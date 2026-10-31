@@ -136,6 +136,15 @@ writeFileSync(path.join(proj, 'package.json'), '{"name":"proj","private":true,"t
 const local = run('npm', ['install', '--offline', path.join(DIST, main), path.join(DIST, plat)], proj, env);
 const lib = run('node', ['--input-type=module', '-e', "const { Rofl } = await import('@grafema/rofl'); const r = new Rofl(); r.load('edge(a, b). edge(b, c). path(X, Y) :- edge(X, Y). path(X, Z) :- path(X, Y), edge(Y, Z).', 'p.rofl'); r.evaluate(); console.log(r.query('path(a, X)').rows.length);"], proj, env);
 said(local.status === 0 && lib.status === 0 && lib.stdout === '2\n', "import('@grafema/rofl') in a project that installed the tarballs", `npm install exit ${local.status}, node exit ${lib.status}, ${JSON.stringify(lib.stdout + lib.stderr.slice(0, 300))}`);
+// every file or directory the exports name is in the package; ./port imports; a TypeScript project gets the types
+const installed = path.join(proj, 'node_modules/@grafema/rofl'), exported: Record<string, string | Record<string, string>> = JSON.parse(readFileSync(path.join(installed, 'package.json'), 'utf8')).exports;
+const named = Object.values(exported).flatMap((e) => typeof e === 'string' ? [e] : Object.values(e)), missing = named.filter((f) => !existsSync(path.join(installed, f.split('*')[0])));
+const port = run('node', ['--input-type=module', '-e', "console.log(Object.keys(await import('@grafema/rofl/port')).length > 0)"], proj, env);
+said(missing.length === 0 && port.stdout === 'true\n', "every path the package's exports name is in it, and import('@grafema/rofl/port')", `${missing.length ? `missing ${missing.join(', ')}` : `${named.length} paths`}; port ${JSON.stringify(port.stdout + port.stderr.slice(0, 300))}`);
+writeFileSync(path.join(proj, 'use.ts'), "import { Rofl } from '@grafema/rofl';\nexport const rows: number = new Rofl().query('path(a, X)').rows.length;\n");
+writeFileSync(path.join(proj, 'tsconfig.json'), JSON.stringify({ compilerOptions: { strict: true, module: 'nodenext', moduleResolution: 'nodenext', noEmit: true, skipLibCheck: true, types: [] }, files: ['use.ts'] }));
+const typed = run(process.execPath, [path.join(ROOT, 'node_modules/typescript/bin/tsc'), '-p', proj], proj, env);
+said(typed.status === 0, "a TypeScript project's import of '@grafema/rofl' has its types (tsc --strict)", `exit ${typed.status}${typed.status ? `: ${typed.stdout.slice(0, 300)}` : ''}`);
 const npx = run('npx', ['--no-install', 'rofl', 'ask', 'path(a, X)', path.join(work, 'world.rofl')], proj, env);
 said(npx.status === 0 && npx.stdout === 'X = b\nX = c\n\n', 'npx rofl ask in that project', `exit ${npx.status}, ${JSON.stringify(npx.stdout + npx.stderr.slice(0, 300))}`);
 

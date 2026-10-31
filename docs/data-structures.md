@@ -288,7 +288,12 @@ came with the tree (below).
 
 **The check** (`checkFunctions`, `check_functions`): after every evaluation, at
 every tick (every evaluation is one) and after a retraction by `retract_delta`,
-over the facts the evaluation left, base and derived alike. Two facts of one
+over the facts the evaluation left, base and derived alike. A function declared
+into an evaluated world is an addition by delta (it derives nothing); its promise
+is then judged over every row of its relation, the others' over the new rows. A
+tree likewise; its closure, over a relation that held no row, is engaged over the
+edges that stand, and a rule that already read it fires again whole, unless it
+read it under a negation or an aggregate (then the world is evaluated again). Two facts of one
 relation, one book and one key with different values refuse the run:
 `program rejected: function nm: key (1) has two values in the book main: (a) and
 (b); 1 more key breaks it too`. The key is shown by its canonical terms; the

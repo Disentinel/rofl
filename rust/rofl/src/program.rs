@@ -805,16 +805,7 @@ fn check_lattice_decl(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<(Sy
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{}: '{}' is a kernel relation and cannot be {}", what(), h.name(rel), if c.tag { "tagged" } else { "a lattice" }));
     }
-    let mut seen: Vec<Sym> = Vec::new();
-    for a in &c.head.args {
-        match a.kind() {
-            TermK::Var(x) if !seen.contains(&x) => seen.push(x),
-            TermK::Var(x) => {
-                return Err(format!("{}: '{}' is written twice; a declaration names each argument once", what(), h.name(x)))
-            }
-            _ => return Err(format!("{}: a declaration's arguments are variables, the key and then the value", what())),
-        }
-    }
+    crate::structure::head_vars(h, &c.head.args, &what(), "the key and then the value")?;
     Ok((rel, c.head.args.len(), op, c.widen))
 }
 
@@ -837,14 +828,7 @@ fn lower_order(h: &Heap, v: &Vocab, c: &rofl_parse::Clause) -> Result<Vec<String
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{what}: '{}' is a kernel relation and cannot be ordered", h.name(rel)));
     }
-    let mut names: Vec<String> = Vec::new();
-    for a in &c.head.args {
-        match a.kind() {
-            TermK::Var(x) if !names.iter().any(|n| n == h.name(x)) => names.push(h.name(x).to_string()),
-            TermK::Var(x) => return Err(format!("{what}: '{}' is written twice; a declaration names each argument once", h.name(x))),
-            _ => return Err(format!("{what}: a declaration's arguments are variables, the key and then each value with its direction")),
-        }
-    }
+    let mut names: Vec<String> = crate::structure::head_vars(h, &c.head.args, &what, "the key and then each value with its direction")?.into_iter().map(|x| h.name(x).to_string()).collect();
     // a wildcard is a value no rule reads, and a name of its own in a rule
     let named = names.clone();
     for (i, x) in names.iter_mut().enumerate() {
@@ -887,6 +871,20 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
     let rel = c.head.rel;
     let what = format!("dominance {}", h.name(rel));
     let hi = c.dom.as_ref().expect("a dominance rule");
+    check_dominance_shape(h, v, c, hi, &what)?;
+    let lo = to_lit(h, v, &c.head)?;
+    let hi_lit = to_lit(h, v, hi)?;
+    let (k, seen) = dominance_key(h, &lo, &hi_lit, &what)?;
+    let body = to_body(h, v, &c.body)?;
+    let probe = Clause { head: lo.clone(), body: body.clone() };
+    check_dominance_body(h, v, &probe, who, &what)?;
+    check_dominance_bound(h, &body, &seen, &what)?;
+    Ok((lo, hi_lit, body, k))
+}
+
+/// The two facts of a dominance rule: a relation of its own, two facts of one arity, written in the bare book, now.
+fn check_dominance_shape(h: &Heap, v: &Vocab, c: &rofl_parse::Clause, hi: &rofl_parse::Lit, what: &str) -> Result<(), String> {
+    let rel = c.head.rel;
     if v.is_reserved(rel) || h.name(rel).starts_with('$') || v.arity_of(rel).is_some() {
         return Err(format!("{what}: '{}' is a kernel relation, and its facts are the kernel's to keep", h.name(rel)));
     }
@@ -902,8 +900,11 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
     if c.head.tense != Tense::Now || hi.tense != Tense::Now {
         return Err(format!("{what}: a dominance rule compares facts that hold now; it takes no tense"));
     }
-    let lo = to_lit(h, v, &c.head)?;
-    let hi = to_lit(h, v, hi)?;
+    Ok(())
+}
+
+/// The key the two facts share (the prefix both are written with), and the variables the facts name, the key's first.
+fn dominance_key(h: &Heap, lo: &Lit, hi: &Lit, what: &str) -> Result<(usize, Vec<Sym>), String> {
     let n = lo.args.len();
     let var = |t: &Term| match t.kind() { TermK::Var(x) => Some(x), _ => None };
     if !lo.args.iter().chain(&hi.args).all(|t| var(t).is_some()) {
@@ -913,8 +914,7 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
     if k == n {
         return Err(format!("{what}: the two facts are one: a dominance rule compares two values at one key, so the facts differ after the key"));
     }
-    let key: Vec<Sym> = lo.args[..k].iter().filter_map(var).collect();
-    let mut seen: Vec<Sym> = key.clone();
+    let mut seen: Vec<Sym> = lo.args[..k].iter().filter_map(var).collect();
     for t in lo.args[k..].iter().chain(&hi.args[k..]) {
         let x = var(t).unwrap();
         if seen.contains(&x) {
@@ -926,9 +926,13 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
         }
         seen.push(x);
     }
-    let body = to_body(h, v, &c.body)?;
-    let probe = Clause { head: lo.clone(), body: body.clone() };
-    if let Some(d) = check_kernel_book(h, &probe).or_else(|| check_who(h, who, &probe)).or_else(|| check_arity(h, v, &probe)) {
+    Ok((k, seen))
+}
+
+/// The body of a dominance rule: a kernel book, who it is by, its arity, no aggregate, facts now, not its own relation.
+fn check_dominance_body(h: &Heap, v: &Vocab, probe: &Clause, who: Option<&str>, what: &str) -> Result<(), String> {
+    let (rel, body) = (probe.head.rel, &probe.body);
+    if let Some(d) = check_kernel_book(h, probe).or_else(|| check_who(h, who, probe)).or_else(|| check_arity(h, v, probe)) {
         return Err(d);
     }
     if body.iter().any(|b| matches!(b, BodyElem::Agg(_))) {
@@ -943,20 +947,23 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
             h.name(rel)
         ));
     }
-    if let Some(d) = check_set_patterns(h, v, &probe) {
-        return Err(d);
+    match check_set_patterns(h, v, probe) {
+        Some(d) => Err(d),
+        None => Ok(()),
     }
-    // RANGE-RESTRICTED over the two facts, in the order the engine solves
-    // the body (`plan_order`, as it plans it): a positive literal binds its
-    // variables, `is` and `in` bind their left from a bound right, `=` one
-    // side from the other, and every other element reads only what is bound
-    let (order, stuck, _, _) = plan_order(h, &[], &body, &seen, &[]);
+}
+
+/// RANGE-RESTRICTED over the two facts, in the order the engine solves the body (`plan_order`, as it plans it): a
+/// positive literal binds its variables, `is` and `in` bind their left from a bound right, `=` one side from the other,
+/// and every other element reads only what is bound.
+fn check_dominance_bound(h: &mut Heap, body: &[BodyElem], seen: &[Sym], what: &str) -> Result<(), String> {
+    let (order, stuck, _, _) = plan_order(h, &[], body, seen, &[]);
     let vars = |t: Term| {
         let mut v = Vec::new();
         h.vars_of(t, &mut v);
         v
     };
-    let mut bound = seen.clone();
+    let mut bound = seen.to_vec();
     let mut free: Option<Vec<Sym>> = None;
     for i in order {
         if free.is_some() {
@@ -1012,7 +1019,7 @@ fn check_dominance(h: &mut Heap, v: &Vocab, c: &rofl_parse::Clause, who: Option<
             if names.is_empty() { "a variable".to_string() } else { names.join(", ") }
         ));
     }
-    Ok((lo, hi, body, k))
+    Ok(())
 }
 
 fn is_sealed_body(v: &Vocab, b: Sym) -> bool {
@@ -1047,231 +1054,288 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // A LARGE TEXT IS READ A PIECE AT A TIME: the parser holds four bytes a character and forty a token, ten times
     // the text, so a pack is cut between clauses and each piece parsed and checked before the next. A piece the
     // parser refuses is refused as the whole text is, with the whole text's line.
-    // The pieces are lexed a window at a time on threads; parsing names them in the heap, so it stays on this one.
-    let all = rofl_parse::pieces(text, 1 << 20);
-    let threads = e.par.threads.max(1);
-    let mut lexed: std::collections::VecDeque<rofl_parse::Lexed> = Default::default();
-    let mut at = 0;
-    let mut next_lexed = |lexed: &mut std::collections::VecDeque<rofl_parse::Lexed>| -> Option<rofl_parse::Lexed> {
-        if lexed.is_empty() && at < all.len() {
-            let window = &all[at..(at + threads).min(all.len())];
-            at += window.len();
-            if let [one] = window {
-                return Some(rofl_parse::lex(one));
-            }
-            lexed.extend(std::thread::scope(|sc| window.iter().map(|p| sc.spawn(move || rofl_parse::lex(p))).collect::<Vec<_>>().into_iter().map(|t| t.join().unwrap()).collect::<Vec<_>>()));
-        }
-        lexed.pop_front()
-    };
-    let refused = |e: &mut Eval, d: String| Loaded { ok: false, diagnostics: vec![rofl_parse::parse(&mut e.h, text).err().unwrap_or(d)], admitted: 0 };
-    let mut clauses = match rofl_parse::parse_lexed(&mut e.h, next_lexed(&mut lexed).unwrap_or_else(|| rofl_parse::lex(""))) {
+    let mut pieces = Pieces { all: rofl_parse::pieces(text, 1 << 20), at: 0, threads: e.par.threads.max(1), lexed: Default::default() };
+    let mut clauses = match rofl_parse::parse_lexed(&mut e.h, pieces.next_piece().unwrap_or_else(|| rofl_parse::lex(""))) {
         Ok(cs) => cs,
-        Err(d) => return refused(e, d),
+        Err(d) => return refused(e, text, d),
     };
-
-    // THE KERNEL DECLARES ITSELF, IN ITS OWN FILE, AT THE TOP. Two conditions,
-    // both load-bearing: FIRST CLAUSE, so a file cannot slip the claim in
-    // halfway; FIRST LOAD, so it can only be made into a store holding nothing
-    // but the bootstrap tables — the way init runs before there is anyone to
-    // stop it. After that the door is shut for the life of the store.
-    let mut who_owned = who.map(|s| s.to_string());
+    let trusted = match claim_kernel(e, &mut clauses, who) {
+        Ok(trusted) => trusted,
+        Err(loaded) => return loaded,
+    };
+    let who_owned = if trusted { Some("$kernel".to_string()) } else { who.map(|s| s.to_string()) };
     let claim = e.h.intern(KERNEL_CLAIM);
-    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty() && c.lattice.is_none() && c.dom.is_none() && c.structure.is_none();
-    if !clauses.is_empty() && clauses[0].lattice.is_none() && clauses[0].dom.is_none() && clauses[0].structure.is_none() {
-        let first = match to_clause(&mut e.h, &e.v, &clauses[0]) {
-            Ok(c) => c,
-            Err(d) => return Loaded { ok: false, diagnostics: vec![d], admitted: 0 },
-        };
-        if let Some(d) = check_who(&e.h, who, &first) {
-            return Loaded { ok: false, diagnostics: vec![d], admitted: 0 };
-        }
-    }
-    let mut trusted = false;
-    if !clauses.is_empty() && claims(&clauses[0]) {
-        if e.kernel_claimed {
-            return Loaded {
-                ok: false,
-                admitted: 0,
-                diagnostics: vec![format!(
-                    "'{KERNEL_CLAIM}' is already claimed: only the first load of a store may be the kernel's"
-                )],
-            };
-        }
-        // the door is the store's, not this session's: a store reopened from
-        // a snapshot, or one a load already wrote into, holds more than the
-        // bootstrap tables, and the claim is too late for it
-        if e.store.fact_count() > bootstrap_rows() {
-            return Loaded {
-                ok: false,
-                admitted: 0,
-                diagnostics: vec![format!(
-                    "'{KERNEL_CLAIM}' comes too late: this store holds more than the bootstrap tables, and only the first load of a store may be the kernel's"
-                )],
-            };
-        }
-        e.kernel_claimed = true;
-        who_owned = Some("$kernel".to_string());
-        trusted = true;
-        clauses.remove(0);
-    }
-    let late_claim = || Loaded {
-        ok: false,
-        admitted: 0,
-        diagnostics: vec![format!("'{KERNEL_CLAIM}' must be the FIRST clause of the FIRST load, or it is not a claim at all")],
-    };
 
     // ATOMIC, WITHOUT COPYING THE WORLD. A program with three bad clauses
     // hears about all three and leaves nothing behind — and it leaves nothing
     // behind because nothing was written, not because a backup was restored.
     // See `check_clause` for why every refusal can be decided before any write.
-    let mut ready: Vec<Clause> = Vec::with_capacity(clauses.len());
-    let mut diags: Vec<String> = Vec::new();
-    let mut unready: Vec<String> = Vec::new();
-    let mut decls: Vec<(Sym, usize, Sym, Option<i64>)> = Vec::new();
-    let mut tags: Vec<(Sym, usize, Sym)> = Vec::new();
-    let mut doms: Vec<(Lit, Lit, Vec<BodyElem>, usize)> = Vec::new();
-    let mut ords: Vec<(Sym, Sym, Vec<Sym>, usize)> = Vec::new();
-    let mut structs: Vec<rofl_parse::Clause> = Vec::new();
-    let mut declared = crate::structure::declared(&e.h, &e.v, &mut e.store);
-    // the closures of declared trees, and what a batch concludes before a declaration reads it
-    let mut closure_of = crate::structure::closures(&e.h, &e.v, &mut e.store);
-    let mut aliased = crate::structure::aliased(&e.h, &e.v, &mut e.store);
-    let (mut batch_rules, mut batch_facts): (std::collections::HashSet<Sym>, std::collections::HashSet<Sym>) = Default::default();
-    let mut lowered: Vec<String> = Vec::new();
+    let mut p = Pending::new(e);
     let mut claimed_late = false;
     loop {
-    claimed_late |= !trusted && clauses.iter().any(|c| c.head.rel == claim);
-    for pc in std::mem::take(&mut clauses) {
-        let pc = &pc;
-        if pc.want {
-            match lower_want(&mut e.h, &e.v, pc) {
-                Ok((rule, texts)) => {
-                    match to_clause(&mut e.h, &e.v, &rule).and_then(|c| check_clause(&e.h, &e.v, &c, None, true)) {
-                        Ok(r) => ready.push(r),
-                        Err(d) => diags.push(d),
-                    }
-                    lowered.extend(texts);
-                }
-                Err(d) => diags.push(d),
-            }
-            continue;
+        claimed_late |= !trusted && clauses.iter().any(|c| c.head.rel == claim);
+        for pc in std::mem::take(&mut clauses) {
+            p.classify(e, &pc, who_owned.as_deref(), trusted);
         }
-        if let Some(st) = &pc.structure {
-            let stored = if st.closure.is_some() || st.source.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
-            let concluded = |cl: Sym| -> Option<String> {
-                if stored.contains(&cl) || batch_rules.contains(&cl) {
-                    Some("a rule".to_string())
-                } else if batch_facts.contains(&cl) || e.store.rel_count(cl) > 0 {
-                    Some("a fact".to_string())
-                } else {
-                    None
-                }
-            };
-            // a name an alias cannot take: another alias's, or a tree's closure
-            let taken: std::collections::HashSet<Sym> = aliased.iter().chain(closure_of.keys()).copied().collect();
-            match crate::structure::check_decl(&e.h, &e.v, pc, &declared, &taken, &concluded) {
-                Ok(()) if st.source.is_some() => {
-                    aliased.insert(pc.head.rel);
-                    batch_rules.insert(pc.head.rel);
-                    lowered.push(crate::structure::lower_alias(&e.h, pc));
-                    structs.push(pc.clone());
-                }
-                Ok(()) => {
-                    declared.insert(pc.head.rel);
-                    if let Some(cl) = st.closure {
-                        declared.insert(cl);
-                        closure_of.insert(cl, pc.head.rel);
-                        lowered.extend(crate::structure::lower_closure(&e.h, pc));
-                    }
-                    structs.push(pc.clone());
-                }
-                Err(d) => diags.push(d),
-            }
-            continue;
-        }
-        if pc.ord.is_some() {
-            match lower_order(&e.h, &e.v, pc) {
-                Ok(texts) => {
-                    let first = doms.len();
-                    for t in &texts {
-                        let lowered = rofl_parse::parse(&mut e.h, t).expect("a lowered order reads");
-                        match check_dominance(&mut e.h, &e.v, &lowered[0], who_owned.as_deref()) {
-                            Ok(d) => doms.push(d),
-                            Err(d) => diags.push(d),
-                        }
-                    }
-                    ords.push((pc.head.rel, pc.lattice.unwrap(), pc.ord.clone().unwrap(), first));
-                }
-                Err(d) => diags.push(d),
-            }
-            continue;
-        }
-        if pc.dom.is_some() {
-            match check_dominance(&mut e.h, &e.v, pc, who_owned.as_deref()) {
-                Ok(d) => doms.push(d),
-                Err(d) => diags.push(d),
-            }
-            continue;
-        }
-        if pc.lattice.is_some() {
-            match check_lattice_decl(&e.h, &e.v, pc) {
-                Ok((r, n, alg, _)) if pc.tag => tags.push((r, n, alg)),
-                Ok(d) => decls.push(d),
-                Err(d) => diags.push(d),
-            }
-            continue;
-        }
-        match to_clause(&mut e.h, &e.v, pc) {
-            Ok(c) => {
-                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &closure_of, &aliased) {
-                    diags.push(d);
-                    continue;
-                }
-                if c.body.is_empty() { batch_facts.insert(c.head.rel); } else { batch_rules.insert(c.head.rel); }
-                // The RESOLVED clauses come back from the checker, so admission does not
-                // resolve a second time.
-                match check_clause(&e.h, &e.v, &c, who_owned.as_deref(), trusted) {
-                    Ok(r) => ready.push(r),
-                    Err(d) => unready.push(d),
-                }
-            }
-            Err(d) => diags.push(d),
-        }
-    }
-    let Some(piece) = next_lexed(&mut lexed) else { break };
-    clauses = match rofl_parse::parse_lexed(&mut e.h, piece) {
-        Ok(cs) => cs,
-        Err(d) => return refused(e, d),
-    };
+        let Some(piece) = pieces.next_piece() else { break };
+        clauses = match rofl_parse::parse_lexed(&mut e.h, piece) {
+            Ok(cs) => cs,
+            Err(d) => return refused(e, text, d),
+        };
     }
     if claimed_late {
-        return late_claim();
+        return rejected(vec![format!("'{KERNEL_CLAIM}' must be the FIRST clause of the FIRST load, or it is not a claim at all")]);
     }
-    diags.extend(unready);
+    p.diags.append(&mut p.unready);
     // THE RULES A CLOSURE OR AN ALIAS LOWERS TO are the declaration's, trusted as the kernel's own writing is
+    let low = lower_declared(e, &p.lowered, &mut p.diags);
+    if !p.diags.is_empty() {
+        return rejected(p.diags);
+    }
+    let mark = e.store.journal.mark();
+    for c in p.ready.iter().chain(low.iter()) {
+        admit_clause(e, c, who_owned.as_deref());
+    }
+    // a load that brings a program is kept whole, its facts in it
+    if trusted || !(low.is_empty() && p.decls.is_empty() && p.tags.is_empty() && p.doms.is_empty() && p.structs.is_empty()) || p.ready.iter().any(|c| !c.body.is_empty()) {
+        let author = who.map(|w| e.h.intern(w));
+        e.store.journal.text(mark, text, author);
+    }
+    write_lattice_rows(e, &p.decls);
+    write_tag_rows(e, &p.tags);
+    let dom_ids = write_dominance_rows(e, &p.doms);
+    write_order_rows(e, &p.ords, &dom_ids);
+    write_structure_rows(e, &p.structs);
+    Loaded { ok: true, diagnostics: Vec::new(), admitted: p.ready.len() + low.len() + p.decls.len() + p.tags.len() + p.doms.len() + p.structs.len() }
+}
+
+fn rejected(diagnostics: Vec<String>) -> Loaded {
+    Loaded { ok: false, diagnostics, admitted: 0 }
+}
+
+/// A refusal of a text the parser cannot read: the whole text's diagnostic, the line it is on in the whole text.
+fn refused(e: &mut Eval, text: &str, d: String) -> Loaded {
+    rejected(vec![rofl_parse::parse(&mut e.h, text).err().unwrap_or(d)])
+}
+
+/// The pieces of a load's text, lexed a window at a time: the pieces of a window are lexed on threads together, then
+/// handed out one at a time.
+struct Pieces<'a> {
+    all: Vec<&'a str>,
+    at: usize,
+    threads: usize,
+    lexed: std::collections::VecDeque<rofl_parse::Lexed>,
+}
+
+impl Pieces<'_> {
+    fn next_piece(&mut self) -> Option<rofl_parse::Lexed> {
+        if self.lexed.is_empty() && self.at < self.all.len() {
+            let end = (self.at + self.threads).min(self.all.len());
+            let window = &self.all[self.at..end];
+            self.at = end;
+            if let [one] = window {
+                return Some(rofl_parse::lex(one));
+            }
+            self.lexed.extend(std::thread::scope(|sc| window.iter().map(|p| sc.spawn(move || rofl_parse::lex(p))).collect::<Vec<_>>().into_iter().map(|t| t.join().unwrap()).collect::<Vec<_>>()));
+        }
+        self.lexed.pop_front()
+    }
+}
+
+/// Checks the first clause of a load against `who`, and takes the kernel's claim when the load makes it. Returns
+/// whether the load is the kernel's.
+fn claim_kernel(e: &mut Eval, clauses: &mut Vec<rofl_parse::Clause>, who: Option<&str>) -> Result<bool, Loaded> {
+    // THE KERNEL DECLARES ITSELF, IN ITS OWN FILE, AT THE TOP. Two conditions,
+    // both load-bearing: FIRST CLAUSE, so a file cannot slip the claim in
+    // halfway; FIRST LOAD, so it can only be made into a store holding nothing
+    // but the bootstrap tables — the way init runs before there is anyone to
+    // stop it. After that the door is shut for the life of the store.
+    let claim = e.h.intern(KERNEL_CLAIM);
+    if let Some(first) = clauses.first().filter(|c| c.lattice.is_none() && c.dom.is_none() && c.structure.is_none()) {
+        let first = to_clause(&mut e.h, &e.v, first).map_err(|d| rejected(vec![d]))?;
+        if let Some(d) = check_who(&e.h, who, &first) {
+            return Err(rejected(vec![d]));
+        }
+    }
+    let claims = |c: &rofl_parse::Clause| c.head.rel == claim && c.body.is_empty() && c.lattice.is_none() && c.dom.is_none() && c.structure.is_none();
+    if !clauses.first().is_some_and(|c| claims(c)) {
+        return Ok(false);
+    }
+    if e.kernel_claimed {
+        return Err(rejected(vec![format!("'{KERNEL_CLAIM}' is already claimed: only the first load of a store may be the kernel's")]));
+    }
+    // the door is the store's, not this session's: a store reopened from
+    // a snapshot, or one a load already wrote into, holds more than the
+    // bootstrap tables, and the claim is too late for it
+    if e.store.fact_count() > bootstrap_rows() {
+        return Err(rejected(vec![format!("'{KERNEL_CLAIM}' comes too late: this store holds more than the bootstrap tables, and only the first load of a store may be the kernel's")]));
+    }
+    e.kernel_claimed = true;
+    clauses.remove(0);
+    Ok(true)
+}
+
+/// What a load has classified so far: the clauses it admits, the declarations it writes as kernel rows, and the
+/// relations its declarations make known to the rest of the load.
+#[derive(Default)]
+struct Pending {
+    ready: Vec<Clause>,
+    unready: Vec<String>,
+    diags: Vec<String>,
+    decls: Vec<(Sym, usize, Sym, Option<i64>)>,
+    tags: Vec<(Sym, usize, Sym)>,
+    doms: Vec<(Lit, Lit, Vec<BodyElem>, usize)>,
+    ords: Vec<(Sym, Sym, Vec<Sym>, usize)>,
+    structs: Vec<rofl_parse::Clause>,
+    lowered: Vec<String>,
+    declared: std::collections::HashSet<Sym>,
+    closure_of: HashMap<Sym, Sym>,
+    aliased: std::collections::HashSet<Sym>,
+    batch_rules: std::collections::HashSet<Sym>,
+    batch_facts: std::collections::HashSet<Sym>,
+}
+
+impl Pending {
+    fn new(e: &mut Eval) -> Pending {
+        Pending {
+            declared: crate::structure::declared(&e.h, &e.v, &mut e.store),
+            closure_of: crate::structure::closures(&e.h, &e.v, &mut e.store),
+            aliased: crate::structure::aliased(&e.h, &e.v, &mut e.store),
+            ..Default::default()
+        }
+    }
+
+    fn classify(&mut self, e: &mut Eval, pc: &rofl_parse::Clause, who: Option<&str>, trusted: bool) {
+        if pc.want {
+            self.want(e, pc);
+        } else if let Some(st) = &pc.structure {
+            self.structure(e, pc, st);
+        } else if pc.ord.is_some() {
+            self.order(e, pc, who);
+        } else if pc.dom.is_some() {
+            match check_dominance(&mut e.h, &e.v, pc, who) {
+                Ok(d) => self.doms.push(d),
+                Err(d) => self.diags.push(d),
+            }
+        } else if pc.lattice.is_some() {
+            self.lattice(e, pc);
+        } else {
+            self.clause(e, pc, who, trusted);
+        }
+    }
+
+    fn want(&mut self, e: &mut Eval, pc: &rofl_parse::Clause) {
+        match lower_want(&mut e.h, &e.v, pc) {
+            Ok((rule, texts)) => {
+                match to_clause(&mut e.h, &e.v, &rule).and_then(|c| check_clause(&e.h, &e.v, &c, None, true)) {
+                    Ok(r) => self.ready.push(r),
+                    Err(d) => self.diags.push(d),
+                }
+                self.lowered.extend(texts);
+            }
+            Err(d) => self.diags.push(d),
+        }
+    }
+
+    fn structure(&mut self, e: &mut Eval, pc: &rofl_parse::Clause, st: &rofl_parse::Structure) {
+        let stored = if st.closure.is_some() || st.source.is_some() { crate::structure::concluded_by_rules(&e.h, &e.v, &mut e.store) } else { Default::default() };
+        let (batch_rules, batch_facts, store) = (&self.batch_rules, &self.batch_facts, &e.store);
+        let concluded = |cl: Sym| -> Option<String> {
+            if stored.contains(&cl) || batch_rules.contains(&cl) {
+                Some("a rule".to_string())
+            } else if batch_facts.contains(&cl) || store.rel_count(cl) > 0 {
+                Some("a fact".to_string())
+            } else {
+                None
+            }
+        };
+        // a name an alias cannot take: another alias's, or a tree's closure
+        let taken: std::collections::HashSet<Sym> = self.aliased.iter().chain(self.closure_of.keys()).copied().collect();
+        match crate::structure::check_decl(&e.h, &e.v, pc, &self.declared, &taken, &concluded) {
+            Ok(()) if st.source.is_some() => {
+                self.aliased.insert(pc.head.rel);
+                self.batch_rules.insert(pc.head.rel);
+                self.lowered.push(crate::structure::lower_alias(&e.h, pc));
+                self.structs.push(pc.clone());
+            }
+            Ok(()) => {
+                self.declared.insert(pc.head.rel);
+                if let Some(cl) = st.closure {
+                    self.declared.insert(cl);
+                    self.closure_of.insert(cl, pc.head.rel);
+                    self.lowered.extend(crate::structure::lower_closure(&e.h, pc));
+                }
+                self.structs.push(pc.clone());
+            }
+            Err(d) => self.diags.push(d),
+        }
+    }
+
+    fn order(&mut self, e: &mut Eval, pc: &rofl_parse::Clause, who: Option<&str>) {
+        match lower_order(&e.h, &e.v, pc) {
+            Ok(texts) => {
+                let first = self.doms.len();
+                for t in &texts {
+                    let lowered = rofl_parse::parse(&mut e.h, t).expect("a lowered order reads");
+                    match check_dominance(&mut e.h, &e.v, &lowered[0], who) {
+                        Ok(d) => self.doms.push(d),
+                        Err(d) => self.diags.push(d),
+                    }
+                }
+                self.ords.push((pc.head.rel, pc.lattice.unwrap(), pc.ord.clone().unwrap(), first));
+            }
+            Err(d) => self.diags.push(d),
+        }
+    }
+
+    fn lattice(&mut self, e: &mut Eval, pc: &rofl_parse::Clause) {
+        match check_lattice_decl(&e.h, &e.v, pc) {
+            Ok((r, n, alg, _)) if pc.tag => self.tags.push((r, n, alg)),
+            Ok(d) => self.decls.push(d),
+            Err(d) => self.diags.push(d),
+        }
+    }
+
+    fn clause(&mut self, e: &mut Eval, pc: &rofl_parse::Clause, who: Option<&str>, trusted: bool) {
+        match to_clause(&mut e.h, &e.v, pc) {
+            Ok(c) => {
+                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &self.closure_of, &self.aliased) {
+                    self.diags.push(d);
+                    return;
+                }
+                if c.body.is_empty() {
+                    self.batch_facts.insert(c.head.rel);
+                } else {
+                    self.batch_rules.insert(c.head.rel);
+                }
+                // The RESOLVED clauses come back from the checker, so admission does not
+                // resolve a second time.
+                match check_clause(&e.h, &e.v, &c, who, trusted) {
+                    Ok(r) => self.ready.push(r),
+                    Err(d) => self.unready.push(d),
+                }
+            }
+            Err(d) => self.diags.push(d),
+        }
+    }
+}
+
+fn lower_declared(e: &mut Eval, lowered: &[String], diags: &mut Vec<String>) -> Vec<Clause> {
     let mut low: Vec<Clause> = Vec::with_capacity(lowered.len());
-    for t in &lowered {
+    for t in lowered {
         let pcs = rofl_parse::parse(&mut e.h, t).expect("a lowered declaration reads");
         match to_clause(&mut e.h, &e.v, &pcs[0]).and_then(|c| check_clause(&e.h, &e.v, &c, None, true)) {
             Ok(r) => low.push(r),
             Err(d) => diags.push(d),
         }
     }
-    if !diags.is_empty() {
-        return Loaded { ok: false, diagnostics: diags, admitted: 0 };
-    }
-    let mark = e.store.journal.mark();
-    for c in ready.iter().chain(low.iter()) {
-        admit_clause(e, c, who_owned.as_deref());
-    }
-    // a load that brings a program is kept whole, its facts in it
-    if trusted || !(low.is_empty() && decls.is_empty() && tags.is_empty() && doms.is_empty() && structs.is_empty()) || ready.iter().any(|c| !c.body.is_empty()) {
-        let author = who.map(|w| e.h.intern(w));
-        e.store.journal.text(mark, text, author);
-    }
-    // THE DECLARATION IS ONE KERNEL ROW, timeless like the semantics
-    // declaration: which algebra a relation has is a property of the program.
-    for (rel, n, op, widen) in &decls {
+    low
+}
+
+// THE DECLARATION IS ONE KERNEL ROW, timeless like the semantics
+// declaration: which algebra a relation has is a property of the program.
+fn write_lattice_rows(e: &mut Eval, decls: &[(Sym, usize, Sym, Option<i64>)]) {
+    for (rel, n, op, widen) in decls {
         let (ld, kp) = (e.v.lattice_decl, e.v.kernel_persp);
         let args = brk!("lattice_op_min" => [Term::atom(*rel), Term::int(*n as i64), Term::atom(e.v.op_sym(AggOp::Min))],
                         "lattice_arity_short" => [Term::atom(*rel), Term::int(*n as i64 - 1), Term::atom(*op)];
@@ -1284,17 +1348,23 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         e.store.dirty = true;
     }
-    // A TAG IS ONE KERNEL ROW too, `tag_decl(Rel, Arity, Alg)`
-    // (docs/aggregates.md, "Tags, as built").
-    for (rel, n, alg) in &tags {
+}
+
+// A TAG IS ONE KERNEL ROW too, `tag_decl(Rel, Arity, Alg)`
+// (docs/aggregates.md, "Tags, as built").
+fn write_tag_rows(e: &mut Eval, tags: &[(Sym, usize, Sym)]) {
+    for (rel, n, alg) in tags {
         let n = brk!("tag_arity_short" => *n as i64 - 1; *n as i64);
         e.store.add(&e.h, e.v.tag_decl, e.v.kernel_persp, &[Term::atom(*rel), Term::int(n), Term::atom(*alg)], F_BASE);
         e.store.dirty = true;
     }
-    // A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
-    // as built"): rows in the kernel's book, the body a rule body's
+}
+
+// A DOMINANCE RULE IS ITS REFLECTION (docs/aggregates.md, "Subsumption,
+// as built"): rows in the kernel's book, the body a rule body's
+fn write_dominance_rows(e: &mut Eval, doms: &[(Lit, Lit, Vec<BodyElem>, usize)]) -> Vec<Sym> {
     let mut dom_ids: Vec<Sym> = Vec::new();
-    for (lo, hi, body, k) in &doms {
+    for (lo, hi, body, k) in doms {
         for b in body {
             for l in b.lits_deep() {
                 if let Some(p) = l.persp.as_atom() {
@@ -1314,18 +1384,25 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         e.store.dirty = true;
     }
-    // A DECLARED ORDER is a row for each value it compares: its kind, place,
-    // direction and the dominance rule strict in it
-    for (rel, kind, dirs, first) in &ords {
+    dom_ids
+}
+
+// A DECLARED ORDER is a row for each value it compares: its kind, place,
+// direction and the dominance rule strict in it
+fn write_order_rows(e: &mut Eval, ords: &[(Sym, Sym, Vec<Sym>, usize)], dom_ids: &[Sym]) {
+    for (rel, kind, dirs, first) in ords {
         for (i, d) in dirs.iter().enumerate() {
             let row = [Term::atom(*rel), Term::atom(*kind), Term::int(i as i64 + 1), Term::atom(*d), Term::atom(brk!("order_row_rule_first" => dom_ids[*first]; dom_ids[first + i]))];
             e.store.add(&e.h, e.v.order_comp, e.v.kernel_persp, &row, F_BASE);
         }
         e.store.dirty = true;
     }
-    // A DECLARED STRUCTURE is its kernel rows, timeless: `structure_decl(Rel, Arity, Kind)` and a
-    // `structure_role(Rel, Pos, Role)` for each marked argument (docs/data-structures.md)
-    for c in &structs {
+}
+
+// A DECLARED STRUCTURE is its kernel rows, timeless: `structure_decl(Rel, Arity, Kind)` and a
+// `structure_role(Rel, Pos, Role)` for each marked argument (docs/data-structures.md)
+fn write_structure_rows(e: &mut Eval, structs: &[rofl_parse::Clause]) {
+    for c in structs {
         let st = c.structure.as_ref().unwrap();
         let kp = e.v.kernel_persp;
         let row = [Term::atom(c.head.rel), Term::int(brk!("function_arity_short" => c.head.args.len() as i64 - 1; c.head.args.len() as i64)), Term::atom(st.kind)];
@@ -1340,5 +1417,4 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
         }
         e.store.dirty = true;
     }
-    Loaded { ok: true, diagnostics: Vec::new(), admitted: ready.len() + low.len() + decls.len() + tags.len() + doms.len() + structs.len() }
 }

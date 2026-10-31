@@ -1,0 +1,247 @@
+# Writing an adapter
+
+An adapter lets a world ask the outside: a database, a program, an MCP
+server, an HTTP API, another ROFL world, a screen. The world writes a `want`.
+The engine sends it, and the answer comes back as facts in the adapter's
+book. The design and its reasons are in [docs/intents.md](../docs/intents.md).
+This page is how to write one.
+
+## The book
+
+An adapter is a book of facts. A world uses it by importing it. The book is a
+file, or a book signed on a Roflenox node (below).
+
+    imports(main, deps).                          -- the world reads the book deps
+    adapter(deps, exec, "node deps.cjs").         -- name, kind, address
+    capability(imports_of, deps, reads).          -- what it can do: reads, shows or does
+    arg(imports_of, 1, file, text).               -- its arguments: position, name, type
+    answers(imports_of, file_import, 2).          -- where answers arrive; the first column is the want
+    max_wants(imports_of, 20000).                 -- at most this many wants an evaluation (1000 if not said)
+
+The argument types are `text`, `number`, `atom`, `time` and `json`.
+
+A world asks with a `want`, a rule whose head names a capability:
+
+    want imports_of(F) :- needed(F).
+
+The world then reads the answers in the adapter's book, `file_import[deps](W, F)`.
+`W` is the want's key, `$want(imports_of, "main.js")`, so a rule can tell which
+question an answer belongs to.
+
+## The three classes
+
+- **reads** asks and changes nothing outside. Every evaluating verb sends it:
+  `load`, `ask`, `why`, `whynot`, `serve`.
+- **shows** puts something in front of a person. It is never sent, and no rule
+  reads its answers. A host draws it; the web workbench draws a `render`
+  adapter's screen.
+- **does** changes the world outside. Only `rofl serve` with a journal sends
+  it, and only with `permit(W)`. It is sent once: the journal remembers it.
+
+## How a want ends
+
+Each want ends in one of these facts:
+
+- `answered(W)`, or any fact of its `answers` relation;
+- `failed(W, Reason)`;
+- `outcome_unknown(W)`: the adapter ended well and said nothing about it;
+- `want_held(W, Why)`: the adapter cannot be reached, or a key is missing.
+
+A world that waits says so in its own rule:
+`pending(W) :- want_of(W, _), not answered(W), not failed(W, _)`.
+
+## The kinds
+
+| kind | address | what the book adds |
+|---|---|---|
+| `exec` | a command line | nothing; the program reads a batch on stdin and prints facts |
+| `sql` | a SQLite file | `query(Cap, "SELECT ... ?1")` for each capability |
+| `mcp` | a command (stdio) or a URL | `mcp_tool`, `mcp_arg`, `mcp_field`; generated |
+| `openapi` | the API's base URL | `http_op`, `http_in`, `http_field`; generated |
+| `rofl` | another world's files, or a command that serves it | the relation a capability answers from |
+| `render` | `"workbench"` | `component(Cap, Kind)`: heading, text, card, button, field |
+
+`rofl adapter mcp CMD|URL` and `rofl adapter openapi SPEC` print a book from
+the server's own description. Regenerate it when the server changes; the
+book's version changes with it.
+
+### exec
+
+The program gets one batch per capability per round on stdin, as JSON:
+`{capability, book_version, wants: [{key, args: {name: value}}]}`. It prints
+ROFL facts, each answer with the want's key first. It may print `failed(K, "why")`
+and `answered(K)`. A `-- reads: PATH` line names a file the answer depends on,
+so the answer is kept until that file changes.
+
+<!-- BEGIN file examples/intents/exec.rofl -->
+```rofl
+-- SCENARIO 3 (docs/intents.md 7): a local program. The scanner of today, unchanged, beside an exec adapter that
+-- answers the same kind of question as wants: what main.js imports, a file a round, as the scan world asks.
+imports(main, deps).
+adapter(deps, exec, "node examples/intents/deps.cjs").
+capability(imports_of, deps, reads).
+arg(imports_of, 1, file, text).
+answers(imports_of, file_import, 2).
+
+needed("main.js").
+needed(F) :- file_import[deps](_, F).
+want imports_of(F) :- needed(F).
+```
+<!-- END file -->
+
+<!-- BEGIN file examples/intents/deps.cjs -->
+```
+// The exec adapter of scenario 3: the files each file it is asked about imports, from examples/scan/src.
+const fs = require('fs');
+const path = require('path');
+const batch = JSON.parse(fs.readFileSync(0, 'utf8'));
+const root = path.join(__dirname, '..', 'scan', 'src');
+for (const w of batch.wants) {
+  const file = path.join(root, w.args.file);
+  console.log(`-- reads: ${file}`);
+  const found = [...fs.readFileSync(file, 'utf8').matchAll(/from\s+['"](\.\/.+?)['"]/g)]
+    .map(m => path.relative(root, path.join(path.dirname(file), m[1])));
+  for (const f of found) console.log(`file_import(${w.key}, ${JSON.stringify(f)}).`);
+  if (found.length === 0) console.log(`answered(${w.key}).`);
+}
+```
+<!-- END file -->
+
+### sql
+
+The template is the book's, never a string a rule builds. `?1`, `?2` are the
+want's arguments in order, and each row of the result is one answer fact.
+
+    adapter(shop, sql, "examples/intents/shop.db").
+    capability(children_of, shop, reads).
+    arg(children_of, 1, tenant, text).
+    answers(children_of, child, 2).
+    query(children_of, "SELECT id FROM tenants WHERE parent = ?1").
+
+### rofl
+
+The adapter is another ROFL world. Its address is that world's files, which the
+engine evaluates once in its own process:
+
+    adapter(team, rofl, "team.rofl").
+
+Or the address is a command that serves the world, so it lives in another
+process or on another machine:
+
+    adapter(team, rofl, "rofl serve team.rofl").
+    adapter(team, rofl, "ssh bob.example rofl serve team.rofl").
+
+`rofl serve FILE...` evaluates the files as its session 1 before it reads the
+first request. The engine starts the command once and asks that session each
+round, so a served world that changed answers as it stands now. An address
+whose words all end in `.rofl` or `.rofl.md` is files; any other is a command.
+
+A capability answers in one relation of the other world. A want's arguments
+are its first columns. Each row comes back as an answer in the adapter's book,
+and the why of an answer stops there.
+
+## Keys
+
+A key is never a fact. The book names where to find it, and the engine reads
+it from the environment when it sends:
+
+    http_auth(Adapter, Scheme, How, Name, Env).   -- How: bearer, basic, header, query, client_credentials, login
+    http_needs(Cap, Scheme).                      -- which capabilities need it
+
+For `client_credentials`, `Name` is the token URL and `Env` holds `id:secret`;
+the adapter gets and renews the token itself. For `login`, `Name` is the authorization
+server (its issuer) and `Env` is `""`: a person signs in once, at a browser,
+
+    rofl adapter login https://auth.example.com
+
+and the adapter sends that person's token, renewed by its refresh token when it
+expires or the service refuses it. The command reads the server's metadata,
+registers itself as a client when the server allows it (else give the client
+id after the issuer), prints the address to sign in at and opens it in a
+browser, and takes the answer on a local port (OAuth 2.1 with PKCE). The tokens
+are kept in `~/.config/rofl/logins.json`, readable only by you. Until someone
+signs in, the want is held and says which command to run. A missing variable holds the want:
+`want_held(W, "... the environment has no ENV ...")`. On the command line, a key
+is `HOW[:NAME]=ENV`: `rofl adapter mcp URL bearer=TRACKER_TOKEN`.
+
+## A book on Roflenox
+
+A book may live on a Roflenox node instead of in a file. There it is signed: you
+know who wrote it, and that nobody changed it on the way. Name it where a file
+would go:
+
+    rofl ask 'imports_of[deps](W, F)' main.rofl roflenox://rofl.enox.dev/vadim.enox.dev/deps
+
+The address is `roflenox://HOST/IDENTITY/BOOK`. Each clause of the book is one
+fact of that identity's book on the node:
+
+    {source: "deps", relation: "rofl:book", target: "capability(imports_of, deps, reads).", perspective: "rofl", confidence: 1}
+
+To change a clause, assert the new one. To take one out, assert it again with
+confidence 0. A node shows a feed to a reader without a key only after the
+identity publishes its books, once:
+
+    {source: "rofl:book", relation: "roflenox:export", target: "public", perspective: "rofl", confidence: 1}
+
+Put the book's facts in batches of their own. The node withholds a batch that
+also holds a fact it does not publish.
+
+The engine believes nothing the node says. It checks the identity's documents
+from the first, and pins the first one when it meets the identity. It checks
+every batch of the chain: the signature, the key valid at the time the batch
+was signed, the link to the batch before, and the content against the signed
+digest. One batch that fails refuses the book (exit 2). A withheld batch is
+counted and named in the book's first line; what it says is not known.
+
+What was checked is kept under `~/.cache/rofl/roflenox`. The next load fetches
+only the batches after it. A node out of reach is answered from there, and
+stderr says so.
+
+## When the event happened
+
+An answer has two times. One is when the world learned it, the tick, which the
+engine keeps by itself. The other is when the thing happened outside: a tracker
+answers at tick 500 that a ticket was closed, and it was closed yesterday at
+14:00.
+
+That second time is an ordinary column of the answer. The book says which one:
+
+    capability(ticket_closed, tracker, reads).
+    answers(ticket_closed, closed, 3).            -- closed(W, Ticket, At)
+    event_time(ticket_closed, 3).                 -- column 3 of closed is when it happened
+
+The column holds an ISO 8601 time: a date, or a date and time with its zone
+(`Z` or `+03:00`). The engine makes it one instant whatever zone the source
+wrote it in. The column arrives as text in UTC, `"2026-10-24T11:00:00.000Z"`,
+and beside it comes `instant(Text, Ms)`, its milliseconds since 1970, which
+rules order with `<`:
+
+    first(A, B) :- closed[tracker](_, A, X), closed[tracker](_, B, Y),
+                   instant(X, MX), instant(Y, MY), MX < MY.
+
+A value that is no instant, such as `"yesterday"` or a time of day without its
+zone, fails its want and says why. Do not wrap facts in a separate
+`at(Fact, Time)`. This is a convention of the book (the owner's choice,
+2026-10-24).
+
+## Recursion
+
+A want may depend on the answers of earlier wants: a tree in a database, the
+imports of imports. The engine sends one round at a time, a batch per
+capability, until no new want appears:
+
+    reaches("acme").
+    reaches(T) :- want_arg(W, 1, _), child[shop](W, T).
+    want children_of(T) :- reaches(T).
+
+- Each level of the tree is one round, and each round is one query or call per
+  capability, never one per node.
+- A want is sent once per evaluation, by its key, so a cycle in the data ends.
+- A capability sends at most 1000 wants an evaluation, or as many as its book
+  says: `max_wants(Cap, N)`. A want over the limit is held,
+  `want_held(W, "over the limit of N wants of Cap an evaluation: ...")`, and
+  the world's answers are partial (exit 5). This is what stops an answer that
+  always asks one more question: each round costs a call, and the limit is the
+  number of calls the book's author will pay for.
+- The rounds also share the evaluation's budget and its space wall, so one that
+  grows too wide stops there with a hole, as a rule does.

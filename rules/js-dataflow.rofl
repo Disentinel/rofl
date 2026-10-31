@@ -732,8 +732,8 @@ sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may
 -- is the site that made it: `new Map()` (`keyed_obj`), and an express app
 -- (rules/js-express.rofl). A key is matched by its value, however it got there
 -- (`const K = 'port'; m.get(K)`); a key with no known value matches nothing, and
--- the call is named in `keyed_key_unknown[audit]`: we do not know which. Flow-insensitive, as the rest of this layer: a
--- get sees every put, before or after it. `m.keys()`, `m.values()` and
+-- the call is named in `keyed_key_unknown[audit]`: we do not know which. A get
+-- sees every put but those the order below rules out. `m.keys()`, `m.values()` and
 -- `m.entries()` are not read.
 edb(keyed_store).
 keyed_store(map, "set", "get").
@@ -755,9 +755,73 @@ keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, G
 keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), may_be_lit[flow](A, _).
 keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flow](C).
 
-keyed_read[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
-may_be_node[flow](C, N) :- keyed_read[flow](C, V), may_be_node[flow](V, N).
-may_be_lit[flow](C, L)  :- keyed_read[flow](C, V), may_be_lit[flow](V, L).
+-- WHAT IS IN IT AT THE READ. A `const` that binds a new collection makes one
+-- per run of its statement list, so a get on that name in the list, outside any
+-- function written there, has an order with each put on it:
+--   - a put in a later statement has not run yet, also inside a function
+--     written in that statement: the function does not exist before it. A
+--     function DECLARATION is hoisted to the top of the list and gets no order.
+--   - a put in an earlier statement outside any function has run, unless a put
+--     of the same literal key, a delete of it or a clear, in a statement of its
+--     own between them, took it out.
+-- Every other put may have run before the get or not (a function called at
+-- some time, an await, another file, a loop around the declaration): it is
+-- kept, as `keyed_read_unordered`, and a proof says so.
+keyed_local[code](D, P, B, F) :- es_global_construct[code](X, Name, _), lib_global_prototype(Name, P),
+                                 keyed_store(P, _, _), ast_child[code](D, init, 0, X),
+                                 ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
+                                 ast_child[code](B, F, _, V), stmt_seq_field(F).
+keyed_local_seen[code](C, D, Meth, S, I) :- keyed_local[code](D, _, B, F), sees_binder[code](O, D),
+                                            ast_child[code](N, object, 0, O), ast_attr[code](N, computed, false),
+                                            ast_child[code](N, property, 0, Pn), ast_name[code](Pn, Meth),
+                                            ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _),
+                                            ast_within[code](S, C), ast_child[code](B, F, I, S).
+keyed_fn_between[code](S, C) :- keyed_local_seen[code](C, _, _, S, _), ast_within[code](G, C),
+                                fn_node[code](G), ast_within[code](S, G).
+keyed_fn_between[code](S, C) :- keyed_local_seen[code](C, _, _, S, _), fn_node[code](S).
+keyed_local_call[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), not keyed_fn_between[code](S, C).
+
+keyed_hoisted[code](S) :- keyed_local_seen[code](_, _, _, S, _), fn_node[code](S).
+keyed_hoisted[code](S) :- keyed_local_seen[code](_, _, _, S, _), ast_child[code](S, declaration, 0, G), fn_node[code](G).
+keyed_local_later[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), not keyed_hoisted[code](S).
+
+-- a statement that is nothing but the call: it runs whenever the list gets past it
+keyed_local_step[code](C, D, Meth, I) :- keyed_local_seen[code](C, D, Meth, S, I), ast_node[code](S, expression_statement, _),
+                                         ast_child[code](S, expression, 0, C).
+edb(keyed_key_kind).
+keyed_key_kind(string_literal).
+keyed_key_kind(numeric_literal).
+keyed_local_key[code](C, Key) :- keyed_local_call[code](C, _, _, _), ast_child[code](C, arguments, 0, A),
+                                 ast_node[code](A, K, _), keyed_key_kind(K), ast_value[code](A, Key).
+
+keyed_get_site[code](C, D, I)    :- keyed_local_call[code](C, D, Get, I), keyed_local[code](D, P, _, _),
+                                    keyed_store(P, _, Get).
+keyed_put_site[code](C, D, V, J) :- keyed_local_call[code](C, D, Put, J), keyed_local[code](D, P, _, _),
+                                    keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
+keyed_put_later[code](C, D, V, J) :- keyed_local_later[code](C, D, Put, J), keyed_local[code](D, P, _, _),
+                                     keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
+
+keyed_put_before[code](V, C) :- keyed_get_site[code](C, D, I), keyed_put_site[code](_, D, V, J), J < I.
+keyed_put_after[code](V, C)  :- keyed_get_site[code](C, D, I), keyed_put_later[code](_, D, V, J), I < J.
+keyed_taken_out[code](V, C, R) :- keyed_put_before[code](V, C), keyed_get_site[code](C, D, I),
+                                  keyed_put_site[code](_, D, V, J), keyed_local_step[code](R, D, "clear", K),
+                                  J < K, K < I.
+keyed_taken_out[code](V, C, R) :- keyed_put_before[code](V, C), keyed_get_site[code](C, D, I),
+                                  keyed_put_site[code](P, D, V, J), keyed_local_step[code](R, D, "delete", K),
+                                  J < K, K < I, keyed_local_key[code](P, Key), keyed_local_key[code](R, Key).
+keyed_taken_out[code](V, C, R) :- keyed_put_before[code](V, C), keyed_get_site[code](C, D, I),
+                                  keyed_put_site[code](P, D, V, J), keyed_put_site[code](R, D, _, K),
+                                  J < K, K < I, keyed_local_step[code](R, D, _, K),
+                                  keyed_local_key[code](P, Key), keyed_local_key[code](R, Key).
+
+keyed_read_ordered[flow](C, V)   :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V), keyed_put_before[code](V, C),
+                                    not keyed_taken_out[code](V, C, _).
+keyed_read_unordered[flow](C, V) :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V), not keyed_put_before[code](V, C),
+                                    not keyed_put_after[code](V, C).
+may_be_node[flow](C, N) :- may_be_node[flow](V, N), keyed_read_ordered[flow](C, V).
+may_be_node[flow](C, N) :- may_be_node[flow](V, N), keyed_read_unordered[flow](C, V).
+may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read_ordered[flow](C, V).
+may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read_unordered[flow](C, V).
 
 -- the walk: position 0 of the head's pattern is a key, position 1 a value
 keyed_walk[flow](D, X) :- ast_node[code](S, for_of_statement, _), ast_child[code](S, left, 0, H),
@@ -999,6 +1063,10 @@ may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[cod
 may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
                                  this_host[flow](P, T).
 
+-- a static member is inherited by the subclass's constructor, a field as a method is
+class_member_static[flow](CD, Key, V) :- super_of[flow](CD, SD), class_member_static[flow](SD, Key, V),
+                                         not own_key[flow](CD, Key).
+
 static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
                                  ast_child[code](B, body, _, SB),
                                  ast_node[code](SB, static_block, _).
@@ -1021,10 +1089,18 @@ corpus_file[code](File) :- ast_node[code](_, program, File).
 
 
 
-exports_name[code](F, Name, File) :- ast_node[code](E, export_named_declaration, File),
+-- an export of the module itself, not one inside a TypeScript namespace
+module_export[code](E, File) :- ast_node[code](P, program, File), ast_child[code](P, body, _, E),
+                                ast_node[code](E, export_named_declaration, _).
+
+exports_name[code](F, Name, File) :- module_export[code](E, File),
                                      ast_child[code](E, declaration, 0, F),
                                      fn_node[code](F),
                                      ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+exports_name[code](D, Name, File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
+                                     class_or_namespace[code](D), own_name[code](D, Name, File, around).
+class_or_namespace[code](D) :- ast_node[code](D, class_declaration, _).
+class_or_namespace[code](D) :- ts_namespace[code](D).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
 -- kind guard is not redundant with `module_site`, which holds of imports too.
@@ -1080,7 +1156,7 @@ may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
 -- literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
 -- in one file reaches a use in another (vscode's channel names and ports, w_next_version_cutoff).
-export_var[code](Init, Name, File) :- ast_node[code](E, export_named_declaration, File),
+export_var[code](Init, Name, File) :- module_export[code](E, File),
                                       ast_child[code](E, declaration, 0, V), ast_child[code](V, declarations, _, D),
                                       binder[code](D, Name, Init, File).
 exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_node[flow](Init, F).
@@ -1328,6 +1404,19 @@ callback_param[flow](P, F, Spec) :- sx_cb[surface](F, Spec), ast_child[code](F, 
 external_value[flow](P, Spec) :- callback_param[flow](P, _, Spec).
 may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P, Name),
                                  param_use[flow](F, Name, U).
+
+-- A TypeScript namespace is an object made at run time (not a `declare`d one):
+-- reached by its name, holding what its body exports.
+ts_namespace[code](NS) :- ast_node[code](NS, tsmodule_declaration, _), not ast_attr[code](NS, declare, true).
+may_be_node[flow](E, NS) :- sees_decl[code](E, NS), ts_namespace[code](NS).
+ns_export[code](NS, E) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, E),
+                          ast_node[code](E, export_named_declaration, _).
+member_value[flow](NS, Name, D)    :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, D),
+                                      own_name[code](D, Name, _, around), not ast_node[code](D, tsdeclare_function, _).
+member_value[flow](NS, Name, Init) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
+                                      ast_child[code](V, declarations, _, D), binder[code](D, Name, Init, _).
+member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), ast_child[code](NS, body, 0, In),
+                                      own_name[code](In, Name, _, around).
 
 -- =========================================================================
 -- 12. CONSTRUCTION

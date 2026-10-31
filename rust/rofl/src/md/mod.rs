@@ -7,6 +7,7 @@
 //! (`model: js`) is the list `rules/js.files`, which `npm test` holds to notebook/front.ts `MODEL_FILES`.
 mod blocks;
 mod omap;
+#[macro_use]
 pub mod reader;
 mod rx;
 mod say;
@@ -122,6 +123,16 @@ fn prose_asks(md: &str) -> Vec<usize> {
         if fenced || rx::test(r"^(?: {4}|\t)", raw) || !(asking(l).is_some() || (english(l) && rx::test(r"[.?]$", l))) { continue; }
         if above.is_empty() || rx::test(r"[.?:!]$", above) || rx::test(r"^(?:[-*>#|]|\d+\. )", above) || (k > 0 && out.contains(&(k - 1))) { out.push(k); }
     }
+    out
+}
+
+/// The lines [from, to) of `md` the reader reads as sentences, whatever the words, and each line of the prose that asks (read_md.ts `sentenceSpans`).
+pub fn sentence_spans(md: &str) -> Vec<(usize, usize)> {
+    let asks = prose_asks(md);
+    let blanked = md.split('\n').enumerate().map(|(k, l)| if asks.contains(&k) { "" } else { l }).collect::<Vec<_>>().join("\n");
+    let mut out = reader::read_md(&blanked, "", &HashMap::new()).spans;
+    out.extend(asks.iter().map(|&k| (k, k + 1)));
+    out.sort_by_key(|s| s.0);
     out
 }
 

@@ -58,6 +58,11 @@ Declared as facts:
 | `ident_in` | "reads(identifier E, name Name, in file File)" |
 | `may_be_lit` | "may_be_the_literal(node E, text V)" |
 | `may_be_node` | "points_to(node E, node N)" |
+| `keyed_read_ordered` | "reads_back(call C, the value put before it node V)" |
+| `keyed_read_unordered` | "may_read_back(call C, the value put in an order not known node V)" |
+| `keyed_put_before` | "is_put_before(node V, call C)" |
+| `keyed_put_after` | "is_put_after(node V, call C)" |
+| `keyed_taken_out` | "is_taken_out_before(node V, call C, by call R)" |
 | `interpolated` | "is_interpolated(template T)" |
 | `binder` | "binds(declarator D, name Name, to node Init, in file File)" |
 | `binder_at_top` | "is_at_the_top(declarator D)" |

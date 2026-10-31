@@ -19,6 +19,45 @@ struct Tok {
     line: usize,
 }
 
+/// A string literal from the quote at `i`: its text, and the index after its closing quote. A newline inside it counts in `line`.
+fn quoted(b: &[char], i: usize, line: &mut usize) -> Result<(String, usize), DenseError> {
+    let mut j = i + 1;
+    let mut s = String::new();
+    while j < b.len() && b[j] != '"' {
+        if b[j] == '\\' {
+            let e = b.get(j + 1).copied().unwrap_or(' ');
+            if e == 'u' {
+                let c = crate::rofl_parse::control_escape(b, j + 1).map_err(|_| DenseError(format!("line {line}: unknown escape")))?;
+                s.push(c);
+                j += 6;
+                continue;
+            }
+            let r = match e {
+                'n' => '\n',
+                't' => '\t',
+                'r' => '\r',
+                'b' => '\u{8}',
+                'f' => '\u{c}',
+                '\\' => '\\',
+                '"' => '"',
+                _ => return Err(DenseError(format!("line {line}: unknown escape"))),
+            };
+            s.push(r);
+            j += 2;
+            continue;
+        }
+        if b[j] == '\n' {
+            *line += 1;
+        }
+        s.push(b[j]);
+        j += 1;
+    }
+    if j >= b.len() {
+        return Err(DenseError(format!("line {line}: unterminated string")));
+    }
+    Ok((s, j + 1))
+}
+
 fn tokens(src: &str) -> Result<Vec<Tok>, DenseError> {
     let b: Vec<char> = src.chars().collect();
     let mut out = Vec::new();
@@ -42,51 +81,14 @@ fn tokens(src: &str) -> Result<Vec<Tok>, DenseError> {
             continue;
         }
         if c == '"' {
-            let mut j = i + 1;
-            let mut s = String::new();
-            while j < b.len() && b[j] != '"' {
-                if b[j] == '\\' {
-                    let e = b.get(j + 1).copied().unwrap_or(' ');
-                    if e == 'u' {
-                        let hex: String = b.get(j + 2..j + 6).map(|h| h.iter().collect()).unwrap_or_default();
-                        let c = u32::from_str_radix(&hex, 16).ok()
-                            .filter(|n| hex.len() == 4 && hex.chars().all(|c| c.is_ascii_hexdigit()) && *n < 0x20)
-                            .and_then(char::from_u32)
-                            .ok_or_else(|| DenseError(format!("line {line}: unknown escape")))?;
-                        s.push(c);
-                        j += 6;
-                        continue;
-                    }
-                    let r = match e {
-                        'n' => '\n',
-                        't' => '\t',
-                        'r' => '\r',
-                        'b' => '\u{8}',
-                        'f' => '\u{c}',
-                        '\\' => '\\',
-                        '"' => '"',
-                        _ => return Err(DenseError(format!("line {line}: unknown escape"))),
-                    };
-                    s.push(r);
-                    j += 2;
-                    continue;
-                }
-                if b[j] == '\n' {
-                    line += 1;
-                }
-                s.push(b[j]);
-                j += 1;
-            }
-            if j >= b.len() {
-                return Err(DenseError(format!("line {line}: unterminated string")));
-            }
+            let (s, next) = quoted(&b, i, &mut line)?;
             out.push(Tok {
                 t: b's',
                 v: s,
                 n: 0,
                 line,
             });
-            i = j + 1;
+            i = next;
             continue;
         }
         if c.is_ascii_digit() || (c == '-' && b.get(i + 1).is_some_and(|x| x.is_ascii_digit())) {

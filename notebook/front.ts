@@ -100,6 +100,9 @@ export function unread(text: string, have: Record<string, string>): string[] {
 }
 
 /** `a/b/../c` -> `a/c`. */
+/** A glob of `code:`, `*`, `?` and `**`, as a pattern over paths. */
+export const globRe = (g: string) => new RegExp(`^${normal(g).split('/').map((s) => s === '**' ? '\u0000' : s.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]')).join('/').replace(/\u0000\//g, '(?:.*/)?').replace(/\u0000/g, '.*')}$`);
+
 export function normal(p: string): string {
   const out: string[] = [];
   for (const s of p.split('/')) { if (s === '..' && out.length && out[out.length - 1] !== '..') out.pop(); else if (s !== '.' && s !== '') out.push(s); }

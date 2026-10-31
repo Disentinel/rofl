@@ -72,6 +72,7 @@ Before a brief goes to a worker, the coordinator answers these in it:
     npm run test:split       the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red
     npm run bench            `[-- --write]`   the reference benchmark: vscode at a pinned commit, the side-effect question, the median of three runs of each measure (the cone and the witnessed world at 250 files, adding a file and opening a kept world at 20) on the Rust release build, against the last version in facts/bench.rofl; `--write` appends this version's medians there. Run it on a quiet machine before a release
     npm run test:npm         the npm packages `npm run dist` packed (@grafema/rofl and this machine's @grafema/rofl-<os>-<cpu>), installed from the tarballs alone into an empty prefix with an empty HOME and no registry, and run from outside the tree: `rofl ask`, `rofl scan` and the JS model by `@rules/js.files`, a kept world, `rofl-nb`, the library; and the faults that must be loud (no engine, an engine of another version, a tag of another version, a signal). Run it after touching scripts/dist.ts, npm/ or how the engine finds its tree
+    npm run engine           `[-- REF]`   the Rust engine's own code as facts (rust/tools/rs_scan), for the model of the engine in models/engine/: its parts, glossary and call paths (`npm run nb -- models/engine/parts.rofl.md`); with REF (a commit or A..B) the tree as REF left it and the lines it changed, and `npm run nb -- models/engine/blast.rofl.md` says what the change touches: functions, callers, verbs, parts, words
 
 <!-- END commands -->
 
@@ -144,9 +145,28 @@ Decided by the owner; each is a finding, read it before arguing with it.
   `derived_by` when something asks. A world that asks `asks(R)` runs only the
   rules R needs, and a question outside the cone is refused, not answered
   wrong (docs/demand-cones.md).
+- **A corpus lives as volumes** (owner, 2026-10-25). A file is scanned into a
+  volume of its own, cooled to disk, and a thin `[surface]` of what escapes it
+  stays beside it. It is to be the engine's default behaviour, not a command
+  of its own (owner, 2026-10-25); it is not the default yet: before a run over more files than one
+  heap holds, read docs/cli.md, *A corpus larger than one heap*, for the parts
+  that exist and how to run them, and say which one the run uses.
 
 What changed for an agent, and the known gaps, are in docs/releases/1.5.md
 (and 1.4.md, 1.3.md, 1.2.md, 1.1.md before it).
+
+## Where an agent finds a feature
+
+docs/cli.md is the agent's manual of the engine: every verb, the kept worlds,
+the exit codes, the `rofl serve` protocol, the paths for a corpus larger than
+one heap and what `hot:` on stderr means. guide/ is the book for a person using
+`rofl-nb` (guide/AGENTS.md for an agent in another project). docs/ holds the
+design decisions; README.md, *What is in the tree*, maps the rest.
+
+**A feature is done when an agent reading only this file and docs/cli.md finds
+it**: its command, or one line saying it has none yet and which harness drives
+it. A capability that lives only in a script's header, a design note or a
+finding is not findable, and the next agent builds around it.
 
 ## Testing has a hard limit
 

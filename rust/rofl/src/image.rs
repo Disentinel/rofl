@@ -150,6 +150,25 @@ impl W {
 /// The world in `s`, and what its evaluation staged for the next tick, as a kept image.
 pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], answer: &RuleAnswer, lattices: &[Tok], unknowns: &[Tok]) -> Vec<u8> {
     let mut w = W::default();
+    write_header(&mut w, s);
+    let fact_ix = write_facts(&mut w, h, s);
+    let cell_ix = write_cells(&mut w, h, s, &fact_ix);
+    write_firings(&mut w, s, &fact_ix, &cell_ix);
+    w.u32(s.eval_log.len() as u32);
+    for (t, e) in &s.eval_log {
+        w.u32(*t);
+        w.i64(e.budget);
+        w.i64(e.steps);
+        w.out.push(e.partial as u8);
+    }
+    write_staged(&mut w, h, staged, &fact_ix, &cell_ix);
+    w.answer(answer);
+    write_toks(&mut w, h, lattices, &fact_ix, &cell_ix);
+    write_toks(&mut w, h, unknowns, &fact_ix, &cell_ix);
+    frame(w, h)
+}
+
+fn write_header(w: &mut W, s: &Store) {
     w.u32(s.tick);
     w.out.push((!s.dirty && !s.partial_eval) as u8);
     w.u32(s.tick_log.len() as u32);
@@ -168,6 +187,10 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
     for t in tags {
         w.sym(t);
     }
+}
+
+/// The live facts, then the dead ones, numbered in the order written.
+fn write_facts(w: &mut W, h: &Heap, s: &Store) -> HashMap<u32, u32> {
     let (live, dead) = (s.live_ids(), s.dead_ids());
     let mut fact_ix: HashMap<u32, u32> = HashMap::with_capacity(live.len() + dead.len());
     for ids in [&live, &dead] {
@@ -181,6 +204,11 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
             w.terms(h, s.args(id));
         }
     }
+    fact_ix
+}
+
+/// The cells in order, each with its key, value, members and seals; returns the index each cell was written at.
+fn write_cells(w: &mut W, h: &Heap, s: &Store, fact_ix: &HashMap<u32, u32>) -> HashMap<u32, u32> {
     let cells = s.cells_in_order(h);
     let cell_ix: HashMap<u32, u32> = cells.iter().enumerate().map(|(i, (c, _))| (*c, i as u32)).collect();
     w.u32(cells.len() as u32);
@@ -215,7 +243,7 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
             let derivs: Vec<&[PremRef]> = s.member_derivs(m).collect();
             w.u32(derivs.len() as u32);
             for d in derivs {
-                w.prems(d, &fact_ix, &HashMap::new());
+                w.prems(d, fact_ix, &HashMap::new());
             }
         }
         let seals = s.cell_seals(*c);
@@ -225,6 +253,10 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
             w.u32(x.round);
         }
     }
+    cell_ix
+}
+
+fn write_firings(w: &mut W, s: &Store, fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
     let firing = s.firing_keys();
     w.u32(firing.len() as u32);
     for id in firing {
@@ -235,57 +267,57 @@ pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>
         for v in wits.iter().rev() {
             w.sym(v.rule);
             w.u32(v.tick);
-            w.prems(v.prems, &fact_ix, &cell_ix);
+            w.prems(v.prems, fact_ix, cell_ix);
         }
     }
-    w.u32(s.eval_log.len() as u32);
-    for (t, e) in &s.eval_log {
-        w.u32(*t);
-        w.i64(e.budget);
-        w.i64(e.steps);
-        w.out.push(e.partial as u8);
-    }
+}
+
+fn write_staged(w: &mut W, h: &Heap, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
     w.u32(staged.len() as u32);
     for (f, alts) in staged {
         w.sym(f.rel);
         w.sym(f.persp);
         w.terms(h, &f.args);
         w.sym(f.rule);
-        w.prems(&f.prems, &fact_ix, &cell_ix);
+        w.prems(&f.prems, fact_ix, cell_ix);
         w.u32(alts.len() as u32);
         for (rule, prems) in alts {
             w.sym(*rule);
-            w.prems(prems, &fact_ix, &cell_ix);
+            w.prems(prems, fact_ix, cell_ix);
         }
     }
-    w.answer(answer);
-    for toks in [lattices, unknowns] {
-        w.u32(toks.len() as u32);
-        for t in toks {
-            match t {
-                Tok::N(n) => {
-                    w.out.push(0);
-                    w.u32(*n)
-                }
-                Tok::T(x) => {
-                    w.out.push(1);
-                    w.term(h, *x)
-                }
-                Tok::F(f) => {
-                    w.out.push(2);
-                    w.u32(fact_ix.get(f).copied().unwrap_or(u32::MAX))
-                }
-                Tok::S(x) => {
-                    w.out.push(3);
-                    w.sym(*x)
-                }
-                Tok::P(ps) => {
-                    w.out.push(4);
-                    w.prems(ps, &fact_ix, &cell_ix)
-                }
+}
+
+fn write_toks(w: &mut W, h: &Heap, toks: &[Tok], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
+    w.u32(toks.len() as u32);
+    for t in toks {
+        match t {
+            Tok::N(n) => {
+                w.out.push(0);
+                w.u32(*n)
+            }
+            Tok::T(x) => {
+                w.out.push(1);
+                w.term(h, *x)
+            }
+            Tok::F(f) => {
+                w.out.push(2);
+                w.u32(fact_ix.get(f).copied().unwrap_or(u32::MAX))
+            }
+            Tok::S(x) => {
+                w.out.push(3);
+                w.sym(*x)
+            }
+            Tok::P(ps) => {
+                w.out.push(4);
+                w.prems(ps, fact_ix, cell_ix)
             }
         }
     }
+}
+
+/// The magic, the names, the term table, then what was written.
+fn frame(w: W, h: &Heap) -> Vec<u8> {
     let mut file = MAGIC.to_vec();
     file.extend_from_slice(&(w.names.len() as u32).to_le_bytes());
     for &n in &w.names {
@@ -442,14 +474,45 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         return Err("not a kept image of this build".into());
     }
     let mut r = R { b: bytes, i: MAGIC.len(), names: Vec::new(), terms: Vec::new(), ground: Vec::new() };
-    let n = r.u32()?;
-    for _ in 0..n {
+    read_names(&mut r, h)?;
+    r.table(h)?;
+    let mut s = Store::new();
+    let evaluated = read_header(&mut r, &mut s)?;
+    let mut ids: Vec<u32> = Vec::new();
+    let ghosts = read_facts(&mut r, h, &mut s, &mut ids)?;
+    let cells = read_cells(&mut r, &mut s, &ids)?;
+    let dangling = read_firings(&mut r, &mut s, &ids, &cells)?;
+    for _ in 0..r.u32()? {
+        let t = r.u32()?;
+        let (budget, steps, partial) = (r.i64()?, r.i64()?, r.u8()? == 1);
+        s.eval_log.insert(t, EvalRecord { budget, steps, partial });
+    }
+    let staged = read_staged(&mut r, &ids, &cells)?;
+    let answer = r.answer()?;
+    let lattices = read_toks(&mut r, &ids, &cells)?;
+    let unknowns = read_toks(&mut r, &ids, &cells)?;
+    if r.i != bytes.len() {
+        return Err("a kept image has bytes after its end".into());
+    }
+    for &id in &ids[ghosts] {
+        s.retire_keeping_firings(id);
+    }
+    s.sweep();
+    s.dirty = !evaluated;
+    Ok(Opened { store: s, staged, dangling, answer: evaluated.then_some(answer), lattices, unknowns })
+}
+
+fn read_names(r: &mut R, h: &mut Heap) -> Result<(), String> {
+    for _ in 0..r.u32()? {
         let len = r.u32()? as usize;
         let t = std::str::from_utf8(r.bytes(len)?).map_err(|e| e.to_string())?.to_string();
         r.names.push(h.intern(&t));
     }
-    r.table(h)?;
-    let mut s = Store::new();
+    Ok(())
+}
+
+/// The tick, whether the image was evaluated, the tick log, the lattice registers and the tag rules; returns the evaluated flag.
+fn read_header(r: &mut R, s: &mut Store) -> Result<bool, String> {
     s.tick = r.u32()?;
     let evaluated = r.u8()? == 1;
     for _ in 0..r.u32()? {
@@ -466,7 +529,11 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         let t = r.sym()?;
         s.tag_rules.insert(t);
     }
-    let mut ids: Vec<u32> = Vec::new();
+    Ok(evaluated)
+}
+
+/// The live facts, then the dead ones, put back in the store; returns the range of the dead ones (the ghosts).
+fn read_facts(r: &mut R, h: &mut Heap, s: &mut Store, ids: &mut Vec<u32>) -> Result<std::ops::Range<usize>, String> {
     let mut args = Vec::new();
     let mut ghosts = 0..0;
     for part in 0..2 {
@@ -486,7 +553,11 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
             ghosts = from..ids.len();
         }
     }
-    let mut dangling = 0usize;
+    Ok(ghosts)
+}
+
+/// The cells, in order; returns the id each cell was added (or shared) as.
+fn read_cells(r: &mut R, s: &mut Store, ids: &[u32]) -> Result<Vec<u32>, String> {
     let mut cells: Vec<u32> = Vec::new();
     for _ in 0..r.u32()? {
         let rule = r.sym()?;
@@ -502,19 +573,7 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
         let tick = r.u32()?;
         let desc = r.sym()?;
         let like = r.u32()?;
-        let mut members = Vec::new();
-        for _ in 0..r.u32()? {
-            let proj: Box<[Term]> = r.term_list()?.into();
-            let value = r.term()?;
-            let height = r.u32()?;
-            let mut derivs = Vec::new();
-            for _ in 0..r.u32()? {
-                derivs.push(r.prems(&ids, &[])?.ok_or("a cell member names a fact the image does not hold")?);
-            }
-            let mut d = derivs.into_iter();
-            let prems = d.next().unwrap_or_default();
-            members.push(NewMember { proj, value, height, prems, others: d.collect() });
-        }
+        let members = read_members(r, ids)?;
         let mut seals = Vec::new();
         for _ in 0..r.u32()? {
             let rel = r.sym()?;
@@ -526,12 +585,35 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
             None => s.add_cell(cell),
         });
     }
+    Ok(cells)
+}
+
+fn read_members(r: &mut R, ids: &[u32]) -> Result<Vec<NewMember>, String> {
+    let mut members = Vec::new();
+    for _ in 0..r.u32()? {
+        let proj: Box<[Term]> = r.term_list()?.into();
+        let value = r.term()?;
+        let height = r.u32()?;
+        let mut derivs = Vec::new();
+        for _ in 0..r.u32()? {
+            derivs.push(r.prems(ids, &[])?.ok_or("a cell member names a fact the image does not hold")?);
+        }
+        let mut d = derivs.into_iter();
+        let prems = d.next().unwrap_or_default();
+        members.push(NewMember { proj, value, height, prems, others: d.collect() });
+    }
+    Ok(members)
+}
+
+/// The firings with their witnesses; returns how many witnesses name a fact or premise the image does not hold.
+fn read_firings(r: &mut R, s: &mut Store, ids: &[u32], cells: &[u32]) -> Result<usize, String> {
+    let mut dangling = 0usize;
     for _ in 0..r.u32()? {
         let at = r.u32()?;
         for _ in 0..r.u32()? {
             let rule = r.sym()?;
             let tick = r.u32()?;
-            let prems = r.prems(&ids, &cells)?;
+            let prems = r.prems(ids, cells)?;
             match (ids.get(at as usize), prems) {
                 (Some(&id), Some(prems)) => {
                     s.support(id, Witness { rule, tick, prems });
@@ -540,65 +622,54 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
             }
         }
     }
-    for _ in 0..r.u32()? {
-        let t = r.u32()?;
-        let (budget, steps, partial) = (r.i64()?, r.i64()?, r.u8()? == 1);
-        s.eval_log.insert(t, EvalRecord { budget, steps, partial });
-    }
+    Ok(dangling)
+}
+
+fn read_staged(r: &mut R, ids: &[u32], cells: &[u32]) -> Result<Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>, String> {
     let mut staged = Vec::new();
     for _ in 0..r.u32()? {
         let rel = r.sym()?;
         let persp = r.sym()?;
         let args = r.term_list()?;
         let rule = r.sym()?;
-        let prems = r.prems(&ids, &cells)?.ok_or("a staged fact names a fact the image does not hold")?;
+        let prems = r.prems(ids, cells)?.ok_or("a staged fact names a fact the image does not hold")?;
         let mut alts = Vec::new();
         for _ in 0..r.u32()? {
             let rule = r.sym()?;
-            alts.push((rule, r.prems(&ids, &cells)?.ok_or("a staged fact names a fact the image does not hold")?));
+            alts.push((rule, r.prems(ids, cells)?.ok_or("a staged fact names a fact the image does not hold")?));
         }
         staged.push((StagedFact { rel, persp, args, rule, prems }, alts));
     }
-    let answer = r.answer()?;
-    let mut streams = Vec::new();
-    for _ in 0..2 {
-        let mut toks = Vec::new();
-        let mut whole = true;
-        for _ in 0..r.u32()? {
-            toks.push(match r.u8()? {
-                0 => Tok::N(r.u32()?),
-                1 => Tok::T(r.term()?),
-                2 => match ids.get(r.u32()? as usize) {
-                    Some(&f) => Tok::F(f),
-                    None => {
-                        whole = false;
-                        continue;
-                    }
-                },
-                3 => Tok::S(r.sym()?),
-                _ => match r.prems(&ids, &cells)? {
-                    Some(p) => Tok::P(p),
-                    None => {
-                        whole = false;
-                        continue;
-                    }
-                },
-            });
-        }
-        if !whole {
-            toks.clear();
-        }
-        streams.push(toks);
+    Ok(staged)
+}
+
+/// One token stream; a stream that names a fact or premise the image does not hold reads as empty.
+fn read_toks(r: &mut R, ids: &[u32], cells: &[u32]) -> Result<Vec<Tok>, String> {
+    let mut toks = Vec::new();
+    let mut whole = true;
+    for _ in 0..r.u32()? {
+        toks.push(match r.u8()? {
+            0 => Tok::N(r.u32()?),
+            1 => Tok::T(r.term()?),
+            2 => match ids.get(r.u32()? as usize) {
+                Some(&f) => Tok::F(f),
+                None => {
+                    whole = false;
+                    continue;
+                }
+            },
+            3 => Tok::S(r.sym()?),
+            _ => match r.prems(ids, cells)? {
+                Some(p) => Tok::P(p),
+                None => {
+                    whole = false;
+                    continue;
+                }
+            },
+        });
     }
-    let unknowns = streams.pop().unwrap();
-    let lattices = streams.pop().unwrap();
-    if r.i != bytes.len() {
-        return Err("a kept image has bytes after its end".into());
+    if !whole {
+        toks.clear();
     }
-    for &id in &ids[ghosts] {
-        s.retire_keeping_firings(id);
-    }
-    s.sweep();
-    s.dirty = !evaluated;
-    Ok(Opened { store: s, staged, dangling, answer: evaluated.then_some(answer), lattices, unknowns })
+    Ok(toks)
 }

@@ -253,7 +253,7 @@ fn every_door_reads_a_set_by_its_value() {
     assert!(s.ask("r(k, set(Y))").is_ok(), "set(Y) has one spelling");
     let why = s.why("r(k, set(b, a))").unwrap();
     assert!(why.contains("[lattice union: a cover of 2 contributions]"), "{why}");
-    let b = rofl::engine::WhynotBounds { max_depth: 4, max_nodes: 64 };
+    let b = rofl::engine::WhynotBounds { max_depth: 4, max_nodes: 64, all: false };
     let (holds, text) = s.whynot("r(k, set(a, a, b))", &b).unwrap();
     assert!(holds, "{text}");
     assert!(s.whynot("r(k, set(b, Y))", &b).is_err());

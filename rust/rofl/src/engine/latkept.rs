@@ -17,143 +17,225 @@ pub enum Tok {
 
 struct Out(Vec<Tok>);
 
+const SHORT: &str = "a kept lattice ends early or out of kind";
+
+struct In(std::vec::IntoIter<Tok>);
+
 impl Out {
     fn n(&mut self, n: usize) {
         self.0.push(Tok::N(n as u32));
     }
-    fn terms(&mut self, ts: &[Term]) {
-        self.n(ts.len());
-        self.0.extend(ts.iter().map(|t| Tok::T(*t)));
+}
+
+impl In {
+    fn tok<T>(&mut self, pick: impl FnOnce(Tok) -> Option<T>) -> Result<T, String> {
+        self.0.next().and_then(pick).ok_or_else(|| SHORT.into())
     }
-    fn facts(&mut self, fs: &[FactId]) {
-        self.n(fs.len());
-        self.0.extend(fs.iter().map(|f| Tok::F(*f)));
-    }
-    fn key(&mut self, ck: &LatKey) {
-        self.0.push(Tok::S(ck.0));
-        self.0.push(Tok::S(ck.1));
-        self.terms(&ck.2);
-    }
-    fn val(&mut self, (ck, v): &SubVal) {
-        self.key(ck);
-        self.terms(v);
+    fn n(&mut self) -> Result<usize, String> {
+        self.tok(|t| if let Tok::N(n) = t { Some(n as usize) } else { None })
     }
 }
 
-struct In<I: Iterator<Item = Tok>>(I);
+/// How a piece of the kept stream is written and read back: one description of a field serves both.
+trait Shape {
+    type V;
+    fn put(v: &Self::V, o: &mut Out);
+    fn get(i: &mut In) -> Result<Self::V, String>;
+}
 
-const SHORT: &str = "a kept lattice ends early or out of kind";
+macro_rules! leaf {
+    ($name:ident, $v:ty, $tag:ident) => {
+        struct $name;
+        impl Shape for $name {
+            type V = $v;
+            fn put(v: &$v, o: &mut Out) {
+                o.0.push(Tok::$tag(v.clone()));
+            }
+            fn get(i: &mut In) -> Result<$v, String> {
+                i.tok(|t| if let Tok::$tag(x) = t { Some(x) } else { None })
+            }
+        }
+    };
+}
+leaf!(Sy, Sym, S);
+leaf!(Fa, FactId, F);
+leaf!(Te, Term, T);
+leaf!(Pr, Vec<PremRef>, P);
 
-impl<I: Iterator<Item = Tok>> In<I> {
-    fn n(&mut self) -> Result<usize, String> {
-        match self.0.next() {
-            Some(Tok::N(n)) => Ok(n as usize),
-            _ => Err(SHORT.into()),
+/// A count and that many of `T`, in the collection `C`, as it iterates.
+struct Seq<C, T>(std::marker::PhantomData<(C, T)>);
+impl<C: FromIterator<T::V>, T: Shape> Shape for Seq<C, T>
+where
+    for<'a> &'a C: IntoIterator<Item = &'a T::V, IntoIter: ExactSizeIterator>,
+{
+    type V = C;
+    fn put(v: &C, o: &mut Out) {
+        o.n(v.into_iter().len());
+        v.into_iter().for_each(|x| T::put(x, o));
+    }
+    fn get(i: &mut In) -> Result<C, String> {
+        (0..i.n()?).map(|_| T::get(i)).collect()
+    }
+}
+
+struct Map<K, V>(std::marker::PhantomData<(K, V)>);
+impl<K: Shape, V: Shape> Shape for Map<K, V>
+where
+    K::V: Eq + std::hash::Hash,
+{
+    type V = HashMap<K::V, V::V>;
+    fn put(m: &Self::V, o: &mut Out) {
+        o.n(m.len());
+        for (k, v) in m {
+            K::put(k, o);
+            V::put(v, o);
         }
     }
-    fn term(&mut self) -> Result<Term, String> {
-        match self.0.next() {
-            Some(Tok::T(t)) => Ok(t),
-            _ => Err(SHORT.into()),
+    fn get(i: &mut In) -> Result<Self::V, String> {
+        (0..i.n()?).map(|_| Ok((K::get(i)?, V::get(i)?))).collect()
+    }
+}
+
+macro_rules! tuple {
+    ($($t:ident $i:tt),+) => {
+        impl<$($t: Shape),+> Shape for ($($t,)+) {
+            type V = ($($t::V,)+);
+            fn put(v: &Self::V, o: &mut Out) {
+                $($t::put(&v.$i, o);)+
+            }
+            fn get(i: &mut In) -> Result<Self::V, String> {
+                Ok(($($t::get(i)?,)+))
+            }
+        }
+    };
+}
+tuple!(A 0, B 1);
+tuple!(A 0, B 1, C 2);
+
+type Terms = Seq<Box<[Term]>, Te>;
+type TermVec = Seq<Vec<Term>, Te>;
+type Facts = Seq<Vec<FactId>, Fa>;
+type Key = (Sy, Sy, Terms);
+type Val = (Key, Terms);
+
+struct Un;
+impl Shape for Un {
+    type V = Unknown;
+    fn put(u: &Unknown, o: &mut Out) {
+        match u {
+            Unknown::Cell(k) => {
+                o.n(0);
+                Key::put(k, o);
+            }
+            Unknown::Rel(r) => {
+                o.n(1);
+                Sy::put(r, o);
+            }
+            Unknown::Tuple(r, p, args) => {
+                o.n(2);
+                Key::put(&(*r, *p, args.clone()), o);
+            }
         }
     }
-    fn fact(&mut self) -> Result<FactId, String> {
-        match self.0.next() {
-            Some(Tok::F(f)) => Ok(f),
-            _ => Err(SHORT.into()),
+    fn get(i: &mut In) -> Result<Unknown, String> {
+        Ok(match i.n()? {
+            0 => Unknown::Cell(Key::get(i)?),
+            1 => Unknown::Rel(Sy::get(i)?),
+            _ => {
+                let (r, p, args) = Key::get(i)?;
+                Unknown::Tuple(r, p, args)
+            }
+        })
+    }
+}
+
+/// The fields of a record, in the order kept, written and read from one list.
+macro_rules! record {
+    ($put:ident, $get:ident, $($f:ident: $s:ty),+) => {
+        fn $put(&self, o: &mut Out) {
+            $(<$s>::put(&self.$f, o);)+
         }
-    }
-    fn sym(&mut self) -> Result<Sym, String> {
-        match self.0.next() {
-            Some(Tok::S(s)) => Ok(s),
-            _ => Err(SHORT.into()),
+        fn $get(&mut self, i: &mut In) -> Result<(), String> {
+            $(self.$f = <$s>::get(i)?;)+
+            Ok(())
         }
-    }
-    fn prems(&mut self) -> Result<Vec<PremRef>, String> {
-        match self.0.next() {
-            Some(Tok::P(p)) => Ok(p),
-            _ => Err(SHORT.into()),
-        }
-    }
-    fn terms(&mut self) -> Result<Box<[Term]>, String> {
-        (0..self.n()?).map(|_| self.term()).collect()
-    }
-    fn facts(&mut self) -> Result<Vec<FactId>, String> {
-        (0..self.n()?).map(|_| self.fact()).collect()
-    }
-    fn key(&mut self) -> Result<LatKey, String> {
-        Ok((self.sym()?, self.sym()?, self.terms()?))
-    }
-    fn val(&mut self) -> Result<SubVal, String> {
-        Ok((self.key()?, self.terms()?))
-    }
-    fn many<T>(&mut self, mut one: impl FnMut(&mut Self) -> Result<T, String>) -> Result<Vec<T>, String> {
-        (0..self.n()?).map(|_| one(self)).collect()
-    }
+    };
+}
+
+impl LatticePass {
+    record!(put_kept, get_kept,
+        sub_cur: Map<Key, Facts>, join_contribs: Map<Key, Facts>, history: Map<Key, Facts>, cur: Map<Key, Fa>,
+        sub_seen: Map<Key, Seq<Vec<Box<[Term]>>, Terms>>, sub_beaten: Map<Val, Terms>, sub_prems: Map<Val, Seq<Vec<Vec<PremRef>>, Pr>>,
+        sub_by: Map<Val, (Fa, Sy)>, sub_parties: Map<Key, TermVec>, conflict_marks: Map<Te, TermVec>,
+        sub_gone: Seq<HashSet<FactId>, Fa>, superseded: Seq<HashSet<FactId>, Fa>, stale: Seq<HashSet<FactId>, Fa>, closed: Seq<HashSet<Sym>, Sy>);
 }
 
 impl Eval {
-    fn lattice_keeps(&self) -> bool {
-        !self.subs.is_empty() || self.lattices.values().any(|(_, op)| op.is_join())
+    /// WHAT THE HOLES LEFT UNKNOWN, kept with a volume: each relation's unknowns in the order they were noted, with
+    /// what each was reached from, and which were carried and which are plain. A question answered on demand reads
+    /// them (`read_unknown`) beyond the store; a world opened without them answered a negation unfolded at a call as
+    /// if the hole were absence.
+    pub fn unknowns_kept(&self) -> Vec<Tok> {
+        let mut o = Out(Vec::new());
+        let mut rels: Vec<Sym> = self.lat.carry.lat_unknown_rel.keys().copied().collect();
+        rels.sort_unstable();
+        o.n(rels.len());
+        for r in rels {
+            let list = &self.lat.carry.lat_unknown_rel[&r];
+            o.n(list.len());
+            for u in list {
+                Un::put(u, &mut o);
+                match self.lat.carry.unknown.get(u) {
+                    Some(Some((v, rule))) => {
+                        o.n(1);
+                        Un::put(v, &mut o);
+                        Sy::put(rule, &mut o);
+                    }
+                    _ => o.n(0),
+                }
+            }
+        }
+        Set::put(&self.lat.carry.spread, &mut o);
+        Set::put(&self.lat.carry.plain, &mut o);
+        o.0
+    }
+
+    /// The unknowns `unknowns_kept` wrote, noted again as the evaluation noted them.
+    pub fn unknowns_from(&mut self, toks: Vec<Tok>) -> Result<(), String> {
+        let mut i = In(toks.into_iter());
+        let (reads, carried) = (std::mem::replace(&mut self.unk.reads_unknown, false), self.wfs.carry_rows);
+        for _ in 0..i.n()? {
+            for _ in 0..i.n()? {
+                let u = Un::get(&mut i)?;
+                let via = if i.n()? == 1 { Some((Un::get(&mut i)?, Sy::get(&mut i)?)) } else { None };
+                self.note_unknown(u, via);
+            }
+        }
+        (self.unk.reads_unknown, self.wfs.carry_rows) = (reads, carried);
+        self.lat.carry.spread = Set::get(&mut i)?;
+        self.lat.carry.plain = Set::get(&mut i)?;
+        if i.0.next().is_some() {
+            return Err("kept unknowns have items after their end".into());
+        }
+        Ok(())
+    }
+}
+
+type Set = Seq<HashSet<Unknown>, Un>;
+
+impl LatticeState {
+    pub(super) fn lattice_keeps(&self) -> bool {
+        self.algebras.values().any(|a| a.sub.is_some() || a.join.is_some())
     }
 
     /// The stream to keep, empty for a world that needs none or that cannot be kept so.
-    pub fn lattices_kept(&self) -> Vec<Tok> {
-        let unkept = !self.widened_x.is_empty() || !self.lat_unknown.is_empty() || !self.lat_pending.is_empty() || self.store.dirty || self.store.partial_eval;
+    pub fn lattices_kept(&self, store: &Store) -> Vec<Tok> {
+        let unkept = !self.pass.widened_x.is_empty() || !self.carry.unknown.is_empty() || !self.pass.pending.is_empty() || store.dirty || store.partial_eval;
         if !self.lattice_keeps() || unkept {
             return Vec::new();
         }
         let mut o = Out(vec![Tok::N(1)]);
-        for m in [&self.sub_cur, &self.join_contribs, &self.lat_history] {
-            o.n(m.len());
-            for (ck, fs) in m {
-                o.key(ck);
-                o.facts(fs);
-            }
-        }
-        o.n(self.lat_cur.len());
-        for (ck, f) in &self.lat_cur {
-            o.key(ck);
-            o.0.push(Tok::F(*f));
-        }
-        o.n(self.sub_seen.len());
-        for (ck, vs) in &self.sub_seen {
-            o.key(ck);
-            o.n(vs.len());
-            vs.iter().for_each(|v| o.terms(v));
-        }
-        o.n(self.sub_beaten.len());
-        for (sv, by) in &self.sub_beaten {
-            o.val(sv);
-            o.terms(by);
-        }
-        o.n(self.sub_prems.len());
-        for (sv, ps) in &self.sub_prems {
-            o.val(sv);
-            o.n(ps.len());
-            o.0.extend(ps.iter().map(|p| Tok::P(p.clone())));
-        }
-        o.n(self.sub_by.len());
-        for (sv, (f, rule)) in &self.sub_by {
-            o.val(sv);
-            o.0.push(Tok::F(*f));
-            o.0.push(Tok::S(*rule));
-        }
-        o.n(self.sub_parties.len());
-        for (ck, ts) in &self.sub_parties {
-            o.key(ck);
-            o.terms(ts);
-        }
-        o.n(self.conflict_marks.len());
-        for (t, ts) in &self.conflict_marks {
-            o.0.push(Tok::T(*t));
-            o.terms(ts);
-        }
-        for s in [&self.sub_gone, &self.lat_superseded, &self.lat_stale] {
-            o.facts(&s.iter().copied().collect::<Vec<_>>());
-        }
-        o.n(self.lat_closed.len());
-        o.0.extend(self.lat_closed.iter().map(|r| Tok::S(*r)));
+        self.pass.put_kept(&mut o);
         o.0
     }
 
@@ -165,115 +247,15 @@ impl Eval {
             Some(Tok::N(1)) => {}
             _ => return Err(SHORT.into()),
         }
-        let mut maps: Vec<HashMap<LatKey, Vec<FactId>>> = Vec::new();
-        for _ in 0..3 {
-            maps.push(i.many(|i| Ok((i.key()?, i.facts()?)))?.into_iter().collect());
+        self.pass.get_kept(&mut i)?;
+        self.pass.sub_seen_set = self.pass.sub_seen.iter().flat_map(|(ck, vs)| vs.iter().enumerate().map(move |(n, v)| ((ck.clone(), v.clone()), n as u32))).collect();
+        self.pass.sub_by_of.clear();
+        for ((_, d), (f, _)) in &self.pass.sub_by {
+            self.pass.sub_by_of.entry(*f).or_default().push(d.clone());
         }
-        self.lat_history = maps.pop().unwrap();
-        self.join_contribs = maps.pop().unwrap();
-        self.sub_cur = maps.pop().unwrap();
-        self.lat_cur = i.many(|i| Ok((i.key()?, i.fact()?)))?.into_iter().collect();
-        self.sub_seen = i.many(|i| Ok((i.key()?, i.many(|i| i.terms())?)))?.into_iter().collect();
-        self.sub_seen_set = self.sub_seen.iter().flat_map(|(ck, vs)| vs.iter().enumerate().map(move |(n, v)| ((ck.clone(), v.clone()), n as u32))).collect();
-        self.sub_beaten = i.many(|i| Ok((i.val()?, i.terms()?)))?.into_iter().collect();
-        self.sub_prems = i.many(|i| Ok((i.val()?, i.many(|i| i.prems())?)))?.into_iter().collect();
-        self.sub_by = i.many(|i| Ok((i.val()?, (i.fact()?, i.sym()?))))?.into_iter().collect();
-        self.sub_by_of.clear();
-        for ((_, d), (f, _)) in &self.sub_by {
-            self.sub_by_of.entry(*f).or_default().push(d.clone());
-        }
-        self.sub_parties = i.many(|i| Ok((i.key()?, i.terms()?.into_vec())))?.into_iter().collect();
-        self.conflict_marks = i.many(|i| Ok((i.term()?, i.terms()?.into_vec())))?.into_iter().collect();
-        self.sub_gone = i.facts()?.into_iter().collect();
-        self.lat_superseded = i.facts()?.into_iter().collect();
-        self.lat_stale = i.facts()?.into_iter().collect();
-        self.lat_closed = i.many(|i| i.sym())?.into_iter().collect();
         if i.0.next().is_some() {
             return Err("a kept lattice has items after its end".into());
         }
         Ok(true)
-    }
-
-    /// WHAT THE HOLES LEFT UNKNOWN, kept with a volume: each relation's unknowns in the order they were noted, with
-    /// what each was reached from, and which were carried and which are plain. A question answered on demand reads
-    /// them (`read_unknown`) beyond the store; a world opened without them answered a negation unfolded at a call as
-    /// if the hole were absence.
-    pub fn unknowns_kept(&self) -> Vec<Tok> {
-        let mut o = Out(Vec::new());
-        let mut rels: Vec<Sym> = self.lat_unknown_rel.keys().copied().collect();
-        rels.sort_unstable();
-        o.n(rels.len());
-        for r in rels {
-            let list = &self.lat_unknown_rel[&r];
-            o.n(list.len());
-            for u in list {
-                o.unknown(u);
-                match self.lat_unknown.get(u) {
-                    Some(Some((v, rule))) => {
-                        o.n(1);
-                        o.unknown(v);
-                        o.0.push(Tok::S(*rule));
-                    }
-                    _ => o.n(0),
-                }
-            }
-        }
-        for set in [&self.lat_spread, &self.lat_plain] {
-            o.n(set.len());
-            set.iter().for_each(|u| o.unknown(u));
-        }
-        o.0
-    }
-
-    /// The unknowns `unknowns_kept` wrote, noted again as the evaluation noted them.
-    pub fn unknowns_from(&mut self, toks: Vec<Tok>) -> Result<(), String> {
-        let mut i = In(toks.into_iter());
-        let (reads, carried) = (std::mem::replace(&mut self.reads_unknown, false), self.carry_rows);
-        for _ in 0..i.n()? {
-            for _ in 0..i.n()? {
-                let u = i.unknown()?;
-                let via = if i.n()? == 1 { Some((i.unknown()?, i.sym()?)) } else { None };
-                self.note_unknown(u, via);
-            }
-        }
-        (self.reads_unknown, self.carry_rows) = (reads, carried);
-        self.lat_spread = i.many(|i| i.unknown())?.into_iter().collect();
-        self.lat_plain = i.many(|i| i.unknown())?.into_iter().collect();
-        if i.0.next().is_some() {
-            return Err("kept unknowns have items after their end".into());
-        }
-        Ok(())
-    }
-}
-
-impl Out {
-    fn unknown(&mut self, u: &Unknown) {
-        match u {
-            Unknown::Cell(k) => {
-                self.n(0);
-                self.key(k);
-            }
-            Unknown::Rel(r) => {
-                self.n(1);
-                self.0.push(Tok::S(*r));
-            }
-            Unknown::Tuple(r, p, args) => {
-                self.n(2);
-                self.key(&(*r, *p, args.clone()));
-            }
-        }
-    }
-}
-
-impl<I: Iterator<Item = Tok>> In<I> {
-    fn unknown(&mut self) -> Result<Unknown, String> {
-        Ok(match self.n()? {
-            0 => Unknown::Cell(self.key()?),
-            1 => Unknown::Rel(self.sym()?),
-            _ => {
-                let (r, p, args) = self.key()?;
-                Unknown::Tuple(r, p, args)
-            }
-        })
     }
 }

@@ -7,14 +7,17 @@
   // `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING`. Type stripping is not
   // applied to files under `node_modules`, in any version, so raw `.ts` works
   // for this repository's own scripts and cannot work for a dependency.
+  //
+  // Declarations only: the package's JavaScript is the one scripts/dist.ts
+  // transpiles for the commands (src/, runtime/), and the exports name it.
+  // No maps: the sources they would point at are not in the package.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": false,
     "allowImportingTsExtensions": false,
     "rewriteRelativeImportExtensions": true,
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
+    "emitDeclarationOnly": true,
     "outDir": "dist"
   },
   "include": ["src/**/*.ts", "runtime/port.ts"]

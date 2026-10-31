@@ -73,6 +73,43 @@ fn going(ids: Vec<u32>, stays: &[u32]) -> Vec<rofl::store::FactId> {
 /// `s`, opened from the kept world `r`, brought by delta to the world of the files `files` (absolute, as the run
 /// names them); why not, otherwise, and then `s` is not to be used.
 pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, String> {
+    check_record(r, files)?;
+    let stamps: HashMap<&str, &str> = r.read.iter().map(|(p, s)| (p.as_str(), s.as_str())).collect();
+    let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
+    let all = rofl::brk!("kept_delta_all_files" => true; false);
+    let mut p = plan_files(s, files, &old, &stamps, all)?;
+    plan_gone(r, files, &mut p)?;
+    let (ids, live) = (s.eval.store.len_ids() as usize, s.eval.store.fact_count());
+    if (ids - live) * 4 > ids {
+        return Err(format!("{} of its {ids} fact records are of facts gone: it is evaluated whole to drop them", ids - live));
+    }
+    let (mut scans, again) = plan_scans(s, r, &stamps, all, &mut p)?;
+    let out = going(std::mem::take(&mut p.goes), &p.stays);
+    let mut n_out = out.len();
+    let mut touched = match s.retract_set_delta(&out)? {
+        Err(why) => return Err(why),
+        Ok(d) => d.overdeleted + d.rederived,
+    };
+    if !p.add.is_empty() {
+        match s.load_delta(&p.add, None) {
+            Err(d) => return Err(d.join("; ")),
+            Ok((_, Addition::Full(why))) => return Err(why),
+            Ok(_) => {}
+        }
+    }
+    for rec in &again {
+        scans.push(ScanUnit::of(s, rec));
+    }
+    let (more_touched, more_out) = settle_scans(s, files, &old, &mut p, &mut scans)?;
+    touched += more_touched;
+    n_out += more_out;
+    let units = units_of(s, files, &p, &old)?;
+    Ok(Done { units, scans, took: p.took, touched, out: n_out })
+}
+
+/// The checks a kept world must pass before a delta is tried on it: read from its files alone, no Markdown named, its
+/// scanners run here, and nothing it read changed except what a file named or a scanner read.
+fn check_record(r: &Record, files: &[String]) -> Result<(), String> {
     if r.units.len() != r.files.len() || r.units.iter().zip(&r.files).any(|(u, f)| u.path != *f) {
         return Err("the world was not read from its files alone (a .rofl.md, or a world below)".into());
     }
@@ -84,46 +121,63 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             return Err(format!("its scanners ran in {cwd}, and this run is in another directory"));
         }
     }
-    let stamps: HashMap<&str, &str> = r.read.iter().map(|(p, s)| (p.as_str(), s.as_str())).collect();
     let named: HashSet<&str> = r.files.iter().map(String::as_str).collect();
     let scanned: HashSet<&str> = r.scans.iter().flat_map(|s| s.read.iter().map(String::as_str)).collect();
     if let Some((p, _)) = r.read.iter().find(|(p, st)| !named.contains(p.as_str()) && !scanned.contains(p.as_str()) && !kept::holds(p, st)) {
         return Err(format!("{} changed, and it is neither a file named on the command line nor one a scanner read", kept::shown(p)));
     }
-    let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
-    let all = rofl::brk!("kept_delta_all_files" => true; false);
-    // what stays, what goes, what comes
-    let (mut stays, mut goes): (Vec<u32>, Vec<u32>) = (Vec::new(), Vec::new());
-    let (mut add, mut took, mut texts): (String, Vec<String>, HashMap<&str, String>) = (String::new(), Vec::new(), HashMap::new());
+    Ok(())
+}
+
+/// What a delta does, as it is planned: the facts that stay, the facts that go, the text it puts in, and what it took.
+struct Plan<'a> {
+    stays: Vec<u32>,
+    goes: Vec<u32>,
+    add: String,
+    took: Vec<String>,
+    texts: HashMap<&'a str, String>,
+}
+
+impl<'a> Plan<'a> {
+    fn take(&mut self, f: &'a str, text: String) {
+        self.add.push_str(&text);
+        self.add.push('\n');
+        self.took.push(kept::shown(f));
+        self.texts.insert(f, text);
+    }
+}
+
+/// Each file named: kept as it stood, read again (its rules must not have changed), or read for the first time.
+fn plan_files<'a>(s: &mut Session, files: &'a [String], old: &HashMap<&str, &Unit>, stamps: &HashMap<&str, &str>, all: bool) -> Result<Plan<'a>, String> {
+    let mut p = Plan { stays: Vec::new(), goes: Vec::new(), add: String::new(), took: Vec::new(), texts: HashMap::new() };
     for f in files {
         match old.get(f.as_str()) {
-            Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => stays.extend(&u.facts),
+            Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => p.stays.extend(&u.facts),
             Some(u) => {
                 let text = read(f)?;
                 let (ids, rules, _) = s.facts_of(&text)?;
                 if kept::rules_sum(&rules) != u.rules {
                     return Err(format!("the rules of {} changed", kept::shown(f)));
                 }
-                stays.extend(ids.iter().copied());
+                p.stays.extend(ids.iter().copied());
                 if rofl::brk!("kept_delta_keeps_old" => false; true) {
-                    goes.extend(&u.facts);
+                    p.goes.extend(&u.facts);
                 }
-                add.push_str(&text);
-                add.push('\n');
-                took.push(kept::shown(f));
-                texts.insert(f, text);
+                p.take(f, text);
             }
             None => {
                 let text = read(f)?;
                 let (ids, _, _) = s.facts_of(&text)?;
-                stays.extend(ids.iter().copied());
-                add.push_str(&text);
-                add.push('\n');
-                took.push(kept::shown(f));
-                texts.insert(f, text);
+                p.stays.extend(ids.iter().copied());
+                p.take(f, text);
             }
         }
     }
+    Ok(p)
+}
+
+/// The kept files no longer named: their facts go, and a world holding rules from one is evaluated whole.
+fn plan_gone(r: &Record, files: &[String], p: &mut Plan) -> Result<(), String> {
     let now: HashSet<&str> = files.iter().map(String::as_str).collect();
     for u in r.units.iter().filter(|u| !now.contains(u.path.as_str())) {
         // a rule is taken out of a world by evaluating it again
@@ -131,48 +185,37 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             return Err(format!("{} is gone and held rules", kept::shown(&u.path)));
         }
         if rofl::brk!("kept_delta_keeps_removed" => false; true) {
-            goes.extend(&u.facts);
+            p.goes.extend(&u.facts);
         }
-        took.push(format!("{} (gone)", kept::shown(&u.path)));
+        p.took.push(format!("{} (gone)", kept::shown(&u.path)));
     }
-    let (ids, live) = (s.eval.store.len_ids() as usize, s.eval.store.fact_count());
-    if (ids - live) * 4 > ids {
-        return Err(format!("{} of its {ids} fact records are of facts gone: it is evaluated whole to drop them", ids - live));
-    }
-    // a scan whose reads changed runs again, alone; the rest stand as they were
-    let mut scans: Vec<ScanUnit> = Vec::new();
-    let mut again: Vec<rofl::engine::ScanRec> = Vec::new();
+    Ok(())
+}
+
+/// The scans of the kept world: one whose reads moved runs again, alone, and is returned to be recorded once its
+/// facts are in; the rest stand as they were.
+fn plan_scans(s: &mut Session, r: &Record, stamps: &HashMap<&str, &str>, all: bool, p: &mut Plan) -> Result<(Vec<ScanUnit>, Vec<rofl::engine::ScanRec>), String> {
+    let (mut scans, mut again) = (Vec::new(), Vec::new());
     for sc in &r.scans {
-        if all || sc.read.iter().any(|p| stamps.get(p.as_str()).is_none_or(|st| !kept::holds(p, st))) {
+        if all || sc.read.iter().any(|q| stamps.get(q.as_str()).is_none_or(|st| !kept::holds(q, st))) {
             let rec = Session::rescan(&sc.kind, &sc.path, &sc.text, sc.cmd.clone());
-            stays.extend(s.facts_of(&rec.unit)?.0);
-            goes.extend(&sc.facts);
-            add.push_str(&rec.unit);
-            took.push(format!("{} (scanned again)", sc.text));
+            p.stays.extend(s.facts_of(&rec.unit)?.0);
+            p.goes.extend(&sc.facts);
+            p.add.push_str(&rec.unit);
+            p.took.push(format!("{} (scanned again)", sc.text));
             again.push(rec);
         } else {
-            stays.extend(&sc.facts);
+            p.stays.extend(&sc.facts);
             scans.push(sc.clone());
         }
     }
-    let out = going(goes, &stays);
-    let mut n_out = out.len();
-    let mut touched = match s.retract_set_delta(&out)? {
-        Err(why) => return Err(why),
-        Ok(d) => d.overdeleted + d.rederived,
-    };
-    if !add.is_empty() {
-        match s.load_delta(&add, None) {
-            Err(d) => return Err(d.join("; ")),
-            Ok((_, Addition::Full(why))) => return Err(why),
-            Ok(_) => {}
-        }
-    }
-    for rec in &again {
-        scans.push(ScanUnit::of(s, rec));
-    }
-    // the scans the world asks for now: the new ones run (each by delta), those it no longer asks for taken out,
-    // until it asks for nothing more and holds nothing it does not ask for
+    Ok((scans, again))
+}
+
+/// The scans the world asks for now: the new ones run (each by delta), those it no longer asks for taken out, until it
+/// asks for nothing more and holds nothing it does not ask for. Returns the facts this retracts beyond the first pass.
+fn settle_scans(s: &mut Session, files: &[String], old: &HashMap<&str, &Unit>, p: &mut Plan, scans: &mut Vec<ScanUnit>) -> Result<(usize, usize), String> {
+    let (mut touched, mut n_out) = (0, 0);
     loop {
         s.eval.scans.clear();
         let ran = s.scan_requests()?;
@@ -180,19 +223,19 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             return Err("a scan's facts were not taken by delta".into());
         }
         for rec in std::mem::take(&mut s.eval.scans) {
-            took.push(format!("{} (scanned)", rec.text));
+            p.took.push(format!("{} (scanned)", rec.text));
             scans.push(ScanUnit::of(s, &rec));
         }
         let held = s.scan_requests_held();
-        let (kept_scans, dropped): (Vec<ScanUnit>, Vec<ScanUnit>) = scans.into_iter().partition(|sc| held.contains(&(sc.kind.clone(), sc.path.clone())) || rofl::brk!("kept_delta_unasked_kept" => true; false));
-        scans = kept_scans;
+        let (kept_scans, dropped): (Vec<ScanUnit>, Vec<ScanUnit>) = std::mem::take(scans).into_iter().partition(|sc| held.contains(&(sc.kind.clone(), sc.path.clone())) || rofl::brk!("kept_delta_unasked_kept" => true; false));
+        *scans = kept_scans;
         if ran == 0 && dropped.is_empty() {
             break;
         }
         if !dropped.is_empty() {
             let mut stays: Vec<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
             for f in files {
-                match texts.get(f.as_str()) {
+                match p.texts.get(f.as_str()) {
                     Some(t) => stays.extend(s.facts_of(t)?.0),
                     None => stays.extend(&old[f.as_str()].facts),
                 }
@@ -200,7 +243,7 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             let out = going(dropped.iter().flat_map(|sc| sc.facts.iter().copied()).collect(), &stays);
             n_out += out.len();
             for sc in &dropped {
-                took.push(format!("{} (no longer asked)", sc.text));
+                p.took.push(format!("{} (no longer asked)", sc.text));
             }
             match s.retract_set_delta(&out)? {
                 Err(why) => return Err(why),
@@ -208,10 +251,15 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             }
         }
     }
+    Ok((touched, n_out))
+}
+
+/// Each file's units as the world now records them: the stored ones when the index is stale, else read again.
+fn units_of(s: &mut Session, files: &[String], p: &Plan, old: &HashMap<&str, &Unit>) -> Result<Vec<Unit>, String> {
     let stale_index = rofl::brk!("kept_delta_stale_index" => true; false);
     let mut units = Vec::with_capacity(files.len());
     for f in files {
-        match (texts.get(f.as_str()), old.get(f.as_str())) {
+        match (p.texts.get(f.as_str()), old.get(f.as_str())) {
             (Some(_), Some(u)) if stale_index => units.push((*u).clone()),
             (Some(t), _) => {
                 let (ids, rules, _) = s.facts_of(t)?;
@@ -221,5 +269,5 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
             (None, None) => unreachable!("a file neither kept nor read"),
         }
     }
-    Ok(Done { units, scans, took, touched, out: n_out })
+    Ok(units)
 }

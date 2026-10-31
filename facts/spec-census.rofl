@@ -8,6 +8,9 @@
 -- @who census
 
 check[checks]("rust/rofl/tests/adapter.rs", "a_recursive_rule_through_an_adapter_sends_one_batch_a_round", test).
+check[checks]("rust/rofl/tests/adapter.rs", "a_cycle_through_an_adapter_ends_each_want_sent_once", test).
+check[checks]("rust/rofl/tests/adapter.rs", "a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget", test).
+check[checks]("rust/rofl/tests/adapter.rs", "a_capability_sends_no_more_wants_than_its_book_allows", test).
 check[checks]("rust/rofl/tests/adapter.rs", "a_killed_adapter_is_failed_and_a_lost_answer_unknown", test).
 check[checks]("rust/rofl/tests/adapter.rs", "a_want_no_adapter_runs_is_held", test).
 check[checks]("rust/rofl/tests/adapter.rs", "an_answer_outside_the_capability_fails_its_batch", test).
@@ -17,9 +20,11 @@ check[checks]("rust/rofl/tests/addition.rs", "random_large_programs_take_additio
 check[checks]("rust/rofl/tests/addition.rs", "a_lattice_world_is_a_fresh_evaluation_after_every_addition", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_declared_tree_is_a_fresh_evaluation_after_every_addition", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_the_forest", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_tree_declared_into_an_evaluated_world_is_answered_from_its_forest_by_delta", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_added_rule_that_moves_a_round_seals_the_cells_over_it_again", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_base_fact_beside_a_reset_rule_keeps_only_the_firings_that_hold", test).
 check[checks]("rust/rofl/tests/addition.rs", "an_aggregate_over_what_did_not_change_fires_on_what_grew", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_member_standing_lower_seals_again_only_its_group", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_sealed_programs_take_additions_as_a_fresh_evaluation_does", test).
 check[checks]("rust/rofl/tests/addition.rs", "random_negation_programs_keep_what_a_negation_still_allows", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_holistic_aggregate_is_sealed_again_at_the_groups_the_change_reaches", test).
@@ -94,6 +99,7 @@ check[checks]("rust/rofl/tests/dispatch.rs", "a_does_want_runs_once_across_a_dis
 check[checks]("rust/rofl/tests/dispatch.rs", "a_want_sent_with_no_outcome_recorded_is_unknown", test).
 check[checks]("rust/rofl/tests/dispatch.rs", "a_running_world_cannot_change_what_grants_permission", test).
 check[checks]("rust/rofl/tests/dispatch.rs", "the_mcp_scenario_moves_the_approved_issue_once", test).
+check[checks]("rust/rofl/tests/event_time.rs", "an_event_time_is_one_instant_whatever_zone_it_came_in", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_walks_the_derivation_to_its_axioms", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_negated_premise_renders_as_finite_failure_with_its_demonstration", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_builtin_premise_keeps_its_own_spelling", test).
@@ -124,6 +130,7 @@ check[checks]("rust/rofl/tests/explain.rs", "the_settled_world_is_the_same_which
 check[checks]("rust/rofl/tests/explain.rs", "the_audits_are_a_loaded_pack_and_not_a_property_of_the_engine", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_derivation_thousands_deep_is_explained_to_its_bottom", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_second_whynot_renames_as_the_first_did", test).
+check[checks]("rust/rofl/tests/explain.rs", "whynot_prints_the_nearest_failure_and_the_whole_walk_is_all", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_cross_product_premise_is_solved_last_and_cited_last", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_kernel_emitted_premise_is_an_axiom", test).
 check[checks]("rust/rofl/tests/explain.rs", "an_undefined_premise_is_walked_and_its_unfounded_set_named", test).
@@ -201,6 +208,7 @@ check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_names_no_cell_that_imp
 check[checks]("rust/rofl/tests/lattice_scale.rs", "a_wall_before_a_cycle_came_round_names_none_of_it", test).
 check[checks]("rust/rofl/tests/level_wall.rs", "a_world_stopped_at_every_level_ends_as_the_whole_evaluation", test).
 check[checks]("rust/rofl/tests/level_wall.rs", "facts_admitted_after_their_level_end_the_world_as_if_loaded_before", test).
+check[checks]("rust/rofl/tests/login.rs", "a_person_signs_in_once_and_the_token_is_renewed_when_refused", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_regenerated_book_differs_by_exactly_the_changed_tool", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_reads_tool_is_called_once_per_want_and_answered_by_its_output_schema", test).
 check[checks]("rust/rofl/tests/mcp.rs", "a_does_tool_is_not_sent_by_evaluation", test).
@@ -240,10 +248,18 @@ check[checks]("rust/rofl/tests/retract_set.rs", "a_tree_edited_in_sequence_is_th
 check[checks]("rust/rofl/tests/retract_set.rs", "a_js_files_facts_taken_out_are_the_fresh_world", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "ring1_reads_every_aggregate_and_lattice_declaration_the_parser_reads_and_as_the_same_tree", test).
 check[checks]("rust/rofl/tests/ring1_agg.rs", "what_the_parser_refuses_ring1_does_not_cover", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_book_is_the_clauses_its_last_assertions_keep", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_reader_asks_only_after_the_head_it_checked", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_withheld_batch_is_counted_and_said", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_book_changed_after_it_was_signed_is_refused", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "a_batch_signed_by_a_stranger_is_refused", test).
+check[checks]("rust/rofl/tests/roflenox.rs", "another_identity_under_the_same_name_is_refused", test).
 check[checks]("rust/rofl/tests/scan.rs", "what_a_scan_brings_in_asks_for_the_next", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_request_no_scanner_answers_is_a_fact_and_not_a_halt", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_scanners_rules_are_loaded_like_its_facts", test).
 check[checks]("rust/rofl/tests/scan.rs", "a_scan_that_names_what_it_read_is_kept_until_that_changes", test).
+check[checks]("rust/rofl/tests/served.rs", "a_world_another_process_serves_answers_its_wants", test).
+check[checks]("rust/rofl/tests/served.rs", "a_served_world_that_cannot_start_fails_its_wants", test).
 check[checks]("rust/rofl/tests/session.rs", "evaluate_matches_the_corpus", test).
 check[checks]("rust/rofl/tests/session.rs", "a_fork_is_the_same_world_and_then_its_own", test).
 check[checks]("rust/rofl/tests/session.rs", "ask_agrees_with_the_stores_own_census", test).
@@ -260,6 +276,7 @@ check[checks]("rust/rofl/tests/structure.rs", "the_promise_is_judged_at_every_ti
 check[checks]("rust/rofl/tests/structure.rs", "a_retraction_that_breaks_the_promise_is_refused_not_answered", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_key_in_two_books_is_two_keys", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_budget_wall_does_not_skip_the_promise", test).
+check[checks]("rust/rofl/tests/structure.rs", "a_function_declared_into_an_evaluated_world_is_a_delta_judged_over_every_row", test).
 check[checks]("rust/rofl/tests/structures.rs", "proposes_exactly_the_right_declarations", test).
 check[checks]("rust/rofl/tests/structures.rs", "lists_the_near_misses_with_their_facts", test).
 check[checks]("rust/rofl/tests/structures.rs", "the_text_is_the_committed_report", test).
@@ -332,13 +349,17 @@ check[checks]("facts/goldens.rofl", "notebook", world).
 check[checks]("facts/goldens.rofl", "notebook_assign", world).
 check[checks]("facts/goldens.rofl", "notebook_cjs", world).
 check[checks]("facts/goldens.rofl", "notebook_cli_exits", world).
+check[checks]("facts/goldens.rofl", "notebook_declared", world).
 check[checks]("facts/goldens.rofl", "notebook_decorated", world).
 check[checks]("facts/goldens.rofl", "notebook_destructure", world).
 check[checks]("facts/goldens.rofl", "notebook_external", world).
 check[checks]("facts/goldens.rofl", "notebook_guard", world).
+check[checks]("facts/goldens.rofl", "notebook_imports", world).
 check[checks]("facts/goldens.rofl", "notebook_keyed", world).
 check[checks]("facts/goldens.rofl", "notebook_ledger", world).
 check[checks]("facts/goldens.rofl", "notebook_mcp", world).
+check[checks]("facts/goldens.rofl", "notebook_missing", world).
+check[checks]("facts/goldens.rofl", "notebook_order", world).
 check[checks]("facts/goldens.rofl", "notebook_packages", world).
 check[checks]("facts/goldens.rofl", "notebook_review", world).
 check[checks]("facts/goldens.rofl", "notebook_scoped", world).
@@ -939,6 +960,7 @@ test_file[checks]("rust/rofl/tests/demand_query.rs").
 test_file[checks]("rust/rofl/tests/demand_scale.rs").
 test_file[checks]("rust/rofl/tests/disk.rs").
 test_file[checks]("rust/rofl/tests/dispatch.rs").
+test_file[checks]("rust/rofl/tests/event_time.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
@@ -946,6 +968,7 @@ test_file[checks]("rust/rofl/tests/journal.rs").
 test_file[checks]("rust/rofl/tests/kept.rs").
 test_file[checks]("rust/rofl/tests/lattice_scale.rs").
 test_file[checks]("rust/rofl/tests/level_wall.rs").
+test_file[checks]("rust/rofl/tests/login.rs").
 test_file[checks]("rust/rofl/tests/mcp.rs").
 test_file[checks]("rust/rofl/tests/openapi.rs").
 test_file[checks]("rust/rofl/tests/par.rs").
@@ -956,7 +979,9 @@ test_file[checks]("rust/rofl/tests/resume.rs").
 test_file[checks]("rust/rofl/tests/retract_refuse.rs").
 test_file[checks]("rust/rofl/tests/retract_set.rs").
 test_file[checks]("rust/rofl/tests/ring1_agg.rs").
+test_file[checks]("rust/rofl/tests/roflenox.rs").
 test_file[checks]("rust/rofl/tests/scan.rs").
+test_file[checks]("rust/rofl/tests/served.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
 test_file[checks]("rust/rofl/tests/sql.rs").
 test_file[checks]("rust/rofl/tests/structure.rs").

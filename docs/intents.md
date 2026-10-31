@@ -215,6 +215,9 @@ anywhere, past its sources.
 
 ## 4. Spec
 
+How to write an adapter, for its author rather than its designer, is
+[guide/ADAPTERS.md](../guide/ADAPTERS.md).
+
 ### 4.1 Syntax
 
 ```
@@ -422,14 +425,38 @@ a new directory `intents` under `examples` (phase 7).
    adapter's book (`tracker_transition(...)` written as a rule head, the book
    making it a want)?
 2. A cap on wants per tick and per batch: a world's budget like `--budget`, or
-   declared per capability in the adapter's book?
+   declared per capability in the adapter's book? DECIDED 2026-10-24 by the
+   owner, after recursion through an adapter was tried: per capability in the book,
+   `max_wants(Cap, N)`, 1000 an evaluation when not said; a want over it is
+   held and the world partial (guide/ADAPTERS.md).
 3. Valid time: a convention for answer facts (`at(Fact, Time)`), or a column
-   each capability declares?
+   each capability declares? DECIDED by the owner, 2026-10-24: a column,
+   `event_time(Cap, Column)` in the book (guide/ADAPTERS.md). BUILT 2026-10-25:
+   the engine makes the column one instant, its text in UTC, and adds
+   `instant(Text, Ms)` for rules to order it (the engine does not order
+   strings); a value that is no instant fails its want (rust/rofl/tests/
+   event_time.rs, planted event_time_raw).
 4. An adapter's book signed (Roflenox) from the start, or plain until a second
-   owner appears?
+   owner appears? DECIDED by the owner, 2026-10-24: a book on Roflenox is
+   signed. BUILT 2026-10-25: `roflenox://HOST/IDENTITY/BOOK` where a file would
+   go, each clause a `rofl:book` fact, every batch checked by the engine
+   (src/roflenox.rs, guide/ADAPTERS.md); a book in a file stays plain.
 5. Recursion through an adapter: allowed and measured (the owner, 2026-10-23:
    try it and see where it spoils things and where it opens new ways of
-   programming), with the per-want call count in the cost report.
+   programming), with the per-want call count in the cost report. TRIED
+   2026-10-24 (f_a_recursion_through_an_adapter_never_met_the_budget): cycles
+   end, a doubling tree meets the space wall, and an endless chain now meets
+   the budget the rounds share; question 2 gave the cap.
+
+### A world served by another process, as built (2026-10-25)
+
+The `rofl` kind's address is the other world's files, evaluated in this process,
+or a command that serves it: `rofl serve FILE...` (session 1 is the files,
+evaluated) here, `ssh HOST rofl serve FILE...` on another machine. The command is
+started once a process and asked `{"op":"ask","session":1}` each round, so a
+served world that changed answers as it stands. An address whose words all end
+in `.rofl` or `.rofl.md` is files. Proof: rust/rofl/tests/served.rs (planted
+served_other_session red).
 
 ### Phase 1, as built (2026-10-23)
 
@@ -790,5 +817,12 @@ want of a sql adapter in it is `want_held(W, "this build has no sql adapter
   (bearer, basic, header, query, client_credentials), read from the
   environment; an mcp book gets an `http_auth` row for each. Planted
   `token_kept_refused` is red.
-- **Open.** The authorization code flow with a person at a browser (PKCE,
-  dynamic client registration): a token a person got goes in as `bearer=ENV`.
+- **Built 2026-10-25.** The authorization code flow with a person at a browser
+  (PKCE, RFC 7636; dynamic client registration, RFC 7591; a loopback redirect,
+  RFC 8252): `rofl adapter login ISSUER [CLIENT_ID]` signs a person in and keeps
+  the tokens in `~/.config/rofl/logins.json` (mode 0600); a book's
+  `http_auth(A, S, login, "ISSUER", "")` sends that token, renewed by the
+  refresh token when it expires or is refused; until someone signs in the want
+  is held naming the command. `login:ISSUER` is the key form for `rofl adapter
+  mcp|openapi`, and an MCP 401 now names it. Proof: rust/rofl/tests/login.rs
+  against a node authorization server (planted login_verifier_dropped red).

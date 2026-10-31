@@ -12,9 +12,32 @@ Claude Code does not know `rofl-nb` exists. Paste this into the project's
 
     rofl-nb <file.rofl.md> [--json] [--cell N]   what every cell says
     rofl-nb <file.rofl.md> --all                 every answer, not the first 12 (JSON: 50)
+    rofl-nb <file.rofl.md> --timing              the time of each phase, on stderr
+    rofl-nb <file.rofl.md> --format F            a `draw` in the form F: mermaid, dot, argdown, vega-lite, ... (DRAWING.md)
+    rofl-nb edit <file.rofl.md> --cell N         the new text of cell N from stdin (`--lang L` for a new cell); the only
+                                                 safe way for a program to change a notebook: it writes the file only
+                                                 if it reads back as written
     rofl-nb translate <file.rofl.md>             a model writes a rofl cell under each natural cell (rofl-nb models)
     rofl-nb vocab [<file.rofl.md>] [word]        the sentences a cell can use; with a file, its own too
-    rofl-nb --help env                           the environment variables (time and memory limits, the kept kernel)
+    rofl-nb --help env                           the environment variables:
+
+<!-- BEGIN run examples/start: rofl-nb --help env -->
+```
+$ rofl-nb --help env
+ROFL_NB_LIMIT=120        seconds a run evaluates before it stops and answers what it found (exit 3)
+ROFL_NB_MEMORY=<GB>      gigabytes of heap likewise; by default most of what Node allows
+ROFL_NB_DAEMON=0         run in this process; by default runs go to a kept kernel, started on first use
+                         (the model loads once, 10 to 20 s; later runs take seconds)
+ROFL_NB_TIMEOUT=<s>      how long to wait for the kept kernel; by default ROFL_NB_LIMIT + 180
+ROFL_NB_IDLE=900         seconds the kept kernel waits for a run before it exits
+ROFL_NB_MODEL_CMD=<sh>   a command that reads the prompt on stdin and prints the answer (the harness named command)
+ROFL_NB_<NAME>=<path>    the binary of that harness, e.g. ROFL_NB_CLAUDE=/opt/claude
+ROFL_NB_ALLOW_TOOLS=1    run a harness that cannot be run without tools (codex, copilot, hermes)
+ROFL_NB_MODEL_TIMEOUT=180  seconds translate waits for the model
+ROFL_NB_READ_ROUNDS=6    rounds the model may read the workspace's files before it writes; ROFL_NB_READ_BUDGET=200000 bytes in all
+ROFL_NB_UNTRACKED_COMMAND=<sh>  prints the files your version control tracks, for untracked_by(command) in .rofl/read.rofl
+```
+<!-- END run -->
 
 ## Exit codes
 
@@ -43,3 +66,11 @@ notebook's own sentences onto `rofl:visual/graph.rofl.md` and end the cell
 with `draw graph`. The words, the layouts and the steps are in
 [docs/schemas.md](../docs/schemas.md); every kind of picture is in
 [DRAWING.md](DRAWING.md).
+
+## Beyond a notebook
+
+A question about code from the command line, with no notebook, is
+`rofl ask`, `rofl why` and `rofl whynot` ([ASKING.md](ASKING.md)). Every verb,
+the worlds it keeps, its exit codes and the `rofl serve` protocol are in
+[docs/cli.md](../docs/cli.md). A world is evaluated on one heap: before
+pointing it at thousands of files, read *A corpus larger than one heap* there.

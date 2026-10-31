@@ -218,14 +218,44 @@ A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) an
 
 In the code:
 
-A node
-
-- <a id="eff_calls"></a>has a call to G if all of:
+<a id="eff_calls"></a>A node has a call to G if all of:
   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
   - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [`fn_value`](js-surface.rofl.md#fn_value)(G).
-- <a id="eff_reaches"></a>reaches by calling a node G if it [has a call to](#eff_calls) G.
-- reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and G [has a call to](#eff_calls) H.
+
+Declared as facts:
+
+- <a id="eff_loop_kind"></a>`eff_loop_kind` — rows in this file
+
+> A cycle is asked of the edges that can lie on one: a function nothing calls or that calls
+> nothing is on no cycle, and peeling such ends four times over leaves the cycles whole and
+> the closure a seventeenth of the call graph's (vscode 250). `eff_reaches` is reach inside
+> what is left, which is all the recursion test reads.
+
+<a id="eff_ring1"></a>`eff_ring1`(F, G) if all of:
+  - a node F [has a call to](#eff_calls) a node G;
+  - G [has a call to](#eff_calls) some function;
+  - some node [has a call to](#eff_calls) F.
+
+<a id="eff_ring2"></a>`eff_ring2`(F, G) if all of:
+  - [`eff_ring1`](#eff_ring1)(F, G);
+  - [`eff_ring1`](#eff_ring1)(G, something);
+  - [`eff_ring1`](#eff_ring1)(something, F).
+
+<a id="eff_ring3"></a>`eff_ring3`(F, G) if all of:
+  - [`eff_ring2`](#eff_ring2)(F, G);
+  - [`eff_ring2`](#eff_ring2)(G, something);
+  - [`eff_ring2`](#eff_ring2)(something, F).
+
+<a id="eff_ring"></a>`eff_ring`(F, G) if all of:
+  - [`eff_ring3`](#eff_ring3)(F, G);
+  - [`eff_ring3`](#eff_ring3)(G, something);
+  - [`eff_ring3`](#eff_ring3)(something, F).
+
+A node
+
+- <a id="eff_reaches"></a>reaches by calling a node G if [`eff_ring`](#eff_ring)(it, G).
+- reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and [`eff_ring`](#eff_ring)(G, H).
 
 In the flow:
 
@@ -233,10 +263,6 @@ A node has the effect `div` at `none` if all of:
   - it [resolves to](js-callgraph.rofl.md#resolves) a node G;
   - a node F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) it;
   - G [reaches by calling](#eff_reaches) F.
-
-Declared as facts:
-
-- <a id="eff_loop_kind"></a>`eff_loop_kind` — rows in this file
 
 > ALLOC: a fresh mutable identity. `new_expression` is here although its cell
 > is open: the allocation half is complete; the constructor's effect is the

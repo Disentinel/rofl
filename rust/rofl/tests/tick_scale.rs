@@ -35,7 +35,7 @@ fn a_cell_cited_by_many_firings_is_walked_once_at_the_boundary() {
     let src = facts(n, &["q", "r"]) + "w(Y) :- r(Y).\np(X, N)@next :- q(X), N is count(Y : w(Y)).\n";
     let mut s = world(&src, Some(0));
     assert!(s.tick().unwrap().advanced);
-    assert_eq!(s.eval.past_walks, n as u64, "the one cell's members, each once");
+    assert_eq!(s.eval.why.past_walks, n as u64, "the one cell's members, each once");
     let kept = s.fact_keys(Some("derived_by")).iter().filter(|k| k.starts_with("derived_by[$kernel]($fact(w,")).count();
     assert_eq!(kept, n, "every member the carried cell cites keeps its row");
 }
@@ -54,5 +54,5 @@ fn why_of_a_carried_cell_reads_the_past_rows_once() {
     let text = s.why_all(&format!("tn({n})")).unwrap();
     assert_eq!(text.matches("[past tick]").count(), n, "every member, as of its tick");
     assert!(text.contains("w[main](k0)  <= r"), "a member is named with the rule that derived it then");
-    assert!(s.eval.why_scans <= rows, "{} rows read for {rows} rows", s.eval.why_scans);
+    assert!(s.eval.why.scans <= rows, "{} rows read for {rows} rows", s.eval.why.scans);
 }

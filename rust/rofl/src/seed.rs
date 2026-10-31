@@ -4,7 +4,7 @@
 
 use crate::cell::AggOp;
 use crate::reflect::Vocab;
-use crate::store::{CellId, FactId, 
+use crate::store::{fact_key, CellId, FactId,
     CellOwner, CellValue, EvalRecord, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK,
 };
 use crate::term::{cmp_js, Heap, Sym, Term, TermK};
@@ -193,6 +193,40 @@ fn split(json: &str) -> Option<(Value, Texts<'_>)> {
 
 fn restore_from(h: &mut Heap, d: &Value, raw: Option<Texts>) -> Result<Restored, Fail> {
     let mut s = Store::new();
+    restore_header(h, &mut s, d)?;
+    let (fact_ids, ghost_ids) = restore_facts(h, &mut s, d, &raw)?;
+    let fired = match &raw {
+        Some(t) => {
+            let mut r = Raw::new(t.firings, 1);
+            !(r.eat(b'[') && r.eat(b']'))
+        }
+        None => cited(d, "firings"),
+    };
+    let mut by_key: HashMap<String, u32> = HashMap::new();
+    if cited(d, "cells") || fired {
+        for &id in fact_ids.iter().chain(&ghost_ids) {
+            by_key.insert(s.key(h, id), id);
+        }
+    }
+    let mut dangling = 0usize;
+    let cells_by_key = restore_cells(h, &mut s, d, &by_key, &mut dangling)?;
+    restore_firings(h, &mut s, d, &raw, &by_key, &cells_by_key, &mut dangling)?;
+    restore_evals(&mut s, d);
+    // Killed only now, and with their firings kept: a superseded lattice
+    // value's firings are how the value that replaced it was reached.
+    for id in &ghost_ids {
+        s.retire_keeping_firings(*id);
+    }
+    s.sweep();
+    s.dirty = true;
+    Ok(Restored { store: s, dangling })
+}
+
+fn cited(d: &Value, k: &str) -> bool {
+    d.get(k).and_then(|x| x.as_array()).is_some_and(|x| !x.is_empty())
+}
+
+fn restore_header(h: &mut Heap, s: &mut Store, d: &Value) -> Result<(), Fail> {
     s.tick = d["tick"].as_u64().unwrap_or(0) as u32;
     if let Some(tl) = d.get("tickLog").and_then(|x| x.as_array()) {
         s.tick_log = tl
@@ -209,129 +243,155 @@ fn restore_from(h: &mut Heap, d: &Value, raw: Option<Texts>) -> Result<Restored,
     for r in d.get("tagRules").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
         s.tag_rules.insert(h.intern(r.as_str().ok_or("snapshot refused: bad tag rule")?));
     }
+    Ok(())
+}
+
+/// The facts, then the ghosts: the fact ids and the ghost ids, in the order read.
+fn restore_facts(h: &mut Heap, s: &mut Store, d: &Value, raw: &Option<Texts>) -> Result<(Vec<u32>, Vec<u32>), Fail> {
     let mut fact_ids = Vec::new();
     // The ghosts, re-entered and killed again: a witness may name one, and no
     // answer ever will. Added before `firings` so the keys are in the index.
     let mut ghost_ids = Vec::new();
-    match &raw {
+    match raw {
         Some(t) => {
-            Raw::new(t.facts, 1).facts(h, &mut s, &mut fact_ids).ok_or(Fail::Unread)?;
-            Raw::new(t.ghosts, 1).facts(h, &mut s, &mut ghost_ids).ok_or(Fail::Unread)?;
+            Raw::new(t.facts, 1).facts(h, s, &mut fact_ids).ok_or(Fail::Unread)?;
+            Raw::new(t.ghosts, 1).facts(h, s, &mut ghost_ids).ok_or(Fail::Unread)?;
         }
         None => {
-            add_facts(h, &mut s, d["facts"].as_array().ok_or("no facts")?, &mut fact_ids)?;
-            add_facts(h, &mut s, d.get("ghosts").and_then(|x| x.as_array()).unwrap_or(&vec![]), &mut ghost_ids)?;
+            add_facts(h, s, d["facts"].as_array().ok_or("no facts")?, &mut fact_ids)?;
+            add_facts(h, s, d.get("ghosts").and_then(|x| x.as_array()).unwrap_or(&vec![]), &mut ghost_ids)?;
         }
     }
-    let cited = |k: &str| d.get(k).and_then(|x| x.as_array()).is_some_and(|x| !x.is_empty());
-    let fired = match &raw {
-        Some(t) => {
-            let mut r = Raw::new(t.firings, 1);
-            !(r.eat(b'[') && r.eat(b']'))
-        }
-        None => cited("firings"),
-    };
-    let mut by_key: HashMap<String, u32> = HashMap::new();
-    if cited("cells") || fired {
-        for &id in fact_ids.iter().chain(&ghost_ids) {
-            by_key.insert(s.key(h, id), id);
-        }
-    }
-    let mut dangling = 0usize;
-    // THE CELLS, before the firings that cite them: a firing names a cell by
-    // its key, and a member names its facts by theirs, ghosts included.
+    Ok((fact_ids, ghost_ids))
+}
+
+// THE CELLS, before the firings that cite them: a firing names a cell by
+// its key, and a member names its facts by theirs, ghosts included.
+fn restore_cells(h: &mut Heap, s: &mut Store, d: &Value, by_key: &HashMap<String, u32>, dangling: &mut usize) -> Result<HashMap<String, u32>, Fail> {
     let mut cells_by_key: HashMap<String, u32> = HashMap::new();
-    // A CELL IS READ WHOLE OR THE SNAPSHOT IS REFUSED: a height, a tick or a
-    // round filled in with 0 is a witness that says something nobody sealed.
-    let count = |x: &Value, what: &str| -> Result<u32, String> {
-        x.as_u64().and_then(|n| u32::try_from(n).ok()).ok_or_else(|| format!("bad cell {what}"))
-    };
     for c in d.get("cells").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
-        let rule = h.intern(c["rule"].as_str().ok_or("bad cell rule")?);
-        let at = count(&c["at"], "position")?;
-        let op = AggOp::from_name(c["op"].as_str().unwrap_or("")).ok_or("bad cell op")?;
-        let key: Result<Vec<Term>, String> =
-            c["keyTerms"].as_array().ok_or("bad cell key")?.iter().map(|a| term_from_json(h, a)).collect();
-        let value = match (c.get("value"), c.get("hole")) {
-            (_, Some(Value::String(r))) => CellValue::Hole(h.intern(r)),
-            (Some(v), None | Some(Value::Null)) if !v.is_null() => CellValue::Value(term_from_json(h, v)?),
-            (Some(Value::Null), None | Some(Value::Null)) => CellValue::Empty,
-            _ => return Err("bad cell value".into()),
-        };
-        let mut members = Vec::new();
-        for m in c["members"].as_array().ok_or("bad cell members")? {
-            let proj: Result<Vec<Term>, String> =
-                m["proj"].as_array().ok_or("bad member")?.iter().map(|a| term_from_json(h, a)).collect();
-            let prems = read_prems(h, &by_key, &HashMap::new(), m["prems"].as_array().ok_or("bad member premises")?.iter().map(Prem::of), &mut dangling)
-                .ok_or("a cell member names a fact the snapshot does not hold")?;
-            let mut others = Vec::new();
-            for o in m["others"].as_array().into_iter().flatten() {
-                others.push(
-                    read_prems(h, &by_key, &HashMap::new(), o.as_array().ok_or("bad member derivation")?.iter().map(Prem::of), &mut dangling)
-                        .ok_or("a cell member names a fact the snapshot does not hold")?,
-                );
-            }
-            members.push(NewMember {
-                proj: proj?.into(),
-                value: term_from_json(h, &m["value"])?,
-                height: count(&m["height"], "member height")?,
-                prems,
-                others,
-            });
-        }
-        let mut seals = Vec::new();
-        for x in c["sealed"].as_array().ok_or("bad cell seals")? {
-            let rel = x["rel"].as_str().filter(|r| !r.is_empty()).ok_or("bad cell seal")?;
-            seals.push(Seal { rel: h.intern(rel), round: count(&x["round"], "seal round")? });
-        }
-        let desc = h.intern(c["desc"].as_str().filter(|d| !d.is_empty()).ok_or("bad cell description")?);
-        let key: Box<[Term]> = key?.into();
-        let owner = CellOwner::Body { rule, at };
-        let tick = count(&c["tick"], "tick")?;
-        if s.find_cell(owner, &key, tick).is_some() {
-            return Err("a cell is in the snapshot twice".into());
-        }
-        let like = match c.get("membersOf") {
-            None => None,
-            Some(k) => Some(*k.as_str().and_then(|k| cells_by_key.get(k)).ok_or("a cell shares the members of a cell the snapshot does not hold before it")?),
-        };
-        let cell = NewCell {
-            owner,
-            op,
-            key,
-            value,
-            height: count(&c["height"], "height")?,
-            tick,
-            desc,
-            members,
-            seals,
-        };
-        let id = match like {
-            Some(_) if !cell.members.is_empty() => return Err("a cell both shares members and lists its own".into()),
-            Some(x) if s.cell_members(x).is_empty() => return Err("a cell shares the members of a cell with none".into()),
-            Some(x) => s.add_cell_sharing(cell, x),
-            None => s.add_cell(cell),
-        };
-        // the name a firing cites it by must be the name its fields spell
-        let mut spelled = String::new();
-        s.write_cell_key(h, id, &mut spelled);
-        if c["key"].as_str() != Some(spelled.as_str()) {
-            return Err(format!("a cell's key does not spell its fields: {spelled}").into());
-        }
-        cells_by_key.insert(spelled, id);
+        restore_cell(h, s, c, by_key, &mut cells_by_key, dangling)?;
     }
-    match &raw {
-        Some(t) => Raw::new(t.firings, 1).firings(h, &mut s, &by_key, &cells_by_key, &mut dangling).ok_or(Fail::Unread)?,
+    Ok(cells_by_key)
+}
+
+/// A height, a tick or a round filled in with 0 is a witness that says something nobody sealed: a field that does not read is refused.
+fn count(x: &Value, what: &str) -> Result<u32, String> {
+    x.as_u64().and_then(|n| u32::try_from(n).ok()).ok_or_else(|| format!("bad cell {what}"))
+}
+
+fn restore_cell(h: &mut Heap, s: &mut Store, c: &Value, by_key: &HashMap<String, u32>, cells_by_key: &mut HashMap<String, u32>, dangling: &mut usize) -> Result<(), Fail> {
+    let rule = h.intern(c["rule"].as_str().ok_or("bad cell rule")?);
+    let at = count(&c["at"], "position")?;
+    let op = AggOp::from_name(c["op"].as_str().unwrap_or("")).ok_or("bad cell op")?;
+    let key: Result<Vec<Term>, String> =
+        c["keyTerms"].as_array().ok_or("bad cell key")?.iter().map(|a| term_from_json(h, a)).collect();
+    let value = cell_value(h, c)?;
+    let members = restore_members(h, c, by_key, dangling)?;
+    let seals = cell_seals(h, c)?;
+    let desc = h.intern(c["desc"].as_str().filter(|d| !d.is_empty()).ok_or("bad cell description")?);
+    let key: Box<[Term]> = key?.into();
+    let owner = CellOwner::Body { rule, at };
+    let tick = count(&c["tick"], "tick")?;
+    if s.find_cell(owner, &key, tick).is_some() {
+        return Err("a cell is in the snapshot twice".into());
+    }
+    let like = cell_like(c, cells_by_key)?;
+    let cell = NewCell {
+        owner,
+        op,
+        key,
+        value,
+        height: count(&c["height"], "height")?,
+        tick,
+        desc,
+        members,
+        seals,
+    };
+    let id = match like {
+        Some(_) if !cell.members.is_empty() => return Err("a cell both shares members and lists its own".into()),
+        Some(x) if s.cell_members(x).is_empty() => return Err("a cell shares the members of a cell with none".into()),
+        Some(x) => s.add_cell_sharing(cell, x),
+        None => s.add_cell(cell),
+    };
+    // the name a firing cites it by must be the name its fields spell
+    let mut spelled = String::new();
+    s.write_cell_key(h, id, &mut spelled);
+    if c["key"].as_str() != Some(spelled.as_str()) {
+        return Err(format!("a cell's key does not spell its fields: {spelled}").into());
+    }
+    cells_by_key.insert(spelled, id);
+    Ok(())
+}
+
+fn cell_value(h: &mut Heap, c: &Value) -> Result<CellValue, Fail> {
+    Ok(match (c.get("value"), c.get("hole")) {
+        (_, Some(Value::String(r))) => CellValue::Hole(h.intern(r)),
+        (Some(v), None | Some(Value::Null)) if !v.is_null() => CellValue::Value(term_from_json(h, v)?),
+        (Some(Value::Null), None | Some(Value::Null)) => CellValue::Empty,
+        _ => return Err("bad cell value".into()),
+    })
+}
+
+fn cell_seals(h: &mut Heap, c: &Value) -> Result<Vec<Seal>, Fail> {
+    let mut seals = Vec::new();
+    for x in c["sealed"].as_array().ok_or("bad cell seals")? {
+        let rel = x["rel"].as_str().filter(|r| !r.is_empty()).ok_or("bad cell seal")?;
+        seals.push(Seal { rel: h.intern(rel), round: count(&x["round"], "seal round")? });
+    }
+    Ok(seals)
+}
+
+/// The cell whose members this one shares, by its key, if it names one.
+fn cell_like(c: &Value, cells_by_key: &HashMap<String, u32>) -> Result<Option<u32>, Fail> {
+    Ok(match c.get("membersOf") {
+        None => None,
+        Some(k) => Some(*k.as_str().and_then(|k| cells_by_key.get(k)).ok_or("a cell shares the members of a cell the snapshot does not hold before it")?),
+    })
+}
+
+fn restore_members(h: &mut Heap, c: &Value, by_key: &HashMap<String, u32>, dangling: &mut usize) -> Result<Vec<NewMember>, Fail> {
+    let mut members = Vec::new();
+    for m in c["members"].as_array().ok_or("bad cell members")? {
+        let proj: Result<Vec<Term>, String> =
+            m["proj"].as_array().ok_or("bad member")?.iter().map(|a| term_from_json(h, a)).collect();
+        let prems = read_prems(h, by_key, &HashMap::new(), m["prems"].as_array().ok_or("bad member premises")?.iter().map(Prem::of), dangling)
+            .ok_or("a cell member names a fact the snapshot does not hold")?;
+        let mut others = Vec::new();
+        for o in m["others"].as_array().into_iter().flatten() {
+            others.push(
+                read_prems(h, by_key, &HashMap::new(), o.as_array().ok_or("bad member derivation")?.iter().map(Prem::of), dangling)
+                    .ok_or("a cell member names a fact the snapshot does not hold")?,
+            );
+        }
+        members.push(NewMember {
+            proj: proj?.into(),
+            value: term_from_json(h, &m["value"])?,
+            height: count(&m["height"], "member height")?,
+            prems,
+            others,
+        });
+    }
+    Ok(members)
+}
+
+fn restore_firings(h: &mut Heap, s: &mut Store, d: &Value, raw: &Option<Texts>, by_key: &HashMap<String, u32>, cells_by_key: &HashMap<String, u32>, dangling: &mut usize) -> Result<(), Fail> {
+    match raw {
+        Some(t) => Raw::new(t.firings, 1).firings(h, s, by_key, cells_by_key, dangling).ok_or(Fail::Unread)?,
         None => {
             for e in d.get("firings").and_then(|x| x.as_array()).into_iter().flatten() {
                 let sup = e["sup"].as_array().into_iter().flatten().map(|x| {
                     let ps = x["prems"].as_array().into_iter().flatten().map(Prem::of).collect();
                     (Cow::Borrowed(x["ruleId"].as_str().unwrap_or("")), x["tick"].as_u64().unwrap_or(0) as u32, ps)
                 });
-                fire(h, &mut s, &by_key, &cells_by_key, e["key"].as_str().unwrap_or(""), sup, &mut dangling);
+                fire(h, s, by_key, cells_by_key, e["key"].as_str().unwrap_or(""), sup, dangling);
             }
         }
     }
+    Ok(())
+}
+
+fn restore_evals(s: &mut Store, d: &Value) {
     for e in d.get("evals").and_then(|x| x.as_array()).unwrap_or(&vec![]) {
         let Some(t) = e["tick"].as_u64() else { continue };
         s.eval_log.insert(
@@ -343,15 +403,6 @@ fn restore_from(h: &mut Heap, d: &Value, raw: Option<Texts>) -> Result<Restored,
             },
         );
     }
-
-    // Killed only now, and with their firings kept: a superseded lattice
-    // value's firings are how the value that replaced it was reached.
-    for id in &ghost_ids {
-        s.retire_keeping_firings(*id);
-    }
-    s.sweep();
-    s.dirty = true;
-    Ok(Restored { store: s, dangling })
 }
 
 fn add_facts(h: &mut Heap, s: &mut Store, list: &[Value], ids: &mut Vec<u32>) -> Result<(), String> {
@@ -898,8 +949,7 @@ pub fn cell_json(h: &Heap, s: &Store, c: CellId, like: Option<CellId>) -> Value 
 
 /// A row a structure answers, as `fact_json` writes a stored one: derived, of its tick.
 pub fn virtual_json(h: &Heap, rel: Sym, book: Sym, args: &[Term]) -> Value {
-    let mut key = String::new();
-    crate::store::write_fact_key(h, rel, book, args, &mut key);
+    let key = fact_key(h, rel, book, args);
     value(|o| fact(o, h, Some(&key), rel, book, args, true, false, false))
 }
 

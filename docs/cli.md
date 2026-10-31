@@ -16,16 +16,18 @@ stderr with the package to install.
 rofl ask    'reaches(a, X)'      boot.rofl world.rofl    # the rows, one per line
 rofl why    'reaches(a, c)'      boot.rofl world.rofl    # what proves it
 rofl why --all 'total(a, 7)'     boot.rofl world.rofl    # every member of every cell
-rofl whynot 'reaches(c, a)'      boot.rofl world.rofl    # what stops it; --depth N --nodes N bound the walk
+rofl whynot 'reaches(c, a)'      boot.rofl world.rofl    # what stops it: the nearest failure; --depth N --nodes N bound the walk
+rofl whynot --all 'reaches(c, a)' boot.rofl world.rofl   # every failure the walk met
 rofl excise 'calls(a, b)'        boot.rofl world.rofl    # what taking the base fact out changes: - gone, + new
 rofl load                        boot.rofl world.rofl    # the whole state
-rofl serve                                               # one JSON request a line, one answer a line
+rofl serve [FILE...]                                     # one JSON request a line, one answer a line; the files are session 1
 rofl render --out DIR            world.rofl ...          # the sentence form
 rofl render --out DIR            world.rofl.md           # back into rules: DIR/world.rofl, DIR/world.phrases.rofl, the report on stdout
 rofl nb [--cell N] [--all]       notebook.rofl.md        # run a notebook, printed as `npm run nb` prints it
 rofl adapter mcp COMMAND... | URL [KEY...]               # the adapter book of an MCP server, over stdio or HTTP (docs/intents.md, phase 5)
 rofl adapter openapi SPEC [KEY...]                       # the adapter book of an OpenAPI document, JSON or YAML, a file or URL (scenario 6)
-                                                         # a KEY is HOW[:NAME]=ENV: bearer, basic, header:NAME, query:NAME, client_credentials:TOKEN_URL
+                                                         # a KEY is HOW[:NAME]=ENV: bearer, basic, header:NAME, query:NAME, client_credentials:TOKEN_URL; or login:ISSUER
+rofl adapter login ISSUER [CLIENT_ID]                    # a person signs in at a browser (OAuth 2.1, PKCE); a book's login key sends that token
 ```
 
 A question verb is `rofl load` with that one question, so every flag of
@@ -33,6 +35,18 @@ A question verb is `rofl load` with that one question, so every flag of
 `--retract`, `--below`, `--kept`). `rofl load --ask L --why L --whynot L --excise F`
 asks several in one run, the answers in that order with an empty line after
 each.
+
+**A whynot prints the nearest failure.** The walk goes down every rule that could
+conclude the literal and every candidate it follows, as far as `--depth` and
+`--nodes` let it; it prints one chain of it: at each literal the rule, and at
+each rule the failed premise, that leave the fewest premises unmet (those after
+the one it failed at, and one at the chain's end: a premise nothing supports, a
+negation blocked, a builtin false; a chain the bounds cut is farther than any
+that ends), the first of equal ones, with the `followed 16 of N` lines of the
+rules it keeps. `  (every failure: --all)` closes it when it left something
+out. `rofl whynot --all`, `rofl load --whynot-all L` and the protocol's
+`"all": true` print the whole walk; `explain_request(whynot, L)` stores the
+whole walk, and a notebook prints it under `--all`.
 
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
@@ -58,6 +72,16 @@ is a document and is refused (exit 2).
 (0 ok, 1 a never fails, 2 not everything was read, 3 blind or cut), with `--cell N` and `--all`. `draw`, a
 notebook over code (`code:`, `model: js`) and `--json` are not native yet: it says so on stderr and exits 2.
 `npm run nbcheck` holds it to the TypeScript kernel byte for byte over every notebook in its slice.
+`npm run nb` evaluates only the cone of what a notebook's lines ask (docs/demand-cones.md); it has no setting.
+`rofl ask`, `rofl why` and `rofl whynot` do the same: the world asks the relations
+their question names (`asks(R)`), so only the rules those reach run; asked later
+about a relation outside what its kept world asked, that world grows its cone by
+delta. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
+rule, and so does `rofl load`, whose answers whycheck holds to the reference. At
+700 vscode files with the JS model: 49 s and 2.1 GB against 104 s and 3.4 GB.
+A world is kept only when the memory the process may still use holds about three
+times its volume (indexing it for a delta and writing it); otherwise it is
+answered and not kept, said on stderr.
 
 **`@LIST`** stands for the files LIST names, one a line, each read from LIST's
 directory. `@rules/js.files` is the JS model, the files the notebook host
@@ -67,6 +91,10 @@ command came with: the tree above the path the binary was called by (the npm
 package calls it by a path inside itself), else the one above the binary. So
 `@rules/js.files` works from any directory, and a `.rofl.md`'s vocabulary is
 found the same way.
+
+**`roflenox://HOST/IDENTITY/BOOK`** stands for the book BOOK as IDENTITY signed
+it on that Roflenox node, every batch of the chain checked (guide/ADAPTERS.md,
+*A book on Roflenox*). A book that fails a check is refused, exit 2.
 
 ## A world kept on disk
 
@@ -115,6 +143,21 @@ killed while it wrote leaves is removed by the next run that keeps a world,
 before it starts to write, and the cap counts every file of the directory. Writing the volume costs about 5% of the evaluation it
 saves (agg_minmax_strata: 0.83 s on 16.9 s). `rofl load`, `rofl serve` and every harness never read nor
 write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
+
+**A world larger than memory stops there.** Every `rofl` process watches the
+memory it may use: the least memory limit of its cgroup less a quarter, against
+the cgroup's anonymous memory (so the Node of a notebook in the same container
+counts); without a limit, what the machine has available down to a quarter of
+it; on macOS, four fifths of the machine against the engine's own heap
+(src/bin/rofl/memory.rs). Past it, an evaluation stops as at a step wall, with
+`hole($adhoc, memory_exhausted)`: a question verb answers partial (exit 5), says
+on stderr `the world reached the memory this process may use and stopped there:
+its answers are partial, and it is not kept`, and keeps nothing; `rofl serve`
+answers the request with `"stopped":"heap"`, as under a caller's `limit.bytes`,
+and refuses every later request but `close` while the memory stays spent, so a
+host is told instead of finding the engine killed. The wall is checked between
+steps: a phase that takes no steps (reading the files, one firing that solves
+more than the reserve) can still pass it. Nothing to turn on or off.
 
 `--kept F` with any verb names the kept world yourself, under the owner's
 stricter rule: computed once, asked many times, each question a new process that
@@ -187,21 +230,30 @@ The run says so in one line on stderr:
 the kept world took 1 file by delta: db.rofl (35 facts out, 409 overdeleted or derived again; opened and taken in 201 ms, kept again in 12 ms, 9367080 bytes written)
 ```
 
-**The world kept again is an overlay** (f_a_kept_world_is_written_whole_by_each_edit).
-The whole volume the world was opened from stays on disk as its base, beside
-the slot under its sum (`<slot>.<sum>.vol`), and the slot gets an overlay: a
-file that names the base and writes only what the world holds that the base
-does not. An arena the edit did not change is a reference into the base; one
-it wrote a few values into is the reference and those values; one it appended
-to is the reference and what came after (a copy of a mapped arena is compared
-with the base to find them). Opening an overlay maps the base as before and
-maps each changed span privately, the overlay's values written into its pages,
-so the pages nothing changed are the file's. Each edit writes its overlay over
-the same base, every change since the base in it; once it would pass a quarter
-of the base, the world is written whole again and that is the new base (the
-line ends `bytes written over the world it was kept from` while it is an
-overlay). A base pushed out of the cache takes its overlays with it; an overlay
-whose base is gone or changed is refused and computed anew.
+**The world kept again is an overlay over the one before it**
+(f_a_kept_world_is_written_whole_by_each_edit,
+f_an_overlay_held_every_edit_since_its_base). The volume the world was opened
+from stays on disk beside the slot under its sum (`<slot>.<sum>.vol`), and the
+slot gets an overlay: a file that names the volumes it is kept over, the whole
+one first and the overlays after it in order, and writes only what changed
+since the last of them. An arena the edit did not change is named where it was
+made: a span of one of those volumes and the changes the overlays after it
+wrote over it. One it changed is that and one change more: the values put over
+it and what came after, or, where values went out of the middle, the spans it
+keeps and the values between (a copy of a mapped arena is compared with what it
+was made of to find them). The cells of the aggregates, the citations and the
+firings since the whole volume, and the top of an argument index over the
+whole volume's are written the same way. Opening an overlay maps those volumes
+and makes each changed arena once, its unchanged pages mapped privately from
+the file. So an edit writes about what it changed, not what changed since the
+whole volume: at vscode 250 a 402-fact file is 1.1 MB where the one overlay
+over the base held 46 MB after eight edits; kept again in 0.09-0.27 s where
+it rose to 0.63 s. After 64 overlays, or once they
+together would pass a quarter of the whole volume, the world is written whole
+again and that is the new base (the line ends `bytes written over the world it
+was kept from` while it is an overlay). A volume pushed out of the cache takes
+the overlays kept over it; an overlay one of whose volumes is gone or changed
+is refused and computed anew.
 
 It evaluates whole instead, the reason after `not by delta:` in the stale line,
 when the rules changed (a file that changed holds a rule, or a file gone held
@@ -263,7 +315,7 @@ by delta.
 | 2 | a file is refused: it does not parse or does not load; or the kept world (`--kept F`) is stale, damaged, or cannot be kept |
 | 3 | the world is refused when evaluated: a broken promise, a negation through a cycle |
 | 4 | a question is refused: not ground for a why, not a base fact for an excise, outside the cone |
-| 5 | answered from a world the budget or the space cut short, or a scan failed, or an ask whose rows may be short |
+| 5 | answered from a world the budget, the space or the memory cut short, or a scan failed, or an ask whose rows may be short |
 | 70 | a defect: the engine failed (a panic, or an evaluation that says `defect:`) |
 
 A refusal wins over a partial answer: a run with a refused question exits 4.
@@ -352,3 +404,66 @@ to about 0.15 GB. The peak, 2.9 GB, is not lowered: it is the round that adds
 14 files at once. Adding them one a round lowers it to 1.4 GB, the largest file
 alone, but each small file added to that world costs about 15 s
 (`f_a_walk_goes_cold_between_rounds`).
+
+## A corpus larger than one heap
+
+**Every verb above holds one world on one heap.** `rofl scan` writes one file
+of facts, and `rofl ask`, `rofl load` and `rofl serve FILE...` load it whole
+and evaluate it whole; only the finished world is kept as a volume. At the
+reference scale (CLAUDE.md, *The goal*) that is the 23 GB the owner measured.
+A run over more files than fit one heap does not go this way without saying so.
+
+**The design the owner agreed** (2026-10-25): a file is scanned into a volume of
+its own, the volume is cooled to disk and stays there until a question needs
+it, and beside it lives the file's `[surface]`, a thin volume of what escapes
+the file (`rules/js-surface.rofl`). The design is in
+docs/volumes-and-residency.md (why a corpus can stay cold),
+docs/surface-split.md (what crosses files, the book, the driver) and
+docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
+**It is not the engine's default yet.** The owner wants it to be what
+`rofl scan` and the question verbs do by themselves, not a command of its own;
+today none of them scans into a volume per file, cools it and keeps its surface. What exists are its parts and the
+harnesses that drive them, each over `rofl serve`:
+
+| what | how to run it | measured | status |
+|---|---|---|---|
+| a volume per file, cooled, the surface resident (the driver) | `runtime/split.ts`; `node --experimental-strip-types scripts/vscode_curve.ts DIR N split [--hot K]` over a corpus of `scripts/vscode_corpus.ts`; `npm run test:split` is its gate | 500 vscode files: the whole world's answers exactly, 2.0 GB against 2.5 GB, but 6 335 s against 40 s: each volume reads ~10% of the surface and is evaluated again whole 7.6 times (surface-split.md §7) | correct, not an economy; what it needs next is in §7 |
+| the ingest loop: parse a batch, evaluate, cool volumes under pressure | `node --experimental-strip-types runtime/ingest.ts ROOT SUB N [--batch K] [--pressure F]` (boot and `rules/ingest.rofl`, no JS model) | eslint, 1 426 files: 29.9 s, 1 290 volumes cooled to 200 MB, the world never above 1.94 M facts (docs/scaling-a-corpus.md) | the AST only; the JS model is not evaluated |
+| stages that fit a memory limit, each a process over the last volume | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
+| an evaluation in pieces of a fixed time, each a process resuming the last volume | `node --experimental-strip-types scripts/vscode_pieces.ts FACTS N MS [--state FILE]` | the same state as one run | built (item 3) |
+| a question added above an evaluated lower stage | `node --experimental-strip-types scripts/stage_by_asks.ts FACTS N LOWER,... [kept\|volume]` | 0.38 s against 5.2 s whole at 20 files | built |
+| files added to an evaluated world one by one | `node --experimental-strip-types scripts/ingest_by_delta.ts FACTS N` | byte for byte the whole world; ~3x a file's share at 20 files | built |
+| a level evaluated at a time, other workers' facts admitted between (for workers) | `rofl serve`: `evaluate` with `wall`, `admit`, `evaluate_on` (below), tests/level_wall.rs | 4 workers over vscode 250: the union is the whole world, the slowest worker 12.5 s against 22.8 s | built; the master and shared volumes are the thread *first evaluation in 5 minutes* |
+
+A scan already lies per file: a world that asks for its own input
+(`scan_request`, above) keeps each file's scan under `~/.cache/rofl/scans`,
+stamped by its bytes. `rofl scan DIR --out F` does not; it writes one file.
+
+Before a run of more than a few hundred files: say which of these it uses, and
+if it uses none, that its world is one heap and how large that heap will be:
+the JS model over vscode is linear in the base facts, 0.92 GB at 250 files
+without a question, so ~12 GB over the 4 308 files of subset S
+(w_reference_scale_in_five_minutes in facts/findings.rofl).
+
+## `rofl serve`, the protocol
+
+`rofl serve` reads one JSON request a line and answers one a line. The list of
+operations and their fields is the header of
+`rust/rofl/src/bin/rofl/serve.rs`; `runtime/port.ts` is the TypeScript client
+every harness above uses. Besides the question verbs: `open` (a seed, a kept
+image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`,
+`evaluate` and `resume`, `keep` (an image or, with `volume`, a volume),
+`cool`, `cool_many` and `reheat` (a volume by its key prefix, to disk and
+back), `view` (what a volume's world wrote above its base), `evaluate` with
+`wall`, `evaluate_on` and `admit` (a level at a time), `rows`, `fact`,
+`firings`, `cell`, `books`, `holding` (the store read piece by piece),
+`inbox` and `dispatch` (adapters, docs/intents.md), `tick`, `state`, `facts`,
+`close`, and `spans` (no session: `{"op":"spans","text":MD}` answers `{"spans":[[a,b],...]}`,
+the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
+line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
+
+**`hot:` on stderr** is the engine naming a rule that reads far more rows than
+it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
+reading and the binding. It is a diagnostic for the rule's author, not an
+error; docs/optimising-a-world.md is what to do about it. `evaluate` returns
+the same as `hot`.

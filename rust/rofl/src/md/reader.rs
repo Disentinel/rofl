@@ -7,7 +7,11 @@ use super::say::{self, Fix, Part, T};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 
-pub const TERM: &str = r#"(?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}(?: [A-Z][A-Za-z0-9]*)?|some [a-z][\w-]*(?: [a-z][\w-]*){0,2}|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|`[^`]+`|\$?[a-z_]\w*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))"#;
+/// The words of a noun phrase: one to three, lower case.
+macro_rules! words { () => { r"[a-z][\w-]*(?: [a-z][\w-]*){0,2}" }; }
+/// What may stand in a hole of a sentence: a noun phrase, a variable, a string, a number, an atom in backticks; `TERM` adds a call.
+macro_rules! ask_term { () => { concat!(r"[Aa]n? ", words!(), r"(?: [A-Z][A-Za-z0-9]*)?|some ", words!(), r#"|something|it|[A-Z][A-Za-z0-9]*|"[^"]*"|-?\d+|`[^`]+`"#) }; }
+pub const TERM: &str = concat!("(?:", ask_term!(), r#"|\$?[a-z_]\w*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\)"#, ")");
 const TAKES: &str = r#"\((?:[^()"`]|"[^"]*"|`[^`]*`)*\)|TERM"#;
 /// A pattern with `TERM` and `TAKES` in it, compiled once.
 fn tm(p: &str) -> &'static Regex {
@@ -19,7 +23,7 @@ fn tm(p: &str) -> &'static Regex {
 }
 fn cap(r: &Regex, s: &str) -> Option<Vec<Option<String>>> { r.captures(s).map(|c| rx::groups(&c)) }
 
-const VALUE: [&str; 13] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
+pub const VALUE: [&str; 13] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 fn value(n: &str) -> bool { VALUE.contains(&n) }
 const EVALUABLE: [&str; 18] = ["+", "-", "*", "/", "mod", "min", "max", "str_len", "str_char", "str_sub", "str_pre", "str_seg", "str_segs", "atom_of", "ivadd", "ivsub", "ivmul", "ivmeet"];
 const MODAL: [&str; 7] = ["can", "could", "must", "may", "will", "should", "would"];
@@ -32,7 +36,7 @@ fn be(t: &str) -> Option<Vec<String>> {
     };
     Some(v.iter().map(|s| s.to_string()).collect())
 }
-const LATTICE_WORD: [(&str, &str); 12] = [("least", "min"), ("greatest", "max"), ("disjunction", "or"), ("conjunction", "and"), ("union", "union"), ("hull", "hull"),
+pub const LATTICE_WORD: [(&str, &str); 12] = [("least", "min"), ("greatest", "max"), ("disjunction", "or"), ("conjunction", "and"), ("union", "union"), ("hull", "hull"),
     ("bitwise or", "bitor"), ("sum", "sum"), ("count", "count"), ("median", "median"), ("quantile", "quantile"), ("rank", "rank")];
 const NAME: &str = "(?:_|[A-Z][A-Za-z0-9_]*)";
 pub const TREE_DECL: &str = r"^Each child of `(\w+)` has one parent and no node is its own ancestor(?:, and `(\w+)` holds of each node and every ancestor of it)?\.$";
@@ -132,7 +136,7 @@ pub fn clean(s: &str) -> String { rx::sub(r#"<a id="[^"]+"><\/a>"#, &rx::replace
 
 /// A sentence's relation named from its words, `A call C is unawaited` -> `unawaited`.
 pub fn slug(head: &str) -> String {
-    let s = rx::sub(r"\b(?:[Aa]n?|[Tt]he) [a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z][A-Za-z0-9]*\b", head, true, " ");
+    let s = rx::sub(concat!(r"\b(?:[Aa]n?|[Tt]he) ", words!(), r" [A-Z][A-Za-z0-9]*\b"), head, true, " ");
     let s = rx::sub(r#"`[^`]*`|"[^"]*"|\b[A-Z][A-Za-z0-9]*\b"#, &s, true, " ").to_lowercase();
     let s = rx::sub(r"\b(a|an|the|is|are)\b", &s, true, " ");
     let s = rx::sub(r"[^a-z0-9]+", &s, true, "_");
@@ -459,6 +463,8 @@ pub struct R {
     fresh_n: usize,
     bad_term: Option<String>,
     pub dropped: Vec<String>,
+    /// the lines [from, to) of each run of blocks read as sentences
+    pub spans: Vec<(usize, usize)>,
     /// the relations of the rules left out, which a rule of the text concludes and no loaded one does
     pub left_out: Vec<String>,
     promised: Vec<(String, String)>,
@@ -498,6 +504,72 @@ pub struct R {
 }
 
 /// The reading of a text: its rules, its sentences, its report, and the reader for its questions.
+fn paragraph_blocks(md: &str) -> Vec<Block> {
+    let mut blocks: Vec<Block> = Vec::new();
+    for b in parse_md(md) {
+        if matches!(b.ty, Ty::Front | Ty::Q | Ty::Code) { continue; }
+        if b.ty == Ty::P && b.lines.is_some() {
+            let lines = b.lines.clone().unwrap();
+            let at = b.at.unwrap_or(0);
+            let mut ps: Vec<Vec<usize>> = Vec::new();
+            for (i, l) in lines.iter().enumerate() {
+                if i == 0 || (lines[i - 1].ends_with('.') && rx::test("^[A-Z`]", l)) { ps.push(vec![]); }
+                ps.last_mut().unwrap().push(i);
+            }
+            for p in ps {
+                blocks.push(Block { ty: Ty::P, text: p.iter().map(|&i| lines[i].as_str()).collect::<Vec<_>>().join(" "), at: Some(at + p[0]), end: Some(at + p[p.len() - 1] + 1), ..Default::default() });
+            }
+        } else { blocks.push(b); }
+    }
+    blocks
+}
+
+fn head_of(t: &str) -> String {
+    let t = rx::sub(" if all of:$", &rx::sub(" either:$", t, false, ""), false, "");
+    let first = rx::split(" if | unless |, unless ", &t).into_iter().next().unwrap_or_default();
+    rx::sub("[.;:]$", &first, false, "").trim().to_string()
+}
+
+fn word_shape(t: &str) -> String {
+    rx::sub(concat!(r"(?:\b(?:an?) ", words!(), r" )?\b[A-Z][A-Za-z0-9]*\b"), &lower1(t), true, "_")
+}
+
+fn declared_listing(blocks: &[Block], lines: &[&str]) -> (HashMap<String, i64>, Vec<String>) {
+    let mut at: HashMap<String, i64> = HashMap::new();
+    let mut items: Vec<String> = Vec::new();
+    for (i, b) in blocks.iter().enumerate() {
+        if !(b.ty == Ty::P && b.text.trim() == "Declared as facts:" && blocks.get(i + 1).is_some_and(|n| n.ty == Ty::Ul)) { continue; }
+        let next = &blocks[i + 1];
+        for it in &next.items {
+            let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
+            if !at.contains_key(&t) {
+                let from = next.at.unwrap_or(0);
+                at.insert(t.clone(), lines.iter().enumerate().position(|(k, l)| k >= from && l.contains(t.as_str())).map(|x| x as i64).unwrap_or(-1));
+            }
+            items.push(t);
+        }
+    }
+    (at, items)
+}
+
+struct AggParts<'a> { text: &'a str, pre: &'a str, inner: &'a str, tail: &'a str }
+
+fn subject_of(t: &str) -> String {
+    if rx::test(r"^[A-Z]\w*$", t) || t == "it" { t.to_string() } else { rx::exec(r" ([A-Z]\w*)$", t).map(|m| g(&m, 1).to_string()).unwrap_or_else(|| t.to_string()) }
+}
+
+/// The pattern of the words a template spells before its `is`, which a stem of a sentence must match.
+fn stem_prefix(t: &T) -> Option<&'static Regex> {
+    let last = t.parts.iter().rposition(|p| matches!(p, Part::Hole(..)))?;
+    if last < 1 || t.parts[last + 1..].iter().any(|p| !matches!(p, Part::Fix(..))) { return None; }
+    let Part::Text(before) = &t.parts[last - 1] else { return None };
+    if !rx::test(r"\bis$", before) { return None; }
+    let mut pieces: Vec<String> = t.parts[..last - 1].iter().filter_map(|p| match p { Part::Text(s) => Some(rx::esc(s).replace(' ', "\\s+")), Part::Hole(..) => Some(format!("({TERM})")), _ => None }).filter(|s| !s.is_empty()).collect();
+    let stem_text = rx::sub(r"\s*is$", before, false, "").trim().to_string();
+    if !stem_text.is_empty() { pieces.push(rx::esc(&stem_text).replace(' ', "\\s+")); }
+    Some(rx::re(&format!("^{}$", pieces.join("\\s+"))))
+}
+
 pub fn read_md(raw: &str, vocab: &str, home_books: &HashMap<String, String>) -> R {
     let mut r = R::new(vocab, home_books);
     r.run(raw);
@@ -535,7 +607,7 @@ impl R {
         let set_rels = rx::each(r"(?m)^kind_set\((\w+)\)", vocab).iter().map(|m| g(m, 1).to_string()).collect();
         let mut r = R {
             kind_noun, guard_of, noun_guards: OMap::default(), nouns, templates, fun_templates, collisions, set_rels, used_here: HashSet::new(),
-            noun_atoms: OMap::default(), noun_sets: OMap::default(), subject_var: None, fresh_n: 0, bad_term: None, dropped: vec![], left_out: vec![], promised: vec![],
+            noun_atoms: OMap::default(), noun_sets: OMap::default(), subject_var: None, fresh_n: 0, bad_term: None, dropped: vec![], spans: vec![], left_out: vec![], promised: vec![],
             plurals: HashMap::new(), plurals_of: usize::MAX, ambiguous: vec![], known: HashMap::new(), unparsed: vec![], fresh_names: HashSet::new(), agg_why: None,
             rules: vec![], parsed_facts: vec![], declared: vec![], imported: HashSet::new(), bad_alternatives: vec![], head_book: HashMap::new(),
             home_book: HashMap::new(), home_books: home_books.clone(), default_book: "main".into(), cur_book: "main".into(), block_set: false,
@@ -632,7 +704,7 @@ impl R {
         if rx::test(" or ", &rx::sub(r#""[^"]*"|`[^`]*`"#, text, true, "")) {
             return Or(rx::split(" or ", text).iter().map(|x| self.term(x.trim(), intros)).collect());
         }
-        if let Some(m) = rx::exec(r"^[Aa]n? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: ([A-Z][A-Za-z0-9]*))?$", text) {
+        if let Some(m) = rx::exec(concat!(r"^[Aa]n? (", words!(), r")(?: ([A-Z][A-Za-z0-9]*))?$"), text) {
             let v = if has(&m, 2) { g(&m, 2).to_string() } else { let v = format!("It{}", self.fresh_n); self.fresh_n += 1; v };
             let n = g(&m, 1);
             intros.push(Intro { v: v.clone(), noun: if n.ends_with(" node") { format!("`{}", cut(n, 5)) } else { n.to_string() } });
@@ -684,7 +756,7 @@ impl R {
                     let Part::Hole(_, pn) = p else { continue };
                     let cap = &gs[gi];
                     gi += 1;
-                    let im = rx::exec(r"^[Aa]n? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: [A-Z]\w*)?$", cap);
+                    let im = rx::exec(concat!(r"^[Aa]n? (", words!(), r")(?: [A-Z]\w*)?$"), cap);
                     let noun: Option<String> = match &im {
                         Some(im) => Some(g(im, 1).to_string()),
                         None if cap == "it" => self.subject_var.as_ref().and_then(|s| self.known.get(s).cloned()),
@@ -715,7 +787,7 @@ impl R {
             let Part::Hole(_, pn) = p else { continue };
             let cap = &gs[gi];
             gi += 1;
-            let im = if rx::test(r"^[A-Z]\w*$", cap) { Some(cap.clone()) } else { rx::exec(r"^[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} ([A-Z]\w*)$", cap).map(|m| g(&m, 1).to_string()) };
+            let im = if rx::test(r"^[A-Z]\w*$", cap) { Some(cap.clone()) } else { rx::exec(concat!(r"^[Aa]n? ", words!(), r" ([A-Z]\w*)$"), cap).map(|m| g(&m, 1).to_string()) };
             if let Some(im) = im { if !self.known.contains_key(&im) { self.known.insert(im, pn.clone()); } }
         }
         if as_head && matches!(t.parts.first(), Some(Part::Hole(..))) {
@@ -738,7 +810,7 @@ impl R {
     }
 
     fn guard_head(&mut self, text: &str, intros: &mut Vec<Intro>) -> Option<Lit> {
-        let m = cap(tm(r"^(TERM) is an? ([a-z][\w-]*(?: [a-z][\w-]*){0,2})$"), text)?;
+        let m = cap(tm(concat!(r"^(TERM) is an? (", words!(), r")$")), text)?;
         let rel = self.noun_guards.get(g(&m, 2))?.clone();
         let t = self.term(g(&m, 1), intros);
         self.subject_var = var_name(&t).map(str::to_string);
@@ -751,146 +823,189 @@ impl R {
     }
 
     // ------------------------------------------------------------- sentences
+    /// One condition of a sentence, read by the first of its forms that fits; `false` when none does.
     fn condition(&mut self, text0: &str, intros: &mut Vec<Intro>, rule: &mut Rule) -> bool {
         let mut neg = false;
         let mut text = rx::sub("[;.]$", text0.trim(), false, "");
         if let Some(t) = text.strip_prefix("unless ") { neg = true; text = t.to_string(); }
         let text = text.as_str();
-        if let Some(agg) = self.aggregate(text, intros, rule) {
-            if neg || !agg {
-                let u = if neg { format!("unless {text}: an aggregate is not negated") } else if let Some(w) = &self.agg_why { format!("{text}: {w}") } else { text.to_string() };
-                self.unparsed.push(u);
-            }
-            return agg && !neg;
-        }
-        let subj_of = |t: &str| -> String { if rx::test(r"^[A-Z]\w*$", t) || t == "it" { t.to_string() } else { rx::exec(r" ([A-Z]\w*)$", t).map(|m| g(&m, 1).to_string()).unwrap_or_else(|| t.to_string()) } };
-        if !neg {
-            if let Some(m) = rx::exec(r"^(.+?) but is not (.+)$", text) {
-                let head2: String = g(&m, 1).chars().take(2).collect();
-                if !rx::test("[\"`]", &head2) {
-                    if let Some(st) = cap(tm(r"^(TERM) "), g(&m, 1)) {
-                        let ok = self.condition(g(&m, 1), intros, rule);
-                        return self.condition(&format!("unless {} is {}", subj_of(g(&st, 1)), g(&m, 2)), intros, rule) && ok;
-                    }
-                }
-            }
-        }
-        if let Some(m) = cap(tm(r"^(TERM) neither (.+) nor (.+)$"), text) {
-            let ok = self.condition(&format!("unless {} {}", g(&m, 1), g(&m, 2)), intros, rule);
-            return self.condition(&format!("unless {} {}", subj_of(g(&m, 1)), g(&m, 3)), intros, rule) && ok;
-        }
-        if neg && text.contains(" or ") {
-            let pieces = split_or(text);
-            if pieces.len() > 1 && pieces.iter().all(|p| tm(r"^TERM\s+\S").is_match(p)) {
-                let mut ok = true;
-                for p in pieces { ok = self.condition(&format!("unless {p}"), intros, rule) && ok; }
-                return ok;
+        let form = self.aggregate_condition(text, neg, intros, rule)
+            .or_else(|| self.but_is_not(text, neg, intros, rule))
+            .or_else(|| self.neither_nor(text, intros, rule))
+            .or_else(|| self.unless_either(text, neg, intros, rule))
+            .or_else(|| self.fun_is(text, neg, intros, rule))
+            .or_else(|| self.in_file(text, intros, rule))
+            .or_else(|| self.kinds_is(text, neg, intros, rule))
+            .or_else(|| self.plain_literal(text, neg, intros, rule))
+            .or_else(|| self.operator(text, neg, intros, rule))
+            .or_else(|| self.relative(text, neg, intros, rule))
+            .or_else(|| self.template(text, neg, intros, rule));
+        match form {
+            Some(ok) => ok,
+            None => {
+                let the = self.the_variable(text);
+                self.unparsed.push(match the { Some(w) => format!("{text}: {w}"), None => text.to_string() });
+                false
             }
         }
-        if let Some(m) = cap(tm(r"^(TERM) is (.+)$"), text) {
-            if let Some(f) = self.fun_term(g(&m, 2), intros) {
-                let rel = if matches!(&f, F(n, _) if n.starts_with('$')) { "=" } else { "is" };
-                let a = self.term(g(&m, 1), intros);
-                rule.body.push(Lit { neg, ..lit(rel, vec![a, f]) });
-                return true;
-            }
+    }
+
+    fn aggregate_condition(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let agg = self.aggregate(text, intros, rule)?;
+        if neg || !agg {
+            let u = if neg { format!("unless {text}: an aggregate is not negated") } else if let Some(w) = &self.agg_why { format!("{text}: {w}") } else { text.to_string() };
+            self.unparsed.push(u);
         }
-        if let Some(m) = rx::exec(r"^((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?[A-Z][A-Za-z0-9]*|it) is in file (.+)$", text) {
-            let t = self.term(g(&m, 1), intros);
-            let v = var_name(&t).unwrap_or("").to_string();
-            let guarded = gpos(&rule.guards, &v).is_some() || intros.iter().any(|x| x.v == v && !value(&x.noun));
-            if guarded {
-                let file = self.term(g(&m, 2), intros);
-                match gpos(&rule.guards, &v) {
-                    Some(i) => rule.guards[i].1.file = Some(file),
-                    None => { let noun = intros.iter().find(|x| x.v == v).unwrap().noun.clone(); rule.guards.push((v, Guard { noun, nouns: None, file: Some(file) })); }
-                }
-                return true;
+        Some(agg && !neg)
+    }
+
+    fn but_is_not(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        if neg { return None; }
+        let m = rx::exec(r"^(.+?) but is not (.+)$", text)?;
+        let head2: String = g(&m, 1).chars().take(2).collect();
+        if rx::test("[\"`]", &head2) { return None; }
+        let st = cap(tm(r"^(TERM) "), g(&m, 1))?;
+        let ok = self.condition(g(&m, 1), intros, rule);
+        Some(self.condition(&format!("unless {} is {}", subject_of(g(&st, 1)), g(&m, 2)), intros, rule) && ok)
+    }
+
+    fn neither_nor(&mut self, text: &str, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) neither (.+) nor (.+)$"), text)?;
+        let ok = self.condition(&format!("unless {} {}", g(&m, 1), g(&m, 2)), intros, rule);
+        Some(self.condition(&format!("unless {} {}", subject_of(g(&m, 1)), g(&m, 3)), intros, rule) && ok)
+    }
+
+    fn unless_either(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        if !neg || !text.contains(" or ") { return None; }
+        let pieces = split_or(text);
+        if pieces.len() <= 1 || !pieces.iter().all(|p| tm(r"^TERM\s+\S").is_match(p)) { return None; }
+        let mut ok = true;
+        for p in pieces { ok = self.condition(&format!("unless {p}"), intros, rule) && ok; }
+        Some(ok)
+    }
+
+    fn fun_is(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is (.+)$"), text)?;
+        let f = self.fun_term(g(&m, 2), intros)?;
+        let rel = if matches!(&f, F(n, _) if n.starts_with('$')) { "=" } else { "is" };
+        let a = self.term(g(&m, 1), intros);
+        rule.body.push(Lit { neg, ..lit(rel, vec![a, f]) });
+        Some(true)
+    }
+
+    fn in_file(&mut self, text: &str, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = rx::exec(concat!(r"^((?:[Aa]n? ", words!(), r" )?[A-Z][A-Za-z0-9]*|it) is in file (.+)$"), text)?;
+        let t = self.term(g(&m, 1), intros);
+        let v = var_name(&t).unwrap_or("").to_string();
+        let guarded = gpos(&rule.guards, &v).is_some() || intros.iter().any(|x| x.v == v && !value(&x.noun));
+        let file = self.term(g(&m, 2), intros);
+        if guarded {
+            match gpos(&rule.guards, &v) {
+                Some(i) => rule.guards[i].1.file = Some(file),
+                None => { let noun = intros.iter().find(|x| x.v == v).unwrap().noun.clone(); rule.guards.push((v, Guard { noun, nouns: None, file: Some(file) })); }
             }
-            let file = self.term(g(&m, 2), intros);
-            match gpos(&rule.guards, &v) { Some(i) => rule.guards[i].1 = Guard { noun: "node".into(), nouns: None, file: Some(file) }, None => rule.guards.push((v.clone(), Guard { noun: "node".into(), nouns: None, file: Some(file) })) }
-            self.known.insert(v, "node".into());
+            return Some(true);
+        }
+        match gpos(&rule.guards, &v) { Some(i) => rule.guards[i].1 = Guard { noun: "node".into(), nouns: None, file: Some(file) }, None => rule.guards.push((v.clone(), Guard { noun: "node".into(), nouns: None, file: Some(file) })) }
+        self.known.insert(v, "node".into());
+        Some(true)
+    }
+
+    /// `X is a node` and `X is a kind`: the noun's guard, or its kind's relation, or its atoms.
+    fn kinds_is(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = rx::exec(concat!(r"^((?:[Aa]n? ", words!(), r" )?[A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? ", words!(), r")(?: or [Aa]n? ", words!(), r")*)$"), text)?;
+        let ns: Vec<String> = rx::split(" or ", g(&m, 2)).iter().map(|x| rx::sub("^[Aa]n? ", x, false, "")).map(|n| if n.ends_with(" node") { format!("`{}", cut(&n, 5)) } else { n }).collect();
+        let subj = if g(&m, 1) == "it" { self.subject_var.clone().unwrap_or_else(|| "It".into()) } else { let t = self.term(g(&m, 1), intros); var_name(&t).unwrap_or("").to_string() };
+        if ns.len() == 1 && self.noun_guards.has(&ns[0]) {
+            let rel = self.noun_guards.get(&ns[0]).unwrap().clone();
+            rule.body.push(Lit { neg, ..lit(&rel, vec![V(subj.clone())]) });
+            self.known.insert(subj, ns[0].clone());
+            return Some(true);
+        }
+        if !ns.iter().all(|n| self.noun_atoms.has(n) || self.noun_sets.has(n) || n.starts_with('`')) { return None; }
+        Some(self.noun_kinds(text, neg, ns, subj, rule))
+    }
+
+    fn noun_kinds(&mut self, text: &str, neg: bool, ns: Vec<String>, subj: String, rule: &mut Rule) -> bool {
+        let hit = if ns.len() == 1 { self.match_lit(text, &mut Vec::new(), false) } else { None };
+        if let Some(mut hit) = hit {
+            self.ambiguous.push(format!("{text}  ->  a kind of {subj} | {} (the relation wins)", hit.rel));
+            hit.neg = neg;
+            rule.body.push(hit);
+            self.known.insert(subj, ns[0].clone());
             return true;
         }
-        if let Some(m) = rx::exec(r"^((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?[A-Z][A-Za-z0-9]*|it) is ((?:[Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})(?: or [Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2})*)$", text) {
-            let ns: Vec<String> = rx::split(" or ", g(&m, 2)).iter().map(|x| rx::sub("^[Aa]n? ", x, false, "")).map(|n| if n.ends_with(" node") { format!("`{}", cut(&n, 5)) } else { n }).collect();
-            let subj = if g(&m, 1) == "it" { self.subject_var.clone().unwrap_or_else(|| "It".into()) } else { let t = self.term(g(&m, 1), intros); var_name(&t).unwrap_or("").to_string() };
-            if ns.len() == 1 && self.noun_guards.has(&ns[0]) {
-                let rel = self.noun_guards.get(&ns[0]).unwrap().clone();
-                rule.body.push(Lit { neg, ..lit(&rel, vec![V(subj.clone())]) });
-                self.known.insert(subj, ns[0].clone());
+        if neg {
+            let atoms: Vec<String> = ns.iter().flat_map(|n| if let Some(a) = n.strip_prefix('`') { vec![a.to_string()] } else { self.noun_atoms.get(n).cloned().unwrap_or_default() }).collect();
+            if atoms.len() == ns.len() {
+                for a in atoms { rule.body.push(Lit { neg: true, ..lit("ast_node", vec![V(subj.clone()), A(a), W]) }); }
                 return true;
             }
-            if ns.iter().all(|n| self.noun_atoms.has(n) || self.noun_sets.has(n) || n.starts_with('`')) {
-                let hit = if ns.len() == 1 { self.match_lit(text, &mut Vec::new(), false) } else { None };
-                if let Some(mut hit) = hit {
-                    self.ambiguous.push(format!("{text}  ->  a kind of {subj} | {} (the relation wins)", hit.rel));
-                    hit.neg = neg;
-                    rule.body.push(hit);
-                    self.known.insert(subj, ns[0].clone());
-                    return true;
-                }
-                if neg {
-                    let atoms: Vec<String> = ns.iter().flat_map(|n| if let Some(a) = n.strip_prefix('`') { vec![a.to_string()] } else { self.noun_atoms.get(n).cloned().unwrap_or_default() }).collect();
-                    if atoms.len() == ns.len() {
-                        for a in atoms { rule.body.push(Lit { neg: true, ..lit("ast_node", vec![V(subj.clone()), A(a), W]) }); }
-                        return true;
-                    }
-                    self.unparsed.push(format!("unless {text}"));
-                    return false;
-                }
-                let file = gpos(&rule.guards, &subj).and_then(|i| rule.guards[i].1.file.clone());
-                let gd = Guard { noun: ns[0].clone(), nouns: Some(ns.clone()), file };
-                match gpos(&rule.guards, &subj) { Some(i) => rule.guards[i].1 = gd, None => rule.guards.push((subj.clone(), gd)) }
-                self.known.insert(subj, ns[0].clone());
-                return true;
-            }
+            self.unparsed.push(format!("unless {text}"));
+            return false;
         }
+        let file = gpos(&rule.guards, &subj).and_then(|i| rule.guards[i].1.file.clone());
+        let gd = Guard { noun: ns[0].clone(), nouns: Some(ns.clone()), file };
+        match gpos(&rule.guards, &subj) { Some(i) => rule.guards[i].1 = gd, None => rule.guards.push((subj.clone(), gd)) }
+        self.known.insert(subj, ns[0].clone());
+        true
+    }
+
+    fn plain_literal(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
         let pos = self.positional(text, intros);
         // read again, as the TypeScript does for its trace: a name it gives a term is spent twice
         if pos.is_some() { self.positional(text, &mut Vec::new()); }
-        let l = match pos { Some(l) => Some(l), None => self.match_lit(text, intros, false) };
-        if let Some(mut l) = l { l.neg = neg; rule.body.push(l); return true; }
+        let mut l = match pos { Some(l) => l, None => self.match_lit(text, intros, false)? };
+        l.neg = neg;
+        rule.body.push(l);
+        Some(true)
+    }
+
+    fn operator(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
         if let Some(m) = rx::exec(r"^(.+?) is (.+)$", text) {
             let re = r#"^(it|[A-Z][A-Za-z0-9]*|`[^`]+`|"[^"]*"|-?\d+)$"#;
             if rx::test(re, g(&m, 1)) && rx::test(re, g(&m, 2)) {
                 let (a, b) = (self.term(g(&m, 1), intros), self.term(g(&m, 2), intros));
                 rule.body.push(Lit { neg, ..lit("=", vec![a, b]) });
-                return true;
+                return Some(true);
             }
         }
         if let Some(m) = rx::exec(r"^(.+?) differs from (.+)$", text) {
             let (a, b) = (self.term(g(&m, 1), intros), self.term(g(&m, 2), intros));
             rule.body.push(Lit { neg, ..lit("!=", vec![a, b]) });
-            return true;
+            return Some(true);
         }
         if let Some(m) = cap(tm(r"^(TERM) is (a member|a subset) of (TERM)$"), text) {
             let (a, b) = (self.term(g(&m, 1), intros), self.term(g(&m, 3), intros));
             rule.body.push(Lit { neg, ..lit(if g(&m, 2) == "a member" { "in" } else { "subset" }, vec![a, b]) });
-            return true;
+            return Some(true);
         }
         if let Some(m) = rx::exec(r"^(\S+) ([<>]=?) (\S+)$", text) {
             let (a, b) = (self.term(g(&m, 1), intros), self.term(g(&m, 3), intros));
             rule.body.push(Lit { neg, ..lit(g(&m, 2), vec![a, b]) });
-            return true;
+            return Some(true);
         }
-        if let Some(m) = rx::exec(r"^(.*?) ([Aa]n? [a-z][\w-]*(?: [a-z][\w-]*){0,2}) that (.+)$", text) {
-            let fresh = format!("Rel{}", self.fresh_n);
-            self.fresh_n += 1;
-            let l1 = self.match_lit(&format!("{} {} {fresh}", g(&m, 1), g(&m, 2)), intros, false);
-            let l2 = if l1.is_some() { self.match_lit(&format!("{fresh} {}", g(&m, 3)), intros, false) } else { None };
-            if let (Some(mut l1), Some(l2)) = (l1, l2) { l1.neg = neg; rule.body.push(l1); rule.body.push(l2); return true; }
-        }
+        None
+    }
+
+    /// `A B that C`: the relation B between A and a fresh one, which C says of.
+    fn relative(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = rx::exec(concat!(r"^(.*?) ([Aa]n? ", words!(), r") that (.+)$"), text)?;
+        let fresh = format!("Rel{}", self.fresh_n);
+        self.fresh_n += 1;
+        let l1 = self.match_lit(&format!("{} {} {fresh}", g(&m, 1), g(&m, 2)), intros, false);
+        let l2 = if l1.is_some() { self.match_lit(&format!("{fresh} {}", g(&m, 3)), intros, false) } else { None };
+        let (mut l1, l2) = (l1?, l2?);
+        l1.neg = neg;
+        rule.body.push(l1);
+        rule.body.push(l2);
+        Some(true)
+    }
+
+    /// A relation a template spells, with its last word `is` and the subject after it.
+    fn template(&mut self, text: &str, neg: bool, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
         for ti in 0..self.templates.len() {
-            let t = self.templates[ti].clone();
-            let Some(last) = t.parts.iter().rposition(|p| matches!(p, Part::Hole(..))) else { continue };
-            if last < 1 || t.parts[last + 1..].iter().any(|p| !matches!(p, Part::Fix(..))) { continue; }
-            let Part::Text(before) = &t.parts[last - 1] else { continue };
-            if !rx::test(r"\bis$", before) { continue; }
-            let mut pieces: Vec<String> = t.parts[..last - 1].iter().filter_map(|p| match p { Part::Text(s) => Some(rx::esc(s).replace(' ', "\\s+")), Part::Hole(..) => Some(format!("({TERM})")), _ => None }).filter(|s| !s.is_empty()).collect();
-            let stem_text = rx::sub(r"\s*is$", before, false, "").trim().to_string();
-            if !stem_text.is_empty() { pieces.push(rx::esc(&stem_text).replace(' ', "\\s+")); }
-            let prefix = rx::re(&format!("^{}$", pieces.join("\\s+")));
+            let Some(prefix) = stem_prefix(&self.templates[ti]) else { continue };
             let mut i = text.find(' ');
             while let Some(k) = i {
                 if k == 0 { break; }
@@ -899,19 +1014,17 @@ impl R {
                     let fresh = format!("Rel{}", self.fresh_n);
                     let l1 = self.match_lit(&format!("{stem} is {fresh}"), intros, false);
                     let l2 = if l1.is_some() { self.match_lit(&format!("{fresh} {}", &text[k + 1..]), intros, false) } else { None };
-                    if let (Some(mut l1), Some(l2)) = (l1, l2) { self.fresh_n += 1; l1.neg = neg; rule.body.push(l1); rule.body.push(l2); return true; }
+                    if let (Some(mut l1), Some(l2)) = (l1, l2) { self.fresh_n += 1; l1.neg = neg; rule.body.push(l1); rule.body.push(l2); return Some(true); }
                 }
                 i = text[k + 1..].find(' ').map(|x| x + k + 1);
             }
         }
-        let the = self.the_variable(text);
-        self.unparsed.push(match the { Some(w) => format!("{text}: {w}"), None => text.to_string() });
-        false
+        None
     }
 
     /// `the area A` where a variable is meant: why the line does not read, when it reads with `an area A`.
     fn the_variable(&mut self, s: &str) -> Option<String> {
-        let found: Vec<(usize, usize, String, String)> = rx::re(r"\bthe ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) ([A-Z][A-Za-z0-9]*)\b").captures_iter(s)
+        let found: Vec<(usize, usize, String, String)> = rx::re(concat!(r"\bthe (", words!(), r") ([A-Z][A-Za-z0-9]*)\b")).captures_iter(s)
             .map(|c| { let m = c.get(0).unwrap(); (m.start(), m.end(), c[1].to_string(), c[2].to_string()) }).collect();
         for (st, en, n, v) in found {
             let a = format!("{} {n} {v}", art(&n));
@@ -945,110 +1058,149 @@ impl R {
         rule.body.push(Lit { agg: Some(Box::new(Agg { op: op.into(), res, vals, keys, subs, copy, alone: None, every })), ..lit("$agg", vec![]) });
     }
     /// true: read into `rule`; false: an aggregate that does not read; None: no aggregate.
+    /// `… such that (…)` aggregates: the text split around the parenthesis, and each form that may read it.
     fn aggregate(&mut self, text: &str, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
         self.agg_why = None;
         let at = text.find(" such that (")?;
         let open = at + " such that ".len();
         let close = closer(text, open)?;
-        let (pre, inner, tail) = (&text[..at], &text[open + 1..close], &text[close + 1..]);
-        if let Some(m) = cap(tm(r"^every (TAKES)$"), pre) {
-            let sat = rx::exec(r"^ satisfies \(", tail);
-            let n = " satisfies (".len();
-            if sat.is_none() || closer(tail, n - 1) != Some(tail.len() - 1) { self.agg_why = Some("every names what each must satisfy, `satisfies (...)`".into()); return Some(false); }
-            let xs = self.takes(g(&m, 1), intros);
-            let d = self.inner_rule(inner, rule);
-            let b = self.inner_rule(&tail[n..tail.len() - 1], rule);
-            let (Some(d), Some(b)) = (d, b) else { return Some(false) };
-            let (all, holding) = (V(self.fresh("Domain")), V(self.fresh("Holding")));
-            Self::push_agg(rule, "count", all.clone(), xs.clone(), vec![], vec![d.clone()], false, false);
-            Self::push_agg(rule, "count", holding.clone(), xs, vec![], vec![d, b], true, true);
-            rule.body.push(Lit { keep: true, ..lit("=", vec![all, holding]) });
-            return Some(true);
-        }
-        if let Some(m) = cap(tm(r"^(TERM) is the average of (TERM) over (TAKES)$"), pre) {
-            let Some(r) = rx::exec(r"^(?: in (tenths|hundredths|thousandths|millionths))? rounded toward zero$", tail) else {
-                self.agg_why = Some("an average states its rounding: `rounded toward zero`, after a scale (`in tenths` ... `in millionths`) if any".into());
-                return Some(false);
-            };
-            let res = self.term(g(&m, 1), intros);
-            let v = self.term(g(&m, 2), intros);
-            let ks = self.takes(g(&m, 3), intros);
-            let Some(b) = self.inner_rule(inner, rule) else { return Some(false) };
-            let (total, count) = (V(self.fresh("Total")), V(self.fresh("Count")));
-            Self::push_agg(rule, "sum", total.clone(), vec![v.clone()], ks.clone(), vec![b.clone()], false, false);
-            Self::push_agg(rule, "count", count.clone(), std::iter::once(v).chain(ks).collect(), vec![], vec![b], true, false);
-            rule.body.push(lit(">", vec![count.clone(), N("0".into())]));
-            let mut num = total.clone();
-            if has(&r, 1) {
-                num = V(self.fresh("Scaled"));
-                let scale = match g(&r, 1) { "tenths" => "10", "hundredths" => "100", "thousandths" => "1000", _ => "1000000" };
-                rule.body.push(lit("is", vec![num.clone(), F("*".into(), vec![total, N(scale.into())])]));
-            }
-            rule.body.push(lit("is", vec![res, F("/".into(), vec![num, count])]));
-            return Some(true);
-        }
-        if !tail.is_empty() { return Some(false); }
-        macro_rules! read { ($op:expr, $res:expr, $vals:expr, $keys:expr) => {{
-            let (res, vals, keys) = ($res, $vals, $keys);
-            match self.inner_rule(inner, rule) { None => Some(false), Some(s) => { Self::push_agg(rule, $op, res, vals, keys, vec![s], false, false); Some(true) } }
-        }}; }
-        if let Some(m) = cap(tm(r"^(TERM) is the number of (TAKES)$"), pre) {
-            return read!("count", self.term(g(&m, 1), intros), self.takes(g(&m, 2), intros), vec![]);
-        }
-        if let Some(m) = cap(tm(r"^(TERM) is the (sum|median) of (TERM) over (TAKES)$"), pre) {
-            let res = self.term(g(&m, 1), intros);
-            let v = self.term(g(&m, 3), intros);
-            return read!(g(&m, 2), res, vec![v], self.takes(g(&m, 4), intros));
-        }
-        if let Some(m) = cap(tm(r"^(TERM) is the quantile (TERM) of (TERM) over (TAKES)$"), pre) {
-            let res = self.term(g(&m, 1), intros);
-            let q = self.term(g(&m, 2), intros);
-            let v = self.term(g(&m, 3), intros);
-            return read!("quantile", res, vec![q, v], self.takes(g(&m, 4), intros));
-        }
-        if let Some(m) = cap(tm(r"^(TERM) is the rank of (TAKES) among (TAKES)$"), pre) {
-            if !g(&m, 2).starts_with('(') && !g(&m, 3).starts_with('(') {
-                let res = self.term(g(&m, 1), intros);
-                let a = self.term(g(&m, 2), intros);
-                let b = self.term(g(&m, 3), intros);
-                return read!("rank", res, vec![a, b], vec![]);
-            }
-            let list = if g(&m, 3).starts_with('(') { split_top(&mid(g(&m, 3))) } else { vec![g(&m, 3).to_string()] };
-            let mut keys = Vec::new();
-            for x in list {
-                let d = rx::exec(r"^(.*) (ascending|descending)$", x.trim());
-                let t = self.term(d.as_ref().map(|d| g(d, 1)).unwrap_or(&x), intros);
-                keys.push(match d { Some(d) => F(if g(&d, 2) == "descending" { "desc" } else { "asc" }.into(), vec![t]), None => t });
-            }
-            let res = self.term(g(&m, 1), intros);
-            return read!("rank", res, self.takes(g(&m, 2), intros), keys);
-        }
-        if let Some(m) = cap(tm(r"^(TERM) is the (least|greatest) (TERM)$"), pre) {
-            let res = self.term(g(&m, 1), intros);
-            return read!(if g(&m, 2) == "least" { "min" } else { "max" }, res, vec![self.term(g(&m, 3), intros)], vec![]);
-        }
-        if let Some(m) = cap(tm(r"^(TERM) is the (disjunction|conjunction) of (TERM)$"), pre) {
-            let res = self.term(g(&m, 1), intros);
-            return read!(if g(&m, 2) == "disjunction" { "or" } else { "and" }, res, vec![self.term(g(&m, 3), intros)], vec![]);
-        }
-        if let Some(m) = cap(tm(r"^at least (TERM) of (TAKES)$"), pre) {
-            let res = self.term(g(&m, 1), intros);
-            return read!("at_least", res, self.takes(g(&m, 2), intros), vec![]);
-        }
-        if let Some(m) = cap(tm(r"^(at most|exactly) (TERM) of (TAKES)$"), pre) {
-            let n = self.term(g(&m, 2), intros);
-            let xs = self.takes(g(&m, 3), intros);
-            let Some(s) = self.inner_rule(inner, rule) else { return Some(false) };
-            let count = V(self.fresh("Count"));
-            Self::push_agg(rule, "count", count.clone(), xs, vec![], vec![s], false, false);
-            rule.body.last_mut().unwrap().agg.as_mut().unwrap().alone = Some(text.to_string());
-            rule.body.push(if g(&m, 1) == "at most" { lit("<=", vec![count, n]) } else { Lit { keep: true, ..lit("=", vec![count, n]) } });
-            return Some(true);
-        }
-        Some(false)
+        let p = AggParts { text, pre: &text[..at], inner: &text[open + 1..close], tail: &text[close + 1..] };
+        if let Some(ok) = self.every_form(&p, intros, rule).or_else(|| self.average_form(&p, intros, rule)) { return Some(ok); }
+        if !p.tail.is_empty() { return Some(false); }
+        Some(self.counted_form(&p, intros, rule).unwrap_or(false))
     }
 
-    /// `J + K`, or a destructor by its phrase.
+    fn every_form(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^every (TAKES)$"), p.pre)?;
+        let sat = rx::exec(r"^ satisfies \(", p.tail);
+        let n = " satisfies (".len();
+        if sat.is_none() || closer(p.tail, n - 1) != Some(p.tail.len() - 1) { self.agg_why = Some("every names what each must satisfy, `satisfies (...)`".into()); return Some(false); }
+        let xs = self.takes(g(&m, 1), intros);
+        let d = self.inner_rule(p.inner, rule);
+        let b = self.inner_rule(&p.tail[n..p.tail.len() - 1], rule);
+        let (Some(d), Some(b)) = (d, b) else { return Some(false) };
+        let (all, holding) = (V(self.fresh("Domain")), V(self.fresh("Holding")));
+        Self::push_agg(rule, "count", all.clone(), xs.clone(), vec![], vec![d.clone()], false, false);
+        Self::push_agg(rule, "count", holding.clone(), xs, vec![], vec![d, b], true, true);
+        rule.body.push(Lit { keep: true, ..lit("=", vec![all, holding]) });
+        Some(true)
+    }
+
+    fn average_form(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the average of (TERM) over (TAKES)$"), p.pre)?;
+        let Some(r) = rx::exec(r"^(?: in (tenths|hundredths|thousandths|millionths))? rounded toward zero$", p.tail) else {
+            self.agg_why = Some("an average states its rounding: `rounded toward zero`, after a scale (`in tenths` ... `in millionths`) if any".into());
+            return Some(false);
+        };
+        let res = self.term(g(&m, 1), intros);
+        let v = self.term(g(&m, 2), intros);
+        let ks = self.takes(g(&m, 3), intros);
+        let Some(b) = self.inner_rule(p.inner, rule) else { return Some(false) };
+        let (total, count) = (V(self.fresh("Total")), V(self.fresh("Count")));
+        Self::push_agg(rule, "sum", total.clone(), vec![v.clone()], ks.clone(), vec![b.clone()], false, false);
+        Self::push_agg(rule, "count", count.clone(), std::iter::once(v).chain(ks).collect(), vec![], vec![b], true, false);
+        rule.body.push(lit(">", vec![count.clone(), N("0".into())]));
+        let mut num = total.clone();
+        if has(&r, 1) {
+            num = V(self.fresh("Scaled"));
+            let scale = match g(&r, 1) { "tenths" => "10", "hundredths" => "100", "thousandths" => "1000", _ => "1000000" };
+            rule.body.push(lit("is", vec![num.clone(), F("*".into(), vec![total, N(scale.into())])]));
+        }
+        rule.body.push(lit("is", vec![res, F("/".into(), vec![num, count])]));
+        Some(true)
+    }
+
+    /// The forms that are not an average or every: each one a set of rows, read as one aggregate literal.
+    fn counted_form(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        self.number_of(p, intros, rule)
+            .or_else(|| self.sum_or_median(p, intros, rule))
+            .or_else(|| self.quantile(p, intros, rule))
+            .or_else(|| self.rank(p, intros, rule))
+            .or_else(|| self.least_or_junction(p, intros, rule))
+            .or_else(|| self.at_least(p, intros, rule))
+            .or_else(|| self.at_most_or_exactly(p, intros, rule))
+    }
+
+    /// Pushes one aggregate over the inner rule; `false` when the inner rule does not read.
+    fn read_agg(&mut self, p: &AggParts, rule: &mut Rule, op: &str, res: Term, vals: Vec<Term>, keys: Vec<Term>) -> Option<bool> {
+        Some(match self.inner_rule(p.inner, rule) {
+            None => false,
+            Some(s) => { Self::push_agg(rule, op, res, vals, keys, vec![s], false, false); true }
+        })
+    }
+
+    fn number_of(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the number of (TAKES)$"), p.pre)?;
+        let res = self.term(g(&m, 1), intros);
+        let vals = self.takes(g(&m, 2), intros);
+        self.read_agg(p, rule, "count", res, vals, vec![])
+    }
+
+    fn sum_or_median(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the (sum|median) of (TERM) over (TAKES)$"), p.pre)?;
+        let res = self.term(g(&m, 1), intros);
+        let v = self.term(g(&m, 3), intros);
+        let keys = self.takes(g(&m, 4), intros);
+        self.read_agg(p, rule, g(&m, 2), res, vec![v], keys)
+    }
+
+    fn quantile(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the quantile (TERM) of (TERM) over (TAKES)$"), p.pre)?;
+        let res = self.term(g(&m, 1), intros);
+        let q = self.term(g(&m, 2), intros);
+        let v = self.term(g(&m, 3), intros);
+        let keys = self.takes(g(&m, 4), intros);
+        self.read_agg(p, rule, "quantile", res, vec![q, v], keys)
+    }
+
+    fn rank(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the rank of (TAKES) among (TAKES)$"), p.pre)?;
+        if !g(&m, 2).starts_with('(') && !g(&m, 3).starts_with('(') {
+            let res = self.term(g(&m, 1), intros);
+            let a = self.term(g(&m, 2), intros);
+            let b = self.term(g(&m, 3), intros);
+            return self.read_agg(p, rule, "rank", res, vec![a, b], vec![]);
+        }
+        let list = if g(&m, 3).starts_with('(') { split_top(&mid(g(&m, 3))) } else { vec![g(&m, 3).to_string()] };
+        let mut keys = Vec::new();
+        for x in list {
+            let d = rx::exec(r"^(.*) (ascending|descending)$", x.trim());
+            let t = self.term(d.as_ref().map(|d| g(d, 1)).unwrap_or(&x), intros);
+            keys.push(match d { Some(d) => F(if g(&d, 2) == "descending" { "desc" } else { "asc" }.into(), vec![t]), None => t });
+        }
+        let res = self.term(g(&m, 1), intros);
+        let vals = self.takes(g(&m, 2), intros);
+        self.read_agg(p, rule, "rank", res, vals, keys)
+    }
+
+    fn least_or_junction(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(TERM) is the (?:(least|greatest)|(disjunction|conjunction) of) (TERM)$"), p.pre)?;
+        let res = self.term(g(&m, 1), intros);
+        let v = self.term(g(&m, 4), intros);
+        let word = [g(&m, 2), g(&m, 3)].concat();
+        let op = LATTICE_WORD.iter().find(|x| x.0 == word).unwrap().1;
+        self.read_agg(p, rule, op, res, vec![v], vec![])
+    }
+
+    fn at_least(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^at least (TERM) of (TAKES)$"), p.pre)?;
+        let res = self.term(g(&m, 1), intros);
+        let vals = self.takes(g(&m, 2), intros);
+        self.read_agg(p, rule, "at_least", res, vals, vec![])
+    }
+
+    fn at_most_or_exactly(&mut self, p: &AggParts, intros: &mut Vec<Intro>, rule: &mut Rule) -> Option<bool> {
+        let m = cap(tm(r"^(at most|exactly) (TERM) of (TAKES)$"), p.pre)?;
+        let n = self.term(g(&m, 2), intros);
+        let xs = self.takes(g(&m, 3), intros);
+        let Some(s) = self.inner_rule(p.inner, rule) else { return Some(false) };
+        let count = V(self.fresh("Count"));
+        Self::push_agg(rule, "count", count.clone(), xs, vec![], vec![s], false, false);
+        rule.body.last_mut().unwrap().agg.as_mut().unwrap().alone = Some(p.text.to_string());
+        rule.body.push(if g(&m, 1) == "at most" { lit("<=", vec![count, n]) } else { Lit { keep: true, ..lit("=", vec![count, n]) } });
+        Some(true)
+    }
+
     fn fun_term(&mut self, text: &str, intros: &mut Vec<Intro>) -> Option<Term> {
         if rx::test(r"^\$?[a-z_]\w*\(.*\)$", text) { let t = self.term(text, intros); return matches!(t, F(..)).then_some(t); }
         if let Some(m) = cap(tm(r"^(TERM) ([-+*/]|mod) (TERM)$"), text) {
@@ -1210,8 +1362,7 @@ impl R {
             if let Some((_, t)) = &tm_ { head.tense = Some(if t == "initially" { "init" } else { "next" }.into()); }
             let book = if self.block_set { self.cur_book.clone() } else { self.home_books.get(&head.rel).cloned().unwrap_or_else(|| self.cur_book.clone()) };
             let mut rule = Rule { head, body: vec![], guards: vec![], book };
-            let mut whole = true;
-            for c in conds { whole = self.condition(c, &mut intros, &mut rule) && whole; }
+            let whole = self.conditions(conds, &mut intros, &mut rule);
             for it in &intros { if !self.known.contains_key(&it.v) { self.known.insert(it.v.clone(), it.noun.clone()); } }
             if pass == 0 { self.ambiguous.truncate(saved_amb); self.unparsed.truncate(saved_un); continue; }
             if let Some(b) = &self.bad_term { self.dropped.push(format!("{head_text}: a term the sentence form cannot carry, {b}")); if !self.left_out.contains(&rule.head.rel) { self.left_out.push(rule.head.rel.clone()); } continue; }
@@ -1220,7 +1371,7 @@ impl R {
                 None => None,
                 Some(m) => {
                     let rest = &head_text[g(&m, 0).len()..];
-                    let typed = !rx::test(r"^(?:is|are|has|have|was|were|does|do)\b", rest) && rx::test(r"^[a-z][\w-]*(?: [a-z][\w-]*){0,2} [A-Z]", rest);
+                    let typed = !rx::test(r"^(?:is|are|has|have|was|were|does|do)\b", rest) && rx::test(concat!(r"^", words!(), r" [A-Z]"), rest);
                     (!typed).then(|| g(&m, 1).to_string())
                 }
             };
@@ -1288,7 +1439,7 @@ impl R {
         let mut parts = Vec::new();
         let (mut buf, mut n, mut last) = (String::new(), 0usize, 0usize);
         let flush = |buf: &mut String, parts: &mut Vec<Part>| { let t = buf.trim(); if !t.is_empty() { parts.push(Part::Text(t.to_string())); } buf.clear(); };
-        for c in rx::re(r"(?:\b(an?) ([a-z][\w-]*(?: [a-z][\w-]*){0,2}) )?\b([A-Z][A-Za-z0-9]*)\b").captures_iter(&head) {
+        for c in rx::re(concat!(r"(?:\b(an?) (", words!(), r") )?\b([A-Z][A-Za-z0-9]*)\b")).captures_iter(&head) {
             let m = c.get(0).unwrap();
             buf.push_str(&head[last..m.start()]);
             flush(&mut buf, &mut parts);
@@ -1359,6 +1510,13 @@ impl R {
         false
     }
 
+    /// Every condition read into the rule; `true` when each one was read.
+    fn conditions(&mut self, conds: &[String], intros: &mut Vec<Intro>, rule: &mut Rule) -> bool {
+        let mut whole = true;
+        for c in conds { whole = self.condition(c, intros, rule) && whole; }
+        whole
+    }
+
     fn dominance(&mut self, text: &str) -> bool {
         let Some(m) = rx::exec(r"^A fact that (.+?) is dominated by one that (.+?) if (.+)\.$", text) else { return false };
         self.known = HashMap::new();
@@ -1370,8 +1528,8 @@ impl R {
         let hi = match self.positional(g(&m, 2), &mut intros) { Some(l) => Some(l), None => self.match_lit(g(&m, 2), &mut intros, false) };
         let (Some(lo), Some(hi)) = (lo, hi) else { self.unparsed.push(format!("DOMINANCE {text}")); return true };
         let mut rule = Rule { head: lo, body: vec![], guards: vec![], book: self.cur_book.clone() };
-        let mut whole = true;
-        for c in self.split_conds(g(&m, 3)) { whole = self.condition(&c, &mut intros, &mut rule) && whole; }
+        let conds = self.split_conds(g(&m, 3));
+        let whole = self.conditions(&conds, &mut intros, &mut rule);
         for it in &intros { if !value(&it.noun) && gpos(&rule.guards, &it.v).is_none() { rule.guards.push((it.v.clone(), Guard { noun: it.noun.clone(), nouns: None, file: None })); } }
         let cs = if whole && self.bad_term.is_none() { self.expand(&rule) } else { vec![] };
         if cs.len() != 1 { self.dropped.push(format!("{text}: a dominance rule reads as one rule or not at all")); return true; }
@@ -1390,275 +1548,279 @@ impl R {
 
     fn run(&mut self, raw: &str) {
         let md = clean(raw);
-        let mut blocks: Vec<Block> = Vec::new();
-        for b in parse_md(&md) {
-            if matches!(b.ty, Ty::Front | Ty::Q | Ty::Code) { continue; }
-            if b.ty == Ty::P && b.lines.is_some() {
-                let lines = b.lines.clone().unwrap();
-                let at = b.at.unwrap_or(0);
-                let mut ps: Vec<Vec<usize>> = Vec::new();
-                for (i, l) in lines.iter().enumerate() {
-                    if i == 0 || (lines[i - 1].ends_with('.') && rx::test("^[A-Z`]", l)) { ps.push(vec![]); }
-                    ps.last_mut().unwrap().push(i);
-                }
-                for p in ps {
-                    blocks.push(Block { ty: Ty::P, text: p.iter().map(|&i| lines[i].as_str()).collect::<Vec<_>>().join(" "), at: Some(at + p[0]), end: Some(at + p[p.len() - 1] + 1), ..Default::default() });
-                }
-            } else { blocks.push(b); }
-        }
+        let blocks = paragraph_blocks(&md);
         if let Some(fm) = rx::exec(r"^---\n([\s\S]*?)\n---", raw) { if let Some(d) = rx::exec(r"(?m)^default: (\w+)$", g(&fm, 1)) { self.default_book = g(&d, 1).into(); } }
         self.cur_book = self.default_book.clone();
         self.home_book = self.home_books.clone();
         self.home_book.entry("shrug".into()).or_insert_with(|| "$kernel".into());
-        {
-            let mut sec = String::new();
-            for b in &blocks {
-                if b.ty == Ty::H { sec = b.text.clone(); continue; }
-                if sec == "Signatures" && b.ty == Ty::Ul {
-                    for it in &b.items {
-                        let Some(m) = rx::exec(r"^(.+?\))(?: \((\w+)\))?(?:, in the (\w+))?$", it.text.trim()) else { continue };
-                        let m1 = g(&m, 1);
-                        let rel = if has(&m, 2) { g(&m, 2).to_string() } else { m1[..m1.find('(').unwrap()].trim().to_string() };
-                        if !self.templates.iter().any(|t| t.rel == rel && t.src == m1) { let t = say::parse_sig(&rel, m1, self.nouns.keys()); self.templates.push(t); }
-                        let book = if has(&m, 3) { g(&m, 3).to_string() } else { self.default_book.clone() };
-                        self.head_book.insert(rel.clone(), book.clone());
-                        self.home_book.insert(rel, book);
-                    }
-                }
-                if sec == "Words" && b.ty == Ty::Table {
-                    for r in &b.rows {
-                        let c0 = r.first().map(String::as_str).unwrap_or("");
-                        let c1 = r.get(1).map(String::as_str).unwrap_or("");
-                        let noun = rx::sub("^[Aa]n? ", &rx::sub(r#"^<a id="[^"]+"><\/a>"#, c0, false, ""), false, "").trim().to_string();
-                        let mut matched = false;
-                        for part in rx::split(", or ", c1) {
-                            if let Some(set) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+) \(`(\w+)`\)$", &part) {
-                                let rel = g(&set, 2).to_string();
-                                self.set_rels.insert(rel.clone());
-                                if !self.kind_noun.has(&rel) { self.kind_noun.set(&rel, noun.clone()); self.nouns.add(&noun); }
-                                for k in rx::split(r",\s*", g(&set, 1)) { self.parsed_facts.push(lit(&rel, vec![A(k.replace('`', ""))])); }
-                                self.home_book.insert(rel, "main".into());
-                                matched = true;
-                                continue;
-                            }
-                            if let Some(from) = rx::exec(r"^a node of a kind in \[?`(\w+)`", &part) {
-                                let rel = g(&from, 1);
-                                self.set_rels.insert(rel.into());
-                                if !self.kind_noun.has(rel) { self.kind_noun.set(rel, noun.clone()); self.nouns.add(&noun); }
-                                matched = true;
-                                continue;
-                            }
-                            if let Some(kinds) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+)$", &part) {
-                                for k in rx::split(r",\s*", g(&kinds, 1)) { let k = k.replace('`', ""); if !self.kind_noun.has(&k) { self.kind_noun.set(&k, noun.clone()); self.nouns.add(&noun); } }
-                                matched = true;
-                            }
-                        }
-                        if matched { continue; }
-                        if let Some(gd) = rx::exec(r"`(\w+)`.* holds of$", c1) { self.noun_guards.set(&noun, g(&gd, 1).to_string()); }
-                    }
-                }
-            }
-        }
+        self.signatures_and_words(&blocks);
         let gs: Vec<(String, Vec<String>)> = self.guard_of.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         for (n, rels) in gs {
             if !self.noun_guards.has(&n) { let r = rels.iter().find(|r| self.used_here.contains(*r)).unwrap_or(&rels[0]).clone(); self.noun_guards.set(&n, r); }
         }
-        {
-            let head_of = |t: &str| -> String {
-                let t = rx::sub(" if all of:$", &rx::sub(" either:$", t, false, ""), false, "");
-                let first = rx::split(" if | unless |, unless ", &t).into_iter().next().unwrap_or_default();
-                rx::sub("[.;:]$", &first, false, "").trim().to_string()
-            };
-            let (mut subject, mut fenced) = (String::new(), false);
-            for (k, raw_line) in raw.split('\n').enumerate() {
-                let line = raw_line.trim();
-                if raw_line.starts_with("```") { fenced = !fenced; continue; }
-                if fenced || line.is_empty() || line.starts_with('>') || line.starts_with('#') || line.starts_with('|') || rx::test(r"^\d+\. ", line) { continue; }
-                let Some(a) = rx::exec(r#"^(- )?<a id="([\w-]+)"><\/a>(.*)$"#, line) else {
-                    if !line.starts_with("- ") && !rx::test("[.:]$", line) { subject = clean(line); } else if !line.starts_with("- ") { subject = String::new(); }
-                    continue;
-                };
-                let text = clean(g(&a, 3)).trim().to_string();
-                let head = if has(&a, 1) && !subject.is_empty() && rx::test("^[a-z]", &text) { format!("{subject} {text}") } else { text };
-                let id = g(&a, 2);
-                if id.contains('-') && rx::test(r"\b[A-Z]", &rx::sub("^(?:An?|The) ", &head, false, "")) {
-                    self.unparsed.push(format!("HEAD the anchor \"{id}\" names no relation, a name is one word: \"{}\" ({})", id.replace('-', "_"), head_of(&head)));
-                    continue;
-                }
-                self.learn(id, &head_of(&head), k as i64);
-            }
-        }
-        {
-            let lines: Vec<&str> = md.split('\n').collect();
-            let mut at: HashMap<String, i64> = HashMap::new();
-            let mut items: Vec<String> = Vec::new();
-            for (i, b) in blocks.iter().enumerate() {
-                if !(b.ty == Ty::P && b.text.trim() == "Declared as facts:" && blocks.get(i + 1).is_some_and(|n| n.ty == Ty::Ul)) { continue; }
-                let next = &blocks[i + 1];
-                for it in &next.items {
-                    let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
-                    if !at.contains_key(&t) {
-                        let from = next.at.unwrap_or(0);
-                        at.insert(t.clone(), lines.iter().enumerate().position(|(k, l)| k >= from && l.contains(t.as_str())).map(|x| x as i64).unwrap_or(-1));
-                    }
-                    items.push(t);
-                }
-            }
-            let items: Vec<String> = items.into_iter().filter(|t| !rx::test(r"^`\w+`$", t) && rx::test(r"\s[A-Z][A-Za-z0-9]*\b", t)).collect();
-            for t in &items { let src = lower1(t); if !self.said_at.contains_key(&src) { self.said_at.insert(src, at[t]); } }
-            let mut decls = Vec::new();
-            for t in &items { if self.match_lit(t, &mut Vec::new(), false).is_none() { decls.push(t.clone()); } }
-            for t in &decls {
-                let name = slug(t);
-                let twin = decls.iter().find(|x| *x != t && slug(x) == name);
-                let held = self.templates.iter().find(|x| x.rel == name);
-                if name.is_empty() { continue; }
-                if let Some(tw) = twin { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is also the name of \"{tw}\": give one of them an anchor, <a id=\"...\"></a>, to name it")); }
-                else if let Some(h) = held { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is the relation of \"{}\": give it an anchor of its own, <a id=\"...\"></a>", h.src)); }
-            }
-            for t in &decls { if !self.refused_name.contains_key(t) && !slug(t).is_empty() { self.learn(&slug(t), t, at[t]); } }
-            let words = |t: &str| rx::sub(r"(?:\b(?:an?) [a-z][\w-]*(?: [a-z][\w-]*){0,2} )?\b[A-Z][A-Za-z0-9]*\b", &lower1(t), true, "_");
-            for t in &items {
-                for o in &items {
-                    if o != t && words(o) == words(t) {
-                        let u = format!("DECLARED {t} — it says the words of \"{o}\", their nouns aside, and a row leaves the nouns out, so a row of either would be read as a row of the one: say one of them in other words");
-                        if !self.unparsed.contains(&u) { self.unparsed.push(u); }
-                    }
-                }
-            }
-            let la = &self.learned_at;
-            self.learned.sort_by_key(|t| la[&t.id]);
-            let n = self.templates.len() - self.learned.len();
-            self.templates.truncate(n);
-            self.templates.extend(self.learned.iter().cloned());
-        }
+        self.anchors(raw);
+        self.declared_names(&md, &blocks);
         self.md_lines = md.split('\n').map(str::to_string).collect();
-        let mut i = 0;
-        while i < blocks.len() {
-            let b = blocks[i].clone();
-            let next = blocks.get(i + 1).cloned();
-            let nty = next.as_ref().map(|n| n.ty);
-            let items: Vec<Item> = next.as_ref().map(|n| n.items.clone()).unwrap_or_default();
-            i += 1;
-            if b.ty == Ty::H { continue; }
-            if b.ty == Ty::Ul || b.ty == Ty::Ol { for it in &b.items { self.unparsed.push(format!("LIST {}", it.text.trim())); } continue; }
-            if b.ty == Ty::Table { self.unparsed.push(format!("TABLE {}", b.head.join(" | "))); continue; }
-            if b.ty != Ty::P { continue; }
-            let text = b.text.trim().to_string();
-            if text.starts_with("Kinds without a noun:") || text.starts_with("What this file calls a node") || text.contains("trailing comments") {
-                if nty.is_some_and(|t| t != Ty::P && t != Ty::H) { i += 1; }
-                continue;
-            }
-            if let Some(m) = rx::exec(r"^In the (\w+):$", &text) { self.cur_book = g(&m, 1).into(); self.block_set = true; continue; }
-            if self.declaration(&text) || self.dominance(&text) { continue; }
-            if text == "Reads:" && nty == Some(Ty::Ul) {
-                for it in &items {
-                    let Some(im) = rx::exec(r"^from (.+?)(?:, in the (\w+))?:\s*(.*)$", it.text.trim()) else { continue };
-                    let mut names: Vec<String> = if g(&im, 3).is_empty() { vec![] } else {
-                        rx::split(r",\s*", g(&im, 3)).iter().map(|r| rx::replace(r"\[([^\]]*)\]\([^)]*\)", r, true, |c| c[1].to_string()).replace('`', "").trim().to_string()).filter(|x| !x.is_empty()).collect()
-                    };
-                    for sub in &it.sub { if let Some(m) = rx::exec(r#"<a id="(\w+)"><\/a>|`(\w+)`\)?$"#, sub.trim()) { names.push(if has(&m, 1) { g(&m, 1) } else { g(&m, 2) }.to_string()); } }
-                    for name in names { self.imported.insert(name.clone()); if has(&im, 2) { self.home_book.insert(name, g(&im, 2).into()); } }
-                }
-                i += 1;
-                continue;
-            }
-            if text == "Declared as facts:" && nty == Some(Ty::Ul) {
-                let next = next.clone().unwrap();
-                for it in &items {
-                    let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
-                    let nm = rx::exec(r"^`(\w+)`$", &t);
-                    let rel = match &nm { Some(nm) => Some(g(nm, 1).to_string()), None => self.match_lit(&t, &mut Vec::new(), false).map(|l| l.rel) };
-                    let again = if nm.is_some() { None } else { self.declared_at(&t, &next) };
-                    if let Some(a) = again { self.unparsed.push(format!("AGAIN {a} {t}")); }
-                    else if let Some(rel) = rel { self.declared.push(rel.clone()); self.home_book.insert(rel, "main".into()); }
-                    else { let why = self.refused_name.get(&t).map(|r| format!(" — {r}")).unwrap_or_default(); self.unparsed.push(format!("DECLARED {t}{why}")); }
-                }
-                i += 1;
-                continue;
-            }
-            let lead = rx::exec(r"^(Initially|In the next tick), ", &text);
-            let tense = lead.as_ref().map(|l| if g(l, 1) == "Initially" { "init".to_string() } else { "next".to_string() });
-            let fact = match &lead { Some(l) => text[g(l, 0).len()..].to_string(), None => text.clone() };
-            if let Some(m) = rx::exec(r"^`(\$?\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$", &fact) {
-                self.home_book.insert(g(&m, 1).into(), "main".into());
-                for a in rx::split(r",\s*", g(&m, 2)) { let t = self.term(&a, &mut Vec::new()); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), vec![t]) }); }
-                continue;
-            }
-            if let Some(m) = rx::exec(r"^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$", &fact) {
-                if nty == Some(Ty::Table) {
-                    self.home_book.insert(g(&m, 1).into(), "main".into());
-                    for r in &next.as_ref().unwrap().rows { let args = r.iter().map(|c| self.term(c, &mut Vec::new())).collect(); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), args) }); }
-                    i += 1;
-                    continue;
-                }
-            }
-            if text.ends_with(" either:") && nty == Some(Ty::Ol) {
-                if twin(&text) || items.iter().any(|it| twin(&it.text) || it.sub.iter().any(|s| twin(s))) {
-                    let texts: Vec<&str> = std::iter::once(text.as_str()).chain(items.iter().flat_map(|it| std::iter::once(it.text.as_str()).chain(it.sub.iter().map(String::as_str)))).collect();
-                    self.both_sides(&texts, |r, side| {
-                        let head = halves(&rx::sub(" either:$", &text, false, ""), side);
-                        for it in &items {
-                            let t = halves(&rx::sub("[;.]$", &it.text, false, ""), side);
-                            if t == "if all of:" { let subs: Vec<String> = it.sub.iter().map(|x| halves(x, side)).collect(); r.sentence(&head, &subs); }
-                            else if t == "always" { r.sentence(&head, &[]); }
-                            else { r.rule_text(&format!("{head} {t}."), None); }
-                        }
-                    });
-                    i += 1;
-                    continue;
-                }
-                let head = rx::sub(" either:$", &text, false, "");
-                for it in &items {
-                    let t = rx::sub("[;.]$", &it.text, false, "");
-                    if !rx::test("^(if |unless |always$)", &t) { self.bad_alternatives.push(format!("{head} … {t}")); }
-                    if t == "if all of:" { self.sentence(&head, &it.sub); }
-                    else if t == "always" { self.sentence(&head, &[]); }
-                    else { self.rule_text(&format!("{head} {t}."), None); }
-                }
-                i += 1;
-                continue;
-            }
-            if text.ends_with(" if all of:") && nty == Some(Ty::Ul) {
-                let xs: Vec<String> = items.iter().map(|x| x.text.clone()).collect();
-                self.rule_text(&text, Some(&xs));
-                i += 1;
-                continue;
-            }
-            if text.starts_with("Phrases this file defines") && nty == Some(Ty::Ul) {
-                for it in &items { self.rule_text(&it.text, if it.sub.is_empty() { None } else { Some(&it.sub) }); }
-                i += 1;
-                continue;
-            }
-            if text.ends_with(':') && nty == Some(Ty::Ul) {
-                let next = next.clone().unwrap();
-                for it in &items {
-                    let t = rx::sub(r"\.$", it.text.trim(), false, "");
-                    self.bad_term = None;
-                    let l = self.match_lit(&t, &mut Vec::new(), false);
-                    let again = if l.as_ref().is_some_and(|l| l.args.iter().all(|a| matches!(a, V(_)))) { self.declared_at(&t, &next) } else { None };
-                    match l {
-                        Some(l) if self.bad_term.is_none() && l.args.iter().all(|a| !matches!(a, V(_))) => {
-                            if !self.home_book.contains_key(&l.rel) { self.home_book.insert(l.rel.clone(), "main".into()); }
-                            self.parsed_facts.push(l);
-                        }
-                        _ => self.unparsed.push(match again { Some(a) => format!("AGAIN {a} {t}"), None => format!("FACT {t}") }),
-                    }
-                }
-                i += 1;
-                continue;
-            }
-            if !rx::test("[.:]$", &text) && nty == Some(Ty::Ul) {
-                for it in &items {
-                    let t = format!("{text} {}", it.text);
-                    if it.text.ends_with(" if all of:") { self.rule_text(&t, Some(&it.sub)); } else { self.rule_text(&t, None); }
-                }
-                i += 1;
-                continue;
-            }
-            if text.ends_with('.') { self.rule_text(&text, None); }
-        }
+        self.statements(&blocks);
         self.output();
+    }
+
+    fn signatures_and_words(&mut self, blocks: &[Block]) {
+        let mut sec = String::new();
+        for b in blocks {
+            if b.ty == Ty::H { sec = b.text.clone(); continue; }
+            if sec == "Signatures" && b.ty == Ty::Ul { self.signatures(&b.items); }
+            if sec == "Words" && b.ty == Ty::Table { for r in &b.rows { self.word(r); } }
+        }
+    }
+
+    fn signatures(&mut self, items: &[Item]) {
+        for it in items {
+            let Some(m) = rx::exec(r"^(.+?\))(?: \((\w+)\))?(?:, in the (\w+))?$", it.text.trim()) else { continue };
+            let m1 = g(&m, 1);
+            let rel = if has(&m, 2) { g(&m, 2).to_string() } else { m1[..m1.find('(').unwrap()].trim().to_string() };
+            if !self.templates.iter().any(|t| t.rel == rel && t.src == m1) { let t = say::parse_sig(&rel, m1, self.nouns.keys()); self.templates.push(t); }
+            let book = if has(&m, 3) { g(&m, 3).to_string() } else { self.default_book.clone() };
+            self.head_book.insert(rel.clone(), book.clone());
+            self.home_book.insert(rel, book);
+        }
+    }
+
+    fn word(&mut self, r: &[String]) {
+        let c0 = r.first().map(String::as_str).unwrap_or("");
+        let c1 = r.get(1).map(String::as_str).unwrap_or("");
+        let noun = rx::sub("^[Aa]n? ", &rx::sub(r#"^<a id="[^"]+"><\/a>"#, c0, false, ""), false, "").trim().to_string();
+        let mut matched = false;
+        for part in rx::split(", or ", c1) {
+            if let Some(set) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+) \(`(\w+)`\)$", &part) {
+                let rel = g(&set, 2).to_string();
+                self.set_rels.insert(rel.clone());
+                if !self.kind_noun.has(&rel) { self.kind_noun.set(&rel, noun.clone()); self.nouns.add(&noun); }
+                for k in rx::split(r",\s*", g(&set, 1)) { self.parsed_facts.push(lit(&rel, vec![A(k.replace('`', ""))])); }
+                self.home_book.insert(rel, "main".into());
+                matched = true;
+                continue;
+            }
+            if let Some(from) = rx::exec(r"^a node of a kind in \[?`(\w+)`", &part) {
+                let rel = g(&from, 1);
+                self.set_rels.insert(rel.into());
+                if !self.kind_noun.has(rel) { self.kind_noun.set(rel, noun.clone()); self.nouns.add(&noun); }
+                matched = true;
+                continue;
+            }
+            if let Some(kinds) = rx::exec(r"^a node of (?:kind|one of the kinds) (.+)$", &part) {
+                for k in rx::split(r",\s*", g(&kinds, 1)) { let k = k.replace('`', ""); if !self.kind_noun.has(&k) { self.kind_noun.set(&k, noun.clone()); self.nouns.add(&noun); } }
+                matched = true;
+            }
+        }
+        if matched { return; }
+        if let Some(gd) = rx::exec(r"`(\w+)`.* holds of$", c1) { self.noun_guards.set(&noun, g(&gd, 1).to_string()); }
+    }
+
+    fn anchors(&mut self, raw: &str) {
+        let (mut subject, mut fenced) = (String::new(), false);
+        for (k, raw_line) in raw.split('\n').enumerate() {
+            let line = raw_line.trim();
+            if raw_line.starts_with("```") { fenced = !fenced; continue; }
+            if fenced || line.is_empty() || line.starts_with('>') || line.starts_with('#') || line.starts_with('|') || rx::test(r"^\d+\. ", line) { continue; }
+            let Some(a) = rx::exec(r#"^(- )?<a id="([\w-]+)"><\/a>(.*)$"#, line) else {
+                if !line.starts_with("- ") && !rx::test("[.:]$", line) { subject = clean(line); } else if !line.starts_with("- ") { subject = String::new(); }
+                continue;
+            };
+            let text = clean(g(&a, 3)).trim().to_string();
+            let head = if has(&a, 1) && !subject.is_empty() && rx::test("^[a-z]", &text) { format!("{subject} {text}") } else { text };
+            let id = g(&a, 2);
+            if id.contains('-') && rx::test(r"\b[A-Z]", &rx::sub("^(?:An?|The) ", &head, false, "")) {
+                self.unparsed.push(format!("HEAD the anchor \"{id}\" names no relation, a name is one word: \"{}\" ({})", id.replace('-', "_"), head_of(&head)));
+                continue;
+            }
+            self.learn(id, &head_of(&head), k as i64);
+        }
+    }
+
+    fn declared_names(&mut self, md: &str, blocks: &[Block]) {
+        let lines: Vec<&str> = md.split('\n').collect();
+        let (at, listed) = declared_listing(blocks, &lines);
+        let items: Vec<String> = listed.into_iter().filter(|t| !rx::test(r"^`\w+`$", t) && rx::test(r"\s[A-Z][A-Za-z0-9]*\b", t)).collect();
+        for t in &items { let src = lower1(t); if !self.said_at.contains_key(&src) { self.said_at.insert(src, at[t]); } }
+        let mut decls = Vec::new();
+        for t in &items { if self.match_lit(t, &mut Vec::new(), false).is_none() { decls.push(t.clone()); } }
+        self.refuse_twins(&decls);
+        for t in &decls { if !self.refused_name.contains_key(t) && !slug(t).is_empty() { self.learn(&slug(t), t, at[t]); } }
+        self.same_words(&items);
+        self.reorder_learned();
+    }
+
+    fn refuse_twins(&mut self, decls: &[String]) {
+        for t in decls {
+            let name = slug(t);
+            let twin = decls.iter().find(|x| *x != t && slug(x) == name);
+            let held = self.templates.iter().find(|x| x.rel == name);
+            if name.is_empty() { continue; }
+            if let Some(tw) = twin { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is also the name of \"{tw}\": give one of them an anchor, <a id=\"...\"></a>, to name it")); }
+            else if let Some(h) = held { self.refused_name.insert(t.clone(), format!("its name from its words, {name}, is the relation of \"{}\": give it an anchor of its own, <a id=\"...\"></a>", h.src)); }
+        }
+    }
+
+    fn same_words(&mut self, items: &[String]) {
+        for t in items {
+            for o in items {
+                if o != t && word_shape(o) == word_shape(t) {
+                    let u = format!("DECLARED {t} — it says the words of \"{o}\", their nouns aside, and a row leaves the nouns out, so a row of either would be read as a row of the one: say one of them in other words");
+                    if !self.unparsed.contains(&u) { self.unparsed.push(u); }
+                }
+            }
+        }
+    }
+
+    fn reorder_learned(&mut self) {
+        let la = &self.learned_at;
+        self.learned.sort_by_key(|t| la[&t.id]);
+        let n = self.templates.len() - self.learned.len();
+        self.templates.truncate(n);
+        self.templates.extend(self.learned.iter().cloned());
+    }
+
+    fn statements(&mut self, blocks: &[Block]) {
+        let mut i = 0;
+        let (mut from, mut taken) = (0, false);
+        let last = blocks.len().saturating_sub(1);
+        while i < blocks.len() {
+            if taken { self.spans.push((blocks[from].at.unwrap(), blocks[(i - 1).min(last)].end.unwrap())); }
+            from = i;
+            let next = blocks.get(i + 1);
+            i += 1;
+            let (is_taken, skip) = self.block(&blocks[i - 1], next);
+            taken = is_taken;
+            i += skip;
+        }
+        if taken { self.spans.push((blocks[from].at.unwrap(), blocks[(i - 1).min(last)].end.unwrap())); }
+    }
+
+    /// Reads one block; `true` when it is a statement (its span is kept), and the blocks it took after it.
+    fn block(&mut self, b: &Block, next: Option<&Block>) -> (bool, usize) {
+        if b.ty == Ty::H { return (false, 0); }
+        if b.ty == Ty::Ul || b.ty == Ty::Ol { for it in &b.items { self.unparsed.push(format!("LIST {}", it.text.trim())); } return (false, 0); }
+        if b.ty == Ty::Table { self.unparsed.push(format!("TABLE {}", b.head.join(" | "))); return (false, 0); }
+        if b.ty != Ty::P { return (false, 0); }
+        let text = b.text.trim().to_string();
+        if text.starts_with("Kinds without a noun:") || text.starts_with("What this file calls a node") || text.contains("trailing comments") {
+            return (false, usize::from(next.is_some_and(|n| n.ty != Ty::P && n.ty != Ty::H)));
+        }
+        match self.statement(&text, next) { Some(skip) => (true, skip), None => (false, 0) }
+    }
+
+    /// The statement `text` says, read by its form; `Some` with the blocks it took after it, `None` when it is not a statement.
+    fn statement(&mut self, text: &str, next: Option<&Block>) -> Option<usize> {
+        let nty = next.map(|n| n.ty);
+        if let Some(m) = rx::exec(r"^In the (\w+):$", text) { self.cur_book = g(&m, 1).into(); self.block_set = true; return Some(0); }
+        if self.declaration(text) || self.dominance(text) { return Some(0); }
+        if text == "Reads:" && nty == Some(Ty::Ul) { self.reads_list(&next.unwrap().items); return Some(1); }
+        if text == "Declared as facts:" && nty == Some(Ty::Ul) { self.declared_facts(next.unwrap()); return Some(1); }
+        if let Some(skip) = self.fact_statement(text, next) { return Some(skip); }
+        if text.ends_with(" either:") && nty == Some(Ty::Ol) { self.either(text, next.unwrap()); return Some(1); }
+        if text.ends_with(" if all of:") && nty == Some(Ty::Ul) {
+            let xs: Vec<String> = next.unwrap().items.iter().map(|x| x.text.clone()).collect();
+            self.rule_text(text, Some(&xs));
+            return Some(1);
+        }
+        if text.starts_with("Phrases this file defines") && nty == Some(Ty::Ul) {
+            for it in &next.unwrap().items { self.rule_text(&it.text, if it.sub.is_empty() { None } else { Some(&it.sub) }); }
+            return Some(1);
+        }
+        if text.ends_with(':') && nty == Some(Ty::Ul) { self.colon_facts(next.unwrap()); return Some(1); }
+        if !rx::test("[.:]$", text) && nty == Some(Ty::Ul) {
+            for it in &next.unwrap().items {
+                let t = format!("{text} {}", it.text);
+                if it.text.ends_with(" if all of:") { self.rule_text(&t, Some(&it.sub)); } else { self.rule_text(&t, None); }
+            }
+            return Some(1);
+        }
+        if text.ends_with('.') { self.rule_text(text, None); return Some(0); }
+        None
+    }
+
+    fn fact_statement(&mut self, text: &str, next: Option<&Block>) -> Option<usize> {
+        let lead = rx::exec(r"^(Initially|In the next tick), ", text);
+        let tense = lead.as_ref().map(|l| if g(l, 1) == "Initially" { "init".to_string() } else { "next".to_string() });
+        let fact = match &lead { Some(l) => text[g(l, 0).len()..].to_string(), None => text.to_string() };
+        if let Some(m) = rx::exec(r"^`(\$?\w+)`(?:, (?:a|an) [\w -]+,)? includes (.*)\.$", &fact) {
+            self.home_book.insert(g(&m, 1).into(), "main".into());
+            for a in rx::split(r",\s*", g(&m, 2)) { let t = self.term(&a, &mut Vec::new()); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), vec![t]) }); }
+            return Some(0);
+        }
+        if let Some(m) = rx::exec(r"^`(\w+)`(?:, (?:a|an) [\w -]+,)? lists:$", &fact) {
+            if let Some(n) = next.filter(|n| n.ty == Ty::Table) {
+                self.home_book.insert(g(&m, 1).into(), "main".into());
+                for r in &n.rows { let args = r.iter().map(|c| self.term(c, &mut Vec::new())).collect(); self.parsed_facts.push(Lit { tense: tense.clone(), ..lit(g(&m, 1), args) }); }
+                return Some(1);
+            }
+        }
+        None
+    }
+
+    fn reads_list(&mut self, items: &[Item]) {
+        for it in items {
+            let Some(im) = rx::exec(r"^from (.+?)(?:, in the (\w+))?:\s*(.*)$", it.text.trim()) else { continue };
+            let mut names: Vec<String> = if g(&im, 3).is_empty() { vec![] } else {
+                rx::split(r",\s*", g(&im, 3)).iter().map(|r| rx::replace(r"\[([^\]]*)\]\([^)]*\)", r, true, |c| c[1].to_string()).replace('`', "").trim().to_string()).filter(|x| !x.is_empty()).collect()
+            };
+            for sub in &it.sub { if let Some(m) = rx::exec(r#"<a id="(\w+)"><\/a>|`(\w+)`\)?$"#, sub.trim()) { names.push(if has(&m, 1) { g(&m, 1) } else { g(&m, 2) }.to_string()); } }
+            for name in names { self.imported.insert(name.clone()); if has(&im, 2) { self.home_book.insert(name, g(&im, 2).into()); } }
+        }
+    }
+
+    fn declared_facts(&mut self, next: &Block) {
+        for it in &next.items {
+            let t = rx::sub(r"\.$", it.text.trim().split(" — ").next().unwrap_or(""), false, "");
+            let nm = rx::exec(r"^`(\w+)`$", &t);
+            let rel = match &nm { Some(nm) => Some(g(nm, 1).to_string()), None => self.match_lit(&t, &mut Vec::new(), false).map(|l| l.rel) };
+            let again = if nm.is_some() { None } else { self.declared_at(&t, next) };
+            if let Some(a) = again { self.unparsed.push(format!("AGAIN {a} {t}")); }
+            else if let Some(rel) = rel { self.declared.push(rel.clone()); self.home_book.insert(rel, "main".into()); }
+            else { let why = self.refused_name.get(&t).map(|r| format!(" — {r}")).unwrap_or_default(); self.unparsed.push(format!("DECLARED {t}{why}")); }
+        }
+    }
+
+    fn either(&mut self, text: &str, block: &Block) {
+        let items = &block.items;
+        if twin(text) || items.iter().any(|it| twin(&it.text) || it.sub.iter().any(|s| twin(s))) {
+            let texts: Vec<&str> = std::iter::once(text).chain(items.iter().flat_map(|it| std::iter::once(it.text.as_str()).chain(it.sub.iter().map(String::as_str)))).collect();
+            self.both_sides(&texts, |r, side| {
+                let head = halves(&rx::sub(" either:$", text, false, ""), side);
+                for it in items {
+                    let t = halves(&rx::sub("[;.]$", &it.text, false, ""), side);
+                    if t == "if all of:" { let subs: Vec<String> = it.sub.iter().map(|x| halves(x, side)).collect(); r.sentence(&head, &subs); }
+                    else if t == "always" { r.sentence(&head, &[]); }
+                    else { r.rule_text(&format!("{head} {t}."), None); }
+                }
+            });
+            return;
+        }
+        let head = rx::sub(" either:$", text, false, "");
+        for it in items {
+            let t = rx::sub("[;.]$", &it.text, false, "");
+            if !rx::test("^(if |unless |always$)", &t) { self.bad_alternatives.push(format!("{head} … {t}")); }
+            if t == "if all of:" { self.sentence(&head, &it.sub); }
+            else if t == "always" { self.sentence(&head, &[]); }
+            else { self.rule_text(&format!("{head} {t}."), None); }
+        }
+    }
+
+    fn colon_facts(&mut self, next: &Block) {
+        for it in &next.items {
+            let t = rx::sub(r"\.$", it.text.trim(), false, "");
+            self.bad_term = None;
+            let l = self.match_lit(&t, &mut Vec::new(), false);
+            let again = if l.as_ref().is_some_and(|l| l.args.iter().all(|a| matches!(a, V(_)))) { self.declared_at(&t, next) } else { None };
+            match l {
+                Some(l) if self.bad_term.is_none() && l.args.iter().all(|a| !matches!(a, V(_))) => {
+                    if !self.home_book.contains_key(&l.rel) { self.home_book.insert(l.rel.clone(), "main".into()); }
+                    self.parsed_facts.push(l);
+                }
+                _ => self.unparsed.push(match again { Some(a) => format!("AGAIN {a} {t}"), None => format!("FACT {t}") }),
+            }
+        }
     }
 
     fn expand(&mut self, rule: &Rule) -> Vec<Clause> {
@@ -2116,8 +2278,7 @@ impl R {
         let cands: Vec<Cand> = (0..3.min(w.len())).map(|k| Cand { s: format!("X {}", w[k + 1..].join(" ")), np: Some(w[..k + 1].join(" ")), past: false }).collect();
         let (r, np) = self.settle(raw, &cands, "never")?;
         let n = self.noun_of(&r, np.as_deref()).unwrap_or_else(|| "thing".into());
-        let rel = rx::exec(r"^(\w+)", &r.lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
-        let domain = self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if *hn == n)).cloned();
+        let domain = self.ranging_sentence(&r.lit, &n);
         let tail = rx::sub("^X ", &r.said, false, "");
         Err(match domain {
             Some(d) => format!("\"{}\" needs the {} it ranges over, and no sentence lists every {n}: say which, as in {q} {n} that {} {tail}.", q.to_lowercase(), plural(&n), rx::sub("^X ", &lettered(&d), false, "")),
@@ -2126,122 +2287,150 @@ impl R {
     }
     fn asked(&mut self, raw: &str, s: &str, seen: &[(String, String)], number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
         if let Some(m) = rx::exec("^(Every|Each) (.+)$", s) { return self.every(raw, g(&m, 1), g(&m, 2), seen, number); }
-        if rx::test(r"^(?:No|Nothing|Nobody|None|There (?:is|are) no)\b", s) {
-            let mut subj: Vec<(Option<String>, String)> = Vec::new();
-            if let Some(m) = rx::exec("^There (?:is|are) no (.+?) that (.+)$", s) { subj.push((Some(g(&m, 1).into()), g(&m, 2).into())); }
-            else if let Some(m) = rx::exec("^(?:Nothing|Nobody|None|No one) (.+)$", s) { subj.push((None, g(&m, 1).into())); }
-            else if let Some(m) = rx::exec("^No (.+)$", s) {
-                let w = tokens(g(&m, 1));
-                let mut k = 1;
-                while k <= 3.min(w.len().saturating_sub(1)) && w[k - 1] != "and" && w[k - 1] != "or" { subj.push((Some(w[..k].join(" ")), w[k..].join(" "))); k += 1; }
-            }
-            if subj.iter().any(|x| rx::test(r"\bnot\b|n['’]t\b", &x.1)) { return Err("\"no … not\" reads two ways: say what must never happen without \"not\"".into()); }
-            let cands: Vec<Cand> = subj.iter().map(|x| Cand { s: format!("X {}", x.1), np: x.0.clone(), past: false }).collect();
-            return match self.settle(raw, &cands, "never") {
-                Ok((r, np)) => {
-                    let noun = self.noun_of(&r, np.as_deref());
-                    let note = self.noted(&r, np.as_deref(), seen);
-                    Ok(Question { kind: "never".into(), line: format!("never {}", r.said), lit: r.lit, noun, note, ..Default::default() })
-                }
-                Err(e) => {
-                    let ic: Vec<Cand> = cands.iter().map(|c| Cand { s: self.indefinite(&c.s), ..c.clone() }).collect();
-                    let Some((op, l, r, sj, np)) = self.joined(&ic) else { return Err(e) };
-                    if sj != "X" { return Err(e); }
-                    let noun = self.noun_of(&l, np.as_deref());
-                    if op == "or" { return Ok(Question { kind: "never".into(), line: format!("never {}", l.said), lit: l.lit, noun, also: vec![(format!("never {}", r.said), r.lit)], ..Default::default() }); }
-                    let noun = noun.unwrap_or_else(|| "thing".into());
-                    let (rules, phrase, said, lit) = self.generated("promise", &noun, &[format!("{} and {}", l.said, r.said)], number);
-                    Ok(Question { kind: "never".into(), line: format!("never {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), ..Default::default() })
-                }
-            };
-        }
-        if let Some(m) = rx::exec("(?i)^(How many|Which|What|Whom|Who) (.+)$", s) {
-            let w0 = g(&m, 1).to_lowercase();
-            let w = tokens(g(&m, 2));
-            let neg = rx::test(r"\bnot\b|n['’]t\b", g(&m, 2));
-            let mut cands: Vec<Cand> = Vec::new();
-            let ks: &[usize] = if w0 == "who" || w0 == "whom" { &[0] } else if w0 == "what" { &[0, 1, 2] } else { &[1, 2, 3] };
-            for &k in ks {
-                if k + 1 > w.len() || w[..k].iter().any(|x| x == "and" || x == "or") { continue; }
-                let np = Some(w[..k].join(" ")).filter(|x| !x.is_empty());
-                let rest0 = w[k..].join(" ");
-                let rest1 = rx::replace(r"\b(?:which|what) ([a-z][\w-]*)\b", &rest0, false, |c| if self.singular(&c[1]).is_some() { "Y".to_string() } else { c[0].to_string() });
-                let rest = rx::sub(r"\b(?:who|whom|what)\b", &rest1, false, "Y");
-                cands.push(Cand { s: format!("X {rest}"), np: np.clone(), past: false });
-                if let Some(a) = rx::exec(r"^(\S+) (.+)$", &rest) {
-                    if aux(g(&a, 1)) { for c in self.inverted(g(&a, 1), g(&a, 2), Some("X")) { cands.push(Cand { s: c, np: np.clone(), past: g(&a, 1) == "did" }); } }
-                }
-            }
-            if neg { return Err(self.not_said(&unnot(raw))); }
-            let count = (w0 == "how many").then(|| "X".to_string());
-            return match self.settle(raw, &cands, "answers") {
-                Ok((r, np)) => {
-                    let noun = self.noun_of(&r, np.as_deref());
-                    let note = self.noted(&r, np.as_deref(), seen);
-                    Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, noun, note, count, ..Default::default() })
-                }
-                Err(e) => {
-                    let ic: Vec<Cand> = cands.iter().map(|c| Cand { s: self.indefinite(&c.s), ..c.clone() }).collect();
-                    let Some((op, l, r, sj, np)) = self.joined(&ic) else { return Err(e) };
-                    if sj != "X" { return Err(e); }
-                    let noun = self.noun_of(&l, np.as_deref()).unwrap_or_else(|| "thing".into());
-                    let bodies = if op == "and" { vec![format!("{} and {}", l.said, r.said)] } else { vec![l.said.clone(), r.said.clone()] };
-                    let (rules, phrase, said, lit) = self.generated("question", &noun, &bodies, number);
-                    Ok(Question { kind: "answers".into(), line: format!("? {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), count, ..Default::default() })
-                }
-            };
-        }
-        if let Some(m) = rx::exec(r"^Why (\w+?)(n['’]t)? (.+)$", s) {
-            let aux_w = not_of(g(&m, 1));
-            if !aux(&aux_w) { return Err("a why question reads as \"Why is …\", \"Why does …\" or \"Why does … not …\"".into()); }
-            let (mut rest, mut neg) = (g(&m, 3).to_string(), has(&m, 2));
-            if rx::test(r"\bnot\b", &rest) { neg = true; rest = rx::sub(r"\bnot ", &rest, false, ""); }
-            let lead = tokens(&rest).first().cloned().unwrap_or_default();
-            let some = rx::exec(r"^(?:a|an|any|some) ([a-z][\w-]*)\b", &rest);
-            let pronoun: Option<String> = if PRONOUN.contains(&lead.as_str()) { Some(lead.clone()) } else { match &some { Some(sm) if self.singular(g(sm, 1)).is_some() => Some(g(sm, 0).to_string()), _ => None } };
-            if let Some(p) = &pronoun { rest = format!("X{}", &rest[p.len()..]); }
-            let cands: Vec<Cand> = self.inverted(&aux_w, &rest, None).into_iter().map(|c| Cand { s: c, np: None, past: aux_w == "did" }).collect();
-            let (r, _) = self.settle(raw, &cands, "answers")?;
-            let kind = if neg { "whynot" } else { "why" };
-            let said = r.said.clone();
-            let v = tokens(&said).into_iter().find(|w| rx::test(r"^[A-Z]\d*$", w));
-            let noun = self.noun_of(&r, None);
-            let note = self.noted(&r, None, seen);
-            let mut q = Question { kind: kind.into(), line: format!("{kind} {said}"), lit: r.lit.clone(), noun, note, ..Default::default() };
-            let Some(v) = v else { return Ok(q) };
-            let why = match &pronoun { Some(p) if PRONOUN.contains(&p.as_str()) => format!("\"{p}\" has nothing to refer to in a question."), _ => format!("{kind} explains one answer, and {} is a blank.", match &pronoun { Some(p) => format!("\"{p}\""), None => v.clone() }) };
-            let lit = self.literal(&said).unwrap_or(r.lit.clone());
-            q.blank = Some(Blank { lit, v: v.clone(), said, why, raw: raw.trim().to_string(), pat: pronoun.unwrap_or(v) });
-            return Ok(q);
-        }
+        if rx::test(r"^(?:No|Nothing|Nobody|None|There (?:is|are) no)\b", s) { return self.never_question(raw, s, seen, number); }
+        if let Some(m) = rx::exec("(?i)^(How many|Which|What|Whom|Who) (.+)$", s) { return self.answers_question(raw, &m, seen, number); }
+        if let Some(m) = rx::exec(r"^Why (\w+?)(n['’]t)? (.+)$", s) { return self.why_question(raw, &m, seen); }
         if let Some(m) = rx::exec(r"^(\w+?)(n['’]t)? (.+)$", s) {
-            let aux_w = not_of(&g(&m, 1).to_lowercase());
-            if aux(&aux_w) {
-                let rest = g(&m, 3).to_string();
-                if has(&m, 2) || rx::test(r"\bnot\b", &rest) { return Err(format!("a yes-or-no question with \"not\" is not read: ask it without \"not\", {}, and read \"no\" as its answer", unnot(raw).trim())); }
-                let lead = tokens(&rest).first().cloned();
-                if let Some(l) = lead.filter(|l| PRONOUN.contains(&l.as_str())) { return Err(format!("\"{l}\" has nothing to refer to in a question: put a name in backticks in its place")); }
-                let (np, cands): (Option<String>, Vec<Cand>) = if let Some(t) = rx::exec(r"^there (?:(?:a|an|any) (.+?)|anything|anyone|anybody|something) that (.+)$", &rest) {
-                    let np = has(&t, 1).then(|| g(&t, 1).to_string());
-                    (np.clone(), vec![Cand { s: format!("X {}", g(&t, 2)), np, past: false }])
-                } else {
-                    let r2 = rx::sub(r"^(?:anything|anyone|anybody)\b", &rest, false, "X");
-                    (None, self.inverted(&aux_w, &r2, None).into_iter().map(|c| Cand { s: c, np: None, past: aux_w == "did" }).collect())
-                };
-                let (r, _) = self.settle(raw, &cands, "answers")?;
-                let noun = self.noun_of(&r, np.as_deref());
-                let note = self.noted(&r, np.as_deref(), seen);
-                return Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, yesno: true, noun, note, ..Default::default() });
-            }
+            if let Some(q) = self.yes_no_question(raw, &m, seen) { return q; }
         }
         Err("not a question the reader knows: ask with Which, What, Who, How many or Why, or with is, does, can…; say a promise with No".into())
     }
+
+    fn never_question(&mut self, raw: &str, s: &str, seen: &[(String, String)], number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
+        let mut subj: Vec<(Option<String>, String)> = Vec::new();
+        if let Some(m) = rx::exec("^There (?:is|are) no (.+?) that (.+)$", s) { subj.push((Some(g(&m, 1).into()), g(&m, 2).into())); }
+        else if let Some(m) = rx::exec("^(?:Nothing|Nobody|None|No one) (.+)$", s) { subj.push((None, g(&m, 1).into())); }
+        else if let Some(m) = rx::exec("^No (.+)$", s) {
+            let w = tokens(g(&m, 1));
+            let mut k = 1;
+            while k <= 3.min(w.len().saturating_sub(1)) && w[k - 1] != "and" && w[k - 1] != "or" { subj.push((Some(w[..k].join(" ")), w[k..].join(" "))); k += 1; }
+        }
+        if subj.iter().any(|x| rx::test(r"\bnot\b|n['’]t\b", &x.1)) { return Err("\"no … not\" reads two ways: say what must never happen without \"not\"".into()); }
+        let cands: Vec<Cand> = subj.iter().map(|x| Cand { s: format!("X {}", x.1), np: x.0.clone(), past: false }).collect();
+        match self.settle(raw, &cands, "never") {
+            Ok((r, np)) => {
+                let noun = self.noun_of(&r, np.as_deref());
+                let note = self.noted(&r, np.as_deref(), seen);
+                Ok(Question { kind: "never".into(), line: format!("never {}", r.said), lit: r.lit, noun, note, ..Default::default() })
+            }
+            Err(e) => self.never_joined(e, &cands, number),
+        }
+    }
+
+    /// A never over two things joined by `and` or `or`: the `or` is two lines, the `and` a promise to generate.
+    fn never_joined(&mut self, e: String, cands: &[Cand], number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
+        let Some((op, l, r, np)) = self.joined_subject(cands) else { return Err(e) };
+        let noun = self.noun_of(&l, np.as_deref());
+        if op == "or" { return Ok(Question { kind: "never".into(), line: format!("never {}", l.said), lit: l.lit, noun, also: vec![(format!("never {}", r.said), r.lit)], ..Default::default() }); }
+        let noun = noun.unwrap_or_else(|| "thing".into());
+        let (rules, phrase, said, lit) = self.generated("promise", &noun, &[format!("{} and {}", l.said, r.said)], number);
+        Ok(Question { kind: "never".into(), line: format!("never {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), ..Default::default() })
+    }
+
+    /// The two sides of a question the candidates join, when they join on the subject alone.
+    fn joined_subject(&mut self, cands: &[Cand]) -> Option<(String, Reading, Reading, Option<String>)> {
+        let ic: Vec<Cand> = cands.iter().map(|c| Cand { s: self.indefinite(&c.s), ..c.clone() }).collect();
+        let (op, l, r, sj, np) = self.joined(&ic)?;
+        (sj == "X").then_some((op, l, r, np))
+    }
+
+    fn answers_question(&mut self, raw: &str, m: &[Option<String>], seen: &[(String, String)], number: &mut dyn FnMut(&str) -> usize) -> Result<Question, String> {
+        let w0 = g(m, 1).to_lowercase();
+        let w = tokens(g(m, 2));
+        let neg = rx::test(r"\bnot\b|n['’]t\b", g(m, 2));
+        let cands = self.wh_candidates(&w0, &w);
+        if neg { return Err(self.not_said(&unnot(raw))); }
+        let count = (w0 == "how many").then(|| "X".to_string());
+        match self.settle(raw, &cands, "answers") {
+            Ok((r, np)) => {
+                let noun = self.noun_of(&r, np.as_deref());
+                let note = self.noted(&r, np.as_deref(), seen);
+                Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, noun, note, count, ..Default::default() })
+            }
+            Err(e) => {
+                let Some((op, l, r, np)) = self.joined_subject(&cands) else { return Err(e) };
+                let noun = self.noun_of(&l, np.as_deref()).unwrap_or_else(|| "thing".into());
+                let bodies = if op == "and" { vec![format!("{} and {}", l.said, r.said)] } else { vec![l.said.clone(), r.said.clone()] };
+                let (rules, phrase, said, lit) = self.generated("question", &noun, &bodies, number);
+                Ok(Question { kind: "answers".into(), line: format!("? {said}"), lit, noun: Some(noun), rules: Some(rules), phrase: Some(phrase), count, ..Default::default() })
+            }
+        }
+    }
+
+    /// The candidate readings of a `Which`, `What`, `Who` or `How many` question, with its words as the subject at each split.
+    fn wh_candidates(&mut self, w0: &str, w: &[String]) -> Vec<Cand> {
+        let mut cands: Vec<Cand> = Vec::new();
+        let ks: &[usize] = if w0 == "who" || w0 == "whom" { &[0] } else if w0 == "what" { &[0, 1, 2] } else { &[1, 2, 3] };
+        for &k in ks {
+            if k + 1 > w.len() || w[..k].iter().any(|x| x == "and" || x == "or") { continue; }
+            let np = Some(w[..k].join(" ")).filter(|x| !x.is_empty());
+            let rest0 = w[k..].join(" ");
+            let rest1 = rx::replace(r"\b(?:which|what) ([a-z][\w-]*)\b", &rest0, false, |c| if self.singular(&c[1]).is_some() { "Y".to_string() } else { c[0].to_string() });
+            let rest = rx::sub(r"\b(?:who|whom|what)\b", &rest1, false, "Y");
+            cands.push(Cand { s: format!("X {rest}"), np: np.clone(), past: false });
+            if let Some(a) = rx::exec(r"^(\S+) (.+)$", &rest) {
+                if aux(g(&a, 1)) { for c in self.inverted(g(&a, 1), g(&a, 2), Some("X")) { cands.push(Cand { s: c, np: np.clone(), past: g(&a, 1) == "did" }); } }
+            }
+        }
+        cands
+    }
+
+    fn why_question(&mut self, raw: &str, m: &[Option<String>], seen: &[(String, String)]) -> Result<Question, String> {
+        let aux_w = not_of(g(m, 1));
+        if !aux(&aux_w) { return Err("a why question reads as \"Why is …\", \"Why does …\" or \"Why does … not …\"".into()); }
+        let (mut rest, mut neg) = (g(m, 3).to_string(), has(m, 2));
+        if rx::test(r"\bnot\b", &rest) { neg = true; rest = rx::sub(r"\bnot ", &rest, false, ""); }
+        let lead = tokens(&rest).first().cloned().unwrap_or_default();
+        let some = rx::exec(r"^(?:a|an|any|some) ([a-z][\w-]*)\b", &rest);
+        let pronoun: Option<String> = if PRONOUN.contains(&lead.as_str()) { Some(lead.clone()) } else { match &some { Some(sm) if self.singular(g(sm, 1)).is_some() => Some(g(sm, 0).to_string()), _ => None } };
+        if let Some(p) = &pronoun { rest = format!("X{}", &rest[p.len()..]); }
+        let cands: Vec<Cand> = self.inverted(&aux_w, &rest, None).into_iter().map(|c| Cand { s: c, np: None, past: aux_w == "did" }).collect();
+        let (r, _) = self.settle(raw, &cands, "answers")?;
+        let kind = if neg { "whynot" } else { "why" };
+        let said = r.said.clone();
+        let v = tokens(&said).into_iter().find(|w| rx::test(r"^[A-Z]\d*$", w));
+        let noun = self.noun_of(&r, None);
+        let note = self.noted(&r, None, seen);
+        let mut q = Question { kind: kind.into(), line: format!("{kind} {said}"), lit: r.lit.clone(), noun, note, ..Default::default() };
+        let Some(v) = v else { return Ok(q) };
+        let why = match &pronoun { Some(p) if PRONOUN.contains(&p.as_str()) => format!("\"{p}\" has nothing to refer to in a question."), _ => format!("{kind} explains one answer, and {} is a blank.", match &pronoun { Some(p) => format!("\"{p}\""), None => v.clone() }) };
+        let lit = self.literal(&said).unwrap_or(r.lit.clone());
+        q.blank = Some(Blank { lit, v: v.clone(), said, why, raw: raw.trim().to_string(), pat: pronoun.unwrap_or(v) });
+        Ok(q)
+    }
+
+    /// `Is …`, `Does …`, `Can …`: a yes-or-no question; `None` when the first word is not an auxiliary.
+    fn yes_no_question(&mut self, raw: &str, m: &[Option<String>], seen: &[(String, String)]) -> Option<Result<Question, String>> {
+        let aux_w = not_of(&g(m, 1).to_lowercase());
+        if !aux(&aux_w) { return None; }
+        let rest = g(m, 3).to_string();
+        if has(m, 2) || rx::test(r"\bnot\b", &rest) { return Some(Err(format!("a yes-or-no question with \"not\" is not read: ask it without \"not\", {}, and read \"no\" as its answer", unnot(raw).trim()))); }
+        let lead = tokens(&rest).first().cloned();
+        if let Some(l) = lead.filter(|l| PRONOUN.contains(&l.as_str())) { return Some(Err(format!("\"{l}\" has nothing to refer to in a question: put a name in backticks in its place"))); }
+        let (np, cands): (Option<String>, Vec<Cand>) = if let Some(t) = rx::exec(r"^there (?:(?:a|an|any) (.+?)|anything|anyone|anybody|something) that (.+)$", &rest) {
+            let np = has(&t, 1).then(|| g(&t, 1).to_string());
+            (np.clone(), vec![Cand { s: format!("X {}", g(&t, 2)), np, past: false }])
+        } else {
+            let r2 = rx::sub(r"^(?:anything|anyone|anybody)\b", &rest, false, "X");
+            (None, self.inverted(&aux_w, &r2, None).into_iter().map(|c| Cand { s: c, np: None, past: aux_w == "did" }).collect())
+        };
+        let (r, _) = match self.settle(raw, &cands, "answers") { Ok(x) => x, Err(e) => return Some(Err(e)) };
+        let noun = self.noun_of(&r, np.as_deref());
+        let note = self.noted(&r, np.as_deref(), seen);
+        Some(Ok(Question { kind: "answers".into(), line: format!("? {}", r.said), lit: r.lit, yesno: true, noun, note, ..Default::default() }))
+    }
+
+    /// The one-place sentence over `n` that a question about `lit` can name its things by.
+    fn ranging_sentence(&self, lit: &str, n: &str) -> Option<T> {
+        let rel = rx::exec(r"^(\w+)", lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
+        self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if hn == n)).cloned()
+    }
+
     /// `Which products do not leave the line?`: a question with not needs the things it ranges over, which only a rule can name.
     fn not_said(&mut self, positive: &str) -> String {
         let q = match self.question(positive, &mut |_| 1) { Ok(q) if q.noun.is_some() => q, _ => return "a question with \"not\" needs the things it ranges over: write a rule that names them and ask its head".into() };
         let n = q.noun.clone().unwrap();
-        let rel = rx::exec(r"^(\w+)", &q.lit).map(|m| g(&m, 1).to_string()).unwrap_or_default();
-        let domain = self.templates.iter().find(|t| t.arity == 1 && t.rel != rel && matches!(&t.parts[0], Part::Hole(_, hn) if *hn == n)).cloned();
+        let domain = self.ranging_sentence(&q.lit, &n);
         let said = rx::sub(r"^\? ", &q.line, false, "");
         match domain {
             Some(d) => format!("a question with \"not\" needs the {} it ranges over. Name them in a rule: {} {n} X stays if {}, unless {said}. Then ask: Which {} stay?", plural(&n), cap_art(&n), lettered(&d), plural(&n)),

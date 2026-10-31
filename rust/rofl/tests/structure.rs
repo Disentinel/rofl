@@ -51,8 +51,8 @@ fn a_declaration_changes_no_fact_and_the_planner_reads_its_promise() {
     let (a, b) = (plain.eval.store.canonical_state(&plain.eval.h), declared.eval.store.canonical_state(&declared.eval.h));
     assert_ne!(a, b, "the declaration is two kernel rows");
     assert_eq!(without_declaration(&a), without_declaration(&b), "a declaration changed a fact");
-    assert_eq!(plain.eval.promise_stats, 0, "no promise was declared");
-    assert!(declared.eval.promise_stats > 0, "the planner counted rows where the key was promised");
+    assert_eq!(plain.eval.ds.promise_stats, 0, "no promise was declared");
+    assert!(declared.eval.ds.promise_stats > 0, "the planner counted rows where the key was promised");
 }
 
 #[test]
@@ -136,4 +136,26 @@ wf_r(X, Z) :- wf_r(X, Y), wf_e(Y, Z).
     assert!(m.contains("function wf_v: key (k) has two values"), "{m}");
     assert!(s.eval.store.dirty, "a refused world stays dirty");
     assert!(s.ask("wf_v(k, X)").is_err(), "a broken world answered");
+}
+
+#[test]
+fn a_function_declared_into_an_evaluated_world_is_a_delta_judged_over_every_row() {
+    let decl = "function kind(N, to V).";
+    let mut fresh = world(&format!("{RULES}\n{decl}"));
+    fresh.evaluate().unwrap();
+    let mut s = world(RULES);
+    s.evaluate().unwrap();
+    let (_, a) = s.load_delta(decl, None).unwrap();
+    assert!(matches!(a, rofl::session::Addition::Delta(_)), "evaluated again: {}", match a { rofl::session::Addition::Full(w) => w, _ => unreachable!() });
+    assert_eq!(s.eval.store.canonical_state(&s.eval.h), fresh.eval.store.canonical_state(&fresh.eval.h));
+    // rows that stood before the declaration and break it refuse the world, though the addition made none of them
+    let mut s = world(&format!("{RULES}\nkind(n1, call)."));
+    s.evaluate().unwrap();
+    match s.load_delta(decl, None).unwrap().1 {
+        rofl::session::Addition::Full(w) => assert!(w.contains("promise is broken"), "{w}"),
+        rofl::session::Addition::Delta(_) => panic!("a broken promise answered by delta"),
+    }
+    assert!(s.eval.store.dirty);
+    let m = refusal(s.evaluate());
+    assert!(m.contains("function kind: key (n1) has two values"), "{m}");
 }
