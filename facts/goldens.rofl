@@ -185,7 +185,7 @@ golden_state("rules_stage-plan", "16b6edd4d6ed5cf6", 953).
 golden_state("rules_strata", "cf88191d96bd1e1a", 1902).
 golden_state("rules_swarm", "bc00a5f8c1f4632b", 771).
 golden_state("rules_untyped", "e7fb76b1c5a999d0", 1034).
-golden_state("rules_worklist", "e5573158c00fbec2", 5281).
+golden_state("rules_worklist", "0d87c673cdda6dc1", 5279).
 golden_state("rules_worlds", "66d8f18900fbdf2c", 1388).
 golden_state("boot_only", "7f49120e1b62b3e4", 663).
 golden_state("agg_breaks_census", "aa97dcf222f0772d", 13242).
@@ -603,7 +603,7 @@ golden_state("prov_lazy_retract", "b7307a860a994843", 782).
 golden_state("provenance_relational", "12f9eedb790e85ba", 867).
 golden_state("readiness_atlas", "06d6eaae51fed1af", 1994).
 golden_state("readiness_rofl", "d8849f3f60fd4ba3", 2351).
-golden_state("refactoring_queue", "94de739ab8fdf42f", 5365).
+golden_state("refactoring_queue", "a2184721102e6928", 5363).
 golden_state("refused", "cd2383aa59918116", 663).
 golden_state("retract_again", "7dd4250e458f057f", 700).
 golden_state("retract_last", "08cea2b0e9c4c4fc", 682).
@@ -614,7 +614,7 @@ golden_state("sealed_provenance", "430e8a8392cd8855", 681).
 golden_state("sensors_t3", "0ae392741dda3271", 1017).
 golden_state("services", "62aaa37f6fc82c40", 163737).
 golden_state("set_spelling", "347cc60b024bf82b", 807).
-golden_state("spec_coverage", "999058280ae6947b", 5065).
+golden_state("spec_coverage", "4abab4e954bd24bd", 5067).
 golden_state("staged_neg_why", "53353068d776ddf5", 998).
 golden_state("staged_neg_why_agg", "43b1acc5b9aba0dd", 1022).
 golden_state("staged_neg_why_nocarry", "76e67de10077c3cd", 1022).
@@ -8444,7 +8444,7 @@ golden_rel("rules_untyped", "stratum[main]", 10).
 golden_rel("rules_untyped", "uses_builtin[$kernel]", 13).
 golden_rel("rules_untyped", "writes_to[$kernel]", 51).
 golden_rel("rules_worklist", "@other", 1).
-golden_rel("rules_worklist", "@wit", 1199).
+golden_rel("rules_worklist", "@wit", 1198).
 golden_rel("rules_worklist", "anything_unblocks[main]", 1).
 golden_rel("rules_worklist", "asserted_by[$kernel]", 884).
 golden_rel("rules_worklist", "authority[main]", 5).
@@ -8459,7 +8459,7 @@ golden_rel("rules_worklist", "concludes[$kernel]", 77).
 golden_rel("rules_worklist", "conclusion_lit[$kernel]", 77).
 golden_rel("rules_worklist", "conclusion_tense[$kernel]", 77).
 golden_rel("rules_worklist", "crossing[main]", 1).
-golden_rel("rules_worklist", "derived_by[$kernel]", 1210).
+golden_rel("rules_worklist", "derived_by[$kernel]", 1209).
 golden_rel("rules_worklist", "edb[main]", 57).
 golden_rel("rules_worklist", "flow[main]", 6).
 golden_rel("rules_worklist", "flows_to[main]", 6).
@@ -8489,7 +8489,7 @@ golden_rel("rules_worklist", "sees[main]", 6).
 golden_rel("rules_worklist", "spawn_orphan[audit]", 212).
 golden_rel("rules_worklist", "stated_state[main]", 209).
 golden_rel("rules_worklist", "stratum[main]", 10).
-golden_rel("rules_worklist", "takeable[main]", 40).
+golden_rel("rules_worklist", "takeable[main]", 39).
 golden_rel("rules_worklist", "unblocking_work[main]", 8).
 golden_rel("rules_worklist", "unblocks[main]", 57).
 golden_rel("rules_worklist", "unclaimed_item[main]", 186).
@@ -31275,7 +31275,7 @@ golden_rel("readiness_rofl", "unknown[epistemic]", 2).
 golden_rel("readiness_rofl", "uses_builtin[$kernel]", 6).
 golden_rel("readiness_rofl", "writes_to[$kernel]", 85).
 golden_rel("refactoring_queue", "@other", 1).
-golden_rel("refactoring_queue", "@wit", 1223).
+golden_rel("refactoring_queue", "@wit", 1222).
 golden_rel("refactoring_queue", "anything_unblocks[main]", 1).
 golden_rel("refactoring_queue", "asserted_by[$kernel]", 902).
 golden_rel("refactoring_queue", "authority[main]", 5).
@@ -31290,7 +31290,7 @@ golden_rel("refactoring_queue", "concludes[$kernel]", 77).
 golden_rel("refactoring_queue", "conclusion_lit[$kernel]", 77).
 golden_rel("refactoring_queue", "conclusion_tense[$kernel]", 77).
 golden_rel("refactoring_queue", "crossing[main]", 1).
-golden_rel("refactoring_queue", "derived_by[$kernel]", 1234).
+golden_rel("refactoring_queue", "derived_by[$kernel]", 1233).
 golden_rel("refactoring_queue", "edb[main]", 57).
 golden_rel("refactoring_queue", "flow[main]", 6).
 golden_rel("refactoring_queue", "flows_to[main]", 6).
@@ -31320,7 +31320,7 @@ golden_rel("refactoring_queue", "sees[main]", 6).
 golden_rel("refactoring_queue", "spawn_orphan[audit]", 218).
 golden_rel("refactoring_queue", "stated_state[main]", 215).
 golden_rel("refactoring_queue", "stratum[main]", 10).
-golden_rel("refactoring_queue", "takeable[main]", 46).
+golden_rel("refactoring_queue", "takeable[main]", 45).
 golden_rel("refactoring_queue", "unblocking_work[main]", 8).
 golden_rel("refactoring_queue", "unblocks[main]", 57).
 golden_rel("refactoring_queue", "unclaimed_item[main]", 192).
@@ -33183,10 +33183,10 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 17).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 1391).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 1392).
 golden_rel("spec_coverage", "authority[main]", 35).
 golden_rel("spec_coverage", "boot_rank[main]", 10).
-golden_rel("spec_coverage", "check[checks]", 948).
+golden_rel("spec_coverage", "check[checks]", 949).
 golden_rel("spec_coverage", "check_stands[coverage]", 15).
 golden_rel("spec_coverage", "citation_ok[checks]", 137).
 golden_rel("spec_coverage", "cited_check[map]", 15).
