@@ -1,5 +1,5 @@
 //! THE PROFILE OF AN EVALUATION, READ BY RULES (examples/profile/chain.rofl; docs/cli.md, *The profile of an
-//! evaluation*). A rule that reads the book `profile` is answered after the evaluation with what each rule and premise
+//! evaluation*). A rule that reads a relation of the book `profile` is answered after the evaluation with what each rule and premise
 //! cost (`Eval::profile_text`), and runs in the round after; a world that reads none pays nothing and holds nothing of it.
 use rofl::session::Session;
 use std::path::Path;

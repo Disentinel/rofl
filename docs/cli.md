@@ -472,8 +472,8 @@ back), `view` (what a volume's world wrote above its base), `evaluate` with
 the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
 line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
 
-**The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation whose rules read
-it, and read by those rules in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
+**The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
+one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
 A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
 `conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
 firings solved news first, `written_order[profile](R, Why)` why the planner kept the rule in written order (`builtin`,

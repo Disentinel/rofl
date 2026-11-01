@@ -1,5 +1,5 @@
 -- examples/profile/chain.rofl — THE EVALUATION READ BY RULES OF THE SAME WORLD (docs/cli.md, *The profile of an
--- evaluation*). A rule that reads the book `profile` asks for it: after the evaluation the engine writes what each
+-- evaluation*). A rule that reads a relation of the book `profile` asks for it: after the evaluation the engine writes what each
 -- rule and premise cost there, and the rules that read it run in the round after.
 --
 -- A chain of ten, walked two ways: `reach` is recursion alone and goes news first; `depth` carries `K is J + 1`,

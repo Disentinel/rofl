@@ -229,11 +229,19 @@ impl Eval {
     }
 }
 
+/// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
+/// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
+const PROFILE_RELS: [&str; 11] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "width", "read", "yield", "widest", "rows", "distinct"];
+
 impl Eval {
     /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");
-        self.rules.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p)))
+        let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
+        self.rules.iter().any(|r| {
+            r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel))
+        })
     }
 
     /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
