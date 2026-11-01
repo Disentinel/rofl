@@ -185,7 +185,7 @@ golden_state("rules_stage-plan", "be623800d36815a9", 951).
 golden_state("rules_strata", "a366d372f37910d8", 1900).
 golden_state("rules_swarm", "4cdf8e702992bd8f", 769).
 golden_state("rules_untyped", "58722dc3d17835c2", 1032).
-golden_state("rules_worklist", "3c9666ce1b6119a1", 5265).
+golden_state("rules_worklist", "1261c78acec65157", 5263).
 golden_state("rules_worlds", "11316227b3cf0025", 1386).
 golden_state("boot_only", "f4c6c2be7a0dffcd", 661).
 golden_state("agg_breaks_census", "6a49d49d748f6b14", 13240).
@@ -600,7 +600,7 @@ golden_state("prov_lazy_retract", "3855155723639efe", 780).
 golden_state("provenance_relational", "9997b0faa578cb91", 865).
 golden_state("readiness_atlas", "420c6fa41910700f", 1992).
 golden_state("readiness_rofl", "2206292c68ce7613", 2349).
-golden_state("refactoring_queue", "1ae0e1a3c425175e", 5349).
+golden_state("refactoring_queue", "453026aef022c06e", 5347).
 golden_state("refused", "8fc17f482876f7ef", 661).
 golden_state("retract_again", "ff1d69782eb7a276", 698).
 golden_state("retract_last", "2795ce91e90f2bac", 680).
@@ -8440,7 +8440,7 @@ golden_rel("rules_untyped", "stratum[main]", 10).
 golden_rel("rules_untyped", "uses_builtin[$kernel]", 13).
 golden_rel("rules_untyped", "writes_to[$kernel]", 51).
 golden_rel("rules_worklist", "@other", 1).
-golden_rel("rules_worklist", "@wit", 1195).
+golden_rel("rules_worklist", "@wit", 1194).
 golden_rel("rules_worklist", "anything_unblocks[main]", 1).
 golden_rel("rules_worklist", "asserted_by[$kernel]", 881).
 golden_rel("rules_worklist", "authority[main]", 5).
@@ -8455,7 +8455,7 @@ golden_rel("rules_worklist", "concludes[$kernel]", 77).
 golden_rel("rules_worklist", "conclusion_lit[$kernel]", 77).
 golden_rel("rules_worklist", "conclusion_tense[$kernel]", 77).
 golden_rel("rules_worklist", "crossing[main]", 1).
-golden_rel("rules_worklist", "derived_by[$kernel]", 1206).
+golden_rel("rules_worklist", "derived_by[$kernel]", 1205).
 golden_rel("rules_worklist", "edb[main]", 57).
 golden_rel("rules_worklist", "flow[main]", 6).
 golden_rel("rules_worklist", "flows_to[main]", 6).
@@ -8485,7 +8485,7 @@ golden_rel("rules_worklist", "sees[main]", 6).
 golden_rel("rules_worklist", "spawn_orphan[audit]", 212).
 golden_rel("rules_worklist", "stated_state[main]", 208).
 golden_rel("rules_worklist", "stratum[main]", 10).
-golden_rel("rules_worklist", "takeable[main]", 40).
+golden_rel("rules_worklist", "takeable[main]", 39).
 golden_rel("rules_worklist", "unblocking_work[main]", 8).
 golden_rel("rules_worklist", "unblocks[main]", 57).
 golden_rel("rules_worklist", "unclaimed_item[main]", 185).
@@ -31026,7 +31026,7 @@ golden_rel("readiness_rofl", "unknown[epistemic]", 2).
 golden_rel("readiness_rofl", "uses_builtin[$kernel]", 6).
 golden_rel("readiness_rofl", "writes_to[$kernel]", 85).
 golden_rel("refactoring_queue", "@other", 1).
-golden_rel("refactoring_queue", "@wit", 1219).
+golden_rel("refactoring_queue", "@wit", 1218).
 golden_rel("refactoring_queue", "anything_unblocks[main]", 1).
 golden_rel("refactoring_queue", "asserted_by[$kernel]", 899).
 golden_rel("refactoring_queue", "authority[main]", 5).
@@ -31041,7 +31041,7 @@ golden_rel("refactoring_queue", "concludes[$kernel]", 77).
 golden_rel("refactoring_queue", "conclusion_lit[$kernel]", 77).
 golden_rel("refactoring_queue", "conclusion_tense[$kernel]", 77).
 golden_rel("refactoring_queue", "crossing[main]", 1).
-golden_rel("refactoring_queue", "derived_by[$kernel]", 1230).
+golden_rel("refactoring_queue", "derived_by[$kernel]", 1229).
 golden_rel("refactoring_queue", "edb[main]", 57).
 golden_rel("refactoring_queue", "flow[main]", 6).
 golden_rel("refactoring_queue", "flows_to[main]", 6).
@@ -31071,7 +31071,7 @@ golden_rel("refactoring_queue", "sees[main]", 6).
 golden_rel("refactoring_queue", "spawn_orphan[audit]", 218).
 golden_rel("refactoring_queue", "stated_state[main]", 214).
 golden_rel("refactoring_queue", "stratum[main]", 10).
-golden_rel("refactoring_queue", "takeable[main]", 46).
+golden_rel("refactoring_queue", "takeable[main]", 45).
 golden_rel("refactoring_queue", "unblocking_work[main]", 8).
 golden_rel("refactoring_queue", "unblocks[main]", 57).
 golden_rel("refactoring_queue", "unclaimed_item[main]", 191).

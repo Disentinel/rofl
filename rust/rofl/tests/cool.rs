@@ -350,3 +350,45 @@ fn a_trail_this_engine_did_not_write_is_refused() {
     std::fs::remove_file(&out).ok();
     std::fs::remove_file(&bad).ok();
 }
+
+/// A COOLED AND REHEATED WORLD ANSWERS `why` AS IT DID BEFORE (w_witnesses_survive_cooling): the proofs of the volume's
+/// own conclusions and of what another book concluded from them, byte for byte, whether the volume comes back by delta
+/// into the world it left, before an evaluation, or into the world kept as a volume and opened again.
+#[test]
+fn a_reheated_volume_answers_why_as_before_cooling() {
+    let qs = ["callee_of[flow](na1b2c3d4_2, \"greet\")", "sx_called[surface](\"greet\")", "callee_of[flow](nf9e8d7c6_2, \"farewell\")"];
+    let fresh = || {
+        let mut s = world();
+        s.load(BOOKS, None).expect("books refused");
+        s.evaluate().expect("evaluate");
+        s
+    };
+    let whys = |s: &mut Session| -> Vec<String> { qs.iter().map(|q| s.why(q).unwrap_or_else(|e| format!("refused: {e}"))).collect() };
+    let mut s = fresh();
+    let before = whys(&mut s);
+    assert!(before.iter().all(|w| w.contains("<= ")), "the world proves nothing to compare: {before:?}");
+    let out = tmp("cool_why.rofl");
+    let vol = tmp("cool_why.vol");
+    let path = out.to_str().unwrap();
+
+    s.cool("na1b2c3d4_", path).expect("cool");
+    s.evaluate().expect("evaluate");
+    s.reheat(path).expect("reheat");
+    s.evaluate().expect("evaluate");
+    assert_eq!(whys(&mut s), before, "reheated by delta");
+
+    s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], &[], path).expect("cool by book");
+    s.reheat(path).expect("reheat");
+    assert_eq!(whys(&mut s), before, "reheated with no evaluation between");
+
+    let mut s = fresh();
+    s.cool("na1b2c3d4_", path).expect("cool");
+    s.evaluate().expect("evaluate");
+    s.keep_volume(vol.to_str().unwrap()).expect("keep");
+    let mut t = Session::open_volume(vol.to_str().unwrap(), BUDGET).expect("open");
+    t.reheat(path).expect("reheat");
+    t.evaluate().expect("evaluate");
+    assert_eq!(whys(&mut t), before, "reheated into the world kept as a volume");
+    std::fs::remove_file(&out).ok();
+    std::fs::remove_file(&vol).ok();
+}
