@@ -186,8 +186,8 @@ completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code
 edb(deferred_attr).
 deferred_attr(async).
 deferred_attr(generator).
-deferred_body[code](F) :- fn_node[code](F), ast_attr[code](F, A, true), deferred_attr(A).
-async_body[code](F)    :- deferred_body[code](F), not ast_attr[code](F, generator, true).
+deferred_body[code](F) :- fn_node[code](F), mark[value](F, A), deferred_attr(A).
+async_body[code](F)    :- deferred_body[code](F), not generator[value](F).
 sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
 has_return[code](F)    :- ast_node[code](R, return_statement, _), nearest_v[flow](F, R).

@@ -897,8 +897,8 @@ keyed_ret_need[code](F)  :- fn_node[code](F), sx_ret_lit[surface](F, _), not key
 keyed_want[code](R) :- keyed_ret_need[code](F), ret_plain[flow](F, R).
 keyed_ret_known[code](F) :- keyed_ret_need[code](F).
 keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ret_plain[flow](F, R), keyed_open[code](R).
-keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ast_attr[code](F, async, true).
-keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ast_attr[code](F, generator, true).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), async[value](F).
+keyed_ret_open[code](F)  :- keyed_ret_need[code](F), generator[value](F).
 sx_ret_known[surface](F) :- sx_esc[surface](F), keyed_ret_known[code](F).
 sx_ret_open[surface](F)  :- sx_esc[surface](F), keyed_ret_open[code](F).
 keyed_ret_known[code](F) :- sx_ret_known[surface](F).
@@ -1201,11 +1201,11 @@ keyed_two_targets[code](Q) :- resolves[code](Q, A), resolves[code](Q, B), A != B
 keyed_local_call[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), at[tree](Q, F, _), at[tree](G, F, _).
 keyed_this_call[code](Q) :- callee_of[code](Q, N), object_of[code](N, T), ast_node[code](T, this_expression, _).
 keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), not class_method_of[flow](_, G),
-                                not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
+                                not async[value](G), not generator[value](G).
 keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), class_method_of[flow](_, G),
-                                keyed_this_call[code](Q), not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
+                                keyed_this_call[code](Q), not async[value](G), not generator[value](G).
 keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), ast_node[code](G, class_private_method, _),
-                                keyed_this_call[code](Q), not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
+                                keyed_this_call[code](Q), not async[value](G), not generator[value](G).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, P), keyed_put_of[code](P, H, _).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_sure[code](G2, H, P).
 keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G, D).
@@ -2089,7 +2089,7 @@ may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, argument, 
 yields[flow](F, E) :- ast_node[code](Y, yield_expression, _), nearest_v[flow](F, Y),
                       ast_child[code](Y, argument, 0, E).
 
-gen_fn[flow](F)          :- fn_node[code](F), ast_attr[code](F, generator, true).
+gen_fn[flow](F)          :- fn_node[code](F), generator[value](F).
 gen_of[flow](C, F)       :- resolves[code](C, F), gen_fn[flow](F).
 may_be_node[flow](C, C)  :- gen_of[flow](C, _).
 
