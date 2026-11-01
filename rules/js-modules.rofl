@@ -199,18 +199,17 @@ module_target[code](I, T) :- ts_resolved[code](I, T), not resolved_import[code](
 -- 4. IMPORT BINDINGS — the four specifier kinds. `imported` may be a
 -- StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 -- verdict. A default binds `"default"`, a namespace `"*"`.
-import_specifier_node[code](Sp) :- ast_node[code](Sp, import_specifier, _).
-import_specifier_node[code](Sp) :- ast_node[code](Sp, import_default_specifier, _).
-import_specifier_node[code](Sp) :- ast_node[code](Sp, import_namespace_specifier, _).
+import_specifier_node[code](Sp) :- decl[value](Sp, import).
 
-import_spec[code](I, Sp) :- import_site[code](I, static_import),
-                            ast_child[code](I, specifiers, _, Sp).
+import_spec[code](I, Sp) :- import_specifier_node[code](Sp), parent[tree](I, Sp).
 
-spec_local[code](Sp, L) :- import_specifier_node[code](Sp),
-                           ast_child[code](Sp, local, 0, N), ast_name[code](N, L).
+spec_local[code](Sp, L) :- import_specifier_node[code](Sp), target[value](Sp, N), binds[type](N, L).
 
 spec_imported[code](Sp, M)         :- decl[value](Sp, import), parent[tree](Sp, L), pattern_prop[value](_, M, L).
-spec_imported[code](Sp, "*")       :- ast_node[code](Sp, import_namespace_specifier, _).
+spec_imported[code](Sp, "*")       :- import_specifier_node[code](Sp), assign[value](Sp, _, _).
+-- the name of an import_specifier written as an identifier (a string `imported` has none); a default specifier's "default" is not
+spec_key_string[code](Sp)        :- import_specifier_node[code](Sp), parent[tree](Sp, I), literal[value](I, _).
+import_ident_key[code](Sp, Key)  :- spec_imported[code](Sp, Key), not spec_key_string[code](Sp).
 
 binding[code](I, Sp, Local, Imported) :- import_spec[code](I, Sp),
                                          spec_local[code](Sp, Local),

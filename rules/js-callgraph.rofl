@@ -694,11 +694,7 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[surface](O, Key).
 -- the model cannot see: `export *` of a module it does not resolve or of an open
 -- one, a pattern exported, `export =`, CommonJS.
 whole_expr[flow](E) :- imports_ns[code](Local, D, File), module_target[code](D, _), top_read[code](E, Local, File).
-export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
-                                ast_child[code](D, id, 0, I), ast_name[code](I, Name).
-export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, declaration, 0, V),
-                                ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I),
-                                ast_name[code](I, Name).
+export_key[code](File, Name) :- program[tree](P, File), has[value](P, M), value[value](M, M), key[value](M, Name).
 export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, specifiers, _, Sp),
                                 ast_child[code](Sp, exported, 0, X), key_name[code](X, Name).
 export_key[code](File, "default") :- ast_node[code](_, export_default_declaration, File).

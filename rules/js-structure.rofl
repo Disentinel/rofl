@@ -51,10 +51,8 @@ alias ast_value(N, V) is ast_attr(N, value, V).
 -- `import.meta` are both a `meta_property` with zero attributes; three layers
 -- need the form and none owns it. Keyed on `meta`, the reserved word the
 -- grammar switches on: a future `import.defer` is still (meta="import").
-meta_form[code](M, new_target)  :- ast_node[code](M, meta_property, _),
-                                   ast_child[code](M, meta, 0, C), ast_name[code](C, "new").
-meta_form[code](M, import_meta) :- ast_node[code](M, meta_property, _),
-                                   ast_child[code](M, meta, 0, C), ast_name[code](C, "import").
+meta_form[code](M, new_target)  :- new_target[value](M).
+meta_form[code](M, import_meta) :- import_meta[value](M).
 
 -- a third form nothing classifies, and a node answering as both (the mutant
 -- keying the first arm on the wrong word gives every `import.meta` two forms)

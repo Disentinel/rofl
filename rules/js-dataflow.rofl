@@ -1722,10 +1722,8 @@ exports_name[code](F, Ext, File) :- export_local[code](L, Ext, File),
 -- so `ns.f()` is an ordinary member lookup.
 
 export_ns_name[code](Name, E, File) :-
-    ast_node[code](E, export_named_declaration, File),
-    ast_child[code](E, specifiers, _, Sp),
-    ast_node[code](Sp, export_namespace_specifier, _),
-    ast_child[code](Sp, exported, 0, X), ast_name[code](X, Name).
+    module_ref[value](Src, _), value[value](X, Src), key[value](X, Name), not literal[value](X, _),
+    parent[tree](E, Src), at[tree](E, File, _).
 
 exports_name[code](P, Name, File) :- export_ns_name[code](Name, E, File),
                                      module_target[code](E, Target),
@@ -1758,10 +1756,8 @@ member_value[flow](P, Name, X) :- module_object[flow](P, Target), exports_value[
 -- A namespace import binds the module object. A default import binds the one
 -- unnamed export, whose syntactic name is NOT the importer's name.
 imports_ns[code](Local, D, File) :-
-    ast_node[code](D, import_declaration, File),
-    ast_child[code](D, specifiers, _, Sp),
-    ast_node[code](Sp, import_namespace_specifier, _),
-    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local).
+    spec_imported[code](Sp, "*"), target[value](Sp, L), binds[type](L, Local),
+    parent[tree](D, Sp), at[tree](D, File, _).
 
 module_object[flow](P, File) :- ast_node[code](P, program, File).
 
@@ -1864,8 +1860,7 @@ external_value[flow](Spec, Spec) :- external_module[code](Spec).
 -- `require('m')` and `import('m')` evaluate to the module; so do the names a
 -- default or namespace import binds.
 may_be_node[flow](I, Spec) :- external_site[code](I, Spec), require_site[code](I).
-may_be_node[flow](I, Spec) :- external_site[code](I, Spec),
-                              ast_node[code](I, import_expression, _).
+may_be_node[flow](I, Spec) :- module_ref[value](I, Spec), external_site[code](I, Spec).
 may_be_node[flow](E, Spec) :- imports_default[code](Local, D, File), external_site[code](D, Spec),
                               top_read[code](E, Local, File).
 may_be_node[flow](E, Spec) :- imports_ns[code](Local, D, File), external_site[code](D, Spec),
@@ -1956,8 +1951,7 @@ contract_fn[flow](M, Pkg, Key)     :- sx_contract_pkg[surface](Spec, Pkg), exter
                                       may_be_node[flow](O, Spec), object_of[code](M, O),
                                       member_node_v[flow](M), selects[flow](M, Key), contract_key(Pkg, Key).
 contract_fn[flow](Sp, Pkg, Key)    :- external_import[code](Sp, _, Spec, _), sx_contract_pkg[surface](Spec, Pkg),
-                                      ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key),
-                                      contract_key(Pkg, Key).
+                                      import_ident_key[code](Sp, Key), contract_key(Pkg, Key).
 contract_call[flow](C, Pkg, Key)   :- contract_fn[flow](X, Pkg, Key), may_be_node[flow](G, X),
                                       callee[value](C, G), ast_node[code](C, call_expression, _).
 

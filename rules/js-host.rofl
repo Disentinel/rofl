@@ -43,7 +43,7 @@ builtin_member[flow](M, Spec, Key) :- builtin_ns_at[flow](O, Spec),
                                       object_of[code](M, O), member_node_v[flow](M),
                                       selects[flow](M, Key).
 builtin_member[flow](Sp, Spec, Key) :- external_import[code](Sp, _, S, _), builtin_canonical[code](S, Spec),
-                                       ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key).
+                                       import_ident_key[code](Sp, Key).
 builtin_member[flow](P, Spec, Key) :- builtin_ns[flow](Y, Spec), may_be_node[flow](Init, Y),
                                       decl_value[flow](D, Init),
                                       destr_prop[code](D, P, K, _, _), key_name[code](K, Key).
