@@ -435,19 +435,21 @@ name_field[ast_babel](tscall_signature_declaration, params). name_field[ast_babe
 
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
                        attr[ast_babel](K, name, Name).
-b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
-                       node[ast_babel](K, KK, _), key_literal[ast_babel](KK), attr[ast_babel](K, value, V).
+-- a literal key is static, written `{ 1: x }`, `{ "a": x }` or `{ ["a"]: x }` alike
+b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), node[ast_babel](K, KK, _), key_literal[ast_babel](KK),
+                       attr[ast_babel](K, value, V).
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, private_name, _),
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
                        attr[ast_babel](I, name, Name).
 key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
 key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
-key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
+key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
-key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
+key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
 edb(key_literal).
+b_lit_key[ast_babel](K) :- node[ast_babel](K, KK, _), key_literal[ast_babel](KK).
 key_literal[ast_babel](string_literal). key_literal[ast_babel](numeric_literal).
 
 edb(member_kind).

@@ -175,12 +175,17 @@ edb(member_kind).
 key_name(K, Name) :- oxc_k[ast_oxc](K, identifier_name), oxc_name[ast_oxc](K, Name).
 key_name(K, Name) :- oxc_k[ast_oxc](K, private_identifier), oxc_name[ast_oxc](K, Name).
 key_name(K, Name) :- oxc_k[ast_oxc](K, string_literal), oxc_a[ast_oxc](K, value, Name).
+key_name(K, Name) :- oxc_k[ast_oxc](K, numeric_literal), oxc_a[ast_oxc](K, value, Name).
+lit_key(K) :- oxc_k[ast_oxc](K, string_literal).
+lit_key(K) :- oxc_k[ast_oxc](K, numeric_literal).
 member_kind(object_property). member_kind(method_definition). member_kind(property_definition). member_kind(accessor_property).
-key[value](M, Name)  :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, K), not oxc_a[ast_oxc](M, computed, true), key_name(K, Name).
-key_expr[value](M, E) :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true).
-key[value](P, Name)  :- oxc_k[ast_oxc](P, binding_property), not oxc_a[ast_oxc](P, computed, true), oxc_c[ast_oxc](P, key, 0, K), key_name(K, Name).
-key[value](P, Name)  :- oxc_k[ast_oxc](P, assignment_target_property_property), not oxc_a[ast_oxc](P, computed, true),
-                        oxc_c[ast_oxc](P, name, 0, K), key_name(K, Name).
+-- a key is static when written plain or as a literal: `{ 1: x }`, `{ "a": x }` and `{ ["a"]: x }` alike
+static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), not oxc_a[ast_oxc](M, computed, true).
+static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), oxc_a[ast_oxc](M, computed, true), lit_key(K).
+key[value](M, Name)  :- member_kind(MK), oxc_k[ast_oxc](M, MK), static_key(M, K, key), key_name(K, Name).
+key_expr[value](M, E) :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not lit_key(E).
+key[value](P, Name)  :- oxc_k[ast_oxc](P, binding_property), static_key(P, K, key), key_name(K, Name).
+key[value](P, Name)  :- oxc_k[ast_oxc](P, assignment_target_property_property), static_key(P, K, name), key_name(K, Name).
 mark[value](M, private)    :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, K), oxc_k[ast_oxc](K, private_identifier).
 
 literal[value](N, V) :- oxc_k[ast_oxc](N, string_literal), oxc_a[ast_oxc](N, value, V), not key_of(N).
@@ -525,7 +530,7 @@ has[type](I, M) :- oxc_k[ast_oxc](I, tsinterface_declaration), oxc_c[ast_oxc](I,
 has[type](L, M) :- oxc_k[ast_oxc](L, tstype_literal), oxc_c[ast_oxc](L, members, _, M).
 mark[type](I, object) :- oxc_k[ast_oxc](I, tsinterface_declaration).
 mark[type](L, object) :- oxc_k[ast_oxc](L, tstype_literal).
-key[type](M, Key) :- type_member(M), oxc_c[ast_oxc](M, key, 0, K), not oxc_a[ast_oxc](M, computed, true), key_name(K, Key).
+key[type](M, Key) :- type_member(M), static_key(M, K, key), key_name(K, Key).
 declared[type](M, T) :- type_member(M), annotated(M, T).
 declared[type](M, T) :- type_member(M), oxc_c[ast_oxc](M, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 assign[type](A, A, T) :- oxc_k[ast_oxc](A, tstype_alias_declaration), oxc_c[ast_oxc](A, type_annotation, 0, T).
