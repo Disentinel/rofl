@@ -521,6 +521,36 @@ back), `view` (what a volume's world wrote above its base), `evaluate` with
 the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
 line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
 
+**The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
+one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
+A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
+`conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
+firings solved news first, `written_order[profile](R, Why)` why the planner kept the rule in written order (
+`aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`). Per premise
+`K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
+`read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
+`widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
+and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure.
+Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
+the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
+the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a
+rule fired once per round); the TypeScript engine writes no profile, so a world that reads it is Rust's alone
+(`check_opt(W, one_engine, rust)`).
+
+**The hypotheses over the profile** are models/engine/profile.rofl, a pack loaded beside any world (`rofl load
+models/engine/profile.rofl WORLD...`), everything it says in the book `profile`. Verdicts on a rule `R` or its premise
+`K`: `scan(R, K, Rel, Read, Out)` a premise that read more than three times what it let through, with `scan_why(R, K,
+small_relation | selective)`; `rescan(R, K, Rel)` a premise read whole on every firing (read = fires x rows);
+`rederives(R, Conc, Fresh)` a rule most of whose conclusions were known; `barren(R, Read)` a rule that read and
+concluded nothing; `hot(R, Pct)` a rule that read a quarter or more of all rows read. Forecasts of a head's size from the
+shape of its rules and the `rows` and `distinct` of what they read, each an upper bound: `forecast(Rel, N, projection |
+join | product | closure | chain)`, judged by the head's `rows`: `forecast_off(Rel, Kind, N, Actual)` where the head
+holds more (the hypothesis is false), `forecast_loose(Rel, Kind, N, Actual)` where it holds under a quarter. `growth(R,
+per_row | per_round | kernel)` is the class of a recursive rule, which only two runs of different sizes judge
+(rust/rofl/tests/profile_model.rs). The pack's own rules are profiled and left out of what it says. World
+`profile_model` over examples/checks/profile-hub.rofl (a chain, a hub, a ladder, each planted for one verdict or forecast),
+Rust only.
+
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
 reading and the binding. It is a diagnostic for the rule's author, not an

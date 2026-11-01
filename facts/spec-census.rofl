@@ -222,6 +222,11 @@ check[checks]("rust/rofl/tests/openapi.rs", "client_credentials_get_a_token_once
 check[checks]("rust/rofl/tests/openapi.rs", "an_mcp_server_that_wants_a_token_says_where_to_get_one", test).
 check[checks]("rust/rofl/tests/par.rs", "the_threads_answer_as_one_thread_does", test).
 check[checks]("rust/rofl/tests/post.rs", "a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come", test).
+check[checks]("rust/rofl/tests/profile.rs", "a_rule_that_reads_the_profile_is_answered_in_the_round_after", test).
+check[checks]("rust/rofl/tests/profile.rs", "a_world_that_reads_no_profile_holds_none", test).
+check[checks]("rust/rofl/tests/profile.rs", "the_profile_is_the_same_on_every_run", test).
+check[checks]("rust/rofl/tests/profile_model.rs", "the_hub_world_shows_every_planted_verdict_and_forecast", test).
+check[checks]("rust/rofl/tests/profile_model.rs", "two_sizes_judge_the_forecasts_and_the_growth_class", test).
 check[checks]("rust/rofl/tests/program.rs", "a_program_loaded_in_rust_is_the_world_the_kernel_builds", test).
 check[checks]("rust/rofl/tests/program.rs", "a_loaded_program_ticks_the_way_the_kernel_ticks", test).
 check[checks]("rust/rofl/tests/program.rs", "the_door_refuses_what_the_kernel_refuses", test).
@@ -371,6 +376,7 @@ check[checks]("facts/goldens.rofl", "notebook_spat", world).
 check[checks]("facts/goldens.rofl", "notebook_xdir", world).
 check[checks]("facts/goldens.rofl", "npc", world).
 check[checks]("facts/goldens.rofl", "oops", world).
+check[checks]("facts/goldens.rofl", "profile", world).
 check[checks]("facts/goldens.rofl", "quorum", world).
 check[checks]("facts/goldens.rofl", "quorum_quorum-says", world).
 check[checks]("facts/goldens.rofl", "reach", world).
@@ -905,6 +911,7 @@ check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
 check[checks]("facts/goldens.rofl", "oxc_roles", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).
+check[checks]("facts/goldens.rofl", "profile_model", world).
 check[checks]("facts/goldens.rofl", "prov_lazy", world).
 check[checks]("facts/goldens.rofl", "prov_lazy_lattice", world).
 check[checks]("facts/goldens.rofl", "prov_lazy_reader", world).
@@ -980,6 +987,8 @@ test_file[checks]("rust/rofl/tests/mcp.rs").
 test_file[checks]("rust/rofl/tests/openapi.rs").
 test_file[checks]("rust/rofl/tests/par.rs").
 test_file[checks]("rust/rofl/tests/post.rs").
+test_file[checks]("rust/rofl/tests/profile.rs").
+test_file[checks]("rust/rofl/tests/profile_model.rs").
 test_file[checks]("rust/rofl/tests/program.rs").
 test_file[checks]("rust/rofl/tests/prov_lazy.rs").
 test_file[checks]("rust/rofl/tests/resume.rs").

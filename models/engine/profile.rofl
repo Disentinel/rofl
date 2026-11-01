@@ -1,0 +1,100 @@
+-- models/engine/profile.rofl — HYPOTHESES ABOUT A RUN, AS RULES THE RUN'S PROFILE JUDGES (docs/cli.md, *The
+-- profile of an evaluation*). Load it beside any world: its rules read the book `profile`, so the engine writes it
+-- after the first run, and these rules run over it in the round after. Everything here is in the book `profile`, and
+-- what the pack says leaves its own rules out.
+--
+-- Two kinds of rule. A VERDICT reads the meters and names a rule or a premise the author should look at:
+--   scan        a premise that read far more rows than it let through, and why (a relation too small for an index,
+--               or a selective premise with nothing bound)
+--   rescan      a premise read whole on every firing of a rule that fires more than once (read = fires x rows)
+--   rederives   a rule most of whose conclusions were already known (conc > 2 x fresh)
+--   barren      a rule that read and concluded nothing
+--   hot         a rule that read a quarter or more of all the rows read
+-- A FORECAST says, from the shape of a rule and the sizes of what it reads, how many rows its head can hold; the
+-- profile's `rows` judges it: `forecast_off` where the head holds more than the forecast (the hypothesis is false),
+-- `forecast_loose` where it holds less than a quarter (the bound is too weak to plan by). The forecasts, each an
+-- upper bound:
+--   projection  one arm, one positive premise, no negation: rows of that premise
+--   join        one arm, two positive premises sharing a variable: |A| x |B| / max(distinct values at the shared slot)
+--   product     the same with no shared variable: |A| x |B|
+--   closure     the transitive closure of Base (one base arm, one recursive arm): distinct(Base, 1) x distinct(Base, 2)
+--   chain       the closure of a Base whose both columns are keys: n(n+1)/2 paths at most
+-- And a GROWTH class, which only two runs of different sizes can judge (rust/rofl/tests/profile_model.rs):
+--   per_row     a recursive rule solved news first: what it reads grows with its head
+--   per_round   a recursive rule kept in written order: what it reads grows with its head times its rounds
+--   kernel      a closure the kernel answers: the rule fires never, the kernel's cost is not in the profile
+--
+-- The reflection is read slot by slot, as examples/shapes/shapes.rofl reads it: `premise_lit(R, K, $lit(Rel, Book,
+-- Args, Tense))`, K from 1, the arguments a `$cons` list. A hypothesis that needs what is not here (which variables
+-- a premise binds at run time) is not written: a forecast that cannot be judged is not a forecast.
+
+-- ------------------------------------------------------------------------------------ the reflection, by slot
+pf_lit[profile](R, K, Rel, B, As) :- premise_lit(R, K, L), L = $lit(Rel, B, As, _).
+pf_tail[profile](R, K, 1, As)     :- pf_lit[profile](R, K, _, _, As).
+pf_tail[profile](R, K, J, T)      :- pf_tail[profile](R, K, I, $cons(_, T)), J is I + 1.
+pf_slot[profile](R, K, J, A)      :- pf_tail[profile](R, K, J, $cons(A, _)).
+pf_var[profile](R, K, J, V)       :- pf_slot[profile](R, K, J, $var(V)), not pf_meta[profile](V).
+pf_var[profile](R, K, J, V)       :- pf_slot[profile](R, K, J, A), A = $var(W), W = $var(V).
+pf_meta[profile](V)               :- pf_slot[profile](_, _, _, $var(V)), V = $var(_).
+pf_head[profile](R, Rel, B)       :- conclusion_lit(R, 1, L), L = $lit(Rel, B, _, _).
+pf_npos[profile](R, N)            :- pf_lit[profile](R, _, _, _, _), N is count(K : pf_lit[profile](R, K, _, _, _)).
+pf_neg[profile](R)                :- premise_lit(R, _, L), L = $not(_).
+pf_arms[profile](Rel, N)          :- concludes(_, Rel), N is count(R : concludes(R, Rel)).
+recursive[profile](R)    :- pf_head[profile](R, Rel, B), pf_lit[profile](R, _, Rel, B, _).
+-- the pack's own rules conclude in this book; they are profiled too, and left out of what it says
+pf_own[profile](R)       :- pf_head[profile](R, _, profile).
+-- the facts a relation was given, beside what its rules conclude
+pf_base[profile](Rel, B, N) :- asserted_by($fact(Rel, B, _), _, _), B != profile, N is count(A : asserted_by($fact(Rel, B, A), _, _)).
+
+-- ------------------------------------------------------------------------------------------------ verdicts
+scan[profile](R, K, Rel, Read, Out) :- read[profile](R, K, Read), yield[profile](R, K, Out), pf_lit[profile](R, K, Rel, _, _),
+                                       Out > 0, Read > Out * 3, Read >= 16, not pf_own[profile](R).
+scan_why[profile](R, K, small_relation) :- scan[profile](R, K, Rel, _, _), pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), N < 16.
+scan_why[profile](R, K, selective)      :- scan[profile](R, K, Rel, _, _), pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), N >= 16.
+
+rescan[profile](R, K, Rel) :- fires[profile](R, F), F > 1, not pf_own[profile](R), pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N),
+                              read[profile](R, K, Read), Read is F * N.
+
+rederives[profile](R, Conc, Fresh) :- conc[profile](R, Conc), fresh[profile](R, Fresh), Fresh > 0, Conc > Fresh * 2, not pf_own[profile](R).
+
+rule_read[profile](R, T)  :- fires[profile](R, _), not pf_own[profile](R), T is sum(X ; K : read[profile](R, K, X)).
+read_total[profile](T)    :- T is sum(X ; R : rule_read[profile](R, X)).
+barren[profile](R, Read)  :- fires[profile](R, F), F > 0, conc[profile](R, 0), rule_read[profile](R, Read), Read > 0, not pf_own[profile](R).
+share[profile](R, Pct)    :- rule_read[profile](R, X), read_total[profile](T), T > 0, Pct is X * 100 / T.
+hot[profile](R, Pct)      :- share[profile](R, Pct), Pct >= 25.
+
+-- ----------------------------------------------------------------------------------------------- forecasts
+pf_one[profile](Rel, R)   :- pf_arms[profile](Rel, 1), concludes(R, Rel), not pf_own[profile](R).
+pf_two[profile](R, A, BA, B, BB) :- pf_npos[profile](R, 2), pf_lit[profile](R, K1, A, BA, _), pf_lit[profile](R, K2, B, BB, _), K1 < K2.
+pf_shared[profile](R, D)  :- pf_npos[profile](R, 2), pf_var[profile](R, K1, J1, V), pf_var[profile](R, K2, J2, V), K1 < K2,
+                    pf_lit[profile](R, K1, A, BA, _), pf_lit[profile](R, K2, B, BB, _),
+                    distinct[profile](A, BA, J1, DA), distinct[profile](B, BB, J2, DB), DA >= DB, D = DA.
+pf_shared[profile](R, D)  :- pf_npos[profile](R, 2), pf_var[profile](R, K1, J1, V), pf_var[profile](R, K2, J2, V), K1 < K2,
+                    pf_lit[profile](R, K1, A, BA, _), pf_lit[profile](R, K2, B, BB, _),
+                    distinct[profile](A, BA, J1, DA), distinct[profile](B, BB, J2, DB), DB > DA, D = DB.
+pf_div[profile](R, D)     :- pf_shared[profile](R, _), D is max(X : pf_shared[profile](R, X)).
+
+pf_rules[profile](Rel, N, projection) :- pf_one[profile](Rel, R), pf_npos[profile](R, 1), not pf_neg[profile](R), pf_lit[profile](R, _, P, B, _), rows[profile](P, B, N).
+pf_rules[profile](Rel, N, join)       :- pf_one[profile](Rel, R), not pf_neg[profile](R), pf_two[profile](R, A, BA, B, BB),
+                                         rows[profile](A, BA, NA), rows[profile](B, BB, NB), pf_div[profile](R, D), N is NA * NB / D.
+pf_rules[profile](Rel, N, product)    :- pf_one[profile](Rel, R), not pf_neg[profile](R), pf_two[profile](R, A, BA, B, BB),
+                                         rows[profile](A, BA, NA), rows[profile](B, BB, NB), not pf_div[profile](R, _), N is NA * NB.
+
+pf_tc[profile](Rel, Base, BB) :- pf_arms[profile](Rel, 2), concludes(R1, Rel), not pf_own[profile](R1), pf_npos[profile](R1, 1), pf_lit[profile](R1, _, Base, BB, _), Base != Rel,
+                        concludes(R2, Rel), recursive[profile](R2), pf_npos[profile](R2, 2), pf_lit[profile](R2, _, Base, BB, _).
+pf_rules[profile](Rel, N, closure) :- pf_tc[profile](Rel, Base, BB), distinct[profile](Base, BB, 1, D1), distinct[profile](Base, BB, 2, D2),
+                                      N is D1 * D2, not pf_keyed[profile](Base, BB).
+pf_rules[profile](Rel, N, chain)   :- pf_tc[profile](Rel, Base, BB), pf_keyed[profile](Base, BB), rows[profile](Base, BB, M), N is M * (M + 1) / 2.
+pf_keyed[profile](Rel, B) :- rows[profile](Rel, B, M), distinct[profile](Rel, B, 1, M), distinct[profile](Rel, B, 2, M).
+
+-- what the rules can add, plus what the relation was given
+forecast[profile](Rel, N, Kind) :- pf_rules[profile](Rel, M, Kind), pf_head[profile](R, Rel, B), pf_base[profile](Rel, B, K), N is M + K.
+forecast[profile](Rel, N, Kind) :- pf_rules[profile](Rel, N, Kind), pf_head[profile](R, Rel, B), not pf_base[profile](Rel, B, _).
+
+forecast_off[profile](Rel, Kind, N, Actual)   :- forecast[profile](Rel, N, Kind), pf_head[profile](R, Rel, B), rows[profile](Rel, B, Actual), Actual > N.
+forecast_loose[profile](Rel, Kind, N, Actual) :- forecast[profile](Rel, N, Kind), pf_head[profile](R, Rel, B), rows[profile](Rel, B, Actual), Actual * 4 < N.
+
+-- --------------------------------------------------------------------------------------------------- growth
+growth[profile](R, kernel)    :- recursive[profile](R), written_order[profile](R, closure).
+growth[profile](R, per_round) :- recursive[profile](R), written_order[profile](R, Why), Why != closure.
+growth[profile](R, per_row)   :- recursive[profile](R), not written_order[profile](R, _), not pf_own[profile](R).
