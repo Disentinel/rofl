@@ -269,9 +269,9 @@ awaits[value](A, X)    :- node[ast_babel](A, await_expression, _), child[ast_bab
 edb(param_kind).
 param_kind[ast_babel](tsmethod_signature). param_kind[ast_babel](tsfunction_type). param_kind[ast_babel](tsconstructor_type).
 param_kind[ast_babel](tscall_signature_declaration). param_kind[ast_babel](tsconstruct_signature_declaration).
-b_params[ast_babel](F) :- fn_kind[ast_babel](K), node[ast_babel](F, K, _).
-b_params[ast_babel](F) :- param_kind[ast_babel](K), node[ast_babel](F, K, _).
-b_param[ast_babel](F, I, X) :- b_params[ast_babel](F), child[ast_babel](F, params, I, X).
+b_fn[ast_babel](F)     :- fn_kind[ast_babel](K), node[ast_babel](F, K, _).
+b_param[ast_babel](F, I, X) :- b_fn[ast_babel](F), child[ast_babel](F, params, I, X).
+b_param[ast_babel](F, I, X) :- param_kind[ast_babel](K), node[ast_babel](F, K, _), child[ast_babel](F, params, I, X).
 b_param[ast_babel](F, 0, X) :- node[ast_babel](F, tsindex_signature, _), child[ast_babel](F, parameters, 0, X).
 b_param[ast_babel](F, I, Y) :- b_param[ast_babel](F, I, X), node[ast_babel](X, assignment_pattern, _),
                                child[ast_babel](X, left, 0, Y).
@@ -279,10 +279,9 @@ b_param[ast_babel](F, I, Y) :- b_param[ast_babel](F, I, X), node[ast_babel](X, t
                                child[ast_babel](X, parameter, 0, Y).
 edb(target_kind).
 target_kind[ast_babel](identifier). target_kind[ast_babel](object_pattern). target_kind[ast_babel](array_pattern). target_kind[ast_babel](member_expression).
-param[value](F, I, X)       :- b_param[ast_babel](F, I, X), b_value_fn[ast_babel](F), node[ast_babel](X, K, _), target_kind[ast_babel](K).
+param[value](F, I, X)       :- b_param[ast_babel](F, I, X), b_fn[ast_babel](F), node[ast_babel](X, K, _), target_kind[ast_babel](K).
 param[type](F, I, X)        :- b_param[ast_babel](F, I, X), b_tplace[ast_babel](F), node[ast_babel](X, K, _), target_kind[ast_babel](K).
-b_value_fn[ast_babel](F)    :- fn_kind[ast_babel](K), node[ast_babel](F, K, _).
-rest_params[value](F, I, A) :- b_param[ast_babel](F, I, X), b_value_fn[ast_babel](F), node[ast_babel](X, rest_element, _),
+rest_params[value](F, I, A) :- b_param[ast_babel](F, I, X), b_fn[ast_babel](F), node[ast_babel](X, rest_element, _),
                                child[ast_babel](X, argument, 0, A).
 decl[value](X, param) :- param[value](_, _, X).
 decl[value](X, param) :- rest_params[value](_, _, X).
@@ -437,7 +436,7 @@ name_field[ast_babel](tscall_signature_declaration, params). name_field[ast_babe
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
                        attr[ast_babel](K, name, Name).
 b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
-                       key_literal[ast_babel](KK), node[ast_babel](K, KK, _), attr[ast_babel](K, value, V).
+                       node[ast_babel](K, KK, _), key_literal[ast_babel](KK), attr[ast_babel](K, value, V).
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, private_name, _),
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
@@ -742,7 +741,7 @@ b_app_args[ast_babel](T, I, A) :- type_app[ast_babel](K, _), node[ast_babel](T, 
 passes[type](T, N)  :- type_app[ast_babel](K, F), node[ast_babel](T, K, _), child[ast_babel](T, F, 0, N),
                        not child[ast_babel](T, type_arguments, 0, _).
 mark[type](T, call) :- b_app_args[ast_babel](T, _, _).
-callee[type](T, N)  :- b_app_args[ast_babel](T, _, _), type_app[ast_babel](K, F), node[ast_babel](T, K, _), child[ast_babel](T, F, 0, N).
+callee[type](T, N)  :- b_app_args[ast_babel](T, _, _), node[ast_babel](T, K, _), type_app[ast_babel](K, F), child[ast_babel](T, F, 0, N).
 nth[tree](T, I, A)  :- b_app_args[ast_babel](T, I, A).
 -- T[] is Array<T>
 mark[type](T, call) :- node[ast_babel](T, tsarray_type, _).
