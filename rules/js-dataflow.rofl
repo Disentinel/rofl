@@ -2123,10 +2123,8 @@ imports(surface, code).
 -- names it), sourced by the HOST — nothing the model sees can throw, which is
 -- `w_env_api_surface`'s question — or a dead handler with no call at all, the
 -- one row that is an audit.
-catch_of[flow](T, H)     :- ast_node[code](T, try_statement, _),
-                            ast_child[code](T, handler, 0, H).
-catch_param[flow](H, P)  :- ast_node[code](H, catch_clause, _),
-                            ast_child[code](H, param, 0, P).
+catch_of[flow](T, H)     :- tries[value](T, B), executes_if[value](H, B, thrown).
+catch_param[flow](H, P)  :- decl[value](P, catch), parent[tree](H, P).
 try_block[flow](T, B)    :- ast_node[code](T, try_statement, _),
                             ast_child[code](T, block, 0, B).
 -- a throw in a function the try only defines is not thrown by the try

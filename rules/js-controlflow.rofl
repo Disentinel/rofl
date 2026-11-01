@@ -377,7 +377,7 @@ try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _),
 -- The block walked down to the first function boundary, as `nearest_v` walks:
 -- the whole subtree joined back to its function was 1.4 M probes.
 try_walk[code](TS, X)      :- try_catches[code](TS),
-                              ast_child[code](TS, block, 0, B), parent[tree](B, X).
+                              tries[value](TS, B), parent[tree](B, X).
 try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), parent[tree](P, X).
 caught_here[code](N)       :- try_walk[code](_, N).
 
