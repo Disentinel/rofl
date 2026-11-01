@@ -3887,3 +3887,10 @@ check_world("profile_model").
 check_file("profile_model", "models/engine/profile.rofl").
 check_file("profile_model", "examples/checks/profile-hub.rofl").
 check_opt("profile_model", one_engine, rust).
+
+-- THE PLAN AS FACTS (docs/cli.md, *The plan as facts*): plan[fixpointplan](R, At, Order) is the order the engine solves
+-- rule R in on the news at At, taken as it is; the profile says which order each rule was solved in and whose it was
+-- (order[profile](R, At, Order, plan | greedy)). Rust only, as every reader of the profile.
+check_world("plan_given").
+check_file("plan_given", "examples/checks/plan-given.rofl").
+check_opt("plan_given", one_engine, rust).

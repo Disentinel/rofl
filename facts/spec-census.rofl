@@ -221,6 +221,8 @@ check[checks]("rust/rofl/tests/openapi.rs", "a_key_comes_from_the_environment_an
 check[checks]("rust/rofl/tests/openapi.rs", "client_credentials_get_a_token_once_and_again_when_it_is_refused", test).
 check[checks]("rust/rofl/tests/openapi.rs", "an_mcp_server_that_wants_a_token_says_where_to_get_one", test).
 check[checks]("rust/rofl/tests/par.rs", "the_threads_answer_as_one_thread_does", test).
+check[checks]("rust/rofl/tests/plan.rs", "the_engine_solves_in_the_order_the_fact_gives", test).
+check[checks]("rust/rofl/tests/plan.rs", "without_the_facts_the_greedy_order_crosses_a_and_b_first", test).
 check[checks]("rust/rofl/tests/post.rs", "a_world_that_does_not_wait_goes_on_and_takes_its_answers_when_they_come", test).
 check[checks]("rust/rofl/tests/profile.rs", "a_rule_that_reads_the_profile_is_answered_in_the_round_after", test).
 check[checks]("rust/rofl/tests/profile.rs", "a_world_that_reads_no_profile_holds_none", test).
@@ -910,6 +912,7 @@ check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
 check[checks]("facts/goldens.rofl", "oxc_roles", world).
+check[checks]("facts/goldens.rofl", "plan_given", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).
 check[checks]("facts/goldens.rofl", "profile_model", world).
 check[checks]("facts/goldens.rofl", "prov_lazy", world).
@@ -986,6 +989,7 @@ test_file[checks]("rust/rofl/tests/login.rs").
 test_file[checks]("rust/rofl/tests/mcp.rs").
 test_file[checks]("rust/rofl/tests/openapi.rs").
 test_file[checks]("rust/rofl/tests/par.rs").
+test_file[checks]("rust/rofl/tests/plan.rs").
 test_file[checks]("rust/rofl/tests/post.rs").
 test_file[checks]("rust/rofl/tests/profile.rs").
 test_file[checks]("rust/rofl/tests/profile_model.rs").
