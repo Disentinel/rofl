@@ -184,9 +184,9 @@ array_elem[flow](R, K, A) :- sx_rest_elem[surface](R, K, A).
 param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, Name, _, _).
 -- A generator's call is a generator object (rules/js-dataflow.rofl, `gen_of`): its `return` is what `yield*` gets, not
 -- what the call is.
-call_returns[flow](F, E) :- returns[flow](F, E), not ast_attr[code](F, generator, true).
+call_returns[flow](F, E) :- returns[flow](F, E), not generator[value](F).
 param_read[flow](F, I, E) :- param_use[flow](F, Name, E), param_of[flow](F, I, Name),
-                             ast_child[code](F, params, I, P), ast_node[code](P, identifier, _),
+                             param[value](F, I, P), parent[tree](F, P), ast_node[code](P, identifier, _),
                              not param_assigned[flow](F, Name), not sees_binder[code](E, _).
 ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_read[flow](F, I, E).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
@@ -198,13 +198,13 @@ sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 -- a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
 -- cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
-falls_off[code](F) :- fn_node[code](F), ast_child[code](F, body, 0, B), ast_node[code](B, block_statement, _),
+falls_off[code](F) :- fn_node[code](F), body[value](F, B), ast_node[code](B, block_statement, _),
                       not completes_abruptly[code](B).
-falls_off[code](F) :- ast_node[code](R, return_statement, _), not ast_child[code](R, argument, 0, _), nearest_v[flow](F, R).
-sx_ret_undef[surface](F) :- falls_off[code](F), not ast_attr[code](F, generator, true), not ast_attr[code](F, kind, "constructor").
+falls_off[code](F) :- exits[value](R, return), not returns[value](R, _), nearest_v[flow](F, R).
+sx_ret_undef[surface](F) :- falls_off[code](F), not generator[value](F), not ast_attr[code](F, kind, "constructor").
 may_be_lit[flow](C, undefined) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[surface](F).
-sx_gen_ret[surface](F, N)   :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_node[flow](E, N).
-sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), ast_attr[code](F, generator, true), may_be_lit[flow](E, V).
+sx_gen_ret[surface](F, N)   :- returns[flow](F, E), generator[value](F), may_be_node[flow](E, N).
+sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), generator[value](F), may_be_lit[flow](E, V).
 
 -- ---------------------------------------------------------------- what a call writes
 -- `o[k] = v` with k and v the function's own parameters (`on(name, handler)`): at a call, THAT call's value under

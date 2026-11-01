@@ -31,7 +31,12 @@ Reads:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
+  - <a id="body"></a>`body`
+  - <a id="exits"></a>`exits`
+  - <a id="generator"></a>`generator`
   - <a id="logical"></a>`logical`
+  - <a id="mark"></a>`mark`
+  - <a id="throws"></a>`throws`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -53,10 +58,8 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
-| <a id="noun-return"></a>a return | a node of kind `return_statement` |
 | <a id="noun-short_circuit"></a>a short circuit | a node of one of the kinds `optional_call_expression`, `optional_member_expression` (`short_circuit_kind`) |
 | <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
-| <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
@@ -65,7 +68,6 @@ What this file calls a node, and what each word stands for:
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
-- <a id="has_return"></a>F has a return if F [is nearest to](js-dataflow.rofl.md#nearest_v) a [return](#noun-return) R.
 - <a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the accessor](#accessor_as) of Obj and some kind at Key is M.
 - <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
 - <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
@@ -334,14 +336,18 @@ In the audit:
 
 In the code:
 
-<a id="deferred_body"></a>A [function](js-callgraph.rofl.md#fn_node) runs its body later if [the attribute](#ast_attr) X of it is `true` and X [defers the body](#deferred_attr).
+<a id="deferred_body"></a>A [function](js-callgraph.rofl.md#fn_node) runs its body later if [`mark`](#mark)(it, X) and an attribute X [defers the body](#deferred_attr).
 
-<a id="async_body"></a>A node is async if it [runs its body later](#deferred_body), unless [the attribute](#ast_attr) `generator` of it is `true`.
+<a id="async_body"></a>F is async if F [runs its body later](#deferred_body), unless [`generator`](#generator)(F).
 
-A [function](js-callgraph.rofl.md#fn_node)
+<a id="sync_body"></a>A [function](js-callgraph.rofl.md#fn_node) runs its body at once unless it [runs its body later](#deferred_body).
 
-- <a id="sync_body"></a>runs its body at once unless it [runs its body later](#deferred_body).
-- <a id="top_throw"></a>throws at the top if the `body` of it is a node B and a [throw](#noun-throw) S [is among the](#ast_child) `body` of B.
+<a id="has_return"></a>F has a return if [`exits`](#exits)(R, `return`) and F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R.
+
+<a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if all of:
+  - [`body`](#body)(it, B);
+  - a node S [is among the](#ast_child) `body` of a node B;
+  - [`exits`](#exits)(S, `throw`).
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw) and F neither [has a return](#has_return) nor [runs its body later](#deferred_body).
 
@@ -642,7 +648,10 @@ Declared as facts:
    - [`parent`](#parent)(P, X);
    - unless P is a [function](js-callgraph.rofl.md#fn_node).
 
-<a id="throws_outright"></a>F throws outright if F [is nearest to](js-dataflow.rofl.md#nearest_v) a [throw](#noun-throw) T, unless T [is caught here](#caught_here).
+<a id="throws_outright"></a>F throws outright if all of:
+  - [`exits`](#exits)(T, `throw`);
+  - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node T;
+  - unless T [is caught here](#caught_here).
 
 > `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 > callee. The value travels with the throw: `thrown_by`, `caught_value`.
@@ -673,8 +682,8 @@ In the flow:
 <a id="thrown_by"></a>F throws out a node V either:
 
 1. if all of:
-   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a [throw](#noun-throw) T;
-   - the `argument` of T is V;
+   - [`throws`](#throws)(T, V);
+   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node T;
    - unless T [is caught here](#caught_here);
 2. if all of:
    - G [throws out](#thrown_by) V;

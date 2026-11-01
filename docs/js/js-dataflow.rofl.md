@@ -47,10 +47,15 @@ Reads:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
+  - <a id="async"></a>`async`
+  - <a id="awaits"></a>`awaits`
   - <a id="binary"></a>`binary`
   - <a id="binds"></a>`binds`
+  - <a id="body"></a>`body`
   - <a id="callee"></a>`callee`
   - <a id="decl"></a>`decl`
+  - <a id="exits"></a>`exits`
+  - <a id="generator"></a>`generator`
   - <a id="gives"></a>`gives`
   - <a id="has"></a>`has`
   - <a id="key"></a>`key`
@@ -58,11 +63,14 @@ Reads:
   - <a id="logical"></a>`logical`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
+  - <a id="param"></a>`param`
   - <a id="private"></a>`private`
+  - <a id="rest_params"></a>`rest_params`
   - <a id="spread_args"></a>`spread_args`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="this"></a>`this`
+  - <a id="throws"></a>`throws`
   - <a id="unary"></a>`unary`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -78,12 +86,9 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
-| <a id="noun-arrow_function"></a>an arrow function | a node of kind `arrow_function_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
-| <a id="noun-await"></a>an await | a node of kind `await_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-block_scope"></a>a block scope | a node of one of the kinds `block_statement`, `for_statement`, `for_in_statement`, `for_of_statement` (`block_scope_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
@@ -120,15 +125,12 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-program"></a>a program | a node of kind `program` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
 | <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
-| <a id="noun-return"></a>a return | a node of kind `return_statement` |
 | <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
 | <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
 | <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-super"></a>a super | a node of kind `super` |
-| <a id="noun-this"></a>a this | a node of kind `this_expression` |
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
-| <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | <a id="noun-value_assignment_operator"></a>a value assignment operator | a node of one of the kinds "=", "||=", "&&=", "??=" (`assign_value_op`) |
@@ -161,11 +163,10 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="type_import"></a>A node imports types only if [the attribute](#ast_attr) `import_kind` of it is "type".
 - <a id="external_module"></a>A module is an external module if some node [is an external site](#external_site) of it.
 - <a id="has_own_ctor"></a>A class has its own constructor if it [has its own constructor](#own_ctor) some method.
-- <a id="gen_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is a generator function if [the attribute](#ast_attr) `generator` of it is `true`.
+- <a id="gen_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is a generator function if [`generator`](#generator)(it).
 - <a id="catch_of"></a>The catch of a [try](#noun-try) T is a node H if the `handler` of T is H.
 - <a id="catch_param"></a>The param of a [catch](#noun-catch) H is a node P if the `param` of H is P.
 - <a id="try_block"></a>The block of a [try](#noun-try) T is a node B if the `block` of T is B.
-- <a id="throw_in_fn"></a>A [throw](#noun-throw) throws inside a function if some function [is nearest to](#nearest_v) it.
 
 ## 1. Names
 
@@ -919,7 +920,8 @@ In the code:
 
 1. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - P is the I-th of the `params` of F;
+   - [`param`](#param)(F, I, P);
+   - [`parent`](#parent)(F, P);
    - P is an [object pattern](#noun-object_pattern);
 2. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
@@ -1195,8 +1197,9 @@ F takes Name at an index I either:
 
 1. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - a node P is the I-th of the `params` of F;
-   - P [is named](js-structure.rofl.md#ast_name) Name;
+   - [`param`](#param)(F, I, P);
+   - [`parent`](#parent)(F, P);
+   - a node P [is named](js-structure.rofl.md#ast_name) Name;
 2. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - a tsparameter_property node P is the I-th of the `params` of F;
@@ -1209,7 +1212,11 @@ F takes Name at an index I either:
 
 In the code:
 
-<a id="param_rest"></a>A [function](js-callgraph.rofl.md#fn_node) has the rest parameter at an index J a [rest](#noun-rest) R and Name if R is the J-th of the `params` of it and the `argument` of R [is named](js-structure.rofl.md#ast_name) Name.
+<a id="param_rest"></a>A [function](js-callgraph.rofl.md#fn_node) has the rest parameter at an index J a node R and Name if all of:
+  - [`rest_params`](#rest_params)(it, J, L);
+  - [`parent`](#parent)(R, L);
+  - [`parent`](#parent)(it, R);
+  - a node L [is named](js-structure.rofl.md#ast_name) Name.
 
 In the flow:
 
@@ -1241,11 +1248,11 @@ A node
 
 <a id="returns"></a>F returns a node E either:
 
-1. if F [is nearest to](#nearest_v) a [return](#noun-return) R and the `argument` of R is E;
-2. if all of:
-   - F is an [arrow function](#noun-arrow_function);
-   - the `body` of F is E;
-   - unless E is a [block](#noun-block).
+1. if all of:
+   - [`exits`](#exits)(R, `return`);
+   - [`returns`](#returns)(R, E) in the value;
+   - F [is nearest to](#nearest_v) a node R;
+2. if F is a [function](js-callgraph.rofl.md#fn_node) and [`returns`](#returns)(F, E) in the value.
 
 A node
 
@@ -1492,7 +1499,7 @@ In the code:
 <a id="keyed_ctor"></a>`keyed_ctor`(CB, Body) if all of:
   - [the attribute](#ast_attr) `kind` of a [method](#noun-method) M is "constructor";
   - M [is among the](#ast_child) `body` of a node CB;
-  - the `body` of M is a node Body.
+  - [`body`](#body)(M, Body).
 
 <a id="keyed_this_member"></a>`keyed_this_member`(L, T, Fld) if [`prop_name`](js-structure.rofl.md#prop_name)(L, T, Fld) and [`this`](#this)(T).
 
@@ -1561,7 +1568,7 @@ In the code:
 <a id="keyed_list"></a>`keyed_list`(H, B, F) either:
 
 1. if [`keyed_born`](#keyed_born)(H, B, F);
-2. if [`keyed_method`](#keyed_method)(H, M), the `body` of a node M is B, and F is `body`.
+2. if [`keyed_method`](#keyed_method)(H, M), [`body`](#body)(M, B), and F is `body`.
 
 > `this` in a method is the instance only where no nearer function binds it
 
@@ -1712,7 +1719,8 @@ Declared as facts:
    - [`keyed_ret_need`](#keyed_ret_need)(F);
    - [`ret_plain`](js-surface.rofl.md#ret_plain)(F, R);
    - [`keyed_open`](#keyed_open)(R);
-2. if [`keyed_ret_need`](#keyed_ret_need)(F) and [the attribute](#ast_attr) `async` or `generator` of F is `true`.
+2. if [`keyed_ret_need`](#keyed_ret_need)(F) and [`async`](#async)(F);
+3. if [`keyed_ret_need`](#keyed_ret_need)(F) and [`generator`](#generator)(F).
 
 In the surface:
 
@@ -1816,8 +1824,9 @@ In the code:
 <a id="keyed_param_name"></a>`keyed_param_name`(C, G, Name) if all of:
   - [`keyed_key_arg`](#keyed_key_arg)(C, an [identifier](#noun-identifier) X);
   - X [is named](js-structure.rofl.md#ast_name) Name;
-  - X [finds its name in](#name_scope) Name in some file a node G;
-  - an [identifier](#noun-identifier) Pa [is among the](#ast_child) `params` of G;
+  - X [finds its name in](#name_scope) Name in some file G;
+  - [`param`](#param)(G, something, an [identifier](#noun-identifier) Pa);
+  - [`parent`](#parent)(G, Pa);
   - Pa [is named](js-structure.rofl.md#ast_name) Name.
 
 <a id="keyed_param_set"></a>`keyed_param_set`(G, Name) either:
@@ -1970,7 +1979,10 @@ In the code:
 
 <a id="keyed_by_this"></a>`keyed_by_this`(E) either:
 
-1. if [`keyed_named_fn`](#keyed_named_fn)(a [private method](#noun-private_method) G, E) and [`object_of`](js-structure.rofl.md#object_of)(E, a [this](#noun-this) T);
+1. if all of:
+   - [`keyed_named_fn`](#keyed_named_fn)(a [private method](#noun-private_method) G, E);
+   - [`object_of`](js-structure.rofl.md#object_of)(E, T);
+   - [`this`](#this)(T);
 2. if [`keyed_named_fn`](#keyed_named_fn)(something, E) and E is an [identifier](#noun-identifier).
 
 <a id="keyed_escapes"></a>`keyed_escapes`(G) either:
@@ -2246,7 +2258,8 @@ Declared as facts:
 `keyed_noisy`(C, K) either:
 
 1. if all of:
-   - [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q);
+   - [`keyed_between`](#keyed_between)(C, K, Q);
+   - [`awaits`](#awaits)(Q, something);
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_overlap`](#keyed_overlap)(M);
 2. if all of:
@@ -2256,8 +2269,12 @@ Declared as facts:
 
 <a id="keyed_once_need"></a>`keyed_once_need`(M) either:
 
-1. if [`keyed_between`](#keyed_between)(C, K, an [await](#noun-await) Q) and [`keyed_again`](#keyed_again)(C, K, M);
-2. if [`keyed_caller`](#keyed_caller)(something, something, M).
+1. if all of:
+   - [`keyed_between`](#keyed_between)(C, K, Q);
+   - [`awaits`](#awaits)(Q, something);
+   - [`keyed_again`](#keyed_again)(C, K, M);
+2. if [`keyed_between`](#keyed_between)(C, K, a [yield](#noun-yield) Q) and [`keyed_again`](#keyed_again)(C, K, M);
+3. if [`keyed_caller`](#keyed_caller)(something, something, M).
 
 <a id="keyed_caller"></a>`keyed_caller`(G, Q, F) if [`keyed_called_at`](#keyed_called_at)(G, Q) and F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q.
 
@@ -2303,7 +2320,7 @@ Declared as facts:
    - [`keyed_handed`](#keyed_handed)(I);
    - unless [the attribute](#ast_attr) `accessibility` of G is "private".
 
-<a id="keyed_awaited"></a>`keyed_awaited`(Q) if [`keyed_called_at`](#keyed_called_at)(something, Q) and the `argument` of an [await](#noun-await) X is a node Q.
+<a id="keyed_awaited"></a>`keyed_awaited`(Q) if [`keyed_called_at`](#keyed_called_at)(something, Q) and [`awaits`](#awaits)(something, Q).
 
 <a id="keyed_left"></a>`keyed_left`(G, Q) if [`keyed_called_at`](#keyed_called_at)(G, Q), unless [`keyed_awaited`](#keyed_awaited)(Q).
 
@@ -2427,7 +2444,8 @@ Declared as facts:
    - G2 [is nearest to](#nearest_v) a node D;
    - [`keyed_drop_runs`](#keyed_drop_runs)(G, G2);
    - unless [`keyed_vsure_out`](#keyed_vsure_out)(V, C, Q);
-2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, an [await](#noun-await) Q, something).
+2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, something) and [`awaits`](#awaits)(Q, something);
+3. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, a [yield](#noun-yield) Q, something).
 
 <a id="keyed_vsure_out"></a>`keyed_vsure_out`(V, C, Q) if all of:
   - [`keyed_vbetween`](#keyed_vbetween)(V, C, P, Q);
@@ -2495,24 +2513,26 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
 
 <a id="keyed_body_stmt"></a>`keyed_body_stmt`(G, K, X) if all of:
   - [`keyed_stmt_need`](#keyed_stmt_need)(G);
-  - the `body` of a node G is a node Gb;
-  - an expression_statement node S is the K-th of the `body` of Gb;
+  - [`body`](#body)(G, Gb);
+  - an expression_statement node S is the K-th of the `body` of a node Gb;
   - the `expression` of S is a node X.
 
 <a id="keyed_early"></a>`keyed_early`(G, K) either:
 
 1. if all of:
    - [`keyed_body_stmt`](#keyed_body_stmt)(G, K, something);
-   - a node G [is nearest to](#nearest_v) a [return](#noun-return) R;
-   - the `body` of G is a node Gb;
-   - a node S is the L-th of the `body` of Gb;
+   - G [is nearest to](#nearest_v) a node R;
+   - [`exits`](#exits)(R, `return`);
+   - [`body`](#body)(G, Gb);
+   - a node S is the L-th of the `body` of a node Gb;
    - L < K;
    - [`inside`](#inside)(S, R);
 2. if all of:
    - [`keyed_body_stmt`](#keyed_body_stmt)(G, K, something);
-   - the `body` of a node G is a node Gb;
-   - a [return](#noun-return) R is the L-th of the `body` of Gb;
-   - L < K.
+   - [`body`](#body)(G, Gb);
+   - a node R is the L-th of the `body` of a node Gb;
+   - L < K;
+   - [`exits`](#exits)(R, `return`).
 
 <a id="keyed_two_targets"></a>`keyed_two_targets`(Q) if all of:
   - Q [resolves to](js-callgraph.rofl.md#resolves) X;
@@ -2528,27 +2548,30 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
   - [`at`](#at)(G, F, something);
   - unless [`keyed_two_targets`](#keyed_two_targets)(Q).
 
-<a id="keyed_this_call"></a>`keyed_this_call`(Q) if [the callee](js-callgraph.rofl.md#callee_of) of Q is a node N and [`object_of`](js-structure.rofl.md#object_of)(N, a [this](#noun-this) T).
+<a id="keyed_this_call"></a>`keyed_this_call`(Q) if all of:
+  - [the callee](js-callgraph.rofl.md#callee_of) of Q is a node N;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, T);
+  - [`this`](#this)(T).
 
 <a id="keyed_one_target"></a>`keyed_one_target`(Q, G) either:
 
 1. if all of:
    - [`keyed_local_call`](#keyed_local_call)(Q, G);
    - unless some class [has the method](#class_method_of) G;
-   - unless [the attribute](#ast_attr) `async` of G is `true`;
-   - unless [the attribute](#ast_attr) `generator` of G is `true`;
+   - unless [`async`](#async)(G);
+   - unless [`generator`](#generator)(G);
 2. if all of:
    - [`keyed_local_call`](#keyed_local_call)(Q, G);
    - some class [has the method](#class_method_of) G;
    - [`keyed_this_call`](#keyed_this_call)(Q);
-   - unless [the attribute](#ast_attr) `async` of G is `true`;
-   - unless [the attribute](#ast_attr) `generator` of G is `true`;
+   - unless [`async`](#async)(G);
+   - unless [`generator`](#generator)(G);
 3. if all of:
    - [`keyed_local_call`](#keyed_local_call)(Q, G);
    - G is a [private method](#noun-private_method);
    - [`keyed_this_call`](#keyed_this_call)(Q);
-   - unless [the attribute](#ast_attr) `async` of G is `true`;
-   - unless [the attribute](#ast_attr) `generator` of G is `true`.
+   - unless [`async`](#async)(G);
+   - unless [`generator`](#generator)(G).
 
 <a id="keyed_sure_at"></a>`keyed_sure_at`(G, H, P, K) either:
 
@@ -2631,8 +2654,8 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
   - [`keyed_fill_ctor`](#keyed_fill_ctor)(C, J);
   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
   - [`keyed_born`](#keyed_born)(H, Body, `body`);
-  - the `body` of a node Ct is a node Body;
-  - a node S is the L-th of the `body` of Body;
+  - [`body`](#body)(Ct, Body);
+  - a node S is the L-th of the `body` of a node Body;
   - L < J;
   - Ct [is nearest to](#nearest_v) a node Q;
   - [`inside`](#inside)(S, Q).
@@ -2717,9 +2740,9 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
 
 <a id="keyed_heal_at"></a>`keyed_heal_at`(C, D, G, L, K) if all of:
   - [`keyed_pair`](#keyed_pair)(C, D);
-  - a node G [is nearest to](#nearest_v) a node D;
-  - the `body` of G is a node Gb;
-  - a node S is the L-th of the `body` of Gb;
+  - G [is nearest to](#nearest_v) a node D;
+  - [`body`](#body)(G, Gb);
+  - a node S is the L-th of the `body` of a node Gb;
   - [`inside`](#inside)(S, D);
   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
   - [`keyed_sure_at`](#keyed_sure_at)(G, H, P, K);
@@ -2734,9 +2757,9 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
 
 <a id="keyed_heal_span"></a>`keyed_heal_span`(C, D, Q) if all of:
   - [`keyed_heal_at`](#keyed_heal_at)(C, D, G, L, K);
-  - a node G [is nearest to](#nearest_v) a node Q;
-  - the `body` of G is a node Gb;
-  - a node S is the J-th of the `body` of Gb;
+  - G [is nearest to](#nearest_v) a node Q;
+  - [`body`](#body)(G, Gb);
+  - a node S is the J-th of the `body` of a node Gb;
   - L <= J;
   - J <= K;
   - [`inside`](#inside)(S, Q).
@@ -2754,7 +2777,8 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
    - [`runs_unknown`](#runs_unknown)(Q);
    - [`keyed_heal_fn`](#keyed_heal_fn)(C, F);
    - [`keyed_open_to`](#keyed_open_to)(F);
-4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, an [await](#noun-await) Q).
+4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, Q) and [`awaits`](#awaits)(Q, something);
+5. if [`keyed_heal_span`](#keyed_heal_span)(C, D, a [yield](#noun-yield) Q).
 
 <a id="keyed_healed"></a>`keyed_healed`(C, D) if [`keyed_heal_at`](#keyed_heal_at)(C, D, something, something, something), unless [`keyed_heal_broken`](#keyed_heal_broken)(C, D).
 
@@ -2819,7 +2843,12 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
 4. if all of:
    - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
    - G [is nearest to](#nearest_v) a node D;
-   - [`keyed_pbetween`](#keyed_pbetween)(C, J, an [await](#noun-await) Q).
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - [`awaits`](#awaits)(Q, something);
+5. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
+   - G [is nearest to](#nearest_v) a node D;
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, a [yield](#noun-yield) Q).
 
 <a id="keyed_outside_at"></a>`keyed_outside_at`(C, J) either:
 
@@ -3209,13 +3238,15 @@ In the code:
   - [`field_unset_decl`](#field_unset_decl)(CB, Key);
   - [`keyed_ctor`](#keyed_ctor)(CB, Body);
   - a node S is the J-th of the `body` of a node Body;
-  - [`member_assign`](#member_assign)(S, a [this](#noun-this) T, Key, something).
+  - [`member_assign`](#member_assign)(S, T, Key, something);
+  - [`this`](#this)(T).
 
 <a id="member_ctor_early"></a>`member_ctor_early`(Body, J) if all of:
   - [`member_ctor_set`](#member_ctor_set)(Body, something, J);
-  - the `body` of a node Ct is a node Body;
-  - Ct [is nearest to](#nearest_v) a [return](#noun-return) R;
-  - a node S is the L-th of the `body` of Body;
+  - [`body`](#body)(Ct, Body);
+  - Ct [is nearest to](#nearest_v) a node R;
+  - [`exits`](#exits)(R, `return`);
+  - a node S is the L-th of the `body` of a node Body;
   - L < J;
   - [`inside`](#inside)(S, R).
 
@@ -3227,11 +3258,15 @@ In the code:
 
 <a id="member_ctor_this"></a>`member_ctor_this`(Body, J) either:
 
-1. if [`member_ctor_before`](#member_ctor_before)(Body, J, a [this](#noun-this) T), unless [`object_of`](js-structure.rofl.md#object_of)(something, T);
+1. if all of:
+   - [`member_ctor_before`](#member_ctor_before)(Body, J, T);
+   - [`this`](#this)(T);
+   - unless [`object_of`](js-structure.rofl.md#object_of)(something, T);
 2. if all of:
-   - [`member_ctor_before`](#member_ctor_before)(Body, J, a [this](#noun-this) T);
-   - a node G [is nearest to](#nearest_v) T;
-   - unless the `body` of G is Body;
+   - [`member_ctor_before`](#member_ctor_before)(Body, J, T);
+   - [`this`](#this)(T);
+   - G [is nearest to](#nearest_v) a node T;
+   - unless [`body`](#body)(G, Body);
 3. if [`member_ctor_before`](#member_ctor_before)(Body, J, a [super](#noun-super) S).
 
 <a id="member_ctor_open"></a>`member_ctor_open`(Body, J) if all of:
@@ -3383,7 +3418,7 @@ A [property](#noun-property) may be the literal V if a node X [may be the litera
 > and by a static block (the class); a private method binds it too. `this_over`
 > binds T first: a handful of nodes, then their ancestors.
 
-<a id="this_over"></a>A node is over a [this](#noun-this) T if [`inside`](#inside)(it, T) and it [binds this](#this_binder).
+<a id="this_over"></a>A node is over T if [`this`](#this)(T), [`inside`](#inside)(it, T), and it [binds this](#this_binder).
 
 <a id="this_nearer"></a>F is outdone for T if all of:
   - F [is over](#this_over) T;
@@ -4012,11 +4047,10 @@ In the surface:
 
 In the flow:
 
-<a id="coroutine_yield"></a>`coroutine_yield`(a [yield](#noun-yield) Y, X) if all of:
+<a id="coroutine_yield"></a>`coroutine_yield`(Y, X) if all of:
   - [`sx_coroutine`](#sx_coroutine)(F);
-  - F [is nearest to](#nearest_v) Y;
-  - [the attribute](#ast_attr) `delegate` of Y is `false`;
-  - the `argument` of Y is a node X.
+  - F [is nearest to](#nearest_v) a node Y;
+  - [`yields`](#yields)(Y, X) in the value.
 
 A node
 
@@ -4044,7 +4078,10 @@ Declared as facts:
 > values the corpus does not build: each plain parameter is an external value
 > of the callee's origin, read wherever the parameter is.
 
-<a id="callback_param"></a>An [identifier](#noun-identifier) is called back with in a node F from a module Spec if [`sx_cb`](js-surface.rofl.md#sx_cb)(F, Spec) and it [is among the](#ast_child) `params` of F.
+<a id="callback_param"></a>An [identifier](#noun-identifier) is called back with in F from a module Spec if all of:
+  - [`sx_cb`](js-surface.rofl.md#sx_cb)(F, Spec);
+  - [`param`](#param)(F, something, it);
+  - [`parent`](#parent)(F, it).
 
 A node
 
@@ -4160,10 +4197,10 @@ E may be the literal V if all of:
   - the `consequent` or `alternate` of E is X;
   - E is a [conditional](#noun-conditional).
 
-An [await](#noun-await)
+A node
 
-- points to a node N if a node X [points to](js-concat.rofl.md#may_be_node) N and the `argument` of it is X.
-- may be the literal V if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and the `argument` of it is X.
+- points to a node N if a node X [points to](js-concat.rofl.md#may_be_node) N and [`awaits`](#awaits)(it, X).
+- may be the literal V if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and [`awaits`](#awaits)(it, X).
 
 ## 14. GENERATORS. Calling a generator function makes a generator OBJECT, the
 
@@ -4172,7 +4209,10 @@ An [await](#noun-await)
 > what the consumer hands `.next(v)`, through `yield*` too. The delegating
 > expression itself is the inner generator's return.
 
-<a id="yields"></a>F yields a node E if F [is nearest to](#nearest_v) a [yield](#noun-yield) Y and the `argument` of Y is E.
+<a id="yields"></a>F yields a node E either:
+
+1. if [`yields`](#yields)(Y, E) in the value and F [is nearest to](#nearest_v) a node Y;
+2. if [`delegates`](#delegates)(Y, E) in the value and F [is nearest to](#nearest_v) a node Y.
 
 <a id="gen_of"></a>C makes a generator of F if C [resolves to](js-callgraph.rofl.md#resolves) F and F [is a generator function](#gen_fn).
 
@@ -4187,9 +4227,9 @@ A node points to it if it [makes a generator of](#gen_of) some function.
   - the `arguments` of C is V.
 
 <a id="delegates"></a>Outer delegates to Inner if all of:
-  - [the attribute](#ast_attr) `delegate` of a [yield](#noun-yield) Y is `true`;
-  - Outer [is nearest to](#nearest_v) Y;
-  - the `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner.
+  - [`delegates`](#delegates)(Y, X) in the value;
+  - Outer [is nearest to](#nearest_v) a node Y;
+  - X [resolves to](js-callgraph.rofl.md#resolves) Inner.
 
 Inner is sent a node V if Outer [is sent](#next_send) V and Outer [delegates to](#delegates) Inner.
 
@@ -4202,9 +4242,8 @@ Y points to a node X either:
    - [the attribute](#ast_attr) `delegate` of Y is `false`;
    - V [points to](js-concat.rofl.md#may_be_node) X;
 2. if all of:
-   - Y is a [yield](#noun-yield);
-   - [the attribute](#ast_attr) `delegate` of Y is `true`;
-   - the `argument` of Y [resolves to](js-callgraph.rofl.md#resolves) Inner;
+   - [`delegates`](#delegates)(Y, Z) in the value;
+   - Z [resolves to](js-callgraph.rofl.md#resolves) Inner;
    - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(Inner, X).
 
 > FOR-OF: the head is a declarator like any other, whose value is each
@@ -4290,16 +4329,18 @@ A node
 <a id="thrown_in"></a>A node T throws a node V either:
 
 1. if all of:
-   - [`inside`](#inside)(B, a [throw](#noun-throw) Th);
+   - [`throws`](#throws)(Th, V);
+   - [`inside`](#inside)(B, Th);
    - [the block](#try_block) of T is a node B;
-   - the `argument` of Th is V;
-   - G [is nearest to](#nearest_v) Th;
+   - G [is nearest to](#nearest_v) a node Th;
    - G [is nearest to](#nearest_v) T;
 2. if all of:
-   - [`inside`](#inside)(B, a [throw](#noun-throw) Th);
+   - [`throws`](#throws)(Th, V);
+   - [`inside`](#inside)(B, Th);
    - [the block](#try_block) of T is a node B;
-   - the `argument` of Th is V;
-   - unless Th [throws inside a function](#throw_in_fn).
+   - unless a statement Th [throws inside a function](#throw_in_fn).
+
+<a id="throw_in_fn"></a>A statement throws inside a function if [`exits`](#exits)(it, `throw`) and some function [is nearest to](#nearest_v) it.
 
 A node
 

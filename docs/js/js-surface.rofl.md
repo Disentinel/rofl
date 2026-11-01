@@ -1,6 +1,6 @@
 ---
 world: js-surface
-books: code, flow, main, surface, value
+books: code, flow, main, surface, tree, value
 default: surface
 ---
 
@@ -46,8 +46,14 @@ Reads:
 - from js-host, in the flow: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from outside these files, in the tree:
+  - <a id="parent"></a>`parent`
 - from outside these files, in the value:
+  - <a id="body"></a>`body`
   - <a id="callee"></a>`callee`
+  - <a id="exits"></a>`exits`
+  - <a id="generator"></a>`generator`
+  - <a id="param"></a>`param`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -61,7 +67,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
-| <a id="noun-return"></a>a return | a node of kind `return_statement` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -390,12 +395,13 @@ In the flow:
 > A generator's call is a generator object (rules/js-dataflow.rofl, `gen_of`): its `return` is what `yield*` gets, not
 > what the call is.
 
-<a id="call_returns"></a>A node returns to its call E if it [returns](js-dataflow.rofl.md#returns) E, unless [the attribute](#ast_attr) `generator` of it is `true`.
+<a id="call_returns"></a>F returns to its call E if F [returns](js-dataflow.rofl.md#returns) E, unless [`generator`](#generator)(F).
 
 <a id="param_read"></a>`param_read`(F, I, E) if all of:
-  - a node F [uses](js-dataflow.rofl.md#param_use) Name at a node E;
+  - F [uses](js-dataflow.rofl.md#param_use) Name at a node E;
   - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
-  - an [identifier](#noun-identifier) P is the I-th of the `params` of F;
+  - [`param`](#param)(F, I, an [identifier](#noun-identifier) P);
+  - [`parent`](#parent)(F, P);
   - unless [`param_assigned`](#param_assigned)(F, Name);
   - unless E [sees](js-dataflow.rofl.md#sees_binder) some declarator.
 
@@ -424,16 +430,19 @@ In the code:
 
 1. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - the `body` of F is a [block](#noun-block) B;
+   - [`body`](#body)(F, a [block](#noun-block) B);
    - unless B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
-2. if F [is nearest to](js-dataflow.rofl.md#nearest_v) R, unless the `argument` of a [return](#noun-return) R is some node.
+2. if all of:
+   - [`exits`](#exits)(R, `return`);
+   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R;
+   - unless [`returns`](js-dataflow.rofl.md#returns)(R, something) in the value.
 
 In the surface:
 
 <a id="sx_ret_undef"></a>`sx_ret_undef`(F) if all of:
   - [`falls_off`](#falls_off)(F);
-  - unless [the attribute](#ast_attr) `generator` of a node F is `true`;
-  - unless [the attribute](#ast_attr) `kind` of F is "constructor".
+  - unless [`generator`](#generator)(F);
+  - unless [the attribute](#ast_attr) `kind` of a node F is "constructor".
 
 In the flow:
 
@@ -445,13 +454,13 @@ A node may be the literal `undefined` if all of:
 In the surface:
 
 <a id="sx_gen_ret"></a>`sx_gen_ret`(F, N) if all of:
-  - a node F [returns](js-dataflow.rofl.md#returns) a node E;
-  - [the attribute](#ast_attr) `generator` of F is `true`;
+  - F [returns](js-dataflow.rofl.md#returns) a node E;
+  - [`generator`](#generator)(F);
   - E [points to](js-concat.rofl.md#may_be_node) a node N.
 
 <a id="sx_gen_rlit"></a>`sx_gen_rlit`(F, V) if all of:
-  - a node F [returns](js-dataflow.rofl.md#returns) a node E;
-  - [the attribute](#ast_attr) `generator` of F is `true`;
+  - F [returns](js-dataflow.rofl.md#returns) a node E;
+  - [`generator`](#generator)(F);
   - E [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 > ---------------------------------------------------------------- what a call writes
