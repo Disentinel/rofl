@@ -61,6 +61,12 @@ shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same
 shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (the arm that reads nearest_fn), 5 ms sealed / 13 default").
 shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
 shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
+shape_ok(class_like, twin_bodies, "alias_of_a_role: the flow book's name for the class mark, read by the model under its old name (w_js_model_on_roles), 0 ms").
+shape_ok(obj_like, twin_bodies, "alias_of_a_role: an object literal or a class: one arm is the class mark, as class_like, 0 ms").
+shape_ok(receivable, twin_bodies, "alias_of_a_role: one arm is obj_lit, as obj_like, 0 ms").
+shape_ok(static_block_of, twin_bodies, "alias_of_a_role: the flow book's name for static_block[value], 0 ms").
+shape_ok(eff_class_body, twin_bodies, "alias_of_a_role: one arm is static_block[value], as static_block_of, 0 ms").
+shape_ok(eff_define_part, twin_bodies, "alias_of_a_role: one arm is static_block[value], as static_block_of, 0 ms").
 shape_ok(fn_value, twin_bodies, "alias_of_a_derived: the flow book's name for fn_node, the one a function of another file reaches through rules/js-surface.rofl; one row per function, not timed").
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
 shape_ok(scope_node, twin_bodies, "alias_of_a_derived: eff_subject is its fn_node arm in the flow book, 10 ms sealed / 57 default (all arms)").

@@ -31,7 +31,7 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
-- from js-dataflow, in the code: [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read)
+- from js-dataflow, in the code: [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read)
 - from js-dataflow: [inst_of](js-dataflow.rofl.md#inst_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
@@ -45,9 +45,13 @@ Reads:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="binary"></a>`binary`
+  - <a id="construct"></a>`construct`
   - <a id="exits"></a>`exits`
+  - <a id="extends"></a>`extends`
+  - <a id="static_block"></a>`static_block`
   - <a id="template"></a>`template`
   - <a id="unary"></a>`unary`
+  - <a id="value"></a>`value`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -60,8 +64,6 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-new"></a>a new | a node of kind `new_expression` |
-| <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
@@ -801,26 +803,18 @@ In the flow:
 
 `eff_class_form` includes `class_declaration`, `class_expression`.
 
-`eff_field_kind` includes `class_property`, `class_private_property`, `class_accessor_property`.
-
 In the code:
 
-<a id="eff_class_body"></a>A node has the body member P if all of:
-  - a kind K [is a class form](#eff_class_form);
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - the `body` of it is a node B;
-  - P [is among the](#ast_child) `body` of B.
+<a id="eff_class_body"></a>A node CD has the body member P either:
 
-<a id="eff_field_value"></a>A class initialises the field at a node P with a node V if all of:
-  - it [has the body member](#eff_class_body) P;
-  - [`eff_field_kind`](#eff_field_kind)(K);
-  - P [is of kind](js-model.rofl.md#ast_node) K;
-  - the `value` of P is V.
+1. if [`class_slot`](js-dataflow.rofl.md#class_slot)(CD, P);
+2. if [`static_block`](#static_block)(CD, P).
+
+<a id="eff_field_value"></a>A class initialises the field at a node P with a node V if it [has the body member](#eff_class_body) P and [`value`](#value)(P, V).
 
 Declared as facts:
 
 - <a id="eff_class_form"></a>A kind K is a class form — rows in this file
-- <a id="eff_field_kind"></a>`eff_field_kind` — rows in this file
 
 > Two POSITIVE arms, not `not static`: a default would silently file every
 > field the scanner stops flagging under construction time, and
@@ -844,7 +838,7 @@ In the flow:
 A class
 
 - <a id="eff_define_part"></a><a id="eff_construct_part"></a>defines/constructs by running a node V if it [initialises the field](#eff_field_value) at a node P with V and P [initialises at](#eff_field_moment) `definition`/`construction`.
-- defines by running a [static block](#noun-static_block) S if it [has the body member](#eff_class_body) S.
+- defines by running a node S if [`static_block`](#static_block)(it, S).
 
 > Three more things run at definition: the `extends` expression, a COMPUTED
 > key, a decorator. The computed-key arm negates `eff_plain_key` instead of
@@ -852,10 +846,7 @@ A class
 > kind that carries no such attribute (private members) —
 > `attr_blind_guard[audit]` said so in one run.
 
-A class defines by running a node S if all of:
-  - a kind K [is a class form](#eff_class_form);
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - the `super_class` of it is S.
+A class defines by running a node S if [`extends`](#extends)(it, S).
 
 In the code:
 
@@ -936,9 +927,11 @@ In the flow:
 > `prototype`, where a function declaration is hoisted and performs nothing
 > where it is written).
 
-A node has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
+A node
 
-A [new](#noun-new) has the effect L at a host H if all of:
+- has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
+- has the effect L at a host H if all of:
+  - [`construct`](#construct)(it);
   - it [points to](js-concat.rofl.md#may_be_node) a node I;
   - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
   - CD [constructs with effect](#class_construct_eff) L at H.

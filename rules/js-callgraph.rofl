@@ -643,7 +643,7 @@ sx_open[surface](CD) :- class_like[flow](CD), decorated[value](CD, _).
 sx_open[surface](CD) :- class_like[flow](CD), class_slot[code](CD, M), decorated[value](M, _).
 sx_open[surface](CD) :- class_like[flow](CD), type_open[flow](CD).
 sx_open[surface](CD) :- super_of[flow](CD, SD), sx_open[surface](SD).
-sx_open[surface](CD) :- class_ctor[code](CD, M), returns[flow](M, _).
+sx_open[surface](CD) :- class_method_of[flow](CD, M), ctor_method[code](M), returns[flow](M, _).
 sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
 
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype

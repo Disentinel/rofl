@@ -25,7 +25,7 @@ Reads:
 
 - from facts/js-globals.rofl, in the main:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
-- from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
+- from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [hidden_call_pos](js-controlflow.rofl.md#hidden_call_pos), [in_fn](js-controlflow.rofl.md#in_fn)
@@ -46,6 +46,7 @@ Reads:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
+  - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
   - <a id="async"></a>`async`
   - <a id="awaits"></a>`awaits`
@@ -53,6 +54,8 @@ Reads:
   - <a id="binds"></a>`binds`
   - <a id="body"></a>`body`
   - <a id="callee"></a>`callee`
+  - <a id="class"></a>`class`
+  - <a id="construct"></a>`construct`
   - <a id="decl"></a>`decl`
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
@@ -63,15 +66,22 @@ Reads:
   - <a id="logical"></a>`logical`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
+  - <a id="object"></a>`object`
   - <a id="param"></a>`param`
   - <a id="private"></a>`private`
   - <a id="rest_params"></a>`rest_params`
   - <a id="spread_args"></a>`spread_args`
+  - <a id="spread_elems"></a>`spread_elems`
+  - <a id="spread_props"></a>`spread_props`
+  - <a id="static"></a>`static`
+  - <a id="static_block"></a>`static_block`
+  - <a id="super"></a>`super`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="this"></a>`this`
   - <a id="throws"></a>`throws`
   - <a id="unary"></a>`unary`
+  - <a id="value"></a>`value`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -84,7 +94,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
@@ -112,24 +121,18 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-literal"></a>a literal | a node of one of the kinds `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal` (`literal_kind`) |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-method"></a>a method | a node of kind `class_method` |
+| <a id="noun-method"></a>a method | a node of a kind in `class_method` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-namespace_export"></a>a namespace export | a node of kind `export_namespace_specifier` |
 | <a id="noun-namespace_import"></a>a namespace import | a node of kind `import_namespace_specifier` |
-| <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
-| <a id="noun-private_field"></a>a private field | a node of kind `class_private_property` |
-| <a id="noun-private_method"></a>a private method | a node of kind `class_private_method` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
 | <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
 | <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
-| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
-| <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
-| <a id="noun-super"></a>a super | a node of kind `super` |
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
@@ -151,15 +154,16 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="decl_region"></a>D is scoped to a [scope](#scope_node) R if D [climbs from](#up_d) R.
 - <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="spread_arg"></a>C has a spread at an index I if [`spread_args`](#spread_args)(C, I, something).
+- <a id="class_like"></a>A node is a class if [`class`](#class)(it).
 - <a id="member_node_v"></a>A node is a member access if [`object_of`](js-structure.rofl.md#object_of)(it, something).
 - <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
+- <a id="static_block_of"></a>A class has the static block SB if [`static_block`](#static_block)(it, SB).
 - <a id="corpus_file"></a>File is in the corpus if some node [is of kind](js-model.rofl.md#ast_node) `program` in file File.
 - <a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if the `source` of it is some node.
 - <a id="export_list_erased"></a>A node exports types only if [the attribute](#ast_attr) `export_kind` of it is "type".
 - <a id="export_item_erased"></a>A node is a type only specifier if [the attribute](#ast_attr) `export_kind` of it is "type".
 - <a id="module_object"></a>A [program](#noun-program) is the module object of File if it is in file File.
 - <a id="exports_default"></a>A [function](js-callgraph.rofl.md#fn_node) is the default export of File if a [default export](#noun-default_export) E is in file File and the `declaration` of E is it.
-- <a id="obj_method_of"></a>An [object literal](#noun-object_literal) has the object method M if M [is among the](#ast_child) `properties` of it and M is an [object method](#noun-object_method).
 - <a id="type_import"></a>A node imports types only if [the attribute](#ast_attr) `import_kind` of it is "type".
 - <a id="external_module"></a>A module is an external module if some node [is an external site](#external_site) of it.
 - <a id="has_own_ctor"></a>A class has its own constructor if it [has its own constructor](#own_ctor) some method.
@@ -756,7 +760,7 @@ The prototype of a node C is Y either:
    - F [is async](js-controlflow.rofl.md#async_body);
    - Y is `promise`;
 2. if all of:
-   - C is a [new](#noun-new);
+   - [`construct`](#construct)(C);
    - [`callee`](#callee)(C, G);
    - a node G [refers to the free](#free_global) "Promise" in some file;
    - Y is `promise`;
@@ -874,7 +878,10 @@ D is scoped in File if D [destructures](#destructures_at) some name at some inde
 
 In the flow:
 
-<a id="array_elem"></a>`array_elem`(an [array literal](#noun-array_literal) X, I, E) if a node E is the I-th of the `elements` of X.
+<a id="array_elem"></a>`array_elem`(Y, I, E) either:
+
+1. if [`array`](#array)(Y), [`nth`](#nth)(Y, I, E), and [`parent`](#parent)(Y, E);
+2. if [`spread_elems`](#spread_elems)(Y, I, X) and [`parent`](#parent)(E, X).
 
 <a id="elem_at"></a>The element I of a node X is a node E if X [points to](js-concat.rofl.md#may_be_node) a node Y and [`array_elem`](#array_elem)(Y, I, E).
 
@@ -1011,7 +1018,7 @@ A node points to a node R if all of:
 
 In the code:
 
-<a id="spread_of"></a>`spread_of`(an [object literal](#noun-object_literal) O, X) if a [spread](#noun-spread) S [is among the](#ast_child) `properties` of O and the `argument` of S is a node X.
+<a id="spread_of"></a>`spread_of`(O, X) if [`obj_lit`](#obj_lit)(O) and [`spread_props`](#spread_props)(O, something, X).
 
 In the flow:
 
@@ -1497,8 +1504,8 @@ In the code:
 <a id="keyed_ref"></a>`keyed_ref`(O, D) if [`keyed_const`](#keyed_const)(D, something, something, something) and a node O [sees](#sees_binder) D.
 
 <a id="keyed_ctor"></a>`keyed_ctor`(CB, Body) if all of:
-  - [the attribute](#ast_attr) `kind` of a [method](#noun-method) M is "constructor";
-  - M [is among the](#ast_child) `body` of a node CB;
+  - M [is a constructor](js-callgraph.rofl.md#ctor_method);
+  - [`parent`](#parent)(CB, M);
   - [`body`](#body)(M, Body).
 
 <a id="keyed_this_member"></a>`keyed_this_member`(L, T, Fld) if [`prop_name`](js-structure.rofl.md#prop_name)(L, T, Fld) and [`this`](#this)(T).
@@ -1559,11 +1566,10 @@ In the code:
 
 `keyed_born`(H, Body, `body`) if [`keyed_field_ok`](#keyed_field_ok)(H, CB, something) and [`keyed_ctor`](#keyed_ctor)(CB, Body).
 
-<a id="keyed_method"></a>`keyed_method`(H, M) if all of:
+<a id="keyed_method"></a>`keyed_method`(H, a [function](js-callgraph.rofl.md#fn_node) M) if all of:
   - [`keyed_field_ok`](#keyed_field_ok)(H, CB, something);
-  - M [is among the](#ast_child) `body` of a node CB;
-  - M is a [method](#noun-method) or a [private method](#noun-private_method);
-  - [the attribute](#ast_attr) `static` of M is `false`.
+  - [`parent`](#parent)(CB, M);
+  - unless [`static`](#static)(M).
 
 <a id="keyed_list"></a>`keyed_list`(H, B, F) either:
 
@@ -1932,7 +1938,7 @@ In the code:
 3. if all of:
    - [`keyed_fn_need`](#keyed_fn_need)(G);
    - E [binds privately to](#private_binds) G;
-   - G is a [private method](#noun-private_method);
+   - [`private_method`](#private_method)(G);
 4. if all of:
    - [`keyed_fn_need`](#keyed_fn_need)(G);
    - [the attribute](#ast_attr) `accessibility` of G is "private";
@@ -1980,7 +1986,8 @@ In the code:
 <a id="keyed_by_this"></a>`keyed_by_this`(E) either:
 
 1. if all of:
-   - [`keyed_named_fn`](#keyed_named_fn)(a [private method](#noun-private_method) G, E);
+   - [`keyed_named_fn`](#keyed_named_fn)(G, E);
+   - some class [has the method](#class_method_of) G;
    - [`object_of`](js-structure.rofl.md#object_of)(E, T);
    - [`this`](#this)(T);
 2. if [`keyed_named_fn`](#keyed_named_fn)(something, E) and E is an [identifier](#noun-identifier).
@@ -2568,7 +2575,7 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
    - unless [`generator`](#generator)(G);
 3. if all of:
    - [`keyed_local_call`](#keyed_local_call)(Q, G);
-   - G is a [private method](#noun-private_method);
+   - [`private_method`](#private_method)(G);
    - [`keyed_this_call`](#keyed_this_call)(Q);
    - unless [`async`](#async)(G);
    - unless [`generator`](#generator)(G).
@@ -3061,9 +3068,16 @@ A node U may be the literal L either:
 > `.k`". `member_value` names the node a member HOLDS and judges nothing about
 > it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
 
-<a id="obj_like"></a>O is object like if O is an [object literal](#noun-object_literal) or a [class declaration](#noun-class_declaration) or a [class expression](#noun-class_expression).
+In the code:
 
-<a id="class_like"></a>O is a class if O is a [class declaration](#noun-class_declaration) or a [class expression](#noun-class_expression).
+<a id="obj_lit"></a>`obj_lit`(O) if [`object`](#object)(O), unless [`decl`](#decl)(O, `enum`).
+
+In the flow:
+
+<a id="obj_like"></a>A node O is object like either:
+
+1. if [`obj_lit`](#obj_lit)(O);
+2. if [`class`](#class)(O).
 
 > An INSTANCE is not its class. The class node is the class object (`C`, and
 > `this` in a static member); its body node stands for every instance (`new
@@ -3267,7 +3281,7 @@ In the code:
    - [`this`](#this)(T);
    - G [is nearest to](#nearest_v) a node T;
    - unless [`body`](#body)(G, Body);
-3. if [`member_ctor_before`](#member_ctor_before)(Body, J, a [super](#noun-super) S).
+3. if [`member_ctor_before`](#member_ctor_before)(Body, J, S) and [`super`](#super)(S).
 
 <a id="member_ctor_open"></a>`member_ctor_open`(Body, J) if all of:
   - [`member_ctor_this`](#member_ctor_this)(Body, J);
@@ -3375,11 +3389,16 @@ In the flow:
 > object answers the static half and what is written onto it; an object
 > literal, a module namespace and an instance answer `member_plain`.
 
-<a id="class_member_static"></a><a id="class_member_proto"></a>The static/instance member Key of a class CD is a node M if [the member](#member_value) Key of CD holds M and [the attribute](#ast_attr) `static` of M is `true`/`false`.
+<a id="class_member_static"></a>The static member Key of a class CD is a node M if [the member](#member_value) Key of CD holds M and [`static`](#static)(M).
 
-The plain member Key of O is a node V either:
+<a id="class_member_proto"></a>The instance member Key of a class CD is a node M if all of:
+  - [the member](#member_value) Key of CD holds M;
+  - [`class_method`](#class_method)(something, M);
+  - unless [`static`](#static)(M).
 
-1. if O is an [object literal](#noun-object_literal) and [the member](#member_value) Key of O holds V;
+The plain member Key of a node O is a node V either:
+
+1. if [`obj_lit`](#obj_lit)(O) and [the member](#member_value) Key of O holds V;
 2. if O [is the module object of](#module_object) some file and [the member](#member_value) Key of O holds V.
 
 The static member Key of a class CD is a node V if CD [is a class](#class_like) and [`sx_mwrite`](js-concat.rofl.md#sx_mwrite)(CD, Key, V).
@@ -3401,11 +3420,13 @@ A node N may be the literal L either:
 > A method is a value; a declared function is reached by its name, looked up
 > as any name is.
 
-M points to a node Y either:
+A node M points to a node Y either:
 
-1. if M is an [object method](#noun-object_method) or a [method](#noun-method) or a [function declaration](#noun-function_declaration) and Y is M;
-2. if M [sees the declaration](#sees_decl) Y and Y is a [function declaration](#noun-function_declaration);
-3. if all of:
+1. if some object literal [has the object method](#obj_method_of) M and Y is M;
+2. if some class [has the method](#class_method_of) M and Y is M;
+3. if M is a [function declaration](#noun-function_declaration) and Y is M;
+4. if M [sees the declaration](#sees_decl) Y and Y is a [function declaration](#noun-function_declaration);
+5. if all of:
    - a node X [points to](js-concat.rofl.md#may_be_node) Y;
    - the `value` of M is X;
    - M is a [property](#noun-property).
@@ -3428,17 +3449,25 @@ A [property](#noun-property) may be the literal V if a node X [may be the litera
 
 <a id="this_host"></a>A node hosts T if it [is over](#this_over) T, unless it [is outdone for](#this_nearer) T.
 
-<a id="class_method_of"></a>A class has the method M if all of:
-  - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - M [is among the](#ast_child) `body` of B;
-  - M is a [method](#noun-method).
+In the code:
+
+<a id="class_slot"></a>`class_slot`(CD, M) if all of:
+  - [`class`](#class)(CD);
+  - [`has`](#has)(CD, M);
+  - [`parent`](#parent)(B, M);
+  - [`parent`](#parent)(CD, B).
+
+<a id="class_method"></a>`class_method`(CD, a [function](js-callgraph.rofl.md#fn_node) M) if [`class_slot`](#class_slot)(CD, M), unless [`private`](#private)(M).
+
+In the flow:
+
+<a id="class_method_of"></a>A class has the method M if [`class_method`](#class_method)(it, M).
 
 A node points to a node I if all of:
   - a class CD [has the method](#class_method_of) M;
-  - [the attribute](#ast_attr) `static` of M is `false`;
   - I [stands for an instance of](#inst_of) CD;
-  - M [hosts](#this_host) it.
+  - M [hosts](#this_host) it;
+  - unless [`static`](#static)(M).
 
 Declared as facts:
 
@@ -3457,13 +3486,10 @@ A node T points to a node I either:
 
 1. if all of:
    - a class SD [has the method](#class_method_of) M;
-   - [the attribute](#ast_attr) `static` of M is `false`;
    - M [hosts](#this_host) T;
    - [`sub_inst`](#sub_inst)(SD, I);
-2. if all of:
-   - I [has the method](#class_method_of) M;
-   - [the attribute](#ast_attr) `static` of M is `true`;
-   - M [hosts](#this_host) T.
+   - unless [`static`](#static)(M);
+2. if I [has the method](#class_method_of) M, [`static`](#static)(M), and M [hosts](#this_host) T.
 
 ## 10. Es2022 class syntax
 
@@ -3532,26 +3558,29 @@ In the code:
   - [`inside`](#inside)(CD, N);
   - unless N [has an inner class inside](#private_inner) CD.
 
-In the flow:
+<a id="private_method"></a>`private_method`(a [function](js-callgraph.rofl.md#fn_node) M) if [`private`](#private)(M).
 
-A [private method](#noun-private_method) points to it.
+In the flow:
 
 A node
 
-- points to a [private method](#noun-private_method) M if it [binds privately to](#private_binds) M.
-- points to a node V2 if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [points to](js-concat.rofl.md#may_be_node) V2.
-- may be the literal L if it [binds privately to](#private_binds) a [private field](#noun-private_field) M and the `value` of M [may be the literal](js-concat.rofl.md#may_be_lit) L.
+- points to it if [`private_method`](#private_method)(it).
+- points to a node M if it [binds privately to](#private_binds) M and [`private_method`](#private_method)(M).
+- points to a node V2 if all of:
+  - it [binds privately to](#private_binds) a node M;
+  - [`value`](#value)(M, V);
+  - a node V [points to](js-concat.rofl.md#may_be_node) V2.
+- may be the literal L if all of:
+  - it [binds privately to](#private_binds) a node M;
+  - [`value`](#value)(M, V);
+  - a node V [may be the literal](js-concat.rofl.md#may_be_lit) L.
 
-A class has the method M if all of:
-  - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - M [is among the](#ast_child) `body` of B;
-  - M is a [private method](#noun-private_method).
+A class has the method M if [`class_slot`](#class_slot)(it, M) and [`private_method`](#private_method)(M).
 
 <a id="class_field_this"></a>A class CD has the field site P either:
 
 1. if CD [has the field](#field_of) some key at P holding some node;
-2. if CD [has the private member](#private_member) some name at P and P is a [private field](#noun-private_field).
+2. if CD [has the private member](#private_member) some name at P, unless P is a [function](js-callgraph.rofl.md#fn_node).
 
 A node T points to a node I either:
 
@@ -3559,16 +3588,13 @@ A node T points to a node I either:
    - a class CD [has the field site](#class_field_this) P;
    - I [stands for an instance of](#inst_of) CD;
    - P [hosts](#this_host) T;
-   - unless [the attribute](#ast_attr) `static` of P is `true`;
+   - unless [`static`](#static)(P);
 2. if all of:
    - a class SD [has the field site](#class_field_this) P;
    - P [hosts](#this_host) T;
    - [`sub_inst`](#sub_inst)(SD, I);
-   - unless [the attribute](#ast_attr) `static` of P is `true`;
-3. if all of:
-   - I [has the field site](#class_field_this) P;
-   - [the attribute](#ast_attr) `static` of P is `true`;
-   - P [hosts](#this_host) T.
+   - unless [`static`](#static)(P);
+3. if I [has the field site](#class_field_this) P, [`static`](#static)(P), and P [hosts](#this_host) T.
 
 > a static member is inherited by the subclass's constructor, a field as a method is
 
@@ -3576,12 +3602,6 @@ The static member Key of a class CD is a node V if all of:
   - [the super](#super_of) of CD is a class SD;
   - [the static member](#class_member_static) Key of SD is V;
   - unless CD [owns the key](#own_key) Key.
-
-<a id="static_block_of"></a>A class has the static block SB if all of:
-  - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - SB [is among the](#ast_child) `body` of B;
-  - SB is a [static block](#noun-static_block).
 
 A node points to a node CD if CD [has the static block](#static_block_of) SB and SB [hosts](#this_host) it.
 
@@ -3788,6 +3808,11 @@ In the audit:
 > `this` in an object literal's own method is that object.
 
 In the flow:
+
+<a id="obj_method_of"></a>O has the object method M if all of:
+  - [`obj_lit`](#obj_lit)(O);
+  - [`has`](#has)(O, M);
+  - M is a [function](js-callgraph.rofl.md#fn_node).
 
 A node points to a node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
 
@@ -4136,7 +4161,8 @@ A node points to a [class declaration](#noun-class_declaration) CD if it [sees t
 > `new X()` is an instance of whichever class its callee may be, by value:
 > `new ns.Foo()` and an imported class are reached as a call's callee is.
 
-A [new](#noun-new) points to a node I if all of:
+A node points to a node I if all of:
+  - [`construct`](#construct)(it);
   - [`callee`](#callee)(it, CE);
   - a node CE [points to](js-concat.rofl.md#may_be_node) a node CD;
   - I [stands for an instance of](#inst_of) CD.
@@ -4153,7 +4179,7 @@ A [new](#noun-new) points to a node I if all of:
 > The `new` rule in js-callgraph deliberately does NOT use this walk: there V8
 > creates the synthesised frame and makes it the caller.
 
-<a id="own_ctor"></a>A class has its own constructor M if it [has the method](#class_method_of) M and [the attribute](#ast_attr) `kind` of M is "constructor".
+<a id="own_ctor"></a>A class has its own constructor M if it [has the method](#class_method_of) M and M [is a constructor](js-callgraph.rofl.md#ctor_method).
 
 <a id="ctor_of"></a>The constructor of a class CD is M either:
 
@@ -4163,7 +4189,8 @@ A [new](#noun-new) points to a node I if all of:
    - [the constructor](#ctor_of) of SD is M;
    - unless CD [has its own constructor](#has_own_ctor).
 
-A [super](#noun-super) points to a node SD if all of:
+A node points to a node SD if all of:
+  - [`super`](#super)(it);
   - [`inside`](#inside)(M, it);
   - a class CD [has the method](#class_method_of) M;
   - [the super](#super_of) of CD is SD.
@@ -4398,7 +4425,7 @@ A node E points to a node N either:
   - it [has the method](#class_method_of) M;
   - the `key` of M [spells](#key_name) Key.
 
-The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at a node M replaced with N and [the attribute](#ast_attr) `static` of M is `true`/`false`.
+The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at M replaced with N and/unless [`static`](#static)(M).
 
 > 1 trailing comments on rule lines are not carried over.
 

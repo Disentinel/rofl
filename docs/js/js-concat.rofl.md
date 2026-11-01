@@ -63,6 +63,7 @@ Reads:
   - <a id="assign"></a>`assign`
   - <a id="binary"></a>`binary`
   - <a id="callee"></a>`callee`
+  - <a id="construct"></a>`construct`
   - <a id="ref"></a>`ref`
   - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
@@ -77,7 +78,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
-| <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -263,7 +263,7 @@ In the flow:
    - [`callee`](#callee)(C, G);
    - C is an [invocation](#noun-invocation);
 2. if all of:
-   - C is a [new](#noun-new);
+   - [`construct`](#construct)(C);
    - [`callee`](#callee)(C, G);
    - a node G [refers to the free](js-dataflow.rofl.md#free_global) Surface in some file;
    - [`ambient_value`](#ambient_value)(Surface, `construct`, something, something);

@@ -2022,8 +2022,7 @@ super_of[flow](CD, SD) :- class_like[flow](CD), ast_child[code](CD, super_class,
 -- V8: `super()` inside C reports `C -> A`, skipping the synthesised B frame.
 -- The `new` rule in js-callgraph deliberately does NOT use this walk: there V8
 -- creates the synthesised frame and makes it the caller.
-own_ctor[flow](CD, M)  :- class_method_of[flow](CD, M),
-                          ast_attr[code](M, kind, "constructor").
+own_ctor[flow](CD, M)  :- class_method_of[flow](CD, M), ctor_method[code](M).
 has_own_ctor[flow](CD) :- own_ctor[flow](CD, _).
 
 ctor_of[flow](CD, M)   :- own_ctor[flow](CD, M).

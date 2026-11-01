@@ -19,7 +19,7 @@ Reads:
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
+- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure: [object_of](js-structure.rofl.md#object_of)
@@ -36,6 +36,7 @@ Reads:
   - <a id="generator"></a>`generator`
   - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
+  - <a id="spread_props"></a>`spread_props`
   - <a id="throws"></a>`throws`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -55,7 +56,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
-| <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
 | <a id="noun-short_circuit"></a>a short circuit | a node of one of the kinds `optional_call_expression`, `optional_member_expression` (`short_circuit_kind`) |
@@ -456,11 +456,12 @@ A node destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 
-A [spread](#noun-spread) destructures through the accessor M if all of:
+S destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of a node Obj at Key is M;
   - a node X [points to](js-concat.rofl.md#may_be_node) Obj;
-  - the `argument` of it is X;
-  - it [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O.
+  - [`spread_props`](#spread_props)(O, something, X);
+  - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
+  - [`parent`](#parent)(S, X).
 
 > `spread_element` is one kind doing two things: in `properties` it copies
 > keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
@@ -537,8 +538,9 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
    - N [is among the](#ast_child) `properties` of an [object pattern](#noun-object_pattern) P;
    - E is `accessor_call`;
 3. if all of:
-   - N [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O;
-   - N is a [spread](#noun-spread);
+   - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
+   - [`spread_props`](#spread_props)(O, something, Y);
+   - [`parent`](#parent)(N, Y);
    - E is `accessor_call`;
 4. if N is an [array pattern](#noun-array_pattern) or a [for-of](#noun-for-of) and E is `iterator_call`;
 5. if N [is iterated](#spread_iterated) and E is `iterator_call`.

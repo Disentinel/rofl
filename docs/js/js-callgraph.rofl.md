@@ -27,7 +27,7 @@ Reads:
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [key_name](js-dataflow.rofl.md#key_name), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [own_name](js-dataflow.rofl.md#own_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
+- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [key_name](js-dataflow.rofl.md#key_name), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [obj_lit](js-dataflow.rofl.md#obj_lit), [own_name](js-dataflow.rofl.md#own_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member), [value_transparent](js-dataflow.rofl.md#value_transparent)
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
@@ -51,7 +51,9 @@ Reads:
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
+  - <a id="parent"></a>`parent`
 - from outside these files, in the value:
+  - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
   - <a id="awaits"></a>`awaits`
   - <a id="binary"></a>`binary`
@@ -59,11 +61,17 @@ Reads:
   - <a id="body"></a>`body`
   - <a id="callee"></a>`callee`
   - <a id="class"></a>`class`
+  - <a id="construct"></a>`construct`
   - <a id="constructs"></a>`constructs`
   - <a id="decl"></a>`decl`
+  - <a id="decorated"></a>`decorated`
+  - <a id="extends"></a>`extends`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="spread_args"></a>`spread_args`
+  - <a id="spread_props"></a>`spread_props`
+  - <a id="static"></a>`static`
+  - <a id="super"></a>`super`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="unary"></a>`unary`
@@ -79,7 +87,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-array_literal"></a>an array literal | a node of kind `array_expression` |
 | <a id="noun-as_expression"></a>an as expression | a node of kind `tsas_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
@@ -95,9 +102,8 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-method"></a>a method | a node of kind `class_method` |
+| <a id="noun-method"></a>a method | a node of a kind in [`class_method`](js-dataflow.rofl.md#class_method) |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
-| <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-non-null_expression"></a>a non-null expression | a node of kind `tsnon_null_expression` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
@@ -105,8 +111,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
 | <a id="noun-parenthesized_expression"></a>a parenthesized expression | a node of kind `parenthesized_expression` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
-| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
-| <a id="noun-super"></a>a super | a node of kind `super` |
 | <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
 | <a id="noun-wrapper"></a>a wrapper | a node of a kind in [`value_transparent`](js-dataflow.rofl.md#value_transparent) |
 | a function | a node [`fn_node`](#fn_node) holds of |
@@ -122,7 +126,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="shaped"></a>C is shaped if C [has the shape](#shape) some shape.
 - <a id="fn_node"></a>A node is a function if [`body`](#body)(it, something).
 - <a id="fn_file"></a>A [function](#fn_node) is defined in File if [`at`](#at)(it, File, something).
-- <a id="ctor_method"></a>A [method](#noun-method) is a constructor if [the attribute](#ast_attr) `kind` of it is "constructor".
+- <a id="ctor_method"></a>A [function](#fn_node) is a constructor if [`constructs`](#constructs)(something, it).
 - <a id="decorates"></a>A node is decorated by a [decorator](#noun-decorator) D if D [is among the](#ast_child) `decorators` of it.
 - <a id="enclosed"></a>A node is enclosed if some function [is the nearest function of](#nearest_fn) it.
 - <a id="resolved_site"></a>A node is resolved if it [resolves to](#resolves) some function.
@@ -492,7 +496,7 @@ A [function](#fn_node) answers to a name N if all of:
 > the synthesised frame); `new` deliberately does NOT, because V8 names the
 > frame after the class and makes it the caller.
 
-<a id="class_ctor"></a>A class has the constructor M if it [has the method](js-dataflow.rofl.md#class_method_of) M and [the attribute](#ast_attr) `kind` of M is "constructor".
+<a id="class_ctor"></a>A class has the constructor M if it [has the method](js-dataflow.rofl.md#class_method_of) M and M [is a constructor](#ctor_method).
 
 <a id="resolves"></a>A node X resolves to M either:
 
@@ -502,7 +506,8 @@ A [function](#fn_node) answers to a name N if all of:
    - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
    - CD [has the constructor](#class_ctor) M;
 2. if all of:
-   - [the callee](#callee_of) of X is a [super](#noun-super) N;
+   - [`super`](#super)(N);
+   - [the callee](#callee_of) of X is a node N;
    - N [points to](js-concat.rofl.md#may_be_node) a node SD;
    - [the constructor](js-dataflow.rofl.md#ctor_of) of SD is M.
 
@@ -932,7 +937,7 @@ In the flow:
 
 1. if [`whole_kind`](#whole_kind)(K) and a node E [is of kind](js-model.rofl.md#ast_node) K;
 2. if E [is an instance](js-globals.rofl.md#es_instance) of some name from some release;
-3. if E is a [new](#noun-new), [`callee`](#callee)(E, CE), and [`whole_expr`](#whole_expr)(CE);
+3. if [`construct`](#construct)(E), [`callee`](#callee)(E, CE), and [`whole_expr`](#whole_expr)(CE);
 4. if all of:
    - E is a [wrapper](#noun-wrapper);
    - the `expression` of E is a node X;
@@ -977,10 +982,11 @@ Declared as facts:
 
 <a id="receivable"></a>`receivable`(O) either:
 
-1. if O is an [object literal](#noun-object_literal) or an [array literal](#noun-array_literal);
-2. if O [stands for an instance of](js-dataflow.rofl.md#inst_of) some class;
-3. if O [is an instance](js-globals.rofl.md#es_instance) of Name from some release and Name [has the prototype](#lib_global_prototype) some prototype;
-4. if [`ns_export`](js-dataflow.rofl.md#ns_export)(O, something).
+1. if [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
+2. if [`array`](#array)(O);
+3. if O [stands for an instance of](js-dataflow.rofl.md#inst_of) some class;
+4. if O [is an instance](js-globals.rofl.md#es_instance) of Name from some release and Name [has the prototype](#lib_global_prototype) some prototype;
+5. if [`ns_export`](js-dataflow.rofl.md#ns_export)(O, something).
 
 <a id="surveyed"></a>`surveyed`(O) either:
 
@@ -1081,7 +1087,7 @@ Declared as facts:
 
 > a member of an object literal holds the value as long as the literal is not open
 
-<a id="literal_part"></a>`literal_part`(an [object literal](#noun-object_literal) O, P) if a node P [is among the](#ast_child) `properties` of O.
+<a id="literal_part"></a>`literal_part`(O, P) if [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O) and [`parent`](#parent)(O, P).
 
 `held`(P) if [`placed`](#placed)(P) and [`literal_part`](#literal_part)(something, P).
 
@@ -1150,7 +1156,7 @@ Declared as facts:
 
 `sx_open`(O) either:
 
-1. if [`literal_part`](#literal_part)(O, a [spread](#noun-spread) P);
+1. if [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O) and [`spread_props`](#spread_props)(O, something, something);
 2. if all of:
    - [`literal_part`](#literal_part)(O, P);
    - the `key` of a node P is a node K;
@@ -1184,13 +1190,12 @@ In the surface:
 
 `sx_open`(CD) if [`member_at`](js-dataflow.rofl.md#member_at)(something, something, CD, "prototype").
 
-`sx_open`(CD) if a node CD [is a class](js-dataflow.rofl.md#class_like) and some node [is among the](#ast_child) `decorators` of CD.
+`sx_open`(CD) if a node CD [is a class](js-dataflow.rofl.md#class_like) and [`decorated`](#decorated)(CD, something).
 
 `sx_open`(CD) if all of:
   - a node CD [is a class](js-dataflow.rofl.md#class_like);
-  - the `body` of CD is a node B;
-  - a node M [is among the](#ast_child) `body` of B;
-  - some node [is among the](#ast_child) `decorators` of M.
+  - [`class_slot`](js-dataflow.rofl.md#class_slot)(CD, M);
+  - [`decorated`](#decorated)(M, something).
 
 `sx_open`(CD) if a node CD [is a class](js-dataflow.rofl.md#class_like) and [`type_open`](#type_open)(CD).
 
@@ -1198,7 +1203,7 @@ In the surface:
 
 `sx_open`(CD) if all of:
   - a class CD [has the method](js-dataflow.rofl.md#class_method_of) M;
-  - [the attribute](#ast_attr) `kind` of M is "constructor";
+  - M [is a constructor](#ctor_method);
   - M [returns](js-dataflow.rofl.md#returns) some node.
 
 `sx_open`(I) if a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD and [`sx_open`](#sx_open)(CD).
@@ -1684,7 +1689,7 @@ In the flow:
 2. if a node H [is among the](#ast_child) `extends` of T, unless [`names_type`](#names_type)(H, something);
 3. if all of:
    - T [is a class](js-dataflow.rofl.md#class_like);
-   - the `super_class` of T is some node;
+   - [`extends`](#extends)(T, something);
    - unless [the super](js-dataflow.rofl.md#super_of) of T is some class;
 4. if [`type_base`](#type_base)(T, B) and [`type_open`](#type_open)(B).
 
@@ -1749,9 +1754,9 @@ In the flow:
    - the `return_type` of S is a node X;
 2. if all of:
    - T [has the method](js-dataflow.rofl.md#class_method_of) M;
-   - [the attribute](#ast_attr) `static` of M is `false`;
    - the `key` of M [is named](js-structure.rofl.md#ast_name) Key;
-   - the `return_type` of M is a node X.
+   - the `return_type` of M is a node X;
+   - unless [`static`](#static)(M).
 
 <a id="method_type"></a>`method_type`(T, Key, T2) either:
 
@@ -1857,8 +1862,8 @@ In the flow:
 
 `declared`(T, CD) if all of:
   - a class CD [has the method](js-dataflow.rofl.md#class_method_of) M;
-  - [the attribute](#ast_attr) `static` of M is `false`;
-  - M [hosts](js-dataflow.rofl.md#this_host) T.
+  - M [hosts](js-dataflow.rofl.md#this_host) T;
+  - unless [`static`](#static)(M).
 
 `declared`(a [member access](js-dataflow.rofl.md#member_node_v) N, T2) if all of:
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
@@ -1890,8 +1895,9 @@ In the flow:
 
 In the code:
 
-<a id="new_of"></a>`new_of`(a [new](#noun-new) E, Name, File) if all of:
-  - E is in file File;
+<a id="new_of"></a>`new_of`(E, Name, File) if all of:
+  - [`construct`](#construct)(E);
+  - [`at`](#at)(E, File, something);
   - [`callee`](#callee)(E, an [identifier](#noun-identifier) N);
   - N [is named](js-structure.rofl.md#ast_name) Name.
 
@@ -1922,11 +1928,11 @@ In the flow:
 `declared`(S, B) either:
 
 1. if all of:
-   - S is a [super](#noun-super);
+   - [`super`](#super)(S);
    - [`inside`](#inside)(M, S);
    - a class CD [has the method](js-dataflow.rofl.md#class_method_of) M;
-   - [the attribute](#ast_attr) `static` of M is `false`;
    - [the super](js-dataflow.rofl.md#super_of) of CD is a class B;
+   - unless [`static`](#static)(M);
 2. if [`declared_call`](#declared_call)(S, T, Key) and [`method_type`](#method_type)(T, Key, B).
 
 `declared_lib`(C, P) if [`declared_call`](#declared_call)(C, T, Key) and [`method_lib`](#method_lib)(T, Key, P).

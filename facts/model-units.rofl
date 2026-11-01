@@ -410,6 +410,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_holds_key).
 unit_concludes("rules/js-dataflow.rofl", keyed_viewed).
 unit_concludes("rules/js-dataflow.rofl", read_holds_node).
 unit_concludes("rules/js-dataflow.rofl", read_holds_lit).
+unit_concludes("rules/js-dataflow.rofl", obj_lit).
 unit_concludes("rules/js-dataflow.rofl", obj_like).
 unit_concludes("rules/js-dataflow.rofl", class_like).
 unit_concludes("rules/js-dataflow.rofl", inst_of).
@@ -450,6 +451,8 @@ unit_concludes("rules/js-dataflow.rofl", this_binder).
 unit_concludes("rules/js-dataflow.rofl", this_over).
 unit_concludes("rules/js-dataflow.rofl", this_nearer).
 unit_concludes("rules/js-dataflow.rofl", this_host).
+unit_concludes("rules/js-dataflow.rofl", class_slot).
+unit_concludes("rules/js-dataflow.rofl", class_method).
 unit_concludes("rules/js-dataflow.rofl", class_method_of).
 unit_concludes("rules/js-dataflow.rofl", sub_inst).
 unit_concludes("rules/js-dataflow.rofl", class_field_kind).
@@ -460,6 +463,7 @@ unit_concludes("rules/js-dataflow.rofl", private_member).
 unit_concludes("rules/js-dataflow.rofl", private_ref).
 unit_concludes("rules/js-dataflow.rofl", private_inner).
 unit_concludes("rules/js-dataflow.rofl", private_binds).
+unit_concludes("rules/js-dataflow.rofl", private_method).
 unit_concludes("rules/js-dataflow.rofl", class_field_this).
 unit_concludes("rules/js-dataflow.rofl", static_block_of).
 unit_concludes("rules/js-dataflow.rofl", imports_name).
@@ -1001,7 +1005,6 @@ unit_concludes("rules/js-effects.rofl", eff_hidden_call).
 unit_concludes("rules/js-effects.rofl", eff_edge_closed).
 unit_concludes("rules/js-effects.rofl", eff_edge_unclosed).
 unit_concludes("rules/js-effects.rofl", eff_class_form).
-unit_concludes("rules/js-effects.rofl", eff_field_kind).
 unit_concludes("rules/js-effects.rofl", eff_class_body).
 unit_concludes("rules/js-effects.rofl", eff_field_value).
 unit_concludes("rules/js-effects.rofl", eff_field_moment).
