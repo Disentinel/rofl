@@ -54,11 +54,12 @@
 //! concluded, so a witness is the one the written order would have built.
 
 use super::*;
+use super::cost::prem_key;
 
 pub(super) struct DeltaPlan {
     body: Rc<[BodyElem]>,
     /// `perm[k]` is the position in `ERule::plan` of `body[k]`.
-    perm: Vec<usize>,
+    pub(super) perm: Vec<usize>,
     /// Estimated cost of the whole firing per news row.
     unit: f64,
     /// The written-order firing: rows touched by the premises before `i`, the
@@ -71,6 +72,8 @@ pub(super) struct DeltaPlan {
     tail: f64,
     /// The relations the estimates read and their size when they were made.
     watch: Vec<(Sym, Option<Sym>, usize)>,
+    /// The order is a plan fact's (`planned_order`), taken whatever the estimate says.
+    pub(super) given: bool,
 }
 
 #[derive(Clone)]
@@ -121,6 +124,9 @@ impl Eval {
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
+        if p.given {
+            return Some(p.clone());
+        }
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
@@ -319,10 +325,109 @@ impl Eval {
             }
         }
 
-        // the delta-first order
-        let (order, unit) = self.greedy_order(r, news.map(|_| i), &[], &[])?;
+        // the delta-first order: a plan fact's, or the greedy one
+        let (order, unit, given) = match self.planned_order(r, news.map(|_| i)) {
+            Some(o) => (o, 0.0, true),
+            None => {
+                let (o, u) = self.greedy_order(r, news.map(|_| i), &[], &[])?;
+                (o, u, false)
+            }
+        };
         let body: Vec<BodyElem> = order.iter().map(|&j| plan[j].clone()).collect();
-        Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch })
+        Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch, given })
+    }
+
+    /// The written position (from 1, as `premise_lit` counts) of `r`'s plan element `j`, and back.
+    pub(super) fn written_pos(&self, r: &ERule, j: usize) -> Option<usize> {
+        let key = prem_key(&r.plan[j])?;
+        r.clause.body.iter().position(|b| prem_key(b) == Some(key)).map(|k| k + 1)
+    }
+
+    fn plan_pos(&self, r: &ERule, k: usize) -> Option<usize> {
+        let key = prem_key(r.clause.body.get(k.checked_sub(1)?)?)?;
+        r.plan.iter().position(|b| prem_key(b) == Some(key))
+    }
+
+    /// THE ORDER A PLAN FACT GIVES: `plan[fixpointplan](R, At, Order)`, At the written position of the news premise (0 the
+    /// firing over the whole store) and Order the written positions of every premise, from 1 (docs/cli.md, *The plan as
+    /// facts*). The engine takes it as it is, whatever its own estimate says, once it holds up: every premise once, the
+    /// news first, a negation after what binds the variables it shares, a builtin after one of the sets that run it and
+    /// where the written order has it (a builtin is a wall, so the holes it makes stay the written order's). A fact that
+    /// does not hold up is left alone and the greedy order is built; a rule kept in written order reads none.
+    pub(super) fn planned_order(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<Vec<usize>> {
+        let (rel, book) = (self.h.intern("plan"), self.h.intern("fixpointplan"));
+        let want_at = match at {
+            Some(i) => self.written_pos(r, i)? as i64,
+            None => 0,
+        };
+        let mut order: Option<Vec<usize>> = None;
+        for f in self.store.rel_persp(&self.h, rel, book) {
+            let args = self.store.args(f).to_vec();
+            if args.len() != 3 || args[0].as_atom() != Some(r.id) || args[1].as_int() != Some(want_at) {
+                continue;
+            }
+            let (mut ks, mut t) = (Vec::new(), args[2]);
+            loop {
+                match t.kind() {
+                    TermK::Func(i) if self.h.name(self.h.fname(i)) == "$cons" => {
+                        ks.push(usize::try_from(self.h.fargs(i)[0].as_int()?).ok()?);
+                        t = self.h.fargs(i)[1];
+                    }
+                    TermK::Atom(a) if self.h.name(a) == "$nil" => break,
+                    _ => return None,
+                }
+            }
+            order = ks.iter().map(|&k| self.plan_pos(r, k)).collect();
+            break;
+        }
+        let order = order?;
+        let plan = &r.plan;
+        let mut seen = vec![false; plan.len()];
+        for &j in &order {
+            if seen[j] {
+                return None;
+            }
+            seen[j] = true;
+        }
+        if seen.iter().any(|s| !s) || at.is_some_and(|i| order.first() != Some(&i)) {
+            return None;
+        }
+        let vars_of = |h: &Heap, b: &BodyElem| {
+            let mut v = Vec::new();
+            b.vars(h, &mut v);
+            v
+        };
+        let mut head_vars = Vec::new();
+        for a in &r.clause.head.args {
+            self.h.vars_of(*a, &mut head_vars);
+        }
+        let all_vars: Vec<Vec<Sym>> = plan.iter().map(|b| vars_of(&self.h, b)).collect();
+        let mut bound: Vec<Sym> = Vec::new();
+        for (n, &j) in order.iter().enumerate() {
+            match &plan[j] {
+                BodyElem::Neg(_) => {
+                    let local = |v: &Sym| !head_vars.contains(v) && all_vars.iter().enumerate().all(|(k, vs)| k == j || !vs.contains(v));
+                    if !all_vars[j].iter().all(|v| bound.contains(v) || local(v)) {
+                        return None;
+                    }
+                }
+                BodyElem::Bi { .. } => {
+                    if !self.bi_needs(&plan[j]).iter().any(|ns| ns.iter().all(|v| bound.contains(v))) {
+                        return None;
+                    }
+                    if order[..n].iter().any(|&k| k > j) || order[n + 1..].iter().any(|&k| k < j) {
+                        return None;
+                    }
+                }
+                BodyElem::Pos(_) | BodyElem::Agg(_) => {}
+            }
+            for v in &all_vars[j] {
+                if !bound.contains(v) {
+                    bound.push(*v);
+                }
+            }
+        }
+        Some(order)
     }
 
     /// THE GREEDY ORDER of `r`'s plan, its positions `skip` left out: from the news premise `start`, or from the

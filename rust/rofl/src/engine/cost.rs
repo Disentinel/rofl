@@ -102,7 +102,7 @@ impl Hot {
     }
 }
 
-fn prem_key(b: &BodyElem) -> Option<u64> {
+pub(super) fn prem_key(b: &BodyElem) -> Option<u64> {
     let mut h = Fx::default();
     match b {
         BodyElem::Pos(l) | BodyElem::Neg(l) => {
@@ -231,8 +231,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 11] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "width", "read", "yield", "widest", "rows", "distinct"];
+const PROFILE_RELS: [&str; 12] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct"];
 
 impl Eval {
     /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
@@ -284,6 +284,26 @@ impl Eval {
                     let _ = writeln!(out, "widest[profile]({id}, {k}, {}).", c.widest.n);
                 }
             }
+        }
+        // the orders the planner solved in, by rule and news position, in written positions: from a plan fact or greedy
+        let mut orders: Vec<(String, usize, Vec<usize>, bool)> = Vec::new();
+        for (&(rid, at), slot) in self.add.delta_plans.iter() {
+            let super::joinplan::Slot::Plan(p) = slot else { continue };
+            let Some(r) = self.rules.iter().find(|r| r.id == rid) else { continue };
+            let at = match at {
+                a if a == usize::MAX >> 1 => Some(0),
+                a if a & (1 << 62) != 0 => None,
+                a => self.written_pos(r, a),
+            };
+            let ks: Option<Vec<usize>> = p.perm.iter().map(|&j| self.written_pos(r, j)).collect();
+            if let (Some(at), Some(ks)) = (at, ks) {
+                orders.push((self.h.name(rid).to_string(), at, ks, p.given));
+            }
+        }
+        orders.sort_by(|a, b| cmp_js(&a.0, &b.0).then(a.1.cmp(&b.1)));
+        for (id, at, ks, given) in orders {
+            let list = ks.iter().rev().fold("$nil".to_string(), |t, k| format!("$cons({k}, {t})"));
+            let _ = writeln!(out, "order[profile]({id}, {at}, {list}, {}).", if given { "plan" } else { "greedy" });
         }
         let mut census: Vec<(String, String, Sym, Sym, usize, usize)> = self
             .store
