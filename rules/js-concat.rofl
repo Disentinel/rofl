@@ -49,8 +49,8 @@ str_value[flow](V) :- path_cut[flow](_, V).
 --
 -- An interpolated template is a string. The quasi of a TAGGED template is not
 -- evaluated as one: the tag's return is.
-tagged_quasi[code](T) :- ast_node[code](G, tagged_template_expression, _), ast_child[code](G, quasi, 0, T).
-composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _), not tagged_quasi[code](T).
+tagged_quasi[code](T) :- tagged[value](_, _, T).
+composed[flow](T) :- interpolated[code](T), template[value](T), not tagged_quasi[code](T).
 
 -- `a + b` and `x += v` are a concatenation where a side may be a string; a sum
 -- of two numbers stays silent.
@@ -175,7 +175,7 @@ may_be_lit[flow](C, V) :- path_cut[flow](C, V).
 -- 4. THE PARTS AND THE JOIN. Read by the texts below and by a question; the
 -- flow above never reads them, so they may count.
 cshape[flow](C, plus)  :- composed[flow](C), plus_site[code](C, _, _).
-cshape[flow](C, raw)   :- composed[flow](C), ast_node[code](C, template_literal, _).
+cshape[flow](C, raw)   :- composed[flow](C), template[value](C).
 cshape[flow](C, Sh)    :- vlib_op[flow](C, Op, Kind), op_shape(Op, Kind, Sh).
 
 edb(op_shape).
@@ -195,8 +195,8 @@ joined[flow](C, Kind) :- vlib_op[flow](C, _, Kind).
 parts[flow](C, 0, L) :- cshape[flow](C, plus), plus_site[code](C, L, _).
 parts[flow](C, 1, R) :- cshape[flow](C, plus), plus_site[code](C, _, R).
 
-parts[flow](T, I, X) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _),
-                        ast_child[code](T, expressions, K, X), I is 2 * K + 1.
+parts[flow](T, I, X) :- cshape[flow](T, raw), template[value](T), nth[tree](T, K, X), I is 2 * K + 1.
+
 part_lit[flow](T, I, V) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _),
                            ast_child[code](T, quasis, K, Q), ast_attr[code](Q, value_cooked, V), I is 2 * K.
 

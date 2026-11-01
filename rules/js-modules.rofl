@@ -208,13 +208,7 @@ import_spec[code](I, Sp) :- import_site[code](I, static_import),
 spec_local[code](Sp, L) :- import_specifier_node[code](Sp),
                            ast_child[code](Sp, local, 0, N), ast_name[code](N, L).
 
-spec_imported[code](Sp, M) :- ast_node[code](Sp, import_specifier, _),
-                              ast_child[code](Sp, imported, 0, N), ast_name[code](N, M).
-
-spec_imported[code](Sp, M) :- ast_node[code](Sp, import_specifier, _),
-                              ast_child[code](Sp, imported, 0, N), ast_value[code](N, M).
-
-spec_imported[code](Sp, "default") :- ast_node[code](Sp, import_default_specifier, _).
+spec_imported[code](Sp, M)         :- decl[value](Sp, import), parent[tree](Sp, L), pattern_prop[value](_, M, L).
 spec_imported[code](Sp, "*")       :- ast_node[code](Sp, import_namespace_specifier, _).
 
 binding[code](I, Sp, Local, Imported) :- import_spec[code](I, Sp),
@@ -237,10 +231,9 @@ export_spec[code](E, Sp) :- export_site[code](E), ast_child[code](E, specifiers,
 export_specifier_node[code](Sp) :- ast_node[code](Sp, export_specifier, _).
 export_specifier_node[code](Sp) :- ast_node[code](Sp, export_namespace_specifier, _).
 
-spec_external[code](Sp, X) :- export_specifier_node[code](Sp),
-                              ast_child[code](Sp, exported, 0, N), ast_name[code](N, X).
-spec_external[code](Sp, X) :- export_specifier_node[code](Sp),
-                              ast_child[code](Sp, exported, 0, N), ast_value[code](N, X).
+spec_external[code](Sp, X) :- export_specifier_node[code](Sp), key[value](Sp, X).
+spec_external[code](Sp, X) :- export_specifier_node[code](Sp), parent[tree](Sp, M), key[value](M, X).
+
 
 spec_internal[code](Sp, L)   :- ast_node[code](Sp, export_specifier, _),
                                 ast_child[code](Sp, local, 0, N), ast_name[code](N, L).

@@ -330,8 +330,8 @@ eff_converts[code](N) :- ast_node[code](N, unary_expression, _),  not eff_op_ins
 eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, left, 0, X).
 eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, right, 0, X).
 eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, argument, 0, X).
-eff_coerced[flow](T, X) :- ast_node[code](T, template_literal, _),
-                           ast_child[code](T, expressions, _, X).
+eff_coerced[flow](T, X) :- template[value](T), nth[tree](T, _, X).
+
 
 edb(eff_conv_key).
 eff_conv_key(symbol_to_primitive).

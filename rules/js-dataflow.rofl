@@ -52,10 +52,7 @@ may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D)
 -- evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
 -- strings and a partial answer is wrong where silence is right (w_concat_value).
 interpolated[code](T)  :- ast_child[code](T, expressions, _, _).
-may_be_lit[flow](T, V) :- ast_node[code](T, template_literal, _),
-                          not interpolated[code](T),
-                          ast_child[code](T, quasis, 0, Q),
-                          ast_attr[code](Q, value_cooked, V).
+may_be_lit[flow](T, V) :- template[value](T), literal[value](T, V).
 
 -- An object, array, function, class or regexp expression is its own node.
 -- `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
@@ -899,7 +896,8 @@ keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expressio
                          ast_child[code](E, left, 0, X).
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
                          ast_child[code](E, right, 0, X).
-keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, template_literal, _), ast_child[code](E, expressions, _, X).
+keyed_src[code](E, X) :- keyed_want[code](E), template[value](E), nth[tree](E, _, X).
+
 -- a call is what the functions it calls return: open where one of them is not
 -- followed (`keyed_ret_known`), has an open return (`keyed_ret_open`), returns
 -- a parameter the call leaves out or hands an open argument, or is async or a

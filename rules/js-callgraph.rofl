@@ -148,8 +148,8 @@ static_key_kind(numeric_literal).
 computed_key_static[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
                                 ast_node[code](P, K, _), static_key_kind(K).
 
-computed_key_template[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
-                                  ast_node[code](P, template_literal, _).
+computed_key_template[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), template[value](P).
+
 
 shape_known[code](C, S) :- callee_kind[code](C, K), callee_shape(K, S).
 shape_known[code](C, s_computed_literal_key) :- computed_member[code](C, _),
