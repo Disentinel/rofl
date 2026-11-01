@@ -529,7 +529,7 @@ class_construct_eff[flow](CD, L, H) :- super_of[flow](CD, SD),
 -- `prototype`, where a function declaration is hoisted and performs nothing
 -- where it is written).
 eff_here[flow](CD, L, H) :- class_define_eff[flow](CD, L, H).
-eff_here[flow](X, L, H)  :- ast_node[code](X, new_expression, _),
+eff_here[flow](X, L, H)  :- construct[value](X),
                             may_be_node[flow](X, I), inst_of[flow](I, CD), class_construct_eff[flow](CD, L, H).
 
 eff_alloc_kind(class_declaration).

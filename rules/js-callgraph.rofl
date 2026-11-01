@@ -196,8 +196,7 @@ fn_file[code](F, File) :- fn_node[code](F), at[tree](F, File, _).
 fn_name[code](F, N) :- fn_node[code](F), target[value](F, I), binds[value](I, N).
 fn_name[code](F, N) :- ast_node[code](F, object_method, _),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-ctor_method[code](F)   :- ast_node[code](F, class_method, _),
-                          ast_attr[code](F, kind, "constructor").
+ctor_method[code](F)   :- constructs[value](_, F), fn_node[code](F).
 fn_name[code](F, N) :- ast_node[code](F, class_method, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
 fn_name[code](F, N) :- binder[code](D, N, F, _), fn_node[code](F).
@@ -267,13 +266,12 @@ obj_member_fn[code](O, Key, F) :- key_name[code](K, Key),
 -- `ctor_of` (a class with no constructor forwards to its ancestor's — V8 skips
 -- the synthesised frame); `new` deliberately does NOT, because V8 names the
 -- frame after the class and makes it the caller.
-class_ctor[code](CD, M) :- class_method_of[flow](CD, M),
-                           ast_attr[code](M, kind, "constructor").
+class_ctor[code](CD, M) :- class_method_of[flow](CD, M), ctor_method[code](M).
 
 resolves[code](X, M) :- transfer_site[code](X, new_expression),
                         may_be_node[flow](X, I), inst_of[flow](I, CD), class_ctor[code](CD, M).
 
-resolves[code](C, M) :- ast_node[code](N, super, _), callee_of[code](C, N),
+resolves[code](C, M) :- super[value](N), callee_of[code](C, N),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
 
 -- A tag is a callee in every sense but the grammar's (the field is `tag`, not
@@ -523,7 +521,7 @@ whole_kind(class_expression).
 
 whole_expr[flow](E) :- whole_kind(K), ast_node[code](E, K, _).
 whole_expr[flow](E) :- es_instance[flow](E, _, _).
-whole_expr[flow](E) :- ast_node[code](E, new_expression, _), callee[value](E, CE), whole_expr[flow](CE).
+whole_expr[flow](E) :- construct[value](E), callee[value](E, CE), whole_expr[flow](CE).
 whole_expr[flow](E) :- value_transparent(K), ast_node[code](E, K, _), ast_child[code](E, expression, 0, X),
                        whole_expr[flow](X).
 whole_expr[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), whole_expr[flow](Init),
@@ -538,8 +536,8 @@ many_binders[flow](E)   :- sees_binder[code](E, _), sees_decl[code](E, _).
 reassigned[flow](D)     :- assign_binder[code](_, D).
 
 -- The objects whose members can be known, and the classes whose prototype they read.
-receivable[flow](O) :- ast_node[code](O, object_expression, _).
-receivable[flow](O) :- ast_node[code](O, array_expression, _).
+receivable[flow](O) :- obj_lit[code](O).
+receivable[flow](O) :- array[value](O).
 receivable[flow](I) :- inst_of[flow](I, _).
 receivable[flow](X) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, _).
 receivable[flow](NS) :- ns_export[code](NS, _).
@@ -603,7 +601,7 @@ held[flow](A) :- placed[flow](A), ast_child[code](C, arguments, _, A), callee[va
                  whole_expr[flow](CE).
 held[flow](V) :- placed[flow](V), stored_in[flow](V, _).
 -- a member of an object literal holds the value as long as the literal is not open
-literal_part[flow](O, P) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P).
+literal_part[flow](O, P) :- obj_lit[code](O), parent[tree](O, P).
 held[flow](P) :- placed[flow](P), literal_part[flow](_, P).
 stored_in[flow](V, H) :- ast_child[code](A, right, 0, V), ast_node[code](A, assignment_expression, _),
                          ast_child[code](A, left, 0, L), member_node_v[flow](L), object_of[code](L, HE),
@@ -629,7 +627,7 @@ sx_open[surface](O)  :- member_written[flow](N), member_obj[flow](N, _, O), not 
 sx_open[surface](O)  :- may_be_node[flow](P, O), literal_part[flow](L, P), sx_open[surface](L).
 sx_open[surface](O)  :- stored_in[flow](V, H), sx_open[surface](H), may_be_node[flow](V, O).
 -- an object literal with a spread, a computed key or a `__proto__`
-sx_open[surface](O)  :- literal_part[flow](O, P), ast_node[code](P, spread_element, _).
+sx_open[surface](O)  :- obj_lit[code](O), spread_props[value](O, _, _).
 sx_open[surface](O)  :- literal_part[flow](O, P), ast_child[code](P, key, 0, K), not key_name[code](K, _).
 sx_open[surface](O)  :- literal_part[flow](O, P), ast_child[code](P, key, 0, K), key_name[code](K, "__proto__").
 -- a member function whose `this` the model does not follow may write onto it
@@ -641,12 +639,11 @@ sx_open[surface](O)  :- receivable[flow](O), member_value[flow](O, _, V), may_be
 -- a class whose prototype may change: read as `C.prototype`, decorated, a base not
 -- seen or open, a constructor returning a value
 sx_open[surface](CD) :- member_at[flow](_, _, CD, "prototype").
-sx_open[surface](CD) :- class_like[flow](CD), ast_child[code](CD, decorators, _, _).
-sx_open[surface](CD) :- class_like[flow](CD), ast_child[code](CD, body, 0, B), ast_child[code](B, body, _, M),
-                        ast_child[code](M, decorators, _, _).
+sx_open[surface](CD) :- class_like[flow](CD), decorated[value](CD, _).
+sx_open[surface](CD) :- class_like[flow](CD), class_slot[code](CD, M), decorated[value](M, _).
 sx_open[surface](CD) :- class_like[flow](CD), type_open[flow](CD).
 sx_open[surface](CD) :- super_of[flow](CD, SD), sx_open[surface](SD).
-sx_open[surface](CD) :- class_method_of[flow](CD, M), ast_attr[code](M, kind, "constructor"), returns[flow](M, _).
+sx_open[surface](CD) :- class_ctor[code](CD, M), returns[flow](M, _).
 sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
 
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
@@ -840,7 +837,7 @@ type_member[flow](T, Key) :- type_base[flow](T, B), type_member[flow](B, Key).
 type_open[flow](T)        :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
                              ast_child[code](B, body, _, S), ast_node[code](S, tsindex_signature, _).
 type_open[flow](T)        :- ast_child[code](T, extends, _, H), not names_type[flow](H, _).
-type_open[flow](T)        :- class_like[flow](T), ast_child[code](T, super_class, 0, _), not super_of[flow](T, _).
+type_open[flow](T)        :- class_like[flow](T), extends[value](T, _), not super_of[flow](T, _).
 type_open[flow](T)        :- type_base[flow](T, B), type_open[flow](B).
 -- a type a member is declared as: an interface's property or a class's field or parameter property
 member_type_at[flow](T, Key, A) :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
@@ -918,7 +915,7 @@ declared[flow](E, T)     :- new_of[code](E, Name, File), type_decl[code](T, Name
                             ast_node[code](T, class_declaration, _).
 declared[flow](E, T)     :- new_of[code](E, Name, File), imports_name[code](Name, Orig, D, File),
                             module_target[code](D, Target), sx_export_type[surface](Target, Orig, T).
-new_of[code](E, Name, File) :- ast_node[code](E, new_expression, File), callee[value](E, N),
+new_of[code](E, Name, File) :- construct[value](E), at[tree](E, File, _), callee[value](E, N),
                                ast_node[code](N, identifier, _), ast_name[code](N, Name).
 declared[flow](E, T)     :- cast[code](E), names_type[flow](E, T).
 declared_lib[flow](E, P) :- cast[code](E), names_lib[flow](E, P).
@@ -929,7 +926,7 @@ declared_lib[flow](E, P) :- see_through[code](E, X), declared_lib[flow](X, P).
 see_through[code](E, X)  :- ast_node[code](E, tsnon_null_expression, _), ast_child[code](E, expression, 0, X).
 see_through[code](E, X)  :- ast_node[code](E, parenthesized_expression, _), ast_child[code](E, expression, 0, X).
 -- `super` in an instance method is declared as the base class
-declared[flow](S, B)     :- ast_node[code](S, super, _), inside[tree](M, S), class_method_of[flow](CD, M),
+declared[flow](S, B)     :- super[value](S), inside[tree](M, S), class_method_of[flow](CD, M),
                             ast_attr[code](M, static, false), super_of[flow](CD, B).
 declared[flow](C, T2)    :- declared_call[flow](C, T, Key), method_type[flow](T, Key, T2).
 declared_lib[flow](C, P) :- declared_call[flow](C, T, Key), method_lib[flow](T, Key, P).

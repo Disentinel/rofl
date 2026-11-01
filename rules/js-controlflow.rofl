@@ -255,8 +255,7 @@ pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _), declarator_id[co
                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
 pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
-                                ast_child[code](S, argument, 0, A), ast_node[code](S, spread_element, _),
-                                ast_child[code](O, properties, _, S), ast_node[code](O, object_expression, _).
+                                spread_props[value](O, _, A), obj_lit[code](O), parent[tree](S, A).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
 -- keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
@@ -310,9 +309,7 @@ hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _).
 hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _),
                                            ast_child[code](P, properties, _, R),
                                            ast_node[code](P, object_pattern, _).
-hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _),
-                                           ast_child[code](O, properties, _, S),
-                                           ast_node[code](S, spread_element, _).
+hidden_call_pos[code](S, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A), parent[tree](S, A).
 hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _).
 hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
 hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _).

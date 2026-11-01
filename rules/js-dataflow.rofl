@@ -399,7 +399,7 @@ builtin_prototype(weakset).
 -- on a promise, and a name bound to one is one.
 edb(lib_member).
 prototype_of[flow](C, promise) :- resolves[code](C, F), async_body[code](F).
-prototype_of[flow](X, promise) :- ast_node[code](X, new_expression, _), callee[value](X, G),
+prototype_of[flow](X, promise) :- construct[value](X), callee[value](X, G),
                                   free_global[code](G, "Promise", _).
 prototype_of[flow](C, promise) :- callee[value](C, N), object_of[code](N, G),
                                   free_global[code](G, "Promise", _).
@@ -540,8 +540,7 @@ may_be_node[flow](E, R) :- rest_binds[code](D, R, Local, File),
 
 -- Spread copies the source's keys. `{ ...o, k: v }` keeps both `k`s — the safe
 -- direction; narrowing needs an order this layer has not got.
-spread_of[code](O, A) :- ast_node[code](S, spread_element, _), ast_child[code](O, properties, _, S),
-                         ast_node[code](O, object_expression, _), ast_child[code](S, argument, 0, A).
+spread_of[code](O, A) :- obj_lit[code](O), spread_props[value](O, _, A).
 member_value[flow](O, Key, V) :- spread_of[code](O, A), may_be_node[flow](A, Src), member_value[flow](Src, Key, V).
 
 valued[flow](E) :- may_be_lit[flow](E, _).
@@ -1376,11 +1375,10 @@ read_holds_lit[flow](C, undefined) :- keyed_read[flow](C, _), not keyed_present[
 -- An object literal and a class are identical to the question "can it answer
 -- `.k`". `member_value` names the node a member HOLDS and judges nothing about
 -- it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
-obj_like[flow](O) :- ast_node[code](O, object_expression, _).
-obj_like[flow](O) :- ast_node[code](O, class_declaration, _).
-obj_like[flow](O) :- ast_node[code](O, class_expression, _).
-class_like[flow](O) :- ast_node[code](O, class_declaration, _).
-class_like[flow](O) :- ast_node[code](O, class_expression, _).
+obj_lit[code](O)  :- object[value](O), not decl[value](O, enum).
+obj_like[flow](O) :- obj_lit[code](O).
+obj_like[flow](O) :- class[value](O).
+class_like[flow](O) :- class[value](O).
 
 -- An INSTANCE is not its class. The class node is the class object (`C`, and
 -- `this` in a static member); its body node stands for every instance (`new
@@ -1489,7 +1487,7 @@ member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), this[va
                                    not object_of[code](_, T).
 member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), this[value](T),
                                    nearest_v[flow](G, T), not body[value](G, Body).
-member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, S), ast_node[code](S, super, _).
+member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, S), super[value](S).
 member_ctor_open[code](Body, J) :- member_ctor_this[code](Body, J), member_ctor_before[code](Body, J, Q), runs_unknown[code](Q).
 -- what the class publishes: the field is set at J for certain, and which
 -- functions run before J (`super()` among them, and through it the parent's
@@ -1532,7 +1530,7 @@ class_member_static[flow](CD, Key, M) :- member_value[flow](CD, Key, M),
                                          ast_attr[code](M, static, true).
 class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M),
                                          ast_attr[code](M, static, false).
-member_plain[flow](O, Key, V) :- ast_node[code](O, object_expression, _),
+member_plain[flow](O, Key, V) :- obj_lit[code](O),
                                  member_value[flow](O, Key, V).
 member_plain[flow](P, Key, V) :- module_object[flow](P, _),
                                  member_value[flow](P, Key, V).
@@ -1547,8 +1545,8 @@ may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), member_plain[flow](
 
 -- A method is a value; a declared function is reached by its name, looked up
 -- as any name is.
-may_be_node[flow](M, M) :- ast_node[code](M, object_method, _).
-may_be_node[flow](M, M) :- ast_node[code](M, class_method, _).
+may_be_node[flow](M, M) :- obj_method_of[flow](_, M).
+may_be_node[flow](M, M) :- class_method_of[flow](_, M).
 may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _).
 
 may_be_node[flow](E, F) :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _).
@@ -1575,9 +1573,8 @@ this_nearer[flow](F, T) :- this_over[flow](F, T), this_over[flow](G, T),
                            inside[tree](F, G), F != G.
 this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).
 
-class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                ast_child[code](B, body, _, M),
-                                ast_node[code](M, class_method, _).
+class_slot[code](CD, M)       :- class[value](CD), has[value](CD, M), parent[tree](B, M), parent[tree](CD, B).
+class_method_of[flow](CD, M) :- class_slot[code](CD, M), fn_node[code](M), not private[value](M).
 may_be_node[flow](T, I)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false),
                             inst_of[flow](I, CD), this_host[flow](M, T).
 -- an instance of a subclass runs the parent's methods and constructor with
@@ -1830,9 +1827,7 @@ import_outside_corpus[audit](Src, File) :- site_source[code](N, Src), site_file[
                                            not module_target[code](N, _).
 
 -- `this` in an object literal's own method is that object.
-obj_method_of[flow](O, M) :- ast_node[code](O, object_expression, _),
-                             ast_child[code](O, properties, _, M),
-                             ast_node[code](M, object_method, _).
+obj_method_of[flow](O, M) :- obj_lit[code](O), has[value](O, M), fn_node[code](M).
 may_be_node[flow](T, O) :- obj_method_of[flow](O, M), this_host[flow](M, T).
 
 -- =========================================================================
@@ -2030,7 +2025,7 @@ may_be_node[flow](E, CD) :- sees_decl[code](E, CD), ast_node[code](CD, class_dec
 
 -- `new X()` is an instance of whichever class its callee may be, by value:
 -- `new ns.Foo()` and an imported class are reached as a call's callee is.
-may_be_node[flow](E, I) :- ast_node[code](E, new_expression, _),
+may_be_node[flow](E, I) :- construct[value](E),
                            callee[value](E, CE), may_be_node[flow](CE, CD), inst_of[flow](I, CD).
 
 -- `super` denotes the class its `extends` expression may be.
@@ -2049,7 +2044,7 @@ ctor_of[flow](CD, M)   :- own_ctor[flow](CD, M).
 ctor_of[flow](CD, M)   :- super_of[flow](CD, SD), not has_own_ctor[flow](CD),
                           ctor_of[flow](SD, M).
 
-may_be_node[flow](S, SD) :- ast_node[code](S, super, _),
+may_be_node[flow](S, SD) :- super[value](S),
                             inside[tree](M, S), class_method_of[flow](CD, M),
                             super_of[flow](CD, SD).
 
