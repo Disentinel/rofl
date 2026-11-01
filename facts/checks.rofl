@@ -3874,3 +3874,8 @@ check_world("concat_builtin").
 check_file("concat_builtin", "examples/checks/concat.rofl").
 check_world("concat_recursion").
 check_file("concat_recursion", "examples/checks/concat-recursion.rofl").
+
+-- THE PROFILE OF AN EVALUATION (docs/cli.md, *The profile of an evaluation*): a rule that reads a relation of the book `profile`
+-- is answered with what each rule and premise cost, written by the Rust engine after the evaluation and read in the
+-- round after. The TypeScript engine writes no profile, so the world is Rust's alone.
+check_opt("profile", one_engine, rust).
