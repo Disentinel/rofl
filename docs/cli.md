@@ -525,7 +525,9 @@ line that asks; the VS Code extension cuts its bare cells by it). Any request ma
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
 A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
 `conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
-firings solved news first, `written_order[profile](R, Why)` why the planner kept the rule in written order (
+firings solved news first, `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
+written position `At` (0 the firing over the whole store), as a `$cons` list of written positions, and whose it was (below,
+*The plan as facts*), `written_order[profile](R, Why)` why the planner kept the rule in written order (
 `aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`). Per premise
 `K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
@@ -550,6 +552,29 @@ per_row | per_round | kernel)` is the class of a recursive rule, which only two 
 (rust/rofl/tests/profile_model.rs). The pack's own rules are profiled and left out of what it says. World
 `profile_model` over examples/checks/profile-hub.rofl (a chain, a hub, a ladder, each planted for one verdict or forecast),
 Rust only.
+
+**The plan as facts** is the book `fixpointplan`: `plan[fixpointplan](R, At, Order)` gives rule `R` (its id, as
+`premise_lit` names it) the order to solve its premises in when fired on the news at written position `At` (0 the firing
+over the whole store), `Order` the written positions of every premise as a `$cons` list, from 1. The engine takes it as
+it is, whatever its own estimate says, once it holds up: every premise once, the news first, a negation after what binds
+the variables it shares, a builtin after one of the sets that run it and where the written order has it. A fact that does
+not hold up is left alone and the greedy order is built; a rule kept in written order (`written_order[profile]`) reads
+none. The profile says which order was taken and whose it was (`order[profile]`), so the width that order cost
+(`width[profile]`, the partial solutions each premise was solved from) judges the fact. examples/checks/plan-given.rofl
+(world `plan_given`, Rust only) is the world where the greedy order loses: `out(X, Y, Z) :- a(X), b(Y), c(X, Z), d(Z, Y)`
+reaches its premises with 1 + 9 + 90 + 900 partial solutions as the planner orders it (b first, then a) and 1 + 10 + 100 + 100 under the
+fact `plan[fixpointplan](r815c0a08, 0, $cons(1, $cons(3, $cons(4, $cons(2, $nil)))))`. The pack that computes the plan
+from a profile is `models/engine/plan.rofl`, loaded beside models/engine/profile.rofl and the world's files **in a world
+of its own** (it declares a lattice, and a world with a lattice is solved in written order, so the profile measured
+there would be another planner's): over the subsets of each rule's premises it builds `lattice pl_best(R, At, S, min
+C)`, the least sum of partial solutions over the premise placed last, with the independence estimate of a set (its
+rows multiplied, divided for every shared variable by the most distinct of its columns, once per sharing premise after
+the first), and concludes `plan[fixpointplan](R, At, Order)` for every rule of two to eight positive premises, At 0
+and, for a recursive rule, each news position, with `plan_cost[fixpointplan](R, At, C)` the width it forecasts. The
+world is then run with those facts and `width[profile]` judges them. Over plan-world.rofl (world `plan_dp`) it finds b,
+d, c, a for `out` and `alt` alike at 210, under the hand-given 211, and the world measures 210 under it
+(rust/rofl/tests/plan_dp.rs). It is the second of the two modes the owner asked for: reflection in a world of its own,
+the answer in the world as it is; the loop between them is not scripted yet.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is

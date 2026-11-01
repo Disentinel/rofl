@@ -1,0 +1,9 @@
+-- examples/checks/plan-given.rofl — THE JOIN ORDER AS A FACT THE ENGINE OBEYS (docs/cli.md, *The plan as facts*).
+--
+-- Over plan-world.rofl, two plan facts swap the orders: `out` is given the good one and `alt` the bad one, and the
+-- profile's widths swap with them (211 and 1001), which is the engine obeying the fact and not its estimate. A third
+-- fact, on `two`, places a premise twice and is left alone: `two` is solved as the planner would (order ... greedy).
+
+plan[fixpointplan](r815c0a08, 0, $cons(1, $cons(3, $cons(4, $cons(2, $nil))))).
+plan[fixpointplan](r6590ddbf, 0, $cons(1, $cons(4, $cons(2, $cons(3, $nil))))).
+plan[fixpointplan](re0980c8d, 0, $cons(1, $cons(1, $nil))).
