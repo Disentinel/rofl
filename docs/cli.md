@@ -545,7 +545,7 @@ evaluation of its own (`Eval::safety_answer`), and that evaluation's profile is 
 `program[profile](R, safety)` with `kernel_head[profile](R, L)` and `kernel_premise[profile](R, K, L)` their reflection
 (the kernel's rules are in no world's `premise_lit`; a builtin premise is written `$builtin(Op, $nil)`, an aggregate
 `$agg`), and its relations censused under the book `safety`, so a hypothesis pack judges the kernel's rules as it
-judges the world's. A question meant for the world's rules alone joins `concludes(R, _)`, as examples/profile/chain.rofl does. That is how the kernel's quadratic was
+judges the world's; its text is built only when the profile is asked, from the kernel's evaluation kept for it, so a world that asks no profile pays nothing for it. A question meant for the world's rules alone joins `concludes(R, _)`, as examples/profile/chain.rofl does. The plan pack plans none of the kernel's rules (`pl_own(R) :- program[profile](R, safety)`): the engine obeys no plan there, and planning its 213 rules cost a small world twice its time. That is how the kernel's quadratic was
 found (f_a_lattice_beside_the_js_model_trips_the_kernel_safety_budget): a lattice beside the JS model made
 `unw_reach` close the whole lattice-edge graph, 445 036 rows read of 2.3 million in the run.
 

@@ -345,8 +345,12 @@ impl Eval {
                 let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
             }
         }
-        if let Some(k) = &self.kernel_profile {
-            out.push_str(k);
+        // the kernel's heap is this evaluation's: lent to a copy of the kernel for its text, only when asked
+        if let (None, Some(k)) = (census_book, self.kernel_eval.clone()) {
+            let mut sub = k.1.clone();
+            sub.h = std::mem::take(&mut self.h);
+            out.push_str(&sub.kernel_profile_text());
+            self.h = std::mem::take(&mut sub.h);
         }
         out
     }
