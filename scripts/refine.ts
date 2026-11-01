@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 const PACKS = ['models/engine/profile.rofl', 'models/engine/plan.rofl'].map((p) => path.join(ROOT, p));
-const METER = `refine_width(R, T) :- fires[profile](R, _), T is sum(V ; K : width[profile](R, K, V)).
+const METER = `refine_width(R, T) :- fires[profile](R, _), concludes(R, _), T is sum(V ; K : width[profile](R, K, V)).
 refine_order(R, At, O, W) :- order[profile](R, At, O, W), concludes(R, _).
 `;
 

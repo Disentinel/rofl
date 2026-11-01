@@ -231,8 +231,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 12] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct"];
+const PROFILE_RELS: [&str; 15] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
@@ -254,6 +254,12 @@ impl Eval {
     /// Pos, N)` the distinct values at `Pos`, the planner's own measure (`Store::probe_stats`). Rows read are
     /// deterministic, so the same world profiles the same on every run; time is not written.
     pub fn profile_text(&mut self) -> String {
+        self.profile_text_in(None)
+    }
+
+    /// `census_book` names the book the census is written under instead of the store's own: the kernel's
+    /// relations are in a store of their own and would otherwise be censused as `main` beside the world's.
+    fn profile_text_in(&mut self, census_book: Option<&str>) -> String {
         use std::fmt::Write;
         let mut out = String::new();
         let mut rules: Vec<Rc<ERule>> = self.rules.clone();
@@ -314,10 +320,46 @@ impl Eval {
             .collect();
         census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
         for (rel_name, book_name, rel, book, n, arity) in census {
+            let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
             for pos in 0..arity {
                 let (_, d) = self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]);
                 let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
+            }
+        }
+        if let Some(k) = &self.kernel_profile {
+            out.push_str(k);
+        }
+        out
+    }
+
+    /// THE KERNEL'S OWN PROGRAM PROFILED: this evaluation's `profile_text` (it is safety.rofl's), then
+    /// `program[profile](R, safety)` for each of its rules and their reflection as the world's `premise_lit` and
+    /// `conclusion_lit` would carry it, `kernel_premise[profile](R, K, L)` and `kernel_head[profile](R, L)`, since
+    /// the kernel's rules are reflected in no world of a user's. A hypothesis pack reads them as it reads the
+    /// world's rules (models/engine/profile.rofl). The relations seeded from the world are the kernel's book and
+    /// are not censused; safety.rofl's own are, under the book `safety`.
+    pub fn kernel_profile_text(&mut self) -> String {
+        use std::fmt::Write;
+        let mut out = self.profile_text_in(Some("safety"));
+        let mut rules: Vec<Rc<ERule>> = self.rules.clone();
+        rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
+        for r in &rules {
+            let id = self.h.name(r.id).to_string();
+            let _ = writeln!(out, "program[profile]({id}, safety).");
+            let head = crate::reflect::reify_lit(&mut self.h, &self.v, &r.clause.head);
+            let _ = writeln!(out, "kernel_head[profile]({id}, {}).", self.h.canon(head));
+            // a builtin's arithmetic prints as a prefix functor the parser does not read back: its operator alone
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let text = match b {
+                    BodyElem::Bi { op, .. } => format!("$builtin({:?}, $nil)", self.h.name(*op)),
+                    BodyElem::Agg(_) => "$agg".to_string(),
+                    _ => {
+                        let t = crate::reflect::reify_body_elem(&mut self.h, &self.v, b);
+                        self.h.canon(t)
+                    }
+                };
+                let _ = writeln!(out, "kernel_premise[profile]({id}, {}, {text}).", i + 1);
             }
         }
         out

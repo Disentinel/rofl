@@ -229,6 +229,7 @@ check[checks]("rust/rofl/tests/post.rs", "a_world_that_does_not_wait_goes_on_and
 check[checks]("rust/rofl/tests/profile.rs", "a_rule_that_reads_the_profile_is_answered_in_the_round_after", test).
 check[checks]("rust/rofl/tests/profile.rs", "a_world_that_reads_no_profile_holds_none", test).
 check[checks]("rust/rofl/tests/profile.rs", "the_profile_is_the_same_on_every_run", test).
+check[checks]("rust/rofl/tests/profile.rs", "the_kernels_own_program_is_profiled_beside_the_worlds", test).
 check[checks]("rust/rofl/tests/profile_model.rs", "the_hub_world_shows_every_planted_verdict_and_forecast", test).
 check[checks]("rust/rofl/tests/profile_model.rs", "two_sizes_judge_the_forecasts_and_the_growth_class", test).
 check[checks]("rust/rofl/tests/program.rs", "a_program_loaded_in_rust_is_the_world_the_kernel_builds", test).
