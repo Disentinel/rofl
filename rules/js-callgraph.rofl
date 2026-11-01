@@ -73,7 +73,7 @@ optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional
 computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, true).
 static_member[code](C, N)   :- member_like[code](C, N), ast_attr[code](N, computed, false).
 
-callee_obj[code](C, O)      :- member_like[code](C, N), ast_child[code](N, object, 0, O).
+callee_obj[code](C, O)      :- member_like[code](C, N), object_of[code](N, O).
 callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _).
 callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
 
@@ -359,7 +359,7 @@ written_arg[code](C, I, A) :- arg_at[flow](C, I, A), ast_child[code](C, argument
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
 -- arguments to the callee's parameters and its return to the call's value, and
 -- a callback gets neither (`map` passes elements and returns an array).
-callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), ast_child[code](N, object, 0, O),
+callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), object_of[code](N, O),
                                          callee_of[code](C, N), selects[flow](N, Key).
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
@@ -389,7 +389,7 @@ unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
 runs_outside[code](F)       :- unresolved_call[code](C, _), not keyed_quiet[code](C), nearest_fn[code](F, C).
 
 stdlib_member[audit](C, P, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                                   ast_child[code](N, object, 0, O),
+                                   object_of[code](N, O),
                                    prototype_of[flow](O, P), builtin_prototype(P),
                                    selects[flow](N, Key).
 
@@ -623,7 +623,7 @@ held[flow](V) :- placed[flow](V), stored_in[flow](V, _).
 literal_part[flow](O, P) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P).
 held[flow](P) :- placed[flow](P), literal_part[flow](_, P).
 stored_in[flow](V, H) :- ast_child[code](A, right, 0, V), ast_node[code](A, assignment_expression, _),
-                         ast_child[code](A, left, 0, L), member_node_v[flow](L), ast_child[code](L, object, 0, HE),
+                         ast_child[code](A, left, 0, L), member_node_v[flow](L), object_of[code](L, HE),
                          whole_expr[flow](HE), may_be_node[flow](HE, H).
 
 -- A member written: by a known key it is had, by an unknown one the object is open.
@@ -669,7 +669,7 @@ sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
 member_call[flow](C, R, Key) :- ast_node[code](C, call_expression, _), callee[value](C, N),
                                 ast_node[code](N, member_expression, _), ast_attr[code](N, computed, false),
-                                selects[flow](N, Key), ast_child[code](N, object, 0, R).
+                                selects[flow](N, Key), object_of[code](N, R).
 call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), may_be_node[flow](R, O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), member_value[flow](O, Key, _), not class_like[flow](O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), sx_mkey[surface](O, Key).
@@ -763,9 +763,9 @@ host_extends_global("Error").
 whole_global[flow](R) :- es_global[code](R, Name, _, Form), Form != plain_value,
                          not host_extends_global(Name), not assign_reaches_unscoped[flow](R, _),
                          not sx_global_open[surface](Name).
-sx_global_key[surface](Name, Key) :- member_written[flow](N), ast_child[code](N, object, 0, G),
+sx_global_key[surface](Name, Key) :- member_written[flow](N), object_of[code](N, G),
                                      es_global[code](G, Name, _, _), selects[flow](N, Key).
-sx_global_open[surface](Name) :- member_written[flow](N), ast_child[code](N, object, 0, G),
+sx_global_open[surface](Name) :- member_written[flow](N), object_of[code](N, G),
                                  es_global[code](G, Name, _, _), not selects[flow](N, _).
 sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), ast_child[code](P, F, _, G),
                                  ast_node[code](P, PK, _), not holds_in_place(PK, F).
@@ -923,9 +923,9 @@ declared[flow](E, T)   :- ast_node[code](D, variable_declarator, _), ast_child[c
 declared_lib[flow](E, L) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
                           ast_child[code](I, type_annotation, 0, A), names_lib[flow](A, L), sees_binder[code](E, D).
 declared[flow](T, CD)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false), this_host[flow](M, T).
-declared[flow](N, T2)  :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared[flow](O, T),
+declared[flow](N, T2)  :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
                           selects[flow](N, Key), member_type[flow](T, Key, T2).
-declared_lib[flow](N, L) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared[flow](O, T),
+declared_lib[flow](N, L) :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
                           selects[flow](N, Key), member_lib[flow](T, Key, L).
 
 -- what TypeScript infers from declarations alone: `new C()` is a C, a call is what its
@@ -972,7 +972,7 @@ declared_lib[flow](E, P) :- inferred_init[code](D, X), declared_lib[flow](X, P),
 -- a browser global by the interface it is declared as (`document: Document`), and a
 -- member of a browser type by the interface the member is declared as
 declared_lib[flow](R, N) :- free_global[code](R, Name, _), host_global_type(_, Name, N).
-declared_lib[flow](N, M) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared_lib[flow](O, P),
+declared_lib[flow](N, M) :- member_node_v[flow](N), object_of[code](N, O), declared_lib[flow](O, P),
                             selects[flow](N, Key), host_up[flow](P, B), host_type_prop(_, B, Key, M).
 -- a browser type and what it extends, walked only from a type a program names
 host_up[flow](P, P)  :- declared_lib[flow](_, P).
@@ -1044,7 +1044,7 @@ param_tested[flow](F, Name) :- param_use[flow](F, Name, T), param_test[code](_, 
 -- the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
 sx_param_deref[surface](F, I, Name, DefFile, DefLine) :- param_of[flow](F, I, Name), not param_defaulted[code](F, I),
                                         not param_tested[flow](F, Name),
-                                        param_use[flow](F, Name, U), ast_child[code](M, object, 0, U),
+                                        param_use[flow](F, Name, U), object_of[code](M, U),
                                         ast_node[code](M, member_expression, _),
                                         at[tree](U, DefFile, _), at[tree](U, _, DefLine).
 

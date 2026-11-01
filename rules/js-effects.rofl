@@ -259,7 +259,7 @@ eff_purer_callee[flow](C, F, G) :- eff_callee_less[flow](C, F, G), not eff_calle
 -- after all. Derivable with no surface pack: the builtin prototypes; the
 -- ambient surfaces add their arms in rules/js-ambient.rofl.
 eff_surface[flow](C, P) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                           ast_child[code](N, object, 0, O),
+                           object_of[code](N, O),
                            prototype_of[flow](O, P), builtin_prototype(P).
 
 eff_operation[flow](C, Key) :- eff_surface[flow](C, _), callee_of[code](C, N),

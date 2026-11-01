@@ -268,7 +268,7 @@ well_known_symbol("split", symbol_split).
 well_known_symbol("toPrimitive", symbol_to_primitive).
 well_known_symbol("toStringTag", symbol_to_string_tag).
 well_known_symbol("unscopables", symbol_unscopables).
-symbol_ref[code](E, Key) :- ast_child[code](E, object, 0, O), free_global[code](O, "Symbol", _),
+symbol_ref[code](E, Key) :- object_of[code](E, O), free_global[code](O, "Symbol", _),
                             ast_attr[code](E, computed, false), ast_child[code](E, property, 0, P),
                             ast_name[code](P, N), well_known_symbol(N, Key).
 key_name[code](K, Key)   :- ast_child[code](_, key, 0, K), symbol_ref[code](K, Key).
@@ -404,9 +404,9 @@ edb(lib_member).
 prototype_of[flow](C, promise) :- resolves[code](C, F), async_body[code](F).
 prototype_of[flow](X, promise) :- ast_node[code](X, new_expression, _), callee[value](X, G),
                                   free_global[code](G, "Promise", _).
-prototype_of[flow](C, promise) :- callee[value](C, N), ast_child[code](N, object, 0, G),
+prototype_of[flow](C, promise) :- callee[value](C, N), object_of[code](N, G),
                                   free_global[code](G, "Promise", _).
-prototype_of[flow](C, promise) :- callee[value](C, N), ast_child[code](N, object, 0, O),
+prototype_of[flow](C, promise) :- callee[value](C, N), object_of[code](N, O),
                                   prototype_of[flow](O, promise), selects[flow](N, Key),
                                   lib_member(promise, Key, _).
 prototype_of[flow](E, promise) :- binder[code](D, _, Init, _), prototype_of[flow](Init, promise),
@@ -601,7 +601,7 @@ imported_test[code](T) :- main_is_module[code](T, "!=").
 
 module_member[code](M, Key) :- ast_node[code](M, member_expression, File), ast_attr[code](M, computed, false),
                                ast_child[code](M, property, 0, P), ast_name[code](P, Key),
-                               ast_child[code](M, object, 0, O), free_global[code](O, "module", File).
+                               object_of[code](M, O), free_global[code](O, "module", File).
 main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), ast_attr[code](T, operator, Op),
                                ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
                                require_main[code](L), free_global[code](R, "module", File).
@@ -610,7 +610,7 @@ main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), ast_a
                                require_main[code](R), free_global[code](L, "module", File).
 require_main[code](M) :- ast_node[code](M, member_expression, File), ast_attr[code](M, computed, false),
                          ast_child[code](M, property, 0, P), ast_name[code](P, "main"),
-                         ast_child[code](M, object, 0, O), free_global[code](O, "require", File).
+                         object_of[code](M, O), free_global[code](O, "require", File).
 
 dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
@@ -756,7 +756,7 @@ keyed_store(weakmap, "set", "get").
 
 keyed_obj[flow](X, P) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, P), keyed_store(P, _, _).
 
-keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), ast_child[code](N, object, 0, O),
+keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), object_of[code](N, O),
                                 callee[value](C, N), ast_node[code](C, call_expression, _),
                                 selects[flow](N, Key).
 sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
@@ -811,7 +811,7 @@ keyed_ref[code](O, D)     :- keyed_const[code](D, _, _, _), sees_binder[code](O,
 
 keyed_ctor[code](CB, Body) :- ast_node[code](M, class_method, _), ast_attr[code](M, kind, "constructor"),
                               ast_child[code](CB, body, _, M), ast_child[code](M, body, 0, Body).
-keyed_this_member[code](L, T, Fld) :- ast_child[code](L, object, 0, T), ast_node[code](T, this_expression, _),
+keyed_this_member[code](L, T, Fld) :- object_of[code](L, T), ast_node[code](T, this_expression, _),
                                       ast_attr[code](L, computed, false), ast_child[code](L, property, 0, Pn),
                                       ast_name[code](Pn, Fld).
 keyed_field[code](A, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](A, right, 0, X),
@@ -851,7 +851,7 @@ keyed_ref[code](L, H) :- keyed_method[code](H, M), this_host[flow](M, T), keyed_
                          keyed_field_ok[code](H, _, Fld).
 
 -- every call on a holder in a statement of an ordered list
-keyed_seen[code](C, H, Meth, S, B, F, I) :- keyed_ref[code](O, H), ast_child[code](N, object, 0, O),
+keyed_seen[code](C, H, Meth, S, B, F, I) :- keyed_ref[code](O, H), object_of[code](N, O),
                                             ast_attr[code](N, computed, false), ast_child[code](N, property, 0, Pn),
                                             ast_name[code](Pn, Meth), callee[value](C, N),
                                             ast_node[code](C, call_expression, _), inside[tree](S, C),
@@ -1022,9 +1022,9 @@ keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast
 keyed_has_name[code](G) :- keyed_named_fn[code](G, _).
 keyed_called[code](G, Q) :- keyed_named_fn[code](G, E), callee[value](Q, E), ast_node[code](Q, call_expression, _).
 keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_private_method, _),
-                            ast_child[code](E, object, 0, T), ast_node[code](T, this_expression, _).
+                            object_of[code](E, T), ast_node[code](T, this_expression, _).
 keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_method, _),
-                            ast_child[code](E, object, 0, T), ast_node[code](T, this_expression, _).
+                            object_of[code](E, T), ast_node[code](T, this_expression, _).
 keyed_by_this[code](E)   :- keyed_named_fn[code](_, E), ast_node[code](E, identifier, _).
 keyed_escapes[code](G) :- keyed_fn_need[code](G), not keyed_has_name[code](G).
 keyed_escapes[code](G) :- keyed_named_fn[code](G, E), not keyed_callee[code](E).
@@ -1104,7 +1104,7 @@ keyed_hand_need[code](I) :- keyed_once_need[code](G), class_method_of[flow](CD, 
 keyed_hand_need[code](I) :- keyed_runs_m[code](G, _), class_method_of[flow](CD, G), inst_of[flow](I, CD).
 keyed_handed[code](V) :- keyed_hand_need[code](V), sx_esc[surface](V).
 keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](A, V), arg_at[flow](Q, _, A), runs_unknown[code](Q).
-keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](O, V), ast_child[code](N, object, 0, O),
+keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](O, V), object_of[code](N, O),
                          callee_of[code](Q, N), runs_unknown[code](Q).
 keyed_open_to[code](M) :- keyed_runs_m[code](G, M), keyed_handed[code](G).
 keyed_open_to[code](M) :- keyed_runs_m[code](G, M), entry_point[code](G), not class_method_of[flow](_, G).
@@ -1222,7 +1222,7 @@ keyed_two_targets[code](Q) :- resolves[code](Q, A), resolves[code](Q, B), A != B
 -- a call of a function of another file reaches the collection only where it left
 -- its file, and there `keyed_lost` holds whatever the call does
 keyed_local_call[code](Q, G) :- resolves[code](Q, G), not keyed_two_targets[code](Q), at[tree](Q, F, _), at[tree](G, F, _).
-keyed_this_call[code](Q) :- callee_of[code](Q, N), ast_child[code](N, object, 0, T), ast_node[code](T, this_expression, _).
+keyed_this_call[code](Q) :- callee_of[code](Q, N), object_of[code](N, T), ast_node[code](T, this_expression, _).
 keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), not class_method_of[flow](_, G),
                                 not ast_attr[code](G, async, true), not ast_attr[code](G, generator, true).
 keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), class_method_of[flow](_, G),
@@ -1433,7 +1433,7 @@ member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 
 -- A member written is a member read, flow-insensitively — `assigns` one step
 -- over. `plain_assign` is load-bearing: `+=` evaluates to a sum. The object may be
 -- another file's: the write is published for it (rules/js-surface.rofl) and read back.
-sx_mwrite[surface](O, Key, V) :- may_be_node[flow](Obj, O), ast_child[code](L, object, 0, Obj),
+sx_mwrite[surface](O, Key, V) :- may_be_node[flow](Obj, O), object_of[code](L, Obj),
                                  selects[flow](L, Key),
                                  ast_child[code](A, left, 0, L), plain_assign[flow](A), not store_sym[flow](A),
                                  ast_child[code](A, right, 0, V).
@@ -1510,7 +1510,7 @@ member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flo
 member_assign[code](S, T, Key, A) :- ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, A),
                                     ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "="),
                                     ast_child[code](A, left, 0, L), ast_attr[code](L, computed, false),
-                                    ast_child[code](L, object, 0, T), ast_child[code](L, property, 0, P), ast_name[code](P, Key).
+                                    object_of[code](L, T), ast_child[code](L, property, 0, P), ast_name[code](P, Key).
 member_dropped[flow](O, Key) :- ast_node[code](U, unary_expression, _), ast_attr[code](U, operator, "delete"),
                                 ast_child[code](U, argument, 0, N), member_at[flow](N, _, O, Key).
 member_ctor_set[code](Body, Key, J) :- field_unset_decl[code](CB, Key), keyed_ctor[code](CB, Body), ast_child[code](Body, body, J, S),
@@ -1520,7 +1520,7 @@ member_ctor_early[code](Body, J) :- member_ctor_set[code](Body, _, J), ast_child
 member_ctor_before[code](Body, J, X) :- member_ctor_set[code](Body, _, J), ast_child[code](Body, body, L, S), L <= J,
                                         inside[tree](S, X).
 member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_node[code](T, this_expression, _),
-                                   not ast_child[code](_, object, 0, T).
+                                   not object_of[code](_, T).
 member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, T), ast_node[code](T, this_expression, _),
                                    nearest_v[flow](G, T), not ast_child[code](G, body, 0, Body).
 member_ctor_this[code](Body, J) :- member_ctor_before[code](Body, J, S), ast_node[code](S, super, _).
@@ -1572,7 +1572,7 @@ member_plain[flow](P, Key, V) :- module_object[flow](P, _),
                                  member_value[flow](P, Key, V).
 class_member_static[flow](CD, Key, V) :- class_like[flow](CD), sx_mwrite[surface](CD, Key, V).
 
-member_obj[flow](N, O, Obj)      :- may_be_node[flow](O, Obj), ast_child[code](N, object, 0, O), member_node_v[flow](N).
+member_obj[flow](N, O, Obj)      :- may_be_node[flow](O, Obj), object_of[code](N, O), member_node_v[flow](N).
 member_at[flow](N, O, Obj, Key)  :- member_obj[flow](N, O, Obj), selects[flow](N, Key).
 may_be_node[flow](N, V2) :- member_at[flow](N, _, Obj, Key), class_member_static[flow](Obj, Key, V), may_be_node[flow](V, V2).
 may_be_node[flow](N, V2) :- member_at[flow](N, _, Obj, Key), member_plain[flow](Obj, Key, V), may_be_node[flow](V, V2).
@@ -1857,7 +1857,7 @@ may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
 -- whatever `module.exports = X` puts there. Both stay in the may-set, so
 -- `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
 -- is an ordinary member write (section 8) on the first.
-cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), ast_child[code](M, object, 0, O),
+cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), object_of[code](M, O),
                                      ast_node[code](M, member_expression, _), ast_attr[code](M, computed, false),
                                      ast_child[code](M, property, 0, P), ast_name[code](P, "exports").
 
@@ -1965,7 +1965,7 @@ ext_call[flow](C, Spec)       :- external_value[flow](X, Spec), may_be_node[flow
 external_value[flow](C, Spec) :- ext_call[flow](C, Spec).
 may_be_node[flow](C, C)       :- ext_call[flow](C, _).
 ext_member[flow](M, Spec)     :- external_value[flow](X, Spec), may_be_node[flow](O, X),
-                                 ast_child[code](M, object, 0, O), member_node_v[flow](M).
+                                 object_of[code](M, O), member_node_v[flow](M).
 external_value[flow](M, Spec) :- ext_member[flow](M, Spec).
 may_be_node[flow](M, M)       :- ext_member[flow](M, _).
 
@@ -2022,7 +2022,7 @@ sx_contract_pkg[surface](Spec, Pkg) :- external_package[code](Spec, Pkg, _), con
 contract_fn[flow](Spec, Pkg, call) :- sx_contract_pkg[surface](Spec, Pkg), contract_key(Pkg, call),
                                       external_value[flow](Spec, Spec).
 contract_fn[flow](M, Pkg, Key)     :- sx_contract_pkg[surface](Spec, Pkg), external_value[flow](Spec, Spec),
-                                      may_be_node[flow](O, Spec), ast_child[code](M, object, 0, O),
+                                      may_be_node[flow](O, Spec), object_of[code](M, O),
                                       member_node_v[flow](M), selects[flow](M, Key), contract_key(Pkg, Key).
 contract_fn[flow](Sp, Pkg, Key)    :- external_import[code](Sp, _, Spec, _), sx_contract_pkg[surface](Spec, Pkg),
                                       ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key),
@@ -2136,7 +2136,7 @@ gen_of[flow](C, F)       :- resolves[code](C, F), gen_fn[flow](F).
 may_be_node[flow](C, C)  :- gen_of[flow](C, _).
 
 next_send[flow](G, V) :- selects[flow](N, "next"), callee_of[code](C, N),
-                         ast_child[code](N, object, 0, O), may_be_node[flow](O, GC), gen_of[flow](GC, G),
+                         object_of[code](N, O), may_be_node[flow](O, GC), gen_of[flow](GC, G),
                          ast_child[code](C, arguments, 0, V).
 
 delegates[flow](Outer, Inner) :- ast_node[code](Y, yield_expression, _),

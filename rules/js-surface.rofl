@@ -212,7 +212,7 @@ store_pkey[flow](F, J, I, A) :- plain_assign[flow](A), ast_child[code](A, left, 
                                 param_read[flow](F, J, Q), ast_child[code](A, right, 0, V), param_read[flow](F, I, V).
 store_sym[flow](A) :- store_pkey[flow](_, _, _, A).
 sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), ast_child[code](A, left, 0, L),
-                                      ast_child[code](L, object, 0, Obj), may_be_node[flow](Obj, O).
+                                      object_of[code](L, Obj), may_be_node[flow](Obj, O).
 sx_mwrite[surface](O, K, A) :- sx_store_pkey[surface](F, J, I, O), resolves[code](C, F),
                                arg_at[flow](C, J, B), may_be_lit[flow](B, K), arg_at[flow](C, I, A).
 

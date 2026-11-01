@@ -222,7 +222,7 @@ accessor_as[flow](Obj, Key, M, K) :- member_value[flow](Obj, Key, M),
 accessor_of[flow](Obj, Key, M) :- accessor_as[flow](Obj, Key, M, _).
 accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
 accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
-                               ast_child[code](N, object, 0, O), member_node_v[flow](N).
+                               object_of[code](N, O), member_node_v[flow](N).
 -- A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
 accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj, Key, M, "get"),
                              selects[flow](N, Key), not only_written[code](N).

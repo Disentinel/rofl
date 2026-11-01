@@ -45,7 +45,7 @@ cl_api[flow](G, S, K, root) :- cl_member[flow](G, S, K), cl_rooted[flow](G).
 cl_api[flow](G, S, K, inst) :- cl_member[flow](G, S, K), not cl_rooted[flow](G).
 cl_api[flow](G, S, K, root) :- may_be_node[flow](G, Sp), cl_import[flow](Sp, S, K).
 cl_member[flow](G, S, K) :- member_node_v[flow](G), selects[flow](G, K), external_value[flow](G, S), http_client(S, K, _).
-cl_rooted[flow](G) :- cl_member[flow](G, _, _), ast_child[code](G, object, 0, O), may_be_node[flow](O, S),
+cl_rooted[flow](G) :- cl_member[flow](G, _, _), object_of[code](G, O), may_be_node[flow](O, S),
                        external_value[flow](S, S).
 cl_import[flow](Sp, S, K) :- external_import[code](Sp, _, S, _), ast_child[code](Sp, imported, 0, I), ast_name[code](I, K),
                              http_client(S, K, _).
