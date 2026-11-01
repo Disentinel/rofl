@@ -37,7 +37,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
-- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
@@ -71,6 +71,7 @@ Reads:
   - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
+  - <a id="logical"></a>`logical`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="namespace"></a>`namespace`
@@ -79,6 +80,7 @@ Reads:
   - <a id="spread_props"></a>`spread_props`
   - <a id="static"></a>`static`
   - <a id="super"></a>`super`
+  - <a id="tagged"></a>`tagged`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="unary"></a>`unary`
@@ -103,16 +105,13 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
-| <a id="noun-decorator"></a>a decorator | a node of kind `decorator` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
-| <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-non-null_expression"></a>a non-null expression | a node of kind `tsnon_null_expression` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
 | <a id="noun-parenthesized_expression"></a>a parenthesized expression | a node of kind `parenthesized_expression` |
-| <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
 | <a id="noun-wrapper"></a>a wrapper | a node of a kind in [`value_transparent`](js-dataflow.rofl.md#value_transparent) |
 | a function | a node [`fn_node`](#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -128,7 +127,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="fn_node"></a>A node is a function if [`body`](#body)(it, something).
 - <a id="fn_file"></a>A [function](#fn_node) is defined in File if [`at`](#at)(it, File, something).
 - <a id="ctor_method"></a>A [function](#fn_node) is a constructor if [`constructs`](#constructs)(something, it).
-- <a id="decorates"></a>A node is decorated by a [decorator](#noun-decorator) D if D [is among the](#ast_child) `decorators` of it.
 - <a id="enclosed"></a>A node is enclosed if some function [is the nearest function of](#nearest_fn) it.
 - <a id="resolved_site"></a>A node is resolved if it [resolves to](#resolves) some function.
 - <a id="unresolved_shape"></a>A shape has residue if some call [is unresolved](#unresolved_call) with it.
@@ -156,18 +154,17 @@ Declared as facts:
 > iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
 > does not resolve them; it makes a miss attributable instead of silent.
 
-`transfer_kind` includes `new_expression`, `tagged_template_expression`, `for_of_statement`, `decorator`.
+<a id="transfer_site"></a>A node X is a transfer site of a kind N either:
 
-<a id="transfer_site"></a>A node is a transfer site of a kind K if [`transfer_kind`](#transfer_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
+1. if [`construct`](#construct)(X) and N is `new_expression`;
+2. if [`tagged`](#tagged)(X, something, something) and N is `tagged_template_expression`;
+3. if [`iterates`](#iterates)(X, something, something) and N is `for_of_statement`;
+4. if [`decorated`](#decorated)(something, E), [`parent`](#parent)(X, E), and N is `decorator`.
 
 <a id="site"></a>A node X is a site either:
 
 1. if X [is a call site](#call_site) in some file;
 2. if X [is a transfer site](#transfer_site) of some kind.
-
-Declared as facts:
-
-- <a id="transfer_kind"></a>`transfer_kind` — rows in this file
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
@@ -428,6 +425,8 @@ A [function](#fn_node) answers to a name N if all of:
 > for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 > repair made them one rule and 2026-09-11 made them one name.)
 
+<a id="decorates"></a>A node is decorated by a node D if [`decorated`](#decorated)(it, E) and [`parent`](#parent)(D, E).
+
 <a id="in_own_decorator"></a>A node F has its decorator at a node C either:
 
 1. if F [is decorated by](#decorates) a node D and [`inside`](#inside)(D, C);
@@ -511,8 +510,9 @@ A node X resolves to a node F either:
    - the `tag` of X [points to](js-concat.rofl.md#may_be_node) F;
    - [`fn_value`](js-surface.rofl.md#fn_value)(F);
 2. if all of:
-   - X [is a transfer site](#transfer_site) of `decorator`;
-   - the `expression` of X [points to](js-concat.rofl.md#may_be_node) F;
+   - [`decorated`](#decorated)(something, E);
+   - [`parent`](#parent)(X, E);
+   - a node E [points to](js-concat.rofl.md#may_be_node) F;
    - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
 > `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
@@ -2042,8 +2042,18 @@ In the code:
 1. if [`binary`](#binary)(something, "instanceof", O, something);
 2. if [`binary`](#binary)(something, "in", something, O);
 3. if the `test` of a node P is a node G and O [is among the](#ast_child) `arguments` of G;
-4. if the `argument` of an [unary expression](#noun-unary_expression) P is a node G and O [is among the](#ast_child) `arguments` of G;
-5. if the `left` or `right` of a [logical](#noun-logical) P is a node G and O [is among the](#ast_child) `arguments` of G.
+4. if all of:
+   - [`unary`](#unary)(P, something, G);
+   - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
+   - unless [`assign`](#assign)(P, something, something);
+5. if all of:
+   - [`logical`](#logical)(P, something, G, something);
+   - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
+   - unless [`assign`](#assign)(P, something, something);
+6. if all of:
+   - [`logical`](#logical)(P, something, something, G);
+   - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
+   - unless [`assign`](#assign)(P, something, something).
 
 <a id="narrowed_name"></a>`narrowed_name`(File, Name) if all of:
   - [`narrows_at`](#narrows_at)(an [identifier](#noun-identifier) O);

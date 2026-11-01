@@ -127,6 +127,7 @@ unit_concludes("rules/js-structure.rofl", imports).
 unit_concludes("rules/js-structure.rofl", object_of).
 unit_concludes("rules/js-structure.rofl", prop_name).
 unit_concludes("rules/js-structure.rofl", argument_at).
+unit_concludes("rules/js-structure.rofl", arg_node).
 unit_concludes("rules/js-structure.rofl", ast_in).
 unit_concludes("rules/js-structure.rofl", ast_name).
 unit_concludes("rules/js-structure.rofl", key_name).
@@ -592,7 +593,6 @@ unit_concludes("rules/js-callgraph.rofl", callee_of).
 unit_concludes("rules/js-callgraph.rofl", call_site_kind).
 unit_concludes("rules/js-callgraph.rofl", call_line).
 unit_concludes("rules/js-callgraph.rofl", callee_kind).
-unit_concludes("rules/js-callgraph.rofl", transfer_kind).
 unit_concludes("rules/js-callgraph.rofl", transfer_site).
 unit_concludes("rules/js-callgraph.rofl", site).
 unit_concludes("rules/js-callgraph.rofl", call_arg).
@@ -828,7 +828,6 @@ unit_concludes("rules/js-controlflow.rofl", resolves).
 unit_concludes("rules/js-controlflow.rofl", site).
 unit_concludes("rules/js-controlflow.rofl", pattern_source).
 unit_concludes("rules/js-controlflow.rofl", pattern_accessor).
-unit_concludes("rules/js-controlflow.rofl", spread_iterable_field).
 unit_concludes("rules/js-controlflow.rofl", spread_iterated).
 unit_concludes("rules/js-controlflow.rofl", pattern_iterates).
 unit_concludes("rules/js-controlflow.rofl", calls).
@@ -847,7 +846,6 @@ unit_concludes("rules/js-controlflow.rofl", hidden_call_accounted).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_unaccounted).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_off_table).
 unit_concludes("rules/js-controlflow.rofl", in_try_block).
-unit_concludes("rules/js-controlflow.rofl", catches_via).
 unit_concludes("rules/js-controlflow.rofl", try_catches).
 unit_concludes("rules/js-controlflow.rofl", try_walk).
 unit_concludes("rules/js-controlflow.rofl", caught_here).
@@ -995,7 +993,6 @@ unit_concludes("rules/js-effects.rofl", eff_mod_join_short).
 unit_concludes("rules/js-effects.rofl", eff_hidden_call).
 unit_concludes("rules/js-effects.rofl", eff_edge_closed).
 unit_concludes("rules/js-effects.rofl", eff_edge_unclosed).
-unit_concludes("rules/js-effects.rofl", eff_class_form).
 unit_concludes("rules/js-effects.rofl", eff_class_body).
 unit_concludes("rules/js-effects.rofl", eff_field_value).
 unit_concludes("rules/js-effects.rofl", eff_field_moment).

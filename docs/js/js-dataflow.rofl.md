@@ -36,7 +36,7 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -77,6 +77,7 @@ Reads:
   - <a id="param"></a>`param`
   - <a id="private"></a>`private`
   - <a id="rest_params"></a>`rest_params`
+  - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
   - <a id="spread_elems"></a>`spread_elems`
   - <a id="spread_props"></a>`spread_props`
@@ -123,7 +124,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
-| <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
 | <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
@@ -968,12 +968,18 @@ In the code:
 <a id="pattern_takes"></a>An [object pattern](#noun-object_pattern) takes the key Key if a node Prop [is among the](#ast_child) `properties` of it and Prop [spells](js-structure.rofl.md#key_name) Key.
 
 <a id="rest_in_pattern"></a>D holds a rest R in File if all of:
-  - [`declarator_id`](#declarator_id)(D, an [object pattern](#noun-object_pattern) P);
+  - [`declarator_id`](#declarator_id)(D, P);
   - [`at`](#at)(D, File, something);
-  - R [is among the](#ast_child) `properties` of P;
-  - R is a [rest](#noun-rest).
+  - [`rest_props`](#rest_props)(P, T);
+  - [`parent`](#parent)(R, T);
+  - [`parent`](#parent)(P, R).
 
-<a id="rest_binds"></a>D binds Local through the rest R in File if D [holds a rest](#rest_in_pattern) R in File and the `argument` of R [is named](js-structure.rofl.md#ast_name) Local.
+<a id="rest_binds"></a>D binds Local through the rest R in File if all of:
+  - D [holds a rest](#rest_in_pattern) R in File;
+  - [`declarator_id`](#declarator_id)(D, P);
+  - [`rest_props`](#rest_props)(P, L);
+  - [`parent`](#parent)(R, L);
+  - [`binds`](#binds)(L, Local).
 
 D is scoped in File if D [binds](#rest_binds) some name through the rest some node in File.
 
@@ -1615,8 +1621,8 @@ In the code:
 
 <a id="keyed_key_arg"></a>`keyed_key_arg`(C, X) either:
 
-1. if [`keyed_seen`](#keyed_seen)(C, something, something, something, something, something, something) and the `arguments` of a node C is a node X;
-2. if [`keyed_drop`](#keyed_drop)(C, something) and the `arguments` of a node C is a node X.
+1. if [`keyed_seen`](#keyed_seen)(C, something, something, something, something, something, something) and [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, X);
+2. if [`keyed_drop`](#keyed_drop)(C, something) and [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, X).
 
 <a id="keyed_want"></a>`keyed_want`(X) either:
 
@@ -1748,9 +1754,9 @@ In the code:
 
 `keyed_src`(C, X) if all of:
   - [`keyed_want`](#keyed_want)(C);
-  - a node C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - [`sx_ret_param`](js-surface.rofl.md#sx_ret_param)(F, I);
-  - a node X is the I-th of the `arguments` of C.
+  - [`arg_node`](js-structure.rofl.md#arg_node)(C, I, X).
 
 <a id="keyed_fn_need"></a>`keyed_fn_need`(G) if [`keyed_param`](#keyed_param)(something, G, something).
 
@@ -1773,7 +1779,8 @@ In the code:
    - [`keyed_want`](#keyed_want)(E);
    - a node E [sees](#sees_binder) D;
    - a node L [sees](#sees_binder) D;
-   - the `argument` of an [update expression](#noun-update_expression) U is L;
+   - [`unary`](#unary)(U, something, L);
+   - [`assign`](#assign)(U, L, U);
 6. if all of:
    - [`keyed_want`](#keyed_want)(E);
    - a node E [sees](#sees_binder) D;
@@ -1806,9 +1813,8 @@ In the code:
 
 <a id="keyed_const_name"></a>`keyed_const_name`(C, Dk) if all of:
   - [`keyed_key_arg`](#keyed_key_arg)(C, an [identifier](#noun-identifier) X);
-  - X [sees](#sees_binder) a node Dk;
-  - Dk [is among the](#ast_child) `declarations` of a node V;
-  - [the attribute](#ast_attr) `kind` of V is "const".
+  - X [sees](#sees_binder) Dk;
+  - [`decl`](#decl)(Dk, `const`).
 
 <a id="keyed_param_name"></a>`keyed_param_name`(C, G, Name) if all of:
   - [`keyed_key_arg`](#keyed_key_arg)(C, an [identifier](#noun-identifier) X);
@@ -1857,7 +1863,7 @@ In the code:
   - [`keyed_seen`](#keyed_seen)(C, H, Put, something, something, something, something);
   - [`keyed_holder`](#keyed_holder)(H, P);
   - [`keyed_store`](#keyed_store)(P, Put, something);
-  - a node V is the 1-th of the `arguments` of a node C.
+  - [`arg_node`](js-structure.rofl.md#arg_node)(C, 1, V).
 
 <a id="keyed_put_site"></a>`keyed_put_site`(C, H, V, B, F, J) if [`keyed_call`](#keyed_call)(C, H, something, B, F, J) and [`keyed_put_of`](#keyed_put_of)(C, H, V).
 
@@ -1892,12 +1898,12 @@ In the code:
    - G [is nearest to](#nearest_v) a node X;
    - [`keyed_method`](#keyed_method)(H, M);
    - [`inside`](#inside)(M, G);
-   - unless [the attribute](#ast_attr) `kind` of a node M is "constructor";
+   - unless M [is a constructor](js-callgraph.rofl.md#ctor_method);
 4. if all of:
    - [`keyed_hop`](#keyed_hop)(X, H);
    - G [is nearest to](#nearest_v) a node X;
    - [`keyed_method`](#keyed_method)(H, G);
-   - unless [the attribute](#ast_attr) `kind` of G is "constructor".
+   - unless G [is a constructor](js-callgraph.rofl.md#ctor_method).
 
 `keyed_fn_need`(G) if [`keyed_hop_fn`](#keyed_hop_fn)(G, something).
 
@@ -2907,7 +2913,8 @@ A node
 
 <a id="keyed_walk"></a>`keyed_walk`(S, D, X) if all of:
   - [`iterates`](#iterates)(S, H, R);
-  - the `declarations` of a node H is a node D;
+  - [`parent`](#parent)(H, D);
+  - [`decl`](#decl)(D, something);
   - a node R [points to](js-concat.rofl.md#may_be_node) a node X;
   - [`keyed_obj`](#keyed_obj)(X, something).
 
@@ -4221,11 +4228,11 @@ A node points to it if it [makes a generator of](#gen_of) some function.
 
 <a id="next_send"></a>G is sent a node V if all of:
   - a node N [selects](#selects) "next";
-  - [the callee](js-callgraph.rofl.md#callee_of) of a node C is N;
+  - [the callee](js-callgraph.rofl.md#callee_of) of C is N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
   - a node O [points to](js-concat.rofl.md#may_be_node) a node GC;
   - GC [makes a generator of](#gen_of) G;
-  - the `arguments` of C is V.
+  - [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, V).
 
 <a id="delegates"></a>Outer delegates to Inner if all of:
   - [`delegates`](#delegates)(Y, X) in the value;

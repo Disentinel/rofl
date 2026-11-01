@@ -198,10 +198,9 @@ sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 -- a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
 -- cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
-falls_off[code](F) :- fn_node[code](F), body[value](F, B), ast_node[code](B, block_statement, _),
-                      not completes_abruptly[code](B).
+falls_off[code](F) :- body[value](F, B), not returns[value](F, B), not completes_abruptly[code](B).
 falls_off[code](F) :- exits[value](R, return), not returns[value](R, _), nearest_v[flow](F, R).
-sx_ret_undef[surface](F) :- falls_off[code](F), not generator[value](F), not ast_attr[code](F, kind, "constructor").
+sx_ret_undef[surface](F) :- falls_off[code](F), not generator[value](F), not ctor_method[code](F).
 may_be_lit[flow](C, undefined) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[surface](F).
 sx_gen_ret[surface](F, N)   :- returns[flow](F, E), generator[value](F), may_be_node[flow](E, N).
 sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), generator[value](F), may_be_lit[flow](E, V).

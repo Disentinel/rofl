@@ -68,14 +68,13 @@ eff_label_unnamed[audit](L, H) :- eff_label(L, H), not eff_row(_, L, H).
 --
 -- EXN: a `throw` its own function does not catch, the same seed `may_throw`
 -- uses, so the two can be compared row for row. `caught_here` reads
--- `catches_via` (rules/js-controlflow.rofl): a handler discharges, a finalizer
+-- `tries` (rules/js-controlflow.rofl): a handler discharges, a finalizer
 -- alone does not.
 eff_catch_here[code](N) :- caught_here[code](N).
 
 -- Two arms of ONE relation, so "how many try statements lack a handler" is a
 -- query whose control is the same literal with one constant swapped.
-eff_try_arm[flow](T, handled)   :- ast_node[code](T, try_statement, _),
-                                   ast_child[code](T, handler, 0, _).
+eff_try_arm[flow](T, handled)   :- tries[value](T, _).
 eff_try_arm[flow](T, unhandled) :- ast_node[code](T, try_statement, _),
                                    not ast_child[code](T, handler, 0, _).
 
@@ -438,10 +437,6 @@ eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
 -- `B => class extends B { static { init() } }` at each call). Methods are not
 -- field kinds: they are latent.
 -- `class_accessor_property` adds no label beyond a plain field.
-edb(eff_class_form).
-eff_class_form(class_declaration).
-eff_class_form(class_expression).
-
 eff_class_body[code](CD, P) :- class_slot[code](CD, P).
 eff_class_body[code](CD, P) :- static_block[value](CD, P).
 eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), value[value](P, V).
@@ -473,10 +468,8 @@ eff_plain_key[code](P)        :- eff_class_body[code](_, P),
                                  not ast_attr[code](P, computed, true).
 eff_define_part[flow](CD, KN) :- eff_class_body[code](CD, P), not eff_plain_key[code](P),
                                  ast_child[code](P, key, 0, KN).
-eff_define_part[flow](CD, D)  :- eff_class_form(K), ast_node[code](CD, K, _),
-                                 ast_child[code](CD, decorators, _, D).
-eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P),
-                                 ast_child[code](P, decorators, _, D).
+eff_define_part[flow](CD, D)  :- class[value](CD), decorates[code](CD, D).
+eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P), decorates[code](P, D).
 
 -- What runs when a part is reached, stopping at a function: `static forge =
 -- (n) => hammered(n)` contributes `alloc`, not what `hammered` does. A try

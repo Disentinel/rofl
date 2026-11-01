@@ -18,6 +18,9 @@ object_of[code](M, O) :- member_expr[value](M, O, _).
 prop_name[code](M, O, K) :- member[value](M, O, K), not private[value](M).
 -- the I-th argument of a call, or what it spreads
 argument_at[code](C, I, A) :- callee[value](C, _), nth[tree](C, I, A).
+-- the I-th argument as the tree has it: a spread is its own node, not what it spreads
+arg_node[code](C, I, A) :- argument_at[code](C, I, A), not spread_args[value](C, I, _).
+arg_node[code](C, I, S) :- spread_args[value](C, I, A), parent[tree](S, A).
 
 
 

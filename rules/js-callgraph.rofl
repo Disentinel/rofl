@@ -28,12 +28,10 @@ callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _).
 -- Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 -- iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
 -- does not resolve them; it makes a miss attributable instead of silent.
-edb(transfer_kind).
-transfer_kind(new_expression).
-transfer_kind(tagged_template_expression).
-transfer_kind(for_of_statement).
-transfer_kind(decorator).
-transfer_site[code](X, K) :- transfer_kind(K), ast_node[code](X, K, _).
+transfer_site[code](X, new_expression)               :- construct[value](X).
+transfer_site[code](X, tagged_template_expression)   :- tagged[value](X, _, _).
+transfer_site[code](X, for_of_statement)             :- iterates[value](X, _, _).
+transfer_site[code](X, decorator)                    :- decorated[value](_, E), parent[tree](X, E).
 
 site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
@@ -219,8 +217,7 @@ fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), anon_class[co
 -- level reaches `calls` only through here. (`top_site` was its twin, written
 -- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 -- repair made them one rule and 2026-09-11 made them one name.)
-decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
-                                 ast_node[code](D, decorator, _).
+decorates[code](Owner, D)     :- decorated[value](Owner, E), parent[tree](D, E).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), inside[tree](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
 dec_up[code](C, G)     :- in_own_decorator[code](G, C), site[code](C), nearest_v[flow](G, C).
@@ -265,8 +262,7 @@ resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
                         ast_child[code](X, tag, 0, T),
                         may_be_node[flow](T, F), fn_value[flow](F).
 
-resolves[code](X, F) :- transfer_site[code](X, decorator),
-                        ast_child[code](X, expression, 0, E),
+resolves[code](X, F) :- decorated[value](_, E), parent[tree](X, E),
                         may_be_node[flow](E, F), fn_value[flow](F).
 
 -- `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
@@ -945,12 +941,9 @@ declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](
 narrows_at[code](O) :- binary[value](_, "instanceof", O, _).
 narrows_at[code](O) :- binary[value](_, "in", _, O).
 narrows_at[code](O) :- ast_child[code](P, test, 0, G), ast_child[code](G, arguments, _, O).
-narrows_at[code](O) :- ast_node[code](P, unary_expression, _), ast_child[code](P, argument, 0, G),
-                       ast_child[code](G, arguments, _, O).
-narrows_at[code](O) :- ast_node[code](P, logical_expression, _), ast_child[code](P, left, 0, G),
-                       ast_child[code](G, arguments, _, O).
-narrows_at[code](O) :- ast_node[code](P, logical_expression, _), ast_child[code](P, right, 0, G),
-                       ast_child[code](G, arguments, _, O).
+narrows_at[code](O) :- unary[value](P, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
+narrows_at[code](O) :- logical[value](P, _, G, _), not assign[value](P, _, _), arg_node[code](G, _, O).
+narrows_at[code](O) :- logical[value](P, _, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
 narrowed_name[code](File, Name) :- narrows_at[code](O), ast_node[code](O, identifier, File), ast_name[code](O, Name).
 narrowed_key[flow](File, Key)   :- narrows_at[code](O), member_node_v[flow](O), at[tree](O, File, _),
                                    selects[flow](O, Key).

@@ -23,6 +23,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
+  - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="callee"></a>`callee`
   - <a id="import_meta"></a>`import_meta`
@@ -32,6 +33,7 @@ Reads:
   - <a id="member_expr"></a>`member_expr`
   - <a id="new_target"></a>`new_target`
   - <a id="private"></a>`private`
+  - <a id="spread_args"></a>`spread_args`
 
 ## Words
 
@@ -68,6 +70,12 @@ What this file calls a node, and what each word stands for:
 > the I-th argument of a call, or what it spreads
 
 <a id="argument_at"></a>`argument_at`(C, I, X) if [`callee`](#callee)(C, something) and [`nth`](#nth)(C, I, X).
+
+> the I-th argument as the tree has it: a spread is its own node, not what it spreads
+
+<a id="arg_node"></a>`arg_node`(C, I, X) if [`argument_at`](#argument_at)(C, I, X), unless [`spread_args`](#spread_args)(C, I, something).
+
+`arg_node`(C, I, S) if [`spread_args`](#spread_args)(C, I, X) and [`parent`](#parent)(S, X).
 
 <a id="ast_in"></a>`ast_in` of P and C is another name for `ast_child` of P, _, _ and C.
 

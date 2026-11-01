@@ -28,7 +28,7 @@ Reads:
   - <a id="eff_origin"></a>An origin O is an origin (`eff_origin`)
 - from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
 - from js-ambient, in the main: [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
 - from js-dataflow, in the code: [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read)
@@ -45,6 +45,7 @@ Reads:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="binary"></a>`binary`
+  - <a id="class"></a>`class`
   - <a id="construct"></a>`construct`
   - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
@@ -52,6 +53,7 @@ Reads:
   - <a id="repeats"></a>`repeats`
   - <a id="static_block"></a>`static_block`
   - <a id="template"></a>`template`
+  - <a id="tries"></a>`tries`
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
 - from the scanner, in the code:
@@ -194,7 +196,7 @@ An effect
 > 
 > EXN: a `throw` its own function does not catch, the same seed `may_throw`
 > uses, so the two can be compared row for row. `caught_here` reads
-> `catches_via` (rules/js-controlflow.rofl): a handler discharges, a finalizer
+> `tries` (rules/js-controlflow.rofl): a handler discharges, a finalizer
 > alone does not.
 
 In the code:
@@ -208,7 +210,7 @@ In the flow:
 
 <a id="eff_try_arm"></a>T has the arm N either:
 
-1. if T is a [try](#noun-try), the `handler` of T is some node, and N is `handled`;
+1. if [`tries`](#tries)(T, something) and N is `handled`;
 2. if T is a [try](#noun-try) and N is `unhandled`, unless the `handler` of T is some node.
 
 A node has the effect `exn` at `none` if [`exits`](#exits)(it, `throw`), unless it [is caught in place](#eff_catch_here).
@@ -803,8 +805,6 @@ In the flow:
 > field kinds: they are latent.
 > `class_accessor_property` adds no label beyond a plain field.
 
-`eff_class_form` includes `class_declaration`, `class_expression`.
-
 In the code:
 
 <a id="eff_class_body"></a>A node CD has the body member P either:
@@ -813,10 +813,6 @@ In the code:
 2. if [`static_block`](#static_block)(CD, P).
 
 <a id="eff_field_value"></a>A class initialises the field at a node P with a node V if it [has the body member](#eff_class_body) P and [`value`](#value)(P, V).
-
-Declared as facts:
-
-- <a id="eff_class_form"></a>A kind K is a class form — rows in this file
 
 > Two POSITIVE arms, not `not static`: a default would silently file every
 > field the scanner stops flagging under construction time, and
@@ -862,11 +858,8 @@ A class CD defines by running a node KN either:
    - CD [has the body member](#eff_class_body) P;
    - the `key` of P is KN;
    - unless P [has a plain key](#eff_plain_key);
-2. if all of:
-   - a kind K [is a class form](#eff_class_form);
-   - CD [is of kind](js-model.rofl.md#ast_node) K;
-   - KN [is among the](#ast_child) `decorators` of CD;
-3. if CD [has the body member](#eff_class_body) P and KN [is among the](#ast_child) `decorators` of P.
+2. if [`class`](#class)(CD) and CD [is decorated by](js-callgraph.rofl.md#decorates) KN;
+3. if CD [has the body member](#eff_class_body) P and P [is decorated by](js-callgraph.rofl.md#decorates) KN.
 
 > What runs when a part is reached, stopping at a function: `static forge =
 > (n) => hammered(n)` contributes `alloc`, not what `hammered` does. A try
