@@ -19,7 +19,8 @@ import { spawnSync } from 'node:child_process';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 const PACKS = ['models/engine/profile.rofl', 'models/engine/plan.rofl'].map((p) => path.join(ROOT, p));
-const METER = `refine_width(R, T) :- fires[profile](R, _), concludes(R, _), T is sum(V ; K : width[profile](R, K, V)).
+// a plan is given per news position At, so it is judged by the firings solved from that position alone
+const METER = `refine_width(R, At, T) :- width_at[profile](R, At, _, _), concludes(R, _), T is sum(V ; K : width_at[profile](R, At, K, V)).
 refine_order(R, At, O, W) :- order[profile](R, At, O, W), concludes(R, _).
 `;
 
@@ -47,9 +48,9 @@ export type Report = { head: string; rule: string; at: string; before: number; f
 export function refine(files: string[]): { facts: string; report: Report[] } {
   const meter = tmp('meter.rofl', METER);
   const measure = (extra: string[]) => {
-    const [widths, orders, heads] = ask([...files, meter, ...extra], ['refine_width(R, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)']);
+    const [widths, orders, heads] = ask([...files, meter, ...extra], ['refine_width(R, At, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)']);
     return {
-      width: new Map(widths.map(([r, t]) => [r, Number(t)])),
+      width: new Map(widths.map(([r, at, t]) => [`${r} ${at}`, Number(t)])),
       order: new Map(orders.map(([r, at, o, w]) => [`${r} ${at}`, { o, w }])),
       head: new Map(heads.map(([r, h]) => [r, h])),
     };
@@ -61,16 +62,16 @@ export function refine(files: string[]): { facts: string; report: Report[] } {
   const all = plans.map(fact).sort().join('\n') + (plans.length ? '\n' : '');
   const after = all ? measure([tmp('plan.rofl', all)]) : before;
   // kept: the plans the measurement confirmed (the rule's width fell); a plan that cost more is the report's, never a fact
-  const kept = plans.filter(([r]) => (after.width.get(r) ?? 0) < (before.width.get(r) ?? 0));
+  const kept = plans.filter(([r, at]) => (after.width.get(`${r} ${at}`) ?? 0) < (before.width.get(`${r} ${at}`) ?? 0));
   const facts = kept.map(fact).sort().join('\n') + (kept.length ? '\n' : '');
   const report: Report[] = plans
     .map(([r, at, l]) => ({
       head: before.head.get(r) ?? r,
       rule: r,
       at,
-      before: before.width.get(r) ?? 0,
+      before: before.width.get(`${r} ${at}`) ?? 0,
       forecast: forecast.get(`${r} ${at}`) ?? 0,
-      after: after.width.get(r) ?? 0,
+      after: after.width.get(`${r} ${at}`) ?? 0,
       order: l,
       was: before.order.get(`${r} ${at}`)?.o ?? '',
     }))

@@ -15,7 +15,7 @@ unmeasured: the forecast and the width after are in the same report, in the same
     npm run refine -- <world files> --out plan.rofl
 
 1. **ask**: the world as it is, with a meter beside it: for every rule, the order it was solved in (`order[profile]`)
-   and its width (the partial solutions its premises were solved from, summed: `width[profile]`).
+   and its width (the partial solutions its premises were solved from, summed: `width_at[profile]`, by the news position the plan is for).
 2. **reflect**: the world beside `models/engine/profile.rofl` and `models/engine/plan.rofl`, in a world of its own,
    concludes `plan[fixpointplan](R, At, Order)` and `plan_cost[fixpointplan](R, At, C)`, the width each forecasts.
 3. **refine**: the plan facts are written to `plan.rofl`. They are part of the model from now on: load the file with

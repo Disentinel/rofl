@@ -531,7 +531,7 @@ written position `At` (0 the firing over the whole store), as a `$cons` list of 
 `aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`); `lattice`
 means the rule reads or concludes a lattice relation, so a rule beside a lattice that touches none is planned as it
 would be without it. Per premise
-`K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
+`K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it, `width_at[profile](R, At, K, N)` the same by the news position `At` the firing was solved from (0 the whole evaluation; a plan is given per `At`, so the refine loop judges it by these),
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
 `widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
 and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure; a

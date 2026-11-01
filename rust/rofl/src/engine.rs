@@ -5853,7 +5853,7 @@ impl Eval {
                 }
                 let b = &body[i];
                 let mut next: Vec<Sol> = Vec::new();
-                let mark = self.cost.cost_mark(rule_id, b);
+                let mark = self.cost.cost_mark(rule_id, front_at.and_then(|(a, _)| cost::prem_key(&body[a])), b);
                 let left = match self.par_level(b, i, &acc, depth, front_at, rule_id) {
                     Some(made) => {
                         next = made?;

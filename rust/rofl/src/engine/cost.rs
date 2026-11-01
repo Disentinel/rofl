@@ -34,6 +34,8 @@ pub struct Widest {
 pub struct CostState {
     /// What each premise of each rule cost (`cost.rs`), by rule and premise.
     pub prem_cost: FxMap<(Sym, u64), PremCost>,
+    /// The same by the premise whose news the firing was solved from (0: the whole evaluation, no news).
+    pub prem_cost_at: FxMap<(Sym, u64, u64), PremCost>,
     pub(super) read_rows: u64,
     pub(super) widest: Widest,
     pub(super) wide_floor: usize,
@@ -57,7 +59,7 @@ pub struct CostState {
 impl Default for CostState {
     fn default() -> Self {
         CostState {
-            prem_cost: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
+            prem_cost: FxMap::default(), prem_cost_at: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
             read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
             argm_by_rule: HashMap::new(), ns_by_rule: HashMap::new(), fires_by_rule: HashMap::new(),
             sols_by_rule: HashMap::new(), new_by_rule: HashMap::new(), delta_by_rule: HashMap::new(),
@@ -67,6 +69,7 @@ impl Default for CostState {
 
 pub struct Mark {
     key: (Sym, u64),
+    at: u64,
     read0: u64,
     outer: Widest,
     outer_floor: usize,
@@ -231,8 +234,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 16] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 17] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
@@ -288,6 +291,17 @@ impl Eval {
                 );
                 if c.widest.n > 0 {
                     let _ = writeln!(out, "widest[profile]({id}, {k}, {}).", c.widest.n);
+                }
+            }
+            // the width by the news position the firing was solved from: a plan is given per position, so it is
+            // judged by its own firings; At 0 is the whole evaluation, as order[profile] counts it
+            let ats: Vec<(usize, u64)> = std::iter::once((0, 0))
+                .chain(r.clause.body.iter().enumerate().filter_map(|(a, b)| prem_key(b).map(|k| (a + 1, k))))
+                .collect();
+            for (at, ak) in ats {
+                for (i, b) in r.clause.body.iter().enumerate() {
+                    let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost_at.get(&(r.id, ak, k))) else { continue };
+                    let _ = writeln!(out, "width_at[profile]({id}, {at}, {}, {}).", i + 1, c.rows_in);
                 }
             }
         }
@@ -422,11 +436,12 @@ impl Eval {
 
 impl CostState {
     /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
-    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {
+    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, at: Option<u64>, b: &BodyElem) -> Option<Mark> {
         let key = (rid?, prem_key(b)?);
         let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
         Some(Mark {
             key,
+            at: at.unwrap_or(0),
             read0: self.read_rows,
             outer: std::mem::take(&mut self.widest),
             outer_floor: std::mem::replace(&mut self.wide_floor, floor),
@@ -438,9 +453,14 @@ impl CostState {
         let wide = std::mem::take(&mut self.widest);
         self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
         self.wide_floor = m.outer_floor;
+        let read = self.read_rows - m.read0;
+        let c = self.prem_cost_at.entry((m.key.0, m.at, m.key.1)).or_default();
+        c.rows_in += rows_in as u64;
+        c.read += read;
+        c.rows_out += rows_out as u64;
         let c = self.prem_cost.entry(m.key).or_default();
         c.rows_in += rows_in as u64;
-        c.read += self.read_rows - m.read0;
+        c.read += read;
         c.rows_out += rows_out as u64;
         if wide.n > c.widest.n {
             c.widest = wide;
