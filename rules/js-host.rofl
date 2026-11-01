@@ -40,7 +40,7 @@ builtin_ns_at[flow](O, Sub)  :- builtin_member[flow](X, Spec, Key), host_member_
                                 may_be_node[flow](O, X).
 
 builtin_member[flow](M, Spec, Key) :- builtin_ns_at[flow](O, Spec),
-                                      ast_child[code](M, object, 0, O), member_node_v[flow](M),
+                                      object_of[code](M, O), member_node_v[flow](M),
                                       selects[flow](M, Key).
 builtin_member[flow](Sp, Spec, Key) :- external_import[code](Sp, _, S, _), builtin_canonical[code](S, Spec),
                                        ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key).
@@ -64,7 +64,7 @@ host_import_unknown[audit](File, Spec, Key) :- external_import[code](Sp, _, _, F
 --    readFileSync(p)            was reached: dotted, imported, destructured, aliased
 -- `selects[flow]` answers the key for the dotted and the computed form alike.
 host_member_call[code](C, H, Name, Key) :- callee_of[code](C, N),
-                                           ast_child[code](N, object, 0, O),
+                                           object_of[code](N, O),
                                            host_global_ref[code](O, H, Name),
                                            selects[flow](N, Key).
 
@@ -80,7 +80,7 @@ host_site[code](C, node, Spec, Key) :- host_module_call[code](C, Spec, Key).
 host_site[code](C, H, Name, Key)    :- host_member_call[code](C, H, Name, Key).
 host_site[code](C, H, Name, itself) :- host_global_call[code](C, H, Name).
 host_site_at[code](H, File, Line, Origin, Key) :- host_site[code](C, H, Origin, Key),
-                                                  ast_node[code](C, _, File), ast_line[code](C, Line).
+                                                  at[tree](C, File, _), at[tree](C, _, Line).
 
 -- =========================================================================
 -- 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
@@ -105,7 +105,7 @@ host_call_effect[audit](C, E, by_global) :- host_member_call[code](C, H, Name, _
 
 -- at a coordinate, and the set of effects the corpus exercises
 host_effect_at[audit](E, File, Line, Why) :- host_call_effect[audit](C, E, Why),
-                                             ast_node[code](C, _, File), ast_line[code](C, Line).
+                                             at[tree](C, File, _), at[tree](C, _, Line).
 host_effect_used[audit](E) :- host_call_effect[audit](_, E, _).
 
 -- The FRONTIER, expected non-zero: a site here is one the effect layer sees
@@ -176,7 +176,7 @@ host_member_absent[audit](R, Spec, Key) :- runtime_version(R, F, _),
 host_call_absent[audit](R, C, Spec, Key) :- host_module_call[code](C, Spec, Key),
                                             host_member_absent[audit](R, Spec, Key).
 host_call_absent_at[audit](R, File, Line, Spec, Key) :- host_call_absent[audit](R, C, Spec, Key),
-                                                        ast_node[code](C, _, File), ast_line[code](C, Line).
+                                                        at[tree](C, File, _), at[tree](C, _, Line).
 
 -- The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 -- not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
@@ -247,14 +247,14 @@ host_family_mismatch[audit](F) :- runtime(F), not host(F).
 -- 7. THE ENVIRONMENT a program reads: `process.env.NAME`, `process.env[k]`,
 -- `const { NAME } = process.env`, through any alias of `process.env`. A key the
 -- value layer cannot name is said, with its place, rather than dropped.
-env_member[flow](M) :- host_global_ref[code](P, node, "process"), ast_child[code](M, object, 0, P),
+env_member[flow](M) :- host_global_ref[code](P, node, "process"), object_of[code](M, P),
                        member_node_v[flow](M), selects[flow](M, "env").
 sx_env[surface](M)  :- env_member[flow](M).
 env_object[flow](M) :- sx_env[surface](M).
 env_object[flow](E) :- may_be_node[flow](E, M), sx_env[surface](M).
 env_object[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), env_object[flow](Init).
 
-env_key[flow](M) :- env_object[flow](O), ast_child[code](M, object, 0, O), member_node_v[flow](M).
+env_key[flow](M) :- env_object[flow](O), object_of[code](M, O), member_node_v[flow](M).
 env_written[flow](M) :- env_key[flow](M), ast_child[code](A, left, 0, M), ast_node[code](A, assignment_expression, _).
 
 env_read[flow](M, Name) :- env_key[flow](M), selects[flow](M, Name), not env_written[flow](M).
@@ -265,6 +265,6 @@ env_read_unnamed[flow](M)  :- env_key[flow](M), not env_named[flow](M), not env_
 env_write_unnamed[flow](M) :- env_written[flow](M), not env_named[flow](M).
 env_named[flow](M) :- env_key[flow](M), selects[flow](M, _).
 
-env_read_at[flow](Name, File, Line) :- env_read[flow](M, Name), ast_node[code](M, _, File), ast_line[code](M, Line).
-env_read_unnamed_at[flow](File, Line) :- env_read_unnamed[flow](M), ast_node[code](M, _, File), ast_line[code](M, Line).
-env_write_unnamed_at[flow](File, Line) :- env_write_unnamed[flow](M), ast_node[code](M, _, File), ast_line[code](M, Line).
+env_read_at[flow](Name, File, Line) :- env_read[flow](M, Name), at[tree](M, File, _), at[tree](M, _, Line).
+env_read_unnamed_at[flow](File, Line) :- env_read_unnamed[flow](M), at[tree](M, File, _), at[tree](M, _, Line).
+env_write_unnamed_at[flow](File, Line) :- env_write_unnamed[flow](M), at[tree](M, File, _), at[tree](M, _, Line).

@@ -20,9 +20,9 @@ function call_site(C, to File).
 function callee_of(C, to N).
 call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File).
 call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _).
-call_line[code](C, Line)      :- call_site[code](C, _), ast_line[code](C, Line).
+call_line[code](C, Line)      :- call_site[code](C, _), at[tree](C, _, Line).
 
-callee_of[code](C, N)         :- call_site[code](C, _), ast_child[code](C, callee, 0, N).
+callee_of[code](C, N)         :- call_site[code](C, _), callee[value](C, N).
 callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _).
 
 -- Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
@@ -70,10 +70,11 @@ member_kind(optional_member_expression).
 
 member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _), member_kind(K).
 optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional_member_expression, _).
-computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, true).
-static_member[code](C, N)   :- member_like[code](C, N), ast_attr[code](N, computed, false).
+computed_member[code](C, N) :- callee_of[code](C, N), member_expr[value](N, _, _).
+static_member[code](C, N)   :- callee_of[code](C, N), member[value](N, _, _).
 
-callee_obj[code](C, O)      :- member_like[code](C, N), ast_child[code](N, object, 0, O).
+
+callee_obj[code](C, O)      :- member_like[code](C, N), object_of[code](N, O).
 callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _).
 callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
 
@@ -147,8 +148,8 @@ static_key_kind(numeric_literal).
 computed_key_static[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
                                 ast_node[code](P, K, _), static_key_kind(K).
 
-computed_key_template[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
-                                  ast_node[code](P, template_literal, _).
+computed_key_template[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), template[value](P).
+
 
 shape_known[code](C, S) :- callee_kind[code](C, K), callee_shape(K, S).
 shape_known[code](C, s_computed_literal_key) :- computed_member[code](C, _),
@@ -180,16 +181,8 @@ multi_shape[audit](C, A, B) :- shape[code](C, A), shape[code](C, B), A != B.
 
 -- =========================================================================
 -- 3. THE ENCLOSING FUNCTION
-edb(fn_kind).
-fn_kind(function_declaration).
-fn_kind(function_expression).
-fn_kind(arrow_function_expression).
-fn_kind(object_method).
-fn_kind(class_method).
-fn_kind(class_private_method).
-
-fn_node[code](F)     :- fn_kind(K), ast_node[code](F, K, _).
-fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File).
+fn_node[code](F)     :- body[value](F, _).
+fn_file[code](F, File) :- fn_node[code](F), at[tree](F, File, _).
 
 -- A function's name is whatever binds it — several arms, and a node may hold
 -- more than one name. `key_name` rather than `ast_name` on a key, so a computed
@@ -200,26 +193,18 @@ fn_file[code](F, File) :- fn_node[code](F), ast_node[code](F, _, File).
 -- laid every function beside every declarator (271 982 accumulator rows on
 -- sixteen eslint files). A PRIVATE method gets no name: V8 says `#rim`, the
 -- store holds `rim`, and the kernel has no operation that builds a string.
-fn_name[code](F, N) :- ast_node[code](F, function_declaration, _),
-                       ast_child[code](F, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- ast_node[code](F, function_expression, _),
-                       ast_child[code](F, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- fn_node[code](F), target[value](F, I), binds[value](I, N).
 fn_name[code](F, N) :- ast_node[code](F, object_method, _),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
 ctor_method[code](F)   :- ast_node[code](F, class_method, _),
                           ast_attr[code](F, kind, "constructor").
 fn_name[code](F, N) :- ast_node[code](F, class_method, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _),
-                       ast_child[code](D, init, 0, F), fn_node[code](F),
-                       ast_child[code](D, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- binder[code](D, N, F, _), fn_node[code](F).
 fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
                        ast_node[code](P, object_property, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _),
-                       ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
-                       ast_child[code](CD, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), target[value](CD, I), binds[value](I, N).
 fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F),
                        ast_child[code](P, key, 0, KN), key_name[code](KN, N).
@@ -228,17 +213,8 @@ fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _),
 -- inference: `const A = class {}` has `A.name === "A"`, but
 -- `const W = class Hoist {}` has `"Hoist"`. The arm carries the negation so
 -- the two constructor arms never both fire.
-class_has_id[code](CD) :- ast_node[code](CD, class_expression, _),
-                          ast_child[code](CD, id, 0, _).
-anon_class[code](CD)   :- ast_node[code](CD, class_expression, _),
-                          not class_has_id[code](CD).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _),
-                       ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
-                       anon_class[code](CD),
-                       ast_child[code](D, init, 0, CD),
-                       ast_node[code](D, variable_declarator, _),
-                       ast_child[code](D, id, 0, I), ast_name[code](I, N).
+anon_class[code](CD)   :- class[value](CD), not decl[value](CD, class).
+fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), anon_class[code](CD), binder[code](_, N, CD, _).
 
 -- A decorator is INSIDE the thing it decorates and does not run there:
 -- `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
@@ -253,7 +229,7 @@ fn_name[code](F, N) :- ast_node[code](F, class_method, _),
 -- repair made them one rule and 2026-09-11 made them one name.)
 decorates[code](Owner, D)     :- ast_child[code](Owner, decorators, _, D),
                                  ast_node[code](D, decorator, _).
-in_own_decorator[code](F, C)  :- decorates[code](F, D), ast_within[code](D, C).
+in_own_decorator[code](F, C)  :- decorates[code](F, D), inside[tree](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
 dec_up[code](C, G)     :- in_own_decorator[code](G, C), site[code](C), nearest_v[flow](G, C).
 dec_up[code](C, H)     :- dec_up[code](C, G), nearest_v[flow](H, G), in_own_decorator[code](H, C).
@@ -261,7 +237,7 @@ nearest_fn[code](F, C) :- site[code](C), nearest_v[flow](F, C), not in_own_decor
 nearest_fn[code](F, C) :- dec_up[code](C, G), nearest_v[flow](F, G), not in_own_decorator[code](F, C).
 
 enclosed[code](C)      :- nearest_fn[code](_, C).
-top_call[code](C, R)   :- site[code](C), ast_node[code](C, _, File),
+top_call[code](C, R)   :- site[code](C), at[tree](C, File, _),
                           ast_file[code](R, File), not enclosed[code](C).
 
 -- =========================================================================
@@ -345,7 +321,7 @@ calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_label[flow](Y, B).
 calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_label[flow](Y, B).
 
-calls_in[code](File, A, B)   :- calls[code](X, Y), ast_node[code](X, _, File),
+calls_in[code](File, A, B)   :- calls[code](X, Y), at[tree](X, File, _),
                                 fn_name[code](X, A), fn_label[flow](Y, B).
 calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
                                 fn_label[flow](Y, B).
@@ -361,13 +337,13 @@ passes_function[code](C, I, A, anonymous) :- written_arg[code](C, I, A), fn_node
 -- a member handed over (`bus.on(x, this.onMsg)`) is named by its key
 passes_function[code](C, I, F, Key)       :- written_arg[code](C, I, A), member_node_v[flow](A), selects[flow](A, Key),
                                              may_be_node[flow](A, F), fn_value[flow](F).
-written_arg[code](C, I, A) :- arg_at[flow](C, I, A), ast_child[code](C, arguments, I, A).
+written_arg[code](C, I, A) :- arg_at[flow](C, I, A), argument_at[code](C, I, A).
 
 -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
 -- arguments to the callee's parameters and its return to the call's value, and
 -- a callback gets neither (`map` passes elements and returns an array).
-callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), ast_child[code](N, object, 0, O),
+callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), object_of[code](N, O),
                                          callee_of[code](C, N), selects[flow](N, Key).
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
@@ -397,7 +373,7 @@ unresolved_shape[audit](S)  :- unresolved_call[code](_, S).
 runs_outside[code](F)       :- unresolved_call[code](C, _), not keyed_quiet[code](C), nearest_fn[code](F, C).
 
 stdlib_member[audit](C, P, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                                   ast_child[code](N, object, 0, O),
+                                   object_of[code](N, O),
                                    prototype_of[flow](O, P), builtin_prototype(P),
                                    selects[flow](N, Key).
 
@@ -432,9 +408,9 @@ frontier_at[code](R, K) :- top_call[code](X, R), transfer_site[code](X, K),
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
 frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R, _).
 
-frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), ast_node[code](C, _, File), ast_line[code](C, Line).
+frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), at[tree](C, File, _), at[tree](C, _, Line).
 frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_site[code](X),
-                                      ast_node[code](X, _, File), ast_line[code](X, Line).
+                                      at[tree](X, File, _), at[tree](X, _, Line).
 
 -- The closed vocabulary of shapes, read off the tables: the denominator is the
 -- grammar, so a shape the corpus never produces still wants an answer.
@@ -522,7 +498,7 @@ await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[co
 -- The gate: a performed call must never become an ordinary edge. It cannot use
 -- `nearest_fn`, because it demands `site(C)` and an await is not a site
 -- — written that way it was permanently silent.
-awaiting_fn[code](Fn, A) :- performed_call[code](A, _), ast_within[code](Fn, A),
+awaiting_fn[code](Fn, A) :- performed_call[code](A, _), inside[tree](Fn, A),
                             fn_node[code](Fn).
 performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
                                    awaiting_fn[code](Fn, A),
@@ -548,7 +524,7 @@ whole_kind(class_expression).
 
 whole_expr[flow](E) :- whole_kind(K), ast_node[code](E, K, _).
 whole_expr[flow](E) :- es_instance[flow](E, _, _).
-whole_expr[flow](E) :- ast_node[code](E, new_expression, _), ast_child[code](E, callee, 0, CE), whole_expr[flow](CE).
+whole_expr[flow](E) :- ast_node[code](E, new_expression, _), callee[value](E, CE), whole_expr[flow](CE).
 whole_expr[flow](E) :- value_transparent(K), ast_node[code](E, K, _), ast_child[code](E, expression, 0, X),
                        whole_expr[flow](X).
 whole_expr[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), whole_expr[flow](Init),
@@ -624,14 +600,14 @@ holds_in_place(object_property, value).
 placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), ast_child[code](_, _, _, A).
 held[flow](A) :- placed[flow](A), ast_child[code](P, F, _, A), ast_node[code](P, PK, _), holds_in_place(PK, F).
 held[flow](A) :- placed[flow](A), assigned[code](_, _, _, A, _).
-held[flow](A) :- placed[flow](A), ast_child[code](C, arguments, _, A), ast_child[code](C, callee, 0, CE),
+held[flow](A) :- placed[flow](A), ast_child[code](C, arguments, _, A), callee[value](C, CE),
                  whole_expr[flow](CE).
 held[flow](V) :- placed[flow](V), stored_in[flow](V, _).
 -- a member of an object literal holds the value as long as the literal is not open
 literal_part[flow](O, P) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P).
 held[flow](P) :- placed[flow](P), literal_part[flow](_, P).
 stored_in[flow](V, H) :- ast_child[code](A, right, 0, V), ast_node[code](A, assignment_expression, _),
-                         ast_child[code](A, left, 0, L), member_node_v[flow](L), ast_child[code](L, object, 0, HE),
+                         ast_child[code](A, left, 0, L), member_node_v[flow](L), object_of[code](L, HE),
                          whole_expr[flow](HE), may_be_node[flow](HE, H).
 
 -- A member written: by a known key it is had, by an unknown one the object is open.
@@ -675,9 +651,9 @@ sx_open[surface](CD) :- class_method_of[flow](CD, M), ast_attr[code](M, kind, "c
 sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
 
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
-member_call[flow](C, R, Key) :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, N),
+member_call[flow](C, R, Key) :- ast_node[code](C, call_expression, _), callee[value](C, N),
                                 ast_node[code](N, member_expression, _), ast_attr[code](N, computed, false),
-                                selects[flow](N, Key), ast_child[code](N, object, 0, R).
+                                selects[flow](N, Key), object_of[code](N, R).
 call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), may_be_node[flow](R, O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), member_value[flow](O, Key, _), not class_like[flow](O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), sx_mkey[surface](O, Key).
@@ -771,13 +747,13 @@ host_extends_global("Error").
 whole_global[flow](R) :- es_global[code](R, Name, _, Form), Form != plain_value,
                          not host_extends_global(Name), not assign_reaches_unscoped[flow](R, _),
                          not sx_global_open[surface](Name).
-sx_global_key[surface](Name, Key) :- member_written[flow](N), ast_child[code](N, object, 0, G),
+sx_global_key[surface](Name, Key) :- member_written[flow](N), object_of[code](N, G),
                                      es_global[code](G, Name, _, _), selects[flow](N, Key).
-sx_global_open[surface](Name) :- member_written[flow](N), ast_child[code](N, object, 0, G),
+sx_global_open[surface](Name) :- member_written[flow](N), object_of[code](N, G),
                                  es_global[code](G, Name, _, _), not selects[flow](N, _).
 sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), ast_child[code](P, F, _, G),
                                  ast_node[code](P, PK, _), not holds_in_place(PK, F).
-call_finds[flow](C) :- ast_child[code](C, callee, 0, N), es_static[code](N, _, _, _).
+call_finds[flow](C) :- callee[value](C, N), es_static[code](N, _, _, _).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, Name, _, _), sx_global_key[surface](Name, Key).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, _, _, constructor_binding),
                        lib_member(function, Key, _).
@@ -926,14 +902,14 @@ param_annotation[code](P, A) :- ast_child[code](P, type_annotation, 0, A).
 param_annotation[code](P, A) :- param_property[code](P, _, X), ast_child[code](X, type_annotation, 0, A).
 param_annotation[code](P, A) :- ast_node[code](P, assignment_pattern, _), ast_child[code](P, left, 0, X),
                                 ast_child[code](X, type_annotation, 0, A).
-declared[flow](E, T)   :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
+declared[flow](E, T)   :- declarator_id[code](D, I),
                           ast_child[code](I, type_annotation, 0, A), names_type[flow](A, T), sees_binder[code](E, D).
-declared_lib[flow](E, L) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
+declared_lib[flow](E, L) :- declarator_id[code](D, I),
                           ast_child[code](I, type_annotation, 0, A), names_lib[flow](A, L), sees_binder[code](E, D).
 declared[flow](T, CD)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false), this_host[flow](M, T).
-declared[flow](N, T2)  :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared[flow](O, T),
+declared[flow](N, T2)  :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
                           selects[flow](N, Key), member_type[flow](T, Key, T2).
-declared_lib[flow](N, L) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared[flow](O, T),
+declared_lib[flow](N, L) :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
                           selects[flow](N, Key), member_lib[flow](T, Key, L).
 
 -- what TypeScript infers from declarations alone: `new C()` is a C, a call is what its
@@ -943,7 +919,7 @@ declared[flow](E, T)     :- new_of[code](E, Name, File), type_decl[code](T, Name
                             ast_node[code](T, class_declaration, _).
 declared[flow](E, T)     :- new_of[code](E, Name, File), imports_name[code](Name, Orig, D, File),
                             module_target[code](D, Target), sx_export_type[surface](Target, Orig, T).
-new_of[code](E, Name, File) :- ast_node[code](E, new_expression, File), ast_child[code](E, callee, 0, N),
+new_of[code](E, Name, File) :- ast_node[code](E, new_expression, File), callee[value](E, N),
                                ast_node[code](N, identifier, _), ast_name[code](N, Name).
 declared[flow](E, T)     :- cast[code](E), names_type[flow](E, T).
 declared_lib[flow](E, P) :- cast[code](E), names_lib[flow](E, P).
@@ -954,11 +930,11 @@ declared_lib[flow](E, P) :- see_through[code](E, X), declared_lib[flow](X, P).
 see_through[code](E, X)  :- ast_node[code](E, tsnon_null_expression, _), ast_child[code](E, expression, 0, X).
 see_through[code](E, X)  :- ast_node[code](E, parenthesized_expression, _), ast_child[code](E, expression, 0, X).
 -- `super` in an instance method is declared as the base class
-declared[flow](S, B)     :- ast_node[code](S, super, _), ast_within[code](M, S), class_method_of[flow](CD, M),
+declared[flow](S, B)     :- ast_node[code](S, super, _), inside[tree](M, S), class_method_of[flow](CD, M),
                             ast_attr[code](M, static, false), super_of[flow](CD, B).
 declared[flow](C, T2)    :- declared_call[flow](C, T, Key), method_type[flow](T, Key, T2).
 declared_lib[flow](C, P) :- declared_call[flow](C, T, Key), method_lib[flow](T, Key, P).
-fn_ret_at[code](C, A)    :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, N),
+fn_ret_at[code](C, A)    :- ast_node[code](C, call_expression, _), callee[value](C, N),
                             ast_node[code](N, identifier, _), sees_decl[code](N, F), ast_child[code](F, return_type, 0, A).
 declared[flow](C, T)     :- fn_ret_at[code](C, A), names_type[flow](A, T).
 -- a function another module exports, by what its declaration returns
@@ -966,21 +942,21 @@ sx_fn_ret[surface](File, Name, T)     :- export_fn_ret[code](File, Name, A), nam
 sx_fn_ret_lib[surface](File, Name, P) :- export_fn_ret[code](File, Name, A), names_lib[flow](A, P).
 export_fn_ret[code](File, Name, A)    :- module_export[code](E, File), ast_child[code](E, declaration, 0, F),
                                          own_name[code](F, Name, File, around), ast_child[code](F, return_type, 0, A).
-imported_call[code](C, Orig, Target)  :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, N),
+imported_call[code](C, Orig, Target)  :- ast_node[code](C, call_expression, _), callee[value](C, N),
                                          top_read[code](N, Name, File), imports_name[code](Name, Orig, D, File),
                                          module_target[code](D, Target).
 declared[flow](C, T)     :- imported_call[code](C, Orig, Target), sx_fn_ret[surface](Target, Orig, T).
 declared_lib[flow](C, P) :- imported_call[code](C, Orig, Target), sx_fn_ret_lib[surface](Target, Orig, P).
 declared_lib[flow](C, P) :- fn_ret_at[code](C, A), names_lib[flow](A, P).
-inferred_init[code](D, X) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
-                             not ast_child[code](I, type_annotation, 0, _), ast_child[code](D, init, 0, X).
+inferred_init[code](D, X) :- var_decl[code](D), assign[value](D, I, X), not ast_child[code](I, type_annotation, 0, _).
+
 declared[flow](E, T)     :- inferred_init[code](D, X), declared[flow](X, T), sees_binder[code](E, D).
 declared_lib[flow](E, P) :- inferred_init[code](D, X), declared_lib[flow](X, P), sees_binder[code](E, D).
 
 -- a browser global by the interface it is declared as (`document: Document`), and a
 -- member of a browser type by the interface the member is declared as
 declared_lib[flow](R, N) :- free_global[code](R, Name, _), host_global_type(_, Name, N).
-declared_lib[flow](N, M) :- member_node_v[flow](N), ast_child[code](N, object, 0, O), declared_lib[flow](O, P),
+declared_lib[flow](N, M) :- member_node_v[flow](N), object_of[code](N, O), declared_lib[flow](O, P),
                             selects[flow](N, Key), host_up[flow](P, B), host_type_prop(_, B, Key, M).
 -- a browser type and what it extends, walked only from a type a program names
 host_up[flow](P, P)  :- declared_lib[flow](_, P).
@@ -1000,10 +976,8 @@ declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](
 -- TypeScript narrows a declared type where the code tests it (`x instanceof Sub`, `'k' in x`,
 -- a guard `isSub(x)` in a test): a receiver of that name or key anywhere in the file is not
 -- held to its declaration
-narrows_at[code](O) :- ast_node[code](X, binary_expression, _), ast_attr[code](X, operator, "instanceof"),
-                       ast_child[code](X, left, 0, O).
-narrows_at[code](O) :- ast_node[code](X, binary_expression, _), ast_attr[code](X, operator, "in"),
-                       ast_child[code](X, right, 0, O).
+narrows_at[code](O) :- binary[value](_, "instanceof", O, _).
+narrows_at[code](O) :- binary[value](_, "in", _, O).
 narrows_at[code](O) :- ast_child[code](P, test, 0, G), ast_child[code](G, arguments, _, O).
 narrows_at[code](O) :- ast_node[code](P, unary_expression, _), ast_child[code](P, argument, 0, G),
                        ast_child[code](G, arguments, _, O).
@@ -1012,12 +986,12 @@ narrows_at[code](O) :- ast_node[code](P, logical_expression, _), ast_child[code]
 narrows_at[code](O) :- ast_node[code](P, logical_expression, _), ast_child[code](P, right, 0, G),
                        ast_child[code](G, arguments, _, O).
 narrowed_name[code](File, Name) :- narrows_at[code](O), ast_node[code](O, identifier, File), ast_name[code](O, Name).
-narrowed_key[flow](File, Key)   :- narrows_at[code](O), member_node_v[flow](O), ast_node[code](O, _, File),
+narrowed_key[flow](File, Key)   :- narrows_at[code](O), member_node_v[flow](O), at[tree](O, File, _),
                                    selects[flow](O, Key).
 declared_open[flow](C) :- declared_any[flow](C), member_call[flow](C, R, _), ast_node[code](R, identifier, File),
                           ast_name[code](R, Name), narrowed_name[code](File, Name).
 declared_open[flow](C) :- declared_any[flow](C), member_call[flow](C, R, _), member_node_v[flow](R),
-                          ast_node[code](R, _, File), selects[flow](R, Key), narrowed_key[flow](File, Key).
+                          at[tree](R, File, _), selects[flow](R, Key), narrowed_key[flow](File, Key).
 declared_any[flow](C)          :- declared_call[flow](C, _, _).
 declared_any[flow](C)          :- member_call[flow](C, R, _), declared_lib[flow](R, _).
 missing_declared_member[audit](C, T, Key) :- declared_call[flow](C, T, Key), not declared_has[flow](C),
@@ -1038,25 +1012,27 @@ imports(code, surface).
 -- without ever testing it (`res && ...`, `res ? ... : ...`, `if (!res)`): a
 -- TypeError when that line runs. A call with a spread passes what it cannot
 -- count, and a parameter with a default is never `undefined`; neither is asked.
-call_spreads[code](C) :- ast_child[code](C, arguments, _, S), ast_node[code](S, spread_element, _).
-call_passes[code](C, I) :- ast_child[code](C, arguments, I, _).
+call_spreads[code](C) :- spread_args[value](C, _, _).
+call_passes[code](C, I) :- argument_at[code](C, I, _).
+
 param_defaulted[code](F, I) :- ast_child[code](F, params, I, P), ast_node[code](P, assignment_pattern, _).
 
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "&&").
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "||").
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "??").
-param_test[code](B, T) :- ast_child[code](B, argument, 0, T), ast_attr[code](B, operator, "!").
+param_test[code](B, T) :- unary[value](B, "!", T).
+
 param_test[code](B, T) :- ast_child[code](B, test, 0, T).
 param_tested[flow](F, Name) :- param_use[flow](F, Name, T), param_test[code](_, T).
 
 -- the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
 sx_param_deref[surface](F, I, Name, DefFile, DefLine) :- param_of[flow](F, I, Name), not param_defaulted[code](F, I),
                                         not param_tested[flow](F, Name),
-                                        param_use[flow](F, Name, U), ast_child[code](M, object, 0, U),
+                                        param_use[flow](F, Name, U), object_of[code](M, U),
                                         ast_node[code](M, member_expression, _),
-                                        ast_node[code](U, _, DefFile), ast_line[code](U, DefLine).
+                                        at[tree](U, DefFile, _), at[tree](U, _, DefLine).
 
 unpassed_deref_at[flow](File, Line, Name, DefFile, DefLine) :- resolves[code](C, F),
                                         sx_param_deref[surface](F, I, Name, DefFile, DefLine),
                                         not call_passes[code](C, I), not call_spreads[code](C),
-                                        ast_node[code](C, _, File), ast_line[code](C, Line).
+                                        at[tree](C, File, _), at[tree](C, _, Line).

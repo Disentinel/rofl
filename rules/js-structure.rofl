@@ -8,6 +8,19 @@
 
 -- THE THREE ARE ALIASES (docs/data-structures.md): each reads its source and
 -- the Rust engine stores no row of one where no witness is kept.
+imports(code, value). imports(code, tree). imports(flow, value). imports(flow, tree).
+imports(surface, value). imports(surface, tree). imports(audit, value). imports(audit, tree).
+
+-- the object a member reads, whether its key is a name or computed
+object_of[code](M, O) :- member[value](M, O, _).
+object_of[code](M, O) :- member_expr[value](M, O, _).
+-- the static name a member reads; a private name is no property
+prop_name[code](M, O, K) :- member[value](M, O, K), not private[value](M).
+-- the I-th argument of a call, or what it spreads
+argument_at[code](C, I, A) :- callee[value](C, _), nth[tree](C, I, A).
+
+
+
 alias ast_in(P, C) is ast_child(P, _, _, C).
 
 -- THE EDGES ARE A FOREST (one parent for each node, no cycle), and `ast_within`

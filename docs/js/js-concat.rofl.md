@@ -1,6 +1,6 @@
 ---
 world: js-concat
-books: audit, code, flow, main, surface
+books: audit, code, flow, main, surface, tree, value
 default: flow
 ---
 
@@ -54,8 +54,18 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
+  - <a id="nth"></a>`nth`
+- from outside these files, in the value:
+  - <a id="assign"></a>`assign`
+  - <a id="binary"></a>`binary`
+  - <a id="callee"></a>`callee`
+  - <a id="ref"></a>`ref`
+  - <a id="tagged"></a>`tagged`
+  - <a id="template"></a>`template`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -66,12 +76,9 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
-| <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
 | <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
-| <a id="noun-tagged_template"></a>a tagged template | a node of kind `tagged_template_expression` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -94,29 +101,21 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 In the code:
 
-<a id="tagged_quasi"></a>`tagged_quasi`(T) if the `quasi` of a [tagged template](#noun-tagged_template) G is a node T.
+<a id="tagged_quasi"></a>`tagged_quasi`(T) if [`tagged`](#tagged)(something, something, T).
 
 In the flow:
 
-<a id="composed"></a>`composed`(a [template](#noun-template) T) if T [is interpolated](js-dataflow.rofl.md#interpolated), unless [`tagged_quasi`](#tagged_quasi)(T).
+<a id="composed"></a>`composed`(T) if all of:
+  - T [is interpolated](js-dataflow.rofl.md#interpolated);
+  - [`template`](#template)(T);
+  - unless [`tagged_quasi`](#tagged_quasi)(T).
 
 > `a + b` and `x += v` are a concatenation where a side may be a string; a sum
 > of two numbers stays silent.
 
 In the code:
 
-<a id="plus_site"></a>`plus_site`(C, L, R) either:
-
-1. if all of:
-   - C is a [binary expression](#noun-binary_expression);
-   - [the attribute](#ast_attr) `operator` of C is "+";
-   - the `left` of C is a node L;
-   - the `right` of C is a node R;
-2. if all of:
-   - C is an [assignment](#noun-assignment);
-   - [the attribute](#ast_attr) `operator` of C is "+=";
-   - the `left` of C is a node L;
-   - the `right` of C is a node R.
+<a id="plus_site"></a>`plus_site`(C, L, R) if [`binary`](#binary)(C, "+", L, R).
 
 <a id="plus_operand"></a>`plus_operand`(C, X) either:
 
@@ -144,11 +143,11 @@ In the flow:
 
 In the code:
 
-<a id="plus_assign"></a>`plus_assign`(an [assignment](#noun-assignment) X, L, Name, File) if all of:
-  - X is in file File;
-  - [the attribute](#ast_attr) `operator` of X is "+=";
-  - the `left` of X is a node L;
-  - L [is named](js-structure.rofl.md#ast_name) Name.
+<a id="plus_assign"></a>`plus_assign`(X, L, Name, File) if all of:
+  - [`binary`](#binary)(X, "+", L, something);
+  - [`assign`](#assign)(X, L, X);
+  - [`ref`](#ref)(L, Name);
+  - [`at`](#at)(X, File, something).
 
 In the flow:
 
@@ -171,9 +170,10 @@ In the surface:
 
 <a id="sx_mwrite"></a>`sx_mwrite`(O, Key, X) if all of:
   - [`composed`](#composed)(X);
-  - [the attribute](#ast_attr) `operator` of a node X is "+=";
-  - the `left` of X is a node L;
-  - the `object` of L [points to](#may_be_node) a node O;
+  - [`binary`](#binary)(X, "+", L, something);
+  - [`assign`](#assign)(X, L, X);
+  - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
+  - a node Obj [points to](#may_be_node) a node O;
   - L [selects](js-dataflow.rofl.md#selects) Key.
 
 ## 3. THE LIBRARY, AS A TABLE. `ambient_value(Surface, Member, Op, Kind)`: a
@@ -227,7 +227,7 @@ In the flow:
 <a id="vlib_member"></a>`vlib_member`(a [member access](js-dataflow.rofl.md#member_node_v) M, Surface, K) if all of:
   - [`vlib_ns`](#vlib_ns)(Y, Surface);
   - a node O [points to](#may_be_node) a node Y;
-  - the `object` of M is O;
+  - [`object_of`](js-structure.rofl.md#object_of)(M, O);
   - M [selects](js-dataflow.rofl.md#selects) K.
 
 > The value of a function of the table: a member read off the module, a name
@@ -260,11 +260,12 @@ In the flow:
 1. if all of:
    - [`vlib_fn`](#vlib_fn)(X, Surface, K);
    - a node G [points to](#may_be_node) a node X;
-   - the `callee` of C is G;
+   - [`callee`](#callee)(C, G);
    - C is an [invocation](#noun-invocation);
 2. if all of:
    - C is a [new](#noun-new);
-   - the `callee` of C [refers to the free](js-dataflow.rofl.md#free_global) Surface in some file;
+   - [`callee`](#callee)(C, G);
+   - a node G [refers to the free](js-dataflow.rofl.md#free_global) Surface in some file;
    - [`ambient_value`](#ambient_value)(Surface, `construct`, something, something);
    - K is `construct`.
 
@@ -286,8 +287,8 @@ In the flow:
   - [`ambient_value`](#ambient_value)(P, K, something, something);
   - a name P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
   - a [member access](js-dataflow.rofl.md#member_node_v) M [selects](js-dataflow.rofl.md#selects) K;
-  - the `callee` of C is M;
-  - the `object` of M is a node O.
+  - [`callee`](#callee)(C, M);
+  - [`object_of`](js-structure.rofl.md#object_of)(M, O).
 
 `vlib_call`(C, N, K) either:
 
@@ -360,7 +361,7 @@ In the flow:
   - Last is the segment K of V split by "/";
   - Last differs from "".
 
-`path_cut`(C, B) if [`base_of`](#base_of)(C, B), unless some node is the 1-th of the `arguments` of a node C.
+`path_cut`(C, B) if [`base_of`](#base_of)(C, B), unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something).
 
 `path_cut`(C, B) if all of:
   - [`base_of`](#base_of)(C, B);
@@ -403,7 +404,7 @@ In the flow:
 <a id="cshape"></a>`cshape`(C, N) either:
 
 1. if [`composed`](#composed)(C), [`plus_site`](#plus_site)(C, something, something), and N is `plus`;
-2. if [`composed`](#composed)(C), C is a [template](#noun-template), and N is `raw`;
+2. if [`composed`](#composed)(C), [`template`](#template)(C), and N is `raw`;
 3. if [`vlib_op`](#vlib_op)(C, Op, Kind) and [`op_shape`](#op_shape)(Op, Kind, N).
 
 `op_shape` lists:
@@ -434,8 +435,8 @@ In the flow:
 2. if [`cshape`](#cshape)(C, `plus`), [`plus_site`](#plus_site)(C, something, L), and N is 1;
 3. if all of:
    - [`cshape`](#cshape)(C, `raw`);
-   - C is a [template](#noun-template);
-   - L is the K-th of the `expressions` of C;
+   - [`template`](#template)(C);
+   - [`nth`](#nth)(C, K, L);
    - N is 2 * K + 1.
 
 <a id="part_lit"></a>`part_lit`(a [template](#noun-template) T, I, V) if all of:
@@ -461,8 +462,8 @@ Declared as facts:
 2. if all of:
    - [`vlib_op`](#vlib_op)(C, `concat_this`, something);
    - [`whole_args`](#whole_args)(C);
-   - the `callee` of C is a node M;
-   - the `object` of M is a node X;
+   - [`callee`](#callee)(C, M);
+   - [`object_of`](js-structure.rofl.md#object_of)(M, X);
    - I is 0;
 3. if all of:
    - [`vlib_op`](#vlib_op)(C, `concat_this`, something);
@@ -477,7 +478,7 @@ Declared as facts:
    - [`vlib_op`](#vlib_op)(C, `url`, something);
    - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - I is 0;
-   - unless some node is the 1-th of the `arguments` of C;
+   - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something);
 6. if all of:
    - [`vlib_op`](#vlib_op)(C, `url`, something);
    - C [passes](js-dataflow.rofl.md#arg_at) some node at 0;
@@ -495,8 +496,9 @@ Declared as facts:
 
 <a id="join_recv"></a>`join_recv`(C, X) if all of:
   - [`vlib_op`](#vlib_op)(C, `elements`, something);
-  - the `callee` of a node C is a node M;
-  - the `object` of M [points to](#may_be_node) a node X;
+  - [`callee`](#callee)(C, M);
+  - [`object_of`](js-structure.rofl.md#object_of)(M, O);
+  - a node O [points to](#may_be_node) a node X;
   - [`kind_proto`](js-dataflow.rofl.md#kind_proto)(X, `array`).
 
 <a id="join_arrays"></a>`join_arrays`(C, N) if [`vlib_op`](#vlib_op)(C, `elements`, something) and N is the number of X such that ([`join_recv`](#join_recv)(C, X)).
@@ -516,7 +518,7 @@ Declared as facts:
 
 `parts`(C, I, S) if [`join_sep`](#join_sep)(C, I) and C [passes](js-dataflow.rofl.md#arg_at) a node S at 0.
 
-`part_lit`(C, I, ",") if [`join_sep`](#join_sep)(C, I), unless the `arguments` of a node C is some node.
+`part_lit`(C, I, ",") if [`join_sep`](#join_sep)(C, I), unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 0, something).
 
 > What a part may be, for a reader of the answer.
 
@@ -558,7 +560,7 @@ Declared as facts:
 
 <a id="summarized"></a>`summarized`(X) if all of:
   - [`composed`](#composed)(X);
-  - a node X [is in file](js-model.rofl.md#ast_node) File;
+  - [`at`](#at)(X, File, something);
   - [`ambient_module`](#ambient_module)(File, something).
 
 <a id="plain_valued"></a>`plain_valued`(P) either:

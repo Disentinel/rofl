@@ -3518,10 +3518,17 @@ work_state(w_l2_roles, open).
 -- holds each file's roles alone equal to the whole world's and the audits empty. LEFT: the model's rules moved onto the
 -- roles (rung 1 of the ladder), the scanner writing [ast_babel] by default, ids from the role tree.
 
+work(w_js_model_on_roles,
+  "THE JS MODEL MOVED ONTO THE ROLES, oxc the scanner by default, Babel removed (owner, 2026-11-01: translate the rules keeping their names, one stream, one group of roles at a time). Steps: the roles and the Babel converter in every world of the model; names and scopes; functions; calls and members; values; control; modules; TS types; the coverage matrix as role x layer and the raw tree out of the world; oxc by default; Babel removed. ACCEPTANCE per step before oxc: not one fact of the model's own relations moves in any world, both engines. ACCEPTANCE of the oxc step: the model's answers over a Babel scan and an oxc scan of the same files compared by place, every difference fixed or recorded with its reason; then one bless.").
+work_state(w_js_model_on_roles, open).
+work_needs(w_js_model_on_roles, w_l2_roles).
+work_needs(w_js_model_on_roles, w_rust_scanner_oxc).
+
 work(w_lifecycle_world,
   "THE [lifecycle] WORLD OVER THE ROLES (owner, 2026-10-31: there is no L3 level; lifecycle is a world of behaviour, doc «Словарь ролей модели JS» rev 92, «Миры поведения»). The [lifecycle] perspective over roles for JS; first questions are use after death and leaks (created_by without deleted_by); it needs before and resolves as bridges plus open/close pairs from js-host; the old operation words (overwrites, hidden_call, coerces, narrows, transfers, suspends, shadows, only_if) are derived, see the doc. ACCEPTANCE: use after death and a leak each answered over [lifecycle] on a JS fixture that has one and a control that has none, and every derived operation word answering what its old relation (param_default, member_written, sees_binder, hidden_call_pos, eff_coerced, narrows_at, transfer_site, suspend_at) answers today.").
 work_state(w_lifecycle_world, open).
 work_needs(w_lifecycle_world, w_l2_roles).
+work_needs(w_lifecycle_world, w_js_model_on_roles).
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").

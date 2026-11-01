@@ -1,6 +1,6 @@
 ---
 world: js-fetch
-books: code, flow, main, surface
+books: code, flow, main, surface, value
 default: flow
 ---
 
@@ -26,8 +26,10 @@ Reads:
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [selects](js-dataflow.rofl.md#selects)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
 - from the scanner, in the code:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
@@ -130,7 +132,8 @@ In the flow:
 
 <a id="cl_rooted"></a>`cl_rooted`(G) if all of:
   - [`cl_member`](#cl_member)(G, something, something);
-  - the `object` of a node G [points to](js-concat.rofl.md#may_be_node) a node S;
+  - [`object_of`](js-structure.rofl.md#object_of)(G, O);
+  - a node O [points to](js-concat.rofl.md#may_be_node) a node S;
   - S [comes out of](js-dataflow.rofl.md#external_value) S.
 
 <a id="cl_import"></a>`cl_import`(Sp, S, K) if all of:
@@ -147,7 +150,7 @@ In the flow:
 `cl_import`(Sp, S, K) if [`sx_cl_import`](#sx_cl_import)(Sp, S, K).
 
 <a id="cl_how"></a>`cl_how`(a [call expression](#noun-call_expression) C, How, Base) if all of:
-  - the `callee` of C is a node G;
+  - [`callee`](#callee)(C, G);
   - [`cl_api`](#cl_api)(G, S, K, Base);
   - [`http_client`](#http_client)(S, K, How).
 
@@ -160,7 +163,7 @@ In the flow:
 
 <a id="cl_opts"></a>`cl_opts`(C, X) if [`cl_how`](#cl_how)(C, opts(I), something) and C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I.
 
-`cl_method`(C, `get`) if [`cl_how`](#cl_how)(C, opts(I), something), unless some node is the I-th of the `arguments` of a node C.
+`cl_method`(C, `get`) if [`cl_how`](#cl_how)(C, opts(I), something), unless [`argument_at`](js-structure.rofl.md#argument_at)(C, I, something).
 
 <a id="cl_known"></a>`cl_known`(X) if [`cl_opts`](#cl_opts)(something, X) and a node X [points to](js-concat.rofl.md#may_be_node) some node.
 

@@ -66,7 +66,7 @@ xl_ok(keyed_noisy, keyed_again, "the read's own method, matched against the mirr
 -- file); where the collection left the file (`sx_esc`), a call between that reaches another file loses the entry.
 xl_ok(keyed_drop, keyed_made, "the collection's own new node, matched, and the removal in the same file").
 xl_ok(keyed_lost, keyed_made, "the collection's own new node, matched against what was handed out").
-xl_ok(keyed_leaves, ast_node, "the test that a callee is NOT of the read's file: true alike in the volume and the whole").
+xl_ok(keyed_leaves, at, "the test that a callee is NOT of the read's file: true alike in the volume and the whole").
 xl_ok(keyed_lost, nearest_v, "the function around a removal of the same file, matched").
 -- How often the method runs, for an `await` between: its known calls and their callers in the volume. A call from another
 -- file means the function or its instance left the file (`sx_esc`, read by keyed_handed), and that alone makes it many.
@@ -78,7 +78,7 @@ xl_ok(keyed_overlap, keyed_caller, "the enclosing function of the volume's own c
 -- Presence through a call that puts for certain (`keyed_sure`) follows only a callee of the call's own file
 -- (`keyed_local_call` matches the file): a function of another file reaches the collection only where it left its file,
 -- and there `keyed_lost` holds. The callee, the collection it fills and the put are then the volume's own nodes.
-xl_ok(keyed_local_call, ast_node, "the test that a callee IS of the call's file: true alike in the volume and the whole").
+xl_ok(keyed_local_call, at, "the test that a callee IS of the call's file: true alike in the volume and the whole").
 xl_ok(keyed_one_target, ast_attr, "a callee of the call's own file (keyed_local_call)").
 xl_ok(keyed_one_target, ast_node, "a callee of the call's own file (keyed_local_call)").
 xl_ok(keyed_one_target, class_method_of, "a callee of the call's own file (keyed_local_call)").
@@ -114,7 +114,7 @@ xl_ok(member_ctor_late, member_read_fn, "the read's own function, matched agains
 -- What a call may run is asked backwards along the call graph (keyed_runs_m, keyed_drop_runs, keyed_runs_out), and a
 -- function of another file brings its answer with it (sx_keyed_runs, sx_drop_runs, sx_runs_out).
 xl_ok(keyed_handed, keyed_hand_need, "the volume's own instance or function, matched; one another file hands on is sx_esc").
-xl_ok(keyed_crosses, ast_node, "the test that a callee is NOT of the caller's file: true alike in the volume and the whole").
+xl_ok(keyed_crosses, at, "the test that a callee is NOT of the caller's file: true alike in the volume and the whole").
 xl_ok(keyed_crosses, keyed_crosses, "a callee of another file makes the caller cross by the arm beside, so its own answer adds nothing").
 xl_ok(keyed_leaves, keyed_crosses, "a callee of the read's own file (the ast_node file match)").
 xl_ok(keyed_dsure_at, keyed_dsure, "a callee of the call's own file (keyed_one_target)").
@@ -135,7 +135,7 @@ xl_ok(next_send, delegates, "the generator's own delegation, in its volume: next
 
 -- The arm for the volume's own argument; another file's array element spread into the call is named by `sx_name`.
 xl_ok(passes_function, ast_name, "the volume's own argument; the arm beside it reads sx_name for another file's element").
-xl_ok(written_arg, ast_child, "the point of it: an argument of another file is no child of the call and is left out").
+xl_ok(written_arg, argument_at, "the point of it: an argument of another file is no step of the call and is left out").
 xl_ok(passes_function, fn_node, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").
 xl_ok(passes_function, fn_name, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").
 xl_ok(passes_function, member_node_v, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").

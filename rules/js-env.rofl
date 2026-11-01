@@ -50,7 +50,7 @@ uses[audit](N, F) :- ast_node[code](N, K, _), env_lang(L),
 -- by the rare `async=true`, and only then does `ast_within` walk down. The
 -- negation goes last with N bound.
 within_attr[audit](N, Key, V) :- outside_attr_needs(_, _, Key, V, _),
-                                 ast_attr[code](A, Key, V), ast_within[code](A, N).
+                                 ast_attr[code](A, Key, V), inside[tree](A, N).
 uses[audit](N, F) :- ast_node[code](N, K, _), env_lang(L),
                      outside_attr_needs(L, K, Key, V, F),
                      not within_attr[audit](N, Key, V).
@@ -64,16 +64,16 @@ used_feature[audit](F)  :- uses[audit](_, F).
 unsupported[audit](E, N, F) :- environment(E), uses[audit](N, F), not env_has[audit](E, F).
 
 unsupported_at[audit](E, File, Line, F) :- unsupported[audit](E, N, F),
-                                           ast_node[code](N, _, File), ast_line[code](N, Line).
+                                           at[tree](N, File, _), at[tree](N, _, Line).
 
-uses_at[audit](File, Line, F)  :- uses[audit](N, F), ast_node[code](N, _, File), ast_line[code](N, Line).
+uses_at[audit](File, Line, F)  :- uses[audit](N, F), at[tree](N, File, _), at[tree](N, _, Line).
 uses_kind[audit](K, F)         :- uses[audit](N, F), ast_node[code](N, K, _).
 unsupported_in[audit](E, File, F) :- unsupported_at[audit](E, File, _, F).
 
 -- «Валидна ли эта программа в окружении X?» — total over the files scanned,
 -- so a clean file produces a POSITIVE row: a silence cannot be told from a
 -- model that did not run.
-file_broken[audit](E, File) :- unsupported[audit](E, N, _), ast_node[code](N, _, File).
+file_broken[audit](E, File) :- unsupported[audit](E, N, _), at[tree](N, File, _).
 
 -- A FILE THE SCANNER REFUSED is neither valid nor invalid unless the host
 -- says so; the denominator is every file the scanner reported on, and a
@@ -100,7 +100,7 @@ lost[audit](From, To, N, F) :- unsupported[audit](To, N, F), environment(From),
 
 lost_feature[audit](From, To, F) :- lost[audit](From, To, _, F).
 lost_at[audit](From, To, File, Line, F) :- lost[audit](From, To, N, F),
-                                           ast_node[code](N, _, File), ast_line[code](N, Line).
+                                           at[tree](N, File, _), at[tree](N, _, Line).
 
 -- =========================================================================
 -- 5. THE GATES. Each is a statement this layer makes about itself, and

@@ -1,6 +1,6 @@
 ---
 world: js-structure
-books: audit, code
+books: audit, code, main, tree, value
 default: code
 ---
 
@@ -20,6 +20,13 @@ default: code
 Reads:
 
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from outside these files, in the tree:
+  - <a id="nth"></a>`nth`
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
+  - <a id="member"></a>`member`
+  - <a id="member_expr"></a>`member_expr`
+  - <a id="private"></a>`private`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -32,6 +39,34 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `code` | `value` |
+| `code` | `tree` |
+| `flow` | `value` |
+| `flow` | `tree` |
+| `surface` | `value` |
+| `surface` | `tree` |
+| `audit` | `value` |
+| `audit` | `tree` |
+
+> the object a member reads, whether its key is a name or computed
+
+<a id="object_of"></a>`object_of`(M, O) either:
+
+1. if [`member`](#member)(M, O, something);
+2. if [`member_expr`](#member_expr)(M, O, something).
+
+> the static name a member reads; a private name is no property
+
+<a id="prop_name"></a>`prop_name`(M, O, K) if [`member`](#member)(M, O, K), unless [`private`](#private)(M).
+
+> the I-th argument of a call, or what it spreads
+
+<a id="argument_at"></a>`argument_at`(C, I, X) if [`callee`](#callee)(C, something) and [`nth`](#nth)(C, I, X).
 
 <a id="ast_in"></a>`ast_in` of P and C is another name for `ast_child` of P, _, _ and C.
 

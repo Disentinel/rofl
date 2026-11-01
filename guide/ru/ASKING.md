@@ -83,28 +83,28 @@ $ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
 ```
 $ rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23
 risky[main]("checkout")  <= re667b5bf @tick 0
-  fn_name[code](n017f49dbfbe9e0a8_fa4unkv52g4,"checkout")  <= r4664ba89 @tick 0
-    ast_node[code](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [axiom]
-    ast_child[code](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43) [axiom]
-    ast_name[code](n017f49dbfbe9e0a8_pi9h9ptud43,"checkout")  <= r4a879967 @tick 0
-      ast_attr[code](n017f49dbfbe9e0a8_pi9h9ptud43,name,"checkout") [axiom]
-  exported_fn[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= r0df9c422 @tick 0
-    fn_node[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= re519a619 @tick 0
-      fn_kind[main](function_declaration) [axiom]
-      ast_node[code](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [axiom]
-    not in_fn[code](n017f49dbfbe9e0a8_fa4unkv52g4) [finite failure]
-      whynot in_fn[code](n017f49dbfbe9e0a8_fa4unkv52g4):
-        rule r61bef758: in_fn[code](?N)@now :- nearest_v[flow](?_$0,?N)@now
-          failed premise: nearest_v[flow](?_$0#0,n017f49dbfbe9e0a8_fa4unkv52g4)
-    ast_within[code](n017f49dbfbe9e0a8_9l7lmkrrho2,n017f49dbfbe9e0a8_fa4unkv52g4)  <= rd361b6b6 @tick 0
-      ast_in[code](n017f49dbfbe9e0a8_9l7lmkrrho2,n017f49dbfbe9e0a8_fa4unkv52g4)  <= r9e3f8aba @tick 0
-        ast_child[code](n017f49dbfbe9e0a8_9l7lmkrrho2,declaration,0,n017f49dbfbe9e0a8_fa4unkv52g4) [axiom]
-    ast_node[code](n017f49dbfbe9e0a8_9l7lmkrrho2,export_named_declaration,"checkout.js") [axiom]
-    export_kind[main](export_named_declaration) [axiom]
-  may_throw[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= rbef6bec0 @tick 0
-    may_throw[code](na31b9c7ff583580b_v300rg8uh91)  <= r8e0a1ee0 @tick 0
-      throws_outright[code](na31b9c7ff583580b_v300rg8uh91)  <= rd720c658 @tick 0
-        ast_node[code](na31b9c7ff583580b_o5a7dfnm0m1,throw_statement,"pay.js") [axiom]
+  fn_name[code](n017f49dbfbe9e0a8_fa4unkv52g4,"checkout")  <= rb448fa01 @tick 0
+    fn_node[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= r631ec945 @tick 0
+      body[value](n017f49dbfbe9e0a8_fa4unkv52g4,n017f49dbfbe9e0a8_6siev33bp82)  <= rb22caae4 @tick 0
+        fn_kind[ast_babel](function_declaration) [axiom]
+        node[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js")  <= ra858953d @tick 0
+          ast_node[code](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [axiom]
+        child[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,body,0,n017f49dbfbe9e0a8_6siev33bp82)  <= r1e007e15 @tick 0
+          ast_child[code](n017f49dbfbe9e0a8_fa4unkv52g4,body,0,n017f49dbfbe9e0a8_6siev33bp82) [axiom]
+    target[value](n017f49dbfbe9e0a8_fa4unkv52g4,n017f49dbfbe9e0a8_pi9h9ptud43)  <= r56fa45d2 @tick 0
+      target_field[ast_babel](function_declaration,id) [axiom]
+      node[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [above]
+      child[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43)  <= r1e007e15 @tick 0
+        ast_child[code](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43) [axiom]
+    binds[value](n017f49dbfbe9e0a8_pi9h9ptud43,"checkout")  <= r06d8976c @tick 0
+      b_bind[ast_babel](n017f49dbfbe9e0a8_pi9h9ptud43,value)  <= r610c4050 @tick 0
+        bind_root[ast_babel](function_declaration,id,value) [axiom]
+        node[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [above]
+        child[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43) [above]
+      node[ast_babel](n017f49dbfbe9e0a8_pi9h9ptud43,identifier,"checkout.js")  <= ra858953d @tick 0
+        ast_node[code](n017f49dbfbe9e0a8_pi9h9ptud43,identifier,"checkout.js") [axiom]
+      attr[ast_babel](n017f49dbfbe9e0a8_pi9h9ptud43,name,"checkout")  <= r17100bcb @tick 0
+        ast_attr[code](n017f49dbfbe9e0a8_pi9h9ptud43,name,"checkout") [axiom]
 ```
 <!-- END run -->
 

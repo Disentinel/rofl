@@ -26,23 +26,23 @@ ex_depth(3).
 
 -- =========================================================================
 -- 1. THE APPS AND THE ROUTERS.
-ex_router_fn[flow](G) :- member_node_v[flow](G), selects[flow](G, "Router"), ast_child[code](G, object, 0, O),
+ex_router_fn[flow](G) :- member_node_v[flow](G), selects[flow](G, "Router"), object_of[code](G, O),
                          may_be_node[flow](O, S), external_value[flow](S, S), express_module(S).
 ex_router_fn[flow](G) :- may_be_node[flow](G, Sp), ex_import[flow](Sp, "Router").
 ex_import[flow](Sp, K) :- external_import[code](Sp, _, S, _), express_module(S),
                           ast_child[code](Sp, imported, 0, I), ast_name[code](I, K).
 sx_ex_import[surface](Sp, K) :- sx_esc[surface](Sp), ex_import[flow](Sp, K).
 ex_import[flow](Sp, K) :- sx_ex_import[surface](Sp, K).
-ex_app[flow](C) :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, G),
+ex_app[flow](C) :- ast_node[code](C, call_expression, _), callee[value](C, G),
                    may_be_node[flow](G, S), external_value[flow](S, S), express_module(S).
-ex_router[flow](C) :- ast_node[code](C, call_expression, _), ast_child[code](C, callee, 0, G), ex_router_fn[flow](G).
+ex_router[flow](C) :- ast_node[code](C, call_expression, _), callee[value](C, G), ex_router_fn[flow](G).
 ex_target[flow](Y) :- sx_ex_app[surface](Y).
 ex_target[flow](Y) :- ex_router[flow](Y).
 
 -- =========================================================================
 -- 2. WHAT A CALL ON ONE REGISTERS.
-ex_on[flow](R, Y, K) :- ast_node[code](R, call_expression, _), ast_child[code](R, callee, 0, M),
-                        member_node_v[flow](M), selects[flow](M, K), ast_child[code](M, object, 0, O),
+ex_on[flow](R, Y, K) :- ast_node[code](R, call_expression, _), callee[value](R, M),
+                        member_node_v[flow](M), selects[flow](M, K), object_of[code](M, O),
                         may_be_node[flow](O, Y), ex_target[flow](Y).
 ex_path[flow](R, V) :- ex_on[flow](R, _, _), arg_at[flow](R, 0, A), may_be_lit[flow](A, V), str_value[flow](V).
 ex_fn[flow](R, I, F) :- ex_on[flow](R, _, _), arg_at[flow](R, I, A), may_be_node[flow](A, F), fn_value[flow](F).

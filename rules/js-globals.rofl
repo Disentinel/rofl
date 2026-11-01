@@ -30,14 +30,14 @@ global_unattributed[audit](E, Name) :- free_global[code](E, Name, _),
 -- 4. THE STATIC SURFACE — one join, keyed by (global, key) once
 -- `selects[flow]` has answered the key; `Math["max"]` is `Math.max`.
 es_static[code](N, Name, Key, Rel) :- es_global[code](O, Name, _, _),
-                                      ast_child[code](N, object, 0, O),
+                                      object_of[code](N, O),
                                       selects[flow](N, Key), lib_static(Name, Key, Rel).
 
 -- a member off a KNOWN global that TypeScript does not carry: a newer
 -- edition, a HOST extension (`Error.captureStackTrace` is V8's) or a typo;
 -- non-empty on purpose, the fixture puts a site in it
 es_static_unattributed[audit](N, Name, Key) :- es_global[code](O, Name, _, _),
-                                               ast_child[code](N, object, 0, O),
+                                               object_of[code](N, O),
                                                selects[flow](N, Key),
                                                not lib_static(Name, Key, _).
 
@@ -52,7 +52,7 @@ es_static_call[code](C, Name, Key, Rel) :- callee_of[code](C, N),
 es_global_invoke[code](C, Name, Rel)    :- callee_of[code](C, N),
                                            es_global[code](N, Name, Rel, _).
 es_global_construct[code](X, Name, Rel) :- transfer_site[code](X, new_expression),
-                                           ast_child[code](X, callee, 0, N),
+                                           callee[value](X, N),
                                            es_global[code](N, Name, Rel, _).
 
 -- `new Math()` is a TypeError and the model says why: `Math` is a
@@ -105,7 +105,7 @@ es_prototype_gap[audit](Name, Rel) :- lib_global(Name, Rel, Form), constructible
                                       not lib_global_prototype(Name, _).
 
 es_instance_unattributed[audit](C, Name, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                                                 ast_child[code](N, object, 0, O),
+                                                 object_of[code](N, O),
                                                  may_be_node[flow](O, X),
                                                  es_instance[flow](X, Name, _),
                                                  not lib_global_prototype(Name, _),

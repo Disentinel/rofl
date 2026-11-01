@@ -1,6 +1,6 @@
 ---
 world: js-env
-books: audit, code, main
+books: audit, code, main, tree
 default: audit
 ---
 
@@ -37,15 +37,17 @@ Reads:
   - <a id="kind_needs"></a>A kind K needs a feature F in a language L (`kind_needs`)
   - <a id="provides"></a>A release P provides the feature F (`provides`)
   - <a id="release"></a>A release R is a release (`release`)
-- from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
 - from outside these files, in the code:
   - <a id="ast_file"></a>`ast_file`
-  - <a id="ast_within"></a>A node is within a node (`ast_within`)
 - from outside these files, in the main:
   - <a id="attr_needs"></a>`attr_needs`
   - <a id="feature_unscannable"></a>A feature F is unscannable because a reason R (`feature_unscannable`)
   - <a id="outside_attr_needs"></a>`outside_attr_needs`
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
+  - <a id="inside"></a>`inside`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -122,7 +124,7 @@ A node
 - <a id="within_attr"></a>contains the attribute Key holding V if all of:
   - [`outside_attr_needs`](#outside_attr_needs)(something, something, Key, V, something);
   - [the attribute](#ast_attr) Key of a node X is V;
-  - it [is within](#ast_within) X.
+  - [`inside`](#inside)(X, it).
 - uses the feature F if all of:
   - it [is of kind](js-model.rofl.md#ast_node) K;
   - a language L [is the environment language](#env_lang);
@@ -141,13 +143,13 @@ A node
 
 <a id="unsupported_at"></a>File fails at Line in an environment E for a feature F if all of:
   - a node N [fails](#unsupported) in E for F;
-  - N [is in file](js-model.rofl.md#ast_node) File;
-  - N [is at line](js-model.rofl.md#ast_line) Line.
+  - [`at`](#at)(N, File, something);
+  - [`at`](#at)(N, something, Line).
 
 <a id="uses_at"></a>File uses the feature F at Line if all of:
   - a node N [uses the feature](#uses) F;
-  - N [is in file](js-model.rofl.md#ast_node) File;
-  - N [is at line](js-model.rofl.md#ast_line) Line.
+  - [`at`](#at)(N, File, something);
+  - [`at`](#at)(N, something, Line).
 
 <a id="uses_kind"></a>A kind K is seen using a feature F if a node N [uses the feature](#uses) F and N [is of kind](js-model.rofl.md#ast_node) K.
 
@@ -155,7 +157,7 @@ A node
 > so a clean file produces a POSITIVE row: a silence cannot be told from a
 > model that did not run.
 
-<a id="file_broken"></a>File is broken in an environment E if a node N [fails](#unsupported) in E for some feature and N [is in file](js-model.rofl.md#ast_node) File.
+<a id="file_broken"></a>File is broken in an environment E if a node N [fails](#unsupported) in E for some feature and [`at`](#at)(N, File, something).
 
 > A FILE THE SCANNER REFUSED is neither valid nor invalid unless the host
 > says so; the denominator is every file the scanner reported on, and a
@@ -198,8 +200,8 @@ Declared as facts:
 
 <a id="lost_at"></a>File loses the feature F at Line from an environment From to an environment To if all of:
   - a node N [is lost](#lost) from From to To by F;
-  - N [is in file](js-model.rofl.md#ast_node) File;
-  - N [is at line](js-model.rofl.md#ast_line) Line.
+  - [`at`](#at)(N, File, something);
+  - [`at`](#at)(N, something, Line).
 
 ## 5. THE GATES. Each is a statement this layer makes about itself, and
 

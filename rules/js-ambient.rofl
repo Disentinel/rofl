@@ -91,7 +91,7 @@ ambient_effect(Spec, Key, E) :- member_effect[code](Spec, Key, A), eff_of_host(A
 -- selects; `ambient_unenumerated[flow]` names the surfaces in that state.
 ambient_global_default(Name, E) :- host_global_effect(_, Name, A), eff_of_host(A, E).
 amb_global_member[flow](Name, Key) :- free_global[code](O, Name, _),
-                                      ast_child[code](M, object, 0, O),
+                                      object_of[code](M, O),
                                       selects[flow](M, Key),
                                       host_global_effect(_, Name, _).
 ambient_effect(Name, Key, E)       :- amb_global_member[flow](Name, Key),
@@ -122,7 +122,7 @@ eff_operation[flow](C, Key) :- host_module_call[code](C, _, Key).
 
 -- 5a. A member call on an ambient global — `console.log(x)`.
 eff_surface[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                              ast_child[code](N, object, 0, O), free_global[code](O, Name, _),
+                              object_of[code](N, O), free_global[code](O, Name, _),
                               ambient_global(Name).
 
 -- 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
@@ -137,7 +137,7 @@ eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 -- `new Box()` resolved to a class in this program is not ambient.
 amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
                                 not resolved_site[code](X),
-                                ast_child[code](X, callee, 0, N),
+                                callee[value](X, N),
                                 free_global[code](N, Name, _),
                                 ambient_global(Name).
 eff_surface[flow](X, Name)        :- amb_construct[flow](X, Name).
@@ -182,7 +182,7 @@ amb_proto_heap(P, local) :- builtin_prototype(P), not amb_proto_untraced(P).
 
 -- the structural argument as a row: heap-decided here, `global` in js-effects
 amb_proto_recv[flow](M, P) :- builtin_prototype(P), prototype_of[flow](O, P),
-                              ast_child[code](M, object, 0, O), member_node_v[flow](M).
+                              object_of[code](M, O), member_node_v[flow](M).
 amb_proto_heap_split[audit](P, M) :- amb_proto_heap(P, local), amb_proto_recv[flow](M, P),
                                      eff_heap_of[flow](M, global).
 

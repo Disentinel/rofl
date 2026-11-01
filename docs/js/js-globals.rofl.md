@@ -1,6 +1,6 @@
 ---
 world: js-globals
-books: audit, code, flow, main
+books: audit, code, flow, main, value
 default: audit
 ---
 
@@ -34,10 +34,11 @@ Reads:
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow, in the flow: [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
+- from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the main:
   - <a id="lib_static_shape"></a>`lib_static_shape`
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
 
 ## Words
 
@@ -67,10 +68,10 @@ In the audit:
 
 In the code:
 
-<a id="es_static"></a>A node selects the static Key of Name from a release Rel if all of:
+<a id="es_static"></a>N selects the static Key of Name from a release Rel if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
-  - the `object` of it is O;
-  - it [selects](js-dataflow.rofl.md#selects) Key;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - N [selects](js-dataflow.rofl.md#selects) Key;
   - Name [has the static](#lib_static) Key since Rel.
 
 > a member off a KNOWN global that TypeScript does not carry: a newer
@@ -81,7 +82,7 @@ In the audit:
 
 <a id="es_static_unattributed"></a>A node selects an unattributed static Key of Name if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
-  - the `object` of it is O;
+  - [`object_of`](js-structure.rofl.md#object_of)(it, O);
   - it [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the static](#lib_static) Key since some release.
 
@@ -98,7 +99,10 @@ In the code:
 
 <a id="es_global_invoke"></a>C invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of C [is the global](#es_global) Name of Rel with some form.
 
-<a id="es_global_construct"></a>A node constructs the global Name of a release Rel if it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression` and the `callee` of it [is the global](#es_global) Name of Rel with some form.
+<a id="es_global_construct"></a>A node constructs the global Name of a release Rel if all of:
+  - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
+  - [`callee`](#callee)(it, N);
+  - a node N [is the global](#es_global) Name of Rel with some form.
 
 > `new Math()` is a TypeError and the model says why: `Math` is a
 > `namespace_object` with no constructor declared behind it. A runtime error
@@ -177,7 +181,8 @@ In the audit:
 <a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [points to](js-concat.rofl.md#may_be_node) a node X;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - a node O [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.
