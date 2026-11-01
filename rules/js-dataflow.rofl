@@ -45,7 +45,7 @@ may_be_lit[flow](E, V) :- literal_kind(K), ast_node[code](E, K, _), ast_value[co
 -- here: the layer does not know what an object lacks.
 may_be_lit[flow](E, undefined) :- free_global[code](E, "undefined", _).
 may_be_lit[flow](E, undefined) :- unary[value](E, "void", _).
-undef_binder[code](D) :- bare_binder[code](D, _, _), ast_child[code](V, declarations, _, D), not ast_child[code](_, left, 0, V).
+undef_binder[code](D) :- bare_binder[code](D, _, _), ast_child[code](V, declarations, _, D), not iterates[value](_, V, _), not enumerates[value](_, V, _).
 may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D), not target[value](D, E).
 
 -- A template with no interpolation is a string — `cooked`, which is what it
@@ -938,8 +938,8 @@ keyed_same_name[code](P, R) :- keyed_param_name[code](P, G, Name), keyed_param_n
 keyed_read_site[code](C, H, B, F, I) :- keyed_call[code](C, H, Get, B, F, I), keyed_holder[code](H, P),
                                         keyed_store(P, _, Get).
 keyed_read_site[code](C, H, B, F, I) :- keyed_call[code](C, H, "forEach", B, F, I).
-keyed_read_site[code](S, H, B, F, I) :- keyed_ref[code](R, H), ast_child[code](S, right, 0, R),
-                                        ast_node[code](S, for_of_statement, _), ast_child[code](B, F, I, S),
+keyed_read_site[code](S, H, B, F, I) :- keyed_ref[code](R, H), iterates[value](S, _, R),
+                                        ast_child[code](B, F, I, S),
                                         keyed_list[code](H, B, F).
 keyed_put_of[code](C, H, V)  :- keyed_seen[code](C, H, Put, _, _, _, _), keyed_holder[code](H, P),
                                 keyed_store(P, Put, _), ast_child[code](C, arguments, 1, V).
@@ -1093,10 +1093,10 @@ keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, yiel
 keyed_once_need[code](F) :- keyed_caller[code](_, _, F).
 keyed_caller[code](G, Q, F) :- keyed_called_at[code](G, Q), nearest_fn[code](F, Q).
 keyed_called_at[code](G, Q) :- keyed_once_need[code](G), resolves[code](Q, G).
-keyed_looped[code](Q) :- keyed_called_at[code](_, Q), inside[tree](Lp, Q), ast_node[code](Lp, K, _),
-                         eff_loop_kind(K), nearest_fn[code](F, Q), inside[tree](F, Lp).
+keyed_looped[code](Q) :- keyed_called_at[code](_, Q), inside[tree](Lp, Q), eff_loop[code](Lp),
+                         nearest_fn[code](F, Q), inside[tree](F, Lp).
 keyed_looped[code](Q) :- keyed_called_at[code](_, Q), not in_fn[code](Q), inside[tree](Lp, Q),
-                         ast_node[code](Lp, K, _), eff_loop_kind(K).
+                         eff_loop[code](Lp).
 keyed_many[code](G) :- keyed_called_at[code](G, Q1), keyed_called_at[code](G, Q2), Q1 != Q2.
 keyed_many[code](G) :- keyed_called_at[code](G, Q), keyed_looped[code](Q).
 keyed_many[code](G) :- keyed_caller[code](G, _, F), keyed_many[code](F).
@@ -1311,8 +1311,8 @@ may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read[flow](C, V).
 
 -- the walks: position 0 of the head's pattern is a key, position 1 a value;
 -- forEach's callback takes (value, key)
-keyed_walk[flow](S, D, X) :- ast_node[code](S, for_of_statement, _), ast_child[code](S, left, 0, H),
-                             ast_child[code](H, declarations, 0, D), ast_child[code](S, right, 0, R),
+keyed_walk[flow](S, D, X) :- iterates[value](S, H, R),
+                             ast_child[code](H, declarations, 0, D),
                              may_be_node[flow](R, X), keyed_obj[flow](X, _).
 keyed_walk_at[flow](E, D, Pos) :- keyed_walk[flow](_, D, _), destructures_at[code](D, Local, Pos, File),
                                   ident_in[code](E, Local, File), sees_binder[code](E, D).
@@ -2085,8 +2085,8 @@ may_be_node[flow](Y, X) :- delegates[value](Y, A), resolves[code](A, Inner),
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
 iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
 
-decl_value[flow](D, E) :- ast_node[code](S, for_of_statement, _), ast_child[code](S, left, 0, V),
-                          ast_child[code](V, declarations, 0, D), ast_child[code](S, right, 0, X),
+decl_value[flow](D, E) :- iterates[value](S, V, X),
+                          ast_child[code](V, declarations, 0, D),
                           iter_elem[flow](X, E).
 
 may_be_node[flow](U, N) :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be_node[flow](E, N),

@@ -91,13 +91,9 @@ eff_here[flow](T, exn, none) :- exits[value](T, throw),
 -- `@mark() m() {}` is a call of the function around the class, never of `m`.
 -- A `for-in` walks the keys the object had when it started, so it ends; a
 -- `for-of` walks an iterator, which need not.
-edb(eff_loop_kind).
-eff_loop_kind(while_statement).
-eff_loop_kind(do_while_statement).
-eff_loop_kind(for_statement).
-eff_loop_kind(for_of_statement).
+eff_loop[code](L) :- repeats[value](L, _), not enumerates[value](L, _, _).
 
-eff_here[flow](N, div, none) :- eff_loop_kind(K), ast_node[code](N, K, _).
+eff_here[flow](N, div, none) :- eff_loop[code](N).
 
 eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_value[flow](G).
 -- A cycle is asked of the edges that can lie on one: a function nothing calls or that calls

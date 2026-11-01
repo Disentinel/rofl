@@ -290,8 +290,7 @@ resolves[code](X, F) :- transfer_site[code](X, decorator),
 -- as an over-approximation, and a for-of really makes two calls, so the second
 -- goes straight to `calls`. `member_value` names the node a member HOLDS — for
 -- `{ next: bump }` the identifier — hence the second `may_be_node` hop.
-for_of_iterates[code](X, M) :- transfer_site[code](X, for_of_statement),
-                               ast_child[code](X, right, 0, R),
+for_of_iterates[code](X, M) :- iterates[value](X, _, R),
                                may_be_node[flow](R, Obj),
                                member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 resolves[code](X, M) :- for_of_iterates[code](X, M).
@@ -614,10 +613,10 @@ writes_in_place(update_expression, argument).
 writes_in_place(array_pattern, elements).
 writes_in_place(assignment_pattern, left).
 writes_in_place(rest_element, argument).
-writes_in_place(for_in_statement, left).
-writes_in_place(for_of_statement, left).
 member_written[flow](N) :- member_node_v[flow](N), ast_child[code](P, F, _, N), ast_node[code](P, PK, _),
                            writes_in_place(PK, F).
+member_written[flow](N) :- member_node_v[flow](N), iterates[value](_, N, _).
+member_written[flow](N) :- member_node_v[flow](N), enumerates[value](_, N, _).
 member_written[flow](N) :- member_node_v[flow](N), ast_child[code](Prop, value, 0, N),
                            ast_child[code](Pat, properties, _, Prop), ast_node[code](Pat, object_pattern, _).
 sx_mkey[surface](O, Key) :- member_written[flow](N), member_at[flow](N, _, O, Key).

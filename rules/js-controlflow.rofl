@@ -312,7 +312,7 @@ hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _),
 hidden_call_pos[code](S, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A), parent[tree](S, A).
 hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _).
 hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
-hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _).
+hidden_call_pos[code](X, iterator_call) :- iterates[value](X, _, _).
 
 hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _),
                                   pattern_source[code](P, Init).
@@ -323,8 +323,7 @@ hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
 hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _),
                                   hidden_call_pos[code](S, _),
                                   ast_child[code](S, argument, 0, A).
-hidden_call_src[code](X, R)    :- ast_node[code](X, for_of_statement, _),
-                                  ast_child[code](X, right, 0, R).
+hidden_call_src[code](X, R)    :- iterates[value](X, _, R).
 
 hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
 hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
