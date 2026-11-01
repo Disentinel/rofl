@@ -3879,3 +3879,11 @@ check_file("concat_recursion", "examples/checks/concat-recursion.rofl").
 -- is answered with what each rule and premise cost, written by the Rust engine after the evaluation and read in the
 -- round after. The TypeScript engine writes no profile, so the world is Rust's alone.
 check_opt("profile", one_engine, rust).
+
+-- THE HYPOTHESES OVER THE PROFILE (models/engine/profile.rofl): verdicts on a rule or a premise (scan, rescan,
+-- rederives, barren, hot), forecasts of a head's size judged by `rows` (forecast_off, forecast_loose), and a growth
+-- class two sizes judge (rust/rofl/tests/profile_model.rs), over the planted shapes of examples/checks/profile-hub.rofl.
+check_world("profile_model").
+check_file("profile_model", "models/engine/profile.rofl").
+check_file("profile_model", "examples/checks/profile-hub.rofl").
+check_opt("profile_model", one_engine, rust).
