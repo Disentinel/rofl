@@ -1990,8 +1990,7 @@ coroutine_of[flow](C, F) :- contract_call[flow](C, Pkg, Key), runs_coroutine(Pkg
                             arg_at[flow](C, I, A), may_be_node[flow](A, F), gen_fn[flow](F).
 sx_coroutine[surface](F) :- coroutine_of[flow](_, F).
 coroutine_yield[flow](Y, A) :- sx_coroutine[surface](F), nearest_v[flow](F, Y),
-                               ast_node[code](Y, yield_expression, _), ast_attr[code](Y, delegate, false),
-                               ast_child[code](Y, argument, 0, A).
+                               yields[value](Y, A).
 may_be_node[flow](Y, N) :- coroutine_yield[flow](Y, A), may_be_node[flow](A, N).
 may_be_lit[flow](Y, V)  :- coroutine_yield[flow](Y, A), may_be_lit[flow](A, V).
 may_be_node[flow](C, N) :- coroutine_of[flow](C, F), sx_gen_ret[surface](F, N).
@@ -2084,8 +2083,8 @@ may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), awaits[value](E, X).
 -- function yields is what `for-of` walks, and the value a `yield` RECEIVES is
 -- what the consumer hands `.next(v)`, through `yield*` too. The delegating
 -- expression itself is the inner generator's return.
-yields[flow](F, E) :- ast_node[code](Y, yield_expression, _), nearest_v[flow](F, Y),
-                      ast_child[code](Y, argument, 0, E).
+yields[flow](F, E) :- yields[value](Y, E), nearest_v[flow](F, Y).
+yields[flow](F, E) :- delegates[value](Y, E), nearest_v[flow](F, Y).
 
 gen_fn[flow](F)          :- fn_node[code](F), generator[value](F).
 gen_of[flow](C, F)       :- resolves[code](C, F), gen_fn[flow](F).
@@ -2095,11 +2094,7 @@ next_send[flow](G, V) :- selects[flow](N, "next"), callee_of[code](C, N),
                          object_of[code](N, O), may_be_node[flow](O, GC), gen_of[flow](GC, G),
                          ast_child[code](C, arguments, 0, V).
 
-delegates[flow](Outer, Inner) :- ast_node[code](Y, yield_expression, _),
-                                 ast_attr[code](Y, delegate, true),
-                                 nearest_v[flow](Outer, Y),
-                                 ast_child[code](Y, argument, 0, A),
-                                 resolves[code](A, Inner).
+delegates[flow](Outer, Inner) :- delegates[value](Y, A), nearest_v[flow](Outer, Y), resolves[code](A, Inner).
 next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, Inner).
 
 may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y),
@@ -2107,9 +2102,7 @@ may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y),
                            ast_attr[code](Y, delegate, false),
                            may_be_node[flow](V, X).
 
-may_be_node[flow](Y, X) :- ast_node[code](Y, yield_expression, _),
-                           ast_attr[code](Y, delegate, true),
-                           ast_child[code](Y, argument, 0, A), resolves[code](A, Inner),
+may_be_node[flow](Y, X) :- delegates[value](Y, A), resolves[code](A, Inner),
                            ret_node_any[flow](Inner, X).
 
 -- FOR-OF: the head is a declarator like any other, whose value is each
