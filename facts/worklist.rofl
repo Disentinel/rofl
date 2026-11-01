@@ -3570,8 +3570,8 @@ work(w_whynot_tells_absent_from_unloaded,
 work_state(w_whynot_tells_absent_from_unloaded, done).
 
 work(w_witnesses_survive_cooling,
-  "A COOLED AND REHEATED SESSION ANSWERS WHY WITH [axiom]: the witness arena is not persisted, so a cache keeps facts but not proofs. Persist the witnesses with the volume (or derive them again on reheat, said so), so why after reheat equals why before cooling, byte for byte.").
-work_state(w_witnesses_survive_cooling, open).
+  "A COOLED AND REHEATED SESSION ANSWERS WHY WITH [axiom]: the witness arena is not persisted, so a cache keeps facts but not proofs. Persist the witnesses with the volume (or derive them again on reheat, said so), so why after reheat equals why before cooling, byte for byte. DONE 2026-11-01, nothing to build: measured, the claim no longer holds. A cooled volume writes only base facts; its conclusions are derived again on reheat with fresh witnesses, and a conclusion of another book keeps its own; a world kept as a volume carries the witness arena (f_a_world_kept_as_a_volume_opens_mapped_in_a_fifteenth_of_the_time), and a TS snapshot its firings. tests/cool.rs a_reheated_volume_answers_why_as_before_cooling pins it: why of the volume's own conclusion, of a [surface] conclusion drawn from it and of the other volume's, byte for byte, reheated by delta, by book with no evaluation between, and into a world kept as a volume and opened; the round-trip tests there already compared canonical_state, witnesses included. A [surface] fact the split driver holds as a published base copy still shows [axiom] in the resident world until runtime/split.ts why lifts its publishers, which is that driver's re-derivation on demand, said in its header and held by npm run test:split.").
+work_state(w_witnesses_survive_cooling, done).
 
 work(w_a_wall_names_itself_in_the_notebook,
   "rofl-nb over 2-3 real files answers \"at least N answers, cut short\" (exit 3) after about 30 s and ROFL_NB_LIMIT does not change it, because the cut is not the clock (the memory wall, f_a_run_cut_short_said_it_held). The message names which wall cut the run and the setting that raises it. Speed is w_rust_default_backend's.").
