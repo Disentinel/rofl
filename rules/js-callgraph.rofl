@@ -193,26 +193,18 @@ fn_file[code](F, File) :- fn_node[code](F), at[tree](F, File, _).
 -- laid every function beside every declarator (271 982 accumulator rows on
 -- sixteen eslint files). A PRIVATE method gets no name: V8 says `#rim`, the
 -- store holds `rim`, and the kernel has no operation that builds a string.
-fn_name[code](F, N) :- ast_node[code](F, function_declaration, _),
-                       ast_child[code](F, id, 0, I), ast_name[code](I, N).
-fn_name[code](F, N) :- ast_node[code](F, function_expression, _),
-                       ast_child[code](F, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- fn_node[code](F), target[value](F, I), binds[value](I, N).
 fn_name[code](F, N) :- ast_node[code](F, object_method, _),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
 ctor_method[code](F)   :- ast_node[code](F, class_method, _),
                           ast_attr[code](F, kind, "constructor").
 fn_name[code](F, N) :- ast_node[code](F, class_method, _), not ctor_method[code](F),
                        ast_child[code](F, key, 0, K), key_name[code](K, N).
-fn_name[code](F, N) :- ast_node[code](D, variable_declarator, _),
-                       ast_child[code](D, init, 0, F), fn_node[code](F),
-                       ast_child[code](D, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- binder[code](D, N, F, _), fn_node[code](F).
 fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
                        ast_node[code](P, object_property, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _),
-                       ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
-                       ast_child[code](CD, id, 0, I), ast_name[code](I, N).
+fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), target[value](CD, I), binds[value](I, N).
 fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _),
                        ast_child[code](P, value, 0, F), fn_node[code](F),
                        ast_child[code](P, key, 0, KN), key_name[code](KN, N).
@@ -221,17 +213,8 @@ fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _),
 -- inference: `const A = class {}` has `A.name === "A"`, but
 -- `const W = class Hoist {}` has `"Hoist"`. The arm carries the negation so
 -- the two constructor arms never both fire.
-class_has_id[code](CD) :- ast_node[code](CD, class_expression, _),
-                          ast_child[code](CD, id, 0, _).
-anon_class[code](CD)   :- ast_node[code](CD, class_expression, _),
-                          not class_has_id[code](CD).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _),
-                       ast_attr[code](F, kind, "constructor"),
-                       ast_child[code](B, body, _, F), ast_child[code](CD, body, 0, B),
-                       anon_class[code](CD),
-                       ast_child[code](D, init, 0, CD),
-                       ast_node[code](D, variable_declarator, _),
-                       ast_child[code](D, id, 0, I), ast_name[code](I, N).
+anon_class[code](CD)   :- class[value](CD), not decl[value](CD, class).
+fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), anon_class[code](CD), binder[code](_, N, CD, _).
 
 -- A decorator is INSIDE the thing it decorates and does not run there:
 -- `@decoFactory('m') marked() {}` puts the call in `marked`'s subtree and
@@ -919,9 +902,9 @@ param_annotation[code](P, A) :- ast_child[code](P, type_annotation, 0, A).
 param_annotation[code](P, A) :- param_property[code](P, _, X), ast_child[code](X, type_annotation, 0, A).
 param_annotation[code](P, A) :- ast_node[code](P, assignment_pattern, _), ast_child[code](P, left, 0, X),
                                 ast_child[code](X, type_annotation, 0, A).
-declared[flow](E, T)   :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
+declared[flow](E, T)   :- declarator_id[code](D, I),
                           ast_child[code](I, type_annotation, 0, A), names_type[flow](A, T), sees_binder[code](E, D).
-declared_lib[flow](E, L) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
+declared_lib[flow](E, L) :- declarator_id[code](D, I),
                           ast_child[code](I, type_annotation, 0, A), names_lib[flow](A, L), sees_binder[code](E, D).
 declared[flow](T, CD)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false), this_host[flow](M, T).
 declared[flow](N, T2)  :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
@@ -965,8 +948,8 @@ imported_call[code](C, Orig, Target)  :- ast_node[code](C, call_expression, _), 
 declared[flow](C, T)     :- imported_call[code](C, Orig, Target), sx_fn_ret[surface](Target, Orig, T).
 declared_lib[flow](C, P) :- imported_call[code](C, Orig, Target), sx_fn_ret_lib[surface](Target, Orig, P).
 declared_lib[flow](C, P) :- fn_ret_at[code](C, A), names_lib[flow](A, P).
-inferred_init[code](D, X) :- ast_node[code](D, variable_declarator, _), ast_child[code](D, id, 0, I),
-                             not ast_child[code](I, type_annotation, 0, _), ast_child[code](D, init, 0, X).
+inferred_init[code](D, X) :- var_decl[code](D), assign[value](D, I, X), not ast_child[code](I, type_annotation, 0, _).
+
 declared[flow](E, T)     :- inferred_init[code](D, X), declared[flow](X, T), sees_binder[code](E, D).
 declared_lib[flow](E, P) :- inferred_init[code](D, X), declared_lib[flow](X, P), sees_binder[code](E, D).
 

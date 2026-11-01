@@ -249,15 +249,13 @@ site[code](N) :- accessor_read[code](N, _).
 -- `accessor_of` and `member_value(Obj, symbol_iterator, M)` already decide. Only
 -- the declarator form: a pattern in a parameter reads the argument, a
 -- call-site question, so it is silent here rather than wrong.
-pattern_source[code](P, Init) :- ast_node[code](D, variable_declarator, _),
-                                 ast_child[code](D, id, 0, P),
-                                 decl_value[flow](D, Init).
+pattern_source[code](P, Init) :- declarator_id[code](D, P), decl_value[flow](D, Init).
 
 pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
                                 pattern_source[code](P, Init), ast_node[code](P, object_pattern, _),
                                 pattern_takes[code](P, Key).
-pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _),
-                                ast_child[code](D, id, 0, P),
+pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _), declarator_id[code](D, P),
+
                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
 pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),

@@ -46,7 +46,7 @@ may_be_lit[flow](E, V) :- literal_kind(K), ast_node[code](E, K, _), ast_value[co
 may_be_lit[flow](E, undefined) :- free_global[code](E, "undefined", _).
 may_be_lit[flow](E, undefined) :- ast_node[code](E, unary_expression, _), ast_attr[code](E, operator, "void").
 undef_binder[code](D) :- bare_binder[code](D, _, _), ast_child[code](V, declarations, _, D), not ast_child[code](_, left, 0, V).
-may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D), not ast_child[code](D, id, 0, E).
+may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D), not target[value](D, E).
 
 -- A template with no interpolation is a string — `cooked`, which is what it
 -- evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
@@ -81,6 +81,8 @@ may_be_node[flow](E, E) :- node_value_kind(K), ast_node[code](E, K, _).
 edb(var_decl_kind).
 var_decl_kind(var). var_decl_kind(let). var_decl_kind(const). var_decl_kind(using). var_decl_kind(await_using).
 var_decl[code](D) :- var_decl_kind(K), decl[value](D, K).
+declarator_id[code](D, I) :- var_decl[code](D), assign[value](D, I, _).
+declarator_id[code](D, I) :- var_decl[code](D), target[value](D, I).
 
 function binder(D, to Name, to Init, to File).
 binder[code](D, Name, Init, File) :- var_decl[code](D), assign[value](D, I, Init), binds[value](I, Name),
@@ -162,7 +164,7 @@ scope_declares[code](F, "arguments", File) :- fn_node[code](F), ast_node[code](F
 scope_declares[code](S, Name, File) :- named_decl[code](D, Name, File), decl_region[code](D, S).
 scope_declares[code](B, Name, File) :- catch_names[code](B, Name, File).
 scope_declares[code](B, Name, File) :- ast_node[code](B, tsenum_body, File), ast_child[code](B, members, _, M),
-                                       ast_child[code](M, id, 0, I), ast_name[code](I, Name).
+                                       key[value](M, Name).
 scope_declares[code](X, Name, File) :- own_name[code](X, Name, File, itself).
 
 -- A function or class declaration declares its name in the scope around it,
@@ -177,7 +179,7 @@ named_kind(tsdeclare_function, around).
 named_kind(function_expression, itself).
 named_kind(class_expression, itself).
 own_name[code](X, Name, File, W) :- named_kind(K, W), ast_node[code](X, K, File),
-                                    ast_child[code](X, id, 0, I), ast_name[code](I, Name).
+                                    target[value](X, I), binds[value](I, Name).
 named_decl[code](D, Name, File)  :- own_name[code](D, Name, File, around).
 up_d[code](D, P)         :- named_decl[code](D, _, _), parent[tree](P, D).
 up_d[code](D, P2)        :- up_d[code](D, P), not scope_node[code](P), parent[tree](P2, P).
@@ -432,8 +434,7 @@ prop_default[code](Prop, Init)  :- ast_child[code](Prop, value, 0, A),
 -- a for-of each element the loop walks (section 14).
 decl_value[flow](D, X) :- ast_child[code](D, init, 0, X).
 
-destr_prop[code](D, Prop, K, Local, File) :- ast_node[code](D, variable_declarator, File),
-                                             ast_child[code](D, id, 0, P),
+destr_prop[code](D, Prop, K, Local, File) :- declarator_id[code](D, P), at[tree](D, File, _),
                                              ast_node[code](P, object_pattern, _),
                                              ast_child[code](P, properties, _, Prop),
                                              ast_child[code](Prop, key, 0, K),
@@ -457,8 +458,7 @@ may_be_lit[flow](E, L)  :- destr_default[code](D, Local, Init, File), may_be_lit
 may_be_node[flow](E, N) :- destr_default[code](D, Local, Init, File), may_be_node[flow](Init, N),
                            ident_in[code](E, Local, File), sees_binder[code](E, D).
 
-destructures_at[code](D, Local, Index, File) :- ast_node[code](D, variable_declarator, File),
-                                                ast_child[code](D, id, 0, P),
+destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, P), at[tree](D, File, _),
                                                 ast_node[code](P, array_pattern, _),
                                                 ast_child[code](P, elements, Index, L),
                                                 ast_name[code](L, Local).
@@ -524,8 +524,7 @@ pattern_takes[code](P, Key) :- ast_node[code](P, object_pattern, _),
                                ast_child[code](P, properties, _, Prop),
                                ast_child[code](Prop, key, 0, K), key_name[code](K, Key).
 
-rest_in_pattern[code](D, R, File) :- ast_node[code](D, variable_declarator, File),
-                                     ast_child[code](D, id, 0, P),
+rest_in_pattern[code](D, R, File) :- declarator_id[code](D, P), at[tree](D, File, _),
                                      ast_node[code](P, object_pattern, _),
                                      ast_child[code](P, properties, _, R),
                                      ast_node[code](R, rest_element, _).
@@ -533,8 +532,7 @@ rest_binds[code](D, R, Local, File) :- rest_in_pattern[code](D, R, File),
                                        ast_child[code](R, argument, 0, L), ast_name[code](L, Local).
 scoped_binder[code](D, File) :- rest_binds[code](D, _, _, File).
 
-member_value[flow](R, Key, V) :- rest_in_pattern[code](D, R, _),
-                                 ast_child[code](D, id, 0, P),
+member_value[flow](R, Key, V) :- rest_in_pattern[code](D, R, _), declarator_id[code](D, P),
                                  decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                  member_value[flow](Obj, Key, V),
                                  not pattern_takes[code](P, Key).
@@ -623,9 +621,9 @@ dead_in[code](A, C) :- dead_arm[code](A), inside[tree](A, C).
 dead_site[code](C)  :- dead_in[code](_, C), call_like_v(K), ast_node[code](C, K, _).
 
 mention[code](F, E)     :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _),
-                           ast_child[code](F, id, 0, I), E != I.
+                           target[value](F, I), E != I.
 mention[code](F, E)     :- sees_binder[code](E, D), binder[code](D, _, F, _), fn_node[code](F),
-                           ast_child[code](D, id, 0, I), E != I.
+                           assign[value](D, I, F), E != I.
 live_mention[code](F)   :- mention[code](F, E), not dead_in[code](_, E).
 live_mention[code](F)   :- exported_decl[code](F).
 exported_decl[code](F)  :- ast_node[code](E, export_named_declaration, _), ast_child[code](E, declaration, 0, F).
@@ -989,11 +987,11 @@ keyed_hop_fn[code](M, H) :- keyed_hop[code](X, H), nearest_v[flow](M, X), keyed_
 keyed_fn_need[code](G) :- keyed_hop_fn[code](G, _).
 keyed_named_fn[code](G, E) :- keyed_fn_need[code](G), ast_node[code](G, function_declaration, _),
                               not ast_child[code](_, declaration, 0, G), sees_decl[code](E, G),
-                              not ast_child[code](G, id, 0, E).
+                              not target[value](G, E).
 keyed_named_fn[code](G, E) :- keyed_fn_need[code](G), ast_child[code](D, init, 0, G),
                               ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
                               not ast_child[code](_, declaration, 0, V), sees_binder[code](E, D),
-                              not ast_child[code](D, id, 0, E).
+                              not assign[value](D, E, G).
 keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), private_binds[code](N, G),
                               ast_node[code](G, class_private_method, _).
 keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), ast_attr[code](G, accessibility, "private"),
@@ -1729,8 +1727,8 @@ module_export[code](E, File) :- ast_node[code](P, program, File), ast_child[code
 
 exports_name[code](F, Name, File) :- module_export[code](E, File),
                                      ast_child[code](E, declaration, 0, F),
-                                     fn_node[code](F),
-                                     ast_child[code](F, id, 0, I), ast_name[code](I, Name).
+                                     fn_node[code](F), target[value](F, I), binds[value](I, Name).
+
 exports_name[code](D, Name, File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
                                      class_or_namespace[code](D), own_name[code](D, Name, File, around).
 class_or_namespace[code](D) :- ast_node[code](D, class_declaration, _).
