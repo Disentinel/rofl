@@ -660,10 +660,8 @@ call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
 
 -- A TypeScript namespace has every name its body exports, a value or not
 -- (`export let x;`, `export declare function f()`).
-ns_key[code](NS, Name) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, D),
-                          ast_child[code](D, id, 0, I), ast_name[code](I, Name).
-ns_key[code](NS, Name) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
-                          ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), ast_name[code](I, Name).
+ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, X), key[value](X, Name).
+ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[type](B, X), key[type](X, Name).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, S),
                           ast_node[code](S, tsimport_equals_declaration, _), ast_attr[code](S, is_export, true),
                           ast_child[code](S, id, 0, I), ast_name[code](I, Name).
@@ -677,17 +675,16 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[surface](O, Key).
 -- the model cannot see: `export *` of a module it does not resolve or of an open
 -- one, a pattern exported, `export =`, CommonJS.
 whole_expr[flow](E) :- imports_ns[code](Local, D, File), module_target[code](D, _), top_read[code](E, Local, File).
-export_key[code](File, Name) :- program[tree](P, File), has[value](P, M), value[value](M, M), key[value](M, Name).
-export_key[code](File, "default") :- ast_node[code](_, export_default_declaration, File).
-export_key[code](File, Name) :- ast_node[code](E, export_all_declaration, File), module_target[code](E, T),
+export_key[code](File, Name) :- program[tree](P, File), has[value](P, M), key[value](M, Name).
+export_key[code](File, Name) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), module_target[code](E, T),
                                 sx_export_key[surface](T, Name), Name != "default".
 sx_export_key[surface](File, Name) :- export_key[code](File, Name).
-ns_open_file[code](File) :- ast_node[code](E, export_all_declaration, File), not module_target[code](E, _).
-ns_open_file[code](File) :- ast_node[code](E, export_all_declaration, File), module_target[code](E, T),
+ns_open_file[code](File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), not module_target[code](E, _).
+ns_open_file[code](File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), module_target[code](E, T),
                             sx_ns_open[surface](T).
 ns_open_file[code](File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, V),
                             ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), not ast_name[code](I, _).
-ns_open_file[code](File) :- ast_node[code](_, tsexport_assignment, File).
+ns_open_file[code](File) :- namespace[value](_, Ns), assign[value](E, Ns, _), at[tree](E, File, _).
 ns_open_file[code](File) :- free_global[code](_, "exports", File).
 ns_open_file[code](File) :- free_global[code](_, "module", File).
 sx_ns_open[surface](File) :- ns_open_file[code](File).
@@ -703,8 +700,8 @@ whole_expr[flow](E) :- imports_name[code](Local, Name, D, File), module_target[c
 decl_twice[code](File, Name) :- named_decl[code](A, Name, File), named_decl[code](B, Name, File), A != B,
                                 decl_at_top[code](A), decl_at_top[code](B),
                                 not ast_node[code](A, tsdeclare_function, _), not ast_node[code](B, tsdeclare_function, _).
-sx_whole_export[surface](File, Name) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
-                                        whole_decl[flow](D), own_name[code](D, Name, File, around),
+sx_whole_export[surface](File, Name) :- whole_decl[flow](D), own_name[code](D, Name, File, around),
+                                        target[value](D, I), has[value](P, I), program[tree](P, File),
                                         not decl_twice[code](File, Name), not assigned[code](_, _, Name, _, File).
 sx_whole_export[surface](File, Ext) :- reexport_offers[code](File, Ext, T, Int), sx_whole_export[surface](T, Int).
 sx_whole_export[surface](File, Ext) :- export_local[code](L, Ext, File), whole_expr[flow](L).
@@ -771,9 +768,9 @@ type_name_at[code](A, Name, File) :- type_at[code](A, X), ast_node[code](X, tsty
                                      ast_node[code](N, identifier, _), ast_name[code](N, Name).
 type_name_at[code](H, Name, File) :- ast_node[code](H, tsinterface_heritage, File), ast_child[code](H, expression, 0, N),
                                      ast_node[code](N, identifier, _), ast_name[code](N, Name).
-sx_export_type[surface](File, Name, T) :- ast_node[code](E, export_named_declaration, File),
-                                          ast_child[code](E, declaration, 0, T), type_decl[code](T, Name, File).
-sx_export_type[surface](File, Ext, T)  :- export_local[code](L, Ext, File), ast_name[code](L, Local),
+sx_export_type[surface](File, Name, T) :- type_decl[code](T, Name, File), parent[tree](T, I), binds[type](I, Name),
+                                          has[type](_, I).
+sx_export_type[surface](File, Ext, T)  :- export_local[code](L, Ext, File), ref[value](L, Local),
                                           type_decl[code](T, Local, File).
 names_type[flow](A, T) :- type_name_at[code](A, Name, File), type_decl[code](T, Name, File).
 names_type[flow](A, T) :- type_name_at[code](A, Name, File), imports_name[code](Name, Orig, D, File),
@@ -909,8 +906,8 @@ declared[flow](C, T)     :- fn_ret_at[code](C, A), names_type[flow](A, T).
 -- a function another module exports, by what its declaration returns
 sx_fn_ret[surface](File, Name, T)     :- export_fn_ret[code](File, Name, A), names_type[flow](A, T).
 sx_fn_ret_lib[surface](File, Name, P) :- export_fn_ret[code](File, Name, A), names_lib[flow](A, P).
-export_fn_ret[code](File, Name, A)    :- module_export[code](E, File), ast_child[code](E, declaration, 0, F),
-                                         own_name[code](F, Name, File, around), ast_child[code](F, return_type, 0, A).
+export_fn_ret[code](File, Name, A)    :- own_name[code](F, Name, File, around), target[value](F, I), has[value](P, I),
+                                         program[tree](P, File), ast_child[code](F, return_type, 0, A).
 imported_call[code](C, Orig, Target)  :- ast_node[code](C, call_expression, _), callee[value](C, N),
                                          top_read[code](N, Name, File), imports_name[code](Name, Orig, D, File),
                                          module_target[code](D, Target).

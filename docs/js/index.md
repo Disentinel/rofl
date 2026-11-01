@@ -6,10 +6,10 @@
 | [js-phrases](js-phrases.rofl.md) | 1062 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 94 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 529 | 198 | 88 | 95 | 71 | 727 | 68 | 7 | 42 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 528 | 198 | 88 | 95 | 67 | 723 | 68 | 7 | 44 | 0 |
 | [js-concat](js-concat.rofl.md) | 208 | 71 | 2 | 58 | 8 | 343 | 23 | 7 | 11 | 0 |
-| [js-controlflow](js-controlflow.rofl.md) | 248 | 96 | 78 | 4 | 31 | 246 | 18 | 6 | 17 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 937 | 394 | 140 | 232 | 151 | 1650 | 131 | 11 | 50 | 0 |
+| [js-controlflow](js-controlflow.rofl.md) | 246 | 95 | 77 | 5 | 30 | 246 | 19 | 6 | 17 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 932 | 389 | 135 | 232 | 139 | 1647 | 131 | 11 | 52 | 0 |
 | [js-effects](js-effects.rofl.md) | 202 | 127 | 114 | 7 | 12 | 306 | 18 | 2 | 20 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 43 | 5 | 1 | 19 | 0 |
@@ -18,7 +18,7 @@
 | [js-globals](js-globals.rofl.md) | 18 | 17 | 16 | 0 | 0 | 33 | 0 | 0 | 6 | 0 |
 | [js-host](js-host.rofl.md) | 77 | 59 | 44 | 14 | 4 | 105 | 8 | 1 | 19 | 0 |
 | [js-model](js-model.rofl.md) | 122 | 56 | 49 | 2 | 0 | 139 | 13 | 3 | 2 | 0 |
-| [js-modules](js-modules.rofl.md) | 186 | 121 | 115 | 2 | 18 | 252 | 26 | 4 | 12 | 0 |
+| [js-modules](js-modules.rofl.md) | 191 | 112 | 104 | 4 | 4 | 259 | 29 | 4 | 21 | 0 |
 | [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-service](js-service.rofl.md) | 20 | 15 | 1 | 13 | 0 | 16 | 2 | 1 | 8 | 0 |
@@ -26,7 +26,7 @@
 | [js-surface](js-surface.rofl.md) | 165 | 131 | 33 | 97 | 8 | 257 | 9 | 1 | 8 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-559 heads without a phrase across these files.
+562 heads without a phrase across these files.
 
 ## Proposed renames
 

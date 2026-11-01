@@ -22,6 +22,7 @@ Reads:
 - from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
 - from js-structure: [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
@@ -56,9 +57,9 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
-| <a id="noun-export_declaration"></a>an export declaration | a node of one of the kinds `export_named_declaration`, `export_default_declaration` (`export_kind`) |
 | <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
+| <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
 | <a id="noun-short_circuit"></a>a short circuit | a node of one of the kinds `optional_call_expression`, `optional_member_expression` (`short_circuit_kind`) |
@@ -770,11 +771,17 @@ A node
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
-<a id="exported_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is exported if [`inside`](#inside)(an [export declaration](#noun-export_declaration) E, it), unless it [is inside a function](#in_fn).
+> The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
 
-Declared as facts:
+<a id="export_statement"></a>`export_statement`(E) either:
 
-- <a id="export_kind"></a>`export_kind` — rows in Words
+1. if E is a [named export](#noun-named_export);
+2. if E [is a default export site](js-modules.rofl.md#export_default_site).
+
+<a id="exported_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is exported if all of:
+  - [`inside`](#inside)(E, it);
+  - [`export_statement`](#export_statement)(E);
+  - unless it [is inside a function](#in_fn).
 
 > `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 
@@ -800,17 +807,8 @@ F is exported if [`sx_entry`](#sx_entry)(F).
 
 <a id="may_not_be_reached"></a>F may not be reached if [`sx_called`](js-surface.rofl.md#sx_called)(F), unless F [is reachable](#reachable).
 
-> the typo hole again: a misspelling shrinks the entry surface and reports
-> live functions as maybe-dead, the dangerous direction
-
-In the audit:
-
-<a id="export_kind_unseen"></a>A kind K is an unseen export kind if [`export_kind`](#export_kind)(K), unless some node [is of kind](js-model.rofl.md#ast_node) K.
-
 > A file with functions and no entry point reports every function dead — an
 > artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
-
-In the code:
 
 <a id="has_entry"></a>File has an entry point if F [is an entry point](#entry_point) and [`at`](#at)(F, File, something).
 

@@ -100,6 +100,7 @@ role(label,     "X carries the label Name").
 -- ---- modules
 role(namespace, "Ns is the object of exports of P").
 role(module_ref, "N stands for the exports of the module Spec").
+role(module_expr, "N stands for the exports of the module E names when it runs").
 
 -- ---- the bridges between the worlds, and the bound of a type parameter (JS/TS only)
 role(declared,  "the type T is written at X").

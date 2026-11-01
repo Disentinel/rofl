@@ -468,6 +468,7 @@ namespace[value](P, P) :- oxc_k[ast_oxc](P, program).
 spec_of(S, V) :- oxc_k[ast_oxc](S, string_literal), oxc_a[ast_oxc](S, value, V).
 module_ref[value](S, V) :- oxc_c[ast_oxc](D, source, 0, S), spec_of(S, V), not oxc_k[ast_oxc](D, import_expression).
 module_ref[value](D, V) :- oxc_k[ast_oxc](D, import_expression), oxc_c[ast_oxc](D, source, 0, S), spec_of(S, V).
+module_expr[value](D, E) :- oxc_k[ast_oxc](D, import_expression), oxc_c[ast_oxc](D, source, 0, E), not spec_of(E, _).
 
 decl[value](S, import)   :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S).
 target[value](S, L)      :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), oxc_c[ast_oxc](S, local, 0, L).
@@ -484,9 +485,16 @@ in_program(P, I, X) :- oxc_k[ast_oxc](P, program), oxc_c[ast_oxc](P, body, I, X)
 export_key(S, Key) :- oxc_c[ast_oxc](S, exported, 0, K), key_name(K, Key).
 edb(export_list).
 export_list(export_named_declaration). export_list(export_from_declaration).
-has[value](P, S)   :- in_program(P, _, E), oxc_k[ast_oxc](E, K), export_list(K), oxc_c[ast_oxc](E, specifiers, _, S).
-key[value](S, Key) :- oxc_k[ast_oxc](S, export_specifier), export_key(S, Key).
-value[value](S, L) :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L).
+-- `export type {X}` and `export {type X}` are members of the module's types only
+type_spec(S) :- oxc_k[ast_oxc](S, export_specifier), oxc_a[ast_oxc](S, export_kind, "Type").
+type_spec(S) :- oxc_k[ast_oxc](E, K), export_list(K), oxc_a[ast_oxc](E, export_kind, "Type"), oxc_c[ast_oxc](E, specifiers, _, S).
+export_spec(P, S)  :- in_program(P, _, E), oxc_k[ast_oxc](E, K), export_list(K), oxc_c[ast_oxc](E, specifiers, _, S).
+has[value](P, S)   :- export_spec(P, S), not type_spec(S).
+has[type](P, S)    :- export_spec(P, S), type_spec(S).
+key[value](S, Key) :- oxc_k[ast_oxc](S, export_specifier), export_key(S, Key), not type_spec(S).
+key[type](S, Key)  :- oxc_k[ast_oxc](S, export_specifier), export_key(S, Key), type_spec(S).
+value[value](S, L) :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L), not type_spec(S).
+value[type](S, L)  :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L), type_spec(S).
 -- export with a declaration: each declared name is a member, its value the binding
 exported_decl(E, D) :- oxc_k[ast_oxc](E, export_named_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
 exported_decl(E, D) :- oxc_k[ast_oxc](E, export_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
@@ -495,9 +503,16 @@ exported_place(E, M, B) :- exported_decl(E, V), oxc_k[ast_oxc](V, variable_decla
 exported_place(E, D, B) :- exported_decl(E, D), oxc_c[ast_oxc](D, id, 0, B), oxc_k[ast_oxc](B, binding_identifier).
 ns_body(Ns, X) :- in_program(P, _, X), namespace[value](P, Ns).
 ns_body(B, X)  :- namespace[value](M, B), M != B, oxc_c[ast_oxc](B, body, _, X).
-has[value](Ns, B)  :- ns_body(Ns, E), exported_place(E, _, B).
-key[value](B, Key) :- exported_place(_, _, B), oxc_name[ast_oxc](B, Key).
-value[value](B, B) :- exported_place(_, _, B).
+-- a declared name is a member of the world its binding is in
+value_place(E, B) :- exported_place(E, _, B), not type_side(B).
+type_place(E, B)  :- exported_place(E, _, B), type_side(B).
+type_place(E, B)  :- exported_place(E, _, B), both_sides(B).
+has[value](Ns, B)  :- ns_body(Ns, E), value_place(E, B).
+key[value](B, Key) :- value_place(_, B), oxc_name[ast_oxc](B, Key).
+value[value](B, B) :- value_place(_, B).
+has[type](Ns, B)   :- ns_body(Ns, E), type_place(E, B).
+key[type](B, Key)  :- type_place(_, B), oxc_name[ast_oxc](B, Key).
+value[type](B, B)  :- type_place(_, B).
 has[value](P, E)   :- in_program(P, _, E), oxc_k[ast_oxc](E, export_default_declaration).
 key[value](E, "default") :- oxc_k[ast_oxc](E, export_default_declaration).
 value[value](E, D) :- oxc_k[ast_oxc](E, export_default_declaration), oxc_c[ast_oxc](E, declaration, 0, D).

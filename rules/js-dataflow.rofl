@@ -611,9 +611,8 @@ mention[code](F, E)     :- sees_decl[code](E, F), ast_node[code](F, function_dec
 mention[code](F, E)     :- sees_binder[code](E, D), binder[code](D, _, F, _), fn_node[code](F),
                            assign[value](D, I, F), E != I.
 live_mention[code](F)   :- mention[code](F, E), not dead_in[code](_, E).
-live_mention[code](F)   :- exported_decl[code](F).
-exported_decl[code](F)  :- ast_node[code](E, export_named_declaration, _), ast_child[code](E, declaration, 0, F).
-exported_decl[code](F)  :- ast_node[code](E, export_default_declaration, _), ast_child[code](E, declaration, 0, F).
+live_mention[code](F)   :- fn_node[code](F), target[value](F, I), has[value](_, I).
+live_mention[code](F)   :- fn_node[code](F), default_declaration[code](_, F).
 dead_fn[code](F)        :- mention[code](F, _), not live_mention[code](F).
 dead_site[code](C)      :- dead_fn[code](F), inside[tree](F, C), call_like_v(K), ast_node[code](C, K, _).
 
@@ -1640,14 +1639,12 @@ may_be_node[flow](T, CD)      :- static_block_of[flow](CD, SB), this_host[flow](
 -- layer's `module_target` (rules/js-modules.rofl), keyed by the SITE: one
 -- specifier names different files from different directories.
 imports_name[code](Local, Name, D, File) :-
-    ast_node[code](D, import_declaration, File),
-    ast_child[code](D, specifiers, _, Sp),
-    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local),
-    ast_child[code](Sp, imported, 0, I), ast_name[code](I, Name).
+    binding[code](D, Sp, Local, Name), import_ident_key[code](Sp, Name), Name != "default", Name != "*",
+    at[tree](D, File, _).
 
 -- one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 -- the corpus to learn three strings
-corpus_file[code](File) :- ast_node[code](_, program, File).
+corpus_file[code](File) :- program[tree](_, File).
 
 
 
@@ -1655,18 +1652,17 @@ corpus_file[code](File) :- ast_node[code](_, program, File).
 module_export[code](E, File) :- ast_node[code](P, program, File), ast_child[code](P, body, _, E),
                                 ast_node[code](E, export_named_declaration, _).
 
-exports_name[code](F, Name, File) :- module_export[code](E, File),
-                                     ast_child[code](E, declaration, 0, F),
-                                     fn_node[code](F), target[value](F, I), binds[value](I, Name).
+exports_name[code](F, Name, File) :- fn_node[code](F), target[value](F, I), binds[value](I, Name),
+                                     has[value](P, I), program[tree](P, File).
 
-exports_name[code](D, Name, File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, D),
-                                     class_or_namespace[code](D), own_name[code](D, Name, File, around).
+exports_name[code](D, Name, File) :- class_or_namespace[code](D), own_name[code](D, Name, File, around),
+                                     target[value](D, I), has[value](P, I), program[tree](P, File).
 class_or_namespace[code](D) :- ast_node[code](D, class_declaration, _).
 class_or_namespace[code](D) :- ts_namespace[code](D).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
 -- kind guard is not redundant with `module_site`, which holds of imports too.
-exports_name[code](F, Name, File) :- ast_node[code](E, export_all_declaration, File),
+exports_name[code](F, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
                                      module_target[code](E, Target),
                                      sx_export_node[surface](Target, Name, F).
 
@@ -1678,21 +1674,10 @@ exports_name[code](F, Ext, File) :- reexport_offers[code](File, Ext, T, "default
 
 -- `export { a as b }`: the `local` child is an identifier of this file and
 -- resolves through `may_be_node`; under a declaration WITH a `source` it names
--- a binding of the OTHER module and must not resolve here. Erasure has two
--- markers, on the declaration and on the specifier, neither implying the other.
-reexport_decl[code](E) :- ast_node[code](E, export_named_declaration, _),
-                          ast_child[code](E, source, 0, _).
-
-export_list_erased[code](E)  :- ast_attr[code](E, export_kind, "type").
-export_item_erased[code](Sp) :- ast_attr[code](Sp, export_kind, "type").
-
-export_local[code](L, Ext, File) :-
-    ast_node[code](E, export_named_declaration, File),
-    not reexport_decl[code](E), not export_list_erased[code](E),
-    ast_child[code](E, specifiers, _, Sp),
-    ast_node[code](Sp, export_specifier, _), not export_item_erased[code](Sp),
-    ast_child[code](Sp, local, 0, L),
-    ast_child[code](Sp, exported, 0, X), ast_name[code](X, Ext).
+-- a binding of the OTHER module and has no value here, and a type-only one is
+-- a member of the types: the roles give `value` to the local export of a value alone.
+export_local[code](L, Ext, File) :- export_spec[code](E, Sp), value[value](Sp, L), key[value](Sp, Ext),
+                                    at[tree](E, File, _).
 
 exports_name[code](F, Ext, File) :- export_local[code](L, Ext, File),
                                     may_be_node[flow](L, F).
@@ -1716,14 +1701,13 @@ may_be_node[flow](E, F) :- imports_name[code](Local, Name, D, File),
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
 -- literal through `exports_value`, which also carries `export { x }` and the re-exports, so a constant written
 -- in one file reaches a use in another (vscode's channel names and ports, w_next_version_cutoff).
-export_var[code](Init, Name, File) :- module_export[code](E, File),
-                                      ast_child[code](E, declaration, 0, V), ast_child[code](V, declarations, _, D),
-                                      binder[code](D, Name, Init, File).
+export_var[code](Init, Name, File) :- binder[code](D, Name, Init, File), assign[value](D, I, _),
+                                      has[value](P, I), program[tree](P, File).
 exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_node[flow](Init, F).
 
 exports_value[code](Init, Name, File) :- export_var[code](Init, Name, File).
 exports_value[code](L, Ext, File) :- export_local[code](L, Ext, File).
-exports_value[code](X, Name, File) :- ast_node[code](E, export_all_declaration, File),
+exports_value[code](X, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
                                       module_target[code](E, Target), sx_export_val[surface](Target, Name, X).
 exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), sx_export_val[surface](T, Int, X).
 
@@ -1738,7 +1722,7 @@ imports_ns[code](Local, D, File) :-
     spec_imported[code](Sp, "*"), target[value](Sp, L), binds[type](L, Local),
     parent[tree](D, Sp), at[tree](D, File, _).
 
-module_object[flow](P, File) :- ast_node[code](P, program, File).
+module_object[flow](P, File) :- program[tree](P, File).
 
 may_be_node[flow](E, P) :- imports_ns[code](Local, D, File), module_target[code](D, Target),
                            sx_module[surface](Target, P), top_read[code](E, Local, File).
@@ -1746,13 +1730,9 @@ member_value[flow](P, Name, F) :- module_object[flow](P, Target),
                                   exports_name[code](F, Name, Target).
 
 imports_default[code](Local, D, File) :-
-    ast_node[code](D, import_declaration, File),
-    ast_child[code](D, specifiers, _, Sp),
-    ast_node[code](Sp, import_default_specifier, _),
-    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local).
+    binding[code](D, Sp, Local, "default"), at[tree](D, File, _).
 
-exports_default[code](F, File) :- ast_node[code](E, export_default_declaration, File),
-                                  ast_child[code](E, declaration, 0, F),
+exports_default[code](F, File) :- default_declaration[code](E, F), at[tree](E, File, _),
                                   fn_node[code](F).
 
 may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
@@ -1822,14 +1802,12 @@ edb(external_shape).
 external_shape(bare).
 external_shape(node_builtin).
 
-type_import[code](X) :- ast_attr[code](X, import_kind, "type").
-
 external_site[code](I, Spec) :- require_site[code](I), site_source[code](I, Spec),
                                 site_shape[code](I, Sh), external_shape(Sh),
                                 not module_target[code](I, _).
 external_site[code](I, Spec) :- import_site[code](I, _), site_source[code](I, Spec),
                                 site_shape[code](I, Sh), external_shape(Sh),
-                                not module_target[code](I, _), not type_import[code](I).
+                                not module_target[code](I, _), not type_only_site[code](I).
 
 external_module[code](Spec)  :- external_site[code](_, Spec).
 
@@ -1845,10 +1823,8 @@ may_be_node[flow](E, Spec) :- imports_ns[code](Local, D, File), external_site[co
                               top_read[code](E, Local, File).
 
 external_import[code](Sp, Local, Spec, File) :-
-    ast_node[code](D, import_declaration, File), external_site[code](D, Spec),
-    ast_child[code](D, specifiers, _, Sp), ast_node[code](Sp, import_specifier, _),
-    not type_import[code](Sp),
-    ast_child[code](Sp, local, 0, L), ast_name[code](L, Local).
+    external_site[code](D, Spec), value_binding[code](D, Sp), spec_local[code](Sp, Local),
+    spec_imported[code](Sp, K), K != "default", K != "*", at[tree](D, File, _).
 external_value[flow](Sp, Spec) :- external_import[code](Sp, _, Spec, _).
 may_be_node[flow](E, Sp)       :- external_import[code](Sp, Local, _, File),
                                   top_read[code](E, Local, File).
@@ -1959,14 +1935,15 @@ may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P
 
 -- A TypeScript namespace is an object made at run time (not a `declare`d one):
 -- reached by its name, holding what its body exports.
-ts_namespace[code](NS) :- ast_node[code](NS, tsmodule_declaration, _), not ast_attr[code](NS, declare, true).
+ts_namespace[code](NS) :- decl[value](NS, namespace), not ambient[value](NS).
 may_be_node[flow](E, NS) :- sees_decl[code](E, NS), ts_namespace[code](NS).
 ns_export[code](NS, E) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, E),
                           ast_node[code](E, export_named_declaration, _).
-member_value[flow](NS, Name, D)    :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, D),
-                                      own_name[code](D, Name, _, around), not ast_node[code](D, tsdeclare_function, _).
-member_value[flow](NS, Name, Init) :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
-                                      ast_child[code](V, declarations, _, D), binder[code](D, Name, Init, _).
+member_value[flow](NS, Name, D)    :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, I),
+                                      target[value](D, I), own_name[code](D, Name, _, around),
+                                      not ast_node[code](D, tsdeclare_function, _).
+member_value[flow](NS, Name, Init) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, I),
+                                      assign[value](D, I, _), binder[code](D, Name, Init, _).
 member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), ast_child[code](NS, body, 0, In),
                                       own_name[code](In, Name, _, around).
 

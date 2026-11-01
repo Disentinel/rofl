@@ -108,6 +108,7 @@ roled[W](N) :- label[W](N, _).
 roled[W](N) :- namespace[W](N, _).
 roled[W](N) :- namespace[W](_, N).
 roled[W](N) :- module_ref[W](N, _).
+roled[W](N) :- module_expr[W](N, _).
 roled[W](N) :- declared[W](N, _).
 roled[W](N) :- declared[W](_, N).
 roled[W](N) :- implements[W](N, _).

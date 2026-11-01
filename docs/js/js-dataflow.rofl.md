@@ -35,7 +35,7 @@ Reads:
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
+- from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
 - from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
@@ -46,6 +46,7 @@ Reads:
   - <a id="parent"></a>`parent`
   - <a id="program"></a>`program`
 - from outside these files, in the value:
+  - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
   - <a id="async"></a>`async`
@@ -71,6 +72,7 @@ Reads:
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="module_ref"></a>`module_ref`
+  - <a id="namespace"></a>`namespace`
   - <a id="object"></a>`object`
   - <a id="param"></a>`param`
   - <a id="private"></a>`private`
@@ -92,7 +94,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: expression_statement, tsenum_body, tsmodule_declaration, tsparameter_property.
+Kinds without a noun: expression_statement, tsenum_body, tsparameter_property.
 
 ## Words
 
@@ -109,15 +111,9 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
-| <a id="noun-default_export"></a>a default export | a node of kind `export_default_declaration` |
-| <a id="noun-default_import"></a>a default import | a node of kind `import_default_specifier` |
-| <a id="noun-export_specifier"></a>an export specifier | a node of kind `export_specifier` |
-| <a id="noun-export-all"></a>an export-all | a node of kind `export_all_declaration` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
-| <a id="noun-import"></a>an import | a node of kind `import_declaration` |
-| <a id="noun-import_specifier"></a>an import specifier | a node of kind `import_specifier` |
 | <a id="noun-invocation"></a>an invocation | a node of one of the kinds `call_expression`, `optional_call_expression`, `new_expression` (`call_like_v`) |
 | <a id="noun-literal"></a>a literal | a node of one of the kinds `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal` (`literal_kind`) |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
@@ -155,13 +151,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="member_node_v"></a>A node is a member access if [`object_of`](js-structure.rofl.md#object_of)(it, something).
 - <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
 - <a id="static_block_of"></a>A class has the static block SB if [`static_block`](#static_block)(it, SB).
-- <a id="corpus_file"></a>File is in the corpus if some node [is of kind](js-model.rofl.md#ast_node) `program` in file File.
-- <a id="reexport_decl"></a>A [named export](#noun-named_export) re exports if the `source` of it is some node.
-- <a id="export_list_erased"></a>A node exports types only if [the attribute](#ast_attr) `export_kind` of it is "type".
-- <a id="export_item_erased"></a>A node is a type only specifier if [the attribute](#ast_attr) `export_kind` of it is "type".
-- <a id="module_object"></a>A [program](#noun-program) is the module object of File if it is in file File.
-- <a id="exports_default"></a>A [function](js-callgraph.rofl.md#fn_node) is the default export of File if a [default export](#noun-default_export) E is in file File and the `declaration` of E is it.
-- <a id="type_import"></a>A node imports types only if [the attribute](#ast_attr) `import_kind` of it is "type".
+- <a id="corpus_file"></a>File is in the corpus if [`program`](#program)(something, File).
+- <a id="module_object"></a>A node is the module object of File if [`program`](#program)(it, File).
 - <a id="external_module"></a>A module is an external module if some node [is an external site](#external_site) of it.
 - <a id="has_own_ctor"></a>A class has its own constructor if it [has its own constructor](#own_ctor) some method.
 - <a id="gen_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is a generator function if [`generator`](#generator)(it).
@@ -1152,9 +1143,11 @@ In the code:
 <a id="live_mention"></a>`live_mention`(F) either:
 
 1. if [`mention`](#mention)(F, E), unless [`dead_in`](#dead_in)(something, E);
-2. if F [is exported where declared](#exported_decl).
-
-<a id="exported_decl"></a>A node is exported where declared if the `declaration` of a [named export](#noun-named_export) E is it.
+2. if all of:
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - [`target`](#target)(F, I);
+   - [`has`](#has)(something, I);
+3. if F is a [function](js-callgraph.rofl.md#fn_node) and [the default declaration](js-modules.rofl.md#default_declaration) of some node is F.
 
 <a id="dead_fn"></a>`dead_fn`(F) if [`mention`](#mention)(F, something), unless [`live_mention`](#live_mention)(F).
 
@@ -3588,11 +3581,12 @@ A node points to a node CD if CD [has the static block](#static_block_of) SB and
 
 In the code:
 
-<a id="imports_name"></a>Local imports Name at an [import](#noun-import) D in File if all of:
-  - D is in file File;
-  - a node Sp [is among the](#ast_child) `specifiers` of D;
-  - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local;
-  - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) Name.
+<a id="imports_name"></a>Local imports Name at a site D in File if all of:
+  - D [binds the name](js-modules.rofl.md#binding) Local to Name at a specifier Sp;
+  - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(Sp, Name);
+  - Name differs from "default";
+  - Name differs from "*";
+  - [`at`](#at)(D, File, something).
 
 > one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 > the corpus to learn three strings
@@ -3604,16 +3598,17 @@ In the code:
 <a id="exports_name"></a>F is exported as Name from File either:
 
 1. if all of:
-   - [`module_export`](#module_export)(E, File);
-   - the `declaration` of a node E is F;
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - [`target`](#target)(F, I);
    - [`binds`](#binds)(I, Name);
+   - [`has`](#has)(P, I);
+   - [`program`](#program)(P, File);
 2. if all of:
-   - [`module_export`](#module_export)(E, File);
-   - the `declaration` of a node E is F;
    - [`class_or_namespace`](#class_or_namespace)(F);
-   - F [carries its own name](#own_name) Name and File and `around`.
+   - F [carries its own name](#own_name) Name and File and `around`;
+   - [`target`](#target)(F, I);
+   - [`has`](#has)(P, I);
+   - [`program`](#program)(P, File).
 
 <a id="class_or_namespace"></a>`class_or_namespace`(D) either:
 
@@ -3624,7 +3619,8 @@ In the code:
 > kind guard is not redundant with `module_site`, which holds of imports too.
 
 A node is exported as Name from File if all of:
-  - an [export-all](#noun-export-all) E is in file File;
+  - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
+  - [`at`](#at)(E, File, something);
   - E [means the file](js-modules.rofl.md#module_target) Target;
   - [`sx_export_node`](js-surface.rofl.md#sx_export_node)(Target, Name, it).
 
@@ -3637,18 +3633,16 @@ A node F is exported as Ext from File either:
 
 > `export { a as b }`: the `local` child is an identifier of this file and
 > resolves through `may_be_node`; under a declaration WITH a `source` it names
-> a binding of the OTHER module and must not resolve here. Erasure has two
-> markers, on the declaration and on the specifier, neither implying the other.
+> a binding of the OTHER module and has no value here, and a type-only one is
+> a member of the types: the roles give `value` to the local export of a value alone.
 
 A node
 
 - <a id="export_local"></a>is exported locally as Ext from File if all of:
-  - a [named export](#noun-named_export) E is in file File;
-  - an [export specifier](#noun-export_specifier) Sp [is among the](#ast_child) `specifiers` of E;
-  - the `local` of Sp is it;
-  - the `exported` of Sp [is named](js-structure.rofl.md#ast_name) Ext;
-  - E neither [re exports](#reexport_decl) nor [exports types only](#export_list_erased);
-  - unless Sp [is a type only specifier](#export_item_erased).
+  - a node E [has the export specifier](js-modules.rofl.md#export_spec) Sp;
+  - [`value`](#value)(Sp, it);
+  - [`key`](#key)(Sp, Ext);
+  - [`at`](#at)(E, File, something).
 - is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [points to](js-concat.rofl.md#may_be_node) it.
 
 > `export * as ns from` exports the other module's OBJECT — its `program` node —
@@ -3682,10 +3676,10 @@ A node points to a node F if all of:
 In the code:
 
 <a id="export_var"></a>`export_var`(Init, Name, File) if all of:
-  - [`module_export`](#module_export)(E, File);
-  - the `declaration` of a node E is a node V;
-  - a node D [is among the](#ast_child) `declarations` of V;
-  - D [binds](#binder) Name to a node Init in File.
+  - D [binds](#binder) Name to a node Init in File;
+  - [`assign`](#assign)(D, I, something);
+  - [`has`](#has)(P, I);
+  - [`program`](#program)(P, File).
 
 A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, File) and a node Init [points to](js-concat.rofl.md#may_be_node) it.
 
@@ -3694,7 +3688,8 @@ A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, 
 1. if [`export_var`](#export_var)(Init, Name, File);
 2. if Init [is exported locally as](#export_local) Name from File;
 3. if all of:
-   - an [export-all](#noun-export-all) E is in file File;
+   - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
+   - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) Target;
    - [`sx_export_val`](js-surface.rofl.md#sx_export_val)(Target, Name, Init);
 4. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`sx_export_val`](js-surface.rofl.md#sx_export_val)(T, Int, Init).
@@ -3733,10 +3728,9 @@ The member Name of a node P holds a node F if P [is the module object of](#modul
 
 In the code:
 
-<a id="imports_default"></a>Local imports the default at an [import](#noun-import) D in File if all of:
-  - D is in file File;
-  - a [default import](#noun-default_import) Sp [is among the](#ast_child) `specifiers` of D;
-  - the `local` of Sp [is named](js-structure.rofl.md#ast_name) Local.
+<a id="imports_default"></a>Local imports the default at a site D in File if D [binds the name](js-modules.rofl.md#binding) Local to "default" at a specifier Sp and [`at`](#at)(D, File, something).
+
+<a id="exports_default"></a>A [function](js-callgraph.rofl.md#fn_node) is the default export of File if [the default declaration](js-modules.rofl.md#default_declaration) of a node E is it and [`at`](#at)(E, File, something).
 
 In the flow:
 
@@ -3840,7 +3834,7 @@ In the code:
    - [the source text](js-modules.rofl.md#site_source) of I is Spec;
    - [the site shape](js-modules.rofl.md#site_shape) of I is a shape Sh;
    - [`external_shape`](#external_shape)(Sh);
-   - I neither [means the file](js-modules.rofl.md#module_target) some file nor [imports types only](#type_import).
+   - I neither [means the file](js-modules.rofl.md#module_target) some file nor [is type only](js-modules.rofl.md#type_only_site).
 
 In the flow:
 
@@ -3868,12 +3862,14 @@ A node I points to a node Spec either:
 
 In the code:
 
-<a id="external_import"></a>An [import specifier](#noun-import_specifier) imports from outside Local from a module Spec in File if all of:
-  - an [import](#noun-import) D is in file File;
-  - D [is an external site](#external_site) of Spec;
-  - it [is among the](#ast_child) `specifiers` of D;
-  - the `local` of it [is named](js-structure.rofl.md#ast_name) Local;
-  - unless it [imports types only](#type_import).
+<a id="external_import"></a>A node imports from outside Local from a module Spec in File if all of:
+  - a node D [is an external site](#external_site) of Spec;
+  - D [binds a value](js-modules.rofl.md#value_binding) at it;
+  - it [binds locally](js-modules.rofl.md#spec_local) Local;
+  - it [imports the name](js-modules.rofl.md#spec_imported) K;
+  - K differs from "default";
+  - K differs from "*";
+  - [`at`](#at)(D, File, something).
 
 In the flow:
 
@@ -4096,7 +4092,7 @@ A node
 
 In the code:
 
-<a id="ts_namespace"></a>`ts_namespace`(a tsmodule_declaration node NS) unless [the attribute](#ast_attr) `declare` of NS is `true`.
+<a id="ts_namespace"></a>`ts_namespace`(NS) if [`decl`](#decl)(NS, `namespace`), unless [`ambient`](#ambient)(NS).
 
 In the flow:
 
@@ -4112,14 +4108,17 @@ In the code:
 In the flow:
 
 The member Name of a node NS holds a node D if all of:
-  - [`ns_export`](#ns_export)(NS, E);
-  - the `declaration` of a node E is D;
+  - [`ts_namespace`](#ts_namespace)(NS);
+  - [`namespace`](#namespace)(NS, B);
+  - [`has`](#has)(B, I);
+  - [`target`](#target)(D, I);
   - D [carries its own name](#own_name) Name and some file and `around` but is not a tsdeclare_function node.
 
 The member Name of a node NS holds a node Init if all of:
-  - [`ns_export`](#ns_export)(NS, E);
-  - the `declaration` of a node E is a node V;
-  - a node D [is among the](#ast_child) `declarations` of V;
+  - [`ts_namespace`](#ts_namespace)(NS);
+  - [`namespace`](#namespace)(NS, B);
+  - [`has`](#has)(B, I);
+  - [`assign`](#assign)(D, I, something);
   - D [binds](#binder) Name to Init in some file.
 
 The member Name of a node NS holds a node In if all of:

@@ -441,12 +441,11 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 -- `export_all_declaration` introduces no local entry.
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
-edb(export_kind).
-export_kind(export_named_declaration).
-export_kind(export_default_declaration).
+-- The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
+export_statement[code](E) :- ast_node[code](E, export_named_declaration, _).
+export_statement[code](E) :- export_default_site[code](E).
 
-exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F),
-                        ast_node[code](E, K, _), export_kind(K).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_statement[code](E).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
@@ -461,10 +460,6 @@ reachable[code](F) :- entry_point[code](F).
 reachable[code](F) :- sx_reach[surface](F).
 
 may_not_be_reached[code](F) :- sx_called[surface](F), not reachable[code](F).
-
--- the typo hole again: a misspelling shrinks the entry surface and reports
--- live functions as maybe-dead, the dangerous direction
-export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _).
 
 -- A file with functions and no entry point reports every function dead — an
 -- artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.

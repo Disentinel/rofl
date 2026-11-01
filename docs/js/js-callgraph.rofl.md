@@ -1,6 +1,6 @@
 ---
 world: js-callgraph
-books: audit, code, flow, main, surface, tree, value
+books: audit, code, flow, main, surface, tree, type, value
 default: code
 ---
 
@@ -36,7 +36,7 @@ Reads:
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
-- from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers)
+- from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
 - from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
@@ -73,6 +73,8 @@ Reads:
   - <a id="key"></a>`key`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
+  - <a id="namespace"></a>`namespace`
+  - <a id="ref"></a>`ref`
   - <a id="spread_args"></a>`spread_args`
   - <a id="spread_props"></a>`spread_props`
   - <a id="static"></a>`static`
@@ -102,12 +104,10 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
 | <a id="noun-decorator"></a>a decorator | a node of kind `decorator` |
-| <a id="noun-export-all"></a>an export-all | a node of kind `export_all_declaration` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-non-null_expression"></a>a non-null expression | a node of kind `tsnon_null_expression` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
@@ -1289,14 +1289,15 @@ In the code:
 <a id="ns_key"></a>`ns_key`(NS, Name) either:
 
 1. if all of:
-   - [`ns_export`](js-dataflow.rofl.md#ns_export)(NS, E);
-   - the `declaration` of a node E is a node D;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name;
+   - [`ts_namespace`](js-dataflow.rofl.md#ts_namespace)(NS);
+   - [`namespace`](#namespace)(NS, B);
+   - [`has`](#has)(B, X);
+   - [`key`](#key)(X, Name);
 2. if all of:
-   - [`ns_export`](js-dataflow.rofl.md#ns_export)(NS, E);
-   - the `declaration` of a node E is a node V;
-   - a node D [is among the](#ast_child) `declarations` of V;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name;
+   - [`ts_namespace`](js-dataflow.rofl.md#ts_namespace)(NS);
+   - [`namespace`](#namespace)(NS, B);
+   - [`has`](#has)(B, X) in the type;
+   - [`key`](#key)(X, Name) in the type;
 3. if all of:
    - [`ts_namespace`](js-dataflow.rofl.md#ts_namespace)(NS);
    - the `body` of NS is a node B;
@@ -1333,14 +1334,10 @@ In the code:
 
 <a id="export_key"></a>`export_key`(File, Name) either:
 
-1. if all of:
-   - [`program`](#program)(P, File);
-   - [`has`](#has)(P, M);
-   - [`value`](#value)(M, M);
-   - [`key`](#key)(M, Name);
-2. if some node [is of kind](js-model.rofl.md#ast_node) `export_default_declaration` in file File and Name is "default";
-3. if all of:
-   - an [export-all](#noun-export-all) E is in file File;
+1. if [`program`](#program)(P, File), [`has`](#has)(P, M), and [`key`](#key)(M, Name);
+2. if all of:
+   - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
+   - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) T;
    - [`sx_export_key`](#sx_export_key)(T, Name);
    - Name differs from "default".
@@ -1353,9 +1350,13 @@ In the code:
 
 <a id="ns_open_file"></a>`ns_open_file`(File) either:
 
-1. if an [export-all](#noun-export-all) E is in file File, unless E [means the file](js-modules.rofl.md#module_target) some file;
+1. if all of:
+   - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
+   - [`at`](#at)(E, File, something);
+   - unless E [means the file](js-modules.rofl.md#module_target) some file;
 2. if all of:
-   - an [export-all](#noun-export-all) E is in file File;
+   - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
+   - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) T;
    - [`sx_ns_open`](#sx_ns_open)(T);
 3. if all of:
@@ -1364,7 +1365,10 @@ In the code:
    - a node D [is among the](#ast_child) `declarations` of V;
    - the `id` of D is a node I;
    - unless I [is named](js-structure.rofl.md#ast_name) some name;
-4. if some node [is of kind](js-model.rofl.md#ast_node) `tsexport_assignment` in file File;
+4. if all of:
+   - [`namespace`](#namespace)(something, Ns);
+   - [`assign`](#assign)(E, Ns, something);
+   - [`at`](#at)(E, File, something);
 5. if some node [refers to the free](js-dataflow.rofl.md#free_global) "exports" or "module" in File.
 
 In the surface:
@@ -1404,10 +1408,11 @@ In the surface:
 <a id="sx_whole_export"></a>`sx_whole_export`(File, Name) either:
 
 1. if all of:
-   - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
-   - the `declaration` of a node E is a node D;
    - [`whole_decl`](#whole_decl)(D);
-   - D [carries its own name](js-dataflow.rofl.md#own_name) Name and File and `around`;
+   - a node D [carries its own name](js-dataflow.rofl.md#own_name) Name and File and `around`;
+   - [`target`](#target)(D, I);
+   - [`has`](#has)(P, I);
+   - [`program`](#program)(P, File);
    - unless [`decl_twice`](#decl_twice)(File, Name);
    - unless [`assigned`](js-dataflow.rofl.md#assigned)(something, something, Name, something, File);
 2. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`sx_whole_export`](#sx_whole_export)(T, Int);
@@ -1559,12 +1564,13 @@ In the surface:
 <a id="sx_export_type"></a>`sx_export_type`(File, Name, T) either:
 
 1. if all of:
-   - a [named export](#noun-named_export) E is in file File;
-   - the `declaration` of E is a node T;
    - [`type_decl`](#type_decl)(T, Name, File);
+   - [`parent`](#parent)(T, I);
+   - [`binds`](#binds)(I, Name) in the type;
+   - [`has`](#has)(something, I) in the type;
 2. if all of:
    - a node L [is exported locally as](js-dataflow.rofl.md#export_local) Name from File;
-   - L [is named](js-structure.rofl.md#ast_name) Local;
+   - [`ref`](#ref)(L, Local);
    - [`type_decl`](#type_decl)(T, Local, File).
 
 In the flow:
@@ -1930,9 +1936,10 @@ In the surface:
 In the code:
 
 <a id="export_fn_ret"></a>`export_fn_ret`(File, Name, X) if all of:
-  - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
-  - the `declaration` of a node E is a node F;
-  - F [carries its own name](js-dataflow.rofl.md#own_name) Name and File and `around`;
+  - a node F [carries its own name](js-dataflow.rofl.md#own_name) Name and File and `around`;
+  - [`target`](#target)(F, I);
+  - [`has`](#has)(P, I);
+  - [`program`](#program)(P, File);
   - the `return_type` of F is a node X.
 
 <a id="imported_call"></a>`imported_call`(a [call expression](#noun-call_expression) C, Orig, Target) if all of:
