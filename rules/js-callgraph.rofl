@@ -194,11 +194,10 @@ fn_file[code](F, File) :- fn_node[code](F), at[tree](F, File, _).
 -- sixteen eslint files). A PRIVATE method gets no name: V8 says `#rim`, the
 -- store holds `rim`, and the kernel has no operation that builds a string.
 fn_name[code](F, N) :- fn_node[code](F), target[value](F, I), binds[value](I, N).
-fn_name[code](F, N) :- key_name[code](F, N), obj_method[code](_, F).
+fn_name[code](F, N) :- obj_member_fn[code](_, N, F).
 ctor_method[code](F)   :- constructs[value](_, F), fn_node[code](F).
 fn_name[code](F, N) :- key_name[code](F, N), class_method[code](_, F), not ctor_method[code](F).
 fn_name[code](F, N) :- binder[code](D, N, F, _), fn_node[code](F).
-fn_name[code](F, N) :- key_name[code](P, N), obj_prop[code](_, P, F), fn_node[code](F).
 fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), target[value](CD, I), binds[value](I, N).
 fn_name[code](F, N) :- key_name[code](P, N), class_slot[code](_, P), value[value](P, F), fn_node[code](F).
 

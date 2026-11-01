@@ -27,9 +27,9 @@ Reads:
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [key_name](js-dataflow.rofl.md#key_name), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [obj_lit](js-dataflow.rofl.md#obj_lit), [own_name](js-dataflow.rofl.md#own_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
+- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_method](js-dataflow.rofl.md#class_method), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_method](js-dataflow.rofl.md#obj_method), [obj_prop](js-dataflow.rofl.md#obj_prop), [own_name](js-dataflow.rofl.md#own_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host)
-- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [class_field_kind](js-dataflow.rofl.md#class_field_kind), [lib_member](js-dataflow.rofl.md#lib_member), [value_transparent](js-dataflow.rofl.md#value_transparent)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member), [value_transparent](js-dataflow.rofl.md#value_transparent)
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-host: [host_site](js-host.rofl.md#host_site)
@@ -37,7 +37,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers)
-- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
@@ -85,7 +85,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsimport_equals_declaration, tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsmethod_signature, tsparameter_property, tsproperty_signature, tstype_reference, tsunion_type.
+Kinds without a noun: tsimport_equals_declaration, tsindex_signature, tsinterface_declaration, tsinterface_heritage, tsmethod_signature, tsproperty_signature, tstype_reference, tsunion_type.
 
 ## Words
 
@@ -99,7 +99,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-call"></a>a call | a node of one of the kinds `call_expression`, `optional_call_expression` (`call_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
-| <a id="noun-class_field"></a>a class field | a node of a kind in [`class_field_kind`](js-dataflow.rofl.md#class_field_kind) |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-declarator"></a>a declarator | a node of kind `variable_declarator` |
 | <a id="noun-decorator"></a>a decorator | a node of kind `decorator` |
@@ -108,15 +107,11 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-method"></a>a method | a node of a kind in [`class_method`](js-dataflow.rofl.md#class_method) |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-non-null_expression"></a>a non-null expression | a node of kind `tsnon_null_expression` |
-| <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
-| <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
 | <a id="noun-parenthesized_expression"></a>a parenthesized expression | a node of kind `parenthesized_expression` |
-| <a id="noun-property"></a>a property | a node of kind `object_property` |
 | <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
 | <a id="noun-wrapper"></a>a wrapper | a node of a kind in [`value_transparent`](js-dataflow.rofl.md#value_transparent) |
 | a function | a node [`fn_node`](#fn_node) holds of |
@@ -389,29 +384,25 @@ In the code:
 <a id="fn_name"></a>F answers to a name N either:
 
 1. if F is a [function](#fn_node), [`target`](#target)(F, I), and [`binds`](#binds)(I, N);
-2. if F is an [object method](#noun-object_method) and the `key` of F [spells](js-dataflow.rofl.md#key_name) N.
+2. if some object literal [has the member function](#obj_member_fn) F at N.
 
-F answers to a name N either:
+A node F answers to a name N either:
 
 1. if all of:
-   - F is a [method](#noun-method);
-   - the `key` of F [spells](js-dataflow.rofl.md#key_name) N;
+   - F [spells](js-structure.rofl.md#key_name) N;
+   - [`class_method`](js-dataflow.rofl.md#class_method)(something, F);
    - unless F [is a constructor](#ctor_method);
 2. if D [binds](js-dataflow.rofl.md#binder) N to F in some file and F is a [function](#fn_node);
 3. if all of:
-   - a node K [spells](js-dataflow.rofl.md#key_name) N;
-   - the `key` of a [property](#noun-property) P is K;
-   - the `value` of P is F;
-   - F is a [function](#fn_node);
-4. if all of:
    - [`constructs`](#constructs)(CD, F);
    - F is a [function](#fn_node);
    - [`target`](#target)(CD, I);
    - [`binds`](#binds)(I, N);
-5. if all of:
-   - the `value` of a [class field](#noun-class_field) P is F;
-   - F is a [function](#fn_node);
-   - the `key` of P [spells](js-dataflow.rofl.md#key_name) N.
+4. if all of:
+   - a node P [spells](js-structure.rofl.md#key_name) N;
+   - [`class_slot`](js-dataflow.rofl.md#class_slot)(something, P);
+   - [`value`](#value)(P, F);
+   - F is a [function](#fn_node).
 
 > A class expression with no `id` takes its binding's name — the language's own
 > inference: `const A = class {}` has `A.name === "A"`, but
@@ -478,23 +469,15 @@ A [function](#fn_node) answers to a name N if all of:
 > over `may_be_node`, and the shapes are entry points into the value layer.
 > Both `obj_member_fn` arms lead with `key_name` for correctness AND cost:
 > `ns[haspSpelling]()` must not resolve under the variable's spelling, and
-> `key_name`'s 105 rows bind K so every later literal is an indexed lookup.
+> `key_name`'s rows bind the member so every later literal is an indexed lookup.
 
 <a id="obj_member_fn"></a>O has the member function M at Key either:
 
-1. if all of:
-   - a node K [spells](js-dataflow.rofl.md#key_name) Key;
-   - the `key` of M is K;
-   - M is an [object method](#noun-object_method);
-   - M [is among the](#ast_child) `properties` of O;
-   - O is an [object literal](#noun-object_literal);
+1. if M [spells](js-structure.rofl.md#key_name) Key and [`obj_method`](js-dataflow.rofl.md#obj_method)(O, M);
 2. if all of:
-   - a node K [spells](js-dataflow.rofl.md#key_name) Key;
-   - the `key` of a [property](#noun-property) P is K;
-   - the `value` of P is M;
-   - M is a [function](#fn_node);
-   - P [is among the](#ast_child) `properties` of O;
-   - O is an [object literal](#noun-object_literal).
+   - a node P [spells](js-structure.rofl.md#key_name) Key;
+   - [`obj_prop`](js-dataflow.rofl.md#obj_prop)(O, P, M);
+   - M is a [function](#fn_node).
 
 > The constructor edge is not a CallExpression at all; it needed the value
 > question "which class does this expression construct". `super()` walks
@@ -848,7 +831,7 @@ In the code:
 <a id="fn_binder"></a>D binds the function F either:
 
 1. if D is a [declarator](#noun-declarator), the `init` of D is F, and F is a [function](#fn_node);
-2. if D is a [property](#noun-property), the `value` of D is F, and F is a [function](#fn_node);
+2. if [`obj_prop`](js-dataflow.rofl.md#obj_prop)(something, D, F) and F is a [function](#fn_node);
 3. if D [has the member function](#obj_member_fn) F at some key.
 
 In the audit:
@@ -1165,15 +1148,15 @@ Declared as facts:
 1. if [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O) and [`spread_props`](#spread_props)(O, something, something);
 2. if all of:
    - [`literal_part`](#literal_part)(O, P);
-   - the `key` of a node P is a node K;
-   - unless K [spells](js-dataflow.rofl.md#key_name) some key;
-3. if [`literal_part`](#literal_part)(O, P) and the `key` of a node P [spells](js-dataflow.rofl.md#key_name) "__proto__".
+   - [`has`](#has)(O, P);
+   - unless a node P [spells](js-structure.rofl.md#key_name) some key;
+3. if [`literal_part`](#literal_part)(O, P) and a node P [spells](js-structure.rofl.md#key_name) "__proto__".
 
 > a member function whose `this` the model does not follow may write onto it
 
 In the flow:
 
-<a id="this_unfollowed"></a>`this_unfollowed`(F) if a node F [hosts](js-dataflow.rofl.md#this_host) some this, unless F is a [method](#noun-method).
+<a id="this_unfollowed"></a>`this_unfollowed`(F) if a node F [hosts](js-dataflow.rofl.md#this_host) some this, unless [`class_method`](js-dataflow.rofl.md#class_method)(something, F).
 
 In the surface:
 
@@ -1355,12 +1338,8 @@ In the code:
    - [`has`](#has)(P, M);
    - [`value`](#value)(M, M);
    - [`key`](#key)(M, Name);
-2. if all of:
-   - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
-   - a node Sp [is among the](#ast_child) `specifiers` of a node E;
-   - the `exported` of Sp [spells](js-dataflow.rofl.md#key_name) Name;
-3. if some node [is of kind](js-model.rofl.md#ast_node) `export_default_declaration` in file File and Name is "default";
-4. if all of:
+2. if some node [is of kind](js-model.rofl.md#ast_node) `export_default_declaration` in file File and Name is "default";
+3. if all of:
    - an [export-all](#noun-export-all) E is in file File;
    - E [means the file](js-modules.rofl.md#module_target) T;
    - [`sx_export_key`](#sx_export_key)(T, Name);
@@ -1661,17 +1640,7 @@ Declared as facts:
 
 In the code:
 
-<a id="param_property"></a>`param_property`(P, Key, X) either:
-
-1. if all of:
-   - P is a tsparameter_property node;
-   - the `parameter` of P is a node X;
-   - X [is named](js-structure.rofl.md#ast_name) Key;
-2. if all of:
-   - P is a tsparameter_property node;
-   - the `parameter` of P is a node D;
-   - the `left` of D is a node X;
-   - X [is named](js-structure.rofl.md#ast_name) Key.
+<a id="param_property"></a>`param_property`(P, Key, X) if [`has`](#has)(something, P), [`assign`](#assign)(P, P, X), and [`key`](#key)(P, Key).
 
 In the flow:
 

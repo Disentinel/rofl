@@ -49,7 +49,8 @@ xl_seed(sx_sub_inst, 2).
 -- A member's own attribute. `member_value`'s third column is foreign only for a value another file WROTE onto the
 -- object (`sx_mwrite`), and a written value is an expression: it has no `static` and no `get`/`set` kind, so the
 -- attribute these read is the declaring file's own method or field.
-xl_ok(accessor_as, ast_attr, "a member's own attribute: a value written from another file carries no kind").
+xl_ok(accessor_as, getter, "a member's own kind: a value written from another file carries no kind").
+xl_ok(accessor_as, setter, "a member's own kind: a value written from another file carries no kind").
 xl_ok(accessor_recv, accessor_obj, "the receiver may be an object of another file, as accessor_read read it through accessor_of before it was split").
 xl_ok(class_member_proto, static, "a member's own mark: a value written from another file carries no static flag").
 xl_ok(class_member_proto, class_method, "a member's own kind: a value written from another file is no method of the class").

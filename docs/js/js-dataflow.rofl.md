@@ -36,7 +36,7 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg)
-- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name)
+- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -107,7 +107,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
 | <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
-| <a id="noun-class_field"></a>a class field | a node of one of the kinds `class_property`, `class_accessor_property` (`class_field_kind`) |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
 | <a id="noun-default_export"></a>a default export | a node of kind `export_default_declaration` |
@@ -123,10 +122,8 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-literal"></a>a literal | a node of one of the kinds `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal` (`literal_kind`) |
 | <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-method"></a>a method | a node of a kind in `class_method` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
-| <a id="noun-object_method"></a>an object method | a node of kind `object_method` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
@@ -544,13 +541,10 @@ A node is no reference if the `property` or `key` of a node P is it and [the att
 | "toStringTag" | `symbol_to_string_tag` |
 | "unscopables" | `symbol_unscopables` |
 
-A node
-
-- <a id="symbol_ref"></a>is the well known symbol Key if all of:
+<a id="symbol_ref"></a>A node is the well known symbol Key if all of:
   - [`prop_name`](js-structure.rofl.md#prop_name)(it, O, N);
   - a node O [refers to the free](#free_global) "Symbol" in some file;
   - a name N [names the well known symbol](#well_known_symbol) Key.
-- <a id="key_name"></a>spells Key if the `key` of some node is it and it [is the well known symbol](#symbol_ref) Key.
 
 Declared as facts:
 
@@ -818,7 +812,7 @@ In the code:
   - the `key` of Prop is a node K;
   - [`prop_local`](#prop_local)(Prop, Local).
 
-<a id="destructures"></a>D destructures Local from Key in File if [`destr_prop`](#destr_prop)(D, something, K, Local, File) and a node K [spells](#key_name) Key.
+<a id="destructures"></a>D destructures Local from Key in File if [`destr_prop`](#destr_prop)(D, Prop, something, Local, File) and a node Prop [spells](js-structure.rofl.md#key_name) Key.
 
 D is scoped in File if [`destr_prop`](#destr_prop)(D, something, something, something, File).
 
@@ -935,7 +929,7 @@ In the code:
 <a id="param_prop"></a>`param_prop`(F, I, Key, Local, Prop) if all of:
   - [`param_pattern`](#param_pattern)(F, I, P);
   - a node Prop [is among the](#ast_child) `properties` of a node P;
-  - the `key` of Prop [spells](#key_name) Key;
+  - Prop [spells](js-structure.rofl.md#key_name) Key;
   - [`prop_local`](#prop_local)(Prop, Local).
 
 In the flow:
@@ -980,7 +974,7 @@ A node
 
 In the code:
 
-<a id="pattern_takes"></a>An [object pattern](#noun-object_pattern) takes the key Key if a node Prop [is among the](#ast_child) `properties` of it and the `key` of Prop [spells](#key_name) Key.
+<a id="pattern_takes"></a>An [object pattern](#noun-object_pattern) takes the key Key if a node Prop [is among the](#ast_child) `properties` of it and Prop [spells](js-structure.rofl.md#key_name) Key.
 
 <a id="rest_in_pattern"></a>D holds a rest R in File if all of:
   - [`declarator_id`](#declarator_id)(D, an [object pattern](#noun-object_pattern) P);
@@ -3065,6 +3059,12 @@ In the code:
 
 <a id="obj_lit"></a>`obj_lit`(O) if [`object`](#object)(O), unless [`decl`](#decl)(O, `enum`).
 
+> the members of an object literal: a property holds a value, a method is itself a function
+
+<a id="obj_prop"></a>`obj_prop`(O, P, V) if [`obj_lit`](#obj_lit)(O), [`has`](#has)(O, P), and [`value`](#value)(P, V).
+
+<a id="obj_method"></a>`obj_method`(O, a [function](js-callgraph.rofl.md#fn_node) M) if [`obj_lit`](#obj_lit)(O) and [`has`](#has)(O, M).
+
 In the flow:
 
 <a id="obj_like"></a>A node O is object like either:
@@ -3083,24 +3083,14 @@ The member Key of a node I holds a node V if I [stands for an instance of](#inst
 
 The plain member Key of a node I is a node V if I [stands for an instance of](#inst_of) some class and [the member](#member_value) Key of I holds V.
 
-The member Key of O holds a node V either:
+The member Key of a node O holds a node V either:
 
 1. if all of:
-   - O is an [object literal](#noun-object_literal);
-   - an [object method](#noun-object_method) M [is among the](#ast_child) `properties` of O;
-   - the `key` of M [spells](#key_name) Key;
+   - [`obj_method`](#obj_method)(O, M);
+   - a node M [spells](js-structure.rofl.md#key_name) Key;
    - V is M;
-2. if all of:
-   - O is an [object literal](#noun-object_literal);
-   - a [property](#noun-property) P [is among the](#ast_child) `properties` of O;
-   - the `key` of P [spells](#key_name) Key;
-   - the `value` of P is V;
-3. if all of:
-   - O [is object like](#obj_like);
-   - the `body` of O is a node B;
-   - V [is among the](#ast_child) `body` of B;
-   - V is a [method](#noun-method);
-   - the `key` of V [spells](#key_name) Key.
+2. if [`obj_prop`](#obj_prop)(O, P, V) and a node P [spells](js-structure.rofl.md#key_name) Key;
+3. if [`class_method`](#class_method)(O, V) and V [spells](js-structure.rofl.md#key_name) Key.
 
 > A member written is a member read, flow-insensitively — `assigns` one step
 > over. `plain_assign` is load-bearing: `+=` evaluates to a sum. The object may be
@@ -3129,12 +3119,7 @@ The member Key of a node O holds a node V if [`sx_mwrite`](js-concat.rofl.md#sx_
 > read it with `Key` unbound as "no own key at all"; the kernel now defers a
 > negation until its variables are bound, and the order is kept for the reader.
 
-<a id="own_key"></a>A class owns the key Key if all of:
-  - a node K [spells](#key_name) Key;
-  - the `key` of a [method](#noun-method) M is K;
-  - M [is among the](#ast_child) `body` of a node B;
-  - the `body` of it is B;
-  - it [is object like](#obj_like).
+<a id="own_key"></a>A class owns the key Key if a node M [spells](js-structure.rofl.md#key_name) Key and [`class_method`](#class_method)(it, M).
 
 The member Key of a node CD holds a node V if all of:
   - [the super](#super_of) of CD is a class SD;
@@ -3178,7 +3163,10 @@ In the code:
    - a node P [is among the](#ast_child) `properties` of O;
    - [the attribute](#ast_attr) `computed` of P is `true`.
 
-<a id="obj_own_key"></a>`obj_own_key`(an [object literal](#noun-object_literal) O, Key) if a node P [is among the](#ast_child) `properties` of O and the `key` of P [spells](#key_name) Key.
+<a id="obj_own_key"></a>`obj_own_key`(O, Key) if all of:
+  - a node P [spells](js-structure.rofl.md#key_name) Key;
+  - [`has`](#has)(O, P);
+  - [`obj_lit`](#obj_lit)(O).
 
 In the flow:
 
@@ -3196,7 +3184,7 @@ In the code:
 
 <a id="field_unset_decl"></a>`field_unset_decl`(CB, Key) if all of:
   - [the attribute](#ast_attr) `static` of Q is `false`;
-  - the `key` of Q [spells](#key_name) Key;
+  - Q [spells](js-structure.rofl.md#key_name) Key;
   - Q [is among the](#ast_child) `body` of a node CB;
   - unless the `value` of a [class property](#noun-class_property) Q is some node.
 
@@ -3415,7 +3403,7 @@ A node N may be the literal L either:
 
 A node M points to a node Y either:
 
-1. if some object literal [has the object method](#obj_method_of) M and Y is M;
+1. if [`obj_method`](#obj_method)(something, M) and Y is M;
 2. if some class [has the method](#class_method_of) M and Y is M;
 3. if M is a [function declaration](#noun-function_declaration) and Y is M;
 4. if M [sees the declaration](#sees_decl) Y and Y is a [function declaration](#noun-function_declaration);
@@ -3492,22 +3480,16 @@ A node T points to a node I either:
 > through `super_of`). An auto-accessor is a field on this layer's question. A
 > field with no initialiser is no row: the layer has no `undefined`.
 
-<a id="field_of"></a>A class has the field Key at a [class field](#noun-class_field) P holding a node V if all of:
-  - it [is object like](#obj_like);
-  - the `body` of it is a node B;
-  - P [is among the](#ast_child) `body` of B;
-  - the `key` of P [spells](#key_name) Key;
-  - the `value` of P is V.
+<a id="field_of"></a>A class has the field Key at a node P holding a node V if all of:
+  - P [spells](js-structure.rofl.md#key_name) Key;
+  - [`class_slot`](#class_slot)(it, P);
+  - [`value`](#value)(P, V).
 
 The member Key of a node CD holds a node V if CD [has the field](#field_of) Key at some node holding V.
 
 A class owns the key Key if it [has the field](#field_of) Key at some node holding some node.
 
 The static/instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `true`/`false`.
-
-Declared as facts:
-
-- <a id="class_field_kind"></a>`class_field_kind` — rows in Words
 
 > Walks FIELDS and not members: written over `class_member_proto` it inherited
 > methods a second way and silently disarmed the mutant guarding the method arm.
@@ -3807,12 +3789,7 @@ In the audit:
 
 In the flow:
 
-<a id="obj_method_of"></a>O has the object method M if all of:
-  - [`obj_lit`](#obj_lit)(O);
-  - [`has`](#has)(O, M);
-  - M is a [function](js-callgraph.rofl.md#fn_node).
-
-A node points to a node O if O [has the object method](#obj_method_of) M and M [hosts](#this_host) it.
+A node points to a node O if [`obj_method`](#obj_method)(O, M) and a node M [hosts](#this_host) it.
 
 ## 11b. EXTERNAL VALUES: a value with no source in the corpus is still an
 
@@ -3946,7 +3923,7 @@ The plain member Key of a node X is a node V if X [comes out of](#external_value
 
 In the code:
 
-<a id="external_destructured"></a>D destructures from outside at a node Prop Local in File if [`destr_prop`](#destr_prop)(D, Prop, K, Local, File) and a node K [spells](#key_name) some key.
+<a id="external_destructured"></a>D destructures from outside at a node Prop Local in File if [`destr_prop`](#destr_prop)(D, Prop, something, Local, File) and Prop [spells](js-structure.rofl.md#key_name) some key.
 
 In the flow:
 
@@ -4422,10 +4399,10 @@ A node E points to a node N either:
 1. if a node CD [is replaced by its decorator with](#decorated_by) N and E [sees the declaration](#sees_decl) CD;
 2. if E [is replaced by its decorator with](#decorated_by) N and E is a [class expression](#noun-class_expression).
 
-<a id="decorated_member"></a>A class has the decorated member Key at a [method](#noun-method) M replaced with a node N if all of:
+<a id="decorated_member"></a>A class has the decorated member Key at a node M replaced with a node N if all of:
   - M [is replaced by its decorator with](#decorated_by) N;
-  - it [has the method](#class_method_of) M;
-  - the `key` of M [spells](#key_name) Key.
+  - [`class_method`](#class_method)(it, M);
+  - M [spells](js-structure.rofl.md#key_name) Key.
 
 The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at M replaced with N and/unless [`static`](#static)(M).
 

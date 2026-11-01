@@ -179,7 +179,6 @@ unit_concludes("rules/js-dataflow.rofl", top_declares).
 unit_concludes("rules/js-dataflow.rofl", free_global).
 unit_concludes("rules/js-dataflow.rofl", well_known_symbol).
 unit_concludes("rules/js-dataflow.rofl", symbol_ref).
-unit_concludes("rules/js-dataflow.rofl", key_name).
 unit_concludes("rules/js-dataflow.rofl", tdz_cand).
 unit_concludes("rules/js-dataflow.rofl", tdz_deferred).
 unit_concludes("rules/js-dataflow.rofl", tdz_at).
@@ -410,6 +409,8 @@ unit_concludes("rules/js-dataflow.rofl", keyed_viewed).
 unit_concludes("rules/js-dataflow.rofl", read_holds_node).
 unit_concludes("rules/js-dataflow.rofl", read_holds_lit).
 unit_concludes("rules/js-dataflow.rofl", obj_lit).
+unit_concludes("rules/js-dataflow.rofl", obj_prop).
+unit_concludes("rules/js-dataflow.rofl", obj_method).
 unit_concludes("rules/js-dataflow.rofl", obj_like).
 unit_concludes("rules/js-dataflow.rofl", class_like).
 unit_concludes("rules/js-dataflow.rofl", inst_of).
@@ -454,7 +455,6 @@ unit_concludes("rules/js-dataflow.rofl", class_slot).
 unit_concludes("rules/js-dataflow.rofl", class_method).
 unit_concludes("rules/js-dataflow.rofl", class_method_of).
 unit_concludes("rules/js-dataflow.rofl", sub_inst).
-unit_concludes("rules/js-dataflow.rofl", class_field_kind).
 unit_concludes("rules/js-dataflow.rofl", field_of).
 unit_concludes("rules/js-dataflow.rofl", field_at).
 unit_concludes("rules/js-dataflow.rofl", inherited_field).
@@ -484,7 +484,6 @@ unit_concludes("rules/js-dataflow.rofl", exports_default).
 unit_concludes("rules/js-dataflow.rofl", cjs_module_exports).
 unit_concludes("rules/js-dataflow.rofl", cjs_exports).
 unit_concludes("rules/js-dataflow.rofl", import_outside_corpus).
-unit_concludes("rules/js-dataflow.rofl", obj_method_of).
 unit_concludes("rules/js-dataflow.rofl", external_shape).
 unit_concludes("rules/js-dataflow.rofl", type_import).
 unit_concludes("rules/js-dataflow.rofl", external_site).
@@ -823,7 +822,6 @@ unit_concludes("rules/js-controlflow.rofl", has_return).
 unit_concludes("rules/js-controlflow.rofl", top_throw).
 unit_concludes("rules/js-controlflow.rofl", always_throws).
 unit_concludes("rules/js-controlflow.rofl", throwing_call).
-unit_concludes("rules/js-controlflow.rofl", accessor_kind).
 unit_concludes("rules/js-controlflow.rofl", accessor_as).
 unit_concludes("rules/js-controlflow.rofl", accessor_of).
 unit_concludes("rules/js-controlflow.rofl", accessor_obj).
@@ -1592,6 +1590,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", name_field).
 unit_concludes("models/lang/js/babel-roles.rofl", b_key).
 unit_concludes("models/lang/js/babel-roles.rofl", key).
 unit_concludes("models/lang/js/babel-roles.rofl", key_expr).
+unit_concludes("models/lang/js/babel-roles.rofl", b_lit_key).
 unit_concludes("models/lang/js/babel-roles.rofl", key_literal).
 unit_concludes("models/lang/js/babel-roles.rofl", member_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", member).

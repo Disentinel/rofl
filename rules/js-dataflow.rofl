@@ -1521,7 +1521,7 @@ may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), member_plain[flow](
 
 -- A method is a value; a declared function is reached by its name, looked up
 -- as any name is.
-may_be_node[flow](M, M) :- obj_method_of[flow](_, M).
+may_be_node[flow](M, M) :- obj_method[code](_, M).
 may_be_node[flow](M, M) :- class_method_of[flow](_, M).
 may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _).
 
@@ -1783,8 +1783,7 @@ import_outside_corpus[audit](Src, File) :- site_source[code](N, Src), site_file[
                                            not module_target[code](N, _).
 
 -- `this` in an object literal's own method is that object.
-obj_method_of[flow](O, M) :- obj_lit[code](O), has[value](O, M), fn_node[code](M).
-may_be_node[flow](T, O) :- obj_method_of[flow](O, M), this_host[flow](M, T).
+may_be_node[flow](T, O) :- obj_method[code](O, M), this_host[flow](M, T).
 
 -- =========================================================================
 -- 11b. EXTERNAL VALUES: a value with no source in the corpus is still an

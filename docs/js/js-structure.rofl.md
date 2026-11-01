@@ -19,19 +19,19 @@ default: code
 
 Reads:
 
+- from js-dataflow: [symbol_ref](js-dataflow.rofl.md#symbol_ref)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
 - from outside these files, in the value:
   - <a id="callee"></a>`callee`
   - <a id="import_meta"></a>`import_meta`
+  - <a id="key"></a>`key`
+  - <a id="key_expr"></a>`key_expr`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="new_target"></a>`new_target`
   - <a id="private"></a>`private`
-- from the scanner:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -40,7 +40,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
-| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
 `imports` lists:
 
@@ -82,26 +81,18 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 
 <a id="ast_name"></a>`ast_name` of N and V is another name for `ast_attr` of N, name and V.
 
-> THE NAME A KEY STANDS FOR, wherever a key appears, written once: a name, or
-> a string written as the key (`{ "x-id": 1 }`, `{ ["x-id"]: 1 }`). A
-> well-known symbol is a key too, found where globals are
+> THE NAME THE KEY OF A MEMBER STANDS FOR, wherever a key appears, written
+> once: a name, or a literal written as the key (`{ "x-id": 1 }`, `{ ["x-id"]: 1 }`,
+> `{ 1: x }`), by the role `key`. A private member is no such name: `#x` and `x`
+> are two members. A well-known symbol is a key too, found where globals are
 > (rules/js-dataflow.rofl, `symbol_ref`); `obj[someVar]` has no static name.
-> 
-> A NEGATION and not `computed, false`: `class_private_property` and
-> `class_private_method` carry no `computed` attribute at all.
 
-`key_name` has one N for each K.
+`key_name` has one N for each M.
 
-A node K spells N either:
+<a id="key_name"></a>A node M spells N either:
 
-1. if all of:
-   - the `key` of a node P is K;
-   - K [is named](#ast_name) N;
-   - unless [the attribute](#ast_attr) `computed` of P is `true`;
-2. if all of:
-   - the `key` of some node is K;
-   - K is a [string literal](#noun-string_literal);
-   - [the attribute](#ast_attr) `value` of K is N.
+1. if [`key`](#key)(M, N), unless [`private`](#private)(M);
+2. if [`key_expr`](#key_expr)(M, E) and a node E [is the well known symbol](js-dataflow.rofl.md#symbol_ref) N.
 
 <a id="ast_value"></a>`ast_value` of N and V is another name for `ast_attr` of N, value and V.
 

@@ -34,9 +34,11 @@ Reads:
   - <a id="body"></a>`body`
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
+  - <a id="getter"></a>`getter`
   - <a id="iterates"></a>`iterates`
   - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
+  - <a id="setter"></a>`setter`
   - <a id="spread_props"></a>`spread_props`
   - <a id="throws"></a>`throws`
   - <a id="tries"></a>`tries`
@@ -369,14 +371,18 @@ Declared as facts:
 > no caller — declaring `member_expression` a transfer kind would make every
 > property read in the corpus a site.
 
-`accessor_kind` includes "get", "set".
-
 In the flow:
 
-<a id="accessor_as"></a>The accessor of a node Obj and K at Key is a node M if all of:
-  - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
-  - [the attribute](#ast_attr) `kind` of M is K;
-  - K [is an accessor kind](#accessor_kind).
+<a id="accessor_as"></a>The accessor of a node Obj and N at Key is a node M either:
+
+1. if all of:
+   - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
+   - [`getter`](#getter)(M, M);
+   - N is "get";
+2. if all of:
+   - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
+   - [`setter`](#setter)(M, M);
+   - N is "set".
 
 <a id="accessor_obj"></a>`accessor_obj`(Obj) if [the accessor](#accessor_of) of a node Obj at some key is some node.
 
@@ -384,10 +390,6 @@ In the flow:
   - [`accessor_obj`](#accessor_obj)(Obj);
   - a node O [points to](js-concat.rofl.md#may_be_node) a node Obj;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O).
-
-Declared as facts:
-
-- <a id="accessor_kind"></a>A kind K is an accessor kind — rows in this file
 
 > A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
 
@@ -407,11 +409,11 @@ In the code:
    - N [is written](#written_member);
 3. if all of:
    - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
-   - [the attribute](#ast_attr) `kind` of M is "get";
+   - [`getter`](#getter)(M, M);
    - unless N [is only written](#only_written);
 4. if all of:
    - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
-   - [the attribute](#ast_attr) `kind` of M is "set";
+   - [`setter`](#setter)(M, M);
    - N [is written](#written_member).
 
 <a id="written_member"></a>A member N is written either:
