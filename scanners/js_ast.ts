@@ -409,7 +409,7 @@ export function scan(src: string, opts: ScanOpts = {}): AstFacts {
       }
       start(salt); feed52(hash); feed(f); feed(nm !== undefined ? 1 : listed ? 2 : 0); feed52(disc); feed(k);
       ch = done();
-      // in a raw ledger the program is named by its file alone, as every parser names it (models/lang/js/role-ids.rofl)
+      // in a raw ledger the program is named by its file alone, as every parser names it
       return raw === '' && c.type === 'Program' ? prefix + 'root' : prefix + b32(ch);
     };
 

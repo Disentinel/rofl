@@ -401,10 +401,9 @@ of `roles.rofl` is `models/lang/js/oxc-roles.rofl` (`rofl load
 both parsers and both converters and compares the role facts row by row; what
 still differs is f_oxc_roles_meets_the_vocabulary.
 
-A node's id from its roles alone, the same whichever parser read the file, is
-`models/lang/js/role-ids.rofl` (`rid(N, Id)`, loaded after a converter); it
-needs the builtin `hash(Seed, V)` and each parser's program named
-`<prefix>root` with `pos[tree]` in UTF-16 units (f_role_ids_name_a_node_by_its_roles).
+A node's id is its scanner's: stable under edits, each parser's own
+(f_role_ids_name_a_node_by_its_roles); both name the program `<prefix>root` and
+give `pos[tree]` in UTF-16 units.
 The host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
 
 Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M

@@ -3857,7 +3857,6 @@ check_file("intents_screen", "examples/intents/screen.rofl").
 check_world("oxc_roles").
 check_file("oxc_roles", "models/lang/js/roles.rofl").
 check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
-check_file("oxc_roles", "models/lang/js/role-ids.rofl").
 check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
 check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
 -- w_l2_roles, the roles layer under the JS model: the Babel converter (models/lang/js/babel-roles.rofl) over the raw

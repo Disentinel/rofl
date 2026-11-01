@@ -457,7 +457,7 @@ half a character, which the store would then carry. Operands compose, so
 | `str_segs(S, Sep)` | 2 | how many segments — and it is what tells `str_pre`'s empty answer apart from an empty first segment |
 | `concat(A, B)` | 2 | A and B joined: the one operation that makes a string the program did not hold, so `safety.rofl` refuses it in a rule that reads its own recursion (`unbounded_in_recursion`): over the finitely many strings below a recursion it makes finitely many, inside one it could grow a string without end |
 | `atom_of(S)` | 1 | the atom of a string. It crosses a sort boundary and produces a TERM; a term only becomes an executable rule through the reflection rows, which `breach[audit]` and the write protection on `conclusion_lit` already watch |
-| `hash(Seed, V)` | 2 | an atom that names the pair: 13 base-32 digits of a 64-bit hash of both texts, under the prefix of Seed's atom up to its first `_` (`h` when it has none), so a file's volume key carries over. Not a destructor: it is how a rule names a node it reads out of a tree (models/lang/js/role-ids.rofl), and the universe stays finite only because the width is fixed |
+| `hash(Seed, V)` | 2 | an atom that names the pair: 13 base-32 digits of a 64-bit hash of both texts, under the prefix of Seed's atom up to its first `_` (`h` when it has none), so a file's volume key carries over. Not a destructor: it names a pair a rule reads, and the universe stays finite only because the width is fixed |
 
 Three refusals, kept apart because they demand three different repairs, and
 each arrives as a `hole` rather than as silence: `str_type_error` (the program
