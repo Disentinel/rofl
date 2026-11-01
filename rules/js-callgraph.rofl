@@ -804,10 +804,7 @@ type_member[flow](T, Key) :- class_like[flow](T), ast_child[code](T, body, 0, B)
 type_member[flow](T, Key) :- class_method_of[flow](T, M), ast_attr[code](M, kind, "constructor"),
                              ast_child[code](M, params, _, P), param_property[code](P, Key, _).
 -- `private foo: IFoo` and `private foo: IFoo = d`: the name and its annotation
-param_property[code](P, Key, X) :- ast_node[code](P, tsparameter_property, _), ast_child[code](P, parameter, 0, X),
-                                   ast_name[code](X, Key).
-param_property[code](P, Key, X) :- ast_node[code](P, tsparameter_property, _), ast_child[code](P, parameter, 0, D),
-                                   ast_child[code](D, left, 0, X), ast_name[code](X, Key).
+param_property[code](P, Key, X) :- has[value](_, P), assign[value](P, P, X), key[value](P, Key).
 type_base[flow](T, B)     :- ast_child[code](T, extends, _, H), names_type[flow](H, B).
 type_base[flow](T, B)     :- super_of[flow](T, B).
 type_member[flow](T, Key) :- type_base[flow](T, B), type_member[flow](B, Key).
