@@ -786,8 +786,7 @@ keyed_holder[code](D, P)  :- keyed_const[code](D, P, _, _).
 keyed_born[code](D, B, F) :- keyed_const[code](D, _, B, F).
 keyed_ref[code](O, D)     :- keyed_const[code](D, _, _, _), sees_binder[code](O, D).
 
-keyed_ctor[code](CB, Body) :- ast_node[code](M, class_method, _), ast_attr[code](M, kind, "constructor"),
-                              ast_child[code](CB, body, _, M), body[value](M, Body).
+keyed_ctor[code](CB, Body) :- ctor_method[code](M), parent[tree](CB, M), body[value](M, Body).
 keyed_this_member[code](L, T, Fld) :- prop_name[code](L, T, Fld), this[value](T).
 keyed_field[code](A, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](A, right, 0, X),
                                     ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, L),
@@ -815,10 +814,8 @@ keyed_field_ok[code](H, CB, Fld) :- keyed_field[code](H, _, CB, Fld), not keyed_
 keyed_holder[code](H, P)  :- keyed_field[code](H, P, _, _), keyed_field_ok[code](H, _, _).
 keyed_born[code](H, Body, body) :- keyed_field_ok[code](H, CB, _), keyed_ctor[code](CB, Body).
 
-keyed_method[code](H, M) :- keyed_field_ok[code](H, CB, _), ast_child[code](CB, body, _, M),
-                            ast_node[code](M, class_method, _), ast_attr[code](M, static, false).
-keyed_method[code](H, M) :- keyed_field_ok[code](H, CB, _), ast_child[code](CB, body, _, M),
-                            ast_node[code](M, class_private_method, _), ast_attr[code](M, static, false).
+keyed_method[code](H, M) :- keyed_field_ok[code](H, CB, _), parent[tree](CB, M), fn_node[code](M),
+                            not static[value](M).
 keyed_list[code](H, B, F)       :- keyed_born[code](H, B, F).
 keyed_list[code](H, Body, body) :- keyed_method[code](H, M), body[value](M, Body).
 -- `this` in a method is the instance only where no nearer function binds it
@@ -975,8 +972,7 @@ keyed_named_fn[code](G, E) :- keyed_fn_need[code](G), ast_child[code](D, init, 0
                               ast_child[code](V, declarations, _, D), ast_attr[code](V, kind, "const"),
                               not ast_child[code](_, declaration, 0, V), sees_binder[code](E, D),
                               not assign[value](D, E, G).
-keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), private_binds[code](N, G),
-                              ast_node[code](G, class_private_method, _).
+keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), private_binds[code](N, G), private_method[code](G).
 keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), ast_attr[code](G, accessibility, "private"),
                               ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G),
                               ast_name[code](Pn, Name), ast_child[code](N, property, 0, Pn), inside[tree](CB, N),
@@ -994,9 +990,7 @@ keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast
                                       at[tree](G, File, _), not inside[tree](CB, N).
 keyed_has_name[code](G) :- keyed_named_fn[code](G, _).
 keyed_called[code](G, Q) :- keyed_named_fn[code](G, E), callee[value](Q, E), ast_node[code](Q, call_expression, _).
-keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_private_method, _),
-                            object_of[code](E, T), this[value](T).
-keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), ast_node[code](G, class_method, _),
+keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), class_method_of[flow](_, G),
                             object_of[code](E, T), this[value](T).
 keyed_by_this[code](E)   :- keyed_named_fn[code](_, E), ast_node[code](E, identifier, _).
 keyed_escapes[code](G) :- keyed_fn_need[code](G), not keyed_has_name[code](G).
@@ -1200,7 +1194,7 @@ keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), not class_method_o
                                 not async[value](G), not generator[value](G).
 keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), class_method_of[flow](_, G),
                                 keyed_this_call[code](Q), not async[value](G), not generator[value](G).
-keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), ast_node[code](G, class_private_method, _),
+keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), private_method[code](G),
                                 keyed_this_call[code](Q), not async[value](G), not generator[value](G).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, P), keyed_put_of[code](P, H, _).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_sure[code](G2, H, P).
@@ -1526,10 +1520,9 @@ member_may_lack[flow](N) :- member_unset[flow](N, O, Key), not member_set_sure[f
 -- attribute — emitted for every method, read by nothing — was read. The class
 -- object answers the static half and what is written onto it; an object
 -- literal, a module namespace and an instance answer `member_plain`.
-class_member_static[flow](CD, Key, M) :- member_value[flow](CD, Key, M),
-                                         ast_attr[code](M, static, true).
-class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M),
-                                         ast_attr[code](M, static, false).
+class_member_static[flow](CD, Key, M) :- member_value[flow](CD, Key, M), static[value](M).
+class_member_proto[flow](CD, Key, M)  :- member_value[flow](CD, Key, M), class_method[code](_, M),
+                                         not static[value](M).
 member_plain[flow](O, Key, V) :- obj_lit[code](O),
                                  member_value[flow](O, Key, V).
 member_plain[flow](P, Key, V) :- module_object[flow](P, _),
@@ -1574,17 +1567,18 @@ this_nearer[flow](F, T) :- this_over[flow](F, T), this_over[flow](G, T),
 this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).
 
 class_slot[code](CD, M)       :- class[value](CD), has[value](CD, M), parent[tree](B, M), parent[tree](CD, B).
-class_method_of[flow](CD, M) :- class_slot[code](CD, M), fn_node[code](M), not private[value](M).
-may_be_node[flow](T, I)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false),
+class_method[code](CD, M)    :- class_slot[code](CD, M), fn_node[code](M), not private[value](M).
+class_method_of[flow](CD, M) :- class_method[code](CD, M).
+may_be_node[flow](T, I)  :- class_method_of[flow](CD, M), not static[value](M),
                             inst_of[flow](I, CD), this_host[flow](M, T).
 -- an instance of a subclass runs the parent's methods and constructor with
 -- itself as `this`, so `this.m()` there reaches the subclass's override; a
 -- subclass of another file's class tells that file (`sx_sub_inst`)
 sub_inst[flow](SD, I) :- super_of[flow](CD, SD), inst_of[flow](I, CD).
 sub_inst[flow](SD, I) :- super_of[flow](MD, SD), sub_inst[flow](MD, I).
-may_be_node[flow](T, I)  :- class_method_of[flow](SD, M), ast_attr[code](M, static, false), this_host[flow](M, T),
+may_be_node[flow](T, I)  :- class_method_of[flow](SD, M), not static[value](M), this_host[flow](M, T),
                             sub_inst[flow](SD, I).
-may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), ast_attr[code](M, static, true),
+may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), static[value](M),
                             this_host[flow](M, T).
 
 -- =========================================================================
@@ -1637,41 +1631,32 @@ private_inner[code](N, CD) :- private_ref[code](N, Name), private_member[code](C
 private_binds[code](N, M)  :- private_ref[code](N, Name), private_member[code](CD, Name, M),
                               inside[tree](CD, N), not private_inner[code](N, CD).
 
-may_be_node[flow](M, M)  :- ast_node[code](M, class_private_method, _).
-may_be_node[flow](N, M)  :- private_binds[code](N, M),
-                            ast_node[code](M, class_private_method, _).
-may_be_node[flow](N, V2) :- private_binds[code](N, M),
-                            ast_node[code](M, class_private_property, _),
-                            ast_child[code](M, value, 0, V), may_be_node[flow](V, V2).
-may_be_lit[flow](N, L)   :- private_binds[code](N, M),
-                            ast_node[code](M, class_private_property, _),
-                            ast_child[code](M, value, 0, V), may_be_lit[flow](V, L).
+private_method[code](M)  :- fn_node[code](M), private[value](M).
+may_be_node[flow](M, M)  :- private_method[code](M).
+may_be_node[flow](N, M)  :- private_binds[code](N, M), private_method[code](M).
+may_be_node[flow](N, V2) :- private_binds[code](N, M), value[value](M, V), may_be_node[flow](V, V2).
+may_be_lit[flow](N, L)   :- private_binds[code](N, M), value[value](M, V), may_be_lit[flow](V, L).
 
-class_method_of[flow](CD, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                ast_child[code](B, body, _, M),
-                                ast_node[code](M, class_private_method, _).
+class_method_of[flow](CD, M) :- class_slot[code](CD, M), private_method[code](M).
 
 this_binds_kind(class_property).
 this_binds_kind(class_private_property).
 this_binds_kind(static_block).
 
 class_field_this[flow](CD, P) :- field_of[flow](CD, _, P, _).
-class_field_this[flow](CD, P) :- private_member[code](CD, _, P),
-                                 ast_node[code](P, class_private_property, _).
-may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not ast_attr[code](P, static, true),
+class_field_this[flow](CD, P) :- private_member[code](CD, _, P), not fn_node[code](P).
+may_be_node[flow](T, I)       :- class_field_this[flow](CD, P), not static[value](P),
                                  inst_of[flow](I, CD), this_host[flow](P, T).
-may_be_node[flow](T, I)       :- class_field_this[flow](SD, P), not ast_attr[code](P, static, true), this_host[flow](P, T),
+may_be_node[flow](T, I)       :- class_field_this[flow](SD, P), not static[value](P), this_host[flow](P, T),
                                  sub_inst[flow](SD, I).
-may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), ast_attr[code](P, static, true),
+may_be_node[flow](T, CD)      :- class_field_this[flow](CD, P), static[value](P),
                                  this_host[flow](P, T).
 
 -- a static member is inherited by the subclass's constructor, a field as a method is
 class_member_static[flow](CD, Key, V) :- super_of[flow](CD, SD), class_member_static[flow](SD, Key, V),
                                          not own_key[flow](CD, Key).
 
-static_block_of[flow](CD, SB) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                 ast_child[code](B, body, _, SB),
-                                 ast_node[code](SB, static_block, _).
+static_block_of[flow](CD, SB) :- static_block[value](CD, SB).
 may_be_node[flow](T, CD)      :- static_block_of[flow](CD, SB), this_host[flow](SB, T).
 
 -- =========================================================================
@@ -2192,7 +2177,5 @@ decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
                                          ast_node[code](M, class_method, _),
                                          class_method_of[flow](CD, M),
                                          ast_child[code](M, key, 0, K), key_name[code](K, Key).
-class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N),
-                                         ast_attr[code](M, static, true).
-class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N),
-                                         ast_attr[code](M, static, false).
+class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N), static[value](M).
+class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N), not static[value](M).

@@ -867,7 +867,7 @@ method_ret_at[flow](T, Key, A) :- ast_node[code](T, tsinterface_declaration, _),
                                   ast_child[code](B, body, _, S), ast_node[code](S, tsmethod_signature, _),
                                   ast_child[code](S, key, 0, K), ast_name[code](K, Key),
                                   ast_child[code](S, return_type, 0, A).
-method_ret_at[flow](T, Key, A) :- class_method_of[flow](T, M), ast_attr[code](M, static, false),
+method_ret_at[flow](T, Key, A) :- class_method_of[flow](T, M), not static[value](M),
                                   ast_child[code](M, key, 0, K), ast_name[code](K, Key),
                                   ast_child[code](M, return_type, 0, A).
 method_type[flow](T, Key, T2) :- method_ret_at[flow](T, Key, A), names_type[flow](A, T2).
@@ -902,7 +902,7 @@ declared[flow](E, T)   :- declarator_id[code](D, I),
                           ast_child[code](I, type_annotation, 0, A), names_type[flow](A, T), sees_binder[code](E, D).
 declared_lib[flow](E, L) :- declarator_id[code](D, I),
                           ast_child[code](I, type_annotation, 0, A), names_lib[flow](A, L), sees_binder[code](E, D).
-declared[flow](T, CD)  :- class_method_of[flow](CD, M), ast_attr[code](M, static, false), this_host[flow](M, T).
+declared[flow](T, CD)  :- class_method_of[flow](CD, M), not static[value](M), this_host[flow](M, T).
 declared[flow](N, T2)  :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
                           selects[flow](N, Key), member_type[flow](T, Key, T2).
 declared_lib[flow](N, L) :- member_node_v[flow](N), object_of[code](N, O), declared[flow](O, T),
@@ -927,7 +927,7 @@ see_through[code](E, X)  :- ast_node[code](E, tsnon_null_expression, _), ast_chi
 see_through[code](E, X)  :- ast_node[code](E, parenthesized_expression, _), ast_child[code](E, expression, 0, X).
 -- `super` in an instance method is declared as the base class
 declared[flow](S, B)     :- super[value](S), inside[tree](M, S), class_method_of[flow](CD, M),
-                            ast_attr[code](M, static, false), super_of[flow](CD, B).
+                            not static[value](M), super_of[flow](CD, B).
 declared[flow](C, T2)    :- declared_call[flow](C, T, Key), method_type[flow](T, Key, T2).
 declared_lib[flow](C, P) :- declared_call[flow](C, T, Key), method_lib[flow](T, Key, P).
 fn_ret_at[code](C, A)    :- ast_node[code](C, call_expression, _), callee[value](C, N),
