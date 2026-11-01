@@ -1217,6 +1217,8 @@ unit_concludes("rules/js-modules.rofl", import_specifier_node).
 unit_concludes("rules/js-modules.rofl", import_spec).
 unit_concludes("rules/js-modules.rofl", spec_local).
 unit_concludes("rules/js-modules.rofl", spec_imported).
+unit_concludes("rules/js-modules.rofl", spec_key_string).
+unit_concludes("rules/js-modules.rofl", import_ident_key).
 unit_concludes("rules/js-modules.rofl", binding).
 unit_concludes("rules/js-modules.rofl", has_specifier).
 unit_concludes("rules/js-modules.rofl", export_site).

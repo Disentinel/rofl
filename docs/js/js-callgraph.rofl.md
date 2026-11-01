@@ -52,6 +52,7 @@ Reads:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
   - <a id="parent"></a>`parent`
+  - <a id="program"></a>`program`
 - from outside these files, in the value:
   - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
@@ -67,7 +68,9 @@ Reads:
   - <a id="decorated"></a>`decorated`
   - <a id="enumerates"></a>`enumerates`
   - <a id="extends"></a>`extends`
+  - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
+  - <a id="key"></a>`key`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="spread_args"></a>`spread_args`
@@ -77,6 +80,7 @@ Reads:
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="unary"></a>`unary`
+  - <a id="value"></a>`value`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -1347,20 +1351,16 @@ In the code:
 <a id="export_key"></a>`export_key`(File, Name) either:
 
 1. if all of:
-   - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
-   - the `declaration` of a node E is a node D;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name;
+   - [`program`](#program)(P, File);
+   - [`has`](#has)(P, M);
+   - [`value`](#value)(M, M);
+   - [`key`](#key)(M, Name);
 2. if all of:
-   - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
-   - the `declaration` of a node E is a node V;
-   - a node D [is among the](#ast_child) `declarations` of V;
-   - the `id` of D [is named](js-structure.rofl.md#ast_name) Name;
-3. if all of:
    - [`module_export`](js-dataflow.rofl.md#module_export)(E, File);
    - a node Sp [is among the](#ast_child) `specifiers` of a node E;
    - the `exported` of Sp [spells](js-dataflow.rofl.md#key_name) Name;
-4. if some node [is of kind](js-model.rofl.md#ast_node) `export_default_declaration` in file File and Name is "default";
-5. if all of:
+3. if some node [is of kind](js-model.rofl.md#ast_node) `export_default_declaration` in file File and Name is "default";
+4. if all of:
    - an [export-all](#noun-export-all) E is in file File;
    - E [means the file](js-modules.rofl.md#module_target) T;
    - [`sx_export_key`](#sx_export_key)(T, Name);

@@ -24,8 +24,10 @@ Reads:
   - <a id="nth"></a>`nth`
 - from outside these files, in the value:
   - <a id="callee"></a>`callee`
+  - <a id="import_meta"></a>`import_meta`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
+  - <a id="new_target"></a>`new_target`
   - <a id="private"></a>`private`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
@@ -108,16 +110,10 @@ A node K spells N either:
 > need the form and none owns it. Keyed on `meta`, the reserved word the
 > grammar switches on: a future `import.defer` is still (meta="import").
 
-<a id="meta_form"></a>M has the meta form N either:
+<a id="meta_form"></a>A node M has the meta form N either:
 
-1. if all of:
-   - M is a [meta property](#noun-meta_property);
-   - the `meta` of M [is named](#ast_name) "new";
-   - N is `new_target`;
-2. if all of:
-   - M is a [meta property](#noun-meta_property);
-   - the `meta` of M [is named](#ast_name) "import";
-   - N is `import_meta`.
+1. if [`new_target`](#new_target)(M) and N is `new_target`;
+2. if [`import_meta`](#import_meta)(M) and N is `import_meta`.
 
 > a third form nothing classifies, and a node answering as both (the mutant
 > keying the first arm on the wrong word gives every `import.meta` two forms)

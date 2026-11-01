@@ -1,6 +1,6 @@
 ---
 world: js-modules
-books: audit, code, fs, main, tree, value
+books: audit, code, fs, main, tree, type, value
 default: code
 ---
 
@@ -39,10 +39,14 @@ Reads:
   - <a id="at"></a>`at`
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
+  - <a id="assign"></a>`assign`
+  - <a id="binds"></a>`binds`
   - <a id="callee"></a>`callee`
   - <a id="decl"></a>`decl`
   - <a id="key"></a>`key`
+  - <a id="literal"></a>`literal`
   - <a id="pattern_prop"></a>`pattern_prop`
+  - <a id="target"></a>`target`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -55,17 +59,14 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-default_export"></a>a default export | a node of kind `export_default_declaration` |
-| <a id="noun-default_import"></a>a default import | a node of kind `import_default_specifier` |
 | <a id="noun-dynamic_import"></a>a dynamic import | a node of kind `import_expression` |
 | <a id="noun-export_specifier"></a>an export specifier | a node of kind `export_specifier` |
 | <a id="noun-export-all"></a>an export-all | a node of kind `export_all_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-import"></a>an import | a node of kind `import_declaration` |
 | <a id="noun-import_attribute"></a>an import attribute | a node of kind `import_attribute` |
-| <a id="noun-import_specifier"></a>an import specifier | a node of kind `import_specifier` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-namespace_export"></a>a namespace export | a node of kind `export_namespace_specifier` |
-| <a id="noun-namespace_import"></a>a namespace import | a node of kind `import_namespace_specifier` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -73,6 +74,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
 - <a id="has_explicit_shape"></a>A text S has an explicit shape if S [has the explicit shape](#explicit_shape) some shape.
 - A site has a shape if [the site shape](#site_shape) of it is some shape.
+- <a id="import_specifier_node"></a>A node names an import if [`decl`](#decl)(it, `import`).
 - <a id="has_specifier"></a>A site has a specifier if it [has the import specifier](#import_spec) some node.
 - <a id="export_site"></a>A [named export](#noun-named_export) is an export site.
 - <a id="export_decl_type_only"></a>A node is a type only export if [the attribute](#ast_attr) `export_kind` of it is "type".
@@ -412,11 +414,12 @@ A site
 > StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 > verdict. A default binds `"default"`, a namespace `"*"`.
 
-<a id="import_specifier_node"></a>Sp names an import if Sp is an [import specifier](#noun-import_specifier) or a [default import](#noun-default_import) or a [namespace import](#noun-namespace_import).
+<a id="import_spec"></a>A site has the import specifier Sp if Sp [names an import](#import_specifier_node) and [`parent`](#parent)(it, Sp).
 
-<a id="import_spec"></a>A site has the import specifier Sp if it [is an import site](#import_site) of `static_import` and Sp [is among the](#ast_child) `specifiers` of it.
-
-<a id="spec_local"></a>A node binds locally L if it [names an import](#import_specifier_node) and the `local` of it [is named](js-structure.rofl.md#ast_name) L.
+<a id="spec_local"></a>A node binds locally L if all of:
+  - it [names an import](#import_specifier_node);
+  - [`target`](#target)(it, N);
+  - [`binds`](#binds)(N, L) in the type.
 
 <a id="spec_imported"></a>A node Sp imports the name M either:
 
@@ -424,7 +427,19 @@ A site
    - [`decl`](#decl)(Sp, `import`);
    - [`parent`](#parent)(Sp, L);
    - [`pattern_prop`](#pattern_prop)(something, M, L);
-2. if Sp is a [namespace import](#noun-namespace_import) and M is "*".
+2. if all of:
+   - Sp [names an import](#import_specifier_node);
+   - [`assign`](#assign)(Sp, something, something);
+   - M is "*".
+
+> the name of an import_specifier written as an identifier (a string `imported` has none); a default specifier's "default" is not
+
+<a id="spec_key_string"></a>`spec_key_string`(Sp) if all of:
+  - a node Sp [names an import](#import_specifier_node);
+  - [`parent`](#parent)(Sp, I);
+  - [`literal`](#literal)(I, something).
+
+<a id="import_ident_key"></a>`import_ident_key`(Sp, Key) if a node Sp [imports the name](#spec_imported) Key, unless [`spec_key_string`](#spec_key_string)(Sp).
 
 <a id="binding"></a>A site binds the name Local to Imported at a specifier Sp if all of:
   - it [has the import specifier](#import_spec) Sp;

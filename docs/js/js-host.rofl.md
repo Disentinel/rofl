@@ -49,9 +49,9 @@ Reads:
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
+- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the main:
   - <a id="host_member_module"></a>`host_member_module`
 - from outside these files, in the tree:
@@ -127,7 +127,7 @@ In the flow:
 2. if all of:
    - M [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
    - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of S is Spec;
-   - the `imported` of M [is named](js-structure.rofl.md#ast_name) Key;
+   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(M, Key);
 3. if all of:
    - a node Y [is the builtin module](#builtin_ns) of Spec;
    - a node Init [points to](js-concat.rofl.md#may_be_node) Y;
