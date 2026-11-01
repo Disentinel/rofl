@@ -234,8 +234,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 17] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 18] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
@@ -325,12 +325,12 @@ impl Eval {
             let list = ks.iter().rev().fold("$nil".to_string(), |t, k| format!("$cons({k}, {t})"));
             let _ = writeln!(out, "order[profile]({id}, {at}, {list}, {}).", if given { "plan" } else { "greedy" });
         }
-        let mut census: Vec<(String, String, Sym, Sym, usize, usize)> = self
+        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = self
             .store
             .live_census()
             .into_iter()
-            .filter(|&(rel, book, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
-            .map(|(rel, book, n, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, arity))
+            .filter(|&(rel, book, _, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
+            .map(|(rel, book, n, base, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, base, arity))
             .collect();
         // a relation a rule reads and nothing holds is censused as empty: a plan that knows nothing of it puts it last
         let held: HashSet<(Sym, Sym)> = census.iter().map(|c| (c.2, c.3)).collect();
@@ -346,7 +346,7 @@ impl Eval {
                     continue;
                 }
                 if empty.insert((l.rel, book)) {
-                    census.push((self.h.name(l.rel).to_string(), self.h.name(book).to_string(), l.rel, book, 0, l.args.len()));
+                    census.push((self.h.name(l.rel).to_string(), self.h.name(book).to_string(), l.rel, book, 0, 0, l.args.len()));
                 }
             }
         }
@@ -383,9 +383,11 @@ impl Eval {
             let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "selects[profile]({rel_name}, {book_name}, {}, {c}, {n}).", j + 1);
         }
-        for (rel_name, book_name, rel, book, n, arity) in census {
+        // the rows a relation was given as base facts, counted here in one pass: a rule counting them over
+        // asserted_by read 51 million rows at 250 files of vscode
+        for (rel_name, book_name, rel, book, n, base, arity) in census {
             let book_name = census_book.unwrap_or(&book_name);
-            let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
+            let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}). base[profile]({rel_name}, {book_name}, {base}).");
             for pos in 0..arity {
                 let d = if n == 0 { 0 } else { self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]).1 };
                 let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
