@@ -537,6 +537,20 @@ the questions a rule's author asks of it (a rule kept in written order, a premis
 rule fired once per round); the TypeScript engine writes no profile, so a world that reads it is Rust's alone
 (`check_opt(W, one_engine, rust)`).
 
+**The hypotheses over the profile** are models/engine/profile.rofl, a pack loaded beside any world (`rofl load
+models/engine/profile.rofl WORLD...`), everything it says in the book `profile`. Verdicts on a rule `R` or its premise
+`K`: `scan(R, K, Rel, Read, Out)` a premise that read more than three times what it let through, with `scan_why(R, K,
+small_relation | selective)`; `rescan(R, K, Rel)` a premise read whole on every firing (read = fires x rows);
+`rederives(R, Conc, Fresh)` a rule most of whose conclusions were known; `barren(R, Read)` a rule that read and
+concluded nothing; `hot(R, Pct)` a rule that read a quarter or more of all rows read. Forecasts of a head's size from the
+shape of its rules and the `rows` and `distinct` of what they read, each an upper bound: `forecast(Rel, N, projection |
+join | product | closure | chain)`, judged by the head's `rows`: `forecast_off(Rel, Kind, N, Actual)` where the head
+holds more (the hypothesis is false), `forecast_loose(Rel, Kind, N, Actual)` where it holds under a quarter. `growth(R,
+per_row | per_round | kernel)` is the class of a recursive rule, which only two runs of different sizes judge
+(rust/rofl/tests/profile_model.rs). The pack's own rules are profiled and left out of what it says. World
+`profile_model` over examples/checks/profile-hub.rofl (a chain, a hub, a ladder, each planted for one verdict or forecast),
+Rust only.
+
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
 reading and the binding. It is a diagnostic for the rule's author, not an
