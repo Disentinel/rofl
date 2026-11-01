@@ -455,8 +455,10 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
         }
     };
     let unread: Vec<Option<String>> = rd.outs.iter().map(|o| (!o.errors.is_empty()).then(|| "part of this cell was not read (its errors above)".to_string())).collect();
-    let rests = |rel: &str| undefined_base(rel, &deps, &a, &k.model_rels);
+    let declared: HashSet<String> = query(&mut f, "edb(R)").rows.into_iter().filter_map(|r| r.into_iter().next()).collect();
+    let rests = |rel: &str| undefined_base(rel, &deps, &a, &k.model_rels, &declared);
     let model_and_cells = format!("{}\n{all}", a.model);
+    arity_notes(&mut f, &rd.texts, &model_and_cells, &mut rd.outs);
     let cx = Cx { a: &a, vocab: &rd.vocab, names: &rd.names, model_and_cells: &model_and_cells, rows_kept: if all_rows { usize::MAX } else { 50 }, rests_on: &rests, foreign: &k.foreign };
     let mut atoms: Option<HashSet<String>> = None;
     for (i, list) in rd.asks.iter().enumerate() {
@@ -678,9 +680,29 @@ fn evaluate_world(f: &mut Session) -> Result<bool, String> {
     }
 }
 
-fn undefined_base(rel: &str, deps: &[(String, Vec<String>)], a: &Assembled, model_rels: &HashSet<String>) -> Option<String> {
+fn undefined_base(rel: &str, deps: &[(String, Vec<String>)], a: &Assembled, model_rels: &HashSet<String>, declared: &HashSet<String>) -> Option<String> {
     let mut seen: Vec<String> = Vec::new();
-    under(rel, deps, &|r| (!deps.iter().any(|d| d.0 == r) && !a.home.contains_key(r) && !model_rels.contains(r)).then(|| format!("it rests on {}, which nothing defines", spaced(r))), false, &mut seen)
+    under(rel, deps, &|r| (!deps.iter().any(|d| d.0 == r) && !a.home.contains_key(r) && !model_rels.contains(r) && !declared.contains(r)).then(|| format!("it rests on {}, which nothing defines", spaced(r))), false, &mut seen)
+}
+
+/// A rule reading a relation at an arity or in a book nothing writes is empty for no reason in the code: said where the rule is.
+fn arity_notes(f: &mut Session, texts: &[String], model_and_cells: &str, outs: &mut [Out]) {
+    for (i, x) in texts.iter().enumerate() {
+        let Ok(pr) = program(x) else { continue };
+        let mut warned: Vec<String> = Vec::new();
+        for cl in &pr.clauses {
+            for l in cl.body.iter().flat_map(|b| b.lits()) {
+                let book = match l.book { Book::Named(b) => format!("[{}]", pr.h.name(b)), _ => String::new() };
+                let name = format!("{}{book}", pr.h.name(l.rel));
+                let lit = format!("{name}({})", vec!["_"; l.args.len()].join(", "));
+                if warned.contains(&lit) || !f.unpopulatable(&lit).unwrap_or(false) { continue; }
+                let n = l.args.len();
+                outs[i].notes.push(format!("the rule for {} reads {} with {n} argument{}, and nothing in the model can put a row there: {}",
+                    spaced(pr.h.name(cl.head.rel)), plain(&name), if n == 1 { "" } else { "s" }, elsewhere(&format!("{name}("), model_and_cells).unwrap_or_else(|| "check the name, the book and the number of arguments".into())));
+                warned.push(lit);
+            }
+        }
+    }
 }
 
 fn under(rel: &str, deps: &[(String, Vec<String>)], say: &dyn Fn(&str) -> Option<String>, this: bool, seen: &mut Vec<String>) -> Option<String> {

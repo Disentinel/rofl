@@ -143,6 +143,7 @@ sig(keyed_read_unordered, "may_read_back(call C, the value put in an order not k
 sig(keyed_put_before, "is_put_before(node V, call C)").
 sig(keyed_put_after, "is_put_after(node V, call C)").
 sig(keyed_taken_out, "is_taken_out_before(node V, call C, by call R)").
+sig(keyed_private_reached, "reaches_the_private(node N, method G)").
 sig(interpolated, "is_interpolated(template T)").
 sig(binder, "binds(declarator D, name Name, to node Init, in file File)").
 sig(binder_at_top, "is_at_the_top(declarator D)").
@@ -511,6 +512,11 @@ sig(calls, "calls(function Caller, function Callee)").
 sig(calls_named, "calls_by_name(name Z, name B)").
 sig(calls_in, "names_a_call_to(name Z:1, name B:2, in file File:0)").
 sig(passes_function, "passes_the_function(call C, function F:2, named name Name:3, at index I:1)").
+sig(written_arg, "is_written_as_the_argument(call C, at index I, node A)").
+sig(may_resolve, "may_resolve_to(call C, function F)").
+sig(may_call, "may_call(function A, function F)").
+sig(handed_fn, "is_handed_the_function(function F, at index I, function G)").
+sig(merged_param, "merges_its_parameter(function F, at index I, handed functions N)").
 phrase(calls_back, "<0:call> calls back <1:function> <2:when>").
 sig(callback_site, "is_a_callback_site(call C, of origin Origin, at key Key)").
 sig(host_calls_back, "calls_back_its_argument(origin Origin, key Key:1, argument Arg:2, when When:3)").
@@ -815,6 +821,8 @@ sig(decl_at_top, "is_declared_at_the_top(declaration D)").
 sig(catch_names, "declares_its_caught_name(catch H, name Name, in file File)").
 sig(sees_decl, "sees_the_declaration(identifier E, declaration D)").
 sig(reads_the_file_as, "is_read_as_the(view V)").
+sig(runs_as_script, "runs_as_the_script(file File)").
+sig(exported_decl, "is_exported_where_declared(function F)").
 sig(up_d, "climbs_from(declaration D, node P)").
 sig(class_like, "is_a_class(node O)").
 sig(constant_global, "is_a_constant_global(name Name)").

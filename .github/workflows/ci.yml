@@ -105,7 +105,7 @@ jobs:
         include:
           - { triple: x86_64-pc-windows-msvc, os: windows-latest }
           - { triple: x86_64-pc-windows-gnu, os: ubuntu-latest, apt: gcc-mingw-w64-x86-64 }
-          - { triple: x86_64-apple-darwin, os: macos-14 }
+          - { triple: x86_64-apple-darwin, os: macos-15 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -130,8 +130,8 @@ jobs:
         include:
           - { target: linux-x64, os: ubuntu-latest }
           - { target: linux-arm64, os: ubuntu-24.04-arm }
-          - { target: darwin-x64, os: macos-14, triple: x86_64-apple-darwin }
-          - { target: darwin-arm64, os: macos-14 }
+          - { target: darwin-x64, os: macos-15, triple: x86_64-apple-darwin }
+          - { target: darwin-arm64, os: macos-15 }
           - { target: win32-x64, os: windows-latest }
     runs-on: ${{ matrix.os }}
     steps:

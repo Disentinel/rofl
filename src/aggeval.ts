@@ -8308,7 +8308,8 @@ export class AggEval {
     if (ctx.nodes >= ctx.maxNodes) { next.push({ t: 'line', line: `${pad}[node limit ${ctx.maxNodes} reached]`, m: ['cut', level, 0] }); return; }
     const ck = this.cycleKey(lit);
     if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]`, m: ['cut', level, 0] }); return; }
-    if (isGround(lit.persp) && lit.args.every(isGround)) {
+    // the nearest failure is chosen over the tree: a literal met again is walked again, never referred to
+    if (ctx.all && isGround(lit.persp) && lit.args.every(isGround)) {
       let at = ctx.done.get(ck);
       if (at !== undefined && at.has(level)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]`, m: ['cut', level, 0] }); return; }
       if (at === undefined) { at = new Set(); ctx.done.set(ck, at); }
@@ -8321,10 +8322,7 @@ export class AggEval {
   /** THE DEMONSTRATION, WALKED WITH A STACK OF ITS OWN (as `renderTree` walks `why`): a failure as deep as the bounds
    *  allow takes no frame per level, and each line is written once. */
   private explainTree(lit: Lit, ctx: WnCtx): string[] {
-    const lines = this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx);
-    if (ctx.all) return lines.map(([l]) => l);
-    const kept = wnNearest(lines);
-    return kept.length < lines.length ? [...kept.map((i) => lines[i][0]), '  (every failure: --all)'] : lines.map(([l]) => l);
+    return wnShown(this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx), ctx.all);
   }
 
   private explainFrom(tasks: WnTask[], ctx: WnCtx): [string, WnMark | undefined][] {
@@ -8345,14 +8343,14 @@ export class AggEval {
    *  volume, a key prefix its scanner minted (rust/rofl/src/session.rs `cool`): `vols` pairs each prefix with the file's name. One walk
    *  keeps each file's candidates apart, 16 a premise and 2000 steps each, where the plain walk takes the first 16 of all; below the
    *  premises a file stops at, its demonstration is the plain one. */
-  whynotFiles(lit: Lit, b: { maxDepth: number; maxNodes: number }, vols: [string, string][]): WhynotFile[] {
+  whynotFiles(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, vols: [string, string][]): WhynotFile[] {
     const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
     this.asking = true;
     try { return this.whynotFilesAt(lit, b, vols); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; this.forgetAsked(); }
   }
 
-  private whynotFilesAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, vols: [string, string][]): WhynotFile[] {
+  private whynotFilesAt(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, vols: [string, string][]): WhynotFile[] {
     const names = new Map(vols), lens = [...new Set(vols.map(([p]) => p.length))];
     const volOf = (t: Term): string | undefined => {
       if (t.k === 'a' || t.k === 'f') for (const n of lens) { const v = names.get(t.name.slice(0, n)); if (v !== undefined) return v; }
@@ -8364,6 +8362,7 @@ export class AggEval {
     for (const [s] of this.matchPremise(lit, new Map(), 0, null)) { const v = of(lit, s); if (v !== undefined) found.set(v, (found.get(v) ?? 0) + 1); }
     const head = of(lit, new Map());
     const walks: { r: ERule; outs: Map<string, Map<string, Lit | null>>; split?: string }[] = [];
+    this.wnLeft.clear();
     for (const r of this.rules.filter((x) => x.clause.head.rel === lit.rel)) {
       const rn = this.renameClause(r.clause);
       let s: Subst | null = this.evalBuiltin('=', rn.head.persp, lit.persp, new Map(), null);
@@ -8381,16 +8380,16 @@ export class AggEval {
         const own = w.outs.get(name) ?? (w.split ? new Map([[`${w.split} -- none in this file`, null]]) : w.outs.get('') ?? new Map<string, Lit | null>());
         const keys = [...own.keys()].sort(cmpStr).slice(0, 12);
         if (keys.length === 0) continue;
-        tasks.push({ t: 'line', line: `  rule ${w.r.id}: ${w.r.canon}` });
+        tasks.push({ t: 'line', line: `  rule ${w.r.id}: ${w.r.canon}`, m: ['rule', 1, 0] });
         for (const f of keys) {
-          tasks.push({ t: 'line', line: `    failed premise: ${f}` });
+          tasks.push({ t: 'line', line: `    failed premise: ${f}`, m: ['premise', 1, this.wnLeft.get(f) ?? 0] });
           const sub = own.get(f);
           if (sub) tasks.push({ t: 'deeper', lit: sub, level: 2 });
         }
         stops.push(...keys);
       }
-      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map(), all: true };
-      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...this.explainFrom(tasks, ctx).map(([l]) => l)].join('\n') };
+      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map(), all: b.all ?? false };
+      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...wnShown(this.explainFrom(tasks, ctx), ctx.all)].join('\n') };
     });
   }
 
@@ -8553,6 +8552,11 @@ type WnMark = [k: 'rule' | 'nohead' | 'info' | 'premise' | 'nofail' | 'leaf' | '
 /** A chain the walk cut short, or a rule it found no failure of: farther than every chain that ends. */
 const WN_FAR = 1_000_000;
 
+/** The lines a whynot prints: every one under `all`, else the nearest failure. */
+function wnShown(lines: [string, WnMark | undefined][], all: boolean): string[] {
+  const kept = all ? [] : wnNearest(lines);
+  return all || kept.length >= lines.length ? lines.map(([l]) => l) : [...kept.map((i) => lines[i][0]), '  (every failure: --all)'];
+}
 /** THE NEAREST FAILURE of a whynot's walk: the lines kept. A chain costs the premises it leaves unmet: at each rule those after
  *  the one it failed at, and one at its end, a premise nothing supports, a negation blocked or a builtin false. The rule and the
  *  failure of least cost are kept, the first of equal ones, with the matches that rule did not follow. The walk is written in

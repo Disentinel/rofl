@@ -170,7 +170,7 @@ export class RoflSession {
   }
 
   /** `Rofl.whynotFiles`: a row for each file of `files`, a key prefix and the file's name. */
-  async whynotFiles(query: string, files: [string, string][], opts: { depth?: number; nodes?: number } = {}): Promise<{ file: string; found: number; stops: string[]; text: string }[]> {
+  async whynotFiles(query: string, files: [string, string][], opts: { depth?: number; nodes?: number; all?: boolean } = {}): Promise<{ file: string; found: number; stops: string[]; text: string }[]> {
     const r = await this.port.send({ op: 'whynot', session: this.id, query, files, ...opts });
     return r.files as { file: string; found: number; stops: string[]; text: string }[];
   }

@@ -1,6 +1,6 @@
 ---
 world: js-host
-books: audit, code, flow, main
+books: audit, code, flow, main, surface
 default: audit
 ---
 
@@ -44,7 +44,7 @@ Reads:
   - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow, in the code: [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [key_name](js-dataflow.rofl.md#key_name)
+- from js-dataflow, in the code: [binder](js-dataflow.rofl.md#binder), [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [key_name](js-dataflow.rofl.md#key_name), [sees_binder](js-dataflow.rofl.md#sees_binder)
 - from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
@@ -52,6 +52,8 @@ Reads:
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
 - from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
+- from outside these files, in the main:
+  - <a id="host_member_module"></a>`host_member_module`
 - from the scanner, in the code:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
@@ -61,6 +63,7 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
+| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -105,12 +108,18 @@ In the flow:
 
 <a id="builtin_ns"></a>A node is the builtin module of a spec Spec if it [comes out of](js-dataflow.rofl.md#external_value) it and [the canonical builtin](js-modules.rofl.md#builtin_canonical) of it is Spec.
 
+<a id="builtin_ns_at"></a>`builtin_ns_at`(O, Spec) if a node Y [is the builtin module](#builtin_ns) of a spec Spec and a node O [points to](js-concat.rofl.md#may_be_node) Y.
+
+`builtin_ns_at`(O, Sub) if all of:
+  - a node X [is a member of the builtin](#builtin_member) of a spec Spec Key;
+  - [`host_member_module`](#host_member_module)(`node`, Spec, Key, Sub);
+  - a node O [points to](js-concat.rofl.md#may_be_node) X.
+
 <a id="builtin_member"></a>M is a member of the builtin of a spec Spec Key either:
 
 1. if all of:
-   - a node Y [is the builtin module](#builtin_ns) of Spec;
-   - a node O [points to](js-concat.rofl.md#may_be_node) Y;
-   - the `object` of M is O;
+   - [`builtin_ns_at`](#builtin_ns_at)(O, Spec);
+   - the `object` of M is a node O;
    - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - M [selects](js-dataflow.rofl.md#selects) Key;
 2. if all of:
@@ -411,4 +420,72 @@ A runtime
 
 1. if H [is a host](#host), unless H [is a runtime](#runtime);
 2. if H [is a runtime](#runtime), unless H [is a host](#host).
+
+## 7. THE ENVIRONMENT a program reads: `process.env.NAME`, `process.env[k]`,
+
+> `const { NAME } = process.env`, through any alias of `process.env`. A key the
+> value layer cannot name is said, with its place, rather than dropped.
+
+In the flow:
+
+<a id="env_member"></a>`env_member`(a [member access](js-dataflow.rofl.md#member_node_v) M) if all of:
+  - a node P [refers to the global](#host_global_ref) "process" of `node`;
+  - the `object` of M is P;
+  - M [selects](js-dataflow.rofl.md#selects) "env".
+
+In the surface:
+
+<a id="sx_env"></a>`sx_env`(M) if [`env_member`](#env_member)(M).
+
+In the flow:
+
+<a id="env_object"></a>`env_object`(M) if [`sx_env`](#sx_env)(M).
+
+`env_object`(E) if a node E [points to](js-concat.rofl.md#may_be_node) a node M and [`sx_env`](#sx_env)(M).
+
+`env_object`(E) if all of:
+  - a node E [sees](js-dataflow.rofl.md#sees_binder) D;
+  - D [binds](js-dataflow.rofl.md#binder) some name to a node Init in some file;
+  - [`env_object`](#env_object)(Init).
+
+<a id="env_key"></a>`env_key`(a [member access](js-dataflow.rofl.md#member_node_v) M) if [`env_object`](#env_object)(O) and the `object` of M is a node O.
+
+<a id="env_written"></a>`env_written`(M) if [`env_key`](#env_key)(M) and the `left` of an [assignment](#noun-assignment) X is a node M.
+
+<a id="env_read"></a>`env_read`(M, Name) if all of:
+  - [`env_key`](#env_key)(M);
+  - M [selects](js-dataflow.rofl.md#selects) Name;
+  - unless [`env_written`](#env_written)(M).
+
+<a id="env_write"></a>`env_write`(M, Name) if [`env_written`](#env_written)(M) and M [selects](js-dataflow.rofl.md#selects) Name.
+
+`env_read`(P, Name) if all of:
+  - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
+  - [`sx_env`](#sx_env)(Init);
+  - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, P, K, something, something);
+  - a node K [spells](js-dataflow.rofl.md#key_name) Name.
+
+<a id="env_read_unnamed"></a>`env_read_unnamed`(M) if all of:
+  - [`env_key`](#env_key)(M);
+  - unless [`env_named`](#env_named)(M);
+  - unless [`env_written`](#env_written)(M).
+
+<a id="env_write_unnamed"></a>`env_write_unnamed`(M) if [`env_written`](#env_written)(M), unless [`env_named`](#env_named)(M).
+
+<a id="env_named"></a>`env_named`(M) if [`env_key`](#env_key)(M) and M [selects](js-dataflow.rofl.md#selects) some key.
+
+<a id="env_read_at"></a>`env_read_at`(Name, File, Line) if all of:
+  - [`env_read`](#env_read)(M, Name);
+  - a node M [is in file](js-model.rofl.md#ast_node) File;
+  - M [is at line](js-model.rofl.md#ast_line) Line.
+
+<a id="env_read_unnamed_at"></a>`env_read_unnamed_at`(File, Line) if all of:
+  - [`env_read_unnamed`](#env_read_unnamed)(M);
+  - a node M [is in file](js-model.rofl.md#ast_node) File;
+  - M [is at line](js-model.rofl.md#ast_line) Line.
+
+<a id="env_write_unnamed_at"></a>`env_write_unnamed_at`(File, Line) if all of:
+  - [`env_write_unnamed`](#env_write_unnamed)(M);
+  - a node M [is in file](js-model.rofl.md#ast_node) File;
+  - M [is at line](js-model.rofl.md#ast_line) Line.
 
