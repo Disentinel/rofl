@@ -494,7 +494,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
     return joined;
   }
   // what `is` evaluates rather than builds: arithmetic and the seven destructors
-  const EVALUABLE = new Set(['+', '-', '*', '/', 'mod', 'min', 'max', 'str_len', 'str_char', 'str_sub', 'str_pre', 'str_seg', 'str_segs', 'atom_of', 'ivadd', 'ivsub', 'ivmul', 'ivmeet']);
+  const EVALUABLE = new Set(['+', '-', '*', '/', 'mod', 'min', 'max', 'str_len', 'str_char', 'str_sub', 'str_pre', 'str_seg', 'str_segs', 'atom_of', 'hash', 'ivadd', 'ivsub', 'ivmul', 'ivmeet']);
   const varsOf = (t: Term): string[] => ('v' in t ? [t.v] : 'f' in t ? t.args.flatMap(varsOf) : 'or' in t ? t.or.flatMap(varsOf) : []);
   const litVars = (l: Lit): string[] => [...l.args.flatMap(varsOf), ...(l.agg ? [l.agg.res, ...l.agg.vals, ...l.agg.keys].flatMap(varsOf).concat(l.agg.subs.flatMap((r) => r.body.flatMap(litVars))) : [])];
   /** A literal with every term mapped, inside an aggregate too. */

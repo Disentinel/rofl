@@ -29,6 +29,7 @@ check_refuses("async_refused", "async-refused.rofl").
 check_refuses("not_as_a_name", "not-as-a-name.rofl").
 check_refuses("unstratifiable", "unstratifiable.rofl").
 check_refuses("premise_arity", "premise-arity.rofl").
+check_refuses("concat_recursion", "concat-recursion.rofl").
 -- The dense form of ring 1 is written for examples/ring1/dense.ts, not for the
 -- loader; the directory world has refused it since it was first blessed.
 check_refuses("ring1", "l1.dense.rofl").
@@ -3850,7 +3851,31 @@ check_opt("intents_rofl", one_engine, rust).
 check_world("intents_screen").
 check_file("intents_screen", "examples/intents/screen.rofl").
 
--- THE PROFILE OF AN EVALUATION (docs/cli.md, *The profile of an evaluation*): a rule that reads the book `profile`
+-- oxc's raw tree of one file with a construct of every kind the roles read, through the converter
+-- into the roles of roles.rofl (models/lang/js/oxc-roles.rofl), with their role ids and the vocabulary's audit;
+-- that Babel gives the same file the same rows is npm run test:parity
+check_world("oxc_roles").
+check_file("oxc_roles", "models/lang/js/roles.rofl").
+check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
+check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
+check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
+-- w_l2_roles, the roles layer under the JS model: the Babel converter (models/lang/js/babel-roles.rofl) over the raw
+-- tree of examples/checks/roles-babel/ in [ast_babel], with the vocabulary's and the converter's audits; the files
+-- alone against the whole world and the vscode corpus are scripts/roles_check.ts, npm run test:roles
+check_world("roles_babel").
+check_file("roles_babel", "models/lang/js/roles.rofl").
+check_file("roles_babel", "models/lang/js/babel-roles.rofl").
+check_file("roles_babel", "models/lang/js/roles-audit.rofl").
+check_file("roles_babel", "models/lang/js/babel-audit.rofl").
+check_file("roles_babel", "examples/checks/roles-babel-facts.rofl").
+
+-- concat(A, B), the one string constructor: below a recursion it joins, inside one it is refused (safety.rofl)
+check_world("concat_builtin").
+check_file("concat_builtin", "examples/checks/concat.rofl").
+check_world("concat_recursion").
+check_file("concat_recursion", "examples/checks/concat-recursion.rofl").
+
+-- THE PROFILE OF AN EVALUATION (docs/cli.md, *The profile of an evaluation*): a rule that reads a relation of the book `profile`
 -- is answered with what each rule and premise cost, written by the Rust engine after the evaluation and read in the
 -- round after. The TypeScript engine writes no profile, so the world is Rust's alone.
 check_opt("profile", one_engine, rust).

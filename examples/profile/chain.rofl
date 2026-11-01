@@ -2,9 +2,10 @@
 -- evaluation*). A rule that reads a relation of the book `profile` asks for it: after the evaluation the engine writes what each
 -- rule and premise cost there, and the rules that read it run in the round after.
 --
--- A chain of ten, walked two ways: `reach` is recursion alone and goes news first; `depth` carries `K is J + 1`,
--- which keeps it in written order (written_order(R, builtin)), so each round reads the whole of `depth` again
--- (f_a_builtin_is_a_wall_of_the_delta_first_plan names the quadratic this profile shows).
+-- A chain of ten, walked two ways: `reach` is recursion alone and the closure kernel answers it (written_order(R,
+-- closure), fires 0); `depth` carries `K is J + 1` and fires once per node. Under sixteen rows a relation has no
+-- index (MIN_INDEXED), so each firing of `depth` scans the nine rows of `nxt` for the one it needs: read 90, yield 9
+-- (`scans`), 90 = 10 firings x 9 rows (`rescanned`). The same world at a thousand nodes reads `nxt` once per node.
 
 nxt(1, 2). nxt(2, 3). nxt(3, 4). nxt(4, 5). nxt(5, 6). nxt(6, 7). nxt(7, 8). nxt(8, 9). nxt(9, 10).
 
@@ -22,8 +23,8 @@ kept_written(R, Why) :- written_order[profile](R, Why).
 -- a premise that read far more rows than it let through: a scan where a lookup was wanted
 scans(R, K, Read, Out) :- read[profile](R, K, Read), yield[profile](R, K, Out), Read > Out * 3, Out > 0.
 
--- a premise read whole on every firing of a rule that fires once per round: the quadratic of a recursion kept in
--- written order (here `nxt(A, B)` of `depth`, 9 rows read 10 times)
+-- a premise read whole on every firing of a rule that fires once per round: a recursion kept in written order, or a
+-- relation too small for an index (here `nxt(A, B)` of `depth`, 9 rows read 10 times)
 rescanned(R, K, Rel) :-
   fires[profile](R, F), F > 1,
   premise_lit(R, K, $lit(Rel, _, _, _)), rows[profile](Rel, main, N),

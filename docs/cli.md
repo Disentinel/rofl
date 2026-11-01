@@ -337,7 +337,7 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 |---|---|---|---|
 | `npm run scan` | node: `scanners/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
 | the scanner | `scanners/js_ast.ts` (Babel) | one file's text, named by its path from the directory | `ast_node[code](Id, Kind, File), ast_line[code](Id, Line)`, `ast_child[code](Parent, Field, Index, Child)`, `ast_attr[code](Id, Key, Value)`, `ast_file[code](Root, File)`, `ast_parse_error[code](File, Message)`; the contract is the header of `scanners/js_ast.ts` |
-| the host facts | `playground/host.ts` `codeFacts` | the paths, and every string a file holds | `fs_dir`, `fs_file`, `fs_parent`, `fs_dir_of`, `fs_dir_in`, `fs_file_in` (the files and directories, `"."` the root) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read), all `[code]` |
+| the host facts | `playground/host.ts` `codeFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
 | the model | `rofl`, Rust | `@rules/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`docs/js/` renders each file of it in sentences) |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
@@ -360,6 +360,55 @@ whys, a whynot and two asks: every answer the same text as the TypeScript
 engine's. The TypeScript engine took 12.4 s for the world and the five; the
 Rust release build 1.5 s for the world and the five in one `rofl load` run,
 and as much for each `rofl why` run alone, since each builds the world.
+
+### The roles layer (w_l2_roles), not yet read by the model
+
+`models/lang/js/` is the next layer under the JS model: `roles.rofl` is one
+vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
+two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `babel-roles.rofl`
+writes them from the scanner's tree in `[ast_babel]` (`ScanSet().scan(src,
+{file, persp: 'ast_babel'})`, where the raw relations are `node`, `child`, `attr`,
+`line` and `file`: a ledger is named by its book, not by a prefix). It has no command for an agent yet and
+`rules/js-*.rofl` do not read it; `npm run test:roles` drives it, and
+`rofl load @models/lang/js/roles.files sealed.rofl FACTS` writes the roles of
+a corpus scanned so. Pass `--budget` and `--space` at hundreds of files: the
+default budget cuts the state without saying so.
+
+### The second parser: oxc, in Rust
+
+```sh
+npm run scan:oxc -- path/to/src --out oxc.rofl
+```
+
+`rust/tools/oxc_scan` (its own cargo workspace, so the engine's build never
+compiles oxc) reads the same files as `npm run scan` through oxc and writes
+oxc's own tree, the Rust structs of `oxc_ast` and not its ESTree output, raw
+and without judgement into the `[ast_oxc]` perspective: `node(Id, Kind,
+File)`, `line(Id, Line)`, `start(Id, Offset)` (in UTF-16 units, as a JS
+parser counts), `child(Parent, Field, Index, Child)`, `attr(Id, Key, Value)`,
+`file(Root, File)`, or `parse_error(File, Message)` alone for a file oxc
+reports an error in. A program's id is its file prefix and `root`, so a second
+parser that does the same names a file's program alike. A
+kind is the struct's name (`static_member_expression`, `class`), a field the
+Rust field's; an enum wrapper that names it otherwise is the attribute
+`variant` (`class` under `"ClassDeclaration"`). Every other id is made as js_ast.ts makes
+it, with the same file prefix: code added above a node leaves its id. Files
+are parsed in parallel and printed in path order, the same bytes for the same
+tree. The JS model does not read `[ast_oxc]` yet. Its converter into the roles
+of `roles.rofl` is `models/lang/js/oxc-roles.rofl` (`rofl load
+@models/lang/js/oxc.files oxc.rofl`), checked by the world `oxc_roles` over
+`models/lang/js/fixtures/all.ts`. `npm run test:parity` runs that file through
+both parsers and both converters and compares the role facts row by row; what
+still differs is f_oxc_roles_meets_the_vocabulary.
+
+A node's id is its scanner's: stable under edits, each parser's own
+(f_role_ids_name_a_node_by_its_roles); both name the program `<prefix>root` and
+give `pos[tree]` in UTF-16 units.
+The host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
+
+Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M
+facts, 8.9 GB of text, most of the wall writing it; on vscode src/vs/base (499
+files) 1.1 s against 18.7 s for `npm run scan`, 304 MB against 241 MB.
 
 ## A world that asks for its own input
 
@@ -476,7 +525,7 @@ line that asks; the VS Code extension cuts its bare cells by it). Any request ma
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
 A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
 `conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
-firings solved news first, `written_order[profile](R, Why)` why the planner kept the rule in written order (`builtin`,
+firings solved news first, `written_order[profile](R, Why)` why the planner kept the rule in written order (
 `aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`). Per premise
 `K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,

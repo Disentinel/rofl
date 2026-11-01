@@ -1,0 +1,141 @@
+-- roles.rofl — THE ROLES OF THE JS MODEL, one vocabulary for every parser (w_l2_roles).
+--
+-- A role is a relation over the nodes a parser already has: what one place in the code is, certain from that place
+-- and its neighbours. What needs other places (what is overwritten, where a throw lands, who runs a callback) is an
+-- operation or the model's conclusion, not a role. Each parser has its converter (babel-roles.rofl for Babel) that
+-- writes these relations from its raw tree, kept in a book of its own ([ast_babel]); the model never reads that book.
+--
+-- THE WORLDS ARE BOOKS. The same roles hold in the world of values, [value], and in the world of types, [type]:
+-- binds[type](N, Name) beside binds[value](N, Name), a generic applied is call[type], a union is binary[type]. A
+-- rule that reads [type] and writes [value] crosses between worlds, and only the two bridges may: declared(X, T)
+-- and implements(C, T), written in [value]. The tree is shared by every world and is a book of its own, [tree]:
+-- program, at, pos, parent, inside, nth, strict, precedes. The file itself is no node: it is the host's fs_* facts.
+-- A role named below without a book is in [value].
+-- The design and the reasons for each word: the doc «Словарь ролей модели JS», agreed with the owner 2026-10-31.
+--
+-- Two rules of the vocabulary. A variant is its own role when the model treats it as another mechanism (call and
+-- construct), a parameter when it is data (the operator of binary, let/const/var of decl). A role names a link
+-- positively and distinctly, so the model walks the links it needs and subtracts nothing.
+--
+-- Below: each role with its sentence, then which of its arguments are nodes (`roled`: the node stands in a role).
+-- `role_undeclared` is a relation a converter writes into a world that this file does not declare.
+
+edb(role).
+
+-- ---- place
+role(at,        "node N stands in File on Line").
+role(program,   "P is the root of File").
+role(pos,       "N starts at the O-th UTF-16 unit of its file: an order among siblings, never part of an id").
+role(parent,    "C is a child of P in the role tree").
+role(inside,    "Inner is nested in Outer at any depth: the closure of parent").
+role(nth,       "S stands I-th, from 0, among what Seq executes: a position, not an order").
+role(strict,    "Seq executes in the order of its nth positions, and step I runs when step I-1 completed normally").
+role(precedes,  "A completed before B began, in the same turn: where the order runs across sequences or is partly guaranteed").
+
+-- ---- names and literals
+role(ref,       "N reads Name").
+role(binds,     "N introduces Name; a function that is not an arrow also binds this and arguments").
+role(key,       "Owner's key is the static Name").
+role(key_expr,  "Owner's key is computed by E").
+role(literal,   "N is a literal of Value").
+role(template_part, "X is the I-th part of the template T: even parts text, odd parts expressions").
+
+-- ---- calls
+role(callee,    "C calls or constructs N").
+role(tagged,    "C calls Tag with the template Template").
+role(spread_args, "X is spread into the arguments of C from the I-th step").
+
+-- ---- functions
+role(body,      "B executes when F is called; being a function is having a body").
+role(param,     "P is the I-th parameter of F: a name or a pattern").
+role(rest_params, "Target collects the parameters of F from the I-th on").
+role(constructs, "new C executes F").
+role(getter,    "reading the member M executes F").
+role(setter,    "writing the member M executes F with one parameter").
+role(returns,   "R carries the value E out of its function").
+role(yields,    "Y hands E to the consumer of the iterator").
+role(delegates, "Y hands every value of the iterator E to the consumer").
+role(awaits,    "A waits for X; the rest runs later").
+
+-- ---- property access
+role(member,    "N reads the property Key of Obj").
+role(member_expr, "N reads the property of Obj computed by E").
+
+-- ---- bindings and assignment
+role(assign,    "the value Value goes into the place Target: a name, a property or a pattern").
+role(decl,      "D introduces a fresh place of Kind: var, let, const, using, function, class, param, catch, import, enum, namespace").
+role(target,    "what the declaration D introduces when it has no value").
+role(gives,     "the value of E is the value of X, not the result of its operation").
+role(pattern_prop, "the property Key of the value destructured by P goes into Target").
+role(pattern_elem, "the I-th element of the value destructured by P goes into Target").
+role(rest_props, "Target collects the properties P does not name").
+role(rest_elems, "Target collects the elements of P from the I-th on").
+
+-- ---- values
+role(has,       "M is a member of the object, class or namespace Owner").
+role(value,     "V is the value of the member M").
+role(extends,   "CD inherits from E").
+role(static_block, "B executes when the class CD is defined").
+role(decorated, "D executes when X is defined and may replace it").
+role(spread_props, "the properties of X join the object O at its I-th step").
+role(spread_elems, "X is spread into the array A from its I-th step").
+
+-- ---- conduits
+role(passes,    "the value of E is the value of X: a wrapper with no behaviour").
+role(binary,    "N is L Op R").
+role(unary,     "N is Op X").
+role(logical,   "N is L Op R where Op is &&, || or ??").
+
+-- ---- control
+role(executes_if, "N executes depending on how G completed: How is truthy, falsy, nullish, defined, thrown, matches or next").
+role(executes_when, "N executes after G completed, at When: sync, microtask, macrotask or event").
+role(repeats,   "Body of S may execute again after itself").
+role(iterates,  "Left of S receives the elements of the iterator of Right").
+role(enumerates, "Left of S receives the keys of Right").
+role(exits,     "nothing after J executes in its sequence: How is return, break, continue or throw").
+role(throws,    "T carries the value V out as a throw").
+role(tries,     "a throw out of Block is served by the handler of T").
+role(label,     "X carries the label Name").
+
+-- ---- modules
+role(namespace, "Ns is the object of exports of P").
+role(module_ref, "N stands for the exports of the module Spec").
+
+-- ---- the bridges between the worlds, and the bound of a type parameter (JS/TS only)
+role(declared,  "the type T is written at X").
+role(implements, "the instances of the class C have the members of the type T").
+role(bound,     "the type parameter P takes only types within U").
+
+-- ---- marks: properties of one node, kept as one relation and named by an alias each, so a mark costs no table
+role(mark,      "N has the property Role").
+alias call(C) is mark(C, call).
+alias construct(C) is mark(C, construct).
+alias optional(N) is mark(N, optional).
+alias this(T) is mark(T, this).
+alias super(S) is mark(S, super).
+alias new_target(M) is mark(M, new_target).
+alias import_meta(M) is mark(M, import_meta).
+alias async(F) is mark(F, async).
+alias generator(F) is mark(F, generator).
+alias object(O) is mark(O, object).
+alias array(A) is mark(A, array).
+alias class(C) is mark(C, class).
+alias static(M) is mark(M, static).
+alias private(N) is mark(N, private).
+alias scope(S) is mark(S, scope).
+alias template(T) is mark(T, template).
+alias ambient(X) is mark(X, ambient).
+
+edb(mark_name).
+mark_name(call). mark_name(construct). mark_name(optional). mark_name(this). mark_name(super).
+mark_name(new_target). mark_name(import_meta). mark_name(async). mark_name(generator). mark_name(object).
+mark_name(array). mark_name(class). mark_name(static). mark_name(private). mark_name(scope). mark_name(template).
+mark_name(ambient).
+
+-- the role tree is a forest and `inside` its closure
+tree parent(P, C) closure inside.
+
+edb(world).
+world(value). world(type). world(tree).
+imports(tree, value). imports(tree, type).
+imports(value, main). imports(type, main). imports(tree, main).

@@ -20,16 +20,17 @@ fn a_rule_that_reads_the_profile_is_answered_in_the_round_after() {
     let mut s = Session::fresh(BUDGET);
     s.load(&chain(), None).unwrap();
     s.evaluate().unwrap();
-    // depth(B, K) :- nxt(A, B), depth(A, J), K is J + 1. fires once per node of the chain, kept in written order for its
-    // builtin, and reads the whole of nxt on every firing
+    // depth(B, K) :- nxt(A, B), depth(A, J), K is J + 1. fires once per node of the chain and, nxt being under the
+    // index threshold, scans its nine rows on every firing for the one it needs
     let fired = rows(&mut s, "rounds(R, N)");
     assert_eq!(fired.len(), 1, "{fired:?}");
     assert_eq!(fired[0][1], "10");
     let depth = fired[0][0].clone();
-    assert!(s.holds(&format!("kept_written({depth}, builtin)")).unwrap());
+    assert_eq!(rows(&mut s, "scans(R, K, Read, Out)"), vec![vec![depth.clone(), "1".into(), "90".into(), "9".into()]]);
     let rescanned = rows(&mut s, "rescanned(R, K, Rel)");
     assert_eq!(rescanned, vec![vec![depth.clone(), "1".to_string(), "nxt".to_string()]]);
     // reach is answered by the closure kernel, which the profile says: no firing, and written order for `closure`
+    assert_eq!(rows(&mut s, "kept_written(R, Why)").len(), 3, "two closure rules and one of one premise");
     let closure = rows(&mut s, "kept_written(R, closure)");
     assert_eq!(closure.len(), 2, "{closure:?}");
     for r in &closure {

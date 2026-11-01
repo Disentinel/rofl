@@ -1,0 +1,19 @@
+[package]
+name = "oxc_scan"
+version = "0.1.0"
+edition = "2021"
+
+# its own workspace: the engine's build never compiles oxc
+[workspace]
+
+[dependencies]
+oxc_allocator = "0.156"
+oxc_parser = "0.156"
+oxc_ast = "0.156"
+oxc_span = "0.156"
+sha2 = "0.10"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
