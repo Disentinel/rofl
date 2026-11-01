@@ -36,7 +36,7 @@ The report, on stderr, one line per planned rule:
   not keep the fact: delete that rule's line from `plan.rofl` (the engine falls back to its greedy order), and record
   what the data looked like in the ledger (`facts/findings.rofl`): the pack is a hypothesis and this is its
   counterexample. The usual cause is a join whose columns are correlated (the independence estimate divides too much).
-- Known as of 2026-11-01: over the JS model (vscode mini) the independence estimate loses to the greedy order on 400 of 1 242 rules (f_the_join_order_is_a_fact_the_engine_obeys): do not load the facts for a JS world until the estimate reads declared or measured functional dependencies; the report is the result there, not the facts.
+- The facts the loop writes are already the kept ones: only a rule whose measured width fell gets its plan fact; `worse` and unchanged rows stay in the report. Known as of 2026-11-01: over the JS model (vscode mini) the independence estimate loses to the greedy order on most rules the data's functional dependencies touch (f_the_join_order_is_a_fact_the_engine_obeys), so the kept set there is small (30 of 1 438) and the report is the finding.
 - `after` far below `forecast` is a loose bound, harmless; `after` far above `forecast` with `better` still is the
   estimate wrong but the order right by luck; say so in the finding.
 - A rule missing from the report has one premise, or a negation, builtin or aggregate among its premises (not

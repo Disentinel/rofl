@@ -57,8 +57,12 @@ export function refine(files: string[]): { facts: string; report: Report[] } {
   const before = measure([]);
   const [plans, costs] = ask([...files, ...PACKS], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)'], REFLECT_WALLS);
   const forecast = new Map(costs.map(([r, at, c]) => [`${r} ${at}`, Number(c)]));
-  const facts = plans.map(([r, at, l]) => `plan[fixpointplan](${r}, ${at}, ${l}).`).sort().join('\n') + (plans.length ? '\n' : '');
-  const after = facts ? measure([tmp('plan.rofl', facts)]) : before;
+  const fact = ([r, at, l]: Row) => `plan[fixpointplan](${r}, ${at}, ${l}).`;
+  const all = plans.map(fact).sort().join('\n') + (plans.length ? '\n' : '');
+  const after = all ? measure([tmp('plan.rofl', all)]) : before;
+  // kept: the plans the measurement confirmed (the rule's width fell); a plan that cost more is the report's, never a fact
+  const kept = plans.filter(([r]) => (after.width.get(r) ?? 0) < (before.width.get(r) ?? 0));
+  const facts = kept.map(fact).sort().join('\n') + (kept.length ? '\n' : '');
   const report: Report[] = plans
     .map(([r, at, l]) => ({
       head: before.head.get(r) ?? r,
@@ -83,18 +87,21 @@ export function render(report: Report[]): string {
     const mark = r.before === 0 && r.after === 0 ? '  not fired (the kernel answers it)' : r.after > r.before ? '  worse' : r.after < r.before ? '  better' : '';
     lines.push(`${r.head.padEnd(w)}  ${r.at.padStart(2)}  ${String(r.before).padStart(8)}  ${String(r.forecast).padStart(8)}  ${String(r.after).padStart(8)}  ${list(r.order)} (${list(r.was)})${mark}`);
   }
+  const n = (f: (r: Report) => boolean) => report.filter(f).length;
+  const near = n((r) => r.after > 0 && r.forecast > 0 && r.after <= r.forecast * 2 && r.forecast <= r.after * 2);
+  lines.push(`${report.length} planned: ${n((r) => r.after < r.before)} better (kept as facts), ${n((r) => r.after > r.before)} worse, ${n((r) => r.after === r.before)} unchanged; forecast within 2x of the measure on ${near}`);
   return lines.join('\n') + '\n';
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   if (args.includes('--check')) {
-    const { report } = refine([path.join(ROOT, 'examples/checks/plan-world.rofl')]);
+    const { report, facts } = refine([path.join(ROOT, 'examples/checks/plan-world.rofl')]);
     const want: Record<string, [number, number, number]> = { out: [1001, 210, 210], alt: [211, 210, 210], two: [11, 11, 11] };
     const bad = report.filter((r) => String(want[r.head]) !== String([r.before, r.forecast, r.after]));
     process.stderr.write(render(report));
-    if (bad.length || report.length !== 3) { console.log('  FAIL  the loop over plan-world.rofl did not say what it should'); process.exit(1); }
-    console.log('  ok    refine over examples/checks/plan-world.rofl: 1001 -> 210 forecast 210, 211 -> 210, 11 -> 11');
+    if (bad.length || report.length !== 3 || facts.split('\n').filter(Boolean).length !== 2) { console.log('  FAIL  the loop over plan-world.rofl did not say what it should'); process.exit(1); }
+    console.log('  ok    refine over examples/checks/plan-world.rofl: 1001 -> 210 forecast 210, 211 -> 210, 11 -> 11; two facts kept, the unchanged one not');
     process.exit(0);
   }
   const out = args.indexOf('--out');

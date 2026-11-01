@@ -318,12 +318,30 @@ impl Eval {
             .filter(|&(rel, book, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
             .map(|(rel, book, n, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, arity))
             .collect();
+        // a relation a rule reads and nothing holds is censused as empty: a plan that knows nothing of it puts it last
+        let held: HashSet<(Sym, Sym)> = census.iter().map(|c| (c.2, c.3)).collect();
+        let mut empty: HashSet<(Sym, Sym)> = HashSet::new();
+        for r in &self.rules {
+            for b in r.clause.body.iter() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" || held.contains(&(l.rel, book)) {
+                    continue;
+                }
+                if empty.insert((l.rel, book)) {
+                    census.push((self.h.name(l.rel).to_string(), self.h.name(book).to_string(), l.rel, book, 0, l.args.len()));
+                }
+            }
+        }
         census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
         for (rel_name, book_name, rel, book, n, arity) in census {
             let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
             for pos in 0..arity {
-                let (_, d) = self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]);
+                let d = if n == 0 { 0 } else { self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]).1 };
                 let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
             }
         }

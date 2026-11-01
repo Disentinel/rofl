@@ -532,7 +532,8 @@ written position `At` (0 the firing over the whole store), as a `$cons` list of 
 `K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
 `widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
-and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure.
+and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure; a
+relation a rule reads and nothing holds is censused with 0 rows and 0 distinct, so a plan knows it is empty.
 Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
 the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
 the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a
@@ -588,9 +589,11 @@ report on stderr sets before, forecast and after side by side per rule and marks
 order it replaced: that is the estimate's hypothesis false there, and a finding, not a thing to hide. `-- --check`
 runs it over plan-world.rofl and judges it. The reflection runs under walls of its own (the packs' world is 2^N x N rows
 per rule of N premises, past the default space at the JS model's size) and a partial answer stops the loop with its
-text. Measured over the JS model on vscode mini (2026-11-01): 400 plans worse, 23 better, the independence estimate
-refuted by the data's functional dependencies (f_the_join_order_is_a_fact_the_engine_obeys); the facts it writes are
-not to be loaded until the estimate reads them. The agent's skill for the loop (when to run it, how to read the report,
+text. The facts it writes are the plans the measurement confirmed, the rules whose width fell; a plan that cost
+more is in the report and never a fact (keep or revert, per rule), and the last line counts planned, kept, worse and
+how many forecasts came within 2x of the measure. Measured over the JS model on vscode mini (2026-11-01): the
+independence estimate loses to the greedy order on most rules the data's functional dependencies touch
+(f_the_join_order_is_a_fact_the_engine_obeys), so what the loop keeps there is the few it confirmed. The agent's skill for the loop (when to run it, how to read the report,
 where the facts live) is .claude/skills/refine-plan/SKILL.md.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than

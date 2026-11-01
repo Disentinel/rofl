@@ -54,7 +54,9 @@ pl_div(R, S, K, J, 1)   :- pl_in(R, S, K), pf_slot[profile](R, K, J, _), not pl_
 -- multiplies by its rows, then divides column by column, never below one
 pl_pre(R, S, 1, 1)      :- pl_set(R, S).
 pl_mul(R, S, K, 0, E)   :- pl_pre(R, S, K, E0), pl_in(R, S, K), pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), E is E0 * N.
-pl_mul(R, S, K, J, E)   :- pl_mul(R, S, K, J0, E0), J is J0 + 1, pl_div(R, S, K, J, D), E1 is E0 / D, E is max(E1, 1).
+pl_mul(R, S, K, J, E)   :- pl_mul(R, S, K, J0, E0), E0 > 0, J is J0 + 1, pl_div(R, S, K, J, D), E1 is E0 / D, E is max(E1, 1).
+-- nothing reaches past a relation that holds nothing (the census says rows 0 of what a rule reads and nothing holds)
+pl_mul(R, S, K, J, 0)   :- pl_mul(R, S, K, J0, 0), J is J0 + 1, pl_div(R, S, K, J, _).
 pl_pre(R, S, K1, E)     :- pl_mul(R, S, K, A, E), pl_arity(R, K, A), K1 is K + 1.
 pl_pre(R, S, K1, E)     :- pl_pre(R, S, K, E), pl_out(R, S, K), K1 is K + 1.
 pl_est(R, S, E)         :- pl_pre(R, S, K, E), pl_rule(R, N), K is N + 1.
