@@ -263,7 +263,6 @@ well_known_symbol("toPrimitive", symbol_to_primitive).
 well_known_symbol("toStringTag", symbol_to_string_tag).
 well_known_symbol("unscopables", symbol_unscopables).
 symbol_ref[code](E, Key) :- prop_name[code](E, O, N), free_global[code](O, "Symbol", _), well_known_symbol(N, Key).
-key_name[code](K, Key)   :- ast_child[code](_, key, 0, K), symbol_ref[code](K, Key).
 
 -- The TDZ, the one place the LINE matters: a read of a `let`/`const` name
 -- above its declaration in the same region throws, so the model says nothing
@@ -431,7 +430,7 @@ destr_prop[code](D, Prop, K, Local, File) :- declarator_id[code](D, P), at[tree]
                                              ast_child[code](P, properties, _, Prop),
                                              ast_child[code](Prop, key, 0, K),
                                              prop_local[code](Prop, Local).
-destructures[code](D, Local, Key, File) :- destr_prop[code](D, _, K, Local, File), key_name[code](K, Key).
+destructures[code](D, Local, Key, File) :- destr_prop[code](D, Prop, _, Local, File), key_name[code](Prop, Key).
 scoped_binder[code](D, File) :- destr_prop[code](D, _, _, _, File).
 
 may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
@@ -492,7 +491,7 @@ param_pattern[code](F, I, P) :- fn_node[code](F), ast_child[code](F, params, I, 
                                 ast_child[code](A, left, 0, P), ast_node[code](P, object_pattern, _).
 param_prop[code](F, I, Key, Local, Prop) :- param_pattern[code](F, I, P),
                                             ast_child[code](P, properties, _, Prop),
-                                            ast_child[code](Prop, key, 0, K), key_name[code](K, Key),
+                                            key_name[code](Prop, Key),
                                             prop_local[code](Prop, Local).
 param_bound[flow](F, Name) :- param_of[flow](F, _, Name).
 param_bound[flow](F, Name) :- param_pattern[code](F, _, P), ast_child[code](P, properties, _, Prop),
@@ -515,7 +514,7 @@ may_be_node[flow](U, N) :- param_prop[code](F, _, _, Local, Prop), prop_default[
 -- `static` anywhere), as a module namespace is.
 pattern_takes[code](P, Key) :- ast_node[code](P, object_pattern, _),
                                ast_child[code](P, properties, _, Prop),
-                               ast_child[code](Prop, key, 0, K), key_name[code](K, Key).
+                               key_name[code](Prop, Key).
 
 rest_in_pattern[code](D, R, File) :- declarator_id[code](D, P), at[tree](D, File, _),
                                      ast_node[code](P, object_pattern, _),
@@ -1366,6 +1365,9 @@ read_holds_lit[flow](C, undefined) :- keyed_read[flow](C, _), not keyed_present[
 -- `.k`". `member_value` names the node a member HOLDS and judges nothing about
 -- it; what that node may be is `may_be_lit`/`may_be_node`, one step later.
 obj_lit[code](O)  :- object[value](O), not decl[value](O, enum).
+-- the members of an object literal: a property holds a value, a method is itself a function
+obj_prop[code](O, P, V) :- obj_lit[code](O), has[value](O, P), value[value](P, V).
+obj_method[code](O, M)  :- obj_lit[code](O), has[value](O, M), fn_node[code](M).
 obj_like[flow](O) :- obj_lit[code](O).
 obj_like[flow](O) :- class[value](O).
 class_like[flow](O) :- class[value](O).
@@ -1378,19 +1380,9 @@ inst_of[flow](I, CD)          :- class_like[flow](CD), ast_child[code](CD, body,
 member_value[flow](I, Key, V) :- inst_of[flow](I, CD), class_member_proto[flow](CD, Key, V).
 member_plain[flow](I, Key, V) :- inst_of[flow](I, _), member_value[flow](I, Key, V).
 
-member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _),
-                                 ast_child[code](O, properties, _, M),
-                                 ast_node[code](M, object_method, _),
-                                 ast_child[code](M, key, 0, K), key_name[code](K, Key), V = M.
-member_value[flow](O, Key, V) :- ast_node[code](O, object_expression, _),
-                                 ast_child[code](O, properties, _, P),
-                                 ast_node[code](P, object_property, _),
-                                 ast_child[code](P, key, 0, K), key_name[code](K, Key),
-                                 ast_child[code](P, value, 0, V).
-member_value[flow](CD, Key, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                  ast_child[code](B, body, _, M),
-                                  ast_node[code](M, class_method, _),
-                                  ast_child[code](M, key, 0, K), key_name[code](K, Key).
+member_value[flow](O, Key, V) :- obj_method[code](O, M), key_name[code](M, Key), V = M.
+member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_name[code](P, Key).
+member_value[flow](CD, Key, M) :- class_method[code](CD, M), key_name[code](M, Key).
 
 -- A member written is a member read, flow-insensitively — `assigns` one step
 -- over. `plain_assign` is load-bearing: `+=` evaluates to a sum. The object may be
@@ -1408,11 +1400,7 @@ member_value[flow](O, Key, V) :- sx_mwrite[surface](O, Key, V).
 -- every round. The negation is written last: until 2026-09-05 the evaluator
 -- read it with `Key` unbound as "no own key at all"; the kernel now defers a
 -- negation until its variables are bound, and the order is kept for the reader.
-own_key[flow](CD, Key)         :- key_name[code](K, Key),
-                                  ast_child[code](M, key, 0, K),
-                                  ast_node[code](M, class_method, _),
-                                  ast_child[code](B, body, _, M),
-                                  ast_child[code](CD, body, 0, B), obj_like[flow](CD).
+own_key[flow](CD, Key)         :- key_name[code](M, Key), class_method[code](CD, M).
 member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
                                   member_value[flow](SD, Key, V),
                                   not own_key[flow](CD, Key).
@@ -1438,13 +1426,12 @@ selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P
 obj_open_own[code](O) :- hidden_call_pos[code](S, accessor_call), ast_child[code](O, properties, _, S).
 obj_open_own[code](O) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
                          ast_attr[code](P, computed, true).
-obj_own_key[code](O, Key) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
-                             ast_child[code](P, key, 0, K), key_name[code](K, Key).
+obj_own_key[code](O, Key) :- key_name[code](P, Key), has[value](O, P), obj_lit[code](O).
 member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), at[tree](N, F, _), ast_node[code](O, object_expression, F),
                                  not ast_child[code](_, left, 0, N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
                                  not lib_member(object, Key, _), Key != "__proto__".
 field_unset_decl[code](CB, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
-                                   ast_attr[code](Q, static, false), ast_child[code](Q, key, 0, K), key_name[code](K, Key),
+                                   ast_attr[code](Q, static, false), key_name[code](Q, Key),
                                    ast_child[code](CB, body, _, Q).
 class_unset_field[flow](CD, Key) :- field_unset_decl[code](CB, Key), ast_child[code](CD, body, 0, CB).
 member_unset[flow](N, I, Key) :- class_unset_field[flow](CD, Key), inst_of[flow](I, CD), member_at[flow](N, _, I, Key),
@@ -1585,15 +1572,7 @@ may_be_node[flow](T, CD) :- class_method_of[flow](CD, M), static[value](M),
 -- an inherited field needs `inherited_field` (a method carries its own flag
 -- through `super_of`). An auto-accessor is a field on this layer's question. A
 -- field with no initialiser is no row: the layer has no `undefined`.
-edb(class_field_kind).
-class_field_kind(class_property).
-class_field_kind(class_accessor_property).
-
-field_of[flow](CD, Key, P, V)  :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                  ast_child[code](B, body, _, P),
-                                  ast_node[code](P, K, _), class_field_kind(K),
-                                  ast_child[code](P, key, 0, KN), key_name[code](KN, Key),
-                                  ast_child[code](P, value, 0, V).
+field_of[flow](CD, Key, P, V)  :- key_name[code](P, Key), class_slot[code](CD, P), value[value](P, V).
 member_value[flow](CD, Key, V) :- field_of[flow](CD, Key, _, V).
 own_key[flow](CD, Key)         :- field_of[flow](CD, Key, _, _).
 class_member_static[flow](CD, Key, V) :- field_of[flow](CD, Key, P, V),
@@ -1902,7 +1881,7 @@ member_plain[flow](X, Key, V) :- external_value[flow](X, _), member_value[flow](
 -- A pattern off an external value: each name is a member of it, the rest is
 -- another object of the same origin.
 external_destructured[code](D, Prop, Local, File) :-
-    destr_prop[code](D, Prop, K, Local, File), key_name[code](K, _).
+    destr_prop[code](D, Prop, _, Local, File), key_name[code](Prop, _).
 external_value[flow](Prop, Spec) :- external_destructured[code](D, Prop, _, _),
                                     decl_value[flow](D, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).
@@ -2161,8 +2140,6 @@ may_be_node[flow](E, N) :- decorated_by[flow](CD, N), sees_decl[code](E, CD).
 may_be_node[flow](CD, N) :- decorated_by[flow](CD, N), ast_node[code](CD, class_expression, _).
 
 decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
-                                         ast_node[code](M, class_method, _),
-                                         class_method_of[flow](CD, M),
-                                         ast_child[code](M, key, 0, K), key_name[code](K, Key).
+                                         class_method[code](CD, M), key_name[code](M, Key).
 class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N), static[value](M).
 class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N), not static[value](M).

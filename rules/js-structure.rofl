@@ -32,19 +32,14 @@ tree ast_in(P, C) closure ast_within.
 
 alias ast_name(N, V) is ast_attr(N, name, V).
 
--- THE NAME A KEY STANDS FOR, wherever a key appears, written once: a name, or
--- a string written as the key (`{ "x-id": 1 }`, `{ ["x-id"]: 1 }`). A
--- well-known symbol is a key too, found where globals are
+-- THE NAME THE KEY OF A MEMBER STANDS FOR, wherever a key appears, written
+-- once: a name, or a literal written as the key (`{ "x-id": 1 }`, `{ ["x-id"]: 1 }`,
+-- `{ 1: x }`), by the role `key`. A private member is no such name: `#x` and `x`
+-- are two members. A well-known symbol is a key too, found where globals are
 -- (rules/js-dataflow.rofl, `symbol_ref`); `obj[someVar]` has no static name.
---
--- A NEGATION and not `computed, false`: `class_private_property` and
--- `class_private_method` carry no `computed` attribute at all.
-function key_name(K, to N).
-key_name[code](K, N)   :- ast_child[code](P, key, 0, K),
-                          not ast_attr[code](P, computed, true),
-                          ast_name[code](K, N).
-key_name[code](K, N)   :- ast_child[code](_, key, 0, K), ast_node[code](K, string_literal, _),
-                          ast_attr[code](K, value, N).
+function key_name(M, to N).
+key_name[code](M, N) :- key[value](M, N), not private[value](M).
+key_name[code](M, N) :- key_expr[value](M, E), symbol_ref[code](E, N).
 alias ast_value(N, V) is ast_attr(N, value, V).
 
 -- ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and

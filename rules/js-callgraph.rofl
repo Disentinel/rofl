@@ -194,19 +194,13 @@ fn_file[code](F, File) :- fn_node[code](F), at[tree](F, File, _).
 -- sixteen eslint files). A PRIVATE method gets no name: V8 says `#rim`, the
 -- store holds `rim`, and the kernel has no operation that builds a string.
 fn_name[code](F, N) :- fn_node[code](F), target[value](F, I), binds[value](I, N).
-fn_name[code](F, N) :- ast_node[code](F, object_method, _),
-                       ast_child[code](F, key, 0, K), key_name[code](K, N).
+fn_name[code](F, N) :- key_name[code](F, N), obj_method[code](_, F).
 ctor_method[code](F)   :- constructs[value](_, F), fn_node[code](F).
-fn_name[code](F, N) :- ast_node[code](F, class_method, _), not ctor_method[code](F),
-                       ast_child[code](F, key, 0, K), key_name[code](K, N).
+fn_name[code](F, N) :- key_name[code](F, N), class_method[code](_, F), not ctor_method[code](F).
 fn_name[code](F, N) :- binder[code](D, N, F, _), fn_node[code](F).
-fn_name[code](F, N) :- key_name[code](K, N), ast_child[code](P, key, 0, K),
-                       ast_node[code](P, object_property, _),
-                       ast_child[code](P, value, 0, F), fn_node[code](F).
+fn_name[code](F, N) :- key_name[code](P, N), obj_prop[code](_, P, F), fn_node[code](F).
 fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), target[value](CD, I), binds[value](I, N).
-fn_name[code](F, N) :- class_field_kind(K), ast_node[code](P, K, _),
-                       ast_child[code](P, value, 0, F), fn_node[code](F),
-                       ast_child[code](P, key, 0, KN), key_name[code](KN, N).
+fn_name[code](F, N) :- key_name[code](P, N), class_slot[code](_, P), value[value](P, F), fn_node[code](F).
 
 -- A class expression with no `id` takes its binding's name — the language's own
 -- inference: `const A = class {}` has `A.name === "A"`, but
@@ -248,18 +242,9 @@ top_call[code](C, R)   :- site[code](C), at[tree](C, File, _),
 -- over `may_be_node`, and the shapes are entry points into the value layer.
 -- Both `obj_member_fn` arms lead with `key_name` for correctness AND cost:
 -- `ns[haspSpelling]()` must not resolve under the variable's spelling, and
--- `key_name`'s 105 rows bind K so every later literal is an indexed lookup.
-obj_member_fn[code](O, Key, M) :- key_name[code](K, Key),
-                                  ast_child[code](M, key, 0, K),
-                                  ast_node[code](M, object_method, _),
-                                  ast_child[code](O, properties, _, M),
-                                  ast_node[code](O, object_expression, _).
-obj_member_fn[code](O, Key, F) :- key_name[code](K, Key),
-                                  ast_child[code](P, key, 0, K),
-                                  ast_node[code](P, object_property, _),
-                                  ast_child[code](P, value, 0, F), fn_node[code](F),
-                                  ast_child[code](O, properties, _, P),
-                                  ast_node[code](O, object_expression, _).
+-- `key_name`'s rows bind the member so every later literal is an indexed lookup.
+obj_member_fn[code](O, Key, M) :- key_name[code](M, Key), obj_method[code](O, M).
+obj_member_fn[code](O, Key, F) :- key_name[code](P, Key), obj_prop[code](O, P, F), fn_node[code](F).
 
 -- The constructor edge is not a CallExpression at all; it needed the value
 -- question "which class does this expression construct". `super()` walks
@@ -446,8 +431,7 @@ shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours
 -- declared `node_kind`, or the matrix has a cell it does not know exists.
 fn_binder[code](D, F) :- ast_node[code](D, variable_declarator, _),
                          ast_child[code](D, init, 0, F), fn_node[code](F).
-fn_binder[code](P, F) :- ast_node[code](P, object_property, _),
-                         ast_child[code](P, value, 0, F), fn_node[code](F).
+fn_binder[code](P, F) :- obj_prop[code](_, P, F), fn_node[code](F).
 fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 
 callgraph_kind[audit](K)  :- call_site_kind[code](_, K).
@@ -627,10 +611,10 @@ sx_open[surface](O)  :- may_be_node[flow](P, O), literal_part[flow](L, P), sx_op
 sx_open[surface](O)  :- stored_in[flow](V, H), sx_open[surface](H), may_be_node[flow](V, O).
 -- an object literal with a spread, a computed key or a `__proto__`
 sx_open[surface](O)  :- obj_lit[code](O), spread_props[value](O, _, _).
-sx_open[surface](O)  :- literal_part[flow](O, P), ast_child[code](P, key, 0, K), not key_name[code](K, _).
-sx_open[surface](O)  :- literal_part[flow](O, P), ast_child[code](P, key, 0, K), key_name[code](K, "__proto__").
+sx_open[surface](O)  :- literal_part[flow](O, P), has[value](O, P), not key_name[code](P, _).
+sx_open[surface](O)  :- literal_part[flow](O, P), key_name[code](P, "__proto__").
 -- a member function whose `this` the model does not follow may write onto it
-this_unfollowed[flow](F) :- this_host[flow](F, _), not ast_node[code](F, class_method, _).
+this_unfollowed[flow](F) :- this_host[flow](F, _), not class_method[code](_, F).
 sx_this_unfollowed[surface](F) :- sx_esc[surface](F), this_unfollowed[flow](F).
 this_unfollowed[flow](F)       :- sx_this_unfollowed[surface](F).
 sx_open[surface](O)  :- receivable[flow](O), member_value[flow](O, _, V), may_be_node[flow](V, F),
@@ -695,8 +679,6 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[surface](O, Key).
 -- one, a pattern exported, `export =`, CommonJS.
 whole_expr[flow](E) :- imports_ns[code](Local, D, File), module_target[code](D, _), top_read[code](E, Local, File).
 export_key[code](File, Name) :- program[tree](P, File), has[value](P, M), value[value](M, M), key[value](M, Name).
-export_key[code](File, Name) :- module_export[code](E, File), ast_child[code](E, specifiers, _, Sp),
-                                ast_child[code](Sp, exported, 0, X), key_name[code](X, Name).
 export_key[code](File, "default") :- ast_node[code](_, export_default_declaration, File).
 export_key[code](File, Name) :- ast_node[code](E, export_all_declaration, File), module_target[code](E, T),
                                 sx_export_key[surface](T, Name), Name != "default".

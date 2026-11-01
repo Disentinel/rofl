@@ -208,12 +208,8 @@ throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
 -- has to say so too: `resolves`, and the read must be a `site` or the edge has
 -- no caller — declaring `member_expression` a transfer kind would make every
 -- property read in the corpus a site.
-edb(accessor_kind).
-accessor_kind("get").
-accessor_kind("set").
-
-accessor_as[flow](Obj, Key, M, K) :- member_value[flow](Obj, Key, M),
-                                     ast_attr[code](M, kind, K), accessor_kind(K).
+accessor_as[flow](Obj, Key, M, "get") :- member_value[flow](Obj, Key, M), getter[value](M, M).
+accessor_as[flow](Obj, Key, M, "set") :- member_value[flow](Obj, Key, M), setter[value](M, M).
 accessor_of[flow](Obj, Key, M) :- accessor_as[flow](Obj, Key, M, _).
 accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
 accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
@@ -223,8 +219,8 @@ accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj,
                              selects[flow](N, Key), not only_written[code](N).
 accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj, Key, M, "set"),
                              selects[flow](N, Key), written_member[code](N).
-accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "get"), not only_written[code](N).
-accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "set"), written_member[code](N).
+accessor_read[code](N, M) :- private_binds[code](N, M), getter[value](M, M), not only_written[code](N).
+accessor_read[code](N, M) :- private_binds[code](N, M), setter[value](M, M), written_member[code](N).
 written_member[code](N)   :- ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, N).
 written_member[code](N)   :- ast_node[code](U, update_expression, _), ast_child[code](U, argument, 0, N).
 only_written[code](N)     :- plain_assign[flow](A), ast_child[code](A, left, 0, N).
