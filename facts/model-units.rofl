@@ -1176,6 +1176,9 @@ unit_concludes("rules/js-attrs.rofl", attr_kind_lacks).
 unit_concludes("rules/js-attrs.rofl", attr_kind_split).
 unit_concludes("rules/js-attrs.rofl", attr_split_ok_unseen).
 unit_concludes("rules/js-modules.rofl", edb).
+unit_concludes("rules/js-modules.rofl", imports).
+unit_concludes("rules/js-modules.rofl", file_at).
+unit_concludes("rules/js-modules.rofl", dir_at).
 unit_concludes("rules/js-modules.rofl", import_site).
 unit_concludes("rules/js-modules.rofl", reexport_site).
 unit_concludes("rules/js-modules.rofl", require_site).

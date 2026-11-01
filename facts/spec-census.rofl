@@ -824,6 +824,8 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "closure_base_fact", world).
+check[checks]("facts/goldens.rofl", "concat_builtin", world).
+check[checks]("facts/goldens.rofl", "concat_recursion", world).
 check[checks]("facts/goldens.rofl", "concat_value", world).
 check[checks]("facts/goldens.rofl", "cost_shapes_model", world).
 check[checks]("facts/goldens.rofl", "demand_asked_hole", world).
@@ -901,6 +903,7 @@ check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
+check[checks]("facts/goldens.rofl", "oxc_roles", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).
 check[checks]("facts/goldens.rofl", "prov_lazy", world).
 check[checks]("facts/goldens.rofl", "prov_lazy_lattice", world).
@@ -915,6 +918,7 @@ check[checks]("facts/goldens.rofl", "refused", world).
 check[checks]("facts/goldens.rofl", "retract_again", world).
 check[checks]("facts/goldens.rofl", "retract_last", world).
 check[checks]("facts/goldens.rofl", "retract_last_read", world).
+check[checks]("facts/goldens.rofl", "roles_babel", world).
 check[checks]("facts/goldens.rofl", "scan_requests", world).
 check[checks]("facts/goldens.rofl", "sealed_provenance", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
@@ -947,6 +951,7 @@ check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
+check[checks](".github/workflows/ci.yml", "roles parity", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "npm packages", ci).
 check[checks](".github/workflows/ci.yml", "planted faults", ci).

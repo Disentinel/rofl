@@ -35,8 +35,14 @@ jobs:
       # rust/target/release binaries; CI built none, so bun died on ENOENT.
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: rust }
+        with:
+          workspaces: |
+            rust
+            rust/tools/oxc_scan
       - run: cd rust && cargo build --release
+      # ONE FILE, TWO PARSERS, THE SAME ROLES: Babel and oxc, each through its converter (scripts/roles_parity.ts)
+      - name: roles parity
+        run: npm run test:parity
       # THE KEEP, AND WHERE IT IS NOT TRUSTED. `npm test` reads back a world's answer kept under the hash of everything
       # it is a function of (scripts/keep.ts), so a pull request runs warm on the keep of earlier runs. A wrongly kept
       # answer that equals the golden would turn a real regression green, so a push to main and a release tag run COLD,

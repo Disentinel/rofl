@@ -79,7 +79,7 @@ node_kind(js, export_default_declaration).
 -- detector — `shape_stale[audit]` — and `host_emitter` has none.
 --
 -- Neither emitter carries import semantics: `str_*` would split a shopping
--- list the same way, and `fs_*` reports what is on disk. What they are NOT
+-- list the same way, and `[fs]` reports what is on disk. What they are NOT
 -- allowed to do is decide anything, and the count of these rows going to zero
 -- is what "the kernel grew a string primitive" would mean, measurably.
 host_emitter(js, modules, str_algebra, a_kernel_has_no_string_builtins).
@@ -176,7 +176,7 @@ unknown_because(js, import_declaration, bare, modules, out_of_scope).
 --
 -- `#sub` resolves through the IMPORTING package's own package.json `imports`
 -- map — a file the fs emitter already walks and already reports as
--- `fs_file_in(".", "package.json", "package.json")` — and never enters
+-- `has_file[fs](".", "package.json")` — and never enters
 -- node_modules at all. `bare` is a walk up through node_modules and a
 -- conditions map; this is a lookup in one file that is already on the disk the
 -- model can see. What it still lacks is that file's CONTENT: the host's two

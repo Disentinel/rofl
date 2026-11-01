@@ -10,6 +10,7 @@
 // (scanners/js_inherit.ts).
 
 import * as fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 import { codeFacts } from '../playground/host.ts';
 import { previousByPrefix } from './js_inherit.ts';
@@ -37,8 +38,10 @@ const parsed = one === undefined ? files : [one];
 const prev = process.env.ROFL_SCAN_PREVIOUS;
 const previous = prev && fs.existsSync(prev) ? previousByPrefix(fs.readFileSync(prev, 'utf8')) : undefined;
 const { facts, host, parseErrors } = codeFacts(Object.fromEntries(parsed.map((f) => [f, fs.readFileSync(path.join(root, f), 'utf8')])), files.filter((f) => f !== one), previous);
-// what was read, for the engine's storeroom of scans (docs/cli.md): the parsed files and every directory listed
-const reads = [...parsed, ...dirs].map((f) => `-- reads: ${path.resolve(root, f)}`);
+// what was read, for the engine's storeroom of scans (docs/cli.md): the parsed files, every directory listed, and the
+// scanner's own code, so that a scanner changed is a scan stale
+const own = ['cli.ts', 'js_ast.ts', '../playground/host.ts'].map((f) => fileURLToPath(new URL(f, import.meta.url)));
+const reads = [...[...parsed, ...dirs].map((f) => path.resolve(root, f)), ...own].map((f) => `-- reads: ${f}`);
 const text = [...reads, ...facts, ...host].join('\n') + '\n';
 if (out) fs.writeFileSync(out, text); else process.stdout.write(text);
 for (const [f, e] of Object.entries(parseErrors)) console.error(`${f}: ${e}`);

@@ -25,7 +25,7 @@ fn cap(r: &Regex, s: &str) -> Option<Vec<Option<String>>> { r.captures(s).map(|c
 
 pub const VALUE: [&str; 13] = ["key", "name", "file", "index", "text", "kind", "line", "attribute", "number", "score", "value", "child", "node"];
 fn value(n: &str) -> bool { VALUE.contains(&n) }
-const EVALUABLE: [&str; 18] = ["+", "-", "*", "/", "mod", "min", "max", "str_len", "str_char", "str_sub", "str_pre", "str_seg", "str_segs", "atom_of", "ivadd", "ivsub", "ivmul", "ivmeet"];
+const EVALUABLE: [&str; 19] = ["+", "-", "*", "/", "mod", "min", "max", "str_len", "str_char", "str_sub", "str_pre", "str_seg", "str_segs", "atom_of", "hash", "ivadd", "ivsub", "ivmul", "ivmeet"];
 const MODAL: [&str; 7] = ["can", "could", "must", "may", "will", "should", "would"];
 const BE_KEYS: [&str; 8] = ["is", "are", "was", "were", "has", "have", "does", "do"];
 fn aux(w: &str) -> bool { BE_KEYS.contains(&w) || w == "did" || MODAL.contains(&w) }

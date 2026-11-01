@@ -3458,76 +3458,29 @@ ast_child[code](ndc27e34f71d5ff1f_39ab38uhpe6, expression, 0, ndc27e34f71d5ff1f_
 ast_child[code](ndc27e34f71d5ff1f_12undirbnh3, body, 5, ndc27e34f71d5ff1f_39ab38uhpe6).
 ast_child[code](ndc27e34f71d5ff1f_3c3ted0nsu2, program, 0, ndc27e34f71d5ff1f_12undirbnh3).
 ast_file[code](ndc27e34f71d5ff1f_3c3ted0nsu2, "split/writer.ts").
-fs_dir[code](".").
-fs_dir[code]("mini/common").
-fs_parent[code]("mini/common", "mini").
-fs_dir_in[code]("mini", "common", "mini/common").
-fs_dir[code]("mini").
-fs_parent[code]("mini", ".").
-fs_dir_in[code](".", "mini", "mini").
-fs_dir[code]("mini/node").
-fs_parent[code]("mini/node", "mini").
-fs_dir_in[code]("mini", "node", "mini/node").
-fs_dir[code]("split").
-fs_parent[code]("split", ".").
-fs_dir_in[code](".", "split", "split").
-fs_file[code]("mini/common/channels.ts").
-fs_dir_of[code]("mini/common/channels.ts", "mini/common").
-fs_file_in[code]("mini/common", "channels.ts", "mini/common/channels.ts").
-fs_file[code]("mini/node/main.ts").
-fs_dir_of[code]("mini/node/main.ts", "mini/node").
-fs_file_in[code]("mini/node", "main.ts", "mini/node/main.ts").
-fs_file[code]("mini/node/paths.ts").
-fs_dir_of[code]("mini/node/paths.ts", "mini/node").
-fs_file_in[code]("mini/node", "paths.ts", "mini/node/paths.ts").
-fs_file[code]("mini/node/pfs.ts").
-fs_dir_of[code]("mini/node/pfs.ts", "mini/node").
-fs_file_in[code]("mini/node", "pfs.ts", "mini/node/pfs.ts").
-fs_file[code]("mini/node/server.ts").
-fs_dir_of[code]("mini/node/server.ts", "mini/node").
-fs_file_in[code]("mini/node", "server.ts", "mini/node/server.ts").
-fs_file[code]("split/app.ts").
-fs_dir_of[code]("split/app.ts", "split").
-fs_file_in[code]("split", "app.ts", "split/app.ts").
-fs_file[code]("split/cb.ts").
-fs_dir_of[code]("split/cb.ts", "split").
-fs_file_in[code]("split", "cb.ts", "split/cb.ts").
-fs_file[code]("split/child.ts").
-fs_dir_of[code]("split/child.ts", "split").
-fs_file_in[code]("split", "child.ts", "split/child.ts").
-fs_file[code]("split/consumer.ts").
-fs_dir_of[code]("split/consumer.ts", "split").
-fs_file_in[code]("split", "consumer.ts", "split/consumer.ts").
-fs_file[code]("split/each.ts").
-fs_dir_of[code]("split/each.ts", "split").
-fs_file_in[code]("split", "each.ts", "split/each.ts").
-fs_file[code]("split/errors.ts").
-fs_dir_of[code]("split/errors.ts", "split").
-fs_file_in[code]("split", "errors.ts", "split/errors.ts").
-fs_file[code]("split/guard.ts").
-fs_dir_of[code]("split/guard.ts", "split").
-fs_file_in[code]("split", "guard.ts", "split/guard.ts").
-fs_file[code]("split/lib.ts").
-fs_dir_of[code]("split/lib.ts", "split").
-fs_file_in[code]("split", "lib.ts", "split/lib.ts").
-fs_file[code]("split/locations.ts").
-fs_dir_of[code]("split/locations.ts", "split").
-fs_file_in[code]("split", "locations.ts", "split/locations.ts").
-fs_file[code]("split/parent.ts").
-fs_dir_of[code]("split/parent.ts", "split").
-fs_file_in[code]("split", "parent.ts", "split/parent.ts").
-fs_file[code]("split/reexports.ts").
-fs_dir_of[code]("split/reexports.ts", "split").
-fs_file_in[code]("split", "reexports.ts", "split/reexports.ts").
-fs_file[code]("split/store.ts").
-fs_dir_of[code]("split/store.ts", "split").
-fs_file_in[code]("split", "store.ts", "split/store.ts").
-fs_file[code]("split/util.ts").
-fs_dir_of[code]("split/util.ts", "split").
-fs_file_in[code]("split", "util.ts", "split/util.ts").
-fs_file[code]("split/writer.ts").
-fs_dir_of[code]("split/writer.ts", "split").
-fs_file_in[code]("split", "writer.ts", "split/writer.ts").
+has_dir[fs]("mini", "common").
+has_dir[fs](".", "mini").
+has_dir[fs]("mini", "node").
+has_dir[fs](".", "split").
+has_file[fs]("mini/common", "channels.ts").
+has_file[fs]("mini/node", "main.ts").
+has_file[fs]("mini/node", "paths.ts").
+has_file[fs]("mini/node", "pfs.ts").
+has_file[fs]("mini/node", "server.ts").
+has_file[fs]("split", "app.ts").
+has_file[fs]("split", "cb.ts").
+has_file[fs]("split", "child.ts").
+has_file[fs]("split", "consumer.ts").
+has_file[fs]("split", "each.ts").
+has_file[fs]("split", "errors.ts").
+has_file[fs]("split", "guard.ts").
+has_file[fs]("split", "lib.ts").
+has_file[fs]("split", "locations.ts").
+has_file[fs]("split", "parent.ts").
+has_file[fs]("split", "reexports.ts").
+has_file[fs]("split", "store.ts").
+has_file[fs]("split", "util.ts").
+has_file[fs]("split", "writer.ts").
 str_segs[code]("vscode:hello", 1).
 str_char0[code]("vscode:hello", "v").
 str_seg[code]("vscode:hello", 0, "vscode:hello").

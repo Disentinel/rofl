@@ -30,11 +30,12 @@
 //! store, with no news (each rule's first), is ordered the same way from
 //! nothing bound, and needs a larger gain (`MARGIN_FULL`).
 //!
-//! WHICH RULES: those whose plan is positive and negated premises only, in a
-//! world with no lattice, and not an aggregate, threshold, closure or demand
-//! rule: a builtin or fault reads the order it is solved in (a hole is
-//! attributed at the premise that failed), and a lattice withdraws what a
-//! firing read. A rule concluding `@next` is kept in written order unless the
+//! WHICH RULES: those in a world with no lattice, and not an aggregate,
+//! threshold, closure or demand rule: a lattice withdraws what a firing read.
+//! A builtin is a wall: every element written before it is placed before it
+//! and none written after it, so the partial solutions that reach it, and the
+//! holes it makes, are the written order's; the order moves only between two
+//! builtins, and a news premise after a builtin keeps the written order. A rule concluding `@next` is kept in written order unless the
 //! store is unordered: in the engine's order the first firing to stage a fact
 //! is its witness, and the solutions' order is the written one.
 //!
@@ -153,7 +154,7 @@ impl Eval {
             && r.plan.iter().all(|b| match b {
                 BodyElem::Pos(_) => true,
                 BodyElem::Neg(l) => !self.demand.on(l.rel),
-                BodyElem::Bi { .. } => self.add.adding,
+                BodyElem::Bi { .. } => true,
                 BodyElem::Agg(_) => false,
             })
     }
@@ -342,7 +343,13 @@ impl Eval {
                 wb.extend(all_vars[j].iter().copied());
             }
         }
+        // A BUILTIN IS A WALL: what is written before it is joined before it and nothing written after it is, so the
+        // partial solutions that reach it, and the holes it makes, are the written order's
+        let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && matches!(plan[k], BodyElem::Bi { .. }));
         let placeable = |j: usize, bound: &[Sym], rest: &[usize]| -> bool {
+            if walled(j, rest) {
+                return false;
+            }
             if let Some((p, was)) = vp[j] {
                 if bound.contains(&p) != was && brk!("delta_first_persp" => false; true) {
                     return false;
@@ -357,6 +364,9 @@ impl Eval {
         let (mut unit, mut cur_d) = (0.0f64, 1.0f64);
         if let Some(i) = start {
             let BodyElem::Pos(l) = &plan[i] else { return None };
+            if walled(i, &rest) {
+                return None;
+            }
             rest.retain(|&j| j != i);
             if !placeable(i, &[], &rest) {
                 return None;
