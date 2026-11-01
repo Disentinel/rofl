@@ -476,8 +476,7 @@ kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
 -- So `performed_call` is one column short of `calls` on purpose and never
 -- reaches `calls_named`/`calls_in`. The two `may_be_node` hops are the same
 -- last step the iterator protocol takes: `member_value` names the identifier.
-await_arg[code](A, X) :- ast_node[code](A, await_expression, _),
-                         ast_child[code](A, argument, 0, X).
+await_arg[code](A, X) :- awaits[value](A, X).
 
 awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),
                             member_value[flow](O, "then", V),

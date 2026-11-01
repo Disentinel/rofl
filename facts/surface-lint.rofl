@@ -79,7 +79,8 @@ xl_ok(keyed_overlap, keyed_caller, "the enclosing function of the volume's own c
 -- (`keyed_local_call` matches the file): a function of another file reaches the collection only where it left its file,
 -- and there `keyed_lost` holds. The callee, the collection it fills and the put are then the volume's own nodes.
 xl_ok(keyed_local_call, at, "the test that a callee IS of the call's file: true alike in the volume and the whole").
-xl_ok(keyed_one_target, ast_attr, "a callee of the call's own file (keyed_local_call)").
+xl_ok(keyed_one_target, async, "a callee of the call's own file (keyed_local_call)").
+xl_ok(keyed_one_target, generator, "a callee of the call's own file (keyed_local_call)").
 xl_ok(keyed_one_target, ast_node, "a callee of the call's own file (keyed_local_call)").
 xl_ok(keyed_one_target, class_method_of, "a callee of the call's own file (keyed_local_call)").
 xl_ok(keyed_sure_at, keyed_sure, "a callee of the call's own file (keyed_one_target)").

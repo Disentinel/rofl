@@ -45,6 +45,7 @@ Reads:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="binary"></a>`binary`
+  - <a id="exits"></a>`exits`
   - <a id="template"></a>`template`
   - <a id="unary"></a>`unary`
 - from the scanner, in the code:
@@ -61,7 +62,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
-| <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
@@ -207,7 +207,7 @@ In the flow:
 1. if T is a [try](#noun-try), the `handler` of T is some node, and N is `handled`;
 2. if T is a [try](#noun-try) and N is `unhandled`, unless the `handler` of T is some node.
 
-A [throw](#noun-throw) has the effect `exn` at `none` unless it [is caught in place](#eff_catch_here).
+A node has the effect `exn` at `none` if [`exits`](#exits)(it, `throw`), unless it [is caught in place](#eff_catch_here).
 
 > DIV: loops, and RECURSION — a call whose callee reaches its own caller may
 > not terminate for the same reason `while (true)` may not, and nothing in the

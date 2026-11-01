@@ -79,7 +79,7 @@ eff_try_arm[flow](T, handled)   :- ast_node[code](T, try_statement, _),
 eff_try_arm[flow](T, unhandled) :- ast_node[code](T, try_statement, _),
                                    not ast_child[code](T, handler, 0, _).
 
-eff_here[flow](T, exn, none) :- ast_node[code](T, throw_statement, _),
+eff_here[flow](T, exn, none) :- exits[value](T, throw),
                                 not eff_catch_here[code](T).
 
 -- DIV: loops, and RECURSION — a call whose callee reaches its own caller may

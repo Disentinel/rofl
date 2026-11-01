@@ -53,6 +53,7 @@ Reads:
   - <a id="inside"></a>`inside`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
+  - <a id="awaits"></a>`awaits`
   - <a id="binary"></a>`binary`
   - <a id="binds"></a>`binds`
   - <a id="body"></a>`body`
@@ -82,7 +83,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-as_expression"></a>an as expression | a node of kind `tsas_expression` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
-| <a id="noun-await"></a>an await | a node of kind `await_expression` |
 | <a id="noun-call"></a>a call | a node of one of the kinds `call_expression`, `optional_call_expression` (`call_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
@@ -128,7 +128,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="resolved_site"></a>A node is resolved if it [resolves to](#resolves) some function.
 - <a id="unresolved_shape"></a>A shape has residue if some call [is unresolved](#unresolved_call) with it.
 - <a id="shape_seen"></a>A shape is seen if some call [has the shape](#shape) it.
-- <a id="await_arg"></a>An [await](#noun-await) awaits a node X if the `argument` of it is X.
+- <a id="await_arg"></a>Y awaits a node X if [`awaits`](#awaits)(Y, X).
 - <a id="performed_call"></a>A node performs the call F if it [awaits the then](#awaited_then) F.
 
 ## 1. Call sites
