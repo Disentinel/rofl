@@ -31,7 +31,7 @@ edb(lint_kernel).    -- lint_kernel(Head): a head of boot.rofl, the kernel progr
 
 lint_kernel(boot_rank). lint_kernel(imports). lint_kernel(sees). lint_kernel(stratum).
 
-lint_closure(ast_within).
+lint_closure(ast_within). lint_closure(inside).
 
 shape_reason(cross_product, "a premise that shares no variable with what precedes it is read once per row of what precedes it: move it after what binds it").
 shape_reason(closure_wide_end, "the closure is entered at its top and enumerates every descendant before a filter on the descendant is asked: enter from the filtered end, the ancestors of X").

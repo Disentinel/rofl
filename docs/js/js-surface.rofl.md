@@ -1,6 +1,6 @@
 ---
 world: js-surface
-books: code, flow, main, surface
+books: code, flow, main, surface, value
 default: surface
 ---
 
@@ -45,7 +45,9 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-host, in the flow: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -318,15 +320,15 @@ In the surface:
 
 In the code:
 
-<a id="arg_given"></a>`arg_given`(C) if some node [is among the](#ast_child) `arguments` of a node C.
+<a id="arg_given"></a>`arg_given`(C) if [`argument_at`](js-structure.rofl.md#argument_at)(C, something, something).
 
 <a id="arg_count"></a>`arg_count`(C, E) either:
 
-1. if C is an [invocation](#noun-invocation) and E is 0, unless [`arg_given`](#arg_given)(C);
+1. if [`callee`](#callee)(C, something) and E is 0, unless [`arg_given`](#arg_given)(C);
 2. if all of:
-   - some node is the I-th of the `arguments` of C;
+   - [`argument_at`](js-structure.rofl.md#argument_at)(C, I, something);
    - E is I + 1;
-   - unless some node is the E-th of the `arguments` of C;
+   - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, E, something);
    - unless [`call_spreads`](js-callgraph.rofl.md#call_spreads)(C).
 
 In the surface:
@@ -370,7 +372,7 @@ In the surface:
 <a id="sx_cb"></a>`sx_cb`(F, Spec) if all of:
   - a node X [comes out of](js-dataflow.rofl.md#external_value) a module Spec;
   - a node G [points to](js-concat.rofl.md#may_be_node) X;
-  - the `callee` of an [invocation](#noun-invocation) C is G;
+  - [`callee`](#callee)(an [invocation](#noun-invocation) C, G);
   - a node Y [is among the](#ast_child) `arguments` of C;
   - Y [points to](js-concat.rofl.md#may_be_node) a node F;
   - [`fn_value`](#fn_value)(F).
@@ -473,7 +475,8 @@ In the surface:
 <a id="sx_store_pkey"></a>`sx_store_pkey`(F, J, I, O) if all of:
   - [`store_pkey`](#store_pkey)(F, J, I, X);
   - the `left` of a node X is a node L;
-  - the `object` of L [points to](js-concat.rofl.md#may_be_node) a node O.
+  - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
+  - a node Obj [points to](js-concat.rofl.md#may_be_node) a node O.
 
 `sx_mwrite`(O, K, X) if all of:
   - [`sx_store_pkey`](#sx_store_pkey)(F, J, I, O);

@@ -1,6 +1,6 @@
 ---
 world: js-modules
-books: audit, code, fs, main
+books: audit, code, fs, main, tree, value
 default: code
 ---
 
@@ -32,9 +32,17 @@ Reads:
 - from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
 - from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
 - from js-dataflow: [free_global](js-dataflow.rofl.md#free_global)
-- from js-model: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
+- from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
-- from js-structure: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
+- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
+  - <a id="parent"></a>`parent`
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
+  - <a id="decl"></a>`decl`
+  - <a id="key"></a>`key`
+  - <a id="pattern_prop"></a>`pattern_prop`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -152,8 +160,8 @@ Declared as facts:
 
 <a id="require_site"></a>A [call expression](#noun-call_expression) is a require site if all of:
   - a node N [refers to the free](js-dataflow.rofl.md#free_global) "require" in some file;
-  - the `callee` of it is N;
-  - the `arguments` of it is some node.
+  - [`callee`](#callee)(it, N);
+  - [`argument_at`](js-structure.rofl.md#argument_at)(it, 0, something).
 
 <a id="module_site"></a>A node N is a module site of a form K either:
 
@@ -171,8 +179,8 @@ Declared as facts:
 
 A site
 
-- <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and it [is in file](js-model.rofl.md#ast_node) F.
-- <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and it [is at line](js-model.rofl.md#ast_line) L.
+- <a id="site_file"></a>sits in a file F if it [is a module site](#module_site) of some form and [`at`](#at)(it, F, something).
+- <a id="site_line"></a>sits at line L if it [is a module site](#module_site) of some form and [`at`](#at)(it, something, L).
 
 <a id="site_source_node"></a>The source node of a site I is a node Src either:
 
@@ -410,12 +418,13 @@ A site
 
 <a id="spec_local"></a>A node binds locally L if it [names an import](#import_specifier_node) and the `local` of it [is named](js-structure.rofl.md#ast_name) L.
 
-<a id="spec_imported"></a>Sp imports the name M either:
+<a id="spec_imported"></a>A node Sp imports the name M either:
 
-1. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is named](js-structure.rofl.md#ast_name) M;
-2. if Sp is an [import specifier](#noun-import_specifier) and the `imported` of Sp [is written as](js-structure.rofl.md#ast_value) M;
-3. if Sp is a [default import](#noun-default_import) and M is "default";
-4. if Sp is a [namespace import](#noun-namespace_import) and M is "*".
+1. if all of:
+   - [`decl`](#decl)(Sp, `import`);
+   - [`parent`](#parent)(Sp, L);
+   - [`pattern_prop`](#pattern_prop)(something, M, L);
+2. if Sp is a [namespace import](#noun-namespace_import) and M is "*".
 
 <a id="binding"></a>A site binds the name Local to Imported at a specifier Sp if all of:
   - it [has the import specifier](#import_spec) Sp;
@@ -437,8 +446,8 @@ A site
 
 <a id="spec_external"></a>A node Sp exports as X either:
 
-1. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is named](js-structure.rofl.md#ast_name) X;
-2. if Sp [names an export](#export_specifier_node) and the `exported` of Sp [is written as](js-structure.rofl.md#ast_value) X.
+1. if Sp [names an export](#export_specifier_node) and [`key`](#key)(Sp, X);
+2. if Sp [names an export](#export_specifier_node), [`parent`](#parent)(Sp, M), and [`key`](#key)(M, X).
 
 <a id="spec_internal"></a>Sp exports the local L either:
 
@@ -637,14 +646,14 @@ A file F
 1. if all of:
    - a node E [has the export specifier](#export_spec) Sp;
    - E [is a local export site](#local_export_site);
-   - E [is in file](js-model.rofl.md#ast_node) F;
+   - [`at`](#at)(E, F, something);
 2. if a node E [has the reexport specifier](#reexport_spec) Sp and E [resolves to the file](#resolved_import) F.
 
 <a id="export_internal_unplaced"></a>A node has an unplaced internal of a shape Sh if a node E [has the reexport specifier](#reexport_spec) it and E [is unresolved with shape](#unresolved_import) Sh.
 
 <a id="export_internal_elsewhere"></a>A file F exports X from a file T if all of:
   - a node E [exports](#export_binding) some name as X at a node Sp;
-  - E [is in file](js-model.rofl.md#ast_node) F;
+  - [`at`](#at)(E, F, something);
   - Sp [has its internal in](#export_internal_in) T;
   - T differs from F.
 
@@ -741,7 +750,7 @@ A kind K
 
 In the code:
 
-<a id="module_meta"></a>A file F has the module meta M if M [has the meta form](js-structure.rofl.md#meta_form) `import_meta` and M [is in file](js-model.rofl.md#ast_node) F.
+<a id="module_meta"></a>A file F has the module meta M if M [has the meta form](js-structure.rofl.md#meta_form) `import_meta` and [`at`](#at)(M, F, something).
 
 In the audit:
 
