@@ -528,7 +528,9 @@ A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` nam
 firings solved news first, `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
 written position `At` (0 the firing over the whole store), as a `$cons` list of written positions, and whose it was (below,
 *The plan as facts*), `written_order[profile](R, Why)` why the planner kept the rule in written order (
-`aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`). Per premise
+`aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`); `lattice`
+means the rule reads or concludes a lattice relation, so a rule beside a lattice that touches none is planned as it
+would be without it. Per premise
 `K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
 `widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
