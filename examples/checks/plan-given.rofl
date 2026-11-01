@@ -1,0 +1,35 @@
+-- examples/checks/plan-given.rofl — THE JOIN ORDER AS A FACT THE ENGINE OBEYS (docs/cli.md, *The plan as facts*).
+--
+-- Four relations the greedy planner orders wrong: a(X) ten rows, b(Y) nine, c(X, Z) ten per X, d(Z, Y) one per Z.
+-- The planner takes b first (nine rows, the fewest), then a, and crosses them before c narrows anything: 1 + 9 + 90 + 900
+-- partial solutions reach the four premises of `out`. The order a, c, d, b reaches them with 1 + 10 + 100 + 100: `alt`
+-- is `out` written that way. Then two plan facts swap the orders: `out` is given the good one and `alt` the bad one, and
+-- the profile's widths swap with them (211 and 1001), which is the engine obeying the fact and not its estimate. A third
+-- fact, on `two`, places a premise twice and is left alone: `two` is solved as the planner would (order ... greedy).
+
+a(0). a(1). a(2). a(3). a(4). a(5). a(6). a(7). a(8). a(9).
+b(0). b(1). b(2). b(3). b(4). b(5). b(6). b(7). b(8).
+c(0, 0). c(0, 1). c(0, 2). c(0, 3). c(0, 4). c(0, 5). c(0, 6). c(0, 7). c(0, 8). c(0, 9).
+c(1, 10). c(1, 11). c(1, 12). c(1, 13). c(1, 14). c(1, 15). c(1, 16). c(1, 17). c(1, 18). c(1, 19).
+c(2, 20). c(2, 21). c(2, 22). c(2, 23). c(2, 24). c(2, 25). c(2, 26). c(2, 27). c(2, 28). c(2, 29).
+c(3, 30). c(3, 31). c(3, 32). c(3, 33). c(3, 34). c(3, 35). c(3, 36). c(3, 37). c(3, 38). c(3, 39).
+c(4, 40). c(4, 41). c(4, 42). c(4, 43). c(4, 44). c(4, 45). c(4, 46). c(4, 47). c(4, 48). c(4, 49).
+c(5, 50). c(5, 51). c(5, 52). c(5, 53). c(5, 54). c(5, 55). c(5, 56). c(5, 57). c(5, 58). c(5, 59).
+c(6, 60). c(6, 61). c(6, 62). c(6, 63). c(6, 64). c(6, 65). c(6, 66). c(6, 67). c(6, 68). c(6, 69).
+c(7, 70). c(7, 71). c(7, 72). c(7, 73). c(7, 74). c(7, 75). c(7, 76). c(7, 77). c(7, 78). c(7, 79).
+c(8, 80). c(8, 81). c(8, 82). c(8, 83). c(8, 84). c(8, 85). c(8, 86). c(8, 87). c(8, 88). c(8, 89).
+c(9, 90). c(9, 91). c(9, 92). c(9, 93). c(9, 94). c(9, 95). c(9, 96). c(9, 97). c(9, 98). c(9, 99).
+d(Z, Y) :- c(_, Z), Y is Z mod 9.
+
+out(X, Y, Z) :- a(X), b(Y), c(X, Z), d(Z, Y).
+alt(X, Y, Z) :- a(X), c(X, Z), d(Z, Y), b(Y).
+two(X, Z) :- a(X), c(X, Z).
+
+plan[fixpointplan](r815c0a08, 0, $cons(1, $cons(3, $cons(4, $cons(2, $nil))))).
+plan[fixpointplan](r6590ddbf, 0, $cons(1, $cons(4, $cons(2, $cons(3, $nil))))).
+plan[fixpointplan](re0980c8d, 0, $cons(1, $cons(1, $nil))).
+
+-- the partial solutions a rule's premises were solved from, summed: the cost of its order
+width_sum(R, T) :- fires[profile](R, _), T is sum(V ; K : width[profile](R, K, V)).
+-- the order each rule was solved in, and whose it was
+solved(Head, At, Order, Whose) :- order[profile](R, At, Order, Whose), concludes(R, Head).
