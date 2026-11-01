@@ -152,3 +152,5 @@ command_note("test:parity", "`-- [FILE...]`   one file (models/lang/js/fixtures/
 
 command_shown("scan:oxc", 28).
 command_note("scan:oxc", "-- <dir> [FILE] [--out F]   the same files through oxc in Rust (rust/tools/oxc_scan): oxc's own tree, raw, in [ast_oxc] (node, line, start, child, attr, file, parse_error); models/lang/js/oxc-roles.rofl reads it into the roles (docs/cli.md)").
+command_shown("refine", 29).
+command_note("refine", "`-- <files> [--out F]`   the refine loop over a world: ask (the order and width of every rule, from the profile), reflect (models/engine/plan.rofl beside models/engine/profile.rofl in a world of its own: the plan facts and the width each forecasts), refine (the facts written to F, or stdout, to travel with the model), ask again (the width under them); the report on stderr sets before, forecast and after side by side and marks a plan that cost more `worse`; `-- --check` runs it over examples/checks/plan-world.rofl and judges it; needs `cargo build --release` in rust/. The agent's skill for the loop is .claude/skills/refine-plan/SKILL.md").
