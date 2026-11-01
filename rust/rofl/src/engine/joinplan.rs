@@ -30,8 +30,9 @@
 //! store, with no news (each rule's first), is ordered the same way from
 //! nothing bound, and needs a larger gain (`MARGIN_FULL`).
 //!
-//! WHICH RULES: those in a world with no lattice, and not an aggregate,
-//! threshold, closure or demand rule: a lattice withdraws what a firing read.
+//! WHICH RULES: those that neither read nor conclude a lattice cell (a cell
+//! withdraws what a firing read, and improves in the order its candidates
+//! arrive), and not an aggregate, threshold, closure or demand rule.
 //! A builtin is a wall: every element written before it is placed before it
 //! and none written after it, so the partial solutions that reach it, and the
 //! holes it makes, are the written order's; the order moves only between two
@@ -152,12 +153,19 @@ impl Eval {
         self.written_order_reason(r).is_none()
     }
 
+    /// A rule that concludes into a lattice cell or reads one, under a negation or an aggregate too, or a cell carried
+    /// across a tick: a cell improves in the order its candidates arrive and withdraws what a firing read.
+    fn touches_lattice(&self, r: &ERule) -> bool {
+        let lat = |rel: Sym| self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some() || self.carried.contains_key(&rel);
+        lat(r.clause.head.rel) || r.lat_close.is_some() || !r.lattice_outer.is_empty() || r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| lat(l.rel))
+    }
+
     /// Why `r` is kept in written order, or None where a delta-first plan may be built for it (`written_order[profile]`).
     pub(super) fn written_order_reason(&self, r: &Rc<ERule>) -> Option<&'static str> {
         if self.naive {
             return Some("naive");
         }
-        if self.lat.has_cells() {
+        if self.lat.has_cells() && self.touches_lattice(r) {
             return Some("lattice");
         }
         if r.has_agg {
@@ -625,7 +633,7 @@ impl Eval {
                 sol
             })
             .collect();
-        self.conclude_all(r, sols, Front::default(), false)
+        self.conclude_all(r, sols, Front::default(), true)
     }
 }
 

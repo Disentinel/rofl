@@ -1,6 +1,6 @@
 -- models/engine/plan.rofl — THE JOIN ORDER PLANNED AS A FIXPOINT WITH MIN, FROM THE PROFILE (docs/cli.md, *The plan as
 -- facts*). Load it beside a world and models/engine/profile.rofl, in a world of its own: it declares a lattice, and a
--- world with a lattice is solved in written order, so it must not sit in the world it plans. Its answer is
+-- rule that reads one is solved in written order, so it must not sit in the world it plans. Its answer is
 -- `plan[fixpointplan](R, At, Order)`, the fact the engine obeys; the world it is for is then run with those facts and
 -- the profile's `width` judges them.
 --
