@@ -19,9 +19,10 @@ Reads:
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern)
+- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern), [spread_of](js-dataflow.rofl.md#spread_of)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
+- from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
 - from js-structure: [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
@@ -34,9 +35,17 @@ Reads:
   - <a id="body"></a>`body`
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
+  - <a id="getter"></a>`getter`
+  - <a id="iterates"></a>`iterates`
   - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
+  - <a id="rest_props"></a>`rest_props`
+  - <a id="setter"></a>`setter`
+  - <a id="spread_args"></a>`spread_args`
+  - <a id="spread_elems"></a>`spread_elems`
+  - <a id="spread_props"></a>`spread_props`
   - <a id="throws"></a>`throws`
+  - <a id="tries"></a>`tries`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -51,16 +60,11 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
-| <a id="noun-export_declaration"></a>an export declaration | a node of one of the kinds `export_named_declaration`, `export_default_declaration` (`export_kind`) |
-| <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
-| <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
+| <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
-| <a id="noun-rest"></a>a rest | a node of kind `rest_element` |
 | <a id="noun-short_circuit"></a>a short circuit | a node of one of the kinds `optional_call_expression`, `optional_member_expression` (`short_circuit_kind`) |
-| <a id="noun-spread"></a>a spread | a node of kind `spread_element` |
-| <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -71,6 +75,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the accessor](#accessor_as) of Obj and some kind at Key is M.
 - <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
 - <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
+- <a id="try_catches"></a>A node has a handler if [`tries`](#tries)(it, something).
 - <a id="caught_here"></a>A node is caught here if [`try_walk`](#try_walk)(something, it).
 - <a id="reached_unguarded"></a>F is reached unguarded if [`sx_reached`](js-surface.rofl.md#sx_reached)(F).
 - <a id="in_fn"></a>A node is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
@@ -226,7 +231,7 @@ A node
 
 `completion_kind` includes `block_statement`, `if_statement`, `labeled_statement`.
 
-<a id="completes_abruptly"></a>An [abrupt statement](#noun-abrupt_statement) completes abruptly.
+<a id="completes_abruptly"></a>A node completes abruptly if [`exits`](#exits)(it, something).
 
 A [block](#noun-block) completes abruptly if a node S [completes abruptly](#completes_abruptly) and S [is among the](#ast_child) `body` of it.
 
@@ -344,10 +349,7 @@ In the code:
 
 <a id="has_return"></a>F has a return if [`exits`](#exits)(R, `return`) and F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R.
 
-<a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if all of:
-  - [`body`](#body)(it, B);
-  - a node S [is among the](#ast_child) `body` of a node B;
-  - [`exits`](#exits)(S, `throw`).
+<a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if [`body`](#body)(it, B), [`parent`](#parent)(B, S), and [`exits`](#exits)(S, `throw`).
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw) and F neither [has a return](#has_return) nor [runs its body later](#deferred_body).
 
@@ -371,14 +373,18 @@ Declared as facts:
 > no caller — declaring `member_expression` a transfer kind would make every
 > property read in the corpus a site.
 
-`accessor_kind` includes "get", "set".
-
 In the flow:
 
-<a id="accessor_as"></a>The accessor of a node Obj and K at Key is a node M if all of:
-  - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
-  - [the attribute](#ast_attr) `kind` of M is K;
-  - K [is an accessor kind](#accessor_kind).
+<a id="accessor_as"></a>The accessor of a node Obj and N at Key is a node M either:
+
+1. if all of:
+   - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
+   - [`getter`](#getter)(M, M);
+   - N is "get";
+2. if all of:
+   - [the member](js-dataflow.rofl.md#member_value) Key of Obj holds M;
+   - [`setter`](#setter)(M, M);
+   - N is "set".
 
 <a id="accessor_obj"></a>`accessor_obj`(Obj) if [the accessor](#accessor_of) of a node Obj at some key is some node.
 
@@ -386,10 +392,6 @@ In the flow:
   - [`accessor_obj`](#accessor_obj)(Obj);
   - a node O [points to](js-concat.rofl.md#may_be_node) a node Obj;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O).
-
-Declared as facts:
-
-- <a id="accessor_kind"></a>A kind K is an accessor kind — rows in this file
 
 > A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
 
@@ -409,11 +411,11 @@ In the code:
    - N [is written](#written_member);
 3. if all of:
    - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
-   - [the attribute](#ast_attr) `kind` of M is "get";
+   - [`getter`](#getter)(M, M);
    - unless N [is only written](#only_written);
 4. if all of:
    - N [binds privately to](js-dataflow.rofl.md#private_binds) M;
-   - [the attribute](#ast_attr) `kind` of M is "set";
+   - [`setter`](#setter)(M, M);
    - N [is written](#written_member).
 
 <a id="written_member"></a>A member N is written either:
@@ -421,7 +423,7 @@ In the code:
 1. if the `left` of an [assignment](#noun-assignment) X is N;
 2. if the `argument` of an [update expression](#noun-update_expression) U is N.
 
-<a id="only_written"></a>A member is only written if a node X [is plain](js-dataflow.rofl.md#plain_assign) and the `left` of X is it.
+<a id="only_written"></a>A member is only written if X [is plain](js-dataflow.rofl.md#plain_assign) and [`assign`](#assign)(X, it, something).
 
 A node
 
@@ -456,18 +458,20 @@ A node destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 
-A [spread](#noun-spread) destructures through the accessor M if all of:
+S destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of a node Obj at Key is M;
   - a node X [points to](js-concat.rofl.md#may_be_node) Obj;
-  - the `argument` of it is X;
-  - it [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O.
+  - [`spread_props`](#spread_props)(O, something, X);
+  - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
+  - [`parent`](#parent)(S, X).
 
 > `spread_element` is one kind doing two things: in `properties` it copies
 > keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
 
-`spread_iterable_field` includes `elements`, `arguments`.
+<a id="spread_iterated"></a>S is iterated either:
 
-<a id="spread_iterated"></a>A [spread](#noun-spread) is iterated if a field F [holds iterated spreads](#spread_iterable_field) and it [is among the](#ast_child) F of some node.
+1. if [`spread_elems`](#spread_elems)(something, something, X) and [`parent`](#parent)(S, X);
+2. if [`spread_args`](#spread_args)(something, something, X) and [`parent`](#parent)(S, X).
 
 <a id="pattern_iterates"></a>P destructures through a node M either:
 
@@ -478,13 +482,10 @@ A [spread](#noun-spread) destructures through the accessor M if all of:
    - [`fn_value`](js-surface.rofl.md#fn_value)(M);
 2. if all of:
    - P [is iterated](#spread_iterated);
-   - the `argument` of P [points to](js-concat.rofl.md#may_be_node) a node Obj;
+   - [`parent`](#parent)(P, X);
+   - a node X [points to](js-concat.rofl.md#may_be_node) a node Obj;
    - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
    - [`fn_value`](js-surface.rofl.md#fn_value)(M).
-
-Declared as facts:
-
-- <a id="spread_iterable_field"></a>A field F holds iterated spreads — rows in this file
 
 > The two sides reach the call graph differently. An iterable position has one
 > `[Symbol.iterator]` per receiver, so two answers are two candidate receivers
@@ -533,25 +534,26 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 
 1. if N is an [object pattern](#noun-object_pattern) and E is `accessor_call`;
 2. if all of:
-   - N is a [rest](#noun-rest);
-   - N [is among the](#ast_child) `properties` of an [object pattern](#noun-object_pattern) P;
+   - [`rest_props`](#rest_props)(P, T);
+   - [`parent`](#parent)(N, T);
+   - [`parent`](#parent)(P, N);
    - E is `accessor_call`;
 3. if all of:
-   - N [is among the](#ast_child) `properties` of an [object literal](#noun-object_literal) O;
-   - N is a [spread](#noun-spread);
+   - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
+   - [`spread_props`](#spread_props)(O, something, Y);
+   - [`parent`](#parent)(N, Y);
    - E is `accessor_call`;
-4. if N is an [array pattern](#noun-array_pattern) or a [for-of](#noun-for-of) and E is `iterator_call`;
-5. if N [is iterated](#spread_iterated) and E is `iterator_call`.
+4. if N is an [array pattern](#noun-array_pattern) and E is `iterator_call`;
+5. if N [is iterated](#spread_iterated) and E is `iterator_call`;
+6. if [`iterates`](#iterates)(N, something, something) and E is `iterator_call`.
 
 <a id="hidden_call_src"></a>The hidden call source of P is a node Init either:
 
 1. if P is an [object pattern](#noun-object_pattern) or an [array pattern](#noun-array_pattern) and [the pattern source](#pattern_source) of P is Init;
 2. if D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-3. if all of:
-   - P is a [spread](#noun-spread);
-   - P [hides a call by](#hidden_call_pos) some mechanism;
-   - the `argument` of P is Init;
-4. if P is a [for-of](#noun-for-of) and the `right` of P is Init.
+3. if P [is iterated](#spread_iterated) and [`parent`](#parent)(P, Init);
+4. if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, Init) and [`parent`](#parent)(P, Init);
+5. if [`iterates`](#iterates)(P, something, Init).
 
 In the flow:
 
@@ -608,41 +610,23 @@ In the audit:
 
 > `try { const f = () => g() } catch {}` has `g()` inside the block textually
 > and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
-> clause: `block`, not the whole try.
+> clause: `block`, not the whole try. Only a try with a handler has the block as a role (`tries`).
 
 In the code:
 
-<a id="in_try_block"></a>A [try](#noun-try) tries a node N if the `block` of it is a node B and [`inside`](#inside)(B, N).
+<a id="in_try_block"></a>TS tries a node N if [`tries`](#tries)(TS, B) and [`inside`](#inside)(B, N).
 
 > A try discharges through its `handler`; a finalizer alone catches nothing —
-> `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
+> `tries` is written for a try with a handler only, and that is the statement. Repaired 2026-09-11
 > with `leaky` in alpha.mjs as the site
 > (f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does).
-
-`catches_via` lists:
-
-| kind | field |
-|---|---|
-| `try_statement` | `handler` |
-
-<a id="try_catches"></a>A node has a handler if all of:
-  - a kind K [catches via](#catches_via) a field Field;
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - the Field of it is some node.
-
-Declared as facts:
-
-- <a id="catches_via"></a>A kind K catches via a field Field — rows in this file
 
 > The block walked down to the first function boundary, as `nearest_v` walks:
 > the whole subtree joined back to its function was 1.4 M probes.
 
 <a id="try_walk"></a>`try_walk`(TS, X) either:
 
-1. if all of:
-   - a node TS [has a handler](#try_catches);
-   - the `block` of TS is a node B;
-   - [`parent`](#parent)(B, X);
+1. if a node TS [has a handler](#try_catches), [`tries`](#tries)(TS, B), and [`parent`](#parent)(B, X);
 2. if all of:
    - [`try_walk`](#try_walk)(TS, P);
    - [`parent`](#parent)(P, X);
@@ -770,11 +754,17 @@ A node
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
-<a id="exported_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is exported if [`inside`](#inside)(an [export declaration](#noun-export_declaration) E, it), unless it [is inside a function](#in_fn).
+> The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
 
-Declared as facts:
+<a id="export_statement"></a>`export_statement`(E) either:
 
-- <a id="export_kind"></a>`export_kind` — rows in Words
+1. if E is a [named export](#noun-named_export);
+2. if E [is a default export site](js-modules.rofl.md#export_default_site).
+
+<a id="exported_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is exported if all of:
+  - [`inside`](#inside)(E, it);
+  - [`export_statement`](#export_statement)(E);
+  - unless it [is inside a function](#in_fn).
 
 > `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 
@@ -800,17 +790,8 @@ F is exported if [`sx_entry`](#sx_entry)(F).
 
 <a id="may_not_be_reached"></a>F may not be reached if [`sx_called`](js-surface.rofl.md#sx_called)(F), unless F [is reachable](#reachable).
 
-> the typo hole again: a misspelling shrinks the entry surface and reports
-> live functions as maybe-dead, the dangerous direction
-
-In the audit:
-
-<a id="export_kind_unseen"></a>A kind K is an unseen export kind if [`export_kind`](#export_kind)(K), unless some node [is of kind](js-model.rofl.md#ast_node) K.
-
 > A file with functions and no entry point reports every function dead — an
 > artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
-
-In the code:
 
 <a id="has_entry"></a>File has an entry point if F [is an entry point](#entry_point) and [`at`](#at)(F, File, something).
 

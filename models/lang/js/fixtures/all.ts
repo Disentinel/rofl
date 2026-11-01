@@ -34,3 +34,5 @@ type A = string | number; interface I { a: string; m(): void }
 enum E { A = 1 } namespace N { export const n = 1 }
 declare function amb(): void;
 typeof x; void 0; delete o.a; !x; -x; 'a' in o;
+export type { A }; export { type I as J, E }; export interface K { k: number } export class Cx {}
+import(tl);

@@ -43,10 +43,10 @@ builtin_member[flow](M, Spec, Key) :- builtin_ns_at[flow](O, Spec),
                                       object_of[code](M, O), member_node_v[flow](M),
                                       selects[flow](M, Key).
 builtin_member[flow](Sp, Spec, Key) :- external_import[code](Sp, _, S, _), builtin_canonical[code](S, Spec),
-                                       ast_child[code](Sp, imported, 0, I), ast_name[code](I, Key).
+                                       import_ident_key[code](Sp, Key).
 builtin_member[flow](P, Spec, Key) :- builtin_ns[flow](Y, Spec), may_be_node[flow](Init, Y),
                                       decl_value[flow](D, Init),
-                                      destr_prop[code](D, P, K, _, _), key_name[code](K, Key).
+                                      destr_prop[code](D, P, _, _, _), key_name[code](P, Key).
 
 -- An import naming something the generated surface lacks: a typo, a member
 -- newer than @types/node, or one the declarations do not carry. The module
@@ -260,7 +260,7 @@ env_written[flow](M) :- env_key[flow](M), ast_child[code](A, left, 0, M), ast_no
 env_read[flow](M, Name) :- env_key[flow](M), selects[flow](M, Name), not env_written[flow](M).
 env_write[flow](M, Name) :- env_written[flow](M), selects[flow](M, Name).
 env_read[flow](P, Name) :- decl_value[flow](D, Init), sx_env[surface](Init),
-                           destr_prop[code](D, P, K, _, _), key_name[code](K, Name).
+                           destr_prop[code](D, P, _, _, _), key_name[code](P, Name).
 env_read_unnamed[flow](M)  :- env_key[flow](M), not env_named[flow](M), not env_written[flow](M).
 env_write_unnamed[flow](M) :- env_written[flow](M), not env_named[flow](M).
 env_named[flow](M) :- env_key[flow](M), selects[flow](M, _).

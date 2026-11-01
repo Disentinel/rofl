@@ -28,10 +28,10 @@ Reads:
   - <a id="eff_origin"></a>An origin O is an origin (`eff_origin`)
 - from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
 - from js-ambient, in the main: [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
-- from js-dataflow, in the code: [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read)
+- from js-dataflow, in the code: [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read)
 - from js-dataflow: [inst_of](js-dataflow.rofl.md#inst_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
@@ -45,9 +45,17 @@ Reads:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="binary"></a>`binary`
+  - <a id="class"></a>`class`
+  - <a id="construct"></a>`construct`
+  - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
+  - <a id="extends"></a>`extends`
+  - <a id="repeats"></a>`repeats`
+  - <a id="static_block"></a>`static_block`
   - <a id="template"></a>`template`
+  - <a id="tries"></a>`tries`
   - <a id="unary"></a>`unary`
+  - <a id="value"></a>`value`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -60,8 +68,6 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-new"></a>a new | a node of kind `new_expression` |
-| <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
@@ -190,7 +196,7 @@ An effect
 > 
 > EXN: a `throw` its own function does not catch, the same seed `may_throw`
 > uses, so the two can be compared row for row. `caught_here` reads
-> `catches_via` (rules/js-controlflow.rofl): a handler discharges, a finalizer
+> `tries` (rules/js-controlflow.rofl): a handler discharges, a finalizer
 > alone does not.
 
 In the code:
@@ -204,7 +210,7 @@ In the flow:
 
 <a id="eff_try_arm"></a>T has the arm N either:
 
-1. if T is a [try](#noun-try), the `handler` of T is some node, and N is `handled`;
+1. if [`tries`](#tries)(T, something) and N is `handled`;
 2. if T is a [try](#noun-try) and N is `unhandled`, unless the `handler` of T is some node.
 
 A node has the effect `exn` at `none` if [`exits`](#exits)(it, `throw`), unless it [is caught in place](#eff_catch_here).
@@ -219,9 +225,13 @@ A node has the effect `exn` at `none` if [`exits`](#exits)(it, `throw`), unless 
 > A `for-in` walks the keys the object had when it started, so it ends; a
 > `for-of` walks an iterator, which need not.
 
-`eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_of_statement`.
+In the code:
 
-A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
+<a id="eff_loop"></a>`eff_loop`(L) if [`repeats`](#repeats)(L, something), unless [`enumerates`](#enumerates)(L, something, something).
+
+In the flow:
+
+A node has the effect `div` at `none` if [`eff_loop`](#eff_loop)(it).
 
 In the code:
 
@@ -229,10 +239,6 @@ In the code:
   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
   - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [`fn_value`](js-surface.rofl.md#fn_value)(G).
-
-Declared as facts:
-
-- <a id="eff_loop_kind"></a>`eff_loop_kind` — rows in this file
 
 > A cycle is asked of the edges that can lie on one: a function nothing calls or that calls
 > nothing is on no cycle, and peeling such ends four times over leaves the cycles whole and
@@ -799,28 +805,14 @@ In the flow:
 > field kinds: they are latent.
 > `class_accessor_property` adds no label beyond a plain field.
 
-`eff_class_form` includes `class_declaration`, `class_expression`.
-
-`eff_field_kind` includes `class_property`, `class_private_property`, `class_accessor_property`.
-
 In the code:
 
-<a id="eff_class_body"></a>A node has the body member P if all of:
-  - a kind K [is a class form](#eff_class_form);
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - the `body` of it is a node B;
-  - P [is among the](#ast_child) `body` of B.
+<a id="eff_class_body"></a>A node CD has the body member P either:
 
-<a id="eff_field_value"></a>A class initialises the field at a node P with a node V if all of:
-  - it [has the body member](#eff_class_body) P;
-  - [`eff_field_kind`](#eff_field_kind)(K);
-  - P [is of kind](js-model.rofl.md#ast_node) K;
-  - the `value` of P is V.
+1. if [`class_slot`](js-dataflow.rofl.md#class_slot)(CD, P);
+2. if [`static_block`](#static_block)(CD, P).
 
-Declared as facts:
-
-- <a id="eff_class_form"></a>A kind K is a class form — rows in this file
-- <a id="eff_field_kind"></a>`eff_field_kind` — rows in this file
+<a id="eff_field_value"></a>A class initialises the field at a node P with a node V if it [has the body member](#eff_class_body) P and [`value`](#value)(P, V).
 
 > Two POSITIVE arms, not `not static`: a default would silently file every
 > field the scanner stops flagging under construction time, and
@@ -844,7 +836,7 @@ In the flow:
 A class
 
 - <a id="eff_define_part"></a><a id="eff_construct_part"></a>defines/constructs by running a node V if it [initialises the field](#eff_field_value) at a node P with V and P [initialises at](#eff_field_moment) `definition`/`construction`.
-- defines by running a [static block](#noun-static_block) S if it [has the body member](#eff_class_body) S.
+- defines by running a node S if [`static_block`](#static_block)(it, S).
 
 > Three more things run at definition: the `extends` expression, a COMPUTED
 > key, a decorator. The computed-key arm negates `eff_plain_key` instead of
@@ -852,10 +844,7 @@ A class
 > kind that carries no such attribute (private members) —
 > `attr_blind_guard[audit]` said so in one run.
 
-A class defines by running a node S if all of:
-  - a kind K [is a class form](#eff_class_form);
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - the `super_class` of it is S.
+A class defines by running a node S if [`extends`](#extends)(it, S).
 
 In the code:
 
@@ -869,11 +858,8 @@ A class CD defines by running a node KN either:
    - CD [has the body member](#eff_class_body) P;
    - the `key` of P is KN;
    - unless P [has a plain key](#eff_plain_key);
-2. if all of:
-   - a kind K [is a class form](#eff_class_form);
-   - CD [is of kind](js-model.rofl.md#ast_node) K;
-   - KN [is among the](#ast_child) `decorators` of CD;
-3. if CD [has the body member](#eff_class_body) P and KN [is among the](#ast_child) `decorators` of P.
+2. if [`class`](#class)(CD) and CD [is decorated by](js-callgraph.rofl.md#decorates) KN;
+3. if CD [has the body member](#eff_class_body) P and P [is decorated by](js-callgraph.rofl.md#decorates) KN.
 
 > What runs when a part is reached, stopping at a function: `static forge =
 > (n) => hammered(n)` contributes `alloc`, not what `hammered` does. A try
@@ -936,9 +922,11 @@ In the flow:
 > `prototype`, where a function declaration is hoisted and performs nothing
 > where it is written).
 
-A node has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
+A node
 
-A [new](#noun-new) has the effect L at a host H if all of:
+- has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
+- has the effect L at a host H if all of:
+  - [`construct`](#construct)(it);
   - it [points to](js-concat.rofl.md#may_be_node) a node I;
   - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
   - CD [constructs with effect](#class_construct_eff) L at H.

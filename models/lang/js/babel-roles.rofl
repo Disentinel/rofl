@@ -435,19 +435,21 @@ name_field[ast_babel](tscall_signature_declaration, params). name_field[ast_babe
 
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
                        attr[ast_babel](K, name, Name).
-b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
-                       node[ast_babel](K, KK, _), key_literal[ast_babel](KK), attr[ast_babel](K, value, V).
+-- a literal key is static, written `{ 1: x }`, `{ "a": x }` or `{ ["a"]: x }` alike
+b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), node[ast_babel](K, KK, _), key_literal[ast_babel](KK),
+                       attr[ast_babel](K, value, V).
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, private_name, _),
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
                        attr[ast_babel](I, name, Name).
 key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
 key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
-key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
+key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
-key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
+key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
 edb(key_literal).
+b_lit_key[ast_babel](K) :- node[ast_babel](K, KK, _), key_literal[ast_babel](KK).
 key_literal[ast_babel](string_literal). key_literal[ast_babel](numeric_literal).
 
 edb(member_kind).
@@ -638,6 +640,8 @@ module_ref[value](Src, Spec) :- source_kind[ast_babel](K), node[ast_babel](D, K,
                                 attr[ast_babel](Src, value, Spec).
 module_ref[value](I, Spec)   :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, Src),
                                 node[ast_babel](Src, string_literal, _), attr[ast_babel](Src, value, Spec).
+module_expr[value](I, E)     :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, E),
+                                not node[ast_babel](E, string_literal, _).
 
 b_import_key[ast_babel](S, Name) :- node[ast_babel](S, import_specifier, _), child[ast_babel](S, imported, 0, I),
                                     attr[ast_babel](I, name, Name).
@@ -669,10 +673,18 @@ b_reexport[ast_babel](E, S)  :- node[ast_babel](E, export_named_declaration, _),
 -- the member is the specifier, and for `* as ns` its name, the one node every parser has there
 b_spec_member[ast_babel](S, S) :- node[ast_babel](S, export_specifier, _).
 b_spec_member[ast_babel](S, M) :- node[ast_babel](S, export_namespace_specifier, _), child[ast_babel](S, exported, 0, M).
-has[value](Ns, M)  :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
-                      child[ast_babel](E, specifiers, _, S), b_spec_member[ast_babel](S, M).
-key[value](M, N)   :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M).
-value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L).
+-- `export type {X}` and `export {type X}` are members of the module's types only
+b_type_spec[ast_babel](S) :- node[ast_babel](S, export_specifier, _), attr[ast_babel](S, export_kind, "type").
+b_type_spec[ast_babel](S) :- node[ast_babel](E, export_named_declaration, _), attr[ast_babel](E, export_kind, "type"),
+                             child[ast_babel](E, specifiers, _, S).
+b_spec_of[ast_babel](Ns, S) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
+                               child[ast_babel](E, specifiers, _, S).
+has[value](Ns, M)  :- b_spec_of[ast_babel](Ns, S), b_spec_member[ast_babel](S, M), not b_type_spec[ast_babel](S).
+has[type](Ns, M)   :- b_spec_of[ast_babel](Ns, S), b_spec_member[ast_babel](S, M), b_type_spec[ast_babel](S).
+key[value](M, N)   :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M), not b_type_spec[ast_babel](S).
+key[type](M, N)    :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M), b_type_spec[ast_babel](S).
+value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), not b_type_spec[ast_babel](S).
+value[type](S, L)  :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), b_type_spec[ast_babel](S).
 -- export { a as b } from 'm': the member is destructured from m
 pattern_prop[value](E, Name, S) :- b_reexport[ast_babel](E, S), child[ast_babel](S, local, 0, L),
                                    attr[ast_babel](L, name, Name).
@@ -687,9 +699,13 @@ b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E,
                                       child[ast_babel](D, id, 0, X), node[ast_babel](X, identifier, _).
 b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
                                       child[ast_babel](E, declaration, 0, V), child[ast_babel](V, id, 0, X).
-has[value](Ns, X)     :- b_export_binding[ast_babel](Ns, X).
-key[value](X, Name)   :- b_export_binding[ast_babel](_, X), attr[ast_babel](X, name, Name).
-value[value](X, X)    :- b_export_binding[ast_babel](_, X).
+-- a declared name is a member of the world its binding is in
+has[value](Ns, X)     :- b_export_binding[ast_babel](Ns, X), b_bind[ast_babel](X, value).
+key[value](X, Name)   :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, value), attr[ast_babel](X, name, Name).
+value[value](X, X)    :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, value).
+has[type](Ns, X)      :- b_export_binding[ast_babel](Ns, X), b_bind[ast_babel](X, type).
+key[type](X, Name)    :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, type), attr[ast_babel](X, name, Name).
+value[type](X, X)     :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, type).
 -- export default x
 has[value](Ns, E)     :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_default_declaration, _).
 key[value](E, "default") :- node[ast_babel](E, export_default_declaration, _).

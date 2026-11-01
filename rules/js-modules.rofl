@@ -42,20 +42,27 @@ edb(unknown_because).
 -- `export { a as b } from './d'` are one kind. `import_site` keeps its meaning
 -- (section 4 binds LOCAL names and a re-export introduces none); `module_site`
 -- is the union every later rule reads.
-import_site[code](I, static_import)  :- ast_node[code](I, import_declaration, _).
-import_site[code](I, dynamic_import) :- ast_node[code](I, import_expression, _).
+-- The roles merge the forms that are one in JS: `import x from "m"` is `import {default as x} from "m"`, and
+-- `import "m"` is `export {} from "m"`. A declaration with a source and no export specifier is a static_import; the
+-- re-export with specifiers and the export-all are told apart by what they put into the exports.
+--
+-- The roles name the module by `module_ref`: on the string of a declaration, and on a dynamic import itself (a call).
+static_source[code](D, Src, Spec) :- module_ref[value](Src, Spec), not call[value](Src), parent[tree](D, Src).
 
-reexport_site[code](E, reexport_named) :- ast_node[code](E, export_named_declaration, _),
-                                          ast_child[code](E, source, 0, _).
-reexport_site[code](E, reexport_all)   :- ast_node[code](E, export_all_declaration, _),
-                                          ast_child[code](E, source, 0, _).
+import_site[code](I, static_import)  :- static_source[code](I, Src, _), not spread_props[value](_, _, Src),
+                                        not reexport_site[code](I, reexport_named).
+import_site[code](I, dynamic_import) :- module_ref[value](I, _), call[value](I).
+import_site[code](I, dynamic_import) :- module_expr[value](I, _).
+
+reexport_site[code](E, reexport_named) :- export_spec[code](E, _), static_source[code](E, _, _).
+reexport_site[code](E, reexport_all)   :- static_source[code](E, Src, _), spread_props[value](_, _, Src).
 
 -- `require('./p')` is CommonJS's import: a call whose callee is the free
 -- global `require` and whose first argument is the specifier; a `require` the
 -- file declares itself is not node's. `require.resolve(s)` names a file and
 -- loads nothing, and is not a site.
 require_site[code](C) :- free_global[code](N, "require", _),
-                         callee[value](C, N), ast_node[code](C, call_expression, _),
+                         callee[value](C, N), call[value](C),
                          argument_at[code](C, 0, _).
 
 
@@ -63,8 +70,8 @@ module_site[code](N, K) :- import_site[code](N, K).
 module_site[code](N, K) :- reexport_site[code](N, K).
 module_site[code](C, require_call) :- require_site[code](C).
 
-site_kind[code](I, import_declaration) :- ast_node[code](I, import_declaration, _).
-site_kind[code](I, import_expression)  :- ast_node[code](I, import_expression, _).
+site_kind[code](I, import_declaration) :- import_site[code](I, static_import).
+site_kind[code](I, import_expression)  :- import_site[code](I, dynamic_import).
 site_kind[code](E, export_named_declaration) :- reexport_site[code](E, reexport_named).
 site_kind[code](E, export_all_declaration)   :- reexport_site[code](E, reexport_all).
 site_kind[code](C, call_expression)          :- require_site[code](C).
@@ -73,10 +80,15 @@ site_file[code](I, F) :- module_site[code](I, _), at[tree](I, F, _).
 
 site_line[code](I, L) :- module_site[code](I, _), at[tree](I, _, L).
 
-site_source_node[code](I, Src) :- module_site[code](I, _), ast_child[code](I, source, 0, Src).
-site_source_node[code](C, Src) :- require_site[code](C), ast_child[code](C, arguments, 0, Src).
+site_source_node[code](I, Src) :- static_source[code](I, Src, _).
+site_source_node[code](I, Src) :- module_ref[value](I, _), call[value](I), nth[tree](I, 0, Src).
+site_source_node[code](I, E)   :- module_expr[value](I, E).
+site_source_node[code](C, Src) :- require_site[code](C), argument_at[code](C, 0, Src).
 
-site_source[code](I, S) :- site_source_node[code](I, Src),
+site_source[code](I, S) :- static_source[code](I, _, S).
+site_source[code](I, S) :- module_ref[value](I, S), call[value](I).
+-- the roles do not say a literal is a string: the argument of `require` is read on the raw tree
+site_source[code](C, S) :- require_site[code](C), site_source_node[code](C, Src),
                            ast_node[code](Src, string_literal, _),
                            ast_value[code](Src, S).
 
@@ -199,18 +211,17 @@ module_target[code](I, T) :- ts_resolved[code](I, T), not resolved_import[code](
 -- 4. IMPORT BINDINGS — the four specifier kinds. `imported` may be a
 -- StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 -- verdict. A default binds `"default"`, a namespace `"*"`.
-import_specifier_node[code](Sp) :- ast_node[code](Sp, import_specifier, _).
-import_specifier_node[code](Sp) :- ast_node[code](Sp, import_default_specifier, _).
-import_specifier_node[code](Sp) :- ast_node[code](Sp, import_namespace_specifier, _).
+import_specifier_node[code](Sp) :- decl[value](Sp, import).
 
-import_spec[code](I, Sp) :- import_site[code](I, static_import),
-                            ast_child[code](I, specifiers, _, Sp).
+import_spec[code](I, Sp) :- import_specifier_node[code](Sp), parent[tree](I, Sp).
 
-spec_local[code](Sp, L) :- import_specifier_node[code](Sp),
-                           ast_child[code](Sp, local, 0, N), ast_name[code](N, L).
+spec_local[code](Sp, L) :- import_specifier_node[code](Sp), target[value](Sp, N), binds[type](N, L).
 
 spec_imported[code](Sp, M)         :- decl[value](Sp, import), parent[tree](Sp, L), pattern_prop[value](_, M, L).
-spec_imported[code](Sp, "*")       :- ast_node[code](Sp, import_namespace_specifier, _).
+spec_imported[code](Sp, "*")       :- import_specifier_node[code](Sp), assign[value](Sp, _, _).
+-- the name of an import_specifier written as an identifier (a string `imported` has none); a default specifier's "default" is not
+spec_key_string[code](Sp)        :- import_specifier_node[code](Sp), parent[tree](Sp, I), literal[value](I, _).
+import_ident_key[code](Sp, Key)  :- spec_imported[code](Sp, Key), not spec_key_string[code](Sp).
 
 binding[code](I, Sp, Local, Imported) :- import_spec[code](I, Sp),
                                          spec_local[code](Sp, Local),
@@ -226,19 +237,30 @@ has_specifier[code](I) :- import_spec[code](I, _).
 -- `source`: the naming question and the edge question are separate. Erasure
 -- has the same two markers as an import; a namespace specifier carries none
 -- and is a value binding, correctly.
-export_site[code](E) :- ast_node[code](E, export_named_declaration, _).
-export_spec[code](E, Sp) :- export_site[code](E), ast_child[code](E, specifiers, _, Sp).
+-- A specifier is the member of the program's exports that stands for it: the specifier itself, or for `* as ns` the
+-- name `ns` under it. A type-only specifier is a member of the types ([type]), a value one of the values; the roles
+-- merge `export type {X}` and `export {type X}`. A member of a class or a declared name is not under the declaration.
+export_spec[code](E, Sp) :- program[tree](Ns, _), has[value](Ns, Sp), parent[tree](E, Sp), parent[tree](Ns, E).
+export_spec[code](E, Sp) :- program[tree](Ns, _), has[type](Ns, Sp), parent[tree](E, Sp), parent[tree](Ns, E).
+export_spec[code](E, Sp) :- has[value](_, M), value[value](M, Src), module_ref[value](Src, _),
+                            parent[tree](Sp, M), parent[tree](E, Sp).
+export_spec[code](E, Sp) :- has[type](_, M), value[value](M, Src), module_ref[value](Src, _),
+                            parent[tree](Sp, M), parent[tree](E, Sp).
 
-export_specifier_node[code](Sp) :- ast_node[code](Sp, export_specifier, _).
-export_specifier_node[code](Sp) :- ast_node[code](Sp, export_namespace_specifier, _).
+export_value_spec[code](E, Sp) :- export_spec[code](E, Sp), has[value](_, Sp).
+export_value_spec[code](E, Sp) :- export_spec[code](E, Sp), parent[tree](Sp, M), has[value](_, M).
 
-spec_external[code](Sp, X) :- export_specifier_node[code](Sp), key[value](Sp, X).
-spec_external[code](Sp, X) :- export_specifier_node[code](Sp), parent[tree](Sp, M), key[value](M, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), key[value](Sp, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), key[type](Sp, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), parent[tree](Sp, M), key[value](M, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), parent[tree](Sp, M), key[type](M, X).
 
-
-spec_internal[code](Sp, L)   :- ast_node[code](Sp, export_specifier, _),
-                                ast_child[code](Sp, local, 0, N), ast_name[code](N, L).
-spec_internal[code](Sp, "*") :- ast_node[code](Sp, export_namespace_specifier, _).
+-- the name of a local export is the name it reads; of a re-export the name it destructures from the other module
+spec_internal[code](Sp, L)   :- export_spec[code](_, Sp), value[value](Sp, N), ref[value](N, L).
+spec_internal[code](Sp, L)   :- export_spec[code](_, Sp), value[type](Sp, N), ref[value](N, L).
+spec_internal[code](Sp, L)   :- export_spec[code](E, Sp), pattern_prop[value](E, L, Sp).
+spec_internal[code](Sp, "*") :- export_spec[code](_, Sp), parent[tree](Sp, M), value[value](M, Src),
+                                module_ref[value](Src, _).
 
 export_binding[code](E, Sp, External, Internal) :- export_spec[code](E, Sp),
                                                    spec_external[code](Sp, External),
@@ -247,12 +269,10 @@ export_binding[code](E, Sp, External, Internal) :- export_spec[code](E, Sp),
 export_renamed[code](Sp, External, Internal) :- export_binding[code](_, Sp, External, Internal),
                                                 External != Internal.
 
+-- the one marker the roles do not carry: a declaration with no member (`export type * from`)
 export_decl_type_only[code](E)  :- ast_attr[code](E, export_kind, "type").
-export_spec_type_only[code](Sp) :- ast_attr[code](Sp, export_kind, "type").
 
-export_value_binding[code](E, Sp) :- export_binding[code](E, Sp, _, _),
-                                     not export_decl_type_only[code](E),
-                                     not export_spec_type_only[code](Sp).
+export_value_binding[code](E, Sp) :- export_binding[code](E, Sp, _, _), export_value_spec[code](E, Sp).
 
 -- the gates: every specifier yields exactly one external and one internal name
 -- — none is an unread child, two is a name that is not a function of the node
@@ -274,24 +294,21 @@ export_internal_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, _, A),
 -- `export default interface I {}` is erased and carries `export_kind`
 -- "value"; its kind is outside the vocabulary and `vocabulary_gap[audit]`
 -- says so the day it arrives.
-export_default_site[code](E) :- ast_node[code](E, export_default_declaration, _).
+export_default_site[code](E) :- program[tree](Ns, _), has[value](Ns, E), key[value](E, "default"), parent[tree](Ns, E).
 
 default_external[code](E, "default") :- export_default_site[code](E).
 
-default_declaration[code](E, D) :- export_default_site[code](E),
-                                   ast_child[code](E, declaration, 0, D).
+default_declaration[code](E, D) :- export_default_site[code](E), value[value](E, D).
 
-default_internal[code](E, N) :- default_declaration[code](E, D),
-                                ast_child[code](D, id, 0, I), ast_name[code](I, N).
-
-default_internal[code](E, N) :- default_declaration[code](E, D),
-                                ast_node[code](D, identifier, _), ast_name[code](D, N).
+default_internal[code](E, N) :- default_declaration[code](E, D), target[value](D, I), binds[value](I, N).
+default_internal[code](E, N) :- default_declaration[code](E, D), parent[tree](D, I), binds[type](I, N).
+default_internal[code](E, N) :- default_declaration[code](E, D), ref[value](D, N).
 
 has_default_internal[code](E) :- default_internal[code](E, _).
 default_anonymous[code](E)    :- default_declaration[code](E, _),
                                  not has_default_internal[code](E).
 
-default_export_file[code](F, E) :- ast_node[code](E, export_default_declaration, F).
+default_export_file[code](F, E) :- export_default_site[code](E), at[tree](E, F, _).
 
 -- totality, one internal name, one default per module (two in one File is
 -- what a collision between scanned modules would look like from here)
@@ -311,13 +328,7 @@ default_conflict[audit](F, A, B) :- default_export_file[code](F, A),
 -- dynamic import carrying the module object. EVALUATES: the body RUNS —
 -- `import './side'` executes a file and `import type {}` executes nothing,
 -- and both read as "depends, nothing flows".
-decl_type_only[code](I) :- ast_attr[code](I, import_kind, "type").
-
-spec_type_only[code](Sp) :- ast_attr[code](Sp, import_kind, "type").
-
-value_binding[code](I, Sp) :- binding[code](I, Sp, _, _),
-                              not decl_type_only[code](I),
-                              not spec_type_only[code](Sp).
+value_binding[code](I, Sp) :- binding[code](I, Sp, _, _), target[value](Sp, N), binds[value](N, _).
 
 has_value_binding[code](I) :- value_binding[code](I, _).
 
@@ -333,19 +344,17 @@ flows[code](F, T) :- require_site[code](I),
                      module_target[code](I, T), site_file[code](I, F).
 
 -- A SITE RUNS ITS TARGET unless TypeScript erases it or it imports data.
--- Erasure needs both markers: `import type {X}` marks the declaration,
--- `import {type X}` the specifier; a site ALL of whose specifiers are erased
--- evaluates nothing and one with NO specifier evaluates everything. A module
--- imported as data (section 9) is read, not run.
-type_only_site[code](I)  :- module_site[code](I, _), ast_attr[code](I, import_kind, "type").
-type_only_site[code](I)  :- module_site[code](I, _), ast_attr[code](I, export_kind, "type").
-site_has_spec[code](I)   :- module_site[code](I, _), ast_child[code](I, specifiers, _, _).
-site_value_spec[code](I) :- module_site[code](I, _), ast_child[code](I, specifiers, _, Sp),
-                            not ast_attr[code](Sp, import_kind, "type"),
-                            not ast_attr[code](Sp, export_kind, "type").
-erased_site[code](I)     :- type_only_site[code](I).
-erased_site[code](I)     :- site_has_spec[code](I), not site_value_spec[code](I).
-runs_site[code](I)       :- module_site[code](I, _), not erased_site[code](I), not module_is_data[code](I, _).
+-- The roles merge `import type {X}` with `import {type X}`: a name bound in the
+-- types only is one erased either way. A site ALL of whose specifiers are
+-- erased evaluates nothing and one with NO specifier evaluates everything
+-- (the roles do not see `import type {} from` or `export type * from`: both
+-- are read on the declaration). A module imported as data (section 9) is read, not run.
+type_only_site[code](I)  :- has_specifier[code](I), not has_value_binding[code](I).
+type_only_site[code](E)  :- reexport_site[code](E, reexport_named), not reexport_value[code](E).
+type_only_site[code](E)  :- reexport_site[code](E, reexport_all), export_decl_type_only[code](E).
+type_only_site[code](E)  :- no_specifiers[code](E), export_decl_type_only[code](E).
+type_only_site[code](E)  :- no_specifiers[code](E), ast_attr[code](E, import_kind, "type").
+runs_site[code](I)       :- module_site[code](I, _), not type_only_site[code](I), not module_is_data[code](I, _).
 
 evaluates_at[code](I, T)       :- runs_site[code](I), module_target[code](I, T).
 evaluates_unresolved[code](I)  :- runs_site[code](I), not module_target[code](I, _).
@@ -357,26 +366,16 @@ evaluates[code](F, T)          :- evaluates_at[code](I, T), site_file[code](I, F
 -- carry it in both places, neither implying the other. `export {} from
 -- './side'` is the side-effect import's twin — measured on node: the file runs
 -- and nothing flows.
-reexport_spec[code](E, Sp) :- reexport_site[code](E, reexport_named),
-                              ast_child[code](E, specifiers, _, Sp).
+reexport_spec[code](E, Sp) :- reexport_site[code](E, reexport_named), export_spec[code](E, Sp).
 
-reexport_value_spec[code](E, Sp) :- reexport_spec[code](E, Sp),
-                                    not export_decl_type_only[code](E),
-                                    not export_spec_type_only[code](Sp).
+reexport_value_spec[code](E, Sp) :- reexport_site[code](E, reexport_named), export_value_spec[code](E, Sp).
 
 reexport_value[code](E) :- reexport_value_spec[code](E, _).
 reexport_value[code](E) :- reexport_site[code](E, reexport_all),
                            not export_decl_type_only[code](E).
 
-has_reexport_spec[code](E)      :- reexport_spec[code](E, _).
-no_reexport_specifiers[code](E) :- reexport_site[code](E, reexport_named),
-                                   not has_reexport_spec[code](E).
-
 flows[code](F, T) :- reexport_value[code](E),
                      module_target[code](E, T), site_file[code](E, F).
-
-evaluates[code](F, T) :- no_reexport_specifiers[code](E), not export_decl_type_only[code](E),
-                         module_target[code](E, T), site_file[code](E, F).
 
 -- the join: the resolver says which FILE, the specifier which name in it.
 -- What `export * from` offers is the other file's export list —
@@ -390,16 +389,10 @@ reexport_offers[code](F, External, T, Internal) :-
 
 -- =========================================================================
 -- 5c. WHICH MODULE AN INTERNAL NAME LIVES IN. `export { helper as reHelper }
--- from './c'`: `helper` is c's name, not this file's. The guard `export_local`
--- carries in js-dataflow is not transplantable — `export * as ns;` without a
--- source is a SyntaxError, so excluding sourced declarations from
--- `export_site` would empty the namespace-specifier cell in every program. So
--- the row is kept and the silence closed: under a declaration with no
--- `source` the name lives here, under a re-export in the file resolved to, and
--- an unresolved re-export is placed by SHAPE, a positive relation.
-local_export_site[code](E) :- export_site[code](E), not reexport_site[code](E, reexport_named).
-
-export_internal_in[code](Sp, F) :- export_spec[code](E, Sp), local_export_site[code](E),
+-- from './c'`: `helper` is c's name, not this file's. Under a declaration with
+-- no `source` the name lives here, under a re-export in the file resolved to,
+-- and an unresolved re-export is placed by SHAPE, a positive relation.
+export_internal_in[code](Sp, F) :- export_spec[code](E, Sp), not reexport_site[code](E, reexport_named),
                                    at[tree](E, F, _).
 export_internal_in[code](Sp, T) :- reexport_spec[code](E, Sp), resolved_import[code](E, T).
 

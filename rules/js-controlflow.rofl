@@ -118,7 +118,7 @@ completion_kind(block_statement).
 completion_kind(if_statement).
 completion_kind(labeled_statement).
 
-completes_abruptly[code](S) :- abrupt_kind(K), ast_node[code](S, K, _).
+completes_abruptly[code](S) :- exits[value](S, _).
 
 completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
                                ast_node[code](B, block_statement, _).
@@ -192,8 +192,7 @@ sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
 has_return[code](F)    :- exits[value](R, return), nearest_v[flow](F, R).
 top_throw[code](F)     :- fn_node[code](F), body[value](F, B),
-                          ast_child[code](B, body, _, S),
-                          exits[value](S, throw).
+                          parent[tree](B, S), exits[value](S, throw).
 always_throws[code](F) :- top_throw[code](F), not has_return[code](F), not deferred_body[code](F).
 
 throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
@@ -209,12 +208,8 @@ throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
 -- has to say so too: `resolves`, and the read must be a `site` or the edge has
 -- no caller — declaring `member_expression` a transfer kind would make every
 -- property read in the corpus a site.
-edb(accessor_kind).
-accessor_kind("get").
-accessor_kind("set").
-
-accessor_as[flow](Obj, Key, M, K) :- member_value[flow](Obj, Key, M),
-                                     ast_attr[code](M, kind, K), accessor_kind(K).
+accessor_as[flow](Obj, Key, M, "get") :- member_value[flow](Obj, Key, M), getter[value](M, M).
+accessor_as[flow](Obj, Key, M, "set") :- member_value[flow](Obj, Key, M), setter[value](M, M).
 accessor_of[flow](Obj, Key, M) :- accessor_as[flow](Obj, Key, M, _).
 accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
 accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
@@ -224,11 +219,11 @@ accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj,
                              selects[flow](N, Key), not only_written[code](N).
 accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj, Key, M, "set"),
                              selects[flow](N, Key), written_member[code](N).
-accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "get"), not only_written[code](N).
-accessor_read[code](N, M) :- private_binds[code](N, M), ast_attr[code](M, kind, "set"), written_member[code](N).
+accessor_read[code](N, M) :- private_binds[code](N, M), getter[value](M, M), not only_written[code](N).
+accessor_read[code](N, M) :- private_binds[code](N, M), setter[value](M, M), written_member[code](N).
 written_member[code](N)   :- ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, N).
 written_member[code](N)   :- ast_node[code](U, update_expression, _), ast_child[code](U, argument, 0, N).
-only_written[code](N)     :- plain_assign[flow](A), ast_child[code](A, left, 0, N).
+only_written[code](N)     :- plain_assign[flow](A), assign[value](A, N, _).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
 
@@ -255,22 +250,18 @@ pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _), declarator_id[co
                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
 pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
-                                ast_child[code](S, argument, 0, A), ast_node[code](S, spread_element, _),
-                                ast_child[code](O, properties, _, S), ast_node[code](O, object_expression, _).
+                                spread_props[value](O, _, A), obj_lit[code](O), parent[tree](S, A).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
 -- keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
-edb(spread_iterable_field).
-spread_iterable_field(elements).
-spread_iterable_field(arguments).
-spread_iterated[code](S) :- ast_node[code](S, spread_element, _),
-                            spread_iterable_field(F), ast_child[code](_, F, _, S).
+spread_iterated[code](S) :- spread_elems[value](_, _, A), parent[tree](S, A).
+spread_iterated[code](S) :- spread_args[value](_, _, A), parent[tree](S, A).
 
 pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _),
                                 pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
                                 member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 pattern_iterates[code](S, M) :- spread_iterated[code](S),
-                                ast_child[code](S, argument, 0, A), may_be_node[flow](A, Obj),
+                                parent[tree](S, A), may_be_node[flow](A, Obj),
                                 member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 
 -- The two sides reach the call graph differently. An iterable position has one
@@ -307,15 +298,11 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- to `spread_element`, which carries both mechanisms — mutant d9 reads the
 -- edges instead.
 hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _).
-hidden_call_pos[code](R, accessor_call) :- ast_node[code](R, rest_element, _),
-                                           ast_child[code](P, properties, _, R),
-                                           ast_node[code](P, object_pattern, _).
-hidden_call_pos[code](S, accessor_call) :- ast_node[code](O, object_expression, _),
-                                           ast_child[code](O, properties, _, S),
-                                           ast_node[code](S, spread_element, _).
+hidden_call_pos[code](R, accessor_call) :- rest_props[value](P, T), parent[tree](R, T), parent[tree](P, R).
+hidden_call_pos[code](S, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A), parent[tree](S, A).
 hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _).
 hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
-hidden_call_pos[code](X, iterator_call) :- ast_node[code](X, for_of_statement, _).
+hidden_call_pos[code](X, iterator_call) :- iterates[value](X, _, _).
 
 hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _),
                                   pattern_source[code](P, Init).
@@ -323,11 +310,9 @@ hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _),
                                   pattern_source[code](P, Init).
 hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
                                   decl_value[flow](D, Init).
-hidden_call_src[code](S, A)    :- ast_node[code](S, spread_element, _),
-                                  hidden_call_pos[code](S, _),
-                                  ast_child[code](S, argument, 0, A).
-hidden_call_src[code](X, R)    :- ast_node[code](X, for_of_statement, _),
-                                  ast_child[code](X, right, 0, R).
+hidden_call_src[code](S, A)    :- spread_iterated[code](S), parent[tree](S, A).
+hidden_call_src[code](S, A)    :- spread_of[code](_, A), parent[tree](S, A).
+hidden_call_src[code](X, R)    :- iterates[value](X, _, R).
 
 hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
 hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
@@ -365,22 +350,18 @@ hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
 -- 6. WHAT PROPAGATES. A try catches what runs in ITS OWN function:
 -- `try { const f = () => g() } catch {}` has `g()` inside the block textually
 -- and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
--- clause: `block`, not the whole try.
-in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _),
-                              ast_child[code](TS, block, 0, B), inside[tree](B, N).
+-- clause: `block`, not the whole try. Only a try with a handler has the block as a role (`tries`).
+in_try_block[code](TS, N)  :- tries[value](TS, B), inside[tree](B, N).
 
 -- A try discharges through its `handler`; a finalizer alone catches nothing —
--- `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
+-- `tries` is written for a try with a handler only, and that is the statement. Repaired 2026-09-11
 -- with `leaky` in alpha.mjs as the site
 -- (f_a_try_with_no_handler_catches_nothing_and_caught_here_says_it_does).
-edb(catches_via).
-catches_via(try_statement, handler).
-try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _),
-                              ast_child[code](TS, Field, 0, _).
+try_catches[code](TS)      :- tries[value](TS, _).
 -- The block walked down to the first function boundary, as `nearest_v` walks:
 -- the whole subtree joined back to its function was 1.4 M probes.
 try_walk[code](TS, X)      :- try_catches[code](TS),
-                              ast_child[code](TS, block, 0, B), parent[tree](B, X).
+                              tries[value](TS, B), parent[tree](B, X).
 try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), parent[tree](P, X).
 caught_here[code](N)       :- try_walk[code](_, N).
 
@@ -450,12 +431,11 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 -- `export_all_declaration` introduces no local entry.
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
-edb(export_kind).
-export_kind(export_named_declaration).
-export_kind(export_default_declaration).
+-- The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
+export_statement[code](E) :- ast_node[code](E, export_named_declaration, _).
+export_statement[code](E) :- export_default_site[code](E).
 
-exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F),
-                        ast_node[code](E, K, _), export_kind(K).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_statement[code](E).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
@@ -470,10 +450,6 @@ reachable[code](F) :- entry_point[code](F).
 reachable[code](F) :- sx_reach[surface](F).
 
 may_not_be_reached[code](F) :- sx_called[surface](F), not reachable[code](F).
-
--- the typo hole again: a misspelling shrinks the entry surface and reports
--- live functions as maybe-dead, the dangerous direction
-export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _).
 
 -- A file with functions and no entry point reports every function dead — an
 -- artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.

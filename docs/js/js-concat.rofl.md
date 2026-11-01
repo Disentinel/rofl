@@ -49,12 +49,12 @@ default: flow
 Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [destr_prop](js-dataflow.rofl.md#destr_prop), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [key_name](js-dataflow.rofl.md#key_name), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
+- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [destr_prop](js-dataflow.rofl.md#destr_prop), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [decl_value](js-dataflow.rofl.md#decl_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [call_like_v](js-dataflow.rofl.md#call_like_v)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
@@ -63,6 +63,7 @@ Reads:
   - <a id="assign"></a>`assign`
   - <a id="binary"></a>`binary`
   - <a id="callee"></a>`callee`
+  - <a id="construct"></a>`construct`
   - <a id="ref"></a>`ref`
   - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
@@ -77,7 +78,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
-| <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -241,8 +241,8 @@ In the flow:
    - [`vlib_ns`](#vlib_ns)(Y, Surface);
    - a node Init [points to](#may_be_node) a node Y;
    - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-   - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, Key, something, something);
-   - a node Key [spells](js-dataflow.rofl.md#key_name) K;
+   - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, something, something, something);
+   - M [spells](js-structure.rofl.md#key_name) K;
    - [`ambient_value`](#ambient_value)(Surface, K, something, something);
 4. if all of:
    - [`ambient_module`](#ambient_module)(File, Surface);
@@ -263,7 +263,7 @@ In the flow:
    - [`callee`](#callee)(C, G);
    - C is an [invocation](#noun-invocation);
 2. if all of:
-   - C is a [new](#noun-new);
+   - [`construct`](#construct)(C);
    - [`callee`](#callee)(C, G);
    - a node G [refers to the free](js-dataflow.rofl.md#free_global) Surface in some file;
    - [`ambient_value`](#ambient_value)(Surface, `construct`, something, something);
