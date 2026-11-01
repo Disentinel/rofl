@@ -30,7 +30,7 @@ fn a_rule_that_reads_the_profile_is_answered_in_the_round_after() {
     let rescanned = rows(&mut s, "rescanned(R, K, Rel)");
     assert_eq!(rescanned, vec![vec![depth.clone(), "1".to_string(), "nxt".to_string()]]);
     // reach is answered by the closure kernel, which the profile says: no firing, and written order for `closure`
-    assert_eq!(rows(&mut s, "kept_written(R, Why)").len(), 3, "two closure rules and one of one premise");
+    assert_eq!(rows(&mut s, "kept_written(R, Why)").len(), 2, "the two closure rules; the kernel's are not the world's");
     let closure = rows(&mut s, "kept_written(R, closure)");
     assert_eq!(closure.len(), 2, "{closure:?}");
     for r in &closure {
@@ -68,4 +68,28 @@ fn the_profile_is_the_same_on_every_run() {
         s.eval.canonical_state()
     };
     assert_eq!(state(), state());
+}
+
+#[test]
+fn the_kernels_own_program_is_profiled_beside_the_worlds() {
+    let mut s = Session::fresh(BUDGET);
+    s.load(&chain(), None).unwrap();
+    s.evaluate().unwrap();
+    // safety.rofl judged the world in an evaluation of its own: each of its rules is named, with its head and
+    // premises reified as premise_lit would carry them, and its firings counted with the world's
+    let program = rows(&mut s, "program[profile](R, safety)");
+    assert!(program.len() > 100, "{}", program.len());
+    let r = program[0][0].clone();
+    assert_eq!(rows(&mut s, &format!("kernel_head[profile]({r}, L)")).len(), 1);
+    assert!(!rows(&mut s, &format!("kernel_premise[profile]({r}, K, L)")).is_empty());
+    assert!(s.holds(&format!("fires[profile]({r}, N)")).unwrap());
+    // the profile's reader asks the kernel's rules as it asks the world's
+    s.load("kh(R, Rel) :- kernel_head[profile](R, L), L = $lit(Rel, _, _, _).", None).unwrap();
+    s.evaluate().unwrap();
+    let heads = rows(&mut s, "kh(R, agg_refused)");
+    assert!(heads.len() > 5, "{heads:?}");
+    // a world's own rules are not of the kernel's program
+    s.load("kw(R) :- program[profile](R, safety), premise_lit(R, _, _).", None).unwrap();
+    s.evaluate().unwrap();
+    assert!(rows(&mut s, "kw(R)").is_empty());
 }

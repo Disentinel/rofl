@@ -537,7 +537,14 @@ Rows read are deterministic, so the same world profiles the same on every machin
 the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
 the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a
 rule fired once per round); the TypeScript engine writes no profile, so a world that reads it is Rust's alone
-(`check_opt(W, one_engine, rust)`).
+(`check_opt(W, one_engine, rust)`). **The kernel's own program is profiled with the world's**: safety.rofl judges every world in an
+evaluation of its own (`Eval::safety_answer`), and that evaluation's profile is written to the same book, its rules named
+`program[profile](R, safety)` with `kernel_head[profile](R, L)` and `kernel_premise[profile](R, K, L)` their reflection
+(the kernel's rules are in no world's `premise_lit`; a builtin premise is written `$builtin(Op, $nil)`, an aggregate
+`$agg`), and its relations censused under the book `safety`, so a hypothesis pack judges the kernel's rules as it
+judges the world's. A question meant for the world's rules alone joins `concludes(R, _)`, as examples/profile/chain.rofl does. That is how the kernel's quadratic was
+found (f_a_lattice_beside_the_js_model_trips_the_kernel_safety_budget): a lattice beside the JS model made
+`unw_reach` close the whole lattice-edge graph, 445 036 rows read of 2.3 million in the run.
 
 **The hypotheses over the profile** are models/engine/profile.rofl, a pack loaded beside any world (`rofl load
 models/engine/profile.rofl WORLD...`), everything it says in the book `profile`. Verdicts on a rule `R` or its premise

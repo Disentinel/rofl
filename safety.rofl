@@ -446,8 +446,10 @@ lat_step(R, K, Y, J, X, grow_iv) :- lat_mv(R, K, Y, grow_iv), premise_arith(R, J
                                     iv_op(Op), Op != "ivmul", lat_clean(R, K, E).
 lat_iv_step(R, K) :- lat_step(R, K, _, J, _, grow_iv), premise_arith(R, J, _, Op, _, _), iv_op(Op).
 unw_edge(A, B)  :- lat_edge(A, B), not lat_widened(A), not lat_widened(B).
-unw_reach(A, B) :- unw_edge(A, B).
-unw_reach(A, C) :- unw_reach(A, B), unw_edge(B, C).
+-- from a lattice relation only: the one reader asks unw_reach(P, H) with P a lattice relation, and the closure
+-- of the whole graph (every pair, 5 000 edges at the JS model's size) was what spent the budget there
+unw_reach(P, B) :- lattice_rel(P), unw_edge(P, B).
+unw_reach(P, C) :- unw_reach(P, B), unw_edge(B, C).
 agg_refused(R, lattice_unwidened) :- lat_iv_step(R, K), lat_inner(R, K, P), concludes(R, H), unw_reach(P, H).
 agg_refused(R, lattice_unwidened) :- lat_iv_step(R, K), lat_inner(R, K, H), concludes(R, H), not lat_widened(H).
 

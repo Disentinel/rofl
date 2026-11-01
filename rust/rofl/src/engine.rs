@@ -837,6 +837,12 @@ pub struct Eval {
     /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
     /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
     safety_memo: Option<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>,
+    /// The profile of safety.rofl's own evaluation, as `profile_text` writes it, with `program[profile](R, safety)` and
+    /// the reflection of its rules (`kernel_premise`, `kernel_head`): appended to the world's profile when a rule
+    /// reads it, so that the kernel's program is judged by the same hypotheses as the world's (docs/cli.md, *The
+    /// profile of an evaluation*). Written in the one branch that evaluates safety.rofl; a memo or a kept image
+    /// carries none, and the profile then says nothing of the kernel.
+    kernel_profile: Option<String>,
     /// The evaluated safety.rofl world of the last judgement and the rows it was judged over (its heap is this
     /// world's): a program that only adds rows is judged by adding them to it.
     safety_kept: Option<Rc<(Vec<Vec<Term>>, Eval)>>,
@@ -2241,6 +2247,7 @@ impl Eval {
             known_answer: known,
             safety_memo: None,
             safety_kept: None,
+            kernel_profile: None,
             prov: ProvState::default(),
             pending_assert: prov::Notes::default(),
             reads_assertions: false,
@@ -2910,6 +2917,7 @@ impl Eval {
             Err(h) => {
                 let mut sub = Eval::new(h, pol, POLICY_BUDGET, Mode::Strata, true);
                 let res = sub.run().map(|o| o.partial);
+                self.kernel_profile = Some(sub.kernel_profile_text());
                 (sub, res)
             }
         };

@@ -24,12 +24,18 @@
 --   per_round   a recursive rule kept in written order: what it reads grows with its head times its rounds
 --   kernel      a closure the kernel answers: the rule fires never, the kernel's cost is not in the profile
 --
+-- The kernel's own program (safety.rofl) comes profiled too, `program[profile](R, safety)`, with its rules reflected
+-- by the profile itself (`kernel_premise`, `kernel_head`), so the same verdicts fall on it; its forecasts need
+-- `concludes` and `rows` of the kernel's book, which the profile does not carry, and are not made.
+--
 -- The reflection is read slot by slot, as examples/shapes/shapes.rofl reads it: `premise_lit(R, K, $lit(Rel, Book,
 -- Args, Tense))`, K from 1, the arguments a `$cons` list. A hypothesis that needs what is not here (which variables
 -- a premise binds at run time) is not written: a forecast that cannot be judged is not a forecast.
 
 -- ------------------------------------------------------------------------------------ the reflection, by slot
 pf_lit[profile](R, K, Rel, B, As) :- premise_lit(R, K, L), L = $lit(Rel, B, As, _).
+-- the kernel's own program, safety.rofl, reflected by the profile since no world of a user's reflects it
+pf_lit[profile](R, K, Rel, B, As) :- kernel_premise[profile](R, K, L), L = $lit(Rel, B, As, _).
 pf_tail[profile](R, K, 1, As)     :- pf_lit[profile](R, K, _, _, As).
 pf_tail[profile](R, K, J, T)      :- pf_tail[profile](R, K, I, $cons(_, T)), J is I + 1.
 pf_slot[profile](R, K, J, A)      :- pf_tail[profile](R, K, J, $cons(A, _)).
@@ -37,8 +43,10 @@ pf_var[profile](R, K, J, V)       :- pf_slot[profile](R, K, J, $var(V)), not pf_
 pf_var[profile](R, K, J, V)       :- pf_slot[profile](R, K, J, A), A = $var(W), W = $var(V).
 pf_meta[profile](V)               :- pf_slot[profile](_, _, _, $var(V)), V = $var(_).
 pf_head[profile](R, Rel, B)       :- conclusion_lit(R, 1, L), L = $lit(Rel, B, _, _).
+pf_head[profile](R, Rel, B)       :- kernel_head[profile](R, L), L = $lit(Rel, B, _, _).
 pf_npos[profile](R, N)            :- pf_lit[profile](R, _, _, _, _), N is count(K : pf_lit[profile](R, K, _, _, _)).
 pf_neg[profile](R)                :- premise_lit(R, _, L), L = $not(_).
+pf_neg[profile](R)                :- kernel_premise[profile](R, _, L), L = $not(_).
 pf_arms[profile](Rel, N)          :- concludes(_, Rel), N is count(R : concludes(R, Rel)).
 recursive[profile](R)    :- pf_head[profile](R, Rel, B), pf_lit[profile](R, _, Rel, B, _).
 -- the pack's own rules conclude in this book; they are profiled too, and left out of what it says
