@@ -1566,11 +1566,10 @@ unit_concludes("models/lang/js/babel-roles.rofl", yields).
 unit_concludes("models/lang/js/babel-roles.rofl", delegates).
 unit_concludes("models/lang/js/babel-roles.rofl", awaits).
 unit_concludes("models/lang/js/babel-roles.rofl", param_kind).
-unit_concludes("models/lang/js/babel-roles.rofl", b_params).
+unit_concludes("models/lang/js/babel-roles.rofl", b_fn).
 unit_concludes("models/lang/js/babel-roles.rofl", b_param).
 unit_concludes("models/lang/js/babel-roles.rofl", target_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", param).
-unit_concludes("models/lang/js/babel-roles.rofl", b_value_fn).
 unit_concludes("models/lang/js/babel-roles.rofl", rest_params).
 unit_concludes("models/lang/js/babel-roles.rofl", decl).
 unit_concludes("models/lang/js/babel-roles.rofl", method_kind).

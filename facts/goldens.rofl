@@ -609,7 +609,7 @@ golden_state("retract_again", "7dd4250e458f057f", 700).
 golden_state("retract_last", "08cea2b0e9c4c4fc", 682).
 golden_state("retract_last_read", "2f8d3a617f0bc2f3", 688).
 golden_state("roles_babel", "3e5a70187be984b7", 22692).
-golden_state("scan_requests", "db23a34cf6d9a4d7", 144679).
+golden_state("scan_requests", "f21c7ac8083108d6", 144677).
 golden_state("sealed_provenance", "430e8a8392cd8855", 681).
 golden_state("sensors_t3", "0ae392741dda3271", 1017).
 golden_state("services", "dd724321e458e6c5", 181846).
@@ -31680,7 +31680,7 @@ golden_rel("scan_requests", "arg_at[flow]", 3).
 golden_rel("scan_requests", "arg_count[code]", 4).
 golden_rel("scan_requests", "arg_given[code]", 3).
 golden_rel("scan_requests", "arrived_by[code]", 1924).
-golden_rel("scan_requests", "asserted_by[$kernel]", 17909).
+golden_rel("scan_requests", "asserted_by[$kernel]", 17908).
 golden_rel("scan_requests", "assign[value]", 2).
 golden_rel("scan_requests", "assign_value_op[main]", 4).
 golden_rel("scan_requests", "ast_attr[code]", 39).
@@ -32215,7 +32215,7 @@ golden_rel("scan_requests", "ts_ext[main]", 5).
 golden_rel("scan_requests", "unaccounted[audit]", 50).
 golden_rel("scan_requests", "unconsumed_attr[audit]", 7).
 golden_rel("scan_requests", "undefined_premise[audit]", 16).
-golden_rel("scan_requests", "unit_concludes[main]", 1653).
+golden_rel("scan_requests", "unit_concludes[main]", 1652).
 golden_rel("scan_requests", "unknown_because[main]", 22).
 golden_rel("scan_requests", "unknown_type[main]", 5).
 golden_rel("scan_requests", "unresolved_call[code]", 2).
