@@ -17,11 +17,12 @@ depth(B, K) :- nxt(A, B), depth(A, J), K is J + 1.
 
 -- The questions over the profile, as a rule author asks them.
 
--- a rule the planner kept in written order, and why
-kept_written(R, Why) :- written_order[profile](R, Why).
+-- a rule the planner kept in written order, and why. The kernel's own rules (program[profile](R, safety)) are profiled
+-- beside the world's; the questions here are of the world's, the ones its reflection holds
+kept_written(R, Why) :- written_order[profile](R, Why), concludes(R, _).
 
 -- a premise that read far more rows than it let through: a scan where a lookup was wanted
-scans(R, K, Read, Out) :- read[profile](R, K, Read), yield[profile](R, K, Out), Read > Out * 3, Out > 0.
+scans(R, K, Read, Out) :- read[profile](R, K, Read), yield[profile](R, K, Out), Read > Out * 3, Out > 0, concludes(R, _).
 
 -- a premise read whole on every firing of a rule that fires once per round: a recursion kept in written order, or a
 -- relation too small for an index (here `nxt(A, B)` of `depth`, 9 rows read 10 times)
@@ -31,7 +32,7 @@ rescanned(R, K, Rel) :-
   read[profile](R, K, Read), Read is F * N.
 
 -- a rule fired once per round of its recursion
-rounds(R, N) :- fires[profile](R, N), N > 2.
+rounds(R, N) :- fires[profile](R, N), N > 2, concludes(R, _).
 
 -- the chain is a function of its first argument: one next per node
 one_next(Rel) :- rows[profile](Rel, main, N), distinct[profile](Rel, main, 1, N).

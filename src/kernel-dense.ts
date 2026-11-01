@@ -240,8 +240,8 @@ r(r143, l(lat_step, [v("R"), v("K"), v("Y"), v("J"), v("X"), grow_iv]), [l(lat_m
 r(r144, l(lat_step, [v("R"), v("K"), v("Y"), v("J"), v("X"), grow_iv]), [l(lat_mv, [v("R"), v("K"), v("Y"), grow_iv]), l(premise_arith, [v("R"), v("J"), f("$var", [v("X")]), v("Op"), v("E"), f("$var", [v("Y")])]), l(iv_op, [v("Op")]), b("!=", v("Op"), s("ivmul")), l(lat_clean, [v("R"), v("K"), v("E")])]).
 r(r145, l(lat_iv_step, [v("R"), v("K")]), [l(lat_step, [v("R"), v("K"), v("_$0"), v("J"), v("_$1"), grow_iv]), l(premise_arith, [v("R"), v("J"), v("_$2"), v("Op"), v("_$3"), v("_$4")]), l(iv_op, [v("Op")])]).
 r(r146, l(unw_edge, [v("A"), v("B")]), [l(lat_edge, [v("A"), v("B")]), n(l(lat_widened, [v("A")])), n(l(lat_widened, [v("B")]))]).
-r(r147, l(unw_reach, [v("A"), v("B")]), [l(unw_edge, [v("A"), v("B")])]).
-r(r148, l(unw_reach, [v("A"), v("C")]), [l(unw_reach, [v("A"), v("B")]), l(unw_edge, [v("B"), v("C")])]).
+r(r147, l(unw_reach, [v("P"), v("B")]), [l(lattice_rel, [v("P")]), l(unw_edge, [v("P"), v("B")])]).
+r(r148, l(unw_reach, [v("P"), v("C")]), [l(unw_reach, [v("P"), v("B")]), l(unw_edge, [v("B"), v("C")])]).
 r(r149, l(agg_refused, [v("R"), lattice_unwidened]), [l(lat_iv_step, [v("R"), v("K")]), l(lat_inner, [v("R"), v("K"), v("P")]), l(concludes, [v("R"), v("H")]), l(unw_reach, [v("P"), v("H")])]).
 r(r150, l(agg_refused, [v("R"), lattice_unwidened]), [l(lat_iv_step, [v("R"), v("K")]), l(lat_inner, [v("R"), v("K"), v("H")]), l(concludes, [v("R"), v("H")]), n(l(lat_widened, [v("H")]))]).
 unbounded(s("concat")).

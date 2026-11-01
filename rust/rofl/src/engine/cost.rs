@@ -254,6 +254,12 @@ impl Eval {
     /// Pos, N)` the distinct values at `Pos`, the planner's own measure (`Store::probe_stats`). Rows read are
     /// deterministic, so the same world profiles the same on every run; time is not written.
     pub fn profile_text(&mut self) -> String {
+        self.profile_text_in(None)
+    }
+
+    /// `census_book` names the book the census is written under instead of the store's own: the kernel's
+    /// relations are in a store of their own and would otherwise be censused as `main` beside the world's.
+    fn profile_text_in(&mut self, census_book: Option<&str>) -> String {
         use std::fmt::Write;
         let mut out = String::new();
         let mut rules: Vec<Rc<ERule>> = self.rules.clone();
@@ -314,6 +320,7 @@ impl Eval {
             .collect();
         census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
         for (rel_name, book_name, rel, book, n, arity) in census {
+            let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
             for pos in 0..arity {
                 let (_, d) = self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]);
@@ -331,10 +338,10 @@ impl Eval {
     /// `conclusion_lit` would carry it, `kernel_premise[profile](R, K, L)` and `kernel_head[profile](R, L)`, since
     /// the kernel's rules are reflected in no world of a user's. A hypothesis pack reads them as it reads the
     /// world's rules (models/engine/profile.rofl). The relations seeded from the world are the kernel's book and
-    /// are not censused; safety.rofl's own are.
+    /// are not censused; safety.rofl's own are, under the book `safety`.
     pub fn kernel_profile_text(&mut self) -> String {
         use std::fmt::Write;
-        let mut out = self.profile_text();
+        let mut out = self.profile_text_in(Some("safety"));
         let mut rules: Vec<Rc<ERule>> = self.rules.clone();
         rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
         for r in &rules {
