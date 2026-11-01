@@ -58,7 +58,7 @@ pub struct Session {
     /// reference's `qn` (src/api.ts `query`).
     pub asks: i64,
     /// The profile of the first evaluation was written (`profile_wants`): it is written once.
-    profiled: bool,
+    pub profiled: bool,
     /// the volumes this world was opened from, the whole one first and the one it was opened from last
     pub kept: crate::volume::Chain,
     /// where wants go when the caller does not wait for them (`rofl serve`, src/adapter.rs `Post`); none, and an
