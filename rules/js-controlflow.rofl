@@ -191,7 +191,7 @@ async_body[code](F)    :- deferred_body[code](F), not generator[value](F).
 sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
 has_return[code](F)    :- exits[value](R, return), nearest_v[flow](F, R).
-top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
+top_throw[code](F)     :- fn_node[code](F), body[value](F, B),
                           ast_child[code](B, body, _, S),
                           exits[value](S, throw).
 always_throws[code](F) :- top_throw[code](F), not has_return[code](F), not deferred_body[code](F).

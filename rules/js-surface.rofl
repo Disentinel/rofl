@@ -186,7 +186,7 @@ param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, 
 -- what the call is.
 call_returns[flow](F, E) :- returns[flow](F, E), not generator[value](F).
 param_read[flow](F, I, E) :- param_use[flow](F, Name, E), param_of[flow](F, I, Name),
-                             ast_child[code](F, params, I, P), ast_node[code](P, identifier, _),
+                             param[value](F, I, P), parent[tree](F, P), ast_node[code](P, identifier, _),
                              not param_assigned[flow](F, Name), not sees_binder[code](E, _).
 ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_read[flow](F, I, E).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
@@ -198,7 +198,7 @@ sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 -- a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
 -- cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
-falls_off[code](F) :- fn_node[code](F), ast_child[code](F, body, 0, B), ast_node[code](B, block_statement, _),
+falls_off[code](F) :- fn_node[code](F), body[value](F, B), ast_node[code](B, block_statement, _),
                       not completes_abruptly[code](B).
 falls_off[code](F) :- exits[value](R, return), not returns[value](R, _), nearest_v[flow](F, R).
 sx_ret_undef[surface](F) :- falls_off[code](F), not generator[value](F), not ast_attr[code](F, kind, "constructor").
