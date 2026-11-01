@@ -1,0 +1,81 @@
+-- models/engine/plan.rofl — THE JOIN ORDER PLANNED AS A FIXPOINT WITH MIN, FROM THE PROFILE (docs/cli.md, *The plan as
+-- facts*). Load it beside a world and models/engine/profile.rofl, in a world of its own: it declares a lattice, and a
+-- world with a lattice is solved in written order, so it must not sit in the world it plans. Its answer is
+-- `plan[fixpointplan](R, At, Order)`, the fact the engine obeys; the world it is for is then run with those facts and
+-- the profile's `width` judges them.
+--
+-- The hypothesis. The cost of an order is the partial solutions each premise is solved from, summed (the engine's
+-- `width[profile]`). A set of premises S leaves est(S) partial solutions, the independence estimate: the rows of its
+-- premises multiplied, divided for every variable two of them share by the most distinct of the columns holding it,
+-- once per sharing premise after the first (folded in written order, which does not change the number). The best cost of a set is the least, over the premise K placed last,
+-- of the best cost of S without K plus est(S without K): `lattice pl_best(R, At, S, min C)`, a shortest path over the
+-- subsets. Sets are bitmasks: premise K (written position, from 1) is bit 2^(K-1).
+--
+-- What it plans: a rule of two to eight premises, every one a positive literal (no negation, builtin or aggregate: a
+-- fact on those would hold up only under conditions this pack does not model), none of the profile pack's or this
+-- one's, nor one that reads the profile. At is 0 (the firing over the whole store) and, for a recursive rule, each written position of the head's
+-- relation among the premises, which the engine fires on the news and solves first.
+
+-- ------------------------------------------------------------------------------------------------ the rules planned
+pl_mixed(R) :- premise_lit(R, _, $not(_)).
+pl_mixed(R) :- premise_lit(R, _, $builtin(_, _)).
+pl_mixed(R) :- premise_lit(R, _, $agg(_, _, _, _, _)).
+-- the rules that are not the world's: the two packs' and any that read the profile, and whatever reads what they
+-- conclude or concludes what they read
+pl_own(R) :- pf_head[profile](R, _, fixpointplan).
+pl_own(R) :- pf_own[profile](R).
+pl_own(R) :- premise_lit(R, _, $lit(_, profile, _, _)).
+pl_own(R) :- pl_own(R2), concludes(R2, Rel), premise_lit(R, _, $lit(Rel, main, _, _)).
+pl_own(R) :- pl_own(R2), premise_lit(R2, _, $lit(Rel, main, _, _)), concludes(R, Rel).
+pl_rule(R, N) :- pf_npos[profile](R, N), N >= 2, N <= 8, not pl_mixed(R), not pf_own[profile](R), not pl_own(R).
+
+pl_bit(1, 1).
+pl_bit(K, B) :- pl_bit(J, A), J < 8, K is J + 1, B is A * 2.
+pl_full(R, F) :- pl_rule(R, N), pl_bit(N, B), F is B * 2 - 1.
+-- every subset of the premises, as a number up to the full set
+pl_set(R, 0)  :- pl_rule(R, _).
+pl_set(R, S)  :- pl_set(R, T), pl_full(R, F), T < F, S is T + 1.
+pl_in(R, S, K)  :- pl_set(R, S), pl_rule(R, N), pl_bit(K, B), K <= N, Q is S / B, M is Q mod 2, M = 1.
+pl_out(R, S, K) :- pl_set(R, S), pl_rule(R, N), pl_bit(K, B), K <= N, Q is S / B, M is Q mod 2, M = 0.
+
+-- -------------------------------------------------------------------------------------------------- the estimate
+-- the variables a lower premise of S binds, and for every variable S binds the most distinct of its columns across S
+pl_low(R, S, K, V)  :- pl_in(R, S, K2), pl_rule(R, N), pl_bit(K, _), K <= N, K2 < K, pf_var[profile](R, K2, _, V).
+pl_dv(R, S, V, D)   :- pl_in(R, S, K), pf_var[profile](R, K, J, V), pf_lit[profile](R, K, Rel, B, _), distinct[profile](Rel, B, J, D).
+pl_dmax(R, S, V, D) :- pl_dv(R, S, V, _), D is max(X : pl_dv(R, S, V, X)).
+-- the divisor at a column of K: that most distinct where a lower premise binds the column's variable, else 1
+pl_arity(R, K, A)       :- pf_lit[profile](R, K, _, _, _), A is count(J : pf_slot[profile](R, K, J, _)).
+pl_held(R, S, K, J)     :- pl_in(R, S, K), pf_var[profile](R, K, J, V), pl_low(R, S, K, V).
+pl_div(R, S, K, J, D)   :- pl_held(R, S, K, J), pf_var[profile](R, K, J, V), pl_dmax(R, S, V, D).
+pl_div(R, S, K, J, 1)   :- pl_in(R, S, K), pf_slot[profile](R, K, J, _), not pl_held(R, S, K, J).
+-- the estimate folded over the positions: pl_pre(R, S, K, E) is est of the premises of S before K; a premise in S
+-- multiplies by its rows, then divides column by column, never below one
+pl_pre(R, S, 1, 1)      :- pl_set(R, S).
+pl_mul(R, S, K, 0, E)   :- pl_pre(R, S, K, E0), pl_in(R, S, K), pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), E is E0 * N.
+pl_mul(R, S, K, J, E)   :- pl_mul(R, S, K, J0, E0), J is J0 + 1, pl_div(R, S, K, J, D), E1 is E0 / D, E is max(E1, 1).
+pl_pre(R, S, K1, E)     :- pl_mul(R, S, K, A, E), pl_arity(R, K, A), K1 is K + 1.
+pl_pre(R, S, K1, E)     :- pl_pre(R, S, K, E), pl_out(R, S, K), K1 is K + 1.
+pl_est(R, S, E)         :- pl_pre(R, S, K, E), pl_rule(R, N), K is N + 1.
+
+-- ------------------------------------------------------------------------------------------------------ the plan
+-- where an order starts: nothing placed, or the news premise alone
+pl_start(R, 0, 0)  :- pl_rule(R, _).
+pl_start(R, K, B)  :- pl_rule(R, _), recursive[profile](R), pf_head[profile](R, Rel, Bk), pf_lit[profile](R, K, Rel, Bk, _), pl_bit(K, B).
+
+lattice pl_best(R, At, S, min C).
+pl_best(R, At, S, 0) :- pl_start(R, At, S).
+pl_best(R, At, S, C) :- pl_best(R, At, T, C0), pl_est(R, T, E), pl_out(R, T, K), pl_bit(K, B), S is T + B, C is C0 + E.
+
+-- the premise placed last on a cheapest way to a set (the lowest position where several tie), and the walk back
+pl_step(R, At, S, K) :- pl_best(R, At, S, C), pl_out(R, T, K), pl_best(R, At, T, C0), pl_est(R, T, E), pl_bit(K, B), S is T + B, C1 is C0 + E, C1 = C.
+pl_pick(R, At, S, K) :- pl_step(R, At, S, _), K is min(X : pl_step(R, At, S, X)).
+pl_at(R, At, F, N)   :- pl_start(R, At, _), pl_full(R, F), pl_rule(R, N).
+pl_at(R, At, T, P)   :- pl_at(R, At, S, P1), pl_start(R, At, S0), S != S0, pl_pick(R, At, S, K), pl_bit(K, B), T is S - B, P is P1 - 1.
+pl_pos(R, At, P, K)  :- pl_at(R, At, S, P), pl_pick(R, At, S, K).
+pl_pos(R, At, 1, At) :- pl_start(R, At, _), At != 0.
+pl_list(R, At, P, $nil) :- pl_start(R, At, _), pl_rule(R, N), P is N + 1.
+pl_list(R, At, P, $cons(K, L)) :- pl_list(R, At, P1, L), P is P1 - 1, P >= 1, pl_pos(R, At, P, K).
+
+plan[fixpointplan](R, At, L) :- pl_list(R, At, 1, L).
+-- the cost the plan forecasts, to set beside the width the profile measures under it (summed over the premises)
+plan_cost[fixpointplan](R, At, C) :- plan[fixpointplan](R, At, _), pl_full(R, F), pl_best(R, At, F, C).
