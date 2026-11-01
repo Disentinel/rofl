@@ -45,6 +45,7 @@ Reads:
   - <a id="inside"></a>`inside`
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
+  - <a id="program"></a>`program`
 - from outside these files, in the value:
   - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
@@ -64,6 +65,7 @@ Reads:
   - <a id="key"></a>`key`
   - <a id="literal"></a>`literal`
   - <a id="logical"></a>`logical`
+  - <a id="mark"></a>`mark`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="object"></a>`object`
@@ -98,7 +100,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-block_scope"></a>a block scope | a node of one of the kinds `block_statement`, `for_statement`, `for_in_statement`, `for_of_statement` (`block_scope_kind`) |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
 | <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
@@ -321,17 +322,14 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 > `static_block` hold no declaration in this corpus. Leaving one out widens a
 > region: the safe direction for what a binder SEES, the unsafe one for what it
 > HIDES, which is why the loop heads are here.
+> the roles' scopes; the program's is the top of the file, which top_read and decl_at_top answer
 
-<a id="scope_node"></a>R is a scope either:
+<a id="scope_node"></a>A node R is a scope either:
 
-1. if R is a [block scope](#noun-block_scope);
+1. if [`mark`](#mark)(R, `scope`), unless [`program`](#program)(R, something);
 2. if R is a [function](js-callgraph.rofl.md#fn_node).
 
 <a id="lexical_binder"></a>D is lexical if [`decl`](#decl)(D, `let` or `const`).
-
-Declared as facts:
-
-- <a id="block_scope_kind"></a>`block_scope_kind` — rows in Words
 
 > Nearest scope, over declarators only. `ast_within(R, D)` first, with D
 > bound, walks ancestors; `scope_node(R)` first built the (binder × scope)

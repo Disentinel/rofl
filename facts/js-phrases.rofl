@@ -105,7 +105,6 @@ kind_noun(node_value_kind, "value site").
 kind_noun(class_field_kind, "class field").
 kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
-kind_noun(block_scope_kind, "block scope").
 kind_noun(call_like_v, "invocation").
 kind_noun(assign_value_op, "value assignment operator").
 kind_noun(external_shape, "external shape").
@@ -126,7 +125,6 @@ kind_set(member_kind_v).
 kind_set(class_field_kind).
 kind_set(private_member_kind).
 kind_set(this_binds_kind).
-kind_set(block_scope_kind).
 kind_set(call_like_v).
 kind_set(call_kind).
 

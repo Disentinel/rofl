@@ -152,7 +152,6 @@ unit_concludes("rules/js-dataflow.rofl", bare_binder).
 unit_concludes("rules/js-dataflow.rofl", binder_region).
 unit_concludes("rules/js-dataflow.rofl", binder_at_top).
 unit_concludes("rules/js-dataflow.rofl", sees_binder).
-unit_concludes("rules/js-dataflow.rofl", block_scope_kind).
 unit_concludes("rules/js-dataflow.rofl", scope_node).
 unit_concludes("rules/js-dataflow.rofl", lexical_binder).
 unit_concludes("rules/js-dataflow.rofl", up_s).

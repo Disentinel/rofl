@@ -117,13 +117,8 @@ sees_binder[code](E, D)      :- binder_at_top[code](D), binds_name[code](D, Name
 -- `static_block` hold no declaration in this corpus. Leaving one out widens a
 -- region: the safe direction for what a binder SEES, the unsafe one for what it
 -- HIDES, which is why the loop heads are here.
-edb(block_scope_kind).
-block_scope_kind(block_statement).
-block_scope_kind(for_statement).
-block_scope_kind(for_in_statement).
-block_scope_kind(for_of_statement).
-
-scope_node[code](R) :- block_scope_kind(K), ast_node[code](R, K, _).
+-- the roles' scopes; the program's is the top of the file, which top_read and decl_at_top answer
+scope_node[code](R) :- mark[value](R, scope), not program[tree](R, _).
 scope_node[code](R) :- fn_node[code](R).
 
 lexical_binder[code](D) :- decl[value](D, let).
