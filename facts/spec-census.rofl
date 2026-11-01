@@ -72,6 +72,7 @@ check[checks]("rust/rofl/tests/cool.rs", "a_volume_holding_a_base_fact_in_an_unc
 check[checks]("rust/rofl/tests/cool.rs", "an_unknown_volume_cools_nothing", test).
 check[checks]("rust/rofl/tests/cool.rs", "the_trail_cools_and_comes_back_whole", test).
 check[checks]("rust/rofl/tests/cool.rs", "a_trail_this_engine_did_not_write_is_refused", test).
+check[checks]("rust/rofl/tests/cool.rs", "a_reheated_volume_answers_why_as_before_cooling", test).
 check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_chain_of_sums_is_fired_once_per_sum", test).
 check[checks]("rust/rofl/tests/datastrat_scale.rs", "a_layer_that_fires_an_instance_again_spends_the_budget", test).
 check[checks]("rust/rofl/tests/demand_fixpoint.rs", "an_unbounded_fixpoint_meets_the_step_wall", test).
