@@ -586,7 +586,11 @@ with a meter beside the world, for the order and width of every rule; reflect, t
 the plan facts written to F (or stdout) to be loaded with the world from then on; ask again, the width under them. The
 report on stderr sets before, forecast and after side by side per rule and marks `worse` a plan that cost more than the
 order it replaced: that is the estimate's hypothesis false there, and a finding, not a thing to hide. `-- --check`
-runs it over plan-world.rofl and judges it. The agent's skill for the loop (when to run it, how to read the report,
+runs it over plan-world.rofl and judges it. The reflection runs under walls of its own (the packs' world is 2^N x N rows
+per rule of N premises, past the default space at the JS model's size) and a partial answer stops the loop with its
+text. Measured over the JS model on vscode mini (2026-11-01): 400 plans worse, 23 better, the independence estimate
+refuted by the data's functional dependencies (f_the_join_order_is_a_fact_the_engine_obeys); the facts it writes are
+not to be loaded until the estimate reads them. The agent's skill for the loop (when to run it, how to read the report,
 where the facts live) is .claude/skills/refine-plan/SKILL.md.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than

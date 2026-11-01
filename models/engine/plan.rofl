@@ -31,10 +31,12 @@ pl_rule(R, N) :- pf_npos[profile](R, N), N >= 2, N <= 8, not pl_mixed(R), not pf
 
 pl_bit(1, 1).
 pl_bit(K, B) :- pl_bit(J, A), J < 8, K is J + 1, B is A * 2.
+-- every subset of the premises, as a bitmask, each set reached by adding one premise it lacks: N rounds for a
+-- rule of N premises, where counting to the full set would take 2^N (in a world with a lattice every rule is solved
+-- whole each round, so the rounds are the price)
 pl_full(R, F) :- pl_rule(R, N), pl_bit(N, B), F is B * 2 - 1.
--- every subset of the premises, as a number up to the full set
 pl_set(R, 0)  :- pl_rule(R, _).
-pl_set(R, S)  :- pl_set(R, T), pl_full(R, F), T < F, S is T + 1.
+pl_set(R, S)  :- pl_out(R, T, K), pl_bit(K, B), S is T + B.
 pl_in(R, S, K)  :- pl_set(R, S), pl_rule(R, N), pl_bit(K, B), K <= N, Q is S / B, M is Q mod 2, M = 1.
 pl_out(R, S, K) :- pl_set(R, S), pl_rule(R, N), pl_bit(K, B), K <= N, Q is S / B, M is Q mod 2, M = 0.
 

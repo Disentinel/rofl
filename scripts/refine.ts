@@ -14,7 +14,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
@@ -24,9 +24,17 @@ refine_order(R, At, O, W) :- order[profile](R, At, O, W), concludes(R, _).
 `;
 
 type Row = string[];
-const ask = (files: string[], qs: string[]): Row[][] => {
-  const out = execFileSync(RUST, ['load', '--json', ...qs.flatMap((q) => ['--ask', q]), ...files], { encoding: 'utf8', maxBuffer: 1 << 28 });
-  return out.trim().split('\n').map((l) => JSON.parse(l).rows as Row[]);
+// the reflection world is 2^N x N rows per rule of N premises, past the default space at the JS model's size: it
+// runs under walls of its own, and a wall it still meets is said, not answered from the rows it reached
+const REFLECT_WALLS = ['--space', '200000000', '--budget', '20000000000'];
+const ask = (files: string[], qs: string[], walls: string[] = []): Row[][] => {
+  const run = spawnSync(RUST, ['load', '--json', ...walls, ...qs.flatMap((q) => ['--ask', q]), ...files], { encoding: 'utf8', maxBuffer: 1 << 28 });
+  if (run.status !== 0 && run.status !== 5) throw new Error(`rofl load exited ${run.status}: ${run.stderr}`);
+  return run.stdout.trim().split('\n').map((l) => {
+    const a = JSON.parse(l);
+    if (a.partial) throw new Error(`${qs.join(', ')}: partial, ${a.shrugs?.[0]?.line ?? 'a wall'}`);
+    return a.rows as Row[];
+  });
 };
 const tmp = (name: string, text: string): string => {
   const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-refine-')), name);
@@ -47,7 +55,7 @@ export function refine(files: string[]): { facts: string; report: Report[] } {
     };
   };
   const before = measure([]);
-  const [plans, costs] = ask([...PACKS, ...files], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)']);
+  const [plans, costs] = ask([...files, ...PACKS], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)'], REFLECT_WALLS);
   const forecast = new Map(costs.map(([r, at, c]) => [`${r} ${at}`, Number(c)]));
   const facts = plans.map(([r, at, l]) => `plan[fixpointplan](${r}, ${at}, ${l}).`).sort().join('\n') + (plans.length ? '\n' : '');
   const after = facts ? measure([tmp('plan.rofl', facts)]) : before;
@@ -92,7 +100,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const out = args.indexOf('--out');
   const files = args.filter((a, i) => !a.startsWith('--') && (out < 0 || i !== out + 1));
   if (!files.length) { console.error('usage: refine <files> [--out F] | --check'); process.exit(4); }
-  const { facts, report } = refine(files.map((f) => path.resolve(f)));
+  const { facts, report } = refine(files.map((f) => (f.startsWith('@') ? f : path.resolve(f))));
   process.stderr.write(render(report));
   if (out >= 0) fs.writeFileSync(args[out + 1], `-- the plan facts models/engine/plan.rofl concluded over ${files.join(' ')}; load them with the world\n${facts}`);
   else process.stdout.write(facts);
