@@ -16,6 +16,9 @@ object_of[code](M, O) :- member[value](M, O, _).
 object_of[code](M, O) :- member_expr[value](M, O, _).
 -- the static name a member reads; a private name is no property
 prop_name[code](M, O, K) :- member[value](M, O, K), not private[value](M).
+-- the I-th argument of a call, or what it spreads
+argument_at[code](C, I, A) :- callee[value](C, _), nth[tree](C, I, A).
+
 
 
 alias ast_in(P, C) is ast_child(P, _, _, C).

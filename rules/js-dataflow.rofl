@@ -627,20 +627,15 @@ dead_site[code](C)      :- dead_fn[code](F), inside[tree](F, C), call_like_v(K),
 -- everything after it, and a may-set may be silent but not wrong, so `arg_at`
 -- stops at the first spread; a spread of an array this layer can see (a
 -- literal, or a rest parameter) contributes element K at position J + K.
-spread_arg[code](C, I)   :- call_like_v(K), ast_node[code](C, K, _),
-                            ast_child[code](C, arguments, I, S),
-                            ast_node[code](S, spread_element, _).
-after_spread[code](C, I) :- spread_arg[code](C, J), ast_child[code](C, arguments, I, _), J < I.
+spread_arg[code](C, I)   :- spread_args[value](C, I, _).
+after_spread[code](C, I) :- spread_arg[code](C, J), argument_at[code](C, I, _), J < I.
 
-arg_at[flow](C, I, A)      :- call_like_v(K), ast_node[code](C, K, _), not dead_site[code](C),
-                              ast_child[code](C, arguments, I, A),
-                              not ast_node[code](A, spread_element, _),
+arg_at[flow](C, I, A)      :- argument_at[code](C, I, A), not dead_site[code](C),
+                              not spread_args[value](C, I, _),
                               not after_spread[code](C, I).
 
-arg_at[flow](C, I, E)      :- spread_arg[code](C, J), not after_spread[code](C, J), not dead_site[code](C),
-                              ast_child[code](C, arguments, J, S),
-                              ast_child[code](S, argument, 0, A), elem_at[flow](A, K, E),
-                              I is J + K.
+arg_at[flow](C, I, E)      :- spread_args[value](C, J, A), not after_spread[code](C, J), not dead_site[code](C),
+                              elem_at[flow](A, K, E), I is J + K.
 param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
                               ast_name[code](P, Name).
 param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
@@ -749,7 +744,7 @@ sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _
                              may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
 keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
-                            may_be_lit[flow](A, K), not ast_child[code](C, arguments, 1, _).
+                            may_be_lit[flow](A, K), not argument_at[code](C, 1, _).
 may_be_lit[flow](C, undefined) :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get).
 -- code outside the model runs at a site nothing resolves, unless it is a
 -- method of a collection that calls nothing back (all but `forEach`)
@@ -884,8 +879,8 @@ keyed_src[code](E, S) :- keyed_want[code](E), ast_node[code](E, identifier, _), 
                          assign_binder[code](A, D), assigned[code](A, _, _, S, _).
 keyed_src[code](U, S) :- keyed_param[code](U, G, _), param_use[flow](G, Name, U), assign_param[flow](A, G),
                          assigned[code](A, _, Name, S, _).
-keyed_arg[code](U, Q, Pos, A) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), ast_child[code](Q, arguments, Pos, A),
-                                  not ast_node[code](A, spread_element, _).
+keyed_arg[code](U, Q, Pos, A) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), argument_at[code](Q, Pos, A),
+                                  not spread_args[value](Q, Pos, _).
 keyed_src[code](U, A) :- keyed_arg[code](U, _, _, A).
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), binary[value](E, "+", X, _).
 keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), binary[value](E, "+", _, X).
@@ -915,7 +910,8 @@ keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _
                        keyed_ret_open[code](F).
 keyed_open[code](C) :- keyed_want[code](C), callee_of[code](C, N), external_value[flow](N, _).
 keyed_open[code](C) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
-                       not ast_child[code](C, arguments, I, _).
+                       not argument_at[code](C, I, _).
+
 keyed_src[code](C, A) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
                          ast_child[code](C, arguments, I, A).
 keyed_fn_need[code](G) :- keyed_param[code](_, G, _).

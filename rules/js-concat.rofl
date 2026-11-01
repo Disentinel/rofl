@@ -157,7 +157,7 @@ path_cut[flow](C, D) :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), may
 base_of[flow](C, Last) :- vlib_op[flow](C, basename, _), arg_at[flow](C, 0, A), may_be_lit[flow](A, V),
                           str_value[flow](V), N is str_segs(V, "/"), K is N - 1,
                           Last is str_seg(V, "/", K), Last != "".
-path_cut[flow](C, B) :- base_of[flow](C, B), not ast_child[code](C, arguments, 1, _).
+path_cut[flow](C, B) :- base_of[flow](C, B), not argument_at[code](C, 1, _).
 path_cut[flow](C, B) :- base_of[flow](C, B), arg_at[flow](C, 1, E), may_be_lit[flow](E, X),
                         str_value[flow](X), LB is str_len(B), LX is str_len(X), LX < LB,
                         S is LB - LX, T is str_sub(B, S, LX), T != X.
@@ -205,7 +205,7 @@ parts[flow](C, 0, O) :- vlib_op[flow](C, concat_this, _), whole_args[flow](C), c
 parts[flow](C, I, A) :- vlib_op[flow](C, concat_this, _), whole_args[flow](C), arg_at[flow](C, J, A), I is J + 1.
 parts[flow](C, 0, A) :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A).
 parts[flow](C, I, A) :- vlib_op[flow](C, basename, _), whole_args[flow](C), arg_at[flow](C, I, A).
-parts[flow](C, 0, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, A), not ast_child[code](C, arguments, 1, _).
+parts[flow](C, 0, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, A), not argument_at[code](C, 1, _).
 parts[flow](C, 0, B) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, _), arg_at[flow](C, 1, B).
 parts[flow](C, 1, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[flow](C, 0, A).
 
@@ -219,7 +219,8 @@ join_array[flow](C, A) :- join_arrays[flow](C, 1), join_recv[flow](C, A).
 parts[flow](C, I, E) :- join_array[flow](C, A), array_elem[flow](A, K, E), I is 2 * K.
 join_sep[flow](C, I) :- join_array[flow](C, A), array_elem[flow](A, K, _), K > 0, I is 2 * K - 1.
 parts[flow](C, I, S) :- join_sep[flow](C, I), arg_at[flow](C, 0, S).
-part_lit[flow](C, I, ",") :- join_sep[flow](C, I), not ast_child[code](C, arguments, 0, _).
+part_lit[flow](C, I, ",") :- join_sep[flow](C, I), not argument_at[code](C, 0, _).
+
 
 -- What a part may be, for a reader of the answer.
 part_value[flow](C, I, V) :- part_lit[flow](C, I, V).

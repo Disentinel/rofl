@@ -61,7 +61,8 @@ cl_how[flow](C, How, Base) :- ast_node[code](C, call_expression, _), callee[valu
 -- where there are no options, or none of their values has a `method`.
 cl_method[flow](C, M) :- cl_how[flow](C, verb(M), _).
 cl_opts[flow](C, A) :- cl_how[flow](C, opts(I), _), arg_at[flow](C, I, A).
-cl_method[flow](C, get) :- cl_how[flow](C, opts(I), _), not ast_child[code](C, arguments, I, _).
+cl_method[flow](C, get) :- cl_how[flow](C, opts(I), _), not argument_at[code](C, I, _).
+
 cl_known[flow](A) :- cl_opts[flow](_, A), may_be_node[flow](A, _).
 cl_method[flow](C, any) :- cl_opts[flow](C, A), not cl_known[flow](A).
 cl_method_at[flow](C, P) :- cl_opts[flow](C, A), may_be_node[flow](A, O), member_value[flow](O, "method", P).

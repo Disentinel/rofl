@@ -56,7 +56,8 @@ reexport_site[code](E, reexport_all)   :- ast_node[code](E, export_all_declarati
 -- loads nothing, and is not a site.
 require_site[code](C) :- free_global[code](N, "require", _),
                          callee[value](C, N), ast_node[code](C, call_expression, _),
-                         ast_child[code](C, arguments, 0, _).
+                         argument_at[code](C, 0, _).
+
 
 module_site[code](N, K) :- import_site[code](N, K).
 module_site[code](N, K) :- reexport_site[code](N, K).

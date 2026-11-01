@@ -36,7 +36,6 @@ guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _),
 
 -- `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
 -- the branching is in the operator, not the kind.
-
 guard_arm[code](P, A) :- logical[value](P, _, L, A), assign[value](P, L, A).
 
 

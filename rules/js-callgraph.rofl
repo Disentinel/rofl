@@ -337,7 +337,7 @@ passes_function[code](C, I, A, anonymous) :- written_arg[code](C, I, A), fn_node
 -- a member handed over (`bus.on(x, this.onMsg)`) is named by its key
 passes_function[code](C, I, F, Key)       :- written_arg[code](C, I, A), member_node_v[flow](A), selects[flow](A, Key),
                                              may_be_node[flow](A, F), fn_value[flow](F).
-written_arg[code](C, I, A) :- arg_at[flow](C, I, A), ast_child[code](C, arguments, I, A).
+written_arg[code](C, I, A) :- arg_at[flow](C, I, A), argument_at[code](C, I, A).
 
 -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
 -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
@@ -1012,8 +1012,9 @@ imports(code, surface).
 -- without ever testing it (`res && ...`, `res ? ... : ...`, `if (!res)`): a
 -- TypeError when that line runs. A call with a spread passes what it cannot
 -- count, and a parameter with a default is never `undefined`; neither is asked.
-call_spreads[code](C) :- ast_child[code](C, arguments, _, S), ast_node[code](S, spread_element, _).
-call_passes[code](C, I) :- ast_child[code](C, arguments, I, _).
+call_spreads[code](C) :- spread_args[value](C, _, _).
+call_passes[code](C, I) :- argument_at[code](C, I, _).
+
 param_defaulted[code](F, I) :- ast_child[code](F, params, I, P), ast_node[code](P, assignment_pattern, _).
 
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "&&").
