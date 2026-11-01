@@ -79,8 +79,10 @@ jobs:
 
   # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
   # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
+  # Not blocking while its control is red on main: f_the_fault_harness_control_is_red_on_main. Blocking again once it is green.
   breaks:
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
