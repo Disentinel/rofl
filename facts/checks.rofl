@@ -3892,5 +3892,14 @@ check_opt("profile_model", one_engine, rust).
 -- rule R in on the news at At, taken as it is; the profile says which order each rule was solved in and whose it was
 -- (order[profile](R, At, Order, plan | greedy)). Rust only, as every reader of the profile.
 check_world("plan_given").
+check_file("plan_given", "examples/checks/plan-world.rofl").
 check_file("plan_given", "examples/checks/plan-given.rofl").
 check_opt("plan_given", one_engine, rust).
+-- THE PLAN COMPUTED (models/engine/plan.rofl): the same world under the two packs, in a world of its own since the pack
+-- declares a lattice: the DP with min over the subsets of each rule's premises concludes plan[fixpointplan] and its
+-- forecast cost; rust/rofl/tests/plan_dp.rs runs plan-world.rofl under the plans found and the widths equal the forecast.
+check_world("plan_dp").
+check_file("plan_dp", "models/engine/profile.rofl").
+check_file("plan_dp", "models/engine/plan.rofl").
+check_file("plan_dp", "examples/checks/plan-world.rofl").
+check_opt("plan_dp", one_engine, rust).
