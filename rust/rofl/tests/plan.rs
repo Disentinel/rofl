@@ -1,4 +1,4 @@
-//! THE JOIN ORDER AS A FACT (examples/checks/plan-given.rofl; docs/cli.md, *The plan as facts*). `plan[fixpointplan](R, At,
+//! THE JOIN ORDER AS A FACT (examples/checks/plan-world.rofl with plan-given.rofl; docs/cli.md, *The plan as facts*). `plan[fixpointplan](R, At,
 //! Order)` is taken as it is: the widths of `out` and `alt` swap with the facts that swap their orders; a fact that does
 //! not hold up is left alone; and the profile says which order every rule was solved in and whose it was.
 use rofl::session::Session;
@@ -6,9 +6,17 @@ use std::path::Path;
 
 const BUDGET: i64 = 100_000_000;
 
-fn world() -> String {
-    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/checks/plan-given.rofl");
+fn file(rel: &str) -> String {
+    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(rel);
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("{}: {e}", p.display()))
+}
+
+fn world() -> String {
+    file("examples/checks/plan-world.rofl")
+}
+
+fn given() -> String {
+    world() + &file("examples/checks/plan-given.rofl")
 }
 
 fn run(src: &str) -> Session {
@@ -31,7 +39,7 @@ fn width(s: &mut Session, head: &str) -> u64 {
 
 #[test]
 fn the_engine_solves_in_the_order_the_fact_gives() {
-    let mut s = run(&world());
+    let mut s = run(&given());
     assert_eq!(width(&mut s, "out"), 211, "out, given the order a, c, d, b");
     assert_eq!(width(&mut s, "alt"), 1001, "alt, given the order a, b, c, d");
     assert_eq!(one(&mut s, "solved(out, 0, O, W)"), ["$cons(1,$cons(3,$cons(4,$cons(2,$nil))))", "plan"]);
@@ -42,8 +50,7 @@ fn the_engine_solves_in_the_order_the_fact_gives() {
 
 #[test]
 fn without_the_facts_the_greedy_order_crosses_a_and_b_first() {
-    let src: String = world().lines().filter(|l| !l.starts_with("plan[fixpointplan]")).collect::<Vec<_>>().join("\n");
-    let mut s = run(&src);
+    let mut s = run(&world());
     assert_eq!(width(&mut s, "out"), 1001, "the greedy planner takes b before c");
     assert_eq!(width(&mut s, "alt"), 211);
     assert_eq!(one(&mut s, "solved(out, 0, O, W)"), ["$cons(2,$cons(1,$cons(3,$cons(4,$nil))))", "greedy"], "b first, the fewest rows");

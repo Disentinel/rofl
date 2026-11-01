@@ -564,7 +564,17 @@ none. The profile says which order was taken and whose it was (`order[profile]`)
 (world `plan_given`, Rust only) is the world where the greedy order loses: `out(X, Y, Z) :- a(X), b(Y), c(X, Z), d(Z, Y)`
 reaches its premises with 1 + 9 + 90 + 900 partial solutions as the planner orders it (b first, then a) and 1 + 10 + 100 + 100 under the
 fact `plan[fixpointplan](r815c0a08, 0, $cons(1, $cons(3, $cons(4, $cons(2, $nil)))))`. The pack that computes the plan
-from a profile is not built yet; a plan fact is written by hand or by a reflection world of the model's own.
+from a profile is `models/engine/plan.rofl`, loaded beside models/engine/profile.rofl and the world's files **in a world
+of its own** (it declares a lattice, and a world with a lattice is solved in written order, so the profile measured
+there would be another planner's): over the subsets of each rule's premises it builds `lattice pl_best(R, At, S, min
+C)`, the least sum of partial solutions over the premise placed last, with the independence estimate of a set (its
+rows multiplied, divided for every shared variable by the most distinct of its columns, once per sharing premise after
+the first), and concludes `plan[fixpointplan](R, At, Order)` for every rule of two to eight positive premises, At 0
+and, for a recursive rule, each news position, with `plan_cost[fixpointplan](R, At, C)` the width it forecasts. The
+world is then run with those facts and `width[profile]` judges them. Over plan-world.rofl (world `plan_dp`) it finds b,
+d, c, a for `out` and `alt` alike at 210, under the hand-given 211, and the world measures 210 under it
+(rust/rofl/tests/plan_dp.rs). It is the second of the two modes the owner asked for: reflection in a world of its own,
+the answer in the world as it is; the loop between them is not scripted yet.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
