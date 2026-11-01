@@ -142,20 +142,46 @@ impl Eval {
     }
 
     fn delta_eligible(&self, r: &Rc<ERule>) -> bool {
-        !self.naive
-            && !self.lat.has_cells()
-            && !r.has_agg
-            && !r.has_thr
-            && !r.has_demand_prem
-            && !self.clo.closure_of.contains_key(&r.id)
-            && (r.clause.head.temporal != Temporal::Next || self.store.unordered)
-            && r.plan.len() >= 2
-            && r.plan.iter().all(|b| match b {
-                BodyElem::Pos(_) => true,
-                BodyElem::Neg(l) => !self.demand.on(l.rel),
-                BodyElem::Bi { .. } => self.add.adding,
-                BodyElem::Agg(_) => false,
-            })
+        self.written_order_reason(r).is_none()
+    }
+
+    /// Why `r` is kept in written order, or None where a delta-first plan may be built for it (`written_order[profile]`).
+    pub(super) fn written_order_reason(&self, r: &Rc<ERule>) -> Option<&'static str> {
+        if self.naive {
+            return Some("naive");
+        }
+        if self.lat.has_cells() {
+            return Some("lattice");
+        }
+        if r.has_agg {
+            return Some("aggregate");
+        }
+        if r.has_thr {
+            return Some("threshold");
+        }
+        if r.has_demand_prem {
+            return Some("demand");
+        }
+        if self.clo.closure_of.contains_key(&r.id) {
+            return Some("closure");
+        }
+        if r.clause.head.temporal == Temporal::Next && !self.store.unordered {
+            return Some("next");
+        }
+        if r.plan.len() < 2 {
+            return Some("one_premise");
+        }
+        for b in r.plan.iter() {
+            match b {
+                BodyElem::Pos(_) => {}
+                BodyElem::Neg(l) if self.demand.on(l.rel) => return Some("negated_demand"),
+                BodyElem::Neg(_) => {}
+                BodyElem::Bi { .. } if !self.add.adding => return Some("builtin"),
+                BodyElem::Bi { .. } => {}
+                BodyElem::Agg(_) => return Some("aggregate_premise"),
+            }
+        }
+        None
     }
 
     /// The variable sets a builtin can run from: one fully bound among them, it holds or binds the rest (`is` and `in`

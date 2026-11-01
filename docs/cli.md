@@ -472,6 +472,22 @@ back), `view` (what a volume's world wrote above its base), `evaluate` with
 the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
 line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
 
+**The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation whose rules read
+it, and read by those rules in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
+A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
+`conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
+firings solved news first, `written_order[profile](R, Why)` why the planner kept the rule in written order (`builtin`,
+`aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`). Per premise
+`K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
+`read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
+`widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
+and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure.
+Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
+the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
+the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a
+rule fired once per round); the TypeScript engine writes no profile, so a world that reads it is Rust's alone
+(`check_opt(W, one_engine, rust)`).
+
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
 reading and the binding. It is a diagnostic for the rule's author, not an
