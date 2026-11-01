@@ -187,17 +187,57 @@ sees_decl[code](E, D) :- decl_at_top[code](D), named_decl[code](D, Name, File),
                          top_read[code](E, Name, File).
 scoped_name[code](Name, File) :- scope_declares[code](_, Name, File).
 
-name_cand[code](E, Name, File, S)  :- ref[value](E, Name), at[tree](E, File, _), scoped_name[code](Name, File),
+name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name[code](Name, File),
                                       inside[tree](S, E), scope_declares[code](S, Name, File).
 name_outer[code](E, S)             :- name_cand[code](E, Name, File, S), name_cand[code](E, Name, File, S2),
                                       inside[tree](S, S2).
 function name_scope(E, to Name, to File, to S).
 name_scope[code](E, Name, File, S) :- name_cand[code](E, Name, File, S), not name_outer[code](E, S).
 
+-- 3b. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
+-- type name is an `identifier` node too; these are the positions where an
+-- identifier names something other than a binding. Everywhere else it is a
+-- reference, `typeof Promise` and `arr.map(String)` included.
+edb(not_a_reference).   -- not_a_reference(Kind, Field)
+not_a_reference(labeled_statement, label).
+not_a_reference(break_statement, label).
+not_a_reference(continue_statement, label).
+not_a_reference(import_specifier, imported).
+not_a_reference(export_specifier, exported).
+not_a_reference(export_namespace_specifier, exported).
+not_a_reference(meta_property, meta).
+not_a_reference(meta_property, property).
+not_a_reference(tstype_reference, type_name).
+not_a_reference(tsqualified_name, left).
+not_a_reference(tsqualified_name, right).
+not_a_reference(tsexpression_with_type_arguments, expression).
+not_a_reference(tsclass_implements, expression).
+not_a_reference(tsinterface_heritage, expression).
+not_a_reference(tstype_query, expr_name).
+not_a_reference(tsinterface_declaration, id).
+not_a_reference(tstype_alias_declaration, id).
+not_a_reference(tsenum_member, id).
+not_a_reference(tstype_predicate, parameter_name).
+not_a_reference(tsimport_type, qualifier).
+-- the parameters of a signature with no body name types, not bindings
+not_a_reference(tsdeclare_function, params).
+not_a_reference(tsdeclare_method, params).
+not_a_reference(tsfunction_type, params).
+not_a_reference(tsconstructor_type, params).
+not_a_reference(tsmethod_signature, params).
+not_a_reference(tscall_signature_declaration, params).
+not_a_reference(tsconstruct_signature_declaration, params).
+
+not_a_ref[code](E) :- not_a_reference(K, Field), ast_node[code](P, K, _), ast_child[code](P, Field, _, E).
+-- a key written as a name: `o.p`, `{ p: v }`, `p() {}`, a class field
+not_a_ref[code](E) :- ast_child[code](P, property, 0, E), ast_attr[code](P, computed, false).
+not_a_ref[code](E) :- ast_child[code](P, key, 0, E), ast_attr[code](P, computed, false).
+
 -- 3c. WHAT IS DECLARED AT THE TOP OF A FILE. A name no scope around its
 -- reading declares is the file's own top-level binding or import, else global.
 function top_read(E, to Name, to File).
-top_read[code](E, Name, File)  :- ref[value](E, Name), at[tree](E, File, _), not name_cand[code](E, _, _, _).
+top_read[code](E, Name, File)  :- ident_in[code](E, Name, File), not not_a_ref[code](E),
+                                  not name_cand[code](E, _, _, _).
 top_declares[code](Name, File) :- binder_at_top[code](D), binds_name[code](D, Name, File).
 top_declares[code](Name, File) :- decl_at_top[code](D), named_decl[code](D, Name, File).
 top_declares[code](Name, File) :- imports_name[code](Name, _, _, File).
