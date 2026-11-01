@@ -28,6 +28,7 @@ refine_drop(R, K, D) :- width[profile](R, K, W), yield[profile](R, K, Y), conclu
 refine_waste(dropped, T) :- T is sum(D ; R, K : refine_drop(R, K, D)).
 refine_redo(R, D) :- conc[profile](R, C), fresh[profile](R, F), concludes(R, _), D is C - F, D > 0.
 refine_waste(rederived, T) :- T is sum(D ; R : refine_redo(R, D)).
+refine_profile(Rel, A) :- asserted_by($fact(Rel, profile, A), _, _).
 `;
 
 type Row = string[];
@@ -58,9 +59,10 @@ export type Waste = { dropped: [number, number]; rederived: [number, number]; ms
 export function refine(files: string[]): { facts: string; report: Report[]; waste: Waste } {
   const meter = tmp('meter.rofl', METER);
   const measure = (extra: string[]) => {
-    const [widths, orders, heads, waste] = ask([...files, meter, ...extra], ['refine_width(R, At, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)', 'refine_waste(W, T)'], WALLS);
+    const [widths, orders, heads, waste, profile] = ask([...files, meter, ...extra], ['refine_width(R, At, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)', 'refine_waste(W, T)', 'refine_profile(Rel, A)'], WALLS);
     return {
       ms: lastMs,
+      profile: profile.map(([rel, a]) => `${rel}[profile](${args(a).join(', ')}).`).sort().join('\n') + '\n',
       width: new Map(widths.map(([r, at, t]) => [`${r} ${at}`, Number(t)])),
       waste: new Map(waste.map(([w, t]) => [w, Number(t)])),
       order: new Map(orders.map(([r, at, o, w]) => [`${r} ${at}`, { o, w }])),
@@ -68,7 +70,11 @@ export function refine(files: string[]): { facts: string; report: Report[]; wast
     };
   };
   const before = measure([]);
-  const [plans, costs] = ask([...files, ...PACKS], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)'], WALLS);
+  // the reflection is over the rules and the profile alone, without the data: the pack reads the reflection of the
+  // rules and the profile's numbers, and a lattice beside the data would have the world solved whole again
+  const rules = files.filter((f) => f.startsWith('@') || /:-/.test(fs.readFileSync(f, 'utf8')));
+  // the reflection asks its two answers alone: the rules of the world have nothing to fire over and are not run
+  const [plans, costs] = ask([...rules, tmp('profile.rofl', before.profile + 'asks(plan).\nasks(plan_cost).\n'), ...PACKS], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)'], WALLS);
   const forecast = new Map(costs.map(([r, at, c]) => [`${r} ${at}`, Number(c)]));
   const fact = ([r, at, l]: Row) => `plan[fixpointplan](${r}, ${at}, ${l}).`;
   const all = plans.map(fact).sort().join('\n') + (plans.length ? '\n' : '');
@@ -92,6 +98,24 @@ export function refine(files: string[]): { facts: string; report: Report[]; wast
   return { facts, report, waste: { dropped: w('dropped'), rederived: w('rederived'), ms: [before.ms, after.ms] } };
 }
 
+// the arguments of a `$cons` list, each as the engine prints it: a comma at depth 0 outside a string separates
+const args = (l: string): string[] => {
+  const out: string[] = [];
+  while (l.startsWith('$cons(')) {
+    let depth = 0, quoted = false, i = 6;
+    for (; i < l.length; i++) {
+      const c = l[i];
+      if (quoted) { if (c === '\\') i++; else if (c === '"') quoted = false; }
+      else if (c === '"') quoted = true;
+      else if (c === '(') depth++;
+      else if (c === ')') depth--;
+      else if (c === ',' && depth === 0) break;
+    }
+    out.push(l.slice(6, i));
+    l = l.slice(i + 1, -1);
+  }
+  return out;
+};
 const list = (l: string): string => l.replace(/\$cons\(/g, '').replace(/,\$nil\)*/g, '').replace(/\$nil/g, '').replace(/,/g, ' ');
 export function render(report: Report[], waste?: Waste): string {
   if (!report.length) return 'no rule planned: none of two to eight positive premises\n';

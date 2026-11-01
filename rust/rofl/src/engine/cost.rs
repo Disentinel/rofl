@@ -238,13 +238,16 @@ const PROFILE_RELS: [&str; 18] =
     ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
-    /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
+    /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
+    /// there as facts (`profile_text`). A profile given as facts is another world's, read as it is (the reflection
+    /// over a measured world, scripts/refine.ts); writing this world's beside it would double the census.
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");
         let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
-        self.rules.iter().any(|r| {
+        let reads = self.rules.iter().any(|r| {
             r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel))
-        })
+        });
+        reads && names.iter().all(|n| self.store.rel_persp(&self.h, *n, p).is_empty())
     }
 
     /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it

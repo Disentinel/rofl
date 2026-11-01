@@ -523,7 +523,7 @@ line that asks; the VS Code extension cuts its bare cells by it). Any request ma
 
 **The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
-A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
+A world that reads none pays nothing, and a world given profile facts (another world's, the reflection over it) is written none: the profile it holds is read as it is. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
 `conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
 firings solved news first, `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
 written position `At` (0 the firing over the whole store), as a `$cons` list of written positions, and whose it was (below,
@@ -585,11 +585,11 @@ world is then run with those facts and `width[profile]` judges them. Over plan-w
 d, c, a for `out` and `alt` alike at 210, under the hand-given 211, and the world measures 210 under it
 (rust/rofl/tests/plan_dp.rs). It is the second of the two modes the owner asked for: reflection in a world of its own,
 the answer in the world as it is. `npm run refine -- <files> [--out F]` runs the loop once (scripts/refine.ts): ask,
-with a meter beside the world, for the order and width of every rule; reflect, the two packs beside the world; refine,
+with a meter beside the world, for the order and width of every rule and for the profile itself; reflect, the two packs beside the rule files (those with a `:-`, and `@` lists) and the profile written as facts, without the data (the pack reads the reflection of the rules and the profile's numbers; a lattice beside the data had the world solved whole again, and the reflection at 250 files of vscode did not answer in 900 s); refine,
 the plan facts written to F (or stdout) to be loaded with the world from then on; ask again, the width under them. The
 report on stderr sets before, forecast and after side by side per rule and marks `worse` a plan that cost more than the
 order it replaced: that is the estimate's hypothesis false there, and a finding, not a thing to hide. `-- --check`
-runs it over plan-world.rofl and judges it. The reflection runs under walls of its own (the packs' world is 2^N x N rows
+runs it over plan-world.rofl and judges it. The reflection world asks its two answers alone (`asks(plan)`, `asks(plan_cost)`), and the plan pack's estimate saturates at 10^15: integers are i64 and a product past them is an `arith_overflow` hole, which made every plan a shrug at 250 files (f_the_reflection_at_the_reference_size_overflowed_and_shrugged). Measured 2026-11-01 at 250 files of vscode: the world 88 s, the reflection 45 s. The reflection runs under walls of its own (the packs' world is 2^N x N rows
 per rule of N premises, past the default space at the JS model's size) and a partial answer stops the loop with its
 text. The facts it writes are the plans the measurement confirmed, the rules whose width fell; a plan that cost
 more is in the report and never a fact (keep or revert, per rule), and the last line counts planned, kept, worse and
