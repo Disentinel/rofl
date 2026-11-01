@@ -593,7 +593,7 @@ runs it over plan-world.rofl and judges it. The reflection runs under walls of i
 per rule of N premises, past the default space at the JS model's size) and a partial answer stops the loop with its
 text. The facts it writes are the plans the measurement confirmed, the rules whose width fell; a plan that cost
 more is in the report and never a fact (keep or revert, per rule), and the last line counts planned, kept, worse and
-how many forecasts came within 2x of the measure. Measured over the JS model on vscode mini (2026-11-01): the
+how many forecasts came within 2x of the measure, and the line after it what was computed and thrown away, before and with every plan: partial solutions dropped at a premise (`width` less `yield`) and solutions concluded that were not new (`conc` less `fresh`), with the wall time of each run beside them, since the aim is both at zero only while the clock falls too. Every run of the loop is under walls of its own (`--space 200000000 --budget 20000000000`), the reference world being past the default space. Measured over the JS model on vscode mini (2026-11-01): the
 independence estimate loses to the greedy order on most rules the data's functional dependencies touch
 (f_the_join_order_is_a_fact_the_engine_obeys), so what the loop keeps there is the few it confirmed. The agent's skill for the loop (when to run it, how to read the report,
 where the facts live) is .claude/skills/refine-plan/SKILL.md.
