@@ -1647,17 +1647,8 @@ class_member_static[flow](CD, Key, V) :- inherited_field[flow](CD, Key, V, true)
 -- two members of one class, `{ '#edge': … }` is a legal string key — so
 -- `key_name` gets no arm for `private_name` and `selects` stays empty on a
 -- private read. `private_inner` is the shadowing test for nested classes.
-private_key[code](P, Name) :- ast_node[code](P, private_name, _),
-                              ast_child[code](P, id, 0, I), ast_name[code](I, Name).
+private_member[code](CD, Name, M) :- obj_like[flow](CD), has[value](CD, M), private[value](M), key[value](M, Name).
 
-edb(private_member_kind).
-private_member_kind(class_private_property).
-private_member_kind(class_private_method).
-
-private_member[code](CD, Name, M) :- obj_like[flow](CD), ast_child[code](CD, body, 0, B),
-                                     ast_child[code](B, body, _, M),
-                                     private_member_kind(K), ast_node[code](M, K, _),
-                                     ast_child[code](M, key, 0, P), private_key[code](P, Name).
 private_ref[code](N, Name)        :- member[value](N, _, Name), private[value](N).
 
 private_inner[code](N, CD) :- private_ref[code](N, Name), private_member[code](CD, Name, _),
