@@ -28,6 +28,7 @@ module_in("bin::rofl::load", cli).
 module_in("bin::rofl::render", cli).
 module_in("bin::rofl::nb", cli).
 module_in("bin::rofl::seed", cli).
+module_in("bin::rofl::memory", cli).
 module_in("bin::rofl::kept", kept).
 module_in("bin::rofl::kept::win", kept).
 module_in("bin::rofl::delta", kept).
@@ -61,10 +62,12 @@ module_in("rofl::engine::want", evaluator).
 module_in("rofl::engine::resume", evaluator).
 module_in("rofl::engine::addition", incremental).
 module_in("rofl::engine::delta", incremental).
+module_in("rofl::engine::layer", incremental).
 module_in("rofl::engine::prov", provenance).
 module_in("rofl::cell", aggregates).
 module_in("rofl::tag", aggregates).
 module_in("rofl::engine::latkept", aggregates).
+module_in("rofl::engine::algebra", aggregates).
 module_in("rofl::structure", structures).
 module_in("rofl::structures", structures).
 module_in("rofl::forest", structures).
