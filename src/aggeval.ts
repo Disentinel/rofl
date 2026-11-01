@@ -327,6 +327,7 @@ export function aggRefusalText(reason: string, rel: string | null): string {
     case 'set_pattern': return `${setPatternReason('the value of its head')}; this head's relation is no join lattice`;
     case 'join_value_off_carrier': return "it reads a join lattice with a value no value of its carrier can match, so the literal could never hold: a union's value is `set(E, ...)`, a hull's `iv(Lo, Hi)` with Lo <= Hi, a bitor's an integer of [0, 2^60); the slot takes a variable, such a value, `set(T)` or `iv(A, B)` of variables and integers (`ninf` a low end, `inf` a high one)";
     case 'lattice_unwidened': return "it computes a hull's value from that hull's own value by an interval function (ivadd, ivsub, ivmul, ivmeet) inside its recursion, and no relation on that cycle declares a widening, so nothing bounds how often the value can grow: declare one, `lattice p(K, hull I) widen N.`";
+    case 'unbounded_in_recursion': return "it makes an unbounded value inside its recursion: a builtin marked unbounded (concat, hash) makes a value the program did not hold, and a rule that calls one may not read a relation that depends on its own head, or the values could grow without end, unless that read walks an edge of a declared tree; call it below the recursion, or walk a tree";
     case 'order_nonmonotone': return "it reads a relation with a declared order inside its recursion, or concludes one, and is not monotone in that order: a value of an ordered relation may flow only into a value of a head that improves the same way (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) and into a comparison that stays true as the value improves (V < N for min, V > N for max); under pareto each value moves on its own, and under lex only the first value, strictly (+, - or a copy), may be compared, and each later value goes only into the value at its own place of a lex head whose first value is computed from the first one read";
     case 'lattice_nonmonotone': return "it reads a lattice relation inside its recursion and is not monotone in the value: the value may flow only into a lattice head's value (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) in the direction that head improves, or into a comparison that stays true as the value improves (D < N for min, D > N for max, B = true for or, B = false for and); a join's value (union, hull, bitor) only into a head of the same join or as S in `E in S` and `A subset S`, and a hull's through an interval function, X is ivadd(V, E), ivsub(V, E), ivsub(E, V), ivmul(V, K), ivmeet(V, E)";
     case 'tag_weight_reads_tag': return 'its head\'s tag is its weight, and the weight reads a tag of the body the engine multiplies in (⊗ through the body), so that tag would count twice: leave the head\'s tag a variable the body does not bind, and the engine writes the ⊗ of the body\'s tags (docs/aggregates.md, "Tags, as built")';
@@ -1489,7 +1490,7 @@ export class AggEval {
     if (this.bootstrap || (rules.length === 0 && this.latticeRows.length === 0 && this.domRels.size === 0)) return emptyAnswer();
     // WHAT safety.rofl IS ASKED is a function of the reflected program alone: one program, asked once
     const keyed = [V.rule, V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg,
-      V.premise_agg, V.reserved, V.lattice_decl, V.tag_decl, V.lattice_widen, V.dominance, V.order_comp];
+      V.premise_agg, V.uses_builtin, V.structure_decl, V.reserved, V.lattice_decl, V.tag_decl, V.lattice_widen, V.dominance, V.order_comp];
     const parts = [...rules.map((r) => r.id), JSON.stringify(this.latticeRows), ...this.tagRefused.flat()];
     for (const rel of keyed) for (const f of this.store.relAll(rel)) parts.push(f.key);
     const memoKey = digest53(parts.join('\n'));
@@ -1511,7 +1512,7 @@ export class AggEval {
     const pol = policyStore(SAFETY_DENSE);
     const add = (rel: string, persp: string, args: Term[]) => pol.add(rel, persp, args, F_BASE);
     for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos,
-      V.premise_neg, V.premise_agg, V.reserved, V.lattice_decl, V.lattice_widen, V.dominance, V.order_comp]) {
+      V.premise_neg, V.premise_agg, V.uses_builtin, V.structure_decl, V.reserved, V.lattice_decl, V.lattice_widen, V.dominance, V.order_comp]) {
       for (const f of this.store.relAll(rel)) {
         const a0 = f.args[0];
         if (a0 !== undefined && a0.k === 'a' && this.tagChanged.has(a0.name) && rel !== V.lattice_decl) continue;
@@ -1519,7 +1520,7 @@ export class AggEval {
       }
     }
     const seeded = new Set<string>([V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense,
-      V.premise_pos, V.premise_neg, V.premise_agg]);
+      V.premise_pos, V.premise_neg, V.premise_agg, V.uses_builtin]);
     for (const r of rules) {
       if (!this.tagChanged.has(r.id)) continue;
       const enc = encodeRule(r.clause);
@@ -1630,7 +1631,9 @@ export class AggEval {
     }
     const sub = new AggEval(pol, POLICY_BUDGET, 'strata', true);
     let settled = true;
-    try { sub.run(); } catch (e) { settled = false; this.diags.push(`safety.rofl did not settle: ${(e as Error).message}`); }
+    try {
+      if (sub.run().partial) throw new Error(`its budget of ${POLICY_BUDGET} steps ran out`);
+    } catch (e) { settled = false; this.diags.push(`safety.rofl did not settle: ${(e as Error).message}`); }
     const atoms = (rel: string): string[] => {
       const out: string[] = [];
       for (const f of pol.relAll(rel)) if (f.args[0]?.k === 'a' && !out.includes(f.args[0].name)) out.push(f.args[0].name);

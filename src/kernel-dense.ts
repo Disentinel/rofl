@@ -136,6 +136,7 @@ r(r76, l(lattice_member_reader, [v("R")]), [l(analysed, [v("R")]), l(premise_neg
 r(r77, l(dominated_reader, [v("R")]), [l(analysed, [v("R")]), l(premise_pos, [v("R"), dominated_by])]).
 r(r78, l(dominated_reader, [v("R")]), [l(analysed, [v("R")]), l(premise_neg, [v("R"), dominated_by])]).
 edb(premise_arith).
+edb(structure_decl).
 edb(lit_arity).
 r(r79, l(lattice_rel, [v("P")]), [l(lattice_decl, [v("P"), v("_$0"), v("_$1")])]).
 r(r80, l(lattice_any, []), [l(lattice_rel, [v("_$0")])]).
@@ -243,68 +244,79 @@ r(r147, l(unw_reach, [v("A"), v("B")]), [l(unw_edge, [v("A"), v("B")])]).
 r(r148, l(unw_reach, [v("A"), v("C")]), [l(unw_reach, [v("A"), v("B")]), l(unw_edge, [v("B"), v("C")])]).
 r(r149, l(agg_refused, [v("R"), lattice_unwidened]), [l(lat_iv_step, [v("R"), v("K")]), l(lat_inner, [v("R"), v("K"), v("P")]), l(concludes, [v("R"), v("H")]), l(unw_reach, [v("P"), v("H")])]).
 r(r150, l(agg_refused, [v("R"), lattice_unwidened]), [l(lat_iv_step, [v("R"), v("K")]), l(lat_inner, [v("R"), v("K"), v("H")]), l(concludes, [v("R"), v("H")]), n(l(lat_widened, [v("H")]))]).
-r(r151, l(lat_use, [v("R"), v("K"), v("X"), v("J"), v("S")]), [l(lat_taint, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), v("J"), v("S"), v("_$0"), v("X")])]).
-r(r152, l(lat_misuse, [v("R")]), [l(lat_use, [v("R"), v("K"), v("X"), v("J"), v("S")]), n(l(lat_ok, [v("R"), v("K"), v("X"), v("J"), v("S")]))]).
-r(r153, l(lat_args, [v("R"), v("K"), v("L")]), [l(lat_inner, [v("R"), v("K"), v("_$0")]), l(premise_lit, [v("R"), v("K"), f("$lit", [v("_$1"), v("_$2"), v("L"), v("_$3")])])]).
-r(r154, l(lat_args, [v("R"), v("K"), v("T")]), [l(lat_args, [v("R"), v("K"), f("$cons", [v("_$0"), v("T")])])]).
-r(r155, l(lat_last, [v("R"), v("K"), v("X")]), [l(lat_args, [v("R"), v("K"), f("$cons", [v("X"), $nil])])]).
-r(r156, l(lat_last_var, [v("R"), v("K")]), [l(lat_last, [v("R"), v("K"), f("$var", [v("_$0")])])]).
-r(r157, l(lat_const_ok, [v("R"), v("K")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(lat_last, [v("R"), v("K"), v("C")]), l(lat_op, [v("P"), v("Op")]), l(better_move, [v("Op"), v("M")]), l(top_const, [v("M"), v("C")])]).
-r(r158, l(lat_misuse, [v("R")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(lat_op, [v("P"), v("_$0")]), n(l(lat_last_var, [v("R"), v("K")])), n(l(lat_const_ok, [v("R"), v("K")]))]).
-r(r159, l(agg_refused, [v("R"), lattice_nonmonotone]), [l(lat_misuse, [v("R")]), n(l(ord_rule, [v("R")]))]).
-r(r160, l(agg_refused, [v("R"), order_nonmonotone]), [l(lat_misuse, [v("R")]), l(ord_rule, [v("R")])]).
+unbounded(s("concat")).
+unbounded(s("hash")).
+r(r151, l(unb_rule, [v("R"), v("H")]), [l(uses_builtin, [v("R"), v("Op")]), l(unbounded, [v("Op")]), l(concludes, [v("R"), v("H")])]).
+r(r152, l(unb_read, [v("R"), v("P")]), [l(unb_rule, [v("R"), v("_$0")]), l(premise_pos, [v("R"), v("P")])]).
+r(r153, l(unb_read, [v("R"), v("P")]), [l(unb_rule, [v("R"), v("_$0")]), l(premise_agg, [v("R"), v("P")])]).
+r(r154, l(unb_up, [v("H"), v("X")]), [l(unb_rule, [v("_$0"), v("H")]), l(premise_pos, [v("R"), v("H")]), l(concludes, [v("R"), v("X")]), l(conclusion_tense, [v("R"), now])]).
+r(r155, l(unb_up, [v("H"), v("X")]), [l(unb_rule, [v("_$0"), v("H")]), l(premise_agg, [v("R"), v("H")]), l(concludes, [v("R"), v("X")]), l(conclusion_tense, [v("R"), now])]).
+r(r156, l(unb_up, [v("H"), v("Y")]), [l(unb_up, [v("H"), v("X")]), l(premise_pos, [v("R"), v("X")]), l(concludes, [v("R"), v("Y")]), l(conclusion_tense, [v("R"), now])]).
+r(r157, l(unb_up, [v("H"), v("Y")]), [l(unb_up, [v("H"), v("X")]), l(premise_agg, [v("R"), v("X")]), l(concludes, [v("R"), v("Y")]), l(conclusion_tense, [v("R"), now])]).
+r(r158, l(unb_walks_tree, [v("R")]), [l(unb_rule, [v("R"), v("_$0")]), l(premise_pos, [v("R"), v("T")]), l(structure_decl, [v("T"), v("_$1"), tree])]).
+r(r159, l(agg_refused, [v("R"), unbounded_in_recursion]), [l(unb_rule, [v("R"), v("H")]), l(unb_read, [v("R"), v("P")]), l(unb_up, [v("H"), v("P")]), n(l(unb_walks_tree, [v("R")]))]).
+r(r160, l(lat_use, [v("R"), v("K"), v("X"), v("J"), v("S")]), [l(lat_taint, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), v("J"), v("S"), v("_$0"), v("X")])]).
+r(r161, l(lat_misuse, [v("R")]), [l(lat_use, [v("R"), v("K"), v("X"), v("J"), v("S")]), n(l(lat_ok, [v("R"), v("K"), v("X"), v("J"), v("S")]))]).
+r(r162, l(lat_args, [v("R"), v("K"), v("L")]), [l(lat_inner, [v("R"), v("K"), v("_$0")]), l(premise_lit, [v("R"), v("K"), f("$lit", [v("_$1"), v("_$2"), v("L"), v("_$3")])])]).
+r(r163, l(lat_args, [v("R"), v("K"), v("T")]), [l(lat_args, [v("R"), v("K"), f("$cons", [v("_$0"), v("T")])])]).
+r(r164, l(lat_last, [v("R"), v("K"), v("X")]), [l(lat_args, [v("R"), v("K"), f("$cons", [v("X"), $nil])])]).
+r(r165, l(lat_last_var, [v("R"), v("K")]), [l(lat_last, [v("R"), v("K"), f("$var", [v("_$0")])])]).
+r(r166, l(lat_const_ok, [v("R"), v("K")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(lat_last, [v("R"), v("K"), v("C")]), l(lat_op, [v("P"), v("Op")]), l(better_move, [v("Op"), v("M")]), l(top_const, [v("M"), v("C")])]).
+r(r167, l(lat_misuse, [v("R")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(lat_op, [v("P"), v("_$0")]), n(l(lat_last_var, [v("R"), v("K")])), n(l(lat_const_ok, [v("R"), v("K")]))]).
+r(r168, l(agg_refused, [v("R"), lattice_nonmonotone]), [l(lat_misuse, [v("R")]), n(l(ord_rule, [v("R")]))]).
+r(r169, l(agg_refused, [v("R"), order_nonmonotone]), [l(lat_misuse, [v("R")]), l(ord_rule, [v("R")])]).
 edb(order_comp).
 edb(order_bad_read).
-r(r161, l(ord_rel, [v("P")]), [l(order_comp, [v("P"), v("_$0"), v("_$1"), v("_$2"), v("_$3")])]).
-r(r162, l(ord_owned, [v("P"), v("R")]), [l(order_comp, [v("P"), v("_$0"), v("_$1"), v("_$2"), v("R")])]).
-r(r163, l(lattice_refused, [v("P"), order_and_rules]), [l(ord_rel, [v("P")]), l(dominance, [v("R"), v("P"), v("_$0"), v("_$1")]), n(l(ord_owned, [v("P"), v("R")]))]).
-r(r164, l(lattice_refused, [v("P"), two_orders]), [l(order_comp, [v("P"), v("K1"), v("_$0"), v("_$1"), v("_$2")]), l(order_comp, [v("P"), v("K2"), v("_$3"), v("_$4"), v("_$5")]), b("!=", v("K1"), v("K2"))]).
-r(r165, l(lattice_refused, [v("P"), two_orders]), [l(order_comp, [v("P"), v("_$0"), v("I"), v("D1"), v("_$1")]), l(order_comp, [v("P"), v("_$2"), v("I"), v("D2"), v("_$3")]), b("!=", v("D1"), v("D2"))]).
-r(r166, l(lat_taint, [v("R"), v("K"), v("V")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("_$0"), v("V")])]).
-r(r167, l(lat_mv, [v("R"), v("K"), v("V"), v("M")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(premise_var, [v("R"), v("K"), oval, v("I"), v("V")]), l(order_comp, [v("P"), v("_$0"), v("I"), v("Dir"), v("_$1")]), l(better_move, [v("Dir"), v("M")])]).
-r(r168, l(lat_ok, [v("R"), v("K"), v("V"), v("K"), oval]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("_$0"), v("V")])]).
-r(r169, l(lat_ok, [v("R"), v("K"), v("V"), v("K"), pos]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("_$0"), v("V")])]).
-r(r170, l(lat_misuse, [v("R")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(order_bad_read, [v("R"), v("K")])]).
-r(r171, l(ord_head_dir, [v("R"), v("K"), v("X"), v("I")]), [l(premise_var, [v("R"), 0, oval, v("I"), v("X")]), l(concludes, [v("R"), v("H")]), l(order_comp, [v("H"), v("_$0"), v("I"), v("Dir"), v("_$1")]), l(lat_mv, [v("R"), v("K"), v("X"), v("M")]), l(better_move, [v("Dir"), v("M")])]).
-r(r172, l(ord_head_unfit, [v("R"), v("K"), v("X")]), [l(lat_taint, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, oval, v("I"), v("X")]), n(l(ord_head_dir, [v("R"), v("K"), v("X"), v("I")]))]).
-r(r173, l(lat_ok, [v("R"), v("K"), v("X"), 0, oval]), [l(lat_taint, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), n(l(ord_head_unfit, [v("R"), v("K"), v("X")]))]).
-r(r174, l(lat_ok, [v("R"), v("K"), v("X"), 0, head]), [l(lat_ok, [v("R"), v("K"), v("X"), 0, oval])]).
-r(r175, l(lat_base, [v("R"), v("K"), v("V"), v("I")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("I"), v("V")])]).
-r(r176, l(lat_base, [v("R"), v("K"), v("V"), 1]), [l(lat_inner, [v("R"), v("K"), v("P")]), n(l(ord_rel, [v("P")])), l(premise_var, [v("R"), v("K"), lval, v("_$0"), v("V")])]).
-r(r177, l(ord_org, [v("R"), v("K"), v("V"), v("I")]), [l(lat_base, [v("R"), v("K"), v("V"), v("I")])]).
-r(r178, l(ord_org, [v("R"), v("K"), v("X"), v("I")]), [l(ord_org, [v("R"), v("K"), v("Y"), v("I")]), l(lat_step, [v("R"), v("K"), v("Y"), v("_$0"), v("X"), v("_$1")])]).
-r(r179, l(strict_step, [v("R"), v("J")]), [l(premise_arith, [v("R"), v("J"), v("_$0"), s("+"), v("_$1"), v("_$2")])]).
-r(r180, l(strict_step, [v("R"), v("J")]), [l(premise_arith, [v("R"), v("J"), v("_$0"), s("-"), v("_$1"), v("_$2")])]).
-r(r181, l(strict_step, [v("R"), v("J")]), [l(premise_arith, [v("R"), v("J"), f("$var", [v("X")]), s("is"), f("$var", [v("Y")]), f("$var", [v("Y")])])]).
-r(r182, l(ord_str, [v("R"), v("K"), v("V")]), [l(lat_base, [v("R"), v("K"), v("V"), v("_$0")])]).
-r(r183, l(ord_str, [v("R"), v("K"), v("X")]), [l(ord_str, [v("R"), v("K"), v("Y")]), l(lat_step, [v("R"), v("K"), v("Y"), v("J"), v("X"), v("_$0")]), l(strict_step, [v("R"), v("J")])]).
-r(r184, l(ord_has_org, [v("R"), v("K"), v("X")]), [l(ord_org, [v("R"), v("K"), v("X"), v("_$0")])]).
-r(r185, l(lex_rel, [v("P")]), [l(order_comp, [v("P"), lex, v("_$0"), v("_$1"), v("_$2")])]).
-r(r186, l(lex_head, [v("R")]), [l(concludes, [v("R"), v("H")]), l(lex_rel, [v("H")])]).
-r(r187, l(lex_late, [v("R"), v("K"), v("X")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(lex_rel, [v("P")]), l(ord_org, [v("R"), v("K"), v("X"), v("I")]), b(">", v("I"), 1)]).
+r(r170, l(ord_rel, [v("P")]), [l(order_comp, [v("P"), v("_$0"), v("_$1"), v("_$2"), v("_$3")])]).
+r(r171, l(ord_owned, [v("P"), v("R")]), [l(order_comp, [v("P"), v("_$0"), v("_$1"), v("_$2"), v("R")])]).
+r(r172, l(lattice_refused, [v("P"), order_and_rules]), [l(ord_rel, [v("P")]), l(dominance, [v("R"), v("P"), v("_$0"), v("_$1")]), n(l(ord_owned, [v("P"), v("R")]))]).
+r(r173, l(lattice_refused, [v("P"), two_orders]), [l(order_comp, [v("P"), v("K1"), v("_$0"), v("_$1"), v("_$2")]), l(order_comp, [v("P"), v("K2"), v("_$3"), v("_$4"), v("_$5")]), b("!=", v("K1"), v("K2"))]).
+r(r174, l(lattice_refused, [v("P"), two_orders]), [l(order_comp, [v("P"), v("_$0"), v("I"), v("D1"), v("_$1")]), l(order_comp, [v("P"), v("_$2"), v("I"), v("D2"), v("_$3")]), b("!=", v("D1"), v("D2"))]).
+r(r175, l(lat_taint, [v("R"), v("K"), v("V")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("_$0"), v("V")])]).
+r(r176, l(lat_mv, [v("R"), v("K"), v("V"), v("M")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(premise_var, [v("R"), v("K"), oval, v("I"), v("V")]), l(order_comp, [v("P"), v("_$0"), v("I"), v("Dir"), v("_$1")]), l(better_move, [v("Dir"), v("M")])]).
+r(r177, l(lat_ok, [v("R"), v("K"), v("V"), v("K"), oval]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("_$0"), v("V")])]).
+r(r178, l(lat_ok, [v("R"), v("K"), v("V"), v("K"), pos]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("_$0"), v("V")])]).
+r(r179, l(lat_misuse, [v("R")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(order_bad_read, [v("R"), v("K")])]).
+r(r180, l(ord_head_dir, [v("R"), v("K"), v("X"), v("I")]), [l(premise_var, [v("R"), 0, oval, v("I"), v("X")]), l(concludes, [v("R"), v("H")]), l(order_comp, [v("H"), v("_$0"), v("I"), v("Dir"), v("_$1")]), l(lat_mv, [v("R"), v("K"), v("X"), v("M")]), l(better_move, [v("Dir"), v("M")])]).
+r(r181, l(ord_head_unfit, [v("R"), v("K"), v("X")]), [l(lat_taint, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, oval, v("I"), v("X")]), n(l(ord_head_dir, [v("R"), v("K"), v("X"), v("I")]))]).
+r(r182, l(lat_ok, [v("R"), v("K"), v("X"), 0, oval]), [l(lat_taint, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), n(l(ord_head_unfit, [v("R"), v("K"), v("X")]))]).
+r(r183, l(lat_ok, [v("R"), v("K"), v("X"), 0, head]), [l(lat_ok, [v("R"), v("K"), v("X"), 0, oval])]).
+r(r184, l(lat_base, [v("R"), v("K"), v("V"), v("I")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(ord_rel, [v("P")]), l(premise_var, [v("R"), v("K"), oval, v("I"), v("V")])]).
+r(r185, l(lat_base, [v("R"), v("K"), v("V"), 1]), [l(lat_inner, [v("R"), v("K"), v("P")]), n(l(ord_rel, [v("P")])), l(premise_var, [v("R"), v("K"), lval, v("_$0"), v("V")])]).
+r(r186, l(ord_org, [v("R"), v("K"), v("V"), v("I")]), [l(lat_base, [v("R"), v("K"), v("V"), v("I")])]).
+r(r187, l(ord_org, [v("R"), v("K"), v("X"), v("I")]), [l(ord_org, [v("R"), v("K"), v("Y"), v("I")]), l(lat_step, [v("R"), v("K"), v("Y"), v("_$0"), v("X"), v("_$1")])]).
+r(r188, l(strict_step, [v("R"), v("J")]), [l(premise_arith, [v("R"), v("J"), v("_$0"), s("+"), v("_$1"), v("_$2")])]).
+r(r189, l(strict_step, [v("R"), v("J")]), [l(premise_arith, [v("R"), v("J"), v("_$0"), s("-"), v("_$1"), v("_$2")])]).
+r(r190, l(strict_step, [v("R"), v("J")]), [l(premise_arith, [v("R"), v("J"), f("$var", [v("X")]), s("is"), f("$var", [v("Y")]), f("$var", [v("Y")])])]).
+r(r191, l(ord_str, [v("R"), v("K"), v("V")]), [l(lat_base, [v("R"), v("K"), v("V"), v("_$0")])]).
+r(r192, l(ord_str, [v("R"), v("K"), v("X")]), [l(ord_str, [v("R"), v("K"), v("Y")]), l(lat_step, [v("R"), v("K"), v("Y"), v("J"), v("X"), v("_$0")]), l(strict_step, [v("R"), v("J")])]).
+r(r193, l(ord_has_org, [v("R"), v("K"), v("X")]), [l(ord_org, [v("R"), v("K"), v("X"), v("_$0")])]).
+r(r194, l(lex_rel, [v("P")]), [l(order_comp, [v("P"), lex, v("_$0"), v("_$1"), v("_$2")])]).
+r(r195, l(lex_head, [v("R")]), [l(concludes, [v("R"), v("H")]), l(lex_rel, [v("H")])]).
+r(r196, l(lex_late, [v("R"), v("K"), v("X")]), [l(lat_inner, [v("R"), v("K"), v("P")]), l(lex_rel, [v("P")]), l(ord_org, [v("R"), v("K"), v("X"), v("I")]), b(">", v("I"), 1)]).
 ord_cmp(s("<")).
 ord_cmp(s("<=")).
 ord_cmp(s(">")).
 ord_cmp(s(">=")).
 ord_cmp(s("=")).
 ord_cmp(s("!=")).
-r(r188, l(lat_misuse, [v("R")]), [l(lex_late, [v("R"), v("K"), v("X")]), l(premise_lit, [v("R"), v("J"), f("$builtin", [v("Op"), v("_$0")])]), l(premise_var, [v("R"), v("J"), v("_$1"), v("_$2"), v("X")]), l(ord_cmp, [v("Op")])]).
-r(r189, l(lat_misuse, [v("R")]), [l(lex_late, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, hval, v("_$0"), v("X")])]).
-r(r190, l(lat_misuse, [v("R")]), [l(lex_late, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), l(concludes, [v("R"), v("H")]), n(l(lex_rel, [v("H")]))]).
-r(r191, l(ord_more, [v("P"), v("I")]), [l(order_comp, [v("P"), v("_$0"), v("I"), v("_$1"), v("_$2")]), l(order_comp, [v("P"), v("_$3"), v("J"), v("_$4"), v("_$5")]), b(">", v("J"), v("I"))]).
-r(r192, l(lex_pos, [v("R"), v("I")]), [l(concludes, [v("R"), v("H")]), l(lex_rel, [v("H")]), l(ord_more, [v("H"), v("I")])]).
-r(r193, l(lex_track, [v("R"), v("K")]), [l(lex_head, [v("R")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), l(lat_taint, [v("R"), v("K"), v("X")])]).
-r(r194, l(lex_strict, [v("R"), v("K"), v("I")]), [l(premise_var, [v("R"), 0, oval, v("I"), v("X")]), l(ord_org, [v("R"), v("K"), v("X"), v("I")]), l(ord_str, [v("R"), v("K"), v("X")])]).
-r(r195, l(lat_misuse, [v("R")]), [l(lex_track, [v("R"), v("K")]), l(lex_pos, [v("R"), v("I")]), n(l(lex_strict, [v("R"), v("K"), v("I")]))]).
-r(r196, l(lat_misuse, [v("R")]), [l(lex_head, [v("R")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), l(lat_taint, [v("R"), v("K"), v("X")]), n(l(ord_has_org, [v("R"), v("K"), v("X")]))]).
-r(r197, l(ord_rule, [v("R")]), [l(lat_inner, [v("R"), v("_$0"), v("P")]), l(ord_rel, [v("P")])]).
-r(r198, l(ord_rule, [v("R")]), [l(concludes, [v("R"), v("H")]), l(ord_rel, [v("H")])]).
-r(r199, l(lat_live, [v("P"), v("P")]), [l(lattice_rel, [v("P")])]).
-r(r200, l(lat_live, [v("A"), v("P")]), [l(lattice_any, []), l(concludes, [v("R"), v("A")]), l(conclusion_tense, [v("R"), now]), l(premise_pos, [v("R"), v("B")]), n(l(lattice_rel, [v("B")])), l(lat_live, [v("B"), v("P")])]).
-r(r201, l(lat_live, [v("A"), v("P")]), [l(lat_inner, [v("R"), v("_$0"), v("B")]), l(concludes, [v("R"), v("A")]), l(lat_live, [v("B"), v("P")])]).
-r(r202, l(agg_refused, [v("R"), threshold_lattice]), [l(thr_read, [v("R"), v("Q")]), l(lat_live, [v("Q"), v("_$0")])]).
-r(r203, l(agg_refused, [v("R"), threshold_lattice]), [l(agg_op, [v("R"), v("_$0"), at_least]), l(concludes, [v("R"), v("H")]), l(lattice_rel, [v("H")])]).
-r(r204, l(agg_refused, [v("R"), threshold_lattice]), [l(agg_op, [v("R"), v("_$0"), at_least]), l(lat_inner, [v("R"), v("_$1"), v("_$2")])]).
+r(r197, l(lat_misuse, [v("R")]), [l(lex_late, [v("R"), v("K"), v("X")]), l(premise_lit, [v("R"), v("J"), f("$builtin", [v("Op"), v("_$0")])]), l(premise_var, [v("R"), v("J"), v("_$1"), v("_$2"), v("X")]), l(ord_cmp, [v("Op")])]).
+r(r198, l(lat_misuse, [v("R")]), [l(lex_late, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, hval, v("_$0"), v("X")])]).
+r(r199, l(lat_misuse, [v("R")]), [l(lex_late, [v("R"), v("K"), v("X")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), l(concludes, [v("R"), v("H")]), n(l(lex_rel, [v("H")]))]).
+r(r200, l(ord_more, [v("P"), v("I")]), [l(order_comp, [v("P"), v("_$0"), v("I"), v("_$1"), v("_$2")]), l(order_comp, [v("P"), v("_$3"), v("J"), v("_$4"), v("_$5")]), b(">", v("J"), v("I"))]).
+r(r201, l(lex_pos, [v("R"), v("I")]), [l(concludes, [v("R"), v("H")]), l(lex_rel, [v("H")]), l(ord_more, [v("H"), v("I")])]).
+r(r202, l(lex_track, [v("R"), v("K")]), [l(lex_head, [v("R")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), l(lat_taint, [v("R"), v("K"), v("X")])]).
+r(r203, l(lex_strict, [v("R"), v("K"), v("I")]), [l(premise_var, [v("R"), 0, oval, v("I"), v("X")]), l(ord_org, [v("R"), v("K"), v("X"), v("I")]), l(ord_str, [v("R"), v("K"), v("X")])]).
+r(r204, l(lat_misuse, [v("R")]), [l(lex_track, [v("R"), v("K")]), l(lex_pos, [v("R"), v("I")]), n(l(lex_strict, [v("R"), v("K"), v("I")]))]).
+r(r205, l(lat_misuse, [v("R")]), [l(lex_head, [v("R")]), l(premise_var, [v("R"), 0, oval, v("_$0"), v("X")]), l(lat_taint, [v("R"), v("K"), v("X")]), n(l(ord_has_org, [v("R"), v("K"), v("X")]))]).
+r(r206, l(ord_rule, [v("R")]), [l(lat_inner, [v("R"), v("_$0"), v("P")]), l(ord_rel, [v("P")])]).
+r(r207, l(ord_rule, [v("R")]), [l(concludes, [v("R"), v("H")]), l(ord_rel, [v("H")])]).
+r(r208, l(lat_live, [v("P"), v("P")]), [l(lattice_rel, [v("P")])]).
+r(r209, l(lat_live, [v("A"), v("P")]), [l(lattice_any, []), l(concludes, [v("R"), v("A")]), l(conclusion_tense, [v("R"), now]), l(premise_pos, [v("R"), v("B")]), n(l(lattice_rel, [v("B")])), l(lat_live, [v("B"), v("P")])]).
+r(r210, l(lat_live, [v("A"), v("P")]), [l(lat_inner, [v("R"), v("_$0"), v("B")]), l(concludes, [v("R"), v("A")]), l(lat_live, [v("B"), v("P")])]).
+r(r211, l(agg_refused, [v("R"), threshold_lattice]), [l(thr_read, [v("R"), v("Q")]), l(lat_live, [v("Q"), v("_$0")])]).
+r(r212, l(agg_refused, [v("R"), threshold_lattice]), [l(agg_op, [v("R"), v("_$0"), at_least]), l(concludes, [v("R"), v("H")]), l(lattice_rel, [v("H")])]).
+r(r213, l(agg_refused, [v("R"), threshold_lattice]), [l(agg_op, [v("R"), v("_$0"), at_least]), l(lat_inner, [v("R"), v("_$1"), v("_$2")])]).
 stratum(analysed, 1).
 stratum(slot, 1).
 stratum(binds_at, 1).
@@ -355,6 +367,10 @@ stratum(lat_read, 1).
 stratum(lat_right_dirty, 1).
 stratum(lat_taint, 1).
 stratum(lat_use, 1).
+stratum(unb_rule, 1).
+stratum(unb_read, 1).
+stratum(unb_up, 1).
+stratum(unb_walks_tree, 1).
 stratum(lattice_any, 1).
 stratum(lattice_member_reader, 1).
 stratum(lattice_refused, 2).

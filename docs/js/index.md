@@ -2,8 +2,8 @@
 
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
-| [phrases](phrases.rofl.md) | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1065 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1064 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 91 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 542 | 200 | 89 | 95 | 101 | 730 | 69 | 7 | 12 | 0 |
@@ -18,7 +18,7 @@
 | [js-globals](js-globals.rofl.md) | 18 | 17 | 16 | 0 | 0 | 30 | 0 | 0 | 6 | 0 |
 | [js-host](js-host.rofl.md) | 77 | 59 | 44 | 14 | 4 | 113 | 8 | 1 | 18 | 0 |
 | [js-model](js-model.rofl.md) | 122 | 56 | 49 | 2 | 0 | 139 | 13 | 3 | 2 | 0 |
-| [js-modules](js-modules.rofl.md) | 187 | 116 | 113 | 0 | 23 | 253 | 24 | 3 | 2 | 0 |
+| [js-modules](js-modules.rofl.md) | 188 | 119 | 115 | 0 | 23 | 257 | 26 | 4 | 2 | 0 |
 | [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-service](js-service.rofl.md) | 20 | 15 | 1 | 13 | 0 | 17 | 2 | 1 | 7 | 0 |
@@ -242,6 +242,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `delegates` | `delegates_to` |
 | `depends` | `depends_on` |
 | `destructures_at` | `destructures` |
+| `dir_at` | `holds_the_directory` |
 | `double_cell` | `is_a_double_cell` |
 | `double_claimed` | `is_double_claimed` |
 | `double_claimed` | `is_double_claimed` |
@@ -436,6 +437,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `field_at` | `has_a_field_own_or_inherited` |
 | `field_init` | `has_the_field_initialiser` |
 | `field_of` | `has_the_field` |
+| `file_at` | `holds_the_file` |
 | `file_broken` | `is_broken_in` |
 | `file_stem` | `has_the_stem` |
 | `fkind_slot` | `has_a_kind_slot_in_facts` |
@@ -451,7 +453,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `frontier_at` | `has_the_frontier` |
 | `frontier_line` | `shows_the_frontier` |
 | `frontier_named` | `has_the_frontier_by_name` |
-| `fs_file_in` | `holds_the_file` |
 | `fslot` | `the_slot` |
 | `fwalk` | `the_arguments` |
 | `gate_feature` | `requires` |
@@ -471,9 +472,11 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `handled` | `is_handled` |
 | `has_api` | `reaches_the_api` |
 | `has_default_internal` | `has_a_default_internal` |
+| `has_dir` | `holds_the_directory` |
 | `has_entry` | `has_an_entry_point` |
 | `has_explicit_shape` | `has_an_explicit_shape` |
 | `has_feature` | `has_the_feature` |
+| `has_file` | `holds_the_file` |
 | `has_init` | `has_an_initialiser` |
 | `has_internal_home` | `has_an_internal_home` |
 | `has_module_target` | `names_a_file_of_the_code` |

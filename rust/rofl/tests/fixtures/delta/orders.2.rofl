@@ -59,25 +59,12 @@ ast_child[code](n2b70869555e396cd_9l7lmkrrho2, declaration, 0, n2b70869555e396cd
 ast_child[code](n2b70869555e396cd_12undirbnh3, body, 1, n2b70869555e396cd_9l7lmkrrho2).
 ast_child[code](n2b70869555e396cd_3c3ted0nsu2, program, 0, n2b70869555e396cd_12undirbnh3).
 ast_file[code](n2b70869555e396cd_3c3ted0nsu2, "orders.js").
-fs_dir[code](".").
-fs_file[code]("orders.js").
-fs_dir_of[code]("orders.js", ".").
-fs_file_in[code](".", "orders.js", "orders.js").
-fs_file[code]("db.js").
-fs_dir_of[code]("db.js", ".").
-fs_file_in[code](".", "db.js", "db.js").
-fs_file[code]("log.js").
-fs_dir_of[code]("log.js", ".").
-fs_file_in[code](".", "log.js", "log.js").
-fs_file[code]("server.js").
-fs_dir_of[code]("server.js", ".").
-fs_file_in[code](".", "server.js", "server.js").
-fs_file[code]("users.js").
-fs_dir_of[code]("users.js", ".").
-fs_file_in[code](".", "users.js", "users.js").
-fs_file[code]("util.js").
-fs_dir_of[code]("util.js", ".").
-fs_file_in[code](".", "util.js", "util.js").
+has_file[fs](".", "orders.js").
+has_file[fs](".", "db.js").
+has_file[fs](".", "log.js").
+has_file[fs](".", "server.js").
+has_file[fs](".", "users.js").
+has_file[fs](".", "util.js").
 str_segs[code]("./users.js", 2).
 str_char0[code]("./users.js", ".").
 str_seg[code]("./users.js", 0, ".").

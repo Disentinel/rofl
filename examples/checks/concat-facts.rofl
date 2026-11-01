@@ -1379,16 +1379,9 @@ ast_child[code](nfb3ebe8b34f12aa0_cnkjcpr3ml, declaration, 0, nfb3ebe8b34f12aa0_
 ast_child[code](nfb3ebe8b34f12aa0_12undirbnh3, body, 0, nfb3ebe8b34f12aa0_cnkjcpr3ml).
 ast_child[code](nfb3ebe8b34f12aa0_3c3ted0nsu2, program, 0, nfb3ebe8b34f12aa0_12undirbnh3).
 ast_file[code](nfb3ebe8b34f12aa0_3c3ted0nsu2, "src/mypath.ts").
-fs_dir[code](".").
-fs_dir[code]("src").
-fs_parent[code]("src", ".").
-fs_dir_in[code](".", "src", "src").
-fs_file[code]("src/entry.ts").
-fs_dir_of[code]("src/entry.ts", "src").
-fs_file_in[code]("src", "entry.ts", "src/entry.ts").
-fs_file[code]("src/mypath.ts").
-fs_dir_of[code]("src/mypath.ts", "src").
-fs_file_in[code]("src", "mypath.ts", "src/mypath.ts").
+has_dir[fs](".", "src").
+has_file[fs]("src", "entry.ts").
+has_file[fs]("src", "mypath.ts").
 str_segs[code]("path", 1).
 str_char0[code]("path", "p").
 str_seg[code]("path", 0, "path").
