@@ -118,7 +118,7 @@ completion_kind(block_statement).
 completion_kind(if_statement).
 completion_kind(labeled_statement).
 
-completes_abruptly[code](S) :- abrupt_kind(K), ast_node[code](S, K, _).
+completes_abruptly[code](S) :- exits[value](S, _).
 
 completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
                                ast_node[code](B, block_statement, _).
@@ -192,8 +192,7 @@ sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
 has_return[code](F)    :- exits[value](R, return), nearest_v[flow](F, R).
 top_throw[code](F)     :- fn_node[code](F), body[value](F, B),
-                          ast_child[code](B, body, _, S),
-                          exits[value](S, throw).
+                          parent[tree](B, S), exits[value](S, throw).
 always_throws[code](F) :- top_throw[code](F), not has_return[code](F), not deferred_body[code](F).
 
 throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
