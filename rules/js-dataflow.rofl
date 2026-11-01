@@ -461,7 +461,8 @@ destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, P), at[tr
                                                 ast_name[code](L, Local).
 scoped_binder[code](D, File) :- destructures_at[code](D, _, _, File).
 
-array_elem[flow](A, I, E) :- ast_node[code](A, array_expression, _), ast_child[code](A, elements, I, E).
+array_elem[flow](A, I, E) :- array[value](A), nth[tree](A, I, E), parent[tree](A, E).
+array_elem[flow](A, I, S) :- spread_elems[value](A, I, X), parent[tree](S, X).
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 
 may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),

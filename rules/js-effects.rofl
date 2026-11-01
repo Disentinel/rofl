@@ -446,17 +446,9 @@ edb(eff_class_form).
 eff_class_form(class_declaration).
 eff_class_form(class_expression).
 
-edb(eff_field_kind).
-eff_field_kind(class_property).
-eff_field_kind(class_private_property).
-eff_field_kind(class_accessor_property).
-
-eff_class_body[code](CD, P) :- eff_class_form(K), ast_node[code](CD, K, _),
-                               ast_child[code](CD, body, 0, B),
-                               ast_child[code](B, body, _, P).
-eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), eff_field_kind(K),
-                                   ast_node[code](P, K, _),
-                                   ast_child[code](P, value, 0, V).
+eff_class_body[code](CD, P) :- class_slot[code](CD, P).
+eff_class_body[code](CD, P) :- static_block[value](CD, P).
+eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), value[value](P, V).
 
 -- Two POSITIVE arms, not `not static`: a default would silently file every
 -- field the scanner stops flagging under construction time, and
@@ -473,16 +465,14 @@ eff_define_part[flow](CD, V)    :- eff_field_value[code](CD, P, V),
 eff_construct_part[flow](CD, V) :- eff_field_value[code](CD, P, V),
                                    eff_field_moment[flow](P, construction).
 
-eff_define_part[flow](CD, S) :- eff_class_body[code](CD, S),
-                                ast_node[code](S, static_block, _).
+eff_define_part[flow](CD, S) :- static_block[value](CD, S).
 
 -- Three more things run at definition: the `extends` expression, a COMPUTED
 -- key, a decorator. The computed-key arm negates `eff_plain_key` instead of
 -- testing `computed = true`, because a positive attribute test cannot reach a
 -- kind that carries no such attribute (private members) —
 -- `attr_blind_guard[audit]` said so in one run.
-eff_define_part[flow](CD, S)  :- eff_class_form(K), ast_node[code](CD, K, _),
-                                 ast_child[code](CD, super_class, 0, S).
+eff_define_part[flow](CD, S)  :- extends[value](CD, S).
 eff_plain_key[code](P)        :- eff_class_body[code](_, P),
                                  not ast_attr[code](P, computed, true).
 eff_define_part[flow](CD, KN) :- eff_class_body[code](CD, P), not eff_plain_key[code](P),
