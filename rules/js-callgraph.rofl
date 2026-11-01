@@ -70,8 +70,9 @@ member_kind(optional_member_expression).
 
 member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _), member_kind(K).
 optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional_member_expression, _).
-computed_member[code](C, N) :- member_like[code](C, N), ast_attr[code](N, computed, true).
-static_member[code](C, N)   :- member_like[code](C, N), ast_attr[code](N, computed, false).
+computed_member[code](C, N) :- callee_of[code](C, N), member_expr[value](N, _, _).
+static_member[code](C, N)   :- callee_of[code](C, N), member[value](N, _, _).
+
 
 callee_obj[code](C, O)      :- member_like[code](C, N), object_of[code](N, O).
 callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _).

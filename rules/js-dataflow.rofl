@@ -268,9 +268,7 @@ well_known_symbol("split", symbol_split).
 well_known_symbol("toPrimitive", symbol_to_primitive).
 well_known_symbol("toStringTag", symbol_to_string_tag).
 well_known_symbol("unscopables", symbol_unscopables).
-symbol_ref[code](E, Key) :- object_of[code](E, O), free_global[code](O, "Symbol", _),
-                            ast_attr[code](E, computed, false), ast_child[code](E, property, 0, P),
-                            ast_name[code](P, N), well_known_symbol(N, Key).
+symbol_ref[code](E, Key) :- prop_name[code](E, O, N), free_global[code](O, "Symbol", _), well_known_symbol(N, Key).
 key_name[code](K, Key)   :- ast_child[code](_, key, 0, K), symbol_ref[code](K, Key).
 
 -- The TDZ, the one place the LINE matters: a read of a `let`/`const` name
@@ -599,18 +597,16 @@ imported_test[code](T) :- module_member[code](T, "parent").
 imported_test[code](T) :- main_is_module[code](T, "!==").
 imported_test[code](T) :- main_is_module[code](T, "!=").
 
-module_member[code](M, Key) :- ast_node[code](M, member_expression, File), ast_attr[code](M, computed, false),
-                               ast_child[code](M, property, 0, P), ast_name[code](P, Key),
-                               object_of[code](M, O), free_global[code](O, "module", File).
+module_member[code](M, Key) :- ast_node[code](M, member_expression, File), prop_name[code](M, O, Key),
+                               free_global[code](O, "module", File).
 main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), ast_attr[code](T, operator, Op),
                                ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
                                require_main[code](L), free_global[code](R, "module", File).
 main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), ast_attr[code](T, operator, Op),
                                ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
                                require_main[code](R), free_global[code](L, "module", File).
-require_main[code](M) :- ast_node[code](M, member_expression, File), ast_attr[code](M, computed, false),
-                         ast_child[code](M, property, 0, P), ast_name[code](P, "main"),
-                         object_of[code](M, O), free_global[code](O, "require", File).
+require_main[code](M) :- ast_node[code](M, member_expression, File), prop_name[code](M, O, "main"),
+                         free_global[code](O, "require", File).
 
 dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
@@ -811,9 +807,7 @@ keyed_ref[code](O, D)     :- keyed_const[code](D, _, _, _), sees_binder[code](O,
 
 keyed_ctor[code](CB, Body) :- ast_node[code](M, class_method, _), ast_attr[code](M, kind, "constructor"),
                               ast_child[code](CB, body, _, M), ast_child[code](M, body, 0, Body).
-keyed_this_member[code](L, T, Fld) :- object_of[code](L, T), ast_node[code](T, this_expression, _),
-                                      ast_attr[code](L, computed, false), ast_child[code](L, property, 0, Pn),
-                                      ast_name[code](Pn, Fld).
+keyed_this_member[code](L, T, Fld) :- prop_name[code](L, T, Fld), this[value](T).
 keyed_field[code](A, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](A, right, 0, X),
                                     ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, L),
                                     keyed_this_member[code](L, _, Fld), ast_child[code](S, expression, 0, A),
@@ -851,9 +845,7 @@ keyed_ref[code](L, H) :- keyed_method[code](H, M), this_host[flow](M, T), keyed_
                          keyed_field_ok[code](H, _, Fld).
 
 -- every call on a holder in a statement of an ordered list
-keyed_seen[code](C, H, Meth, S, B, F, I) :- keyed_ref[code](O, H), object_of[code](N, O),
-                                            ast_attr[code](N, computed, false), ast_child[code](N, property, 0, Pn),
-                                            ast_name[code](Pn, Meth), callee[value](C, N),
+keyed_seen[code](C, H, Meth, S, B, F, I) :- keyed_ref[code](O, H), prop_name[code](N, O, Meth), callee[value](C, N),
                                             ast_node[code](C, call_expression, _), inside[tree](S, C),
                                             ast_child[code](B, F, I, S), keyed_list[code](H, B, F).
 keyed_fn_between[code](S, C) :- keyed_seen[code](C, _, _, S, _, _, _), inside[tree](G, C),
@@ -1457,14 +1449,9 @@ member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
 
 -- The key an expression selects. Static and computed collapse here:
 -- `may_be_lit` closes the distance for `o[k]`.
-member_kind_v(member_expression).
-member_kind_v(optional_member_expression).
-edb(member_kind_v).
-
-member_node_v[flow](N)      :- member_kind_v(K), ast_node[code](N, K, _).
-selects[flow](N, Key)       :- member_node_v[flow](N), ast_attr[code](N, computed, false),
-                               ast_child[code](N, property, 0, P), ast_name[code](P, Key).
-computed_key[code](N, P)    :- ast_attr[code](N, computed, true), member_node_v[flow](N), ast_child[code](N, property, 0, P).
+member_node_v[flow](N)      :- object_of[code](N, _).
+selects[flow](N, Key)       :- prop_name[code](N, _, Key).
+computed_key[code](N, P)    :- member_expr[value](N, _, P).
 selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
@@ -1509,8 +1496,7 @@ member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flo
 --   (a nested function may run anywhere, a declaration even before it).
 member_assign[code](S, T, Key, A) :- ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, A),
                                     ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "="),
-                                    ast_child[code](A, left, 0, L), ast_attr[code](L, computed, false),
-                                    object_of[code](L, T), ast_child[code](L, property, 0, P), ast_name[code](P, Key).
+                                    ast_child[code](A, left, 0, L), prop_name[code](L, T, Key).
 member_dropped[flow](O, Key) :- ast_node[code](U, unary_expression, _), ast_attr[code](U, operator, "delete"),
                                 ast_child[code](U, argument, 0, N), member_at[flow](N, _, O, Key).
 member_ctor_set[code](Body, Key, J) :- field_unset_decl[code](CB, Key), keyed_ctor[code](CB, Body), ast_child[code](Body, body, J, S),
@@ -1674,9 +1660,7 @@ private_member[code](CD, Name, M) :- obj_like[flow](CD), ast_child[code](CD, bod
                                      ast_child[code](B, body, _, M),
                                      private_member_kind(K), ast_node[code](M, K, _),
                                      ast_child[code](M, key, 0, P), private_key[code](P, Name).
-private_ref[code](N, Name)        :- member_node_v[flow](N),
-                                     ast_child[code](N, property, 0, P),
-                                     private_key[code](P, Name).
+private_ref[code](N, Name)        :- member[value](N, _, Name), private[value](N).
 
 private_inner[code](N, CD) :- private_ref[code](N, Name), private_member[code](CD, Name, _),
                               inside[tree](CD, N),
@@ -1857,9 +1841,9 @@ may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
 -- whatever `module.exports = X` puts there. Both stay in the may-set, so
 -- `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
 -- is an ordinary member write (section 8) on the first.
-cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), object_of[code](M, O),
-                                     ast_node[code](M, member_expression, _), ast_attr[code](M, computed, false),
-                                     ast_child[code](M, property, 0, P), ast_name[code](P, "exports").
+cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), prop_name[code](M, O, "exports"),
+                                     ast_node[code](M, member_expression, _).
+
 
 
 cjs_exports[flow](File, P) :- module_object[flow](P, File).
