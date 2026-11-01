@@ -6,9 +6,9 @@ b_kind_seen[ast_babel](K)   :- node[ast_babel](_, K, _).
 b_kind_roled[ast_babel](K)  :- roled[value](N), node[ast_babel](N, K, _).
 b_kind_roled[ast_babel](K)  :- roled[type](N), node[ast_babel](N, K, _).
 b_kind_roled[ast_babel](K)  :- roled[tree](N), node[ast_babel](N, K, _).
-kind_without_role[audit](K) :- b_kind_seen[ast_babel](K), not b_kind_roled[ast_babel](K), not no_role(K, _).
-no_role_but_roled[audit](K) :- no_role(K, _), b_kind_roled[ast_babel](K).
+kind_without_role[audit](K) :- b_kind_seen[ast_babel](K), not b_kind_roled[ast_babel](K), not no_role[ast_babel](K, _).
+no_role_but_roled[audit](K) :- no_role[ast_babel](K, _), b_kind_roled[ast_babel](K).
 -- an identifier that is neither read nor introduced, where no role carries it as a name
 ident_without_role[audit](K, F) :- child[ast_babel](P, F, _, X), node[ast_babel](X, identifier, _), node[ast_babel](P, K, _),
                                    not ref[value](X, _), not ref[type](X, _), not binds[value](X, _),
-                                   not binds[type](X, _), not name_field(K, F).
+                                   not binds[type](X, _), not name_field[ast_babel](K, F).

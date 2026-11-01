@@ -122,7 +122,6 @@ alias array(A) is mark(A, array).
 alias class(C) is mark(C, class).
 alias static(M) is mark(M, static).
 alias private(N) is mark(N, private).
-alias scope(S) is mark(S, scope).
 alias template(T) is mark(T, template).
 alias ambient(X) is mark(X, ambient).
 
