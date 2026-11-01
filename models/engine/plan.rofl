@@ -51,11 +51,19 @@ pl_dmax(R, S, V, D) :- pl_dv(R, S, V, _), D is max(X : pl_dv(R, S, V, X)).
 pl_arity(R, K, A)       :- pf_lit[profile](R, K, _, _, _), A is count(J : pf_slot[profile](R, K, J, _)).
 pl_held(R, S, K, J)     :- pl_in(R, S, K), pf_var[profile](R, K, J, V), pl_low(R, S, K, V).
 pl_div(R, S, K, J, D)   :- pl_held(R, S, K, J), pf_var[profile](R, K, J, V), pl_dmax(R, S, V, D).
+-- a constant in a column: the premise's rows are those that hold it (`selects` of the census), the fewest where it
+-- writes several; the column's average over its distinct values was tried and missed the skew (identifier among the
+-- kinds of a node is most of the rows, try_statement one)
+pl_varslot(R, K, J)     :- pf_slot[profile](R, K, J, $var(_)).
+pl_const(R, K, J)       :- pf_slot[profile](R, K, J, _), not pl_varslot(R, K, J).
+pl_sel(R, K, N)         :- pl_const(R, K, J), pf_slot[profile](R, K, J, A), pf_lit[profile](R, K, Rel, B, _), selects[profile](Rel, B, J, A, N).
+pl_rows(R, K, N)        :- pl_sel(R, K, _), N is min(X : pl_sel(R, K, X)).
+pl_rows(R, K, N)        :- pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), not pl_sel(R, K, _).
 pl_div(R, S, K, J, 1)   :- pl_in(R, S, K), pf_slot[profile](R, K, J, _), not pl_held(R, S, K, J).
 -- the estimate folded over the positions: pl_pre(R, S, K, E) is est of the premises of S before K; a premise in S
 -- multiplies by its rows, then divides column by column, never below one
 pl_pre(R, S, 1, 1)      :- pl_set(R, S).
-pl_mul(R, S, K, 0, E)   :- pl_pre(R, S, K, E0), pl_in(R, S, K), pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), E is E0 * N.
+pl_mul(R, S, K, 0, E)   :- pl_pre(R, S, K, E0), pl_in(R, S, K), pl_rows(R, K, N), E is E0 * N.
 pl_mul(R, S, K, J, E)   :- pl_mul(R, S, K, J0, E0), E0 > 0, J is J0 + 1, pl_div(R, S, K, J, D), E1 is E0 / D, E is max(E1, 1).
 -- nothing reaches past a relation that holds nothing (the census says rows 0 of what a rule reads and nothing holds)
 pl_mul(R, S, K, J, 0)   :- pl_mul(R, S, K, J0, 0), J is J0 + 1, pl_div(R, S, K, J, _).

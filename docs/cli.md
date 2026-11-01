@@ -535,7 +535,7 @@ would be without it. Per premise
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
 `widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
 and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure; a
-relation a rule reads and nothing holds is censused with 0 rows and 0 distinct, so a plan knows it is empty.
+relation a rule reads and nothing holds is censused with 0 rows and 0 distinct, so a plan knows it is empty; a constant a rule writes in a column is censused as `selects[profile](Rel, Book, Pos, Const, N)`, the rows that hold it, since the column's average misses the skew a constant picks.
 Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
 the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
 the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a

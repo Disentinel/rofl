@@ -231,8 +231,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 15] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 16] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
@@ -337,6 +337,38 @@ impl Eval {
             }
         }
         census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
+        // a constant a rule writes in a column: the rows that hold it, `selects(Rel, Book, Pos, Const, N)`, since the
+        // average over the column's distinct values misses the skew a rule's constant picks (identifier among kinds)
+        let mut selects: Vec<(Sym, Sym, usize, Term)> = Vec::new();
+        for r in &self.rules {
+            for b in r.clause.body.iter() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                    continue;
+                }
+                for (j, &t) in l.args.iter().enumerate() {
+                    if self.h.is_ground(t) && !selects.contains(&(l.rel, book, j, t)) {
+                        selects.push((l.rel, book, j, t));
+                    }
+                }
+            }
+        }
+        let mut selects: Vec<(String, String, usize, String, usize)> = selects
+            .into_iter()
+            .map(|(rel, book, j, t)| {
+                let n = self.store.probe_stats(&self.h, rel, Some(book), &[j], &[t], &[]).0;
+                (self.h.name(rel).to_string(), self.h.name(book).to_string(), j, self.h.canon(t), n)
+            })
+            .collect();
+        selects.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)).then(a.2.cmp(&b.2)).then_with(|| cmp_js(&a.3, &b.3)));
+        for (rel_name, book_name, j, c, n) in selects {
+            let book_name = census_book.unwrap_or(&book_name);
+            let _ = writeln!(out, "selects[profile]({rel_name}, {book_name}, {}, {c}, {n}).", j + 1);
+        }
         for (rel_name, book_name, rel, book, n, arity) in census {
             let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
