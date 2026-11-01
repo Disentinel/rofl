@@ -190,10 +190,10 @@ deferred_body[code](F) :- fn_node[code](F), mark[value](F, A), deferred_attr(A).
 async_body[code](F)    :- deferred_body[code](F), not generator[value](F).
 sync_body[code](F)     :- fn_node[code](F), not deferred_body[code](F).
 
-has_return[code](F)    :- ast_node[code](R, return_statement, _), nearest_v[flow](F, R).
+has_return[code](F)    :- exits[value](R, return), nearest_v[flow](F, R).
 top_throw[code](F)     :- fn_node[code](F), ast_child[code](F, body, 0, B),
                           ast_child[code](B, body, _, S),
-                          ast_node[code](S, throw_statement, _).
+                          exits[value](S, throw).
 always_throws[code](F) :- top_throw[code](F), not has_return[code](F), not deferred_body[code](F).
 
 throwing_call[code](C) :- always_throws[code](F), resolves[code](C, F),
@@ -384,7 +384,7 @@ try_walk[code](TS, X)      :- try_catches[code](TS),
 try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), parent[tree](P, X).
 caught_here[code](N)       :- try_walk[code](_, N).
 
-throws_outright[code](F) :- ast_node[code](T, throw_statement, _),
+throws_outright[code](F) :- exits[value](T, throw),
                             nearest_v[flow](F, T), not caught_here[code](T).
 
 -- `may_throw` is a handful of rows and binds G, so `resolves` is probed by
@@ -397,8 +397,7 @@ may_throw[code](F) :- may_throw[code](G), sync_body[code](G), resolves[code](C, 
 may_throw[code](F) :- may_throw[code](G), async_body[code](G), resolves[code](C, G),
                       await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 
-thrown_by[flow](F, V) :- ast_node[code](T, throw_statement, _), nearest_v[flow](F, T),
-                         not caught_here[code](T), ast_child[code](T, argument, 0, V).
+thrown_by[flow](F, V) :- throws[value](T, V), nearest_v[flow](F, T), not caught_here[code](T).
 thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), resolves[code](C, G),
                          nearest_fn[code](F, C), not caught_here[code](C).
 thrown_by[flow](F, V) :- thrown_by[flow](G, V), async_body[code](G), resolves[code](C, G),

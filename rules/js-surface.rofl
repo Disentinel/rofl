@@ -200,7 +200,7 @@ sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 -- cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
 falls_off[code](F) :- fn_node[code](F), ast_child[code](F, body, 0, B), ast_node[code](B, block_statement, _),
                       not completes_abruptly[code](B).
-falls_off[code](F) :- ast_node[code](R, return_statement, _), not ast_child[code](R, argument, 0, _), nearest_v[flow](F, R).
+falls_off[code](F) :- exits[value](R, return), not returns[value](R, _), nearest_v[flow](F, R).
 sx_ret_undef[surface](F) :- falls_off[code](F), not generator[value](F), not ast_attr[code](F, kind, "constructor").
 may_be_lit[flow](C, undefined) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[surface](F).
 sx_gen_ret[surface](F, N)   :- returns[flow](F, E), generator[value](F), may_be_node[flow](E, N).
