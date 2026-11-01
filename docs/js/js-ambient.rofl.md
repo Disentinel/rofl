@@ -1,6 +1,6 @@
 ---
 world: js-ambient
-books: audit, code, flow, main
+books: audit, code, flow, main, value
 default: main
 ---
 
@@ -51,11 +51,12 @@ Reads:
 - from js-globals: [constructible_form](js-globals.rofl.md#constructible_form)
 - from js-host, in the code: [host_module_call](js-host.rofl.md#host_module_call), [member_effect](js-host.rofl.md#member_effect)
 - from js-modules: [host_module](js-modules.rofl.md#host_module)
+- from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from outside these files:
   - <a id="lib_readonly_member"></a>`lib_readonly_member`
   - <a id="lib_readonly_view"></a>`lib_readonly_view`
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
 
 ## Words
 
@@ -198,7 +199,7 @@ In the flow:
 
 <a id="amb_global_member"></a>Key is selected on the global Name if all of:
   - a node O [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
-  - the `object` of a node M is O;
+  - [`object_of`](js-structure.rofl.md#object_of)(M, O);
   - M [selects](js-dataflow.rofl.md#selects) Key;
   - some host [attributes the global](#host_global_effect) Name to some effect.
 
@@ -246,7 +247,8 @@ In the flow:
 C reaches the surface Name if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - a node O [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
   - Name [is an ambient global](#ambient_global).
 
 > 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
@@ -266,7 +268,8 @@ C performs the operation `itself` if C [calls the global](#amb_global_call) some
 
 <a id="amb_construct"></a>A node constructs the ambient global Name if all of:
   - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
-  - the `callee` of it [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
+  - [`callee`](#callee)(it, N);
+  - a node N [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
   - Name [is an ambient global](#ambient_global);
   - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
@@ -336,7 +339,7 @@ In the flow:
 <a id="amb_proto_recv"></a>A [member access](js-dataflow.rofl.md#member_node_v) has the receiver prototype P if all of:
   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
   - [the prototype](js-dataflow.rofl.md#prototype_of) of a node O is P;
-  - the `object` of it is O.
+  - [`object_of`](js-structure.rofl.md#object_of)(it, O).
 
 In the audit:
 

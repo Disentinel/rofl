@@ -26,3 +26,6 @@ js-attrs.rofl
 js-modules.rofl
 js-concat.rofl
 js-surface.rofl
+../models/lang/js/roles.rofl
+../models/lang/js/babel-roles.rofl
+../models/lang/js/babel-from-code.rofl

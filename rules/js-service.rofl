@@ -25,7 +25,7 @@ imports(surface, main).
 svc_file(F) :- ast_file[code](_, F).
 svc_dir(F, X) :- svc_file(F), code_of(X, D), L is str_len(D), M is str_len(F), M > L, P is str_sub(F, 0, L), P = D,
                  C is str_char(F, L), C = "/".
-svc_proc(N, X) :- ast_node[code](N, _, F), svc_dir(F, X).
+svc_proc(N, X) :- at[tree](N, F, _), svc_dir(F, X).
 
 http_send(C, X, M, U) :- requests[flow](C, M, U), svc_proc(C, X).
 http_serves(X, P, M, R, H, K) :- serves[surface](App, M, R, H, K), app_listens[surface](App, P), svc_proc(App, X).

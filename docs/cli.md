@@ -574,7 +574,13 @@ and, for a recursive rule, each news position, with `plan_cost[fixpointplan](R, 
 world is then run with those facts and `width[profile]` judges them. Over plan-world.rofl (world `plan_dp`) it finds b,
 d, c, a for `out` and `alt` alike at 210, under the hand-given 211, and the world measures 210 under it
 (rust/rofl/tests/plan_dp.rs). It is the second of the two modes the owner asked for: reflection in a world of its own,
-the answer in the world as it is; the loop between them is not scripted yet.
+the answer in the world as it is. `npm run refine -- <files> [--out F]` runs the loop once (scripts/refine.ts): ask,
+with a meter beside the world, for the order and width of every rule; reflect, the two packs beside the world; refine,
+the plan facts written to F (or stdout) to be loaded with the world from then on; ask again, the width under them. The
+report on stderr sets before, forecast and after side by side per rule and marks `worse` a plan that cost more than the
+order it replaced: that is the estimate's hypothesis false there, and a finding, not a thing to hide. `-- --check`
+runs it over plan-world.rofl and judges it. The agent's skill for the loop (when to run it, how to read the report,
+where the facts live) is .claude/skills/refine-plan/SKILL.md.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is

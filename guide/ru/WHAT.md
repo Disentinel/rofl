@@ -104,31 +104,31 @@ checkout.rofl.md:13: cell 1 · rofl
     - "checkout" is a risky export
   checkout.rofl.md:16: why "checkout" is a risky export
     the value's steps, from where it is written:
-      checkout.js:4  checkout             it is named "checkout"
+      checkout.js:4  checkout             binds[value](it,"checkout")
       checkout.js:4  function checkout()  it answers to "checkout"
                                           "checkout" is a risky export
     the proof:
     "checkout" is a risky export, because
       [function checkout() at checkout.js:4] is a function, in the code, because
-        `function_declaration` is a function kind (given)
-        [function checkout() at checkout.js:4] is of kind `function_declaration` in file "checkout.js", in the code (given)
+        body[value]([function checkout() at checkout.js:4],[block at checkout.js:4]), because
+          `function_declaration` is a function kind, in the ast_babel (given)
+          node[ast_babel]([function checkout() at checkout.js:4],function_declaration,"checkout.js"), because
+            [function checkout() at checkout.js:4] is of kind `function_declaration` in file "checkout.js", in the code (given)
+          child[ast_babel]([function checkout() at checkout.js:4],body,0,[block at checkout.js:4]), because
+            The `body` of [function checkout() at checkout.js:4] is [block at checkout.js:4], in the code (given)
       [function checkout() at checkout.js:4] answers to "checkout", in the code, because
-        [function checkout() at checkout.js:4] is of kind `function_declaration` in file "checkout.js", in the code (given)
-        The `id` of [function checkout() at checkout.js:4] is [checkout at checkout.js:4], in the code (given)
-        [checkout at checkout.js:4] is named "checkout", in the code, because
-          The attribute `name` of [checkout at checkout.js:4] is "checkout", in the code (given)
-      [function checkout() at checkout.js:4] is exported, in the code, because
         [function checkout() at checkout.js:4] is a function, in the code [above]
-        + 1 side condition holds (nothing says otherwise)
-        [function checkout() at checkout.js:4] is within [export named at checkout.js:4], in the code, because
-          [function checkout() at checkout.js:4] is under [export named at checkout.js:4], in the code, because
-            The `declaration` of [export named at checkout.js:4] is [function checkout() at checkout.js:4], in the code (given)
-        [export named at checkout.js:4] is of kind `export_named_declaration` in file "checkout.js", in the code (given)
-        `export_named_declaration` is an export declaration kind (given)
-      [function checkout() at checkout.js:4] may throw, in the code, because
-        [function charge() at pay.js:1] may throw, in the code, because
-          [function charge() at pay.js:1] throws outright, in the code, because
-            [throw at pay.js:2] is of kind `throw_statement` in file "pay.js", in the code (given)
+        target[value]([function checkout() at checkout.js:4],[checkout at checkout.js:4]), because
+          target_field[ast_babel](function_declaration,id) (given)
+          node[ast_babel]([function checkout() at checkout.js:4],function_declaration,"checkout.js") [above]
+          child[ast_babel]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]), because
+            The `id` of [function checkout() at checkout.js:4] is [checkout at checkout.js:4], in the code (given)
+        binds[value]([checkout at checkout.js:4],"checkout"), because
+          b_bind[ast_babel]([checkout at checkout.js:4],value), because
+            bind_root[ast_babel](function_declaration,id,value) (given)
+            node[ast_babel]([function checkout() at checkout.js:4],function_declaration,"checkout.js") [above]
+            child[ast_babel]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]) [above]
+          node[ast_babel]([checkout at checkout.js:4],identifier,"checkout.js"), because
 ```
 <!-- END run -->
 

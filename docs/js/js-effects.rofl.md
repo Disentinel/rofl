@@ -1,6 +1,6 @@
 ---
 world: js-effects
-books: audit, code, flow, main, surface
+books: audit, code, flow, main, surface, tree, value
 default: flow
 ---
 
@@ -36,9 +36,17 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
-- from js-structure, in the code: [ast_in](js-structure.rofl.md#ast_in), [ast_name](js-structure.rofl.md#ast_name)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
+  - <a id="nth"></a>`nth`
+  - <a id="parent"></a>`parent`
+- from outside these files, in the value:
+  - <a id="binary"></a>`binary`
+  - <a id="template"></a>`template`
+  - <a id="unary"></a>`unary`
 - from the scanner, in the code:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -53,7 +61,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-new"></a>a new | a node of kind `new_expression` |
 | <a id="noun-static_block"></a>a static block | a node of kind `static_block` |
-| <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | <a id="noun-throw"></a>a throw | a node of kind `throw_statement` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
@@ -518,8 +525,8 @@ A node
 C reaches the surface P if all of:
   - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N is a node O;
-  - [the prototype](js-dataflow.rofl.md#prototype_of) of O is P;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - [the prototype](js-dataflow.rofl.md#prototype_of) of a node O is P;
   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype).
 
 C performs the operation Key if C [reaches the surface](js-ambient.rofl.md#eff_surface) some surface and [the callee](js-callgraph.rofl.md#callee_of) of C [selects](js-dataflow.rofl.md#selects) Key.
@@ -593,14 +600,17 @@ Declared as facts:
 
 In the code:
 
-<a id="eff_op_inspects"></a>A node inspects if [the attribute](#ast_attr) `operator` of it is "===" or "!==" or "typeof" or "void" or "!".
+<a id="eff_op_inspects"></a>A node N inspects either:
+
+1. if [`binary`](#binary)(N, "===" or "!==", something, something);
+2. if [`unary`](#unary)(N, "typeof" or "void" or "!", something).
 
 In the flow:
 
 <a id="eff_op_beyond"></a>A node N runs the hook E either:
 
-1. if [the attribute](#ast_attr) `operator` of N is "instanceof" and E is `has_instance`;
-2. if [the attribute](#ast_attr) `operator` of N is "delete" and E is `delete_own`.
+1. if [`binary`](#binary)(N, "instanceof", something, something) and E is `has_instance`;
+2. if [`unary`](#unary)(N, "delete", something) and E is `delete_own`.
 
 In the code:
 
@@ -611,7 +621,7 @@ In the flow:
 <a id="eff_coerced"></a>A node N coerces a node X either:
 
 1. if N [converts](#eff_converts) and the `left` or `right` or `argument` of N is X;
-2. if N is a [template](#noun-template) and X [is among the](#ast_child) `expressions` of N.
+2. if [`template`](#template)(N) and [`nth`](#nth)(N, something, X).
 
 `eff_conv_key` includes `symbol_to_primitive`, "valueOf", "toString".
 
@@ -701,11 +711,11 @@ In the flow:
 
 1. if all of:
    - a node N [has the effect](js-ambient.rofl.md#eff_here) L at H;
-   - N [is in file](js-model.rofl.md#ast_node) F;
+   - [`at`](#at)(N, F, something);
    - unless N [is inside a function](js-controlflow.rofl.md#in_fn);
 2. if all of:
    - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
-   - C [is in file](js-model.rofl.md#ast_node) F;
+   - [`at`](#at)(C, F, something);
    - G [has the latent effect](#eff_latent) L at H;
    - unless C [is inside a function](js-controlflow.rofl.md#in_fn).
 
@@ -744,7 +754,7 @@ A file F
   - X differs from B.
 - <a id="eff_mod_join_short"></a>is short of the module join J with a file T if all of:
   - a site I [evaluates](js-modules.rofl.md#evaluates_at) T;
-  - I [is in file](js-model.rofl.md#ast_node) F;
+  - [`at`](#at)(I, F, something);
   - [the module effect](#effect_of_module) of F is an effect NF;
   - [`sx_effect_module`](js-surface.rofl.md#sx_effect_module)(T, NT);
   - [the join](#eff_join) of NF and NT is J;
@@ -877,7 +887,7 @@ A class CD defines by running a node KN either:
 2. if some class [constructs by running](#eff_construct_part) P and N is P;
 3. if all of:
    - P [runs](#eff_runs_in) a node Y;
-   - N [is under](js-structure.rofl.md#ast_in) Y;
+   - [`parent`](#parent)(Y, N);
    - unless Y is a [function](js-callgraph.rofl.md#fn_node).
 
 In the code:

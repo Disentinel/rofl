@@ -1,0 +1,11 @@
+-- babel-from-code.rofl — the raw tree the JS model reads in [code] (ast_*), given to the Babel converter in
+-- [ast_babel], while the model moves onto the roles (rules/js-*.rofl). Gone when no rule of the model reads ast_*.
+-- [code] has no `start`, so the bridge gives no pos[tree]; nothing in the model orders siblings by it.
+
+imports(ast_babel, code).
+
+node[ast_babel](N, K, F)     :- ast_node[code](N, K, F).
+line[ast_babel](N, L)        :- ast_line[code](N, L).
+child[ast_babel](P, F, I, C) :- ast_child[code](P, F, I, C).
+attr[ast_babel](N, A, V)     :- ast_attr[code](N, A, V).
+file[ast_babel](R, F)        :- ast_file[code](R, F).

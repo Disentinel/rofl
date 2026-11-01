@@ -155,9 +155,10 @@ sx_arg_lit[surface](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), ma
 sx_arg_node[surface](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
 sx_called[surface](F)         :- resolves[code](_, F).
 -- how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
-arg_given[code](C)     :- ast_child[code](C, arguments, _, _).
-arg_count[code](C, 0)  :- call_like_v(K), ast_node[code](C, K, _), not arg_given[code](C).
-arg_count[code](C, N)  :- ast_child[code](C, arguments, I, _), N is I + 1, not ast_child[code](C, arguments, N, _),
+arg_given[code](C)     :- argument_at[code](C, _, _).
+arg_count[code](C, 0)  :- callee[value](C, _), not arg_given[code](C).
+arg_count[code](C, N)  :- argument_at[code](C, I, _), N is I + 1, not argument_at[code](C, N, _),
+
                           not call_spreads[code](C).
 sx_arg_short[surface](F, N) :- resolves[code](C, F), arg_count[code](C, N).
 may_be_lit[flow](U, undefined) :- sx_arg_short[surface](F, N), param_of[flow](F, I, Name), I >= N,
@@ -171,7 +172,7 @@ sx_rest_elem[surface](R, K, A) :- sx_rest[surface](F, J, R), resolves[code](C, F
                                   I >= J, K is I - J.
 -- a function handed to an external call is called back by code the corpus cannot see
 sx_cb[surface](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
-                                 ast_child[code](C, callee, 0, G), ast_node[code](C, K, _), call_like_v(K),
+                                 callee[value](C, G), ast_node[code](C, K, _), call_like_v(K),
                                  ast_child[code](C, arguments, _, A), may_be_node[flow](A, F), fn_value[flow](F).
 
 next_send[flow](G, V) :- sx_next[surface](G, V).
@@ -212,7 +213,7 @@ store_pkey[flow](F, J, I, A) :- plain_assign[flow](A), ast_child[code](A, left, 
                                 param_read[flow](F, J, Q), ast_child[code](A, right, 0, V), param_read[flow](F, I, V).
 store_sym[flow](A) :- store_pkey[flow](_, _, _, A).
 sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), ast_child[code](A, left, 0, L),
-                                      ast_child[code](L, object, 0, Obj), may_be_node[flow](Obj, O).
+                                      object_of[code](L, Obj), may_be_node[flow](Obj, O).
 sx_mwrite[surface](O, K, A) :- sx_store_pkey[surface](F, J, I, O), resolves[code](C, F),
                                arg_at[flow](C, J, B), may_be_lit[flow](B, K), arg_at[flow](C, I, A).
 

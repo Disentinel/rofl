@@ -3138,6 +3138,9 @@ check_world("cost_shapes_model").
 check_file("cost_shapes_model", "examples/shapes/shapes.rofl").
 check_file("cost_shapes_model", "facts/cost-shapes.rofl").
 check_file("cost_shapes_model", "rules/js-structure.rofl").
+check_file("cost_shapes_model", "models/lang/js/roles.rofl").
+check_file("cost_shapes_model", "models/lang/js/babel-roles.rofl").
+check_file("cost_shapes_model", "models/lang/js/babel-from-code.rofl").
 check_file("cost_shapes_model", "rules/js-dataflow.rofl").
 check_file("cost_shapes_model", "rules/js-model.rofl").
 check_file("cost_shapes_model", "rules/js-callgraph.rofl").
@@ -3171,6 +3174,9 @@ check_world("surface_model").
 check_file("surface_model", "examples/surface/surface.rofl").
 check_file("surface_model", "facts/surface-lint.rofl").
 check_file("surface_model", "rules/js-structure.rofl").
+check_file("surface_model", "models/lang/js/roles.rofl").
+check_file("surface_model", "models/lang/js/babel-roles.rofl").
+check_file("surface_model", "models/lang/js/babel-from-code.rofl").
 check_file("surface_model", "rules/js-dataflow.rofl").
 check_file("surface_model", "rules/js-model.rofl").
 check_file("surface_model", "rules/js-callgraph.rofl").
@@ -3657,6 +3663,9 @@ check_file("vscode_side_effects", "facts/js-host-surface.rofl").
 check_file("vscode_side_effects", "facts/js-lib-surface.rofl").
 check_file("vscode_side_effects", "facts/js-attrs.rofl").
 check_file("vscode_side_effects", "rules/js-structure.rofl").
+check_file("vscode_side_effects", "models/lang/js/roles.rofl").
+check_file("vscode_side_effects", "models/lang/js/babel-roles.rofl").
+check_file("vscode_side_effects", "models/lang/js/babel-from-code.rofl").
 check_file("vscode_side_effects", "rules/js-dataflow.rofl").
 check_file("vscode_side_effects", "rules/js-model.rofl").
 check_file("vscode_side_effects", "rules/js-callgraph.rofl").
@@ -3690,6 +3699,9 @@ check_file("concat_value", "facts/js-host-surface.rofl").
 check_file("concat_value", "facts/js-lib-surface.rofl").
 check_file("concat_value", "facts/js-attrs.rofl").
 check_file("concat_value", "rules/js-structure.rofl").
+check_file("concat_value", "models/lang/js/roles.rofl").
+check_file("concat_value", "models/lang/js/babel-roles.rofl").
+check_file("concat_value", "models/lang/js/babel-from-code.rofl").
 check_file("concat_value", "rules/js-dataflow.rofl").
 check_file("concat_value", "rules/js-model.rofl").
 check_file("concat_value", "rules/js-callgraph.rofl").
@@ -3724,6 +3736,9 @@ check_file("services", "facts/js-host-surface.rofl").
 check_file("services", "facts/js-lib-surface.rofl").
 check_file("services", "facts/js-attrs.rofl").
 check_file("services", "rules/js-structure.rofl").
+check_file("services", "models/lang/js/roles.rofl").
+check_file("services", "models/lang/js/babel-roles.rofl").
+check_file("services", "models/lang/js/babel-from-code.rofl").
 check_file("services", "rules/js-dataflow.rofl").
 check_file("services", "rules/js-model.rofl").
 check_file("services", "rules/js-callgraph.rofl").
@@ -3783,6 +3798,9 @@ check_file("vscode_surface_split", "facts/js-host-surface.rofl").
 check_file("vscode_surface_split", "facts/js-lib-surface.rofl").
 check_file("vscode_surface_split", "facts/js-attrs.rofl").
 check_file("vscode_surface_split", "rules/js-structure.rofl").
+check_file("vscode_surface_split", "models/lang/js/roles.rofl").
+check_file("vscode_surface_split", "models/lang/js/babel-roles.rofl").
+check_file("vscode_surface_split", "models/lang/js/babel-from-code.rofl").
 check_file("vscode_surface_split", "rules/js-dataflow.rofl").
 check_file("vscode_surface_split", "rules/js-model.rofl").
 check_file("vscode_surface_split", "rules/js-callgraph.rofl").
@@ -3817,6 +3835,9 @@ check_file("scan_requests", "facts/js-host-surface.rofl").
 check_file("scan_requests", "facts/js-lib-surface.rofl").
 check_file("scan_requests", "facts/js-attrs.rofl").
 check_file("scan_requests", "rules/js-structure.rofl").
+check_file("scan_requests", "models/lang/js/roles.rofl").
+check_file("scan_requests", "models/lang/js/babel-roles.rofl").
+check_file("scan_requests", "models/lang/js/babel-from-code.rofl").
 check_file("scan_requests", "rules/js-dataflow.rofl").
 check_file("scan_requests", "rules/js-model.rofl").
 check_file("scan_requests", "rules/js-callgraph.rofl").

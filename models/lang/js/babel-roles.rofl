@@ -28,42 +28,42 @@ namespace[value](P, P)   :- node[ast_babel](P, program, _).
 -- MARKS
 
 edb(kind_mark).
-kind_mark(call_expression, call).            kind_mark(optional_call_expression, call).
-kind_mark(import_expression, call).
-kind_mark(new_expression, construct).
-kind_mark(this_expression, this).            kind_mark(super, super).
-kind_mark(object_expression, object).        kind_mark(tsenum_declaration, object).
-kind_mark(array_expression, array).
-kind_mark(class_declaration, class).         kind_mark(class_expression, class).
-kind_mark(template_literal, template).
-kind_mark(class_private_property, private).  kind_mark(class_private_method, private).
-kind_mark(tsdeclare_function, ambient).      kind_mark(tsdeclare_method, ambient).
-kind_mark(program, scope).                   kind_mark(block_statement, scope).
-kind_mark(static_block, scope).              kind_mark(catch_clause, scope).
-kind_mark(for_statement, scope).             kind_mark(for_in_statement, scope).
-kind_mark(for_of_statement, scope).          kind_mark(switch_statement, scope).
-kind_mark(tsmodule_block, scope).
-kind_mark(function_declaration, scope).      kind_mark(function_expression, scope).
-kind_mark(arrow_function_expression, scope). kind_mark(object_method, scope).
-kind_mark(class_method, scope).              kind_mark(class_private_method, scope).
-mark[value](N, M) :- kind_mark(K, M), node[ast_babel](N, K, _).
+kind_mark[ast_babel](call_expression, call).            kind_mark[ast_babel](optional_call_expression, call).
+kind_mark[ast_babel](import_expression, call).
+kind_mark[ast_babel](new_expression, construct).
+kind_mark[ast_babel](this_expression, this).            kind_mark[ast_babel](super, super).
+kind_mark[ast_babel](object_expression, object).        kind_mark[ast_babel](tsenum_declaration, object).
+kind_mark[ast_babel](array_expression, array).
+kind_mark[ast_babel](class_declaration, class).         kind_mark[ast_babel](class_expression, class).
+kind_mark[ast_babel](template_literal, template).
+kind_mark[ast_babel](class_private_property, private).  kind_mark[ast_babel](class_private_method, private).
+kind_mark[ast_babel](tsdeclare_function, ambient).      kind_mark[ast_babel](tsdeclare_method, ambient).
+kind_mark[ast_babel](program, scope).                   kind_mark[ast_babel](block_statement, scope).
+kind_mark[ast_babel](static_block, scope).              kind_mark[ast_babel](catch_clause, scope).
+kind_mark[ast_babel](for_statement, scope).             kind_mark[ast_babel](for_in_statement, scope).
+kind_mark[ast_babel](for_of_statement, scope).          kind_mark[ast_babel](switch_statement, scope).
+kind_mark[ast_babel](tsmodule_block, scope).
+kind_mark[ast_babel](function_declaration, scope).      kind_mark[ast_babel](function_expression, scope).
+kind_mark[ast_babel](arrow_function_expression, scope). kind_mark[ast_babel](object_method, scope).
+kind_mark[ast_babel](class_method, scope).              kind_mark[ast_babel](class_private_method, scope).
+mark[value](N, M) :- kind_mark[ast_babel](K, M), node[ast_babel](N, K, _).
 
 edb(attr_mark).
-attr_mark(async, true, async).
-attr_mark(generator, true, generator).
-attr_mark(static, true, static).
-attr_mark(declare, true, ambient).
-mark[value](N, M) :- attr_mark(A, V, M), attr[ast_babel](N, A, V).
+attr_mark[ast_babel](async, true, async).
+attr_mark[ast_babel](generator, true, generator).
+attr_mark[ast_babel](static, true, static).
+attr_mark[ast_babel](declare, true, ambient).
+mark[value](N, M) :- attr_mark[ast_babel](A, V, M), attr[ast_babel](N, A, V).
 
 edb(optional_kind).
-optional_kind(optional_member_expression). optional_kind(optional_call_expression).
-mark[value](N, optional) :- optional_kind(K), node[ast_babel](N, K, _), attr[ast_babel](N, optional, true).
+optional_kind[ast_babel](optional_member_expression). optional_kind[ast_babel](optional_call_expression).
+mark[value](N, optional) :- optional_kind[ast_babel](K), node[ast_babel](N, K, _), attr[ast_babel](N, optional, true).
 
 mark[value](M, new_target)  :- node[ast_babel](M, meta_property, _), child[ast_babel](M, meta, 0, C),
                                attr[ast_babel](C, name, "new").
 mark[value](M, import_meta) :- node[ast_babel](M, meta_property, _), child[ast_babel](M, meta, 0, C),
                                attr[ast_babel](C, name, "import").
-mark[value](N, private)     :- member_kind(K), node[ast_babel](N, K, _), child[ast_babel](N, property, 0, P),
+mark[value](N, private)     :- member_kind[ast_babel](K), node[ast_babel](N, K, _), child[ast_babel](N, property, 0, P),
                                node[ast_babel](P, private_name, _).
 
 -- =====================================================================================================================
@@ -75,50 +75,50 @@ mark[value](N, private)     :- member_kind(K), node[ast_babel](N, K, _), child[a
 -- role of the parent).
 
 edb(seq_field).
-seq_field(program, body, 0).                 seq_field(block_statement, body, 0).
-seq_field(static_block, body, 0).            seq_field(tsmodule_block, body, 0).
-seq_field(switch_case, consequent, 0).       seq_field(sequence_expression, expressions, 0).
-seq_field(array_expression, elements, 0).    seq_field(object_expression, properties, 0).
-seq_field(call_expression, arguments, 0).    seq_field(optional_call_expression, arguments, 0).
-seq_field(new_expression, arguments, 0).     seq_field(variable_declaration, declarations, 0).
-seq_field(template_literal, expressions, 0).
+seq_field[ast_babel](program, body, 0).                 seq_field[ast_babel](block_statement, body, 0).
+seq_field[ast_babel](static_block, body, 0).            seq_field[ast_babel](tsmodule_block, body, 0).
+seq_field[ast_babel](switch_case, consequent, 0).       seq_field[ast_babel](sequence_expression, expressions, 0).
+seq_field[ast_babel](array_expression, elements, 0).    seq_field[ast_babel](object_expression, properties, 0).
+seq_field[ast_babel](call_expression, arguments, 0).    seq_field[ast_babel](optional_call_expression, arguments, 0).
+seq_field[ast_babel](new_expression, arguments, 0).     seq_field[ast_babel](variable_declaration, declarations, 0).
+seq_field[ast_babel](template_literal, expressions, 0).
 
 edb(step_field).
-step_field(member_expression, object, 0).    step_field(optional_member_expression, object, 0).
-step_field(binary_expression, left, 0).      step_field(binary_expression, right, 1).
-step_field(logical_expression, left, 0).
-step_field(assignment_expression, left, 0).
-step_field(unary_expression, argument, 0).   step_field(update_expression, argument, 0).
-step_field(await_expression, argument, 0).   step_field(yield_expression, argument, 0).
-step_field(return_statement, argument, 0).   step_field(throw_statement, argument, 0).
-step_field(conditional_expression, test, 0). step_field(if_statement, test, 0).
-step_field(while_statement, test, 0).
-step_field(do_while_statement, body, 0).     step_field(do_while_statement, test, 1).
-step_field(for_statement, init, 0).          step_field(for_statement, test, 1).
-step_field(for_in_statement, right, 0).      step_field(for_of_statement, right, 0).
-step_field(switch_statement, discriminant, 0).
-step_field(variable_declarator, init, 0).    step_field(variable_declarator, id, 1).
-step_field(class_declaration, super_class, 0). step_field(class_expression, super_class, 0).
-step_field(export_default_declaration, declaration, 0).
-step_field(export_named_declaration, declaration, 0).
-step_field(catch_clause, body, 0).
-step_field(try_statement, finalizer, 1).
-step_field(import_expression, source, 0).    step_field(import_expression, options, 1).
-step_field(tsexport_assignment, expression, 0).
-step_field(parenthesized_expression, expression, 0). step_field(tsas_expression, expression, 0).
-step_field(tssatisfies_expression, expression, 0).  step_field(tsnon_null_expression, expression, 0).
-step_field(tstype_assertion, expression, 0).        step_field(tsinstantiation_expression, expression, 0).
+step_field[ast_babel](member_expression, object, 0).    step_field[ast_babel](optional_member_expression, object, 0).
+step_field[ast_babel](binary_expression, left, 0).      step_field[ast_babel](binary_expression, right, 1).
+step_field[ast_babel](logical_expression, left, 0).
+step_field[ast_babel](assignment_expression, left, 0).
+step_field[ast_babel](unary_expression, argument, 0).   step_field[ast_babel](update_expression, argument, 0).
+step_field[ast_babel](await_expression, argument, 0).   step_field[ast_babel](yield_expression, argument, 0).
+step_field[ast_babel](return_statement, argument, 0).   step_field[ast_babel](throw_statement, argument, 0).
+step_field[ast_babel](conditional_expression, test, 0). step_field[ast_babel](if_statement, test, 0).
+step_field[ast_babel](while_statement, test, 0).
+step_field[ast_babel](do_while_statement, body, 0).     step_field[ast_babel](do_while_statement, test, 1).
+step_field[ast_babel](for_statement, init, 0).          step_field[ast_babel](for_statement, test, 1).
+step_field[ast_babel](for_in_statement, right, 0).      step_field[ast_babel](for_of_statement, right, 0).
+step_field[ast_babel](switch_statement, discriminant, 0).
+step_field[ast_babel](variable_declarator, init, 0).    step_field[ast_babel](variable_declarator, id, 1).
+step_field[ast_babel](class_declaration, super_class, 0). step_field[ast_babel](class_expression, super_class, 0).
+step_field[ast_babel](export_default_declaration, declaration, 0).
+step_field[ast_babel](export_named_declaration, declaration, 0).
+step_field[ast_babel](catch_clause, body, 0).
+step_field[ast_babel](try_statement, finalizer, 1).
+step_field[ast_babel](import_expression, source, 0).    step_field[ast_babel](import_expression, options, 1).
+step_field[ast_babel](tsexport_assignment, expression, 0).
+step_field[ast_babel](parenthesized_expression, expression, 0). step_field[ast_babel](tsas_expression, expression, 0).
+step_field[ast_babel](tssatisfies_expression, expression, 0).  step_field[ast_babel](tsnon_null_expression, expression, 0).
+step_field[ast_babel](tstype_assertion, expression, 0).        step_field[ast_babel](tsinstantiation_expression, expression, 0).
 
 edb(steps_through).
-steps_through(expression_statement, expression).
-steps_through(labeled_statement, body).
-steps_through(spread_element, argument).
+steps_through[ast_babel](expression_statement, expression).
+steps_through[ast_babel](labeled_statement, body).
+steps_through[ast_babel](spread_element, argument).
 
-b_slot[ast_babel](Seq, I, S) :- seq_field(K, F, Off), node[ast_babel](Seq, K, _),
+b_slot[ast_babel](Seq, I, S) :- seq_field[ast_babel](K, F, Off), node[ast_babel](Seq, K, _),
                                 child[ast_babel](Seq, F, J, S), I is J + Off.
-b_slot[ast_babel](Seq, I, S) :- step_field(K, F, I), node[ast_babel](Seq, K, _), child[ast_babel](Seq, F, 0, S).
+b_slot[ast_babel](Seq, I, S) :- step_field[ast_babel](K, F, I), node[ast_babel](Seq, K, _), child[ast_babel](Seq, F, 0, S).
 -- the property of `o[k]`, the computed key and the value of a property in an object literal
-b_slot[ast_babel](M, 1, E)   :- member_kind(K), node[ast_babel](M, K, _), attr[ast_babel](M, computed, true),
+b_slot[ast_babel](M, 1, E)   :- member_kind[ast_babel](K), node[ast_babel](M, K, _), attr[ast_babel](M, computed, true),
                                 child[ast_babel](M, property, 0, E).
 b_slot[ast_babel](P, 0, E)   :- b_literal_prop[ast_babel](P), attr[ast_babel](P, computed, true),
                                 child[ast_babel](P, key, 0, E).
@@ -130,7 +130,7 @@ b_slot[ast_babel](P, 0, V)   :- b_literal_prop[ast_babel](P), attr[ast_babel](P,
 b_slot[ast_babel](A, 1, R)   :- node[ast_babel](A, assignment_expression, _), attr[ast_babel](A, operator, "="),
                                 child[ast_babel](A, right, 0, R).
 b_slot[ast_babel](A, 1, R)   :- node[ast_babel](A, assignment_expression, _), attr[ast_babel](A, operator, Op),
-                                compound_op(Op, _), child[ast_babel](A, right, 0, R).
+                                compound_op[ast_babel](Op, _), child[ast_babel](A, right, 0, R).
 -- the tests of a switch, after its discriminant and in their order
 b_slot[ast_babel](Sw, J, T)  :- child[ast_babel](Sw, cases, I, C), child[ast_babel](C, test, 0, T), J is I + 1.
 -- try without a handler runs its block as a step
@@ -144,24 +144,24 @@ b_literal_prop[ast_babel](P) :- node[ast_babel](O, object_expression, _), child[
 
 -- a child as the model sees it: through the wrappers
 -- b_through(S, X): the wrapper S stands for X; a child that is no wrapper stands for itself
-b_through[ast_babel](S, X) :- node[ast_babel](S, K, _), steps_through(K, F), child[ast_babel](S, F, 0, X),
-                              node[ast_babel](X, KX, _), not steps_through(KX, _).
-b_through[ast_babel](S, X) :- node[ast_babel](S, K, _), steps_through(K, F), child[ast_babel](S, F, 0, Y),
+b_through[ast_babel](S, X) :- node[ast_babel](S, K, _), steps_through[ast_babel](K, F), child[ast_babel](S, F, 0, X),
+                              node[ast_babel](X, KX, _), not steps_through[ast_babel](KX, _).
+b_through[ast_babel](S, X) :- node[ast_babel](S, K, _), steps_through[ast_babel](K, F), child[ast_babel](S, F, 0, Y),
                               b_through[ast_babel](Y, X).
 
-nth[tree](Seq, I, S) :- b_slot[ast_babel](Seq, I, S), node[ast_babel](S, K, _), not steps_through(K, _).
+nth[tree](Seq, I, S) :- b_slot[ast_babel](Seq, I, S), node[ast_babel](S, K, _), not steps_through[ast_babel](K, _).
 nth[tree](Seq, I, X) :- b_slot[ast_babel](Seq, I, S), b_through[ast_babel](S, X).
 -- every sequence of the value world executes in the order of its positions
 strict[tree](Seq) :- b_slot[ast_babel](Seq, _, _).
 -- beside a spread the order is more than the positions: the spread runs an iterator or getters between them, so
 -- what is spread and its neighbour are said in order (A and B the spread's argument, or the plain element)
 edb(spread_seq).
-spread_seq(call_expression, arguments).  spread_seq(optional_call_expression, arguments).
-spread_seq(new_expression, arguments).   spread_seq(array_expression, elements).
-spread_seq(object_expression, properties).
-b_spread_pos[ast_babel](S, I, X, plain)  :- spread_seq(K, F), node[ast_babel](S, K, _), child[ast_babel](S, F, I, X),
+spread_seq[ast_babel](call_expression, arguments).  spread_seq[ast_babel](optional_call_expression, arguments).
+spread_seq[ast_babel](new_expression, arguments).   spread_seq[ast_babel](array_expression, elements).
+spread_seq[ast_babel](object_expression, properties).
+b_spread_pos[ast_babel](S, I, X, plain)  :- spread_seq[ast_babel](K, F), node[ast_babel](S, K, _), child[ast_babel](S, F, I, X),
                                             node[ast_babel](X, KX, _), KX != spread_element.
-b_spread_pos[ast_babel](S, I, X, spread) :- spread_seq(K, F), node[ast_babel](S, K, _), child[ast_babel](S, F, I, E),
+b_spread_pos[ast_babel](S, I, X, spread) :- spread_seq[ast_babel](K, F), node[ast_babel](S, K, _), child[ast_babel](S, F, I, E),
                                             node[ast_babel](E, spread_element, _), child[ast_babel](E, argument, 0, X).
 precedes[tree](A, B) :- b_spread_pos[ast_babel](S, I, A, spread), J is I + 1, b_spread_pos[ast_babel](S, J, B, _).
 precedes[tree](A, B) :- b_spread_pos[ast_babel](S, I, A, plain), J is I + 1, b_spread_pos[ast_babel](S, J, B, spread).
@@ -170,31 +170,31 @@ precedes[tree](A, B) :- b_spread_pos[ast_babel](S, I, A, plain), J is I + 1, b_s
 -- CONTROL
 
 edb(cond_field).
-cond_field(if_statement, consequent, test, truthy).
-cond_field(if_statement, alternate, test, falsy).
-cond_field(conditional_expression, consequent, test, truthy).
-cond_field(conditional_expression, alternate, test, falsy).
-cond_field(while_statement, body, test, truthy).
-cond_field(for_statement, body, test, truthy).
-cond_field(for_statement, update, test, truthy).
-cond_field(for_of_statement, body, right, next).
-cond_field(for_of_statement, left, right, next).
-cond_field(for_in_statement, body, right, next).
-cond_field(for_in_statement, left, right, next).
-cond_field(try_statement, handler, block, thrown).
-cond_field(logical_expression, right, left, by_operator).
-cond_field(assignment_expression, right, left, by_operator).
+cond_field[ast_babel](if_statement, consequent, test, truthy).
+cond_field[ast_babel](if_statement, alternate, test, falsy).
+cond_field[ast_babel](conditional_expression, consequent, test, truthy).
+cond_field[ast_babel](conditional_expression, alternate, test, falsy).
+cond_field[ast_babel](while_statement, body, test, truthy).
+cond_field[ast_babel](for_statement, body, test, truthy).
+cond_field[ast_babel](for_statement, update, test, truthy).
+cond_field[ast_babel](for_of_statement, body, right, next).
+cond_field[ast_babel](for_of_statement, left, right, next).
+cond_field[ast_babel](for_in_statement, body, right, next).
+cond_field[ast_babel](for_in_statement, left, right, next).
+cond_field[ast_babel](try_statement, handler, block, thrown).
+cond_field[ast_babel](logical_expression, right, left, by_operator).
+cond_field[ast_babel](assignment_expression, right, left, by_operator).
 
 edb(logical_how).
-logical_how("&&", truthy).  logical_how("||", falsy).  logical_how("??", nullish).
-logical_how("&&=", truthy). logical_how("||=", falsy). logical_how("??=", nullish).
+logical_how[ast_babel]("&&", truthy).  logical_how[ast_babel]("||", falsy).  logical_how[ast_babel]("??", nullish).
+logical_how[ast_babel]("&&=", truthy). logical_how[ast_babel]("||=", falsy). logical_how[ast_babel]("??=", nullish).
 
-b_branch[ast_babel](S, N, G, How) :- cond_field(K, F, GF, How), How != by_operator, node[ast_babel](S, K, _),
+b_branch[ast_babel](S, N, G, How) :- cond_field[ast_babel](K, F, GF, How), How != by_operator, node[ast_babel](S, K, _),
                                      child[ast_babel](S, F, 0, N), child[ast_babel](S, GF, 0, G).
-b_branch[ast_babel](S, N, G, How) :- cond_field(K, F, GF, by_operator), node[ast_babel](S, K, _),
-                                     attr[ast_babel](S, operator, Op), logical_how(Op, How),
+b_branch[ast_babel](S, N, G, How) :- cond_field[ast_babel](K, F, GF, by_operator), node[ast_babel](S, K, _),
+                                     attr[ast_babel](S, operator, Op), logical_how[ast_babel](Op, How),
                                      child[ast_babel](S, F, 0, N), child[ast_babel](S, GF, 0, G).
-executes_if[value](N, G, How) :- b_branch[ast_babel](_, N, G, How), node[ast_babel](N, K, _), not steps_through(K, _).
+executes_if[value](N, G, How) :- b_branch[ast_babel](_, N, G, How), node[ast_babel](N, K, _), not steps_through[ast_babel](K, _).
 executes_if[value](X, G, How) :- b_branch[ast_babel](_, N, G, How), b_through[ast_babel](N, X).
 -- the tail of `?.` runs when what it reads is defined
 executes_if[value](N, O, defined) :- mark[value](N, optional), child[ast_babel](N, object, 0, O).
@@ -203,11 +203,11 @@ executes_if[value](N, O, defined) :- mark[value](N, optional), child[ast_babel](
 executes_if[value](C, T, matches) :- node[ast_babel](C, switch_case, _), child[ast_babel](C, test, 0, T).
 
 edb(loop_kind).
-loop_kind(for_statement). loop_kind(for_in_statement). loop_kind(for_of_statement).
-loop_kind(while_statement). loop_kind(do_while_statement).
-repeats[value](S, B)    :- loop_kind(K), node[ast_babel](S, K, _), child[ast_babel](S, body, 0, B),
-                           node[ast_babel](B, KB, _), not steps_through(KB, _).
-repeats[value](S, X)    :- loop_kind(K), node[ast_babel](S, K, _), child[ast_babel](S, body, 0, B),
+loop_kind[ast_babel](for_statement). loop_kind[ast_babel](for_in_statement). loop_kind[ast_babel](for_of_statement).
+loop_kind[ast_babel](while_statement). loop_kind[ast_babel](do_while_statement).
+repeats[value](S, B)    :- loop_kind[ast_babel](K), node[ast_babel](S, K, _), child[ast_babel](S, body, 0, B),
+                           node[ast_babel](B, KB, _), not steps_through[ast_babel](KB, _).
+repeats[value](S, X)    :- loop_kind[ast_babel](K), node[ast_babel](S, K, _), child[ast_babel](S, body, 0, B),
                            b_through[ast_babel](B, X).
 iterates[value](S, L, R)   :- node[ast_babel](S, for_of_statement, _), child[ast_babel](S, left, 0, L),
                               child[ast_babel](S, right, 0, R).
@@ -215,18 +215,18 @@ enumerates[value](S, L, R) :- node[ast_babel](S, for_in_statement, _), child[ast
                               child[ast_babel](S, right, 0, R).
 
 edb(exit_kind).
-exit_kind(return_statement, return). exit_kind(break_statement, break).
-exit_kind(continue_statement, continue). exit_kind(throw_statement, throw).
-exits[value](J, How)   :- exit_kind(K, How), node[ast_babel](J, K, _).
+exit_kind[ast_babel](return_statement, return). exit_kind[ast_babel](break_statement, break).
+exit_kind[ast_babel](continue_statement, continue). exit_kind[ast_babel](throw_statement, throw).
+exits[value](J, How)   :- exit_kind[ast_babel](K, How), node[ast_babel](J, K, _).
 throws[value](T, V)    :- node[ast_babel](T, throw_statement, _), child[ast_babel](T, argument, 0, V).
 tries[value](T, B)     :- child[ast_babel](T, block, 0, B), child[ast_babel](T, handler, 0, _).
 
 label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, X),
-                          node[ast_babel](X, K, _), not steps_through(K, _).
+                          node[ast_babel](X, K, _), not steps_through[ast_babel](K, _).
 label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, B), b_through[ast_babel](B, X).
-label[value](J, Name)  :- exit_kind(K, _), node[ast_babel](J, K, _), child[ast_babel](J, label, 0, I),
+label[value](J, Name)  :- exit_kind[ast_babel](K, _), node[ast_babel](J, K, _), child[ast_babel](J, label, 0, I),
                           attr[ast_babel](I, name, Name).
 
 -- what runs after an await runs later: every later step of each sequence the suspension is inside, up to
@@ -244,17 +244,17 @@ executes_when[value](Arg, A, microtask)  :- b_up[ast_babel](A, N), callee[value]
 -- FUNCTIONS
 
 edb(fn_kind).
-fn_kind(function_declaration). fn_kind(function_expression). fn_kind(arrow_function_expression).
-fn_kind(object_method). fn_kind(class_method). fn_kind(class_private_method).
-fn_kind(tsdeclare_function). fn_kind(tsdeclare_method).
+fn_kind[ast_babel](function_declaration). fn_kind[ast_babel](function_expression). fn_kind[ast_babel](arrow_function_expression).
+fn_kind[ast_babel](object_method). fn_kind[ast_babel](class_method). fn_kind[ast_babel](class_private_method).
+fn_kind[ast_babel](tsdeclare_function). fn_kind[ast_babel](tsdeclare_method).
 
-edb(this_binder).
-this_binder(function_declaration). this_binder(function_expression). this_binder(object_method).
-this_binder(class_method). this_binder(class_private_method).
+edb(this_kind).
+this_kind[ast_babel](function_declaration). this_kind[ast_babel](function_expression). this_kind[ast_babel](object_method).
+this_kind[ast_babel](class_method). this_kind[ast_babel](class_private_method).
 
-body[value](F, B)  :- fn_kind(K), node[ast_babel](F, K, _), child[ast_babel](F, body, 0, B).
-binds[value](F, "this")      :- this_binder(K), node[ast_babel](F, K, _).
-binds[value](F, "arguments") :- this_binder(K), node[ast_babel](F, K, _).
+body[value](F, B)  :- fn_kind[ast_babel](K), node[ast_babel](F, K, _), child[ast_babel](F, body, 0, B).
+binds[value](F, "this")      :- this_kind[ast_babel](K), node[ast_babel](F, K, _).
+binds[value](F, "arguments") :- this_kind[ast_babel](K), node[ast_babel](F, K, _).
 -- an arrow whose body is an expression returns it
 returns[value](F, E) :- node[ast_babel](F, arrow_function_expression, _), child[ast_babel](F, body, 0, E),
                         node[ast_babel](E, K, _), K != block_statement.
@@ -267,30 +267,29 @@ awaits[value](A, X)    :- node[ast_babel](A, await_expression, _), child[ast_bab
 
 -- a parameter is what stands in its slot, through a default and through a TS parameter property
 edb(param_kind).
-param_kind(tsmethod_signature). param_kind(tsfunction_type). param_kind(tsconstructor_type).
-param_kind(tscall_signature_declaration). param_kind(tsconstruct_signature_declaration).
-b_params[ast_babel](F) :- fn_kind(K), node[ast_babel](F, K, _).
-b_params[ast_babel](F) :- param_kind(K), node[ast_babel](F, K, _).
-b_param[ast_babel](F, I, X) :- b_params[ast_babel](F), child[ast_babel](F, params, I, X).
+param_kind[ast_babel](tsmethod_signature). param_kind[ast_babel](tsfunction_type). param_kind[ast_babel](tsconstructor_type).
+param_kind[ast_babel](tscall_signature_declaration). param_kind[ast_babel](tsconstruct_signature_declaration).
+b_fn[ast_babel](F)     :- fn_kind[ast_babel](K), node[ast_babel](F, K, _).
+b_param[ast_babel](F, I, X) :- b_fn[ast_babel](F), child[ast_babel](F, params, I, X).
+b_param[ast_babel](F, I, X) :- param_kind[ast_babel](K), node[ast_babel](F, K, _), child[ast_babel](F, params, I, X).
 b_param[ast_babel](F, 0, X) :- node[ast_babel](F, tsindex_signature, _), child[ast_babel](F, parameters, 0, X).
 b_param[ast_babel](F, I, Y) :- b_param[ast_babel](F, I, X), node[ast_babel](X, assignment_pattern, _),
                                child[ast_babel](X, left, 0, Y).
 b_param[ast_babel](F, I, Y) :- b_param[ast_babel](F, I, X), node[ast_babel](X, tsparameter_property, _),
                                child[ast_babel](X, parameter, 0, Y).
 edb(target_kind).
-target_kind(identifier). target_kind(object_pattern). target_kind(array_pattern). target_kind(member_expression).
-param[value](F, I, X)       :- b_param[ast_babel](F, I, X), b_value_fn[ast_babel](F), node[ast_babel](X, K, _), target_kind(K).
-param[type](F, I, X)        :- b_param[ast_babel](F, I, X), b_tplace[ast_babel](F), node[ast_babel](X, K, _), target_kind(K).
-b_value_fn[ast_babel](F)    :- fn_kind(K), node[ast_babel](F, K, _).
-rest_params[value](F, I, A) :- b_param[ast_babel](F, I, X), b_value_fn[ast_babel](F), node[ast_babel](X, rest_element, _),
+target_kind[ast_babel](identifier). target_kind[ast_babel](object_pattern). target_kind[ast_babel](array_pattern). target_kind[ast_babel](member_expression).
+param[value](F, I, X)       :- b_param[ast_babel](F, I, X), b_fn[ast_babel](F), node[ast_babel](X, K, _), target_kind[ast_babel](K).
+param[type](F, I, X)        :- b_param[ast_babel](F, I, X), b_tplace[ast_babel](F), node[ast_babel](X, K, _), target_kind[ast_babel](K).
+rest_params[value](F, I, A) :- b_param[ast_babel](F, I, X), b_fn[ast_babel](F), node[ast_babel](X, rest_element, _),
                                child[ast_babel](X, argument, 0, A).
 decl[value](X, param) :- param[value](_, _, X).
 decl[value](X, param) :- rest_params[value](_, _, X).
 
 edb(method_kind).
-method_kind(object_method). method_kind(class_method). method_kind(class_private_method). method_kind(tsdeclare_method).
-getter[value](M, M)     :- method_kind(K), node[ast_babel](M, K, _), attr[ast_babel](M, kind, "get").
-setter[value](M, M)     :- method_kind(K), node[ast_babel](M, K, _), attr[ast_babel](M, kind, "set").
+method_kind[ast_babel](object_method). method_kind[ast_babel](class_method). method_kind[ast_babel](class_private_method). method_kind[ast_babel](tsdeclare_method).
+getter[value](M, M)     :- method_kind[ast_babel](K), node[ast_babel](M, K, _), attr[ast_babel](M, kind, "get").
+setter[value](M, M)     :- method_kind[ast_babel](K), node[ast_babel](M, K, _), attr[ast_babel](M, kind, "set").
 constructs[value](C, M) :- b_member[ast_babel](C, M), attr[ast_babel](M, kind, "constructor").
 
 -- =====================================================================================================================
@@ -301,37 +300,37 @@ constructs[value](C, M) :- b_member[ast_babel](C, M), attr[ast_babel](M, kind, "
 -- catch, an import. The same pattern on the left of `=` writes names that exist.
 
 edb(bind_root).
-bind_root(variable_declarator, id, value).    bind_root(catch_clause, param, value).
-bind_root(function_declaration, id, value).   bind_root(function_expression, id, value).
-bind_root(tsdeclare_function, id, value).
-bind_root(class_declaration, id, value).      bind_root(class_declaration, id, type).
-bind_root(class_expression, id, value).       bind_root(class_expression, id, type).
-bind_root(import_specifier, local, type).     bind_root(import_default_specifier, local, type).
-bind_root(import_namespace_specifier, local, type).
-bind_root(tsinterface_declaration, id, type). bind_root(tstype_alias_declaration, id, type).
-bind_root(tsenum_declaration, id, value).     bind_root(tsenum_declaration, id, type).
-bind_root(tsmodule_declaration, id, value).   bind_root(tsmodule_declaration, id, type).
-bind_root(tstype_parameter, name, type).
+bind_root[ast_babel](variable_declarator, id, value).    bind_root[ast_babel](catch_clause, param, value).
+bind_root[ast_babel](function_declaration, id, value).   bind_root[ast_babel](function_expression, id, value).
+bind_root[ast_babel](tsdeclare_function, id, value).
+bind_root[ast_babel](class_declaration, id, value).      bind_root[ast_babel](class_declaration, id, type).
+bind_root[ast_babel](class_expression, id, value).       bind_root[ast_babel](class_expression, id, type).
+bind_root[ast_babel](import_specifier, local, type).     bind_root[ast_babel](import_default_specifier, local, type).
+bind_root[ast_babel](import_namespace_specifier, local, type).
+bind_root[ast_babel](tsinterface_declaration, id, type). bind_root[ast_babel](tstype_alias_declaration, id, type).
+bind_root[ast_babel](tsenum_declaration, id, value).     bind_root[ast_babel](tsenum_declaration, id, type).
+bind_root[ast_babel](tsmodule_declaration, id, value).   bind_root[ast_babel](tsmodule_declaration, id, type).
+bind_root[ast_babel](tstype_parameter, name, type).
 
-b_bind[ast_babel](X, Sort) :- bind_root(K, F, Sort), node[ast_babel](P, K, _), child[ast_babel](P, F, 0, X).
+b_bind[ast_babel](X, Sort) :- bind_root[ast_babel](K, F, Sort), node[ast_babel](P, K, _), child[ast_babel](P, F, 0, X).
 b_bind[ast_babel](X, value) :- node[ast_babel](D, import_declaration, _), attr[ast_babel](D, import_kind, "value"),
                                child[ast_babel](D, specifiers, _, S), not attr[ast_babel](S, import_kind, "type"),
                                child[ast_babel](S, local, 0, X).
 b_bind[ast_babel](X, value) :- param[value](_, _, X).
 b_bind[ast_babel](X, value) :- rest_params[value](_, _, X).
-b_bind[ast_babel](Y, Sort)  :- b_bind[ast_babel](X, Sort), node[ast_babel](X, K, _), pattern_down(K, F),
+b_bind[ast_babel](Y, Sort)  :- b_bind[ast_babel](X, Sort), node[ast_babel](X, K, _), pattern_down[ast_babel](K, F),
                                child[ast_babel](X, F, _, Y).
 
 edb(pattern_down).
-pattern_down(object_pattern, properties). pattern_down(object_property, value). pattern_down(array_pattern, elements).
-pattern_down(rest_element, argument).     pattern_down(assignment_pattern, left).
+pattern_down[ast_babel](object_pattern, properties). pattern_down[ast_babel](object_property, value). pattern_down[ast_babel](array_pattern, elements).
+pattern_down[ast_babel](rest_element, argument).     pattern_down[ast_babel](assignment_pattern, left).
 
 b_write[ast_babel](X) :- node[ast_babel](A, assignment_expression, _), child[ast_babel](A, left, 0, X).
-b_write[ast_babel](X) :- node[ast_babel](S, K, _), loop_left(K), child[ast_babel](S, left, 0, X).
-b_write[ast_babel](Y) :- b_write[ast_babel](X), node[ast_babel](X, K, _), pattern_down(K, F),
+b_write[ast_babel](X) :- node[ast_babel](S, K, _), loop_left[ast_babel](K), child[ast_babel](S, left, 0, X).
+b_write[ast_babel](Y) :- b_write[ast_babel](X), node[ast_babel](X, K, _), pattern_down[ast_babel](K, F),
                          child[ast_babel](X, F, _, Y).
 edb(loop_left).
-loop_left(for_of_statement). loop_left(for_in_statement).
+loop_left[ast_babel](for_of_statement). loop_left[ast_babel](for_in_statement).
 
 binds[value](X, Name) :- b_bind[ast_babel](X, value), node[ast_babel](X, identifier, _),
                          attr[ast_babel](X, name, Name).
@@ -342,49 +341,49 @@ ref[value](X, Name)  :- b_write[ast_babel](X), node[ast_babel](X, identifier, _)
 
 -- the fields where an identifier is a value read
 edb(ref_field).
-ref_field(call_expression, callee).        ref_field(call_expression, arguments).
-ref_field(optional_call_expression, callee). ref_field(optional_call_expression, arguments).
-ref_field(new_expression, callee).         ref_field(new_expression, arguments).
-ref_field(member_expression, object).      ref_field(optional_member_expression, object).
-ref_field(binary_expression, left).        ref_field(binary_expression, right).
-ref_field(logical_expression, left).       ref_field(logical_expression, right).
-ref_field(assignment_expression, right).
-ref_field(unary_expression, argument).     ref_field(update_expression, argument).
-ref_field(await_expression, argument).     ref_field(yield_expression, argument).
-ref_field(spread_element, argument).
-ref_field(return_statement, argument).     ref_field(throw_statement, argument).
-ref_field(conditional_expression, test).   ref_field(conditional_expression, consequent).
-ref_field(conditional_expression, alternate).
-ref_field(if_statement, test).             ref_field(while_statement, test).
-ref_field(do_while_statement, test).
-ref_field(for_statement, init).            ref_field(for_statement, test).
-ref_field(for_statement, update).
-ref_field(for_in_statement, right).        ref_field(for_of_statement, right).
-ref_field(switch_statement, discriminant). ref_field(switch_case, test).
-ref_field(expression_statement, expression). ref_field(sequence_expression, expressions).
-ref_field(array_expression, elements).
-ref_field(assignment_pattern, right).
-ref_field(variable_declarator, init).
-ref_field(arrow_function_expression, body).
-ref_field(template_literal, expressions).
-ref_field(tagged_template_expression, tag).
-ref_field(class_declaration, super_class). ref_field(class_expression, super_class).
-ref_field(class_property, value).          ref_field(class_private_property, value).
-ref_field(class_accessor_property, value).
-ref_field(export_default_declaration, declaration).
-ref_field(tsas_expression, expression).    ref_field(tssatisfies_expression, expression).
-ref_field(tsnon_null_expression, expression). ref_field(tstype_assertion, expression).
-ref_field(tsinstantiation_expression, expression). ref_field(parenthesized_expression, expression).
-ref_field(decorator, expression).
-ref_field(import_expression, source).      ref_field(import_expression, options).
-ref_field(tsexport_assignment, expression).
-ref_field(tsenum_member, initializer).
-ref_field(tstype_query, expr_name).
-ref_field(jsxexpression_container, expression). ref_field(jsxspread_attribute, argument).
+ref_field[ast_babel](call_expression, callee).        ref_field[ast_babel](call_expression, arguments).
+ref_field[ast_babel](optional_call_expression, callee). ref_field[ast_babel](optional_call_expression, arguments).
+ref_field[ast_babel](new_expression, callee).         ref_field[ast_babel](new_expression, arguments).
+ref_field[ast_babel](member_expression, object).      ref_field[ast_babel](optional_member_expression, object).
+ref_field[ast_babel](binary_expression, left).        ref_field[ast_babel](binary_expression, right).
+ref_field[ast_babel](logical_expression, left).       ref_field[ast_babel](logical_expression, right).
+ref_field[ast_babel](assignment_expression, right).
+ref_field[ast_babel](unary_expression, argument).     ref_field[ast_babel](update_expression, argument).
+ref_field[ast_babel](await_expression, argument).     ref_field[ast_babel](yield_expression, argument).
+ref_field[ast_babel](spread_element, argument).
+ref_field[ast_babel](return_statement, argument).     ref_field[ast_babel](throw_statement, argument).
+ref_field[ast_babel](conditional_expression, test).   ref_field[ast_babel](conditional_expression, consequent).
+ref_field[ast_babel](conditional_expression, alternate).
+ref_field[ast_babel](if_statement, test).             ref_field[ast_babel](while_statement, test).
+ref_field[ast_babel](do_while_statement, test).
+ref_field[ast_babel](for_statement, init).            ref_field[ast_babel](for_statement, test).
+ref_field[ast_babel](for_statement, update).
+ref_field[ast_babel](for_in_statement, right).        ref_field[ast_babel](for_of_statement, right).
+ref_field[ast_babel](switch_statement, discriminant). ref_field[ast_babel](switch_case, test).
+ref_field[ast_babel](expression_statement, expression). ref_field[ast_babel](sequence_expression, expressions).
+ref_field[ast_babel](array_expression, elements).
+ref_field[ast_babel](assignment_pattern, right).
+ref_field[ast_babel](variable_declarator, init).
+ref_field[ast_babel](arrow_function_expression, body).
+ref_field[ast_babel](template_literal, expressions).
+ref_field[ast_babel](tagged_template_expression, tag).
+ref_field[ast_babel](class_declaration, super_class). ref_field[ast_babel](class_expression, super_class).
+ref_field[ast_babel](class_property, value).          ref_field[ast_babel](class_private_property, value).
+ref_field[ast_babel](class_accessor_property, value).
+ref_field[ast_babel](export_default_declaration, declaration).
+ref_field[ast_babel](tsas_expression, expression).    ref_field[ast_babel](tssatisfies_expression, expression).
+ref_field[ast_babel](tsnon_null_expression, expression). ref_field[ast_babel](tstype_assertion, expression).
+ref_field[ast_babel](tsinstantiation_expression, expression). ref_field[ast_babel](parenthesized_expression, expression).
+ref_field[ast_babel](decorator, expression).
+ref_field[ast_babel](import_expression, source).      ref_field[ast_babel](import_expression, options).
+ref_field[ast_babel](tsexport_assignment, expression).
+ref_field[ast_babel](tsenum_member, initializer).
+ref_field[ast_babel](tstype_query, expr_name).
+ref_field[ast_babel](jsxexpression_container, expression). ref_field[ast_babel](jsxspread_attribute, argument).
 
-ref[value](X, Name) :- ref_field(K, F), node[ast_babel](P, K, _), child[ast_babel](P, F, _, X), node[ast_babel](X, identifier, _),
+ref[value](X, Name) :- ref_field[ast_babel](K, F), node[ast_babel](P, K, _), child[ast_babel](P, F, _, X), node[ast_babel](X, identifier, _),
                               attr[ast_babel](X, name, Name).
-ref[value](X, Name) :- member_kind(K), node[ast_babel](P, K, _), attr[ast_babel](P, computed, true),
+ref[value](X, Name) :- member_kind[ast_babel](K), node[ast_babel](P, K, _), attr[ast_babel](P, computed, true),
                               child[ast_babel](P, property, _, X), node[ast_babel](X, identifier, _), attr[ast_babel](X, name, Name).
 ref[value](X, Name) :- attr[ast_babel](P, computed, true), child[ast_babel](P, key, _, X), node[ast_babel](X, identifier, _),
                               attr[ast_babel](X, name, Name).
@@ -395,41 +394,41 @@ ref[value](X, Name) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 
 
 -- the fields where an identifier is a type read; a keyword type is a name the library binds
 edb(type_ref_field).
-type_ref_field(tstype_reference, type_name). type_ref_field(tsclass_implements, expression).
-type_ref_field(tsinterface_heritage, expression). type_ref_field(tsqualified_name, left).
-ref[type](X, Name) :- type_ref_field(K, F), node[ast_babel](P, K, _), child[ast_babel](P, F, _, X), node[ast_babel](X, identifier, _),
+type_ref_field[ast_babel](tstype_reference, type_name). type_ref_field[ast_babel](tsclass_implements, expression).
+type_ref_field[ast_babel](tsinterface_heritage, expression). type_ref_field[ast_babel](tsqualified_name, left).
+ref[type](X, Name) :- type_ref_field[ast_babel](K, F), node[ast_babel](P, K, _), child[ast_babel](P, F, _, X), node[ast_babel](X, identifier, _),
                              attr[ast_babel](X, name, Name).
 
 edb(keyword_type).
-keyword_type(tsstring_keyword, "string").   keyword_type(tsnumber_keyword, "number").
-keyword_type(tsboolean_keyword, "boolean"). keyword_type(tsany_keyword, "any").
-keyword_type(tsunknown_keyword, "unknown"). keyword_type(tsvoid_keyword, "void").
-keyword_type(tsundefined_keyword, "undefined"). keyword_type(tsnull_keyword, "null").
-keyword_type(tsnever_keyword, "never").     keyword_type(tsobject_keyword, "object").
-keyword_type(tsbigint_keyword, "bigint").   keyword_type(tssymbol_keyword, "symbol").
-keyword_type(tsthis_type, "this").          keyword_type(tsintrinsic_keyword, "intrinsic").
-keyword_type(tsarray_type, "Array").
-ref[type](T, Name) :- keyword_type(K, Name), node[ast_babel](T, K, _).
+keyword_type[ast_babel](tsstring_keyword, "string").   keyword_type[ast_babel](tsnumber_keyword, "number").
+keyword_type[ast_babel](tsboolean_keyword, "boolean"). keyword_type[ast_babel](tsany_keyword, "any").
+keyword_type[ast_babel](tsunknown_keyword, "unknown"). keyword_type[ast_babel](tsvoid_keyword, "void").
+keyword_type[ast_babel](tsundefined_keyword, "undefined"). keyword_type[ast_babel](tsnull_keyword, "null").
+keyword_type[ast_babel](tsnever_keyword, "never").     keyword_type[ast_babel](tsobject_keyword, "object").
+keyword_type[ast_babel](tsbigint_keyword, "bigint").   keyword_type[ast_babel](tssymbol_keyword, "symbol").
+keyword_type[ast_babel](tsthis_type, "this").          keyword_type[ast_babel](tsintrinsic_keyword, "intrinsic").
+keyword_type[ast_babel](tsarray_type, "Array").
+ref[type](T, Name) :- keyword_type[ast_babel](K, Name), node[ast_babel](T, K, _).
 
 -- the fields where an identifier is a name its parent's role carries
 edb(name_field).
-name_field(member_expression, property).   name_field(optional_member_expression, property).
-name_field(object_property, key).          name_field(object_method, key).
-name_field(class_method, key).             name_field(class_property, key).
-name_field(class_accessor_property, key).  name_field(tsdeclare_method, key).
-name_field(tsproperty_signature, key).     name_field(tsmethod_signature, key).
-name_field(tsenum_member, id).             name_field(private_name, id).
-name_field(import_specifier, imported).    name_field(export_specifier, exported).
-name_field(export_specifier, local).       name_field(export_namespace_specifier, exported).
-name_field(export_default_specifier, exported).
-name_field(meta_property, meta).           name_field(meta_property, property).
-name_field(labeled_statement, label).      name_field(break_statement, label).
-name_field(continue_statement, label).
-name_field(tsqualified_name, right).
+name_field[ast_babel](member_expression, property).   name_field[ast_babel](optional_member_expression, property).
+name_field[ast_babel](object_property, key).          name_field[ast_babel](object_method, key).
+name_field[ast_babel](class_method, key).             name_field[ast_babel](class_property, key).
+name_field[ast_babel](class_accessor_property, key).  name_field[ast_babel](tsdeclare_method, key).
+name_field[ast_babel](tsproperty_signature, key).     name_field[ast_babel](tsmethod_signature, key).
+name_field[ast_babel](tsenum_member, id).             name_field[ast_babel](private_name, id).
+name_field[ast_babel](import_specifier, imported).    name_field[ast_babel](export_specifier, exported).
+name_field[ast_babel](export_specifier, local).       name_field[ast_babel](export_namespace_specifier, exported).
+name_field[ast_babel](export_default_specifier, exported).
+name_field[ast_babel](meta_property, meta).           name_field[ast_babel](meta_property, property).
+name_field[ast_babel](labeled_statement, label).      name_field[ast_babel](break_statement, label).
+name_field[ast_babel](continue_statement, label).
+name_field[ast_babel](tsqualified_name, right).
 -- the name of a parameter in a signature of the type world labels it; nothing reads it as a binding
-name_field(tsindex_signature, parameters).  name_field(tsmethod_signature, params).
-name_field(tsfunction_type, params).        name_field(tsconstructor_type, params).
-name_field(tscall_signature_declaration, params). name_field(tsconstruct_signature_declaration, params).
+name_field[ast_babel](tsindex_signature, parameters).  name_field[ast_babel](tsmethod_signature, params).
+name_field[ast_babel](tsfunction_type, params).        name_field[ast_babel](tsconstructor_type, params).
+name_field[ast_babel](tscall_signature_declaration, params). name_field[ast_babel](tsconstruct_signature_declaration, params).
 
 -- =====================================================================================================================
 -- KEYS, MEMBERS, LITERALS
@@ -437,35 +436,35 @@ name_field(tscall_signature_declaration, params). name_field(tsconstruct_signatu
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
                        attr[ast_babel](K, name, Name).
 b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
-                       key_literal(KK), node[ast_babel](K, KK, _), attr[ast_babel](K, value, V).
+                       node[ast_babel](K, KK, _), key_literal[ast_babel](KK), attr[ast_babel](K, value, V).
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, private_name, _),
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
                        attr[ast_babel](I, name, Name).
-key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member(K).
-key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member(K).
+key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
+key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
 key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
-                         node[ast_babel](M, K, _), not type_member(K).
+                         node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
 key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
-                         node[ast_babel](M, K, _), type_member(K).
+                         node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
 edb(key_literal).
-key_literal(string_literal). key_literal(numeric_literal).
+key_literal[ast_babel](string_literal). key_literal[ast_babel](numeric_literal).
 
 edb(member_kind).
-member_kind(member_expression). member_kind(optional_member_expression).
-member[value](N, O, Name) :- member_kind(K), node[ast_babel](N, K, _), attr[ast_babel](N, computed, false),
+member_kind[ast_babel](member_expression). member_kind[ast_babel](optional_member_expression).
+member[value](N, O, Name) :- member_kind[ast_babel](K), node[ast_babel](N, K, _), attr[ast_babel](N, computed, false),
                              child[ast_babel](N, object, 0, O), child[ast_babel](N, property, 0, P),
                              attr[ast_babel](P, name, Name).
-member[value](N, O, Name) :- member_kind(K), node[ast_babel](N, K, _), child[ast_babel](N, object, 0, O),
+member[value](N, O, Name) :- member_kind[ast_babel](K), node[ast_babel](N, K, _), child[ast_babel](N, object, 0, O),
                              child[ast_babel](N, property, 0, P), node[ast_babel](P, private_name, _),
                              child[ast_babel](P, id, 0, I), attr[ast_babel](I, name, Name).
-member_expr[value](N, O, E) :- member_kind(K), node[ast_babel](N, K, _), attr[ast_babel](N, computed, true),
+member_expr[value](N, O, E) :- member_kind[ast_babel](K), node[ast_babel](N, K, _), attr[ast_babel](N, computed, true),
                                child[ast_babel](N, object, 0, O), child[ast_babel](N, property, 0, E).
 
 edb(literal_kind).
-literal_kind(string_literal). literal_kind(numeric_literal). literal_kind(boolean_literal).
-literal_kind(big_int_literal).
-literal[value](N, V)    :- literal_kind(K), node[ast_babel](N, K, _), attr[ast_babel](N, value, V),
+literal_kind[ast_babel](string_literal). literal_kind[ast_babel](numeric_literal). literal_kind[ast_babel](boolean_literal).
+literal_kind[ast_babel](big_int_literal).
+literal[value](N, V)    :- literal_kind[ast_babel](K), node[ast_babel](N, K, _), attr[ast_babel](N, value, V),
                            not b_type_literal[ast_babel](N).
 literal[type](N, V)     :- b_type_literal[ast_babel](N), attr[ast_babel](N, value, V).
 b_type_literal[ast_babel](N) :- node[ast_babel](T, tsliteral_type, _), child[ast_babel](T, literal, 0, N).
@@ -483,12 +482,12 @@ template_part[value](T, J, E) :- node[ast_babel](T, template_literal, _), child[
 -- =====================================================================================================================
 -- CALLS
 
-edb(callee_kind).
-callee_kind(call_expression). callee_kind(optional_call_expression). callee_kind(new_expression).
-callee[value](C, N) :- callee_kind(K), node[ast_babel](C, K, _), child[ast_babel](C, callee, 0, N).
+edb(calling_kind).
+calling_kind[ast_babel](call_expression). calling_kind[ast_babel](optional_call_expression). calling_kind[ast_babel](new_expression).
+callee[value](C, N) :- calling_kind[ast_babel](K), node[ast_babel](C, K, _), child[ast_babel](C, callee, 0, N).
 tagged[value](C, Tag, Q) :- node[ast_babel](C, tagged_template_expression, _), child[ast_babel](C, tag, 0, Tag),
                             child[ast_babel](C, quasi, 0, Q).
-spread_args[value](C, I, X) :- callee_kind(K), node[ast_babel](C, K, _), child[ast_babel](C, arguments, I, S),
+spread_args[value](C, I, X) :- calling_kind[ast_babel](K), node[ast_babel](C, K, _), child[ast_babel](C, arguments, I, S),
                                node[ast_babel](S, spread_element, _), child[ast_babel](S, argument, 0, X).
 
 -- =====================================================================================================================
@@ -507,9 +506,9 @@ has[type](I, M)  :- node[ast_babel](I, tsinterface_declaration, _), child[ast_ba
 has[type](T, M)  :- node[ast_babel](T, tstype_literal, _), child[ast_babel](T, members, _, M).
 
 edb(value_kind).
-value_kind(class_property). value_kind(class_private_property). value_kind(class_accessor_property).
+value_kind[ast_babel](class_property). value_kind[ast_babel](class_private_property). value_kind[ast_babel](class_accessor_property).
 value[value](M, V) :- b_literal_prop[ast_babel](M), child[ast_babel](M, value, 0, V).
-value[value](M, V) :- value_kind(K), node[ast_babel](M, K, _), child[ast_babel](M, value, 0, V).
+value[value](M, V) :- value_kind[ast_babel](K), node[ast_babel](M, K, _), child[ast_babel](M, value, 0, V).
 value[value](M, V) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, initializer, 0, V).
 
 extends[value](C, E)      :- mark[value](C, class), child[ast_babel](C, super_class, 0, E).
@@ -539,9 +538,9 @@ assign[value](T, T, X) :- b_param_member[ast_babel](_, T, X).
 -- CONDUITS AND OPERATORS
 
 edb(passes_kind).
-passes_kind(parenthesized_expression). passes_kind(tsas_expression). passes_kind(tssatisfies_expression).
-passes_kind(tsnon_null_expression). passes_kind(tstype_assertion). passes_kind(tsinstantiation_expression).
-passes[value](E, X) :- passes_kind(K), node[ast_babel](E, K, _), child[ast_babel](E, expression, 0, X).
+passes_kind[ast_babel](parenthesized_expression). passes_kind[ast_babel](tsas_expression). passes_kind[ast_babel](tssatisfies_expression).
+passes_kind[ast_babel](tsnon_null_expression). passes_kind[ast_babel](tstype_assertion). passes_kind[ast_babel](tsinstantiation_expression).
+passes[value](E, X) :- passes_kind[ast_babel](K), node[ast_babel](E, K, _), child[ast_babel](E, expression, 0, X).
 
 binary[value](N, Op, L, R)  :- node[ast_babel](N, binary_expression, _), attr[ast_babel](N, operator, Op),
                                child[ast_babel](N, left, 0, L), child[ast_babel](N, right, 0, R).
@@ -552,21 +551,21 @@ logical[value](N, Op, L, R) :- node[ast_babel](N, logical_expression, _), attr[a
 
 -- `a = b` puts b into a and gives b; `a += b` is a + b put into a; `a ??= b` is a ?? b with b put into a
 edb(compound_op).
-compound_op("+=", "+"). compound_op("-=", "-"). compound_op("*=", "*"). compound_op("/=", "/").
-compound_op("%=", "%"). compound_op("**=", "**"). compound_op("<<=", "<<"). compound_op(">>=", ">>").
-compound_op(">>>=", ">>>"). compound_op("&=", "&"). compound_op("|=", "|"). compound_op("^=", "^").
+compound_op[ast_babel]("+=", "+"). compound_op[ast_babel]("-=", "-"). compound_op[ast_babel]("*=", "*"). compound_op[ast_babel]("/=", "/").
+compound_op[ast_babel]("%=", "%"). compound_op[ast_babel]("**=", "**"). compound_op[ast_babel]("<<=", "<<"). compound_op[ast_babel](">>=", ">>").
+compound_op[ast_babel](">>>=", ">>>"). compound_op[ast_babel]("&=", "&"). compound_op[ast_babel]("|=", "|"). compound_op[ast_babel]("^=", "^").
 edb(logical_assign).
-logical_assign("&&=", "&&"). logical_assign("||=", "||"). logical_assign("??=", "??").
+logical_assign[ast_babel]("&&=", "&&"). logical_assign[ast_babel]("||=", "||"). logical_assign[ast_babel]("??=", "??").
 
 b_assign_parts[ast_babel](A, Op, L, R) :- node[ast_babel](A, assignment_expression, _),
                                           attr[ast_babel](A, operator, Op),
                                           child[ast_babel](A, left, 0, L), child[ast_babel](A, right, 0, R).
 assign[value](A, L, R)       :- b_assign_parts[ast_babel](A, "=", L, R).
 gives[value](A, R)           :- b_assign_parts[ast_babel](A, "=", _, R).
-binary[value](A, B, L, R)    :- b_assign_parts[ast_babel](A, Op, L, R), compound_op(Op, B).
-assign[value](A, L, A)       :- b_assign_parts[ast_babel](A, Op, L, _), compound_op(Op, _).
-logical[value](A, B, L, R)   :- b_assign_parts[ast_babel](A, Op, L, R), logical_assign(Op, B).
-assign[value](A, L, R)       :- b_assign_parts[ast_babel](A, Op, L, R), logical_assign(Op, _).
+binary[value](A, B, L, R)    :- b_assign_parts[ast_babel](A, Op, L, R), compound_op[ast_babel](Op, B).
+assign[value](A, L, A)       :- b_assign_parts[ast_babel](A, Op, L, _), compound_op[ast_babel](Op, _).
+logical[value](A, B, L, R)   :- b_assign_parts[ast_babel](A, Op, L, R), logical_assign[ast_babel](Op, B).
+assign[value](A, L, R)       :- b_assign_parts[ast_babel](A, Op, L, R), logical_assign[ast_babel](Op, _).
 assign[value](P, L, R)       :- node[ast_babel](P, assignment_pattern, _), child[ast_babel](P, left, 0, L),
                                 child[ast_babel](P, right, 0, R).
 
@@ -584,34 +583,34 @@ gives[value](S, X) :- node[ast_babel](S, sequence_expression, _), I is max(J : c
 -- DECLARATIONS AND PATTERNS
 
 decl[value](D, Kind)   :- node[ast_babel](V, variable_declaration, _), attr[ast_babel](V, kind, W),
-                          var_kind(W, Kind), child[ast_babel](V, declarations, _, D).
+                          var_kind[ast_babel](W, Kind), child[ast_babel](V, declarations, _, D).
 edb(var_kind).
-var_kind("var", var). var_kind("let", let). var_kind("const", const). var_kind("using", using).
-var_kind("await using", await_using).
+var_kind[ast_babel]("var", var). var_kind[ast_babel]("let", let). var_kind[ast_babel]("const", const). var_kind[ast_babel]("using", using).
+var_kind[ast_babel]("await using", await_using).
 assign[value](D, T, I) :- node[ast_babel](D, variable_declarator, _), child[ast_babel](D, id, 0, T),
                           child[ast_babel](D, init, 0, I).
 target[value](D, T)    :- node[ast_babel](D, variable_declarator, _), child[ast_babel](D, id, 0, T),
                           not child[ast_babel](D, init, 0, _).
 
 edb(decl_kind).
-decl_kind(function_declaration, function). decl_kind(tsdeclare_function, function).
-decl_kind(class_declaration, class).       decl_kind(tsenum_declaration, enum).
-decl_kind(tsmodule_declaration, namespace).
-decl_kind(import_specifier, import).       decl_kind(import_default_specifier, import).
-decl_kind(import_namespace_specifier, import).
-decl[value](D, Kind)   :- decl_kind(K, Kind), node[ast_babel](D, K, _).
+decl_kind[ast_babel](function_declaration, function). decl_kind[ast_babel](tsdeclare_function, function).
+decl_kind[ast_babel](class_declaration, class).       decl_kind[ast_babel](tsenum_declaration, enum).
+decl_kind[ast_babel](tsmodule_declaration, namespace).
+decl_kind[ast_babel](import_specifier, import).       decl_kind[ast_babel](import_default_specifier, import).
+decl_kind[ast_babel](import_namespace_specifier, import).
+decl[value](D, Kind)   :- decl_kind[ast_babel](K, Kind), node[ast_babel](D, K, _).
 -- a named function or class expression introduces its name in its own scope
 decl[value](D, function) :- node[ast_babel](D, function_expression, _), child[ast_babel](D, id, 0, _).
 decl[value](D, class)    :- node[ast_babel](D, class_expression, _), child[ast_babel](D, id, 0, _).
 decl[value](P, catch)    :- node[ast_babel](C, catch_clause, _), child[ast_babel](C, param, 0, P).
 
 edb(target_field).
-target_field(function_declaration, id). target_field(function_expression, id). target_field(tsdeclare_function, id).
-target_field(class_declaration, id).    target_field(class_expression, id).
-target_field(tsenum_declaration, id).   target_field(tsmodule_declaration, id).
-target_field(import_specifier, local).  target_field(import_default_specifier, local).
-target_field(import_namespace_specifier, local).
-target[value](D, T) :- target_field(K, F), node[ast_babel](D, K, _), child[ast_babel](D, F, 0, T).
+target_field[ast_babel](function_declaration, id). target_field[ast_babel](function_expression, id). target_field[ast_babel](tsdeclare_function, id).
+target_field[ast_babel](class_declaration, id).    target_field[ast_babel](class_expression, id).
+target_field[ast_babel](tsenum_declaration, id).   target_field[ast_babel](tsmodule_declaration, id).
+target_field[ast_babel](import_specifier, local).  target_field[ast_babel](import_default_specifier, local).
+target_field[ast_babel](import_namespace_specifier, local).
+target[value](D, T) :- target_field[ast_babel](K, F), node[ast_babel](D, K, _), child[ast_babel](D, F, 0, T).
 
 -- a pattern hands its parts to its targets; a default on a target is an assign of its own
 b_tgt[ast_babel](V, V) :- b_pat_kid[ast_babel](V), node[ast_babel](V, K, _), K != assignment_pattern.
@@ -634,8 +633,8 @@ rest_elems[value](P, I, T)      :- node[ast_babel](P, array_pattern, _), child[a
 -- MODULES: an import destructures the namespace of the module it names; an export is a member of this one's
 
 edb(source_kind).
-source_kind(import_declaration). source_kind(export_named_declaration). source_kind(export_all_declaration).
-module_ref[value](Src, Spec) :- source_kind(K), node[ast_babel](D, K, _), child[ast_babel](D, source, 0, Src),
+source_kind[ast_babel](import_declaration). source_kind[ast_babel](export_named_declaration). source_kind[ast_babel](export_all_declaration).
+module_ref[value](Src, Spec) :- source_kind[ast_babel](K), node[ast_babel](D, K, _), child[ast_babel](D, source, 0, Src),
                                 attr[ast_babel](Src, value, Spec).
 module_ref[value](I, Spec)   :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, Src),
                                 node[ast_babel](Src, string_literal, _), attr[ast_babel](Src, value, Spec).
@@ -710,24 +709,24 @@ assign[value](E, Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, tsexport_a
 
 -- the places that are themselves in the type world: the members of an interface or a type literal, and the
 -- signatures whose parameters are types
-edb(type_member).
-type_member(tsproperty_signature). type_member(tsmethod_signature). type_member(tsindex_signature).
-type_member(tscall_signature_declaration). type_member(tsconstruct_signature_declaration).
-b_tplace[ast_babel](X) :- type_member(K), node[ast_babel](X, K, _).
-b_tplace[ast_babel](X) :- param_kind(K), node[ast_babel](X, K, _).
+edb(type_member_kind).
+type_member_kind[ast_babel](tsproperty_signature). type_member_kind[ast_babel](tsmethod_signature). type_member_kind[ast_babel](tsindex_signature).
+type_member_kind[ast_babel](tscall_signature_declaration). type_member_kind[ast_babel](tsconstruct_signature_declaration).
+b_tplace[ast_babel](X) :- type_member_kind[ast_babel](K), node[ast_babel](X, K, _).
+b_tplace[ast_babel](X) :- param_kind[ast_babel](K), node[ast_babel](X, K, _).
 b_tplace[ast_babel](P) :- b_tplace[ast_babel](F), b_param[ast_babel](F, _, P).
 
-b_annotated[ast_babel](X, T) :- child[ast_babel](X, F, 0, A), annotation_field(F),
+b_annotated[ast_babel](X, T) :- child[ast_babel](X, F, 0, A), annotation_field[ast_babel](F),
                                 node[ast_babel](A, tstype_annotation, _), child[ast_babel](A, type_annotation, 0, T).
-b_annotated[ast_babel](X, T) :- direct_type(K), node[ast_babel](X, K, _), child[ast_babel](X, type_annotation, 0, T).
+b_annotated[ast_babel](X, T) :- direct_type[ast_babel](K), node[ast_babel](X, K, _), child[ast_babel](X, type_annotation, 0, T).
 declared[value](X, T) :- b_annotated[ast_babel](X, T), not b_tplace[ast_babel](X).
 declared[type](X, T)  :- b_annotated[ast_babel](X, T), b_tplace[ast_babel](X).
 edb(annotation_field).
-annotation_field(type_annotation). annotation_field(return_type).
+annotation_field[ast_babel](type_annotation). annotation_field[ast_babel](return_type).
 edb(direct_type).
-direct_type(tsas_expression). direct_type(tstype_assertion).
+direct_type[ast_babel](tsas_expression). direct_type[ast_babel](tstype_assertion).
 -- f<T>(), new C<T>(): the type arguments of a call in the value world are declared at the call
-declared[value](C, A) :- callee_kind(K), node[ast_babel](C, K, _), child[ast_babel](C, type_arguments, 0, D),
+declared[value](C, A) :- calling_kind[ast_babel](K), node[ast_babel](C, K, _), child[ast_babel](C, type_arguments, 0, D),
                          child[ast_babel](D, params, _, A).
 implements[value](C, T) :- mark[value](C, class), child[ast_babel](C, implements, _, T).
 
@@ -736,13 +735,13 @@ assign[type](A, A, T) :- node[ast_babel](A, tstype_alias_declaration, _), child[
 
 -- a type named, and a generic applied: Array<T> is a call in the type world, the callee named by callee and the arguments its steps
 edb(type_app).
-type_app(tstype_reference, type_name). type_app(tsinterface_heritage, expression). type_app(tsclass_implements, expression).
-b_app_args[ast_babel](T, I, A) :- type_app(K, _), node[ast_babel](T, K, _), child[ast_babel](T, type_arguments, 0, D),
+type_app[ast_babel](tstype_reference, type_name). type_app[ast_babel](tsinterface_heritage, expression). type_app[ast_babel](tsclass_implements, expression).
+b_app_args[ast_babel](T, I, A) :- type_app[ast_babel](K, _), node[ast_babel](T, K, _), child[ast_babel](T, type_arguments, 0, D),
                                   child[ast_babel](D, params, I, A).
-passes[type](T, N)  :- type_app(K, F), node[ast_babel](T, K, _), child[ast_babel](T, F, 0, N),
+passes[type](T, N)  :- type_app[ast_babel](K, F), node[ast_babel](T, K, _), child[ast_babel](T, F, 0, N),
                        not child[ast_babel](T, type_arguments, 0, _).
 mark[type](T, call) :- b_app_args[ast_babel](T, _, _).
-callee[type](T, N)  :- b_app_args[ast_babel](T, _, _), type_app(K, F), node[ast_babel](T, K, _), child[ast_babel](T, F, 0, N).
+callee[type](T, N)  :- b_app_args[ast_babel](T, _, _), node[ast_babel](T, K, _), type_app[ast_babel](K, F), child[ast_babel](T, F, 0, N).
 nth[tree](T, I, A)  :- b_app_args[ast_babel](T, I, A).
 -- T[] is Array<T>
 mark[type](T, call) :- node[ast_babel](T, tsarray_type, _).
@@ -756,10 +755,10 @@ assign[type](P, P, D) :- node[ast_babel](P, tstype_parameter, _), child[ast_babe
 
 -- A | B, A & B; keyof T, typeof x
 edb(type_op).
-type_op(tsunion_type, "|"). type_op(tsintersection_type, "&").
-binary[type](T, Op, L, R) :- type_op(K, Op), node[ast_babel](T, K, _), child[ast_babel](T, types, I, L),
+type_op[ast_babel](tsunion_type, "|"). type_op[ast_babel](tsintersection_type, "&").
+binary[type](T, Op, L, R) :- type_op[ast_babel](K, Op), node[ast_babel](T, K, _), child[ast_babel](T, types, I, L),
                              J is I + 1, child[ast_babel](T, types, J, R).
-nth[tree](T, I, P)        :- type_op(K, _), node[ast_babel](T, K, _), child[ast_babel](T, types, I, P).
+nth[tree](T, I, P)        :- type_op[ast_babel](K, _), node[ast_babel](T, K, _), child[ast_babel](T, types, I, P).
 unary[type](T, Op, X)     :- node[ast_babel](T, tstype_operator, _), attr[ast_babel](T, operator, Op),
                              child[ast_babel](T, type_annotation, 0, X).
 unary[type](T, "typeof", X) :- node[ast_babel](T, tstype_query, _), child[ast_babel](T, expr_name, 0, X).
@@ -794,43 +793,43 @@ decl[type](P, infer)            :- node[ast_babel](I, tsinfer_type, _), child[as
 -- THE KINDS THAT STAND IN NO ROLE, each with its reason
 
 edb(no_role).
-no_role(file, "dissolved: the file is named by program and at, and is itself in the fs_* facts").
-no_role(expression_statement, "stepped through: the expression is the step").
-no_role(labeled_statement, "stepped through: the label is on the statement").
-no_role(spread_element, "stepped through: the spread is a role of the parent").
-no_role(rest_element, "dissolved: rest_params, rest_props or rest_elems of its parent").
-no_role(export_namespace_specifier, "dissolved: its exported name is the member").
-no_role(export_all_declaration, "dissolved: spread_props of the namespace from its source").
-no_role(class_body, "dissolved: its members are has of the class").
-no_role(tsinterface_body, "dissolved: its members are has of the interface").
-no_role(tsenum_body, "dissolved: its members are has of the enum").
-no_role(tstype_annotation, "dissolved: the type is declared at the annotated place").
-no_role(tstype_parameter_declaration, "dissolved: its parameters are param[type] of the declaration").
-no_role(tstype_parameter_instantiation, "dissolved: its arguments are steps of the application").
-no_role(decorator, "dissolved: decorated(X, D) reads its expression").
-no_role(private_name, "dissolved: the name is key or member, the mark private").
-no_role(comment_line, "not code").
-no_role(comment_block, "not code").
-no_role(directive, "no role yet: the model does not read directives").
-no_role(directive_literal, "no role yet: the model does not read directives").
-no_role(reg_exp_literal, "no role yet: a regular expression is an object with a pattern").
-no_role(tsmapped_type, "no role yet").
-no_role(tstype_predicate, "no role yet: a type predicate is an operation (narrows)").
-no_role(tsimport_type, "no role yet").
-no_role(tstemplate_literal_type, "no role yet").
-no_role(tsoptional_type, "no role yet").
-no_role(tsrest_type, "no role yet").
-no_role(tsnamed_tuple_member, "no role yet").
-no_role(jsxelement, "no role yet: JSX").
-no_role(jsxopening_element, "no role yet: JSX").
-no_role(jsxclosing_element, "no role yet: JSX").
-no_role(jsxattribute, "no role yet: JSX").
-no_role(jsxidentifier, "no role yet: JSX").
-no_role(jsxtext, "no role yet: JSX").
-no_role(jsxexpression_container, "no role yet: JSX").
-no_role(jsxfragment, "no role yet: JSX").
-no_role(jsxopening_fragment, "no role yet: JSX").
-no_role(jsxclosing_fragment, "no role yet: JSX").
-no_role(jsxmember_expression, "no role yet: JSX").
-no_role(jsxspread_attribute, "no role yet: JSX").
-no_role(jsxempty_expression, "no role yet: JSX").
+no_role[ast_babel](file, "dissolved: the file is named by program and at, and is itself in the fs_* facts").
+no_role[ast_babel](expression_statement, "stepped through: the expression is the step").
+no_role[ast_babel](labeled_statement, "stepped through: the label is on the statement").
+no_role[ast_babel](spread_element, "stepped through: the spread is a role of the parent").
+no_role[ast_babel](rest_element, "dissolved: rest_params, rest_props or rest_elems of its parent").
+no_role[ast_babel](export_namespace_specifier, "dissolved: its exported name is the member").
+no_role[ast_babel](export_all_declaration, "dissolved: spread_props of the namespace from its source").
+no_role[ast_babel](class_body, "dissolved: its members are has of the class").
+no_role[ast_babel](tsinterface_body, "dissolved: its members are has of the interface").
+no_role[ast_babel](tsenum_body, "dissolved: its members are has of the enum").
+no_role[ast_babel](tstype_annotation, "dissolved: the type is declared at the annotated place").
+no_role[ast_babel](tstype_parameter_declaration, "dissolved: its parameters are param[type] of the declaration").
+no_role[ast_babel](tstype_parameter_instantiation, "dissolved: its arguments are steps of the application").
+no_role[ast_babel](decorator, "dissolved: decorated(X, D) reads its expression").
+no_role[ast_babel](private_name, "dissolved: the name is key or member, the mark private").
+no_role[ast_babel](comment_line, "not code").
+no_role[ast_babel](comment_block, "not code").
+no_role[ast_babel](directive, "no role yet: the model does not read directives").
+no_role[ast_babel](directive_literal, "no role yet: the model does not read directives").
+no_role[ast_babel](reg_exp_literal, "no role yet: a regular expression is an object with a pattern").
+no_role[ast_babel](tsmapped_type, "no role yet").
+no_role[ast_babel](tstype_predicate, "no role yet: a type predicate is an operation (narrows)").
+no_role[ast_babel](tsimport_type, "no role yet").
+no_role[ast_babel](tstemplate_literal_type, "no role yet").
+no_role[ast_babel](tsoptional_type, "no role yet").
+no_role[ast_babel](tsrest_type, "no role yet").
+no_role[ast_babel](tsnamed_tuple_member, "no role yet").
+no_role[ast_babel](jsxelement, "no role yet: JSX").
+no_role[ast_babel](jsxopening_element, "no role yet: JSX").
+no_role[ast_babel](jsxclosing_element, "no role yet: JSX").
+no_role[ast_babel](jsxattribute, "no role yet: JSX").
+no_role[ast_babel](jsxidentifier, "no role yet: JSX").
+no_role[ast_babel](jsxtext, "no role yet: JSX").
+no_role[ast_babel](jsxexpression_container, "no role yet: JSX").
+no_role[ast_babel](jsxfragment, "no role yet: JSX").
+no_role[ast_babel](jsxopening_fragment, "no role yet: JSX").
+no_role[ast_babel](jsxclosing_fragment, "no role yet: JSX").
+no_role[ast_babel](jsxmember_expression, "no role yet: JSX").
+no_role[ast_babel](jsxspread_attribute, "no role yet: JSX").
+no_role[ast_babel](jsxempty_expression, "no role yet: JSX").

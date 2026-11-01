@@ -1,6 +1,6 @@
 ---
 world: js-host
-books: audit, code, flow, main, surface
+books: audit, code, flow, main, surface, tree
 default: audit
 ---
 
@@ -48,12 +48,14 @@ Reads:
 - from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
-- from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
+- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
+- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the main:
   - <a id="host_member_module"></a>`host_member_module`
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
 - from the scanner, in the code:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
@@ -119,7 +121,7 @@ In the flow:
 
 1. if all of:
    - [`builtin_ns_at`](#builtin_ns_at)(O, Spec);
-   - the `object` of M is a node O;
+   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
    - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - M [selects](js-dataflow.rofl.md#selects) Key;
 2. if all of:
@@ -157,7 +159,8 @@ In the code:
 
 <a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
   - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [refers to the global](#host_global_ref) Name of H;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - a node O [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.rofl.md#selects) Key.
 
 <a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
@@ -178,9 +181,9 @@ In the code:
 3. if C [calls the host global](#host_global_call) Spec of N and Key is `itself`.
 
 <a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if all of:
-  - a node C [is a host site](#host_site) of H from Origin at Key;
-  - C [is in file](js-model.rofl.md#ast_node) File;
-  - C [is at line](js-model.rofl.md#ast_line) Line.
+  - C [is a host site](#host_site) of H from Origin at Key;
+  - [`at`](#at)(C, File, something);
+  - [`at`](#at)(C, something, Line).
 
 ## 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
 
@@ -222,9 +225,9 @@ In the audit:
 > at a coordinate, and the set of effects the corpus exercises
 
 <a id="host_effect_at"></a>File has the host effect E at Line by a route Why if all of:
-  - a node C [has the host effect](#host_call_effect) E by Why;
-  - C [is in file](js-model.rofl.md#ast_node) File;
-  - C [is at line](js-model.rofl.md#ast_line) Line.
+  - C [has the host effect](#host_call_effect) E by Why;
+  - [`at`](#at)(C, File, something);
+  - [`at`](#at)(C, something, Line).
 
 > The FRONTIER, expected non-zero: a site here is one the effect layer sees
 > as silent, which it must not mistake for `total`.
@@ -322,9 +325,9 @@ In the audit:
 <a id="host_call_absent"></a>C is absent on a runtime R at Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
 
 <a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if all of:
-  - a node C [is absent on](#host_call_absent) R at Key of Spec;
-  - C [is in file](js-model.rofl.md#ast_node) File;
-  - C [is at line](js-model.rofl.md#ast_line) Line.
+  - C [is absent on](#host_call_absent) R at Key of Spec;
+  - [`at`](#at)(C, File, something);
+  - [`at`](#at)(C, something, Line).
 
 > The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
@@ -430,7 +433,7 @@ In the flow:
 
 <a id="env_member"></a>`env_member`(a [member access](js-dataflow.rofl.md#member_node_v) M) if all of:
   - a node P [refers to the global](#host_global_ref) "process" of `node`;
-  - the `object` of M is P;
+  - [`object_of`](js-structure.rofl.md#object_of)(M, P);
   - M [selects](js-dataflow.rofl.md#selects) "env".
 
 In the surface:
@@ -448,7 +451,7 @@ In the flow:
   - D [binds](js-dataflow.rofl.md#binder) some name to a node Init in some file;
   - [`env_object`](#env_object)(Init).
 
-<a id="env_key"></a>`env_key`(a [member access](js-dataflow.rofl.md#member_node_v) M) if [`env_object`](#env_object)(O) and the `object` of M is a node O.
+<a id="env_key"></a>`env_key`(a [member access](js-dataflow.rofl.md#member_node_v) M) if [`env_object`](#env_object)(O) and [`object_of`](js-structure.rofl.md#object_of)(M, O).
 
 <a id="env_written"></a>`env_written`(M) if [`env_key`](#env_key)(M) and the `left` of an [assignment](#noun-assignment) X is a node M.
 
@@ -476,16 +479,16 @@ In the flow:
 
 <a id="env_read_at"></a>`env_read_at`(Name, File, Line) if all of:
   - [`env_read`](#env_read)(M, Name);
-  - a node M [is in file](js-model.rofl.md#ast_node) File;
-  - M [is at line](js-model.rofl.md#ast_line) Line.
+  - [`at`](#at)(M, File, something);
+  - [`at`](#at)(M, something, Line).
 
 <a id="env_read_unnamed_at"></a>`env_read_unnamed_at`(File, Line) if all of:
   - [`env_read_unnamed`](#env_read_unnamed)(M);
-  - a node M [is in file](js-model.rofl.md#ast_node) File;
-  - M [is at line](js-model.rofl.md#ast_line) Line.
+  - [`at`](#at)(M, File, something);
+  - [`at`](#at)(M, something, Line).
 
 <a id="env_write_unnamed_at"></a>`env_write_unnamed_at`(File, Line) if all of:
   - [`env_write_unnamed`](#env_write_unnamed)(M);
-  - a node M [is in file](js-model.rofl.md#ast_node) File;
-  - M [is at line](js-model.rofl.md#ast_line) Line.
+  - [`at`](#at)(M, File, something);
+  - [`at`](#at)(M, something, Line).
 
