@@ -126,9 +126,9 @@ vlib_fn[flow](F, Surface, K) :- ambient_module(File, Surface), exports_name[code
 vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code](O, N, File), ambient_value_ns(N),
                               member_value[flow](O, K, M), ambient_value(Surface, K, _, _).
 
-vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), ast_child[code](C, callee, 0, G),
+vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), callee[value](C, G),
                                   ast_node[code](C, T, _), call_like_v(T).
-vlib_call[flow](C, S, construct) :- ast_node[code](C, new_expression, _), ast_child[code](C, callee, 0, G),
+vlib_call[flow](C, S, construct) :- ast_node[code](C, new_expression, _), callee[value](C, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
 -- A method of a prototype: the receiver decides the surface.
@@ -136,7 +136,7 @@ str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_lit[flow](O, V), str_valu
 str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_node[flow](O, D), composed[flow](D).
 str_recv[flow](O) :- proto_call[flow](_, O, _), prototype_of[flow](O, string).
 proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), selects[flow](M, K),
-                             member_node_v[flow](M), ast_child[code](C, callee, 0, M), ast_child[code](M, object, 0, O),
+                             member_node_v[flow](M), callee[value](C, M), ast_child[code](M, object, 0, O),
                              ast_node[code](C, T, _), call_like_v(T).
 vlib_call[flow](C, string, K) :- ambient_value(string, K, _, _), proto_call[flow](C, O, K), str_recv[flow](O).
 vlib_call[flow](C, array, K)  :- ambient_value(array, K, _, _), proto_call[flow](C, O, K),
@@ -203,7 +203,7 @@ part_lit[flow](T, I, V) :- cshape[flow](T, raw), ast_node[code](T, template_lite
 -- Every argument or none: a spread hides where the rest are.
 whole_args[flow](C) :- vlib_op[flow](C, _, _), not spread_arg[code](C, _).
 parts[flow](C, I, A) :- vlib_op[flow](C, concat, _), whole_args[flow](C), arg_at[flow](C, I, A).
-parts[flow](C, 0, O) :- vlib_op[flow](C, concat_this, _), whole_args[flow](C), ast_child[code](C, callee, 0, M),
+parts[flow](C, 0, O) :- vlib_op[flow](C, concat_this, _), whole_args[flow](C), callee[value](C, M),
                         ast_child[code](M, object, 0, O).
 parts[flow](C, I, A) :- vlib_op[flow](C, concat_this, _), whole_args[flow](C), arg_at[flow](C, J, A), I is J + 1.
 parts[flow](C, 0, A) :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A).
@@ -215,7 +215,7 @@ parts[flow](C, 1, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[
 -- An array's elements, when the receiver may be exactly one array written in
 -- place; the separator between, "," by default. A hole leaves a gap, so no
 -- text; a spread is a part nothing gives a value, so a form.
-join_recv[flow](C, A) :- vlib_op[flow](C, elements, _), ast_child[code](C, callee, 0, M),
+join_recv[flow](C, A) :- vlib_op[flow](C, elements, _), callee[value](C, M),
                          ast_child[code](M, object, 0, O), may_be_node[flow](O, A), kind_proto[flow](A, array).
 join_arrays[flow](C, N) :- vlib_op[flow](C, elements, _), N is count(A : join_recv[flow](C, A)).
 join_array[flow](C, A) :- join_arrays[flow](C, 1), join_recv[flow](C, A).
@@ -249,7 +249,7 @@ textable[flow](C) :- last_slot[flow](C, L), N is count(I : slot[flow](C, I)), M 
 -- function's own body composes is `summarized`: a part reads past it, to the
 -- summary of the call.
 edb(ambient_module).
-summarized[flow](X) :- composed[flow](X), ast_node[code](X, _, File), ambient_module(File, _).
+summarized[flow](X) :- composed[flow](X), at[tree](X, File, _), ambient_module(File, _).
 plain_valued[flow](P) :- parts[flow](_, _, P), may_be_lit[flow](P, _).
 plain_valued[flow](P) :- parts[flow](_, _, P), may_be_node[flow](P, X), not summarized[flow](X).
 

@@ -137,7 +137,7 @@ eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 -- `new Box()` resolved to a class in this program is not ambient.
 amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
                                 not resolved_site[code](X),
-                                ast_child[code](X, callee, 0, N),
+                                callee[value](X, N),
                                 free_global[code](N, Name, _),
                                 ambient_global(Name).
 eff_surface[flow](X, Name)        :- amb_construct[flow](X, Name).

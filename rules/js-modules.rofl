@@ -55,7 +55,7 @@ reexport_site[code](E, reexport_all)   :- ast_node[code](E, export_all_declarati
 -- file declares itself is not node's. `require.resolve(s)` names a file and
 -- loads nothing, and is not a site.
 require_site[code](C) :- free_global[code](N, "require", _),
-                         ast_child[code](C, callee, 0, N), ast_node[code](C, call_expression, _),
+                         callee[value](C, N), ast_node[code](C, call_expression, _),
                          ast_child[code](C, arguments, 0, _).
 
 module_site[code](N, K) :- import_site[code](N, K).
@@ -68,9 +68,9 @@ site_kind[code](E, export_named_declaration) :- reexport_site[code](E, reexport_
 site_kind[code](E, export_all_declaration)   :- reexport_site[code](E, reexport_all).
 site_kind[code](C, call_expression)          :- require_site[code](C).
 
-site_file[code](I, F) :- module_site[code](I, _), ast_node[code](I, _, F).
+site_file[code](I, F) :- module_site[code](I, _), at[tree](I, F, _).
 
-site_line[code](I, L) :- module_site[code](I, _), ast_line[code](I, L).
+site_line[code](I, L) :- module_site[code](I, _), at[tree](I, _, L).
 
 site_source_node[code](I, Src) :- module_site[code](I, _), ast_child[code](I, source, 0, Src).
 site_source_node[code](C, Src) :- require_site[code](C), ast_child[code](C, arguments, 0, Src).
@@ -406,14 +406,14 @@ reexport_offers[code](F, External, T, Internal) :-
 local_export_site[code](E) :- export_site[code](E), not reexport_site[code](E, reexport_named).
 
 export_internal_in[code](Sp, F) :- export_spec[code](E, Sp), local_export_site[code](E),
-                                   ast_node[code](E, _, F).
+                                   at[tree](E, F, _).
 export_internal_in[code](Sp, T) :- reexport_spec[code](E, Sp), resolved_import[code](E, T).
 
 export_internal_unplaced[code](Sp, Sh) :- reexport_spec[code](E, Sp),
                                           unresolved_import[code](E, Sh).
 
 export_internal_elsewhere[code](F, X, T) :- export_binding[code](E, Sp, X, _),
-                                            ast_node[code](E, _, F),
+                                            at[tree](E, F, _),
                                             export_internal_in[code](Sp, T), T != F.
 
 has_internal_home[audit](Sp)        :- export_internal_in[code](Sp, _).
@@ -477,7 +477,7 @@ reason_earned[audit](K, R) :- unresolved_import[code](I, Sh), site_kind[code](I,
 -- shares the kind. `import.meta.resolve(spec)` is a specifier in a fifth place
 -- and NOT modelled: wiring it into `module_site` changes the relation the test
 -- compares site for site against node's own resolver.
-module_meta[code](F, M) :- meta_form[code](M, import_meta), ast_node[code](M, _, F).
+module_meta[code](F, M) :- meta_form[code](M, import_meta), at[tree](M, F, _).
 
 self_referential_module[code](F) :- module_meta[code](F, _).
 

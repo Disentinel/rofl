@@ -52,7 +52,7 @@ field_init[code](P, V) :- transfer_mechanism(K, per_construction),
 guard_arm[code](P, V)  :- field_init[code](P, V).
 
 guarded[code](A) :- guard_arm[code](_, A).
-guarded[code](N) :- guard_arm[code](_, A), ast_within[code](A, N).
+guarded[code](N) :- guard_arm[code](_, A), inside[tree](A, N).
 
 -- =========================================================================
 -- 2. STATEMENT ORDER. After a return/throw/break/continue the rest of the list
@@ -79,8 +79,8 @@ after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), 
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
 suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _),
-                             nearest_v[flow](G, X), ast_within[code](S, X),
-                             ast_within[code](G, S),
+                             nearest_v[flow](G, X), inside[tree](S, X),
+                             inside[tree](G, S),
                              ast_child[code](B, F, I, S), stmt_seq_field(F).
 after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
 
@@ -101,10 +101,10 @@ label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _),
 label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _),
                              ast_child[code](X, label, 0, I), ast_attr[code](I, name, N).
 label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
-                             ast_within[code](LS, X).
+                             inside[tree](LS, X).
 
-abrupt_at[code](B, F, I)  :- label_target[code](X, LS), ast_within[code](S, X),
-                             ast_within[code](LS, S), ast_child[code](B, F, I, S),
+abrupt_at[code](B, F, I)  :- label_target[code](X, LS), inside[tree](S, X),
+                             inside[tree](LS, S), ast_child[code](B, F, I, S),
                              stmt_seq_field(F).
 
 -- =========================================================================
@@ -172,12 +172,12 @@ completion_known(K) :- abrupt_kind(K).
 -- `const f = () => { return 1 }` is a declaration holding a return. Seeded from
 -- the candidate and the boundary asked of it; the other order crossed every
 -- function with every abrupt completion, 8.8 s to 21.7 s for one rule.
-completion_outer[code](P, S)      :- completes_abruptly[code](S), ast_within[code](P, S),
+completion_outer[code](P, S)      :- completes_abruptly[code](S), inside[tree](P, S),
                                      ast_node[code](P, K, _), not completion_known(K),
                                      not fn_node[code](P),
                                      ast_child[code](_, F, _, P), stmt_seq_field(F).
-completion_fn_between[code](P, S) :- completion_outer[code](P, S), ast_within[code](G, S),
-                                     fn_node[code](G), ast_within[code](P, G).
+completion_fn_between[code](P, S) :- completion_outer[code](P, S), inside[tree](G, S),
+                                     fn_node[code](G), inside[tree](P, G).
 completion_unaccounted[audit](K)  :- completion_outer[code](P, S), ast_node[code](P, K, _),
                                      not completion_fn_between[code](P, S).
 
@@ -373,7 +373,7 @@ hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
 -- and it runs later, elsewhere. A throw in a HANDLER is not caught by its own
 -- clause: `block`, not the whole try.
 in_try_block[code](TS, N)  :- ast_node[code](TS, try_statement, _),
-                              ast_child[code](TS, block, 0, B), ast_within[code](B, N).
+                              ast_child[code](TS, block, 0, B), inside[tree](B, N).
 
 -- A try discharges through its `handler`; a finalizer alone catches nothing —
 -- `finalizer`'s absence from this table is the statement. Repaired 2026-09-11
@@ -386,8 +386,8 @@ try_catches[code](TS)      :- catches_via(K, Field), ast_node[code](TS, K, _),
 -- The block walked down to the first function boundary, as `nearest_v` walks:
 -- the whole subtree joined back to its function was 1.4 M probes.
 try_walk[code](TS, X)      :- try_catches[code](TS),
-                              ast_child[code](TS, block, 0, B), ast_in[code](B, X).
-try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), ast_in[code](P, X).
+                              ast_child[code](TS, block, 0, B), parent[tree](B, X).
+try_walk[code](TS, X)      :- try_walk[code](TS, P), not fn_node[code](P), parent[tree](P, X).
 caught_here[code](N)       :- try_walk[code](_, N).
 
 throws_outright[code](F) :- ast_node[code](T, throw_statement, _),
@@ -423,19 +423,19 @@ caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
 -- unreachable (`after_abrupt` 3 -> 37). A try catches only from its block and
 -- only with a handler: `try { f() } finally {}` stops nothing.
 try_stops[code](C, T) :- throwing_call[code](C), try_walk[code](T, C).
-try_stops[code](C, S) :- try_stops[code](C, T), ast_within[code](S, T).
+try_stops[code](C, S) :- try_stops[code](C, T), inside[tree](S, T).
 
 abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
-                            ast_within[code](S, C), ast_within[code](G, S),
+                            inside[tree](S, C), inside[tree](G, S),
                             ast_child[code](B, F, I, S), stmt_seq_field(F),
                             not try_stops[code](C, S).
 
 -- After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
 -- A suspension is a may and belongs here more exactly.
 guarded[code](S) :- after_abrupt[code](S).
-guarded[code](N) :- after_abrupt[code](S), ast_within[code](S, N).
+guarded[code](N) :- after_abrupt[code](S), inside[tree](S, N).
 guarded[code](S) :- after_suspend[code](S).
-guarded[code](N) :- after_suspend[code](S), ast_within[code](S, N).
+guarded[code](N) :- after_suspend[code](S), inside[tree](S, N).
 
 -- A function every one of whose sites is guarded may never be entered.
 -- `may_not_run` is LOCAL, one level; the transitive question is reachability.
@@ -461,7 +461,7 @@ edb(export_kind).
 export_kind(export_named_declaration).
 export_kind(export_default_declaration).
 
-exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), ast_within[code](E, F),
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F),
                         ast_node[code](E, K, _), export_kind(K).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
@@ -484,8 +484,8 @@ export_kind_unseen[audit](K) :- export_kind(K), not ast_node[code](_, K, _).
 
 -- A file with functions and no entry point reports every function dead — an
 -- artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
-has_entry[code](File)       :- entry_point[code](F), ast_node[code](F, _, File).
-no_entry_point[audit](File) :- fn_node[code](F), ast_node[code](F, _, File),
+has_entry[code](File)       :- entry_point[code](F), at[tree](F, File, _).
+no_entry_point[audit](File) :- fn_node[code](F), at[tree](F, File, _),
                                not has_entry[code](File).
 
 -- =========================================================================
@@ -590,7 +590,7 @@ short_circuit_kind(optional_member_expression).
 
 guarded[code](N) :- short_circuit_kind(K), ast_node[code](N, K, _).
 guarded[code](N) :- short_circuit_kind(K), ast_node[code](P, K, _),
-                    ast_within[code](P, N).
+                    inside[tree](P, N).
 
 -- an arm declared for a field the scanner never emits under that kind: a typo
 -- makes the guarded set quietly smaller
@@ -600,7 +600,7 @@ guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _),
                                   not guard_arm_seen[code](K, F).
 
 -- a guarded site at a coordinate, for the report and the runtime comparison
-guarded_at[code](File, Line) :- guarded_call[code](C), ast_node[code](C, _, File), ast_line[code](C, Line).
+guarded_at[code](File, Line) :- guarded_call[code](C), at[tree](C, File, _), at[tree](C, _, Line).
 
 -- the callee-keyed verdicts read the callers through rules/js-surface.rofl
 imports(code, surface).

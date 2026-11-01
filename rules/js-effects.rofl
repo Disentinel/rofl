@@ -383,9 +383,9 @@ eff_import_outside[flow](I, Src) :- site_source[code](I, Src), evaluates_unresol
 -- group's effect). No `load` label: the suspension of `import()` is CONTROL,
 -- as `await` is.
 eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not in_fn[code](N),
-                             ast_node[code](N, _, F).
+                             at[tree](N, F, _).
 eff_module[flow](F, L, H) :- resolves[code](C, G), not in_fn[code](C),
-                             ast_node[code](C, _, F), eff_latent[flow](G, L, H).
+                             at[tree](C, F, _), eff_latent[flow](G, L, H).
 
 eff_here[flow](I, L, H) :- evaluates_at[code](I, T), sx_eff_module[surface](T, L, H).
 
@@ -402,7 +402,7 @@ effect_of_module[flow](F, N)    :- eff_mod_bounded[flow](F, N), not eff_mod_boun
 eff_mod_unnamed[audit](F)         :- eff_mod_subject[flow](F), not effect_of_module[flow](F, _).
 eff_mod_two_names[audit](F, A, B) :- effect_of_module[flow](F, A), effect_of_module[flow](F, B), A != B.
 
-eff_mod_join_short[audit](F, T, J) :- evaluates_at[code](I, T), ast_node[code](I, _, F),
+eff_mod_join_short[audit](F, T, J) :- evaluates_at[code](I, T), at[tree](I, F, _),
                                       effect_of_module[flow](F, NF), sx_effect_module[surface](T, NT),
                                       eff_join(NF, NT, J), J != NF.
 
@@ -499,7 +499,7 @@ eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P),
 eff_runs_in[flow](P, P) :- eff_define_part[flow](_, P).
 eff_runs_in[flow](P, P) :- eff_construct_part[flow](_, P).
 eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node[code](Y),
-                           ast_in[code](Y, X).
+                           parent[tree](Y, X).
 
 eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
                            ast_node[code](TS, try_statement, _),

@@ -52,7 +52,7 @@ es_static_call[code](C, Name, Key, Rel) :- callee_of[code](C, N),
 es_global_invoke[code](C, Name, Rel)    :- callee_of[code](C, N),
                                            es_global[code](N, Name, Rel, _).
 es_global_construct[code](X, Name, Rel) :- transfer_site[code](X, new_expression),
-                                           ast_child[code](X, callee, 0, N),
+                                           callee[value](X, N),
                                            es_global[code](N, Name, Rel, _).
 
 -- `new Math()` is a TypeError and the model says why: `Math` is a
