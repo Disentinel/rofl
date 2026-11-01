@@ -36,12 +36,9 @@ guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _),
 
 -- `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
 -- the branching is in the operator, not the kind.
-edb(short_circuit_assign).
-short_circuit_assign("??=").
-short_circuit_assign("||=").
-short_circuit_assign("&&=").
-guard_arm[code](P, A) :- short_circuit_assign(Op), ast_attr[code](P, operator, Op),
-                         ast_node[code](P, assignment_expression, _), ast_child[code](P, right, 0, A).
+
+guard_arm[code](P, A) :- logical[value](P, _, L, A), assign[value](P, L, A).
+
 
 -- A non-static field initialiser runs once per construction and never if the
 -- class is never constructed; a static one runs with the definition. Derived

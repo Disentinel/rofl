@@ -976,10 +976,8 @@ declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](
 -- TypeScript narrows a declared type where the code tests it (`x instanceof Sub`, `'k' in x`,
 -- a guard `isSub(x)` in a test): a receiver of that name or key anywhere in the file is not
 -- held to its declaration
-narrows_at[code](O) :- ast_node[code](X, binary_expression, _), ast_attr[code](X, operator, "instanceof"),
-                       ast_child[code](X, left, 0, O).
-narrows_at[code](O) :- ast_node[code](X, binary_expression, _), ast_attr[code](X, operator, "in"),
-                       ast_child[code](X, right, 0, O).
+narrows_at[code](O) :- binary[value](_, "instanceof", O, _).
+narrows_at[code](O) :- binary[value](_, "in", _, O).
 narrows_at[code](O) :- ast_child[code](P, test, 0, G), ast_child[code](G, arguments, _, O).
 narrows_at[code](O) :- ast_node[code](P, unary_expression, _), ast_child[code](P, argument, 0, G),
                        ast_child[code](G, arguments, _, O).
@@ -1021,7 +1019,8 @@ param_defaulted[code](F, I) :- ast_child[code](F, params, I, P), ast_node[code](
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "&&").
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "||").
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "??").
-param_test[code](B, T) :- ast_child[code](B, argument, 0, T), ast_attr[code](B, operator, "!").
+param_test[code](B, T) :- unary[value](B, "!", T).
+
 param_test[code](B, T) :- ast_child[code](B, test, 0, T).
 param_tested[flow](F, Name) :- param_use[flow](F, Name, T), param_test[code](_, T).
 

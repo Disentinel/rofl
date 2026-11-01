@@ -44,7 +44,7 @@ may_be_lit[flow](E, V) :- literal_kind(K), ast_node[code](E, K, _), ast_value[co
 -- may find no entry (section 7c). Where an object lacks a property is not
 -- here: the layer does not know what an object lacks.
 may_be_lit[flow](E, undefined) :- free_global[code](E, "undefined", _).
-may_be_lit[flow](E, undefined) :- ast_node[code](E, unary_expression, _), ast_attr[code](E, operator, "void").
+may_be_lit[flow](E, undefined) :- unary[value](E, "void", _).
 undef_binder[code](D) :- bare_binder[code](D, _, _), ast_child[code](V, declarations, _, D), not ast_child[code](_, left, 0, V).
 may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D), not target[value](D, E).
 
@@ -584,8 +584,7 @@ nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node[code](P),
 edb(reads_the_file_as).
 edb(runs_as_script).
 read_as_script() :- reads_the_file_as(script).
-entry_test[code](T) :- ast_node[code](T, unary_expression, _), ast_attr[code](T, operator, "!"),
-                       ast_child[code](T, argument, 0, M), module_member[code](M, "parent").
+entry_test[code](T) :- unary[value](T, "!", M), module_member[code](M, "parent").
 entry_test[code](T) :- main_is_module[code](T, "===").
 entry_test[code](T) :- main_is_module[code](T, "==").
 imported_test[code](T) :- module_member[code](T, "parent").
@@ -594,11 +593,9 @@ imported_test[code](T) :- main_is_module[code](T, "!=").
 
 module_member[code](M, Key) :- ast_node[code](M, member_expression, File), prop_name[code](M, O, Key),
                                free_global[code](O, "module", File).
-main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), ast_attr[code](T, operator, Op),
-                               ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
+main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), binary[value](T, Op, L, R),
                                require_main[code](L), free_global[code](R, "module", File).
-main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), ast_attr[code](T, operator, Op),
-                               ast_child[code](T, left, 0, L), ast_child[code](T, right, 0, R),
+main_is_module[code](T, Op) :- ast_node[code](T, binary_expression, File), binary[value](T, Op, L, R),
                                require_main[code](R), free_global[code](L, "module", File).
 require_main[code](M) :- ast_node[code](M, member_expression, File), prop_name[code](M, O, "main"),
                          free_global[code](O, "require", File).
@@ -607,11 +604,9 @@ dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_ch
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, alternate, 0, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
-dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, left, 0, T), ast_node[code](S, logical_expression, _),
-                     ast_attr[code](S, operator, "&&"), ast_child[code](S, right, 0, A),
+dead_arm[code](A) :- entry_test[code](T), logical[value](S, "&&", T, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
-dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, left, 0, T), ast_node[code](S, logical_expression, _),
-                     ast_attr[code](S, operator, "||"), ast_child[code](S, right, 0, A),
+dead_arm[code](A) :- imported_test[code](T), logical[value](S, "||", T, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
 
 dead_in[code](A, C) :- dead_arm[code](A), inside[tree](A, C).
@@ -892,10 +887,8 @@ keyed_src[code](U, S) :- keyed_param[code](U, G, _), param_use[flow](G, Name, U)
 keyed_arg[code](U, Q, Pos, A) :- keyed_param[code](U, G, Pos), keyed_called[code](G, Q), ast_child[code](Q, arguments, Pos, A),
                                   not ast_node[code](A, spread_element, _).
 keyed_src[code](U, A) :- keyed_arg[code](U, _, _, A).
-keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
-                         ast_child[code](E, left, 0, X).
-keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), ast_attr[code](E, operator, "+"),
-                         ast_child[code](E, right, 0, X).
+keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), binary[value](E, "+", X, _).
+keyed_src[code](E, X) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), binary[value](E, "+", _, X).
 keyed_src[code](E, X) :- keyed_want[code](E), template[value](E), nth[tree](E, _, X).
 
 -- a call is what the functions it calls return: open where one of them is not
@@ -1491,10 +1484,8 @@ member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flo
 --   binds it, before the read's statement, and the read is in the same function
 --   (a nested function may run anywhere, a declaration even before it).
 member_assign[code](S, T, Key, A) :- ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, A),
-                                    ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "="),
-                                    ast_child[code](A, left, 0, L), prop_name[code](L, T, Key).
-member_dropped[flow](O, Key) :- ast_node[code](U, unary_expression, _), ast_attr[code](U, operator, "delete"),
-                                ast_child[code](U, argument, 0, N), member_at[flow](N, _, O, Key).
+                                    assign[value](A, L, R), gives[value](A, R), prop_name[code](L, T, Key).
+member_dropped[flow](O, Key) :- unary[value](U, "delete", N), member_at[flow](N, _, O, Key).
 member_ctor_set[code](Body, Key, J) :- field_unset_decl[code](CB, Key), keyed_ctor[code](CB, Body), ast_child[code](Body, body, J, S),
                                       member_assign[code](S, T, Key, _), ast_node[code](T, this_expression, _).
 member_ctor_early[code](Body, J) :- member_ctor_set[code](Body, _, J), ast_child[code](Ct, body, 0, Body), nearest_v[flow](Ct, R),
@@ -2147,8 +2138,8 @@ may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, right, 0,
 may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, left, 0, X), ast_node[code](E, logical_expression, _).
 may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, right, 0, X), ast_node[code](E, logical_expression, _).
 
-plain_assign[flow](E) :- ast_node[code](E, assignment_expression, _),
-                         ast_attr[code](E, operator, "=").
+plain_assign[flow](E) :- assign[value](E, _, R), gives[value](E, R).
+
 
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, right, 0, X), plain_assign[flow](E).
 may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, right, 0, X), plain_assign[flow](E).

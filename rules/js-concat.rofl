@@ -54,10 +54,7 @@ composed[flow](T) :- interpolated[code](T), template[value](T), not tagged_quasi
 
 -- `a + b` and `x += v` are a concatenation where a side may be a string; a sum
 -- of two numbers stays silent.
-plus_site[code](C, L, R) :- ast_node[code](C, binary_expression, _), ast_attr[code](C, operator, "+"),
-                            ast_child[code](C, left, 0, L), ast_child[code](C, right, 0, R).
-plus_site[code](A, L, R) :- ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, "+="),
-                            ast_child[code](A, left, 0, L), ast_child[code](A, right, 0, R).
+plus_site[code](C, L, R) :- binary[value](C, "+", L, R).
 plus_operand[code](C, X) :- plus_site[code](C, X, _).
 plus_operand[code](C, X) :- plus_site[code](C, _, X).
 
@@ -69,16 +66,16 @@ may_be_node[flow](C, C) :- composed[flow](C).
 -- `x += v` writes the binding, as `x = x + v` would: every read of the binding
 -- may be the composed value at the assignment. Scoped as section 4 of
 -- js-dataflow scopes `=`; a target no binder or parameter owns stays silent.
-plus_assign[code](A, L, Name, File) :- ast_node[code](A, assignment_expression, File),
-                                       ast_attr[code](A, operator, "+="),
-                                       ast_child[code](A, left, 0, L), ast_name[code](L, Name).
+plus_assign[code](A, L, Name, File) :- binary[value](A, "+", L, _), assign[value](A, L, A), ref[value](L, Name),
+                                       at[tree](A, File, _).
 may_be_node[flow](E, A) :- composed[flow](A), plus_assign[code](A, L, Name, File),
                            binds_name[code](D, Name, File), sees_binder[code](L, D),
                            ident_in[code](E, Name, File), sees_binder[code](E, D).
 may_be_node[flow](U, A) :- composed[flow](A), plus_assign[code](A, L, Name, _),
                            param_use[flow](F, Name, L), param_use[flow](F, Name, U).
-sx_mwrite[surface](O, Key, A) :- composed[flow](A), ast_attr[code](A, operator, "+="),
-                                 ast_child[code](A, left, 0, L), object_of[code](L, Obj),
+sx_mwrite[surface](O, Key, A) :- composed[flow](A), binary[value](A, "+", L, _), assign[value](A, L, A),
+                                 object_of[code](L, Obj),
+
                                  may_be_node[flow](Obj, O), selects[flow](L, Key).
 
 -- =========================================================================

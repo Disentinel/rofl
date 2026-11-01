@@ -315,14 +315,15 @@ eff_suspension_word(next).
 -- `instanceof` and `delete` hide a call that is not ToPrimitive, so they stay
 -- in the converting complement: over-reporting a conversion, never missing a
 -- call.
-eff_op_inspects[code](N) :- ast_attr[code](N, operator, "===").
-eff_op_inspects[code](N) :- ast_attr[code](N, operator, "!==").
-eff_op_inspects[code](N) :- ast_attr[code](N, operator, "typeof").
-eff_op_inspects[code](N) :- ast_attr[code](N, operator, "void").
-eff_op_inspects[code](N) :- ast_attr[code](N, operator, "!").
+eff_op_inspects[code](N) :- binary[value](N, "===", _, _).
+eff_op_inspects[code](N) :- binary[value](N, "!==", _, _).
+eff_op_inspects[code](N) :- unary[value](N, "typeof", _).
+eff_op_inspects[code](N) :- unary[value](N, "void", _).
+eff_op_inspects[code](N) :- unary[value](N, "!", _).
 
-eff_op_beyond[flow](N, has_instance) :- ast_attr[code](N, operator, "instanceof").
-eff_op_beyond[flow](N, delete_own)   :- ast_attr[code](N, operator, "delete").
+eff_op_beyond[flow](N, has_instance) :- binary[value](N, "instanceof", _, _).
+eff_op_beyond[flow](N, delete_own)   :- unary[value](N, "delete", _).
+
 
 eff_converts[code](N) :- ast_node[code](N, binary_expression, _), not eff_op_inspects[code](N).
 eff_converts[code](N) :- ast_node[code](N, unary_expression, _),  not eff_op_inspects[code](N).
