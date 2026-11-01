@@ -46,8 +46,10 @@ Reads:
 - from outside these files, in the value:
   - <a id="binary"></a>`binary`
   - <a id="construct"></a>`construct`
+  - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
   - <a id="extends"></a>`extends`
+  - <a id="repeats"></a>`repeats`
   - <a id="static_block"></a>`static_block`
   - <a id="template"></a>`template`
   - <a id="unary"></a>`unary`
@@ -221,9 +223,13 @@ A node has the effect `exn` at `none` if [`exits`](#exits)(it, `throw`), unless 
 > A `for-in` walks the keys the object had when it started, so it ends; a
 > `for-of` walks an iterator, which need not.
 
-`eff_loop_kind` includes `while_statement`, `do_while_statement`, `for_statement`, `for_of_statement`.
+In the code:
 
-A node has the effect `div` at `none` if [`eff_loop_kind`](#eff_loop_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
+<a id="eff_loop"></a>`eff_loop`(L) if [`repeats`](#repeats)(L, something), unless [`enumerates`](#enumerates)(L, something, something).
+
+In the flow:
+
+A node has the effect `div` at `none` if [`eff_loop`](#eff_loop)(it).
 
 In the code:
 
@@ -231,10 +237,6 @@ In the code:
   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
   - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [`fn_value`](js-surface.rofl.md#fn_value)(G).
-
-Declared as facts:
-
-- <a id="eff_loop_kind"></a>`eff_loop_kind` — rows in this file
 
 > A cycle is asked of the edges that can lie on one: a function nothing calls or that calls
 > nothing is on no cycle, and peeling such ends four times over leaves the cycles whole and

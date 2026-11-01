@@ -918,14 +918,14 @@ unit_concludes("rules/js-effects.rofl", eff_label_unnamed).
 unit_concludes("rules/js-effects.rofl", eff_catch_here).
 unit_concludes("rules/js-effects.rofl", eff_try_arm).
 unit_concludes("rules/js-effects.rofl", eff_here).
-unit_concludes("rules/js-effects.rofl", edb).
-unit_concludes("rules/js-effects.rofl", eff_loop_kind).
+unit_concludes("rules/js-effects.rofl", eff_loop).
 unit_concludes("rules/js-effects.rofl", eff_calls).
 unit_concludes("rules/js-effects.rofl", eff_ring1).
 unit_concludes("rules/js-effects.rofl", eff_ring2).
 unit_concludes("rules/js-effects.rofl", eff_ring3).
 unit_concludes("rules/js-effects.rofl", eff_ring).
 unit_concludes("rules/js-effects.rofl", eff_reaches).
+unit_concludes("rules/js-effects.rofl", edb).
 unit_concludes("rules/js-effects.rofl", eff_alloc_kind).
 unit_concludes("rules/js-effects.rofl", eff_obj_traced).
 unit_concludes("rules/js-effects.rofl", eff_heap_of).

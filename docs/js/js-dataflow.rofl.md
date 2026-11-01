@@ -31,8 +31,7 @@ Reads:
 - from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [hidden_call_pos](js-controlflow.rofl.md#hidden_call_pos), [in_fn](js-controlflow.rofl.md#in_fn)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
-- from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
-- from js-effects, in the main: [eff_loop_kind](js-effects.rofl.md#eff_loop_kind)
+- from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
@@ -58,10 +57,13 @@ Reads:
   - <a id="class"></a>`class`
   - <a id="construct"></a>`construct`
   - <a id="decl"></a>`decl`
+  - <a id="enumerates"></a>`enumerates`
+  - <a id="executes_if"></a>`executes_if`
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
   - <a id="gives"></a>`gives`
   - <a id="has"></a>`has`
+  - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
   - <a id="literal"></a>`literal`
   - <a id="logical"></a>`logical`
@@ -82,6 +84,7 @@ Reads:
   - <a id="template"></a>`template`
   - <a id="this"></a>`this`
   - <a id="throws"></a>`throws`
+  - <a id="tries"></a>`tries`
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
 - from the scanner:
@@ -101,7 +104,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
-| <a id="noun-catch"></a>a catch | a node of kind `catch_clause` |
 | <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
 | <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
 | <a id="noun-class_field"></a>a class field | a node of one of the kinds `class_property`, `class_accessor_property` (`class_field_kind`) |
@@ -113,7 +115,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-export_specifier"></a>an export specifier | a node of kind `export_specifier` |
 | <a id="noun-export-all"></a>an export-all | a node of kind `export_all_declaration` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
-| <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-import"></a>an import | a node of kind `import_declaration` |
@@ -169,8 +170,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="external_module"></a>A module is an external module if some node [is an external site](#external_site) of it.
 - <a id="has_own_ctor"></a>A class has its own constructor if it [has its own constructor](#own_ctor) some method.
 - <a id="gen_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is a generator function if [`generator`](#generator)(it).
-- <a id="catch_of"></a>The catch of a [try](#noun-try) T is a node H if the `handler` of T is H.
-- <a id="catch_param"></a>The param of a [catch](#noun-catch) H is a node P if the `param` of H is P.
 - <a id="try_block"></a>The block of a [try](#noun-try) T is a node B if the `block` of T is B.
 
 ## 1. Names
@@ -212,7 +211,8 @@ In the code:
 <a id="undef_binder"></a>`undef_binder`(D) if all of:
   - a node D [declares without a value](#bare_binder) some name in some file;
   - D [is among the](#ast_child) `declarations` of a node V;
-  - unless the `left` of some node is V.
+  - unless [`iterates`](#iterates)(something, V, something);
+  - unless [`enumerates`](#enumerates)(something, V, something).
 
 In the flow:
 
@@ -1864,8 +1864,7 @@ In the code:
 2. if [`keyed_call`](#keyed_call)(C, H, "forEach", B, F, I);
 3. if all of:
    - [`keyed_ref`](#keyed_ref)(R, H);
-   - the `right` of C is a node R;
-   - C is a [for-of](#noun-for-of);
+   - [`iterates`](#iterates)(C, something, R);
    - C is the I-th of the F of B;
    - [`keyed_list`](#keyed_list)(H, B, F).
 
@@ -2290,15 +2289,13 @@ Declared as facts:
 1. if all of:
    - [`keyed_called_at`](#keyed_called_at)(something, Q);
    - [`inside`](#inside)(Lp, Q);
-   - a node Lp [is of kind](js-model.rofl.md#ast_node) K;
-   - [`eff_loop_kind`](js-effects.rofl.md#eff_loop_kind)(K);
+   - [`eff_loop`](js-effects.rofl.md#eff_loop)(Lp);
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q;
    - [`inside`](#inside)(F, Lp);
 2. if all of:
    - [`keyed_called_at`](#keyed_called_at)(something, Q);
    - [`inside`](#inside)(Lp, Q);
-   - a node Lp [is of kind](js-model.rofl.md#ast_node) K;
-   - [`eff_loop_kind`](js-effects.rofl.md#eff_loop_kind)(K);
+   - [`eff_loop`](js-effects.rofl.md#eff_loop)(Lp);
    - unless a node Q [is inside a function](js-controlflow.rofl.md#in_fn).
 
 <a id="keyed_many"></a>`keyed_many`(G) either:
@@ -2923,10 +2920,10 @@ A node
 > the walks: position 0 of the head's pattern is a key, position 1 a value;
 > forEach's callback takes (value, key)
 
-<a id="keyed_walk"></a>`keyed_walk`(a [for-of](#noun-for-of) S, D, X) if all of:
-  - the `left` of S is a node H;
-  - the `declarations` of H is a node D;
-  - the `right` of S [points to](js-concat.rofl.md#may_be_node) a node X;
+<a id="keyed_walk"></a>`keyed_walk`(S, D, X) if all of:
+  - [`iterates`](#iterates)(S, H, R);
+  - the `declarations` of a node H is a node D;
+  - a node R [points to](js-concat.rofl.md#may_be_node) a node X;
   - [`keyed_obj`](#keyed_obj)(X, something).
 
 <a id="keyed_walk_at"></a>`keyed_walk_at`(E, D, Pos) if all of:
@@ -4286,9 +4283,9 @@ Y points to a node X either:
 A node
 
 - takes its value from a node E if all of:
-  - the `left` of a [for-of](#noun-for-of) S is a node V;
-  - the `declarations` of V is it;
-  - the `right` of S [has an element](#iter_elem) E.
+  - [`iterates`](#iterates)(S, V, X);
+  - the `declarations` of a node V is it;
+  - a node X [has an element](#iter_elem) E.
 - points to a node N if all of:
   - D [declares without a value](#bare_binder) Name in File;
   - D [takes its value from](#decl_value) a node E;
@@ -4348,6 +4345,10 @@ A node
 > names it), sourced by the HOST — nothing the model sees can throw, which is
 > `w_env_api_surface`'s question — or a dead handler with no call at all, the
 > one row that is an audit.
+
+<a id="catch_of"></a>The catch of T is H if [`tries`](#tries)(T, B) and [`executes_if`](#executes_if)(H, B, `thrown`).
+
+<a id="catch_param"></a>The param of H is a node P if [`decl`](#decl)(P, `catch`) and [`parent`](#parent)(H, P).
 
 > a throw in a function the try only defines is not thrown by the try
 

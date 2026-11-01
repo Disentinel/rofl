@@ -65,7 +65,9 @@ Reads:
   - <a id="constructs"></a>`constructs`
   - <a id="decl"></a>`decl`
   - <a id="decorated"></a>`decorated`
+  - <a id="enumerates"></a>`enumerates`
   - <a id="extends"></a>`extends`
+  - <a id="iterates"></a>`iterates`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="spread_args"></a>`spread_args`
@@ -532,9 +534,9 @@ A node X resolves to a node F either:
 > goes straight to `calls`. `member_value` names the node a member HOLDS — for
 > `{ next: bump }` the identifier — hence the second `may_be_node` hop.
 
-<a id="for_of_iterates"></a>A node iterates through a node M if all of:
-  - it [is a transfer site](#transfer_site) of `for_of_statement`;
-  - the `right` of it [points to](js-concat.rofl.md#may_be_node) a node Obj;
+<a id="for_of_iterates"></a>X iterates through a node M if all of:
+  - [`iterates`](#iterates)(X, something, R);
+  - a node R [points to](js-concat.rofl.md#may_be_node) a node Obj;
   - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
   - [`fn_value`](js-surface.rofl.md#fn_value)(M).
 
@@ -1109,8 +1111,6 @@ Declared as facts:
 | `array_pattern` | `elements` |
 | `assignment_pattern` | `left` |
 | `rest_element` | `argument` |
-| `for_in_statement` | `left` |
-| `for_of_statement` | `left` |
 
 <a id="member_written"></a>`member_written`(N) either:
 
@@ -1119,7 +1119,9 @@ Declared as facts:
    - N [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) PK;
    - [`writes_in_place`](#writes_in_place)(PK, F);
-2. if all of:
+2. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`iterates`](#iterates)(something, N, something);
+3. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`enumerates`](#enumerates)(something, N, something);
+4. if all of:
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
    - the `value` of a node Prop is N;
    - Prop [is among the](#ast_child) `properties` of an [object pattern](#noun-object_pattern) Pat.

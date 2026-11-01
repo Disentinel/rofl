@@ -34,10 +34,12 @@ Reads:
   - <a id="body"></a>`body`
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
+  - <a id="iterates"></a>`iterates`
   - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
   - <a id="spread_props"></a>`spread_props`
   - <a id="throws"></a>`throws`
+  - <a id="tries"></a>`tries`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -53,7 +55,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-export_declaration"></a>an export declaration | a node of one of the kinds `export_named_declaration`, `export_default_declaration` (`export_kind`) |
-| <a id="noun-for-of"></a>a for-of | a node of kind `for_of_statement` |
 | <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
@@ -226,7 +227,7 @@ A node
 
 `completion_kind` includes `block_statement`, `if_statement`, `labeled_statement`.
 
-<a id="completes_abruptly"></a>An [abrupt statement](#noun-abrupt_statement) completes abruptly.
+<a id="completes_abruptly"></a>A node completes abruptly if [`exits`](#exits)(it, something).
 
 A [block](#noun-block) completes abruptly if a node S [completes abruptly](#completes_abruptly) and S [is among the](#ast_child) `body` of it.
 
@@ -344,10 +345,7 @@ In the code:
 
 <a id="has_return"></a>F has a return if [`exits`](#exits)(R, `return`) and F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R.
 
-<a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if all of:
-  - [`body`](#body)(it, B);
-  - a node S [is among the](#ast_child) `body` of a node B;
-  - [`exits`](#exits)(S, `throw`).
+<a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if [`body`](#body)(it, B), [`parent`](#parent)(B, S), and [`exits`](#exits)(S, `throw`).
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw) and F neither [has a return](#has_return) nor [runs its body later](#deferred_body).
 
@@ -542,8 +540,9 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
    - [`spread_props`](#spread_props)(O, something, Y);
    - [`parent`](#parent)(N, Y);
    - E is `accessor_call`;
-4. if N is an [array pattern](#noun-array_pattern) or a [for-of](#noun-for-of) and E is `iterator_call`;
-5. if N [is iterated](#spread_iterated) and E is `iterator_call`.
+4. if N is an [array pattern](#noun-array_pattern) and E is `iterator_call`;
+5. if N [is iterated](#spread_iterated) and E is `iterator_call`;
+6. if [`iterates`](#iterates)(N, something, something) and E is `iterator_call`.
 
 <a id="hidden_call_src"></a>The hidden call source of P is a node Init either:
 
@@ -553,7 +552,7 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
    - P is a [spread](#noun-spread);
    - P [hides a call by](#hidden_call_pos) some mechanism;
    - the `argument` of P is Init;
-4. if P is a [for-of](#noun-for-of) and the `right` of P is Init.
+4. if [`iterates`](#iterates)(P, something, Init).
 
 In the flow:
 
@@ -641,10 +640,7 @@ Declared as facts:
 
 <a id="try_walk"></a>`try_walk`(TS, X) either:
 
-1. if all of:
-   - a node TS [has a handler](#try_catches);
-   - the `block` of TS is a node B;
-   - [`parent`](#parent)(B, X);
+1. if a node TS [has a handler](#try_catches), [`tries`](#tries)(TS, B), and [`parent`](#parent)(B, X);
 2. if all of:
    - [`try_walk`](#try_walk)(TS, P);
    - [`parent`](#parent)(P, X);
