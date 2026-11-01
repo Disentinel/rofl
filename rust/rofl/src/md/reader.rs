@@ -788,7 +788,7 @@ impl R {
             let cap = &gs[gi];
             gi += 1;
             let im = if rx::test(r"^[A-Z]\w*$", cap) { Some(cap.clone()) } else { rx::exec(concat!(r"^[Aa]n? ", words!(), r" ([A-Z]\w*)$"), cap).map(|m| g(&m, 1).to_string()) };
-            if let Some(im) = im { if !self.known.contains_key(&im) { self.known.insert(im, pn.clone()); } }
+            if let Some(im) = im { self.known.entry(im).or_insert_with(|| pn.clone()); }
         }
         if as_head && matches!(t.parts.first(), Some(Part::Hole(..))) {
             let a = &gs[0];
@@ -1642,7 +1642,7 @@ impl R {
         let lines: Vec<&str> = md.split('\n').collect();
         let (at, listed) = declared_listing(blocks, &lines);
         let items: Vec<String> = listed.into_iter().filter(|t| !rx::test(r"^`\w+`$", t) && rx::test(r"\s[A-Z][A-Za-z0-9]*\b", t)).collect();
-        for t in &items { let src = lower1(t); if !self.said_at.contains_key(&src) { self.said_at.insert(src, at[t]); } }
+        for t in &items { let src = lower1(t); self.said_at.entry(src).or_insert(at[t]); }
         let mut decls = Vec::new();
         for t in &items { if self.match_lit(t, &mut Vec::new(), false).is_none() { decls.push(t.clone()); } }
         self.refuse_twins(&decls);
@@ -2140,7 +2140,7 @@ impl R {
             let ask = if then == "never" { format!("write: never {subj} is stuck") } else { format!("ask: Which {} are stuck?", plural(&noun)) };
             return format!("an asking line holds one sentence, and this one holds two: \"{}\", \"{}\". Join them in a rule: {} {noun} {subj} is stuck if {} and {}. Then {ask}", l.said, r.said, cap_art(&noun), l.said, r.said);
         }
-        for c in ss.iter().filter(|x| x.past) {
+        if let Some(c) = ss.iter().find(|x| x.past) {
             let tail = tokens(&c.s).iter().skip(2).cloned().collect::<Vec<_>>().join(" ");
             let t = self.templates.iter().find(|x| matches!(x.parts[0], Part::Hole(..)) && text_words(x).iter().skip(1).cloned().collect::<Vec<_>>().join(" ") == tail).cloned();
             return match t {
@@ -2262,7 +2262,7 @@ impl R {
             if both.is_empty() {
                 let mut c = None;
                 for (a, b) in &splits { let cs = self.indefinite(&format!("X {a}")); if !self.reads(&cs, false).is_empty() { c = Some((a.clone(), b.clone())); break; } }
-                let why = match &c { Some((_, b)) => Some(self.settle(raw, &[Cand { s: format!("X {b}"), np: Some(np.clone()), past: false }], "never")), None => None };
+                let why = c.as_ref().map(|(_, b)| self.settle(raw, &[Cand { s: format!("X {b}"), np: Some(np.clone()), past: false }], "never"));
                 return Err(match (c, why) {
                     (Some((a, _)), Some(Err(e))) => format!("\"that {a}\" reads as the condition, and what must hold of it does not: {e}"),
                     _ => format!("the condition \"that {rest}\" reads as no sentence: say it as Every {np} that <a sentence> <a sentence>, or put a comma after the condition"),

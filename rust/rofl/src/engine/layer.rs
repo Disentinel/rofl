@@ -131,12 +131,13 @@ impl Eval {
         ];
         let kernel = |rel: Sym| self.v.is_reserved(rel) || self.v.in_kernel_book(rel);
         let read_ok = |rel: Sym| {
-            !changed.contains(&rel)
-                && !special.contains(&rel)
-                && !w.special.contains(&rel)
-                && !w.faulted.contains(&rel)
-                && self.store.alias_view(rel).is_none()
-                && !(kernel(rel) && WRITTEN.contains(&self.h.name(rel)))
+            let moved = changed.contains(&rel)
+                || special.contains(&rel)
+                || w.special.contains(&rel)
+                || w.faulted.contains(&rel)
+                || self.store.alias_view(rel).is_some()
+                || (kernel(rel) && WRITTEN.contains(&self.h.name(rel)));
+            !moved
         };
         let mut kept: FxSet<Sym> = w
             .rules

@@ -247,7 +247,7 @@ pub(crate) fn call(cmd: &str, creds: &[(String, String, String)], tool: &str, re
             .filter_map(|c| c.get("text").and_then(Value::as_str)).collect::<Vec<_>>().join("\n");
         match r.get("structuredContent").and_then(Value::as_object) {
             _ if r.get("isError").and_then(Value::as_bool) == Some(true) => out.push_str(&format!("failed({key}, {}).\n", quote(&said))),
-            Some(o) if !fields.is_empty() => out.push_str(&row_fact(rel, &key, fields.iter().map(|f| o.get(f)))),
+            Some(o) if !fields.is_empty() => out.push_str(&row_fact(rel, key, fields.iter().map(|f| o.get(f)))),
             Some(_) if rel != "mcp_text" => out.push_str(&format!("answered({key}).\n")),
             _ if text => out.push_str(&format!("mcp_text({key}, {}).\n", quote(&said))),
             _ => out.push_str(&format!("failed({key}, \"no way to read the answer\").\n")),

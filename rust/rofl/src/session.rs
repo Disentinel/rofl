@@ -58,7 +58,7 @@ pub struct Session {
     /// reference's `qn` (src/api.ts `query`).
     pub asks: i64,
     /// The profile of the first evaluation was written (`profile_wants`): it is written once.
-    profiled: bool,
+    pub profiled: bool,
     /// the volumes this world was opened from, the whole one first and the one it was opened from last
     pub kept: crate::volume::Chain,
     /// where wants go when the caller does not wait for them (`rofl serve`, src/adapter.rs `Post`); none, and an
@@ -1073,11 +1073,10 @@ impl Session {
             let mut stack = args;
             while let Some(t) = stack.pop() {
                 match t.kind() {
-                    TermK::Atom(a) | TermK::Str(a) => {
-                        if (matches!(t.kind(), TermK::Str(_)) || !self.eval.h.name(a).starts_with(prefix)) && seen.insert(t) {
+                    TermK::Atom(a) | TermK::Str(a)
+                        if (matches!(t.kind(), TermK::Str(_)) || !self.eval.h.name(a).starts_with(prefix)) && seen.insert(t) => {
                             names.push(self.eval.h.canon(t));
                         }
-                    }
                     TermK::Func(i) => stack.extend(self.eval.h.fargs(i).iter().copied()),
                     _ => {}
                 }
@@ -2387,7 +2386,7 @@ fn scan_stamp(p: &str) -> String {
     let p = std::path::Path::new(p);
     if let Ok(d) = std::fs::read_dir(p) {
         let mut names: Vec<String> = d.flatten().map(|e| {
-            let dir = e.file_type().map_or(false, |t| t.is_dir());
+            let dir = e.file_type().is_ok_and(|t| t.is_dir());
             format!("{}{}", e.file_name().to_string_lossy(), if dir { "/" } else { "" })
         }).collect();
         names.sort();

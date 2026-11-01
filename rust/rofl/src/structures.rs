@@ -760,7 +760,7 @@ fn pair_verdict<'a>(store: &Store, a: &Rel<'a>, b: &Rel<'a>, t: usize) -> Pair<'
         if exact {
             return Pair::Equal(s.clone());
         }
-        if na + nb <= t && best.as_ref().map_or(true, |x| na + nb < x.0) {
+        if na + nb <= t && best.as_ref().is_none_or(|x| na + nb < x.0) {
             best = Some((na + nb, s.clone(), a_lacked, b_lacked));
         }
     }
@@ -860,7 +860,7 @@ fn projection_source(rels: &[Rel], store: &Store, b: &Rel, aliased: &BTreeSet<us
         if !alias_ok(a, declared) || a.arity <= b.arity || a.rows.len() < b.rows.len() {
             continue;
         }
-        if aliased.contains(&ai) || best.as_ref().map_or(false, |(x, _)| (rels[*x].arity, rels[*x].rows.len(), &rels[*x].name) <= (a.arity, a.rows.len(), &a.name)) {
+        if aliased.contains(&ai) || best.as_ref().is_some_and(|(x, _)| (rels[*x].arity, rels[*x].rows.len(), &rels[*x].name) <= (a.arity, a.rows.len(), &a.name)) {
             continue;
         }
         let ok = |c: usize, k: usize| b.dc[c] == a.dc[k];

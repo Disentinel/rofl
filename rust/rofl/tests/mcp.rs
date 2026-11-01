@@ -3,7 +3,7 @@
 //! Planted: `mcp_book_digest` prints a digest of the whole list in the book, and the regenerated book differs outside
 //! the changed tool; `mcp_does_sent` sends a `does` want during evaluation, and the server is called.
 use rofl::session::Session;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const SERVER: &str = r#"
 const fs = require('fs');
@@ -49,12 +49,12 @@ fn dir(name: &str) -> PathBuf {
 }
 
 /// The server's command; `version` is what it will be when next started.
-fn server(d: &PathBuf, version: &str) -> String {
+fn server(d: &Path, version: &str) -> String {
     std::fs::write(d.join("version"), version).unwrap();
     format!("node {} {} {}", d.join("server.js").display(), d.join("log").display(), d.join("version").display())
 }
 
-fn log(d: &PathBuf) -> Vec<String> {
+fn log(d: &Path) -> Vec<String> {
     std::fs::read_to_string(d.join("log")).unwrap_or_default().lines().map(str::to_string).collect()
 }
 

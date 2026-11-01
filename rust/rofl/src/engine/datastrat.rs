@@ -480,9 +480,9 @@ impl Eval {
             depth[c] = d;
         }
         // every correlation the walk met is released, a group the rule binds as well as the rule's own
-        let mut aggs: Vec<usize> = (0..n).filter(|i| is_agg(*i)).collect();
-        brk!("ds_root_dropped" => { aggs.pop(); }; ());
-        brk!("ds_ground_unreleased" => aggs.retain(|i| matches!(&g.nodes[*i], Node::Agg(k) if self.ds_whole(k))); ());
+        let aggs: Vec<usize> = (0..n).filter(|i| is_agg(*i)).collect();
+        let aggs = brk!("ds_root_dropped" => { let mut a = aggs; a.pop(); a }; aggs);
+        let aggs = brk!("ds_ground_unreleased" => { let mut a = aggs; a.retain(|i| matches!(&g.nodes[*i], Node::Agg(k) if self.ds_whole(k))); a }; aggs);
         let mut layers: Vec<Vec<AggKey>> = Vec::new();
         for i in aggs {
             let Node::Agg(k) = &g.nodes[i] else { continue };

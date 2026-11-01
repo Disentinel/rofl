@@ -38,7 +38,7 @@ fn build_id() -> String {
     format!("{} {} {:x}", env!("CARGO_PKG_VERSION"), crate::kernel::KERNEL_HASH, 0x0102_0304u32)
 }
 
-pub type Staged = Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>;
+pub type Staged = Vec<crate::engine::StagedAlts>;
 
 /// The world `e` evaluated, frozen, what its evaluation staged and where a step wall cut it, as a volume at
 /// `path` with `note`; its size. With a `bound` the file never grows past it: the volume fails instead

@@ -4,7 +4,7 @@
 //! Planted: `does_unpermitted_sent` sends a want without permit; `does_journal_ignored` sends again what the journal
 //! holds; `permit_unguarded` lets a running world forge an approval.
 use rofl::session::Session;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const MOVER: &str = r#"
 const fs = require('fs');
@@ -23,7 +23,7 @@ fn dir(name: &str) -> PathBuf {
     d
 }
 
-fn world(d: &PathBuf) -> String {
+fn world(d: &Path) -> String {
     format!(
         "adapter(tracker, exec, \"node {} {}\").
 capability(move_issue, tracker, does).
@@ -40,7 +40,7 @@ want move_issue(K) :- stage_done(K).
 }
 
 /// The world evaluated, and the approval of K-1 come in as an adapter brings it.
-fn evaluated(d: &PathBuf) -> Session {
+fn evaluated(d: &Path) -> Session {
     let mut s = Session::fresh(1_000_000);
     s.load(&world(d), None).expect("load");
     s.evaluate().expect("evaluate");
@@ -48,7 +48,7 @@ fn evaluated(d: &PathBuf) -> Session {
     s
 }
 
-fn calls(d: &PathBuf) -> Vec<String> {
+fn calls(d: &Path) -> Vec<String> {
     std::fs::read_to_string(d.join("calls")).unwrap_or_default().lines().map(str::to_string).collect()
 }
 

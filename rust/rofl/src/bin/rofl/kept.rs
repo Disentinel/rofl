@@ -214,7 +214,7 @@ pub fn most(kept: &str) -> Result<u64, String> {
 /// (what a dead one left goes before a world is written: `sweep_orphans`).
 fn writing(dir: &Path, live: bool) -> u64 {
     let dead = |name: &str| name.split_once(".vol.").and_then(|(_, r)| r.split('.').next()?.parse::<u32>().ok()).is_some_and(|pid| pid != std::process::id() && !alive(pid));
-    std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| !e.path().extension().is_some_and(|x| x == "vol"))
+    std::fs::read_dir(dir).map(|rd| rd.flatten().filter(|e| e.path().extension().is_none_or(|x| x != "vol"))
         .filter(|e| !live || !dead(&e.file_name().to_string_lossy())).filter_map(|e| e.metadata().ok()).filter(|m| m.is_file()).map(|m| m.len()).sum()).unwrap_or(0)
 }
 

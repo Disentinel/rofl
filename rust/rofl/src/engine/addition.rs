@@ -360,7 +360,7 @@ impl Eval {
 
     /// The same for the cells of `rules` alone: a full pass that kept them did not fire them (engine/layer.rs).
     pub(super) fn restore_cells_of(&mut self, rules: Option<&FxSet<Sym>>) {
-        let mut by: HashMap<(Sym, u32, Box<[Term]>), Vec<CellId>> = HashMap::new();
+        let mut by: HashMap<super::datastrat::AggKey, Vec<CellId>> = HashMap::new();
         for c in self.store.live_cells() {
             let r = self.store.cell(c);
             let CellOwner::Body { rule, at } = r.owner;
@@ -589,7 +589,7 @@ impl Eval {
                             continue;
                         }
                         let t = std::time::Instant::now();
-                        self.fire_in_round(r, &front)?;
+                        self.fire_in_round(r, front)?;
                         *self.cost.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
                     }
                     front = std::mem::take(&mut self.cur_front);
@@ -1030,7 +1030,7 @@ impl Eval {
             whole.insert(r.id);
         }
         let mut front = st.news.clone();
-        for id in self.store.arrivals.as_ref().map(|a| a.clone()).unwrap_or_default() {
+        for id in self.store.arrivals.clone().unwrap_or_default() {
             if self.store.alive(id) {
                 front.note(self.store.rec(id).rel, id);
             }
@@ -1103,13 +1103,13 @@ impl Eval {
             }
             let Some(s0) = s0.filter(|_| r.clause.head.args.len() == args.len()) else { continue };
             let all: Vec<usize> = (0..r.plan.len()).collect();
-            if !orders.contains_key(&r.id) {
+            if let std::collections::hash_map::Entry::Vacant(e) = orders.entry(r.id) {
                 let mut pre = Vec::new();
                 for a in r.clause.head.args.iter().chain([&r.clause.head.persp]) {
                     self.h.vars_of(*a, &mut pre);
                 }
                 let o = self.bound_order(&r, &all, &pre);
-                orders.insert(r.id, o);
+                e.insert(o);
             }
             for sol in self.solve_bound(&r, &all, orders[&r.id].clone().as_deref(), vec![s0])? {
                 // (a fact brought back cuts the window as it begins its chain anew)
@@ -1255,8 +1255,8 @@ impl Eval {
                 }
                 // a shared holistic group: every percent or subject of it, and the group
                 let h = &self.h;
-                let fits = |k: &(Sym, u32, Box<[Term]>)| k.0 == r.id && k.1 == a.at && k.2.len() == corr.len() && k.2.iter().zip(corr.iter()).all(|(x, p)| !h.is_ground(*p) || x == p);
-                let mine: Vec<(Sym, u32, Box<[Term]>)> = self.memo.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
+                let fits = |k: &super::datastrat::AggKey| k.0 == r.id && k.1 == a.at && k.2.len() == corr.len() && k.2.iter().zip(corr.iter()).all(|(x, p)| !h.is_ground(*p) || x == p);
+                let mine: Vec<super::datastrat::AggKey> = self.memo.agg_memo.keys().filter(|k| fits(k)).cloned().collect();
                 for mk in mine {
                     if let Some(cs) = self.memo.agg_memo.remove(&mk) {
                         cells.extend(cs.iter().copied());
