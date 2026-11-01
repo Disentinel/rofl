@@ -229,6 +229,81 @@ impl Eval {
     }
 }
 
+/// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
+/// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
+const PROFILE_RELS: [&str; 11] =
+    ["fires", "conc", "fresh", "delta_fires", "written_order", "width", "read", "yield", "widest", "rows", "distinct"];
+
+impl Eval {
+    /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
+    pub fn profile_wanted(&mut self) -> bool {
+        let p = self.h.intern("profile");
+        let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
+        self.rules.iter().any(|r| {
+            r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel))
+        })
+    }
+
+    /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
+    /// (docs/cli.md, *The profile of an evaluation*). `K` is a premise's written position as `premise_lit` counts it,
+    /// from 1; `Pos` an argument's, from 1. Per rule: `fires(R, N)` firings, `conc(R, N)` solutions concluded,
+    /// `fresh(R, N)` rows that were new, `delta_fires(R, N)` firings solved news first, `written_order(R, Why)` why
+    /// the planner kept it in written order. Per premise: `width(R, K, N)` partial rows that reached it,
+    /// `read(R, K, N)` rows read from the store there, `yield(R, K, N)` rows that left it, `widest(R, K, N)` its
+    /// widest single read. Per relation of a user's book: `rows(Rel, Book, N)` live rows and `distinct(Rel, Book,
+    /// Pos, N)` the distinct values at `Pos`, the planner's own measure (`Store::probe_stats`). Rows read are
+    /// deterministic, so the same world profiles the same on every run; time is not written.
+    pub fn profile_text(&mut self) -> String {
+        use std::fmt::Write;
+        let mut out = String::new();
+        let mut rules: Vec<Rc<ERule>> = self.rules.clone();
+        rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
+        let count = |m: &HashMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);
+        for r in &rules {
+            let id = self.h.name(r.id).to_string();
+            let _ = writeln!(
+                out,
+                "fires[profile]({id}, {}). conc[profile]({id}, {}). fresh[profile]({id}, {}). delta_fires[profile]({id}, {}).",
+                count(&self.cost.fires_by_rule, r.id),
+                count(&self.cost.sols_by_rule, r.id),
+                count(&self.cost.new_by_rule, r.id),
+                count(&self.cost.delta_by_rule, r.id)
+            );
+            if let Some(why) = self.written_order_reason(r) {
+                let _ = writeln!(out, "written_order[profile]({id}, {why}).");
+            }
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost.get(&(r.id, k))) else { continue };
+                let k = i + 1;
+                let _ = writeln!(
+                    out,
+                    "width[profile]({id}, {k}, {}). read[profile]({id}, {k}, {}). yield[profile]({id}, {k}, {}).",
+                    c.rows_in, c.read, c.rows_out
+                );
+                if c.widest.n > 0 {
+                    let _ = writeln!(out, "widest[profile]({id}, {k}, {}).", c.widest.n);
+                }
+            }
+        }
+        let mut census: Vec<(String, String, Sym, Sym, usize, usize)> = self
+            .store
+            .live_census()
+            .into_iter()
+            .filter(|&(rel, book, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
+            .map(|(rel, book, n, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, arity))
+            .collect();
+        census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
+        for (rel_name, book_name, rel, book, n, arity) in census {
+            let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
+            for pos in 0..arity {
+                let (_, d) = self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]);
+                let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
+            }
+        }
+        out
+    }
+}
+
 impl CostState {
     /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
     pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {

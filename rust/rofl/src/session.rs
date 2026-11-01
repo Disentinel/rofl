@@ -57,6 +57,8 @@ pub struct Session {
     /// The questions asked so far: a hole a question writes is `$q(N)`, the
     /// reference's `qn` (src/api.ts `query`).
     pub asks: i64,
+    /// The profile of the first evaluation was written (`profile_wants`): it is written once.
+    profiled: bool,
     /// the volumes this world was opened from, the whole one first and the one it was opened from last
     pub kept: crate::volume::Chain,
     /// where wants go when the caller does not wait for them (`rofl serve`, src/adapter.rs `Post`); none, and an
@@ -214,7 +216,7 @@ impl Session {
     pub fn open(seed_json: &str, budget: i64) -> Result<Session, String> {
         let mut l = crate::load(seed_json, budget)?;
         l.eval.store.journal.seeded();
-        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, kept: Default::default(), post: None, sent: Default::default() })
+        Ok(Session { eval: l.eval, dangling: l.dangling, asks: 0, profiled: false, kept: Default::default(), post: None, sent: Default::default() })
     }
 
     /// A world from a kept image (`crate::image`): an evaluated world opens evaluated.
@@ -231,7 +233,7 @@ impl Session {
         if !eval.store.dirty && crate::brk!("volume_unknowns_dropped" => false; true) {
             eval.unknowns_from(o.unknowns)?;
         }
-        Ok(Session { eval, dangling: o.dangling, asks: 0, kept: Default::default(), post: None, sent: Default::default() })
+        Ok(Session { eval, dangling: o.dangling, asks: 0, profiled: false, kept: Default::default(), post: None, sent: Default::default() })
     }
 
     /// This world as a kept image, which `open_kept` reads back.
@@ -301,7 +303,7 @@ impl Session {
         if !o.cut.at_end() {
             return Err(format!("{path}: a volume has bytes after its end"));
         }
-        Ok(Session { eval, dangling: 0, asks: 0, kept: o.chain, post: None, sent: Default::default() })
+        Ok(Session { eval, dangling: 0, asks: 0, profiled: false, kept: o.chain, post: None, sent: Default::default() })
     }
 
     /// AN EMPTY WORLD with the kernel's bootstrap tables and nothing else —
@@ -313,7 +315,7 @@ impl Session {
         let v = Vocab::new(&mut h);
         let mut store = Store::new();
         bootstrap_kernel(&mut h, &v, &mut store);
-        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, kept: Default::default(), post: None, sent: Default::default() }
+        Session { eval: Eval::new(h, store, budget, Mode::Rounds, false), dangling: 0, asks: 0, profiled: false, kept: Default::default(), post: None, sent: Default::default() }
     }
 
     /// A world of one's own, as a LAYER over this one. The first fork freezes
@@ -325,7 +327,7 @@ impl Session {
         self.eval.settle_provenance();
         self.eval.h.freeze();
         self.eval.store.freeze(&self.eval.h);
-        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, kept: Default::default(), post: None, sent: Default::default() }
+        Session { eval: self.eval.fork(), dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() }
     }
 
     /// Add base facts, written as ROFL. What they add is not visible to a
@@ -814,7 +816,7 @@ impl Session {
         while !e.partial {
             self.eval.budget = crate::brk!("rounds_budget_each" => budget; budget.saturating_sub(spent).max(0));
             (self.eval.steps, self.eval.added_steps) = (0, 0);
-            let n = self.scan_requests().and_then(|n| Ok(n + self.adapter_wants()?));
+            let n = self.scan_requests().and_then(|n| Ok(n + self.adapter_wants()? + self.profile_wants()?));
             spent = spent.saturating_add(self.eval.steps).saturating_add(self.eval.added_steps);
             if n.as_ref().is_ok_and(|n| *n > 0) && self.eval.store.dirty {
                 self.eval.budget = budget.saturating_sub(spent).max(0);
@@ -2166,6 +2168,19 @@ impl Session {
         }
         self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
         Ok(todo.len())
+    }
+
+    /// The profile of the first evaluation, written once as facts of the book `profile` when a rule reads it
+    /// (`Eval::profile_text`), loaded as a scanner's facts are: the rules that read it run in the round after, and the
+    /// numbers are the evaluation's before that round.
+    fn profile_wants(&mut self) -> Result<usize, String> {
+        if self.profiled || !self.eval.profile_wanted() {
+            return Ok(0);
+        }
+        self.profiled = true;
+        let src = self.eval.profile_text();
+        self.load_delta(&src, None).map_err(|d| format!("the profile's facts were refused: {}", d.join("; ")))?;
+        Ok(1)
     }
 
     /// The scan requests that hold, each as its kind and path written back.
