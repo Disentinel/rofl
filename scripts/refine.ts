@@ -14,19 +14,38 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
 const PACKS = ['models/engine/profile.rofl', 'models/engine/plan.rofl'].map((p) => path.join(ROOT, p));
-const METER = `refine_width(R, T) :- fires[profile](R, _), concludes(R, _), T is sum(V ; K : width[profile](R, K, V)).
+// a plan is given per news position At, so it is judged by the firings solved from that position alone
+// and two sums over the world's rules of what was computed and thrown away: partial solutions a premise dropped
+// (reached it, did not leave it) and solutions concluded that were not new
+const METER = `refine_width(R, At, T) :- width_at[profile](R, At, _, _), concludes(R, _), T is sum(V ; K : width_at[profile](R, At, K, V)).
 refine_order(R, At, O, W) :- order[profile](R, At, O, W), concludes(R, _).
+refine_drop(R, K, D) :- width[profile](R, K, W), yield[profile](R, K, Y), concludes(R, _), D is W - Y, D > 0.
+refine_waste(dropped, T) :- T is sum(D ; R, K : refine_drop(R, K, D)).
+refine_redo(R, D) :- conc[profile](R, C), fresh[profile](R, F), concludes(R, _), D is C - F, D > 0.
+refine_waste(rederived, T) :- T is sum(D ; R : refine_redo(R, D)).
+refine_profile(Rel, A) :- asserted_by($fact(Rel, profile, A), _, _).
 `;
 
 type Row = string[];
-const ask = (files: string[], qs: string[]): Row[][] => {
-  const out = execFileSync(RUST, ['load', '--json', ...qs.flatMap((q) => ['--ask', q]), ...files], { encoding: 'utf8', maxBuffer: 1 << 28 });
-  return out.trim().split('\n').map((l) => JSON.parse(l).rows as Row[]);
+// the reference world (vscode at 250 files) and the reflection over it are past the default space: every run is
+// under walls of its own, and a wall it still meets is said, not answered from the rows it reached
+const WALLS = ['--space', '200000000', '--budget', '20000000000'];
+let lastMs = 0;
+const ask = (files: string[], qs: string[], walls: string[] = []): Row[][] => {
+  const t0 = Date.now();
+  const run = spawnSync(RUST, ['load', '--json', ...walls, ...qs.flatMap((q) => ['--ask', q]), ...files], { encoding: 'utf8', maxBuffer: 1 << 28 });
+  lastMs = Date.now() - t0;
+  if (run.status !== 0 && run.status !== 5) throw new Error(`rofl load exited ${run.status}: ${run.stderr}`);
+  return run.stdout.trim().split('\n').map((l) => {
+    const a = JSON.parse(l);
+    if (a.partial) throw new Error(`${qs.join(', ')}: partial, ${a.shrugs?.[0]?.line ?? 'a wall'}`);
+    return a.rows as Row[];
+  });
 };
 const tmp = (name: string, text: string): string => {
   const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'rofl-refine-')), name);
@@ -35,39 +54,70 @@ const tmp = (name: string, text: string): string => {
 };
 
 export type Report = { head: string; rule: string; at: string; before: number; forecast: number; after: number; order: string; was: string };
+export type Waste = { dropped: [number, number]; rederived: [number, number]; ms: [number, number] };
 
-export function refine(files: string[]): { facts: string; report: Report[] } {
+export function refine(files: string[]): { facts: string; report: Report[]; waste: Waste } {
   const meter = tmp('meter.rofl', METER);
   const measure = (extra: string[]) => {
-    const [widths, orders, heads] = ask([...files, meter, ...extra], ['refine_width(R, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)']);
+    const [widths, orders, heads, waste, profile] = ask([...files, meter, ...extra], ['refine_width(R, At, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)', 'refine_waste(W, T)', 'refine_profile(Rel, A)'], WALLS);
     return {
-      width: new Map(widths.map(([r, t]) => [r, Number(t)])),
+      ms: lastMs,
+      profile: profile.map(([rel, a]) => `${rel}[profile](${args(a).join(', ')}).`).sort().join('\n') + '\n',
+      width: new Map(widths.map(([r, at, t]) => [`${r} ${at}`, Number(t)])),
+      waste: new Map(waste.map(([w, t]) => [w, Number(t)])),
       order: new Map(orders.map(([r, at, o, w]) => [`${r} ${at}`, { o, w }])),
       head: new Map(heads.map(([r, h]) => [r, h])),
     };
   };
   const before = measure([]);
-  const [plans, costs] = ask([...PACKS, ...files], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)']);
+  // the reflection is over the rules and the profile alone, without the data: the pack reads the reflection of the
+  // rules and the profile's numbers, and a lattice beside the data would have the world solved whole again
+  const rules = files.filter((f) => f.startsWith('@') || /:-/.test(fs.readFileSync(f, 'utf8')));
+  // the reflection asks its two answers alone: the rules of the world have nothing to fire over and are not run
+  const [plans, costs] = ask([...rules, tmp('profile.rofl', before.profile + 'asks(plan).\nasks(plan_cost).\n'), ...PACKS], ['plan[fixpointplan](R, At, L)', 'plan_cost[fixpointplan](R, At, C)'], WALLS);
   const forecast = new Map(costs.map(([r, at, c]) => [`${r} ${at}`, Number(c)]));
-  const facts = plans.map(([r, at, l]) => `plan[fixpointplan](${r}, ${at}, ${l}).`).sort().join('\n') + (plans.length ? '\n' : '');
-  const after = facts ? measure([tmp('plan.rofl', facts)]) : before;
+  const fact = ([r, at, l]: Row) => `plan[fixpointplan](${r}, ${at}, ${l}).`;
+  const all = plans.map(fact).sort().join('\n') + (plans.length ? '\n' : '');
+  const after = all ? measure([tmp('plan.rofl', all)]) : before;
+  // kept: the plans the measurement confirmed (the rule's width fell); a plan that cost more is the report's, never a fact
+  const kept = plans.filter(([r, at]) => (after.width.get(`${r} ${at}`) ?? 0) < (before.width.get(`${r} ${at}`) ?? 0));
+  const facts = kept.map(fact).sort().join('\n') + (kept.length ? '\n' : '');
   const report: Report[] = plans
     .map(([r, at, l]) => ({
       head: before.head.get(r) ?? r,
       rule: r,
       at,
-      before: before.width.get(r) ?? 0,
+      before: before.width.get(`${r} ${at}`) ?? 0,
       forecast: forecast.get(`${r} ${at}`) ?? 0,
-      after: after.width.get(r) ?? 0,
+      after: after.width.get(`${r} ${at}`) ?? 0,
       order: l,
       was: before.order.get(`${r} ${at}`)?.o ?? '',
     }))
     .sort((a, b) => a.head.localeCompare(b.head) || Number(a.at) - Number(b.at));
-  return { facts, report };
+  const w = (k: string): [number, number] => [before.waste.get(k) ?? 0, after.waste.get(k) ?? 0];
+  return { facts, report, waste: { dropped: w('dropped'), rederived: w('rederived'), ms: [before.ms, after.ms] } };
 }
 
+// the arguments of a `$cons` list, each as the engine prints it: a comma at depth 0 outside a string separates
+const args = (l: string): string[] => {
+  const out: string[] = [];
+  while (l.startsWith('$cons(')) {
+    let depth = 0, quoted = false, i = 6;
+    for (; i < l.length; i++) {
+      const c = l[i];
+      if (quoted) { if (c === '\\') i++; else if (c === '"') quoted = false; }
+      else if (c === '"') quoted = true;
+      else if (c === '(') depth++;
+      else if (c === ')') depth--;
+      else if (c === ',' && depth === 0) break;
+    }
+    out.push(l.slice(6, i));
+    l = l.slice(i + 1, -1);
+  }
+  return out;
+};
 const list = (l: string): string => l.replace(/\$cons\(/g, '').replace(/,\$nil\)*/g, '').replace(/\$nil/g, '').replace(/,/g, ' ');
-export function render(report: Report[]): string {
+export function render(report: Report[], waste?: Waste): string {
   if (!report.length) return 'no rule planned: none of two to eight positive premises\n';
   const w = Math.max(...report.map((r) => r.head.length), 4);
   const lines = [`${'rule'.padEnd(w)}  at  ${'before'.padStart(8)}  ${'forecast'.padStart(8)}  ${'after'.padStart(8)}  order (was)`];
@@ -75,25 +125,30 @@ export function render(report: Report[]): string {
     const mark = r.before === 0 && r.after === 0 ? '  not fired (the kernel answers it)' : r.after > r.before ? '  worse' : r.after < r.before ? '  better' : '';
     lines.push(`${r.head.padEnd(w)}  ${r.at.padStart(2)}  ${String(r.before).padStart(8)}  ${String(r.forecast).padStart(8)}  ${String(r.after).padStart(8)}  ${list(r.order)} (${list(r.was)})${mark}`);
   }
+  const n = (f: (r: Report) => boolean) => report.filter(f).length;
+  const near = n((r) => r.after > 0 && r.forecast > 0 && r.after <= r.forecast * 2 && r.forecast <= r.after * 2);
+  lines.push(`${report.length} planned: ${n((r) => r.after < r.before)} better (kept as facts), ${n((r) => r.after > r.before)} worse, ${n((r) => r.after === r.before)} unchanged; forecast within 2x of the measure on ${near}`);
+  // the aim is both at zero, and only while the clock falls too: a wall time of one run on this machine, noise about a tenth
+  if (waste) lines.push(`thrown away, before -> with every plan: ${waste.dropped[0]} -> ${waste.dropped[1]} partial solutions dropped at a premise, ${waste.rederived[0]} -> ${waste.rederived[1]} solutions concluded that were not new; the run ${(waste.ms[0] / 1000).toFixed(1)} s -> ${(waste.ms[1] / 1000).toFixed(1)} s (one run each, noise about a tenth)`);
   return lines.join('\n') + '\n';
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   if (args.includes('--check')) {
-    const { report } = refine([path.join(ROOT, 'examples/checks/plan-world.rofl')]);
+    const { report, facts, waste } = refine([path.join(ROOT, 'examples/checks/plan-world.rofl')]);
     const want: Record<string, [number, number, number]> = { out: [1001, 210, 210], alt: [211, 210, 210], two: [11, 11, 11] };
     const bad = report.filter((r) => String(want[r.head]) !== String([r.before, r.forecast, r.after]));
-    process.stderr.write(render(report));
-    if (bad.length || report.length !== 3) { console.log('  FAIL  the loop over plan-world.rofl did not say what it should'); process.exit(1); }
-    console.log('  ok    refine over examples/checks/plan-world.rofl: 1001 -> 210 forecast 210, 211 -> 210, 11 -> 11');
+    process.stderr.write(render(report, waste));
+    if (bad.length || report.length !== 3 || facts.split('\n').filter(Boolean).length !== 2) { console.log('  FAIL  the loop over plan-world.rofl did not say what it should'); process.exit(1); }
+    console.log('  ok    refine over examples/checks/plan-world.rofl: 1001 -> 210 forecast 210, 211 -> 210, 11 -> 11; two facts kept, the unchanged one not');
     process.exit(0);
   }
   const out = args.indexOf('--out');
   const files = args.filter((a, i) => !a.startsWith('--') && (out < 0 || i !== out + 1));
   if (!files.length) { console.error('usage: refine <files> [--out F] | --check'); process.exit(4); }
-  const { facts, report } = refine(files.map((f) => path.resolve(f)));
-  process.stderr.write(render(report));
+  const { facts, report, waste } = refine(files.map((f) => (f.startsWith('@') ? f : path.resolve(f))));
+  process.stderr.write(render(report, waste));
   if (out >= 0) fs.writeFileSync(args[out + 1], `-- the plan facts models/engine/plan.rofl concluded over ${files.join(' ')}; load them with the world\n${facts}`);
   else process.stdout.write(facts);
 }

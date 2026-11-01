@@ -51,8 +51,9 @@ pf_arms[profile](Rel, N)          :- concludes(_, Rel), N is count(R : concludes
 recursive[profile](R)    :- pf_head[profile](R, Rel, B), pf_lit[profile](R, _, Rel, B, _).
 -- the pack's own rules conclude in this book; they are profiled too, and left out of what it says
 pf_own[profile](R)       :- pf_head[profile](R, _, profile).
--- the facts a relation was given, beside what its rules conclude
-pf_base[profile](Rel, B, N) :- asserted_by($fact(Rel, B, _), _, _), B != profile, N is count(A : asserted_by($fact(Rel, B, A), _, _)).
+-- the facts a relation was given, beside what its rules conclude: the census counts them (`base`), since a count over
+-- asserted_by per fact read 51 million rows at 250 files of vscode (rows x group)
+pf_base[profile](Rel, B, N) :- base[profile](Rel, B, N), N > 0.
 
 -- ------------------------------------------------------------------------------------------------ verdicts
 scan[profile](R, K, Rel, Read, Out) :- read[profile](R, K, Read), yield[profile](R, K, Out), pf_lit[profile](R, K, Rel, _, _),
@@ -80,7 +81,8 @@ pf_shared[profile](R, D)  :- pf_npos[profile](R, 2), pf_var[profile](R, K1, J1, 
 pf_shared[profile](R, D)  :- pf_npos[profile](R, 2), pf_var[profile](R, K1, J1, V), pf_var[profile](R, K2, J2, V), K1 < K2,
                     pf_lit[profile](R, K1, A, BA, _), pf_lit[profile](R, K2, B, BB, _),
                     distinct[profile](A, BA, J1, DA), distinct[profile](B, BB, J2, DB), DB > DA, D = DB.
-pf_div[profile](R, D)     :- pf_shared[profile](R, _), D is max(X : pf_shared[profile](R, X)).
+-- a shared slot no row holds divides nothing: the join is then a product of an empty relation
+pf_div[profile](R, D)     :- pf_shared[profile](R, _), D is max(X : pf_shared[profile](R, X)), D > 0.
 
 pf_rules[profile](Rel, N, projection) :- pf_one[profile](Rel, R), pf_npos[profile](R, 1), not pf_neg[profile](R), pf_lit[profile](R, _, P, B, _), rows[profile](P, B, N).
 pf_rules[profile](Rel, N, join)       :- pf_one[profile](Rel, R), not pf_neg[profile](R), pf_two[profile](R, A, BA, B, BB),

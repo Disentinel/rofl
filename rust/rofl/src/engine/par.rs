@@ -625,7 +625,7 @@ impl Eval {
         let mut grew = 0;
         for (k, t) in levels.iter().enumerate() {
             let (l, neg) = lits[k];
-            let mark = self.cost.cost_mark(rule_id, &body[i + k]);
+            let mark = self.cost.cost_mark(rule_id, front_at.and_then(|(a, _)| super::cost::prem_key(&body[a])), &body[i + k]);
             let now = self.rows + (t.outs - t.last) as i64;
             if now > self.peak_rows {
                 self.peak_rows = now;

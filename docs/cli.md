@@ -523,16 +523,19 @@ line that asks; the VS Code extension cuts its bare cells by it). Any request ma
 
 **The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
-A world that reads none pays nothing. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
+A world that reads none pays nothing, and a world given profile facts (another world's, the reflection over it) is written none: the profile it holds is read as it is. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
 `conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
 firings solved news first, `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
 written position `At` (0 the firing over the whole store), as a `$cons` list of written positions, and whose it was (below,
 *The plan as facts*), `written_order[profile](R, Why)` why the planner kept the rule in written order (
-`aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`). Per premise
-`K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it,
+`aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`); `lattice`
+means the rule reads or concludes a lattice relation, so a rule beside a lattice that touches none is planned as it
+would be without it. Per premise
+`K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it, `width_at[profile](R, At, K, N)` the same by the news position `At` the firing was solved from (0 the whole evaluation; a plan is given per `At`, so the refine loop judges it by these),
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
 `widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
-and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure.
+and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure; a
+relation a rule reads and nothing holds is censused with 0 rows and 0 distinct, so a plan knows it is empty; a constant a rule writes in a column is censused as `selects[profile](Rel, Book, Pos, Const, N)`, the rows that hold it, since the column's average misses the skew a constant picks.
 Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
 the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
 the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a
@@ -542,7 +545,7 @@ evaluation of its own (`Eval::safety_answer`), and that evaluation's profile is 
 `program[profile](R, safety)` with `kernel_head[profile](R, L)` and `kernel_premise[profile](R, K, L)` their reflection
 (the kernel's rules are in no world's `premise_lit`; a builtin premise is written `$builtin(Op, $nil)`, an aggregate
 `$agg`), and its relations censused under the book `safety`, so a hypothesis pack judges the kernel's rules as it
-judges the world's. A question meant for the world's rules alone joins `concludes(R, _)`, as examples/profile/chain.rofl does. That is how the kernel's quadratic was
+judges the world's; its text is built only when the profile is asked, from the kernel's evaluation kept for it, so a world that asks no profile pays nothing for it. A question meant for the world's rules alone joins `concludes(R, _)`, as examples/profile/chain.rofl does. The plan pack plans none of the kernel's rules (`pl_own(R) :- program[profile](R, safety)`): the engine obeys no plan there, and planning its 213 rules cost a small world twice its time. That is how the kernel's quadratic was
 found (f_a_lattice_beside_the_js_model_trips_the_kernel_safety_budget): a lattice beside the JS model made
 `unw_reach` close the whole lattice-edge graph, 445 036 rows read of 2.3 million in the run.
 
@@ -582,11 +585,17 @@ world is then run with those facts and `width[profile]` judges them. Over plan-w
 d, c, a for `out` and `alt` alike at 210, under the hand-given 211, and the world measures 210 under it
 (rust/rofl/tests/plan_dp.rs). It is the second of the two modes the owner asked for: reflection in a world of its own,
 the answer in the world as it is. `npm run refine -- <files> [--out F]` runs the loop once (scripts/refine.ts): ask,
-with a meter beside the world, for the order and width of every rule; reflect, the two packs beside the world; refine,
+with a meter beside the world, for the order and width of every rule and for the profile itself; reflect, the two packs beside the rule files (those with a `:-`, and `@` lists) and the profile written as facts, without the data (the pack reads the reflection of the rules and the profile's numbers; a lattice beside the data had the world solved whole again, and the reflection at 250 files of vscode did not answer in 900 s); refine,
 the plan facts written to F (or stdout) to be loaded with the world from then on; ask again, the width under them. The
 report on stderr sets before, forecast and after side by side per rule and marks `worse` a plan that cost more than the
 order it replaced: that is the estimate's hypothesis false there, and a finding, not a thing to hide. `-- --check`
-runs it over plan-world.rofl and judges it. The agent's skill for the loop (when to run it, how to read the report,
+runs it over plan-world.rofl and judges it. The reflection world asks its two answers alone (`asks(plan)`, `asks(plan_cost)`), and the plan pack's estimate saturates at 10^15: integers are i64 and a product past them is an `arith_overflow` hole, which made every plan a shrug at 250 files (f_the_reflection_at_the_reference_size_overflowed_and_shrugged). Measured 2026-11-01 at 250 files of vscode: the world 88 s, the reflection 45 s. The reflection runs under walls of its own (the packs' world is 2^N x N rows
+per rule of N premises, past the default space at the JS model's size) and a partial answer stops the loop with its
+text. The facts it writes are the plans the measurement confirmed, the rules whose width fell; a plan that cost
+more is in the report and never a fact (keep or revert, per rule), and the last line counts planned, kept, worse and
+how many forecasts came within 2x of the measure, and the line after it what was computed and thrown away, before and with every plan: partial solutions dropped at a premise (`width` less `yield`) and solutions concluded that were not new (`conc` less `fresh`), with the wall time of each run beside them, since the aim is both at zero only while the clock falls too. Every run of the loop is under walls of its own (`--space 200000000 --budget 20000000000`), the reference world being past the default space. Measured over the JS model on vscode mini (2026-11-01): the
+independence estimate loses to the greedy order on most rules the data's functional dependencies touch
+(f_the_join_order_is_a_fact_the_engine_obeys), so what the loop keeps there is the few it confirmed. The agent's skill for the loop (when to run it, how to read the report,
 where the facts live) is .claude/skills/refine-plan/SKILL.md.
 
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
