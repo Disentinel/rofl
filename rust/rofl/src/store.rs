@@ -2469,9 +2469,9 @@ impl Store {
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
         let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
-        if !bp.contains_key(&at) {
+        if let std::collections::hash_map::Entry::Vacant(e) = bp.entry(at) {
             let rows: Vec<FactId> = run.canon.iter().chain(run.arrived.iter()).copied().collect();
-            bp.insert(at, PatIndex::build(h, facts, pos, &rows));
+            e.insert(PatIndex::build(h, facts, pos, &rows));
         }
         let by_val = &bp[&at];
         let sub: Vec<Term> = by_val.pos.iter().map(|q| vals[pos.iter().position(|x| x == q).unwrap()]).collect();
@@ -3539,7 +3539,7 @@ impl Store {
             // engines that agree on the premise SET look like two languages.
             // Measured: `drip` differed on exactly this, two witnesses of
             // 9439 lines, every fact line identical.
-            let prems = self.sorted_prems(h, &w.prems);
+            let prems = self.sorted_prems(h, w.prems);
             out.push_str(&prems.join("; "));
             out.push(']');
         }
@@ -3578,7 +3578,7 @@ impl Store {
                 out.push_str(&prems.join("; "));
                 out.push(']');
                 for o in self.member_derivs(m).skip(1) {
-                    let ps = self.sorted_prems(h, &o);
+                    let ps = self.sorted_prems(h, o);
                     out.push_str(&format!(" alt [{}]", ps.join("; ")));
                 }
             }
@@ -3819,7 +3819,7 @@ impl Store {
     /// sorted (FNV-1a over `rule@tick|prem; prem`; src/store.ts `firingId`).
     /// A firing a superseded value keeps has one too.
     pub fn firing_id(&self, h: &Heap, rule: Sym, tick: u32, prems: &[PremRef]) -> String {
-        let ps = self.sorted_prems(h, &prems);
+        let ps = self.sorted_prems(h, prems);
         let text = brk!("firing_id_tickless" => format!("{}|{}", h.name(rule), ps.join("; ")); format!("{}@{}|{}", h.name(rule), tick, ps.join("; ")));
         fnv64(&text)
     }
@@ -5036,6 +5036,21 @@ pub fn resolved_lit_key(
     out.push(')');
 }
 
+/// A projection tuple as `canonical_state` spells it: `(a,b)`.
+pub fn tuple_text(h: &Heap, ts: &[Term]) -> String {
+    let mut o = String::from("(");
+    for (i, t) in ts.iter().enumerate() {
+        if i > 0 {
+            o.push(',');
+        }
+        h.canon_term(*t, &mut o);
+    }
+    o.push(')');
+    o
+}
+
+const _: () = assert!(std::mem::size_of::<PremRef>() == 8 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5284,18 +5299,3 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!(std::mem::size_of::<FactRec>(), 12);
     }
 }
-
-/// A projection tuple as `canonical_state` spells it: `(a,b)`.
-pub fn tuple_text(h: &Heap, ts: &[Term]) -> String {
-    let mut o = String::from("(");
-    for (i, t) in ts.iter().enumerate() {
-        if i > 0 {
-            o.push(',');
-        }
-        h.canon_term(*t, &mut o);
-    }
-    o.push(')');
-    o
-}
-
-const _: () = assert!(std::mem::size_of::<PremRef>() == 8 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);

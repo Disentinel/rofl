@@ -679,11 +679,10 @@ impl Heap {
 
     pub fn vars_of(&self, t: Term, into: &mut Vec<Sym>) {
         match t.kind() {
-            TermK::Var(v) => {
-                if !into.contains(&v) {
+            TermK::Var(v)
+                if !into.contains(&v) => {
                     into.push(v)
                 }
-            }
             TermK::Func(i) => {
                 for a in self.fargs(i) {
                     self.vars_of(*a, into);
@@ -986,6 +985,21 @@ pub fn fnv1a(s: &str) -> String {
     format!("{hval:08x}")
 }
 
+/// `t`, built in `from`, rebuilt in `to`: two worlds share no heap.
+pub fn copy_term(from: &Heap, t: Term, to: &mut Heap) -> Term {
+    match t.kind() {
+        TermK::Var(s) => to.var(from.name(s)),
+        TermK::Atom(s) => to.atom(from.name(s)),
+        TermK::Str(s) => to.string(from.name(s)),
+        TermK::Int(v) => Term::int(v),
+        TermK::Func(i) => {
+            let args: Vec<Term> = from.fargs(i).iter().map(|a| copy_term(from, *a, to)).collect();
+            let f = to.intern(from.name(from.fname(i)));
+            to.mkf(f, &args)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1109,20 +1123,5 @@ mod tests {
         let g = h.mkf_named("p", &[a, a]);
         assert_eq!(f, g);
         assert_eq!(h.func_count(), 1);
-    }
-}
-
-/// `t`, built in `from`, rebuilt in `to`: two worlds share no heap.
-pub fn copy_term(from: &Heap, t: Term, to: &mut Heap) -> Term {
-    match t.kind() {
-        TermK::Var(s) => to.var(from.name(s)),
-        TermK::Atom(s) => to.atom(from.name(s)),
-        TermK::Str(s) => to.string(from.name(s)),
-        TermK::Int(v) => Term::int(v),
-        TermK::Func(i) => {
-            let args: Vec<Term> = from.fargs(i).iter().map(|a| copy_term(from, *a, to)).collect();
-            let f = to.intern(from.name(from.fname(i)));
-            to.mkf(f, &args)
-        }
     }
 }

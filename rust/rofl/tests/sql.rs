@@ -5,7 +5,7 @@
 //! Planted: `sql_arguments_spliced` writes the arguments into the template, and a tenant named like an injection
 //! reads the whole table; `sql_query_from_rule` lets a rule build the template.
 use rofl::session::Session;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const ROWS: i64 = 11_100;
 
@@ -23,7 +23,7 @@ fn db(name: &str) -> PathBuf {
     p
 }
 
-fn world(p: &PathBuf, asked: &str) -> String {
+fn world(p: &Path, asked: &str) -> String {
     format!(
         "adapter(shop, sql, \"{}\").
 capability(orders_of, shop, reads).
@@ -57,7 +57,7 @@ fn a_question_loads_only_the_rows_it_reaches() {
     for t in ["t1", "t2", "t3"] {
         assert!(s.holds(&format!("sql_snapshot($want(orders_of, \"{t}\"), _)")).unwrap(), "stamped {t}");
     }
-    assert!(s.ask("big(T, I)").unwrap().rows.len() > 0);
+    assert!(!s.ask("big(T, I)").unwrap().rows.is_empty());
     // the same question over the table imported whole
     let c = rusqlite::Connection::open(&p).unwrap();
     let mut whole = String::from("asked(\"t1\"). asked(\"t2\"). asked(\"t3\").\nbig(T, I) :- order(T, I, A), asked(T), A > 40.\n");

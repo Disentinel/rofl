@@ -85,7 +85,7 @@ fn holds(w: &World, sp: &Spans, t: &Test, at: usize) -> bool {
         Test::Kind(o, k) => idx(at, *o, w.len()).is_some_and(|i| w.kind_name[i] == *k),
         Test::State(o, s) => idx(at, *o, w.len()).is_some_and(|i| w.state_name[i] == *s),
         Test::Char(o, c) => idx(at, *o, w.len())
-            .is_some_and(|i| c.chars().next() == Some(w.ch[i]) && c.chars().count() == 1),
+            .is_some_and(|i| c.starts_with(w.ch[i]) && c.chars().count() == 1),
         Test::Pred(o, r) => match idx(at, *o, w.len()) {
             None => false,
             Some(i) => sp.by_rel.get(r).is_some_and(|s| s.contains(&(i, i)))

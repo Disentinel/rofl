@@ -76,8 +76,8 @@ pub fn folded(text: &str) -> String {
     let neg = |l: &str| rx::test(r"^\s*not .* \(nothing says so\)$", l);
     let (mut counts, mut first): (HashMap<i64, usize>, HashMap<i64, usize>) = (HashMap::new(), HashMap::new());
     let parent_of = |k: usize| -> i64 { for j in (0..k).rev() { if pad(ls[j]) < pad(ls[k]) { return j as i64; } } -1 };
-    for k in 0..ls.len() {
-        if !neg(ls[k]) { continue; }
+    for (k, &l) in ls.iter().enumerate() {
+        if !neg(l) { continue; }
         let p = parent_of(k);
         *counts.entry(p).or_default() += 1;
         first.entry(p).or_insert(k);
@@ -517,7 +517,7 @@ fn read_cells(a: &Assembled, runs: &[&super::Cell], parts: &mut [PartC], k: &Ker
     vocab.add_text(&own_of(&format!("{}\n{}", book.vocab, parts.iter().map(|p| if p.form_md { String::new() } else { p.clauses.clone() }).collect::<Vec<_>>().join("\n"))));
     let mut everywhere: HashSet<String> = a.home.keys().cloned().collect();
     everywhere.extend(book.read.iter().flatten().flat_map(|r| r.defined.clone()));
-    for p in parts.iter().filter(|p| p.form_md == false) { for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[\w+\])?\(", &p.clauses) { everywhere.insert(g(&m, 1).to_string()); } }
+    for p in parts.iter().filter(|p| !p.form_md) { for m in rx::each(r"(?m)^([a-z_]\w*)(?:\[\w+\])?\(", &p.clauses) { everywhere.insert(g(&m, 1).to_string()); } }
     let mut first_def: HashMap<String, usize> = HashMap::new();
     for (i, r) in book.read.iter().enumerate() { for rel in r.iter().flat_map(|r| r.defined.iter()) { first_def.entry(rel.clone()).or_insert(i); } }
     let mut rd = Reading { book, names, vocab, everywhere, first_def, texts: vec![String::new(); parts.len()], refused: HashSet::new(), outs: Vec::new(), asks: Vec::new() };
@@ -668,7 +668,7 @@ fn reader_error(e: String, text: &str, read: bool) -> String {
 fn load_world(core: &mut Session, texts: &[String], all: &str, outs: &mut [Out]) -> Session {
     let mut f = core.fork();
     if !all.trim().is_empty() && f.load(all, None).is_err() {
-        for (i, x) in texts.iter().enumerate() { if x.trim().is_empty() { continue; } if let Err(d) = f.load(x, None) { outs[i].errors.extend(d); } }
+        for (i, x) in texts.iter().enumerate().filter(|(_, x)| !x.trim().is_empty()) { if let Err(d) = f.load(x, None) { outs[i].errors.extend(d); } }
     }
     f
 }
@@ -805,7 +805,7 @@ fn rows_line(f: &mut Session, atoms: &mut Option<HashSet<String>>, cx: &Cx, x: &
     let counted = x.q.as_ref().and_then(|q| q.count.as_ref()).and_then(|c| q.vars.iter().position(|v| v == c)).map(|k| q.rows.iter().map(|r| r[k].clone()).collect::<HashSet<_>>().len());
     let headline = match (&x.q, counted) {
         (Some(qq), _) if qq.yesno => Some(if q.rows.is_empty() { "no" } else { "yes" }.to_string()),
-        (Some(qq), Some(n)) => Some(format!("{n} {}", if n == 1 || qq.noun.is_none() { qq.noun.clone().unwrap_or_default() } else { plural(qq.noun.as_ref().unwrap()) }).trim().to_string()),
+        (Some(qq), Some(n)) => Some(format!("{n} {}", match &qq.noun { Some(noun) if n != 1 => plural(noun), noun => noun.clone().unwrap_or_default() }).trim().to_string()),
         _ => None,
     };
     let english = english_of(x).map(|(l, n, _)| (l, n, headline));

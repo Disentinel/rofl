@@ -126,7 +126,7 @@ const render = (c: Cond): string => {
   switch (c.k) {
     case 'true': return 'true';
     case 'kind': return `at(${c.off}) == Some(Kind::${cap(c.kind)})`;
-    case 'not': return `!(${render(c.c)})`;
+    case 'not': return c.c.k === 'kind' ? `at(${c.c.off}) != Some(Kind::${cap(c.c.kind)})` : `!(${render(c.c)})`;
     case 'and': return c.cs.length === 0 ? 'false' : c.cs.map(render).join(' && ');
   }
 };

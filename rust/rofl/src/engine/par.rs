@@ -326,7 +326,7 @@ struct Level {
     probes: u64,
 }
 
-fn front_news<'a>(front_at: Option<(usize, &'a FxSet<FactId>)>, at: usize, neg: bool) -> Option<(&'a FxSet<FactId>, Vec<FactId>)> {
+fn front_news(front_at: Option<(usize, &FxSet<FactId>)>, at: usize, neg: bool) -> Option<(&FxSet<FactId>, Vec<FactId>)> {
     match front_at {
         Some((p, keys)) if p == at && !neg => Some((keys, keys.iter().copied().collect())),
         _ => None,

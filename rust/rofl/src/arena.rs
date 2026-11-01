@@ -174,7 +174,7 @@ impl Delta<'_> {
                 }
                 for k in 0..offs.len() / 8 {
                     let o = u64_at(offs, k) as usize;
-                    v.get_mut(o..o.checked_add(sz)?).filter(|_| o % sz == 0)?.copy_from_slice(&vals[k * sz..(k + 1) * sz]);
+                    v.get_mut(o..o.checked_add(sz)?).filter(|_| o.is_multiple_of(sz))?.copy_from_slice(&vals[k * sz..(k + 1) * sz]);
                 }
                 v.extend_from_slice(tail);
             }
@@ -351,7 +351,7 @@ impl<T: Pod> Arena<T> {
     pub fn mapped(map: &Rc<Region>, off: usize, len: usize) -> Option<Self> {
         let bytes = len.checked_mul(std::mem::size_of::<T>())?;
         let end = off.checked_add(bytes)?;
-        let aligned = (map.ptr as usize + off) % std::mem::align_of::<T>() == 0;
+        let aligned = (map.ptr as usize + off).is_multiple_of(std::mem::align_of::<T>());
         (end <= map.len() && aligned).then(|| Arena::Mapped { map: map.clone(), off, len })
     }
 }
@@ -670,7 +670,7 @@ impl VolW {
 /// `new` as spans of `old` and values between them, values of `sz` bytes, the order of what both hold kept (a run
 /// swept or merged); None when they are not few.
 fn splice(old: &[u8], new: &[u8], sz: usize) -> Option<(Vec<u64>, Vec<u8>)> {
-    if new.len() < REF_MIN || old.len() % sz != 0 || new.len() % sz != 0 {
+    if new.len() < REF_MIN || !old.len().is_multiple_of(sz) || !new.len().is_multiple_of(sz) {
         return None;
     }
     let (bn, n) = (old.len() / sz, new.len() / sz);
@@ -817,7 +817,7 @@ impl VolR {
         // of an arena made from other volumes only the values the deltas write are checked: the span is its volume's
         // bytes, which its sum vouches for as it does for an argument index's entries
         if len & REF != 0 {
-            let ok = |b: &[u8]| std::mem::size_of::<T>() % 4 != 0 || words_of(b).is_some_and(&ok);
+            let ok = |b: &[u8]| !std::mem::size_of::<T>().is_multiple_of(4) || words_of(b).is_some_and(&ok);
             return self.layered::<T>((len & !REF) as usize, ok);
         }
         self.inline_arena(len as usize, ok)
@@ -825,12 +825,12 @@ impl VolR {
     fn inline_arena<T: Pod>(&mut self, len: usize, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {
         self.i = self.i.next_multiple_of(8);
         let at = self.i;
-        if len.checked_mul(std::mem::size_of::<T>()).and_then(|n| n.checked_add(at)).map_or(true, |to| to > self.end) {
+        if len.checked_mul(std::mem::size_of::<T>()).and_then(|n| n.checked_add(at)).is_none_or(|to| to > self.end) {
             return Err("a volume ends early".into());
         }
         let words = Arena::<u32>::mapped(&self.map, at, len.checked_mul(std::mem::size_of::<T>()).ok_or("a volume ends early")? / 4);
         let a = Arena::<T>::mapped(&self.map, at, len).ok_or("a volume ends early")?;
-        if std::mem::size_of::<T>() % 4 == 0 && !ok(&words.ok_or("a volume ends early")?) {
+        if std::mem::size_of::<T>().is_multiple_of(4) && !ok(&words.ok_or("a volume ends early")?) {
             return Err("a volume holds a value of no kind".into());
         }
         self.i += std::mem::size_of_val::<[T]>(&a);
@@ -865,7 +865,7 @@ impl VolR {
         }
         let total = len.checked_mul(sz).ok_or_else(bad)?;
         let fits = at.checked_add(bytes).is_some_and(|e| e <= base.region.len()) && bytes % sz == 0;
-        if !fits || (base.region.ptr as usize + at) % std::mem::align_of::<T>() != 0 {
+        if !fits || !(base.region.ptr as usize + at).is_multiple_of(std::mem::align_of::<T>()) {
             return Err(bad());
         }
         let puts = deltas.iter().all(|d| matches!(d, Delta::Put { .. }));
@@ -898,7 +898,7 @@ impl VolR {
 /// `b` as the words it holds, where it lies aligned for them.
 fn words_of(b: &[u8]) -> Option<&[u32]> {
     // SAFETY: checked aligned for u32, and u32 is Pod.
-    (b.as_ptr() as usize % 4 == 0).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) })
+    (b.as_ptr() as usize).is_multiple_of(4).then(|| unsafe { std::slice::from_raw_parts(b.as_ptr() as *const u32, b.len() / 4) })
 }
 
 /// A span of a volume mapped privately and the values the deltas put over it and after it written into that mapping,
@@ -936,7 +936,7 @@ fn stitch<T: Pod>(base: &Base, at: usize, bytes: usize, deltas: &[Delta], len: u
             }
             for k in 0..offs.len() / 8 {
                 let o = u64_at(offs, k) as usize;
-                if o % sz != 0 || o.checked_add(sz).is_none_or(|e| e > cur) {
+                if !o.is_multiple_of(sz) || o.checked_add(sz).is_none_or(|e| e > cur) {
                     return Err("a volume's reference does not lie in the volumes it was kept over".into());
                 }
                 std::ptr::copy_nonoverlapping(vals.as_ptr().add(k * sz), s.add(o), sz);

@@ -4,7 +4,7 @@
 //! image is read by the build that wrote it. Each distinct term is written once, in a table ahead of the facts, and
 //! built once when read.
 use crate::cell::{AggOp, Algebra};
-use crate::engine::{RuleAnswer, StagedFact, Tok};
+use crate::engine::{RuleAnswer, StagedAlts, StagedFact, Tok};
 use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 use std::collections::HashMap;
@@ -148,7 +148,7 @@ impl W {
 }
 
 /// The world in `s`, and what its evaluation staged for the next tick, as a kept image.
-pub fn keep(h: &Heap, s: &Store, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], answer: &RuleAnswer, lattices: &[Tok], unknowns: &[Tok]) -> Vec<u8> {
+pub fn keep(h: &Heap, s: &Store, staged: &[StagedAlts], answer: &RuleAnswer, lattices: &[Tok], unknowns: &[Tok]) -> Vec<u8> {
     let mut w = W::default();
     write_header(&mut w, s);
     let fact_ix = write_facts(&mut w, h, s);
@@ -200,7 +200,7 @@ fn write_facts(w: &mut W, h: &Heap, s: &Store) -> HashMap<u32, u32> {
             let r = s.rec(id);
             w.sym(r.rel);
             w.sym(r.persp);
-            w.out.push((r.tick_scope() as u8) * F_TICK | (r.base() as u8) * F_BASE | (r.frozen() as u8) * F_FROZEN);
+            w.out.push(((r.tick_scope() as u8) * F_TICK) | ((r.base() as u8) * F_BASE) | ((r.frozen() as u8) * F_FROZEN));
             w.terms(h, s.args(id));
         }
     }
@@ -272,7 +272,7 @@ fn write_firings(w: &mut W, s: &Store, fact_ix: &HashMap<u32, u32>, cell_ix: &Ha
     }
 }
 
-fn write_staged(w: &mut W, h: &Heap, staged: &[(StagedFact, Vec<(Sym, Vec<PremRef>)>)], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
+fn write_staged(w: &mut W, h: &Heap, staged: &[StagedAlts], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
     w.u32(staged.len() as u32);
     for (f, alts) in staged {
         w.sym(f.rel);
@@ -457,7 +457,7 @@ impl R<'_> {
 
 pub struct Opened {
     pub store: Store,
-    pub staged: Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>,
+    pub staged: Vec<StagedAlts>,
     /// premises the image named that it does not hold
     pub dangling: usize,
     /// the program's safety answer, when the image was kept evaluated and so holds it current
@@ -625,7 +625,7 @@ fn read_firings(r: &mut R, s: &mut Store, ids: &[u32], cells: &[u32]) -> Result<
     Ok(dangling)
 }
 
-fn read_staged(r: &mut R, ids: &[u32], cells: &[u32]) -> Result<Vec<(StagedFact, Vec<(Sym, Vec<PremRef>)>)>, String> {
+fn read_staged(r: &mut R, ids: &[u32], cells: &[u32]) -> Result<Vec<StagedAlts>, String> {
     let mut staged = Vec::new();
     for _ in 0..r.u32()? {
         let rel = r.sym()?;

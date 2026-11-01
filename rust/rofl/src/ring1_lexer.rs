@@ -50,12 +50,12 @@ pub fn step(k: &[Kind], i: usize, s: State) -> State {
     match s {
         State::Cmt => {
             if at(0) == Some(Kind::Nl) { return State::Code; }
-            if !(at(0) == Some(Kind::Nl)) { return State::Cmt; }
+            if at(0) != Some(Kind::Nl) { return State::Cmt; }
             State::Cmt
         }
         State::Code => {
-            if at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash) && !(at(0) == Some(Kind::Quote)) { return State::Cmt; }
-            if !(at(0) == Some(Kind::Quote)) && !(at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash)) { return State::Code; }
+            if at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash) && at(0) != Some(Kind::Quote) { return State::Cmt; }
+            if at(0) != Some(Kind::Quote) && !(at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash)) { return State::Code; }
             if at(0) == Some(Kind::Quote) { return State::Str; }
             State::Code
         }
@@ -63,7 +63,7 @@ pub fn step(k: &[Kind], i: usize, s: State) -> State {
             State::Str
         }
         State::Str => {
-            if !(at(0) == Some(Kind::Quote)) && !(at(0) == Some(Kind::Backslash)) { return State::Str; }
+            if at(0) != Some(Kind::Quote) && at(0) != Some(Kind::Backslash) { return State::Str; }
             if at(0) == Some(Kind::Backslash) { return State::Esc; }
             if at(0) == Some(Kind::Quote) { return State::Code; }
             State::Str

@@ -67,6 +67,41 @@ jobs:
           node --experimental-strip-types scripts/dist.ts
           node --experimental-strip-types scripts/npm_check.ts
 
+  # THE ENGINE'S CODE READS AS RUST. Every target of the crate clean under clippy, a warning a red; the lints the
+  # style overrules are in rust/rofl/Cargo.toml, [lints.clippy], each with its reason. The toolchain is pinned so
+  # that the lint set moves only when it is bumped here, not with each stable release. The planted-fault build is
+  # checked beside it: a lint fix in the normal build can remove a binding only a fault uses (src/breaks.rs).
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with: { components: clippy }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: clippy }
+      - run: cd rust && cargo clippy -p rofl --all-targets -- -D warnings
+      - run: cd rust && cargo check -p rofl --all-targets --features breaks
+        env: { RUSTFLAGS: -D warnings }
+
+  # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
+  # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
+  # Not blocking while its control is red on main: f_the_fault_harness_control_is_red_on_main. Blocking again once it is green.
+  breaks:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: breaks }
+      - run: npm ci
+      - name: planted faults
+        env: { ROFL_JOBS: 4 }
+        run: npm run test:agg:breaks
+
   # EVERY PLATFORM COMPILES BEFORE A MERGE. The engine job below builds each platform on main and on a tag only, so
   # a pull request that breaks one is green until it lands: bin/rofl/kept.rs called statvfs and kill, and win32 was
   # red on main for five merges and blocked the 1.4.0 release. A cargo check per target, on every push and pull

@@ -464,7 +464,8 @@ impl Eval {
         if let Some(e) = self.store.vrow_of.get(&k) {
             return Some(e);
         }
-        let lit = self.parse_lit(&self.h.name(k).to_string()).ok()?;
+        let name = self.h.name(k).to_string();
+        let lit = self.parse_lit(&name).ok()?;
         let (book, ci) = (walk(&self.h, lit.persp, &Subst::default()).as_atom()?, *self.vc.vclosure_of.get(&lit.rel)?);
         let [a, d] = lit.args[..] else { return None };
         self.store.vrow_of.name(k, (ci, book, a, d));

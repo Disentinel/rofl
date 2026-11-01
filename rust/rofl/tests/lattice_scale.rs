@@ -560,9 +560,9 @@ fn a_wall_names_no_cell_that_improved_only_through_others() {
     assert!(named.iter().all(|l| l.contains("$cons(x,") || l.contains("$cons(y,")), "{named:?}");
     assert!(!st.lines().any(|l| l.contains("support_withdrawn")), "a settled cell was withdrawn");
     let got = values(&mut s, "dist(A, C, D)");
-    for i in 0..n {
-        for j in 0..n {
-            assert_eq!(got.get(&format!("n{i},n{j}")), Some(&d[i][j]), "dist(n{i}, n{j})");
+    for (i, row) in d.iter().enumerate() {
+        for (j, dij) in row.iter().enumerate() {
+            assert_eq!(got.get(&format!("n{i},n{j}")), Some(dij), "dist(n{i}, n{j})");
         }
     }
 }
