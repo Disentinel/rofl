@@ -73,8 +73,9 @@ $ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
 
 `partial` is `false`: every row that follows from the facts is there. It is
 `true`, and the exit code 5, when the evaluation was cut short by a budget or
-a scan failed; then the rows may be short of an answer, and the output says so
-rather than passing a short list off as the whole one.
+by the memory the process may use, or a scan failed; then the rows may be
+short of an answer, and the output says so rather than passing a short list
+off as the whole one.
 
 ## Why
 
@@ -119,21 +120,29 @@ read; the command line's is the one to parse.
 
 ## Why not
 
-<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' --depth 1 @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl -->
 ```
-$ rofl whynot 'risky("safeCheckout")' --depth 1 @rules/js.files shop.rofl
+$ rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl
 whynot risky[main]("safeCheckout"):
   rule re667b5bf: risky[main](?N)@now :- fn_name[code](?F,?N)@now, exported_fn[code](?F)@now, may_throw[code](?F)@now
     failed premise: may_throw[code](n017f49dbfbe9e0a8_gjdh70j2637)
+      rule rbef6bec0: may_throw[code](?F)@now :- may_throw[code](?G)@now, sync_body[code](?G)@now, resolves[code](?C,?G)@now, nearest_fn[code](?F,?C)@now, not caught_here[code](?C)@now
+        failed premise: not caught_here[code](n017f49dbfbe9e0a8_dkaak6chp4) -- blocked: caught_here[code](n017f49dbfbe9e0a8_dkaak6chp4) holds
+  (every failure: --all)
 ```
 <!-- END run -->
 
-The one rule that could conclude `risky("safeCheckout")`, and the premise
-that fails: `may_throw` of the node that is `safeCheckout`. `--depth 2` goes
-one rule further and names, among the ways `may_throw` could have held, the
-one that was blocked: `not caught_here(C)` fails because `caught_here(C)`
-holds, the call to `checkout` being inside a `try`. Each level down multiplies
-the lines; `--depth N` and `--nodes N` bound the walk.
+The one rule that could conclude `risky("safeCheckout")` and the premise that
+fails in it: `may_throw` of the node that is `safeCheckout`. One rule further
+down is why that fails. A function may throw when it calls one that may
+throw, unless the call is caught, and here it is: `not caught_here(C)` is
+blocked because `caught_here(C)` holds, the call to `checkout` being inside a
+`try`.
+
+`whynot` follows every way a rule could have held and prints the one that
+came nearest, the one with the fewest conditions left unmet. The last line,
+`(every failure: --all)`, says there were others; `rofl whynot --all` prints
+every one. `--depth N` and `--nodes N` bound how far the walk goes.
 
 ## What it could not see
 
@@ -150,6 +159,21 @@ F = "checkout.js", L = 2, S = "./log.js"
 A relative import that names no file of the code, with its file and line.
 An agent that asks a question about code should ask this one too: an answer
 over a world with an unresolved import holds only as far as the model sees.
+
+An import is not the only place the model can lose the thread, and each of
+the others is a relation of its own, asked the same way:
+
+| relation | holds for |
+|---|---|
+| `unresolved_call[code](C, Shape)` | a call the model could not tie to the function it runs, with the shape of its callee |
+| `may_call[code](A, F)` | function `A` makes a call `o[k]()` whose key the model could not trace, and `F` is one of the functions `o` holds, so the call may run it; this is kept apart from `calls`, which holds only what is certain |
+| `merged_param[audit](F, I, N)` | parameter `I` of function `F` is handed `N` different functions across its callers, so what it calls is their union, not the one each caller passed |
+
+Code under `if (require.main === module)` runs only when its file is started
+as a script. By default the model reads every file as a library, so that code
+counts as never run. A world that means otherwise says so in a fact:
+`runs_as_script("bin/cli.js")` reads that one file as node runs it, and
+`reads_the_file_as(script)` reads every file so.
 
 ## The second question costs nothing
 
@@ -169,7 +193,17 @@ Nothing to turn on. The cache holds at most `ROFL_CACHE_GB` gigabytes (50 by
 default) and drops the least recently used world first. A world too large for
 it is answered and not kept, said on stderr; a world that grows past the cap
 while evaluating stops there, answers what it has as partial (exit 5), and
-goes on from where it stopped when asked under a larger cap.
+goes on from where it stopped when asked under a larger cap. The same holds
+for memory: a world that outgrows the memory the process may use (its
+container's limit, or what the machine has free) stops there, answers partial
+with exit 5, says so on stderr and is not kept. The engine reports it; it is
+not killed halfway through.
+
+A question evaluates only the part of the model it needs: `rofl ask`, `why`
+and `whynot` run the rules their question can reach and no others, and a later
+question about something else grows the kept world by what that one needs. On
+700 files of VS Code with the JavaScript model, the first question takes 49 s
+and 2.1 GB, where evaluating the whole model takes 104 s and 3.4 GB.
 
 ## Exit codes
 
@@ -180,7 +214,7 @@ goes on from where it stopped when asked under a larger cap.
 | 2 | a file is refused: it does not parse or does not load; or a `--kept` world is stale |
 | 3 | the world is refused when evaluated: a declared structure does not hold, or a negation runs through a cycle |
 | 4 | the question is refused: `why` of a literal with a variable in it, `excise` of a fact that is not given, a question outside the world's declared cone |
-| 5 | answered, but from a world cut short by its budget, its space or a failed scan; the rows may be short |
+| 5 | answered, but from a world cut short by its budget, its space, the memory the process may use, or a failed scan; the rows may be short |
 | 70 | a defect in the engine itself |
 
 A refusal wins over a partial answer: a run with a refused question exits 4

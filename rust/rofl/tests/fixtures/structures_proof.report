@@ -1,4 +1,4 @@
-structures: 12 relations of at least 2 rows scanned over 311 live facts, about 180 B per fact (store tables over live facts)
+structures: 26 relations of at least 2 rows scanned over 583 live facts, about 162 B per fact (store tables over live facts)
 
 declared tree dedge(P, C) closure dbelow.
         dedge: 3 edges over 4 nodes, 1 roots, depth 2; one parent per child, no cycle (implies a function from child to parent)
@@ -7,8 +7,40 @@ propose function grade(A, B, to C).
         grade: 7 rows, 7 distinct A,B; at most one C for each
         saves no rows (a map by key is added); the planner learns at most one match
 
+propose function joined(A, to B).
+        joined: 3 rows, 3 distinct A; at most one B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function level(A, to B).
+        level: 4 rows, 4 distinct A; at most one B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function level(to A, B).
+        level: 4 rows, 4 distinct B; at most one A for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
 propose function name_of(A, to B).
         name_of: 3 rows, 3 distinct A; at most one B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function range(A, to B, to C).
+        range: 4 rows, 4 distinct A; at most one B,C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function range(to A, B, to C).
+        range: 4 rows, 4 distinct B; at most one A,C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function range(to A, to B, C).
+        range: 4 rows, 4 distinct C; at most one A,B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function rank(A, to B).
+        rank: 3 rows, 3 distinct A; at most one B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function rank(to A, B).
+        rank: 3 rows, 3 distinct B; at most one A for each
         saves no rows (a map by key is added); the planner learns at most one match
 
 propose function ring(A, to B).
@@ -19,10 +51,55 @@ propose function ring(to A, B).
         ring: 4 rows, 4 distinct B; at most one A for each
         saves no rows (a map by key is added); the planner learns at most one match
 
+propose function slot(A, B, to C).
+        slot: 5 rows, 5 distinct A,B; at most one C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function slot(to A, to B, C).
+        slot: 5 rows, 5 distinct C; at most one A,B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function step(A, B, to C).
+        step: 5 rows, 5 distinct A,B; at most one C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function step(to A, to B, C).
+        step: 5 rows, 5 distinct C; at most one A,B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function trip(A, to B, to C).
+        trip: 3 rows, 3 distinct A; at most one B,C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function trip(to A, B, to C).
+        trip: 3 rows, 3 distinct B; at most one A,C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function trip(to A, to B, C).
+        trip: 3 rows, 3 distinct C; at most one A,B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function window(A, to B, to C).
+        window: 4 rows, 4 distinct A; at most one B,C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function window(to A, B, to C).
+        window: 4 rows, 4 distinct B; at most one A,C for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
+propose function window(to A, to B, C).
+        window: 4 rows, 4 distinct C; at most one A,B for each
+        saves no rows (a map by key is added); the planner learns at most one match
+
 propose tree edge(P, C) closure below.
         edge: 6 edges over 8 nodes, 2 roots, depth 2; one parent per child, no cycle (implies a function from child to parent)
         below: 9 rows = the closure of edge
         saves 9 rows (9 derivations)
+
+propose tree joined(P, C).
+        joined: 3 edges over 5 nodes, 2 roots, depth 2; one parent per child, no cycle (implies a function from child to parent)
+        a forest the other way round too (each node has at most one child as well): the orientation is the author's
+        no relation equals its closure: the promise only, no rows saved
 
 propose alias held_by(A, B) is owns(B, A).
         held_by: 5 rows (0 asserted) equals, arguments permuted, owns: 5 rows
@@ -33,16 +110,80 @@ propose alias holder(A) is owns(A, _).
         the price is a distinct index on the kept columns, unless they are a key of the source
         saves 4 rows (5 derivations)
 
+propose ordered grade(A, B, by C).
+        grade: 7 rows, C an integer in every row, 3 distinct from 3 to 5
+        saves no rows (a sorted index is added); a range of C is a lookup, not a scan
+
+propose ordered rank(A, by B).
+        rank: 3 rows, B an integer in every row, 3 distinct from 3 to 9
+        saves no rows (a sorted index is added); a range of B is a lookup, not a scan
+
+propose ordered slot(A, by B, C).
+        slot: 5 rows, B an integer in every row, 3 distinct from 0 to 2
+        saves no rows (a sorted index is added); a range of B is a lookup, not a scan
+
+propose ordered trip(A, B, by C).
+        trip: 3 rows, C an integer in every row, 3 distinct from 3 to 6
+        saves no rows (a sorted index is added); a range of C is a lookup, not a scan
+
+propose ordered trip(A, by B, C).
+        trip: 3 rows, B an integer in every row, 3 distinct from 1 to 9
+        saves no rows (a sorted index is added); a range of B is a lookup, not a scan
+
+propose sequence step(A, at B, to C).
+        step: 5 rows, 2 keys, each numbered 0, 1, 2, ... by B, the longest 3
+        saves no rows; first, last, next and previous by key are lookups
+
+propose span range(A, from B, to C) laminar.
+        range: 4 rows, B =< C in every row
+        laminar: any two are nested or apart (ends exclusive, so touching intervals are apart); a nesting tree answers containment
+        saves no rows; containment, overlap and stabbing by an interval index
+
+propose span window(A, from B, to C).
+        window: 4 rows, B =< C in every row
+        not laminar: 1 crossing, the first window(w1, 0, 5) and window(w2, 3, 8)
+        saves no rows; containment, overlap and stabbing by an interval index
+
+propose equivalence eqv(A, B) of joined(A, B).
+        eqv: 13 rows = every pair of 2 classes over 5 nodes, the largest 3
+        joined: 3 rows, whose equivalence closure it is
+        saves 13 rows (47 derivations); a representative per class answers it
+
+propose dag _(A, B) closure prec.
+        prec: 5 rows is the transitive closure of a dag of 4 edges that no relation holds
+        saves 1 row: 5 less the 4 edges to state (0 derivations)
+
+propose dag dep(A, B).
+        dep: 5 edges over 5 nodes, no cycle, and no forest (a node has two parents)
+        no relation equals its closure: the promise only, no rows saved
+
+propose dag link(A, B) closure reach.
+        link: 4 edges over 4 nodes, no cycle, and no forest (a node has two parents)
+        reach: 5 rows = the closure of link
+        saves 5 rows (6 derivations); reachability by labels over the dag
+
 near miss alias copy_miss(A, B) is owns(B, A): copy_miss lacks 1 row of owns: owns(p4, i4)
+near miss dag buddy(A, B): 3 cycles, the first through the 2 nodes m1, m2
+near miss dag peer(A, B): 2 cycles, the first through the 3 nodes j1, j2, j3
+near miss dag ring(A, B): 1 cycle, the first through the 3 nodes x1, x2, x3
+near miss equivalence buddy(A, B): lacks 1 of the 8 pairs of its classes: buddy(m4, m3)
+near miss equivalence peer(A, B): an equivalence but for its diagonal, the 5 pairs (X, X) of its nodes
 near miss function copy_miss(A, to B): 1 of 3 keys has more than one B: copy_miss(i1, p1) and copy_miss(i1, p2)
 near miss function copy_miss(to A, B): 1 of 3 keys has more than one A: copy_miss(i1, p1) and copy_miss(i2, p1)
+near miss function dep(A, to B): 1 of 4 keys has more than one B: dep(g1, g2) and dep(g1, g3)
+near miss function dep(to A, B): 1 of 4 keys has more than one A: dep(g2, g4) and dep(g3, g4)
 near miss function grade(A, to B, C): 1 of 6 keys has more than one B: grade(s4, math, 4) and grade(s4, art, 4)
 near miss function link(A, to B): 1 of 3 keys has more than one B: link(a1, b1) and link(a1, c1)
 near miss function link(to A, B): 1 of 3 keys has more than one A: link(b1, d1) and link(c1, d1)
 near miss function owns(A, to B): 1 of 4 keys has more than one B: owns(p1, i1) and owns(p1, i2)
 near miss function owns(to A, B): 1 of 4 keys has more than one A: owns(p1, i1) and owns(p2, i1)
 near miss function tag_of(A, to B): 1 of 4 keys has more than one B: tag_of(k3, t2) and tag_of(k3, t3)
+near miss ordered level(A, by B): 1 of 4 rows is not an integer: level(v3, "high")
+near miss sequence slot(A, at B, to C): 1 of 3 keys not numbered 0..n-1 by B: key (q1) has 0, 2
+near miss span trip(A, from B, to C): 1 of 3 rows ends before it starts: trip(t3, 9, 3)
+near miss span window(A, from B, to C) laminar: 1 crossing: window(w1, 0, 5) and window(w2, 3, 8)
+near miss tree dep(P, C). 1 child with two parents: g4 has parents g2 and g3
 near miss tree link(P, C). 1 child with two parents: d1 has parents b1 and c1
 near miss tree ring(P, C). 1 cycle, the first through x1, x3, x2
 
-7 proposals (function 4, tree 1, alias 2), 11 near misses; the rows they stop storing: 18 (19 derivations), about 3.2 KiB at the mean cost per fact
+38 proposals (function 22, tree 2, alias 2, ordered 5, sequence 1, span 2, equivalence 1, dag 3), 23 near misses; the rows they stop storing: 37 (72 derivations), about 5.9 KiB at the mean cost per fact

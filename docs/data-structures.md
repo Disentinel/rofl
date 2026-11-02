@@ -226,6 +226,8 @@ the declaration's sentence, with what it measured:
 - **equivalence, dag**: a relation closed under the three laws on its data
   (classes against n^2); an acyclic one (components).
 
+All eight are built (the last five 2026-11-02, see "The other five, as built" below).
+
 Every proposal carries the rows and bytes it would save, the premises of the
 rules that it would serve (from the reader census, as
 `facts/ast-within-readers.rofl` does by hand for the tree) and the worlds over
@@ -245,6 +247,8 @@ tree) is read by no proposal or near miss.
    util it proposes `tree ast_in(P, C) closure ast_within.` (the closure is
    exact), the ast_in and in_fn aliases, and 169 functions that hold on all
    four (`f_the_engine_proposes_a_forest_a_closure_and_aliases_on_all_four_corpora`).
+   The other five kinds (`ordered`, `sequence`, `span`, `equivalence`, `dag`) joined the report
+   **2026-11-02**, still read-only (below, "The other five, as built").
 1. **The plumbing with `function`.** The declaration in the three parsers and
    the sentence, the reflection rows, the refusal with its place, the TS check
    and the proof world with a planted break. `function` has the smallest
@@ -538,6 +542,54 @@ the rule written by hand.
 
 *Saves*, on vscode at 250 files sealed: ast_in and ast_name, about 560k rows (12% of the facts). A sealed cell over an
 alias records the source among its sealed relations; the census compares, the spelling differs from TypeScript.
+
+## The other five, as built
+
+Detection only (2026-11-02, `rust/rofl/src/structures.rs`): the report proposes them; no parser reads
+them, no check judges them and the engine stores nothing by them. Exact on the data, as the first three.
+
+- **ordered** `ordered r(A, by B).`: a column that holds an integer in every row and two values at
+  least; a column a sequence or a span takes is theirs. Near miss: a few rows that are no integer.
+- **sequence** `sequence ast_child(A, B, at C, to D).`: an integer column that numbers the rows of
+  each key 0 to n-1, each once; the minimal keys only (a key whose subset numbers already adds
+  nothing). The note's syntax leaves the key implicit; the report marks the columns the key and the
+  index determine `to`, as `function` does. Near miss: a few keys with a gap or a repeat, with the
+  numbers they have. One pass sorts four bytes a row per key set.
+- **span** `span r(A, from B, to C) [laminar].`: two integer columns with B =< C in every row and
+  B < C in one; `laminar` when no two intervals cross, ends exclusive (touching intervals are apart);
+  when not laminar the note says the first crossing and whether each value of another column is
+  laminar within itself, which the declaration cannot say yet. Near misses: a few rows that end
+  before they start, a few crossings.
+- **equivalence** `equivalence r(A, B) of g(A, B).`: a binary relation that holds of exactly every
+  pair within its classes (union-find; rows = the sum of the squared class sizes), `of` the
+  relation with the fewest rows that lies within the classes, touches every node and joins as many
+  classes; `of _(A, B)` when none does, with the edges a generator would need. One class is said
+  (a product as much as an equivalence). Near misses: a few pairs lacking, or exactly the diagonal
+  (the strict form, `same(A, B), A != B`).
+- **dag** `dag r(A, B) [closure c].`: a binary relation with no cycle (Tarjan) that is no forest
+  (a forest is a tree's) and no equivalence; `closure` when another relation is exactly its strict
+  transitive closure (it holds every edge, asked of the store first; it is closed under one more
+  edge; each of its rows is an edge or one edge past another of its rows: exact, no closure built);
+  `dag _(A, B) closure c.` when c is a closure whose reduction no relation holds. Near miss: up to
+  three cycles, the first with its nodes. A dag's closure is read by no other proposal or near miss.
+
+Measured 2026-11-02 (fast build), over the JS model on examples/vscode/mini (min 20 rows, 3.3 s with
+the evaluation) and on this tree's src/ (20 files, 3.5M live facts, min 2 rows: 18-21 s with the
+evaluation, of which the report is one to two seconds; one run each, on a busy 4-core box):
+
+- `sequence ast_child(A, B, at C, to D).` holds on mini (340 keys, the longest 14) and is a near miss
+  on src/: 67 of 128 842 keys of `elements` skip a number, a pattern or an array with a hole
+  (`const [, a, b] = row`), which the scanner numbers by Babel's index. A declaration would be refused there: the promise is false of
+  JS, not of the corpus.
+- `nth` and `b_slot` (the roles) are no sequence: a `for (const x of xs)` declarator has slot 1 (its
+  id) and no slot 0 (no init), as `nth` is a position and not a numbering.
+- `dag _(A, B) closure eff_lt.`: the effect order is the closure of a 21-edge diagram no relation
+  holds (41 rows); `eff_has_join` is one class over the 14 effect names, a product.
+- no span: the scanner writes `ast_line` and no ranges, so the JS model holds no interval yet.
+- over every `.rofl` of examples/, models/ and facts/ alone (5 s each), the dag closures are the
+  reachability worlds (`pl_edge` / `pl_reach`, `edge` / `path`, `crossing` / `leak`); the spans and
+  ordered columns of small test worlds are mostly coincidences of a few integers, as a function on
+  three rows is.
 
 ## What serves the readers of the tree
 
