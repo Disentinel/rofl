@@ -524,7 +524,7 @@ line that asks; the VS Code extension cuts its bare cells by it). Any request ma
 **The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
 A world that reads none pays nothing, and a world given profile facts (another world's, the reflection over it) is written none: the profile it holds is read as it is. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
-`conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
+`conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `fresh_whole[profile](R, N)` of them those new at the rule's whole firing, `delta_fires[profile](R, N)`
 firings solved news first, `activation[profile](R, I)` the place of its firing over the whole store in the run's sequence of them (from 1: at that firing a relation is live only where a rule concluding it fired whole before, or it is a closure), `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
 written position `At` (0 the firing over the whole store), as a `$cons` list of written positions, and whose it was (below,
 *The plan as facts*), `written_order[profile](R, Why)` why the planner kept the rule in written order (

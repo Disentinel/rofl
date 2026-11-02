@@ -110,11 +110,18 @@ pl_livep(R, refire, K)  :- pf_lit[profile](R, K, Rel, B, _), pl_rl2(R, Rel, B).
 -- (activation 1438) at 119 rows of 13 451, the rules concluding it fired before but one, and the census is of the
 -- finished store. The rows at a firing are bounded by the base facts and the conclusions (`conc`) of the producers
 -- fired before it and productive in the book, summed; the census where there is no producer (a closure, an alias
--- read from its source, a producer whose conclusions the closure kernel answers and `conc` counts 0).
+-- read from its source, a producer the closure kernel answers for, which never fires and whose meters count 0),
 pl_producer(R, full, Rel, B, R2)   :- pl_need(R, Rel, B), pl_headb(R2, Rel, B), pl_prod(R2, B), activation[profile](R2, I2), activation[profile](R, I), I2 < I.
 pl_producer(R, refire, Rel, B, R2) :- pl_refire(R, I), pl_need(R, Rel, B), pl_headb(R2, Rel, B), pl_prod(R2, B), activation[profile](R2, I2), I2 <= I.
-pl_had(R, P, Rel, B, N) :- pl_producer(R, P, Rel, B, _), N is sum(X ; R2 : pl_producer(R, P, Rel, B, R2), conc[profile](R2, X)).
-pl_cap(R, P, Rel, B, A) :- pl_had(R, P, Rel, B, H), H > 0, base[profile](Rel, B, Bn), A is Bn + H.
+-- and WHAT A PRODUCER HAD CONCLUDED BY THEN IS WHAT ITS WHOLE FIRING ADDED, not the run's `conc`: `this(T) :-
+-- mark(T, this)` (activation 1925) concluded its 14 111 in the rounds, after `mark` was whole, and nothing at its own
+-- firing, when `mark` held 360 rows and no `this`; a reader planned from 14 111 rows of `this` read 380 145 where the
+-- engine's order, seeing it empty, read one. The rounds come after every whole firing, so at any activation each
+-- producer before it has added exactly the rows new at its whole firing, `fresh_whole`, and their sum over the
+-- producers is the relation's rows then, less what was given
+pl_had(R, P, Rel, B, N) :- pl_producer(R, P, Rel, B, _), N is sum(X ; R2 : pl_producer(R, P, Rel, B, R2), fresh_whole[profile](R2, X)).
+pl_kern(R, P, Rel, B)   :- pl_producer(R, P, Rel, B, R2), fires[profile](R2, 0).
+pl_cap(R, P, Rel, B, A) :- pl_had(R, P, Rel, B, H), not pl_kern(R, P, Rel, B), base[profile](Rel, B, Bn), A is Bn + H.
 pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N0), pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), pl_cap(R, P, Rel, B, A), N is min(N0, A).
 pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N), pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), not pl_cap(R, P, Rel, B, _).
 pl_rows(R, P, K, N)     :- pl_phase(R, P), P != delta, pl_rows(R, delta, K, N0), not pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), base[profile](Rel, B, Bn), N is min(N0, Bn).

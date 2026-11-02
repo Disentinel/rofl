@@ -5181,10 +5181,15 @@ impl Eval {
                 self.seen_at.entry(r.id).or_insert(self.store.len_ids());
             }
             let t = std::time::Instant::now();
+            let fresh0 = self.cost.new_by_rule.get(&r.id).copied().unwrap_or(0);
             let f = match round.take() {
                 Some(fl) => self.finish(r, fl, |e| e.fire_rule(r, None)),
                 None => self.fire_rule(r, None),
             };
+            if round.is_none() {
+                let fresh1 = self.cost.new_by_rule.get(&r.id).copied().unwrap_or(0);
+                self.cost.fresh_whole_by_rule.entry(r.id).or_insert(fresh1 - fresh0);
+            }
             let f = match f {
                 Ok(f) => f,
                 Err(e) => {
