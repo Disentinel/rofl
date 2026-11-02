@@ -565,8 +565,11 @@ Rust only.
 
 **The plan as facts** is the book `fixpointplan`: `plan[fixpointplan](R, At, Order)` gives rule `R` (its id, as
 `premise_lit` names it) the order to solve its premises in when fired on the news at written position `At` (0 the firing
-over the whole store), `Order` the written positions of every premise as a `$cons` list, from 1. The engine takes it as
-it is, whatever its own estimate says, once it holds up: every premise once, the news first, a negation after what binds
+over the whole store), `Order` the written positions of every premise as a `$cons` list, from 1. The engine takes the
+order as it is, whatever its own estimate says, once it holds up (whether a round fires from the news in that order or
+in the written one stays the engine's choice, costed over the given order as over its own: taken free, a given order
+fired from every news row where the written firing was cheaper, 296 319 rows greedy against 7 381 348 given for one
+order of member_value at 250 files), once it holds up: every premise once, the news first, a negation after what binds
 the variables it shares, a builtin after one of the sets that run it and where the written order has it. A fact that does
 not hold up is left alone and the greedy order is built; a rule kept in written order (`written_order[profile]`) reads
 none. The profile says which order was taken and whose it was (`order[profile]`), so the width that order cost

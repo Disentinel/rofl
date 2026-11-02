@@ -335,6 +335,17 @@ impl Eval {
             .filter(|&(rel, book, _, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
             .map(|(rel, book, n, base, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, base, arity))
             .collect();
+        // a closure answered from its tree holds no row: its pairs are its rows and its two columns' distinct values
+        // are the tree's ancestors and descendants (vclosure.rs vcensus); censused as empty, at 250 files of vscode the
+        // plan read 21 million rows of inside[tree] first, where the greedy order read one
+        let mut closures: HashMap<(Sym, Sym), (u32, u32)> = HashMap::new();
+        for (rel, book, pairs, internal, deep) in self.vc.vcensus(&mut self.store) {
+            if self.v.is_reserved(rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                continue;
+            }
+            closures.insert((rel, book), (internal, deep));
+            census.push((self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, pairs as usize, 0, 2));
+        }
         // a relation a rule reads and nothing holds is censused as empty: a plan that knows nothing of it puts it last
         let held: HashSet<(Sym, Sym)> = census.iter().map(|c| (c.2, c.3)).collect();
         let mut empty: HashSet<(Sym, Sym)> = HashSet::new();
@@ -392,7 +403,11 @@ impl Eval {
             let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}). base[profile]({rel_name}, {book_name}, {base}).");
             for pos in 0..arity {
-                let d = if n == 0 { 0 } else { self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]).1 };
+                let d = match closures.get(&(rel, book)) {
+                    Some(&(internal, deep)) => [internal, deep][pos] as usize,
+                    None if n == 0 => 0,
+                    None => self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]).1,
+                };
                 let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
             }
         }
