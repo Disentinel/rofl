@@ -1192,6 +1192,16 @@ pub struct AddState {
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
+    /// `Store::probe_groups` by premise shape (relation, book, constant positions, bound positions), with the stamp
+    /// it was counted at and the constants missed since: a second miss of a shape counts all its constants.
+    delta_groups: HashMap<(Sym, Option<Sym>, Vec<usize>, Vec<usize>), DeltaGroups>,
+}
+
+#[derive(Clone, Default)]
+struct DeltaGroups {
+    stamp: (usize, u64, usize),
+    misses: usize,
+    counts: Option<crate::store::FxMap<(u64, u64), (usize, usize)>>,
 }
 
 /// The threshold cells of one evaluation: reached, still open, and the round their news came in. Held by `Eval`.

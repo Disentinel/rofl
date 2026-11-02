@@ -262,7 +262,7 @@ impl Eval {
             Some(&(then, rows, d)) if !stale(size, then) => (rows, d),
             _ => {
                 let t = std::time::Instant::now();
-                let (rows, d) = self.store.probe_stats(&self.h, l.rel, persp, &cpos, &cvals, &vpos);
+                let (rows, d) = self.probe_counted(l.rel, persp, &cpos, &cvals, &vpos);
                 self.add.delta_ns += t.elapsed().as_nanos() as u64;
                 self.add.delta_stats.insert(key, (size, rows, d));
                 (rows, d)
@@ -270,6 +270,31 @@ impl Eval {
         };
         let fan = if vpos.is_empty() { rows as f64 } else { rows as f64 / distinct.max(1) as f64 };
         Stat { rows: rows as f64, fan: if rows == 0 { 0.0 } else { fan.max(1.0) } }
+    }
+
+    /// `Store::probe_stats`, read off one pass over all the constants of a premise's shape once a second constant of
+    /// it is asked while its rows stand as they were counted.
+    fn probe_counted(&mut self, rel: Sym, persp: Option<Sym>, cpos: &[usize], cvals: &[Term], vpos: &[usize]) -> (usize, usize) {
+        if !(1..=2).contains(&cpos.len()) {
+            return self.store.probe_stats(&self.h, rel, persp, cpos, cvals, vpos);
+        }
+        let at = (cvals[0].bits(), cvals.get(1).map_or(0, |t| t.bits()));
+        let stamp = self.store.rows_stamp(rel, persp);
+        let g = self.add.delta_groups.entry((rel, persp, cpos.to_vec(), vpos.to_vec())).or_default();
+        if g.stamp != stamp {
+            *g = super::DeltaGroups { stamp, ..Default::default() };
+        }
+        if let Some(counts) = &g.counts {
+            return counts.get(&at).copied().unwrap_or((0, 1));
+        }
+        g.misses += 1;
+        if g.misses < 2 {
+            return self.store.probe_stats(&self.h, rel, persp, cpos, cvals, vpos);
+        }
+        let counts = self.store.probe_groups(&self.h, rel, persp, cpos, vpos);
+        let got = counts.get(&at).copied().unwrap_or((0, 1));
+        g.counts = Some(counts);
+        got
     }
 
     fn delta_build(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<DeltaPlan> {
