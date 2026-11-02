@@ -536,13 +536,10 @@ fn load_sources(o: &Opts) -> Vec<(String, Option<String>)> {
 
 /// Each source loaded into the world, refused with its diagnostics; returned with its text, for what it asserts.
 fn load_files(o: &Opts, s: &mut Session, sources: &[(String, Option<String>)]) -> Vec<(String, String)> {
-    let mut loaded: Vec<(String, String)> = Vec::new();
-    for (f, text) in sources {
-        let t = text.clone().unwrap_or_else(|| read(o.json, f));
-        if let Err(d) = s.load(&t, None) {
-            fail(o.json, FILE_REFUSED, &format!("{f} refused:\n  {}", d.join("\n  ")));
-        }
-        loaded.push((f.clone(), t));
+    let loaded: Vec<(String, String)> = sources.iter().map(|(f, text)| (f.clone(), text.clone().unwrap_or_else(|| read(o.json, f)))).collect();
+    let texts: Vec<&str> = loaded.iter().map(|(_, t)| t.as_str()).collect();
+    if let Err((i, d)) = s.load_all(&texts, None) {
+        fail(o.json, FILE_REFUSED, &format!("{} refused:\n  {}", loaded[i].0, d.join("\n  ")));
     }
     loaded
 }
@@ -554,10 +551,10 @@ fn load_below(o: &Opts, s: &mut Session, sources: &[(String, Option<String>)]) {
     let mut b = Session::fresh(o.budget);
     if o.strata { b.eval.mode = rofl::engine::Mode::Strata; }
     if let Some(n) = o.space { b.eval.space = n; }
-    for f in sources.iter().take(1).map(|x| &x.0).chain(o.below.iter()) {
-        if let Err(d) = b.load(&read(o.json, f), None) {
-            fail(o.json, FILE_REFUSED, &format!("below: {f} refused:\n  {}", d.join("\n  ")));
-        }
+    let files: Vec<&String> = sources.iter().take(1).map(|x| &x.0).chain(o.below.iter()).collect();
+    let texts: Vec<String> = files.iter().map(|f| read(o.json, f)).collect();
+    if let Err((i, d)) = b.load_all(&texts.iter().map(String::as_str).collect::<Vec<_>>(), None) {
+        fail(o.json, FILE_REFUSED, &format!("below: {} refused:\n  {}", files[i], d.join("\n  ")));
     }
     if let Err(e) = b.evaluate() { refuse(&mut b, o.json, format!("below: {}", rofl::describe(&e))); }
     if let Err(e) = s.feed_below(&mut b) { fail(o.json, WORLD_REFUSED, &format!("below: {e}")); }

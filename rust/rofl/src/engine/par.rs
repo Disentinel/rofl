@@ -77,7 +77,7 @@ impl NewsIx {
 
 /// The arguments of `l` that `s` binds to ground terms, and those terms.
 pub(super) fn bound_args(h: &Heap, l: &Lit, s: &Subst) -> (Vec<usize>, Vec<Term>) {
-    let (mut pos, mut vals) = (Vec::new(), Vec::new());
+    let (mut pos, mut vals) = (Vec::with_capacity(l.args.len()), Vec::with_capacity(l.args.len()));
     for (i, &a) in l.args.iter().enumerate() {
         let t = walk(h, a, s);
         if h.is_ground(t) {
@@ -331,6 +331,16 @@ struct Level {
     probes: u64,
 }
 
+/// The solutions from `from` on, each row's first only, in order.
+fn first_of_each_fact(next: &mut Vec<Sol>, from: usize) {
+    if next.len() - from < 2 {
+        return;
+    }
+    let mut seen: FxSet<FactId> = FxSet::with_capacity_and_hasher(next.len() - from, Default::default());
+    let mine: Vec<Sol> = next.drain(from..).filter(|s| seen.insert(last_fact(s))).collect();
+    next.extend(mine);
+}
+
 fn front_news(front_at: Option<(usize, &FxSet<FactId>)>, at: usize, neg: bool) -> Option<(&FxSet<FactId>, Vec<FactId>)> {
     match front_at {
         Some((p, keys)) if p == at && !neg => Some((keys, keys.iter().copied().collect())),
@@ -385,9 +395,7 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
                         lv.at = Some(a.s.clone());
                     }
                     if c.segs.is_empty() {
-                        let mut seen: HashSet<FactId> = HashSet::new();
-                        let mine: Vec<Sol> = next.drain(from..).filter(|s| seen.insert(last_fact(s))).collect();
-                        next.extend(mine);
+                        first_of_each_fact(&mut next, from);
                     }
                     if sort {
                         let (store, h) = (fr.store, fr.h);
@@ -499,9 +507,7 @@ impl Eval {
             }
             self.note_read(l, &acc[e].s, read);
             if dedup[e] {
-                let mut seen: HashSet<FactId> = HashSet::new();
-                let mine: Vec<Sol> = next.drain(from..).filter(|s| seen.insert(last_fact(s))).collect();
-                next.extend(mine);
+                first_of_each_fact(&mut next, from);
             }
             if sort {
                 let (store, h) = (&self.store, &self.h);
