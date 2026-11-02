@@ -63,33 +63,47 @@ pl_phase(R, refire)     :- pl_vreader(R).
 -- live at a firing (the full phase: the rule's own activation): base facts held, or a rule concluding it
 -- fired whole before I AND concluded something then, which it did only where every premise of its own was live at
 -- its own firing (a rule fired before with nothing to read concluded nothing). An alias is its source read again
--- (`alias this(T) is mark(T, this)`, lowered to a rule the engine never fires), so it is live where its source is,
--- in the book the premise names. A closure is its tree's edges read again: it is live where they are (`tree
--- parent(P, C) closure inside`: `inside` answers nothing until a rule concluded `parent`; a reader fired whole before
+-- (`alias this(T) is mark(T, this)`, lowered to a rule) where the world keeps no witness: the rule is never fired
+-- (`fires` 0) and the alias is live where its source is, in the book the premise names. Where witnesses are kept the
+-- alias is rows, its rule fired at its own activation as any rule (engine/alias.rs), and the law above holds:
+-- `assigned` (activation 72) read `ast_name` (its rule the 74th) empty, and the engine's order, which saw that, cost
+-- one where a plan from the alias cost 17 249. A closure is its tree's edges read again: it is live where they are
+-- (`tree parent(P, C) closure inside`: `inside` answers nothing until a rule concluded `parent`; a reader fired whole before
 -- that from its other premise probed an empty tree once per row, 15 629 for one rule at 250 files, and the engine's
 -- own order, which saw the tree empty, read one). The count is over the rules fired earlier, so it is stratified by
 -- the data (activation strictly decreasing), not by the program
-pl_src(Rel, Rel2)       :- structure_decl(Rel, _, alias), pf_head[profile](R2, Rel, _), pf_lit[profile](R2, _, Rel2, _, _).
+pl_src(Rel, Rel2)       :- structure_decl(Rel, _, alias), pf_head[profile](R2, Rel, _), fires[profile](R2, 0), pf_lit[profile](R2, _, Rel2, _, _).
 pl_src(Rel, Rel2)       :- structure_closure(Rel2, Rel).
 pl_need(R, Rel, B)      :- pf_lit[profile](R, _, Rel, B, _).
 pl_need(R, Rel2, B)     :- pl_need(R, Rel, B), pl_src(Rel, Rel2).
 pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), base[profile](Rel, B, N), N > 0.
-pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), pf_head[profile](R2, Rel, B), activation[profile](R2, I2), activation[profile](R, I), I2 < I, pl_prod(R2).
+pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), pl_headb(R2, Rel, B), activation[profile](R2, I2), activation[profile](R, I), I2 < I, pl_prod(R2, B).
 pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), pl_src(Rel, Rel2), pl_rl(R, Rel2, B).
 pl_live(R, K)           :- pf_lit[profile](R, K, Rel, B, _), pl_rl(R, Rel, B).
 pl_livep(R, full, K)    :- pl_live(R, K).
-pl_nlive(R2, N)         :- activation[profile](R2, _), N is count(K : pl_live(R2, K)).
-pl_prod(R2)             :- pl_nlive(R2, N), pf_npos[profile](R2, N).
+-- A RULE WHOSE BOOK IS A VARIABLE (`alias ast_name(N, V) is ast_attr(N, name, V)` lowers to `ast_name[B](N, V) :-
+-- ast_attr[B](N, name, V)`) concludes in every book it is read in, and is productive in a book where its premises
+-- are live in that book: its count of live premises is per book, a premise of the variable book read in the head's
+pl_vbook(B)             :- pf_lit[profile](_, _, _, B, _), B = $var(_).
+pl_vbook(B)             :- pf_head[profile](_, _, B), B = $var(_).
+pl_headb(R2, Rel, B)    :- pf_head[profile](R2, Rel, B), not pl_vbook(B).
+pl_headb(R2, Rel, B)    :- pf_head[profile](R2, Rel, Bv), pl_vbook(Bv), pl_need(_, Rel, B), not pl_vbook(B).
+pl_litb(R2, B, K, Rel, B) :- pl_headb(R2, _, B), pf_lit[profile](R2, K, Rel, Bk, _), pl_vbook(Bk).
+pl_litb(R2, B, K, Rel, Bk) :- pl_headb(R2, _, B), pf_lit[profile](R2, K, Rel, Bk, _), not pl_vbook(Bk).
+pl_need(R2, Rel, Bk)    :- pl_litb(R2, _, _, Rel, Bk).
+pl_liveb(R2, B, K)      :- pl_litb(R2, B, K, Rel, Bk), pl_rl(R2, Rel, Bk).
+pl_nlive(R2, B, N)      :- pl_headb(R2, _, B), N is count(K : pl_liveb(R2, B, K)).
+pl_prod(R2, B)          :- pl_nlive(R2, B, N), pf_npos[profile](R2, N).
 -- A READER OF A CLOSURE whose tree is empty at its activation fires whole then, and whole again on the round the
 -- tree is complete (engine.rs, fire_in_round_from): a third moment, `refire`, where what is live is what the rules
 -- concluding the edges, the last of them, had before them. Both firings run under the one order the rule is given,
 -- so its cost is the two phases summed; an order from the closure costs one at activation and every row of the
 -- closure later (3 562 677 for one rule at 250 files), where the order from its other premise costs twice its rows.
 pl_vreader(R)           :- pl_rule(R, _), pf_lit[profile](R, K, Rel, _, _), structure_closure(_, Rel), not pl_live(R, K).
-pl_edge(R, R2)          :- pl_vreader(R), pf_lit[profile](R, _, Rel, _, _), structure_closure(Src, Rel), pf_head[profile](R2, Src, _), pl_prod(R2).
+pl_edge(R, R2)          :- pl_vreader(R), pf_lit[profile](R, _, Rel, _, _), structure_closure(Src, Rel), pl_headb(R2, Src, B), pl_prod(R2, B).
 pl_refire(R, I)         :- pl_edge(R, _), I is max(X : pl_edge(R, R2), activation[profile](R2, X)).
 pl_rl2(R, Rel, B)       :- pl_refire(R, _), pl_need(R, Rel, B), base[profile](Rel, B, N), N > 0.
-pl_rl2(R, Rel, B)       :- pl_refire(R, I), pl_need(R, Rel, B), pf_head[profile](R2, Rel, B), activation[profile](R2, I2), I2 <= I, pl_prod(R2).
+pl_rl2(R, Rel, B)       :- pl_refire(R, I), pl_need(R, Rel, B), pl_headb(R2, Rel, B), activation[profile](R2, I2), I2 <= I, pl_prod(R2, B).
 pl_rl2(R, Rel, B)       :- pl_need(R, Rel, B), pl_src(Rel, Rel2), pl_rl2(R, Rel2, B).
 pl_livep(R, refire, K)  :- pf_lit[profile](R, K, Rel, B, _), pl_rl2(R, Rel, B).
 pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N), pl_livep(R, P, K).
