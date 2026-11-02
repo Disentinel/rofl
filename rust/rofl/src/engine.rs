@@ -5171,6 +5171,8 @@ impl Eval {
         };
         for (i, r) in batch.iter().enumerate().skip(from) {
             self.batch_at = i;
+            let n = self.cost.activation_by_rule.len() as u64 + 1;
+            self.cost.activation_by_rule.entry(r.id).or_insert(n);
             let t = std::time::Instant::now();
             let f = match round.take() {
                 Some(fl) => self.finish(r, fl, |e| e.fire_rule(r, None)),

@@ -131,8 +131,11 @@ impl Eval {
         } else {
             p.pre + p.cur * (1.0 + p.fan.min(n)) + p.cur * p.fan * (n / p.rows_i.max(1.0)).min(1.0) * p.tail
         };
-        // the margins cover the engine's own estimate; a given order is the plan's to answer for, and is taken
-        // whenever its cost comes under the written firing's
+        // the margins cover the engine's own estimate; a given order is the plan's to answer for: the firing over
+        // the whole store takes it as it is, a round takes it where its cost comes under the written firing's
+        if p.given && at.is_none() {
+            return Some(p.clone());
+        }
         let margin = if p.given { 1.0 } else if at.is_none() { MARGIN_FULL } else { MARGIN };
         if n * p.unit * margin < written {
             Some(p.clone())

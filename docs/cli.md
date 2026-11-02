@@ -525,7 +525,7 @@ line that asks; the VS Code extension cuts its bare cells by it). Any request ma
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
 A world that reads none pays nothing, and a world given profile facts (another world's, the reflection over it) is written none: the profile it holds is read as it is. Per rule `R` (its id, as `premise_lit` names it): `fires[profile](R, N)` firings,
 `conc[profile](R, N)` solutions concluded, `fresh[profile](R, N)` rows that were new, `delta_fires[profile](R, N)`
-firings solved news first, `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
+firings solved news first, `activation[profile](R, I)` the place of its firing over the whole store in the run's sequence of them (from 1: at that firing a relation is live only where a rule concluding it fired whole before, or it is a closure), `order[profile](R, At, Order, plan | greedy)` the order the rule was solved in on the news at
 written position `At` (0 the firing over the whole store), as a `$cons` list of written positions, and whose it was (below,
 *The plan as facts*), `written_order[profile](R, Why)` why the planner kept the rule in written order (
 `aggregate`, `closure`, `lattice`, `demand`, `negated_demand`, `threshold`, `next`, `one_premise`, `naive`); `lattice`
@@ -582,7 +582,7 @@ of its own** (it declares a lattice, and a world with a lattice is solved in wri
 there would be another planner's): over the subsets of each rule's premises it builds `lattice pl_best(R, At, S, min
 C)`, the least sum of partial solutions over the premise placed last, with the independence estimate of a set (its
 rows multiplied, divided for every shared variable by the most distinct of its columns, once per sharing premise after
-the first), and concludes `plan[fixpointplan](R, At, Order)` for every rule of two to eight positive premises, At 0
+the first), in two phases: the firing over the whole store (At 0) reads a premise's `rows` only where it is live at the rule's `activation`, else its `base` (a derived premise is empty there, and the order that starts from it reads nothing), the firings on the news read `rows`; and concludes `plan[fixpointplan](R, At, Order)` for every rule of two to eight positive premises, At 0
 and, for a recursive rule, each news position, with `plan_cost[fixpointplan](R, At, C)` the width it forecasts. The
 world is then run with those facts and `width[profile]` judges them. Over plan-world.rofl (world `plan_dp`) it finds b,
 d, c, a for `out` and `alt` alike at 210, under the hand-given 211, and the world measures 210 under it

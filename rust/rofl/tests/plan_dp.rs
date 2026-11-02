@@ -44,7 +44,9 @@ fn plans(s: &mut Session) -> String {
 #[test]
 fn the_pack_finds_a_cheaper_order_than_the_given_one_and_the_world_measures_its_forecast() {
     let (profile, plan, world) = (file("models/engine/profile.rofl"), file("models/engine/plan.rofl"), file("examples/checks/plan-world.rofl"));
-    let mut r = run(&[&profile, &plan, &world]);
+    // the reflection reads the measured world's profile (its activation order is that world's, not the reflection's)
+    let measured = run(&[&profile, &world]).eval.profile_text();
+    let mut r = run(&[&profile, &plan, &world, &measured]);
     let (out, alt) = (rule_of(&mut r, "out"), rule_of(&mut r, "alt"));
     // b, d, c, a for both: written 2, 4, 3, 1 in out and 4, 3, 2, 1 in alt
     assert_eq!(one(&mut r, &format!("plan[fixpointplan]({out}, 0, L)")), ["$cons(2,$cons(4,$cons(3,$cons(1,$nil))))"]);

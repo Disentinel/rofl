@@ -54,6 +54,9 @@ pub struct CostState {
     pub new_by_rule: HashMap<Sym, u64>,
     /// Firings solved delta-first.
     pub delta_by_rule: HashMap<Sym, u64>,
+    /// The place of each rule's firing over the whole store in the run's sequence of them, from 1: a relation a
+    /// rule reads is live at that firing only where a rule concluding it fired whole before (`activation`).
+    pub activation_by_rule: HashMap<Sym, u64>,
 }
 
 impl Default for CostState {
@@ -62,7 +65,7 @@ impl Default for CostState {
             prem_cost: FxMap::default(), prem_cost_at: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
             read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
             argm_by_rule: HashMap::new(), ns_by_rule: HashMap::new(), fires_by_rule: HashMap::new(),
-            sols_by_rule: HashMap::new(), new_by_rule: HashMap::new(), delta_by_rule: HashMap::new(),
+            sols_by_rule: HashMap::new(), new_by_rule: HashMap::new(), delta_by_rule: HashMap::new(), activation_by_rule: HashMap::new(),
         }
     }
 }
@@ -234,8 +237,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 18] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 19] =
+    ["fires", "conc", "fresh", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
@@ -253,8 +256,9 @@ impl Eval {
     /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
     /// (docs/cli.md, *The profile of an evaluation*). `K` is a premise's written position as `premise_lit` counts it,
     /// from 1; `Pos` an argument's, from 1. Per rule: `fires(R, N)` firings, `conc(R, N)` solutions concluded,
-    /// `fresh(R, N)` rows that were new, `delta_fires(R, N)` firings solved news first, `written_order(R, Why)` why
-    /// the planner kept it in written order. Per premise: `width(R, K, N)` partial rows that reached it,
+    /// `fresh(R, N)` rows that were new, `delta_fires(R, N)` firings solved news first, `activation(R, I)` the place
+    /// of its firing over the whole store among the run's (from 1), `written_order(R, Why)` why the planner kept it
+    /// in written order. Per premise: `width(R, K, N)` partial rows that reached it,
     /// `read(R, K, N)` rows read from the store there, `yield(R, K, N)` rows that left it, `widest(R, K, N)` its
     /// widest single read. Per relation of a user's book: `rows(Rel, Book, N)` live rows and `distinct(Rel, Book,
     /// Pos, N)` the distinct values at `Pos`, the planner's own measure (`Store::probe_stats`). Rows read are
@@ -281,6 +285,9 @@ impl Eval {
                 count(&self.cost.new_by_rule, r.id),
                 count(&self.cost.delta_by_rule, r.id)
             );
+            if let Some(i) = self.cost.activation_by_rule.get(&r.id) {
+                let _ = writeln!(out, "activation[profile]({id}, {i}).");
+            }
             if let Some(why) = self.written_order_reason(r) {
                 let _ = writeln!(out, "written_order[profile]({id}, {why}).");
             }
