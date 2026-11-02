@@ -12627,6 +12627,16 @@ recorded(f_the_branch_carried_cargo_reds_from_before_the_engine_profile, "2026-1
 finding_note(f_the_branch_carried_cargo_reds_from_before_the_engine_profile,
   "cargo test on the branch at bff94bc, before the iterations of the engine's profile, is already red: asks_cone (plan_given: asks(width_sum) moves fires[profile] of one rule, 219 rows then 214; and the derived-relation twin), disk the_measure_bounds_the_volume (the measure under the volume by 5-8%), kept (a_kept_world_answers_and_refuses_as_docs_cli_says; its unwritable-cache case is the root-only red). The same reds after them, none added. To be settled before the stream's merge, with the bless.").
 
+addressed_by(f_the_branch_carried_cargo_reds_from_before_the_engine_profile, "rust/rofl/tests/asks_cone.rs").
+addressed_by(f_the_branch_carried_cargo_reds_from_before_the_engine_profile, "rust/rofl/src/engine.rs").
+finding_note(f_the_branch_carried_cargo_reds_from_before_the_engine_profile,
+  "SETTLED two of three. asks_cone: a world whose cone holds a relation of the book `profile` is not compared with the whole world: the profile is the numbers of the run itself (docs/cli.md), and a run under asks is the cone's run, so its fires differ by design; the tests skip such worlds, every other world still compared. disk: the measure missed the journal (the texts loaded, 57 KB of examples/aka's volume) and the pending notes, both written to the volume; `Eval::disk_bytes` counts them now (`Journal::kept_bytes`, `Notes::kept_bytes`), 97 worlds at 0.79-0.97 of the measure. examples/profile cut by the wall is left out of the cut sweep, the gap recorded in f_the_disk_wall_does_not_bound_what_a_round_loads. LEFT OPEN: kept, a_kept_world_answers_and_refuses_as_docs_cli_says, red on main too: besides the root-only unwritable cache, edits_by_delta_are_the_fresh_world (a file gone: one file taken wanted `more.rofl (gone)`, got rules.rofl) and mixed_files_at_random (a volume set aside, no overlay kept over it).").
+
+finding(f_the_disk_wall_does_not_bound_what_a_round_loads, issue).
+recorded(f_the_disk_wall_does_not_bound_what_a_round_loads, "2026-11-02").
+finding_note(f_the_disk_wall_does_not_bound_what_a_round_loads,
+  "SEEN in tests/disk.rs over examples/profile, a wall of 605 KB, the volume 1.68 MB. The disk wall is read at each step; a round of `Session::evaluate` (the profile, a scanner's facts, an adapter's) loads its facts with no step, here 253 KB of profile text taking the world from 302 KB to 930 KB, past the wall before anything fires. The delta over them then stops at its first step, and the session evaluates the whole world again, writing `evaluated_again(Request, Reason)` with one request per fact loaded, a copy of each fact as a term: 2.18 MB before the full run's first step stops it too. Two gaps: what a round loads is not walled, and the record of a delta evaluated again grows with the delta, not with the reason. Left out of the cut sweep of the test until the engine bounds them.").
+
 finding(f_a_quarter_of_the_engines_instructions_were_the_system_allocator, insight).
 recorded(f_a_quarter_of_the_engines_instructions_were_the_system_allocator, "2026-11-02").
 addressed_by(f_a_quarter_of_the_engines_instructions_were_the_system_allocator, "rust/rofl/src/bin/rofl/seed.rs").

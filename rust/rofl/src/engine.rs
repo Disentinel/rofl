@@ -5835,7 +5835,8 @@ impl Eval {
     /// What a volume of the world would take now, a firing's solutions not yet concluded among it: never less than
     /// the volume (tests/disk.rs).
     pub fn disk_bytes(&self) -> i64 {
-        (self.store.kept_bytes() + self.h.kept_bytes()) as i64 + self.disk_held
+        let notes = self.prov.pending.kept_bytes() + self.pending_assert.kept_bytes() + self.store.journal.kept_bytes();
+        (self.store.kept_bytes() + self.h.kept_bytes() + notes as u64) as i64 + self.disk_held
     }
 
     /// Whether the last evaluation stopped at the disk wall: its hole is in the store.

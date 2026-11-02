@@ -102,6 +102,9 @@ impl Notes {
         *self = Notes::default();
         all
     }
+    pub(crate) fn kept_bytes(&self) -> usize {
+        self.len() * 12
+    }
     fn write(&self, w: &mut crate::arena::VolW) {
         w.arena_parts(&self.kept, &[&self.own.iter().flat_map(|&(f, r, t)| [f, r, t]).collect::<Vec<u32>>()]);
     }
