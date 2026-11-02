@@ -419,7 +419,7 @@ impl<'a> Parser<'a> {
                         let e = *inner.get(k + 1).ok_or("string: a trailing backslash")?;
                         // what `canon_term` writes is read back: a control character leaves as `\b`, `\f` or `\u00XX`
                         if e == 'u' {
-                            out.push(control_escape(&inner, k + 1).map_err(|hex| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?);
+                            out.push(control_escape(inner, k + 1).map_err(|hex| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?);
                             k += 6;
                             continue;
                         }

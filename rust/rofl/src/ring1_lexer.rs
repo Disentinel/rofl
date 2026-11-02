@@ -82,7 +82,7 @@ pub fn states_of(k: &[Kind]) -> Vec<State> {
     let mut s = State::Code;
     for i in 0..k.len() {
         out.push(s);
-        s = step(&k, i, s);
+        s = step(k, i, s);
     }
     out
 }

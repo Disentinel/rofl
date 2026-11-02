@@ -1,7 +1,8 @@
 //! `rofl load --seed SEED.json`: reads a seed, evaluates, prints
 //! `canonicalState` on stdout; with `--bytes` the per-phase timing and the
 //! measurements on stderr.
-use std::alloc::{GlobalAlloc, Layout, System};
+use mimalloc::MiMalloc;
+use std::alloc::{GlobalAlloc, Layout};
 use std::io::Read;
 use std::sync::atomic::{AtomicIsize, Ordering};
 
@@ -46,15 +47,15 @@ fn count(n: isize) {
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, l: Layout) -> *mut u8 {
         count(l.size() as isize);
-        System.alloc(l)
+        MiMalloc.alloc(l)
     }
     unsafe fn dealloc(&self, p: *mut u8, l: Layout) {
         count(-(l.size() as isize));
-        System.dealloc(p, l)
+        MiMalloc.dealloc(p, l)
     }
     unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
         count(n as isize - l.size() as isize);
-        System.realloc(p, l, n)
+        MiMalloc.realloc(p, l, n)
     }
 }
 
