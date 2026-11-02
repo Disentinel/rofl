@@ -3,18 +3,20 @@
 //! facts and firings and no rule concluding one fires. What stands is what the pass would derive again, so a world
 //! evaluated in stages pays for its upper stage only.
 //!
-//! A relation is kept when every rule concluding it is a rule it had, with no threshold, lattice, dominance, tag or
-//! shrug, and every relation it reads is kept, or a base relation no fact came into or left since and no rule
-//! concludes, or what the kernel read off the program as it was loaded. A relation a hole or a shrug of the whole
-//! evaluation names, or whose rule one names, is evaluated again: a fault is the firing's, and only a firing writes
-//! it. A relation answered on demand is kept only while no rule evaluated again reads it: one could ask it more. A
-//! well-founded world, a world cut by a wall, and one whose rules read `derived_by` keep nothing.
+//! A relation is kept when every rule concluding it is a rule it had, with no lattice, dominance, tag or shrug, and
+//! every relation it reads is kept, or a base relation no fact came into or left since and no rule concludes, or what
+//! the kernel read off the program as it was loaded. A threshold is kept with what its sealing knew of its groups. A
+//! relation a hole, a shrug or (well-founded) an undefined row of the whole evaluation names, or whose rule one names,
+//! is evaluated again: a fault is the firing's, and only a firing writes it. A relation answered on demand is kept only
+//! while no rule evaluated again reads it: one could ask it otherwise. A world cut by a wall, or whose semantics
+//! changed, keeps nothing.
 
 use super::*;
 
 #[derive(Clone, Default)]
 pub struct Whole {
     tick: u32,
+    well_founded: bool,
     rules: HashMap<Sym, Vec<String>>,
     special: HashSet<Sym>,
     faulted: HashSet<Sym>,
@@ -45,7 +47,8 @@ impl Eval {
         let heads: HashMap<Sym, Sym> = self.rules.iter().map(|r| (r.id, r.clause.head.rel)).collect();
         let mut out = HashSet::new();
         let mut todo: Vec<Term> = Vec::new();
-        for rel in [self.v.hole, self.v.shrug] {
+        let undefined = self.well_founded.then_some(self.v.unknown);
+        for rel in [self.v.hole, self.v.shrug].into_iter().chain(undefined) {
             for f in self.store.rel_all(&self.h, rel) {
                 todo.extend(self.store.args(f).iter().copied());
             }
@@ -96,6 +99,7 @@ impl Eval {
         }
         self.whole = Some(Rc::new(Whole {
             tick: self.store.tick,
+            well_founded: self.well_founded,
             rules: self.rules_by_head(),
             special: self.special_rels(),
             faulted: self.faulted_rels(),
@@ -111,8 +115,7 @@ impl Eval {
             a
         };
         if w.tick != self.store.tick
-            || self.well_founded
-            || self.answer.reads_provenance
+            || w.well_founded != self.well_founded
             || self.wall.level_wall.is_some()
         {
             return (FxSet::default(), again(&FxSet::default()));
@@ -132,6 +135,7 @@ impl Eval {
         let kernel = |rel: Sym| self.v.is_reserved(rel) || self.v.in_kernel_book(rel);
         let read_ok = |rel: Sym| {
             let moved = changed.contains(&rel)
+                || (self.well_founded && rel == self.v.unknown)
                 || special.contains(&rel)
                 || w.special.contains(&rel)
                 || w.faulted.contains(&rel)
@@ -148,7 +152,6 @@ impl Eval {
                     && now.get(rel) == Some(rs)
                     && by_head[rel].iter().all(|r| {
                         (r.safe || self.demand.on(**rel))
-                            && !r.has_thr
                             && r.lattice_outer.is_empty()
                             && r.lat_close.is_none()
                             && !self.shrug_readers.contains(&r.id)

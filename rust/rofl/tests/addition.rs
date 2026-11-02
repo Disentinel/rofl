@@ -1107,3 +1107,37 @@ fn a_closure_row_given_a_shorter_path_seals_its_aggregate_again() {
     let program = "edb(e). edb(n).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\nq(X) :- n(X), not p(X, X).\nc(X, N) :- n(X), N is count(Y : p(X, Y)).\nn(b). n(e). n(c). e(d, b). e(c, c). e(c, d). e(a, e). e(b, c).\n";
     one_addition(program, Op::Assert("e(c, b). n(a).".into()));
 }
+
+/// A threshold below an upper rule added later, in a world that keeps its witnesses and in one sealed: the full pass
+/// after the addition keeps the threshold as the last whole evaluation left it, with what its sealing knew of its groups,
+/// and the world equals one evaluated whole, explanations included.
+#[test]
+fn a_full_pass_keeps_a_threshold_below_what_was_added() {
+    for seal in ["", "sealed(provenance)."] {
+        let lower = format!(
+            "{seal} edb(e). edb(n).
+            e(a, b). e(b, c). e(c, a). e(a, d). e(c, d). n(a). n(b). n(c). n(d).
+            popular(Y) :- n(Y), at_least(2, X : e(X, Y)).
+            popular(Y) :- n(Y), at_least(1, X : e(X, Y), popular(X)).
+            far(X, Y) :- e(X, Y).
+            far(X, Z) :- far(X, Y), e(Y, Z)."
+        );
+        let upper = "top(X) :- far(a, X), not popular(X).";
+        let mut s = Session::fresh(BUDGET);
+        s.load(&boot(), None).expect("boot");
+        s.load(&lower, None).expect("lower");
+        s.evaluate().expect("lower evaluates");
+        s.load_delta(upper, None).expect("upper");
+        s.evaluate().expect("evaluates again");
+        let again: Vec<&str> = s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect();
+        assert!(!again.contains(&"popular") && !again.contains(&"far"), "{seal}: the lower relations are kept: {again:?}");
+        let mut fresh = Session::fresh(BUDGET);
+        fresh.load(&boot(), None).expect("boot");
+        fresh.load(&lower, None).expect("lower");
+        fresh.load(upper, None).expect("upper");
+        assert_eq!(state(&mut s), state(&mut fresh), "{seal}");
+        for q in ["popular(d)", "popular(a)", "far(a, d)", "top(b)"] {
+            assert_eq!(s.why(q), fresh.why(q), "{seal}: why {q}");
+        }
+    }
+}
