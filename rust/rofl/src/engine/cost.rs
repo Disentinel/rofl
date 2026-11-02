@@ -45,20 +45,22 @@ pub struct CostState {
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
-    pub argm_by_rule: HashMap<Sym, u64>,
+    pub argm_by_rule: FxMap<Sym, u64>,
     /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
-    pub ns_by_rule: HashMap<Sym, u64>,
+    pub ns_by_rule: FxMap<Sym, u64>,
     /// Per rule: firings, solutions concluded, and rows that were new.
-    pub fires_by_rule: HashMap<Sym, u64>,
-    pub sols_by_rule: HashMap<Sym, u64>,
-    pub new_by_rule: HashMap<Sym, u64>,
+    pub fires_by_rule: FxMap<Sym, u64>,
+    pub sols_by_rule: FxMap<Sym, u64>,
+    pub new_by_rule: FxMap<Sym, u64>,
     /// Rows new at the rule's whole firing alone: what the store held of its conclusions at every activation after.
-    pub fresh_whole_by_rule: HashMap<Sym, u64>,
+    pub fresh_whole_by_rule: FxMap<Sym, u64>,
+    /// Solutions that added nothing: the witness was recorded before (or, where none is kept, the row stood).
+    pub again_by_rule: FxMap<Sym, u64>,
     /// Firings solved delta-first.
-    pub delta_by_rule: HashMap<Sym, u64>,
+    pub delta_by_rule: FxMap<Sym, u64>,
     /// The place of each rule's firing over the whole store in the run's sequence of them, from 1: a relation a
     /// rule reads is live at that firing only where a rule concluding it fired whole before (`activation`).
-    pub activation_by_rule: HashMap<Sym, u64>,
+    pub activation_by_rule: FxMap<Sym, u64>,
 }
 
 impl Default for CostState {
@@ -66,8 +68,8 @@ impl Default for CostState {
         CostState {
             prem_cost: FxMap::default(), prem_cost_at: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
             read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
-            argm_by_rule: HashMap::new(), ns_by_rule: HashMap::new(), fires_by_rule: HashMap::new(),
-            sols_by_rule: HashMap::new(), new_by_rule: HashMap::new(), fresh_whole_by_rule: HashMap::new(), delta_by_rule: HashMap::new(), activation_by_rule: HashMap::new(),
+            argm_by_rule: FxMap::default(), ns_by_rule: FxMap::default(), fires_by_rule: FxMap::default(),
+            sols_by_rule: FxMap::default(), new_by_rule: FxMap::default(), fresh_whole_by_rule: FxMap::default(), again_by_rule: FxMap::default(), delta_by_rule: FxMap::default(), activation_by_rule: FxMap::default(),
         }
     }
 }
@@ -239,8 +241,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 21] =
-    ["fires", "conc", "fresh", "fresh_whole", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 22] =
+    ["fires", "conc", "fresh", "fresh_whole", "again", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
@@ -258,7 +260,7 @@ impl Eval {
     /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
     /// (docs/cli.md, *The profile of an evaluation*). `K` is a premise's written position as `premise_lit` counts it,
     /// from 1; `Pos` an argument's, from 1. Per rule: `fires(R, N)` firings, `conc(R, N)` solutions concluded,
-    /// `fresh(R, N)` rows that were new, `fresh_whole(R, N)` of them those new at its whole firing, `delta_fires(R, N)` firings solved news first, `activation(R, I)` the place
+    /// `fresh(R, N)` rows that were new, `fresh_whole(R, N)` of them those new at its whole firing, `again(R, N)` solutions that added nothing, neither a row nor a witness, `delta_fires(R, N)` firings solved news first, `activation(R, I)` the place
     /// of its firing over the whole store among the run's (from 1), `written_order(R, Why)` why the planner kept it
     /// in written order. Per premise: `width(R, K, N)` partial rows that reached it,
     /// `read(R, K, N)` rows read from the store there, `yield(R, K, N)` rows that left it, `widest(R, K, N)` its
@@ -276,7 +278,7 @@ impl Eval {
         let mut out = String::new();
         let mut rules: Vec<Rc<ERule>> = self.rules.clone();
         rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
-        let count = |m: &HashMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);
+        let count = |m: &FxMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);
         for r in &rules {
             let id = self.h.name(r.id).to_string();
             let _ = writeln!(
@@ -292,6 +294,9 @@ impl Eval {
             }
             if let Some(n) = self.cost.fresh_whole_by_rule.get(&r.id) {
                 let _ = writeln!(out, "fresh_whole[profile]({id}, {n}).");
+            }
+            if let Some(n) = self.cost.again_by_rule.get(&r.id) {
+                let _ = writeln!(out, "again[profile]({id}, {n}).");
             }
             if let Some(why) = self.written_order_reason(r) {
                 let _ = writeln!(out, "written_order[profile]({id}, {why}).");

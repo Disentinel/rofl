@@ -5600,7 +5600,7 @@ impl Eval {
     }
 
     fn conclude(&mut self, r: &Rc<ERule>, sol: Sol, out: &mut Front) -> Result<(), Halt> {
-        let head = r.clause.head.clone();
+        let head = &r.clause.head;
         let persp_t = walk(&self.h, head.persp, &sol.s);
         let args: Vec<Term> = if persp_t.is_atom() {
             head.args
@@ -5683,7 +5683,7 @@ impl Eval {
                 Witness {
                     rule: r.id,
                     tick,
-                    prems: sol.prems.clone(),
+                    prems: sol.prems,
                 },
             )
         };
@@ -5704,8 +5704,11 @@ impl Eval {
             }
             self.charge_row(Some(r.id), true)?;
             self.write_derived_by(r.id, head.rel, persp, &args, id, out);
-        } else if self.ds.charge {
-            self.bump_steps()?;
+        } else {
+            *self.cost.again_by_rule.entry(r.id).or_insert(0) += 1;
+            if self.ds.charge {
+                self.bump_steps()?;
+            }
         }
         if is_new {
             out.note(head.rel, id);

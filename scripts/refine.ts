@@ -29,6 +29,8 @@ refine_drop(R, K, D) :- width[profile](R, K, W), yield[profile](R, K, Y), conclu
 refine_waste(dropped, T) :- T is sum(D ; R, K : refine_drop(R, K, D)).
 refine_redo(R, D) :- conc[profile](R, C), fresh[profile](R, F), concludes(R, _), D is C - F, D > 0.
 refine_waste(rederived, T) :- T is sum(D ; R : refine_redo(R, D)).
+refine_again(R, N) :- again[profile](R, N), concludes(R, _).
+refine_waste(again, T) :- T is sum(N ; R : refine_again(R, N)).
 refine_profile(Rel, A) :- asserted_by($fact(Rel, profile, A), _, _).
 `;
 
@@ -55,7 +57,7 @@ const tmp = (name: string, text: string): string => {
 };
 
 export type Report = { head: string; rule: string; at: string; before: number; forecast: number; after: number; order: string; was: string };
-export type Waste = { dropped: [number, number]; rederived: [number, number]; ms: [number, number] };
+export type Waste = { dropped: [number, number]; rederived: [number, number]; again: [number, number]; ms: [number, number] };
 
 export function refine(files: string[]): { facts: string; report: Report[]; waste: Waste } {
   const meter = tmp('meter.rofl', METER);
@@ -104,7 +106,7 @@ export function refine(files: string[]): { facts: string; report: Report[]; wast
     }))
     .sort((a, b) => a.head.localeCompare(b.head) || Number(a.at) - Number(b.at));
   const w = (k: string): [number, number] => [before.waste.get(k) ?? 0, after.waste.get(k) ?? 0];
-  return { facts, report, waste: { dropped: w('dropped'), rederived: w('rederived'), ms: [before.ms, after.ms] } };
+  return { facts, report, waste: { dropped: w('dropped'), rederived: w('rederived'), again: w('again'), ms: [before.ms, after.ms] } };
 }
 
 // the arguments of a `$cons` list, each as the engine prints it: a comma at depth 0 outside a string separates
@@ -138,7 +140,7 @@ export function render(report: Report[], waste?: Waste): string {
   const near = n((r) => r.after > 0 && r.forecast > 0 && r.after <= r.forecast * 2 && r.forecast <= r.after * 2);
   lines.push(`${report.length} planned: ${n((r) => r.after < r.before)} better (kept as facts), ${n((r) => r.after > r.before)} worse, ${n((r) => r.after === r.before)} unchanged; forecast within 2x of the measure on ${near}`);
   // the aim is both at zero, and only while the clock falls too: a wall time of one run on this machine, noise about a tenth
-  if (waste) lines.push(`thrown away, before -> with every plan: ${waste.dropped[0]} -> ${waste.dropped[1]} partial solutions dropped at a premise, ${waste.rederived[0]} -> ${waste.rederived[1]} solutions concluded that were not new; the run ${(waste.ms[0] / 1000).toFixed(1)} s -> ${(waste.ms[1] / 1000).toFixed(1)} s (one run each, noise about a tenth)`);
+  if (waste) lines.push(`thrown away, before -> with every plan: ${waste.dropped[0]} -> ${waste.dropped[1]} partial solutions dropped at a premise, ${waste.rederived[0]} -> ${waste.rederived[1]} solutions concluded that were not new, ${waste.again[0]} -> ${waste.again[1]} of them that added not even a witness; the run ${(waste.ms[0] / 1000).toFixed(1)} s -> ${(waste.ms[1] / 1000).toFixed(1)} s (one run each, noise about a tenth)`);
   return lines.join('\n') + '\n';
 }
 
