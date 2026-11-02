@@ -149,6 +149,9 @@ try {
     if (w0.together || w0.ticks || w0.budget || w0.cap || w0.space || w0.strata || w0.explain || w0.retract?.length || w0.oneEngine === 'ts') continue;
     const w = placed(w0);
     if (w.files.some((f) => !fs.existsSync(f) || expectedRefusal(f)) || belowFiles(w.files).length) continue;
+    // a world reading the book `profile` reads its own evaluation: split in two or in stages the evaluation is another,
+    // and so is the profile (docs/cli.md, *The profile of an evaluation*)
+    if (w.files.some((f) => /\[profile\]/.test(fs.readFileSync(f, 'utf8')))) continue;
     let fresh: string;
     try {
       fresh = execFileSync(LOAD, ['load', BOOT, ...w.files], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
