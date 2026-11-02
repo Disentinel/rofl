@@ -411,9 +411,8 @@ impl<'a> Parser<'a> {
                 // and the escapes are still written. `src/tokens.ts` decodes
                 // five and REFUSES the rest by name, so this refuses too rather
                 // than passing an unknown escape through as itself.
-                let raw = self.text(&s);
-                let inner: Vec<char> = raw.chars().collect();
-                let mut out = String::new();
+                let inner = &self.src[s.start..=s.end];
+                let mut out = String::with_capacity(inner.len());
                 let mut k = 1;
                 while k + 1 < inner.len() {
                     if inner[k] == '\\' {
