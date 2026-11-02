@@ -11838,7 +11838,8 @@ impl Eval {
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => {
-                        let (pos, vals) = par::bound_args(&self.h, l, s);
+                        let b = par::bound_args(&self.h, l, s);
+                        let (pos, vals) = (b.pos(), b.vals());
                         let ix = self.news_ix.as_ref().filter(|(at, rel, _)| *at == keys as *const _ as usize && *rel == l.rel && !pos.is_empty()).map(|(_, _, ix)| ix.clone());
                         let store = &self.store;
                         let kept = |f: &FactId| {
@@ -11847,7 +11848,7 @@ impl Eval {
                                 r.rel == l.rel && (persp.is_none() || Some(r.persp) == persp)
                             }
                         };
-                        match ix.as_ref().and_then(|ix| ix.rows(store, keys.iter().copied(), l.args.len(), &pos, &vals)) {
+                        match ix.as_ref().and_then(|ix| ix.rows(store, keys.iter().copied(), l.args.len(), pos, vals)) {
                             Some(rows) => rows.iter().copied().filter(kept).collect(),
                             None => keys.iter().copied().filter(kept).collect(),
                         }

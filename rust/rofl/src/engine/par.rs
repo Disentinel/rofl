@@ -75,17 +75,52 @@ impl NewsIx {
     }
 }
 
-/// The arguments of `l` that `s` binds to ground terms, and those terms.
-pub(super) fn bound_args(h: &Heap, l: &Lit, s: &Subst) -> (Vec<usize>, Vec<Term>) {
-    let (mut pos, mut vals) = (Vec::with_capacity(l.args.len()), Vec::with_capacity(l.args.len()));
+/// The arguments of `l` that `s` binds to ground terms, and those terms: held in place up to `INLINE` of them, as a
+/// probe asks for every partial solution.
+pub(super) fn bound_args(h: &Heap, l: &Lit, s: &Subst) -> Bound {
+    let mut b = Bound { n: 0, pos: [0; INLINE], vals: [Term::atom(0); INLINE], spill: None };
     for (i, &a) in l.args.iter().enumerate() {
         let t = walk(h, a, s);
         if h.is_ground(t) {
-            pos.push(i);
-            vals.push(t);
+            b.push(i, t);
         }
     }
-    (pos, vals)
+    b
+}
+
+const INLINE: usize = 8;
+
+pub(super) struct Bound {
+    n: usize,
+    pos: [usize; INLINE],
+    vals: [Term; INLINE],
+    spill: Option<(Vec<usize>, Vec<Term>)>,
+}
+
+impl Bound {
+    fn push(&mut self, p: usize, t: Term) {
+        if let Some((pos, vals)) = &mut self.spill {
+            pos.push(p);
+            vals.push(t);
+        } else if self.n == INLINE {
+            let (mut pos, mut vals) = (self.pos.to_vec(), self.vals.to_vec());
+            pos.push(p);
+            vals.push(t);
+            self.spill = Some((pos, vals));
+        } else {
+            self.pos[self.n] = p;
+            self.vals[self.n] = t;
+            self.n += 1;
+        }
+    }
+
+    pub(super) fn pos(&self) -> &[usize] {
+        self.spill.as_ref().map_or(&self.pos[..self.n], |s| &s.0)
+    }
+
+    pub(super) fn vals(&self) -> &[Term] {
+        self.spill.as_ref().map_or(&self.vals[..self.n], |s| &s.1)
+    }
 }
 
 /// The candidates of one partial solution: rows, kept by `keep`.
@@ -213,11 +248,11 @@ impl<'a> Frozen<'a> {
         if !self.store.indexed(l.rel, persp) {
             return Some((None, false));
         }
-        let (pos, vals) = bound_args(self.h, l, s);
-        if pos.is_empty() {
+        let b = bound_args(self.h, l, s);
+        if b.pos().is_empty() {
             return Some((None, false));
         }
-        Some((self.store.arg_matches_ro(self.h, l.rel, persp, l.args.len(), &pos, &vals, limit)?, true))
+        Some((self.store.arg_matches_ro(self.h, l.rel, persp, l.args.len(), b.pos(), b.vals(), limit)?, true))
     }
 
     /// The runs a scan reads, in `rel_persp` / `rel_all` order.
@@ -244,8 +279,8 @@ impl<'a> Frozen<'a> {
         match (&self.news, narrow) {
             (Some((keys, _)), Some(n)) => c.owned = n.into_iter().filter(|f| keys.contains(f)).collect(),
             (Some((_, news)), _) => {
-                let (pos, vals) = bound_args(self.h, self.l, &a.s);
-                match (!pos.is_empty()).then(|| self.nix.rows(self.store, news.iter().copied(), self.l.args.len(), &pos, &vals)).flatten() {
+                let b = bound_args(self.h, self.l, &a.s);
+                match (!b.pos().is_empty()).then(|| self.nix.rows(self.store, news.iter().copied(), self.l.args.len(), b.pos(), b.vals())).flatten() {
                     Some(rows) => c.owned = rows.to_vec(),
                     None => c.segs = vec![&news[..]],
                 }
