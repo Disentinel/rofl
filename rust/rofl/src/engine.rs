@@ -704,6 +704,15 @@ pub struct Eval {
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
     /// the premise statistics their estimates read.
     plan_trial: bool,
+    /// The store's next id when each rule fired whole in `fire_all`: a fact older than that was joined by that firing,
+    /// and is not news for the rule in the rounds after (`news_since`).
+    seen_at: FxMap<Sym, FactId>,
+    /// SEMI-NAIVE EXCLUSION while a rule fires on the news at one plan position: at each earlier plan position whose
+    /// relation is news too, the rows that are this round's news there, which that position's own firing reads (a
+    /// solution with news at two places is found once, from the first). None at a position: nothing excluded.
+    sn: Option<Rc<Vec<Option<Rc<FxSet<FactId>>>>>>,
+    /// The plan position of each body position of the delta plan solving now (`fire_planned`); None: the body is the plan.
+    sn_perm: Option<Rc<Vec<usize>>>,
     pub add: AddState,
     pub ds: DsState,
     pub vc: VClosureState,
@@ -842,7 +851,9 @@ pub struct Eval {
     /// reads it, so that the kernel's program is judged by the same hypotheses as the world's (docs/cli.md, *The
     /// profile of an evaluation*). Written in the one branch that evaluates safety.rofl; a memo or a kept image
     /// carries none, and the profile then says nothing of the kernel.
-    kernel_profile: Option<String>,
+    /// The kernel's last whole evaluation, for its profile when a rule asks (`kernel_profile_text`), shared with
+    /// `safety_kept` when it settled.
+    kernel_eval: Option<Rc<(Vec<Vec<Term>>, Eval)>>,
     /// The evaluated safety.rofl world of the last judgement and the rows it was judged over (its heap is this
     /// world's): a program that only adds rows is judged by adding them to it.
     safety_kept: Option<Rc<(Vec<Vec<Term>>, Eval)>>,
@@ -2172,6 +2183,9 @@ impl Eval {
             scans: Vec::new(),
             add: AddState::default(),
             plan_trial: false,
+            seen_at: FxMap::default(),
+            sn: None,
+            sn_perm: None,
             ds: DsState::default(),
             vc: VClosureState::default(),
             alias_drules: Vec::new(),
@@ -2247,7 +2261,7 @@ impl Eval {
             known_answer: known,
             safety_memo: None,
             safety_kept: None,
-            kernel_profile: None,
+            kernel_eval: None,
             prov: ProvState::default(),
             pending_assert: prov::Notes::default(),
             reads_assertions: false,
@@ -2917,7 +2931,6 @@ impl Eval {
             Err(h) => {
                 let mut sub = Eval::new(h, pol, POLICY_BUDGET, Mode::Strata, true);
                 let res = sub.run().map(|o| o.partial);
-                self.kernel_profile = Some(sub.kernel_profile_text());
                 (sub, res)
             }
         };
@@ -2933,8 +2946,10 @@ impl Eval {
         }
         let answer = self.read_answer(&mut h, pol, rules, &lattices);
         self.h = h;
+        let sub = Rc::new((judged.clone(), sub));
+        self.kernel_eval = Some(sub.clone());
         if err.is_none() {
-            self.safety_kept = Some(Rc::new((judged.clone(), sub)));
+            self.safety_kept = Some(sub);
         }
         self.safety_memo = Some((judged, answer.clone(), err));
         answer
@@ -5168,11 +5183,21 @@ impl Eval {
         };
         for (i, r) in batch.iter().enumerate().skip(from) {
             self.batch_at = i;
+            let n = self.cost.activation_by_rule.len() as u64 + 1;
+            self.cost.activation_by_rule.entry(r.id).or_insert(n);
+            if round.is_none() {
+                self.seen_at.entry(r.id).or_insert(self.store.len_ids());
+            }
             let t = std::time::Instant::now();
+            let fresh0 = self.cost.new_by_rule.get(&r.id).copied().unwrap_or(0);
             let f = match round.take() {
                 Some(fl) => self.finish(r, fl, |e| e.fire_rule(r, None)),
                 None => self.fire_rule(r, None),
             };
+            if round.is_none() {
+                let fresh1 = self.cost.new_by_rule.get(&r.id).copied().unwrap_or(0);
+                self.cost.fresh_whole_by_rule.entry(r.id).or_insert(fresh1 - fresh0);
+            }
             let f = match f {
                 Ok(f) => f,
                 Err(e) => {
@@ -5321,12 +5346,24 @@ impl Eval {
                         let Some(keys) = cur.by_rel.get(&l.rel) else {
                             continue;
                         };
+                        let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
+                        let keys = &*keys;
+                        if twice {
+                            let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
+                            for (j, e) in excl.iter_mut().enumerate() {
+                                let BodyElem::Pos(lj) = &r.plan[j] else { continue };
+                                let Some(kj) = cur.by_rel.get(&lj.rel) else { continue };
+                                *e = self.news_since(r, lj.rel, kj).map(|k| Rc::new(k.into_owned()));
+                            }
+                            self.sn = excl.iter().any(Option::is_some).then(|| Rc::new(excl));
+                        }
                         let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
                             Some(p) => e.fire_planned(r, &p, Some(keys)),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
-                        let f = self.fire_at(r, i + 1, fl.take(), fire)?;
-                        merge_front(&mut self.cur_front, f);
+                        let f = self.fire_at(r, i + 1, fl.take(), fire);
+                        self.sn = None;
+                        merge_front(&mut self.cur_front, f?);
                     }
                     Ok(())
                 })();
@@ -5346,6 +5383,27 @@ impl Eval {
             }
         }
         Ok(())
+    }
+
+    /// The rows excluded at body position `i` of the body solving now (`sn`), by its plan position.
+    pub(super) fn sn_except(&self, i: usize) -> Option<Rc<FxSet<FactId>>> {
+        let sn = self.sn.as_ref()?;
+        let at = self.sn_perm.as_ref().map_or(i, |p| p[i]);
+        sn.get(at)?.clone()
+    }
+
+    /// THE NEWS OF A ROUND THAT ARE NEWS FOR `r`: the facts the rule's whole firing in `fire_all` did not see, those
+    /// with an id from the store's length at that firing. The first round carries every conclusion of the whole
+    /// firings, and a rule activated after its producers joined them already: fired again on them in written order it
+    /// read the whole body once more per premise (`ref` at 250 files of vscode: five firings of 372 062 for one). A
+    /// relation with a revived fact (an id older than the firing, alive again) keeps every key. None: nothing is news.
+    fn news_since<'a>(&self, r: &ERule, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
+        let Some(&w) = self.seen_at.get(&r.id) else { return Some(std::borrow::Cow::Borrowed(keys)) };
+        if self.store.revived.contains_key(&rel) || keys.iter().all(|&k| k >= w) {
+            return Some(std::borrow::Cow::Borrowed(keys));
+        }
+        let fresh: FxSet<FactId> = keys.iter().copied().filter(|&k| k >= w).collect();
+        if fresh.is_empty() { None } else { Some(std::borrow::Cow::Owned(fresh)) }
     }
 
     fn fire_rule(
@@ -5850,7 +5908,7 @@ impl Eval {
                 }
                 let b = &body[i];
                 let mut next: Vec<Sol> = Vec::new();
-                let mark = self.cost.cost_mark(rule_id, b);
+                let mark = self.cost.cost_mark(rule_id, front_at.and_then(|(a, _)| cost::prem_key(&body[a])), b);
                 let left = match self.par_level(b, i, &acc, depth, front_at, rule_id) {
                     Some(made) => {
                         next = made?;
@@ -5876,7 +5934,13 @@ impl Eval {
                                 let (faults, unknowns) = (self.fault_count, self.demand.trail.len());
                                 let found = self.match_premise(l, &a.s, depth, only)?;
                                 self.demand_below(depth, l, &a.s, faults, unknowns);
+                                let excl = if depth == 0 { self.sn_except(i) } else { None };
                                 for (s2, r) in found {
+                                    if let (Some(x), PremRef::Fact(f)) = (&excl, &r) {
+                                        if x.contains(f) {
+                                            continue;
+                                        }
+                                    }
                                     let mut prems = a.prems.clone();
                                     prems.push(r);
                                     next.push(Sol { s: s2, prems });
@@ -9839,10 +9903,12 @@ impl Eval {
     /// type error or a zero divisor has none, and the tuple may not exist.
     fn fault_sure(&mut self, r: &ERule, s: &Subst, at: &BodyElem) -> bool {
         let Some((last, rest)) = r.plan.split_last() else { return false };
-        if !std::ptr::eq(last, at) && brk!("label_fault_anywhere" => false; true) {
+        // `at` may belong to a planned order of the same body: the same builtin, not the same address
+        let BodyElem::Bi { op, l, r: rt } = last else { return false };
+        let same = matches!(at, BodyElem::Bi { op: o2, l: l2, r: r2 } if o2 == op && l2 == l && r2 == rt);
+        if !same && brk!("label_fault_anywhere" => false; true) {
             return false;
         }
-        let BodyElem::Bi { op, l, r: rt } = last else { return false };
         let (lv, rv) = (resolve(&mut self.h, *l, s), resolve(&mut self.h, *rt, s));
         if *op != self.v.op_is || !matches!(lv.kind(), TermK::Var(_)) || !self.h.is_ground(rv) {
             return false;
@@ -11562,10 +11628,8 @@ impl Eval {
                     out.push((a, r));
                     continue;
                 }
-                match self.store.get(l.rel, book, &inst) {
-                    Some(id) => out.push((inst, PremRef::Fact(id))),
-                    None => return None,
-                }
+                let id = self.store.get(l.rel, book, &inst)?;
+                out.push((inst, PremRef::Fact(id)));
             }
             return Some(out);
         }

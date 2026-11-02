@@ -16,10 +16,20 @@ fn pack() -> String {
     file("models/engine/profile.rofl")
 }
 
+/// The pack judges the kernel's rules beside the world's (program[profile](R, safety)); these questions are of the world's.
+const OWN: &str = "w_rederives(R, C, F) :- rederives[profile](R, C, F), concludes(R, _).
+w_rescan(R, K, Rel) :- rescan[profile](R, K, Rel), concludes(R, _).
+w_scan_why(R, K, W) :- scan_why[profile](R, K, W), concludes(R, _).
+w_scan(R, K, Rel, Rd, O) :- scan[profile](R, K, Rel, Rd, O), concludes(R, _).
+w_barren(R, Rd) :- barren[profile](R, Rd), concludes(R, _).
+w_growth(R, G) :- growth[profile](R, G), concludes(R, _).
+";
+
 fn world(src: &str) -> Session {
     let mut s = Session::fresh(BUDGET);
     s.load(&pack(), None).unwrap_or_else(|e| panic!("{e:?}"));
     s.load(src, None).unwrap_or_else(|e| panic!("{e:?}"));
+    s.load(OWN, None).unwrap_or_else(|e| panic!("{e:?}"));
     s.evaluate().unwrap();
     s
 }
@@ -65,14 +75,14 @@ fn the_hub_world_shows_every_planted_verdict_and_forecast() {
     assert!(rows(&mut s, "forecast_off[profile](Rel, Kind, N, Actual)").is_empty());
     assert_eq!(rows(&mut s, "forecast_loose[profile](Rel, Kind, N, Actual)"), vec![vec!["two".to_string(), "join".into(), "54".into(), "9".into()]]);
     // verdicts
-    assert_eq!(rows(&mut s, "rederives[profile](R, Conc, Fresh)"), vec![vec![two.clone(), "27".to_string(), "9".to_string()]]);
-    assert_eq!(rows(&mut s, "rescan[profile](R, K, Rel)"), vec![vec![depth.clone(), "1".to_string(), "nxt".to_string()]]);
-    assert_eq!(rows(&mut s, "scan_why[profile](R, K, Why)"), vec![vec![depth.clone(), "1".to_string(), "small_relation".to_string()]]);
-    assert!(rows(&mut s, "barren[profile](R, Read)").is_empty());
+    assert_eq!(rows(&mut s, "w_rederives(R, Conc, Fresh)"), vec![vec![two.clone(), "27".to_string(), "9".to_string()]]);
+    assert_eq!(rows(&mut s, "w_rescan(R, K, Rel)"), vec![vec![depth.clone(), "1".to_string(), "nxt".to_string()]]);
+    assert_eq!(rows(&mut s, "w_scan_why(R, K, Why)"), vec![vec![depth.clone(), "1".to_string(), "small_relation".to_string()]]);
+    assert!(rows(&mut s, "w_barren(R, Read)").is_empty());
     // the growth classes: depth news first, the two closures the kernel's
-    assert_eq!(rows(&mut s, "growth[profile](R, per_row)"), vec![vec![depth.clone()]]);
-    assert_eq!(rows(&mut s, "growth[profile](R, kernel)").len(), 2);
-    assert!(rows(&mut s, "growth[profile](R, per_round)").is_empty());
+    assert_eq!(rows(&mut s, "w_growth(R, per_row)"), vec![vec![depth.clone()]]);
+    assert_eq!(rows(&mut s, "w_growth(R, kernel)").len(), 2);
+    assert!(rows(&mut s, "w_growth(R, per_round)").is_empty());
     // the pack's own rules are profiled and left out of what it says
     assert!(rows(&mut s, "pf_own[profile](R)").len() > 20);
     for v in ["scan[profile](R, K, Rel, Read, Out)", "hot[profile](R, Pct)", "rederives[profile](R, C, F)"] {
@@ -97,8 +107,8 @@ fn two_sizes_judge_the_forecasts_and_the_growth_class() {
         assert!(rows(&mut s, "forecast_off[profile](Rel, Kind, N, Actual)").is_empty(), "a bound exceeded at {n}");
         assert!(rows(&mut s, "forecast_loose[profile](Rel, Kind, N, Actual)").is_empty(), "a bound loose at {n}");
         // nxt is indexed at this size: a lookup is a lookup, and nothing is scanned or rescanned
-        assert!(rows(&mut s, "scan[profile](R, K, Rel, Read, Out)").is_empty(), "scan at {n}");
-        assert!(rows(&mut s, "rescan[profile](R, K, Rel)").is_empty(), "rescan at {n}");
+        assert!(rows(&mut s, "w_scan(R, K, Rel, Read, Out)").is_empty(), "scan at {n}");
+        assert!(rows(&mut s, "w_rescan(R, K, Rel)").is_empty(), "rescan at {n}");
         let depth = rule_of(&mut s, "depth");
         assert!(s.holds(&format!("growth[profile]({depth}, per_row)")).unwrap());
         let r = rows(&mut s, &format!("rule_read[profile]({depth}, T)"));

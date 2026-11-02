@@ -43,6 +43,8 @@ struct Frozen<'a> {
     /// a premise `@init` after the first tick matches nothing, read nowhere
     off: bool,
     nix: NewsIx,
+    /// the rows this round's news at an earlier position reads, excluded here (`Eval::sn`)
+    except: Option<Rc<FxSet<FactId>>>,
 }
 
 // SAFETY: the store and the heap share their bases through `Rc`, which is why neither is `Sync`. The threads only
@@ -264,6 +266,9 @@ impl<'a> Frozen<'a> {
     }
 
     fn kept(&self, c: &Cands, f: FactId) -> bool {
+        if self.except.as_ref().is_some_and(|x| x.contains(&f)) {
+            return false;
+        }
         match c.keep {
             Keep::All => true,
             Keep::Alive => self.store.alive(f),
@@ -420,7 +425,8 @@ impl Eval {
         if !off {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
-        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default() };
+        let except = if depth == 0 && !neg { self.sn_except(i) } else { None };
+        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default(), except };
         let threads = self.par.threads;
 
         // the candidates of each partial solution, found over runs of them
@@ -570,7 +576,8 @@ impl Eval {
             .enumerate()
             .map(|(k, &(l, neg))| {
                 let news = front_news(front_at, i + k, neg);
-                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default() }
+                let except = if depth == 0 && !neg { self.sn_except(i + k) } else { None };
+                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default(), except }
             })
             .collect();
         let sort = !self.store.unordered;
@@ -625,7 +632,7 @@ impl Eval {
         let mut grew = 0;
         for (k, t) in levels.iter().enumerate() {
             let (l, neg) = lits[k];
-            let mark = self.cost.cost_mark(rule_id, &body[i + k]);
+            let mark = self.cost.cost_mark(rule_id, front_at.and_then(|(a, _)| super::cost::prem_key(&body[a])), &body[i + k]);
             let now = self.rows + (t.outs - t.last) as i64;
             if now > self.peak_rows {
                 self.peak_rows = now;

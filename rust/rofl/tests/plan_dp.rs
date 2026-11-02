@@ -1,7 +1,7 @@
-//! THE PLAN COMPUTED AS A FIXPOINT WITH MIN (models/engine/plan.rofl; docs/cli.md, *The plan as facts*). Over
+//! THE PLAN AS THE CHEAPEST OF EVERY ORDER (models/engine/plan.rofl; docs/cli.md, *The plan as facts*). Over
 //! examples/checks/plan-world.rofl the pack finds, for `out` and `alt` alike, the order b, d, c, a at a forecast cost of
-//! 210, below the 211 of the hand-given order and the 1001 of the greedy one; the world run under the plans it found
-//! measures the widths the forecast said. Over the hub world a recursive rule is planned news first at each news
+//! 208, below the 211 of the hand-given order and the 1001 of the greedy one; the world run under the plans it found
+//! measures 210, a row from the forecast. Over the hub world a recursive rule is planned news first at each news
 //! position, and the packs' own rules are never planned.
 use rofl::session::Session;
 use std::path::Path;
@@ -44,13 +44,15 @@ fn plans(s: &mut Session) -> String {
 #[test]
 fn the_pack_finds_a_cheaper_order_than_the_given_one_and_the_world_measures_its_forecast() {
     let (profile, plan, world) = (file("models/engine/profile.rofl"), file("models/engine/plan.rofl"), file("examples/checks/plan-world.rofl"));
-    let mut r = run(&[&profile, &plan, &world]);
+    // the reflection reads the measured world's profile (its activation order is that world's, not the reflection's)
+    let measured = run(&[&profile, &world]).eval.profile_text();
+    let mut r = run(&[&profile, &plan, &world, &measured]);
     let (out, alt) = (rule_of(&mut r, "out"), rule_of(&mut r, "alt"));
     // b, d, c, a for both: written 2, 4, 3, 1 in out and 4, 3, 2, 1 in alt
     assert_eq!(one(&mut r, &format!("plan[fixpointplan]({out}, 0, L)")), ["$cons(2,$cons(4,$cons(3,$cons(1,$nil))))"]);
     assert_eq!(one(&mut r, &format!("plan[fixpointplan]({alt}, 0, L)")), ["$cons(4,$cons(3,$cons(2,$cons(1,$nil))))"]);
-    assert_eq!(one(&mut r, &format!("plan_cost[fixpointplan]({out}, 0, C)")), ["210"]);
-    assert_eq!(one(&mut r, &format!("plan_cost[fixpointplan]({alt}, 0, C)")), ["210"]);
+    assert_eq!(one(&mut r, &format!("plan_cost[fixpointplan]({out}, 0, C)")), ["208"]);
+    assert_eq!(one(&mut r, &format!("plan_cost[fixpointplan]({alt}, 0, C)")), ["208"]);
     // only the world's rules are planned: out, alt, two
     assert_eq!(rows(&mut r, "plan[fixpointplan](R, At, L)").len(), 3);
     for row in rows(&mut r, "pl_rule(R, N)") {

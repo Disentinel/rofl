@@ -2105,19 +2105,20 @@ impl Store {
 
     /// Every (relation, book) holding a live row, with its live rows and widest arity, in no order: the
     /// census a profile reports (`Eval::profile_text`).
-    pub fn live_census(&self) -> Vec<(Sym, Sym, usize, usize)> {
+    pub fn live_census(&self) -> Vec<(Sym, Sym, usize, usize, usize)> {
         let mut out = Vec::new();
         for (rel, groups) in self.idx.iter() {
             for (p, r) in groups {
-                let (mut n, mut arity) = (0usize, 0usize);
+                let (mut n, mut base, mut arity) = (0usize, 0usize, 0usize);
                 for &k in r.canon.iter().chain(r.arrived.iter()) {
                     if self.alive(k) {
                         n += 1;
+                        base += usize::from(self.rec(k).base());
                         arity = arity.max(self.facts.args(k).len());
                     }
                 }
                 if n > 0 {
-                    out.push((*rel, *p, n, arity));
+                    out.push((*rel, *p, n, base, arity));
                 }
             }
         }

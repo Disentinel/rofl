@@ -30,8 +30,9 @@
 //! store, with no news (each rule's first), is ordered the same way from
 //! nothing bound, and needs a larger gain (`MARGIN_FULL`).
 //!
-//! WHICH RULES: those in a world with no lattice, and not an aggregate,
-//! threshold, closure or demand rule: a lattice withdraws what a firing read.
+//! WHICH RULES: those that neither read nor conclude a lattice cell (a cell
+//! withdraws what a firing read, and improves in the order its candidates
+//! arrive), and not an aggregate, threshold, closure or demand rule.
 //! A builtin is a wall: every element written before it is placed before it
 //! and none written after it, so the partial solutions that reach it, and the
 //! holes it makes, are the written order's; the order moves only between two
@@ -124,16 +125,19 @@ impl Eval {
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
-        if p.given {
-            return Some(p.clone());
-        }
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
         } else {
             p.pre + p.cur * (1.0 + p.fan.min(n)) + p.cur * p.fan * (n / p.rows_i.max(1.0)).min(1.0) * p.tail
         };
-        if n * p.unit * if at.is_none() { MARGIN_FULL } else { MARGIN } < written {
+        // the margins cover the engine's own estimate; a given order is the plan's to answer for: the firing over
+        // the whole store takes it as it is, a round takes it where its cost comes under the written firing's
+        if p.given && at.is_none() {
+            return Some(p.clone());
+        }
+        let margin = if p.given { 1.0 } else if at.is_none() { MARGIN_FULL } else { MARGIN };
+        if n * p.unit * margin < written {
             Some(p.clone())
         } else {
             None
@@ -152,12 +156,19 @@ impl Eval {
         self.written_order_reason(r).is_none()
     }
 
+    /// A rule that concludes into a lattice cell or reads one, under a negation or an aggregate too, or a cell carried
+    /// across a tick: a cell improves in the order its candidates arrive and withdraws what a firing read.
+    fn touches_lattice(&self, r: &ERule) -> bool {
+        let lat = |rel: Sym| self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some() || self.carried.contains_key(&rel);
+        lat(r.clause.head.rel) || r.lat_close.is_some() || !r.lattice_outer.is_empty() || r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| lat(l.rel))
+    }
+
     /// Why `r` is kept in written order, or None where a delta-first plan may be built for it (`written_order[profile]`).
     pub(super) fn written_order_reason(&self, r: &Rc<ERule>) -> Option<&'static str> {
         if self.naive {
             return Some("naive");
         }
-        if self.lat.has_cells() {
+        if self.lat.has_cells() && self.touches_lattice(r) {
             return Some("lattice");
         }
         if r.has_agg {
@@ -327,7 +338,10 @@ impl Eval {
 
         // the delta-first order: a plan fact's, or the greedy one
         let (order, unit, given) = match self.planned_order(r, news.map(|_| i)) {
-            Some(o) => (o, 0.0, true),
+            Some(o) => {
+                let u = self.order_unit(r, &o, news.map(|_| i));
+                (o, u, true)
+            }
             None => {
                 let (o, u) = self.greedy_order(r, news.map(|_| i), &[], &[])?;
                 (o, u, false)
@@ -335,6 +349,38 @@ impl Eval {
         };
         let body: Vec<BodyElem> = order.iter().map(|&j| plan[j].clone()).collect();
         Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch, given })
+    }
+
+    /// The cost per news row of firing `r` in `order`, the greedy order's own accounting over an order given: a plan
+    /// fact chooses the order, and the choice between the delta-first firing and the written one stays the engine's
+    /// (`delta_pick`). Taken free, a given order fired from every news row where the greedy one knew the written
+    /// firing was cheaper: the same order 3 2 1 of member_value read 296 319 rows greedy and 7 381 348 given.
+    fn order_unit(&mut self, r: &Rc<ERule>, order: &[usize], start: Option<usize>) -> f64 {
+        let mut bound: Vec<Sym> = Vec::new();
+        let (mut unit, mut cur_d) = (0.0f64, 1.0f64);
+        for (k, &j) in order.iter().enumerate() {
+            let mut vs = Vec::new();
+            r.plan[j].vars(&self.h, &mut vs);
+            match &r.plan[j] {
+                BodyElem::Pos(l) if k == 0 && start == Some(j) => {
+                    let size = self.len_est(l.rel, l.persp.as_atom()).max(1) as f64;
+                    let st0 = self.delta_stat(l, &[]);
+                    (unit, cur_d) = (1.0, if st0.rows == 0.0 { 0.0 } else { (st0.rows / size).min(1.0) });
+                }
+                BodyElem::Pos(l) => {
+                    let st = self.delta_stat(l, &bound);
+                    unit += cur_d * (1.0 + st.fan);
+                    cur_d = (cur_d * st.fan).min(1e15);
+                }
+                _ => unit += cur_d,
+            }
+            for v in vs {
+                if !bound.contains(&v) {
+                    bound.push(v);
+                }
+            }
+        }
+        unit
     }
 
     /// The written position (from 1, as `premise_lit` counts) of `r`'s plan element `j`, and back.
@@ -350,7 +396,8 @@ impl Eval {
 
     /// THE ORDER A PLAN FACT GIVES: `plan[fixpointplan](R, At, Order)`, At the written position of the news premise (0 the
     /// firing over the whole store) and Order the written positions of every premise, from 1 (docs/cli.md, *The plan as
-    /// facts*). The engine takes it as it is, whatever its own estimate says, once it holds up: every premise once, the
+    /// facts*). The engine takes the order as it is, whatever its own estimate says, once it holds up (whether to fire
+    /// from the news in that order or in the written one stays its choice, `order_unit`): every premise once, the
     /// news first, a negation after what binds the variables it shares, a builtin after one of the sets that run it and
     /// where the written order has it (a builtin is a wall, so the holes it makes stay the written order's). A fact that
     /// does not hold up is left alone and the greedy order is built; a rule kept in written order reads none.
@@ -599,8 +646,10 @@ impl Eval {
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
+        self.sn_perm = self.sn.is_some().then(|| Rc::new(p.perm.clone()));
         let before = self.steps;
         let sols = self.solve_body(&p.body, Subst::new(), 0, keys.map(|k| (0, k)), Some(r.id));
+        self.sn_perm = None;
         self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;
@@ -625,7 +674,7 @@ impl Eval {
                 sol
             })
             .collect();
-        self.conclude_all(r, sols, Front::default(), false)
+        self.conclude_all(r, sols, Front::default(), true)
     }
 }
 
