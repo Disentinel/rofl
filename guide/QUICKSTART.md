@@ -6,7 +6,10 @@ questions about what it says. `rofl-nb` runs one.
 Only want to look at a notebook? https://disentinel.github.io/rofl/ opens one in the browser, on the TypeScript engine: drop the
 `.rofl.md` with the files its `reads:` and `code:` name (or the whole folder) on the page, or pass a link,
 `?gh=owner/repo/path@ref` or `?url=` a GitHub page or raw link. The files beside it are read from where it is. The
-playground is at `/playground/`.
+playground is at `/playground/`. From the next release VS Code can do the
+same: **ROFL: Open notebook from GitHub…** takes a link or
+`owner/repo/path.rofl.md@ref` and opens the notebook without a clone, private
+repositories too, through the GitHub account VS Code is signed in with.
 
 ## 1. Copy the examples
 
