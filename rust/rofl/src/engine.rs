@@ -5348,7 +5348,7 @@ impl Eval {
                         };
                         let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
                         let keys = &*keys;
-                        if twice && brk!("semi_naive_off" => false; true) {
+                        if twice {
                             let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
                             for (j, e) in excl.iter_mut().enumerate() {
                                 let BodyElem::Pos(lj) = &r.plan[j] else { continue };
@@ -9903,10 +9903,12 @@ impl Eval {
     /// type error or a zero divisor has none, and the tuple may not exist.
     fn fault_sure(&mut self, r: &ERule, s: &Subst, at: &BodyElem) -> bool {
         let Some((last, rest)) = r.plan.split_last() else { return false };
-        if !std::ptr::eq(last, at) && brk!("label_fault_anywhere" => false; true) {
+        // `at` may belong to a planned order of the same body: the same builtin, not the same address
+        let BodyElem::Bi { op, l, r: rt } = last else { return false };
+        let same = matches!(at, BodyElem::Bi { op: o2, l: l2, r: r2 } if o2 == op && l2 == l && r2 == rt);
+        if !same && brk!("label_fault_anywhere" => false; true) {
             return false;
         }
-        let BodyElem::Bi { op, l, r: rt } = last else { return false };
         let (lv, rv) = (resolve(&mut self.h, *l, s), resolve(&mut self.h, *rt, s));
         if *op != self.v.op_is || !matches!(lv.kind(), TermK::Var(_)) || !self.h.is_ground(rv) {
             return false;
@@ -11626,10 +11628,8 @@ impl Eval {
                     out.push((a, r));
                     continue;
                 }
-                match self.store.get(l.rel, book, &inst) {
-                    Some(id) => out.push((inst, PremRef::Fact(id))),
-                    None => return None,
-                }
+                let id = self.store.get(l.rel, book, &inst)?;
+                out.push((inst, PremRef::Fact(id)));
             }
             return Some(out);
         }

@@ -86,10 +86,8 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let (mut scans, again) = plan_scans(s, r, &stamps, all, &mut p)?;
     let out = going(std::mem::take(&mut p.goes), &p.stays);
     let mut n_out = out.len();
-    let mut touched = match s.retract_set_delta(&out)? {
-        Err(why) => return Err(why),
-        Ok(d) => d.overdeleted + d.rederived,
-    };
+    let d = s.retract_set_delta(&out)??;
+    let mut touched = d.overdeleted + d.rederived;
     if !p.add.is_empty() {
         match s.load_delta(&p.add, None) {
             Err(d) => return Err(d.join("; ")),
@@ -245,10 +243,8 @@ fn settle_scans(s: &mut Session, files: &[String], old: &HashMap<&str, &Unit>, p
             for sc in &dropped {
                 p.took.push(format!("{} (no longer asked)", sc.text));
             }
-            match s.retract_set_delta(&out)? {
-                Err(why) => return Err(why),
-                Ok(d) => touched += d.overdeleted + d.rederived,
-            }
+            let d = s.retract_set_delta(&out)??;
+            touched += d.overdeleted + d.rederived;
         }
     }
     Ok((touched, n_out))
