@@ -52,6 +52,6 @@ and worlds with a lattice are solved in written order and read no plan.
 ## What not to do
 
 - Do not edit `plan.rofl` by hand to a guess. Every fact in it is to come from the loop or from a measurement.
-- Do not put the packs in the world they plan: the lattice would hold every rule of it in written order.
+- Do not put the packs in the world they plan: the reflection reads the measured world's profile (its `activation` order is that world's), and the packs beside the data would change the schedule they read.
 - Do not take `before` from one machine and `after` from another: widths are deterministic, but a different data set
   is a different world.

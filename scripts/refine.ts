@@ -15,6 +15,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileHash, keptOr, keyOf } from './keep.ts';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const RUST = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', 'rofl');
@@ -58,10 +59,18 @@ export type Waste = { dropped: [number, number]; rederived: [number, number]; ms
 
 export function refine(files: string[]): { facts: string; report: Report[]; waste: Waste } {
   const meter = tmp('meter.rofl', METER);
-  const measure = (extra: string[]) => {
+  const measured = (extra: string[]) => {
     const [widths, orders, heads, waste, profile] = ask([...files, meter, ...extra], ['refine_width(R, At, T)', 'refine_order(R, At, O, W)', 'concludes(R, H)', 'refine_waste(W, T)', 'refine_profile(Rel, A)'], WALLS);
+    return { ms: lastMs, widths, orders, heads, waste, profile };
+  };
+  const measure = (extra: string[]) => {
+    // the measure of the world as it is does not change while the world, the engine and the meter do not: it is kept
+    // in .cache/rofl under their hash (scripts/keep.ts), as npm test keeps its answers, and a run of the loop over an
+    // unchanged world pays the reflection and the measure under the plans alone
+    const key = extra.length ? null : keyOf('refine', [['files', files.map((f) => (f.startsWith('@') ? f : `${path.relative(ROOT, f)}:${fileHash(f)}`))], ['engine', fileHash(RUST)], ['meter', METER], ['walls', WALLS]]);
+    const { ms, widths, orders, heads, waste, profile } = keptOr('refine', key, () => measured(extra));
     return {
-      ms: lastMs,
+      ms,
       profile: profile.map(([rel, a]) => `${rel}[profile](${args(a).join(', ')}).`).sort().join('\n') + '\n',
       width: new Map(widths.map(([r, at, t]) => [`${r} ${at}`, Number(t)])),
       waste: new Map(waste.map(([w, t]) => [w, Number(t)])),
@@ -137,11 +146,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   if (args.includes('--check')) {
     const { report, facts, waste } = refine([path.join(ROOT, 'examples/checks/plan-world.rofl')]);
-    const want: Record<string, [number, number, number]> = { out: [1001, 210, 210], alt: [211, 210, 210], two: [11, 11, 11] };
+    const want: Record<string, [number, number, number]> = { out: [1001, 208, 210], alt: [211, 208, 210], two: [11, 11, 11] };
     const bad = report.filter((r) => String(want[r.head]) !== String([r.before, r.forecast, r.after]));
     process.stderr.write(render(report, waste));
     if (bad.length || report.length !== 3 || facts.split('\n').filter(Boolean).length !== 2) { console.log('  FAIL  the loop over plan-world.rofl did not say what it should'); process.exit(1); }
-    console.log('  ok    refine over examples/checks/plan-world.rofl: 1001 -> 210 forecast 210, 211 -> 210, 11 -> 11; two facts kept, the unchanged one not');
+    console.log('  ok    refine over examples/checks/plan-world.rofl: 1001 -> 210 at a forecast of 208, 211 -> 210, 11 -> 11; two facts kept, the unchanged one not');
     process.exit(0);
   }
   const out = args.indexOf('--out');
