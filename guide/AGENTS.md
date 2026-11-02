@@ -11,7 +11,8 @@ Claude Code does not know `rofl-nb` exists. Paste this into the project's
 ## Commands
 
     rofl-nb <file.rofl.md> [--json] [--cell N]   what every cell says
-    rofl-nb <file.rofl.md> --all                 every answer, not the first 12 (JSON: 50)
+    rofl-nb <file.rofl.md> --all                 nothing abridged: every answer, not the first 12 (JSON: 50),
+                                                 every proof whole, every failure a whynot met
     rofl-nb <file.rofl.md> --timing              the time of each phase, on stderr
     rofl-nb <file.rofl.md> --format F            a `draw` in the form F: mermaid, dot, argdown, vega-lite, ... (DRAWING.md)
     rofl-nb edit <file.rofl.md> --cell N         the new text of cell N from stdin (`--lang L` for a new cell); the only

@@ -12671,7 +12671,7 @@ impl Eval {
     fn round_rules(&self) -> Vec<Rc<ERule>> {
         self.rules
             .iter()
-            .filter(|r| r.safe && r.clause.head.rel != self.v.stratum)
+            .filter(|r| r.safe && r.clause.head.rel != self.v.stratum && !self.store.kept_layer.contains(&r.clause.head.rel))
             .filter(|r| !(self.wfs.skip_cone && self.unknown_cone.contains(&r.clause.head.rel)))
             .cloned()
             .collect()
@@ -12679,8 +12679,19 @@ impl Eval {
 
     /// What an evaluation knows of the cells it sealed: gone with the
     /// derived layer, which `clear_derived` drops with the cells it frees.
+    /// A threshold a full pass keeps (`Eval::finished_layer`) is reached where its cells stand.
     fn forget_cells(&mut self) {
         self.memo = DerivedMemo::default();
+        if self.store.kept_rules.is_empty() {
+            return;
+        }
+        for c in self.store.live_cells() {
+            let r = self.store.cell(c);
+            let CellOwner::Body { rule, at } = r.owner;
+            if r.op == AggOp::AtLeast && self.store.kept_rules.contains(&rule) {
+                self.memo.thr_cells.insert((rule, at, r.key.clone()), c);
+            }
+        }
     }
 
     fn wfs_round(&mut self, assume: Rc<Assumption>) -> Result<(), Halt> {
