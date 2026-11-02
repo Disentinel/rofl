@@ -106,7 +106,17 @@ pl_rl2(R, Rel, B)       :- pl_refire(R, _), pl_need(R, Rel, B), base[profile](Re
 pl_rl2(R, Rel, B)       :- pl_refire(R, I), pl_need(R, Rel, B), pl_headb(R2, Rel, B), activation[profile](R2, I2), I2 <= I, pl_prod(R2, B).
 pl_rl2(R, Rel, B)       :- pl_need(R, Rel, B), pl_src(Rel, Rel2), pl_rl2(R, Rel2, B).
 pl_livep(R, refire, K)  :- pf_lit[profile](R, K, Rel, B, _), pl_rl2(R, Rel, B).
-pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N), pl_livep(R, P, K).
+-- A LIVE RELATION HOLDS WHAT ITS PRODUCERS CONCLUDED SO FAR, not the census: `key_name` was read by `own_key`
+-- (activation 1438) at 119 rows of 13 451, the rules concluding it fired before but one, and the census is of the
+-- finished store. The rows at a firing are bounded by the base facts and the conclusions (`conc`) of the producers
+-- fired before it and productive in the book, summed; the census where there is no producer (a closure, an alias
+-- read from its source).
+pl_producer(R, full, Rel, B, R2)   :- pl_need(R, Rel, B), pl_headb(R2, Rel, B), pl_prod(R2, B), activation[profile](R2, I2), activation[profile](R, I), I2 < I.
+pl_producer(R, refire, Rel, B, R2) :- pl_refire(R, I), pl_need(R, Rel, B), pl_headb(R2, Rel, B), pl_prod(R2, B), activation[profile](R2, I2), I2 <= I.
+pl_had(R, P, Rel, B, N) :- pl_producer(R, P, Rel, B, _), N is sum(X ; R2 : pl_producer(R, P, Rel, B, R2), conc[profile](R2, X)).
+pl_cap(R, P, Rel, B, A) :- pl_had(R, P, Rel, B, H), base[profile](Rel, B, Bn), A is Bn + H.
+pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N0), pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), pl_cap(R, P, Rel, B, A), N is min(N0, A).
+pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N), pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), not pl_cap(R, P, Rel, B, _).
 pl_rows(R, P, K, N)     :- pl_phase(R, P), P != delta, pl_rows(R, delta, K, N0), not pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), base[profile](Rel, B, Bn), N is min(N0, Bn).
 -- the firing at 0 is costed in the full phase, which decides, and the delta phase, the store as it fills, which
 -- breaks its ties (every order that starts from an empty premise costs one); a reader of a closure in refire too
