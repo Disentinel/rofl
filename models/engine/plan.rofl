@@ -59,28 +59,46 @@ pl_rows(R, delta, K, N) :- pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, 
 -- premise, reads the store as it fills: `rows`.
 pl_phase(R, full)       :- pl_rule(R, _).
 pl_phase(R, delta)      :- pl_rule(R, _).
--- live at R's firing: base facts held, or a closure, or a rule concluding it fired whole before AND concluded
--- something then, which it did only where every premise of its own was live at its firing (a rule fired before with
--- nothing to read concluded nothing). An alias is its source read again (`alias this(T) is mark(T, this)`, lowered
--- to a rule the engine never fires), so it is live where its source is, in the book the premise names. The count
--- is over the rules fired earlier, so it is stratified by the data (activation strictly decreasing), not by the program
+pl_phase(R, refire)     :- pl_vreader(R).
+-- live at a firing (the full phase: the rule's own activation): base facts held, or a rule concluding it
+-- fired whole before I AND concluded something then, which it did only where every premise of its own was live at
+-- its own firing (a rule fired before with nothing to read concluded nothing). An alias is its source read again
+-- (`alias this(T) is mark(T, this)`, lowered to a rule the engine never fires), so it is live where its source is,
+-- in the book the premise names. A closure is its tree's edges read again: it is live where they are (`tree
+-- parent(P, C) closure inside`: `inside` answers nothing until a rule concluded `parent`; a reader fired whole before
+-- that from its other premise probed an empty tree once per row, 15 629 for one rule at 250 files, and the engine's
+-- own order, which saw the tree empty, read one). The count is over the rules fired earlier, so it is stratified by
+-- the data (activation strictly decreasing), not by the program
 pl_src(Rel, Rel2)       :- structure_decl(Rel, _, alias), pf_head[profile](R2, Rel, _), pf_lit[profile](R2, _, Rel2, _, _).
+pl_src(Rel, Rel2)       :- structure_closure(Rel2, Rel).
 pl_need(R, Rel, B)      :- pf_lit[profile](R, _, Rel, B, _).
 pl_need(R, Rel2, B)     :- pl_need(R, Rel, B), pl_src(Rel, Rel2).
 pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), base[profile](Rel, B, N), N > 0.
-pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), structure_closure(_, Rel).
 pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), pf_head[profile](R2, Rel, B), activation[profile](R2, I2), activation[profile](R, I), I2 < I, pl_prod(R2).
 pl_rl(R, Rel, B)        :- pl_need(R, Rel, B), pl_src(Rel, Rel2), pl_rl(R, Rel2, B).
 pl_live(R, K)           :- pf_lit[profile](R, K, Rel, B, _), pl_rl(R, Rel, B).
+pl_livep(R, full, K)    :- pl_live(R, K).
 pl_nlive(R2, N)         :- activation[profile](R2, _), N is count(K : pl_live(R2, K)).
 pl_prod(R2)             :- pl_nlive(R2, N), pf_npos[profile](R2, N).
-pl_rows(R, full, K, N)  :- pl_rows(R, delta, K, N), pl_live(R, K).
-pl_rows(R, full, K, N)  :- pl_rows(R, delta, K, N0), not pl_live(R, K), pf_lit[profile](R, K, Rel, B, _), base[profile](Rel, B, Bn), N is min(N0, Bn).
--- the firing at 0 is costed in both phases: the full phase decides, and where it cannot (every order that starts
--- from an empty premise costs one), the delta phase does, since a reader of a closure fires whole again on every
--- round its edges move (engine.rs, fire_in_round_from) and a rule's whole firing is not the only one at 0
+-- A READER OF A CLOSURE whose tree is empty at its activation fires whole then, and whole again on the round the
+-- tree is complete (engine.rs, fire_in_round_from): a third moment, `refire`, where what is live is what the rules
+-- concluding the edges, the last of them, had before them. Both firings run under the one order the rule is given,
+-- so its cost is the two phases summed; an order from the closure costs one at activation and every row of the
+-- closure later (3 562 677 for one rule at 250 files), where the order from its other premise costs twice its rows.
+pl_vreader(R)           :- pl_rule(R, _), pf_lit[profile](R, K, Rel, _, _), structure_closure(_, Rel), not pl_live(R, K).
+pl_edge(R, R2)          :- pl_vreader(R), pf_lit[profile](R, _, Rel, _, _), structure_closure(Src, Rel), pf_head[profile](R2, Src, _), pl_prod(R2).
+pl_refire(R, I)         :- pl_edge(R, _), I is max(X : pl_edge(R, R2), activation[profile](R2, X)).
+pl_rl2(R, Rel, B)       :- pl_refire(R, _), pl_need(R, Rel, B), base[profile](Rel, B, N), N > 0.
+pl_rl2(R, Rel, B)       :- pl_refire(R, I), pl_need(R, Rel, B), pf_head[profile](R2, Rel, B), activation[profile](R2, I2), I2 <= I, pl_prod(R2).
+pl_rl2(R, Rel, B)       :- pl_need(R, Rel, B), pl_src(Rel, Rel2), pl_rl2(R, Rel2, B).
+pl_livep(R, refire, K)  :- pf_lit[profile](R, K, Rel, B, _), pl_rl2(R, Rel, B).
+pl_rows(R, P, K, N)     :- pl_rows(R, delta, K, N), pl_livep(R, P, K).
+pl_rows(R, P, K, N)     :- pl_phase(R, P), P != delta, pl_rows(R, delta, K, N0), not pl_livep(R, P, K), pf_lit[profile](R, K, Rel, B, _), base[profile](Rel, B, Bn), N is min(N0, Bn).
+-- the firing at 0 is costed in the full phase, which decides, and the delta phase, the store as it fills, which
+-- breaks its ties (every order that starts from an empty premise costs one); a reader of a closure in refire too
 pl_atp(R, 0, full)      :- pl_rule(R, _).
 pl_atp(R, 0, delta)     :- pl_rule(R, _).
+pl_atp(R, 0, refire)    :- pl_vreader(R).
 pl_atp(R, At, delta)    :- pl_start(R, At, _), At != 0.
 pl_prim(R, 0, full)     :- pl_rule(R, _).
 pl_prim(R, At, delta)   :- pl_start(R, At, _), At != 0.
@@ -126,9 +144,12 @@ pl_sq(R, At, P, S1, L1, Code1, E1, C1) :- pl_step(R, At, P, S, E, K, S1, L1, Cod
 pl_sq(R, At, P, S1, L1, Code1, 1000000000000000, C1) :- pl_step(R, At, P, S, E, K, S1, L1, Code1, C1), pl_fan(R, P, S, K, F), E > 1000000000, F > 0.
 pl_sq(R, At, P, S1, L1, Code1, 0, C1) :- pl_step(R, At, P, S, E, K, S1, L1, Code1, C1), pl_fan(R, P, S, K, 0), E > 1000000000.
 pl_sqf(R, At, P, Code, C) :- pl_sq(R, At, P, F, _, Code, _, C), pl_full(R, F).
--- the cheapest order in the deciding phase, the cheapest in the delta phase among those, the lowest code among ties
-pl_cmin(R, At, C)     :- pl_prim(R, At, P), pl_sqf(R, At, P, _, _), C is min(X : pl_sqf(R, At, P, _, X)).
-pl_tie(R, At, Code, C2) :- pl_cmin(R, At, C), pl_prim(R, At, P), pl_sqf(R, At, P, Code, C), pl_sqf(R, At, delta, Code, C2).
+-- the cost of an order: the deciding phase's, and for a reader of a closure its refire added. The cheapest order,
+-- the cheapest in the delta phase among those, the lowest code among ties
+pl_cost(R, At, Code, C) :- pl_prim(R, At, P), pl_sqf(R, At, P, Code, C), not pl_vreader(R).
+pl_cost(R, At, Code, C) :- pl_prim(R, At, P), pl_sqf(R, At, P, Code, C1), pl_vreader(R), pl_sqf(R, At, refire, Code, C2), C is C1 + C2.
+pl_cmin(R, At, C)     :- pl_cost(R, At, _, _), C is min(X : pl_cost(R, At, _, X)).
+pl_tie(R, At, Code, C2) :- pl_cmin(R, At, C), pl_cost(R, At, Code, C), pl_sqf(R, At, delta, Code, C2).
 pl_cmin2(R, At, C2)   :- pl_tie(R, At, _, _), C2 is min(X : pl_tie(R, At, _, X)).
 pl_pick(R, At, Code)  :- pl_cmin2(R, At, C2), Code is min(X : pl_tie(R, At, X, C2)).
 pl_want(R, At, Code) :- pl_pick(R, At, Code).
@@ -136,6 +157,12 @@ pl_want(R, At, C0)   :- pl_want(R, At, C), C > 0, C0 is C / 9.
 pl_dec(R, At, 0, $nil) :- pl_want(R, At, 0).
 pl_dec(R, At, C, $cons(K, L)) :- pl_want(R, At, C), C > 0, K is C mod 9, C0 is C / 9, pl_dec(R, At, C0, L).
 
-plan[fixpointplan](R, At, L) :- pl_pick(R, At, Code), pl_dec(R, At, Code, L).
+-- a reader of a closure whose two firings want different orders (the tree empty at activation: from the closure;
+-- complete later: from the other premise) has no one order to be given: the engine plans each firing from the live
+-- sizes and beats any fixed order (15 631 against 31 260 for one rule at 250 files), so no plan is written for it
+pl_pmin(R, At, P, C)   :- pl_vreader(R), pl_atp(R, At, P), pl_sqf(R, At, P, _, _), C is min(X : pl_sqf(R, At, P, _, X)).
+pl_agree(R, At)        :- pl_pmin(R, At, full, C1), pl_pmin(R, At, refire, C2), pl_sqf(R, At, full, Code, C1), pl_sqf(R, At, refire, Code, C2).
+pl_split(R, At)        :- pl_pmin(R, At, full, _), pl_pmin(R, At, refire, _), not pl_agree(R, At).
+plan[fixpointplan](R, At, L) :- pl_pick(R, At, Code), pl_dec(R, At, Code, L), not pl_split(R, At).
 -- the cost the plan forecasts, to set beside the width the profile measures under it (summed over the premises)
-plan_cost[fixpointplan](R, At, C) :- pl_cmin(R, At, C), pl_pick(R, At, _).
+plan_cost[fixpointplan](R, At, C) :- pl_cmin(R, At, C), pl_pick(R, At, _), not pl_split(R, At).
