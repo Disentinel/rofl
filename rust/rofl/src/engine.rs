@@ -704,6 +704,9 @@ pub struct Eval {
     /// Delta-first join plans (`joinplan.rs`), per rule and news position, and
     /// the premise statistics their estimates read.
     plan_trial: bool,
+    /// The store's next id when each rule fired whole in `fire_all`: a fact older than that was joined by that firing,
+    /// and is not news for the rule in the rounds after (`news_since`).
+    seen_at: FxMap<Sym, FactId>,
     pub add: AddState,
     pub ds: DsState,
     pub vc: VClosureState,
@@ -2174,6 +2177,7 @@ impl Eval {
             scans: Vec::new(),
             add: AddState::default(),
             plan_trial: false,
+            seen_at: FxMap::default(),
             ds: DsState::default(),
             vc: VClosureState::default(),
             alias_drules: Vec::new(),
@@ -5173,6 +5177,9 @@ impl Eval {
             self.batch_at = i;
             let n = self.cost.activation_by_rule.len() as u64 + 1;
             self.cost.activation_by_rule.entry(r.id).or_insert(n);
+            if round.is_none() {
+                self.seen_at.entry(r.id).or_insert(self.store.len_ids());
+            }
             let t = std::time::Instant::now();
             let f = match round.take() {
                 Some(fl) => self.finish(r, fl, |e| e.fire_rule(r, None)),
@@ -5326,6 +5333,8 @@ impl Eval {
                         let Some(keys) = cur.by_rel.get(&l.rel) else {
                             continue;
                         };
+                        let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
+                        let keys = &*keys;
                         let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
                             Some(p) => e.fire_planned(r, &p, Some(keys)),
                             None => e.fire_rule(r, Some((i, keys))),
@@ -5351,6 +5360,20 @@ impl Eval {
             }
         }
         Ok(())
+    }
+
+    /// THE NEWS OF A ROUND THAT ARE NEWS FOR `r`: the facts the rule's whole firing in `fire_all` did not see, those
+    /// with an id from the store's length at that firing. The first round carries every conclusion of the whole
+    /// firings, and a rule activated after its producers joined them already: fired again on them in written order it
+    /// read the whole body once more per premise (`ref` at 250 files of vscode: five firings of 372 062 for one). A
+    /// relation with a revived fact (an id older than the firing, alive again) keeps every key. None: nothing is news.
+    fn news_since<'a>(&self, r: &ERule, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
+        let Some(&w) = self.seen_at.get(&r.id) else { return Some(std::borrow::Cow::Borrowed(keys)) };
+        if self.store.revived.contains_key(&rel) || keys.iter().all(|&k| k >= w) {
+            return Some(std::borrow::Cow::Borrowed(keys));
+        }
+        let fresh: FxSet<FactId> = keys.iter().copied().filter(|&k| k >= w).collect();
+        if fresh.is_empty() { None } else { Some(std::borrow::Cow::Owned(fresh)) }
     }
 
     fn fire_rule(
