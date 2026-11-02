@@ -183,7 +183,9 @@ to be a function that may throw, and it is not, because the one call in it
 that can throw is caught by its `try`. In `pay.js` it stops earlier: no function there answers to
 that name at all. This is the difference between "no" and "not found": the
 answer names the condition that fails, so you can decide whether the code is
-right or the rule is.
+right or the rule is. Of all the ways the rule could have held, `whynot` shows
+the one that came nearest, the one with the fewest conditions left unmet;
+`(every failure: --all)` says that `rofl-nb --all` prints every way it tried.
 
 ## What the model did not see
 
