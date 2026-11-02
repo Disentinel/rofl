@@ -239,8 +239,8 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 20] =
-    ["fires", "conc", "fresh", "fresh_whole", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 21] =
+    ["fires", "conc", "fresh", "fresh_whole", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
@@ -408,6 +408,32 @@ impl Eval {
         for (rel_name, book_name, j, c, n) in selects {
             let book_name = census_book.unwrap_or(&book_name);
             let _ = writeln!(out, "selects[profile]({rel_name}, {book_name}, {}, {c}, {n}).", j + 1);
+        }
+        // a premise writing constants in two columns or more: the rows that hold them all, `picks(R, K, N)`, since the
+        // fewest of its columns' `selects` misses their conjunction (`attr(P, computed, true)`: 13 245 hold true,
+        // 55 015 computed, 2 075 both)
+        let mut picks: Vec<(String, usize, usize)> = Vec::new();
+        for r in &self.rules {
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                    continue;
+                }
+                let (js, ts): (Vec<usize>, Vec<Term>) = l.args.iter().enumerate().filter(|(_, &t)| self.h.is_ground(t)).map(|(j, &t)| (j, t)).unzip();
+                if js.len() < 2 {
+                    continue;
+                }
+                let n = self.store.probe_stats(&self.h, l.rel, Some(book), &js, &ts, &[]).0;
+                picks.push((self.h.name(r.id).to_string(), i + 1, n));
+            }
+        }
+        picks.sort_by(|a, b| cmp_js(&a.0, &b.0).then(a.1.cmp(&b.1)));
+        for (id, k, n) in picks {
+            let _ = writeln!(out, "picks[profile]({id}, {k}, {n}).");
         }
         // the rows a relation was given as base facts, counted here in one pass: a rule counting them over
         // asserted_by read 51 million rows at 250 files of vscode

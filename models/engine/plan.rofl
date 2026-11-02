@@ -42,12 +42,15 @@ pl_out(R, S, K) :- pl_set(R, S), pl_rule(R, N), pl_bit(K, B), K <= N, Q is S / B
 
 -- -------------------------------------------------------------------------------------------------- the estimate
 -- a constant in a column: the premise's rows are those that hold it (`selects` of the census), the fewest where it
--- writes several; the column's average over its distinct values was tried and missed the skew (identifier among the
+-- writes several in one column; the column's average over its distinct values was tried and missed the skew (identifier among the
 -- kinds of a node is most of the rows, try_statement one)
 pl_arity(R, K, A)       :- pf_lit[profile](R, K, _, _, _), A is count(J : pf_slot[profile](R, K, J, _)).
 pl_varslot(R, K, J)     :- pf_slot[profile](R, K, J, $var(_)).
 pl_const(R, K, J)       :- pf_slot[profile](R, K, J, _), not pl_varslot(R, K, J).
 pl_sel(R, K, N)         :- pl_const(R, K, J), pf_slot[profile](R, K, J, A), pf_lit[profile](R, K, Rel, B, _), selects[profile](Rel, B, J, A, N).
+-- and where it writes two or more, the rows that hold them all (`picks`): `attr(P, computed, true)` is 2 075 rows
+-- of 13 245 true and 55 015 computed, and the fewest of its columns missed the conjunction sixfold
+pl_sel(R, K, N)         :- picks[profile](R, K, N).
 pl_rows(R, delta, K, N) :- pl_sel(R, K, _), N is min(X : pl_sel(R, K, X)).
 pl_rows(R, delta, K, N) :- pf_lit[profile](R, K, Rel, B, _), rows[profile](Rel, B, N), not pl_sel(R, K, _).
 -- THE TWO PHASES OF A FIRING. At 0 the rule fires once over the whole store, at its activation, when the store
