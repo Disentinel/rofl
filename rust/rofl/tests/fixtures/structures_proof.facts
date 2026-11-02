@@ -9,10 +9,10 @@ edge(r1, a). edge(r1, b). edge(a, c). edge(a, d). edge(r2, e). edge(e, f).
 below(X, Y) :- edge(X, Y).
 below(X, Z) :- below(X, Y), edge(Y, Z).
 
--- NEAR MISS: a DAG, d1 has two parents.
+-- NEAR MISS of a tree, a DAG: d1 has two parents.
 link(a1, b1). link(a1, c1). link(b1, d1). link(c1, d1).
 
--- NEAR MISS: a cycle.
+-- NEAR MISS of a tree and of a dag: a cycle.
 ring(x1, x2). ring(x2, x3). ring(x3, x1). ring(y1, y2).
 
 -- A FUNCTION: one name per node.
@@ -38,3 +38,40 @@ copy_miss(I, P) :- owns(P, I), I != i4.
 tree dedge(P, C) closure dbelow.
 dedge(q1, q2). dedge(q1, q3). dedge(q2, q4).
 
+
+-- AN ORDERED COLUMN, and a NEAR MISS: one level is no integer.
+edb(rank). edb(level).
+rank(u1, 3). rank(u2, 7). rank(u3, 9).
+level(v1, 1). level(v2, 4). level(v3, "high"). level(v4, 2).
+
+-- A SEQUENCE: the steps of each process numbered 0, 1, 2, ...; NEAR MISS: q1 skips 1.
+edb(step). edb(slot).
+step(p1, 0, a). step(p1, 1, b). step(p1, 2, c). step(p2, 0, d). step(p2, 1, e).
+slot(q1, 0, x). slot(q1, 2, y). slot(q2, 0, z). slot(q2, 1, w). slot(q3, 0, v).
+
+-- A LAMINAR SPAN; a span with one crossing (NEAR MISS of laminar); NEAR MISS: a trip that ends before it starts.
+edb(range). edb(window). edb(trip).
+range(n1, 0, 10). range(n2, 1, 4). range(n3, 5, 9). range(n4, 6, 8).
+window(w1, 0, 5). window(w2, 3, 8). window(w3, 10, 12). window(w4, 13, 15).
+trip(t1, 1, 4). trip(t2, 2, 6). trip(t3, 9, 3).
+
+-- AN EQUIVALENCE and the relation that generates it; NEAR MISSES: the same without its diagonal, and one pair lacking.
+edb(joined). edb(buddy).
+joined(j1, j2). joined(j2, j3). joined(j4, j5).
+eqv(X, Y) :- joined(X, Y).
+eqv(X, Y) :- joined(Y, X).
+eqv(X, X) :- joined(X, _).
+eqv(X, X) :- joined(_, X).
+eqv(X, Z) :- eqv(X, Y), eqv(Y, Z).
+peer(X, Y) :- eqv(X, Y), X != Y.
+buddy(m1, m1). buddy(m1, m2). buddy(m2, m1). buddy(m2, m2). buddy(m3, m3). buddy(m3, m4). buddy(m4, m4).
+
+-- A DAG (link, above) and its closure; a dag with no closure.
+edb(dep).
+reach(X, Y) :- link(X, Y).
+reach(X, Z) :- reach(X, Y), link(Y, Z).
+dep(g1, g2). dep(g1, g3). dep(g2, g4). dep(g3, g4). dep(g4, g5).
+
+-- A CLOSURE OF A DAG that no relation holds: a strict order whose reduction is a diamond.
+edb(prec).
+prec(h1, h2). prec(h1, h3). prec(h2, h4). prec(h3, h4). prec(h1, h4).

@@ -8047,6 +8047,41 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "structures_ordered_non_integer_ignored",
+  "what": "the detection report takes a column with one row that is no integer for an ordered one",
+  "expect": {
+   "structures_proof": "ordered level"
+  }
+ },
+ {
+  "id": "structures_sequence_gap_ignored",
+  "what": "the detection report takes a numbering with a gap for a sequence",
+  "expect": {
+   "structures_proof": "sequence slot"
+  }
+ },
+ {
+  "id": "structures_span_crossing_ignored",
+  "what": "the detection report does not see two intervals cross, so a span is laminar",
+  "expect": {
+   "structures_proof": "span window"
+  }
+ },
+ {
+  "id": "structures_equivalence_missing_ignored",
+  "what": "the detection report takes a relation that lacks a pair of its classes for an equivalence",
+  "expect": {
+   "structures_proof": "equivalence buddy"
+  }
+ },
+ {
+  "id": "structures_dag_cycle_ignored",
+  "what": "the detection report does not see a cycle, so a ring is a dag",
+  "expect": {
+   "structures_proof": "dag ring"
+  }
+ },
+ {
   "id": "tree_unread",
   "what": "the Rust parser reads no declared tree: `tree p(P, C).` is a clause it refuses",
   "expect": {
