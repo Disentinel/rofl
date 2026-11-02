@@ -707,6 +707,12 @@ pub struct Eval {
     /// The store's next id when each rule fired whole in `fire_all`: a fact older than that was joined by that firing,
     /// and is not news for the rule in the rounds after (`news_since`).
     seen_at: FxMap<Sym, FactId>,
+    /// SEMI-NAIVE EXCLUSION while a rule fires on the news at one plan position: at each earlier plan position whose
+    /// relation is news too, the rows that are this round's news there, which that position's own firing reads (a
+    /// solution with news at two places is found once, from the first). None at a position: nothing excluded.
+    sn: Option<Rc<Vec<Option<Rc<FxSet<FactId>>>>>>,
+    /// The plan position of each body position of the delta plan solving now (`fire_planned`); None: the body is the plan.
+    sn_perm: Option<Rc<Vec<usize>>>,
     pub add: AddState,
     pub ds: DsState,
     pub vc: VClosureState,
@@ -2178,6 +2184,8 @@ impl Eval {
             add: AddState::default(),
             plan_trial: false,
             seen_at: FxMap::default(),
+            sn: None,
+            sn_perm: None,
             ds: DsState::default(),
             vc: VClosureState::default(),
             alias_drules: Vec::new(),
@@ -5340,12 +5348,22 @@ impl Eval {
                         };
                         let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
                         let keys = &*keys;
+                        if twice && brk!("semi_naive_off" => false; true) {
+                            let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
+                            for (j, e) in excl.iter_mut().enumerate() {
+                                let BodyElem::Pos(lj) = &r.plan[j] else { continue };
+                                let Some(kj) = cur.by_rel.get(&lj.rel) else { continue };
+                                *e = self.news_since(r, lj.rel, kj).map(|k| Rc::new(k.into_owned()));
+                            }
+                            self.sn = excl.iter().any(Option::is_some).then(|| Rc::new(excl));
+                        }
                         let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
                             Some(p) => e.fire_planned(r, &p, Some(keys)),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
-                        let f = self.fire_at(r, i + 1, fl.take(), fire)?;
-                        merge_front(&mut self.cur_front, f);
+                        let f = self.fire_at(r, i + 1, fl.take(), fire);
+                        self.sn = None;
+                        merge_front(&mut self.cur_front, f?);
                     }
                     Ok(())
                 })();
@@ -5365,6 +5383,13 @@ impl Eval {
             }
         }
         Ok(())
+    }
+
+    /// The rows excluded at body position `i` of the body solving now (`sn`), by its plan position.
+    pub(super) fn sn_except(&self, i: usize) -> Option<Rc<FxSet<FactId>>> {
+        let sn = self.sn.as_ref()?;
+        let at = self.sn_perm.as_ref().map_or(i, |p| p[i]);
+        sn.get(at)?.clone()
     }
 
     /// THE NEWS OF A ROUND THAT ARE NEWS FOR `r`: the facts the rule's whole firing in `fire_all` did not see, those
@@ -5909,7 +5934,13 @@ impl Eval {
                                 let (faults, unknowns) = (self.fault_count, self.demand.trail.len());
                                 let found = self.match_premise(l, &a.s, depth, only)?;
                                 self.demand_below(depth, l, &a.s, faults, unknowns);
+                                let excl = if depth == 0 { self.sn_except(i) } else { None };
                                 for (s2, r) in found {
+                                    if let (Some(x), PremRef::Fact(f)) = (&excl, &r) {
+                                        if x.contains(f) {
+                                            continue;
+                                        }
+                                    }
                                     let mut prems = a.prems.clone();
                                     prems.push(r);
                                     next.push(Sol { s: s2, prems });
