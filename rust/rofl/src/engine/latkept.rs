@@ -197,6 +197,14 @@ impl Eval {
         }
         Set::put(&self.lat.carry.spread, &mut o);
         Set::put(&self.lat.carry.plain, &mut o);
+        if self.shrug.unk_edges.is_empty() && self.shrug.holes_now.is_empty() {
+            return o.0;
+        }
+        Edges::put(&self.shrug.unk_edges, &mut o);
+        Seq::<Vec<(Term, Sym)>, (Te, Sy)>::put(&self.shrug.holes_now, &mut o);
+        let mut closed: Vec<Sym> = self.lat.carry.plain_closed.iter().copied().collect();
+        closed.sort_unstable();
+        Seq::<Vec<Sym>, Sy>::put(&closed, &mut o);
         o.0
     }
 
@@ -214,14 +222,47 @@ impl Eval {
         (self.unk.reads_unknown, self.wfs.carry_rows) = (reads, carried);
         self.lat.carry.spread = Set::get(&mut i)?;
         self.lat.carry.plain = Set::get(&mut i)?;
+        // what each was reached from and the holes met, for a full pass that keeps what they name (`carry_kept`)
+        if i.0.len() == 0 {
+            return Ok(());
+        }
+        self.shrug.unk_edges = Edges::get(&mut i)?;
+        self.shrug.holes_now = Seq::<Vec<(Term, Sym)>, (Te, Sy)>::get(&mut i)?;
+        self.shrug.holes_met = self.shrug.holes_now.iter().copied().collect();
+        self.lat.carry.plain_closed = Seq::<HashSet<Sym>, Sy>::get(&mut i)?;
         if i.0.next().is_some() {
             return Err("kept unknowns have items after their end".into());
         }
+        self.recarry_whole();
         Ok(())
     }
 }
 
 type Set = Seq<HashSet<Unknown>, Un>;
+type Edges = Seq<Vec<(Node, Node)>, (No, No)>;
+
+struct No;
+impl Shape for No {
+    type V = Node;
+    fn put(n: &Node, o: &mut Out) {
+        match n {
+            Node::Unk(u) => {
+                o.n(0);
+                Un::put(u, o);
+            }
+            Node::Hole(t) => {
+                o.n(1);
+                Te::put(t, o);
+            }
+        }
+    }
+    fn get(i: &mut In) -> Result<Node, String> {
+        Ok(match i.n()? {
+            0 => Node::Unk(Un::get(i)?),
+            _ => Node::Hole(Te::get(i)?),
+        })
+    }
+}
 
 impl LatticeState {
     pub(super) fn lattice_keeps(&self) -> bool {

@@ -3681,6 +3681,15 @@ holds, byte for byte, without clearing what it derived
   it), and every rule that negates or aggregates those. A rule staged `@next`
   from what changed stages again (`restage`), over cells sealed again where it
   aggregates.
+- **What a hole or a shrug may move** (the relations a hole names, a reader of
+  `shrug` or `unknown`, and what reads them) that the change reaches: the
+  delta is worked out without their rules (none of them is read by the rest),
+  and they are evaluated again after it by a full pass that keeps every other
+  relation (engine/layer.rs). What the holes left unknown in the relations it
+  keeps is carried on from the evaluation before, and from a volume, which
+  keeps the unknowns with what each was reached from and the holes met; the
+  shrug rows are written again from them. A retraction takes the same path.
+  A lattice, a tag or a dominance among them is refused.
 - **A base fact asserted where it was derived** is an addition: it is base now,
   with the tick scope and height a load gives it, and what rests on it may lie
   lower.
@@ -3691,8 +3700,9 @@ holds, byte for byte, without clearing what it derived
 
 **What is evaluated again, every reason said** (`Addition::Full`, rofl serve's
 `full`): a world not evaluated, cut by a wall, at a later tick, well-founded,
-holding a hole or reading a shrug (the hole a seal of provenance writes is not
-one); a lattice beside a relation answered on demand; a rule that reads the ledger of cells or provenance; a component
+holding a hole that names no relation a rule concludes (the hole a seal of
+provenance writes is not one); a lattice, a tag or a dominance a hole may move
+reached; a lattice beside a relation answered on demand; a rule that reads the ledger of cells or provenance; a component
 stratified by its data; a join, a widening, a counting tag or a dominance the
 change reaches; a staged fact that two firings reach; in a world that keeps no
 witness (`sealed(provenance)`), anything beyond the monotone part, for what a

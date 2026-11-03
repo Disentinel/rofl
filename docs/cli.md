@@ -261,7 +261,10 @@ one), the world was not
 read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
 another directory, a file changed that is neither named nor read by a scanner,
 or the engine refuses the delta (a fact read on demand, a base fact a rule
-reads as an `edb` or authority row, a world kept with no witnesses). The
+reads as an `edb` or authority row, a world kept with no witnesses, an edit
+that makes a rule fault anew). A world holding a hole is taken by delta: what
+the holes and the shrugs may move that the edit reaches is evaluated again
+after it, the rest kept with what the holes left unknown in it. The
 answer is the fresh evaluation's either way (rust/rofl/tests/retract_set.rs:
 200 random edit, add and remove steps over a JS corpus, each equal to a fresh
 evaluation byte for byte, and one in ten to the same step taken a fact at a

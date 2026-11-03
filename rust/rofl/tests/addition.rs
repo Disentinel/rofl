@@ -216,6 +216,7 @@ impl Stats {
                 s.negated += d.negated;
                 s.overdeleted += d.overdeleted;
                 s.rederived += d.rederived;
+                s.holed += d.holed;
             }
             Addition::Full(why) => {
                 for w in why.split("; ") {
@@ -249,6 +250,7 @@ impl Stats {
         s.negated += d.negated;
         s.overdeleted += d.overdeleted;
         s.rederived += d.rederived;
+        s.holed += d.holed;
     }
 }
 
@@ -764,7 +766,8 @@ fn fact_fault(r: &mut Rng) -> String {
 }
 
 /// A world holding a rule's fault (an arithmetic type error, a hole and its shrugs) and a rule that reads the shrugs:
-/// an addition that reaches neither the rule nor what reads it is a delta, and the hole and the shrugs stand.
+/// an addition that reaches neither the rule nor what reads it is a delta, and the hole and the shrugs stand; one that
+/// reaches them is a delta of the rest, and what they may move is evaluated again after it.
 #[test]
 fn a_fault_the_addition_does_not_reach_stands() {
     let rules = [
@@ -777,9 +780,12 @@ fn a_fault_the_addition_does_not_reach_stands() {
         "q(X) :- n(X), not p(X, X).",
         "c(X, N) :- n(X), N is count(Y : p(X, Y)).",
     ];
-    let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=14, 10);
+    let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=40, 10);
     assert!(all.delta * 2 > all.additions, "most additions reach no fault: {all:?}");
-    assert!(all.full.keys().all(|k| k.contains("faulted") || k.contains("write a hole")), "{all:?}");
+    // a new fault is the firing's, met only as the delta fires: that addition is evaluated again
+    assert!(all.full.keys().all(|k| k.contains("write a hole")), "{all:?}");
+    assert!(all.delta * 10 > all.additions * 9 && all.sum.holed > 0, "an addition that reaches a fault is a delta: {all:?}");
+    eprintln!("retractions by delta: {} of {}", all.retracted.1, all.retracted.0);
     assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault: {all:?}");
 }
 
