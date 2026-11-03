@@ -71,6 +71,7 @@
 //! The result is the one a full evaluation gives, byte for byte in
 //! `canonical_state`, and its explanations are the same (rust/rofl/tests/
 //! incremental.rs holds both over random edits).
+use crate::store::Prem;
 use super::datastrat::DsComp;
 use super::*;
 use crate::cell::Strategy;
@@ -167,8 +168,8 @@ impl Eval {
     fn index_cell(store: &Store, c: CellId, ix: &mut Support) {
         for m in store.cell_members(c) {
             for p in store.member_derivs(m).take(brk!("retract_alts_unindexed" => 1; usize::MAX)).flatten() {
-                if let PremRef::Fact(g) = p {
-                    let v = ix.entry(*g).or_default();
+                if let Prem::Fact(g) = p.kind() {
+                    let v = ix.entry(g).or_default();
                     if !v.contains(&c) {
                         v.push(c);
                     }
@@ -180,8 +181,8 @@ impl Eval {
     fn unindex_cell(store: &Store, c: CellId, ix: &mut Support) {
         for m in store.cell_members(c) {
             for p in store.member_derivs(m).flatten() {
-                if let PremRef::Fact(g) = p {
-                    if let Some(v) = ix.get_mut(g) {
+                if let Prem::Fact(g) = p.kind() {
+                    if let Some(v) = ix.get_mut(&g) {
                         v.retain(|x| *x != c);
                     }
                 }
@@ -518,7 +519,7 @@ impl Eval {
             }
             for (_, _, ps) in self.store.firings(x) {
                 for p in ps {
-                    if let PremRef::Fact(g) = p {
+                    if let Prem::Fact(g) = p.kind() {
                         let v = cm.entry(g).or_default();
                         if v.last() != Some(&x) {
                             v.push(x);
@@ -865,9 +866,9 @@ impl Eval {
             .staged
             .iter()
             .filter(|(_, f)| {
-                f.prems.iter().any(|p| match p {
-                    PremRef::Fact(g) => !store.alive(*g),
-                    PremRef::Cell(c) => store.cell_dead(*c),
+                f.prems.iter().any(|p| match p.kind() {
+                    Prem::Fact(g) => !store.alive(g),
+                    Prem::Cell(c) => store.cell_dead(c),
                     _ => false,
                 })
             })
@@ -1014,7 +1015,7 @@ impl Eval {
                 if inside.contains(&x) {
                     continue;
                 }
-                let cites = |ps: &Vec<PremRef>| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)));
+                let cites = |ps: &Vec<PremRef>| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if frontier.contains(&g)));
                 let firings = self.store.firings(x);
                 let rested = brk!("retract_lattice_precise" => firings.iter().all(|(_, _, ps)| cites(ps)); firings.iter().any(|(_, _, ps)| cites(ps)));
                 if !rested {
@@ -1047,7 +1048,7 @@ impl Eval {
             // firing rested on a fact of the cone
             let mut keys: Vec<LatKey> = Vec::new();
             for ((ck, _), firings) in &self.lat.pass.sub_prems {
-                if firings.iter().any(|ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)))) && !keys.contains(ck) {
+                if firings.iter().any(|ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if frontier.contains(&g)))) && !keys.contains(ck) {
                     keys.push(ck.clone());
                 }
             }

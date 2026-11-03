@@ -3,6 +3,7 @@
 //! facts, ghosts, witnesses, cells, lattices and the program are the seed's; only the encoding differs, and an
 //! image is read by the build that wrote it. Each distinct term is written once, in a table ahead of the facts, and
 //! built once when read.
+use crate::store::Prem;
 use crate::cell::{AggOp, Algebra};
 use crate::engine::{RuleAnswer, StagedAlts, StagedFact, Tok};
 use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK};
@@ -121,24 +122,24 @@ impl W {
     fn prems(&mut self, ps: &[PremRef], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
         self.u32(ps.len() as u32);
         for p in ps {
-            match *p {
-                PremRef::Fact(f) => {
+            match (*p).kind() {
+                Prem::Fact(f) => {
                     self.out.push(0);
                     self.u32(fact_ix.get(&f).copied().unwrap_or(u32::MAX))
                 }
-                PremRef::Neg(s) => {
+                Prem::Neg(s) => {
                     self.out.push(1);
                     self.sym(s)
                 }
-                PremRef::Bi(s) => {
+                Prem::Bi(s) => {
                     self.out.push(2);
                     self.sym(s)
                 }
-                PremRef::VRow(s) => {
+                Prem::VRow(s) => {
                     self.out.push(3);
                     self.sym(s)
                 }
-                PremRef::Cell(c) => {
+                Prem::Cell(c) => {
                     self.out.push(4);
                     self.u32(cell_ix.get(&c).copied().unwrap_or(u32::MAX))
                 }

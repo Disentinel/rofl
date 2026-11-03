@@ -610,7 +610,8 @@ reached with, the relation's `rows` and the partial rows that asked through them
 The profile to read is a world's own, dumped with a rule that asks for it (`refine_profile(Rel, A) :-
 asserted_by($fact(Rel, profile, A), _, _).` beside one that reads a relation of the book, as scripts/refine.ts writes
 it). At vscode 250 files the witnesses were forecast 13.63M against 13.56M stored, and the pattern indexes matched the
-engine's on 555 of its 622, 95% of their bytes (f_the_memory_of_a_world_is_forecast_from_its_rules).
+engine's on 555 of its 622, 95% of their bytes (f_the_memory_of_a_world_is_forecast_from_its_rules). The agent's skill for an engine change priced this way first and measured after is
+.claude/skills/forecast-engine-change/SKILL.md.
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
 reading and the binding. It is a diagnostic for the rule's author, not an

@@ -3,17 +3,15 @@
 --
 -- The hypothesis. Every solution that added something, a row or a witness (`conc` less `again`), is one witness: a
 -- node of 20 bytes (rule, tick, where its premises start, how many, the next witness of the fact; store.rs `WitNode`)
--- and one `PremRef` of 8 bytes for each premise the rule has. A row is a record of 12 bytes (`FactRec`) and its
+-- and one `PremRef` of 4 bytes for each premise the rule has (8 until 2026-11-03, f_a_premise_is_named_in_four_bytes). A row is a record of 12 bytes (`FactRec`) and its
 -- arguments, 4 bytes each. So the witnesses are a function of the rules' widths and premise counts, not of the data's
--- spelling, and a narrower `PremRef` is a saving the forecast can price before anything is built.
+-- spelling, and a narrower layout is a saving the forecast can price before anything is built.
 
 mem_wit(R, W, P) :- conc[profile](R, C), again[profile](R, A), pf_npos[profile](R, P), W is C - A, W > 0.
 mem_wit(R, W, P) :- conc[profile](R, C), not again[profile](R, _), pf_npos[profile](R, P), W = C, W > 0.
 memory(witness_nodes, T) :- S is sum(W ; R : mem_wit(R, W, _)), T is S * 20.
-mem_prems(R, B) :- mem_wit(R, W, P), B is W * P * 8.
+mem_prems(R, B) :- mem_wit(R, W, P), B is W * P * 4.
 memory(witness_prems, T) :- T is sum(B ; R : mem_prems(R, B)).
--- the same premises at 4 bytes each: a fact's id with the kind of premise in its high bits
-memory(witness_prems_narrow, T) :- memory(witness_prems, B), T is B / 2.
 memory(witnesses, N) :- N is sum(W ; R : mem_wit(R, W, _)).
 
 -- THE PATTERN INDEXES. A premise asks its relation by the columns bound when it is reached: a constant, or a variable

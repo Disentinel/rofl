@@ -169,7 +169,7 @@ fn pairs(r: &mut VolR) -> Result<Vec<(u32, u32)>, String> {
 }
 
 fn prems(r: &mut VolR) -> Result<Vec<PremRef>, String> {
-    Ok(r.arena_checked::<PremRef>(|w| w.iter().step_by(2).all(|&t| t <= 4))?.to_vec())
+    Ok(r.arena::<PremRef>()?.to_vec())
 }
 
 /// What `check` reads of a volume before its world: whether this build wrote it, and its note.

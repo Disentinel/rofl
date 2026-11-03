@@ -235,7 +235,7 @@ fn the_question_verbs_answer_as_load_does() {
     assert_eq!(code, 0);
     let (out, code) = run("excise", &["reaches(a, c)", "--json"]);
     assert_eq!((serde_json::from_str::<Value>(&out).unwrap(), code), (json!({ "ok": false, "error": "reaches[main](a,c) is not a base fact" }), 4));
-    assert_eq!(run("why", &["reaches(a, c)", "--budget", "3"]).1, 5);
+    assert_eq!(run("why", &["reaches(a, c)", "--budget", "2"]).1, 5);
     assert_eq!(load(&["--budget", "3"]).1, 0, "a dump of a cut world is whole: its holes are in it");
     assert_eq!(Command::new(env!("CARGO_BIN_EXE_rofl")).arg("why").output().unwrap().status.code(), Some(1));
 }
