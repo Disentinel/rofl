@@ -792,6 +792,11 @@ pub struct Eval {
     shrug_readers: HashSet<Sym>,
     /// What the last whole evaluation held, for the next full pass to keep (`engine/layer.rs`).
     whole: Option<Rc<layer::Whole>>,
+    /// What the last whole evaluation left unknown, for the full pass under way to carry on from what it keeps.
+    kept_carry: Option<Rc<layer::Carried>>,
+    /// What a delta under way leaves to the full pass after it: the relations a hole or a shrug may move that the
+    /// change reaches (`Eval::hole_world`). No rule concluding one is read by the delta.
+    aside: HashSet<Sym>,
     /// Inside `fire_rule`:a builtin that fails for an error there holes the
     /// lattice cell the rule concludes into.
     firing: bool,
@@ -2234,6 +2239,8 @@ impl Eval {
             wfs: WfsState { carry_wall: (budget, DEFAULT_SPACE), ..Default::default() },
             shrug_readers: HashSet::new(),
             whole: None,
+            kept_carry: None,
+            aside: HashSet::new(),
             firing: false,
             fault_count: 0,
             wn_vols: None,
@@ -3368,7 +3375,7 @@ impl Eval {
     /// evaluation again with what it found.
     pub fn run(&mut self) -> Result<Outcome, Halt> {
         let (kept, again) = self.finished_layer();
-        self.whole = None;
+        self.kept_carry = self.whole.take().and_then(|w| w.carry.clone());
         self.again = again;
         self.store.kept_layer = kept;
         let out = self.run_whole();
@@ -3379,6 +3386,7 @@ impl Eval {
         self.store.kept_layer.clear();
         self.store.kept_rows.clear();
         self.store.kept_rules.clear();
+        self.kept_carry = None;
         if out.as_ref().is_ok_and(|o| !o.partial) && self.wall.level_rest.is_none() {
             self.note_whole();
         }
@@ -3387,7 +3395,7 @@ impl Eval {
 
     fn run_whole(&mut self) -> Result<Outcome, Halt> {
         self.check_wants()?;
-        brk!("stale_holes_kept" => (); self.store.drop_eval_holes());
+        brk!("stale_holes_kept" => (); self.drop_stale_holes());
         self.lat.narrow_out.clear();
         let out = self.run_pass()?;
         if out.partial || self.well_founded || self.lat.pass.widened_x.is_empty() {
@@ -3487,6 +3495,8 @@ impl Eval {
         let steps = brk!("widen_steps_carried" => std::mem::take(&mut self.lat.pass.steps); HashMap::new());
         self.lat.pass = LatticePass { steps, plain_pending: self.carried_unknowns(self.store.tick), ..Default::default() };
         self.lat.carry = UnknownCarry::default();
+        let carried = self.kept_carry.clone();
+        self.carry_kept(carried);
         self.cells.agg_opened.clear();
         self.ds.comps.clear();
         self.ds.elems.clear();

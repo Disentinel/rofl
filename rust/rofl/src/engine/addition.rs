@@ -66,6 +66,8 @@ pub struct AddDelta {
     pub rederived: usize,
     /// facts that lost a firing and kept another standing on what stays: not overdeleted
     pub kept: usize,
+    /// relations a hole or a shrug may move that the change reached, evaluated again after the rest
+    pub holed: usize,
 }
 
 /// A negated premise over a relation that grew, as the fine path reads it: its place in the plan, and the places of
@@ -425,8 +427,9 @@ impl Eval {
     /// Add to an evaluated world the base facts `added` (already in the store) and the rules `new_rules` (already
     /// prepared), and bring it to the state a fresh evaluation would hold. `Err(reason)` leaves the store dirty or untouched; the caller evaluates again.
     pub fn add_delta(&mut self, added: &[FactId], new_rules: &[Sym], called: &[Sym]) -> Result<AddDelta, String> {
-        let mut from: HashSet<Sym> = added.iter().map(|f| self.store.rec(*f).rel).collect();
         let fresh: HashSet<Sym> = new_rules.iter().copied().collect();
+        let added = &self.kernel_declared(added, &fresh);
+        let mut from: HashSet<Sym> = added.iter().map(|f| self.store.rec(*f).rel).collect();
         from.extend(self.rules.iter().filter(|r| fresh.contains(&r.id) && r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel));
         let grown = self.grow(&from, &fresh);
         let why = self.addition_refusals();
@@ -442,12 +445,25 @@ impl Eval {
             self.clo.closures_engage(&self.store);
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
-        let d = self.add_worked_out(added, &[], &fresh, &grown, &moved, called)?;
+        let d = self.worked_out_beside_holes(added, &[], &fresh, &grown, &moved, called)?;
         // a closure declared by the addition lists its rows from now on
         if self.vc.any && !self.store.vlisted {
             self.vc.vpublish(&mut self.store);
         }
         Ok(d)
+    }
+
+    /// `added`, and the kernel's `edb(shrug)` and `edb(unknown)` where a rule added is the first to read either: a
+    /// pass declares them so (`shrug_reset`), and what reads `edb` reads the row as a fact come.
+    fn kernel_declared(&mut self, added: &[FactId], fresh: &HashSet<Sym>) -> Vec<FactId> {
+        let mut out = added.to_vec();
+        for rel in [self.v.shrug, self.v.unknown] {
+            let read = self.rules.iter().filter(|r| fresh.contains(&r.id)).any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.rel == rel));
+            if read && self.store.add(&self.h, self.v.edb, self.v.main, &[Term::atom(rel)], F_BASE) {
+                out.extend(self.store.get(self.v.edb, self.v.main, &[Term::atom(rel)]));
+            }
+        }
+        out
     }
 
     /// The indexes a retraction reads (`retract_set`): what cites each fact, and each row of a tree. Built once, kept
@@ -500,7 +516,30 @@ impl Eval {
             self.vindex_citers();
         }
         self.store.remove_many(&all);
-        self.add_worked_out(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[]).map_err(String::from)
+        self.worked_out_beside_holes(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[])
+    }
+
+    /// The addition worked out over the program without the rules of what a hole or a shrug may move that it reaches
+    /// (`hole_world`): none of them is read by the rest, so the rest is the delta of a program of its own; they are
+    /// evaluated again after it (`pass_aside`).
+    fn worked_out_beside_holes(&mut self, added: &[FactId], removed: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, String> {
+        // (what calls made to a relation answered on demand goes where the change reaches it or a caller: `dirty_set`)
+        let reached: HashSet<Sym> = grown.iter().copied().chain(self.call_relations(called, fresh, grown)).collect();
+        let aside = self.hole_world(&reached, fresh)?;
+        if aside.is_empty() {
+            return self.add_worked_out(added, removed, fresh, grown, moved, called).map_err(String::from);
+        }
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| !aside.contains(&r.clause.head.rel)).cloned().collect();
+        let at: HashMap<Sym, usize> = rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
+        let (rules, at) = (std::mem::replace(&mut self.rules, rules), std::mem::replace(&mut self.rule_at, at));
+        let fresh: HashSet<Sym> = fresh.iter().copied().filter(|r| self.rule_at.contains_key(r)).collect();
+        let grown: HashSet<Sym> = grown.difference(&aside).copied().collect();
+        let r = self.add_worked_out(added, removed, &fresh, &grown, moved, called);
+        (self.rules, self.rule_at) = (rules, at);
+        let mut d = r?;
+        d.holed = aside.len();
+        self.pass_aside(aside)?;
+        Ok(d)
     }
 
     /// `plan` solved as rule `r` solves its body, from each of `seeds`, the solutions in the order of the seeds.
@@ -1304,32 +1343,26 @@ impl Eval {
         Ok(())
     }
 
-    /// The holes other than a rule's fault (`hole_cone`) and the one a seal of provenance writes, which says only that
-    /// derived_by is sealed and which no change moves.
+    /// The holes that name no relation a rule concludes (a rule's fault, a cell's or a lattice's names one:
+    /// `hole_cone`), but for the one a seal of provenance writes, which says only that derived_by is sealed and which no
+    /// change moves.
     pub(super) fn holes_beyond_faults(&mut self) -> usize {
         let sealed = self.h.atom("reflection_sealed");
-        let s_rule = self.v.s_rule_hole;
-        let h = &self.h;
-        self.store.rel_all(h, self.v.hole).into_iter().filter(|id| {
+        let heads: HashSet<Sym> = self.rules.iter().map(|r| r.clause.head.rel).collect();
+        self.store.rel_all(&self.h, self.v.hole).into_iter().filter(|id| {
             let a = self.store.args(*id);
-            a.get(1) != Some(&sealed) && !matches!(a[0].kind(), TermK::Func(i) if h.fname(i) == s_rule && brk!("add_fault_hole_refused" => false; true))
+            a.get(1) != Some(&sealed) && (brk!("add_fault_hole_refused" => matches!(a[0].kind(), TermK::Func(i) if self.h.fname(i) == self.v.s_rule_hole); false) || !self.named_by(&[*id]).iter().any(|r| heads.contains(r)))
         }).count()
     }
 
-    /// WHAT A HOLE OR A SHRUG MAY MOVE: the heads of the rules a fault names, the shrugs and unknowns the kernel
+    /// WHAT A HOLE OR A SHRUG MAY MOVE: the relations a hole names (a faulted rule's head, a cell's, a lattice's), the shrugs and unknowns the kernel
     /// writes of them, and every relation that reads one, through each other. An addition that reaches none of them
     /// meets no fault it did not meet and leaves every shrug standing.
     pub(super) fn hole_cone(&mut self) -> HashSet<Sym> {
-        let s_rule = self.v.s_rule_hole;
-        let mut from: HashSet<Sym> = HashSet::new();
-        for id in self.store.rel_all(&self.h, self.v.hole) {
-            if let TermK::Func(i) = self.store.args(id)[0].kind() {
-                if self.h.fname(i) == s_rule {
-                    let r = self.h.fargs(i)[0].as_atom().and_then(|r| self.rule_of(r));
-                    from.extend(r.map(|r| r.clause.head.rel));
-                }
-            }
-        }
+        let sealed = self.h.atom("reflection_sealed");
+        let heads: HashSet<Sym> = self.rules.iter().map(|r| r.clause.head.rel).collect();
+        let holes: Vec<FactId> = self.store.rel_all(&self.h, self.v.hole).into_iter().filter(|id| self.store.args(*id).get(1) != Some(&sealed)).collect();
+        let mut from: HashSet<Sym> = self.named_by(&holes).into_iter().filter(|r| heads.contains(r)).collect();
         if from.is_empty() && self.shrug_readers.is_empty() && !self.unk.reads_unknown {
             return from;
         }
