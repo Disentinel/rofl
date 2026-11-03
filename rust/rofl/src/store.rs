@@ -2103,6 +2103,45 @@ impl Store {
         (rows, seen.len().clamp(1, rows.max(1)))
     }
 
+    /// `probe_stats` for every value of the constant positions `cpos` (one or two) at once, by the values' bits: one
+    /// pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`).
+    pub fn probe_groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> FxMap<(u64, u64), (usize, usize)> {
+        let mut rows: FxMap<(u64, u64), (usize, usize)> = FxMap::default();
+        let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
+        let Some(groups) = self.idx.get(&rel) else { return rows };
+        for (_, r) in groups.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)) {
+            for &k in r.canon.iter().chain(r.arrived.iter()) {
+                if !self.facts.alive(k) {
+                    continue;
+                }
+                let a = self.facts.args(k);
+                let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
+                let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { continue };
+                let c = (c0, c1);
+                rows.entry(c).or_default().0 += 1;
+                if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+                    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+                    for &p in vpos {
+                        x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+                    }
+                    seen.insert((c, x));
+                }
+            }
+        }
+        for (c, _) in seen {
+            rows.get_mut(&c).expect("a value seen is counted").1 += 1;
+        }
+        for v in rows.values_mut() {
+            v.1 = v.1.clamp(1, v.0.max(1));
+        }
+        rows
+    }
+
+    /// What `probe_groups` counted is still so: the rows of `rel` neither grew, nor died, nor came back.
+    pub fn rows_stamp(&self, rel: Sym, persp: Option<Sym>) -> (usize, u64, usize) {
+        (self.rel_len_est(rel, persp), self.deaths.get(&rel).copied().unwrap_or(0), self.revived.get(&rel).map_or(0, Vec::len))
+    }
+
     /// Every (relation, book) holding a live row, with its live rows and widest arity, in no order: the
     /// census a profile reports (`Eval::profile_text`).
     pub fn live_census(&self) -> Vec<(Sym, Sym, usize, usize, usize)> {

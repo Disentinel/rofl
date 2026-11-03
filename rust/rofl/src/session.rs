@@ -696,6 +696,22 @@ impl Session {
         self.told(crate::journal::Verb::Load, |s| s.load_untold(src, who))
     }
 
+    /// Texts loaded one after another as `load` loads each, the program prepared once after the last and not after
+    /// each: a refusal names the text by its place, and what loaded before it stays, as when they load one by one.
+    pub fn load_all(&mut self, srcs: &[&str], who: Option<&str>) -> Result<usize, (usize, Vec<String>)> {
+        let mut admitted = 0;
+        for (i, src) in srcs.iter().enumerate() {
+            let r = self.told(crate::journal::Verb::Load, |s| crate::program::load_program(&mut s.eval, src, who));
+            if !r.ok {
+                self.eval.reprepare();
+                return Err((i, r.diagnostics));
+            }
+            admitted += r.admitted;
+        }
+        self.eval.reprepare();
+        Ok(admitted)
+    }
+
     fn load_untold(&mut self, src: &str, who: Option<&str>) -> Result<usize, Vec<String>> {
         let r = crate::program::load_program(&mut self.eval, src, who);
         if !r.ok {

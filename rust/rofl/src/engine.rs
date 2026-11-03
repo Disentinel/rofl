@@ -1197,6 +1197,16 @@ pub struct AddState {
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
+    /// `Store::probe_groups` by premise shape (relation, book, constant positions, bound positions), with the stamp
+    /// it was counted at and the constants missed since: a second miss of a shape counts all its constants.
+    delta_groups: HashMap<(Sym, Option<Sym>, Vec<usize>, Vec<usize>), DeltaGroups>,
+}
+
+#[derive(Clone, Default)]
+struct DeltaGroups {
+    stamp: (usize, u64, usize),
+    misses: usize,
+    counts: Option<crate::store::FxMap<(u64, u64), (usize, usize)>>,
 }
 
 /// The threshold cells of one evaluation: reached, still open, and the round their news came in. Held by `Eval`.
@@ -5610,7 +5620,7 @@ impl Eval {
     }
 
     fn conclude(&mut self, r: &Rc<ERule>, sol: Sol, out: &mut Front) -> Result<(), Halt> {
-        let head = r.clause.head.clone();
+        let head = &r.clause.head;
         let persp_t = walk(&self.h, head.persp, &sol.s);
         let args: Vec<Term> = if persp_t.is_atom() {
             head.args
@@ -5693,7 +5703,7 @@ impl Eval {
                 Witness {
                     rule: r.id,
                     tick,
-                    prems: sol.prems.clone(),
+                    prems: sol.prems,
                 },
             )
         };
@@ -5714,8 +5724,11 @@ impl Eval {
             }
             self.charge_row(Some(r.id), true)?;
             self.write_derived_by(r.id, head.rel, persp, &args, id, out);
-        } else if self.ds.charge {
-            self.bump_steps()?;
+        } else {
+            *self.cost.again_by_rule.entry(r.id).or_insert(0) += 1;
+            if self.ds.charge {
+                self.bump_steps()?;
+            }
         }
         if is_new {
             out.note(head.rel, id);
@@ -5832,7 +5845,8 @@ impl Eval {
     /// What a volume of the world would take now, a firing's solutions not yet concluded among it: never less than
     /// the volume (tests/disk.rs).
     pub fn disk_bytes(&self) -> i64 {
-        (self.store.kept_bytes() + self.h.kept_bytes()) as i64 + self.disk_held
+        let notes = self.prov.pending.kept_bytes() + self.pending_assert.kept_bytes() + self.store.journal.kept_bytes();
+        (self.store.kept_bytes() + self.h.kept_bytes() + notes as u64) as i64 + self.disk_held
     }
 
     /// Whether the last evaluation stopped at the disk wall: its hole is in the store.
@@ -11835,7 +11849,8 @@ impl Eval {
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => {
-                        let (pos, vals) = par::bound_args(&self.h, l, s);
+                        let b = par::bound_args(&self.h, l, s);
+                        let (pos, vals) = (b.pos(), b.vals());
                         let ix = self.news_ix.as_ref().filter(|(at, rel, _)| *at == keys as *const _ as usize && *rel == l.rel && !pos.is_empty()).map(|(_, _, ix)| ix.clone());
                         let store = &self.store;
                         let kept = |f: &FactId| {
@@ -11844,7 +11859,7 @@ impl Eval {
                                 r.rel == l.rel && (persp.is_none() || Some(r.persp) == persp)
                             }
                         };
-                        match ix.as_ref().and_then(|ix| ix.rows(store, keys.iter().copied(), l.args.len(), &pos, &vals)) {
+                        match ix.as_ref().and_then(|ix| ix.rows(store, keys.iter().copied(), l.args.len(), pos, vals)) {
                             Some(rows) => rows.iter().copied().filter(kept).collect(),
                             None => keys.iter().copied().filter(kept).collect(),
                         }

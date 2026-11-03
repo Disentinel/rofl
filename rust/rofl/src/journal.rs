@@ -235,6 +235,11 @@ impl Journal {
         4 * (self.kept.len() + self.own.len()) + self.kept_text.len() + self.own_text.len() + 8 * (self.kept_at.len() + self.own_at.len())
     }
 
+    /// What `write` puts in a volume, from the lengths it holds (`Eval::disk_bytes`).
+    pub fn kept_bytes(&self) -> usize {
+        (self.kept.len() + self.own.len()) * 4 + self.kept_text.len() + self.own_text.len() + (self.kept_at.len() + self.own_at.len()) * 8
+    }
+
     pub fn write(&self, w: &mut VolW) {
         w.arena_parts(&self.kept, &[self.own.as_slice()]);
         w.arena_parts(&self.kept_text, &[self.own_text.as_slice()]);
