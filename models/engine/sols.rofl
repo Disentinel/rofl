@@ -1,0 +1,35 @@
+-- models/engine/sols.rofl — WHAT THE PARTIAL SOLUTIONS OF A JOIN HOLD, FROM THE FORM OF THE RULE AND THE PROFILE'S WIDTH.
+-- Load it beside models/engine/profile.rofl, the rule files and the profile of a world (as scripts/refine.ts reflects).
+--
+-- The hypothesis. A partial solution that reaches a premise is the bindings of the variables the premises solved
+-- before it bound, and the premises it rests on (engine.rs `Sol`: `Subst`, a vector of (Sym, Term), 16 bytes a
+-- binding, and a vector of `PremRef`, 8 bytes each, each vector a block of its own behind a 24-byte header). A level of
+-- the join is held whole before the next is solved, so what a level holds is its width times that size, and every
+-- partial solution is two blocks allocated and freed. The alternative layout, a level as two flat arrays with a stride
+-- fixed by the plan (the variable's slot is its place, so no Sym is kept), holds 8 bytes a binding and 8 a premise,
+-- and allocates two blocks a level, not two a solution.
+--
+-- What it does not see: the variables a builtin, a negation or an aggregate binds (only positive literals are read),
+-- and what the allocator rounds a block up to. So the bytes forecast are a floor.
+
+-- the place of each premise in the order the rule was solved in, at each news position (`order[profile]`, from 1)
+so_at(R, At, 1, K, T) :- order[profile](R, At, $cons(K, T), _).
+so_at(R, At, I, K, T) :- so_at(R, At, J, _, $cons(K, T)), I is J + 1.
+-- the premises solved before K, and the variables they bound
+so_before(R, At, K, J) :- so_at(R, At, I, K, _), so_at(R, At, H, J, _), H < I.
+so_bound(R, At, K, V)  :- so_before(R, At, K, J), pf_var[profile](R, J, _, V).
+so_vars(R, At, K, N)   :- so_bound(R, At, K, _), N is count(V : so_bound(R, At, K, V)).
+so_vars(R, At, K, 0)   :- so_at(R, At, _, K, _), not so_bound(R, At, K, _).
+so_prems(R, At, K, P)  :- so_at(R, At, I, K, _), P is I - 1.
+
+-- a partial solution's bytes reaching K, as held now and as a flat level would hold it, and the level's whole
+so_size(R, At, K, Now, Flat) :- so_vars(R, At, K, V), so_prems(R, At, K, P), Now is 48 + 16 * V + 8 * P, Flat is 8 * V + 8 * P.
+so_level(R, At, K, W, Now, Flat) :- width_at[profile](R, At, K, W), W > 0, so_size(R, At, K, N, F), Now is W * N, Flat is W * F.
+
+-- the forecasts: bytes made over the run, blocks allocated, and the widest level held at once
+sols_bytes(now, T)   :- T is sum(B ; R, At, K : so_level(R, At, K, _, B, _)).
+sols_bytes(flat, T)  :- T is sum(B ; R, At, K : so_level(R, At, K, _, _, B)).
+sols_blocks(now, T)  :- S is sum(W ; R, At, K : so_level(R, At, K, W, _, _)), T is S * 2.
+sols_blocks(flat, T) :- S is count(R, At, K : so_level(R, At, K, _, _, _)), T is S * 2.
+so_peak(M)           :- M is max(X : so_level(_, _, _, _, X, _)).
+sols_widest(R, At, K, W, B) :- so_peak(B), so_level(R, At, K, W, B, _).
