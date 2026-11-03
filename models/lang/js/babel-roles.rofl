@@ -220,6 +220,8 @@ exit_kind[ast_babel](continue_statement, continue). exit_kind[ast_babel](throw_s
 exits[value](J, How)   :- exit_kind[ast_babel](K, How), node[ast_babel](J, K, _).
 throws[value](T, V)    :- node[ast_babel](T, throw_statement, _), child[ast_babel](T, argument, 0, V).
 tries[value](T, B)     :- child[ast_babel](T, block, 0, B), child[ast_babel](T, handler, 0, _).
+finalizes[value](Fin, B) :- node[ast_babel](T, try_statement, _), child[ast_babel](T, finalizer, 0, Fin), child[ast_babel](T, block, 0, B).
+finalizes[value](Fin, C) :- node[ast_babel](T, try_statement, _), child[ast_babel](T, finalizer, 0, Fin), child[ast_babel](T, handler, 0, C).
 
 label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, X),
@@ -264,6 +266,14 @@ yields[value](Y, E)    :- node[ast_babel](Y, yield_expression, _), attr[ast_babe
 delegates[value](Y, E) :- node[ast_babel](Y, yield_expression, _), attr[ast_babel](Y, delegate, true),
                           child[ast_babel](Y, argument, 0, E).
 awaits[value](A, X)    :- node[ast_babel](A, await_expression, _), child[ast_babel](A, argument, 0, X).
+-- the function a suspension pauses: the nearest owner of a body above it, or the module for a top-level await
+b_pause_at[ast_babel](S, later) :- node[ast_babel](S, await_expression, _).
+b_pause_at[ast_babel](S, next)  :- node[ast_babel](S, yield_expression, _).
+b_pause_at[ast_babel](S, later) :- node[ast_babel](S, for_of_statement, _), attr[ast_babel](S, await, true).
+b_pause_up[ast_babel](S, P) :- b_pause_at[ast_babel](S, _), parent[tree](P, S).
+b_pause_up[ast_babel](S, Q) :- b_pause_up[ast_babel](S, P), not body[value](P, _), parent[tree](Q, P).
+suspends[value](S, F, How) :- b_pause_up[ast_babel](S, F), body[value](F, _), b_pause_at[ast_babel](S, How).
+suspends[value](S, P, How) :- b_pause_up[ast_babel](S, P), node[ast_babel](P, program, _), b_pause_at[ast_babel](S, How).
 
 -- a parameter is what stands in its slot, through a default and through a TS parameter property
 edb(param_kind).

@@ -61,6 +61,7 @@ Reads:
   - <a id="enumerates"></a>`enumerates`
   - <a id="executes_if"></a>`executes_if`
   - <a id="exits"></a>`exits`
+  - <a id="finalizes"></a>`finalizes`
   - <a id="generator"></a>`generator`
   - <a id="gives"></a>`gives`
   - <a id="has"></a>`has`
@@ -84,6 +85,7 @@ Reads:
   - <a id="static"></a>`static`
   - <a id="static_block"></a>`static_block`
   - <a id="super"></a>`super`
+  - <a id="suspends"></a>`suspends`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="this"></a>`this`
@@ -127,12 +129,10 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
-| <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | <a id="noun-value_assignment_operator"></a>a value assignment operator | a node of one of the kinds "=", "||=", "&&=", "??=" (`assign_value_op`) |
 | <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal` (`node_value_kind`) |
 | <a id="noun-wrapper"></a>a wrapper | a node of one of the kinds `parenthesized_expression`, `tsas_expression`, `tsnon_null_expression` (`value_transparent`) |
-| <a id="noun-yield"></a>a yield | a node of kind `yield_expression` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](#member_node_v) holds of |
 | a scope | a node [`scope_node`](#scope_node) holds of |
@@ -156,7 +156,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="external_module"></a>A module is an external module if some node [is an external site](#external_site) of it.
 - <a id="has_own_ctor"></a>A class has its own constructor if it [has its own constructor](#own_ctor) some method.
 - <a id="gen_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is a generator function if [`generator`](#generator)(it).
-- <a id="try_block"></a>The block of a [try](#noun-try) T is a node B if the `block` of T is B.
 
 ## 1. Names
 
@@ -2254,11 +2253,12 @@ Declared as facts:
 
 1. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
-   - [`awaits`](#awaits)(Q, something);
+   - [`suspends`](#suspends)(Q, something, `later`);
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_overlap`](#keyed_overlap)(M);
 2. if all of:
-   - [`keyed_between`](#keyed_between)(C, K, a [yield](#noun-yield) Q);
+   - [`keyed_between`](#keyed_between)(C, K, Q);
+   - [`suspends`](#suspends)(Q, something, `next`);
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_many`](#keyed_many)(M).
 
@@ -2266,10 +2266,9 @@ Declared as facts:
 
 1. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
-   - [`awaits`](#awaits)(Q, something);
+   - [`suspends`](#suspends)(Q, something, something);
    - [`keyed_again`](#keyed_again)(C, K, M);
-2. if [`keyed_between`](#keyed_between)(C, K, a [yield](#noun-yield) Q) and [`keyed_again`](#keyed_again)(C, K, M);
-3. if [`keyed_caller`](#keyed_caller)(something, something, M).
+2. if [`keyed_caller`](#keyed_caller)(something, something, M).
 
 <a id="keyed_caller"></a>`keyed_caller`(G, Q, F) if [`keyed_called_at`](#keyed_called_at)(G, Q) and F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) a node Q.
 
@@ -2437,8 +2436,7 @@ Declared as facts:
    - G2 [is nearest to](#nearest_v) a node D;
    - [`keyed_drop_runs`](#keyed_drop_runs)(G, G2);
    - unless [`keyed_vsure_out`](#keyed_vsure_out)(V, C, Q);
-2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, something) and [`awaits`](#awaits)(Q, something);
-3. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, a [yield](#noun-yield) Q, something).
+2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, something) and [`suspends`](#suspends)(Q, something, something).
 
 <a id="keyed_vsure_out"></a>`keyed_vsure_out`(V, C, Q) if all of:
   - [`keyed_vbetween`](#keyed_vbetween)(V, C, P, Q);
@@ -2770,8 +2768,7 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
    - [`runs_unknown`](#runs_unknown)(Q);
    - [`keyed_heal_fn`](#keyed_heal_fn)(C, F);
    - [`keyed_open_to`](#keyed_open_to)(F);
-4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, Q) and [`awaits`](#awaits)(Q, something);
-5. if [`keyed_heal_span`](#keyed_heal_span)(C, D, a [yield](#noun-yield) Q).
+4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, Q) and [`suspends`](#suspends)(Q, something, something).
 
 <a id="keyed_healed"></a>`keyed_healed`(C, D) if [`keyed_heal_at`](#keyed_heal_at)(C, D, something, something, something), unless [`keyed_heal_broken`](#keyed_heal_broken)(C, D).
 
@@ -2837,11 +2834,7 @@ A node is taken out before C by Q if [`keyed_vsure_out`](#keyed_vsure_out)(it, C
    - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
    - G [is nearest to](#nearest_v) a node D;
    - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
-   - [`awaits`](#awaits)(Q, something);
-5. if all of:
-   - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
-   - G [is nearest to](#nearest_v) a node D;
-   - [`keyed_pbetween`](#keyed_pbetween)(C, J, a [yield](#noun-yield) Q).
+   - [`suspends`](#suspends)(Q, something, something).
 
 <a id="keyed_outside_at"></a>`keyed_outside_at`(C, J) either:
 
@@ -4241,13 +4234,23 @@ A node points to it if it [makes a generator of](#gen_of) some function.
 
 Inner is sent a node V if Outer [is sent](#next_send) V and Outer [delegates to](#delegates) Inner.
 
-Y points to a node X either:
+> a yield that hands a value out or none (a bare `yield` has no child); `yield*` answers with the inner iterator's
+
+In the code:
+
+<a id="yield_back"></a>`yield_back`(Y) either:
+
+1. if [`yields`](#yields)(Y, something) in the value;
+2. if [`suspends`](#suspends)(Y, something, `next`), unless [`parent`](#parent)(Y, something).
+
+In the flow:
+
+A node Y points to a node X either:
 
 1. if all of:
    - G [is sent](#next_send) a node V;
    - G [is nearest to](#nearest_v) Y;
-   - Y is a [yield](#noun-yield);
-   - [the attribute](#ast_attr) `delegate` of Y is `false`;
+   - [`yield_back`](#yield_back)(Y);
    - V [points to](js-concat.rofl.md#may_be_node) X;
 2. if all of:
    - [`delegates`](#delegates)(Y, Z) in the value;
@@ -4335,6 +4338,16 @@ A node
 <a id="catch_of"></a>The catch of T is H if [`tries`](#tries)(T, B) and [`executes_if`](#executes_if)(H, B, `thrown`).
 
 <a id="catch_param"></a>The param of H is a node P if [`decl`](#decl)(P, `catch`) and [`parent`](#parent)(H, P).
+
+<a id="try_block"></a>The block of T is a node B either:
+
+1. if [`tries`](#tries)(T, B);
+2. if [`try_unhandled`](#try_unhandled)(T, B).
+
+<a id="try_unhandled"></a>`try_unhandled`(T, B) if all of:
+  - [`finalizes`](#finalizes)(Fin, B);
+  - [`parent`](#parent)(T, Fin);
+  - unless [`tries`](#tries)(T, something).
 
 > a throw in a function the try only defines is not thrown by the try
 

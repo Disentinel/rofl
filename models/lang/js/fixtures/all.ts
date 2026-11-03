@@ -36,3 +36,7 @@ declare function amb(): void;
 typeof x; void 0; delete o.a; !x; -x; 'a' in o;
 export type { A }; export { type I as J, E }; export interface K { k: number } export class Cx {}
 import(tl);
+function* gq() { yield; const r = yield 1; yield* gq(); }
+async function fa(it: any) { for await (const v of it) { try { await v; } catch { } finally { v.close(); } } }
+try { amb(); } finally { amb(); }
+await amb();

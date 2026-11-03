@@ -75,8 +75,7 @@ eff_catch_here[code](N) :- caught_here[code](N).
 -- Two arms of ONE relation, so "how many try statements lack a handler" is a
 -- query whose control is the same literal with one constant swapped.
 eff_try_arm[flow](T, handled)   :- tries[value](T, _).
-eff_try_arm[flow](T, unhandled) :- ast_node[code](T, try_statement, _),
-                                   not ast_child[code](T, handler, 0, _).
+eff_try_arm[flow](T, unhandled) :- try_unhandled[flow](T, _).
 
 eff_here[flow](T, exn, none) :- exits[value](T, throw),
                                 not eff_catch_here[code](T).

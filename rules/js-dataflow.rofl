@@ -1080,12 +1080,11 @@ keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K,
 -- one after another, each awaited, do not overlap. A generator's runs live
 -- until they are exhausted, which the model does not follow, so at a `yield`
 -- any second run counts (`keyed_many`).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), awaits[value](Q, _),
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), suspends[value](Q, _, later),
                            keyed_again[code](C, K, M), keyed_overlap[code](M).
-keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _),
+keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), suspends[value](Q, _, next),
                            keyed_again[code](C, K, M), keyed_many[code](M).
-keyed_once_need[code](M) :- keyed_between[code](C, K, Q), awaits[value](Q, _), keyed_again[code](C, K, M).
-keyed_once_need[code](M) :- keyed_between[code](C, K, Q), ast_node[code](Q, yield_expression, _), keyed_again[code](C, K, M).
+keyed_once_need[code](M) :- keyed_between[code](C, K, Q), suspends[value](Q, _, _), keyed_again[code](C, K, M).
 keyed_once_need[code](F) :- keyed_caller[code](_, _, F).
 keyed_caller[code](G, Q, F) :- keyed_called_at[code](G, Q), nearest_fn[code](F, Q).
 keyed_called_at[code](G, Q) :- keyed_once_need[code](G), resolves[code](Q, G).
@@ -1139,8 +1138,7 @@ keyed_vdrop_cand[code](D, P) :- keyed_vbetween[code](_, C, P, _), keyed_read_sit
 keyed_vdrop_at[code](V, C, Q, D) :- keyed_vbetween[code](V, C, P, Q), keyed_vdrop_cand[code](D, P), not keyed_vdiffers[code](D, P).
 keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, D), resolves[code](Q, G), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2),
                                not keyed_vsure_out[code](V, C, Q).
-keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), awaits[value](Q, _).
-keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), ast_node[code](Q, yield_expression, _).
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), suspends[value](Q, _, _).
 keyed_vsure_out[code](V, C, Q) :- keyed_vbetween[code](V, C, P, Q), ast_child[code](S, expression, 0, Q), ast_node[code](S, expression_statement, _),
                                   keyed_read_site[code](C, H, B, F, _), ast_child[code](B, F, _, S), keyed_one_target[code](Q, G),
                                   keyed_dsure[code](G, H, D), keyed_dsure_key[code](D, P).
@@ -1255,8 +1253,7 @@ keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), resolves[code](
                                  keyed_runs_m[code](G, F).
 keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), runs_unknown[code](Q), keyed_heal_fn[code](C, F),
                                  keyed_open_to[code](F).
-keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), awaits[value](Q, _).
-keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), ast_node[code](Q, yield_expression, _).
+keyed_heal_broken[code](C, D) :- keyed_heal_span[code](C, D, Q), suspends[value](Q, _, _).
 keyed_healed[code](C, D) :- keyed_heal_at[code](C, D, _, _, _), not keyed_heal_broken[code](C, D).
 keyed_target[code](G)  :- keyed_drop_fn[code](G).
 keyed_hand_need[code](X) :- keyed_made[code](_, X).
@@ -1277,9 +1274,7 @@ keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), 
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
                           resolves[code](Q, F), keyed_drop_runs[code](F, G).
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
-                          awaits[value](Q, _).
-keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
-                          ast_node[code](Q, yield_expression, _).
+                          suspends[value](Q, _, _).
 keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), runs_unknown[code](Q).
 keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), resolves[code](Q, G), keyed_runs_out[code](G).
 keyed_lost[code](C, J) :- keyed_outside_at[code](C, J), keyed_read_site[code](C, H, _, _, _), keyed_made[code](H, X),
@@ -2018,9 +2013,10 @@ next_send[flow](G, V) :- selects[flow](N, "next"), callee_of[code](C, N),
 delegates[flow](Outer, Inner) :- delegates[value](Y, A), nearest_v[flow](Outer, Y), resolves[code](A, Inner).
 next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, Inner).
 
-may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y),
-                           ast_node[code](Y, yield_expression, _),
-                           ast_attr[code](Y, delegate, false),
+-- a yield that hands a value out or none (a bare `yield` has no child); `yield*` answers with the inner iterator's
+yield_back[code](Y) :- yields[value](Y, _).
+yield_back[code](Y) :- suspends[value](Y, _, next), not parent[tree](Y, _).
+may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y), yield_back[code](Y),
                            may_be_node[flow](V, X).
 
 may_be_node[flow](Y, X) :- delegates[value](Y, A), resolves[code](A, Inner),
@@ -2072,8 +2068,9 @@ imports(surface, code).
 -- one row that is an audit.
 catch_of[flow](T, H)     :- tries[value](T, B), executes_if[value](H, B, thrown).
 catch_param[flow](H, P)  :- decl[value](P, catch), parent[tree](H, P).
-try_block[flow](T, B)    :- ast_node[code](T, try_statement, _),
-                            ast_child[code](T, block, 0, B).
+try_block[flow](T, B)    :- tries[value](T, B).
+try_block[flow](T, B)    :- try_unhandled[flow](T, B).
+try_unhandled[flow](T, B) :- finalizes[value](Fin, B), parent[tree](T, Fin), not tries[value](T, _).
 -- a throw in a function the try only defines is not thrown by the try
 thrown_in[flow](T, V)    :- throws[value](Th, V),
                             inside[tree](B, Th), try_block[flow](T, B),

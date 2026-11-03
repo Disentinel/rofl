@@ -258,6 +258,14 @@ returns[value](R, E) :- oxc_k[ast_oxc](R, return_statement), oxc_c[ast_oxc](R, a
 yields[value](Y, E)    :- oxc_k[ast_oxc](Y, yield_expression), oxc_a[ast_oxc](Y, delegate, false), oxc_c[ast_oxc](Y, argument, 0, E).
 delegates[value](Y, E) :- oxc_k[ast_oxc](Y, yield_expression), oxc_a[ast_oxc](Y, delegate, true), oxc_c[ast_oxc](Y, argument, 0, E).
 awaits[value](A, X)    :- oxc_k[ast_oxc](A, await_expression), oxc_c[ast_oxc](A, argument, 0, X).
+-- the function a suspension pauses: the nearest owner of a body above it, or the module for a top-level await
+pause_at(S, later) :- oxc_k[ast_oxc](S, await_expression).
+pause_at(S, next)  :- oxc_k[ast_oxc](S, yield_expression).
+pause_at(S, later) :- oxc_k[ast_oxc](S, for_of_statement), oxc_a[ast_oxc](S, await, true).
+pause_up(S, P) :- pause_at(S, _), parent[tree](P, S).
+pause_up(S, Q) :- pause_up(S, P), not body[value](P, _), parent[tree](Q, P).
+suspends[value](S, F, How) :- pause_up(S, F), body[value](F, _), pause_at(S, How).
+suspends[value](S, P, How) :- pause_up(S, P), oxc_k[ast_oxc](P, program), pause_at(S, How).
 
 -- MEMBERS ----------------------------------------------------------------------------------------------
 
@@ -441,6 +449,8 @@ iterates[value](L, Left, R)   :- oxc_k[ast_oxc](L, for_of_statement), oxc_c[ast_
 enumerates[value](L, Left, R) :- oxc_k[ast_oxc](L, for_in_statement), oxc_c[ast_oxc](L, left, 0, Left), oxc_c[ast_oxc](L, right, 0, R).
 
 tries[value](T, B) :- oxc_k[ast_oxc](T, try_statement), oxc_c[ast_oxc](T, handler, 0, _), oxc_c[ast_oxc](T, block, 0, B).
+finalizes[value](Fin, B) :- oxc_k[ast_oxc](T, try_statement), oxc_c[ast_oxc](T, finalizer, 0, Fin), oxc_c[ast_oxc](T, block, 0, B).
+finalizes[value](Fin, C) :- oxc_k[ast_oxc](T, try_statement), oxc_c[ast_oxc](T, finalizer, 0, Fin), oxc_c[ast_oxc](T, handler, 0, C).
 exits[value](J, return)   :- oxc_k[ast_oxc](J, return_statement).
 exits[value](J, break)    :- oxc_k[ast_oxc](J, break_statement).
 exits[value](J, continue) :- oxc_k[ast_oxc](J, continue_statement).
