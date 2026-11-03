@@ -104,7 +104,8 @@ roled[W](N) :- throws[W](N, _).
 roled[W](N) :- throws[W](_, N).
 roled[W](N) :- tries[W](N, _).
 roled[W](N) :- tries[W](_, N).
-roled[W](N) :- label[W](N, _).
+roled[W](N) :- labeled_as[W](N, _).
+roled[W](N) :- jumps_to[W](N, _).
 roled[W](N) :- namespace[W](N, _).
 roled[W](N) :- namespace[W](_, N).
 roled[W](N) :- module_ref[W](N, _).

@@ -234,12 +234,12 @@ tries[value](T, B)     :- child[ast_babel](T, block, 0, B), child[ast_babel](T, 
 finalizes[value](Fin, B) :- node[ast_babel](T, try_statement, _), child[ast_babel](T, finalizer, 0, Fin), child[ast_babel](T, block, 0, B).
 finalizes[value](Fin, C) :- node[ast_babel](T, try_statement, _), child[ast_babel](T, finalizer, 0, Fin), child[ast_babel](T, handler, 0, C).
 
-label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
+labeled_as[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, X),
                           node[ast_babel](X, K, _), not steps_through[ast_babel](K, _).
-label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
+labeled_as[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, B), b_through[ast_babel](B, X).
-label[value](J, Name)  :- exit_kind[ast_babel](K, _), node[ast_babel](J, K, _), child[ast_babel](J, label, 0, I),
+jumps_to[value](J, Name)  :- exit_kind[ast_babel](K, _), node[ast_babel](J, K, _), child[ast_babel](J, label, 0, I),
                           attr[ast_babel](I, name, Name).
 
 -- what runs after an await runs later: every later step of each sequence the suspension is inside, up to

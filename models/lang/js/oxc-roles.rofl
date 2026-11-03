@@ -472,9 +472,9 @@ exits[value](J, throw)    :- oxc_k[ast_oxc](J, throw_statement).
 throws[value](T, V) :- oxc_k[ast_oxc](T, throw_statement), oxc_c[ast_oxc](T, argument, 0, V).
 -- a label goes onto the statement it names, and onto the jump that names it
 label_of(L, Name) :- oxc_c[ast_oxc](L, label, 0, I), oxc_name[ast_oxc](I, Name).
-label[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), label_of(L, Name), oxc_c[ast_oxc](L, body, 0, X), plain(X).
-label[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), label_of(L, Name), oxc_c[ast_oxc](L, body, 0, B), through(B, X).
-label[value](J, Name) :- oxc_k[ast_oxc](J, K), K != labeled_statement, label_of(J, Name).
+labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), label_of(L, Name), oxc_c[ast_oxc](L, body, 0, X), plain(X).
+labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), label_of(L, Name), oxc_c[ast_oxc](L, body, 0, B), through(B, X).
+jumps_to[value](J, Name) :- oxc_k[ast_oxc](J, K), K != labeled_statement, label_of(J, Name).
 
 -- what runs after an await runs later: every later step of each sequence the suspension is inside, up to its function
 wait_up(A, A) :- oxc_k[ast_oxc](A, await_expression).

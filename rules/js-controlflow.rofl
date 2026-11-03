@@ -79,8 +79,7 @@ stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
 -- harmless, because both consumers read through `guarded`.
 label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _),
                              ast_child[code](LS, label, 0, I), ast_attr[code](I, name, N).
-label_ref[code](X, N)     :- abrupt_kind(K), ast_node[code](X, K, _),
-                             ast_child[code](X, label, 0, I), ast_attr[code](I, name, N).
+label_ref[code](X, N)     :- jumps_to[value](X, N).
 label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
                              inside[tree](LS, X).
 

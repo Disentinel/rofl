@@ -97,7 +97,8 @@ role(exits,     "nothing after J executes in its sequence but what finalizes it:
 role(throws,    "T carries the value V out as a throw").
 role(tries,     "a throw out of Block is served by the handler of T").
 role(finalizes, "Fin executes whenever control leaves Block: at its end, by return, break, continue or throw").
-role(label,     "X carries the label Name").
+role(labeled_as, "X carries the label Name").
+role(jumps_to,  "the break or continue J leaves the statement labeled Name").
 
 -- ---- modules
 role(namespace, "Ns is the object of exports of P").

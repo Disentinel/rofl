@@ -40,6 +40,7 @@ Reads:
   - <a id="getter"></a>`getter`
   - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
+  - <a id="jumps_to"></a>`jumps_to`
   - <a id="mark"></a>`mark`
   - <a id="rest_props"></a>`rest_props`
   - <a id="setter"></a>`setter`
@@ -74,6 +75,7 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
+- <a id="label_ref"></a>A node refers to the label N if [`jumps_to`](#jumps_to)(it, N).
 - <a id="label_escaped"></a>LS is escaped if some node [targets the label](#label_target) LS.
 - <a id="accessor_of"></a>The accessor of a node Obj at Key is a node M if [the accessor](#accessor_as) of Obj and some kind at Key is M.
 - <a id="hidden_call_fires"></a>A node fires a hidden call if it [fires the hidden call](#hidden_call_user) some node.
@@ -199,8 +201,6 @@ In the audit:
 In the code:
 
 <a id="label_name"></a>The label name of a [label](#noun-label) LS is N if the `label` of LS is a node I and [the attribute](#ast_attr) `name` of I is N.
-
-<a id="label_ref"></a>An [abrupt statement](#noun-abrupt_statement) refers to the label N if the `label` of it is a node I and [the attribute](#ast_attr) `name` of I is N.
 
 A node
 
