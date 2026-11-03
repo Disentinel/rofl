@@ -9,7 +9,7 @@ use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember,
 use crate::term::{Heap, Sym, Term, TermK};
 use std::collections::HashMap;
 
-const MAGIC: &[u8] = b"ROFL-KEPT-4\n";
+const MAGIC: &[u8] = b"ROFL-KEPT-5\n";
 
 #[derive(Default)]
 struct W {
@@ -165,6 +165,12 @@ pub fn keep(h: &Heap, s: &Store, staged: &[StagedAlts], answer: &RuleAnswer, lat
     w.answer(answer);
     write_toks(&mut w, h, lattices, &fact_ix, &cell_ix);
     write_toks(&mut w, h, unknowns, &fact_ix, &cell_ix);
+    // the holes the last evaluation wrote, which the next drops (`Eval::drop_stale_holes`)
+    let holes: Vec<u32> = s.eval_holes.iter().filter_map(|id| fact_ix.get(id).copied()).collect();
+    w.u32(holes.len() as u32);
+    for i in holes {
+        w.u32(i);
+    }
     frame(w, h)
 }
 
@@ -491,6 +497,10 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     let answer = r.answer()?;
     let lattices = read_toks(&mut r, &ids, &cells)?;
     let unknowns = read_toks(&mut r, &ids, &cells)?;
+    for _ in 0..r.u32()? {
+        let i = r.u32()? as usize;
+        s.eval_holes.push(*ids.get(i).ok_or("a kept image names a hole it does not hold")?);
+    }
     if r.i != bytes.len() {
         return Err("a kept image has bytes after its end".into());
     }
