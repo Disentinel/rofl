@@ -12,6 +12,7 @@
 //! The walls and the watcher stay on one thread: the rows held are counted solution by solution as one thread counts
 //! them, and every read is noted with its solution, in order. So a wall falls where it fell and the answers are the
 //! same, byte for byte, on any number of threads.
+use crate::store::Prem;
 use super::*;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
@@ -451,8 +452,8 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
 }
 
 fn last_fact(s: &Sol) -> FactId {
-    match s.prems.last() {
-        Some(PremRef::Fact(f)) => *f,
+    match s.prems.last().map(|p| p.kind()) {
+        Some(Prem::Fact(f)) => f,
         _ => unreachable!(),
     }
 }

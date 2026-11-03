@@ -600,6 +600,18 @@ independence estimate loses to the greedy order on most rules the data's functio
 (f_the_join_order_is_a_fact_the_engine_obeys), so what the loop keeps there is the few it confirmed. The agent's skill for the loop (when to run it, how to read the report,
 where the facts live) is .claude/skills/refine-plan/SKILL.md.
 
+**What a world holds, forecast from its rules.** Two more packs read the same reflection as plan.rofl, in a world of
+their own beside models/engine/profile.rofl, the rule files and a measured world's profile, and have no command yet:
+`models/engine/sols.rofl` (`sols_bytes(now|flat, T)`, `sols_blocks(now|flat, T)`, `sols_widest(R, At, K, W, B)`: the
+partial solutions a join makes and the widest level it holds, from the variables each premise is reached with in the
+order the profile names, times `width_at`) and `models/engine/memory.rofl` (`memory(K, T)`: the witnesses, their nodes
+and premises, from `conc` less `again` and the premise count; and the pattern indexes, from the columns each premise is
+reached with, the relation's `rows` and the partial rows that asked through them, `idle_*` those asked by one at most).
+The profile to read is a world's own, dumped with a rule that asks for it (`refine_profile(Rel, A) :-
+asserted_by($fact(Rel, profile, A), _, _).` beside one that reads a relation of the book, as scripts/refine.ts writes
+it). At vscode 250 files the witnesses were forecast 13.63M against 13.56M stored, and the pattern indexes matched the
+engine's on 555 of its 622, 95% of their bytes (f_the_memory_of_a_world_is_forecast_from_its_rules). The agent's skill for an engine change priced this way first and measured after is
+.claude/skills/forecast-engine-change/SKILL.md.
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
 reading and the binding. It is a diagnostic for the rule's author, not an

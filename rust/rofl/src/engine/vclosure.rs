@@ -32,6 +32,7 @@
 //! of its own. An addition gives it news: the rows the new edges make
 //! (`vnews`), from which the reader is solved (`vfire_news`).
 
+use crate::store::Prem;
 use super::*;
 use crate::forest::Forest;
 
@@ -228,12 +229,12 @@ impl Eval {
             let mut keys: Vec<Sym> = Vec::new();
             for id in self.store.firing_keys() {
                 for (_, _, ps) in self.store.firings(id) {
-                    keys.extend(ps.iter().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
+                    keys.extend(ps.iter().filter_map(|p| if let Prem::VRow(k) = p.kind() { Some(k) } else { None }));
                 }
             }
             for c in self.store.live_cells() {
                 for m in self.store.cell_members(c) {
-                    keys.extend(self.store.member_derivs(m).flatten().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
+                    keys.extend(self.store.member_derivs(m).flatten().filter_map(|p| if let Prem::VRow(k) = p.kind() { Some(k) } else { None }));
                 }
             }
             for k in keys.into_iter().filter(|_| !brk!("vclosure_restore_keys_unread" => true; false)) {
@@ -248,7 +249,7 @@ impl Eval {
         for id in self.store.firing_keys() {
             for (_, _, prems) in self.store.firings(id) {
                 for p in prems {
-                    if let PremRef::VRow(k) = p {
+                    if let Prem::VRow(k) = p.kind() {
                         if k != 0 {
                             cited.push((id, k));
                         }

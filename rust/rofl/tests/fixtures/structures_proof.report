@@ -1,4 +1,4 @@
-structures: 26 relations of at least 2 rows scanned over 583 live facts, about 162 B per fact (store tables over live facts)
+structures: 26 relations of at least 2 rows scanned over 583 live facts, about 160 B per fact (store tables over live facts)
 
 declared tree dedge(P, C) closure dbelow.
         dedge: 3 edges over 4 nodes, 1 roots, depth 2; one parent per child, no cycle (implies a function from child to parent)
@@ -186,4 +186,4 @@ near miss tree dep(P, C). 1 child with two parents: g4 has parents g2 and g3
 near miss tree link(P, C). 1 child with two parents: d1 has parents b1 and c1
 near miss tree ring(P, C). 1 cycle, the first through x1, x3, x2
 
-38 proposals (function 22, tree 2, alias 2, ordered 5, sequence 1, span 2, equivalence 1, dag 3), 23 near misses; the rows they stop storing: 37 (72 derivations), about 5.9 KiB at the mean cost per fact
+38 proposals (function 22, tree 2, alias 2, ordered 5, sequence 1, span 2, equivalence 1, dag 3), 23 near misses; the rows they stop storing: 37 (72 derivations), about 5.8 KiB at the mean cost per fact

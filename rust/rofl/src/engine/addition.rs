@@ -37,6 +37,7 @@
 //! dominance reached, a staged fact two firings reach, a world that keeps no
 //! witness beyond the monotone part, and for added rules a program whose
 //! preparation moves more than the rules it runs.
+use crate::store::Prem;
 use super::*;
 
 /// What an addition did.
@@ -686,21 +687,21 @@ impl Eval {
             // this, of the same level, brings the fact back here: `judged` lets it be judged again.)
             if self.store.alive(x) {
                 let store = &self.store;
-                let gone = |p: &PremRef| matches!(p, PremRef::Fact(g) if over.contains(g) || over_base.contains(g) || !store.alive(*g));
+                let gone = |p: &PremRef| matches!(p.kind(), Prem::Fact(g) if over.contains(&g) || over_base.contains(&g) || !store.alive(g));
                 let firings = store.firings(x);
                 let own = comp.get(&store.rec(x).rel);
                 let below = |g: FactId| {
                     let rel = store.rec(g).rel;
                     self.rel_level(rel) < lv || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
                 };
-                let stands = |ps: &[PremRef]| ps.iter().all(|p| match p {
-                    PremRef::Fact(g) => store.alive(*g) && !over.contains(g) && !over_base.contains(g) && below(*g),
-                    PremRef::Neg(_) | PremRef::Bi(_) => true,
+                let stands = |ps: &[PremRef]| ps.iter().all(|p| match p.kind() {
+                    Prem::Fact(g) => store.alive(g) && !over.contains(&g) && !over_base.contains(&g) && below(g),
+                    Prem::Neg(_) | Prem::Bi(_) => true,
                     _ => false,
                 });
                 if firings.iter().any(|(_, _, ps)| !ps.iter().any(gone) && stands(ps)) {
-                    let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
-                    self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if dead.contains(g))));
+                    let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
+                    self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if dead.contains(&g))));
                     d.kept += 1;
                     self.add.kept.entry(x).or_default().extend(dead);
                     judged.insert(x);

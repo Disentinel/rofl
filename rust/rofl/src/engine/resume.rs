@@ -12,6 +12,7 @@
 //! A wall anywhere else (a lattice, a threshold, a closure kernel, a demand
 //! unfolding, the alternating fixpoint, a component stratified by its data,
 //! the space wall) leaves no cut, and `resume` evaluates the world again.
+use crate::store::Prem;
 use super::*;
 use crate::arena::{VolR, VolW};
 
@@ -91,7 +92,7 @@ impl Eval {
             }
             if stale
                 && self.lat.has_cells()
-                && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p, PremRef::Fact(f) if !self.store.alive(*f))))
+                && brk!("lattice_stale_solution" => false; sol.prems.iter().any(|p| matches!(p.kind(), Prem::Fact(f) if !self.store.alive(f))))
             {
                 continue;
             }
@@ -235,7 +236,7 @@ fn read_front(r: &mut VolR) -> Result<Front, String> {
 }
 
 fn read_prems(r: &mut VolR) -> Result<Vec<PremRef>, String> {
-    Ok(r.arena_checked::<PremRef>(|w| w.iter().step_by(2).all(|&t| t <= 4))?.to_vec())
+    Ok(r.arena::<PremRef>()?.to_vec())
 }
 
 impl Eval {

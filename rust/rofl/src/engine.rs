@@ -6,6 +6,7 @@
 //! reproduces here; `Mode::Strata` is the stock path, and it is not decoration
 //! — the kernel's own `safety.rofl` sub-evaluation runs under it.
 
+use crate::store::Prem;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 
@@ -4789,28 +4790,28 @@ impl Eval {
         for (rel, rule, t, prems) in firings {
             let staged = self.staged_firing(rel, rule, t, &prems);
             for p in prems {
-                match p {
-                    PremRef::Cell(c) if walked.insert(c) => {
+                match p.kind() {
+                    Prem::Cell(c) if walked.insert(c) => {
                         let tick = self.store.cell(c).tick;
                         for m in self.store.cell_members(c) {
                             self.why.past_walks += 1;
                             for q in self.store.member_derivs(m).take(brk!("cited_past_canonical_only" => 1; usize::MAX)).flatten() {
-                                match q {
-                                    PremRef::Fact(f) => {
-                                        read.insert((*f, tick));
+                                match q.kind() {
+                                    Prem::Fact(f) => {
+                                        read.insert((f, tick));
                                     }
-                                    PremRef::VRow(k) if vrows => {
-                                        vread.insert((*k, tick));
+                                    Prem::VRow(k) if vrows => {
+                                        vread.insert((k, tick));
                                     }
                                     _ => {}
                                 }
                             }
                         }
                     }
-                    PremRef::Fact(f) if staged => {
+                    Prem::Fact(f) if staged => {
                         read.insert((f, t.saturating_sub(1)));
                     }
-                    PremRef::VRow(k) if staged && vrows => {
+                    Prem::VRow(k) if staged && vrows => {
                         vread.insert((k, t.saturating_sub(1)));
                     }
                     _ => {}
@@ -5960,8 +5961,8 @@ impl Eval {
                                 self.demand_below(depth, l, &a.s, faults, unknowns);
                                 let excl = if depth == 0 { self.sn_except(i) } else { None };
                                 for (s2, r) in found {
-                                    if let (Some(x), PremRef::Fact(f)) = (&excl, &r) {
-                                        if x.contains(f) {
+                                    if let (Some(x), Prem::Fact(f)) = (&excl, r.kind()) {
+                                        if x.contains(&f) {
                                             continue;
                                         }
                                     }
@@ -6180,13 +6181,13 @@ impl Eval {
                 let k = self.anon_lit_key(l, s);
                 PremRef::Neg(self.h.intern(&k))
             }
-            BodyElem::Pos(l) => match r {
-                PremRef::VRow(_) => self.vc.vrow_ref(&mut self.h, &mut self.store, l, s),
-                PremRef::Bi(_) => {
+            BodyElem::Pos(l) => match r.kind() {
+                Prem::VRow(_) => self.vc.vrow_ref(&mut self.h, &mut self.store, l, s),
+                Prem::Bi(_) => {
                     let k = format!("open {}", self.anon_lit_key(l, s));
                     PremRef::Bi(self.h.intern(&k))
                 }
-                other => other,
+                _ => r,
             },
             // One premise for the element, the cell it read: the invariant
             // that `prems[i]` describes `body[i]` holds.
@@ -7445,17 +7446,17 @@ impl Eval {
 
     /// 1 + the highest fact premise's height; a negation or a builtin is 0.
     fn member_height(&mut self, prems: &[PremRef]) -> Result<u32, Halt> {
-        let roots: Vec<FactId> = prems.iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }).collect();
+        let roots: Vec<FactId> = prems.iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }).collect();
         if let Err(f) = self.store.heights(&roots, &mut self.memo.height_memo) {
             return Err(Halt::Bug(format!("{} has no well-founded height", self.store.key(&self.h, f))));
         }
         let mut hgt = 0u32;
         for p in prems {
-            match p {
-                PremRef::Fact(f) => hgt = hgt.max(self.memo.height_memo[f]),
-                PremRef::Cell(c) => hgt = hgt.max(self.store.cell(*c).height),
-                PremRef::VRow(k) => hgt = hgt.max(self.store.vrow_height(*k, &mut self.memo.height_memo)),
-                PremRef::Neg(_) | PremRef::Bi(_) => {}
+            match p.kind() {
+                Prem::Fact(f) => hgt = hgt.max(self.memo.height_memo[&f]),
+                Prem::Cell(c) => hgt = hgt.max(self.store.cell(c).height),
+                Prem::VRow(k) => hgt = hgt.max(self.store.vrow_height(k, &mut self.memo.height_memo)),
+                Prem::Neg(_) | Prem::Bi(_) => {}
             }
         }
         Ok(hgt + 1)
@@ -7802,7 +7803,7 @@ impl Eval {
             let cy = *self.store.args(y).last().unwrap();
             for (ry, _, ps) in self.store.firings(y) {
                 let Some(k) = open.iter().position(|r| *r == ry) else { continue };
-                if !ps.iter().any(|p| matches!(p, PremRef::Fact(f) if self.lat.pass.superseded.contains(f)))
+                if !ps.iter().any(|p| matches!(p.kind(), Prem::Fact(f) if self.lat.pass.superseded.contains(&f)))
                     && self.join_leq(op, cx, cy)?
                 {
                     open.swap_remove(k);
@@ -7950,10 +7951,10 @@ impl Eval {
             for &c in &cover {
                 let hc = memo[&c];
                 for (rule, _, prems) in self.store.firings(c) {
-                    let high = prems.iter().any(|p| match p {
-                        PremRef::Fact(q) => memo.get(q).is_none_or(|h| *h >= hc),
-                        PremRef::Cell(x) => self.store.cell(*x).height >= hc,
-                        PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => false,
+                    let high = prems.iter().any(|p| match p.kind() {
+                        Prem::Fact(q) => memo.get(&q).is_none_or(|h| *h >= hc),
+                        Prem::Cell(x) => self.store.cell(x).height >= hc,
+                        Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_) => false,
                     });
                     if brk!("join_self_firing_kept" => false; high) {
                         self.store.remove_firing(c, rule, &prems);
@@ -8563,7 +8564,7 @@ impl Eval {
         for &y in &region {
             for (_, _, ps) in self.store.firings(y) {
                 for p in ps {
-                    if let PremRef::Fact(g) = p {
+                    if let Prem::Fact(g) = p.kind() {
                         if stale.contains(&g) && !ups.contains_key(&g) {
                             let d = brk!("dominance_history_unfounded" => HashSet::new(); self.sub_dominators(g));
                             ups.insert(g, d);
@@ -8577,8 +8578,8 @@ impl Eval {
             store.firings(head).iter().any(|(r, _, qs)| {
                 *r == rule
                     && qs.len() == ps.len()
-                    && ps.iter().zip(qs).all(|(p, q)| match (p, q) {
-                        (PremRef::Fact(g), PremRef::Fact(h)) if stale.contains(g) => ups.get(g).is_some_and(|u| u.contains(h)),
+                    && ps.iter().zip(qs).all(|(p, q)| match (p.kind(), q.kind()) {
+                        (Prem::Fact(g), Prem::Fact(h)) if stale.contains(&g) => ups.get(&g).is_some_and(|u| u.contains(&h)),
                         _ => true,
                     })
             })
@@ -8586,7 +8587,7 @@ impl Eval {
         let mut memo: HashMap<FactId, u32> = HashMap::new();
         let _ = store.heights_where_head(&region, &mut memo, &|head, rule, ps| {
             !cells.contains(&store.rec(head).rel)
-                && ps.iter().any(|p| matches!(p, PremRef::Fact(g) if stale.contains(g)))
+                && ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if stale.contains(&g)))
                 && !refired(head, rule, ps)
         });
         let unfounded: Vec<FactId> = region.iter().copied().filter(|f| !memo.contains_key(f)).collect();
@@ -8650,7 +8651,7 @@ impl Eval {
         }
         for (rule, _, prems) in self.store.firings(x) {
             for p in prems {
-                let PremRef::Fact(g) = p else { continue };
+                let Prem::Fact(g) = p.kind() else { continue };
                 let rec = self.store.rec(g);
                 if !self.lat.pass.superseded.contains(&g) || self.lat.algebra(rec.rel).sub.is_none() {
                     continue;
@@ -9289,7 +9290,7 @@ impl Eval {
             return;
         }
         let store = &self.store;
-        let dead = |ps: &[PremRef]| ps.iter().any(|p| matches!(p, PremRef::Fact(f) if !store.alive(*f)));
+        let dead = |ps: &[PremRef]| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(f) if !store.alive(f)));
         let mut keys: Vec<FKey> = self.staged.iter().filter(|(_, f)| dead(&f.prems)).map(|(k, _)| k.clone()).collect();
         if keys.is_empty() {
             return;
@@ -9299,11 +9300,11 @@ impl Eval {
         for k in keys {
             let alts = self.staged_alts.remove(&k).unwrap_or_default();
             let store = &self.store;
-            let dead = |ps: &[PremRef]| ps.iter().any(|p| matches!(p, PremRef::Fact(f) if !store.alive(*f)));
+            let dead = |ps: &[PremRef]| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(f) if !store.alive(f)));
             let known_false = |ps: &[PremRef]| {
                 ps.iter().any(|p| {
-                    matches!(p, PremRef::Fact(f) if self.lat.pass.sub_gone.contains(f)
-                        || self.lat.pass.superseded.contains(f) && self.lat.algebra(store.rec(*f).rel).sub.is_some())
+                    matches!(p.kind(), Prem::Fact(f) if self.lat.pass.sub_gone.contains(&f)
+                        || self.lat.pass.superseded.contains(&f) && self.lat.algebra(store.rec(f).rel).sub.is_some())
                 })
             };
             let f = &self.staged[&k];
@@ -10591,7 +10592,7 @@ impl Eval {
         let sup = std::mem::take(&mut self.lat.pass.superseded);
         let mut memo: HashMap<FactId, u32> = HashMap::new();
         let _ = self.store.heights_where(&cand, &mut memo, &|ps: &[PremRef]| {
-            ps.iter().any(|p| matches!(p, PremRef::Fact(g) if sup.contains(g)))
+            ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if sup.contains(&g)))
         });
         let mut keep: Vec<FactId> = Vec::new();
         for f in cand {
@@ -10636,10 +10637,10 @@ impl Eval {
     fn firing_height(&self, prems: &[PremRef]) -> u32 {
         let mut h = 0u32;
         for p in prems {
-            match p {
-                PremRef::Fact(f) => h = h.max(self.memo.height_memo.get(f).copied().unwrap_or(0)),
-                PremRef::Cell(c) => h = h.max(self.store.cell(*c).height),
-                PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
+            match p.kind() {
+                Prem::Fact(f) => h = h.max(self.memo.height_memo.get(&f).copied().unwrap_or(0)),
+                Prem::Cell(c) => h = h.max(self.store.cell(c).height),
+                Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_) => {}
             }
         }
         h + 1
@@ -10721,8 +10722,8 @@ impl Eval {
                 let mut high: Vec<FactId> = members
                     .iter()
                     .flat_map(|m| m.3.iter())
-                    .filter_map(|q| match q {
-                        PremRef::Fact(q) if *q != f && hm(q) > hf => Some(*q),
+                    .filter_map(|q| match q.kind() {
+                        Prem::Fact(q) if q != f && hm(&q) > hf => Some(q),
                         _ => None,
                     })
                     .collect();
@@ -10736,8 +10737,8 @@ impl Eval {
                 let selfish: Vec<bool> = members
                     .iter()
                     .map(|m| {
-                        m.3.iter().any(|q| match q {
-                            PremRef::Fact(q) => brk!("lattice_self_cite" => hm(q) > hf && !founded.contains(q); *q == f || (hm(q) > hf && !founded.contains(q))),
+                        m.3.iter().any(|q| match q.kind() {
+                            Prem::Fact(q) => brk!("lattice_self_cite" => hm(&q) > hf && !founded.contains(&q); q == f || (hm(&q) > hf && !founded.contains(&q))),
                             _ => false,
                         })
                     })
@@ -11502,23 +11503,23 @@ impl Eval {
     /// A member's premise as a term: `$fact(rel, persp, args)`, `$neg("key")`
     /// or `$bi("desc")`.
     fn prem_term(&mut self, p: PremRef) -> Term {
-        match p {
-            PremRef::Fact(f) => {
+        match p.kind() {
+            Prem::Fact(f) => {
                 let r = self.store.rec(f);
                 let (rel, persp) = (r.rel, r.persp);
                 let args = self.store.args(f).to_vec();
                 fact_term(&mut self.h, &self.v, rel, persp, &args)
             }
-            PremRef::Neg(k) => {
+            Prem::Neg(k) => {
                 let t = Term::str(k);
                 self.h.mkf(self.v.s_neg, &[t])
             }
-            PremRef::Bi(d) => {
+            Prem::Bi(d) => {
                 let t = Term::str(d);
                 self.h.mkf(self.v.s_bi, &[t])
             }
-            PremRef::Cell(c) => self.store.cell_key_term(&mut self.h, c),
-            PremRef::VRow(k) => match self.vrow_entry(k) {
+            Prem::Cell(c) => self.store.cell_key_term(&mut self.h, c),
+            Prem::VRow(k) => match self.vrow_entry(k) {
                 Some((ci, book, a, d)) => {
                     let rel = self.vc.vclosures[ci].rel;
                     fact_term(&mut self.h, &self.v, rel, book, &[a, d])
@@ -11639,7 +11640,7 @@ impl Eval {
             let book = p.as_atom()?;
             let mut out = Vec::with_capacity(picks.len());
             for (a, r) in picks {
-                if matches!(r, PremRef::Fact(_)) || brk!("demand_done_grounds_open" => true; false) {
+                if matches!(r.kind(), Prem::Fact(_)) || brk!("demand_done_grounds_open" => true; false) {
                     out.push((a, r));
                     continue;
                 }
@@ -11730,7 +11731,7 @@ impl Eval {
     /// new: under canonical variables, a row if open. Whether it was.
     fn keep_answer(&mut self, l: &Lit, ms: &Subst, mref: PremRef, dk: &str, rid: Sym) -> Result<bool, Halt> {
         // an open answer is the same answer again under other variables
-        let tk = if matches!(mref, PremRef::Fact(_)) { dk.to_string() } else { self.anon_lit_key(l, ms) };
+        let tk = if matches!(mref.kind(), Prem::Fact(_)) { dk.to_string() } else { self.anon_lit_key(l, ms) };
         if self.demand.calls.last().unwrap().keys.contains(&tk) {
             return Ok(false);
         }
@@ -11741,7 +11742,7 @@ impl Eval {
         c.keys.insert(tk);
         c.answers.push((args, mref));
         // an open answer kept is a row: no stored fact counts it
-        if !matches!(mref, PremRef::Fact(_)) && brk!("demand_open_answer_free" => false; true) {
+        if !matches!(mref.kind(), Prem::Fact(_)) && brk!("demand_open_answer_free" => false; true) {
             c.rows += 1;
             self.charge_row(Some(rid), true)?;
         }
@@ -11761,8 +11762,8 @@ impl Eval {
             let mut grew = false;
             for dr in &rules {
                 for (ms, mref) in self.solve_demand_rule(dr, &lit, &Vec::new(), depth)? {
-                    let dk = match mref {
-                        PremRef::Fact(f) => self.store.key(&self.h, f),
+                    let dk = match mref.kind() {
+                        Prem::Fact(f) => self.store.key(&self.h, f),
                         _ => String::new(),
                     };
                     if self.keep_answer(&lit, &ms, mref, &dk, dr.id)? {
@@ -11813,8 +11814,8 @@ impl Eval {
             self.rename_counter += 1;
             let args: Vec<Term> = args.iter().map(|a| rename_term(&mut self.h, *a, n)).collect();
             let Some(ms) = unify_all(&self.h, &l.args, &args, s) else { continue };
-            let dk = match mref {
-                PremRef::Fact(f) => self.store.key(&self.h, f),
+            let dk = match mref.kind() {
+                Prem::Fact(f) => self.store.key(&self.h, f),
                 _ => self.lit_key(l, &ms),
             };
             if seen_keys.insert(dk.clone()) {
@@ -11948,8 +11949,8 @@ impl Eval {
         let mut seen_keys: HashSet<String> = HashSet::new();
         if drs.is_some() {
             for (_, r) in out.iter() {
-                if let PremRef::Fact(f) = r {
-                    seen_keys.insert(self.store.key(&self.h, *f));
+                if let Prem::Fact(f) = r.kind() {
+                    seen_keys.insert(self.store.key(&self.h, f));
                 }
             }
         }
@@ -11994,8 +11995,8 @@ impl Eval {
             return out;
         }
         if open.is_empty() {
-            let fact = |r: &PremRef| match r {
-                PremRef::Fact(f) => *f,
+            let fact = |r: &PremRef| match r.kind() {
+                Prem::Fact(f) => f,
                 _ => unreachable!(),
             };
             out.sort_by(|a, b| self.store.cmp_key(&self.h, fact(&a.1), fact(&b.1)));
@@ -12004,8 +12005,8 @@ impl Eval {
         let mut keyed: Vec<(String, Subst, PremRef)> = out
             .into_iter()
             .map(|(s, r)| {
-                let k = match r {
-                    PremRef::Fact(f) => self.store.key(&self.h, f),
+                let k = match r.kind() {
+                    Prem::Fact(f) => self.store.key(&self.h, f),
                     _ => unreachable!(),
                 };
                 (k, s, r)
@@ -12067,9 +12068,9 @@ impl Eval {
         let mut c = DemandCall { key, neg: self.demand.neg_level, linear, low: p, marks, seen: usize::MAX, ..Default::default() };
         let stored = if only.is_some() { self.store_answers(l, s, None) } else { out.to_vec() };
         for (_, r) in stored.iter() {
-            if let PremRef::Fact(f) = r {
-                c.keys.insert(self.store.key(&self.h, *f));
-                c.answers.push((self.store.args(*f).to_vec(), *r));
+            if let Prem::Fact(f) = r.kind() {
+                c.keys.insert(self.store.key(&self.h, f));
+                c.answers.push((self.store.args(f).to_vec(), *r));
             }
         }
         c.began = c.answers.len();
@@ -12136,8 +12137,8 @@ impl Eval {
                 },
                 None => ms,
             };
-            let dk = match mref {
-                PremRef::Fact(f) => self.store.key(&self.h, f),
+            let dk = match mref.kind() {
+                Prem::Fact(f) => self.store.key(&self.h, f),
                 _ => self.lit_key(l, &ms),
             };
             let new = !u.pushed || self.keep_answer(l, &ms, mref, &dk, rid)?;
@@ -13006,9 +13007,9 @@ impl Eval {
             let prems: Vec<PremRef> = w
                 .prems
                 .iter()
-                .map(|pr| match pr {
-                    PremRef::Fact(f) => {
-                        let fk = self.fkey_of(*f);
+                .map(|pr| match pr.kind() {
+                    Prem::Fact(f) => {
+                        let fk = self.fkey_of(f);
                         match undef.get(&fk) {
                             Some(u) => match self.store.get(u.0, u.1, &u.2) {
                                 Some(x) => PremRef::Fact(x),
@@ -13338,7 +13339,7 @@ fn reachable<N: IntoIterator<Item = Sym>>(from: impl IntoIterator<Item = Sym>, m
 }
 
 fn fact_prems(prems: &[PremRef]) -> Vec<FactId> {
-    prems.iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }).collect()
+    prems.iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }).collect()
 }
 
 /// A RULE WHOSE FAULTS A LATTICE DECIDES runs each builtin that can fail
@@ -14600,7 +14601,7 @@ mod tests {
                     continue;
                 }
                 for p in prems {
-                    if let PremRef::Fact(f) = p {
+                    if let Prem::Fact(f) = p.kind() {
                         let r = l.eval.store.rec(f);
                         let args = l.eval.store.args(f).to_vec();
                         read.insert(fact_term(&mut l.eval.h, &l.eval.v, r.rel, r.persp, &args));
@@ -15216,14 +15217,14 @@ impl Eval {
     /// Is `id` reachable from `prems` through firings?
     fn rests_on_itself(&self, id: FactId, prems: &[PremRef]) -> bool {
         let mut seen = HashSet::new();
-        let mut stack: Vec<FactId> = prems.iter().filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
+        let mut stack: Vec<FactId> = prems.iter().filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
         while let Some(g) = stack.pop() {
             if g == id {
                 return true;
             }
             if seen.insert(g) {
                 for (_, _, ps) in self.store.firings(g) {
-                    stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(x) = p { Some(*x) } else { None }));
+                    stack.extend(ps.iter().filter_map(|p| if let Prem::Fact(x) = p.kind() { Some(x) } else { None }));
                 }
             }
         }
@@ -15318,13 +15319,13 @@ impl Eval {
         // lattice value, or cites a cell sealed before its tick
         let past = brk!("carry_why_present" => false; self.staged_firing(self.store.rec(id).rel, rule, tick, &prems));
         for pr in prems {
-            match pr {
+            match pr.kind() {
                 // THE PLAIN EXPLAINER WRITES A NEGATION'S DEMONSTRATION
                 // WHEN IT REACHES THE FIRING, before the premises above
                 // it are walked, and its renaming suffixes count in
                 // that order (src/api.ts renderWhy)
-                PremRef::Neg(_) if self.plain && past => self.render_past(pr, tick.saturating_sub(1), indent, o, next),
-                PremRef::Neg(_) | PremRef::Bi(_) if self.plain => self.render_prem(pr, indent, o, next),
+                Prem::Neg(_) if self.plain && past => self.render_past(pr, tick.saturating_sub(1), indent, o, next),
+                Prem::Neg(_) | Prem::Bi(_) if self.plain => self.render_prem(pr, indent, o, next),
                 _ if past => next.push(WhyTask::Past(pr, tick.saturating_sub(1), indent)),
                 _ => next.push(WhyTask::Prem(pr, indent)),
             }
@@ -15528,7 +15529,7 @@ impl Eval {
         let Some((rule, tick, prems)) = self.why_witness(id) else {
             return next.push(WhyTask::Line(format!("{pad}{key} [past tick]")));
         };
-        let Some(c) = prems.iter().find_map(|p| if let PremRef::Cell(c) = p { Some(*c) } else { None }) else {
+        let Some(c) = prems.iter().find_map(|p| if let Prem::Cell(c) = p.kind() { Some(c) } else { None }) else {
             return next.push(WhyTask::Line(format!("{pad}{key} [tag counting] <= {} @tick {tick}", self.h.name(rule))));
         };
         let members = self.store.cell_members(c).to_vec();
@@ -15549,7 +15550,7 @@ impl Eval {
                 break;
             }
             let ps = self.store.member_prems(m).to_vec();
-            let v = ps.iter().find_map(|p| if let PremRef::Fact(f) = p { self.store.args(*f).last().copied() } else { None });
+            let v = ps.iter().find_map(|p| if let Prem::Fact(f) = p.kind() { self.store.args(f).last().copied() } else { None });
             let mut vs = String::new();
             if let Some(v) = v {
                 self.h.canon_term(v, &mut vs);
@@ -15614,7 +15615,7 @@ impl Eval {
     fn staged_firing(&self, rel: Sym, rule: Sym, tick: u32, prems: &[PremRef]) -> bool {
         brk!("plain_staged_why_present" => false; self.next_rules.contains(&rule))
             || self.carried.contains_key(&rel)
-            || prems.iter().any(|p| matches!(p, PremRef::Cell(c) if self.store.cell(*c).tick < tick))
+            || prems.iter().any(|p| matches!(p.kind(), Prem::Cell(c) if self.store.cell(c).tick < tick))
     }
 
     /// A PREMISE READ IN A PAST TICK: what a cell sealed at T, or a value
@@ -15624,19 +15625,19 @@ impl Eval {
     /// it) and not explained further: a tick's firings go with the tick.
     fn render_past(&mut self, pr: PremRef, t: u32, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
         // a row of a closure answered from its tree, read at T: named by its frozen `derived_by` rows as a stored row is
-        let vrow = match pr {
-            PremRef::VRow(k) if !brk!("vclosure_past_row_present" => true; false) => self.vrow_entry(k).map(|(ci, b, a, d)| (self.vc.vclosures[ci].rel, b, vec![a, d])),
+        let vrow = match pr.kind() {
+            Prem::VRow(k) if !brk!("vclosure_past_row_present" => true; false) => self.vrow_entry(k).map(|(ci, b, a, d)| (self.vc.vclosures[ci].rel, b, vec![a, d])),
             _ => None,
         };
-        let row = match pr {
-            PremRef::Fact(f) => Some((self.store.rec(f).rel, self.store.rec(f).persp, self.store.args(f).to_vec())),
+        let row = match pr.kind() {
+            Prem::Fact(f) => Some((self.store.rec(f).rel, self.store.rec(f).persp, self.store.args(f).to_vec())),
             _ => vrow,
         };
         let Some((rel, persp, args)) = row else {
             // A NEGATED PREMISE of a staged firing held in the tick it was
             // read: the arrival tick's store (an undefined row, a whynot) says
             // nothing about it, so it is the bare claim, no demonstration.
-            if let PremRef::Neg(k) = pr {
+            if let Prem::Neg(k) = pr.kind() {
                 if brk!("staged_neg_arrival" => false; true) {
                     let key = self.h.name(k).to_string();
                     return next.line(format!("{}not {key} [finite failure]", "  ".repeat(indent)));
@@ -15671,9 +15672,9 @@ impl Eval {
 
     /// One premise of a firing, at `indent`.
     fn render_prem(&mut self, pr: PremRef, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
-        match pr {
-            PremRef::Fact(f) => next.push(WhyTask::Fact(f, indent)),
-            PremRef::Neg(k) => {
+        match pr.kind() {
+            Prem::Fact(f) => next.push(WhyTask::Fact(f, indent)),
+            Prem::Neg(k) => {
                 let key = self.h.name(k).to_string();
                 // `not p` over an undefined p did not fail, it never settled:
                 // p's own row is the explanation.
@@ -15694,14 +15695,14 @@ impl Eval {
                     }
                 }
             }
-            PremRef::Bi(d) => next.line(format!("{}{} [builtin]", "  ".repeat(indent), self.h.name(d))),
-            PremRef::VRow(k) => self.render_vrow(k, indent, next),
+            Prem::Bi(d) => next.line(format!("{}{} [builtin]", "  ".repeat(indent), self.h.name(d))),
+            Prem::VRow(k) => self.render_vrow(k, indent, next),
             // AN AGGREGATE PREMISE IS ITS CELL: what it folded, what it
             // sealed, and its members, each explained in turn. A digest of
             // `WHY_MEMBERS` by default; `why all` prints every one.
             // A QUORUM: the first N members, canonical, and nothing sealed —
             // a threshold reached stays reached however its input grows.
-            PremRef::Cell(c) if self.store.cell(c).op == AggOp::AtLeast => {
+            Prem::Cell(c) if self.store.cell(c).op == AggOp::AtLeast => {
                 let r = self.store.cell(c).clone();
                 let head = self.h.name(r.desc).to_string();
                 let id = self.why.why_cell_id(&head, c);
@@ -15727,7 +15728,7 @@ impl Eval {
                     self.render_alt_derivations(c, m, i, indent + 1, o, next);
                 }
             }
-            PremRef::Cell(c) => {
+            Prem::Cell(c) => {
                 let r = self.store.cell(c).clone();
                 let value = self.store.cell_value_text(&self.h, c);
                 let head = format!("{} = {value}", self.h.name(r.desc));
@@ -16450,12 +16451,12 @@ impl Eval {
                 let prems: Vec<String> = sol
                     .prems
                     .iter()
-                    .filter_map(|p| match p {
-                        PremRef::Fact(f) => Some(self.store.key(&self.h, *f)),
-                        PremRef::Bi(d) => Some(self.h.name(*d).to_string()),
-                        PremRef::Neg(k) => Some(format!("not {}", self.h.name(*k))),
-                        PremRef::VRow(k) => Some(self.h.name(*k).to_string()),
-                        PremRef::Cell(_) => None,
+                    .filter_map(|p| match p.kind() {
+                        Prem::Fact(f) => Some(self.store.key(&self.h, f)),
+                        Prem::Bi(d) => Some(self.h.name(d).to_string()),
+                        Prem::Neg(k) => Some(format!("not {}", self.h.name(k))),
+                        Prem::VRow(k) => Some(self.h.name(k).to_string()),
+                        Prem::Cell(_) => None,
                     })
                     .collect();
                 let text = format!("{vs} <= {}: {}", self.h.name(r.id), prems.join(", "));
@@ -16884,8 +16885,8 @@ impl Eval {
                     let key = self.lit_key(l, s);
                     self.wn_put(out, format!("not {key} -- not known: it reads what a hole left unknown"), None, left);
                 } else if let Some((s2, r)) = mm.into_iter().next() {
-                    let wit = match r {
-                        PremRef::Fact(f) => {
+                    let wit = match r.kind() {
+                        Prem::Fact(f) => {
                             let rec = self.store.rec(f);
                             let (rel, persp) = (rec.rel, rec.persp);
                             let args = self.store.args(f).to_vec();

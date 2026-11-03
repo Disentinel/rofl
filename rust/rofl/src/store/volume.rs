@@ -162,7 +162,7 @@ impl Cells {
         let bad = || "a volume's cells are not cells".to_string();
         let names: Vec<String> = (0..r.u32()?).map(|_| r.text()).collect::<Result<_, _>>()?;
         let (recs, keys, mems, projs) = (r.arena::<u32>()?, r.arena::<Term>()?, r.arena::<u32>()?, r.arena::<Term>()?);
-        let prems = r.arena_checked::<PremRef>(prem_tags_ok)?;
+        let prems = r.arena::<PremRef>()?;
         let (alts, seals) = (r.arena::<u32>()?, r.arena::<u32>()?);
         if recs.len() % CELL_WORDS != 0 || mems.len() % MEMBER_WORDS != 0 || alts.len() % 2 != 0 || seals.len() % 2 != 0 {
             return Err(bad());
@@ -223,10 +223,6 @@ impl Fired {
         }
         w.arena::<u64>(&[]);
     }
-}
-
-fn prem_tags_ok(words: &[u32]) -> bool {
-    words.iter().step_by(2).all(|&t| t <= 4)
 }
 
 impl Store {
@@ -395,7 +391,7 @@ impl Store {
         s.wit_head = Col { mark: heads.len(), base: Rc::new(heads), own: Vec::new(), ..Col::default() };
         let wits: Arena<WitNode> = r.arena()?;
         s.wits = Col { mark: wits.len(), base: Rc::new(wits), own: Vec::new(), ..Col::default() };
-        let prems: Arena<PremRef> = r.arena_checked(prem_tags_ok)?;
+        let prems: Arena<PremRef> = r.arena()?;
         s.prem_arena = Col { mark: prems.len(), base: Rc::new(prems), own: Vec::new(), ..Col::default() };
         let n = r.u64()? as usize;
         let zero = r.u32()? == 1;
