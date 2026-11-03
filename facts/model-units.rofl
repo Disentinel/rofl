@@ -786,11 +786,10 @@ unit_concludes("rules/js-callgraph.rofl", param_test).
 unit_concludes("rules/js-callgraph.rofl", param_tested).
 unit_concludes("rules/js-callgraph.rofl", sx_param_deref).
 unit_concludes("rules/js-callgraph.rofl", unpassed_deref_at).
-unit_concludes("rules/js-controlflow.rofl", edb).
-unit_concludes("rules/js-controlflow.rofl", guard_kind).
 unit_concludes("rules/js-controlflow.rofl", guard_arm).
-unit_concludes("rules/js-controlflow.rofl", field_init).
 unit_concludes("rules/js-controlflow.rofl", guarded).
+unit_concludes("rules/js-controlflow.rofl", field_init).
+unit_concludes("rules/js-controlflow.rofl", edb).
 unit_concludes("rules/js-controlflow.rofl", abrupt_kind).
 unit_concludes("rules/js-controlflow.rofl", stmt_seq_field).
 unit_concludes("rules/js-controlflow.rofl", after_abrupt).
@@ -873,11 +872,6 @@ unit_concludes("rules/js-controlflow.rofl", mechanism_modelled).
 unit_concludes("rules/js-controlflow.rofl", mechanism_waived).
 unit_concludes("rules/js-controlflow.rofl", mechanism_known).
 unit_concludes("rules/js-controlflow.rofl", mechanism_unanswered).
-unit_concludes("rules/js-controlflow.rofl", guard_named).
-unit_concludes("rules/js-controlflow.rofl", guard_unmodelled).
-unit_concludes("rules/js-controlflow.rofl", short_circuit_kind).
-unit_concludes("rules/js-controlflow.rofl", guard_arm_seen).
-unit_concludes("rules/js-controlflow.rofl", guard_arm_unseen).
 unit_concludes("rules/js-controlflow.rofl", guarded_at).
 unit_concludes("rules/js-controlflow.rofl", imports).
 unit_concludes("rules/js-effects.rofl", eff_row).
@@ -1531,6 +1525,8 @@ unit_concludes("models/lang/js/babel-roles.rofl", cond_field).
 unit_concludes("models/lang/js/babel-roles.rofl", logical_how).
 unit_concludes("models/lang/js/babel-roles.rofl", b_branch).
 unit_concludes("models/lang/js/babel-roles.rofl", executes_if).
+unit_concludes("models/lang/js/babel-roles.rofl", b_chain_below).
+unit_concludes("models/lang/js/babel-roles.rofl", b_chain_opt).
 unit_concludes("models/lang/js/babel-roles.rofl", loop_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", repeats).
 unit_concludes("models/lang/js/babel-roles.rofl", iterates).

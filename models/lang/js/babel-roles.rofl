@@ -199,8 +199,19 @@ executes_if[value](X, G, How) :- b_branch[ast_babel](_, N, G, How), b_through[as
 -- the tail of `?.` runs when what it reads is defined
 executes_if[value](N, O, defined) :- mark[value](N, optional), child[ast_babel](N, object, 0, O).
 executes_if[value](N, O, defined) :- mark[value](N, optional), child[ast_babel](N, callee, 0, O).
+-- and so does the rest of the chain above it: a link that is not itself optional, whose object or callee is a link of the chain; a parenthesis ends the chain
+b_chain_below[ast_babel](L, X) :- optional_kind[ast_babel](K), node[ast_babel](L, K, _), attr[ast_babel](L, optional, false),
+                                  child[ast_babel](L, object, 0, X).
+b_chain_below[ast_babel](L, X) :- optional_kind[ast_babel](K), node[ast_babel](L, K, _), attr[ast_babel](L, optional, false),
+                                  child[ast_babel](L, callee, 0, X).
+b_chain_opt[ast_babel](L, X) :- b_chain_below[ast_babel](L, X), mark[value](X, optional).
+b_chain_opt[ast_babel](L, O) :- b_chain_below[ast_babel](L, X), b_chain_opt[ast_babel](X, O).
+executes_if[value](L, G, defined) :- b_chain_opt[ast_babel](L, O), executes_if[value](O, G, defined).
 -- a case runs when its test matches
 executes_if[value](C, T, matches) :- node[ast_babel](C, switch_case, _), child[ast_babel](C, test, 0, T).
+-- the default runs when no case matched the discriminant
+executes_if[value](C, D, unmatched) :- node[ast_babel](S, switch_statement, _), child[ast_babel](S, cases, _, C), not child[ast_babel](C, test, 0, _),
+                                       child[ast_babel](S, discriminant, 0, D).
 
 edb(loop_kind).
 loop_kind[ast_babel](for_statement). loop_kind[ast_babel](for_in_statement). loop_kind[ast_babel](for_of_statement).

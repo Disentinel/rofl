@@ -7,44 +7,30 @@
 -- claim, and the narrow direction is the dangerous one throughout.
 
 -- =========================================================================
--- 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), and
--- the vocabulary is closed: `guard_unmodelled[audit]` reports a kind that
--- branches and is not here. `&&`, `||`, `??` all short-circuit, so the kind
--- suffices. `do_while_statement` is NOT here: its body runs before the test. A `for`'s
--- `update` runs zero times when the test fails at once. A default value (the
--- `right` of an `assignment_pattern`) runs only when the argument is absent;
--- the `left` is a name and not conditional. Of a `try` only the HANDLER is a
--- guard: the block and the finalizer always run.
-edb(guard_kind).
-guard_kind(if_statement,               consequent).
-guard_kind(if_statement,               alternate).
-guard_kind(conditional_expression,     consequent).
-guard_kind(conditional_expression,     alternate).
-guard_kind(logical_expression,         right).
-guard_kind(for_of_statement,           body).
-guard_kind(for_statement,              body).
-guard_kind(for_statement,              update).
-guard_kind(for_in_statement,           body).
-guard_kind(while_statement,            body).
-guard_kind(assignment_pattern,         right).
-guard_kind(switch_case,                consequent).
-guard_kind(try_statement,              handler).
+-- 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), read from the roles (`executes_if`). `&&`,
+-- `||`, `??` and their assignments, `?:`, `if`, a loop's body and update, a `for-in` / `for-of` head, a case, a
+-- default, a catch handler and the tail of `?.` all say it. `do_while_statement` says nothing: its body runs before
+-- the test, and a `for` with no test runs its body at once. A default value (the `right` of an `assignment_pattern`)
+-- runs only when the argument is absent. Of a `try` only the HANDLER is a guard: the block and the finalizer always
+-- run.
+-- A branch is a role: `executes_if(X, G, How)` says X executes depending on how G completed. The arm is the child
+-- of G's parent that holds X (a statement wrapper around X is the arm, not X). A switch case guards its consequents,
+-- not its test; a default is guarded as unmatched. The default value of a pattern has no role: its kind is read.
+guard_arm[code](P, A) :- executes_if[value](A, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A).
+guard_arm[code](P, A) :- executes_if[value](X, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A),
+                         inside[tree](A, X).
+guard_arm[code](C, S) :- executes_if[value](C, T, matches), parent[tree](C, S), S != T.
+guard_arm[code](C, S) :- executes_if[value](C, _, unmatched), parent[tree](C, S).
+guard_arm[code](P, A) :- ast_node[code](P, assignment_pattern, _), ast_child[code](P, right, 0, A).
 
--- ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
-guard_arm[code](P, A) :- guard_kind(K, Field), ast_node[code](P, K, _),
-                         ast_child[code](P, Field, _, A).
+-- `a?.b.c(x)` runs its tail when the head is defined: every link of the chain and all it holds but the head (and
+-- the links below, which have their own row) are conditional.
+guarded[code](N)       :- executes_if[value](N, _, defined).
+guard_arm[code](N, C)  :- executes_if[value](N, G, defined), parent[tree](N, C), C != G, not inside[tree](C, G).
 
--- `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
--- the branching is in the operator, not the kind.
-guard_arm[code](P, A) :- logical[value](P, _, L, A), assign[value](P, L, A).
-
-
--- A non-static field initialiser runs once per construction and never if the
--- class is never constructed; a static one runs with the definition. Derived
--- from `transfer_mechanism(K, per_construction)`, not a second list.
-field_init[code](P, V) :- transfer_mechanism(K, per_construction),
-                          ast_node[code](P, K, _), ast_attr[code](P, static, false),
-                          ast_child[code](P, value, 0, V).
+-- A non-static member of a class with a value runs once per construction and never if the class is never
+-- constructed; a static one runs with the definition.
+field_init[code](P, V) :- class[value](CD), has[value](CD, P), value[value](P, V), not static[value](P).
 guard_arm[code](P, V)  :- field_init[code](P, V).
 
 guarded[code](A) :- guard_arm[code](_, A).
@@ -74,13 +60,12 @@ after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), 
 -- a MAY and is deliberately not an `abrupt_at` arm. Confined to the suspending
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
-suspend_at[code](B, F, I) :- transfer_mechanism(K, suspend), ast_node[code](X, K, _),
-                             nearest_v[flow](G, X), inside[tree](S, X),
-                             inside[tree](G, S),
+suspend_at[code](B, F, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+                             inside[tree](S, X), inside[tree](G, S),
                              ast_child[code](B, F, I, S), stmt_seq_field(F).
 after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
 
--- a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
+-- a sequence field the scanner never emits: the typo hole
 stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
 
 -- A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
@@ -221,8 +206,7 @@ accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj,
                              selects[flow](N, Key), written_member[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), getter[value](M, M), not only_written[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), setter[value](M, M), written_member[code](N).
-written_member[code](N)   :- ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, N).
-written_member[code](N)   :- ast_node[code](U, update_expression, _), ast_child[code](U, argument, 0, N).
+written_member[code](N)   :- assign[value](_, N, _), object_of[code](N, _).
 only_written[code](N)     :- plain_assign[flow](A), assign[value](A, N, _).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
@@ -524,49 +508,6 @@ mechanism_known(M) :- mechanism_waived(M, _).
 mechanism_known(M) :- mechanism_open(M, _).
 
 mechanism_unanswered[audit](M) :- transfer_mechanism(_, M), not mechanism_known(M).
-
--- A kind carrying a modelled mechanism that no rule reaches. Derived from
--- `transfer_mechanism` where a mechanism has one door (suspend, label, field,
--- iterator), so claiming the mechanism without the rule reddens
--- `guard_unmodelled`. Named by hand where the door is another relation:
--- `catch_clause` is a try's arm, `switch_statement` selects a case,
--- `member_expression` and `decorator` transfer INTO a callee, and the three
--- object-key kinds go through `pattern_accessor` — one per kind rather than
--- derived, or the derived line would cover `member_expression` and silence
--- its mutant.
-guard_named[code](K)       :- guard_kind(K, _).
-guard_named[code](K)       :- short_circuit_kind(K).
-guard_named[code](K)       :- abrupt_kind(K).
-guard_named[code](K)       :- transfer_mechanism(K, suspend).
-guard_named[code](K)       :- transfer_mechanism(K, label_boundary).
-guard_named[code](K)       :- transfer_mechanism(K, per_construction).
-guard_named[code](catch_clause).
-guard_named[code](switch_statement).
-guard_named[code](member_expression).
-guard_named[code](decorator).
-guard_named[code](object_pattern).
-guard_named[code](rest_element).
-guard_named[code](spread_element).
-guard_named[code](K)       :- transfer_mechanism(K, iterator_call).
-guard_unmodelled[audit](K) :- transfer_mechanism(K, M), mechanism_modelled(M),
-                              ast_node[code](_, K, _), not guard_named[code](K).
-
--- SHORT-CIRCUIT: `a?.b()` stops the whole chain, so the site and everything
--- further along it is conditional.
-edb(short_circuit_kind).
-short_circuit_kind(optional_call_expression).
-short_circuit_kind(optional_member_expression).
-
-guarded[code](N) :- short_circuit_kind(K), ast_node[code](N, K, _).
-guarded[code](N) :- short_circuit_kind(K), ast_node[code](P, K, _),
-                    inside[tree](P, N).
-
--- an arm declared for a field the scanner never emits under that kind: a typo
--- makes the guarded set quietly smaller
-guard_arm_seen[code](K, Field) :- guard_kind(K, Field), ast_node[code](P, K, _),
-                                  ast_child[code](P, Field, 0, _).
-guard_arm_unseen[audit](K, F)  :- guard_kind(K, F), ast_node[code](_, K, _),
-                                  not guard_arm_seen[code](K, F).
 
 -- a guarded site at a coordinate, for the report and the runtime comparison
 guarded_at[code](File, Line) :- guarded_call[code](C), at[tree](C, File, _), at[tree](C, _, Line).

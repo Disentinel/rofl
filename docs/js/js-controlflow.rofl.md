@@ -33,19 +33,24 @@ Reads:
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="body"></a>`body`
+  - <a id="class"></a>`class`
+  - <a id="executes_if"></a>`executes_if`
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
   - <a id="getter"></a>`getter`
+  - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
-  - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
   - <a id="rest_props"></a>`rest_props`
   - <a id="setter"></a>`setter`
   - <a id="spread_args"></a>`spread_args`
   - <a id="spread_elems"></a>`spread_elems`
   - <a id="spread_props"></a>`spread_props`
+  - <a id="static"></a>`static`
+  - <a id="suspends"></a>`suspends`
   - <a id="throws"></a>`throws`
   - <a id="tries"></a>`tries`
+  - <a id="value"></a>`value`
 - from the scanner:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
@@ -58,14 +63,12 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
-| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
+| <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
-| <a id="noun-short_circuit"></a>a short circuit | a node of one of the kinds `optional_call_expression`, `optional_member_expression` (`short_circuit_kind`) |
-| <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -81,64 +84,59 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="in_fn"></a>A node is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
 - <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
-## 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), and
+## 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), read from the roles (`executes_if`). `&&`,
 
-> the vocabulary is closed: `guard_unmodelled[audit]` reports a kind that
-> branches and is not here. `&&`, `||`, `??` all short-circuit, so the kind
-> suffices. `do_while_statement` is NOT here: its body runs before the test. A `for`'s
-> `update` runs zero times when the test fails at once. A default value (the
-> `right` of an `assignment_pattern`) runs only when the argument is absent;
-> the `left` is a name and not conditional. Of a `try` only the HANDLER is a
-> guard: the block and the finalizer always run.
+> `||`, `??` and their assignments, `?:`, `if`, a loop's body and update, a `for-in` / `for-of` head, a case, a
+> default, a catch handler and the tail of `?.` all say it. `do_while_statement` says nothing: its body runs before
+> the test, and a `for` with no test runs its body at once. A default value (the `right` of an `assignment_pattern`)
+> runs only when the argument is absent. Of a `try` only the HANDLER is a guard: the block and the finalizer always
+> run.
+> A branch is a role: `executes_if(X, G, How)` says X executes depending on how G completed. The arm is the child
+> of G's parent that holds X (a statement wrapper around X is the arm, not X). A switch case guards its consequents,
+> not its test; a default is guarded as unmatched. The default value of a pattern has no role: its kind is read.
 
-`guard_kind` lists:
+<a id="guard_arm"></a>A node Y is conditional on a node P either:
 
-| kind | field |
-|---|---|
-| `if_statement` | `consequent` |
-| `if_statement` | `alternate` |
-| `conditional_expression` | `consequent` |
-| `conditional_expression` | `alternate` |
-| `logical_expression` | `right` |
-| `for_of_statement` | `body` |
-| `for_statement` | `body` |
-| `for_statement` | `update` |
-| `for_in_statement` | `body` |
-| `while_statement` | `body` |
-| `assignment_pattern` | `right` |
-| `switch_case` | `consequent` |
-| `try_statement` | `handler` |
+1. if all of:
+   - [`executes_if`](#executes_if)(Y, G, How);
+   - How differs from `unmatched`;
+   - [`parent`](#parent)(P, G);
+   - [`parent`](#parent)(P, Y);
+2. if all of:
+   - [`executes_if`](#executes_if)(X, G, How);
+   - How differs from `unmatched`;
+   - [`parent`](#parent)(P, G);
+   - [`parent`](#parent)(P, Y);
+   - [`inside`](#inside)(Y, X);
+3. if [`executes_if`](#executes_if)(P, T, `matches`), [`parent`](#parent)(P, Y), and Y differs from T;
+4. if [`executes_if`](#executes_if)(P, something, `unmatched`) and [`parent`](#parent)(P, Y);
+5. if P is an [assignment pattern](#noun-assignment_pattern) and the `right` of P is Y.
 
-Declared as facts:
+> `a?.b.c(x)` runs its tail when the head is defined: every link of the chain and all it holds but the head (and
+> the links below, which have their own row) are conditional.
 
-- <a id="guard_kind"></a>A kind K guards the field Field — rows in this file
+A node
 
-> ANY index: `switch_case`'s `consequent` is an array, one arm per statement.
+- <a id="guarded"></a>is guarded if [`executes_if`](#executes_if)(it, something, `defined`).
+- is conditional on a node N if all of:
+  - [`executes_if`](#executes_if)(N, G, `defined`);
+  - [`parent`](#parent)(N, it);
+  - it differs from G;
+  - unless [`inside`](#inside)(it, G).
 
-<a id="guard_arm"></a>A node is conditional on a node P if all of:
-  - a kind K [guards the field](#guard_kind) Field;
-  - P [is of kind](js-model.rofl.md#ast_node) K;
-  - it [is among the](#ast_child) Field of P.
-
-> `x ??= f()`, `x ||= f()`, `x &&= f()` short-circuit as their operators do;
-> the branching is in the operator, not the kind.
-
-A node is conditional on a node P if [`logical`](#logical)(P, something, L, it) and [`assign`](#assign)(P, L, it).
-
-> A non-static field initialiser runs once per construction and never if the
-> class is never constructed; a static one runs with the definition. Derived
-> from `transfer_mechanism(K, per_construction)`, not a second list.
+> A non-static member of a class with a value runs once per construction and never if the class is never
+> constructed; a static one runs with the definition.
 
 `field_init`(P, V), in the code if all of:
-  - a kind K [transfers by](#transfer_mechanism) `per_construction`;
-  - a node P [is of kind](js-model.rofl.md#ast_node) K;
-  - [the attribute](#ast_attr) `static` of P is `false`;
-  - the `value` of P is a node V.
+  - [`class`](#class)(CD);
+  - [`has`](#has)(CD, P);
+  - [`value`](#value)(P, V);
+  - unless [`static`](#static)(P).
 
 A node
 
 - is conditional on a node P if [`field_init`](js-callgraph.rofl.md#field_init)(P, it) in the code.
-- <a id="guarded"></a>is guarded if it [is conditional on](#guard_arm) some node.
+- is guarded if it [is conditional on](#guard_arm) some node.
 - is guarded if a node X [is conditional on](#guard_arm) some node and [`inside`](#inside)(X, it).
 
 ## 2. STATEMENT ORDER. After a return/throw/break/continue the rest of the list
@@ -171,19 +169,18 @@ Declared as facts:
 A node
 
 - <a id="suspend_at"></a>suspends at a field F from an index I if all of:
-  - a kind K [transfers by](#transfer_mechanism) `suspend`;
-  - a node X [is of kind](js-model.rofl.md#ast_node) K;
-  - G [is nearest to](js-dataflow.rofl.md#nearest_v) X;
+  - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
   - [`inside`](#inside)(S, X);
   - [`inside`](#inside)(G, S);
   - a node S is the I-th of the F of it;
-  - F [is a statement sequence field](#stmt_seq_field).
+  - F [is a statement sequence field](#stmt_seq_field);
+  - unless [`iterates`](#iterates)(X, something, something).
 - <a id="after_suspend"></a>follows a suspension if all of:
   - a node B [suspends](#suspend_at) at a field F from an index I;
   - it is the J-th of the F of B;
   - I < J.
 
-> a sequence field the scanner never emits: the typo hole, as `guard_arm_unseen`
+> a sequence field the scanner never emits: the typo hole
 
 In the audit:
 
@@ -418,12 +415,10 @@ In the code:
    - [`setter`](#setter)(M, M);
    - N [is written](#written_member).
 
-<a id="written_member"></a>A member N is written either:
+A member
 
-1. if the `left` of an [assignment](#noun-assignment) X is N;
-2. if the `argument` of an [update expression](#noun-update_expression) U is N.
-
-<a id="only_written"></a>A member is only written if X [is plain](js-dataflow.rofl.md#plain_assign) and [`assign`](#assign)(X, it, something).
+- <a id="written_member"></a>is written if [`assign`](#assign)(something, it, something) and [`object_of`](js-structure.rofl.md#object_of)(it, something).
+- <a id="only_written"></a>is only written if X [is plain](js-dataflow.rofl.md#plain_assign) and [`assign`](#assign)(X, it, something).
 
 A node
 
@@ -880,66 +875,6 @@ Declared as facts:
 - <a id="mechanism_modelled"></a>A mechanism M is modelled — rows in this file
 - <a id="mechanism_waived"></a>A mechanism M is waived because a reason R — rows in this file
 - <a id="mechanism_open"></a>A mechanism M is open because a reason R — no rows: declared so a rule may read it
-
-> A kind carrying a modelled mechanism that no rule reaches. Derived from
-> `transfer_mechanism` where a mechanism has one door (suspend, label, field,
-> iterator), so claiming the mechanism without the rule reddens
-> `guard_unmodelled`. Named by hand where the door is another relation:
-> `catch_clause` is a try's arm, `switch_statement` selects a case,
-> `member_expression` and `decorator` transfer INTO a callee, and the three
-> object-key kinds go through `pattern_accessor` — one per kind rather than
-> derived, or the derived line would cover `member_expression` and silence
-> its mutant.
-
-In the code:
-
-<a id="guard_named"></a>A kind K is a named guard kind either:
-
-1. if K [guards the field](#guard_kind) some field;
-2. if [`short_circuit_kind`](#short_circuit_kind)(K);
-3. if [`abrupt_kind`](#abrupt_kind)(K);
-4. if K [transfers by](#transfer_mechanism) `suspend` or `label_boundary` or `per_construction`.
-
-`guard_named` includes `catch_clause`, `switch_statement`, `member_expression`, `decorator`, `object_pattern`, `rest_element`, `spread_element`.
-
-A kind K is a named guard kind if K [transfers by](#transfer_mechanism) `iterator_call`.
-
-In the audit:
-
-<a id="guard_unmodelled"></a>A kind K is an unmodelled guard kind if all of:
-  - K [transfers by](#transfer_mechanism) a mechanism M;
-  - M [is modelled](#mechanism_modelled);
-  - some node [is of kind](js-model.rofl.md#ast_node) K;
-  - unless K [is a named guard kind](#guard_named).
-
-> SHORT-CIRCUIT: `a?.b()` stops the whole chain, so the site and everything
-> further along it is conditional.
-
-In the code:
-
-N is guarded either:
-
-1. if N is a [short circuit](#noun-short_circuit);
-2. if [`inside`](#inside)(a [short circuit](#noun-short_circuit) P, N).
-
-Declared as facts:
-
-- <a id="short_circuit_kind"></a>`short_circuit_kind` — rows in Words
-
-> an arm declared for a field the scanner never emits under that kind: a typo
-> makes the guarded set quietly smaller
-
-<a id="guard_arm_seen"></a>A kind K is seen guarding a field Field if all of:
-  - K [guards the field](#guard_kind) Field;
-  - a node P [is of kind](js-model.rofl.md#ast_node) K;
-  - the Field of P is some node.
-
-In the audit:
-
-<a id="guard_arm_unseen"></a>A kind K is unseen guarding a field F if all of:
-  - K [guards the field](#guard_kind) F;
-  - some node [is of kind](js-model.rofl.md#ast_node) K;
-  - unless K [is seen guarding](#guard_arm_seen) F.
 
 > a guarded site at a coordinate, for the report and the runtime comparison
 

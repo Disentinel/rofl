@@ -67,6 +67,7 @@ Reads:
   - <a id="decl"></a>`decl`
   - <a id="decorated"></a>`decorated`
   - <a id="enumerates"></a>`enumerates`
+  - <a id="executes_if"></a>`executes_if`
   - <a id="extends"></a>`extends`
   - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
@@ -110,7 +111,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-non-null_expression"></a>a non-null expression | a node of kind `tsnon_null_expression` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
-| <a id="noun-optional_member_expression"></a>an optional member expression | a node of kind `optional_member_expression` |
 | <a id="noun-parenthesized_expression"></a>a parenthesized expression | a node of kind `parenthesized_expression` |
 | <a id="noun-wrapper"></a>a wrapper | a node of a kind in [`value_transparent`](js-dataflow.rofl.md#value_transparent) |
 | a function | a node [`fn_node`](#fn_node) holds of |
@@ -120,7 +120,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="call_site"></a>A [call](#noun-call) is a call site in File if it is in file File.
 - <a id="call_site_kind"></a>The call kind of a node C is K if K [is a call kind](#call_kind) and C [is of kind](js-model.rofl.md#ast_node) K.
-- <a id="optional_member"></a>C calls through an optional member if [the callee](#callee_of) of C is an [optional member expression](#noun-optional_member_expression) N.
 - <a id="obj_kind_known"></a>A kind K is a classed kind if [`obj_kind_class`](#obj_kind_class)(K, something).
 - <a id="has_shape"></a>C has a shape if C [has the known shape](#shape_known) some shape.
 - <a id="shaped"></a>C is shaped if C [has the shape](#shape) some shape.
@@ -202,6 +201,11 @@ Declared as facts:
   - [the callee](#callee_of) of C is N;
   - N [is of kind](js-model.rofl.md#ast_node) K;
   - [`member_kind`](#member_kind)(K).
+
+<a id="optional_member"></a>C calls through an optional member if all of:
+  - [the callee](#callee_of) of C is a node N;
+  - [`executes_if`](#executes_if)(N, something, `defined`);
+  - [`object_of`](js-structure.rofl.md#object_of)(N, something).
 
 <a id="computed_member"></a><a id="static_member"></a>C calls through a computed/static member N if [the callee](#callee_of) of C is N and [`member_expr`/`member`](#member_expr)(N, something, something).
 
@@ -2043,11 +2047,11 @@ In the code:
 2. if [`binary`](#binary)(something, "in", something, O);
 3. if the `test` of a node P is a node G and O [is among the](#ast_child) `arguments` of G;
 4. if all of:
-   - [`unary`](#unary)(P, something, G);
+   - [`logical`](#logical)(P, something, G, something);
    - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
    - unless [`assign`](#assign)(P, something, something);
 5. if all of:
-   - [`logical`](#logical)(P, something, G, something);
+   - [`unary`](#unary)(P, something, G);
    - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
    - unless [`assign`](#assign)(P, something, something);
 6. if all of:

@@ -437,8 +437,22 @@ executes_if[value](X, G, How) :- branch(N, G, How), through(N, X).
 -- the tail of `?.` runs when what it reads is defined
 executes_if[value](N, O, defined) :- mark[value](N, optional), oxc_c[ast_oxc](N, object, 0, O).
 executes_if[value](N, O, defined) :- mark[value](N, optional), oxc_c[ast_oxc](N, callee, 0, O).
+-- and so does the rest of the chain above it: a link that is not itself optional, whose object or callee is a link of the chain; a parenthesis ends the chain
+edb(chain_link).
+chain_link(static_member_expression). chain_link(computed_member_expression). chain_link(private_field_expression).
+chain_link(call_expression).
+chain_below[ast_oxc](L, X) :- chain_link(K), oxc_k[ast_oxc](L, K), not oxc_a[ast_oxc](L, optional, true),
+                              child[ast_oxc](L, object, 0, X).
+chain_below[ast_oxc](L, X) :- chain_link(K), oxc_k[ast_oxc](L, K), not oxc_a[ast_oxc](L, optional, true),
+                              child[ast_oxc](L, callee, 0, X).
+chain_opt[ast_oxc](L, X) :- chain_below[ast_oxc](L, X), mark[value](X, optional).
+chain_opt[ast_oxc](L, O) :- chain_below[ast_oxc](L, X), chain_opt[ast_oxc](X, O).
+executes_if[value](L, G, defined) :- chain_opt[ast_oxc](L, O), executes_if[value](O, G, defined).
 -- a case runs when its test matches
 executes_if[value](C, T, matches) :- oxc_k[ast_oxc](C, switch_case), oxc_c[ast_oxc](C, test, 0, T).
+-- the default runs when no case matched the discriminant
+executes_if[value](C, D, unmatched) :- oxc_k[ast_oxc](S, switch_statement), oxc_c[ast_oxc](S, cases, _, C), not oxc_c[ast_oxc](C, test, 0, _),
+                                       oxc_c[ast_oxc](S, discriminant, 0, D).
 
 edb(loop_kind).
 loop_kind(for_statement). loop_kind(for_in_statement). loop_kind(for_of_statement).

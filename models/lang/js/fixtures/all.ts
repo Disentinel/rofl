@@ -20,6 +20,7 @@ const o = { a, b: 1, [k]: 2, ...s, m() {}, get x() { return 1; } };
 const arr2 = [1, , ...s];
 let u; u ??= 3; u += 1; u++; ++u; (u, k);
 o?.a?.b(); o.a?.(1);
+a?.b.c(g()); (a?.b).c; a?.b!.c; a?.[g()].d?.e;
 x = a ? b : c; y = (a && b || c) ?? d;
 label: for (let i = 0; i < 3; i++) { if (i) continue label; else break; }
 for (const k in o) {} while (x) { x--; } do { x++; } while (x < 3);

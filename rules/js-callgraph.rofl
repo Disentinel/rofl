@@ -67,7 +67,7 @@ member_kind(member_expression).
 member_kind(optional_member_expression).
 
 member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _), member_kind(K).
-optional_member[code](C)    :- callee_of[code](C, N), ast_node[code](N, optional_member_expression, _).
+optional_member[code](C)    :- callee_of[code](C, N), executes_if[value](N, _, defined), object_of[code](N, _).
 computed_member[code](C, N) :- callee_of[code](C, N), member_expr[value](N, _, _).
 static_member[code](C, N)   :- callee_of[code](C, N), member[value](N, _, _).
 
@@ -941,8 +941,8 @@ declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](
 narrows_at[code](O) :- binary[value](_, "instanceof", O, _).
 narrows_at[code](O) :- binary[value](_, "in", _, O).
 narrows_at[code](O) :- ast_child[code](P, test, 0, G), ast_child[code](G, arguments, _, O).
-narrows_at[code](O) :- unary[value](P, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
 narrows_at[code](O) :- logical[value](P, _, G, _), not assign[value](P, _, _), arg_node[code](G, _, O).
+narrows_at[code](O) :- unary[value](P, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
 narrows_at[code](O) :- logical[value](P, _, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
 narrowed_name[code](File, Name) :- narrows_at[code](O), ast_node[code](O, identifier, File), ast_name[code](O, Name).
 narrowed_key[flow](File, Key)   :- narrows_at[code](O), member_node_v[flow](O), at[tree](O, File, _),
