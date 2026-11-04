@@ -260,9 +260,11 @@ when the rules changed (a file that changed holds a rule, or a file gone held
 one), the world was not
 read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
 another directory, a file changed that is neither named nor read by a scanner,
-or the engine refuses the delta (a fact read on demand, a base fact a rule
-reads as an `edb` or authority row, a world kept with no witnesses, an edit
-that makes a rule fault anew). A world holding a hole is taken by delta: what
+or the engine refuses the delta (a fact read on demand, a world kept with no
+witnesses, a well-founded world, an edit that makes a rule fault anew).
+`rofl load --retract F` and `rofl serve`'s `retract` take one fact by the same
+pass where the engine's one-fact delta refuses it; stderr's `Delta { .. set:
+Some(..) }` says so. A world holding a hole is taken by delta: what
 the holes and the shrugs may move that the edit reaches is evaluated again
 after it, the rest kept with what the holes left unknown in it. The
 answer is the fresh evaluation's either way (rust/rofl/tests/retract_set.rs:

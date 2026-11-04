@@ -595,7 +595,7 @@ fn differential(program: &str, gen: Gen, seed: u64, start: usize, steps: usize, 
             match s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}")) {
                 Retraction::Delta(d) => {
                     by_delta = true;
-                    stacked = d.stacked_rules > 0;
+                    stacked = d.stacked_rules > 0 || d.set.as_ref().is_some_and(|a| a.stacked_rules > 0);
                     st.delta += 1;
                     st.sum.take(&d);
                 }
@@ -929,10 +929,9 @@ fn a_refused_delta_says_every_reason() {
     let program = "edb(q). edb(r).\nq(X) :- r(X).\nled(F) :- asserted_by[$kernel](F, _, _).\n";
     let facts = ["q(1)", "r(2)"].iter().map(|x| x.to_string()).collect::<BTreeSet<String>>();
     let mut s = fresh(program, &facts, &BTreeSet::new());
-    match s.retract_delta("q(1)").unwrap() {
-        Retraction::Full(why) => {
-            assert!(why.contains("concluded by a rule too") && why.contains("reads the ledger"), "{why}");
-        }
+    let q = s.eval.store.live_ids().into_iter().find(|&f| s.eval.store.key(&s.eval.h, f).starts_with("q[main](1)")).unwrap();
+    match s.eval.retract_delta(&[q]) {
+        Err(why) => assert!(why.contains("concluded by a rule too") && why.contains("reads the ledger"), "{why}"),
         other => panic!("{other:?}"),
     }
 }
@@ -977,22 +976,21 @@ fn the_median_the_quantile_and_the_threshold_are_derived_again() {
 }
 
 #[test]
-fn an_aggregate_after_one_that_may_leave_no_solution_is_evaluated_again_and_is_the_same() {
+fn an_aggregate_after_one_that_may_leave_no_solution_is_taken_by_the_sets_pass_and_is_the_same() {
     let all = sweep(PARTIAL, fact_holistic, 1..=8, 12, 40);
-    assert!(all.full.contains("an aggregate follows one that may leave no solution"), "{all:?}");
+    assert!(all.full.is_empty(), "{all:?}");
 }
 
 #[test]
 fn a_shared_group_is_evaluated_again_by_name() {
     let all = sweep(SHARED, fact_shared, 1..=6, 10, 30);
     assert!(all.sum.rederived == 0, "{all:?}");
-    assert!(all.full.contains("a quantile whose percent is read from outside"), "{:?}", all.full);
+    assert!(all.full.is_empty(), "{:?}", all.full);
 }
 
 #[test]
 fn correlated_aggregates_and_overflow_are_evaluated_again_and_are_the_same() {
     let all = sweep(TRICKY, fact_tricky, 1..=16, 10, 40);
-    assert!(all.full.contains("an aggregate reads what another aggregate of its rule binds"), "{:?}", all.full);
     assert!(all.full.contains("a cell holding a hole") || all.full.iter().any(|w| w.contains("write a hole")), "{:?}", all.full);
     assert!(all.sum.subtracted > 0, "the sum was never subtracted: {all:?}");
 }

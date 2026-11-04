@@ -565,9 +565,8 @@ impl Session {
             return Ok(Err("asks names the rules the world runs".into()));
         }
         let doomed = self.doomed_of_set(&facts);
-        // a mark a rule reads goes as a fact of the set, and what rests on it with it
-        let (edb, authority) = (self.eval.v.edb, self.eval.v.authority);
-        let read: HashSet<Sym> = [edb, authority].into_iter().filter(|m| self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| l.rel == *m)))).collect();
+        // a row a rule reads (a mark, an `asserted_by`) goes as a fact of the set, and what rests on it with it
+        let read: HashSet<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|m| self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| l.rel == *m)))).collect();
         let (marks, rows): (Vec<FactId>, Vec<FactId>) = doomed.into_iter().partition(|&f| read.contains(&self.eval.store.rec(f).rel));
         let mut facts = facts;
         facts.extend(marks);
@@ -637,7 +636,11 @@ impl Session {
 
     /// The delta that takes `doomed` out, or why there is none: then `doomed` goes and the world is left dirty.
     fn retract_doomed(&mut self, id: FactId, doomed: &[FactId], read: bool) -> Result<crate::engine::Delta, String> {
-        let delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
+        let mut delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
+        // what the one-fact delta refuses with the store untouched, the set's pass may take
+        if delta.is_err() && self.eval.store.alive(id) && !self.eval.store.dirty {
+            delta = self.retract_set_delta_unjournaled(&[id])?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
+        }
         if delta.is_err() {
             if self.eval.store.alive(id) {
                 self.eval.store.remove_many(doomed);
