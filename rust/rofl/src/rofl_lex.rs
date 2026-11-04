@@ -15,7 +15,7 @@
 //! derives — the same oracle the generated one was held to. A syntax change is
 //! still a change to the rules first; this file is then rewritten against them,
 //! and the oracle is what makes that safe rather than frightening.
-use crate::ring1_lexer::{kind_of, states, Kind, State};
+use crate::ring1_lexer::{kind_of, states_of, Kind, State};
 
 /// What a token is, in the rules' own vocabulary.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -58,8 +58,8 @@ impl Src {
 /// every clause is guarded by `code_at(I)`, and a character inside a string or
 /// a comment makes no token at all.
 pub fn tokens(src: &str) -> Vec<Span> {
-    let ch: Vec<char> = src.chars().collect();
-    let s = Src { n: ch.len(), kind: ch.iter().map(|c| kind_of(*c)).collect(), st: states(src) };
+    let kind: Vec<Kind> = src.chars().map(kind_of).collect();
+    let s = Src { n: kind.len(), st: states_of(&kind), kind };
     let mut out: Vec<Span> = Vec::new();
     let mut i = 0usize;
     while i < s.n {

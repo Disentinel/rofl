@@ -3595,7 +3595,7 @@ check_world("retract_again").
 check_file("retract_again", "examples/checks/retract-again.rofl").
 check_opt("retract_again", together, 1).
 check_opt("retract_again", one_engine, rust).
-check_opt("retract_again", retract, "ra_gone(1)").
+check_opt("retract_again", retract, "asks(ra_more)").
 
 check_world("asks_demand").
 check_file("asks_demand", "examples/checks/asks-demand.rofl").

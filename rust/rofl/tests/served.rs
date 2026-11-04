@@ -20,7 +20,9 @@ fn rows(text: &str, q: &str) -> Vec<Vec<String>> {
     let mut s = Session::fresh(1_000_000);
     s.load(text, None).unwrap();
     s.evaluate().unwrap();
-    s.ask(q).unwrap().rows
+    let mut r = s.ask(q).unwrap().rows;
+    r.sort();
+    r
 }
 
 #[test]

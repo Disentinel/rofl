@@ -3,13 +3,14 @@
 //! facts, ghosts, witnesses, cells, lattices and the program are the seed's; only the encoding differs, and an
 //! image is read by the build that wrote it. Each distinct term is written once, in a table ahead of the facts, and
 //! built once when read.
+use crate::store::Prem;
 use crate::cell::{AggOp, Algebra};
 use crate::engine::{RuleAnswer, StagedAlts, StagedFact, Tok};
 use crate::store::{CellOwner, CellValue, EvalRecord, LatReg, NewCell, NewMember, PremRef, Seal, Store, Witness, F_BASE, F_FROZEN, F_TICK};
 use crate::term::{Heap, Sym, Term, TermK};
 use std::collections::HashMap;
 
-const MAGIC: &[u8] = b"ROFL-KEPT-4\n";
+const MAGIC: &[u8] = b"ROFL-KEPT-5\n";
 
 #[derive(Default)]
 struct W {
@@ -121,24 +122,24 @@ impl W {
     fn prems(&mut self, ps: &[PremRef], fact_ix: &HashMap<u32, u32>, cell_ix: &HashMap<u32, u32>) {
         self.u32(ps.len() as u32);
         for p in ps {
-            match *p {
-                PremRef::Fact(f) => {
+            match (*p).kind() {
+                Prem::Fact(f) => {
                     self.out.push(0);
                     self.u32(fact_ix.get(&f).copied().unwrap_or(u32::MAX))
                 }
-                PremRef::Neg(s) => {
+                Prem::Neg(s) => {
                     self.out.push(1);
                     self.sym(s)
                 }
-                PremRef::Bi(s) => {
+                Prem::Bi(s) => {
                     self.out.push(2);
                     self.sym(s)
                 }
-                PremRef::VRow(s) => {
+                Prem::VRow(s) => {
                     self.out.push(3);
                     self.sym(s)
                 }
-                PremRef::Cell(c) => {
+                Prem::Cell(c) => {
                     self.out.push(4);
                     self.u32(cell_ix.get(&c).copied().unwrap_or(u32::MAX))
                 }
@@ -165,6 +166,12 @@ pub fn keep(h: &Heap, s: &Store, staged: &[StagedAlts], answer: &RuleAnswer, lat
     w.answer(answer);
     write_toks(&mut w, h, lattices, &fact_ix, &cell_ix);
     write_toks(&mut w, h, unknowns, &fact_ix, &cell_ix);
+    // the holes the last evaluation wrote, which the next drops (`Eval::drop_stale_holes`)
+    let holes: Vec<u32> = s.eval_holes.iter().filter_map(|id| fact_ix.get(id).copied()).collect();
+    w.u32(holes.len() as u32);
+    for i in holes {
+        w.u32(i);
+    }
     frame(w, h)
 }
 
@@ -491,6 +498,10 @@ pub fn open(h: &mut Heap, bytes: &[u8]) -> Result<Opened, String> {
     let answer = r.answer()?;
     let lattices = read_toks(&mut r, &ids, &cells)?;
     let unknowns = read_toks(&mut r, &ids, &cells)?;
+    for _ in 0..r.u32()? {
+        let i = r.u32()? as usize;
+        s.eval_holes.push(*ids.get(i).ok_or("a kept image names a hole it does not hold")?);
+    }
     if r.i != bytes.len() {
         return Err("a kept image has bytes after its end".into());
     }

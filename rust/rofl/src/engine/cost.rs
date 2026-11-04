@@ -34,6 +34,8 @@ pub struct Widest {
 pub struct CostState {
     /// What each premise of each rule cost (`cost.rs`), by rule and premise.
     pub prem_cost: FxMap<(Sym, u64), PremCost>,
+    /// The same by the premise whose news the firing was solved from (0: the whole evaluation, no news).
+    pub prem_cost_at: FxMap<(Sym, u64, u64), PremCost>,
     pub(super) read_rows: u64,
     pub(super) widest: Widest,
     pub(super) wide_floor: usize,
@@ -43,30 +45,38 @@ pub struct CostState {
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
-    pub argm_by_rule: HashMap<Sym, u64>,
+    pub argm_by_rule: FxMap<Sym, u64>,
     /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
-    pub ns_by_rule: HashMap<Sym, u64>,
+    pub ns_by_rule: FxMap<Sym, u64>,
     /// Per rule: firings, solutions concluded, and rows that were new.
-    pub fires_by_rule: HashMap<Sym, u64>,
-    pub sols_by_rule: HashMap<Sym, u64>,
-    pub new_by_rule: HashMap<Sym, u64>,
+    pub fires_by_rule: FxMap<Sym, u64>,
+    pub sols_by_rule: FxMap<Sym, u64>,
+    pub new_by_rule: FxMap<Sym, u64>,
+    /// Rows new at the rule's whole firing alone: what the store held of its conclusions at every activation after.
+    pub fresh_whole_by_rule: FxMap<Sym, u64>,
+    /// Solutions that added nothing: the witness was recorded before (or, where none is kept, the row stood).
+    pub again_by_rule: FxMap<Sym, u64>,
     /// Firings solved delta-first.
-    pub delta_by_rule: HashMap<Sym, u64>,
+    pub delta_by_rule: FxMap<Sym, u64>,
+    /// The place of each rule's firing over the whole store in the run's sequence of them, from 1: a relation a
+    /// rule reads is live at that firing only where a rule concluding it fired whole before (`activation`).
+    pub activation_by_rule: FxMap<Sym, u64>,
 }
 
 impl Default for CostState {
     fn default() -> Self {
         CostState {
-            prem_cost: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
+            prem_cost: FxMap::default(), prem_cost_at: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
             read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
-            argm_by_rule: HashMap::new(), ns_by_rule: HashMap::new(), fires_by_rule: HashMap::new(),
-            sols_by_rule: HashMap::new(), new_by_rule: HashMap::new(), delta_by_rule: HashMap::new(),
+            argm_by_rule: FxMap::default(), ns_by_rule: FxMap::default(), fires_by_rule: FxMap::default(),
+            sols_by_rule: FxMap::default(), new_by_rule: FxMap::default(), fresh_whole_by_rule: FxMap::default(), again_by_rule: FxMap::default(), delta_by_rule: FxMap::default(), activation_by_rule: FxMap::default(),
         }
     }
 }
 
 pub struct Mark {
     key: (Sym, u64),
+    at: u64,
     read0: u64,
     outer: Widest,
     outer_floor: usize,
@@ -231,24 +241,28 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 15] =
-    ["fires", "conc", "fresh", "delta_fires", "written_order", "order", "width", "read", "yield", "widest", "rows", "distinct", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 22] =
+    ["fires", "conc", "fresh", "fresh_whole", "again", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
-    /// Whether a rule reads the book `profile`: then the evaluation is written there as facts (`profile_text`).
+    /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
+    /// there as facts (`profile_text`). A profile given as facts is another world's, read as it is (the reflection
+    /// over a measured world, scripts/refine.ts); writing this world's beside it would double the census.
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");
         let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
-        self.rules.iter().any(|r| {
+        let reads = self.rules.iter().any(|r| {
             r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel))
-        })
+        });
+        reads && names.iter().all(|n| self.store.rel_persp(&self.h, *n, p).is_empty())
     }
 
     /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
     /// (docs/cli.md, *The profile of an evaluation*). `K` is a premise's written position as `premise_lit` counts it,
     /// from 1; `Pos` an argument's, from 1. Per rule: `fires(R, N)` firings, `conc(R, N)` solutions concluded,
-    /// `fresh(R, N)` rows that were new, `delta_fires(R, N)` firings solved news first, `written_order(R, Why)` why
-    /// the planner kept it in written order. Per premise: `width(R, K, N)` partial rows that reached it,
+    /// `fresh(R, N)` rows that were new, `fresh_whole(R, N)` of them those new at its whole firing, `again(R, N)` solutions that added nothing, neither a row nor a witness, `delta_fires(R, N)` firings solved news first, `activation(R, I)` the place
+    /// of its firing over the whole store among the run's (from 1), `written_order(R, Why)` why the planner kept it
+    /// in written order. Per premise: `width(R, K, N)` partial rows that reached it,
     /// `read(R, K, N)` rows read from the store there, `yield(R, K, N)` rows that left it, `widest(R, K, N)` its
     /// widest single read. Per relation of a user's book: `rows(Rel, Book, N)` live rows and `distinct(Rel, Book,
     /// Pos, N)` the distinct values at `Pos`, the planner's own measure (`Store::probe_stats`). Rows read are
@@ -264,7 +278,7 @@ impl Eval {
         let mut out = String::new();
         let mut rules: Vec<Rc<ERule>> = self.rules.clone();
         rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
-        let count = |m: &HashMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);
+        let count = |m: &FxMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);
         for r in &rules {
             let id = self.h.name(r.id).to_string();
             let _ = writeln!(
@@ -275,6 +289,15 @@ impl Eval {
                 count(&self.cost.new_by_rule, r.id),
                 count(&self.cost.delta_by_rule, r.id)
             );
+            if let Some(i) = self.cost.activation_by_rule.get(&r.id) {
+                let _ = writeln!(out, "activation[profile]({id}, {i}).");
+            }
+            if let Some(n) = self.cost.fresh_whole_by_rule.get(&r.id) {
+                let _ = writeln!(out, "fresh_whole[profile]({id}, {n}).");
+            }
+            if let Some(n) = self.cost.again_by_rule.get(&r.id) {
+                let _ = writeln!(out, "again[profile]({id}, {n}).");
+            }
             if let Some(why) = self.written_order_reason(r) {
                 let _ = writeln!(out, "written_order[profile]({id}, {why}).");
             }
@@ -288,6 +311,17 @@ impl Eval {
                 );
                 if c.widest.n > 0 {
                     let _ = writeln!(out, "widest[profile]({id}, {k}, {}).", c.widest.n);
+                }
+            }
+            // the width by the news position the firing was solved from: a plan is given per position, so it is
+            // judged by its own firings; At 0 is the whole evaluation, as order[profile] counts it
+            let ats: Vec<(usize, u64)> = std::iter::once((0, 0))
+                .chain(r.clause.body.iter().enumerate().filter_map(|(a, b)| prem_key(b).map(|k| (a + 1, k))))
+                .collect();
+            for (at, ak) in ats {
+                for (i, b) in r.clause.body.iter().enumerate() {
+                    let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost_at.get(&(r.id, ak, k))) else { continue };
+                    let _ = writeln!(out, "width_at[profile]({id}, {at}, {}, {}).", i + 1, c.rows_in);
                 }
             }
         }
@@ -311,24 +345,121 @@ impl Eval {
             let list = ks.iter().rev().fold("$nil".to_string(), |t, k| format!("$cons({k}, {t})"));
             let _ = writeln!(out, "order[profile]({id}, {at}, {list}, {}).", if given { "plan" } else { "greedy" });
         }
-        let mut census: Vec<(String, String, Sym, Sym, usize, usize)> = self
+        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = self
             .store
             .live_census()
             .into_iter()
-            .filter(|&(rel, book, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
-            .map(|(rel, book, n, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, arity))
+            .filter(|&(rel, book, _, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
+            .map(|(rel, book, n, base, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, base, arity))
             .collect();
+        // a closure answered from its tree holds no row: its pairs are its rows and its two columns' distinct values
+        // are the tree's ancestors and descendants (vclosure.rs vcensus); censused as empty, at 250 files of vscode the
+        // plan read 21 million rows of inside[tree] first, where the greedy order read one
+        let mut closures: HashMap<(Sym, Sym), (u32, u32)> = HashMap::new();
+        for (rel, book, pairs, internal, deep) in self.vc.vcensus(&mut self.store) {
+            if self.v.is_reserved(rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                continue;
+            }
+            closures.insert((rel, book), (internal, deep));
+            census.push((self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, pairs as usize, 0, 2));
+        }
+        // a relation a rule reads and nothing holds is censused as empty: a plan that knows nothing of it puts it last
+        let held: HashSet<(Sym, Sym)> = census.iter().map(|c| (c.2, c.3)).collect();
+        let mut empty: HashSet<(Sym, Sym)> = HashSet::new();
+        for r in &self.rules {
+            for b in r.clause.body.iter() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" || held.contains(&(l.rel, book)) {
+                    continue;
+                }
+                if empty.insert((l.rel, book)) {
+                    census.push((self.h.name(l.rel).to_string(), self.h.name(book).to_string(), l.rel, book, 0, 0, l.args.len()));
+                }
+            }
+        }
         census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
-        for (rel_name, book_name, rel, book, n, arity) in census {
+        // a constant a rule writes in a column: the rows that hold it, `selects(Rel, Book, Pos, Const, N)`, since the
+        // average over the column's distinct values misses the skew a rule's constant picks (identifier among kinds)
+        let mut selects: Vec<(Sym, Sym, usize, Term)> = Vec::new();
+        for r in &self.rules {
+            for b in r.clause.body.iter() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                    continue;
+                }
+                for (j, &t) in l.args.iter().enumerate() {
+                    if self.h.is_ground(t) && !selects.contains(&(l.rel, book, j, t)) {
+                        selects.push((l.rel, book, j, t));
+                    }
+                }
+            }
+        }
+        let mut selects: Vec<(String, String, usize, String, usize)> = selects
+            .into_iter()
+            .map(|(rel, book, j, t)| {
+                let n = self.store.probe_stats(&self.h, rel, Some(book), &[j], &[t], &[]).0;
+                (self.h.name(rel).to_string(), self.h.name(book).to_string(), j, self.h.canon(t), n)
+            })
+            .collect();
+        selects.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)).then(a.2.cmp(&b.2)).then_with(|| cmp_js(&a.3, &b.3)));
+        for (rel_name, book_name, j, c, n) in selects {
             let book_name = census_book.unwrap_or(&book_name);
-            let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}).");
+            let _ = writeln!(out, "selects[profile]({rel_name}, {book_name}, {}, {c}, {n}).", j + 1);
+        }
+        // a premise writing constants in two columns or more: the rows that hold them all, `picks(R, K, N)`, since the
+        // fewest of its columns' `selects` misses their conjunction (`attr(P, computed, true)`: 13 245 hold true,
+        // 55 015 computed, 2 075 both)
+        let mut picks: Vec<(String, usize, usize)> = Vec::new();
+        for r in &self.rules {
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                    continue;
+                }
+                let (js, ts): (Vec<usize>, Vec<Term>) = l.args.iter().enumerate().filter(|(_, &t)| self.h.is_ground(t)).map(|(j, &t)| (j, t)).unzip();
+                if js.len() < 2 {
+                    continue;
+                }
+                let n = self.store.probe_stats(&self.h, l.rel, Some(book), &js, &ts, &[]).0;
+                picks.push((self.h.name(r.id).to_string(), i + 1, n));
+            }
+        }
+        picks.sort_by(|a, b| cmp_js(&a.0, &b.0).then(a.1.cmp(&b.1)));
+        for (id, k, n) in picks {
+            let _ = writeln!(out, "picks[profile]({id}, {k}, {n}).");
+        }
+        // the rows a relation was given as base facts, counted here in one pass: a rule counting them over
+        // asserted_by read 51 million rows at 250 files of vscode
+        for (rel_name, book_name, rel, book, n, base, arity) in census {
+            let book_name = census_book.unwrap_or(&book_name);
+            let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}). base[profile]({rel_name}, {book_name}, {base}).");
             for pos in 0..arity {
-                let (_, d) = self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]);
+                let d = match closures.get(&(rel, book)) {
+                    Some(&(internal, deep)) => [internal, deep][pos] as usize,
+                    None if n == 0 => 0,
+                    None => self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]).1,
+                };
                 let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
             }
         }
-        if let Some(k) = &self.kernel_profile {
-            out.push_str(k);
+        // the kernel's heap is this evaluation's: lent to a copy of the kernel for its text, only when asked
+        if let (None, Some(k)) = (census_book, self.kernel_eval.clone()) {
+            let mut sub = k.1.clone();
+            sub.h = std::mem::take(&mut self.h);
+            out.push_str(&sub.kernel_profile_text());
+            self.h = std::mem::take(&mut sub.h);
         }
         out
     }
@@ -368,11 +499,12 @@ impl Eval {
 
 impl CostState {
     /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
-    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {
+    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, at: Option<u64>, b: &BodyElem) -> Option<Mark> {
         let key = (rid?, prem_key(b)?);
         let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
         Some(Mark {
             key,
+            at: at.unwrap_or(0),
             read0: self.read_rows,
             outer: std::mem::take(&mut self.widest),
             outer_floor: std::mem::replace(&mut self.wide_floor, floor),
@@ -384,9 +516,14 @@ impl CostState {
         let wide = std::mem::take(&mut self.widest);
         self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
         self.wide_floor = m.outer_floor;
+        let read = self.read_rows - m.read0;
+        let c = self.prem_cost_at.entry((m.key.0, m.at, m.key.1)).or_default();
+        c.rows_in += rows_in as u64;
+        c.read += read;
+        c.rows_out += rows_out as u64;
         let c = self.prem_cost.entry(m.key).or_default();
         c.rows_in += rows_in as u64;
-        c.read += self.read_rows - m.read0;
+        c.read += read;
         c.rows_out += rows_out as u64;
         if wide.n > c.widest.n {
             c.widest = wide;

@@ -32,15 +32,24 @@ fn a_base_fact_in_another_book_does_not_stop_the_delta() {
     assert_eq!(s.eval.canonical_state(), fresh.eval.canonical_state());
 }
 
-/// A base fact of the negating rule's relation in the book it concludes into: refused, the world evaluated again.
+/// A base fact of the negating rule's relation in the book it concludes into: the one-fact delta refuses it, the
+/// set's pass takes it, and gives the fresh world.
 #[test]
-fn a_base_fact_in_the_same_book_still_refuses() {
+fn a_base_fact_in_the_same_book_is_taken_by_the_sets_pass() {
     let rules = "v(S) :- dom(S), not k(S).\nv(x).\n";
     let mut s = world(&format!("{BASE}{rules}"));
-    match s.retract_delta("k(a)").unwrap() {
-        Retraction::Full(why) => assert!(why.contains("concludes a base fact"), "{why}"),
-        d => panic!("a base fact of the rule's own book was taken by delta: {d:?}"),
+    let k = s.eval.store.live_ids().into_iter().find(|&f| s.eval.store.key(&s.eval.h, f).starts_with("k[main](a)")).unwrap();
+    match s.eval.retract_delta(&[k]) {
+        Err(why) => assert!(why.contains("concludes a base fact"), "{why}"),
+        Ok(d) => panic!("the one-fact delta took a base fact of the rule's own book: {d:?}"),
     }
+    let mut s = world(&format!("{BASE}{rules}"));
+    match s.retract_delta("k(a)").unwrap() {
+        Retraction::Delta(d) => assert!(d.set.is_some(), "{d:?}"),
+        r => panic!("evaluated again: {r:?}"),
+    }
+    let mut fresh = world(&format!("edb(k).\nedb(dom).\nk(b).\ndom(a).\ndom(c).\n{rules}"));
+    assert_eq!(s.eval.canonical_state(), fresh.eval.canonical_state());
 }
 
 /// Two facts of the program given to the engine's delta at once: refused, not half done.

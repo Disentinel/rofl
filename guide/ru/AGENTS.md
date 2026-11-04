@@ -11,7 +11,8 @@ Claude Code не знает, что `rofl-nb` существует. Вставь
 ## Команды
 
     rofl-nb <file.rofl.md> [--json] [--cell N]   что говорит каждая ячейка
-    rofl-nb <file.rofl.md> --all                 все ответы, а не первые 12 (JSON: 50)
+    rofl-nb <file.rofl.md> --all                 ничего не сокращая: все ответы, а не первые 12 (JSON: 50),
+                                                 каждое доказательство целиком, каждый провал, встреченный whynot
     rofl-nb <file.rofl.md> --timing              время каждой фазы, на stderr
     rofl-nb <file.rofl.md> --format F            `draw` в форме F: mermaid, dot, argdown, vega-lite, ... (DRAWING.md)
     rofl-nb edit <file.rofl.md> --cell N         новый текст ячейки N со stdin (`--lang L` для новой ячейки); единственный

@@ -71,6 +71,7 @@
 //! The result is the one a full evaluation gives, byte for byte in
 //! `canonical_state`, and its explanations are the same (rust/rofl/tests/
 //! incremental.rs holds both over random edits).
+use crate::store::Prem;
 use super::datastrat::DsComp;
 use super::*;
 use crate::cell::Strategy;
@@ -103,6 +104,8 @@ pub struct Delta {
     pub consumers: usize,
     /// rules that negate or aggregate what changed, read again whole
     pub stacked_rules: usize,
+    /// relations a hole or a shrug may move that the change reached, evaluated again after the rest
+    pub holed: usize,
     /// cells of those rules, sealed again
     pub stacked_cells: usize,
     /// staged facts (`@next`) that rested on what changed, taken out
@@ -111,6 +114,8 @@ pub struct Delta {
     pub components: usize,
     /// facts a rule answered on demand concluded at a call, taken out with the calls that made them
     pub demanded: usize,
+    /// the fact taken out by the set's pass (`retract_set`) where this one is not worked out, and what it did
+    pub set: Option<Box<AddDelta>>,
 }
 
 /// The rules that read what a retraction changes (`consumer_rules`).
@@ -165,8 +170,8 @@ impl Eval {
     fn index_cell(store: &Store, c: CellId, ix: &mut Support) {
         for m in store.cell_members(c) {
             for p in store.member_derivs(m).take(brk!("retract_alts_unindexed" => 1; usize::MAX)).flatten() {
-                if let PremRef::Fact(g) = p {
-                    let v = ix.entry(*g).or_default();
+                if let Prem::Fact(g) = p.kind() {
+                    let v = ix.entry(g).or_default();
                     if !v.contains(&c) {
                         v.push(c);
                     }
@@ -178,8 +183,8 @@ impl Eval {
     fn unindex_cell(store: &Store, c: CellId, ix: &mut Support) {
         for m in store.cell_members(c) {
             for p in store.member_derivs(m).flatten() {
-                if let PremRef::Fact(g) = p {
-                    if let Some(v) = ix.get_mut(g) {
+                if let Prem::Fact(g) = p.kind() {
+                    if let Some(v) = ix.get_mut(&g) {
                         v.retain(|x| *x != c);
                     }
                 }
@@ -187,10 +192,16 @@ impl Eval {
         }
     }
 
+    /// A cell of a rule whose relation the delta leaves to the pass after it.
+    fn aside_cell(&self, c: CellId) -> bool {
+        let CellOwner::Body { rule, .. } = self.store.cell(c).owner;
+        !self.aside.is_empty() && self.rule_of(rule).is_some_and(|r| self.aside.contains(&r.clause.head.rel))
+    }
+
     /// The cells a retraction of `f` reaches, from the back-index.
     pub fn supported_cells(&mut self, f: FactId) -> Vec<CellId> {
         let mut v = brk!("retract_index_off" => Vec::new(); self.support_index().get(&f).cloned().unwrap_or_default());
-        v.retain(|c| !self.store.cell_dead(*c));
+        v.retain(|c| !self.store.cell_dead(*c) && !self.aside_cell(*c));
         v.sort_unstable();
         v
     }
@@ -206,9 +217,9 @@ impl Eval {
         if self.prov.no_witness {
             out.push("the world keeps no witness, so nothing says which facts lose their last support");
         }
-        // a rule's fault, and the shrugs, stand where nothing the fact reaches is read by the rule or by a reader of either
-        let reached = self.grow(&HashSet::from([self.store.rec(f).rel]), &HashSet::new());
-        if self.holes_beyond_faults() > 0 || brk!("retract_fault_hole_refused" => !self.hole_cone().is_empty(); self.hole_cone().iter().any(|r| reached.contains(r))) {
+        // a hole, and the shrugs, stand where nothing the fact reaches is read by its rule or by a reader of either; what
+        // the fact reaches of them is evaluated again after the rest (`retract_delta`)
+        if self.holes_beyond_faults() > 0 || brk!("retract_fault_hole_refused" => !self.hole_cone().is_empty(); false) {
             out.push("the world holds a hole or reads a shrug");
         }
         let rec = self.store.rec(f);
@@ -319,7 +330,7 @@ impl Eval {
         loop {
             let mut grew = false;
             for r in &self.rules {
-                if own.contains(&r.clause.head.rel) || taken.contains(&r.id) {
+                if own.contains(&r.clause.head.rel) || taken.contains(&r.id) || self.aside.contains(&r.clause.head.rel) {
                     continue;
                 }
                 let (mut reads, mut inner) = (false, false);
@@ -510,7 +521,7 @@ impl Eval {
             }
             for (_, _, ps) in self.store.firings(x) {
                 for p in ps {
-                    if let PremRef::Fact(g) = p {
+                    if let Prem::Fact(g) = p.kind() {
                         let v = cm.entry(g).or_default();
                         if v.last() != Some(&x) {
                             v.push(x);
@@ -576,7 +587,7 @@ impl Eval {
     /// that cites `f`.
     fn derivations_citing(&mut self, f: FactId) -> Vec<FactId> {
         let mut out = Vec::new();
-        let rels: Vec<Sym> = self.lat.counts().map(|(_, c)| c).collect();
+        let rels: Vec<Sym> = self.lat.counts().filter(|(r, _)| !self.aside.contains(r)).map(|(_, c)| c).collect();
         for rel in rels {
             for id in self.store.rel_all(&self.h, rel) {
                 if self.store.firings(id).iter().any(|(_, _, ps)| ps.contains(&PremRef::Fact(f))) {
@@ -608,7 +619,13 @@ impl Eval {
         if !why.is_empty() {
             return Err(why.join("; "));
         }
-        self.retract_worked_out(doomed).map_err(String::from)
+        self.aside = self.hole_world(&HashSet::from([self.store.rec(doomed[0]).rel]), &HashSet::new()).map_err(String::from)?;
+        let r = self.retract_worked_out(doomed);
+        let aside = std::mem::take(&mut self.aside);
+        let mut d = r.map_err(String::from)?;
+        d.holed = aside.len();
+        self.pass_aside(aside).map_err(String::from)?;
+        Ok(d)
     }
 
     fn retract_worked_out(&mut self, doomed: &[FactId]) -> Result<Delta, &'static str> {
@@ -760,7 +777,7 @@ impl Eval {
         self.lat.has_cells()
             && (self.store.citers_of(&HashSet::from([f])).into_iter().any(|x| {
                 let rel = self.store.rec(x).rel;
-                self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some()
+                !self.aside.contains(&rel) && (self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some())
             }) || self.lat.pass.sub_prems.values().any(|fs| fs.iter().any(|ps| ps.contains(&PremRef::Fact(f)))))
     }
 
@@ -851,9 +868,9 @@ impl Eval {
             .staged
             .iter()
             .filter(|(_, f)| {
-                f.prems.iter().any(|p| match p {
-                    PremRef::Fact(g) => !store.alive(*g),
-                    PremRef::Cell(c) => store.cell_dead(*c),
+                f.prems.iter().any(|p| match p.kind() {
+                    Prem::Fact(g) => !store.alive(g),
+                    Prem::Cell(c) => store.cell_dead(c),
                     _ => false,
                 })
             })
@@ -1000,7 +1017,7 @@ impl Eval {
                 if inside.contains(&x) {
                     continue;
                 }
-                let cites = |ps: &Vec<PremRef>| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)));
+                let cites = |ps: &Vec<PremRef>| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if frontier.contains(&g)));
                 let firings = self.store.firings(x);
                 let rested = brk!("retract_lattice_precise" => firings.iter().all(|(_, _, ps)| cites(ps)); firings.iter().any(|(_, _, ps)| cites(ps)));
                 if !rested {
@@ -1033,7 +1050,7 @@ impl Eval {
             // firing rested on a fact of the cone
             let mut keys: Vec<LatKey> = Vec::new();
             for ((ck, _), firings) in &self.lat.pass.sub_prems {
-                if firings.iter().any(|ps| ps.iter().any(|p| matches!(p, PremRef::Fact(g) if frontier.contains(g)))) && !keys.contains(ck) {
+                if firings.iter().any(|ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if frontier.contains(&g)))) && !keys.contains(ck) {
                     keys.push(ck.clone());
                 }
             }

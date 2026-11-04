@@ -11,6 +11,8 @@ memmap2 = "0.9"
 regex = "1"
 # the free space of a disk, before a question verb keeps its world on it (src/bin/rofl/kept.rs)
 libc = "0.2"
+# the allocator under the counting one (src/bin/rofl/seed.rs): an engine that allocates per partial solution
+mimalloc = { version = "0.1.43", default-features = false }
 # an OpenAPI document written in YAML (src/openapi.rs)
 serde_yaml = "0.9"
 # the sql adapter (src/adapter.rs `run_sql`); `cargo build --no-default-features` builds the engine without it

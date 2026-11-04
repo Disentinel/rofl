@@ -73,12 +73,16 @@ pub fn step(k: &[Kind], i: usize, s: State) -> State {
 
 /// `st/2` for every position: the state the automaton is IN at i.
 pub fn states(src: &str) -> Vec<State> {
-    let k: Vec<Kind> = src.chars().map(kind_of).collect();
+    states_of(&src.chars().map(kind_of).collect::<Vec<Kind>>())
+}
+
+/// `states` over the kinds of the characters, read once by a caller that keeps them.
+pub fn states_of(k: &[Kind]) -> Vec<State> {
     let mut out = Vec::with_capacity(k.len());
     let mut s = State::Code;
     for i in 0..k.len() {
         out.push(s);
-        s = step(&k, i, s);
+        s = step(k, i, s);
     }
     out
 }

@@ -438,7 +438,11 @@ fn set_walls(o: &Opts, s: &mut Session) {
 /// The world of a run that did not open one from disk: its files, its world below, and what it evaluates, then kept.
 fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String>) {
     let sources = load_sources(o);
-    let loaded = load_files(o, s, &sources);
+    // what each file brought is read now, and the texts dropped before the evaluation, not held through it
+    let units = {
+        let loaded = load_files(o, s, &sources);
+        (o.kept.is_some() || slot.is_some()).then(|| units_of(s, &loaded))
+    };
     load_below(o, s, &sources);
     let disk = disk_wall(o, s, slot);
     if let Some(rels) = question_rels(o) {
@@ -447,7 +451,7 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
     evaluate_world(o, s);
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).chain(o.below.iter().cloned()).collect();
-    keep_loaded(o, world, s, &loaded, &read, slot, disk);
+    keep_loaded(o, world, s, units.unwrap_or_default(), &read, slot, disk);
 }
 
 /// The relations a question verb's questions name, which its world asks (docs/demand-cones.md) as a notebook asks
@@ -536,13 +540,10 @@ fn load_sources(o: &Opts) -> Vec<(String, Option<String>)> {
 
 /// Each source loaded into the world, refused with its diagnostics; returned with its text, for what it asserts.
 fn load_files(o: &Opts, s: &mut Session, sources: &[(String, Option<String>)]) -> Vec<(String, String)> {
-    let mut loaded: Vec<(String, String)> = Vec::new();
-    for (f, text) in sources {
-        let t = text.clone().unwrap_or_else(|| read(o.json, f));
-        if let Err(d) = s.load(&t, None) {
-            fail(o.json, FILE_REFUSED, &format!("{f} refused:\n  {}", d.join("\n  ")));
-        }
-        loaded.push((f.clone(), t));
+    let loaded: Vec<(String, String)> = sources.iter().map(|(f, text)| (f.clone(), text.clone().unwrap_or_else(|| read(o.json, f)))).collect();
+    let texts: Vec<&str> = loaded.iter().map(|(_, t)| t.as_str()).collect();
+    if let Err((i, d)) = s.load_all(&texts, None) {
+        fail(o.json, FILE_REFUSED, &format!("{} refused:\n  {}", loaded[i].0, d.join("\n  ")));
     }
     loaded
 }
@@ -554,10 +555,10 @@ fn load_below(o: &Opts, s: &mut Session, sources: &[(String, Option<String>)]) {
     let mut b = Session::fresh(o.budget);
     if o.strata { b.eval.mode = rofl::engine::Mode::Strata; }
     if let Some(n) = o.space { b.eval.space = n; }
-    for f in sources.iter().take(1).map(|x| &x.0).chain(o.below.iter()) {
-        if let Err(d) = b.load(&read(o.json, f), None) {
-            fail(o.json, FILE_REFUSED, &format!("below: {f} refused:\n  {}", d.join("\n  ")));
-        }
+    let files: Vec<&String> = sources.iter().take(1).map(|x| &x.0).chain(o.below.iter()).collect();
+    let texts: Vec<String> = files.iter().map(|f| read(o.json, f)).collect();
+    if let Err((i, d)) = b.load_all(&texts.iter().map(String::as_str).collect::<Vec<_>>(), None) {
+        fail(o.json, FILE_REFUSED, &format!("below: {} refused:\n  {}", files[i], d.join("\n  ")));
     }
     if let Err(e) = b.evaluate() { refuse(&mut b, o.json, format!("below: {}", rofl::describe(&e))); }
     if let Err(e) = s.feed_below(&mut b) { fail(o.json, WORLD_REFUSED, &format!("below: {e}")); }
@@ -612,10 +613,13 @@ fn units_of(s: &mut Session, loaded: &[(String, String)]) -> Vec<crate::kept::Un
 }
 
 /// The world kept: at the kept file, else under the question's slot, where a world that cannot be kept is answered all the same.
-fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, loaded: &[(String, String)], read: &[String], slot: &Option<String>, disk: Option<u64>) {
+fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, mut units: Vec<crate::kept::Unit>, read: &[String], slot: &Option<String>, disk: Option<u64>) {
+    // read before the evaluation: what a retraction took out since is no longer the file's
+    for u in &mut units {
+        u.facts.retain(|&f| s.eval.store.alive(f) && s.eval.store.rec(f).base());
+    }
     let files_now = files_of(o, world);
     if let Some(k) = &o.kept {
-        let units = units_of(s, loaded);
         let note = crate::kept::record(world, files_now, &units, read, &scan_units(s), None).unwrap_or_else(|e| fail(o.json, FILE_REFUSED, &format!("{k} is not kept: {e}")));
         let n = s.keep_volume_noted(k, &note).unwrap_or_else(|e| fail(o.json, USAGE, &format!("{k}: {e}")));
         eprintln!("kept {k}: {n} bytes");
@@ -625,7 +629,6 @@ fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, loaded: &[(String, S
         eprintln!("the world is not kept: keeping it takes about {} of memory more, which this process may not use", crate::kept::said_size(need));
     } else if let Some(p) = slot {
         // keeping is a convenience of the question: a world that cannot be kept is answered all the same
-        let units = units_of(s, loaded);
         let cut = disk.filter(|_| s.eval.disk_cut());
         let kept = crate::kept::record(world, files_now, &units, read, &scan_units(s), cut).and_then(|note| {
             // kept with what a delta reads, so no later run indexes the world again

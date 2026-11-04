@@ -2001,6 +2001,16 @@ brk("structures_tree_two_parents_ignored"). brk_kind("structures_tree_two_parent
 brk_expects("structures_tree_two_parents_ignored", "structures_proof").
 brk("structures_alias_subset_accepted"). brk_kind("structures_alias_subset_accepted", switch).
 brk_expects("structures_alias_subset_accepted", "structures_proof").
+brk("structures_ordered_non_integer_ignored"). brk_kind("structures_ordered_non_integer_ignored", switch).
+brk_expects("structures_ordered_non_integer_ignored", "structures_proof").
+brk("structures_sequence_gap_ignored"). brk_kind("structures_sequence_gap_ignored", switch).
+brk_expects("structures_sequence_gap_ignored", "structures_proof").
+brk("structures_span_crossing_ignored"). brk_kind("structures_span_crossing_ignored", switch).
+brk_expects("structures_span_crossing_ignored", "structures_proof").
+brk("structures_equivalence_missing_ignored"). brk_kind("structures_equivalence_missing_ignored", switch).
+brk_expects("structures_equivalence_missing_ignored", "structures_proof").
+brk("structures_dag_cycle_ignored"). brk_kind("structures_dag_cycle_ignored", switch).
+brk_expects("structures_dag_cycle_ignored", "structures_proof").
 brk("tree_unread"). brk_kind("tree_unread", switch).
 brk_expects("tree_unread", "ds_tree_syntax").
 brk_expects("tree_unread", "ds_tree_holds").
@@ -2837,8 +2847,13 @@ switch_site("stale_holes_kept", "rust/rofl/src/engine.rs").
 switch_site("stale_kept_drained", "rust/rofl/src/engine.rs").
 switch_site("strata_untabled", "rust/rofl/src/engine.rs").
 switch_site("structures_alias_subset_accepted", "rust/rofl/src/structures.rs").
+switch_site("structures_dag_cycle_ignored", "rust/rofl/src/structures.rs").
 switch_site("structures_declared_ignored", "rust/rofl/src/structures.rs").
+switch_site("structures_equivalence_missing_ignored", "rust/rofl/src/structures.rs").
 switch_site("structures_function_conflict_ignored", "rust/rofl/src/structures.rs").
+switch_site("structures_ordered_non_integer_ignored", "rust/rofl/src/structures.rs").
+switch_site("structures_sequence_gap_ignored", "rust/rofl/src/structures.rs").
+switch_site("structures_span_crossing_ignored", "rust/rofl/src/structures.rs").
 switch_site("structures_tree_two_parents_ignored", "rust/rofl/src/structures.rs").
 switch_site("subset_iv_low_only", "rust/rofl/src/engine.rs").
 switch_site("sum_by_value", "rust/rofl/src/engine.rs").

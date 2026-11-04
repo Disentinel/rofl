@@ -29,7 +29,11 @@ fn the_measure_bounds_the_volume() {
             bad.push(format!("{name}: volume {v} bytes, measured {m}"));
         }
         // and a world cut by the wall, with what the cut keeps of the evaluation in flight, passes it by less than an
-        // eighth, the room a question verb leaves it (`rofl::engine::CUT_ROOM`)
+        // eighth, the room a question verb leaves it (`rofl::engine::CUT_ROOM`). Not a world whose evaluation loads
+        // its own profile: what a round loads is not walled (f_the_disk_wall_does_not_bound_what_a_round_loads)
+        if build(&files, BUDGET).unwrap().eval.profile_wanted() {
+            continue;
+        }
         for k in [2, 3, 5] {
             let mut c = build(&files, BUDGET).unwrap();
             let base = c.eval.disk_bytes();

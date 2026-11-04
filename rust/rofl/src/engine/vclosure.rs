@@ -32,6 +32,7 @@
 //! of its own. An addition gives it news: the rows the new edges make
 //! (`vnews`), from which the reader is solved (`vfire_news`).
 
+use crate::store::Prem;
 use super::*;
 use crate::forest::Forest;
 
@@ -228,12 +229,12 @@ impl Eval {
             let mut keys: Vec<Sym> = Vec::new();
             for id in self.store.firing_keys() {
                 for (_, _, ps) in self.store.firings(id) {
-                    keys.extend(ps.iter().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
+                    keys.extend(ps.iter().filter_map(|p| if let Prem::VRow(k) = p.kind() { Some(k) } else { None }));
                 }
             }
             for c in self.store.live_cells() {
                 for m in self.store.cell_members(c) {
-                    keys.extend(self.store.member_derivs(m).flatten().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
+                    keys.extend(self.store.member_derivs(m).flatten().filter_map(|p| if let Prem::VRow(k) = p.kind() { Some(k) } else { None }));
                 }
             }
             for k in keys.into_iter().filter(|_| !brk!("vclosure_restore_keys_unread" => true; false)) {
@@ -248,7 +249,7 @@ impl Eval {
         for id in self.store.firing_keys() {
             for (_, _, prems) in self.store.firings(id) {
                 for p in prems {
-                    if let PremRef::VRow(k) = p {
+                    if let Prem::VRow(k) = p.kind() {
                         if k != 0 {
                             cited.push((id, k));
                         }
@@ -781,6 +782,23 @@ impl VClosureState {
     /// The pairs of a closure: its size to the planner.
     pub(super) fn vlen(&self, ci: usize) -> usize {
         self.vclosures[ci].pairs as usize
+    }
+
+    /// THE CENSUS OF THE CLOSURES, for the profile: each active closure in each book its edges have, with its pairs
+    /// (its rows), the ancestors with a descendant (the distinct values of its first column) and the descendants (of
+    /// its second), as `vstat` reads them for the planner. A closure holds no row, so the store's census misses it.
+    pub(super) fn vcensus(&mut self, store: &mut Store) -> Vec<(Sym, Sym, u64, u32, u32)> {
+        let mut out = Vec::new();
+        for ci in 0..self.vclosures.len() {
+            if !self.vclosures[ci].active {
+                continue;
+            }
+            let rel = self.vclosures[ci].rel;
+            for (book, f) in self.vforests(store, ci).iter() {
+                out.push((rel, *book, f.pairs, f.internal, f.deep));
+            }
+        }
+        out
     }
 
     /// WHAT THE STORE LISTS ON OUTPUT: the rows of every active closure, generated from the trees as the last evaluation

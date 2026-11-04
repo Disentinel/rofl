@@ -159,9 +159,9 @@ pub struct EvalRecord {
     pub partial: bool,
 }
 
+/// What a witness's premise is, read out of the four bytes it is kept in (`PremRef::kind`).
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[repr(C, u32)]
-pub enum PremRef {
+pub enum Prem {
     /// A fact that was matched: the identity, not the spelling.
     Fact(FactId),
     /// The canonical key of an ABSENT pattern, which is not a fact and can
@@ -170,11 +170,78 @@ pub enum PremRef {
     Bi(Sym),
     /// A sealed aggregate cell, the ONE premise an aggregate element records.
     /// Its members and what it sealed live in the cell record, so a witness
-    /// keeps one premise per body element and this stays eight bytes.
+    /// keeps one premise per body element.
     Cell(CellId),
     /// A row of a closure answered from its tree (engine/vclosure.rs): no fact holds it, so the premise is the canonical key
     /// of the row, interned as a negation's is; `VRow(0)` is the unspelled form a match returns and a firing's record spells.
     VRow(Sym),
+}
+
+/// A premise as a witness and a partial solution keep it, in four bytes: a fact's id below 2^31, else the kind in the two
+/// bits under the top one and a symbol or cell of 29 bits. An id past them refuses loudly rather than wrap.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct PremRef(u32);
+
+const PREM_OTHER: u32 = 1 << 31;
+const PREM_SHIFT: u32 = 29;
+const PREM_LOW: u32 = (1 << PREM_SHIFT) - 1;
+
+#[allow(non_snake_case)]
+impl PremRef {
+    #[inline]
+    pub fn Fact(f: FactId) -> PremRef {
+        assert!(f < PREM_OTHER, "a fact id past 2^31 cannot be a witness's premise");
+        PremRef(f)
+    }
+    #[inline]
+    fn other(kind: u32, x: u32) -> PremRef {
+        assert!(x <= PREM_LOW, "a symbol or cell past 2^29 cannot be a witness's premise");
+        PremRef(PREM_OTHER | kind << PREM_SHIFT | x)
+    }
+    pub fn Neg(s: Sym) -> PremRef {
+        PremRef::other(0, s)
+    }
+    pub fn Bi(s: Sym) -> PremRef {
+        PremRef::other(1, s)
+    }
+    pub fn Cell(c: CellId) -> PremRef {
+        PremRef::other(2, c)
+    }
+    pub fn VRow(s: Sym) -> PremRef {
+        PremRef::other(3, s)
+    }
+    #[inline]
+    pub fn kind(self) -> Prem {
+        if self.0 & PREM_OTHER == 0 {
+            return Prem::Fact(self.0);
+        }
+        let x = self.0 & PREM_LOW;
+        match (self.0 >> PREM_SHIFT) & 3 {
+            0 => Prem::Neg(x),
+            1 => Prem::Bi(x),
+            2 => Prem::Cell(x),
+            _ => Prem::VRow(x),
+        }
+    }
+}
+
+impl From<Prem> for PremRef {
+    fn from(p: Prem) -> PremRef {
+        match p {
+            Prem::Fact(f) => PremRef::Fact(f),
+            Prem::Neg(s) => PremRef::Neg(s),
+            Prem::Bi(s) => PremRef::Bi(s),
+            Prem::Cell(c) => PremRef::Cell(c),
+            Prem::VRow(s) => PremRef::VRow(s),
+        }
+    }
+}
+
+impl std::fmt::Debug for PremRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.kind().fmt(f)
+    }
 }
 
 // ------------------------------------------------------------------ cells
@@ -2103,21 +2170,61 @@ impl Store {
         (rows, seen.len().clamp(1, rows.max(1)))
     }
 
+    /// `probe_stats` for every value of the constant positions `cpos` (one or two) at once, by the values' bits: one
+    /// pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`).
+    pub fn probe_groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> FxMap<(u64, u64), (usize, usize)> {
+        let mut rows: FxMap<(u64, u64), (usize, usize)> = FxMap::default();
+        let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
+        let Some(groups) = self.idx.get(&rel) else { return rows };
+        for (_, r) in groups.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)) {
+            for &k in r.canon.iter().chain(r.arrived.iter()) {
+                if !self.facts.alive(k) {
+                    continue;
+                }
+                let a = self.facts.args(k);
+                let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
+                let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { continue };
+                let c = (c0, c1);
+                rows.entry(c).or_default().0 += 1;
+                if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+                    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+                    for &p in vpos {
+                        x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+                    }
+                    seen.insert((c, x));
+                }
+            }
+        }
+        for (c, _) in seen {
+            rows.get_mut(&c).expect("a value seen is counted").1 += 1;
+        }
+        for v in rows.values_mut() {
+            v.1 = v.1.clamp(1, v.0.max(1));
+        }
+        rows
+    }
+
+    /// What `probe_groups` counted is still so: the rows of `rel` neither grew, nor died, nor came back.
+    pub fn rows_stamp(&self, rel: Sym, persp: Option<Sym>) -> (usize, u64, usize) {
+        (self.rel_len_est(rel, persp), self.deaths.get(&rel).copied().unwrap_or(0), self.revived.get(&rel).map_or(0, Vec::len))
+    }
+
     /// Every (relation, book) holding a live row, with its live rows and widest arity, in no order: the
     /// census a profile reports (`Eval::profile_text`).
-    pub fn live_census(&self) -> Vec<(Sym, Sym, usize, usize)> {
+    pub fn live_census(&self) -> Vec<(Sym, Sym, usize, usize, usize)> {
         let mut out = Vec::new();
         for (rel, groups) in self.idx.iter() {
             for (p, r) in groups {
-                let (mut n, mut arity) = (0usize, 0usize);
+                let (mut n, mut base, mut arity) = (0usize, 0usize, 0usize);
                 for &k in r.canon.iter().chain(r.arrived.iter()) {
                     if self.alive(k) {
                         n += 1;
+                        base += usize::from(self.rec(k).base());
                         arity = arity.max(self.facts.args(k).len());
                     }
                 }
                 if n > 0 {
-                    out.push((*rel, *p, n, arity));
+                    out.push((*rel, *p, n, base, arity));
                 }
             }
         }
@@ -2585,7 +2692,7 @@ impl Store {
             for &id in &keys {
                 for (_, _, prems) in self.firings(id) {
                     for p in prems {
-                        if let PremRef::Fact(g) = p {
+                        if let Prem::Fact(g) = p.kind() {
                             f(g, id);
                         }
                     }
@@ -2854,16 +2961,16 @@ impl Store {
         }
         if let Some(ix) = self.citers.as_mut().map(Rc::make_mut).filter(|_| brk!("citers_unkept" => false; true)) {
             for p in &w.prems {
-                if let PremRef::Fact(g) = p {
-                    ix.more.entry(*g).or_default().push(id);
+                if let Prem::Fact(g) = p.kind() {
+                    ix.more.entry(g).or_default().push(id);
                 }
             }
         }
         if self.vciters.is_some() && brk!("vciters_unkept" => false; true) {
             for p in &w.prems {
-                let PremRef::VRow(k) = p else { continue };
-                match self.vrow_of.get(k) {
-                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).put(d.bits(), id, *k),
+                let Prem::VRow(k) = p.kind() else { continue };
+                match self.vrow_of.get(&k) {
+                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).put(d.bits(), id, k),
                     None => {
                         self.vciters = None;
                         break;
@@ -2955,13 +3062,13 @@ impl Store {
         let mut out = Vec::new();
         for id in ids {
             let removed = self.unlink_where(id, |s, n| {
-                s.prems_of(n).iter().any(|p| matches!(p, PremRef::Fact(f) if gone.contains(f)))
+                s.prems_of(n).iter().any(|p| matches!(p.kind(), Prem::Fact(f) if gone.contains(&f)))
             });
             if removed.is_empty() {
                 continue;
             }
-            let cited = removed.iter().flat_map(|n| self.prems_of(n)).filter_map(|p| match p {
-                PremRef::Fact(f) if gone.contains(f) => Some(*f),
+            let cited = removed.iter().flat_map(|n| self.prems_of(n)).filter_map(|p| match p.kind() {
+                Prem::Fact(f) if gone.contains(&f) => Some(f),
                 _ => None,
             }).min().unwrap_or(FactId::MAX);
             out.push((id, removed.iter().map(|n| n.rule).collect(), self.wit_head[id as usize] != EMPTY, cited));
@@ -2995,13 +3102,13 @@ impl Store {
 
     /// Does some firing of `id` cite none of `stale`?
     pub fn fired_without(&self, id: FactId, stale: &HashSet<FactId>) -> bool {
-        self.chain(id).any(|n| !self.prems_of(&n).iter().any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f))))
+        self.chain(id).any(|n| !self.prems_of(&n).iter().any(|p| matches!(p.kind(), Prem::Fact(f) if stale.contains(&f))))
     }
 
     /// Drop the firings of `id` that cite one of `stale`; their rules.
     pub fn drop_firings_of_citing(&mut self, id: FactId, stale: &HashSet<FactId>) -> Vec<Sym> {
         self.chains_cut();
-        self.unlink_where(id, |s, n| s.prems_of(n).iter().any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f))))
+        self.unlink_where(id, |s, n| s.prems_of(n).iter().any(|p| matches!(p.kind(), Prem::Fact(f) if stale.contains(&f))))
             .into_iter()
             .map(|n| n.rule)
             .collect()
@@ -3180,8 +3287,8 @@ impl Store {
         while c != EMPTY {
             nodes.push(c);
             for p in self.view(c).prems {
-                if let PremRef::Fact(g) = p {
-                    roots.push(*g);
+                if let Prem::Fact(g) = p.kind() {
+                    roots.push(g);
                 }
             }
             c = self.wits[c as usize].next;
@@ -3221,7 +3328,7 @@ impl Store {
     /// Firings found by the caller (not held here) in the order `witness_of`
     /// ranks the held ones: least height, then signature.
     pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
+        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
         let _ = self.heights(&roots, memo);
         let mut ranked: Vec<(u32, String, (Sym, u32, Vec<PremRef>))> = fs
             .into_iter()
@@ -3263,26 +3370,26 @@ impl Store {
         out.push_str(h.name(w.rule));
         for p in w.prems {
             out.push('|');
-            match p {
-                PremRef::Fact(f) => {
+            match p.kind() {
+                Prem::Fact(f) => {
                     out.push_str("fact:");
-                    self.write_key(h, *f, out);
+                    self.write_key(h, f, out);
                 }
-                PremRef::Neg(s) => {
+                Prem::Neg(s) => {
                     out.push_str("neg:");
-                    out.push_str(h.name(*s));
+                    out.push_str(h.name(s));
                 }
-                PremRef::Bi(s) => {
+                Prem::Bi(s) => {
                     out.push_str("b:");
-                    out.push_str(h.name(*s));
+                    out.push_str(h.name(s));
                 }
-                PremRef::Cell(c) => {
+                Prem::Cell(c) => {
                     out.push_str("cell:");
-                    self.write_cell_key(h, *c, out);
+                    self.write_cell_key(h, c, out);
                 }
-                PremRef::VRow(s) => {
+                Prem::VRow(s) => {
                     out.push_str("fact:");
-                    out.push_str(h.name(*s));
+                    out.push_str(h.name(s));
                 }
             }
         }
@@ -3297,12 +3404,12 @@ impl Store {
 
     /// A premise as `canonical_state` spells it in a witness line.
     pub fn prem_text(&self, h: &Heap, p: PremRef) -> String {
-        match p {
-            PremRef::Fact(f) => format!("fact:{}", self.key(h, f)),
-            PremRef::Neg(s) => format!("neg:{}", h.name(s)),
-            PremRef::Bi(s) => format!("bi:{}", h.name(s)),
-            PremRef::VRow(s) => format!("fact:{}", h.name(s)),
-            PremRef::Cell(c) => {
+        match p.kind() {
+            Prem::Fact(f) => format!("fact:{}", self.key(h, f)),
+            Prem::Neg(s) => format!("neg:{}", h.name(s)),
+            Prem::Bi(s) => format!("bi:{}", h.name(s)),
+            Prem::VRow(s) => format!("fact:{}", h.name(s)),
+            Prem::Cell(c) => {
                 let mut o = String::from("cell:");
                 self.write_cell_key(h, c, &mut o);
                 o
@@ -3362,11 +3469,11 @@ impl Store {
 
     /// The height of a premise: a fact's from `memo` (computed), a cell's own, a row of a tree's, a negation and a builtin 0.
     fn prem_height(&self, p: &PremRef, memo: &mut HashMap<FactId, u32>) -> u32 {
-        match p {
-            PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
-            PremRef::Cell(x) => self.cells.recs[*x as usize].height,
-            PremRef::VRow(k) => self.vrow_height(*k, memo),
-            PremRef::Neg(_) | PremRef::Bi(_) => 0,
+        match p.kind() {
+            Prem::Fact(g) => memo.get(&g).copied().unwrap_or(u32::MAX - 1),
+            Prem::Cell(x) => self.cells.recs[x as usize].height,
+            Prem::VRow(k) => self.vrow_height(k, memo),
+            Prem::Neg(_) | Prem::Bi(_) => 0,
         }
     }
 
@@ -3950,8 +4057,8 @@ impl Store {
         for h in self.wit_head.iter() {
             for n in self.nodes_from(*h) {
                 for p in self.prems_of(&n) {
-                    if let PremRef::Cell(x) = p {
-                        live[*x as usize] = true;
+                    if let Prem::Cell(x) = p.kind() {
+                        live[x as usize] = true;
                     }
                 }
             }
@@ -4017,8 +4124,8 @@ impl Store {
             while c != EMPTY {
                 let n = self.wits[c as usize];
                 for p in &mut self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
-                    if let PremRef::Cell(x) = p {
-                        *x = remap[*x as usize];
+                    if let Prem::Cell(x) = p.kind() {
+                        *p = PremRef::Cell(remap[x as usize]);
                     }
                 }
                 c = n.next;
@@ -4059,9 +4166,9 @@ impl Store {
                     continue;
                 }
                 for p in ps {
-                    if let PremRef::Fact(g) = p {
-                        if !memo.contains_key(g) && !seen.contains(g) {
-                            stack.push(*g);
+                    if let Prem::Fact(g) = p.kind() {
+                        if !memo.contains_key(&g) && !seen.contains(&g) {
+                            stack.push(g);
                         }
                     }
                 }
@@ -4078,11 +4185,8 @@ impl Store {
         }
         let read = |ps: &[PremRef], vh: &mut HashMap<Sym, u32>, memo: &mut HashMap<FactId, u32>| {
             for p in ps {
-                if let PremRef::VRow(k) = p {
-                    if !vh.contains_key(k) {
-                        let x = self.vrow_height(*k, memo);
-                        vh.insert(*k, x);
-                    }
+                if let Prem::VRow(k) = p.kind() {
+                    vh.entry(k).or_insert_with(|| self.vrow_height(k, memo));
                 }
             }
         };
@@ -4129,17 +4233,17 @@ impl Store {
                 let mut best = 0u32;
                 let idx = firings.len();
                 for p in self.prems_of(&n) {
-                    match p {
-                        PremRef::Fact(g) => match memo.get(g) {
+                    match p.kind() {
+                        Prem::Fact(g) => match memo.get(&g) {
                             Some(hg) => best = brk!("height_min" => best.min(*hg); best.max(*hg)),
                             None => {
                                 open += 1;
-                                users.entry(*g).or_default().push(idx);
+                                users.entry(g).or_default().push(idx);
                             }
                         },
-                        PremRef::Cell(x) => best = best.max(self.cells.recs[*x as usize].height),
-                        PremRef::VRow(k) => best = best.max(vh.get(k).copied().unwrap_or(0)),
-                        PremRef::Neg(_) | PremRef::Bi(_) => {}
+                        Prem::Cell(x) => best = best.max(self.cells.recs[x as usize].height),
+                        Prem::VRow(k) => best = best.max(vh.get(&k).copied().unwrap_or(0)),
+                        Prem::Neg(_) | Prem::Bi(_) => {}
                     }
                 }
                 firings.push(Firing { head: f, open, best });
@@ -4193,12 +4297,12 @@ impl Store {
         // every fact below the members, through firings and open cells
         let mut stack: Vec<FactId> = Vec::new();
         for ps in members.iter().flatten().flatten() {
-            stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }));
+            stack.extend(ps.iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }));
         }
         let order = self.region_below(stack, memo, |f, _, ps| {
             for p in ps {
-                if let PremRef::Cell(x) = p {
-                    if forbidden.contains(x) && !at.contains_key(x) {
+                if let Prem::Cell(x) = p.kind() {
+                    if forbidden.contains(&x) && !at.contains_key(&x) {
                         return Err(f);
                     }
                 }
@@ -4258,26 +4362,26 @@ impl Store {
             let idx = firings.len();
             let (mut open_n, mut best) = (0usize, 0u32);
             for p in ps {
-                let dep = match p {
-                    PremRef::Fact(g) => match memo.get(g) {
+                let dep = match p.kind() {
+                    Prem::Fact(g) => match memo.get(&g) {
                         Some(hg) => {
                             best = best.max(*hg);
                             None
                         }
-                        None => Some(QNode::Fact(*g)),
+                        None => Some(QNode::Fact(g)),
                     },
-                    PremRef::Cell(x) => match at.get(x) {
+                    Prem::Cell(x) => match at.get(&x) {
                         Some(i) => Some(QNode::Cell(*i)),
                         None => {
-                            best = best.max(self.cells.recs[*x as usize].height);
+                            best = best.max(self.cells.recs[x as usize].height);
                             None
                         }
                     },
-                    PremRef::VRow(k) => {
-                        best = best.max(vh.get(k).copied().unwrap_or(0));
+                    Prem::VRow(k) => {
+                        best = best.max(vh.get(&k).copied().unwrap_or(0));
                         None
                     }
-                    PremRef::Neg(_) | PremRef::Bi(_) => None,
+                    Prem::Neg(_) | Prem::Bi(_) => None,
                 };
                 if let Some(d) = dep {
                     open_n += 1;
@@ -4331,8 +4435,8 @@ impl Store {
         let mut out = Vec::new();
         for n in self.chain(id) {
             for p in self.prems_of(&n) {
-                if let PremRef::Fact(g) = p {
-                    out.push(*g);
+                if let Prem::Fact(g) = p.kind() {
+                    out.push(g);
                 }
             }
         }
@@ -4348,13 +4452,13 @@ impl Store {
             let mut h = 0u32;
             let mut known = true;
             for p in ps {
-                match p {
-                    PremRef::Fact(x) => match height.get(x) {
+                match p.kind() {
+                    Prem::Fact(x) => match height.get(&x) {
                         Some(hx) => h = h.max(*hx),
                         None => known = false,
                     },
-                    PremRef::Cell(x) => h = h.max(self.cells.recs[*x as usize].height),
-                    PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
+                    Prem::Cell(x) => h = h.max(self.cells.recs[x as usize].height),
+                    Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_) => {}
                 }
             }
             if known && h + 1 == hg {
@@ -4381,12 +4485,12 @@ impl Store {
                 let mut inside: Option<usize> = None;
                 let mut usable = true;
                 for p in self.prems_of(&w) {
-                    let PremRef::Fact(g) = p else { continue };
-                    if !height.contains_key(g) {
+                    let Prem::Fact(g) = p.kind() else { continue };
+                    if !height.contains_key(&g) {
                         usable = false;
                         break;
                     }
-                    if let Some(&j) = at.get(g) {
+                    if let Some(&j) = at.get(&g) {
                         match inside {
                             Some(k) if k != j => return None,
                             _ => inside = Some(j),
@@ -4512,7 +4616,7 @@ impl Store {
                     slow.push(q);
                     continue 'q;
                 };
-                stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(x) = p { Some(*x) } else { None }));
+                stack.extend(ps.iter().filter_map(|p| if let Prem::Fact(x) = p.kind() { Some(x) } else { None }));
             }
             ok.insert(q);
         }
@@ -4539,13 +4643,13 @@ impl Store {
                 let mut need: Vec<usize> = Vec::new();
                 let mut dead = false;
                 for p in ps {
-                    let PremRef::Fact(x) = p else { continue };
-                    if *x == f || !height.contains_key(x) {
+                    let Prem::Fact(x) = p.kind() else { continue };
+                    if x == f || !height.contains_key(&x) {
                         dead = true;
                         break;
                     }
-                    if above(*x) {
-                        need.push(at[x]);
+                    if above(x) {
+                        need.push(at[&x]);
                     }
                 }
                 if dead {
@@ -5049,7 +5153,7 @@ pub fn tuple_text(h: &Heap, ts: &[Term]) -> String {
     o
 }
 
-const _: () = assert!(std::mem::size_of::<PremRef>() == 8 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);
+const _: () = assert!(std::mem::size_of::<PremRef>() == 4 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);
 
 #[cfg(test)]
 mod tests {

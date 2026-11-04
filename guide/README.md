@@ -58,17 +58,35 @@ what runs. They are published at
 
 ### On main, not yet in a release
 
-[ADAPTERS.md](ADAPTERS.md) describes the adapter ones already; an installed
-1.5.1 has none of these yet.
+The chapters linked below describe them already; an installed 1.5.1 has none
+of these yet.
 
 - An adapter book can be signed on a Roflenox node and checked by the engine;
   a `rofl` adapter can ask a world another process serves; a person signs in
   to an adapter at a browser (`rofl adapter login`); an event time is one
-  instant whatever zone it was written in.
+  instant whatever zone it was written in ([ADAPTERS.md](ADAPTERS.md)).
 - The JS model says when a call names a member its receiver has not got, and
   reads a `Map` in the order its `set` calls were written.
 - An edit to a kept world costs less: on 250 files of VS Code, the tenth file
-  added one after another takes 4.3 s instead of 13.
+  added one after another takes 4.3 s instead of 13. Each edit is kept over
+  the one before it, so it writes about what it changed: 1.1 MB for a file
+  of 400 facts, where the eighth edit in a row used to write 46 MB. A world
+  that has to be evaluated whole again keeps the parts nothing touched since.
+- A question evaluates only what it needs: the first `rofl ask` over 700
+  files of VS Code takes 49 s and 2.1 GB instead of 104 s and 3.4 GB, and a
+  notebook runs only the rules its lines ask about.
+- A world larger than memory stops, answers what it has as partial (exit 5)
+  and says so; the process is no longer killed halfway
+  ([ASKING.md](ASKING.md#the-second-question-costs-nothing)).
+- `whynot` shows the nearest place a "no" stops, the way with the fewest
+  conditions unmet; `rofl whynot --all` and `rofl-nb --all` print every way
+  it tried.
+- The JS model names more of what it could not trace: calls it could not
+  resolve, calls through an untraced key and what they may run, a parameter
+  handed several functions; and code under `require.main === module` is read
+  as a script when the world says so ([ASKING.md](ASKING.md#what-it-could-not-see)).
+- VS Code opens a notebook straight from GitHub, private repositories too:
+  **ROFL: Open notebook from GitHub…** ([QUICKSTART.md](QUICKSTART.md)).
 
 ## Further in
 

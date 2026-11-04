@@ -411,16 +411,15 @@ impl<'a> Parser<'a> {
                 // and the escapes are still written. `src/tokens.ts` decodes
                 // five and REFUSES the rest by name, so this refuses too rather
                 // than passing an unknown escape through as itself.
-                let raw = self.text(&s);
-                let inner: Vec<char> = raw.chars().collect();
-                let mut out = String::new();
+                let inner = &self.src[s.start..=s.end];
+                let mut out = String::with_capacity(inner.len());
                 let mut k = 1;
                 while k + 1 < inner.len() {
                     if inner[k] == '\\' {
                         let e = *inner.get(k + 1).ok_or("string: a trailing backslash")?;
                         // what `canon_term` writes is read back: a control character leaves as `\b`, `\f` or `\u00XX`
                         if e == 'u' {
-                            out.push(control_escape(&inner, k + 1).map_err(|hex| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?);
+                            out.push(control_escape(inner, k + 1).map_err(|hex| format!("string: \\u is a control character as the renderer writes it, \\u0000 to \\u001f, not \\u{hex}"))?);
                             k += 6;
                             continue;
                         }

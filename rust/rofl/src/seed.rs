@@ -2,6 +2,7 @@
 //! the contract: a seed carries the data AND, through the reflection relations,
 //! the program.
 
+use crate::store::Prem as PremK;
 use crate::cell::AggOp;
 use crate::reflect::Vocab;
 use crate::store::{fact_key, CellId, FactId,
@@ -832,26 +833,26 @@ fn terms(o: &mut Out, at: &str, h: &Heap, ts: &[Term]) {
 fn prems(o: &mut Out, at: &str, h: &Heap, s: &Store, ps: &[PremRef]) {
     o.list(at, ps, |o, p| {
         let mut key = String::new();
-        let t = match p {
-            PremRef::Bi(d) => {
-                o.s(r#"{"desc":"#, h.name(*d));
+        let t = match p.kind() {
+            PremK::Bi(d) => {
+                o.s(r#"{"desc":"#, h.name(d));
                 "bi"
             }
-            PremRef::Neg(k) => {
-                o.s(r#"{"key":"#, h.name(*k));
+            PremK::Neg(k) => {
+                o.s(r#"{"key":"#, h.name(k));
                 "neg"
             }
-            PremRef::VRow(k) => {
-                o.s(r#"{"key":"#, h.name(*k));
+            PremK::VRow(k) => {
+                o.s(r#"{"key":"#, h.name(k));
                 "vrow"
             }
-            PremRef::Fact(f) => {
-                s.write_key(h, *f, &mut key);
+            PremK::Fact(f) => {
+                s.write_key(h, f, &mut key);
                 o.s(r#"{"key":"#, &key);
                 "fact"
             }
-            PremRef::Cell(c) => {
-                s.write_cell_key(h, *c, &mut key);
+            PremK::Cell(c) => {
+                s.write_cell_key(h, c, &mut key);
                 o.s(r#"{"key":"#, &key);
                 "cell"
             }
