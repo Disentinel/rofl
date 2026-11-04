@@ -39,7 +39,7 @@ Declared as facts:
 | `member_node_v` | "member access" |
 | `scope_node` | "scope" |
 
-`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`.
+`kind_set` includes `value_transparent`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`.
 
 Declared as facts:
 

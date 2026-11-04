@@ -121,7 +121,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
-| <a id="noun-literal"></a>a literal | a node of one of the kinds `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal` (`literal_kind`) |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
@@ -173,11 +172,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 In the flow:
 
-A [literal](#noun-literal) may be the literal V if it [is written as](js-structure.rofl.md#ast_value) V.
-
-Declared as facts:
-
-- <a id="literal_kind"></a>`literal_kind` — rows in Words
+A node may be the literal V if [`literal`](#literal)(it, V).
 
 > `undefined` is a value too, the atom `undefined` (the string "undefined" is
 > another): the global of that name, `void`, a `let` or `var` with no
@@ -214,13 +209,11 @@ In the code:
 
 <a id="interpolated"></a>T is interpolated if [`template`](#template)(T) and [`nth`](#nth)(T, something, something).
 
-In the flow:
-
-A node may be the literal V if [`template`](#template)(it) and [`literal`](#literal)(it, V).
-
 > An object, array, function, class or regexp expression is its own node.
 > `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
 > each time round.
+
+In the flow:
 
 A [value site](#noun-value_site) points to it.
 

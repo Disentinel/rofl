@@ -100,7 +100,6 @@ kind_noun(update_expression, "update expression").
 kind_noun(reg_exp_literal, "regex literal").
 kind_noun(tagged_template_expression, "tagged template").
 kind_noun(value_transparent, "wrapper").
-kind_noun(literal_kind, "literal").
 kind_noun(node_value_kind, "value site").
 kind_noun(class_field_kind, "class field").
 kind_noun(private_member_kind, "private member").
@@ -117,7 +116,6 @@ noun_guard(fn_node, "function").
 noun_guard(member_node_v, "member access").
 noun_guard(scope_node, "scope").
 kind_set(value_transparent).
-kind_set(literal_kind).
 kind_set(node_value_kind).
 kind_set(member_kind_v).
 kind_set(class_field_kind).

@@ -29,13 +29,7 @@ ident[code](N, Name)        :- ident_in[code](N, Name, _).
 -- A literal is its own value. A bigint's term is its decimal string, so `1n`
 -- and `"1"` collide here, as `1e21` and its spelling already do. A regexp is
 -- NOT a literal: it has identity and methods, so it is a node value below.
-edb(literal_kind).
-literal_kind(string_literal).
-literal_kind(numeric_literal).
-literal_kind(boolean_literal).
-literal_kind(big_int_literal).
-
-may_be_lit[flow](E, V) :- literal_kind(K), ast_node[code](E, K, _), ast_value[code](E, V).
+may_be_lit[flow](E, V) :- literal[value](E, V).
 
 -- `undefined` is a value too, the atom `undefined` (the string "undefined" is
 -- another): the global of that name, `void`, a `let` or `var` with no
@@ -52,7 +46,6 @@ may_be_lit[flow](E, undefined) :- undef_binder[code](D), sees_binder[code](E, D)
 -- evaluates to, not `raw`. No arm for an interpolated one: the kernel builds no
 -- strings and a partial answer is wrong where silence is right (w_concat_value).
 interpolated[code](T)  :- template[value](T), nth[tree](T, _, _).
-may_be_lit[flow](T, V) :- template[value](T), literal[value](T, V).
 
 -- An object, array, function, class or regexp expression is its own node.
 -- `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object

@@ -138,11 +138,10 @@ unit_concludes("rules/js-structure.rofl", meta_unformed).
 unit_concludes("rules/js-structure.rofl", meta_form_conflict).
 unit_concludes("rules/js-dataflow.rofl", ident_in).
 unit_concludes("rules/js-dataflow.rofl", ident).
-unit_concludes("rules/js-dataflow.rofl", edb).
-unit_concludes("rules/js-dataflow.rofl", literal_kind).
 unit_concludes("rules/js-dataflow.rofl", may_be_lit).
 unit_concludes("rules/js-dataflow.rofl", undef_binder).
 unit_concludes("rules/js-dataflow.rofl", interpolated).
+unit_concludes("rules/js-dataflow.rofl", edb).
 unit_concludes("rules/js-dataflow.rofl", node_value_kind).
 unit_concludes("rules/js-dataflow.rofl", may_be_node).
 unit_concludes("rules/js-dataflow.rofl", var_decl_kind).

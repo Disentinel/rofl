@@ -43,3 +43,4 @@ try { amb(); } finally { amb(); }
 await amb();
 class Acc { private a1 = 1; protected a2 = 2; public readonly a3 = 3; constructor(readonly a4: number) {} }
 type Uno = | A; import type {} from 'tonly'; namespace NQ { export const v = 1 }
+type TLit = "a" | 1; type TBool = true; let tlv: "b" = "b"; const nlv = null;
