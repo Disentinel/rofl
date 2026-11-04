@@ -48,6 +48,7 @@ edb(unknown_because).
 --
 -- The roles name the module by `module_ref`: on the string of a declaration, and on a dynamic import itself (a call).
 static_source[code](D, Src, Spec) :- module_ref[value](Src, Spec), not call[value](Src), parent[tree](D, Src).
+static_source[code](D, Src, Spec) :- module_ref[type](Src, Spec), parent[tree](D, Src).
 
 import_site[code](I, static_import)  :- static_source[code](I, Src, _), not spread_props[value](_, _, Src),
                                         not reexport_site[code](I, reexport_named).
@@ -269,8 +270,8 @@ export_binding[code](E, Sp, External, Internal) :- export_spec[code](E, Sp),
 export_renamed[code](Sp, External, Internal) :- export_binding[code](_, Sp, External, Internal),
                                                 External != Internal.
 
--- the one marker the roles do not carry: a declaration with no member (`export type * from`)
-export_decl_type_only[code](E)  :- ast_attr[code](E, export_kind, "type").
+-- a declaration with no member names its module in the world of types (`import type {} from`, `export type * from`)
+type_sited[code](E)  :- module_ref[type](Src, _), parent[tree](E, Src).
 
 export_value_binding[code](E, Sp) :- export_binding[code](E, Sp, _, _), export_value_spec[code](E, Sp).
 
@@ -332,7 +333,6 @@ value_binding[code](I, Sp) :- binding[code](I, Sp, _, _), target[value](Sp, N), 
 
 has_value_binding[code](I) :- value_binding[code](I, _).
 
-no_specifiers[code](I) :- import_site[code](I, static_import), not has_specifier[code](I).
 
 depends[code](F, T) :- module_target[code](I, T), site_file[code](I, F).
 
@@ -347,13 +347,10 @@ flows[code](F, T) :- require_site[code](I),
 -- The roles merge `import type {X}` with `import {type X}`: a name bound in the
 -- types only is one erased either way. A site ALL of whose specifiers are
 -- erased evaluates nothing and one with NO specifier evaluates everything
--- (the roles do not see `import type {} from` or `export type * from`: both
--- are read on the declaration). A module imported as data (section 9) is read, not run.
+-- (`import type {} from` and `export type * from` name their module in the types). A module imported as data (section 9) is read, not run.
 type_only_site[code](I)  :- has_specifier[code](I), not has_value_binding[code](I).
 type_only_site[code](E)  :- reexport_site[code](E, reexport_named), not reexport_value[code](E).
-type_only_site[code](E)  :- reexport_site[code](E, reexport_all), export_decl_type_only[code](E).
-type_only_site[code](E)  :- no_specifiers[code](E), export_decl_type_only[code](E).
-type_only_site[code](E)  :- no_specifiers[code](E), ast_attr[code](E, import_kind, "type").
+type_only_site[code](E)  :- module_site[code](E, _), type_sited[code](E).
 runs_site[code](I)       :- module_site[code](I, _), not type_only_site[code](I), not module_is_data[code](I, _).
 
 evaluates_at[code](I, T)       :- runs_site[code](I), module_target[code](I, T).
@@ -372,7 +369,7 @@ reexport_value_spec[code](E, Sp) :- reexport_site[code](E, reexport_named), expo
 
 reexport_value[code](E) :- reexport_value_spec[code](E, _).
 reexport_value[code](E) :- reexport_site[code](E, reexport_all),
-                           not export_decl_type_only[code](E).
+                           not type_sited[code](E).
 
 flows[code](F, T) :- reexport_value[code](E),
                      module_target[code](E, T), site_file[code](E, F).

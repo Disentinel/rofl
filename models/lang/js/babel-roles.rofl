@@ -330,6 +330,7 @@ bind_root[ast_babel](import_specifier, local, type).     bind_root[ast_babel](im
 bind_root[ast_babel](import_namespace_specifier, local, type).
 bind_root[ast_babel](tsinterface_declaration, id, type). bind_root[ast_babel](tstype_alias_declaration, id, type).
 bind_root[ast_babel](tsenum_declaration, id, value).     bind_root[ast_babel](tsenum_declaration, id, type).
+bind_root[ast_babel](tsimport_equals_declaration, id, value).
 bind_root[ast_babel](tsmodule_declaration, id, value).   bind_root[ast_babel](tsmodule_declaration, id, type).
 bind_root[ast_babel](tstype_parameter, name, type).
 
@@ -657,8 +658,15 @@ rest_elems[value](P, I, T)      :- node[ast_babel](P, array_pattern, _), child[a
 
 edb(source_kind).
 source_kind[ast_babel](import_declaration). source_kind[ast_babel](export_named_declaration). source_kind[ast_babel](export_all_declaration).
+-- `import type {} from 'm'`, `export type {} from 'm'` and `export type * from 'm'` introduce no member: the module is named in the types
+b_type_site[ast_babel](D) :- node[ast_babel](D, import_declaration, _), attr[ast_babel](D, import_kind, "type"),
+                             not child[ast_babel](D, specifiers, _, _).
+b_type_site[ast_babel](D) :- node[ast_babel](D, export_named_declaration, _), attr[ast_babel](D, export_kind, "type"),
+                             child[ast_babel](D, source, 0, _), not child[ast_babel](D, specifiers, _, _).
+b_type_site[ast_babel](D) :- node[ast_babel](D, export_all_declaration, _), attr[ast_babel](D, export_kind, "type").
 module_ref[value](Src, Spec) :- source_kind[ast_babel](K), node[ast_babel](D, K, _), child[ast_babel](D, source, 0, Src),
-                                attr[ast_babel](Src, value, Spec).
+                                attr[ast_babel](Src, value, Spec), not b_type_site[ast_babel](D).
+module_ref[type](Src, Spec)  :- b_type_site[ast_babel](D), child[ast_babel](D, source, 0, Src), attr[ast_babel](Src, value, Spec).
 module_ref[value](I, Spec)   :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, Src),
                                 node[ast_babel](Src, string_literal, _), attr[ast_babel](Src, value, Spec).
 module_expr[value](I, E)     :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, E),
@@ -753,9 +761,16 @@ b_tplace[ast_babel](X) :- type_member_kind[ast_babel](K), node[ast_babel](X, K, 
 b_tplace[ast_babel](X) :- param_kind[ast_babel](K), node[ast_babel](X, K, _).
 b_tplace[ast_babel](P) :- b_tplace[ast_babel](F), b_param[ast_babel](F, _, P).
 
-b_annotated[ast_babel](X, T) :- child[ast_babel](X, F, 0, A), annotation_field[ast_babel](F),
-                                node[ast_babel](A, tstype_annotation, _), child[ast_babel](A, type_annotation, 0, T).
-b_annotated[ast_babel](X, T) :- direct_type[ast_babel](K), node[ast_babel](X, K, _), child[ast_babel](X, type_annotation, 0, T).
+b_stated[ast_babel](X, T) :- child[ast_babel](X, F, 0, A), annotation_field[ast_babel](F),
+                             node[ast_babel](A, tstype_annotation, _), child[ast_babel](A, type_annotation, 0, T).
+b_stated[ast_babel](X, T) :- direct_type[ast_babel](K), node[ast_babel](X, K, _), child[ast_babel](X, type_annotation, 0, T).
+-- a union or an intersection of one type (`x: | T`) is that type: it writes nothing of its own and T stands in its place
+b_solo[ast_babel](U, P) :- type_op[ast_babel](K, _), node[ast_babel](U, K, _), child[ast_babel](U, types, 0, P),
+                           not child[ast_babel](U, types, 1, _).
+b_stands[ast_babel](U, Q) :- b_solo[ast_babel](U, Q), not b_solo[ast_babel](Q, _).
+b_stands[ast_babel](U, R) :- b_solo[ast_babel](U, Q), b_stands[ast_babel](Q, R).
+b_annotated[ast_babel](X, T) :- b_stated[ast_babel](X, T), not b_solo[ast_babel](T, _).
+b_annotated[ast_babel](X, R) :- b_stated[ast_babel](X, T), b_stands[ast_babel](T, R).
 declared[value](X, T) :- b_annotated[ast_babel](X, T), not b_tplace[ast_babel](X).
 declared[type](X, T)  :- b_annotated[ast_babel](X, T), b_tplace[ast_babel](X).
 edb(annotation_field).
@@ -790,12 +805,31 @@ param[type](X, I, P) :- child[ast_babel](X, type_parameters, 0, D),
 bound[type](P, U)    :- node[ast_babel](P, tstype_parameter, _), child[ast_babel](P, constraint, 0, U).
 assign[type](P, P, D) :- node[ast_babel](P, tstype_parameter, _), child[ast_babel](P, default, 0, D).
 
+-- how a member is reached from outside, whether it is written once, and the index signature that takes every key of a type
+edb(access_word).
+access_word[ast_babel]("private", own). access_word[ast_babel]("protected", family). access_word[ast_babel]("public", any).
+access[type](M, How) :- attr[ast_babel](M, accessibility, W), access_word[ast_babel](W, How).
+frozen[type](M)      :- attr[ast_babel](M, readonly, true).
+keyed_by[type](M, T) :- node[ast_babel](M, tsindex_signature, _), child[ast_babel](M, parameters, 0, P),
+                        child[ast_babel](P, type_annotation, 0, A), child[ast_babel](A, type_annotation, 0, T).
+
+-- import A = X.Y puts the member Y of X into A
+b_alias_ref[ast_babel](Q) :- node[ast_babel](D, tsimport_equals_declaration, _), child[ast_babel](D, module_reference, 0, Q),
+                             not node[ast_babel](Q, tsexternal_module_reference, _).
+b_alias_ref[ast_babel](L) :- b_alias_ref[ast_babel](Q), node[ast_babel](Q, tsqualified_name, _), child[ast_babel](Q, left, 0, L).
+assign[value](D, I, Q) :- node[ast_babel](D, tsimport_equals_declaration, _), child[ast_babel](D, id, 0, I),
+                          child[ast_babel](D, module_reference, 0, Q), b_alias_ref[ast_babel](Q).
+member[value](Q, L, Name) :- b_alias_ref[ast_babel](Q), node[ast_babel](Q, tsqualified_name, _), child[ast_babel](Q, left, 0, L),
+                             child[ast_babel](Q, right, 0, R), attr[ast_babel](R, name, Name).
+ref[value](X, Name) :- b_alias_ref[ast_babel](X), node[ast_babel](X, identifier, _), attr[ast_babel](X, name, Name).
+
 -- A | B, A & B; keyof T, typeof x
 edb(type_op).
 type_op[ast_babel](tsunion_type, "|"). type_op[ast_babel](tsintersection_type, "&").
 binary[type](T, Op, L, R) :- type_op[ast_babel](K, Op), node[ast_babel](T, K, _), child[ast_babel](T, types, I, L),
                              J is I + 1, child[ast_babel](T, types, J, R).
-nth[tree](T, I, P)        :- type_op[ast_babel](K, _), node[ast_babel](T, K, _), child[ast_babel](T, types, I, P).
+nth[tree](T, I, P)        :- type_op[ast_babel](K, _), node[ast_babel](T, K, _), child[ast_babel](T, types, I, P),
+                             not b_solo[ast_babel](T, _).
 unary[type](T, Op, X)     :- node[ast_babel](T, tstype_operator, _), attr[ast_babel](T, operator, Op),
                              child[ast_babel](T, type_annotation, 0, X).
 unary[type](T, "typeof", X) :- node[ast_babel](T, tstype_query, _), child[ast_babel](T, expr_name, 0, X).

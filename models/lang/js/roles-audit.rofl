@@ -119,6 +119,10 @@ roled[W](N) :- implements[W](N, _).
 roled[W](N) :- implements[W](_, N).
 roled[W](N) :- bound[W](N, _).
 roled[W](N) :- bound[W](_, N).
+roled[W](N) :- access[W](N, _).
+roled[W](N) :- frozen[W](N).
+roled[W](N) :- keyed_by[W](N, _).
+roled[W](N) :- keyed_by[W](_, N).
 roled[W](N) :- mark[W](N, _).
 
 

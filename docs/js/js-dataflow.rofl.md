@@ -46,7 +46,9 @@ Reads:
   - <a id="parent"></a>`parent`
   - <a id="program"></a>`program`
 - from outside these files, in the type:
+  - <a id="access"></a>`access`
   - <a id="binary"></a>`binary`
+  - <a id="frozen"></a>`frozen`
   - <a id="object"></a>`object`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
@@ -77,6 +79,7 @@ Reads:
   - <a id="module_ref"></a>`module_ref`
   - <a id="namespace"></a>`namespace`
   - <a id="param"></a>`param`
+  - <a id="passes"></a>`passes`
   - <a id="private"></a>`private`
   - <a id="rest_params"></a>`rest_params`
   - <a id="rest_props"></a>`rest_props`
@@ -111,7 +114,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
-| <a id="noun-class_declaration"></a>a class declaration | a node of kind `class_declaration` |
 | <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
@@ -133,7 +135,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | <a id="noun-value_assignment_operator"></a>a value assignment operator | a node of one of the kinds "=", "||=", "&&=", "??=" (`assign_value_op`) |
 | <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal` (`node_value_kind`) |
-| <a id="noun-wrapper"></a>a wrapper | a node of one of the kinds `parenthesized_expression`, `tsas_expression`, `tsnon_null_expression` (`value_transparent`) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](#member_node_v) holds of |
 | a scope | a node [`scope_node`](#scope_node) holds of |
@@ -681,17 +682,14 @@ A node
 - may be the literal V if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [may be the literal](js-concat.rofl.md#may_be_lit) V.
 - points to a node N if it [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and Src [points to](js-concat.rofl.md#may_be_node) N.
 
-> A parenthesis, a TS cast and a non-null assertion change nothing about the
-> value; the call graph lists them as shapes and this layer does not.
+> A parenthesis, a TS cast, a non-null assertion, `satisfies` and an instantiation
+> change nothing about the value (`passes`); the call graph lists them as shapes and
+> this layer does not.
 
-A [wrapper](#noun-wrapper)
+A node
 
-- may be the literal V if the `expression` of it [may be the literal](js-concat.rofl.md#may_be_lit) V.
-- points to a node N if the `expression` of it [points to](js-concat.rofl.md#may_be_node) N.
-
-Declared as facts:
-
-- <a id="value_transparent"></a>`value_transparent` — rows in Words
+- may be the literal V if [`passes`](#passes)(it, X) and a node X [may be the literal](js-concat.rofl.md#may_be_lit) V.
+- points to a node N if [`passes`](#passes)(it, X) and a node X [points to](js-concat.rofl.md#may_be_node) N.
 
 ## 5. WHICH PROTOTYPE A VALUE HAS — from the KIND of a receiver written in
 
@@ -1534,12 +1532,12 @@ In the code:
    - [`keyed_field`](#keyed_field)(H, something, CB, Fld);
    - a [class property](#noun-class_property) Q [is among the](#ast_child) `body` of a node CB;
    - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
-   - [the attribute](#ast_attr) `accessibility` of Q is "private";
+   - [`access`](#access)(Q, `own`);
 2. if all of:
    - [`keyed_field`](#keyed_field)(H, something, CB, Fld);
    - a [class property](#noun-class_property) Q [is among the](#ast_child) `body` of a node CB;
    - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
-   - [the attribute](#ast_attr) `readonly` of Q is `true`.
+   - [`frozen`](#frozen)(Q).
 
 <a id="keyed_field_set"></a>`keyed_field_set`(H, an [assignment](#noun-assignment) X, File) if all of:
   - [`keyed_field`](#keyed_field)(H, something, something, Fld);
@@ -1934,7 +1932,7 @@ In the code:
    - [`private_method`](#private_method)(G);
 4. if all of:
    - [`keyed_fn_need`](#keyed_fn_need)(G);
-   - [the attribute](#ast_attr) `accessibility` of G is "private";
+   - [`access`](#access)(G, `own`);
    - the `key` of G [is named](js-structure.rofl.md#ast_name) Name;
    - G [is among the](#ast_child) `body` of a node CB;
    - a node Pn [is named](js-structure.rofl.md#ast_name) Name;
@@ -1948,8 +1946,8 @@ In the code:
 
 <a id="keyed_private_name"></a>`keyed_private_name`(G, CB, Name) if all of:
   - [`keyed_hop_fn`](#keyed_hop_fn)(G, something);
-  - [the attribute](#ast_attr) `accessibility` of a node G is "private";
-  - the `key` of G [is named](js-structure.rofl.md#ast_name) Name;
+  - [`access`](#access)(G, `own`);
+  - the `key` of a node G [is named](js-structure.rofl.md#ast_name) Name;
   - G [is among the](#ast_child) `body` of a node CB.
 
 In the audit:
@@ -2232,7 +2230,7 @@ Declared as facts:
    - a class CD [has the method](#class_method_of) G;
    - a node I [stands for an instance of](#inst_of) CD;
    - [`keyed_handed`](#keyed_handed)(I);
-   - unless [the attribute](#ast_attr) `accessibility` of G is "private".
+   - unless [`access`](#access)(G, `own`).
 
 <a id="keyed_noisy"></a>`keyed_noisy`(C, K) either:
 
@@ -2316,7 +2314,7 @@ Declared as facts:
    - a class CD [has the method](#class_method_of) G;
    - a node I [stands for an instance of](#inst_of) CD;
    - [`keyed_handed`](#keyed_handed)(I);
-   - unless [the attribute](#ast_attr) `accessibility` of G is "private".
+   - unless [`access`](#access)(G, `own`).
 
 <a id="keyed_awaited"></a>`keyed_awaited`(Q) if [`keyed_called_at`](#keyed_called_at)(something, Q) and [`awaits`](#awaits)(something, Q).
 
@@ -3618,7 +3616,7 @@ In the code:
 
 <a id="class_or_namespace"></a>`class_or_namespace`(D) either:
 
-1. if D is a [class declaration](#noun-class_declaration);
+1. if [`decl`](#decl)(D, `class`), and a node D [carries its own name](#own_name) some name and some file and `around`;
 2. if [`ts_namespace`](#ts_namespace)(D).
 
 > `export * from` re-exports every NAME (not the default), recursively. The
@@ -4137,7 +4135,7 @@ The member Name of a node NS holds a node In if all of:
 
 > A class declaration is reached by its name, looked up as any name is.
 
-A node points to a [class declaration](#noun-class_declaration) CD if it [sees the declaration](#sees_decl) CD.
+A node points to a node CD if it [sees the declaration](#sees_decl) CD and [`decl`](#decl)(CD, `class`).
 
 > `new X()` is an instance of whichever class its callee may be, by value:
 > `new ns.Foo()` and an imported class are reached as a call's callee is.

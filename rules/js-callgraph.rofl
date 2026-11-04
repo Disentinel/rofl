@@ -51,14 +51,14 @@ callee_shape(identifier,                s_identifier).
 callee_shape(arrow_function_expression, s_iife).
 callee_shape(function_expression,       s_iife).
 callee_shape(super,                     s_super).
-callee_shape(tsnon_null_expression,     s_non_null).
+callee_shape(tsnon_null_expression,     s_passes).
 callee_shape(call_expression,           s_call_result).
 callee_shape(optional_call_expression,  s_call_result).
 callee_shape(new_expression,            s_new_result).
 callee_shape(import,                    s_dynamic_import).
 callee_shape(sequence_expression,       s_sequence).
 callee_shape(parenthesized_expression,  s_parenthesized).
-callee_shape(tsas_expression,           s_ts_as).
+callee_shape(tsas_expression,           s_passes).
 callee_shape(conditional_expression,    s_conditional).
 callee_shape(yield_expression,          s_yield_result).
 
@@ -105,8 +105,8 @@ obj_kind_class(logical_expression,         o_logical).
 obj_kind_class(assignment_expression,      o_assignment).
 obj_kind_class(await_expression,           o_await).
 obj_kind_class(template_literal,           o_template).
-obj_kind_class(tsas_expression,            o_cast).
-obj_kind_class(tsnon_null_expression,      o_non_null).
+obj_kind_class(tsas_expression,            o_passes).
+obj_kind_class(tsnon_null_expression,      o_passes).
 obj_kind_class(meta_property,              o_meta).
 
 obj_kind_known(K)           :- obj_kind_class(K, _).
@@ -129,8 +129,7 @@ member_shape(o_logical,        s_member_on_logical).
 member_shape(o_assignment,     s_member_on_assignment).
 member_shape(o_await,          s_member_on_await).
 member_shape(o_template,       s_member_on_template).
-member_shape(o_cast,           s_member_on_cast).
-member_shape(o_non_null,       s_member_on_non_null).
+member_shape(o_passes,           s_member_on_passes).
 member_shape(o_meta,           s_member_on_meta).
 member_shape(o_other,          s_member_on_other).
 
@@ -500,8 +499,7 @@ whole_kind(class_expression).
 whole_expr[flow](E) :- whole_kind(K), ast_node[code](E, K, _).
 whole_expr[flow](E) :- es_instance[flow](E, _, _).
 whole_expr[flow](E) :- construct[value](E), callee[value](E, CE), whole_expr[flow](CE).
-whole_expr[flow](E) :- value_transparent(K), ast_node[code](E, K, _), ast_child[code](E, expression, 0, X),
-                       whole_expr[flow](X).
+whole_expr[flow](E) :- passes[value](E, X), whole_expr[flow](X).
 whole_expr[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), whole_expr[flow](Init),
                        not many_binders[flow](E), not reassigned[flow](D), not assign_reaches_unscoped[flow](E, _).
 whole_expr[flow](E) :- sees_decl[code](E, F), whole_decl[flow](F),
@@ -658,9 +656,6 @@ call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
 -- (`export let x;`, `export declare function f()`).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, X), key[value](X, Name).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[type](B, X), key[type](X, Name).
-ns_key[code](NS, Name) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B), ast_child[code](B, body, _, S),
-                          ast_node[code](S, tsimport_equals_declaration, _), ast_attr[code](S, is_export, true),
-                          ast_child[code](S, id, 0, I), ast_name[code](I, Name).
 sx_ns_key[surface](NS, Name) :- ns_key[code](NS, Name).
 sx_open[surface](NS)  :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
                          ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), not ast_name[code](I, _).
@@ -741,16 +736,16 @@ member_unknown[audit](C) :- member_call[flow](C, _, _), not call_finds[flow](C),
 -- declared as is known whole and none has it); `member_undeclared[audit](C)`
 -- is a call neither the values nor the declarations answer.
 type_decl[code](T, Name, File) :- object[type](T), parent[tree](T, I), binds[type](I, Name), at[tree](T, File, _).
-type_decl[code](T, Name, File) :- ast_node[code](T, class_declaration, File), target[value](T, I), binds[value](I, Name).
+type_decl[code](T, Name, File) :- decl[value](T, class), own_name[code](T, Name, File, around).
 -- the type an annotation states: itself, or the one part of a union that is not `undefined`
 -- or `null` (`IFoo | undefined`: a member call throws on either)
 edb(nullish_type).
 nullish_type("undefined").
 nullish_type("null").
 -- the type a place is declared as, an annotation or a cast (`x as IFoo`, `<IFoo>x`), in the world of values or of types;
--- an interface's `extends` states its type in itself. A union of one type (`x: | IFoo`) is no `binary`: the roles hold none
+-- an interface's `extends` states its type in itself.
 nullish[code](Y)           :- ref[type](Y, Name), nullish_type(Name).
-union_part[code](U, Y)     :- ast_node[code](U, tsunion_type, _), ast_child[code](U, types, _, Y), not nullish[code](Y).
+union_part[code](U, Y)     :- binary[type](U, "|", _, _), nth[tree](U, _, Y), not nullish[code](Y).
 union_parts[code](U)       :- union_part[code](U, Y1), union_part[code](U, Y2), Y1 != Y2.
 type_at[code](A, X)        :- declared[value](A, X), not binary[type](X, "|", _, _).
 type_at[code](A, X)        :- declared[type](A, X), not binary[type](X, "|", _, _).
@@ -784,30 +779,24 @@ keyword_prototype("Array", array).
 names_lib[flow](A, P)  :- type_at[code](A, X), ref[type](X, Name), keyword_prototype(Name, P).
 
 -- what a type has, and where it cannot be known whole
-type_member[flow](T, Key) :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
-                             ast_child[code](B, body, _, S), ast_child[code](S, key, 0, K), ast_name[code](K, Key).
-type_member[flow](T, Key) :- class_like[flow](T), ast_child[code](T, body, 0, B),
-                             ast_child[code](B, body, _, S), ast_attr[code](S, static, false),
-                             ast_child[code](S, key, 0, K), ast_name[code](K, Key).
-type_member[flow](T, Key) :- class_method_of[flow](T, M), ctor_method[code](M),
-                             parent[tree](M, P), param_property[code](P, Key, _).
+type_member[flow](T, Key) :- type_decl[code](T, _, _), has[type](T, S), key[type](S, Key).
+type_member[flow](T, Key) :- class_like[flow](T), has[value](T, S), not static[value](S), not private[value](S),
+                             key[value](S, Key).
 -- `private foo: IFoo` and `private foo: IFoo = d`: the name and its annotation
 param_property[code](P, Key, X) :- has[value](_, P), assign[value](P, P, X), key[value](P, Key).
 type_base[flow](T, B)     :- extends[type](T, H), names_type[flow](H, B).
 type_base[flow](T, B)     :- super_of[flow](T, B).
 type_member[flow](T, Key) :- type_base[flow](T, B), type_member[flow](B, Key).
-type_open[flow](T)        :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
-                             ast_child[code](B, body, _, S), ast_node[code](S, tsindex_signature, _).
+type_open[flow](T)        :- type_decl[code](T, _, _), has[type](T, S), keyed_by[type](S, _).
 type_open[flow](T)        :- extends[type](T, H), not names_type[flow](H, _).
 type_open[flow](T)        :- class_like[flow](T), extends[value](T, _), not super_of[flow](T, _).
 type_open[flow](T)        :- type_base[flow](T, B), type_open[flow](B).
--- the place a member is declared as a type at: an interface's property or a class's field or parameter property
-member_type_at[flow](T, Key, S) :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
-                                   ast_child[code](B, body, _, S), ast_node[code](S, tsproperty_signature, _),
-                                   ast_child[code](S, key, 0, K), ast_name[code](K, Key), declared[type](S, _).
-member_type_at[flow](T, Key, S) :- class_like[flow](T), ast_child[code](T, body, 0, B), ast_child[code](B, body, _, S),
-                                   ast_node[code](S, class_property, _), ast_attr[code](S, static, false),
-                                   ast_child[code](S, key, 0, K), ast_name[code](K, Key), declared[value](S, _).
+-- the place a member is declared as a type at: an interface's property, a class's field or parameter property.
+-- The roles hold no word for a method signature against a property signature, so the kind says which
+member_type_at[flow](T, Key, S) :- type_decl[code](T, _, _), has[type](T, S), ast_node[code](S, tsproperty_signature, _),
+                                   key[type](S, Key), declared[type](S, _).
+member_type_at[flow](T, Key, S) :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
+                                   not static[value](S), not private[value](S), key[value](S, Key), declared[value](S, _).
 member_type_at[flow](T, Key, X) :- class_method_of[flow](T, M), ctor_method[code](M),
                                    parent[tree](M, P), param_property[code](P, Key, X), declared[value](X, _).
 member_type[flow](T, Key, T2) :- member_type_at[flow](T, Key, A), names_type[flow](A, T2).
@@ -817,16 +806,20 @@ member_lib[flow](T, Key, P)   :- type_base[flow](T, B), member_lib[flow](B, Key,
 -- a field declared by its initialiser (`private inner = new Maker()`)
 member_type[flow](T, Key, T2) :- field_init[flow](T, Key, V), declared[flow](V, T2).
 member_lib[flow](T, Key, P)   :- field_init[flow](T, Key, V), declared_lib[flow](V, P).
-field_init[flow](T, Key, V)   :- class_like[flow](T), ast_child[code](T, body, 0, B), ast_child[code](B, body, _, S),
-                                 ast_node[code](S, class_property, _), ast_attr[code](S, static, false),
-                                 not ast_child[code](S, type_annotation, 0, _),
-                                 ast_child[code](S, key, 0, K), ast_name[code](K, Key), ast_child[code](S, value, 0, V).
--- the place whose return type says what a method returns: an interface's method signature or a class's method
-method_ret_at[flow](T, Key, S) :- ast_node[code](T, tsinterface_declaration, _), ast_child[code](T, body, 0, B),
-                                  ast_child[code](B, body, _, S), ast_node[code](S, tsmethod_signature, _),
-                                  ast_child[code](S, key, 0, K), ast_name[code](K, Key), declared[type](S, _).
-method_ret_at[flow](T, Key, M) :- class_method_of[flow](T, M), not static[value](M),
-                                  ast_child[code](M, key, 0, K), ast_name[code](K, Key), declared[value](M, _).
+field_init[flow](T, Key, V)   :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
+                                 not static[value](S), not private[value](S),
+                                 key[value](S, Key), value[value](S, V), not ast_child[code](S, type_annotation, 0, _).
+-- the place whose return type says what a call of a member yields: a method signature, a property whose type is a
+-- function type, a class's method
+method_ret_at[flow](T, Key, S) :- type_decl[code](T, _, _), has[type](T, S), ast_node[code](S, tsmethod_signature, _),
+                                  key[type](S, Key), declared[type](S, _).
+method_ret_at[flow](T, Key, F) :- type_decl[code](T, _, _), has[type](T, S), ast_node[code](S, tsproperty_signature, _),
+                                  key[type](S, Key), declared[type](S, F), declared[type](F, _).
+method_ret_at[flow](T, Key, F) :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
+                                  not static[value](S), not private[value](S),
+                                  key[value](S, Key), declared[value](S, F), declared[type](F, _).
+method_ret_at[flow](T, Key, M) :- class_method_of[flow](T, M), not static[value](M), not private[value](M),
+                                  key[value](M, Key), declared[value](M, _).
 method_type[flow](T, Key, T2) :- method_ret_at[flow](T, Key, A), names_type[flow](A, T2).
 method_type[flow](T, Key, T2) :- type_base[flow](T, B), method_type[flow](B, Key, T2).
 method_lib[flow](T, Key, P)   :- method_ret_at[flow](T, Key, A), names_lib[flow](A, P).
@@ -862,19 +855,17 @@ declared_lib[flow](N, L) :- member_node_v[flow](N), object_of[code](N, O), decla
 -- what TypeScript infers from declarations alone: `new C()` is a C, a call is what its
 -- method or function is declared to return, and a binder with no annotation is what its
 -- initialiser is declared to be
-declared[flow](E, T)     :- new_of[code](E, Name, File), type_decl[code](T, Name, File),
-                            ast_node[code](T, class_declaration, _).
+declared[flow](E, T)     :- new_of[code](E, Name, File), type_decl[code](T, Name, File), decl[value](T, class).
 declared[flow](E, T)     :- new_of[code](E, Name, File), imports_name[code](Name, Orig, D, File),
                             module_target[code](D, Target), sx_export_type[surface](Target, Orig, T).
 new_of[code](E, Name, File) :- construct[value](E), at[tree](E, File, _), callee[value](E, N),
                                ast_node[code](N, identifier, _), ast_name[code](N, Name).
 declared[flow](E, T)     :- cast[code](E), names_type[flow](E, T).
 declared_lib[flow](E, P) :- cast[code](E), names_lib[flow](E, P).
-cast[code](E)            :- passes[value](E, _), declared[value](E, _).
-declared[flow](E, T)     :- see_through[code](E, X), declared[flow](X, T).
-declared_lib[flow](E, P) :- see_through[code](E, X), declared_lib[flow](X, P).
-see_through[code](E, X)  :- ast_node[code](E, tsnon_null_expression, _), ast_child[code](E, expression, 0, X).
-see_through[code](E, X)  :- ast_node[code](E, parenthesized_expression, _), ast_child[code](E, expression, 0, X).
+cast[code](E)            :- ast_node[code](E, tsas_expression, _).
+cast[code](E)            :- ast_node[code](E, tstype_assertion, _).
+declared[flow](E, T)     :- passes[value](E, X), not cast[code](E), declared[flow](X, T).
+declared_lib[flow](E, P) :- passes[value](E, X), not cast[code](E), declared_lib[flow](X, P).
 -- `super` in an instance method is declared as the base class
 declared[flow](S, B)     :- super[value](S), inside[tree](M, S), class_method_of[flow](CD, M),
                             not static[value](M), super_of[flow](CD, B).

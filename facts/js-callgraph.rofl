@@ -369,7 +369,7 @@ shape_because(js, s_identifier,            callgraph, not_yet).
 -- excluded, until somebody with the authority says otherwise.
 shape_because(js, s_computed_literal_key,  callgraph, not_yet).
 
--- `s_non_null` IS TICKED AND STILL HAS RESIDUE, which is what this table is
+-- `s_passes` IS TICKED AND STILL HAS RESIDUE, which is what this table is
 -- for and `unknown_because` is not: the cell is modelled — `notNull!(n)`
 -- resolves through the value layer — while `maybe!(n)` does not, because
 -- `maybe` is an AMBIENT declaration with no value in the program. REVERTED TO
@@ -378,7 +378,7 @@ shape_because(js, s_computed_literal_key,  callgraph, not_yet).
 -- it is not my call. Note the division of labour the two tables have:
 -- `shape_because` describes the RESIDUE OF A SHAPE and may stand beside a
 -- tick; `unknown_because` describes an UNMODELLED CELL and may not.
-shape_because(js, s_non_null,              callgraph, not_yet).
+shape_because(js, s_passes,              callgraph, not_yet).
 -- RETIRED 2026-09-08, and `shape_stale[audit]` is what named it: every site of
 -- `s_computed_template_key` resolves now, so the excuse outlived its cause. It
 -- read `knowable at parse time, and absent from the fact vocabulary`, which was

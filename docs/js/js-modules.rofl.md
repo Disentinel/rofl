@@ -58,7 +58,6 @@ Reads:
   - <a id="target"></a>`target`
   - <a id="value"></a>`value`
 - from the scanner:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
@@ -77,7 +76,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - A site has a shape if [the site shape](#site_shape) of it is some shape.
 - <a id="import_specifier_node"></a>A node names an import if [`decl`](#decl)(it, `import`).
 - <a id="has_specifier"></a>A site has a specifier if it [has the import specifier](#import_spec) some node.
-- <a id="export_decl_type_only"></a>A node is a type only export if [the attribute](#ast_attr) `export_kind` of it is "type".
 - <a id="export_bound"></a>A node has an export binding if some node [exports](#export_binding) some name as some name at it.
 - <a id="default_external"></a>A node exports by default as "default" if it [is a default export site](#export_default_site).
 - <a id="has_default_internal"></a>A node has a default internal if it [exports by default](#default_internal) some name.
@@ -141,10 +139,13 @@ Declared as facts:
 > 
 > The roles name the module by `module_ref`: on the string of a declaration, and on a dynamic import itself (a call).
 
-<a id="static_source"></a>`static_source`(D, Src, Spec) if all of:
-  - [`module_ref`](#module_ref)(Src, Spec);
-  - [`parent`](#parent)(D, Src);
-  - unless [`call`](#call)(Src).
+<a id="static_source"></a>`static_source`(D, Src, Spec) either:
+
+1. if all of:
+   - [`module_ref`](#module_ref)(Src, Spec);
+   - [`parent`](#parent)(D, Src);
+   - unless [`call`](#call)(Src);
+2. if [`module_ref`](#module_ref)(Src, Spec) in the type and [`parent`](#parent)(D, Src).
 
 <a id="import_site"></a>A node I is an import site of a form N either:
 
@@ -557,7 +558,9 @@ A node
   - Sp [exports the local](#spec_internal) Internal.
 - <a id="export_renamed"></a>renames on export Internal to External if some node [exports](#export_binding) Internal as External at it and External differs from Internal.
 
-> the one marker the roles do not carry: a declaration with no member (`export type * from`)
+> a declaration with no member names its module in the world of types (`import type {} from`, `export type * from`)
+
+<a id="type_sited"></a>`type_sited`(E) if [`module_ref`](#module_ref)(Src, something) in the type and [`parent`](#parent)(E, Src).
 
 <a id="export_value_binding"></a>A node binds a value export at a node Sp if it [exports](#export_binding) some name as some name at Sp and [`export_value_spec`](#export_value_spec)(it, Sp).
 
@@ -647,13 +650,10 @@ A node
 
 In the code:
 
-A site
-
-- <a id="value_binding"></a>binds a value at a node Sp if all of:
+<a id="value_binding"></a>A site binds a value at a node Sp if all of:
   - it [binds the name](#binding) some name to some name at Sp;
   - [`target`](#target)(Sp, N);
   - [`binds`](#binds)(N, something).
-- <a id="no_specifiers"></a>has no specifiers if it [is an import site](#import_site) of `static_import`, unless it [has a specifier](#has_specifier).
 
 <a id="depends"></a>A file F depends on a file T if a site I [means the file](#module_target) T and I [sits in](#site_file) F.
 
@@ -676,16 +676,13 @@ A site
 > The roles merge `import type {X}` with `import {type X}`: a name bound in the
 > types only is one erased either way. A site ALL of whose specifiers are
 > erased evaluates nothing and one with NO specifier evaluates everything
-> (the roles do not see `import type {} from` or `export type * from`: both
-> are read on the declaration). A module imported as data (section 9) is read, not run.
+> (`import type {} from` and `export type * from` name their module in the types). A module imported as data (section 9) is read, not run.
 
 <a id="type_only_site"></a>A site I is type only either:
 
 1. if I [has a specifier](#has_specifier), unless I [binds a value](#has_value_binding);
 2. if I [is a reexport site](#reexport_site) of `reexport_named`, unless I [reexports a value](#reexport_value);
-3. if I [is a reexport site](#reexport_site) of `reexport_all` and I [is a type only export](#export_decl_type_only);
-4. if I [has no specifiers](#no_specifiers) and I [is a type only export](#export_decl_type_only);
-5. if I [has no specifiers](#no_specifiers) and [the attribute](#ast_attr) `import_kind` of I is "type".
+3. if I [is a module site](#module_site) of some form and [`type_sited`](#type_sited)(I).
 
 A site
 
@@ -710,7 +707,7 @@ A node
 <a id="reexport_value"></a>A node E reexports a value either:
 
 1. if E [reexports a value at](#reexport_value_spec) some node;
-2. if E [is a reexport site](#reexport_site) of `reexport_all`, unless E [is a type only export](#export_decl_type_only).
+2. if E [is a reexport site](#reexport_site) of `reexport_all`, unless [`type_sited`](#type_sited)(E).
 
 A file F takes values from a file T if all of:
   - a node E [reexports a value](#reexport_value);

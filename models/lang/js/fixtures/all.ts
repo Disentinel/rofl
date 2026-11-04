@@ -41,3 +41,5 @@ function* gq() { yield; const r = yield 1; yield* gq(); }
 async function fa(it: any) { for await (const v of it) { try { await v; } catch { } finally { v.close(); } } }
 try { amb(); } finally { amb(); }
 await amb();
+class Acc { private a1 = 1; protected a2 = 2; public readonly a3 = 3; constructor(readonly a4: number) {} }
+type Uno = | A; import type {} from 'tonly'; namespace NQ { export const v = 1 }

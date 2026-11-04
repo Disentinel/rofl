@@ -339,17 +339,11 @@ assign_reaches_unscoped[flow](E, Src) :- assign_unscoped[flow](A), assigned[code
 may_be_lit[flow](E, V)  :- assign_reaches_unscoped[flow](E, Src), may_be_lit[flow](Src, V).
 may_be_node[flow](E, N) :- assign_reaches_unscoped[flow](E, Src), may_be_node[flow](Src, N).
 
--- A parenthesis, a TS cast and a non-null assertion change nothing about the
--- value; the call graph lists them as shapes and this layer does not.
-edb(value_transparent).
-value_transparent(parenthesized_expression).
-value_transparent(tsas_expression).
-value_transparent(tsnon_null_expression).
-
-may_be_lit[flow](E, V)  :- value_transparent(K), ast_node[code](E, K, _),
-                           ast_child[code](E, expression, 0, X), may_be_lit[flow](X, V).
-may_be_node[flow](E, N) :- value_transparent(K), ast_node[code](E, K, _),
-                           ast_child[code](E, expression, 0, X), may_be_node[flow](X, N).
+-- A parenthesis, a TS cast, a non-null assertion, `satisfies` and an instantiation
+-- change nothing about the value (`passes`); the call graph lists them as shapes and
+-- this layer does not.
+may_be_lit[flow](E, V)  :- passes[value](E, X), may_be_lit[flow](X, V).
+may_be_node[flow](E, N) :- passes[value](E, X), may_be_node[flow](X, N).
 
 -- =========================================================================
 -- 5. WHICH PROTOTYPE A VALUE HAS — from the KIND of a receiver written in
@@ -792,10 +786,10 @@ keyed_field[code](Q, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](Q, va
 -- the field to its class (`private`, `readonly`): then in its own file only.
 keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code](CB, body, _, Q),
                                ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
-                               ast_name[code](K, Fld), ast_attr[code](Q, accessibility, "private").
+                               ast_name[code](K, Fld), access[type](Q, own).
 keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code](CB, body, _, Q),
                                ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
-                               ast_name[code](K, Fld), ast_attr[code](Q, readonly, true).
+                               ast_name[code](K, Fld), frozen[type](Q).
 keyed_field_set[code](H, A, File) :- keyed_field[code](H, _, _, Fld), ast_name[code](Pn, Fld),
                                      ast_child[code](L, property, 0, Pn), ast_child[code](A, left, 0, L),
                                      ast_node[code](A, assignment_expression, File), A != H.
@@ -964,14 +958,14 @@ keyed_named_fn[code](G, E) :- keyed_fn_need[code](G), ast_child[code](D, init, 0
                               not ast_child[code](_, declaration, 0, V), sees_binder[code](E, D),
                               not assign[value](D, E, G).
 keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), private_binds[code](N, G), private_method[code](G).
-keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), ast_attr[code](G, accessibility, "private"),
+keyed_named_fn[code](G, N) :- keyed_fn_need[code](G), access[type](G, own),
                               ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G),
                               ast_name[code](Pn, Name), ast_child[code](N, property, 0, Pn), inside[tree](CB, N),
                               ast_node[code](N, member_expression, _).
 -- tsc lets two ways past `private`: `x['f']` and a cast to any. The model
 -- keeps to `private` and says where a member of that name is reached so: by
 -- a string anywhere, by a name outside the class in its file
-keyed_private_name[code](G, CB, Name) :- keyed_hop_fn[code](G, _), ast_attr[code](G, accessibility, "private"),
+keyed_private_name[code](G, CB, Name) :- keyed_hop_fn[code](G, _), access[type](G, own),
                                         ast_child[code](G, key, 0, K), ast_name[code](K, Name), ast_child[code](CB, body, _, G).
 keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast_value[code](Lit, Name),
                                       ast_node[code](Lit, string_literal, _), ast_child[code](N, property, 0, Lit),
@@ -1066,7 +1060,7 @@ keyed_handed[code](V) :- keyed_hand_need[code](V), may_be_node[flow](O, V), obje
                          callee_of[code](Q, N), runs_unknown[code](Q).
 keyed_open_to[code](M) :- keyed_runs_m[code](G, M), keyed_handed[code](G).
 keyed_open_to[code](M) :- keyed_runs_m[code](G, M), entry_point[code](G), not class_method_of[flow](_, G).
-keyed_open_to[code](M) :- keyed_runs_m[code](G, M), class_method_of[flow](CD, G), not ast_attr[code](G, accessibility, "private"),
+keyed_open_to[code](M) :- keyed_runs_m[code](G, M), class_method_of[flow](CD, G), not access[type](G, own),
                           inst_of[flow](I, CD), keyed_handed[code](I).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, M).
 keyed_noisy[code](C, K) :- keyed_between[code](C, K, Q), keyed_again[code](C, K, M), resolves[code](Q, G),
@@ -1098,7 +1092,7 @@ keyed_many[code](G) :- keyed_overlap[code](G).
 keyed_unknown_call[code](G) :- keyed_once_need[code](G), keyed_handed[code](G).
 keyed_unknown_call[code](G) :- keyed_once_need[code](G), entry_point[code](G), not class_method_of[flow](_, G).
 keyed_unknown_call[code](G) :- keyed_once_need[code](G), class_method_of[flow](CD, G),
-                               not ast_attr[code](G, accessibility, "private"), inst_of[flow](I, CD), keyed_handed[code](I).
+                               not access[type](G, own), inst_of[flow](I, CD), keyed_handed[code](I).
 keyed_awaited[code](Q) :- keyed_called_at[code](_, Q), awaits[value](_, Q).
 keyed_left[code](G, Q) :- keyed_called_at[code](G, Q), not keyed_awaited[code](Q).
 keyed_overlap[code](G) :- keyed_unknown_call[code](G).
@@ -1649,7 +1643,7 @@ exports_name[code](F, Name, File) :- fn_node[code](F), target[value](F, I), bind
 
 exports_name[code](D, Name, File) :- class_or_namespace[code](D), own_name[code](D, Name, File, around),
                                      target[value](D, I), has[value](P, I), program[tree](P, File).
-class_or_namespace[code](D) :- ast_node[code](D, class_declaration, _).
+class_or_namespace[code](D) :- decl[value](D, class), own_name[code](D, _, _, around).
 class_or_namespace[code](D) :- ts_namespace[code](D).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
@@ -1943,7 +1937,7 @@ member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), parent[tree](NS, I
 -- 12. CONSTRUCTION
 --
 -- A class declaration is reached by its name, looked up as any name is.
-may_be_node[flow](E, CD) :- sees_decl[code](E, CD), ast_node[code](CD, class_declaration, _).
+may_be_node[flow](E, CD) :- sees_decl[code](E, CD), decl[value](CD, class).
 
 -- `new X()` is an instance of whichever class its callee may be, by value:
 -- `new ns.Foo()` and an imported class are reached as a call's callee is.
