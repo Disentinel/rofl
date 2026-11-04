@@ -23,7 +23,7 @@ Reads:
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
-- from js-structure: [object_of](js-structure.rofl.md#object_of)
+- from js-structure: [object_of](js-structure.rofl.md#object_of), [seq_at](js-structure.rofl.md#seq_at)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
 - from outside these files, in the tree:
@@ -36,12 +36,14 @@ Reads:
   - <a id="class"></a>`class`
   - <a id="executes_if"></a>`executes_if`
   - <a id="exits"></a>`exits`
+  - <a id="finalizes"></a>`finalizes`
   - <a id="generator"></a>`generator`
   - <a id="getter"></a>`getter`
   - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
   - <a id="jumps_to"></a>`jumps_to`
   - <a id="mark"></a>`mark`
+  - <a id="repeats"></a>`repeats`
   - <a id="rest_props"></a>`rest_props`
   - <a id="setter"></a>`setter`
   - <a id="spread_args"></a>`spread_args`
@@ -155,12 +157,13 @@ Declared as facts:
 - <a id="abrupt_kind"></a>`abrupt_kind` — rows in Words
 - <a id="stmt_seq_field"></a>A field F is a statement sequence field — rows in this file
 
-> `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
+> `abrupt_at` is a handful of rows and binds B: the second literal probes.
 
 <a id="after_abrupt"></a>A node follows an abrupt completion if all of:
-  - a node B [is abrupt](#abrupt_at) at a field F from an index I;
-  - it is the J-th of the F of B;
-  - I < J.
+  - B [is abrupt](#abrupt_at) from a step I;
+  - [`seq_at`](js-structure.rofl.md#seq_at)(B, J, it);
+  - I < J;
+  - unless [`finalizes`](#finalizes)(it, something).
 
 > A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
 > control comes back only if the promise settles — so it lands in `guarded` as
@@ -168,25 +171,23 @@ Declared as facts:
 > function: without `nearest_v` an `await` inside a function would guard
 > everything after that function's declaration at module level.
 
-A node
+<a id="suspend_at"></a>B suspends from a step I either:
 
-- <a id="suspend_at"></a>suspends at a field F from an index I if all of:
-  - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
-  - [`inside`](#inside)(S, X);
-  - [`inside`](#inside)(G, S);
-  - a node S is the I-th of the F of it;
-  - F [is a statement sequence field](#stmt_seq_field);
-  - unless [`iterates`](#iterates)(X, something, something).
-- <a id="after_suspend"></a>follows a suspension if all of:
-  - a node B [suspends](#suspend_at) at a field F from an index I;
-  - it is the J-th of the F of B;
+1. if all of:
+   - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
+   - [`inside`](#inside)(S, X);
+   - [`inside`](#inside)(G, S);
+   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
+   - unless [`iterates`](#iterates)(X, something, something);
+2. if all of:
+   - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
+   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, X);
+   - unless [`iterates`](#iterates)(X, something, something).
+
+<a id="after_suspend"></a>A node follows a suspension if all of:
+  - B [suspends](#suspend_at) from a step I;
+  - [`seq_at`](js-structure.rofl.md#seq_at)(B, J, it);
   - I < J.
-
-> a sequence field the scanner never emits: the typo hole
-
-In the audit:
-
-<a id="stmt_seq_unseen"></a>A field is an unseen statement field if it [is a statement sequence field](#stmt_seq_field), unless the it of some node is some node.
 
 > A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 > statements between the reference and its target, and the walk stops at the
@@ -198,22 +199,19 @@ In the audit:
 > honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 > harmless, because both consumers read through `guarded`.
 
-In the code:
-
 <a id="label_name"></a>The label name of a [label](#noun-label) LS is N if the `label` of LS is a node I and [the attribute](#ast_attr) `name` of I is N.
 
-A node
-
-- <a id="label_target"></a>targets the label LS if all of:
+<a id="label_target"></a>A node targets the label LS if all of:
   - it [refers to the label](#label_ref) N;
   - [the label name](#label_name) of LS is N;
   - [`inside`](#inside)(LS, it).
-- <a id="abrupt_at"></a>is abrupt at a field F from an index I if all of:
+
+<a id="abrupt_at"></a>B is abrupt from a step I if all of:
   - a node X [targets the label](#label_target) LS;
   - [`inside`](#inside)(S, X);
   - [`inside`](#inside)(LS, S);
-  - a node S is the I-th of the F of it;
-  - F [is a statement sequence field](#stmt_seq_field).
+  - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
+  - unless [`repeats`](#repeats)(B, S).
 
 ## COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
 
@@ -249,10 +247,10 @@ Declared as facts:
 > the consumer: it replaces the old four-kind arm rather than sitting beside
 > it, since the base case IS that arm
 
-A node is abrupt at a field F from an index I if all of:
+B is abrupt from a step I if all of:
   - a node S [completes abruptly](#completes_abruptly);
-  - S is the I-th of the F of it;
-  - F [is a statement sequence field](#stmt_seq_field).
+  - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
+  - unless [`repeats`](#repeats)(B, S).
 
 > a kind this closure claims and never decides — misspelled, deleted or
 > unexercised all read as "the closure is smaller than it says"
@@ -709,14 +707,20 @@ In the code:
 
 C is stopped by S if C [is stopped by](#try_stops) T and [`inside`](#inside)(S, T).
 
-A node is abrupt at a field F from an index I if all of:
-  - a node C [is a throwing call](#throwing_call);
-  - G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
-  - [`inside`](#inside)(S, C);
-  - [`inside`](#inside)(G, S);
-  - a node S is the I-th of the F of it;
-  - F [is a statement sequence field](#stmt_seq_field);
-  - unless C [is stopped by](#try_stops) S.
+B is abrupt from a step I either:
+
+1. if all of:
+   - a node C [is a throwing call](#throwing_call);
+   - G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+   - [`inside`](#inside)(S, C);
+   - [`inside`](#inside)(G, S);
+   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
+   - unless [`repeats`](#repeats)(B, S);
+   - unless C [is stopped by](#try_stops) S;
+2. if all of:
+   - a node C [is a throwing call](#throwing_call);
+   - some function [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, C).
 
 > After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
 > A suspension is a may and belongs here more exactly.

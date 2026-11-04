@@ -128,6 +128,7 @@ unit_concludes("rules/js-structure.rofl", object_of).
 unit_concludes("rules/js-structure.rofl", prop_name).
 unit_concludes("rules/js-structure.rofl", argument_at).
 unit_concludes("rules/js-structure.rofl", arg_node).
+unit_concludes("rules/js-structure.rofl", seq_at).
 unit_concludes("rules/js-structure.rofl", ast_in).
 unit_concludes("rules/js-structure.rofl", ast_name).
 unit_concludes("rules/js-structure.rofl", key_name).
@@ -792,7 +793,6 @@ unit_concludes("rules/js-controlflow.rofl", stmt_seq_field).
 unit_concludes("rules/js-controlflow.rofl", after_abrupt).
 unit_concludes("rules/js-controlflow.rofl", suspend_at).
 unit_concludes("rules/js-controlflow.rofl", after_suspend).
-unit_concludes("rules/js-controlflow.rofl", stmt_seq_unseen).
 unit_concludes("rules/js-controlflow.rofl", label_name).
 unit_concludes("rules/js-controlflow.rofl", label_ref).
 unit_concludes("rules/js-controlflow.rofl", label_target).

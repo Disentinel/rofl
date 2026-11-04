@@ -208,8 +208,8 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `abrupt_at` | "is_abrupt(node B, at field F, from index I)" |
-| `suspend_at` | "suspends(node B, at field F, from index I)" |
+| `abrupt_at` | "is_abrupt(sequence B, from step I)" |
+| `suspend_at` | "suspends(sequence B, from step I)" |
 
 > ambient
 

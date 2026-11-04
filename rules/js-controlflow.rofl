@@ -52,21 +52,19 @@ edb(stmt_seq_field).
 stmt_seq_field(body).
 stmt_seq_field(consequent).
 
--- `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
-after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
+-- `abrupt_at` is a handful of rows and binds B: the second literal probes.
+after_abrupt[code](S) :- abrupt_at[code](B, I), seq_at[code](B, J, S), I < J, not finalizes[value](S, _).
 
 -- A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
 -- control comes back only if the promise settles — so it lands in `guarded` as
 -- a MAY and is deliberately not an `abrupt_at` arm. Confined to the suspending
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
-suspend_at[code](B, F, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
-                             inside[tree](S, X), inside[tree](G, S),
-                             ast_child[code](B, F, I, S), stmt_seq_field(F).
-after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
-
--- a sequence field the scanner never emits: the typo hole
-stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
+suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+                          inside[tree](S, X), inside[tree](G, S), seq_at[code](B, I, S).
+suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+                          seq_at[code](B, I, X).
+after_suspend[code](S) :- suspend_at[code](B, I), seq_at[code](B, J, S), I < J.
 
 -- A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 -- statements between the reference and its target, and the walk stops at the
@@ -83,9 +81,8 @@ label_ref[code](X, N)     :- jumps_to[value](X, N).
 label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
                              inside[tree](LS, X).
 
-abrupt_at[code](B, F, I)  :- label_target[code](X, LS), inside[tree](S, X),
-                             inside[tree](LS, S), ast_child[code](B, F, I, S),
-                             stmt_seq_field(F).
+abrupt_at[code](B, I)     :- label_target[code](X, LS), inside[tree](S, X),
+                             inside[tree](LS, S), seq_at[code](B, I, S), not repeats[value](B, S).
 
 -- =========================================================================
 -- COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
@@ -118,8 +115,7 @@ completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS,
 
 -- the consumer: it replaces the old four-kind arm rather than sitting beside
 -- it, since the base case IS that arm
-abrupt_at[code](B, F, I) :- completes_abruptly[code](S), ast_child[code](B, F, I, S),
-                            stmt_seq_field(F).
+abrupt_at[code](B, I) :- completes_abruptly[code](S), seq_at[code](B, I, S), not repeats[value](B, S).
 
 -- a kind this closure claims and never decides — misspelled, deleted or
 -- unexercised all read as "the closure is smaller than it says"
@@ -382,10 +378,10 @@ caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
 try_stops[code](C, T) :- throwing_call[code](C), try_walk[code](T, C).
 try_stops[code](C, S) :- try_stops[code](C, T), inside[tree](S, T).
 
-abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
-                            inside[tree](S, C), inside[tree](G, S),
-                            ast_child[code](B, F, I, S), stmt_seq_field(F),
-                            not try_stops[code](C, S).
+abrupt_at[code](B, I) :- throwing_call[code](C), nearest_v[flow](G, C),
+                         inside[tree](S, C), inside[tree](G, S),
+                         seq_at[code](B, I, S), not repeats[value](B, S), not try_stops[code](C, S).
+abrupt_at[code](B, I) :- throwing_call[code](C), nearest_v[flow](_, C), seq_at[code](B, I, C).
 
 -- After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
 -- A suspension is a may and belongs here more exactly.

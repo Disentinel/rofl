@@ -281,8 +281,8 @@ sig(meta_unformed, "has_no_meta_form(node N)").
 -- body says instead (the same relation twice, and A != B).
 
 -- controlflow
-sig(abrupt_at, "is_abrupt(node B, at field F, from index I)").
-sig(suspend_at, "suspends(node B, at field F, from index I)").
+sig(abrupt_at, "is_abrupt(sequence B, from step I)").
+sig(suspend_at, "suspends(sequence B, from step I)").
 
 -- ambient
 sig(amb_short_at, "falls_short(effect N:2, of effect label L:0, at host H:1)").

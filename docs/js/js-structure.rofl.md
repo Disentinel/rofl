@@ -24,8 +24,10 @@ Reads:
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
+  - <a id="strict"></a>`strict`
 - from outside these files, in the value:
   - <a id="callee"></a>`callee`
+  - <a id="executes_if"></a>`executes_if`
   - <a id="import_meta"></a>`import_meta`
   - <a id="key"></a>`key`
   - <a id="key_expr"></a>`key_expr`
@@ -76,6 +78,27 @@ What this file calls a node, and what each word stands for:
 <a id="arg_node"></a>`arg_node`(C, I, X) if [`argument_at`](#argument_at)(C, I, X), unless [`spread_args`](#spread_args)(C, I, something).
 
 `arg_node`(C, I, S) if [`spread_args`](#spread_args)(C, I, X) and [`parent`](#parent)(S, X).
+
+> ORDER OF EXECUTION. The step of a strict sequence B at position I, as the tree has it: the child of B that holds
+> the step (the statement around an expression, the label around a statement), whatever the sequence is: a block,
+> the arguments of a call, the operands of an operator. B runs its steps in the order of I.
+
+<a id="seq_at"></a>`seq_at`(B, I, S) either:
+
+1. if [`nth`](#nth)(B, I, S), [`strict`](#strict)(B), and [`parent`](#parent)(B, S);
+2. if all of:
+   - [`nth`](#nth)(B, I, X);
+   - [`strict`](#strict)(B);
+   - [`parent`](#parent)(S, X);
+   - [`parent`](#parent)(B, S);
+   - unless [`executes_if`](#executes_if)(S, X, `matches`);
+3. if all of:
+   - [`nth`](#nth)(B, I, X);
+   - [`strict`](#strict)(B);
+   - [`parent`](#parent)(V, X);
+   - [`parent`](#parent)(S, V);
+   - [`parent`](#parent)(B, S);
+   - unless [`executes_if`](#executes_if)(V, X, `matches`).
 
 <a id="ast_in"></a>`ast_in` of P and C is another name for `ast_child` of P, _, _ and C.
 
