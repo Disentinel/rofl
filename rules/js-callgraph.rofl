@@ -861,8 +861,7 @@ new_of[code](E, Name, File) :- construct[value](E), at[tree](E, File, _), callee
                                ref[value](N, Name).
 declared[flow](E, T)     :- cast[code](E), names_type[flow](E, T).
 declared_lib[flow](E, P) :- cast[code](E), names_lib[flow](E, P).
-cast[code](E)            :- ast_node[code](E, tsas_expression, _).
-cast[code](E)            :- ast_node[code](E, tstype_assertion, _).
+cast[code](E)            :- passes[value](E, _), declared[value](E, _).
 declared[flow](E, T)     :- passes[value](E, X), not cast[code](E), declared[flow](X, T).
 declared_lib[flow](E, P) :- passes[value](E, X), not cast[code](E), declared_lib[flow](X, P).
 -- `super` in an instance method is declared as the base class
@@ -884,7 +883,7 @@ imported_call[code](C, Orig, Target)  :- call[value](C), not optional[value](C),
 declared[flow](C, T)     :- imported_call[code](C, Orig, Target), sx_fn_ret[surface](Target, Orig, T).
 declared_lib[flow](C, P) :- imported_call[code](C, Orig, Target), sx_fn_ret_lib[surface](Target, Orig, P).
 declared_lib[flow](C, P) :- fn_ret_at[code](C, F), names_lib[flow](F, P).
-inferred_init[code](D, X) :- var_decl[code](D), assign[value](D, I, X), not ast_child[code](I, type_annotation, 0, _).
+inferred_init[code](D, X) :- var_decl[code](D), assign[value](D, I, X), not declared[value](I, _).
 
 declared[flow](E, T)     :- inferred_init[code](D, X), declared[flow](X, T), sees_binder[code](E, D).
 declared_lib[flow](E, P) :- inferred_init[code](D, X), declared_lib[flow](X, P), sees_binder[code](E, D).

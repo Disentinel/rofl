@@ -41,7 +41,7 @@ import {
   V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
   sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
   wellFoundedDeclared, reifyTerm, reifyBodyElem, decodeDominances, type DomRule, evalStrOp, BUDGET_REASON, resolveBook,
-  SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm,
+  SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm, KERNEL_BOOK,
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText, shown } from './shrug.ts';
 import { tarjan } from './scc.ts';
@@ -517,11 +517,53 @@ export function reachable(peel: Peel): Map<string, Set<string>> {
 
 const edgeKey = (a: string, b: string): string => `${a}\u0001${b}`;
 
+/** A RELATION IS RANKED BY ITS NAME AND ITS BOOK (`books.rs`). One the program writes in two books or more is a node per
+ *  book, `delegates[value]` beside `delegates[flow]`; a literal of a variable book reads every book; `whole` keeps a
+ *  relation one node, as the kernel's book is. */
+export class Books {
+  private node = new Map<string, string>();
+  private nodes = new Map<string, string[]>();
+  private nodeSet = new Set<string>();
+  constructor(rules: PeelRule[] = [], whole: (rel: string) => boolean = () => false) {
+    const seen = new Map<string, Set<string>>();
+    for (const r of rules) {
+      if (r.clause.head.temporal === 'next') continue;
+      for (const l of [r.clause.head, ...r.clause.body.flatMap(litsOf)]) {
+        if (l.persp.k !== 'a') continue;
+        let s = seen.get(l.rel);
+        if (!s) { s = new Set(); seen.set(l.rel, s); }
+        s.add(l.persp.name);
+      }
+    }
+    for (const [rel, bs] of seen) {
+      if (bs.size < 2 || KERNEL_BOOK.has(rel) || whole(rel)) continue;
+      const all = [...bs].sort().map((b) => { const n = `${rel}[${b}]`; this.node.set(edgeKey(rel, b), n); this.nodeSet.add(n); return n; });
+      this.nodes.set(rel, all);
+    }
+  }
+  lit(l: Lit): string[] {
+    const all = this.nodes.get(l.rel);
+    if (!all) return [l.rel];
+    return l.persp.k === 'a' ? [this.fact(l.rel, l.persp.name)] : all;
+  }
+  fact(rel: string, persp: string): string { return this.node.get(edgeKey(rel, persp)) ?? rel; }
+  head(l: Lit): string { return l.persp.k === 'a' ? this.fact(l.rel, l.persp.name) : l.rel; }
+  isNode(s: string): boolean { return this.nodeSet.has(s); }
+  rounds(round: Map<string, number>): Map<string, number> {
+    const out = new Map(round);
+    for (const [rel, all] of this.nodes) {
+      const rs = all.map((n) => round.get(n)).filter((x): x is number => x !== undefined);
+      if (rs.length > 0) out.set(rel, Math.max(...rs));
+    }
+    return out;
+  }
+}
+
 /** `peel_rounds`: the round number IS the stratum number, and a stall is the
  *  rejection. An aggregate's edge is a negation's; a lattice read from outside
  *  its recursion is strict; what the kernel writes at a close sits above. `demote` holds the `head\u0001inner` pairs whose
  *  aggregate edge is positive instead: a component a data-level stratification takes (`dataDemotable`). */
-export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set()): Peel {
+export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set(), books: Books = new Books()): Peel {
   const pos = new Map<string, Set<string>>(), neg = new Map<string, Set<string>>();
   const heads = new Set<string>();
   const aggEdges: [string, string, string][] = [];
@@ -530,33 +572,35 @@ export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [str
   const P = (h: string) => { let s = pos.get(h); if (!s) { s = new Set(); pos.set(h, s); } return s; };
   const N = (h: string) => { let s = neg.get(h); if (!s) { s = new Set(); neg.set(h, s); } return s; };
   const reflected = [V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.hole];
+  const add = (s: Set<string>, l: Lit) => { for (const n of books.lit(l)) s.add(n); };
   for (const r of rules) {
     if (r.clause.head.temporal === 'next') continue;
-    const hrel = r.clause.head.rel;
-    heads.add(hrel); P(hrel); N(hrel);
-    for (const b of r.clause.body) {
-      if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) N(hrel).add(b.lit.rel);
-      else if (b.t === 'pos') P(hrel).add(b.lit.rel);
-      else if (b.t === 'neg') N(hrel).add(b.lit.rel);
-      else if (b.t === 'agg' && b.op === 'at_least') {
-        for (const x of b.body) {
-          if (x.t === 'pos') P(hrel).add(x.lit.rel);
-          else if (x.t === 'neg') N(hrel).add(x.lit.rel);
-        }
-        for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
-      } else if (b.t === 'agg') {
-        for (const l of litsOf(b)) {
-          for (const h of [hrel, ...reflected]) {
-            heads.add(h); P(h);
-            if (h === hrel && demote.has(edgeKey(hrel, l.rel))) {
-              P(h).add(l.rel);
-              if (!demoted.some((d) => d[0] === r.id && d[1] === b.at)) demoted.push([r.id, b.at!]);
-              continue;
-            }
-            N(h).add(l.rel);
-            if (h === hrel) soft.add(edgeKey(h, l.rel));
+    for (const hrel of books.lit(r.clause.head)) {
+      heads.add(hrel); P(hrel); N(hrel);
+      for (const b of r.clause.body) {
+        if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) add(N(hrel), b.lit);
+        else if (b.t === 'pos') add(P(hrel), b.lit);
+        else if (b.t === 'neg') add(N(hrel), b.lit);
+        else if (b.t === 'agg' && b.op === 'at_least') {
+          for (const x of b.body) {
+            if (x.t === 'pos') add(P(hrel), x.lit);
+            else if (x.t === 'neg') add(N(hrel), x.lit);
           }
-          aggEdges.push([r.id, hrel, l.rel]);
+          for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
+        } else if (b.t === 'agg') {
+          for (const inner of litsOf(b).flatMap((l) => books.lit(l))) {
+            for (const h of [hrel, ...reflected]) {
+              heads.add(h); P(h);
+              if (h === hrel && demote.has(edgeKey(hrel, inner))) {
+                P(h).add(inner);
+                if (!demoted.some((d) => d[0] === r.id && d[1] === b.at)) demoted.push([r.id, b.at!]);
+                continue;
+              }
+              N(h).add(inner);
+              if (h === hrel) soft.add(edgeKey(h, inner));
+            }
+            aggEdges.push([r.id, hrel, inner]);
+          }
         }
       }
     }
@@ -933,6 +977,7 @@ export class AggEval {
   private thrFocus: Map<string, ThrFocus> | null = null;
   private heightMemo = new Map<string, number>();
   private roundOf = new Map<string, number>();
+  private books = new Books();
   /** Whether a run has planned its levels: `roundOf`, or under well-founded semantics the stratum table. */
   planned = false;
   private derivedRels = new Set<string>();
@@ -1428,7 +1473,8 @@ export class AggEval {
     }
     if (this.mode === 'rounds') {
       const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-      const peel = peelRounds(kept, [...this.lattices.keys()], domEdges);
+      this.books = this.booksOf(kept);
+      const peel = peelRounds(kept, [...this.lattices.keys()], domEdges, new Set(), this.books);
       if (peel.stalled) {
         const heads = new Set(kept.map((r) => r.clause.head.rel));
         out.push(...peel.stuck.filter((s) => heads.has(s)));
@@ -1709,7 +1755,7 @@ export class AggEval {
   private peelOnce(): Peel {
     if (this.peelCache === null) {
       const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-      this.peelCache = peelRounds(this.rules, [...this.lattices.keys()], domEdges);
+      this.peelCache = peelRounds(this.rules, [...this.lattices.keys()], domEdges, new Set(), this.booksOf(this.rules));
     }
     return this.peelCache;
   }
@@ -1783,7 +1829,8 @@ export class AggEval {
       if (this.mode === 'rounds') {
         const lats = [...this.lattices.keys()];
         const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-        let peel = peelRounds(this.rules, lats, domEdges);
+        this.books = this.booksOf(this.rules);
+        let peel = peelRounds(this.rules, lats, domEdges, new Set(), this.books);
         // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be stratified by its data: ranked as one round
         if (peel.stalled) peel = this.takeDataComponents(peel, lats, domEdges) ?? peel;
         if (peel.stalled) {
@@ -1791,7 +1838,7 @@ export class AggEval {
           for (const [rid, head, inner] of peel.aggEdges) {
             if (stuck.has(head) && stuck.has(inner) && reachesIn(deps, inner, head)) {
               const r = this.rules.find((x) => x.id === rid);
-              const b = r?.clause.body.find((x) => x.t === 'agg' && litsOf(x).some((l) => l.rel === inner));
+              const b = r?.clause.body.find((x) => x.t === 'agg' && litsOf(x).some((l) => this.books.lit(l).includes(inner)));
               const op = b && b.t === 'agg' ? b.op : 'an aggregate';
               throw new Rejected(`program rejected: ${op} in rule ${rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md)`);
             }
@@ -1807,9 +1854,9 @@ export class AggEval {
             ? `program rejected: nothing on the cycle ${c} can be settled first: it reads its own conclusion under a negation (-/->) or an aggregate (-agg->)`
             : `program rejected: round ${peel.rounds + 1} settled nothing while ${peel.stuck.join(', ')} remained`);
         }
-        this.roundOf = new Map(peel.round);
+        this.roundOf = this.books.rounds(peel.round);
         this.planned = true;
-        levels = levelSplit(stratRules, (r) => (r.clause.head.temporal === 'next' ? Infinity : peel.round.get(r.clause.head.rel) ?? Infinity));
+        levels = levelSplit(stratRules, (r) => (r.clause.head.temporal === 'next' ? Infinity : this.roundOf.get(this.books.head(r.clause.head)) ?? Infinity));
       }
       const late = this.answer.late;
       const first = mono.filter((r) => !late.has(r.id));
@@ -1885,12 +1932,12 @@ export class AggEval {
   /** The peel that ranks each component of a stalled one `dataDemotable` finds as a round, with the components recorded
    *  for the evaluation; null when there is no such component or the program stalls anyway. */
   private takeDataComponents(stalled: Peel, lats: string[], domEdges: [string, string][]): Peel | null {
-    const barred = (rel: string): boolean => this.lattices.has(rel) || this.subs.has(rel) || this.carried.has(rel)
+    const barred = (rel: string): boolean => this.books.isNode(rel) || this.lattices.has(rel) || this.subs.has(rel) || this.carried.has(rel)
       || this.demandRels.some(([d]) => d === rel) || this.tags.countRel.has(rel) || [...this.tags.countRel.values()].includes(rel)
       || this.rules.some((r) => r.clause.head.rel === rel && (r.hasThr || r.latClose !== null || r.latticeOuter.length > 0));
     const [demote, comps] = dataDemotable(stalled, barred);
     if (demote.size === 0) return null;
-    const again = peelRounds(this.rules, lats, domEdges, demote);
+    const again = peelRounds(this.rules, lats, domEdges, demote, this.books);
     if (again.stalled) return null;
     const least = (set: Set<string>): string => [...set].sort(cmpStr)[0];
     comps.sort((a, b) => cmpStr(least(a), least(b)));
@@ -5175,7 +5222,13 @@ export class AggEval {
     return this.derivedRels.has(rel) ? Infinity : 0;
   }
 
-  private ruleLevel(r: ERule): number { return r.clause.head.temporal === 'next' ? Infinity : this.relLevel(r.clause.head.rel); }
+  private ruleLevel(r: ERule): number { return r.clause.head.temporal === 'next' ? Infinity : this.relLevel(this.books.head(r.clause.head)); }
+
+  /** The relations ranked by name and book (`Books`). */
+  private booksOf(rules: PeelRule[]): Books {
+    const read = new Set([...this.subs.values()].flatMap((x) => x.reads));
+    return new Books(rules, (rel) => this.lattices.has(rel) || this.subs.has(rel) || read.has(rel));
+  }
 
   /** RULES CLOSE, AND ONLY THEN DOES A PLAIN UNKNOWN REACH THEM. */
   private closePlainRules(lv: number): void {

@@ -328,11 +328,12 @@ impl Eval {
         }
         let lats: Vec<Sym> = self.lat.cell_rels().collect();
         let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
-        let peel = peel_rounds(&self.rules, &self.v, &lats, &dom_edges, &HashSet::new());
+        self.refresh_books();
+        let peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
         if peel.stalled {
             return Err("the program is ranked only by its data, or not at all");
         }
-        let round: HashMap<Sym, u32> = peel.round.iter().map(|(k, v)| (*k, *v as u32)).collect();
+        let round: HashMap<Sym, u32> = self.books.rounds(&peel.round);
         let moved: HashSet<Sym> = self.round_of.keys().chain(round.keys()).copied().filter(|k| self.round_of.get(k).unwrap_or(&0) != round.get(k).unwrap_or(&0)).collect();
         self.round_of = round;
         self.derived_rels = self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next).map(|r| r.clause.head.rel).collect();
@@ -671,7 +672,7 @@ impl Eval {
         let mut judged: HashSet<FactId> = HashSet::new();
         // lowest level first: a fact is judged once everything below it that goes has gone
         let mut queue: std::collections::BinaryHeap<std::cmp::Reverse<(i64, FactId)>> =
-            seeds.into_iter().map(|x| std::cmp::Reverse((self.rel_level(self.store.rec(x).rel), x))).collect();
+            seeds.into_iter().map(|x| std::cmp::Reverse(({ let rc = self.store.rec(x); self.fact_level(rc.rel, rc.persp) }, x))).collect();
         while let Some(std::cmp::Reverse((lv, x))) = queue.pop() {
             if over.contains(&x) || over_base.contains(&x) || judged.contains(&x) {
                 continue;
@@ -695,8 +696,9 @@ impl Eval {
                 let firings = store.firings(x);
                 let own = comp.get(&store.rec(x).rel);
                 let below = |g: FactId| {
-                    let rel = store.rec(g).rel;
-                    self.rel_level(rel) < lv || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
+                    let rc = store.rec(g);
+                    let rel = rc.rel;
+                    self.fact_level(rel, rc.persp) < lv || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
                 };
                 let stands = |ps: &[PremRef]| ps.iter().all(|p| match p.kind() {
                     Prem::Fact(g) => store.alive(g) && !over.contains(&g) && !over_base.contains(&g) && below(g),
@@ -725,7 +727,7 @@ impl Eval {
                     if brk!("overdelete_judged_kept" => false; true) {
                         judged.remove(&y);
                     }
-                    queue.push(std::cmp::Reverse((self.rel_level(self.store.rec(y).rel), y)));
+                    queue.push(std::cmp::Reverse(({ let rc = self.store.rec(y); self.fact_level(rc.rel, rc.persp) }, y)));
                 }
             }
         }
@@ -1081,7 +1083,7 @@ impl Eval {
             .copied()
             .filter(|x| {
                 let rec = self.store.rec(*x);
-                self.rel_level(rec.rel) == lv && !plan.dirty.contains(&rec.rel) && !level.heads.contains(&rec.rel) && (rec.base() || !self.store.alive(*x))
+                self.fact_level(rec.rel, rec.persp) == lv && !plan.dirty.contains(&rec.rel) && !level.heads.contains(&rec.rel) && (rec.base() || !self.store.alive(*x))
             })
             .collect();
         again.sort_unstable();
@@ -1114,7 +1116,7 @@ impl Eval {
                 .add
                 .kept
                 .iter()
-                .filter(|(x, lost)| store.alive(**x) && self.rel_level(store.rec(**x).rel) == lv && lost.iter().any(|g| store.alive(*g)))
+                .filter(|(x, lost)| store.alive(**x) && { let rc = store.rec(**x); self.fact_level(rc.rel, rc.persp) } == lv && lost.iter().any(|g| store.alive(*g)))
                 .map(|(x, _)| *x)
                 .collect();
             v.sort_unstable();
@@ -1185,8 +1187,9 @@ impl Eval {
     fn settle_gone(&mut self, lv: i64, st: &mut Fine, d: &mut AddDelta) {
         let mut edges_gone: Vec<FactId> = Vec::new();
         for x in &st.over {
-            let rel = self.store.rec(*x).rel;
-            if self.rel_level(rel) == lv && !self.store.alive(*x) {
+            let rc = self.store.rec(*x);
+            let rel = rc.rel;
+            if self.fact_level(rel, rc.persp) == lv && !self.store.alive(*x) {
                 st.gone.entry(rel).or_default().push(*x);
                 edges_gone.push(*x);
             }
@@ -1251,7 +1254,7 @@ impl Eval {
         if !self.ds.elems.is_empty() {
             return None;
         }
-        let lower: Vec<FactId> = self.add.refired.iter().copied().filter(|f| !changed.contains(f) && self.rel_level(self.store.rec(*f).rel) < lv).collect();
+        let lower: Vec<FactId> = self.add.refired.iter().copied().filter(|f| !changed.contains(f) && { let rc = self.store.rec(*f); self.fact_level(rc.rel, rc.persp) } < lv).collect();
         let mut key: Option<Vec<Sym>> = None;
         let mut lits: Vec<&Lit> = Vec::new();
         for b in &r.plan {
@@ -1411,7 +1414,7 @@ impl Eval {
         })();
         *self.cost.ns_by_rule.entry(r.id).or_insert(0) += t.elapsed().as_nanos() as u64;
         let mut kept = std::mem::take(&mut self.memo.height_memo);
-        kept.retain(|f, _| self.rel_level(self.store.rec(*f).rel) < lv);
+        kept.retain(|f, _| { let rc = self.store.rec(*f); self.fact_level(rc.rel, rc.persp) } < lv);
         self.heights_kept = kept;
         self.active = saved;
         let came = self.store.arrivals.take().unwrap_or_default();

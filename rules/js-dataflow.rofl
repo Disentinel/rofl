@@ -2000,7 +2000,7 @@ next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, I
 
 -- a yield that hands a value out or none (a bare `yield` has no child); `yield*` answers with the inner iterator's
 yield_back[code](Y) :- yields[value](Y, _).
-yield_back[code](Y) :- suspends[value](Y, _, next), not parent[tree](Y, _).
+yield_back[code](Y) :- suspends[value](Y, _, next), not yields[value](Y, _), not delegates[value](Y, _).
 may_be_node[flow](Y, X) :- next_send[flow](G, V), nearest_v[flow](G, Y), yield_back[code](Y),
                            may_be_node[flow](V, X).
 

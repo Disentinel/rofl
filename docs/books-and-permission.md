@@ -47,6 +47,15 @@ perspective(P)     :- authority(P, _).
 Which is why `perspective` is the anchor the derived inventory hangs off: it
 is boot.rofl's sentence for *a book exists*.
 
+**A relation is ranked by its name and its book.** Where a program writes one
+name in two books, `delegates[value]` beside `delegates[flow]`, the peel ranks
+them as two relations (`rust/rofl/src/engine/books.rs`, `Books` in
+`src/aggeval.ts`): a rule may negate the one and conclude the other. A literal
+whose book is a variable reads every book of the name. A relation written in
+one book, or one a lattice, a dominance or the kernel's book holds, is ranked
+by its name as before. The stock evaluator's table (`--strata`,
+`rules/strata.rofl`) still ranks by name.
+
 ### The three jobs `[main]` does, measured
 
 `f_main_carries_the_kernels_own_reflection_and_that_is_ring_zero` named three
