@@ -29,13 +29,12 @@ Reads:
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of)
+- from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
+- from js-structure, in the code: [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
 - from outside these files, in the value:
   - <a id="callee"></a>`callee`
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -86,7 +85,7 @@ Declared as facts:
 <a id="ex_import"></a>`ex_import`(Sp, K) if all of:
   - a node Sp [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
   - [`express_module`](#express_module)(S);
-  - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) K.
+  - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(Sp, K).
 
 In the surface:
 

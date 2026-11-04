@@ -116,7 +116,7 @@ vlib_member[flow](M, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow]
 vlib_fn[flow](M, Surface, K) :- vlib_member[flow](M, Surface, K), ambient_value(Surface, K, _, _).
 vlib_fn[flow](X, Surface, K) :- builtin_member[flow](X, Surface, K), ambient_value(Surface, K, _, _).
 vlib_fn[flow](P, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](Init, Y), decl_value[flow](D, Init),
-                               destr_prop[code](D, P, Key, _, _), key_name[code](Key, K), ambient_value(Surface, K, _, _).
+                               destr_prop[code](D, P, _, _, _), key_name[code](P, K), ambient_value(Surface, K, _, _).
 
 vlib_fn[flow](F, Surface, K) :- ambient_module(File, Surface), exports_name[code](F, K, File),
                               ambient_value(Surface, K, _, _).
@@ -125,7 +125,7 @@ vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code
 
 vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), callee[value](C, G),
                                   ast_node[code](C, T, _), call_like_v(T).
-vlib_call[flow](C, S, construct) :- ast_node[code](C, new_expression, _), callee[value](C, G),
+vlib_call[flow](C, S, construct) :- construct[value](C), callee[value](C, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
 -- A method of a prototype: the receiver decides the surface.

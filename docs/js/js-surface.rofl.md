@@ -33,7 +33,7 @@ default: surface
 Reads:
 
 - from js-ambient, in the flow: [amb_exn_carrier](js-ambient.rofl.md#amb_exn_carrier)
-- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [class_ctor](js-callgraph.rofl.md#class_ctor), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside)
+- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [class_ctor](js-callgraph.rofl.md#class_ctor), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
 - from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
@@ -55,7 +55,6 @@ Reads:
   - <a id="generator"></a>`generator`
   - <a id="param"></a>`param`
 - from the scanner, in the code:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
@@ -64,7 +63,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
@@ -429,9 +427,9 @@ In the code:
 <a id="falls_off"></a>`falls_off`(F) either:
 
 1. if all of:
-   - F is a [function](js-callgraph.rofl.md#fn_node);
-   - [`body`](#body)(F, a [block](#noun-block) B);
-   - unless B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
+   - [`body`](#body)(F, B);
+   - unless [`returns`](js-dataflow.rofl.md#returns)(F, B) in the value;
+   - unless a node B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
 2. if all of:
    - [`exits`](#exits)(R, `return`);
    - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R;
@@ -442,7 +440,7 @@ In the surface:
 <a id="sx_ret_undef"></a>`sx_ret_undef`(F) if all of:
   - [`falls_off`](#falls_off)(F);
   - unless [`generator`](#generator)(F);
-  - unless [the attribute](#ast_attr) `kind` of a node F is "constructor".
+  - unless F [is a constructor](js-callgraph.rofl.md#ctor_method).
 
 In the flow:
 

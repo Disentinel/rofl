@@ -30,7 +30,7 @@ ex_router_fn[flow](G) :- member_node_v[flow](G), selects[flow](G, "Router"), obj
                          may_be_node[flow](O, S), external_value[flow](S, S), express_module(S).
 ex_router_fn[flow](G) :- may_be_node[flow](G, Sp), ex_import[flow](Sp, "Router").
 ex_import[flow](Sp, K) :- external_import[code](Sp, _, S, _), express_module(S),
-                          ast_child[code](Sp, imported, 0, I), ast_name[code](I, K).
+                          import_ident_key[code](Sp, K).
 sx_ex_import[surface](Sp, K) :- sx_esc[surface](Sp), ex_import[flow](Sp, K).
 ex_import[flow](Sp, K) :- sx_ex_import[surface](Sp, K).
 ex_app[flow](C) :- ast_node[code](C, call_expression, _), callee[value](C, G),

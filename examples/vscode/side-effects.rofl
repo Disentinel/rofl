@@ -37,7 +37,7 @@ se_api(S, S, "*")  :- external_value[flow](S, S).
 se_api(M, S, N)    :- se_member_of(M, Y, N), se_ns(Y, S).
 se_api(Sp, S, N)   :- external_import[code](Sp, _, S, _), ast_child[code](Sp, imported, 0, I), ast_name[code](I, N).
 se_api(P, S, N)    :- external_destructured[code](D, P, _, _), external_value[flow](P, S),
-                      destr_prop[code](D, P, K, _, _), key_name[code](K, N).
+                      destr_prop[code](D, P, _, _, _), key_name[code](P, N).
 
 -- A receiver: the API value itself (`ipcMain`), or what calling it made (`net.createServer()`, `express()`).
 se_recv(Y, S, R) :- se_api(Y, S, R).

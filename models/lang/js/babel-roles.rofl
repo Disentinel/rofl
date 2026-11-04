@@ -199,8 +199,19 @@ executes_if[value](X, G, How) :- b_branch[ast_babel](_, N, G, How), b_through[as
 -- the tail of `?.` runs when what it reads is defined
 executes_if[value](N, O, defined) :- mark[value](N, optional), child[ast_babel](N, object, 0, O).
 executes_if[value](N, O, defined) :- mark[value](N, optional), child[ast_babel](N, callee, 0, O).
+-- and so does the rest of the chain above it: a link that is not itself optional, whose object or callee is a link of the chain; a parenthesis ends the chain
+b_chain_below[ast_babel](L, X) :- optional_kind[ast_babel](K), node[ast_babel](L, K, _), attr[ast_babel](L, optional, false),
+                                  child[ast_babel](L, object, 0, X).
+b_chain_below[ast_babel](L, X) :- optional_kind[ast_babel](K), node[ast_babel](L, K, _), attr[ast_babel](L, optional, false),
+                                  child[ast_babel](L, callee, 0, X).
+b_chain_opt[ast_babel](L, X) :- b_chain_below[ast_babel](L, X), mark[value](X, optional).
+b_chain_opt[ast_babel](L, O) :- b_chain_below[ast_babel](L, X), b_chain_opt[ast_babel](X, O).
+executes_if[value](L, G, defined) :- b_chain_opt[ast_babel](L, O), executes_if[value](O, G, defined).
 -- a case runs when its test matches
 executes_if[value](C, T, matches) :- node[ast_babel](C, switch_case, _), child[ast_babel](C, test, 0, T).
+-- the default runs when no case matched the discriminant
+executes_if[value](C, D, unmatched) :- node[ast_babel](S, switch_statement, _), child[ast_babel](S, cases, _, C), not child[ast_babel](C, test, 0, _),
+                                       child[ast_babel](S, discriminant, 0, D).
 
 edb(loop_kind).
 loop_kind[ast_babel](for_statement). loop_kind[ast_babel](for_in_statement). loop_kind[ast_babel](for_of_statement).
@@ -220,13 +231,15 @@ exit_kind[ast_babel](continue_statement, continue). exit_kind[ast_babel](throw_s
 exits[value](J, How)   :- exit_kind[ast_babel](K, How), node[ast_babel](J, K, _).
 throws[value](T, V)    :- node[ast_babel](T, throw_statement, _), child[ast_babel](T, argument, 0, V).
 tries[value](T, B)     :- child[ast_babel](T, block, 0, B), child[ast_babel](T, handler, 0, _).
+finalizes[value](Fin, B) :- node[ast_babel](T, try_statement, _), child[ast_babel](T, finalizer, 0, Fin), child[ast_babel](T, block, 0, B).
+finalizes[value](Fin, C) :- node[ast_babel](T, try_statement, _), child[ast_babel](T, finalizer, 0, Fin), child[ast_babel](T, handler, 0, C).
 
-label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
+labeled_as[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, X),
                           node[ast_babel](X, K, _), not steps_through[ast_babel](K, _).
-label[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
+labeled_as[value](X, Name)  :- node[ast_babel](L, labeled_statement, _), child[ast_babel](L, label, 0, I),
                           attr[ast_babel](I, name, Name), child[ast_babel](L, body, 0, B), b_through[ast_babel](B, X).
-label[value](J, Name)  :- exit_kind[ast_babel](K, _), node[ast_babel](J, K, _), child[ast_babel](J, label, 0, I),
+jumps_to[value](J, Name)  :- exit_kind[ast_babel](K, _), node[ast_babel](J, K, _), child[ast_babel](J, label, 0, I),
                           attr[ast_babel](I, name, Name).
 
 -- what runs after an await runs later: every later step of each sequence the suspension is inside, up to
@@ -264,6 +277,14 @@ yields[value](Y, E)    :- node[ast_babel](Y, yield_expression, _), attr[ast_babe
 delegates[value](Y, E) :- node[ast_babel](Y, yield_expression, _), attr[ast_babel](Y, delegate, true),
                           child[ast_babel](Y, argument, 0, E).
 awaits[value](A, X)    :- node[ast_babel](A, await_expression, _), child[ast_babel](A, argument, 0, X).
+-- the function a suspension pauses: the nearest owner of a body above it, or the module for a top-level await
+b_pause_at[ast_babel](S, later) :- node[ast_babel](S, await_expression, _).
+b_pause_at[ast_babel](S, next)  :- node[ast_babel](S, yield_expression, _).
+b_pause_at[ast_babel](S, later) :- node[ast_babel](S, for_of_statement, _), attr[ast_babel](S, await, true).
+b_pause_up[ast_babel](S, P) :- b_pause_at[ast_babel](S, _), parent[tree](P, S).
+b_pause_up[ast_babel](S, Q) :- b_pause_up[ast_babel](S, P), not body[value](P, _), parent[tree](Q, P).
+suspends[value](S, F, How) :- b_pause_up[ast_babel](S, F), body[value](F, _), b_pause_at[ast_babel](S, How).
+suspends[value](S, P, How) :- b_pause_up[ast_babel](S, P), node[ast_babel](P, program, _), b_pause_at[ast_babel](S, How).
 
 -- a parameter is what stands in its slot, through a default and through a TS parameter property
 edb(param_kind).
@@ -435,19 +456,21 @@ name_field[ast_babel](tscall_signature_declaration, params). name_field[ast_babe
 
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
                        attr[ast_babel](K, name, Name).
-b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), attr[ast_babel](M, computed, false),
-                       node[ast_babel](K, KK, _), key_literal[ast_babel](KK), attr[ast_babel](K, value, V).
+-- a literal key is static, written `{ 1: x }`, `{ "a": x }` or `{ ["a"]: x }` alike
+b_key[ast_babel](M, V)    :- child[ast_babel](M, key, 0, K), node[ast_babel](K, KK, _), key_literal[ast_babel](KK),
+                       attr[ast_babel](K, value, V).
 b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, private_name, _),
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
                        attr[ast_babel](I, name, Name).
 key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
 key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
-key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
+key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
-key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true),
+key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
 edb(key_literal).
+b_lit_key[ast_babel](K) :- node[ast_babel](K, KK, _), key_literal[ast_babel](KK).
 key_literal[ast_babel](string_literal). key_literal[ast_babel](numeric_literal).
 
 edb(member_kind).
@@ -638,6 +661,8 @@ module_ref[value](Src, Spec) :- source_kind[ast_babel](K), node[ast_babel](D, K,
                                 attr[ast_babel](Src, value, Spec).
 module_ref[value](I, Spec)   :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, Src),
                                 node[ast_babel](Src, string_literal, _), attr[ast_babel](Src, value, Spec).
+module_expr[value](I, E)     :- node[ast_babel](I, import_expression, _), child[ast_babel](I, source, 0, E),
+                                not node[ast_babel](E, string_literal, _).
 
 b_import_key[ast_babel](S, Name) :- node[ast_babel](S, import_specifier, _), child[ast_babel](S, imported, 0, I),
                                     attr[ast_babel](I, name, Name).
@@ -669,10 +694,18 @@ b_reexport[ast_babel](E, S)  :- node[ast_babel](E, export_named_declaration, _),
 -- the member is the specifier, and for `* as ns` its name, the one node every parser has there
 b_spec_member[ast_babel](S, S) :- node[ast_babel](S, export_specifier, _).
 b_spec_member[ast_babel](S, M) :- node[ast_babel](S, export_namespace_specifier, _), child[ast_babel](S, exported, 0, M).
-has[value](Ns, M)  :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
-                      child[ast_babel](E, specifiers, _, S), b_spec_member[ast_babel](S, M).
-key[value](M, N)   :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M).
-value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L).
+-- `export type {X}` and `export {type X}` are members of the module's types only
+b_type_spec[ast_babel](S) :- node[ast_babel](S, export_specifier, _), attr[ast_babel](S, export_kind, "type").
+b_type_spec[ast_babel](S) :- node[ast_babel](E, export_named_declaration, _), attr[ast_babel](E, export_kind, "type"),
+                             child[ast_babel](E, specifiers, _, S).
+b_spec_of[ast_babel](Ns, S) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
+                               child[ast_babel](E, specifiers, _, S).
+has[value](Ns, M)  :- b_spec_of[ast_babel](Ns, S), b_spec_member[ast_babel](S, M), not b_type_spec[ast_babel](S).
+has[type](Ns, M)   :- b_spec_of[ast_babel](Ns, S), b_spec_member[ast_babel](S, M), b_type_spec[ast_babel](S).
+key[value](M, N)   :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M), not b_type_spec[ast_babel](S).
+key[type](M, N)    :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M), b_type_spec[ast_babel](S).
+value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), not b_type_spec[ast_babel](S).
+value[type](S, L)  :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), b_type_spec[ast_babel](S).
 -- export { a as b } from 'm': the member is destructured from m
 pattern_prop[value](E, Name, S) :- b_reexport[ast_babel](E, S), child[ast_babel](S, local, 0, L),
                                    attr[ast_babel](L, name, Name).
@@ -687,9 +720,13 @@ b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E,
                                       child[ast_babel](D, id, 0, X), node[ast_babel](X, identifier, _).
 b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
                                       child[ast_babel](E, declaration, 0, V), child[ast_babel](V, id, 0, X).
-has[value](Ns, X)     :- b_export_binding[ast_babel](Ns, X).
-key[value](X, Name)   :- b_export_binding[ast_babel](_, X), attr[ast_babel](X, name, Name).
-value[value](X, X)    :- b_export_binding[ast_babel](_, X).
+-- a declared name is a member of the world its binding is in
+has[value](Ns, X)     :- b_export_binding[ast_babel](Ns, X), b_bind[ast_babel](X, value).
+key[value](X, Name)   :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, value), attr[ast_babel](X, name, Name).
+value[value](X, X)    :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, value).
+has[type](Ns, X)      :- b_export_binding[ast_babel](Ns, X), b_bind[ast_babel](X, type).
+key[type](X, Name)    :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, type), attr[ast_babel](X, name, Name).
+value[type](X, X)     :- b_export_binding[ast_babel](_, X), b_bind[ast_babel](X, type).
 -- export default x
 has[value](Ns, E)     :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_default_declaration, _).
 key[value](E, "default") :- node[ast_babel](E, export_default_declaration, _).

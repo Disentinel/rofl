@@ -20,6 +20,7 @@ const o = { a, b: 1, [k]: 2, ...s, m() {}, get x() { return 1; } };
 const arr2 = [1, , ...s];
 let u; u ??= 3; u += 1; u++; ++u; (u, k);
 o?.a?.b(); o.a?.(1);
+a?.b.c(g()); (a?.b).c; a?.b!.c; a?.[g()].d?.e;
 x = a ? b : c; y = (a && b || c) ?? d;
 label: for (let i = 0; i < 3; i++) { if (i) continue label; else break; }
 for (const k in o) {} while (x) { x--; } do { x++; } while (x < 3);
@@ -34,3 +35,9 @@ type A = string | number; interface I { a: string; m(): void }
 enum E { A = 1 } namespace N { export const n = 1 }
 declare function amb(): void;
 typeof x; void 0; delete o.a; !x; -x; 'a' in o;
+export type { A }; export { type I as J, E }; export interface K { k: number } export class Cx {}
+import(tl);
+function* gq() { yield; const r = yield 1; yield* gq(); }
+async function fa(it: any) { for await (const v of it) { try { await v; } catch { } finally { v.close(); } } }
+try { amb(); } finally { amb(); }
+await amb();

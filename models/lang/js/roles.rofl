@@ -56,6 +56,7 @@ role(returns,   "R carries the value E out of its function").
 role(yields,    "Y hands E to the consumer of the iterator").
 role(delegates, "Y hands every value of the iterator E to the consumer").
 role(awaits,    "A waits for X; the rest runs later").
+role(suspends,  "the call of F pauses at S: control leaves F and comes back, or never; How is later (await, for await: when the awaited settles) or next (yield: when the consumer asks)").
 
 -- ---- property access
 role(member,    "N reads the property Key of Obj").
@@ -87,19 +88,22 @@ role(unary,     "N is Op X").
 role(logical,   "N is L Op R where Op is &&, || or ??").
 
 -- ---- control
-role(executes_if, "N executes depending on how G completed: How is truthy, falsy, nullish, defined, thrown, matches or next").
+role(executes_if, "N executes depending on how G completed: How is truthy, falsy, nullish, defined, thrown, matches, unmatched or next").
 role(executes_when, "N executes after G completed, at When: sync, microtask, macrotask or event").
 role(repeats,   "Body of S may execute again after itself").
 role(iterates,  "Left of S receives the elements of the iterator of Right").
 role(enumerates, "Left of S receives the keys of Right").
-role(exits,     "nothing after J executes in its sequence: How is return, break, continue or throw").
+role(exits,     "nothing after J executes in its sequence but what finalizes it: How is return, break, continue or throw").
 role(throws,    "T carries the value V out as a throw").
 role(tries,     "a throw out of Block is served by the handler of T").
-role(label,     "X carries the label Name").
+role(finalizes, "Fin executes whenever control leaves Block: at its end, by return, break, continue or throw").
+role(labeled_as, "X carries the label Name").
+role(jumps_to,  "the break or continue J leaves the statement labeled Name").
 
 -- ---- modules
 role(namespace, "Ns is the object of exports of P").
 role(module_ref, "N stands for the exports of the module Spec").
+role(module_expr, "N stands for the exports of the module E names when it runs").
 
 -- ---- the bridges between the worlds, and the bound of a type parameter (JS/TS only)
 role(declared,  "the type T is written at X").
