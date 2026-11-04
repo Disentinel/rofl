@@ -31,7 +31,7 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
-- from js-dataflow, in the code: [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read)
+- from js-dataflow, in the code: [bin_op](js-dataflow.rofl.md#bin_op), [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read), [un_op](js-dataflow.rofl.md#un_op)
 - from js-dataflow: [inst_of](js-dataflow.rofl.md#inst_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [try_unhandled](js-dataflow.rofl.md#try_unhandled)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
@@ -52,6 +52,7 @@ Reads:
   - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
   - <a id="repeats"></a>`repeats`
+  - <a id="static"></a>`static`
   - <a id="static_block"></a>`static_block`
   - <a id="template"></a>`template`
   - <a id="tries"></a>`tries`
@@ -68,10 +69,7 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
-| <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
-| <a id="noun-unary_expression"></a>an unary expression | a node of kind `unary_expression` |
-| <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -82,7 +80,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="eff_obj_traced"></a>M has a traced object if [`member_obj`](js-dataflow.rofl.md#member_obj)(M, something, something).
 - <a id="eff_assign"></a>An [assignment](#noun-assignment) is a write.
 - <a id="eff_member_target"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
-- <a id="eff_update_arg"></a>An [update expression](#noun-update_expression) updates a node X if the `argument` of it is X.
 - <a id="eff_label_seen"></a>An effect label is seen at a host H if some node [has the effect](js-ambient.rofl.md#eff_here) it at H.
 - <a id="eff_subject"></a>A [function](js-callgraph.rofl.md#fn_node) is an effect subject.
 - <a id="eff_mod_subject"></a>A file F is a module subject if F [is in the corpus](js-dataflow.rofl.md#corpus_file).
@@ -340,6 +337,8 @@ In the audit:
 > `x++` is a read and a write, on either form.
 
 In the code:
+
+<a id="eff_update_arg"></a>U updates a node X if [`unary`](#unary)(U, "++" or "--", X).
 
 In the flow:
 
@@ -621,14 +620,19 @@ In the flow:
 
 In the code:
 
-<a id="eff_converts"></a>N converts if N is a [binary expression](#noun-binary_expression) or an [unary expression](#noun-unary_expression), unless N [inspects](#eff_op_inspects).
+<a id="eff_converts"></a>A node N converts either:
+
+1. if [`bin_op`](js-dataflow.rofl.md#bin_op)(N, something, something, something), unless N [inspects](#eff_op_inspects);
+2. if [`un_op`](js-dataflow.rofl.md#un_op)(N, something, something), unless N [inspects](#eff_op_inspects).
 
 In the flow:
 
 <a id="eff_coerced"></a>A node N coerces a node X either:
 
-1. if N [converts](#eff_converts) and the `left` or `right` or `argument` of N is X;
-2. if [`template`](#template)(N) and [`nth`](#nth)(N, something, X).
+1. if N [converts](#eff_converts) and [`bin_op`](js-dataflow.rofl.md#bin_op)(N, something, X, something);
+2. if N [converts](#eff_converts) and [`bin_op`](js-dataflow.rofl.md#bin_op)(N, something, something, X);
+3. if N [converts](#eff_converts) and [`un_op`](js-dataflow.rofl.md#un_op)(N, something, X);
+4. if [`template`](#template)(N) and [`nth`](#nth)(N, something, X).
 
 `eff_conv_key` includes `symbol_to_primitive`, "valueOf", "toString".
 
@@ -827,7 +831,7 @@ In the flow:
 
 1. if all of:
    - some class [initialises the field](#eff_field_value) at P with some node;
-   - [the attribute](#ast_attr) `static` of P is `true`;
+   - [`static`](#static)(P);
    - N is `definition`;
 2. if all of:
    - some class [initialises the field](#eff_field_value) at P with some node;

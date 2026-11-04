@@ -49,6 +49,8 @@ Reads:
 - from outside these files, in the tree:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
+  - <a id="assign"></a>`assign`
+  - <a id="binds"></a>`binds`
   - <a id="body"></a>`body`
   - <a id="callee"></a>`callee`
   - <a id="exits"></a>`exits`
@@ -63,7 +65,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 
@@ -398,8 +399,9 @@ In the flow:
 <a id="param_read"></a>`param_read`(F, I, E) if all of:
   - F [uses](js-dataflow.rofl.md#param_use) Name at a node E;
   - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
-  - [`param`](#param)(F, I, an [identifier](#noun-identifier) P);
+  - [`param`](#param)(F, I, P);
   - [`parent`](#parent)(F, P);
+  - [`binds`](#binds)(P, something);
   - unless [`param_assigned`](#param_assigned)(F, Name);
   - unless E [sees](js-dataflow.rofl.md#sees_binder) some declarator.
 
@@ -468,11 +470,10 @@ In the surface:
 In the flow:
 
 <a id="store_pkey"></a>`store_pkey`(F, J, I, X) if all of:
-  - a node X [is plain](js-dataflow.rofl.md#plain_assign);
-  - the `left` of X is a node L;
+  - [`assign`](#assign)(X, L, V);
+  - X [is plain](js-dataflow.rofl.md#plain_assign);
   - [`computed_key`](js-dataflow.rofl.md#computed_key)(L, Q);
   - [`param_read`](#param_read)(F, J, Q);
-  - the `right` of X is a node V;
   - [`param_read`](#param_read)(F, I, V).
 
 <a id="store_sym"></a>`store_sym`(X) if [`store_pkey`](#store_pkey)(something, something, something, X).
@@ -481,7 +482,7 @@ In the surface:
 
 <a id="sx_store_pkey"></a>`sx_store_pkey`(F, J, I, O) if all of:
   - [`store_pkey`](#store_pkey)(F, J, I, X);
-  - the `left` of a node X is a node L;
+  - [`assign`](#assign)(X, L, something);
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
   - a node Obj [points to](js-concat.rofl.md#may_be_node) a node O.
 

@@ -68,7 +68,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
-| <a id="noun-if"></a>an if | a node of kind `if_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
@@ -230,10 +229,13 @@ Declared as facts:
 
 A [block](#noun-block) completes abruptly if a node S [completes abruptly](#completes_abruptly) and S [is among the](#ast_child) `body` of it.
 
-An [if](#noun-if) completes abruptly if all of:
+A node completes abruptly if all of:
   - a node C [completes abruptly](#completes_abruptly);
-  - the `consequent` of it is C;
-  - the `alternate` of it [completes abruptly](#completes_abruptly).
+  - [`executes_if`](#executes_if)(C, G, `truthy`);
+  - [`parent`](#parent)(it, C);
+  - [`executes_if`](#executes_if)(X, G, `falsy`);
+  - [`parent`](#parent)(it, X);
+  - a node X [completes abruptly](#completes_abruptly).
 
 A [label](#noun-label) completes abruptly if all of:
   - a node S [completes abruptly](#completes_abruptly);

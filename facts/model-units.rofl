@@ -205,6 +205,7 @@ unit_concludes("rules/js-dataflow.rofl", destr_default).
 unit_concludes("rules/js-dataflow.rofl", destructures_at).
 unit_concludes("rules/js-dataflow.rofl", array_elem).
 unit_concludes("rules/js-dataflow.rofl", elem_at).
+unit_concludes("rules/js-dataflow.rofl", param_wrap).
 unit_concludes("rules/js-dataflow.rofl", param_of).
 unit_concludes("rules/js-dataflow.rofl", param_default).
 unit_concludes("rules/js-dataflow.rofl", param_pattern).
@@ -513,6 +514,9 @@ unit_concludes("rules/js-dataflow.rofl", delegates).
 unit_concludes("rules/js-dataflow.rofl", yield_back).
 unit_concludes("rules/js-dataflow.rofl", iter_elem).
 unit_concludes("rules/js-dataflow.rofl", plain_assign).
+unit_concludes("rules/js-dataflow.rofl", bin_op).
+unit_concludes("rules/js-dataflow.rofl", logic_op).
+unit_concludes("rules/js-dataflow.rofl", un_op).
 unit_concludes("rules/js-dataflow.rofl", imports).
 unit_concludes("rules/js-dataflow.rofl", catch_of).
 unit_concludes("rules/js-dataflow.rofl", catch_param).

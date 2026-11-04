@@ -150,8 +150,8 @@ eff_here[flow](M, read, H) :- eff_heap_of[flow](M, H), eff_read_site[flow](M).
 eff_member_both[audit](M) :- eff_read_site[flow](M), eff_member_target[code](M).
 
 -- `x++` is a read and a write, on either form.
-eff_update_arg[code](U, X) :- ast_node[code](U, update_expression, _),
-                              ast_child[code](U, argument, 0, X).
+eff_update_arg[code](U, X) :- unary[value](U, "++", X).
+eff_update_arg[code](U, X) :- unary[value](U, "--", X).
 eff_here[flow](U, read, local)  :- eff_update_arg[code](U, X), ast_name[code](X, _).
 eff_here[flow](U, write, local) :- eff_update_arg[code](U, X), ast_name[code](X, _).
 eff_here[flow](U, read, H)      :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
@@ -319,12 +319,12 @@ eff_op_beyond[flow](N, has_instance) :- binary[value](N, "instanceof", _, _).
 eff_op_beyond[flow](N, delete_own)   :- unary[value](N, "delete", _).
 
 
-eff_converts[code](N) :- ast_node[code](N, binary_expression, _), not eff_op_inspects[code](N).
-eff_converts[code](N) :- ast_node[code](N, unary_expression, _),  not eff_op_inspects[code](N).
+eff_converts[code](N) :- bin_op[code](N, _, _, _), not eff_op_inspects[code](N).
+eff_converts[code](N) :- un_op[code](N, _, _),     not eff_op_inspects[code](N).
 
-eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, left, 0, X).
-eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, right, 0, X).
-eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, argument, 0, X).
+eff_coerced[flow](N, X) :- eff_converts[code](N), bin_op[code](N, _, X, _).
+eff_coerced[flow](N, X) :- eff_converts[code](N), bin_op[code](N, _, _, X).
+eff_coerced[flow](N, X) :- eff_converts[code](N), un_op[code](N, _, X).
 eff_coerced[flow](T, X) :- template[value](T), nth[tree](T, _, X).
 
 
@@ -446,7 +446,7 @@ eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), value[value](P, 
 -- in neither. A `static_block` carries no `static` attribute — the word is in
 -- its kind — so it gets its own arm.
 eff_field_moment[flow](P, definition)   :- eff_field_value[code](_, P, _),
-                                           ast_attr[code](P, static, true).
+                                           static[value](P).
 eff_field_moment[flow](P, construction) :- eff_field_value[code](_, P, _),
                                            ast_attr[code](P, static, false).
 

@@ -104,9 +104,8 @@ completes_abruptly[code](S) :- exits[value](S, _).
 completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
                                ast_node[code](B, block_statement, _).
 
-completes_abruptly[code](S) :- completes_abruptly[code](C), ast_child[code](S, consequent, 0, C),
-                               ast_node[code](S, if_statement, _),
-                               ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).
+completes_abruptly[code](S) :- completes_abruptly[code](C), executes_if[value](C, G, truthy), parent[tree](S, C),
+                               executes_if[value](A, G, falsy), parent[tree](S, A), completes_abruptly[code](A).
 
 label_escaped[code](LS)      :- label_target[code](_, LS).
 completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),

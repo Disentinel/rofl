@@ -423,8 +423,7 @@ shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours
 
 -- What modelling this layer dragged in: every kind its rules touch must be a
 -- declared `node_kind`, or the matrix has a cell it does not know exists.
-fn_binder[code](D, F) :- ast_node[code](D, variable_declarator, _),
-                         ast_child[code](D, init, 0, F), fn_node[code](F).
+fn_binder[code](D, F) :- decl[value](D, _), assign[value](D, _, F), fn_node[code](F).
 fn_binder[code](P, F) :- obj_prop[code](_, P, F), fn_node[code](F).
 fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 
@@ -859,7 +858,7 @@ declared[flow](E, T)     :- new_of[code](E, Name, File), type_decl[code](T, Name
 declared[flow](E, T)     :- new_of[code](E, Name, File), imports_name[code](Name, Orig, D, File),
                             module_target[code](D, Target), sx_export_type[surface](Target, Orig, T).
 new_of[code](E, Name, File) :- construct[value](E), at[tree](E, File, _), callee[value](E, N),
-                               ast_node[code](N, identifier, _), ast_name[code](N, Name).
+                               ref[value](N, Name).
 declared[flow](E, T)     :- cast[code](E), names_type[flow](E, T).
 declared_lib[flow](E, P) :- cast[code](E), names_lib[flow](E, P).
 cast[code](E)            :- ast_node[code](E, tsas_expression, _).
@@ -949,7 +948,7 @@ imports(code, surface).
 call_spreads[code](C) :- spread_args[value](C, _, _).
 call_passes[code](C, I) :- argument_at[code](C, I, _).
 
-param_defaulted[code](F, I) :- ast_child[code](F, params, I, P), ast_node[code](P, assignment_pattern, _).
+param_defaulted[code](F, I) :- param_wrap[code](F, I, _, _).
 
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "&&").
 param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "||").

@@ -50,6 +50,7 @@ Reads:
   - <a id="binary"></a>`binary`
   - <a id="frozen"></a>`frozen`
   - <a id="object"></a>`object`
+  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
@@ -122,7 +123,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
 | <a id="noun-invocation"></a>an invocation | a node of one of the kinds `call_expression`, `optional_call_expression`, `new_expression` (`call_like_v`) |
 | <a id="noun-literal"></a>a literal | a node of one of the kinds `string_literal`, `numeric_literal`, `boolean_literal`, `big_int_literal` (`literal_kind`) |
-| <a id="noun-logical"></a>a logical | a node of kind `logical_expression` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
@@ -143,7 +143,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="ident_in"></a>An [identifier](#noun-identifier) reads Name in File if it is in file File and it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
-- <a id="interpolated"></a>A node is interpolated if some node [is among the](#ast_child) `expressions` of it.
 - <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
 - <a id="named_decl"></a>A node declares the name Name in File if it [carries its own name](#own_name) Name and File and `around`.
 - <a id="decl_region"></a>D is scoped to a [scope](#scope_node) R if D [climbs from](#up_d) R.
@@ -196,8 +195,8 @@ A node E may be the literal N either:
 In the code:
 
 <a id="undef_binder"></a>`undef_binder`(D) if all of:
-  - a node D [declares without a value](#bare_binder) some name in some file;
-  - D [is among the](#ast_child) `declarations` of a node V;
+  - D [declares without a value](#bare_binder) some name in some file;
+  - [`parent`](#parent)(V, D);
   - unless [`iterates`](#iterates)(something, V, something);
   - unless [`enumerates`](#enumerates)(something, V, something).
 
@@ -213,6 +212,8 @@ A node may be the literal `undefined` if all of:
 > strings and a partial answer is wrong where silence is right (w_concat_value).
 
 In the code:
+
+<a id="interpolated"></a>T is interpolated if [`template`](#template)(T) and [`nth`](#nth)(T, something, something).
 
 In the flow:
 
@@ -354,11 +355,7 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 
 1. if [the region](#binder_region) of D is S and D [introduces](#binds_name) Name in File;
 2. if [`param_bound`](#param_bound)(S, Name) and [`at`](#at)(S, File, something);
-3. if all of:
-   - S is a [function](js-callgraph.rofl.md#fn_node);
-   - S [is of kind](js-model.rofl.md#ast_node) K in file File;
-   - K differs from `arrow_function_expression`;
-   - Name is "arguments";
+3. if [`binds`](#binds)(S, "arguments"), [`at`](#at)(S, File, something), and Name is "arguments";
 4. if D [declares the name](#named_decl) Name in File and D [is scoped to](#decl_region) S;
 5. if S [declares its caught name](#catch_names) Name in File;
 6. if all of:
@@ -878,13 +875,23 @@ A node points to a node N if all of:
 > A defaulted parameter has an index (the `left` of its `assignment_pattern`)
 > and a default that reaches the body.
 
+In the code:
+
+<a id="param_wrap"></a>`param_wrap`(F, I, W, L) if all of:
+  - [`param`](#param)(F, I, L);
+  - [`parent`](#parent)(F, W);
+  - [`assign`](#assign)(W, L, something);
+  - [`parent`](#parent)(W, L).
+
+In the flow:
+
 A [function](js-callgraph.rofl.md#fn_node)
 
-- <a id="param_of"></a>takes Name at an index I if an [assignment pattern](#noun-assignment_pattern) P is the I-th of the `params` of it and the `left` of P [is named](js-structure.rofl.md#ast_name) Name.
+- <a id="param_of"></a>takes Name at an index I if [`param_wrap`](#param_wrap)(it, I, something, L) and a node L [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="param_default"></a>defaults Name to a node Init if all of:
-  - an [assignment pattern](#noun-assignment_pattern) P [is among the](#ast_child) `params` of it;
-  - the `left` of P [is named](js-structure.rofl.md#ast_name) Name;
-  - the `right` of P is Init.
+  - [`param_wrap`](#param_wrap)(it, something, P, L);
+  - a node L [is named](js-structure.rofl.md#ast_name) Name;
+  - [`assign`](#assign)(P, L, Init).
 
 A node
 
@@ -913,8 +920,7 @@ In the code:
    - P is an [object pattern](#noun-object_pattern);
 2. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - an [assignment pattern](#noun-assignment_pattern) X is the I-th of the `params` of F;
-   - the `left` of X is P;
+   - [`param_wrap`](#param_wrap)(F, I, something, P);
    - P is an [object pattern](#noun-object_pattern).
 
 <a id="param_prop"></a>`param_prop`(F, I, Key, Local, Prop) if all of:
@@ -1082,15 +1088,13 @@ In the code:
 <a id="main_is_module"></a>`main_is_module`(T, Op) either:
 
 1. if all of:
-   - T is a [binary expression](#noun-binary_expression);
-   - T is in file File;
-   - [`binary`](#binary)(T, Op, L, R) in the value;
+   - [`bin_op`](#bin_op)(T, Op, L, R);
+   - [`at`](#at)(T, File, something);
    - [`require_main`](#require_main)(L);
    - a node R [refers to the free](#free_global) "module" in File;
 2. if all of:
-   - T is a [binary expression](#noun-binary_expression);
-   - T is in file File;
-   - [`binary`](#binary)(T, Op, L, R) in the value;
+   - [`bin_op`](#bin_op)(T, Op, L, R);
+   - [`at`](#at)(T, File, something);
    - [`require_main`](#require_main)(R);
    - a node L [refers to the free](#free_global) "module" in File.
 
@@ -1641,9 +1645,10 @@ In the code:
    - [`keyed_key_arg`](#keyed_key_arg)(P, X);
 3. if [`keyed_want`](#keyed_want)(E) and [`keyed_src`](#keyed_src)(E, X).
 
-<a id="keyed_param"></a>`keyed_param`(an [identifier](#noun-identifier) U, G, Pos) if all of:
+<a id="keyed_param"></a>`keyed_param`(U, G, Pos) if all of:
   - [`keyed_want`](#keyed_want)(U);
-  - G [uses](#param_use) Name at U;
+  - [`ref`](#ref)(U, something) in the value;
+  - G [uses](#param_use) Name at a node U;
   - G [takes](#param_of) Name at Pos.
 
 <a id="keyed_bound"></a>`keyed_bound`(E) either:
@@ -1658,18 +1663,18 @@ In the code:
 
 1. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - E is an [identifier](#noun-identifier);
-   - E [sees](#sees_binder) D;
+   - [`ref`](#ref)(E, something) in the value;
+   - a node E [sees](#sees_binder) D;
    - D [binds](#binder) some name to a node I in some file;
 2. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - E is an [identifier](#noun-identifier);
-   - E [sees](#sees_binder) D;
+   - [`ref`](#ref)(E, something) in the value;
+   - a node E [sees](#sees_binder) D;
    - X [is written into](#assign_binder) D;
    - [`assigned`](#assigned)(X, something, something, I, something);
 3. if all of:
    - [`keyed_param`](#keyed_param)(E, G, something);
-   - G [uses](#param_use) Name at E;
+   - G [uses](#param_use) Name at a node E;
    - X [is written into a parameter of](#assign_param) G;
    - [`assigned`](#assigned)(X, something, Name, I, something).
 
@@ -1682,14 +1687,8 @@ In the code:
 `keyed_src`(U, Y) either:
 
 1. if [`keyed_arg`](#keyed_arg)(U, something, something, Y);
-2. if all of:
-   - [`keyed_want`](#keyed_want)(U);
-   - U is a [binary expression](#noun-binary_expression);
-   - [`binary`](#binary)(U, "+", Y, something) in the value;
-3. if all of:
-   - [`keyed_want`](#keyed_want)(U);
-   - U is a [binary expression](#noun-binary_expression);
-   - [`binary`](#binary)(U, "+", something, Y) in the value;
+2. if [`keyed_want`](#keyed_want)(U) and [`bin_op`](#bin_op)(U, "+", Y, something);
+3. if [`keyed_want`](#keyed_want)(U) and [`bin_op`](#bin_op)(U, "+", something, Y);
 4. if [`keyed_want`](#keyed_want)(U), [`template`](#template)(U), and [`nth`](#nth)(U, something, Y).
 
 Declared as facts:
@@ -1778,7 +1777,7 @@ In the code:
    - unless [the attribute](#ast_attr) `operator` of E is "+";
 3. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - E is an [identifier](#noun-identifier);
+   - [`ref`](#ref)(E, something) in the value;
    - unless [`keyed_bound`](#keyed_bound)(E);
 4. if [`keyed_param`](#keyed_param)(E, G, something) and [`keyed_escapes`](#keyed_escapes)(G);
 5. if all of:
@@ -1818,14 +1817,15 @@ In the code:
   - unless [`keyed_open`](#keyed_open)(X).
 
 <a id="keyed_const_name"></a>`keyed_const_name`(C, Dk) if all of:
-  - [`keyed_key_arg`](#keyed_key_arg)(C, an [identifier](#noun-identifier) X);
-  - X [sees](#sees_binder) Dk;
+  - [`keyed_key_arg`](#keyed_key_arg)(C, X);
+  - [`ref`](#ref)(X, something) in the value;
+  - a node X [sees](#sees_binder) Dk;
   - [`decl`](#decl)(Dk, `const`).
 
 <a id="keyed_param_name"></a>`keyed_param_name`(C, G, Name) if all of:
-  - [`keyed_key_arg`](#keyed_key_arg)(C, an [identifier](#noun-identifier) X);
-  - X [is named](js-structure.rofl.md#ast_name) Name;
-  - X [finds its name in](#name_scope) Name in some file G;
+  - [`keyed_key_arg`](#keyed_key_arg)(C, X);
+  - [`ref`](#ref)(X, Name) in the value;
+  - a node X [finds its name in](#name_scope) Name in some file G;
   - [`param`](#param)(G, something, an [identifier](#noun-identifier) Pa);
   - [`parent`](#parent)(G, Pa);
   - Pa [is named](js-structure.rofl.md#ast_name) Name.
@@ -1984,7 +1984,7 @@ In the code:
    - some class [has the method](#class_method_of) G;
    - [`object_of`](js-structure.rofl.md#object_of)(E, T);
    - [`this`](#this)(T);
-2. if [`keyed_named_fn`](#keyed_named_fn)(something, E) and E is an [identifier](#noun-identifier).
+2. if [`keyed_named_fn`](#keyed_named_fn)(something, E) and [`ref`](#ref)(E, something) in the value.
 
 <a id="keyed_escapes"></a>`keyed_escapes`(G) either:
 
@@ -3105,10 +3105,9 @@ In the surface:
 `sx_mwrite`(O, Key, V) if all of:
   - a node Obj [points to](js-concat.rofl.md#may_be_node) a node O;
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
-  - a node L [selects](#selects) Key;
-  - the `left` of a node X is L;
+  - L [selects](#selects) Key;
+  - [`assign`](#assign)(X, L, V);
   - X [is plain](#plain_assign);
-  - the `right` of X is a node V;
   - unless [`store_sym`](js-surface.rofl.md#store_sym)(X).
 
 In the flow:
@@ -3493,7 +3492,9 @@ The member Key of a node CD holds a node V if CD [has the field](#field_of) Key 
 
 A class owns the key Key if it [has the field](#field_of) Key at some node holding some node.
 
-The static/instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `true`/`false`.
+The static member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [`static`](#static)(P).
+
+The instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `false`.
 
 > Walks FIELDS and not members: written over `class_member_proto` it inherited
 > methods a second way and silently disarmed the mutant guarding the method arm.
@@ -3768,9 +3769,9 @@ In the flow:
 1. if P [is the module object of](#module_object) File;
 2. if all of:
    - a node L [is module exports in](#cjs_module_exports) File;
-   - the `left` of a node X is L;
+   - [`assign`](#assign)(X, L, R);
    - X [is plain](#plain_assign);
-   - the `right` of X [points to](js-concat.rofl.md#may_be_node) P.
+   - a node R [points to](js-concat.rofl.md#may_be_node) P.
 
 A node M points to a node V either:
 
@@ -4085,13 +4086,13 @@ Declared as facts:
 > values the corpus does not build: each plain parameter is an external value
 > of the callee's origin, read wherever the parameter is.
 
-<a id="callback_param"></a>An [identifier](#noun-identifier) is called back with in F from a module Spec if all of:
-  - [`sx_cb`](js-surface.rofl.md#sx_cb)(F, Spec);
-  - [`param`](#param)(F, something, it);
-  - [`parent`](#parent)(F, it).
-
 A node
 
+- <a id="callback_param"></a>is called back with in F from a module Spec if all of:
+  - [`sx_cb`](js-surface.rofl.md#sx_cb)(F, Spec);
+  - [`param`](#param)(F, something, it);
+  - [`parent`](#parent)(F, it);
+  - [`binds`](#binds)(it, something).
 - comes out of a module Spec if it [is called back with](#callback_param) in some function from Spec.
 - points to a node P if all of:
   - P [is called back with](#callback_param) in F from some module;
@@ -4281,12 +4282,13 @@ A node Y points to a node X either:
    - GC [makes a generator of](#gen_of) F;
    - F [yields](#yields) E.
 
+D takes its value from a node E if all of:
+  - [`iterates`](#iterates)(S, V, X);
+  - [`nth`](#nth)(V, 0, D);
+  - a node X [has an element](#iter_elem) E.
+
 A node
 
-- takes its value from a node E if all of:
-  - [`iterates`](#iterates)(S, V, X);
-  - the `declarations` of a node V is it;
-  - a node X [has an element](#iter_elem) E.
 - points to a node N if all of:
   - D [declares without a value](#bare_binder) Name in File;
   - D [takes its value from](#decl_value) a node E;
@@ -4300,27 +4302,39 @@ A node
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
 
-E points to a node N if all of:
-  - a node X [points to](js-concat.rofl.md#may_be_node) N;
-  - the `left` or `right` of E is X;
-  - E is a [logical](#noun-logical).
+A node E points to a node N either:
 
-E may be the literal V if all of:
-  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
-  - the `left` or `right` of E is X;
-  - E is a [logical](#noun-logical).
+1. if a node X [points to](js-concat.rofl.md#may_be_node) N and [`logic_op`](#logic_op)(E, something, X, something);
+2. if a node X [points to](js-concat.rofl.md#may_be_node) N and [`logic_op`](#logic_op)(E, something, something, X).
+
+A node E may be the literal V either:
+
+1. if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and [`logic_op`](#logic_op)(E, something, X, something);
+2. if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and [`logic_op`](#logic_op)(E, something, something, X).
 
 <a id="plain_assign"></a>E is plain if [`assign`](#assign)(E, something, R) and [`gives`](#gives)(E, R).
+
+> an operator written between operands, not an assignment with an operator
+
+In the code:
+
+<a id="bin_op"></a>`bin_op`(E, Op, L, R) if [`binary`](#binary)(E, Op, L, R) in the value, unless [`assign`](#assign)(E, something, something).
+
+<a id="logic_op"></a>`logic_op`(E, Op, L, R) if [`logical`](#logical)(E, Op, L, R), unless [`assign`](#assign)(E, something, something).
+
+<a id="un_op"></a>`un_op`(E, Op, X) if [`unary`](#unary)(E, Op, X), unless [`assign`](#assign)(E, something, something).
+
+In the flow:
 
 A node
 
 - points to a node N if all of:
   - a node X [points to](js-concat.rofl.md#may_be_node) N;
-  - the `right` of it is X;
+  - [`assign`](#assign)(it, something, X);
   - it [is plain](#plain_assign).
 - may be the literal V if all of:
   - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
-  - the `right` of it is X;
+  - [`assign`](#assign)(it, something, X);
   - it [is plain](#plain_assign).
 
 > The crossings this layer performs: the scanner's tree, the unperspectived

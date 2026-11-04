@@ -186,7 +186,7 @@ param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, 
 -- what the call is.
 call_returns[flow](F, E) :- returns[flow](F, E), not generator[value](F).
 param_read[flow](F, I, E) :- param_use[flow](F, Name, E), param_of[flow](F, I, Name),
-                             param[value](F, I, P), parent[tree](F, P), ast_node[code](P, identifier, _),
+                             param[value](F, I, P), parent[tree](F, P), binds[value](P, _),
                              not param_assigned[flow](F, Name), not sees_binder[code](E, _).
 ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_read[flow](F, I, E).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
@@ -208,10 +208,10 @@ sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), generator[value](F), may_be_
 -- ---------------------------------------------------------------- what a call writes
 -- `o[k] = v` with k and v the function's own parameters (`on(name, handler)`): at a call, THAT call's value under
 -- THAT call's key, not every value under every key.
-store_pkey[flow](F, J, I, A) :- plain_assign[flow](A), ast_child[code](A, left, 0, L), computed_key[code](L, Q),
-                                param_read[flow](F, J, Q), ast_child[code](A, right, 0, V), param_read[flow](F, I, V).
+store_pkey[flow](F, J, I, A) :- assign[value](A, L, V), plain_assign[flow](A), computed_key[code](L, Q),
+                                param_read[flow](F, J, Q), param_read[flow](F, I, V).
 store_sym[flow](A) :- store_pkey[flow](_, _, _, A).
-sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), ast_child[code](A, left, 0, L),
+sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), assign[value](A, L, _),
                                       object_of[code](L, Obj), may_be_node[flow](Obj, O).
 sx_mwrite[surface](O, K, A) :- sx_store_pkey[surface](F, J, I, O), resolves[code](C, F),
                                arg_at[flow](C, J, B), may_be_lit[flow](B, K), arg_at[flow](C, I, A).
