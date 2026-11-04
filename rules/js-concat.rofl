@@ -41,7 +41,7 @@
 -- =========================================================================
 -- 1. THE STRINGS THE PROGRAM HOLDS — what makes a `+` a concatenation.
 str_value[flow](V) :- ast_node[code](N, string_literal, _), ast_value[code](N, V).
-str_value[flow](V) :- ast_attr[code](Q, value_cooked, V).
+str_value[flow](V) :- template_part[value](_, I, Q), literal[value](Q, V), R is I mod 2, R = 0.
 str_value[flow](V) :- path_cut[flow](_, V).
 
 -- =========================================================================
@@ -194,8 +194,7 @@ parts[flow](C, 1, R) :- cshape[flow](C, plus), plus_site[code](C, _, R).
 
 parts[flow](T, I, X) :- cshape[flow](T, raw), template[value](T), nth[tree](T, K, X), I is 2 * K + 1.
 
-part_lit[flow](T, I, V) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _),
-                           ast_child[code](T, quasis, K, Q), ast_attr[code](Q, value_cooked, V), I is 2 * K.
+part_lit[flow](T, I, V) :- cshape[flow](T, raw), template_part[value](T, I, X), literal[value](X, V).
 
 -- Every argument or none: a spread hides where the rest are.
 whole_args[flow](C) :- vlib_op[flow](C, _, _), not spread_arg[code](C, _).
