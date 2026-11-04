@@ -114,6 +114,8 @@ pub struct Delta {
     pub components: usize,
     /// facts a rule answered on demand concluded at a call, taken out with the calls that made them
     pub demanded: usize,
+    /// the fact taken out by the set's pass (`retract_set`) where this one is not worked out, and what it did
+    pub set: Option<Box<AddDelta>>,
 }
 
 /// The rules that read what a retraction changes (`consumer_rules`).

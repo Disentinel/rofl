@@ -163,7 +163,7 @@ check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_beside_a
 check[checks]("rust/rofl/tests/incremental.rs", "a_cell_read_again_beside_its_own_retraction_is_read_again_whole", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_read_again_whole_that_concludes_what_a_changed_cell_concludes_is_the_same", test).
 check[checks]("rust/rofl/tests/incremental.rs", "the_median_the_quantile_and_the_threshold_are_derived_again", test).
-check[checks]("rust/rofl/tests/incremental.rs", "an_aggregate_after_one_that_may_leave_no_solution_is_evaluated_again_and_is_the_same", test).
+check[checks]("rust/rofl/tests/incremental.rs", "an_aggregate_after_one_that_may_leave_no_solution_is_taken_by_the_sets_pass_and_is_the_same", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_shared_group_is_evaluated_again_by_name", test).
 check[checks]("rust/rofl/tests/incremental.rs", "correlated_aggregates_and_overflow_are_evaluated_again_and_are_the_same", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_counting_tag_subtracts_the_derivations_a_fact_made", test).
@@ -248,7 +248,7 @@ check[checks]("rust/rofl/tests/prov_lazy.rs", "a_sealed_world_notes_nothing", te
 check[checks]("rust/rofl/tests/prov_lazy.rs", "why_of_a_derived_by_row_and_a_fork_see_the_rows", test).
 check[checks]("rust/rofl/tests/resume.rs", "a_resumed_evaluation_is_a_whole_one", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_another_book_does_not_stop_the_delta", test).
-check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_the_same_book_still_refuses", test).
+check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_the_same_book_is_taken_by_the_sets_pass", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "the_engine_delta_refuses_two_facts_at_once", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_set_taken_out_in_one_pass_is_the_fresh_world", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "random_js_steps_1", test).

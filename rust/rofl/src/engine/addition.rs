@@ -516,6 +516,10 @@ impl Eval {
         if self.vc.any && self.store.vciters.is_none() {
             self.vindex_citers();
         }
+        // a base fact a rule concludes too loses its firings with it, and their rows (it is derived again at its level
+        // where a rule still makes it)
+        let fired: Vec<FactId> = facts.iter().copied().filter(|f| !self.store.firings(*f).is_empty()).collect();
+        self.withdraw_unswept(&fired, |_, _| true);
         self.store.remove_many(&all);
         self.worked_out_beside_holes(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[])
     }
@@ -759,7 +763,86 @@ impl Eval {
         for lv in levels {
             self.fine_level(lv, plan, &mut st, d)?;
         }
+        self.drop_unreached_cells(&st)?;
         self.settle_thresholds(&st.news)
+    }
+
+    /// A CELL WHOSE CORRELATION THE RULE NO LONGER REACHES goes: a fresh evaluation asks an aggregate only where the
+    /// premises before it bind its correlation. The cells looked at are those whose correlation a fact gone binds
+    /// through a premise before the aggregate, or a fact come through a negated one.
+    fn drop_unreached_cells(&mut self, st: &Fine) -> Result<(), Halt> {
+        let mut by: HashMap<Sym, Vec<FactId>> = HashMap::new();
+        for &f in st.over.iter().chain(&st.over_base).filter(|f| !self.store.alive(**f)) {
+            by.entry(self.store.rec(f).rel).or_default().push(f);
+        }
+        let came = &st.news.by_rel;
+        if by.is_empty() && came.is_empty() {
+            return Ok(());
+        }
+        // (rule, at, the correlation as far as the fact binds it)
+        let mut wanted: Vec<(Sym, u32, Vec<Option<Term>>)> = Vec::new();
+        for r in self.rules.iter().filter(|r| r.has_agg) {
+            for (i, b) in r.plan.iter().enumerate() {
+                let BodyElem::Agg(a) = b else { continue };
+                let Some(p) = self.agg_plans.get(&(r.id, a.at)) else { continue };
+                for e in &r.plan[..i] {
+                    let facts: Vec<FactId> = match e {
+                        BodyElem::Pos(l) => by.get(&l.rel).cloned().unwrap_or_default(),
+                        BodyElem::Neg(l) => came.get(&l.rel).map(|s| s.iter().copied().collect()).unwrap_or_default(),
+                        _ => continue,
+                    };
+                    let l = e.lit().unwrap();
+                    for g in facts {
+                        let args = self.store.args(g);
+                        if args.len() != l.args.len() {
+                            continue;
+                        }
+                        let mut s = Some(Subst::new());
+                        for (x, y) in l.args.iter().zip(args) {
+                            s = s.and_then(|s| unify(&self.h, *x, *y, &s));
+                        }
+                        let Some(s) = s else { continue };
+                        let corr: Vec<Option<Term>> = p.corr.iter().map(|&j| Some(walk(&self.h, Term::var(a.shared[j]), &s)).filter(|t| self.h.is_ground(*t))).collect();
+                        wanted.push((r.id, a.at, corr));
+                    }
+                }
+            }
+        }
+        if wanted.is_empty() {
+            return Ok(());
+        }
+        let mut cells: Vec<CellId> = Vec::new();
+        for (k, cs) in &self.memo.agg_memo {
+            if wanted.iter().any(|(r, at, corr)| k.0 == *r && k.1 == *at && k.2.len() == corr.len() && k.2.iter().zip(corr).all(|(x, c)| c.is_none_or(|c| *x == c))) {
+                cells.extend(cs.iter().copied());
+            }
+        }
+        cells.sort_unstable();
+        cells.dedup();
+        let mut gone: Vec<CellId> = Vec::new();
+        for c in cells {
+            if self.store.cell_dead(c) {
+                continue;
+            }
+            let CellOwner::Body { rule, at } = self.store.cell(c).owner;
+            let Some(r) = self.rule_of(rule) else { continue };
+            let Some(i) = r.plan.iter().position(|b| matches!(b, BodyElem::Agg(a) if a.at == at)) else { continue };
+            let BodyElem::Agg(a) = &r.plan[i] else { unreachable!() };
+            let Some(p) = self.agg_plans.get(&(rule, at)).cloned() else { continue };
+            let key = self.store.cell(c).key.clone();
+            let s: Subst = p.corr.iter().map(|&j| (a.shared[j], key[j])).collect();
+            let corr: Box<[Term]> = p.corr.iter().map(|&j| key[j]).collect();
+            let before: Vec<usize> = (0..i).collect();
+            if self.solve_bound(&r, &before, None, vec![s])?.is_empty() {
+                let mk = (rule, at, corr);
+                self.memo.agg_memo.remove(&mk);
+                self.memo.reach_memo.remove(&mk);
+                self.cells.agg_opened.remove(&mk);
+                gone.push(c);
+            }
+        }
+        self.kill_cells(&gone);
+        Ok(())
     }
 
     /// The state a fine addition starts from: the news of the added facts, the rules by head that fire here (those of
@@ -1808,3 +1891,4 @@ impl LatticeState {
         true
     }
 }
+
