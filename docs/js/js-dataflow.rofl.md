@@ -25,7 +25,7 @@ Reads:
 
 - from facts/js-globals.rofl, in the main:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
-- from js-callgraph: [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
+- from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [hidden_call_pos](js-controlflow.rofl.md#hidden_call_pos), [in_fn](js-controlflow.rofl.md#in_fn)
@@ -45,13 +45,15 @@ Reads:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
   - <a id="program"></a>`program`
+- from outside these files, in the type:
+  - <a id="binary"></a>`binary`
+  - <a id="object"></a>`object`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
   - <a id="async"></a>`async`
   - <a id="awaits"></a>`awaits`
-  - <a id="binary"></a>`binary`
   - <a id="binds"></a>`binds`
   - <a id="body"></a>`body`
   - <a id="callee"></a>`callee`
@@ -74,7 +76,6 @@ Reads:
   - <a id="member_expr"></a>`member_expr`
   - <a id="module_ref"></a>`module_ref`
   - <a id="namespace"></a>`namespace`
-  - <a id="object"></a>`object`
   - <a id="param"></a>`param`
   - <a id="private"></a>`private`
   - <a id="rest_params"></a>`rest_params`
@@ -97,7 +98,7 @@ Reads:
   - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: expression_statement, tsenum_body, tsparameter_property.
+Kinds without a noun: expression_statement.
 
 ## Words
 
@@ -360,10 +361,12 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 4. if D [declares the name](#named_decl) Name in File and D [is scoped to](#decl_region) S;
 5. if S [declares its caught name](#catch_names) Name in File;
 6. if all of:
-   - S is a tsenum_body node;
-   - S is in file File;
-   - a node M [is among the](#ast_child) `members` of S;
+   - [`decl`](#decl)(E, `enum`);
+   - [`has`](#has)(E, M);
    - [`key`](#key)(M, Name);
+   - [`parent`](#parent)(S, M);
+   - [`parent`](#parent)(E, S);
+   - [`at`](#at)(S, File, something);
 7. if S [carries its own name](#own_name) Name and File and `itself`.
 
 > A function or class declaration declares its name in the scope around it,
@@ -1083,13 +1086,13 @@ In the code:
 1. if all of:
    - T is a [binary expression](#noun-binary_expression);
    - T is in file File;
-   - [`binary`](#binary)(T, Op, L, R);
+   - [`binary`](#binary)(T, Op, L, R) in the value;
    - [`require_main`](#require_main)(L);
    - a node R [refers to the free](#free_global) "module" in File;
 2. if all of:
    - T is a [binary expression](#noun-binary_expression);
    - T is in file File;
-   - [`binary`](#binary)(T, Op, L, R);
+   - [`binary`](#binary)(T, Op, L, R) in the value;
    - [`require_main`](#require_main)(R);
    - a node L [refers to the free](#free_global) "module" in File.
 
@@ -1197,8 +1200,11 @@ F takes Name at an index I either:
    - a node P [is named](js-structure.rofl.md#ast_name) Name;
 2. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
-   - a tsparameter_property node P is the I-th of the `params` of F;
-   - the `parameter` of P [is named](js-structure.rofl.md#ast_name) Name.
+   - [`param`](#param)(F, I, X);
+   - [`parent`](#parent)(P, X);
+   - [`parent`](#parent)(F, P);
+   - [`has`](#has)(something, P);
+   - [`binds`](#binds)(X, Name).
 
 > A rest parameter is an array of the arguments from its index on: element K
 > of `...args` at J is the argument at J + K of every call of the function,
@@ -1678,11 +1684,11 @@ In the code:
 2. if all of:
    - [`keyed_want`](#keyed_want)(U);
    - U is a [binary expression](#noun-binary_expression);
-   - [`binary`](#binary)(U, "+", Y, something);
+   - [`binary`](#binary)(U, "+", Y, something) in the value;
 3. if all of:
    - [`keyed_want`](#keyed_want)(U);
    - U is a [binary expression](#noun-binary_expression);
-   - [`binary`](#binary)(U, "+", something, Y);
+   - [`binary`](#binary)(U, "+", something, Y) in the value;
 4. if [`keyed_want`](#keyed_want)(U), [`template`](#template)(U), and [`nth`](#nth)(U, something, Y).
 
 Declared as facts:
@@ -3050,7 +3056,7 @@ A node U may be the literal L either:
 
 In the code:
 
-<a id="obj_lit"></a>`obj_lit`(O) if [`object`](#object)(O), unless [`decl`](#decl)(O, `enum`).
+<a id="obj_lit"></a>`obj_lit`(O) if [`object`](#object)(O) in the value, unless [`decl`](#decl)(O, `enum`).
 
 > the members of an object literal: a property holds a value, a method is itself a function
 
@@ -4112,7 +4118,8 @@ The member Name of a node NS holds a node D if all of:
   - [`namespace`](#namespace)(NS, B);
   - [`has`](#has)(B, I);
   - [`target`](#target)(D, I);
-  - D [carries its own name](#own_name) Name and some file and `around` but is not a tsdeclare_function node.
+  - D [carries its own name](#own_name) Name and some file and `around`;
+  - unless [`bodiless`](js-callgraph.rofl.md#bodiless)(D).
 
 The member Name of a node NS holds a node Init if all of:
   - [`ts_namespace`](#ts_namespace)(NS);
@@ -4123,7 +4130,7 @@ The member Name of a node NS holds a node Init if all of:
 
 The member Name of a node NS holds a node In if all of:
   - [`ts_namespace`](#ts_namespace)(NS);
-  - the `body` of NS is In;
+  - [`parent`](#parent)(NS, In);
   - In [carries its own name](#own_name) Name and some file and `around`.
 
 ## 12. Construction

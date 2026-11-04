@@ -43,13 +43,14 @@ Reads:
   - <a id="at"></a>`at`
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
-- from outside these files, in the value:
+- from outside these files, in the type:
   - <a id="binary"></a>`binary`
+  - <a id="extends"></a>`extends`
+- from outside these files, in the value:
   - <a id="class"></a>`class`
   - <a id="construct"></a>`construct`
   - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
-  - <a id="extends"></a>`extends`
   - <a id="repeats"></a>`repeats`
   - <a id="static_block"></a>`static_block`
   - <a id="template"></a>`template`
@@ -608,14 +609,14 @@ In the code:
 
 <a id="eff_op_inspects"></a>A node N inspects either:
 
-1. if [`binary`](#binary)(N, "===" or "!==", something, something);
+1. if [`binary`](#binary)(N, "===" or "!==", something, something) in the value;
 2. if [`unary`](#unary)(N, "typeof" or "void" or "!", something).
 
 In the flow:
 
 <a id="eff_op_beyond"></a>A node N runs the hook E either:
 
-1. if [`binary`](#binary)(N, "instanceof", something, something) and E is `has_instance`;
+1. if [`binary`](#binary)(N, "instanceof", something, something) in the value and E is `has_instance`;
 2. if [`unary`](#unary)(N, "delete", something) and E is `delete_own`.
 
 In the code:
@@ -844,7 +845,7 @@ A class
 > kind that carries no such attribute (private members) —
 > `attr_blind_guard[audit]` said so in one run.
 
-A class defines by running a node S if [`extends`](#extends)(it, S).
+A class defines by running a node S if [`extends`](#extends)(it, S) in the value.
 
 In the code:
 

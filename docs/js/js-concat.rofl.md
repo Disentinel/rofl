@@ -59,12 +59,13 @@ Reads:
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="nth"></a>`nth`
+- from outside these files, in the type:
+  - <a id="binary"></a>`binary`
+  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
-  - <a id="binary"></a>`binary`
   - <a id="callee"></a>`callee`
   - <a id="construct"></a>`construct`
-  - <a id="ref"></a>`ref`
   - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
 - from the scanner, in the code:
@@ -115,7 +116,7 @@ In the flow:
 
 In the code:
 
-<a id="plus_site"></a>`plus_site`(C, L, R) if [`binary`](#binary)(C, "+", L, R).
+<a id="plus_site"></a>`plus_site`(C, L, R) if [`binary`](#binary)(C, "+", L, R) in the value.
 
 <a id="plus_operand"></a>`plus_operand`(C, X) either:
 
@@ -144,9 +145,9 @@ In the flow:
 In the code:
 
 <a id="plus_assign"></a>`plus_assign`(X, L, Name, File) if all of:
-  - [`binary`](#binary)(X, "+", L, something);
+  - [`binary`](#binary)(X, "+", L, something) in the value;
   - [`assign`](#assign)(X, L, X);
-  - [`ref`](#ref)(L, Name);
+  - [`ref`](#ref)(L, Name) in the value;
   - [`at`](#at)(X, File, something).
 
 In the flow:
@@ -170,7 +171,7 @@ In the surface:
 
 <a id="sx_mwrite"></a>`sx_mwrite`(O, Key, X) if all of:
   - [`composed`](#composed)(X);
-  - [`binary`](#binary)(X, "+", L, something);
+  - [`binary`](#binary)(X, "+", L, something) in the value;
   - [`assign`](#assign)(X, L, X);
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
   - a node Obj [points to](#may_be_node) a node O;

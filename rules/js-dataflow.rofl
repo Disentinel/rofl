@@ -155,8 +155,8 @@ scope_declares[code](F, "arguments", File) :- fn_node[code](F), ast_node[code](F
                                               K != arrow_function_expression.
 scope_declares[code](S, Name, File) :- named_decl[code](D, Name, File), decl_region[code](D, S).
 scope_declares[code](B, Name, File) :- catch_names[code](B, Name, File).
-scope_declares[code](B, Name, File) :- ast_node[code](B, tsenum_body, File), ast_child[code](B, members, _, M),
-                                       key[value](M, Name).
+scope_declares[code](B, Name, File) :- decl[value](E, enum), has[value](E, M), key[value](M, Name),
+                                       parent[tree](B, M), parent[tree](E, B), at[tree](B, File, _).
 scope_declares[code](X, Name, File) :- own_name[code](X, Name, File, itself).
 
 -- A function or class declaration declares its name in the scope around it,
@@ -629,9 +629,8 @@ arg_at[flow](C, I, E)      :- spread_args[value](C, J, A), not after_spread[code
                               elem_at[flow](A, K, E), I is J + K.
 param_of[flow](F, I, Name) :- fn_node[code](F), param[value](F, I, P), parent[tree](F, P),
                               ast_name[code](P, Name).
-param_of[flow](F, I, Name) :- fn_node[code](F), ast_child[code](F, params, I, P),
-                              ast_node[code](P, tsparameter_property, _),
-                              ast_child[code](P, parameter, 0, X), ast_name[code](X, Name).
+param_of[flow](F, I, Name) :- fn_node[code](F), param[value](F, I, X), parent[tree](P, X), parent[tree](F, P),
+                              has[value](_, P), binds[value](X, Name).
 
 -- A rest parameter is an array of the arguments from its index on: element K
 -- of `...args` at J is the argument at J + K of every call of the function,
@@ -1934,10 +1933,10 @@ ns_export[code](NS, E) :- ts_namespace[code](NS), ast_child[code](NS, body, 0, B
                           ast_node[code](E, export_named_declaration, _).
 member_value[flow](NS, Name, D)    :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, I),
                                       target[value](D, I), own_name[code](D, Name, _, around),
-                                      not ast_node[code](D, tsdeclare_function, _).
+                                      not bodiless[code](D).
 member_value[flow](NS, Name, Init) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, I),
                                       assign[value](D, I, _), binder[code](D, Name, Init, _).
-member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), ast_child[code](NS, body, 0, In),
+member_value[flow](NS, Name, In)   :- ts_namespace[code](NS), parent[tree](NS, In),
                                       own_name[code](In, Name, _, around).
 
 -- =========================================================================

@@ -40,6 +40,8 @@ Reads:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
   - <a id="program"></a>`program`
+- from outside these files, in the type:
+  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="binds"></a>`binds`
@@ -52,7 +54,6 @@ Reads:
   - <a id="module_expr"></a>`module_expr`
   - <a id="module_ref"></a>`module_ref`
   - <a id="pattern_prop"></a>`pattern_prop`
-  - <a id="ref"></a>`ref`
   - <a id="spread_props"></a>`spread_props`
   - <a id="target"></a>`target`
   - <a id="value"></a>`value`
@@ -535,11 +536,11 @@ A site
 1. if all of:
    - some node [has the export specifier](#export_spec) Sp;
    - [`value`](#value)(Sp, N);
-   - [`ref`](#ref)(N, L);
+   - [`ref`](#ref)(N, L) in the value;
 2. if all of:
    - some node [has the export specifier](#export_spec) Sp;
    - [`value`](#value)(Sp, N) in the type;
-   - [`ref`](#ref)(N, L);
+   - [`ref`](#ref)(N, L) in the value;
 3. if a node E [has the export specifier](#export_spec) Sp and [`pattern_prop`](#pattern_prop)(E, L, Sp);
 4. if all of:
    - some node [has the export specifier](#export_spec) Sp;
@@ -608,7 +609,7 @@ In the code:
    - [the default declaration](#default_declaration) of E is a node D;
    - [`parent`](#parent)(D, I);
    - [`binds`](#binds)(I, N) in the type;
-3. if [the default declaration](#default_declaration) of E is a node D and [`ref`](#ref)(D, N).
+3. if [the default declaration](#default_declaration) of E is a node D and [`ref`](#ref)(D, N) in the value.
 
 <a id="default_anonymous"></a>A node exports an anonymous default if [the default declaration](#default_declaration) of it is some node, unless it [has a default internal](#has_default_internal).
 
