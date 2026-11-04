@@ -77,6 +77,7 @@ Reads:
   - <a id="enumerates"></a>`enumerates`
   - <a id="executes_if"></a>`executes_if`
   - <a id="has"></a>`has`
+  - <a id="hoisted"></a>`hoisted`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
   - <a id="logical"></a>`logical`
@@ -110,7 +111,6 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
-| <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | a function | a node [`fn_node`](#fn_node) holds of |
@@ -950,7 +950,7 @@ In the flow:
 
 <a id="whole_decl"></a>`whole_decl`(F) either:
 
-1. if F is a [function declaration](#noun-function_declaration);
+1. if [`hoisted`](#hoisted)(F, something) and F is a [function](#fn_node);
 2. if [`class_or_namespace`](js-dataflow.rofl.md#class_or_namespace)(F).
 
 <a id="many_binders"></a>`many_binders`(E) either:

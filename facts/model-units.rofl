@@ -1610,6 +1610,9 @@ unit_concludes("models/lang/js/babel-roles.rofl", gives).
 unit_concludes("models/lang/js/babel-roles.rofl", var_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", target).
 unit_concludes("models/lang/js/babel-roles.rofl", decl_kind).
+unit_concludes("models/lang/js/babel-roles.rofl", hoist_kind).
+unit_concludes("models/lang/js/babel-roles.rofl", b_scope_between).
+unit_concludes("models/lang/js/babel-roles.rofl", hoisted).
 unit_concludes("models/lang/js/babel-roles.rofl", target_field).
 unit_concludes("models/lang/js/babel-roles.rofl", b_tgt).
 unit_concludes("models/lang/js/babel-roles.rofl", b_pat_kid).

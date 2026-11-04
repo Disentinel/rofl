@@ -66,11 +66,10 @@ Reads:
   - <a id="assign"></a>`assign`
   - <a id="callee"></a>`callee`
   - <a id="construct"></a>`construct`
+  - <a id="literal"></a>`literal`
   - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
-- from the scanner, in the code:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+  - <a id="template_part"></a>`template_part`
 
 ## Words
 
@@ -79,7 +78,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
-| <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -91,7 +89,11 @@ Phrases this file defines in one step, each by the sentence it stands for:
 <a id="str_value"></a>`str_value`(V) either:
 
 1. if a [string literal](#noun-string_literal) N [is written as](js-structure.rofl.md#ast_value) V;
-2. if [the attribute](#ast_attr) `value_cooked` of a node Q is V;
+2. if all of:
+   - [`template_part`](#template_part)(something, I, Q);
+   - [`literal`](#literal)(Q, V);
+   - R is mod(I, 2);
+   - R is 0;
 3. if [`path_cut`](#path_cut)(something, V).
 
 ## 2. The language forms.
@@ -440,11 +442,10 @@ In the flow:
    - [`nth`](#nth)(C, K, L);
    - N is 2 * K + 1.
 
-<a id="part_lit"></a>`part_lit`(a [template](#noun-template) T, I, V) if all of:
+<a id="part_lit"></a>`part_lit`(T, I, V) if all of:
   - [`cshape`](#cshape)(T, `raw`);
-  - a node Q is the K-th of the `quasis` of T;
-  - [the attribute](#ast_attr) `value_cooked` of Q is V;
-  - I is 2 * K.
+  - [`template_part`](#template_part)(T, I, X);
+  - [`literal`](#literal)(X, V).
 
 Declared as facts:
 

@@ -71,6 +71,7 @@ Reads:
   - <a id="generator"></a>`generator`
   - <a id="gives"></a>`gives`
   - <a id="has"></a>`has`
+  - <a id="hoisted"></a>`hoisted`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
   - <a id="literal"></a>`literal`
@@ -115,7 +116,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
-| <a id="noun-class_expression"></a>a class expression | a node of kind `class_expression` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
@@ -1137,7 +1137,8 @@ In the code:
 
 1. if all of:
    - E [sees the declaration](#sees_decl) F;
-   - F is a [function declaration](#noun-function_declaration);
+   - [`hoisted`](#hoisted)(F, something);
+   - F is a [function](js-callgraph.rofl.md#fn_node);
    - [`target`](#target)(F, I);
    - E differs from I;
 2. if all of:
@@ -3409,8 +3410,11 @@ A node M points to a node Y either:
 
 1. if [`obj_method`](#obj_method)(something, M) and Y is M;
 2. if some class [has the method](#class_method_of) M and Y is M;
-3. if M is a [function declaration](#noun-function_declaration) and Y is M;
-4. if M [sees the declaration](#sees_decl) Y and Y is a [function declaration](#noun-function_declaration);
+3. if [`hoisted`](#hoisted)(M, something), M is a [function](js-callgraph.rofl.md#fn_node), and Y is M;
+4. if all of:
+   - M [sees the declaration](#sees_decl) Y;
+   - [`hoisted`](#hoisted)(Y, something);
+   - Y is a [function](js-callgraph.rofl.md#fn_node);
 5. if all of:
    - a node X [points to](js-concat.rofl.md#may_be_node) Y;
    - the `value` of M is X;
@@ -4448,7 +4452,10 @@ In the flow:
 A node E points to a node N either:
 
 1. if a node CD [is replaced by its decorator with](#decorated_by) N and E [sees the declaration](#sees_decl) CD;
-2. if E [is replaced by its decorator with](#decorated_by) N and E is a [class expression](#noun-class_expression).
+2. if all of:
+   - E [is replaced by its decorator with](#decorated_by) N;
+   - [`class`](#class)(E);
+   - unless [`hoisted`](#hoisted)(E, something).
 
 <a id="decorated_member"></a>A class has the decorated member Key at a node M replaced with a node N if all of:
   - M [is replaced by its decorator with](#decorated_by) N;

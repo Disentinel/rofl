@@ -627,6 +627,13 @@ decl[value](D, Kind)   :- decl_kind[ast_babel](K, Kind), node[ast_babel](D, K, _
 decl[value](D, function) :- node[ast_babel](D, function_expression, _), child[ast_babel](D, id, 0, _).
 decl[value](D, class)    :- node[ast_babel](D, class_expression, _), child[ast_babel](D, id, 0, _).
 decl[value](P, catch)    :- node[ast_babel](C, catch_clause, _), child[ast_babel](C, param, 0, P).
+-- a function or class declaration exists from the start of the nearest scope around it; a function or class expression does not
+edb(hoist_kind).
+hoist_kind[ast_babel](function_declaration). hoist_kind[ast_babel](class_declaration).
+b_scope_between[ast_babel](X, S) :- hoist_kind[ast_babel](K), node[ast_babel](X, K, _), inside[tree](W, X), mark[value](W, scope),
+                                    inside[tree](S, W).
+hoisted[value](X, S) :- hoist_kind[ast_babel](K), node[ast_babel](X, K, _), inside[tree](S, X), mark[value](S, scope),
+                        not b_scope_between[ast_babel](X, S).
 
 edb(target_field).
 target_field[ast_babel](function_declaration, id). target_field[ast_babel](function_expression, id). target_field[ast_babel](tsdeclare_function, id).

@@ -585,7 +585,7 @@ dead_arm[code](A) :- imported_test[code](T), logical[value](S, "||", T, A),
 dead_in[code](A, C) :- dead_arm[code](A), inside[tree](A, C).
 dead_site[code](C)  :- dead_in[code](_, C), call_like[code](C).
 
-mention[code](F, E)     :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _),
+mention[code](F, E)     :- sees_decl[code](E, F), hoisted[value](F, _), fn_node[code](F),
                            target[value](F, I), E != I.
 mention[code](F, E)     :- sees_binder[code](E, D), binder[code](D, _, F, _), fn_node[code](F),
                            assign[value](D, I, F), E != I.
@@ -1491,9 +1491,9 @@ may_be_lit[flow](N, L)   :- member_at[flow](N, _, Obj, Key), member_plain[flow](
 -- as any name is.
 may_be_node[flow](M, M) :- obj_method[code](_, M).
 may_be_node[flow](M, M) :- class_method_of[flow](_, M).
-may_be_node[flow](M, M) :- ast_node[code](M, function_declaration, _).
+may_be_node[flow](M, M) :- hoisted[value](M, _), fn_node[code](M).
 
-may_be_node[flow](E, F) :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _).
+may_be_node[flow](E, F) :- sees_decl[code](E, F), hoisted[value](F, _), fn_node[code](F).
 
 may_be_node[flow](P, N) :- may_be_node[flow](X, N), ast_child[code](P, value, 0, X), ast_node[code](P, object_property, _).
 may_be_lit[flow](P, V)  :- may_be_lit[flow](X, V), ast_child[code](P, value, 0, X), ast_node[code](P, object_property, _).
@@ -2089,7 +2089,7 @@ catch_unsourced[audit](P) :- catch_of[flow](T, H), catch_param[flow](H, P),
 decorated_by[flow](Owner, N) :- decorates[code](Owner, D), may_be_node[flow](D, N).
 
 may_be_node[flow](E, N) :- decorated_by[flow](CD, N), sees_decl[code](E, CD).
-may_be_node[flow](CD, N) :- decorated_by[flow](CD, N), ast_node[code](CD, class_expression, _).
+may_be_node[flow](CD, N) :- decorated_by[flow](CD, N), class[value](CD), not hoisted[value](CD, _).
 
 decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
                                          class_method[code](CD, M), key_name[code](M, Key).

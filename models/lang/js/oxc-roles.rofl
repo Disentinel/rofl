@@ -304,6 +304,10 @@ decl[value](F, function) :- oxc_k[ast_oxc](F, function), oxc_c[ast_oxc](F, id, 0
 target[value](F, I)      :- oxc_k[ast_oxc](F, function), oxc_c[ast_oxc](F, id, 0, I).
 decl[value](C, class)    :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, id, 0, _).
 target[value](C, I)      :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, id, 0, I).
+hoist_node(X) :- oxc_k[ast_oxc](X, function), oxc_a[ast_oxc](X, type, "FunctionDeclaration").
+hoist_node(X) :- oxc_k[ast_oxc](X, class), oxc_a[ast_oxc](X, type, "ClassDeclaration").
+scope_between(X, S) :- hoist_node(X), inside[tree](W, X), mark[value](W, scope), inside[tree](S, W).
+hoisted[value](X, S) :- hoist_node(X), inside[tree](S, X), mark[value](S, scope), not scope_between(X, S).
 decl[value](T, param)    :- param[value](_, _, T).
 decl[value](T, param)    :- rest_params[value](_, _, T).
 assign[value](P, T, V)   :- oxc_k[ast_oxc](P, formal_parameter), oxc_c[ast_oxc](P, pattern, 0, T), oxc_c[ast_oxc](P, initializer, 0, V).

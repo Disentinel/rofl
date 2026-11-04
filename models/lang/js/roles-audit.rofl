@@ -111,6 +111,8 @@ roled[W](N) :- namespace[W](_, N).
 roled[W](N) :- module_ref[W](N, _).
 roled[W](N) :- module_expr[W](N, _).
 roled[W](N) :- suspends[W](N, _, _).
+roled[W](N) :- hoisted[W](N, _).
+roled[W](N) :- hoisted[W](_, N).
 roled[W](N) :- finalizes[W](N, _).
 roled[W](N) :- finalizes[W](_, N).
 roled[W](N) :- declared[W](N, _).
