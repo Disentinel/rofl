@@ -234,7 +234,7 @@ A node has the effect `div` at `none` if [`eff_loop`](#eff_loop)(it).
 In the code:
 
 <a id="eff_calls"></a>A node has a call to G if all of:
-  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
   - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [`fn_value`](js-surface.rofl.md#fn_value)(G).
 
@@ -427,7 +427,7 @@ In the flow:
 
 F has the latent effect L at a host H if all of:
   - G [has the latent effect](#eff_latent) L at H;
-  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
   - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - unless C [discharges here](#eff_discharged_at) L.
 
@@ -449,7 +449,7 @@ Declared as facts:
 
 <a id="may_throw_only"></a>F may throw without a latent exception if F [may throw](js-controlflow.rofl.md#may_throw), unless F [has the latent effect](#eff_latent) `exn` at `none`.
 
-<a id="eff_swallowed"></a>A node swallows an effect label L at a host H in a node C if all of:
+<a id="eff_swallowed"></a>A node swallows an effect label L at a host H in a call C if all of:
   - C [is caught in place](#eff_catch_here);
   - C [resolves to](js-callgraph.rofl.md#resolves) G;
   - G [has the latent effect](#eff_latent) L at H;
@@ -496,7 +496,7 @@ In the audit:
 <a id="eff_two_names"></a>F has two effects X and B if [the effect](#effect_of) of F is X, [the effect](#effect_of) of F is B, and X differs from B.
 
 <a id="eff_join_short"></a>F is short of the join J with G if all of:
-  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
   - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [the effect](#effect_of) of F is an effect NF;
   - [the effect](#effect_of) of G is an effect NG;
@@ -506,7 +506,7 @@ In the audit:
 
 In the flow:
 
-A node
+A call
 
 - <a id="eff_callee_less"></a>has a callee without a row G of F if all of:
   - it [resolves to](js-callgraph.rofl.md#resolves) G;
@@ -518,8 +518,7 @@ A node
   - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) it;
   - G [has the latent effect](#eff_latent) L at a host H;
   - unless F [has the latent effect](#eff_latent) L at H.
-
-<a id="eff_purer_callee"></a>C calls a purer callee G from F if C [has a callee without a row](#eff_callee_less) G of F, unless C [has a callee with an extra row](#eff_callee_more) G over F.
+- <a id="eff_purer_callee"></a>calls a purer callee G from F if it [has a callee without a row](#eff_callee_less) G of F, unless it [has a callee with an extra row](#eff_callee_more) G over F.
 
 ## 5. THE CONCRETE COLUMN — `http:get` RATHER THAN `io`
 
@@ -528,16 +527,16 @@ A node
 > after all. Derivable with no surface pack: the builtin prototypes; the
 > ambient surfaces add their arms in rules/js-ambient.rofl.
 
-C reaches the surface P if all of:
-  - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+A call
+
+- reaches the surface P if all of:
+  - it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
   - [the prototype](js-dataflow.rofl.md#prototype_of) of a node O is P;
   - P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype).
-
-C performs the operation Key if C [reaches the surface](js-ambient.rofl.md#eff_surface) some surface and [the callee](js-callgraph.rofl.md#callee_of) of C [selects](js-dataflow.rofl.md#selects) Key.
-
-<a id="concrete_effect"></a>C operates on a surface S by an operation Op if C [reaches the surface](js-ambient.rofl.md#eff_surface) S and C [performs the operation](js-ambient.rofl.md#eff_operation) Op.
+- performs the operation Key if it [reaches the surface](js-ambient.rofl.md#eff_surface) some surface and [the callee](js-callgraph.rofl.md#callee_of) of it [selects](js-dataflow.rofl.md#selects) Key.
+- <a id="concrete_effect"></a>operates on a surface S by an operation Op if it [reaches the surface](js-ambient.rofl.md#eff_surface) S and it [performs the operation](js-ambient.rofl.md#eff_operation) Op.
 
 > `ambient_effect(S, Op, E)` is the one TABLE in this column, owned by the
 > surface pack: a `.d.ts` fixes the surface and says nothing about the effect.
@@ -565,7 +564,7 @@ A node has the effect L at a host H if all of:
 
 <a id="concrete_unmapped"></a>A surface is unmapped at an operation Op if some call [operates](#concrete_effect) on it by Op, unless it [has the ambient effect](js-ambient.rofl.md#ambient_effect) some effect at Op.
 
-<a id="eff_call_unattributed"></a>C has no surface if C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape, unless C [operates](#concrete_effect) on some surface by some operation.
+<a id="eff_call_unattributed"></a>A call has no surface if it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape, unless it [operates](#concrete_effect) on some surface by some operation.
 
 In the audit:
 
@@ -725,7 +724,7 @@ In the flow:
    - [`at`](#at)(N, F, something);
    - unless N [is inside a function](js-controlflow.rofl.md#in_fn);
 2. if all of:
-   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - [`at`](#at)(C, F, something);
    - G [has the latent effect](#eff_latent) L at H;
    - unless C [is inside a function](js-controlflow.rofl.md#in_fn).
@@ -791,7 +790,7 @@ In the flow:
 1. if N [destructures through the accessor](js-controlflow.rofl.md#pattern_accessor) M;
 2. if N [iterates with the next](js-controlflow.rofl.md#pattern_next) M.
 
-<a id="eff_edge_closed"></a>A node closes the edge to G if a node C [resolves to](js-callgraph.rofl.md#resolves) G and it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C.
+<a id="eff_edge_closed"></a>A node closes the edge to G if a call C [resolves to](js-callgraph.rofl.md#resolves) G and it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C.
 
 <a id="eff_edge_unclosed"></a>A [function](js-callgraph.rofl.md#fn_node) leaves open the edge to G for an effect label L at a host H if all of:
   - it [calls](js-callgraph.rofl.md#calls) G;

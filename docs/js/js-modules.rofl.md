@@ -73,7 +73,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
 - <a id="has_explicit_shape"></a>A text S has an explicit shape if S [has the explicit shape](#explicit_shape) some shape.
-- A site has a shape if [the site shape](#site_shape) of it is some shape.
+- A call has a shape if [the site shape](#site_shape) of it is some shape.
 - <a id="import_specifier_node"></a>A node names an import if [`decl`](#decl)(it, `import`).
 - <a id="has_specifier"></a>A site has a specifier if it [has the import specifier](#import_spec) some node.
 - <a id="export_bound"></a>A node has an export binding if some node [exports](#export_binding) some name as some name at it.

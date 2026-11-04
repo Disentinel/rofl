@@ -12,14 +12,10 @@
 
 -- =========================================================================
 -- 1. CALL SITES
-edb(call_kind).
-call_kind(call_expression).
-call_kind(optional_call_expression).
-
 function call_site(C, to File).
 function callee_of(C, to N).
-call_site[code](C, File)      :- call_kind(K), ast_node[code](C, K, File).
-call_site_kind[code](C, K)    :- call_kind(K), ast_node[code](C, K, _).
+call_site[code](C, File)      :- call[value](C), at[tree](C, File, _).
+call_site_kind[code](C, K)    :- call_site[code](C, _), ast_node[code](C, K, _).
 call_line[code](C, Line)      :- call_site[code](C, _), at[tree](C, _, Line).
 
 callee_of[code](C, N)         :- call_site[code](C, _), callee[value](C, N).
@@ -173,7 +169,7 @@ catch_all_occupied[audit](K) :- shape[code](C, s_member_on_other),
 unnamed_callee[audit](K) :- shape[code](C, s_unclassified), callee_kind[code](C, K).
 
 shaped[code](C)         :- shape[code](C, _).
-unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C).
+unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C), not has_shape[code](C).
 multi_shape[audit](C, A, B) :- shape[code](C, A), shape[code](C, B), A != B.
 
 -- =========================================================================
@@ -622,7 +618,7 @@ sx_open[surface](CD) :- class_method_of[flow](CD, M), ctor_method[code](M), retu
 sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
 
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
-member_call[flow](C, R, Key) :- ast_node[code](C, call_expression, _), callee[value](C, N),
+member_call[flow](C, R, Key) :- call[value](C), callee[value](C, N),
                                 ast_node[code](N, member_expression, _), ast_attr[code](N, computed, false),
                                 selects[flow](N, Key), object_of[code](N, R).
 call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), may_be_node[flow](R, O).

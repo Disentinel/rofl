@@ -124,7 +124,7 @@ vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code
                               member_value[flow](O, K, M), ambient_value(Surface, K, _, _).
 
 vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), callee[value](C, G),
-                                  ast_node[code](C, T, _), call_like_v(T).
+                                  call_like[code](C).
 vlib_call[flow](C, S, construct) :- construct[value](C), callee[value](C, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
@@ -134,7 +134,7 @@ str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_node[flow](O, D), compose
 str_recv[flow](O) :- proto_call[flow](_, O, _), prototype_of[flow](O, string).
 proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), selects[flow](M, K),
                              member_node_v[flow](M), callee[value](C, M), object_of[code](M, O),
-                             ast_node[code](C, T, _), call_like_v(T).
+                             call_like[code](C).
 vlib_call[flow](C, string, K) :- ambient_value(string, K, _, _), proto_call[flow](C, O, K), str_recv[flow](O).
 vlib_call[flow](C, array, K)  :- ambient_value(array, K, _, _), proto_call[flow](C, O, K),
                                 may_be_node[flow](O, A), kind_proto[flow](A, array).

@@ -157,31 +157,31 @@ In the audit:
 
 In the code:
 
-<a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+A call
+
+- <a id="host_member_call"></a>calls the host member Key of Name in a host H if all of:
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
   - a node O [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.rofl.md#selects) Key.
-
-<a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
-
-<a id="host_module_call"></a>C calls the module member Key of a spec Spec if all of:
+- <a id="host_global_call"></a>calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of it [refers to the global](#host_global_ref) Name of H.
+- <a id="host_module_call"></a>calls the module member Key of a spec Spec if all of:
   - a node X [is a member of the builtin](#builtin_member) of Spec Key;
   - a node G [points to](js-concat.rofl.md#may_be_node) X;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is G.
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is G.
 
 > The union, with the receiver in the origin column: the canonical specifier
 > for a module, the global's own name for a member call, and the atom `itself`
 > for a plain call of a global, so the two shapes stay distinguishable.
 
-<a id="host_site"></a>C is a host site of a host N from an origin Spec at Key either:
+<a id="host_site"></a>A call C is a host site of a host N from an origin Spec at Key either:
 
 1. if C [calls the module member](#host_module_call) Key of Spec and N is `node`;
 2. if C [calls the host member](#host_member_call) Key of Spec in N;
 3. if C [calls the host global](#host_global_call) Spec of N and Key is `itself`.
 
 <a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if all of:
-  - C [is a host site](#host_site) of H from Origin at Key;
+  - a call C [is a host site](#host_site) of H from Origin at Key;
   - [`at`](#at)(C, File, something);
   - [`at`](#at)(C, something, Line).
 
@@ -202,7 +202,7 @@ In the code:
 
 In the audit:
 
-<a id="host_call_effect"></a>C has the host effect E by a route N either:
+<a id="host_call_effect"></a>A call C has the host effect E by a route N either:
 
 1. if all of:
    - C [calls the module member](#host_module_call) Key of a spec Spec;
@@ -225,14 +225,14 @@ In the audit:
 > at a coordinate, and the set of effects the corpus exercises
 
 <a id="host_effect_at"></a>File has the host effect E at Line by a route Why if all of:
-  - C [has the host effect](#host_call_effect) E by Why;
+  - a call C [has the host effect](#host_call_effect) E by Why;
   - [`at`](#at)(C, File, something);
   - [`at`](#at)(C, something, Line).
 
 > The FRONTIER, expected non-zero: a site here is one the effect layer sees
 > as silent, which it must not mistake for `total`.
 
-<a id="host_call_uneffected"></a>C has no host effect from an origin Origin at Key if C [is a host site](#host_site) of some host from Origin at Key, unless C [has the host effect](#host_call_effect) some effect by some route.
+<a id="host_call_uneffected"></a>A call has no host effect from an origin Origin at Key if it [is a host site](#host_site) of some host from Origin at Key, unless it [has the host effect](#host_call_effect) some effect by some route.
 
 ## 5. THE RUNTIME AXIS — a composition in the ES scale's shape: a runtime
 
@@ -309,8 +309,8 @@ In the audit:
 
 <a id="runtime_no_release"></a>A runtime has no release if it [is the version](#runtime_version) some number of some runtime, unless it [has a release](#runtime_has_release).
 
-<a id="runtime_lib_unsupported"></a>C is unsupported on a runtime R at Key of a prototype P if all of:
-  - C [calls the stdlib](js-env-api.rofl.md#lib_call) Key of P since a release Rel;
+<a id="runtime_lib_unsupported"></a>A call is unsupported on a runtime R at Key of a prototype P if all of:
+  - it [calls the stdlib](js-env-api.rofl.md#lib_call) Key of P since a release Rel;
   - R [has a release](#runtime_has_release);
   - unless R [runs the release](#runtime_reaches_release) Rel.
 
@@ -322,10 +322,10 @@ In the audit:
   - F [adds](#host_member_since) Key of Spec since some text being some number;
   - unless it [reaches the api](#has_api) Key of Spec.
 
-<a id="host_call_absent"></a>C is absent on a runtime R at Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
+<a id="host_call_absent"></a>A call is absent on a runtime R at Key of a spec Spec if it [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
 
 <a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if all of:
-  - C [is absent on](#host_call_absent) R at Key of Spec;
+  - a call C [is absent on](#host_call_absent) R at Key of Spec;
   - [`at`](#at)(C, File, something);
   - [`at`](#at)(C, something, Line).
 
@@ -344,9 +344,10 @@ In the audit:
 > source records; a deprecation note naming its replacement is one join from
 > a remedy.
 
-<a id="host_call_deprecated"></a>C calls a deprecated member Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and `node` [deprecates](#host_member_deprecated) Key of Spec.
+A call
 
-<a id="host_call_remedy"></a>C has the host remedy Use for Key of a spec Spec if C [calls a deprecated member](#host_call_deprecated) Key of Spec and `node` [replaces](#host_member_replaced_by) Key of Spec with Use.
+- <a id="host_call_deprecated"></a>calls a deprecated member Key of a spec Spec if it [calls the module member](#host_module_call) Key of Spec and `node` [deprecates](#host_member_deprecated) Key of Spec.
+- <a id="host_call_remedy"></a>has the host remedy Use for Key of a spec Spec if it [calls a deprecated member](#host_call_deprecated) Key of Spec and `node` [replaces](#host_member_replaced_by) Key of Spec with Use.
 
 ## 6. THE GATES. Each is a statement this layer makes about itself, and
 

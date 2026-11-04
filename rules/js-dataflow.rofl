@@ -531,10 +531,8 @@ valued[flow](E) :- may_be_node[flow](E, _).
 
 -- =========================================================================
 -- 7. ACROSS A CALL
-edb(call_like_v).
-call_like_v(call_expression).
-call_like_v(optional_call_expression).
-call_like_v(new_expression).
+call_like[code](C) :- call[value](C).
+call_like[code](C) :- construct[value](C).
 
 -- ONE function relation for every book: `fn_node[code]` from rules/js-callgraph.rofl
 -- (`fn_kind` is its set). The value layer's own copy, `fn_node_v[flow]` over
@@ -592,7 +590,7 @@ dead_arm[code](A) :- imported_test[code](T), logical[value](S, "||", T, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
 
 dead_in[code](A, C) :- dead_arm[code](A), inside[tree](A, C).
-dead_site[code](C)  :- dead_in[code](_, C), call_like_v(K), ast_node[code](C, K, _).
+dead_site[code](C)  :- dead_in[code](_, C), call_like[code](C).
 
 mention[code](F, E)     :- sees_decl[code](E, F), ast_node[code](F, function_declaration, _),
                            target[value](F, I), E != I.
@@ -602,7 +600,7 @@ live_mention[code](F)   :- mention[code](F, E), not dead_in[code](_, E).
 live_mention[code](F)   :- fn_node[code](F), target[value](F, I), has[value](_, I).
 live_mention[code](F)   :- fn_node[code](F), default_declaration[code](_, F).
 dead_fn[code](F)        :- mention[code](F, _), not live_mention[code](F).
-dead_site[code](C)      :- dead_fn[code](F), inside[tree](F, C), call_like_v(K), ast_node[code](C, K, _).
+dead_site[code](C)      :- call_like[code](C), inside[tree](F, C), dead_fn[code](F).
 
 -- Argument into parameter by INDEX. A spread destroys the correspondence for
 -- everything after it, and a may-set may be silent but not wrong, so `arg_at`
@@ -669,9 +667,9 @@ keeps_argument_static("Number", "parseInt").
 keeps_argument_static("Number", "parseFloat").
 
 converts[flow](C) :- keeps_argument(Name), free_global[code](G, Name, _),
-                     callee[value](C, G), ast_node[code](C, call_expression, _).
+                     callee[value](C, G), call[value](C).
 converts[flow](C) :- keeps_argument_static(Owner, Key), es_static_call[code](C, Owner, Key, _),
-                     ast_node[code](C, call_expression, _).
+                     call[value](C).
 may_be_lit[flow](C, V) :- converts[flow](C), arg_at[flow](C, 0, A), may_be_lit[flow](A, V).
 
 -- `Object.assign(target, ...sources)` copies the sources' members onto the target
@@ -688,7 +686,7 @@ merge_fn[flow](M)       :- merge_member[flow](M).
 merge_fn[flow](Spec) :- merges_into_first_module(Spec), external_value[flow](Spec, Spec).
 
 merge_call[flow](C) :- merge_fn[flow](X), may_be_node[flow](G, X), callee[value](C, G),
-                       ast_node[code](C, call_expression, _).
+                       call[value](C).
 
 may_be_node[flow](C, O) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be_node[flow](T, O).
 sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be_node[flow](T, O),
@@ -715,7 +713,7 @@ keyed_store(weakmap, "set", "get").
 keyed_obj[flow](X, P) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, P), keyed_store(P, _, _).
 
 keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), object_of[code](N, O),
-                                callee[value](C, N), ast_node[code](C, call_expression, _),
+                                callee[value](C, N), call[value](C),
                                 selects[flow](N, Key).
 sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
                              may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
@@ -805,7 +803,7 @@ keyed_ref[code](L, H) :- keyed_method[code](H, M), this_host[flow](M, T), keyed_
 
 -- every call on a holder in a statement of an ordered list
 keyed_seen[code](C, H, Meth, S, B, F, I) :- keyed_ref[code](O, H), prop_name[code](N, O, Meth), callee[value](C, N),
-                                            ast_node[code](C, call_expression, _), inside[tree](S, C),
+                                            call[value](C), inside[tree](S, C),
                                             seq_at[code](B, I, S), keyed_list[code](H, B, F).
 keyed_fn_between[code](S, C) :- keyed_seen[code](C, _, _, S, _, _, _), inside[tree](G, C),
                                 fn_node[code](G), inside[tree](S, G).
@@ -876,10 +874,10 @@ sx_ret_known[surface](F) :- sx_esc[surface](F), keyed_ret_known[code](F).
 sx_ret_open[surface](F)  :- sx_esc[surface](F), keyed_ret_open[code](F).
 keyed_ret_known[code](F) :- sx_ret_known[surface](F).
 keyed_ret_open[code](F)  :- sx_ret_open[surface](F).
-keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), not resolved_site[code](C).
-keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), resolves[code](C, F),
+keyed_open[code](C) :- keyed_want[code](C), call[value](C), not resolved_site[code](C).
+keyed_open[code](C) :- keyed_want[code](C), call[value](C), resolves[code](C, F),
                        not keyed_ret_known[code](F).
-keyed_open[code](C) :- keyed_want[code](C), ast_node[code](C, call_expression, _), resolves[code](C, F),
+keyed_open[code](C) :- keyed_want[code](C), call[value](C), resolves[code](C, F),
                        keyed_ret_open[code](F).
 keyed_open[code](C) :- keyed_want[code](C), callee_of[code](C, N), external_value[flow](N, _).
 keyed_open[code](C) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param[surface](F, I),
@@ -969,7 +967,7 @@ keyed_private_reached[audit](N, G) :- keyed_private_name[code](G, CB, Name), ast
                                       ast_child[code](N, property, 0, Pn), ast_node[code](N, member_expression, File),
                                       at[tree](G, File, _), not inside[tree](CB, N).
 keyed_has_name[code](G) :- keyed_named_fn[code](G, _).
-keyed_called[code](G, Q) :- keyed_named_fn[code](G, E), callee[value](Q, E), ast_node[code](Q, call_expression, _).
+keyed_called[code](G, Q) :- keyed_named_fn[code](G, E), callee[value](Q, E), call[value](Q).
 keyed_by_this[code](E)   :- keyed_named_fn[code](G, E), class_method_of[flow](_, G),
                             object_of[code](E, T), this[value](T).
 keyed_by_this[code](E)   :- keyed_named_fn[code](_, E), ref[value](E, _).
@@ -1819,7 +1817,7 @@ may_be_node[flow](E, Sp)       :- external_import[code](Sp, Local, _, File),
 -- Under the engine that fired in written order they ROSE 2.5 %.
 ext_call[flow](C, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](F, X),
                                  callee[value](C, F),
-                                 ast_node[code](C, K, _), call_like_v(K).
+                                 call_like[code](C).
 external_value[flow](C, Spec) :- ext_call[flow](C, Spec).
 may_be_node[flow](C, C)       :- ext_call[flow](C, _).
 ext_member[flow](M, Spec)     :- external_value[flow](X, Spec), may_be_node[flow](O, X),
@@ -1885,7 +1883,7 @@ contract_fn[flow](M, Pkg, Key)     :- sx_contract_pkg[surface](Spec, Pkg), exter
 contract_fn[flow](Sp, Pkg, Key)    :- external_import[code](Sp, _, Spec, _), sx_contract_pkg[surface](Spec, Pkg),
                                       import_ident_key[code](Sp, Key), contract_key(Pkg, Key).
 contract_call[flow](C, Pkg, Key)   :- contract_fn[flow](X, Pkg, Key), may_be_node[flow](G, X),
-                                      callee[value](C, G), ast_node[code](C, call_expression, _).
+                                      callee[value](C, G), call[value](C).
 
 coroutine_of[flow](C, F) :- contract_call[flow](C, Pkg, Key), runs_coroutine(Pkg, Key, I),
                             arg_at[flow](C, I, A), may_be_node[flow](A, F), gen_fn[flow](F).

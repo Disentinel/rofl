@@ -350,10 +350,10 @@ In the code:
 
 <a id="always_throws"></a>F always throws if F [throws at the top](#top_throw) and F neither [has a return](#has_return) nor [runs its body later](#deferred_body).
 
-<a id="throwing_call"></a>C is a throwing call if all of:
+<a id="throwing_call"></a>A call is a throwing call if all of:
   - F [always throws](#always_throws);
-  - C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - C [is a call site](js-callgraph.rofl.md#call_site) in some file.
+  - it [resolves to](js-callgraph.rofl.md#resolves) F;
+  - it [is a call site](js-callgraph.rofl.md#call_site) in some file.
 
 Declared as facts:
 
@@ -420,11 +420,12 @@ A member
 - <a id="written_member"></a>is written if [`assign`](#assign)(something, it, something) and [`object_of`](js-structure.rofl.md#object_of)(it, something).
 - <a id="only_written"></a>is only written if X [is plain](js-dataflow.rofl.md#plain_assign) and [`assign`](#assign)(X, it, something).
 
-A node
+A call
 
 - is a throwing call if it [reads through the accessor](#accessor_read) M and M [always throws](#always_throws).
 - resolves to a node M if it [reads through the accessor](#accessor_read) M.
-- is a site if it [reads through the accessor](#accessor_read) some node.
+
+A node is a site if it [reads through the accessor](#accessor_read) some node.
 
 ## 4. A DESTRUCTURING FORM HIDES A CALL. Measured on V8's own stack:
 
@@ -499,11 +500,11 @@ Caller calls a node M either:
 1. if a node N [destructures through the accessor](#pattern_accessor) M and Caller [is the nearest function of](js-callgraph.rofl.md#nearest_fn) N;
 2. if a node N [destructures through the accessor](#pattern_accessor) M and N [runs at the top of](js-callgraph.rofl.md#top_call) Caller.
 
-A node
+A node is a site if it [destructures through](#pattern_iterates) some node.
 
-- is a site if it [destructures through](#pattern_iterates) some node.
-- resolves to a node M if it [destructures through](#pattern_iterates) M.
-- <a id="pattern_next"></a>iterates with the next Next if all of:
+A call resolves to a node M if it [destructures through](#pattern_iterates) M.
+
+<a id="pattern_next"></a>A node iterates with the next Next if all of:
   - it [destructures through](#pattern_iterates) a node M;
   - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(M, IterObj);
   - [the member](js-dataflow.rofl.md#member_value) "next" of a node IterObj holds a node V;
@@ -641,7 +642,7 @@ In the code:
 2. if all of:
    - G [may throw](#may_throw);
    - G [runs its body at once](#sync_body);
-   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
    - unless C [is caught here](#caught_here).
 
@@ -651,7 +652,7 @@ In the code:
 F may throw if all of:
   - G [may throw](#may_throw);
   - G [is async](#async_body);
-  - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
   - a node X [awaits](js-callgraph.rofl.md#await_arg) C;
   - F [is nearest to](js-dataflow.rofl.md#nearest_v) X;
   - unless X [is caught here](#caught_here).
@@ -667,13 +668,13 @@ In the flow:
 2. if all of:
    - G [throws out](#thrown_by) V;
    - G [runs its body at once](#sync_body);
-   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
    - unless C [is caught here](#caught_here);
 3. if all of:
    - G [throws out](#thrown_by) V;
    - G [is async](#async_body);
-   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - a node X [awaits](js-callgraph.rofl.md#await_arg) C;
    - F [is nearest to](js-dataflow.rofl.md#nearest_v) X;
    - unless X [is caught here](#caught_here).
@@ -684,7 +685,7 @@ In the flow:
    - [the catch](js-dataflow.rofl.md#catch_of) of T is H;
    - [the param](js-dataflow.rofl.md#catch_param) of H is P;
    - [`try_walk`](#try_walk)(T, C);
-   - C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - G [runs its body at once](#sync_body);
    - G [throws out](#thrown_by) V;
 2. if all of:
@@ -705,14 +706,15 @@ In the flow:
 
 In the code:
 
-<a id="try_stops"></a>C is stopped by T if C [is a throwing call](#throwing_call) and [`try_walk`](#try_walk)(T, C).
+A call
 
-C is stopped by S if C [is stopped by](#try_stops) T and [`inside`](#inside)(S, T).
+- <a id="try_stops"></a>is stopped by T if it [is a throwing call](#throwing_call) and [`try_walk`](#try_walk)(T, it).
+- is stopped by S if it [is stopped by](#try_stops) T and [`inside`](#inside)(S, T).
 
 B is abrupt from a step I either:
 
 1. if all of:
-   - a node C [is a throwing call](#throwing_call);
+   - a call C [is a throwing call](#throwing_call);
    - G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
    - [`inside`](#inside)(S, C);
    - [`inside`](#inside)(G, S);
@@ -720,7 +722,7 @@ B is abrupt from a step I either:
    - unless [`repeats`](#repeats)(B, S);
    - unless C [is stopped by](#try_stops) S;
 2. if all of:
-   - a node C [is a throwing call](#throwing_call);
+   - a call C [is a throwing call](#throwing_call);
    - some function [is nearest to](js-dataflow.rofl.md#nearest_v) C;
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, C).
 
@@ -737,7 +739,7 @@ A node
 > A function every one of whose sites is guarded may never be entered.
 > `may_not_run` is LOCAL, one level; the transitive question is reachability.
 
-<a id="guarded_call"></a>A node is a guarded call if it [is a call site](js-callgraph.rofl.md#call_site) in some file and it [is guarded](#guarded).
+<a id="guarded_call"></a>A call is a guarded call if it [is a call site](js-callgraph.rofl.md#call_site) in some file and it [is guarded](#guarded).
 
 > Both are the CALLEE's and their support is the callers': each caller publishes the call
 > (rules/js-surface.rofl `sx_called`, `sx_reached`), and the callee's volume reads them.
@@ -887,7 +889,7 @@ Declared as facts:
 In the code:
 
 <a id="guarded_at"></a>File has a guarded call at Line if all of:
-  - C [is a guarded call](#guarded_call);
+  - a call C [is a guarded call](#guarded_call);
   - [`at`](#at)(C, File, something);
   - [`at`](#at)(C, something, Line).
 

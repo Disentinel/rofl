@@ -218,7 +218,7 @@ unit_concludes("rules/js-dataflow.rofl", member_value).
 unit_concludes("rules/js-dataflow.rofl", member_plain).
 unit_concludes("rules/js-dataflow.rofl", spread_of).
 unit_concludes("rules/js-dataflow.rofl", valued).
-unit_concludes("rules/js-dataflow.rofl", call_like_v).
+unit_concludes("rules/js-dataflow.rofl", call_like).
 unit_concludes("rules/js-dataflow.rofl", nearest_v).
 unit_concludes("rules/js-dataflow.rofl", read_as_script).
 unit_concludes("rules/js-dataflow.rofl", entry_test).
@@ -592,8 +592,6 @@ unit_concludes("rules/js-model.rofl", scanned).
 unit_concludes("rules/js-model.rofl", kind_unexercised).
 unit_concludes("rules/js-model.rofl", kind_absent_stale).
 unit_concludes("rules/js-model.rofl", kind_absent_undeclared).
-unit_concludes("rules/js-callgraph.rofl", edb).
-unit_concludes("rules/js-callgraph.rofl", call_kind).
 unit_concludes("rules/js-callgraph.rofl", call_site).
 unit_concludes("rules/js-callgraph.rofl", callee_of).
 unit_concludes("rules/js-callgraph.rofl", call_site_kind).
@@ -602,6 +600,7 @@ unit_concludes("rules/js-callgraph.rofl", callee_kind).
 unit_concludes("rules/js-callgraph.rofl", transfer_site).
 unit_concludes("rules/js-callgraph.rofl", site).
 unit_concludes("rules/js-callgraph.rofl", call_arg).
+unit_concludes("rules/js-callgraph.rofl", edb).
 unit_concludes("rules/js-callgraph.rofl", callee_shape).
 unit_concludes("rules/js-callgraph.rofl", member_kind).
 unit_concludes("rules/js-callgraph.rofl", member_like).

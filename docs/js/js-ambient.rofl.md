@@ -238,29 +238,30 @@ In the flow:
 
 > reached, is `host_module_call[code]` with its key.
 
-<a id="eff_surface"></a>C reaches the surface Spec if C [calls the module member](js-host.rofl.md#host_module_call) some key of Spec.
+A call
 
-<a id="eff_operation"></a>C performs the operation Key if C [calls the module member](js-host.rofl.md#host_module_call) Key of some spec.
+- <a id="eff_surface"></a>reaches the surface Spec if it [calls the module member](js-host.rofl.md#host_module_call) some key of Spec.
+- <a id="eff_operation"></a>performs the operation Key if it [calls the module member](js-host.rofl.md#host_module_call) Key of some spec.
 
 > 5a. A member call on an ambient global — `console.log(x)`.
 
-C reaches the surface Name if all of:
-  - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+A call reaches the surface Name if all of:
+  - it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
   - a node O [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
   - Name [is an ambient global](#ambient_global).
 
 > 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
 
-<a id="amb_global_call"></a>C calls the global Name if all of:
-  - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
+A call
+
+- <a id="amb_global_call"></a>calls the global Name if all of:
+  - it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+  - [the callee](js-callgraph.rofl.md#callee_of) of it [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
   - Name [is an ambient global](#ambient_global).
-
-C reaches the surface Name if C [calls the global](#amb_global_call) Name.
-
-C performs the operation `itself` if C [calls the global](#amb_global_call) some name.
+- reaches the surface Name if it [calls the global](#amb_global_call) Name.
+- performs the operation `itself` if it [calls the global](#amb_global_call) some name.
 
 > 5c. A construction — `new URL(s)`. A `new_expression` is a `transfer_site`
 > and not a `call_site`, so the negation is on `resolved_site[code]`: a
@@ -273,9 +274,10 @@ C performs the operation `itself` if C [calls the global](#amb_global_call) some
   - Name [is an ambient global](#ambient_global);
   - unless it [is resolved](js-callgraph.rofl.md#resolved_site).
 
-X reaches the surface Name if X [constructs the ambient global](#amb_construct) Name.
+A call
 
-X performs the operation `construct` if X [constructs the ambient global](#amb_construct) some name.
+- reaches the surface Name if it [constructs the ambient global](#amb_construct) Name.
+- performs the operation `construct` if it [constructs the ambient global](#amb_construct) some name.
 
 ## 6. `identifier` — THE THIRD CASE. js-effects derives a reassigned name as
 
@@ -424,17 +426,17 @@ A surface
 > divergence. The carrier closure is the propagation rule's own shape: one
 > hop per `resolves` edge, minus what a handler discharges.
 
-<a id="amb_exn_source"></a>C is an exception source if all of:
-  - C [operates](js-effects.rofl.md#concrete_effect) on a surface S by an operation Op;
+<a id="amb_exn_source"></a>A call is an exception source if all of:
+  - it [operates](js-effects.rofl.md#concrete_effect) on a surface S by an operation Op;
   - S [has the ambient effect](#ambient_effect) E at Op;
   - E [covers](js-effects.rofl.md#eff_row) `exn` at `none`.
 
 <a id="amb_exn_carrier"></a>F carries an exception either:
 
-1. if a node C [is an exception source](#amb_exn_source) and F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+1. if a call C [is an exception source](#amb_exn_source) and F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
 2. if all of:
    - G [carries an exception](#amb_exn_carrier);
-   - a node C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
    - unless C [discharges here](js-effects.rofl.md#eff_discharged_at) `exn`.
 

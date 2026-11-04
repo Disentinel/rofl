@@ -39,7 +39,7 @@ Declared as facts:
 | `member_node_v` | "member access" |
 | `scope_node` | "scope" |
 
-`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `call_like_v`, `call_kind`.
+`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`.
 
 Declared as facts:
 
@@ -125,7 +125,6 @@ Declared as facts:
 | `member_value` | "the_member(of node O, key Key, holds node V)" |
 | `own_key` | "owns_the_key(class CD, key Key)" |
 | `fn_kind` | "is_a_function_kind(kind K)" |
-| `call_kind` | "is_a_call_kind(kind K)" |
 | `call_site` | "is_a_call_site(call C, in file File)" |
 | `call_site_kind` | "the_call_kind(of call C, is kind K)" |
 | `call_line` | "the_line(of call C, is line Line)" |

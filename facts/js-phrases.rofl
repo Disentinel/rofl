@@ -105,10 +105,8 @@ kind_noun(node_value_kind, "value site").
 kind_noun(class_field_kind, "class field").
 kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
-kind_noun(call_like_v, "invocation").
 kind_noun(assign_value_op, "value assignment operator").
 kind_noun(external_shape, "external shape").
-kind_noun(call_kind, "call").
 
 -- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _), set(K)`
 edb(kind_set).
@@ -125,8 +123,6 @@ kind_set(member_kind_v).
 kind_set(class_field_kind).
 kind_set(private_member_kind).
 kind_set(this_binds_kind).
-kind_set(call_like_v).
-kind_set(call_kind).
 
 -- signatures: the head phrase is the name, each argument is `[marker] noun Var`
 -- in the relation's own order; a name that differs from the relation is a
@@ -203,7 +199,6 @@ sig(obj_like, "is_object_like(node O)").
 sig(member_value, "the_member(of node O, key Key, holds node V)").
 sig(own_key, "owns_the_key(class CD, key Key)").
 sig(fn_kind, "is_a_function_kind(kind K)").
-sig(call_kind, "is_a_call_kind(kind K)").
 sig(call_site, "is_a_call_site(call C, in file File)").
 sig(call_site_kind, "the_call_kind(of call C, is kind K)").
 sig(call_line, "the_line(of call C, is line Line)").
