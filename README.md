@@ -27,8 +27,8 @@ The kernel is a *generic* inference machine: all semantics — including the
 schema of what a "rule" is and the rules that validate rules — live in the
 graph as data (`boot.rofl`). The engine is Rust (the `rofl` binary under
 `rust/`, one native file); the TypeScript engine under `src/` is the parity
-reference, has zero runtime dependencies (the optional code scanner under
-`scanners/` is the only component with one, `@babel/parser`) and runs under
+reference, has zero runtime dependencies (the code scanner is `rust/tools/oxc_scan`, native for the command line and
+wasm for a page) and runs under
 Node ≥ 22.
 
 ## Using it
@@ -135,7 +135,7 @@ points; the whole list is in `package.json`.
 | `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
 | `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by test/kernel-policy-program.test.ts (gate removed 2026-09-11) |
 | `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
-| `models/lang/js/` | the roles layer of the JS model (w_l2_roles): the vocabulary `roles.rofl`, worlds `[value]` `[type]` `[tree]`, and `babel-roles.rofl`, its converter from the Babel tree in `[ast_babel]`, with the audits a check loads (`roles-check.files`); `rules/js-*.rofl` do not read it yet | `test:roles` |
+| `models/lang/js/` | the roles layer of the JS model (w_l2_roles): the vocabulary `roles.rofl`, worlds `[value]` `[type]` `[tree]`, and `oxc-roles.rofl`, its converter from oxc's tree in `[ast_oxc]`, with the audits a check loads (`roles-check.files`); `rules/js-*.rofl` do not read it yet | `test:roles` |
 | `models/engine/` | the model of the engine itself: its Rust code scanned by `rust/tools/rs_scan` into `rs_*[rs]` facts, calls resolved where the code names them surely (`code.rofl`), its 17 parts and the glossary's words tied to the code (`parts.rofl`), and what a change touches (`blast.rofl`); the hypotheses over an evaluation's profile, judged by it (`profile.rofl`, world `profile_model`), and the join order planned from it as a fixpoint with min, concluded as the `plan[fixpointplan]` facts the engine obeys (`plan.rofl`, world `plan_dp`); the rest not swept by `npm test` | `engine` `nb` |
 | `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`: since 1.1 `js-surface.rofl`, the `[surface]` book a file shows the others, docs/surface-split.md, and `js-concat.rofl`, a string built from parts as a node with parts and its text as a term), the service graph (`js-fetch.rofl`, `js-express.rofl`, `js-service.rofl`) and the net library it walks (`net/`: names, addresses, listeners, hops, guards, tls), the stage plan's checks (`stage-plan.rofl`), the aggregates programme (`agg.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` `test:split` |
 | `shrug.rofl` | the closed vocabulary of a shrug, the third answer: every cause and reason an engine may write in `shrug(Target, Reason, Meta)` (docs/aggregates.md) | compiled into `src/kernel-dense.ts` by `build:dense` |
@@ -284,7 +284,7 @@ asserted as program text.
 ## Code scanner
 
 `npm run scan -- DIR --out code.rofl` turns a JS/TS source tree into the
-facts the JS model reads: `scanners/js_ast.ts` over each file and the host's
+facts the JS model reads: `rust/tools/oxc_scan` over each file and the host's
 path and string facts, as the notebook host gives them. Not part of the
 kernel — it lives outside `src/` and the kernel grep test on purpose. The
 model then runs in the Rust engine:
@@ -617,7 +617,7 @@ variable in it.
 
 `rules/js-*.rofl` is a model OF JAVASCRIPT — structure, modules, resolution,
 call graph, data flow, control flow, effects, environments, globals, hosts —
-fed by `scanners/js_ast.ts` and indexed as a matrix of (node kind × layer)
+fed by `rust/tools/oxc_scan` and indexed as a matrix of (node kind × layer)
 cells, each `modelled`, `waived` with a reason, or `not_modelled`. The
 methodology, and the one measurement that decides whether it is science or
 bookkeeping, is `docs/modelling-a-language.md`; `docs/scaling-a-corpus.md` is

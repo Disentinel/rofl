@@ -379,7 +379,7 @@ Declared as facts:
 - <a id="ast_node"></a>`ast_node` — rows from the scanner
 - <a id="ast_line"></a>`ast_line` — rows from the scanner
 
-> THE SCANNER'S ROWS ARE FUNCTIONS (docs/data-structures.md), and the scanner keeps the promise (scanners/js_ast.ts
+> THE SCANNER'S ROWS ARE FUNCTIONS (docs/data-structures.md), and the scanner keeps the promise (rust/tools/oxc_scan
 > `emit`): a node has an id of its own (the scanner refuses a collision in a file), so one kind, file and line; an
 > own property is written once, under a key of its own (`field`, or `field_member` for a record of scalars). A fact
 > that breaks it is refused with its key and both values, never silently believed; the planner reads a bound id as

@@ -32,9 +32,8 @@ Reads:
 - from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
 - from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
 - from js-dataflow: [free_global](js-dataflow.rofl.md#free_global)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
-- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
+- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [meta_form](js-structure.rofl.md#meta_form)
 - from outside these files, in the ast_oxc:
   - <a id="attr"></a>`attr`
   - <a id="child"></a>`child`
@@ -60,16 +59,8 @@ Reads:
   - <a id="spread_props"></a>`spread_props`
   - <a id="target"></a>`target`
   - <a id="value"></a>`value`
-- from the scanner:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
-
-What this file calls a node, and what each word stands for:
-
-| word | stands for |
-|---|---|
-| <a id="noun-import_attribute"></a>an import attribute | a node of kind `import_attribute` |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
@@ -853,16 +844,11 @@ In the audit:
 > is NOT evaluated as code — `effect_of_module` assumes an imported module
 > runs, and for these it does not. Two frontiers: an attribute whose parent is
 > not a site, and one whose key or value the join could not read.
+> oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
 
 In the code:
 
-<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if the `key` of it [is named](js-structure.rofl.md#ast_name) Key and the `value` of it [is written as](js-structure.rofl.md#ast_value) Value.
-
-<a id="import_attr_of"></a>A node has the import attribute X if X [is among the](#ast_child) `attributes` of it.
-
-> oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
-
-X carries Key holding Value if all of:
+<a id="import_attr"></a>X carries Key holding Value if all of:
   - [`node`](#node)(X, `import_attribute`, something);
   - [`child`](#child)(X, `key`, 0, K);
   - [`attr`](#attr)(K, `name` or `value`, Key);
@@ -871,21 +857,15 @@ X carries Key holding Value if all of:
 
 A node
 
-- has the import attribute X if [`child`](#child)(it, `with_clause`, 0, W) and [`child`](#child)(W, `with_entries`, something, X).
+- <a id="import_attr_of"></a>has the import attribute X if [`child`](#child)(it, `with_clause`, 0, W) and [`child`](#child)(W, `with_entries`, something, X).
 - <a id="module_attr"></a>imports with the attribute Key holding Value if it [has the import attribute](#import_attr_of) X and X [carries](#import_attr) Key holding Value.
 - <a id="module_is_data"></a>imports a data module of a text T if it [imports the module type](#module_type) T and T differs from "javascript".
 
 In the audit:
 
-<a id="import_attr_unsited"></a>X is unsited either:
+<a id="import_attr_unsited"></a>X is unsited if [`node`](#node)(X, `import_attribute`, something), unless some node [has the import attribute](#import_attr_of) X.
 
-1. if X is an [import attribute](#noun-import_attribute), unless some node [has the import attribute](#import_attr_of) X;
-2. if [`node`](#node)(X, `import_attribute`, something), unless some node [has the import attribute](#import_attr_of) X.
-
-<a id="import_attr_unread"></a>X is unread either:
-
-1. if X is an [import attribute](#noun-import_attribute), unless X [carries](#import_attr) some key holding some text;
-2. if [`node`](#node)(X, `import_attribute`, something), unless X [carries](#import_attr) some key holding some text.
+<a id="import_attr_unread"></a>X is unread if [`node`](#node)(X, `import_attribute`, something), unless X [carries](#import_attr) some key holding some text.
 
 > 3 trailing comments on rule lines are not carried over.
 

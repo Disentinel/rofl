@@ -10,7 +10,7 @@
 // --break cross   a rule that reads another file's roles is added: the check must be red. Without --break the run also
 //                 evaluates the whole world once with that rule and is red unless it shows a role naming two files
 // --cost          also the cost of the whole world: raw facts in, roles out, evaluation time and peak memory
-// --fixture       write examples/checks/roles-oxc-facts.rofl, the raw tree of examples/checks/roles-babel/ that the
+// --fixture       write examples/checks/roles-oxc-facts.rofl, the raw tree of examples/checks/roles/ that the
 //                 world roles_oxc of npm test evaluates on both engines (facts/checks.rofl)
 
 import * as fs from 'node:fs';
@@ -28,7 +28,7 @@ const brk = flag('--break');
 const cost = flag('--cost') !== undefined;
 const fixture = flag('--fixture') !== undefined;
 if (brk !== undefined && brk !== 'cross') { console.error('--break cross'); process.exit(64); }
-const FIXTURE = 'examples/checks/roles-babel';
+const FIXTURE = 'examples/checks/roles';
 const dirs = fixture ? [FIXTURE] : argv.length ? argv : [FIXTURE, 'examples/vscode/mini', 'examples/vscode/split'];
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;

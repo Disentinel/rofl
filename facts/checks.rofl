@@ -3866,22 +3866,12 @@ check_world("intents_screen").
 check_file("intents_screen", "examples/intents/screen.rofl").
 
 -- oxc's raw tree of one file with a construct of every kind the roles read, through the converter
--- into the roles of roles.rofl (models/lang/js/oxc-roles.rofl), with their role ids and the vocabulary's audit;
--- that Babel gives the same file the same rows is npm run test:parity
+-- into the roles of roles.rofl (models/lang/js/oxc-roles.rofl), with their role ids and the vocabulary's audit
 check_world("oxc_roles").
 check_file("oxc_roles", "models/lang/js/roles.rofl").
 check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
 check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
 check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
--- w_l2_roles, the roles layer under the JS model: the Babel converter (models/lang/js/babel-roles.rofl) over the raw
--- tree of examples/checks/roles-babel/ in [ast_babel], with the vocabulary's and the converter's audits; the files
--- alone against the whole world and the vscode corpus are scripts/roles_check.ts, npm run test:roles
-check_world("roles_babel").
-check_file("roles_babel", "models/lang/js/roles.rofl").
-check_file("roles_babel", "models/lang/js/babel-roles.rofl").
-check_file("roles_babel", "models/lang/js/roles-audit.rofl").
-check_file("roles_babel", "models/lang/js/babel-audit.rofl").
-check_file("roles_babel", "examples/checks/roles-babel-facts.rofl").
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").

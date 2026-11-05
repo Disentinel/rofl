@@ -473,11 +473,6 @@ not_module_meta[audit](M) :- meta_form[code](M, new_target).
 -- is NOT evaluated as code — `effect_of_module` assumes an imported module
 -- runs, and for these it does not. Two frontiers: an attribute whose parent is
 -- not a site, and one whose key or value the join could not read.
-import_attr[code](A, Key, Value) :- ast_node[code](A, import_attribute, _),
-                                    ast_child[code](A, key, 0, K), ast_name[code](K, Key),
-                                    ast_child[code](A, value, 0, V), ast_value[code](V, Value).
-
-import_attr_of[code](D, A) :- ast_child[code](D, attributes, _, A).
 -- oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
 import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, name, Key),
                                     child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
@@ -490,12 +485,8 @@ module_type[code](D, T) :- module_attr[code](D, "type", T).
 
 module_is_data[code](D, T) :- module_type[code](D, T), T != "javascript".
 
-import_attr_unsited[audit](A) :- ast_node[code](A, import_attribute, _),
-                                 not import_attr_of[code](_, A).
 import_attr_unsited[audit](A) :- node[ast_oxc](A, import_attribute, _),
                                  not import_attr_of[code](_, A).
 
-import_attr_unread[audit](A) :- ast_node[code](A, import_attribute, _),
-                                not import_attr[code](A, _, _).
 import_attr_unread[audit](A) :- node[ast_oxc](A, import_attribute, _),
                                 not import_attr[code](A, _, _).

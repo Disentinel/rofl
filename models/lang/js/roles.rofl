@@ -2,8 +2,8 @@
 --
 -- A role is a relation over the nodes a parser already has: what one place in the code is, certain from that place
 -- and its neighbours. What needs other places (what is overwritten, where a throw lands, who runs a callback) is an
--- operation or the model's conclusion, not a role. Each parser has its converter (babel-roles.rofl for Babel) that
--- writes these relations from its raw tree, kept in a book of its own ([ast_babel]); the model never reads that book.
+-- operation or the model's conclusion, not a role. Each parser has its converter (oxc-roles.rofl for oxc) that
+-- writes these relations from its raw tree, kept in a book of its own ([ast_oxc]); the model reads that book only where a rule says so.
 --
 -- THE WORLDS ARE BOOKS. The same roles hold in the world of values, [value], and in the world of types, [type]:
 -- binds[type](N, Name) beside binds[value](N, Name), a generic applied is call[type], a union is binary[type]. A

@@ -2,9 +2,7 @@
 --
 -- The vocabulary is models/lang/js/roles.rofl, loaded beside this file: [value] and [type] hold the
 -- roles of each world, [tree] the structure every world shares. Every rule reads one node and its
--- neighbours, so a file's roles come from that file's facts alone. Where oxc and Babel read one
--- construct as different trees, this file follows Babel's converter (babel-roles.rofl), and
--- scripts/roles_parity.ts holds the two to the same rows.
+-- neighbours, so a file's roles come from that file's facts alone.
 
 -- the raw tree, under short names
 alias oxc_k(N, K) is node(N, K, _).

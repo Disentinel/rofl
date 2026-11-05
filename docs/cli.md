@@ -347,12 +347,12 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
-host gives a `.rofl.md` with `model: js` (`npm run nb`, the VS Code worker): both scan with oxc (`scanners/oxc_facts.ts`
-for a notebook's files, `scanners/cli.ts` for a directory), and a notebook also reads `ast_node`, `ast_child`, `ast_attr`
-over oxc's tree (`models/lang/js/oxc-to-code.rofl`). Only the browser page (playground, workbench) scans with Babel
-(`scanners/js_ast.ts`, which runs in a page); the roles (`models/lang/js/roles.rofl`) are the same, and `npm run test:parity`
-holds the two converters to the same rows.
-A node's id is a hash of its path in its parser's tree, so the two name a node differently.
+host gives a `.rofl.md` with `model: js` (`npm run nb`, the VS Code worker): both scan with oxc, the notebook host and the
+browser page (playground, workbench) through `rust/tools/oxc_scan` compiled to wasm (`scanners/oxc_wasm.ts`, the facts of
+`--no-start` byte for byte; `oxc_scan.wasm` is built by `cargo build --release --lib --target wasm32-unknown-unknown` in
+`rust/tools/oxc_scan`, and `rustup target add wasm32-unknown-unknown` is its one prerequisite), `scanners/cli.ts` for a
+directory through the native binary. A notebook also reads `ast_node`, `ast_child`, `ast_attr` over oxc's tree
+(`models/lang/js/oxc-to-code.rofl`).
 
 Where the JS model cannot be exact it says so in a relation, not by an empty
 answer: `unresolved_call[code](C, Shape)` and `frontier_at` name every call it
@@ -375,9 +375,7 @@ and as much for each `rofl why` run alone, since each builds the world.
 `models/lang/js/` is the next layer under the JS model: `roles.rofl` is one
 vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
 two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `oxc-roles.rofl`
-writes them from oxc's tree in `[ast_oxc]` and `babel-roles.rofl`
-(the notebook's, and `npm run test:parity`'s) from the Babel scanner's tree in `[ast_babel]` (`ScanSet().scan(src,
-{file, persp: 'ast_babel'})`, where the raw relations are `node`, `child`, `attr`,
+writes them from oxc's tree in `[ast_oxc]` (the raw relations are `node`, `child`, `attr`,
 `line` and `file`: a ledger is named by its book, not by a prefix). `rules/js-*.rofl` read
 the roles of the oxc converter (`rules/js.files`); `npm run test:roles` drives the layer, and
 `rofl load @models/lang/js/oxc.files code.rofl` writes the roles of a corpus scanned by `npm run scan`. Pass `--budget` and `--space` at hundreds of files: the
@@ -400,15 +398,13 @@ reports an error in. A program's id is its file prefix and `root`, so a second
 parser that does the same names a file's program alike. A
 kind is the struct's name (`static_member_expression`, `class`), a field the
 Rust field's; an enum wrapper that names it otherwise is the attribute
-`variant` (`class` under `"ClassDeclaration"`). Every other id is made as js_ast.ts makes
-it, with the same file prefix: code added above a node leaves its id. Files
+`variant` (`class` under `"ClassDeclaration"`). Every other id is a hash of its parent's id and its step, under the file's
+prefix: code added above a node leaves its id. Files
 are parsed in parallel and printed in path order, the same bytes for the same
 tree. The JS model reads `[ast_oxc]` through its converter into the roles
 of `roles.rofl` is `models/lang/js/oxc-roles.rofl` (`rofl load
 @models/lang/js/oxc.files oxc.rofl`), checked by the world `oxc_roles` over
-`models/lang/js/fixtures/all.ts`. `npm run test:parity` runs that file through
-both parsers and both converters and compares the role facts row by row; what
-still differs is f_oxc_roles_meets_the_vocabulary.
+`models/lang/js/fixtures/all.ts`.
 
 A node's id is its scanner's: stable under edits, each parser's own
 (f_role_ids_name_a_node_by_its_roles); both name the program `<prefix>root` and

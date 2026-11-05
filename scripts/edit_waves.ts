@@ -44,7 +44,7 @@ function world(dir: string): Set<string> {
   return new Set(out.split('\n').flatMap((l) => /^([a-z_]\w*(?:\[\w+\])?\(.*\)) tick /.exec(l)?.[1] ?? []));
 }
 
-const scanned = (f: string) => /^((ast|str)_\w+\[code\]|\w+\[(ast_babel|ast_oxc|fs)\])/.test(f);
+const scanned = (f: string) => /^((ast|str)_\w+\[code\]|\w+\[(ast_oxc|fs)\])/.test(f);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'waves-'));
 const copy = (name: string, edit?: (s: string) => string): string => {
   const d = path.join(tmp, name);

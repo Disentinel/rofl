@@ -39,7 +39,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { Rofl } from '../src/api.ts';
-import { scan, ScanSet } from './js_ast.ts';
+import { scan, ScanSet } from './oxc_code.ts';
 
 const REPO = fs.realpathSync(new URL('..', import.meta.url).pathname);
 const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');

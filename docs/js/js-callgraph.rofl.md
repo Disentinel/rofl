@@ -106,8 +106,6 @@ Reads:
   - <a id="this"></a>`this`
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
-- from the scanner:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -1077,56 +1075,9 @@ In the flow:
 > off it, a binding, a name it is assigned to, a test, a closed function's
 > argument, or a value dropped (`discards`). Any other place (returned, in an array, an argument of a call the
 > model does not resolve to a closed function) lets it out of sight.
+> oxc's names (rust/tools/oxc_scan): a parameter's pattern is the child of its formal_parameter, a function's body a function_body
 
 `holds_in_place` lists:
-
-| arg 1 | arg 2 |
-|---|---|
-| `member_expression` | `object` |
-| `member_expression` | `property` |
-| `optional_member_expression` | `object` |
-| `optional_member_expression` | `property` |
-| `variable_declarator` | `id` |
-| `variable_declarator` | `init` |
-| `class_declaration` | `id` |
-| `class_expression` | `id` |
-| `function_declaration` | `id` |
-| `function_expression` | `id` |
-| `function_declaration` | `params` |
-| `function_expression` | `params` |
-| `arrow_function_expression` | `params` |
-| `class_method` | `params` |
-| `object_method` | `params` |
-| `assignment_expression` | `left` |
-| `call_expression` | `callee` |
-| `new_expression` | `callee` |
-| `program` | `body` |
-| `block_statement` | `body` |
-| `class_body` | `body` |
-| `class_declaration` | `super_class` |
-| `class_expression` | `super_class` |
-| `binary_expression` | `left` |
-| `binary_expression` | `right` |
-| `unary_expression` | `argument` |
-| `if_statement` | `test` |
-| `conditional_expression` | `test` |
-| `while_statement` | `test` |
-| `template_literal` | `expressions` |
-| `export_named_declaration` | `declaration` |
-| `export_specifier` | `local` |
-| `import_specifier` | `local` |
-| `import_default_specifier` | `local` |
-| `tsmodule_declaration` | `id` |
-| `tsmodule_block` | `body` |
-| `object_property` | `value` |
-
-Declared as facts:
-
-- <a id="holds_in_place"></a>`holds_in_place` — rows in this file
-
-> the same table in oxc's names (rust/tools/oxc_scan): a parameter's pattern is the child of its formal_parameter, a function's body statements are function_body's, a namespace is tsnamespace_declaration
-
-`holds_in_place_oxc` lists:
 
 | arg 1 | arg 2 |
 |---|---|
@@ -1168,7 +1119,7 @@ Declared as facts:
 
 Declared as facts:
 
-- <a id="holds_in_place_oxc"></a>`holds_in_place_oxc` — rows in this file
+- <a id="holds_in_place"></a>`holds_in_place` — rows in this file
 
 > asked only of a place that may hold a surveyed object of its own file
 
@@ -1181,23 +1132,18 @@ Declared as facts:
 
 1. if all of:
    - [`placed`](#placed)(X);
-   - a node X [is among the](#ast_child) F of a node P;
-   - P [is of kind](js-model.rofl.md#ast_node) PK;
-   - [`holds_in_place`](#holds_in_place)(PK, F);
-2. if all of:
-   - [`placed`](#placed)(X);
    - [`child`](#child)(P, F, something, X);
    - [`node`](#node)(P, PK, something);
-   - [`holds_in_place_oxc`](#holds_in_place_oxc)(PK, F);
-3. if [`placed`](#placed)(X) and [`discards`](#discards)(something, X);
-4. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
-5. if all of:
+   - [`holds_in_place`](#holds_in_place)(PK, F);
+2. if [`placed`](#placed)(X) and [`discards`](#discards)(something, X);
+3. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
+4. if all of:
    - [`placed`](#placed)(X);
    - [`nth`](#nth)(C, something, X);
    - [`callee`](#callee)(C, CE);
    - [`whole_expr`](#whole_expr)(CE);
    - unless [`spread_args`](#spread_args)(C, something, X);
-6. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
+5. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
 
 > a member of an object literal holds the value as long as the literal is not open
 
@@ -1559,15 +1505,9 @@ In the surface:
    - unless N [selects](js-dataflow.rofl.md#selects) some key;
 2. if all of:
    - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
-   - G [is among the](#ast_child) F of a node P;
-   - P [is of kind](js-model.rofl.md#ast_node) PK;
-   - unless [`holds_in_place`](#holds_in_place)(PK, F);
-   - unless [`discards`](#discards)(something, G);
-3. if all of:
-   - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
    - [`child`](#child)(P, F, something, G);
    - [`node`](#node)(P, PK, something);
-   - unless [`holds_in_place_oxc`](#holds_in_place_oxc)(PK, F);
+   - unless [`holds_in_place`](#holds_in_place)(PK, F);
    - unless [`discards`](#discards)(something, G).
 
 In the flow:
