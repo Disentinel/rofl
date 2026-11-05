@@ -441,6 +441,7 @@ cond_field(if_statement, alternate, test, falsy).
 cond_field(conditional_expression, consequent, test, truthy).
 cond_field(conditional_expression, alternate, test, falsy).
 cond_field(while_statement, body, test, truthy).
+cond_field(do_while_statement, body, test, again).
 cond_field(for_statement, body, test, truthy).
 cond_field(for_statement, update, test, truthy).
 cond_field(for_of_statement, body, right, next).

@@ -12960,3 +12960,11 @@ recorded(f_an_optional_member_call_is_a_member_call, "2026-11-05").
 addressed_by(f_an_optional_member_call_is_a_member_call, "rules/js-callgraph.rofl").
 finding_note(f_an_optional_member_call_is_a_member_call, 
   "VADIM, 2026-11-05: `o?.m()` is a member call like `o.m()` (the decision of optional calls and `module?.exports`). member_call reads the member role (a static key) instead of the kind member_expression and the computed flag. MOVED: corpus member_call +38, call_open +38, member_unknown +37, member_undeclared +37, call_on +4, call_finds +1; cf (`mco?.f()`, `mco.g?.h()`, `mco?.g.h()`, `mco.f?.()`): member_call +11, call_open +10, member_unknown and member_undeclared +8, call_on and call_finds +3.").
+
+finding(f_the_test_of_a_do_while_guards_its_repetition, insight).
+recorded(f_the_test_of_a_do_while_guards_its_repetition, "2026-11-05").
+addressed_by(f_the_test_of_a_do_while_guards_its_repetition, "models/lang/js/babel-roles.rofl").
+addressed_by(f_the_test_of_a_do_while_guards_its_repetition, "models/lang/js/oxc-roles.rofl").
+addressed_by(f_the_test_of_a_do_while_guards_its_repetition, "rules/js-callgraph.rofl").
+finding_note(f_the_test_of_a_do_while_guards_its_repetition, 
+  "VADIM, 2026-11-05: the test of a do-while guards the repetition the way a while test does, and the left of `x ||= v` is a test of x. The converters had no guard for a do-while (a converter gap). Both now give executes_if(Body, Test, again): the loop body runs again depending on how the test completed. `again`, and not truthy, because a do-while body runs once unconditionally: with truthy, guarded moved by 69 on the corpus (4 guard_arm, 2 guarded_call, 2 guarded_at); guard_arm leaves `again` out and nothing moved. The roles sentence names the new How. param_test reads executes_if (truthy, falsy, matches, again) of the parent: the field `test` is gone. MOVED: corpus param_test +1; cf param_test +12 (the left of `x ||= v`, `x &&= v`, 9 identifiers and 3 members) and param_tested +2; the do-while rows come back. Parity 0 (2806 facts), test:roles green; the existing fixture line `do { x++; } while (x < 3)` covers it.").

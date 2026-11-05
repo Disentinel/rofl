@@ -16,8 +16,8 @@
 -- A branch is a role: `executes_if(X, G, How)` says X executes depending on how G completed. The arm is the child
 -- of G's parent that holds X (a statement wrapper around X is the arm, not X). A switch case guards its consequents,
 -- not its test; a default is guarded as unmatched. The default value of a pattern has no role: its kind is read.
-guard_arm[code](P, A) :- executes_if[value](A, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A).
-guard_arm[code](P, A) :- executes_if[value](X, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A),
+guard_arm[code](P, A) :- executes_if[value](A, G, How), How != unmatched, How != again, parent[tree](P, G), parent[tree](P, A).
+guard_arm[code](P, A) :- executes_if[value](X, G, How), How != unmatched, How != again, parent[tree](P, G), parent[tree](P, A),
                          inside[tree](A, X).
 guard_arm[code](C, S) :- executes_if[value](C, T, matches), parent[tree](C, S), S != T.
 guard_arm[code](C, S) :- executes_if[value](C, _, unmatched), parent[tree](C, S).

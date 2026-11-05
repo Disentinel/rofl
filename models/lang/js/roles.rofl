@@ -89,7 +89,7 @@ role(unary,     "N is Op X").
 role(logical,   "N is L Op R where Op is &&, || or ??").
 
 -- ---- control
-role(executes_if, "N executes depending on how G completed: How is truthy, falsy, nullish, defined, thrown, matches, unmatched or next").
+role(executes_if, "N executes depending on how G completed: How is truthy, falsy, nullish, defined, thrown, matches, unmatched, next or again (the loop body runs again)").
 role(executes_when, "N executes after G completed, at When: sync, microtask, macrotask or event").
 role(repeats,   "Body of S may execute again after itself").
 role(iterates,  "Left of S receives the elements of the iterator of Right: a for-of, or an array pattern, where S is Left and Right is the value it takes apart, or the pattern itself when it has no node of its own").

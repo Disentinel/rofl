@@ -942,7 +942,10 @@ param_test[code](B, T) :- logic_op[code](B, "||", T, _).
 param_test[code](B, T) :- logic_op[code](B, "??", T, _).
 param_test[code](B, T) :- unary[value](B, "!", T).
 
-param_test[code](B, T) :- ast_child[code](B, test, 0, T).
+param_test[code](B, T) :- executes_if[value](_, T, truthy), parent[tree](B, T).
+param_test[code](B, T) :- executes_if[value](_, T, falsy), parent[tree](B, T).
+param_test[code](B, T) :- executes_if[value](_, T, matches), parent[tree](B, T).
+param_test[code](B, T) :- executes_if[value](_, T, again), parent[tree](B, T).
 param_tested[flow](F, Name) :- param_use[flow](F, Name, T), param_test[code](_, T).
 
 -- the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
