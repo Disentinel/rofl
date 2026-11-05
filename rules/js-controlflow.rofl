@@ -102,8 +102,12 @@ completion_kind(labeled_statement).
 
 completes_abruptly[code](S) :- exits[value](S, _).
 
-completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
-                               ast_node[code](B, block_statement, _).
+-- a step that carries a label is the labelled statement's body: the owner completes abruptly if the labelled
+-- statement does, which it does not when a break leaves it
+completes_abruptly[code](B) :- completes_abruptly[code](S), nth[tree](B, _, S), strict[tree](B), not labeled_as[value](S, _),
+                               not repeats[value](B, _), not finalizes[value](_, S).
+completes_abruptly[code](B) :- completes_abruptly[code](LS), parent[tree](LS, S), labeled_as[value](S, _), nth[tree](B, _, S),
+                               strict[tree](B), not repeats[value](B, _).
 
 completes_abruptly[code](S) :- completes_abruptly[code](C), executes_if[value](C, G, truthy), parent[tree](S, C),
                                executes_if[value](A, G, falsy), parent[tree](S, A), completes_abruptly[code](A).

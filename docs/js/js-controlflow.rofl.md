@@ -31,6 +31,7 @@ Reads:
   - <a id="inside"></a>`inside`
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
+  - <a id="strict"></a>`strict`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="body"></a>`body`
@@ -67,7 +68,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
-| <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -242,26 +242,42 @@ Declared as facts:
 
 <a id="completes_abruptly"></a>A node completes abruptly if [`exits`](#exits)(it, something).
 
-A [block](#noun-block) completes abruptly if a node S [completes abruptly](#completes_abruptly) and S [is among the](#ast_child) `body` of it.
+Declared as facts:
 
-A node
+- <a id="completion_kind"></a>A kind K is a completion kind — rows in this file
 
-- completes abruptly if all of:
-  - a node C [completes abruptly](#completes_abruptly);
-  - [`executes_if`](#executes_if)(C, G, `truthy`);
-  - [`parent`](#parent)(it, C);
-  - [`executes_if`](#executes_if)(X, G, `falsy`);
-  - [`parent`](#parent)(it, X);
-  - a node X [completes abruptly](#completes_abruptly).
-- completes abruptly if all of:
+> a step that carries a label is the labelled statement's body: the owner completes abruptly if the labelled
+> statement does, which it does not when a break leaves it
+
+A node B completes abruptly either:
+
+1. if all of:
+   - a node S [completes abruptly](#completes_abruptly);
+   - [`nth`](#nth)(B, something, S);
+   - [`strict`](#strict)(B);
+   - unless [`labeled_as`](#labeled_as)(S, something);
+   - unless [`repeats`](#repeats)(B, something);
+   - unless [`finalizes`](#finalizes)(something, S);
+2. if all of:
+   - a node LS [completes abruptly](#completes_abruptly);
+   - [`parent`](#parent)(LS, S);
+   - [`labeled_as`](#labeled_as)(S, something);
+   - [`nth`](#nth)(B, something, S);
+   - [`strict`](#strict)(B);
+   - unless [`repeats`](#repeats)(B, something);
+3. if all of:
+   - a node C [completes abruptly](#completes_abruptly);
+   - [`executes_if`](#executes_if)(C, G, `truthy`);
+   - [`parent`](#parent)(B, C);
+   - [`executes_if`](#executes_if)(X, G, `falsy`);
+   - [`parent`](#parent)(B, X);
+   - a node X [completes abruptly](#completes_abruptly).
+
+A node completes abruptly if all of:
   - a node S [completes abruptly](#completes_abruptly);
   - [`labeled_as`](#labeled_as)(S, something);
   - [`parent`](#parent)(it, S);
   - unless it [is escaped](#label_escaped).
-
-Declared as facts:
-
-- <a id="completion_kind"></a>A kind K is a completion kind — rows in this file
 
 > the consumer: it replaces the old four-kind arm rather than sitting beside
 > it, since the base case IS that arm
