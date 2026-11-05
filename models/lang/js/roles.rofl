@@ -68,6 +68,7 @@ role(decl,      "D introduces a fresh place of Kind: var, let, const, using, fun
 role(target,    "what the declaration D introduces when it has no value").
 role(hoisted,   "X exists from the start of Scope: a function or class declaration, not a function or class that is a value").
 role(gives,     "the value of E is the value of X, not the result of its operation").
+role(discards,  "S evaluates E and does not use its value: an expression statement (S is the owner of the step), a for statement's init and update, a sequence's operands before the last").
 role(pattern_prop, "the property Key of the value destructured by P goes into Target").
 role(pattern_elem, "the I-th element of the value destructured by P goes into Target").
 role(rest_props, "Target collects the properties P does not name").

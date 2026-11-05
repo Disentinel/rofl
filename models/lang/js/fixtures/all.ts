@@ -53,3 +53,4 @@ const rxa = /ab+/g; abstract class BodyLess { abstract bla(a: number): string; b
 const lfl = [1.5, 10n, true, null, 0x10];
 export const { epa, epb: [epc], ...epr } = { epa: 1, epb: [2] }; export const [epd, ...epe] = [4]; export const [epf = 3, [epg = 4]] = [];
 export { ea as eaa, eb as ebb }; export type { MSig as MSigX }; export { zz as zzz } from "m2";
+let ds1 = 0, ds2 = 0; ds1 + 1; (ds1, ds2); ds1 = (ds2++, ds1, 3); for (ds1 = 0, ds2 = 1; ds1 < 2; ds1++, ds2--) ds2; for (let dsi = 0; dsi < 1; dsi++) {} if (ds1) ds2; else ds1; label2: ds2; "use strict";

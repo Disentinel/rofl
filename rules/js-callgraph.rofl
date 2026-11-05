@@ -534,7 +534,7 @@ surveyed[flow](O)         :- sx_surveyed[surface](O).
 
 -- A place that hands its value nowhere the model cannot follow: a member read
 -- off it, a binding, a name it is assigned to, a test, a closed function's
--- argument. Any other place (returned, in an array, an argument of a call the
+-- argument, or a value dropped (`discards`). Any other place (returned, in an array, an argument of a call the
 -- model does not resolve to a closed function) lets it out of sight.
 edb(holds_in_place).
 holds_in_place(member_expression, object).
@@ -555,7 +555,6 @@ holds_in_place(object_method, params).
 holds_in_place(assignment_expression, left).
 holds_in_place(call_expression, callee).
 holds_in_place(new_expression, callee).
-holds_in_place(expression_statement, expression).
 holds_in_place(program, body).
 holds_in_place(block_statement, body).
 holds_in_place(class_body, body).
@@ -579,6 +578,7 @@ holds_in_place(object_property, value).
 -- asked only of a place that may hold a surveyed object of its own file
 placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), parent[tree](_, A).
 held[flow](A) :- placed[flow](A), ast_child[code](P, F, _, A), ast_node[code](P, PK, _), holds_in_place(PK, F).
+held[flow](A) :- placed[flow](A), discards[value](_, A).
 held[flow](A) :- placed[flow](A), assigned[code](_, _, _, A, _).
 held[flow](A) :- placed[flow](A), nth[tree](C, _, A), not spread_args[value](C, _, A), callee[value](C, CE),
                  whole_expr[flow](CE).
@@ -710,7 +710,7 @@ sx_global_key[surface](Name, Key) :- member_written[flow](N), object_of[code](N,
 sx_global_open[surface](Name) :- member_written[flow](N), object_of[code](N, G),
                                  es_global[code](G, Name, _, _), not selects[flow](N, _).
 sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), ast_child[code](P, F, _, G),
-                                 ast_node[code](P, PK, _), not holds_in_place(PK, F).
+                                 ast_node[code](P, PK, _), not holds_in_place(PK, F), not discards[value](_, G).
 call_finds[flow](C) :- callee[value](C, N), es_static[code](N, _, _, _).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, Name, _, _), sx_global_key[surface](Name, Key).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, _, _, constructor_binding),

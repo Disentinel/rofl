@@ -627,6 +627,14 @@ gives[value](U, X)      :- node[ast_babel](U, update_expression, _), attr[ast_ba
 
 gives[value](S, X) :- node[ast_babel](S, sequence_expression, _), I is max(J : child[ast_babel](S, expressions, J, _)),
                       child[ast_babel](S, expressions, I, X).
+-- an expression statement, a for's init and update, and the operands of a sequence before the last evaluate and drop their value
+discards[value](S, E) :- node[ast_babel](X, expression_statement, _), child[ast_babel](X, expression, 0, E), nth[tree](S, _, E).
+discards[value](S, E) :- node[ast_babel](X, expression_statement, _), child[ast_babel](X, expression, 0, E), not nth[tree](_, _, E),
+                         child[ast_babel](S, _, _, X).
+discards[value](S, E) :- node[ast_babel](S, for_statement, _), child[ast_babel](S, init, 0, E), node[ast_babel](E, K, _), K != variable_declaration.
+discards[value](S, E) :- node[ast_babel](S, for_statement, _), child[ast_babel](S, update, 0, E).
+discards[value](S, E) :- node[ast_babel](S, sequence_expression, _), child[ast_babel](S, expressions, I, E),
+                         N is count(J : child[ast_babel](S, expressions, J, _)), I < N - 1.
 -- a conditional and a logical operator give the value of one of their operands: a row per arm
 gives[value](E, X) :- node[ast_babel](E, conditional_expression, _), child[ast_babel](E, consequent, 0, X).
 gives[value](E, X) :- node[ast_babel](E, conditional_expression, _), child[ast_babel](E, alternate, 0, X).

@@ -55,6 +55,7 @@ roled[W](N) :- target[W](N, _).
 roled[W](N) :- target[W](_, N).
 roled[W](N) :- gives[W](N, _).
 roled[W](N) :- gives[W](_, N).
+roled[W](N) :- discards[W](_, N).
 roled[W](N) :- pattern_prop[W](N, _, _).
 roled[W](N) :- pattern_prop[W](_, _, N).
 roled[W](N) :- pattern_elem[W](N, _, _).

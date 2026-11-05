@@ -369,6 +369,13 @@ assign[value](U, X, U)  :- oxc_k[ast_oxc](U, update_expression), oxc_c[ast_oxc](
 gives[value](U, X)      :- oxc_k[ast_oxc](U, update_expression), oxc_a[ast_oxc](U, prefix, false), oxc_c[ast_oxc](U, argument, 0, X).
 gives[value](S, X)      :- oxc_k[ast_oxc](S, sequence_expression), oxc_c[ast_oxc](S, expressions, I, X),
                            N is count(J : oxc_c[ast_oxc](S, expressions, J, _)), I is N - 1.
+discards[value](S, E)   :- oxc_k[ast_oxc](X, expression_statement), oxc_c[ast_oxc](X, expression, 0, E), nth[tree](S, _, E).
+discards[value](S, E)   :- oxc_k[ast_oxc](X, expression_statement), oxc_c[ast_oxc](X, expression, 0, E), not nth[tree](_, _, E),
+                           oxc_c[ast_oxc](S, _, _, X).
+discards[value](S, E)   :- oxc_k[ast_oxc](S, for_statement), oxc_c[ast_oxc](S, init, 0, E), oxc_k[ast_oxc](E, K), K != variable_declaration.
+discards[value](S, E)   :- oxc_k[ast_oxc](S, for_statement), oxc_c[ast_oxc](S, update, 0, E).
+discards[value](S, E)   :- oxc_k[ast_oxc](S, sequence_expression), oxc_c[ast_oxc](S, expressions, I, E),
+                           N is count(J : oxc_c[ast_oxc](S, expressions, J, _)), I < N - 1.
 gives[value](E, X)      :- oxc_k[ast_oxc](E, conditional_expression), oxc_c[ast_oxc](E, consequent, 0, X).
 gives[value](E, X)      :- oxc_k[ast_oxc](E, conditional_expression), oxc_c[ast_oxc](E, alternate, 0, X).
 gives[value](E, X)      :- oxc_k[ast_oxc](E, logical_expression), oxc_c[ast_oxc](E, left, 0, X).
