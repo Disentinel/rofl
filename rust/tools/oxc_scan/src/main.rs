@@ -1,6 +1,6 @@
 // oxc_scan — JS/TS source through oxc, its tree as facts in the [ast_oxc] perspective, without judgement.
 //
-//   oxc_scan DIR [FILE] [--out OUT]   every JS/TS file under DIR (or FILE alone), facts on stdout, the same bytes
+//   oxc_scan DIR [FILE...] [--out OUT]  every JS/TS file under DIR (or the FILEs alone, paths from DIR), facts on stdout, the same bytes
 //                                      for the same tree; a file oxc refuses is named on stderr and the exit code is 2
 //
 // The tree is oxc_ast's own (the Rust structs, not oxc's ESTree output), read through the Debug that oxc derives on
@@ -539,17 +539,14 @@ fn main() {
         args.remove(i);
         args.remove(i)
     });
-    if args.is_empty() || args.len() > 2 {
-        eprintln!("usage: oxc_scan DIR [FILE] [--out OUT]");
+    if args.is_empty() {
+        eprintln!("usage: oxc_scan DIR [FILE...] [--out OUT]");
         std::process::exit(1);
     }
     let root = Path::new(&args[0]);
     let (mut files, mut dirs) = (Vec::new(), Vec::new());
     walk(root, "", &mut files, &mut dirs);
-    let parsed: Vec<String> = match args.get(1) {
-        Some(f) => vec![f.clone()],
-        None => files,
-    };
+    let parsed: Vec<String> = if args.len() > 1 { args[1..].to_vec() } else { files };
     let mut w: Box<dyn std::io::Write> = match &out {
         Some(o) => Box::new(std::io::BufWriter::new(std::fs::File::create(o).unwrap())),
         None => Box::new(std::io::BufWriter::new(std::io::stdout().lock())),

@@ -699,3 +699,19 @@ assign[value](D, I, Q) :- oxc_k[ast_oxc](D, tsimport_equals_declaration), oxc_c[
 member[value](Q, L, Name) :- alias_ref(Q), oxc_k[ast_oxc](Q, tsqualified_name), oxc_c[ast_oxc](Q, left, 0, L),
                              oxc_c[ast_oxc](Q, right, 0, R), oxc_name[ast_oxc](R, Name).
 ref[value](X, Name) :- alias_ref(X), oxc_k[ast_oxc](X, identifier_reference), oxc_name[ast_oxc](X, Name).
+
+-- T['k'], A.B as types
+member[type](N, O, Key) :- oxc_k[ast_oxc](N, tsindexed_access_type), oxc_c[ast_oxc](N, object_type, 0, O),
+                           oxc_c[ast_oxc](N, index_type, 0, I), type_literal_of(I, Key).
+member_expr[type](N, O, I) :- oxc_k[ast_oxc](N, tsindexed_access_type), oxc_c[ast_oxc](N, object_type, 0, O),
+                              oxc_c[ast_oxc](N, index_type, 0, I), not type_literal_of(I, _).
+type_literal_of(T, V) :- oxc_c[ast_oxc](T, literal, 0, L), type_literal(L), oxc_a[ast_oxc](L, value, V).
+member[type](N, L, Name) :- oxc_k[ast_oxc](N, tsqualified_name), oxc_c[ast_oxc](N, left, 0, L),
+                            oxc_c[ast_oxc](N, right, 0, R), oxc_name[ast_oxc](R, Name).
+
+-- keyof T, readonly T[], unique symbol, typeof x
+edb(type_operator_word).
+type_operator_word("Keyof", "keyof"). type_operator_word("Readonly", "readonly"). type_operator_word("Unique", "unique").
+unary[type](T, Op, X)       :- oxc_k[ast_oxc](T, tstype_operator), oxc_a[ast_oxc](T, operator, W), type_operator_word(W, Op),
+                               oxc_c[ast_oxc](T, type_annotation, 0, X).
+unary[type](T, "typeof", X) :- oxc_k[ast_oxc](T, tstype_query), oxc_c[ast_oxc](T, expr_name, 0, X).
