@@ -562,6 +562,18 @@ exported_decl(E, D) :- oxc_k[ast_oxc](E, export_declaration), oxc_c[ast_oxc](E, 
 exported_place(E, M, B) :- exported_decl(E, V), oxc_k[ast_oxc](V, variable_declaration), oxc_c[ast_oxc](V, declarations, _, M),
                            oxc_c[ast_oxc](M, id, 0, B), oxc_k[ast_oxc](B, binding_identifier).
 exported_place(E, D, B) :- exported_decl(E, D), oxc_c[ast_oxc](D, id, 0, B), oxc_k[ast_oxc](B, binding_identifier).
+-- the names a pattern binds: `export const { a, b: [c] } = o` exports a and c as `export const a = 1` exports a
+exported_place(E, M, B) :- exported_decl(E, V), oxc_k[ast_oxc](V, variable_declaration), oxc_c[ast_oxc](V, declarations, _, M),
+                           oxc_c[ast_oxc](M, id, 0, P), pat_ident(P, B), P != B, oxc_k[ast_oxc](B, binding_identifier).
+pat_ident(P, P) :- oxc_c[ast_oxc](_, id, 0, P).
+pat_ident(P, Y) :- pat_ident(P, X), pat_down(X, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, object_pattern), oxc_c[ast_oxc](X, properties, _, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, object_pattern), oxc_c[ast_oxc](X, rest, 0, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, binding_property), oxc_c[ast_oxc](X, value, 0, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, array_pattern), oxc_c[ast_oxc](X, elements, _, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, array_pattern), oxc_c[ast_oxc](X, rest, 0, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, assignment_pattern), oxc_c[ast_oxc](X, left, 0, Y).
+pat_down(X, Y) :- oxc_k[ast_oxc](X, binding_rest_element), oxc_c[ast_oxc](X, argument, 0, Y).
 ns_body(Ns, X) :- in_program(P, _, X), namespace[value](P, Ns).
 ns_body(B, X)  :- namespace[value](M, B), M != B, oxc_c[ast_oxc](B, body, _, X).
 -- a declared name is a member of the world its binding is in

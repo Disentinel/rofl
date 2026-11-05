@@ -1642,6 +1642,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", b_spec_member).
 unit_concludes("models/lang/js/babel-roles.rofl", b_type_spec).
 unit_concludes("models/lang/js/babel-roles.rofl", b_spec_of).
 unit_concludes("models/lang/js/babel-roles.rofl", b_export_binding).
+unit_concludes("models/lang/js/babel-roles.rofl", b_pat_ident).
 unit_concludes("models/lang/js/babel-roles.rofl", type_member_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", b_tplace).
 unit_concludes("models/lang/js/babel-roles.rofl", b_stated).

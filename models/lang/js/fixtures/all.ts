@@ -51,3 +51,4 @@ interface MSig { msm(a: number): string; msp: () => string; msq(): void; readonl
 type MSLit = { mtm(b: string): number; mtp: () => number };
 const rxa = /ab+/g; abstract class BodyLess { abstract bla(a: number): string; blo(a: string): string; blo(a: number): string; blo(a: any): string { return a; } declare bld: number; abstract blp: string; blf: number; blg; accessor bla2 = 3; constructor(a: string); constructor(a: any) {} }
 const lfl = [1.5, 10n, true, null, 0x10];
+export const { epa, epb: [epc], ...epr } = { epa: 1, epb: [2] }; export const [epd, ...epe] = [4];

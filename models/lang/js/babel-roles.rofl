@@ -765,7 +765,11 @@ value[value](M, Src) :- node[ast_babel](E, export_named_declaration, _), child[a
 -- export const a = 1, export function f, export class C: the binding is the member, its value itself
 b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
                                       child[ast_babel](E, declaration, 0, V), child[ast_babel](V, declarations, _, D),
-                                      child[ast_babel](D, id, 0, X), node[ast_babel](X, identifier, _).
+                                      child[ast_babel](D, id, 0, P), b_pat_ident[ast_babel](P, X), node[ast_babel](X, identifier, _).
+-- the names a pattern binds: `export const { a, b: [c] } = o` exports a and c as `export const a = 1` exports a
+b_pat_ident[ast_babel](P, P) :- child[ast_babel](_, id, 0, P).
+b_pat_ident[ast_babel](P, Y) :- b_pat_ident[ast_babel](P, X), node[ast_babel](X, K, _), pattern_down[ast_babel](K, F),
+                                child[ast_babel](X, F, _, Y).
 b_export_binding[ast_babel](Ns, X) :- b_ns[ast_babel](E, Ns), node[ast_babel](E, export_named_declaration, _),
                                       child[ast_babel](E, declaration, 0, V), child[ast_babel](V, id, 0, X).
 -- a declared name is a member of the world its binding is in
