@@ -283,16 +283,9 @@ may_be_node[flow](E, N) :- may_be_node[flow](Init, N), binder[code](D, Name, Ini
 -- Only an operator whose result IS the right-hand side counts: `=` and the
 -- three logical ones (`x ||= v` is x or v, a superset of v). `x += v` is a sum
 -- and used to be read as v.
-edb(assign_value_op).
-assign_value_op("=").
-assign_value_op("||=").
-assign_value_op("&&=").
-assign_value_op("??=").
 
-assigned[code](A, L, Name, Src, File) :- ast_node[code](A, assignment_expression, File),
-                                         ast_attr[code](A, operator, Op), assign_value_op(Op),
-                                         ast_child[code](A, left, 0, L), ast_name[code](L, Name),
-                                         ast_child[code](A, right, 0, Src).
+assigned[code](A, L, Name, Src, File) :- value_write[code](A, L, Src), at[tree](A, File, _),
+                                         ref[value](L, Name).
 
 -- THE TARGET, decided three ways. (a) a declarator in scope at the target:
 -- closures, `var` hoisting and top-of-file binders are all `sees_binder`.
@@ -760,8 +753,7 @@ keyed_ref[code](O, D)     :- keyed_const[code](D, _, _, _), sees_binder[code](O,
 
 keyed_ctor[code](CB, Body) :- ctor_method[code](M), parent[tree](CB, M), body[value](M, Body).
 keyed_this_member[code](L, T, Fld) :- prop_name[code](L, T, Fld), this[value](T).
-keyed_field[code](A, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](A, right, 0, X),
-                                    ast_node[code](A, assignment_expression, _), ast_child[code](A, left, 0, L),
+keyed_field[code](A, P, CB, Fld) :- keyed_new[code](X, P), assign_op[code](A, L, X),
                                     keyed_this_member[code](L, _, Fld), ast_child[code](S, expression, 0, A),
                                     ast_child[code](Body, body, _, S), keyed_ctor[code](CB, Body).
 keyed_field[code](Q, P, CB, Fld) :- keyed_new[code](X, P), ast_child[code](Q, value, 0, X),
@@ -778,8 +770,8 @@ keyed_field_closed[code](H) :- keyed_field[code](H, _, CB, Fld), ast_child[code]
                                ast_node[code](Q, class_property, _), ast_child[code](Q, key, 0, K),
                                ast_name[code](K, Fld), frozen[type](Q).
 keyed_field_set[code](H, A, File) :- keyed_field[code](H, _, _, Fld), ast_name[code](Pn, Fld),
-                                     ast_child[code](L, property, 0, Pn), ast_child[code](A, left, 0, L),
-                                     ast_node[code](A, assignment_expression, File), A != H.
+                                     ast_child[code](L, property, 0, Pn), assign_op[code](A, L, _),
+                                     at[tree](A, File, _), A != H.
 keyed_field_reset[code](H) :- keyed_field_set[code](H, _, _), not keyed_field_closed[code](H).
 keyed_field_reset[code](H) :- keyed_field_set[code](H, _, File), at[tree](H, File, _).
 keyed_field_ok[code](H, CB, Fld) :- keyed_field[code](H, _, CB, Fld), not keyed_field_reset[code](H).
@@ -880,13 +872,12 @@ keyed_src[code](C, A) :- keyed_want[code](C), resolves[code](C, F), sx_ret_param
                          arg_node[code](C, I, A).
 keyed_fn_need[code](G) :- keyed_param[code](_, G, _).
 keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, K, _), not keyed_shut_kind(K).
-keyed_open[code](E) :- keyed_want[code](E), ast_node[code](E, binary_expression, _), not ast_attr[code](E, operator, "+").
+keyed_open[code](E) :- keyed_want[code](E), bin_op[code](E, Op, _, _), Op != "+".
 keyed_open[code](E) :- keyed_want[code](E), ref[value](E, _), not keyed_bound[code](E).
 keyed_open[code](U) :- keyed_param[code](U, G, _), keyed_escapes[code](G).
 keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D),
                        unary[value](U, _, L), assign[value](U, L, U).
-keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D), ast_child[code](A, left, 0, L),
-                       ast_node[code](A, assignment_expression, _), ast_attr[code](A, operator, Op), not assign_value_op(Op).
+keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D), compound_write[code](_, L).
 keyed_open[code](E) :- keyed_src[code](E, S), keyed_open[code](S).
 -- a source that reaches itself builds its value in a loop
 keyed_upstream[code](E, S) :- keyed_src[code](E, S).

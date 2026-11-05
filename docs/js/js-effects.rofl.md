@@ -36,7 +36,7 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
 - from outside these files, in the tree:
@@ -68,7 +68,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -78,7 +77,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="eff_has_join"></a>An effect has a join with an effect B if [the join](#eff_join) of it and B is some effect.
 - <a id="eff_has_meet"></a>An effect has a meet with an effect B if [the meet](#eff_meet) of it and B is some effect.
 - <a id="eff_obj_traced"></a>M has a traced object if [`member_obj`](js-dataflow.rofl.md#member_obj)(M, something, something).
-- <a id="eff_assign"></a>An [assignment](#noun-assignment) is a write.
+- <a id="eff_assign"></a>X is a write if [`assign_op`](js-structure.rofl.md#assign_op)(X, something, something).
 - <a id="eff_member_target"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a written member if some assignment [writes to](#eff_assign_target) it.
 - <a id="eff_label_seen"></a>An effect label is seen at a host H if some node [has the effect](js-ambient.rofl.md#eff_here) it at H.
 - <a id="eff_subject"></a>A [function](js-callgraph.rofl.md#fn_node) is an effect subject.
@@ -308,7 +307,7 @@ Declared as facts:
 
 In the code:
 
-<a id="eff_assign_target"></a>A node writes to a node L if it [is a write](#eff_assign) and the `left` of it is L.
+<a id="eff_assign_target"></a>X writes to a node L if X [is a write](#eff_assign) and [`assign_op`](js-structure.rofl.md#assign_op)(X, L, something).
 
 <a id="eff_compound"></a>X is a compound write if X [is a write](#eff_assign), unless X [is plain](js-dataflow.rofl.md#plain_assign).
 
@@ -320,8 +319,8 @@ A node
 
 - has the effect `write` at a host H if it [is a written member](#eff_member_target) and it [touches the heap](#eff_heap_of) H.
 - has the effect `read` at a host H if all of:
-  - a node X [is a compound write](#eff_compound);
-  - the `left` of X is it;
+  - X [is a compound write](#eff_compound);
+  - [`assign_op`](js-structure.rofl.md#assign_op)(X, it, something);
   - it [is a written member](#eff_member_target);
   - it [touches the heap](#eff_heap_of) H.
 - has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and L [is named](js-structure.rofl.md#ast_name) some name.

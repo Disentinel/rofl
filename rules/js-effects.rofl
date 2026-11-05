@@ -133,14 +133,14 @@ eff_obj_traced[flow](M) :- member_obj[flow](M, _, _).
 eff_heap_of[flow](M, local)  :- eff_obj_traced[flow](M), member_node_v[flow](M).
 eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
 
-eff_assign[code](A)           :- ast_node[code](A, assignment_expression, _).
-eff_assign_target[code](A, L) :- eff_assign[code](A), ast_child[code](A, left, 0, L).
+eff_assign[code](A)           :- assign_op[code](A, _, _).
+eff_assign_target[code](A, L) :- eff_assign[code](A), assign_op[code](A, L, _).
 eff_compound[code](A)         :- eff_assign[code](A), not plain_assign[flow](A).
 eff_member_target[code](L)    :- eff_assign_target[code](_, L), member_node_v[flow](L).
 eff_name_target[code](L)      :- eff_assign_target[code](_, L), ast_name[code](L, _).
 
 eff_here[flow](L, write, H) :- eff_member_target[code](L), eff_heap_of[flow](L, H).
-eff_here[flow](L, read, H)  :- eff_compound[code](A), ast_child[code](A, left, 0, L),
+eff_here[flow](L, read, H)  :- eff_compound[code](A), assign_op[code](A, L, _),
                                eff_member_target[code](L), eff_heap_of[flow](L, H).
 eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ast_name[code](L, _).
 

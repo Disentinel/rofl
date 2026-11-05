@@ -54,6 +54,23 @@ key_name[code](M, N) :- key[value](M, N), not private[value](M).
 key_name[code](M, N) :- key_expr[value](M, E), symbol_ref[code](E, N).
 alias ast_value(N, V) is ast_attr(N, value, V).
 
+-- A write by an operator expression: `x = v`, `x ||= v` and `x += v` put the right operand R into the place L. The
+-- first two give R or the old value; `+=` gives a new value from the old one; `x++` has no right operand and is no
+-- assignment here, a declarator and the default of a pattern are not written by an operator.
+assign_op[code](A, L, R) :- assign[value](A, L, R), gives[value](A, R).
+assign_op[code](A, L, R) :- assign[value](A, L, _), logical[value](A, _, L, R).
+assign_op[code](A, L, R) :- assign[value](A, L, _), binary[value](A, _, L, R).
+value_write[code](A, L, R) :- assign_op[code](A, L, R), not binary[value](A, _, _, _).
+compound_write[code](A, L)  :- assign_op[code](A, L, _), binary[value](A, _, _, _).
+
+-- A write whose value is only sometimes the source: the default of a pattern or a parameter, and `||=`, `&&=`, `??=`.
+-- `x = v` and a declarator's init are unconditional.
+pattern_target[code](L) :- pattern_prop[value](_, _, L).
+pattern_target[code](L) :- pattern_elem[value](_, _, L).
+pattern_target[code](L) :- param[value](_, _, L).
+conditional_write[code](W) :- assign[value](W, L, _), pattern_target[code](L).
+conditional_write[code](W) :- assign[value](W, _, _), logical[value](W, _, _, _).
+
 -- ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 -- `import.meta` are both a `meta_property` with zero attributes; three layers
 -- need the form and none owns it. Keyed on `meta`, the reserved word the

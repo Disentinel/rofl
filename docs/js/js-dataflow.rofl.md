@@ -36,7 +36,7 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -113,9 +113,7 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
-| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
-| <a id="noun-binary_expression"></a>a binary expression | a node of kind `binary_expression` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
@@ -131,7 +129,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
-| <a id="noun-value_assignment_operator"></a>a value assignment operator | a node of one of the kinds "=", "||=", "&&=", "??=" (`assign_value_op`) |
 | <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal` (`node_value_kind`) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](#member_node_v) holds of |
@@ -583,17 +580,10 @@ A node
 
 In the code:
 
-<a id="assigned"></a>`assigned`(an [assignment](#noun-assignment) X, L, Name, Src, File) if all of:
-  - X is in file File;
-  - [the attribute](#ast_attr) `operator` of X is Op;
-  - [`assign_value_op`](#assign_value_op)(Op);
-  - the `left` of X is a node L;
-  - L [is named](js-structure.rofl.md#ast_name) Name;
-  - the `right` of X is a node Src.
-
-Declared as facts:
-
-- <a id="assign_value_op"></a>`assign_value_op` — rows in Words
+<a id="assigned"></a>`assigned`(X, L, Name, Src, File) if all of:
+  - [`value_write`](js-structure.rofl.md#value_write)(X, L, Src);
+  - [`at`](#at)(X, File, something);
+  - [`ref`](#ref)(L, Name) in the value.
 
 > THE TARGET, decided three ways. (a) a declarator in scope at the target:
 > closures, `var` hoisting and top-of-file binders are all `sees_binder`.
@@ -1511,11 +1501,9 @@ In the code:
 
 1. if all of:
    - [`keyed_new`](#keyed_new)(X, P);
-   - the `right` of Y is a node X;
-   - Y is an [assignment](#noun-assignment);
-   - the `left` of Y is a node L;
+   - [`assign_op`](js-structure.rofl.md#assign_op)(Y, L, X);
    - [`keyed_this_member`](#keyed_this_member)(L, something, Fld);
-   - the `expression` of a node S is Y;
+   - the `expression` of a node S is a node Y;
    - S [is among the](#ast_child) `body` of a node Body;
    - [`keyed_ctor`](#keyed_ctor)(CB, Body);
 2. if all of:
@@ -1544,12 +1532,12 @@ In the code:
    - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
    - [`frozen`](#frozen)(Q).
 
-<a id="keyed_field_set"></a>`keyed_field_set`(H, an [assignment](#noun-assignment) X, File) if all of:
+<a id="keyed_field_set"></a>`keyed_field_set`(H, X, File) if all of:
   - [`keyed_field`](#keyed_field)(H, something, something, Fld);
   - a node Pn [is named](js-structure.rofl.md#ast_name) Fld;
   - the `property` of a node L is Pn;
-  - the `left` of X is L;
-  - X is in file File;
+  - [`assign_op`](js-structure.rofl.md#assign_op)(X, L, something);
+  - [`at`](#at)(X, File, something);
   - X differs from H.
 
 <a id="keyed_field_reset"></a>`keyed_field_reset`(H) either:
@@ -1775,8 +1763,8 @@ In the code:
    - unless [`keyed_shut_kind`](#keyed_shut_kind)(K);
 2. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - E is a [binary expression](#noun-binary_expression);
-   - unless [the attribute](#ast_attr) `operator` of E is "+";
+   - [`bin_op`](#bin_op)(E, Op, something, something);
+   - Op differs from "+";
 3. if all of:
    - [`keyed_want`](#keyed_want)(E);
    - [`ref`](#ref)(E, something) in the value;
@@ -1792,9 +1780,7 @@ In the code:
    - [`keyed_want`](#keyed_want)(E);
    - a node E [sees](#sees_binder) D;
    - a node L [sees](#sees_binder) D;
-   - the `left` of an [assignment](#noun-assignment) X is L;
-   - [the attribute](#ast_attr) `operator` of X is Op;
-   - unless [`assign_value_op`](#assign_value_op)(Op);
+   - [`compound_write`](js-structure.rofl.md#compound_write)(something, L);
 7. if [`keyed_src`](#keyed_src)(E, S) and [`keyed_open`](#keyed_open)(S).
 
 > a source that reaches itself builds its value in a loop

@@ -48,16 +48,13 @@ Reads:
 - from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
-- from js-structure, in the code: [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the main:
   - <a id="host_member_module"></a>`host_member_module`
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -65,7 +62,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-assignment"></a>an assignment | a node of kind `assignment_expression` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -454,7 +450,7 @@ In the flow:
 
 <a id="env_key"></a>`env_key`(a [member access](js-dataflow.rofl.md#member_node_v) M) if [`env_object`](#env_object)(O) and [`object_of`](js-structure.rofl.md#object_of)(M, O).
 
-<a id="env_written"></a>`env_written`(M) if [`env_key`](#env_key)(M) and the `left` of an [assignment](#noun-assignment) X is a node M.
+<a id="env_written"></a>`env_written`(M) if [`env_key`](#env_key)(M) and [`assign_op`](js-structure.rofl.md#assign_op)(something, M, something).
 
 <a id="env_read"></a>`env_read`(M, Name) if all of:
   - [`env_key`](#env_key)(M);

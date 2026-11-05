@@ -574,8 +574,7 @@ held[flow](V) :- placed[flow](V), stored_in[flow](V, _).
 -- a member of an object literal holds the value as long as the literal is not open
 literal_part[flow](O, P) :- obj_lit[code](O), parent[tree](O, P).
 held[flow](P) :- placed[flow](P), literal_part[flow](_, P).
-stored_in[flow](V, H) :- ast_child[code](A, right, 0, V), ast_node[code](A, assignment_expression, _),
-                         ast_child[code](A, left, 0, L), member_node_v[flow](L), object_of[code](L, HE),
+stored_in[flow](V, H) :- assign_op[code](_, L, V), member_node_v[flow](L), object_of[code](L, HE),
                          whole_expr[flow](HE), may_be_node[flow](HE, H).
 
 -- A member written: by a known key it is had, by an unknown one the object is open.
@@ -945,9 +944,9 @@ call_passes[code](C, I) :- argument_at[code](C, I, _).
 
 param_defaulted[code](F, I) :- param_wrap[code](F, I, _, _).
 
-param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "&&").
-param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "||").
-param_test[code](B, T) :- ast_child[code](B, left, 0, T), ast_attr[code](B, operator, "??").
+param_test[code](B, T) :- logic_op[code](B, "&&", T, _).
+param_test[code](B, T) :- logic_op[code](B, "||", T, _).
+param_test[code](B, T) :- logic_op[code](B, "??", T, _).
 param_test[code](B, T) :- unary[value](B, "!", T).
 
 param_test[code](B, T) :- ast_child[code](B, test, 0, T).

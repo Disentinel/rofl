@@ -133,6 +133,11 @@ unit_concludes("rules/js-structure.rofl", ast_in).
 unit_concludes("rules/js-structure.rofl", ast_name).
 unit_concludes("rules/js-structure.rofl", key_name).
 unit_concludes("rules/js-structure.rofl", ast_value).
+unit_concludes("rules/js-structure.rofl", assign_op).
+unit_concludes("rules/js-structure.rofl", value_write).
+unit_concludes("rules/js-structure.rofl", compound_write).
+unit_concludes("rules/js-structure.rofl", pattern_target).
+unit_concludes("rules/js-structure.rofl", conditional_write).
 unit_concludes("rules/js-structure.rofl", meta_form).
 unit_concludes("rules/js-structure.rofl", meta_unformed).
 unit_concludes("rules/js-structure.rofl", meta_form_conflict).
@@ -183,7 +188,6 @@ unit_concludes("rules/js-dataflow.rofl", symbol_ref).
 unit_concludes("rules/js-dataflow.rofl", tdz_cand).
 unit_concludes("rules/js-dataflow.rofl", tdz_deferred).
 unit_concludes("rules/js-dataflow.rofl", tdz_at).
-unit_concludes("rules/js-dataflow.rofl", assign_value_op).
 unit_concludes("rules/js-dataflow.rofl", assigned).
 unit_concludes("rules/js-dataflow.rofl", assign_binder).
 unit_concludes("rules/js-dataflow.rofl", assign_param).

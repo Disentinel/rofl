@@ -25,15 +25,23 @@ Reads:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
   - <a id="strict"></a>`strict`
+- from outside these files, in the type:
+  - <a id="binary"></a>`binary`
 - from outside these files, in the value:
+  - <a id="assign"></a>`assign`
   - <a id="callee"></a>`callee`
   - <a id="executes_if"></a>`executes_if`
+  - <a id="gives"></a>`gives`
   - <a id="import_meta"></a>`import_meta`
   - <a id="key"></a>`key`
   - <a id="key_expr"></a>`key_expr`
+  - <a id="logical"></a>`logical`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="new_target"></a>`new_target`
+  - <a id="param"></a>`param`
+  - <a id="pattern_elem"></a>`pattern_elem`
+  - <a id="pattern_prop"></a>`pattern_prop`
   - <a id="private"></a>`private`
   - <a id="spread_args"></a>`spread_args`
 
@@ -126,6 +134,34 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 2. if [`key_expr`](#key_expr)(M, E) and a node E [is the well known symbol](js-dataflow.rofl.md#symbol_ref) N.
 
 <a id="ast_value"></a>`ast_value` of N and V is another name for `ast_attr` of N, value and V.
+
+> A write by an operator expression: `x = v`, `x ||= v` and `x += v` put the right operand R into the place L. The
+> first two give R or the old value; `+=` gives a new value from the old one; `x++` has no right operand and is no
+> assignment here, a declarator and the default of a pattern are not written by an operator.
+
+<a id="assign_op"></a>`assign_op`(X, L, R) either:
+
+1. if [`assign`](#assign)(X, L, R) and [`gives`](#gives)(X, R);
+2. if [`assign`](#assign)(X, L, something) and [`logical`](#logical)(X, something, L, R);
+3. if [`assign`](#assign)(X, L, something) and [`binary`](#binary)(X, something, L, R) in the value.
+
+<a id="value_write"></a>`value_write`(X, L, R) if [`assign_op`](#assign_op)(X, L, R), unless [`binary`](#binary)(X, something, something, something) in the value.
+
+<a id="compound_write"></a>`compound_write`(X, L) if [`assign_op`](#assign_op)(X, L, something) and [`binary`](#binary)(X, something, something, something) in the value.
+
+> A write whose value is only sometimes the source: the default of a pattern or a parameter, and `||=`, `&&=`, `??=`.
+> `x = v` and a declarator's init are unconditional.
+
+<a id="pattern_target"></a>`pattern_target`(L) either:
+
+1. if [`pattern_prop`](#pattern_prop)(something, something, L);
+2. if [`pattern_elem`](#pattern_elem)(something, something, L);
+3. if [`param`](#param)(something, something, L).
+
+<a id="conditional_write"></a>`conditional_write`(W) either:
+
+1. if [`assign`](#assign)(W, L, something) and [`pattern_target`](#pattern_target)(L);
+2. if [`assign`](#assign)(W, something, something) and [`logical`](#logical)(W, something, something, something).
 
 > ONE KIND, TWO CONSTRUCTS, AND THE DISCRIMINATOR IS A CHILD. `new.target` and
 > `import.meta` are both a `meta_property` with zero attributes; three layers

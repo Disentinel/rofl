@@ -104,7 +104,6 @@ kind_noun(node_value_kind, "value site").
 kind_noun(class_field_kind, "class field").
 kind_noun(private_member_kind, "private member").
 kind_noun(this_binds_kind, "this-binder").
-kind_noun(assign_value_op, "value assignment operator").
 kind_noun(external_shape, "external shape").
 
 -- a kind noun that names a SET of kinds, not one kind: the guard is `ast_node(X, K, _), set(K)`
