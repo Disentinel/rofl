@@ -12948,3 +12948,9 @@ recorded(f_a_callback_argument_is_the_ith_step_of_the_call, "2026-11-05").
 addressed_by(f_a_callback_argument_is_the_ith_step_of_the_call, "rules/js-surface.rofl").
 finding_note(f_a_callback_argument_is_the_ith_step_of_the_call,
   "w_js_model_on_roles, last stage, group 7: sx_cb reads the argument of the call as nth(C, _, A), a spread's argument left out. NO ROW MOVED (corpus; cf: forEach(f), setTimeout(f, 1), forEach(...[f])). NOT PORTED, CONTESTED: param_test reads the field `test` of any node. executes_if (truthy, falsy, matches) says it for if, ?:, while, for and case, and changes two things on cf: the test of a do-while is no row (no role gives a guard to `do ... while (x)`: 5 param_test lost, param_tested and sx_param_deref move), and the left of `x ||= v` and `x &&= v` becomes a test (12 new rows: 9 identifiers, 3 members). The model asks 'is this read as a condition'. Either do-while gets its guard (executes_if for the next turn of the loop) and `x ||= v` is accepted as a test of x, or param_test stays on the field.").
+
+finding(f_an_object_literal_is_open_by_its_spread_and_its_computed_key, insight).
+recorded(f_an_object_literal_is_open_by_its_spread_and_its_computed_key, "2026-11-05").
+addressed_by(f_an_object_literal_is_open_by_its_spread_and_its_computed_key, "rules/js-dataflow.rofl").
+finding_note(f_an_object_literal_is_open_by_its_spread_and_its_computed_key,
+  "w_js_model_on_roles, last stage, group 8: obj_open_own is an object literal (obj_lit) with a spread (spread_props) or a computed key (key_expr of a member), member_unset takes its object from obj_lit. NO ANSWER MOVED. HELPER ROWS DROPPED: obj_open_own held 5 rows (7 in cf) for OBJECT PATTERNS with a rest (`const { ...r } = o`), through the accessor_call position of the rest; the only reader asks it of an object literal.").

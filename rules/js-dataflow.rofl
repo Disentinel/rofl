@@ -1356,16 +1356,15 @@ selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P
 -- instance of a class of any file reads it `undefined`. A write of the key onto
 -- the object (`member_value`) may run before the read or after it: writes onto
 -- an object are not ordered, so such a read is `member_unset_written`.
-obj_open_own[code](O) :- hidden_call_pos[code](S, accessor_call), ast_child[code](O, properties, _, S).
-obj_open_own[code](O) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
-                         ast_attr[code](P, computed, true).
+obj_open_own[code](O) :- obj_lit[code](O), spread_props[value](O, _, _).
+obj_open_own[code](O) :- obj_lit[code](O), has[value](O, P), key_expr[value](P, _).
 obj_own_key[code](O, Key) :- key_name[code](P, Key), has[value](O, P), obj_lit[code](O).
 written_target[code](N) :- assign_op[code](_, N, _).
 written_target[code](N) :- pattern_target[code](N), member[value](N, _, _).
 written_target[code](N) :- pattern_target[code](N), member_expr[value](N, _, _).
 written_target[code](N) :- iterates[value](S, N, _), for_of[code](S).
 written_target[code](N) :- enumerates[value](_, N, _).
-member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), at[tree](N, F, _), ast_node[code](O, object_expression, F),
+member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), at[tree](N, F, _), obj_lit[code](O), at[tree](O, F, _),
                                  not written_target[code](N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
                                  not lib_member(object, Key, _), Key != "__proto__".
 field_unset_decl[code](CB, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
