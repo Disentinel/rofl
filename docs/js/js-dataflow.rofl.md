@@ -356,24 +356,30 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 > A function or class declaration declares its name in the scope around it,
 > as a binder does; a function or class expression inside itself. A
 > declaration with no scope around it is at the top of its file.
+> What a declaration names is where it stands: a function or class declaration (hoisted), an enum, a namespace and a
+> `declare function` (not hoisted: ambient) name themselves in the scope around; an expression in itself.
 
-`named_kind` lists:
+<a id="named_here"></a>`named_here`(X) either:
 
-| kind | where |
-|---|---|
-| `function_declaration` | `around` |
-| `class_declaration` | `around` |
-| `tsenum_declaration` | `around` |
-| `tsmodule_declaration` | `around` |
-| `tsdeclare_function` | `around` |
-| `function_expression` | `itself` |
-| `class_expression` | `itself` |
+1. if [`hoisted`](#hoisted)(X, something);
+2. if [`decl`](#decl)(X, `enum` or `namespace`);
+3. if [`bodiless`](js-callgraph.rofl.md#bodiless)(X).
 
-<a id="own_name"></a>A node carries its own name Name and File and W if all of:
-  - a kind K [declares its name](#named_kind) W;
-  - it [is of kind](js-model.rofl.md#ast_node) K in file File;
-  - [`target`](#target)(it, I);
-  - [`binds`](#binds)(I, Name).
+<a id="own_name"></a>A node X carries its own name Name and File and N either:
+
+1. if all of:
+   - [`named_here`](#named_here)(X);
+   - [`at`](#at)(X, File, something);
+   - [`target`](#target)(X, I);
+   - [`binds`](#binds)(I, Name);
+   - N is `around`;
+2. if all of:
+   - [`decl`](#decl)(X, `function` or `class`);
+   - [`at`](#at)(X, File, something);
+   - [`target`](#target)(X, I);
+   - [`binds`](#binds)(I, Name);
+   - N is `itself`;
+   - unless [`named_here`](#named_here)(X).
 
 <a id="up_d"></a>D climbs from a node P if D [declares the name](#named_decl) some name in some file and [`parent`](#parent)(P, D).
 
@@ -389,10 +395,6 @@ D climbs from a node P2 if all of:
   - [`binds`](#binds)(P, Name);
   - [`parent`](#parent)(H, P);
   - [`at`](#at)(H, File, something).
-
-Declared as facts:
-
-- <a id="named_kind"></a>A kind K declares its name W — rows in this file
 
 > which declaration a read of its name sees, found by the same lookup
 

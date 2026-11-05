@@ -146,16 +146,17 @@ scope_declares[code](X, Name, File) :- own_name[code](X, Name, File, itself).
 -- A function or class declaration declares its name in the scope around it,
 -- as a binder does; a function or class expression inside itself. A
 -- declaration with no scope around it is at the top of its file.
-edb(named_kind).
-named_kind(function_declaration, around).
-named_kind(class_declaration, around).
-named_kind(tsenum_declaration, around).
-named_kind(tsmodule_declaration, around).
-named_kind(tsdeclare_function, around).
-named_kind(function_expression, itself).
-named_kind(class_expression, itself).
-own_name[code](X, Name, File, W) :- named_kind(K, W), ast_node[code](X, K, File),
-                                    target[value](X, I), binds[value](I, Name).
+-- What a declaration names is where it stands: a function or class declaration (hoisted), an enum, a namespace and a
+-- `declare function` (not hoisted: ambient) name themselves in the scope around; an expression in itself.
+named_here[code](X) :- hoisted[value](X, _).
+named_here[code](X) :- decl[value](X, enum).
+named_here[code](X) :- decl[value](X, namespace).
+named_here[code](X) :- bodiless[code](X).
+own_name[code](X, Name, File, around) :- named_here[code](X), at[tree](X, File, _), target[value](X, I), binds[value](I, Name).
+own_name[code](X, Name, File, itself) :- decl[value](X, function), not named_here[code](X), at[tree](X, File, _),
+                                         target[value](X, I), binds[value](I, Name).
+own_name[code](X, Name, File, itself) :- decl[value](X, class), not named_here[code](X), at[tree](X, File, _),
+                                         target[value](X, I), binds[value](I, Name).
 named_decl[code](D, Name, File)  :- own_name[code](D, Name, File, around).
 up_d[code](D, P)         :- named_decl[code](D, _, _), parent[tree](P, D).
 up_d[code](D, P2)        :- up_d[code](D, P), not scope_node[code](P), parent[tree](P2, P).

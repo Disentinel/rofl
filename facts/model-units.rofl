@@ -169,7 +169,7 @@ unit_concludes("rules/js-dataflow.rofl", encloses_s).
 unit_concludes("rules/js-dataflow.rofl", closer_s).
 unit_concludes("rules/js-dataflow.rofl", binds_name).
 unit_concludes("rules/js-dataflow.rofl", scope_declares).
-unit_concludes("rules/js-dataflow.rofl", named_kind).
+unit_concludes("rules/js-dataflow.rofl", named_here).
 unit_concludes("rules/js-dataflow.rofl", own_name).
 unit_concludes("rules/js-dataflow.rofl", named_decl).
 unit_concludes("rules/js-dataflow.rofl", up_d).
