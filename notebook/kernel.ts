@@ -1,5 +1,6 @@
 // The notebook kernel: a `.rofl.md` notebook's text and the texts of the files it names in, what every cell said out.
 // No I/O, no printing, no exit: the command line (notebook/cli.ts) and an editor read the files and show the result.
+import { oxcFacts } from '../scanners/oxc_facts.ts';
 import { Host, concernsOf, type Stop, translatorVocab, type Line, type Node, type Row, type FileRow } from '../playground/host.ts';
 import { cellsOf, libFiles, parseFront, translated, type CellKind, type Front } from './front.ts';
 import { asCell, assemble, type Inputs } from './world.ts';
@@ -41,7 +42,7 @@ export class Kernel {
    *  `wall`: a run's stop, made as the run starts; a run it stops answers what it found and its status is `cut`.
    *  `engine`: what evaluates the model over the code, a host's choice (playground/rust.ts engineOf); the TypeScript engine when none is given. */
   constructor(opts: { whole?: boolean; all?: boolean; wall?: () => Stop; engine?: Engine } = {}) {
-    this.host = new Host(opts.engine); this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall;
+    this.host = new Host(opts.engine, oxcFacts); this.whole = !!opts.whole; if (opts.all) this.host.rows = Infinity; this.wall = opts.wall;
   }
   get engine(): EngineName { return this.host.engine.name; }
 

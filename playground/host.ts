@@ -263,7 +263,9 @@ export class Host {
 
   /** `engine`: what evaluates the model over the code and the cells over it (playground/engine.ts); the TypeScript engine evaluates the cells only where the engine cannot. */
   readonly engine: Engine;
-  constructor(engine: Engine = typescript) { this.engine = engine; }
+  /** `scan`: another way to the code's facts than Babel in this process, which a host that can run a native scanner gives (scanners/oxc_facts.ts). */
+  private readonly scan?: typeof codeFacts;
+  constructor(engine: Engine = typescript, scan?: typeof codeFacts) { this.engine = engine; this.scan = scan; }
 
   /** `boot`: the kernel's boot, whose relations a notebook reads only by naming their book; given apart from `kernel`, which also asks for the layered run. */
   init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string, boot = kernel): { ok: boolean; diagnostics: string[]; ms: number } {
@@ -731,8 +733,8 @@ export class Host {
   private code(files: Record<string, string>, data: string[]): Scanned {
     const key = JSON.stringify([files, data]);
     if (this.scanned?.key === key) return this.scanned;
-    const { facts, nodes, parseErrors, host } = codeFacts(files, data);
-    labelNodes(facts, nodes);
+    const { facts, nodes, parseErrors, host } = (this.scan ?? codeFacts)(files, data);
+    if (!this.scan) labelNodes(facts, nodes);
     const all = [...facts, ...host];
     this.base = null;
     return this.scanned = { key, facts, nodes, parseErrors, lines: all, rels: new Set(all.map(relOf)) };

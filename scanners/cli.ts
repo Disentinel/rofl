@@ -10,15 +10,14 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
 import { hostFacts } from '../playground/host.ts';
-import { engine } from '../npm/platform.ts';
+import { oxcScan } from './oxc_bin.ts';
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
 const NOT_CODE = /\.d\.[mc]?ts$|\.min\.js$/;
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 function walk(root: string, dir: string, out: string[]): void {
   for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
@@ -28,17 +27,10 @@ function walk(root: string, dir: string, out: string[]): void {
   }
 }
 
-/** The scanner binary: this tree's build (made if it is missing), else the one beside the installed engine. */
-function oxcScan(): string {
-  const manifest = path.join(ROOT, 'rust/tools/oxc_scan/Cargo.toml'), built = path.join(ROOT, 'rust/tools/oxc_scan/target/release/oxc_scan');
-  if (fs.existsSync(manifest)) {
-    if (!fs.existsSync(built)) spawnSync('cargo', ['build', '--release', '-q', '--manifest-path', manifest], { stdio: ['ignore', 2, 2] });
-    if (fs.existsSync(built)) return built;
-  }
-  const exe = `oxc_scan${process.platform === 'win32' ? '.exe' : ''}`, e = engine();
-  const beside = [path.join(ROOT, 'bin', exe), ...('bin' in e ? [path.join(path.dirname(e.bin), exe)] : [])].find((f) => fs.existsSync(f));
-  if (beside) return beside;
-  console.error('no oxc_scan: build it with cargo build --release --manifest-path rust/tools/oxc_scan/Cargo.toml, or install the engine of this platform (@grafema/rofl-<os>-<cpu>)');
+function scanner(): string {
+  const b = oxcScan();
+  if (typeof b === 'string') return b;
+  console.error(b.error);
   process.exit(3);
 }
 
@@ -49,7 +41,7 @@ if (argv.length < 1 || argv.length > 2 || (at >= 0 && !out)) { console.error('us
 const [root, one] = argv;
 const files: string[] = [];
 walk(root, '', files);
-const bin = oxcScan();
+const bin = scanner();
 const sink = out ? fs.createWriteStream(out) : process.stdout;
 const put = (text: string | Buffer) => new Promise<void>((done) => { if (sink.write(text)) done(); else sink.once('drain', () => done()); });
 // what was read, for the engine's storeroom of scans (docs/cli.md): the files and directories oxc_scan names, and the

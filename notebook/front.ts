@@ -9,8 +9,8 @@ export const MODEL_FILES = ['boot.rofl', 'facts/model-units.rofl',
   'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl',
   'rules/js-concat.rofl', 'rules/js-surface.rofl',
   'models/lang/js/roles.rofl', 'models/lang/js/babel-roles.rofl', 'models/lang/js/babel-from-code.rofl'];
-/** The same model over oxc's tree, which `rofl scan` writes (scanners/cli.ts): rules/js.files. The notebook host scans in its own process with Babel, so it keeps the file above. */
-export const SCAN_MODEL_FILES = MODEL_FILES.filter((f) => !/\/(?:babel-roles|babel-from-code)\.rofl$/.test(f)).concat('models/lang/js/oxc-roles.rofl');
+/** The same model over oxc's tree, which `rofl scan` writes (scanners/cli.ts): rules/js.files. A notebook host adds oxc-to-code.rofl, so a cell may still name ast_node, ast_child and ast_attr; the browser page scans with Babel and keeps the file above. */
+export const SCAN_MODEL_FILES = MODEL_FILES.filter((f) => !/\/(?:babel-roles|babel-from-code)\.rofl$/.test(f)).concat('models/lang/js/oxc-roles.rofl', 'models/lang/js/oxc-to-code.rofl');
 export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
 /** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or
@@ -71,12 +71,12 @@ export const translated = (cells: NbCell[], c: NbCell): boolean => {
   return cells[0].text.split('\n').slice(c.line + c.text.split('\n').length, n.line - 2).every((l) => !/^#/.test(l));
 };
 
-/** The files, from the root of the tree, whose text the kernel needs: the model and the vocabulary it is read in. A rendered model's file is read in that model's words. */
+/** The files, from the root of the tree, whose text the kernel needs (the model over oxc's tree: every host that reads them runs the scanner): the model and the vocabulary it is read in. A rendered model's file is read in that model's words. */
 export function libFiles(path: string, front: Front): { model: string[]; phrases: string[] } {
   const phrases = ['facts/phrases.rofl'];
   if (front.model === 'js' || /(^|\/)docs\/js\//.test(path)) phrases.push('facts/js-phrases.rofl');
   if (/(^|\/)docs\/rings\//.test(path)) phrases.push('facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl');
-  return { model: front.model === 'js' ? MODEL_FILES : ['boot.rofl'], phrases };
+  return { model: front.model === 'js' ? SCAN_MODEL_FILES : ['boot.rofl'], phrases };
 }
 
 /** A `reads:` name of the file read as `from` (a key itself; '' for the notebook) as a key of Inputs.reads: a `rofl:` name as is, a path from the

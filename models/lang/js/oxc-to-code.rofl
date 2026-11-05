@@ -1,0 +1,10 @@
+-- oxc-to-code.rofl — oxc's raw tree, [ast_oxc], read back as the raw tree a notebook's own rules name in [code]
+-- (ast_node, ast_child, ast_attr, ast_line, ast_file). Only for a notebook host; the model reads the roles.
+
+imports(code, ast_oxc).
+
+ast_node[code](N, K, F)     :- node[ast_oxc](N, K, F).
+ast_line[code](N, L)        :- line[ast_oxc](N, L).
+ast_child[code](P, F, I, C) :- child[ast_oxc](P, F, I, C).
+ast_attr[code](N, A, V)     :- attr[ast_oxc](N, A, V).
+ast_file[code](R, F)        :- file[ast_oxc](R, F).

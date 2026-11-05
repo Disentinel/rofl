@@ -16,11 +16,11 @@ imports(main, value). imports(main, type). imports(main, tree).
 
 -- a parenthesis and an optional chain are syntax that Babel's tree does not have: every rule sees
 -- through them, as if the child stood in their place
-edb(wrapper_kind).
-wrapper_kind(parenthesized_expression). wrapper_kind(chain_expression).
-seen[ast_oxc](X, X) :- node[ast_oxc](X, K, _), not wrapper_kind(K).
-seen[ast_oxc](X, Y) :- node[ast_oxc](X, K, _), wrapper_kind(K), child[ast_oxc](X, expression, 0, Z), seen[ast_oxc](Z, Y).
-oxc_c[ast_oxc](P, F, I, C) :- child[ast_oxc](P, F, I, X), seen[ast_oxc](X, C).
+edb(ox_wrapper_kind).
+ox_wrapper_kind(parenthesized_expression). ox_wrapper_kind(chain_expression).
+unwrapped[ast_oxc](X, X) :- node[ast_oxc](X, K, _), not ox_wrapper_kind(K).
+unwrapped[ast_oxc](X, Y) :- node[ast_oxc](X, K, _), ox_wrapper_kind(K), child[ast_oxc](X, expression, 0, Z), unwrapped[ast_oxc](Z, Y).
+oxc_c[ast_oxc](P, F, I, C) :- child[ast_oxc](P, F, I, X), unwrapped[ast_oxc](X, C).
 alias oxc_a(N, K, V) is attr(N, K, V).
 alias oxc_name(N, V) is attr(N, name, V).
 
@@ -31,181 +31,181 @@ program[tree](P, File)   :- node[ast_oxc](P, program, File).
 pos[tree](N, O)          :- start[ast_oxc](N, O).
 
 -- the edge `inside` closes over: the raw parent, so a node under a wrapper is still inside
-edge[tree](P, C) :- child[ast_oxc](P, _, _, C), not moved_type(C, _).
+edge[tree](P, C) :- child[ast_oxc](P, _, _, C), not ox_moved_type(C, _).
 -- the type of a parameter or a declarator is written on oxc's wrapper; as in Babel it hangs under the name
-moved_type(A, B) :- oxc_k[ast_oxc](W, formal_parameter), child[ast_oxc](W, type_annotation, 0, A), child[ast_oxc](W, pattern, 0, B).
-moved_type(A, B) :- oxc_k[ast_oxc](W, variable_declarator), child[ast_oxc](W, type_annotation, 0, A), child[ast_oxc](W, id, 0, B).
-edge[tree](B, A) :- moved_type(A, B).
+ox_moved_type(A, B) :- oxc_k[ast_oxc](W, formal_parameter), child[ast_oxc](W, type_annotation, 0, A), child[ast_oxc](W, pattern, 0, B).
+ox_moved_type(A, B) :- oxc_k[ast_oxc](W, variable_declarator), child[ast_oxc](W, type_annotation, 0, A), child[ast_oxc](W, id, 0, B).
+edge[tree](B, A) :- ox_moved_type(A, B).
 
 -- THE ORDER OF EVALUATION: nth. A sequence field gives its members from Offset on; a step field one
 -- child at its position; the callee is no step of its call. The statement around an expression, the
 -- label around a statement and the spread around a value are stepped through.
-edb(seq_field).
-seq_field(program, body, 0).                 seq_field(block_statement, body, 0).
-seq_field(function_body, statements, 0).     seq_field(static_block, body, 0).
-seq_field(tsmodule_block, body, 0).          seq_field(switch_case, consequent, 0).
-seq_field(sequence_expression, expressions, 0). seq_field(array_expression, elements, 0).
-seq_field(object_expression, properties, 0). seq_field(call_expression, arguments, 0).
-seq_field(new_expression, arguments, 0).     seq_field(variable_declaration, declarations, 0).
-seq_field(template_literal, expressions, 0).
+edb(ox_seq_field).
+ox_seq_field(program, body, 0).                 ox_seq_field(block_statement, body, 0).
+ox_seq_field(function_body, statements, 0).     ox_seq_field(static_block, body, 0).
+ox_seq_field(tsmodule_block, body, 0).          ox_seq_field(switch_case, consequent, 0).
+ox_seq_field(sequence_expression, expressions, 0). ox_seq_field(array_expression, elements, 0).
+ox_seq_field(object_expression, properties, 0). ox_seq_field(call_expression, arguments, 0).
+ox_seq_field(new_expression, arguments, 0).     ox_seq_field(variable_declaration, declarations, 0).
+ox_seq_field(template_literal, expressions, 0).
 
-edb(step_field).
-step_field(static_member_expression, object, 0). step_field(computed_member_expression, object, 0).
-step_field(private_field_expression, object, 0).
-step_field(binary_expression, left, 0).      step_field(binary_expression, right, 1).
-step_field(private_in_expression, left, 0).  step_field(private_in_expression, right, 1).
-step_field(logical_expression, left, 0).
-step_field(assignment_expression, left, 0).
-step_field(unary_expression, argument, 0).   step_field(update_expression, argument, 0).
-step_field(await_expression, argument, 0).   step_field(yield_expression, argument, 0).
-step_field(return_statement, argument, 0).   step_field(throw_statement, argument, 0).
-step_field(conditional_expression, test, 0). step_field(if_statement, test, 0).
-step_field(while_statement, test, 0).
-step_field(do_while_statement, body, 0).     step_field(do_while_statement, test, 1).
-step_field(for_statement, init, 0).          step_field(for_statement, test, 1).
-step_field(for_in_statement, right, 0).      step_field(for_of_statement, right, 0).
-step_field(switch_statement, discriminant, 0).
-step_field(variable_declarator, init, 0).    step_field(variable_declarator, id, 1).
-step_field(class, super_class, 0).           step_field(class, heritage_expression, 0).
-step_field(export_default_declaration, declaration, 0).
-step_field(export_named_declaration, declaration, 0). step_field(export_declaration, declaration, 0).
-step_field(catch_clause, body, 0).
-step_field(try_statement, finalizer, 1).
-step_field(import_expression, source, 0).    step_field(import_expression, options, 1).
-step_field(tsexport_assignment, expression, 0).
-step_field(tsas_expression, expression, 0).  step_field(tssatisfies_expression, expression, 0).
-step_field(tsnon_null_expression, expression, 0). step_field(tstype_assertion, expression, 0).
-step_field(tsinstantiation_expression, expression, 0).
+edb(ox_step_field).
+ox_step_field(static_member_expression, object, 0). ox_step_field(computed_member_expression, object, 0).
+ox_step_field(private_field_expression, object, 0).
+ox_step_field(binary_expression, left, 0).      ox_step_field(binary_expression, right, 1).
+ox_step_field(private_in_expression, left, 0).  ox_step_field(private_in_expression, right, 1).
+ox_step_field(logical_expression, left, 0).
+ox_step_field(assignment_expression, left, 0).
+ox_step_field(unary_expression, argument, 0).   ox_step_field(update_expression, argument, 0).
+ox_step_field(await_expression, argument, 0).   ox_step_field(yield_expression, argument, 0).
+ox_step_field(return_statement, argument, 0).   ox_step_field(throw_statement, argument, 0).
+ox_step_field(conditional_expression, test, 0). ox_step_field(if_statement, test, 0).
+ox_step_field(while_statement, test, 0).
+ox_step_field(do_while_statement, body, 0).     ox_step_field(do_while_statement, test, 1).
+ox_step_field(for_statement, init, 0).          ox_step_field(for_statement, test, 1).
+ox_step_field(for_in_statement, right, 0).      ox_step_field(for_of_statement, right, 0).
+ox_step_field(switch_statement, discriminant, 0).
+ox_step_field(variable_declarator, init, 0).    ox_step_field(variable_declarator, id, 1).
+ox_step_field(class, super_class, 0).           ox_step_field(class, heritage_expression, 0).
+ox_step_field(export_default_declaration, declaration, 0).
+ox_step_field(export_named_declaration, declaration, 0). ox_step_field(export_declaration, declaration, 0).
+ox_step_field(catch_clause, body, 0).
+ox_step_field(try_statement, finalizer, 1).
+ox_step_field(import_expression, source, 0).    ox_step_field(import_expression, options, 1).
+ox_step_field(tsexport_assignment, expression, 0).
+ox_step_field(tsas_expression, expression, 0).  ox_step_field(tssatisfies_expression, expression, 0).
+ox_step_field(tsnon_null_expression, expression, 0). ox_step_field(tstype_assertion, expression, 0).
+ox_step_field(tsinstantiation_expression, expression, 0).
 
-edb(steps_through).
-steps_through(expression_statement, expression).
-steps_through(labeled_statement, body).
-steps_through(spread_element, argument).
+edb(ox_steps_through).
+ox_steps_through(expression_statement, expression).
+ox_steps_through(labeled_statement, body).
+ox_steps_through(spread_element, argument).
 
-slot(Seq, I, S) :- seq_field(K, F, Off), oxc_k[ast_oxc](Seq, K), oxc_c[ast_oxc](Seq, F, J, S),
+ox_slot(Seq, I, S) :- ox_seq_field(K, F, Off), oxc_k[ast_oxc](Seq, K), oxc_c[ast_oxc](Seq, F, J, S),
                    not oxc_k[ast_oxc](S, elision), I is J + Off.
-slot(Seq, I, S) :- step_field(K, F, I), oxc_k[ast_oxc](Seq, K), oxc_c[ast_oxc](Seq, F, 0, S).
+ox_slot(Seq, I, S) :- ox_step_field(K, F, I), oxc_k[ast_oxc](Seq, K), oxc_c[ast_oxc](Seq, F, 0, S).
 -- the property of `o[k]`, the computed key and the value of a property in an object literal
-slot(M, 1, E) :- oxc_k[ast_oxc](M, computed_member_expression), oxc_c[ast_oxc](M, expression, 0, E).
-literal_prop(P) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, _, P),
-                   oxc_k[ast_oxc](P, object_property), not method_member(P, _).
-slot(P, 0, E) :- literal_prop(P), oxc_a[ast_oxc](P, computed, true), oxc_c[ast_oxc](P, key, 0, E).
-slot(P, 1, V) :- literal_prop(P), oxc_a[ast_oxc](P, computed, true), oxc_c[ast_oxc](P, value, 0, V).
-slot(P, 0, V) :- literal_prop(P), oxc_a[ast_oxc](P, computed, false), oxc_c[ast_oxc](P, value, 0, V).
+ox_slot(M, 1, E) :- oxc_k[ast_oxc](M, computed_member_expression), oxc_c[ast_oxc](M, expression, 0, E).
+ox_literal_prop(P) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, _, P),
+                   oxc_k[ast_oxc](P, object_property), not ox_method_member(P, _).
+ox_slot(P, 0, E) :- ox_literal_prop(P), oxc_a[ast_oxc](P, computed, true), oxc_c[ast_oxc](P, key, 0, E).
+ox_slot(P, 1, V) :- ox_literal_prop(P), oxc_a[ast_oxc](P, computed, true), oxc_c[ast_oxc](P, value, 0, V).
+ox_slot(P, 0, V) :- ox_literal_prop(P), oxc_a[ast_oxc](P, computed, false), oxc_c[ast_oxc](P, value, 0, V).
 -- an assignment that is not logical evaluates its value unconditionally
-slot(A, 1, R) :- assign_parts(A, Op, _, R), not logical_op(Op).
+ox_slot(A, 1, R) :- ox_assign_parts(A, Op, _, R), not ox_logical_op(Op).
 -- the tests of a switch, after its discriminant and in their order
-slot(Sw, J, T) :- oxc_k[ast_oxc](Sw, switch_statement), oxc_c[ast_oxc](Sw, cases, I, C), oxc_c[ast_oxc](C, test, 0, T), J is I + 1.
+ox_slot(Sw, J, T) :- oxc_k[ast_oxc](Sw, switch_statement), oxc_c[ast_oxc](Sw, cases, I, C), oxc_c[ast_oxc](C, test, 0, T), J is I + 1.
 -- try without a handler runs its block as a step
-slot(T, 0, B) :- oxc_k[ast_oxc](T, try_statement), oxc_c[ast_oxc](T, block, 0, B), not oxc_c[ast_oxc](T, handler, 0, _).
+ox_slot(T, 0, B) :- oxc_k[ast_oxc](T, try_statement), oxc_c[ast_oxc](T, block, 0, B), not oxc_c[ast_oxc](T, handler, 0, _).
 -- a loop with no test runs its body every time
-slot(L, 2, B) :- oxc_k[ast_oxc](L, for_statement), oxc_c[ast_oxc](L, body, 0, B), not oxc_c[ast_oxc](L, test, 0, _).
+ox_slot(L, 2, B) :- oxc_k[ast_oxc](L, for_statement), oxc_c[ast_oxc](L, body, 0, B), not oxc_c[ast_oxc](L, test, 0, _).
 
--- a child as the model sees it: through(S, X), the wrapper S stands for X
-through(S, X) :- oxc_k[ast_oxc](S, K), steps_through(K, F), oxc_c[ast_oxc](S, F, 0, X), oxc_k[ast_oxc](X, KX), not steps_through(KX, _).
-through(S, X) :- oxc_k[ast_oxc](S, K), steps_through(K, F), oxc_c[ast_oxc](S, F, 0, Y), through(Y, X).
-plain(S) :- oxc_k[ast_oxc](S, K), not steps_through(K, _).
+-- a child as the model sees it: ox_through(S, X), the wrapper S stands for X
+ox_through(S, X) :- oxc_k[ast_oxc](S, K), ox_steps_through(K, F), oxc_c[ast_oxc](S, F, 0, X), oxc_k[ast_oxc](X, KX), not ox_steps_through(KX, _).
+ox_through(S, X) :- oxc_k[ast_oxc](S, K), ox_steps_through(K, F), oxc_c[ast_oxc](S, F, 0, Y), ox_through(Y, X).
+ox_plain(S) :- oxc_k[ast_oxc](S, K), not ox_steps_through(K, _).
 
-nth[tree](Seq, I, S) :- slot(Seq, I, S), plain(S).
-nth[tree](Seq, I, X) :- slot(Seq, I, S), through(S, X).
-strict[tree](Seq) :- slot(Seq, _, _).
+nth[tree](Seq, I, S) :- ox_slot(Seq, I, S), ox_plain(S).
+nth[tree](Seq, I, X) :- ox_slot(Seq, I, S), ox_through(S, X).
+strict[tree](Seq) :- ox_slot(Seq, _, _).
 
 -- precedes, where a spread sits between two positions (its hidden iterator or getters)
-spread_seq(C, arguments)  :- call_like(C).
-spread_seq(A, elements)   :- oxc_k[ast_oxc](A, array_expression).
-spread_seq(O, properties) :- oxc_k[ast_oxc](O, object_expression).
-seq_pos(S, I, X, plain)  :- spread_seq(S, F), oxc_c[ast_oxc](S, F, I, X), not oxc_k[ast_oxc](X, spread_element), not oxc_k[ast_oxc](X, elision).
-seq_pos(S, I, X, spread) :- spread_seq(S, F), oxc_c[ast_oxc](S, F, I, E), oxc_k[ast_oxc](E, spread_element), oxc_c[ast_oxc](E, argument, 0, X).
-precedes[tree](A, B) :- seq_pos(S, I, A, spread), J is I + 1, seq_pos(S, J, B, _).
-precedes[tree](A, B) :- seq_pos(S, I, A, plain), J is I + 1, seq_pos(S, J, B, spread).
+ox_spread_seq(C, arguments)  :- ox_call_like(C).
+ox_spread_seq(A, elements)   :- oxc_k[ast_oxc](A, array_expression).
+ox_spread_seq(O, properties) :- oxc_k[ast_oxc](O, object_expression).
+ox_seq_pos(S, I, X, plain)  :- ox_spread_seq(S, F), oxc_c[ast_oxc](S, F, I, X), not oxc_k[ast_oxc](X, spread_element), not oxc_k[ast_oxc](X, elision).
+ox_seq_pos(S, I, X, spread) :- ox_spread_seq(S, F), oxc_c[ast_oxc](S, F, I, E), oxc_k[ast_oxc](E, spread_element), oxc_c[ast_oxc](E, argument, 0, X).
+precedes[tree](A, B) :- ox_seq_pos(S, I, A, spread), J is I + 1, ox_seq_pos(S, J, B, _).
+precedes[tree](A, B) :- ox_seq_pos(S, I, A, plain), J is I + 1, ox_seq_pos(S, J, B, spread).
 
-edb(scope_kind).
-scope_kind(program). scope_kind(block_statement). scope_kind(function_body). scope_kind(static_block).
-scope_kind(for_statement). scope_kind(for_in_statement). scope_kind(for_of_statement).
-scope_kind(catch_clause). scope_kind(switch_statement). scope_kind(tsmodule_block).
-mark[value](S, scope) :- scope_kind(K), oxc_k[ast_oxc](S, K).
-mark[value](F, scope) :- fn_node(F, Fn), not oxc_a[ast_oxc](Fn, declare, true), not overload(Fn).
+edb(ox_scope_kind).
+ox_scope_kind(program). ox_scope_kind(block_statement). ox_scope_kind(function_body). ox_scope_kind(static_block).
+ox_scope_kind(for_statement). ox_scope_kind(for_in_statement). ox_scope_kind(for_of_statement).
+ox_scope_kind(catch_clause). ox_scope_kind(switch_statement). ox_scope_kind(tsmodule_block).
+mark[value](S, scope) :- ox_scope_kind(K), oxc_k[ast_oxc](S, K).
+mark[value](F, scope) :- ox_fn_node(F, Fn), not oxc_a[ast_oxc](Fn, declare, true), not ox_overload(Fn).
 -- an arrow whose body is an expression
-arrow_expr(F, E) :- oxc_k[ast_oxc](F, arrow_function_expression), oxc_c[ast_oxc](F, body, 0, E), not oxc_k[ast_oxc](E, function_body).
+ox_arrow_expr(F, E) :- oxc_k[ast_oxc](F, arrow_function_expression), oxc_c[ast_oxc](F, body, 0, E), not oxc_k[ast_oxc](E, function_body).
 
 -- NAMES AND LITERALS ---------------------------------------------------------------------------------
 
 -- a name read; in a type position it is read in the world of types
-edb(type_name_field).
-type_name_field(tstype_reference, type_name).
-type_name_field(tsclass_implements, expression).
-type_name_field(tsinterface_heritage, expression).
-type_name_field(tsqualified_name, left).
-type_ref_site(N) :- type_name_field(K, F), oxc_k[ast_oxc](P, K), oxc_c[ast_oxc](P, F, 0, N).
-ref[value](N, Name) :- oxc_k[ast_oxc](N, identifier_reference), oxc_name[ast_oxc](N, Name), not type_ref_site(N).
-ref[type](N, Name)  :- oxc_k[ast_oxc](N, identifier_reference), oxc_name[ast_oxc](N, Name), type_ref_site(N).
-edb(ts_keyword).
-ts_keyword(tsany_keyword, "any").         ts_keyword(tsunknown_keyword, "unknown").
-ts_keyword(tsnever_keyword, "never").     ts_keyword(tsvoid_keyword, "void").
-ts_keyword(tsundefined_keyword, "undefined"). ts_keyword(tsnull_keyword, "null").
-ts_keyword(tsstring_keyword, "string").   ts_keyword(tsnumber_keyword, "number").
-ts_keyword(tsboolean_keyword, "boolean"). ts_keyword(tsbig_int_keyword, "bigint").
-ts_keyword(tssymbol_keyword, "symbol").   ts_keyword(tsobject_keyword, "object").
-ts_keyword(tsarray_type, "Array").
-ref[type](N, Name) :- ts_keyword(K, Name), oxc_k[ast_oxc](N, K).
+edb(ox_type_name_field).
+ox_type_name_field(tstype_reference, type_name).
+ox_type_name_field(tsclass_implements, expression).
+ox_type_name_field(tsinterface_heritage, expression).
+ox_type_name_field(tsqualified_name, left).
+ox_type_ref_site(N) :- ox_type_name_field(K, F), oxc_k[ast_oxc](P, K), oxc_c[ast_oxc](P, F, 0, N).
+ref[value](N, Name) :- oxc_k[ast_oxc](N, identifier_reference), oxc_name[ast_oxc](N, Name), not ox_type_ref_site(N).
+ref[type](N, Name)  :- oxc_k[ast_oxc](N, identifier_reference), oxc_name[ast_oxc](N, Name), ox_type_ref_site(N).
+edb(ox_ts_keyword).
+ox_ts_keyword(tsany_keyword, "any").         ox_ts_keyword(tsunknown_keyword, "unknown").
+ox_ts_keyword(tsnever_keyword, "never").     ox_ts_keyword(tsvoid_keyword, "void").
+ox_ts_keyword(tsundefined_keyword, "undefined"). ox_ts_keyword(tsnull_keyword, "null").
+ox_ts_keyword(tsstring_keyword, "string").   ox_ts_keyword(tsnumber_keyword, "number").
+ox_ts_keyword(tsboolean_keyword, "boolean"). ox_ts_keyword(tsbig_int_keyword, "bigint").
+ox_ts_keyword(tssymbol_keyword, "symbol").   ox_ts_keyword(tsobject_keyword, "object").
+ox_ts_keyword(tsarray_type, "Array").
+ref[type](N, Name) :- ox_ts_keyword(K, Name), oxc_k[ast_oxc](N, K).
 
 -- a name introduced; the world is where its declaration puts it
-edb(type_only_decl).
-type_only_decl(tsinterface_declaration).
-type_only_decl(tstype_alias_declaration).
-type_only_decl(tstype_parameter).
-edb(both_worlds_decl).
-both_worlds_decl(class).
-both_worlds_decl(tsenum_declaration).
-both_worlds_decl(tsnamespace_declaration).
-both_worlds_decl(tsmodule_declaration).
-bind_site(N, Name, D) :- oxc_k[ast_oxc](N, binding_identifier), oxc_name[ast_oxc](N, Name), oxc_c[ast_oxc](D, _, _, N).
-type_import(N) :- oxc_k[ast_oxc](D, import_declaration), oxc_a[ast_oxc](D, import_kind, "Type"),
+edb(ox_type_only_decl).
+ox_type_only_decl(tsinterface_declaration).
+ox_type_only_decl(tstype_alias_declaration).
+ox_type_only_decl(tstype_parameter).
+edb(ox_both_worlds_decl).
+ox_both_worlds_decl(class).
+ox_both_worlds_decl(tsenum_declaration).
+ox_both_worlds_decl(tsnamespace_declaration).
+ox_both_worlds_decl(tsmodule_declaration).
+ox_bind_site(N, Name, D) :- oxc_k[ast_oxc](N, binding_identifier), oxc_name[ast_oxc](N, Name), oxc_c[ast_oxc](D, _, _, N).
+ox_type_import(N) :- oxc_k[ast_oxc](D, import_declaration), oxc_a[ast_oxc](D, import_kind, "Type"),
                   oxc_c[ast_oxc](D, specifiers, _, S), oxc_c[ast_oxc](S, local, 0, N).
-type_import(N) :- oxc_a[ast_oxc](S, import_kind, "Type"), oxc_c[ast_oxc](S, local, 0, N).
-type_side(N) :- bind_site(N, _, D), oxc_k[ast_oxc](D, K), type_only_decl(K).
-type_side(N) :- type_import(N).
-both_sides(N) :- bind_site(N, _, D), oxc_k[ast_oxc](D, K), both_worlds_decl(K).
-binds[value](N, Name) :- bind_site(N, Name, _), not type_side(N), not sig_param(_, _, _, N).
-binds[type](N, Name)  :- bind_site(N, Name, _), type_side(N), not sig_param(_, _, _, N).
-binds[type](N, Name)  :- bind_site(N, Name, _), both_sides(N).
-binds[type](N, Name)  :- bind_site(N, Name, _), import_local(N), not type_import(N).
-import_local(N) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), oxc_c[ast_oxc](S, local, 0, N).
+ox_type_import(N) :- oxc_a[ast_oxc](S, import_kind, "Type"), oxc_c[ast_oxc](S, local, 0, N).
+ox_type_side(N) :- ox_bind_site(N, _, D), oxc_k[ast_oxc](D, K), ox_type_only_decl(K).
+ox_type_side(N) :- ox_type_import(N).
+ox_both_sides(N) :- ox_bind_site(N, _, D), oxc_k[ast_oxc](D, K), ox_both_worlds_decl(K).
+binds[value](N, Name) :- ox_bind_site(N, Name, _), not ox_type_side(N), not ox_sig_param(_, _, _, N).
+binds[type](N, Name)  :- ox_bind_site(N, Name, _), ox_type_side(N), not ox_sig_param(_, _, _, N).
+binds[type](N, Name)  :- ox_bind_site(N, Name, _), ox_both_sides(N).
+binds[type](N, Name)  :- ox_bind_site(N, Name, _), ox_import_local(N), not ox_type_import(N).
+ox_import_local(N) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), oxc_c[ast_oxc](S, local, 0, N).
 
-edb(member_kind).
+edb(ox_member_kind).
 -- a static key: a name, a string, a private name (with private on the owner)
-key_name(K, Name) :- oxc_k[ast_oxc](K, identifier_name), oxc_name[ast_oxc](K, Name).
-key_name(K, Name) :- oxc_k[ast_oxc](K, private_identifier), oxc_name[ast_oxc](K, Name).
-key_name(K, Name) :- oxc_k[ast_oxc](K, string_literal), oxc_a[ast_oxc](K, value, Name).
-key_name(K, Name) :- oxc_k[ast_oxc](K, numeric_literal), oxc_a[ast_oxc](K, value, Name).
-lit_key(K) :- oxc_k[ast_oxc](K, string_literal).
-lit_key(K) :- oxc_k[ast_oxc](K, numeric_literal).
-member_kind(object_property). member_kind(method_definition). member_kind(property_definition). member_kind(accessor_property).
+ox_key_name(K, Name) :- oxc_k[ast_oxc](K, identifier_name), oxc_name[ast_oxc](K, Name).
+ox_key_name(K, Name) :- oxc_k[ast_oxc](K, private_identifier), oxc_name[ast_oxc](K, Name).
+ox_key_name(K, Name) :- oxc_k[ast_oxc](K, string_literal), oxc_a[ast_oxc](K, value, Name).
+ox_key_name(K, Name) :- oxc_k[ast_oxc](K, numeric_literal), oxc_a[ast_oxc](K, value, Name).
+ox_lit_key(K) :- oxc_k[ast_oxc](K, string_literal).
+ox_lit_key(K) :- oxc_k[ast_oxc](K, numeric_literal).
+ox_member_kind(object_property). ox_member_kind(method_definition). ox_member_kind(property_definition). ox_member_kind(accessor_property).
 -- a key is static when written plain or as a literal: `{ 1: x }`, `{ "a": x }` and `{ ["a"]: x }` alike
-static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), not oxc_a[ast_oxc](M, computed, true).
-static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), oxc_a[ast_oxc](M, computed, true), lit_key(K).
-key[value](M, Name)  :- member_kind(MK), oxc_k[ast_oxc](M, MK), static_key(M, K, key), key_name(K, Name), not type_only(M).
-key_expr[value](M, E) :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not lit_key(E), not type_only(M).
-key_expr[type](M, E)  :- type_only(M), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not lit_key(E).
-key[value](P, Name)  :- oxc_k[ast_oxc](P, binding_property), static_key(P, K, key), key_name(K, Name).
-key[value](P, Name)  :- oxc_k[ast_oxc](P, assignment_target_property_property), static_key(P, K, name), key_name(K, Name).
-mark[value](M, private)    :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, K), oxc_k[ast_oxc](K, private_identifier).
+ox_static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), not oxc_a[ast_oxc](M, computed, true).
+ox_static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), oxc_a[ast_oxc](M, computed, true), ox_lit_key(K).
+key[value](M, Name)  :- ox_member_kind(MK), oxc_k[ast_oxc](M, MK), ox_static_key(M, K, key), ox_key_name(K, Name), not ox_type_only(M).
+key_expr[value](M, E) :- ox_member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not ox_lit_key(E), not ox_type_only(M).
+key_expr[type](M, E)  :- ox_type_only(M), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not ox_lit_key(E).
+key[value](P, Name)  :- oxc_k[ast_oxc](P, binding_property), ox_static_key(P, K, key), ox_key_name(K, Name).
+key[value](P, Name)  :- oxc_k[ast_oxc](P, assignment_target_property_property), ox_static_key(P, K, name), ox_key_name(K, Name).
+mark[value](M, private)    :- ox_member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, K), oxc_k[ast_oxc](K, private_identifier).
 
-literal[value](N, V) :- oxc_k[ast_oxc](N, string_literal), oxc_a[ast_oxc](N, value, V), not key_of(N), not type_literal(N), not directive_string(N).
+literal[value](N, V) :- oxc_k[ast_oxc](N, string_literal), oxc_a[ast_oxc](N, value, V), not ox_key_of(N), not ox_type_literal(N), not ox_directive_string(N).
 -- a directive is no expression statement: its string is no literal
-directive_string(N) :- oxc_k[ast_oxc](D, directive), oxc_c[ast_oxc](D, expression, 0, N).
+ox_directive_string(N) :- oxc_k[ast_oxc](D, directive), oxc_c[ast_oxc](D, expression, 0, N).
 literal[value](N, null) :- oxc_k[ast_oxc](N, null_literal).
-literal[value](N, V) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), int is type_of(V), not type_literal(N).
-literal[value](N, float(V)) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), string is type_of(V), not type_literal(N).
-literal[value](N, V) :- oxc_k[ast_oxc](N, boolean_literal), oxc_a[ast_oxc](N, value, V), not type_literal(N).
-literal[value](N, bigint(V)) :- oxc_k[ast_oxc](N, big_int_literal), oxc_a[ast_oxc](N, value, V), not type_literal(N).
+literal[value](N, V) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), int is type_of(V), not ox_type_literal(N).
+literal[value](N, float(V)) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), string is type_of(V), not ox_type_literal(N).
+literal[value](N, V) :- oxc_k[ast_oxc](N, boolean_literal), oxc_a[ast_oxc](N, value, V), not ox_type_literal(N).
+literal[value](N, bigint(V)) :- oxc_k[ast_oxc](N, big_int_literal), oxc_a[ast_oxc](N, value, V), not ox_type_literal(N).
 literal[value](T, V) :- oxc_k[ast_oxc](T, template_literal), oxc_c[ast_oxc](T, quasis, 0, Q), oxc_a[ast_oxc](Q, tail, true),
                         oxc_a[ast_oxc](Q, value_cooked, V).
-type_literal(N) :- oxc_k[ast_oxc](T, tsliteral_type), oxc_c[ast_oxc](T, literal, 0, N).
-literal[type](N, V) :- type_literal(N), oxc_a[ast_oxc](N, value, V).
+ox_type_literal(N) :- oxc_k[ast_oxc](T, tsliteral_type), oxc_c[ast_oxc](T, literal, 0, N).
+literal[type](N, V) :- ox_type_literal(N), oxc_a[ast_oxc](N, value, V).
 passes[type](T, L) :- oxc_k[ast_oxc](T, tsliteral_type), oxc_c[ast_oxc](T, literal, 0, L).
-key_of(N) :- oxc_c[ast_oxc](M, key, 0, N), oxc_a[ast_oxc](M, computed, false).
-key_of(N) :- oxc_c[ast_oxc](M, id, 0, N), oxc_k[ast_oxc](M, tsenum_member).
+ox_key_of(N) :- oxc_c[ast_oxc](M, key, 0, N), oxc_a[ast_oxc](M, computed, false).
+ox_key_of(N) :- oxc_c[ast_oxc](M, id, 0, N), oxc_k[ast_oxc](M, tsenum_member).
 
 mark[value](T, template)           :- oxc_k[ast_oxc](T, template_literal).
 template_part[value](T, I, Q) :- mark[value](T, template), oxc_c[ast_oxc](T, quasis, J, Q), I is J * 2.
@@ -214,79 +214,79 @@ literal[value](Q, V)         :- mark[value](T, template), oxc_c[ast_oxc](T, quas
 
 -- CALLS ------------------------------------------------------------------------------------------------
 
-call_like(C) :- oxc_k[ast_oxc](C, call_expression).
-call_like(C) :- oxc_k[ast_oxc](C, new_expression).
+ox_call_like(C) :- oxc_k[ast_oxc](C, call_expression).
+ox_call_like(C) :- oxc_k[ast_oxc](C, new_expression).
 mark[value](C, call)      :- oxc_k[ast_oxc](C, call_expression).
 mark[value](C, call)      :- oxc_k[ast_oxc](C, import_expression).
 mark[value](C, construct) :- oxc_k[ast_oxc](C, new_expression).
 tagged[value](C, Tag, Q) :- oxc_k[ast_oxc](C, tagged_template_expression),
                             oxc_c[ast_oxc](C, tag, 0, Tag), oxc_c[ast_oxc](C, quasi, 0, Q).
-callee[value](C, N) :- call_like(C), oxc_c[ast_oxc](C, callee, 0, N).
-spread_args[value](C, I, X) :- call_like(C), oxc_c[ast_oxc](C, arguments, I, S), oxc_k[ast_oxc](S, spread_element),
+callee[value](C, N) :- ox_call_like(C), oxc_c[ast_oxc](C, callee, 0, N).
+spread_args[value](C, I, X) :- ox_call_like(C), oxc_c[ast_oxc](C, arguments, I, S), oxc_k[ast_oxc](S, spread_element),
                                oxc_c[ast_oxc](S, argument, 0, X).
 
 -- FUNCTIONS --------------------------------------------------------------------------------------------
 
 -- a member written as a method, getter, setter or constructor IS the function: the oxc Function
 -- under it is a wrapper, as the one node Babel has
-method_member(M, Fn) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn), not type_only(M).
+ox_method_member(M, Fn) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn), not ox_type_only(M).
 -- a member declared without a body or a value exists only as a type: an abstract or overload method, a declared or
 -- abstract field
-type_only(M) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn), not oxc_c[ast_oxc](Fn, body, 0, _).
-type_only(M) :- oxc_k[ast_oxc](M, property_definition), oxc_a[ast_oxc](M, declare, true).
-type_only(M) :- oxc_k[ast_oxc](M, property_definition), oxc_a[ast_oxc](M, type, "TSAbstractPropertyDefinition").
-type_only_method(M, Fn) :- type_only(M), oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn).
-method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
+ox_type_only(M) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn), not oxc_c[ast_oxc](Fn, body, 0, _).
+ox_type_only(M) :- oxc_k[ast_oxc](M, property_definition), oxc_a[ast_oxc](M, declare, true).
+ox_type_only(M) :- oxc_k[ast_oxc](M, property_definition), oxc_a[ast_oxc](M, type, "TSAbstractPropertyDefinition").
+ox_type_only_method(M, Fn) :- ox_type_only(M), oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn).
+ox_method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
                         oxc_a[ast_oxc](M, method, true).
-method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
+ox_method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
                         oxc_a[ast_oxc](M, kind, "Get").
-method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
+ox_method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
                         oxc_a[ast_oxc](M, kind, "Set").
-wrapped_fn(Fn) :- method_member(_, Fn).
-wrapped_fn(Fn) :- type_only_method(_, Fn).
-fn_node(F, F)  :- oxc_k[ast_oxc](F, function), not wrapped_fn(F).
+ox_wrapped_fn(Fn) :- ox_method_member(_, Fn).
+ox_wrapped_fn(Fn) :- ox_type_only_method(_, Fn).
+ox_fn_node(F, F)  :- oxc_k[ast_oxc](F, function), not ox_wrapped_fn(F).
 -- an overload signature is a function with no body, which binds neither this nor arguments and is no scope
-overload(F)    :- oxc_k[ast_oxc](F, function), not wrapped_fn(F), not oxc_c[ast_oxc](F, body, 0, _).
-fn_node(F, F)  :- oxc_k[ast_oxc](F, arrow_function_expression).
-fn_node(M, Fn) :- method_member(M, Fn).
+ox_overload(F)    :- oxc_k[ast_oxc](F, function), not ox_wrapped_fn(F), not oxc_c[ast_oxc](F, body, 0, _).
+ox_fn_node(F, F)  :- oxc_k[ast_oxc](F, arrow_function_expression).
+ox_fn_node(M, Fn) :- ox_method_member(M, Fn).
 
-body[value](F, B)  :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, body, 0, B).
-returns[value](F, E) :- arrow_expr(F, E).
-param[value](F, I, P) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
+body[value](F, B)  :- ox_fn_node(F, Fn), oxc_c[ast_oxc](Fn, body, 0, B).
+returns[value](F, E) :- ox_arrow_expr(F, E).
+param[value](F, I, P) :- ox_fn_node(F, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
                          oxc_c[ast_oxc](FP, pattern, 0, P).
-rest_params[value](F, I, T) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, rest, 0, R),
+rest_params[value](F, I, T) :- ox_fn_node(F, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, rest, 0, R),
                                oxc_c[ast_oxc](R, rest, 0, RE), oxc_c[ast_oxc](RE, argument, 0, T),
                                I is count(J : oxc_c[ast_oxc](Ps, items, J, _)).
-binds[value](F, "this")      :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true), not overload(Fn).
-binds[value](F, "arguments") :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true), not overload(Fn).
-mark[value](F, async)     :- fn_node(F, Fn), oxc_a[ast_oxc](Fn, async, true).
-mark[value](F, generator) :- fn_node(F, Fn), oxc_a[ast_oxc](Fn, generator, true).
+binds[value](F, "this")      :- ox_fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true), not ox_overload(Fn).
+binds[value](F, "arguments") :- ox_fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true), not ox_overload(Fn).
+mark[value](F, async)     :- ox_fn_node(F, Fn), oxc_a[ast_oxc](Fn, async, true).
+mark[value](F, generator) :- ox_fn_node(F, Fn), oxc_a[ast_oxc](Fn, generator, true).
 constructs[value](CD, M) :- oxc_k[ast_oxc](CD, class), oxc_c[ast_oxc](CD, body, 0, B), oxc_c[ast_oxc](B, body, _, M),
-                            oxc_a[ast_oxc](M, kind, "Constructor"), not type_only(M).
-param_member(C, FP, X) :- constructs[value](C, M), method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
+                            oxc_a[ast_oxc](M, kind, "Constructor"), not ox_type_only(M).
+ox_param_member(C, FP, X) :- constructs[value](C, M), ox_method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
                           oxc_c[ast_oxc](Ps, items, _, FP), oxc_a[ast_oxc](FP, accessibility, _),
                           oxc_c[ast_oxc](FP, pattern, 0, X), oxc_k[ast_oxc](X, binding_identifier).
-param_member(C, FP, X) :- constructs[value](C, M), method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
+ox_param_member(C, FP, X) :- constructs[value](C, M), ox_method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
                           oxc_c[ast_oxc](Ps, items, _, FP), oxc_a[ast_oxc](FP, readonly, true),
                           oxc_c[ast_oxc](FP, pattern, 0, X), oxc_k[ast_oxc](X, binding_identifier).
-has[value](C, FP)        :- param_member(C, FP, _).
-key[value](FP, Name)     :- param_member(_, FP, X), oxc_name[ast_oxc](X, Name).
-assign[value](FP, FP, X) :- param_member(_, FP, X).
-getter[value](M, M) :- method_member(M, _), oxc_a[ast_oxc](M, kind, "Get").
-setter[value](M, M) :- method_member(M, _), oxc_a[ast_oxc](M, kind, "Set").
+has[value](C, FP)        :- ox_param_member(C, FP, _).
+key[value](FP, Name)     :- ox_param_member(_, FP, X), oxc_name[ast_oxc](X, Name).
+assign[value](FP, FP, X) :- ox_param_member(_, FP, X).
+getter[value](M, M) :- ox_method_member(M, _), oxc_a[ast_oxc](M, kind, "Get").
+setter[value](M, M) :- ox_method_member(M, _), oxc_a[ast_oxc](M, kind, "Set").
 
 returns[value](R, E) :- oxc_k[ast_oxc](R, return_statement), oxc_c[ast_oxc](R, argument, 0, E).
 yields[value](Y, E)    :- oxc_k[ast_oxc](Y, yield_expression), oxc_a[ast_oxc](Y, delegate, false), oxc_c[ast_oxc](Y, argument, 0, E).
 delegates[value](Y, E) :- oxc_k[ast_oxc](Y, yield_expression), oxc_a[ast_oxc](Y, delegate, true), oxc_c[ast_oxc](Y, argument, 0, E).
 awaits[value](A, X)    :- oxc_k[ast_oxc](A, await_expression), oxc_c[ast_oxc](A, argument, 0, X).
 -- the function a suspension pauses: the nearest owner of a body above it, or the module for a top-level await
-pause_at(S, later) :- oxc_k[ast_oxc](S, await_expression).
-pause_at(S, next)  :- oxc_k[ast_oxc](S, yield_expression).
-pause_at(S, later) :- oxc_k[ast_oxc](S, for_of_statement), oxc_a[ast_oxc](S, await, true).
-pause_up(S, P) :- pause_at(S, _), edge[tree](P, S).
-pause_up(S, Q) :- pause_up(S, P), not body[value](P, _), edge[tree](Q, P).
-suspends[value](S, F, How) :- pause_up(S, F), body[value](F, _), pause_at(S, How).
-suspends[value](S, P, How) :- pause_up(S, P), oxc_k[ast_oxc](P, program), pause_at(S, How).
+ox_pause_at(S, later) :- oxc_k[ast_oxc](S, await_expression).
+ox_pause_at(S, next)  :- oxc_k[ast_oxc](S, yield_expression).
+ox_pause_at(S, later) :- oxc_k[ast_oxc](S, for_of_statement), oxc_a[ast_oxc](S, await, true).
+ox_pause_up(S, P) :- ox_pause_at(S, _), edge[tree](P, S).
+ox_pause_up(S, Q) :- ox_pause_up(S, P), not body[value](P, _), edge[tree](Q, P).
+suspends[value](S, F, How) :- ox_pause_up(S, F), body[value](F, _), ox_pause_at(S, How).
+suspends[value](S, P, How) :- ox_pause_up(S, P), oxc_k[ast_oxc](P, program), ox_pause_at(S, How).
 
 -- MEMBERS ----------------------------------------------------------------------------------------------
 
@@ -297,7 +297,7 @@ member[value](N, O, Key)  :- oxc_k[ast_oxc](N, private_field_expression), oxc_c[
 mark[value](N, private)         :- oxc_k[ast_oxc](N, private_field_expression).
 member_expr[value](N, O, E) :- oxc_k[ast_oxc](N, computed_member_expression), oxc_c[ast_oxc](N, object, 0, O),
                                oxc_c[ast_oxc](N, expression, 0, E).
-mark[value](N, optional)  :- oxc_a[ast_oxc](N, optional, true), not oxc_k[ast_oxc](N, formal_parameter), not type_member(N),
+mark[value](N, optional)  :- oxc_a[ast_oxc](N, optional, true), not oxc_k[ast_oxc](N, formal_parameter), not ox_type_member(N),
                        not oxc_k[ast_oxc](N, property_definition), not oxc_k[ast_oxc](N, method_definition).
 mark[value](T, this)       :- oxc_k[ast_oxc](T, this_expression).
 mark[value](S, super)      :- oxc_k[ast_oxc](S, super).
@@ -308,10 +308,10 @@ mark[value](M, import_meta) :- oxc_k[ast_oxc](M, meta_property), oxc_c[ast_oxc](
 
 -- BINDINGS AND ASSIGNMENTS ----------------------------------------------------------------------------
 
-edb(decl_kind).
-decl_kind("Var", var). decl_kind("Let", let). decl_kind("Const", const).
-decl_kind("Using", using). decl_kind("AwaitUsing", await_using).
-decl[value](D, Kind) :- oxc_k[ast_oxc](V, variable_declaration), oxc_a[ast_oxc](V, kind, K), decl_kind(K, Kind),
+edb(ox_decl_kind).
+ox_decl_kind("Var", var). ox_decl_kind("Let", let). ox_decl_kind("Const", const).
+ox_decl_kind("Using", using). ox_decl_kind("AwaitUsing", await_using).
+decl[value](D, Kind) :- oxc_k[ast_oxc](V, variable_declaration), oxc_a[ast_oxc](V, kind, K), ox_decl_kind(K, Kind),
                         oxc_c[ast_oxc](V, declarations, _, D).
 target[value](D, T)  :- oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, id, 0, T), not oxc_c[ast_oxc](D, init, 0, _).
 assign[value](D, T, V) :- oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, id, 0, T), oxc_c[ast_oxc](D, init, 0, V).
@@ -319,11 +319,11 @@ decl[value](F, function) :- oxc_k[ast_oxc](F, function), oxc_c[ast_oxc](F, id, 0
 target[value](F, I)      :- oxc_k[ast_oxc](F, function), oxc_c[ast_oxc](F, id, 0, I).
 decl[value](C, class)    :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, id, 0, _).
 target[value](C, I)      :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, id, 0, I).
-hoist_node(X) :- oxc_k[ast_oxc](X, function), oxc_a[ast_oxc](X, type, "FunctionDeclaration").
-hoist_node(X) :- oxc_k[ast_oxc](X, class), oxc_a[ast_oxc](X, type, "ClassDeclaration").
-hoist_up(X, P) :- hoist_node(X), edge[tree](P, X).
-hoist_up(X, Q) :- hoist_up(X, P), not mark[value](P, scope), edge[tree](Q, P).
-hoisted[value](X, S) :- hoist_up(X, S), mark[value](S, scope).
+ox_hoist_node(X) :- oxc_k[ast_oxc](X, function), oxc_a[ast_oxc](X, type, "FunctionDeclaration").
+ox_hoist_node(X) :- oxc_k[ast_oxc](X, class), oxc_a[ast_oxc](X, type, "ClassDeclaration").
+ox_hoist_up(X, P) :- ox_hoist_node(X), edge[tree](P, X).
+ox_hoist_up(X, Q) :- ox_hoist_up(X, P), not mark[value](P, scope), edge[tree](Q, P).
+hoisted[value](X, S) :- ox_hoist_up(X, S), mark[value](S, scope).
 decl[value](T, param)    :- param[value](_, _, T).
 decl[value](T, param)    :- rest_params[value](_, _, T).
 assign[value](P, T, V)   :- oxc_k[ast_oxc](P, formal_parameter), oxc_c[ast_oxc](P, pattern, 0, T), oxc_c[ast_oxc](P, initializer, 0, V).
@@ -331,46 +331,46 @@ decl[value](T, catch)    :- oxc_k[ast_oxc](P, catch_parameter), oxc_c[ast_oxc](P
 decl[value](E, enum)      :- oxc_k[ast_oxc](E, tsenum_declaration).
 decl[value](N, namespace) :- oxc_k[ast_oxc](N, tsnamespace_declaration).
 decl[value](N, namespace) :- oxc_k[ast_oxc](N, tsmodule_declaration).
-target[value](D, I)       :- oxc_k[ast_oxc](D, K), ns_or_enum(K), oxc_c[ast_oxc](D, id, 0, I).
-edb(ns_or_enum).
-ns_or_enum(tsenum_declaration). ns_or_enum(tsnamespace_declaration). ns_or_enum(tsmodule_declaration).
+target[value](D, I)       :- oxc_k[ast_oxc](D, K), ox_ns_or_enum(K), oxc_c[ast_oxc](D, id, 0, I).
+edb(ox_ns_or_enum).
+ox_ns_or_enum(tsenum_declaration). ox_ns_or_enum(tsnamespace_declaration). ox_ns_or_enum(tsmodule_declaration).
 -- a TS namespace is an object of exports, its body the namespace
-namespace[value](M, B) :- oxc_k[ast_oxc](M, K), K != tsenum_declaration, ns_or_enum(K), oxc_c[ast_oxc](M, body, 0, B).
+namespace[value](M, B) :- oxc_k[ast_oxc](M, K), K != tsenum_declaration, ox_ns_or_enum(K), oxc_c[ast_oxc](M, body, 0, B).
 assign[value](A, T, V)   :- oxc_k[ast_oxc](A, assignment_pattern), oxc_c[ast_oxc](A, left, 0, T), oxc_c[ast_oxc](A, right, 0, V).
 assign[value](A, T, V)   :- oxc_k[ast_oxc](A, assignment_target_with_default), oxc_c[ast_oxc](A, binding, 0, T), oxc_c[ast_oxc](A, init, 0, V).
 
 -- `=` gives its right side; `+=` is a binary and an assign of itself; `??=` a logical and an assign
-edb(op_text).
-op_text("Assign", "=").
-op_text("Addition", "+").        op_text("Subtraction", "-").    op_text("Multiplication", "*").
-op_text("Division", "/").        op_text("Remainder", "%").      op_text("Exponential", "**").
-op_text("ShiftLeft", "<<").      op_text("ShiftRight", ">>").    op_text("ShiftRightZeroFill", ">>>").
-op_text("BitwiseOR", "|").       op_text("BitwiseXOR", "^").     op_text("BitwiseAnd", "&").
-op_text("Equality", "==").       op_text("Inequality", "!=").    op_text("StrictEquality", "===").
-op_text("StrictInequality", "!=="). op_text("LessThan", "<").    op_text("LessEqualThan", "<=").
-op_text("GreaterThan", ">").     op_text("GreaterEqualThan", ">=").
-op_text("In", "in").             op_text("Instanceof", "instanceof").
-op_text("And", "&&").            op_text("Or", "||").            op_text("Coalesce", "??").
-op_text("LogicalAnd", "&&").     op_text("LogicalOr", "||").     op_text("LogicalNullish", "??").
-op_text("UnaryNegation", "-").   op_text("UnaryPlus", "+").      op_text("LogicalNot", "!").
-op_text("BitwiseNot", "~").      op_text("Typeof", "typeof").    op_text("Void", "void").
-op_text("Delete", "delete").
-op_text("Increment", "++").      op_text("Decrement", "--").
-edb(logical_how).
-logical_how("&&", truthy). logical_how("||", falsy). logical_how("??", nullish).
-edb(logical_op).
-logical_op("&&"). logical_op("||"). logical_op("??").
+edb(ox_op_text).
+ox_op_text("Assign", "=").
+ox_op_text("Addition", "+").        ox_op_text("Subtraction", "-").    ox_op_text("Multiplication", "*").
+ox_op_text("Division", "/").        ox_op_text("Remainder", "%").      ox_op_text("Exponential", "**").
+ox_op_text("ShiftLeft", "<<").      ox_op_text("ShiftRight", ">>").    ox_op_text("ShiftRightZeroFill", ">>>").
+ox_op_text("BitwiseOR", "|").       ox_op_text("BitwiseXOR", "^").     ox_op_text("BitwiseAnd", "&").
+ox_op_text("Equality", "==").       ox_op_text("Inequality", "!=").    ox_op_text("StrictEquality", "===").
+ox_op_text("StrictInequality", "!=="). ox_op_text("LessThan", "<").    ox_op_text("LessEqualThan", "<=").
+ox_op_text("GreaterThan", ">").     ox_op_text("GreaterEqualThan", ">=").
+ox_op_text("In", "in").             ox_op_text("Instanceof", "instanceof").
+ox_op_text("And", "&&").            ox_op_text("Or", "||").            ox_op_text("Coalesce", "??").
+ox_op_text("LogicalAnd", "&&").     ox_op_text("LogicalOr", "||").     ox_op_text("LogicalNullish", "??").
+ox_op_text("UnaryNegation", "-").   ox_op_text("UnaryPlus", "+").      ox_op_text("LogicalNot", "!").
+ox_op_text("BitwiseNot", "~").      ox_op_text("Typeof", "typeof").    ox_op_text("Void", "void").
+ox_op_text("Delete", "delete").
+ox_op_text("Increment", "++").      ox_op_text("Decrement", "--").
+edb(ox_logical_how).
+ox_logical_how("&&", truthy). ox_logical_how("||", falsy). ox_logical_how("??", nullish).
+edb(ox_logical_op).
+ox_logical_op("&&"). ox_logical_op("||"). ox_logical_op("??").
 
-assign_parts(A, Op, L, R) :- oxc_k[ast_oxc](A, assignment_expression), oxc_a[ast_oxc](A, operator, O), op_text(O, Op),
+ox_assign_parts(A, Op, L, R) :- oxc_k[ast_oxc](A, assignment_expression), oxc_a[ast_oxc](A, operator, O), ox_op_text(O, Op),
                              oxc_c[ast_oxc](A, left, 0, L), oxc_c[ast_oxc](A, right, 0, R).
-assign[value](A, L, R)   :- assign_parts(A, "=", L, R).
-gives[value](A, R)       :- assign_parts(A, "=", _, R).
-binary[value](A, Op, L, R) :- assign_parts(A, Op, L, R), Op != "=", not logical_op(Op).
-assign[value](A, L, A)     :- assign_parts(A, Op, L, _), Op != "=", not logical_op(Op).
-logical[value](A, Op, L, R) :- assign_parts(A, Op, L, R), logical_op(Op).
-assign[value](A, L, R)      :- assign_parts(A, Op, L, R), logical_op(Op).
+assign[value](A, L, R)   :- ox_assign_parts(A, "=", L, R).
+gives[value](A, R)       :- ox_assign_parts(A, "=", _, R).
+binary[value](A, Op, L, R) :- ox_assign_parts(A, Op, L, R), Op != "=", not ox_logical_op(Op).
+assign[value](A, L, A)     :- ox_assign_parts(A, Op, L, _), Op != "=", not ox_logical_op(Op).
+logical[value](A, Op, L, R) :- ox_assign_parts(A, Op, L, R), ox_logical_op(Op).
+assign[value](A, L, R)      :- ox_assign_parts(A, Op, L, R), ox_logical_op(Op).
 
-unary[value](U, Op, X)  :- oxc_k[ast_oxc](U, update_expression), oxc_a[ast_oxc](U, operator, O), op_text(O, Op),
+unary[value](U, Op, X)  :- oxc_k[ast_oxc](U, update_expression), oxc_a[ast_oxc](U, operator, O), ox_op_text(O, Op),
                            oxc_c[ast_oxc](U, argument, 0, X).
 assign[value](U, X, U)  :- oxc_k[ast_oxc](U, update_expression), oxc_c[ast_oxc](U, argument, 0, X).
 gives[value](U, X)      :- oxc_k[ast_oxc](U, update_expression), oxc_a[ast_oxc](U, prefix, false), oxc_c[ast_oxc](U, argument, 0, X).
@@ -390,14 +390,14 @@ gives[value](E, X)      :- oxc_k[ast_oxc](E, logical_expression), oxc_c[ast_oxc]
 
 -- patterns, declared (binding_*) and assigned (*_assignment_target) alike
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, properties, _, BP),
-                                  oxc_c[ast_oxc](BP, key, 0, K), key_name(K, Key), oxc_c[ast_oxc](BP, value, 0, V), pat_target(V, T).
+                                  oxc_c[ast_oxc](BP, key, 0, K), ox_key_name(K, Key), oxc_c[ast_oxc](BP, value, 0, V), ox_pat_target(V, T).
 -- a default on the target is an assign of its own: the target is the name
-pat_target(V, V) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, properties, _, BP), oxc_c[ast_oxc](BP, value, 0, V),
+ox_pat_target(V, V) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, properties, _, BP), oxc_c[ast_oxc](BP, value, 0, V),
                     not oxc_k[ast_oxc](V, assignment_pattern).
-pat_target(V, T) :- oxc_k[ast_oxc](V, assignment_pattern), oxc_c[ast_oxc](V, left, 0, T).
+ox_pat_target(V, T) :- oxc_k[ast_oxc](V, assignment_pattern), oxc_c[ast_oxc](V, left, 0, T).
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_assignment_target), oxc_c[ast_oxc](P, properties, _, AP),
                                   oxc_k[ast_oxc](AP, assignment_target_property_property),
-                                  oxc_c[ast_oxc](AP, name, 0, K), key_name(K, Key), oxc_c[ast_oxc](AP, binding, 0, T).
+                                  oxc_c[ast_oxc](AP, name, 0, K), ox_key_name(K, Key), oxc_c[ast_oxc](AP, binding, 0, T).
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_assignment_target), oxc_c[ast_oxc](P, properties, _, AP),
                                   oxc_k[ast_oxc](AP, assignment_target_property_identifier),
                                   oxc_c[ast_oxc](AP, binding, 0, T), oxc_name[ast_oxc](T, Key).
@@ -407,15 +407,15 @@ assign[value](AP, T, V)        :- oxc_k[ast_oxc](AP, assignment_target_property_
                                   oxc_c[ast_oxc](AP, binding, 0, T), oxc_c[ast_oxc](AP, init, 0, V).
 rest_props[value](P, T) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, argument, 0, T).
 rest_props[value](P, T) :- oxc_k[ast_oxc](P, object_assignment_target), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, target, 0, T).
-array_pat(P) :- oxc_k[ast_oxc](P, array_pattern).
-array_pat(P) :- oxc_k[ast_oxc](P, array_assignment_target).
-iterates[value](P, P, V) :- array_pat(P), oxc_c[ast_oxc](D, id, 0, P), oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, init, 0, V).
-iterates[value](P, P, V) :- array_pat(P), oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment_expression), oxc_c[ast_oxc](A, right, 0, V).
-iterates[value](P, P, P) :- array_pat(P), not pat_sourced(P).
-pat_sourced(P) :- oxc_c[ast_oxc](D, id, 0, P), oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, init, 0, _).
-pat_sourced(P) :- oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment_expression).
-pattern_elem[value](P, I, T) :- array_pat(P), oxc_c[ast_oxc](P, elements, I, V), oxc_k[ast_oxc](V, K), K != assignment_pattern, T = V.
-pattern_elem[value](P, I, T) :- array_pat(P), oxc_c[ast_oxc](P, elements, I, V), oxc_k[ast_oxc](V, assignment_pattern), oxc_c[ast_oxc](V, left, 0, T).
+ox_array_pat(P) :- oxc_k[ast_oxc](P, array_pattern).
+ox_array_pat(P) :- oxc_k[ast_oxc](P, array_assignment_target).
+iterates[value](P, P, V) :- ox_array_pat(P), oxc_c[ast_oxc](D, id, 0, P), oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, init, 0, V).
+iterates[value](P, P, V) :- ox_array_pat(P), oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment_expression), oxc_c[ast_oxc](A, right, 0, V).
+iterates[value](P, P, P) :- ox_array_pat(P), not ox_pat_sourced(P).
+ox_pat_sourced(P) :- oxc_c[ast_oxc](D, id, 0, P), oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, init, 0, _).
+ox_pat_sourced(P) :- oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment_expression).
+pattern_elem[value](P, I, T) :- ox_array_pat(P), oxc_c[ast_oxc](P, elements, I, V), oxc_k[ast_oxc](V, K), K != assignment_pattern, T = V.
+pattern_elem[value](P, I, T) :- ox_array_pat(P), oxc_c[ast_oxc](P, elements, I, V), oxc_k[ast_oxc](V, assignment_pattern), oxc_c[ast_oxc](V, left, 0, T).
 rest_elems[value](P, I, T)   :- oxc_k[ast_oxc](P, array_pattern), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, argument, 0, T),
                                 I is count(J : oxc_c[ast_oxc](P, elements, J, _)).
 rest_elems[value](P, I, T)   :- oxc_k[ast_oxc](P, array_assignment_target), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, target, 0, T),
@@ -429,9 +429,9 @@ mark[value](R, regexp) :- oxc_k[ast_oxc](R, reg_exp_literal).
 mark[value](C, class)  :- oxc_k[ast_oxc](C, class).
 has[value](O, M) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, _, M), not oxc_k[ast_oxc](M, spread_element).
 has[value](C, M) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0, B), oxc_c[ast_oxc](B, body, _, M),
-                    not oxc_k[ast_oxc](M, static_block), not type_only(M).
-has[type](C, M) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0, B), oxc_c[ast_oxc](B, body, _, M), type_only(M).
-value[value](M, V) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, V), not method_member(M, _).
+                    not oxc_k[ast_oxc](M, static_block), not ox_type_only(M).
+has[type](C, M) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0, B), oxc_c[ast_oxc](B, body, _, M), ox_type_only(M).
+value[value](M, V) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, V), not ox_method_member(M, _).
 value[value](M, V) :- oxc_k[ast_oxc](M, property_definition), oxc_c[ast_oxc](M, value, 0, V).
 value[value](M, V) :- oxc_k[ast_oxc](M, accessor_property), oxc_c[ast_oxc](M, value, 0, V).
 mark[value](M, static)   :- oxc_a[ast_oxc](M, static, true).
@@ -443,7 +443,7 @@ decorated[value](X, E) :- oxc_c[ast_oxc](X, decorators, _, D), oxc_c[ast_oxc](D,
 -- an enum is an object: each member a key and its initializer
 mark[value](E, object)  :- oxc_k[ast_oxc](E, tsenum_declaration).
 has[value](E, M)  :- oxc_k[ast_oxc](E, tsenum_declaration), oxc_c[ast_oxc](E, body, 0, B), oxc_c[ast_oxc](B, members, _, M).
-key[value](M, Key) :- oxc_k[ast_oxc](M, tsenum_member), oxc_c[ast_oxc](M, id, 0, K), key_name(K, Key).
+key[value](M, Key) :- oxc_k[ast_oxc](M, tsenum_member), oxc_c[ast_oxc](M, id, 0, K), ox_key_name(K, Key).
 value[value](M, V) :- oxc_k[ast_oxc](M, tsenum_member), oxc_c[ast_oxc](M, initializer, 0, V).
 spread_props[value](O, I, X) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, I, S),
                                 oxc_k[ast_oxc](S, spread_element), oxc_c[ast_oxc](S, argument, 0, X).
@@ -452,50 +452,50 @@ spread_elems[value](A, I, X) :- oxc_k[ast_oxc](A, array_expression), oxc_c[ast_o
 
 -- CONDUCTORS -------------------------------------------------------------------------------------------
 
-edb(passes_kind).
-passes_kind(tsnon_null_expression).    passes_kind(tsas_expression).
-passes_kind(tssatisfies_expression).   passes_kind(tstype_assertion).
-passes[value](E, X) :- passes_kind(K), oxc_k[ast_oxc](E, K), oxc_c[ast_oxc](E, expression, 0, X).
+edb(ox_passes_kind).
+ox_passes_kind(tsnon_null_expression).    ox_passes_kind(tsas_expression).
+ox_passes_kind(tssatisfies_expression).   ox_passes_kind(tstype_assertion).
+passes[value](E, X) :- ox_passes_kind(K), oxc_k[ast_oxc](E, K), oxc_c[ast_oxc](E, expression, 0, X).
 
-binary[value](N, Op, L, R) :- oxc_k[ast_oxc](N, binary_expression), oxc_a[ast_oxc](N, operator, O), op_text(O, Op),
+binary[value](N, Op, L, R) :- oxc_k[ast_oxc](N, binary_expression), oxc_a[ast_oxc](N, operator, O), ox_op_text(O, Op),
                               oxc_c[ast_oxc](N, left, 0, L), oxc_c[ast_oxc](N, right, 0, R).
 binary[value](N, "in", L, R) :- oxc_k[ast_oxc](N, private_in_expression), oxc_c[ast_oxc](N, left, 0, L), oxc_c[ast_oxc](N, right, 0, R).
-unary[value](N, Op, X)  :- oxc_k[ast_oxc](N, unary_expression), oxc_a[ast_oxc](N, operator, O), op_text(O, Op),
+unary[value](N, Op, X)  :- oxc_k[ast_oxc](N, unary_expression), oxc_a[ast_oxc](N, operator, O), ox_op_text(O, Op),
                            oxc_c[ast_oxc](N, argument, 0, X).
-logical[value](N, Op, L, R) :- oxc_k[ast_oxc](N, logical_expression), oxc_a[ast_oxc](N, operator, O), op_text(O, Op),
+logical[value](N, Op, L, R) :- oxc_k[ast_oxc](N, logical_expression), oxc_a[ast_oxc](N, operator, O), ox_op_text(O, Op),
                                oxc_c[ast_oxc](N, left, 0, L), oxc_c[ast_oxc](N, right, 0, R).
 
 -- CONTROL ----------------------------------------------------------------------------------------------
 
-edb(cond_field).
-cond_field(if_statement, consequent, test, truthy).
-cond_field(if_statement, alternate, test, falsy).
-cond_field(conditional_expression, consequent, test, truthy).
-cond_field(conditional_expression, alternate, test, falsy).
-cond_field(while_statement, body, test, truthy).
-cond_field(do_while_statement, body, test, truthy).
-cond_field(for_statement, body, test, truthy).
-cond_field(for_statement, update, test, truthy).
-cond_field(for_of_statement, body, right, next).
-cond_field(for_of_statement, left, right, next).
-cond_field(for_in_statement, body, right, next).
-cond_field(for_in_statement, left, right, next).
-cond_field(try_statement, handler, block, thrown).
-branch(N, G, How) :- cond_field(K, F, GF, How), oxc_k[ast_oxc](S, K), oxc_c[ast_oxc](S, F, 0, N), oxc_c[ast_oxc](S, GF, 0, G).
-branch(R, L, How) :- logical[value](N, Op, L, R), oxc_k[ast_oxc](N, logical_expression), logical_how(Op, How).
-branch(R, L, How) :- assign_parts(_, Op, L, R), logical_how(Op, How).
-executes_if[value](N, G, How) :- branch(N, G, How), plain(N).
-executes_if[value](X, G, How) :- branch(N, G, How), through(N, X).
+edb(ox_cond_field).
+ox_cond_field(if_statement, consequent, test, truthy).
+ox_cond_field(if_statement, alternate, test, falsy).
+ox_cond_field(conditional_expression, consequent, test, truthy).
+ox_cond_field(conditional_expression, alternate, test, falsy).
+ox_cond_field(while_statement, body, test, truthy).
+ox_cond_field(do_while_statement, body, test, truthy).
+ox_cond_field(for_statement, body, test, truthy).
+ox_cond_field(for_statement, update, test, truthy).
+ox_cond_field(for_of_statement, body, right, next).
+ox_cond_field(for_of_statement, left, right, next).
+ox_cond_field(for_in_statement, body, right, next).
+ox_cond_field(for_in_statement, left, right, next).
+ox_cond_field(try_statement, handler, block, thrown).
+ox_branch(N, G, How) :- ox_cond_field(K, F, GF, How), oxc_k[ast_oxc](S, K), oxc_c[ast_oxc](S, F, 0, N), oxc_c[ast_oxc](S, GF, 0, G).
+ox_branch(R, L, How) :- logical[value](N, Op, L, R), oxc_k[ast_oxc](N, logical_expression), ox_logical_how(Op, How).
+ox_branch(R, L, How) :- ox_assign_parts(_, Op, L, R), ox_logical_how(Op, How).
+executes_if[value](N, G, How) :- ox_branch(N, G, How), ox_plain(N).
+executes_if[value](X, G, How) :- ox_branch(N, G, How), ox_through(N, X).
 -- the tail of `?.` runs when what it reads is defined
 executes_if[value](N, O, defined) :- mark[value](N, optional), oxc_c[ast_oxc](N, object, 0, O).
 executes_if[value](N, O, defined) :- mark[value](N, optional), oxc_c[ast_oxc](N, callee, 0, O).
 -- and so does the rest of the chain above it: a link that is not itself optional, whose object or callee is a link of the chain; a parenthesis ends the chain
-edb(chain_link).
-chain_link(static_member_expression). chain_link(computed_member_expression). chain_link(private_field_expression).
-chain_link(call_expression).
-chain_below[ast_oxc](L, X) :- chain_link(K), oxc_k[ast_oxc](L, K), not oxc_a[ast_oxc](L, optional, true),
+edb(ox_chain_link).
+ox_chain_link(static_member_expression). ox_chain_link(computed_member_expression). ox_chain_link(private_field_expression).
+ox_chain_link(call_expression).
+chain_below[ast_oxc](L, X) :- ox_chain_link(K), oxc_k[ast_oxc](L, K), not oxc_a[ast_oxc](L, optional, true),
                               child[ast_oxc](L, object, 0, X).
-chain_below[ast_oxc](L, X) :- chain_link(K), oxc_k[ast_oxc](L, K), not oxc_a[ast_oxc](L, optional, true),
+chain_below[ast_oxc](L, X) :- ox_chain_link(K), oxc_k[ast_oxc](L, K), not oxc_a[ast_oxc](L, optional, true),
                               child[ast_oxc](L, callee, 0, X).
 chain_opt[ast_oxc](L, X) :- chain_below[ast_oxc](L, X), mark[value](X, optional).
 chain_opt[ast_oxc](L, O) :- chain_below[ast_oxc](L, X), chain_opt[ast_oxc](X, O).
@@ -506,11 +506,11 @@ executes_if[value](C, T, matches) :- oxc_k[ast_oxc](C, switch_case), oxc_c[ast_o
 executes_if[value](C, D, unmatched) :- oxc_k[ast_oxc](S, switch_statement), oxc_c[ast_oxc](S, cases, _, C), not oxc_c[ast_oxc](C, test, 0, _),
                                        oxc_c[ast_oxc](S, discriminant, 0, D).
 
-edb(loop_kind).
-loop_kind(for_statement). loop_kind(for_in_statement). loop_kind(for_of_statement).
-loop_kind(while_statement). loop_kind(do_while_statement).
-repeats[value](L, B) :- loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), plain(B).
-repeats[value](L, X) :- loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), through(B, X).
+edb(ox_loop_kind).
+ox_loop_kind(for_statement). ox_loop_kind(for_in_statement). ox_loop_kind(for_of_statement).
+ox_loop_kind(while_statement). ox_loop_kind(do_while_statement).
+repeats[value](L, B) :- ox_loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), ox_plain(B).
+repeats[value](L, X) :- ox_loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), ox_through(B, X).
 iterates[value](L, Left, R)   :- oxc_k[ast_oxc](L, for_of_statement), oxc_c[ast_oxc](L, left, 0, Left), oxc_c[ast_oxc](L, right, 0, R).
 enumerates[value](L, Left, R) :- oxc_k[ast_oxc](L, for_in_statement), oxc_c[ast_oxc](L, left, 0, Left), oxc_c[ast_oxc](L, right, 0, R).
 
@@ -523,157 +523,157 @@ exits[value](J, continue) :- oxc_k[ast_oxc](J, continue_statement).
 exits[value](J, throw)    :- oxc_k[ast_oxc](J, throw_statement).
 throws[value](T, V) :- oxc_k[ast_oxc](T, throw_statement), oxc_c[ast_oxc](T, argument, 0, V).
 -- a label goes onto the statement it names, and onto the jump that names it
-label_of(L, Name) :- oxc_c[ast_oxc](L, label, 0, I), oxc_name[ast_oxc](I, Name).
-labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), label_of(L, Name), oxc_c[ast_oxc](L, body, 0, X), plain(X).
-labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), label_of(L, Name), oxc_c[ast_oxc](L, body, 0, B), through(B, X).
-jumps_to[value](J, Name) :- oxc_k[ast_oxc](J, K), K != labeled_statement, label_of(J, Name).
+ox_label_of(L, Name) :- oxc_c[ast_oxc](L, label, 0, I), oxc_name[ast_oxc](I, Name).
+labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), ox_label_of(L, Name), oxc_c[ast_oxc](L, body, 0, X), ox_plain(X).
+labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), ox_label_of(L, Name), oxc_c[ast_oxc](L, body, 0, B), ox_through(B, X).
+jumps_to[value](J, Name) :- oxc_k[ast_oxc](J, K), K != labeled_statement, ox_label_of(J, Name).
 
 -- what runs after an await runs later: every later step of each sequence the suspension is inside, up to its function
-wait_up(A, A) :- oxc_k[ast_oxc](A, await_expression).
-wait_up(A, S) :- wait_up(A, X), nth[tree](S, _, X).
-wait_up(A, C) :- wait_up(A, X), callee[value](C, X).
-wait_up(A, C) :- wait_up(A, X), tagged[value](C, X, _).
-wait_up(A, S) :- wait_up(A, X), executes_if[value](X, _, _), edge[tree](S, X).
-executes_when[value](Next, A, microtask) :- wait_up(A, S), nth[tree](Seq, I, S), nth[tree](Seq, J, Next), J > I.
-executes_when[value](Arg, A, microtask)  :- wait_up(A, N), callee[value](C, N), nth[tree](C, _, Arg).
+ox_wait_up(A, A) :- oxc_k[ast_oxc](A, await_expression).
+ox_wait_up(A, S) :- ox_wait_up(A, X), nth[tree](S, _, X).
+ox_wait_up(A, C) :- ox_wait_up(A, X), callee[value](C, X).
+ox_wait_up(A, C) :- ox_wait_up(A, X), tagged[value](C, X, _).
+ox_wait_up(A, S) :- ox_wait_up(A, X), executes_if[value](X, _, _), edge[tree](S, X).
+executes_when[value](Next, A, microtask) :- ox_wait_up(A, S), nth[tree](Seq, I, S), nth[tree](Seq, J, Next), J > I.
+executes_when[value](Arg, A, microtask)  :- ox_wait_up(A, N), callee[value](C, N), nth[tree](C, _, Arg).
 
 -- MODULES ----------------------------------------------------------------------------------------------
 
 -- the namespace is the program node itself: no rule can mint a node (written in the notes below)
 namespace[value](P, P) :- oxc_k[ast_oxc](P, program).
-spec_of(S, V) :- oxc_k[ast_oxc](S, string_literal), oxc_a[ast_oxc](S, value, V).
+ox_spec_of(S, V) :- oxc_k[ast_oxc](S, string_literal), oxc_a[ast_oxc](S, value, V).
 -- `import type {} from 'm'`, `export type {} from 'm'` and `export type * from 'm'` introduce no member: the module is named in the types
-type_site(D) :- oxc_k[ast_oxc](D, import_declaration), oxc_a[ast_oxc](D, import_kind, "Type"), not oxc_c[ast_oxc](D, specifiers, _, _).
-type_site(D) :- oxc_k[ast_oxc](D, K), export_list(K), oxc_a[ast_oxc](D, export_kind, "Type"), oxc_c[ast_oxc](D, source, 0, _),
+ox_type_site(D) :- oxc_k[ast_oxc](D, import_declaration), oxc_a[ast_oxc](D, import_kind, "Type"), not oxc_c[ast_oxc](D, specifiers, _, _).
+ox_type_site(D) :- oxc_k[ast_oxc](D, K), ox_export_list(K), oxc_a[ast_oxc](D, export_kind, "Type"), oxc_c[ast_oxc](D, source, 0, _),
                 not oxc_c[ast_oxc](D, specifiers, _, _).
-type_site(D) :- oxc_k[ast_oxc](D, export_all_declaration), oxc_a[ast_oxc](D, export_kind, "Type"), not oxc_c[ast_oxc](D, exported, 0, _).
-module_ref[value](S, V) :- oxc_c[ast_oxc](D, source, 0, S), spec_of(S, V), not oxc_k[ast_oxc](D, import_expression), not type_site(D).
-module_ref[type](S, V)  :- type_site(D), oxc_c[ast_oxc](D, source, 0, S), spec_of(S, V).
-module_ref[value](D, V) :- oxc_k[ast_oxc](D, import_expression), oxc_c[ast_oxc](D, source, 0, S), spec_of(S, V).
-module_expr[value](D, E) :- oxc_k[ast_oxc](D, import_expression), oxc_c[ast_oxc](D, source, 0, E), not spec_of(E, _).
+ox_type_site(D) :- oxc_k[ast_oxc](D, export_all_declaration), oxc_a[ast_oxc](D, export_kind, "Type"), not oxc_c[ast_oxc](D, exported, 0, _).
+module_ref[value](S, V) :- oxc_c[ast_oxc](D, source, 0, S), ox_spec_of(S, V), not oxc_k[ast_oxc](D, import_expression), not ox_type_site(D).
+module_ref[type](S, V)  :- ox_type_site(D), oxc_c[ast_oxc](D, source, 0, S), ox_spec_of(S, V).
+module_ref[value](D, V) :- oxc_k[ast_oxc](D, import_expression), oxc_c[ast_oxc](D, source, 0, S), ox_spec_of(S, V).
+module_expr[value](D, E) :- oxc_k[ast_oxc](D, import_expression), oxc_c[ast_oxc](D, source, 0, E), not ox_spec_of(E, _).
 
 decl[value](S, import)   :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S).
 target[value](S, L)      :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), oxc_c[ast_oxc](S, local, 0, L).
-assign[value](D, D, Src) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), import_key(S, _),
+assign[value](D, D, Src) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), ox_import_key(S, _),
                             oxc_c[ast_oxc](D, source, 0, Src).
-import_key(S, Key) :- oxc_k[ast_oxc](S, import_specifier), oxc_c[ast_oxc](S, imported, 0, K), key_name(K, Key).
-import_key(S, "default") :- oxc_k[ast_oxc](S, import_default_specifier).
+ox_import_key(S, Key) :- oxc_k[ast_oxc](S, import_specifier), oxc_c[ast_oxc](S, imported, 0, K), ox_key_name(K, Key).
+ox_import_key(S, "default") :- oxc_k[ast_oxc](S, import_default_specifier).
 pattern_prop[value](D, Key, B) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S),
-                                  import_key(S, Key), oxc_c[ast_oxc](S, local, 0, B).
+                                  ox_import_key(S, Key), oxc_c[ast_oxc](S, local, 0, B).
 assign[value](S, B, Src) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S),
                             oxc_k[ast_oxc](S, import_namespace_specifier), oxc_c[ast_oxc](S, local, 0, B), oxc_c[ast_oxc](D, source, 0, Src).
 
-in_program(P, I, X) :- oxc_k[ast_oxc](P, program), oxc_c[ast_oxc](P, body, I, X).
-export_key(S, Key) :- oxc_c[ast_oxc](S, exported, 0, K), key_name(K, Key).
-edb(export_list).
-export_list(export_named_declaration). export_list(export_from_declaration).
+ox_in_program(P, I, X) :- oxc_k[ast_oxc](P, program), oxc_c[ast_oxc](P, body, I, X).
+ox_export_key(S, Key) :- oxc_c[ast_oxc](S, exported, 0, K), ox_key_name(K, Key).
+edb(ox_export_list).
+ox_export_list(export_named_declaration). ox_export_list(export_from_declaration).
 -- `export type {X}` and `export {type X}` are members of the module's types only
-type_spec(S) :- oxc_k[ast_oxc](S, export_specifier), oxc_a[ast_oxc](S, export_kind, "Type").
-type_spec(S) :- oxc_k[ast_oxc](E, K), export_list(K), oxc_a[ast_oxc](E, export_kind, "Type"), oxc_c[ast_oxc](E, specifiers, _, S).
-export_spec(P, S)  :- in_program(P, _, E), oxc_k[ast_oxc](E, K), export_list(K), oxc_c[ast_oxc](E, specifiers, _, S).
-has[value](P, S)   :- export_spec(P, S), not type_spec(S).
-has[type](P, S)    :- export_spec(P, S), type_spec(S).
-key[value](S, Key) :- oxc_k[ast_oxc](S, export_specifier), export_key(S, Key), not type_spec(S).
-key[type](S, Key)  :- oxc_k[ast_oxc](S, export_specifier), export_key(S, Key), type_spec(S).
-reexport_spec(E, S) :- oxc_k[ast_oxc](E, export_from_declaration), oxc_c[ast_oxc](E, specifiers, _, S), oxc_k[ast_oxc](S, export_specifier).
-value[value](S, L) :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L), not type_spec(S), not reexport_spec(_, S).
+ox_type_spec(S) :- oxc_k[ast_oxc](S, export_specifier), oxc_a[ast_oxc](S, export_kind, "Type").
+ox_type_spec(S) :- oxc_k[ast_oxc](E, K), ox_export_list(K), oxc_a[ast_oxc](E, export_kind, "Type"), oxc_c[ast_oxc](E, specifiers, _, S).
+ox_export_spec(P, S)  :- ox_in_program(P, _, E), oxc_k[ast_oxc](E, K), ox_export_list(K), oxc_c[ast_oxc](E, specifiers, _, S).
+has[value](P, S)   :- ox_export_spec(P, S), not ox_type_spec(S).
+has[type](P, S)    :- ox_export_spec(P, S), ox_type_spec(S).
+key[value](S, Key) :- oxc_k[ast_oxc](S, export_specifier), ox_export_key(S, Key), not ox_type_spec(S).
+key[type](S, Key)  :- oxc_k[ast_oxc](S, export_specifier), ox_export_key(S, Key), ox_type_spec(S).
+ox_reexport_spec(E, S) :- oxc_k[ast_oxc](E, export_from_declaration), oxc_c[ast_oxc](E, specifiers, _, S), oxc_k[ast_oxc](S, export_specifier).
+value[value](S, L) :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L), not ox_type_spec(S), not ox_reexport_spec(_, S).
 -- export { a as b } from 'm': the member is destructured from m
-pattern_prop[value](E, Name, S) :- reexport_spec(E, S), oxc_c[ast_oxc](S, local, 0, L), key_name(L, Name).
-assign[value](E, E, Src)        :- reexport_spec(E, _), oxc_c[ast_oxc](E, source, 0, Src).
-value[type](S, L)  :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L), type_spec(S), not reexport_spec(_, S).
+pattern_prop[value](E, Name, S) :- ox_reexport_spec(E, S), oxc_c[ast_oxc](S, local, 0, L), ox_key_name(L, Name).
+assign[value](E, E, Src)        :- ox_reexport_spec(E, _), oxc_c[ast_oxc](E, source, 0, Src).
+value[type](S, L)  :- oxc_k[ast_oxc](S, export_specifier), oxc_c[ast_oxc](S, local, 0, L), ox_type_spec(S), not ox_reexport_spec(_, S).
 -- export with a declaration: each declared name is a member, its value the binding
-exported_decl(E, D) :- oxc_k[ast_oxc](E, export_named_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
-exported_decl(E, D) :- oxc_k[ast_oxc](E, export_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
-exported_place(E, M, B) :- exported_decl(E, V), oxc_k[ast_oxc](V, variable_declaration), oxc_c[ast_oxc](V, declarations, _, M),
+ox_exported_decl(E, D) :- oxc_k[ast_oxc](E, export_named_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
+ox_exported_decl(E, D) :- oxc_k[ast_oxc](E, export_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
+ox_exported_place(E, M, B) :- ox_exported_decl(E, V), oxc_k[ast_oxc](V, variable_declaration), oxc_c[ast_oxc](V, declarations, _, M),
                            oxc_c[ast_oxc](M, id, 0, B), oxc_k[ast_oxc](B, binding_identifier).
-exported_place(E, D, B) :- exported_decl(E, D), oxc_c[ast_oxc](D, id, 0, B), oxc_k[ast_oxc](B, binding_identifier).
+ox_exported_place(E, D, B) :- ox_exported_decl(E, D), oxc_c[ast_oxc](D, id, 0, B), oxc_k[ast_oxc](B, binding_identifier).
 -- the names a pattern binds: `export const { a, b: [c] } = o` exports a and c as `export const a = 1` exports a
-exported_place(E, M, B) :- exported_decl(E, V), oxc_k[ast_oxc](V, variable_declaration), oxc_c[ast_oxc](V, declarations, _, M),
-                           oxc_c[ast_oxc](M, id, 0, P), pat_ident(P, B), P != B, oxc_k[ast_oxc](B, binding_identifier).
-pat_ident(P, P) :- oxc_c[ast_oxc](_, id, 0, P).
-pat_ident(P, Y) :- pat_ident(P, X), pat_down(X, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, object_pattern), oxc_c[ast_oxc](X, properties, _, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, object_pattern), oxc_c[ast_oxc](X, rest, 0, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, binding_property), oxc_c[ast_oxc](X, value, 0, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, array_pattern), oxc_c[ast_oxc](X, elements, _, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, array_pattern), oxc_c[ast_oxc](X, rest, 0, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, assignment_pattern), oxc_c[ast_oxc](X, left, 0, Y).
-pat_down(X, Y) :- oxc_k[ast_oxc](X, binding_rest_element), oxc_c[ast_oxc](X, argument, 0, Y).
-ns_body(Ns, X) :- in_program(P, _, X), namespace[value](P, Ns).
-ns_body(B, X)  :- namespace[value](M, B), M != B, oxc_c[ast_oxc](B, body, _, X).
+ox_exported_place(E, M, B) :- ox_exported_decl(E, V), oxc_k[ast_oxc](V, variable_declaration), oxc_c[ast_oxc](V, declarations, _, M),
+                           oxc_c[ast_oxc](M, id, 0, P), ox_pat_ident(P, B), P != B, oxc_k[ast_oxc](B, binding_identifier).
+ox_pat_ident(P, P) :- oxc_c[ast_oxc](_, id, 0, P).
+ox_pat_ident(P, Y) :- ox_pat_ident(P, X), ox_pat_down(X, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, object_pattern), oxc_c[ast_oxc](X, properties, _, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, object_pattern), oxc_c[ast_oxc](X, rest, 0, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, binding_property), oxc_c[ast_oxc](X, value, 0, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, array_pattern), oxc_c[ast_oxc](X, elements, _, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, array_pattern), oxc_c[ast_oxc](X, rest, 0, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, assignment_pattern), oxc_c[ast_oxc](X, left, 0, Y).
+ox_pat_down(X, Y) :- oxc_k[ast_oxc](X, binding_rest_element), oxc_c[ast_oxc](X, argument, 0, Y).
+ox_ns_body(Ns, X) :- ox_in_program(P, _, X), namespace[value](P, Ns).
+ox_ns_body(B, X)  :- namespace[value](M, B), M != B, oxc_c[ast_oxc](B, body, _, X).
 -- a declared name is a member of the world its binding is in
-value_place(E, B) :- exported_place(E, _, B), not type_side(B).
-type_place(E, B)  :- exported_place(E, _, B), type_side(B).
-type_place(E, B)  :- exported_place(E, _, B), both_sides(B).
-has[value](Ns, B)  :- ns_body(Ns, E), value_place(E, B).
-key[value](B, Key) :- value_place(_, B), oxc_name[ast_oxc](B, Key).
-value[value](B, B) :- value_place(_, B).
-has[type](Ns, B)   :- ns_body(Ns, E), type_place(E, B).
-key[type](B, Key)  :- type_place(_, B), oxc_name[ast_oxc](B, Key).
-value[type](B, B)  :- type_place(_, B).
-has[value](P, E)   :- in_program(P, _, E), oxc_k[ast_oxc](E, export_default_declaration).
+ox_value_place(E, B) :- ox_exported_place(E, _, B), not ox_type_side(B).
+ox_type_place(E, B)  :- ox_exported_place(E, _, B), ox_type_side(B).
+ox_type_place(E, B)  :- ox_exported_place(E, _, B), ox_both_sides(B).
+has[value](Ns, B)  :- ox_ns_body(Ns, E), ox_value_place(E, B).
+key[value](B, Key) :- ox_value_place(_, B), oxc_name[ast_oxc](B, Key).
+value[value](B, B) :- ox_value_place(_, B).
+has[type](Ns, B)   :- ox_ns_body(Ns, E), ox_type_place(E, B).
+key[type](B, Key)  :- ox_type_place(_, B), oxc_name[ast_oxc](B, Key).
+value[type](B, B)  :- ox_type_place(_, B).
+has[value](P, E)   :- ox_in_program(P, _, E), oxc_k[ast_oxc](E, export_default_declaration).
 key[value](E, "default") :- oxc_k[ast_oxc](E, export_default_declaration).
 value[value](E, D) :- oxc_k[ast_oxc](E, export_default_declaration), oxc_c[ast_oxc](E, declaration, 0, D).
-spread_props[value](P, I, S) :- in_program(P, I, E), oxc_k[ast_oxc](E, export_all_declaration), not oxc_c[ast_oxc](E, exported, 0, _),
+spread_props[value](P, I, S) :- ox_in_program(P, I, E), oxc_k[ast_oxc](E, export_all_declaration), not oxc_c[ast_oxc](E, exported, 0, _),
                                 oxc_c[ast_oxc](E, source, 0, S).
 -- export * as ns from 'm': the exported name is the member, the module its value
-has[value](P, X)   :- in_program(P, _, E), oxc_k[ast_oxc](E, export_all_declaration), oxc_c[ast_oxc](E, exported, 0, X).
-key[value](X, Key) :- oxc_k[ast_oxc](E, export_all_declaration), oxc_c[ast_oxc](E, exported, 0, X), key_name(X, Key).
+has[value](P, X)   :- ox_in_program(P, _, E), oxc_k[ast_oxc](E, export_all_declaration), oxc_c[ast_oxc](E, exported, 0, X).
+key[value](X, Key) :- oxc_k[ast_oxc](E, export_all_declaration), oxc_c[ast_oxc](E, exported, 0, X), ox_key_name(X, Key).
 value[value](X, S) :- oxc_k[ast_oxc](E, export_all_declaration), oxc_c[ast_oxc](E, exported, 0, X), oxc_c[ast_oxc](E, source, 0, S).
-assign[value](E, P, X) :- in_program(P, _, E), oxc_k[ast_oxc](E, tsexport_assignment), oxc_c[ast_oxc](E, expression, 0, X).
+assign[value](E, P, X) :- ox_in_program(P, _, E), oxc_k[ast_oxc](E, tsexport_assignment), oxc_c[ast_oxc](E, expression, 0, X).
 
 -- TYPES ------------------------------------------------------------------------------------------------
 
-annotated(H, T) :- oxc_c[ast_oxc](H, type_annotation, 0, A), oxc_k[ast_oxc](A, tstype_annotation), oxc_c[ast_oxc](A, type_annotation, 0, T).
-typed_value(P, T) :- oxc_k[ast_oxc](FP, formal_parameter), annotated(FP, T), oxc_c[ast_oxc](FP, pattern, 0, P), not sig_param(_, _, FP, P).
-typed_value(R, T) :- oxc_k[ast_oxc](R, formal_parameter_rest), annotated(R, T).
-typed_value(B, T) :- oxc_k[ast_oxc](D, variable_declarator), annotated(D, T), oxc_c[ast_oxc](D, id, 0, B).
-typed_value(M, T) :- oxc_k[ast_oxc](M, property_definition), annotated(M, T), not type_only(M).
-typed_value(F, T) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
-typed_value(E, T) :- oxc_k[ast_oxc](E, tsas_expression), oxc_c[ast_oxc](E, type_annotation, 0, T).
-typed_value(E, T) :- oxc_k[ast_oxc](E, tstype_assertion), oxc_c[ast_oxc](E, type_annotation, 0, T).
+ox_annotated(H, T) :- oxc_c[ast_oxc](H, type_annotation, 0, A), oxc_k[ast_oxc](A, tstype_annotation), oxc_c[ast_oxc](A, type_annotation, 0, T).
+ox_typed_value(P, T) :- oxc_k[ast_oxc](FP, formal_parameter), ox_annotated(FP, T), oxc_c[ast_oxc](FP, pattern, 0, P), not ox_sig_param(_, _, FP, P).
+ox_typed_value(R, T) :- oxc_k[ast_oxc](R, formal_parameter_rest), ox_annotated(R, T).
+ox_typed_value(B, T) :- oxc_k[ast_oxc](D, variable_declarator), ox_annotated(D, T), oxc_c[ast_oxc](D, id, 0, B).
+ox_typed_value(M, T) :- oxc_k[ast_oxc](M, property_definition), ox_annotated(M, T), not ox_type_only(M).
+ox_typed_value(F, T) :- ox_fn_node(F, Fn), oxc_c[ast_oxc](Fn, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
+ox_typed_value(E, T) :- oxc_k[ast_oxc](E, tsas_expression), oxc_c[ast_oxc](E, type_annotation, 0, T).
+ox_typed_value(E, T) :- oxc_k[ast_oxc](E, tstype_assertion), oxc_c[ast_oxc](E, type_annotation, 0, T).
 -- a union or an intersection of one type (`x: | T`) is that type: it writes nothing of its own and T stands in its place
-solo(U, P) :- oxc_k[ast_oxc](U, tsunion_type), oxc_c[ast_oxc](U, types, 0, P), not oxc_c[ast_oxc](U, types, 1, _).
-solo(U, P) :- oxc_k[ast_oxc](U, tsintersection_type), oxc_c[ast_oxc](U, types, 0, P), not oxc_c[ast_oxc](U, types, 1, _).
-stands(U, Q) :- solo(U, Q), not solo(Q, _).
-stands(U, R) :- solo(U, Q), stands(Q, R).
-declared[value](X, T) :- typed_value(X, T), not solo(T, _).
-declared[value](X, R) :- typed_value(X, T), stands(T, R).
+ox_solo(U, P) :- oxc_k[ast_oxc](U, tsunion_type), oxc_c[ast_oxc](U, types, 0, P), not oxc_c[ast_oxc](U, types, 1, _).
+ox_solo(U, P) :- oxc_k[ast_oxc](U, tsintersection_type), oxc_c[ast_oxc](U, types, 0, P), not oxc_c[ast_oxc](U, types, 1, _).
+ox_stands(U, Q) :- ox_solo(U, Q), not ox_solo(Q, _).
+ox_stands(U, R) :- ox_solo(U, Q), ox_stands(Q, R).
+declared[value](X, T) :- ox_typed_value(X, T), not ox_solo(T, _).
+declared[value](X, R) :- ox_typed_value(X, T), ox_stands(T, R).
 implements[value](C, T) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, implements, _, T).
 mark[value](X, ambient) :- oxc_a[ast_oxc](X, declare, true).
-mark[value](F, ambient) :- oxc_k[ast_oxc](F, function), not oxc_c[ast_oxc](F, body, 0, _), not wrapped_fn(F).
+mark[value](F, ambient) :- oxc_k[ast_oxc](F, function), not oxc_c[ast_oxc](F, body, 0, _), not ox_wrapped_fn(F).
 
 -- an interface or a type literal is an object of the world of types; its members have a key and a type
-type_member(M) :- oxc_k[ast_oxc](B, tsinterface_body), oxc_c[ast_oxc](B, body, _, M).
-type_member(M) :- oxc_k[ast_oxc](L, tstype_literal), oxc_c[ast_oxc](L, members, _, M).
+ox_type_member(M) :- oxc_k[ast_oxc](B, tsinterface_body), oxc_c[ast_oxc](B, body, _, M).
+ox_type_member(M) :- oxc_k[ast_oxc](L, tstype_literal), oxc_c[ast_oxc](L, members, _, M).
 has[type](I, M) :- oxc_k[ast_oxc](I, tsinterface_declaration), oxc_c[ast_oxc](I, body, 0, B), oxc_c[ast_oxc](B, body, _, M).
 has[type](L, M) :- oxc_k[ast_oxc](L, tstype_literal), oxc_c[ast_oxc](L, members, _, M).
 mark[type](I, object) :- oxc_k[ast_oxc](I, tsinterface_declaration).
 mark[type](L, object) :- oxc_k[ast_oxc](L, tstype_literal).
-key[type](M, Key) :- type_member(M), static_key(M, K, key), key_name(K, Key).
-key[type](M, Key) :- type_only(M), static_key(M, K, key), key_name(K, Key).
-value[type](M, M) :- type_member(M), oxc_k[ast_oxc](M, tsmethod_signature).
-value[type](M, M) :- type_only_method(M, _).
+key[type](M, Key) :- ox_type_member(M), ox_static_key(M, K, key), ox_key_name(K, Key).
+key[type](M, Key) :- ox_type_only(M), ox_static_key(M, K, key), ox_key_name(K, Key).
+value[type](M, M) :- ox_type_member(M), oxc_k[ast_oxc](M, tsmethod_signature).
+value[type](M, M) :- ox_type_only_method(M, _).
 -- a signature in the world of types: the parameters are types' places, its return type is declared at it
-edb(sig_kind).
-sig_kind(tsmethod_signature). sig_kind(tsfunction_type). sig_kind(tsconstructor_type).
-sig_kind(tscall_signature_declaration). sig_kind(tsconstruct_signature_declaration).
-sig_param(F, I, FP, P) :- sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
+edb(ox_sig_kind).
+ox_sig_kind(tsmethod_signature). ox_sig_kind(tsfunction_type). ox_sig_kind(tsconstructor_type).
+ox_sig_kind(tscall_signature_declaration). ox_sig_kind(tsconstruct_signature_declaration).
+ox_sig_param(F, I, FP, P) :- ox_sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
                           oxc_c[ast_oxc](FP, pattern, 0, P).
-sig_param(M, I, FP, P) :- type_only_method(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
+ox_sig_param(M, I, FP, P) :- ox_type_only_method(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
                           oxc_c[ast_oxc](FP, pattern, 0, P).
-param[type](F, I, P) :- sig_param(F, I, _, P).
-typed_type(P, T) :- sig_param(_, _, FP, P), annotated(FP, T).
-typed_type(F, T) :- sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
-typed_type(F, T) :- type_only_method(F, Fn), oxc_c[ast_oxc](Fn, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
-typed_type(M, T) :- type_member(M), annotated(M, T).
-typed_type(M, T) :- type_only(M), oxc_k[ast_oxc](M, property_definition), annotated(M, T).
-typed_type(M, T) :- type_member(M), oxc_c[ast_oxc](M, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
-declared[type](X, T) :- typed_type(X, T), not solo(T, _).
-declared[type](X, R) :- typed_type(X, T), stands(T, R).
+param[type](F, I, P) :- ox_sig_param(F, I, _, P).
+ox_typed_type(P, T) :- ox_sig_param(_, _, FP, P), ox_annotated(FP, T).
+ox_typed_type(F, T) :- ox_sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
+ox_typed_type(F, T) :- ox_type_only_method(F, Fn), oxc_c[ast_oxc](Fn, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
+ox_typed_type(M, T) :- ox_type_member(M), ox_annotated(M, T).
+ox_typed_type(M, T) :- ox_type_only(M), oxc_k[ast_oxc](M, property_definition), ox_annotated(M, T).
+ox_typed_type(M, T) :- ox_type_member(M), oxc_c[ast_oxc](M, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
+declared[type](X, T) :- ox_typed_type(X, T), not ox_solo(T, _).
+declared[type](X, R) :- ox_typed_type(X, T), ox_stands(T, R).
 -- <T extends U = D>: a parameter of the type world, its bound and its default
-param[type](F, I, P) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, type_parameters, 0, D), oxc_c[ast_oxc](D, params, I, P).
-param[type](X, I, P) :- oxc_c[ast_oxc](X, type_parameters, 0, D), not fn_node(X, _), not oxc_k[ast_oxc](X, function), oxc_c[ast_oxc](D, params, I, P).
+param[type](F, I, P) :- ox_fn_node(F, Fn), oxc_c[ast_oxc](Fn, type_parameters, 0, D), oxc_c[ast_oxc](D, params, I, P).
+param[type](X, I, P) :- oxc_c[ast_oxc](X, type_parameters, 0, D), not ox_fn_node(X, _), not oxc_k[ast_oxc](X, function), oxc_c[ast_oxc](D, params, I, P).
 bound[type](P, U)    :- oxc_k[ast_oxc](P, tstype_parameter), oxc_c[ast_oxc](P, constraint, 0, U).
 assign[type](P, P, D) :- oxc_k[ast_oxc](P, tstype_parameter), oxc_c[ast_oxc](P, default, 0, D).
 assign[type](A, A, T) :- oxc_k[ast_oxc](A, tstype_alias_declaration), oxc_c[ast_oxc](A, type_annotation, 0, T).
@@ -684,43 +684,43 @@ passes[type](R, N)    :- oxc_k[ast_oxc](R, tsclass_implements), oxc_c[ast_oxc](R
 mark[type](T, call)   :- oxc_k[ast_oxc](T, tsarray_type).
 nth[tree](T, 0, E)    :- oxc_k[ast_oxc](T, tsarray_type), oxc_c[ast_oxc](T, element_type, 0, E).
 nth[tree](R, I, A)    :- mark[type](R, call), oxc_c[ast_oxc](R, type_arguments, 0, Ps), oxc_c[ast_oxc](Ps, params, I, A).
-nth[tree](U, I, T)    :- oxc_k[ast_oxc](U, tsunion_type), oxc_c[ast_oxc](U, types, I, T), not solo(U, _).
-nth[tree](U, I, T)    :- oxc_k[ast_oxc](U, tsintersection_type), oxc_c[ast_oxc](U, types, I, T), not solo(U, _).
+nth[tree](U, I, T)    :- oxc_k[ast_oxc](U, tsunion_type), oxc_c[ast_oxc](U, types, I, T), not ox_solo(U, _).
+nth[tree](U, I, T)    :- oxc_k[ast_oxc](U, tsintersection_type), oxc_c[ast_oxc](U, types, I, T), not ox_solo(U, _).
 binary[type](U, "|", L, R) :- oxc_k[ast_oxc](U, tsunion_type), oxc_c[ast_oxc](U, types, 0, L), oxc_c[ast_oxc](U, types, 1, R),
                               not oxc_c[ast_oxc](U, types, 2, _).
 binary[type](U, "&", L, R) :- oxc_k[ast_oxc](U, tsintersection_type), oxc_c[ast_oxc](U, types, 0, L), oxc_c[ast_oxc](U, types, 1, R),
                               not oxc_c[ast_oxc](U, types, 2, _).
 
 -- how a member is reached from outside, whether it is written once, and the index signature that takes every key of a type
-edb(access_word).
-access_word("Private", own). access_word("Protected", family). access_word("Public", any).
-access[type](M, How) :- oxc_a[ast_oxc](M, accessibility, W), access_word(W, How).
+edb(ox_access_word).
+ox_access_word("Private", own). ox_access_word("Protected", family). ox_access_word("Public", any).
+access[type](M, How) :- oxc_a[ast_oxc](M, accessibility, W), ox_access_word(W, How).
 frozen[type](M)      :- oxc_a[ast_oxc](M, readonly, true).
 keyed_by[type](M, T) :- oxc_k[ast_oxc](M, tsindex_signature), oxc_c[ast_oxc](M, parameter, 0, P),
                         oxc_c[ast_oxc](P, type_annotation, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 
 -- import A = X.Y puts the member Y of X into A
-alias_ref(Q) :- oxc_k[ast_oxc](D, tsimport_equals_declaration), oxc_c[ast_oxc](D, module_reference, 0, Q),
+ox_alias_ref(Q) :- oxc_k[ast_oxc](D, tsimport_equals_declaration), oxc_c[ast_oxc](D, module_reference, 0, Q),
                 not oxc_k[ast_oxc](Q, tsexternal_module_reference).
-alias_ref(L) :- alias_ref(Q), oxc_k[ast_oxc](Q, tsqualified_name), oxc_c[ast_oxc](Q, left, 0, L).
+ox_alias_ref(L) :- ox_alias_ref(Q), oxc_k[ast_oxc](Q, tsqualified_name), oxc_c[ast_oxc](Q, left, 0, L).
 assign[value](D, I, Q) :- oxc_k[ast_oxc](D, tsimport_equals_declaration), oxc_c[ast_oxc](D, id, 0, I),
-                          oxc_c[ast_oxc](D, module_reference, 0, Q), alias_ref(Q).
-member[value](Q, L, Name) :- alias_ref(Q), oxc_k[ast_oxc](Q, tsqualified_name), oxc_c[ast_oxc](Q, left, 0, L),
+                          oxc_c[ast_oxc](D, module_reference, 0, Q), ox_alias_ref(Q).
+member[value](Q, L, Name) :- ox_alias_ref(Q), oxc_k[ast_oxc](Q, tsqualified_name), oxc_c[ast_oxc](Q, left, 0, L),
                              oxc_c[ast_oxc](Q, right, 0, R), oxc_name[ast_oxc](R, Name).
-ref[value](X, Name) :- alias_ref(X), oxc_k[ast_oxc](X, identifier_reference), oxc_name[ast_oxc](X, Name).
+ref[value](X, Name) :- ox_alias_ref(X), oxc_k[ast_oxc](X, identifier_reference), oxc_name[ast_oxc](X, Name).
 
 -- T['k'], A.B as types
 member[type](N, O, Key) :- oxc_k[ast_oxc](N, tsindexed_access_type), oxc_c[ast_oxc](N, object_type, 0, O),
-                           oxc_c[ast_oxc](N, index_type, 0, I), type_literal_of(I, Key).
+                           oxc_c[ast_oxc](N, index_type, 0, I), ox_type_literal_of(I, Key).
 member_expr[type](N, O, I) :- oxc_k[ast_oxc](N, tsindexed_access_type), oxc_c[ast_oxc](N, object_type, 0, O),
-                              oxc_c[ast_oxc](N, index_type, 0, I), not type_literal_of(I, _).
-type_literal_of(T, V) :- oxc_c[ast_oxc](T, literal, 0, L), type_literal(L), oxc_a[ast_oxc](L, value, V).
+                              oxc_c[ast_oxc](N, index_type, 0, I), not ox_type_literal_of(I, _).
+ox_type_literal_of(T, V) :- oxc_c[ast_oxc](T, literal, 0, L), ox_type_literal(L), oxc_a[ast_oxc](L, value, V).
 member[type](N, L, Name) :- oxc_k[ast_oxc](N, tsqualified_name), oxc_c[ast_oxc](N, left, 0, L),
                             oxc_c[ast_oxc](N, right, 0, R), oxc_name[ast_oxc](R, Name).
 
 -- keyof T, readonly T[], unique symbol, typeof x
-edb(type_operator_word).
-type_operator_word("Keyof", "keyof"). type_operator_word("Readonly", "readonly"). type_operator_word("Unique", "unique").
-unary[type](T, Op, X)       :- oxc_k[ast_oxc](T, tstype_operator), oxc_a[ast_oxc](T, operator, W), type_operator_word(W, Op),
+edb(ox_type_operator_word).
+ox_type_operator_word("Keyof", "keyof"). ox_type_operator_word("Readonly", "readonly"). ox_type_operator_word("Unique", "unique").
+unary[type](T, Op, X)       :- oxc_k[ast_oxc](T, tstype_operator), oxc_a[ast_oxc](T, operator, W), ox_type_operator_word(W, Op),
                                oxc_c[ast_oxc](T, type_annotation, 0, X).
 unary[type](T, "typeof", X) :- oxc_k[ast_oxc](T, tstype_query), oxc_c[ast_oxc](T, expr_name, 0, X).

@@ -347,9 +347,11 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
-host gives a `.rofl.md` with `model: js` (`npm run nb`), but for the parser: a notebook scans in
-its own process with Babel (`scanners/js_ast.ts`, which also runs in a page), `rofl scan` with oxc; the roles
-(`models/lang/js/roles.rofl`) are the same, and `npm run test:parity` holds the two converters to the same rows.
+host gives a `.rofl.md` with `model: js` (`npm run nb`, the VS Code worker): both scan with oxc (`scanners/oxc_facts.ts`
+for a notebook's files, `scanners/cli.ts` for a directory), and a notebook also reads `ast_node`, `ast_child`, `ast_attr`
+over oxc's tree (`models/lang/js/oxc-to-code.rofl`). Only the browser page (playground, workbench) scans with Babel
+(`scanners/js_ast.ts`, which runs in a page); the roles (`models/lang/js/roles.rofl`) are the same, and `npm run test:parity`
+holds the two converters to the same rows.
 A node's id is a hash of its path in its parser's tree, so the two name a node differently.
 
 Where the JS model cannot be exact it says so in a relation, not by an empty
