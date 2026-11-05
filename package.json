@@ -135,11 +135,7 @@
     "bench": "node --experimental-strip-types scripts/bench.ts"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.1",
-    "@babel/generator": "^8.0.0",
     "@babel/parser": "^8.0.4",
-    "@babel/plugin-transform-async-to-generator": "^8.0.1",
-    "@babel/plugin-transform-regenerator": "^8.0.2",
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3"
   },
