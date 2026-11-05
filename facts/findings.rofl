@@ -12974,3 +12974,9 @@ recorded(f_a_field_initialiser_binds_this, "2026-11-05").
 addressed_by(f_a_field_initialiser_binds_this, "rules/js-dataflow.rofl").
 finding_note(f_a_field_initialiser_binds_this, 
   "VADIM, 2026-11-05: class field initialisers bind `this`. this_binder reads the roles: a function that binds `this` (binds(F, \"this\"), the `this` parameter of a TypeScript signature left out: decl param), a class member that has a value (has + value, parameter properties left out), a static block. The table this_binds_kind of ten kinds is gone. MOVED: this_binder loses 170 rows on the corpus (10 in cf): a class property WITHOUT an initialiser bound `this` for nothing; it gains the auto-accessor (class_accessor_property, 1 on the corpus, 6 in cf: `accessor e = this`) and below it this_over, this_host, this_unfollowed, valued, may_be_node, sx_node (1 each in cf).").
+
+finding(f_a_dead_arm_is_an_arm_under_a_test, insight).
+recorded(f_a_dead_arm_is_an_arm_under_a_test, "2026-11-05").
+addressed_by(f_a_dead_arm_is_an_arm_under_a_test, "rules/js-dataflow.rofl").
+finding_note(f_a_dead_arm_is_an_arm_under_a_test, 
+  "Vadim 2026-11-05, dead_arm tried on executes_if: arm_under(A, T, How) is the child A of the owner of the test T that runs depending on T (executes_if of A, or of something inside A, as guard_arm reads it); dead_arm is the arm under an entry test when it is truthy and under an imported test when it is falsy. NO ROW MOVED on the corpus. ONE KIND OF ROW IS NEW, in cf: `while (require.main === module) { ... }` has its body dead outside the entry point (dead_arm +1, dead_in +4, dead_site +1): executes_if gives the body of a while the same guard as the arm of an if. The old rule read the fields consequent and alternate, i.e. an if or a conditional. The model asks 'is this arm under the entry test'.").

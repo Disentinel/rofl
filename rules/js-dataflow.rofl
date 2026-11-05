@@ -539,10 +539,12 @@ main_is_module[code](T, Op) :- bin_op[code](T, Op, L, R), at[tree](T, File, _),
                                require_main[code](R), free_global[code](L, "module", File).
 require_main[code](M) :- prop_name[code](M, O, "main"), free_global[code](O, "require", _).
 
-dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A),
-                     at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
-dead_arm[code](A) :- imported_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, alternate, 0, A),
-                     at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
+arm_under[code](A, T, How) :- executes_if[value](A, T, How), parent[tree](S, T), parent[tree](S, A).
+arm_under[code](A, T, How) :- executes_if[value](X, T, How), parent[tree](S, T), parent[tree](S, A), inside[tree](A, X).
+dead_arm[code](A) :- entry_test[code](T), arm_under[code](A, T, truthy),
+                     at[tree](A, File, _), not read_as_script(), not runs_as_script(File).
+dead_arm[code](A) :- imported_test[code](T), arm_under[code](A, T, falsy),
+                     at[tree](A, File, _), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- entry_test[code](T), logical[value](S, "&&", T, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- imported_test[code](T), logical[value](S, "||", T, A),
