@@ -1,12 +1,7 @@
 ../boot.rofl
 ../facts/model-units.rofl
-../facts/js-kinds.rofl
 ../facts/js-callgraph.rofl
-../facts/js-dataflow.rofl
 ../facts/js-modules.rofl
-../facts/js-shapes.rofl
-../facts/js-statements.rofl
-../facts/js-controlflow.rofl
 ../facts/js-effects.rofl
 ../facts/js-globals.rofl
 ../facts/js-host.rofl
@@ -27,5 +22,4 @@ js-modules.rofl
 js-concat.rofl
 js-surface.rofl
 ../models/lang/js/roles.rofl
-../models/lang/js/babel-roles.rofl
-../models/lang/js/babel-from-code.rofl
+../models/lang/js/oxc-roles.rofl

@@ -83,28 +83,28 @@ off as the whole one.
 ```
 $ rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23
 risky[main]("checkout")  <= re667b5bf @tick 0
-  fn_name[code](n017f49dbfbe9e0a8_fa4unkv52g4,"checkout")  <= rb448fa01 @tick 0
-    fn_node[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= r631ec945 @tick 0
-      body[value](n017f49dbfbe9e0a8_fa4unkv52g4,n017f49dbfbe9e0a8_6siev33bp82)  <= rb22caae4 @tick 0
-        fn_kind[ast_babel](function_declaration) [axiom]
-        node[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js")  <= ra858953d @tick 0
-          ast_node[code](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [axiom]
-        child[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,body,0,n017f49dbfbe9e0a8_6siev33bp82)  <= r1e007e15 @tick 0
-          ast_child[code](n017f49dbfbe9e0a8_fa4unkv52g4,body,0,n017f49dbfbe9e0a8_6siev33bp82) [axiom]
-    target[value](n017f49dbfbe9e0a8_fa4unkv52g4,n017f49dbfbe9e0a8_pi9h9ptud43)  <= r56fa45d2 @tick 0
-      target_field[ast_babel](function_declaration,id) [axiom]
-      node[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [above]
-      child[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43)  <= r1e007e15 @tick 0
-        ast_child[code](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43) [axiom]
-    binds[value](n017f49dbfbe9e0a8_pi9h9ptud43,"checkout")  <= r06d8976c @tick 0
-      b_bind[ast_babel](n017f49dbfbe9e0a8_pi9h9ptud43,value)  <= r610c4050 @tick 0
-        bind_root[ast_babel](function_declaration,id,value) [axiom]
-        node[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [above]
-        child[ast_babel](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43) [above]
-      node[ast_babel](n017f49dbfbe9e0a8_pi9h9ptud43,identifier,"checkout.js")  <= ra858953d @tick 0
-        ast_node[code](n017f49dbfbe9e0a8_pi9h9ptud43,identifier,"checkout.js") [axiom]
-      attr[ast_babel](n017f49dbfbe9e0a8_pi9h9ptud43,name,"checkout")  <= r17100bcb @tick 0
-        ast_attr[code](n017f49dbfbe9e0a8_pi9h9ptud43,name,"checkout") [axiom]
+  fn_name[code](n017f49dbfbe9e0a8_en4a19n90pa5f,"checkout")  <= rb448fa01 @tick 0
+    fn_node[code](n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r631ec945 @tick 0
+      body[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_einjg9erj696f)  <= r0099afc3 @tick 0
+        fn_node[main](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r58931d6c @tick 0
+          oxc_k[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function)  <= r30763fea @tick 0
+            node[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function,"checkout.js") [axiom]
+          not wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f) [finite failure]
+            whynot wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f):
+              rule r40c18f64: wrapped_fn[main](?Fn)@now :- method_member[main](?_$0,?Fn)@now
+                failed premise: method_member[main](?_$0#0,n017f49dbfbe9e0a8_en4a19n90pa5f)
+              rule r387ec243: wrapped_fn[main](?Fn)@now :- type_only_method[main](?_$0,?Fn)@now
+                failed premise: type_only_method[main](?_$0#1,n017f49dbfbe9e0a8_en4a19n90pa5f)
+        oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f)  <= r6214f26f @tick 0
+          child[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f) [axiom]
+          seen[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,n017f49dbfbe9e0a8_einjg9erj696f)  <= r3125f7bd @tick 0
+            node[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,function_body,"checkout.js") [axiom]
+            not wrapper_kind[main](function_body) [finite failure]
+              whynot wrapper_kind[main](function_body):
+                no rule concludes 'wrapper_kind' and no matching base fact exists
+    target[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= rc88cb927 @tick 0
+      oxc_k[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function) [above]
+      oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,id,0,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= r6214f26f @tick 0
 ```
 <!-- END run -->
 
@@ -125,9 +125,9 @@ read; the command line's is the one to parse.
 $ rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl
 whynot risky[main]("safeCheckout"):
   rule re667b5bf: risky[main](?N)@now :- fn_name[code](?F,?N)@now, exported_fn[code](?F)@now, may_throw[code](?F)@now
-    failed premise: may_throw[code](n017f49dbfbe9e0a8_gjdh70j2637)
+    failed premise: may_throw[code](n017f49dbfbe9e0a8_0o34j1j12he7d)
       rule rbef6bec0: may_throw[code](?F)@now :- may_throw[code](?G)@now, sync_body[code](?G)@now, resolves[code](?C,?G)@now, nearest_fn[code](?F,?C)@now, not caught_here[code](?C)@now
-        failed premise: not caught_here[code](n017f49dbfbe9e0a8_dkaak6chp4) -- blocked: caught_here[code](n017f49dbfbe9e0a8_dkaak6chp4) holds
+        failed premise: not caught_here[code](n017f49dbfbe9e0a8_fr031il3tivb6) -- blocked: caught_here[code](n017f49dbfbe9e0a8_fr031il3tivb6) holds
   (every failure: --all)
 ```
 <!-- END run -->

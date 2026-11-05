@@ -40,8 +40,7 @@
 
 -- =========================================================================
 -- 1. THE STRINGS THE PROGRAM HOLDS — what makes a `+` a concatenation.
-str_value[flow](V) :- ast_node[code](N, string_literal, _), ast_value[code](N, V).
-str_value[flow](V) :- ast_attr[code](Q, value_cooked, V).
+str_value[flow](V) :- literal[value](_, V), string is type_of(V).
 str_value[flow](V) :- path_cut[flow](_, V).
 
 -- =========================================================================
@@ -115,8 +114,6 @@ vlib_member[flow](M, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow]
 -- imported from it, a name destructured from it.
 vlib_fn[flow](M, Surface, K) :- vlib_member[flow](M, Surface, K), ambient_value(Surface, K, _, _).
 vlib_fn[flow](X, Surface, K) :- builtin_member[flow](X, Surface, K), ambient_value(Surface, K, _, _).
-vlib_fn[flow](P, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](Init, Y), decl_value[flow](D, Init),
-                               destr_prop[code](D, P, _, _, _), key_name[code](P, K), ambient_value(Surface, K, _, _).
 
 vlib_fn[flow](F, Surface, K) :- ambient_module(File, Surface), exports_name[code](F, K, File),
                               ambient_value(Surface, K, _, _).
@@ -124,7 +121,7 @@ vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code
                               member_value[flow](O, K, M), ambient_value(Surface, K, _, _).
 
 vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), callee[value](C, G),
-                                  ast_node[code](C, T, _), call_like_v(T).
+                                  call_like[code](C).
 vlib_call[flow](C, S, construct) :- construct[value](C), callee[value](C, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
@@ -134,7 +131,7 @@ str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_node[flow](O, D), compose
 str_recv[flow](O) :- proto_call[flow](_, O, _), prototype_of[flow](O, string).
 proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), selects[flow](M, K),
                              member_node_v[flow](M), callee[value](C, M), object_of[code](M, O),
-                             ast_node[code](C, T, _), call_like_v(T).
+                             call_like[code](C).
 vlib_call[flow](C, string, K) :- ambient_value(string, K, _, _), proto_call[flow](C, O, K), str_recv[flow](O).
 vlib_call[flow](C, array, K)  :- ambient_value(array, K, _, _), proto_call[flow](C, O, K),
                                 may_be_node[flow](O, A), kind_proto[flow](A, array).
@@ -194,8 +191,7 @@ parts[flow](C, 1, R) :- cshape[flow](C, plus), plus_site[code](C, _, R).
 
 parts[flow](T, I, X) :- cshape[flow](T, raw), template[value](T), nth[tree](T, K, X), I is 2 * K + 1.
 
-part_lit[flow](T, I, V) :- cshape[flow](T, raw), ast_node[code](T, template_literal, _),
-                           ast_child[code](T, quasis, K, Q), ast_attr[code](Q, value_cooked, V), I is 2 * K.
+part_lit[flow](T, I, V) :- cshape[flow](T, raw), template_part[value](T, I, X), literal[value](X, V).
 
 -- Every argument or none: a spread hides where the rest are.
 whole_args[flow](C) :- vlib_op[flow](C, _, _), not spread_arg[code](C, _).

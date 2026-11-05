@@ -1,7 +1,7 @@
 // The playground as static files: the engine, the JS scanner and part of the JS model, run in a browser. Publish the directory as an artifact or serve it as is.
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { emit as emitTo, finish } from './emit.ts';
-import { MODEL_FILES, PHRASE_FILES, translatorVocab, concernsOf } from '../playground/host.ts';
+import { emit as emitTo, finish, wasmScanner } from './emit.ts';
+import { NB_MODEL_FILES, PHRASE_FILES, translatorVocab, concernsOf } from '../playground/host.ts';
 import { NPC_FILES } from '../playground/npc_host.ts';
 import { parseProgram } from '../src/parser.ts';
 import { ruleIdOf } from '../src/reflect.ts';
@@ -16,13 +16,13 @@ mkdirSync(`${OUT}/lib`, { recursive: true });
 
 const emit = (src: string) => emitTo(ROOT, `${OUT}/lib`, src);
 for (const f of readdirSync(`${ROOT}src`)) if (f.endsWith('.ts') && f !== 'repl.ts') emit(`src/${f}`);
-for (const f of ['scanners/js_ast.ts', 'scanners/js_inherit.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'playground/chain.ts', 'playground/engine.ts', 'notebook/front.ts', 'notebook/book.ts', 'notebook/screen.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/schema.ts', 'vscode/visual/pan.ts', 'vscode/visual/schema-layouts.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'vscode/visual/pic-moments.ts', 'vscode/visual/pic-charts.ts', 'vscode/visual/pic-space.ts', 'notebook/draw-space.ts', 'vscode/visual/pic-notation.ts', 'notebook/draw-notation.ts', 'notebook/draw.ts', 'notebook/icons.ts', 'notebook/draw-text.ts', 'notebook/draw-graph.ts', 'notebook/draw-argument.ts', 'notebook/draw-time.ts', 'notebook/draw-table.ts', 'notebook/draw-forms.ts', 'vscode/visual/pic-dialects.ts', 'notebook/draw-dialects.ts', 'notebook/draw-proof.ts', 'playground/host.ts', 'playground/worker.ts',
+for (const f of ['scanners/oxc_wasm.ts', 'scripts/read_md.ts', 'scripts/md_blocks.ts', 'playground/fold.ts', 'playground/chain.ts', 'playground/engine.ts', 'notebook/front.ts', 'notebook/book.ts', 'notebook/screen.ts', 'vscode/visual/pictures.ts', 'vscode/visual/picture.ts', 'vscode/visual/pic-graph.ts', 'vscode/visual/schema.ts', 'vscode/visual/pan.ts', 'vscode/visual/schema-layouts.ts', 'vscode/visual/pic-time.ts', 'vscode/visual/pic-table.ts', 'vscode/visual/pic-moments.ts', 'vscode/visual/pic-charts.ts', 'vscode/visual/pic-space.ts', 'notebook/draw-space.ts', 'vscode/visual/pic-notation.ts', 'notebook/draw-notation.ts', 'notebook/draw.ts', 'notebook/icons.ts', 'notebook/draw-text.ts', 'notebook/draw-graph.ts', 'notebook/draw-argument.ts', 'notebook/draw-time.ts', 'notebook/draw-table.ts', 'notebook/draw-forms.ts', 'vscode/visual/pic-dialects.ts', 'notebook/draw-dialects.ts', 'notebook/draw-proof.ts', 'playground/host.ts', 'playground/worker.ts',
   'runtime/semirings.ts', 'examples/npc/sim.ts', 'playground/npc_host.ts', 'playground/npc_worker.ts']) emit(f);
-copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);
+copyFileSync(wasmScanner(ROOT), `${OUT}/oxc_scan.wasm`);
 finish(`${OUT}/lib`);
 
 const read = (f: string) => readFileSync(`${ROOT}${f}`, 'utf8');
-const model = MODEL_FILES.map(read).join('\n');
+const model = NB_MODEL_FILES.map(read).join('\n');
 const phrases = PHRASE_FILES.map(read).join('\n');
 writeFileSync(`${OUT}/model.txt`, model);
 writeFileSync(`${OUT}/phrases.txt`, phrases);
@@ -34,7 +34,7 @@ const { vocab, functions } = translatorVocab(model, phrases);
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');
 writeFileSync(`${OUT}/functions.txt`, functions.join('\n') + '\n');
 
-const concerns = concernsOf(MODEL_FILES.filter((x) => x.startsWith('rules/')).map((f) => [f, read(f)]));
+const concerns = concernsOf(NB_MODEL_FILES.filter((x) => x.startsWith('rules/')).map((f) => [f, read(f)]));
 writeFileSync(`${OUT}/concerns.json`, JSON.stringify(concerns));
 
 // The NPC yard: the kernel's boot, the yard's rules and phrases, and the section of npc.rofl each rule sits in.

@@ -111,16 +111,11 @@ eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_fn[code](F, C),
 -- ALLOC: a fresh mutable identity. `new_expression` is here although its cell
 -- is open: the allocation half is complete; the constructor's effect is the
 -- ambient-surface question. `class_declaration` is added in section 6.
-edb(eff_alloc_kind).
-eff_alloc_kind(object_expression).
-eff_alloc_kind(array_expression).
-eff_alloc_kind(reg_exp_literal).
-eff_alloc_kind(function_expression).
-eff_alloc_kind(arrow_function_expression).
-eff_alloc_kind(class_expression).
-eff_alloc_kind(new_expression).
 
-eff_here[flow](N, alloc, none) :- eff_alloc_kind(K), ast_node[code](N, K, _).
+eff_here[flow](N, alloc, none) :- value_expr[code](N).
+eff_here[flow](N, alloc, none) :- class[value](N).
+eff_here[flow](N, alloc, none) :- construct[value](N).
+eff_here[flow](N, alloc, none) :- regexp[value](N).
 
 -- READ AND WRITE, AND THEIR HEAP. `local` iff the value layer traces the
 -- receiver to an allocation; otherwise `global`. A negation pair rather than
@@ -133,16 +128,16 @@ eff_obj_traced[flow](M) :- member_obj[flow](M, _, _).
 eff_heap_of[flow](M, local)  :- eff_obj_traced[flow](M), member_node_v[flow](M).
 eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
 
-eff_assign[code](A)           :- ast_node[code](A, assignment_expression, _).
-eff_assign_target[code](A, L) :- eff_assign[code](A), ast_child[code](A, left, 0, L).
+eff_assign[code](A)           :- assign_op[code](A, _, _).
+eff_assign_target[code](A, L) :- eff_assign[code](A), assign_op[code](A, L, _).
 eff_compound[code](A)         :- eff_assign[code](A), not plain_assign[flow](A).
 eff_member_target[code](L)    :- eff_assign_target[code](_, L), member_node_v[flow](L).
-eff_name_target[code](L)      :- eff_assign_target[code](_, L), ast_name[code](L, _).
+eff_name_target[code](L)      :- eff_assign_target[code](_, L), ref[value](L, _).
 
 eff_here[flow](L, write, H) :- eff_member_target[code](L), eff_heap_of[flow](L, H).
-eff_here[flow](L, read, H)  :- eff_compound[code](A), ast_child[code](A, left, 0, L),
+eff_here[flow](L, read, H)  :- eff_compound[code](A), assign_op[code](A, L, _),
                                eff_member_target[code](L), eff_heap_of[flow](L, H).
-eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ast_name[code](L, _).
+eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ref[value](L, _).
 
 eff_read_site[flow](M) :- member_node_v[flow](M), not eff_member_target[code](M).
 eff_here[flow](M, read, H) :- eff_heap_of[flow](M, H), eff_read_site[flow](M).
@@ -150,10 +145,10 @@ eff_here[flow](M, read, H) :- eff_heap_of[flow](M, H), eff_read_site[flow](M).
 eff_member_both[audit](M) :- eff_read_site[flow](M), eff_member_target[code](M).
 
 -- `x++` is a read and a write, on either form.
-eff_update_arg[code](U, X) :- ast_node[code](U, update_expression, _),
-                              ast_child[code](U, argument, 0, X).
-eff_here[flow](U, read, local)  :- eff_update_arg[code](U, X), ast_name[code](X, _).
-eff_here[flow](U, write, local) :- eff_update_arg[code](U, X), ast_name[code](X, _).
+eff_update_arg[code](U, X) :- unary[value](U, "++", X).
+eff_update_arg[code](U, X) :- unary[value](U, "--", X).
+eff_here[flow](U, read, local)  :- eff_update_arg[code](U, X), ref[value](X, _).
+eff_here[flow](U, write, local) :- eff_update_arg[code](U, X), ref[value](X, _).
 eff_here[flow](U, read, H)      :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
 eff_here[flow](U, write, H)     :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
 
@@ -163,7 +158,7 @@ eff_here[flow](U, write, H)     :- eff_update_arg[code](U, X), eff_heap_of[flow]
 -- of the file: a write of `n` in one function makes another function's own
 -- `n` no more mutable than before.
 eff_written[code](X)               :- eff_name_target[code](X).
-eff_written[code](X)               :- eff_update_arg[code](_, X), ast_name[code](X, _).
+eff_written[code](X)               :- eff_update_arg[code](_, X), ref[value](X, _).
 eff_mutable_in[code](Name, File, S) :- eff_written[code](X), name_scope[code](X, Name, File, S).
 eff_mutable_top[code](Name, File)  :- eff_written[code](X), top_read[code](X, Name, File).
 eff_here[flow](N, read, local) :- eff_mutable_in[code](Name, File, S), name_scope[code](N, Name, File, S),
@@ -319,12 +314,12 @@ eff_op_beyond[flow](N, has_instance) :- binary[value](N, "instanceof", _, _).
 eff_op_beyond[flow](N, delete_own)   :- unary[value](N, "delete", _).
 
 
-eff_converts[code](N) :- ast_node[code](N, binary_expression, _), not eff_op_inspects[code](N).
-eff_converts[code](N) :- ast_node[code](N, unary_expression, _),  not eff_op_inspects[code](N).
+eff_converts[code](N) :- bin_op[code](N, _, _, _), not eff_op_inspects[code](N).
+eff_converts[code](N) :- un_op[code](N, _, _),     not eff_op_inspects[code](N).
 
-eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, left, 0, X).
-eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, right, 0, X).
-eff_coerced[flow](N, X) :- eff_converts[code](N), ast_child[code](N, argument, 0, X).
+eff_coerced[flow](N, X) :- eff_converts[code](N), bin_op[code](N, _, X, _).
+eff_coerced[flow](N, X) :- eff_converts[code](N), bin_op[code](N, _, _, X).
+eff_coerced[flow](N, X) :- eff_converts[code](N), un_op[code](N, _, X).
 eff_coerced[flow](T, X) :- template[value](T), nth[tree](T, _, X).
 
 
@@ -446,9 +441,9 @@ eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), value[value](P, 
 -- in neither. A `static_block` carries no `static` attribute — the word is in
 -- its kind — so it gets its own arm.
 eff_field_moment[flow](P, definition)   :- eff_field_value[code](_, P, _),
-                                           ast_attr[code](P, static, true).
+                                           static[value](P).
 eff_field_moment[flow](P, construction) :- eff_field_value[code](_, P, _),
-                                           ast_attr[code](P, static, false).
+                                           not static[value](P).
 
 eff_define_part[flow](CD, V)    :- eff_field_value[code](CD, P, V),
                                    eff_field_moment[flow](P, definition).
@@ -464,9 +459,9 @@ eff_define_part[flow](CD, S) :- static_block[value](CD, S).
 -- `attr_blind_guard[audit]` said so in one run.
 eff_define_part[flow](CD, S)  :- extends[value](CD, S).
 eff_plain_key[code](P)        :- eff_class_body[code](_, P),
-                                 not ast_attr[code](P, computed, true).
+                                 not key_expr[value](P, _).
 eff_define_part[flow](CD, KN) :- eff_class_body[code](CD, P), not eff_plain_key[code](P),
-                                 ast_child[code](P, key, 0, KN).
+                                 key_expr[value](P, KN).
 eff_define_part[flow](CD, D)  :- class[value](CD), decorates[code](CD, D).
 eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P), decorates[code](P, D).
 
@@ -481,7 +476,6 @@ eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node[code](Y),
                            parent[tree](Y, X).
 
 eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
-                           ast_node[code](TS, try_statement, _),
                            in_try_block[code](TS, N), eff_runs_in[flow](P, N),
                            try_catches[code](TS).
 
@@ -510,7 +504,6 @@ eff_here[flow](CD, L, H) :- class_define_eff[flow](CD, L, H).
 eff_here[flow](X, L, H)  :- construct[value](X),
                             may_be_node[flow](X, I), inst_of[flow](I, CD), class_construct_eff[flow](CD, L, H).
 
-eff_alloc_kind(class_declaration).
 
 -- A field initialiser runs at definition or construction, never both, never
 -- neither — an identity, true of any corpus.
@@ -549,6 +542,26 @@ eff_moment_unplaced[audit](P)   :- eff_field_value[code](_, P, _),
 imports(code, main).
 imports(code, flow).
 imports(flow, code).
+-- =========================================================================
+-- A DISCARDED EXPRESSION THAT DOES NOTHING. An expression whose value is
+-- dropped (`discards`) is there for what it does: it may call, write, throw,
+-- await or yield, itself or in an operand that is not inside a function it
+-- merely makes. One that may do none of these is an answer of its own, not an
+-- alarm: `x + 1;`, `a.b;`.
+acts[flow](N) :- call_like[code](N).
+acts[flow](N) :- awaits[value](N, _).
+acts[flow](N) :- yield_back[code](N).
+acts[flow](N) :- delegates[value](N, _).
+acts[flow](N) :- tagged[value](N, _, _).
+acts[flow](N) :- assign[value](N, _, _).
+acts[flow](N) :- unary[value](N, "delete", _).
+acts[flow](N) :- eff_here[flow](N, write, _).
+acts[flow](N) :- eff_here[flow](N, exn, _).
+acts_in[flow](E) :- discards[value](_, E), acts[flow](E).
+acts_in[flow](E) :- discards[value](_, E), inside[tree](E, N), acts[flow](N), nearest_v[flow](F, N), nearest_v[flow](F, E).
+acts_in[flow](E) :- discards[value](_, E), inside[tree](E, N), acts[flow](N), not nearest_v[flow](_, N), not nearest_v[flow](_, E).
+useless_expr[audit](E) :- discards[value](_, E), not acts_in[flow](E).
+
 imports(flow, main).
 imports(audit, code).
 imports(audit, flow).

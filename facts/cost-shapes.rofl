@@ -17,7 +17,6 @@
 --   alias_of_a_derived     a second name for a derived relation, kept for what the name says (a book,
 --                          a reader's vocabulary); the head's total over all its arms is given
 
-shape_ok(axis_earns, cross_product, "product_is_the_output: an audit over axes x layers, 1 ms").
 shape_ok(eff_lacks, cross_product, "product_is_the_output: names x rows of the inclusion order, 3 ms sealed / 4 default").
 shape_ok(ambient_effect, cross_product, "product_is_the_output: the head is names x effects, 0 ms").
 shape_ok(runtime_lib_unsupported, cross_product, "product_is_the_output: releases x library calls is the audited pair, 0 ms").
@@ -43,6 +42,12 @@ shape_ok(shape_without_verdict, project_then_negate, "one_row_per_key: 0 ms seal
 shape_ok(private_inner, not_closer, "no_nearest_relation: private members nest by class body, 0 ms and 0 probes; the walk up from each private reference to the first class that declares the name was written and measured, 8 ms for nothing saved").
 shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder is not a function (static blocks, class fields), 1 ms sealed / 7 default; the walk up from each this to the first binder was written and measured: this_over + this_nearer + this_host 19 ms sealed / 88 default, the walk 67 / 113").
 
+shape_ok(ox_import_local, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
+shape_ok(ox_key_name, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
+shape_ok(ox_pat_down, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
+shape_ok(ox_pat_target, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
+shape_ok(ox_spec_of, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
+shape_ok(target, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(calls_in, twin_bodies, "small_set: calls by (file, name), 1 ms sealed / 3 default").
 shape_ok(calls_named, twin_bodies, "small_set: the same body one column short, 1 ms sealed / 2 default").
 shape_ok(eff_conv_call, twin_bodies, "small_set: the converting call and its override test, 4 ms sealed / 14 default").
@@ -53,9 +58,6 @@ shape_ok(call_in_try, closure_wide_end, "tried_no_net_gain: entering from call_s
 shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; the first version led with site(C) and cost 21 firings").
 shape_ok(name_outer, not_closer, "small_set: name_cand holds 1.01 rows an identifier over 20 vscode files (5229 for 5182), the pairs are the one or two scopes of one identifier, 47 rows").
 shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
-shape_ok(keyed_heal_fn, scoped_descent, "small_set: the descendant set is keyed_heal_at (a read whose removal its own function undoes), 0 rows at vscode 250").
-shape_ok(member_ctor_this, scoped_descent, "small_set: the descendants are a constructor's statements up to a field's write, nearest_v asked of each `this` there; 300 rows at vscode 250").
-shape_ok(member_set_sure, scoped_descent, "small_set: the descendants are reads of a key an object is not made with, nearest_v asked of the read and the write; 2168 rows at vscode 250").
 
 shape_ok(calls, twin_bodies, "alias_of_a_derived: eff_edge_closed reads the same edge in the flow book; calls has the arms eff_edge_closed lacks, 12 ms sealed / 38 default (all arms)").
 shape_ok(eff_edge_closed, twin_bodies, "alias_of_a_derived: the flow book's copy of calls (the arm that reads nearest_fn), 5 ms sealed / 13 default").
@@ -75,3 +77,33 @@ shape_ok(eff_hidden_call, twin_bodies, "alias_of_a_derived: the same fan-out, 0 
 shape_ok(resolves, twin_bodies, "alias_of_a_derived: a hidden call is a call edge too, 96 ms sealed / 221 default (all arms; this body is the one-premise arms)").
 shape_ok(has_default_internal, twin_bodies, "alias_of_a_derived: default_accounted is the audit's name, 0 ms").
 shape_ok(default_accounted, twin_bodies, "alias_of_a_derived: has_default_internal is the code book's name, 0 ms").
+shape_ok(object_pat, project_then_negate, "one_row_per_key: a root pattern without a declarator or parameter value, 132 rows on the corpus, 0 ms").
+shape_ok(eff_field_moment, project_then_negate, "one_row_per_key: the class fields of the corpus without static, 0 ms").
+shape_ok(obj_open_own, twin_bodies, "alias_of_a_derived: the spread arm is sx_open's, in the code book where member_unset reads it and the surface book that publishes it, 0 ms").
+shape_ok(sx_open, twin_bodies, "alias_of_a_derived: the spread arm is obj_open_own's, in the surface book that publishes it, 0 ms").
+shape_ok(value_expr, twin_bodies, "alias_of_a_derived: a union of the object, the array and the function that makes a value, read by may_be_node, whole_expr and the effect layer; each arm is one premise, 0 ms").
+shape_ok(type_owner, twin_bodies, "alias_of_a_derived: the owner of a member declared as a type is an interface, a type literal or a class; two one-premise arms of different relations, 0 ms").
+shape_ok(surveyed, twin_bodies, "alias_of_a_derived: what the surface surveyed is a receivable, a class or a published survey; one-premise arms of different relations, 0 ms").
+shape_ok(keyed_field, cross_product, "join_is_keyed: the field's class is reached through has from the value that holds the new collection; the arms are joined by the class and the value, 2 rows at the corpus, 0 ms").
+shape_ok(keyed_private_reached, cross_product, "join_is_keyed: the private name's class and the member are joined by the name and the file; an audit relation, 0 ms").
+shape_ok(declares_export, closure_wide_end, "one_row_per_key: the pattern arm asks which exported local lies inside the binding target, a destructuring pattern of a few names, 16 rows at the corpus, 0 ms").
+shape_ok(kind_proto, twin_bodies, "alias_of_a_derived: the prototype of a value read where it stands is told by the array mark, an object literal or a function expression, and by a literal's type; one-premise arms of different relations, 0 ms").
+shape_ok(acts_in, closure_wide_end, "one_row_per_key: seeded by a discarded expression (an expression statement, a for's init and update, a sequence's operands), the descent asks which acts lie inside it; 1700 rows at the corpus, 0 ms").
+shape_ok(acts_in, scoped_descent, "one_row_per_key: the nearest function of the act and of the discarded expression are the same one, asked of the discarded expressions only; 0 ms").
+shape_ok(useless_expr, project_then_negate, "one_row_per_key: the discarded expressions with no act inside, an audit of its own; 0 ms").
+shape_ok(acts, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(call_spreads, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(completes_abruptly, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(fn_node, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(keyed_shut, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(member_kind_expr, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(named_here, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(object_pat, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(pattern_slot, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(pattern_target, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(spread_iterated, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(this_binder, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(try_catches, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(written_target, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(yield_back, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").
+shape_ok(roled, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers every node a role names, one one-premise arm per role (roles.rofl); this relation shares a one-premise arm with it or with another, of different relations, 0 ms").

@@ -3,30 +3,29 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1062 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
-| [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 94 | 5 | 1 | 11 | 0 |
-| [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 522 | 196 | 88 | 95 | 52 | 732 | 70 | 7 | 53 | 0 |
-| [js-concat](js-concat.rofl.md) | 208 | 71 | 2 | 58 | 8 | 343 | 23 | 7 | 11 | 0 |
-| [js-controlflow](js-controlflow.rofl.md) | 211 | 87 | 73 | 5 | 19 | 224 | 18 | 4 | 26 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 932 | 391 | 135 | 234 | 127 | 1650 | 133 | 11 | 55 | 0 |
-| [js-effects](js-effects.rofl.md) | 199 | 126 | 114 | 7 | 10 | 307 | 18 | 2 | 22 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1055 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-ambient](js-ambient.rofl.md) | 75 | 42 | 38 | 0 | 1 | 93 | 5 | 1 | 11 | 0 |
+| [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 106 | 4 | 0 | 5 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 516 | 190 | 88 | 94 | 29 | 731 | 75 | 6 | 63 | 0 |
+| [js-concat](js-concat.rofl.md) | 206 | 71 | 2 | 58 | 2 | 338 | 23 | 7 | 11 | 0 |
+| [js-controlflow](js-controlflow.rofl.md) | 215 | 86 | 71 | 6 | 11 | 240 | 23 | 4 | 33 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 883 | 386 | 132 | 242 | 34 | 1693 | 150 | 7 | 68 | 0 |
+| [js-effects](js-effects.rofl.md) | 207 | 128 | 114 | 10 | 6 | 324 | 22 | 3 | 29 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
-| [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 43 | 5 | 1 | 19 | 0 |
-| [js-express](js-express.rofl.md) | 45 | 27 | 0 | 23 | 6 | 71 | 4 | 2 | 1 | 0 |
-| [js-fetch](js-fetch.rofl.md) | 59 | 23 | 0 | 21 | 2 | 72 | 2 | 3 | 1 | 0 |
+| [js-env](js-env.rofl.md) | 44 | 33 | 32 | 0 | 0 | 42 | 5 | 1 | 18 | 0 |
+| [js-express](js-express.rofl.md) | 45 | 27 | 0 | 23 | 2 | 70 | 4 | 2 | 3 | 0 |
+| [js-fetch](js-fetch.rofl.md) | 59 | 23 | 0 | 21 | 1 | 72 | 2 | 3 | 2 | 0 |
 | [js-globals](js-globals.rofl.md) | 18 | 17 | 16 | 0 | 0 | 33 | 0 | 0 | 6 | 0 |
-| [js-host](js-host.rofl.md) | 77 | 59 | 44 | 14 | 4 | 105 | 8 | 1 | 19 | 0 |
-| [js-model](js-model.rofl.md) | 122 | 56 | 49 | 2 | 0 | 139 | 13 | 3 | 2 | 0 |
-| [js-modules](js-modules.rofl.md) | 191 | 112 | 104 | 4 | 4 | 259 | 29 | 4 | 21 | 0 |
-| [js-pack-home](js-pack-home.rofl.md) | 11 | 9 | 8 | 0 | 0 | 12 | 1 | 0 | 2 | 0 |
+| [js-host](js-host.rofl.md) | 76 | 59 | 44 | 14 | 3 | 101 | 8 | 1 | 18 | 0 |
+| [js-model](js-model.rofl.md) | 14 | 2 | 0 | 0 | 0 | 0 | 0 | 2 | 0 | 0 |
+| [js-modules](js-modules.rofl.md) | 190 | 111 | 102 | 5 | 0 | 251 | 30 | 4 | 22 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
-| [js-service](js-service.rofl.md) | 20 | 15 | 1 | 13 | 0 | 16 | 2 | 1 | 8 | 0 |
-| [js-structure](js-structure.rofl.md) | 25 | 9 | 4 | 4 | 1 | 5 | 3 | 1 | 11 | 0 |
-| [js-surface](js-surface.rofl.md) | 165 | 131 | 33 | 97 | 6 | 259 | 9 | 1 | 7 | 0 |
-| [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
+| [js-service](js-service.rofl.md) | 19 | 14 | 1 | 12 | 0 | 16 | 2 | 1 | 7 | 0 |
+| [js-structure](js-structure.rofl.md) | 55 | 20 | 4 | 15 | 2 | 22 | 13 | 1 | 30 | 0 |
+| [js-surface](js-surface.rofl.md) | 165 | 131 | 33 | 97 | 3 | 259 | 9 | 1 | 11 | 0 |
+| [js-vocabulary](js-vocabulary.rofl.md) | 6 | 4 | 4 | 0 | 0 | 4 | 2 | 0 | 1 | 0 |
 
-565 heads without a phrase across these files.
+585 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -140,19 +139,16 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `builtin_prototype` | `is_a_builtin_prototype` |
 | `call_arg` | `passes_the_argument` |
 | `call_in_try` | `calls` |
-| `call_kind` | `is_a_call_kind` |
 | `call_line` | `the_line` |
 | `call_returns` | `returns_to_its_call` |
 | `call_site` | `is_a_call_site` |
-| `call_site_kind` | `the_call_kind` |
 | `callback_key_unknown` | `names_an_unknown_callback_member` |
 | `callback_param` | `is_called_back_with` |
 | `callback_site` | `is_a_callback_site` |
-| `callee_kind` | `the_callee_kind` |
+| `callee_class` | `has_the_callee_class` |
 | `callee_obj` | `the_receiver` |
-| `callee_obj_kind` | `the_receiver_kind` |
+| `callee_obj_class` | `has_the_receiver_class` |
 | `callee_of` | `the_callee` |
-| `callee_prop` | `the_property` |
 | `callerless_call` | `is_called_without_a_caller` |
 | `callgraph_kind` | `is_touched_by_the_call_graph` |
 | `calls_in` | `names_a_call_to` |
@@ -422,9 +418,9 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `exported_fn` | `is_exported` |
 | `exports_default` | `is_the_default_export_of` |
 | `exports_name` | `is_exported_as` |
+| `expr_class` | `is_of_the_class` |
 | `ext_call` | `is_an_external_call_of` |
 | `ext_member` | `is_an_external_member_of` |
-| `external_destructured` | `destructures_from_outside` |
 | `external_import` | `imports_from_outside` |
 | `external_module` | `is_an_external_module` |
 | `external_site` | `is_an_external_site` |
@@ -458,6 +454,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `gate_feature` | `requires` |
 | `gen_fn` | `is_a_generator_function` |
 | `gen_of` | `makes_a_generator_of` |
+| `gives_two` | `gives_two_operands` |
 | `global_unattributed` | `refers_to_an_unattributed_global` |
 | `guard_arm_seen` | `is_seen_guarding` |
 | `guard_arm_unseen` | `is_unseen_guarding` |
@@ -471,6 +468,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `handled` | `is_handled` |
 | `handled` | `is_handled` |
 | `has_api` | `reaches_the_api` |
+| `has_class` | `has_an_expression_class` |
 | `has_default_internal` | `has_a_default_internal` |
 | `has_dir` | `holds_the_directory` |
 | `has_entry` | `has_an_entry_point` |
@@ -597,7 +595,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `kind_unexercised` | `is_unexercised` |
 | `kind_ungoverned` | `is_ungoverned` |
 | `label_escaped` | `is_escaped` |
-| `label_name` | `the_label_name` |
 | `label_ref` | `refers_to_the_label` |
 | `label_target` | `targets_the_label` |
 | `lang_of_corpus` | `is_the_corpus_language` |
@@ -640,6 +637,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `meet_ambiguous` | `has_two_meets` |
 | `meet_missing` | `has_no_meet_with` |
 | `member_effect` | `has_the_member_effect` |
+| `member_kind_expr` | `is_a_member_read` |
 | `member_kind_v` | `is_a_member_kind` |
 | `member_like` | `calls_through` |
 | `member_plain` | `the_plain_member` |
@@ -895,6 +893,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `ts_resolved` | `names_under_typescript` |
 | `type_import` | `imports_types_only` |
 | `type_only_site` | `is_type_only` |
+| `type_owner` | `owns_members_declared_as_types` |
 | `unaccounted` | `is_unaccounted` |
 | `unaccounted_site` | `is_an_unaccounted_site` |
 | `uncompared` | `is_uncompared` |
@@ -904,7 +903,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `unknown_because` | `is_unknown` |
 | `unknown_because` | `is_unknown` |
 | `unknown_ledger` | `is_an_unknown_ledger` |
-| `unnamed_callee` | `is_an_unnamed_callee_kind` |
+| `unnamed_callee` | `is_an_unnamed_callee_class` |
 | `unrecorded_coverage` | `is_covered_unrecorded` |
 | `unresolved_call` | `is_unresolved` |
 | `unresolved_import` | `is_unresolved_with_shape` |

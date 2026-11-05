@@ -1,0 +1,1814 @@
+-- the raw tree of examples/checks/roles/ in [ast_oxc], written by npm run test:roles -- --fixture
+node[ast_oxc](nf03d0acadc5c4723_root, program, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_root, 1).
+node[ast_oxc](nf03d0acadc5c4723_d5rqdr7gpevnb, class, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_d5rqdr7gpevnb, 1).
+node[ast_oxc](nf03d0acadc5c4723_icsqn9p2038q6, binding_identifier, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_icsqn9p2038q6, 1).
+attr[ast_oxc](nf03d0acadc5c4723_icsqn9p2038q6, name, "Q").
+child[ast_oxc](nf03d0acadc5c4723_d5rqdr7gpevnb, id, 0, nf03d0acadc5c4723_icsqn9p2038q6).
+node[ast_oxc](nf03d0acadc5c4723_3eakhcnh6rej1, class_body, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_3eakhcnh6rej1, 1).
+node[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, method_definition, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, 1).
+attr[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, type, "MethodDefinition").
+attr[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, kind, "Constructor").
+attr[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, computed, false).
+attr[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, static, false).
+node[ast_oxc](nf03d0acadc5c4723_a2kvdq35o1dv3, identifier_name, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_a2kvdq35o1dv3, 1).
+attr[ast_oxc](nf03d0acadc5c4723_a2kvdq35o1dv3, name, "constructor").
+child[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, key, 0, nf03d0acadc5c4723_a2kvdq35o1dv3).
+node[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, function, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, 1).
+node[ast_oxc](nf03d0acadc5c4723_ncjco38qhc752, formal_parameters, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_ncjco38qhc752, 1).
+attr[ast_oxc](nf03d0acadc5c4723_ncjco38qhc752, kind, "UniqueFormalParameters").
+node[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, formal_parameter, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, 1).
+attr[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, optional, false).
+attr[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, accessibility, "Private").
+attr[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, readonly, true).
+node[ast_oxc](nf03d0acadc5c4723_tsml5nmicu4td, decorator, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_tsml5nmicu4td, 1).
+node[ast_oxc](nf03d0acadc5c4723_f8frfaijq6beb, identifier_reference, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_f8frfaijq6beb, 1).
+attr[ast_oxc](nf03d0acadc5c4723_f8frfaijq6beb, name, "IFoo").
+child[ast_oxc](nf03d0acadc5c4723_tsml5nmicu4td, expression, 0, nf03d0acadc5c4723_f8frfaijq6beb).
+child[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, decorators, 0, nf03d0acadc5c4723_tsml5nmicu4td).
+node[ast_oxc](nf03d0acadc5c4723_5lf11i0k05rm1, binding_identifier, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_5lf11i0k05rm1, 1).
+attr[ast_oxc](nf03d0acadc5c4723_5lf11i0k05rm1, name, "f").
+child[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, pattern, 0, nf03d0acadc5c4723_5lf11i0k05rm1).
+node[ast_oxc](nf03d0acadc5c4723_89tvj60uq0jt1, tstype_annotation, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_89tvj60uq0jt1, 1).
+node[ast_oxc](nf03d0acadc5c4723_h4hu3dckp0ap, tsnumber_keyword, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_h4hu3dckp0ap, 1).
+child[ast_oxc](nf03d0acadc5c4723_89tvj60uq0jt1, type_annotation, 0, nf03d0acadc5c4723_h4hu3dckp0ap).
+child[ast_oxc](nf03d0acadc5c4723_ag7bkbog1hu3e, type_annotation, 0, nf03d0acadc5c4723_89tvj60uq0jt1).
+child[ast_oxc](nf03d0acadc5c4723_ncjco38qhc752, items, 0, nf03d0acadc5c4723_ag7bkbog1hu3e).
+child[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, params, 0, nf03d0acadc5c4723_ncjco38qhc752).
+node[ast_oxc](nf03d0acadc5c4723_6bhdgvbmv2v9b, function_body, "roles/decorated.ts").
+line[ast_oxc](nf03d0acadc5c4723_6bhdgvbmv2v9b, 1).
+child[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, body, 0, nf03d0acadc5c4723_6bhdgvbmv2v9b).
+attr[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, type, "FunctionExpression").
+attr[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, generator, false).
+attr[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, async, false).
+attr[ast_oxc](nf03d0acadc5c4723_cvbqcs11ii5n3, declare, false).
+child[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, value, 0, nf03d0acadc5c4723_cvbqcs11ii5n3).
+attr[ast_oxc](nf03d0acadc5c4723_e37acfp6vq5df, optional, false).
+child[ast_oxc](nf03d0acadc5c4723_3eakhcnh6rej1, body, 0, nf03d0acadc5c4723_e37acfp6vq5df).
+child[ast_oxc](nf03d0acadc5c4723_d5rqdr7gpevnb, body, 0, nf03d0acadc5c4723_3eakhcnh6rej1).
+attr[ast_oxc](nf03d0acadc5c4723_d5rqdr7gpevnb, type, "ClassDeclaration").
+attr[ast_oxc](nf03d0acadc5c4723_d5rqdr7gpevnb, declare, false).
+child[ast_oxc](nf03d0acadc5c4723_root, body, 0, nf03d0acadc5c4723_d5rqdr7gpevnb).
+file[ast_oxc](nf03d0acadc5c4723_root, "roles/decorated.ts").
+node[ast_oxc](nc920dfdea0b610c8_root, program, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_root, 1).
+node[ast_oxc](nc920dfdea0b610c8_9ack1mbso0j9, import_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9ack1mbso0j9, 1).
+attr[ast_oxc](nc920dfdea0b610c8_9ack1mbso0j9, import_kind, "Value").
+node[ast_oxc](nc920dfdea0b610c8_e84f7et0ueqk4, import_specifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_e84f7et0ueqk4, 1).
+attr[ast_oxc](nc920dfdea0b610c8_e84f7et0ueqk4, import_kind, "Value").
+node[ast_oxc](nc920dfdea0b610c8_63j3pe610ngj6, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_63j3pe610ngj6, 1).
+attr[ast_oxc](nc920dfdea0b610c8_63j3pe610ngj6, name, "a").
+child[ast_oxc](nc920dfdea0b610c8_e84f7et0ueqk4, imported, 0, nc920dfdea0b610c8_63j3pe610ngj6).
+node[ast_oxc](nc920dfdea0b610c8_kio6626g0g6h2, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kio6626g0g6h2, 1).
+attr[ast_oxc](nc920dfdea0b610c8_kio6626g0g6h2, name, "b").
+child[ast_oxc](nc920dfdea0b610c8_e84f7et0ueqk4, local, 0, nc920dfdea0b610c8_kio6626g0g6h2).
+child[ast_oxc](nc920dfdea0b610c8_9ack1mbso0j9, specifiers, 0, nc920dfdea0b610c8_e84f7et0ueqk4).
+node[ast_oxc](nc920dfdea0b610c8_1o8obnvjcl0p3, import_specifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_1o8obnvjcl0p3, 1).
+attr[ast_oxc](nc920dfdea0b610c8_1o8obnvjcl0p3, import_kind, "Value").
+node[ast_oxc](nc920dfdea0b610c8_glsdscagmp4o5, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_glsdscagmp4o5, 1).
+attr[ast_oxc](nc920dfdea0b610c8_glsdscagmp4o5, name, "c").
+child[ast_oxc](nc920dfdea0b610c8_1o8obnvjcl0p3, imported, 0, nc920dfdea0b610c8_glsdscagmp4o5).
+node[ast_oxc](nc920dfdea0b610c8_nu7va5u55b586, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_nu7va5u55b586, 1).
+attr[ast_oxc](nc920dfdea0b610c8_nu7va5u55b586, name, "c").
+child[ast_oxc](nc920dfdea0b610c8_1o8obnvjcl0p3, local, 0, nc920dfdea0b610c8_nu7va5u55b586).
+child[ast_oxc](nc920dfdea0b610c8_9ack1mbso0j9, specifiers, 1, nc920dfdea0b610c8_1o8obnvjcl0p3).
+node[ast_oxc](nc920dfdea0b610c8_ugvukfren6soa, string_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ugvukfren6soa, 1).
+attr[ast_oxc](nc920dfdea0b610c8_ugvukfren6soa, value, "./m").
+child[ast_oxc](nc920dfdea0b610c8_9ack1mbso0j9, source, 0, nc920dfdea0b610c8_ugvukfren6soa).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 0, nc920dfdea0b610c8_9ack1mbso0j9).
+node[ast_oxc](nc920dfdea0b610c8_kv4bsetet4fa, import_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kv4bsetet4fa, 2).
+attr[ast_oxc](nc920dfdea0b610c8_kv4bsetet4fa, import_kind, "Value").
+node[ast_oxc](nc920dfdea0b610c8_17076m30lrsa6, import_default_specifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_17076m30lrsa6, 2).
+node[ast_oxc](nc920dfdea0b610c8_876hikb77ktf2, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_876hikb77ktf2, 2).
+attr[ast_oxc](nc920dfdea0b610c8_876hikb77ktf2, name, "d").
+child[ast_oxc](nc920dfdea0b610c8_17076m30lrsa6, local, 0, nc920dfdea0b610c8_876hikb77ktf2).
+child[ast_oxc](nc920dfdea0b610c8_kv4bsetet4fa, specifiers, 0, nc920dfdea0b610c8_17076m30lrsa6).
+node[ast_oxc](nc920dfdea0b610c8_q1v8kr0i3bdcd, string_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_q1v8kr0i3bdcd, 2).
+attr[ast_oxc](nc920dfdea0b610c8_q1v8kr0i3bdcd, value, "x").
+child[ast_oxc](nc920dfdea0b610c8_kv4bsetet4fa, source, 0, nc920dfdea0b610c8_q1v8kr0i3bdcd).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 1, nc920dfdea0b610c8_kv4bsetet4fa).
+node[ast_oxc](nc920dfdea0b610c8_d8tutft09eev, import_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_d8tutft09eev, 3).
+attr[ast_oxc](nc920dfdea0b610c8_d8tutft09eev, import_kind, "Value").
+node[ast_oxc](nc920dfdea0b610c8_1aoc9bceonhi9, import_namespace_specifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_1aoc9bceonhi9, 3).
+node[ast_oxc](nc920dfdea0b610c8_c1kltfm0lvbp7, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_c1kltfm0lvbp7, 3).
+attr[ast_oxc](nc920dfdea0b610c8_c1kltfm0lvbp7, name, "ns").
+child[ast_oxc](nc920dfdea0b610c8_1aoc9bceonhi9, local, 0, nc920dfdea0b610c8_c1kltfm0lvbp7).
+child[ast_oxc](nc920dfdea0b610c8_d8tutft09eev, specifiers, 0, nc920dfdea0b610c8_1aoc9bceonhi9).
+node[ast_oxc](nc920dfdea0b610c8_08v53262ctaua, string_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_08v53262ctaua, 3).
+attr[ast_oxc](nc920dfdea0b610c8_08v53262ctaua, value, "y").
+child[ast_oxc](nc920dfdea0b610c8_d8tutft09eev, source, 0, nc920dfdea0b610c8_08v53262ctaua).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 2, nc920dfdea0b610c8_d8tutft09eev).
+node[ast_oxc](nc920dfdea0b610c8_j1iil34sjn6td, export_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_j1iil34sjn6td, 4).
+node[ast_oxc](nc920dfdea0b610c8_k6ia7upk0uhg6, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_k6ia7upk0uhg6, 4).
+attr[ast_oxc](nc920dfdea0b610c8_k6ia7upk0uhg6, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_k6ia7upk0uhg6, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_u081j2jtmvr4f, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_u081j2jtmvr4f, 4).
+node[ast_oxc](nc920dfdea0b610c8_6c00sn1vonue6, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6c00sn1vonue6, 4).
+attr[ast_oxc](nc920dfdea0b610c8_6c00sn1vonue6, name, "k").
+child[ast_oxc](nc920dfdea0b610c8_u081j2jtmvr4f, id, 0, nc920dfdea0b610c8_6c00sn1vonue6).
+node[ast_oxc](nc920dfdea0b610c8_nbjp0ebhtlt1b, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_nbjp0ebhtlt1b, 4).
+attr[ast_oxc](nc920dfdea0b610c8_nbjp0ebhtlt1b, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_u081j2jtmvr4f, init, 0, nc920dfdea0b610c8_nbjp0ebhtlt1b).
+child[ast_oxc](nc920dfdea0b610c8_k6ia7upk0uhg6, declarations, 0, nc920dfdea0b610c8_u081j2jtmvr4f).
+node[ast_oxc](nc920dfdea0b610c8_5fpg49qc4po54, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5fpg49qc4po54, 4).
+node[ast_oxc](nc920dfdea0b610c8_o2h1ertmij5vd, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_o2h1ertmij5vd, 4).
+attr[ast_oxc](nc920dfdea0b610c8_o2h1ertmij5vd, name, "z").
+child[ast_oxc](nc920dfdea0b610c8_5fpg49qc4po54, id, 0, nc920dfdea0b610c8_o2h1ertmij5vd).
+node[ast_oxc](nc920dfdea0b610c8_5ranndljg2dic, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5ranndljg2dic, 4).
+attr[ast_oxc](nc920dfdea0b610c8_5ranndljg2dic, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_uokjq8m02mv3a, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_uokjq8m02mv3a, 4).
+attr[ast_oxc](nc920dfdea0b610c8_uokjq8m02mv3a, name, "f").
+child[ast_oxc](nc920dfdea0b610c8_5ranndljg2dic, callee, 0, nc920dfdea0b610c8_uokjq8m02mv3a).
+node[ast_oxc](nc920dfdea0b610c8_rta7dv60sdmu6, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_rta7dv60sdmu6, 4).
+attr[ast_oxc](nc920dfdea0b610c8_rta7dv60sdmu6, name, "b").
+child[ast_oxc](nc920dfdea0b610c8_5ranndljg2dic, arguments, 0, nc920dfdea0b610c8_rta7dv60sdmu6).
+node[ast_oxc](nc920dfdea0b610c8_76ihcu6ml12r5, spread_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_76ihcu6ml12r5, 4).
+node[ast_oxc](nc920dfdea0b610c8_25skag7k0fe8d, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_25skag7k0fe8d, 4).
+attr[ast_oxc](nc920dfdea0b610c8_25skag7k0fe8d, name, "c").
+child[ast_oxc](nc920dfdea0b610c8_76ihcu6ml12r5, argument, 0, nc920dfdea0b610c8_25skag7k0fe8d).
+child[ast_oxc](nc920dfdea0b610c8_5ranndljg2dic, arguments, 1, nc920dfdea0b610c8_76ihcu6ml12r5).
+child[ast_oxc](nc920dfdea0b610c8_5fpg49qc4po54, init, 0, nc920dfdea0b610c8_5ranndljg2dic).
+child[ast_oxc](nc920dfdea0b610c8_k6ia7upk0uhg6, declarations, 1, nc920dfdea0b610c8_5fpg49qc4po54).
+child[ast_oxc](nc920dfdea0b610c8_j1iil34sjn6td, declaration, 0, nc920dfdea0b610c8_k6ia7upk0uhg6).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 3, nc920dfdea0b610c8_j1iil34sjn6td).
+node[ast_oxc](nc920dfdea0b610c8_65nuidmkg3cs1, export_default_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_65nuidmkg3cs1, 5).
+node[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, function, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, 5).
+node[ast_oxc](nc920dfdea0b610c8_29c9hv5k60kv7, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_29c9hv5k60kv7, 5).
+attr[ast_oxc](nc920dfdea0b610c8_29c9hv5k60kv7, name, "g").
+child[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, id, 0, nc920dfdea0b610c8_29c9hv5k60kv7).
+node[ast_oxc](nc920dfdea0b610c8_1a3g9mlqk66kb, formal_parameters, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_1a3g9mlqk66kb, 5).
+attr[ast_oxc](nc920dfdea0b610c8_1a3g9mlqk66kb, kind, "FormalParameter").
+node[ast_oxc](nc920dfdea0b610c8_afdn34vc22638, formal_parameter, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_afdn34vc22638, 5).
+attr[ast_oxc](nc920dfdea0b610c8_afdn34vc22638, optional, false).
+attr[ast_oxc](nc920dfdea0b610c8_afdn34vc22638, readonly, false).
+node[ast_oxc](nc920dfdea0b610c8_72jmhm13dnbsf, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_72jmhm13dnbsf, 5).
+attr[ast_oxc](nc920dfdea0b610c8_72jmhm13dnbsf, name, "p").
+child[ast_oxc](nc920dfdea0b610c8_afdn34vc22638, pattern, 0, nc920dfdea0b610c8_72jmhm13dnbsf).
+node[ast_oxc](nc920dfdea0b610c8_dvhqr4hmv81e8, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_dvhqr4hmv81e8, 5).
+attr[ast_oxc](nc920dfdea0b610c8_dvhqr4hmv81e8, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_afdn34vc22638, initializer, 0, nc920dfdea0b610c8_dvhqr4hmv81e8).
+child[ast_oxc](nc920dfdea0b610c8_1a3g9mlqk66kb, items, 0, nc920dfdea0b610c8_afdn34vc22638).
+node[ast_oxc](nc920dfdea0b610c8_6ugll1hvahhcb, formal_parameter_rest, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6ugll1hvahhcb, 5).
+node[ast_oxc](nc920dfdea0b610c8_vh7q0e0vdrhge, binding_rest_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_vh7q0e0vdrhge, 5).
+node[ast_oxc](nc920dfdea0b610c8_o4tcafnaqosu5, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_o4tcafnaqosu5, 5).
+attr[ast_oxc](nc920dfdea0b610c8_o4tcafnaqosu5, name, "r").
+child[ast_oxc](nc920dfdea0b610c8_vh7q0e0vdrhge, argument, 0, nc920dfdea0b610c8_o4tcafnaqosu5).
+child[ast_oxc](nc920dfdea0b610c8_6ugll1hvahhcb, rest, 0, nc920dfdea0b610c8_vh7q0e0vdrhge).
+child[ast_oxc](nc920dfdea0b610c8_1a3g9mlqk66kb, rest, 0, nc920dfdea0b610c8_6ugll1hvahhcb).
+child[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, params, 0, nc920dfdea0b610c8_1a3g9mlqk66kb).
+node[ast_oxc](nc920dfdea0b610c8_pgds0bsvu6p77, function_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_pgds0bsvu6p77, 5).
+node[ast_oxc](nc920dfdea0b610c8_9t735cbj2svj1, return_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9t735cbj2svj1, 5).
+node[ast_oxc](nc920dfdea0b610c8_5scehiarvvqj, binary_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5scehiarvvqj, 5).
+attr[ast_oxc](nc920dfdea0b610c8_5scehiarvvqj, operator, "Addition").
+node[ast_oxc](nc920dfdea0b610c8_epig397pmper6, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_epig397pmper6, 5).
+attr[ast_oxc](nc920dfdea0b610c8_epig397pmper6, name, "p").
+child[ast_oxc](nc920dfdea0b610c8_5scehiarvvqj, left, 0, nc920dfdea0b610c8_epig397pmper6).
+node[ast_oxc](nc920dfdea0b610c8_29avkaouu1hd3, static_member_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_29avkaouu1hd3, 5).
+attr[ast_oxc](nc920dfdea0b610c8_29avkaouu1hd3, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_6a4dqjvrvtko2, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6a4dqjvrvtko2, 5).
+attr[ast_oxc](nc920dfdea0b610c8_6a4dqjvrvtko2, name, "r").
+child[ast_oxc](nc920dfdea0b610c8_29avkaouu1hd3, object, 0, nc920dfdea0b610c8_6a4dqjvrvtko2).
+node[ast_oxc](nc920dfdea0b610c8_fgj8vc5p6kag1, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_fgj8vc5p6kag1, 5).
+attr[ast_oxc](nc920dfdea0b610c8_fgj8vc5p6kag1, name, "length").
+child[ast_oxc](nc920dfdea0b610c8_29avkaouu1hd3, property, 0, nc920dfdea0b610c8_fgj8vc5p6kag1).
+child[ast_oxc](nc920dfdea0b610c8_5scehiarvvqj, right, 0, nc920dfdea0b610c8_29avkaouu1hd3).
+child[ast_oxc](nc920dfdea0b610c8_9t735cbj2svj1, argument, 0, nc920dfdea0b610c8_5scehiarvvqj).
+child[ast_oxc](nc920dfdea0b610c8_pgds0bsvu6p77, statements, 0, nc920dfdea0b610c8_9t735cbj2svj1).
+child[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, body, 0, nc920dfdea0b610c8_pgds0bsvu6p77).
+attr[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, type, "FunctionDeclaration").
+attr[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, generator, false).
+attr[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, async, false).
+attr[ast_oxc](nc920dfdea0b610c8_s0c5l5vmro1ob, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_65nuidmkg3cs1, declaration, 0, nc920dfdea0b610c8_s0c5l5vmro1ob).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 4, nc920dfdea0b610c8_65nuidmkg3cs1).
+node[ast_oxc](nc920dfdea0b610c8_tfblt7m4km4fa, export_all_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_tfblt7m4km4fa, 6).
+attr[ast_oxc](nc920dfdea0b610c8_tfblt7m4km4fa, export_kind, "Value").
+node[ast_oxc](nc920dfdea0b610c8_mcmn4scvu5kif, string_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_mcmn4scvu5kif, 6).
+attr[ast_oxc](nc920dfdea0b610c8_mcmn4scvu5kif, value, "./q").
+child[ast_oxc](nc920dfdea0b610c8_tfblt7m4km4fa, source, 0, nc920dfdea0b610c8_mcmn4scvu5kif).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 5, nc920dfdea0b610c8_tfblt7m4km4fa).
+node[ast_oxc](nc920dfdea0b610c8_i59n0d7qgjdra, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_i59n0d7qgjdra, 7).
+attr[ast_oxc](nc920dfdea0b610c8_i59n0d7qgjdra, kind, "Let").
+attr[ast_oxc](nc920dfdea0b610c8_i59n0d7qgjdra, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_tddch9bhb6l9e, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_tddch9bhb6l9e, 7).
+node[ast_oxc](nc920dfdea0b610c8_9sc0ufjo4bf57, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9sc0ufjo4bf57, 7).
+attr[ast_oxc](nc920dfdea0b610c8_9sc0ufjo4bf57, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_tddch9bhb6l9e, id, 0, nc920dfdea0b610c8_9sc0ufjo4bf57).
+node[ast_oxc](nc920dfdea0b610c8_puf3vdm2u7gjc, chain_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_puf3vdm2u7gjc, 7).
+node[ast_oxc](nc920dfdea0b610c8_00pkuna5vqui3, computed_member_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_00pkuna5vqui3, 7).
+attr[ast_oxc](nc920dfdea0b610c8_00pkuna5vqui3, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_l3m1umq8qdqr9, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_l3m1umq8qdqr9, 7).
+attr[ast_oxc](nc920dfdea0b610c8_l3m1umq8qdqr9, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_sjrpdsmgujtu6, static_member_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_sjrpdsmgujtu6, 7).
+attr[ast_oxc](nc920dfdea0b610c8_sjrpdsmgujtu6, optional, true).
+node[ast_oxc](nc920dfdea0b610c8_29k65gljblji3, static_member_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_29k65gljblji3, 7).
+attr[ast_oxc](nc920dfdea0b610c8_29k65gljblji3, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_6juj68a0jbh41, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6juj68a0jbh41, 7).
+attr[ast_oxc](nc920dfdea0b610c8_6juj68a0jbh41, name, "o").
+child[ast_oxc](nc920dfdea0b610c8_29k65gljblji3, object, 0, nc920dfdea0b610c8_6juj68a0jbh41).
+node[ast_oxc](nc920dfdea0b610c8_b7vmfdc191am8, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_b7vmfdc191am8, 7).
+attr[ast_oxc](nc920dfdea0b610c8_b7vmfdc191am8, name, "k").
+child[ast_oxc](nc920dfdea0b610c8_29k65gljblji3, property, 0, nc920dfdea0b610c8_b7vmfdc191am8).
+child[ast_oxc](nc920dfdea0b610c8_sjrpdsmgujtu6, object, 0, nc920dfdea0b610c8_29k65gljblji3).
+node[ast_oxc](nc920dfdea0b610c8_hcpb6ctn3mu52, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_hcpb6ctn3mu52, 7).
+attr[ast_oxc](nc920dfdea0b610c8_hcpb6ctn3mu52, name, "m").
+child[ast_oxc](nc920dfdea0b610c8_sjrpdsmgujtu6, property, 0, nc920dfdea0b610c8_hcpb6ctn3mu52).
+child[ast_oxc](nc920dfdea0b610c8_l3m1umq8qdqr9, callee, 0, nc920dfdea0b610c8_sjrpdsmgujtu6).
+node[ast_oxc](nc920dfdea0b610c8_kdurvj1pitf6b, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kdurvj1pitf6b, 7).
+attr[ast_oxc](nc920dfdea0b610c8_kdurvj1pitf6b, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_l3m1umq8qdqr9, arguments, 0, nc920dfdea0b610c8_kdurvj1pitf6b).
+child[ast_oxc](nc920dfdea0b610c8_00pkuna5vqui3, object, 0, nc920dfdea0b610c8_l3m1umq8qdqr9).
+node[ast_oxc](nc920dfdea0b610c8_bcp1qk5i9uoa1, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_bcp1qk5i9uoa1, 7).
+attr[ast_oxc](nc920dfdea0b610c8_bcp1qk5i9uoa1, value, 2).
+child[ast_oxc](nc920dfdea0b610c8_00pkuna5vqui3, expression, 0, nc920dfdea0b610c8_bcp1qk5i9uoa1).
+child[ast_oxc](nc920dfdea0b610c8_puf3vdm2u7gjc, expression, 0, nc920dfdea0b610c8_00pkuna5vqui3).
+child[ast_oxc](nc920dfdea0b610c8_tddch9bhb6l9e, init, 0, nc920dfdea0b610c8_puf3vdm2u7gjc).
+child[ast_oxc](nc920dfdea0b610c8_i59n0d7qgjdra, declarations, 0, nc920dfdea0b610c8_tddch9bhb6l9e).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 6, nc920dfdea0b610c8_i59n0d7qgjdra).
+node[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, class, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, 8).
+node[ast_oxc](nc920dfdea0b610c8_np7b6r6defha8, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_np7b6r6defha8, 8).
+attr[ast_oxc](nc920dfdea0b610c8_np7b6r6defha8, name, "C").
+child[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, id, 0, nc920dfdea0b610c8_np7b6r6defha8).
+node[ast_oxc](nc920dfdea0b610c8_lk7pddro2hpv8, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_lk7pddro2hpv8, 8).
+attr[ast_oxc](nc920dfdea0b610c8_lk7pddro2hpv8, name, "B").
+child[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, heritage_expression, 0, nc920dfdea0b610c8_lk7pddro2hpv8).
+node[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, class_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, 8).
+node[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, property_definition, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, 8).
+attr[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, type, "PropertyDefinition").
+attr[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, computed, false).
+attr[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, static, false).
+attr[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_1ba9krv4l4q62, private_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_1ba9krv4l4q62, 8).
+attr[ast_oxc](nc920dfdea0b610c8_1ba9krv4l4q62, name, "x").
+child[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, key, 0, nc920dfdea0b610c8_1ba9krv4l4q62).
+node[ast_oxc](nc920dfdea0b610c8_kh7p3bhp84mh1, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kh7p3bhp84mh1, 8).
+attr[ast_oxc](nc920dfdea0b610c8_kh7p3bhp84mh1, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, value, 0, nc920dfdea0b610c8_kh7p3bhp84mh1).
+attr[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, optional, false).
+attr[ast_oxc](nc920dfdea0b610c8_gql7d1c588dr7, readonly, false).
+child[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, body, 0, nc920dfdea0b610c8_gql7d1c588dr7).
+node[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, property_definition, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, 8).
+attr[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, type, "PropertyDefinition").
+attr[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, computed, false).
+attr[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, static, true).
+attr[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_6ni2bji35srgd, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6ni2bji35srgd, 8).
+attr[ast_oxc](nc920dfdea0b610c8_6ni2bji35srgd, name, "s").
+child[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, key, 0, nc920dfdea0b610c8_6ni2bji35srgd).
+attr[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, optional, false).
+attr[ast_oxc](nc920dfdea0b610c8_jo73tc5u33ju9, readonly, false).
+child[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, body, 1, nc920dfdea0b610c8_jo73tc5u33ju9).
+node[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, method_definition, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, 8).
+attr[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, type, "MethodDefinition").
+attr[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, kind, "Get").
+attr[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, computed, false).
+attr[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, static, false).
+node[ast_oxc](nc920dfdea0b610c8_5mrev9qudq7n3, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5mrev9qudq7n3, 8).
+attr[ast_oxc](nc920dfdea0b610c8_5mrev9qudq7n3, name, "v").
+child[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, key, 0, nc920dfdea0b610c8_5mrev9qudq7n3).
+node[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, function, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, 8).
+node[ast_oxc](nc920dfdea0b610c8_6id02nm706i85, formal_parameters, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6id02nm706i85, 8).
+attr[ast_oxc](nc920dfdea0b610c8_6id02nm706i85, kind, "UniqueFormalParameters").
+child[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, params, 0, nc920dfdea0b610c8_6id02nm706i85).
+node[ast_oxc](nc920dfdea0b610c8_orjad4js9h506, function_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_orjad4js9h506, 8).
+node[ast_oxc](nc920dfdea0b610c8_hn4btu012n2u5, return_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_hn4btu012n2u5, 8).
+node[ast_oxc](nc920dfdea0b610c8_irgf9rnnrp3d1, private_field_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_irgf9rnnrp3d1, 8).
+attr[ast_oxc](nc920dfdea0b610c8_irgf9rnnrp3d1, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_3dtgd5s8vajk, this_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_3dtgd5s8vajk, 8).
+child[ast_oxc](nc920dfdea0b610c8_irgf9rnnrp3d1, object, 0, nc920dfdea0b610c8_3dtgd5s8vajk).
+node[ast_oxc](nc920dfdea0b610c8_fi7r2f7ahvg9, private_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_fi7r2f7ahvg9, 8).
+attr[ast_oxc](nc920dfdea0b610c8_fi7r2f7ahvg9, name, "x").
+child[ast_oxc](nc920dfdea0b610c8_irgf9rnnrp3d1, field, 0, nc920dfdea0b610c8_fi7r2f7ahvg9).
+child[ast_oxc](nc920dfdea0b610c8_hn4btu012n2u5, argument, 0, nc920dfdea0b610c8_irgf9rnnrp3d1).
+child[ast_oxc](nc920dfdea0b610c8_orjad4js9h506, statements, 0, nc920dfdea0b610c8_hn4btu012n2u5).
+child[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, body, 0, nc920dfdea0b610c8_orjad4js9h506).
+attr[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, type, "FunctionExpression").
+attr[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, generator, false).
+attr[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, async, false).
+attr[ast_oxc](nc920dfdea0b610c8_0udsjlonppj69, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, value, 0, nc920dfdea0b610c8_0udsjlonppj69).
+attr[ast_oxc](nc920dfdea0b610c8_3h3f5q5dvrjv7, optional, false).
+child[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, body, 2, nc920dfdea0b610c8_3h3f5q5dvrjv7).
+node[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, method_definition, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, 8).
+attr[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, type, "MethodDefinition").
+attr[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, kind, "Constructor").
+attr[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, computed, false).
+attr[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, static, false).
+node[ast_oxc](nc920dfdea0b610c8_kqg2ed19fevc8, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kqg2ed19fevc8, 8).
+attr[ast_oxc](nc920dfdea0b610c8_kqg2ed19fevc8, name, "constructor").
+child[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, key, 0, nc920dfdea0b610c8_kqg2ed19fevc8).
+node[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, function, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, 8).
+node[ast_oxc](nc920dfdea0b610c8_cf477rgt6q83, formal_parameters, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_cf477rgt6q83, 8).
+attr[ast_oxc](nc920dfdea0b610c8_cf477rgt6q83, kind, "UniqueFormalParameters").
+child[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, params, 0, nc920dfdea0b610c8_cf477rgt6q83).
+node[ast_oxc](nc920dfdea0b610c8_boe4qs2a3p6q, function_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_boe4qs2a3p6q, 8).
+node[ast_oxc](nc920dfdea0b610c8_dfvhpee8ftara, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_dfvhpee8ftara, 8).
+node[ast_oxc](nc920dfdea0b610c8_a72e0o3bh25re, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_a72e0o3bh25re, 8).
+attr[ast_oxc](nc920dfdea0b610c8_a72e0o3bh25re, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_qqi25crhrt9jf, super, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_qqi25crhrt9jf, 8).
+child[ast_oxc](nc920dfdea0b610c8_a72e0o3bh25re, callee, 0, nc920dfdea0b610c8_qqi25crhrt9jf).
+child[ast_oxc](nc920dfdea0b610c8_dfvhpee8ftara, expression, 0, nc920dfdea0b610c8_a72e0o3bh25re).
+child[ast_oxc](nc920dfdea0b610c8_boe4qs2a3p6q, statements, 0, nc920dfdea0b610c8_dfvhpee8ftara).
+child[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, body, 0, nc920dfdea0b610c8_boe4qs2a3p6q).
+attr[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, type, "FunctionExpression").
+attr[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, generator, false).
+attr[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, async, false).
+attr[ast_oxc](nc920dfdea0b610c8_44p838lr2d8l4, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, value, 0, nc920dfdea0b610c8_44p838lr2d8l4).
+attr[ast_oxc](nc920dfdea0b610c8_28co2p2m8qm88, optional, false).
+child[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, body, 3, nc920dfdea0b610c8_28co2p2m8qm88).
+node[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, method_definition, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, 8).
+attr[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, type, "MethodDefinition").
+attr[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, kind, "Method").
+attr[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, computed, false).
+attr[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, static, false).
+node[ast_oxc](nc920dfdea0b610c8_ftd6oem63qug8, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ftd6oem63qug8, 8).
+attr[ast_oxc](nc920dfdea0b610c8_ftd6oem63qug8, name, "m").
+child[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, key, 0, nc920dfdea0b610c8_ftd6oem63qug8).
+node[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, function, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, 8).
+node[ast_oxc](nc920dfdea0b610c8_hknlbnh71re08, formal_parameters, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_hknlbnh71re08, 8).
+attr[ast_oxc](nc920dfdea0b610c8_hknlbnh71re08, kind, "UniqueFormalParameters").
+child[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, params, 0, nc920dfdea0b610c8_hknlbnh71re08).
+node[ast_oxc](nc920dfdea0b610c8_0l7pl4gm4ak1, function_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_0l7pl4gm4ak1, 8).
+child[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, body, 0, nc920dfdea0b610c8_0l7pl4gm4ak1).
+attr[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, type, "FunctionExpression").
+attr[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, generator, false).
+attr[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, async, false).
+attr[ast_oxc](nc920dfdea0b610c8_dc6ufn0t9hje9, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, value, 0, nc920dfdea0b610c8_dc6ufn0t9hje9).
+attr[ast_oxc](nc920dfdea0b610c8_hn7tohfq4d3g2, optional, false).
+child[ast_oxc](nc920dfdea0b610c8_rqhd5u2e5c7lf, body, 4, nc920dfdea0b610c8_hn7tohfq4d3g2).
+child[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, body, 0, nc920dfdea0b610c8_rqhd5u2e5c7lf).
+attr[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, type, "ClassDeclaration").
+attr[ast_oxc](nc920dfdea0b610c8_rv7j79hh09i89, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 7, nc920dfdea0b610c8_rv7j79hh09i89).
+node[ast_oxc](nc920dfdea0b610c8_a0k1s24rkace5, if_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_a0k1s24rkace5, 9).
+node[ast_oxc](nc920dfdea0b610c8_761qt6nh11m8, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_761qt6nh11m8, 9).
+attr[ast_oxc](nc920dfdea0b610c8_761qt6nh11m8, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_a0k1s24rkace5, test, 0, nc920dfdea0b610c8_761qt6nh11m8).
+node[ast_oxc](nc920dfdea0b610c8_b5bttonvhh9s5, block_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_b5bttonvhh9s5, 9).
+node[ast_oxc](nc920dfdea0b610c8_b47hqhfagoggd, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_b47hqhfagoggd, 9).
+node[ast_oxc](nc920dfdea0b610c8_2l07ibuplcgp8, assignment_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_2l07ibuplcgp8, 9).
+attr[ast_oxc](nc920dfdea0b610c8_2l07ibuplcgp8, operator, "Addition").
+node[ast_oxc](nc920dfdea0b610c8_abl70d52mn3m, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_abl70d52mn3m, 9).
+attr[ast_oxc](nc920dfdea0b610c8_abl70d52mn3m, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_2l07ibuplcgp8, left, 0, nc920dfdea0b610c8_abl70d52mn3m).
+node[ast_oxc](nc920dfdea0b610c8_pho4pt1jp9ji3, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_pho4pt1jp9ji3, 9).
+attr[ast_oxc](nc920dfdea0b610c8_pho4pt1jp9ji3, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_2l07ibuplcgp8, right, 0, nc920dfdea0b610c8_pho4pt1jp9ji3).
+child[ast_oxc](nc920dfdea0b610c8_b47hqhfagoggd, expression, 0, nc920dfdea0b610c8_2l07ibuplcgp8).
+child[ast_oxc](nc920dfdea0b610c8_b5bttonvhh9s5, body, 0, nc920dfdea0b610c8_b47hqhfagoggd).
+child[ast_oxc](nc920dfdea0b610c8_a0k1s24rkace5, consequent, 0, nc920dfdea0b610c8_b5bttonvhh9s5).
+node[ast_oxc](nc920dfdea0b610c8_kkrtjg3g04r5e, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kkrtjg3g04r5e, 9).
+node[ast_oxc](nc920dfdea0b610c8_oat4lsjohqrvc, assignment_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_oat4lsjohqrvc, 9).
+attr[ast_oxc](nc920dfdea0b610c8_oat4lsjohqrvc, operator, "Assign").
+node[ast_oxc](nc920dfdea0b610c8_jkaag7a9s26o9, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jkaag7a9s26o9, 9).
+attr[ast_oxc](nc920dfdea0b610c8_jkaag7a9s26o9, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_oat4lsjohqrvc, left, 0, nc920dfdea0b610c8_jkaag7a9s26o9).
+node[ast_oxc](nc920dfdea0b610c8_vnsdobicuvbcb, unary_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_vnsdobicuvbcb, 9).
+attr[ast_oxc](nc920dfdea0b610c8_vnsdobicuvbcb, operator, "UnaryNegation").
+node[ast_oxc](nc920dfdea0b610c8_fm5u62i9iufq3, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_fm5u62i9iufq3, 9).
+attr[ast_oxc](nc920dfdea0b610c8_fm5u62i9iufq3, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_vnsdobicuvbcb, argument, 0, nc920dfdea0b610c8_fm5u62i9iufq3).
+child[ast_oxc](nc920dfdea0b610c8_oat4lsjohqrvc, right, 0, nc920dfdea0b610c8_vnsdobicuvbcb).
+child[ast_oxc](nc920dfdea0b610c8_kkrtjg3g04r5e, expression, 0, nc920dfdea0b610c8_oat4lsjohqrvc).
+child[ast_oxc](nc920dfdea0b610c8_a0k1s24rkace5, alternate, 0, nc920dfdea0b610c8_kkrtjg3g04r5e).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 8, nc920dfdea0b610c8_a0k1s24rkace5).
+node[ast_oxc](nc920dfdea0b610c8_b2cs21hnpp626, for_of_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_b2cs21hnpp626, 10).
+node[ast_oxc](nc920dfdea0b610c8_7uqdrbkkvalj8, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7uqdrbkkvalj8, 10).
+attr[ast_oxc](nc920dfdea0b610c8_7uqdrbkkvalj8, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_7uqdrbkkvalj8, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_outqjev570lp9, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_outqjev570lp9, 10).
+node[ast_oxc](nc920dfdea0b610c8_7pagidhjphjma, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7pagidhjphjma, 10).
+attr[ast_oxc](nc920dfdea0b610c8_7pagidhjphjma, name, "e").
+child[ast_oxc](nc920dfdea0b610c8_outqjev570lp9, id, 0, nc920dfdea0b610c8_7pagidhjphjma).
+child[ast_oxc](nc920dfdea0b610c8_7uqdrbkkvalj8, declarations, 0, nc920dfdea0b610c8_outqjev570lp9).
+child[ast_oxc](nc920dfdea0b610c8_b2cs21hnpp626, left, 0, nc920dfdea0b610c8_7uqdrbkkvalj8).
+node[ast_oxc](nc920dfdea0b610c8_l8tmplhsv48e2, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_l8tmplhsv48e2, 10).
+attr[ast_oxc](nc920dfdea0b610c8_l8tmplhsv48e2, name, "es").
+child[ast_oxc](nc920dfdea0b610c8_b2cs21hnpp626, right, 0, nc920dfdea0b610c8_l8tmplhsv48e2).
+node[ast_oxc](nc920dfdea0b610c8_pbsi4sg509om9, block_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_pbsi4sg509om9, 10).
+node[ast_oxc](nc920dfdea0b610c8_pcmqvb4025lgf, if_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_pcmqvb4025lgf, 10).
+node[ast_oxc](nc920dfdea0b610c8_21ui2unfr8a96, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_21ui2unfr8a96, 10).
+attr[ast_oxc](nc920dfdea0b610c8_21ui2unfr8a96, name, "e").
+child[ast_oxc](nc920dfdea0b610c8_pcmqvb4025lgf, test, 0, nc920dfdea0b610c8_21ui2unfr8a96).
+node[ast_oxc](nc920dfdea0b610c8_gt505md491ta2, break_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_gt505md491ta2, 10).
+child[ast_oxc](nc920dfdea0b610c8_pcmqvb4025lgf, consequent, 0, nc920dfdea0b610c8_gt505md491ta2).
+child[ast_oxc](nc920dfdea0b610c8_pbsi4sg509om9, body, 0, nc920dfdea0b610c8_pcmqvb4025lgf).
+child[ast_oxc](nc920dfdea0b610c8_b2cs21hnpp626, body, 0, nc920dfdea0b610c8_pbsi4sg509om9).
+attr[ast_oxc](nc920dfdea0b610c8_b2cs21hnpp626, await, false).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 9, nc920dfdea0b610c8_b2cs21hnpp626).
+node[ast_oxc](nc920dfdea0b610c8_ie74enngaavjc, try_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ie74enngaavjc, 11).
+node[ast_oxc](nc920dfdea0b610c8_880jn235bfhl6, block_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_880jn235bfhl6, 11).
+node[ast_oxc](nc920dfdea0b610c8_m15vo7ndhn7ib, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_m15vo7ndhn7ib, 11).
+node[ast_oxc](nc920dfdea0b610c8_fb1g2kaqh3q7d, await_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_fb1g2kaqh3q7d, 11).
+node[ast_oxc](nc920dfdea0b610c8_d9dh0upn97gre, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_d9dh0upn97gre, 11).
+attr[ast_oxc](nc920dfdea0b610c8_d9dh0upn97gre, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_785n1osst6kt7, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_785n1osst6kt7, 11).
+attr[ast_oxc](nc920dfdea0b610c8_785n1osst6kt7, name, "h").
+child[ast_oxc](nc920dfdea0b610c8_d9dh0upn97gre, callee, 0, nc920dfdea0b610c8_785n1osst6kt7).
+child[ast_oxc](nc920dfdea0b610c8_fb1g2kaqh3q7d, argument, 0, nc920dfdea0b610c8_d9dh0upn97gre).
+child[ast_oxc](nc920dfdea0b610c8_m15vo7ndhn7ib, expression, 0, nc920dfdea0b610c8_fb1g2kaqh3q7d).
+child[ast_oxc](nc920dfdea0b610c8_880jn235bfhl6, body, 0, nc920dfdea0b610c8_m15vo7ndhn7ib).
+child[ast_oxc](nc920dfdea0b610c8_ie74enngaavjc, block, 0, nc920dfdea0b610c8_880jn235bfhl6).
+node[ast_oxc](nc920dfdea0b610c8_cb86phpdmrjq5, catch_clause, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_cb86phpdmrjq5, 11).
+node[ast_oxc](nc920dfdea0b610c8_mhh5oivuobfl8, catch_parameter, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_mhh5oivuobfl8, 11).
+node[ast_oxc](nc920dfdea0b610c8_12jb426d0p2k5, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_12jb426d0p2k5, 11).
+attr[ast_oxc](nc920dfdea0b610c8_12jb426d0p2k5, name, "err").
+child[ast_oxc](nc920dfdea0b610c8_mhh5oivuobfl8, pattern, 0, nc920dfdea0b610c8_12jb426d0p2k5).
+child[ast_oxc](nc920dfdea0b610c8_cb86phpdmrjq5, param, 0, nc920dfdea0b610c8_mhh5oivuobfl8).
+node[ast_oxc](nc920dfdea0b610c8_iqt0b6lkj8kq, block_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_iqt0b6lkj8kq, 11).
+node[ast_oxc](nc920dfdea0b610c8_mar6u9q1ce6n4, throw_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_mar6u9q1ce6n4, 11).
+node[ast_oxc](nc920dfdea0b610c8_2v33og59um6q9, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_2v33og59um6q9, 11).
+attr[ast_oxc](nc920dfdea0b610c8_2v33og59um6q9, name, "err").
+child[ast_oxc](nc920dfdea0b610c8_mar6u9q1ce6n4, argument, 0, nc920dfdea0b610c8_2v33og59um6q9).
+child[ast_oxc](nc920dfdea0b610c8_iqt0b6lkj8kq, body, 0, nc920dfdea0b610c8_mar6u9q1ce6n4).
+child[ast_oxc](nc920dfdea0b610c8_cb86phpdmrjq5, body, 0, nc920dfdea0b610c8_iqt0b6lkj8kq).
+child[ast_oxc](nc920dfdea0b610c8_ie74enngaavjc, handler, 0, nc920dfdea0b610c8_cb86phpdmrjq5).
+node[ast_oxc](nc920dfdea0b610c8_dsm6u7isd9144, block_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_dsm6u7isd9144, 11).
+node[ast_oxc](nc920dfdea0b610c8_6gr3ufh4fq805, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6gr3ufh4fq805, 11).
+node[ast_oxc](nc920dfdea0b610c8_9adhar83a74dc, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9adhar83a74dc, 11).
+attr[ast_oxc](nc920dfdea0b610c8_9adhar83a74dc, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_7acc06emhgdl9, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7acc06emhgdl9, 11).
+attr[ast_oxc](nc920dfdea0b610c8_7acc06emhgdl9, name, "done").
+child[ast_oxc](nc920dfdea0b610c8_9adhar83a74dc, callee, 0, nc920dfdea0b610c8_7acc06emhgdl9).
+child[ast_oxc](nc920dfdea0b610c8_6gr3ufh4fq805, expression, 0, nc920dfdea0b610c8_9adhar83a74dc).
+child[ast_oxc](nc920dfdea0b610c8_dsm6u7isd9144, body, 0, nc920dfdea0b610c8_6gr3ufh4fq805).
+child[ast_oxc](nc920dfdea0b610c8_ie74enngaavjc, finalizer, 0, nc920dfdea0b610c8_dsm6u7isd9144).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 10, nc920dfdea0b610c8_ie74enngaavjc).
+node[ast_oxc](nc920dfdea0b610c8_6q4dj7fk0r7k9, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6q4dj7fk0r7k9, 12).
+attr[ast_oxc](nc920dfdea0b610c8_6q4dj7fk0r7k9, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_6q4dj7fk0r7k9, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_9emgvll53nntf, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9emgvll53nntf, 12).
+node[ast_oxc](nc920dfdea0b610c8_016g2sb4qf9a3, object_pattern, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_016g2sb4qf9a3, 12).
+node[ast_oxc](nc920dfdea0b610c8_lu3tp2nmtubjf, binding_property, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_lu3tp2nmtubjf, 12).
+attr[ast_oxc](nc920dfdea0b610c8_lu3tp2nmtubjf, computed, false).
+node[ast_oxc](nc920dfdea0b610c8_31qo5akb1u67d, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_31qo5akb1u67d, 12).
+attr[ast_oxc](nc920dfdea0b610c8_31qo5akb1u67d, name, "u").
+child[ast_oxc](nc920dfdea0b610c8_lu3tp2nmtubjf, key, 0, nc920dfdea0b610c8_31qo5akb1u67d).
+node[ast_oxc](nc920dfdea0b610c8_c29g1vedhdeca, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_c29g1vedhdeca, 12).
+attr[ast_oxc](nc920dfdea0b610c8_c29g1vedhdeca, name, "u").
+child[ast_oxc](nc920dfdea0b610c8_lu3tp2nmtubjf, value, 0, nc920dfdea0b610c8_c29g1vedhdeca).
+child[ast_oxc](nc920dfdea0b610c8_016g2sb4qf9a3, properties, 0, nc920dfdea0b610c8_lu3tp2nmtubjf).
+node[ast_oxc](nc920dfdea0b610c8_fl7m9k1m7f1sd, binding_property, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_fl7m9k1m7f1sd, 12).
+attr[ast_oxc](nc920dfdea0b610c8_fl7m9k1m7f1sd, computed, false).
+node[ast_oxc](nc920dfdea0b610c8_5eb9n8d393et6, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5eb9n8d393et6, 12).
+attr[ast_oxc](nc920dfdea0b610c8_5eb9n8d393et6, name, "w").
+child[ast_oxc](nc920dfdea0b610c8_fl7m9k1m7f1sd, key, 0, nc920dfdea0b610c8_5eb9n8d393et6).
+node[ast_oxc](nc920dfdea0b610c8_ebh6c7cr3qcl4, array_pattern, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ebh6c7cr3qcl4, 12).
+node[ast_oxc](nc920dfdea0b610c8_osev04140sq89, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_osev04140sq89, 12).
+attr[ast_oxc](nc920dfdea0b610c8_osev04140sq89, name, "y1").
+child[ast_oxc](nc920dfdea0b610c8_ebh6c7cr3qcl4, elements, 0, nc920dfdea0b610c8_osev04140sq89).
+node[ast_oxc](nc920dfdea0b610c8_fn0tlkfo1f847, binding_rest_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_fn0tlkfo1f847, 12).
+node[ast_oxc](nc920dfdea0b610c8_k8et0dbrsndqe, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_k8et0dbrsndqe, 12).
+attr[ast_oxc](nc920dfdea0b610c8_k8et0dbrsndqe, name, "ys").
+child[ast_oxc](nc920dfdea0b610c8_fn0tlkfo1f847, argument, 0, nc920dfdea0b610c8_k8et0dbrsndqe).
+child[ast_oxc](nc920dfdea0b610c8_ebh6c7cr3qcl4, rest, 0, nc920dfdea0b610c8_fn0tlkfo1f847).
+child[ast_oxc](nc920dfdea0b610c8_fl7m9k1m7f1sd, value, 0, nc920dfdea0b610c8_ebh6c7cr3qcl4).
+child[ast_oxc](nc920dfdea0b610c8_016g2sb4qf9a3, properties, 1, nc920dfdea0b610c8_fl7m9k1m7f1sd).
+node[ast_oxc](nc920dfdea0b610c8_m4as692cd9bo2, binding_rest_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_m4as692cd9bo2, 12).
+node[ast_oxc](nc920dfdea0b610c8_41eqvfgp57566, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_41eqvfgp57566, 12).
+attr[ast_oxc](nc920dfdea0b610c8_41eqvfgp57566, name, "rest").
+child[ast_oxc](nc920dfdea0b610c8_m4as692cd9bo2, argument, 0, nc920dfdea0b610c8_41eqvfgp57566).
+child[ast_oxc](nc920dfdea0b610c8_016g2sb4qf9a3, rest, 0, nc920dfdea0b610c8_m4as692cd9bo2).
+child[ast_oxc](nc920dfdea0b610c8_9emgvll53nntf, id, 0, nc920dfdea0b610c8_016g2sb4qf9a3).
+node[ast_oxc](nc920dfdea0b610c8_i0kkuin3r6utb, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_i0kkuin3r6utb, 12).
+attr[ast_oxc](nc920dfdea0b610c8_i0kkuin3r6utb, name, "obj").
+child[ast_oxc](nc920dfdea0b610c8_9emgvll53nntf, init, 0, nc920dfdea0b610c8_i0kkuin3r6utb).
+child[ast_oxc](nc920dfdea0b610c8_6q4dj7fk0r7k9, declarations, 0, nc920dfdea0b610c8_9emgvll53nntf).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 11, nc920dfdea0b610c8_6q4dj7fk0r7k9).
+node[ast_oxc](nc920dfdea0b610c8_vb5hdg9iaf6s2, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_vb5hdg9iaf6s2, 13).
+node[ast_oxc](nc920dfdea0b610c8_t09a1fefhor6c, update_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_t09a1fefhor6c, 13).
+attr[ast_oxc](nc920dfdea0b610c8_t09a1fefhor6c, operator, "Increment").
+attr[ast_oxc](nc920dfdea0b610c8_t09a1fefhor6c, prefix, false).
+node[ast_oxc](nc920dfdea0b610c8_7nci9f86dnm3e, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7nci9f86dnm3e, 13).
+attr[ast_oxc](nc920dfdea0b610c8_7nci9f86dnm3e, name, "x").
+child[ast_oxc](nc920dfdea0b610c8_t09a1fefhor6c, argument, 0, nc920dfdea0b610c8_7nci9f86dnm3e).
+child[ast_oxc](nc920dfdea0b610c8_vb5hdg9iaf6s2, expression, 0, nc920dfdea0b610c8_t09a1fefhor6c).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 12, nc920dfdea0b610c8_vb5hdg9iaf6s2).
+node[ast_oxc](nc920dfdea0b610c8_95l3c23ruaerf, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_95l3c23ruaerf, 13).
+node[ast_oxc](nc920dfdea0b610c8_pf7ovl4jmack7, update_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_pf7ovl4jmack7, 13).
+attr[ast_oxc](nc920dfdea0b610c8_pf7ovl4jmack7, operator, "Increment").
+attr[ast_oxc](nc920dfdea0b610c8_pf7ovl4jmack7, prefix, true).
+node[ast_oxc](nc920dfdea0b610c8_0pkjb7d6ju185, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_0pkjb7d6ju185, 13).
+attr[ast_oxc](nc920dfdea0b610c8_0pkjb7d6ju185, name, "x").
+child[ast_oxc](nc920dfdea0b610c8_pf7ovl4jmack7, argument, 0, nc920dfdea0b610c8_0pkjb7d6ju185).
+child[ast_oxc](nc920dfdea0b610c8_95l3c23ruaerf, expression, 0, nc920dfdea0b610c8_pf7ovl4jmack7).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 13, nc920dfdea0b610c8_95l3c23ruaerf).
+node[ast_oxc](nc920dfdea0b610c8_bl2sdepv5t78b, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_bl2sdepv5t78b, 14).
+attr[ast_oxc](nc920dfdea0b610c8_bl2sdepv5t78b, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_bl2sdepv5t78b, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_2n36isaa412k6, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_2n36isaa412k6, 14).
+node[ast_oxc](nc920dfdea0b610c8_5khaf372n7t25, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5khaf372n7t25, 14).
+attr[ast_oxc](nc920dfdea0b610c8_5khaf372n7t25, name, "s2").
+child[ast_oxc](nc920dfdea0b610c8_2n36isaa412k6, id, 0, nc920dfdea0b610c8_5khaf372n7t25).
+node[ast_oxc](nc920dfdea0b610c8_6sv6unu1ivmb2, template_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6sv6unu1ivmb2, 14).
+node[ast_oxc](nc920dfdea0b610c8_16eel9bcu921b, template_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_16eel9bcu921b, 14).
+attr[ast_oxc](nc920dfdea0b610c8_16eel9bcu921b, tail, false).
+attr[ast_oxc](nc920dfdea0b610c8_16eel9bcu921b, value_cooked, "a").
+child[ast_oxc](nc920dfdea0b610c8_6sv6unu1ivmb2, quasis, 0, nc920dfdea0b610c8_16eel9bcu921b).
+node[ast_oxc](nc920dfdea0b610c8_bbagp1em2o23f, template_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_bbagp1em2o23f, 14).
+attr[ast_oxc](nc920dfdea0b610c8_bbagp1em2o23f, tail, true).
+attr[ast_oxc](nc920dfdea0b610c8_bbagp1em2o23f, value_cooked, "b").
+child[ast_oxc](nc920dfdea0b610c8_6sv6unu1ivmb2, quasis, 1, nc920dfdea0b610c8_bbagp1em2o23f).
+node[ast_oxc](nc920dfdea0b610c8_3bae9gcmcr9m2, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_3bae9gcmcr9m2, 14).
+attr[ast_oxc](nc920dfdea0b610c8_3bae9gcmcr9m2, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_6sv6unu1ivmb2, expressions, 0, nc920dfdea0b610c8_3bae9gcmcr9m2).
+child[ast_oxc](nc920dfdea0b610c8_2n36isaa412k6, init, 0, nc920dfdea0b610c8_6sv6unu1ivmb2).
+child[ast_oxc](nc920dfdea0b610c8_bl2sdepv5t78b, declarations, 0, nc920dfdea0b610c8_2n36isaa412k6).
+node[ast_oxc](nc920dfdea0b610c8_820gada6srtl4, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_820gada6srtl4, 14).
+node[ast_oxc](nc920dfdea0b610c8_96jpgt4mblr12, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_96jpgt4mblr12, 14).
+attr[ast_oxc](nc920dfdea0b610c8_96jpgt4mblr12, name, "tg").
+child[ast_oxc](nc920dfdea0b610c8_820gada6srtl4, id, 0, nc920dfdea0b610c8_96jpgt4mblr12).
+node[ast_oxc](nc920dfdea0b610c8_47h1ti74deq5b, tagged_template_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_47h1ti74deq5b, 14).
+node[ast_oxc](nc920dfdea0b610c8_6n4opiltjght6, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6n4opiltjght6, 14).
+attr[ast_oxc](nc920dfdea0b610c8_6n4opiltjght6, name, "tag").
+child[ast_oxc](nc920dfdea0b610c8_47h1ti74deq5b, tag, 0, nc920dfdea0b610c8_6n4opiltjght6).
+node[ast_oxc](nc920dfdea0b610c8_0313e52hl6ljb, template_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_0313e52hl6ljb, 14).
+node[ast_oxc](nc920dfdea0b610c8_qfh5ib3qo7fh2, template_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_qfh5ib3qo7fh2, 14).
+attr[ast_oxc](nc920dfdea0b610c8_qfh5ib3qo7fh2, tail, true).
+attr[ast_oxc](nc920dfdea0b610c8_qfh5ib3qo7fh2, value_cooked, "q").
+child[ast_oxc](nc920dfdea0b610c8_0313e52hl6ljb, quasis, 0, nc920dfdea0b610c8_qfh5ib3qo7fh2).
+child[ast_oxc](nc920dfdea0b610c8_47h1ti74deq5b, quasi, 0, nc920dfdea0b610c8_0313e52hl6ljb).
+child[ast_oxc](nc920dfdea0b610c8_820gada6srtl4, init, 0, nc920dfdea0b610c8_47h1ti74deq5b).
+child[ast_oxc](nc920dfdea0b610c8_bl2sdepv5t78b, declarations, 1, nc920dfdea0b610c8_820gada6srtl4).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 14, nc920dfdea0b610c8_bl2sdepv5t78b).
+node[ast_oxc](nc920dfdea0b610c8_ejtc3ba10pkr5, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ejtc3ba10pkr5, 15).
+attr[ast_oxc](nc920dfdea0b610c8_ejtc3ba10pkr5, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_ejtc3ba10pkr5, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_7rfq1vacffd3b, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7rfq1vacffd3b, 15).
+node[ast_oxc](nc920dfdea0b610c8_ij41bhhrvlsr9, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ij41bhhrvlsr9, 15).
+attr[ast_oxc](nc920dfdea0b610c8_ij41bhhrvlsr9, name, "ar").
+child[ast_oxc](nc920dfdea0b610c8_7rfq1vacffd3b, id, 0, nc920dfdea0b610c8_ij41bhhrvlsr9).
+node[ast_oxc](nc920dfdea0b610c8_1huq39nc1uli1, array_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_1huq39nc1uli1, 15).
+node[ast_oxc](nc920dfdea0b610c8_ndcgemk84rdf6, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ndcgemk84rdf6, 15).
+attr[ast_oxc](nc920dfdea0b610c8_ndcgemk84rdf6, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_1huq39nc1uli1, elements, 0, nc920dfdea0b610c8_ndcgemk84rdf6).
+node[ast_oxc](nc920dfdea0b610c8_7chvam1p7emlf, elision, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7chvam1p7emlf, 15).
+child[ast_oxc](nc920dfdea0b610c8_1huq39nc1uli1, elements, 1, nc920dfdea0b610c8_7chvam1p7emlf).
+node[ast_oxc](nc920dfdea0b610c8_o769mtegrmam9, spread_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_o769mtegrmam9, 15).
+node[ast_oxc](nc920dfdea0b610c8_td2efngc7986a, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_td2efngc7986a, 15).
+attr[ast_oxc](nc920dfdea0b610c8_td2efngc7986a, name, "ar2").
+child[ast_oxc](nc920dfdea0b610c8_o769mtegrmam9, argument, 0, nc920dfdea0b610c8_td2efngc7986a).
+child[ast_oxc](nc920dfdea0b610c8_1huq39nc1uli1, elements, 2, nc920dfdea0b610c8_o769mtegrmam9).
+child[ast_oxc](nc920dfdea0b610c8_7rfq1vacffd3b, init, 0, nc920dfdea0b610c8_1huq39nc1uli1).
+child[ast_oxc](nc920dfdea0b610c8_ejtc3ba10pkr5, declarations, 0, nc920dfdea0b610c8_7rfq1vacffd3b).
+node[ast_oxc](nc920dfdea0b610c8_n4t4uvnlftqr6, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_n4t4uvnlftqr6, 15).
+node[ast_oxc](nc920dfdea0b610c8_6l3m3nl0kgque, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_6l3m3nl0kgque, 15).
+attr[ast_oxc](nc920dfdea0b610c8_6l3m3nl0kgque, name, "ob").
+child[ast_oxc](nc920dfdea0b610c8_n4t4uvnlftqr6, id, 0, nc920dfdea0b610c8_6l3m3nl0kgque).
+node[ast_oxc](nc920dfdea0b610c8_m2h12tq6b2tv7, object_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_m2h12tq6b2tv7, 15).
+node[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, object_property, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, 15).
+attr[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, kind, "Init").
+attr[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, method, false).
+attr[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, computed, false).
+node[ast_oxc](nc920dfdea0b610c8_o8pn8j7l2rr8, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_o8pn8j7l2rr8, 15).
+attr[ast_oxc](nc920dfdea0b610c8_o8pn8j7l2rr8, name, "a").
+child[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, key, 0, nc920dfdea0b610c8_o8pn8j7l2rr8).
+node[ast_oxc](nc920dfdea0b610c8_oagofqcuvfo9a, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_oagofqcuvfo9a, 15).
+attr[ast_oxc](nc920dfdea0b610c8_oagofqcuvfo9a, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_5sbb603q6c4h, value, 0, nc920dfdea0b610c8_oagofqcuvfo9a).
+child[ast_oxc](nc920dfdea0b610c8_m2h12tq6b2tv7, properties, 0, nc920dfdea0b610c8_5sbb603q6c4h).
+node[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, object_property, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, 15).
+attr[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, kind, "Init").
+attr[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, method, false).
+attr[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, computed, true).
+node[ast_oxc](nc920dfdea0b610c8_v83v7pq8j7vn8, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_v83v7pq8j7vn8, 15).
+attr[ast_oxc](nc920dfdea0b610c8_v83v7pq8j7vn8, name, "k").
+child[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, key, 0, nc920dfdea0b610c8_v83v7pq8j7vn8).
+node[ast_oxc](nc920dfdea0b610c8_no4k1d9unap1b, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_no4k1d9unap1b, 15).
+attr[ast_oxc](nc920dfdea0b610c8_no4k1d9unap1b, value, 2).
+child[ast_oxc](nc920dfdea0b610c8_k67matblnjhq3, value, 0, nc920dfdea0b610c8_no4k1d9unap1b).
+child[ast_oxc](nc920dfdea0b610c8_m2h12tq6b2tv7, properties, 1, nc920dfdea0b610c8_k67matblnjhq3).
+node[ast_oxc](nc920dfdea0b610c8_ah1riph456v57, spread_element, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ah1riph456v57, 15).
+node[ast_oxc](nc920dfdea0b610c8_7bofe0j2knj3d, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7bofe0j2knj3d, 15).
+attr[ast_oxc](nc920dfdea0b610c8_7bofe0j2knj3d, name, "ob2").
+child[ast_oxc](nc920dfdea0b610c8_ah1riph456v57, argument, 0, nc920dfdea0b610c8_7bofe0j2knj3d).
+child[ast_oxc](nc920dfdea0b610c8_m2h12tq6b2tv7, properties, 2, nc920dfdea0b610c8_ah1riph456v57).
+node[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, object_property, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, 15).
+attr[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, kind, "Init").
+attr[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, method, true).
+attr[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, computed, false).
+node[ast_oxc](nc920dfdea0b610c8_9dubhpgav3rif, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9dubhpgav3rif, 15).
+attr[ast_oxc](nc920dfdea0b610c8_9dubhpgav3rif, name, "m").
+child[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, key, 0, nc920dfdea0b610c8_9dubhpgav3rif).
+node[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, function, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, 15).
+node[ast_oxc](nc920dfdea0b610c8_rqoo7abq4e42f, formal_parameters, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_rqoo7abq4e42f, 15).
+attr[ast_oxc](nc920dfdea0b610c8_rqoo7abq4e42f, kind, "UniqueFormalParameters").
+child[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, params, 0, nc920dfdea0b610c8_rqoo7abq4e42f).
+node[ast_oxc](nc920dfdea0b610c8_sjk9l9n2sg0n5, function_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_sjk9l9n2sg0n5, 15).
+child[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, body, 0, nc920dfdea0b610c8_sjk9l9n2sg0n5).
+attr[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, type, "FunctionExpression").
+attr[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, generator, false).
+attr[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, async, false).
+attr[ast_oxc](nc920dfdea0b610c8_7hnat7fe1au89, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_ch1ckao95l7m1, value, 0, nc920dfdea0b610c8_7hnat7fe1au89).
+child[ast_oxc](nc920dfdea0b610c8_m2h12tq6b2tv7, properties, 3, nc920dfdea0b610c8_ch1ckao95l7m1).
+child[ast_oxc](nc920dfdea0b610c8_n4t4uvnlftqr6, init, 0, nc920dfdea0b610c8_m2h12tq6b2tv7).
+child[ast_oxc](nc920dfdea0b610c8_ejtc3ba10pkr5, declarations, 1, nc920dfdea0b610c8_n4t4uvnlftqr6).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 15, nc920dfdea0b610c8_ejtc3ba10pkr5).
+node[ast_oxc](nc920dfdea0b610c8_frmecdrlk2rj7, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_frmecdrlk2rj7, 16).
+attr[ast_oxc](nc920dfdea0b610c8_frmecdrlk2rj7, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_frmecdrlk2rj7, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_l1jvg2k4rqt89, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_l1jvg2k4rqt89, 16).
+node[ast_oxc](nc920dfdea0b610c8_tppog9jqc8ac1, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_tppog9jqc8ac1, 16).
+attr[ast_oxc](nc920dfdea0b610c8_tppog9jqc8ac1, name, "fn").
+child[ast_oxc](nc920dfdea0b610c8_l1jvg2k4rqt89, id, 0, nc920dfdea0b610c8_tppog9jqc8ac1).
+node[ast_oxc](nc920dfdea0b610c8_kcdv0utnfg6lc, arrow_function_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_kcdv0utnfg6lc, 16).
+node[ast_oxc](nc920dfdea0b610c8_hrr5fja964deb, formal_parameters, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_hrr5fja964deb, 16).
+attr[ast_oxc](nc920dfdea0b610c8_hrr5fja964deb, kind, "ArrowFormalParameters").
+node[ast_oxc](nc920dfdea0b610c8_c9i5od1bovfcf, formal_parameter, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_c9i5od1bovfcf, 16).
+attr[ast_oxc](nc920dfdea0b610c8_c9i5od1bovfcf, optional, false).
+attr[ast_oxc](nc920dfdea0b610c8_c9i5od1bovfcf, readonly, false).
+node[ast_oxc](nc920dfdea0b610c8_jcfucb8tk7j71, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jcfucb8tk7j71, 16).
+attr[ast_oxc](nc920dfdea0b610c8_jcfucb8tk7j71, name, "q").
+child[ast_oxc](nc920dfdea0b610c8_c9i5od1bovfcf, pattern, 0, nc920dfdea0b610c8_jcfucb8tk7j71).
+child[ast_oxc](nc920dfdea0b610c8_hrr5fja964deb, items, 0, nc920dfdea0b610c8_c9i5od1bovfcf).
+child[ast_oxc](nc920dfdea0b610c8_kcdv0utnfg6lc, params, 0, nc920dfdea0b610c8_hrr5fja964deb).
+node[ast_oxc](nc920dfdea0b610c8_gqgbql0cpfal1, logical_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_gqgbql0cpfal1, 16).
+attr[ast_oxc](nc920dfdea0b610c8_gqgbql0cpfal1, operator, "Coalesce").
+node[ast_oxc](nc920dfdea0b610c8_3c8b2c2dni071, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_3c8b2c2dni071, 16).
+attr[ast_oxc](nc920dfdea0b610c8_3c8b2c2dni071, name, "q").
+child[ast_oxc](nc920dfdea0b610c8_gqgbql0cpfal1, left, 0, nc920dfdea0b610c8_3c8b2c2dni071).
+node[ast_oxc](nc920dfdea0b610c8_npit2gnfbm8p4, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_npit2gnfbm8p4, 16).
+attr[ast_oxc](nc920dfdea0b610c8_npit2gnfbm8p4, value, 0).
+child[ast_oxc](nc920dfdea0b610c8_gqgbql0cpfal1, right, 0, nc920dfdea0b610c8_npit2gnfbm8p4).
+child[ast_oxc](nc920dfdea0b610c8_kcdv0utnfg6lc, body, 0, nc920dfdea0b610c8_gqgbql0cpfal1).
+attr[ast_oxc](nc920dfdea0b610c8_kcdv0utnfg6lc, async, true).
+child[ast_oxc](nc920dfdea0b610c8_l1jvg2k4rqt89, init, 0, nc920dfdea0b610c8_kcdv0utnfg6lc).
+child[ast_oxc](nc920dfdea0b610c8_frmecdrlk2rj7, declarations, 0, nc920dfdea0b610c8_l1jvg2k4rqt89).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 16, nc920dfdea0b610c8_frmecdrlk2rj7).
+node[ast_oxc](nc920dfdea0b610c8_288e49n7eoun1, while_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_288e49n7eoun1, 17).
+node[ast_oxc](nc920dfdea0b610c8_4c8bf19grbcfa, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_4c8bf19grbcfa, 17).
+attr[ast_oxc](nc920dfdea0b610c8_4c8bf19grbcfa, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_288e49n7eoun1, test, 0, nc920dfdea0b610c8_4c8bf19grbcfa).
+node[ast_oxc](nc920dfdea0b610c8_3aqo8psk11l3c, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_3aqo8psk11l3c, 17).
+node[ast_oxc](nc920dfdea0b610c8_df7t3vhag91u3, update_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_df7t3vhag91u3, 17).
+attr[ast_oxc](nc920dfdea0b610c8_df7t3vhag91u3, operator, "Decrement").
+attr[ast_oxc](nc920dfdea0b610c8_df7t3vhag91u3, prefix, false).
+node[ast_oxc](nc920dfdea0b610c8_23ees8dsqp6r6, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_23ees8dsqp6r6, 17).
+attr[ast_oxc](nc920dfdea0b610c8_23ees8dsqp6r6, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_df7t3vhag91u3, argument, 0, nc920dfdea0b610c8_23ees8dsqp6r6).
+child[ast_oxc](nc920dfdea0b610c8_3aqo8psk11l3c, expression, 0, nc920dfdea0b610c8_df7t3vhag91u3).
+child[ast_oxc](nc920dfdea0b610c8_288e49n7eoun1, body, 0, nc920dfdea0b610c8_3aqo8psk11l3c).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 17, nc920dfdea0b610c8_288e49n7eoun1).
+node[ast_oxc](nc920dfdea0b610c8_jmvla092q2d83, switch_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jmvla092q2d83, 18).
+node[ast_oxc](nc920dfdea0b610c8_54lejbr777d8, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_54lejbr777d8, 18).
+attr[ast_oxc](nc920dfdea0b610c8_54lejbr777d8, name, "t").
+child[ast_oxc](nc920dfdea0b610c8_jmvla092q2d83, discriminant, 0, nc920dfdea0b610c8_54lejbr777d8).
+node[ast_oxc](nc920dfdea0b610c8_io5h3cta9eree, switch_case, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_io5h3cta9eree, 18).
+node[ast_oxc](nc920dfdea0b610c8_0ddgb2ojh7bg, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_0ddgb2ojh7bg, 18).
+attr[ast_oxc](nc920dfdea0b610c8_0ddgb2ojh7bg, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_io5h3cta9eree, test, 0, nc920dfdea0b610c8_0ddgb2ojh7bg).
+node[ast_oxc](nc920dfdea0b610c8_o744unpb2d05e, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_o744unpb2d05e, 18).
+node[ast_oxc](nc920dfdea0b610c8_quk6fg4gb7r64, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_quk6fg4gb7r64, 18).
+attr[ast_oxc](nc920dfdea0b610c8_quk6fg4gb7r64, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_r60vgeo6e468b, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_r60vgeo6e468b, 18).
+attr[ast_oxc](nc920dfdea0b610c8_r60vgeo6e468b, name, "f").
+child[ast_oxc](nc920dfdea0b610c8_quk6fg4gb7r64, callee, 0, nc920dfdea0b610c8_r60vgeo6e468b).
+child[ast_oxc](nc920dfdea0b610c8_o744unpb2d05e, expression, 0, nc920dfdea0b610c8_quk6fg4gb7r64).
+child[ast_oxc](nc920dfdea0b610c8_io5h3cta9eree, consequent, 0, nc920dfdea0b610c8_o744unpb2d05e).
+node[ast_oxc](nc920dfdea0b610c8_qmn2s8oghjt84, break_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_qmn2s8oghjt84, 18).
+child[ast_oxc](nc920dfdea0b610c8_io5h3cta9eree, consequent, 1, nc920dfdea0b610c8_qmn2s8oghjt84).
+child[ast_oxc](nc920dfdea0b610c8_jmvla092q2d83, cases, 0, nc920dfdea0b610c8_io5h3cta9eree).
+node[ast_oxc](nc920dfdea0b610c8_vjbau8nnlg0k7, switch_case, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_vjbau8nnlg0k7, 18).
+node[ast_oxc](nc920dfdea0b610c8_siq6bmhlirphc, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_siq6bmhlirphc, 18).
+node[ast_oxc](nc920dfdea0b610c8_j13ftpkhbilse, call_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_j13ftpkhbilse, 18).
+attr[ast_oxc](nc920dfdea0b610c8_j13ftpkhbilse, optional, false).
+node[ast_oxc](nc920dfdea0b610c8_e1r3hugdol0k4, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_e1r3hugdol0k4, 18).
+attr[ast_oxc](nc920dfdea0b610c8_e1r3hugdol0k4, name, "g").
+child[ast_oxc](nc920dfdea0b610c8_j13ftpkhbilse, callee, 0, nc920dfdea0b610c8_e1r3hugdol0k4).
+child[ast_oxc](nc920dfdea0b610c8_siq6bmhlirphc, expression, 0, nc920dfdea0b610c8_j13ftpkhbilse).
+child[ast_oxc](nc920dfdea0b610c8_vjbau8nnlg0k7, consequent, 0, nc920dfdea0b610c8_siq6bmhlirphc).
+child[ast_oxc](nc920dfdea0b610c8_jmvla092q2d83, cases, 1, nc920dfdea0b610c8_vjbau8nnlg0k7).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 18, nc920dfdea0b610c8_jmvla092q2d83).
+node[ast_oxc](nc920dfdea0b610c8_cjp7m59a8q2if, labeled_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_cjp7m59a8q2if, 19).
+node[ast_oxc](nc920dfdea0b610c8_1q2p0d1940av9, label_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_1q2p0d1940av9, 19).
+attr[ast_oxc](nc920dfdea0b610c8_1q2p0d1940av9, name, "lbl").
+child[ast_oxc](nc920dfdea0b610c8_cjp7m59a8q2if, label, 0, nc920dfdea0b610c8_1q2p0d1940av9).
+node[ast_oxc](nc920dfdea0b610c8_2vmi5phi7jihf, for_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_2vmi5phi7jihf, 19).
+node[ast_oxc](nc920dfdea0b610c8_ojcppgb50ltif, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ojcppgb50ltif, 19).
+attr[ast_oxc](nc920dfdea0b610c8_ojcppgb50ltif, kind, "Let").
+attr[ast_oxc](nc920dfdea0b610c8_ojcppgb50ltif, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_ib974s3j09khd, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ib974s3j09khd, 19).
+node[ast_oxc](nc920dfdea0b610c8_p9im9dppad602, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_p9im9dppad602, 19).
+attr[ast_oxc](nc920dfdea0b610c8_p9im9dppad602, name, "i").
+child[ast_oxc](nc920dfdea0b610c8_ib974s3j09khd, id, 0, nc920dfdea0b610c8_p9im9dppad602).
+node[ast_oxc](nc920dfdea0b610c8_q65p0lqac0av7, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_q65p0lqac0av7, 19).
+attr[ast_oxc](nc920dfdea0b610c8_q65p0lqac0av7, value, 0).
+child[ast_oxc](nc920dfdea0b610c8_ib974s3j09khd, init, 0, nc920dfdea0b610c8_q65p0lqac0av7).
+child[ast_oxc](nc920dfdea0b610c8_ojcppgb50ltif, declarations, 0, nc920dfdea0b610c8_ib974s3j09khd).
+child[ast_oxc](nc920dfdea0b610c8_2vmi5phi7jihf, init, 0, nc920dfdea0b610c8_ojcppgb50ltif).
+node[ast_oxc](nc920dfdea0b610c8_r9gpgl8gvfume, binary_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_r9gpgl8gvfume, 19).
+attr[ast_oxc](nc920dfdea0b610c8_r9gpgl8gvfume, operator, "LessThan").
+node[ast_oxc](nc920dfdea0b610c8_i14o0equr4qa5, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_i14o0equr4qa5, 19).
+attr[ast_oxc](nc920dfdea0b610c8_i14o0equr4qa5, name, "i").
+child[ast_oxc](nc920dfdea0b610c8_r9gpgl8gvfume, left, 0, nc920dfdea0b610c8_i14o0equr4qa5).
+node[ast_oxc](nc920dfdea0b610c8_vvnunt7548d6b, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_vvnunt7548d6b, 19).
+attr[ast_oxc](nc920dfdea0b610c8_vvnunt7548d6b, value, 3).
+child[ast_oxc](nc920dfdea0b610c8_r9gpgl8gvfume, right, 0, nc920dfdea0b610c8_vvnunt7548d6b).
+child[ast_oxc](nc920dfdea0b610c8_2vmi5phi7jihf, test, 0, nc920dfdea0b610c8_r9gpgl8gvfume).
+node[ast_oxc](nc920dfdea0b610c8_jk39t0s1ddrh3, update_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jk39t0s1ddrh3, 19).
+attr[ast_oxc](nc920dfdea0b610c8_jk39t0s1ddrh3, operator, "Increment").
+attr[ast_oxc](nc920dfdea0b610c8_jk39t0s1ddrh3, prefix, false).
+node[ast_oxc](nc920dfdea0b610c8_j4h287enftmkc, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_j4h287enftmkc, 19).
+attr[ast_oxc](nc920dfdea0b610c8_j4h287enftmkc, name, "i").
+child[ast_oxc](nc920dfdea0b610c8_jk39t0s1ddrh3, argument, 0, nc920dfdea0b610c8_j4h287enftmkc).
+child[ast_oxc](nc920dfdea0b610c8_2vmi5phi7jihf, update, 0, nc920dfdea0b610c8_jk39t0s1ddrh3).
+node[ast_oxc](nc920dfdea0b610c8_0rfl596to72i3, continue_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_0rfl596to72i3, 19).
+node[ast_oxc](nc920dfdea0b610c8_jeafuerra9llf, label_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jeafuerra9llf, 19).
+attr[ast_oxc](nc920dfdea0b610c8_jeafuerra9llf, name, "lbl").
+child[ast_oxc](nc920dfdea0b610c8_0rfl596to72i3, label, 0, nc920dfdea0b610c8_jeafuerra9llf).
+child[ast_oxc](nc920dfdea0b610c8_2vmi5phi7jihf, body, 0, nc920dfdea0b610c8_0rfl596to72i3).
+child[ast_oxc](nc920dfdea0b610c8_cjp7m59a8q2if, body, 0, nc920dfdea0b610c8_2vmi5phi7jihf).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 19, nc920dfdea0b610c8_cjp7m59a8q2if).
+node[ast_oxc](nc920dfdea0b610c8_4g2jn9dl87rh1, expression_statement, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_4g2jn9dl87rh1, 20).
+node[ast_oxc](nc920dfdea0b610c8_04ukgbfg4ceuc, new_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_04ukgbfg4ceuc, 20).
+node[ast_oxc](nc920dfdea0b610c8_j0icf02miuj37, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_j0icf02miuj37, 20).
+attr[ast_oxc](nc920dfdea0b610c8_j0icf02miuj37, name, "C").
+child[ast_oxc](nc920dfdea0b610c8_04ukgbfg4ceuc, callee, 0, nc920dfdea0b610c8_j0icf02miuj37).
+node[ast_oxc](nc920dfdea0b610c8_iqdkvbf4kojsb, numeric_literal, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_iqdkvbf4kojsb, 20).
+attr[ast_oxc](nc920dfdea0b610c8_iqdkvbf4kojsb, value, 1).
+child[ast_oxc](nc920dfdea0b610c8_04ukgbfg4ceuc, arguments, 0, nc920dfdea0b610c8_iqdkvbf4kojsb).
+child[ast_oxc](nc920dfdea0b610c8_4g2jn9dl87rh1, expression, 0, nc920dfdea0b610c8_04ukgbfg4ceuc).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 20, nc920dfdea0b610c8_4g2jn9dl87rh1).
+node[ast_oxc](nc920dfdea0b610c8_jn5qpamc4i96e, variable_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_jn5qpamc4i96e, 21).
+attr[ast_oxc](nc920dfdea0b610c8_jn5qpamc4i96e, kind, "Const").
+attr[ast_oxc](nc920dfdea0b610c8_jn5qpamc4i96e, declare, false).
+node[ast_oxc](nc920dfdea0b610c8_oqlelvled0uu8, variable_declarator, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_oqlelvled0uu8, 21).
+node[ast_oxc](nc920dfdea0b610c8_nbr8tssjr87o8, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_nbr8tssjr87o8, 21).
+attr[ast_oxc](nc920dfdea0b610c8_nbr8tssjr87o8, name, "n").
+child[ast_oxc](nc920dfdea0b610c8_oqlelvled0uu8, id, 0, nc920dfdea0b610c8_nbr8tssjr87o8).
+node[ast_oxc](nc920dfdea0b610c8_9s697otqheh84, tsas_expression, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_9s697otqheh84, 21).
+node[ast_oxc](nc920dfdea0b610c8_f5gi6cnd0qmh2, identifier_reference, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_f5gi6cnd0qmh2, 21).
+attr[ast_oxc](nc920dfdea0b610c8_f5gi6cnd0qmh2, name, "x").
+child[ast_oxc](nc920dfdea0b610c8_9s697otqheh84, expression, 0, nc920dfdea0b610c8_f5gi6cnd0qmh2).
+node[ast_oxc](nc920dfdea0b610c8_g645o3tjbl7ab, tsnumber_keyword, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_g645o3tjbl7ab, 21).
+child[ast_oxc](nc920dfdea0b610c8_9s697otqheh84, type_annotation, 0, nc920dfdea0b610c8_g645o3tjbl7ab).
+child[ast_oxc](nc920dfdea0b610c8_oqlelvled0uu8, init, 0, nc920dfdea0b610c8_9s697otqheh84).
+child[ast_oxc](nc920dfdea0b610c8_jn5qpamc4i96e, declarations, 0, nc920dfdea0b610c8_oqlelvled0uu8).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 21, nc920dfdea0b610c8_jn5qpamc4i96e).
+node[ast_oxc](nc920dfdea0b610c8_a8vm0ts5k45f9, tsinterface_declaration, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_a8vm0ts5k45f9, 22).
+node[ast_oxc](nc920dfdea0b610c8_2br5r98751reb, binding_identifier, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_2br5r98751reb, 22).
+attr[ast_oxc](nc920dfdea0b610c8_2br5r98751reb, name, "I").
+child[ast_oxc](nc920dfdea0b610c8_a8vm0ts5k45f9, id, 0, nc920dfdea0b610c8_2br5r98751reb).
+node[ast_oxc](nc920dfdea0b610c8_ciijtsv6f9jvb, tsinterface_body, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_ciijtsv6f9jvb, 22).
+node[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, tsproperty_signature, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, 22).
+attr[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, computed, false).
+attr[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, optional, false).
+attr[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, readonly, false).
+node[ast_oxc](nc920dfdea0b610c8_osib4f952ni33, identifier_name, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_osib4f952ni33, 22).
+attr[ast_oxc](nc920dfdea0b610c8_osib4f952ni33, name, "a").
+child[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, key, 0, nc920dfdea0b610c8_osib4f952ni33).
+node[ast_oxc](nc920dfdea0b610c8_p612an1nhhil9, tstype_annotation, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_p612an1nhhil9, 22).
+node[ast_oxc](nc920dfdea0b610c8_4b749nsf7afn1, tsstring_keyword, "roles/statements.ts").
+line[ast_oxc](nc920dfdea0b610c8_4b749nsf7afn1, 22).
+child[ast_oxc](nc920dfdea0b610c8_p612an1nhhil9, type_annotation, 0, nc920dfdea0b610c8_4b749nsf7afn1).
+child[ast_oxc](nc920dfdea0b610c8_388tdklgjp6ld, type_annotation, 0, nc920dfdea0b610c8_p612an1nhhil9).
+child[ast_oxc](nc920dfdea0b610c8_ciijtsv6f9jvb, body, 0, nc920dfdea0b610c8_388tdklgjp6ld).
+child[ast_oxc](nc920dfdea0b610c8_a8vm0ts5k45f9, body, 0, nc920dfdea0b610c8_ciijtsv6f9jvb).
+attr[ast_oxc](nc920dfdea0b610c8_a8vm0ts5k45f9, declare, false).
+child[ast_oxc](nc920dfdea0b610c8_root, body, 22, nc920dfdea0b610c8_a8vm0ts5k45f9).
+file[ast_oxc](nc920dfdea0b610c8_root, "roles/statements.ts").
+node[ast_oxc](n86fba6a2590419a1_root, program, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_root, 1).
+node[ast_oxc](n86fba6a2590419a1_qg011u3oubd2f, variable_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_qg011u3oubd2f, 1).
+attr[ast_oxc](n86fba6a2590419a1_qg011u3oubd2f, kind, "Let").
+attr[ast_oxc](n86fba6a2590419a1_qg011u3oubd2f, declare, false).
+node[ast_oxc](n86fba6a2590419a1_l9708k38qa3l5, variable_declarator, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_l9708k38qa3l5, 1).
+node[ast_oxc](n86fba6a2590419a1_gsmoqi22mloec, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_gsmoqi22mloec, 1).
+attr[ast_oxc](n86fba6a2590419a1_gsmoqi22mloec, name, "k").
+child[ast_oxc](n86fba6a2590419a1_l9708k38qa3l5, id, 0, n86fba6a2590419a1_gsmoqi22mloec).
+node[ast_oxc](n86fba6a2590419a1_ovethguci77oe, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ovethguci77oe, 1).
+attr[ast_oxc](n86fba6a2590419a1_ovethguci77oe, value, 1).
+child[ast_oxc](n86fba6a2590419a1_l9708k38qa3l5, init, 0, n86fba6a2590419a1_ovethguci77oe).
+child[ast_oxc](n86fba6a2590419a1_qg011u3oubd2f, declarations, 0, n86fba6a2590419a1_l9708k38qa3l5).
+node[ast_oxc](n86fba6a2590419a1_0tuvpe69nm265, variable_declarator, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_0tuvpe69nm265, 1).
+node[ast_oxc](n86fba6a2590419a1_evqubai0f8fl1, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_evqubai0f8fl1, 1).
+attr[ast_oxc](n86fba6a2590419a1_evqubai0f8fl1, name, "z").
+child[ast_oxc](n86fba6a2590419a1_0tuvpe69nm265, id, 0, n86fba6a2590419a1_evqubai0f8fl1).
+node[ast_oxc](n86fba6a2590419a1_4m6qobmh9fn24, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_4m6qobmh9fn24, 1).
+attr[ast_oxc](n86fba6a2590419a1_4m6qobmh9fn24, value, 2).
+child[ast_oxc](n86fba6a2590419a1_0tuvpe69nm265, init, 0, n86fba6a2590419a1_4m6qobmh9fn24).
+child[ast_oxc](n86fba6a2590419a1_qg011u3oubd2f, declarations, 1, n86fba6a2590419a1_0tuvpe69nm265).
+child[ast_oxc](n86fba6a2590419a1_root, body, 0, n86fba6a2590419a1_qg011u3oubd2f).
+node[ast_oxc](n86fba6a2590419a1_8vo76aoj10pdb, tstype_alias_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8vo76aoj10pdb, 2).
+node[ast_oxc](n86fba6a2590419a1_deb46pah4kjkf, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_deb46pah4kjkf, 2).
+attr[ast_oxc](n86fba6a2590419a1_deb46pah4kjkf, name, "A").
+child[ast_oxc](n86fba6a2590419a1_8vo76aoj10pdb, id, 0, n86fba6a2590419a1_deb46pah4kjkf).
+node[ast_oxc](n86fba6a2590419a1_pupmdodnu2eka, tstype_parameter_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_pupmdodnu2eka, 2).
+node[ast_oxc](n86fba6a2590419a1_2tb6f111r3ee2, tstype_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_2tb6f111r3ee2, 2).
+node[ast_oxc](n86fba6a2590419a1_c6bpi3gvc5vaa, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_c6bpi3gvc5vaa, 2).
+attr[ast_oxc](n86fba6a2590419a1_c6bpi3gvc5vaa, name, "T").
+child[ast_oxc](n86fba6a2590419a1_2tb6f111r3ee2, name, 0, n86fba6a2590419a1_c6bpi3gvc5vaa).
+child[ast_oxc](n86fba6a2590419a1_pupmdodnu2eka, params, 0, n86fba6a2590419a1_2tb6f111r3ee2).
+child[ast_oxc](n86fba6a2590419a1_8vo76aoj10pdb, type_parameters, 0, n86fba6a2590419a1_pupmdodnu2eka).
+node[ast_oxc](n86fba6a2590419a1_8ra2ck3d36eif, tsunion_type, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8ra2ck3d36eif, 2).
+node[ast_oxc](n86fba6a2590419a1_1km0v04f03ta8, tsarray_type, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_1km0v04f03ta8, 2).
+node[ast_oxc](n86fba6a2590419a1_iiou48k44f0ob, tstype_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_iiou48k44f0ob, 2).
+node[ast_oxc](n86fba6a2590419a1_gqeqk2pblha68, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_gqeqk2pblha68, 2).
+attr[ast_oxc](n86fba6a2590419a1_gqeqk2pblha68, name, "T").
+child[ast_oxc](n86fba6a2590419a1_iiou48k44f0ob, type_name, 0, n86fba6a2590419a1_gqeqk2pblha68).
+child[ast_oxc](n86fba6a2590419a1_1km0v04f03ta8, element_type, 0, n86fba6a2590419a1_iiou48k44f0ob).
+child[ast_oxc](n86fba6a2590419a1_8ra2ck3d36eif, types, 0, n86fba6a2590419a1_1km0v04f03ta8).
+node[ast_oxc](n86fba6a2590419a1_t61n40kpdb0p2, tsintersection_type, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_t61n40kpdb0p2, 2).
+node[ast_oxc](n86fba6a2590419a1_i5ooqoqk7knb3, tsstring_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_i5ooqoqk7knb3, 2).
+child[ast_oxc](n86fba6a2590419a1_t61n40kpdb0p2, types, 0, n86fba6a2590419a1_i5ooqoqk7knb3).
+node[ast_oxc](n86fba6a2590419a1_5i5pjbrvuclga, tstype_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_5i5pjbrvuclga, 2).
+node[ast_oxc](n86fba6a2590419a1_e1ooh4phl78jb, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_e1ooh4phl78jb, 2).
+attr[ast_oxc](n86fba6a2590419a1_e1ooh4phl78jb, name, "B").
+child[ast_oxc](n86fba6a2590419a1_5i5pjbrvuclga, type_name, 0, n86fba6a2590419a1_e1ooh4phl78jb).
+child[ast_oxc](n86fba6a2590419a1_t61n40kpdb0p2, types, 1, n86fba6a2590419a1_5i5pjbrvuclga).
+child[ast_oxc](n86fba6a2590419a1_8ra2ck3d36eif, types, 1, n86fba6a2590419a1_t61n40kpdb0p2).
+child[ast_oxc](n86fba6a2590419a1_8vo76aoj10pdb, type_annotation, 0, n86fba6a2590419a1_8ra2ck3d36eif).
+attr[ast_oxc](n86fba6a2590419a1_8vo76aoj10pdb, declare, false).
+child[ast_oxc](n86fba6a2590419a1_root, body, 1, n86fba6a2590419a1_8vo76aoj10pdb).
+node[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, function, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, 3).
+node[ast_oxc](n86fba6a2590419a1_4jj64s5e7s693, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_4jj64s5e7s693, 3).
+attr[ast_oxc](n86fba6a2590419a1_4jj64s5e7s693, name, "id").
+child[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, id, 0, n86fba6a2590419a1_4jj64s5e7s693).
+node[ast_oxc](n86fba6a2590419a1_ehc052ujcj4j3, tstype_parameter_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ehc052ujcj4j3, 3).
+node[ast_oxc](n86fba6a2590419a1_nud42t27f4ai7, tstype_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_nud42t27f4ai7, 3).
+node[ast_oxc](n86fba6a2590419a1_l0ftseh0gg1tc, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_l0ftseh0gg1tc, 3).
+attr[ast_oxc](n86fba6a2590419a1_l0ftseh0gg1tc, name, "T").
+child[ast_oxc](n86fba6a2590419a1_nud42t27f4ai7, name, 0, n86fba6a2590419a1_l0ftseh0gg1tc).
+node[ast_oxc](n86fba6a2590419a1_talmv5riqkbja, tsobject_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_talmv5riqkbja, 3).
+child[ast_oxc](n86fba6a2590419a1_nud42t27f4ai7, constraint, 0, n86fba6a2590419a1_talmv5riqkbja).
+child[ast_oxc](n86fba6a2590419a1_ehc052ujcj4j3, params, 0, n86fba6a2590419a1_nud42t27f4ai7).
+child[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, type_parameters, 0, n86fba6a2590419a1_ehc052ujcj4j3).
+node[ast_oxc](n86fba6a2590419a1_fng868k5d2cl, formal_parameters, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_fng868k5d2cl, 3).
+attr[ast_oxc](n86fba6a2590419a1_fng868k5d2cl, kind, "FormalParameter").
+node[ast_oxc](n86fba6a2590419a1_8mf91sp99u3be, formal_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8mf91sp99u3be, 3).
+attr[ast_oxc](n86fba6a2590419a1_8mf91sp99u3be, optional, false).
+attr[ast_oxc](n86fba6a2590419a1_8mf91sp99u3be, readonly, false).
+node[ast_oxc](n86fba6a2590419a1_f5jlldohtq9u3, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_f5jlldohtq9u3, 3).
+attr[ast_oxc](n86fba6a2590419a1_f5jlldohtq9u3, name, "x").
+child[ast_oxc](n86fba6a2590419a1_8mf91sp99u3be, pattern, 0, n86fba6a2590419a1_f5jlldohtq9u3).
+node[ast_oxc](n86fba6a2590419a1_m09joqmmjf0p5, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_m09joqmmjf0p5, 3).
+node[ast_oxc](n86fba6a2590419a1_6vfrckmfkv174, tstype_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_6vfrckmfkv174, 3).
+node[ast_oxc](n86fba6a2590419a1_ba1becfupfg88, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ba1becfupfg88, 3).
+attr[ast_oxc](n86fba6a2590419a1_ba1becfupfg88, name, "T").
+child[ast_oxc](n86fba6a2590419a1_6vfrckmfkv174, type_name, 0, n86fba6a2590419a1_ba1becfupfg88).
+child[ast_oxc](n86fba6a2590419a1_m09joqmmjf0p5, type_annotation, 0, n86fba6a2590419a1_6vfrckmfkv174).
+child[ast_oxc](n86fba6a2590419a1_8mf91sp99u3be, type_annotation, 0, n86fba6a2590419a1_m09joqmmjf0p5).
+child[ast_oxc](n86fba6a2590419a1_fng868k5d2cl, items, 0, n86fba6a2590419a1_8mf91sp99u3be).
+node[ast_oxc](n86fba6a2590419a1_v27b87bd1f3vd, formal_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_v27b87bd1f3vd, 3).
+attr[ast_oxc](n86fba6a2590419a1_v27b87bd1f3vd, optional, true).
+attr[ast_oxc](n86fba6a2590419a1_v27b87bd1f3vd, readonly, false).
+node[ast_oxc](n86fba6a2590419a1_19c694n4hgli4, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_19c694n4hgli4, 3).
+attr[ast_oxc](n86fba6a2590419a1_19c694n4hgli4, name, "y").
+child[ast_oxc](n86fba6a2590419a1_v27b87bd1f3vd, pattern, 0, n86fba6a2590419a1_19c694n4hgli4).
+node[ast_oxc](n86fba6a2590419a1_q75mklasvlubd, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_q75mklasvlubd, 3).
+node[ast_oxc](n86fba6a2590419a1_lrbiv4irrbi74, tsnumber_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lrbiv4irrbi74, 3).
+child[ast_oxc](n86fba6a2590419a1_q75mklasvlubd, type_annotation, 0, n86fba6a2590419a1_lrbiv4irrbi74).
+child[ast_oxc](n86fba6a2590419a1_v27b87bd1f3vd, type_annotation, 0, n86fba6a2590419a1_q75mklasvlubd).
+child[ast_oxc](n86fba6a2590419a1_fng868k5d2cl, items, 1, n86fba6a2590419a1_v27b87bd1f3vd).
+child[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, params, 0, n86fba6a2590419a1_fng868k5d2cl).
+node[ast_oxc](n86fba6a2590419a1_7tjcvbckmrksc, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7tjcvbckmrksc, 3).
+node[ast_oxc](n86fba6a2590419a1_ho9g5vn66v0hd, tstype_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ho9g5vn66v0hd, 3).
+node[ast_oxc](n86fba6a2590419a1_sfbc6jj68ok38, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_sfbc6jj68ok38, 3).
+attr[ast_oxc](n86fba6a2590419a1_sfbc6jj68ok38, name, "Map").
+child[ast_oxc](n86fba6a2590419a1_ho9g5vn66v0hd, type_name, 0, n86fba6a2590419a1_sfbc6jj68ok38).
+node[ast_oxc](n86fba6a2590419a1_63q8ns04e7do5, tstype_parameter_instantiation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_63q8ns04e7do5, 3).
+node[ast_oxc](n86fba6a2590419a1_vk5qsc0s8ocp3, tsstring_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_vk5qsc0s8ocp3, 3).
+child[ast_oxc](n86fba6a2590419a1_63q8ns04e7do5, params, 0, n86fba6a2590419a1_vk5qsc0s8ocp3).
+node[ast_oxc](n86fba6a2590419a1_0c2onqo1l0ml9, tstype_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_0c2onqo1l0ml9, 3).
+node[ast_oxc](n86fba6a2590419a1_d36upgu63lo8c, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_d36upgu63lo8c, 3).
+attr[ast_oxc](n86fba6a2590419a1_d36upgu63lo8c, name, "T").
+child[ast_oxc](n86fba6a2590419a1_0c2onqo1l0ml9, type_name, 0, n86fba6a2590419a1_d36upgu63lo8c).
+child[ast_oxc](n86fba6a2590419a1_63q8ns04e7do5, params, 1, n86fba6a2590419a1_0c2onqo1l0ml9).
+child[ast_oxc](n86fba6a2590419a1_ho9g5vn66v0hd, type_arguments, 0, n86fba6a2590419a1_63q8ns04e7do5).
+child[ast_oxc](n86fba6a2590419a1_7tjcvbckmrksc, type_annotation, 0, n86fba6a2590419a1_ho9g5vn66v0hd).
+child[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, return_type, 0, n86fba6a2590419a1_7tjcvbckmrksc).
+node[ast_oxc](n86fba6a2590419a1_42ehrh7nicad4, function_body, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_42ehrh7nicad4, 3).
+node[ast_oxc](n86fba6a2590419a1_us2dl6vccfv85, return_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_us2dl6vccfv85, 3).
+node[ast_oxc](n86fba6a2590419a1_pg6p76o39bn0b, tsas_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_pg6p76o39bn0b, 3).
+node[ast_oxc](n86fba6a2590419a1_7cduif3pe8l5, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7cduif3pe8l5, 3).
+attr[ast_oxc](n86fba6a2590419a1_7cduif3pe8l5, name, "x").
+child[ast_oxc](n86fba6a2590419a1_pg6p76o39bn0b, expression, 0, n86fba6a2590419a1_7cduif3pe8l5).
+node[ast_oxc](n86fba6a2590419a1_tai1j698fc347, tsany_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_tai1j698fc347, 3).
+child[ast_oxc](n86fba6a2590419a1_pg6p76o39bn0b, type_annotation, 0, n86fba6a2590419a1_tai1j698fc347).
+child[ast_oxc](n86fba6a2590419a1_us2dl6vccfv85, argument, 0, n86fba6a2590419a1_pg6p76o39bn0b).
+child[ast_oxc](n86fba6a2590419a1_42ehrh7nicad4, statements, 0, n86fba6a2590419a1_us2dl6vccfv85).
+child[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, body, 0, n86fba6a2590419a1_42ehrh7nicad4).
+attr[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, type, "FunctionDeclaration").
+attr[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, generator, false).
+attr[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, async, false).
+attr[ast_oxc](n86fba6a2590419a1_fhabe4vhe9ov6, declare, false).
+child[ast_oxc](n86fba6a2590419a1_root, body, 2, n86fba6a2590419a1_fhabe4vhe9ov6).
+node[ast_oxc](n86fba6a2590419a1_1697uompctpo4, function, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_1697uompctpo4, 4).
+node[ast_oxc](n86fba6a2590419a1_fbd8g7ah27fc1, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_fbd8g7ah27fc1, 4).
+attr[ast_oxc](n86fba6a2590419a1_fbd8g7ah27fc1, name, "dd").
+child[ast_oxc](n86fba6a2590419a1_1697uompctpo4, id, 0, n86fba6a2590419a1_fbd8g7ah27fc1).
+node[ast_oxc](n86fba6a2590419a1_s0tq4eov4j6g5, formal_parameters, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_s0tq4eov4j6g5, 4).
+attr[ast_oxc](n86fba6a2590419a1_s0tq4eov4j6g5, kind, "FormalParameter").
+node[ast_oxc](n86fba6a2590419a1_v2789ho99ese8, formal_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_v2789ho99ese8, 4).
+attr[ast_oxc](n86fba6a2590419a1_v2789ho99ese8, optional, false).
+attr[ast_oxc](n86fba6a2590419a1_v2789ho99ese8, readonly, false).
+node[ast_oxc](n86fba6a2590419a1_752jv75erhqna, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_752jv75erhqna, 4).
+attr[ast_oxc](n86fba6a2590419a1_752jv75erhqna, name, "a").
+child[ast_oxc](n86fba6a2590419a1_v2789ho99ese8, pattern, 0, n86fba6a2590419a1_752jv75erhqna).
+node[ast_oxc](n86fba6a2590419a1_30eav8or6jrhd, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_30eav8or6jrhd, 4).
+node[ast_oxc](n86fba6a2590419a1_mo2ua77b2eks2, tsnumber_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_mo2ua77b2eks2, 4).
+child[ast_oxc](n86fba6a2590419a1_30eav8or6jrhd, type_annotation, 0, n86fba6a2590419a1_mo2ua77b2eks2).
+child[ast_oxc](n86fba6a2590419a1_v2789ho99ese8, type_annotation, 0, n86fba6a2590419a1_30eav8or6jrhd).
+child[ast_oxc](n86fba6a2590419a1_s0tq4eov4j6g5, items, 0, n86fba6a2590419a1_v2789ho99ese8).
+child[ast_oxc](n86fba6a2590419a1_1697uompctpo4, params, 0, n86fba6a2590419a1_s0tq4eov4j6g5).
+node[ast_oxc](n86fba6a2590419a1_orf2pvqq125id, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_orf2pvqq125id, 4).
+node[ast_oxc](n86fba6a2590419a1_lr1p2sapo6t09, tsvoid_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lr1p2sapo6t09, 4).
+child[ast_oxc](n86fba6a2590419a1_orf2pvqq125id, type_annotation, 0, n86fba6a2590419a1_lr1p2sapo6t09).
+child[ast_oxc](n86fba6a2590419a1_1697uompctpo4, return_type, 0, n86fba6a2590419a1_orf2pvqq125id).
+attr[ast_oxc](n86fba6a2590419a1_1697uompctpo4, type, "TSDeclareFunction").
+attr[ast_oxc](n86fba6a2590419a1_1697uompctpo4, generator, false).
+attr[ast_oxc](n86fba6a2590419a1_1697uompctpo4, async, false).
+attr[ast_oxc](n86fba6a2590419a1_1697uompctpo4, declare, true).
+child[ast_oxc](n86fba6a2590419a1_root, body, 3, n86fba6a2590419a1_1697uompctpo4).
+node[ast_oxc](n86fba6a2590419a1_r5ll209j5j4fe, tsinterface_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_r5ll209j5j4fe, 5).
+node[ast_oxc](n86fba6a2590419a1_ge3jvcd0l0om2, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ge3jvcd0l0om2, 5).
+attr[ast_oxc](n86fba6a2590419a1_ge3jvcd0l0om2, name, "J").
+child[ast_oxc](n86fba6a2590419a1_r5ll209j5j4fe, id, 0, n86fba6a2590419a1_ge3jvcd0l0om2).
+node[ast_oxc](n86fba6a2590419a1_bgj1hp92ig2kc, tsinterface_heritage, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_bgj1hp92ig2kc, 5).
+node[ast_oxc](n86fba6a2590419a1_6ih445acn19gb, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_6ih445acn19gb, 5).
+attr[ast_oxc](n86fba6a2590419a1_6ih445acn19gb, name, "K").
+child[ast_oxc](n86fba6a2590419a1_bgj1hp92ig2kc, type_name, 0, n86fba6a2590419a1_6ih445acn19gb).
+node[ast_oxc](n86fba6a2590419a1_4np5te8efv9bb, tstype_parameter_instantiation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_4np5te8efv9bb, 5).
+node[ast_oxc](n86fba6a2590419a1_omrb4ns3aojn, tsnumber_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_omrb4ns3aojn, 5).
+child[ast_oxc](n86fba6a2590419a1_4np5te8efv9bb, params, 0, n86fba6a2590419a1_omrb4ns3aojn).
+child[ast_oxc](n86fba6a2590419a1_bgj1hp92ig2kc, type_arguments, 0, n86fba6a2590419a1_4np5te8efv9bb).
+child[ast_oxc](n86fba6a2590419a1_r5ll209j5j4fe, extends, 0, n86fba6a2590419a1_bgj1hp92ig2kc).
+node[ast_oxc](n86fba6a2590419a1_c8qdkj00g2sv, tsinterface_body, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_c8qdkj00g2sv, 5).
+node[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, tsmethod_signature, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, 5).
+node[ast_oxc](n86fba6a2590419a1_km4eqgfruqhf1, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_km4eqgfruqhf1, 5).
+attr[ast_oxc](n86fba6a2590419a1_km4eqgfruqhf1, name, "m").
+child[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, key, 0, n86fba6a2590419a1_km4eqgfruqhf1).
+node[ast_oxc](n86fba6a2590419a1_lfbdjusbker38, formal_parameters, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lfbdjusbker38, 5).
+attr[ast_oxc](n86fba6a2590419a1_lfbdjusbker38, kind, "Signature").
+node[ast_oxc](n86fba6a2590419a1_a8ihk5qr1qan9, formal_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_a8ihk5qr1qan9, 5).
+attr[ast_oxc](n86fba6a2590419a1_a8ihk5qr1qan9, optional, false).
+attr[ast_oxc](n86fba6a2590419a1_a8ihk5qr1qan9, readonly, false).
+node[ast_oxc](n86fba6a2590419a1_o7j9osahc8e3c, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_o7j9osahc8e3c, 5).
+attr[ast_oxc](n86fba6a2590419a1_o7j9osahc8e3c, name, "a").
+child[ast_oxc](n86fba6a2590419a1_a8ihk5qr1qan9, pattern, 0, n86fba6a2590419a1_o7j9osahc8e3c).
+node[ast_oxc](n86fba6a2590419a1_9en06n7n7b1m2, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_9en06n7n7b1m2, 5).
+node[ast_oxc](n86fba6a2590419a1_er78934sptvsa, tsstring_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_er78934sptvsa, 5).
+child[ast_oxc](n86fba6a2590419a1_9en06n7n7b1m2, type_annotation, 0, n86fba6a2590419a1_er78934sptvsa).
+child[ast_oxc](n86fba6a2590419a1_a8ihk5qr1qan9, type_annotation, 0, n86fba6a2590419a1_9en06n7n7b1m2).
+child[ast_oxc](n86fba6a2590419a1_lfbdjusbker38, items, 0, n86fba6a2590419a1_a8ihk5qr1qan9).
+child[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, params, 0, n86fba6a2590419a1_lfbdjusbker38).
+node[ast_oxc](n86fba6a2590419a1_c6n2opv986rdb, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_c6n2opv986rdb, 5).
+node[ast_oxc](n86fba6a2590419a1_rcijcoqfclkqe, tsvoid_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_rcijcoqfclkqe, 5).
+child[ast_oxc](n86fba6a2590419a1_c6n2opv986rdb, type_annotation, 0, n86fba6a2590419a1_rcijcoqfclkqe).
+child[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, return_type, 0, n86fba6a2590419a1_c6n2opv986rdb).
+attr[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, computed, false).
+attr[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, optional, false).
+attr[ast_oxc](n86fba6a2590419a1_9nrl5e2qicdh3, kind, "Method").
+child[ast_oxc](n86fba6a2590419a1_c8qdkj00g2sv, body, 0, n86fba6a2590419a1_9nrl5e2qicdh3).
+node[ast_oxc](n86fba6a2590419a1_ha9d52e7h1oh4, tsindex_signature, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ha9d52e7h1oh4, 5).
+attr[ast_oxc](n86fba6a2590419a1_ha9d52e7h1oh4, readonly, false).
+attr[ast_oxc](n86fba6a2590419a1_ha9d52e7h1oh4, static, false).
+node[ast_oxc](n86fba6a2590419a1_d76nfo33vtaa3, tsindex_signature_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_d76nfo33vtaa3, 5).
+attr[ast_oxc](n86fba6a2590419a1_d76nfo33vtaa3, name, "k").
+node[ast_oxc](n86fba6a2590419a1_gnlf27jjdp339, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_gnlf27jjdp339, 5).
+node[ast_oxc](n86fba6a2590419a1_u01e6qglc41i1, tsstring_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_u01e6qglc41i1, 5).
+child[ast_oxc](n86fba6a2590419a1_gnlf27jjdp339, type_annotation, 0, n86fba6a2590419a1_u01e6qglc41i1).
+child[ast_oxc](n86fba6a2590419a1_d76nfo33vtaa3, type_annotation, 0, n86fba6a2590419a1_gnlf27jjdp339).
+child[ast_oxc](n86fba6a2590419a1_ha9d52e7h1oh4, parameter, 0, n86fba6a2590419a1_d76nfo33vtaa3).
+node[ast_oxc](n86fba6a2590419a1_7979noe1rgd8c, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7979noe1rgd8c, 5).
+node[ast_oxc](n86fba6a2590419a1_n6vi1e1778au6, tsany_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_n6vi1e1778au6, 5).
+child[ast_oxc](n86fba6a2590419a1_7979noe1rgd8c, type_annotation, 0, n86fba6a2590419a1_n6vi1e1778au6).
+child[ast_oxc](n86fba6a2590419a1_ha9d52e7h1oh4, type_annotation, 0, n86fba6a2590419a1_7979noe1rgd8c).
+child[ast_oxc](n86fba6a2590419a1_c8qdkj00g2sv, body, 1, n86fba6a2590419a1_ha9d52e7h1oh4).
+child[ast_oxc](n86fba6a2590419a1_r5ll209j5j4fe, body, 0, n86fba6a2590419a1_c8qdkj00g2sv).
+attr[ast_oxc](n86fba6a2590419a1_r5ll209j5j4fe, declare, false).
+child[ast_oxc](n86fba6a2590419a1_root, body, 4, n86fba6a2590419a1_r5ll209j5j4fe).
+node[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, class, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, 6).
+node[ast_oxc](n86fba6a2590419a1_945o4a7qmhmqa, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_945o4a7qmhmqa, 6).
+attr[ast_oxc](n86fba6a2590419a1_945o4a7qmhmqa, name, "D").
+child[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, id, 0, n86fba6a2590419a1_945o4a7qmhmqa).
+node[ast_oxc](n86fba6a2590419a1_lifn823jj3gme, tsclass_implements, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lifn823jj3gme, 6).
+node[ast_oxc](n86fba6a2590419a1_ei8nlt3bmkd11, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ei8nlt3bmkd11, 6).
+attr[ast_oxc](n86fba6a2590419a1_ei8nlt3bmkd11, name, "J").
+child[ast_oxc](n86fba6a2590419a1_lifn823jj3gme, expression, 0, n86fba6a2590419a1_ei8nlt3bmkd11).
+child[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, implements, 0, n86fba6a2590419a1_lifn823jj3gme).
+node[ast_oxc](n86fba6a2590419a1_ftrveq6ctc31f, tsclass_implements, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ftrveq6ctc31f, 6).
+node[ast_oxc](n86fba6a2590419a1_6pqkmf15vvbid, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_6pqkmf15vvbid, 6).
+attr[ast_oxc](n86fba6a2590419a1_6pqkmf15vvbid, name, "L").
+child[ast_oxc](n86fba6a2590419a1_ftrveq6ctc31f, expression, 0, n86fba6a2590419a1_6pqkmf15vvbid).
+child[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, implements, 1, n86fba6a2590419a1_ftrveq6ctc31f).
+node[ast_oxc](n86fba6a2590419a1_fk05qf0nrmna5, class_body, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_fk05qf0nrmna5, 6).
+node[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, method_definition, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, 6).
+attr[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, type, "MethodDefinition").
+attr[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, kind, "Constructor").
+attr[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, computed, false).
+attr[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, static, false).
+node[ast_oxc](n86fba6a2590419a1_mkakfcg2ilkb2, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_mkakfcg2ilkb2, 6).
+attr[ast_oxc](n86fba6a2590419a1_mkakfcg2ilkb2, name, "constructor").
+child[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, key, 0, n86fba6a2590419a1_mkakfcg2ilkb2).
+node[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, function, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, 6).
+node[ast_oxc](n86fba6a2590419a1_c5rfbf774cgs9, formal_parameters, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_c5rfbf774cgs9, 6).
+attr[ast_oxc](n86fba6a2590419a1_c5rfbf774cgs9, kind, "UniqueFormalParameters").
+node[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, formal_parameter, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, 6).
+attr[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, optional, false).
+attr[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, accessibility, "Private").
+attr[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, readonly, true).
+node[ast_oxc](n86fba6a2590419a1_7t4vqb5n5cj18, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7t4vqb5n5cj18, 6).
+attr[ast_oxc](n86fba6a2590419a1_7t4vqb5n5cj18, name, "q").
+child[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, pattern, 0, n86fba6a2590419a1_7t4vqb5n5cj18).
+node[ast_oxc](n86fba6a2590419a1_ht4u7ctioeb16, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ht4u7ctioeb16, 6).
+node[ast_oxc](n86fba6a2590419a1_dbi60slonr99, tsnumber_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dbi60slonr99, 6).
+child[ast_oxc](n86fba6a2590419a1_ht4u7ctioeb16, type_annotation, 0, n86fba6a2590419a1_dbi60slonr99).
+child[ast_oxc](n86fba6a2590419a1_n4bd4e2ijolq7, type_annotation, 0, n86fba6a2590419a1_ht4u7ctioeb16).
+child[ast_oxc](n86fba6a2590419a1_c5rfbf774cgs9, items, 0, n86fba6a2590419a1_n4bd4e2ijolq7).
+child[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, params, 0, n86fba6a2590419a1_c5rfbf774cgs9).
+node[ast_oxc](n86fba6a2590419a1_8krf4ucaudjff, function_body, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8krf4ucaudjff, 6).
+child[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, body, 0, n86fba6a2590419a1_8krf4ucaudjff).
+attr[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, type, "FunctionExpression").
+attr[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, generator, false).
+attr[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, async, false).
+attr[ast_oxc](n86fba6a2590419a1_5i0lmghkpc41, declare, false).
+child[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, value, 0, n86fba6a2590419a1_5i0lmghkpc41).
+attr[ast_oxc](n86fba6a2590419a1_450qr0lng0r4c, optional, false).
+child[ast_oxc](n86fba6a2590419a1_fk05qf0nrmna5, body, 0, n86fba6a2590419a1_450qr0lng0r4c).
+node[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, property_definition, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, 6).
+attr[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, type, "PropertyDefinition").
+attr[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, computed, false).
+attr[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, static, false).
+attr[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, declare, true).
+node[ast_oxc](n86fba6a2590419a1_baeh0ctpnqj2c, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_baeh0ctpnqj2c, 6).
+attr[ast_oxc](n86fba6a2590419a1_baeh0ctpnqj2c, name, "z").
+child[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, key, 0, n86fba6a2590419a1_baeh0ctpnqj2c).
+node[ast_oxc](n86fba6a2590419a1_5fifud7mvebq8, tstype_annotation, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_5fifud7mvebq8, 6).
+node[ast_oxc](n86fba6a2590419a1_3sj8eridhpofa, tsnumber_keyword, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_3sj8eridhpofa, 6).
+child[ast_oxc](n86fba6a2590419a1_5fifud7mvebq8, type_annotation, 0, n86fba6a2590419a1_3sj8eridhpofa).
+child[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, type_annotation, 0, n86fba6a2590419a1_5fifud7mvebq8).
+attr[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, optional, false).
+attr[ast_oxc](n86fba6a2590419a1_rja5qq8psq51d, readonly, false).
+child[ast_oxc](n86fba6a2590419a1_fk05qf0nrmna5, body, 1, n86fba6a2590419a1_rja5qq8psq51d).
+child[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, body, 0, n86fba6a2590419a1_fk05qf0nrmna5).
+attr[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, type, "ClassDeclaration").
+attr[ast_oxc](n86fba6a2590419a1_334j3riit6rj1, declare, false).
+child[ast_oxc](n86fba6a2590419a1_root, body, 5, n86fba6a2590419a1_334j3riit6rj1).
+node[ast_oxc](n86fba6a2590419a1_cv47rpt496os, tsenum_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_cv47rpt496os, 7).
+attr[ast_oxc](n86fba6a2590419a1_cv47rpt496os, declare, false).
+node[ast_oxc](n86fba6a2590419a1_cbjsibrtnojsb, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_cbjsibrtnojsb, 7).
+attr[ast_oxc](n86fba6a2590419a1_cbjsibrtnojsb, name, "E").
+child[ast_oxc](n86fba6a2590419a1_cv47rpt496os, id, 0, n86fba6a2590419a1_cbjsibrtnojsb).
+node[ast_oxc](n86fba6a2590419a1_cnm5jbqh4mih4, tsenum_body, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_cnm5jbqh4mih4, 7).
+node[ast_oxc](n86fba6a2590419a1_vlr0kg7moo9g2, tsenum_member, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_vlr0kg7moo9g2, 7).
+node[ast_oxc](n86fba6a2590419a1_1rs4f9gs2arpc, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_1rs4f9gs2arpc, 7).
+attr[ast_oxc](n86fba6a2590419a1_1rs4f9gs2arpc, name, "A").
+child[ast_oxc](n86fba6a2590419a1_vlr0kg7moo9g2, id, 0, n86fba6a2590419a1_1rs4f9gs2arpc).
+node[ast_oxc](n86fba6a2590419a1_lg3mpf7026gpa, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lg3mpf7026gpa, 7).
+attr[ast_oxc](n86fba6a2590419a1_lg3mpf7026gpa, value, 1).
+child[ast_oxc](n86fba6a2590419a1_vlr0kg7moo9g2, initializer, 0, n86fba6a2590419a1_lg3mpf7026gpa).
+child[ast_oxc](n86fba6a2590419a1_cnm5jbqh4mih4, members, 0, n86fba6a2590419a1_vlr0kg7moo9g2).
+node[ast_oxc](n86fba6a2590419a1_4numppsjrt2bb, tsenum_member, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_4numppsjrt2bb, 7).
+node[ast_oxc](n86fba6a2590419a1_pe4a1ot947mm3, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_pe4a1ot947mm3, 7).
+attr[ast_oxc](n86fba6a2590419a1_pe4a1ot947mm3, name, "B").
+child[ast_oxc](n86fba6a2590419a1_4numppsjrt2bb, id, 0, n86fba6a2590419a1_pe4a1ot947mm3).
+child[ast_oxc](n86fba6a2590419a1_cnm5jbqh4mih4, members, 1, n86fba6a2590419a1_4numppsjrt2bb).
+child[ast_oxc](n86fba6a2590419a1_cv47rpt496os, body, 0, n86fba6a2590419a1_cnm5jbqh4mih4).
+child[ast_oxc](n86fba6a2590419a1_root, body, 6, n86fba6a2590419a1_cv47rpt496os).
+node[ast_oxc](n86fba6a2590419a1_ulib8rdg77emb, tsnamespace_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ulib8rdg77emb, 8).
+node[ast_oxc](n86fba6a2590419a1_mk20gfa8n7et3, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_mk20gfa8n7et3, 8).
+attr[ast_oxc](n86fba6a2590419a1_mk20gfa8n7et3, name, "N").
+child[ast_oxc](n86fba6a2590419a1_ulib8rdg77emb, id, 0, n86fba6a2590419a1_mk20gfa8n7et3).
+node[ast_oxc](n86fba6a2590419a1_96jgq4m820vbe, tsmodule_block, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_96jgq4m820vbe, 8).
+node[ast_oxc](n86fba6a2590419a1_bo0518cguded9, export_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_bo0518cguded9, 8).
+node[ast_oxc](n86fba6a2590419a1_7d57o3gtag4k9, variable_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7d57o3gtag4k9, 8).
+attr[ast_oxc](n86fba6a2590419a1_7d57o3gtag4k9, kind, "Const").
+attr[ast_oxc](n86fba6a2590419a1_7d57o3gtag4k9, declare, false).
+node[ast_oxc](n86fba6a2590419a1_gojs2032pogi3, variable_declarator, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_gojs2032pogi3, 8).
+node[ast_oxc](n86fba6a2590419a1_iqqvrist93taf, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_iqqvrist93taf, 8).
+attr[ast_oxc](n86fba6a2590419a1_iqqvrist93taf, name, "v").
+child[ast_oxc](n86fba6a2590419a1_gojs2032pogi3, id, 0, n86fba6a2590419a1_iqqvrist93taf).
+node[ast_oxc](n86fba6a2590419a1_tj87f4i7bs512, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_tj87f4i7bs512, 8).
+attr[ast_oxc](n86fba6a2590419a1_tj87f4i7bs512, value, 1).
+child[ast_oxc](n86fba6a2590419a1_gojs2032pogi3, init, 0, n86fba6a2590419a1_tj87f4i7bs512).
+child[ast_oxc](n86fba6a2590419a1_7d57o3gtag4k9, declarations, 0, n86fba6a2590419a1_gojs2032pogi3).
+child[ast_oxc](n86fba6a2590419a1_bo0518cguded9, declaration, 0, n86fba6a2590419a1_7d57o3gtag4k9).
+child[ast_oxc](n86fba6a2590419a1_96jgq4m820vbe, body, 0, n86fba6a2590419a1_bo0518cguded9).
+child[ast_oxc](n86fba6a2590419a1_ulib8rdg77emb, body, 0, n86fba6a2590419a1_96jgq4m820vbe).
+attr[ast_oxc](n86fba6a2590419a1_ulib8rdg77emb, kind, "Namespace").
+attr[ast_oxc](n86fba6a2590419a1_ulib8rdg77emb, declare, false).
+child[ast_oxc](n86fba6a2590419a1_root, body, 7, n86fba6a2590419a1_ulib8rdg77emb).
+node[ast_oxc](n86fba6a2590419a1_nnsk14q5smjka, export_named_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_nnsk14q5smjka, 9).
+attr[ast_oxc](n86fba6a2590419a1_nnsk14q5smjka, export_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_dufbod2m18g91, export_specifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dufbod2m18g91, 9).
+attr[ast_oxc](n86fba6a2590419a1_dufbod2m18g91, export_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_72tfe3qbr9vte, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_72tfe3qbr9vte, 9).
+attr[ast_oxc](n86fba6a2590419a1_72tfe3qbr9vte, name, "k").
+child[ast_oxc](n86fba6a2590419a1_dufbod2m18g91, local, 0, n86fba6a2590419a1_72tfe3qbr9vte).
+node[ast_oxc](n86fba6a2590419a1_uqtmlbvi81o24, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_uqtmlbvi81o24, 9).
+attr[ast_oxc](n86fba6a2590419a1_uqtmlbvi81o24, name, "kk").
+child[ast_oxc](n86fba6a2590419a1_dufbod2m18g91, exported, 0, n86fba6a2590419a1_uqtmlbvi81o24).
+child[ast_oxc](n86fba6a2590419a1_nnsk14q5smjka, specifiers, 0, n86fba6a2590419a1_dufbod2m18g91).
+node[ast_oxc](n86fba6a2590419a1_nv0224qfklo1a, export_specifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_nv0224qfklo1a, 9).
+attr[ast_oxc](n86fba6a2590419a1_nv0224qfklo1a, export_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_dcvp00af3be16, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dcvp00af3be16, 9).
+attr[ast_oxc](n86fba6a2590419a1_dcvp00af3be16, name, "z").
+child[ast_oxc](n86fba6a2590419a1_nv0224qfklo1a, local, 0, n86fba6a2590419a1_dcvp00af3be16).
+node[ast_oxc](n86fba6a2590419a1_ko0mbjo4remub, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ko0mbjo4remub, 9).
+attr[ast_oxc](n86fba6a2590419a1_ko0mbjo4remub, name, "z").
+child[ast_oxc](n86fba6a2590419a1_nv0224qfklo1a, exported, 0, n86fba6a2590419a1_ko0mbjo4remub).
+child[ast_oxc](n86fba6a2590419a1_nnsk14q5smjka, specifiers, 1, n86fba6a2590419a1_nv0224qfklo1a).
+child[ast_oxc](n86fba6a2590419a1_root, body, 8, n86fba6a2590419a1_nnsk14q5smjka).
+node[ast_oxc](n86fba6a2590419a1_0pbems7hfar18, export_from_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_0pbems7hfar18, 10).
+attr[ast_oxc](n86fba6a2590419a1_0pbems7hfar18, export_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_jg1vr3q7boekc, export_specifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_jg1vr3q7boekc, 10).
+attr[ast_oxc](n86fba6a2590419a1_jg1vr3q7boekc, export_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_j24r3ahvqa9c1, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_j24r3ahvqa9c1, 10).
+attr[ast_oxc](n86fba6a2590419a1_j24r3ahvqa9c1, name, "a").
+child[ast_oxc](n86fba6a2590419a1_jg1vr3q7boekc, local, 0, n86fba6a2590419a1_j24r3ahvqa9c1).
+node[ast_oxc](n86fba6a2590419a1_psnntvv2lsejb, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_psnntvv2lsejb, 10).
+attr[ast_oxc](n86fba6a2590419a1_psnntvv2lsejb, name, "aa").
+child[ast_oxc](n86fba6a2590419a1_jg1vr3q7boekc, exported, 0, n86fba6a2590419a1_psnntvv2lsejb).
+child[ast_oxc](n86fba6a2590419a1_0pbems7hfar18, specifiers, 0, n86fba6a2590419a1_jg1vr3q7boekc).
+node[ast_oxc](n86fba6a2590419a1_3fus6o4er209c, string_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_3fus6o4er209c, 10).
+attr[ast_oxc](n86fba6a2590419a1_3fus6o4er209c, value, "./m").
+child[ast_oxc](n86fba6a2590419a1_0pbems7hfar18, source, 0, n86fba6a2590419a1_3fus6o4er209c).
+child[ast_oxc](n86fba6a2590419a1_root, body, 9, n86fba6a2590419a1_0pbems7hfar18).
+node[ast_oxc](n86fba6a2590419a1_h3q7a8h07ci65, export_all_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_h3q7a8h07ci65, 11).
+attr[ast_oxc](n86fba6a2590419a1_h3q7a8h07ci65, export_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_3q4hldlfklofb, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_3q4hldlfklofb, 11).
+attr[ast_oxc](n86fba6a2590419a1_3q4hldlfklofb, name, "nsx").
+child[ast_oxc](n86fba6a2590419a1_h3q7a8h07ci65, exported, 0, n86fba6a2590419a1_3q4hldlfklofb).
+node[ast_oxc](n86fba6a2590419a1_dpfspuufc6fr2, string_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dpfspuufc6fr2, 11).
+attr[ast_oxc](n86fba6a2590419a1_dpfspuufc6fr2, value, "./n").
+child[ast_oxc](n86fba6a2590419a1_h3q7a8h07ci65, source, 0, n86fba6a2590419a1_dpfspuufc6fr2).
+child[ast_oxc](n86fba6a2590419a1_root, body, 10, n86fba6a2590419a1_h3q7a8h07ci65).
+node[ast_oxc](n86fba6a2590419a1_27lrmi9erm4id, import_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_27lrmi9erm4id, 12).
+attr[ast_oxc](n86fba6a2590419a1_27lrmi9erm4id, import_kind, "Type").
+node[ast_oxc](n86fba6a2590419a1_hdc8gl9ob3bb8, import_specifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_hdc8gl9ob3bb8, 12).
+attr[ast_oxc](n86fba6a2590419a1_hdc8gl9ob3bb8, import_kind, "Value").
+node[ast_oxc](n86fba6a2590419a1_dgqi1oji2cnsf, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dgqi1oji2cnsf, 12).
+attr[ast_oxc](n86fba6a2590419a1_dgqi1oji2cnsf, name, "T1").
+child[ast_oxc](n86fba6a2590419a1_hdc8gl9ob3bb8, imported, 0, n86fba6a2590419a1_dgqi1oji2cnsf).
+node[ast_oxc](n86fba6a2590419a1_8851qv8b6cqd, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8851qv8b6cqd, 12).
+attr[ast_oxc](n86fba6a2590419a1_8851qv8b6cqd, name, "T1").
+child[ast_oxc](n86fba6a2590419a1_hdc8gl9ob3bb8, local, 0, n86fba6a2590419a1_8851qv8b6cqd).
+child[ast_oxc](n86fba6a2590419a1_27lrmi9erm4id, specifiers, 0, n86fba6a2590419a1_hdc8gl9ob3bb8).
+node[ast_oxc](n86fba6a2590419a1_2k6he0c35dtn3, string_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_2k6he0c35dtn3, 12).
+attr[ast_oxc](n86fba6a2590419a1_2k6he0c35dtn3, value, "./t").
+child[ast_oxc](n86fba6a2590419a1_27lrmi9erm4id, source, 0, n86fba6a2590419a1_2k6he0c35dtn3).
+child[ast_oxc](n86fba6a2590419a1_root, body, 11, n86fba6a2590419a1_27lrmi9erm4id).
+node[ast_oxc](n86fba6a2590419a1_af9e6hi23vte4, variable_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_af9e6hi23vte4, 13).
+attr[ast_oxc](n86fba6a2590419a1_af9e6hi23vte4, kind, "Const").
+attr[ast_oxc](n86fba6a2590419a1_af9e6hi23vte4, declare, false).
+node[ast_oxc](n86fba6a2590419a1_28atmgr2e16pf, variable_declarator, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_28atmgr2e16pf, 13).
+node[ast_oxc](n86fba6a2590419a1_vprkupjkvho66, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_vprkupjkvho66, 13).
+attr[ast_oxc](n86fba6a2590419a1_vprkupjkvho66, name, "dyn").
+child[ast_oxc](n86fba6a2590419a1_28atmgr2e16pf, id, 0, n86fba6a2590419a1_vprkupjkvho66).
+node[ast_oxc](n86fba6a2590419a1_m0h1ivht3jq01, import_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_m0h1ivht3jq01, 13).
+node[ast_oxc](n86fba6a2590419a1_8tfnoaa91fh2d, string_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8tfnoaa91fh2d, 13).
+attr[ast_oxc](n86fba6a2590419a1_8tfnoaa91fh2d, value, "./d").
+child[ast_oxc](n86fba6a2590419a1_m0h1ivht3jq01, source, 0, n86fba6a2590419a1_8tfnoaa91fh2d).
+child[ast_oxc](n86fba6a2590419a1_28atmgr2e16pf, init, 0, n86fba6a2590419a1_m0h1ivht3jq01).
+child[ast_oxc](n86fba6a2590419a1_af9e6hi23vte4, declarations, 0, n86fba6a2590419a1_28atmgr2e16pf).
+child[ast_oxc](n86fba6a2590419a1_root, body, 12, n86fba6a2590419a1_af9e6hi23vte4).
+node[ast_oxc](n86fba6a2590419a1_5jkiv0d15fma8, variable_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_5jkiv0d15fma8, 14).
+attr[ast_oxc](n86fba6a2590419a1_5jkiv0d15fma8, kind, "Let").
+attr[ast_oxc](n86fba6a2590419a1_5jkiv0d15fma8, declare, false).
+node[ast_oxc](n86fba6a2590419a1_e56d4pp4ivfb4, variable_declarator, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_e56d4pp4ivfb4, 14).
+node[ast_oxc](n86fba6a2590419a1_hi3vqlga0l1n2, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_hi3vqlga0l1n2, 14).
+attr[ast_oxc](n86fba6a2590419a1_hi3vqlga0l1n2, name, "o2").
+child[ast_oxc](n86fba6a2590419a1_e56d4pp4ivfb4, id, 0, n86fba6a2590419a1_hi3vqlga0l1n2).
+node[ast_oxc](n86fba6a2590419a1_0jphgcp8mdp02, chain_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_0jphgcp8mdp02, 14).
+node[ast_oxc](n86fba6a2590419a1_76tare3kflds2, static_member_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_76tare3kflds2, 14).
+attr[ast_oxc](n86fba6a2590419a1_76tare3kflds2, optional, true).
+node[ast_oxc](n86fba6a2590419a1_flk47e0b56bae, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_flk47e0b56bae, 14).
+attr[ast_oxc](n86fba6a2590419a1_flk47e0b56bae, name, "a").
+child[ast_oxc](n86fba6a2590419a1_76tare3kflds2, object, 0, n86fba6a2590419a1_flk47e0b56bae).
+node[ast_oxc](n86fba6a2590419a1_790pdpkruq77b, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_790pdpkruq77b, 14).
+attr[ast_oxc](n86fba6a2590419a1_790pdpkruq77b, name, "b").
+child[ast_oxc](n86fba6a2590419a1_76tare3kflds2, property, 0, n86fba6a2590419a1_790pdpkruq77b).
+child[ast_oxc](n86fba6a2590419a1_0jphgcp8mdp02, expression, 0, n86fba6a2590419a1_76tare3kflds2).
+child[ast_oxc](n86fba6a2590419a1_e56d4pp4ivfb4, init, 0, n86fba6a2590419a1_0jphgcp8mdp02).
+child[ast_oxc](n86fba6a2590419a1_5jkiv0d15fma8, declarations, 0, n86fba6a2590419a1_e56d4pp4ivfb4).
+child[ast_oxc](n86fba6a2590419a1_root, body, 13, n86fba6a2590419a1_5jkiv0d15fma8).
+node[ast_oxc](n86fba6a2590419a1_ukrp7cfmguel3, labeled_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ukrp7cfmguel3, 14).
+node[ast_oxc](n86fba6a2590419a1_1ukgn09k5kftb, label_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_1ukgn09k5kftb, 14).
+attr[ast_oxc](n86fba6a2590419a1_1ukgn09k5kftb, name, "label2").
+child[ast_oxc](n86fba6a2590419a1_ukrp7cfmguel3, label, 0, n86fba6a2590419a1_1ukgn09k5kftb).
+node[ast_oxc](n86fba6a2590419a1_9fb4klf29u8g3, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_9fb4klf29u8g3, 14).
+node[ast_oxc](n86fba6a2590419a1_akeml8d97lt87, call_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_akeml8d97lt87, 14).
+attr[ast_oxc](n86fba6a2590419a1_akeml8d97lt87, optional, false).
+node[ast_oxc](n86fba6a2590419a1_633sj9biov41c, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_633sj9biov41c, 14).
+attr[ast_oxc](n86fba6a2590419a1_633sj9biov41c, name, "x").
+child[ast_oxc](n86fba6a2590419a1_akeml8d97lt87, callee, 0, n86fba6a2590419a1_633sj9biov41c).
+child[ast_oxc](n86fba6a2590419a1_9fb4klf29u8g3, expression, 0, n86fba6a2590419a1_akeml8d97lt87).
+child[ast_oxc](n86fba6a2590419a1_ukrp7cfmguel3, body, 0, n86fba6a2590419a1_9fb4klf29u8g3).
+child[ast_oxc](n86fba6a2590419a1_root, body, 14, n86fba6a2590419a1_ukrp7cfmguel3).
+node[ast_oxc](n86fba6a2590419a1_g9g1oj203cua, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_g9g1oj203cua, 15).
+node[ast_oxc](n86fba6a2590419a1_uvp2schjmjp0f, unary_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_uvp2schjmjp0f, 15).
+attr[ast_oxc](n86fba6a2590419a1_uvp2schjmjp0f, operator, "Typeof").
+node[ast_oxc](n86fba6a2590419a1_m7mkf77bmcuu5, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_m7mkf77bmcuu5, 15).
+attr[ast_oxc](n86fba6a2590419a1_m7mkf77bmcuu5, name, "q").
+child[ast_oxc](n86fba6a2590419a1_uvp2schjmjp0f, argument, 0, n86fba6a2590419a1_m7mkf77bmcuu5).
+child[ast_oxc](n86fba6a2590419a1_g9g1oj203cua, expression, 0, n86fba6a2590419a1_uvp2schjmjp0f).
+child[ast_oxc](n86fba6a2590419a1_root, body, 15, n86fba6a2590419a1_g9g1oj203cua).
+node[ast_oxc](n86fba6a2590419a1_fuugmaoc13ps2, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_fuugmaoc13ps2, 15).
+node[ast_oxc](n86fba6a2590419a1_hsk573107bhda, unary_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_hsk573107bhda, 15).
+attr[ast_oxc](n86fba6a2590419a1_hsk573107bhda, operator, "Delete").
+node[ast_oxc](n86fba6a2590419a1_76h7ttloe6cm, static_member_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_76h7ttloe6cm, 15).
+attr[ast_oxc](n86fba6a2590419a1_76h7ttloe6cm, optional, false).
+node[ast_oxc](n86fba6a2590419a1_9ggnaa7kd8uk3, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_9ggnaa7kd8uk3, 15).
+attr[ast_oxc](n86fba6a2590419a1_9ggnaa7kd8uk3, name, "o").
+child[ast_oxc](n86fba6a2590419a1_76h7ttloe6cm, object, 0, n86fba6a2590419a1_9ggnaa7kd8uk3).
+node[ast_oxc](n86fba6a2590419a1_5euilhac9omoa, identifier_name, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_5euilhac9omoa, 15).
+attr[ast_oxc](n86fba6a2590419a1_5euilhac9omoa, name, "p").
+child[ast_oxc](n86fba6a2590419a1_76h7ttloe6cm, property, 0, n86fba6a2590419a1_5euilhac9omoa).
+child[ast_oxc](n86fba6a2590419a1_hsk573107bhda, argument, 0, n86fba6a2590419a1_76h7ttloe6cm).
+child[ast_oxc](n86fba6a2590419a1_fuugmaoc13ps2, expression, 0, n86fba6a2590419a1_hsk573107bhda).
+child[ast_oxc](n86fba6a2590419a1_root, body, 16, n86fba6a2590419a1_fuugmaoc13ps2).
+node[ast_oxc](n86fba6a2590419a1_onp754tdgii82, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_onp754tdgii82, 15).
+node[ast_oxc](n86fba6a2590419a1_2tcd8pikptmh, unary_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_2tcd8pikptmh, 15).
+attr[ast_oxc](n86fba6a2590419a1_2tcd8pikptmh, operator, "Void").
+node[ast_oxc](n86fba6a2590419a1_a43l50nti15ha, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_a43l50nti15ha, 15).
+attr[ast_oxc](n86fba6a2590419a1_a43l50nti15ha, value, 0).
+child[ast_oxc](n86fba6a2590419a1_2tcd8pikptmh, argument, 0, n86fba6a2590419a1_a43l50nti15ha).
+child[ast_oxc](n86fba6a2590419a1_onp754tdgii82, expression, 0, n86fba6a2590419a1_2tcd8pikptmh).
+child[ast_oxc](n86fba6a2590419a1_root, body, 17, n86fba6a2590419a1_onp754tdgii82).
+node[ast_oxc](n86fba6a2590419a1_sbasvuuookvp, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_sbasvuuookvp, 15).
+node[ast_oxc](n86fba6a2590419a1_lu5sab9kkfi49, null_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lu5sab9kkfi49, 15).
+child[ast_oxc](n86fba6a2590419a1_sbasvuuookvp, expression, 0, n86fba6a2590419a1_lu5sab9kkfi49).
+child[ast_oxc](n86fba6a2590419a1_root, body, 18, n86fba6a2590419a1_sbasvuuookvp).
+node[ast_oxc](n86fba6a2590419a1_9jlce5b447v99, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_9jlce5b447v99, 15).
+node[ast_oxc](n86fba6a2590419a1_m52tf04dcd7ba, reg_exp_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_m52tf04dcd7ba, 15).
+child[ast_oxc](n86fba6a2590419a1_9jlce5b447v99, expression, 0, n86fba6a2590419a1_m52tf04dcd7ba).
+child[ast_oxc](n86fba6a2590419a1_root, body, 19, n86fba6a2590419a1_9jlce5b447v99).
+node[ast_oxc](n86fba6a2590419a1_btjlciaobel29, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_btjlciaobel29, 15).
+node[ast_oxc](n86fba6a2590419a1_5vaj463s5hs3b, big_int_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_5vaj463s5hs3b, 15).
+attr[ast_oxc](n86fba6a2590419a1_5vaj463s5hs3b, value, "10").
+child[ast_oxc](n86fba6a2590419a1_btjlciaobel29, expression, 0, n86fba6a2590419a1_5vaj463s5hs3b).
+child[ast_oxc](n86fba6a2590419a1_root, body, 20, n86fba6a2590419a1_btjlciaobel29).
+node[ast_oxc](n86fba6a2590419a1_1dbip7u41tbn, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_1dbip7u41tbn, 15).
+node[ast_oxc](n86fba6a2590419a1_dfci9ltpa5gm2, boolean_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dfci9ltpa5gm2, 15).
+attr[ast_oxc](n86fba6a2590419a1_dfci9ltpa5gm2, value, true).
+child[ast_oxc](n86fba6a2590419a1_1dbip7u41tbn, expression, 0, n86fba6a2590419a1_dfci9ltpa5gm2).
+child[ast_oxc](n86fba6a2590419a1_root, body, 21, n86fba6a2590419a1_1dbip7u41tbn).
+node[ast_oxc](n86fba6a2590419a1_7ksf1f6lb6svc, do_while_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7ksf1f6lb6svc, 16).
+node[ast_oxc](n86fba6a2590419a1_091tl2ehs55hd, block_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_091tl2ehs55hd, 16).
+node[ast_oxc](n86fba6a2590419a1_8e4k0tgk9vhm, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_8e4k0tgk9vhm, 16).
+node[ast_oxc](n86fba6a2590419a1_idsg9ord1ir7f, update_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_idsg9ord1ir7f, 16).
+attr[ast_oxc](n86fba6a2590419a1_idsg9ord1ir7f, operator, "Decrement").
+attr[ast_oxc](n86fba6a2590419a1_idsg9ord1ir7f, prefix, false).
+node[ast_oxc](n86fba6a2590419a1_2bt1et3r59mda, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_2bt1et3r59mda, 16).
+attr[ast_oxc](n86fba6a2590419a1_2bt1et3r59mda, name, "i").
+child[ast_oxc](n86fba6a2590419a1_idsg9ord1ir7f, argument, 0, n86fba6a2590419a1_2bt1et3r59mda).
+child[ast_oxc](n86fba6a2590419a1_8e4k0tgk9vhm, expression, 0, n86fba6a2590419a1_idsg9ord1ir7f).
+child[ast_oxc](n86fba6a2590419a1_091tl2ehs55hd, body, 0, n86fba6a2590419a1_8e4k0tgk9vhm).
+child[ast_oxc](n86fba6a2590419a1_7ksf1f6lb6svc, body, 0, n86fba6a2590419a1_091tl2ehs55hd).
+node[ast_oxc](n86fba6a2590419a1_devas3a15adv9, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_devas3a15adv9, 16).
+attr[ast_oxc](n86fba6a2590419a1_devas3a15adv9, name, "i").
+child[ast_oxc](n86fba6a2590419a1_7ksf1f6lb6svc, test, 0, n86fba6a2590419a1_devas3a15adv9).
+child[ast_oxc](n86fba6a2590419a1_root, body, 22, n86fba6a2590419a1_7ksf1f6lb6svc).
+node[ast_oxc](n86fba6a2590419a1_bknvqkflb3j25, for_in_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_bknvqkflb3j25, 17).
+node[ast_oxc](n86fba6a2590419a1_s9o63ddupskbc, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_s9o63ddupskbc, 17).
+attr[ast_oxc](n86fba6a2590419a1_s9o63ddupskbc, name, "k").
+child[ast_oxc](n86fba6a2590419a1_bknvqkflb3j25, left, 0, n86fba6a2590419a1_s9o63ddupskbc).
+node[ast_oxc](n86fba6a2590419a1_lobbnk2drhut8, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_lobbnk2drhut8, 17).
+attr[ast_oxc](n86fba6a2590419a1_lobbnk2drhut8, name, "o").
+child[ast_oxc](n86fba6a2590419a1_bknvqkflb3j25, right, 0, n86fba6a2590419a1_lobbnk2drhut8).
+node[ast_oxc](n86fba6a2590419a1_v1ee1vnijdi9, block_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_v1ee1vnijdi9, 17).
+child[ast_oxc](n86fba6a2590419a1_bknvqkflb3j25, body, 0, n86fba6a2590419a1_v1ee1vnijdi9).
+child[ast_oxc](n86fba6a2590419a1_root, body, 23, n86fba6a2590419a1_bknvqkflb3j25).
+node[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, function, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, 18).
+node[ast_oxc](n86fba6a2590419a1_ae2i01af8muj5, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_ae2i01af8muj5, 18).
+attr[ast_oxc](n86fba6a2590419a1_ae2i01af8muj5, name, "nf").
+child[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, id, 0, n86fba6a2590419a1_ae2i01af8muj5).
+node[ast_oxc](n86fba6a2590419a1_9u4jv8n7ussc, formal_parameters, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_9u4jv8n7ussc, 18).
+attr[ast_oxc](n86fba6a2590419a1_9u4jv8n7ussc, kind, "FormalParameter").
+child[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, params, 0, n86fba6a2590419a1_9u4jv8n7ussc).
+node[ast_oxc](n86fba6a2590419a1_gfpgtohf909u1, function_body, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_gfpgtohf909u1, 18).
+node[ast_oxc](n86fba6a2590419a1_cpitouabv0mj7, return_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_cpitouabv0mj7, 18).
+node[ast_oxc](n86fba6a2590419a1_4knrttkop7ps, new_target, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_4knrttkop7ps, 18).
+child[ast_oxc](n86fba6a2590419a1_cpitouabv0mj7, argument, 0, n86fba6a2590419a1_4knrttkop7ps).
+child[ast_oxc](n86fba6a2590419a1_gfpgtohf909u1, statements, 0, n86fba6a2590419a1_cpitouabv0mj7).
+child[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, body, 0, n86fba6a2590419a1_gfpgtohf909u1).
+attr[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, type, "FunctionDeclaration").
+attr[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, generator, false).
+attr[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, async, false).
+attr[ast_oxc](n86fba6a2590419a1_ga3deqv63jp8d, declare, false).
+child[ast_oxc](n86fba6a2590419a1_root, body, 24, n86fba6a2590419a1_ga3deqv63jp8d).
+node[ast_oxc](n86fba6a2590419a1_dtas47qu531s9, variable_declaration, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_dtas47qu531s9, 18).
+attr[ast_oxc](n86fba6a2590419a1_dtas47qu531s9, kind, "Const").
+attr[ast_oxc](n86fba6a2590419a1_dtas47qu531s9, declare, false).
+node[ast_oxc](n86fba6a2590419a1_rsv5nqg4h3khc, variable_declarator, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_rsv5nqg4h3khc, 18).
+node[ast_oxc](n86fba6a2590419a1_1prldeh3h2a5b, binding_identifier, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_1prldeh3h2a5b, 18).
+attr[ast_oxc](n86fba6a2590419a1_1prldeh3h2a5b, name, "im").
+child[ast_oxc](n86fba6a2590419a1_rsv5nqg4h3khc, id, 0, n86fba6a2590419a1_1prldeh3h2a5b).
+node[ast_oxc](n86fba6a2590419a1_nb6uq7ptannh8, import_meta, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_nb6uq7ptannh8, 18).
+child[ast_oxc](n86fba6a2590419a1_rsv5nqg4h3khc, init, 0, n86fba6a2590419a1_nb6uq7ptannh8).
+child[ast_oxc](n86fba6a2590419a1_dtas47qu531s9, declarations, 0, n86fba6a2590419a1_rsv5nqg4h3khc).
+child[ast_oxc](n86fba6a2590419a1_root, body, 25, n86fba6a2590419a1_dtas47qu531s9).
+node[ast_oxc](n86fba6a2590419a1_a8obggh19j905, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_a8obggh19j905, 19).
+node[ast_oxc](n86fba6a2590419a1_hvhp3b460ac79, assignment_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_hvhp3b460ac79, 19).
+attr[ast_oxc](n86fba6a2590419a1_hvhp3b460ac79, operator, "LogicalOr").
+node[ast_oxc](n86fba6a2590419a1_3ojfk9v4ut3k4, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_3ojfk9v4ut3k4, 19).
+attr[ast_oxc](n86fba6a2590419a1_3ojfk9v4ut3k4, name, "x").
+child[ast_oxc](n86fba6a2590419a1_hvhp3b460ac79, left, 0, n86fba6a2590419a1_3ojfk9v4ut3k4).
+node[ast_oxc](n86fba6a2590419a1_hqfphdv35m9i7, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_hqfphdv35m9i7, 19).
+attr[ast_oxc](n86fba6a2590419a1_hqfphdv35m9i7, value, 1).
+child[ast_oxc](n86fba6a2590419a1_hvhp3b460ac79, right, 0, n86fba6a2590419a1_hqfphdv35m9i7).
+child[ast_oxc](n86fba6a2590419a1_a8obggh19j905, expression, 0, n86fba6a2590419a1_hvhp3b460ac79).
+child[ast_oxc](n86fba6a2590419a1_root, body, 26, n86fba6a2590419a1_a8obggh19j905).
+node[ast_oxc](n86fba6a2590419a1_p2nhqscfpqc75, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_p2nhqscfpqc75, 19).
+node[ast_oxc](n86fba6a2590419a1_oae43mfgj6cud, assignment_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_oae43mfgj6cud, 19).
+attr[ast_oxc](n86fba6a2590419a1_oae43mfgj6cud, operator, "LogicalAnd").
+node[ast_oxc](n86fba6a2590419a1_l93262ksljg12, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_l93262ksljg12, 19).
+attr[ast_oxc](n86fba6a2590419a1_l93262ksljg12, name, "y").
+child[ast_oxc](n86fba6a2590419a1_oae43mfgj6cud, left, 0, n86fba6a2590419a1_l93262ksljg12).
+node[ast_oxc](n86fba6a2590419a1_tn8v6emo5jcg2, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_tn8v6emo5jcg2, 19).
+attr[ast_oxc](n86fba6a2590419a1_tn8v6emo5jcg2, value, 2).
+child[ast_oxc](n86fba6a2590419a1_oae43mfgj6cud, right, 0, n86fba6a2590419a1_tn8v6emo5jcg2).
+child[ast_oxc](n86fba6a2590419a1_p2nhqscfpqc75, expression, 0, n86fba6a2590419a1_oae43mfgj6cud).
+child[ast_oxc](n86fba6a2590419a1_root, body, 27, n86fba6a2590419a1_p2nhqscfpqc75).
+node[ast_oxc](n86fba6a2590419a1_0i2fhfcmolfg, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_0i2fhfcmolfg, 19).
+node[ast_oxc](n86fba6a2590419a1_f0ugjir9rhhq4, assignment_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_f0ugjir9rhhq4, 19).
+attr[ast_oxc](n86fba6a2590419a1_f0ugjir9rhhq4, operator, "LogicalNullish").
+node[ast_oxc](n86fba6a2590419a1_7r48re2mgpep2, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_7r48re2mgpep2, 19).
+attr[ast_oxc](n86fba6a2590419a1_7r48re2mgpep2, name, "z").
+child[ast_oxc](n86fba6a2590419a1_f0ugjir9rhhq4, left, 0, n86fba6a2590419a1_7r48re2mgpep2).
+node[ast_oxc](n86fba6a2590419a1_or8ji316q5766, numeric_literal, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_or8ji316q5766, 19).
+attr[ast_oxc](n86fba6a2590419a1_or8ji316q5766, value, 3).
+child[ast_oxc](n86fba6a2590419a1_f0ugjir9rhhq4, right, 0, n86fba6a2590419a1_or8ji316q5766).
+child[ast_oxc](n86fba6a2590419a1_0i2fhfcmolfg, expression, 0, n86fba6a2590419a1_f0ugjir9rhhq4).
+child[ast_oxc](n86fba6a2590419a1_root, body, 28, n86fba6a2590419a1_0i2fhfcmolfg).
+node[ast_oxc](n86fba6a2590419a1_i1ua3qvqvbhbb, expression_statement, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_i1ua3qvqvbhbb, 19).
+node[ast_oxc](n86fba6a2590419a1_vcm8kdcid6qgf, parenthesized_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_vcm8kdcid6qgf, 19).
+node[ast_oxc](n86fba6a2590419a1_0gn61n52gom0a, sequence_expression, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_0gn61n52gom0a, 19).
+node[ast_oxc](n86fba6a2590419a1_nugelrqisafv5, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_nugelrqisafv5, 19).
+attr[ast_oxc](n86fba6a2590419a1_nugelrqisafv5, name, "a").
+child[ast_oxc](n86fba6a2590419a1_0gn61n52gom0a, expressions, 0, n86fba6a2590419a1_nugelrqisafv5).
+node[ast_oxc](n86fba6a2590419a1_eg92336mgns28, identifier_reference, "roles/types.ts").
+line[ast_oxc](n86fba6a2590419a1_eg92336mgns28, 19).
+attr[ast_oxc](n86fba6a2590419a1_eg92336mgns28, name, "b").
+child[ast_oxc](n86fba6a2590419a1_0gn61n52gom0a, expressions, 1, n86fba6a2590419a1_eg92336mgns28).
+child[ast_oxc](n86fba6a2590419a1_vcm8kdcid6qgf, expression, 0, n86fba6a2590419a1_0gn61n52gom0a).
+child[ast_oxc](n86fba6a2590419a1_i1ua3qvqvbhbb, expression, 0, n86fba6a2590419a1_vcm8kdcid6qgf).
+child[ast_oxc](n86fba6a2590419a1_root, body, 29, n86fba6a2590419a1_i1ua3qvqvbhbb).
+file[ast_oxc](n86fba6a2590419a1_root, "roles/types.ts").

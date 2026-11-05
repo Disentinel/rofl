@@ -174,10 +174,11 @@ lib_readonly_only[audit](P, Key) :- lib_readonly_member(P, Key),
 
 -- `ambient_effect` has no heap column, and a prototype's receiver is a value
 -- in THIS program, so a row can only be written where the receiver's heap is
--- decided by the model: a prototype every one of whose `kind_prototype` kinds
--- is a `node_value_kind` has no untraced receiver (`array`, `regexp`), while
--- `"ab".concat(x)` is a read of an untraced receiver.
-amb_proto_untraced(P) :- kind_prototype(K, P), not node_value_kind(K).
+-- decided by the model: a primitive's prototype has an untraced receiver
+-- (`"ab".concat(x)`), while `array` and `regexp` are values the model traces.
+edb(primitive_prototype).
+primitive_prototype(string). primitive_prototype(number). primitive_prototype(boolean). primitive_prototype(bigint).
+amb_proto_untraced(P) :- primitive_prototype(P).
 amb_proto_heap(P, local) :- builtin_prototype(P), not amb_proto_untraced(P).
 
 -- the structural argument as a row: heap-decided here, `global` in js-effects

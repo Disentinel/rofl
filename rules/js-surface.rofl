@@ -57,7 +57,7 @@ sx_unset_field[surface](C, K) :- sx_esc[surface](C), class_unset_field[flow](C, 
 sx_field_sure[surface](C, K, J) :- sx_esc[surface](C), member_field_sure[flow](C, K, J).
 sx_field_runs[surface](C, K, J, G) :- sx_esc[surface](C), member_field_runs[flow](C, K, J, G).
 sx_elem[surface](A, I, E)    :- sx_esc[surface](A), array_elem[flow](A, I, E).
-sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ast_name[code](E, Name).
+sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ref[value](E, Name).
 sx_proto[surface](N, P)      :- sx_esc[surface](N), kind_proto[flow](N, P).
 sx_ext[surface](N, S)        :- sx_esc[surface](N), external_value[flow](N, S).
 sx_bns[surface](N, S)        :- sx_esc[surface](N), builtin_ns[flow](N, S).
@@ -172,8 +172,8 @@ sx_rest_elem[surface](R, K, A) :- sx_rest[surface](F, J, R), resolves[code](C, F
                                   I >= J, K is I - J.
 -- a function handed to an external call is called back by code the corpus cannot see
 sx_cb[surface](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
-                                 callee[value](C, G), ast_node[code](C, K, _), call_like_v(K),
-                                 ast_child[code](C, arguments, _, A), may_be_node[flow](A, F), fn_value[flow](F).
+                                 callee[value](C, G), call_like[code](C),
+                                 nth[tree](C, _, A), not spread_args[value](C, _, A), may_be_node[flow](A, F), fn_value[flow](F).
 
 next_send[flow](G, V) :- sx_next[surface](G, V).
 array_elem[flow](R, K, A) :- sx_rest_elem[surface](R, K, A).
@@ -186,7 +186,7 @@ param_assigned[flow](F, Name) :- assign_param[flow](A, F), assigned[code](A, _, 
 -- what the call is.
 call_returns[flow](F, E) :- returns[flow](F, E), not generator[value](F).
 param_read[flow](F, I, E) :- param_use[flow](F, Name, E), param_of[flow](F, I, Name),
-                             param[value](F, I, P), parent[tree](F, P), ast_node[code](P, identifier, _),
+                             param[value](F, I, P), parent[tree](F, P), binds[value](P, _),
                              not param_assigned[flow](F, Name), not sees_binder[code](E, _).
 ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_read[flow](F, I, E).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
@@ -208,10 +208,10 @@ sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), generator[value](F), may_be_
 -- ---------------------------------------------------------------- what a call writes
 -- `o[k] = v` with k and v the function's own parameters (`on(name, handler)`): at a call, THAT call's value under
 -- THAT call's key, not every value under every key.
-store_pkey[flow](F, J, I, A) :- plain_assign[flow](A), ast_child[code](A, left, 0, L), computed_key[code](L, Q),
-                                param_read[flow](F, J, Q), ast_child[code](A, right, 0, V), param_read[flow](F, I, V).
+store_pkey[flow](F, J, I, A) :- assign[value](A, L, V), plain_assign[flow](A), computed_key[code](L, Q),
+                                param_read[flow](F, J, Q), param_read[flow](F, I, V).
 store_sym[flow](A) :- store_pkey[flow](_, _, _, A).
-sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), ast_child[code](A, left, 0, L),
+sx_store_pkey[surface](F, J, I, O) :- store_pkey[flow](F, J, I, A), assign[value](A, L, _),
                                       object_of[code](L, Obj), may_be_node[flow](Obj, O).
 sx_mwrite[surface](O, K, A) :- sx_store_pkey[surface](F, J, I, O), resolves[code](C, F),
                                arg_at[flow](C, J, B), may_be_lit[flow](B, K), arg_at[flow](C, I, A).

@@ -475,7 +475,6 @@ check[checks]("facts/goldens.rofl", "rules_js-globals", world).
 check[checks]("facts/goldens.rofl", "rules_js-host", world).
 check[checks]("facts/goldens.rofl", "rules_js-model", world).
 check[checks]("facts/goldens.rofl", "rules_js-modules", world).
-check[checks]("facts/goldens.rofl", "rules_js-pack-home", world).
 check[checks]("facts/goldens.rofl", "rules_js-resolve", world).
 check[checks]("facts/goldens.rofl", "rules_js-service", world).
 check[checks]("facts/goldens.rofl", "rules_js-structure", world).
@@ -934,7 +933,7 @@ check[checks]("facts/goldens.rofl", "refused", world).
 check[checks]("facts/goldens.rofl", "retract_again", world).
 check[checks]("facts/goldens.rofl", "retract_last", world).
 check[checks]("facts/goldens.rofl", "retract_last_read", world).
-check[checks]("facts/goldens.rofl", "roles_babel", world).
+check[checks]("facts/goldens.rofl", "roles_oxc", world).
 check[checks]("facts/goldens.rofl", "scan_requests", world).
 check[checks]("facts/goldens.rofl", "sealed_provenance", world).
 check[checks]("facts/goldens.rofl", "sensors_t3", world).
@@ -967,7 +966,6 @@ check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
-check[checks](".github/workflows/ci.yml", "roles parity", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "npm packages", ci).
 check[checks](".github/workflows/ci.yml", "planted faults", ci).

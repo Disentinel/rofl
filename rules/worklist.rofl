@@ -1,20 +1,8 @@
--- rules/worklist.rofl — THE PLAN, DERIVED FROM WHAT THE MODEL KNOWS ABOUT
--- ITSELF. rules/js-model.rofl already answers which cells are open and whose
--- fault each unknown is; a plan adds ORDER, STATE and the link from an item to
--- the problems it spawned, and only those are authored here. Closing a cell
--- moves the queue with no edit; an item claiming a cell the model says is shut
--- is red.
---
--- The claim is `claim(queued, ...)` and not a relation of its own, so the
--- fourth ledger costs one fact, `claim_kind(queued)`, and inherits
--- `orphan[audit]` instead of copying it. The granularity is the model's
--- finest: `cell[audit]/4` carries the shape column, `none` where the axis
--- does not split. What this ledger may not do is tick a cell: `verdict[audit]`
--- reads `handled` and `ignored` only, so queueing work is not doing it.
+-- rules/worklist.rofl — THE PLAN: items, their state, what each waits on, and
+-- what to take next. Authored: the items and their states. Derived: the order.
 
 edb(work).          -- work(Item, Note)             an item, and what it is
 edb(work_state).    -- work_state(Item, State)      open | taken | done
-edb(work_sweeps).   -- work_sweeps(Item, Layer)     owns the layer's residue
 edb(work_spawned).  -- work_spawned(Item, Finding)  a problem this item found
 edb(work_needs).    -- work_needs(Item, Other)      Other must be done first
 edb(work_state_kind).
@@ -23,100 +11,10 @@ work_state_kind(open).
 work_state_kind(taken).
 work_state_kind(done).
 
--- =========================================================================
--- THE OPEN QUEUE, DERIVED. `unknown_type` splits a reason into the program's
--- (`irreducible`) and ours, which is right for the matrix and wrong for a
--- plan: `out_of_scope` is a decision already taken and `budget_exhausted` a
--- statement about resources, and neither is a thing anybody will do. A reason
--- the plan has no opinion about raises `reason_unclassified`.
-edb(reason_is_work).
-edb(reason_not_work).
-reason_is_work(not_yet).
-reason_not_work(out_of_scope).
-reason_not_work(budget_exhausted).
-
--- SCOPE IS THE OWNER'S WORD, not the model's and not mine: `out_of_scope`
--- takes a cell out of the queue for good. An exclusion with no recorded
--- decision is a row until the owner writes `scope_decided`; the verdict is
--- not overturned, the cell is just never silent.
-edb(scope_decided).   -- scope_decided(Kind, Shape, Layer)  -- the owner said so
-
-scope_unowned[audit](K, S, L) :- reason[audit](js, K, S, L, out_of_scope),
-                                 not scope_decided(K, S, L).
-
-reason_unclassified[audit](R) :- unknown_type(R, ours),
-                                 not reason_is_work(R), not reason_not_work(R).
-
-open_cell[audit](K, S, L) :- our_unknown[audit](js, K, S, L),
-                             reason[audit](js, K, S, L, R), reason_is_work(R).
-
--- =========================================================================
--- A BLOCKER THAT IS NOT A WORK ITEM. `work_needs` waits on another item; a
--- cell blocked by the scanner's vocabulary or by an ambient declaration used
--- to look like a cell nobody had got to, and was handed out. An item is
--- offered only when something about it is workable.
-edb(cell_blocked).   -- cell_blocked(Kind, Shape, Layer, Cause)
-edb(blocker_kind).
-
--- scanner_contract: only scalar own properties are in the fact vocabulary;
--- ambient_declaration: a `declare const` has no initialiser;
--- no_possible_site: the grammar allows the form and the parser never emits
--- it; decision_owed: somebody has to choose before anybody can build
-blocker_kind(scanner_contract).
-blocker_kind(ambient_declaration).
-blocker_kind(no_possible_site).
-blocker_kind(decision_owed).
-
-blocked_cell[audit](K, S, L) :- cell_blocked(K, S, L, _).
-workable(K, S, L)            :- open_cell[audit](K, S, L), not blocked_cell[audit](K, S, L).
-
--- and the two ways a blocker can be nonsense
-blocker_unknown[audit](K, S, L, C) :- cell_blocked(K, S, L, C), not blocker_kind(C).
-blocker_stale[audit](K, S, L)      :- cell_blocked(K, S, L, _), not open_cell[audit](K, S, L).
-
--- =========================================================================
--- CLAIMED, SWEPT, AND THE FOUR WAYS A PLAN CAN LIE. A cell is claimed by
--- name, or swept by an item owning its layer's residue; a layer with no
--- sweeper reports its residue as unqueued. A DONE sweeper stops sweeping.
-claimed(K, S, L) :- claim(queued, js, K, S, L, _).
-sweeper(K, S, L) :- work_sweeps(W, L), not work_state(W, done),
-                    open_cell[audit](K, S, L), not claimed(K, S, L).
-
--- 1. an open cell nobody has queued
-unqueued[audit](K, S, L) :- open_cell[audit](K, S, L), not claimed(K, S, L),
-                            not sweeper(K, S, L).
-
--- 2. an item claiming a cell the model does not report open; a done item is
--- exempt. The shape column stays in the head: projecting it away collapsed
--- eleven shapes of one kind into one row.
-queue_stale[audit](W, K, S, L) :- claim(queued, js, K, S, L, W), not work_state(W, done),
-                                  not open_cell[audit](K, S, L).
-
--- 3. two items owning one cell — two owners is nobody
-double_owned[audit](K, S, L, A, B) :- claim(queued, js, K, S, L, A),
-                                      claim(queued, js, K, S, L, B), A != B.
-
--- 4. an item marked done whose cell the model still reports open: the filled
--- matrix that looks finished
-false_done[audit](W, K, S, L) :- work_state(W, done), claim(queued, js, K, S, L, W),
-                                 open_cell[audit](K, S, L).
-
--- Where this cannot look: a sweep absorbs a lost claim, so deleting a named
--- claim outright moves no audit. The detector is a number in
--- test/worklist.test.ts — how many cells each sweep absorbs — and `sweeper/3`
--- is exported for that alone.
---
--- hygiene of an authored table, each direction a positive row; a frame
--- deferral names an owner, and an owner that is not an item is a decision
--- addressed to nobody
+-- hygiene of an authored table, each direction a positive row
 stated_state(W)               :- work_state(W, _).
-work_unstated[audit](W)       :- claim(queued, js, _, _, _, W), not work(W, _).
-frame_owner_unknown[audit](K, W) :- frame_deferred(K, W), not work(W, _).
-frame_owner_done[audit](K, W)    :- frame_deferred(K, W), work_state(W, done).
-work_unstated[audit](W)       :- work_sweeps(W, _), not work(W, _).
 work_stateless[audit](W)      :- work(W, _), not stated_state(W).
 work_bad_state[audit](W, S)   :- work_state(W, S), not work_state_kind(S).
-work_sweeps_nolayer[audit](W, L) :- work_sweeps(W, L), not layer(L).
 
 -- =========================================================================
 -- DEPENDENCIES. A note saying "waits on dataflow" cannot refuse to hand out
@@ -125,15 +23,6 @@ blocked[audit](W)   :- work_needs(W, O), not work_state(O, done).
 
 needs_unknown[audit](W, O) :- work_needs(W, O), not work(O, _).
 
--- =========================================================================
--- WHAT TO DO NEXT, as a query. Three ways an open item can be workable: a
--- named claim on a workable cell, a sweep with workable residue, or no cells
--- at all (a layer that does not exist yet claims none).
-claims_cell(W)      :- claim(queued, js, _, _, _, W).
-has_workable(W)     :- claim(queued, js, K, S, L, W), workable(K, S, L).
-sweep_workable(W)   :- work_sweeps(W, L), workable(K, S, L), not claimed(K, S, L).
-unclaimed_item(W)   :- work(W, _), not claims_cell(W), not work_sweeps(W, _).
-
 -- HELD BY THE OWNER, as a row: an ordinal meant "last" until the queue grew
 -- past it. `held_by` names who.
 edb(held).
@@ -141,26 +30,11 @@ held_by(W, Who)     :- held(W, Who).
 on_hold(W)          :- held(W, _).
 held_unknown[audit](W) :- held(W, _), not work(W, _).
 
-takeable(W)         :- work_state(W, open), not blocked[audit](W), has_workable(W),
-                       not on_hold(W).
-takeable(W)         :- work_state(W, open), not blocked[audit](W), sweep_workable(W),
-                       not on_hold(W).
-takeable(W)         :- work_state(W, open), not blocked[audit](W), unclaimed_item(W),
-                       not on_hold(W).
+takeable(W)         :- work_state(W, open), not blocked[audit](W), not on_hold(W).
 
--- the item the queue is silent about, said out loud: every cell blocked, or
--- every cell already closed and nobody said done
-nothing_workable[audit](W) :- work_state(W, open), claims_cell(W), not has_workable(W),
-                              not sweep_workable(W).
-
--- THE ORDER IS THE WORK. A hand number collided (file order by topic,
--- numeric order by append) and was asserted nowhere; what replaces it is
--- LEVERAGE, a boolean (it was one because the kernel had no aggregation; it
--- has aggregates now, docs/aggregates.md, and a count of waiters stays a
--- later choice, not a missing feature): an item
--- something else waits on comes first. `next_work` is a SET: a partial order
--- has no unique least element. `anything_unblocks()` is the nullary head
--- this file quoted when it argued for one — at most one row, where
+-- THE ORDER IS THE WORK. LEVERAGE, a boolean: an item something else waits on
+-- comes first. `next_work` is a SET: a partial order has no unique least
+-- element. `anything_unblocks()` is the nullary head at most one row, where
 -- `takeable(W)` was a cross product against a body that never read W.
 unblocks(P)            :- work_needs(_, P).
 unblocking_work(W)     :- takeable(W), unblocks(W).
@@ -169,8 +43,7 @@ next_work[audit](W)    :- unblocking_work(W).
 next_work[audit](W)    :- takeable(W), not anything_unblocks().
 
 -- a derived order makes a cycle possible and invisible: every item in it is
--- blocked, none takeable, and the queue goes quiet. The plan came within one
--- prose note of it once.
+-- blocked, none takeable, and the queue goes quiet.
 waits_on(W, P)         :- work_needs(W, P).
 waits_on(W, P)         :- work_needs(W, Q), waits_on(Q, P).
 work_needs_cycle[audit](W) :- waits_on(W, W).

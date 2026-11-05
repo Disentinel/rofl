@@ -24,8 +24,6 @@ default: audit
 
 Reads:
 
-- from facts/js-callgraph.rofl, in the main:
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from facts/js-env.rofl, in the main:
   - <a id="child_needs"></a>A kind K needs at a field Field holding a text V a feature F in a language L (`child_needs`)
   - <a id="env_lang"></a>A language L is the environment language (`env_lang`)
@@ -230,14 +228,9 @@ In the main:
 1. if K [needs](#kind_needs) some feature in L;
 2. if K [needs at](#child_needs) some field holding some text some feature in L.
 
-In the audit:
-
-<a id="kind_unaccounted"></a>A kind K is unaccounted in a language L if all of:
-  - L [is the environment language](#env_lang);
-  - L [has the node kind](#node_kind) K;
-  - K neither [is gated](#kind_gated) in L nor [is baseline](#kind_baseline) in L.
-
 > gated AND baseline: harmless to the answer, a lie about what was decided
+
+In the audit:
 
 <a id="kind_double_booked"></a>A kind K is double booked in a language L if K [is gated](#kind_gated) in L and K [is baseline](#kind_baseline) in L.
 
@@ -262,9 +255,7 @@ In the audit:
 
 <a id="unscannable_seen"></a>A feature is unscannable yet seen if it [is unscannable](#unscannable) and it [is used](#used_feature).
 
-> THE FRONTIER, expected non-zero: `node_kind` is authored and babel has 252
-> concrete types. `kind_unaccounted` asks the same of the DECLARED
-> vocabulary, where the answer must be zero.
+> THE FRONTIER, expected non-zero: a kind the scanner emits that no table decides.
 
 <a id="kind_ungoverned"></a>A kind K is ungoverned if all of:
   - some node [is of kind](js-model.rofl.md#ast_node) K;

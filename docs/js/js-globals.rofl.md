@@ -95,9 +95,10 @@ In the code:
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
-<a id="es_static_call"></a>C calls the static Key of Name from a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of C [selects the static](#es_static) Key of Name from Rel.
+A call
 
-<a id="es_global_invoke"></a>C invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of C [is the global](#es_global) Name of Rel with some form.
+- <a id="es_static_call"></a>calls the static Key of Name from a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of it [selects the static](#es_static) Key of Name from Rel.
+- <a id="es_global_invoke"></a>invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of it [is the global](#es_global) Name of Rel with some form.
 
 <a id="es_global_construct"></a>A node constructs the global Name of a release Rel if all of:
   - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
@@ -144,7 +145,7 @@ An environment
 > global nothing in this program binds evaluates to a value whose prototype
 > is that global's, and THE CONSTRUCTION SITE STANDS FOR THE VALUE:
 > `may_be_node(X, X)`, the abstraction js-dataflow already uses for
-> `array_expression`, not a new `kind_prototype` row (`new Map()` and
+> `array_expression`, not a new `kind_proto` arm (`new Map()` and
 > `new Box()` are one kind and two questions). The binder and assignment arms
 > of `may_be_node` then carry the instance to the receiver for free.
 > 
@@ -178,9 +179,9 @@ In the audit:
   - Form [is constructible](#constructible_form);
   - unless Name [has the prototype](#lib_global_prototype) some prototype.
 
-<a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
-  - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
+<a id="es_instance_unattributed"></a>A call calls an unattributed instance member Key of Name if all of:
+  - it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
   - a node O [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;

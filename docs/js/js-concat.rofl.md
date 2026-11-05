@@ -49,28 +49,26 @@ default: flow
 Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [destr_prop](js-dataflow.rofl.md#destr_prop), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [decl_value](js-dataflow.rofl.md#decl_value), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
-- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [call_like_v](js-dataflow.rofl.md#call_like_v)
+- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [call_like](js-dataflow.rofl.md#call_like), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_value](js-structure.rofl.md#ast_value), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="nth"></a>`nth`
 - from outside these files, in the type:
   - <a id="binary"></a>`binary`
-  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="callee"></a>`callee`
   - <a id="construct"></a>`construct`
+  - <a id="literal"></a>`literal`
+  - <a id="ref"></a>`ref`
   - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
-- from the scanner, in the code:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+  - <a id="template_part"></a>`template_part`
 
 ## Words
 
@@ -78,9 +76,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-invocation"></a>an invocation | a node of a kind in [`call_like_v`](js-dataflow.rofl.md#call_like_v) |
-| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
-| <a id="noun-template"></a>a template | a node of kind `template_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -91,9 +86,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="str_value"></a>`str_value`(V) either:
 
-1. if a [string literal](#noun-string_literal) N [is written as](js-structure.rofl.md#ast_value) V;
-2. if [the attribute](#ast_attr) `value_cooked` of a node Q is V;
-3. if [`path_cut`](#path_cut)(something, V).
+1. if [`literal`](#literal)(something, V) and `string` is type_of(V);
+2. if [`path_cut`](#path_cut)(something, V).
 
 ## 2. The language forms.
 
@@ -147,7 +141,7 @@ In the code:
 <a id="plus_assign"></a>`plus_assign`(X, L, Name, File) if all of:
   - [`binary`](#binary)(X, "+", L, something) in the value;
   - [`assign`](#assign)(X, L, X);
-  - [`ref`](#ref)(L, Name) in the value;
+  - [`ref`](#ref)(L, Name);
   - [`at`](#at)(X, File, something).
 
 In the flow:
@@ -239,17 +233,10 @@ In the flow:
 1. if [`vlib_member`](#vlib_member)(M, Surface, K) and [`ambient_value`](#ambient_value)(Surface, K, something, something);
 2. if M [is a member of the builtin](js-host.rofl.md#builtin_member) of Surface K and [`ambient_value`](#ambient_value)(Surface, K, something, something);
 3. if all of:
-   - [`vlib_ns`](#vlib_ns)(Y, Surface);
-   - a node Init [points to](#may_be_node) a node Y;
-   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-   - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, something, something, something);
-   - M [spells](js-structure.rofl.md#key_name) K;
-   - [`ambient_value`](#ambient_value)(Surface, K, something, something);
-4. if all of:
    - [`ambient_module`](#ambient_module)(File, Surface);
    - M [is exported as](js-dataflow.rofl.md#exports_name) K from File;
    - [`ambient_value`](#ambient_value)(Surface, K, something, something);
-5. if all of:
+4. if all of:
    - [`ambient_module`](#ambient_module)(File, Surface);
    - a node O [is exported as](js-dataflow.rofl.md#exports_name) N from File;
    - [`ambient_value_ns`](#ambient_value_ns)(N);
@@ -262,7 +249,7 @@ In the flow:
    - [`vlib_fn`](#vlib_fn)(X, Surface, K);
    - a node G [points to](#may_be_node) a node X;
    - [`callee`](#callee)(C, G);
-   - C is an [invocation](#noun-invocation);
+   - [`call_like`](js-dataflow.rofl.md#call_like)(C);
 2. if all of:
    - [`construct`](#construct)(C);
    - [`callee`](#callee)(C, G);
@@ -284,12 +271,13 @@ In the flow:
    - [`composed`](#composed)(D);
 3. if [`proto_call`](#proto_call)(something, O, something) and [the prototype](js-dataflow.rofl.md#prototype_of) of a node O is `string`.
 
-<a id="proto_call"></a>`proto_call`(an [invocation](#noun-invocation) C, O, K) if all of:
+<a id="proto_call"></a>`proto_call`(C, O, K) if all of:
   - [`ambient_value`](#ambient_value)(P, K, something, something);
   - a name P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype);
   - a [member access](js-dataflow.rofl.md#member_node_v) M [selects](js-dataflow.rofl.md#selects) K;
   - [`callee`](#callee)(C, M);
-  - [`object_of`](js-structure.rofl.md#object_of)(M, O).
+  - [`object_of`](js-structure.rofl.md#object_of)(M, O);
+  - [`call_like`](js-dataflow.rofl.md#call_like)(C).
 
 `vlib_call`(C, N, K) either:
 
@@ -317,7 +305,7 @@ In the flow:
 
 1. if all of:
    - [`vlib_op`](#vlib_op)(C, `dirname`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - X [may be the literal](#may_be_lit) V;
    - [`str_value`](#str_value)(V);
    - N is the number of segments of V split by "/";
@@ -325,7 +313,7 @@ In the flow:
    - E is ".";
 2. if all of:
    - [`vlib_op`](#vlib_op)(C, `dirname`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - X [may be the literal](#may_be_lit) V;
    - [`str_value`](#str_value)(V);
    - N is the number of segments of V split by "/";
@@ -335,7 +323,7 @@ In the flow:
    - E is "/";
 3. if all of:
    - [`vlib_op`](#vlib_op)(C, `dirname`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - X [may be the literal](#may_be_lit) V;
    - [`str_value`](#str_value)(V);
    - N is the number of segments of V split by "/";
@@ -354,7 +342,7 @@ In the flow:
 
 <a id="base_of"></a>`base_of`(C, Last) if all of:
   - [`vlib_op`](#vlib_op)(C, `basename`, something);
-  - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+  - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
   - X [may be the literal](#may_be_lit) V;
   - [`str_value`](#str_value)(V);
   - N is the number of segments of V split by "/";
@@ -366,7 +354,7 @@ In the flow:
 
 `path_cut`(C, B) if all of:
   - [`base_of`](#base_of)(C, B);
-  - C [passes](js-dataflow.rofl.md#arg_at) a node E at 1;
+  - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node E at 1;
   - E [may be the literal](#may_be_lit) X;
   - [`str_value`](#str_value)(X);
   - LB is the length of B;
@@ -378,7 +366,7 @@ In the flow:
 
 `path_cut`(C, B) if all of:
   - [`base_of`](#base_of)(C, B);
-  - C [passes](js-dataflow.rofl.md#arg_at) a node E at 1;
+  - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node E at 1;
   - E [may be the literal](#may_be_lit) X;
   - [`str_value`](#str_value)(X);
   - LB is the length of B;
@@ -387,7 +375,7 @@ In the flow:
 
 `path_cut`(C, R) if all of:
   - [`base_of`](#base_of)(C, B);
-  - C [passes](js-dataflow.rofl.md#arg_at) a node E at 1;
+  - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node E at 1;
   - E [may be the literal](#may_be_lit) X;
   - [`str_value`](#str_value)(X);
   - LB is the length of B;
@@ -440,11 +428,10 @@ In the flow:
    - [`nth`](#nth)(C, K, L);
    - N is 2 * K + 1.
 
-<a id="part_lit"></a>`part_lit`(a [template](#noun-template) T, I, V) if all of:
+<a id="part_lit"></a>`part_lit`(T, I, V) if all of:
   - [`cshape`](#cshape)(T, `raw`);
-  - a node Q is the K-th of the `quasis` of T;
-  - [the attribute](#ast_attr) `value_cooked` of Q is V;
-  - I is 2 * K.
+  - [`template_part`](#template_part)(T, I, X);
+  - [`literal`](#literal)(X, V).
 
 Declared as facts:
 
@@ -452,14 +439,14 @@ Declared as facts:
 
 > Every argument or none: a spread hides where the rest are.
 
-<a id="whole_args"></a>`whole_args`(C) if [`vlib_op`](#vlib_op)(C, something, something), unless C [has a spread](js-dataflow.rofl.md#spread_arg) at some index.
+<a id="whole_args"></a>`whole_args`(C) if [`vlib_op`](#vlib_op)(C, something, something), unless an invocation C [has a spread](js-dataflow.rofl.md#spread_arg) at some index.
 
 `parts`(C, I, X) either:
 
 1. if all of:
    - [`vlib_op`](#vlib_op)(C, `concat` or `basename`, something);
    - [`whole_args`](#whole_args)(C);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
 2. if all of:
    - [`vlib_op`](#vlib_op)(C, `concat_this`, something);
    - [`whole_args`](#whole_args)(C);
@@ -469,25 +456,25 @@ Declared as facts:
 3. if all of:
    - [`vlib_op`](#vlib_op)(C, `concat_this`, something);
    - [`whole_args`](#whole_args)(C);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index J;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at an index J;
    - I is J + 1;
 4. if all of:
    - [`vlib_op`](#vlib_op)(C, `dirname`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - I is 0;
 5. if all of:
    - [`vlib_op`](#vlib_op)(C, `url`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - I is 0;
    - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something);
 6. if all of:
    - [`vlib_op`](#vlib_op)(C, `url`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) some node at 0;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) some node at 0;
    - C [passes](js-dataflow.rofl.md#arg_at) a node X at 1;
    - I is 0;
 7. if all of:
    - [`vlib_op`](#vlib_op)(C, `url`, something);
-   - C [passes](js-dataflow.rofl.md#arg_at) some node at 1;
+   - an invocation C [passes](js-dataflow.rofl.md#arg_at) some node at 1;
    - C [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
    - I is 1.
 
@@ -517,7 +504,7 @@ Declared as facts:
   - K > 0;
   - I is 2 * K - 1.
 
-`parts`(C, I, S) if [`join_sep`](#join_sep)(C, I) and C [passes](js-dataflow.rofl.md#arg_at) a node S at 0.
+`parts`(C, I, S) if [`join_sep`](#join_sep)(C, I) and an invocation C [passes](js-dataflow.rofl.md#arg_at) a node S at 0.
 
 `part_lit`(C, I, ",") if [`join_sep`](#join_sep)(C, I), unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 0, something).
 

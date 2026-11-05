@@ -97,14 +97,15 @@ xl_ok(keyed_ctor_put, keyed_shared, "the collection a function of the read's fil
 xl_ok(keyed_fill, keyed_key, "a put of a function of the read's file").
 xl_ok(keyed_fill_ctor, keyed_key, "a put of a function of the read's file").
 xl_ok(keyed_g_drops, nearest_v, "the function around a removal of the collection's own file, matched against the mirrored eff_reaches").
-xl_ok(keyed_lost_ctor, ast_child, "the read's own method, bound by its body").
+xl_ok(keyed_lost_ctor, body, "the read's own method, bound by its body").
 xl_ok(keyed_lost_ctor, keyed_made, "the collection's own new node, matched against what was handed out").
 xl_ok(keyed_heal_at, keyed_key, "a put of a function of the read's file").
 xl_ok(keyed_heal_at, keyed_read_site, "the collection a function of the read's file fills, matched against the read").
 xl_ok(keyed_heal_broken, keyed_heal_fn, "the read's own function, matched").
 -- What an object literal lacks is read only where the literal and the read share a file (`member_unset` matches the
 -- file): the negation over another file's keys would close a cycle with the flow that carries the object.
-xl_ok(member_unset, ast_node, "the test that the literal IS of the read's file: true alike in the volume and the whole").
+xl_ok(member_unset, at, "the test that the literal IS of the read's file: true alike in the volume and the whole").
+xl_ok(member_unset, obj_lit, "a literal of the read's own file (the at file match)").
 xl_ok(member_unset, obj_open_own, "a literal of the read's own file (the ast_node file match)").
 xl_ok(member_unset, obj_own_key, "a literal of the read's own file (the ast_node file match)").
 -- eff_reaches is foreign-capable at both ends (the rings of js-effects): a runner of a method is matched against the
@@ -137,13 +138,13 @@ xl_ok(may_be_node, nearest_v, "the generator's own yields, in its volume: next_s
 xl_ok(next_send, delegates, "the generator's own delegation, in its volume: next_send(G, _) arrives there through sx_next").
 
 -- The arm for the volume's own argument; another file's array element spread into the call is named by `sx_name`.
-xl_ok(passes_function, ast_name, "the volume's own argument; the arm beside it reads sx_name for another file's element").
+xl_ok(passes_function, ref, "the volume's own argument; the arm beside it reads sx_name for another file's element").
 xl_ok(written_arg, argument_at, "the point of it: an argument of another file is no step of the call and is left out").
 xl_ok(passes_function, fn_node, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").
 xl_ok(passes_function, fn_name, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").
 xl_ok(passes_function, member_node_v, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").
 xl_ok(passes_function, selects, "the argument written at the call (written_arg: ast_child of the call), a node of the call's own file").
-xl_ok(sx_name, ast_name, "the publication: the array's own volume names its element; another volume holds no name of it").
+xl_ok(sx_name, ref, "the publication: the array's own volume names its element; another volume holds no name of it").
 
 -- Object.assign (w_js_object_assign): the library member is recognised in the file that reads it. `const assign = Object.assign`
 -- exported and called from another file is not seen as a merge by the importing volume (declared); the common shape, the

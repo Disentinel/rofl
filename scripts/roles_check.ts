@@ -1,7 +1,7 @@
-// npm run test:roles -- [DIR...] [--break cross] [--cost]   the Babel converter of the roles layer (w_l2_roles), checked
+// npm run test:roles -- [DIR...] [--break cross] [--cost]   the oxc converter of the roles layer (w_l2_roles), checked
 //
-// Each JS/TS file under DIR (examples/vscode/mini and examples/vscode/split by default) is scanned into [ast_babel]
-// and the world @models/lang/js/roles.files is evaluated on the Rust release build twice over: once over every file,
+// Each JS/TS file under DIR (examples/vscode/mini and examples/vscode/split by default) is scanned into [ast_oxc]
+// and the world @models/lang/js/roles-oxc.files is evaluated on the Rust release build twice over: once over every file,
 // once over each file alone. Green when every file's roles ([value], [type], [tree]) alone are exactly its roles in
 // the whole world, no role names two files, and the converter's audits are empty: a kind that stands in no role and has no
 // reason (kind_without_role), an identifier that is neither read nor introduced nor a name a role carries
@@ -10,17 +10,17 @@
 // --break cross   a rule that reads another file's roles is added: the check must be red. Without --break the run also
 //                 evaluates the whole world once with that rule and is red unless it shows a role naming two files
 // --cost          also the cost of the whole world: raw facts in, roles out, evaluation time and peak memory
-// --fixture       write examples/checks/roles-babel-facts.rofl, the raw tree of examples/checks/roles-babel/ that the
-//                 world roles_babel of npm test evaluates on both engines (facts/checks.rofl)
+// --fixture       write examples/checks/roles-oxc-facts.rofl, the raw tree of examples/checks/roles/ that the
+//                 world roles_oxc of npm test evaluates on both engines (facts/checks.rofl)
 
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { ScanSet } from '../scanners/js_ast.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const WORLD = path.join(ROOT, 'models/lang/js/roles-check.files');
+const WORLD = path.join(ROOT, 'models/lang/js/roles-oxc.files');
+const OXC = path.join(ROOT, 'rust/tools/oxc_scan/target/release/oxc_scan');
 const rofl = path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl`);
 const argv = process.argv.slice(2);
 const flag = (k: string) => { const i = argv.indexOf(k); if (i < 0) return undefined; return argv.splice(i, k === '--break' ? 2 : 1).pop(); };
@@ -28,7 +28,7 @@ const brk = flag('--break');
 const cost = flag('--cost') !== undefined;
 const fixture = flag('--fixture') !== undefined;
 if (brk !== undefined && brk !== 'cross') { console.error('--break cross'); process.exit(64); }
-const FIXTURE = 'examples/checks/roles-babel';
+const FIXTURE = 'examples/checks/roles';
 const dirs = fixture ? [FIXTURE] : argv.length ? argv : [FIXTURE, 'examples/vscode/mini', 'examples/vscode/split'];
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
@@ -42,18 +42,21 @@ const walk = (root: string, rel = ''): string[] => fs.readdirSync(path.join(root
   });
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'roles-'));
-const set = new ScanSet();
 const files: { label: string; prefix: string; out: string; nodes: number }[] = [];
+// each file alone through oxc_scan, named from the parent of its directory so that two directories never share a name
 for (const d of dirs) for (const f of walk(d)) {
-  const label = path.join(d, f);
-  const r = set.scan(fs.readFileSync(label, 'utf8'), { file: label, persp: 'ast_babel' });
+  const label = path.join(d, f), root = path.dirname(d);
+  const r = spawnSync(OXC, ['--no-start', root, path.join(path.basename(d), f)], { encoding: 'utf8', maxBuffer: 1 << 30 });
+  if (r.status !== 0) { console.error(`${label}: ${r.stderr}`); process.exit(70); }
+  const facts = r.stdout.split('\n').filter((l) => l && !l.startsWith('-- reads:'));
   const out = path.join(tmp, `${files.length}.rofl`);
-  fs.writeFileSync(out, r.facts.join('\n') + '\n');
-  files.push({ label, prefix: r.prefix, out, nodes: r.nodes });
+  fs.writeFileSync(out, facts.join('\n') + '\n');
+  const prefix = /^node\[ast_oxc\]\((n[0-9a-f]{16})_root/.exec(facts[0])?.[1] ?? '';
+  files.push({ label, prefix, out, nodes: facts.filter((l) => l.startsWith('node[')).length });
 }
 if (fixture) {
-  const out = 'examples/checks/roles-babel-facts.rofl';
-  fs.writeFileSync(out, `-- the raw tree of ${FIXTURE}/ in [ast_babel], written by npm run test:roles -- --fixture\n`
+  const out = 'examples/checks/roles-oxc-facts.rofl';
+  fs.writeFileSync(out, `-- the raw tree of ${FIXTURE}/ in [ast_oxc], written by npm run test:roles -- --fixture\n`
     + files.map((f) => fs.readFileSync(f.out, 'utf8')).join(''));
   console.log(`${out}: ${files.length} files, ${files.reduce((s, f) => s + f.nodes, 0)} nodes`);
   fs.rmSync(tmp, { recursive: true, force: true });
@@ -103,7 +106,7 @@ function evaluate(inputs: string[]): Run {
 }
 
 const PREF = /\bn([0-9a-f]{16})_/g;
-const owner = new Map(files.map((f) => [f.prefix.slice(1, 17), f.label]));
+const owner = new Map(files.map((f) => [f.prefix.slice(1), f.label]));
 const filesOf = (fact: string) => new Set([...fact.matchAll(PREF)].map((m) => owner.get(m[1]) ?? m[1]));
 
 const whole = evaluate(files.map((f) => f.out));

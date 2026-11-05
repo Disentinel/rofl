@@ -17,18 +17,20 @@
 -- the knowledge that they existed is not (else cooling puts the file straight
 -- back on the frontier); or the scanner REFUSED it. The third arm is the one
 -- that bit: when the refusal became a fact instead of a throw, the file
--- counted as parsed, emitted no `ast_file`, and the loop took the same eight
+-- counted as parsed, emitted no `file[ast_oxc]`, and the loop took the same eight
 -- files every tick while reporting progress. A file the scanner has ruled on
 -- is indexed, whether the ruling was a tree or a refusal.
 --
 -- `cooled[code](File, Path)` is written by the host after the book is on
 -- disk, never before: a crash between the two costs a re-parse, the cheap
 -- direction.
-indexed[code](F) :- ast_file[code](_, F).
+imports(code, ast_oxc).
+
+indexed[code](F) :- file[ast_oxc](_, F).
 
 indexed[code](F) :- cooled[code](F, _).
 
-indexed[code](F) :- ast_parse_error[code](F, _).
+indexed[code](F) :- parse_error[ast_oxc](F, _).
 
 -- =========================================================================
 -- THE GOAL. `index_complete` is a FACT a driver can stop on; `not

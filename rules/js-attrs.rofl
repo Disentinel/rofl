@@ -21,8 +21,7 @@ attr_pair_read(K, V)   :- attr_lit(L, K, V), not attr_lit_kvar(L, K), not attr_l
 
 -- THE TWO AUDITS: a whole key nobody reads (`async`, `generator`, `prefix`),
 -- and a key read only with constant values, one of which no rule names. Two
--- excuse lists, the `not_a_construct` / `frame_deferred` split of js-model:
--- a key the model will never read is a different fact from one nobody has
+-- excuse lists: a key the model will never read is a different fact from one nobody has
 -- read YET. The first list's criterion is measurable: the distinction the
 -- attribute carries is also carried by something the model reads, usually
 -- the kind (`optional` is `optional_member_expression`).
@@ -38,7 +37,7 @@ unconsumed_value[audit](K, V) :- attr_pair_seen(K, V), attr_key_read(K),
                                  not attr_key_read_free(K), not attr_pair_read(K, V),
                                  not attr_value_unread_ok(K, V, _).
 
--- both excuse lists guarded, as `not_a_construct_unseen` in js-model: a
+-- both excuse lists guarded: a
 -- misspelling would silently readmit the key to nothing
 attr_unread_ok_unseen[audit](K)   :- attr_unread_ok(K, _), not ast_attr[code](_, K, _).
 attr_unread_ok_read[audit](K)     :- attr_unread_ok(K, _), attr_key_read(K).
@@ -98,7 +97,7 @@ attr_guard_slot(R, K, S, F)    :- rule_prem(R, L), attr_test_lit(L, S, K), attr_
                                   not child_lit_fvar(L2, F).
 attr_guard_kind(R, K, S, Kind) :- rule_prem(R, L), attr_test_lit(L, S, K), attr_test_svar(L, S),
                                   rule_prem(R, L2), lit_rel(L2, ast_node), lit_arg(L2, 1, S),
-                                  lit_arg(L2, 2, Kind), node_kind(js, Kind).
+                                  lit_arg(L2, 2, Kind), ast_node[code](_, Kind, _).
 attr_guard_pinned(R, K, S)     :- attr_guard_kind(R, K, S, _).
 
 attr_slot_gap(K, F, Kind) :- attr_guard_slot(R, K, S, F), not attr_guard_pinned(R, K, S),

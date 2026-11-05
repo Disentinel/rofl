@@ -20,8 +20,6 @@ default: main
 
 Reads:
 
-- from facts/js-callgraph.rofl:
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-vocabulary: [body_lit](js-vocabulary.rofl.md#body_lit), [lit_arg](js-vocabulary.rofl.md#lit_arg), [lit_rel](js-vocabulary.rofl.md#lit_rel)
 - from outside these files:
@@ -62,8 +60,7 @@ A key K
 
 > THE TWO AUDITS: a whole key nobody reads (`async`, `generator`, `prefix`),
 > and a key read only with constant values, one of which no rule names. Two
-> excuse lists, the `not_a_construct` / `frame_deferred` split of js-model:
-> a key the model will never read is a different fact from one nobody has
+> excuse lists: a key the model will never read is a different fact from one nobody has
 > read YET. The first list's criterion is measurable: the distinction the
 > attribute carries is also carried by something the model reads, usually
 > the kind (`optional` is `optional_member_expression`).
@@ -93,7 +90,7 @@ Declared as facts:
 - <a id="attr_deferred"></a>`attr_deferred` — rows from facts/js-attrs.rofl
 - <a id="attr_value_unread_ok"></a>`attr_value_unread_ok` — rows from facts/js-attrs.rofl
 
-> both excuse lists guarded, as `not_a_construct_unseen` in js-model: a
+> both excuse lists guarded: a
 > misspelling would silently readmit the key to nothing
 
 A key K
@@ -203,7 +200,7 @@ A rule
   - [the relation](js-vocabulary.rofl.md#lit_rel) of L2 is `ast_node`;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 1 of L2 is S;
   - [the argument](js-vocabulary.rofl.md#lit_arg) 2 of L2 is Kind;
-  - `js` [has the node kind](#node_kind) Kind.
+  - some node [is of kind](js-model.rofl.md#ast_node) Kind.
 
 <a id="attr_slot_gap"></a>An attribute K is a slot gap at a field F of Kind either:
 

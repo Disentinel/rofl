@@ -39,7 +39,7 @@ Declared as facts:
 | `member_node_v` | "member access" |
 | `scope_node` | "scope" |
 
-`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `call_like_v`, `call_kind`.
+`kind_set` includes `value_transparent`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`.
 
 Declared as facts:
 
@@ -97,7 +97,6 @@ Declared as facts:
 | `external_module` | "is_an_external_module(module Spec)" |
 | `external_value` | "comes_out_of(node N, module Spec)" |
 | `external_import` | "imports_from_outside(node Sp, name Local, from module Spec, in file File)" |
-| `external_destructured` | "destructures_from_outside(declarator D, at node Prop, name Local, in file File)" |
 | `callback_param` | "is_called_back_with(node P, in function F, from module Spec)" |
 | `ext_call` | "is_an_external_call_of(invocation C, module Spec)" |
 | `ext_member` | "is_an_external_member_of(member access M, module Spec)" |
@@ -125,12 +124,9 @@ Declared as facts:
 | `member_value` | "the_member(of node O, key Key, holds node V)" |
 | `own_key` | "owns_the_key(class CD, key Key)" |
 | `fn_kind` | "is_a_function_kind(kind K)" |
-| `call_kind` | "is_a_call_kind(kind K)" |
 | `call_site` | "is_a_call_site(call C, in file File)" |
-| `call_site_kind` | "the_call_kind(of call C, is kind K)" |
 | `call_line` | "the_line(of call C, is line Line)" |
 | `callee_of` | "the_callee(of call C, is node N)" |
-| `callee_kind` | "the_callee_kind(of call C, is kind K)" |
 | `member_kind_v` | "is_a_member_kind(kind K)" |
 | `selects` | "selects(member access N, key Key)" |
 | `class_member_static` | "the_static_member(of class CD, key Key, is node V)" |
@@ -208,8 +204,8 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `abrupt_at` | "is_abrupt(node B, at field F, from index I)" |
-| `suspend_at` | "suspends(node B, at field F, from index I)" |
+| `abrupt_at` | "is_abrupt(sequence B, from step I)" |
+| `suspend_at` | "suspends(sequence B, from step I)" |
 
 > ambient
 
@@ -473,8 +469,6 @@ Declared as facts:
 | `computed_member` | "calls_through_a_computed_member(call C, member access N)" |
 | `static_member` | "calls_through_a_static_member(call C, member access N)" |
 | `callee_obj` | "the_receiver(of call C, is node O)" |
-| `callee_obj_kind` | "the_receiver_kind(of call C, is kind K)" |
-| `callee_prop` | "the_property(of call C, is node P)" |
 | `obj_kind_known` | "is_a_classed_kind(kind K)" |
 | `obj_class` | "the_receiver_class(of call C, is shape Cl)" |
 | `computed_key_static` | "has_a_static_computed_key(call C)" |
@@ -482,8 +476,15 @@ Declared as facts:
 | `shape_known` | "has_the_known_shape(call C, shape S)" |
 | `has_shape` | "has_a_shape(call C)" |
 | `shape` | "has_the_shape(call C, shape S)" |
-| `catch_all_occupied` | "occupies_the_catch_all(kind K)" |
-| `unnamed_callee` | "is_an_unnamed_callee_kind(kind K)" |
+| `catch_all_occupied` | "occupies_the_catch_all(class K)" |
+| `unnamed_callee` | "is_an_unnamed_callee_class(class K)" |
+| `callee_class` | "has_the_callee_class(node C, class E)" |
+| `callee_obj_class` | "has_the_receiver_class(node C, class E)" |
+| `expr_class` | "is_of_the_class(node N, class E)" |
+| `gives_two` | "gives_two_operands(node N)" |
+| `member_kind_expr` | "is_a_member_read(node N)" |
+| `has_class` | "has_an_expression_class(node N)" |
+| `type_owner` | "owns_members_declared_as_types(type T)" |
 | `shaped` | "is_shaped(call C)" |
 | `unshaped` | "is_unshaped(call C)" |
 | `fn_file` | "is_defined_in(function F, file File)" |
@@ -580,7 +581,6 @@ Declared as facts:
 | `after_abrupt` | "follows_an_abrupt_completion(node S)" |
 | `after_suspend` | "follows_a_suspension(node S)" |
 | `stmt_seq_unseen` | "is_an_unseen_statement_field(field F)" |
-| `label_name` | "the_label_name(of label LS, is name N)" |
 | `label_ref` | "refers_to_the_label(node X, name N)" |
 | `label_target` | "targets_the_label(node X, label LS)" |
 | `completes_abruptly` | "completes_abruptly(node S)" |
@@ -617,7 +617,7 @@ Declared as facts:
 | `hidden_call_traced` | "has_a_traced_hidden_call(node N)" |
 | `hidden_call_untraced` | "has_an_untraced_hidden_call_from(node N, node Src)" |
 | `hidden_call_sourced` | "has_a_sourced_hidden_call(node N)" |
-| `hidden_call_unsourced` | "has_an_unsourced_hidden_call(node N, of kind K)" |
+| `hidden_call_unsourced` | "has_an_unsourced_hidden_call(node N)" |
 | `hidden_call_accounted` | "has_an_accounted_hidden_call(node N)" |
 | `hidden_call_unaccounted` | "has_an_unaccounted_hidden_call(node N)" |
 | `hidden_call_off_table` | "hides_a_call_off_the_table(kind K, by mechanism M)" |

@@ -122,7 +122,7 @@ if (answers) {
   const at = new Map<string, string>();
   const where = async (n: string) => {
     if (!/^n[0-9a-f]+_[0-9a-z]+$/.test(n)) return n;
-    if (!at.has(n)) { const r = (await s.ask(`ast_node[code](${n}, K, F)`)).rows[0]; at.set(n, r ? `${r[0]} ${r[1]}` : n); }
+    if (!at.has(n)) { const r = (await s.ask(`node[ast_oxc](${n}, K, F)`)).rows[0]; at.set(n, r ? `${r[0]} ${r[1]}` : n); }
     return at.get(n)!;
   };
   const lines: string[] = [];

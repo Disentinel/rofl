@@ -54,7 +54,7 @@ command_shown("repl", 10).
 command_note("repl", "`? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world").
 
 command_shown("scan", 11).
-command_note("scan", "-- <dir> [--out F]   a directory of JS/TS in, the facts the JS model reads out; then `rofl why L @rules/js.files F` (docs/cli.md)").
+command_note("scan", "-- <dir> [--out F]   a directory of JS/TS in, oxc's tree (rust/tools/oxc_scan, [ast_oxc]) and the host's path and string facts out; then `rofl why L @rules/js.files F`, whose models/lang/js/oxc-roles.rofl reads the tree into the roles (docs/cli.md). The notebook host still scans with Babel").
 
 command_shown("report", 12).
 command_note("report", "-- <files>   the epistemic report over a set of packs").
@@ -145,12 +145,9 @@ command_note("test:npm", "the npm packages `npm run dist` packed (@grafema/rofl 
 command_shown("engine", 25).
 command_note("engine", "`[-- REF]`   the Rust engine's own code as facts (rust/tools/rs_scan), for the model of the engine in models/engine/: its parts, glossary and call paths (`npm run nb -- models/engine/parts.rofl.md`); with REF (a commit or A..B) the tree as REF left it and the lines it changed, and `npm run nb -- models/engine/blast.rofl.md` says what the change touches: functions, callers, verbs, parts, words").
 command_shown("test:roles", 26).
-command_note("test:roles", "`-- [DIR...] [--cost] [--fixture]`   the roles layer of the JS model (models/lang/js: roles.rofl the vocabulary, babel-roles.rofl the converter from the scanner's tree): each file's roles alone must equal its roles in the whole world, the audits (a kind with no role and no reason, an identifier in no role, a role the vocabulary does not declare) must be empty, and the same world with a rule planted across files (`--break cross`) must be red; `--cost` adds raw facts in, roles out and peak memory; `--fixture` rewrites examples/checks/roles-babel-facts.rofl for the world roles_babel").
+command_note("test:roles", "`-- [DIR...] [--cost] [--fixture]`   the roles layer of the JS model (models/lang/js: roles.rofl the vocabulary, oxc-roles.rofl the converter from oxc's tree, scanned by rust/tools/oxc_scan): each file's roles alone must equal its roles in the whole world, the audits (a kind with no role and no reason, an identifier in no role, a role the vocabulary does not declare) must be empty, and the same world with a rule planted across files (`--break cross`) must be red; `--cost` adds raw facts in, roles out and peak memory; `--fixture` rewrites examples/checks/roles-oxc-facts.rofl for the world roles_oxc").
 
-command_shown("test:parity", 27).
-command_note("test:parity", "`-- [FILE...]`   one file (models/lang/js/fixtures/all.ts by default) through both parsers: Babel into [ast_babel] and babel-roles.rofl, oxc into [ast_oxc] and oxc-roles.rofl, both into the roles of roles.rofl; every node named by where it starts; red names each row one parser wrote and the other did not. Needs the release builds of rust/ and rust/tools/oxc_scan").
-
-command_shown("scan:oxc", 28).
-command_note("scan:oxc", "-- <dir> [FILE] [--out F]   the same files through oxc in Rust (rust/tools/oxc_scan): oxc's own tree, raw, in [ast_oxc] (node, line, start, child, attr, file, parse_error); models/lang/js/oxc-roles.rofl reads it into the roles (docs/cli.md)").
-command_shown("refine", 29).
+command_shown("scan:oxc", 27).
+command_note("scan:oxc", "-- <dir> [FILE...] [--out F]   oxc's tree alone, without the host facts (rust/tools/oxc_scan, which `npm run scan` runs): raw, in [ast_oxc] (node, line, start, child, attr, file, parse_error); models/lang/js/oxc-roles.rofl reads it into the roles (docs/cli.md)").
+command_shown("refine", 28).
 command_note("refine", "`-- <files> [--out F]`   the refine loop over a world: ask (the order and width of every rule, from the profile), reflect (models/engine/plan.rofl beside models/engine/profile.rofl in a world of its own: the plan facts and the width each forecasts), refine (the facts written to F, or stdout, to travel with the model), ask again (the width under them); the report on stderr sets before, forecast and after side by side and marks a plan that cost more `worse`; `-- --check` runs it over examples/checks/plan-world.rofl and judges it; needs `cargo build --release` in rust/. The agent's skill for the loop is .claude/skills/refine-plan/SKILL.md").

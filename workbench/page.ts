@@ -15,6 +15,7 @@
 // A notebook whose first cell is not prose opening with front matter reads rofl:visual/graph.rofl.md, so `draw graph` works in bare cells.
 import { Bench, HINT, addWhere, answered, ghLink, keyAction, nearFiles, nearLink, notebookOf, shown, split, esc, prose, said, state, type Cell, type Kind, type Near, type Ran } from './bench.ts';
 import { SAID } from '../notebook/kernel.ts';
+import { loadWasm } from '../scanners/oxc_wasm.ts';
 import { armFull, back, checkFull, elevate, finish, linked, read, scope, signIn, signOut, signedIn, whyNot, type Who } from './github.ts';
 import { draw, graphLibs } from '../vscode/visual/pictures.ts';
 import { panZoom } from '../vscode/visual/pan.ts';
@@ -27,6 +28,8 @@ const KINDS: [Kind, string][] = [['rofl', 'sentences'], ['datalog', 'datalog'], 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const book = $('book'), bar = $('bar'), head = $('head');
 const bench = new Bench((p) => fetch(p).then((r) => { if (!r.ok) throw new Error(`${p}: ${r.status}`); return r.text(); }));
+// the scanner is oxc compiled to wasm (rust/tools/oxc_scan), the one `rofl scan` runs; a run waits for it
+const scanner = fetch('oxc_scan.wasm').then((r) => r.arrayBuffer()).then(loadWasm);
 const newId = () => 'c' + Math.random().toString(36).slice(2, 10);
 
 // newest first: this viewer's choice, the display reversed; the notebook's order and its run are the same
@@ -302,7 +305,7 @@ function run(delay: number) {
     if (running) { again = true; return; }
     running = true; again = false;
     $('runinfo').textContent = 'running…';
-    try { ran = await bench.run(cells, source?.near, events); paintOuts(); $('runinfo').textContent = ''; }
+    try { await scanner; ran = await bench.run(cells, source?.near, events); paintOuts(); $('runinfo').textContent = ''; }
     catch (err) { $('runinfo').textContent = ''; head.innerHTML = `<div class="err">The run failed: ${esc((err as Error).message)}</div>`; }
     finally { running = false; if (again) run(0); }
   }, delay);
@@ -326,6 +329,7 @@ async function translate(id: string) {
     } catch (err) { last = err as { code: string; text?: string }; return { ok: false as const, error: SAMPLE[last.code] ?? String((err as Error).message ?? last.code) }; }
   }, { who: 'Claude' });
   try {
+    await scanner;
     const r = await bench.translate(cells, id, ask, (s) => { think.textContent = s; });
     const partial = (last as { text?: string } | null)?.text;
     if (last && ['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].includes((last as { code: string }).code)) sampleOff = true;

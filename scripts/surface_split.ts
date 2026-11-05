@@ -31,12 +31,12 @@
 //   --break books    a volume cooled by the books code, flow and main only (a base fact of another book, `probe[audit]`
 //                    in the first volume, is forgotten: the driver refuses it, or the volume differs from the whole world)
 import * as fs from 'node:fs';
+import { MODEL_FILES } from '../notebook/front.ts';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { Rofl } from '../src/api.ts';
 import { RoflPort, type RoflSession } from '../runtime/port.ts';
-import { MODEL_FILES } from '../notebook/front.ts';
 import { drive } from '../runtime/split.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -79,7 +79,7 @@ for (const line of fs.readFileSync(path.join(ROOT, FACTS), 'utf8').split('\n')) 
   const p = [...ps][0]!;
   if (!volumes.has(p)) volumes.set(p, []);
   volumes.get(p)!.push(line);
-  const m = /^ast_node\[code\]\(n[0-9a-f]{16}_[0-9a-z]+, file, "([^"]+)"/.exec(line);
+  const m = /^node\[ast_oxc\]\(n[0-9a-f]{16}_root, program, "([^"]+)"/.exec(line);
   if (m) fileOf.set(p, m[1]!);
 }
 const prefixOf = new Map([...fileOf].map(([p, f]) => [f, p]));

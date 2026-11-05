@@ -48,8 +48,6 @@ prose_claim("facts/spec.rofl", "...AND THE LINE THAT INHERITED THE COMPOUND NEVE
 prose_pointer("facts/spec.rofl", "...AND THE LINE THAT INHERITED THE COMPOUND NEVER CAUGHT UP.").
 prose_site("rules/js-dataflow.rofl").
 prose_site("rules/worklist.rofl").
-prose_claim("rules/worklist.rofl", "THE ORDER IS THE WORK. A hand number collided (file order by").
-prose_pointer("rules/worklist.rofl", "THE ORDER IS THE WORK. A hand number collided (file order by").
 retire_site(count, "scripts/lint.ts").
 retire_pattern("scripts/lint.ts").
 retire_site(count, "examples/wtf/wtf.rofl").

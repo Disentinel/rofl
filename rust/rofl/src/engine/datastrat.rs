@@ -107,7 +107,8 @@ impl Eval {
     /// when there is no such component or the program stalls anyway.
     pub(super) fn take_data_components(&mut self, stalled: &Peel, lats: &[Sym], dom_edges: &[(Sym, Sym)]) -> Option<Peel> {
         let barred = |rel: Sym| {
-            brk!("ds_barred_ignored" => false; self.lat.is_cell(rel)
+            brk!("ds_barred_ignored" => false; self.books.is_node(rel)
+                || self.lat.is_cell(rel)
                 || self.carried.contains_key(&rel)
                 || self.demand.on(rel)
                 || self.lat.algebra(rel).count.is_some()
@@ -118,7 +119,7 @@ impl Eval {
         if brk!("ds_no_demote" => true; demote.is_empty()) {
             return None;
         }
-        let again = peel_rounds(&self.rules, &self.v, lats, dom_edges, &demote);
+        let again = peel_rounds(&self.rules, &self.v, &self.books, lats, dom_edges, &demote);
         if again.stalled {
             return None;
         }

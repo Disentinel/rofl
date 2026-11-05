@@ -10,8 +10,7 @@ import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { BOOK_ROWS } from '../src/want.ts';
-import { idPrefix, scan } from '../scanners/js_ast.ts';
-import { inherit } from '../scanners/js_inherit.ts';
+import { scanText } from '../scanners/oxc_wasm.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
@@ -23,7 +22,7 @@ export type { Stop };
 const BUDGET = 4_000_000_000, SPACE = 40_000_000;
 export const FILE = 'play.js';
 
-export { MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
+export { NB_MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
 export { readBook, homeOf, booksOf, type Cell } from '../notebook/book.ts';
 
 export type Row = { sentence: string; literal: string };
@@ -53,68 +52,65 @@ const LITERAL = /^[a-z_]\w*(?:\[\w+\])?\(/;   // a question may also be asked in
 /** A string as the scanner quotes it; a control character in it is left as it is, where JSON would refuse the whole run. */
 const unquote = (q: string): string => { try { return JSON.parse(q); } catch { return q.slice(1, -1); } };
 
-/** A node as the code writes it, `s.put()`, `new Store()`, `class Store`, from the scanner's own facts. */
-function labelNodes(facts: string[], nodes: Record<string, Node>): void {
-  const kid = new Map<string, string>(), attr = new Map<string, string>();
-  for (const f of facts) {
-    let m = /^ast_child\[code\]\((\w+), (\w+), (\d+), (\w+)\)/.exec(f);
-    if (m) { kid.set(`${m[1]} ${m[2]} ${m[3]}`, m[4]); continue; }
-    m = /^ast_attr\[code\]\((\w+), (\w+), (.*)\)\.$/.exec(f);
-    if (m) attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? unquote(m[3]) : m[3]);
-  }
-  const k = (id: string, field: string) => kid.get(`${id} ${field} 0`);
+/** A node as the code writes it, `s.put()`, `new Store()`, `class Store`, from oxc's own facts. */
+function labelNodes(kind: Map<string, string>, kid: Map<string, string>, attr: Map<string, string>, nodes: Record<string, Node>): void {
+  const k = (id: string, field: string) => kid.get(`${id} ${field}`);
   const lab = (id: string | undefined, d = 0): string => {
-    const n = id && nodes[id];
-    if (!n || d > 4) return '…';
+    const kd = id && kind.get(id);
+    if (!id || !kd || d > 4) return '…';
     const at = (key: string) => attr.get(`${id} ${key}`);
-    switch (n.kind) {
-      case 'identifier': return at('name') ?? 'name';
-      case 'private_name': return '#' + lab(k(id, 'id'), d + 1);
+    switch (kd) {
+      case 'identifier_reference': case 'binding_identifier': case 'identifier_name': return at('name') ?? 'name';
+      case 'private_identifier': return '#' + (at('name') ?? '');
       case 'this_expression': return 'this';
       case 'string_literal': return JSON.stringify(at('value') ?? '');
       case 'numeric_literal': case 'boolean_literal': return String(at('value'));
-      case 'member_expression': case 'optional_member_expression': return lab(k(id, 'object'), d + 1) + (at('computed') === 'true' ? '[…]' : '.' + lab(k(id, 'property'), d + 1));
-      case 'call_expression': case 'optional_call_expression': return lab(k(id, 'callee'), d + 1) + '()';
+      case 'static_member_expression': return lab(k(id, 'object'), d + 1) + '.' + lab(k(id, 'property'), d + 1);
+      case 'computed_member_expression': return lab(k(id, 'object'), d + 1) + '[…]';
+      case 'call_expression': return lab(k(id, 'callee'), d + 1) + '()';
       case 'new_expression': return 'new ' + lab(k(id, 'callee'), d + 1) + '()';
       case 'await_expression': return 'await ' + lab(k(id, 'argument'), d + 1);
-      case 'class_declaration': case 'class_expression': return 'class ' + (k(id, 'id') ? lab(k(id, 'id'), d + 1) : '');
-      case 'function_declaration': case 'function_expression': return 'function ' + (k(id, 'id') ? lab(k(id, 'id'), d + 1) : '') + '()';
+      case 'parenthesized_expression': return lab(k(id, 'expression'), d + 1);
+      case 'class': return 'class ' + (k(id, 'id') ? lab(k(id, 'id'), d + 1) : '');
+      case 'function': return 'function ' + (k(id, 'id') ? lab(k(id, 'id'), d + 1) : '') + '()';
       case 'arrow_function_expression': return '() =>';
-      case 'class_method': case 'object_method': case 'class_private_method': return lab(k(id, 'key'), d + 1) + '()';
-      case 'class_property': case 'object_property': return lab(k(id, 'key'), d + 1);
+      case 'method_definition': return lab(k(id, 'key'), d + 1) + '()';
+      case 'property_definition': case 'object_property': return lab(k(id, 'key'), d + 1);
       case 'variable_declarator': return lab(k(id, 'id'), d + 1) + (k(id, 'init') ? ' = ' + lab(k(id, 'init'), d + 1) : '');
       case 'assignment_expression': return lab(k(id, 'left'), d + 1) + ' = ' + lab(k(id, 'right'), d + 1);
-      case 'file': case 'program': return n.file;
-      default: return n.kind.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
+      case 'program': return nodes[id]?.file ?? 'program';
+      default: return kd.replace(/_(expression|declaration|statement)$/, '').replace(/_/g, ' ');
     }
   };
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
-/** The facts of the code: the scanner's of each file, and the host's of the paths and of every string a file holds. */
-export function codeFacts(files: Record<string, string>, data: string[] = [], previous?: Map<string, string[]>): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
-  const nodes: Record<string, Node> = {};
-  const parseErrors: Record<string, string> = {};
-  const facts: string[] = [], strings = new Set<string>();
+/** The facts of the code: oxc's tree of each file (scanners/oxc_wasm.ts, the scan of `rofl scan --no-start`), and the host's of the paths and of every string a file holds. */
+export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
+  const facts: string[] = [], nodes: Record<string, Node> = {}, parseErrors: Record<string, string> = {}, strings = new Set<string>();
+  const kind = new Map<string, string>(), kid = new Map<string, string>(), attr = new Map<string, string>();
   for (const [path, src] of Object.entries(files)) {
-    const scanned = scan(src, { file: path }).facts;
-    for (const fact of previous ? inherit(scanned, previous.get(idPrefix(path)) ?? []) : scanned) {
-      facts.push(fact);
-      const m = /^ast_node\[code\]\((\w+), (\w+), "([^"]*)"\)/.exec(fact);
-      if (m) nodes[m[1]] = { kind: m[2], file: m[3], line: 0, label: '' };
-      const l = /^ast_line\[code\]\((\w+), (\d+)\)/.exec(fact);
-      if (l) nodes[l[1]].line = Number(l[2]);
-      const e = /^ast_parse_error\[code\]\("[^"]*", "(.*)"\)\.$/.exec(fact);
-      if (e) parseErrors[path] = e[1];
-      const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact);
-      if (v) strings.add(unquote(v[1]));
+    for (const l of scanText(src, path).split('\n')) {
+      if (!l || l.startsWith('--')) continue;
+      facts.push(l);
+      let m = /^node\[ast_oxc\]\((\w+), (\w+), "((?:[^"\\]|\\.)*)"\)\.$/.exec(l);
+      if (m) { kind.set(m[1], m[2]); nodes[m[1]] = { kind: m[2], file: unquote(`"${m[3]}"`), line: 0, label: '' }; continue; }
+      m = /^line\[ast_oxc\]\((\w+), (\d+)\)\.$/.exec(l);
+      if (m) { if (nodes[m[1]]) nodes[m[1]].line = Number(m[2]); continue; }
+      m = /^child\[ast_oxc\]\((\w+), (\w+), 0, (\w+)\)\.$/.exec(l);
+      if (m) { kid.set(`${m[1]} ${m[2]}`, m[3]); continue; }
+      m = /^attr\[ast_oxc\]\((\w+), (\w+), (.*)\)\.$/.exec(l);
+      if (m) { attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? unquote(m[3]) : m[3]); if (m[2] === 'value' && m[3].startsWith('"')) strings.add(unquote(m[3])); continue; }
+      m = /^parse_error\[ast_oxc\]\("((?:[^"\\]|\\.)*)", "(.*)"\)\.$/.exec(l);
+      if (m) parseErrors[path] = m[2];
     }
   }
+  labelNodes(kind, kid, attr, nodes);
   return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
 }
 
 /** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
-function hostFacts(paths: string[], strings: Set<string>): string[] {
+export function hostFacts(paths: string[], strings: Set<string>): string[] {
   // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
   const q = (x: string) => '"' + x.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"', out: string[] = [], dirs = new Set(['.']);
   const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
@@ -732,7 +728,6 @@ export class Host {
     const key = JSON.stringify([files, data]);
     if (this.scanned?.key === key) return this.scanned;
     const { facts, nodes, parseErrors, host } = codeFacts(files, data);
-    labelNodes(facts, nodes);
     const all = [...facts, ...host];
     this.base = null;
     return this.scanned = { key, facts, nodes, parseErrors, lines: all, rels: new Set(all.map(relOf)) };

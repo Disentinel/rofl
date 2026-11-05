@@ -48,6 +48,7 @@ edb(unknown_because).
 --
 -- The roles name the module by `module_ref`: on the string of a declaration, and on a dynamic import itself (a call).
 static_source[code](D, Src, Spec) :- module_ref[value](Src, Spec), not call[value](Src), parent[tree](D, Src).
+static_source[code](D, Src, Spec) :- module_ref[type](Src, Spec), parent[tree](D, Src).
 
 import_site[code](I, static_import)  :- static_source[code](I, Src, _), not spread_props[value](_, _, Src),
                                         not reexport_site[code](I, reexport_named).
@@ -87,10 +88,8 @@ site_source_node[code](C, Src) :- require_site[code](C), argument_at[code](C, 0,
 
 site_source[code](I, S) :- static_source[code](I, _, S).
 site_source[code](I, S) :- module_ref[value](I, S), call[value](I).
--- the roles do not say a literal is a string: the argument of `require` is read on the raw tree
 site_source[code](C, S) :- require_site[code](C), site_source_node[code](C, Src),
-                           ast_node[code](Src, string_literal, _),
-                           ast_value[code](Src, S).
+                           literal[value](Src, S), string is type_of(S).
 
 site_source_literal[code](I) :- site_source[code](I, _).
 
@@ -269,8 +268,8 @@ export_binding[code](E, Sp, External, Internal) :- export_spec[code](E, Sp),
 export_renamed[code](Sp, External, Internal) :- export_binding[code](_, Sp, External, Internal),
                                                 External != Internal.
 
--- the one marker the roles do not carry: a declaration with no member (`export type * from`)
-export_decl_type_only[code](E)  :- ast_attr[code](E, export_kind, "type").
+-- a declaration with no member names its module in the world of types (`import type {} from`, `export type * from`)
+type_sited[code](E)  :- module_ref[type](Src, _), parent[tree](E, Src).
 
 export_value_binding[code](E, Sp) :- export_binding[code](E, Sp, _, _), export_value_spec[code](E, Sp).
 
@@ -292,8 +291,7 @@ export_internal_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, _, A),
 -- so both ends meet on one spelling. `export default q`: the declaration IS
 -- the name (an identifier has `name` and no `id`), hence the second arm.
 -- `export default interface I {}` is erased and carries `export_kind`
--- "value"; its kind is outside the vocabulary and `vocabulary_gap[audit]`
--- says so the day it arrives.
+-- "value"; its kind has no site here.
 export_default_site[code](E) :- program[tree](Ns, _), has[value](Ns, E), key[value](E, "default"), parent[tree](Ns, E).
 
 default_external[code](E, "default") :- export_default_site[code](E).
@@ -332,7 +330,6 @@ value_binding[code](I, Sp) :- binding[code](I, Sp, _, _), target[value](Sp, N), 
 
 has_value_binding[code](I) :- value_binding[code](I, _).
 
-no_specifiers[code](I) :- import_site[code](I, static_import), not has_specifier[code](I).
 
 depends[code](F, T) :- module_target[code](I, T), site_file[code](I, F).
 
@@ -347,13 +344,10 @@ flows[code](F, T) :- require_site[code](I),
 -- The roles merge `import type {X}` with `import {type X}`: a name bound in the
 -- types only is one erased either way. A site ALL of whose specifiers are
 -- erased evaluates nothing and one with NO specifier evaluates everything
--- (the roles do not see `import type {} from` or `export type * from`: both
--- are read on the declaration). A module imported as data (section 9) is read, not run.
+-- (`import type {} from` and `export type * from` name their module in the types). A module imported as data (section 9) is read, not run.
 type_only_site[code](I)  :- has_specifier[code](I), not has_value_binding[code](I).
 type_only_site[code](E)  :- reexport_site[code](E, reexport_named), not reexport_value[code](E).
-type_only_site[code](E)  :- reexport_site[code](E, reexport_all), export_decl_type_only[code](E).
-type_only_site[code](E)  :- no_specifiers[code](E), export_decl_type_only[code](E).
-type_only_site[code](E)  :- no_specifiers[code](E), ast_attr[code](E, import_kind, "type").
+type_only_site[code](E)  :- module_site[code](E, _), type_sited[code](E).
 runs_site[code](I)       :- module_site[code](I, _), not type_only_site[code](I), not module_is_data[code](I, _).
 
 evaluates_at[code](I, T)       :- runs_site[code](I), module_target[code](I, T).
@@ -372,7 +366,7 @@ reexport_value_spec[code](E, Sp) :- reexport_site[code](E, reexport_named), expo
 
 reexport_value[code](E) :- reexport_value_spec[code](E, _).
 reexport_value[code](E) :- reexport_site[code](E, reexport_all),
-                           not export_decl_type_only[code](E).
+                           not type_sited[code](E).
 
 flows[code](F, T) :- reexport_value[code](E),
                      module_target[code](E, T), site_file[code](E, F).
@@ -478,19 +472,20 @@ not_module_meta[audit](M) :- meta_form[code](M, new_target).
 -- is NOT evaluated as code — `effect_of_module` assumes an imported module
 -- runs, and for these it does not. Two frontiers: an attribute whose parent is
 -- not a site, and one whose key or value the join could not read.
-import_attr[code](A, Key, Value) :- ast_node[code](A, import_attribute, _),
-                                    ast_child[code](A, key, 0, K), ast_name[code](K, Key),
-                                    ast_child[code](A, value, 0, V), ast_value[code](V, Value).
-
-import_attr_of[code](D, A) :- ast_child[code](D, attributes, _, A).
+-- oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
+import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, name, Key),
+                                    child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
+import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, value, Key),
+                                    child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
+import_attr_of[code](D, A) :- child[ast_oxc](D, with_clause, 0, W), child[ast_oxc](W, with_entries, _, A).
 module_attr[code](D, Key, Value) :- import_attr_of[code](D, A), import_attr[code](A, Key, Value).
 
 module_type[code](D, T) :- module_attr[code](D, "type", T).
 
 module_is_data[code](D, T) :- module_type[code](D, T), T != "javascript".
 
-import_attr_unsited[audit](A) :- ast_node[code](A, import_attribute, _),
+import_attr_unsited[audit](A) :- node[ast_oxc](A, import_attribute, _),
                                  not import_attr_of[code](_, A).
 
-import_attr_unread[audit](A) :- ast_node[code](A, import_attribute, _),
+import_attr_unread[audit](A) :- node[ast_oxc](A, import_attribute, _),
                                 not import_attr[code](A, _, _).

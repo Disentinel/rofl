@@ -308,7 +308,7 @@ because no evaluation here hit a bound and everything deliberately outside the
 model is already a waiver. They are exercised in the test instead of being
 filled with plausible-looking rows.
 
-Files: `facts/js-kinds.rofl`, `rules/js-model.rofl`. Cross-language agreement is
+The JS matrix itself (the kind tables, `handled`, `ignored`, the audits of `rules/js-model.rofl`) was removed on 2026-11-05 with Babel, whose kinds it counted; the mechanism is kept for aggregates in `rules/agg.rofl`. Cross-language agreement is
 derived rather than asserted — `converges[audit](Layer, Rule, A, B)` reports the
 eight places two languages are modelled by the same rule in the same layer.
 

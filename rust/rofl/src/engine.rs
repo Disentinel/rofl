@@ -35,6 +35,8 @@ mod latkept;
 mod want;
 mod layer;
 mod algebra;
+mod books;
+pub use books::Books;
 pub use algebra::RelAlgebra;
 pub use latkept::Tok;
 pub use cost::{CostState, Hot, PremCost};
@@ -821,6 +823,8 @@ pub struct Eval {
     news_ix: Option<(usize, Sym, Rc<par::NewsIx>)>,
     /// The round each relation closes in, for a cell's seals; 0 for input.
     round_of: HashMap<Sym, u32>,
+    /// The relations ranked by name and book (`books.rs`).
+    books: Books,
     /// Every relation a rule concludes within the tick: one of these with no
     /// round is a table that failed to rank it, never input.
     derived_rels: HashSet<Sym>,
@@ -2265,6 +2269,7 @@ impl Eval {
             heights_kept: HashMap::new(),
             news_ix: None,
             round_of: HashMap::new(),
+            books: Books::default(),
             derived_rels: HashSet::new(),
             fault: None,
             rename_counter: 0,
@@ -2412,6 +2417,8 @@ impl Eval {
             return None;
         }
         let kernel = self.kernel_heads();
+        let whole = |rel: Sym| self.lat.is_cell(rel) || self.lat.algebra(rel).sub.is_some() || self.lat.subs().any(|(_, x)| x.reads.contains(&rel));
+        self.books = Books::of(kept, &mut self.h, &self.v, &whole);
         cone.extend(self.refusal_heads(kept));
         loop {
             let n = cone.len();
@@ -2522,7 +2529,7 @@ impl Eval {
         if self.mode == Mode::Rounds {
             let lats: Vec<Sym> = self.lat.cell_rels().collect();
             let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
-            let peel = peel_rounds(kept, v, &lats, &dom_edges, &HashSet::new());
+            let peel = peel_rounds(kept, v, &self.books, &lats, &dom_edges, &HashSet::new());
             if peel.stalled {
                 let heads: HashSet<Sym> = kept.iter().map(|r| r.clause.head.rel).collect();
                 out.extend(peel.stuck.iter().copied().filter(|s| heads.contains(s)));
@@ -3594,7 +3601,8 @@ impl Eval {
     fn peel_levels(&mut self, mono: &[Rc<ERule>], strat_rules: &[Rc<ERule>]) -> Result<(HashSet<Sym>, Levels), Halt> {
         let lats: Vec<Sym> = self.lat.cell_rels().collect();
         let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
-        let mut peel = peel_rounds(&self.rules, &self.v, &lats, &dom_edges, &HashSet::new());
+        self.refresh_books();
+        let mut peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
         if peel.stalled {
             // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
             // stratified by its data (`datastrat.rs`): ranked as one round
@@ -3605,9 +3613,9 @@ impl Eval {
         if peel.stalled {
             return Err(self.stall_error(&peel));
         }
-        self.round_of = peel.round.iter().map(|(k, v)| (*k, *v as u32)).collect();
+        self.round_of = self.books.rounds(&peel.round);
         let lifted: Vec<Rc<ERule>> = if self.by_component() {
-            mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next && peel.round.get(&r.clause.head.rel).is_some_and(|k| *k > 0)).cloned().collect()
+            mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next && self.round_of.get(&self.books.head(&r.clause.head)).is_some_and(|k| *k > 0)).cloned().collect()
         } else {
             Vec::new()
         };
@@ -3617,7 +3625,7 @@ impl Eval {
             if r.clause.head.temporal == Temporal::Next {
                 i64::MAX
             } else {
-                peel.round.get(&r.clause.head.rel).copied().unwrap_or(i64::MAX)
+                self.round_of.get(&self.books.head(&r.clause.head)).map_or(i64::MAX, |k| *k as i64)
             }
         });
         Ok((lifted, levels))
@@ -3636,7 +3644,7 @@ impl Eval {
                     .iter()
                     .find(|r| r.id == *rid)
                     .and_then(|r| r.clause.body.iter().find_map(|b| match b {
-                        BodyElem::Agg(a) if b.lits_deep().iter().any(|l| l.rel == *inner) => Some(a.op.name()),
+                        BodyElem::Agg(a) if b.lits_deep().iter().any(|l| self.books.lit(l).contains(inner)) => Some(a.op.name()),
                         _ => None,
                     }))
                     .unwrap_or("an aggregate");
@@ -9073,6 +9081,18 @@ impl Eval {
     /// The level a relation is complete after: the round (or stratum) its
     /// rules run in, `i64::MAX` for a relation a rule concludes that no
     /// round orders, 0 for one no rule concludes.
+    /// The books each relation is ranked by, read again from the program (`books.rs`).
+    fn refresh_books(&mut self) {
+        let whole = |rel: Sym| self.lat.is_cell(rel) || self.lat.algebra(rel).sub.is_some() || self.lat.subs().any(|(_, x)| x.reads.contains(&rel));
+        let books = Books::of(&self.rules, &mut self.h, &self.v, &whole);
+        self.books = books;
+    }
+
+    /// The level a fact is complete after: its relation's in its book.
+    pub fn fact_level(&self, rel: Sym, persp: Sym) -> i64 {
+        self.rel_level(self.books.fact(rel, persp))
+    }
+
     pub fn rel_level(&self, rel: Sym) -> i64 {
         match self.round_of.get(&rel) {
             Some(r) => *r as i64,
@@ -9087,7 +9107,7 @@ impl Eval {
         if r.clause.head.temporal == Temporal::Next {
             i64::MAX
         } else {
-            self.rel_level(r.clause.head.rel)
+            self.rel_level(self.books.head(&r.clause.head))
         }
     }
 
@@ -13768,10 +13788,13 @@ pub struct Peel {
 ///
 /// `demote` holds `(head, inner)` pairs whose aggregate edge is positive
 /// instead: a component a data-level stratification takes (`data_demotable`).
-pub fn peel_rounds<R: std::borrow::Borrow<ERule>>(rules: &[R], v: &Vocab, lattices: &[Sym], dom_edges: &[(Sym, Sym)], demote: &HashSet<(Sym, Sym)>) -> Peel {
+pub fn peel_rounds<R: std::borrow::Borrow<ERule>>(rules: &[R], v: &Vocab, books: &Books, lattices: &[Sym], dom_edges: &[(Sym, Sym)], demote: &HashSet<(Sym, Sym)>) -> Peel {
     let mut g = PeelGraph::default();
     for r in rules {
-        g.read_rule(std::borrow::Borrow::borrow(r), v, demote);
+        let r = std::borrow::Borrow::borrow(r);
+        for h in books.lit(&r.clause.head) {
+            g.read_rule(r, h, books, v, demote);
+        }
     }
     for (p, b) in dom_edges {
         g.heads.insert(*p);
@@ -13797,25 +13820,24 @@ struct PeelGraph {
 
 impl PeelGraph {
     /// The edges of one rule's body, and the kernel relations its aggregates conclude into.
-    fn read_rule(&mut self, r: &ERule, v: &Vocab, demote: &HashSet<(Sym, Sym)>) {
+    fn read_rule(&mut self, r: &ERule, hrel: Sym, books: &Books, v: &Vocab, demote: &HashSet<(Sym, Sym)>) {
         if r.clause.head.temporal == Temporal::Next {
             return;
         }
         let reflected = [v.agg_cell, v.agg_member, v.agg_member_prem, v.agg_sealed, v.hole];
-        let hrel = r.clause.head.rel;
         self.heads.insert(hrel);
         self.pos.entry(hrel).or_default();
         self.neg.entry(hrel).or_default();
         for b in &r.clause.body {
             match b {
                 BodyElem::Pos(l) if r.lattice_outer.contains(&l.rel) => {
-                    self.neg.get_mut(&hrel).unwrap().insert(l.rel);
+                    self.neg.get_mut(&hrel).unwrap().extend(books.lit(l));
                 }
                 BodyElem::Pos(l) => {
-                    self.pos.get_mut(&hrel).unwrap().insert(l.rel);
+                    self.pos.get_mut(&hrel).unwrap().extend(books.lit(l));
                 }
                 BodyElem::Neg(l) => {
-                    self.neg.get_mut(&hrel).unwrap().insert(l.rel);
+                    self.neg.get_mut(&hrel).unwrap().extend(books.lit(l));
                 }
                 // A THRESHOLD reads its inner body as premises: positive
                 // edges (recursion allowed) and strict negations. Its cells
@@ -13824,10 +13846,10 @@ impl PeelGraph {
                     for x in &a.body {
                         match x {
                             BodyElem::Pos(l) => {
-                                self.pos.get_mut(&hrel).unwrap().insert(l.rel);
+                                self.pos.get_mut(&hrel).unwrap().extend(books.lit(l));
                             }
                             BodyElem::Neg(l) => {
-                                self.neg.get_mut(&hrel).unwrap().insert(l.rel);
+                                self.neg.get_mut(&hrel).unwrap().extend(books.lit(l));
                             }
                             _ => {}
                         }
@@ -13839,24 +13861,24 @@ impl PeelGraph {
                     }
                 }
                 BodyElem::Agg(a) => {
-                    for l in b.lits_deep() {
+                    for inner in b.lits_deep().into_iter().flat_map(|l| books.lit(l)) {
                         brk!("no_agg_edge" => { let _ = reflected; };
                         for h in std::iter::once(hrel).chain(reflected) {
                             self.heads.insert(h);
                             self.pos.entry(h).or_default();
-                            if h == hrel && demote.contains(&(hrel, l.rel)) {
-                                self.pos.entry(h).or_default().insert(l.rel);
+                            if h == hrel && demote.contains(&(hrel, inner)) {
+                                self.pos.entry(h).or_default().insert(inner);
                                 if !self.demoted.contains(&(r.id, a.at)) {
                                     self.demoted.push((r.id, a.at));
                                 }
                                 continue;
                             }
-                            self.neg.entry(h).or_default().insert(l.rel);
+                            self.neg.entry(h).or_default().insert(inner);
                             if h == hrel {
-                                self.soft.insert((h, l.rel));
+                                self.soft.insert((h, inner));
                             }
                         });
-                        self.agg_edges.push((r.id, hrel, l.rel));
+                        self.agg_edges.push((r.id, hrel, inner));
                     }
                 }
                 BodyElem::Bi { .. } => {}
@@ -14278,6 +14300,19 @@ pub fn eval_str_op(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> StrOp {
         *fail = STR_TYPE;
         return StrOp::Refused;
     }
+    if name == "type_of" {
+        let name = match walk(h, args[0], s).kind() {
+            TermK::Str(_) => "string",
+            TermK::Int(_) => "int",
+            TermK::Atom(_) => "atom",
+            TermK::Func(_) => "term",
+            TermK::Var(_) => {
+                *fail = ARITH_UNBOUND;
+                return StrOp::Refused;
+            }
+        };
+        return StrOp::Value(h.atom(name));
+    }
     if name == "hash" {
         return match hash_op(h, args[0], args[1], s, fail) {
             Some(t) => StrOp::Value(t),
@@ -14522,7 +14557,7 @@ mod tests {
                 clause: c,
             }));
         }
-        let peel = peel_rounds(&rules, &v, &[], &[], &HashSet::new());
+        let peel = peel_rounds(&rules, &v, &Books::default(), &[], &[], &HashSet::new());
         assert!(!peel.stalled, "safety.rofl does not peel");
         let heads: HashSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
         let mut bad: Vec<String> = Vec::new();
@@ -14548,7 +14583,7 @@ mod tests {
         let mut s = crate::session::Session::fresh(1_000_000);
         s.load("e(a, b). e(b, c). e(c, d).\nreach(X, Y) :- e(X, Y).\nreach(X, Z) :- reach(X, Y), e(Y, Z).\nn(X, N) :- node(X), N is count(Y : reach(X, Y)).\nnode(a). node(d).", None).unwrap();
         let (n, reach, cell) = (s.eval.h.intern("n"), s.eval.h.intern("reach"), s.eval.h.intern("agg_cell"));
-        let peel = peel_rounds(&s.eval.rules, &s.eval.v, &[], &[], &HashSet::new());
+        let peel = peel_rounds(&s.eval.rules, &s.eval.v, &Books::default(), &[], &[], &HashSet::new());
         assert!(peel.round[&n] > peel.round[&reach], "the aggregate's head is above what it reads");
         assert!(peel.round[&cell] > peel.round[&reach], "so are the relations its cells are reflected into");
         s.evaluate().unwrap();

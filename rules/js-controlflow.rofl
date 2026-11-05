@@ -16,12 +16,14 @@
 -- A branch is a role: `executes_if(X, G, How)` says X executes depending on how G completed. The arm is the child
 -- of G's parent that holds X (a statement wrapper around X is the arm, not X). A switch case guards its consequents,
 -- not its test; a default is guarded as unmatched. The default value of a pattern has no role: its kind is read.
-guard_arm[code](P, A) :- executes_if[value](A, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A).
+guard_arm[code](P, A) :- executes_if[value](A, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A), not arm_first[code](P, A, G).
 guard_arm[code](P, A) :- executes_if[value](X, G, How), How != unmatched, parent[tree](P, G), parent[tree](P, A),
-                         inside[tree](A, X).
+                         inside[tree](A, X), not arm_first[code](P, A, G).
+-- an arm that is a step of its owner before the guard (the body of a do-while) runs once before the guard completes
+arm_first[code](P, A, G) :- executes_if[value](_, G, _), parent[tree](P, G), nth[tree](P, J, G), nth[tree](P, I, A), I < J.
 guard_arm[code](C, S) :- executes_if[value](C, T, matches), parent[tree](C, S), S != T.
 guard_arm[code](C, S) :- executes_if[value](C, _, unmatched), parent[tree](C, S).
-guard_arm[code](P, A) :- ast_node[code](P, assignment_pattern, _), ast_child[code](P, right, 0, A).
+guard_arm[code](P, A) :- conditional_write[code](P), assign[value](P, _, A), not logical[value](P, _, _, _).
 
 -- `a?.b.c(x)` runs its tail when the head is defined: every link of the chain and all it holds but the head (and
 -- the links below, which have their own row) are conditional.
@@ -52,21 +54,19 @@ edb(stmt_seq_field).
 stmt_seq_field(body).
 stmt_seq_field(consequent).
 
--- `abrupt_at` is a handful of rows and binds B and F: the second literal probes.
-after_abrupt[code](S) :- abrupt_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
+-- `abrupt_at` is a handful of rows and binds B: the second literal probes.
+after_abrupt[code](S) :- abrupt_at[code](B, I), seq_at[code](B, J, S), I < J, not finalizes[value](S, _).
 
 -- A SUSPENSION (`await`, `yield`) is a point after which the rest may not run —
 -- control comes back only if the promise settles — so it lands in `guarded` as
 -- a MAY and is deliberately not an `abrupt_at` arm. Confined to the suspending
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
-suspend_at[code](B, F, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
-                             inside[tree](S, X), inside[tree](G, S),
-                             ast_child[code](B, F, I, S), stmt_seq_field(F).
-after_suspend[code](S) :- suspend_at[code](B, F, I), ast_child[code](B, F, J, S), I < J.
-
--- a sequence field the scanner never emits: the typo hole
-stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
+suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+                          step_in[code](S, X), inside[tree](G, S), seq_at[code](B, I, S).
+suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+                          seq_at[code](B, I, X).
+after_suspend[code](S) :- suspend_at[code](B, I), seq_at[code](B, J, S), I < J.
 
 -- A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 -- statements between the reference and its target, and the walk stops at the
@@ -77,15 +77,12 @@ stmt_seq_unseen[audit](F) :- stmt_seq_field(F), not ast_child[code](_, F, 0, _).
 -- between reference and target and the walking arms then say NEVER where the
 -- honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 -- harmless, because both consumers read through `guarded`.
-label_name[code](LS, N)   :- ast_node[code](LS, labeled_statement, _),
-                             ast_child[code](LS, label, 0, I), ast_attr[code](I, name, N).
 label_ref[code](X, N)     :- jumps_to[value](X, N).
-label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
+label_target[code](X, LS) :- label_ref[code](X, N), labeled_as[value](LS, N),
                              inside[tree](LS, X).
 
-abrupt_at[code](B, F, I)  :- label_target[code](X, LS), inside[tree](S, X),
-                             inside[tree](LS, S), ast_child[code](B, F, I, S),
-                             stmt_seq_field(F).
+abrupt_at[code](B, I)     :- label_target[code](X, LS), step_in[code](S, X),
+                             inside[tree](LS, S), seq_at[code](B, I, S), not repeats[value](B, S).
 
 -- =========================================================================
 -- COMPLETION — not a ninth mechanism but the CLOSURE: does this statement
@@ -104,22 +101,21 @@ completion_kind(labeled_statement).
 
 completes_abruptly[code](S) :- exits[value](S, _).
 
-completes_abruptly[code](B) :- completes_abruptly[code](S), ast_child[code](B, body, _, S),
-                               ast_node[code](B, block_statement, _).
+-- a step that carries a label is the labelled statement's body: the owner completes abruptly if the labelled
+-- statement does, which it does not when a break leaves it
+completes_abruptly[code](B) :- completes_abruptly[code](S), nth[tree](B, _, S), strict[tree](B), not labeled_as[value](S, _),
+                               not repeats[value](B, _), not finalizes[value](_, S).
+completes_abruptly[code](B) :- completes_abruptly[code](S), labeled_as[value](S, _), not label_escaped[code](S), nth[tree](B, _, S),
+                               strict[tree](B), not repeats[value](B, _).
 
-completes_abruptly[code](S) :- completes_abruptly[code](C), ast_child[code](S, consequent, 0, C),
-                               ast_node[code](S, if_statement, _),
-                               ast_child[code](S, alternate, 0, A), completes_abruptly[code](A).
+completes_abruptly[code](S) :- completes_abruptly[code](C), executes_if[value](C, G, truthy), parent[tree](S, C),
+                               executes_if[value](A, G, falsy), parent[tree](S, A), completes_abruptly[code](A).
 
 label_escaped[code](LS)      :- label_target[code](_, LS).
-completes_abruptly[code](LS) :- completes_abruptly[code](S), ast_child[code](LS, body, 0, S),
-                                ast_node[code](LS, labeled_statement, _),
-                                not label_escaped[code](LS).
 
 -- the consumer: it replaces the old four-kind arm rather than sitting beside
 -- it, since the base case IS that arm
-abrupt_at[code](B, F, I) :- completes_abruptly[code](S), ast_child[code](B, F, I, S),
-                            stmt_seq_field(F).
+abrupt_at[code](B, I) :- completes_abruptly[code](S), seq_at[code](B, I, S), not repeats[value](B, S), not label_escaped[code](S).
 
 -- a kind this closure claims and never decides — misspelled, deleted or
 -- unexercised all read as "the closure is smaller than it says"
@@ -205,7 +201,7 @@ accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj,
                              selects[flow](N, Key), written_member[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), getter[value](M, M), not only_written[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), setter[value](M, M), written_member[code](N).
-written_member[code](N)   :- assign[value](_, N, _), object_of[code](N, _).
+written_member[code](N)   :- assign[value](_, N, _), object_of[code](N, _), not pat_in[code](_, _, N).
 only_written[code](N)     :- plain_assign[flow](A), assign[value](A, N, _).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).
@@ -226,25 +222,22 @@ site[code](N) :- accessor_read[code](N, _).
 pattern_source[code](P, Init) :- declarator_id[code](D, P), decl_value[flow](D, Init).
 
 pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
-                                pattern_source[code](P, Init), ast_node[code](P, object_pattern, _),
+                                pattern_source[code](P, Init),
                                 pattern_takes[code](P, Key).
 pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _), declarator_id[code](D, P),
 
                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
-pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
-                                spread_props[value](O, _, A), obj_lit[code](O), parent[tree](S, A).
+pattern_accessor[code](A, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
+                                spread_props[value](O, _, A), obj_lit[code](O).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
 -- keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
-spread_iterated[code](S) :- spread_elems[value](_, _, A), parent[tree](S, A).
-spread_iterated[code](S) :- spread_args[value](_, _, A), parent[tree](S, A).
+spread_iterated[code](A) :- spread_elems[value](_, _, A).
+spread_iterated[code](A) :- spread_args[value](_, _, A).
 
-pattern_iterates[code](P, M) :- ast_node[code](P, array_pattern, _),
-                                pattern_source[code](P, Init), may_be_node[flow](Init, Obj),
-                                member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
-pattern_iterates[code](S, M) :- spread_iterated[code](S),
-                                parent[tree](S, A), may_be_node[flow](A, Obj),
+pattern_iterates[code](P, M) :- iterates[value](P, P, _), for_of_iterates[code](P, M).
+pattern_iterates[code](A, M) :- spread_iterated[code](A), may_be_node[flow](A, Obj),
                                 member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 
 -- The two sides reach the call graph differently. An iterable position has one
@@ -280,22 +273,20 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- the hand-written mechanism column against `transfer_mechanism`; it is blind
 -- to `spread_element`, which carries both mechanisms — mutant d9 reads the
 -- edges instead.
-hidden_call_pos[code](N, accessor_call) :- ast_node[code](N, object_pattern, _).
-hidden_call_pos[code](R, accessor_call) :- rest_props[value](P, T), parent[tree](R, T), parent[tree](P, R).
-hidden_call_pos[code](S, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A), parent[tree](S, A).
-hidden_call_pos[code](N, iterator_call) :- ast_node[code](N, array_pattern, _).
+hidden_call_pos[code](N, accessor_call) :- object_pat[code](N).
+hidden_call_pos[code](T, accessor_call) :- rest_props[value](_, T).
+hidden_call_pos[code](A, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A).
 hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
 hidden_call_pos[code](X, iterator_call) :- iterates[value](X, _, _).
 
-hidden_call_src[code](P, Init) :- ast_node[code](P, object_pattern, _),
-                                  pattern_source[code](P, Init).
-hidden_call_src[code](P, Init) :- ast_node[code](P, array_pattern, _),
-                                  pattern_source[code](P, Init).
+hidden_call_src[code](P, Init) :- pattern_source[code](P, Init), object_pat[code](P).
 hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
                                   decl_value[flow](D, Init).
-hidden_call_src[code](S, A)    :- spread_iterated[code](S), parent[tree](S, A).
-hidden_call_src[code](S, A)    :- spread_of[code](_, A), parent[tree](S, A).
-hidden_call_src[code](X, R)    :- iterates[value](X, _, R).
+hidden_call_src[code](A, A)    :- spread_iterated[code](A).
+hidden_call_src[code](A, A)    :- spread_of[code](_, A).
+hidden_call_src[code](X, R)    :- iterates[value](X, _, R), X != R.
+hidden_call_src[code](P, N)    :- iterates[value](P, P, P), declarator_id[code](D, P), decl_value[flow](D, N).
+hidden_call_src[code](P, N)    :- iterates[value](P, P, P), may_be_node[flow](P, N).
 
 hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
 hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
@@ -313,15 +304,13 @@ hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
                                       not may_be_lit[flow](Src, _),
                                       not may_be_node[flow](Src, _).
 hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
-hidden_call_unsourced[flow](N, K)  :- hidden_call_pos[code](N, _),
-                                      not hidden_call_sourced[code](N),
-                                      ast_node[code](N, K, _).
+hidden_call_unsourced[flow](N)     :- hidden_call_pos[code](N, _), not hidden_call_sourced[code](N).
 
 hidden_call_accounted[audit](N)   :- hidden_call_fires[code](N).
 hidden_call_accounted[audit](N)   :- hidden_call_builtin[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_primitive[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_untraced[flow](N, _).
-hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N).
 hidden_call_unaccounted[audit](N) :- hidden_call_pos[code](N, _),
                                      not hidden_call_accounted[audit](N).
 
@@ -382,10 +371,10 @@ caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
 try_stops[code](C, T) :- throwing_call[code](C), try_walk[code](T, C).
 try_stops[code](C, S) :- try_stops[code](C, T), inside[tree](S, T).
 
-abrupt_at[code](B, F, I) :- throwing_call[code](C), nearest_v[flow](G, C),
-                            inside[tree](S, C), inside[tree](G, S),
-                            ast_child[code](B, F, I, S), stmt_seq_field(F),
-                            not try_stops[code](C, S).
+abrupt_at[code](B, I) :- throwing_call[code](C), nearest_v[flow](G, C),
+                         step_in[code](S, C), inside[tree](G, S),
+                         seq_at[code](B, I, S), not repeats[value](B, S), not try_stops[code](C, S).
+abrupt_at[code](B, I) :- throwing_call[code](C), nearest_v[flow](_, C), seq_at[code](B, I, C).
 
 -- After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.
 -- A suspension is a may and belongs here more exactly.
@@ -414,11 +403,15 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 -- `export_all_declaration` introduces no local entry.
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
--- The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
-export_statement[code](E) :- ast_node[code](E, export_named_declaration, _).
-export_statement[code](E) :- export_default_site[code](E).
+-- A declaration is exported when a name it introduces is a member of a namespace, a module's or a TypeScript one's:
+-- `export function f`, `export class C`, `export const a = 1`, `export const { a, b = () => 1 } = o`.
+declares_export[code](D) :- target[value](D, I), has[value](_, I).
+declares_export[code](D) :- decl[value](D, _), assign[value](D, T, _), has[value](_, T).
+declares_export[code](D) :- decl[value](D, _), assign[value](D, T, _), inside[tree](T, X), has[value](_, X).
 
-exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_statement[code](E).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), declares_export[code](F).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](D, F), declares_export[code](D).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_default_site[code](E).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),

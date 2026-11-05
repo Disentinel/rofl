@@ -39,7 +39,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createHash } from 'node:crypto';
 import { Rofl } from '../src/api.ts';
-import { scan, ScanSet } from './js_ast.ts';
+import { scan, ScanSet } from './oxc_code.ts';
 
 const REPO = fs.realpathSync(new URL('..', import.meta.url).pathname);
 const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
@@ -47,8 +47,7 @@ const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
 /** Every pack of this tree that exists, in load order. */
 export function packs(): string {
   const named = ['boot.rofl',
-    'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl',
-    'facts/js-shapes.rofl', 'facts/js-statements.rofl', 'facts/js-controlflow.rofl',
+    'facts/js-callgraph.rofl', 'facts/js-modules.rofl',
     'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
     'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl', 'rules/js-surface.rofl'];
   return named.filter((p) => fs.existsSync(path.join(REPO, p))).map(read).join('\n');

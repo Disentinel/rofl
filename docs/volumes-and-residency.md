@@ -136,7 +136,7 @@ the domain and start being about storage, and could not be carried to another
 layout.
 
 **The volume must be readable from the key.** Today it already is, but by
-accident: `scanners/js_ast.ts` mints node ids as `n<hash of path>_<counter>`, so
+accident: `rust/tools/oxc_scan` mints node ids as `n<hash of path>_<counter>`, so
 the file is a prefix of every id. The measurement above rests on that artefact.
 Make it deliberate.
 

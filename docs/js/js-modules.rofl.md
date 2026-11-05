@@ -1,6 +1,6 @@
 ---
 world: js-modules
-books: audit, code, fs, main, tree, type, value
+books: ast_oxc, audit, code, fs, main, tree, type, value
 default: code
 ---
 
@@ -32,16 +32,16 @@ Reads:
 - from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
 - from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
 - from js-dataflow: [free_global](js-dataflow.rofl.md#free_global)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
-- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [meta_form](js-structure.rofl.md#meta_form)
+- from js-structure: [argument_at](js-structure.rofl.md#argument_at), [meta_form](js-structure.rofl.md#meta_form)
+- from outside these files, in the ast_oxc:
+  - <a id="attr"></a>`attr`
+  - <a id="child"></a>`child`
+  - <a id="node"></a>`node`
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
   - <a id="program"></a>`program`
-- from outside these files, in the type:
-  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="binds"></a>`binds`
@@ -54,30 +54,20 @@ Reads:
   - <a id="module_expr"></a>`module_expr`
   - <a id="module_ref"></a>`module_ref`
   - <a id="pattern_prop"></a>`pattern_prop`
+  - <a id="ref"></a>`ref`
   - <a id="spread_props"></a>`spread_props`
   - <a id="target"></a>`target`
   - <a id="value"></a>`value`
-- from the scanner:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
-
-What this file calls a node, and what each word stands for:
-
-| word | stands for |
-|---|---|
-| <a id="noun-import_attribute"></a>an import attribute | a node of kind `import_attribute` |
-| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="site_source_literal"></a>A site has a literal source if [the source text](#site_source) of it is some text.
 - <a id="has_explicit_shape"></a>A text S has an explicit shape if S [has the explicit shape](#explicit_shape) some shape.
-- A site has a shape if [the site shape](#site_shape) of it is some shape.
+- A call has a shape if [the site shape](#site_shape) of it is some shape.
 - <a id="import_specifier_node"></a>A node names an import if [`decl`](#decl)(it, `import`).
 - <a id="has_specifier"></a>A site has a specifier if it [has the import specifier](#import_spec) some node.
-- <a id="export_decl_type_only"></a>A node is a type only export if [the attribute](#ast_attr) `export_kind` of it is "type".
 - <a id="export_bound"></a>A node has an export binding if some node [exports](#export_binding) some name as some name at it.
 - <a id="default_external"></a>A node exports by default as "default" if it [is a default export site](#export_default_site).
 - <a id="has_default_internal"></a>A node has a default internal if it [exports by default](#default_internal) some name.
@@ -87,7 +77,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="has_verdict"></a>A shape has a verdict if [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(it, something) in the main.
 - <a id="self_referential_module"></a>A file F is self referential if F [has the module meta](#module_meta) some node.
 - <a id="not_module_meta"></a>A node is not module meta if it [has the meta form](js-structure.rofl.md#meta_form) `new_target`.
-- <a id="import_attr_of"></a>A node has the import attribute X if X [is among the](#ast_child) `attributes` of it.
 - <a id="module_type"></a>A node imports the module type T if it [imports with the attribute](#module_attr) "type" holding T.
 
 `imports` lists:
@@ -126,8 +115,8 @@ Declared as facts:
 - <a id="node_prefix_only"></a>A spec Spec is loaded only under its scheme — rows from facts/js-modules.rofl
 - <a id="host_module"></a>A host H has the module Spec — rows from facts/js-host-surface.rofl
 - The shape verdict of a shape S is a verdict N — rows from facts/js-modules.rofl
-- A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-callgraph.rofl
-- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-callgraph.rofl
+- <a id="unknown_because"></a>A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-modules.rofl
+- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-modules.rofl
 
 ## 1. THE PLACES A MODULE SPECIFIER OCCURS — five kinds. A re-export is a site
 
@@ -141,10 +130,13 @@ Declared as facts:
 > 
 > The roles name the module by `module_ref`: on the string of a declaration, and on a dynamic import itself (a call).
 
-<a id="static_source"></a>`static_source`(D, Src, Spec) if all of:
-  - [`module_ref`](#module_ref)(Src, Spec);
-  - [`parent`](#parent)(D, Src);
-  - unless [`call`](#call)(Src).
+<a id="static_source"></a>`static_source`(D, Src, Spec) either:
+
+1. if all of:
+   - [`module_ref`](#module_ref)(Src, Spec);
+   - [`parent`](#parent)(D, Src);
+   - unless [`call`](#call)(Src);
+2. if [`module_ref`](#module_ref)(Src, Spec) in the type and [`parent`](#parent)(D, Src).
 
 <a id="import_site"></a>A node I is an import site of a form N either:
 
@@ -207,14 +199,12 @@ A site
 <a id="site_source"></a>The source text of a site I is S either:
 
 1. if [`static_source`](#static_source)(I, something, S);
-2. if [`module_ref`](#module_ref)(I, S) and [`call`](#call)(I).
-
-> the roles do not say a literal is a string: the argument of `require` is read on the raw tree
-
-The source text of a site C is S if all of:
-  - C [is a require site](#require_site);
-  - [the source node](#site_source_node) of C is a [string literal](#noun-string_literal) Src;
-  - Src [is written as](js-structure.rofl.md#ast_value) S.
+2. if [`module_ref`](#module_ref)(I, S) and [`call`](#call)(I);
+3. if all of:
+   - I [is a require site](#require_site);
+   - [the source node](#site_source_node) of I is a node Src;
+   - [`literal`](#literal)(Src, S);
+   - `string` is type_of(S).
 
 > the one irreducible cell: `import(pathVar)` names a module that does not
 > exist until the expression is evaluated
@@ -536,11 +526,11 @@ A site
 1. if all of:
    - some node [has the export specifier](#export_spec) Sp;
    - [`value`](#value)(Sp, N);
-   - [`ref`](#ref)(N, L) in the value;
+   - [`ref`](#ref)(N, L);
 2. if all of:
    - some node [has the export specifier](#export_spec) Sp;
    - [`value`](#value)(Sp, N) in the type;
-   - [`ref`](#ref)(N, L) in the value;
+   - [`ref`](#ref)(N, L);
 3. if a node E [has the export specifier](#export_spec) Sp and [`pattern_prop`](#pattern_prop)(E, L, Sp);
 4. if all of:
    - some node [has the export specifier](#export_spec) Sp;
@@ -557,7 +547,9 @@ A node
   - Sp [exports the local](#spec_internal) Internal.
 - <a id="export_renamed"></a>renames on export Internal to External if some node [exports](#export_binding) Internal as External at it and External differs from Internal.
 
-> the one marker the roles do not carry: a declaration with no member (`export type * from`)
+> a declaration with no member names its module in the world of types (`import type {} from`, `export type * from`)
+
+<a id="type_sited"></a>`type_sited`(E) if [`module_ref`](#module_ref)(Src, something) in the type and [`parent`](#parent)(E, Src).
 
 <a id="export_value_binding"></a>A node binds a value export at a node Sp if it [exports](#export_binding) some name as some name at Sp and [`export_value_spec`](#export_value_spec)(it, Sp).
 
@@ -586,8 +578,7 @@ A node
 > so both ends meet on one spelling. `export default q`: the declaration IS
 > the name (an identifier has `name` and no `id`), hence the second arm.
 > `export default interface I {}` is erased and carries `export_kind`
-> "value"; its kind is outside the vocabulary and `vocabulary_gap[audit]`
-> says so the day it arrives.
+> "value"; its kind has no site here.
 
 In the code:
 
@@ -609,7 +600,7 @@ In the code:
    - [the default declaration](#default_declaration) of E is a node D;
    - [`parent`](#parent)(D, I);
    - [`binds`](#binds)(I, N) in the type;
-3. if [the default declaration](#default_declaration) of E is a node D and [`ref`](#ref)(D, N) in the value.
+3. if [the default declaration](#default_declaration) of E is a node D and [`ref`](#ref)(D, N).
 
 <a id="default_anonymous"></a>A node exports an anonymous default if [the default declaration](#default_declaration) of it is some node, unless it [has a default internal](#has_default_internal).
 
@@ -647,13 +638,10 @@ A node
 
 In the code:
 
-A site
-
-- <a id="value_binding"></a>binds a value at a node Sp if all of:
+<a id="value_binding"></a>A site binds a value at a node Sp if all of:
   - it [binds the name](#binding) some name to some name at Sp;
   - [`target`](#target)(Sp, N);
   - [`binds`](#binds)(N, something).
-- <a id="no_specifiers"></a>has no specifiers if it [is an import site](#import_site) of `static_import`, unless it [has a specifier](#has_specifier).
 
 <a id="depends"></a>A file F depends on a file T if a site I [means the file](#module_target) T and I [sits in](#site_file) F.
 
@@ -676,16 +664,13 @@ A site
 > The roles merge `import type {X}` with `import {type X}`: a name bound in the
 > types only is one erased either way. A site ALL of whose specifiers are
 > erased evaluates nothing and one with NO specifier evaluates everything
-> (the roles do not see `import type {} from` or `export type * from`: both
-> are read on the declaration). A module imported as data (section 9) is read, not run.
+> (`import type {} from` and `export type * from` name their module in the types). A module imported as data (section 9) is read, not run.
 
 <a id="type_only_site"></a>A site I is type only either:
 
 1. if I [has a specifier](#has_specifier), unless I [binds a value](#has_value_binding);
 2. if I [is a reexport site](#reexport_site) of `reexport_named`, unless I [reexports a value](#reexport_value);
-3. if I [is a reexport site](#reexport_site) of `reexport_all` and I [is a type only export](#export_decl_type_only);
-4. if I [has no specifiers](#no_specifiers) and I [is a type only export](#export_decl_type_only);
-5. if I [has no specifiers](#no_specifiers) and [the attribute](#ast_attr) `import_kind` of I is "type".
+3. if I [is a module site](#module_site) of some form and [`type_sited`](#type_sited)(I).
 
 A site
 
@@ -710,7 +695,7 @@ A node
 <a id="reexport_value"></a>A node E reexports a value either:
 
 1. if E [reexports a value at](#reexport_value_spec) some node;
-2. if E [is a reexport site](#reexport_site) of `reexport_all`, unless E [is a type only export](#export_decl_type_only).
+2. if E [is a reexport site](#reexport_site) of `reexport_all`, unless [`type_sited`](#type_sited)(E).
 
 A file F takes values from a file T if all of:
   - a node E [reexports a value](#reexport_value);
@@ -829,8 +814,8 @@ A kind K
   - [the site kind](#site_kind) of I is K;
   - [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(Sh, R) in the main;
   - R differs from `resolves`;
-  - unless K [is unknown](js-model.rofl.md#unknown_because) with Sh in `modules` of `js` because R.
-- <a id="reason_unexercised"></a>has an unexercised reason R if K [is unknown](js-model.rofl.md#unknown_because) with a shape Sh in `modules` of `js` because R, unless K [earns the reason](#reason_earned) R.
+  - unless K [is unknown](#unknown_because) with Sh in `modules` of `js` because R.
+- <a id="reason_unexercised"></a>has an unexercised reason R if K [is unknown](#unknown_because) with a shape Sh in `modules` of `js` because R, unless K [earns the reason](#reason_earned) R.
 - <a id="reason_earned"></a>earns the reason R if all of:
   - a site I [is unresolved with shape](#unresolved_import) Sh;
   - [the site kind](#site_kind) of I is K;
@@ -857,22 +842,28 @@ In the audit:
 > is NOT evaluated as code — `effect_of_module` assumes an imported module
 > runs, and for these it does not. Two frontiers: an attribute whose parent is
 > not a site, and one whose key or value the join could not read.
+> oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
 
 In the code:
 
-<a id="import_attr"></a>An [import attribute](#noun-import_attribute) carries Key holding Value if the `key` of it [is named](js-structure.rofl.md#ast_name) Key and the `value` of it [is written as](js-structure.rofl.md#ast_value) Value.
+<a id="import_attr"></a>X carries Key holding Value if all of:
+  - [`node`](#node)(X, `import_attribute`, something);
+  - [`child`](#child)(X, `key`, 0, K);
+  - [`attr`](#attr)(K, `name` or `value`, Key);
+  - [`child`](#child)(X, `value`, 0, V);
+  - [`attr`](#attr)(V, `value`, Value).
 
 A node
 
+- <a id="import_attr_of"></a>has the import attribute X if [`child`](#child)(it, `with_clause`, 0, W) and [`child`](#child)(W, `with_entries`, something, X).
 - <a id="module_attr"></a>imports with the attribute Key holding Value if it [has the import attribute](#import_attr_of) X and X [carries](#import_attr) Key holding Value.
 - <a id="module_is_data"></a>imports a data module of a text T if it [imports the module type](#module_type) T and T differs from "javascript".
 
 In the audit:
 
-An [import attribute](#noun-import_attribute)
+<a id="import_attr_unsited"></a>X is unsited if [`node`](#node)(X, `import_attribute`, something), unless some node [has the import attribute](#import_attr_of) X.
 
-- <a id="import_attr_unsited"></a>is unsited unless some node [has the import attribute](#import_attr_of) it.
-- <a id="import_attr_unread"></a>is unread unless it [carries](#import_attr) some key holding some text.
+<a id="import_attr_unread"></a>X is unread if [`node`](#node)(X, `import_attribute`, something), unless X [carries](#import_attr) some key holding some text.
 
 > 3 trailing comments on rule lines are not carried over.
 

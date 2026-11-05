@@ -34,7 +34,7 @@ Reads:
 
 In the code:
 
-<a id="lib_call"></a>C calls the stdlib Key of a prototype P since a release Rel if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P and P [has the member](js-dataflow.rofl.md#lib_member) Key since Rel.
+<a id="lib_call"></a>A call calls the stdlib Key of a prototype P since a release Rel if it [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P and P [has the member](js-dataflow.rofl.md#lib_member) Key since Rel.
 
 > a member call on a KNOWN prototype whose name TypeScript does not carry: a
 > newer edition, a wrong prototype, or a typo; the only thing that would
@@ -42,15 +42,15 @@ In the code:
 
 In the audit:
 
-<a id="stdlib_unattributed"></a>C calls an unattributed stdlib member Key of a prototype P if C [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P, unless P [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
+<a id="stdlib_unattributed"></a>A call calls an unattributed stdlib member Key of a prototype P if it [calls the stdlib member](js-callgraph.rofl.md#stdlib_member) Key of P, unless P [has the member](js-dataflow.rofl.md#lib_member) Key since some release.
 
 > THE ERA QUESTION, the same one `unsupported[audit]` asks of syntax, by
 > composition: `Rel` is a RELEASE (lib.es2022.array.d.ts names es2022), so
 > the question is whether the environment REACHES it, in the same words
 > `has_feature` uses.
 
-<a id="lib_unsupported"></a>C is unsupported in an environment E at Key of a prototype P if all of:
-  - C [calls the stdlib](#lib_call) Key of P since a release Rel;
+<a id="lib_unsupported"></a>A call is unsupported in an environment E at Key of a prototype P if all of:
+  - it [calls the stdlib](#lib_call) Key of P since a release Rel;
   - E [is an environment](#environment);
   - unless E [reaches the release](js-env.rofl.md#reaches) Rel.
 
@@ -60,7 +60,8 @@ In the audit:
 > replacement table earns its keep on a runtime's API:
 > `host_member_replaced_by` in rules/js-host.rofl.
 
-<a id="lib_call_deprecated"></a>C calls a deprecated stdlib member Key of a prototype P if C [calls the stdlib](#lib_call) Key of P since some release and P [has the deprecated member](#lib_deprecated) Key.
+A call
 
-<a id="lib_call_remedy"></a>C has the remedy R for a prototype P at Key if C [calls a deprecated stdlib member](#lib_call_deprecated) Key of P and [`lib_replaced_by`](#lib_replaced_by)(P, Key, R).
+- <a id="lib_call_deprecated"></a>calls a deprecated stdlib member Key of a prototype P if it [calls the stdlib](#lib_call) Key of P since some release and P [has the deprecated member](#lib_deprecated) Key.
+- <a id="lib_call_remedy"></a>has the remedy R for a prototype P at Key if it [calls a deprecated stdlib member](#lib_call_deprecated) Key of P and [`lib_replaced_by`](#lib_replaced_by)(P, Key, R).
 
