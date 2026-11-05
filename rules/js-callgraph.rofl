@@ -510,7 +510,8 @@ receivable[flow](O) :- obj_lit[code](O).
 receivable[flow](O) :- array[value](O).
 receivable[flow](I) :- inst_of[flow](I, _).
 receivable[flow](X) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, _).
-receivable[flow](NS) :- ns_export[code](NS, _).
+receivable[flow](NS) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, _).
+receivable[flow](NS) :- ts_namespace[code](NS), namespace[value](NS, B), has[type](B, _).
 surveyed[flow](O)   :- receivable[flow](O).
 surveyed[flow](CD)  :- class_like[flow](CD).
 -- the three, mirrored for a node that left its file
