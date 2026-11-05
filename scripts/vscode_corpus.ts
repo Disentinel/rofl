@@ -33,15 +33,12 @@ function factsOf(root: string, files: string[], seen: Set<string>): { text: stri
   let raw: string;
   try { raw = execFileSync(OXC, [root, ...files], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch (e) { raw = (e as { stdout?: string }).stdout ?? ''; }
-  const facts = raw.split('\n').filter((l) => l && !l.startsWith('-- reads:')), strings = new Set<string>(), errors: [string, string][] = [];
-  for (const l of facts) {
-    const v = /^attr\[ast_oxc\]\(\w+, value, "((?:[^"\\]|\\.)*)"\)\.$/.exec(l);
-    if (v) strings.add(v[1].replace(/\\(["\\])/g, '$1'));
-    const e = /^parse_error\[ast_oxc\]\("([^"]*)", "(.*)"\)\.$/.exec(l);
-    if (e) errors.push([e[1], e[2]]);
-  }
+  // the header of `-- reads:` lines is dropped, and the text is searched as it is: a chunk is millions of lines
+  const body = raw.slice(raw.search(/^(?!-- reads:)/m) < 0 ? 0 : raw.search(/^(?!-- reads:)/m)), strings = new Set<string>(), errors: [string, string][] = [];
+  for (const v of body.matchAll(/^attr\[ast_oxc\]\(\w+, value, "((?:[^"\\\n]|\\.)*)"\)\.$/gm)) strings.add(v[1].replace(/\\(["\\])/g, '$1'));
+  for (const e of body.matchAll(/^parse_error\[ast_oxc\]\("([^"]*)", "(.*)"\)\.$/gm)) errors.push([e[1], e[2]]);
   const fresh = hostFacts(files, strings).filter((h) => !seen.has(h) && seen.add(h));
-  return { text: facts.join('\n') + '\n' + fresh.join('\n') + '\n', errors };
+  return { text: body + fresh.join('\n') + '\n', errors };
 }
 
 const [mode, ...rest] = process.argv.slice(2);

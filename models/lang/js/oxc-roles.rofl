@@ -122,7 +122,7 @@ scope_kind(program). scope_kind(block_statement). scope_kind(function_body). sco
 scope_kind(for_statement). scope_kind(for_in_statement). scope_kind(for_of_statement).
 scope_kind(catch_clause). scope_kind(switch_statement). scope_kind(tsmodule_block).
 mark[value](S, scope) :- scope_kind(K), oxc_k[ast_oxc](S, K).
-mark[value](F, scope) :- fn_node(F, Fn), not oxc_a[ast_oxc](Fn, declare, true).
+mark[value](F, scope) :- fn_node(F, Fn), not oxc_a[ast_oxc](Fn, declare, true), not overload(Fn).
 -- an arrow whose body is an expression
 arrow_expr(F, E) :- oxc_k[ast_oxc](F, arrow_function_expression), oxc_c[ast_oxc](F, body, 0, E), not oxc_k[ast_oxc](E, function_body).
 
@@ -243,6 +243,8 @@ method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, va
 wrapped_fn(Fn) :- method_member(_, Fn).
 wrapped_fn(Fn) :- type_only_method(_, Fn).
 fn_node(F, F)  :- oxc_k[ast_oxc](F, function), not wrapped_fn(F).
+-- an overload signature is a function with no body, which binds neither this nor arguments and is no scope
+overload(F)    :- oxc_k[ast_oxc](F, function), not wrapped_fn(F), not oxc_c[ast_oxc](F, body, 0, _).
 fn_node(F, F)  :- oxc_k[ast_oxc](F, arrow_function_expression).
 fn_node(M, Fn) :- method_member(M, Fn).
 
@@ -253,8 +255,8 @@ param[value](F, I, P) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_
 rest_params[value](F, I, T) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, rest, 0, R),
                                oxc_c[ast_oxc](R, rest, 0, RE), oxc_c[ast_oxc](RE, argument, 0, T),
                                I is count(J : oxc_c[ast_oxc](Ps, items, J, _)).
-binds[value](F, "this")      :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true).
-binds[value](F, "arguments") :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true).
+binds[value](F, "this")      :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true), not overload(Fn).
+binds[value](F, "arguments") :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), not oxc_a[ast_oxc](Fn, declare, true), not overload(Fn).
 mark[value](F, async)     :- fn_node(F, Fn), oxc_a[ast_oxc](Fn, async, true).
 mark[value](F, generator) :- fn_node(F, Fn), oxc_a[ast_oxc](Fn, generator, true).
 constructs[value](CD, M) :- oxc_k[ast_oxc](CD, class), oxc_c[ast_oxc](CD, body, 0, B), oxc_c[ast_oxc](B, body, _, M),

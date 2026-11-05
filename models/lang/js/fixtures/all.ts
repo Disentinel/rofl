@@ -57,3 +57,5 @@ let ds1 = 0, ds2 = 0; ds1 + 1; (ds1, ds2); ds1 = (ds2++, ds1, 3); for (ds1 = 0, 
 let shk = 1; const shobj = { shk }; const { shd = 2, shr: shq = 3 } = shobj; function dfn() { "use strict"; return shd + shq; }
 const qkobj = { "q-a": 1, "q-b"() {}, 3: 4 }; enum QKE { "qk-a" = 1 }
 let tq1: nsq.Server; let tq2: TQ["k"]; let tq3: TQ[typeof tq1]; type TQ4 = TQ["a"]["b"];
+export function ovf(a: string): void; export function ovf(a: number): void; export function ovf(a: any) { return a; }
+declare function dcf(a: number): void; class OvC { ovm(a: string): void; ovm(a: number): void; ovm(a: any) {} }
