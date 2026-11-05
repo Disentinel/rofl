@@ -28,15 +28,14 @@ Reads:
 - from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
+- from js-controlflow: [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
-- from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
 - from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -82,6 +81,7 @@ Reads:
   - <a id="module_ref"></a>`module_ref`
   - <a id="namespace"></a>`namespace`
   - <a id="object"></a>`object`
+  - <a id="optional"></a>`optional`
   - <a id="param"></a>`param`
   - <a id="passes"></a>`passes`
   - <a id="pattern_elem"></a>`pattern_elem`
@@ -89,6 +89,7 @@ Reads:
   - <a id="private"></a>`private`
   - <a id="ref"></a>`ref`
   - <a id="regexp"></a>`regexp`
+  - <a id="repeats"></a>`repeats`
   - <a id="rest_params"></a>`rest_params`
   - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
@@ -106,11 +107,6 @@ Reads:
   - <a id="tries"></a>`tries`
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
-- from the scanner:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
-
-Kinds without a noun: expression_statement.
 
 ## Words
 
@@ -118,16 +114,7 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
-| <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
-| <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
-| <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
-| <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
-| <a id="noun-program"></a>a program | a node of kind `program` |
-| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
-| <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](#member_node_v) holds of |
 | a scope | a node [`scope_node`](#scope_node) holds of |
@@ -1436,23 +1423,23 @@ In the code:
   - Name [has the prototype](#lib_global_prototype) P;
   - [`keyed_store`](#keyed_store)(P, something, something).
 
-<a id="keyed_const"></a>`keyed_const`(D, P, B, F) if all of:
+<a id="keyed_const"></a>`keyed_const`(D, P, B) if all of:
   - [`keyed_new`](#keyed_new)(X, P);
-  - the `init` of a node D is a node X;
-  - D [is among the](#ast_child) `declarations` of a node V;
-  - [the attribute](#ast_attr) `kind` of V is "const";
-  - V [is among the](#ast_child) F of a node B;
-  - F [is a statement sequence field](js-controlflow.rofl.md#stmt_seq_field).
+  - [`assign`](#assign)(D, something, X);
+  - [`decl`](#decl)(D, `const`);
+  - [`parent`](#parent)(V, D);
+  - [`seq_at`](js-structure.rofl.md#seq_at)(B, something, V);
+  - unless [`repeats`](#repeats)(B, something).
 
-<a id="keyed_holder"></a>`keyed_holder`(D, P) if [`keyed_const`](#keyed_const)(D, P, something, something).
+<a id="keyed_holder"></a>`keyed_holder`(D, P) if [`keyed_const`](#keyed_const)(D, P, something).
 
-<a id="keyed_born"></a>`keyed_born`(D, B, F) if [`keyed_const`](#keyed_const)(D, something, B, F).
+<a id="keyed_born"></a>`keyed_born`(D, B) if [`keyed_const`](#keyed_const)(D, something, B).
 
-<a id="keyed_ref"></a>`keyed_ref`(O, D) if [`keyed_const`](#keyed_const)(D, something, something, something) and a node O [sees](#sees_binder) D.
+<a id="keyed_ref"></a>`keyed_ref`(O, D) if [`keyed_const`](#keyed_const)(D, something, something) and a node O [sees](#sees_binder) D.
 
-<a id="keyed_ctor"></a>`keyed_ctor`(CB, Body) if all of:
+<a id="keyed_ctor"></a>`keyed_ctor`(CD, Body) if all of:
   - M [is a constructor](js-callgraph.rofl.md#ctor_method);
-  - [`parent`](#parent)(CB, M);
+  - [`has`](#has)(CD, M);
   - [`body`](#body)(M, Body).
 
 <a id="keyed_this_member"></a>`keyed_this_member`(L, T, Fld) if [`prop_name`](js-structure.rofl.md#prop_name)(L, T, Fld) and [`this`](#this)(T).
@@ -1463,18 +1450,16 @@ In the code:
    - [`keyed_new`](#keyed_new)(X, P);
    - [`assign_op`](js-structure.rofl.md#assign_op)(Y, L, X);
    - [`keyed_this_member`](#keyed_this_member)(L, something, Fld);
-   - the `expression` of a node S is a node Y;
-   - S [is among the](#ast_child) `body` of a node Body;
+   - [`nth`](#nth)(Body, something, Y);
    - [`keyed_ctor`](#keyed_ctor)(CB, Body);
 2. if all of:
    - [`keyed_new`](#keyed_new)(X, P);
-   - the `value` of Y is a node X;
-   - Y is a [class property](#noun-class_property);
-   - [the attribute](#ast_attr) `static` of Y is `false`;
-   - [the attribute](#ast_attr) `computed` of Y is `false`;
-   - the `key` of Y is an [identifier](#noun-identifier) K;
-   - K [is named](js-structure.rofl.md#ast_name) Fld;
-   - Y [is among the](#ast_child) `body` of CB.
+   - [`value`](#value)(Y, X);
+   - [`key`](#key)(Y, Fld);
+   - [`class`](#class)(CB);
+   - [`has`](#has)(CB, Y);
+   - unless [`body`](#body)(Y, something);
+   - unless [`static`](#static)(Y).
 
 > written again on any object: no holder. In any file, unless TypeScript keeps
 > the field to its class (`private`, `readonly`): then in its own file only.
@@ -1483,19 +1468,20 @@ In the code:
 
 1. if all of:
    - [`keyed_field`](#keyed_field)(H, something, CB, Fld);
-   - a [class property](#noun-class_property) Q [is among the](#ast_child) `body` of a node CB;
-   - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
+   - [`has`](#has)(CB, Q);
+   - [`key`](#key)(Q, Fld);
    - [`access`](#access)(Q, `own`);
+   - unless [`body`](#body)(Q, something);
 2. if all of:
    - [`keyed_field`](#keyed_field)(H, something, CB, Fld);
-   - a [class property](#noun-class_property) Q [is among the](#ast_child) `body` of a node CB;
-   - the `key` of Q [is named](js-structure.rofl.md#ast_name) Fld;
-   - [`frozen`](#frozen)(Q).
+   - [`has`](#has)(CB, Q);
+   - [`key`](#key)(Q, Fld);
+   - [`frozen`](#frozen)(Q);
+   - unless [`body`](#body)(Q, something).
 
 <a id="keyed_field_set"></a>`keyed_field_set`(H, X, File) if all of:
   - [`keyed_field`](#keyed_field)(H, something, something, Fld);
-  - a node Pn [is named](js-structure.rofl.md#ast_name) Fld;
-  - the `property` of a node L is Pn;
+  - [`member`](#member)(L, something, Fld);
   - [`assign_op`](js-structure.rofl.md#assign_op)(X, L, something);
   - [`at`](#at)(X, File, something);
   - X differs from H.
@@ -1509,17 +1495,17 @@ In the code:
 
 `keyed_holder`(H, P) if [`keyed_field`](#keyed_field)(H, P, something, something) and [`keyed_field_ok`](#keyed_field_ok)(H, something, something).
 
-`keyed_born`(H, Body, `body`) if [`keyed_field_ok`](#keyed_field_ok)(H, CB, something) and [`keyed_ctor`](#keyed_ctor)(CB, Body).
+`keyed_born`(H, Body) if [`keyed_field_ok`](#keyed_field_ok)(H, CB, something) and [`keyed_ctor`](#keyed_ctor)(CB, Body).
 
 <a id="keyed_method"></a>`keyed_method`(H, a [function](js-callgraph.rofl.md#fn_node) M) if all of:
   - [`keyed_field_ok`](#keyed_field_ok)(H, CB, something);
-  - [`parent`](#parent)(CB, M);
+  - [`has`](#has)(CB, M);
   - unless [`static`](#static)(M).
 
-<a id="keyed_list"></a>`keyed_list`(H, B, F) either:
+<a id="keyed_list"></a>`keyed_list`(H, B) either:
 
-1. if [`keyed_born`](#keyed_born)(H, B, F);
-2. if [`keyed_method`](#keyed_method)(H, M), [`body`](#body)(M, B), and F is `body`.
+1. if [`keyed_born`](#keyed_born)(H, B);
+2. if [`keyed_method`](#keyed_method)(H, M) and [`body`](#body)(M, B).
 
 > `this` in a method is the instance only where no nearer function binds it
 
@@ -1531,39 +1517,39 @@ In the code:
 
 > every call on a holder in a statement of an ordered list
 
-<a id="keyed_seen"></a>`keyed_seen`(C, H, Meth, S, B, F, I) if all of:
+<a id="keyed_seen"></a>`keyed_seen`(C, H, Meth, S, B, I) if all of:
   - [`keyed_ref`](#keyed_ref)(O, H);
   - [`prop_name`](js-structure.rofl.md#prop_name)(N, O, Meth);
   - [`callee`](#callee)(C, N);
   - [`call`](#call)(C);
   - [`inside`](#inside)(S, C);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
-  - [`keyed_list`](#keyed_list)(H, B, F).
+  - [`keyed_list`](#keyed_list)(H, B).
 
 <a id="keyed_fn_between"></a>`keyed_fn_between`(S, C) either:
 
 1. if all of:
-   - [`keyed_seen`](#keyed_seen)(C, something, something, S, something, something, something);
+   - [`keyed_seen`](#keyed_seen)(C, something, something, S, something, something);
    - [`inside`](#inside)(a [function](js-callgraph.rofl.md#fn_node) G, C);
    - [`inside`](#inside)(S, G);
-2. if [`keyed_seen`](#keyed_seen)(C, something, something, S, something, something, something) and S is a [function](js-callgraph.rofl.md#fn_node).
+2. if [`keyed_seen`](#keyed_seen)(C, something, something, S, something, something) and S is a [function](js-callgraph.rofl.md#fn_node).
 
-<a id="keyed_call"></a>`keyed_call`(C, H, Meth, B, F, I) if [`keyed_seen`](#keyed_seen)(C, H, Meth, S, B, F, I), unless [`keyed_fn_between`](#keyed_fn_between)(S, C).
+<a id="keyed_call"></a>`keyed_call`(C, H, Meth, B, I) if [`keyed_seen`](#keyed_seen)(C, H, Meth, S, B, I), unless [`keyed_fn_between`](#keyed_fn_between)(S, C).
 
 <a id="keyed_hoisted"></a>`keyed_hoisted`(S) either:
 
-1. if [`keyed_seen`](#keyed_seen)(something, something, something, S, something, something, something) and S is a [function](js-callgraph.rofl.md#fn_node);
-2. if [`keyed_seen`](#keyed_seen)(something, something, something, S, something, something, something) and the `declaration` of S is a [function](js-callgraph.rofl.md#fn_node) G.
+1. if [`keyed_seen`](#keyed_seen)(something, something, something, S, something, something) and S is a [function](js-callgraph.rofl.md#fn_node);
+2. if [`keyed_seen`](#keyed_seen)(something, something, something, S, something, something) and [`parent`](#parent)(S, a [function](js-callgraph.rofl.md#fn_node) G).
 
-<a id="keyed_later"></a>`keyed_later`(C, H, Meth, B, F, I) if all of:
-  - [`keyed_seen`](#keyed_seen)(C, H, Meth, S, B, F, I);
-  - [`keyed_born`](#keyed_born)(H, B, F);
+<a id="keyed_later"></a>`keyed_later`(C, H, Meth, B, I) if all of:
+  - [`keyed_seen`](#keyed_seen)(C, H, Meth, S, B, I);
+  - [`keyed_born`](#keyed_born)(H, B);
   - unless [`keyed_hoisted`](#keyed_hoisted)(S).
 
 > a statement that is nothing but the call: it runs whenever the list gets past it
 
-<a id="keyed_step"></a>`keyed_step`(C, H, Meth, B, F, I) if all of:
-  - [`keyed_seen`](#keyed_seen)(C, H, Meth, S, B, F, I);
+<a id="keyed_step"></a>`keyed_step`(C, H, Meth, B, I) if all of:
+  - [`keyed_seen`](#keyed_seen)(C, H, Meth, S, B, I);
   - [`nth`](#nth)(B, I, C);
   - [`parent`](#parent)(S, C).
 
@@ -1576,12 +1562,21 @@ In the code:
 > of `+` and of a template, what a call's functions in this file return) every
 > leaf is a literal (`keyed_open` otherwise). A function of another file is
 > open: its returns are not published as closed (no `may_be_open` surface).
+> a key that is a name, a text, a number, an operation or a call; any other form is open
 
-`keyed_shut_kind` includes `string_literal`, `numeric_literal`, `identifier`, `binary_expression`, `template_literal`, `call_expression`.
+<a id="keyed_shut"></a>`keyed_shut`(E) either:
+
+1. if [`ref`](#ref)(E, something);
+2. if [`literal`](#literal)(E, V) and `string` is type_of(V);
+3. if [`literal`](#literal)(E, V) and `int` is type_of(V);
+4. if [`literal`](#literal)(E, float(something));
+5. if [`template`](#template)(E);
+6. if [`binary`](#binary)(E, something, something, something) in the value, unless [`assign`](#assign)(E, something, something);
+7. if [`call`](#call)(E), unless [`construct`](#construct)(E), unless [`optional`](#optional)(E).
 
 <a id="keyed_key_arg"></a>`keyed_key_arg`(C, X) either:
 
-1. if [`keyed_seen`](#keyed_seen)(C, something, something, something, something, something, something) and [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, X);
+1. if [`keyed_seen`](#keyed_seen)(C, something, something, something, something, something) and [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, X);
 2. if [`keyed_drop`](#keyed_drop)(C, something) and [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, X).
 
 <a id="keyed_want"></a>`keyed_want`(X) either:
@@ -1589,8 +1584,8 @@ In the code:
 1. if [`keyed_remover`](#keyed_remover)(R, something, something, something) and [`keyed_key_arg`](#keyed_key_arg)(R, X);
 2. if all of:
    - [`keyed_remover`](#keyed_remover)(something, C, K, something);
-   - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, something);
-   - [`keyed_put_site`](#keyed_put_site)(P, H, something, B, F, J);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, B, something);
+   - [`keyed_put_site`](#keyed_put_site)(P, H, something, B, J);
    - J < K;
    - [`keyed_key_arg`](#keyed_key_arg)(P, X);
 3. if [`keyed_want`](#keyed_want)(E) and [`keyed_src`](#keyed_src)(E, X).
@@ -1640,10 +1635,6 @@ In the code:
 2. if [`keyed_want`](#keyed_want)(U) and [`bin_op`](#bin_op)(U, "+", Y, something);
 3. if [`keyed_want`](#keyed_want)(U) and [`bin_op`](#bin_op)(U, "+", something, Y);
 4. if [`keyed_want`](#keyed_want)(U), [`template`](#template)(U), and [`nth`](#nth)(U, something, Y).
-
-Declared as facts:
-
-- <a id="keyed_shut_kind"></a>`keyed_shut_kind` — rows in this file
 
 > a call is what the functions it calls return: open where one of them is not
 > followed (`keyed_ret_known`), has an open return (`keyed_ret_open`), returns
@@ -1717,10 +1708,7 @@ In the code:
 
 `keyed_open`(E) either:
 
-1. if all of:
-   - [`keyed_want`](#keyed_want)(E);
-   - a node E [is of kind](js-model.rofl.md#ast_node) K;
-   - unless [`keyed_shut_kind`](#keyed_shut_kind)(K);
+1. if [`keyed_want`](#keyed_want)(E), unless [`keyed_shut`](#keyed_shut)(E);
 2. if all of:
    - [`keyed_want`](#keyed_want)(E);
    - [`bin_op`](#bin_op)(E, Op, something, something);
@@ -1732,13 +1720,13 @@ In the code:
 4. if [`keyed_param`](#keyed_param)(E, G, something) and [`keyed_escapes`](#keyed_escapes)(G);
 5. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - a node E [sees](#sees_binder) D;
+   - E [sees](#sees_binder) D;
    - a node L [sees](#sees_binder) D;
    - [`unary`](#unary)(U, something, L);
    - [`assign`](#assign)(U, L, U);
 6. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - a node E [sees](#sees_binder) D;
+   - E [sees](#sees_binder) D;
    - a node L [sees](#sees_binder) D;
    - [`compound_write`](js-structure.rofl.md#compound_write)(something, L);
 7. if [`keyed_src`](#keyed_src)(E, S) and [`keyed_open`](#keyed_open)(S).
@@ -1774,9 +1762,9 @@ In the code:
   - [`keyed_key_arg`](#keyed_key_arg)(C, X);
   - [`ref`](#ref)(X, Name);
   - a node X [finds its name in](#name_scope) Name in some file G;
-  - [`param`](#param)(G, something, an [identifier](#noun-identifier) Pa);
+  - [`param`](#param)(G, something, Pa);
   - [`parent`](#parent)(G, Pa);
-  - Pa [is named](js-structure.rofl.md#ast_name) Name.
+  - [`binds`](#binds)(Pa, Name).
 
 <a id="keyed_param_set"></a>`keyed_param_set`(G, Name) either:
 
@@ -1786,9 +1774,10 @@ In the code:
    - a node L [finds its name in](#name_scope) Name in some file G;
 2. if all of:
    - [`keyed_param_name`](#keyed_param_name)(something, G, Name);
-   - a node L [is named](js-structure.rofl.md#ast_name) Name;
-   - L [finds its name in](#name_scope) Name in some file G;
-   - the `argument` of an [update expression](#noun-update_expression) U is L.
+   - [`ref`](#ref)(L, Name);
+   - a node L [finds its name in](#name_scope) Name in some file G;
+   - [`assign`](#assign)(U, L, U);
+   - [`unary`](#unary)(U, something, L).
 
 <a id="keyed_same_name"></a>`keyed_same_name`(P, R) either:
 
@@ -1800,29 +1789,29 @@ In the code:
 
 > the reads and the puts
 
-<a id="keyed_read_site"></a>`keyed_read_site`(C, H, B, F, I) either:
+<a id="keyed_read_site"></a>`keyed_read_site`(C, H, B, I) either:
 
 1. if all of:
-   - [`keyed_call`](#keyed_call)(C, H, Get, B, F, I);
+   - [`keyed_call`](#keyed_call)(C, H, Get, B, I);
    - [`keyed_holder`](#keyed_holder)(H, P);
    - [`keyed_store`](#keyed_store)(P, something, Get);
-2. if [`keyed_call`](#keyed_call)(C, H, "forEach", B, F, I);
+2. if [`keyed_call`](#keyed_call)(C, H, "forEach", B, I);
 3. if all of:
    - [`keyed_ref`](#keyed_ref)(R, H);
    - [`iterates`](#iterates)(C, something, R);
    - [`for_of`](js-structure.rofl.md#for_of)(C);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, C);
-   - [`keyed_list`](#keyed_list)(H, B, F).
+   - [`keyed_list`](#keyed_list)(H, B).
 
 <a id="keyed_put_of"></a>`keyed_put_of`(C, H, V) if all of:
-  - [`keyed_seen`](#keyed_seen)(C, H, Put, something, something, something, something);
+  - [`keyed_seen`](#keyed_seen)(C, H, Put, something, something, something);
   - [`keyed_holder`](#keyed_holder)(H, P);
   - [`keyed_store`](#keyed_store)(P, Put, something);
   - [`arg_node`](js-structure.rofl.md#arg_node)(C, 1, V).
 
-<a id="keyed_put_site"></a>`keyed_put_site`(C, H, V, B, F, J) if [`keyed_call`](#keyed_call)(C, H, something, B, F, J) and [`keyed_put_of`](#keyed_put_of)(C, H, V).
+<a id="keyed_put_site"></a>`keyed_put_site`(C, H, V, B, J) if [`keyed_call`](#keyed_call)(C, H, something, B, J) and [`keyed_put_of`](#keyed_put_of)(C, H, V).
 
-<a id="keyed_put_later"></a>`keyed_put_later`(C, H, V, B, F, J) if [`keyed_later`](#keyed_later)(C, H, something, B, F, J) and [`keyed_put_of`](#keyed_put_of)(C, H, V).
+<a id="keyed_put_later"></a>`keyed_put_later`(C, H, V, B, J) if [`keyed_later`](#keyed_later)(C, H, something, B, J) and [`keyed_put_of`](#keyed_put_of)(C, H, V).
 
 > WHERE A PUT RUNS, in the list that makes the collection: in the statement
 > it sits in, or, inside a function only ever called, wherever those calls run
@@ -1840,13 +1829,13 @@ In the code:
 1. if all of:
    - [`keyed_hop`](#keyed_hop)(X, H);
    - G [is nearest to](#nearest_v) a node X;
-   - [`keyed_born`](#keyed_born)(H, B, F);
+   - [`keyed_born`](#keyed_born)(H, B);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, something, S);
    - [`inside`](#inside)(S, G);
 2. if all of:
    - [`keyed_hop`](#keyed_hop)(X, H);
    - G [is nearest to](#nearest_v) a node X;
-   - [`keyed_born`](#keyed_born)(H, B, F);
+   - [`keyed_born`](#keyed_born)(H, B);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, something, G);
 3. if all of:
    - [`keyed_hop`](#keyed_hop)(X, H);
@@ -1862,35 +1851,40 @@ In the code:
 
 `keyed_fn_need`(G) if [`keyed_hop_fn`](#keyed_hop_fn)(G, something).
 
-<a id="keyed_named_fn"></a>`keyed_named_fn`(G, E) either:
+<a id="keyed_named_fn"></a>`keyed_named_fn`(G, E) if all of:
+  - [`keyed_fn_need`](#keyed_fn_need)(G);
+  - [`hoisted`](#hoisted)(G, something);
+  - E [sees the declaration](#sees_decl) G;
+  - unless [`keyed_exported`](#keyed_exported)(G);
+  - unless [`target`](#target)(G, E).
+
+> a declaration the module exports is reached by name from outside
+
+<a id="keyed_exported"></a>`keyed_exported`(G) either:
+
+1. if [`declares_export`](js-controlflow.rofl.md#declares_export)(G);
+2. if [`hoisted`](#hoisted)(G, something) and [`value`](#value)(something, G).
+
+`keyed_named_fn`(G, E) either:
 
 1. if all of:
    - [`keyed_fn_need`](#keyed_fn_need)(G);
-   - G is a [function declaration](#noun-function_declaration);
-   - E [sees the declaration](#sees_decl) G;
-   - unless the `declaration` of some node is G;
-   - unless [`target`](#target)(G, E);
-2. if all of:
-   - [`keyed_fn_need`](#keyed_fn_need)(G);
-   - the `init` of a node D is G;
-   - D [is among the](#ast_child) `declarations` of a node V;
-   - [the attribute](#ast_attr) `kind` of V is "const";
-   - E [sees](#sees_binder) D;
-   - unless the `declaration` of some node is V;
+   - [`assign`](#assign)(D, something, G);
+   - [`decl`](#decl)(D, `const`);
+   - a node E [sees](#sees_binder) D;
+   - unless [`keyed_exported`](#keyed_exported)(D);
    - unless [`assign`](#assign)(D, E, G);
-3. if all of:
+2. if all of:
    - [`keyed_fn_need`](#keyed_fn_need)(G);
    - E [binds privately to](#private_binds) G;
    - [`private_method`](#private_method)(G);
-4. if all of:
+3. if all of:
    - [`keyed_fn_need`](#keyed_fn_need)(G);
    - [`access`](#access)(G, `own`);
-   - the `key` of G [is named](js-structure.rofl.md#ast_name) Name;
-   - G [is among the](#ast_child) `body` of a node CB;
-   - a node Pn [is named](js-structure.rofl.md#ast_name) Name;
-   - the `property` of E is Pn;
-   - [`inside`](#inside)(CB, E);
-   - E is a [member expression](#noun-member_expression).
+   - [`key`](#key)(G, Name);
+   - [`has`](#has)(CB, G);
+   - [`member`](#member)(E, something, Name);
+   - [`inside`](#inside)(CB, E).
 
 > tsc lets two ways past `private`: `x['f']` and a cast to any. The model
 > keeps to `private` and says where a member of that name is reached so: by
@@ -1899,8 +1893,8 @@ In the code:
 <a id="keyed_private_name"></a>`keyed_private_name`(G, CB, Name) if all of:
   - [`keyed_hop_fn`](#keyed_hop_fn)(G, something);
   - [`access`](#access)(G, `own`);
-  - the `key` of a node G [is named](js-structure.rofl.md#ast_name) Name;
-  - G [is among the](#ast_child) `body` of a node CB.
+  - [`key`](#key)(G, Name);
+  - [`has`](#has)(CB, G).
 
 In the audit:
 
@@ -1908,15 +1902,13 @@ In the audit:
 
 1. if all of:
    - [`keyed_private_name`](#keyed_private_name)(G, CB, Name);
-   - a [string literal](#noun-string_literal) Lit [is written as](js-structure.rofl.md#ast_value) Name;
-   - the `property` of N is Lit;
-   - [the attribute](#ast_attr) `computed` of N is `true`;
+   - [`member_expr`](#member_expr)(N, something, Lit);
+   - [`literal`](#literal)(Lit, Name);
+   - `string` is type_of(Name);
 2. if all of:
    - [`keyed_private_name`](#keyed_private_name)(G, CB, Name);
-   - a node Pn [is named](js-structure.rofl.md#ast_name) Name;
-   - the `property` of N is Pn;
-   - N is a [member expression](#noun-member_expression);
-   - N is in file File;
+   - [`member`](#member)(N, something, Name);
+   - [`at`](#at)(N, File, something);
    - [`at`](#at)(G, File, something);
    - unless [`inside`](#inside)(CB, N).
 
@@ -1947,21 +1939,21 @@ In the code:
 
 1. if all of:
    - [`keyed_hop`](#keyed_hop)(X, H);
-   - [`keyed_born`](#keyed_born)(H, B, F);
+   - [`keyed_born`](#keyed_born)(H, B);
    - [`inside`](#inside)(S, X);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, something, S);
    - G [is nearest to](#nearest_v) a node X;
    - [`inside`](#inside)(S, G);
 2. if all of:
    - [`keyed_hop`](#keyed_hop)(X, H);
-   - [`keyed_born`](#keyed_born)(H, B, F);
+   - [`keyed_born`](#keyed_born)(H, B);
    - [`inside`](#inside)(S, X);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, something, S);
    - S [is nearest to](#nearest_v) a node X.
 
 <a id="keyed_direct"></a>`keyed_direct`(X, H, J) if all of:
   - [`keyed_hop`](#keyed_hop)(X, H);
-  - [`keyed_born`](#keyed_born)(H, B, F);
+  - [`keyed_born`](#keyed_born)(H, B);
   - [`inside`](#inside)(S, X);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, J, S);
   - unless [`keyed_in_fn`](#keyed_in_fn)(X, S).
@@ -2004,7 +1996,7 @@ In the code:
 
 > AFTER: in the list that makes it, every run of the put is later
 
-<a id="keyed_born_read"></a>`keyed_born_read`(C, H, I) if [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I) and [`keyed_born`](#keyed_born)(H, B, F).
+<a id="keyed_born_read"></a>`keyed_born_read`(C, H, I) if [`keyed_read_site`](#keyed_read_site)(C, H, B, I) and [`keyed_born`](#keyed_born)(H, B).
 
 <a id="keyed_runs_by"></a>`keyed_runs_by`(P, C) if all of:
   - [`keyed_born_read`](#keyed_born_read)(C, H, I);
@@ -2016,8 +2008,8 @@ In the code:
 
 1. if all of:
    - [`keyed_born_read`](#keyed_born_read)(C, H, I);
-   - [`keyed_put_later`](#keyed_put_later)(something, H, V, B, F, J);
-   - [`keyed_born`](#keyed_born)(H, B, F);
+   - [`keyed_put_later`](#keyed_put_later)(something, H, V, B, J);
+   - [`keyed_born`](#keyed_born)(H, B);
    - I < J;
 2. if all of:
    - [`keyed_born_read`](#keyed_born_read)(C, H, I);
@@ -2032,8 +2024,8 @@ In the code:
 <a id="keyed_put_before"></a>A node V is put before a call C either:
 
 1. if all of:
-   - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-   - [`keyed_put_site`](#keyed_put_site)(something, H, V, B, F, J);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+   - [`keyed_put_site`](#keyed_put_site)(something, H, V, B, J);
    - J < I;
 2. if all of:
    - [`keyed_born_read`](#keyed_born_read)(C, H, I);
@@ -2051,14 +2043,14 @@ In the code:
 <a id="keyed_remover"></a>`keyed_remover`(R, C, K, Meth) either:
 
 1. if all of:
-   - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-   - [`keyed_step`](#keyed_step)(R, H, Meth, B, F, K);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+   - [`keyed_step`](#keyed_step)(R, H, Meth, B, K);
    - K < I;
    - [`keyed_holder`](#keyed_holder)(H, P);
    - [`keyed_remove`](#keyed_remove)(P, Meth);
 2. if all of:
-   - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-   - [`keyed_step`](#keyed_step)(R, H, Meth, B, F, K);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+   - [`keyed_step`](#keyed_step)(R, H, Meth, B, K);
    - K < I;
    - [`keyed_holder`](#keyed_holder)(H, P);
    - [`keyed_store`](#keyed_store)(P, Meth, something).
@@ -2072,21 +2064,21 @@ In the code:
 | `weakmap` | "delete" |
 
 <a id="keyed_shared"></a>`keyed_shared`(C, H) if all of:
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something);
   - [`keyed_field_ok`](#keyed_field_ok)(H, something, something);
-  - unless [`keyed_born`](#keyed_born)(H, B, F).
+  - unless [`keyed_born`](#keyed_born)(H, B).
 
 <a id="keyed_get_call"></a>`keyed_get_call`(C) if all of:
   - [`keyed_shared`](#keyed_shared)(C, H);
-  - [`keyed_call`](#keyed_call)(C, H, Get, something, something, something);
+  - [`keyed_call`](#keyed_call)(C, H, Get, something, something);
   - [`keyed_holder`](#keyed_holder)(H, P);
   - [`keyed_store`](#keyed_store)(P, something, Get).
 
 <a id="keyed_again"></a>`keyed_again`(C, K, M) if all of:
   - [`keyed_shared`](#keyed_shared)(C, H);
   - [`keyed_remover`](#keyed_remover)(something, C, K, something);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something, something);
-  - the `body` of a node M is a node B.
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something);
+  - [`body`](#body)(M, B).
 
 Declared as facts:
 
@@ -2099,7 +2091,7 @@ Declared as facts:
 
 1. if all of:
    - [`keyed_again`](#keyed_again)(C, K, M);
-   - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+   - [`keyed_read_site`](#keyed_read_site)(C, something, B, I);
    - M [is nearest to](#nearest_v) a node Q;
    - [`inside`](#inside)(S, Q);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
@@ -2109,7 +2101,7 @@ Declared as facts:
    - unless [`inside`](#inside)(Q, C);
 2. if all of:
    - [`keyed_again`](#keyed_again)(C, K, something);
-   - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+   - [`keyed_read_site`](#keyed_read_site)(C, something, B, I);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, Q);
    - K < L;
    - L < I;
@@ -2303,8 +2295,8 @@ Declared as facts:
 
 <a id="keyed_out"></a>`keyed_out`(V, C, P, R, K, Meth) if all of:
   - a node V [is put before](#keyed_put_before) a call C;
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-  - [`keyed_put_site`](#keyed_put_site)(P, H, V, B, F, J);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+  - [`keyed_put_site`](#keyed_put_site)(P, H, V, B, J);
   - [`keyed_remover`](#keyed_remover)(R, C, K, Meth);
   - J < K.
 
@@ -2340,16 +2332,16 @@ Declared as facts:
 <a id="keyed_vspan"></a>`keyed_vspan`(V, C, P, S, M) either:
 
 1. if all of:
-   - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-   - [`keyed_put_site`](#keyed_put_site)(P, H, V, B, F, J);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+   - [`keyed_put_site`](#keyed_put_site)(P, H, V, B, J);
    - J < I;
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
    - J < L;
    - L < I;
    - M [is nearest to](#nearest_v) a node B;
 2. if all of:
-   - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-   - [`keyed_put_site`](#keyed_put_site)(P, H, V, B, F, J);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+   - [`keyed_put_site`](#keyed_put_site)(P, H, V, B, J);
    - J < I;
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
    - J < L;
@@ -2376,7 +2368,7 @@ Declared as facts:
 
 <a id="keyed_vdrop_cand"></a>`keyed_vdrop_cand`(D, P) if all of:
   - [`keyed_vbetween`](#keyed_vbetween)(something, C, P, something);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
   - [`keyed_drop`](#keyed_drop)(D, H).
 
 <a id="keyed_vdrop_at"></a>`keyed_vdrop_at`(V, C, Q, D) if all of:
@@ -2399,7 +2391,7 @@ Declared as facts:
   - [`nth`](#nth)(B, something, Q);
   - [`parent`](#parent)(S, Q);
   - [`parent`](#parent)(B, S);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something);
   - [`keyed_one_target`](#keyed_one_target)(Q, G);
   - [`keyed_dsure`](#keyed_dsure)(G, H, D);
   - [`keyed_dsure_key`](#keyed_dsure_key)(D, P).
@@ -2416,7 +2408,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 <a id="keyed_noisy_at"></a>`keyed_noisy_at`(C, Q) if all of:
   - [`keyed_vsure_out`](#keyed_vsure_out)(something, C, Q);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
   - [`inside`](#inside)(S, Q);
   - [`keyed_noisy`](#keyed_noisy)(C, L).
@@ -2431,18 +2423,18 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 > get may find no entry and read `undefined`.
 
 <a id="keyed_fill_cand"></a>`keyed_fill_cand`(C, P, J) if all of:
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-  - [`keyed_call`](#keyed_call)(C, H, Get, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+  - [`keyed_call`](#keyed_call)(C, H, Get, something, something);
   - [`keyed_holder`](#keyed_holder)(H, Pk);
   - [`keyed_store`](#keyed_store)(Pk, Put, Get);
-  - [`keyed_step`](#keyed_step)(P, H, Put, B, F, J);
+  - [`keyed_step`](#keyed_step)(P, H, Put, B, J);
   - J < I.
 
 `keyed_want`(X) either:
 
 1. if [`keyed_drop`](#keyed_drop)(D, something) and [`keyed_key_arg`](#keyed_key_arg)(D, X);
 2. if [`keyed_put_of`](#keyed_put_of)(P, something, something) and [`keyed_key_arg`](#keyed_key_arg)(P, X);
-3. if [`keyed_read_site`](#keyed_read_site)(C, something, something, something, something) and [`keyed_key_arg`](#keyed_key_arg)(C, X).
+3. if [`keyed_read_site`](#keyed_read_site)(C, something, something, something) and [`keyed_key_arg`](#keyed_key_arg)(C, X).
 
 <a id="keyed_fill"></a>`keyed_fill`(C, J) if all of:
   - [`keyed_fill_cand`](#keyed_fill_cand)(C, P, J);
@@ -2553,8 +2545,8 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
   - unless [`keyed_g_drops`](#keyed_g_drops)(G, H).
 
 <a id="keyed_fill_call"></a>`keyed_fill_call`(C, P, J) if all of:
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, F, I);
-  - [`keyed_call`](#keyed_call)(C, H, something, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, I);
+  - [`keyed_call`](#keyed_call)(C, H, something, something, something);
   - [`nth`](#nth)(B, J, Q);
   - [`parent`](#parent)(S, Q);
   - [`parent`](#parent)(B, S);
@@ -2576,15 +2568,15 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 1. if all of:
    - [`keyed_shared`](#keyed_shared)(C, H);
-   - [`keyed_call`](#keyed_call)(C, H, Get, something, something, something);
+   - [`keyed_call`](#keyed_call)(C, H, Get, something, something);
    - [`keyed_holder`](#keyed_holder)(H, Pk);
    - [`keyed_store`](#keyed_store)(Pk, Put, Get);
-   - [`keyed_born`](#keyed_born)(H, Body, `body`);
-   - [`keyed_step`](#keyed_step)(P, H, Put, Body, `body`, J);
+   - [`keyed_born`](#keyed_born)(H, Body);
+   - [`keyed_step`](#keyed_step)(P, H, Put, Body, J);
 2. if all of:
    - [`keyed_shared`](#keyed_shared)(C, H);
-   - [`keyed_call`](#keyed_call)(C, H, something, something, something, something);
-   - [`keyed_born`](#keyed_born)(H, Body, `body`);
+   - [`keyed_call`](#keyed_call)(C, H, something, something, something);
+   - [`keyed_born`](#keyed_born)(H, Body);
    - [`nth`](#nth)(Body, J, Q);
    - [`parent`](#parent)(S, Q);
    - [`parent`](#parent)(Body, S);
@@ -2598,13 +2590,13 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 <a id="keyed_pair"></a>`keyed_pair`(C, D) if all of:
   - [`keyed_fill_ctor`](#keyed_fill_ctor)(C, something);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
   - [`keyed_drop`](#keyed_drop)(D, H).
 
 <a id="keyed_before_put"></a>`keyed_before_put`(C, J, Q) if all of:
   - [`keyed_fill_ctor`](#keyed_fill_ctor)(C, J);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
-  - [`keyed_born`](#keyed_born)(H, Body, `body`);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
+  - [`keyed_born`](#keyed_born)(H, Body);
   - [`body`](#body)(Ct, Body);
   - [`seq_at`](js-structure.rofl.md#seq_at)(Body, L, S);
   - L < J;
@@ -2622,26 +2614,26 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 `keyed_target`(M) if all of:
   - [`keyed_fill_ctor`](#keyed_fill_ctor)(C, something);
-  - [`keyed_read_site`](#keyed_read_site)(C, something, B, something, something);
-  - the `body` of a node M is a node B.
+  - [`keyed_read_site`](#keyed_read_site)(C, something, B, something);
+  - [`body`](#body)(M, B).
 
 `keyed_lost_ctor`(C, J) either:
 
 1. if all of:
    - [`keyed_before_put`](#keyed_before_put)(C, J, Q);
-   - [`keyed_read_site`](#keyed_read_site)(C, something, B, something, something);
-   - the `body` of a node M is a node B;
+   - [`keyed_read_site`](#keyed_read_site)(C, something, B, something);
+   - [`body`](#body)(M, B);
    - a call Q [resolves to](js-callgraph.rofl.md#resolves) G;
    - [`keyed_runs_m`](#keyed_runs_m)(G, M);
 2. if all of:
    - [`keyed_before_put`](#keyed_before_put)(C, J, Q);
-   - [`keyed_read_site`](#keyed_read_site)(C, something, B, something, something);
-   - the `body` of a node M is a node B;
+   - [`keyed_read_site`](#keyed_read_site)(C, something, B, something);
+   - [`body`](#body)(M, B);
    - [`runs_unknown`](#runs_unknown)(Q);
    - [`keyed_open_to`](#keyed_open_to)(M);
 3. if all of:
    - [`keyed_fill_ctor`](#keyed_fill_ctor)(C, J);
-   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
    - [`keyed_made`](#keyed_made)(H, X);
    - [`keyed_handed`](#keyed_handed)(X).
 
@@ -2649,7 +2641,10 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 <a id="keyed_filled"></a>`keyed_filled`(H) if [`keyed_holder`](#keyed_holder)(H, something).
 
-<a id="keyed_made"></a>`keyed_made`(H, X) if [`keyed_filled`](#keyed_filled)(H) and the `init` or `right` or `value` of a node H is a node X.
+<a id="keyed_made"></a>`keyed_made`(H, X) either:
+
+1. if [`keyed_filled`](#keyed_filled)(H), [`assign`](#assign)(H, something, X), and X differs from H;
+2. if [`keyed_filled`](#keyed_filled)(H) and [`value`](#value)(H, X).
 
 > a removal in another file is not followed: where the collection left its
 > file, a call between that reaches another file may remove anything
@@ -2663,7 +2658,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 `keyed_pair`(C, D) if all of:
   - [`keyed_fill`](#keyed_fill)(C, something);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
   - [`keyed_drop`](#keyed_drop)(D, H).
 
 <a id="keyed_differs"></a>`keyed_differs`(D, C) if all of:
@@ -2695,7 +2690,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
   - [`body`](#body)(G, Gb);
   - [`seq_at`](js-structure.rofl.md#seq_at)(Gb, L, S);
   - [`inside`](#inside)(S, D);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
   - [`keyed_sure_at`](#keyed_sure_at)(G, H, P, K);
   - L < K;
   - [`keyed_key`](#keyed_key)(P, Kk);
@@ -2741,7 +2736,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 <a id="keyed_pspan"></a>`keyed_pspan`(C, J, S, M) if all of:
   - [`keyed_fill`](#keyed_fill)(C, J);
-  - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+  - [`keyed_read_site`](#keyed_read_site)(C, something, B, I);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
   - J < L;
   - L <= I;
@@ -2749,7 +2744,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 <a id="keyed_pspan_top"></a>`keyed_pspan_top`(C, J, S) if all of:
   - [`keyed_fill`](#keyed_fill)(C, J);
-  - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+  - [`keyed_read_site`](#keyed_read_site)(C, something, B, I);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
   - J < L;
   - L <= I;
@@ -2774,7 +2769,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 1. if all of:
    - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
-   - [`keyed_read_site`](#keyed_read_site)(C, something, B, F, I);
+   - [`keyed_read_site`](#keyed_read_site)(C, something, B, I);
    - [`inside`](#inside)(S, D);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, S);
    - J < L;
@@ -2806,7 +2801,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 `keyed_lost`(C, J) if all of:
   - [`keyed_outside_at`](#keyed_outside_at)(C, J);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+  - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
   - [`keyed_made`](#keyed_made)(H, X);
   - [`keyed_handed`](#keyed_handed)(X).
 
@@ -2828,7 +2823,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 1. if all of:
    - [`keyed_leaves`](#keyed_leaves)(C, J);
-   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something, something);
+   - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
    - [`keyed_made`](#keyed_made)(H, X);
    - [`sx_esc`](js-surface.rofl.md#sx_esc)(X);
 2. if all of:
@@ -2840,8 +2835,8 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 `keyed_again`(C, J, M) if all of:
   - [`keyed_fill`](#keyed_fill)(C, J);
   - [`keyed_shared`](#keyed_shared)(C, H);
-  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something, something);
-  - the `body` of a node M is a node B.
+  - [`keyed_read_site`](#keyed_read_site)(C, H, B, something);
+  - [`body`](#body)(M, B).
 
 `keyed_lost`(C, J) if [`keyed_fill`](#keyed_fill)(C, J) and [`keyed_noisy`](#keyed_noisy)(C, J).
 
@@ -3190,8 +3185,7 @@ A node may be the literal `undefined` if [`member_unset`](#member_unset)(it, som
 
 In the code:
 
-<a id="member_assign"></a>`member_assign`(an expression_statement node S, T, Key, X) if all of:
-  - the `expression` of S is a node X;
+<a id="member_assign"></a>`member_assign`(X, T, Key) if all of:
   - [`assign`](#assign)(X, L, R);
   - [`gives`](#gives)(X, R);
   - [`prop_name`](js-structure.rofl.md#prop_name)(L, T, Key).
@@ -3204,10 +3198,9 @@ In the code:
 
 <a id="member_ctor_set"></a>`member_ctor_set`(Body, Key, J) if all of:
   - [`class_unset_field`](#class_unset_field)(CD, Key);
-  - the `body` of a node CD is a node CB;
-  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
-  - [`seq_at`](js-structure.rofl.md#seq_at)(Body, J, S);
-  - [`member_assign`](#member_assign)(S, T, Key, something);
+  - [`keyed_ctor`](#keyed_ctor)(CD, Body);
+  - [`nth`](#nth)(Body, J, X);
+  - [`member_assign`](#member_assign)(X, T, Key);
   - [`this`](#this)(T).
 
 <a id="member_ctor_early"></a>`member_ctor_early`(Body, J) if all of:
@@ -3251,22 +3244,19 @@ In the flow:
 
 <a id="member_field_sure"></a>`member_field_sure`(CD, Key, J) if all of:
   - [`member_ctor_set`](#member_ctor_set)(Body, Key, J);
-  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
-  - the `body` of a node CD is a node CB;
+  - [`keyed_ctor`](#keyed_ctor)(CD, Body);
   - unless [`member_ctor_early`](#member_ctor_early)(Body, J);
   - unless [`member_ctor_open`](#member_ctor_open)(Body, J).
 
 <a id="member_field_runs"></a>`member_field_runs`(CD, Key, J, G) if all of:
   - [`member_field_sure`](#member_field_sure)(CD, Key, J);
-  - the `body` of a node CD is a node CB;
-  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+  - [`keyed_ctor`](#keyed_ctor)(CD, Body);
   - [`member_ctor_before`](#member_ctor_before)(Body, J, Q);
   - a call Q [resolves to](js-callgraph.rofl.md#resolves) G.
 
 <a id="member_ctor_inside"></a>`member_ctor_inside`(CD, Key, J, N) if all of:
   - [`member_field_sure`](#member_field_sure)(CD, Key, J);
-  - the `body` of a node CD is a node CB;
-  - [`keyed_ctor`](#keyed_ctor)(CB, Body);
+  - [`keyed_ctor`](#keyed_ctor)(CD, Body);
   - [`member_ctor_before`](#member_ctor_before)(Body, J, N).
 
 > the reader: after the write unless it is constructor code before it, or a
@@ -3301,21 +3291,23 @@ In the flow:
 
 In the code:
 
-<a id="member_const_set"></a>`member_const_set`(an [object literal](#noun-object_literal) O, Key, B, F, J) if all of:
-  - a node D [binds](#binder) some name to O in some file;
-  - D [is among the](#ast_child) `declarations` of a node V;
-  - [the attribute](#ast_attr) `kind` of V is "const";
-  - V is the L-th of the F of a node B;
-  - a node S is the J-th of the F of B;
+<a id="member_const_set"></a>`member_const_set`(O, Key, B, J) if all of:
+  - D [binds](#binder) some name to a node O in some file;
+  - [`obj_lit`](#obj_lit)(O);
+  - [`decl`](#decl)(D, `const`);
+  - [`parent`](#parent)(V, D);
+  - [`seq_at`](js-structure.rofl.md#seq_at)(B, L, V);
+  - [`nth`](#nth)(B, J, X);
   - L < J;
-  - [`member_assign`](#member_assign)(S, T, Key, something);
-  - a node T [sees](#sees_binder) D.
+  - [`member_assign`](#member_assign)(X, T, Key);
+  - a node T [sees](#sees_binder) D;
+  - unless [`repeats`](#repeats)(B, something).
 
 In the flow:
 
 <a id="member_const_read"></a>`member_const_read`(N, O, Key, W) if all of:
   - [`member_unset`](#member_unset)(N, O, Key);
-  - [`member_const_set`](#member_const_set)(O, Key, B, F, J);
+  - [`member_const_set`](#member_const_set)(O, Key, B, J);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
   - J < I;
   - [`inside`](#inside)(S, N);
@@ -3618,8 +3610,6 @@ In the code:
 > the corpus to learn three strings
 
 > an export of the module itself, not one inside a TypeScript namespace
-
-<a id="module_export"></a>`module_export`(a [named export](#noun-named_export) E, File) if a [program](#noun-program) P is in file File and E [is among the](#ast_child) `body` of P.
 
 <a id="exports_name"></a>F is exported as Name from File either:
 
@@ -4105,15 +4095,6 @@ In the code:
 In the flow:
 
 A node points to a node NS if it [sees the declaration](#sees_decl) NS and [`ts_namespace`](#ts_namespace)(NS).
-
-In the code:
-
-<a id="ns_export"></a>`ns_export`(NS, a [named export](#noun-named_export) E) if all of:
-  - [`ts_namespace`](#ts_namespace)(NS);
-  - the `body` of a node NS is a node B;
-  - E [is among the](#ast_child) `body` of B.
-
-In the flow:
 
 The member Name of a node NS holds a node D if all of:
   - [`ts_namespace`](#ts_namespace)(NS);

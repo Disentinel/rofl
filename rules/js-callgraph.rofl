@@ -656,14 +656,12 @@ call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, X), key[value](X, Name).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[type](B, X), key[type](X, Name).
 sx_ns_key[surface](NS, Name) :- ns_key[code](NS, Name).
-sx_open[surface](NS)  :- ns_export[code](NS, E), ast_child[code](E, declaration, 0, V),
-                         ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), not ast_name[code](I, _).
 call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[surface](O, Key).
 
 -- An ES module's namespace object (`import * as m`) is frozen and has no prototype:
 -- exactly the names the module exports. It is open where a name comes from where
 -- the model cannot see: `export *` of a module it does not resolve or of an open
--- one, a pattern exported, `export =`, CommonJS.
+-- one, `export =`, CommonJS.
 whole_expr[flow](E) :- imports_ns[code](Local, D, File), module_target[code](D, _), top_read[code](E, Local, File).
 export_key[code](File, Name) :- program[tree](P, File), has[value](P, M), key[value](M, Name).
 export_key[code](File, Name) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), module_target[code](E, T),
@@ -672,8 +670,6 @@ sx_export_key[surface](File, Name) :- export_key[code](File, Name).
 ns_open_file[code](File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), not module_target[code](E, _).
 ns_open_file[code](File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), module_target[code](E, T),
                             sx_ns_open[surface](T).
-ns_open_file[code](File) :- module_export[code](E, File), ast_child[code](E, declaration, 0, V),
-                            ast_child[code](V, declarations, _, D), ast_child[code](D, id, 0, I), not ast_name[code](I, _).
 ns_open_file[code](File) :- namespace[value](_, Ns), assign[value](E, Ns, _), at[tree](E, File, _).
 ns_open_file[code](File) :- free_global[code](_, "exports", File).
 ns_open_file[code](File) :- free_global[code](_, "module", File).

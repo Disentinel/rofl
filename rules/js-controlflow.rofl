@@ -407,11 +407,15 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 -- `export_all_declaration` introduces no local entry.
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
--- The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
-export_statement[code](E) :- ast_node[code](E, export_named_declaration, _).
-export_statement[code](E) :- export_default_site[code](E).
+-- A declaration is exported when a name it introduces is a member of a namespace, a module's or a TypeScript one's:
+-- `export function f`, `export class C`, `export const a = 1`, `export const { a, b = () => 1 } = o`.
+declares_export[code](D) :- target[value](D, I), has[value](_, I).
+declares_export[code](D) :- decl[value](D, _), assign[value](D, T, _), has[value](_, T).
+declares_export[code](D) :- decl[value](D, _), assign[value](D, T, _), inside[tree](T, X), has[value](_, X).
 
-exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_statement[code](E).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), declares_export[code](F).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](D, F), declares_export[code](D).
+exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_default_site[code](E).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),

@@ -281,7 +281,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_hoisted).
 unit_concludes("rules/js-dataflow.rofl", keyed_later).
 unit_concludes("rules/js-dataflow.rofl", keyed_step).
-unit_concludes("rules/js-dataflow.rofl", keyed_shut_kind).
+unit_concludes("rules/js-dataflow.rofl", keyed_shut).
 unit_concludes("rules/js-dataflow.rofl", keyed_key_arg).
 unit_concludes("rules/js-dataflow.rofl", keyed_want).
 unit_concludes("rules/js-dataflow.rofl", keyed_param).
@@ -310,6 +310,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_put_later).
 unit_concludes("rules/js-dataflow.rofl", keyed_hop).
 unit_concludes("rules/js-dataflow.rofl", keyed_hop_fn).
 unit_concludes("rules/js-dataflow.rofl", keyed_named_fn).
+unit_concludes("rules/js-dataflow.rofl", keyed_exported).
 unit_concludes("rules/js-dataflow.rofl", keyed_private_name).
 unit_concludes("rules/js-dataflow.rofl", keyed_private_reached).
 unit_concludes("rules/js-dataflow.rofl", keyed_has_name).
@@ -471,7 +472,6 @@ unit_concludes("rules/js-dataflow.rofl", class_field_this).
 unit_concludes("rules/js-dataflow.rofl", static_block_of).
 unit_concludes("rules/js-dataflow.rofl", imports_name).
 unit_concludes("rules/js-dataflow.rofl", corpus_file).
-unit_concludes("rules/js-dataflow.rofl", module_export).
 unit_concludes("rules/js-dataflow.rofl", exports_name).
 unit_concludes("rules/js-dataflow.rofl", class_or_namespace).
 unit_concludes("rules/js-dataflow.rofl", export_local).
@@ -503,7 +503,6 @@ unit_concludes("rules/js-dataflow.rofl", sx_coroutine).
 unit_concludes("rules/js-dataflow.rofl", coroutine_yield).
 unit_concludes("rules/js-dataflow.rofl", callback_param).
 unit_concludes("rules/js-dataflow.rofl", ts_namespace).
-unit_concludes("rules/js-dataflow.rofl", ns_export).
 unit_concludes("rules/js-dataflow.rofl", super_of).
 unit_concludes("rules/js-dataflow.rofl", own_ctor).
 unit_concludes("rules/js-dataflow.rofl", has_own_ctor).
@@ -861,7 +860,7 @@ unit_concludes("rules/js-controlflow.rofl", guarded_call).
 unit_concludes("rules/js-controlflow.rofl", reached_unguarded).
 unit_concludes("rules/js-controlflow.rofl", may_not_run).
 unit_concludes("rules/js-controlflow.rofl", in_fn).
-unit_concludes("rules/js-controlflow.rofl", export_statement).
+unit_concludes("rules/js-controlflow.rofl", declares_export).
 unit_concludes("rules/js-controlflow.rofl", exported_fn).
 unit_concludes("rules/js-controlflow.rofl", sx_entry).
 unit_concludes("rules/js-controlflow.rofl", entry_point).

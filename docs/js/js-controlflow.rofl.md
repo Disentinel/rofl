@@ -36,6 +36,7 @@ Reads:
   - <a id="assign"></a>`assign`
   - <a id="body"></a>`body`
   - <a id="class"></a>`class`
+  - <a id="decl"></a>`decl`
   - <a id="executes_if"></a>`executes_if`
   - <a id="exits"></a>`exits`
   - <a id="finalizes"></a>`finalizes`
@@ -55,6 +56,7 @@ Reads:
   - <a id="spread_props"></a>`spread_props`
   - <a id="static"></a>`static`
   - <a id="suspends"></a>`suspends`
+  - <a id="target"></a>`target`
   - <a id="throws"></a>`throws`
   - <a id="tries"></a>`tries`
   - <a id="value"></a>`value`
@@ -68,7 +70,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
-| <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -791,17 +792,38 @@ A node
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
-> The roles see an export by its members, and `export const {a, b = () => 1} = o` has none: the named export is read on the raw tree.
+> A declaration is exported when a name it introduces is a member of a namespace, a module's or a TypeScript one's:
+> `export function f`, `export class C`, `export const a = 1`, `export const { a, b = () => 1 } = o`.
 
-<a id="export_statement"></a>`export_statement`(E) either:
+<a id="declares_export"></a>`declares_export`(D) either:
 
-1. if E is a [named export](#noun-named_export);
-2. if E [is a default export site](js-modules.rofl.md#export_default_site).
+1. if [`target`](#target)(D, I) and [`has`](#has)(something, I);
+2. if all of:
+   - [`decl`](#decl)(D, something);
+   - [`assign`](#assign)(D, T, something);
+   - [`has`](#has)(something, T);
+3. if all of:
+   - [`decl`](#decl)(D, something);
+   - [`assign`](#assign)(D, T, something);
+   - [`inside`](#inside)(T, X);
+   - [`has`](#has)(something, X).
 
-<a id="exported_fn"></a>A [function](js-callgraph.rofl.md#fn_node) is exported if all of:
-  - [`inside`](#inside)(E, it);
-  - [`export_statement`](#export_statement)(E);
-  - unless it [is inside a function](#in_fn).
+<a id="exported_fn"></a>F is exported either:
+
+1. if all of:
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - [`declares_export`](#declares_export)(F);
+   - unless F [is inside a function](#in_fn);
+2. if all of:
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - [`inside`](#inside)(D, F);
+   - [`declares_export`](#declares_export)(D);
+   - unless F [is inside a function](#in_fn);
+3. if all of:
+   - F is a [function](js-callgraph.rofl.md#fn_node);
+   - [`inside`](#inside)(E, F);
+   - E [is a default export site](js-modules.rofl.md#export_default_site);
+   - unless F [is inside a function](#in_fn).
 
 > `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 
