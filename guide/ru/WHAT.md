@@ -110,25 +110,25 @@ checkout.rofl.md:13: cell 1 · rofl
     the proof:
     "checkout" is a risky export, because
       [function checkout() at checkout.js:4] is a function, in the code, because
-        body[value]([function checkout() at checkout.js:4],[block at checkout.js:4]), because
-          `function_declaration` is a function kind, in the ast_babel (given)
-          node[ast_babel]([function checkout() at checkout.js:4],function_declaration,"checkout.js"), because
-            [function checkout() at checkout.js:4] is of kind `function_declaration` in file "checkout.js", in the code (given)
-          child[ast_babel]([function checkout() at checkout.js:4],body,0,[block at checkout.js:4]), because
-            The `body` of [function checkout() at checkout.js:4] is [block at checkout.js:4], in the code (given)
+        body[value]([function checkout() at checkout.js:4],[function body at checkout.js:4]), because
+          ox_fn_node([function checkout() at checkout.js:4],[function checkout() at checkout.js:4]), because
+            oxc_k[ast_oxc]([function checkout() at checkout.js:4],function), because
+              node[ast_oxc]([function checkout() at checkout.js:4],function,"checkout.js") (given)
+            + 1 side condition holds (nothing says otherwise)
+          oxc_c[ast_oxc]([function checkout() at checkout.js:4],body,0,[function body at checkout.js:4]), because
+            child[ast_oxc]([function checkout() at checkout.js:4],body,0,[function body at checkout.js:4]) (given)
+            unwrapped[ast_oxc]([function body at checkout.js:4],[function body at checkout.js:4]), because
+              node[ast_oxc]([function body at checkout.js:4],function_body,"checkout.js") (given)
+              + 1 side condition holds (nothing says otherwise)
       [function checkout() at checkout.js:4] answers to "checkout", in the code, because
         [function checkout() at checkout.js:4] is a function, in the code [above]
         target[value]([function checkout() at checkout.js:4],[checkout at checkout.js:4]), because
-          target_field[ast_babel](function_declaration,id) (given)
-          node[ast_babel]([function checkout() at checkout.js:4],function_declaration,"checkout.js") [above]
-          child[ast_babel]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]), because
-            The `id` of [function checkout() at checkout.js:4] is [checkout at checkout.js:4], in the code (given)
-        binds[value]([checkout at checkout.js:4],"checkout"), because
-          b_bind[ast_babel]([checkout at checkout.js:4],value), because
-            bind_root[ast_babel](function_declaration,id,value) (given)
-            node[ast_babel]([function checkout() at checkout.js:4],function_declaration,"checkout.js") [above]
-            child[ast_babel]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]) [above]
-          node[ast_babel]([checkout at checkout.js:4],identifier,"checkout.js"), because
+          oxc_k[ast_oxc]([function checkout() at checkout.js:4],function) [above]
+          oxc_c[ast_oxc]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]), because
+            child[ast_oxc]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]) (given)
+            unwrapped[ast_oxc]([checkout at checkout.js:4],[checkout at checkout.js:4]), because
+              node[ast_oxc]([checkout at checkout.js:4],binding_identifier,"checkout.js") (given)
+              + 1 side condition holds (nothing says otherwise)
 ```
 <!-- END run -->
 
