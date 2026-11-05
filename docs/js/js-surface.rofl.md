@@ -43,7 +43,7 @@ Reads:
 - from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-host, in the flow: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
-- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the tree:
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
@@ -54,6 +54,7 @@ Reads:
   - <a id="exits"></a>`exits`
   - <a id="generator"></a>`generator`
   - <a id="param"></a>`param`
+  - <a id="ref"></a>`ref`
 - from the scanner, in the code:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
@@ -155,7 +156,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_elem"></a>`sx_elem`(X, I, E) if [`sx_esc`](#sx_esc)(X) and [`array_elem`](js-dataflow.rofl.md#array_elem)(X, I, E).
 
-<a id="sx_name"></a>`sx_name`(E, Name) if [`sx_elem`](#sx_elem)(something, something, E) and a node E [is named](js-structure.rofl.md#ast_name) Name.
+<a id="sx_name"></a>`sx_name`(E, Name) if [`sx_elem`](#sx_elem)(something, something, E) and [`ref`](#ref)(E, Name).
 
 <a id="sx_proto"></a>`sx_proto`(N, P) if [`sx_esc`](#sx_esc)(N) and [`kind_proto`](js-dataflow.rofl.md#kind_proto)(N, P).
 

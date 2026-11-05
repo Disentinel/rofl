@@ -36,7 +36,7 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_write](js-structure.rofl.md#value_write)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -50,7 +50,6 @@ Reads:
   - <a id="binary"></a>`binary`
   - <a id="frozen"></a>`frozen`
   - <a id="object"></a>`object`
-  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
@@ -87,6 +86,7 @@ Reads:
   - <a id="pattern_elem"></a>`pattern_elem`
   - <a id="pattern_prop"></a>`pattern_prop`
   - <a id="private"></a>`private`
+  - <a id="ref"></a>`ref`
   - <a id="rest_params"></a>`rest_params`
   - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
@@ -124,8 +124,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
-| <a id="noun-property"></a>a property | a node of kind `object_property` |
-| <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
@@ -582,7 +580,7 @@ In the code:
 <a id="assigned"></a>`assigned`(X, L, Name, Src, File) if all of:
   - [`value_write`](js-structure.rofl.md#value_write)(X, L, Src);
   - [`at`](#at)(X, File, something);
-  - [`ref`](#ref)(L, Name) in the value.
+  - [`ref`](#ref)(L, Name).
 
 > THE TARGET, decided three ways. (a) a declarator in scope at the target:
 > closures, `var` hoisting and top-of-file binders are all `sees_binder`.
@@ -850,7 +848,7 @@ A node
 > What a declarator's pattern takes apart: its initialiser, or at the head of
 > a for-of each element the loop walks (section 14).
 
-<a id="decl_value"></a>A node takes its value from a node X if the `init` of it is X.
+<a id="decl_value"></a>D takes its value from a node X if [`var_decl`](#var_decl)(D) and [`assign`](#assign)(D, something, X).
 
 In the code:
 
@@ -893,10 +891,10 @@ In the flow:
 
 A [function](js-callgraph.rofl.md#fn_node)
 
-- <a id="param_of"></a>takes Name at an index I if [`param_wrap`](#param_wrap)(it, I, something, L) and a node L [is named](js-structure.rofl.md#ast_name) Name.
+- <a id="param_of"></a>takes Name at an index I if [`param_wrap`](#param_wrap)(it, I, something, L) and [`binds`](#binds)(L, Name).
 - <a id="param_default"></a>defaults Name to a node Init if all of:
   - [`param_wrap`](#param_wrap)(it, something, P, L);
-  - a node L [is named](js-structure.rofl.md#ast_name) Name;
+  - [`binds`](#binds)(L, Name);
   - [`assign`](#assign)(P, L, Init).
 
 A node
@@ -1185,7 +1183,7 @@ F takes Name at an index I either:
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - [`param`](#param)(F, I, P);
    - [`parent`](#parent)(F, P);
-   - a node P [is named](js-structure.rofl.md#ast_name) Name;
+   - [`binds`](#binds)(P, Name);
 2. if all of:
    - F is a [function](js-callgraph.rofl.md#fn_node);
    - [`param`](#param)(F, I, X);
@@ -1205,7 +1203,7 @@ In the code:
   - [`rest_params`](#rest_params)(it, J, L);
   - [`parent`](#parent)(R, L);
   - [`parent`](#parent)(it, R);
-  - a node L [is named](js-structure.rofl.md#ast_name) Name.
+  - [`binds`](#binds)(L, Name).
 
 In the flow:
 
@@ -1634,7 +1632,7 @@ In the code:
 
 <a id="keyed_param"></a>`keyed_param`(U, G, Pos) if all of:
   - [`keyed_want`](#keyed_want)(U);
-  - [`ref`](#ref)(U, something) in the value;
+  - [`ref`](#ref)(U, something);
   - G [uses](#param_use) Name at a node U;
   - G [takes](#param_of) Name at Pos.
 
@@ -1650,12 +1648,12 @@ In the code:
 
 1. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - [`ref`](#ref)(E, something) in the value;
+   - [`ref`](#ref)(E, something);
    - a node E [sees](#sees_binder) D;
    - D [binds](#binder) some name to a node I in some file;
 2. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - [`ref`](#ref)(E, something) in the value;
+   - [`ref`](#ref)(E, something);
    - a node E [sees](#sees_binder) D;
    - X [is written into](#assign_binder) D;
    - [`assigned`](#assigned)(X, something, something, I, something);
@@ -1764,7 +1762,7 @@ In the code:
    - Op differs from "+";
 3. if all of:
    - [`keyed_want`](#keyed_want)(E);
-   - [`ref`](#ref)(E, something) in the value;
+   - [`ref`](#ref)(E, something);
    - unless [`keyed_bound`](#keyed_bound)(E);
 4. if [`keyed_param`](#keyed_param)(E, G, something) and [`keyed_escapes`](#keyed_escapes)(G);
 5. if all of:
@@ -1803,13 +1801,13 @@ In the code:
 
 <a id="keyed_const_name"></a>`keyed_const_name`(C, Dk) if all of:
   - [`keyed_key_arg`](#keyed_key_arg)(C, X);
-  - [`ref`](#ref)(X, something) in the value;
+  - [`ref`](#ref)(X, something);
   - a node X [sees](#sees_binder) Dk;
   - [`decl`](#decl)(Dk, `const`).
 
 <a id="keyed_param_name"></a>`keyed_param_name`(C, G, Name) if all of:
   - [`keyed_key_arg`](#keyed_key_arg)(C, X);
-  - [`ref`](#ref)(X, Name) in the value;
+  - [`ref`](#ref)(X, Name);
   - a node X [finds its name in](#name_scope) Name in some file G;
   - [`param`](#param)(G, something, an [identifier](#noun-identifier) Pa);
   - [`parent`](#parent)(G, Pa);
@@ -1970,7 +1968,7 @@ In the code:
    - some class [has the method](#class_method_of) G;
    - [`object_of`](js-structure.rofl.md#object_of)(E, T);
    - [`this`](#this)(T);
-2. if [`keyed_named_fn`](#keyed_named_fn)(something, E) and [`ref`](#ref)(E, something) in the value.
+2. if [`keyed_named_fn`](#keyed_named_fn)(something, E) and [`ref`](#ref)(E, something).
 
 <a id="keyed_escapes"></a>`keyed_escapes`(G) either:
 
@@ -3403,11 +3401,40 @@ A node M points to a node Y either:
    - [`hoisted`](#hoisted)(Y, something);
    - Y is a [function](js-callgraph.rofl.md#fn_node);
 5. if all of:
-   - a node X [points to](js-concat.rofl.md#may_be_node) Y;
-   - the `value` of M is X;
-   - M is a [property](#noun-property).
+   - [`has`](#has)(O, M);
+   - [`obj_lit`](#obj_lit)(O);
+   - [`value`](#value)(M, X);
+   - a node X [points to](js-concat.rofl.md#may_be_node) Y.
 
-A [property](#noun-property) may be the literal V if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and the `value` of it is X.
+A node may be the literal V if all of:
+  - [`has`](#has)(O, it);
+  - [`obj_lit`](#obj_lit)(O);
+  - [`value`](#value)(it, X);
+  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V.
+
+In the code:
+
+<a id="pattern_entry"></a>`pattern_entry`(P, T) either:
+
+1. if all of:
+   - [`pattern_prop`](#pattern_prop)(Q, something, T);
+   - [`object_pat`](js-structure.rofl.md#object_pat)(Q);
+   - [`parent`](#parent)(Q, P);
+   - [`parent`](#parent)(P, T);
+   - unless [`assign`](#assign)(P, something, something);
+2. if all of:
+   - [`pat_computed`](#pat_computed)(Q, T, something);
+   - [`pat_in`](#pat_in)(something, Q, T);
+   - [`parent`](#parent)(Q, P);
+   - [`parent`](#parent)(P, T);
+   - unless [`assign`](#assign)(P, something, something).
+
+In the flow:
+
+A node
+
+- points to a node N if [`pattern_entry`](#pattern_entry)(it, T) and a node T [points to](js-concat.rofl.md#may_be_node) N.
+- may be the literal V if [`pattern_entry`](#pattern_entry)(it, T) and a node T [may be the literal](js-concat.rofl.md#may_be_lit) V.
 
 ## 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
 
@@ -3484,16 +3511,21 @@ The member Key of a node CD holds a node V if CD [has the field](#field_of) Key 
 
 A class owns the key Key if it [has the field](#field_of) Key at some node holding some node.
 
-The static member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [`static`](#static)(P).
-
-The instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is `false`.
+The static/instance member Key of a class CD is a node V if CD [has the field](#field_of) Key at a node P holding V and/unless [`static`](#static)(P).
 
 > Walks FIELDS and not members: written over `class_member_proto` it inherited
 > methods a second way and silently disarmed the mutant guarding the method arm.
 
+<a id="field_at"></a>A class CD has a field own or inherited Key holding a node V a static N either:
+
+1. if CD [has the field](#field_of) Key at a node P holding V, [`static`](#static)(P), and N is `true`;
+2. if all of:
+   - CD [has the field](#field_of) Key at a node P holding V;
+   - N is `false`;
+   - unless [`static`](#static)(P).
+
 A class
 
-- <a id="field_at"></a>has a field own or inherited Key holding a node V a static S if it [has the field](#field_of) Key at a node P holding V and [the attribute](#ast_attr) `static` of P is S.
 - <a id="inherited_field"></a>inherits the field Key holding a node V a static S if [the super](#super_of) of it [has a field own or inherited](#field_at) Key holding V S, unless it [owns the key](#own_key) Key.
 - has a field own or inherited Key holding a node V a static S if it [inherits the field](#inherited_field) Key holding V S.
 
@@ -4070,7 +4102,7 @@ A node
 - comes out of a module Spec if it [is called back with](#callback_param) in some function from Spec.
 - points to a node P if all of:
   - P [is called back with](#callback_param) in F from some module;
-  - P [is named](js-structure.rofl.md#ast_name) Name;
+  - [`binds`](#binds)(P, Name);
   - F [uses](#param_use) Name at it.
 
 > A TypeScript namespace is an object made at run time (not a `declare`d one):
@@ -4164,16 +4196,16 @@ A node points to a node SD if all of:
 > promise constructed and awaited later reaches the Promise class, which no
 > corpus here declares. A plain assignment is its right-hand side; `+=` is a sum.
 
-A [sequence](#noun-sequence)
+A node
 
 - points to a node N if all of:
-  - an index I is the greatest J such that (some node is the J-th of the `expressions` of it);
-  - a node X is the I-th of the `expressions` of it;
-  - X [points to](js-concat.rofl.md#may_be_node) N.
+  - [`gives`](#gives)(it, X);
+  - a node X [points to](js-concat.rofl.md#may_be_node) N;
+  - unless [`assign`](#assign)(it, something, something).
 - may be the literal V if all of:
-  - an index I is the greatest J such that (some node is the J-th of the `expressions` of it);
-  - a node X is the I-th of the `expressions` of it;
-  - X [may be the literal](js-concat.rofl.md#may_be_lit) V.
+  - [`gives`](#gives)(it, X);
+  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
+  - unless [`assign`](#assign)(it, something, something).
 
 E points to a node N if all of:
   - a node X [points to](js-concat.rofl.md#may_be_node) N;

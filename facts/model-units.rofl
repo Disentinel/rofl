@@ -451,6 +451,7 @@ unit_concludes("rules/js-dataflow.rofl", class_member_static).
 unit_concludes("rules/js-dataflow.rofl", class_member_proto).
 unit_concludes("rules/js-dataflow.rofl", member_obj).
 unit_concludes("rules/js-dataflow.rofl", member_at).
+unit_concludes("rules/js-dataflow.rofl", pattern_entry).
 unit_concludes("rules/js-dataflow.rofl", this_binds_kind).
 unit_concludes("rules/js-dataflow.rofl", this_binder).
 unit_concludes("rules/js-dataflow.rofl", this_over).

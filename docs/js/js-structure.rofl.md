@@ -27,7 +27,6 @@ Reads:
   - <a id="strict"></a>`strict`
 - from outside these files, in the type:
   - <a id="binary"></a>`binary`
-  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="binds"></a>`binds`
@@ -47,6 +46,7 @@ Reads:
   - <a id="pattern_elem"></a>`pattern_elem`
   - <a id="pattern_prop"></a>`pattern_prop`
   - <a id="private"></a>`private`
+  - <a id="ref"></a>`ref`
   - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
 
@@ -190,7 +190,7 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 `object_pat`(P) if all of:
   - [`pattern_slot`](#pattern_slot)(P);
   - unless [`binds`](#binds)(P, something);
-  - unless [`ref`](#ref)(P, something) in the value;
+  - unless [`ref`](#ref)(P, something);
   - unless [`member`](#member)(P, something, something);
   - unless [`member_expr`](#member_expr)(P, something, something);
   - unless [`iterates`](#iterates)(P, P, something);

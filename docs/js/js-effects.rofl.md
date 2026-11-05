@@ -36,7 +36,7 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
-- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
 - from outside these files, in the tree:
@@ -51,6 +51,8 @@ Reads:
   - <a id="construct"></a>`construct`
   - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
+  - <a id="key_expr"></a>`key_expr`
+  - <a id="ref"></a>`ref`
   - <a id="repeats"></a>`repeats`
   - <a id="static"></a>`static`
   - <a id="static_block"></a>`static_block`
@@ -58,9 +60,6 @@ Reads:
   - <a id="tries"></a>`tries`
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
-- from the scanner, in the code:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
 
@@ -311,7 +310,7 @@ In the code:
 
 <a id="eff_compound"></a>X is a compound write if X [is a write](#eff_assign), unless X [is plain](js-dataflow.rofl.md#plain_assign).
 
-<a id="eff_name_target"></a>A node is a written name if some assignment [writes to](#eff_assign_target) it and it [is named](js-structure.rofl.md#ast_name) some name.
+<a id="eff_name_target"></a>A node is a written name if some assignment [writes to](#eff_assign_target) it and [`ref`](#ref)(it, something).
 
 In the flow:
 
@@ -323,7 +322,7 @@ A node
   - [`assign_op`](js-structure.rofl.md#assign_op)(X, it, something);
   - it [is a written member](#eff_member_target);
   - it [touches the heap](#eff_heap_of) H.
-- has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and L [is named](js-structure.rofl.md#ast_name) some name.
+- has the effect `write` at `local` if it [writes to](#eff_assign_target) a node L and [`ref`](#ref)(L, something).
 
 <a id="eff_read_site"></a>A [member access](js-dataflow.rofl.md#member_node_v) is a read member unless it [is a written member](#eff_member_target).
 
@@ -343,14 +342,10 @@ In the flow:
 
 A node U has the effect N at a host E either:
 
-1. if all of:
-   - U [updates](#eff_update_arg) a node X;
-   - X [is named](js-structure.rofl.md#ast_name) some name;
-   - N is `read`;
-   - E is `local`;
+1. if U [updates](#eff_update_arg) a node X, [`ref`](#ref)(X, something), N is `read`, and E is `local`;
 2. if all of:
    - U [updates](#eff_update_arg) a node X;
-   - X [is named](js-structure.rofl.md#ast_name) some name;
+   - [`ref`](#ref)(X, something);
    - N is `write`;
    - E is `local`;
 3. if U [updates](#eff_update_arg) a node X, X [touches the heap](#eff_heap_of) E, and N is `read`;
@@ -367,7 +362,7 @@ In the code:
 <a id="eff_written"></a>A node X is written to either:
 
 1. if X [is a written name](#eff_name_target);
-2. if some update expression [updates](#eff_update_arg) X and X [is named](js-structure.rofl.md#ast_name) some name.
+2. if some update expression [updates](#eff_update_arg) X and [`ref`](#ref)(X, something).
 
 <a id="eff_mutable_in"></a>Name is mutable in File and S if a node X [is written to](#eff_written) and X [finds its name in](js-dataflow.rofl.md#name_scope) Name in File S.
 
@@ -833,8 +828,8 @@ In the flow:
    - N is `definition`;
 2. if all of:
    - some class [initialises the field](#eff_field_value) at P with some node;
-   - [the attribute](#ast_attr) `static` of P is `false`;
-   - N is `construction`.
+   - N is `construction`;
+   - unless [`static`](#static)(P).
 
 A class
 
@@ -851,7 +846,7 @@ A class defines by running a node S if [`extends`](#extends)(it, S) in the value
 
 In the code:
 
-<a id="eff_plain_key"></a>A node has a plain key if some node [has the body member](#eff_class_body) it, unless [the attribute](#ast_attr) `computed` of it is `true`.
+<a id="eff_plain_key"></a>A node has a plain key if some node [has the body member](#eff_class_body) it, unless [`key_expr`](#key_expr)(it, something).
 
 In the flow:
 
@@ -859,7 +854,7 @@ A class CD defines by running a node KN either:
 
 1. if all of:
    - CD [has the body member](#eff_class_body) P;
-   - the `key` of P is KN;
+   - [`key_expr`](#key_expr)(P, KN);
    - unless P [has a plain key](#eff_plain_key);
 2. if [`class`](#class)(CD) and CD [is decorated by](js-callgraph.rofl.md#decorates) KN;
 3. if CD [has the body member](#eff_class_body) P and P [is decorated by](js-callgraph.rofl.md#decorates) KN.

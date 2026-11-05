@@ -23,7 +23,7 @@ Reads:
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
-- from js-structure: [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at)
+- from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
 - from outside these files, in the tree:
@@ -42,6 +42,8 @@ Reads:
   - <a id="has"></a>`has`
   - <a id="iterates"></a>`iterates`
   - <a id="jumps_to"></a>`jumps_to`
+  - <a id="labeled_as"></a>`labeled_as`
+  - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
   - <a id="repeats"></a>`repeats`
   - <a id="rest_props"></a>`rest_props`
@@ -55,7 +57,6 @@ Reads:
   - <a id="tries"></a>`tries`
   - <a id="value"></a>`value`
 - from the scanner:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 ## Words
@@ -65,9 +66,7 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
-| <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
-| <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
@@ -111,7 +110,10 @@ Phrases this file defines in one step, each by the sentence it stands for:
    - [`inside`](#inside)(Y, X);
 3. if [`executes_if`](#executes_if)(P, T, `matches`), [`parent`](#parent)(P, Y), and Y differs from T;
 4. if [`executes_if`](#executes_if)(P, something, `unmatched`) and [`parent`](#parent)(P, Y);
-5. if P is an [assignment pattern](#noun-assignment_pattern) and the `right` of P is Y.
+5. if all of:
+   - [`conditional_write`](js-structure.rofl.md#conditional_write)(P);
+   - [`assign`](#assign)(P, something, Y);
+   - unless [`logical`](#logical)(P, something, something, something).
 
 > `a?.b.c(x)` runs its tail when the head is defined: every link of the chain and all it holds but the head (and
 > the links below, which have their own row) are conditional.
@@ -196,7 +198,7 @@ Declared as facts:
 > honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 > harmless, because both consumers read through `guarded`.
 
-<a id="label_name"></a>The label name of a [label](#noun-label) LS is N if the `label` of LS is a node I and [the attribute](#ast_attr) `name` of I is N.
+<a id="label_name"></a>The label name of LS is N if [`labeled_as`](#labeled_as)(X, N) and [`parent`](#parent)(LS, X).
 
 <a id="label_target"></a>A node targets the label LS if all of:
   - it [refers to the label](#label_ref) N;
@@ -227,17 +229,19 @@ Declared as facts:
 
 A [block](#noun-block) completes abruptly if a node S [completes abruptly](#completes_abruptly) and S [is among the](#ast_child) `body` of it.
 
-A node completes abruptly if all of:
+A node
+
+- completes abruptly if all of:
   - a node C [completes abruptly](#completes_abruptly);
   - [`executes_if`](#executes_if)(C, G, `truthy`);
   - [`parent`](#parent)(it, C);
   - [`executes_if`](#executes_if)(X, G, `falsy`);
   - [`parent`](#parent)(it, X);
   - a node X [completes abruptly](#completes_abruptly).
-
-A [label](#noun-label) completes abruptly if all of:
+- completes abruptly if all of:
   - a node S [completes abruptly](#completes_abruptly);
-  - the `body` of it is S;
+  - [`labeled_as`](#labeled_as)(S, something);
+  - [`parent`](#parent)(it, S);
   - unless it [is escaped](#label_escaped).
 
 Declared as facts:

@@ -61,12 +61,12 @@ Reads:
   - <a id="nth"></a>`nth`
 - from outside these files, in the type:
   - <a id="binary"></a>`binary`
-  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="callee"></a>`callee`
   - <a id="construct"></a>`construct`
   - <a id="literal"></a>`literal`
+  - <a id="ref"></a>`ref`
   - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
   - <a id="template_part"></a>`template_part`
@@ -148,7 +148,7 @@ In the code:
 <a id="plus_assign"></a>`plus_assign`(X, L, Name, File) if all of:
   - [`binary`](#binary)(X, "+", L, something) in the value;
   - [`assign`](#assign)(X, L, X);
-  - [`ref`](#ref)(L, Name) in the value;
+  - [`ref`](#ref)(L, Name);
   - [`at`](#at)(X, File, something).
 
 In the flow:

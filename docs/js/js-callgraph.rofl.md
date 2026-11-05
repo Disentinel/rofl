@@ -59,7 +59,6 @@ Reads:
   - <a id="extends"></a>`extends`
   - <a id="keyed_by"></a>`keyed_by`
   - <a id="object"></a>`object`
-  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
@@ -88,6 +87,7 @@ Reads:
   - <a id="param"></a>`param`
   - <a id="passes"></a>`passes`
   - <a id="private"></a>`private`
+  - <a id="ref"></a>`ref`
   - <a id="spread_args"></a>`spread_args`
   - <a id="spread_props"></a>`spread_props`
   - <a id="static"></a>`static`
@@ -594,7 +594,7 @@ Caller calls Callee either:
   - it [passes](js-dataflow.rofl.md#arg_at) a node X at I;
   - X [points to](js-concat.rofl.md#may_be_node) F;
   - [`fn_value`](js-surface.rofl.md#fn_value)(F);
-  - X [is named](js-structure.rofl.md#ast_name) Name.
+  - [`ref`](#ref)(X, Name).
 
 > an element of another file's array spread into the call is named by its own file
 
@@ -1532,7 +1532,7 @@ Declared as facts:
 > the type a place is declared as, an annotation or a cast (`x as IFoo`, `<IFoo>x`), in the world of values or of types;
 > an interface's `extends` states its type in itself.
 
-<a id="nullish"></a>`nullish`(Y) if [`ref`](#ref)(Y, Name) and [`nullish_type`](#nullish_type)(Name).
+<a id="nullish"></a>`nullish`(Y) if [`ref`](#ref)(Y, Name) in the type and [`nullish_type`](#nullish_type)(Name).
 
 <a id="union_part"></a>`union_part`(U, Y) if all of:
   - [`binary`](#binary)(U, "|", something, something);
@@ -1562,12 +1562,12 @@ Declared as facts:
 1. if all of:
    - [`type_at`](#type_at)(Y, X);
    - [`passes`](#passes)(X, N) in the type;
-   - [`ref`](#ref)(N, Name);
+   - [`ref`](#ref)(N, Name) in the type;
    - [`at`](#at)(X, File, something);
 2. if all of:
    - [`type_at`](#type_at)(Y, X);
    - [`callee`](#callee)(X, N) in the type;
-   - [`ref`](#ref)(N, Name);
+   - [`ref`](#ref)(N, Name) in the type;
    - [`at`](#at)(X, File, something).
 
 In the surface:
@@ -1581,7 +1581,7 @@ In the surface:
    - [`has`](#has)(something, I) in the type;
 2. if all of:
    - a node L [is exported locally as](js-dataflow.rofl.md#export_local) Name from File;
-   - [`ref`](#ref)(L, Local) in the value;
+   - [`ref`](#ref)(L, Local);
    - [`type_decl`](#type_decl)(T, Local, File).
 
 In the flow:
@@ -1625,7 +1625,7 @@ In the flow:
 
 `names_lib`(Y, P) if all of:
   - [`type_at`](#type_at)(Y, X);
-  - [`ref`](#ref)(X, Name);
+  - [`ref`](#ref)(X, Name) in the type;
   - [`keyword_prototype`](#keyword_prototype)(Name, P).
 
 Declared as facts:
@@ -1882,7 +1882,7 @@ In the code:
   - [`construct`](#construct)(E);
   - [`at`](#at)(E, File, something);
   - [`callee`](#callee)(E, N);
-  - [`ref`](#ref)(N, Name) in the value.
+  - [`ref`](#ref)(N, Name).
 
 In the flow:
 
@@ -1919,7 +1919,7 @@ In the code:
 <a id="fn_ret_at"></a>`fn_ret_at`(C, F) if all of:
   - [`call`](#call)(C);
   - [`callee`](#callee)(C, N);
-  - [`ref`](#ref)(N, something) in the value;
+  - [`ref`](#ref)(N, something);
   - N [sees the declaration](js-dataflow.rofl.md#sees_decl) F;
   - [`declared`](#declared)(F, something) in the value;
   - unless [`optional`](#optional)(C).
