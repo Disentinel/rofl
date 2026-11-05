@@ -448,7 +448,7 @@ eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), value[value](P, 
 eff_field_moment[flow](P, definition)   :- eff_field_value[code](_, P, _),
                                            static[value](P).
 eff_field_moment[flow](P, construction) :- eff_field_value[code](_, P, _),
-                                           ast_attr[code](P, static, false).
+                                           not static[value](P).
 
 eff_define_part[flow](CD, V)    :- eff_field_value[code](CD, P, V),
                                    eff_field_moment[flow](P, definition).
@@ -464,9 +464,9 @@ eff_define_part[flow](CD, S) :- static_block[value](CD, S).
 -- `attr_blind_guard[audit]` said so in one run.
 eff_define_part[flow](CD, S)  :- extends[value](CD, S).
 eff_plain_key[code](P)        :- eff_class_body[code](_, P),
-                                 not ast_attr[code](P, computed, true).
+                                 not key_expr[value](P, _).
 eff_define_part[flow](CD, KN) :- eff_class_body[code](CD, P), not eff_plain_key[code](P),
-                                 ast_child[code](P, key, 0, KN).
+                                 key_expr[value](P, KN).
 eff_define_part[flow](CD, D)  :- class[value](CD), decorates[code](CD, D).
 eff_define_part[flow](CD, D)  :- eff_class_body[code](CD, P), decorates[code](P, D).
 

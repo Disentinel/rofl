@@ -21,7 +21,7 @@ guard_arm[code](P, A) :- executes_if[value](X, G, How), How != unmatched, parent
                          inside[tree](A, X).
 guard_arm[code](C, S) :- executes_if[value](C, T, matches), parent[tree](C, S), S != T.
 guard_arm[code](C, S) :- executes_if[value](C, _, unmatched), parent[tree](C, S).
-guard_arm[code](P, A) :- ast_node[code](P, assignment_pattern, _), ast_child[code](P, right, 0, A).
+guard_arm[code](P, A) :- conditional_write[code](P), assign[value](P, _, A), not logical[value](P, _, _, _).
 
 -- `a?.b.c(x)` runs its tail when the head is defined: every link of the chain and all it holds but the head (and
 -- the links below, which have their own row) are conditional.

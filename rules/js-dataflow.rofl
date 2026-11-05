@@ -423,7 +423,7 @@ may_be_lit[flow](E, L)  :- pat_local[code](D, Local, T, File), may_be_lit[flow](
 
 -- What a declarator's pattern takes apart: its initialiser, or at the head of
 -- a for-of each element the loop walks (section 14).
-decl_value[flow](D, X) :- ast_child[code](D, init, 0, X).
+decl_value[flow](D, X) :- var_decl[code](D), assign[value](D, _, X).
 
 destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, R), pattern_elem[value](R, Index, T),
                                                 binds[value](T, Local), at[tree](D, File, _).
@@ -1517,11 +1517,12 @@ own_key[flow](CD, Key)         :- field_of[flow](CD, Key, _, _).
 class_member_static[flow](CD, Key, V) :- field_of[flow](CD, Key, P, V),
                                          static[value](P).
 class_member_proto[flow](CD, Key, V)  :- field_of[flow](CD, Key, P, V),
-                                         ast_attr[code](P, static, false).
+                                         not static[value](P).
 
 -- Walks FIELDS and not members: written over `class_member_proto` it inherited
 -- methods a second way and silently disarmed the mutant guarding the method arm.
-field_at[flow](CD, Key, V, S)         :- field_of[flow](CD, Key, P, V), ast_attr[code](P, static, S).
+field_at[flow](CD, Key, V, true)      :- field_of[flow](CD, Key, P, V), static[value](P).
+field_at[flow](CD, Key, V, false)     :- field_of[flow](CD, Key, P, V), not static[value](P).
 inherited_field[flow](CD, Key, V, S)  :- super_of[flow](CD, SD), field_at[flow](SD, Key, V, S),
                                          not own_key[flow](CD, Key).
 field_at[flow](CD, Key, V, S)         :- inherited_field[flow](CD, Key, V, S).
