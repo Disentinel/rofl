@@ -1310,10 +1310,10 @@ obj_like[flow](O) :- class[value](O).
 class_like[flow](O) :- class[value](O).
 
 -- An INSTANCE is not its class. The class node is the class object (`C`, and
--- `this` in a static member); its body node stands for every instance (`new
+-- `this` in a static member); `inst(C)` stands for every instance (`new
 -- C()`, and `this` in an instance member), which answers the prototype half
 -- and whatever is written onto an instance.
-inst_of[flow](I, CD)          :- class_like[flow](CD), ast_child[code](CD, body, 0, I).
+inst_of[flow](inst(CD), CD)   :- class_like[flow](CD).
 member_value[flow](I, Key, V) :- inst_of[flow](I, CD), class_member_proto[flow](CD, Key, V).
 member_plain[flow](I, Key, V) :- inst_of[flow](I, _), member_value[flow](I, Key, V).
 

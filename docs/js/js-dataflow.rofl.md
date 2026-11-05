@@ -142,6 +142,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="spread_arg"></a>An invocation has a spread at an index I if [`spread_args`](#spread_args)(it, I, something).
 - <a id="class_like"></a>A node is a class if [`class`](#class)(it).
+- <a id="inst_of"></a>Inst(a class CD) stands for an instance of CD if CD [is a class](#class_like).
 - <a id="member_node_v"></a>A node is a member access if [`object_of`](js-structure.rofl.md#object_of)(it, something).
 - <a id="static_block_of"></a>A class has the static block SB if [`static_block`](#static_block)(it, SB).
 - <a id="corpus_file"></a>File is in the corpus if [`program`](#program)(something, File).
@@ -3069,11 +3070,9 @@ In the flow:
 2. if [`class`](#class)(O).
 
 > An INSTANCE is not its class. The class node is the class object (`C`, and
-> `this` in a static member); its body node stands for every instance (`new
+> `this` in a static member); `inst(C)` stands for every instance (`new
 > C()`, and `this` in an instance member), which answers the prototype half
 > and whatever is written onto an instance.
-
-<a id="inst_of"></a>A node stands for an instance of a class CD if CD [is a class](#class_like) and the `body` of CD is it.
 
 The member Key of a node I holds a node V if I [stands for an instance of](#inst_of) a class CD and [the instance member](#class_member_proto) Key of CD is V.
 
