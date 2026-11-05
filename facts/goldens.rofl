@@ -518,7 +518,7 @@ golden_state("closure_base_fact", "bbc2476d9d5f4800", 710).
 golden_state("concat_builtin", "8ea17a76496ba280", 733).
 golden_state("concat_recursion", "1962afeb9a14292c", 664).
 golden_state("concat_value", "ebb9a7edab30648e", 183295).
-golden_state("cost_shapes_model", "c8d23647d4f21534", 531394).
+golden_state("cost_shapes_model", "649ecf66a9fe012d", 531374).
 golden_state("demand_asked_hole", "533b1adc44c29b77", 1049).
 golden_state("demand_chain", "315910f85b442bc4", 5689).
 golden_state("demand_cycle", "e9e20d9911cad6c4", 822).
@@ -619,7 +619,7 @@ golden_state("sealed_provenance", "09cfc3daf0e67184", 682).
 golden_state("sensors_t3", "59b51847eef167dd", 1018).
 golden_state("services", "f4f7f73cdcac643f", 194765).
 golden_state("set_spelling", "2c0e27df434362a2", 808).
-golden_state("spec_coverage", "f20d0596ac5e5770", 5116).
+golden_state("spec_coverage", "e911e83ddaebbec6", 5118).
 golden_state("staged_neg_why", "4b078fc21a5145e7", 999).
 golden_state("staged_neg_why_agg", "f74ef870dae0ff12", 1023).
 golden_state("staged_neg_why_nocarry", "968a1e46a549c8ca", 1023).
@@ -27020,7 +27020,7 @@ golden_rel("concat_value", "writes_to[$kernel]", 3076).
 golden_rel("concat_value", "written_arg[code]", 21).
 golden_rel("concat_value", "written_target[code]", 5).
 golden_rel("cost_shapes_model", "@other", 221).
-golden_rel("cost_shapes_model", "@wit", 238924).
+golden_rel("cost_shapes_model", "@wit", 238914).
 golden_rel("cost_shapes_model", "abrupt_kind[main]", 4).
 golden_rel("cost_shapes_model", "addr_text[main]", 2).
 golden_rel("cost_shapes_model", "agg_tail[main]", 5).
@@ -27095,7 +27095,7 @@ golden_rel("cost_shapes_model", "cs_twin[main]", 972).
 golden_rel("cost_shapes_model", "cs_wild[main]", 2619).
 golden_rel("cost_shapes_model", "cs_wildname[main]", 10).
 golden_rel("cost_shapes_model", "deferred_attr[main]", 2).
-golden_rel("cost_shapes_model", "derived_by[$kernel]", 240649).
+golden_rel("cost_shapes_model", "derived_by[$kernel]", 240639).
 golden_rel("cost_shapes_model", "dns_depth[main]", 1).
 golden_rel("cost_shapes_model", "dns_local[main]", 2).
 golden_rel("cost_shapes_model", "edb[main]", 179).
@@ -27215,12 +27215,10 @@ golden_rel("cost_shapes_model", "scope[main]", 12).
 golden_rel("cost_shapes_model", "scope_net[main]", 11).
 golden_rel("cost_shapes_model", "sees[main]", 93).
 golden_rel("cost_shapes_model", "sees_first[main]", 7).
-golden_rel("cost_shapes_model", "shape_alarm[main]", 5).
 golden_rel("cost_shapes_model", "shape_excused[main]", 86).
 golden_rel("cost_shapes_model", "shape_hit[main]", 155).
 golden_rel("cost_shapes_model", "shape_hit_head[main]", 151).
 golden_rel("cost_shapes_model", "shape_ok[main]", 86).
-golden_rel("cost_shapes_model", "shape_ok_stale[main]", 5).
 golden_rel("cost_shapes_model", "shape_reason[main]", 7).
 golden_rel("cost_shapes_model", "shape_verdict[audit]", 34).
 golden_rel("cost_shapes_model", "shape_vocab[audit]", 34).
@@ -33922,10 +33920,10 @@ golden_rel("spec_coverage", "accepted_shortcut[coverage]", 1).
 golden_rel("spec_coverage", "alarm[main]", 1).
 golden_rel("spec_coverage", "amends[map]", 17).
 golden_rel("spec_coverage", "artifact_present[checks]", 3).
-golden_rel("spec_coverage", "asserted_by[$kernel]", 1412).
+golden_rel("spec_coverage", "asserted_by[$kernel]", 1413).
 golden_rel("spec_coverage", "authority[main]", 35).
 golden_rel("spec_coverage", "boot_rank[main]", 10).
-golden_rel("spec_coverage", "check[checks]", 965).
+golden_rel("spec_coverage", "check[checks]", 966).
 golden_rel("spec_coverage", "check_stands[coverage]", 15).
 golden_rel("spec_coverage", "citation_ok[checks]", 137).
 golden_rel("spec_coverage", "cited_check[map]", 15).
