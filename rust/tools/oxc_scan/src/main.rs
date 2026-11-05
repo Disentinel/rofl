@@ -12,7 +12,7 @@
 //   start[ast_oxc](Id, Offset)                   where it starts, in UTF-16 code units as a JS parser counts (left out by --no-start:
 //                                                every edit above a node moves it, and only the parity check reads it)
 //   child[ast_oxc](Parent, Field, Index, Child)  the tree; Index over the raw Vec, a None keeps its place
-//   attr[ast_oxc](Id, Key, Value)                every scalar; a struct without span flattened as key_member
+//   attr[ast_oxc](Id, Key, Value)                every scalar (--no-start: only the READ ones); a struct without span flattened as key_member
 //   file[ast_oxc](RootId, File)                  one per parsed file
 //   parse_error[ast_oxc](File, Message)          instead of all of the above when oxc reports an error
 //
@@ -28,6 +28,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 const P: &str = "ast_oxc";
+/// the attributes the model reads (models/lang/js/oxc-roles.rofl, oxc-to-code.rofl, the rules and the notebooks); `--no-start` writes no other
+const READ: [&str; 21] = ["accessibility", "async", "await", "computed", "declare", "delegate", "export_kind", "generator", "import_kind", "kind", "method", "name", "operator", "optional", "prefix", "readonly", "static", "tail", "type", "value", "value_cooked"];
 static NO_START: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 // --- the Debug text of an oxc tree, read back into a generic tree ---------------------------------------------------
@@ -406,7 +408,7 @@ impl Scan<'_> {
         if !NO_START.load(Ordering::Relaxed) {
             writeln!(self.out, "start[{P}]({me}, {at}).").unwrap();
         }
-        if let Some(v) = &n.variant {
+        if let (Some(v), false) = (&n.variant, NO_START.load(Ordering::Relaxed)) {
             writeln!(self.out, "attr[{P}]({me}, variant, {}).", q(v)).unwrap();
         }
         let mut equal: BTreeMap<u64, u64> = BTreeMap::new();
@@ -431,6 +433,7 @@ impl Scan<'_> {
                 }
             }
             V::None => {}
+            _ if NO_START.load(Ordering::Relaxed) && !READ.contains(&f) => {}
             v => writeln!(self.out, "attr[{P}]({me}, {f}, {}).", scalar(v).unwrap()).unwrap(),
         }
     }
