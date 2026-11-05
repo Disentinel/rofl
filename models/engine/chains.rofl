@@ -1,0 +1,86 @@
+-- models/engine/chains.rofl — THE PATTERN INDEXES AS CHAINS, FORECAST FROM THE PATTERNS memory.rofl FINDS.
+-- Load it beside models/engine/profile.rofl, sols.rofl, memory.rofl, the rule files and the profile of a world.
+--
+-- The hypothesis. Today every pattern a relation is asked by (`mem_pattern`) is a hash index of its own, 12 bytes a row
+-- (store.rs `PatIndex`: an id, a link and a slot). An index ordered by a chain of columns, say node then field, answers
+-- every pattern that is a prefix of it, node alone and node with field, by halving: one array of the rows' ids in that
+-- order, 4 bytes a row (Soufflé's choice, Subotić et al., VLDB 2018). The fewest chains that cover a relation's patterns
+-- (every pattern a prefix of one chain, a pattern inside another on the way to it) is the fewest chains covering the
+-- patterns ordered by inclusion (Dilworth): the patterns less the most pairs (A, B), A inside B, each pattern at most once
+-- on either side. A pairing is a matching, which a fixpoint does not find, so the pack forecasts it from both sides:
+--   low   no fewer than the most patterns no two of which nest: those of one size, or those inside no other;
+--   high  each pattern paired with the smallest one around it (fewest columns, then the lower mask), one pattern taken
+--         once: the patterns less the patterns so taken.
+-- What it costs: a probe halves the array, a step for each doubling of the rows, where a hash probe is one step.
+
+-- the columns of each pattern (memory.rofl's `mem_bound_col` at each premise asking by it), and its size
+ch_col(Rel, Bk, M, J) :- mem_asks(Rel, Bk, M, R, At, K, _), mem_bound_col(R, At, K, J).
+ch_pat(Rel, Bk, M, N) :- mem_pattern(Rel, Bk, M, N, _).
+ch_size(Rel, Bk, M, S) :- ch_pat(Rel, Bk, M, _), S is count(J : ch_col(Rel, Bk, M, J)).
+
+-- A inside B: every column of A is one of B's, and B has more
+ch_out(Rel, Bk, A, B) :- ch_col(Rel, Bk, A, J), ch_pat(Rel, Bk, B, _), not ch_col(Rel, Bk, B, J).
+ch_in(Rel, Bk, A, B) :- ch_size(Rel, Bk, A, SA), ch_size(Rel, Bk, B, SB), SA < SB, not ch_out(Rel, Bk, A, B).
+
+-- low: the widest size, or the patterns inside no other
+ch_layer(Rel, Bk, S, C) :- ch_size(Rel, Bk, _, S), C is count(M : ch_size(Rel, Bk, M, S)).
+ch_wide(Rel, Bk, C) :- ch_layer(Rel, Bk, _, _), C is max(X : ch_layer(Rel, Bk, _, X)).
+ch_inner(Rel, Bk, A) :- ch_in(Rel, Bk, A, _).
+ch_top(Rel, Bk, M) :- ch_pat(Rel, Bk, M, _), not ch_inner(Rel, Bk, M).
+ch_tops(Rel, Bk, C) :- ch_top(Rel, Bk, _), C is count(M : ch_top(Rel, Bk, M)).
+ch_low(Rel, Bk, C) :- ch_wide(Rel, Bk, W), ch_tops(Rel, Bk, T), W >= T, C = W.
+ch_low(Rel, Bk, C) :- ch_wide(Rel, Bk, W), ch_tops(Rel, Bk, T), W < T, C = T.
+
+-- high: each pattern's smallest surround (fewest columns, then the lower mask); the chains are the patterns less those taken
+ch_next_size(Rel, Bk, A, S) :- ch_in(Rel, Bk, A, _), S is min(X : ch_in(Rel, Bk, A, B), ch_size(Rel, Bk, B, X)).
+ch_next(Rel, Bk, A, B) :- ch_next_size(Rel, Bk, A, S),
+  B is min(Y : ch_in(Rel, Bk, A, Y), ch_size(Rel, Bk, Y, S)).
+ch_taken(Rel, Bk, B) :- ch_next(Rel, Bk, _, B).
+ch_count(Rel, Bk, P) :- ch_pat(Rel, Bk, _, _), P is count(M : ch_pat(Rel, Bk, M, _)).
+ch_ntaken(Rel, Bk, T) :- ch_taken(Rel, Bk, _), T is count(B : ch_taken(Rel, Bk, B)).
+ch_high(Rel, Bk, C) :- ch_count(Rel, Bk, P), ch_ntaken(Rel, Bk, T), C is P - T.
+ch_high(Rel, Bk, P) :- ch_count(Rel, Bk, P), not ch_taken(Rel, Bk, _).
+
+-- the bytes: an id a row for each chain
+ch_rows(Rel, Bk, N) :- ch_pat(Rel, Bk, _, N).
+ch_bytes(Rel, Bk, Lo, Hi) :- ch_rows(Rel, Bk, N), ch_low(Rel, Bk, L), ch_high(Rel, Bk, H), Lo is L * N * 4, Hi is H * N * 4.
+memory(chain_indexes_low, T) :- T is sum(B ; Rel, Bk : ch_bytes(Rel, Bk, B, _)).
+memory(chain_indexes_high, T) :- T is sum(B ; Rel, Bk : ch_bytes(Rel, Bk, _, B)).
+memory(chains_low, C) :- C is sum(X ; Rel, Bk : ch_low(Rel, Bk, X)).
+memory(chains_high, C) :- C is sum(X ; Rel, Bk : ch_high(Rel, Bk, X)).
+
+-- the probes: one a partial row asking through a pattern (`mem_pattern`'s W); by a chain, a step for each doubling of the
+-- rows (the first power of two above them)
+ch_pow(0, 1).
+ch_pow(J, B) :- ch_pow(I, A), I < 40, J is I + 1, B is A * 2.
+ch_lg(Rel, Bk, L) :- ch_rows(Rel, Bk, N), L is min(I : ch_pow(I, B), B > N).
+ch_steps(Rel, Bk, M, W, S) :- mem_pattern(Rel, Bk, M, _, W), ch_lg(Rel, Bk, L), S is W * L.
+memory(probes, T) :- T is sum(W ; Rel, Bk, M : ch_steps(Rel, Bk, M, W, _)).
+memory(chain_probe_steps, T) :- T is sum(S ; Rel, Bk, M : ch_steps(Rel, Bk, M, _, S)).
+
+-- A CHAIN WITH A DIRECTORY. Halving costs a read of a fact a step, where a hash probe is one: so the chain's array is
+-- entered by a hash on its first column (a slot of 8 bytes, where its rows start and how many, at three quarters full,
+-- 11 bytes a key), and only a pattern longer than that column halves, inside its first column's run (rows / distinct).
+-- The first column is one of the chain's smallest pattern, unknown here: priced at the fewest and at the most distinct
+-- of the columns the relation is asked by.
+ch_dist(Rel, Bk, J, D) :- ch_col(Rel, Bk, _, J), distinct[profile](Rel, Bk, J, D).
+ch_dmin(Rel, Bk, D) :- ch_dist(Rel, Bk, _, _), D is min(X : ch_dist(Rel, Bk, _, X)).
+ch_dmax(Rel, Bk, D) :- ch_dist(Rel, Bk, _, _), D is max(X : ch_dist(Rel, Bk, _, X)).
+ch_dir_bytes(Rel, Bk, Lo, Hi) :- ch_rows(Rel, Bk, N), ch_low(Rel, Bk, L), ch_high(Rel, Bk, H), ch_dmin(Rel, Bk, D0), ch_dmax(Rel, Bk, D1),
+  Lo is L * (N * 4 + D0 * 11), Hi is H * (N * 4 + D1 * 11).
+memory(chain_dir_indexes_low, T) :- T is sum(B ; Rel, Bk : ch_dir_bytes(Rel, Bk, B, _)).
+memory(chain_dir_indexes_high, T) :- T is sum(B ; Rel, Bk : ch_dir_bytes(Rel, Bk, _, B)).
+-- a probe of a pattern of one column is the hash and its run; a longer one halves the run of the column entered by:
+-- the most distinct column of the pattern at best, the fewest at worst
+ch_pdist(Rel, Bk, M, D) :- ch_col(Rel, Bk, M, J), distinct[profile](Rel, Bk, J, D).
+ch_pbest(Rel, Bk, M, D) :- ch_pdist(Rel, Bk, M, _), D is max(X : ch_pdist(Rel, Bk, M, X)).
+ch_pworst(Rel, Bk, M, D) :- ch_pdist(Rel, Bk, M, _), D is min(X : ch_pdist(Rel, Bk, M, X)).
+ch_run(Rel, Bk, M, Rb, Rw) :- ch_size(Rel, Bk, M, S), S > 1, ch_rows(Rel, Bk, N), ch_pbest(Rel, Bk, M, Db), ch_pworst(Rel, Bk, M, Dw),
+  Rb is N / Db, Rw is N / Dw.
+ch_run_lb(Rel, Bk, M, L) :- ch_run(Rel, Bk, M, R, _), L is min(I : ch_pow(I, B), B > R).
+ch_run_lw(Rel, Bk, M, L) :- ch_run(Rel, Bk, M, _, R), L is min(I : ch_pow(I, B), B > R).
+ch_run_lg(Rel, Bk, M, Lb, Lw) :- ch_run_lb(Rel, Bk, M, Lb), ch_run_lw(Rel, Bk, M, Lw).
+ch_dir_steps(Rel, Bk, M, Sb, Sw) :- mem_pattern(Rel, Bk, M, _, W), ch_run_lg(Rel, Bk, M, Lb, Lw), Sb is W * (1 + Lb), Sw is W * (1 + Lw).
+ch_dir_steps(Rel, Bk, M, W, W) :- mem_pattern(Rel, Bk, M, _, W), ch_size(Rel, Bk, M, 1).
+memory(chain_dir_probe_steps_best, T) :- T is sum(S ; Rel, Bk, M : ch_dir_steps(Rel, Bk, M, S, _)).
+memory(chain_dir_probe_steps_worst, T) :- T is sum(S ; Rel, Bk, M : ch_dir_steps(Rel, Bk, M, _, S)).
