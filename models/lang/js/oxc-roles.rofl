@@ -104,9 +104,10 @@ ox_slot(L, 2, B) :- oxc_k[ast_oxc](L, for_statement), oxc_c[ast_oxc](L, body, 0,
 -- a child as the model sees it: ox_through(S, X), the wrapper S stands for X
 ox_through(S, X) :- oxc_k[ast_oxc](S, K), ox_steps_through(K, F), oxc_c[ast_oxc](S, F, 0, X), oxc_k[ast_oxc](X, KX), not ox_steps_through(KX, _).
 ox_through(S, X) :- oxc_k[ast_oxc](S, K), ox_steps_through(K, F), oxc_c[ast_oxc](S, F, 0, Y), ox_through(Y, X).
-ox_plain(S) :- oxc_k[ast_oxc](S, K), not ox_steps_through(K, _).
 
-nth[tree](Seq, I, S) :- ox_slot(Seq, I, S), ox_plain(S).
+-- a node no wrapper steps through is a node of the role tree; the guard is written out at its four uses rather than
+-- kept as a relation, which held a row per node of the tree (423 559 of 14.4 M at vscode 250)
+nth[tree](Seq, I, S) :- ox_slot(Seq, I, S), oxc_k[ast_oxc](S, KS), not ox_steps_through(KS, _).
 nth[tree](Seq, I, X) :- ox_slot(Seq, I, S), ox_through(S, X).
 strict[tree](Seq) :- ox_slot(Seq, _, _).
 
@@ -182,8 +183,10 @@ ox_lit_key(K) :- oxc_k[ast_oxc](K, string_literal).
 ox_lit_key(K) :- oxc_k[ast_oxc](K, numeric_literal).
 ox_member_kind(object_property). ox_member_kind(method_definition). ox_member_kind(property_definition). ox_member_kind(accessor_property).
 -- a key is static when written plain or as a literal: `{ 1: x }`, `{ "a": x }` and `{ ["a"]: x }` alike
-ox_static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), not oxc_a[ast_oxc](M, computed, true).
-ox_static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), oxc_a[ast_oxc](M, computed, true), ox_lit_key(K).
+edb(ox_key_field).
+ox_key_field(key). ox_key_field(name).
+ox_static_key(M, K, F)  :- ox_key_field(F), oxc_c[ast_oxc](M, F, 0, K), not oxc_a[ast_oxc](M, computed, true).
+ox_static_key(M, K, F)  :- ox_key_field(F), oxc_c[ast_oxc](M, F, 0, K), oxc_a[ast_oxc](M, computed, true), ox_lit_key(K).
 key[value](M, Name)  :- ox_member_kind(MK), oxc_k[ast_oxc](M, MK), ox_static_key(M, K, key), ox_key_name(K, Name), not ox_type_only(M).
 key_expr[value](M, E) :- ox_member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not ox_lit_key(E), not ox_type_only(M).
 key_expr[type](M, E)  :- ox_type_only(M), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not ox_lit_key(E).
@@ -484,7 +487,7 @@ ox_cond_field(try_statement, handler, block, thrown).
 ox_branch(N, G, How) :- ox_cond_field(K, F, GF, How), oxc_k[ast_oxc](S, K), oxc_c[ast_oxc](S, F, 0, N), oxc_c[ast_oxc](S, GF, 0, G).
 ox_branch(R, L, How) :- logical[value](N, Op, L, R), oxc_k[ast_oxc](N, logical_expression), ox_logical_how(Op, How).
 ox_branch(R, L, How) :- ox_assign_parts(_, Op, L, R), ox_logical_how(Op, How).
-executes_if[value](N, G, How) :- ox_branch(N, G, How), ox_plain(N).
+executes_if[value](N, G, How) :- ox_branch(N, G, How), oxc_k[ast_oxc](N, KN), not ox_steps_through(KN, _).
 executes_if[value](X, G, How) :- ox_branch(N, G, How), ox_through(N, X).
 -- the tail of `?.` runs when what it reads is defined
 executes_if[value](N, O, defined) :- mark[value](N, optional), oxc_c[ast_oxc](N, object, 0, O).
@@ -509,7 +512,7 @@ executes_if[value](C, D, unmatched) :- oxc_k[ast_oxc](S, switch_statement), oxc_
 edb(ox_loop_kind).
 ox_loop_kind(for_statement). ox_loop_kind(for_in_statement). ox_loop_kind(for_of_statement).
 ox_loop_kind(while_statement). ox_loop_kind(do_while_statement).
-repeats[value](L, B) :- ox_loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), ox_plain(B).
+repeats[value](L, B) :- ox_loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), oxc_k[ast_oxc](B, KB), not ox_steps_through(KB, _).
 repeats[value](L, X) :- ox_loop_kind(K), oxc_k[ast_oxc](L, K), oxc_c[ast_oxc](L, body, 0, B), ox_through(B, X).
 iterates[value](L, Left, R)   :- oxc_k[ast_oxc](L, for_of_statement), oxc_c[ast_oxc](L, left, 0, Left), oxc_c[ast_oxc](L, right, 0, R).
 enumerates[value](L, Left, R) :- oxc_k[ast_oxc](L, for_in_statement), oxc_c[ast_oxc](L, left, 0, Left), oxc_c[ast_oxc](L, right, 0, R).
@@ -524,7 +527,7 @@ exits[value](J, throw)    :- oxc_k[ast_oxc](J, throw_statement).
 throws[value](T, V) :- oxc_k[ast_oxc](T, throw_statement), oxc_c[ast_oxc](T, argument, 0, V).
 -- a label goes onto the statement it names, and onto the jump that names it
 ox_label_of(L, Name) :- oxc_c[ast_oxc](L, label, 0, I), oxc_name[ast_oxc](I, Name).
-labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), ox_label_of(L, Name), oxc_c[ast_oxc](L, body, 0, X), ox_plain(X).
+labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), ox_label_of(L, Name), oxc_c[ast_oxc](L, body, 0, X), oxc_k[ast_oxc](X, KX), not ox_steps_through(KX, _).
 labeled_as[value](X, Name) :- oxc_k[ast_oxc](L, labeled_statement), ox_label_of(L, Name), oxc_c[ast_oxc](L, body, 0, B), ox_through(B, X).
 jumps_to[value](J, Name) :- oxc_k[ast_oxc](J, K), K != labeled_statement, ox_label_of(J, Name).
 
