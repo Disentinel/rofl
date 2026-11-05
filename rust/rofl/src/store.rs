@@ -446,6 +446,11 @@ impl PatIndex {
         self.under.as_ref().is_some_and(|u| u.holds(facts, vals, k))
     }
 
+    /// Distinct keys, those of a mapped index under this one counted again where a write met them.
+    fn keys(&self) -> usize {
+        self.values + self.under.as_ref().map_or(0, |u| u.keys())
+    }
+
     fn entries(&self) -> usize {
         self.ids.len() + self.under.as_ref().map_or(0, |u| u.entries())
     }
@@ -2560,9 +2565,7 @@ impl Store {
         let mask = pos.iter().fold(0u32, |m, &q| m | 1 << q);
         let run = self.run(rel, p).unwrap();
         let rows = run.canon.len() + run.arrived.len();
-        let have = run.by_pat.as_ref().map(|bp| {
-            bp.keys().copied().filter(|m| m & mask == *m).max_by_key(|m| (m.count_ones(), *m))
-        });
+        let have = run.by_pat.as_ref().map(|bp| narrower(bp, mask));
         let at = match have.flatten() {
             Some(m) => m,
             None if rows < MIN_INDEXED || run.by_pat.as_ref().is_some_and(|bp| bp.len() >= MAX_PATTERNS) => return None,
@@ -4783,8 +4786,14 @@ fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
 }
 
 /// The widest index of a pattern narrower than `mask`: it serves `mask` with a superset.
+/// The index, of those whose columns a probe binds, with the most distinct keys: the fewest rows read per probe. By
+/// the count of columns, a key from a small table of constants (a field name) was taken over the node beside it.
 fn narrower(bp: &ArgIndex, mask: u32) -> Option<u32> {
-    bp.keys().copied().filter(|m| m & mask == *m).max_by_key(|m| (m.count_ones(), *m))
+    let sub = bp.iter().filter(|(m, _)| *m & mask == **m);
+    if crate::brk!("narrower_by_columns" => true; false) {
+        return sub.map(|(m, _)| *m).max_by_key(|m| (m.count_ones(), *m));
+    }
+    sub.max_by_key(|(m, ix)| (ix.keys(), m.count_ones(), **m)).map(|(m, _)| *m)
 }
 
 /// The values of `pos` that the index `by_val` reads, in its order.

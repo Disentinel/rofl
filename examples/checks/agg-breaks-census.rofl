@@ -131,6 +131,8 @@ brk("ts_stale_kept_drained"). brk_kind("ts_stale_kept_drained", ts).
 brk_expects("ts_stale_kept_drained", "sub_history_beside_lattice").
 brk("delta_first_off"). brk_kind("delta_first_off", switch).
 brk_expects("delta_first_off", "agg_join_delta_first").
+brk("narrower_by_columns"). brk_kind("narrower_by_columns", switch).
+brk_expects("narrower_by_columns", "join_through_constants").
 brk("delta_first_spread"). brk_kind("delta_first_spread", switch).
 brk_expects("delta_first_spread", "agg_join_delta_first_hole").
 brk("delta_first_persp"). brk_kind("delta_first_persp", switch).
@@ -2662,6 +2664,7 @@ switch_site("narrow_off", "rust/rofl/src/engine.rs").
 switch_site("narrow_once", "rust/rofl/src/engine.rs").
 switch_site("narrow_overshoot", "rust/rofl/src/cell.rs").
 switch_site("narrow_why_bare", "rust/rofl/src/engine.rs").
+switch_site("narrower_by_columns", "rust/rofl/src/store.rs").
 switch_site("neg_unknown_unbound", "rust/rofl/src/engine.rs").
 switch_site("next_cells_reflected_early", "rust/rofl/src/engine.rs").
 switch_site("no_agg_edge", "rust/rofl/src/engine.rs").

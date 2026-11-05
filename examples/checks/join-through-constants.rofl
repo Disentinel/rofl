@@ -1,0 +1,345 @@
+-- examples/checks/join-through-constants.rofl — A KEY FROM A SMALL TABLE OF CONSTANTS IS NOT THE INDEX TO READ BY.
+--
+-- operand(E, O) :- spell(E), field(F), child(E, F, _, O), in its written order (a plan fact): child is probed bound at
+-- E and F, a pattern it has no index for, and the relation has spent its indexes (eight) on the patterns of the q0
+-- rules before it. The probe is served by the index of a column it binds with the most keys: the node E (320 of them),
+-- not the field F (three), under which every node's children of that field are read (f_a_join_on_a_table_of_constants_read_past_the_index,
+-- w_join_through_constants). The profile counts the rows read at child: 160, eight a node; by the field, 12 800.
+-- expect-row: operand[main](e1,a1) tick
+-- expect-row: operand[main](e20,b20) tick
+-- expect-no-row: read_past_the_index
+edb(child). edb(target). edb(field).
+field(left). field(right). field(argument). field(object).
+target(e1). child(e1, left, 0, a1). child(e1, right, 0, b1).
+target(e2). child(e2, left, 0, a2). child(e2, right, 0, b2).
+target(e3). child(e3, left, 0, a3). child(e3, right, 0, b3).
+target(e4). child(e4, left, 0, a4). child(e4, right, 0, b4).
+target(e5). child(e5, left, 0, a5). child(e5, right, 0, b5).
+target(e6). child(e6, left, 0, a6). child(e6, right, 0, b6).
+target(e7). child(e7, left, 0, a7). child(e7, right, 0, b7).
+target(e8). child(e8, left, 0, a8). child(e8, right, 0, b8).
+target(e9). child(e9, left, 0, a9). child(e9, right, 0, b9).
+target(e10). child(e10, left, 0, a10). child(e10, right, 0, b10).
+target(e11). child(e11, left, 0, a11). child(e11, right, 0, b11).
+target(e12). child(e12, left, 0, a12). child(e12, right, 0, b12).
+target(e13). child(e13, left, 0, a13). child(e13, right, 0, b13).
+target(e14). child(e14, left, 0, a14). child(e14, right, 0, b14).
+target(e15). child(e15, left, 0, a15). child(e15, right, 0, b15).
+target(e16). child(e16, left, 0, a16). child(e16, right, 0, b16).
+target(e17). child(e17, left, 0, a17). child(e17, right, 0, b17).
+target(e18). child(e18, left, 0, a18). child(e18, right, 0, b18).
+target(e19). child(e19, left, 0, a19). child(e19, right, 0, b19).
+target(e20). child(e20, left, 0, a20). child(e20, right, 0, b20).
+child(n1, left, 0, l1). child(n1, object, 0, o1).
+child(n2, left, 0, l2). child(n2, object, 0, o2).
+child(n3, left, 0, l3). child(n3, object, 0, o3).
+child(n4, left, 0, l4). child(n4, object, 0, o4).
+child(n5, left, 0, l5). child(n5, object, 0, o5).
+child(n6, left, 0, l6). child(n6, object, 0, o6).
+child(n7, left, 0, l7). child(n7, object, 0, o7).
+child(n8, left, 0, l8). child(n8, object, 0, o8).
+child(n9, left, 0, l9). child(n9, object, 0, o9).
+child(n10, left, 0, l10). child(n10, object, 0, o10).
+child(n11, left, 0, l11). child(n11, object, 0, o11).
+child(n12, left, 0, l12). child(n12, object, 0, o12).
+child(n13, left, 0, l13). child(n13, object, 0, o13).
+child(n14, left, 0, l14). child(n14, object, 0, o14).
+child(n15, left, 0, l15). child(n15, object, 0, o15).
+child(n16, left, 0, l16). child(n16, object, 0, o16).
+child(n17, left, 0, l17). child(n17, object, 0, o17).
+child(n18, left, 0, l18). child(n18, object, 0, o18).
+child(n19, left, 0, l19). child(n19, object, 0, o19).
+child(n20, left, 0, l20). child(n20, object, 0, o20).
+child(n21, left, 0, l21). child(n21, object, 0, o21).
+child(n22, left, 0, l22). child(n22, object, 0, o22).
+child(n23, left, 0, l23). child(n23, object, 0, o23).
+child(n24, left, 0, l24). child(n24, object, 0, o24).
+child(n25, left, 0, l25). child(n25, object, 0, o25).
+child(n26, left, 0, l26). child(n26, object, 0, o26).
+child(n27, left, 0, l27). child(n27, object, 0, o27).
+child(n28, left, 0, l28). child(n28, object, 0, o28).
+child(n29, left, 0, l29). child(n29, object, 0, o29).
+child(n30, left, 0, l30). child(n30, object, 0, o30).
+child(n31, left, 0, l31). child(n31, object, 0, o31).
+child(n32, left, 0, l32). child(n32, object, 0, o32).
+child(n33, left, 0, l33). child(n33, object, 0, o33).
+child(n34, left, 0, l34). child(n34, object, 0, o34).
+child(n35, left, 0, l35). child(n35, object, 0, o35).
+child(n36, left, 0, l36). child(n36, object, 0, o36).
+child(n37, left, 0, l37). child(n37, object, 0, o37).
+child(n38, left, 0, l38). child(n38, object, 0, o38).
+child(n39, left, 0, l39). child(n39, object, 0, o39).
+child(n40, left, 0, l40). child(n40, object, 0, o40).
+child(n41, left, 0, l41). child(n41, object, 0, o41).
+child(n42, left, 0, l42). child(n42, object, 0, o42).
+child(n43, left, 0, l43). child(n43, object, 0, o43).
+child(n44, left, 0, l44). child(n44, object, 0, o44).
+child(n45, left, 0, l45). child(n45, object, 0, o45).
+child(n46, left, 0, l46). child(n46, object, 0, o46).
+child(n47, left, 0, l47). child(n47, object, 0, o47).
+child(n48, left, 0, l48). child(n48, object, 0, o48).
+child(n49, left, 0, l49). child(n49, object, 0, o49).
+child(n50, left, 0, l50). child(n50, object, 0, o50).
+child(n51, left, 0, l51). child(n51, object, 0, o51).
+child(n52, left, 0, l52). child(n52, object, 0, o52).
+child(n53, left, 0, l53). child(n53, object, 0, o53).
+child(n54, left, 0, l54). child(n54, object, 0, o54).
+child(n55, left, 0, l55). child(n55, object, 0, o55).
+child(n56, left, 0, l56). child(n56, object, 0, o56).
+child(n57, left, 0, l57). child(n57, object, 0, o57).
+child(n58, left, 0, l58). child(n58, object, 0, o58).
+child(n59, left, 0, l59). child(n59, object, 0, o59).
+child(n60, left, 0, l60). child(n60, object, 0, o60).
+child(n61, left, 0, l61). child(n61, object, 0, o61).
+child(n62, left, 0, l62). child(n62, object, 0, o62).
+child(n63, left, 0, l63). child(n63, object, 0, o63).
+child(n64, left, 0, l64). child(n64, object, 0, o64).
+child(n65, left, 0, l65). child(n65, object, 0, o65).
+child(n66, left, 0, l66). child(n66, object, 0, o66).
+child(n67, left, 0, l67). child(n67, object, 0, o67).
+child(n68, left, 0, l68). child(n68, object, 0, o68).
+child(n69, left, 0, l69). child(n69, object, 0, o69).
+child(n70, left, 0, l70). child(n70, object, 0, o70).
+child(n71, left, 0, l71). child(n71, object, 0, o71).
+child(n72, left, 0, l72). child(n72, object, 0, o72).
+child(n73, left, 0, l73). child(n73, object, 0, o73).
+child(n74, left, 0, l74). child(n74, object, 0, o74).
+child(n75, left, 0, l75). child(n75, object, 0, o75).
+child(n76, left, 0, l76). child(n76, object, 0, o76).
+child(n77, left, 0, l77). child(n77, object, 0, o77).
+child(n78, left, 0, l78). child(n78, object, 0, o78).
+child(n79, left, 0, l79). child(n79, object, 0, o79).
+child(n80, left, 0, l80). child(n80, object, 0, o80).
+child(n81, left, 0, l81). child(n81, object, 0, o81).
+child(n82, left, 0, l82). child(n82, object, 0, o82).
+child(n83, left, 0, l83). child(n83, object, 0, o83).
+child(n84, left, 0, l84). child(n84, object, 0, o84).
+child(n85, left, 0, l85). child(n85, object, 0, o85).
+child(n86, left, 0, l86). child(n86, object, 0, o86).
+child(n87, left, 0, l87). child(n87, object, 0, o87).
+child(n88, left, 0, l88). child(n88, object, 0, o88).
+child(n89, left, 0, l89). child(n89, object, 0, o89).
+child(n90, left, 0, l90). child(n90, object, 0, o90).
+child(n91, left, 0, l91). child(n91, object, 0, o91).
+child(n92, left, 0, l92). child(n92, object, 0, o92).
+child(n93, left, 0, l93). child(n93, object, 0, o93).
+child(n94, left, 0, l94). child(n94, object, 0, o94).
+child(n95, left, 0, l95). child(n95, object, 0, o95).
+child(n96, left, 0, l96). child(n96, object, 0, o96).
+child(n97, left, 0, l97). child(n97, object, 0, o97).
+child(n98, left, 0, l98). child(n98, object, 0, o98).
+child(n99, left, 0, l99). child(n99, object, 0, o99).
+child(n100, left, 0, l100). child(n100, object, 0, o100).
+child(n101, left, 0, l101). child(n101, object, 0, o101).
+child(n102, left, 0, l102). child(n102, object, 0, o102).
+child(n103, left, 0, l103). child(n103, object, 0, o103).
+child(n104, left, 0, l104). child(n104, object, 0, o104).
+child(n105, left, 0, l105). child(n105, object, 0, o105).
+child(n106, left, 0, l106). child(n106, object, 0, o106).
+child(n107, left, 0, l107). child(n107, object, 0, o107).
+child(n108, left, 0, l108). child(n108, object, 0, o108).
+child(n109, left, 0, l109). child(n109, object, 0, o109).
+child(n110, left, 0, l110). child(n110, object, 0, o110).
+child(n111, left, 0, l111). child(n111, object, 0, o111).
+child(n112, left, 0, l112). child(n112, object, 0, o112).
+child(n113, left, 0, l113). child(n113, object, 0, o113).
+child(n114, left, 0, l114). child(n114, object, 0, o114).
+child(n115, left, 0, l115). child(n115, object, 0, o115).
+child(n116, left, 0, l116). child(n116, object, 0, o116).
+child(n117, left, 0, l117). child(n117, object, 0, o117).
+child(n118, left, 0, l118). child(n118, object, 0, o118).
+child(n119, left, 0, l119). child(n119, object, 0, o119).
+child(n120, left, 0, l120). child(n120, object, 0, o120).
+child(n121, left, 0, l121). child(n121, object, 0, o121).
+child(n122, left, 0, l122). child(n122, object, 0, o122).
+child(n123, left, 0, l123). child(n123, object, 0, o123).
+child(n124, left, 0, l124). child(n124, object, 0, o124).
+child(n125, left, 0, l125). child(n125, object, 0, o125).
+child(n126, left, 0, l126). child(n126, object, 0, o126).
+child(n127, left, 0, l127). child(n127, object, 0, o127).
+child(n128, left, 0, l128). child(n128, object, 0, o128).
+child(n129, left, 0, l129). child(n129, object, 0, o129).
+child(n130, left, 0, l130). child(n130, object, 0, o130).
+child(n131, left, 0, l131). child(n131, object, 0, o131).
+child(n132, left, 0, l132). child(n132, object, 0, o132).
+child(n133, left, 0, l133). child(n133, object, 0, o133).
+child(n134, left, 0, l134). child(n134, object, 0, o134).
+child(n135, left, 0, l135). child(n135, object, 0, o135).
+child(n136, left, 0, l136). child(n136, object, 0, o136).
+child(n137, left, 0, l137). child(n137, object, 0, o137).
+child(n138, left, 0, l138). child(n138, object, 0, o138).
+child(n139, left, 0, l139). child(n139, object, 0, o139).
+child(n140, left, 0, l140). child(n140, object, 0, o140).
+child(n141, left, 0, l141). child(n141, object, 0, o141).
+child(n142, left, 0, l142). child(n142, object, 0, o142).
+child(n143, left, 0, l143). child(n143, object, 0, o143).
+child(n144, left, 0, l144). child(n144, object, 0, o144).
+child(n145, left, 0, l145). child(n145, object, 0, o145).
+child(n146, left, 0, l146). child(n146, object, 0, o146).
+child(n147, left, 0, l147). child(n147, object, 0, o147).
+child(n148, left, 0, l148). child(n148, object, 0, o148).
+child(n149, left, 0, l149). child(n149, object, 0, o149).
+child(n150, left, 0, l150). child(n150, object, 0, o150).
+child(n151, left, 0, l151). child(n151, object, 0, o151).
+child(n152, left, 0, l152). child(n152, object, 0, o152).
+child(n153, left, 0, l153). child(n153, object, 0, o153).
+child(n154, left, 0, l154). child(n154, object, 0, o154).
+child(n155, left, 0, l155). child(n155, object, 0, o155).
+child(n156, left, 0, l156). child(n156, object, 0, o156).
+child(n157, left, 0, l157). child(n157, object, 0, o157).
+child(n158, left, 0, l158). child(n158, object, 0, o158).
+child(n159, left, 0, l159). child(n159, object, 0, o159).
+child(n160, left, 0, l160). child(n160, object, 0, o160).
+child(n161, left, 0, l161). child(n161, object, 0, o161).
+child(n162, left, 0, l162). child(n162, object, 0, o162).
+child(n163, left, 0, l163). child(n163, object, 0, o163).
+child(n164, left, 0, l164). child(n164, object, 0, o164).
+child(n165, left, 0, l165). child(n165, object, 0, o165).
+child(n166, left, 0, l166). child(n166, object, 0, o166).
+child(n167, left, 0, l167). child(n167, object, 0, o167).
+child(n168, left, 0, l168). child(n168, object, 0, o168).
+child(n169, left, 0, l169). child(n169, object, 0, o169).
+child(n170, left, 0, l170). child(n170, object, 0, o170).
+child(n171, left, 0, l171). child(n171, object, 0, o171).
+child(n172, left, 0, l172). child(n172, object, 0, o172).
+child(n173, left, 0, l173). child(n173, object, 0, o173).
+child(n174, left, 0, l174). child(n174, object, 0, o174).
+child(n175, left, 0, l175). child(n175, object, 0, o175).
+child(n176, left, 0, l176). child(n176, object, 0, o176).
+child(n177, left, 0, l177). child(n177, object, 0, o177).
+child(n178, left, 0, l178). child(n178, object, 0, o178).
+child(n179, left, 0, l179). child(n179, object, 0, o179).
+child(n180, left, 0, l180). child(n180, object, 0, o180).
+child(n181, left, 0, l181). child(n181, object, 0, o181).
+child(n182, left, 0, l182). child(n182, object, 0, o182).
+child(n183, left, 0, l183). child(n183, object, 0, o183).
+child(n184, left, 0, l184). child(n184, object, 0, o184).
+child(n185, left, 0, l185). child(n185, object, 0, o185).
+child(n186, left, 0, l186). child(n186, object, 0, o186).
+child(n187, left, 0, l187). child(n187, object, 0, o187).
+child(n188, left, 0, l188). child(n188, object, 0, o188).
+child(n189, left, 0, l189). child(n189, object, 0, o189).
+child(n190, left, 0, l190). child(n190, object, 0, o190).
+child(n191, left, 0, l191). child(n191, object, 0, o191).
+child(n192, left, 0, l192). child(n192, object, 0, o192).
+child(n193, left, 0, l193). child(n193, object, 0, o193).
+child(n194, left, 0, l194). child(n194, object, 0, o194).
+child(n195, left, 0, l195). child(n195, object, 0, o195).
+child(n196, left, 0, l196). child(n196, object, 0, o196).
+child(n197, left, 0, l197). child(n197, object, 0, o197).
+child(n198, left, 0, l198). child(n198, object, 0, o198).
+child(n199, left, 0, l199). child(n199, object, 0, o199).
+child(n200, left, 0, l200). child(n200, object, 0, o200).
+child(n201, left, 0, l201). child(n201, object, 0, o201).
+child(n202, left, 0, l202). child(n202, object, 0, o202).
+child(n203, left, 0, l203). child(n203, object, 0, o203).
+child(n204, left, 0, l204). child(n204, object, 0, o204).
+child(n205, left, 0, l205). child(n205, object, 0, o205).
+child(n206, left, 0, l206). child(n206, object, 0, o206).
+child(n207, left, 0, l207). child(n207, object, 0, o207).
+child(n208, left, 0, l208). child(n208, object, 0, o208).
+child(n209, left, 0, l209). child(n209, object, 0, o209).
+child(n210, left, 0, l210). child(n210, object, 0, o210).
+child(n211, left, 0, l211). child(n211, object, 0, o211).
+child(n212, left, 0, l212). child(n212, object, 0, o212).
+child(n213, left, 0, l213). child(n213, object, 0, o213).
+child(n214, left, 0, l214). child(n214, object, 0, o214).
+child(n215, left, 0, l215). child(n215, object, 0, o215).
+child(n216, left, 0, l216). child(n216, object, 0, o216).
+child(n217, left, 0, l217). child(n217, object, 0, o217).
+child(n218, left, 0, l218). child(n218, object, 0, o218).
+child(n219, left, 0, l219). child(n219, object, 0, o219).
+child(n220, left, 0, l220). child(n220, object, 0, o220).
+child(n221, left, 0, l221). child(n221, object, 0, o221).
+child(n222, left, 0, l222). child(n222, object, 0, o222).
+child(n223, left, 0, l223). child(n223, object, 0, o223).
+child(n224, left, 0, l224). child(n224, object, 0, o224).
+child(n225, left, 0, l225). child(n225, object, 0, o225).
+child(n226, left, 0, l226). child(n226, object, 0, o226).
+child(n227, left, 0, l227). child(n227, object, 0, o227).
+child(n228, left, 0, l228). child(n228, object, 0, o228).
+child(n229, left, 0, l229). child(n229, object, 0, o229).
+child(n230, left, 0, l230). child(n230, object, 0, o230).
+child(n231, left, 0, l231). child(n231, object, 0, o231).
+child(n232, left, 0, l232). child(n232, object, 0, o232).
+child(n233, left, 0, l233). child(n233, object, 0, o233).
+child(n234, left, 0, l234). child(n234, object, 0, o234).
+child(n235, left, 0, l235). child(n235, object, 0, o235).
+child(n236, left, 0, l236). child(n236, object, 0, o236).
+child(n237, left, 0, l237). child(n237, object, 0, o237).
+child(n238, left, 0, l238). child(n238, object, 0, o238).
+child(n239, left, 0, l239). child(n239, object, 0, o239).
+child(n240, left, 0, l240). child(n240, object, 0, o240).
+child(n241, left, 0, l241). child(n241, object, 0, o241).
+child(n242, left, 0, l242). child(n242, object, 0, o242).
+child(n243, left, 0, l243). child(n243, object, 0, o243).
+child(n244, left, 0, l244). child(n244, object, 0, o244).
+child(n245, left, 0, l245). child(n245, object, 0, o245).
+child(n246, left, 0, l246). child(n246, object, 0, o246).
+child(n247, left, 0, l247). child(n247, object, 0, o247).
+child(n248, left, 0, l248). child(n248, object, 0, o248).
+child(n249, left, 0, l249). child(n249, object, 0, o249).
+child(n250, left, 0, l250). child(n250, object, 0, o250).
+child(n251, left, 0, l251). child(n251, object, 0, o251).
+child(n252, left, 0, l252). child(n252, object, 0, o252).
+child(n253, left, 0, l253). child(n253, object, 0, o253).
+child(n254, left, 0, l254). child(n254, object, 0, o254).
+child(n255, left, 0, l255). child(n255, object, 0, o255).
+child(n256, left, 0, l256). child(n256, object, 0, o256).
+child(n257, left, 0, l257). child(n257, object, 0, o257).
+child(n258, left, 0, l258). child(n258, object, 0, o258).
+child(n259, left, 0, l259). child(n259, object, 0, o259).
+child(n260, left, 0, l260). child(n260, object, 0, o260).
+child(n261, left, 0, l261). child(n261, object, 0, o261).
+child(n262, left, 0, l262). child(n262, object, 0, o262).
+child(n263, left, 0, l263). child(n263, object, 0, o263).
+child(n264, left, 0, l264). child(n264, object, 0, o264).
+child(n265, left, 0, l265). child(n265, object, 0, o265).
+child(n266, left, 0, l266). child(n266, object, 0, o266).
+child(n267, left, 0, l267). child(n267, object, 0, o267).
+child(n268, left, 0, l268). child(n268, object, 0, o268).
+child(n269, left, 0, l269). child(n269, object, 0, o269).
+child(n270, left, 0, l270). child(n270, object, 0, o270).
+child(n271, left, 0, l271). child(n271, object, 0, o271).
+child(n272, left, 0, l272). child(n272, object, 0, o272).
+child(n273, left, 0, l273). child(n273, object, 0, o273).
+child(n274, left, 0, l274). child(n274, object, 0, o274).
+child(n275, left, 0, l275). child(n275, object, 0, o275).
+child(n276, left, 0, l276). child(n276, object, 0, o276).
+child(n277, left, 0, l277). child(n277, object, 0, o277).
+child(n278, left, 0, l278). child(n278, object, 0, o278).
+child(n279, left, 0, l279). child(n279, object, 0, o279).
+child(n280, left, 0, l280). child(n280, object, 0, o280).
+child(n281, left, 0, l281). child(n281, object, 0, o281).
+child(n282, left, 0, l282). child(n282, object, 0, o282).
+child(n283, left, 0, l283). child(n283, object, 0, o283).
+child(n284, left, 0, l284). child(n284, object, 0, o284).
+child(n285, left, 0, l285). child(n285, object, 0, o285).
+child(n286, left, 0, l286). child(n286, object, 0, o286).
+child(n287, left, 0, l287). child(n287, object, 0, o287).
+child(n288, left, 0, l288). child(n288, object, 0, o288).
+child(n289, left, 0, l289). child(n289, object, 0, o289).
+child(n290, left, 0, l290). child(n290, object, 0, o290).
+child(n291, left, 0, l291). child(n291, object, 0, o291).
+child(n292, left, 0, l292). child(n292, object, 0, o292).
+child(n293, left, 0, l293). child(n293, object, 0, o293).
+child(n294, left, 0, l294). child(n294, object, 0, o294).
+child(n295, left, 0, l295). child(n295, object, 0, o295).
+child(n296, left, 0, l296). child(n296, object, 0, o296).
+child(n297, left, 0, l297). child(n297, object, 0, o297).
+child(n298, left, 0, l298). child(n298, object, 0, o298).
+child(n299, left, 0, l299). child(n299, object, 0, o299).
+child(n300, left, 0, l300). child(n300, object, 0, o300).
+-- the patterns child spends its indexes on, none of them (node, field)
+q0(x0) :- child(zz0, _, _, _).
+q0(x1) :- child(_, zz1, _, _).
+q0(x2) :- child(_, _, zz2, _).
+q0(x3) :- child(_, _, _, zz3).
+q0(x4) :- child(zz0, _, zz2, _).
+q0(x5) :- child(zz0, _, _, zz3).
+q0(x6) :- child(_, zz1, zz2, _).
+q0(x7) :- child(_, zz1, _, zz3).
+spell(E) :- target(E), not q0(E).
+operand(E, O) :- spell(E), field(F), child(E, F, _, O).
+plan[fixpointplan](r1c813aab, 0, $cons(1, $cons(2, $cons(3, $nil)))).
+read_past_the_index(N) :- read[profile](r1c813aab, 3, N), N > 1000.

@@ -34,32 +34,7 @@ what runs. They are published at
 
 ## What is new
 
-### 1.5 (1.5.0 on 24 October 2026, 1.5.1 on 25 October)
-
-- **Install it from npm**: `npm install -g @grafema/rofl` ([INSTALL.md](INSTALL.md)).
-  npm downloads the engine for your machine alone. If you had 1.4 from the
-  tarball, run `npm uninstall -g rofl-nb` first. 1.5.1 is the same tool, a 1 MB
-  download instead of 1.6 MB.
-- **Ask about code from any directory.** `rofl scan DIR --out code.rofl`
-  turns JavaScript into facts, and `@rules/js.files` finds the JS model the
-  package carries; `rofl --version` says which version runs
-  ([ASKING.md](ASKING.md)).
-- **Asking again after an edit is cheap.** The kept world takes the changed
-  file in and keeps only what changed beside the world it was kept from. On
-  250 files of VS Code, an edit and the question after it take about one
-  second, and the same question asked again about a third of a second.
-- **A short answer says so.** When a scan fails, or a world grows past the
-  cache's cap (`ROFL_CACHE_GB`), the answer is marked partial and the exit
-  code is 5 ([ASKING.md](ASKING.md#exit-codes)).
-- **A world can ask the outside.** A `want` rule asks a program, a SQLite
-  database, an MCP server, an HTTP API or another ROFL world, and the answers
-  come back as facts the rules read like any other ([ADAPTERS.md](ADAPTERS.md)).
-- A world kept by 1.4 is computed again once: the kept format changed.
-
-### On main, not yet in a release
-
-The chapters linked below describe them already; an installed 1.5.1 has none
-of these yet.
+### 1.6 (November 2026)
 
 - An adapter book can be signed on a Roflenox node and checked by the engine;
   a `rofl` adapter can ask a world another process serves; a person signs in
@@ -87,6 +62,30 @@ of these yet.
   as a script when the world says so ([ASKING.md](ASKING.md#what-it-could-not-see)).
 - VS Code opens a notebook straight from GitHub, private repositories too:
   **ROFL: Open notebook from GitHub…** ([QUICKSTART.md](QUICKSTART.md)).
+- The JS model reads a new layer of roles, and a second scanner, oxc in
+  Rust, writes the same roles; Babel stays the default until the move ends.
+
+### 1.5 (1.5.0 on 24 October 2026, 1.5.1 on 25 October)
+
+- **Install it from npm**: `npm install -g @grafema/rofl` ([INSTALL.md](INSTALL.md)).
+  npm downloads the engine for your machine alone. If you had 1.4 from the
+  tarball, run `npm uninstall -g rofl-nb` first. 1.5.1 is the same tool, a 1 MB
+  download instead of 1.6 MB.
+- **Ask about code from any directory.** `rofl scan DIR --out code.rofl`
+  turns JavaScript into facts, and `@rules/js.files` finds the JS model the
+  package carries; `rofl --version` says which version runs
+  ([ASKING.md](ASKING.md)).
+- **Asking again after an edit is cheap.** The kept world takes the changed
+  file in and keeps only what changed beside the world it was kept from. On
+  250 files of VS Code, an edit and the question after it take about one
+  second, and the same question asked again about a third of a second.
+- **A short answer says so.** When a scan fails, or a world grows past the
+  cache's cap (`ROFL_CACHE_GB`), the answer is marked partial and the exit
+  code is 5 ([ASKING.md](ASKING.md#exit-codes)).
+- **A world can ask the outside.** A `want` rule asks a program, a SQLite
+  database, an MCP server, an HTTP API or another ROFL world, and the answers
+  come back as facts the rules read like any other ([ADAPTERS.md](ADAPTERS.md)).
+- A world kept by 1.4 is computed again once: the kept format changed.
 
 ## Further in
 
