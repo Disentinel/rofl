@@ -134,7 +134,6 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
-- <a id="ident_in"></a>An [identifier](#noun-identifier) reads Name in File if it is in file File and it [is named](js-structure.rofl.md#ast_name) Name.
 - <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
 - <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
 - <a id="named_decl"></a>A node declares the name Name in File if it [carries its own name](#own_name) Name and File and `around`.
@@ -158,6 +157,14 @@ Phrases this file defines in one step, each by the sentence it stands for:
 > identifier in the corpus — 39 % of a fixpoint.
 
 `ident_in` has one Name and File for each N.
+
+<a id="ident_in"></a>N reads Name in File either:
+
+1. if [`ref`](#ref)(N, Name) and [`at`](#at)(N, File, something);
+2. if all of:
+   - [`binds`](#binds)(N, Name);
+   - [`at`](#at)(N, File, something);
+   - unless N is a [function](js-callgraph.rofl.md#fn_node).
 
 ## 2. What a value is
 
@@ -425,69 +432,12 @@ A node
 
 <a id="name_scope"></a>A node finds its name in Name in File S if it [may find its name in](#name_cand) Name in File S, unless it [passes over](#name_outer) S.
 
-> 3b. WHERE A NAME IS NOT A REFERENCE. Every property name, key, label and
-> type name is an `identifier` node too; these are the positions where an
-> identifier names something other than a binding. Everywhere else it is a
-> reference, `typeof Promise` and `arr.map(String)` included.
-
-`not_a_reference` lists:
-
-| kind | field |
-|---|---|
-| `labeled_statement` | `label` |
-| `break_statement` | `label` |
-| `continue_statement` | `label` |
-| `import_specifier` | `imported` |
-| `export_specifier` | `exported` |
-| `export_namespace_specifier` | `exported` |
-| `meta_property` | `meta` |
-| `meta_property` | `property` |
-| `tstype_reference` | `type_name` |
-| `tsqualified_name` | `left` |
-| `tsqualified_name` | `right` |
-| `tsexpression_with_type_arguments` | `expression` |
-| `tsclass_implements` | `expression` |
-| `tsinterface_heritage` | `expression` |
-| `tstype_query` | `expr_name` |
-| `tsinterface_declaration` | `id` |
-| `tstype_alias_declaration` | `id` |
-| `tsenum_member` | `id` |
-| `tstype_predicate` | `parameter_name` |
-| `tsimport_type` | `qualifier` |
-
-Declared as facts:
-
-- <a id="not_a_reference"></a>A kind K is no reference at a field Field — rows in this file
-
-> the parameters of a signature with no body name types, not bindings
-
-`not_a_reference` lists:
-
-| kind | field |
-|---|---|
-| `tsdeclare_function` | `params` |
-| `tsdeclare_method` | `params` |
-| `tsfunction_type` | `params` |
-| `tsconstructor_type` | `params` |
-| `tsmethod_signature` | `params` |
-| `tscall_signature_declaration` | `params` |
-| `tsconstruct_signature_declaration` | `params` |
-
-<a id="not_a_ref"></a>A node is no reference if all of:
-  - a kind K [is no reference at](#not_a_reference) a field Field;
-  - a node P [is of kind](js-model.rofl.md#ast_node) K;
-  - it [is among the](#ast_child) Field of P.
-
-> a key written as a name: `o.p`, `{ p: v }`, `p() {}`, a class field
-
-A node is no reference if the `property` or `key` of a node P is it and [the attribute](#ast_attr) `computed` of P is `false`.
-
 > 3c. WHAT IS DECLARED AT THE TOP OF A FILE. A name no scope around its
 > reading declares is the file's own top-level binding or import, else global.
 
 `top_read` has one Name and File for each E.
 
-<a id="top_read"></a>A node is read at the top of Name and File if it [reads](#ident_in) Name in File and it neither [is no reference](#not_a_ref) nor [may find its name in](#name_cand) some name in some file some scope.
+<a id="top_read"></a>A node is read at the top of Name and File if it [reads](#ident_in) Name in File, unless it [may find its name in](#name_cand) some name in some file some scope.
 
 <a id="top_declares"></a>Name is declared at the top of File either:
 
@@ -4481,6 +4431,4 @@ A node E points to a node N either:
   - M [spells](js-structure.rofl.md#key_name) Key.
 
 The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at M replaced with N and/unless [`static`](#static)(M).
-
-> 1 trailing comments on rule lines are not carried over.
 

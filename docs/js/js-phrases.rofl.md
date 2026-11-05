@@ -469,7 +469,6 @@ Declared as facts:
 | `computed_member` | "calls_through_a_computed_member(call C, member access N)" |
 | `static_member` | "calls_through_a_static_member(call C, member access N)" |
 | `callee_obj` | "the_receiver(of call C, is node O)" |
-| `callee_prop` | "the_property(of call C, is node P)" |
 | `obj_kind_known` | "is_a_classed_kind(kind K)" |
 | `obj_class` | "the_receiver_class(of call C, is shape Cl)" |
 | `computed_key_static` | "has_a_static_computed_key(call C)" |

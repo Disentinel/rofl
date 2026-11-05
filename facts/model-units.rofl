@@ -181,8 +181,6 @@ unit_concludes("rules/js-dataflow.rofl", scoped_name).
 unit_concludes("rules/js-dataflow.rofl", name_cand).
 unit_concludes("rules/js-dataflow.rofl", name_outer).
 unit_concludes("rules/js-dataflow.rofl", name_scope).
-unit_concludes("rules/js-dataflow.rofl", not_a_reference).
-unit_concludes("rules/js-dataflow.rofl", not_a_ref).
 unit_concludes("rules/js-dataflow.rofl", top_read).
 unit_concludes("rules/js-dataflow.rofl", top_declares).
 unit_concludes("rules/js-dataflow.rofl", free_global).
@@ -614,7 +612,6 @@ unit_concludes("rules/js-callgraph.rofl", computed_member).
 unit_concludes("rules/js-callgraph.rofl", static_member).
 unit_concludes("rules/js-callgraph.rofl", callee_obj).
 unit_concludes("rules/js-callgraph.rofl", callee_obj_class).
-unit_concludes("rules/js-callgraph.rofl", callee_prop).
 unit_concludes("rules/js-callgraph.rofl", obj_kind_class).
 unit_concludes("rules/js-callgraph.rofl", obj_kind_known).
 unit_concludes("rules/js-callgraph.rofl", obj_class).

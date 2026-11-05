@@ -95,7 +95,6 @@ static_member[code](C, N)   :- callee_of[code](C, N), member[value](N, _, _).
 
 callee_obj[code](C, O)      :- member_like[code](C, N), object_of[code](N, O).
 callee_obj_class[code](C, E) :- callee_obj[code](C, O), expr_class[code](O, E).
-callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
 
 -- A member callee needs two more bits: `computed`, and the object's kind.
 -- Receivers are classed by VERDICT, not by type: a member on a string, number,
@@ -443,7 +442,6 @@ fn_binder[code](D, F) :- decl[value](D, _), assign[value](D, _, F), fn_node[code
 fn_binder[code](P, F) :- obj_prop[code](_, P, F), fn_node[code](F).
 fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 
-callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _).
 callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _).
 callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _).
 kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).

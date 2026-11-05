@@ -470,7 +470,6 @@ sig(optional_member, "calls_through_an_optional_member(call C)").
 sig(computed_member, "calls_through_a_computed_member(call C, member access N)").
 sig(static_member, "calls_through_a_static_member(call C, member access N)").
 sig(callee_obj, "the_receiver(of call C, is node O)").
-sig(callee_prop, "the_property(of call C, is node P)").
 sig(obj_kind_known, "is_a_classed_kind(kind K)").
 sig(obj_class, "the_receiver_class(of call C, is shape Cl)").
 sig(computed_key_static, "has_a_static_computed_key(call C)").

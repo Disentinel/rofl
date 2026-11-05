@@ -276,8 +276,6 @@ A call
 
 <a id="callee_obj_class"></a>A node has the receiver class E if [the receiver](#callee_obj) of it [is of the class](#expr_class) E.
 
-<a id="callee_prop"></a>The property of a call C is a node P if C [calls through](#member_like) a node N and the `property` of N is P.
-
 > A member callee needs two more bits: `computed`, and the object's kind.
 > Receivers are classed by VERDICT, not by type: a member on a string, number,
 > bigint or regexp is answered by the standard library, so all four are
@@ -917,9 +915,8 @@ In the audit:
 
 <a id="callgraph_kind"></a>A kind K is touched by the call graph either:
 
-1. if [the property](#callee_prop) of some call [is of kind](js-model.rofl.md#ast_node) K;
-2. if a [function](#fn_node) F [is of kind](js-model.rofl.md#ast_node) K;
-3. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.rofl.md#ast_node) K.
+1. if a [function](#fn_node) F [is of kind](js-model.rofl.md#ast_node) K;
+2. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.rofl.md#ast_node) K.
 
 <a id="kind_undeclared"></a>A kind K is undeclared if K [is touched by the call graph](#callgraph_kind), unless `js` [has the node kind](#node_kind) K.
 
