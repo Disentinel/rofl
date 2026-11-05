@@ -441,9 +441,9 @@ may_be_node[flow](E, N) :- destructures_at[code](D, Local, Index, File),
 -- and a default that reaches the body.
 param_wrap[code](F, I, W, L) :- param[value](F, I, L), parent[tree](F, W), assign[value](W, L, _), parent[tree](W, L).
 
-param_of[flow](F, I, Name) :- fn_node[code](F), param_wrap[code](F, I, _, L), ast_name[code](L, Name).
+param_of[flow](F, I, Name) :- fn_node[code](F), param_wrap[code](F, I, _, L), binds[value](L, Name).
 
-param_default[flow](F, Name, Init) :- fn_node[code](F), param_wrap[code](F, _, P, L), ast_name[code](L, Name),
+param_default[flow](F, Name, Init) :- fn_node[code](F), param_wrap[code](F, _, P, L), binds[value](L, Name),
                                       assign[value](P, L, Init).
 
 may_be_node[flow](U, N) :- param_default[flow](F, Name, Init), may_be_node[flow](Init, N),
@@ -577,7 +577,7 @@ arg_at[flow](C, I, A)      :- argument_at[code](C, I, A), not dead_site[code](C)
 arg_at[flow](C, I, E)      :- spread_args[value](C, J, A), not after_spread[code](C, J), not dead_site[code](C),
                               elem_at[flow](A, K, E), I is J + K.
 param_of[flow](F, I, Name) :- fn_node[code](F), param[value](F, I, P), parent[tree](F, P),
-                              ast_name[code](P, Name).
+                              binds[value](P, Name).
 param_of[flow](F, I, Name) :- fn_node[code](F), param[value](F, I, X), parent[tree](P, X), parent[tree](F, P),
                               has[value](_, P), binds[value](X, Name).
 
@@ -586,7 +586,7 @@ param_of[flow](F, I, Name) :- fn_node[code](F), param[value](F, I, X), parent[tr
 -- so `inner(...args)` hands them on through the spread rule above. The caller
 -- knows its arguments and publishes them (sx_rest_elem, rules/js-surface.rofl).
 param_rest[code](F, J, R, Name) :- fn_node[code](F), rest_params[value](F, J, L), parent[tree](R, L),
-                                   parent[tree](F, R), ast_name[code](L, Name).
+                                   parent[tree](F, R), binds[value](L, Name).
 param_bound[flow](F, Name)  :- param_rest[code](F, _, _, Name).
 may_be_node[flow](U, R)     :- param_rest[code](F, _, R, Name), param_use[flow](F, Name, U).
 
@@ -1861,7 +1861,7 @@ may_be_lit[flow](C, V)  :- contract_call[flow](C, Pkg, Key), returns_argument(Pk
 callback_param[flow](P, F, Spec) :- sx_cb[surface](F, Spec), param[value](F, _, P), parent[tree](F, P),
                                     binds[value](P, _).
 external_value[flow](P, Spec) :- callback_param[flow](P, _, Spec).
-may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), ast_name[code](P, Name),
+may_be_node[flow](U, P)       :- callback_param[flow](P, F, _), binds[value](P, Name),
                                  param_use[flow](F, Name, U).
 
 -- A TypeScript namespace is an object made at run time (not a `declare`d one):

@@ -57,7 +57,7 @@ sx_unset_field[surface](C, K) :- sx_esc[surface](C), class_unset_field[flow](C, 
 sx_field_sure[surface](C, K, J) :- sx_esc[surface](C), member_field_sure[flow](C, K, J).
 sx_field_runs[surface](C, K, J, G) :- sx_esc[surface](C), member_field_runs[flow](C, K, J, G).
 sx_elem[surface](A, I, E)    :- sx_esc[surface](A), array_elem[flow](A, I, E).
-sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ast_name[code](E, Name).
+sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ref[value](E, Name).
 sx_proto[surface](N, P)      :- sx_esc[surface](N), kind_proto[flow](N, P).
 sx_ext[surface](N, S)        :- sx_esc[surface](N), external_value[flow](N, S).
 sx_bns[surface](N, S)        :- sx_esc[surface](N), builtin_ns[flow](N, S).

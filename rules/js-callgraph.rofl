@@ -299,7 +299,7 @@ calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
                                 fn_label[flow](Y, B).
 
 passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
-                                        ast_name[code](A, Name).
+                                        ref[value](A, Name).
 -- an element of another file's array spread into the call is named by its own file
 passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
                                         sx_name[surface](A, Name).

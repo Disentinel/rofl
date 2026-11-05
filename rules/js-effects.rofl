@@ -137,12 +137,12 @@ eff_assign[code](A)           :- assign_op[code](A, _, _).
 eff_assign_target[code](A, L) :- eff_assign[code](A), assign_op[code](A, L, _).
 eff_compound[code](A)         :- eff_assign[code](A), not plain_assign[flow](A).
 eff_member_target[code](L)    :- eff_assign_target[code](_, L), member_node_v[flow](L).
-eff_name_target[code](L)      :- eff_assign_target[code](_, L), ast_name[code](L, _).
+eff_name_target[code](L)      :- eff_assign_target[code](_, L), ref[value](L, _).
 
 eff_here[flow](L, write, H) :- eff_member_target[code](L), eff_heap_of[flow](L, H).
 eff_here[flow](L, read, H)  :- eff_compound[code](A), assign_op[code](A, L, _),
                                eff_member_target[code](L), eff_heap_of[flow](L, H).
-eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ast_name[code](L, _).
+eff_here[flow](A, write, local) :- eff_assign_target[code](A, L), ref[value](L, _).
 
 eff_read_site[flow](M) :- member_node_v[flow](M), not eff_member_target[code](M).
 eff_here[flow](M, read, H) :- eff_heap_of[flow](M, H), eff_read_site[flow](M).
@@ -152,8 +152,8 @@ eff_member_both[audit](M) :- eff_read_site[flow](M), eff_member_target[code](M).
 -- `x++` is a read and a write, on either form.
 eff_update_arg[code](U, X) :- unary[value](U, "++", X).
 eff_update_arg[code](U, X) :- unary[value](U, "--", X).
-eff_here[flow](U, read, local)  :- eff_update_arg[code](U, X), ast_name[code](X, _).
-eff_here[flow](U, write, local) :- eff_update_arg[code](U, X), ast_name[code](X, _).
+eff_here[flow](U, read, local)  :- eff_update_arg[code](U, X), ref[value](X, _).
+eff_here[flow](U, write, local) :- eff_update_arg[code](U, X), ref[value](X, _).
 eff_here[flow](U, read, H)      :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
 eff_here[flow](U, write, H)     :- eff_update_arg[code](U, X), eff_heap_of[flow](X, H).
 
@@ -163,7 +163,7 @@ eff_here[flow](U, write, H)     :- eff_update_arg[code](U, X), eff_heap_of[flow]
 -- of the file: a write of `n` in one function makes another function's own
 -- `n` no more mutable than before.
 eff_written[code](X)               :- eff_name_target[code](X).
-eff_written[code](X)               :- eff_update_arg[code](_, X), ast_name[code](X, _).
+eff_written[code](X)               :- eff_update_arg[code](_, X), ref[value](X, _).
 eff_mutable_in[code](Name, File, S) :- eff_written[code](X), name_scope[code](X, Name, File, S).
 eff_mutable_top[code](Name, File)  :- eff_written[code](X), top_read[code](X, Name, File).
 eff_here[flow](N, read, local) :- eff_mutable_in[code](Name, File, S), name_scope[code](N, Name, File, S),
