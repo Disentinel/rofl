@@ -381,6 +381,8 @@ struct KeyRun {
     staged: Vec<FactId>,
     /// The run is in the engine's own order (tuple ids), which an evaluation in key order sorts first.
     by_tup: bool,
+    /// Distinct values of a column with no index of its own, as (column, rows when counted, values) (`Store::col_keys`).
+    dist: Vec<(usize, usize, usize)>,
 }
 
 /// Argument indexes, keyed by BINDING PATTERN — the bitmask of argument
@@ -623,7 +625,9 @@ impl PatIndex {
 const MIN_INDEXED: usize = 16;
 /// What the indexes of a kept volume take for one fact: its place in its relation's runs and in a pattern's table.
 const IDX_PER_FACT: usize = 40;
-const MAX_PATTERNS: usize = 8;
+/// A probe of two columns or more with no index of its own is entered by the index of its most distinct column while a
+/// value of that column holds fewer rows than this on average; past it the pattern is given an index of its own.
+const ENTRY_RUN: usize = 16;
 
 pub type TupId = u32;
 
@@ -2406,12 +2410,10 @@ impl Store {
         }
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => Some(None),
-            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => Some(hits(&self.facts, &run.loose, &bp[&mask], vals, limit)),
-            Some(bp) if bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask) => match narrower(bp, mask) {
-                Some(m) if run.staged.is_empty() => Some(hits(&self.facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit)),
-                Some(_) => None,
-                None => Some(None),
-            },
+            Some(bp) if run.staged.is_empty() => {
+                let ix = bp.get(&self.entry_ro(run, mask)?)?;
+                Some(hits(&self.facts, &run.loose, ix, &sub_vals(ix, pos, vals), limit))
+            }
             _ => None,
         }
     }
@@ -2501,11 +2503,13 @@ impl Store {
         // Answered where the run stands when nothing needs writing, so a
         // layer probes its base's index without copying it.
         let run = self.run(rel, p).unwrap();
-        match &run.by_pat {
-            None if run.canon.len() < MIN_INDEXED => return None,
-            Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return hits(&self.facts, &run.loose, &bp[&mask], vals, limit),
-            Some(bp) if bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask) && narrower(bp, mask).is_none() => return None,
-            _ => {}
+        if run.by_pat.is_none() && run.canon.len() < MIN_INDEXED {
+            return None;
+        }
+        let at = self.entry(h, rel, p, mask);
+        let run = self.run(rel, p).unwrap();
+        if let Some(ix) = run.by_pat.as_ref().filter(|_| run.staged.is_empty()).and_then(|bp| bp.get(&at)) {
+            return hits(&self.facts, &run.loose, ix, &sub_vals(ix, pos, vals), limit);
         }
         let run = self.run_mut(rel, p);
         if run.by_pat.is_none() {
@@ -2516,21 +2520,71 @@ impl Store {
         let run = run_in(&mut self.idx, rel, p);
         let canon = &run.canon;
         let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
-        if let Some(m) = narrower(bp, mask).filter(|_| bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask)) {
-            return hits(facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit);
-        }
-        let by_val = bp.entry(mask).or_insert_with(|| {
+        let by_val = bp.entry(at).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
-            PatIndex::build(h, facts, pos, canon)
+            PatIndex::build(h, facts, &cols_of(at), canon)
         });
-        hits(facts, &run.loose, by_val, vals, limit)
+        hits(facts, &run.loose, by_val, &sub_vals(by_val, pos, vals), limit)
+    }
+
+    /// The pattern a probe of `mask` reads: its own index where one is built, or where it binds one column; else the
+    /// index of its column with the most distinct values while a value there holds fewer than `ENTRY_RUN` rows; else
+    /// its own, to be built (models/engine/chains.rofl, *Column indexes*).
+    fn entry(&mut self, h: &Heap, rel: Sym, p: Sym, mask: u32) -> u32 {
+        let run = self.run(rel, p).unwrap();
+        if mask.count_ones() == 1 || run.by_pat.as_ref().is_some_and(|bp| bp.contains_key(&mask)) {
+            return mask;
+        }
+        let rows = run.canon.len() + run.arrived.len();
+        let keyed: Vec<(usize, usize)> = cols_of(mask).into_iter().map(|j| (self.col_keys(h, rel, p, j), j)).collect();
+        entry_of(&keyed, rows, mask)
+    }
+
+    /// `entry` from a store that is not written: None where a column's distinct values are not counted yet.
+    fn entry_ro(&self, run: &KeyRun, mask: u32) -> Option<u32> {
+        let bp = run.by_pat.as_ref()?;
+        if mask.count_ones() == 1 || bp.contains_key(&mask) {
+            return Some(mask);
+        }
+        let rows = run.canon.len() + run.arrived.len();
+        let keyed: Option<Vec<(usize, usize)>> = cols_of(mask)
+            .into_iter()
+            .map(|j| match bp.get(&(1 << j)) {
+                Some(ix) => Some((ix.keys(), j)),
+                None => run.dist.iter().find(|e| e.0 == j && !stale_count(rows, e.1)).map(|e| (e.2, j)),
+            })
+            .collect();
+        Some(entry_of(&keyed?, rows, mask))
+    }
+
+    /// Distinct values of column `j` of a run: its index's keys where it has one, else counted in a pass over the rows,
+    /// kept until the run has doubled or halved.
+    fn col_keys(&mut self, h: &Heap, rel: Sym, p: Sym, j: usize) -> usize {
+        let run = self.run(rel, p).unwrap();
+        if let Some(ix) = run.by_pat.as_ref().and_then(|bp| bp.get(&(1 << j))) {
+            return ix.keys();
+        }
+        let rows = run.canon.len() + run.arrived.len();
+        if let Some(e) = run.dist.iter().find(|e| e.0 == j && !stale_count(rows, e.1)) {
+            return e.2;
+        }
+        let mut seen: FxSet<u64> = FxSet::default();
+        for &k in run.canon.iter().chain(run.arrived.iter()) {
+            if let Some(&t) = self.facts.args(k).get(j).filter(|t| self.facts.alive(k) && h.is_ground(**t)) {
+                seen.insert(t.bits());
+            }
+        }
+        let run = self.run_mut(rel, p);
+        run.dist.retain(|e| e.0 != j);
+        run.dist.push((j, rows, seen.len()));
+        seen.len()
     }
 
     /// A QUESTION'S CANDIDATES, a superset in no order and nothing merged: the
     /// matches are sorted once they are found (`Eval::in_key_order`), so a
     /// question pays for the rows it reads, not for putting a whole relation
-    /// in key order. An index of a narrower pattern serves a wider one; a
-    /// group no index can serve is read whole.
+    /// in key order. A pattern is read by its entry (`Store::entry`); a group
+    /// too small for an index is read whole.
     pub fn question_matches(&mut self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term]) -> Vec<FactId> {
         let Some(groups) = self.idx.get(&rel) else { return Vec::new() };
         let ps: Vec<Sym> = match persp {
@@ -2564,13 +2618,10 @@ impl Store {
         }
         let mask = pos.iter().fold(0u32, |m, &q| m | 1 << q);
         let run = self.run(rel, p).unwrap();
-        let rows = run.canon.len() + run.arrived.len();
-        let have = run.by_pat.as_ref().map(|bp| narrower(bp, mask));
-        let at = match have.flatten() {
-            Some(m) => m,
-            None if rows < MIN_INDEXED || run.by_pat.as_ref().is_some_and(|bp| bp.len() >= MAX_PATTERNS) => return None,
-            None => mask,
-        };
+        if run.by_pat.is_none() && run.canon.len() + run.arrived.len() < MIN_INDEXED {
+            return None;
+        }
+        let at = self.entry(h, rel, p, mask);
         let run = self.run_mut(rel, p);
         if run.by_pat.is_none() {
             run.by_pat = Some(Rc::default());
@@ -2581,11 +2632,10 @@ impl Store {
         let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
         if let std::collections::hash_map::Entry::Vacant(e) = bp.entry(at) {
             let rows: Vec<FactId> = run.canon.iter().chain(run.arrived.iter()).copied().collect();
-            e.insert(PatIndex::build(h, facts, pos, &rows));
+            e.insert(PatIndex::build(h, facts, &cols_of(at), &rows));
         }
         let by_val = &bp[&at];
-        let sub: Vec<Term> = by_val.pos.iter().map(|q| vals[pos.iter().position(|x| x == q).unwrap()]).collect();
-        hits(facts, &run.loose, by_val, &sub, usize::MAX)
+        hits(facts, &run.loose, by_val, &sub_vals(by_val, pos, vals), usize::MAX)
     }
 
     fn run(&self, rel: Sym, persp: Sym) -> Option<&KeyRun> {
@@ -4785,15 +4835,25 @@ fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
 }
 
-/// The widest index of a pattern narrower than `mask`: it serves `mask` with a superset.
-/// The index, of those whose columns a probe binds, with the most distinct keys: the fewest rows read per probe. By
-/// the count of columns, a key from a small table of constants (a field name) was taken over the node beside it.
-fn narrower(bp: &ArgIndex, mask: u32) -> Option<u32> {
-    let sub = bp.iter().filter(|(m, _)| *m & mask == **m);
-    if crate::brk!("narrower_by_columns" => true; false) {
-        return sub.map(|(m, _)| *m).max_by_key(|m| (m.count_ones(), *m));
+/// The columns of a pattern, in order.
+fn cols_of(mask: u32) -> Vec<usize> {
+    (0..32).filter(|j| mask >> j & 1 == 1).collect()
+}
+
+/// The entry of a probe of `mask` from its columns' distinct values (`Store::entry`): the most distinct column (the
+/// lowest of equals) while its run is short, else the pattern itself.
+fn entry_of(keyed: &[(usize, usize)], rows: usize, mask: u32) -> u32 {
+    if crate::brk!("entry_by_fewest_keys" => true; false) {
+        let &(_, j) = keyed.iter().min_by_key(|(d, j)| (*d, std::cmp::Reverse(*j))).unwrap();
+        return 1 << j;
     }
-    sub.max_by_key(|(m, ix)| (ix.keys(), m.count_ones(), **m)).map(|(m, _)| *m)
+    let &(d, j) = keyed.iter().max_by_key(|(d, j)| (*d, std::cmp::Reverse(*j))).unwrap();
+    if rows < ENTRY_RUN * d.max(1) { 1 << j } else { mask }
+}
+
+/// A count made over `then` rows is stale once the run has doubled or halved, or one of them is empty (joinplan.rs `stale`).
+fn stale_count(now: usize, then: usize) -> bool {
+    now >= 2 * then + 32 || 2 * now + 32 <= then || (now == 0) != (then == 0)
 }
 
 /// The values of `pos` that the index `by_val` reads, in its order.

@@ -382,7 +382,7 @@ impl Store {
                 let loose = r.arena::<FactId>()?.to_vec();
                 let staged = r.arena::<FactId>()?.to_vec();
                 let by_pat = read_patterns(r)?;
-                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat, by_tup }));
+                v.push((p, KeyRun { canon, arrived, loose, staged, by_pat, by_tup, dist: Vec::new() }));
             }
             groups.insert(rel, v);
         }

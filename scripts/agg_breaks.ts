@@ -555,8 +555,8 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "narrower_by_columns",
-  "what": "a probe of a pattern with no index of its own, on a relation whose indexes are spent, is served by the index of the most columns, not of the most keys: a key from a small table of constants is read past",
+  "id": "entry_by_fewest_keys",
+  "what": "a probe of a pattern with no index of its own is entered by the index of its column with the fewest distinct values, whatever its run: a key from a small table of constants is read past",
   "expect": {
    "join_through_constants": "the state holds the row read_past_the_index"
   }

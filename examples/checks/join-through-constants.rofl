@@ -1,10 +1,11 @@
 -- examples/checks/join-through-constants.rofl — A KEY FROM A SMALL TABLE OF CONSTANTS IS NOT THE INDEX TO READ BY.
 --
 -- operand(E, O) :- spell(E), field(F), child(E, F, _, O), in its written order (a plan fact): child is probed bound at
--- E and F, a pattern it has no index for, and the relation has spent its indexes (eight) on the patterns of the q0
--- rules before it. The probe is served by the index of a column it binds with the most keys: the node E (320 of them),
--- not the field F (three), under which every node's children of that field are read (f_a_join_on_a_table_of_constants_read_past_the_index,
--- w_join_through_constants). The profile counts the rows read at child: 160, eight a node; by the field, 12 800.
+-- E and F, a pattern with no index of its own. The probe is entered by the index of its column with the most distinct
+-- values, the node E (320 of them), and the run of a node (two rows) is filtered by the field; not by the field F (three
+-- values), under which every node's children of that field are read (f_a_join_on_a_table_of_constants_read_past_the_index,
+-- w_join_through_constants, models/engine/chains.rofl *Column indexes*). The profile counts the rows read at child: 160,
+-- eight a node; by the field, 12 800.
 -- expect-row: operand[main](e1,a1) tick
 -- expect-row: operand[main](e20,b20) tick
 -- expect-no-row: read_past_the_index
@@ -330,16 +331,7 @@ child(n297, left, 0, l297). child(n297, object, 0, o297).
 child(n298, left, 0, l298). child(n298, object, 0, o298).
 child(n299, left, 0, l299). child(n299, object, 0, o299).
 child(n300, left, 0, l300). child(n300, object, 0, o300).
--- the patterns child spends its indexes on, none of them (node, field)
-q0(x0) :- child(zz0, _, _, _).
-q0(x1) :- child(_, zz1, _, _).
-q0(x2) :- child(_, _, zz2, _).
-q0(x3) :- child(_, _, _, zz3).
-q0(x4) :- child(zz0, _, zz2, _).
-q0(x5) :- child(zz0, _, _, zz3).
-q0(x6) :- child(_, zz1, zz2, _).
-q0(x7) :- child(_, zz1, _, zz3).
-spell(E) :- target(E), not q0(E).
+spell(E) :- target(E).
 operand(E, O) :- spell(E), field(F), child(E, F, _, O).
 plan[fixpointplan](r1c813aab, 0, $cons(1, $cons(2, $cons(3, $nil)))).
 read_past_the_index(N) :- read[profile](r1c813aab, 3, N), N > 1000.
