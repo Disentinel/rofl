@@ -254,9 +254,7 @@ resolves[code](C, M) :- super[value](N), callee_of[code](C, N),
 -- A tag is a callee in every sense but the grammar's (the field is `tag`, not
 -- `callee`); a decorator's `expression` is either the function or a factory
 -- call, and `may_be_node` carries what a call returns, so one arm covers both.
-resolves[code](X, F) :- transfer_site[code](X, tagged_template_expression),
-                        ast_child[code](X, tag, 0, T),
-                        may_be_node[flow](T, F), fn_value[flow](F).
+resolves[code](X, F) :- tagged[value](X, T, _), may_be_node[flow](T, F), fn_value[flow](F).
 
 resolves[code](X, F) :- decorated[value](_, E), parent[tree](X, E),
                         may_be_node[flow](E, F), fn_value[flow](F).

@@ -1893,7 +1893,7 @@ may_be_node[flow](E, I) :- construct[value](E),
                            callee[value](E, CE), may_be_node[flow](CE, CD), inst_of[flow](I, CD).
 
 -- `super` denotes the class its `extends` expression may be.
-super_of[flow](CD, SD) :- class_like[flow](CD), ast_child[code](CD, super_class, 0, SC),
+super_of[flow](CD, SD) :- class_like[flow](CD), extends[value](CD, SC),
                           may_be_node[flow](SC, SD), inst_of[flow](_, SD).
 
 -- A class with no constructor answers with its nearest ancestor's. Measured on

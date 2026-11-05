@@ -481,7 +481,6 @@ eff_runs_in[flow](P, X) :- eff_runs_in[flow](P, Y), not fn_node[code](Y),
                            parent[tree](Y, X).
 
 eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
-                           ast_node[code](TS, try_statement, _),
                            in_try_block[code](TS, N), eff_runs_in[flow](P, N),
                            try_catches[code](TS).
 

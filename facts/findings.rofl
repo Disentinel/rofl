@@ -12928,3 +12928,11 @@ addressed_by(f_a_string_is_a_literal_whose_value_is_a_string, "rules/js-express.
 addressed_by(f_a_string_is_a_literal_whose_value_is_a_string, "rules/js-modules.rofl").
 finding_note(f_a_string_is_a_literal_whose_value_is_a_string, 
   "VADIM, 2026-11-05, with the engine's type_of(V) (string, int, atom, term): str_value is `literal(_, V), string is type_of(V)` (the string literals and every template part, one rule instead of two), site_source of a require is the same test on the argument literal, ex_port_lit is `int is type_of(V)`. A template with no expression counts as a string (accepted). MOVED: str_value +1 on the corpus (+2 in cf: `plain` as a template), and below it str_piece, lit_piece, part_value and basic_piece +3 in cf; ex_port_lit and site_source did not move (cf: listen(8080), \"8081\", 1.5, 10n, true, null; require of a string, a template with and without a substitution, a number).").
+
+finding(f_a_tag_an_extends_and_a_try_are_read_from_the_roles, insight).
+recorded(f_a_tag_an_extends_and_a_try_are_read_from_the_roles, "2026-11-05").
+addressed_by(f_a_tag_an_extends_and_a_try_are_read_from_the_roles, "rules/js-callgraph.rofl").
+addressed_by(f_a_tag_an_extends_and_a_try_are_read_from_the_roles, "rules/js-dataflow.rofl").
+addressed_by(f_a_tag_an_extends_and_a_try_are_read_from_the_roles, "rules/js-effects.rofl").
+finding_note(f_a_tag_an_extends_and_a_try_are_read_from_the_roles,
+  "w_js_model_on_roles, last stage, group 5: resolves of a tagged template reads tagged(X, Tag, _); super_of reads extends(CD, SC); eff_catch_here drops the try_statement kind (in_try_block is tries, which a try with a handler has). NO ROW MOVED on the corpus or in cf (a tag, a parenthesised tag, a tag under `as`, a member tag, a non-null tag; extends under parentheses and `as`, a class expression; try with catch, with finally only).").
