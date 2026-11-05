@@ -360,6 +360,10 @@ assign[value](U, X, U)  :- oxc_k[ast_oxc](U, update_expression), oxc_c[ast_oxc](
 gives[value](U, X)      :- oxc_k[ast_oxc](U, update_expression), oxc_a[ast_oxc](U, prefix, false), oxc_c[ast_oxc](U, argument, 0, X).
 gives[value](S, X)      :- oxc_k[ast_oxc](S, sequence_expression), oxc_c[ast_oxc](S, expressions, I, X),
                            N is count(J : oxc_c[ast_oxc](S, expressions, J, _)), I is N - 1.
+gives[value](E, X)      :- oxc_k[ast_oxc](E, conditional_expression), oxc_c[ast_oxc](E, consequent, 0, X).
+gives[value](E, X)      :- oxc_k[ast_oxc](E, conditional_expression), oxc_c[ast_oxc](E, alternate, 0, X).
+gives[value](E, X)      :- oxc_k[ast_oxc](E, logical_expression), oxc_c[ast_oxc](E, left, 0, X).
+gives[value](E, X)      :- oxc_k[ast_oxc](E, logical_expression), oxc_c[ast_oxc](E, right, 0, X).
 
 -- patterns, declared (binding_*) and assigned (*_assignment_target) alike
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, properties, _, BP),

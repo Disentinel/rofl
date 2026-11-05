@@ -1919,11 +1919,7 @@ may_be_node[flow](S, SD) :- super[value](S),
 may_be_node[flow](E, N) :- gives[value](E, X), not assign[value](E, _, _), may_be_node[flow](X, N).
 may_be_lit[flow](E, V)  :- gives[value](E, X), not assign[value](E, _, _), may_be_lit[flow](X, V).
 
-may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, consequent, 0, X), ast_node[code](E, conditional_expression, _).
-may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, alternate, 0, X), ast_node[code](E, conditional_expression, _).
 
-may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, consequent, 0, X), ast_node[code](E, conditional_expression, _).
-may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), ast_child[code](E, alternate, 0, X), ast_node[code](E, conditional_expression, _).
 
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), awaits[value](E, X).
 may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), awaits[value](E, X).
@@ -1972,10 +1968,6 @@ may_be_node[flow](U, N) :- bare_binder[code](D, Name, File), decl_value[flow](D,
 may_be_lit[flow](U, V)  :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be_lit[flow](E, V),
                            ident_in[code](U, Name, File), sees_binder[code](U, D).
 
-may_be_node[flow](E, N) :- may_be_node[flow](X, N), logic_op[code](E, _, X, _).
-may_be_node[flow](E, N) :- may_be_node[flow](X, N), logic_op[code](E, _, _, X).
-may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), logic_op[code](E, _, X, _).
-may_be_lit[flow](E, V)  :- may_be_lit[flow](X, V), logic_op[code](E, _, _, X).
 
 plain_assign[flow](E) :- assign[value](E, _, R), gives[value](E, R).
 

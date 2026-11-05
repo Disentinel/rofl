@@ -46,3 +46,4 @@ type Uno = | A; import type {} from 'tonly'; namespace NQ { export const v = 1 }
 type TLit = "a" | 1; type TBool = true; let tlv: "b" = "b"; const nlv = null;
 function hf() { function hn() {} class HC2 {} } const hg = function () {}; const hd = class {}; { function hb() {} }
 for (const [fa, fb] of [[1, 2]]) { fa + fb; } const [ea, [eb]] = [1, [2]]; function fp([pa], { pb }) {} const [] = ea; let au, av; [au, av] = [1, 2]; for ([au, av] of [[3, 4]]) {}
+const vgc = ea ? fa : fb; const vgl = ea || fa; const vgn = ea && fa; const vgq = ea ?? fa; const vgcc = ea ? (fa ? 1 : 2) : 3;
