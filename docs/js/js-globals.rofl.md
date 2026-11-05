@@ -145,7 +145,7 @@ An environment
 > global nothing in this program binds evaluates to a value whose prototype
 > is that global's, and THE CONSTRUCTION SITE STANDS FOR THE VALUE:
 > `may_be_node(X, X)`, the abstraction js-dataflow already uses for
-> `array_expression`, not a new `kind_prototype` row (`new Map()` and
+> `array_expression`, not a new `kind_proto` arm (`new Map()` and
 > `new Box()` are one kind and two questions). The binder and assignment arms
 > of `may_be_node` then carry the instance to the receiver for free.
 > 

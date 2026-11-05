@@ -196,7 +196,6 @@ unit_concludes("rules/js-dataflow.rofl", assign_dead).
 unit_concludes("rules/js-dataflow.rofl", assign_decided).
 unit_concludes("rules/js-dataflow.rofl", assign_unscoped).
 unit_concludes("rules/js-dataflow.rofl", assign_reaches_unscoped).
-unit_concludes("rules/js-dataflow.rofl", kind_prototype).
 unit_concludes("rules/js-dataflow.rofl", kind_proto).
 unit_concludes("rules/js-dataflow.rofl", prototype_of).
 unit_concludes("rules/js-dataflow.rofl", builtin_prototype).

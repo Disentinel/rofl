@@ -85,3 +85,4 @@ shape_ok(surveyed, twin_bodies, "alias_of_a_derived: what the surface surveyed i
 shape_ok(keyed_field, cross_product, "join_is_keyed: the field's class is reached through has from the value that holds the new collection; the arms are joined by the class and the value, 2 rows at the corpus, 0 ms").
 shape_ok(keyed_private_reached, cross_product, "join_is_keyed: the private name's class and the member are joined by the name and the file; an audit relation, 0 ms").
 shape_ok(declares_export, closure_wide_end, "one_row_per_key: the pattern arm asks which exported local lies inside the binding target, a destructuring pattern of a few names, 16 rows at the corpus, 0 ms").
+shape_ok(kind_proto, twin_bodies, "alias_of_a_derived: the prototype of a value read where it stands is told by the array mark, an object literal or a function expression, and by a literal's type; one-premise arms of different relations, 0 ms").

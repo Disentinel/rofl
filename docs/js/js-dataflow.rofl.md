@@ -33,7 +33,6 @@ Reads:
 - from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
@@ -614,31 +613,28 @@ A node
 > this model has not got; `object` and `function` are deliberately absent
 > (`member_value` and the language answer those).
 
-`kind_prototype` lists:
-
-| kind | name |
-|---|---|
-| `array_expression` | `array` |
-| `object_expression` | `object` |
-| `function_expression` | `function` |
-| `arrow_function_expression` | `function` |
-
 `kind_proto` has one P for each E.
 
-<a id="kind_proto"></a>`kind_proto`(E, P) either:
+<a id="kind_proto"></a>`kind_proto`(E, N) either:
 
-1. if a kind K [has prototype](#kind_prototype) P and a node E [is of kind](js-model.rofl.md#ast_node) K;
-2. if [`regexp`](#regexp)(E) and P is `regexp`;
+1. if [`array`](#array)(E) and N is `array`;
+2. if [`obj_lit`](#obj_lit)(E) and N is `object`;
 3. if all of:
+   - E is a [function](js-callgraph.rofl.md#fn_node);
+   - N is `function`;
+   - unless [`hoisted`](#hoisted)(E, something);
+   - unless [`has`](#has)(something, E);
+4. if [`regexp`](#regexp)(E) and N is `regexp`;
+5. if all of:
    - [`literal`](#literal)(E, V);
    - `string` is type_of(V);
-   - P is `string`;
+   - N is `string`;
    - unless [`template_part`](#template_part)(something, something, E);
-4. if [`template`](#template)(E) and P is `string`;
-5. if [`literal`](#literal)(E, V), `int` is type_of(V), and P is `number`;
-6. if [`literal`](#literal)(E, float(something)) and P is `number`;
-7. if [`literal`](#literal)(E, bigint(something)) and P is `bigint`;
-8. if [`literal`](#literal)(E, `true` or `false`) and P is `boolean`.
+6. if [`template`](#template)(E) and N is `string`;
+7. if [`literal`](#literal)(E, V), `int` is type_of(V), and N is `number`;
+8. if [`literal`](#literal)(E, float(something)) and N is `number`;
+9. if [`literal`](#literal)(E, bigint(something)) and N is `bigint`;
+10. if [`literal`](#literal)(E, `true` or `false`) and N is `boolean`.
 
 <a id="prototype_of"></a>The prototype of a node E is P either:
 
@@ -649,7 +645,6 @@ A node
 
 Declared as facts:
 
-- <a id="kind_prototype"></a>A kind K has prototype a name P — rows in this file
 - <a id="builtin_prototype"></a>A name P is a builtin prototype — rows in this file
 
 > A promise has no node to be: it is made by calling an async function, by

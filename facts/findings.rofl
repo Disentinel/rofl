@@ -13090,3 +13090,9 @@ recorded(f_an_array_pattern_element_with_a_default_targets_its_left, "2026-11-05
 addressed_by(f_an_array_pattern_element_with_a_default_targets_its_left, "models/lang/js/oxc-roles.rofl").
 finding_note(f_an_array_pattern_element_with_a_default_targets_its_left,
   "The target of pattern_elem for an element with a default (`const [a = 3] = x`) is the name (the left of the default), as Babel's b_tgt wrote it; oxc wrote the whole default. oxc-roles.rofl now takes the left of an assignment_pattern element. The fixture carries `export const [epf = 3, [epg = 4]] = []`; test:parity stays 0 Babel only, 0 oxc only, test:roles green.").
+
+finding(f_the_prototype_of_an_array_an_object_and_a_function_is_told_by_role, insight).
+recorded(f_the_prototype_of_an_array_an_object_and_a_function_is_told_by_role, "2026-11-05").
+addressed_by(f_the_prototype_of_an_array_an_object_and_a_function_is_told_by_role, "rules/js-dataflow.rofl").
+finding_note(f_the_prototype_of_an_array_an_object_and_a_function_is_told_by_role,
+  "The table kind_prototype is gone: kind_proto reads the array mark, an object literal, and a function that is no declaration (hoisted) and no member (has), the same value sites value_expr names. NO ROW MOVED (corpus: every model relation identical; cf identical). Census: kind_prototype 4 -> 0 in every world that loads the model, one shape_ok line (kind_proto, twin_bodies).").
