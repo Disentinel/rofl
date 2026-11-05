@@ -3927,7 +3927,6 @@ check_file("lifecycle_leaky", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_leaky", "examples/checks/lifecycle-leaky-facts.rofl").
 check_file("lifecycle_leaky", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_leaky", "examples/checks/lifecycle-leaky-expect.rofl").
-proves_work("lifecycle_leaky", w_lifecycle_world).
 check_world("lifecycle_clean").
 check_file("lifecycle_clean", "facts/model-units.rofl").
 check_file("lifecycle_clean", "facts/js-callgraph.rofl").
@@ -3958,7 +3957,6 @@ check_file("lifecycle_clean", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_clean", "examples/checks/lifecycle-clean-facts.rofl").
 check_file("lifecycle_clean", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_clean", "examples/checks/lifecycle-clean-expect.rofl").
-proves_work("lifecycle_clean", w_lifecycle_world).
 check_world("lifecycle_forgetful").
 check_file("lifecycle_forgetful", "facts/model-units.rofl").
 check_file("lifecycle_forgetful", "facts/js-callgraph.rofl").
@@ -3989,7 +3987,6 @@ check_file("lifecycle_forgetful", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_forgetful", "examples/checks/lifecycle-forgetful-facts.rofl").
 check_file("lifecycle_forgetful", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_forgetful", "examples/checks/lifecycle-forgetful-expect.rofl").
-proves_work("lifecycle_forgetful", w_lifecycle_world).
 check_world("lifecycle_overwrites").
 check_file("lifecycle_overwrites", "facts/model-units.rofl").
 check_file("lifecycle_overwrites", "facts/js-callgraph.rofl").
@@ -4020,4 +4017,3 @@ check_file("lifecycle_overwrites", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-facts.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-expect.rofl").
-proves_work("lifecycle_overwrites", w_lifecycle_world).

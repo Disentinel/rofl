@@ -374,7 +374,7 @@ golden_state("agg_narrow_why", "38bf85382f1a010f", 1581).
 golden_state("agg_precise_holes", "7b8fdc15bb2a25b3", 2704).
 golden_state("agg_precise_oracle", "ca8a43251b71d3fe", 319094).
 golden_state("agg_precise_scale", "e2e58c1129bf32c9", 3172).
-golden_state("agg_proofs", "34282a238b6d4076", 36910).
+golden_state("agg_proofs", "58e4bd98a9116819", 36894).
 golden_state("agg_prose", "8b7645c978aea130", 1148).
 golden_state("agg_quorum_demo", "1bbe4c1a2b86f4e0", 3434).
 golden_state("agg_rank_tuple_eval", "30552a674ce9ad6b", 1750).
@@ -591,10 +591,10 @@ golden_state("intents_sql", "3c0626fbcb852498", 927).
 golden_state("jodit_fixture", "7db107c8370f2302", 5258).
 golden_state("join_through_constants", "8b45bc805e83e473", 11767).
 golden_state("keyword_atom", "a36c54dba82246a0", 711).
-golden_state("lifecycle_clean", "bcf5cd6243e12310", 155965).
-golden_state("lifecycle_forgetful", "78b56cabf96cebc9", 153322).
-golden_state("lifecycle_leaky", "4fbedf9986e24e53", 151904).
-golden_state("lifecycle_overwrites", "3b099860beb70ec3", 143589).
+golden_state("lifecycle_clean", "eadec84413ecd413", 155967).
+golden_state("lifecycle_forgetful", "9efa8e5b6960e172", 153324).
+golden_state("lifecycle_leaky", "b9ca1c1899925b43", 151906).
+golden_state("lifecycle_overwrites", "3dfe40af6e865856", 143591).
 golden_state("net", "33f97835a79e39ee", 11399).
 golden_state("not_as_a_name", "dc54f02505688a1e", 664).
 golden_state("operators", "9cb89630ac2073b8", 757).
@@ -617,7 +617,7 @@ golden_state("retract_again", "7cabf66a4403644f", 552).
 golden_state("retract_last", "ab9799b26928c8c0", 683).
 golden_state("retract_last_read", "bb6457186639fb0e", 689).
 golden_state("roles_oxc", "38a1a3bdf80d08ed", 31682).
-golden_state("scan_requests", "e0eebcd3ff025d5e", 139622).
+golden_state("scan_requests", "9163e19d76765d18", 139624).
 golden_state("sealed_provenance", "09cfc3daf0e67184", 682).
 golden_state("sensors_t3", "59b51847eef167dd", 1018).
 golden_state("services", "20dba1da6cc971ec", 180756).
@@ -18348,7 +18348,7 @@ golden_rel("agg_precise_scale", "stratum[main]", 10).
 golden_rel("agg_precise_scale", "uses_builtin[$kernel]", 7).
 golden_rel("agg_precise_scale", "writes_to[$kernel]", 37).
 golden_rel("agg_proofs", "@other", 1).
-golden_rel("agg_proofs", "@wit", 3662).
+golden_rel("agg_proofs", "@wit", 3658).
 golden_rel("agg_proofs", "addressed_by[main]", 2312).
 golden_rel("agg_proofs", "agg_check_file[main]", 303).
 golden_rel("agg_proofs", "agg_kind[main]", 14).
@@ -18360,9 +18360,8 @@ golden_rel("agg_proofs", "algebra_known[main]", 9).
 golden_rel("agg_proofs", "algebra_note[main]", 9).
 golden_rel("agg_proofs", "algebra_permits_recursion[main]", 6).
 golden_rel("agg_proofs", "artifact_removed[main]", 299).
-golden_rel("agg_proofs", "asserted_by[$kernel]", 13801).
+golden_rel("agg_proofs", "asserted_by[$kernel]", 13797).
 golden_rel("agg_proofs", "authority[main]", 5).
-golden_rel("agg_proofs", "binding_orphan[audit]", 4).
 golden_rel("agg_proofs", "blocker_kind[main]", 2).
 golden_rel("agg_proofs", "blocks[main]", 11).
 golden_rel("agg_proofs", "boot_rank[main]", 10).
@@ -18381,7 +18380,7 @@ golden_rel("agg_proofs", "conclusion_tense[$kernel]", 163).
 golden_rel("agg_proofs", "contradiction_site[main]", 24).
 golden_rel("agg_proofs", "demands[main]", 1323).
 golden_rel("agg_proofs", "demo_unhashable[main]", 2).
-golden_rel("agg_proofs", "derived_by[$kernel]", 3701).
+golden_rel("agg_proofs", "derived_by[$kernel]", 3697).
 golden_rel("agg_proofs", "dismissed[main]", 58).
 golden_rel("agg_proofs", "edb[main]", 107).
 golden_rel("agg_proofs", "finding[main]", 1713).
@@ -18416,7 +18415,7 @@ golden_rel("agg_proofs", "premise_pos[$kernel]", 215).
 golden_rel("agg_proofs", "proves[main]", 295).
 golden_rel("agg_proofs", "proves_recursion[main]", 6).
 golden_rel("agg_proofs", "proves_refusal[main]", 5).
-golden_rel("agg_proofs", "proves_work[main]", 75).
+golden_rel("agg_proofs", "proves_work[main]", 71).
 golden_rel("agg_proofs", "reads_from[$kernel]", 192).
 golden_rel("agg_proofs", "reason_is_work[main]", 1).
 golden_rel("agg_proofs", "reason_not_work[main]", 2).
@@ -30515,7 +30514,7 @@ golden_rel("lifecycle_clean", "argument_at[code]", 29).
 golden_rel("lifecycle_clean", "array[value]", 1).
 golden_rel("lifecycle_clean", "array_elem[flow]", 1).
 golden_rel("lifecycle_clean", "arrived_by[code]", 1924).
-golden_rel("lifecycle_clean", "asserted_by[$kernel]", 17304).
+golden_rel("lifecycle_clean", "asserted_by[$kernel]", 17305).
 golden_rel("lifecycle_clean", "assign[value]", 10).
 golden_rel("lifecycle_clean", "assign_op[code]", 1).
 golden_rel("lifecycle_clean", "at[tree]", 201).
@@ -31077,7 +31076,7 @@ golden_rel("lifecycle_clean", "top_read[code]", 31).
 golden_rel("lifecycle_clean", "transfer_mechanism[main]", 32).
 golden_rel("lifecycle_clean", "ts_ext[main]", 5).
 golden_rel("lifecycle_clean", "undefined_premise[audit]", 26).
-golden_rel("lifecycle_clean", "unit_concludes[main]", 1553).
+golden_rel("lifecycle_clean", "unit_concludes[main]", 1554).
 golden_rel("lifecycle_clean", "unknown_because[main]", 4).
 golden_rel("lifecycle_clean", "unknown_type[main]", 5).
 golden_rel("lifecycle_clean", "unresolved_call[code]", 20).
@@ -31141,7 +31140,7 @@ golden_rel("lifecycle_forgetful", "argument_at[code]", 22).
 golden_rel("lifecycle_forgetful", "arm_first[code]", 1).
 golden_rel("lifecycle_forgetful", "arm_under[code]", 2).
 golden_rel("lifecycle_forgetful", "arrived_by[code]", 1924).
-golden_rel("lifecycle_forgetful", "asserted_by[$kernel]", 17211).
+golden_rel("lifecycle_forgetful", "asserted_by[$kernel]", 17212).
 golden_rel("lifecycle_forgetful", "assign[value]", 10).
 golden_rel("lifecycle_forgetful", "assign_op[code]", 1).
 golden_rel("lifecycle_forgetful", "at[tree]", 177).
@@ -31719,7 +31718,7 @@ golden_rel("lifecycle_forgetful", "transfer_mechanism[main]", 32).
 golden_rel("lifecycle_forgetful", "ts_ext[main]", 5).
 golden_rel("lifecycle_forgetful", "unary[value]", 1).
 golden_rel("lifecycle_forgetful", "undefined_premise[audit]", 26).
-golden_rel("lifecycle_forgetful", "unit_concludes[main]", 1553).
+golden_rel("lifecycle_forgetful", "unit_concludes[main]", 1554).
 golden_rel("lifecycle_forgetful", "unknown_because[main]", 4).
 golden_rel("lifecycle_forgetful", "unknown_type[main]", 5).
 golden_rel("lifecycle_forgetful", "unresolved_call[code]", 15).
@@ -31785,7 +31784,7 @@ golden_rel("lifecycle_leaky", "argument_at[code]", 23).
 golden_rel("lifecycle_leaky", "array[value]", 1).
 golden_rel("lifecycle_leaky", "array_elem[flow]", 1).
 golden_rel("lifecycle_leaky", "arrived_by[code]", 1924).
-golden_rel("lifecycle_leaky", "asserted_by[$kernel]", 17129).
+golden_rel("lifecycle_leaky", "asserted_by[$kernel]", 17130).
 golden_rel("lifecycle_leaky", "assign[value]", 10).
 golden_rel("lifecycle_leaky", "assign_op[code]", 1).
 golden_rel("lifecycle_leaky", "at[tree]", 156).
@@ -32349,7 +32348,7 @@ golden_rel("lifecycle_leaky", "top_read[code]", 24).
 golden_rel("lifecycle_leaky", "transfer_mechanism[main]", 32).
 golden_rel("lifecycle_leaky", "ts_ext[main]", 5).
 golden_rel("lifecycle_leaky", "undefined_premise[audit]", 26).
-golden_rel("lifecycle_leaky", "unit_concludes[main]", 1553).
+golden_rel("lifecycle_leaky", "unit_concludes[main]", 1554).
 golden_rel("lifecycle_leaky", "unknown_because[main]", 4).
 golden_rel("lifecycle_leaky", "unknown_type[main]", 5).
 golden_rel("lifecycle_leaky", "unresolved_call[code]", 13).
@@ -32401,7 +32400,7 @@ golden_rel("lifecycle_overwrites", "ambient_value[main]", 9).
 golden_rel("lifecycle_overwrites", "ambient_value_ns[main]", 2).
 golden_rel("lifecycle_overwrites", "arm_under[code]", 1).
 golden_rel("lifecycle_overwrites", "arrived_by[code]", 1924).
-golden_rel("lifecycle_overwrites", "asserted_by[$kernel]", 16765).
+golden_rel("lifecycle_overwrites", "asserted_by[$kernel]", 16766).
 golden_rel("lifecycle_overwrites", "assign[value]", 10).
 golden_rel("lifecycle_overwrites", "assign_binder[code]", 5).
 golden_rel("lifecycle_overwrites", "assign_decided[flow]", 5).
@@ -32807,7 +32806,7 @@ golden_rel("lifecycle_overwrites", "top_read[code]", 4).
 golden_rel("lifecycle_overwrites", "transfer_mechanism[main]", 32).
 golden_rel("lifecycle_overwrites", "ts_ext[main]", 5).
 golden_rel("lifecycle_overwrites", "undefined_premise[audit]", 26).
-golden_rel("lifecycle_overwrites", "unit_concludes[main]", 1553).
+golden_rel("lifecycle_overwrites", "unit_concludes[main]", 1554).
 golden_rel("lifecycle_overwrites", "unknown_because[main]", 4).
 golden_rel("lifecycle_overwrites", "unknown_type[main]", 5).
 golden_rel("lifecycle_overwrites", "up_d[code]", 4).
@@ -34412,7 +34411,7 @@ golden_rel("scan_requests", "arg_given[code]", 3).
 golden_rel("scan_requests", "arg_node[code]", 3).
 golden_rel("scan_requests", "argument_at[code]", 3).
 golden_rel("scan_requests", "arrived_by[code]", 1924).
-golden_rel("scan_requests", "asserted_by[$kernel]", 16604).
+golden_rel("scan_requests", "asserted_by[$kernel]", 16605).
 golden_rel("scan_requests", "assign[value]", 2).
 golden_rel("scan_requests", "at[tree]", 47).
 golden_rel("scan_requests", "attr_deferred[main]", 6).
@@ -34927,7 +34926,7 @@ golden_rel("scan_requests", "top_read[code]", 7).
 golden_rel("scan_requests", "transfer_mechanism[main]", 32).
 golden_rel("scan_requests", "ts_ext[main]", 5).
 golden_rel("scan_requests", "undefined_premise[audit]", 26).
-golden_rel("scan_requests", "unit_concludes[main]", 1553).
+golden_rel("scan_requests", "unit_concludes[main]", 1554).
 golden_rel("scan_requests", "unknown_because[main]", 4).
 golden_rel("scan_requests", "unknown_type[main]", 5).
 golden_rel("scan_requests", "unresolved_call[code]", 2).

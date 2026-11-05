@@ -910,6 +910,7 @@ unit_concludes("rules/js-globals.rofl", may_be_node).
 unit_concludes("rules/js-globals.rofl", prototype_of).
 unit_concludes("rules/js-globals.rofl", es_prototype_gap).
 unit_concludes("rules/js-globals.rofl", es_instance_unattributed).
+unit_concludes("rules/js-globals.rofl", imports).
 unit_concludes("rules/js-host.rofl", imports).
 unit_concludes("rules/js-host.rofl", edb).
 unit_concludes("rules/js-host.rofl", host_global_ref).
