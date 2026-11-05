@@ -36,7 +36,9 @@
 // than the total.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { ScanSet, idPrefix } from '../scanners/js_ast.ts';
+import { spawnSync } from 'node:child_process';
+import { idPrefix } from '../scanners/js_ast.ts';
+import { oxcScan } from '../scanners/oxc_bin.ts';
 import { RoflPort, type RoflSession } from './port.ts';
 
 export interface IngestOpts {
@@ -87,7 +89,6 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
   await s.evaluate();
 
   const log: TickReport[] = [];
-  const scans = new ScanSet();
   let tick = 0;
   for (;;) {
     // 1. THE FRONTIER IS A QUERY. Nothing here remembers what it did last
@@ -99,22 +100,17 @@ export async function ingest(s: RoflSession, o: IngestOpts): Promise<TickReport[
     const t0 = Date.now();
     const facts: string[] = [];
     let parsed = 0;
-    for (const rel of batch) {
-      try {
-        facts.push(scans.scan(fs.readFileSync(path.join(o.root, rel), 'utf8'), { file: rel }).facts.join('\n'));
-        parsed += 1;
-      } catch (e) {
-        // A FILE THAT WILL NOT PARSE IS RECORDED, NOT RETRIED. Left alone it
-        // would sit on the frontier forever and the loop would never finish;
-        // silently dropped it would be indistinguishable from an indexed file.
-        //
-        // THIS PATH IS NOW THE UNEXPECTED ONE. `scanners/js_ast.ts` returns
-        // `ast_parse_error` as a FACT rather than throwing, and `indexed` in
-        // rules/ingest.rofl reads it — so a refusal leaves the frontier through
-        // the rules. What reaches here is something else going wrong, which is
-        // why the message is kept instead of being flattened to `unparsable`.
-        facts.push(`ast_parse_error[code](${q(rel)}, ${q(String((e as Error).message).slice(0, 120))}).`);
-      }
+    // ONE oxc_scan FOR THE BATCH: a file that will not parse comes back as `parse_error[ast_oxc]`, which `indexed` reads, so a
+    // refusal leaves the frontier through the rules. What fails here is the scanner itself, and every file of the batch takes
+    // the message, kept rather than flattened to `unparsable`.
+    const bin = oxcScan();
+    const run = typeof bin !== 'string' ? null : spawnSync(bin, ['--no-start', o.root, ...batch], { encoding: 'utf8', maxBuffer: 1 << 30 });
+    if (run && run.status === 0) {
+      facts.push(run.stdout);
+      parsed += batch.length;
+    } else {
+      const why = typeof bin !== 'string' ? bin.error : String(run?.stderr || run?.error).trim();
+      for (const rel of batch) facts.push(`parse_error[ast_oxc](${q(rel)}, ${q(why.slice(0, 120))}).`);
     }
     const t1 = Date.now();
     const text = facts.join('\n');
