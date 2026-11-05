@@ -23,7 +23,7 @@ Reads:
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
-- from js-structure: [object_of](js-structure.rofl.md#object_of), [seq_at](js-structure.rofl.md#seq_at)
+- from js-structure: [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
 - from outside these files, in the tree:
@@ -65,12 +65,10 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-abrupt_statement"></a>an abrupt statement | a node of one of the kinds `return_statement`, `throw_statement`, `break_statement`, `continue_statement` (`abrupt_kind`) |
-| <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
 | <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-block"></a>a block | a node of kind `block_statement` |
 | <a id="noun-label"></a>a label | a node of kind `labeled_statement` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
-| <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -443,13 +441,14 @@ A node is a site if it [reads through the accessor](#accessor_read) some node.
 
 <a id="pattern_source"></a>The pattern source of a node P is a node Init if [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P) and D [takes its value from](js-dataflow.rofl.md#decl_value) Init.
 
-<a id="pattern_accessor"></a>An [object pattern](#noun-object_pattern) destructures through the accessor M if all of:
+A node
+
+- <a id="pattern_accessor"></a>destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of a node Obj at Key is M;
   - a node Init [points to](js-concat.rofl.md#may_be_node) Obj;
   - [the pattern source](#pattern_source) of it is Init;
   - it [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
-
-A node destructures through the accessor M if all of:
+- destructures through the accessor M if all of:
   - D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) it in some file;
   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P);
   - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
@@ -472,13 +471,9 @@ S destructures through the accessor M if all of:
 1. if [`spread_elems`](#spread_elems)(something, something, X) and [`parent`](#parent)(S, X);
 2. if [`spread_args`](#spread_args)(something, something, X) and [`parent`](#parent)(S, X).
 
-<a id="pattern_iterates"></a>P destructures through a node M either:
+<a id="pattern_iterates"></a>A node P destructures through a node M either:
 
-1. if all of:
-   - P is an [array pattern](#noun-array_pattern);
-   - [the pattern source](#pattern_source) of P [points to](js-concat.rofl.md#may_be_node) a node Obj;
-   - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
-   - [`fn_value`](js-surface.rofl.md#fn_value)(M);
+1. if [`iterates`](#iterates)(P, P, something) and P [iterates through](js-callgraph.rofl.md#for_of_iterates) M;
 2. if all of:
    - P [is iterated](#spread_iterated);
    - [`parent`](#parent)(P, X);
@@ -529,9 +524,9 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 > to `spread_element`, which carries both mechanisms — mutant d9 reads the
 > edges instead.
 
-<a id="hidden_call_pos"></a>N hides a call by a mechanism E either:
+<a id="hidden_call_pos"></a>A node N hides a call by a mechanism E either:
 
-1. if N is an [object pattern](#noun-object_pattern) and E is `accessor_call`;
+1. if [`object_pat`](js-structure.rofl.md#object_pat)(N) and E is `accessor_call`;
 2. if all of:
    - [`rest_props`](#rest_props)(P, T);
    - [`parent`](#parent)(N, T);
@@ -542,13 +537,12 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
    - [`spread_props`](#spread_props)(O, something, Y);
    - [`parent`](#parent)(N, Y);
    - E is `accessor_call`;
-4. if N is an [array pattern](#noun-array_pattern) and E is `iterator_call`;
-5. if N [is iterated](#spread_iterated) and E is `iterator_call`;
-6. if [`iterates`](#iterates)(N, something, something) and E is `iterator_call`.
+4. if N [is iterated](#spread_iterated) and E is `iterator_call`;
+5. if [`iterates`](#iterates)(N, something, something) and E is `iterator_call`.
 
-<a id="hidden_call_src"></a>The hidden call source of P is a node Init either:
+<a id="hidden_call_src"></a>The hidden call source of a node P is a node Init either:
 
-1. if P is an [object pattern](#noun-object_pattern) or an [array pattern](#noun-array_pattern) and [the pattern source](#pattern_source) of P is Init;
+1. if [the pattern source](#pattern_source) of P is Init and [`object_pat`](js-structure.rofl.md#object_pat)(P);
 2. if D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
 3. if P [is iterated](#spread_iterated) and [`parent`](#parent)(P, Init);
 4. if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, Init) and [`parent`](#parent)(P, Init);

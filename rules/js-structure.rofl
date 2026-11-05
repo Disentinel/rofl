@@ -68,6 +68,15 @@ compound_write[code](A, L)  :- assign_op[code](A, L, _), binary[value](A, _, _, 
 
 -- A write whose value is only sometimes the source: the default of a pattern or a parameter, and `||=`, `&&=`, `??=`.
 -- `x = v` and a declarator's init are unconditional.
+-- an object pattern: it takes properties, or it is a pattern that takes nothing and does not iterate
+object_pat[code](P) :- pattern_prop[value](P, _, _), not assign[value](P, P, _).
+object_pat[code](P) :- rest_props[value](P, _).
+object_pat[code](P) :- pat_computed[code](P, T, _), pat_in[code](_, P, T).
+object_pat[code](P) :- declarator_id[code](_, P), not binds[value](P, _), not iterates[value](P, P, _), not pat_in[code](_, P, _).
+object_pat[code](P) :- param[value](_, _, P), not binds[value](P, _), not iterates[value](P, P, _), not pat_in[code](_, P, _).
+-- a for-of: the S of iterates that is not the pattern it is
+for_of[code](S) :- iterates[value](S, L, _), S != L.
+
 pattern_target[code](L) :- pattern_prop[value](_, _, L).
 pattern_target[code](L) :- pattern_elem[value](_, _, L).
 pattern_target[code](L) :- param[value](_, _, L).

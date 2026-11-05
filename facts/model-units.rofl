@@ -136,6 +136,8 @@ unit_concludes("rules/js-structure.rofl", ast_value).
 unit_concludes("rules/js-structure.rofl", assign_op).
 unit_concludes("rules/js-structure.rofl", value_write).
 unit_concludes("rules/js-structure.rofl", compound_write).
+unit_concludes("rules/js-structure.rofl", object_pat).
+unit_concludes("rules/js-structure.rofl", for_of).
 unit_concludes("rules/js-structure.rofl", pattern_target).
 unit_concludes("rules/js-structure.rofl", conditional_write).
 unit_concludes("rules/js-structure.rofl", meta_form).
@@ -1529,6 +1531,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", b_chain_opt).
 unit_concludes("models/lang/js/babel-roles.rofl", loop_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", repeats).
 unit_concludes("models/lang/js/babel-roles.rofl", iterates).
+unit_concludes("models/lang/js/babel-roles.rofl", b_pat_sourced).
 unit_concludes("models/lang/js/babel-roles.rofl", enumerates).
 unit_concludes("models/lang/js/babel-roles.rofl", exit_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", exits).

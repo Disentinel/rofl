@@ -222,6 +222,15 @@ repeats[value](S, X)    :- loop_kind[ast_babel](K), node[ast_babel](S, K, _), ch
                            b_through[ast_babel](B, X).
 iterates[value](S, L, R)   :- node[ast_babel](S, for_of_statement, _), child[ast_babel](S, left, 0, L),
                               child[ast_babel](S, right, 0, R).
+-- an array pattern takes its elements from the iterator of the value it destructures, empty or not: the declarator's init
+-- or the assigned value; a parameter, a nested element or the head of a for-of has no node for it, the pattern stands for it
+iterates[value](P, P, V) :- node[ast_babel](P, array_pattern, _), child[ast_babel](D, id, 0, P),
+                            node[ast_babel](D, variable_declarator, _), child[ast_babel](D, init, 0, V).
+iterates[value](P, P, V) :- node[ast_babel](P, array_pattern, _), child[ast_babel](A, left, 0, P),
+                            node[ast_babel](A, assignment_expression, _), child[ast_babel](A, right, 0, V).
+iterates[value](P, P, P) :- node[ast_babel](P, array_pattern, _), not b_pat_sourced[ast_babel](P).
+b_pat_sourced[ast_babel](P) :- child[ast_babel](D, id, 0, P), node[ast_babel](D, variable_declarator, _), child[ast_babel](D, init, 0, _).
+b_pat_sourced[ast_babel](P) :- child[ast_babel](A, left, 0, P), node[ast_babel](A, assignment_expression, _).
 enumerates[value](S, L, R) :- node[ast_babel](S, for_in_statement, _), child[ast_babel](S, left, 0, L),
                               child[ast_babel](S, right, 0, R).
 

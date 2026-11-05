@@ -879,7 +879,7 @@ keyed_same_name[code](P, R) :- keyed_param_name[code](P, G, Name), keyed_param_n
 keyed_read_site[code](C, H, B, F, I) :- keyed_call[code](C, H, Get, B, F, I), keyed_holder[code](H, P),
                                         keyed_store(P, _, Get).
 keyed_read_site[code](C, H, B, F, I) :- keyed_call[code](C, H, "forEach", B, F, I).
-keyed_read_site[code](S, H, B, F, I) :- keyed_ref[code](R, H), iterates[value](S, _, R),
+keyed_read_site[code](S, H, B, F, I) :- keyed_ref[code](R, H), iterates[value](S, _, R), for_of[code](S),
                                         seq_at[code](B, I, S),
                                         keyed_list[code](H, B, F).
 keyed_put_of[code](C, H, V)  :- keyed_seen[code](C, H, Put, _, _, _, _), keyed_holder[code](H, P),
@@ -1245,7 +1245,7 @@ may_be_lit[flow](C, L)  :- may_be_lit[flow](V, L), keyed_read[flow](C, V).
 
 -- the walks: position 0 of the head's pattern is a key, position 1 a value;
 -- forEach's callback takes (value, key)
-keyed_walk[flow](S, D, X) :- iterates[value](S, H, R),
+keyed_walk[flow](S, D, X) :- iterates[value](S, H, R), for_of[code](S),
                              parent[tree](H, D), decl[value](D, _),
                              may_be_node[flow](R, X), keyed_obj[flow](X, _).
 keyed_walk_at[flow](E, D, Pos) :- keyed_walk[flow](_, D, _), destructures_at[code](D, Local, Pos, File),
@@ -1962,7 +1962,7 @@ may_be_node[flow](Y, X) :- delegates[value](Y, A), resolves[code](A, Inner),
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
 iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
 
-decl_value[flow](D, E) :- iterates[value](S, V, X),
+decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
                           nth[tree](V, 0, D),
                           iter_elem[flow](X, E).
 

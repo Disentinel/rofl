@@ -19,7 +19,7 @@ default: code
 
 Reads:
 
-- from js-dataflow: [pat_computed](js-dataflow.rofl.md#pat_computed), [pat_in](js-dataflow.rofl.md#pat_in), [symbol_ref](js-dataflow.rofl.md#symbol_ref)
+- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [pat_computed](js-dataflow.rofl.md#pat_computed), [pat_in](js-dataflow.rofl.md#pat_in), [symbol_ref](js-dataflow.rofl.md#symbol_ref)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
@@ -29,10 +29,12 @@ Reads:
   - <a id="binary"></a>`binary`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
+  - <a id="binds"></a>`binds`
   - <a id="callee"></a>`callee`
   - <a id="executes_if"></a>`executes_if`
   - <a id="gives"></a>`gives`
   - <a id="import_meta"></a>`import_meta`
+  - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
   - <a id="key_expr"></a>`key_expr`
   - <a id="logical"></a>`logical`
@@ -43,6 +45,7 @@ Reads:
   - <a id="pattern_elem"></a>`pattern_elem`
   - <a id="pattern_prop"></a>`pattern_prop`
   - <a id="private"></a>`private`
+  - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
 
 ## Words
@@ -156,6 +159,27 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 
 > A write whose value is only sometimes the source: the default of a pattern or a parameter, and `||=`, `&&=`, `??=`.
 > `x = v` and a declarator's init are unconditional.
+> an object pattern: it takes properties, or it is a pattern that takes nothing and does not iterate
+
+<a id="object_pat"></a>`object_pat`(P) either:
+
+1. if [`pattern_prop`](#pattern_prop)(P, something, something), unless [`assign`](#assign)(P, P, something);
+2. if [`rest_props`](#rest_props)(P, something);
+3. if [`pat_computed`](js-dataflow.rofl.md#pat_computed)(P, T, something) and [`pat_in`](js-dataflow.rofl.md#pat_in)(something, P, T);
+4. if all of:
+   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(something, P);
+   - unless [`binds`](#binds)(P, something);
+   - unless [`iterates`](#iterates)(P, P, something);
+   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, P, something);
+5. if all of:
+   - [`param`](#param)(something, something, P);
+   - unless [`binds`](#binds)(P, something);
+   - unless [`iterates`](#iterates)(P, P, something);
+   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, P, something).
+
+> a for-of: the S of iterates that is not the pattern it is
+
+<a id="for_of"></a>`for_of`(S) if [`iterates`](#iterates)(S, L, something) and S differs from L.
 
 <a id="pattern_target"></a>`pattern_target`(L) either:
 

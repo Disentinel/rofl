@@ -26,7 +26,7 @@ callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _).
 -- does not resolve them; it makes a miss attributable instead of silent.
 transfer_site[code](X, new_expression)               :- construct[value](X).
 transfer_site[code](X, tagged_template_expression)   :- tagged[value](X, _, _).
-transfer_site[code](X, for_of_statement)             :- iterates[value](X, _, _).
+transfer_site[code](X, for_of_statement)             :- for_of[code](X).
 transfer_site[code](X, decorator)                    :- decorated[value](_, E), parent[tree](X, E).
 
 site[code](X) :- call_site[code](X, _).
@@ -586,7 +586,7 @@ writes_in_place(assignment_pattern, left).
 writes_in_place(rest_element, argument).
 member_written[flow](N) :- member_node_v[flow](N), ast_child[code](P, F, _, N), ast_node[code](P, PK, _),
                            writes_in_place(PK, F), not pat_in[code](_, _, N).
-member_written[flow](N) :- member_node_v[flow](N), iterates[value](_, N, _).
+member_written[flow](N) :- member_node_v[flow](N), iterates[value](S, N, _), for_of[code](S).
 member_written[flow](N) :- member_node_v[flow](N), enumerates[value](_, N, _).
 member_written[flow](N) :- member_node_v[flow](N), ast_child[code](Prop, value, 0, N),
                            ast_child[code](Pat, properties, _, Prop), ast_node[code](Pat, object_pattern, _),

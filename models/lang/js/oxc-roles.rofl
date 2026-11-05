@@ -376,6 +376,11 @@ rest_props[value](P, T) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, 
 rest_props[value](P, T) :- oxc_k[ast_oxc](P, object_assignment_target), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, target, 0, T).
 array_pat(P) :- oxc_k[ast_oxc](P, array_pattern).
 array_pat(P) :- oxc_k[ast_oxc](P, array_assignment_target).
+iterates[value](P, P, V) :- array_pat(P), oxc_c[ast_oxc](D, id, 0, P), oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, init, 0, V).
+iterates[value](P, P, V) :- array_pat(P), oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment_expression), oxc_c[ast_oxc](A, right, 0, V).
+iterates[value](P, P, P) :- array_pat(P), not pat_sourced(P).
+pat_sourced(P) :- oxc_c[ast_oxc](D, id, 0, P), oxc_k[ast_oxc](D, variable_declarator), oxc_c[ast_oxc](D, init, 0, _).
+pat_sourced(P) :- oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment_expression).
 pattern_elem[value](P, I, T) :- array_pat(P), oxc_c[ast_oxc](P, elements, I, T).
 rest_elems[value](P, I, T)   :- oxc_k[ast_oxc](P, array_pattern), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, argument, 0, T),
                                 I is count(J : oxc_c[ast_oxc](P, elements, J, _)).

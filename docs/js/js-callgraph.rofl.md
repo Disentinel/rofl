@@ -37,7 +37,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
@@ -154,7 +154,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 1. if [`construct`](#construct)(X) and N is `new_expression`;
 2. if [`tagged`](#tagged)(X, something, something) and N is `tagged_template_expression`;
-3. if [`iterates`](#iterates)(X, something, something) and N is `for_of_statement`;
+3. if [`for_of`](js-structure.rofl.md#for_of)(X) and N is `for_of_statement`;
 4. if [`decorated`](#decorated)(something, E), [`parent`](#parent)(X, E), and N is `decorator`.
 
 <a id="site"></a>A node X is a site either:
@@ -1109,7 +1109,10 @@ Declared as facts:
    - P [is of kind](js-model.rofl.md#ast_node) PK;
    - [`writes_in_place`](#writes_in_place)(PK, F);
    - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, N);
-2. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`iterates`](#iterates)(something, N, something);
+2. if all of:
+   - N is a [member access](js-dataflow.rofl.md#member_node_v);
+   - [`iterates`](#iterates)(S, N, something);
+   - [`for_of`](js-structure.rofl.md#for_of)(S);
 3. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`enumerates`](#enumerates)(something, N, something);
 4. if all of:
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
