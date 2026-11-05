@@ -33,7 +33,8 @@ site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
 
 -- The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
-call_arg[code](C, I, A)       :- call_site[code](C, _), ast_child[code](C, arguments, I, A).
+call_arg[code](C, I, A)       :- call_site[code](C, _), nth[tree](C, I, A), not spread_args[value](C, _, A).
+call_arg[code](C, I, S)       :- call_site[code](C, _), nth[tree](C, I, A), spread_args[value](C, _, A), parent[tree](S, A).
 
 -- =========================================================================
 -- 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
