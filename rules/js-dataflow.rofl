@@ -59,7 +59,9 @@ node_value_kind(class_declaration).
 node_value_kind(class_expression).
 node_value_kind(reg_exp_literal).
 
-may_be_node[flow](E, E) :- node_value_kind(K), ast_node[code](E, K, _).
+may_be_node[flow](E, E) :- value_expr[code](E).
+may_be_node[flow](E, E) :- class[value](E).
+may_be_node[flow](E, E) :- ast_node[code](E, reg_exp_literal, _).
 
 -- =========================================================================
 -- 3. A NAME IS WHAT ITS BINDER'S INITIALISER IS, WHERE THE BINDER IS IN SCOPE

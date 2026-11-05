@@ -138,6 +138,7 @@ unit_concludes("rules/js-structure.rofl", value_write).
 unit_concludes("rules/js-structure.rofl", compound_write).
 unit_concludes("rules/js-structure.rofl", object_pat).
 unit_concludes("rules/js-structure.rofl", pattern_slot).
+unit_concludes("rules/js-structure.rofl", value_expr).
 unit_concludes("rules/js-structure.rofl", for_of).
 unit_concludes("rules/js-structure.rofl", pattern_target).
 unit_concludes("rules/js-structure.rofl", conditional_write).
@@ -230,6 +231,7 @@ unit_concludes("rules/js-dataflow.rofl", imported_test).
 unit_concludes("rules/js-dataflow.rofl", module_member).
 unit_concludes("rules/js-dataflow.rofl", main_is_module).
 unit_concludes("rules/js-dataflow.rofl", require_main).
+unit_concludes("rules/js-dataflow.rofl", arm_under).
 unit_concludes("rules/js-dataflow.rofl", dead_arm).
 unit_concludes("rules/js-dataflow.rofl", dead_in).
 unit_concludes("rules/js-dataflow.rofl", dead_site).
@@ -453,7 +455,6 @@ unit_concludes("rules/js-dataflow.rofl", class_member_proto).
 unit_concludes("rules/js-dataflow.rofl", member_obj).
 unit_concludes("rules/js-dataflow.rofl", member_at).
 unit_concludes("rules/js-dataflow.rofl", pattern_entry).
-unit_concludes("rules/js-dataflow.rofl", this_binds_kind).
 unit_concludes("rules/js-dataflow.rofl", this_binder).
 unit_concludes("rules/js-dataflow.rofl", this_over).
 unit_concludes("rules/js-dataflow.rofl", this_nearer).
@@ -619,7 +620,6 @@ unit_concludes("rules/js-callgraph.rofl", obj_kind_class).
 unit_concludes("rules/js-callgraph.rofl", obj_kind_known).
 unit_concludes("rules/js-callgraph.rofl", obj_class).
 unit_concludes("rules/js-callgraph.rofl", member_shape).
-unit_concludes("rules/js-callgraph.rofl", static_key_kind).
 unit_concludes("rules/js-callgraph.rofl", computed_key_static).
 unit_concludes("rules/js-callgraph.rofl", computed_key_template).
 unit_concludes("rules/js-callgraph.rofl", shape_known).
@@ -692,7 +692,6 @@ unit_concludes("rules/js-callgraph.rofl", await_no_call).
 unit_concludes("rules/js-callgraph.rofl", await_value_unknown).
 unit_concludes("rules/js-callgraph.rofl", awaiting_fn).
 unit_concludes("rules/js-callgraph.rofl", performed_as_edge).
-unit_concludes("rules/js-callgraph.rofl", whole_kind).
 unit_concludes("rules/js-callgraph.rofl", whole_expr).
 unit_concludes("rules/js-callgraph.rofl", whole_decl).
 unit_concludes("rules/js-callgraph.rofl", many_binders).
@@ -706,7 +705,6 @@ unit_concludes("rules/js-callgraph.rofl", placed).
 unit_concludes("rules/js-callgraph.rofl", held).
 unit_concludes("rules/js-callgraph.rofl", literal_part).
 unit_concludes("rules/js-callgraph.rofl", stored_in).
-unit_concludes("rules/js-callgraph.rofl", writes_in_place).
 unit_concludes("rules/js-callgraph.rofl", member_written).
 unit_concludes("rules/js-callgraph.rofl", sx_mkey).
 unit_concludes("rules/js-callgraph.rofl", sx_open).
@@ -916,8 +914,6 @@ unit_concludes("rules/js-effects.rofl", eff_ring2).
 unit_concludes("rules/js-effects.rofl", eff_ring3).
 unit_concludes("rules/js-effects.rofl", eff_ring).
 unit_concludes("rules/js-effects.rofl", eff_reaches).
-unit_concludes("rules/js-effects.rofl", edb).
-unit_concludes("rules/js-effects.rofl", eff_alloc_kind).
 unit_concludes("rules/js-effects.rofl", eff_obj_traced).
 unit_concludes("rules/js-effects.rofl", eff_heap_of).
 unit_concludes("rules/js-effects.rofl", eff_assign).
@@ -934,6 +930,7 @@ unit_concludes("rules/js-effects.rofl", eff_mutable_top).
 unit_concludes("rules/js-effects.rofl", eff_label_seen).
 unit_concludes("rules/js-effects.rofl", eff_label_unseen).
 unit_concludes("rules/js-effects.rofl", eff_latent).
+unit_concludes("rules/js-effects.rofl", edb).
 unit_concludes("rules/js-effects.rofl", eff_discharges).
 unit_concludes("rules/js-effects.rofl", eff_discharged_at).
 unit_concludes("rules/js-effects.rofl", eff_discharge_unknown).

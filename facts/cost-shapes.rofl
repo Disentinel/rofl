@@ -79,3 +79,4 @@ shape_ok(object_pat, project_then_negate, "one_row_per_key: a root pattern witho
 shape_ok(eff_field_moment, project_then_negate, "one_row_per_key: the class fields of the corpus without static, 0 ms").
 shape_ok(obj_open_own, twin_bodies, "alias_of_a_derived: the spread arm is sx_open's, in the code book where member_unset reads it and the surface book that publishes it, 0 ms").
 shape_ok(sx_open, twin_bodies, "alias_of_a_derived: the spread arm is obj_open_own's, in the surface book that publishes it, 0 ms").
+shape_ok(value_expr, twin_bodies, "alias_of_a_derived: a union of the object, the array and the function that makes a value, read by may_be_node, whole_expr and the effect layer; each arm is one premise, 0 ms").

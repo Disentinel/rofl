@@ -80,6 +80,11 @@ pattern_slot[code](S) :- assign[value](_, S, _).
 pattern_slot[code](S) :- decl[value](S, catch).
 object_pat[code](P) :- pattern_slot[code](P), not binds[value](P, _), not ref[value](P, _), not member[value](P, _, _), not member_expr[value](P, _, _),
                        not iterates[value](P, P, _), not pat_in[code](_, P, _), not assign[value](P, P, _).
+-- an expression that makes a value of its own, where it stands: an object, an array, a function that is not a
+-- declaration and not a member (a declaration is hoisted, a member is had)
+value_expr[code](E) :- obj_lit[code](E).
+value_expr[code](E) :- array[value](E).
+value_expr[code](E) :- fn_node[code](E), not hoisted[value](E, _), not has[value](_, E).
 -- a for-of: the S of iterates that is not the pattern it is
 for_of[code](S) :- iterates[value](S, L, _), S != L.
 

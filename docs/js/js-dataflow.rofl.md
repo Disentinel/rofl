@@ -28,7 +28,7 @@ Reads:
 - from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [hidden_call_pos](js-controlflow.rofl.md#hidden_call_pos), [in_fn](js-controlflow.rofl.md#in_fn)
+- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
 - from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
@@ -36,7 +36,7 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_write](js-structure.rofl.md#value_write)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -124,8 +124,8 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
+| <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
-| <a id="noun-this-binder"></a>a this-binder | a node of one of the kinds `function_declaration`, `function_expression`, `object_method`, `class_method`, `class_private_method`, `class_property`, `class_private_property`, `static_block` (`this_binds_kind`) |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
 | <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal` (`node_value_kind`) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
@@ -143,7 +143,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="spread_arg"></a>An invocation has a spread at an index I if [`spread_args`](#spread_args)(it, I, something).
 - <a id="class_like"></a>A node is a class if [`class`](#class)(it).
 - <a id="member_node_v"></a>A node is a member access if [`object_of`](js-structure.rofl.md#object_of)(it, something).
-- <a id="this_binder"></a>A [this-binder](#noun-this-binder) binds this.
 - <a id="static_block_of"></a>A class has the static block SB if [`static_block`](#static_block)(it, SB).
 - <a id="corpus_file"></a>File is in the corpus if [`program`](#program)(something, File).
 - <a id="module_object"></a>A node is the module object of File if [`program`](#program)(it, File).
@@ -210,7 +209,11 @@ In the code:
 
 In the flow:
 
-A [value site](#noun-value_site) points to it.
+A node E points to a node N either:
+
+1. if [`value_expr`](js-structure.rofl.md#value_expr)(E) and N is E;
+2. if [`class`](#class)(E) and N is E;
+3. if E is a [regex literal](#noun-regex_literal) and N is E.
 
 Declared as facts:
 
@@ -1079,20 +1082,30 @@ In the code:
 
 <a id="require_main"></a>`require_main`(M) if [`prop_name`](js-structure.rofl.md#prop_name)(M, O, "main") and a node O [refers to the free](#free_global) "require" in some file.
 
+<a id="arm_under"></a>`arm_under`(Y, T, How) either:
+
+1. if all of:
+   - [`executes_if`](#executes_if)(Y, T, How);
+   - [`parent`](#parent)(S, T);
+   - [`parent`](#parent)(S, Y);
+2. if all of:
+   - [`executes_if`](#executes_if)(X, T, How);
+   - [`parent`](#parent)(S, T);
+   - [`parent`](#parent)(S, Y);
+   - [`inside`](#inside)(Y, X).
+
 <a id="dead_arm"></a>`dead_arm`(X) either:
 
 1. if all of:
    - [`entry_test`](#entry_test)(T);
-   - the `test` of a node S is a node T;
-   - the `consequent` of S is a node X;
-   - [`at`](#at)(S, File, something);
+   - [`arm_under`](#arm_under)(X, T, `truthy`);
+   - [`at`](#at)(X, File, something);
    - unless [`read_as_script`](#read_as_script)();
    - unless File [runs as the script](#runs_as_script);
 2. if all of:
    - [`imported_test`](#imported_test)(T);
-   - the `test` of a node S is a node T;
-   - the `alternate` of S is a node X;
-   - [`at`](#at)(S, File, something);
+   - [`arm_under`](#arm_under)(X, T, `falsy`);
+   - [`at`](#at)(X, File, something);
    - unless [`read_as_script`](#read_as_script)();
    - unless File [runs as the script](#runs_as_script);
 3. if all of:
@@ -3141,11 +3154,8 @@ In the code:
 
 <a id="obj_open_own"></a>`obj_open_own`(O) either:
 
-1. if a node S [hides a call by](js-controlflow.rofl.md#hidden_call_pos) `accessor_call` and S [is among the](#ast_child) `properties` of a node O;
-2. if all of:
-   - O is an [object literal](#noun-object_literal);
-   - a node P [is among the](#ast_child) `properties` of O;
-   - [the attribute](#ast_attr) `computed` of P is `true`.
+1. if [`obj_lit`](#obj_lit)(O) and [`spread_props`](#spread_props)(O, something, something);
+2. if [`obj_lit`](#obj_lit)(O), [`has`](#has)(O, P), and [`key_expr`](#key_expr)(P, something).
 
 <a id="obj_own_key"></a>`obj_own_key`(O, Key) if all of:
   - a node P [spells](js-structure.rofl.md#key_name) Key;
@@ -3162,10 +3172,11 @@ In the code:
 
 In the flow:
 
-<a id="member_unset"></a>`member_unset`(N, an [object literal](#noun-object_literal) O, Key) if all of:
+<a id="member_unset"></a>`member_unset`(N, O, Key) if all of:
   - [`member_at`](#member_at)(N, something, O, Key);
   - [`at`](#at)(N, F, something);
-  - O is in file a file F;
+  - [`obj_lit`](#obj_lit)(O);
+  - [`at`](#at)(O, F, something);
   - Key differs from "__proto__";
   - unless [`written_target`](#written_target)(N);
   - unless [`obj_open_own`](#obj_open_own)(O);
@@ -3444,6 +3455,16 @@ A node
 > and by a static block (the class); a private method binds it too. `this_over`
 > binds T first: a handful of nodes, then their ancestors.
 
+<a id="this_binder"></a>A node F binds this either:
+
+1. if [`binds`](#binds)(F, "this"), unless [`decl`](#decl)(F, `param`);
+2. if all of:
+   - [`class`](#class)(C);
+   - [`has`](#has)(C, F);
+   - [`value`](#value)(F, something);
+   - unless [`decl`](#decl)(F, `param`);
+3. if [`static_block`](#static_block)(something, F).
+
 <a id="this_over"></a>A node is over T if [`this`](#this)(T), [`inside`](#inside)(it, T), and it [binds this](#this_binder).
 
 <a id="this_nearer"></a>F is outdone for T if all of:
@@ -3473,10 +3494,6 @@ A node points to a node I if all of:
   - I [stands for an instance of](#inst_of) CD;
   - M [hosts](#this_host) it;
   - unless [`static`](#static)(M).
-
-Declared as facts:
-
-- <a id="this_binds_kind"></a>`this_binds_kind` — rows in Words
 
 > an instance of a subclass runs the parent's methods and constructor with
 > itself as `this`, so `this.m()` there reaches the subclass's override; a

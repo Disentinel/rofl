@@ -111,16 +111,11 @@ eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_fn[code](F, C),
 -- ALLOC: a fresh mutable identity. `new_expression` is here although its cell
 -- is open: the allocation half is complete; the constructor's effect is the
 -- ambient-surface question. `class_declaration` is added in section 6.
-edb(eff_alloc_kind).
-eff_alloc_kind(object_expression).
-eff_alloc_kind(array_expression).
-eff_alloc_kind(reg_exp_literal).
-eff_alloc_kind(function_expression).
-eff_alloc_kind(arrow_function_expression).
-eff_alloc_kind(class_expression).
-eff_alloc_kind(new_expression).
 
-eff_here[flow](N, alloc, none) :- eff_alloc_kind(K), ast_node[code](N, K, _).
+eff_here[flow](N, alloc, none) :- value_expr[code](N).
+eff_here[flow](N, alloc, none) :- class[value](N).
+eff_here[flow](N, alloc, none) :- construct[value](N).
+eff_here[flow](N, alloc, none) :- ast_node[code](N, reg_exp_literal, _).
 
 -- READ AND WRITE, AND THEIR HEAP. `local` iff the value layer traces the
 -- receiver to an allocation; otherwise `global`. A negation pair rather than
@@ -509,7 +504,6 @@ eff_here[flow](CD, L, H) :- class_define_eff[flow](CD, L, H).
 eff_here[flow](X, L, H)  :- construct[value](X),
                             may_be_node[flow](X, I), inst_of[flow](I, CD), class_construct_eff[flow](CD, L, H).
 
-eff_alloc_kind(class_declaration).
 
 -- A field initialiser runs at definition or construction, never both, never
 -- neither — an identity, true of any corpus.

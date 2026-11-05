@@ -45,6 +45,7 @@ Reads:
 - from js-host, in the flow: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the tree:
+  - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
@@ -55,8 +56,7 @@ Reads:
   - <a id="generator"></a>`generator`
   - <a id="param"></a>`param`
   - <a id="ref"></a>`ref`
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+  - <a id="spread_args"></a>`spread_args`
 
 ## Words
 
@@ -376,9 +376,10 @@ In the surface:
   - a node G [points to](js-concat.rofl.md#may_be_node) X;
   - [`callee`](#callee)(C, G);
   - [`call_like`](js-dataflow.rofl.md#call_like)(C);
-  - a node Y [is among the](#ast_child) `arguments` of a node C;
-  - Y [points to](js-concat.rofl.md#may_be_node) a node F;
-  - [`fn_value`](#fn_value)(F).
+  - [`nth`](#nth)(C, something, Y);
+  - a node Y [points to](js-concat.rofl.md#may_be_node) a node F;
+  - [`fn_value`](#fn_value)(F);
+  - unless [`spread_args`](#spread_args)(C, something, Y).
 
 In the flow:
 

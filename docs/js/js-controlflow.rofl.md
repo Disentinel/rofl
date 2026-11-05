@@ -100,11 +100,13 @@ Phrases this file defines in one step, each by the sentence it stands for:
 1. if all of:
    - [`executes_if`](#executes_if)(Y, G, How);
    - How differs from `unmatched`;
+   - How differs from `again`;
    - [`parent`](#parent)(P, G);
    - [`parent`](#parent)(P, Y);
 2. if all of:
    - [`executes_if`](#executes_if)(X, G, How);
    - How differs from `unmatched`;
+   - How differs from `again`;
    - [`parent`](#parent)(P, G);
    - [`parent`](#parent)(P, Y);
    - [`inside`](#inside)(Y, X);

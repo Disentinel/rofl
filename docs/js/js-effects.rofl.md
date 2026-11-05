@@ -36,7 +36,7 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
-- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
 - from outside these files, in the tree:
@@ -67,6 +67,7 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
+| <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -276,13 +277,12 @@ A node has the effect `div` at `none` if all of:
 > is open: the allocation half is complete; the constructor's effect is the
 > ambient-surface question. `class_declaration` is added in section 6.
 
-`eff_alloc_kind` includes `object_expression`, `array_expression`, `reg_exp_literal`, `function_expression`, `arrow_function_expression`, `class_expression`, `new_expression`.
+A node N has the effect E at a host X either:
 
-A node has the effect `alloc` at `none` if [`eff_alloc_kind`](#eff_alloc_kind)(K) and it [is of kind](js-model.rofl.md#ast_node) K.
-
-Declared as facts:
-
-- <a id="eff_alloc_kind"></a>`eff_alloc_kind` — rows in this file
+1. if [`value_expr`](js-structure.rofl.md#value_expr)(N), E is `alloc`, and X is `none`;
+2. if [`class`](#class)(N), E is `alloc`, and X is `none`;
+3. if [`construct`](#construct)(N), E is `alloc`, and X is `none`;
+4. if N is a [regex literal](#noun-regex_literal), E is `alloc`, and X is `none`.
 
 > READ AND WRITE, AND THEIR HEAP. `local` iff the value layer traces the
 > receiver to an allocation; otherwise `global`. A negation pair rather than
@@ -927,8 +927,6 @@ A node
   - it [points to](js-concat.rofl.md#may_be_node) a node I;
   - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
   - CD [constructs with effect](#class_construct_eff) L at H.
-
-`eff_alloc_kind` includes `class_declaration`.
 
 > A field initialiser runs at definition or construction, never both, never
 > neither — an identity, true of any corpus.

@@ -37,7 +37,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
@@ -79,6 +79,7 @@ Reads:
   - <a id="hoisted"></a>`hoisted`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
+  - <a id="literal"></a>`literal`
   - <a id="logical"></a>`logical`
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
@@ -100,7 +101,6 @@ Reads:
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
 - from the scanner:
-  - <a id="ast_attr"></a>The attribute of a node is a value (`ast_attr`)
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
 Kinds without a noun: tsmethod_signature, tsproperty_signature.
@@ -310,15 +310,22 @@ Declared as facts:
 > `value` is `{raw, cooked}`. So `not_yet` with a named cause, not either
 > neighbour.
 
-`static_key_kind` includes `string_literal`, `numeric_literal`.
+<a id="computed_key_static"></a>A call C has a static computed key either:
 
-A call
+1. if all of:
+   - C [calls through a computed member](#computed_member) N;
+   - [`member_expr`](#member_expr)(N, something, P);
+   - [`literal`](#literal)(P, V);
+   - `string` is type_of(V);
+   - unless [`template`](#template)(P);
+2. if all of:
+   - C [calls through a computed member](#computed_member) N;
+   - [`member_expr`](#member_expr)(N, something, P);
+   - [`literal`](#literal)(P, V);
+   - `int` is type_of(V);
+   - unless [`template`](#template)(P).
 
-- <a id="computed_key_static"></a>has a static computed key if all of:
-  - it [calls through a computed member](#computed_member) some member access;
-  - [the property](#callee_prop) of it [is of kind](js-model.rofl.md#ast_node) K;
-  - [`static_key_kind`](#static_key_kind)(K).
-- <a id="computed_key_template"></a>has a template computed key if all of:
+<a id="computed_key_template"></a>A call has a template computed key if all of:
   - it [calls through a computed member](#computed_member) N;
   - [`member_expr`](#member_expr)(N, something, P);
   - [`template`](#template)(P).
@@ -344,10 +351,6 @@ A call
    - [the receiver class](#obj_class) of C is a shape Cl;
    - [`member_shape`](#member_shape)(Cl, S);
    - unless C [calls through an optional member](#optional_member).
-
-Declared as facts:
-
-- <a id="static_key_kind"></a>`static_key_kind` — rows in this file
 
 > `shape` may negate `has_shape` because `has_shape` does not depend on `shape`.
 > A grammar form nobody anticipated lands in `s_unclassified` rather than
@@ -935,25 +938,24 @@ In the audit:
 > call some value answers is neither. The corpus is the program: an importer
 > outside it is not counted.
 
-`whole_kind` includes `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_expression`.
-
 In the flow:
 
 <a id="whole_expr"></a>`whole_expr`(E) either:
 
-1. if [`whole_kind`](#whole_kind)(K) and a node E [is of kind](js-model.rofl.md#ast_node) K;
-2. if E [is an instance](js-globals.rofl.md#es_instance) of some name from some release;
-3. if [`construct`](#construct)(E), [`callee`](#callee)(E, CE), and [`whole_expr`](#whole_expr)(CE);
-4. if [`passes`](#passes)(E, X) and [`whole_expr`](#whole_expr)(X);
-5. if all of:
-   - a node E [sees](js-dataflow.rofl.md#sees_binder) D;
+1. if [`value_expr`](js-structure.rofl.md#value_expr)(E);
+2. if [`class`](#class)(E), unless [`hoisted`](#hoisted)(E, something);
+3. if E [is an instance](js-globals.rofl.md#es_instance) of some name from some release;
+4. if [`construct`](#construct)(E), [`callee`](#callee)(E, CE), and [`whole_expr`](#whole_expr)(CE);
+5. if [`passes`](#passes)(E, X) and [`whole_expr`](#whole_expr)(X);
+6. if all of:
+   - E [sees](js-dataflow.rofl.md#sees_binder) D;
    - D [binds](js-dataflow.rofl.md#binder) some name to a node Init in some file;
    - [`whole_expr`](#whole_expr)(Init);
    - unless [`many_binders`](#many_binders)(E);
    - unless [`reassigned`](#reassigned)(D);
    - unless E [may hold by name alone](js-dataflow.rofl.md#assign_reaches_unscoped) what node some Src;
-6. if all of:
-   - a node E [sees the declaration](js-dataflow.rofl.md#sees_decl) F;
+7. if all of:
+   - E [sees the declaration](js-dataflow.rofl.md#sees_decl) F;
    - [`whole_decl`](#whole_decl)(F);
    - unless [`many_binders`](#many_binders)(E);
    - unless E [may hold by name alone](js-dataflow.rofl.md#assign_reaches_unscoped) what node some Src.
@@ -977,10 +979,6 @@ In the flow:
 
 <a id="reassigned"></a>`reassigned`(D) if some assignment [is written into](js-dataflow.rofl.md#assign_binder) D.
 
-Declared as facts:
-
-- <a id="whole_kind"></a>`whole_kind` — rows in this file
-
 > The objects whose members can be known, and the classes whose prototype they read.
 
 <a id="receivable"></a>`receivable`(O) either:
@@ -989,7 +987,14 @@ Declared as facts:
 2. if [`array`](#array)(O);
 3. if O [stands for an instance of](js-dataflow.rofl.md#inst_of) some class;
 4. if O [is an instance](js-globals.rofl.md#es_instance) of Name from some release and Name [has the prototype](#lib_global_prototype) some prototype;
-5. if [`ns_export`](js-dataflow.rofl.md#ns_export)(O, something).
+5. if all of:
+   - [`ts_namespace`](js-dataflow.rofl.md#ts_namespace)(O);
+   - [`namespace`](#namespace)(O, B);
+   - [`has`](#has)(B, something);
+6. if all of:
+   - [`ts_namespace`](js-dataflow.rofl.md#ts_namespace)(O);
+   - [`namespace`](#namespace)(O, B);
+   - [`has`](#has)(B, something) in the type.
 
 <a id="surveyed"></a>`surveyed`(O) either:
 
@@ -1213,8 +1218,8 @@ In the flow:
 
 <a id="member_call"></a>`member_call`(C, R, Key) if all of:
   - [`call`](#call)(C);
-  - [`callee`](#callee)(C, a [member expression](#noun-member_expression) N);
-  - [the attribute](#ast_attr) `computed` of N is `false`;
+  - [`callee`](#callee)(C, N);
+  - [`member`](#member)(N, something, something);
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - [`object_of`](js-structure.rofl.md#object_of)(N, R).
 
@@ -2137,7 +2142,7 @@ In the code:
 
 1. if [`logic_op`](js-dataflow.rofl.md#logic_op)(B, "&&" or "||" or "??", T, something);
 2. if [`unary`](#unary)(B, "!", T);
-3. if the `test` of B is T.
+3. if [`executes_if`](#executes_if)(something, T, `truthy` or `falsy` or `matches` or `again`) and [`parent`](#parent)(B, T).
 
 In the flow:
 

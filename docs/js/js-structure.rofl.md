@@ -19,7 +19,8 @@ default: code
 
 Reads:
 
-- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [pat_computed](js-dataflow.rofl.md#pat_computed), [pat_in](js-dataflow.rofl.md#pat_in), [symbol_ref](js-dataflow.rofl.md#symbol_ref)
+- from js-callgraph: [fn_node](js-callgraph.rofl.md#fn_node)
+- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [obj_lit](js-dataflow.rofl.md#obj_lit), [pat_computed](js-dataflow.rofl.md#pat_computed), [pat_in](js-dataflow.rofl.md#pat_in), [symbol_ref](js-dataflow.rofl.md#symbol_ref)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
@@ -28,12 +29,15 @@ Reads:
 - from outside these files, in the type:
   - <a id="binary"></a>`binary`
 - from outside these files, in the value:
+  - <a id="array"></a>`array`
   - <a id="assign"></a>`assign`
   - <a id="binds"></a>`binds`
   - <a id="callee"></a>`callee`
   - <a id="decl"></a>`decl`
   - <a id="executes_if"></a>`executes_if`
   - <a id="gives"></a>`gives`
+  - <a id="has"></a>`has`
+  - <a id="hoisted"></a>`hoisted`
   - <a id="import_meta"></a>`import_meta`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
@@ -57,6 +61,7 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-meta_property"></a>a meta property | a node of kind `meta_property` |
+| a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 
 `imports` lists:
 
@@ -196,6 +201,18 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
   - unless [`iterates`](#iterates)(P, P, something);
   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, P, something);
   - unless [`assign`](#assign)(P, P, something).
+
+> an expression that makes a value of its own, where it stands: an object, an array, a function that is not a
+> declaration and not a member (a declaration is hoisted, a member is had)
+
+<a id="value_expr"></a>`value_expr`(E) either:
+
+1. if [`obj_lit`](js-dataflow.rofl.md#obj_lit)(E);
+2. if [`array`](#array)(E);
+3. if all of:
+   - E is a [function](js-callgraph.rofl.md#fn_node);
+   - unless [`hoisted`](#hoisted)(E, something);
+   - unless [`has`](#has)(something, E).
 
 > a for-of: the S of iterates that is not the pattern it is
 

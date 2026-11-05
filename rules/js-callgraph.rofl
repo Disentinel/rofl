@@ -135,12 +135,11 @@ member_shape(o_other,          s_member_on_other).
 -- because the scanner carries scalar own properties only and a template's
 -- `value` is `{raw, cooked}`. So `not_yet` with a named cause, not either
 -- neighbour.
-edb(static_key_kind).
-static_key_kind(string_literal).
-static_key_kind(numeric_literal).
 
-computed_key_static[code](C) :- computed_member[code](C, _), callee_prop[code](C, P),
-                                ast_node[code](P, K, _), static_key_kind(K).
+computed_key_static[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), literal[value](P, V),
+                                not template[value](P), string is type_of(V).
+computed_key_static[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), literal[value](P, V),
+                                not template[value](P), int is type_of(V).
 
 computed_key_template[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), template[value](P).
 
@@ -483,14 +482,9 @@ performed_as_edge[audit](Fn, F) :- performed_call[code](A, F),
 -- `member_unknown[audit]` where no value seen has it and something is open. A
 -- call some value answers is neither. The corpus is the program: an importer
 -- outside it is not counted.
-edb(whole_kind).
-whole_kind(object_expression).
-whole_kind(array_expression).
-whole_kind(function_expression).
-whole_kind(arrow_function_expression).
-whole_kind(class_expression).
 
-whole_expr[flow](E) :- whole_kind(K), ast_node[code](E, K, _).
+whole_expr[flow](E) :- value_expr[code](E).
+whole_expr[flow](E) :- class[value](E), not hoisted[value](E, _).
 whole_expr[flow](E) :- es_instance[flow](E, _, _).
 whole_expr[flow](E) :- construct[value](E), callee[value](E, CE), whole_expr[flow](CE).
 whole_expr[flow](E) :- passes[value](E, X), whole_expr[flow](X).
