@@ -74,6 +74,12 @@ object_pat[code](P) :- rest_props[value](P, _).
 object_pat[code](P) :- pat_computed[code](P, T, _), pat_in[code](_, P, T).
 object_pat[code](P) :- declarator_id[code](_, P), not binds[value](P, _), not iterates[value](P, P, _), not pat_in[code](_, P, _).
 object_pat[code](P) :- param[value](_, _, P), not binds[value](P, _), not iterates[value](P, P, _), not pat_in[code](_, P, _).
+-- a place a pattern can stand in, with nothing in it: no name, no member, no entry, no iteration. It takes nothing and is no array.
+pattern_slot[code](S) :- pat_in[code](_, _, S).
+pattern_slot[code](S) :- assign[value](_, S, _).
+pattern_slot[code](S) :- decl[value](S, catch).
+object_pat[code](P) :- pattern_slot[code](P), not binds[value](P, _), not ref[value](P, _), not member[value](P, _, _), not member_expr[value](P, _, _),
+                       not iterates[value](P, P, _), not pat_in[code](_, P, _), not assign[value](P, P, _).
 -- a for-of: the S of iterates that is not the pattern it is
 for_of[code](S) :- iterates[value](S, L, _), S != L.
 

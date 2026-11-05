@@ -284,7 +284,9 @@ hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
                                   decl_value[flow](D, Init).
 hidden_call_src[code](S, A)    :- spread_iterated[code](S), parent[tree](S, A).
 hidden_call_src[code](S, A)    :- spread_of[code](_, A), parent[tree](S, A).
-hidden_call_src[code](X, R)    :- iterates[value](X, _, R).
+hidden_call_src[code](X, R)    :- iterates[value](X, _, R), X != R.
+hidden_call_src[code](P, N)    :- iterates[value](P, P, P), declarator_id[code](D, P), decl_value[flow](D, N).
+hidden_call_src[code](P, N)    :- iterates[value](P, P, P), may_be_node[flow](P, N).
 
 hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
 hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
