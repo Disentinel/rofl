@@ -1000,6 +1000,9 @@ unit_concludes("rules/js-effects.rofl", class_construct_eff).
 unit_concludes("rules/js-effects.rofl", eff_moment_both).
 unit_concludes("rules/js-effects.rofl", eff_moment_unplaced).
 unit_concludes("rules/js-effects.rofl", imports).
+unit_concludes("rules/js-effects.rofl", acts).
+unit_concludes("rules/js-effects.rofl", acts_in).
+unit_concludes("rules/js-effects.rofl", useless_expr).
 unit_concludes("rules/js-globals.rofl", es_global).
 unit_concludes("rules/js-globals.rofl", global_unattributed).
 unit_concludes("rules/js-globals.rofl", es_static).
@@ -1611,6 +1614,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", compound_op).
 unit_concludes("models/lang/js/babel-roles.rofl", logical_assign).
 unit_concludes("models/lang/js/babel-roles.rofl", b_assign_parts).
 unit_concludes("models/lang/js/babel-roles.rofl", gives).
+unit_concludes("models/lang/js/babel-roles.rofl", discards).
 unit_concludes("models/lang/js/babel-roles.rofl", var_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", target).
 unit_concludes("models/lang/js/babel-roles.rofl", decl_kind).

@@ -72,6 +72,7 @@ Reads:
   - <a id="constructs"></a>`constructs`
   - <a id="decl"></a>`decl`
   - <a id="decorated"></a>`decorated`
+  - <a id="discards"></a>`discards`
   - <a id="enumerates"></a>`enumerates`
   - <a id="executes_if"></a>`executes_if`
   - <a id="gives"></a>`gives`
@@ -1077,7 +1078,7 @@ In the flow:
 
 > A place that hands its value nowhere the model cannot follow: a member read
 > off it, a binding, a name it is assigned to, a test, a closed function's
-> argument. Any other place (returned, in an array, an argument of a call the
+> argument, or a value dropped (`discards`). Any other place (returned, in an array, an argument of a call the
 > model does not resolve to a closed function) lets it out of sight.
 
 `holds_in_place` lists:
@@ -1102,7 +1103,6 @@ In the flow:
 | `assignment_expression` | `left` |
 | `call_expression` | `callee` |
 | `new_expression` | `callee` |
-| `expression_statement` | `expression` |
 | `program` | `body` |
 | `block_statement` | `body` |
 | `class_body` | `body` |
@@ -1141,14 +1141,15 @@ Declared as facts:
    - a node X [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) PK;
    - [`holds_in_place`](#holds_in_place)(PK, F);
-2. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
-3. if all of:
+2. if [`placed`](#placed)(X) and [`discards`](#discards)(something, X);
+3. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
+4. if all of:
    - [`placed`](#placed)(X);
    - [`nth`](#nth)(C, something, X);
    - [`callee`](#callee)(C, CE);
    - [`whole_expr`](#whole_expr)(CE);
    - unless [`spread_args`](#spread_args)(C, something, X);
-4. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
+5. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
 
 > a member of an object literal holds the value as long as the literal is not open
 
@@ -1512,7 +1513,8 @@ In the surface:
    - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
    - G [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) PK;
-   - unless [`holds_in_place`](#holds_in_place)(PK, F).
+   - unless [`holds_in_place`](#holds_in_place)(PK, F);
+   - unless [`discards`](#discards)(something, G).
 
 In the flow:
 

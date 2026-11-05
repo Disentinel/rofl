@@ -542,6 +542,26 @@ eff_moment_unplaced[audit](P)   :- eff_field_value[code](_, P, _),
 imports(code, main).
 imports(code, flow).
 imports(flow, code).
+-- =========================================================================
+-- A DISCARDED EXPRESSION THAT DOES NOTHING. An expression whose value is
+-- dropped (`discards`) is there for what it does: it may call, write, throw,
+-- await or yield, itself or in an operand that is not inside a function it
+-- merely makes. One that may do none of these is an answer of its own, not an
+-- alarm: `x + 1;`, `a.b;`.
+acts[flow](N) :- call_like[code](N).
+acts[flow](N) :- awaits[value](N, _).
+acts[flow](N) :- yield_back[code](N).
+acts[flow](N) :- delegates[value](N, _).
+acts[flow](N) :- tagged[value](N, _, _).
+acts[flow](N) :- assign[value](N, _, _).
+acts[flow](N) :- unary[value](N, "delete", _).
+acts[flow](N) :- eff_here[flow](N, write, _).
+acts[flow](N) :- eff_here[flow](N, exn, _).
+acts_in[flow](E) :- discards[value](_, E), acts[flow](E).
+acts_in[flow](E) :- discards[value](_, E), inside[tree](E, N), acts[flow](N), nearest_v[flow](F, N), nearest_v[flow](F, E).
+acts_in[flow](E) :- discards[value](_, E), inside[tree](E, N), acts[flow](N), not nearest_v[flow](_, N), not nearest_v[flow](_, E).
+useless_expr[audit](E) :- discards[value](_, E), not acts_in[flow](E).
+
 imports(flow, main).
 imports(audit, code).
 imports(audit, flow).

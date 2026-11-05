@@ -31,8 +31,8 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
-- from js-dataflow, in the code: [bin_op](js-dataflow.rofl.md#bin_op), [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read), [un_op](js-dataflow.rofl.md#un_op)
-- from js-dataflow: [inst_of](js-dataflow.rofl.md#inst_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [try_unhandled](js-dataflow.rofl.md#try_unhandled)
+- from js-dataflow, in the code: [bin_op](js-dataflow.rofl.md#bin_op), [call_like](js-dataflow.rofl.md#call_like), [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read), [un_op](js-dataflow.rofl.md#un_op), [yield_back](js-dataflow.rofl.md#yield_back)
+- from js-dataflow: [delegates](js-dataflow.rofl.md#delegates), [inst_of](js-dataflow.rofl.md#inst_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [try_unhandled](js-dataflow.rofl.md#try_unhandled)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
@@ -41,14 +41,18 @@ Reads:
 - from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
+  - <a id="inside"></a>`inside`
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
 - from outside these files, in the type:
   - <a id="binary"></a>`binary`
   - <a id="extends"></a>`extends`
 - from outside these files, in the value:
+  - <a id="assign"></a>`assign`
+  - <a id="awaits"></a>`awaits`
   - <a id="class"></a>`class`
   - <a id="construct"></a>`construct`
+  - <a id="discards"></a>`discards`
   - <a id="enumerates"></a>`enumerates`
   - <a id="exits"></a>`exits`
   - <a id="key_expr"></a>`key_expr`
@@ -57,6 +61,7 @@ Reads:
   - <a id="repeats"></a>`repeats`
   - <a id="static"></a>`static`
   - <a id="static_block"></a>`static_block`
+  - <a id="tagged"></a>`tagged`
   - <a id="template"></a>`template`
   - <a id="tries"></a>`tries`
   - <a id="unary"></a>`unary`
@@ -974,6 +979,50 @@ A node
 | `code` | `main` |
 | `code` | `flow` |
 | `flow` | `code` |
+
+## A DISCARDED EXPRESSION THAT DOES NOTHING. An expression whose value is
+
+> dropped (`discards`) is there for what it does: it may call, write, throw,
+> await or yield, itself or in an operand that is not inside a function it
+> merely makes. One that may do none of these is an answer of its own, not an
+> alarm: `x + 1;`, `a.b;`.
+
+In the flow:
+
+<a id="acts"></a>`acts`(N) either:
+
+1. if [`call_like`](js-dataflow.rofl.md#call_like)(N);
+2. if [`awaits`](#awaits)(N, something);
+3. if [`yield_back`](js-dataflow.rofl.md#yield_back)(N);
+4. if [`delegates`](js-dataflow.rofl.md#delegates)(N, something) in the value;
+5. if [`tagged`](#tagged)(N, something, something);
+6. if [`assign`](#assign)(N, something, something);
+7. if [`unary`](#unary)(N, "delete", something);
+8. if N [has the effect](js-ambient.rofl.md#eff_here) `write` or `exn` at some host.
+
+<a id="acts_in"></a>`acts_in`(E) either:
+
+1. if [`discards`](#discards)(something, E) and [`acts`](#acts)(E);
+2. if all of:
+   - [`discards`](#discards)(something, E);
+   - [`inside`](#inside)(E, N);
+   - [`acts`](#acts)(N);
+   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node N;
+   - F [is nearest to](js-dataflow.rofl.md#nearest_v) E;
+3. if all of:
+   - [`discards`](#discards)(something, E);
+   - [`inside`](#inside)(E, N);
+   - [`acts`](#acts)(N);
+   - unless some function [is nearest to](js-dataflow.rofl.md#nearest_v) a node N or some function [is nearest to](js-dataflow.rofl.md#nearest_v) E.
+
+In the audit:
+
+<a id="useless_expr"></a>`useless_expr`(E) if [`discards`](#discards)(something, E), unless [`acts_in`](#acts_in)(E).
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
 | `flow` | `main` |
 | `audit` | `code` |
 | `audit` | `flow` |

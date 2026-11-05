@@ -86,3 +86,6 @@ shape_ok(keyed_field, cross_product, "join_is_keyed: the field's class is reache
 shape_ok(keyed_private_reached, cross_product, "join_is_keyed: the private name's class and the member are joined by the name and the file; an audit relation, 0 ms").
 shape_ok(declares_export, closure_wide_end, "one_row_per_key: the pattern arm asks which exported local lies inside the binding target, a destructuring pattern of a few names, 16 rows at the corpus, 0 ms").
 shape_ok(kind_proto, twin_bodies, "alias_of_a_derived: the prototype of a value read where it stands is told by the array mark, an object literal or a function expression, and by a literal's type; one-premise arms of different relations, 0 ms").
+shape_ok(acts_in, closure_wide_end, "one_row_per_key: seeded by a discarded expression (an expression statement, a for's init and update, a sequence's operands), the descent asks which acts lie inside it; 1700 rows at the corpus, 0 ms").
+shape_ok(acts_in, scoped_descent, "one_row_per_key: the nearest function of the act and of the discarded expression are the same one, asked of the discarded expressions only; 0 ms").
+shape_ok(useless_expr, project_then_negate, "one_row_per_key: the discarded expressions with no act inside, an audit of its own; 0 ms").
