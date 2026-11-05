@@ -84,3 +84,44 @@ ch_dir_steps(Rel, Bk, M, Sb, Sw) :- mem_pattern(Rel, Bk, M, _, W), ch_run_lg(Rel
 ch_dir_steps(Rel, Bk, M, W, W) :- mem_pattern(Rel, Bk, M, _, W), ch_size(Rel, Bk, M, 1).
 memory(chain_dir_probe_steps_best, T) :- T is sum(S ; Rel, Bk, M : ch_dir_steps(Rel, Bk, M, S, _)).
 memory(chain_dir_probe_steps_worst, T) :- T is sum(S ; Rel, Bk, M : ch_dir_steps(Rel, Bk, M, _, S)).
+
+-- THE CHAINS CHOSEN. The pairing of `high`, made one: a pattern taken by several is given to the one whose most
+-- distinct column has the most keys (the lowest mask of equals), so a chain of long patterns starts where a run is short; a chain starts at a pattern given to none, and climbs by what each was given. Its first column is the most
+-- distinct of its start's columns (the lowest of equals), the column the directory hashes; every pattern of the chain
+-- holds it, so a pattern of more columns halves the run of that column's value.
+ch_bid(Rel, Bk, B, D) :- ch_next(Rel, Bk, _, B), D is max(X : ch_next(Rel, Bk, A, B), ch_pbest(Rel, Bk, A, X)).
+ch_won(Rel, Bk, A, B) :- ch_bid(Rel, Bk, B, D), A is min(X : ch_next(Rel, Bk, X, B), ch_pbest(Rel, Bk, X, D)).
+ch_climbed(Rel, Bk, B) :- ch_won(Rel, Bk, _, B).
+ch_start(Rel, Bk, S, S) :- ch_pat(Rel, Bk, S, _), not ch_climbed(Rel, Bk, S).
+ch_start(Rel, Bk, B, S) :- ch_won(Rel, Bk, A, B), ch_start(Rel, Bk, A, S).
+ch_chain(Rel, Bk, S) :- ch_start(Rel, Bk, _, S).
+ch_sdist(Rel, Bk, S, D) :- ch_chain(Rel, Bk, S), ch_pdist(Rel, Bk, S, D).
+ch_first_d(Rel, Bk, S, D) :- ch_chain(Rel, Bk, S), D is max(X : ch_sdist(Rel, Bk, S, X)).
+ch_chain_bytes(Rel, Bk, S, T) :- ch_first_d(Rel, Bk, S, D), ch_rows(Rel, Bk, N), T is N * 4 + D * 11.
+memory(chosen_chains, C) :- C is count(Rel, Bk, S : ch_chain(Rel, Bk, S)).
+memory(chosen_chain_indexes, T) :- T is sum(B ; Rel, Bk, S : ch_chain_bytes(Rel, Bk, S, B)).
+ch_crun(Rel, Bk, M, R) :- ch_start(Rel, Bk, M, S), ch_size(Rel, Bk, M, Z), Z > 1, ch_first_d(Rel, Bk, S, D), ch_rows(Rel, Bk, N), R is N / D.
+ch_crun_lg(Rel, Bk, M, L) :- ch_crun(Rel, Bk, M, R), L is min(I : ch_pow(I, B), B > R).
+ch_csteps(Rel, Bk, M, S) :- mem_pattern(Rel, Bk, M, _, W), ch_crun_lg(Rel, Bk, M, L), S is W * (1 + L).
+ch_csteps(Rel, Bk, M, W) :- mem_pattern(Rel, Bk, M, _, W), ch_size(Rel, Bk, M, 1).
+memory(chosen_chain_probe_steps, T) :- T is sum(S ; Rel, Bk, M : ch_csteps(Rel, Bk, M, S)).
+
+-- THE CHAINS CUT WHERE A RUN IS LONG. A chain's patterns all enter by its first column, so a pattern holding a column
+-- far more distinct than its chain's start halves a run it need not: field then node halves the node's children of a
+-- field (thousands) where node first reads two. The pairing A -> B is cut where B's most distinct column has 16 times
+-- the keys of A's: B starts a chain of its own, entered by that column.
+ch_cut(Rel, Bk, A, B) :- ch_won(Rel, Bk, A, B), ch_pbest(Rel, Bk, A, Da), ch_pbest(Rel, Bk, B, Db), Db > Da * 16.
+ch_kept(Rel, Bk, A, B) :- ch_won(Rel, Bk, A, B), not ch_cut(Rel, Bk, A, B).
+ch_kclimbed(Rel, Bk, B) :- ch_kept(Rel, Bk, _, B).
+ch_kstart(Rel, Bk, S, S) :- ch_pat(Rel, Bk, S, _), not ch_kclimbed(Rel, Bk, S).
+ch_kstart(Rel, Bk, B, S) :- ch_kept(Rel, Bk, A, B), ch_kstart(Rel, Bk, A, S).
+ch_kchain(Rel, Bk, S) :- ch_kstart(Rel, Bk, _, S).
+ch_kfirst_d(Rel, Bk, S, D) :- ch_kchain(Rel, Bk, S), D is max(X : ch_kchain(Rel, Bk, S), ch_pdist(Rel, Bk, S, X)).
+ch_kchain_bytes(Rel, Bk, S, T) :- ch_kfirst_d(Rel, Bk, S, D), ch_rows(Rel, Bk, N), T is N * 4 + D * 11.
+memory(cut_chains, C) :- C is count(Rel, Bk, S : ch_kchain(Rel, Bk, S)).
+memory(cut_chain_indexes, T) :- T is sum(B ; Rel, Bk, S : ch_kchain_bytes(Rel, Bk, S, B)).
+ch_krun(Rel, Bk, M, R) :- ch_kstart(Rel, Bk, M, S), ch_size(Rel, Bk, M, Z), Z > 1, ch_kfirst_d(Rel, Bk, S, D), ch_rows(Rel, Bk, N), R is N / D.
+ch_krun_lg(Rel, Bk, M, L) :- ch_krun(Rel, Bk, M, R), L is min(I : ch_pow(I, B), B > R).
+ch_ksteps(Rel, Bk, M, S) :- mem_pattern(Rel, Bk, M, _, W), ch_krun_lg(Rel, Bk, M, L), S is W * (1 + L).
+ch_ksteps(Rel, Bk, M, W) :- mem_pattern(Rel, Bk, M, _, W), ch_size(Rel, Bk, M, 1).
+memory(cut_chain_probe_steps, T) :- T is sum(S ; Rel, Bk, M : ch_ksteps(Rel, Bk, M, S)).
