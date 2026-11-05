@@ -611,7 +611,7 @@ sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
 
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
 member_call[flow](C, R, Key) :- call[value](C), callee[value](C, N),
-                                ast_node[code](N, member_expression, _), ast_attr[code](N, computed, false),
+                                member[value](N, _, _),
                                 selects[flow](N, Key), object_of[code](N, R).
 call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), may_be_node[flow](R, O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), member_value[flow](O, Key, _), not class_like[flow](O).

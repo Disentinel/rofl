@@ -12954,3 +12954,9 @@ recorded(f_an_object_literal_is_open_by_its_spread_and_its_computed_key, "2026-1
 addressed_by(f_an_object_literal_is_open_by_its_spread_and_its_computed_key, "rules/js-dataflow.rofl").
 finding_note(f_an_object_literal_is_open_by_its_spread_and_its_computed_key,
   "w_js_model_on_roles, last stage, group 8: obj_open_own is an object literal (obj_lit) with a spread (spread_props) or a computed key (key_expr of a member), member_unset takes its object from obj_lit. NO ANSWER MOVED. HELPER ROWS DROPPED: obj_open_own held 5 rows (7 in cf) for OBJECT PATTERNS with a rest (`const { ...r } = o`), through the accessor_call position of the rest; the only reader asks it of an object literal.").
+
+finding(f_an_optional_member_call_is_a_member_call, insight).
+recorded(f_an_optional_member_call_is_a_member_call, "2026-11-05").
+addressed_by(f_an_optional_member_call_is_a_member_call, "rules/js-callgraph.rofl").
+finding_note(f_an_optional_member_call_is_a_member_call, 
+  "VADIM, 2026-11-05: `o?.m()` is a member call like `o.m()` (the decision of optional calls and `module?.exports`). member_call reads the member role (a static key) instead of the kind member_expression and the computed flag. MOVED: corpus member_call +38, call_open +38, member_unknown +37, member_undeclared +37, call_on +4, call_finds +1; cf (`mco?.f()`, `mco.g?.h()`, `mco?.g.h()`, `mco.f?.()`): member_call +11, call_open +10, member_unknown and member_undeclared +8, call_on and call_finds +3.").
