@@ -2210,7 +2210,7 @@ In the code:
 
 1. if [`logic_op`](js-dataflow.rofl.md#logic_op)(B, "&&" or "||" or "??", T, something);
 2. if [`unary`](#unary)(B, "!", T);
-3. if [`executes_if`](#executes_if)(something, T, `truthy` or `falsy` or `matches` or `again`) and [`parent`](#parent)(B, T).
+3. if [`executes_if`](#executes_if)(something, T, `truthy` or `falsy` or `matches`) and [`parent`](#parent)(B, T).
 
 In the flow:
 

@@ -793,6 +793,7 @@ unit_concludes("rules/js-callgraph.rofl", param_tested).
 unit_concludes("rules/js-callgraph.rofl", sx_param_deref).
 unit_concludes("rules/js-callgraph.rofl", unpassed_deref_at).
 unit_concludes("rules/js-controlflow.rofl", guard_arm).
+unit_concludes("rules/js-controlflow.rofl", arm_first).
 unit_concludes("rules/js-controlflow.rofl", guarded).
 unit_concludes("rules/js-controlflow.rofl", field_init).
 unit_concludes("rules/js-controlflow.rofl", edb).

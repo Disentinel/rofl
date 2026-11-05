@@ -28,7 +28,7 @@ Reads:
 - from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
+- from js-controlflow: [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-controlflow, in the main: [stmt_seq_field](js-controlflow.rofl.md#stmt_seq_field)
 - from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
@@ -1089,11 +1089,13 @@ In the code:
    - [`executes_if`](#executes_if)(Y, T, How);
    - [`parent`](#parent)(S, T);
    - [`parent`](#parent)(S, Y);
+   - unless [`arm_first`](js-controlflow.rofl.md#arm_first)(S, Y, T);
 2. if all of:
    - [`executes_if`](#executes_if)(X, T, How);
    - [`parent`](#parent)(S, T);
    - [`parent`](#parent)(S, Y);
-   - [`inside`](#inside)(Y, X).
+   - [`inside`](#inside)(Y, X);
+   - unless [`arm_first`](js-controlflow.rofl.md#arm_first)(S, Y, T).
 
 <a id="dead_arm"></a>`dead_arm`(X) either:
 

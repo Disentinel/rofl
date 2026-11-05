@@ -175,7 +175,7 @@ cond_field[ast_babel](if_statement, alternate, test, falsy).
 cond_field[ast_babel](conditional_expression, consequent, test, truthy).
 cond_field[ast_babel](conditional_expression, alternate, test, falsy).
 cond_field[ast_babel](while_statement, body, test, truthy).
-cond_field[ast_babel](do_while_statement, body, test, again).
+cond_field[ast_babel](do_while_statement, body, test, truthy).
 cond_field[ast_babel](for_statement, body, test, truthy).
 cond_field[ast_babel](for_statement, update, test, truthy).
 cond_field[ast_babel](for_of_statement, body, right, next).

@@ -541,8 +541,9 @@ main_is_module[code](T, Op) :- bin_op[code](T, Op, L, R), at[tree](T, File, _),
                                require_main[code](R), free_global[code](L, "module", File).
 require_main[code](M) :- prop_name[code](M, O, "main"), free_global[code](O, "require", _).
 
-arm_under[code](A, T, How) :- executes_if[value](A, T, How), parent[tree](S, T), parent[tree](S, A).
-arm_under[code](A, T, How) :- executes_if[value](X, T, How), parent[tree](S, T), parent[tree](S, A), inside[tree](A, X).
+arm_under[code](A, T, How) :- executes_if[value](A, T, How), parent[tree](S, T), parent[tree](S, A), not arm_first[code](S, A, T).
+arm_under[code](A, T, How) :- executes_if[value](X, T, How), parent[tree](S, T), parent[tree](S, A), inside[tree](A, X),
+                              not arm_first[code](S, A, T).
 dead_arm[code](A) :- entry_test[code](T), arm_under[code](A, T, truthy),
                      at[tree](A, File, _), not read_as_script(), not runs_as_script(File).
 dead_arm[code](A) :- imported_test[code](T), arm_under[code](A, T, falsy),

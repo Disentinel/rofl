@@ -29,6 +29,7 @@ Reads:
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
+  - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
@@ -100,22 +101,34 @@ Phrases this file defines in one step, each by the sentence it stands for:
 1. if all of:
    - [`executes_if`](#executes_if)(Y, G, How);
    - How differs from `unmatched`;
-   - How differs from `again`;
    - [`parent`](#parent)(P, G);
    - [`parent`](#parent)(P, Y);
+   - unless [`arm_first`](#arm_first)(P, Y, G);
 2. if all of:
    - [`executes_if`](#executes_if)(X, G, How);
    - How differs from `unmatched`;
-   - How differs from `again`;
    - [`parent`](#parent)(P, G);
    - [`parent`](#parent)(P, Y);
    - [`inside`](#inside)(Y, X);
-3. if [`executes_if`](#executes_if)(P, T, `matches`), [`parent`](#parent)(P, Y), and Y differs from T;
-4. if [`executes_if`](#executes_if)(P, something, `unmatched`) and [`parent`](#parent)(P, Y);
-5. if all of:
-   - [`conditional_write`](js-structure.rofl.md#conditional_write)(P);
-   - [`assign`](#assign)(P, something, Y);
-   - unless [`logical`](#logical)(P, something, something, something).
+   - unless [`arm_first`](#arm_first)(P, Y, G).
+
+> an arm that is a step of its owner before the guard (the body of a do-while) runs once before the guard completes
+
+<a id="arm_first"></a>`arm_first`(P, X, G) if all of:
+  - [`executes_if`](#executes_if)(something, G, something);
+  - [`parent`](#parent)(P, G);
+  - [`nth`](#nth)(P, J, G);
+  - [`nth`](#nth)(P, I, X);
+  - I < J.
+
+A node S is conditional on a node C either:
+
+1. if [`executes_if`](#executes_if)(C, T, `matches`), [`parent`](#parent)(C, S), and S differs from T;
+2. if [`executes_if`](#executes_if)(C, something, `unmatched`) and [`parent`](#parent)(C, S);
+3. if all of:
+   - [`conditional_write`](js-structure.rofl.md#conditional_write)(C);
+   - [`assign`](#assign)(C, something, S);
+   - unless [`logical`](#logical)(C, something, something, something).
 
 > `a?.b.c(x)` runs its tail when the head is defined: every link of the chain and all it holds but the head (and
 > the links below, which have their own row) are conditional.
