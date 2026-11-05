@@ -3916,6 +3916,12 @@ check_world("plan_given").
 check_file("plan_given", "examples/checks/plan-world.rofl").
 check_file("plan_given", "examples/checks/plan-given.rofl").
 check_opt("plan_given", one_engine, rust).
+-- A JOIN THROUGH A TABLE OF CONSTANTS (w_join_through_constants): a probe bound at two columns, one a key from a small
+-- table of constants, on a relation whose indexes are spent, is served by the index of the column with the most keys;
+-- the profile's read at that premise says which. Rust only, as every reader of the profile.
+check_world("join_through_constants").
+check_file("join_through_constants", "examples/checks/join-through-constants.rofl").
+check_opt("join_through_constants", one_engine, rust).
 -- THE PLAN COMPUTED (models/engine/plan.rofl): the same world under the two packs, in a world of its own since the pack
 -- declares a lattice: the DP with min over the subsets of each rule's premises concludes plan[fixpointplan] and its
 -- forecast cost; rust/rofl/tests/plan_dp.rs runs plan-world.rofl under the plans found and the widths equal the forecast.
