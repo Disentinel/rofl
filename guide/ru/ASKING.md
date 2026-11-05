@@ -86,26 +86,26 @@ $ rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23
 risky[main]("checkout")  <= re667b5bf @tick 0
   fn_name[code](n017f49dbfbe9e0a8_en4a19n90pa5f,"checkout")  <= rb448fa01 @tick 0
     fn_node[code](n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r631ec945 @tick 0
-      body[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_einjg9erj696f)  <= r0099afc3 @tick 0
-        fn_node[main](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r58931d6c @tick 0
+      body[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_einjg9erj696f)  <= rc5fd0cdb @tick 0
+        ox_fn_node[main](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r6e736128 @tick 0
           oxc_k[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function)  <= r30763fea @tick 0
             node[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function,"checkout.js") [axiom]
-          not wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f) [finite failure]
-            whynot wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f):
-              rule r40c18f64: wrapped_fn[main](?Fn)@now :- method_member[main](?_$0,?Fn)@now
-                failed premise: method_member[main](?_$0#0,n017f49dbfbe9e0a8_en4a19n90pa5f)
-              rule r387ec243: wrapped_fn[main](?Fn)@now :- type_only_method[main](?_$0,?Fn)@now
-                failed premise: type_only_method[main](?_$0#1,n017f49dbfbe9e0a8_en4a19n90pa5f)
-        oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f)  <= r6214f26f @tick 0
+          not ox_wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f) [finite failure]
+            whynot ox_wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f):
+              rule r8433a96c: ox_wrapped_fn[main](?Fn)@now :- ox_method_member[main](?_$0,?Fn)@now
+                failed premise: ox_method_member[main](?_$0#0,n017f49dbfbe9e0a8_en4a19n90pa5f)
+              rule r295bcd7b: ox_wrapped_fn[main](?Fn)@now :- ox_type_only_method[main](?_$0,?Fn)@now
+                failed premise: ox_type_only_method[main](?_$0#1,n017f49dbfbe9e0a8_en4a19n90pa5f)
+        oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f)  <= rce71f102 @tick 0
           child[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f) [axiom]
-          seen[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,n017f49dbfbe9e0a8_einjg9erj696f)  <= r3125f7bd @tick 0
+          unwrapped[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,n017f49dbfbe9e0a8_einjg9erj696f)  <= r89ad7666 @tick 0
             node[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,function_body,"checkout.js") [axiom]
-            not wrapper_kind[main](function_body) [finite failure]
-              whynot wrapper_kind[main](function_body):
-                no rule concludes 'wrapper_kind' and no matching base fact exists
+            not ox_wrapper_kind[main](function_body) [finite failure]
+              whynot ox_wrapper_kind[main](function_body):
+                no rule concludes 'ox_wrapper_kind' and no matching base fact exists
     target[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= rc88cb927 @tick 0
       oxc_k[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function) [above]
-      oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,id,0,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= r6214f26f @tick 0
+      oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,id,0,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= rce71f102 @tick 0
 ```
 <!-- END run -->
 
