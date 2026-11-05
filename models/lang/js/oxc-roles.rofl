@@ -403,6 +403,7 @@ rest_elems[value](P, I, T)   :- oxc_k[ast_oxc](P, array_assignment_target), oxc_
 
 mark[value](O, object) :- oxc_k[ast_oxc](O, object_expression).
 mark[value](A, array)  :- oxc_k[ast_oxc](A, array_expression).
+mark[value](R, regexp) :- oxc_k[ast_oxc](R, reg_exp_literal).
 mark[value](C, class)  :- oxc_k[ast_oxc](C, class).
 has[value](O, M) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, _, M), not oxc_k[ast_oxc](M, spread_element).
 has[value](C, M) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0, B), oxc_c[ast_oxc](B, body, _, M),

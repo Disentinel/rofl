@@ -127,6 +127,8 @@ alias async(F) is mark(F, async).
 alias generator(F) is mark(F, generator).
 alias object(O) is mark(O, object).
 alias array(A) is mark(A, array).
+-- R creates a regular expression, a new one each evaluation
+alias regexp(R) is mark(R, regexp).
 alias class(C) is mark(C, class).
 alias static(M) is mark(M, static).
 alias private(N) is mark(N, private).
@@ -136,7 +138,7 @@ alias ambient(X) is mark(X, ambient).
 edb(mark_name).
 mark_name(call). mark_name(construct). mark_name(optional). mark_name(this). mark_name(super).
 mark_name(new_target). mark_name(import_meta). mark_name(async). mark_name(generator). mark_name(object).
-mark_name(array). mark_name(class). mark_name(static). mark_name(private). mark_name(scope). mark_name(template).
+mark_name(array). mark_name(regexp). mark_name(class). mark_name(static). mark_name(private). mark_name(scope). mark_name(template).
 mark_name(ambient).
 
 -- the role tree is a forest and `inside` its closure

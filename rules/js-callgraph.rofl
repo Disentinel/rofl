@@ -74,7 +74,7 @@ expr_class[code](N, e_object)      :- object[value](N).
 expr_class[code](N, e_class)       :- class[value](N), not hoisted[value](N, _).
 expr_class[code](N, e_template)    :- template[value](N).
 expr_class[code](N, e_literal)     :- literal[value](N, _), not template[value](N).
-expr_class[code](N, e_literal)     :- ast_node[code](N, reg_exp_literal, _).
+expr_class[code](N, e_literal)     :- regexp[value](N).
 expr_class[code](N, e_meta)        :- import_meta[value](N).
 expr_class[code](N, e_await)       :- awaits[value](N, _).
 expr_class[code](N, e_assignment)  :- assign[value](N, _, _), gives[value](N, _), not unary[value](N, _, _).

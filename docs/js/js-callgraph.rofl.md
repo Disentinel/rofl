@@ -91,6 +91,7 @@ Reads:
   - <a id="passes"></a>`passes`
   - <a id="private"></a>`private`
   - <a id="ref"></a>`ref`
+  - <a id="regexp"></a>`regexp`
   - <a id="rest_elems"></a>`rest_elems`
   - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
@@ -113,7 +114,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | a function | a node [`fn_node`](#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -230,7 +230,7 @@ Declared as facts:
 13. if [`class`](#class)(N) and E is `e_class`, unless [`hoisted`](#hoisted)(N, something);
 14. if [`template`](#template)(N) and E is `e_template`;
 15. if [`literal`](#literal)(N, something) and E is `e_literal`, unless [`template`](#template)(N);
-16. if N is a [regex literal](#noun-regex_literal) and E is `e_literal`;
+16. if [`regexp`](#regexp)(N) and E is `e_literal`;
 17. if [`import_meta`](#import_meta)(N) and E is `e_meta`;
 18. if [`awaits`](#awaits)(N, something) and E is `e_await`;
 19. if all of:

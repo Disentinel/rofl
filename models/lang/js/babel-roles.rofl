@@ -33,7 +33,7 @@ kind_mark[ast_babel](import_expression, call).
 kind_mark[ast_babel](new_expression, construct).
 kind_mark[ast_babel](this_expression, this).            kind_mark[ast_babel](super, super).
 kind_mark[ast_babel](object_expression, object).        kind_mark[ast_babel](tsenum_declaration, object).
-kind_mark[ast_babel](array_expression, array).
+kind_mark[ast_babel](array_expression, array).    kind_mark[ast_babel](reg_exp_literal, regexp).
 kind_mark[ast_babel](class_declaration, class).         kind_mark[ast_babel](class_expression, class).
 kind_mark[ast_babel](template_literal, template).
 kind_mark[ast_babel](class_private_property, private).  kind_mark[ast_babel](class_private_method, private).
@@ -919,7 +919,6 @@ no_role[ast_babel](comment_line, "not code").
 no_role[ast_babel](comment_block, "not code").
 no_role[ast_babel](directive, "no role yet: the model does not read directives").
 no_role[ast_babel](directive_literal, "no role yet: the model does not read directives").
-no_role[ast_babel](reg_exp_literal, "no role yet: a regular expression is an object with a pattern").
 no_role[ast_babel](tsmapped_type, "no role yet").
 no_role[ast_babel](tstype_predicate, "no role yet: a type predicate is an operation (narrows)").
 no_role[ast_babel](tsimport_type, "no role yet").

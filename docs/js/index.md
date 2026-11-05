@@ -6,11 +6,11 @@
 | [js-phrases](js-phrases.rofl.md) | 1057 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 94 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 523 | 194 | 92 | 94 | 31 | 742 | 75 | 6 | 62 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 523 | 194 | 92 | 94 | 30 | 742 | 75 | 6 | 63 | 0 |
 | [js-concat](js-concat.rofl.md) | 206 | 71 | 2 | 58 | 2 | 338 | 23 | 7 | 11 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 213 | 87 | 72 | 6 | 11 | 234 | 21 | 4 | 30 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 916 | 390 | 133 | 240 | 50 | 1675 | 142 | 11 | 65 | 0 |
-| [js-effects](js-effects.rofl.md) | 194 | 125 | 114 | 7 | 7 | 312 | 20 | 2 | 23 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 915 | 390 | 133 | 240 | 49 | 1675 | 143 | 11 | 66 | 0 |
+| [js-effects](js-effects.rofl.md) | 194 | 125 | 114 | 7 | 6 | 312 | 20 | 2 | 24 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 43 | 5 | 1 | 19 | 0 |
 | [js-express](js-express.rofl.md) | 45 | 27 | 0 | 23 | 2 | 70 | 4 | 2 | 3 | 0 |

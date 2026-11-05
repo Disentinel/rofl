@@ -88,6 +88,7 @@ Reads:
   - <a id="pattern_prop"></a>`pattern_prop`
   - <a id="private"></a>`private`
   - <a id="ref"></a>`ref`
+  - <a id="regexp"></a>`regexp`
   - <a id="rest_params"></a>`rest_params`
   - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
@@ -124,10 +125,9 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
-| <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
-| <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression`, `reg_exp_literal` (`node_value_kind`) |
+| <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression` (`node_value_kind`) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](#member_node_v) holds of |
 | a scope | a node [`scope_node`](#scope_node) holds of |
@@ -214,7 +214,7 @@ A node E points to a node N either:
 
 1. if [`value_expr`](js-structure.rofl.md#value_expr)(E) and N is E;
 2. if [`class`](#class)(E) and N is E;
-3. if E is a [regex literal](#noun-regex_literal) and N is E.
+3. if [`regexp`](#regexp)(E) and N is E.
 
 Declared as facts:
 
@@ -691,12 +691,14 @@ A node
 | `object_expression` | `object` |
 | `function_expression` | `function` |
 | `arrow_function_expression` | `function` |
-| `reg_exp_literal` | `regexp` |
 | `big_int_literal` | `bigint` |
 
 `kind_proto` has one P for each E.
 
-<a id="kind_proto"></a>`kind_proto`(E, P) if a kind K [has prototype](#kind_prototype) P and a node E [is of kind](js-model.rofl.md#ast_node) K.
+<a id="kind_proto"></a>`kind_proto`(E, P) either:
+
+1. if a kind K [has prototype](#kind_prototype) P and a node E [is of kind](js-model.rofl.md#ast_node) K;
+2. if [`regexp`](#regexp)(E) and P is `regexp`.
 
 <a id="prototype_of"></a>The prototype of a node E is P either:
 

@@ -1494,6 +1494,7 @@ unit_concludes("models/lang/js/roles.rofl", async).
 unit_concludes("models/lang/js/roles.rofl", generator).
 unit_concludes("models/lang/js/roles.rofl", object).
 unit_concludes("models/lang/js/roles.rofl", array).
+unit_concludes("models/lang/js/roles.rofl", regexp).
 unit_concludes("models/lang/js/roles.rofl", class).
 unit_concludes("models/lang/js/roles.rofl", static).
 unit_concludes("models/lang/js/roles.rofl", private).

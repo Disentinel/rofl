@@ -53,6 +53,7 @@ Reads:
   - <a id="exits"></a>`exits`
   - <a id="key_expr"></a>`key_expr`
   - <a id="ref"></a>`ref`
+  - <a id="regexp"></a>`regexp`
   - <a id="repeats"></a>`repeats`
   - <a id="static"></a>`static`
   - <a id="static_block"></a>`static_block`
@@ -67,7 +68,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -282,7 +282,7 @@ A node N has the effect E at a host X either:
 1. if [`value_expr`](js-structure.rofl.md#value_expr)(N), E is `alloc`, and X is `none`;
 2. if [`class`](#class)(N), E is `alloc`, and X is `none`;
 3. if [`construct`](#construct)(N), E is `alloc`, and X is `none`;
-4. if N is a [regex literal](#noun-regex_literal), E is `alloc`, and X is `none`.
+4. if [`regexp`](#regexp)(N), E is `alloc`, and X is `none`.
 
 > READ AND WRITE, AND THEIR HEAP. `local` iff the value layer traces the
 > receiver to an allocation; otherwise `global`. A negation pair rather than
