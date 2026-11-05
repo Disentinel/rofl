@@ -129,8 +129,7 @@ closer_s[code](R, D)   :- encloses_s[code](R, D), nearest_s[code](S, D), R != S.
 -- Shadowing is a question about a NAME; this is the projection that carries one.
 binds_name[code](D, Name, File) :- binder[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- bare_binder[code](D, Name, File).
-binds_name[code](D, Name, File) :- destr_prop[code](D, _, _, Name, File).
-binds_name[code](D, Name, File) :- destructures_at[code](D, Name, _, File).
+binds_name[code](D, Name, File) :- pat_local[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 
 -- 3a. THE LOOKUP. A scope declares a name by a binder whose region it is, or
@@ -389,50 +388,45 @@ prototype_of[flow](E, promise) :- binder[code](D, _, Init, _), prototype_of[flow
 -- POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
 -- arm for array patterns: nothing exercises it and an arm nothing exercises
 -- cannot go red.
--- A property binds the name its `value` is, or the `left` of an assignment pattern
--- when it has a default (`{ PORT = 1343 }`, `{ port: p = 82 }`); `prop_default` is
--- that default, which applies when the member is absent and so only adds a value.
-prop_local[code](Prop, Local)   :- ast_child[code](Prop, value, 0, L), ast_name[code](L, Local).
-prop_local[code](Prop, Local)   :- ast_child[code](Prop, value, 0, A),
-                                   ast_node[code](A, assignment_pattern, _),
-                                   ast_child[code](A, left, 0, L), ast_name[code](L, Local).
-prop_default[code](Prop, Init)  :- ast_child[code](Prop, value, 0, A),
-                                   ast_node[code](A, assignment_pattern, _),
-                                   ast_child[code](A, right, 0, Init).
+-- Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
+-- declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
+pat_in[code](R, R, T) :- declarator_id[code](_, R), pat_step[code](R, T).
+pat_in[code](R, R, T) :- param[value](_, _, R), pat_step[code](R, T).
+pat_in[code](R, P, T) :- pat_in[code](R, _, P), pat_step[code](P, T).
+pat_step[code](P, T) :- pattern_prop[value](P, _, T).
+pat_step[code](P, T) :- pattern_elem[value](P, _, T).
+pat_step[code](P, T) :- pat_computed[code](P, T, _).
+pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, T), T != E.
+pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, W), assign[value](W, T, _),
+                               parent[tree](W, T).
+
+-- A destructuring is value resolution: `const { readFile: rf } = fs` is `rf = fs.readFile`. The target T is a member of
+-- the pattern, read like `fs.readFile` (object_of, prop_name, computed_key in rules/js-structure.rofl); the pattern
+-- holds the value it takes apart, a declarator's init or the argument of its call.
+may_be_node[flow](R, N) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
+                           may_be_node[flow](Init, N).
+may_be_node[flow](R, O) :- param[value](F, I, R), pat_in[code](R, _, _), sx_arg_node[surface](F, I, O).
+may_be_node[flow](T, N) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
+                           array_elem[flow](A, I, V), may_be_node[flow](V, N).
+-- the default of a target is a conditional source of it
+may_be_node[flow](T, N) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be_node[flow](Init, N).
+may_be_lit[flow](T, L)  :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be_lit[flow](Init, L).
+
+-- a name a declarator's pattern binds, and the target that binds it
+pat_local[code](D, Local, T, File) :- declarator_id[code](D, R), pat_in[code](R, _, T), binds[value](T, Local),
+                                      at[tree](D, File, _).
+scoped_binder[code](D, File) :- pat_local[code](D, _, _, File).
+may_be_node[flow](E, N) :- pat_local[code](D, Local, T, File), may_be_node[flow](T, N),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
+may_be_lit[flow](E, L)  :- pat_local[code](D, Local, T, File), may_be_lit[flow](T, L),
+                           ident_in[code](E, Local, File), sees_binder[code](E, D).
 
 -- What a declarator's pattern takes apart: its initialiser, or at the head of
 -- a for-of each element the loop walks (section 14).
 decl_value[flow](D, X) :- ast_child[code](D, init, 0, X).
 
-destr_prop[code](D, Prop, K, Local, File) :- declarator_id[code](D, P), at[tree](D, File, _),
-                                             ast_node[code](P, object_pattern, _),
-                                             ast_child[code](P, properties, _, Prop),
-                                             ast_child[code](Prop, key, 0, K),
-                                             prop_local[code](Prop, Local).
-destructures[code](D, Local, Key, File) :- destr_prop[code](D, Prop, _, Local, File), key_name[code](Prop, Key).
-scoped_binder[code](D, File) :- destr_prop[code](D, _, _, _, File).
-
-may_be_node[flow](E, N) :- destructures[code](D, Local, Key, File),
-                           decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
-                           member_value[flow](Obj, Key, V), may_be_node[flow](V, N),
-                           ident_in[code](E, Local, File), sees_binder[code](E, D).
-may_be_lit[flow](E, L)  :- destructures[code](D, Local, Key, File),
-                           decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
-                           member_value[flow](Obj, Key, V), may_be_lit[flow](V, L),
-                           ident_in[code](E, Local, File), sees_binder[code](E, D).
-
-destr_default[code](D, Local, Init, File) :- destr_prop[code](D, Prop, _, Local, File),
-                                             prop_default[code](Prop, Init).
-may_be_lit[flow](E, L)  :- destr_default[code](D, Local, Init, File), may_be_lit[flow](Init, L),
-                           ident_in[code](E, Local, File), sees_binder[code](E, D).
-may_be_node[flow](E, N) :- destr_default[code](D, Local, Init, File), may_be_node[flow](Init, N),
-                           ident_in[code](E, Local, File), sees_binder[code](E, D).
-
-destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, P), at[tree](D, File, _),
-                                                ast_node[code](P, array_pattern, _),
-                                                ast_child[code](P, elements, Index, L),
-                                                ast_name[code](L, Local).
-scoped_binder[code](D, File) :- destructures_at[code](D, _, _, File).
+destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, R), pattern_elem[value](R, Index, T),
+                                                binds[value](T, Local), at[tree](D, File, _).
 
 array_elem[flow](A, I, E) :- array[value](A), nth[tree](A, I, E), parent[tree](A, E).
 array_elem[flow](A, I, S) :- spread_elems[value](A, I, X), parent[tree](S, X).
@@ -457,40 +451,21 @@ may_be_node[flow](U, N) :- param_default[flow](F, Name, Init), may_be_node[flow]
 may_be_lit[flow](U, L)  :- param_default[flow](F, Name, Init), may_be_lit[flow](Init, L),
                            param_use[flow](F, Name, U).
 
--- A parameter that is an object pattern, `({ port, host }) =>`, alone or with a
--- default for the whole object (`({ port } = {}) =>`), binds each name to a member
--- of the argument at its index. `param_of` does not carry these names (the argument
--- is not the name's value), so `param_bound` is the union every scope rule reads.
-param_pattern[code](F, I, P) :- fn_node[code](F), param[value](F, I, P), parent[tree](F, P),
-                                ast_node[code](P, object_pattern, _).
-param_pattern[code](F, I, P) :- fn_node[code](F), param_wrap[code](F, I, _, P),
-                                ast_node[code](P, object_pattern, _).
-param_prop[code](F, I, Key, Local, Prop) :- param_pattern[code](F, I, P),
-                                            ast_child[code](P, properties, _, Prop),
-                                            key_name[code](Prop, Key),
-                                            prop_local[code](Prop, Local).
+-- A parameter that is a pattern, `({ port, host }) =>`, alone or with a default for the whole object, binds each name
+-- to a member of the argument at its index; `param_bound` is the union every scope rule reads.
 param_bound[flow](F, Name) :- param_of[flow](F, _, Name).
-param_bound[flow](F, Name) :- param_pattern[code](F, _, P), ast_child[code](P, properties, _, Prop),
-                              prop_local[code](Prop, Name).
+param_local[code](F, Local, T) :- param[value](F, _, R), pat_in[code](R, _, T), binds[value](T, Local).
+param_bound[flow](F, Name) :- param_local[code](F, Name, _).
 
-may_be_lit[flow](U, L)  :- param_prop[code](F, I, Key, Local, _), sx_arg_node[surface](F, I, O),
-                           member_value[flow](O, Key, V), may_be_lit[flow](V, L),
-                           param_use[flow](F, Local, U).
-may_be_node[flow](U, N) :- param_prop[code](F, I, Key, Local, _), sx_arg_node[surface](F, I, O),
-                           member_value[flow](O, Key, V), may_be_node[flow](V, N),
-                           param_use[flow](F, Local, U).
-may_be_lit[flow](U, L)  :- param_prop[code](F, _, _, Local, Prop), prop_default[code](Prop, Init),
-                           may_be_lit[flow](Init, L), param_use[flow](F, Local, U).
-may_be_node[flow](U, N) :- param_prop[code](F, _, _, Local, Prop), prop_default[code](Prop, Init),
-                           may_be_node[flow](Init, N), param_use[flow](F, Local, U).
+may_be_lit[flow](U, L)  :- param_local[code](F, Local, T), may_be_lit[flow](T, L), param_use[flow](F, Local, U).
+may_be_node[flow](U, N) :- param_local[code](F, Local, T), may_be_node[flow](T, N), param_use[flow](F, Local, U).
 
 -- An object rest binds a FRESH object with no node of its own, so the
 -- `rest_element` node stands for it. It holds every key EXCEPT the ones the
 -- pattern took — the exclusion is the whole content. It is `member_plain` (no
 -- `static` anywhere), as a module namespace is.
-pattern_takes[code](P, Key) :- ast_node[code](P, object_pattern, _),
-                               ast_child[code](P, properties, _, Prop),
-                               key_name[code](Prop, Key).
+pattern_takes[code](P, Key) :- pattern_prop[value](P, Key, _).
+pattern_takes[code](P, Key) :- key_expr[value](Q, E), parent[tree](P, Q), symbol_ref[code](E, Key).
 
 rest_in_pattern[code](D, R, File) :- declarator_id[code](D, P), at[tree](D, File, _),
                                      rest_props[value](P, T), parent[tree](R, T), parent[tree](P, R).
@@ -1369,6 +1344,7 @@ member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
 member_node_v[flow](N)      :- object_of[code](N, _).
 selects[flow](N, Key)       :- prop_name[code](N, _, Key).
 computed_key[code](N, P)    :- member_expr[value](N, _, P).
+computed_key[code](T, E)    :- pat_in[code](_, P, T), pat_computed[code](P, T, E).
 selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
@@ -1813,17 +1789,8 @@ may_be_node[flow](M, M)       :- ext_member[flow](M, _).
 -- reads them back like any plain object's.
 member_plain[flow](X, Key, V) :- external_value[flow](X, _), member_value[flow](X, Key, V).
 
--- A pattern off an external value: each name is a member of it, the rest is
+-- A pattern off an external value: each name is a member of it (ext_member), the rest is
 -- another object of the same origin.
-external_destructured[code](D, Prop, Local, File) :-
-    destr_prop[code](D, Prop, _, Local, File), key_name[code](Prop, _).
-external_value[flow](Prop, Spec) :- external_destructured[code](D, Prop, _, _),
-                                    decl_value[flow](D, Init), may_be_node[flow](Init, X),
-                                    external_value[flow](X, Spec).
-may_be_node[flow](E, Prop)       :- external_destructured[code](D, Prop, Local, File),
-                                    decl_value[flow](D, Init), may_be_node[flow](Init, X),
-                                    external_value[flow](X, _),
-                                    ident_in[code](E, Local, File), sees_binder[code](E, D).
 external_value[flow](R, Spec)    :- rest_in_pattern[code](D, R, _),
                                     decl_value[flow](D, Init), may_be_node[flow](Init, X),
                                     external_value[flow](X, Spec).

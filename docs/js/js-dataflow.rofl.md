@@ -74,6 +74,7 @@ Reads:
   - <a id="hoisted"></a>`hoisted`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
+  - <a id="key_expr"></a>`key_expr`
   - <a id="literal"></a>`literal`
   - <a id="logical"></a>`logical`
   - <a id="mark"></a>`mark`
@@ -83,6 +84,8 @@ Reads:
   - <a id="namespace"></a>`namespace`
   - <a id="param"></a>`param`
   - <a id="passes"></a>`passes`
+  - <a id="pattern_elem"></a>`pattern_elem`
+  - <a id="pattern_prop"></a>`pattern_prop`
   - <a id="private"></a>`private`
   - <a id="rest_params"></a>`rest_params`
   - <a id="rest_props"></a>`rest_props`
@@ -112,8 +115,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-array_pattern"></a>an array pattern | a node of kind `array_pattern` |
-| <a id="noun-assignment_pattern"></a>an assignment pattern | a node of kind `assignment_pattern` |
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
@@ -122,7 +123,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-named_export"></a>a named export | a node of kind `export_named_declaration` |
 | <a id="noun-object_literal"></a>an object literal | a node of kind `object_expression` |
-| <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | <a id="noun-program"></a>a program | a node of kind `program` |
 | <a id="noun-property"></a>a property | a node of kind `object_property` |
 | <a id="noun-sequence"></a>a sequence | a node of kind `sequence_expression` |
@@ -326,9 +326,8 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 
 1. if D [binds](#binder) Name to some node in File;
 2. if D [declares without a value](#bare_binder) Name in File;
-3. if [`destr_prop`](#destr_prop)(D, something, something, Name, File);
-4. if D [destructures](#destructures_at) Name at some index in File;
-5. if D [binds](#rest_binds) Name through the rest some node in File.
+3. if [`pat_local`](#pat_local)(D, Name, something, File);
+4. if D [binds](#rest_binds) Name through the rest some node in File.
 
 > 3a. THE LOOKUP. A scope declares a name by a binder whose region it is, or
 > by a parameter of the function it is. An identifier's name is found in the
@@ -753,88 +752,113 @@ Declared as facts:
 > POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
 > arm for array patterns: nothing exercises it and an arm nothing exercises
 > cannot go red.
-> A property binds the name its `value` is, or the `left` of an assignment pattern
-> when it has a default (`{ PORT = 1343 }`, `{ port: p = 82 }`); `prop_default` is
-> that default, which applies when the member is absent and so only adds a value.
+> Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
+> declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
 
 In the code:
 
-<a id="prop_local"></a>`prop_local`(Prop, Local) either:
+<a id="pat_in"></a>`pat_in`(R, N, T) either:
 
-1. if the `value` of a node Prop [is named](js-structure.rofl.md#ast_name) Local;
-2. if the `value` of a node Prop is an [assignment pattern](#noun-assignment_pattern) X and the `left` of X [is named](js-structure.rofl.md#ast_name) Local.
+1. if [`declarator_id`](#declarator_id)(something, R), [`pat_step`](#pat_step)(R, T), and N is R;
+2. if [`param`](#param)(something, something, R), [`pat_step`](#pat_step)(R, T), and N is R;
+3. if [`pat_in`](#pat_in)(R, something, N) and [`pat_step`](#pat_step)(N, T).
 
-<a id="prop_default"></a>`prop_default`(Prop, Init) if the `value` of a node Prop is an [assignment pattern](#noun-assignment_pattern) X and the `right` of X is a node Init.
+<a id="pat_step"></a>`pat_step`(P, T) either:
+
+1. if [`pattern_prop`](#pattern_prop)(P, something, T);
+2. if [`pattern_elem`](#pattern_elem)(P, something, T);
+3. if [`pat_computed`](#pat_computed)(P, T, something).
+
+<a id="pat_computed"></a>`pat_computed`(P, T, E) either:
+
+1. if all of:
+   - [`key_expr`](#key_expr)(Q, E);
+   - [`parent`](#parent)(P, Q);
+   - [`parent`](#parent)(Q, T);
+   - T differs from E;
+2. if all of:
+   - [`key_expr`](#key_expr)(Q, E);
+   - [`parent`](#parent)(P, Q);
+   - [`parent`](#parent)(Q, W);
+   - [`assign`](#assign)(W, T, something);
+   - [`parent`](#parent)(W, T).
+
+> A destructuring is value resolution: `const { readFile: rf } = fs` is `rf = fs.readFile`. The target T is a member of
+> the pattern, read like `fs.readFile` (object_of, prop_name, computed_key in rules/js-structure.rofl); the pattern
+> holds the value it takes apart, a declarator's init or the argument of its call.
+
+In the flow:
+
+A node R points to a node N either:
+
+1. if all of:
+   - [`declarator_id`](#declarator_id)(D, R);
+   - [`pat_in`](#pat_in)(R, something, something);
+   - D [takes its value from](#decl_value) a node Init;
+   - Init [points to](js-concat.rofl.md#may_be_node) N;
+2. if all of:
+   - [`param`](#param)(F, I, R);
+   - [`pat_in`](#pat_in)(R, something, something);
+   - [`sx_arg_node`](js-surface.rofl.md#sx_arg_node)(F, I, N);
+3. if all of:
+   - [`pattern_elem`](#pattern_elem)(P, I, R);
+   - [`pat_in`](#pat_in)(something, P, R);
+   - a node P [points to](js-concat.rofl.md#may_be_node) a node X;
+   - [`array_elem`](#array_elem)(X, I, V);
+   - a node V [points to](js-concat.rofl.md#may_be_node) N.
+
+> the default of a target is a conditional source of it
+
+A node
+
+- points to a node N if all of:
+  - [`pat_in`](#pat_in)(something, something, it);
+  - [`assign`](#assign)(something, it, Init);
+  - a node Init [points to](js-concat.rofl.md#may_be_node) N.
+- may be the literal L if all of:
+  - [`pat_in`](#pat_in)(something, something, it);
+  - [`assign`](#assign)(something, it, Init);
+  - a node Init [may be the literal](js-concat.rofl.md#may_be_lit) L.
+
+> a name a declarator's pattern binds, and the target that binds it
+
+In the code:
+
+<a id="pat_local"></a>`pat_local`(D, Local, T, File) if all of:
+  - [`declarator_id`](#declarator_id)(D, R);
+  - [`pat_in`](#pat_in)(R, something, T);
+  - [`binds`](#binds)(T, Local);
+  - [`at`](#at)(D, File, something).
+
+D is scoped in File if [`pat_local`](#pat_local)(D, something, something, File).
+
+In the flow:
+
+A node
+
+- points to a node N if all of:
+  - [`pat_local`](#pat_local)(D, Local, T, File);
+  - a node T [points to](js-concat.rofl.md#may_be_node) N;
+  - it [reads](#ident_in) Local in File;
+  - it [sees](#sees_binder) D.
+- may be the literal L if all of:
+  - [`pat_local`](#pat_local)(D, Local, T, File);
+  - a node T [may be the literal](js-concat.rofl.md#may_be_lit) L;
+  - it [reads](#ident_in) Local in File;
+  - it [sees](#sees_binder) D.
 
 > What a declarator's pattern takes apart: its initialiser, or at the head of
 > a for-of each element the loop walks (section 14).
-
-In the flow:
 
 <a id="decl_value"></a>A node takes its value from a node X if the `init` of it is X.
 
 In the code:
 
-<a id="destr_prop"></a>`destr_prop`(D, Prop, K, Local, File) if all of:
-  - [`declarator_id`](#declarator_id)(D, an [object pattern](#noun-object_pattern) P);
-  - [`at`](#at)(D, File, something);
-  - a node Prop [is among the](#ast_child) `properties` of P;
-  - the `key` of Prop is a node K;
-  - [`prop_local`](#prop_local)(Prop, Local).
-
-<a id="destructures"></a>D destructures Local from Key in File if [`destr_prop`](#destr_prop)(D, Prop, something, Local, File) and a node Prop [spells](js-structure.rofl.md#key_name) Key.
-
-D is scoped in File if [`destr_prop`](#destr_prop)(D, something, something, something, File).
-
-In the flow:
-
-A node
-
-- points to a node N if all of:
-  - D [destructures](#destructures) Local from Key in File;
-  - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](js-concat.rofl.md#may_be_node) a node Obj;
-  - [the member](#member_value) Key of Obj holds a node V;
-  - V [points to](js-concat.rofl.md#may_be_node) N;
-  - it [reads](#ident_in) Local in File;
-  - it [sees](#sees_binder) D.
-- may be the literal L if all of:
-  - D [destructures](#destructures) Local from Key in File;
-  - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](js-concat.rofl.md#may_be_node) a node Obj;
-  - [the member](#member_value) Key of Obj holds a node V;
-  - V [may be the literal](js-concat.rofl.md#may_be_lit) L;
-  - it [reads](#ident_in) Local in File;
-  - it [sees](#sees_binder) D.
-
-In the code:
-
-<a id="destr_default"></a>`destr_default`(D, Local, Init, File) if [`destr_prop`](#destr_prop)(D, Prop, something, Local, File) and [`prop_default`](#prop_default)(Prop, Init).
-
-In the flow:
-
-A node
-
-- may be the literal L if all of:
-  - [`destr_default`](#destr_default)(D, Local, Init, File);
-  - a node Init [may be the literal](js-concat.rofl.md#may_be_lit) L;
-  - it [reads](#ident_in) Local in File;
-  - it [sees](#sees_binder) D.
-- points to a node N if all of:
-  - [`destr_default`](#destr_default)(D, Local, Init, File);
-  - a node Init [points to](js-concat.rofl.md#may_be_node) N;
-  - it [reads](#ident_in) Local in File;
-  - it [sees](#sees_binder) D.
-
-In the code:
-
 <a id="destructures_at"></a>D destructures Local at Index in File if all of:
-  - [`declarator_id`](#declarator_id)(D, an [array pattern](#noun-array_pattern) P);
-  - [`at`](#at)(D, File, something);
-  - a node L is the Index-th of the `elements` of P;
-  - L [is named](js-structure.rofl.md#ast_name) Local.
-
-D is scoped in File if D [destructures](#destructures_at) some name at some index in File.
+  - [`declarator_id`](#declarator_id)(D, R);
+  - [`pattern_elem`](#pattern_elem)(R, Index, T);
+  - [`binds`](#binds)(T, Local);
+  - [`at`](#at)(D, File, something).
 
 In the flow:
 
@@ -886,64 +910,31 @@ A node
   - Init [may be the literal](js-concat.rofl.md#may_be_lit) L;
   - F [uses](#param_use) Name at it.
 
-> A parameter that is an object pattern, `({ port, host }) =>`, alone or with a
-> default for the whole object (`({ port } = {}) =>`), binds each name to a member
-> of the argument at its index. `param_of` does not carry these names (the argument
-> is not the name's value), so `param_bound` is the union every scope rule reads.
+> A parameter that is a pattern, `({ port, host }) =>`, alone or with a default for the whole object, binds each name
+> to a member of the argument at its index; `param_bound` is the union every scope rule reads.
+
+<a id="param_bound"></a>`param_bound`(F, Name) if F [takes](#param_of) Name at some index.
 
 In the code:
 
-<a id="param_pattern"></a>`param_pattern`(F, I, P) either:
-
-1. if all of:
-   - F is a [function](js-callgraph.rofl.md#fn_node);
-   - [`param`](#param)(F, I, P);
-   - [`parent`](#parent)(F, P);
-   - P is an [object pattern](#noun-object_pattern);
-2. if all of:
-   - F is a [function](js-callgraph.rofl.md#fn_node);
-   - [`param_wrap`](#param_wrap)(F, I, something, P);
-   - P is an [object pattern](#noun-object_pattern).
-
-<a id="param_prop"></a>`param_prop`(F, I, Key, Local, Prop) if all of:
-  - [`param_pattern`](#param_pattern)(F, I, P);
-  - a node Prop [is among the](#ast_child) `properties` of a node P;
-  - Prop [spells](js-structure.rofl.md#key_name) Key;
-  - [`prop_local`](#prop_local)(Prop, Local).
+<a id="param_local"></a>`param_local`(F, Local, T) if all of:
+  - [`param`](#param)(F, something, R);
+  - [`pat_in`](#pat_in)(R, something, T);
+  - [`binds`](#binds)(T, Local).
 
 In the flow:
 
-<a id="param_bound"></a>`param_bound`(F, Name) either:
-
-1. if F [takes](#param_of) Name at some index;
-2. if all of:
-   - [`param_pattern`](#param_pattern)(F, something, P);
-   - a node Prop [is among the](#ast_child) `properties` of a node P;
-   - [`prop_local`](#prop_local)(Prop, Name).
+`param_bound`(F, Name) if [`param_local`](#param_local)(F, Name, something).
 
 A node
 
 - may be the literal L if all of:
-  - [`param_prop`](#param_prop)(F, I, Key, Local, something);
-  - [`sx_arg_node`](js-surface.rofl.md#sx_arg_node)(F, I, O);
-  - [the member](#member_value) Key of a node O holds a node V;
-  - V [may be the literal](js-concat.rofl.md#may_be_lit) L;
+  - [`param_local`](#param_local)(F, Local, T);
+  - a node T [may be the literal](js-concat.rofl.md#may_be_lit) L;
   - F [uses](#param_use) Local at it.
 - points to a node N if all of:
-  - [`param_prop`](#param_prop)(F, I, Key, Local, something);
-  - [`sx_arg_node`](js-surface.rofl.md#sx_arg_node)(F, I, O);
-  - [the member](#member_value) Key of a node O holds a node V;
-  - V [points to](js-concat.rofl.md#may_be_node) N;
-  - F [uses](#param_use) Local at it.
-- may be the literal L if all of:
-  - [`param_prop`](#param_prop)(F, something, something, Local, Prop);
-  - [`prop_default`](#prop_default)(Prop, Init);
-  - a node Init [may be the literal](js-concat.rofl.md#may_be_lit) L;
-  - F [uses](#param_use) Local at it.
-- points to a node N if all of:
-  - [`param_prop`](#param_prop)(F, something, something, Local, Prop);
-  - [`prop_default`](#prop_default)(Prop, Init);
-  - a node Init [points to](js-concat.rofl.md#may_be_node) N;
+  - [`param_local`](#param_local)(F, Local, T);
+  - a node T [points to](js-concat.rofl.md#may_be_node) N;
   - F [uses](#param_use) Local at it.
 
 > An object rest binds a FRESH object with no node of its own, so the
@@ -953,7 +944,13 @@ A node
 
 In the code:
 
-<a id="pattern_takes"></a>An [object pattern](#noun-object_pattern) takes the key Key if a node Prop [is among the](#ast_child) `properties` of it and Prop [spells](js-structure.rofl.md#key_name) Key.
+<a id="pattern_takes"></a>P takes the key Key either:
+
+1. if [`pattern_prop`](#pattern_prop)(P, Key, T) and [`pat_in`](#pat_in)(something, P, T);
+2. if all of:
+   - [`pat_computed`](#pat_computed)(P, T, E);
+   - [`pat_in`](#pat_in)(something, P, T);
+   - a node E [is the well known symbol](#symbol_ref) Key.
 
 <a id="rest_in_pattern"></a>D holds a rest R in File if all of:
   - [`declarator_id`](#declarator_id)(D, P);
@@ -3126,6 +3123,8 @@ In the code:
 
 <a id="computed_key"></a>`computed_key`(N, P) if [`member_expr`](#member_expr)(N, something, P).
 
+`computed_key`(T, E) if [`pat_in`](#pat_in)(something, P, T) and [`pat_computed`](#pat_computed)(P, T, E).
+
 In the flow:
 
 N selects Key either:
@@ -3918,30 +3917,10 @@ A node
 
 The plain member Key of a node X is a node V if X [comes out of](#external_value) some module and [the member](#member_value) Key of X holds V.
 
-> A pattern off an external value: each name is a member of it, the rest is
+> A pattern off an external value: each name is a member of it (ext_member), the rest is
 > another object of the same origin.
 
-In the code:
-
-<a id="external_destructured"></a>D destructures from outside at a node Prop Local in File if [`destr_prop`](#destr_prop)(D, Prop, something, Local, File) and Prop [spells](js-structure.rofl.md#key_name) some key.
-
-In the flow:
-
-A node
-
-- comes out of a module Spec if all of:
-  - D [destructures from outside](#external_destructured) at it some name in some file;
-  - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](js-concat.rofl.md#may_be_node) a node X;
-  - X [comes out of](#external_value) Spec.
-- points to a node Prop if all of:
-  - D [destructures from outside](#external_destructured) at Prop Local in File;
-  - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](js-concat.rofl.md#may_be_node) a node X;
-  - X [comes out of](#external_value) some module;
-  - it [reads](#ident_in) Local in File;
-  - it [sees](#sees_binder) D.
-- comes out of a module Spec if all of:
+A node comes out of a module Spec if all of:
   - D [holds a rest](#rest_in_pattern) it in some file;
   - D [takes its value from](#decl_value) a node Init;
   - Init [points to](js-concat.rofl.md#may_be_node) a node X;

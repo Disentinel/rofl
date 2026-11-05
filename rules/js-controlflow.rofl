@@ -200,7 +200,7 @@ accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj,
                              selects[flow](N, Key), written_member[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), getter[value](M, M), not only_written[code](N).
 accessor_read[code](N, M) :- private_binds[code](N, M), setter[value](M, M), written_member[code](N).
-written_member[code](N)   :- assign[value](_, N, _), object_of[code](N, _).
+written_member[code](N)   :- assign[value](_, N, _), object_of[code](N, _), not pat_in[code](_, _, N).
 only_written[code](N)     :- plain_assign[flow](A), assign[value](A, N, _).
 
 throwing_call[code](N) :- accessor_read[code](N, M), always_throws[code](M).

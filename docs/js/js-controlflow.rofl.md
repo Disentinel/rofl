@@ -19,7 +19,7 @@ Reads:
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern), [spread_of](js-dataflow.rofl.md#spread_of)
+- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern), [spread_of](js-dataflow.rofl.md#spread_of)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
@@ -417,7 +417,10 @@ In the code:
 
 A member
 
-- <a id="written_member"></a>is written if [`assign`](#assign)(something, it, something) and [`object_of`](js-structure.rofl.md#object_of)(it, something).
+- <a id="written_member"></a>is written if all of:
+  - [`assign`](#assign)(something, it, something);
+  - [`object_of`](js-structure.rofl.md#object_of)(it, something);
+  - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, it).
 - <a id="only_written"></a>is only written if X [is plain](js-dataflow.rofl.md#plain_assign) and [`assign`](#assign)(X, it, something).
 
 A call

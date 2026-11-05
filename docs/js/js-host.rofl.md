@@ -44,13 +44,13 @@ Reads:
   - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow, in the code: [binder](js-dataflow.rofl.md#binder), [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [sees_binder](js-dataflow.rofl.md#sees_binder)
+- from js-dataflow, in the code: [binder](js-dataflow.rofl.md#binder), [declarator_id](js-dataflow.rofl.md#declarator_id), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder)
 - from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
-- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the main:
   - <a id="host_member_module"></a>`host_member_module`
 - from outside these files, in the tree:
@@ -123,13 +123,7 @@ In the flow:
 2. if all of:
    - M [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
    - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of S is Spec;
-   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(M, Key);
-3. if all of:
-   - a node Y [is the builtin module](#builtin_ns) of Spec;
-   - a node Init [points to](js-concat.rofl.md#may_be_node) Y;
-   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-   - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, something, something, something);
-   - M [spells](js-structure.rofl.md#key_name) Key.
+   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(M, Key).
 
 > An import naming something the generated surface lacks: a typo, a member
 > newer than @types/node, or one the declarations do not carry. The module
@@ -443,6 +437,12 @@ In the flow:
 
 `env_object`(E) if a node E [points to](js-concat.rofl.md#may_be_node) a node M and [`sx_env`](#sx_env)(M).
 
+`env_object`(R) if all of:
+  - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, R);
+  - [`pat_in`](js-dataflow.rofl.md#pat_in)(R, something, something);
+  - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
+  - [`sx_env`](#sx_env)(Init).
+
 `env_object`(E) if all of:
   - a node E [sees](js-dataflow.rofl.md#sees_binder) D;
   - D [binds](js-dataflow.rofl.md#binder) some name to a node Init in some file;
@@ -458,12 +458,6 @@ In the flow:
   - unless [`env_written`](#env_written)(M).
 
 <a id="env_write"></a>`env_write`(M, Name) if [`env_written`](#env_written)(M) and M [selects](js-dataflow.rofl.md#selects) Name.
-
-`env_read`(P, Name) if all of:
-  - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
-  - [`sx_env`](#sx_env)(Init);
-  - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, P, something, something, something);
-  - a node P [spells](js-structure.rofl.md#key_name) Name.
 
 <a id="env_read_unnamed"></a>`env_read_unnamed`(M) if all of:
   - [`env_key`](#env_key)(M);

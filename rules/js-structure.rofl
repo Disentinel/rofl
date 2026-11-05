@@ -14,8 +14,11 @@ imports(surface, value). imports(surface, tree). imports(audit, value). imports(
 -- the object a member reads, whether its key is a name or computed
 object_of[code](M, O) :- member[value](M, O, _).
 object_of[code](M, O) :- member_expr[value](M, O, _).
+object_of[code](T, P) :- pattern_prop[value](P, _, T), pat_in[code](_, P, T).
+object_of[code](T, P) :- pat_computed[code](P, T, _), pat_in[code](_, P, T).
 -- the static name a member reads; a private name is no property
 prop_name[code](M, O, K) :- member[value](M, O, K), not private[value](M).
+prop_name[code](T, P, K) :- pattern_prop[value](P, K, T), pat_in[code](_, P, T).
 -- the I-th argument of a call, or what it spreads
 argument_at[code](C, I, A) :- callee[value](C, _), nth[tree](C, I, A).
 -- the I-th argument as the tree has it: a spread is its own node, not what it spreads

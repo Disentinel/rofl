@@ -168,7 +168,6 @@ sig(external_site, "is_an_external_site(node I, of module Spec)").
 sig(external_module, "is_an_external_module(module Spec)").
 sig(external_value, "comes_out_of(node N, module Spec)").
 sig(external_import, "imports_from_outside(node Sp, name Local, from module Spec, in file File)").
-sig(external_destructured, "destructures_from_outside(declarator D, at node Prop, name Local, in file File)").
 sig(callback_param, "is_called_back_with(node P, in function F, from module Spec)").
 sig(ext_call, "is_an_external_call_of(invocation C, module Spec)").
 sig(ext_member, "is_an_external_member_of(member access M, module Spec)").

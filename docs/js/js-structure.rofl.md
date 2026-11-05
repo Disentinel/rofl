@@ -19,7 +19,7 @@ default: code
 
 Reads:
 
-- from js-dataflow: [symbol_ref](js-dataflow.rofl.md#symbol_ref)
+- from js-dataflow: [pat_computed](js-dataflow.rofl.md#pat_computed), [pat_in](js-dataflow.rofl.md#pat_in), [symbol_ref](js-dataflow.rofl.md#symbol_ref)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
@@ -71,11 +71,16 @@ What this file calls a node, and what each word stands for:
 <a id="object_of"></a>`object_of`(M, O) either:
 
 1. if [`member`](#member)(M, O, something);
-2. if [`member_expr`](#member_expr)(M, O, something).
+2. if [`member_expr`](#member_expr)(M, O, something);
+3. if [`pattern_prop`](#pattern_prop)(O, something, M) and [`pat_in`](js-dataflow.rofl.md#pat_in)(something, O, M);
+4. if [`pat_computed`](js-dataflow.rofl.md#pat_computed)(O, M, something) and [`pat_in`](js-dataflow.rofl.md#pat_in)(something, O, M).
 
 > the static name a member reads; a private name is no property
 
-<a id="prop_name"></a>`prop_name`(M, O, K) if [`member`](#member)(M, O, K), unless [`private`](#private)(M).
+<a id="prop_name"></a>`prop_name`(M, O, K) either:
+
+1. if [`member`](#member)(M, O, K), unless [`private`](#private)(M);
+2. if [`pattern_prop`](#pattern_prop)(O, K, M) and [`pat_in`](js-dataflow.rofl.md#pat_in)(something, O, M).
 
 > the I-th argument of a call, or what it spreads
 

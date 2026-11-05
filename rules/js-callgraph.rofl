@@ -585,11 +585,12 @@ writes_in_place(array_pattern, elements).
 writes_in_place(assignment_pattern, left).
 writes_in_place(rest_element, argument).
 member_written[flow](N) :- member_node_v[flow](N), ast_child[code](P, F, _, N), ast_node[code](P, PK, _),
-                           writes_in_place(PK, F).
+                           writes_in_place(PK, F), not pat_in[code](_, _, N).
 member_written[flow](N) :- member_node_v[flow](N), iterates[value](_, N, _).
 member_written[flow](N) :- member_node_v[flow](N), enumerates[value](_, N, _).
 member_written[flow](N) :- member_node_v[flow](N), ast_child[code](Prop, value, 0, N),
-                           ast_child[code](Pat, properties, _, Prop), ast_node[code](Pat, object_pattern, _).
+                           ast_child[code](Pat, properties, _, Prop), ast_node[code](Pat, object_pattern, _),
+                           not pat_in[code](_, _, N).
 sx_mkey[surface](O, Key) :- member_written[flow](N), member_at[flow](N, _, O, Key).
 
 sx_open[surface](O)  :- placed[flow](A), may_be_node[flow](A, O), surveyed[flow](O), not held[flow](A).
