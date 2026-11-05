@@ -564,10 +564,10 @@ holds_in_place(tsmodule_block, body).
 holds_in_place(object_property, value).
 
 -- asked only of a place that may hold a surveyed object of its own file
-placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), ast_child[code](_, _, _, A).
+placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), parent[tree](_, A).
 held[flow](A) :- placed[flow](A), ast_child[code](P, F, _, A), ast_node[code](P, PK, _), holds_in_place(PK, F).
 held[flow](A) :- placed[flow](A), assigned[code](_, _, _, A, _).
-held[flow](A) :- placed[flow](A), ast_child[code](C, arguments, _, A), callee[value](C, CE),
+held[flow](A) :- placed[flow](A), nth[tree](C, _, A), not spread_args[value](C, _, A), callee[value](C, CE),
                  whole_expr[flow](CE).
 held[flow](V) :- placed[flow](V), stored_in[flow](V, _).
 -- a member of an object literal holds the value as long as the literal is not open
@@ -577,19 +577,12 @@ stored_in[flow](V, H) :- assign_op[code](_, L, V), member_node_v[flow](L), objec
                          whole_expr[flow](HE), may_be_node[flow](HE, H).
 
 -- A member written: by a known key it is had, by an unknown one the object is open.
-edb(writes_in_place).
-writes_in_place(assignment_expression, left).
-writes_in_place(update_expression, argument).
-writes_in_place(array_pattern, elements).
-writes_in_place(assignment_pattern, left).
-writes_in_place(rest_element, argument).
-member_written[flow](N) :- member_node_v[flow](N), ast_child[code](P, F, _, N), ast_node[code](P, PK, _),
-                           writes_in_place(PK, F), not pat_in[code](_, _, N).
+member_written[flow](N) :- member_node_v[flow](N), assign[value](_, N, _), not pat_in[code](_, _, N).
+member_written[flow](N) :- member_node_v[flow](N), pattern_target[code](N), not pat_in[code](_, _, N).
+member_written[flow](N) :- member_node_v[flow](N), rest_props[value](_, N), not pat_in[code](_, _, N).
+member_written[flow](N) :- member_node_v[flow](N), rest_elems[value](_, _, N), not pat_in[code](_, _, N).
 member_written[flow](N) :- member_node_v[flow](N), iterates[value](S, N, _), for_of[code](S).
 member_written[flow](N) :- member_node_v[flow](N), enumerates[value](_, N, _).
-member_written[flow](N) :- member_node_v[flow](N), ast_child[code](Prop, value, 0, N),
-                           ast_child[code](Pat, properties, _, Prop), ast_node[code](Pat, object_pattern, _),
-                           not pat_in[code](_, _, N).
 sx_mkey[surface](O, Key) :- member_written[flow](N), member_at[flow](N, _, O, Key).
 
 sx_open[surface](O)  :- placed[flow](A), may_be_node[flow](A, O), surveyed[flow](O), not held[flow](A).

@@ -48,6 +48,7 @@ Reads:
 - from outside these files, in the type:
   - <a id="access"></a>`access`
   - <a id="binary"></a>`binary`
+  - <a id="extends"></a>`extends`
   - <a id="frozen"></a>`frozen`
   - <a id="object"></a>`object`
 - from outside these files, in the value:
@@ -4165,7 +4166,8 @@ A node points to a node I if all of:
 
 <a id="super_of"></a>The super of a class CD is a class SD if all of:
   - CD [is a class](#class_like);
-  - the `super_class` of CD [points to](js-concat.rofl.md#may_be_node) SD;
+  - [`extends`](#extends)(CD, SC) in the value;
+  - a node SC [points to](js-concat.rofl.md#may_be_node) SD;
   - some node [stands for an instance of](#inst_of) SD.
 
 > A class with no constructor answers with its nearest ancestor's. Measured on

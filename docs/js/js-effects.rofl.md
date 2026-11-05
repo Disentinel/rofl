@@ -67,7 +67,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-try"></a>a try | a node of kind `try_statement` |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -877,7 +876,7 @@ A class CD defines by running a node KN either:
 In the code:
 
 A node is caught in place if all of:
-  - a node P [runs](#eff_runs_in) a [try](#noun-try) TS;
+  - a node P [runs](#eff_runs_in) a node TS;
   - TS [tries](js-controlflow.rofl.md#in_try_block) it;
   - P [runs](#eff_runs_in) it;
   - TS [has a handler](js-controlflow.rofl.md#try_catches).

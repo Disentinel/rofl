@@ -37,7 +37,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files:
@@ -88,6 +88,8 @@ Reads:
   - <a id="passes"></a>`passes`
   - <a id="private"></a>`private`
   - <a id="ref"></a>`ref`
+  - <a id="rest_elems"></a>`rest_elems`
+  - <a id="rest_props"></a>`rest_props`
   - <a id="spread_args"></a>`spread_args`
   - <a id="spread_props"></a>`spread_props`
   - <a id="static"></a>`static`
@@ -111,7 +113,6 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
-| <a id="noun-object_pattern"></a>an object pattern | a node of kind `object_pattern` |
 | a function | a node [`fn_node`](#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -518,8 +519,8 @@ A [function](#fn_node) answers to a name N if all of:
 A call X resolves to a node F either:
 
 1. if all of:
-   - X [is a transfer site](#transfer_site) of `tagged_template_expression`;
-   - the `tag` of X [points to](js-concat.rofl.md#may_be_node) F;
+   - [`tagged`](#tagged)(X, T, something);
+   - a node T [points to](js-concat.rofl.md#may_be_node) F;
    - [`fn_value`](js-surface.rofl.md#fn_value)(F);
 2. if all of:
    - [`decorated`](#decorated)(something, E);
@@ -1070,7 +1071,7 @@ Declared as facts:
 <a id="placed"></a>`placed`(X) if all of:
   - a node X [points to](js-concat.rofl.md#may_be_node) a node O;
   - [`surveyed`](#surveyed)(O);
-  - X [is a child of](#ast_child) some node.
+  - [`parent`](#parent)(something, X).
 
 <a id="held"></a>`held`(X) either:
 
@@ -1082,9 +1083,10 @@ Declared as facts:
 2. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
 3. if all of:
    - [`placed`](#placed)(X);
-   - a node X [is among the](#ast_child) `arguments` of a node C;
+   - [`nth`](#nth)(C, something, X);
    - [`callee`](#callee)(C, CE);
    - [`whole_expr`](#whole_expr)(CE);
+   - unless [`spread_args`](#spread_args)(C, something, X);
 4. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
 
 > a member of an object literal holds the value as long as the literal is not open
@@ -1101,34 +1103,29 @@ Declared as facts:
 
 > A member written: by a known key it is had, by an unknown one the object is open.
 
-`writes_in_place` lists:
-
-| arg 1 | arg 2 |
-|---|---|
-| `assignment_expression` | `left` |
-| `update_expression` | `argument` |
-| `array_pattern` | `elements` |
-| `assignment_pattern` | `left` |
-| `rest_element` | `argument` |
-
 <a id="member_written"></a>`member_written`(N) either:
 
 1. if all of:
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
-   - N [is among the](#ast_child) F of a node P;
-   - P [is of kind](js-model.rofl.md#ast_node) PK;
-   - [`writes_in_place`](#writes_in_place)(PK, F);
+   - [`assign`](#assign)(something, N, something);
    - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, N);
 2. if all of:
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
-   - [`iterates`](#iterates)(S, N, something);
-   - [`for_of`](js-structure.rofl.md#for_of)(S);
-3. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`enumerates`](#enumerates)(something, N, something);
+   - [`pattern_target`](js-structure.rofl.md#pattern_target)(N);
+   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, N);
+3. if all of:
+   - N is a [member access](js-dataflow.rofl.md#member_node_v);
+   - [`rest_props`](#rest_props)(something, N);
+   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, N);
 4. if all of:
    - N is a [member access](js-dataflow.rofl.md#member_node_v);
-   - the `value` of a node Prop is N;
-   - Prop [is among the](#ast_child) `properties` of an [object pattern](#noun-object_pattern) Pat;
-   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, N).
+   - [`rest_elems`](#rest_elems)(something, something, N);
+   - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, N);
+5. if all of:
+   - N is a [member access](js-dataflow.rofl.md#member_node_v);
+   - [`iterates`](#iterates)(S, N, something);
+   - [`for_of`](js-structure.rofl.md#for_of)(S);
+6. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`enumerates`](#enumerates)(something, N, something).
 
 In the surface:
 
@@ -1153,10 +1150,6 @@ In the surface:
    - [`stored_in`](#stored_in)(V, H);
    - [`sx_open`](#sx_open)(H);
    - a node V [points to](js-concat.rofl.md#may_be_node) a node O.
-
-Declared as facts:
-
-- <a id="writes_in_place"></a>`writes_in_place` — rows in this file
 
 > an object literal with a spread, a computed key or a `__proto__`
 
