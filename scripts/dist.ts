@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { MODEL_FILES, SCAN_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
+import { MODEL_FILES, NB_MODEL_FILES, SCAN_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { buildRenderer } from './renderer.ts';
 import { PLATFORMS } from '../npm/platform.ts';
 
@@ -68,7 +68,7 @@ await import('${main}');
 cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
 const babel = JSON.parse(readFileSync(path.join(ROOT, 'node_modules/@babel/parser/package.json'), 'utf8')).version;
 writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), `vendor/babel-parser.js is @babel/parser ${babel} (https://github.com/babel/babel), under the MIT license:\n\n${readFileSync(path.join(ROOT, 'node_modules/@babel/parser/LICENSE'), 'utf8')}`);
-for (const f of [...new Set([...MODEL_FILES, ...SCAN_MODEL_FILES]), ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
+for (const f of [...new Set([...MODEL_FILES, ...SCAN_MODEL_FILES, ...NB_MODEL_FILES]), ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 const tutorial = (readdirSync(path.join(ROOT, 'examples/tutorial'), { recursive: true }) as string[]).filter((f) => f.endsWith('.md')).map((f) => `examples/tutorial/${f}`);
 const start = readdirSync(path.join(ROOT, 'examples/start')).map((f) => `examples/start/${f}`);
 // the pictures a notebook draws: what `reads: [rofl:visual/graph.rofl.md]` names (front.ts SHIPPED), the matrix beside the vocabularies, and the examples
