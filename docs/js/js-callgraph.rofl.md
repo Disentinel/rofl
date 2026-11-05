@@ -112,7 +112,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | a function | a node [`fn_node`](#fn_node) holds of |
@@ -1697,11 +1696,13 @@ Declared as facts:
 <a id="type_member"></a>`type_member`(T, Key) either:
 
 1. if all of:
-   - [`type_decl`](#type_decl)(T, something, something);
+   - a type T [owns members declared as types](#type_owner);
    - [`has`](#has)(T, S) in the type;
    - [`key`](#key)(S, Key) in the type;
+   - unless [`static`](#static)(S);
+   - unless [`private`](#private)(S);
 2. if all of:
-   - T [is a class](js-dataflow.rofl.md#class_like);
+   - a node T [is a class](js-dataflow.rofl.md#class_like);
    - [`has`](#has)(T, S);
    - [`key`](#key)(S, Key);
    - unless [`static`](#static)(S);
@@ -1736,26 +1737,34 @@ In the flow:
 4. if [`type_base`](#type_base)(T, B) and [`type_open`](#type_open)(B).
 
 > the place a member is declared as a type at: an interface's property, a class's field or parameter property.
-> A method signature is a member whose value is a function type, so a property signature is a member with no value
+> A method signature is a member whose value is a function type, so a property signature is a member with no value.
+> A class writes a field it declares in [type] only: `declare x: T`, `abstract x: T`.
+
+<a id="type_owner"></a>A type T owns members declared as types either:
+
+1. if [`type_decl`](#type_decl)(T, something, something);
+2. if T [is a class](js-dataflow.rofl.md#class_like).
 
 <a id="member_type_at"></a>`member_type_at`(T, Key, S) either:
 
 1. if all of:
-   - [`type_decl`](#type_decl)(T, something, something);
+   - a type T [owns members declared as types](#type_owner);
    - [`has`](#has)(T, S) in the type;
    - [`key`](#key)(S, Key) in the type;
    - [`declared`](#declared)(S, something) in the type;
    - unless [`value`](#value)(S, something) in the type;
+   - unless [`static`](#static)(S);
+   - unless [`private`](#private)(S);
 2. if all of:
-   - T [is a class](js-dataflow.rofl.md#class_like);
+   - a node T [is a class](js-dataflow.rofl.md#class_like);
    - [`has`](#has)(T, S);
-   - S is a [class property](#noun-class_property);
    - [`key`](#key)(S, Key);
    - [`declared`](#declared)(S, something) in the value;
+   - unless [`body`](#body)(S, something);
    - unless [`static`](#static)(S);
    - unless [`private`](#private)(S);
 3. if all of:
-   - T [has the method](js-dataflow.rofl.md#class_method_of) M;
+   - a class T [has the method](js-dataflow.rofl.md#class_method_of) M;
    - M [is a constructor](#ctor_method);
    - [`parent`](#parent)(M, P);
    - [`param_property`](#param_property)(P, Key, S);
@@ -1779,12 +1788,13 @@ In the flow:
 
 <a id="field_init"></a>`field_init`(T, Key, V) if all of:
   - a node T [is a class](js-dataflow.rofl.md#class_like);
-  - [`has`](#has)(T, a [class property](#noun-class_property) S);
+  - [`has`](#has)(T, S);
   - [`key`](#key)(S, Key);
   - [`value`](#value)(S, V);
+  - unless [`body`](#body)(S, something);
   - unless [`static`](#static)(S);
   - unless [`private`](#private)(S);
-  - unless the `type_annotation` of S is some node.
+  - unless [`declared`](#declared)(S, something) in the value.
 
 > the place whose return type says what a call of a member yields: a method signature, a property whose type is a
 > function type, a class's method
@@ -1792,28 +1802,33 @@ In the flow:
 <a id="method_ret_at"></a>`method_ret_at`(T, Key, F) either:
 
 1. if all of:
-   - [`type_decl`](#type_decl)(T, something, something);
+   - a type T [owns members declared as types](#type_owner);
    - [`has`](#has)(T, S) in the type;
    - [`value`](#value)(S, F) in the type;
    - [`key`](#key)(S, Key) in the type;
    - [`declared`](#declared)(F, something) in the type;
+   - unless [`static`](#static)(S);
+   - unless [`private`](#private)(S);
 2. if all of:
-   - [`type_decl`](#type_decl)(T, something, something);
+   - a type T [owns members declared as types](#type_owner);
    - [`has`](#has)(T, S) in the type;
    - [`key`](#key)(S, Key) in the type;
    - [`declared`](#declared)(S, F) in the type;
    - [`declared`](#declared)(F, something) in the type;
    - unless [`value`](#value)(S, something) in the type;
+   - unless [`static`](#static)(S);
+   - unless [`private`](#private)(S);
 3. if all of:
-   - T [is a class](js-dataflow.rofl.md#class_like);
-   - [`has`](#has)(T, a [class property](#noun-class_property) S);
+   - a node T [is a class](js-dataflow.rofl.md#class_like);
+   - [`has`](#has)(T, S);
    - [`key`](#key)(S, Key);
    - [`declared`](#declared)(S, F) in the value;
    - [`declared`](#declared)(F, something) in the type;
+   - unless [`body`](#body)(S, something);
    - unless [`static`](#static)(S);
    - unless [`private`](#private)(S);
 4. if all of:
-   - T [has the method](js-dataflow.rofl.md#class_method_of) F;
+   - a class T [has the method](js-dataflow.rofl.md#class_method_of) F;
    - [`key`](#key)(F, Key);
    - [`declared`](#declared)(F, something) in the value;
    - unless [`static`](#static)(F);

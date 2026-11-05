@@ -182,8 +182,9 @@ member_kind(object_property). member_kind(method_definition). member_kind(proper
 -- a key is static when written plain or as a literal: `{ 1: x }`, `{ "a": x }` and `{ ["a"]: x }` alike
 static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), not oxc_a[ast_oxc](M, computed, true).
 static_key(M, K, F)  :- oxc_c[ast_oxc](M, F, 0, K), oxc_a[ast_oxc](M, computed, true), lit_key(K).
-key[value](M, Name)  :- member_kind(MK), oxc_k[ast_oxc](M, MK), static_key(M, K, key), key_name(K, Name).
-key_expr[value](M, E) :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not lit_key(E).
+key[value](M, Name)  :- member_kind(MK), oxc_k[ast_oxc](M, MK), static_key(M, K, key), key_name(K, Name), not type_only(M).
+key_expr[value](M, E) :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not lit_key(E), not type_only(M).
+key_expr[type](M, E)  :- type_only(M), oxc_c[ast_oxc](M, key, 0, E), oxc_a[ast_oxc](M, computed, true), not lit_key(E).
 key[value](P, Name)  :- oxc_k[ast_oxc](P, binding_property), static_key(P, K, key), key_name(K, Name).
 key[value](P, Name)  :- oxc_k[ast_oxc](P, assignment_target_property_property), static_key(P, K, name), key_name(K, Name).
 mark[value](M, private)    :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, K), oxc_k[ast_oxc](K, private_identifier).
@@ -223,7 +224,13 @@ spread_args[value](C, I, X) :- call_like(C), oxc_c[ast_oxc](C, arguments, I, S),
 
 -- a member written as a method, getter, setter or constructor IS the function: the oxc Function
 -- under it is a wrapper, as the one node Babel has
-method_member(M, Fn) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn).
+method_member(M, Fn) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn), not type_only(M).
+-- a member declared without a body or a value exists only as a type: an abstract or overload method, a declared or
+-- abstract field
+type_only(M) :- oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn), not oxc_c[ast_oxc](Fn, body, 0, _).
+type_only(M) :- oxc_k[ast_oxc](M, property_definition), oxc_a[ast_oxc](M, declare, true).
+type_only(M) :- oxc_k[ast_oxc](M, property_definition), oxc_a[ast_oxc](M, type, "TSAbstractPropertyDefinition").
+type_only_method(M, Fn) :- type_only(M), oxc_k[ast_oxc](M, method_definition), oxc_c[ast_oxc](M, value, 0, Fn).
 method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
                         oxc_a[ast_oxc](M, method, true).
 method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
@@ -231,6 +238,7 @@ method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, va
 method_member(M, Fn) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, Fn),
                         oxc_a[ast_oxc](M, kind, "Set").
 wrapped_fn(Fn) :- method_member(_, Fn).
+wrapped_fn(Fn) :- type_only_method(_, Fn).
 fn_node(F, F)  :- oxc_k[ast_oxc](F, function), not wrapped_fn(F).
 fn_node(F, F)  :- oxc_k[ast_oxc](F, arrow_function_expression).
 fn_node(M, Fn) :- method_member(M, Fn).
@@ -247,7 +255,7 @@ binds[value](F, "arguments") :- fn_node(F, Fn), oxc_k[ast_oxc](Fn, function), no
 mark[value](F, async)     :- fn_node(F, Fn), oxc_a[ast_oxc](Fn, async, true).
 mark[value](F, generator) :- fn_node(F, Fn), oxc_a[ast_oxc](Fn, generator, true).
 constructs[value](CD, M) :- oxc_k[ast_oxc](CD, class), oxc_c[ast_oxc](CD, body, 0, B), oxc_c[ast_oxc](B, body, _, M),
-                            oxc_a[ast_oxc](M, kind, "Constructor").
+                            oxc_a[ast_oxc](M, kind, "Constructor"), not type_only(M).
 param_member(C, FP, X) :- constructs[value](C, M), method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
                           oxc_c[ast_oxc](Ps, items, _, FP), oxc_a[ast_oxc](FP, accessibility, _),
                           oxc_c[ast_oxc](FP, pattern, 0, X), oxc_k[ast_oxc](X, binding_identifier).
@@ -398,7 +406,8 @@ mark[value](A, array)  :- oxc_k[ast_oxc](A, array_expression).
 mark[value](C, class)  :- oxc_k[ast_oxc](C, class).
 has[value](O, M) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, _, M), not oxc_k[ast_oxc](M, spread_element).
 has[value](C, M) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0, B), oxc_c[ast_oxc](B, body, _, M),
-                    not oxc_k[ast_oxc](M, static_block).
+                    not oxc_k[ast_oxc](M, static_block), not type_only(M).
+has[type](C, M) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0, B), oxc_c[ast_oxc](B, body, _, M), type_only(M).
 value[value](M, V) :- oxc_k[ast_oxc](M, object_property), oxc_c[ast_oxc](M, value, 0, V), not method_member(M, _).
 value[value](M, V) :- oxc_k[ast_oxc](M, property_definition), oxc_c[ast_oxc](M, value, 0, V).
 value[value](M, V) :- oxc_k[ast_oxc](M, accessor_property), oxc_c[ast_oxc](M, value, 0, V).
@@ -580,7 +589,7 @@ annotated(H, T) :- oxc_c[ast_oxc](H, type_annotation, 0, A), oxc_k[ast_oxc](A, t
 typed_value(P, T) :- oxc_k[ast_oxc](FP, formal_parameter), annotated(FP, T), oxc_c[ast_oxc](FP, pattern, 0, P), not sig_param(_, _, FP, P).
 typed_value(R, T) :- oxc_k[ast_oxc](R, formal_parameter_rest), annotated(R, T).
 typed_value(B, T) :- oxc_k[ast_oxc](D, variable_declarator), annotated(D, T), oxc_c[ast_oxc](D, id, 0, B).
-typed_value(M, T) :- oxc_k[ast_oxc](M, property_definition), annotated(M, T).
+typed_value(M, T) :- oxc_k[ast_oxc](M, property_definition), annotated(M, T), not type_only(M).
 typed_value(F, T) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 typed_value(E, T) :- oxc_k[ast_oxc](E, tsas_expression), oxc_c[ast_oxc](E, type_annotation, 0, T).
 typed_value(E, T) :- oxc_k[ast_oxc](E, tstype_assertion), oxc_c[ast_oxc](E, type_annotation, 0, T).
@@ -593,7 +602,7 @@ declared[value](X, T) :- typed_value(X, T), not solo(T, _).
 declared[value](X, R) :- typed_value(X, T), stands(T, R).
 implements[value](C, T) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, implements, _, T).
 mark[value](X, ambient) :- oxc_a[ast_oxc](X, declare, true).
-mark[value](F, ambient) :- oxc_k[ast_oxc](F, function), not oxc_c[ast_oxc](F, body, 0, _).
+mark[value](F, ambient) :- oxc_k[ast_oxc](F, function), not oxc_c[ast_oxc](F, body, 0, _), not wrapped_fn(F).
 
 -- an interface or a type literal is an object of the world of types; its members have a key and a type
 type_member(M) :- oxc_k[ast_oxc](B, tsinterface_body), oxc_c[ast_oxc](B, body, _, M).
@@ -603,17 +612,23 @@ has[type](L, M) :- oxc_k[ast_oxc](L, tstype_literal), oxc_c[ast_oxc](L, members,
 mark[type](I, object) :- oxc_k[ast_oxc](I, tsinterface_declaration).
 mark[type](L, object) :- oxc_k[ast_oxc](L, tstype_literal).
 key[type](M, Key) :- type_member(M), static_key(M, K, key), key_name(K, Key).
+key[type](M, Key) :- type_only(M), static_key(M, K, key), key_name(K, Key).
 value[type](M, M) :- type_member(M), oxc_k[ast_oxc](M, tsmethod_signature).
+value[type](M, M) :- type_only_method(M, _).
 -- a signature in the world of types: the parameters are types' places, its return type is declared at it
 edb(sig_kind).
 sig_kind(tsmethod_signature). sig_kind(tsfunction_type). sig_kind(tsconstructor_type).
 sig_kind(tscall_signature_declaration). sig_kind(tsconstruct_signature_declaration).
 sig_param(F, I, FP, P) :- sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
                           oxc_c[ast_oxc](FP, pattern, 0, P).
+sig_param(M, I, FP, P) :- type_only_method(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
+                          oxc_c[ast_oxc](FP, pattern, 0, P).
 param[type](F, I, P) :- sig_param(F, I, _, P).
 typed_type(P, T) :- sig_param(_, _, FP, P), annotated(FP, T).
 typed_type(F, T) :- sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
+typed_type(F, T) :- type_only_method(F, Fn), oxc_c[ast_oxc](Fn, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 typed_type(M, T) :- type_member(M), annotated(M, T).
+typed_type(M, T) :- type_only(M), oxc_k[ast_oxc](M, property_definition), annotated(M, T).
 typed_type(M, T) :- type_member(M), oxc_c[ast_oxc](M, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 declared[type](X, T) :- typed_type(X, T), not solo(T, _).
 declared[type](X, R) :- typed_type(X, T), stands(T, R).

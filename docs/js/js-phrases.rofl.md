@@ -485,6 +485,7 @@ Declared as facts:
 | `gives_two` | "gives_two_operands(node N)" |
 | `member_kind_expr` | "is_a_member_read(node N)" |
 | `has_class` | "has_an_expression_class(node N)" |
+| `type_owner` | "owns_members_declared_as_types(type T)" |
 | `shaped` | "is_shaped(call C)" |
 | `unshaped` | "is_unshaped(call C)" |
 | `fn_file` | "is_defined_in(function F, file File)" |

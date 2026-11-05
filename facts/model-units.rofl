@@ -429,7 +429,6 @@ unit_concludes("rules/js-dataflow.rofl", obj_open_own).
 unit_concludes("rules/js-dataflow.rofl", obj_own_key).
 unit_concludes("rules/js-dataflow.rofl", written_target).
 unit_concludes("rules/js-dataflow.rofl", member_unset).
-unit_concludes("rules/js-dataflow.rofl", field_unset_decl).
 unit_concludes("rules/js-dataflow.rofl", class_unset_field).
 unit_concludes("rules/js-dataflow.rofl", member_unset_written).
 unit_concludes("rules/js-dataflow.rofl", member_assign).
@@ -750,6 +749,7 @@ unit_concludes("rules/js-callgraph.rofl", type_member).
 unit_concludes("rules/js-callgraph.rofl", param_property).
 unit_concludes("rules/js-callgraph.rofl", type_base).
 unit_concludes("rules/js-callgraph.rofl", type_open).
+unit_concludes("rules/js-callgraph.rofl", type_owner).
 unit_concludes("rules/js-callgraph.rofl", member_type_at).
 unit_concludes("rules/js-callgraph.rofl", member_type).
 unit_concludes("rules/js-callgraph.rofl", member_lib).
@@ -1593,6 +1593,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", callee).
 unit_concludes("models/lang/js/babel-roles.rofl", tagged).
 unit_concludes("models/lang/js/babel-roles.rofl", spread_args).
 unit_concludes("models/lang/js/babel-roles.rofl", b_member).
+unit_concludes("models/lang/js/babel-roles.rofl", b_type_only).
 unit_concludes("models/lang/js/babel-roles.rofl", has).
 unit_concludes("models/lang/js/babel-roles.rofl", value_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", value).

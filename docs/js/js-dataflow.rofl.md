@@ -3182,17 +3182,17 @@ In the flow:
   - unless [`obj_own_key`](#obj_own_key)(O, Key);
   - unless `object` [has the member](#lib_member) Key since some release.
 
-In the code:
+> a field the class declares without a value: it exists, and is undefined until something writes it
 
-<a id="field_unset_decl"></a>`field_unset_decl`(CB, Key) if all of:
-  - [the attribute](#ast_attr) `static` of Q is `false`;
-  - Q [spells](js-structure.rofl.md#key_name) Key;
-  - Q [is among the](#ast_child) `body` of a node CB;
-  - unless the `value` of a [class property](#noun-class_property) Q is some node.
-
-In the flow:
-
-<a id="class_unset_field"></a>`class_unset_field`(CD, Key) if [`field_unset_decl`](#field_unset_decl)(CB, Key) and the `body` of a node CD is a node CB.
+<a id="class_unset_field"></a>`class_unset_field`(CD, Key) if all of:
+  - a node CD [is a class](#class_like);
+  - [`has`](#has)(CD, Q);
+  - [`key`](#key)(Q, Key);
+  - unless [`body`](#body)(Q, something);
+  - unless [`value`](#value)(Q, something);
+  - unless [`static`](#static)(Q);
+  - unless [`private`](#private)(Q);
+  - unless [`assign`](#assign)(Q, Q, something).
 
 `member_unset`(N, I, Key) if all of:
   - [`class_unset_field`](#class_unset_field)(CD, Key);
@@ -3232,7 +3232,8 @@ In the flow:
 In the code:
 
 <a id="member_ctor_set"></a>`member_ctor_set`(Body, Key, J) if all of:
-  - [`field_unset_decl`](#field_unset_decl)(CB, Key);
+  - [`class_unset_field`](#class_unset_field)(CD, Key);
+  - the `body` of a node CD is a node CB;
   - [`keyed_ctor`](#keyed_ctor)(CB, Body);
   - [`seq_at`](js-structure.rofl.md#seq_at)(Body, J, S);
   - [`member_assign`](#member_assign)(S, T, Key, something);

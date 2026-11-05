@@ -778,7 +778,8 @@ keyword_prototype("Array", array).
 names_lib[flow](A, P)  :- type_at[code](A, X), ref[type](X, Name), keyword_prototype(Name, P).
 
 -- what a type has, and where it cannot be known whole
-type_member[flow](T, Key) :- type_decl[code](T, _, _), has[type](T, S), key[type](S, Key).
+type_member[flow](T, Key) :- type_owner[flow](T), has[type](T, S), not static[value](S), not private[value](S),
+                             key[type](S, Key).
 type_member[flow](T, Key) :- class_like[flow](T), has[value](T, S), not static[value](S), not private[value](S),
                              key[value](S, Key).
 -- `private foo: IFoo` and `private foo: IFoo = d`: the name and its annotation
@@ -791,10 +792,13 @@ type_open[flow](T)        :- extends[type](T, H), not names_type[flow](H, _).
 type_open[flow](T)        :- class_like[flow](T), extends[value](T, _), not super_of[flow](T, _).
 type_open[flow](T)        :- type_base[flow](T, B), type_open[flow](B).
 -- the place a member is declared as a type at: an interface's property, a class's field or parameter property.
--- A method signature is a member whose value is a function type, so a property signature is a member with no value
-member_type_at[flow](T, Key, S) :- type_decl[code](T, _, _), has[type](T, S), not value[type](S, _),
-                                   key[type](S, Key), declared[type](S, _).
-member_type_at[flow](T, Key, S) :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
+-- A method signature is a member whose value is a function type, so a property signature is a member with no value.
+-- A class writes a field it declares in [type] only: `declare x: T`, `abstract x: T`.
+type_owner[flow](T) :- type_decl[code](T, _, _).
+type_owner[flow](T) :- class_like[flow](T).
+member_type_at[flow](T, Key, S) :- type_owner[flow](T), has[type](T, S), not value[type](S, _),
+                                   not static[value](S), not private[value](S), key[type](S, Key), declared[type](S, _).
+member_type_at[flow](T, Key, S) :- class_like[flow](T), has[value](T, S), not body[value](S, _),
                                    not static[value](S), not private[value](S), key[value](S, Key), declared[value](S, _).
 member_type_at[flow](T, Key, X) :- class_method_of[flow](T, M), ctor_method[code](M),
                                    parent[tree](M, P), param_property[code](P, Key, X), declared[value](X, _).
@@ -805,16 +809,16 @@ member_lib[flow](T, Key, P)   :- type_base[flow](T, B), member_lib[flow](B, Key,
 -- a field declared by its initialiser (`private inner = new Maker()`)
 member_type[flow](T, Key, T2) :- field_init[flow](T, Key, V), declared[flow](V, T2).
 member_lib[flow](T, Key, P)   :- field_init[flow](T, Key, V), declared_lib[flow](V, P).
-field_init[flow](T, Key, V)   :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
+field_init[flow](T, Key, V)   :- class_like[flow](T), has[value](T, S), not body[value](S, _),
                                  not static[value](S), not private[value](S),
-                                 key[value](S, Key), value[value](S, V), not ast_child[code](S, type_annotation, 0, _).
+                                 key[value](S, Key), value[value](S, V), not declared[value](S, _).
 -- the place whose return type says what a call of a member yields: a method signature, a property whose type is a
 -- function type, a class's method
-method_ret_at[flow](T, Key, F) :- type_decl[code](T, _, _), has[type](T, S), value[type](S, F),
-                                  key[type](S, Key), declared[type](F, _).
-method_ret_at[flow](T, Key, F) :- type_decl[code](T, _, _), has[type](T, S), not value[type](S, _),
-                                  key[type](S, Key), declared[type](S, F), declared[type](F, _).
-method_ret_at[flow](T, Key, F) :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
+method_ret_at[flow](T, Key, F) :- type_owner[flow](T), has[type](T, S), value[type](S, F),
+                                  not static[value](S), not private[value](S), key[type](S, Key), declared[type](F, _).
+method_ret_at[flow](T, Key, F) :- type_owner[flow](T), has[type](T, S), not value[type](S, _),
+                                  not static[value](S), not private[value](S), key[type](S, Key), declared[type](S, F), declared[type](F, _).
+method_ret_at[flow](T, Key, F) :- class_like[flow](T), has[value](T, S), not body[value](S, _),
                                   not static[value](S), not private[value](S),
                                   key[value](S, Key), declared[value](S, F), declared[type](F, _).
 method_ret_at[flow](T, Key, M) :- class_method_of[flow](T, M), not static[value](M), not private[value](M),

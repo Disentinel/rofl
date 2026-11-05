@@ -37,7 +37,7 @@ kind_mark[ast_babel](array_expression, array).
 kind_mark[ast_babel](class_declaration, class).         kind_mark[ast_babel](class_expression, class).
 kind_mark[ast_babel](template_literal, template).
 kind_mark[ast_babel](class_private_property, private).  kind_mark[ast_babel](class_private_method, private).
-kind_mark[ast_babel](tsdeclare_function, ambient).      kind_mark[ast_babel](tsdeclare_method, ambient).
+kind_mark[ast_babel](tsdeclare_function, ambient).
 kind_mark[ast_babel](program, scope).                   kind_mark[ast_babel](block_statement, scope).
 kind_mark[ast_babel](static_block, scope).              kind_mark[ast_babel](catch_clause, scope).
 kind_mark[ast_babel](for_statement, scope).             kind_mark[ast_babel](for_in_statement, scope).
@@ -269,7 +269,7 @@ executes_when[value](Arg, A, microtask)  :- b_up[ast_babel](A, N), callee[value]
 edb(fn_kind).
 fn_kind[ast_babel](function_declaration). fn_kind[ast_babel](function_expression). fn_kind[ast_babel](arrow_function_expression).
 fn_kind[ast_babel](object_method). fn_kind[ast_babel](class_method). fn_kind[ast_babel](class_private_method).
-fn_kind[ast_babel](tsdeclare_function). fn_kind[ast_babel](tsdeclare_method).
+fn_kind[ast_babel](tsdeclare_function).
 
 edb(this_kind).
 this_kind[ast_babel](function_declaration). this_kind[ast_babel](function_expression). this_kind[ast_babel](object_method).
@@ -300,6 +300,7 @@ suspends[value](S, P, How) :- b_pause_up[ast_babel](S, P), node[ast_babel](P, pr
 edb(param_kind).
 param_kind[ast_babel](tsmethod_signature). param_kind[ast_babel](tsfunction_type). param_kind[ast_babel](tsconstructor_type).
 param_kind[ast_babel](tscall_signature_declaration). param_kind[ast_babel](tsconstruct_signature_declaration).
+param_kind[ast_babel](tsdeclare_method).
 b_fn[ast_babel](F)     :- fn_kind[ast_babel](K), node[ast_babel](F, K, _).
 b_param[ast_babel](F, I, X) :- b_fn[ast_babel](F), child[ast_babel](F, params, I, X).
 b_param[ast_babel](F, I, X) :- param_kind[ast_babel](K), node[ast_babel](F, K, _), child[ast_babel](F, params, I, X).
@@ -318,7 +319,7 @@ decl[value](X, param) :- param[value](_, _, X).
 decl[value](X, param) :- rest_params[value](_, _, X).
 
 edb(method_kind).
-method_kind[ast_babel](object_method). method_kind[ast_babel](class_method). method_kind[ast_babel](class_private_method). method_kind[ast_babel](tsdeclare_method).
+method_kind[ast_babel](object_method). method_kind[ast_babel](class_method). method_kind[ast_babel](class_private_method).
 getter[value](M, M)     :- method_kind[ast_babel](K), node[ast_babel](M, K, _), attr[ast_babel](M, kind, "get").
 setter[value](M, M)     :- method_kind[ast_babel](K), node[ast_babel](M, K, _), attr[ast_babel](M, kind, "set").
 constructs[value](C, M) :- b_member[ast_babel](C, M), attr[ast_babel](M, kind, "constructor").
@@ -474,12 +475,15 @@ b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, 
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
                        attr[ast_babel](I, name, Name).
-key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
+key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K), not b_type_only[ast_babel](M).
 key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
+key[type](M, Name)  :- b_key[ast_babel](M, Name), b_type_only[ast_babel](M).
 key_expr[value](M, E) :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
-                         node[ast_babel](M, K, _), not type_member_kind[ast_babel](K).
+                         node[ast_babel](M, K, _), not type_member_kind[ast_babel](K), not b_type_only[ast_babel](M).
 key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
                          node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
+key_expr[type](M, E)  :- child[ast_babel](M, key, 0, E), attr[ast_babel](M, computed, true), not b_lit_key[ast_babel](E),
+                         b_type_only[ast_babel](M).
 edb(key_literal).
 b_lit_key[ast_babel](K) :- node[ast_babel](K, KK, _), key_literal[ast_babel](KK).
 key_literal[ast_babel](string_literal). key_literal[ast_babel](numeric_literal).
@@ -531,7 +535,13 @@ spread_args[value](C, I, X) :- calling_kind[ast_babel](K), node[ast_babel](C, K,
 b_member[ast_babel](O, M) :- node[ast_babel](O, object_expression, _), child[ast_babel](O, properties, _, M),
                              node[ast_babel](M, K, _), K != spread_element.
 b_member[ast_babel](C, M) :- mark[value](C, class), child[ast_babel](C, body, 0, B), child[ast_babel](B, body, _, M),
-                             node[ast_babel](M, K, _), K != static_block.
+                             node[ast_babel](M, K, _), K != static_block, not b_type_only[ast_babel](M).
+-- a member declared without a body or a value exists only as a type: an abstract or overload method, a declared or
+-- abstract field
+b_type_only[ast_babel](M) :- node[ast_babel](M, tsdeclare_method, _).
+b_type_only[ast_babel](M) :- node[ast_babel](M, class_property, _), attr[ast_babel](M, declare, true).
+b_type_only[ast_babel](M) :- node[ast_babel](M, class_property, _), attr[ast_babel](M, abstract, true).
+has[type](C, M) :- mark[value](C, class), child[ast_babel](C, body, 0, B), child[ast_babel](B, body, _, M), b_type_only[ast_babel](M).
 b_member[ast_babel](E, M) :- node[ast_babel](E, tsenum_declaration, _), child[ast_babel](E, body, 0, B),
                              child[ast_babel](B, members, _, M).
 has[value](O, M) :- b_member[ast_babel](O, M).
@@ -738,6 +748,7 @@ value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0
 value[type](S, L)  :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), b_type_spec[ast_babel](S).
 -- a method signature `m(a): T` is a member whose value is a function type: itself, with its parameters and its return type
 value[type](S, S)  :- node[ast_babel](S, tsmethod_signature, _).
+value[type](S, S)  :- node[ast_babel](S, tsdeclare_method, _).
 -- export { a as b } from 'm': the member is destructured from m
 pattern_prop[value](E, Name, S) :- b_reexport[ast_babel](E, S), child[ast_babel](S, local, 0, L),
                                    attr[ast_babel](L, name, Name).
@@ -783,6 +794,7 @@ type_member_kind[ast_babel](tsproperty_signature). type_member_kind[ast_babel](t
 type_member_kind[ast_babel](tscall_signature_declaration). type_member_kind[ast_babel](tsconstruct_signature_declaration).
 b_tplace[ast_babel](X) :- type_member_kind[ast_babel](K), node[ast_babel](X, K, _).
 b_tplace[ast_babel](X) :- param_kind[ast_babel](K), node[ast_babel](X, K, _).
+b_tplace[ast_babel](X) :- b_type_only[ast_babel](X).
 b_tplace[ast_babel](P) :- b_tplace[ast_babel](F), b_param[ast_babel](F, _, P).
 
 b_stated[ast_babel](X, T) :- child[ast_babel](X, F, 0, A), annotation_field[ast_babel](F),

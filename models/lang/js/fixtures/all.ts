@@ -49,3 +49,4 @@ for (const [fa, fb] of [[1, 2]]) { fa + fb; } const [ea, [eb]] = [1, [2]]; funct
 const vgc = ea ? fa : fb; const vgl = ea || fa; const vgn = ea && fa; const vgq = ea ?? fa; const vgcc = ea ? (fa ? 1 : 2) : 3;
 interface MSig { msm(a: number): string; msp: () => string; msq(): void; readonly msr: number; }
 type MSLit = { mtm(b: string): number; mtp: () => number };
+abstract class BodyLess { abstract bla(a: number): string; blo(a: string): string; blo(a: number): string; blo(a: any): string { return a; } declare bld: number; abstract blp: string; blf: number; blg; accessor bla2 = 3; constructor(a: string); constructor(a: any) {} }

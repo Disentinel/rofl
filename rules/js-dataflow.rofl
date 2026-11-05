@@ -1371,10 +1371,9 @@ written_target[code](N) :- enumerates[value](_, N, _).
 member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), at[tree](N, F, _), obj_lit[code](O), at[tree](O, F, _),
                                  not written_target[code](N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
                                  not lib_member(object, Key, _), Key != "__proto__".
-field_unset_decl[code](CB, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
-                                   ast_attr[code](Q, static, false), key_name[code](Q, Key),
-                                   ast_child[code](CB, body, _, Q).
-class_unset_field[flow](CD, Key) :- field_unset_decl[code](CB, Key), ast_child[code](CD, body, 0, CB).
+-- a field the class declares without a value: it exists, and is undefined until something writes it
+class_unset_field[flow](CD, Key) :- class_like[flow](CD), has[value](CD, Q), not body[value](Q, _), not value[value](Q, _),
+                                    not static[value](Q), not private[value](Q), not assign[value](Q, Q, _), key[value](Q, Key).
 member_unset[flow](N, I, Key) :- class_unset_field[flow](CD, Key), inst_of[flow](I, CD), member_at[flow](N, _, I, Key),
                                  not written_target[code](N).
 may_be_lit[flow](N, undefined) :- member_unset[flow](N, _, _).
@@ -1395,7 +1394,7 @@ member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flo
 member_assign[code](S, T, Key, A) :- ast_node[code](S, expression_statement, _), ast_child[code](S, expression, 0, A),
                                     assign[value](A, L, R), gives[value](A, R), prop_name[code](L, T, Key).
 member_dropped[flow](O, Key) :- unary[value](U, "delete", N), member_at[flow](N, _, O, Key).
-member_ctor_set[code](Body, Key, J) :- field_unset_decl[code](CB, Key), keyed_ctor[code](CB, Body), seq_at[code](Body, J, S),
+member_ctor_set[code](Body, Key, J) :- class_unset_field[flow](CD, Key), ast_child[code](CD, body, 0, CB), keyed_ctor[code](CB, Body), seq_at[code](Body, J, S),
                                       member_assign[code](S, T, Key, _), this[value](T).
 member_ctor_early[code](Body, J) :- member_ctor_set[code](Body, _, J), body[value](Ct, Body), nearest_v[flow](Ct, R),
                                    exits[value](R, return), seq_at[code](Body, L, S), L < J, inside[tree](S, R).

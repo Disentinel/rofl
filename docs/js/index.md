@@ -3,13 +3,13 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1056 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1057 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 94 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 522 | 193 | 91 | 94 | 34 | 739 | 74 | 6 | 62 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 524 | 194 | 92 | 94 | 31 | 742 | 75 | 6 | 62 | 0 |
 | [js-concat](js-concat.rofl.md) | 206 | 71 | 2 | 58 | 2 | 338 | 23 | 7 | 11 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 212 | 86 | 72 | 5 | 11 | 232 | 20 | 4 | 29 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 917 | 391 | 133 | 241 | 51 | 1674 | 142 | 11 | 65 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 916 | 390 | 133 | 240 | 50 | 1673 | 142 | 11 | 65 | 0 |
 | [js-effects](js-effects.rofl.md) | 194 | 125 | 114 | 7 | 7 | 312 | 20 | 2 | 23 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 45 | 34 | 33 | 0 | 0 | 43 | 5 | 1 | 19 | 0 |
@@ -26,7 +26,7 @@
 | [js-surface](js-surface.rofl.md) | 165 | 131 | 33 | 97 | 3 | 259 | 9 | 1 | 11 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 12 | 10 | 10 | 0 | 0 | 17 | 2 | 0 | 2 | 0 |
 
-582 heads without a phrase across these files.
+581 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -896,6 +896,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `ts_resolved` | `names_under_typescript` |
 | `type_import` | `imports_types_only` |
 | `type_only_site` | `is_type_only` |
+| `type_owner` | `owns_members_declared_as_types` |
 | `unaccounted` | `is_unaccounted` |
 | `unaccounted_site` | `is_an_unaccounted_site` |
 | `uncompared` | `is_uncompared` |

@@ -80,3 +80,5 @@ shape_ok(eff_field_moment, project_then_negate, "one_row_per_key: the class fiel
 shape_ok(obj_open_own, twin_bodies, "alias_of_a_derived: the spread arm is sx_open's, in the code book where member_unset reads it and the surface book that publishes it, 0 ms").
 shape_ok(sx_open, twin_bodies, "alias_of_a_derived: the spread arm is obj_open_own's, in the surface book that publishes it, 0 ms").
 shape_ok(value_expr, twin_bodies, "alias_of_a_derived: a union of the object, the array and the function that makes a value, read by may_be_node, whole_expr and the effect layer; each arm is one premise, 0 ms").
+shape_ok(type_owner, twin_bodies, "alias_of_a_derived: the owner of a member declared as a type is an interface, a type literal or a class; two one-premise arms of different relations, 0 ms").
+shape_ok(surveyed, twin_bodies, "alias_of_a_derived: what the surface surveyed is a receivable, a class or a published survey; one-premise arms of different relations, 0 ms").
