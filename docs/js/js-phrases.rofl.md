@@ -581,7 +581,6 @@ Declared as facts:
 | `after_abrupt` | "follows_an_abrupt_completion(node S)" |
 | `after_suspend` | "follows_a_suspension(node S)" |
 | `stmt_seq_unseen` | "is_an_unseen_statement_field(field F)" |
-| `label_name` | "the_label_name(of label LS, is name N)" |
 | `label_ref` | "refers_to_the_label(node X, name N)" |
 | `label_target` | "targets_the_label(node X, label LS)" |
 | `completes_abruptly` | "completes_abruptly(node S)" |

@@ -23,6 +23,7 @@ Reads:
 - from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [obj_lit](js-dataflow.rofl.md#obj_lit), [pat_computed](js-dataflow.rofl.md#pat_computed), [pat_in](js-dataflow.rofl.md#pat_in), [symbol_ref](js-dataflow.rofl.md#symbol_ref)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from outside these files, in the tree:
+  - <a id="inside"></a>`inside`
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
   - <a id="strict"></a>`strict`
@@ -34,6 +35,7 @@ Reads:
   - <a id="binds"></a>`binds`
   - <a id="callee"></a>`callee`
   - <a id="decl"></a>`decl`
+  - <a id="discards"></a>`discards`
   - <a id="executes_if"></a>`executes_if`
   - <a id="gives"></a>`gives`
   - <a id="has"></a>`has`
@@ -98,9 +100,10 @@ What this file calls a node, and what each word stands for:
 
 > the I-th argument as the tree has it: a spread is its own node, not what it spreads
 
-<a id="arg_node"></a>`arg_node`(C, I, X) if [`argument_at`](#argument_at)(C, I, X), unless [`spread_args`](#spread_args)(C, I, something).
+<a id="arg_node"></a>`arg_node`(C, I, X) either:
 
-`arg_node`(C, I, S) if [`spread_args`](#spread_args)(C, I, X) and [`parent`](#parent)(S, X).
+1. if [`argument_at`](#argument_at)(C, I, X), unless [`spread_args`](#spread_args)(C, I, something);
+2. if [`spread_args`](#spread_args)(C, I, X).
 
 > ORDER OF EXECUTION. The step of a strict sequence B at position I, as the tree has it: the child of B that holds
 > the step (the statement around an expression, the label around a statement), whatever the sequence is: a block,
@@ -114,14 +117,14 @@ What this file calls a node, and what each word stands for:
    - [`strict`](#strict)(B);
    - [`parent`](#parent)(S, X);
    - [`parent`](#parent)(B, S);
-   - unless [`executes_if`](#executes_if)(S, X, `matches`);
-3. if all of:
-   - [`nth`](#nth)(B, I, X);
-   - [`strict`](#strict)(B);
-   - [`parent`](#parent)(V, X);
-   - [`parent`](#parent)(S, V);
-   - [`parent`](#parent)(B, S);
-   - unless [`executes_if`](#executes_if)(V, X, `matches`).
+   - unless [`executes_if`](#executes_if)(S, X, `matches`).
+
+> what a step holds: what is inside it, and an expression statement's expression, which is the step itself
+
+<a id="step_in"></a>`step_in`(S, X) either:
+
+1. if [`seq_at`](#seq_at)(something, something, S) and [`inside`](#inside)(S, X);
+2. if [`discards`](#discards)(something, S) and X is S.
 
 <a id="ast_in"></a>`ast_in` of P and C is another name for `ast_child` of P, _, _ and C.
 

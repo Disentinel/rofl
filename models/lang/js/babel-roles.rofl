@@ -15,7 +15,7 @@ imports(value, tree). imports(audit, ast_babel).
 -- PLACE
 
 program[tree](P, File)  :- node[ast_babel](P, program, File).
-parent[tree](P, C)      :- child[ast_babel](P, _, _, C), node[ast_babel](P, K, _), K != file.
+edge[tree](P, C)        :- child[ast_babel](P, _, _, C), node[ast_babel](P, K, _), K != file.
 -- the place of every node, so the raw tree need not stay beside the roles; Babel's File node above the Program
 -- dissolves: the file is named by program and at, and stands as itself in the fs_* facts of the host
 at[tree](N, File, Line)  :- node[ast_babel](N, K, File), K != file, line[ast_babel](N, Line).
@@ -259,7 +259,7 @@ b_up[ast_babel](A, S)  :- b_up[ast_babel](A, X), nth[tree](S, _, X).
 -- the callee is no step of its call; it is evaluated before the arguments, and so before the call
 b_up[ast_babel](A, C)  :- b_up[ast_babel](A, X), callee[value](C, X).
 b_up[ast_babel](A, C)  :- b_up[ast_babel](A, X), tagged[value](C, X, _).
-b_up[ast_babel](A, S)  :- b_up[ast_babel](A, X), executes_if[value](X, _, _), parent[tree](S, X).
+b_up[ast_babel](A, S)  :- b_up[ast_babel](A, X), executes_if[value](X, _, _), edge[tree](S, X).
 executes_when[value](Next, A, microtask) :- b_up[ast_babel](A, S), nth[tree](Seq, I, S), nth[tree](Seq, J, Next), J > I.
 executes_when[value](Arg, A, microtask)  :- b_up[ast_babel](A, N), callee[value](C, N), nth[tree](C, _, Arg).
 
@@ -291,8 +291,8 @@ awaits[value](A, X)    :- node[ast_babel](A, await_expression, _), child[ast_bab
 b_pause_at[ast_babel](S, later) :- node[ast_babel](S, await_expression, _).
 b_pause_at[ast_babel](S, next)  :- node[ast_babel](S, yield_expression, _).
 b_pause_at[ast_babel](S, later) :- node[ast_babel](S, for_of_statement, _), attr[ast_babel](S, await, true).
-b_pause_up[ast_babel](S, P) :- b_pause_at[ast_babel](S, _), parent[tree](P, S).
-b_pause_up[ast_babel](S, Q) :- b_pause_up[ast_babel](S, P), not body[value](P, _), parent[tree](Q, P).
+b_pause_up[ast_babel](S, P) :- b_pause_at[ast_babel](S, _), edge[tree](P, S).
+b_pause_up[ast_babel](S, Q) :- b_pause_up[ast_babel](S, P), not body[value](P, _), edge[tree](Q, P).
 suspends[value](S, F, How) :- b_pause_up[ast_babel](S, F), body[value](F, _), b_pause_at[ast_babel](S, How).
 suspends[value](S, P, How) :- b_pause_up[ast_babel](S, P), node[ast_babel](P, program, _), b_pause_at[ast_babel](S, How).
 
@@ -475,6 +475,8 @@ b_key[ast_babel](M, Name) :- child[ast_babel](M, key, 0, K), node[ast_babel](K, 
                        child[ast_babel](K, id, 0, I), attr[ast_babel](I, name, Name).
 b_key[ast_babel](M, Name) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I),
                        attr[ast_babel](I, name, Name).
+b_key[ast_babel](M, V) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, I), node[ast_babel](I, string_literal, _),
+                       attr[ast_babel](I, value, V).
 key[value](M, Name) :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), not type_member_kind[ast_babel](K), not b_type_only[ast_babel](M).
 key[type](M, Name)  :- b_key[ast_babel](M, Name), node[ast_babel](M, K, _), type_member_kind[ast_babel](K).
 key[type](M, Name)  :- b_key[ast_babel](M, Name), b_type_only[ast_babel](M).
@@ -508,7 +510,10 @@ literal[value](N, float(V))    :- node[ast_babel](N, numeric_literal, _), attr[a
                                   not b_type_literal[ast_babel](N).
 literal[value](N, bigint(V))   :- node[ast_babel](N, big_int_literal, _), attr[ast_babel](N, value, V), not b_type_literal[ast_babel](N).
 literal[value](N, V)    :- literal_kind[ast_babel](K), node[ast_babel](N, K, _), attr[ast_babel](N, value, V),
-                           not b_type_literal[ast_babel](N).
+                           not b_type_literal[ast_babel](N), not b_key_string[ast_babel](N).
+-- a static key written as a string names a member: it is a key, not a value
+b_key_string[ast_babel](N) :- child[ast_babel](M, key, 0, N), node[ast_babel](N, string_literal, _), attr[ast_babel](M, computed, false).
+b_key_string[ast_babel](N) :- node[ast_babel](M, tsenum_member, _), child[ast_babel](M, id, 0, N), node[ast_babel](N, string_literal, _).
 literal[type](N, V)     :- b_type_literal[ast_babel](N), attr[ast_babel](N, value, V).
 b_type_literal[ast_babel](N) :- node[ast_babel](T, tsliteral_type, _), child[ast_babel](T, literal, 0, N).
 literal[value](N, null) :- node[ast_babel](N, null_literal, _).
@@ -668,10 +673,9 @@ decl[value](P, catch)    :- node[ast_babel](C, catch_clause, _), child[ast_babel
 -- a function or class declaration exists from the start of the nearest scope around it; a function or class expression does not
 edb(hoist_kind).
 hoist_kind[ast_babel](function_declaration). hoist_kind[ast_babel](class_declaration).
-b_scope_between[ast_babel](X, S) :- hoist_kind[ast_babel](K), node[ast_babel](X, K, _), inside[tree](W, X), mark[value](W, scope),
-                                    inside[tree](S, W).
-hoisted[value](X, S) :- hoist_kind[ast_babel](K), node[ast_babel](X, K, _), inside[tree](S, X), mark[value](S, scope),
-                        not b_scope_between[ast_babel](X, S).
+b_hup[ast_babel](X, P) :- hoist_kind[ast_babel](K), node[ast_babel](X, K, _), edge[tree](P, X).
+b_hup[ast_babel](X, Q) :- b_hup[ast_babel](X, P), not mark[value](P, scope), edge[tree](Q, P).
+hoisted[value](X, S) :- b_hup[ast_babel](X, S), mark[value](S, scope).
 
 edb(target_field).
 target_field[ast_babel](function_declaration, id). target_field[ast_babel](function_expression, id). target_field[ast_babel](tsdeclare_function, id).

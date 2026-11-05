@@ -26,14 +26,14 @@ callee_class[code](C, E)      :- callee_of[code](C, N), expr_class[code](N, E).
 transfer_site[code](X, new_expression)               :- construct[value](X).
 transfer_site[code](X, tagged_template_expression)   :- tagged[value](X, _, _).
 transfer_site[code](X, for_of_statement)             :- for_of[code](X).
-transfer_site[code](X, decorator)                    :- decorated[value](_, E), parent[tree](X, E).
+transfer_site[code](Owner, decorator)                :- decorated[value](Owner, _).
 
 site[code](X) :- call_site[code](X, _).
 site[code](X) :- transfer_site[code](X, _).
 
 -- The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 call_arg[code](C, I, A)       :- call_site[code](C, _), nth[tree](C, I, A), not spread_args[value](C, _, A).
-call_arg[code](C, I, S)       :- call_site[code](C, _), nth[tree](C, I, A), spread_args[value](C, _, A), parent[tree](S, A).
+call_arg[code](C, I, A)       :- call_site[code](C, _), nth[tree](C, I, A), spread_args[value](C, _, A).
 
 -- =========================================================================
 -- 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
@@ -233,7 +233,7 @@ fn_name[code](F, N) :- constructs[value](CD, F), fn_node[code](F), anon_class[co
 -- level reaches `calls` only through here. (`top_site` was its twin, written
 -- for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 -- repair made them one rule and 2026-09-11 made them one name.)
-decorates[code](Owner, D)     :- decorated[value](Owner, E), parent[tree](D, E).
+decorates[code](Owner, E)     :- decorated[value](Owner, E).
 in_own_decorator[code](F, C)  :- decorates[code](F, D), inside[tree](D, C).
 in_own_decorator[code](F, D)  :- decorates[code](F, D).
 dec_up[code](C, G)     :- in_own_decorator[code](G, C), site[code](C), nearest_v[flow](G, C).
@@ -276,7 +276,7 @@ resolves[code](C, M) :- super[value](N), callee_of[code](C, N),
 -- call, and `may_be_node` carries what a call returns, so one arm covers both.
 resolves[code](X, F) :- tagged[value](X, T, _), may_be_node[flow](T, F), fn_value[flow](F).
 
-resolves[code](X, F) :- decorated[value](_, E), parent[tree](X, E),
+resolves[code](Owner, F) :- decorated[value](Owner, E),
                         may_be_node[flow](E, F), fn_value[flow](F).
 
 -- `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
@@ -914,7 +914,8 @@ declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](
 -- held to its declaration
 narrows_at[code](O) :- binary[value](_, "instanceof", O, _).
 narrows_at[code](O) :- binary[value](_, "in", _, O).
-narrows_at[code](O) :- ast_child[code](P, test, 0, G), ast_child[code](G, arguments, _, O).
+narrows_at[code](O) :- executes_if[value](_, G, truthy), call[value](G), arg_node[code](G, _, O).
+narrows_at[code](O) :- executes_if[value](_, G, falsy), call[value](G), arg_node[code](G, _, O).
 narrows_at[code](O) :- logical[value](P, _, G, _), not assign[value](P, _, _), arg_node[code](G, _, O).
 narrows_at[code](O) :- unary[value](P, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
 narrows_at[code](O) :- logical[value](P, _, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
@@ -964,7 +965,7 @@ param_tested[flow](F, Name) :- param_use[flow](F, Name, T), param_test[code](_, 
 sx_param_deref[surface](F, I, Name, DefFile, DefLine) :- param_of[flow](F, I, Name), not param_defaulted[code](F, I),
                                         not param_tested[flow](F, Name),
                                         param_use[flow](F, Name, U), object_of[code](M, U),
-                                        ast_node[code](M, member_expression, _),
+                                        member_node_v[flow](M), not executes_if[value](M, _, defined),
                                         at[tree](U, DefFile, _), at[tree](U, _, DefLine).
 
 unpassed_deref_at[flow](File, Line, Name, DefFile, DefLine) :- resolves[code](C, F),

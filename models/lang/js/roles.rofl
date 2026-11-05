@@ -142,6 +142,267 @@ mark_name(new_target). mark_name(import_meta). mark_name(async). mark_name(gener
 mark_name(array). mark_name(regexp). mark_name(class). mark_name(static). mark_name(private). mark_name(scope). mark_name(template).
 mark_name(ambient).
 
+-- ---- which arguments are nodes; a step of nth is placed, not yet told what it is
+roled[tree](N) :- nth[tree](N, _, _).
+roled[tree](N) :- strict[tree](N).
+roled[tree](A) :- precedes[tree](A, _).
+roled[tree](B) :- precedes[tree](_, B).
+roled[value](N) :- ref[value](N, _).
+roled[type](N) :- ref[type](N, _).
+roled[value](N) :- binds[value](N, _).
+roled[type](N) :- binds[type](N, _).
+roled[value](N) :- key[value](N, _).
+roled[type](N) :- key[type](N, _).
+roled[value](N) :- key_expr[value](N, _).
+roled[type](N) :- key_expr[type](N, _).
+roled[value](N) :- key_expr[value](_, N).
+roled[type](N) :- key_expr[type](_, N).
+roled[value](N) :- literal[value](N, _).
+roled[type](N) :- literal[type](N, _).
+roled[value](N) :- template_part[value](N, _, _).
+roled[type](N) :- template_part[type](N, _, _).
+roled[value](N) :- template_part[value](_, _, N).
+roled[type](N) :- template_part[type](_, _, N).
+roled[value](N) :- callee[value](N, _).
+roled[type](N) :- callee[type](N, _).
+roled[value](N) :- callee[value](_, N).
+roled[type](N) :- callee[type](_, N).
+roled[value](N) :- tagged[value](N, _, _).
+roled[type](N) :- tagged[type](N, _, _).
+roled[value](N) :- tagged[value](_, N, _).
+roled[type](N) :- tagged[type](_, N, _).
+roled[value](N) :- tagged[value](_, _, N).
+roled[type](N) :- tagged[type](_, _, N).
+roled[value](N) :- spread_args[value](N, _, _).
+roled[type](N) :- spread_args[type](N, _, _).
+roled[value](N) :- spread_args[value](_, _, N).
+roled[type](N) :- spread_args[type](_, _, N).
+roled[value](N) :- body[value](N, _).
+roled[type](N) :- body[type](N, _).
+roled[value](N) :- body[value](_, N).
+roled[type](N) :- body[type](_, N).
+roled[value](N) :- param[value](N, _, _).
+roled[type](N) :- param[type](N, _, _).
+roled[value](N) :- param[value](_, _, N).
+roled[type](N) :- param[type](_, _, N).
+roled[value](N) :- rest_params[value](N, _, _).
+roled[type](N) :- rest_params[type](N, _, _).
+roled[value](N) :- rest_params[value](_, _, N).
+roled[type](N) :- rest_params[type](_, _, N).
+roled[value](N) :- constructs[value](N, _).
+roled[type](N) :- constructs[type](N, _).
+roled[value](N) :- constructs[value](_, N).
+roled[type](N) :- constructs[type](_, N).
+roled[value](N) :- getter[value](N, _).
+roled[type](N) :- getter[type](N, _).
+roled[value](N) :- getter[value](_, N).
+roled[type](N) :- getter[type](_, N).
+roled[value](N) :- setter[value](N, _).
+roled[type](N) :- setter[type](N, _).
+roled[value](N) :- setter[value](_, N).
+roled[type](N) :- setter[type](_, N).
+roled[value](N) :- returns[value](N, _).
+roled[type](N) :- returns[type](N, _).
+roled[value](N) :- returns[value](_, N).
+roled[type](N) :- returns[type](_, N).
+roled[value](N) :- yields[value](N, _).
+roled[type](N) :- yields[type](N, _).
+roled[value](N) :- yields[value](_, N).
+roled[type](N) :- yields[type](_, N).
+roled[value](N) :- delegates[value](N, _).
+roled[type](N) :- delegates[type](N, _).
+roled[value](N) :- delegates[value](_, N).
+roled[type](N) :- delegates[type](_, N).
+roled[value](N) :- awaits[value](N, _).
+roled[type](N) :- awaits[type](N, _).
+roled[value](N) :- awaits[value](_, N).
+roled[type](N) :- awaits[type](_, N).
+roled[value](N) :- member[value](N, _, _).
+roled[type](N) :- member[type](N, _, _).
+roled[value](N) :- member[value](_, N, _).
+roled[type](N) :- member[type](_, N, _).
+roled[value](N) :- member_expr[value](N, _, _).
+roled[type](N) :- member_expr[type](N, _, _).
+roled[value](N) :- member_expr[value](_, N, _).
+roled[type](N) :- member_expr[type](_, N, _).
+roled[value](N) :- member_expr[value](_, _, N).
+roled[type](N) :- member_expr[type](_, _, N).
+roled[value](N) :- assign[value](N, _, _).
+roled[type](N) :- assign[type](N, _, _).
+roled[value](N) :- assign[value](_, N, _).
+roled[type](N) :- assign[type](_, N, _).
+roled[value](N) :- assign[value](_, _, N).
+roled[type](N) :- assign[type](_, _, N).
+roled[value](N) :- decl[value](N, _).
+roled[type](N) :- decl[type](N, _).
+roled[value](N) :- target[value](N, _).
+roled[type](N) :- target[type](N, _).
+roled[value](N) :- target[value](_, N).
+roled[type](N) :- target[type](_, N).
+roled[value](N) :- gives[value](N, _).
+roled[type](N) :- gives[type](N, _).
+roled[value](N) :- gives[value](_, N).
+roled[type](N) :- gives[type](_, N).
+roled[value](N) :- discards[value](N, _).
+roled[type](N) :- discards[type](N, _).
+roled[value](N) :- discards[value](_, N).
+roled[type](N) :- discards[type](_, N).
+roled[value](N) :- pattern_prop[value](N, _, _).
+roled[type](N) :- pattern_prop[type](N, _, _).
+roled[value](N) :- pattern_prop[value](_, _, N).
+roled[type](N) :- pattern_prop[type](_, _, N).
+roled[value](N) :- pattern_elem[value](N, _, _).
+roled[type](N) :- pattern_elem[type](N, _, _).
+roled[value](N) :- pattern_elem[value](_, _, N).
+roled[type](N) :- pattern_elem[type](_, _, N).
+roled[value](N) :- rest_props[value](N, _).
+roled[type](N) :- rest_props[type](N, _).
+roled[value](N) :- rest_props[value](_, N).
+roled[type](N) :- rest_props[type](_, N).
+roled[value](N) :- rest_elems[value](N, _, _).
+roled[type](N) :- rest_elems[type](N, _, _).
+roled[value](N) :- rest_elems[value](_, _, N).
+roled[type](N) :- rest_elems[type](_, _, N).
+roled[value](N) :- has[value](N, _).
+roled[type](N) :- has[type](N, _).
+roled[value](N) :- has[value](_, N).
+roled[type](N) :- has[type](_, N).
+roled[value](N) :- value[value](N, _).
+roled[type](N) :- value[type](N, _).
+roled[value](N) :- value[value](_, N).
+roled[type](N) :- value[type](_, N).
+roled[value](N) :- extends[value](N, _).
+roled[type](N) :- extends[type](N, _).
+roled[value](N) :- extends[value](_, N).
+roled[type](N) :- extends[type](_, N).
+roled[value](N) :- static_block[value](N, _).
+roled[type](N) :- static_block[type](N, _).
+roled[value](N) :- static_block[value](_, N).
+roled[type](N) :- static_block[type](_, N).
+roled[value](N) :- decorated[value](N, _).
+roled[type](N) :- decorated[type](N, _).
+roled[value](N) :- decorated[value](_, N).
+roled[type](N) :- decorated[type](_, N).
+roled[value](N) :- spread_props[value](N, _, _).
+roled[type](N) :- spread_props[type](N, _, _).
+roled[value](N) :- spread_props[value](_, _, N).
+roled[type](N) :- spread_props[type](_, _, N).
+roled[value](N) :- spread_elems[value](N, _, _).
+roled[type](N) :- spread_elems[type](N, _, _).
+roled[value](N) :- spread_elems[value](_, _, N).
+roled[type](N) :- spread_elems[type](_, _, N).
+roled[value](N) :- passes[value](N, _).
+roled[type](N) :- passes[type](N, _).
+roled[value](N) :- passes[value](_, N).
+roled[type](N) :- passes[type](_, N).
+roled[value](N) :- binary[value](N, _, _, _).
+roled[type](N) :- binary[type](N, _, _, _).
+roled[value](N) :- binary[value](_, _, N, _).
+roled[type](N) :- binary[type](_, _, N, _).
+roled[value](N) :- binary[value](_, _, _, N).
+roled[type](N) :- binary[type](_, _, _, N).
+roled[value](N) :- unary[value](N, _, _).
+roled[type](N) :- unary[type](N, _, _).
+roled[value](N) :- unary[value](_, _, N).
+roled[type](N) :- unary[type](_, _, N).
+roled[value](N) :- logical[value](N, _, _, _).
+roled[type](N) :- logical[type](N, _, _, _).
+roled[value](N) :- logical[value](_, _, N, _).
+roled[type](N) :- logical[type](_, _, N, _).
+roled[value](N) :- logical[value](_, _, _, N).
+roled[type](N) :- logical[type](_, _, _, N).
+roled[value](N) :- executes_if[value](N, _, _).
+roled[type](N) :- executes_if[type](N, _, _).
+roled[value](N) :- executes_if[value](_, N, _).
+roled[type](N) :- executes_if[type](_, N, _).
+roled[value](N) :- executes_when[value](N, _, _).
+roled[type](N) :- executes_when[type](N, _, _).
+roled[value](N) :- executes_when[value](_, N, _).
+roled[type](N) :- executes_when[type](_, N, _).
+roled[value](N) :- repeats[value](N, _).
+roled[type](N) :- repeats[type](N, _).
+roled[value](N) :- repeats[value](_, N).
+roled[type](N) :- repeats[type](_, N).
+roled[value](N) :- iterates[value](N, _, _).
+roled[type](N) :- iterates[type](N, _, _).
+roled[value](N) :- iterates[value](_, N, _).
+roled[type](N) :- iterates[type](_, N, _).
+roled[value](N) :- iterates[value](_, _, N).
+roled[type](N) :- iterates[type](_, _, N).
+roled[value](N) :- enumerates[value](N, _, _).
+roled[type](N) :- enumerates[type](N, _, _).
+roled[value](N) :- enumerates[value](_, N, _).
+roled[type](N) :- enumerates[type](_, N, _).
+roled[value](N) :- enumerates[value](_, _, N).
+roled[type](N) :- enumerates[type](_, _, N).
+roled[value](N) :- exits[value](N, _).
+roled[type](N) :- exits[type](N, _).
+roled[value](N) :- throws[value](N, _).
+roled[type](N) :- throws[type](N, _).
+roled[value](N) :- throws[value](_, N).
+roled[type](N) :- throws[type](_, N).
+roled[value](N) :- tries[value](N, _).
+roled[type](N) :- tries[type](N, _).
+roled[value](N) :- tries[value](_, N).
+roled[type](N) :- tries[type](_, N).
+roled[value](N) :- labeled_as[value](N, _).
+roled[type](N) :- labeled_as[type](N, _).
+roled[value](N) :- jumps_to[value](N, _).
+roled[type](N) :- jumps_to[type](N, _).
+roled[value](N) :- namespace[value](N, _).
+roled[type](N) :- namespace[type](N, _).
+roled[value](N) :- namespace[value](_, N).
+roled[type](N) :- namespace[type](_, N).
+roled[value](N) :- module_ref[value](N, _).
+roled[type](N) :- module_ref[type](N, _).
+roled[value](N) :- module_expr[value](N, _).
+roled[type](N) :- module_expr[type](N, _).
+roled[value](N) :- suspends[value](N, _, _).
+roled[type](N) :- suspends[type](N, _, _).
+roled[value](N) :- hoisted[value](N, _).
+roled[type](N) :- hoisted[type](N, _).
+roled[value](N) :- hoisted[value](_, N).
+roled[type](N) :- hoisted[type](_, N).
+roled[value](N) :- finalizes[value](N, _).
+roled[type](N) :- finalizes[type](N, _).
+roled[value](N) :- finalizes[value](_, N).
+roled[type](N) :- finalizes[type](_, N).
+roled[value](N) :- declared[value](N, _).
+roled[type](N) :- declared[type](N, _).
+roled[value](N) :- declared[value](_, N).
+roled[type](N) :- declared[type](_, N).
+roled[value](N) :- implements[value](N, _).
+roled[type](N) :- implements[type](N, _).
+roled[value](N) :- implements[value](_, N).
+roled[type](N) :- implements[type](_, N).
+roled[value](N) :- bound[value](N, _).
+roled[type](N) :- bound[type](N, _).
+roled[value](N) :- bound[value](_, N).
+roled[type](N) :- bound[type](_, N).
+roled[value](N) :- access[value](N, _).
+roled[type](N) :- access[type](N, _).
+roled[value](N) :- frozen[value](N).
+roled[type](N) :- frozen[type](N).
+roled[value](N) :- keyed_by[value](N, _).
+roled[type](N) :- keyed_by[type](N, _).
+roled[value](N) :- keyed_by[value](_, N).
+roled[type](N) :- keyed_by[type](_, N).
+roled[value](N) :- mark[value](N, _).
+roled[type](N) :- mark[type](N, _).
+
+
+roled[tree](N) :- program[tree](N, _).
+
+-- THE ROLE TREE. A converter writes the raw edges of its parser, edge[tree](P, C), which only it reads; the tree every
+-- world shares joins a node that plays a role to the nearest ancestor that plays one. A wrapper no role names
+-- (a parameter list, a parenthesis, an expression statement) is no node of it, whatever the parser calls it.
+plays[tree](N) :- roled[value](N).
+plays[tree](N) :- roled[type](N).
+plays[tree](N) :- roled[tree](N).
+plays[tree](N) :- nth[tree](_, _, N).
+climb[tree](C, P) :- edge[tree](P, C), plays[tree](C).
+climb[tree](C, Q) :- climb[tree](C, P), not plays[tree](P), edge[tree](Q, P).
+parent[tree](P, C) :- climb[tree](C, P), plays[tree](P).
 -- the role tree is a forest and `inside` its closure
 tree parent(P, C) closure inside.
 

@@ -114,7 +114,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
 | a function | a node [`fn_node`](#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
@@ -127,6 +126,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="fn_node"></a>A node is a function if [`body`](#body)(it, something).
 - <a id="fn_file"></a>A [function](#fn_node) is defined in File if [`at`](#at)(it, File, something).
 - <a id="ctor_method"></a>A [function](#fn_node) is a constructor if [`constructs`](#constructs)(something, it).
+- <a id="decorates"></a>A node is decorated by a node E if [`decorated`](#decorated)(it, E).
 - <a id="enclosed"></a>A node is enclosed if some function [is the nearest function of](#nearest_fn) it.
 - <a id="resolved_site"></a>A node is resolved if it [resolves to](#resolves) some function.
 - <a id="unresolved_shape"></a>A shape has residue if some call [is unresolved](#unresolved_call) with it.
@@ -157,7 +157,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 1. if [`construct`](#construct)(X) and N is `new_expression`;
 2. if [`tagged`](#tagged)(X, something, something) and N is `tagged_template_expression`;
 3. if [`for_of`](js-structure.rofl.md#for_of)(X) and N is `for_of_statement`;
-4. if [`decorated`](#decorated)(something, E), [`parent`](#parent)(X, E), and N is `decorator`.
+4. if [`decorated`](#decorated)(X, something) and N is `decorator`.
 
 <a id="site"></a>A node X is a site either:
 
@@ -166,17 +166,16 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
-A call
+<a id="call_arg"></a>A call C passes the argument X at an index I either:
 
-- <a id="call_arg"></a>passes the argument X at an index I if all of:
-  - it [is a call site](#call_site) in some file;
-  - [`nth`](#nth)(it, I, X);
-  - unless [`spread_args`](#spread_args)(it, something, X).
-- passes the argument S at an index I if all of:
-  - it [is a call site](#call_site) in some file;
-  - [`nth`](#nth)(it, I, X);
-  - [`spread_args`](#spread_args)(it, something, X);
-  - [`parent`](#parent)(S, X).
+1. if all of:
+   - C [is a call site](#call_site) in some file;
+   - [`nth`](#nth)(C, I, X);
+   - unless [`spread_args`](#spread_args)(C, something, X);
+2. if all of:
+   - C [is a call site](#call_site) in some file;
+   - [`nth`](#nth)(C, I, X);
+   - [`spread_args`](#spread_args)(C, something, X).
 
 ## 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
 
@@ -502,8 +501,6 @@ A [function](#fn_node) answers to a name N if all of:
 > for transfer sites while `top_call` still read `call_site`; the 2026-09-08
 > repair made them one rule and 2026-09-11 made them one name.)
 
-<a id="decorates"></a>A node is decorated by a node D if [`decorated`](#decorated)(it, E) and [`parent`](#parent)(D, E).
-
 <a id="in_own_decorator"></a>A node F has its decorator at a node C either:
 
 1. if F [is decorated by](#decorates) a node D and [`inside`](#inside)(D, C);
@@ -587,8 +584,7 @@ A call X resolves to a node F either:
    - a node T [points to](js-concat.rofl.md#may_be_node) F;
    - [`fn_value`](js-surface.rofl.md#fn_value)(F);
 2. if all of:
-   - [`decorated`](#decorated)(something, E);
-   - [`parent`](#parent)(X, E);
+   - [`decorated`](#decorated)(X, E);
    - a node E [points to](js-concat.rofl.md#may_be_node) F;
    - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
@@ -2116,7 +2112,10 @@ In the code:
 
 1. if [`binary`](#binary)(something, "instanceof", O, something) in the value;
 2. if [`binary`](#binary)(something, "in", something, O) in the value;
-3. if the `test` of a node P is a node G and O [is among the](#ast_child) `arguments` of G;
+3. if all of:
+   - [`executes_if`](#executes_if)(something, G, `truthy` or `falsy`);
+   - [`call`](#call)(G);
+   - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
 4. if all of:
    - [`logical`](#logical)(P, something, G, something);
    - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
@@ -2217,11 +2216,12 @@ In the surface:
 <a id="sx_param_deref"></a>`sx_param_deref`(F, I, Name, DefFile, DefLine) if all of:
   - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
   - F [uses](js-dataflow.rofl.md#param_use) Name at a node U;
-  - [`object_of`](js-structure.rofl.md#object_of)(a [member expression](#noun-member_expression) M, U);
+  - [`object_of`](js-structure.rofl.md#object_of)(a [member access](js-dataflow.rofl.md#member_node_v) M, U);
   - [`at`](#at)(U, DefFile, something);
   - [`at`](#at)(U, something, DefLine);
   - unless [`param_defaulted`](#param_defaulted)(F, I);
-  - unless [`param_tested`](#param_tested)(F, Name).
+  - unless [`param_tested`](#param_tested)(F, Name);
+  - unless [`executes_if`](#executes_if)(M, something, `defined`).
 
 In the flow:
 

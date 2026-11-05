@@ -23,7 +23,7 @@ prop_name[code](T, P, K) :- pattern_prop[value](P, K, T), pat_in[code](_, P, T).
 argument_at[code](C, I, A) :- callee[value](C, _), nth[tree](C, I, A).
 -- the I-th argument as the tree has it: a spread is its own node, not what it spreads
 arg_node[code](C, I, A) :- argument_at[code](C, I, A), not spread_args[value](C, I, _).
-arg_node[code](C, I, S) :- spread_args[value](C, I, A), parent[tree](S, A).
+arg_node[code](C, I, A) :- spread_args[value](C, I, A).
 
 -- ORDER OF EXECUTION. The step of a strict sequence B at position I, as the tree has it: the child of B that holds
 -- the step (the statement around an expression, the label around a statement), whatever the sequence is: a block,
@@ -31,8 +31,9 @@ arg_node[code](C, I, S) :- spread_args[value](C, I, A), parent[tree](S, A).
 seq_at[code](B, I, S) :- nth[tree](B, I, S), strict[tree](B), parent[tree](B, S).
 seq_at[code](B, I, W) :- nth[tree](B, I, X), strict[tree](B), parent[tree](W, X), parent[tree](B, W),
                          not executes_if[value](W, X, matches).
-seq_at[code](B, I, W) :- nth[tree](B, I, X), strict[tree](B), parent[tree](V, X), parent[tree](W, V), parent[tree](B, W),
-                         not executes_if[value](V, X, matches).
+-- what a step holds: what is inside it, and an expression statement's expression, which is the step itself
+step_in[code](S, X) :- seq_at[code](_, _, S), inside[tree](S, X).
+step_in[code](S, S) :- discards[value](_, S).
 
 
 

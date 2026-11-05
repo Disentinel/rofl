@@ -571,7 +571,6 @@ sig(guarded, "is_guarded(node X)").
 sig(after_abrupt, "follows_an_abrupt_completion(node S)").
 sig(after_suspend, "follows_a_suspension(node S)").
 sig(stmt_seq_unseen, "is_an_unseen_statement_field(field F)").
-sig(label_name, "the_label_name(of label LS, is name N)").
 sig(label_ref, "refers_to_the_label(node X, name N)").
 sig(label_target, "targets_the_label(node X, label LS)").
 sig(completes_abruptly, "completes_abruptly(node S)").

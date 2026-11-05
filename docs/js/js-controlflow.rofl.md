@@ -23,7 +23,7 @@ Reads:
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
-- from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at)
+- from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
 - from outside these files, in the tree:
@@ -190,7 +190,7 @@ Declared as facts:
 
 1. if all of:
    - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
-   - [`inside`](#inside)(S, X);
+   - [`step_in`](js-structure.rofl.md#step_in)(S, X);
    - [`inside`](#inside)(G, S);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
    - unless [`iterates`](#iterates)(X, something, something);
@@ -214,16 +214,14 @@ Declared as facts:
 > honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 > harmless, because both consumers read through `guarded`.
 
-<a id="label_name"></a>The label name of LS is N if [`labeled_as`](#labeled_as)(X, N) and [`parent`](#parent)(LS, X).
-
 <a id="label_target"></a>A node targets the label LS if all of:
   - it [refers to the label](#label_ref) N;
-  - [the label name](#label_name) of LS is N;
+  - [`labeled_as`](#labeled_as)(LS, N);
   - [`inside`](#inside)(LS, it).
 
 <a id="abrupt_at"></a>B is abrupt from a step I if all of:
   - a node X [targets the label](#label_target) LS;
-  - [`inside`](#inside)(S, X);
+  - [`step_in`](js-structure.rofl.md#step_in)(S, X);
   - [`inside`](#inside)(LS, S);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
   - unless [`repeats`](#repeats)(B, S).
@@ -260,11 +258,11 @@ A node B completes abruptly either:
    - unless [`repeats`](#repeats)(B, something);
    - unless [`finalizes`](#finalizes)(something, S);
 2. if all of:
-   - a node LS [completes abruptly](#completes_abruptly);
-   - [`parent`](#parent)(LS, S);
+   - a node S [completes abruptly](#completes_abruptly);
    - [`labeled_as`](#labeled_as)(S, something);
    - [`nth`](#nth)(B, something, S);
    - [`strict`](#strict)(B);
+   - unless S [is escaped](#label_escaped);
    - unless [`repeats`](#repeats)(B, something);
 3. if all of:
    - a node C [completes abruptly](#completes_abruptly);
@@ -274,19 +272,14 @@ A node B completes abruptly either:
    - [`parent`](#parent)(B, X);
    - a node X [completes abruptly](#completes_abruptly).
 
-A node completes abruptly if all of:
-  - a node S [completes abruptly](#completes_abruptly);
-  - [`labeled_as`](#labeled_as)(S, something);
-  - [`parent`](#parent)(it, S);
-  - unless it [is escaped](#label_escaped).
-
 > the consumer: it replaces the old four-kind arm rather than sitting beside
 > it, since the base case IS that arm
 
 B is abrupt from a step I if all of:
   - a node S [completes abruptly](#completes_abruptly);
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
-  - unless [`repeats`](#repeats)(B, S).
+  - unless [`repeats`](#repeats)(B, S);
+  - unless S [is escaped](#label_escaped).
 
 > a kind this closure claims and never decides — misspelled, deleted or
 > unexercised all read as "the closure is smaller than it says"
@@ -491,29 +484,26 @@ A node
   - Init [points to](js-concat.rofl.md#may_be_node) a node Obj;
   - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
-
-S destructures through the accessor M if all of:
+- destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of a node Obj at Key is M;
-  - a node X [points to](js-concat.rofl.md#may_be_node) Obj;
-  - [`spread_props`](#spread_props)(O, something, X);
-  - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
-  - [`parent`](#parent)(S, X).
+  - it [points to](js-concat.rofl.md#may_be_node) Obj;
+  - [`spread_props`](#spread_props)(O, something, it);
+  - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O).
 
 > `spread_element` is one kind doing two things: in `properties` it copies
 > keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
 
-<a id="spread_iterated"></a>S is iterated either:
+<a id="spread_iterated"></a>X is iterated either:
 
-1. if [`spread_elems`](#spread_elems)(something, something, X) and [`parent`](#parent)(S, X);
-2. if [`spread_args`](#spread_args)(something, something, X) and [`parent`](#parent)(S, X).
+1. if [`spread_elems`](#spread_elems)(something, something, X);
+2. if [`spread_args`](#spread_args)(something, something, X).
 
 <a id="pattern_iterates"></a>A node P destructures through a node M either:
 
 1. if [`iterates`](#iterates)(P, P, something) and P [iterates through](js-callgraph.rofl.md#for_of_iterates) M;
 2. if all of:
    - P [is iterated](#spread_iterated);
-   - [`parent`](#parent)(P, X);
-   - a node X [points to](js-concat.rofl.md#may_be_node) a node Obj;
+   - P [points to](js-concat.rofl.md#may_be_node) a node Obj;
    - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
    - [`fn_value`](js-surface.rofl.md#fn_value)(M).
 
@@ -563,15 +553,10 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 <a id="hidden_call_pos"></a>A node N hides a call by a mechanism E either:
 
 1. if [`object_pat`](js-structure.rofl.md#object_pat)(N) and E is `accessor_call`;
-2. if all of:
-   - [`rest_props`](#rest_props)(P, T);
-   - [`parent`](#parent)(N, T);
-   - [`parent`](#parent)(P, N);
-   - E is `accessor_call`;
+2. if [`rest_props`](#rest_props)(something, N) and E is `accessor_call`;
 3. if all of:
    - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
-   - [`spread_props`](#spread_props)(O, something, Y);
-   - [`parent`](#parent)(N, Y);
+   - [`spread_props`](#spread_props)(O, something, N);
    - E is `accessor_call`;
 4. if N [is iterated](#spread_iterated) and E is `iterator_call`;
 5. if [`iterates`](#iterates)(N, something, something) and E is `iterator_call`.
@@ -580,8 +565,8 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 
 1. if [the pattern source](#pattern_source) of P is Init and [`object_pat`](js-structure.rofl.md#object_pat)(P);
 2. if D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-3. if P [is iterated](#spread_iterated) and [`parent`](#parent)(P, Init);
-4. if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, Init) and [`parent`](#parent)(P, Init);
+3. if P [is iterated](#spread_iterated) and Init is P;
+4. if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, P) and Init is P;
 5. if [`iterates`](#iterates)(P, something, Init) and P differs from Init;
 6. if all of:
    - [`iterates`](#iterates)(P, P, P);
@@ -751,7 +736,7 @@ B is abrupt from a step I either:
 1. if all of:
    - a call C [is a throwing call](#throwing_call);
    - G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
-   - [`inside`](#inside)(S, C);
+   - [`step_in`](js-structure.rofl.md#step_in)(S, C);
    - [`inside`](#inside)(G, S);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
    - unless [`repeats`](#repeats)(B, S);

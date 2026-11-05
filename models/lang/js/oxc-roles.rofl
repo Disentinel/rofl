@@ -29,11 +29,11 @@ program[tree](P, File)   :- node[ast_oxc](P, program, File).
 pos[tree](N, O)          :- start[ast_oxc](N, O).
 
 -- the edge `inside` closes over: the raw parent, so a node under a wrapper is still inside
-parent[tree](P, C) :- child[ast_oxc](P, _, _, C), not moved_type(C, _).
+edge[tree](P, C) :- child[ast_oxc](P, _, _, C), not moved_type(C, _).
 -- the type of a parameter or a declarator is written on oxc's wrapper; as in Babel it hangs under the name
 moved_type(A, B) :- oxc_k[ast_oxc](W, formal_parameter), child[ast_oxc](W, type_annotation, 0, A), child[ast_oxc](W, pattern, 0, B).
 moved_type(A, B) :- oxc_k[ast_oxc](W, variable_declarator), child[ast_oxc](W, type_annotation, 0, A), child[ast_oxc](W, id, 0, B).
-parent[tree](B, A) :- moved_type(A, B).
+edge[tree](B, A) :- moved_type(A, B).
 
 -- THE ORDER OF EVALUATION: nth. A sequence field gives its members from Offset on; a step field one
 -- child at its position; the callee is no step of its call. The statement around an expression, the
@@ -189,7 +189,9 @@ key[value](P, Name)  :- oxc_k[ast_oxc](P, binding_property), static_key(P, K, ke
 key[value](P, Name)  :- oxc_k[ast_oxc](P, assignment_target_property_property), static_key(P, K, name), key_name(K, Name).
 mark[value](M, private)    :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_oxc](M, key, 0, K), oxc_k[ast_oxc](K, private_identifier).
 
-literal[value](N, V) :- oxc_k[ast_oxc](N, string_literal), oxc_a[ast_oxc](N, value, V), not key_of(N), not type_literal(N).
+literal[value](N, V) :- oxc_k[ast_oxc](N, string_literal), oxc_a[ast_oxc](N, value, V), not key_of(N), not type_literal(N), not directive_string(N).
+-- a directive is no expression statement: its string is no literal
+directive_string(N) :- oxc_k[ast_oxc](D, directive), oxc_c[ast_oxc](D, expression, 0, N).
 literal[value](N, null) :- oxc_k[ast_oxc](N, null_literal).
 literal[value](N, V) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), int is type_of(V), not type_literal(N).
 literal[value](N, float(V)) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), string is type_of(V), not type_literal(N).
@@ -201,7 +203,7 @@ type_literal(N) :- oxc_k[ast_oxc](T, tsliteral_type), oxc_c[ast_oxc](T, literal,
 literal[type](N, V) :- type_literal(N), oxc_a[ast_oxc](N, value, V).
 passes[type](T, L) :- oxc_k[ast_oxc](T, tsliteral_type), oxc_c[ast_oxc](T, literal, 0, L).
 key_of(N) :- oxc_c[ast_oxc](M, key, 0, N), oxc_a[ast_oxc](M, computed, false).
-key_of(N) :- oxc_c[ast_oxc](M, key, 0, N), oxc_k[ast_oxc](M, tsenum_member).
+key_of(N) :- oxc_c[ast_oxc](M, id, 0, N), oxc_k[ast_oxc](M, tsenum_member).
 
 mark[value](T, template)           :- oxc_k[ast_oxc](T, template_literal).
 template_part[value](T, I, Q) :- mark[value](T, template), oxc_c[ast_oxc](T, quasis, J, Q), I is J * 2.
@@ -277,8 +279,8 @@ awaits[value](A, X)    :- oxc_k[ast_oxc](A, await_expression), oxc_c[ast_oxc](A,
 pause_at(S, later) :- oxc_k[ast_oxc](S, await_expression).
 pause_at(S, next)  :- oxc_k[ast_oxc](S, yield_expression).
 pause_at(S, later) :- oxc_k[ast_oxc](S, for_of_statement), oxc_a[ast_oxc](S, await, true).
-pause_up(S, P) :- pause_at(S, _), parent[tree](P, S).
-pause_up(S, Q) :- pause_up(S, P), not body[value](P, _), parent[tree](Q, P).
+pause_up(S, P) :- pause_at(S, _), edge[tree](P, S).
+pause_up(S, Q) :- pause_up(S, P), not body[value](P, _), edge[tree](Q, P).
 suspends[value](S, F, How) :- pause_up(S, F), body[value](F, _), pause_at(S, How).
 suspends[value](S, P, How) :- pause_up(S, P), oxc_k[ast_oxc](P, program), pause_at(S, How).
 
@@ -315,8 +317,9 @@ decl[value](C, class)    :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, id, 0, _
 target[value](C, I)      :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, id, 0, I).
 hoist_node(X) :- oxc_k[ast_oxc](X, function), oxc_a[ast_oxc](X, type, "FunctionDeclaration").
 hoist_node(X) :- oxc_k[ast_oxc](X, class), oxc_a[ast_oxc](X, type, "ClassDeclaration").
-scope_between(X, S) :- hoist_node(X), inside[tree](W, X), mark[value](W, scope), inside[tree](S, W).
-hoisted[value](X, S) :- hoist_node(X), inside[tree](S, X), mark[value](S, scope), not scope_between(X, S).
+hoist_up(X, P) :- hoist_node(X), edge[tree](P, X).
+hoist_up(X, Q) :- hoist_up(X, P), not mark[value](P, scope), edge[tree](Q, P).
+hoisted[value](X, S) :- hoist_up(X, S), mark[value](S, scope).
 decl[value](T, param)    :- param[value](_, _, T).
 decl[value](T, param)    :- rest_params[value](_, _, T).
 assign[value](P, T, V)   :- oxc_k[ast_oxc](P, formal_parameter), oxc_c[ast_oxc](P, pattern, 0, T), oxc_c[ast_oxc](P, initializer, 0, V).
@@ -383,13 +386,19 @@ gives[value](E, X)      :- oxc_k[ast_oxc](E, logical_expression), oxc_c[ast_oxc]
 
 -- patterns, declared (binding_*) and assigned (*_assignment_target) alike
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, properties, _, BP),
-                                  oxc_c[ast_oxc](BP, key, 0, K), key_name(K, Key), oxc_c[ast_oxc](BP, value, 0, T).
+                                  oxc_c[ast_oxc](BP, key, 0, K), key_name(K, Key), oxc_c[ast_oxc](BP, value, 0, V), pat_target(V, T).
+-- a default on the target is an assign of its own: the target is the name
+pat_target(V, V) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, properties, _, BP), oxc_c[ast_oxc](BP, value, 0, V),
+                    not oxc_k[ast_oxc](V, assignment_pattern).
+pat_target(V, T) :- oxc_k[ast_oxc](V, assignment_pattern), oxc_c[ast_oxc](V, left, 0, T).
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_assignment_target), oxc_c[ast_oxc](P, properties, _, AP),
                                   oxc_k[ast_oxc](AP, assignment_target_property_property),
                                   oxc_c[ast_oxc](AP, name, 0, K), key_name(K, Key), oxc_c[ast_oxc](AP, binding, 0, T).
 pattern_prop[value](P, Key, T) :- oxc_k[ast_oxc](P, object_assignment_target), oxc_c[ast_oxc](P, properties, _, AP),
                                   oxc_k[ast_oxc](AP, assignment_target_property_identifier),
                                   oxc_c[ast_oxc](AP, binding, 0, T), oxc_name[ast_oxc](T, Key).
+key[value](T, Key)             :- oxc_k[ast_oxc](AP, assignment_target_property_identifier), oxc_c[ast_oxc](AP, binding, 0, T),
+                                  oxc_name[ast_oxc](T, Key).
 assign[value](AP, T, V)        :- oxc_k[ast_oxc](AP, assignment_target_property_identifier),
                                   oxc_c[ast_oxc](AP, binding, 0, T), oxc_c[ast_oxc](AP, init, 0, V).
 rest_props[value](P, T) :- oxc_k[ast_oxc](P, object_pattern), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, argument, 0, T).
@@ -520,7 +529,7 @@ wait_up(A, A) :- oxc_k[ast_oxc](A, await_expression).
 wait_up(A, S) :- wait_up(A, X), nth[tree](S, _, X).
 wait_up(A, C) :- wait_up(A, X), callee[value](C, X).
 wait_up(A, C) :- wait_up(A, X), tagged[value](C, X, _).
-wait_up(A, S) :- wait_up(A, X), executes_if[value](X, _, _), parent[tree](S, X).
+wait_up(A, S) :- wait_up(A, X), executes_if[value](X, _, _), edge[tree](S, X).
 executes_when[value](Next, A, microtask) :- wait_up(A, S), nth[tree](Seq, I, S), nth[tree](Seq, J, Next), J > I.
 executes_when[value](Arg, A, microtask)  :- wait_up(A, N), callee[value](C, N), nth[tree](C, _, Arg).
 

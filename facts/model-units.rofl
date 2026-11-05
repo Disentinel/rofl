@@ -129,6 +129,7 @@ unit_concludes("rules/js-structure.rofl", prop_name).
 unit_concludes("rules/js-structure.rofl", argument_at).
 unit_concludes("rules/js-structure.rofl", arg_node).
 unit_concludes("rules/js-structure.rofl", seq_at).
+unit_concludes("rules/js-structure.rofl", step_in).
 unit_concludes("rules/js-structure.rofl", ast_in).
 unit_concludes("rules/js-structure.rofl", ast_name).
 unit_concludes("rules/js-structure.rofl", key_name).
@@ -275,6 +276,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_field_ok).
 unit_concludes("rules/js-dataflow.rofl", keyed_method).
 unit_concludes("rules/js-dataflow.rofl", keyed_list).
 unit_concludes("rules/js-dataflow.rofl", keyed_seen).
+unit_concludes("rules/js-dataflow.rofl", keyed_in).
 unit_concludes("rules/js-dataflow.rofl", keyed_fn_between).
 unit_concludes("rules/js-dataflow.rofl", keyed_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_hoisted).
@@ -796,7 +798,6 @@ unit_concludes("rules/js-controlflow.rofl", stmt_seq_field).
 unit_concludes("rules/js-controlflow.rofl", after_abrupt).
 unit_concludes("rules/js-controlflow.rofl", suspend_at).
 unit_concludes("rules/js-controlflow.rofl", after_suspend).
-unit_concludes("rules/js-controlflow.rofl", label_name).
 unit_concludes("rules/js-controlflow.rofl", label_ref).
 unit_concludes("rules/js-controlflow.rofl", label_target).
 unit_concludes("rules/js-controlflow.rofl", abrupt_at).
@@ -1499,13 +1500,16 @@ unit_concludes("models/lang/js/roles.rofl", private).
 unit_concludes("models/lang/js/roles.rofl", template).
 unit_concludes("models/lang/js/roles.rofl", ambient).
 unit_concludes("models/lang/js/roles.rofl", mark_name).
+unit_concludes("models/lang/js/roles.rofl", roled).
+unit_concludes("models/lang/js/roles.rofl", plays).
+unit_concludes("models/lang/js/roles.rofl", climb).
 unit_concludes("models/lang/js/roles.rofl", parent).
 unit_concludes("models/lang/js/roles.rofl", world).
 unit_concludes("models/lang/js/roles.rofl", imports).
 unit_concludes("models/lang/js/babel-roles.rofl", edb).
 unit_concludes("models/lang/js/babel-roles.rofl", imports).
 unit_concludes("models/lang/js/babel-roles.rofl", program).
-unit_concludes("models/lang/js/babel-roles.rofl", parent).
+unit_concludes("models/lang/js/babel-roles.rofl", edge).
 unit_concludes("models/lang/js/babel-roles.rofl", at).
 unit_concludes("models/lang/js/babel-roles.rofl", pos).
 unit_concludes("models/lang/js/babel-roles.rofl", namespace).
@@ -1586,6 +1590,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", member).
 unit_concludes("models/lang/js/babel-roles.rofl", member_expr).
 unit_concludes("models/lang/js/babel-roles.rofl", literal_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", literal).
+unit_concludes("models/lang/js/babel-roles.rofl", b_key_string).
 unit_concludes("models/lang/js/babel-roles.rofl", b_type_literal).
 unit_concludes("models/lang/js/babel-roles.rofl", template_part).
 unit_concludes("models/lang/js/babel-roles.rofl", calling_kind).
@@ -1619,7 +1624,7 @@ unit_concludes("models/lang/js/babel-roles.rofl", var_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", target).
 unit_concludes("models/lang/js/babel-roles.rofl", decl_kind).
 unit_concludes("models/lang/js/babel-roles.rofl", hoist_kind).
-unit_concludes("models/lang/js/babel-roles.rofl", b_scope_between).
+unit_concludes("models/lang/js/babel-roles.rofl", b_hup).
 unit_concludes("models/lang/js/babel-roles.rofl", hoisted).
 unit_concludes("models/lang/js/babel-roles.rofl", target_field).
 unit_concludes("models/lang/js/babel-roles.rofl", b_tgt).

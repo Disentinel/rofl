@@ -63,7 +63,7 @@ after_abrupt[code](S) :- abrupt_at[code](B, I), seq_at[code](B, J, S), I < J, no
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
 suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
-                          inside[tree](S, X), inside[tree](G, S), seq_at[code](B, I, S).
+                          step_in[code](S, X), inside[tree](G, S), seq_at[code](B, I, S).
 suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
                           seq_at[code](B, I, X).
 after_suspend[code](S) :- suspend_at[code](B, I), seq_at[code](B, J, S), I < J.
@@ -77,12 +77,11 @@ after_suspend[code](S) :- suspend_at[code](B, I), seq_at[code](B, J, S), I < J.
 -- between reference and target and the walking arms then say NEVER where the
 -- honest word is MAY (f_after_abrupt_says_never_and_the_walking_arms_say_may);
 -- harmless, because both consumers read through `guarded`.
-label_name[code](LS, N)   :- labeled_as[value](X, N), parent[tree](LS, X).
 label_ref[code](X, N)     :- jumps_to[value](X, N).
-label_target[code](X, LS) :- label_ref[code](X, N), label_name[code](LS, N),
+label_target[code](X, LS) :- label_ref[code](X, N), labeled_as[value](LS, N),
                              inside[tree](LS, X).
 
-abrupt_at[code](B, I)     :- label_target[code](X, LS), inside[tree](S, X),
+abrupt_at[code](B, I)     :- label_target[code](X, LS), step_in[code](S, X),
                              inside[tree](LS, S), seq_at[code](B, I, S), not repeats[value](B, S).
 
 -- =========================================================================
@@ -106,19 +105,17 @@ completes_abruptly[code](S) :- exits[value](S, _).
 -- statement does, which it does not when a break leaves it
 completes_abruptly[code](B) :- completes_abruptly[code](S), nth[tree](B, _, S), strict[tree](B), not labeled_as[value](S, _),
                                not repeats[value](B, _), not finalizes[value](_, S).
-completes_abruptly[code](B) :- completes_abruptly[code](LS), parent[tree](LS, S), labeled_as[value](S, _), nth[tree](B, _, S),
+completes_abruptly[code](B) :- completes_abruptly[code](S), labeled_as[value](S, _), not label_escaped[code](S), nth[tree](B, _, S),
                                strict[tree](B), not repeats[value](B, _).
 
 completes_abruptly[code](S) :- completes_abruptly[code](C), executes_if[value](C, G, truthy), parent[tree](S, C),
                                executes_if[value](A, G, falsy), parent[tree](S, A), completes_abruptly[code](A).
 
 label_escaped[code](LS)      :- label_target[code](_, LS).
-completes_abruptly[code](LS) :- completes_abruptly[code](S), labeled_as[value](S, _), parent[tree](LS, S),
-                                not label_escaped[code](LS).
 
 -- the consumer: it replaces the old four-kind arm rather than sitting beside
 -- it, since the base case IS that arm
-abrupt_at[code](B, I) :- completes_abruptly[code](S), seq_at[code](B, I, S), not repeats[value](B, S).
+abrupt_at[code](B, I) :- completes_abruptly[code](S), seq_at[code](B, I, S), not repeats[value](B, S), not label_escaped[code](S).
 
 -- a kind this closure claims and never decides — misspelled, deleted or
 -- unexercised all read as "the closure is smaller than it says"
@@ -231,17 +228,16 @@ pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _), declarator_id[co
 
                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
-pattern_accessor[code](S, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
-                                spread_props[value](O, _, A), obj_lit[code](O), parent[tree](S, A).
+pattern_accessor[code](A, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
+                                spread_props[value](O, _, A), obj_lit[code](O).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
 -- keys, in `elements`/`arguments` it exhausts an iterator — keyed by FIELD.
-spread_iterated[code](S) :- spread_elems[value](_, _, A), parent[tree](S, A).
-spread_iterated[code](S) :- spread_args[value](_, _, A), parent[tree](S, A).
+spread_iterated[code](A) :- spread_elems[value](_, _, A).
+spread_iterated[code](A) :- spread_args[value](_, _, A).
 
 pattern_iterates[code](P, M) :- iterates[value](P, P, _), for_of_iterates[code](P, M).
-pattern_iterates[code](S, M) :- spread_iterated[code](S),
-                                parent[tree](S, A), may_be_node[flow](A, Obj),
+pattern_iterates[code](A, M) :- spread_iterated[code](A), may_be_node[flow](A, Obj),
                                 member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 
 -- The two sides reach the call graph differently. An iterable position has one
@@ -278,16 +274,16 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- to `spread_element`, which carries both mechanisms — mutant d9 reads the
 -- edges instead.
 hidden_call_pos[code](N, accessor_call) :- object_pat[code](N).
-hidden_call_pos[code](R, accessor_call) :- rest_props[value](P, T), parent[tree](R, T), parent[tree](P, R).
-hidden_call_pos[code](S, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A), parent[tree](S, A).
+hidden_call_pos[code](T, accessor_call) :- rest_props[value](_, T).
+hidden_call_pos[code](A, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A).
 hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
 hidden_call_pos[code](X, iterator_call) :- iterates[value](X, _, _).
 
 hidden_call_src[code](P, Init) :- pattern_source[code](P, Init), object_pat[code](P).
 hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
                                   decl_value[flow](D, Init).
-hidden_call_src[code](S, A)    :- spread_iterated[code](S), parent[tree](S, A).
-hidden_call_src[code](S, A)    :- spread_of[code](_, A), parent[tree](S, A).
+hidden_call_src[code](A, A)    :- spread_iterated[code](A).
+hidden_call_src[code](A, A)    :- spread_of[code](_, A).
 hidden_call_src[code](X, R)    :- iterates[value](X, _, R), X != R.
 hidden_call_src[code](P, N)    :- iterates[value](P, P, P), declarator_id[code](D, P), decl_value[flow](D, N).
 hidden_call_src[code](P, N)    :- iterates[value](P, P, P), may_be_node[flow](P, N).
@@ -376,7 +372,7 @@ try_stops[code](C, T) :- throwing_call[code](C), try_walk[code](T, C).
 try_stops[code](C, S) :- try_stops[code](C, T), inside[tree](S, T).
 
 abrupt_at[code](B, I) :- throwing_call[code](C), nearest_v[flow](G, C),
-                         inside[tree](S, C), inside[tree](G, S),
+                         step_in[code](S, C), inside[tree](G, S),
                          seq_at[code](B, I, S), not repeats[value](B, S), not try_stops[code](C, S).
 abrupt_at[code](B, I) :- throwing_call[code](C), nearest_v[flow](_, C), seq_at[code](B, I, C).
 

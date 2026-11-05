@@ -27,9 +27,8 @@ const ID = /n[0-9a-f]{16}_[0-9a-v]+/g;
 
 // the role facts of one converter over one file. A node plays a role when it is the subject of a row of [value],
 // [type] or a tree role; it is named by where it starts and how deep it stands among the role nodes that start there
-// (outermost 0), so a difference stays at its place. The raw parent edge and its closure are each parser's own and
-// are compared as the role parent instead (the nearest ancestor that plays a role), and so is the place of a node
-// no role names.
+// (outermost 0), so a difference stays at its place. The role tree, parent and its closure inside, is compared like the rest: it is the nearest ancestor that plays a role
+// in both parsers.
 const TREE_ROLE = new Set(['program', 'nth', 'strict', 'precedes']);
 function roles(converter: string, facts: string): Set<string> {
   const out = run(rofl, ['load', '--budget', '100000000', '--space', '100000000', path.join(ROOT, 'boot.rofl'),
@@ -38,18 +37,17 @@ function roles(converter: string, facts: string): Set<string> {
   for (const l of out.split('\n')) {
     let m = /^pos\[tree\]\(([^,]+),(\d+)\) /.exec(l);
     if (m) { pos.set(m[1], +m[2]); continue; }
-    if ((m = /^parent\[tree\]\(([^,]+),([^,)]+)\) /.exec(l))) { up.set(m[2], m[1]); continue; }
+    if ((m = /^parent\[tree\]\(([^,]+),([^,)]+)\) /.exec(l))) { up.set(m[2], m[1]); rows.push(`parent[tree](${m[1]},${m[2]})`); continue; }
     const r = ROW.exec(l);
-    if (!r || r[1] === 'inside' || r[1] === 'pos') continue;
+    if (!r || r[1] === 'pos' || r[1] === 'edge' || r[1] === 'climb' || r[1] === 'plays') continue;
     if (r[2] !== 'tree' || TREE_ROLE.has(r[1])) role.add(r[3].split(',')[0]);
     rows.push(`${r[1]}[${r[2]}](${r[3]})`);
   }
   const roleUp = (n: string): string | undefined => { let p = up.get(n); while (p !== undefined && !role.has(p)) p = up.get(p); return p; };
-  for (const n of role) { const p = roleUp(n); if (p !== undefined) rows.push(`role_parent(${n},${p})`); }
   const depth = (n: string): number => { const p = roleUp(n); return p !== undefined && pos.get(p) === pos.get(n) ? depth(p) + 1 : 0; };
   const name = new Map([...role].map((n) => [n, `@${pos.get(n)}.${depth(n)}`]));
   return new Set(rows.map((r) => r.replace(ID, (n) => name.get(n) ?? '?'))
-    .filter((r) => !r.startsWith('at[tree](?') && !r.startsWith('parent[')));
+    .filter((r) => !r.startsWith('at[tree](?')));
 }
 
 let red = 0;
