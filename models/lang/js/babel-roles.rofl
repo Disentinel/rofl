@@ -500,8 +500,13 @@ member_expr[value](N, O, E) :- member_kind[ast_babel](K), node[ast_babel](N, K, 
                                child[ast_babel](N, object, 0, O), child[ast_babel](N, property, 0, E).
 
 edb(literal_kind).
-literal_kind[ast_babel](string_literal). literal_kind[ast_babel](numeric_literal). literal_kind[ast_babel](boolean_literal).
-literal_kind[ast_babel](big_int_literal).
+literal_kind[ast_babel](string_literal). literal_kind[ast_babel](boolean_literal).
+-- a number that is not an integer, and a bigint, have values of their own: the scanner writes both as text, and text is a string
+literal[value](N, V)           :- node[ast_babel](N, numeric_literal, _), attr[ast_babel](N, value, V), int is type_of(V),
+                                  not b_type_literal[ast_babel](N).
+literal[value](N, float(V))    :- node[ast_babel](N, numeric_literal, _), attr[ast_babel](N, value, V), string is type_of(V),
+                                  not b_type_literal[ast_babel](N).
+literal[value](N, bigint(V))   :- node[ast_babel](N, big_int_literal, _), attr[ast_babel](N, value, V), not b_type_literal[ast_babel](N).
 literal[value](N, V)    :- literal_kind[ast_babel](K), node[ast_babel](N, K, _), attr[ast_babel](N, value, V),
                            not b_type_literal[ast_babel](N).
 literal[type](N, V)     :- b_type_literal[ast_babel](N), attr[ast_babel](N, value, V).

@@ -50,14 +50,6 @@ interpolated[code](T)  :- template[value](T), nth[tree](T, _, _).
 -- An object, array, function, class or regexp expression is its own node.
 -- `may_be_node(E, E)` names the SITE: a literal in a loop makes a new object
 -- each time round.
-edb(node_value_kind).
-node_value_kind(object_expression).
-node_value_kind(array_expression).
-node_value_kind(function_expression).
-node_value_kind(arrow_function_expression).
-node_value_kind(class_declaration).
-node_value_kind(class_expression).
-
 may_be_node[flow](E, E) :- value_expr[code](E).
 may_be_node[flow](E, E) :- class[value](E).
 may_be_node[flow](E, E) :- regexp[value](E).
@@ -339,18 +331,20 @@ may_be_node[flow](E, N) :- passes[value](E, X), may_be_node[flow](X, N).
 -- (`member_value` and the language answer those).
 edb(kind_prototype).
 kind_prototype(array_expression,          array).
-kind_prototype(string_literal,            string).
-kind_prototype(template_literal,          string).
-kind_prototype(numeric_literal,           number).
-kind_prototype(boolean_literal,           boolean).
 kind_prototype(object_expression,         object).
 kind_prototype(function_expression,       function).
 kind_prototype(arrow_function_expression, function).
-kind_prototype(big_int_literal,           bigint).
 
 function kind_proto(E, to P).
 kind_proto[flow](E, P)   :- kind_prototype(K, P), ast_node[code](E, K, _).
 kind_proto[flow](E, regexp) :- regexp[value](E).
+kind_proto[flow](E, string) :- literal[value](E, V), string is type_of(V), not template_part[value](_, _, E).
+kind_proto[flow](E, string) :- template[value](E).
+kind_proto[flow](E, number) :- literal[value](E, V), int is type_of(V).
+kind_proto[flow](E, number) :- literal[value](E, float(_)).
+kind_proto[flow](E, bigint) :- literal[value](E, bigint(_)).
+kind_proto[flow](E, boolean) :- literal[value](E, true).
+kind_proto[flow](E, boolean) :- literal[value](E, false).
 prototype_of[flow](E, P) :- kind_proto[flow](E, P).
 prototype_of[flow](E, P) :- may_be_node[flow](E, N), kind_proto[flow](N, P).
 
@@ -1347,7 +1341,12 @@ member_node_v[flow](N)      :- object_of[code](N, _).
 selects[flow](N, Key)       :- prop_name[code](N, _, Key).
 computed_key[code](N, P)    :- member_expr[value](N, _, P).
 computed_key[code](T, E)    :- pat_in[code](_, P, T), pat_computed[code](P, T, E).
-selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P).
+-- a number that is not an integer, and a bigint, select the property their text names
+selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P), string is type_of(Key).
+selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P), int is type_of(Key).
+selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P), atom is type_of(Key).
+selects[flow](N, Key)       :- may_be_lit[flow](P, float(Key)), computed_key[code](N, P).
+selects[flow](N, Key)       :- may_be_lit[flow](P, bigint(Key)), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
 -- WHAT AN OBJECT LACKS: an object literal with no spread and no computed key

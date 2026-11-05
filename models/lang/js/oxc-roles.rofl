@@ -191,9 +191,10 @@ mark[value](M, private)    :- member_kind(MK), oxc_k[ast_oxc](M, MK), oxc_c[ast_
 
 literal[value](N, V) :- oxc_k[ast_oxc](N, string_literal), oxc_a[ast_oxc](N, value, V), not key_of(N), not type_literal(N).
 literal[value](N, null) :- oxc_k[ast_oxc](N, null_literal).
-literal[value](N, V) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), not type_literal(N).
+literal[value](N, V) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), int is type_of(V), not type_literal(N).
+literal[value](N, float(V)) :- oxc_k[ast_oxc](N, numeric_literal), oxc_a[ast_oxc](N, value, V), string is type_of(V), not type_literal(N).
 literal[value](N, V) :- oxc_k[ast_oxc](N, boolean_literal), oxc_a[ast_oxc](N, value, V), not type_literal(N).
-literal[value](N, V) :- oxc_k[ast_oxc](N, big_int_literal), oxc_a[ast_oxc](N, value, V), not type_literal(N).
+literal[value](N, bigint(V)) :- oxc_k[ast_oxc](N, big_int_literal), oxc_a[ast_oxc](N, value, V), not type_literal(N).
 literal[value](T, V) :- oxc_k[ast_oxc](T, template_literal), oxc_c[ast_oxc](T, quasis, 0, Q), oxc_a[ast_oxc](Q, tail, true),
                         oxc_a[ast_oxc](Q, value_cooked, V).
 type_literal(N) :- oxc_k[ast_oxc](T, tsliteral_type), oxc_c[ast_oxc](T, literal, 0, N).

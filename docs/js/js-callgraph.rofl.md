@@ -371,7 +371,12 @@ Declared as facts:
    - [`member_expr`](#member_expr)(N, something, P);
    - [`literal`](#literal)(P, V);
    - `int` is type_of(V);
-   - unless [`template`](#template)(P).
+   - unless [`template`](#template)(P);
+3. if all of:
+   - C [calls through a computed member](#computed_member) N;
+   - [`member_expr`](#member_expr)(N, something, P);
+   - [`literal`](#literal)(P, V);
+   - `term` is type_of(V).
 
 <a id="computed_key_template"></a>A call has a template computed key if all of:
   - it [calls through a computed member](#computed_member) N;

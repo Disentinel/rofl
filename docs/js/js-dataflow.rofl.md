@@ -100,6 +100,7 @@ Reads:
   - <a id="suspends"></a>`suspends`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
+  - <a id="template_part"></a>`template_part`
   - <a id="this"></a>`this`
   - <a id="throws"></a>`throws`
   - <a id="tries"></a>`tries`
@@ -127,7 +128,6 @@ What this file calls a node, and what each word stands for:
 | <a id="noun-program"></a>a program | a node of kind `program` |
 | <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | <a id="noun-update_expression"></a>an update expression | a node of kind `update_expression` |
-| <a id="noun-value_site"></a>a value site | a node of one of the kinds `object_expression`, `array_expression`, `function_expression`, `arrow_function_expression`, `class_declaration`, `class_expression` (`node_value_kind`) |
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
 | a member access | a node [`member_node_v`](#member_node_v) holds of |
 | a scope | a node [`scope_node`](#scope_node) holds of |
@@ -215,10 +215,6 @@ A node E points to a node N either:
 1. if [`value_expr`](js-structure.rofl.md#value_expr)(E) and N is E;
 2. if [`class`](#class)(E) and N is E;
 3. if [`regexp`](#regexp)(E) and N is E.
-
-Declared as facts:
-
-- <a id="node_value_kind"></a>`node_value_kind` — rows in Words
 
 ## 3. A name is what its binder's initialiser is, where the binder is in scope
 
@@ -684,21 +680,26 @@ A node
 | kind | name |
 |---|---|
 | `array_expression` | `array` |
-| `string_literal` | `string` |
-| `template_literal` | `string` |
-| `numeric_literal` | `number` |
-| `boolean_literal` | `boolean` |
 | `object_expression` | `object` |
 | `function_expression` | `function` |
 | `arrow_function_expression` | `function` |
-| `big_int_literal` | `bigint` |
 
 `kind_proto` has one P for each E.
 
 <a id="kind_proto"></a>`kind_proto`(E, P) either:
 
 1. if a kind K [has prototype](#kind_prototype) P and a node E [is of kind](js-model.rofl.md#ast_node) K;
-2. if [`regexp`](#regexp)(E) and P is `regexp`.
+2. if [`regexp`](#regexp)(E) and P is `regexp`;
+3. if all of:
+   - [`literal`](#literal)(E, V);
+   - `string` is type_of(V);
+   - P is `string`;
+   - unless [`template_part`](#template_part)(something, something, E);
+4. if [`template`](#template)(E) and P is `string`;
+5. if [`literal`](#literal)(E, V), `int` is type_of(V), and P is `number`;
+6. if [`literal`](#literal)(E, float(something)) and P is `number`;
+7. if [`literal`](#literal)(E, bigint(something)) and P is `bigint`;
+8. if [`literal`](#literal)(E, `true` or `false`) and P is `boolean`.
 
 <a id="prototype_of"></a>The prototype of a node E is P either:
 
@@ -3135,12 +3136,26 @@ In the code:
 
 `computed_key`(T, E) if [`pat_in`](#pat_in)(something, P, T) and [`pat_computed`](#pat_computed)(P, T, E).
 
+> a number that is not an integer, and a bigint, select the property their text names
+
 In the flow:
 
 N selects Key either:
 
-1. if a node P [may be the literal](js-concat.rofl.md#may_be_lit) Key and [`computed_key`](#computed_key)(N, P);
-2. if a node P [is the well known symbol](#symbol_ref) Key and [`computed_key`](#computed_key)(N, P).
+1. if all of:
+   - a node P [may be the literal](js-concat.rofl.md#may_be_lit) Key;
+   - [`computed_key`](#computed_key)(N, P);
+   - `string` is type_of(Key);
+2. if all of:
+   - a node P [may be the literal](js-concat.rofl.md#may_be_lit) Key;
+   - [`computed_key`](#computed_key)(N, P);
+   - `int` is type_of(Key);
+3. if all of:
+   - a node P [may be the literal](js-concat.rofl.md#may_be_lit) Key;
+   - [`computed_key`](#computed_key)(N, P);
+   - `atom` is type_of(Key);
+4. if a node P [may be the literal](js-concat.rofl.md#may_be_lit) float(Key) or bigint(Key) and [`computed_key`](#computed_key)(N, P);
+5. if a node P [is the well known symbol](#symbol_ref) Key and [`computed_key`](#computed_key)(N, P).
 
 > WHAT AN OBJECT LACKS: an object literal with no spread and no computed key
 > shows every key it is made with. Read at a key it was not made with and

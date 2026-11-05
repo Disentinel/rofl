@@ -159,6 +159,8 @@ computed_key_static[code](C) :- computed_member[code](C, N), member_expr[value](
                                 not template[value](P), string is type_of(V).
 computed_key_static[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), literal[value](P, V),
                                 not template[value](P), int is type_of(V).
+computed_key_static[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), literal[value](P, V),
+                                term is type_of(V).
 
 computed_key_template[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), template[value](P).
 

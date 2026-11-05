@@ -43,7 +43,7 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
-- from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [kind_prototype](js-dataflow.rofl.md#kind_prototype), [lib_member](js-dataflow.rofl.md#lib_member), [node_value_kind](js-dataflow.rofl.md#node_value_kind)
+- from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-effects, in the audit: [eff_exn_only](js-effects.rofl.md#eff_exn_only)
 - from js-effects, in the code: [eff_discharged_at](js-effects.rofl.md#eff_discharged_at)
 - from js-effects, in the flow: [concrete_effect](js-effects.rofl.md#concrete_effect), [concrete_unmapped](js-effects.rofl.md#concrete_unmapped), [eff_heap_of](js-effects.rofl.md#eff_heap_of)
@@ -69,6 +69,7 @@ What this file calls a node, and what each word stands for:
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - Name is a constant global if Name [is a global](#lib_global) since some release with `plain_value`.
+- <a id="amb_proto_untraced"></a>A prototype has an untraced receiver if [`primitive_prototype`](#primitive_prototype)(it).
 - <a id="amb_surface_attributed"></a>A surface is attributed if it [has the ambient effect](#ambient_effect) some effect at some key.
 
 <a id="imports"></a>`imports` lists:
@@ -324,15 +325,18 @@ In the audit:
 
 > `ambient_effect` has no heap column, and a prototype's receiver is a value
 > in THIS program, so a row can only be written where the receiver's heap is
-> decided by the model: a prototype every one of whose `kind_prototype` kinds
-> is a `node_value_kind` has no untraced receiver (`array`, `regexp`), while
-> `"ab".concat(x)` is a read of an untraced receiver.
+> decided by the model: a primitive's prototype has an untraced receiver
+> (`"ab".concat(x)`), while `array` and `regexp` are values the model traces.
+
+`primitive_prototype` includes `string`, `number`, `boolean`, `bigint`.
 
 In the main:
 
-<a id="amb_proto_untraced"></a>A prototype has an untraced receiver if a kind K [has prototype](js-dataflow.rofl.md#kind_prototype) it, unless [`node_value_kind`](js-dataflow.rofl.md#node_value_kind)(K).
-
 <a id="amb_proto_heap"></a>The heap of a prototype P is `local` if P [is a builtin prototype](js-dataflow.rofl.md#builtin_prototype), unless P [has an untraced receiver](#amb_proto_untraced).
+
+Declared as facts:
+
+- <a id="primitive_prototype"></a>`primitive_prototype` — rows in this file
 
 > the structural argument as a row: heap-decided here, `global` in js-effects
 

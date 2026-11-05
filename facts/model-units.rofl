@@ -150,9 +150,8 @@ unit_concludes("rules/js-dataflow.rofl", ident).
 unit_concludes("rules/js-dataflow.rofl", may_be_lit).
 unit_concludes("rules/js-dataflow.rofl", undef_binder).
 unit_concludes("rules/js-dataflow.rofl", interpolated).
-unit_concludes("rules/js-dataflow.rofl", edb).
-unit_concludes("rules/js-dataflow.rofl", node_value_kind).
 unit_concludes("rules/js-dataflow.rofl", may_be_node).
+unit_concludes("rules/js-dataflow.rofl", edb).
 unit_concludes("rules/js-dataflow.rofl", var_decl_kind).
 unit_concludes("rules/js-dataflow.rofl", var_decl).
 unit_concludes("rules/js-dataflow.rofl", declarator_id).
@@ -1113,6 +1112,7 @@ unit_concludes("rules/js-ambient.rofl", constant_global).
 unit_concludes("rules/js-ambient.rofl", lib_mutator).
 unit_concludes("rules/js-ambient.rofl", amb_proto_unsplit).
 unit_concludes("rules/js-ambient.rofl", lib_readonly_only).
+unit_concludes("rules/js-ambient.rofl", primitive_prototype).
 unit_concludes("rules/js-ambient.rofl", amb_proto_untraced).
 unit_concludes("rules/js-ambient.rofl", amb_proto_heap).
 unit_concludes("rules/js-ambient.rofl", amb_proto_recv).
