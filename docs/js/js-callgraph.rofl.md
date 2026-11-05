@@ -103,8 +103,6 @@ Reads:
 - from the scanner:
   - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
 
-Kinds without a noun: tsmethod_signature, tsproperty_signature.
-
 ## Words
 
 What this file calls a node, and what each word stands for:
@@ -1684,16 +1682,16 @@ In the flow:
 4. if [`type_base`](#type_base)(T, B) and [`type_open`](#type_open)(B).
 
 > the place a member is declared as a type at: an interface's property, a class's field or parameter property.
-> The roles hold no word for a method signature against a property signature, so the kind says which
+> A method signature is a member whose value is a function type, so a property signature is a member with no value
 
 <a id="member_type_at"></a>`member_type_at`(T, Key, S) either:
 
 1. if all of:
    - [`type_decl`](#type_decl)(T, something, something);
    - [`has`](#has)(T, S) in the type;
-   - S is a tsproperty_signature node;
    - [`key`](#key)(S, Key) in the type;
    - [`declared`](#declared)(S, something) in the type;
+   - unless [`value`](#value)(S, something) in the type;
 2. if all of:
    - T [is a class](js-dataflow.rofl.md#class_like);
    - [`has`](#has)(T, S);
@@ -1737,34 +1735,35 @@ In the flow:
 > the place whose return type says what a call of a member yields: a method signature, a property whose type is a
 > function type, a class's method
 
-<a id="method_ret_at"></a>`method_ret_at`(T, Key, a tsmethod_signature node S) if all of:
-  - [`type_decl`](#type_decl)(T, something, something);
-  - [`has`](#has)(T, S) in the type;
-  - [`key`](#key)(S, Key) in the type;
-  - [`declared`](#declared)(S, something) in the type.
+<a id="method_ret_at"></a>`method_ret_at`(T, Key, F) either:
 
-`method_ret_at`(T, Key, F) if all of:
-  - [`type_decl`](#type_decl)(T, something, something);
-  - [`has`](#has)(T, a tsproperty_signature node S) in the type;
-  - [`key`](#key)(S, Key) in the type;
-  - [`declared`](#declared)(S, F) in the type;
-  - [`declared`](#declared)(F, something) in the type.
-
-`method_ret_at`(T, Key, F) if all of:
-  - a node T [is a class](js-dataflow.rofl.md#class_like);
-  - [`has`](#has)(T, a [class property](#noun-class_property) S);
-  - [`key`](#key)(S, Key);
-  - [`declared`](#declared)(S, F) in the value;
-  - [`declared`](#declared)(F, something) in the type;
-  - unless [`static`](#static)(S);
-  - unless [`private`](#private)(S).
-
-`method_ret_at`(T, Key, M) if all of:
-  - a class T [has the method](js-dataflow.rofl.md#class_method_of) M;
-  - [`key`](#key)(M, Key);
-  - [`declared`](#declared)(M, something) in the value;
-  - unless [`static`](#static)(M);
-  - unless [`private`](#private)(M).
+1. if all of:
+   - [`type_decl`](#type_decl)(T, something, something);
+   - [`has`](#has)(T, S) in the type;
+   - [`value`](#value)(S, F) in the type;
+   - [`key`](#key)(S, Key) in the type;
+   - [`declared`](#declared)(F, something) in the type;
+2. if all of:
+   - [`type_decl`](#type_decl)(T, something, something);
+   - [`has`](#has)(T, S) in the type;
+   - [`key`](#key)(S, Key) in the type;
+   - [`declared`](#declared)(S, F) in the type;
+   - [`declared`](#declared)(F, something) in the type;
+   - unless [`value`](#value)(S, something) in the type;
+3. if all of:
+   - T [is a class](js-dataflow.rofl.md#class_like);
+   - [`has`](#has)(T, a [class property](#noun-class_property) S);
+   - [`key`](#key)(S, Key);
+   - [`declared`](#declared)(S, F) in the value;
+   - [`declared`](#declared)(F, something) in the type;
+   - unless [`static`](#static)(S);
+   - unless [`private`](#private)(S);
+4. if all of:
+   - T [has the method](js-dataflow.rofl.md#class_method_of) F;
+   - [`key`](#key)(F, Key);
+   - [`declared`](#declared)(F, something) in the value;
+   - unless [`static`](#static)(F);
+   - unless [`private`](#private)(F).
 
 <a id="method_type"></a>`method_type`(T, Key, T2) either:
 

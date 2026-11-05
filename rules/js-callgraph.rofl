@@ -774,8 +774,8 @@ type_open[flow](T)        :- extends[type](T, H), not names_type[flow](H, _).
 type_open[flow](T)        :- class_like[flow](T), extends[value](T, _), not super_of[flow](T, _).
 type_open[flow](T)        :- type_base[flow](T, B), type_open[flow](B).
 -- the place a member is declared as a type at: an interface's property, a class's field or parameter property.
--- The roles hold no word for a method signature against a property signature, so the kind says which
-member_type_at[flow](T, Key, S) :- type_decl[code](T, _, _), has[type](T, S), ast_node[code](S, tsproperty_signature, _),
+-- A method signature is a member whose value is a function type, so a property signature is a member with no value
+member_type_at[flow](T, Key, S) :- type_decl[code](T, _, _), has[type](T, S), not value[type](S, _),
                                    key[type](S, Key), declared[type](S, _).
 member_type_at[flow](T, Key, S) :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
                                    not static[value](S), not private[value](S), key[value](S, Key), declared[value](S, _).
@@ -793,9 +793,9 @@ field_init[flow](T, Key, V)   :- class_like[flow](T), has[value](T, S), ast_node
                                  key[value](S, Key), value[value](S, V), not ast_child[code](S, type_annotation, 0, _).
 -- the place whose return type says what a call of a member yields: a method signature, a property whose type is a
 -- function type, a class's method
-method_ret_at[flow](T, Key, S) :- type_decl[code](T, _, _), has[type](T, S), ast_node[code](S, tsmethod_signature, _),
-                                  key[type](S, Key), declared[type](S, _).
-method_ret_at[flow](T, Key, F) :- type_decl[code](T, _, _), has[type](T, S), ast_node[code](S, tsproperty_signature, _),
+method_ret_at[flow](T, Key, F) :- type_decl[code](T, _, _), has[type](T, S), value[type](S, F),
+                                  key[type](S, Key), declared[type](F, _).
+method_ret_at[flow](T, Key, F) :- type_decl[code](T, _, _), has[type](T, S), not value[type](S, _),
                                   key[type](S, Key), declared[type](S, F), declared[type](F, _).
 method_ret_at[flow](T, Key, F) :- class_like[flow](T), has[value](T, S), ast_node[code](S, class_property, _),
                                   not static[value](S), not private[value](S),

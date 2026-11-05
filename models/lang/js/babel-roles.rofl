@@ -736,6 +736,8 @@ key[value](M, N)   :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S
 key[type](M, N)    :- b_export_name[ast_babel](S, N), b_spec_member[ast_babel](S, M), b_type_spec[ast_babel](S).
 value[value](S, L) :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), not b_type_spec[ast_babel](S).
 value[type](S, L)  :- b_local_export[ast_babel](S), child[ast_babel](S, local, 0, L), b_type_spec[ast_babel](S).
+-- a method signature `m(a): T` is a member whose value is a function type: itself, with its parameters and its return type
+value[type](S, S)  :- node[ast_babel](S, tsmethod_signature, _).
 -- export { a as b } from 'm': the member is destructured from m
 pattern_prop[value](E, Name, S) :- b_reexport[ast_babel](E, S), child[ast_babel](S, local, 0, L),
                                    attr[ast_babel](L, name, Name).

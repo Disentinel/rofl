@@ -164,8 +164,8 @@ type_import(N) :- oxc_a[ast_oxc](S, import_kind, "Type"), oxc_c[ast_oxc](S, loca
 type_side(N) :- bind_site(N, _, D), oxc_k[ast_oxc](D, K), type_only_decl(K).
 type_side(N) :- type_import(N).
 both_sides(N) :- bind_site(N, _, D), oxc_k[ast_oxc](D, K), both_worlds_decl(K).
-binds[value](N, Name) :- bind_site(N, Name, _), not type_side(N).
-binds[type](N, Name)  :- bind_site(N, Name, _), type_side(N).
+binds[value](N, Name) :- bind_site(N, Name, _), not type_side(N), not sig_param(_, _, _, N).
+binds[type](N, Name)  :- bind_site(N, Name, _), type_side(N), not sig_param(_, _, _, N).
 binds[type](N, Name)  :- bind_site(N, Name, _), both_sides(N).
 binds[type](N, Name)  :- bind_site(N, Name, _), import_local(N), not type_import(N).
 import_local(N) :- oxc_k[ast_oxc](D, import_declaration), oxc_c[ast_oxc](D, specifiers, _, S), oxc_c[ast_oxc](S, local, 0, N).
@@ -577,7 +577,7 @@ assign[value](E, P, X) :- in_program(P, _, E), oxc_k[ast_oxc](E, tsexport_assign
 -- TYPES ------------------------------------------------------------------------------------------------
 
 annotated(H, T) :- oxc_c[ast_oxc](H, type_annotation, 0, A), oxc_k[ast_oxc](A, tstype_annotation), oxc_c[ast_oxc](A, type_annotation, 0, T).
-typed_value(P, T) :- oxc_k[ast_oxc](FP, formal_parameter), annotated(FP, T), oxc_c[ast_oxc](FP, pattern, 0, P).
+typed_value(P, T) :- oxc_k[ast_oxc](FP, formal_parameter), annotated(FP, T), oxc_c[ast_oxc](FP, pattern, 0, P), not sig_param(_, _, FP, P).
 typed_value(R, T) :- oxc_k[ast_oxc](R, formal_parameter_rest), annotated(R, T).
 typed_value(B, T) :- oxc_k[ast_oxc](D, variable_declarator), annotated(D, T), oxc_c[ast_oxc](D, id, 0, B).
 typed_value(M, T) :- oxc_k[ast_oxc](M, property_definition), annotated(M, T).
@@ -603,6 +603,16 @@ has[type](L, M) :- oxc_k[ast_oxc](L, tstype_literal), oxc_c[ast_oxc](L, members,
 mark[type](I, object) :- oxc_k[ast_oxc](I, tsinterface_declaration).
 mark[type](L, object) :- oxc_k[ast_oxc](L, tstype_literal).
 key[type](M, Key) :- type_member(M), static_key(M, K, key), key_name(K, Key).
+value[type](M, M) :- type_member(M), oxc_k[ast_oxc](M, tsmethod_signature).
+-- a signature in the world of types: the parameters are types' places, its return type is declared at it
+edb(sig_kind).
+sig_kind(tsmethod_signature). sig_kind(tsfunction_type). sig_kind(tsconstructor_type).
+sig_kind(tscall_signature_declaration). sig_kind(tsconstruct_signature_declaration).
+sig_param(F, I, FP, P) :- sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, params, 0, Ps), oxc_c[ast_oxc](Ps, items, I, FP),
+                          oxc_c[ast_oxc](FP, pattern, 0, P).
+param[type](F, I, P) :- sig_param(F, I, _, P).
+typed_type(P, T) :- sig_param(_, _, FP, P), annotated(FP, T).
+typed_type(F, T) :- sig_kind(K), oxc_k[ast_oxc](F, K), oxc_c[ast_oxc](F, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 typed_type(M, T) :- type_member(M), annotated(M, T).
 typed_type(M, T) :- type_member(M), oxc_c[ast_oxc](M, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 declared[type](X, T) :- typed_type(X, T), not solo(T, _).

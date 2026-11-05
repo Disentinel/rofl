@@ -6,7 +6,7 @@
 | [js-phrases](js-phrases.rofl.md) | 1053 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 70 | 41 | 38 | 0 | 1 | 94 | 5 | 1 | 11 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 105 | 4 | 0 | 6 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 510 | 191 | 88 | 94 | 35 | 737 | 70 | 6 | 59 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 510 | 191 | 88 | 94 | 32 | 737 | 71 | 6 | 59 | 0 |
 | [js-concat](js-concat.rofl.md) | 206 | 71 | 2 | 58 | 2 | 338 | 23 | 7 | 11 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 212 | 86 | 72 | 5 | 11 | 232 | 20 | 4 | 29 | 0 |
 | [js-dataflow](js-dataflow.rofl.md) | 917 | 391 | 133 | 241 | 51 | 1674 | 142 | 11 | 65 | 0 |
