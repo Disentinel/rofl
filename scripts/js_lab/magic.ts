@@ -175,7 +175,7 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
 const facts: string[] = [], strings = new Set<string>();
 const rel = (p: string) => path.relative(corpus, p);
 let astNodes = 0;
-for (const f of files) { const sc = scan(fs.readFileSync(f, 'utf8'), { file: rel(f) }); astNodes += sc.nodes; for (const fact of sc.facts) { facts.push(fact); const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact); if (v) strings.add(v[1].slice(1, -1).replace(/\\(.)/g, '$1')); } }
+for (const f of files) { const sc = scan(fs.readFileSync(f, 'utf8'), { file: rel(f) }); astNodes += sc.facts.filter(x => x.startsWith("ast_node[code]")).length; for (const fact of sc.facts) { facts.push(fact); const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact); if (v) strings.add(v[1].slice(1, -1).replace(/\\(.)/g, '$1')); } }
 const all = [...facts, ...hostFacts(files.map(rel), strings)];
 
 // ---------------------------------------------------------------- one arm
