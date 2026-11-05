@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
       - run: npm ci
       - run: |
           node --experimental-strip-types scripts/workbench.ts --out _site --standalone
