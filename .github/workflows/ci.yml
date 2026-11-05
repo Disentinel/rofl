@@ -40,6 +40,8 @@ jobs:
             rust
             rust/tools/oxc_scan
       - run: cd rust && cargo build --release
+      # the scanner `rofl scan` and the JS worlds run (scanners/cli.ts)
+      - run: cd rust/tools/oxc_scan && cargo build --release
       # ONE FILE, TWO PARSERS, THE SAME ROLES: Babel and oxc, each through its converter (scripts/roles_parity.ts)
       - name: roles parity
         run: npm run test:parity
@@ -147,12 +149,21 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: '${{ matrix.triple }}' }
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: rust, key: '${{ matrix.target }}' }
+        with: { workspaces: 'rust\nrust/tools/oxc_scan', key: '${{ matrix.target }}' }
       - run: cd rust && cargo build --release --bin rofl ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
+      - run: cd rust/tools/oxc_scan && cargo build --release ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
+      # the engine and its scanner, side by side: rust/target/rofl-<target>/ for dist
+      - shell: bash
+        run: |
+          mkdir stage
+          x=${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
+          t=${{ matrix.triple && format('{0}/', matrix.triple) || '' }}
+          cp rust/target/${t}release/rofl$x stage/
+          cp rust/tools/oxc_scan/target/${t}release/oxc_scan$x stage/
       - uses: actions/upload-artifact@v4
         with:
           name: rofl-${{ matrix.target }}
-          path: rust/target/${{ matrix.triple && format('{0}/', matrix.triple) || '' }}release/rofl${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
+          path: stage/*
 
   vsix:
     needs: engine
@@ -171,7 +182,7 @@ jobs:
         with: { path: rust/target }
       - name: one VSIX per platform
         run: |
-          chmod +x rust/target/rofl-*/rofl*
+          chmod +x rust/target/rofl-*/*
           mkdir -p rust/target/release vsix && cp rust/target/rofl-linux-x64/rofl rust/target/release/
           for t in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
             node --experimental-strip-types scripts/dist.ts --target $t

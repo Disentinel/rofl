@@ -341,14 +341,16 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 | stage | runs on | reads | writes |
 |---|---|---|---|
 | `npm run scan` | node: `scanners/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
-| the scanner | `scanners/js_ast.ts` (Babel) | one file's text, named by its path from the directory | `ast_node[code](Id, Kind, File), ast_line[code](Id, Line)`, `ast_child[code](Parent, Field, Index, Child)`, `ast_attr[code](Id, Key, Value)`, `ast_file[code](Root, File)`, `ast_parse_error[code](File, Message)`; the contract is the header of `scanners/js_ast.ts` |
-| the host facts | `playground/host.ts` `codeFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
-| the model | `rofl`, Rust | `@rules/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`docs/js/` renders each file of it in sentences) |
+| the scanner | `rust/tools/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `rust/tools/oxc_scan/src/main.rs` |
+| the host facts | `playground/host.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
+| the model | `rofl`, Rust | `@rules/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`docs/js/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
-host gives a `.rofl.md` with `model: js` (`npm run nb`), so a question has the
-same answer in a notebook and here.
+host gives a `.rofl.md` with `model: js` (`npm run nb`), but for the parser: a notebook scans in
+its own process with Babel (`scanners/js_ast.ts`, which also runs in a page), `rofl scan` with oxc; the roles
+(`models/lang/js/roles.rofl`) are the same, and `npm run test:parity` holds the two converters to the same rows.
+A node's id is a hash of its path in its parser's tree, so the two name a node differently.
 
 Where the JS model cannot be exact it says so in a relation, not by an empty
 answer: `unresolved_call[code](C, Shape)` and `frontier_at` name every call it
@@ -366,17 +368,17 @@ engine's. The TypeScript engine took 12.4 s for the world and the five; the
 Rust release build 1.5 s for the world and the five in one `rofl load` run,
 and as much for each `rofl why` run alone, since each builds the world.
 
-### The roles layer (w_l2_roles), not yet read by the model
+### The roles layer (w_l2_roles), which the model reads
 
 `models/lang/js/` is the next layer under the JS model: `roles.rofl` is one
 vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
-two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `babel-roles.rofl`
-writes them from the scanner's tree in `[ast_babel]` (`ScanSet().scan(src,
+two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `oxc-roles.rofl`
+writes them from oxc's tree in `[ast_oxc]` and `babel-roles.rofl`
+(the notebook's, and `npm run test:parity`'s) from the Babel scanner's tree in `[ast_babel]` (`ScanSet().scan(src,
 {file, persp: 'ast_babel'})`, where the raw relations are `node`, `child`, `attr`,
-`line` and `file`: a ledger is named by its book, not by a prefix). It has no command for an agent yet and
-`rules/js-*.rofl` do not read it; `npm run test:roles` drives it, and
-`rofl load @models/lang/js/roles.files sealed.rofl FACTS` writes the roles of
-a corpus scanned so. Pass `--budget` and `--space` at hundreds of files: the
+`line` and `file`: a ledger is named by its book, not by a prefix). `rules/js-*.rofl` read
+the roles of the oxc converter (`rules/js.files`); `npm run test:roles` drives the layer, and
+`rofl load @models/lang/js/oxc.files code.rofl` writes the roles of a corpus scanned by `npm run scan`. Pass `--budget` and `--space` at hundreds of files: the
 default budget cuts the state without saying so.
 
 ### The second parser: oxc, in Rust
@@ -399,7 +401,7 @@ Rust field's; an enum wrapper that names it otherwise is the attribute
 `variant` (`class` under `"ClassDeclaration"`). Every other id is made as js_ast.ts makes
 it, with the same file prefix: code added above a node leaves its id. Files
 are parsed in parallel and printed in path order, the same bytes for the same
-tree. The JS model does not read `[ast_oxc]` yet. Its converter into the roles
+tree. The JS model reads `[ast_oxc]` through its converter into the roles
 of `roles.rofl` is `models/lang/js/oxc-roles.rofl` (`rofl load
 @models/lang/js/oxc.files oxc.rofl`), checked by the world `oxc_roles` over
 `models/lang/js/fixtures/all.ts`. `npm run test:parity` runs that file through
@@ -409,7 +411,7 @@ still differs is f_oxc_roles_meets_the_vocabulary.
 A node's id is its scanner's: stable under edits, each parser's own
 (f_role_ids_name_a_node_by_its_roles); both name the program `<prefix>root` and
 give `pos[tree]` in UTF-16 units.
-The host facts (`fs_*`, `str_*`) are still `npm run scan`'s.
+The host facts (`has_*`, `str_*`) are `npm run scan`'s own, written after oxc's facts.
 
 Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M
 facts, 8.9 GB of text, most of the wall writing it; on vscode src/vs/base (499

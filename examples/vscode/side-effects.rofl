@@ -30,18 +30,18 @@ se_ns(S, S) :- external_value[flow](S, S).
 se_ns(M, S) :- se_member_of(M, Y, K), se_ns(Y, S), se_ns_key(K).
 se_ns(Sp, S) :- se_api(Sp, S, K), se_ns_key(K).
 
-se_member_of(M, Y, K) :- member_node_v[flow](M), ast_child[code](M, object, 0, O), may_be_node[flow](O, Y),
+se_member_of(M, Y, K) :- member_node_v[flow](M), object_of[code](M, O), may_be_node[flow](O, Y),
                          external_value[flow](Y, _), selects[flow](M, K).
 
 se_api(S, S, "*")  :- external_value[flow](S, S).
 se_api(M, S, N)    :- se_member_of(M, Y, N), se_ns(Y, S).
-se_api(Sp, S, N)   :- external_import[code](Sp, _, S, _), ast_child[code](Sp, imported, 0, I), ast_name[code](I, N).
+se_api(Sp, S, N)   :- external_import[code](Sp, _, S, _), spec_imported[code](Sp, N).
 se_api(T, S, N)    :- pat_in[code](_, P, T), external_value[flow](T, S), prop_name[code](T, P, N).
 
 -- A receiver: the API value itself (`ipcMain`), or what calling it made (`net.createServer()`, `express()`).
 se_recv(Y, S, R) :- se_api(Y, S, R).
 se_recv(C, S, R) :- se_called(C, X), se_api(X, S, R).
-se_called(C, X)  :- call_like[code](C), ast_child[code](C, callee, 0, G), may_be_node[flow](G, X),
+se_called(C, X)  :- call_like[code](C), callee[value](C, G), may_be_node[flow](G, X),
                     external_value[flow](X, _).
 
 -- 3. THE FAMILIES. A function family is its modules times its names; a method family adds the receiver.
@@ -96,9 +96,9 @@ se_method_name(ipc, "postMessage").
 -- an external function of a family (argument 0); a WRAPPER site is a call of a corpus function whose parameter I
 -- is read as the asked argument of another site, so `writeAtomic(p)` is a site when its body is `fs.writeFileSync(p)`.
 se_site(C, F, 0) :- se_called(C, X), se_api(X, S, N), se_fn(F, S, N).
-se_site(C, F, 0) :- call_like[code](C), ast_child[code](C, callee, 0, M),
+se_site(C, F, 0) :- call_like[code](C), callee[value](C, M),
                     member_node_v[flow](M), selects[flow](M, N), se_method(F, S, R, N),
-                    ast_child[code](M, object, 0, O), may_be_node[flow](O, Y), se_recv(Y, S, R).
+                    object_of[code](M, O), may_be_node[flow](O, Y), se_recv(Y, S, R).
 
 se_param(Fn, I, F) :- se_site(S, F, J), arg_at[flow](S, J, A), param_use[flow](Fn, Name, A), param_of[flow](Fn, I, Name).
 se_site(W, F, I)   :- resolves[code](W, Fn), sx_param_sink[surface](Fn, I, F).

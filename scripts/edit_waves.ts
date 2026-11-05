@@ -4,7 +4,7 @@
 // evaluated under DIR's @rules/js.files on this tree's Rust release build; the state is compared with the unedited
 // world's, and the facts gone plus the facts new are counted, scanner facts and derived apart. DIR is this tree by
 // default: run it again with `--tree` on a worktree of another commit to see what that commit's node ids cost.
-// `--roles` evaluates the roles layer instead (models/lang/js/roles.files over the raw tree in [ast_babel]): what an
+// `--roles` evaluates the roles layer instead (models/lang/js/oxc.files over the raw tree in [ast_oxc]): what an
 // edit moves among the roles, which carry the scanner's node ids.
 
 import * as fs from 'node:fs';
@@ -38,14 +38,13 @@ const EDITS: [string, (s: string) => string][] = [
 function world(dir: string): Set<string> {
   const facts = path.join(dir, '..', path.basename(dir) + '.facts.rofl');
   execFileSync('node', ['--experimental-strip-types', path.join(tree, 'scanners/cli.ts'), dir, '--out', facts], { stdio: ['ignore', 'ignore', 'ignore'] });
-  if (roles) fs.writeFileSync(facts, fs.readFileSync(facts, 'utf8').replace(/^ast_(\w+)\[code\]/gm, '$1[ast_babel]'));
-  const model = roles ? ['--budget', '4000000000', '--space', '40000000', '@' + path.join(tree, 'models/lang/js/roles.files')]
+  const model = roles ? ['--budget', '4000000000', '--space', '40000000', '@' + path.join(tree, 'models/lang/js/oxc.files')]
     : ['@' + path.join(tree, 'rules/js.files')];
   const out = execFileSync(rofl, ['load', ...model, facts], { maxBuffer: 1 << 30, encoding: 'utf8' });
   return new Set(out.split('\n').flatMap((l) => /^([a-z_]\w*(?:\[\w+\])?\(.*\)) tick /.exec(l)?.[1] ?? []));
 }
 
-const scanned = (f: string) => /^((ast|str)_\w+\[code\]|\w+\[(ast_babel|fs)\])/.test(f);
+const scanned = (f: string) => /^((ast|str)_\w+\[code\]|\w+\[(ast_babel|ast_oxc|fs)\])/.test(f);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'waves-'));
 const copy = (name: string, edit?: (s: string) => string): string => {
   const d = path.join(tmp, name);

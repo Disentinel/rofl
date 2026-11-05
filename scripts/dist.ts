@@ -12,7 +12,7 @@ import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
+import { MODEL_FILES, SCAN_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { buildRenderer } from './renderer.ts';
 import { PLATFORMS } from '../npm/platform.ts';
 
@@ -68,7 +68,7 @@ await import('${main}');
 cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
 const babel = JSON.parse(readFileSync(path.join(ROOT, 'node_modules/@babel/parser/package.json'), 'utf8')).version;
 writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), `vendor/babel-parser.js is @babel/parser ${babel} (https://github.com/babel/babel), under the MIT license:\n\n${readFileSync(path.join(ROOT, 'node_modules/@babel/parser/LICENSE'), 'utf8')}`);
-for (const f of [...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
+for (const f of [...new Set([...MODEL_FILES, ...SCAN_MODEL_FILES]), ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 const tutorial = (readdirSync(path.join(ROOT, 'examples/tutorial'), { recursive: true }) as string[]).filter((f) => f.endsWith('.md')).map((f) => `examples/tutorial/${f}`);
 const start = readdirSync(path.join(ROOT, 'examples/start')).map((f) => `examples/start/${f}`);
 // the pictures a notebook draws: what `reads: [rofl:visual/graph.rofl.md]` names (front.ts SHIPPED), the matrix beside the vocabularies, and the examples
@@ -118,6 +118,12 @@ for (const p of PLATFORMS) {
   mkdirSync(path.join(dir, 'bin'), { recursive: true });
   cpSync(built, path.join(dir, 'bin', exe));
   chmodSync(path.join(dir, 'bin', exe), 0o755);
+  // the scanner `rofl scan` runs (scanners/cli.ts looks for it beside the engine), built for the same platform
+  const scan = `oxc_scan${p.startsWith('win32') ? '.exe' : ''}`;
+  const scanner = [path.join(ROOT, 'rust/target', `rofl-${p}`, scan), ...(own ? [path.join(ROOT, 'rust/tools/oxc_scan/target/release', scan)] : [])].find(existsSync);
+  if (!scanner) throw new Error(`${p}: the engine is built and rust/tools/oxc_scan is not (cargo build --release --manifest-path rust/tools/oxc_scan/Cargo.toml; CI lays it out beside the engine, rust/target/rofl-${p}/)`);
+  cpSync(scanner, path.join(dir, 'bin', scan));
+  chmodSync(path.join(dir, 'bin', scan), 0o755);
   cpSync(path.join(ROOT, 'LICENSE'), path.join(dir, 'LICENSE'));
   writeFileSync(path.join(dir, 'README.md'), `# @grafema/rofl-${p}\n\nThe ROFL engine for ${p}, installed by [@grafema/rofl](https://www.npmjs.com/package/@grafema/rofl), whose \`rofl\` command runs it.\n`);
   writeFileSync(path.join(dir, 'package.json'), JSON.stringify({
@@ -142,6 +148,10 @@ if (TARGET) {
   mkdirSync(path.join(VSIX, 'rofl-nb/bin'), { recursive: true });
   const built = [`rofl-${TARGET}`, 'release'].map((d) => path.join(ROOT, 'rust/target', d, exe)).find(existsSync)!;
   cpSync(built, path.join(VSIX, 'rofl-nb/bin', exe));
+  const scan = `oxc_scan${TARGET.startsWith('win32') ? '.exe' : ''}`;
+  const scanner = [path.join(ROOT, 'rust/target', `rofl-${TARGET}`, scan), path.join(ROOT, 'rust/tools/oxc_scan/target/release', scan)].find(existsSync);
+  if (!scanner) throw new Error(`${TARGET}: no oxc_scan built for it (rust/tools/oxc_scan)`);
+  cpSync(scanner, path.join(VSIX, 'rofl-nb/bin', scan));
 }
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");
 const { type: _, devDependencies: __, ...manifest } = ext;

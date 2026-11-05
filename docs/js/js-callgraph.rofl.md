@@ -1,6 +1,6 @@
 ---
 world: js-callgraph
-books: audit, code, flow, main, surface, tree, type, value
+books: ast_oxc, audit, code, flow, main, surface, tree, type, value
 default: code
 ---
 
@@ -40,8 +40,9 @@ Reads:
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
-- from outside these files:
-  - <a id="ast_file"></a>`ast_file`
+- from outside these files, in the ast_oxc:
+  - <a id="child"></a>`child`
+  - <a id="node"></a>`node`
 - from outside these files, in the main:
   - <a id="host_global_type"></a>`host_global_type`
   - <a id="host_type_extends"></a>`host_type_extends`
@@ -530,7 +531,7 @@ A [function](#fn_node) answers to a name N if all of:
 <a id="top_call"></a>A node runs at the top of a node R if all of:
   - it [is a site](#site);
   - [`at`](#at)(it, File, something);
-  - [`ast_file`](#ast_file)(R, File);
+  - [`program`](#program)(R, File);
   - unless it [is enclosed](#enclosed).
 
 ## 4. RESOLUTION — scope-blind on purpose: a name bound anywhere in the file
@@ -644,7 +645,7 @@ Caller calls Callee either:
    - [`fn_label`](js-surface.rofl.md#fn_label)(Y, B);
 2. if all of:
    - R [calls](#calls) Y;
-   - [`ast_file`](#ast_file)(R, something);
+   - [`program`](#program)(R, something);
    - [`fn_label`](js-surface.rofl.md#fn_label)(Y, B);
    - Z is `top`.
 
@@ -657,7 +658,7 @@ Caller calls Callee either:
    - [`fn_label`](js-surface.rofl.md#fn_label)(Y, B);
 2. if all of:
    - R [calls](#calls) Y;
-   - [`ast_file`](#ast_file)(R, File);
+   - [`program`](#program)(R, File);
    - [`fn_label`](js-surface.rofl.md#fn_label)(Y, B);
    - Z is `top`.
 
@@ -839,7 +840,7 @@ In the code:
 <a id="frontier_named"></a>Name has the frontier by name Item either:
 
 1. if F [has the frontier](#frontier_at) Item and F [answers to](#fn_name) Name;
-2. if R [has the frontier](#frontier_at) Item, [`ast_file`](#ast_file)(R, something), and Name is `top`.
+2. if R [has the frontier](#frontier_at) Item, [`program`](#program)(R, something), and Name is `top`.
 
 <a id="frontier_line"></a>File shows the frontier S at Line either:
 
@@ -1123,6 +1124,52 @@ Declared as facts:
 
 - <a id="holds_in_place"></a>`holds_in_place` — rows in this file
 
+> the same table in oxc's names (rust/tools/oxc_scan): a parameter's pattern is the child of its formal_parameter, a function's body statements are function_body's, a namespace is tsnamespace_declaration
+
+`holds_in_place_oxc` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `static_member_expression` | `object` |
+| `static_member_expression` | `property` |
+| `computed_member_expression` | `object` |
+| `computed_member_expression` | `expression` |
+| `private_field_expression` | `object` |
+| `private_field_expression` | `field` |
+| `variable_declarator` | `id` |
+| `variable_declarator` | `init` |
+| `class` | `id` |
+| `class` | `heritage_expression` |
+| `function` | `id` |
+| `formal_parameter` | `pattern` |
+| `assignment_expression` | `left` |
+| `call_expression` | `callee` |
+| `new_expression` | `callee` |
+| `program` | `body` |
+| `function_body` | `statements` |
+| `block_statement` | `body` |
+| `class_body` | `body` |
+| `binary_expression` | `left` |
+| `binary_expression` | `right` |
+| `unary_expression` | `argument` |
+| `if_statement` | `test` |
+| `conditional_expression` | `test` |
+| `while_statement` | `test` |
+| `template_literal` | `expressions` |
+| `export_declaration` | `declaration` |
+| `export_named_declaration` | `declaration` |
+| `export_specifier` | `local` |
+| `import_specifier` | `local` |
+| `import_default_specifier` | `local` |
+| `tsnamespace_declaration` | `id` |
+| `tsmodule_declaration` | `id` |
+| `tsmodule_block` | `body` |
+| `object_property` | `value` |
+
+Declared as facts:
+
+- <a id="holds_in_place_oxc"></a>`holds_in_place_oxc` — rows in this file
+
 > asked only of a place that may hold a surveyed object of its own file
 
 <a id="placed"></a>`placed`(X) if all of:
@@ -1137,15 +1184,20 @@ Declared as facts:
    - a node X [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) PK;
    - [`holds_in_place`](#holds_in_place)(PK, F);
-2. if [`placed`](#placed)(X) and [`discards`](#discards)(something, X);
-3. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
-4. if all of:
+2. if all of:
+   - [`placed`](#placed)(X);
+   - [`child`](#child)(P, F, something, X);
+   - [`node`](#node)(P, PK, something);
+   - [`holds_in_place_oxc`](#holds_in_place_oxc)(PK, F);
+3. if [`placed`](#placed)(X) and [`discards`](#discards)(something, X);
+4. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
+5. if all of:
    - [`placed`](#placed)(X);
    - [`nth`](#nth)(C, something, X);
    - [`callee`](#callee)(C, CE);
    - [`whole_expr`](#whole_expr)(CE);
    - unless [`spread_args`](#spread_args)(C, something, X);
-5. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
+6. if [`placed`](#placed)(X) and [`stored_in`](#stored_in)(X, something).
 
 > a member of an object literal holds the value as long as the literal is not open
 
@@ -1510,6 +1562,12 @@ In the surface:
    - G [is among the](#ast_child) F of a node P;
    - P [is of kind](js-model.rofl.md#ast_node) PK;
    - unless [`holds_in_place`](#holds_in_place)(PK, F);
+   - unless [`discards`](#discards)(something, G);
+3. if all of:
+   - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
+   - [`child`](#child)(P, F, something, G);
+   - [`node`](#node)(P, PK, something);
+   - unless [`holds_in_place_oxc`](#holds_in_place_oxc)(PK, F);
    - unless [`discards`](#discards)(something, G).
 
 In the flow:

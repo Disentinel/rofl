@@ -698,6 +698,7 @@ unit_concludes("rules/js-callgraph.rofl", surveyed).
 unit_concludes("rules/js-callgraph.rofl", sx_receivable).
 unit_concludes("rules/js-callgraph.rofl", sx_surveyed).
 unit_concludes("rules/js-callgraph.rofl", holds_in_place).
+unit_concludes("rules/js-callgraph.rofl", holds_in_place_oxc).
 unit_concludes("rules/js-callgraph.rofl", placed).
 unit_concludes("rules/js-callgraph.rofl", held).
 unit_concludes("rules/js-callgraph.rofl", literal_part).

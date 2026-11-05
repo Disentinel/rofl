@@ -478,6 +478,12 @@ import_attr[code](A, Key, Value) :- ast_node[code](A, import_attribute, _),
                                     ast_child[code](A, value, 0, V), ast_value[code](V, Value).
 
 import_attr_of[code](D, A) :- ast_child[code](D, attributes, _, A).
+-- oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
+import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, name, Key),
+                                    child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
+import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, value, Key),
+                                    child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
+import_attr_of[code](D, A) :- child[ast_oxc](D, with_clause, 0, W), child[ast_oxc](W, with_entries, _, A).
 module_attr[code](D, Key, Value) :- import_attr_of[code](D, A), import_attr[code](A, Key, Value).
 
 module_type[code](D, T) :- module_attr[code](D, "type", T).
@@ -486,6 +492,10 @@ module_is_data[code](D, T) :- module_type[code](D, T), T != "javascript".
 
 import_attr_unsited[audit](A) :- ast_node[code](A, import_attribute, _),
                                  not import_attr_of[code](_, A).
+import_attr_unsited[audit](A) :- node[ast_oxc](A, import_attribute, _),
+                                 not import_attr_of[code](_, A).
 
 import_attr_unread[audit](A) :- ast_node[code](A, import_attribute, _),
+                                not import_attr[code](A, _, _).
+import_attr_unread[audit](A) :- node[ast_oxc](A, import_attribute, _),
                                 not import_attr[code](A, _, _).

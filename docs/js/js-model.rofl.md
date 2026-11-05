@@ -1,6 +1,6 @@
 ---
 world: js-model
-books: audit, code, main
+books: ast_oxc, audit, code, main
 default: audit
 ---
 
@@ -22,6 +22,8 @@ Reads:
   - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from facts/js-controlflow.rofl, in the main:
   - <a id="layer"></a>A layer L is a layer (`layer`)
+- from outside these files, in the ast_oxc:
+  - <a id="node"></a>`node`
 
 ## Words
 
@@ -426,7 +428,10 @@ Declared as facts:
 > constant that guarded nothing. A `kind_absent_ok` row belongs in the pack
 > that declares its kind.
 
-<a id="corpus_scanned"></a>`corpus_scanned`() if [`kind_seen`](#kind_seen)(something).
+<a id="corpus_scanned"></a>`corpus_scanned`() either:
+
+1. if [`kind_seen`](#kind_seen)(something);
+2. if [`node`](#node)(something, something, something).
 
 <a id="scanned"></a>A language has a scanned corpus if it [is the corpus language](#lang_of_corpus) and [`corpus_scanned`](#corpus_scanned)().
 

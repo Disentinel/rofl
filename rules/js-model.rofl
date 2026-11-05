@@ -299,6 +299,7 @@ edb(kind_absent_ok).
 -- constant that guarded nothing. A `kind_absent_ok` row belongs in the pack
 -- that declares its kind.
 corpus_scanned[audit]() :- kind_seen[code](_).
+corpus_scanned[audit]() :- node[ast_oxc](_, _, _).
 scanned[audit](Lang)    :- lang_of_corpus(Lang), corpus_scanned[audit]().
 
 kind_unexercised[audit](Lang, K) :- node_kind(Lang, K), scanned[audit](Lang),

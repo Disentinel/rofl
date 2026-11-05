@@ -114,7 +114,7 @@ export function codeFacts(files: Record<string, string>, data: string[] = [], pr
 }
 
 /** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
-function hostFacts(paths: string[], strings: Set<string>): string[] {
+export function hostFacts(paths: string[], strings: Set<string>): string[] {
   // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
   const q = (x: string) => '"' + x.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"', out: string[] = [], dirs = new Set(['.']);
   const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };

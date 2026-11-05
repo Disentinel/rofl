@@ -9,6 +9,8 @@ export const MODEL_FILES = ['boot.rofl', 'facts/model-units.rofl',
   'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl',
   'rules/js-concat.rofl', 'rules/js-surface.rofl',
   'models/lang/js/roles.rofl', 'models/lang/js/babel-roles.rofl', 'models/lang/js/babel-from-code.rofl'];
+/** The same model over oxc's tree, which `rofl scan` writes (scanners/cli.ts): rules/js.files. The notebook host scans in its own process with Babel, so it keeps the file above. */
+export const SCAN_MODEL_FILES = MODEL_FILES.filter((f) => !/\/(?:babel-roles|babel-from-code)\.rofl$/.test(f)).concat('models/lang/js/oxc-roles.rofl');
 export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
 /** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or

@@ -243,7 +243,7 @@ nearest_fn[code](F, C) :- dec_up[code](C, G), nearest_v[flow](F, G), not in_own_
 
 enclosed[code](C)      :- nearest_fn[code](_, C).
 top_call[code](C, R)   :- site[code](C), at[tree](C, File, _),
-                          ast_file[code](R, File), not enclosed[code](C).
+                          program[tree](R, File), not enclosed[code](C).
 
 -- =========================================================================
 -- 4. RESOLUTION — scope-blind on purpose: a name bound anywhere in the file
@@ -310,11 +310,11 @@ calls[code](Caller, Callee) :- resolves[code](C, Callee), nearest_fn[code](Calle
 calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 
 calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_label[flow](Y, B).
-calls_named[code](top, B) :- calls[code](R, Y), ast_file[code](R, _), fn_label[flow](Y, B).
+calls_named[code](top, B) :- calls[code](R, Y), program[tree](R, _), fn_label[flow](Y, B).
 
 calls_in[code](File, A, B)   :- calls[code](X, Y), at[tree](X, File, _),
                                 fn_name[code](X, A), fn_label[flow](Y, B).
-calls_in[code](File, top, B) :- calls[code](R, Y), ast_file[code](R, File),
+calls_in[code](File, top, B) :- calls[code](R, Y), program[tree](R, File),
                                 fn_label[flow](Y, B).
 
 passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
@@ -397,7 +397,7 @@ frontier_at[code](R, K) :- top_call[code](X, R), transfer_site[code](X, K),
                            not resolved_site[code](X).
 
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
-frontier_named[code](top, Item)  :- frontier_at[code](R, Item), ast_file[code](R, _).
+frontier_named[code](top, Item)  :- frontier_at[code](R, Item), program[tree](R, _).
 
 frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), at[tree](C, File, _), at[tree](C, _, Line).
 frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_site[code](X),
@@ -575,9 +575,48 @@ holds_in_place(tsmodule_declaration, id).
 holds_in_place(tsmodule_block, body).
 holds_in_place(object_property, value).
 
+-- the same table in oxc's names (rust/tools/oxc_scan): a parameter's pattern is the child of its formal_parameter, a function's body statements are function_body's, a namespace is tsnamespace_declaration
+edb(holds_in_place_oxc).
+holds_in_place_oxc(static_member_expression, object).
+holds_in_place_oxc(static_member_expression, property).
+holds_in_place_oxc(computed_member_expression, object).
+holds_in_place_oxc(computed_member_expression, expression).
+holds_in_place_oxc(private_field_expression, object).
+holds_in_place_oxc(private_field_expression, field).
+holds_in_place_oxc(variable_declarator, id).
+holds_in_place_oxc(variable_declarator, init).
+holds_in_place_oxc(class, id).
+holds_in_place_oxc(class, heritage_expression).
+holds_in_place_oxc(function, id).
+holds_in_place_oxc(formal_parameter, pattern).
+holds_in_place_oxc(assignment_expression, left).
+holds_in_place_oxc(call_expression, callee).
+holds_in_place_oxc(new_expression, callee).
+holds_in_place_oxc(program, body).
+holds_in_place_oxc(function_body, statements).
+holds_in_place_oxc(block_statement, body).
+holds_in_place_oxc(class_body, body).
+holds_in_place_oxc(binary_expression, left).
+holds_in_place_oxc(binary_expression, right).
+holds_in_place_oxc(unary_expression, argument).
+holds_in_place_oxc(if_statement, test).
+holds_in_place_oxc(conditional_expression, test).
+holds_in_place_oxc(while_statement, test).
+holds_in_place_oxc(template_literal, expressions).
+holds_in_place_oxc(export_declaration, declaration).
+holds_in_place_oxc(export_named_declaration, declaration).
+holds_in_place_oxc(export_specifier, local).
+holds_in_place_oxc(import_specifier, local).
+holds_in_place_oxc(import_default_specifier, local).
+holds_in_place_oxc(tsnamespace_declaration, id).
+holds_in_place_oxc(tsmodule_declaration, id).
+holds_in_place_oxc(tsmodule_block, body).
+holds_in_place_oxc(object_property, value).
+
 -- asked only of a place that may hold a surveyed object of its own file
 placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), parent[tree](_, A).
 held[flow](A) :- placed[flow](A), ast_child[code](P, F, _, A), ast_node[code](P, PK, _), holds_in_place(PK, F).
+held[flow](A) :- placed[flow](A), child[ast_oxc](P, F, _, A), node[ast_oxc](P, PK, _), holds_in_place_oxc(PK, F).
 held[flow](A) :- placed[flow](A), discards[value](_, A).
 held[flow](A) :- placed[flow](A), assigned[code](_, _, _, A, _).
 held[flow](A) :- placed[flow](A), nth[tree](C, _, A), not spread_args[value](C, _, A), callee[value](C, CE),
@@ -711,6 +750,8 @@ sx_global_open[surface](Name) :- member_written[flow](N), object_of[code](N, G),
                                  es_global[code](G, Name, _, _), not selects[flow](N, _).
 sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), ast_child[code](P, F, _, G),
                                  ast_node[code](P, PK, _), not holds_in_place(PK, F), not discards[value](_, G).
+sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), child[ast_oxc](P, F, _, G),
+                                 node[ast_oxc](P, PK, _), not holds_in_place_oxc(PK, F), not discards[value](_, G).
 call_finds[flow](C) :- callee[value](C, N), es_static[code](N, _, _, _).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, Name, _, _), sx_global_key[surface](Name, Key).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, _, _, constructor_binding),
