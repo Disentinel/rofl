@@ -12,8 +12,6 @@
 --     ? queue_stale[audit](W, K, L)  an item pointing at a shut cell
 --     ? false_done[audit](W, K, L)   a claim of completion the model denies
 
-claim_kind(queued).
-
 -- ===========================================================================
 -- 1 — THE MATRIX ITSELF IS WRONG ABOUT A PARTIAL CELL. Before more cells are
 -- filled, because it decides at what granularity they are filled at all.
@@ -56,15 +54,6 @@ work(w_cg_member_family,
 work_state(w_cg_member_family, done).
 work_needs(w_cg_member_family, w_df_value_core).
 
--- WHAT THE SPLIT HANDED ON. `s_member_on_other` was one cell reading `not_yet`
--- and it held four different answers; naming them turned two of the four into
--- claims on OTHER items, which is the queue doing what it is for. Neither is
--- member-expression work and neither would ever have surfaced as its own row
--- while the bucket existed.
-claim(queued, js, member_expression, s_member_on_await,    callgraph, w_df_control_forms).
--- retired 2026-09-08: the cell is now irreducible, not queued.
--- retired 2026-09-08: the cell is now irreducible, not queued.
-
 -- 3 — the same family through the optional-chaining kind. Held apart because
 -- `a?.b()` has a SHORT-CIRCUIT the plain form does not, which is a control-flow
 -- fact wearing a call-graph shape.
@@ -90,10 +79,6 @@ work_state(w_cg_new_expression, done).
 -- they really are one thing.
 work(w_cg_syntactic_wrappers, "(f)(), f as T (), f!(), (a, f)(), c ? f : g () — unwrap the callee and recurse").
 work_state(w_cg_syntactic_wrappers, done).
-claim(queued, js, tsas_expression,          s_passes,         callgraph, w_cg_syntactic_wrappers).
-claim(queued, js, tsnon_null_expression,    s_passes,      callgraph, w_cg_syntactic_wrappers).
-claim(queued, js, sequence_expression,      s_sequence,      callgraph, w_cg_syntactic_wrappers).
-claim(queued, js, conditional_expression,   s_conditional,   callgraph, w_cg_syntactic_wrappers).
 
 -- 6 — `f()()` needs to know what f RETURNS, so it is blocked on the dataflow
 -- layer having return values at all. Ordered after the call graph's own work
@@ -111,8 +96,6 @@ claim(queued, js, conditional_expression,   s_conditional,   callgraph, w_cg_syn
 work(w_cg_call_result, "DONE 2026-09-04: super() reaches the nearest ancestor's constructor; the dynamic-import shape is unreachable and waived").
 work_state(w_cg_call_result, done).
 work_needs(w_cg_call_result, w_df_function_forms).
-claim(queued, js, super,                    s_super,       callgraph, w_cg_call_result).
-claim(queued, js, import,                   s_dynamic_import, callgraph, w_cg_call_result).
 work_spawned(w_cg_call_result, f_body_order_changes_the_answer_and_whynot_cannot_see_it).
 work_spawned(w_cg_call_result, f_a_synthesised_constructor_has_a_frame_and_no_node).
 work_spawned(w_cg_call_result, f_the_corpus_had_no_class_that_inherited_anything).
@@ -156,11 +139,6 @@ work_state(w_df_function_forms, done).
 -- an item of its own rather than being ticked half-true.
 work(w_df_control_forms, "DONE 2026-09-04: await transparent, for-of over an array and over a generator; conditional and sequence were already modelled and unticked").
 work_state(w_df_control_forms, done).
-claim(queued, js, await_expression,          none, dataflow, w_df_control_forms).
-claim(queued, js, conditional_expression,    none, dataflow, w_df_control_forms).
-claim(queued, js, for_of_statement,          none, dataflow, w_df_control_forms).
-claim(queued, js, sequence_expression,       none, dataflow, w_df_control_forms).
-claim(queued, js, member_expression, s_member_on_await, callgraph, w_df_control_forms).
 work_spawned(w_df_control_forms, f_a_value_can_travel_back_up_a_generator_and_nothing_here_says_so).
 work_spawned(w_df_control_forms, f_a_fixture_name_collision_is_not_a_measurement).
 work_spawned(w_df_control_forms, f_nothing_watches_unrecorded_coverage_below_the_call_graph).
@@ -230,10 +208,6 @@ work_spawned(w_cf_abrupt_transfer, f_the_weaker_consumer_cannot_check_the_strong
 -- THE CLAIMS STAY ON A DONE ITEM ON PURPOSE. They record which cells this item
 -- closed, and `false_done[audit]` then guards that every one of them really IS
 -- closed — deleting them would remove a live gate to tidy up a finished row.
-claim(queued, js, return_statement,   none, controlflow, w_cf_abrupt_transfer).
-claim(queued, js, throw_statement,    none, controlflow, w_cf_abrupt_transfer).
-claim(queued, js, break_statement,    none, controlflow, w_cf_abrupt_transfer).
-claim(queued, js, continue_statement, none, controlflow, w_cf_abrupt_transfer).
 
 -- 40 — WHAT ITEM 22 COULD NOT LOOK AT, and the four shapes are its own mutant
 -- set rather than an argument. `r_abrupt` reads SIBLINGS, so an abrupt transfer
@@ -524,7 +498,6 @@ work_spawned(w_mutant_costs_a_world, f_the_default_was_one_core_short_and_nobody
 --     scope and one to the generator protocol.
 work(w_cg_sweep,  "DONE 2026-09-05: 18 cells, 4 residue, 3 already modelled, 11 handed to items").
 work_state(w_cg_sweep, done).
-work_sweeps(w_cg_sweep, callgraph).
 work_spawned(w_cg_sweep, f_the_callee_catch_all_had_no_audit_for_three_days).
 work_spawned(w_cg_sweep, f_the_call_graph_stops_at_the_module_boundary).
 
@@ -536,7 +509,6 @@ work_spawned(w_cg_sweep, f_the_call_graph_stops_at_the_module_boundary).
 -- none - the first measured deceleration in this queue.
 work(w_df_sweep,  "DONE 2026-09-05: 12 cells, 1 already modelled, 2 closed with a reason, 9 to items that existed").
 work_state(w_df_sweep, done).
-work_sweeps(w_df_sweep, dataflow).
 
 -- DONE 2026-09-05, the last of the four. 39 cells: 34 residue, 2 already
 -- modelled and never recorded (the specifier text is a string literal, every
@@ -546,7 +518,6 @@ work_sweeps(w_df_sweep, dataflow).
 -- settled and which no audit can see.
 work(w_mod_sweep, "DONE 2026-09-05: 39 cells, 34 residue, 2 already modelled, and a false waiver corrected beside them").
 work_state(w_mod_sweep, done).
-work_sweeps(w_mod_sweep, modules).
 
 -- ...and the fourth sweep, which the third layer created the moment it was
 -- declared. Its residue is the largest of the four because most kinds transfer
@@ -559,7 +530,6 @@ work_sweeps(w_mod_sweep, modules).
 -- four questions and each got an item of its own rather than a bucket.
 work(w_cf_sweep, "DONE 2026-09-05: 40 cells, 28 waived with a reason, 12 that were not residue split into four items").
 work_state(w_cf_sweep, done).
-work_sweeps(w_cf_sweep, controlflow).
 work_spawned(w_cf_sweep, f_the_vocabulary_was_a_model_of_the_corpus_not_of_the_language).
 work_spawned(w_cf_sweep, f_a_sweep_is_where_the_residue_stops_being_residue).
 
@@ -584,11 +554,6 @@ work(w_cf_reachability, "DONE 2026-09-06: entry surface = export surface; r_reac
 work_state(w_cf_reachability, done).
 work_spawned(w_cf_reachability, f_the_entry_point_is_what_makes_the_question_stratified).
 work_spawned(w_cf_reachability, f_the_denominator_was_empty_so_the_probe_could_not_fail).
-claim(queued, js, function_declaration,      none, controlflow, w_cf_reachability).
-claim(queued, js, function_expression,       none, controlflow, w_cf_reachability).
-claim(queued, js, arrow_function_expression, none, controlflow, w_cf_reachability).
-claim(queued, js, class_method,              none, controlflow, w_cf_reachability).
-claim(queued, js, object_method,             none, controlflow, w_cf_reachability).
 
 -- 25 — THE EXCEPTION PATH, and it is the owner's observation that put it here:
 -- an exception IS control flow. The TRANSFER is modelled — `try`, `catch` and
@@ -613,10 +578,6 @@ work_state(w_exception_flow, done).
 work_spawned(w_exception_flow, f_a_call_that_exits_stops_at_the_function_boundary).
 work_spawned(w_exception_flow, f_a_fixture_can_blind_a_mutant_and_a_count_cannot_tell).
 work_spawned(w_exception_flow, f_the_arm_written_from_the_language_not_from_the_store).
-claim(queued, js, call_expression,  none, controlflow, w_exception_flow).
-claim(queued, js, super,            none, controlflow, w_exception_flow).
-claim(queued, js, throw_statement,  none, dataflow,    w_exception_flow).
-claim(queued, js, catch_clause,     none, dataflow,    w_exception_flow).
 
 -- 26 — A GETTER IS A CALL WEARING A READ'S SYNTAX, and the LAST cell at the
 -- control-flow layer. The note said it needs the value layer to know which
@@ -634,7 +595,6 @@ work(w_cf_accessor, "DONE 2026-09-06: r_accessor; a read that runs a getter, and
 work_state(w_cf_accessor, done).
 work_spawned(w_cf_accessor, f_the_accessor_attribute_was_read_for_constructor_and_never_for_get).
 work_spawned(w_cf_accessor, f_an_instruments_world_is_part_of_its_claim).
-claim(queued, js, member_expression, none, controlflow, w_cf_accessor).
 -- The optional twin is NOT claimed: its cell is already ticked for the
 -- short-circuit, and a kind-level cell cannot carry two verdicts. See the note
 -- in facts/js-controlflow.rofl — `queue_stale[audit]` said so on the first run.
@@ -686,7 +646,6 @@ work_spawned(w_df_instance_vs_class, f_the_receiver_role_is_syntactic_and_an_ali
 -- The call graph resolves `super()` by a dedicated rule that does not go
 -- through the value layer at all. All three are one question — what a
 -- class-shaped node DENOTES — and they want one fixture.
-
 
 -- ===========================================================================
 -- FOUR BLOCKERS RETIRED 2026-09-08, AND THE CAUSE WAS OURS ALL ALONG. They
@@ -1018,7 +977,6 @@ work(w_alias_store, "DONE 2026-09-07: r_member_write; a member written is a memb
 work_state(w_alias_store, done).
 work_spawned(w_alias_store, f_the_store_was_never_the_missing_thing).
 work_spawned(w_alias_store, f_a_delete_mutant_belongs_on_every_literal_not_only_on_the_arm).
-claim(queued, js, assignment_expression, none, callgraph, w_alias_store).
 
 -- 31. TYPE NODES, DONE — AND THE ITEM WAS TWO ITEMS, which the first probe
 -- against the store said and the note did not. It read: "the only question this
@@ -1166,14 +1124,12 @@ work_spawned(w_cg_module_boundary, f_a_fixture_must_be_reachable_only_through_th
 work_spawned(w_cg_module_boundary, f_the_third_surviving_mutant_in_a_row_wanted_a_name_collision).
 work_spawned(w_cg_module_boundary, f_sharing_a_relation_between_two_forms_moves_the_guard_to_every_reader).
 work_spawned(w_cg_module_boundary, f_the_two_by_two_had_no_control_and_a_missing_axis_was_silent).
-claim(queued, js, export_all_declaration,      none, callgraph, w_cg_module_boundary).
 -- ...AND THE SAME SIX AT THE VALUE LAYER, added by the dataflow sweep on
 -- 2026-09-05. It is ONE missing join and not two: `const h = helper; h()`
 -- resolves to nothing for exactly the reason the call graph stops at the file,
 -- and the item was named `w_cg_` only because the call-graph sweep found it
 -- first. Measured with both files in one store, with a same-file control that
 -- resolves normally two lines away.
-claim(queued, js, export_all_declaration,      none, dataflow, w_cg_module_boundary).
 
 -- 34. THE CALLS THAT HAVE NO CALL SITE. `call_kind` is the closed pair
 -- {call_expression, optional_call_expression}, so every totality audit this
@@ -1313,12 +1269,6 @@ work_spawned(w_cg_invisible_calls, f_an_invisible_call_is_two_different_blockers
 -- written, and the split is not bookkeeping: what is left at this layer is
 -- that a decorator RETURNS A REPLACEMENT, which is a value question, and this
 -- item is about calls the grammar does not show.
-
--- ...and the two the sweep handed to items that already existed. `this()` is a
--- question about what `this` denotes, which is scope; `(yield v)()` is the
--- consumer's value arriving in the middle of a suspended body, which is the
--- generator protocol's other direction.
-claim(queued, js, this_expression,  none, callgraph, w_scope_binding).
 
 -- 35 — THE CONTRACT UNDER ALL THREE BLOCKED CELLS. `cell_blocked` says a cell
 -- waits on the scanner and names no item, so two items sit in
@@ -1536,8 +1486,6 @@ witness_absent(w_mod_beyond_the_import, w_js_corpus,
 -- did: section 4c answers the naming half, so a claim on a shut cell would be
 -- the lie `queue_stale[audit]` reports within one run. The two that remain are
 -- the ones with no verdict this item may write.
-claim(queued, js, call_expression,          none,    modules, w_mod_beyond_the_import).
-claim(queued, js, import_declaration,       subpath, modules, w_mod_beyond_the_import).
 
 -- 38 — THE VOCABULARY'S OWN HOME. `facts/js-kinds.rofl` is named for the kind
 -- vocabulary and holds a minority of it; the rest is spread over four layer
@@ -1688,7 +1636,6 @@ work_spawned(w_cf_suspension, f_one_of_the_three_host_calls_was_a_missing_string
 -- likely answer is the cheapest kind to be wrong about.
 -- ==========================================================================
 
-
 -- 50 - array_pattern, assignment_pattern, rest_element, spread_element.
 work(w_destructuring_rest_and_spread, "array and assignment patterns, rest and spread: object_pattern landed with a rule, and the other four forms of the same family have no site yet").
 work_state(w_destructuring_rest_and_spread, done).
@@ -1696,19 +1643,6 @@ work_state(w_destructuring_rest_and_spread, done).
 -- `w_destructuring_hides_a_call` (60) because measuring them changed the
 -- answer. The claims below are the cells this item CLOSED; a done item keeps
 -- them so `false_done[audit]` can contradict it if any is still open.
-claim(queued, js, array_pattern,               none, callgraph,    w_destructuring_rest_and_spread).
-claim(queued, js, array_pattern,               none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, array_pattern,               none, modules,      w_destructuring_rest_and_spread).
-claim(queued, js, assignment_pattern,          none, callgraph,    w_destructuring_rest_and_spread).
-claim(queued, js, assignment_pattern,          none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, assignment_pattern,          none, controlflow,  w_destructuring_rest_and_spread).
-claim(queued, js, assignment_pattern,          none, modules,      w_destructuring_rest_and_spread).
-claim(queued, js, rest_element,                none, callgraph,    w_destructuring_rest_and_spread).
-claim(queued, js, rest_element,                none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, rest_element,                none, modules,      w_destructuring_rest_and_spread).
-claim(queued, js, spread_element,              none, callgraph,    w_destructuring_rest_and_spread).
-claim(queued, js, spread_element,              none, dataflow,     w_destructuring_rest_and_spread).
-claim(queued, js, spread_element,              none, modules,      w_destructuring_rest_and_spread).
 work_spawned(w_destructuring_rest_and_spread, f_a_spread_argument_shifts_every_argument_after_it).
 work_spawned(w_destructuring_rest_and_spread, f_destructuring_hides_a_call_the_way_an_accessor_does).
 
@@ -1750,26 +1684,6 @@ work_state(w_class_fields, done).
 -- rule gap.
 work_spawned(w_class_fields, f_a_private_method_resolves_and_cannot_be_named).
 work_spawned(w_class_fields, f_a_class_initialiser_is_a_frame_with_no_function).
-claim(queued, js, class_property,              none, callgraph,    w_class_fields).
-claim(queued, js, class_property,              none, dataflow,     w_class_fields).
-claim(queued, js, class_property,              none, controlflow,  w_class_fields).
-claim(queued, js, class_property,              none, modules,      w_class_fields).
-claim(queued, js, class_private_property,      none, callgraph,    w_class_fields).
-claim(queued, js, class_private_property,      none, dataflow,     w_class_fields).
-claim(queued, js, class_private_property,      none, controlflow,  w_class_fields).
-claim(queued, js, class_private_property,      none, modules,      w_class_fields).
-claim(queued, js, class_private_method,        none, callgraph,    w_class_fields).
-claim(queued, js, class_private_method,        none, dataflow,     w_class_fields).
-claim(queued, js, class_private_method,        none, controlflow,  w_class_fields).
-claim(queued, js, class_private_method,        none, modules,      w_class_fields).
-claim(queued, js, private_name,                none, callgraph,    w_class_fields).
-claim(queued, js, private_name,                none, dataflow,     w_class_fields).
-claim(queued, js, private_name,                none, controlflow,  w_class_fields).
-claim(queued, js, private_name,                none, modules,      w_class_fields).
-claim(queued, js, static_block,                none, callgraph,    w_class_fields).
-claim(queued, js, static_block,                none, dataflow,     w_class_fields).
-claim(queued, js, static_block,                none, controlflow,  w_class_fields).
-claim(queued, js, static_block,                none, modules,      w_class_fields).
 
 -- 52 - class_expression.
 work(w_class_expression, "class_expression is READ by obj_like[flow] and node_value_kind and was declared nowhere: the model had an opinion the matrix could not report").
@@ -1884,16 +1798,6 @@ work(w_update_and_literals, "DONE 2026-09-08: 1n reached the store with no value
 work_state(w_update_and_literals, done).
 work_spawned(w_update_and_literals, f_a_bigint_matched_none_of_the_four_branches).
 work_spawned(w_update_and_literals, f_a_for_update_was_never_a_guard_arm).
-claim(queued, js, update_expression,           none, callgraph,    w_update_and_literals).
-claim(queued, js, update_expression,           none, dataflow,     w_update_and_literals).
-claim(queued, js, update_expression,           none, controlflow,  w_update_and_literals).
-claim(queued, js, update_expression,           none, modules,      w_update_and_literals).
-claim(queued, js, big_int_literal,             none, dataflow,     w_update_and_literals).
-claim(queued, js, big_int_literal,             none, controlflow,  w_update_and_literals).
-claim(queued, js, big_int_literal,             none, modules,      w_update_and_literals).
-claim(queued, js, reg_exp_literal,             none, dataflow,     w_update_and_literals).
-claim(queued, js, reg_exp_literal,             none, controlflow,  w_update_and_literals).
-claim(queued, js, reg_exp_literal,             none, modules,      w_update_and_literals).
 -- THE TWO THAT ARE NOT THIS ITEM'S. Both cells are the standard library and
 -- nothing else: the receiver's prototype is known, the method is not a node in
 -- this program, and `w_env_api_surface` is the item that supplies the missing
@@ -2111,10 +2015,6 @@ witness_in_atleast(w_export_specifier_forms, w_js_corpus,
 work(w_labelled_control, "DONE 2026-09-08: r_labelled_boundary; a labelled statement, and break/continue to a label - the one new statement form that really does transfer control").
 work_state(w_labelled_control, done).
 work_spawned(w_labelled_control, f_a_labelled_break_was_read_as_an_ordinary_one).
-claim(queued, js, labeled_statement,           none, callgraph,    w_labelled_control).
-claim(queued, js, labeled_statement,           none, dataflow,     w_labelled_control).
-claim(queued, js, labeled_statement,           none, controlflow,  w_labelled_control).
-claim(queued, js, labeled_statement,           none, modules,      w_labelled_control).
 
 -- 57 - empty_statement, debugger_statement, with_statement.
 -- EIGHT OF TWELVE CLOSED 2026-09-08, and the four that are not are the item.
@@ -2170,10 +2070,6 @@ work_spawned(w_inert_statements, f_with_is_a_scanner_setting_and_a_scoping_hazar
 witness_absent(w_inert_statements, w_js_corpus,
                "ast_node[code](N, with_statement, F, L)",
                "ast_node[code](N, call_expression, F, L)").
-claim(queued, js, with_statement,              none, callgraph,    w_inert_statements).
-claim(queued, js, with_statement,              none, dataflow,     w_inert_statements).
-claim(queued, js, with_statement,              none, controlflow,  w_inert_statements).
-claim(queued, js, with_statement,              none, modules,      w_inert_statements).
 
 -- 58 - directive, directive_literal, interpreter_directive.
 -- DONE 2026-09-08. Twelve cells, twelve waivers, and the item's own premise was
@@ -2228,18 +2124,6 @@ witness_in_atleast(w_directives, w_js_corpus,
                    "ast_node[code](N, directive, F, L)", 1).
 work_spawned(w_directives, f_the_era_scale_tops_out_below_the_hashbang_and_the_table_says_es5_takes_it).
 work_spawned(w_directives, f_use_strict_changes_two_things_this_model_has_neither_of).
-claim(queued, js, directive,                   none, callgraph,    w_directives).
-claim(queued, js, directive,                   none, dataflow,     w_directives).
-claim(queued, js, directive,                   none, controlflow,  w_directives).
-claim(queued, js, directive,                   none, modules,      w_directives).
-claim(queued, js, directive_literal,           none, callgraph,    w_directives).
-claim(queued, js, directive_literal,           none, dataflow,     w_directives).
-claim(queued, js, directive_literal,           none, controlflow,  w_directives).
-claim(queued, js, directive_literal,           none, modules,      w_directives).
-claim(queued, js, interpreter_directive,       none, callgraph,    w_directives).
-claim(queued, js, interpreter_directive,       none, dataflow,     w_directives).
-claim(queued, js, interpreter_directive,       none, controlflow,  w_directives).
-claim(queued, js, interpreter_directive,       none, modules,      w_directives).
 
 -- 59 - THREE KINDS THE VOCABULARY DID NOT TAKE ON, each for a MEASURED
 -- reason rather than a preference, and all three wait on the same two things:
@@ -2333,7 +2217,6 @@ witness_absent(w_plugin_gated_kinds, w_js_corpus,
                "ast_node[code](N, export_default_specifier, F, L)",
                "ast_node[code](N, call_expression, F, L)").
 
-
 -- ==========================================================================
 -- 60 - THE THREE CELLS ITEM 50 COULD NOT CLOSE, plus one it had to REOPEN.
 --
@@ -2380,10 +2263,6 @@ witness_absent(w_plugin_gated_kinds, w_js_corpus,
 -- were held back, not the line drawn between them.
 work(w_destructuring_hides_a_call, "an array pattern, an object rest and every spread position transfer control into user code - an iterator or a getter - and the layer`s reason atom for all four says they transfer nothing").
 work_state(w_destructuring_hides_a_call, done).
-claim(queued, js, object_pattern,              none, controlflow,  w_destructuring_hides_a_call).
-claim(queued, js, array_pattern,               none, controlflow,  w_destructuring_hides_a_call).
-claim(queued, js, rest_element,                none, controlflow,  w_destructuring_hides_a_call).
-claim(queued, js, spread_element,              none, controlflow,  w_destructuring_hides_a_call).
 work_spawned(w_destructuring_hides_a_call, f_destructuring_hides_a_call_the_way_an_accessor_does).
 
 -- SECOND PASS 2026-09-09, ON AN ITEM ALREADY MARKED `done` AND FOUR CELLS
@@ -2506,7 +2385,6 @@ work_spawned(w_open_cell_should_be_an_identity, f_an_instruments_world_is_part_o
 work(w_decorator_replaces_its_target, "DONE 2026-09-08: r_decorator_replacement gives a decorated name and a decorated method the decorator's return, and an auto-accessor becomes a field").
 work_state(w_decorator_replaces_its_target, done).
 work_spawned(w_decorator_replaces_its_target, f_a_decorator_returns_a_different_shape_for_every_position).
-
 
 -- ==========================================================================
 -- 63 - WHAT AN `await` CALLS, AND WHERE THE RUNTIME PUTS IT.
@@ -2884,9 +2762,6 @@ work(w_effect_implicit_coercion, "a binary operator, a unary operator and a temp
 work_state(w_effect_implicit_coercion, open).
 work_spawned(w_effect_implicit_coercion, f_the_operand_decides_a_coercion_and_the_operator_only_says_whether_to_ask).
 work_spawned(w_effect_implicit_coercion, f_the_exn_oracle_cannot_see_a_label_that_did_not_arrive_through_resolves).
-claim(queued, js, binary_expression,        none, effect, w_effect_implicit_coercion).
-claim(queued, js, unary_expression,         none, effect, w_effect_implicit_coercion).
-claim(queued, js, template_literal,         none, effect, w_effect_implicit_coercion).
 
 -- WHAT THE ITEM ANSWERED FOR BEFORE IT WROTE A RULE, which is what its own note
 -- above demanded. `typeof` and `delete` have NO SITE in this corpus and neither
@@ -2963,13 +2838,6 @@ work_spawned(w_effect_module_evaluation, f_a_missing_file_and_a_missing_table_ar
 -- `eff_import_outside[flow]` names all three - the same sites
 -- `import_outside_corpus[audit]` already reports, seen from the effect side.
 
--- ...AND THE FIFTH `with_statement` CELL GOES TO THE ITEM THAT ALREADY HOLDS
--- THE OTHER FOUR. `with (o) { x }` turns every bare name in its body into a
--- member read on `o`, so it changes what a READ MEANS - which is this layer's
--- `read<h>` seed, and it is the same decision about name resolution the other
--- four cells wait on rather than a new one.
-claim(queued, js, with_statement,           none, effect, w_inert_statements).
-
 -- 69 - THE SWEEP, AND IT IS DONE BEFORE IT IS OFFERED. Every other layer has a
 -- sweeping item that owns whatever the named items leave behind; this one has
 -- nothing to sweep, because the eighteen open cells were all claimed by name in
@@ -2979,7 +2847,6 @@ claim(queued, js, with_statement,           none, effect, w_inert_statements).
 -- because every cell has a name, and those are two different facts.
 work(w_effect_sweep, "DONE 2026-09-09: the effect layer's residue, swept in the same commit that declared the layer - 100 cells, 82 answered and 18 claimed by name, nothing left over").
 work_state(w_effect_sweep, done).
-work_sweeps(w_effect_sweep, effect).
 -- ===========================================================================
 -- 68. THE ES GLOBALS — the half of the standard library that is not a
 -- prototype. Entered and closed 2026-09-09, in the wave the owner asked for

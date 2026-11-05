@@ -20,8 +20,6 @@ default: code
 
 Reads:
 
-- from facts/js-callgraph.rofl, in the main:
-  - <a id="node_kind"></a>A language L has the node kind K (`node_kind`)
 - from facts/js-globals.rofl, in the main:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
 - from facts/js-host.rofl, in the main:
@@ -33,9 +31,7 @@ Reads:
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-host: [host_site](js-host.rofl.md#host_site)
-- from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
-- from js-model: [ast_node](js-model.rofl.md#ast_node)
-- from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
+- from js-model, in the main: [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
@@ -745,8 +741,7 @@ In the audit:
 > `stdlib_member` resolves nothing: it moves "the receiver is a builtin
 > prototype, so the method is not a node in this program" from prose into a
 > row `w_env_api_surface` reads. `shape_because(Lang, Shape, Layer, Reason)`
-> is the verdict ledger for SHAPES, separate from js-model's kind-level
-> `unknown_because`, because a kind cannot express partial coverage.
+> is the verdict ledger for SHAPES.
 
 In the code:
 
@@ -854,9 +849,7 @@ In the code:
 
 > The closed vocabulary of shapes, read off the tables: the denominator is the
 > grammar, so a shape the corpus never produces still wants an answer.
-> `shape_stale` is an excuse that outlived its cause; `unrecorded_coverage` is
-> the opposite direction — rules doing the work while the cell says
-> `not_modelled`, which every other gate stays green through.
+> `shape_stale` is an excuse that outlived its cause.
 
 In the audit:
 
@@ -888,16 +881,7 @@ A shape
   - unless it [has residue](#unresolved_shape).
 - <a id="shape_unexercised"></a>is an unexercised shape if [`shape_because`](#shape_because)(`js`, it, `callgraph`, something), unless it [is seen](#shape_seen).
 - <a id="shape_irreducible"></a>is irreducible if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.rofl.md#unknown_type)(R, `irreducible`).
-
-<a id="unrecorded_coverage"></a>A kind K is covered unrecorded at a shape S if all of:
-  - S [resolves somewhere](#resolved_shape);
-  - K [has the shape](js-model.rofl.md#shape_of) S in `js`;
-  - [the verdict](js-model.rofl.md#verdict) of K with S in `callgraph` for `js` is `not_modelled`.
-
-<a id="shape_ours"></a>A shape is ours if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.rofl.md#unknown_type)(R, `ours`).
-
-> What modelling this layer dragged in: every kind its rules touch must be a
-> declared `node_kind`, or the matrix has a cell it does not know exists.
+- <a id="shape_ours"></a>is ours if [the shape reason](#shape_reason) of it is a reason R and [`unknown_type`](js-model.rofl.md#unknown_type)(R, `ours`).
 
 In the code:
 
@@ -909,15 +893,6 @@ In the code:
    - F is a [function](#fn_node);
 2. if [`obj_prop`](js-dataflow.rofl.md#obj_prop)(something, D, F) and F is a [function](#fn_node);
 3. if D [has the member function](#obj_member_fn) F at some key.
-
-In the audit:
-
-<a id="callgraph_kind"></a>A kind K is touched by the call graph either:
-
-1. if a [function](#fn_node) F [is of kind](js-model.rofl.md#ast_node) K;
-2. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.rofl.md#ast_node) K.
-
-<a id="kind_undeclared"></a>A kind K is undeclared if K [is touched by the call graph](#callgraph_kind), unless `js` [has the node kind](#node_kind) K.
 
 ## 7. A call the language performs, with no caller
 
@@ -933,8 +908,6 @@ In the audit:
 > So `performed_call` is one column short of `calls` on purpose and never
 > reaches `calls_named`/`calls_in`. The two `may_be_node` hops are the same
 > last step the iterator protocol takes: `member_value` names the identifier.
-
-In the code:
 
 <a id="awaited_then"></a>Y awaits the then F if all of:
   - Y [awaits](#await_arg) a node X;

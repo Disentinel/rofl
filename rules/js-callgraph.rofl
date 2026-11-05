@@ -353,8 +353,7 @@ callback_key_unknown[audit](P, Key) :- host_calls_back(P, Key, _, _), builtin_pr
 -- `stdlib_member` resolves nothing: it moves "the receiver is a builtin
 -- prototype, so the method is not a node in this program" from prose into a
 -- row `w_env_api_surface` reads. `shape_because(Lang, Shape, Layer, Reason)`
--- is the verdict ledger for SHAPES, separate from js-model's kind-level
--- `unknown_because`, because a kind cannot express partial coverage.
+-- is the verdict ledger for SHAPES.
 resolved_site[code](C)      :- resolves[code](C, _).
 resolved_call[code](C)      :- resolved_site[code](C), call_site[code](C, _).
 unresolved_call[code](C, S) :- shape[code](C, S), not resolved_site[code](C).
@@ -405,9 +404,7 @@ frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_si
 
 -- The closed vocabulary of shapes, read off the tables: the denominator is the
 -- grammar, so a shape the corpus never produces still wants an answer.
--- `shape_stale` is an excuse that outlived its cause; `unrecorded_coverage` is
--- the opposite direction — rules doing the work while the cell says
--- `not_modelled`, which every other gate stays green through.
+-- `shape_stale` is an excuse that outlived its cause.
 shape_vocab[audit](S) :- callee_shape(_, S).
 shape_vocab[audit](S) :- member_shape(_, S).
 shape_vocab[audit](s_dynamic_import).
@@ -433,19 +430,12 @@ shape_stale[audit](S)         :- shape_because(js, S, callgraph, _), shape_seen[
 shape_unexercised[audit](S)   :- shape_because(js, S, callgraph, _), not shape_seen[audit](S).
 shape_irreducible[audit](S)   :- shape_reason[audit](S, R), unknown_type(R, irreducible).
 
-unrecorded_coverage[audit](K, S) :- resolved_shape[audit](S), shape_of(js, K, S),
-                                    verdict[audit](js, K, S, callgraph, not_modelled).
 shape_ours[audit](S)          :- shape_reason[audit](S, R), unknown_type(R, ours).
 
--- What modelling this layer dragged in: every kind its rules touch must be a
--- declared `node_kind`, or the matrix has a cell it does not know exists.
 fn_binder[code](D, F) :- decl[value](D, _), assign[value](D, _, F), fn_node[code](F).
 fn_binder[code](P, F) :- obj_prop[code](_, P, F), fn_node[code](F).
 fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 
-callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _).
-callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _).
-kind_undeclared[audit](K) :- callgraph_kind[audit](K), not node_kind(js, K).
 
 -- =========================================================================
 -- 7. A CALL THE LANGUAGE PERFORMS, WITH NO CALLER

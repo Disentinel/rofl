@@ -291,8 +291,7 @@ export_internal_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, _, A),
 -- so both ends meet on one spelling. `export default q`: the declaration IS
 -- the name (an identifier has `name` and no `id`), hence the second arm.
 -- `export default interface I {}` is erased and carries `export_kind`
--- "value"; its kind is outside the vocabulary and `vocabulary_gap[audit]`
--- says so the day it arrives.
+-- "value"; its kind has no site here.
 export_default_site[code](E) :- program[tree](Ns, _), has[value](Ns, E), key[value](E, "default"), parent[tree](Ns, E).
 
 default_external[code](E, "default") :- export_default_site[code](E).

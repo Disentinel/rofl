@@ -475,7 +475,6 @@ check[checks]("facts/goldens.rofl", "rules_js-globals", world).
 check[checks]("facts/goldens.rofl", "rules_js-host", world).
 check[checks]("facts/goldens.rofl", "rules_js-model", world).
 check[checks]("facts/goldens.rofl", "rules_js-modules", world).
-check[checks]("facts/goldens.rofl", "rules_js-pack-home", world).
 check[checks]("facts/goldens.rofl", "rules_js-resolve", world).
 check[checks]("facts/goldens.rofl", "rules_js-service", world).
 check[checks]("facts/goldens.rofl", "rules_js-structure", world).

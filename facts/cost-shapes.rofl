@@ -17,7 +17,6 @@
 --   alias_of_a_derived     a second name for a derived relation, kept for what the name says (a book,
 --                          a reader's vocabulary); the head's total over all its arms is given
 
-shape_ok(axis_earns, cross_product, "product_is_the_output: an audit over axes x layers, 1 ms").
 shape_ok(eff_lacks, cross_product, "product_is_the_output: names x rows of the inclusion order, 3 ms sealed / 4 default").
 shape_ok(ambient_effect, cross_product, "product_is_the_output: the head is names x effects, 0 ms").
 shape_ok(runtime_lib_unsupported, cross_product, "product_is_the_output: releases x library calls is the audited pair, 0 ms").
@@ -49,7 +48,6 @@ shape_ok(ox_pat_down, twin_bodies, "small_set: the oxc converter reads one file'
 shape_ok(ox_pat_target, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(ox_spec_of, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(target, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
-shape_ok(corpus_scanned, existence_scan, "small_set: one row, true when any node of the raw tree is there").
 shape_ok(calls_in, twin_bodies, "small_set: calls by (file, name), 1 ms sealed / 3 default").
 shape_ok(calls_named, twin_bodies, "small_set: the same body one column short, 1 ms sealed / 2 default").
 shape_ok(eff_conv_call, twin_bodies, "small_set: the converting call and its override test, 4 ms sealed / 14 default").

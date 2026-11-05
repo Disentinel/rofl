@@ -32,7 +32,6 @@ Reads:
 - from js-callgraph, in the audit: [shape_verdict](js-callgraph.rofl.md#shape_verdict)
 - from js-callgraph: [has_shape](js-callgraph.rofl.md#has_shape), [resolved_site](js-callgraph.rofl.md#resolved_site)
 - from js-dataflow: [free_global](js-dataflow.rofl.md#free_global)
-- from js-model, in the main: [unknown_because](js-model.rofl.md#unknown_because)
 - from js-structure: [argument_at](js-structure.rofl.md#argument_at), [meta_form](js-structure.rofl.md#meta_form)
 - from outside these files, in the ast_oxc:
   - <a id="attr"></a>`attr`
@@ -116,8 +115,8 @@ Declared as facts:
 - <a id="node_prefix_only"></a>A spec Spec is loaded only under its scheme — rows from facts/js-modules.rofl
 - <a id="host_module"></a>A host H has the module Spec — rows from facts/js-host-surface.rofl
 - The shape verdict of a shape S is a verdict N — rows from facts/js-modules.rofl
-- A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-callgraph.rofl
-- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-callgraph.rofl
+- <a id="unknown_because"></a>A kind K is unknown in a layer L of a language Lang because a reason R — rows from facts/js-modules.rofl
+- A kind K is unknown with a shape S in a layer Lay of a language Lang because a reason R — rows from facts/js-modules.rofl
 
 ## 1. THE PLACES A MODULE SPECIFIER OCCURS — five kinds. A re-export is a site
 
@@ -579,8 +578,7 @@ A node
 > so both ends meet on one spelling. `export default q`: the declaration IS
 > the name (an identifier has `name` and no `id`), hence the second arm.
 > `export default interface I {}` is erased and carries `export_kind`
-> "value"; its kind is outside the vocabulary and `vocabulary_gap[audit]`
-> says so the day it arrives.
+> "value"; its kind has no site here.
 
 In the code:
 
@@ -816,8 +814,8 @@ A kind K
   - [the site kind](#site_kind) of I is K;
   - [`shape_verdict`](js-callgraph.rofl.md#shape_verdict)(Sh, R) in the main;
   - R differs from `resolves`;
-  - unless K [is unknown](js-model.rofl.md#unknown_because) with Sh in `modules` of `js` because R.
-- <a id="reason_unexercised"></a>has an unexercised reason R if K [is unknown](js-model.rofl.md#unknown_because) with a shape Sh in `modules` of `js` because R, unless K [earns the reason](#reason_earned) R.
+  - unless K [is unknown](#unknown_because) with Sh in `modules` of `js` because R.
+- <a id="reason_unexercised"></a>has an unexercised reason R if K [is unknown](#unknown_because) with a shape Sh in `modules` of `js` because R, unless K [earns the reason](#reason_earned) R.
 - <a id="reason_earned"></a>earns the reason R if all of:
   - a site I [is unresolved with shape](#unresolved_import) Sh;
   - [the site kind](#site_kind) of I is K;

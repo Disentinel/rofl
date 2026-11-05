@@ -120,8 +120,6 @@ gate_feature(L, K, F) :- child_needs(L, K, _, _, F).
 -- `meta_property` has no baseline spelling, so `child_needs` belongs.
 kind_gated(L, K)             :- kind_needs(L, K, _).
 kind_gated(L, K)             :- child_needs(L, K, _, _, _).
-kind_unaccounted[audit](L, K) :- env_lang(L), node_kind(L, K),
-                                 not kind_gated(L, K), not kind_baseline(L, K).
 
 -- gated AND baseline: harmless to the answer, a lie about what was decided
 kind_double_booked[audit](L, K) :- kind_gated(L, K), kind_baseline(L, K).
@@ -143,9 +141,7 @@ unscannable(F)                :- feature_unscannable(F, _).
 
 unscannable_seen[audit](F) :- unscannable(F), used_feature[audit](F).
 
--- THE FRONTIER, expected non-zero: `node_kind` is authored and babel has 252
--- concrete types. `kind_unaccounted` asks the same of the DECLARED
--- vocabulary, where the answer must be zero.
+-- THE FRONTIER, expected non-zero: a kind the scanner emits that no table decides.
 kind_ungoverned[audit](K) :- ast_node[code](_, K, _), env_lang(L),
                              not kind_gated(L, K), not kind_baseline(L, K).
 
