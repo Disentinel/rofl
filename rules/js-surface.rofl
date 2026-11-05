@@ -173,7 +173,7 @@ sx_rest_elem[surface](R, K, A) :- sx_rest[surface](F, J, R), resolves[code](C, F
 -- a function handed to an external call is called back by code the corpus cannot see
 sx_cb[surface](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
                                  callee[value](C, G), call_like[code](C),
-                                 ast_child[code](C, arguments, _, A), may_be_node[flow](A, F), fn_value[flow](F).
+                                 nth[tree](C, _, A), not spread_args[value](C, _, A), may_be_node[flow](A, F), fn_value[flow](F).
 
 next_send[flow](G, V) :- sx_next[surface](G, V).
 array_elem[flow](R, K, A) :- sx_rest_elem[surface](R, K, A).
