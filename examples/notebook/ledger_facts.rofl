@@ -327,16 +327,12 @@ path_exists("facts/feature-map.rofl").
 path_exists("facts/findings.rofl").
 path_exists("facts/goldens.rofl").
 path_exists("facts/js-callgraph.rofl").
-path_exists("facts/js-controlflow.rofl").
 path_exists("facts/js-effects.rofl").
 path_exists("facts/js-env.rofl").
 path_exists("facts/js-globals.rofl").
 path_exists("facts/js-host.rofl").
-path_exists("facts/js-kinds.rofl").
 path_exists("facts/js-modules.rofl").
 path_exists("facts/js-phrases.rofl").
-path_exists("facts/js-shapes.rofl").
-path_exists("facts/js-statements.rofl").
 path_exists("facts/kernel-phrases.rofl").
 path_exists("facts/model-units.rofl").
 path_exists("facts/phrases.rofl").
@@ -409,7 +405,6 @@ path_exists("rules/js-globals.rofl").
 path_exists("rules/js-host.rofl").
 path_exists("rules/js-model.rofl").
 path_exists("rules/js-modules.rofl").
-path_exists("rules/js-pack-home.rofl").
 path_exists("rules/js-resolve.rofl").
 path_exists("rules/js-service.rofl").
 path_exists("rules/js-structure.rofl").
