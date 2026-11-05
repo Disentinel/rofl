@@ -9,8 +9,10 @@ export const MODEL_FILES = ['boot.rofl', 'facts/model-units.rofl',
   'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl',
   'rules/js-concat.rofl', 'rules/js-surface.rofl',
   'models/lang/js/roles.rofl', 'models/lang/js/babel-roles.rofl', 'models/lang/js/babel-from-code.rofl'];
-/** The same model over oxc's tree, which `rofl scan` writes (scanners/cli.ts): rules/js.files. A notebook host adds oxc-to-code.rofl, so a cell may still name ast_node, ast_child and ast_attr; the browser page scans with Babel and keeps the file above. */
-export const SCAN_MODEL_FILES = MODEL_FILES.filter((f) => !/\/(?:babel-roles|babel-from-code)\.rofl$/.test(f)).concat('models/lang/js/oxc-roles.rofl', 'models/lang/js/oxc-to-code.rofl');
+/** The same model over oxc's tree, which `rofl scan` writes (scanners/cli.ts): rules/js.files. It is rules/js.files, which scripts/goldens.ts holds it to. The browser page scans with Babel and keeps the file above. */
+export const SCAN_MODEL_FILES = MODEL_FILES.filter((f) => !/\/(?:babel-roles|babel-from-code)\.rofl$/.test(f)).concat('models/lang/js/oxc-roles.rofl');
+/** What a notebook host loads over oxc: the scan model, and oxc-to-code.rofl so a cell's own rules may still name ast_node, ast_child, ast_attr, ast_line and ast_file. */
+export const NB_MODEL_FILES = [...SCAN_MODEL_FILES, 'models/lang/js/oxc-to-code.rofl'];
 export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
 /** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or
@@ -76,7 +78,7 @@ export function libFiles(path: string, front: Front): { model: string[]; phrases
   const phrases = ['facts/phrases.rofl'];
   if (front.model === 'js' || /(^|\/)docs\/js\//.test(path)) phrases.push('facts/js-phrases.rofl');
   if (/(^|\/)docs\/rings\//.test(path)) phrases.push('facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl');
-  return { model: front.model === 'js' ? SCAN_MODEL_FILES : ['boot.rofl'], phrases };
+  return { model: front.model === 'js' ? NB_MODEL_FILES : ['boot.rofl'], phrases };
 }
 
 /** A `reads:` name of the file read as `from` (a key itself; '' for the notebook) as a key of Inputs.reads: a `rofl:` name as is, a path from the
