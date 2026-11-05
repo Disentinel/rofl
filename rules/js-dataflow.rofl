@@ -532,14 +532,12 @@ imported_test[code](T) :- module_member[code](T, "parent").
 imported_test[code](T) :- main_is_module[code](T, "!==").
 imported_test[code](T) :- main_is_module[code](T, "!=").
 
-module_member[code](M, Key) :- ast_node[code](M, member_expression, File), prop_name[code](M, O, Key),
-                               free_global[code](O, "module", File).
+module_member[code](M, Key) :- prop_name[code](M, O, Key), free_global[code](O, "module", _).
 main_is_module[code](T, Op) :- bin_op[code](T, Op, L, R), at[tree](T, File, _),
                                require_main[code](L), free_global[code](R, "module", File).
 main_is_module[code](T, Op) :- bin_op[code](T, Op, L, R), at[tree](T, File, _),
                                require_main[code](R), free_global[code](L, "module", File).
-require_main[code](M) :- ast_node[code](M, member_expression, File), prop_name[code](M, O, "main"),
-                         free_global[code](O, "require", File).
+require_main[code](M) :- prop_name[code](M, O, "main"), free_global[code](O, "require", _).
 
 dead_arm[code](A) :- entry_test[code](T), ast_child[code](S, test, 0, T), ast_child[code](S, consequent, 0, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
@@ -1691,8 +1689,7 @@ may_be_node[flow](E, F) :- imports_default[code](Local, D, File),
 -- whatever `module.exports = X` puts there. Both stay in the may-set, so
 -- `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
 -- is an ordinary member write (section 8) on the first.
-cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), prop_name[code](M, O, "exports"),
-                                     ast_node[code](M, member_expression, _).
+cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), prop_name[code](M, O, "exports").
 
 
 

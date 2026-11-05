@@ -12901,3 +12901,16 @@ recorded(f_only_an_assignment_writes_a_field, "2026-11-05").
 addressed_by(f_only_an_assignment_writes_a_field, "rules/js-dataflow.rofl").
 finding_note(f_only_an_assignment_writes_a_field,
   "VADIM, 2026-11-05: member_unset read `not ast_child(_, left, 0, N)`, the FIELD left, which is the left operand of every binary and logical expression and the left of a pattern default as well as an assignment; only an assignment writes a field. written_target(N): assign_op over N, a pattern target that is a member expression (`[this.d] = ...`, `({a: o.f} = v)`), a for-of or for-in left (kept as a write: it is an assignment to the member). WHAT MOVED on the corpus (64 files): member_unset +259, member_viewed +121, member_may_lack +107, member_unset_written +35, member_set_sure +14, member_read_fn +14, member_ctor_read +14, may_be_lit +103, read_holds_lit +91; slot_k and slot_n move by identity (12 and 3). The new rows are reads that were hidden as writes: `x.f + 1` and `a.f || b` with f unset (lru/node/index.js:1361 `noDeleteOnStaleGet`, a destructured read with a default, whose default wrapper counted as a left). Lost: a member that is a destructuring-assignment target (`[this.d] = [1]`) is no longer an unset read. cf: `this.a + 1` is now an unset read; `this.b = 2`, `this.c += 1`, `[this.d] = [1]` are writes.").
+
+finding(f_a_string_is_a_property_of_the_value, insight).
+recorded(f_a_string_is_a_property_of_the_value, "2026-11-05").
+addressed_by(f_a_string_is_a_property_of_the_value, "rust/rofl/src/engine.rs").
+addressed_by(f_a_string_is_a_property_of_the_value, "src/reflect.ts").
+finding_note(f_a_string_is_a_property_of_the_value,
+  "Owner, 2026-11-05: that a constant is a string is a property of the value, not a mark on the node that wrote it. `type_of(V)` answers string, int, atom or term in both engines (README, the destructors' table), so `string is type_of(V)` is the test, for every language. In the JS model a template with no expressions is a string too, as `require(`fs`)` is in Node.").
+
+finding(f_an_optional_member_of_the_module_global_counts, insight).
+recorded(f_an_optional_member_of_the_module_global_counts, "2026-11-05").
+addressed_by(f_an_optional_member_of_the_module_global_counts, "rules/js-dataflow.rofl").
+finding_note(f_an_optional_member_of_the_module_global_counts,
+  "VADIM, 2026-11-05: `module?.exports` and `require?.main` read like `module.exports` and `require.main`. module_member, require_main and cjs_module_exports read the member role (prop_name) of the free global and no longer test the kind member_expression. MOVED: none on the 64-file corpus (no optional member of module or require); cf (`const e2 = module?.exports`, `if (require?.main !== module)`, `module?.exports.w`): module_member +2, cjs_module_exports +2, require_main +1, main_is_module +1, imported_test +1, and below them may_be_node +6, member_obj/member_at +2, eff_module and sx_eff_module +1.").
