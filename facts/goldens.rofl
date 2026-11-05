@@ -517,7 +517,7 @@ golden_state("budget_wall", "3f907704b830bdb6", 566).
 golden_state("closure_base_fact", "bbc2476d9d5f4800", 710).
 golden_state("concat_builtin", "8ea17a76496ba280", 733).
 golden_state("concat_recursion", "1962afeb9a14292c", 664).
-golden_state("concat_value", "e9d64d3b92f90128", 185896).
+golden_state("concat_value", "e62f4d568e084dfa", 184452).
 golden_state("cost_shapes_model", "535d0163d5e88491", 529686).
 golden_state("demand_asked_hole", "533b1adc44c29b77", 1049).
 golden_state("demand_chain", "315910f85b442bc4", 5689).
@@ -613,10 +613,10 @@ golden_state("retract_again", "7cabf66a4403644f", 552).
 golden_state("retract_last", "ab9799b26928c8c0", 683).
 golden_state("retract_last_read", "bb6457186639fb0e", 689).
 golden_state("roles_babel", "a501aae85a9a5a74", 27939).
-golden_state("scan_requests", "bce6cd22ee5e402a", 154459).
+golden_state("scan_requests", "5458eb15d1a6e3ff", 154224).
 golden_state("sealed_provenance", "09cfc3daf0e67184", 682).
 golden_state("sensors_t3", "59b51847eef167dd", 1018).
-golden_state("services", "ce756ddf39c0cbde", 197486).
+golden_state("services", "7784cd580dfaaf27", 195974).
 golden_state("set_spelling", "2c0e27df434362a2", 808).
 golden_state("spec_coverage", "f20d0596ac5e5770", 5116).
 golden_state("staged_neg_why", "4b078fc21a5145e7", 999).
@@ -631,8 +631,8 @@ golden_state("sub_history_beside_lattice", "06559f714c4f900e", 754).
 golden_state("surface_model", "26456b1c13f454d3", 285334).
 golden_state("unify_occurs", "b03b042b1d6a162b", 928).
 golden_state("unstratifiable", "43c82d555e410e5a", 664).
-golden_state("vscode_side_effects", "3bf65fc19f679dbd", 187766).
-golden_state("vscode_surface_split", "d8de6723584e6ee6", 235093).
+golden_state("vscode_side_effects", "e85adf1dfb427ac4", 186038).
+golden_state("vscode_surface_split", "e79a4ebbf1495c95", 231217).
 golden_state("want_checks", "5f12171344b6eb5d", 785).
 golden_state("wfs_unknown_negated", "ef09b189aa831cbb", 728).
 golden_state("why_base", "184896bb53f718bc", 861).
@@ -26251,8 +26251,8 @@ golden_rel("concat_recursion", "uses_builtin[$kernel]", 3).
 golden_rel("concat_recursion", "writes_to[$kernel]", 32).
 golden_rel("concat_value", "@cell", 205).
 golden_rel("concat_value", "@mem", 192).
-golden_rel("concat_value", "@other", 3717).
-golden_rel("concat_value", "@wit", 51671).
+golden_rel("concat_value", "@other", 3356).
+golden_rel("concat_value", "@wit", 51310).
 golden_rel("concat_value", "abrupt_at[code]", 2).
 golden_rel("concat_value", "abrupt_kind[main]", 4).
 golden_rel("concat_value", "access_word[main]", 3).
@@ -26298,7 +26298,7 @@ golden_rel("concat_value", "arm_under[code]", 8).
 golden_rel("concat_value", "array[value]", 6).
 golden_rel("concat_value", "array_elem[flow]", 8).
 golden_rel("concat_value", "arrived_by[code]", 1924).
-golden_rel("concat_value", "asserted_by[$kernel]", 17813).
+golden_rel("concat_value", "asserted_by[$kernel]", 17452).
 golden_rel("concat_value", "assign[value]", 38).
 golden_rel("concat_value", "assign_binder[code]", 2).
 golden_rel("concat_value", "assign_decided[flow]", 2).
@@ -26427,7 +26427,7 @@ golden_rel("concat_value", "declared_lib[flow]", 8).
 golden_rel("concat_value", "declares_export[code]", 25).
 golden_rel("concat_value", "deferred_attr[main]", 2).
 golden_rel("concat_value", "depends[code]", 1).
-golden_rel("concat_value", "derived_by[$kernel]", 53294).
+golden_rel("concat_value", "derived_by[$kernel]", 52933).
 golden_rel("concat_value", "dir_at[code]", 1).
 golden_rel("concat_value", "discards[value]", 3).
 golden_rel("concat_value", "edb[main]", 218).
@@ -26779,7 +26779,6 @@ golden_rel("concat_value", "plays[tree]", 327).
 golden_rel("concat_value", "plus_assign[code]", 1).
 golden_rel("concat_value", "plus_operand[code]", 18).
 golden_rel("concat_value", "plus_site[code]", 9).
-golden_rel("concat_value", "pos[tree]", 361).
 golden_rel("concat_value", "pos_prem[main]", 6409).
 golden_rel("concat_value", "precedes[tree]", 1).
 golden_rel("concat_value", "premise_agg[$kernel]", 11).
@@ -32048,8 +32047,8 @@ golden_rel("roles_babel", "world[main]", 3).
 golden_rel("roles_babel", "writes_to[$kernel]", 636).
 golden_rel("scan_requests", "@cell", 8).
 golden_rel("scan_requests", "@mem", 7).
-golden_rel("scan_requests", "@other", 505).
-golden_rel("scan_requests", "@wit", 36979).
+golden_rel("scan_requests", "@other", 458).
+golden_rel("scan_requests", "@wit", 36932).
 golden_rel("scan_requests", "abrupt_at[code]", 2).
 golden_rel("scan_requests", "abrupt_kind[main]", 4).
 golden_rel("scan_requests", "access_word[main]", 3).
@@ -32089,7 +32088,7 @@ golden_rel("scan_requests", "arg_given[code]", 3).
 golden_rel("scan_requests", "arg_node[code]", 3).
 golden_rel("scan_requests", "argument_at[code]", 3).
 golden_rel("scan_requests", "arrived_by[code]", 1924).
-golden_rel("scan_requests", "asserted_by[$kernel]", 17630).
+golden_rel("scan_requests", "asserted_by[$kernel]", 17583).
 golden_rel("scan_requests", "assign[value]", 2).
 golden_rel("scan_requests", "at[tree]", 47).
 golden_rel("scan_requests", "attr_deferred[main]", 6).
@@ -32182,7 +32181,7 @@ golden_rel("scan_requests", "declared_lib[flow]", 1).
 golden_rel("scan_requests", "declares_export[code]", 2).
 golden_rel("scan_requests", "deferred_attr[main]", 2).
 golden_rel("scan_requests", "depends[code]", 2).
-golden_rel("scan_requests", "derived_by[$kernel]", 37251).
+golden_rel("scan_requests", "derived_by[$kernel]", 37204).
 golden_rel("scan_requests", "dir_at[code]", 1).
 golden_rel("scan_requests", "discards[value]", 1).
 golden_rel("scan_requests", "edb[main]", 218).
@@ -32465,7 +32464,6 @@ golden_rel("scan_requests", "perspective[main]", 11).
 golden_rel("scan_requests", "plain[main]", 46).
 golden_rel("scan_requests", "plain_valued[flow]", 1).
 golden_rel("scan_requests", "plays[tree]", 38).
-golden_rel("scan_requests", "pos[tree]", 47).
 golden_rel("scan_requests", "pos_prem[main]", 6383).
 golden_rel("scan_requests", "premise_agg[$kernel]", 11).
 golden_rel("scan_requests", "premise_lit[$kernel]", 7473).
@@ -32735,8 +32733,8 @@ golden_rel("sensors_t3", "uses_builtin[$kernel]", 7).
 golden_rel("sensors_t3", "writes_to[$kernel]", 36).
 golden_rel("services", "@cell", 24).
 golden_rel("services", "@mem", 21).
-golden_rel("services", "@other", 4415).
-golden_rel("services", "@wit", 54562).
+golden_rel("services", "@other", 4037).
+golden_rel("services", "@wit", 54184).
 golden_rel("services", "abrupt_at[code]", 11).
 golden_rel("services", "abrupt_kind[main]", 4).
 golden_rel("services", "acc_blocked[main]", 2).
@@ -32787,7 +32785,7 @@ golden_rel("services", "arg_node[code]", 40).
 golden_rel("services", "argument_at[code]", 40).
 golden_rel("services", "array[value]", 1).
 golden_rel("services", "arrived_by[code]", 1924).
-golden_rel("services", "asserted_by[$kernel]", 18104).
+golden_rel("services", "asserted_by[$kernel]", 17726).
 golden_rel("services", "assign[value]", 8).
 golden_rel("services", "async[value]", 11).
 golden_rel("services", "async_body[code]", 11).
@@ -32916,7 +32914,7 @@ golden_rel("services", "declares_export[code]", 12).
 golden_rel("services", "deferred_attr[main]", 2).
 golden_rel("services", "deferred_body[code]", 11).
 golden_rel("services", "depends[code]", 1).
-golden_rel("services", "derived_by[$kernel]", 55923).
+golden_rel("services", "derived_by[$kernel]", 55545).
 golden_rel("services", "dial[main]", 13).
 golden_rel("services", "dir_at[code]", 3).
 golden_rel("services", "discards[value]", 17).
@@ -33388,7 +33386,6 @@ golden_rel("services", "placed[flow]", 5).
 golden_rel("services", "plain[main]", 361).
 golden_rel("services", "plays[tree]", 287).
 golden_rel("services", "points[main]", 4).
-golden_rel("services", "pos[tree]", 378).
 golden_rel("services", "pos_prem[main]", 7137).
 golden_rel("services", "premise_agg[$kernel]", 11).
 golden_rel("services", "premise_lit[$kernel]", 8508).
@@ -34364,8 +34361,8 @@ golden_rel("unstratifiable", "uses_builtin[$kernel]", 3).
 golden_rel("unstratifiable", "writes_to[$kernel]", 32).
 golden_rel("vscode_side_effects", "@cell", 64).
 golden_rel("vscode_side_effects", "@mem", 87).
-golden_rel("vscode_side_effects", "@other", 4376).
-golden_rel("vscode_side_effects", "@wit", 52230).
+golden_rel("vscode_side_effects", "@other", 3944).
+golden_rel("vscode_side_effects", "@wit", 51798).
 golden_rel("vscode_side_effects", "abrupt_at[code]", 1).
 golden_rel("vscode_side_effects", "abrupt_kind[main]", 4).
 golden_rel("vscode_side_effects", "access[type]", 1).
@@ -34412,7 +34409,7 @@ golden_rel("vscode_side_effects", "array[value]", 2).
 golden_rel("vscode_side_effects", "array_elem[flow]", 2).
 golden_rel("vscode_side_effects", "arrived_by[code]", 1924).
 golden_rel("vscode_side_effects", "arrow_expr[main]", 1).
-golden_rel("vscode_side_effects", "asserted_by[$kernel]", 18245).
+golden_rel("vscode_side_effects", "asserted_by[$kernel]", 17813).
 golden_rel("vscode_side_effects", "assign[value]", 24).
 golden_rel("vscode_side_effects", "assign_op[code]", 1).
 golden_rel("vscode_side_effects", "assign_parts[main]", 1).
@@ -34552,7 +34549,7 @@ golden_rel("vscode_side_effects", "decorates[code]", 1).
 golden_rel("vscode_side_effects", "deferred_attr[main]", 2).
 golden_rel("vscode_side_effects", "deferred_body[code]", 1).
 golden_rel("vscode_side_effects", "depends[code]", 4).
-golden_rel("vscode_side_effects", "derived_by[$kernel]", 53610).
+golden_rel("vscode_side_effects", "derived_by[$kernel]", 53178).
 golden_rel("vscode_side_effects", "dir_at[code]", 3).
 golden_rel("vscode_side_effects", "discards[value]", 23).
 golden_rel("vscode_side_effects", "edb[main]", 228).
@@ -34950,7 +34947,6 @@ golden_rel("vscode_side_effects", "plays[tree]", 324).
 golden_rel("vscode_side_effects", "plus_assign[code]", 1).
 golden_rel("vscode_side_effects", "plus_operand[code]", 4).
 golden_rel("vscode_side_effects", "plus_site[code]", 2).
-golden_rel("vscode_side_effects", "pos[tree]", 432).
 golden_rel("vscode_side_effects", "pos_prem[main]", 6471).
 golden_rel("vscode_side_effects", "premise_agg[$kernel]", 14).
 golden_rel("vscode_side_effects", "premise_lit[$kernel]", 7577).
@@ -35246,8 +35242,8 @@ golden_rel("vscode_side_effects", "written_arg[code]", 40).
 golden_rel("vscode_side_effects", "written_target[code]", 2).
 golden_rel("vscode_surface_split", "@cell", 99).
 golden_rel("vscode_surface_split", "@mem", 155).
-golden_rel("vscode_surface_split", "@other", 9841).
-golden_rel("vscode_surface_split", "@wit", 71938).
+golden_rel("vscode_surface_split", "@other", 8872).
+golden_rel("vscode_surface_split", "@wit", 70969).
 golden_rel("vscode_surface_split", "abrupt_at[code]", 8).
 golden_rel("vscode_surface_split", "abrupt_kind[main]", 4).
 golden_rel("vscode_surface_split", "access[type]", 1).
@@ -35299,7 +35295,7 @@ golden_rel("vscode_surface_split", "array[value]", 3).
 golden_rel("vscode_surface_split", "array_elem[flow]", 4).
 golden_rel("vscode_surface_split", "arrived_by[code]", 1924).
 golden_rel("vscode_surface_split", "arrow_expr[main]", 2).
-golden_rel("vscode_surface_split", "asserted_by[$kernel]", 21296).
+golden_rel("vscode_surface_split", "asserted_by[$kernel]", 20327).
 golden_rel("vscode_surface_split", "assign[value]", 50).
 golden_rel("vscode_surface_split", "assign_op[code]", 2).
 golden_rel("vscode_surface_split", "assign_parts[main]", 2).
@@ -35456,7 +35452,7 @@ golden_rel("vscode_surface_split", "default_internal[code]", 1).
 golden_rel("vscode_surface_split", "deferred_attr[main]", 2).
 golden_rel("vscode_surface_split", "deferred_body[code]", 1).
 golden_rel("vscode_surface_split", "depends[code]", 14).
-golden_rel("vscode_surface_split", "derived_by[$kernel]", 75052).
+golden_rel("vscode_surface_split", "derived_by[$kernel]", 74083).
 golden_rel("vscode_surface_split", "dir_at[code]", 4).
 golden_rel("vscode_surface_split", "discards[value]", 50).
 golden_rel("vscode_surface_split", "edb[main]", 229).
@@ -35898,7 +35894,6 @@ golden_rel("vscode_surface_split", "plays[tree]", 726).
 golden_rel("vscode_surface_split", "plus_assign[code]", 1).
 golden_rel("vscode_surface_split", "plus_operand[code]", 8).
 golden_rel("vscode_surface_split", "plus_site[code]", 4).
-golden_rel("vscode_surface_split", "pos[tree]", 969).
 golden_rel("vscode_surface_split", "pos_prem[main]", 6472).
 golden_rel("vscode_surface_split", "premise_agg[$kernel]", 13).
 golden_rel("vscode_surface_split", "premise_lit[$kernel]", 7577).
