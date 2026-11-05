@@ -946,10 +946,10 @@ In the code:
 
 <a id="pattern_takes"></a>P takes the key Key either:
 
-1. if [`pattern_prop`](#pattern_prop)(P, Key, T) and [`pat_in`](#pat_in)(something, P, T);
+1. if [`pattern_prop`](#pattern_prop)(P, Key, something);
 2. if all of:
-   - [`pat_computed`](#pat_computed)(P, T, E);
-   - [`pat_in`](#pat_in)(something, P, T);
+   - [`key_expr`](#key_expr)(Q, E);
+   - [`parent`](#parent)(P, Q);
    - a node E [is the well known symbol](#symbol_ref) Key.
 
 <a id="rest_in_pattern"></a>D holds a rest R in File if all of:
