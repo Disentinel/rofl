@@ -72,7 +72,7 @@ memory(chain_dir_indexes_low, T) :- T is sum(B ; Rel, Bk : ch_dir_bytes(Rel, Bk,
 memory(chain_dir_indexes_high, T) :- T is sum(B ; Rel, Bk : ch_dir_bytes(Rel, Bk, _, B)).
 -- a probe of a pattern of one column is the hash and its run; a longer one halves the run of the column entered by:
 -- the most distinct column of the pattern at best, the fewest at worst
-ch_pdist(Rel, Bk, M, D) :- ch_col(Rel, Bk, M, J), distinct[profile](Rel, Bk, J, D).
+ch_pdist(Rel, Bk, M, D) :- ch_pat(Rel, Bk, M, _), ch_col(Rel, Bk, M, J), distinct[profile](Rel, Bk, J, D).
 ch_pbest(Rel, Bk, M, D) :- ch_pdist(Rel, Bk, M, _), D is max(X : ch_pdist(Rel, Bk, M, X)).
 ch_pworst(Rel, Bk, M, D) :- ch_pdist(Rel, Bk, M, _), D is min(X : ch_pdist(Rel, Bk, M, X)).
 ch_run(Rel, Bk, M, Rb, Rw) :- ch_size(Rel, Bk, M, S), S > 1, ch_rows(Rel, Bk, N), ch_pbest(Rel, Bk, M, Db), ch_pworst(Rel, Bk, M, Dw),
@@ -125,3 +125,23 @@ ch_krun_lg(Rel, Bk, M, L) :- ch_krun(Rel, Bk, M, R), L is min(I : ch_pow(I, B), 
 ch_ksteps(Rel, Bk, M, S) :- mem_pattern(Rel, Bk, M, _, W), ch_krun_lg(Rel, Bk, M, L), S is W * (1 + L).
 ch_ksteps(Rel, Bk, M, W) :- mem_pattern(Rel, Bk, M, _, W), ch_size(Rel, Bk, M, 1).
 memory(cut_chain_probe_steps, T) :- T is sum(S ; Rel, Bk, M : ch_ksteps(Rel, Bk, M, S)).
+
+-- COLUMN INDEXES, the layout of today's store with no new structure: a pattern is entered by the index of its most
+-- distinct column alone (a hash index as today, 12 bytes a row) and the run of that column's value is read and
+-- filtered; only a pattern whose best column leaves a run of 16 rows or more keeps an index of its own. The indexes
+-- are the columns so entered and the patterns so kept; a probe reads one step and the run.
+ch_bestcol(Rel, Bk, M, J) :- ch_pbest(Rel, Bk, M, D), J is min(X : ch_col(Rel, Bk, M, X), distinct[profile](Rel, Bk, X, D)).
+ch_entry_run(Rel, Bk, M, R) :- ch_pbest(Rel, Bk, M, D), ch_rows(Rel, Bk, N), R is N / D.
+ch_own(Rel, Bk, M) :- ch_size(Rel, Bk, M, S), S > 1, ch_entry_run(Rel, Bk, M, R), R >= 16.
+ch_entered(Rel, Bk, M, J) :- ch_bestcol(Rel, Bk, M, J), not ch_own(Rel, Bk, M).
+ch_colidx(Rel, Bk, J) :- ch_entered(Rel, Bk, _, J).
+memory(column_indexes, C) :- C is count(Rel, Bk, J : ch_colidx(Rel, Bk, J)).
+memory(column_own_indexes, C) :- C is count(Rel, Bk, M : ch_own(Rel, Bk, M)).
+ch_colidx_bytes(Rel, Bk, J, T) :- ch_colidx(Rel, Bk, J), ch_rows(Rel, Bk, N), T is N * 12.
+ch_own_bytes(Rel, Bk, M, T) :- ch_own(Rel, Bk, M), ch_rows(Rel, Bk, N), T is N * 12.
+memory(column_entry_bytes, T) :- T is sum(B ; Rel, Bk, J : ch_colidx_bytes(Rel, Bk, J, B)).
+memory(column_own_bytes, T) :- T is sum(B ; Rel, Bk, M : ch_own_bytes(Rel, Bk, M, B)).
+ch_colsteps(Rel, Bk, M, S) :- mem_pattern(Rel, Bk, M, _, W), ch_entered(Rel, Bk, M, _), ch_size(Rel, Bk, M, Z), Z > 1, ch_entry_run(Rel, Bk, M, R), S is W * (1 + R).
+ch_colsteps(Rel, Bk, M, W) :- mem_pattern(Rel, Bk, M, _, W), ch_size(Rel, Bk, M, 1).
+ch_colsteps(Rel, Bk, M, W) :- mem_pattern(Rel, Bk, M, _, W), ch_own(Rel, Bk, M).
+memory(column_probe_steps, T) :- T is sum(S ; Rel, Bk, M : ch_colsteps(Rel, Bk, M, S)).
