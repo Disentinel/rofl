@@ -1462,8 +1462,12 @@ may_be_node[flow](M, M) :- hoisted[value](M, _), fn_node[code](M).
 
 may_be_node[flow](E, F) :- sees_decl[code](E, F), hoisted[value](F, _), fn_node[code](F).
 
-may_be_node[flow](P, N) :- may_be_node[flow](X, N), ast_child[code](P, value, 0, X), ast_node[code](P, object_property, _).
-may_be_lit[flow](P, V)  :- may_be_lit[flow](X, V), ast_child[code](P, value, 0, X), ast_node[code](P, object_property, _).
+may_be_node[flow](P, N) :- has[value](O, P), obj_lit[code](O), value[value](P, X), may_be_node[flow](X, N).
+may_be_lit[flow](P, V)  :- has[value](O, P), obj_lit[code](O), value[value](P, X), may_be_lit[flow](X, V).
+pattern_entry[code](P, T) :- pattern_prop[value](Q, _, T), object_pat[code](Q), parent[tree](Q, P), parent[tree](P, T), not assign[value](P, _, _).
+pattern_entry[code](P, T) :- pat_computed[code](Q, T, _), pat_in[code](_, Q, T), parent[tree](Q, P), parent[tree](P, T), not assign[value](P, _, _).
+may_be_node[flow](P, N) :- pattern_entry[code](P, T), may_be_node[flow](T, N).
+may_be_lit[flow](P, V)  :- pattern_entry[code](P, T), may_be_lit[flow](T, V).
 
 -- =========================================================================
 -- 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
@@ -1911,12 +1915,8 @@ may_be_node[flow](S, SD) :- super[value](S),
 -- `await` is transparent: `await v` is `v`, `await f()` is f's returns; a
 -- promise constructed and awaited later reaches the Promise class, which no
 -- corpus here declares. A plain assignment is its right-hand side; `+=` is a sum.
-may_be_node[flow](E, N) :- ast_node[code](E, sequence_expression, _),
-                           I is max(J : ast_child[code](E, expressions, J, _)),
-                           ast_child[code](E, expressions, I, X), may_be_node[flow](X, N).
-may_be_lit[flow](E, V)  :- ast_node[code](E, sequence_expression, _),
-                           I is max(J : ast_child[code](E, expressions, J, _)),
-                           ast_child[code](E, expressions, I, X), may_be_lit[flow](X, V).
+may_be_node[flow](E, N) :- gives[value](E, X), not assign[value](E, _, _), may_be_node[flow](X, N).
+may_be_lit[flow](E, V)  :- gives[value](E, X), not assign[value](E, _, _), may_be_lit[flow](X, V).
 
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, consequent, 0, X), ast_node[code](E, conditional_expression, _).
 may_be_node[flow](E, N) :- may_be_node[flow](X, N), ast_child[code](E, alternate, 0, X), ast_node[code](E, conditional_expression, _).
