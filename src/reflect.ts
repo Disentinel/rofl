@@ -451,7 +451,7 @@ export const BUILTIN_OPS = ['=', '!=', '<', '<=', '>', '>=', 'is', 'in', 'subset
  *  INPUTS, and `bootstrapKernel` reads it to write the modes. */
 export const STR_ARITY: ReadonlyMap<string, number> = new Map([
   ['str_char', 2], ['str_len', 1], ['str_pre', 2], ['str_seg', 3], ['str_segs', 2],
-  ['str_sub', 3], ['atom_of', 1], ['hash', 2], ['concat', 2],
+  ['str_sub', 3], ['atom_of', 1], ['hash', 2], ['concat', 2], ['type_of', 1],
 ]);
 
 /** Three refusals, kept apart because they demand three different repairs --
@@ -586,6 +586,11 @@ export function evalStrOp(t: Term, s: Subst, fail?: ArithFail): Term | null | un
   // operation: nothing else in the language answers to these names.
   if (t.args.length !== inputs) { if (fail) fail.code = STR_TYPE; return null; }
   if (t.name === 'hash') return hashOp(t.args[0], t.args[1], s, fail);
+  if (t.name === 'type_of') {
+    const v = walk(t.args[0], s);
+    if (v.k === 'v') { if (fail) fail.code = ARITH_UNBOUND; return null; }
+    return mka(v.k === 's' ? 'string' : v.k === 'i' ? 'int' : v.k === 'a' ? 'atom' : 'term');
+  }
   const str = strOperand(t.args[0], s, fail);
   if (str === null) return null;
   if (t.name === 'str_len') return mki([...str].length);

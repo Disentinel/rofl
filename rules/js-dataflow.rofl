@@ -1362,15 +1362,20 @@ obj_open_own[code](O) :- hidden_call_pos[code](S, accessor_call), ast_child[code
 obj_open_own[code](O) :- ast_node[code](O, object_expression, _), ast_child[code](O, properties, _, P),
                          ast_attr[code](P, computed, true).
 obj_own_key[code](O, Key) :- key_name[code](P, Key), has[value](O, P), obj_lit[code](O).
+written_target[code](N) :- assign_op[code](_, N, _).
+written_target[code](N) :- pattern_target[code](N), member[value](N, _, _).
+written_target[code](N) :- pattern_target[code](N), member_expr[value](N, _, _).
+written_target[code](N) :- iterates[value](S, N, _), for_of[code](S).
+written_target[code](N) :- enumerates[value](_, N, _).
 member_unset[flow](N, O, Key) :- member_at[flow](N, _, O, Key), at[tree](N, F, _), ast_node[code](O, object_expression, F),
-                                 not ast_child[code](_, left, 0, N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
+                                 not written_target[code](N), not obj_open_own[code](O), not obj_own_key[code](O, Key),
                                  not lib_member(object, Key, _), Key != "__proto__".
 field_unset_decl[code](CB, Key) :- ast_node[code](Q, class_property, _), not ast_child[code](Q, value, 0, _),
                                    ast_attr[code](Q, static, false), key_name[code](Q, Key),
                                    ast_child[code](CB, body, _, Q).
 class_unset_field[flow](CD, Key) :- field_unset_decl[code](CB, Key), ast_child[code](CD, body, 0, CB).
 member_unset[flow](N, I, Key) :- class_unset_field[flow](CD, Key), inst_of[flow](I, CD), member_at[flow](N, _, I, Key),
-                                 not ast_child[code](_, left, 0, N).
+                                 not written_target[code](N).
 may_be_lit[flow](N, undefined) :- member_unset[flow](N, _, _).
 member_unset_written[flow](N) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, _).
 

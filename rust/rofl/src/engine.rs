@@ -14300,6 +14300,19 @@ pub fn eval_str_op(h: &mut Heap, t: Term, s: &Subst, fail: &mut u8) -> StrOp {
         *fail = STR_TYPE;
         return StrOp::Refused;
     }
+    if name == "type_of" {
+        let name = match walk(h, args[0], s).kind() {
+            TermK::Str(_) => "string",
+            TermK::Int(_) => "int",
+            TermK::Atom(_) => "atom",
+            TermK::Func(_) => "term",
+            TermK::Var(_) => {
+                *fail = ARITH_UNBOUND;
+                return StrOp::Refused;
+            }
+        };
+        return StrOp::Value(h.atom(name));
+    }
     if name == "hash" {
         return match hash_op(h, args[0], args[1], s, fail) {
             Some(t) => StrOp::Value(t),

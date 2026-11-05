@@ -447,6 +447,7 @@ pub const STR_ARITY: &[(&str, usize)] = &[
     ("atom_of", 1),
     ("hash", 2),
     ("concat", 2),
+    ("type_of", 1),
 ];
 
 impl Vocab {
