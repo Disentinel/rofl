@@ -1,7 +1,7 @@
 // The workbench's notebook without a page: its cells as a `.rofl.md`, run by the notebook kernel over the files published with the page, what each
 // cell said as HTML, and a natural cell translated by whatever model the page reaches. The page (workbench/page.ts) and its check load this alone.
 import { Kernel, short, SIGN, VERDICT, type NbCellOut, type NbLine, type NbResult } from '../notebook/kernel.ts';
-import { builtin, cellsOf, globRe, codeNames, libFiles, normal, parseFront, translated, unread, MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
+import { builtin, cellsOf, globRe, codeNames, libFiles, normal, parseFront, translated, unread, NB_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { assemble, worldOf, type Inputs } from '../notebook/world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { QUESTIONS, questionsOnly, sentenceOf, translateOne } from '../notebook/translate.ts';
@@ -39,7 +39,7 @@ export const addWhere = (row: 'top' | 'bottom', newest: boolean): 'start' | 'end
 export const keyAction = (e: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, kind: Kind): 'run' | 'translate' | null =>
   e.key !== 'Enter' ? null : e.metaKey || e.ctrlKey ? (kind === 'natural' ? 'translate' : 'run') : e.shiftKey && (kind === 'rofl' || kind === 'datalog') ? 'run' : null;
 /** Every file the page fetches besides its modules, by its path from the root of the tree. */
-export const FILES = [...new Set([...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', ...SHIPPED])];
+export const FILES = [...new Set([...NB_MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', ...SHIPPED])];
 
 /** Where an opened notebook is and the files beside it, every path from one root: a repository's, a dropped folder's, a site's.
  *  `list`: the files a glob from the root names, sorted. */

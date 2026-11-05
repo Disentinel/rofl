@@ -6,6 +6,9 @@ edition = "2021"
 # its own workspace: the engine's build never compiles oxc
 [workspace]
 
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 oxc_allocator = "0.156"
 oxc_parser = "0.156"

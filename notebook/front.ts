@@ -1,18 +1,16 @@
 // What a notebook is before anything runs: its front matter, its cells, and the files a host must read for it. No I/O, no dependencies.
 // A notebook is a world written as Markdown (`X.rofl.md`); the fenced ```rofl, ```datalog and ```natural blocks are its cells.
 
-/** The part of the JS model a notebook over code loads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
+/** The JS model, which is rules/js.files (scripts/goldens.ts holds the two to each other) and what `rofl scan` reads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
 export const MODEL_FILES = ['boot.rofl', 'facts/model-units.rofl',
   'facts/js-kinds.rofl', 'facts/js-callgraph.rofl', 'facts/js-dataflow.rofl', 'facts/js-modules.rofl', 'facts/js-shapes.rofl', 'facts/js-statements.rofl',
   'facts/js-controlflow.rofl', 'facts/js-effects.rofl', 'facts/js-globals.rofl', 'facts/js-host.rofl', 'facts/js-host-surface.rofl', 'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl',
   'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl', 'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl',
   'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl',
   'rules/js-concat.rofl', 'rules/js-surface.rofl',
-  'models/lang/js/roles.rofl', 'models/lang/js/babel-roles.rofl', 'models/lang/js/babel-from-code.rofl'];
-/** The same model over oxc's tree, which `rofl scan` writes (scanners/cli.ts): rules/js.files. It is rules/js.files, which scripts/goldens.ts holds it to. The browser page scans with Babel and keeps the file above. */
-export const SCAN_MODEL_FILES = MODEL_FILES.filter((f) => !/\/(?:babel-roles|babel-from-code)\.rofl$/.test(f)).concat('models/lang/js/oxc-roles.rofl');
-/** What a notebook host loads over oxc: the scan model, and oxc-to-code.rofl so a cell's own rules may still name ast_node, ast_child, ast_attr, ast_line and ast_file. */
-export const NB_MODEL_FILES = [...SCAN_MODEL_FILES, 'models/lang/js/oxc-to-code.rofl'];
+  'models/lang/js/roles.rofl', 'models/lang/js/oxc-roles.rofl'];
+/** What a notebook host loads: the model, and oxc-to-code.rofl so a cell's own rules may still name ast_node, ast_child, ast_attr, ast_line and ast_file. */
+export const NB_MODEL_FILES = [...MODEL_FILES, 'models/lang/js/oxc-to-code.rofl'];
 export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
 
 /** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or

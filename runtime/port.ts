@@ -184,7 +184,7 @@ export class RoflSession {
 
   /** COOL A VOLUME TO DISK: write its base facts out as ROFL and drop them.
    *
-   *  A volume is a KEY PREFIX minted by the scanner — `scanners/js_ast.ts`
+   *  A volume is a KEY PREFIX minted by the scanner — `rust/tools/oxc_scan`
    *  exports `idPrefix(file)` — so residency is decided before anything is
    *  loaded, and no rule ever mentions a volume. The kernel's own books are
    *  excluded: `asserted_by` and `in_perspective` are what the kernel says

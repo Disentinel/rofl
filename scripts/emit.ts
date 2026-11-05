@@ -1,6 +1,7 @@
 // TypeScript modules as the browser modules a static page loads: each flat in lib/, a relative `x.ts` import becoming `./x.js`, and the two node
 // modules the kernel's neighbours use given a browser stand-in. The playground and the workbench are built with it.
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import ts from 'typescript';
 
 const SHIMS: Record<string, string> = {
@@ -14,11 +15,20 @@ const nameOf = (src: string) => src.replace(/^.*\//, '').replace(/\.ts$/, '.js')
 export function emit(root: string, lib: string, src: string): string {
   const js = ts.transpileModule(readFileSync(`${root}${src}`, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
     .replace(/from '(?:\.\.?\/)+(?:[\w-]+\/)*([\w-]+)\.ts'/g, "from './$1.js'")
-    .replace(/from '@babel\/parser'/g, "from './babel-parser.js'")
     .replace(/from 'node:(fs|crypto)'/g, "from './shim-$1.js'");
   if (/from 'node:/.test(js)) throw new Error(`${src} still imports a node module`);
   writeFileSync(`${lib}/${nameOf(src)}`, js);
   return js;
+}
+
+/** oxc_scan compiled to wasm (the scanner of a page, scanners/oxc_wasm.ts): this tree's build, made when it is missing. */
+export function wasmScanner(root: string): string {
+  const wasm = `${root}rust/tools/oxc_scan/target/wasm32-unknown-unknown/release/oxc_scan.wasm`;
+  if (!existsSync(wasm)) {
+    const r = spawnSync('cargo', ['build', '--release', '-q', '--lib', '--target', 'wasm32-unknown-unknown', '--manifest-path', `${root}rust/tools/oxc_scan/Cargo.toml`], { stdio: ['ignore', 2, 2] });
+    if (r.status !== 0) throw new Error('oxc_scan.wasm: rustup target add wasm32-unknown-unknown, then cargo build --release --lib --target wasm32-unknown-unknown in rust/tools/oxc_scan');
+  }
+  return wasm;
 }
 
 /** The node stand-ins, and a check that every module of `lib` imports only modules that are there. */

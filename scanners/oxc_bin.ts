@@ -1,7 +1,8 @@
-// Where the oxc scanner is: this tree's build (made when it is missing), else the one beside the installed engine (scanners/cli.ts, scanners/oxc_facts.ts).
+// Where the oxc scanner is: this tree's build (made when it is missing), else the one beside the installed engine.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { engine } from '../npm/platform.ts';
 
@@ -18,3 +19,6 @@ export function oxcScan(): string | { error: string } {
   const beside = [path.join(ROOT, 'bin', exe), ...('bin' in e ? [path.join(path.dirname(e.bin), exe)] : [])].find((f) => fs.existsSync(f));
   return beside ?? { error: 'no oxc_scan: build it with cargo build --release --manifest-path rust/tools/oxc_scan/Cargo.toml, or install the engine of this platform (@grafema/rofl-<os>-<cpu>)' };
 }
+
+/** The prefix of every node id of a file: oxc_scan's (rust/tools/oxc_scan, `prefix`), which names the volume a file cools to. */
+export const idPrefix = (file: string): string => 'n' + createHash('sha256').update(file).digest('hex').slice(0, 16) + '_';

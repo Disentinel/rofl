@@ -32,8 +32,9 @@ jobs:
           npm ci
           npx tsc -p tsconfig.json
       # THE GOLDENS RUN THE RUST ENGINE. `npm test` and goldens.ts spawn
-      # rust/target/release binaries; CI built none, so bun died on ENOENT.
+      # rust/target/release binaries; CI built none, so bun died on ENOENT. The wasm target is the notebook's scanner (oxc_scan.wasm).
       - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
@@ -42,9 +43,6 @@ jobs:
       - run: cd rust && cargo build --release
       # the scanner `rofl scan` and the JS worlds run (scanners/cli.ts)
       - run: cd rust/tools/oxc_scan && cargo build --release
-      # ONE FILE, TWO PARSERS, THE SAME ROLES: Babel and oxc, each through its converter (scripts/roles_parity.ts)
-      - name: roles parity
-        run: npm run test:parity
       # THE KEEP, AND WHERE IT IS NOT TRUSTED. `npm test` reads back a world's answer kept under the hash of everything
       # it is a function of (scripts/keep.ts), so a pull request runs warm on the keep of earlier runs. A wrongly kept
       # answer that equals the golden would turn a real regression green, so a push to main and a release tag run COLD,
@@ -176,6 +174,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
       - run: npm ci && (cd vscode && npm ci)
       # each platform's engine in rust/target/rofl-<target>; this runner's own in release, which the guide check runs
       - uses: actions/download-artifact@v4

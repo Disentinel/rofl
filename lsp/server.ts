@@ -7,11 +7,11 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { know, type Known, type Site } from './know.ts';
-import { builtin, libFiles, MODEL_FILES, NB_MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
+import { builtin, libFiles, NB_MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
 import { Vocabulary } from '../src/say.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const LIB = new Set([...MODEL_FILES, ...NB_MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl']);
+const LIB = new Set([...NB_MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl']);
 const WAIT = 250, LARGEST = 16 << 20;
 
 const open = new Map<string, string>(), known = new Map<string, Known>(), due = new Map<string, NodeJS.Timeout>();

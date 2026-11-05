@@ -40,7 +40,7 @@ const node = (args: string[], cwd = ROOT) => new Promise<Out>((done) => {
 const strip = (s: string) => { try { return JSON.stringify(JSON.parse(s), (k, v) => k === 'ms' ? undefined : v); } catch { return `not JSON: ${s.slice(0, 200)}`; } };
 const bad: string[] = [];
 
-// what a marketplace reads before anything runs: no untrusted or virtual workspace, the vendored parser's notice in both packages, the cells' comment and brackets
+// what a marketplace reads before anything runs: no untrusted or virtual workspace, the scanner's notice in both packages, the cells' comment and brackets
 const list = (cmd: string, args: string[]) => spawnSync(cmd, args, { encoding: 'utf8' }).stdout ?? '';
 const inVsix = list('unzip', ['-l', path.join(DIST, vsix)]), inTgz = list('tar', ['-tzf', path.join(DIST, tgz)]);
 const shipped = { id: id === 'GrafemaLabs.rofl' && vsix === `rofl-${manifest.version}.vsix` && manifest.preview === true, untrusted: manifest.capabilities?.untrustedWorkspaces?.supported === false, virtual: manifest.capabilities?.virtualWorkspaces === false,

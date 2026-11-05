@@ -9,7 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { RoflPort } from '../runtime/port.ts';
-import { SCAN_MODEL_FILES as MODEL_FILES } from '../notebook/front.ts';
+import { MODEL_FILES } from '../notebook/front.ts';
 import { NODE } from '../runtime/split.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;

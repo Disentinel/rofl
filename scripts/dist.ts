@@ -3,7 +3,7 @@
 // the `rofl-lsp` language server and the library; dist/grafema-rofl-<os>-<cpu>-<v>.tgz, each platform package @grafema/rofl-<os>-<cpu>, the engine binary
 // alone, one for each binary found (rust/target/rofl-<os>-<cpu>/, as CI lays them out, else this machine's rust/target/release for its own platform);
 // and dist/rofl-<v>.vsix (the editor), all plain JS.
-// One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, @babel/parser vendored.
+// One tree serves both: the modules the command line and the extension import, transpiled in place, the model's .rofl files beside them, oxc_scan.wasm (the scanner of a notebook) beside the modules.
 // The extension is that tree under rofl-nb/, entered through a CommonJS main, so an editor that loads extensions with require runs it too.
 // `-- --target <vsce target>` (linux-x64, darwin-arm64, win32-x64, ...): the VSIX for that platform, carrying the Rust engine built for it
 // (rust/target/rofl-<target>/rofl, else this machine's rust/target/release/rofl) in rofl-nb/bin; without one, the VSIX for every platform, which evaluates on the TypeScript engine.
@@ -12,8 +12,9 @@ import { execFileSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { MODEL_FILES, NB_MODEL_FILES, SCAN_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
+import { NB_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { buildRenderer } from './renderer.ts';
+import { wasmScanner } from './emit.ts';
 import { PLATFORMS } from '../npm/platform.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url)), OUT = path.join(ROOT, 'dist');
@@ -40,7 +41,6 @@ for (const q = [...ENTRIES]; q.length;) {
 for (const f of seen) {
   let js = ts.transpileModule(readFileSync(path.join(ROOT, f), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText
     .replace(/'(\.\.?\/[^']*)\.ts'/g, "'$1.js'")
-    .replace(/from '@babel\/parser'/g, `from '${path.relative(path.dirname(f), 'vendor/babel-parser.js').replace(/^(?!\.)/, './')}'`)
     .replace(/npm run nb -- /g, 'rofl-nb ').replace(/npm run scan -- /g, 'rofl scan ');
   // an extension host that predates ES module extensions resolves `vscode` only for require
   if (f === 'vscode/extension.ts' || f === 'vscode/lsp.ts') js = js.replace("import * as vscode from 'vscode';", "import { createRequire } from 'node:module';\nconst vscode = createRequire(import.meta.url)('vscode');");
@@ -65,10 +65,21 @@ const { fileURLToPath } = await import('node:url');
 process.argv[1] = fileURLToPath(new URL('${main}', import.meta.url));
 await import('${main}');
 `);
-cpSync(path.join(ROOT, 'node_modules/@babel/parser/lib/index.js'), path.join(PKG, 'vendor/babel-parser.js'));
-const babel = JSON.parse(readFileSync(path.join(ROOT, 'node_modules/@babel/parser/package.json'), 'utf8')).version;
-writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), `vendor/babel-parser.js is @babel/parser ${babel} (https://github.com/babel/babel), under the MIT license:\n\n${readFileSync(path.join(ROOT, 'node_modules/@babel/parser/LICENSE'), 'utf8')}`);
-for (const f of [...new Set([...MODEL_FILES, ...SCAN_MODEL_FILES, ...NB_MODEL_FILES]), ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
+cpSync(wasmScanner(ROOT + '/'), path.join(PKG, 'oxc_scan.wasm'));
+const OXC_NOTICE = `oxc_scan.wasm is rust/tools/oxc_scan built with the oxc crates (oxc_parser, oxc_ast, oxc_span, oxc_allocator, https://github.com/oxc-project/oxc), under the MIT license:
+
+MIT License
+
+Copyright (c) 2024-present VoidZero Inc. & Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+`;
+writeFileSync(path.join(PKG, 'THIRD_PARTY_NOTICES'), OXC_NOTICE);
+for (const f of [...NB_MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', 'LICENSE']) cpSync(path.join(ROOT, f), path.join(PKG, f));
 const tutorial = (readdirSync(path.join(ROOT, 'examples/tutorial'), { recursive: true }) as string[]).filter((f) => f.endsWith('.md')).map((f) => `examples/tutorial/${f}`);
 const start = readdirSync(path.join(ROOT, 'examples/start')).map((f) => `examples/start/${f}`);
 // the pictures a notebook draws: what `reads: [rofl:visual/graph.rofl.md]` names (front.ts SHIPPED), the matrix beside the vocabularies, and the examples

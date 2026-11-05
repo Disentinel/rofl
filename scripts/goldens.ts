@@ -50,7 +50,7 @@ import { runPool, jobs, type Task } from './pool.ts';
 import { parseSelector, select, NotAWorld, belowFiles, inputs } from './agg_select.ts';
 import { own } from './own.ts';
 import { closure, fileHash, filesHash, forget, KEEP, keyOf, keptOr, planted, sha, tallied } from './keep.ts';
-import { SCAN_MODEL_FILES } from '../notebook/front.ts';
+import { MODEL_FILES } from '../notebook/front.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
@@ -1147,9 +1147,9 @@ function refuse(e: unknown): never {
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
   own();
-  // `rofl why L @rules/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts SCAN_MODEL_FILES)
+  // `rofl why L @rules/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
   const listed = fs.readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'rules', f)));
-  if (listed.join('\n') !== SCAN_MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts SCAN_MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
+  if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
   const blessing = rest.includes('--bless'), hosts = rest.includes('--hosts');
   let engine: EngineChoice = 'both', engineWhy = '';

@@ -37,8 +37,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { idPrefix } from '../scanners/js_ast.ts';
-import { oxcScan } from '../scanners/oxc_bin.ts';
+import { idPrefix, oxcScan } from '../scanners/oxc_bin.ts';
 import { RoflPort, type RoflSession } from './port.ts';
 
 export interface IngestOpts {

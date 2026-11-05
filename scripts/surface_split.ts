@@ -31,7 +31,7 @@
 //   --break books    a volume cooled by the books code, flow and main only (a base fact of another book, `probe[audit]`
 //                    in the first volume, is forgotten: the driver refuses it, or the volume differs from the whole world)
 import * as fs from 'node:fs';
-import { SCAN_MODEL_FILES } from '../notebook/front.ts';
+import { MODEL_FILES } from '../notebook/front.ts';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -65,7 +65,7 @@ const read = (f: string): string => brk === 'naive' && (f.startsWith('rules/') &
     catch { console.error(`--break naive reads ${f} at ${NAIVE_BASE}, which this checkout's history does not hold`); process.exit(2); }
   })()
   : fs.readFileSync(path.join(ROOT, f), 'utf8');
-const model = [...SCAN_MODEL_FILES, QUESTION].filter((f) => brk !== 'naive' || f !== 'rules/js-surface.rofl');
+const model = [...MODEL_FILES, QUESTION].filter((f) => brk !== 'naive' || f !== 'rules/js-surface.rofl');
 
 // ------------------------------------------------------------------ the corpus, cut by node prefix
 const core: string[] = [];
