@@ -1,6 +1,6 @@
 -- oxc-audit.rofl — the audits of the oxc converter (npm run test:roles): a kind of oxc's tree that stands in no role
 -- and has no reason in `no_role`, a reason for a kind that does have a role, and an identifier that is neither read
--- nor introduced where no role carries it as a name. The counterpart of babel-audit.rofl.
+-- nor introduced where no role carries it as a name.
 
 imports(audit, ast_oxc). imports(audit, main).
 edb(no_role).
