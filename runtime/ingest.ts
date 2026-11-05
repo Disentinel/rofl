@@ -9,7 +9,7 @@
 // The loop, per tick:
 //
 //   1. ask `needs_index` — the frontier, frozen for the round
-//   2. parse a batch with scanners/js_ast.ts and `load` the facts
+//   2. parse a batch with rust/tools/oxc_scan and `load` the facts
 //   3. evaluate, and read `peak_rows` against `space` — the only honest
 //      pressure signal, and it is counted in ROWS, which are not facts
 //   4. if over the mark, assert `under_pressure`, ask `candidate_intent(cool,
