@@ -88,10 +88,8 @@ site_source_node[code](C, Src) :- require_site[code](C), argument_at[code](C, 0,
 
 site_source[code](I, S) :- static_source[code](I, _, S).
 site_source[code](I, S) :- module_ref[value](I, S), call[value](I).
--- the roles do not say a literal is a string: the argument of `require` is read on the raw tree
 site_source[code](C, S) :- require_site[code](C), site_source_node[code](C, Src),
-                           ast_node[code](Src, string_literal, _),
-                           ast_value[code](Src, S).
+                           literal[value](Src, S), string is type_of(S).
 
 site_source_literal[code](I) :- site_source[code](I, _).
 

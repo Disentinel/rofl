@@ -53,7 +53,7 @@ ex_route[flow](Y, any, join(V, "*"), H, middleware) :- ex_on[flow](R, Y, "use"),
 ex_route[flow](Y, any, "*", H, middleware) :- ex_on[flow](R, Y, "use"), ex_fn[flow](R, 0, _), ex_fn[flow](R, _, H).
 ex_mount[flow](Y, V, Y2) :- ex_path[flow](R, V), ex_sub[flow](R, I, Y2), I > 0, ex_on[flow](R, Y, "use").
 ex_mount[flow](Y, "/", Y2) :- ex_sub[flow](R, 0, Y2), ex_on[flow](R, Y, "use").
-ex_port_lit[flow](V) :- ast_node[code](N, numeric_literal, _), ast_value[code](N, V).
+ex_port_lit[flow](V) :- literal[value](_, V), int is type_of(V).
 ex_listen[flow](Y, P) :- ex_on[flow](R, Y, "listen"), arg_at[flow](R, 0, A), may_be_lit[flow](A, P), ex_port_lit[flow](P).
 
 -- An app keeps its settings by key, `app.set('port', p)` and `app.get('port')`:

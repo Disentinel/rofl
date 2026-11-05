@@ -40,8 +40,7 @@
 
 -- =========================================================================
 -- 1. THE STRINGS THE PROGRAM HOLDS — what makes a `+` a concatenation.
-str_value[flow](V) :- ast_node[code](N, string_literal, _), ast_value[code](N, V).
-str_value[flow](V) :- template_part[value](_, I, Q), literal[value](Q, V), R is I mod 2, R = 0.
+str_value[flow](V) :- literal[value](_, V), string is type_of(V).
 str_value[flow](V) :- path_cut[flow](_, V).
 
 -- =========================================================================

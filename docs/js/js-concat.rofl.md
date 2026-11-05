@@ -53,8 +53,7 @@ Reads:
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
@@ -77,7 +76,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
@@ -88,13 +86,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="str_value"></a>`str_value`(V) either:
 
-1. if a [string literal](#noun-string_literal) N [is written as](js-structure.rofl.md#ast_value) V;
-2. if all of:
-   - [`template_part`](#template_part)(something, I, Q);
-   - [`literal`](#literal)(Q, V);
-   - R is mod(I, 2);
-   - R is 0;
-3. if [`path_cut`](#path_cut)(something, V).
+1. if [`literal`](#literal)(something, V) and `string` is type_of(V);
+2. if [`path_cut`](#path_cut)(something, V).
 
 ## 2. The language forms.
 

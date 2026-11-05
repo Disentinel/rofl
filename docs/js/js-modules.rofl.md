@@ -66,7 +66,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-import_attribute"></a>an import attribute | a node of kind `import_attribute` |
-| <a id="noun-string_literal"></a>a string literal | a node of kind `string_literal` |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
@@ -207,14 +206,12 @@ A site
 <a id="site_source"></a>The source text of a site I is S either:
 
 1. if [`static_source`](#static_source)(I, something, S);
-2. if [`module_ref`](#module_ref)(I, S) and [`call`](#call)(I).
-
-> the roles do not say a literal is a string: the argument of `require` is read on the raw tree
-
-The source text of a site C is S if all of:
-  - C [is a require site](#require_site);
-  - [the source node](#site_source_node) of C is a [string literal](#noun-string_literal) Src;
-  - Src [is written as](js-structure.rofl.md#ast_value) S.
+2. if [`module_ref`](#module_ref)(I, S) and [`call`](#call)(I);
+3. if all of:
+   - I [is a require site](#require_site);
+   - [the source node](#site_source_node) of I is a node Src;
+   - [`literal`](#literal)(Src, S);
+   - `string` is type_of(S).
 
 > the one irreducible cell: `import(pathVar)` names a module that does not
 > exist until the expression is evaluated

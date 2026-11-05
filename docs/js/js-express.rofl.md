@@ -28,14 +28,14 @@ Reads:
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node), [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
-- from js-structure, in the code: [ast_value](js-structure.rofl.md#ast_value), [object_of](js-structure.rofl.md#object_of)
+- from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
 - from outside these files, in the value:
   - <a id="call"></a>`call`
   - <a id="callee"></a>`callee`
+  - <a id="literal"></a>`literal`
 
 ## Words
 
@@ -43,7 +43,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-numeric_literal"></a>a numeric literal | a node of kind `numeric_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 `express_module` includes "express".
@@ -164,7 +163,7 @@ In the flow:
    - [`ex_on`](#ex_on)(R, Y, "use");
 2. if [`ex_sub`](#ex_sub)(R, 0, Y2), [`ex_on`](#ex_on)(R, Y, "use"), and V is "/".
 
-<a id="ex_port_lit"></a>`ex_port_lit`(V) if a [numeric literal](#noun-numeric_literal) N [is written as](js-structure.rofl.md#ast_value) V.
+<a id="ex_port_lit"></a>`ex_port_lit`(V) if [`literal`](#literal)(something, V) and `int` is type_of(V).
 
 <a id="ex_listen"></a>`ex_listen`(Y, P) if all of:
   - [`ex_on`](#ex_on)(R, Y, "listen");
