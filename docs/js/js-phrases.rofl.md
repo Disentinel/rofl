@@ -615,7 +615,7 @@ Declared as facts:
 | `hidden_call_traced` | "has_a_traced_hidden_call(node N)" |
 | `hidden_call_untraced` | "has_an_untraced_hidden_call_from(node N, node Src)" |
 | `hidden_call_sourced` | "has_a_sourced_hidden_call(node N)" |
-| `hidden_call_unsourced` | "has_an_unsourced_hidden_call(node N, of kind K)" |
+| `hidden_call_unsourced` | "has_an_unsourced_hidden_call(node N)" |
 | `hidden_call_accounted` | "has_an_accounted_hidden_call(node N)" |
 | `hidden_call_unaccounted` | "has_an_unaccounted_hidden_call(node N)" |
 | `hidden_call_off_table` | "hides_a_call_off_the_table(kind K, by mechanism M)" |

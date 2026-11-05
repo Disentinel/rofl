@@ -164,7 +164,17 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
-<a id="call_arg"></a>A call passes the argument X at an index I if it [is a call site](#call_site) in some file and X is the I-th of the `arguments` of it.
+A call
+
+- <a id="call_arg"></a>passes the argument X at an index I if all of:
+  - it [is a call site](#call_site) in some file;
+  - [`nth`](#nth)(it, I, X);
+  - unless [`spread_args`](#spread_args)(it, something, X).
+- passes the argument S at an index I if all of:
+  - it [is a call site](#call_site) in some file;
+  - [`nth`](#nth)(it, I, X);
+  - [`spread_args`](#spread_args)(it, something, X);
+  - [`parent`](#parent)(S, X).
 
 ## 2. CALLEE SHAPE — a TOTAL classification, which IS the frontier
 

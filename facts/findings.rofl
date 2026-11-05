@@ -12914,3 +12914,9 @@ recorded(f_an_optional_member_of_the_module_global_counts, "2026-11-05").
 addressed_by(f_an_optional_member_of_the_module_global_counts, "rules/js-dataflow.rofl").
 finding_note(f_an_optional_member_of_the_module_global_counts,
   "VADIM, 2026-11-05: `module?.exports` and `require?.main` read like `module.exports` and `require.main`. module_member, require_main and cjs_module_exports read the member role (prop_name) of the free global and no longer test the kind member_expression. MOVED: none on the 64-file corpus (no optional member of module or require); cf (`const e2 = module?.exports`, `if (require?.main !== module)`, `module?.exports.w`): module_member +2, cjs_module_exports +2, require_main +1, main_is_module +1, imported_test +1, and below them may_be_node +6, member_obj/member_at +2, eff_module and sx_eff_module +1.").
+
+finding(f_an_unsourced_hidden_call_has_no_kind_column, insight).
+recorded(f_an_unsourced_hidden_call_has_no_kind_column, "2026-11-05").
+addressed_by(f_an_unsourced_hidden_call_has_no_kind_column, "rules/js-controlflow.rofl").
+finding_note(f_an_unsourced_hidden_call_has_no_kind_column,
+  "VADIM, 2026-11-05: hidden_call_unsourced(N, K) named the node kind K, which is syntax; it is hidden_call_unsourced(N) now, read by hidden_call_accounted. The sig in facts/js-phrases.rofl and the JS docs follow; no example or script read it. NO ROW MOVED but the column: 34 rows in the cf fixture, the same nodes.").

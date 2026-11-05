@@ -36,7 +36,7 @@ Reads:
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_write](js-structure.rofl.md#value_write)
+- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_node](js-surface.rofl.md#sx_ret_node), [sx_ret_param](js-surface.rofl.md#sx_ret_param)
 - from outside these files, in the tree:
@@ -116,7 +116,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
-| <a id="noun-conditional"></a>a conditional | a node of kind `conditional_expression` |
 | <a id="noun-external_shape"></a>an external shape | a node of one of the kinds `bare`, `node_builtin` (`external_shape`) |
 | <a id="noun-function_declaration"></a>a function declaration | a node of kind `function_declaration` |
 | <a id="noun-identifier"></a>an identifier | a node of kind `identifier` |
@@ -1062,10 +1061,7 @@ In the code:
 1. if [`module_member`](#module_member)(T, "parent");
 2. if [`main_is_module`](#main_is_module)(T, "!==" or "!=").
 
-<a id="module_member"></a>`module_member`(a [member expression](#noun-member_expression) M, Key) if all of:
-  - M is in file File;
-  - [`prop_name`](js-structure.rofl.md#prop_name)(M, O, Key);
-  - a node O [refers to the free](#free_global) "module" in File.
+<a id="module_member"></a>`module_member`(M, Key) if [`prop_name`](js-structure.rofl.md#prop_name)(M, O, Key) and a node O [refers to the free](#free_global) "module" in some file.
 
 <a id="main_is_module"></a>`main_is_module`(T, Op) either:
 
@@ -1080,10 +1076,7 @@ In the code:
    - [`require_main`](#require_main)(R);
    - a node L [refers to the free](#free_global) "module" in File.
 
-<a id="require_main"></a>`require_main`(a [member expression](#noun-member_expression) M) if all of:
-  - M is in file File;
-  - [`prop_name`](js-structure.rofl.md#prop_name)(M, O, "main");
-  - a node O [refers to the free](#free_global) "require" in File.
+<a id="require_main"></a>`require_main`(M) if [`prop_name`](js-structure.rofl.md#prop_name)(M, O, "main") and a node O [refers to the free](#free_global) "require" in some file.
 
 <a id="dead_arm"></a>`dead_arm`(X) either:
 
@@ -3158,6 +3151,14 @@ In the code:
   - [`has`](#has)(O, P);
   - [`obj_lit`](#obj_lit)(O).
 
+<a id="written_target"></a>`written_target`(N) either:
+
+1. if [`assign_op`](js-structure.rofl.md#assign_op)(something, N, something);
+2. if [`pattern_target`](js-structure.rofl.md#pattern_target)(N) and [`member`](#member)(N, something, something);
+3. if [`pattern_target`](js-structure.rofl.md#pattern_target)(N) and [`member_expr`](#member_expr)(N, something, something);
+4. if [`iterates`](#iterates)(S, N, something) and [`for_of`](js-structure.rofl.md#for_of)(S);
+5. if [`enumerates`](#enumerates)(something, N, something).
+
 In the flow:
 
 <a id="member_unset"></a>`member_unset`(N, an [object literal](#noun-object_literal) O, Key) if all of:
@@ -3165,7 +3166,7 @@ In the flow:
   - [`at`](#at)(N, F, something);
   - O is in file a file F;
   - Key differs from "__proto__";
-  - unless the `left` of some node is a node N;
+  - unless [`written_target`](#written_target)(N);
   - unless [`obj_open_own`](#obj_open_own)(O);
   - unless [`obj_own_key`](#obj_own_key)(O, Key);
   - unless `object` [has the member](#lib_member) Key since some release.
@@ -3186,7 +3187,7 @@ In the flow:
   - [`class_unset_field`](#class_unset_field)(CD, Key);
   - a node I [stands for an instance of](#inst_of) a class CD;
   - [`member_at`](#member_at)(N, something, I, Key);
-  - unless the `left` of some node is a node N.
+  - unless [`written_target`](#written_target)(N).
 
 A node may be the literal `undefined` if [`member_unset`](#member_unset)(it, something, something).
 
@@ -3784,7 +3785,7 @@ A node points to a node F if all of:
 
 In the code:
 
-<a id="cjs_module_exports"></a>A [member expression](#noun-member_expression) is module exports in File if a node O [refers to the free](#free_global) "module" in File and [`prop_name`](js-structure.rofl.md#prop_name)(it, O, "exports").
+<a id="cjs_module_exports"></a>A node is module exports in File if a node O [refers to the free](#free_global) "module" in File and [`prop_name`](js-structure.rofl.md#prop_name)(it, O, "exports").
 
 In the flow:
 
@@ -4206,19 +4207,6 @@ A node
   - [`gives`](#gives)(it, X);
   - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - unless [`assign`](#assign)(it, something, something).
-
-E points to a node N if all of:
-  - a node X [points to](js-concat.rofl.md#may_be_node) N;
-  - the `consequent` or `alternate` of E is X;
-  - E is a [conditional](#noun-conditional).
-
-E may be the literal V if all of:
-  - a node X [may be the literal](js-concat.rofl.md#may_be_lit) V;
-  - the `consequent` or `alternate` of E is X;
-  - E is a [conditional](#noun-conditional).
-
-A node
-
 - points to a node N if a node X [points to](js-concat.rofl.md#may_be_node) N and [`awaits`](#awaits)(it, X).
 - may be the literal V if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and [`awaits`](#awaits)(it, X).
 
@@ -4311,16 +4299,6 @@ A node
   - E [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - it [reads](#ident_in) Name in File;
   - it [sees](#sees_binder) D.
-
-A node E points to a node N either:
-
-1. if a node X [points to](js-concat.rofl.md#may_be_node) N and [`logic_op`](#logic_op)(E, something, X, something);
-2. if a node X [points to](js-concat.rofl.md#may_be_node) N and [`logic_op`](#logic_op)(E, something, something, X).
-
-A node E may be the literal V either:
-
-1. if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and [`logic_op`](#logic_op)(E, something, X, something);
-2. if a node X [may be the literal](js-concat.rofl.md#may_be_lit) V and [`logic_op`](#logic_op)(E, something, something, X).
 
 <a id="plain_assign"></a>E is plain if [`assign`](#assign)(E, something, R) and [`gives`](#gives)(E, R).
 

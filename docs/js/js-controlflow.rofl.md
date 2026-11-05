@@ -586,10 +586,7 @@ In the code:
 
 In the flow:
 
-<a id="hidden_call_unsourced"></a>A node has an unsourced hidden call of a kind K if all of:
-  - it [hides a call by](#hidden_call_pos) some mechanism;
-  - it [is of kind](js-model.rofl.md#ast_node) K;
-  - unless it [has a sourced hidden call](#hidden_call_sourced).
+<a id="hidden_call_unsourced"></a>A node has an unsourced hidden call if it [hides a call by](#hidden_call_pos) some mechanism, unless it [has a sourced hidden call](#hidden_call_sourced).
 
 In the audit:
 
@@ -599,7 +596,7 @@ In the audit:
 2. if N [hides a builtin call on](#hidden_call_builtin) some node;
 3. if N [hides a call on the primitive](#hidden_call_primitive) some value;
 4. if N [has an untraced hidden call from](#hidden_call_untraced) some node;
-5. if N [has an unsourced hidden call](#hidden_call_unsourced) of some kind.
+5. if N [has an unsourced hidden call](#hidden_call_unsourced).
 
 <a id="hidden_call_unaccounted"></a>A node has an unaccounted hidden call if it [hides a call by](#hidden_call_pos) some mechanism, unless it [has an accounted hidden call](#hidden_call_accounted).
 

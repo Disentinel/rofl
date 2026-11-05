@@ -425,6 +425,7 @@ unit_concludes("rules/js-dataflow.rofl", selects).
 unit_concludes("rules/js-dataflow.rofl", computed_key).
 unit_concludes("rules/js-dataflow.rofl", obj_open_own).
 unit_concludes("rules/js-dataflow.rofl", obj_own_key).
+unit_concludes("rules/js-dataflow.rofl", written_target).
 unit_concludes("rules/js-dataflow.rofl", member_unset).
 unit_concludes("rules/js-dataflow.rofl", field_unset_decl).
 unit_concludes("rules/js-dataflow.rofl", class_unset_field).

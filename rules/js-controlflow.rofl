@@ -302,15 +302,13 @@ hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
                                       not may_be_lit[flow](Src, _),
                                       not may_be_node[flow](Src, _).
 hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
-hidden_call_unsourced[flow](N, K)  :- hidden_call_pos[code](N, _),
-                                      not hidden_call_sourced[code](N),
-                                      ast_node[code](N, K, _).
+hidden_call_unsourced[flow](N)     :- hidden_call_pos[code](N, _), not hidden_call_sourced[code](N).
 
 hidden_call_accounted[audit](N)   :- hidden_call_fires[code](N).
 hidden_call_accounted[audit](N)   :- hidden_call_builtin[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_primitive[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_untraced[flow](N, _).
-hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N, _).
+hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N).
 hidden_call_unaccounted[audit](N) :- hidden_call_pos[code](N, _),
                                      not hidden_call_accounted[audit](N).
 
