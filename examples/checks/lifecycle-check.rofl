@@ -1,0 +1,14 @@
+-- lifecycle-check.rofl — the answers of [lifecycle] a fixture expects (w_lifecycle_world). Each world names its
+-- expectations in lc_expect; lc_missing and lc_extra are empty when the answers are exactly those.
+imports(audit, lifecycle).
+
+edb(lc_expect).
+
+lc_answer[audit](used_after_death(K, F, B, X, U)) :- used_after_death_at[lifecycle](K, F, B, X, U).
+lc_answer[audit](leaks(K, H, F, L))               :- leaks_at[lifecycle](K, H, F, L).
+lc_answer[audit](leak_unknown(K, F, L, V))        :- leak_unknown_at[lifecycle](K, F, L, V).
+lc_answer[audit](no_shutdown(K, F, L))            :- no_shutdown_at[lifecycle](K, F, L).
+lc_answer[audit](outlives_stop(K, F, L))          :- outlives_stop_at[lifecycle](K, F, L).
+
+lc_missing[audit](A) :- lc_expect(A), not lc_answer[audit](A).
+lc_extra[audit](A)   :- lc_answer[audit](A), not lc_expect(A).

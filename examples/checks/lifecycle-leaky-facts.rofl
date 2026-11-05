@@ -1,0 +1,653 @@
+-- the scan of models/lang/js/fixtures/lifecycle/leaky/ (npm run scan -- models/lang/js/fixtures/lifecycle/leaky --out examples/checks/lifecycle-leaky-facts.rofl), for the world lifecycle_leaky
+node[ast_oxc](na4c65ede64197e1a_root, program, "server.js").
+line[ast_oxc](na4c65ede64197e1a_root, 1).
+node[ast_oxc](na4c65ede64197e1a_64p6llru6pts7, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_64p6llru6pts7, 1).
+attr[ast_oxc](na4c65ede64197e1a_64p6llru6pts7, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_64p6llru6pts7, declare, false).
+node[ast_oxc](na4c65ede64197e1a_7bi3la6uamie1, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_7bi3la6uamie1, 1).
+node[ast_oxc](na4c65ede64197e1a_sh3mden6po6r8, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_sh3mden6po6r8, 1).
+attr[ast_oxc](na4c65ede64197e1a_sh3mden6po6r8, name, "http").
+child[ast_oxc](na4c65ede64197e1a_7bi3la6uamie1, id, 0, na4c65ede64197e1a_sh3mden6po6r8).
+node[ast_oxc](na4c65ede64197e1a_loe6jttmnke28, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_loe6jttmnke28, 1).
+attr[ast_oxc](na4c65ede64197e1a_loe6jttmnke28, optional, false).
+node[ast_oxc](na4c65ede64197e1a_kt07qh8rgop98, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_kt07qh8rgop98, 1).
+attr[ast_oxc](na4c65ede64197e1a_kt07qh8rgop98, name, "require").
+child[ast_oxc](na4c65ede64197e1a_loe6jttmnke28, callee, 0, na4c65ede64197e1a_kt07qh8rgop98).
+node[ast_oxc](na4c65ede64197e1a_20rd2g015t5d3, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_20rd2g015t5d3, 1).
+attr[ast_oxc](na4c65ede64197e1a_20rd2g015t5d3, value, "http").
+child[ast_oxc](na4c65ede64197e1a_loe6jttmnke28, arguments, 0, na4c65ede64197e1a_20rd2g015t5d3).
+child[ast_oxc](na4c65ede64197e1a_7bi3la6uamie1, init, 0, na4c65ede64197e1a_loe6jttmnke28).
+child[ast_oxc](na4c65ede64197e1a_64p6llru6pts7, declarations, 0, na4c65ede64197e1a_7bi3la6uamie1).
+child[ast_oxc](na4c65ede64197e1a_root, body, 0, na4c65ede64197e1a_64p6llru6pts7).
+node[ast_oxc](na4c65ede64197e1a_hq22e05107f71, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hq22e05107f71, 2).
+attr[ast_oxc](na4c65ede64197e1a_hq22e05107f71, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_hq22e05107f71, declare, false).
+node[ast_oxc](na4c65ede64197e1a_63i1oi95aqhma, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_63i1oi95aqhma, 2).
+node[ast_oxc](na4c65ede64197e1a_hhptver5fnm92, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hhptver5fnm92, 2).
+attr[ast_oxc](na4c65ede64197e1a_hhptver5fnm92, name, "fs").
+child[ast_oxc](na4c65ede64197e1a_63i1oi95aqhma, id, 0, na4c65ede64197e1a_hhptver5fnm92).
+node[ast_oxc](na4c65ede64197e1a_nm9nml16oupe9, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_nm9nml16oupe9, 2).
+attr[ast_oxc](na4c65ede64197e1a_nm9nml16oupe9, optional, false).
+node[ast_oxc](na4c65ede64197e1a_qv1vpo88t7d5a, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qv1vpo88t7d5a, 2).
+attr[ast_oxc](na4c65ede64197e1a_qv1vpo88t7d5a, name, "require").
+child[ast_oxc](na4c65ede64197e1a_nm9nml16oupe9, callee, 0, na4c65ede64197e1a_qv1vpo88t7d5a).
+node[ast_oxc](na4c65ede64197e1a_cptc1dg4m0v64, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_cptc1dg4m0v64, 2).
+attr[ast_oxc](na4c65ede64197e1a_cptc1dg4m0v64, value, "fs").
+child[ast_oxc](na4c65ede64197e1a_nm9nml16oupe9, arguments, 0, na4c65ede64197e1a_cptc1dg4m0v64).
+child[ast_oxc](na4c65ede64197e1a_63i1oi95aqhma, init, 0, na4c65ede64197e1a_nm9nml16oupe9).
+child[ast_oxc](na4c65ede64197e1a_hq22e05107f71, declarations, 0, na4c65ede64197e1a_63i1oi95aqhma).
+child[ast_oxc](na4c65ede64197e1a_root, body, 1, na4c65ede64197e1a_hq22e05107f71).
+node[ast_oxc](na4c65ede64197e1a_7j5avm30e23r8, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_7j5avm30e23r8, 3).
+attr[ast_oxc](na4c65ede64197e1a_7j5avm30e23r8, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_7j5avm30e23r8, declare, false).
+node[ast_oxc](na4c65ede64197e1a_u4revllnnn5ka, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_u4revllnnn5ka, 3).
+node[ast_oxc](na4c65ede64197e1a_0modtq1m59bl8, object_pattern, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0modtq1m59bl8, 3).
+node[ast_oxc](na4c65ede64197e1a_meusfid3c6q1e, binding_property, "server.js").
+line[ast_oxc](na4c65ede64197e1a_meusfid3c6q1e, 3).
+attr[ast_oxc](na4c65ede64197e1a_meusfid3c6q1e, computed, false).
+node[ast_oxc](na4c65ede64197e1a_lqpe3ufdjium8, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_lqpe3ufdjium8, 3).
+attr[ast_oxc](na4c65ede64197e1a_lqpe3ufdjium8, name, "fork").
+child[ast_oxc](na4c65ede64197e1a_meusfid3c6q1e, key, 0, na4c65ede64197e1a_lqpe3ufdjium8).
+node[ast_oxc](na4c65ede64197e1a_cb2cdg26rtru, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_cb2cdg26rtru, 3).
+attr[ast_oxc](na4c65ede64197e1a_cb2cdg26rtru, name, "fork").
+child[ast_oxc](na4c65ede64197e1a_meusfid3c6q1e, value, 0, na4c65ede64197e1a_cb2cdg26rtru).
+child[ast_oxc](na4c65ede64197e1a_0modtq1m59bl8, properties, 0, na4c65ede64197e1a_meusfid3c6q1e).
+child[ast_oxc](na4c65ede64197e1a_u4revllnnn5ka, id, 0, na4c65ede64197e1a_0modtq1m59bl8).
+node[ast_oxc](na4c65ede64197e1a_k5vl0b51ha8g, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_k5vl0b51ha8g, 3).
+attr[ast_oxc](na4c65ede64197e1a_k5vl0b51ha8g, optional, false).
+node[ast_oxc](na4c65ede64197e1a_tp4hul2kktrg4, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_tp4hul2kktrg4, 3).
+attr[ast_oxc](na4c65ede64197e1a_tp4hul2kktrg4, name, "require").
+child[ast_oxc](na4c65ede64197e1a_k5vl0b51ha8g, callee, 0, na4c65ede64197e1a_tp4hul2kktrg4).
+node[ast_oxc](na4c65ede64197e1a_hpco8n8qqqab5, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hpco8n8qqqab5, 3).
+attr[ast_oxc](na4c65ede64197e1a_hpco8n8qqqab5, value, "child_process").
+child[ast_oxc](na4c65ede64197e1a_k5vl0b51ha8g, arguments, 0, na4c65ede64197e1a_hpco8n8qqqab5).
+child[ast_oxc](na4c65ede64197e1a_u4revllnnn5ka, init, 0, na4c65ede64197e1a_k5vl0b51ha8g).
+child[ast_oxc](na4c65ede64197e1a_7j5avm30e23r8, declarations, 0, na4c65ede64197e1a_u4revllnnn5ka).
+child[ast_oxc](na4c65ede64197e1a_root, body, 2, na4c65ede64197e1a_7j5avm30e23r8).
+node[ast_oxc](na4c65ede64197e1a_07b838b5v91se, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_07b838b5v91se, 5).
+attr[ast_oxc](na4c65ede64197e1a_07b838b5v91se, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_07b838b5v91se, declare, false).
+node[ast_oxc](na4c65ede64197e1a_99f1rlmni7sif, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_99f1rlmni7sif, 5).
+node[ast_oxc](na4c65ede64197e1a_1jecoelujoqj1, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_1jecoelujoqj1, 5).
+attr[ast_oxc](na4c65ede64197e1a_1jecoelujoqj1, name, "server").
+child[ast_oxc](na4c65ede64197e1a_99f1rlmni7sif, id, 0, na4c65ede64197e1a_1jecoelujoqj1).
+node[ast_oxc](na4c65ede64197e1a_288osdcnleuj4, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_288osdcnleuj4, 5).
+attr[ast_oxc](na4c65ede64197e1a_288osdcnleuj4, optional, false).
+node[ast_oxc](na4c65ede64197e1a_curpe6ierkd17, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_curpe6ierkd17, 5).
+attr[ast_oxc](na4c65ede64197e1a_curpe6ierkd17, optional, false).
+node[ast_oxc](na4c65ede64197e1a_qv7vmbrsu27k4, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qv7vmbrsu27k4, 5).
+attr[ast_oxc](na4c65ede64197e1a_qv7vmbrsu27k4, name, "http").
+child[ast_oxc](na4c65ede64197e1a_curpe6ierkd17, object, 0, na4c65ede64197e1a_qv7vmbrsu27k4).
+node[ast_oxc](na4c65ede64197e1a_qto5s97tghht6, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qto5s97tghht6, 5).
+attr[ast_oxc](na4c65ede64197e1a_qto5s97tghht6, name, "createServer").
+child[ast_oxc](na4c65ede64197e1a_curpe6ierkd17, property, 0, na4c65ede64197e1a_qto5s97tghht6).
+child[ast_oxc](na4c65ede64197e1a_288osdcnleuj4, callee, 0, na4c65ede64197e1a_curpe6ierkd17).
+node[ast_oxc](na4c65ede64197e1a_8f8qsjlg88r81, arrow_function_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_8f8qsjlg88r81, 5).
+node[ast_oxc](na4c65ede64197e1a_0l8m7muvg5je4, formal_parameters, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0l8m7muvg5je4, 5).
+attr[ast_oxc](na4c65ede64197e1a_0l8m7muvg5je4, kind, "ArrowFormalParameters").
+node[ast_oxc](na4c65ede64197e1a_qtcm6unhc8i98, formal_parameter, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qtcm6unhc8i98, 5).
+attr[ast_oxc](na4c65ede64197e1a_qtcm6unhc8i98, optional, false).
+attr[ast_oxc](na4c65ede64197e1a_qtcm6unhc8i98, readonly, false).
+node[ast_oxc](na4c65ede64197e1a_16cte062uj9cb, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_16cte062uj9cb, 5).
+attr[ast_oxc](na4c65ede64197e1a_16cte062uj9cb, name, "req").
+child[ast_oxc](na4c65ede64197e1a_qtcm6unhc8i98, pattern, 0, na4c65ede64197e1a_16cte062uj9cb).
+child[ast_oxc](na4c65ede64197e1a_0l8m7muvg5je4, items, 0, na4c65ede64197e1a_qtcm6unhc8i98).
+node[ast_oxc](na4c65ede64197e1a_uiram54uirpad, formal_parameter, "server.js").
+line[ast_oxc](na4c65ede64197e1a_uiram54uirpad, 5).
+attr[ast_oxc](na4c65ede64197e1a_uiram54uirpad, optional, false).
+attr[ast_oxc](na4c65ede64197e1a_uiram54uirpad, readonly, false).
+node[ast_oxc](na4c65ede64197e1a_8kj7hj9lu5vk3, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_8kj7hj9lu5vk3, 5).
+attr[ast_oxc](na4c65ede64197e1a_8kj7hj9lu5vk3, name, "res").
+child[ast_oxc](na4c65ede64197e1a_uiram54uirpad, pattern, 0, na4c65ede64197e1a_8kj7hj9lu5vk3).
+child[ast_oxc](na4c65ede64197e1a_0l8m7muvg5je4, items, 1, na4c65ede64197e1a_uiram54uirpad).
+child[ast_oxc](na4c65ede64197e1a_8f8qsjlg88r81, params, 0, na4c65ede64197e1a_0l8m7muvg5je4).
+node[ast_oxc](na4c65ede64197e1a_fqn62hddvkm37, function_body, "server.js").
+line[ast_oxc](na4c65ede64197e1a_fqn62hddvkm37, 5).
+node[ast_oxc](na4c65ede64197e1a_eo5fuqgvdq5m, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_eo5fuqgvdq5m, 6).
+attr[ast_oxc](na4c65ede64197e1a_eo5fuqgvdq5m, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_eo5fuqgvdq5m, declare, false).
+node[ast_oxc](na4c65ede64197e1a_e09ol2mem28qe, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_e09ol2mem28qe, 6).
+node[ast_oxc](na4c65ede64197e1a_sfoapqep22hn, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_sfoapqep22hn, 6).
+attr[ast_oxc](na4c65ede64197e1a_sfoapqep22hn, name, "worker").
+child[ast_oxc](na4c65ede64197e1a_e09ol2mem28qe, id, 0, na4c65ede64197e1a_sfoapqep22hn).
+node[ast_oxc](na4c65ede64197e1a_1r8g2ntc5bgtc, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_1r8g2ntc5bgtc, 6).
+attr[ast_oxc](na4c65ede64197e1a_1r8g2ntc5bgtc, optional, false).
+node[ast_oxc](na4c65ede64197e1a_kdsq5brbuh285, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_kdsq5brbuh285, 6).
+attr[ast_oxc](na4c65ede64197e1a_kdsq5brbuh285, name, "fork").
+child[ast_oxc](na4c65ede64197e1a_1r8g2ntc5bgtc, callee, 0, na4c65ede64197e1a_kdsq5brbuh285).
+node[ast_oxc](na4c65ede64197e1a_6kuukgg142job, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_6kuukgg142job, 6).
+attr[ast_oxc](na4c65ede64197e1a_6kuukgg142job, value, "./convert.js").
+child[ast_oxc](na4c65ede64197e1a_1r8g2ntc5bgtc, arguments, 0, na4c65ede64197e1a_6kuukgg142job).
+node[ast_oxc](na4c65ede64197e1a_hratbjodr4fpe, array_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hratbjodr4fpe, 6).
+node[ast_oxc](na4c65ede64197e1a_k9gcgir7ahfca, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_k9gcgir7ahfca, 6).
+attr[ast_oxc](na4c65ede64197e1a_k9gcgir7ahfca, optional, false).
+node[ast_oxc](na4c65ede64197e1a_j067filk288d8, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_j067filk288d8, 6).
+attr[ast_oxc](na4c65ede64197e1a_j067filk288d8, name, "req").
+child[ast_oxc](na4c65ede64197e1a_k9gcgir7ahfca, object, 0, na4c65ede64197e1a_j067filk288d8).
+node[ast_oxc](na4c65ede64197e1a_iihet96fulut8, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_iihet96fulut8, 6).
+attr[ast_oxc](na4c65ede64197e1a_iihet96fulut8, name, "url").
+child[ast_oxc](na4c65ede64197e1a_k9gcgir7ahfca, property, 0, na4c65ede64197e1a_iihet96fulut8).
+child[ast_oxc](na4c65ede64197e1a_hratbjodr4fpe, elements, 0, na4c65ede64197e1a_k9gcgir7ahfca).
+child[ast_oxc](na4c65ede64197e1a_1r8g2ntc5bgtc, arguments, 1, na4c65ede64197e1a_hratbjodr4fpe).
+child[ast_oxc](na4c65ede64197e1a_e09ol2mem28qe, init, 0, na4c65ede64197e1a_1r8g2ntc5bgtc).
+child[ast_oxc](na4c65ede64197e1a_eo5fuqgvdq5m, declarations, 0, na4c65ede64197e1a_e09ol2mem28qe).
+child[ast_oxc](na4c65ede64197e1a_fqn62hddvkm37, statements, 0, na4c65ede64197e1a_eo5fuqgvdq5m).
+node[ast_oxc](na4c65ede64197e1a_pqn53rmqufvtf, expression_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_pqn53rmqufvtf, 7).
+node[ast_oxc](na4c65ede64197e1a_oeb51ldsm8buf, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_oeb51ldsm8buf, 7).
+attr[ast_oxc](na4c65ede64197e1a_oeb51ldsm8buf, optional, false).
+node[ast_oxc](na4c65ede64197e1a_0uttrcfc0tfq4, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0uttrcfc0tfq4, 7).
+attr[ast_oxc](na4c65ede64197e1a_0uttrcfc0tfq4, optional, false).
+node[ast_oxc](na4c65ede64197e1a_dbqo6djq2fhr1, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_dbqo6djq2fhr1, 7).
+attr[ast_oxc](na4c65ede64197e1a_dbqo6djq2fhr1, name, "worker").
+child[ast_oxc](na4c65ede64197e1a_0uttrcfc0tfq4, object, 0, na4c65ede64197e1a_dbqo6djq2fhr1).
+node[ast_oxc](na4c65ede64197e1a_pje3juf44ihg, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_pje3juf44ihg, 7).
+attr[ast_oxc](na4c65ede64197e1a_pje3juf44ihg, name, "on").
+child[ast_oxc](na4c65ede64197e1a_0uttrcfc0tfq4, property, 0, na4c65ede64197e1a_pje3juf44ihg).
+child[ast_oxc](na4c65ede64197e1a_oeb51ldsm8buf, callee, 0, na4c65ede64197e1a_0uttrcfc0tfq4).
+node[ast_oxc](na4c65ede64197e1a_sjg09vshijb72, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_sjg09vshijb72, 7).
+attr[ast_oxc](na4c65ede64197e1a_sjg09vshijb72, value, "message").
+child[ast_oxc](na4c65ede64197e1a_oeb51ldsm8buf, arguments, 0, na4c65ede64197e1a_sjg09vshijb72).
+node[ast_oxc](na4c65ede64197e1a_d658ullgmgor5, arrow_function_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_d658ullgmgor5, 7).
+node[ast_oxc](na4c65ede64197e1a_0mc6b3ajbejk1, formal_parameters, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0mc6b3ajbejk1, 7).
+attr[ast_oxc](na4c65ede64197e1a_0mc6b3ajbejk1, kind, "ArrowFormalParameters").
+node[ast_oxc](na4c65ede64197e1a_p36i8udq0c572, formal_parameter, "server.js").
+line[ast_oxc](na4c65ede64197e1a_p36i8udq0c572, 7).
+attr[ast_oxc](na4c65ede64197e1a_p36i8udq0c572, optional, false).
+attr[ast_oxc](na4c65ede64197e1a_p36i8udq0c572, readonly, false).
+node[ast_oxc](na4c65ede64197e1a_mg9md3cfv4jb7, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_mg9md3cfv4jb7, 7).
+attr[ast_oxc](na4c65ede64197e1a_mg9md3cfv4jb7, name, "m").
+child[ast_oxc](na4c65ede64197e1a_p36i8udq0c572, pattern, 0, na4c65ede64197e1a_mg9md3cfv4jb7).
+child[ast_oxc](na4c65ede64197e1a_0mc6b3ajbejk1, items, 0, na4c65ede64197e1a_p36i8udq0c572).
+child[ast_oxc](na4c65ede64197e1a_d658ullgmgor5, params, 0, na4c65ede64197e1a_0mc6b3ajbejk1).
+node[ast_oxc](na4c65ede64197e1a_2j8qb1iv4ujqb, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_2j8qb1iv4ujqb, 7).
+attr[ast_oxc](na4c65ede64197e1a_2j8qb1iv4ujqb, optional, false).
+node[ast_oxc](na4c65ede64197e1a_ienj19le3us2c, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_ienj19le3us2c, 7).
+attr[ast_oxc](na4c65ede64197e1a_ienj19le3us2c, optional, false).
+node[ast_oxc](na4c65ede64197e1a_d2dr96ld7ebj2, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_d2dr96ld7ebj2, 7).
+attr[ast_oxc](na4c65ede64197e1a_d2dr96ld7ebj2, name, "res").
+child[ast_oxc](na4c65ede64197e1a_ienj19le3us2c, object, 0, na4c65ede64197e1a_d2dr96ld7ebj2).
+node[ast_oxc](na4c65ede64197e1a_v8bk14vh65eg2, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_v8bk14vh65eg2, 7).
+attr[ast_oxc](na4c65ede64197e1a_v8bk14vh65eg2, name, "end").
+child[ast_oxc](na4c65ede64197e1a_ienj19le3us2c, property, 0, na4c65ede64197e1a_v8bk14vh65eg2).
+child[ast_oxc](na4c65ede64197e1a_2j8qb1iv4ujqb, callee, 0, na4c65ede64197e1a_ienj19le3us2c).
+node[ast_oxc](na4c65ede64197e1a_hp5gdu6vnrvff, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hp5gdu6vnrvff, 7).
+attr[ast_oxc](na4c65ede64197e1a_hp5gdu6vnrvff, name, "m").
+child[ast_oxc](na4c65ede64197e1a_2j8qb1iv4ujqb, arguments, 0, na4c65ede64197e1a_hp5gdu6vnrvff).
+child[ast_oxc](na4c65ede64197e1a_d658ullgmgor5, body, 0, na4c65ede64197e1a_2j8qb1iv4ujqb).
+attr[ast_oxc](na4c65ede64197e1a_d658ullgmgor5, async, false).
+child[ast_oxc](na4c65ede64197e1a_oeb51ldsm8buf, arguments, 1, na4c65ede64197e1a_d658ullgmgor5).
+child[ast_oxc](na4c65ede64197e1a_pqn53rmqufvtf, expression, 0, na4c65ede64197e1a_oeb51ldsm8buf).
+child[ast_oxc](na4c65ede64197e1a_fqn62hddvkm37, statements, 1, na4c65ede64197e1a_pqn53rmqufvtf).
+child[ast_oxc](na4c65ede64197e1a_8f8qsjlg88r81, body, 0, na4c65ede64197e1a_fqn62hddvkm37).
+attr[ast_oxc](na4c65ede64197e1a_8f8qsjlg88r81, async, false).
+child[ast_oxc](na4c65ede64197e1a_288osdcnleuj4, arguments, 0, na4c65ede64197e1a_8f8qsjlg88r81).
+child[ast_oxc](na4c65ede64197e1a_99f1rlmni7sif, init, 0, na4c65ede64197e1a_288osdcnleuj4).
+child[ast_oxc](na4c65ede64197e1a_07b838b5v91se, declarations, 0, na4c65ede64197e1a_99f1rlmni7sif).
+child[ast_oxc](na4c65ede64197e1a_root, body, 3, na4c65ede64197e1a_07b838b5v91se).
+node[ast_oxc](na4c65ede64197e1a_4bogjm11t06oc, expression_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_4bogjm11t06oc, 9).
+node[ast_oxc](na4c65ede64197e1a_kpd7mfkojoq36, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_kpd7mfkojoq36, 9).
+attr[ast_oxc](na4c65ede64197e1a_kpd7mfkojoq36, optional, false).
+node[ast_oxc](na4c65ede64197e1a_u62h71cb50tn3, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_u62h71cb50tn3, 9).
+attr[ast_oxc](na4c65ede64197e1a_u62h71cb50tn3, optional, false).
+node[ast_oxc](na4c65ede64197e1a_aeciglgc1tmqe, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_aeciglgc1tmqe, 9).
+attr[ast_oxc](na4c65ede64197e1a_aeciglgc1tmqe, name, "server").
+child[ast_oxc](na4c65ede64197e1a_u62h71cb50tn3, object, 0, na4c65ede64197e1a_aeciglgc1tmqe).
+node[ast_oxc](na4c65ede64197e1a_g6h2hbi17j0o6, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_g6h2hbi17j0o6, 9).
+attr[ast_oxc](na4c65ede64197e1a_g6h2hbi17j0o6, name, "listen").
+child[ast_oxc](na4c65ede64197e1a_u62h71cb50tn3, property, 0, na4c65ede64197e1a_g6h2hbi17j0o6).
+child[ast_oxc](na4c65ede64197e1a_kpd7mfkojoq36, callee, 0, na4c65ede64197e1a_u62h71cb50tn3).
+node[ast_oxc](na4c65ede64197e1a_gaab02m74hvke, numeric_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_gaab02m74hvke, 9).
+attr[ast_oxc](na4c65ede64197e1a_gaab02m74hvke, value, 8080).
+child[ast_oxc](na4c65ede64197e1a_kpd7mfkojoq36, arguments, 0, na4c65ede64197e1a_gaab02m74hvke).
+child[ast_oxc](na4c65ede64197e1a_4bogjm11t06oc, expression, 0, na4c65ede64197e1a_kpd7mfkojoq36).
+child[ast_oxc](na4c65ede64197e1a_root, body, 4, na4c65ede64197e1a_4bogjm11t06oc).
+node[ast_oxc](na4c65ede64197e1a_rig8jda10r7s4, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_rig8jda10r7s4, 11).
+attr[ast_oxc](na4c65ede64197e1a_rig8jda10r7s4, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_rig8jda10r7s4, declare, false).
+node[ast_oxc](na4c65ede64197e1a_8fjcslcmvasb7, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_8fjcslcmvasb7, 11).
+node[ast_oxc](na4c65ede64197e1a_7l62vv8qm4f11, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_7l62vv8qm4f11, 11).
+attr[ast_oxc](na4c65ede64197e1a_7l62vv8qm4f11, name, "ticker").
+child[ast_oxc](na4c65ede64197e1a_8fjcslcmvasb7, id, 0, na4c65ede64197e1a_7l62vv8qm4f11).
+node[ast_oxc](na4c65ede64197e1a_jt1hrg7ggtuse, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_jt1hrg7ggtuse, 11).
+attr[ast_oxc](na4c65ede64197e1a_jt1hrg7ggtuse, optional, false).
+node[ast_oxc](na4c65ede64197e1a_5h1gn3jq7uel3, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_5h1gn3jq7uel3, 11).
+attr[ast_oxc](na4c65ede64197e1a_5h1gn3jq7uel3, name, "setInterval").
+child[ast_oxc](na4c65ede64197e1a_jt1hrg7ggtuse, callee, 0, na4c65ede64197e1a_5h1gn3jq7uel3).
+node[ast_oxc](na4c65ede64197e1a_v2mc39g0tqr4f, arrow_function_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_v2mc39g0tqr4f, 11).
+node[ast_oxc](na4c65ede64197e1a_srnb2fu274s5e, formal_parameters, "server.js").
+line[ast_oxc](na4c65ede64197e1a_srnb2fu274s5e, 11).
+attr[ast_oxc](na4c65ede64197e1a_srnb2fu274s5e, kind, "ArrowFormalParameters").
+child[ast_oxc](na4c65ede64197e1a_v2mc39g0tqr4f, params, 0, na4c65ede64197e1a_srnb2fu274s5e).
+node[ast_oxc](na4c65ede64197e1a_0vput0b8lj0rd, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0vput0b8lj0rd, 11).
+attr[ast_oxc](na4c65ede64197e1a_0vput0b8lj0rd, optional, false).
+node[ast_oxc](na4c65ede64197e1a_pbtheee6te9mf, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_pbtheee6te9mf, 11).
+attr[ast_oxc](na4c65ede64197e1a_pbtheee6te9mf, optional, false).
+node[ast_oxc](na4c65ede64197e1a_t2h82s0gis506, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_t2h82s0gis506, 11).
+attr[ast_oxc](na4c65ede64197e1a_t2h82s0gis506, name, "console").
+child[ast_oxc](na4c65ede64197e1a_pbtheee6te9mf, object, 0, na4c65ede64197e1a_t2h82s0gis506).
+node[ast_oxc](na4c65ede64197e1a_o6l1co9fk0opf, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_o6l1co9fk0opf, 11).
+attr[ast_oxc](na4c65ede64197e1a_o6l1co9fk0opf, name, "log").
+child[ast_oxc](na4c65ede64197e1a_pbtheee6te9mf, property, 0, na4c65ede64197e1a_o6l1co9fk0opf).
+child[ast_oxc](na4c65ede64197e1a_0vput0b8lj0rd, callee, 0, na4c65ede64197e1a_pbtheee6te9mf).
+node[ast_oxc](na4c65ede64197e1a_f493g7o78ngi3, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_f493g7o78ngi3, 11).
+attr[ast_oxc](na4c65ede64197e1a_f493g7o78ngi3, value, "tick").
+child[ast_oxc](na4c65ede64197e1a_0vput0b8lj0rd, arguments, 0, na4c65ede64197e1a_f493g7o78ngi3).
+child[ast_oxc](na4c65ede64197e1a_v2mc39g0tqr4f, body, 0, na4c65ede64197e1a_0vput0b8lj0rd).
+attr[ast_oxc](na4c65ede64197e1a_v2mc39g0tqr4f, async, false).
+child[ast_oxc](na4c65ede64197e1a_jt1hrg7ggtuse, arguments, 0, na4c65ede64197e1a_v2mc39g0tqr4f).
+node[ast_oxc](na4c65ede64197e1a_mgfdb20r9futc, numeric_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_mgfdb20r9futc, 11).
+attr[ast_oxc](na4c65ede64197e1a_mgfdb20r9futc, value, 1000).
+child[ast_oxc](na4c65ede64197e1a_jt1hrg7ggtuse, arguments, 1, na4c65ede64197e1a_mgfdb20r9futc).
+child[ast_oxc](na4c65ede64197e1a_8fjcslcmvasb7, init, 0, na4c65ede64197e1a_jt1hrg7ggtuse).
+child[ast_oxc](na4c65ede64197e1a_rig8jda10r7s4, declarations, 0, na4c65ede64197e1a_8fjcslcmvasb7).
+child[ast_oxc](na4c65ede64197e1a_root, body, 5, na4c65ede64197e1a_rig8jda10r7s4).
+node[ast_oxc](na4c65ede64197e1a_594n4lidkcog, function, "server.js").
+line[ast_oxc](na4c65ede64197e1a_594n4lidkcog, 13).
+node[ast_oxc](na4c65ede64197e1a_4a9k7jd29ke1f, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_4a9k7jd29ke1f, 13).
+attr[ast_oxc](na4c65ede64197e1a_4a9k7jd29ke1f, name, "appendLine").
+child[ast_oxc](na4c65ede64197e1a_594n4lidkcog, id, 0, na4c65ede64197e1a_4a9k7jd29ke1f).
+node[ast_oxc](na4c65ede64197e1a_efnl1trh8aof1, formal_parameters, "server.js").
+line[ast_oxc](na4c65ede64197e1a_efnl1trh8aof1, 13).
+attr[ast_oxc](na4c65ede64197e1a_efnl1trh8aof1, kind, "FormalParameter").
+node[ast_oxc](na4c65ede64197e1a_r8jf9vnuuvclc, formal_parameter, "server.js").
+line[ast_oxc](na4c65ede64197e1a_r8jf9vnuuvclc, 13).
+attr[ast_oxc](na4c65ede64197e1a_r8jf9vnuuvclc, optional, false).
+attr[ast_oxc](na4c65ede64197e1a_r8jf9vnuuvclc, readonly, false).
+node[ast_oxc](na4c65ede64197e1a_her5s1lvs9t12, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_her5s1lvs9t12, 13).
+attr[ast_oxc](na4c65ede64197e1a_her5s1lvs9t12, name, "path").
+child[ast_oxc](na4c65ede64197e1a_r8jf9vnuuvclc, pattern, 0, na4c65ede64197e1a_her5s1lvs9t12).
+child[ast_oxc](na4c65ede64197e1a_efnl1trh8aof1, items, 0, na4c65ede64197e1a_r8jf9vnuuvclc).
+node[ast_oxc](na4c65ede64197e1a_emcd7klp0af55, formal_parameter, "server.js").
+line[ast_oxc](na4c65ede64197e1a_emcd7klp0af55, 13).
+attr[ast_oxc](na4c65ede64197e1a_emcd7klp0af55, optional, false).
+attr[ast_oxc](na4c65ede64197e1a_emcd7klp0af55, readonly, false).
+node[ast_oxc](na4c65ede64197e1a_otgktravdbvl2, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_otgktravdbvl2, 13).
+attr[ast_oxc](na4c65ede64197e1a_otgktravdbvl2, name, "line").
+child[ast_oxc](na4c65ede64197e1a_emcd7klp0af55, pattern, 0, na4c65ede64197e1a_otgktravdbvl2).
+child[ast_oxc](na4c65ede64197e1a_efnl1trh8aof1, items, 1, na4c65ede64197e1a_emcd7klp0af55).
+child[ast_oxc](na4c65ede64197e1a_594n4lidkcog, params, 0, na4c65ede64197e1a_efnl1trh8aof1).
+node[ast_oxc](na4c65ede64197e1a_32bs4051nmn0a, function_body, "server.js").
+line[ast_oxc](na4c65ede64197e1a_32bs4051nmn0a, 13).
+node[ast_oxc](na4c65ede64197e1a_tv9khsat7mu4f, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_tv9khsat7mu4f, 14).
+attr[ast_oxc](na4c65ede64197e1a_tv9khsat7mu4f, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_tv9khsat7mu4f, declare, false).
+node[ast_oxc](na4c65ede64197e1a_sj07ohbopqu04, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_sj07ohbopqu04, 14).
+node[ast_oxc](na4c65ede64197e1a_6du38b96gqoc2, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_6du38b96gqoc2, 14).
+attr[ast_oxc](na4c65ede64197e1a_6du38b96gqoc2, name, "fd").
+child[ast_oxc](na4c65ede64197e1a_sj07ohbopqu04, id, 0, na4c65ede64197e1a_6du38b96gqoc2).
+node[ast_oxc](na4c65ede64197e1a_dnasgnp8b25lf, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_dnasgnp8b25lf, 14).
+attr[ast_oxc](na4c65ede64197e1a_dnasgnp8b25lf, optional, false).
+node[ast_oxc](na4c65ede64197e1a_leanqrrr9mvu1, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_leanqrrr9mvu1, 14).
+attr[ast_oxc](na4c65ede64197e1a_leanqrrr9mvu1, optional, false).
+node[ast_oxc](na4c65ede64197e1a_fpssq5qfmvo5d, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_fpssq5qfmvo5d, 14).
+attr[ast_oxc](na4c65ede64197e1a_fpssq5qfmvo5d, name, "fs").
+child[ast_oxc](na4c65ede64197e1a_leanqrrr9mvu1, object, 0, na4c65ede64197e1a_fpssq5qfmvo5d).
+node[ast_oxc](na4c65ede64197e1a_m3gls2ucrdjac, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_m3gls2ucrdjac, 14).
+attr[ast_oxc](na4c65ede64197e1a_m3gls2ucrdjac, name, "openSync").
+child[ast_oxc](na4c65ede64197e1a_leanqrrr9mvu1, property, 0, na4c65ede64197e1a_m3gls2ucrdjac).
+child[ast_oxc](na4c65ede64197e1a_dnasgnp8b25lf, callee, 0, na4c65ede64197e1a_leanqrrr9mvu1).
+node[ast_oxc](na4c65ede64197e1a_47t02m10fmcdd, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_47t02m10fmcdd, 14).
+attr[ast_oxc](na4c65ede64197e1a_47t02m10fmcdd, name, "path").
+child[ast_oxc](na4c65ede64197e1a_dnasgnp8b25lf, arguments, 0, na4c65ede64197e1a_47t02m10fmcdd).
+node[ast_oxc](na4c65ede64197e1a_f28pg9afv3cue, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_f28pg9afv3cue, 14).
+attr[ast_oxc](na4c65ede64197e1a_f28pg9afv3cue, value, "a").
+child[ast_oxc](na4c65ede64197e1a_dnasgnp8b25lf, arguments, 1, na4c65ede64197e1a_f28pg9afv3cue).
+child[ast_oxc](na4c65ede64197e1a_sj07ohbopqu04, init, 0, na4c65ede64197e1a_dnasgnp8b25lf).
+child[ast_oxc](na4c65ede64197e1a_tv9khsat7mu4f, declarations, 0, na4c65ede64197e1a_sj07ohbopqu04).
+child[ast_oxc](na4c65ede64197e1a_32bs4051nmn0a, statements, 0, na4c65ede64197e1a_tv9khsat7mu4f).
+node[ast_oxc](na4c65ede64197e1a_j040r2r71rgo9, expression_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_j040r2r71rgo9, 15).
+node[ast_oxc](na4c65ede64197e1a_i2ukarbg3ged3, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_i2ukarbg3ged3, 15).
+attr[ast_oxc](na4c65ede64197e1a_i2ukarbg3ged3, optional, false).
+node[ast_oxc](na4c65ede64197e1a_vl06ncmenpuf1, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_vl06ncmenpuf1, 15).
+attr[ast_oxc](na4c65ede64197e1a_vl06ncmenpuf1, optional, false).
+node[ast_oxc](na4c65ede64197e1a_kpabnq1rudtme, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_kpabnq1rudtme, 15).
+attr[ast_oxc](na4c65ede64197e1a_kpabnq1rudtme, name, "fs").
+child[ast_oxc](na4c65ede64197e1a_vl06ncmenpuf1, object, 0, na4c65ede64197e1a_kpabnq1rudtme).
+node[ast_oxc](na4c65ede64197e1a_gvg5r9b0v93jd, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_gvg5r9b0v93jd, 15).
+attr[ast_oxc](na4c65ede64197e1a_gvg5r9b0v93jd, name, "closeSync").
+child[ast_oxc](na4c65ede64197e1a_vl06ncmenpuf1, property, 0, na4c65ede64197e1a_gvg5r9b0v93jd).
+child[ast_oxc](na4c65ede64197e1a_i2ukarbg3ged3, callee, 0, na4c65ede64197e1a_vl06ncmenpuf1).
+node[ast_oxc](na4c65ede64197e1a_5sa33b7thec24, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_5sa33b7thec24, 15).
+attr[ast_oxc](na4c65ede64197e1a_5sa33b7thec24, name, "fd").
+child[ast_oxc](na4c65ede64197e1a_i2ukarbg3ged3, arguments, 0, na4c65ede64197e1a_5sa33b7thec24).
+child[ast_oxc](na4c65ede64197e1a_j040r2r71rgo9, expression, 0, na4c65ede64197e1a_i2ukarbg3ged3).
+child[ast_oxc](na4c65ede64197e1a_32bs4051nmn0a, statements, 1, na4c65ede64197e1a_j040r2r71rgo9).
+node[ast_oxc](na4c65ede64197e1a_0dpka2tb7257e, expression_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0dpka2tb7257e, 16).
+node[ast_oxc](na4c65ede64197e1a_qlk9pt74dt2ib, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qlk9pt74dt2ib, 16).
+attr[ast_oxc](na4c65ede64197e1a_qlk9pt74dt2ib, optional, false).
+node[ast_oxc](na4c65ede64197e1a_a7l4ick4rpdpc, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_a7l4ick4rpdpc, 16).
+attr[ast_oxc](na4c65ede64197e1a_a7l4ick4rpdpc, optional, false).
+node[ast_oxc](na4c65ede64197e1a_g1di6kh8lg9a5, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_g1di6kh8lg9a5, 16).
+attr[ast_oxc](na4c65ede64197e1a_g1di6kh8lg9a5, name, "fs").
+child[ast_oxc](na4c65ede64197e1a_a7l4ick4rpdpc, object, 0, na4c65ede64197e1a_g1di6kh8lg9a5).
+node[ast_oxc](na4c65ede64197e1a_dcdh8e6nf0mb9, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_dcdh8e6nf0mb9, 16).
+attr[ast_oxc](na4c65ede64197e1a_dcdh8e6nf0mb9, name, "writeSync").
+child[ast_oxc](na4c65ede64197e1a_a7l4ick4rpdpc, property, 0, na4c65ede64197e1a_dcdh8e6nf0mb9).
+child[ast_oxc](na4c65ede64197e1a_qlk9pt74dt2ib, callee, 0, na4c65ede64197e1a_a7l4ick4rpdpc).
+node[ast_oxc](na4c65ede64197e1a_p745lgtlooi04, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_p745lgtlooi04, 16).
+attr[ast_oxc](na4c65ede64197e1a_p745lgtlooi04, name, "fd").
+child[ast_oxc](na4c65ede64197e1a_qlk9pt74dt2ib, arguments, 0, na4c65ede64197e1a_p745lgtlooi04).
+node[ast_oxc](na4c65ede64197e1a_6fgt742nireo5, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_6fgt742nireo5, 16).
+attr[ast_oxc](na4c65ede64197e1a_6fgt742nireo5, name, "line").
+child[ast_oxc](na4c65ede64197e1a_qlk9pt74dt2ib, arguments, 1, na4c65ede64197e1a_6fgt742nireo5).
+child[ast_oxc](na4c65ede64197e1a_0dpka2tb7257e, expression, 0, na4c65ede64197e1a_qlk9pt74dt2ib).
+child[ast_oxc](na4c65ede64197e1a_32bs4051nmn0a, statements, 2, na4c65ede64197e1a_0dpka2tb7257e).
+child[ast_oxc](na4c65ede64197e1a_594n4lidkcog, body, 0, na4c65ede64197e1a_32bs4051nmn0a).
+attr[ast_oxc](na4c65ede64197e1a_594n4lidkcog, type, "FunctionDeclaration").
+attr[ast_oxc](na4c65ede64197e1a_594n4lidkcog, generator, false).
+attr[ast_oxc](na4c65ede64197e1a_594n4lidkcog, async, false).
+attr[ast_oxc](na4c65ede64197e1a_594n4lidkcog, declare, false).
+child[ast_oxc](na4c65ede64197e1a_root, body, 6, na4c65ede64197e1a_594n4lidkcog).
+node[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, function, "server.js").
+line[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, 19).
+node[ast_oxc](na4c65ede64197e1a_fu2mvqknvvmh1, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_fu2mvqknvvmh1, 19).
+attr[ast_oxc](na4c65ede64197e1a_fu2mvqknvvmh1, name, "firstByte").
+child[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, id, 0, na4c65ede64197e1a_fu2mvqknvvmh1).
+node[ast_oxc](na4c65ede64197e1a_gl7jkpgkv7o34, formal_parameters, "server.js").
+line[ast_oxc](na4c65ede64197e1a_gl7jkpgkv7o34, 19).
+attr[ast_oxc](na4c65ede64197e1a_gl7jkpgkv7o34, kind, "FormalParameter").
+node[ast_oxc](na4c65ede64197e1a_f9npqnejfv6e4, formal_parameter, "server.js").
+line[ast_oxc](na4c65ede64197e1a_f9npqnejfv6e4, 19).
+attr[ast_oxc](na4c65ede64197e1a_f9npqnejfv6e4, optional, false).
+attr[ast_oxc](na4c65ede64197e1a_f9npqnejfv6e4, readonly, false).
+node[ast_oxc](na4c65ede64197e1a_9tk6c69bgl5a5, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_9tk6c69bgl5a5, 19).
+attr[ast_oxc](na4c65ede64197e1a_9tk6c69bgl5a5, name, "path").
+child[ast_oxc](na4c65ede64197e1a_f9npqnejfv6e4, pattern, 0, na4c65ede64197e1a_9tk6c69bgl5a5).
+child[ast_oxc](na4c65ede64197e1a_gl7jkpgkv7o34, items, 0, na4c65ede64197e1a_f9npqnejfv6e4).
+child[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, params, 0, na4c65ede64197e1a_gl7jkpgkv7o34).
+node[ast_oxc](na4c65ede64197e1a_qdb3l4a8vb4lc, function_body, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qdb3l4a8vb4lc, 19).
+node[ast_oxc](na4c65ede64197e1a_cebe2amk60eg6, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_cebe2amk60eg6, 20).
+attr[ast_oxc](na4c65ede64197e1a_cebe2amk60eg6, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_cebe2amk60eg6, declare, false).
+node[ast_oxc](na4c65ede64197e1a_14j9cjtilddq1, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_14j9cjtilddq1, 20).
+node[ast_oxc](na4c65ede64197e1a_6p72i2jpo32k7, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_6p72i2jpo32k7, 20).
+attr[ast_oxc](na4c65ede64197e1a_6p72i2jpo32k7, name, "fd").
+child[ast_oxc](na4c65ede64197e1a_14j9cjtilddq1, id, 0, na4c65ede64197e1a_6p72i2jpo32k7).
+node[ast_oxc](na4c65ede64197e1a_fovttuushkhk8, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_fovttuushkhk8, 20).
+attr[ast_oxc](na4c65ede64197e1a_fovttuushkhk8, optional, false).
+node[ast_oxc](na4c65ede64197e1a_498779hd9vba2, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_498779hd9vba2, 20).
+attr[ast_oxc](na4c65ede64197e1a_498779hd9vba2, optional, false).
+node[ast_oxc](na4c65ede64197e1a_s2pc89g3l1kg6, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_s2pc89g3l1kg6, 20).
+attr[ast_oxc](na4c65ede64197e1a_s2pc89g3l1kg6, name, "fs").
+child[ast_oxc](na4c65ede64197e1a_498779hd9vba2, object, 0, na4c65ede64197e1a_s2pc89g3l1kg6).
+node[ast_oxc](na4c65ede64197e1a_igh53k6fctk24, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_igh53k6fctk24, 20).
+attr[ast_oxc](na4c65ede64197e1a_igh53k6fctk24, name, "openSync").
+child[ast_oxc](na4c65ede64197e1a_498779hd9vba2, property, 0, na4c65ede64197e1a_igh53k6fctk24).
+child[ast_oxc](na4c65ede64197e1a_fovttuushkhk8, callee, 0, na4c65ede64197e1a_498779hd9vba2).
+node[ast_oxc](na4c65ede64197e1a_mp0dubi3d2lg6, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_mp0dubi3d2lg6, 20).
+attr[ast_oxc](na4c65ede64197e1a_mp0dubi3d2lg6, name, "path").
+child[ast_oxc](na4c65ede64197e1a_fovttuushkhk8, arguments, 0, na4c65ede64197e1a_mp0dubi3d2lg6).
+node[ast_oxc](na4c65ede64197e1a_nepd7q18eq6s1, string_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_nepd7q18eq6s1, 20).
+attr[ast_oxc](na4c65ede64197e1a_nepd7q18eq6s1, value, "r").
+child[ast_oxc](na4c65ede64197e1a_fovttuushkhk8, arguments, 1, na4c65ede64197e1a_nepd7q18eq6s1).
+child[ast_oxc](na4c65ede64197e1a_14j9cjtilddq1, init, 0, na4c65ede64197e1a_fovttuushkhk8).
+child[ast_oxc](na4c65ede64197e1a_cebe2amk60eg6, declarations, 0, na4c65ede64197e1a_14j9cjtilddq1).
+child[ast_oxc](na4c65ede64197e1a_qdb3l4a8vb4lc, statements, 0, na4c65ede64197e1a_cebe2amk60eg6).
+node[ast_oxc](na4c65ede64197e1a_tqhhvsek54c2e, variable_declaration, "server.js").
+line[ast_oxc](na4c65ede64197e1a_tqhhvsek54c2e, 21).
+attr[ast_oxc](na4c65ede64197e1a_tqhhvsek54c2e, kind, "Const").
+attr[ast_oxc](na4c65ede64197e1a_tqhhvsek54c2e, declare, false).
+node[ast_oxc](na4c65ede64197e1a_9pg4412l543ic, variable_declarator, "server.js").
+line[ast_oxc](na4c65ede64197e1a_9pg4412l543ic, 21).
+node[ast_oxc](na4c65ede64197e1a_9spe5fkfsrm01, binding_identifier, "server.js").
+line[ast_oxc](na4c65ede64197e1a_9spe5fkfsrm01, 21).
+attr[ast_oxc](na4c65ede64197e1a_9spe5fkfsrm01, name, "buf").
+child[ast_oxc](na4c65ede64197e1a_9pg4412l543ic, id, 0, na4c65ede64197e1a_9spe5fkfsrm01).
+node[ast_oxc](na4c65ede64197e1a_tkski76a28ln6, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_tkski76a28ln6, 21).
+attr[ast_oxc](na4c65ede64197e1a_tkski76a28ln6, optional, false).
+node[ast_oxc](na4c65ede64197e1a_cjjk7mdk60e25, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_cjjk7mdk60e25, 21).
+attr[ast_oxc](na4c65ede64197e1a_cjjk7mdk60e25, optional, false).
+node[ast_oxc](na4c65ede64197e1a_nlckqqerbjojf, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_nlckqqerbjojf, 21).
+attr[ast_oxc](na4c65ede64197e1a_nlckqqerbjojf, name, "Buffer").
+child[ast_oxc](na4c65ede64197e1a_cjjk7mdk60e25, object, 0, na4c65ede64197e1a_nlckqqerbjojf).
+node[ast_oxc](na4c65ede64197e1a_hrngs2dmsuruf, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hrngs2dmsuruf, 21).
+attr[ast_oxc](na4c65ede64197e1a_hrngs2dmsuruf, name, "alloc").
+child[ast_oxc](na4c65ede64197e1a_cjjk7mdk60e25, property, 0, na4c65ede64197e1a_hrngs2dmsuruf).
+child[ast_oxc](na4c65ede64197e1a_tkski76a28ln6, callee, 0, na4c65ede64197e1a_cjjk7mdk60e25).
+node[ast_oxc](na4c65ede64197e1a_1kr46de56lii3, numeric_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_1kr46de56lii3, 21).
+attr[ast_oxc](na4c65ede64197e1a_1kr46de56lii3, value, 1).
+child[ast_oxc](na4c65ede64197e1a_tkski76a28ln6, arguments, 0, na4c65ede64197e1a_1kr46de56lii3).
+child[ast_oxc](na4c65ede64197e1a_9pg4412l543ic, init, 0, na4c65ede64197e1a_tkski76a28ln6).
+child[ast_oxc](na4c65ede64197e1a_tqhhvsek54c2e, declarations, 0, na4c65ede64197e1a_9pg4412l543ic).
+child[ast_oxc](na4c65ede64197e1a_qdb3l4a8vb4lc, statements, 1, na4c65ede64197e1a_tqhhvsek54c2e).
+node[ast_oxc](na4c65ede64197e1a_34b7on0la657b, expression_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_34b7on0la657b, 22).
+node[ast_oxc](na4c65ede64197e1a_dh8uomvvg6hre, call_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_dh8uomvvg6hre, 22).
+attr[ast_oxc](na4c65ede64197e1a_dh8uomvvg6hre, optional, false).
+node[ast_oxc](na4c65ede64197e1a_ahdhja9ogkh01, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_ahdhja9ogkh01, 22).
+attr[ast_oxc](na4c65ede64197e1a_ahdhja9ogkh01, optional, false).
+node[ast_oxc](na4c65ede64197e1a_a6nkev9lc4tf9, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_a6nkev9lc4tf9, 22).
+attr[ast_oxc](na4c65ede64197e1a_a6nkev9lc4tf9, name, "fs").
+child[ast_oxc](na4c65ede64197e1a_ahdhja9ogkh01, object, 0, na4c65ede64197e1a_a6nkev9lc4tf9).
+node[ast_oxc](na4c65ede64197e1a_66qp00dh6sek, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_66qp00dh6sek, 22).
+attr[ast_oxc](na4c65ede64197e1a_66qp00dh6sek, name, "readSync").
+child[ast_oxc](na4c65ede64197e1a_ahdhja9ogkh01, property, 0, na4c65ede64197e1a_66qp00dh6sek).
+child[ast_oxc](na4c65ede64197e1a_dh8uomvvg6hre, callee, 0, na4c65ede64197e1a_ahdhja9ogkh01).
+node[ast_oxc](na4c65ede64197e1a_ghs2ulnv1htv1, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_ghs2ulnv1htv1, 22).
+attr[ast_oxc](na4c65ede64197e1a_ghs2ulnv1htv1, name, "fd").
+child[ast_oxc](na4c65ede64197e1a_dh8uomvvg6hre, arguments, 0, na4c65ede64197e1a_ghs2ulnv1htv1).
+node[ast_oxc](na4c65ede64197e1a_7202dcg9qi74e, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_7202dcg9qi74e, 22).
+attr[ast_oxc](na4c65ede64197e1a_7202dcg9qi74e, name, "buf").
+child[ast_oxc](na4c65ede64197e1a_dh8uomvvg6hre, arguments, 1, na4c65ede64197e1a_7202dcg9qi74e).
+child[ast_oxc](na4c65ede64197e1a_34b7on0la657b, expression, 0, na4c65ede64197e1a_dh8uomvvg6hre).
+child[ast_oxc](na4c65ede64197e1a_qdb3l4a8vb4lc, statements, 2, na4c65ede64197e1a_34b7on0la657b).
+node[ast_oxc](na4c65ede64197e1a_gdplkqfkhtt41, return_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_gdplkqfkhtt41, 23).
+node[ast_oxc](na4c65ede64197e1a_ueq0oh44ilq7b, computed_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_ueq0oh44ilq7b, 23).
+attr[ast_oxc](na4c65ede64197e1a_ueq0oh44ilq7b, optional, false).
+node[ast_oxc](na4c65ede64197e1a_066lk3m392vvc, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_066lk3m392vvc, 23).
+attr[ast_oxc](na4c65ede64197e1a_066lk3m392vvc, name, "buf").
+child[ast_oxc](na4c65ede64197e1a_ueq0oh44ilq7b, object, 0, na4c65ede64197e1a_066lk3m392vvc).
+node[ast_oxc](na4c65ede64197e1a_phjbnim3focmb, numeric_literal, "server.js").
+line[ast_oxc](na4c65ede64197e1a_phjbnim3focmb, 23).
+attr[ast_oxc](na4c65ede64197e1a_phjbnim3focmb, value, 0).
+child[ast_oxc](na4c65ede64197e1a_ueq0oh44ilq7b, expression, 0, na4c65ede64197e1a_phjbnim3focmb).
+child[ast_oxc](na4c65ede64197e1a_gdplkqfkhtt41, argument, 0, na4c65ede64197e1a_ueq0oh44ilq7b).
+child[ast_oxc](na4c65ede64197e1a_qdb3l4a8vb4lc, statements, 3, na4c65ede64197e1a_gdplkqfkhtt41).
+child[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, body, 0, na4c65ede64197e1a_qdb3l4a8vb4lc).
+attr[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, type, "FunctionDeclaration").
+attr[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, generator, false).
+attr[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, async, false).
+attr[ast_oxc](na4c65ede64197e1a_t5s92entlmpj1, declare, false).
+child[ast_oxc](na4c65ede64197e1a_root, body, 7, na4c65ede64197e1a_t5s92entlmpj1).
+node[ast_oxc](na4c65ede64197e1a_7o3bvoadlf1g5, expression_statement, "server.js").
+line[ast_oxc](na4c65ede64197e1a_7o3bvoadlf1g5, 26).
+node[ast_oxc](na4c65ede64197e1a_t99gmfdfr3rl9, assignment_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_t99gmfdfr3rl9, 26).
+attr[ast_oxc](na4c65ede64197e1a_t99gmfdfr3rl9, operator, "Assign").
+node[ast_oxc](na4c65ede64197e1a_qf5oglgj839bd, static_member_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_qf5oglgj839bd, 26).
+attr[ast_oxc](na4c65ede64197e1a_qf5oglgj839bd, optional, false).
+node[ast_oxc](na4c65ede64197e1a_kk32kis13uq3d, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_kk32kis13uq3d, 26).
+attr[ast_oxc](na4c65ede64197e1a_kk32kis13uq3d, name, "module").
+child[ast_oxc](na4c65ede64197e1a_qf5oglgj839bd, object, 0, na4c65ede64197e1a_kk32kis13uq3d).
+node[ast_oxc](na4c65ede64197e1a_506q0clis19v8, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_506q0clis19v8, 26).
+attr[ast_oxc](na4c65ede64197e1a_506q0clis19v8, name, "exports").
+child[ast_oxc](na4c65ede64197e1a_qf5oglgj839bd, property, 0, na4c65ede64197e1a_506q0clis19v8).
+child[ast_oxc](na4c65ede64197e1a_t99gmfdfr3rl9, left, 0, na4c65ede64197e1a_qf5oglgj839bd).
+node[ast_oxc](na4c65ede64197e1a_gei8tcj6v61u8, object_expression, "server.js").
+line[ast_oxc](na4c65ede64197e1a_gei8tcj6v61u8, 26).
+node[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, object_property, "server.js").
+line[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, 26).
+attr[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, kind, "Init").
+attr[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, method, false).
+attr[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, computed, false).
+node[ast_oxc](na4c65ede64197e1a_01sgto7e9c78, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_01sgto7e9c78, 26).
+attr[ast_oxc](na4c65ede64197e1a_01sgto7e9c78, name, "appendLine").
+child[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, key, 0, na4c65ede64197e1a_01sgto7e9c78).
+node[ast_oxc](na4c65ede64197e1a_ab8qt6q6h1lkb, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_ab8qt6q6h1lkb, 26).
+attr[ast_oxc](na4c65ede64197e1a_ab8qt6q6h1lkb, name, "appendLine").
+child[ast_oxc](na4c65ede64197e1a_mpintvg4cb2h1, value, 0, na4c65ede64197e1a_ab8qt6q6h1lkb).
+child[ast_oxc](na4c65ede64197e1a_gei8tcj6v61u8, properties, 0, na4c65ede64197e1a_mpintvg4cb2h1).
+node[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, object_property, "server.js").
+line[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, 26).
+attr[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, kind, "Init").
+attr[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, method, false).
+attr[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, computed, false).
+node[ast_oxc](na4c65ede64197e1a_0drfj1170rksf, identifier_name, "server.js").
+line[ast_oxc](na4c65ede64197e1a_0drfj1170rksf, 26).
+attr[ast_oxc](na4c65ede64197e1a_0drfj1170rksf, name, "firstByte").
+child[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, key, 0, na4c65ede64197e1a_0drfj1170rksf).
+node[ast_oxc](na4c65ede64197e1a_4lhj3o8lqc5md, identifier_reference, "server.js").
+line[ast_oxc](na4c65ede64197e1a_4lhj3o8lqc5md, 26).
+attr[ast_oxc](na4c65ede64197e1a_4lhj3o8lqc5md, name, "firstByte").
+child[ast_oxc](na4c65ede64197e1a_hqq62r7vfo53, value, 0, na4c65ede64197e1a_4lhj3o8lqc5md).
+child[ast_oxc](na4c65ede64197e1a_gei8tcj6v61u8, properties, 1, na4c65ede64197e1a_hqq62r7vfo53).
+child[ast_oxc](na4c65ede64197e1a_t99gmfdfr3rl9, right, 0, na4c65ede64197e1a_gei8tcj6v61u8).
+child[ast_oxc](na4c65ede64197e1a_7o3bvoadlf1g5, expression, 0, na4c65ede64197e1a_t99gmfdfr3rl9).
+child[ast_oxc](na4c65ede64197e1a_root, body, 8, na4c65ede64197e1a_7o3bvoadlf1g5).
+file[ast_oxc](na4c65ede64197e1a_root, "server.js").
+has_file[fs](".", "server.js").
+str_segs[code]("http", 1).
+str_char0[code]("http", "h").
+str_seg[code]("http", 0, "http").
+str_segs[code]("fs", 1).
+str_char0[code]("fs", "f").
+str_seg[code]("fs", 0, "fs").
+str_segs[code]("child_process", 1).
+str_char0[code]("child_process", "c").
+str_seg[code]("child_process", 0, "child_process").
+str_segs[code]("./convert.js", 2).
+str_char0[code]("./convert.js", ".").
+str_seg[code]("./convert.js", 0, ".").
+str_seg[code]("./convert.js", 1, "convert.js").
+str_segs[code]("message", 1).
+str_char0[code]("message", "m").
+str_seg[code]("message", 0, "message").
+str_segs[code]("tick", 1).
+str_char0[code]("tick", "t").
+str_seg[code]("tick", 0, "tick").
+str_segs[code]("a", 1).
+str_char0[code]("a", "a").
+str_seg[code]("a", 0, "a").
+str_segs[code]("r", 1).
+str_char0[code]("r", "r").
+str_seg[code]("r", 0, "r").

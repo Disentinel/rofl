@@ -912,6 +912,9 @@ check[checks]("facts/goldens.rofl", "intents_sql", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "join_through_constants", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
+check[checks]("facts/goldens.rofl", "lifecycle_clean", world).
+check[checks]("facts/goldens.rofl", "lifecycle_forgetful", world).
+check[checks]("facts/goldens.rofl", "lifecycle_leaky", world).
 check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).

@@ -3396,6 +3396,9 @@ work(w_lifecycle_world,
 work_state(w_lifecycle_world, open).
 work_needs(w_lifecycle_world, w_l2_roles).
 work_needs(w_lifecycle_world, w_js_model_on_roles).
+-- 2026-11-05: the first half is in: use after death and leaks over the host's resources, models/lang/js/lifecycle.rofl,
+-- worlds lifecycle_leaky / lifecycle_clean / lifecycle_forgetful (f_the_lifecycle_world_answers_use_after_death_and_leaks).
+-- Open: the derived operation words against their old relations.
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").

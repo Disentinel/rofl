@@ -1,0 +1,6 @@
+-- models/lang/js/fixtures/lifecycle/leaky/server.js: no stop place, a fork per request, a write after close, an fd never closed
+lc_expect(used_after_death(fd, "server.js", 14, 15, 16)).
+lc_expect(leaks(child, accumulates, "server.js", 6)).
+lc_expect(leaks(fd, once, "server.js", 20)).
+lc_expect(no_shutdown(interval, "server.js", 11)).
+lc_expect(no_shutdown(server, "server.js", 5)).

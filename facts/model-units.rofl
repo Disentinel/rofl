@@ -920,6 +920,7 @@ unit_concludes("rules/js-host.rofl", builtin_member).
 unit_concludes("rules/js-host.rofl", host_import_unknown).
 unit_concludes("rules/js-host.rofl", host_member_call).
 unit_concludes("rules/js-host.rofl", host_global_call).
+unit_concludes("rules/js-host.rofl", may_be_node).
 unit_concludes("rules/js-host.rofl", host_module_call).
 unit_concludes("rules/js-host.rofl", host_site).
 unit_concludes("rules/js-host.rofl", host_site_at).

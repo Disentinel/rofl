@@ -1,0 +1,78 @@
+-- lifecycle-host.rofl — WHAT THE HOST BEARS AND KILLS, for the world [lifecycle] (models/lang/js/lifecycle.rofl).
+-- A resource is born by a call of the host and dies by another call: with it as an argument, or as the
+-- receiver of a method. Origin and Key are host_site's: a module's canonical specifier and member, or a
+-- global's name and `itself`.
+
+edb(lc_born_by).        -- lc_born_by(Origin, Key, Kind): the call's value is a fresh resource of Kind
+edb(lc_killed_by_arg).  -- lc_killed_by_arg(Origin, Key, Kind, I): the call kills its I-th argument
+edb(lc_killed_by_method). -- lc_killed_by_method(Kind, Method)
+edb(lc_used_by_arg).    -- lc_used_by_arg(Origin, Key, Kind, I): the call needs its I-th argument alive
+edb(lc_used_by_method). -- lc_used_by_method(Kind, Method)
+edb(lc_keeps_alive).    -- lc_keeps_alive(Kind): while one lives the process does not end by itself
+edb(lc_stop_signal).    -- lc_stop_signal(Name): process.on(Name, F) makes F a place where the process stops
+edb(lc_repeats_arg).    -- lc_repeats_arg(Origin, Key, I): the function given as the I-th argument runs again and again
+edb(lc_repeats_method). -- lc_repeats_method(Method, I): likewise for a method of any receiver
+
+lc_born_by("node:fs", "openSync", fd).
+lc_born_by("node:fs", "createReadStream", stream).
+lc_born_by("node:fs", "createWriteStream", stream).
+lc_born_by("node:fs", "watch", watcher).
+lc_born_by("node:http", "createServer", server).
+lc_born_by("node:https", "createServer", server).
+lc_born_by("node:net", "createServer", server).
+lc_born_by("node:net", "connect", socket).
+lc_born_by("node:net", "createConnection", socket).
+lc_born_by("node:child_process", "fork", child).
+lc_born_by("node:child_process", "spawn", child).
+lc_born_by("node:child_process", "exec", child).
+lc_born_by("node:child_process", "execFile", child).
+lc_born_by("setInterval", itself, interval).
+lc_born_by("node:timers", "setInterval", interval).
+
+lc_killed_by_arg("node:fs", "closeSync", fd, 0).
+lc_killed_by_arg("node:fs", "close", fd, 0).
+lc_killed_by_arg("clearInterval", itself, interval, 0).
+lc_killed_by_arg("node:timers", "clearInterval", interval, 0).
+
+lc_killed_by_method(server, "close").
+lc_killed_by_method(socket, "destroy").
+lc_killed_by_method(socket, "end").
+lc_killed_by_method(stream, "close").
+lc_killed_by_method(stream, "destroy").
+lc_killed_by_method(watcher, "close").
+lc_killed_by_method(child, "kill").
+lc_killed_by_method(interval, "close").
+
+lc_used_by_arg("node:fs", "readSync", fd, 0).
+lc_used_by_arg("node:fs", "writeSync", fd, 0).
+lc_used_by_arg("node:fs", "fstatSync", fd, 0).
+lc_used_by_arg("node:fs", "fsyncSync", fd, 0).
+lc_used_by_arg("node:fs", "ftruncateSync", fd, 0).
+lc_used_by_arg("node:fs", "read", fd, 0).
+lc_used_by_arg("node:fs", "write", fd, 0).
+
+lc_used_by_method(stream, "write").
+lc_used_by_method(stream, "read").
+lc_used_by_method(stream, "pipe").
+lc_used_by_method(socket, "write").
+lc_used_by_method(server, "listen").
+lc_used_by_method(child, "send").
+
+lc_keeps_alive(server).
+lc_keeps_alive(socket).
+lc_keeps_alive(child).
+lc_keeps_alive(interval).
+lc_keeps_alive(watcher).
+
+lc_stop_signal("SIGTERM").
+lc_stop_signal("SIGINT").
+lc_stop_signal("SIGHUP").
+
+lc_repeats_arg("node:http", "createServer", 0).
+lc_repeats_arg("node:https", "createServer", 0).
+lc_repeats_arg("node:net", "createServer", 0).
+lc_repeats_arg("setInterval", itself, 0).
+lc_repeats_arg("node:timers", "setInterval", 0).
+lc_repeats_method("on", 1).
+lc_repeats_method("addListener", 1).
+lc_repeats_method("addEventListener", 1).
