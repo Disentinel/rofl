@@ -49,7 +49,6 @@ callee_shape(e_super,       s_super).
 callee_shape(e_passes,      s_passes).
 callee_shape(e_call,        s_call_result).
 callee_shape(e_new,         s_new_result).
-callee_shape(e_import,      s_dynamic_import).
 callee_shape(e_sequence,    s_sequence).
 callee_shape(e_conditional, s_conditional).
 callee_shape(e_yield,       s_yield_result).
@@ -58,7 +57,7 @@ callee_shape(e_parenthesized, s_parenthesized).
 -- What an expression IS, by its roles and not by the grammar's kind. A wrapper with no behaviour (`passes`: a
 -- parenthesis, `as`, `!`, `satisfies`, an assertion) is `e_passes`; an expression that gives one of its operands
 -- is a sequence, and one that gives two is a conditional or, with the logical role, a logical.
--- `e_import` and `e_parenthesized` have no rule: an import() has no callee row and no parenthesis is kept.
+-- `e_parenthesized` has no rule: no parenthesis is kept. An import() has no callee row: it is its own shape.
 expr_class[code](N, e_name)        :- ref[value](N, _).
 expr_class[code](N, e_fn)          :- fn_node[code](N), not hoisted[value](N, _), not member[value](N, _, _).
 expr_class[code](N, e_super)       :- super[value](N).
@@ -165,6 +164,7 @@ computed_key_template[code](C) :- computed_member[code](C, N), member_expr[value
 
 
 shape_known[code](C, S) :- callee_class[code](C, E), callee_shape(E, S).
+shape_known[code](C, s_dynamic_import) :- call_site[code](C, _), import_site[code](C, dynamic_import).
 shape_known[code](C, s_computed_literal_key) :- computed_member[code](C, _),
                                                 computed_key_static[code](C).
 shape_known[code](C, s_computed_template_key) :- computed_key_template[code](C).
@@ -410,6 +410,7 @@ frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_si
 -- `not_modelled`, which every other gate stays green through.
 shape_vocab[audit](S) :- callee_shape(_, S).
 shape_vocab[audit](S) :- member_shape(_, S).
+shape_vocab[audit](s_dynamic_import).
 shape_vocab[audit](s_computed_literal_key).
 shape_vocab[audit](s_computed_dynamic_key).
 shape_vocab[audit](s_computed_template_key).

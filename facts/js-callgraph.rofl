@@ -437,17 +437,11 @@ handled(js, new_expression, s_new_result, callgraph, r_call_edge).
 -- frame — and the site that stays is one whose whole chain has no explicit
 -- constructor at all. There is no node for the function it calls.
 shape_because(js, s_super,                 callgraph, no_source_target).
--- UNREACHABLE UNDER THIS PARSER, waived rather than left as backlog and
--- measured rather than assumed: `s_dynamic_import` is the shape of a callee
--- whose KIND is `import` (babel's `Import` node), and scanners/js_ast.ts parses
--- with `plugins: ['typescript']`, under which `import(p)` arrives as a single
--- `import_expression` and never as a call whose callee is `Import`. Over the
--- whole corpus `callee_kind` takes ten values and `import` is not among them,
--- so no corpus this scanner produces can fill the cell. The CONSTRUCT is not
--- unmodelled — `import_expression x callgraph` carries `runtime_dependent` at
--- kind level, which is the honest verdict about which module a computed
--- specifier loads. This is `s_parenthesized` again: `absent` means unreachable
--- here, not undone, and only one of the two is closable.
+-- MODELLED 2026-11-05: an `import(p)` is a call that module_expr or module_ref
+-- gives a module, and its shape is `s_dynamic_import` whatever the parser calls
+-- it. It has no function to reach: the target is a module, so the residue is the
+-- one `super()` has, no source target.
+shape_because(js, s_dynamic_import,        callgraph, no_source_target).
 
 -- the receiver is a host literal — see array_expression above
 shape_because(js, s_member_on_array,       callgraph, out_of_scope).

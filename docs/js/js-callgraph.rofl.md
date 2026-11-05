@@ -36,7 +36,7 @@ Reads:
 - from js-model, in the audit: [verdict](js-model.rofl.md#verdict)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-model, in the main: [shape_of](js-model.rofl.md#shape_of), [unknown_type](js-model.rofl.md#unknown_type)
-- from js-modules: [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
+- from js-modules: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
@@ -194,7 +194,6 @@ A call
 | `e_passes` | `s_passes` |
 | `e_call` | `s_call_result` |
 | `e_new` | `s_new_result` |
-| `e_import` | `s_dynamic_import` |
 | `e_sequence` | `s_sequence` |
 | `e_conditional` | `s_conditional` |
 | `e_yield` | `s_yield_result` |
@@ -207,7 +206,7 @@ Declared as facts:
 > What an expression IS, by its roles and not by the grammar's kind. A wrapper with no behaviour (`passes`: a
 > parenthesis, `as`, `!`, `satisfies`, an assertion) is `e_passes`; an expression that gives one of its operands
 > is a sequence, and one that gives two is a conditional or, with the logical role, a logical.
-> `e_import` and `e_parenthesized` have no rule: an import() has no callee row and no parenthesis is kept.
+> `e_parenthesized` has no rule: no parenthesis is kept. An import() has no callee row: it is its own shape.
 
 <a id="expr_class"></a>A node N is of the class E either:
 
@@ -385,19 +384,23 @@ Declared as facts:
 
 1. if C [has the callee class](#callee_class) E and [`callee_shape`](#callee_shape)(E, S);
 2. if all of:
+   - C [is a call site](#call_site) in some file;
+   - C [is an import site](js-modules.rofl.md#import_site) of `dynamic_import`;
+   - S is `s_dynamic_import`;
+3. if all of:
    - C [calls through a computed member](#computed_member) some member access;
    - C [has a static computed key](#computed_key_static);
    - S is `s_computed_literal_key`;
-3. if C [has a template computed key](#computed_key_template) and S is `s_computed_template_key`;
-4. if all of:
+4. if C [has a template computed key](#computed_key_template) and S is `s_computed_template_key`;
+5. if all of:
    - C [calls through a computed member](#computed_member) some member access;
    - S is `s_computed_dynamic_key`;
    - C neither [has a static computed key](#computed_key_static) nor [has a template computed key](#computed_key_template);
-5. if all of:
+6. if all of:
    - C [calls through a static member](#static_member) some member access;
    - C [calls through an optional member](#optional_member);
    - S is `s_optional_member`;
-6. if all of:
+7. if all of:
    - C [calls through a static member](#static_member) some member access;
    - [the receiver class](#obj_class) of C is a shape Cl;
    - [`member_shape`](#member_shape)(Cl, S);
@@ -866,7 +869,7 @@ In the audit:
 1. if [`callee_shape`](#callee_shape)(something, S);
 2. if [`member_shape`](#member_shape)(something, S).
 
-`shape_vocab` includes `s_computed_literal_key`, `s_computed_dynamic_key`, `s_computed_template_key`, `s_optional_member`, `s_unclassified`.
+`shape_vocab` includes `s_dynamic_import`, `s_computed_literal_key`, `s_computed_dynamic_key`, `s_computed_template_key`, `s_optional_member`, `s_unclassified`.
 
 <a id="resolved_shape"></a>A shape resolves somewhere if a call C [resolves to](#resolves) some function and C [has the shape](#shape) it.
 
