@@ -2,96 +2,77 @@
 -- host gives them (rust/tools/oxc_scan and the host's path and string facts). Regenerate when the scanner moves.
 node[ast_oxc](nf85e80d35f2c16b6_root, program, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_root, 1).
-start[ast_oxc](nf85e80d35f2c16b6_root, 0).
 node[ast_oxc](nf85e80d35f2c16b6_45fjcu2quek02, import_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_45fjcu2quek02, 1).
-start[ast_oxc](nf85e80d35f2c16b6_45fjcu2quek02, 0).
 attr[ast_oxc](nf85e80d35f2c16b6_45fjcu2quek02, import_kind, "Value").
 node[ast_oxc](nf85e80d35f2c16b6_pu5rlc1jd5ctb, import_namespace_specifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_pu5rlc1jd5ctb, 1).
-start[ast_oxc](nf85e80d35f2c16b6_pu5rlc1jd5ctb, 7).
 node[ast_oxc](nf85e80d35f2c16b6_m69hg7cdhklsf, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_m69hg7cdhklsf, 1).
-start[ast_oxc](nf85e80d35f2c16b6_m69hg7cdhklsf, 12).
 attr[ast_oxc](nf85e80d35f2c16b6_m69hg7cdhklsf, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_pu5rlc1jd5ctb, local, 0, nf85e80d35f2c16b6_m69hg7cdhklsf).
 child[ast_oxc](nf85e80d35f2c16b6_45fjcu2quek02, specifiers, 0, nf85e80d35f2c16b6_pu5rlc1jd5ctb).
 node[ast_oxc](nf85e80d35f2c16b6_vbk177kpasstb, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vbk177kpasstb, 1).
-start[ast_oxc](nf85e80d35f2c16b6_vbk177kpasstb, 22).
 attr[ast_oxc](nf85e80d35f2c16b6_vbk177kpasstb, value, "path").
 attr[ast_oxc](nf85e80d35f2c16b6_vbk177kpasstb, raw, "'path'").
 child[ast_oxc](nf85e80d35f2c16b6_45fjcu2quek02, source, 0, nf85e80d35f2c16b6_vbk177kpasstb).
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 0, nf85e80d35f2c16b6_45fjcu2quek02).
 node[ast_oxc](nf85e80d35f2c16b6_c98hqm2pg72t7, import_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_c98hqm2pg72t7, 2).
-start[ast_oxc](nf85e80d35f2c16b6_c98hqm2pg72t7, 30).
 attr[ast_oxc](nf85e80d35f2c16b6_c98hqm2pg72t7, import_kind, "Value").
 node[ast_oxc](nf85e80d35f2c16b6_2q86hs9a0l172, import_specifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2q86hs9a0l172, 2).
-start[ast_oxc](nf85e80d35f2c16b6_2q86hs9a0l172, 39).
 attr[ast_oxc](nf85e80d35f2c16b6_2q86hs9a0l172, import_kind, "Value").
 node[ast_oxc](nf85e80d35f2c16b6_qurhp7ts1vd0b, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_qurhp7ts1vd0b, 2).
-start[ast_oxc](nf85e80d35f2c16b6_qurhp7ts1vd0b, 39).
 attr[ast_oxc](nf85e80d35f2c16b6_qurhp7ts1vd0b, name, "dirname").
 child[ast_oxc](nf85e80d35f2c16b6_2q86hs9a0l172, imported, 0, nf85e80d35f2c16b6_qurhp7ts1vd0b).
 node[ast_oxc](nf85e80d35f2c16b6_14qo1n5t78a54, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_14qo1n5t78a54, 2).
-start[ast_oxc](nf85e80d35f2c16b6_14qo1n5t78a54, 50).
 attr[ast_oxc](nf85e80d35f2c16b6_14qo1n5t78a54, name, "dir").
 child[ast_oxc](nf85e80d35f2c16b6_2q86hs9a0l172, local, 0, nf85e80d35f2c16b6_14qo1n5t78a54).
 child[ast_oxc](nf85e80d35f2c16b6_c98hqm2pg72t7, specifiers, 0, nf85e80d35f2c16b6_2q86hs9a0l172).
 node[ast_oxc](nf85e80d35f2c16b6_e6ro9srdf3mm3, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_e6ro9srdf3mm3, 2).
-start[ast_oxc](nf85e80d35f2c16b6_e6ro9srdf3mm3, 61).
 attr[ast_oxc](nf85e80d35f2c16b6_e6ro9srdf3mm3, value, "node:path").
 attr[ast_oxc](nf85e80d35f2c16b6_e6ro9srdf3mm3, raw, "'node:path'").
 child[ast_oxc](nf85e80d35f2c16b6_c98hqm2pg72t7, source, 0, nf85e80d35f2c16b6_e6ro9srdf3mm3).
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 1, nf85e80d35f2c16b6_c98hqm2pg72t7).
 node[ast_oxc](nf85e80d35f2c16b6_rdftum1p2nqr8, import_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rdftum1p2nqr8, 3).
-start[ast_oxc](nf85e80d35f2c16b6_rdftum1p2nqr8, 74).
 attr[ast_oxc](nf85e80d35f2c16b6_rdftum1p2nqr8, import_kind, "Value").
 node[ast_oxc](nf85e80d35f2c16b6_0i2e811rrkc93, import_specifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0i2e811rrkc93, 3).
-start[ast_oxc](nf85e80d35f2c16b6_0i2e811rrkc93, 83).
 attr[ast_oxc](nf85e80d35f2c16b6_0i2e811rrkc93, import_kind, "Value").
 node[ast_oxc](nf85e80d35f2c16b6_9rqbuljt0s953, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9rqbuljt0s953, 3).
-start[ast_oxc](nf85e80d35f2c16b6_9rqbuljt0s953, 83).
 attr[ast_oxc](nf85e80d35f2c16b6_9rqbuljt0s953, name, "posix").
 child[ast_oxc](nf85e80d35f2c16b6_0i2e811rrkc93, imported, 0, nf85e80d35f2c16b6_9rqbuljt0s953).
 node[ast_oxc](nf85e80d35f2c16b6_g7pn82tva5kl, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_g7pn82tva5kl, 3).
-start[ast_oxc](nf85e80d35f2c16b6_g7pn82tva5kl, 83).
 attr[ast_oxc](nf85e80d35f2c16b6_g7pn82tva5kl, name, "posix").
 child[ast_oxc](nf85e80d35f2c16b6_0i2e811rrkc93, local, 0, nf85e80d35f2c16b6_g7pn82tva5kl).
 child[ast_oxc](nf85e80d35f2c16b6_rdftum1p2nqr8, specifiers, 0, nf85e80d35f2c16b6_0i2e811rrkc93).
 node[ast_oxc](nf85e80d35f2c16b6_ufumvj99inh0c, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ufumvj99inh0c, 3).
-start[ast_oxc](nf85e80d35f2c16b6_ufumvj99inh0c, 96).
 attr[ast_oxc](nf85e80d35f2c16b6_ufumvj99inh0c, value, "./mypath.js").
 attr[ast_oxc](nf85e80d35f2c16b6_ufumvj99inh0c, raw, "'./mypath.js'").
 child[ast_oxc](nf85e80d35f2c16b6_rdftum1p2nqr8, source, 0, nf85e80d35f2c16b6_ufumvj99inh0c).
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 2, nf85e80d35f2c16b6_rdftum1p2nqr8).
 node[ast_oxc](nf85e80d35f2c16b6_t8lehrc1no5h9, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_t8lehrc1no5h9, 5).
-start[ast_oxc](nf85e80d35f2c16b6_t8lehrc1no5h9, 112).
 attr[ast_oxc](nf85e80d35f2c16b6_t8lehrc1no5h9, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_t8lehrc1no5h9, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_4k6ns1vsgfcte, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4k6ns1vsgfcte, 5).
-start[ast_oxc](nf85e80d35f2c16b6_4k6ns1vsgfcte, 118).
 attr[ast_oxc](nf85e80d35f2c16b6_4k6ns1vsgfcte, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_et5bammlajcqc, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_et5bammlajcqc, 5).
-start[ast_oxc](nf85e80d35f2c16b6_et5bammlajcqc, 118).
 attr[ast_oxc](nf85e80d35f2c16b6_et5bammlajcqc, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_4k6ns1vsgfcte, id, 0, nf85e80d35f2c16b6_et5bammlajcqc).
 node[ast_oxc](nf85e80d35f2c16b6_2fjhti4icos95, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2fjhti4icos95, 5).
-start[ast_oxc](nf85e80d35f2c16b6_2fjhti4icos95, 125).
 attr[ast_oxc](nf85e80d35f2c16b6_2fjhti4icos95, value, "/srv").
 attr[ast_oxc](nf85e80d35f2c16b6_2fjhti4icos95, raw, "'/srv'").
 child[ast_oxc](nf85e80d35f2c16b6_4k6ns1vsgfcte, init, 0, nf85e80d35f2c16b6_2fjhti4icos95).
@@ -99,21 +80,17 @@ child[ast_oxc](nf85e80d35f2c16b6_t8lehrc1no5h9, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 3, nf85e80d35f2c16b6_t8lehrc1no5h9).
 node[ast_oxc](nf85e80d35f2c16b6_jn5qpamc4i96e, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_jn5qpamc4i96e, 6).
-start[ast_oxc](nf85e80d35f2c16b6_jn5qpamc4i96e, 133).
 attr[ast_oxc](nf85e80d35f2c16b6_jn5qpamc4i96e, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_jn5qpamc4i96e, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_oqlelvled0uu8, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_oqlelvled0uu8, 6).
-start[ast_oxc](nf85e80d35f2c16b6_oqlelvled0uu8, 139).
 attr[ast_oxc](nf85e80d35f2c16b6_oqlelvled0uu8, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_nbr8tssjr87o8, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_nbr8tssjr87o8, 6).
-start[ast_oxc](nf85e80d35f2c16b6_nbr8tssjr87o8, 139).
 attr[ast_oxc](nf85e80d35f2c16b6_nbr8tssjr87o8, name, "n").
 child[ast_oxc](nf85e80d35f2c16b6_oqlelvled0uu8, id, 0, nf85e80d35f2c16b6_nbr8tssjr87o8).
 node[ast_oxc](nf85e80d35f2c16b6_9s697otqheh84, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9s697otqheh84, 6).
-start[ast_oxc](nf85e80d35f2c16b6_9s697otqheh84, 143).
 attr[ast_oxc](nf85e80d35f2c16b6_9s697otqheh84, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_9s697otqheh84, raw, "7").
 attr[ast_oxc](nf85e80d35f2c16b6_9s697otqheh84, value, 7).
@@ -122,50 +99,40 @@ child[ast_oxc](nf85e80d35f2c16b6_jn5qpamc4i96e, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 4, nf85e80d35f2c16b6_jn5qpamc4i96e).
 node[ast_oxc](nf85e80d35f2c16b6_kja1brarjcgq9, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kja1brarjcgq9, 7).
-start[ast_oxc](nf85e80d35f2c16b6_kja1brarjcgq9, 146).
 attr[ast_oxc](nf85e80d35f2c16b6_kja1brarjcgq9, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_kja1brarjcgq9, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_44ia2mlknvpsd, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_44ia2mlknvpsd, 7).
-start[ast_oxc](nf85e80d35f2c16b6_44ia2mlknvpsd, 152).
 attr[ast_oxc](nf85e80d35f2c16b6_44ia2mlknvpsd, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_m8jrp7r3vtk56, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_m8jrp7r3vtk56, 7).
-start[ast_oxc](nf85e80d35f2c16b6_m8jrp7r3vtk56, 152).
 attr[ast_oxc](nf85e80d35f2c16b6_m8jrp7r3vtk56, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_44ia2mlknvpsd, id, 0, nf85e80d35f2c16b6_m8jrp7r3vtk56).
 node[ast_oxc](nf85e80d35f2c16b6_8qh2m90eq0ub3, conditional_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8qh2m90eq0ub3, 7).
-start[ast_oxc](nf85e80d35f2c16b6_8qh2m90eq0ub3, 156).
 node[ast_oxc](nf85e80d35f2c16b6_3hmctdvto6vld, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3hmctdvto6vld, 7).
-start[ast_oxc](nf85e80d35f2c16b6_3hmctdvto6vld, 156).
 attr[ast_oxc](nf85e80d35f2c16b6_3hmctdvto6vld, operator, "GreaterThan").
 node[ast_oxc](nf85e80d35f2c16b6_b352kb4qe9sj9, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b352kb4qe9sj9, 7).
-start[ast_oxc](nf85e80d35f2c16b6_b352kb4qe9sj9, 156).
 attr[ast_oxc](nf85e80d35f2c16b6_b352kb4qe9sj9, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_b352kb4qe9sj9, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_3jdl6q72d59s9, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3jdl6q72d59s9, 7).
-start[ast_oxc](nf85e80d35f2c16b6_3jdl6q72d59s9, 156).
 attr[ast_oxc](nf85e80d35f2c16b6_3jdl6q72d59s9, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_kh8bras2lo44e, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kh8bras2lo44e, 7).
-start[ast_oxc](nf85e80d35f2c16b6_kh8bras2lo44e, 156).
 attr[ast_oxc](nf85e80d35f2c16b6_kh8bras2lo44e, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_kh8bras2lo44e, name, "Math").
 child[ast_oxc](nf85e80d35f2c16b6_3jdl6q72d59s9, object, 0, nf85e80d35f2c16b6_kh8bras2lo44e).
 node[ast_oxc](nf85e80d35f2c16b6_blvtcnbr83ac6, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_blvtcnbr83ac6, 7).
-start[ast_oxc](nf85e80d35f2c16b6_blvtcnbr83ac6, 161).
 attr[ast_oxc](nf85e80d35f2c16b6_blvtcnbr83ac6, name, "random").
 child[ast_oxc](nf85e80d35f2c16b6_3jdl6q72d59s9, property, 0, nf85e80d35f2c16b6_blvtcnbr83ac6).
 child[ast_oxc](nf85e80d35f2c16b6_b352kb4qe9sj9, callee, 0, nf85e80d35f2c16b6_3jdl6q72d59s9).
 child[ast_oxc](nf85e80d35f2c16b6_3hmctdvto6vld, left, 0, nf85e80d35f2c16b6_b352kb4qe9sj9).
 node[ast_oxc](nf85e80d35f2c16b6_9nmfcqe6f7iu, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9nmfcqe6f7iu, 7).
-start[ast_oxc](nf85e80d35f2c16b6_9nmfcqe6f7iu, 172).
 attr[ast_oxc](nf85e80d35f2c16b6_9nmfcqe6f7iu, base, "Float").
 attr[ast_oxc](nf85e80d35f2c16b6_9nmfcqe6f7iu, raw, "0.5").
 attr[ast_oxc](nf85e80d35f2c16b6_9nmfcqe6f7iu, value, "0.5").
@@ -173,13 +140,11 @@ child[ast_oxc](nf85e80d35f2c16b6_3hmctdvto6vld, right, 0, nf85e80d35f2c16b6_9nmf
 child[ast_oxc](nf85e80d35f2c16b6_8qh2m90eq0ub3, test, 0, nf85e80d35f2c16b6_3hmctdvto6vld).
 node[ast_oxc](nf85e80d35f2c16b6_m9ev2rjs0skba, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_m9ev2rjs0skba, 7).
-start[ast_oxc](nf85e80d35f2c16b6_m9ev2rjs0skba, 178).
 attr[ast_oxc](nf85e80d35f2c16b6_m9ev2rjs0skba, value, "x").
 attr[ast_oxc](nf85e80d35f2c16b6_m9ev2rjs0skba, raw, "'x'").
 child[ast_oxc](nf85e80d35f2c16b6_8qh2m90eq0ub3, consequent, 0, nf85e80d35f2c16b6_m9ev2rjs0skba).
 node[ast_oxc](nf85e80d35f2c16b6_qt1hlnvi61js5, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_qt1hlnvi61js5, 7).
-start[ast_oxc](nf85e80d35f2c16b6_qt1hlnvi61js5, 184).
 attr[ast_oxc](nf85e80d35f2c16b6_qt1hlnvi61js5, value, "y").
 attr[ast_oxc](nf85e80d35f2c16b6_qt1hlnvi61js5, raw, "'y'").
 child[ast_oxc](nf85e80d35f2c16b6_8qh2m90eq0ub3, alternate, 0, nf85e80d35f2c16b6_qt1hlnvi61js5).
@@ -188,41 +153,33 @@ child[ast_oxc](nf85e80d35f2c16b6_kja1brarjcgq9, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 5, nf85e80d35f2c16b6_kja1brarjcgq9).
 node[ast_oxc](nf85e80d35f2c16b6_7gpuqjohcaf43, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_7gpuqjohcaf43, 9).
-start[ast_oxc](nf85e80d35f2c16b6_7gpuqjohcaf43, 190).
 node[ast_oxc](nf85e80d35f2c16b6_rub0ueb6rssna, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rub0ueb6rssna, 9).
-start[ast_oxc](nf85e80d35f2c16b6_rub0ueb6rssna, 197).
 attr[ast_oxc](nf85e80d35f2c16b6_rub0ueb6rssna, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_rub0ueb6rssna, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_j8q47akeqp4j9, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_j8q47akeqp4j9, 9).
-start[ast_oxc](nf85e80d35f2c16b6_j8q47akeqp4j9, 203).
 attr[ast_oxc](nf85e80d35f2c16b6_j8q47akeqp4j9, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_ihns6futvadqc, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ihns6futvadqc, 9).
-start[ast_oxc](nf85e80d35f2c16b6_ihns6futvadqc, 203).
 attr[ast_oxc](nf85e80d35f2c16b6_ihns6futvadqc, name, "template").
 child[ast_oxc](nf85e80d35f2c16b6_j8q47akeqp4j9, id, 0, nf85e80d35f2c16b6_ihns6futvadqc).
 node[ast_oxc](nf85e80d35f2c16b6_3or58pdb9m887, template_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3or58pdb9m887, 9).
-start[ast_oxc](nf85e80d35f2c16b6_3or58pdb9m887, 214).
 node[ast_oxc](nf85e80d35f2c16b6_8h2j8u71uv26b, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8h2j8u71uv26b, 9).
-start[ast_oxc](nf85e80d35f2c16b6_8h2j8u71uv26b, 215).
 attr[ast_oxc](nf85e80d35f2c16b6_8h2j8u71uv26b, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_8h2j8u71uv26b, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_8h2j8u71uv26b, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_3or58pdb9m887, quasis, 0, nf85e80d35f2c16b6_8h2j8u71uv26b).
 node[ast_oxc](nf85e80d35f2c16b6_bhtsjlm4rjhg3, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_bhtsjlm4rjhg3, 9).
-start[ast_oxc](nf85e80d35f2c16b6_bhtsjlm4rjhg3, 222).
 attr[ast_oxc](nf85e80d35f2c16b6_bhtsjlm4rjhg3, tail, true).
 attr[ast_oxc](nf85e80d35f2c16b6_bhtsjlm4rjhg3, value_raw, "/a").
 attr[ast_oxc](nf85e80d35f2c16b6_bhtsjlm4rjhg3, value_cooked, "/a").
 child[ast_oxc](nf85e80d35f2c16b6_3or58pdb9m887, quasis, 1, nf85e80d35f2c16b6_bhtsjlm4rjhg3).
 node[ast_oxc](nf85e80d35f2c16b6_nnekl9g843fib, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_nnekl9g843fib, 9).
-start[ast_oxc](nf85e80d35f2c16b6_nnekl9g843fib, 217).
 attr[ast_oxc](nf85e80d35f2c16b6_nnekl9g843fib, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_nnekl9g843fib, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_3or58pdb9m887, expressions, 0, nf85e80d35f2c16b6_nnekl9g843fib).
@@ -232,34 +189,27 @@ child[ast_oxc](nf85e80d35f2c16b6_7gpuqjohcaf43, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 6, nf85e80d35f2c16b6_7gpuqjohcaf43).
 node[ast_oxc](nf85e80d35f2c16b6_n3lcmmu9bcvff, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n3lcmmu9bcvff, 10).
-start[ast_oxc](nf85e80d35f2c16b6_n3lcmmu9bcvff, 227).
 node[ast_oxc](nf85e80d35f2c16b6_u3ugpoh232iff, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_u3ugpoh232iff, 10).
-start[ast_oxc](nf85e80d35f2c16b6_u3ugpoh232iff, 234).
 attr[ast_oxc](nf85e80d35f2c16b6_u3ugpoh232iff, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_u3ugpoh232iff, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_vm3itdkboci81, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vm3itdkboci81, 10).
-start[ast_oxc](nf85e80d35f2c16b6_vm3itdkboci81, 240).
 attr[ast_oxc](nf85e80d35f2c16b6_vm3itdkboci81, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_vdum9tu8m53o2, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vdum9tu8m53o2, 10).
-start[ast_oxc](nf85e80d35f2c16b6_vdum9tu8m53o2, 240).
 attr[ast_oxc](nf85e80d35f2c16b6_vdum9tu8m53o2, name, "plus").
 child[ast_oxc](nf85e80d35f2c16b6_vm3itdkboci81, id, 0, nf85e80d35f2c16b6_vdum9tu8m53o2).
 node[ast_oxc](nf85e80d35f2c16b6_l22i15sva3qe3, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_l22i15sva3qe3, 10).
-start[ast_oxc](nf85e80d35f2c16b6_l22i15sva3qe3, 247).
 attr[ast_oxc](nf85e80d35f2c16b6_l22i15sva3qe3, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_prfjc016emcd1, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_prfjc016emcd1, 10).
-start[ast_oxc](nf85e80d35f2c16b6_prfjc016emcd1, 247).
 attr[ast_oxc](nf85e80d35f2c16b6_prfjc016emcd1, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_prfjc016emcd1, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_l22i15sva3qe3, left, 0, nf85e80d35f2c16b6_prfjc016emcd1).
 node[ast_oxc](nf85e80d35f2c16b6_k5t9oja8lq1i2, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_k5t9oja8lq1i2, 10).
-start[ast_oxc](nf85e80d35f2c16b6_k5t9oja8lq1i2, 254).
 attr[ast_oxc](nf85e80d35f2c16b6_k5t9oja8lq1i2, value, "/b").
 attr[ast_oxc](nf85e80d35f2c16b6_k5t9oja8lq1i2, raw, "'/b'").
 child[ast_oxc](nf85e80d35f2c16b6_l22i15sva3qe3, right, 0, nf85e80d35f2c16b6_k5t9oja8lq1i2).
@@ -269,35 +219,28 @@ child[ast_oxc](nf85e80d35f2c16b6_n3lcmmu9bcvff, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 7, nf85e80d35f2c16b6_n3lcmmu9bcvff).
 node[ast_oxc](nf85e80d35f2c16b6_kth743vlk6egc, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kth743vlk6egc, 11).
-start[ast_oxc](nf85e80d35f2c16b6_kth743vlk6egc, 260).
 node[ast_oxc](nf85e80d35f2c16b6_0qheq00lnpj2e, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0qheq00lnpj2e, 11).
-start[ast_oxc](nf85e80d35f2c16b6_0qheq00lnpj2e, 267).
 attr[ast_oxc](nf85e80d35f2c16b6_0qheq00lnpj2e, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_0qheq00lnpj2e, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_l3458mpgopcu, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_l3458mpgopcu, 11).
-start[ast_oxc](nf85e80d35f2c16b6_l3458mpgopcu, 273).
 attr[ast_oxc](nf85e80d35f2c16b6_l3458mpgopcu, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_27o09ltco27i7, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_27o09ltco27i7, 11).
-start[ast_oxc](nf85e80d35f2c16b6_27o09ltco27i7, 273).
 attr[ast_oxc](nf85e80d35f2c16b6_27o09ltco27i7, name, "sum").
 child[ast_oxc](nf85e80d35f2c16b6_l3458mpgopcu, id, 0, nf85e80d35f2c16b6_27o09ltco27i7).
 node[ast_oxc](nf85e80d35f2c16b6_peamp2hdnt1g5, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_peamp2hdnt1g5, 11).
-start[ast_oxc](nf85e80d35f2c16b6_peamp2hdnt1g5, 279).
 attr[ast_oxc](nf85e80d35f2c16b6_peamp2hdnt1g5, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_8co6j78qejnt, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8co6j78qejnt, 11).
-start[ast_oxc](nf85e80d35f2c16b6_8co6j78qejnt, 279).
 attr[ast_oxc](nf85e80d35f2c16b6_8co6j78qejnt, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_8co6j78qejnt, raw, "1").
 attr[ast_oxc](nf85e80d35f2c16b6_8co6j78qejnt, value, 1).
 child[ast_oxc](nf85e80d35f2c16b6_peamp2hdnt1g5, left, 0, nf85e80d35f2c16b6_8co6j78qejnt).
 node[ast_oxc](nf85e80d35f2c16b6_855h3buq4lfec, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_855h3buq4lfec, 11).
-start[ast_oxc](nf85e80d35f2c16b6_855h3buq4lfec, 283).
 attr[ast_oxc](nf85e80d35f2c16b6_855h3buq4lfec, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_855h3buq4lfec, raw, "2").
 attr[ast_oxc](nf85e80d35f2c16b6_855h3buq4lfec, value, 2).
@@ -308,34 +251,27 @@ child[ast_oxc](nf85e80d35f2c16b6_kth743vlk6egc, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 8, nf85e80d35f2c16b6_kth743vlk6egc).
 node[ast_oxc](nf85e80d35f2c16b6_k6d47d6ve7sk, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_k6d47d6ve7sk, 12).
-start[ast_oxc](nf85e80d35f2c16b6_k6d47d6ve7sk, 286).
 node[ast_oxc](nf85e80d35f2c16b6_bke91gg8s10m7, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_bke91gg8s10m7, 12).
-start[ast_oxc](nf85e80d35f2c16b6_bke91gg8s10m7, 293).
 attr[ast_oxc](nf85e80d35f2c16b6_bke91gg8s10m7, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_bke91gg8s10m7, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_49t1l5liul9mc, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_49t1l5liul9mc, 12).
-start[ast_oxc](nf85e80d35f2c16b6_49t1l5liul9mc, 299).
 attr[ast_oxc](nf85e80d35f2c16b6_49t1l5liul9mc, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_lu9m94kg3iah5, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_lu9m94kg3iah5, 12).
-start[ast_oxc](nf85e80d35f2c16b6_lu9m94kg3iah5, 299).
 attr[ast_oxc](nf85e80d35f2c16b6_lu9m94kg3iah5, name, "mixed").
 child[ast_oxc](nf85e80d35f2c16b6_49t1l5liul9mc, id, 0, nf85e80d35f2c16b6_lu9m94kg3iah5).
 node[ast_oxc](nf85e80d35f2c16b6_o33ubjbpv2j97, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_o33ubjbpv2j97, 12).
-start[ast_oxc](nf85e80d35f2c16b6_o33ubjbpv2j97, 307).
 attr[ast_oxc](nf85e80d35f2c16b6_o33ubjbpv2j97, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_gtlet4cenopde, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gtlet4cenopde, 12).
-start[ast_oxc](nf85e80d35f2c16b6_gtlet4cenopde, 307).
 attr[ast_oxc](nf85e80d35f2c16b6_gtlet4cenopde, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_gtlet4cenopde, name, "n").
 child[ast_oxc](nf85e80d35f2c16b6_o33ubjbpv2j97, left, 0, nf85e80d35f2c16b6_gtlet4cenopde).
 node[ast_oxc](nf85e80d35f2c16b6_5ep6fh1fvkh99, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5ep6fh1fvkh99, 12).
-start[ast_oxc](nf85e80d35f2c16b6_5ep6fh1fvkh99, 311).
 attr[ast_oxc](nf85e80d35f2c16b6_5ep6fh1fvkh99, value, "x").
 attr[ast_oxc](nf85e80d35f2c16b6_5ep6fh1fvkh99, raw, "'x'").
 child[ast_oxc](nf85e80d35f2c16b6_o33ubjbpv2j97, right, 0, nf85e80d35f2c16b6_5ep6fh1fvkh99).
@@ -345,21 +281,17 @@ child[ast_oxc](nf85e80d35f2c16b6_k6d47d6ve7sk, declaration, 0, nf85e80d35f2c16b6
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 9, nf85e80d35f2c16b6_k6d47d6ve7sk).
 node[ast_oxc](nf85e80d35f2c16b6_rc1mb9a1n3t38, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rc1mb9a1n3t38, 13).
-start[ast_oxc](nf85e80d35f2c16b6_rc1mb9a1n3t38, 316).
 attr[ast_oxc](nf85e80d35f2c16b6_rc1mb9a1n3t38, kind, "Let").
 attr[ast_oxc](nf85e80d35f2c16b6_rc1mb9a1n3t38, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_b346pj5435t2, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b346pj5435t2, 13).
-start[ast_oxc](nf85e80d35f2c16b6_b346pj5435t2, 320).
 attr[ast_oxc](nf85e80d35f2c16b6_b346pj5435t2, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_vch7fek2vr0m3, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vch7fek2vr0m3, 13).
-start[ast_oxc](nf85e80d35f2c16b6_vch7fek2vr0m3, 320).
 attr[ast_oxc](nf85e80d35f2c16b6_vch7fek2vr0m3, name, "grown").
 child[ast_oxc](nf85e80d35f2c16b6_b346pj5435t2, id, 0, nf85e80d35f2c16b6_vch7fek2vr0m3).
 node[ast_oxc](nf85e80d35f2c16b6_kbfgfnol2fj59, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kbfgfnol2fj59, 13).
-start[ast_oxc](nf85e80d35f2c16b6_kbfgfnol2fj59, 328).
 attr[ast_oxc](nf85e80d35f2c16b6_kbfgfnol2fj59, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_kbfgfnol2fj59, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_b346pj5435t2, init, 0, nf85e80d35f2c16b6_kbfgfnol2fj59).
@@ -367,20 +299,16 @@ child[ast_oxc](nf85e80d35f2c16b6_rc1mb9a1n3t38, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 10, nf85e80d35f2c16b6_rc1mb9a1n3t38).
 node[ast_oxc](nf85e80d35f2c16b6_tq0rrpi702003, expression_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_tq0rrpi702003, 14).
-start[ast_oxc](nf85e80d35f2c16b6_tq0rrpi702003, 334).
 node[ast_oxc](nf85e80d35f2c16b6_6ka2u559fe0h7, assignment_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_6ka2u559fe0h7, 14).
-start[ast_oxc](nf85e80d35f2c16b6_6ka2u559fe0h7, 334).
 attr[ast_oxc](nf85e80d35f2c16b6_6ka2u559fe0h7, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_ia507rmkf996b, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ia507rmkf996b, 14).
-start[ast_oxc](nf85e80d35f2c16b6_ia507rmkf996b, 334).
 attr[ast_oxc](nf85e80d35f2c16b6_ia507rmkf996b, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](nf85e80d35f2c16b6_ia507rmkf996b, name, "grown").
 child[ast_oxc](nf85e80d35f2c16b6_6ka2u559fe0h7, left, 0, nf85e80d35f2c16b6_ia507rmkf996b).
 node[ast_oxc](nf85e80d35f2c16b6_kdkhoblg54oaa, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kdkhoblg54oaa, 14).
-start[ast_oxc](nf85e80d35f2c16b6_kdkhoblg54oaa, 343).
 attr[ast_oxc](nf85e80d35f2c16b6_kdkhoblg54oaa, value, "/c").
 attr[ast_oxc](nf85e80d35f2c16b6_kdkhoblg54oaa, raw, "'/c'").
 child[ast_oxc](nf85e80d35f2c16b6_6ka2u559fe0h7, right, 0, nf85e80d35f2c16b6_kdkhoblg54oaa).
@@ -388,57 +316,46 @@ child[ast_oxc](nf85e80d35f2c16b6_tq0rrpi702003, expression, 0, nf85e80d35f2c16b6
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 11, nf85e80d35f2c16b6_tq0rrpi702003).
 node[ast_oxc](nf85e80d35f2c16b6_01o6jc3uqal8f, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_01o6jc3uqal8f, 15).
-start[ast_oxc](nf85e80d35f2c16b6_01o6jc3uqal8f, 349).
 node[ast_oxc](nf85e80d35f2c16b6_du13hhaarmfvc, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_du13hhaarmfvc, 15).
-start[ast_oxc](nf85e80d35f2c16b6_du13hhaarmfvc, 356).
 attr[ast_oxc](nf85e80d35f2c16b6_du13hhaarmfvc, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_du13hhaarmfvc, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_ejenrkq32hjc7, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ejenrkq32hjc7, 15).
-start[ast_oxc](nf85e80d35f2c16b6_ejenrkq32hjc7, 362).
 attr[ast_oxc](nf85e80d35f2c16b6_ejenrkq32hjc7, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_qe5cigp4c69j3, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_qe5cigp4c69j3, 15).
-start[ast_oxc](nf85e80d35f2c16b6_qe5cigp4c69j3, 362).
 attr[ast_oxc](nf85e80d35f2c16b6_qe5cigp4c69j3, name, "joined").
 child[ast_oxc](nf85e80d35f2c16b6_ejenrkq32hjc7, id, 0, nf85e80d35f2c16b6_qe5cigp4c69j3).
 node[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, 15).
-start[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, 371).
 attr[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_rdptmh6vtno18, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rdptmh6vtno18, 15).
-start[ast_oxc](nf85e80d35f2c16b6_rdptmh6vtno18, 371).
 attr[ast_oxc](nf85e80d35f2c16b6_rdptmh6vtno18, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_549ms9u41h79d, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_549ms9u41h79d, 15).
-start[ast_oxc](nf85e80d35f2c16b6_549ms9u41h79d, 371).
 attr[ast_oxc](nf85e80d35f2c16b6_549ms9u41h79d, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_549ms9u41h79d, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_rdptmh6vtno18, object, 0, nf85e80d35f2c16b6_549ms9u41h79d).
 node[ast_oxc](nf85e80d35f2c16b6_88b52bvc96kq, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_88b52bvc96kq, 15).
-start[ast_oxc](nf85e80d35f2c16b6_88b52bvc96kq, 376).
 attr[ast_oxc](nf85e80d35f2c16b6_88b52bvc96kq, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_rdptmh6vtno18, property, 0, nf85e80d35f2c16b6_88b52bvc96kq).
 child[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, callee, 0, nf85e80d35f2c16b6_rdptmh6vtno18).
 node[ast_oxc](nf85e80d35f2c16b6_42k1ge5k692ia, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_42k1ge5k692ia, 15).
-start[ast_oxc](nf85e80d35f2c16b6_42k1ge5k692ia, 381).
 attr[ast_oxc](nf85e80d35f2c16b6_42k1ge5k692ia, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_42k1ge5k692ia, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, arguments, 0, nf85e80d35f2c16b6_42k1ge5k692ia).
 node[ast_oxc](nf85e80d35f2c16b6_00fpnf7rkkkm2, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_00fpnf7rkkkm2, 15).
-start[ast_oxc](nf85e80d35f2c16b6_00fpnf7rkkkm2, 387).
 attr[ast_oxc](nf85e80d35f2c16b6_00fpnf7rkkkm2, value, "d").
 attr[ast_oxc](nf85e80d35f2c16b6_00fpnf7rkkkm2, raw, "'d'").
 child[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, arguments, 1, nf85e80d35f2c16b6_00fpnf7rkkkm2).
 node[ast_oxc](nf85e80d35f2c16b6_fvu0drm0dm0fa, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_fvu0drm0dm0fa, 15).
-start[ast_oxc](nf85e80d35f2c16b6_fvu0drm0dm0fa, 392).
 attr[ast_oxc](nf85e80d35f2c16b6_fvu0drm0dm0fa, value, "e").
 attr[ast_oxc](nf85e80d35f2c16b6_fvu0drm0dm0fa, raw, "'e'").
 child[ast_oxc](nf85e80d35f2c16b6_ikl4c6jldefna, arguments, 2, nf85e80d35f2c16b6_fvu0drm0dm0fa).
@@ -448,51 +365,41 @@ child[ast_oxc](nf85e80d35f2c16b6_01o6jc3uqal8f, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 12, nf85e80d35f2c16b6_01o6jc3uqal8f).
 node[ast_oxc](nf85e80d35f2c16b6_4pru9knngbbt7, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4pru9knngbbt7, 16).
-start[ast_oxc](nf85e80d35f2c16b6_4pru9knngbbt7, 398).
 node[ast_oxc](nf85e80d35f2c16b6_78m929vrr96h, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_78m929vrr96h, 16).
-start[ast_oxc](nf85e80d35f2c16b6_78m929vrr96h, 405).
 attr[ast_oxc](nf85e80d35f2c16b6_78m929vrr96h, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_78m929vrr96h, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_d7521t549e2m1, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_d7521t549e2m1, 16).
-start[ast_oxc](nf85e80d35f2c16b6_d7521t549e2m1, 411).
 attr[ast_oxc](nf85e80d35f2c16b6_d7521t549e2m1, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_ivj6vcmhejlnb, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ivj6vcmhejlnb, 16).
-start[ast_oxc](nf85e80d35f2c16b6_ivj6vcmhejlnb, 411).
 attr[ast_oxc](nf85e80d35f2c16b6_ivj6vcmhejlnb, name, "resolved").
 child[ast_oxc](nf85e80d35f2c16b6_d7521t549e2m1, id, 0, nf85e80d35f2c16b6_ivj6vcmhejlnb).
 node[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, 16).
-start[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, 422).
 attr[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_j29lpuhe3qv3d, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_j29lpuhe3qv3d, 16).
-start[ast_oxc](nf85e80d35f2c16b6_j29lpuhe3qv3d, 422).
 attr[ast_oxc](nf85e80d35f2c16b6_j29lpuhe3qv3d, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_l2flek3heftgc, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_l2flek3heftgc, 16).
-start[ast_oxc](nf85e80d35f2c16b6_l2flek3heftgc, 422).
 attr[ast_oxc](nf85e80d35f2c16b6_l2flek3heftgc, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_l2flek3heftgc, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_j29lpuhe3qv3d, object, 0, nf85e80d35f2c16b6_l2flek3heftgc).
 node[ast_oxc](nf85e80d35f2c16b6_b6fjr2ochmj3e, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b6fjr2ochmj3e, 16).
-start[ast_oxc](nf85e80d35f2c16b6_b6fjr2ochmj3e, 427).
 attr[ast_oxc](nf85e80d35f2c16b6_b6fjr2ochmj3e, name, "resolve").
 child[ast_oxc](nf85e80d35f2c16b6_j29lpuhe3qv3d, property, 0, nf85e80d35f2c16b6_b6fjr2ochmj3e).
 child[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, callee, 0, nf85e80d35f2c16b6_j29lpuhe3qv3d).
 node[ast_oxc](nf85e80d35f2c16b6_jilhsb5o0jls2, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_jilhsb5o0jls2, 16).
-start[ast_oxc](nf85e80d35f2c16b6_jilhsb5o0jls2, 435).
 attr[ast_oxc](nf85e80d35f2c16b6_jilhsb5o0jls2, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_jilhsb5o0jls2, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, arguments, 0, nf85e80d35f2c16b6_jilhsb5o0jls2).
 node[ast_oxc](nf85e80d35f2c16b6_n8hjo41mco2h, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n8hjo41mco2h, 16).
-start[ast_oxc](nf85e80d35f2c16b6_n8hjo41mco2h, 441).
 attr[ast_oxc](nf85e80d35f2c16b6_n8hjo41mco2h, value, "f").
 attr[ast_oxc](nf85e80d35f2c16b6_n8hjo41mco2h, raw, "'f'").
 child[ast_oxc](nf85e80d35f2c16b6_n42jq80ikb734, arguments, 1, nf85e80d35f2c16b6_n8hjo41mco2h).
@@ -502,45 +409,36 @@ child[ast_oxc](nf85e80d35f2c16b6_4pru9knngbbt7, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 13, nf85e80d35f2c16b6_4pru9knngbbt7).
 node[ast_oxc](nf85e80d35f2c16b6_lskrsh22j5fj6, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_lskrsh22j5fj6, 17).
-start[ast_oxc](nf85e80d35f2c16b6_lskrsh22j5fj6, 447).
 node[ast_oxc](nf85e80d35f2c16b6_k4fnek4a68h5b, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_k4fnek4a68h5b, 17).
-start[ast_oxc](nf85e80d35f2c16b6_k4fnek4a68h5b, 454).
 attr[ast_oxc](nf85e80d35f2c16b6_k4fnek4a68h5b, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_k4fnek4a68h5b, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_49748k3s4mfv7, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_49748k3s4mfv7, 17).
-start[ast_oxc](nf85e80d35f2c16b6_49748k3s4mfv7, 460).
 attr[ast_oxc](nf85e80d35f2c16b6_49748k3s4mfv7, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_vngnhaaph1h41, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vngnhaaph1h41, 17).
-start[ast_oxc](nf85e80d35f2c16b6_vngnhaaph1h41, 460).
 attr[ast_oxc](nf85e80d35f2c16b6_vngnhaaph1h41, name, "normal").
 child[ast_oxc](nf85e80d35f2c16b6_49748k3s4mfv7, id, 0, nf85e80d35f2c16b6_vngnhaaph1h41).
 node[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, 17).
-start[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, 469).
 attr[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_70u0nh51n1unb, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_70u0nh51n1unb, 17).
-start[ast_oxc](nf85e80d35f2c16b6_70u0nh51n1unb, 469).
 attr[ast_oxc](nf85e80d35f2c16b6_70u0nh51n1unb, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_uq81r4v3p5qu4, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_uq81r4v3p5qu4, 17).
-start[ast_oxc](nf85e80d35f2c16b6_uq81r4v3p5qu4, 469).
 attr[ast_oxc](nf85e80d35f2c16b6_uq81r4v3p5qu4, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_uq81r4v3p5qu4, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_70u0nh51n1unb, object, 0, nf85e80d35f2c16b6_uq81r4v3p5qu4).
 node[ast_oxc](nf85e80d35f2c16b6_8og3gecsutsv, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8og3gecsutsv, 17).
-start[ast_oxc](nf85e80d35f2c16b6_8og3gecsutsv, 474).
 attr[ast_oxc](nf85e80d35f2c16b6_8og3gecsutsv, name, "normalize").
 child[ast_oxc](nf85e80d35f2c16b6_70u0nh51n1unb, property, 0, nf85e80d35f2c16b6_8og3gecsutsv).
 child[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, callee, 0, nf85e80d35f2c16b6_70u0nh51n1unb).
 node[ast_oxc](nf85e80d35f2c16b6_3aaq976pt51b8, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3aaq976pt51b8, 17).
-start[ast_oxc](nf85e80d35f2c16b6_3aaq976pt51b8, 484).
 attr[ast_oxc](nf85e80d35f2c16b6_3aaq976pt51b8, value, "/a/../b").
 attr[ast_oxc](nf85e80d35f2c16b6_3aaq976pt51b8, raw, "'/a/../b'").
 child[ast_oxc](nf85e80d35f2c16b6_7jqsmch3irjeb, arguments, 0, nf85e80d35f2c16b6_3aaq976pt51b8).
@@ -550,45 +448,36 @@ child[ast_oxc](nf85e80d35f2c16b6_lskrsh22j5fj6, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 14, nf85e80d35f2c16b6_lskrsh22j5fj6).
 node[ast_oxc](nf85e80d35f2c16b6_mn4943l0cbakc, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_mn4943l0cbakc, 18).
-start[ast_oxc](nf85e80d35f2c16b6_mn4943l0cbakc, 496).
 node[ast_oxc](nf85e80d35f2c16b6_lk121g9agnvh6, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_lk121g9agnvh6, 18).
-start[ast_oxc](nf85e80d35f2c16b6_lk121g9agnvh6, 503).
 attr[ast_oxc](nf85e80d35f2c16b6_lk121g9agnvh6, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_lk121g9agnvh6, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_rt25i93t1bfqb, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rt25i93t1bfqb, 18).
-start[ast_oxc](nf85e80d35f2c16b6_rt25i93t1bfqb, 509).
 attr[ast_oxc](nf85e80d35f2c16b6_rt25i93t1bfqb, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_r2vaddhbdiba4, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_r2vaddhbdiba4, 18).
-start[ast_oxc](nf85e80d35f2c16b6_r2vaddhbdiba4, 509).
 attr[ast_oxc](nf85e80d35f2c16b6_r2vaddhbdiba4, name, "cut").
 child[ast_oxc](nf85e80d35f2c16b6_rt25i93t1bfqb, id, 0, nf85e80d35f2c16b6_r2vaddhbdiba4).
 node[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, 18).
-start[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, 515).
 attr[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_e37kiv7vh2os7, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_e37kiv7vh2os7, 18).
-start[ast_oxc](nf85e80d35f2c16b6_e37kiv7vh2os7, 515).
 attr[ast_oxc](nf85e80d35f2c16b6_e37kiv7vh2os7, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_c3eb3a342pk54, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_c3eb3a342pk54, 18).
-start[ast_oxc](nf85e80d35f2c16b6_c3eb3a342pk54, 515).
 attr[ast_oxc](nf85e80d35f2c16b6_c3eb3a342pk54, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_c3eb3a342pk54, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_e37kiv7vh2os7, object, 0, nf85e80d35f2c16b6_c3eb3a342pk54).
 node[ast_oxc](nf85e80d35f2c16b6_53k2fvm1jho99, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_53k2fvm1jho99, 18).
-start[ast_oxc](nf85e80d35f2c16b6_53k2fvm1jho99, 520).
 attr[ast_oxc](nf85e80d35f2c16b6_53k2fvm1jho99, name, "dirname").
 child[ast_oxc](nf85e80d35f2c16b6_e37kiv7vh2os7, property, 0, nf85e80d35f2c16b6_53k2fvm1jho99).
 child[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, callee, 0, nf85e80d35f2c16b6_e37kiv7vh2os7).
 node[ast_oxc](nf85e80d35f2c16b6_p870c23j483h4, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_p870c23j483h4, 18).
-start[ast_oxc](nf85e80d35f2c16b6_p870c23j483h4, 528).
 attr[ast_oxc](nf85e80d35f2c16b6_p870c23j483h4, value, "/x/y/z").
 attr[ast_oxc](nf85e80d35f2c16b6_p870c23j483h4, raw, "'/x/y/z'").
 child[ast_oxc](nf85e80d35f2c16b6_omb4i6l8tr3b7, arguments, 0, nf85e80d35f2c16b6_p870c23j483h4).
@@ -598,51 +487,41 @@ child[ast_oxc](nf85e80d35f2c16b6_mn4943l0cbakc, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 15, nf85e80d35f2c16b6_mn4943l0cbakc).
 node[ast_oxc](nf85e80d35f2c16b6_ac71obesmii83, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ac71obesmii83, 19).
-start[ast_oxc](nf85e80d35f2c16b6_ac71obesmii83, 539).
 node[ast_oxc](nf85e80d35f2c16b6_ou97mu2mval24, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ou97mu2mval24, 19).
-start[ast_oxc](nf85e80d35f2c16b6_ou97mu2mval24, 546).
 attr[ast_oxc](nf85e80d35f2c16b6_ou97mu2mval24, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_ou97mu2mval24, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_i5d2gtif1va93, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_i5d2gtif1va93, 19).
-start[ast_oxc](nf85e80d35f2c16b6_i5d2gtif1va93, 552).
 attr[ast_oxc](nf85e80d35f2c16b6_i5d2gtif1va93, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_al8jodl0dhkm4, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_al8jodl0dhkm4, 19).
-start[ast_oxc](nf85e80d35f2c16b6_al8jodl0dhkm4, 552).
 attr[ast_oxc](nf85e80d35f2c16b6_al8jodl0dhkm4, name, "base").
 child[ast_oxc](nf85e80d35f2c16b6_i5d2gtif1va93, id, 0, nf85e80d35f2c16b6_al8jodl0dhkm4).
 node[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, 19).
-start[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, 559).
 attr[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_e5av9qmc9j0sd, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_e5av9qmc9j0sd, 19).
-start[ast_oxc](nf85e80d35f2c16b6_e5av9qmc9j0sd, 559).
 attr[ast_oxc](nf85e80d35f2c16b6_e5av9qmc9j0sd, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_8kkhvqpnicsf5, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8kkhvqpnicsf5, 19).
-start[ast_oxc](nf85e80d35f2c16b6_8kkhvqpnicsf5, 559).
 attr[ast_oxc](nf85e80d35f2c16b6_8kkhvqpnicsf5, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_8kkhvqpnicsf5, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_e5av9qmc9j0sd, object, 0, nf85e80d35f2c16b6_8kkhvqpnicsf5).
 node[ast_oxc](nf85e80d35f2c16b6_g2o39c4e465uf, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_g2o39c4e465uf, 19).
-start[ast_oxc](nf85e80d35f2c16b6_g2o39c4e465uf, 564).
 attr[ast_oxc](nf85e80d35f2c16b6_g2o39c4e465uf, name, "basename").
 child[ast_oxc](nf85e80d35f2c16b6_e5av9qmc9j0sd, property, 0, nf85e80d35f2c16b6_g2o39c4e465uf).
 child[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, callee, 0, nf85e80d35f2c16b6_e5av9qmc9j0sd).
 node[ast_oxc](nf85e80d35f2c16b6_k752gujs54424, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_k752gujs54424, 19).
-start[ast_oxc](nf85e80d35f2c16b6_k752gujs54424, 573).
 attr[ast_oxc](nf85e80d35f2c16b6_k752gujs54424, value, "/x/y/z.ts").
 attr[ast_oxc](nf85e80d35f2c16b6_k752gujs54424, raw, "'/x/y/z.ts'").
 child[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, arguments, 0, nf85e80d35f2c16b6_k752gujs54424).
 node[ast_oxc](nf85e80d35f2c16b6_0ag75mjcm7vb7, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0ag75mjcm7vb7, 19).
-start[ast_oxc](nf85e80d35f2c16b6_0ag75mjcm7vb7, 586).
 attr[ast_oxc](nf85e80d35f2c16b6_0ag75mjcm7vb7, value, ".ts").
 attr[ast_oxc](nf85e80d35f2c16b6_0ag75mjcm7vb7, raw, "'.ts'").
 child[ast_oxc](nf85e80d35f2c16b6_jo6bi9le63rg7, arguments, 1, nf85e80d35f2c16b6_0ag75mjcm7vb7).
@@ -652,62 +531,50 @@ child[ast_oxc](nf85e80d35f2c16b6_ac71obesmii83, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 16, nf85e80d35f2c16b6_ac71obesmii83).
 node[ast_oxc](nf85e80d35f2c16b6_b4mnepd83qjh6, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b4mnepd83qjh6, 20).
-start[ast_oxc](nf85e80d35f2c16b6_b4mnepd83qjh6, 594).
 node[ast_oxc](nf85e80d35f2c16b6_3msf63mejff14, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3msf63mejff14, 20).
-start[ast_oxc](nf85e80d35f2c16b6_3msf63mejff14, 601).
 attr[ast_oxc](nf85e80d35f2c16b6_3msf63mejff14, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_3msf63mejff14, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_vv1hqs8rfqd93, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vv1hqs8rfqd93, 20).
-start[ast_oxc](nf85e80d35f2c16b6_vv1hqs8rfqd93, 607).
 attr[ast_oxc](nf85e80d35f2c16b6_vv1hqs8rfqd93, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_af2bg6jffft2a, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_af2bg6jffft2a, 20).
-start[ast_oxc](nf85e80d35f2c16b6_af2bg6jffft2a, 607).
 attr[ast_oxc](nf85e80d35f2c16b6_af2bg6jffft2a, name, "nested").
 child[ast_oxc](nf85e80d35f2c16b6_vv1hqs8rfqd93, id, 0, nf85e80d35f2c16b6_af2bg6jffft2a).
 node[ast_oxc](nf85e80d35f2c16b6_soo1skmo6u1u2, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_soo1skmo6u1u2, 20).
-start[ast_oxc](nf85e80d35f2c16b6_soo1skmo6u1u2, 616).
 attr[ast_oxc](nf85e80d35f2c16b6_soo1skmo6u1u2, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_soo1skmo6u1u2, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_sr314bqa0gfc2, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_sr314bqa0gfc2, 20).
-start[ast_oxc](nf85e80d35f2c16b6_sr314bqa0gfc2, 616).
 attr[ast_oxc](nf85e80d35f2c16b6_sr314bqa0gfc2, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_sr314bqa0gfc2, name, "dir").
 child[ast_oxc](nf85e80d35f2c16b6_soo1skmo6u1u2, callee, 0, nf85e80d35f2c16b6_sr314bqa0gfc2).
 node[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, 20).
-start[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, 620).
 attr[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_4iem4t811as55, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4iem4t811as55, 20).
-start[ast_oxc](nf85e80d35f2c16b6_4iem4t811as55, 620).
 attr[ast_oxc](nf85e80d35f2c16b6_4iem4t811as55, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_h3npgl7q91ioa, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_h3npgl7q91ioa, 20).
-start[ast_oxc](nf85e80d35f2c16b6_h3npgl7q91ioa, 620).
 attr[ast_oxc](nf85e80d35f2c16b6_h3npgl7q91ioa, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_h3npgl7q91ioa, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_4iem4t811as55, object, 0, nf85e80d35f2c16b6_h3npgl7q91ioa).
 node[ast_oxc](nf85e80d35f2c16b6_b85rskmla3h2d, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b85rskmla3h2d, 20).
-start[ast_oxc](nf85e80d35f2c16b6_b85rskmla3h2d, 625).
 attr[ast_oxc](nf85e80d35f2c16b6_b85rskmla3h2d, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_4iem4t811as55, property, 0, nf85e80d35f2c16b6_b85rskmla3h2d).
 child[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, callee, 0, nf85e80d35f2c16b6_4iem4t811as55).
 node[ast_oxc](nf85e80d35f2c16b6_vuv6ommcr5urb, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_vuv6ommcr5urb, 20).
-start[ast_oxc](nf85e80d35f2c16b6_vuv6ommcr5urb, 630).
 attr[ast_oxc](nf85e80d35f2c16b6_vuv6ommcr5urb, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_vuv6ommcr5urb, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, arguments, 0, nf85e80d35f2c16b6_vuv6ommcr5urb).
 node[ast_oxc](nf85e80d35f2c16b6_j1ool7imu1r59, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_j1ool7imu1r59, 20).
-start[ast_oxc](nf85e80d35f2c16b6_j1ool7imu1r59, 636).
 attr[ast_oxc](nf85e80d35f2c16b6_j1ool7imu1r59, value, "g").
 attr[ast_oxc](nf85e80d35f2c16b6_j1ool7imu1r59, raw, "'g'").
 child[ast_oxc](nf85e80d35f2c16b6_p9sujp5ihjsm6, arguments, 1, nf85e80d35f2c16b6_j1ool7imu1r59).
@@ -718,51 +585,41 @@ child[ast_oxc](nf85e80d35f2c16b6_b4mnepd83qjh6, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 17, nf85e80d35f2c16b6_b4mnepd83qjh6).
 node[ast_oxc](nf85e80d35f2c16b6_7s9qrg0lj7341, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_7s9qrg0lj7341, 21).
-start[ast_oxc](nf85e80d35f2c16b6_7s9qrg0lj7341, 643).
 node[ast_oxc](nf85e80d35f2c16b6_m0a35ng2h9r3e, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_m0a35ng2h9r3e, 21).
-start[ast_oxc](nf85e80d35f2c16b6_m0a35ng2h9r3e, 650).
 attr[ast_oxc](nf85e80d35f2c16b6_m0a35ng2h9r3e, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_m0a35ng2h9r3e, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_01gciojnqphl8, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_01gciojnqphl8, 21).
-start[ast_oxc](nf85e80d35f2c16b6_01gciojnqphl8, 656).
 attr[ast_oxc](nf85e80d35f2c16b6_01gciojnqphl8, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_1se2k221nm77f, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_1se2k221nm77f, 21).
-start[ast_oxc](nf85e80d35f2c16b6_1se2k221nm77f, 656).
 attr[ast_oxc](nf85e80d35f2c16b6_1se2k221nm77f, name, "method").
 child[ast_oxc](nf85e80d35f2c16b6_01gciojnqphl8, id, 0, nf85e80d35f2c16b6_1se2k221nm77f).
 node[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, 21).
-start[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, 665).
 attr[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_u7bhpl5a6bnte, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_u7bhpl5a6bnte, 21).
-start[ast_oxc](nf85e80d35f2c16b6_u7bhpl5a6bnte, 665).
 attr[ast_oxc](nf85e80d35f2c16b6_u7bhpl5a6bnte, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_4a6lkcfg1s2lb, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4a6lkcfg1s2lb, 21).
-start[ast_oxc](nf85e80d35f2c16b6_4a6lkcfg1s2lb, 665).
 attr[ast_oxc](nf85e80d35f2c16b6_4a6lkcfg1s2lb, value, "a").
 attr[ast_oxc](nf85e80d35f2c16b6_4a6lkcfg1s2lb, raw, "'a'").
 child[ast_oxc](nf85e80d35f2c16b6_u7bhpl5a6bnte, object, 0, nf85e80d35f2c16b6_4a6lkcfg1s2lb).
 node[ast_oxc](nf85e80d35f2c16b6_geodv1n9ha5da, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_geodv1n9ha5da, 21).
-start[ast_oxc](nf85e80d35f2c16b6_geodv1n9ha5da, 669).
 attr[ast_oxc](nf85e80d35f2c16b6_geodv1n9ha5da, name, "concat").
 child[ast_oxc](nf85e80d35f2c16b6_u7bhpl5a6bnte, property, 0, nf85e80d35f2c16b6_geodv1n9ha5da).
 child[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, callee, 0, nf85e80d35f2c16b6_u7bhpl5a6bnte).
 node[ast_oxc](nf85e80d35f2c16b6_uh0h4huukj3k, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_uh0h4huukj3k, 21).
-start[ast_oxc](nf85e80d35f2c16b6_uh0h4huukj3k, 676).
 attr[ast_oxc](nf85e80d35f2c16b6_uh0h4huukj3k, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_uh0h4huukj3k, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, arguments, 0, nf85e80d35f2c16b6_uh0h4huukj3k).
 node[ast_oxc](nf85e80d35f2c16b6_pbd1l2338cls4, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_pbd1l2338cls4, 21).
-start[ast_oxc](nf85e80d35f2c16b6_pbd1l2338cls4, 682).
 attr[ast_oxc](nf85e80d35f2c16b6_pbd1l2338cls4, value, "h").
 attr[ast_oxc](nf85e80d35f2c16b6_pbd1l2338cls4, raw, "'h'").
 child[ast_oxc](nf85e80d35f2c16b6_2lgeu0j85ajhb, arguments, 1, nf85e80d35f2c16b6_pbd1l2338cls4).
@@ -772,55 +629,44 @@ child[ast_oxc](nf85e80d35f2c16b6_7s9qrg0lj7341, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 18, nf85e80d35f2c16b6_7s9qrg0lj7341).
 node[ast_oxc](nf85e80d35f2c16b6_g1ro5mdrm2onb, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_g1ro5mdrm2onb, 22).
-start[ast_oxc](nf85e80d35f2c16b6_g1ro5mdrm2onb, 688).
 node[ast_oxc](nf85e80d35f2c16b6_buqh0cg7g3tpa, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_buqh0cg7g3tpa, 22).
-start[ast_oxc](nf85e80d35f2c16b6_buqh0cg7g3tpa, 695).
 attr[ast_oxc](nf85e80d35f2c16b6_buqh0cg7g3tpa, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_buqh0cg7g3tpa, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_b30fm9jp19616, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b30fm9jp19616, 22).
-start[ast_oxc](nf85e80d35f2c16b6_b30fm9jp19616, 701).
 attr[ast_oxc](nf85e80d35f2c16b6_b30fm9jp19616, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_htu2b9on074id, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_htu2b9on074id, 22).
-start[ast_oxc](nf85e80d35f2c16b6_htu2b9on074id, 701).
 attr[ast_oxc](nf85e80d35f2c16b6_htu2b9on074id, name, "elems").
 child[ast_oxc](nf85e80d35f2c16b6_b30fm9jp19616, id, 0, nf85e80d35f2c16b6_htu2b9on074id).
 node[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, 22).
-start[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, 709).
 attr[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_nfoor5ejdh7ia, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_nfoor5ejdh7ia, 22).
-start[ast_oxc](nf85e80d35f2c16b6_nfoor5ejdh7ia, 709).
 attr[ast_oxc](nf85e80d35f2c16b6_nfoor5ejdh7ia, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_ojt91vujqa1ec, array_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ojt91vujqa1ec, 22).
-start[ast_oxc](nf85e80d35f2c16b6_ojt91vujqa1ec, 709).
 node[ast_oxc](nf85e80d35f2c16b6_osuogakfuut3f, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_osuogakfuut3f, 22).
-start[ast_oxc](nf85e80d35f2c16b6_osuogakfuut3f, 710).
 attr[ast_oxc](nf85e80d35f2c16b6_osuogakfuut3f, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_osuogakfuut3f, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_ojt91vujqa1ec, elements, 0, nf85e80d35f2c16b6_osuogakfuut3f).
 node[ast_oxc](nf85e80d35f2c16b6_0l2pljab4kaqb, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0l2pljab4kaqb, 22).
-start[ast_oxc](nf85e80d35f2c16b6_0l2pljab4kaqb, 716).
 attr[ast_oxc](nf85e80d35f2c16b6_0l2pljab4kaqb, value, "i").
 attr[ast_oxc](nf85e80d35f2c16b6_0l2pljab4kaqb, raw, "'i'").
 child[ast_oxc](nf85e80d35f2c16b6_ojt91vujqa1ec, elements, 1, nf85e80d35f2c16b6_0l2pljab4kaqb).
 child[ast_oxc](nf85e80d35f2c16b6_nfoor5ejdh7ia, object, 0, nf85e80d35f2c16b6_ojt91vujqa1ec).
 node[ast_oxc](nf85e80d35f2c16b6_uv48fcd6rqo2b, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_uv48fcd6rqo2b, 22).
-start[ast_oxc](nf85e80d35f2c16b6_uv48fcd6rqo2b, 721).
 attr[ast_oxc](nf85e80d35f2c16b6_uv48fcd6rqo2b, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_nfoor5ejdh7ia, property, 0, nf85e80d35f2c16b6_uv48fcd6rqo2b).
 child[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, callee, 0, nf85e80d35f2c16b6_nfoor5ejdh7ia).
 node[ast_oxc](nf85e80d35f2c16b6_10j70qk30n416, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_10j70qk30n416, 22).
-start[ast_oxc](nf85e80d35f2c16b6_10j70qk30n416, 726).
 attr[ast_oxc](nf85e80d35f2c16b6_10j70qk30n416, value, "/").
 attr[ast_oxc](nf85e80d35f2c16b6_10j70qk30n416, raw, "'/'").
 child[ast_oxc](nf85e80d35f2c16b6_m3f9jc9bmdm4e, arguments, 0, nf85e80d35f2c16b6_10j70qk30n416).
@@ -830,49 +676,39 @@ child[ast_oxc](nf85e80d35f2c16b6_g1ro5mdrm2onb, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 19, nf85e80d35f2c16b6_g1ro5mdrm2onb).
 node[ast_oxc](nf85e80d35f2c16b6_0137kpivgt69, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0137kpivgt69, 23).
-start[ast_oxc](nf85e80d35f2c16b6_0137kpivgt69, 732).
 node[ast_oxc](nf85e80d35f2c16b6_dbnpib6g04eb3, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_dbnpib6g04eb3, 23).
-start[ast_oxc](nf85e80d35f2c16b6_dbnpib6g04eb3, 739).
 attr[ast_oxc](nf85e80d35f2c16b6_dbnpib6g04eb3, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_dbnpib6g04eb3, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_bsatehlpmiq0b, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_bsatehlpmiq0b, 23).
-start[ast_oxc](nf85e80d35f2c16b6_bsatehlpmiq0b, 745).
 attr[ast_oxc](nf85e80d35f2c16b6_bsatehlpmiq0b, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_p23s5vbh2qi7d, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_p23s5vbh2qi7d, 23).
-start[ast_oxc](nf85e80d35f2c16b6_p23s5vbh2qi7d, 745).
 attr[ast_oxc](nf85e80d35f2c16b6_p23s5vbh2qi7d, name, "commas").
 child[ast_oxc](nf85e80d35f2c16b6_bsatehlpmiq0b, id, 0, nf85e80d35f2c16b6_p23s5vbh2qi7d).
 node[ast_oxc](nf85e80d35f2c16b6_5sm9id65rg2cc, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5sm9id65rg2cc, 23).
-start[ast_oxc](nf85e80d35f2c16b6_5sm9id65rg2cc, 754).
 attr[ast_oxc](nf85e80d35f2c16b6_5sm9id65rg2cc, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_5sm9id65rg2cc, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_j49ghpapbdq3b, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_j49ghpapbdq3b, 23).
-start[ast_oxc](nf85e80d35f2c16b6_j49ghpapbdq3b, 754).
 attr[ast_oxc](nf85e80d35f2c16b6_j49ghpapbdq3b, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_p4hta8g3k8626, array_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_p4hta8g3k8626, 23).
-start[ast_oxc](nf85e80d35f2c16b6_p4hta8g3k8626, 754).
 node[ast_oxc](nf85e80d35f2c16b6_htc2d4j1q1hf, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_htc2d4j1q1hf, 23).
-start[ast_oxc](nf85e80d35f2c16b6_htc2d4j1q1hf, 755).
 attr[ast_oxc](nf85e80d35f2c16b6_htc2d4j1q1hf, value, "j").
 attr[ast_oxc](nf85e80d35f2c16b6_htc2d4j1q1hf, raw, "'j'").
 child[ast_oxc](nf85e80d35f2c16b6_p4hta8g3k8626, elements, 0, nf85e80d35f2c16b6_htc2d4j1q1hf).
 node[ast_oxc](nf85e80d35f2c16b6_iib32sbtjh4h8, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_iib32sbtjh4h8, 23).
-start[ast_oxc](nf85e80d35f2c16b6_iib32sbtjh4h8, 760).
 attr[ast_oxc](nf85e80d35f2c16b6_iib32sbtjh4h8, value, "k").
 attr[ast_oxc](nf85e80d35f2c16b6_iib32sbtjh4h8, raw, "'k'").
 child[ast_oxc](nf85e80d35f2c16b6_p4hta8g3k8626, elements, 1, nf85e80d35f2c16b6_iib32sbtjh4h8).
 child[ast_oxc](nf85e80d35f2c16b6_j49ghpapbdq3b, object, 0, nf85e80d35f2c16b6_p4hta8g3k8626).
 node[ast_oxc](nf85e80d35f2c16b6_3vk57p5ek3mnb, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3vk57p5ek3mnb, 23).
-start[ast_oxc](nf85e80d35f2c16b6_3vk57p5ek3mnb, 765).
 attr[ast_oxc](nf85e80d35f2c16b6_3vk57p5ek3mnb, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_j49ghpapbdq3b, property, 0, nf85e80d35f2c16b6_3vk57p5ek3mnb).
 child[ast_oxc](nf85e80d35f2c16b6_5sm9id65rg2cc, callee, 0, nf85e80d35f2c16b6_j49ghpapbdq3b).
@@ -882,40 +718,32 @@ child[ast_oxc](nf85e80d35f2c16b6_0137kpivgt69, declaration, 0, nf85e80d35f2c16b6
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 20, nf85e80d35f2c16b6_0137kpivgt69).
 node[ast_oxc](nf85e80d35f2c16b6_qfqusaje2j9fd, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_qfqusaje2j9fd, 24).
-start[ast_oxc](nf85e80d35f2c16b6_qfqusaje2j9fd, 773).
 node[ast_oxc](nf85e80d35f2c16b6_n9t8b4hjc8lf6, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n9t8b4hjc8lf6, 24).
-start[ast_oxc](nf85e80d35f2c16b6_n9t8b4hjc8lf6, 780).
 attr[ast_oxc](nf85e80d35f2c16b6_n9t8b4hjc8lf6, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_n9t8b4hjc8lf6, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_mghfig7d16gu, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_mghfig7d16gu, 24).
-start[ast_oxc](nf85e80d35f2c16b6_mghfig7d16gu, 786).
 attr[ast_oxc](nf85e80d35f2c16b6_mghfig7d16gu, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_jeek9olhfo2q1, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_jeek9olhfo2q1, 24).
-start[ast_oxc](nf85e80d35f2c16b6_jeek9olhfo2q1, 786).
 attr[ast_oxc](nf85e80d35f2c16b6_jeek9olhfo2q1, name, "address").
 child[ast_oxc](nf85e80d35f2c16b6_mghfig7d16gu, id, 0, nf85e80d35f2c16b6_jeek9olhfo2q1).
 node[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, new_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, 24).
-start[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, 796).
 attr[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_iomgg4bkhrtid, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_iomgg4bkhrtid, 24).
-start[ast_oxc](nf85e80d35f2c16b6_iomgg4bkhrtid, 800).
 attr[ast_oxc](nf85e80d35f2c16b6_iomgg4bkhrtid, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_iomgg4bkhrtid, name, "URL").
 child[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, callee, 0, nf85e80d35f2c16b6_iomgg4bkhrtid).
 node[ast_oxc](nf85e80d35f2c16b6_knnoh28dr8eld, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_knnoh28dr8eld, 24).
-start[ast_oxc](nf85e80d35f2c16b6_knnoh28dr8eld, 804).
 attr[ast_oxc](nf85e80d35f2c16b6_knnoh28dr8eld, value, "/api").
 attr[ast_oxc](nf85e80d35f2c16b6_knnoh28dr8eld, raw, "'/api'").
 child[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, arguments, 0, nf85e80d35f2c16b6_knnoh28dr8eld).
 node[ast_oxc](nf85e80d35f2c16b6_8198roudsim6a, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8198roudsim6a, 24).
-start[ast_oxc](nf85e80d35f2c16b6_8198roudsim6a, 812).
 attr[ast_oxc](nf85e80d35f2c16b6_8198roudsim6a, value, "https://h").
 attr[ast_oxc](nf85e80d35f2c16b6_8198roudsim6a, raw, "'https://h'").
 child[ast_oxc](nf85e80d35f2c16b6_qmkec5hkq07fd, arguments, 1, nf85e80d35f2c16b6_8198roudsim6a).
@@ -925,75 +753,59 @@ child[ast_oxc](nf85e80d35f2c16b6_qfqusaje2j9fd, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 21, nf85e80d35f2c16b6_qfqusaje2j9fd).
 node[ast_oxc](nf85e80d35f2c16b6_aa4dm6fe0u1ae, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_aa4dm6fe0u1ae, 25).
-start[ast_oxc](nf85e80d35f2c16b6_aa4dm6fe0u1ae, 826).
 node[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, function, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, 25).
-start[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, 833).
 attr[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, variant, "FunctionDeclaration").
 node[ast_oxc](nf85e80d35f2c16b6_edt5f16eqcgj6, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_edt5f16eqcgj6, 25).
-start[ast_oxc](nf85e80d35f2c16b6_edt5f16eqcgj6, 842).
 attr[ast_oxc](nf85e80d35f2c16b6_edt5f16eqcgj6, name, "unknown").
 child[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, id, 0, nf85e80d35f2c16b6_edt5f16eqcgj6).
 node[ast_oxc](nf85e80d35f2c16b6_73jsei07k29h5, formal_parameters, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_73jsei07k29h5, 25).
-start[ast_oxc](nf85e80d35f2c16b6_73jsei07k29h5, 849).
 attr[ast_oxc](nf85e80d35f2c16b6_73jsei07k29h5, kind, "FormalParameter").
 node[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, formal_parameter, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, 25).
-start[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, 850).
 attr[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, readonly, false).
 attr[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, override, false).
 node[ast_oxc](nf85e80d35f2c16b6_o97abdcu241s7, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_o97abdcu241s7, 25).
-start[ast_oxc](nf85e80d35f2c16b6_o97abdcu241s7, 850).
 attr[ast_oxc](nf85e80d35f2c16b6_o97abdcu241s7, name, "u").
 child[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, pattern, 0, nf85e80d35f2c16b6_o97abdcu241s7).
 node[ast_oxc](nf85e80d35f2c16b6_ff14frbhof9a7, tstype_annotation, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ff14frbhof9a7, 25).
-start[ast_oxc](nf85e80d35f2c16b6_ff14frbhof9a7, 851).
 node[ast_oxc](nf85e80d35f2c16b6_7ths33fnmc42d, tsstring_keyword, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_7ths33fnmc42d, 25).
-start[ast_oxc](nf85e80d35f2c16b6_7ths33fnmc42d, 853).
 child[ast_oxc](nf85e80d35f2c16b6_ff14frbhof9a7, type_annotation, 0, nf85e80d35f2c16b6_7ths33fnmc42d).
 child[ast_oxc](nf85e80d35f2c16b6_77snc69tj6mc1, type_annotation, 0, nf85e80d35f2c16b6_ff14frbhof9a7).
 child[ast_oxc](nf85e80d35f2c16b6_73jsei07k29h5, items, 0, nf85e80d35f2c16b6_77snc69tj6mc1).
 child[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, params, 0, nf85e80d35f2c16b6_73jsei07k29h5).
 node[ast_oxc](nf85e80d35f2c16b6_01muul09ustg4, tstype_annotation, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_01muul09ustg4, 25).
-start[ast_oxc](nf85e80d35f2c16b6_01muul09ustg4, 860).
 node[ast_oxc](nf85e80d35f2c16b6_o5holjlbmeu95, tsstring_keyword, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_o5holjlbmeu95, 25).
-start[ast_oxc](nf85e80d35f2c16b6_o5holjlbmeu95, 862).
 child[ast_oxc](nf85e80d35f2c16b6_01muul09ustg4, type_annotation, 0, nf85e80d35f2c16b6_o5holjlbmeu95).
 child[ast_oxc](nf85e80d35f2c16b6_5tt7vfu0srid9, return_type, 0, nf85e80d35f2c16b6_01muul09ustg4).
 node[ast_oxc](nf85e80d35f2c16b6_ivrfd3hk33of7, function_body, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ivrfd3hk33of7, 25).
-start[ast_oxc](nf85e80d35f2c16b6_ivrfd3hk33of7, 869).
 node[ast_oxc](nf85e80d35f2c16b6_thkl3rllqj0v5, return_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_thkl3rllqj0v5, 25).
-start[ast_oxc](nf85e80d35f2c16b6_thkl3rllqj0v5, 871).
 node[ast_oxc](nf85e80d35f2c16b6_dpr0pg1qm8pue, template_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_dpr0pg1qm8pue, 25).
-start[ast_oxc](nf85e80d35f2c16b6_dpr0pg1qm8pue, 878).
 node[ast_oxc](nf85e80d35f2c16b6_k1oii242n726d, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_k1oii242n726d, 25).
-start[ast_oxc](nf85e80d35f2c16b6_k1oii242n726d, 879).
 attr[ast_oxc](nf85e80d35f2c16b6_k1oii242n726d, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_k1oii242n726d, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_k1oii242n726d, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_dpr0pg1qm8pue, quasis, 0, nf85e80d35f2c16b6_k1oii242n726d).
 node[ast_oxc](nf85e80d35f2c16b6_1dsbljfugv764, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_1dsbljfugv764, 25).
-start[ast_oxc](nf85e80d35f2c16b6_1dsbljfugv764, 883).
 attr[ast_oxc](nf85e80d35f2c16b6_1dsbljfugv764, tail, true).
 attr[ast_oxc](nf85e80d35f2c16b6_1dsbljfugv764, value_raw, "/x").
 attr[ast_oxc](nf85e80d35f2c16b6_1dsbljfugv764, value_cooked, "/x").
 child[ast_oxc](nf85e80d35f2c16b6_dpr0pg1qm8pue, quasis, 1, nf85e80d35f2c16b6_1dsbljfugv764).
 node[ast_oxc](nf85e80d35f2c16b6_3gpje4cuvtj41, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3gpje4cuvtj41, 25).
-start[ast_oxc](nf85e80d35f2c16b6_3gpje4cuvtj41, 881).
 attr[ast_oxc](nf85e80d35f2c16b6_3gpje4cuvtj41, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_3gpje4cuvtj41, name, "u").
 child[ast_oxc](nf85e80d35f2c16b6_dpr0pg1qm8pue, expressions, 0, nf85e80d35f2c16b6_3gpje4cuvtj41).
@@ -1010,80 +822,66 @@ child[ast_oxc](nf85e80d35f2c16b6_aa4dm6fe0u1ae, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 22, nf85e80d35f2c16b6_aa4dm6fe0u1ae).
 node[ast_oxc](nf85e80d35f2c16b6_ekq8975ekct7c, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ekq8975ekct7c, 26).
-start[ast_oxc](nf85e80d35f2c16b6_ekq8975ekct7c, 890).
 node[ast_oxc](nf85e80d35f2c16b6_ckg75nk8gpj35, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ckg75nk8gpj35, 26).
-start[ast_oxc](nf85e80d35f2c16b6_ckg75nk8gpj35, 897).
 attr[ast_oxc](nf85e80d35f2c16b6_ckg75nk8gpj35, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_ckg75nk8gpj35, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_a1970mmpmm1d8, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_a1970mmpmm1d8, 26).
-start[ast_oxc](nf85e80d35f2c16b6_a1970mmpmm1d8, 903).
 attr[ast_oxc](nf85e80d35f2c16b6_a1970mmpmm1d8, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_5tselhim6cg95, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5tselhim6cg95, 26).
-start[ast_oxc](nf85e80d35f2c16b6_5tselhim6cg95, 903).
 attr[ast_oxc](nf85e80d35f2c16b6_5tselhim6cg95, name, "atCap").
 child[ast_oxc](nf85e80d35f2c16b6_a1970mmpmm1d8, id, 0, nf85e80d35f2c16b6_5tselhim6cg95).
 node[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, template_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, 26).
-start[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, 911).
 node[ast_oxc](nf85e80d35f2c16b6_2nd0dnh924a2e, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2nd0dnh924a2e, 26).
-start[ast_oxc](nf85e80d35f2c16b6_2nd0dnh924a2e, 912).
 attr[ast_oxc](nf85e80d35f2c16b6_2nd0dnh924a2e, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_2nd0dnh924a2e, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_2nd0dnh924a2e, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, quasis, 0, nf85e80d35f2c16b6_2nd0dnh924a2e).
 node[ast_oxc](nf85e80d35f2c16b6_dm3ce0vrn3r87, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_dm3ce0vrn3r87, 26).
-start[ast_oxc](nf85e80d35f2c16b6_dm3ce0vrn3r87, 916).
 attr[ast_oxc](nf85e80d35f2c16b6_dm3ce0vrn3r87, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_dm3ce0vrn3r87, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_dm3ce0vrn3r87, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, quasis, 1, nf85e80d35f2c16b6_dm3ce0vrn3r87).
 node[ast_oxc](nf85e80d35f2c16b6_2h872biseraa5, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2h872biseraa5, 26).
-start[ast_oxc](nf85e80d35f2c16b6_2h872biseraa5, 920).
 attr[ast_oxc](nf85e80d35f2c16b6_2h872biseraa5, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_2h872biseraa5, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_2h872biseraa5, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, quasis, 2, nf85e80d35f2c16b6_2h872biseraa5).
 node[ast_oxc](nf85e80d35f2c16b6_ne1hdev39vdd2, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ne1hdev39vdd2, 26).
-start[ast_oxc](nf85e80d35f2c16b6_ne1hdev39vdd2, 924).
 attr[ast_oxc](nf85e80d35f2c16b6_ne1hdev39vdd2, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_ne1hdev39vdd2, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_ne1hdev39vdd2, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, quasis, 3, nf85e80d35f2c16b6_ne1hdev39vdd2).
 node[ast_oxc](nf85e80d35f2c16b6_midl37qnj9i9a, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_midl37qnj9i9a, 26).
-start[ast_oxc](nf85e80d35f2c16b6_midl37qnj9i9a, 928).
 attr[ast_oxc](nf85e80d35f2c16b6_midl37qnj9i9a, tail, true).
 attr[ast_oxc](nf85e80d35f2c16b6_midl37qnj9i9a, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_midl37qnj9i9a, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, quasis, 4, nf85e80d35f2c16b6_midl37qnj9i9a).
 node[ast_oxc](nf85e80d35f2c16b6_b6fa05ts5muh9, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_b6fa05ts5muh9, 26).
-start[ast_oxc](nf85e80d35f2c16b6_b6fa05ts5muh9, 914).
 attr[ast_oxc](nf85e80d35f2c16b6_b6fa05ts5muh9, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_b6fa05ts5muh9, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, expressions, 0, nf85e80d35f2c16b6_b6fa05ts5muh9).
 node[ast_oxc](nf85e80d35f2c16b6_lg7vc0pc69sp1, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_lg7vc0pc69sp1, 26).
-start[ast_oxc](nf85e80d35f2c16b6_lg7vc0pc69sp1, 918).
 attr[ast_oxc](nf85e80d35f2c16b6_lg7vc0pc69sp1, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_lg7vc0pc69sp1, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, expressions, 1, nf85e80d35f2c16b6_lg7vc0pc69sp1).
 node[ast_oxc](nf85e80d35f2c16b6_0f8b3ebe5v6s6, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0f8b3ebe5v6s6, 26).
-start[ast_oxc](nf85e80d35f2c16b6_0f8b3ebe5v6s6, 922).
 attr[ast_oxc](nf85e80d35f2c16b6_0f8b3ebe5v6s6, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_0f8b3ebe5v6s6, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, expressions, 2, nf85e80d35f2c16b6_0f8b3ebe5v6s6).
 node[ast_oxc](nf85e80d35f2c16b6_ujss18nleipi9, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ujss18nleipi9, 26).
-start[ast_oxc](nf85e80d35f2c16b6_ujss18nleipi9, 926).
 attr[ast_oxc](nf85e80d35f2c16b6_ujss18nleipi9, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_ujss18nleipi9, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_3verqd8r69sj9, expressions, 3, nf85e80d35f2c16b6_ujss18nleipi9).
@@ -1093,93 +891,77 @@ child[ast_oxc](nf85e80d35f2c16b6_ekq8975ekct7c, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 23, nf85e80d35f2c16b6_ekq8975ekct7c).
 node[ast_oxc](nf85e80d35f2c16b6_folvvmh15vk19, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_folvvmh15vk19, 27).
-start[ast_oxc](nf85e80d35f2c16b6_folvvmh15vk19, 931).
 node[ast_oxc](nf85e80d35f2c16b6_v01fa6eaef8ua, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_v01fa6eaef8ua, 27).
-start[ast_oxc](nf85e80d35f2c16b6_v01fa6eaef8ua, 938).
 attr[ast_oxc](nf85e80d35f2c16b6_v01fa6eaef8ua, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_v01fa6eaef8ua, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_jol94u4h1qda3, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_jol94u4h1qda3, 27).
-start[ast_oxc](nf85e80d35f2c16b6_jol94u4h1qda3, 944).
 attr[ast_oxc](nf85e80d35f2c16b6_jol94u4h1qda3, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_jh33p5pd56bce, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_jh33p5pd56bce, 27).
-start[ast_oxc](nf85e80d35f2c16b6_jh33p5pd56bce, 944).
 attr[ast_oxc](nf85e80d35f2c16b6_jh33p5pd56bce, name, "overCap").
 child[ast_oxc](nf85e80d35f2c16b6_jol94u4h1qda3, id, 0, nf85e80d35f2c16b6_jh33p5pd56bce).
 node[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, template_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, 27).
-start[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, 954).
 node[ast_oxc](nf85e80d35f2c16b6_0tol7oq75qjgd, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0tol7oq75qjgd, 27).
-start[ast_oxc](nf85e80d35f2c16b6_0tol7oq75qjgd, 955).
 attr[ast_oxc](nf85e80d35f2c16b6_0tol7oq75qjgd, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_0tol7oq75qjgd, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_0tol7oq75qjgd, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, quasis, 0, nf85e80d35f2c16b6_0tol7oq75qjgd).
 node[ast_oxc](nf85e80d35f2c16b6_o2tti1u45hn78, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_o2tti1u45hn78, 27).
-start[ast_oxc](nf85e80d35f2c16b6_o2tti1u45hn78, 959).
 attr[ast_oxc](nf85e80d35f2c16b6_o2tti1u45hn78, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_o2tti1u45hn78, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_o2tti1u45hn78, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, quasis, 1, nf85e80d35f2c16b6_o2tti1u45hn78).
 node[ast_oxc](nf85e80d35f2c16b6_n8ur256c6u2l4, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n8ur256c6u2l4, 27).
-start[ast_oxc](nf85e80d35f2c16b6_n8ur256c6u2l4, 963).
 attr[ast_oxc](nf85e80d35f2c16b6_n8ur256c6u2l4, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_n8ur256c6u2l4, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_n8ur256c6u2l4, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, quasis, 2, nf85e80d35f2c16b6_n8ur256c6u2l4).
 node[ast_oxc](nf85e80d35f2c16b6_iv2s5aehtlc39, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_iv2s5aehtlc39, 27).
-start[ast_oxc](nf85e80d35f2c16b6_iv2s5aehtlc39, 967).
 attr[ast_oxc](nf85e80d35f2c16b6_iv2s5aehtlc39, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_iv2s5aehtlc39, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_iv2s5aehtlc39, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, quasis, 3, nf85e80d35f2c16b6_iv2s5aehtlc39).
 node[ast_oxc](nf85e80d35f2c16b6_67eepd5tb77q6, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_67eepd5tb77q6, 27).
-start[ast_oxc](nf85e80d35f2c16b6_67eepd5tb77q6, 971).
 attr[ast_oxc](nf85e80d35f2c16b6_67eepd5tb77q6, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_67eepd5tb77q6, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_67eepd5tb77q6, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, quasis, 4, nf85e80d35f2c16b6_67eepd5tb77q6).
 node[ast_oxc](nf85e80d35f2c16b6_3s4p3nn2nkea8, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3s4p3nn2nkea8, 27).
-start[ast_oxc](nf85e80d35f2c16b6_3s4p3nn2nkea8, 975).
 attr[ast_oxc](nf85e80d35f2c16b6_3s4p3nn2nkea8, tail, true).
 attr[ast_oxc](nf85e80d35f2c16b6_3s4p3nn2nkea8, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_3s4p3nn2nkea8, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, quasis, 5, nf85e80d35f2c16b6_3s4p3nn2nkea8).
 node[ast_oxc](nf85e80d35f2c16b6_pp4un1ekck6ie, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_pp4un1ekck6ie, 27).
-start[ast_oxc](nf85e80d35f2c16b6_pp4un1ekck6ie, 957).
 attr[ast_oxc](nf85e80d35f2c16b6_pp4un1ekck6ie, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_pp4un1ekck6ie, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, expressions, 0, nf85e80d35f2c16b6_pp4un1ekck6ie).
 node[ast_oxc](nf85e80d35f2c16b6_gn3a24pnmk7j6, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gn3a24pnmk7j6, 27).
-start[ast_oxc](nf85e80d35f2c16b6_gn3a24pnmk7j6, 961).
 attr[ast_oxc](nf85e80d35f2c16b6_gn3a24pnmk7j6, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_gn3a24pnmk7j6, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, expressions, 1, nf85e80d35f2c16b6_gn3a24pnmk7j6).
 node[ast_oxc](nf85e80d35f2c16b6_f1oectrsfrf32, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_f1oectrsfrf32, 27).
-start[ast_oxc](nf85e80d35f2c16b6_f1oectrsfrf32, 965).
 attr[ast_oxc](nf85e80d35f2c16b6_f1oectrsfrf32, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_f1oectrsfrf32, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, expressions, 2, nf85e80d35f2c16b6_f1oectrsfrf32).
 node[ast_oxc](nf85e80d35f2c16b6_ucff9g0pl3182, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ucff9g0pl3182, 27).
-start[ast_oxc](nf85e80d35f2c16b6_ucff9g0pl3182, 969).
 attr[ast_oxc](nf85e80d35f2c16b6_ucff9g0pl3182, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_ucff9g0pl3182, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, expressions, 3, nf85e80d35f2c16b6_ucff9g0pl3182).
 node[ast_oxc](nf85e80d35f2c16b6_tdm2entodt8c3, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_tdm2entodt8c3, 27).
-start[ast_oxc](nf85e80d35f2c16b6_tdm2entodt8c3, 973).
 attr[ast_oxc](nf85e80d35f2c16b6_tdm2entodt8c3, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_tdm2entodt8c3, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_kdjfga6hbb7c9, expressions, 4, nf85e80d35f2c16b6_tdm2entodt8c3).
@@ -1189,21 +971,17 @@ child[ast_oxc](nf85e80d35f2c16b6_folvvmh15vk19, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 24, nf85e80d35f2c16b6_folvvmh15vk19).
 node[ast_oxc](nf85e80d35f2c16b6_0os15ncrpiuic, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0os15ncrpiuic, 28).
-start[ast_oxc](nf85e80d35f2c16b6_0os15ncrpiuic, 978).
 attr[ast_oxc](nf85e80d35f2c16b6_0os15ncrpiuic, kind, "Let").
 attr[ast_oxc](nf85e80d35f2c16b6_0os15ncrpiuic, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_a1je6ji3n66vb, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_a1je6ji3n66vb, 28).
-start[ast_oxc](nf85e80d35f2c16b6_a1je6ji3n66vb, 982).
 attr[ast_oxc](nf85e80d35f2c16b6_a1je6ji3n66vb, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_649hhig13u4p7, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_649hhig13u4p7, 28).
-start[ast_oxc](nf85e80d35f2c16b6_649hhig13u4p7, 982).
 attr[ast_oxc](nf85e80d35f2c16b6_649hhig13u4p7, name, "s").
 child[ast_oxc](nf85e80d35f2c16b6_a1je6ji3n66vb, id, 0, nf85e80d35f2c16b6_649hhig13u4p7).
 node[ast_oxc](nf85e80d35f2c16b6_e7hrl1re6gthc, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_e7hrl1re6gthc, 28).
-start[ast_oxc](nf85e80d35f2c16b6_e7hrl1re6gthc, 986).
 attr[ast_oxc](nf85e80d35f2c16b6_e7hrl1re6gthc, value, "").
 attr[ast_oxc](nf85e80d35f2c16b6_e7hrl1re6gthc, raw, "''").
 child[ast_oxc](nf85e80d35f2c16b6_a1je6ji3n66vb, init, 0, nf85e80d35f2c16b6_e7hrl1re6gthc).
@@ -1211,36 +989,29 @@ child[ast_oxc](nf85e80d35f2c16b6_0os15ncrpiuic, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 25, nf85e80d35f2c16b6_0os15ncrpiuic).
 node[ast_oxc](nf85e80d35f2c16b6_0bnavbte879bf, for_of_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0bnavbte879bf, 29).
-start[ast_oxc](nf85e80d35f2c16b6_0bnavbte879bf, 990).
 node[ast_oxc](nf85e80d35f2c16b6_ltodbr9bd00s4, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ltodbr9bd00s4, 29).
-start[ast_oxc](nf85e80d35f2c16b6_ltodbr9bd00s4, 995).
 attr[ast_oxc](nf85e80d35f2c16b6_ltodbr9bd00s4, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_ltodbr9bd00s4, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_d7kcc3q88t107, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_d7kcc3q88t107, 29).
-start[ast_oxc](nf85e80d35f2c16b6_d7kcc3q88t107, 1001).
 attr[ast_oxc](nf85e80d35f2c16b6_d7kcc3q88t107, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_fi6mvugece2a9, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_fi6mvugece2a9, 29).
-start[ast_oxc](nf85e80d35f2c16b6_fi6mvugece2a9, 1001).
 attr[ast_oxc](nf85e80d35f2c16b6_fi6mvugece2a9, name, "_").
 child[ast_oxc](nf85e80d35f2c16b6_d7kcc3q88t107, id, 0, nf85e80d35f2c16b6_fi6mvugece2a9).
 child[ast_oxc](nf85e80d35f2c16b6_ltodbr9bd00s4, declarations, 0, nf85e80d35f2c16b6_d7kcc3q88t107).
 child[ast_oxc](nf85e80d35f2c16b6_0bnavbte879bf, left, 0, nf85e80d35f2c16b6_ltodbr9bd00s4).
 node[ast_oxc](nf85e80d35f2c16b6_ubu02suadtcu, array_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ubu02suadtcu, 29).
-start[ast_oxc](nf85e80d35f2c16b6_ubu02suadtcu, 1006).
 node[ast_oxc](nf85e80d35f2c16b6_7t44vbltivh38, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_7t44vbltivh38, 29).
-start[ast_oxc](nf85e80d35f2c16b6_7t44vbltivh38, 1007).
 attr[ast_oxc](nf85e80d35f2c16b6_7t44vbltivh38, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_7t44vbltivh38, raw, "1").
 attr[ast_oxc](nf85e80d35f2c16b6_7t44vbltivh38, value, 1).
 child[ast_oxc](nf85e80d35f2c16b6_ubu02suadtcu, elements, 0, nf85e80d35f2c16b6_7t44vbltivh38).
 node[ast_oxc](nf85e80d35f2c16b6_4r8j8dvdghgjd, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4r8j8dvdghgjd, 29).
-start[ast_oxc](nf85e80d35f2c16b6_4r8j8dvdghgjd, 1010).
 attr[ast_oxc](nf85e80d35f2c16b6_4r8j8dvdghgjd, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_4r8j8dvdghgjd, raw, "2").
 attr[ast_oxc](nf85e80d35f2c16b6_4r8j8dvdghgjd, value, 2).
@@ -1248,33 +1019,26 @@ child[ast_oxc](nf85e80d35f2c16b6_ubu02suadtcu, elements, 1, nf85e80d35f2c16b6_4r
 child[ast_oxc](nf85e80d35f2c16b6_0bnavbte879bf, right, 0, nf85e80d35f2c16b6_ubu02suadtcu).
 node[ast_oxc](nf85e80d35f2c16b6_4nd5auvkll9c, block_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4nd5auvkll9c, 29).
-start[ast_oxc](nf85e80d35f2c16b6_4nd5auvkll9c, 1014).
 node[ast_oxc](nf85e80d35f2c16b6_fe5kt84u2od49, expression_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_fe5kt84u2od49, 29).
-start[ast_oxc](nf85e80d35f2c16b6_fe5kt84u2od49, 1016).
 node[ast_oxc](nf85e80d35f2c16b6_tl4fd42j5muu4, assignment_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_tl4fd42j5muu4, 29).
-start[ast_oxc](nf85e80d35f2c16b6_tl4fd42j5muu4, 1016).
 attr[ast_oxc](nf85e80d35f2c16b6_tl4fd42j5muu4, operator, "Assign").
 node[ast_oxc](nf85e80d35f2c16b6_i07mjslrle5ka, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_i07mjslrle5ka, 29).
-start[ast_oxc](nf85e80d35f2c16b6_i07mjslrle5ka, 1016).
 attr[ast_oxc](nf85e80d35f2c16b6_i07mjslrle5ka, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](nf85e80d35f2c16b6_i07mjslrle5ka, name, "s").
 child[ast_oxc](nf85e80d35f2c16b6_tl4fd42j5muu4, left, 0, nf85e80d35f2c16b6_i07mjslrle5ka).
 node[ast_oxc](nf85e80d35f2c16b6_ao1qciu4s3fu, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ao1qciu4s3fu, 29).
-start[ast_oxc](nf85e80d35f2c16b6_ao1qciu4s3fu, 1020).
 attr[ast_oxc](nf85e80d35f2c16b6_ao1qciu4s3fu, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_1c7i5rumel5d5, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_1c7i5rumel5d5, 29).
-start[ast_oxc](nf85e80d35f2c16b6_1c7i5rumel5d5, 1020).
 attr[ast_oxc](nf85e80d35f2c16b6_1c7i5rumel5d5, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_1c7i5rumel5d5, name, "s").
 child[ast_oxc](nf85e80d35f2c16b6_ao1qciu4s3fu, left, 0, nf85e80d35f2c16b6_1c7i5rumel5d5).
 node[ast_oxc](nf85e80d35f2c16b6_mppn5l53tln7, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_mppn5l53tln7, 29).
-start[ast_oxc](nf85e80d35f2c16b6_mppn5l53tln7, 1024).
 attr[ast_oxc](nf85e80d35f2c16b6_mppn5l53tln7, value, "x").
 attr[ast_oxc](nf85e80d35f2c16b6_mppn5l53tln7, raw, "'x'").
 child[ast_oxc](nf85e80d35f2c16b6_ao1qciu4s3fu, right, 0, nf85e80d35f2c16b6_mppn5l53tln7).
@@ -1286,24 +1050,19 @@ attr[ast_oxc](nf85e80d35f2c16b6_0bnavbte879bf, await, false).
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 26, nf85e80d35f2c16b6_0bnavbte879bf).
 node[ast_oxc](nf85e80d35f2c16b6_6rnmr5ue0fm7e, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_6rnmr5ue0fm7e, 30).
-start[ast_oxc](nf85e80d35f2c16b6_6rnmr5ue0fm7e, 1031).
 node[ast_oxc](nf85e80d35f2c16b6_6eoripo05qnp, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_6eoripo05qnp, 30).
-start[ast_oxc](nf85e80d35f2c16b6_6eoripo05qnp, 1038).
 attr[ast_oxc](nf85e80d35f2c16b6_6eoripo05qnp, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_6eoripo05qnp, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_so8c6gfpn71fc, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_so8c6gfpn71fc, 30).
-start[ast_oxc](nf85e80d35f2c16b6_so8c6gfpn71fc, 1044).
 attr[ast_oxc](nf85e80d35f2c16b6_so8c6gfpn71fc, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_kp3fhql5lhf8f, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kp3fhql5lhf8f, 30).
-start[ast_oxc](nf85e80d35f2c16b6_kp3fhql5lhf8f, 1044).
 attr[ast_oxc](nf85e80d35f2c16b6_kp3fhql5lhf8f, name, "looped").
 child[ast_oxc](nf85e80d35f2c16b6_so8c6gfpn71fc, id, 0, nf85e80d35f2c16b6_kp3fhql5lhf8f).
 node[ast_oxc](nf85e80d35f2c16b6_9u1ujr33el7g7, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9u1ujr33el7g7, 30).
-start[ast_oxc](nf85e80d35f2c16b6_9u1ujr33el7g7, 1053).
 attr[ast_oxc](nf85e80d35f2c16b6_9u1ujr33el7g7, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_9u1ujr33el7g7, name, "s").
 child[ast_oxc](nf85e80d35f2c16b6_so8c6gfpn71fc, init, 0, nf85e80d35f2c16b6_9u1ujr33el7g7).
@@ -1312,50 +1071,40 @@ child[ast_oxc](nf85e80d35f2c16b6_6rnmr5ue0fm7e, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 27, nf85e80d35f2c16b6_6rnmr5ue0fm7e).
 node[ast_oxc](nf85e80d35f2c16b6_55ufghpl7mqd1, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_55ufghpl7mqd1, 31).
-start[ast_oxc](nf85e80d35f2c16b6_55ufghpl7mqd1, 1056).
 attr[ast_oxc](nf85e80d35f2c16b6_55ufghpl7mqd1, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_55ufghpl7mqd1, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_20ap3kdrkpfp3, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_20ap3kdrkpfp3, 31).
-start[ast_oxc](nf85e80d35f2c16b6_20ap3kdrkpfp3, 1062).
 attr[ast_oxc](nf85e80d35f2c16b6_20ap3kdrkpfp3, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_ui90rfjr96kd2, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ui90rfjr96kd2, 31).
-start[ast_oxc](nf85e80d35f2c16b6_ui90rfjr96kd2, 1062).
 attr[ast_oxc](nf85e80d35f2c16b6_ui90rfjr96kd2, name, "w").
 child[ast_oxc](nf85e80d35f2c16b6_20ap3kdrkpfp3, id, 0, nf85e80d35f2c16b6_ui90rfjr96kd2).
 node[ast_oxc](nf85e80d35f2c16b6_1oqdb9vq8p5re, conditional_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_1oqdb9vq8p5re, 31).
-start[ast_oxc](nf85e80d35f2c16b6_1oqdb9vq8p5re, 1066).
 node[ast_oxc](nf85e80d35f2c16b6_auksm7ooh12sf, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_auksm7ooh12sf, 31).
-start[ast_oxc](nf85e80d35f2c16b6_auksm7ooh12sf, 1066).
 attr[ast_oxc](nf85e80d35f2c16b6_auksm7ooh12sf, operator, "GreaterThan").
 node[ast_oxc](nf85e80d35f2c16b6_dfl5vg60g44md, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_dfl5vg60g44md, 31).
-start[ast_oxc](nf85e80d35f2c16b6_dfl5vg60g44md, 1066).
 attr[ast_oxc](nf85e80d35f2c16b6_dfl5vg60g44md, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_dfl5vg60g44md, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_p5dv2km7t2ci4, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_p5dv2km7t2ci4, 31).
-start[ast_oxc](nf85e80d35f2c16b6_p5dv2km7t2ci4, 1066).
 attr[ast_oxc](nf85e80d35f2c16b6_p5dv2km7t2ci4, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_9tviglokmptc9, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9tviglokmptc9, 31).
-start[ast_oxc](nf85e80d35f2c16b6_9tviglokmptc9, 1066).
 attr[ast_oxc](nf85e80d35f2c16b6_9tviglokmptc9, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_9tviglokmptc9, name, "Math").
 child[ast_oxc](nf85e80d35f2c16b6_p5dv2km7t2ci4, object, 0, nf85e80d35f2c16b6_9tviglokmptc9).
 node[ast_oxc](nf85e80d35f2c16b6_rpnnmp9v0h4h3, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rpnnmp9v0h4h3, 31).
-start[ast_oxc](nf85e80d35f2c16b6_rpnnmp9v0h4h3, 1071).
 attr[ast_oxc](nf85e80d35f2c16b6_rpnnmp9v0h4h3, name, "random").
 child[ast_oxc](nf85e80d35f2c16b6_p5dv2km7t2ci4, property, 0, nf85e80d35f2c16b6_rpnnmp9v0h4h3).
 child[ast_oxc](nf85e80d35f2c16b6_dfl5vg60g44md, callee, 0, nf85e80d35f2c16b6_p5dv2km7t2ci4).
 child[ast_oxc](nf85e80d35f2c16b6_auksm7ooh12sf, left, 0, nf85e80d35f2c16b6_dfl5vg60g44md).
 node[ast_oxc](nf85e80d35f2c16b6_3adlitir1np1, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3adlitir1np1, 31).
-start[ast_oxc](nf85e80d35f2c16b6_3adlitir1np1, 1082).
 attr[ast_oxc](nf85e80d35f2c16b6_3adlitir1np1, base, "Float").
 attr[ast_oxc](nf85e80d35f2c16b6_3adlitir1np1, raw, "0.5").
 attr[ast_oxc](nf85e80d35f2c16b6_3adlitir1np1, value, "0.5").
@@ -1363,14 +1112,12 @@ child[ast_oxc](nf85e80d35f2c16b6_auksm7ooh12sf, right, 0, nf85e80d35f2c16b6_3adl
 child[ast_oxc](nf85e80d35f2c16b6_1oqdb9vq8p5re, test, 0, nf85e80d35f2c16b6_auksm7ooh12sf).
 node[ast_oxc](nf85e80d35f2c16b6_gnlqgn572g56a, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gnlqgn572g56a, 31).
-start[ast_oxc](nf85e80d35f2c16b6_gnlqgn572g56a, 1088).
 attr[ast_oxc](nf85e80d35f2c16b6_gnlqgn572g56a, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_gnlqgn572g56a, raw, "1").
 attr[ast_oxc](nf85e80d35f2c16b6_gnlqgn572g56a, value, 1).
 child[ast_oxc](nf85e80d35f2c16b6_1oqdb9vq8p5re, consequent, 0, nf85e80d35f2c16b6_gnlqgn572g56a).
 node[ast_oxc](nf85e80d35f2c16b6_mqmerm7lcgr8, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_mqmerm7lcgr8, 31).
-start[ast_oxc](nf85e80d35f2c16b6_mqmerm7lcgr8, 1092).
 attr[ast_oxc](nf85e80d35f2c16b6_mqmerm7lcgr8, value, "z").
 attr[ast_oxc](nf85e80d35f2c16b6_mqmerm7lcgr8, raw, "'z'").
 child[ast_oxc](nf85e80d35f2c16b6_1oqdb9vq8p5re, alternate, 0, nf85e80d35f2c16b6_mqmerm7lcgr8).
@@ -1379,34 +1126,27 @@ child[ast_oxc](nf85e80d35f2c16b6_55ufghpl7mqd1, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 28, nf85e80d35f2c16b6_55ufghpl7mqd1).
 node[ast_oxc](nf85e80d35f2c16b6_h9alhjr9mg986, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_h9alhjr9mg986, 32).
-start[ast_oxc](nf85e80d35f2c16b6_h9alhjr9mg986, 1097).
 node[ast_oxc](nf85e80d35f2c16b6_svgmsjdsuq7l9, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_svgmsjdsuq7l9, 32).
-start[ast_oxc](nf85e80d35f2c16b6_svgmsjdsuq7l9, 1104).
 attr[ast_oxc](nf85e80d35f2c16b6_svgmsjdsuq7l9, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_svgmsjdsuq7l9, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_sqhe114ljmdt7, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_sqhe114ljmdt7, 32).
-start[ast_oxc](nf85e80d35f2c16b6_sqhe114ljmdt7, 1110).
 attr[ast_oxc](nf85e80d35f2c16b6_sqhe114ljmdt7, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_91t9l9hkllqk5, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_91t9l9hkllqk5, 32).
-start[ast_oxc](nf85e80d35f2c16b6_91t9l9hkllqk5, 1110).
 attr[ast_oxc](nf85e80d35f2c16b6_91t9l9hkllqk5, name, "either").
 child[ast_oxc](nf85e80d35f2c16b6_sqhe114ljmdt7, id, 0, nf85e80d35f2c16b6_91t9l9hkllqk5).
 node[ast_oxc](nf85e80d35f2c16b6_8bf4pbldfvbt, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8bf4pbldfvbt, 32).
-start[ast_oxc](nf85e80d35f2c16b6_8bf4pbldfvbt, 1119).
 attr[ast_oxc](nf85e80d35f2c16b6_8bf4pbldfvbt, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_r76k1r3b1gta5, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_r76k1r3b1gta5, 32).
-start[ast_oxc](nf85e80d35f2c16b6_r76k1r3b1gta5, 1119).
 attr[ast_oxc](nf85e80d35f2c16b6_r76k1r3b1gta5, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_r76k1r3b1gta5, name, "w").
 child[ast_oxc](nf85e80d35f2c16b6_8bf4pbldfvbt, left, 0, nf85e80d35f2c16b6_r76k1r3b1gta5).
 node[ast_oxc](nf85e80d35f2c16b6_v78idfts8gqfd, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_v78idfts8gqfd, 32).
-start[ast_oxc](nf85e80d35f2c16b6_v78idfts8gqfd, 1123).
 attr[ast_oxc](nf85e80d35f2c16b6_v78idfts8gqfd, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_v78idfts8gqfd, raw, "2").
 attr[ast_oxc](nf85e80d35f2c16b6_v78idfts8gqfd, value, 2).
@@ -1417,45 +1157,36 @@ child[ast_oxc](nf85e80d35f2c16b6_h9alhjr9mg986, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 29, nf85e80d35f2c16b6_h9alhjr9mg986).
 node[ast_oxc](nf85e80d35f2c16b6_3msr4e9d5lvja, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3msr4e9d5lvja, 33).
-start[ast_oxc](nf85e80d35f2c16b6_3msr4e9d5lvja, 1126).
 node[ast_oxc](nf85e80d35f2c16b6_l9oa76imahsnf, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_l9oa76imahsnf, 33).
-start[ast_oxc](nf85e80d35f2c16b6_l9oa76imahsnf, 1133).
 attr[ast_oxc](nf85e80d35f2c16b6_l9oa76imahsnf, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_l9oa76imahsnf, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_0s19dviacpef1, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0s19dviacpef1, 33).
-start[ast_oxc](nf85e80d35f2c16b6_0s19dviacpef1, 1139).
 attr[ast_oxc](nf85e80d35f2c16b6_0s19dviacpef1, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_s07jk0gr2sq3b, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_s07jk0gr2sq3b, 33).
-start[ast_oxc](nf85e80d35f2c16b6_s07jk0gr2sq3b, 1139).
 attr[ast_oxc](nf85e80d35f2c16b6_s07jk0gr2sq3b, name, "doubled").
 child[ast_oxc](nf85e80d35f2c16b6_0s19dviacpef1, id, 0, nf85e80d35f2c16b6_s07jk0gr2sq3b).
 node[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, 33).
-start[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, 1149).
 attr[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_hsgi3qvv4mluc, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_hsgi3qvv4mluc, 33).
-start[ast_oxc](nf85e80d35f2c16b6_hsgi3qvv4mluc, 1149).
 attr[ast_oxc](nf85e80d35f2c16b6_hsgi3qvv4mluc, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_2aoke3o99psba, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2aoke3o99psba, 33).
-start[ast_oxc](nf85e80d35f2c16b6_2aoke3o99psba, 1149).
 attr[ast_oxc](nf85e80d35f2c16b6_2aoke3o99psba, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_2aoke3o99psba, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_hsgi3qvv4mluc, object, 0, nf85e80d35f2c16b6_2aoke3o99psba).
 node[ast_oxc](nf85e80d35f2c16b6_1aqc9f4aj66g4, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_1aqc9f4aj66g4, 33).
-start[ast_oxc](nf85e80d35f2c16b6_1aqc9f4aj66g4, 1154).
 attr[ast_oxc](nf85e80d35f2c16b6_1aqc9f4aj66g4, name, "dirname").
 child[ast_oxc](nf85e80d35f2c16b6_hsgi3qvv4mluc, property, 0, nf85e80d35f2c16b6_1aqc9f4aj66g4).
 child[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, callee, 0, nf85e80d35f2c16b6_hsgi3qvv4mluc).
 node[ast_oxc](nf85e80d35f2c16b6_dhuojpdlv6om5, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_dhuojpdlv6om5, 33).
-start[ast_oxc](nf85e80d35f2c16b6_dhuojpdlv6om5, 1162).
 attr[ast_oxc](nf85e80d35f2c16b6_dhuojpdlv6om5, value, "//x").
 attr[ast_oxc](nf85e80d35f2c16b6_dhuojpdlv6om5, raw, "'//x'").
 child[ast_oxc](nf85e80d35f2c16b6_38lt302ggphk5, arguments, 0, nf85e80d35f2c16b6_dhuojpdlv6om5).
@@ -1465,86 +1196,68 @@ child[ast_oxc](nf85e80d35f2c16b6_3msr4e9d5lvja, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 30, nf85e80d35f2c16b6_3msr4e9d5lvja).
 node[ast_oxc](nf85e80d35f2c16b6_ukf8dfufn92p7, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ukf8dfufn92p7, 34).
-start[ast_oxc](nf85e80d35f2c16b6_ukf8dfufn92p7, 1170).
 attr[ast_oxc](nf85e80d35f2c16b6_ukf8dfufn92p7, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_ukf8dfufn92p7, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, 34).
-start[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, 1176).
 attr[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_fbntmhb9kj671, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_fbntmhb9kj671, 34).
-start[ast_oxc](nf85e80d35f2c16b6_fbntmhb9kj671, 1176).
 attr[ast_oxc](nf85e80d35f2c16b6_fbntmhb9kj671, name, "rest").
 child[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, id, 0, nf85e80d35f2c16b6_fbntmhb9kj671).
 node[ast_oxc](nf85e80d35f2c16b6_e649t9jnhkfs8, tstype_annotation, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_e649t9jnhkfs8, 34).
-start[ast_oxc](nf85e80d35f2c16b6_e649t9jnhkfs8, 1180).
 node[ast_oxc](nf85e80d35f2c16b6_m2meksg1htida, tsarray_type, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_m2meksg1htida, 34).
-start[ast_oxc](nf85e80d35f2c16b6_m2meksg1htida, 1182).
 node[ast_oxc](nf85e80d35f2c16b6_ernrqat9nmbcc, tsstring_keyword, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ernrqat9nmbcc, 34).
-start[ast_oxc](nf85e80d35f2c16b6_ernrqat9nmbcc, 1182).
 child[ast_oxc](nf85e80d35f2c16b6_m2meksg1htida, element_type, 0, nf85e80d35f2c16b6_ernrqat9nmbcc).
 child[ast_oxc](nf85e80d35f2c16b6_e649t9jnhkfs8, type_annotation, 0, nf85e80d35f2c16b6_m2meksg1htida).
 child[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, type_annotation, 0, nf85e80d35f2c16b6_e649t9jnhkfs8).
 node[ast_oxc](nf85e80d35f2c16b6_94bkkfo214u7d, array_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_94bkkfo214u7d, 34).
-start[ast_oxc](nf85e80d35f2c16b6_94bkkfo214u7d, 1193).
 child[ast_oxc](nf85e80d35f2c16b6_71nldska6ctdc, init, 0, nf85e80d35f2c16b6_94bkkfo214u7d).
 child[ast_oxc](nf85e80d35f2c16b6_ukf8dfufn92p7, declarations, 0, nf85e80d35f2c16b6_71nldska6ctdc).
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 31, nf85e80d35f2c16b6_ukf8dfufn92p7).
 node[ast_oxc](nf85e80d35f2c16b6_fvqomvufa0vi9, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_fvqomvufa0vi9, 35).
-start[ast_oxc](nf85e80d35f2c16b6_fvqomvufa0vi9, 1197).
 node[ast_oxc](nf85e80d35f2c16b6_ehvcvqn3f585d, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_ehvcvqn3f585d, 35).
-start[ast_oxc](nf85e80d35f2c16b6_ehvcvqn3f585d, 1204).
 attr[ast_oxc](nf85e80d35f2c16b6_ehvcvqn3f585d, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_ehvcvqn3f585d, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_0e999o83jv721, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0e999o83jv721, 35).
-start[ast_oxc](nf85e80d35f2c16b6_0e999o83jv721, 1210).
 attr[ast_oxc](nf85e80d35f2c16b6_0e999o83jv721, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_9hkbq9cmfju3e, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9hkbq9cmfju3e, 35).
-start[ast_oxc](nf85e80d35f2c16b6_9hkbq9cmfju3e, 1210).
 attr[ast_oxc](nf85e80d35f2c16b6_9hkbq9cmfju3e, name, "spread").
 child[ast_oxc](nf85e80d35f2c16b6_0e999o83jv721, id, 0, nf85e80d35f2c16b6_9hkbq9cmfju3e).
 node[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, 35).
-start[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, 1219).
 attr[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_gs1ih5o8j3tb8, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gs1ih5o8j3tb8, 35).
-start[ast_oxc](nf85e80d35f2c16b6_gs1ih5o8j3tb8, 1219).
 attr[ast_oxc](nf85e80d35f2c16b6_gs1ih5o8j3tb8, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_l634mlh3618q4, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_l634mlh3618q4, 35).
-start[ast_oxc](nf85e80d35f2c16b6_l634mlh3618q4, 1219).
 attr[ast_oxc](nf85e80d35f2c16b6_l634mlh3618q4, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_l634mlh3618q4, name, "path").
 child[ast_oxc](nf85e80d35f2c16b6_gs1ih5o8j3tb8, object, 0, nf85e80d35f2c16b6_l634mlh3618q4).
 node[ast_oxc](nf85e80d35f2c16b6_pk9pgtspiddv7, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_pk9pgtspiddv7, 35).
-start[ast_oxc](nf85e80d35f2c16b6_pk9pgtspiddv7, 1224).
 attr[ast_oxc](nf85e80d35f2c16b6_pk9pgtspiddv7, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_gs1ih5o8j3tb8, property, 0, nf85e80d35f2c16b6_pk9pgtspiddv7).
 child[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, callee, 0, nf85e80d35f2c16b6_gs1ih5o8j3tb8).
 node[ast_oxc](nf85e80d35f2c16b6_2vvb5qq567dsa, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2vvb5qq567dsa, 35).
-start[ast_oxc](nf85e80d35f2c16b6_2vvb5qq567dsa, 1229).
 attr[ast_oxc](nf85e80d35f2c16b6_2vvb5qq567dsa, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_2vvb5qq567dsa, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_rpoqaue179cq5, arguments, 0, nf85e80d35f2c16b6_2vvb5qq567dsa).
 node[ast_oxc](nf85e80d35f2c16b6_0jq8ng4krdip7, spread_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0jq8ng4krdip7, 35).
-start[ast_oxc](nf85e80d35f2c16b6_0jq8ng4krdip7, 1235).
 node[ast_oxc](nf85e80d35f2c16b6_0j69vqc24ibc6, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_0j69vqc24ibc6, 35).
-start[ast_oxc](nf85e80d35f2c16b6_0j69vqc24ibc6, 1238).
 attr[ast_oxc](nf85e80d35f2c16b6_0j69vqc24ibc6, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_0j69vqc24ibc6, name, "rest").
 child[ast_oxc](nf85e80d35f2c16b6_0jq8ng4krdip7, argument, 0, nf85e80d35f2c16b6_0j69vqc24ibc6).
@@ -1555,68 +1268,55 @@ child[ast_oxc](nf85e80d35f2c16b6_fvqomvufa0vi9, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 32, nf85e80d35f2c16b6_fvqomvufa0vi9).
 node[ast_oxc](nf85e80d35f2c16b6_mcdjrtvi5hl89, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_mcdjrtvi5hl89, 36).
-start[ast_oxc](nf85e80d35f2c16b6_mcdjrtvi5hl89, 1245).
 node[ast_oxc](nf85e80d35f2c16b6_n7bcqe6tcau76, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n7bcqe6tcau76, 36).
-start[ast_oxc](nf85e80d35f2c16b6_n7bcqe6tcau76, 1252).
 attr[ast_oxc](nf85e80d35f2c16b6_n7bcqe6tcau76, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_n7bcqe6tcau76, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_lraro4u9qhcg1, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_lraro4u9qhcg1, 36).
-start[ast_oxc](nf85e80d35f2c16b6_lraro4u9qhcg1, 1258).
 attr[ast_oxc](nf85e80d35f2c16b6_lraro4u9qhcg1, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_u3neg8q65v7sb, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_u3neg8q65v7sb, 36).
-start[ast_oxc](nf85e80d35f2c16b6_u3neg8q65v7sb, 1258).
 attr[ast_oxc](nf85e80d35f2c16b6_u3neg8q65v7sb, name, "wrapped").
 child[ast_oxc](nf85e80d35f2c16b6_lraro4u9qhcg1, id, 0, nf85e80d35f2c16b6_u3neg8q65v7sb).
 node[ast_oxc](nf85e80d35f2c16b6_8soq6loin34ne, template_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_8soq6loin34ne, 36).
-start[ast_oxc](nf85e80d35f2c16b6_8soq6loin34ne, 1268).
 node[ast_oxc](nf85e80d35f2c16b6_gtnej6k5kem71, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gtnej6k5kem71, 36).
-start[ast_oxc](nf85e80d35f2c16b6_gtnej6k5kem71, 1269).
 attr[ast_oxc](nf85e80d35f2c16b6_gtnej6k5kem71, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_gtnej6k5kem71, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_gtnej6k5kem71, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_8soq6loin34ne, quasis, 0, nf85e80d35f2c16b6_gtnej6k5kem71).
 node[ast_oxc](nf85e80d35f2c16b6_6j9eaki98besa, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_6j9eaki98besa, 36).
-start[ast_oxc](nf85e80d35f2c16b6_6j9eaki98besa, 1293).
 attr[ast_oxc](nf85e80d35f2c16b6_6j9eaki98besa, tail, true).
 attr[ast_oxc](nf85e80d35f2c16b6_6j9eaki98besa, value_raw, "!").
 attr[ast_oxc](nf85e80d35f2c16b6_6j9eaki98besa, value_cooked, "!").
 child[ast_oxc](nf85e80d35f2c16b6_8soq6loin34ne, quasis, 1, nf85e80d35f2c16b6_6j9eaki98besa).
 node[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, 36).
-start[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, 1271).
 attr[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_hti609vc60cpc, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_hti609vc60cpc, 36).
-start[ast_oxc](nf85e80d35f2c16b6_hti609vc60cpc, 1271).
 attr[ast_oxc](nf85e80d35f2c16b6_hti609vc60cpc, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_5748lsup2k8g5, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5748lsup2k8g5, 36).
-start[ast_oxc](nf85e80d35f2c16b6_5748lsup2k8g5, 1271).
 attr[ast_oxc](nf85e80d35f2c16b6_5748lsup2k8g5, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_5748lsup2k8g5, name, "posix").
 child[ast_oxc](nf85e80d35f2c16b6_hti609vc60cpc, object, 0, nf85e80d35f2c16b6_5748lsup2k8g5).
 node[ast_oxc](nf85e80d35f2c16b6_dlr2k0gg74et8, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_dlr2k0gg74et8, 36).
-start[ast_oxc](nf85e80d35f2c16b6_dlr2k0gg74et8, 1277).
 attr[ast_oxc](nf85e80d35f2c16b6_dlr2k0gg74et8, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_hti609vc60cpc, property, 0, nf85e80d35f2c16b6_dlr2k0gg74et8).
 child[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, callee, 0, nf85e80d35f2c16b6_hti609vc60cpc).
 node[ast_oxc](nf85e80d35f2c16b6_1v4ec71so9o7, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_1v4ec71so9o7, 36).
-start[ast_oxc](nf85e80d35f2c16b6_1v4ec71so9o7, 1282).
 attr[ast_oxc](nf85e80d35f2c16b6_1v4ec71so9o7, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_1v4ec71so9o7, name, "root").
 child[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, arguments, 0, nf85e80d35f2c16b6_1v4ec71so9o7).
 node[ast_oxc](nf85e80d35f2c16b6_95bg9jp3ea2s, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_95bg9jp3ea2s, 36).
-start[ast_oxc](nf85e80d35f2c16b6_95bg9jp3ea2s, 1288).
 attr[ast_oxc](nf85e80d35f2c16b6_95bg9jp3ea2s, value, "m").
 attr[ast_oxc](nf85e80d35f2c16b6_95bg9jp3ea2s, raw, "'m'").
 child[ast_oxc](nf85e80d35f2c16b6_stkht5ov1ilfd, arguments, 1, nf85e80d35f2c16b6_95bg9jp3ea2s).
@@ -1627,54 +1327,43 @@ child[ast_oxc](nf85e80d35f2c16b6_mcdjrtvi5hl89, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 33, nf85e80d35f2c16b6_mcdjrtvi5hl89).
 node[ast_oxc](nf85e80d35f2c16b6_5mj6jock82u73, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5mj6jock82u73, 37).
-start[ast_oxc](nf85e80d35f2c16b6_5mj6jock82u73, 1297).
 node[ast_oxc](nf85e80d35f2c16b6_p5iqqea3c2i73, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_p5iqqea3c2i73, 37).
-start[ast_oxc](nf85e80d35f2c16b6_p5iqqea3c2i73, 1304).
 attr[ast_oxc](nf85e80d35f2c16b6_p5iqqea3c2i73, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_p5iqqea3c2i73, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_5p8439vh9ftq2, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_5p8439vh9ftq2, 37).
-start[ast_oxc](nf85e80d35f2c16b6_5p8439vh9ftq2, 1310).
 attr[ast_oxc](nf85e80d35f2c16b6_5p8439vh9ftq2, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_j41oc40ur4sc, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_j41oc40ur4sc, 37).
-start[ast_oxc](nf85e80d35f2c16b6_j41oc40ur4sc, 1310).
 attr[ast_oxc](nf85e80d35f2c16b6_j41oc40ur4sc, name, "emptyJoin").
 child[ast_oxc](nf85e80d35f2c16b6_5p8439vh9ftq2, id, 0, nf85e80d35f2c16b6_j41oc40ur4sc).
 node[ast_oxc](nf85e80d35f2c16b6_4m72i46vj5pr, template_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_4m72i46vj5pr, 37).
-start[ast_oxc](nf85e80d35f2c16b6_4m72i46vj5pr, 1322).
 node[ast_oxc](nf85e80d35f2c16b6_h61qugal1kl73, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_h61qugal1kl73, 37).
-start[ast_oxc](nf85e80d35f2c16b6_h61qugal1kl73, 1323).
 attr[ast_oxc](nf85e80d35f2c16b6_h61qugal1kl73, tail, false).
 attr[ast_oxc](nf85e80d35f2c16b6_h61qugal1kl73, value_raw, "").
 attr[ast_oxc](nf85e80d35f2c16b6_h61qugal1kl73, value_cooked, "").
 child[ast_oxc](nf85e80d35f2c16b6_4m72i46vj5pr, quasis, 0, nf85e80d35f2c16b6_h61qugal1kl73).
 node[ast_oxc](nf85e80d35f2c16b6_f8v1c36o537a1, template_element, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_f8v1c36o537a1, 37).
-start[ast_oxc](nf85e80d35f2c16b6_f8v1c36o537a1, 1335).
 attr[ast_oxc](nf85e80d35f2c16b6_f8v1c36o537a1, tail, true).
 attr[ast_oxc](nf85e80d35f2c16b6_f8v1c36o537a1, value_raw, "/z").
 attr[ast_oxc](nf85e80d35f2c16b6_f8v1c36o537a1, value_cooked, "/z").
 child[ast_oxc](nf85e80d35f2c16b6_4m72i46vj5pr, quasis, 1, nf85e80d35f2c16b6_f8v1c36o537a1).
 node[ast_oxc](nf85e80d35f2c16b6_btrkruebh58e3, call_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_btrkruebh58e3, 37).
-start[ast_oxc](nf85e80d35f2c16b6_btrkruebh58e3, 1325).
 attr[ast_oxc](nf85e80d35f2c16b6_btrkruebh58e3, optional, false).
 attr[ast_oxc](nf85e80d35f2c16b6_btrkruebh58e3, pure, false).
 node[ast_oxc](nf85e80d35f2c16b6_50bgmsrqit9gf, static_member_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_50bgmsrqit9gf, 37).
-start[ast_oxc](nf85e80d35f2c16b6_50bgmsrqit9gf, 1325).
 attr[ast_oxc](nf85e80d35f2c16b6_50bgmsrqit9gf, optional, false).
 node[ast_oxc](nf85e80d35f2c16b6_n1hvbs92mc386, array_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n1hvbs92mc386, 37).
-start[ast_oxc](nf85e80d35f2c16b6_n1hvbs92mc386, 1325).
 child[ast_oxc](nf85e80d35f2c16b6_50bgmsrqit9gf, object, 0, nf85e80d35f2c16b6_n1hvbs92mc386).
 node[ast_oxc](nf85e80d35f2c16b6_gjdctra7m0nl7, identifier_name, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gjdctra7m0nl7, 37).
-start[ast_oxc](nf85e80d35f2c16b6_gjdctra7m0nl7, 1328).
 attr[ast_oxc](nf85e80d35f2c16b6_gjdctra7m0nl7, name, "join").
 child[ast_oxc](nf85e80d35f2c16b6_50bgmsrqit9gf, property, 0, nf85e80d35f2c16b6_gjdctra7m0nl7).
 child[ast_oxc](nf85e80d35f2c16b6_btrkruebh58e3, callee, 0, nf85e80d35f2c16b6_50bgmsrqit9gf).
@@ -1685,21 +1374,17 @@ child[ast_oxc](nf85e80d35f2c16b6_5mj6jock82u73, declaration, 0, nf85e80d35f2c16b
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 34, nf85e80d35f2c16b6_5mj6jock82u73).
 node[ast_oxc](nf85e80d35f2c16b6_gk3kpq4its4id, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gk3kpq4its4id, 38).
-start[ast_oxc](nf85e80d35f2c16b6_gk3kpq4its4id, 1340).
 attr[ast_oxc](nf85e80d35f2c16b6_gk3kpq4its4id, kind, "Let").
 attr[ast_oxc](nf85e80d35f2c16b6_gk3kpq4its4id, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_236g5qk0p6ro7, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_236g5qk0p6ro7, 38).
-start[ast_oxc](nf85e80d35f2c16b6_236g5qk0p6ro7, 1344).
 attr[ast_oxc](nf85e80d35f2c16b6_236g5qk0p6ro7, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_pgrb1am731mab, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_pgrb1am731mab, 38).
-start[ast_oxc](nf85e80d35f2c16b6_pgrb1am731mab, 1344).
 attr[ast_oxc](nf85e80d35f2c16b6_pgrb1am731mab, name, "forked").
 child[ast_oxc](nf85e80d35f2c16b6_236g5qk0p6ro7, id, 0, nf85e80d35f2c16b6_pgrb1am731mab).
 node[ast_oxc](nf85e80d35f2c16b6_3l3hr1o5emsp5, string_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_3l3hr1o5emsp5, 38).
-start[ast_oxc](nf85e80d35f2c16b6_3l3hr1o5emsp5, 1353).
 attr[ast_oxc](nf85e80d35f2c16b6_3l3hr1o5emsp5, value, "").
 attr[ast_oxc](nf85e80d35f2c16b6_3l3hr1o5emsp5, raw, "''").
 child[ast_oxc](nf85e80d35f2c16b6_236g5qk0p6ro7, init, 0, nf85e80d35f2c16b6_3l3hr1o5emsp5).
@@ -1707,36 +1392,29 @@ child[ast_oxc](nf85e80d35f2c16b6_gk3kpq4its4id, declarations, 0, nf85e80d35f2c16
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 35, nf85e80d35f2c16b6_gk3kpq4its4id).
 node[ast_oxc](nf85e80d35f2c16b6_t8kurbuhscf98, for_of_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_t8kurbuhscf98, 39).
-start[ast_oxc](nf85e80d35f2c16b6_t8kurbuhscf98, 1357).
 node[ast_oxc](nf85e80d35f2c16b6_h64mp2tbhfg6e, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_h64mp2tbhfg6e, 39).
-start[ast_oxc](nf85e80d35f2c16b6_h64mp2tbhfg6e, 1362).
 attr[ast_oxc](nf85e80d35f2c16b6_h64mp2tbhfg6e, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_h64mp2tbhfg6e, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_kmf8cts1jmemf, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_kmf8cts1jmemf, 39).
-start[ast_oxc](nf85e80d35f2c16b6_kmf8cts1jmemf, 1368).
 attr[ast_oxc](nf85e80d35f2c16b6_kmf8cts1jmemf, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_98nl24b3u81i3, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_98nl24b3u81i3, 39).
-start[ast_oxc](nf85e80d35f2c16b6_98nl24b3u81i3, 1368).
 attr[ast_oxc](nf85e80d35f2c16b6_98nl24b3u81i3, name, "_").
 child[ast_oxc](nf85e80d35f2c16b6_kmf8cts1jmemf, id, 0, nf85e80d35f2c16b6_98nl24b3u81i3).
 child[ast_oxc](nf85e80d35f2c16b6_h64mp2tbhfg6e, declarations, 0, nf85e80d35f2c16b6_kmf8cts1jmemf).
 child[ast_oxc](nf85e80d35f2c16b6_t8kurbuhscf98, left, 0, nf85e80d35f2c16b6_h64mp2tbhfg6e).
 node[ast_oxc](nf85e80d35f2c16b6_gutfjt9v1s9bb, array_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_gutfjt9v1s9bb, 39).
-start[ast_oxc](nf85e80d35f2c16b6_gutfjt9v1s9bb, 1373).
 node[ast_oxc](nf85e80d35f2c16b6_emntndcpm19u9, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_emntndcpm19u9, 39).
-start[ast_oxc](nf85e80d35f2c16b6_emntndcpm19u9, 1374).
 attr[ast_oxc](nf85e80d35f2c16b6_emntndcpm19u9, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_emntndcpm19u9, raw, "1").
 attr[ast_oxc](nf85e80d35f2c16b6_emntndcpm19u9, value, 1).
 child[ast_oxc](nf85e80d35f2c16b6_gutfjt9v1s9bb, elements, 0, nf85e80d35f2c16b6_emntndcpm19u9).
 node[ast_oxc](nf85e80d35f2c16b6_frd9pbp0i8eic, numeric_literal, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_frd9pbp0i8eic, 39).
-start[ast_oxc](nf85e80d35f2c16b6_frd9pbp0i8eic, 1377).
 attr[ast_oxc](nf85e80d35f2c16b6_frd9pbp0i8eic, base, "Decimal").
 attr[ast_oxc](nf85e80d35f2c16b6_frd9pbp0i8eic, raw, "2").
 attr[ast_oxc](nf85e80d35f2c16b6_frd9pbp0i8eic, value, 2).
@@ -1744,33 +1422,26 @@ child[ast_oxc](nf85e80d35f2c16b6_gutfjt9v1s9bb, elements, 1, nf85e80d35f2c16b6_f
 child[ast_oxc](nf85e80d35f2c16b6_t8kurbuhscf98, right, 0, nf85e80d35f2c16b6_gutfjt9v1s9bb).
 node[ast_oxc](nf85e80d35f2c16b6_enbeai9im8jq, block_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_enbeai9im8jq, 39).
-start[ast_oxc](nf85e80d35f2c16b6_enbeai9im8jq, 1381).
 node[ast_oxc](nf85e80d35f2c16b6_pfou30dl4k4nc, expression_statement, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_pfou30dl4k4nc, 39).
-start[ast_oxc](nf85e80d35f2c16b6_pfou30dl4k4nc, 1383).
 node[ast_oxc](nf85e80d35f2c16b6_nkh02i01fq166, assignment_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_nkh02i01fq166, 39).
-start[ast_oxc](nf85e80d35f2c16b6_nkh02i01fq166, 1383).
 attr[ast_oxc](nf85e80d35f2c16b6_nkh02i01fq166, operator, "Assign").
 node[ast_oxc](nf85e80d35f2c16b6_l65gkfvo9a226, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_l65gkfvo9a226, 39).
-start[ast_oxc](nf85e80d35f2c16b6_l65gkfvo9a226, 1383).
 attr[ast_oxc](nf85e80d35f2c16b6_l65gkfvo9a226, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](nf85e80d35f2c16b6_l65gkfvo9a226, name, "forked").
 child[ast_oxc](nf85e80d35f2c16b6_nkh02i01fq166, left, 0, nf85e80d35f2c16b6_l65gkfvo9a226).
 node[ast_oxc](nf85e80d35f2c16b6_hme8k98r11n08, binary_expression, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_hme8k98r11n08, 39).
-start[ast_oxc](nf85e80d35f2c16b6_hme8k98r11n08, 1392).
 attr[ast_oxc](nf85e80d35f2c16b6_hme8k98r11n08, operator, "Addition").
 node[ast_oxc](nf85e80d35f2c16b6_oun1n7aifam24, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_oun1n7aifam24, 39).
-start[ast_oxc](nf85e80d35f2c16b6_oun1n7aifam24, 1392).
 attr[ast_oxc](nf85e80d35f2c16b6_oun1n7aifam24, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_oun1n7aifam24, name, "forked").
 child[ast_oxc](nf85e80d35f2c16b6_hme8k98r11n08, left, 0, nf85e80d35f2c16b6_oun1n7aifam24).
 node[ast_oxc](nf85e80d35f2c16b6_9p1pcucd47tp, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_9p1pcucd47tp, 39).
-start[ast_oxc](nf85e80d35f2c16b6_9p1pcucd47tp, 1401).
 attr[ast_oxc](nf85e80d35f2c16b6_9p1pcucd47tp, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_9p1pcucd47tp, name, "v").
 child[ast_oxc](nf85e80d35f2c16b6_hme8k98r11n08, right, 0, nf85e80d35f2c16b6_9p1pcucd47tp).
@@ -1782,24 +1453,19 @@ attr[ast_oxc](nf85e80d35f2c16b6_t8kurbuhscf98, await, false).
 child[ast_oxc](nf85e80d35f2c16b6_root, body, 36, nf85e80d35f2c16b6_t8kurbuhscf98).
 node[ast_oxc](nf85e80d35f2c16b6_q40o7q9235i03, export_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_q40o7q9235i03, 40).
-start[ast_oxc](nf85e80d35f2c16b6_q40o7q9235i03, 1406).
 node[ast_oxc](nf85e80d35f2c16b6_oa96ogj77ci0b, variable_declaration, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_oa96ogj77ci0b, 40).
-start[ast_oxc](nf85e80d35f2c16b6_oa96ogj77ci0b, 1413).
 attr[ast_oxc](nf85e80d35f2c16b6_oa96ogj77ci0b, kind, "Const").
 attr[ast_oxc](nf85e80d35f2c16b6_oa96ogj77ci0b, declare, false).
 node[ast_oxc](nf85e80d35f2c16b6_n5hlece58aap4, variable_declarator, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_n5hlece58aap4, 40).
-start[ast_oxc](nf85e80d35f2c16b6_n5hlece58aap4, 1419).
 attr[ast_oxc](nf85e80d35f2c16b6_n5hlece58aap4, definite, false).
 node[ast_oxc](nf85e80d35f2c16b6_2asua1442ofnb, binding_identifier, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_2asua1442ofnb, 40).
-start[ast_oxc](nf85e80d35f2c16b6_2asua1442ofnb, 1419).
 attr[ast_oxc](nf85e80d35f2c16b6_2asua1442ofnb, name, "branched").
 child[ast_oxc](nf85e80d35f2c16b6_n5hlece58aap4, id, 0, nf85e80d35f2c16b6_2asua1442ofnb).
 node[ast_oxc](nf85e80d35f2c16b6_deglmjcfmjsee, identifier_reference, "src/entry.ts").
 line[ast_oxc](nf85e80d35f2c16b6_deglmjcfmjsee, 40).
-start[ast_oxc](nf85e80d35f2c16b6_deglmjcfmjsee, 1430).
 attr[ast_oxc](nf85e80d35f2c16b6_deglmjcfmjsee, variant, "Identifier").
 attr[ast_oxc](nf85e80d35f2c16b6_deglmjcfmjsee, name, "forked").
 child[ast_oxc](nf85e80d35f2c16b6_n5hlece58aap4, init, 0, nf85e80d35f2c16b6_deglmjcfmjsee).
@@ -1812,127 +1478,100 @@ attr[ast_oxc](nf85e80d35f2c16b6_root, source_type_variant, "Standard").
 file[ast_oxc](nf85e80d35f2c16b6_root, "src/entry.ts").
 node[ast_oxc](nfb3ebe8b34f12aa0_root, program, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_root, 1).
-start[ast_oxc](nfb3ebe8b34f12aa0_root, 0).
 node[ast_oxc](nfb3ebe8b34f12aa0_qgfdojbgi5hce, export_declaration, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_qgfdojbgi5hce, 1).
-start[ast_oxc](nfb3ebe8b34f12aa0_qgfdojbgi5hce, 0).
 node[ast_oxc](nfb3ebe8b34f12aa0_ill97ck4c7995, variable_declaration, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_ill97ck4c7995, 1).
-start[ast_oxc](nfb3ebe8b34f12aa0_ill97ck4c7995, 7).
 attr[ast_oxc](nfb3ebe8b34f12aa0_ill97ck4c7995, kind, "Const").
 attr[ast_oxc](nfb3ebe8b34f12aa0_ill97ck4c7995, declare, false).
 node[ast_oxc](nfb3ebe8b34f12aa0_41gif771ef1t9, variable_declarator, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_41gif771ef1t9, 1).
-start[ast_oxc](nfb3ebe8b34f12aa0_41gif771ef1t9, 13).
 attr[ast_oxc](nfb3ebe8b34f12aa0_41gif771ef1t9, definite, false).
 node[ast_oxc](nfb3ebe8b34f12aa0_sa16utts4h1td, binding_identifier, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_sa16utts4h1td, 1).
-start[ast_oxc](nfb3ebe8b34f12aa0_sa16utts4h1td, 13).
 attr[ast_oxc](nfb3ebe8b34f12aa0_sa16utts4h1td, name, "posix").
 child[ast_oxc](nfb3ebe8b34f12aa0_41gif771ef1t9, id, 0, nfb3ebe8b34f12aa0_sa16utts4h1td).
 node[ast_oxc](nfb3ebe8b34f12aa0_68dctf9h16e, object_expression, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_68dctf9h16e, 1).
-start[ast_oxc](nfb3ebe8b34f12aa0_68dctf9h16e, 21).
 node[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, object_property, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, 24).
 attr[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, kind, "Init").
 attr[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, method, true).
 attr[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, shorthand, false).
 attr[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, computed, false).
 node[ast_oxc](nfb3ebe8b34f12aa0_6reklhleukj58, identifier_name, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_6reklhleukj58, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_6reklhleukj58, 24).
 attr[ast_oxc](nfb3ebe8b34f12aa0_6reklhleukj58, variant, "StaticIdentifier").
 attr[ast_oxc](nfb3ebe8b34f12aa0_6reklhleukj58, name, "join").
 child[ast_oxc](nfb3ebe8b34f12aa0_cvt31efocdjte, key, 0, nfb3ebe8b34f12aa0_6reklhleukj58).
 node[ast_oxc](nfb3ebe8b34f12aa0_fpca67tsnooa8, function, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_fpca67tsnooa8, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_fpca67tsnooa8, 28).
 attr[ast_oxc](nfb3ebe8b34f12aa0_fpca67tsnooa8, variant, "FunctionExpression").
 node[ast_oxc](nfb3ebe8b34f12aa0_b3p436d488cu8, formal_parameters, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_b3p436d488cu8, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_b3p436d488cu8, 28).
 attr[ast_oxc](nfb3ebe8b34f12aa0_b3p436d488cu8, kind, "UniqueFormalParameters").
 node[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, formal_parameter, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, 29).
 attr[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, optional, false).
 attr[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, readonly, false).
 attr[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, override, false).
 node[ast_oxc](nfb3ebe8b34f12aa0_jure957ni03g9, binding_identifier, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_jure957ni03g9, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_jure957ni03g9, 29).
 attr[ast_oxc](nfb3ebe8b34f12aa0_jure957ni03g9, name, "a").
 child[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, pattern, 0, nfb3ebe8b34f12aa0_jure957ni03g9).
 node[ast_oxc](nfb3ebe8b34f12aa0_goqthlr9mbke4, tstype_annotation, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_goqthlr9mbke4, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_goqthlr9mbke4, 30).
 node[ast_oxc](nfb3ebe8b34f12aa0_3esvs90gdhgpa, tsstring_keyword, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_3esvs90gdhgpa, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_3esvs90gdhgpa, 32).
 child[ast_oxc](nfb3ebe8b34f12aa0_goqthlr9mbke4, type_annotation, 0, nfb3ebe8b34f12aa0_3esvs90gdhgpa).
 child[ast_oxc](nfb3ebe8b34f12aa0_grd8ack1dpn1e, type_annotation, 0, nfb3ebe8b34f12aa0_goqthlr9mbke4).
 child[ast_oxc](nfb3ebe8b34f12aa0_b3p436d488cu8, items, 0, nfb3ebe8b34f12aa0_grd8ack1dpn1e).
 node[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, formal_parameter, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, 40).
 attr[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, optional, false).
 attr[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, readonly, false).
 attr[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, override, false).
 node[ast_oxc](nfb3ebe8b34f12aa0_sn32loguchb4d, binding_identifier, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_sn32loguchb4d, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_sn32loguchb4d, 40).
 attr[ast_oxc](nfb3ebe8b34f12aa0_sn32loguchb4d, name, "b").
 child[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, pattern, 0, nfb3ebe8b34f12aa0_sn32loguchb4d).
 node[ast_oxc](nfb3ebe8b34f12aa0_uqkmh6eqba5r7, tstype_annotation, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_uqkmh6eqba5r7, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_uqkmh6eqba5r7, 41).
 node[ast_oxc](nfb3ebe8b34f12aa0_qmdmbafnp9l87, tsstring_keyword, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_qmdmbafnp9l87, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_qmdmbafnp9l87, 43).
 child[ast_oxc](nfb3ebe8b34f12aa0_uqkmh6eqba5r7, type_annotation, 0, nfb3ebe8b34f12aa0_qmdmbafnp9l87).
 child[ast_oxc](nfb3ebe8b34f12aa0_7ckier4hvi996, type_annotation, 0, nfb3ebe8b34f12aa0_uqkmh6eqba5r7).
 child[ast_oxc](nfb3ebe8b34f12aa0_b3p436d488cu8, items, 1, nfb3ebe8b34f12aa0_7ckier4hvi996).
 child[ast_oxc](nfb3ebe8b34f12aa0_fpca67tsnooa8, params, 0, nfb3ebe8b34f12aa0_b3p436d488cu8).
 node[ast_oxc](nfb3ebe8b34f12aa0_tbsf4n6bg1a9f, tstype_annotation, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_tbsf4n6bg1a9f, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_tbsf4n6bg1a9f, 50).
 node[ast_oxc](nfb3ebe8b34f12aa0_5uso3ghf3poec, tsstring_keyword, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_5uso3ghf3poec, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_5uso3ghf3poec, 52).
 child[ast_oxc](nfb3ebe8b34f12aa0_tbsf4n6bg1a9f, type_annotation, 0, nfb3ebe8b34f12aa0_5uso3ghf3poec).
 child[ast_oxc](nfb3ebe8b34f12aa0_fpca67tsnooa8, return_type, 0, nfb3ebe8b34f12aa0_tbsf4n6bg1a9f).
 node[ast_oxc](nfb3ebe8b34f12aa0_s4dvnkv0v2tk2, function_body, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_s4dvnkv0v2tk2, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_s4dvnkv0v2tk2, 59).
 node[ast_oxc](nfb3ebe8b34f12aa0_aitnjds6mgd76, return_statement, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_aitnjds6mgd76, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_aitnjds6mgd76, 61).
 node[ast_oxc](nfb3ebe8b34f12aa0_tpu4uu97b88la, binary_expression, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_tpu4uu97b88la, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_tpu4uu97b88la, 68).
 attr[ast_oxc](nfb3ebe8b34f12aa0_tpu4uu97b88la, operator, "Addition").
 node[ast_oxc](nfb3ebe8b34f12aa0_qln9canequdq9, binary_expression, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_qln9canequdq9, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_qln9canequdq9, 68).
 attr[ast_oxc](nfb3ebe8b34f12aa0_qln9canequdq9, operator, "Addition").
 node[ast_oxc](nfb3ebe8b34f12aa0_klcso5m2hgnvf, identifier_reference, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_klcso5m2hgnvf, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_klcso5m2hgnvf, 68).
 attr[ast_oxc](nfb3ebe8b34f12aa0_klcso5m2hgnvf, variant, "Identifier").
 attr[ast_oxc](nfb3ebe8b34f12aa0_klcso5m2hgnvf, name, "a").
 child[ast_oxc](nfb3ebe8b34f12aa0_qln9canequdq9, left, 0, nfb3ebe8b34f12aa0_klcso5m2hgnvf).
 node[ast_oxc](nfb3ebe8b34f12aa0_vjpkoc1goa742, string_literal, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_vjpkoc1goa742, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_vjpkoc1goa742, 72).
 attr[ast_oxc](nfb3ebe8b34f12aa0_vjpkoc1goa742, value, "/").
 attr[ast_oxc](nfb3ebe8b34f12aa0_vjpkoc1goa742, raw, "'/'").
 child[ast_oxc](nfb3ebe8b34f12aa0_qln9canequdq9, right, 0, nfb3ebe8b34f12aa0_vjpkoc1goa742).
 child[ast_oxc](nfb3ebe8b34f12aa0_tpu4uu97b88la, left, 0, nfb3ebe8b34f12aa0_qln9canequdq9).
 node[ast_oxc](nfb3ebe8b34f12aa0_jjtq1e3h0o5m7, identifier_reference, "src/mypath.ts").
 line[ast_oxc](nfb3ebe8b34f12aa0_jjtq1e3h0o5m7, 2).
-start[ast_oxc](nfb3ebe8b34f12aa0_jjtq1e3h0o5m7, 78).
 attr[ast_oxc](nfb3ebe8b34f12aa0_jjtq1e3h0o5m7, variant, "Identifier").
 attr[ast_oxc](nfb3ebe8b34f12aa0_jjtq1e3h0o5m7, name, "b").
 child[ast_oxc](nfb3ebe8b34f12aa0_tpu4uu97b88la, right, 0, nfb3ebe8b34f12aa0_jjtq1e3h0o5m7).

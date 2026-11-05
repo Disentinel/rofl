@@ -31,7 +31,7 @@ const OXC = path.join(ROOT, 'rust/tools/oxc_scan/target/release/oxc_scan');
 /** oxc's facts of the files (paths from root) and the host's of their paths and strings; the errors are the files oxc refused. */
 function factsOf(root: string, files: string[], seen: Set<string>): { text: string; errors: [string, string][] } {
   let raw: string;
-  try { raw = execFileSync(OXC, [root, ...files], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'ignore'] }); }
+  try { raw = execFileSync(OXC, ['--no-start', root, ...files], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch (e) { raw = (e as { stdout?: string }).stdout ?? ''; }
   // the header of `-- reads:` lines is dropped, and the text is searched as it is: a chunk is millions of lines
   const body = raw.slice(raw.search(/^(?!-- reads:)/m) < 0 ? 0 : raw.search(/^(?!-- reads:)/m)), strings = new Set<string>(), errors: [string, string][] = [];

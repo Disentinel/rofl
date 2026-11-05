@@ -2,75 +2,60 @@
 -- host gives them (rust/tools/oxc_scan and the host's path and string facts). Regenerate when the scanner moves.
 node[ast_oxc](n7811343775b3f00c_root, program, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_root, 1).
-start[ast_oxc](n7811343775b3f00c_root, 0).
 node[ast_oxc](n7811343775b3f00c_t2rm83b5ueut4, import_declaration, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_t2rm83b5ueut4, 1).
-start[ast_oxc](n7811343775b3f00c_t2rm83b5ueut4, 0).
 attr[ast_oxc](n7811343775b3f00c_t2rm83b5ueut4, import_kind, "Value").
 node[ast_oxc](n7811343775b3f00c_nscf3fp3vdjg9, import_default_specifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_nscf3fp3vdjg9, 1).
-start[ast_oxc](n7811343775b3f00c_nscf3fp3vdjg9, 7).
 node[ast_oxc](n7811343775b3f00c_pt803e7ip9to1, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_pt803e7ip9to1, 1).
-start[ast_oxc](n7811343775b3f00c_pt803e7ip9to1, 7).
 attr[ast_oxc](n7811343775b3f00c_pt803e7ip9to1, name, "express").
 child[ast_oxc](n7811343775b3f00c_nscf3fp3vdjg9, local, 0, n7811343775b3f00c_pt803e7ip9to1).
 child[ast_oxc](n7811343775b3f00c_t2rm83b5ueut4, specifiers, 0, n7811343775b3f00c_nscf3fp3vdjg9).
 node[ast_oxc](n7811343775b3f00c_m0fsftiaokmj2, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_m0fsftiaokmj2, 1).
-start[ast_oxc](n7811343775b3f00c_m0fsftiaokmj2, 20).
 attr[ast_oxc](n7811343775b3f00c_m0fsftiaokmj2, value, "express").
 attr[ast_oxc](n7811343775b3f00c_m0fsftiaokmj2, raw, "'express'").
 child[ast_oxc](n7811343775b3f00c_t2rm83b5ueut4, source, 0, n7811343775b3f00c_m0fsftiaokmj2).
 child[ast_oxc](n7811343775b3f00c_root, body, 0, n7811343775b3f00c_t2rm83b5ueut4).
 node[ast_oxc](n7811343775b3f00c_4tgn4bcn9jp8b, import_declaration, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_4tgn4bcn9jp8b, 2).
-start[ast_oxc](n7811343775b3f00c_4tgn4bcn9jp8b, 31).
 attr[ast_oxc](n7811343775b3f00c_4tgn4bcn9jp8b, import_kind, "Value").
 node[ast_oxc](n7811343775b3f00c_fvt62b5ss8562, import_specifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_fvt62b5ss8562, 2).
-start[ast_oxc](n7811343775b3f00c_fvt62b5ss8562, 40).
 attr[ast_oxc](n7811343775b3f00c_fvt62b5ss8562, import_kind, "Value").
 node[ast_oxc](n7811343775b3f00c_o5tu8u0iuotbf, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_o5tu8u0iuotbf, 2).
-start[ast_oxc](n7811343775b3f00c_o5tu8u0iuotbf, 40).
 attr[ast_oxc](n7811343775b3f00c_o5tu8u0iuotbf, name, "users").
 child[ast_oxc](n7811343775b3f00c_fvt62b5ss8562, imported, 0, n7811343775b3f00c_o5tu8u0iuotbf).
 node[ast_oxc](n7811343775b3f00c_kctrlh3rdta5a, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_kctrlh3rdta5a, 2).
-start[ast_oxc](n7811343775b3f00c_kctrlh3rdta5a, 40).
 attr[ast_oxc](n7811343775b3f00c_kctrlh3rdta5a, name, "users").
 child[ast_oxc](n7811343775b3f00c_fvt62b5ss8562, local, 0, n7811343775b3f00c_kctrlh3rdta5a).
 child[ast_oxc](n7811343775b3f00c_4tgn4bcn9jp8b, specifiers, 0, n7811343775b3f00c_fvt62b5ss8562).
 node[ast_oxc](n7811343775b3f00c_04adi3439i48d, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_04adi3439i48d, 2).
-start[ast_oxc](n7811343775b3f00c_04adi3439i48d, 53).
 attr[ast_oxc](n7811343775b3f00c_04adi3439i48d, value, "./users.js").
 attr[ast_oxc](n7811343775b3f00c_04adi3439i48d, raw, "'./users.js'").
 child[ast_oxc](n7811343775b3f00c_4tgn4bcn9jp8b, source, 0, n7811343775b3f00c_04adi3439i48d).
 child[ast_oxc](n7811343775b3f00c_root, body, 1, n7811343775b3f00c_4tgn4bcn9jp8b).
 node[ast_oxc](n7811343775b3f00c_r0u1bml7748f5, variable_declaration, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_r0u1bml7748f5, 4).
-start[ast_oxc](n7811343775b3f00c_r0u1bml7748f5, 68).
 attr[ast_oxc](n7811343775b3f00c_r0u1bml7748f5, kind, "Const").
 attr[ast_oxc](n7811343775b3f00c_r0u1bml7748f5, declare, false).
 node[ast_oxc](n7811343775b3f00c_48u074rlr539b, variable_declarator, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_48u074rlr539b, 4).
-start[ast_oxc](n7811343775b3f00c_48u074rlr539b, 74).
 attr[ast_oxc](n7811343775b3f00c_48u074rlr539b, definite, false).
 node[ast_oxc](n7811343775b3f00c_uuke3mvh1vag2, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_uuke3mvh1vag2, 4).
-start[ast_oxc](n7811343775b3f00c_uuke3mvh1vag2, 74).
 attr[ast_oxc](n7811343775b3f00c_uuke3mvh1vag2, name, "app").
 child[ast_oxc](n7811343775b3f00c_48u074rlr539b, id, 0, n7811343775b3f00c_uuke3mvh1vag2).
 node[ast_oxc](n7811343775b3f00c_3ipo24eau4417, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_3ipo24eau4417, 4).
-start[ast_oxc](n7811343775b3f00c_3ipo24eau4417, 80).
 attr[ast_oxc](n7811343775b3f00c_3ipo24eau4417, optional, false).
 attr[ast_oxc](n7811343775b3f00c_3ipo24eau4417, pure, false).
 node[ast_oxc](n7811343775b3f00c_9gof7e26op272, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_9gof7e26op272, 4).
-start[ast_oxc](n7811343775b3f00c_9gof7e26op272, 80).
 attr[ast_oxc](n7811343775b3f00c_9gof7e26op272, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_9gof7e26op272, name, "express").
 child[ast_oxc](n7811343775b3f00c_3ipo24eau4417, callee, 0, n7811343775b3f00c_9gof7e26op272).
@@ -79,68 +64,55 @@ child[ast_oxc](n7811343775b3f00c_r0u1bml7748f5, declarations, 0, n7811343775b3f0
 child[ast_oxc](n7811343775b3f00c_root, body, 2, n7811343775b3f00c_r0u1bml7748f5).
 node[ast_oxc](n7811343775b3f00c_jvlkucn184np7, function, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_jvlkucn184np7, 6).
-start[ast_oxc](n7811343775b3f00c_jvlkucn184np7, 92).
 attr[ast_oxc](n7811343775b3f00c_jvlkucn184np7, variant, "FunctionDeclaration").
 node[ast_oxc](n7811343775b3f00c_vfn0mta7ij6j5, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_vfn0mta7ij6j5, 6).
-start[ast_oxc](n7811343775b3f00c_vfn0mta7ij6j5, 101).
 attr[ast_oxc](n7811343775b3f00c_vfn0mta7ij6j5, name, "logger").
 child[ast_oxc](n7811343775b3f00c_jvlkucn184np7, id, 0, n7811343775b3f00c_vfn0mta7ij6j5).
 node[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, formal_parameters, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, 6).
-start[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, 107).
 attr[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, kind, "FormalParameter").
 node[ast_oxc](n7811343775b3f00c_osfoccjfuds82, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_osfoccjfuds82, 6).
-start[ast_oxc](n7811343775b3f00c_osfoccjfuds82, 108).
 attr[ast_oxc](n7811343775b3f00c_osfoccjfuds82, optional, false).
 attr[ast_oxc](n7811343775b3f00c_osfoccjfuds82, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_osfoccjfuds82, override, false).
 node[ast_oxc](n7811343775b3f00c_afjrc3iggnlra, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_afjrc3iggnlra, 6).
-start[ast_oxc](n7811343775b3f00c_afjrc3iggnlra, 108).
 attr[ast_oxc](n7811343775b3f00c_afjrc3iggnlra, name, "req").
 child[ast_oxc](n7811343775b3f00c_osfoccjfuds82, pattern, 0, n7811343775b3f00c_afjrc3iggnlra).
 child[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, items, 0, n7811343775b3f00c_osfoccjfuds82).
 node[ast_oxc](n7811343775b3f00c_ttf453r51bbve, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_ttf453r51bbve, 6).
-start[ast_oxc](n7811343775b3f00c_ttf453r51bbve, 113).
 attr[ast_oxc](n7811343775b3f00c_ttf453r51bbve, optional, false).
 attr[ast_oxc](n7811343775b3f00c_ttf453r51bbve, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_ttf453r51bbve, override, false).
 node[ast_oxc](n7811343775b3f00c_bs5tnvovcoti9, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_bs5tnvovcoti9, 6).
-start[ast_oxc](n7811343775b3f00c_bs5tnvovcoti9, 113).
 attr[ast_oxc](n7811343775b3f00c_bs5tnvovcoti9, name, "res").
 child[ast_oxc](n7811343775b3f00c_ttf453r51bbve, pattern, 0, n7811343775b3f00c_bs5tnvovcoti9).
 child[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, items, 1, n7811343775b3f00c_ttf453r51bbve).
 node[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, 6).
-start[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, 118).
 attr[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, optional, false).
 attr[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, override, false).
 node[ast_oxc](n7811343775b3f00c_6o54hfh1pkibc, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_6o54hfh1pkibc, 6).
-start[ast_oxc](n7811343775b3f00c_6o54hfh1pkibc, 118).
 attr[ast_oxc](n7811343775b3f00c_6o54hfh1pkibc, name, "next").
 child[ast_oxc](n7811343775b3f00c_42iqkj2m16c13, pattern, 0, n7811343775b3f00c_6o54hfh1pkibc).
 child[ast_oxc](n7811343775b3f00c_79jgcvgg77dm4, items, 2, n7811343775b3f00c_42iqkj2m16c13).
 child[ast_oxc](n7811343775b3f00c_jvlkucn184np7, params, 0, n7811343775b3f00c_79jgcvgg77dm4).
 node[ast_oxc](n7811343775b3f00c_i6u9a7nrjekn7, function_body, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_i6u9a7nrjekn7, 6).
-start[ast_oxc](n7811343775b3f00c_i6u9a7nrjekn7, 124).
 node[ast_oxc](n7811343775b3f00c_jspjjgm2geeqb, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_jspjjgm2geeqb, 6).
-start[ast_oxc](n7811343775b3f00c_jspjjgm2geeqb, 126).
 node[ast_oxc](n7811343775b3f00c_152d6qkahv7a7, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_152d6qkahv7a7, 6).
-start[ast_oxc](n7811343775b3f00c_152d6qkahv7a7, 126).
 attr[ast_oxc](n7811343775b3f00c_152d6qkahv7a7, optional, false).
 attr[ast_oxc](n7811343775b3f00c_152d6qkahv7a7, pure, false).
 node[ast_oxc](n7811343775b3f00c_hdmdpa2ag05l6, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_hdmdpa2ag05l6, 6).
-start[ast_oxc](n7811343775b3f00c_hdmdpa2ag05l6, 126).
 attr[ast_oxc](n7811343775b3f00c_hdmdpa2ag05l6, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_hdmdpa2ag05l6, name, "next").
 child[ast_oxc](n7811343775b3f00c_152d6qkahv7a7, callee, 0, n7811343775b3f00c_hdmdpa2ag05l6).
@@ -156,72 +128,58 @@ attr[ast_oxc](n7811343775b3f00c_jvlkucn184np7, pife, false).
 child[ast_oxc](n7811343775b3f00c_root, body, 3, n7811343775b3f00c_jvlkucn184np7).
 node[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, function, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, 7).
-start[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, 136).
 attr[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, variant, "FunctionDeclaration").
 node[ast_oxc](n7811343775b3f00c_bqo0r2h9p9sc3, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_bqo0r2h9p9sc3, 7).
-start[ast_oxc](n7811343775b3f00c_bqo0r2h9p9sc3, 145).
 attr[ast_oxc](n7811343775b3f00c_bqo0r2h9p9sc3, name, "health").
 child[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, id, 0, n7811343775b3f00c_bqo0r2h9p9sc3).
 node[ast_oxc](n7811343775b3f00c_ul3r26o37vjg3, formal_parameters, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_ul3r26o37vjg3, 7).
-start[ast_oxc](n7811343775b3f00c_ul3r26o37vjg3, 151).
 attr[ast_oxc](n7811343775b3f00c_ul3r26o37vjg3, kind, "FormalParameter").
 node[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, 7).
-start[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, 152).
 attr[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, optional, false).
 attr[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, override, false).
 node[ast_oxc](n7811343775b3f00c_k9ek0rj3njeke, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_k9ek0rj3njeke, 7).
-start[ast_oxc](n7811343775b3f00c_k9ek0rj3njeke, 152).
 attr[ast_oxc](n7811343775b3f00c_k9ek0rj3njeke, name, "req").
 child[ast_oxc](n7811343775b3f00c_e9fti4gdmr0o3, pattern, 0, n7811343775b3f00c_k9ek0rj3njeke).
 child[ast_oxc](n7811343775b3f00c_ul3r26o37vjg3, items, 0, n7811343775b3f00c_e9fti4gdmr0o3).
 node[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, 7).
-start[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, 157).
 attr[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, optional, false).
 attr[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, override, false).
 node[ast_oxc](n7811343775b3f00c_borhvmrdsmjs9, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_borhvmrdsmjs9, 7).
-start[ast_oxc](n7811343775b3f00c_borhvmrdsmjs9, 157).
 attr[ast_oxc](n7811343775b3f00c_borhvmrdsmjs9, name, "res").
 child[ast_oxc](n7811343775b3f00c_8evgaccgj4ok9, pattern, 0, n7811343775b3f00c_borhvmrdsmjs9).
 child[ast_oxc](n7811343775b3f00c_ul3r26o37vjg3, items, 1, n7811343775b3f00c_8evgaccgj4ok9).
 child[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, params, 0, n7811343775b3f00c_ul3r26o37vjg3).
 node[ast_oxc](n7811343775b3f00c_o6laj7lh36g3d, function_body, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_o6laj7lh36g3d, 7).
-start[ast_oxc](n7811343775b3f00c_o6laj7lh36g3d, 162).
 node[ast_oxc](n7811343775b3f00c_kn1ire8ti6k3a, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_kn1ire8ti6k3a, 7).
-start[ast_oxc](n7811343775b3f00c_kn1ire8ti6k3a, 164).
 node[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, 7).
-start[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, 164).
 attr[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, optional, false).
 attr[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, pure, false).
 node[ast_oxc](n7811343775b3f00c_iclh4he6530v7, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_iclh4he6530v7, 7).
-start[ast_oxc](n7811343775b3f00c_iclh4he6530v7, 164).
 attr[ast_oxc](n7811343775b3f00c_iclh4he6530v7, optional, false).
 node[ast_oxc](n7811343775b3f00c_f9vv3lcsor269, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_f9vv3lcsor269, 7).
-start[ast_oxc](n7811343775b3f00c_f9vv3lcsor269, 164).
 attr[ast_oxc](n7811343775b3f00c_f9vv3lcsor269, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_f9vv3lcsor269, name, "res").
 child[ast_oxc](n7811343775b3f00c_iclh4he6530v7, object, 0, n7811343775b3f00c_f9vv3lcsor269).
 node[ast_oxc](n7811343775b3f00c_c4534gvgcti42, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_c4534gvgcti42, 7).
-start[ast_oxc](n7811343775b3f00c_c4534gvgcti42, 168).
 attr[ast_oxc](n7811343775b3f00c_c4534gvgcti42, name, "send").
 child[ast_oxc](n7811343775b3f00c_iclh4he6530v7, property, 0, n7811343775b3f00c_c4534gvgcti42).
 child[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, callee, 0, n7811343775b3f00c_iclh4he6530v7).
 node[ast_oxc](n7811343775b3f00c_s78kd23q06qra, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_s78kd23q06qra, 7).
-start[ast_oxc](n7811343775b3f00c_s78kd23q06qra, 173).
 attr[ast_oxc](n7811343775b3f00c_s78kd23q06qra, value, "ok").
 attr[ast_oxc](n7811343775b3f00c_s78kd23q06qra, raw, "'ok'").
 child[ast_oxc](n7811343775b3f00c_04jar1f8p77l4, arguments, 0, n7811343775b3f00c_s78kd23q06qra).
@@ -237,81 +195,65 @@ attr[ast_oxc](n7811343775b3f00c_cqht2j5grsv4, pife, false).
 child[ast_oxc](n7811343775b3f00c_root, body, 4, n7811343775b3f00c_cqht2j5grsv4).
 node[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, function, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, 8).
-start[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, 182).
 attr[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, variant, "FunctionDeclaration").
 node[ast_oxc](n7811343775b3f00c_gi1018lss4q73, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_gi1018lss4q73, 8).
-start[ast_oxc](n7811343775b3f00c_gi1018lss4q73, 191).
 attr[ast_oxc](n7811343775b3f00c_gi1018lss4q73, name, "createOrder").
 child[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, id, 0, n7811343775b3f00c_gi1018lss4q73).
 node[ast_oxc](n7811343775b3f00c_r7gvg1hkkbete, formal_parameters, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_r7gvg1hkkbete, 8).
-start[ast_oxc](n7811343775b3f00c_r7gvg1hkkbete, 202).
 attr[ast_oxc](n7811343775b3f00c_r7gvg1hkkbete, kind, "FormalParameter").
 node[ast_oxc](n7811343775b3f00c_483ar3rln93ib, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_483ar3rln93ib, 8).
-start[ast_oxc](n7811343775b3f00c_483ar3rln93ib, 203).
 attr[ast_oxc](n7811343775b3f00c_483ar3rln93ib, optional, false).
 attr[ast_oxc](n7811343775b3f00c_483ar3rln93ib, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_483ar3rln93ib, override, false).
 node[ast_oxc](n7811343775b3f00c_f78tto6go0tka, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_f78tto6go0tka, 8).
-start[ast_oxc](n7811343775b3f00c_f78tto6go0tka, 203).
 attr[ast_oxc](n7811343775b3f00c_f78tto6go0tka, name, "req").
 child[ast_oxc](n7811343775b3f00c_483ar3rln93ib, pattern, 0, n7811343775b3f00c_f78tto6go0tka).
 child[ast_oxc](n7811343775b3f00c_r7gvg1hkkbete, items, 0, n7811343775b3f00c_483ar3rln93ib).
 node[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, 8).
-start[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, 208).
 attr[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, optional, false).
 attr[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, override, false).
 node[ast_oxc](n7811343775b3f00c_q5rj5a811fu81, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_q5rj5a811fu81, 8).
-start[ast_oxc](n7811343775b3f00c_q5rj5a811fu81, 208).
 attr[ast_oxc](n7811343775b3f00c_q5rj5a811fu81, name, "res").
 child[ast_oxc](n7811343775b3f00c_6n9jk0uibn64f, pattern, 0, n7811343775b3f00c_q5rj5a811fu81).
 child[ast_oxc](n7811343775b3f00c_r7gvg1hkkbete, items, 1, n7811343775b3f00c_6n9jk0uibn64f).
 child[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, params, 0, n7811343775b3f00c_r7gvg1hkkbete).
 node[ast_oxc](n7811343775b3f00c_2j190imo4aiq7, function_body, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_2j190imo4aiq7, 8).
-start[ast_oxc](n7811343775b3f00c_2j190imo4aiq7, 213).
 node[ast_oxc](n7811343775b3f00c_bfn32hhun00d1, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_bfn32hhun00d1, 8).
-start[ast_oxc](n7811343775b3f00c_bfn32hhun00d1, 215).
 node[ast_oxc](n7811343775b3f00c_jfgb4dftrnqv7, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_jfgb4dftrnqv7, 8).
-start[ast_oxc](n7811343775b3f00c_jfgb4dftrnqv7, 215).
 attr[ast_oxc](n7811343775b3f00c_jfgb4dftrnqv7, optional, false).
 attr[ast_oxc](n7811343775b3f00c_jfgb4dftrnqv7, pure, false).
 node[ast_oxc](n7811343775b3f00c_3rm42p28s3hg1, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_3rm42p28s3hg1, 8).
-start[ast_oxc](n7811343775b3f00c_3rm42p28s3hg1, 215).
 attr[ast_oxc](n7811343775b3f00c_3rm42p28s3hg1, optional, false).
 node[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, 8).
-start[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, 215).
 attr[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, optional, false).
 attr[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, pure, false).
 node[ast_oxc](n7811343775b3f00c_ssvu8grk5n9m6, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_ssvu8grk5n9m6, 8).
-start[ast_oxc](n7811343775b3f00c_ssvu8grk5n9m6, 215).
 attr[ast_oxc](n7811343775b3f00c_ssvu8grk5n9m6, optional, false).
 node[ast_oxc](n7811343775b3f00c_2hph87n7f7lv6, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_2hph87n7f7lv6, 8).
-start[ast_oxc](n7811343775b3f00c_2hph87n7f7lv6, 215).
 attr[ast_oxc](n7811343775b3f00c_2hph87n7f7lv6, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_2hph87n7f7lv6, name, "res").
 child[ast_oxc](n7811343775b3f00c_ssvu8grk5n9m6, object, 0, n7811343775b3f00c_2hph87n7f7lv6).
 node[ast_oxc](n7811343775b3f00c_klvgolvkuku73, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_klvgolvkuku73, 8).
-start[ast_oxc](n7811343775b3f00c_klvgolvkuku73, 219).
 attr[ast_oxc](n7811343775b3f00c_klvgolvkuku73, name, "status").
 child[ast_oxc](n7811343775b3f00c_ssvu8grk5n9m6, property, 0, n7811343775b3f00c_klvgolvkuku73).
 child[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, callee, 0, n7811343775b3f00c_ssvu8grk5n9m6).
 node[ast_oxc](n7811343775b3f00c_rsrre0uvkel3f, numeric_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_rsrre0uvkel3f, 8).
-start[ast_oxc](n7811343775b3f00c_rsrre0uvkel3f, 226).
 attr[ast_oxc](n7811343775b3f00c_rsrre0uvkel3f, base, "Decimal").
 attr[ast_oxc](n7811343775b3f00c_rsrre0uvkel3f, raw, "201").
 attr[ast_oxc](n7811343775b3f00c_rsrre0uvkel3f, value, 201).
@@ -319,7 +261,6 @@ child[ast_oxc](n7811343775b3f00c_ut9f4dv5f5718, arguments, 0, n7811343775b3f00c_
 child[ast_oxc](n7811343775b3f00c_3rm42p28s3hg1, object, 0, n7811343775b3f00c_ut9f4dv5f5718).
 node[ast_oxc](n7811343775b3f00c_1t6e8nmhgme23, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_1t6e8nmhgme23, 8).
-start[ast_oxc](n7811343775b3f00c_1t6e8nmhgme23, 231).
 attr[ast_oxc](n7811343775b3f00c_1t6e8nmhgme23, name, "end").
 child[ast_oxc](n7811343775b3f00c_3rm42p28s3hg1, property, 0, n7811343775b3f00c_1t6e8nmhgme23).
 child[ast_oxc](n7811343775b3f00c_jfgb4dftrnqv7, callee, 0, n7811343775b3f00c_3rm42p28s3hg1).
@@ -335,66 +276,53 @@ attr[ast_oxc](n7811343775b3f00c_6ma2kj7g28a1f, pife, false).
 child[ast_oxc](n7811343775b3f00c_root, body, 5, n7811343775b3f00c_6ma2kj7g28a1f).
 node[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, function, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, 9).
-start[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, 240).
 attr[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, variant, "FunctionDeclaration").
 node[ast_oxc](n7811343775b3f00c_emj8mc1sa3i8f, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_emj8mc1sa3i8f, 9).
-start[ast_oxc](n7811343775b3f00c_emj8mc1sa3i8f, 249).
 attr[ast_oxc](n7811343775b3f00c_emj8mc1sa3i8f, name, "admin").
 child[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, id, 0, n7811343775b3f00c_emj8mc1sa3i8f).
 node[ast_oxc](n7811343775b3f00c_n82t1jgli9dkb, formal_parameters, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_n82t1jgli9dkb, 9).
-start[ast_oxc](n7811343775b3f00c_n82t1jgli9dkb, 254).
 attr[ast_oxc](n7811343775b3f00c_n82t1jgli9dkb, kind, "FormalParameter").
 node[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, 9).
-start[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, 255).
 attr[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, optional, false).
 attr[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, override, false).
 node[ast_oxc](n7811343775b3f00c_vn09gcmk8to08, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_vn09gcmk8to08, 9).
-start[ast_oxc](n7811343775b3f00c_vn09gcmk8to08, 255).
 attr[ast_oxc](n7811343775b3f00c_vn09gcmk8to08, name, "req").
 child[ast_oxc](n7811343775b3f00c_49s7ec61ofuhe, pattern, 0, n7811343775b3f00c_vn09gcmk8to08).
 child[ast_oxc](n7811343775b3f00c_n82t1jgli9dkb, items, 0, n7811343775b3f00c_49s7ec61ofuhe).
 node[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, formal_parameter, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, 9).
-start[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, 260).
 attr[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, optional, false).
 attr[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, readonly, false).
 attr[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, override, false).
 node[ast_oxc](n7811343775b3f00c_q2oprjk9ke862, binding_identifier, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_q2oprjk9ke862, 9).
-start[ast_oxc](n7811343775b3f00c_q2oprjk9ke862, 260).
 attr[ast_oxc](n7811343775b3f00c_q2oprjk9ke862, name, "res").
 child[ast_oxc](n7811343775b3f00c_7ukd08bat8o21, pattern, 0, n7811343775b3f00c_q2oprjk9ke862).
 child[ast_oxc](n7811343775b3f00c_n82t1jgli9dkb, items, 1, n7811343775b3f00c_7ukd08bat8o21).
 child[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, params, 0, n7811343775b3f00c_n82t1jgli9dkb).
 node[ast_oxc](n7811343775b3f00c_7suimj1khe8t6, function_body, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_7suimj1khe8t6, 9).
-start[ast_oxc](n7811343775b3f00c_7suimj1khe8t6, 265).
 node[ast_oxc](n7811343775b3f00c_u20fdrps77pn9, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_u20fdrps77pn9, 9).
-start[ast_oxc](n7811343775b3f00c_u20fdrps77pn9, 267).
 node[ast_oxc](n7811343775b3f00c_f5lrp123fmuud, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_f5lrp123fmuud, 9).
-start[ast_oxc](n7811343775b3f00c_f5lrp123fmuud, 267).
 attr[ast_oxc](n7811343775b3f00c_f5lrp123fmuud, optional, false).
 attr[ast_oxc](n7811343775b3f00c_f5lrp123fmuud, pure, false).
 node[ast_oxc](n7811343775b3f00c_1at1g3cvjva14, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_1at1g3cvjva14, 9).
-start[ast_oxc](n7811343775b3f00c_1at1g3cvjva14, 267).
 attr[ast_oxc](n7811343775b3f00c_1at1g3cvjva14, optional, false).
 node[ast_oxc](n7811343775b3f00c_hpqikj4mng276, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_hpqikj4mng276, 9).
-start[ast_oxc](n7811343775b3f00c_hpqikj4mng276, 267).
 attr[ast_oxc](n7811343775b3f00c_hpqikj4mng276, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_hpqikj4mng276, name, "res").
 child[ast_oxc](n7811343775b3f00c_1at1g3cvjva14, object, 0, n7811343775b3f00c_hpqikj4mng276).
 node[ast_oxc](n7811343775b3f00c_8vo899cqfpb53, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_8vo899cqfpb53, 9).
-start[ast_oxc](n7811343775b3f00c_8vo899cqfpb53, 271).
 attr[ast_oxc](n7811343775b3f00c_8vo899cqfpb53, name, "end").
 child[ast_oxc](n7811343775b3f00c_1at1g3cvjva14, property, 0, n7811343775b3f00c_8vo899cqfpb53).
 child[ast_oxc](n7811343775b3f00c_f5lrp123fmuud, callee, 0, n7811343775b3f00c_1at1g3cvjva14).
@@ -410,31 +338,25 @@ attr[ast_oxc](n7811343775b3f00c_um02cjinhq6ta, pife, false).
 child[ast_oxc](n7811343775b3f00c_root, body, 6, n7811343775b3f00c_um02cjinhq6ta).
 node[ast_oxc](n7811343775b3f00c_pgg3kcipbt5a9, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_pgg3kcipbt5a9, 11).
-start[ast_oxc](n7811343775b3f00c_pgg3kcipbt5a9, 281).
 node[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, 11).
-start[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, 281).
 attr[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, optional, false).
 attr[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, pure, false).
 node[ast_oxc](n7811343775b3f00c_adhr6ucqbdl29, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_adhr6ucqbdl29, 11).
-start[ast_oxc](n7811343775b3f00c_adhr6ucqbdl29, 281).
 attr[ast_oxc](n7811343775b3f00c_adhr6ucqbdl29, optional, false).
 node[ast_oxc](n7811343775b3f00c_c8svj4ka0t1i2, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_c8svj4ka0t1i2, 11).
-start[ast_oxc](n7811343775b3f00c_c8svj4ka0t1i2, 281).
 attr[ast_oxc](n7811343775b3f00c_c8svj4ka0t1i2, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_c8svj4ka0t1i2, name, "app").
 child[ast_oxc](n7811343775b3f00c_adhr6ucqbdl29, object, 0, n7811343775b3f00c_c8svj4ka0t1i2).
 node[ast_oxc](n7811343775b3f00c_6ll8rg0nv284, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_6ll8rg0nv284, 11).
-start[ast_oxc](n7811343775b3f00c_6ll8rg0nv284, 285).
 attr[ast_oxc](n7811343775b3f00c_6ll8rg0nv284, name, "use").
 child[ast_oxc](n7811343775b3f00c_adhr6ucqbdl29, property, 0, n7811343775b3f00c_6ll8rg0nv284).
 child[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, callee, 0, n7811343775b3f00c_adhr6ucqbdl29).
 node[ast_oxc](n7811343775b3f00c_o305au0slev4e, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_o305au0slev4e, 11).
-start[ast_oxc](n7811343775b3f00c_o305au0slev4e, 289).
 attr[ast_oxc](n7811343775b3f00c_o305au0slev4e, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_o305au0slev4e, name, "logger").
 child[ast_oxc](n7811343775b3f00c_n39599mi2rhkf, arguments, 0, n7811343775b3f00c_o305au0slev4e).
@@ -442,37 +364,30 @@ child[ast_oxc](n7811343775b3f00c_pgg3kcipbt5a9, expression, 0, n7811343775b3f00c
 child[ast_oxc](n7811343775b3f00c_root, body, 7, n7811343775b3f00c_pgg3kcipbt5a9).
 node[ast_oxc](n7811343775b3f00c_l69js17k8krn3, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_l69js17k8krn3, 12).
-start[ast_oxc](n7811343775b3f00c_l69js17k8krn3, 298).
 node[ast_oxc](n7811343775b3f00c_up9jh270e66p, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_up9jh270e66p, 12).
-start[ast_oxc](n7811343775b3f00c_up9jh270e66p, 298).
 attr[ast_oxc](n7811343775b3f00c_up9jh270e66p, optional, false).
 attr[ast_oxc](n7811343775b3f00c_up9jh270e66p, pure, false).
 node[ast_oxc](n7811343775b3f00c_t6rnrhqe2t985, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_t6rnrhqe2t985, 12).
-start[ast_oxc](n7811343775b3f00c_t6rnrhqe2t985, 298).
 attr[ast_oxc](n7811343775b3f00c_t6rnrhqe2t985, optional, false).
 node[ast_oxc](n7811343775b3f00c_bmmsucgent3p8, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_bmmsucgent3p8, 12).
-start[ast_oxc](n7811343775b3f00c_bmmsucgent3p8, 298).
 attr[ast_oxc](n7811343775b3f00c_bmmsucgent3p8, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_bmmsucgent3p8, name, "app").
 child[ast_oxc](n7811343775b3f00c_t6rnrhqe2t985, object, 0, n7811343775b3f00c_bmmsucgent3p8).
 node[ast_oxc](n7811343775b3f00c_k4f1d2j6ukm2c, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_k4f1d2j6ukm2c, 12).
-start[ast_oxc](n7811343775b3f00c_k4f1d2j6ukm2c, 302).
 attr[ast_oxc](n7811343775b3f00c_k4f1d2j6ukm2c, name, "get").
 child[ast_oxc](n7811343775b3f00c_t6rnrhqe2t985, property, 0, n7811343775b3f00c_k4f1d2j6ukm2c).
 child[ast_oxc](n7811343775b3f00c_up9jh270e66p, callee, 0, n7811343775b3f00c_t6rnrhqe2t985).
 node[ast_oxc](n7811343775b3f00c_t28ektefv3bq3, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_t28ektefv3bq3, 12).
-start[ast_oxc](n7811343775b3f00c_t28ektefv3bq3, 306).
 attr[ast_oxc](n7811343775b3f00c_t28ektefv3bq3, value, "/health").
 attr[ast_oxc](n7811343775b3f00c_t28ektefv3bq3, raw, "'/health'").
 child[ast_oxc](n7811343775b3f00c_up9jh270e66p, arguments, 0, n7811343775b3f00c_t28ektefv3bq3).
 node[ast_oxc](n7811343775b3f00c_a3c9t1huv2ap4, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_a3c9t1huv2ap4, 12).
-start[ast_oxc](n7811343775b3f00c_a3c9t1huv2ap4, 317).
 attr[ast_oxc](n7811343775b3f00c_a3c9t1huv2ap4, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_a3c9t1huv2ap4, name, "health").
 child[ast_oxc](n7811343775b3f00c_up9jh270e66p, arguments, 1, n7811343775b3f00c_a3c9t1huv2ap4).
@@ -480,37 +395,30 @@ child[ast_oxc](n7811343775b3f00c_l69js17k8krn3, expression, 0, n7811343775b3f00c
 child[ast_oxc](n7811343775b3f00c_root, body, 8, n7811343775b3f00c_l69js17k8krn3).
 node[ast_oxc](n7811343775b3f00c_qcb50a89rp0d6, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_qcb50a89rp0d6, 13).
-start[ast_oxc](n7811343775b3f00c_qcb50a89rp0d6, 326).
 node[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, 13).
-start[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, 326).
 attr[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, optional, false).
 attr[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, pure, false).
 node[ast_oxc](n7811343775b3f00c_ngcgp9enj8np5, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_ngcgp9enj8np5, 13).
-start[ast_oxc](n7811343775b3f00c_ngcgp9enj8np5, 326).
 attr[ast_oxc](n7811343775b3f00c_ngcgp9enj8np5, optional, false).
 node[ast_oxc](n7811343775b3f00c_oadhgrcb51jv9, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_oadhgrcb51jv9, 13).
-start[ast_oxc](n7811343775b3f00c_oadhgrcb51jv9, 326).
 attr[ast_oxc](n7811343775b3f00c_oadhgrcb51jv9, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_oadhgrcb51jv9, name, "app").
 child[ast_oxc](n7811343775b3f00c_ngcgp9enj8np5, object, 0, n7811343775b3f00c_oadhgrcb51jv9).
 node[ast_oxc](n7811343775b3f00c_712qdu86q0mmc, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_712qdu86q0mmc, 13).
-start[ast_oxc](n7811343775b3f00c_712qdu86q0mmc, 330).
 attr[ast_oxc](n7811343775b3f00c_712qdu86q0mmc, name, "post").
 child[ast_oxc](n7811343775b3f00c_ngcgp9enj8np5, property, 0, n7811343775b3f00c_712qdu86q0mmc).
 child[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, callee, 0, n7811343775b3f00c_ngcgp9enj8np5).
 node[ast_oxc](n7811343775b3f00c_7ees5aehs3dje, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_7ees5aehs3dje, 13).
-start[ast_oxc](n7811343775b3f00c_7ees5aehs3dje, 335).
 attr[ast_oxc](n7811343775b3f00c_7ees5aehs3dje, value, "/orders").
 attr[ast_oxc](n7811343775b3f00c_7ees5aehs3dje, raw, "'/orders'").
 child[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, arguments, 0, n7811343775b3f00c_7ees5aehs3dje).
 node[ast_oxc](n7811343775b3f00c_omr9r0ct9jel9, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_omr9r0ct9jel9, 13).
-start[ast_oxc](n7811343775b3f00c_omr9r0ct9jel9, 346).
 attr[ast_oxc](n7811343775b3f00c_omr9r0ct9jel9, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_omr9r0ct9jel9, name, "createOrder").
 child[ast_oxc](n7811343775b3f00c_fngoak26sa5gf, arguments, 1, n7811343775b3f00c_omr9r0ct9jel9).
@@ -518,37 +426,30 @@ child[ast_oxc](n7811343775b3f00c_qcb50a89rp0d6, expression, 0, n7811343775b3f00c
 child[ast_oxc](n7811343775b3f00c_root, body, 9, n7811343775b3f00c_qcb50a89rp0d6).
 node[ast_oxc](n7811343775b3f00c_b3ku32anu1e0e, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_b3ku32anu1e0e, 14).
-start[ast_oxc](n7811343775b3f00c_b3ku32anu1e0e, 360).
 node[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, 14).
-start[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, 360).
 attr[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, optional, false).
 attr[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, pure, false).
 node[ast_oxc](n7811343775b3f00c_idgcgrba4f5s4, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_idgcgrba4f5s4, 14).
-start[ast_oxc](n7811343775b3f00c_idgcgrba4f5s4, 360).
 attr[ast_oxc](n7811343775b3f00c_idgcgrba4f5s4, optional, false).
 node[ast_oxc](n7811343775b3f00c_fo4ttmge22904, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_fo4ttmge22904, 14).
-start[ast_oxc](n7811343775b3f00c_fo4ttmge22904, 360).
 attr[ast_oxc](n7811343775b3f00c_fo4ttmge22904, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_fo4ttmge22904, name, "app").
 child[ast_oxc](n7811343775b3f00c_idgcgrba4f5s4, object, 0, n7811343775b3f00c_fo4ttmge22904).
 node[ast_oxc](n7811343775b3f00c_bmhmvjrg4ov45, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_bmhmvjrg4ov45, 14).
-start[ast_oxc](n7811343775b3f00c_bmhmvjrg4ov45, 364).
 attr[ast_oxc](n7811343775b3f00c_bmhmvjrg4ov45, name, "get").
 child[ast_oxc](n7811343775b3f00c_idgcgrba4f5s4, property, 0, n7811343775b3f00c_bmhmvjrg4ov45).
 child[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, callee, 0, n7811343775b3f00c_idgcgrba4f5s4).
 node[ast_oxc](n7811343775b3f00c_1vv9vrmtgiop6, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_1vv9vrmtgiop6, 14).
-start[ast_oxc](n7811343775b3f00c_1vv9vrmtgiop6, 368).
 attr[ast_oxc](n7811343775b3f00c_1vv9vrmtgiop6, value, "/admin").
 attr[ast_oxc](n7811343775b3f00c_1vv9vrmtgiop6, raw, "'/admin'").
 child[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, arguments, 0, n7811343775b3f00c_1vv9vrmtgiop6).
 node[ast_oxc](n7811343775b3f00c_f36lr8f8benp5, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_f36lr8f8benp5, 14).
-start[ast_oxc](n7811343775b3f00c_f36lr8f8benp5, 378).
 attr[ast_oxc](n7811343775b3f00c_f36lr8f8benp5, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_f36lr8f8benp5, name, "admin").
 child[ast_oxc](n7811343775b3f00c_fr2tcc3thrfg6, arguments, 1, n7811343775b3f00c_f36lr8f8benp5).
@@ -556,37 +457,30 @@ child[ast_oxc](n7811343775b3f00c_b3ku32anu1e0e, expression, 0, n7811343775b3f00c
 child[ast_oxc](n7811343775b3f00c_root, body, 10, n7811343775b3f00c_b3ku32anu1e0e).
 node[ast_oxc](n7811343775b3f00c_indn7iphftc5f, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_indn7iphftc5f, 15).
-start[ast_oxc](n7811343775b3f00c_indn7iphftc5f, 386).
 node[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, 15).
-start[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, 386).
 attr[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, optional, false).
 attr[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, pure, false).
 node[ast_oxc](n7811343775b3f00c_980sflra5hcqe, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_980sflra5hcqe, 15).
-start[ast_oxc](n7811343775b3f00c_980sflra5hcqe, 386).
 attr[ast_oxc](n7811343775b3f00c_980sflra5hcqe, optional, false).
 node[ast_oxc](n7811343775b3f00c_gvkcqvbb6k4g2, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_gvkcqvbb6k4g2, 15).
-start[ast_oxc](n7811343775b3f00c_gvkcqvbb6k4g2, 386).
 attr[ast_oxc](n7811343775b3f00c_gvkcqvbb6k4g2, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_gvkcqvbb6k4g2, name, "app").
 child[ast_oxc](n7811343775b3f00c_980sflra5hcqe, object, 0, n7811343775b3f00c_gvkcqvbb6k4g2).
 node[ast_oxc](n7811343775b3f00c_ll7kdoknm7m74, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_ll7kdoknm7m74, 15).
-start[ast_oxc](n7811343775b3f00c_ll7kdoknm7m74, 390).
 attr[ast_oxc](n7811343775b3f00c_ll7kdoknm7m74, name, "use").
 child[ast_oxc](n7811343775b3f00c_980sflra5hcqe, property, 0, n7811343775b3f00c_ll7kdoknm7m74).
 child[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, callee, 0, n7811343775b3f00c_980sflra5hcqe).
 node[ast_oxc](n7811343775b3f00c_1kj855q75fhs9, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_1kj855q75fhs9, 15).
-start[ast_oxc](n7811343775b3f00c_1kj855q75fhs9, 394).
 attr[ast_oxc](n7811343775b3f00c_1kj855q75fhs9, value, "/users").
 attr[ast_oxc](n7811343775b3f00c_1kj855q75fhs9, raw, "'/users'").
 child[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, arguments, 0, n7811343775b3f00c_1kj855q75fhs9).
 node[ast_oxc](n7811343775b3f00c_t07gce3bbg1e1, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_t07gce3bbg1e1, 15).
-start[ast_oxc](n7811343775b3f00c_t07gce3bbg1e1, 404).
 attr[ast_oxc](n7811343775b3f00c_t07gce3bbg1e1, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_t07gce3bbg1e1, name, "users").
 child[ast_oxc](n7811343775b3f00c_eb76ng31eiaj6, arguments, 1, n7811343775b3f00c_t07gce3bbg1e1).
@@ -594,37 +488,30 @@ child[ast_oxc](n7811343775b3f00c_indn7iphftc5f, expression, 0, n7811343775b3f00c
 child[ast_oxc](n7811343775b3f00c_root, body, 11, n7811343775b3f00c_indn7iphftc5f).
 node[ast_oxc](n7811343775b3f00c_nvdop6ilk1ht6, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_nvdop6ilk1ht6, 17).
-start[ast_oxc](n7811343775b3f00c_nvdop6ilk1ht6, 413).
 node[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, 17).
-start[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, 413).
 attr[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, optional, false).
 attr[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, pure, false).
 node[ast_oxc](n7811343775b3f00c_v4r79bg7md32a, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_v4r79bg7md32a, 17).
-start[ast_oxc](n7811343775b3f00c_v4r79bg7md32a, 413).
 attr[ast_oxc](n7811343775b3f00c_v4r79bg7md32a, optional, false).
 node[ast_oxc](n7811343775b3f00c_t43v1qshh5i01, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_t43v1qshh5i01, 17).
-start[ast_oxc](n7811343775b3f00c_t43v1qshh5i01, 413).
 attr[ast_oxc](n7811343775b3f00c_t43v1qshh5i01, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_t43v1qshh5i01, name, "app").
 child[ast_oxc](n7811343775b3f00c_v4r79bg7md32a, object, 0, n7811343775b3f00c_t43v1qshh5i01).
 node[ast_oxc](n7811343775b3f00c_8qonstb1pnvrf, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_8qonstb1pnvrf, 17).
-start[ast_oxc](n7811343775b3f00c_8qonstb1pnvrf, 417).
 attr[ast_oxc](n7811343775b3f00c_8qonstb1pnvrf, name, "set").
 child[ast_oxc](n7811343775b3f00c_v4r79bg7md32a, property, 0, n7811343775b3f00c_8qonstb1pnvrf).
 child[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, callee, 0, n7811343775b3f00c_v4r79bg7md32a).
 node[ast_oxc](n7811343775b3f00c_igmio577r9bsb, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_igmio577r9bsb, 17).
-start[ast_oxc](n7811343775b3f00c_igmio577r9bsb, 421).
 attr[ast_oxc](n7811343775b3f00c_igmio577r9bsb, value, "port").
 attr[ast_oxc](n7811343775b3f00c_igmio577r9bsb, raw, "'port'").
 child[ast_oxc](n7811343775b3f00c_0ld20109ftnr9, arguments, 0, n7811343775b3f00c_igmio577r9bsb).
 node[ast_oxc](n7811343775b3f00c_12vmq5t4efb73, numeric_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_12vmq5t4efb73, 17).
-start[ast_oxc](n7811343775b3f00c_12vmq5t4efb73, 429).
 attr[ast_oxc](n7811343775b3f00c_12vmq5t4efb73, base, "Decimal").
 attr[ast_oxc](n7811343775b3f00c_12vmq5t4efb73, raw, "3000").
 attr[ast_oxc](n7811343775b3f00c_12vmq5t4efb73, value, 3000).
@@ -633,52 +520,42 @@ child[ast_oxc](n7811343775b3f00c_nvdop6ilk1ht6, expression, 0, n7811343775b3f00c
 child[ast_oxc](n7811343775b3f00c_root, body, 12, n7811343775b3f00c_nvdop6ilk1ht6).
 node[ast_oxc](n7811343775b3f00c_8rmrqs3d8e294, expression_statement, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_8rmrqs3d8e294, 18).
-start[ast_oxc](n7811343775b3f00c_8rmrqs3d8e294, 436).
 node[ast_oxc](n7811343775b3f00c_rr6v7ie3quen2, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_rr6v7ie3quen2, 18).
-start[ast_oxc](n7811343775b3f00c_rr6v7ie3quen2, 436).
 attr[ast_oxc](n7811343775b3f00c_rr6v7ie3quen2, optional, false).
 attr[ast_oxc](n7811343775b3f00c_rr6v7ie3quen2, pure, false).
 node[ast_oxc](n7811343775b3f00c_u37l14n1q19fb, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_u37l14n1q19fb, 18).
-start[ast_oxc](n7811343775b3f00c_u37l14n1q19fb, 436).
 attr[ast_oxc](n7811343775b3f00c_u37l14n1q19fb, optional, false).
 node[ast_oxc](n7811343775b3f00c_h5oic680ha2v, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_h5oic680ha2v, 18).
-start[ast_oxc](n7811343775b3f00c_h5oic680ha2v, 436).
 attr[ast_oxc](n7811343775b3f00c_h5oic680ha2v, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_h5oic680ha2v, name, "app").
 child[ast_oxc](n7811343775b3f00c_u37l14n1q19fb, object, 0, n7811343775b3f00c_h5oic680ha2v).
 node[ast_oxc](n7811343775b3f00c_erau3dcaksif, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_erau3dcaksif, 18).
-start[ast_oxc](n7811343775b3f00c_erau3dcaksif, 440).
 attr[ast_oxc](n7811343775b3f00c_erau3dcaksif, name, "listen").
 child[ast_oxc](n7811343775b3f00c_u37l14n1q19fb, property, 0, n7811343775b3f00c_erau3dcaksif).
 child[ast_oxc](n7811343775b3f00c_rr6v7ie3quen2, callee, 0, n7811343775b3f00c_u37l14n1q19fb).
 node[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, call_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, 18).
-start[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, 447).
 attr[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, optional, false).
 attr[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, pure, false).
 node[ast_oxc](n7811343775b3f00c_n2mo5hnqjrvv7, static_member_expression, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_n2mo5hnqjrvv7, 18).
-start[ast_oxc](n7811343775b3f00c_n2mo5hnqjrvv7, 447).
 attr[ast_oxc](n7811343775b3f00c_n2mo5hnqjrvv7, optional, false).
 node[ast_oxc](n7811343775b3f00c_98tiddpf3b3r2, identifier_reference, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_98tiddpf3b3r2, 18).
-start[ast_oxc](n7811343775b3f00c_98tiddpf3b3r2, 447).
 attr[ast_oxc](n7811343775b3f00c_98tiddpf3b3r2, variant, "Identifier").
 attr[ast_oxc](n7811343775b3f00c_98tiddpf3b3r2, name, "app").
 child[ast_oxc](n7811343775b3f00c_n2mo5hnqjrvv7, object, 0, n7811343775b3f00c_98tiddpf3b3r2).
 node[ast_oxc](n7811343775b3f00c_79uuu7lcei8h1, identifier_name, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_79uuu7lcei8h1, 18).
-start[ast_oxc](n7811343775b3f00c_79uuu7lcei8h1, 451).
 attr[ast_oxc](n7811343775b3f00c_79uuu7lcei8h1, name, "get").
 child[ast_oxc](n7811343775b3f00c_n2mo5hnqjrvv7, property, 0, n7811343775b3f00c_79uuu7lcei8h1).
 child[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, callee, 0, n7811343775b3f00c_n2mo5hnqjrvv7).
 node[ast_oxc](n7811343775b3f00c_hhshmvovp9rm, string_literal, "src/api/server.js").
 line[ast_oxc](n7811343775b3f00c_hhshmvovp9rm, 18).
-start[ast_oxc](n7811343775b3f00c_hhshmvovp9rm, 455).
 attr[ast_oxc](n7811343775b3f00c_hhshmvovp9rm, value, "port").
 attr[ast_oxc](n7811343775b3f00c_hhshmvovp9rm, raw, "'port'").
 child[ast_oxc](n7811343775b3f00c_4nhffkhqlto54, arguments, 0, n7811343775b3f00c_hhshmvovp9rm).
@@ -691,58 +568,46 @@ attr[ast_oxc](n7811343775b3f00c_root, source_type_variant, "Standard").
 file[ast_oxc](n7811343775b3f00c_root, "src/api/server.js").
 node[ast_oxc](n51d1db749458927d_root, program, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_root, 1).
-start[ast_oxc](n51d1db749458927d_root, 0).
 node[ast_oxc](n51d1db749458927d_87knqds8ngdr7, import_declaration, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_87knqds8ngdr7, 1).
-start[ast_oxc](n51d1db749458927d_87knqds8ngdr7, 0).
 attr[ast_oxc](n51d1db749458927d_87knqds8ngdr7, import_kind, "Value").
 node[ast_oxc](n51d1db749458927d_le871357c95m7, import_specifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_le871357c95m7, 1).
-start[ast_oxc](n51d1db749458927d_le871357c95m7, 9).
 attr[ast_oxc](n51d1db749458927d_le871357c95m7, import_kind, "Value").
 node[ast_oxc](n51d1db749458927d_e0b1on6pls4td, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_e0b1on6pls4td, 1).
-start[ast_oxc](n51d1db749458927d_e0b1on6pls4td, 9).
 attr[ast_oxc](n51d1db749458927d_e0b1on6pls4td, name, "Router").
 child[ast_oxc](n51d1db749458927d_le871357c95m7, imported, 0, n51d1db749458927d_e0b1on6pls4td).
 node[ast_oxc](n51d1db749458927d_7sji8i5cgibv7, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_7sji8i5cgibv7, 1).
-start[ast_oxc](n51d1db749458927d_7sji8i5cgibv7, 9).
 attr[ast_oxc](n51d1db749458927d_7sji8i5cgibv7, name, "Router").
 child[ast_oxc](n51d1db749458927d_le871357c95m7, local, 0, n51d1db749458927d_7sji8i5cgibv7).
 child[ast_oxc](n51d1db749458927d_87knqds8ngdr7, specifiers, 0, n51d1db749458927d_le871357c95m7).
 node[ast_oxc](n51d1db749458927d_ca5fsg6tunasb, string_literal, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_ca5fsg6tunasb, 1).
-start[ast_oxc](n51d1db749458927d_ca5fsg6tunasb, 23).
 attr[ast_oxc](n51d1db749458927d_ca5fsg6tunasb, value, "express").
 attr[ast_oxc](n51d1db749458927d_ca5fsg6tunasb, raw, "'express'").
 child[ast_oxc](n51d1db749458927d_87knqds8ngdr7, source, 0, n51d1db749458927d_ca5fsg6tunasb).
 child[ast_oxc](n51d1db749458927d_root, body, 0, n51d1db749458927d_87knqds8ngdr7).
 node[ast_oxc](n51d1db749458927d_1r1i3v31v2r61, export_declaration, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_1r1i3v31v2r61, 3).
-start[ast_oxc](n51d1db749458927d_1r1i3v31v2r61, 35).
 node[ast_oxc](n51d1db749458927d_oan9f972lnkt6, variable_declaration, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_oan9f972lnkt6, 3).
-start[ast_oxc](n51d1db749458927d_oan9f972lnkt6, 42).
 attr[ast_oxc](n51d1db749458927d_oan9f972lnkt6, kind, "Const").
 attr[ast_oxc](n51d1db749458927d_oan9f972lnkt6, declare, false).
 node[ast_oxc](n51d1db749458927d_2mtkrdnkf3n23, variable_declarator, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_2mtkrdnkf3n23, 3).
-start[ast_oxc](n51d1db749458927d_2mtkrdnkf3n23, 48).
 attr[ast_oxc](n51d1db749458927d_2mtkrdnkf3n23, definite, false).
 node[ast_oxc](n51d1db749458927d_o25fjl3aij1ia, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_o25fjl3aij1ia, 3).
-start[ast_oxc](n51d1db749458927d_o25fjl3aij1ia, 48).
 attr[ast_oxc](n51d1db749458927d_o25fjl3aij1ia, name, "users").
 child[ast_oxc](n51d1db749458927d_2mtkrdnkf3n23, id, 0, n51d1db749458927d_o25fjl3aij1ia).
 node[ast_oxc](n51d1db749458927d_0ibd81n8e1l56, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_0ibd81n8e1l56, 3).
-start[ast_oxc](n51d1db749458927d_0ibd81n8e1l56, 56).
 attr[ast_oxc](n51d1db749458927d_0ibd81n8e1l56, optional, false).
 attr[ast_oxc](n51d1db749458927d_0ibd81n8e1l56, pure, false).
 node[ast_oxc](n51d1db749458927d_shb0408uhjknc, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_shb0408uhjknc, 3).
-start[ast_oxc](n51d1db749458927d_shb0408uhjknc, 56).
 attr[ast_oxc](n51d1db749458927d_shb0408uhjknc, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_shb0408uhjknc, name, "Router").
 child[ast_oxc](n51d1db749458927d_0ibd81n8e1l56, callee, 0, n51d1db749458927d_shb0408uhjknc).
@@ -752,72 +617,58 @@ child[ast_oxc](n51d1db749458927d_1r1i3v31v2r61, declaration, 0, n51d1db749458927
 child[ast_oxc](n51d1db749458927d_root, body, 1, n51d1db749458927d_1r1i3v31v2r61).
 node[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, function, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, 5).
-start[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, 67).
 attr[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, variant, "FunctionDeclaration").
 node[ast_oxc](n51d1db749458927d_kfgf8henfvjrf, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_kfgf8henfvjrf, 5).
-start[ast_oxc](n51d1db749458927d_kfgf8henfvjrf, 76).
 attr[ast_oxc](n51d1db749458927d_kfgf8henfvjrf, name, "list").
 child[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, id, 0, n51d1db749458927d_kfgf8henfvjrf).
 node[ast_oxc](n51d1db749458927d_kse3dshfk63j9, formal_parameters, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_kse3dshfk63j9, 5).
-start[ast_oxc](n51d1db749458927d_kse3dshfk63j9, 80).
 attr[ast_oxc](n51d1db749458927d_kse3dshfk63j9, kind, "FormalParameter").
 node[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, formal_parameter, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, 5).
-start[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, 81).
 attr[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, optional, false).
 attr[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, readonly, false).
 attr[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, override, false).
 node[ast_oxc](n51d1db749458927d_53t95dakns9ge, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_53t95dakns9ge, 5).
-start[ast_oxc](n51d1db749458927d_53t95dakns9ge, 81).
 attr[ast_oxc](n51d1db749458927d_53t95dakns9ge, name, "req").
 child[ast_oxc](n51d1db749458927d_vrbsm8a2m5l91, pattern, 0, n51d1db749458927d_53t95dakns9ge).
 child[ast_oxc](n51d1db749458927d_kse3dshfk63j9, items, 0, n51d1db749458927d_vrbsm8a2m5l91).
 node[ast_oxc](n51d1db749458927d_hauli9mujde65, formal_parameter, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_hauli9mujde65, 5).
-start[ast_oxc](n51d1db749458927d_hauli9mujde65, 86).
 attr[ast_oxc](n51d1db749458927d_hauli9mujde65, optional, false).
 attr[ast_oxc](n51d1db749458927d_hauli9mujde65, readonly, false).
 attr[ast_oxc](n51d1db749458927d_hauli9mujde65, override, false).
 node[ast_oxc](n51d1db749458927d_oa89p12q4hbrd, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_oa89p12q4hbrd, 5).
-start[ast_oxc](n51d1db749458927d_oa89p12q4hbrd, 86).
 attr[ast_oxc](n51d1db749458927d_oa89p12q4hbrd, name, "res").
 child[ast_oxc](n51d1db749458927d_hauli9mujde65, pattern, 0, n51d1db749458927d_oa89p12q4hbrd).
 child[ast_oxc](n51d1db749458927d_kse3dshfk63j9, items, 1, n51d1db749458927d_hauli9mujde65).
 child[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, params, 0, n51d1db749458927d_kse3dshfk63j9).
 node[ast_oxc](n51d1db749458927d_ure3b1mpvltle, function_body, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_ure3b1mpvltle, 5).
-start[ast_oxc](n51d1db749458927d_ure3b1mpvltle, 91).
 node[ast_oxc](n51d1db749458927d_d849hs7rbb4cc, expression_statement, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_d849hs7rbb4cc, 5).
-start[ast_oxc](n51d1db749458927d_d849hs7rbb4cc, 93).
 node[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, 5).
-start[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, 93).
 attr[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, optional, false).
 attr[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, pure, false).
 node[ast_oxc](n51d1db749458927d_rm6n25bpooi3, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_rm6n25bpooi3, 5).
-start[ast_oxc](n51d1db749458927d_rm6n25bpooi3, 93).
 attr[ast_oxc](n51d1db749458927d_rm6n25bpooi3, optional, false).
 node[ast_oxc](n51d1db749458927d_n03n4mk741qmd, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_n03n4mk741qmd, 5).
-start[ast_oxc](n51d1db749458927d_n03n4mk741qmd, 93).
 attr[ast_oxc](n51d1db749458927d_n03n4mk741qmd, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_n03n4mk741qmd, name, "res").
 child[ast_oxc](n51d1db749458927d_rm6n25bpooi3, object, 0, n51d1db749458927d_n03n4mk741qmd).
 node[ast_oxc](n51d1db749458927d_9tekjdh7sfuse, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_9tekjdh7sfuse, 5).
-start[ast_oxc](n51d1db749458927d_9tekjdh7sfuse, 97).
 attr[ast_oxc](n51d1db749458927d_9tekjdh7sfuse, name, "json").
 child[ast_oxc](n51d1db749458927d_rm6n25bpooi3, property, 0, n51d1db749458927d_9tekjdh7sfuse).
 child[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, callee, 0, n51d1db749458927d_rm6n25bpooi3).
 node[ast_oxc](n51d1db749458927d_cv1a19t2upb36, array_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_cv1a19t2upb36, 5).
-start[ast_oxc](n51d1db749458927d_cv1a19t2upb36, 102).
 child[ast_oxc](n51d1db749458927d_6dtfp6n3t0nd7, arguments, 0, n51d1db749458927d_cv1a19t2upb36).
 child[ast_oxc](n51d1db749458927d_d849hs7rbb4cc, expression, 0, n51d1db749458927d_6dtfp6n3t0nd7).
 child[ast_oxc](n51d1db749458927d_ure3b1mpvltle, statements, 0, n51d1db749458927d_d849hs7rbb4cc).
@@ -831,108 +682,87 @@ attr[ast_oxc](n51d1db749458927d_q9a1qep6nabr5, pife, false).
 child[ast_oxc](n51d1db749458927d_root, body, 2, n51d1db749458927d_q9a1qep6nabr5).
 node[ast_oxc](n51d1db749458927d_qq50dl0sjonac, function, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_qq50dl0sjonac, 6).
-start[ast_oxc](n51d1db749458927d_qq50dl0sjonac, 109).
 attr[ast_oxc](n51d1db749458927d_qq50dl0sjonac, variant, "FunctionDeclaration").
 node[ast_oxc](n51d1db749458927d_lvv35hjr7anq7, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_lvv35hjr7anq7, 6).
-start[ast_oxc](n51d1db749458927d_lvv35hjr7anq7, 118).
 attr[ast_oxc](n51d1db749458927d_lvv35hjr7anq7, name, "getUser").
 child[ast_oxc](n51d1db749458927d_qq50dl0sjonac, id, 0, n51d1db749458927d_lvv35hjr7anq7).
 node[ast_oxc](n51d1db749458927d_21q79uaiu4dm1, formal_parameters, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_21q79uaiu4dm1, 6).
-start[ast_oxc](n51d1db749458927d_21q79uaiu4dm1, 125).
 attr[ast_oxc](n51d1db749458927d_21q79uaiu4dm1, kind, "FormalParameter").
 node[ast_oxc](n51d1db749458927d_9l4i5mugheqif, formal_parameter, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_9l4i5mugheqif, 6).
-start[ast_oxc](n51d1db749458927d_9l4i5mugheqif, 126).
 attr[ast_oxc](n51d1db749458927d_9l4i5mugheqif, optional, false).
 attr[ast_oxc](n51d1db749458927d_9l4i5mugheqif, readonly, false).
 attr[ast_oxc](n51d1db749458927d_9l4i5mugheqif, override, false).
 node[ast_oxc](n51d1db749458927d_d028shrt389h8, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_d028shrt389h8, 6).
-start[ast_oxc](n51d1db749458927d_d028shrt389h8, 126).
 attr[ast_oxc](n51d1db749458927d_d028shrt389h8, name, "req").
 child[ast_oxc](n51d1db749458927d_9l4i5mugheqif, pattern, 0, n51d1db749458927d_d028shrt389h8).
 child[ast_oxc](n51d1db749458927d_21q79uaiu4dm1, items, 0, n51d1db749458927d_9l4i5mugheqif).
 node[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, formal_parameter, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, 6).
-start[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, 131).
 attr[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, optional, false).
 attr[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, readonly, false).
 attr[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, override, false).
 node[ast_oxc](n51d1db749458927d_mv8fd4avgqmu6, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_mv8fd4avgqmu6, 6).
-start[ast_oxc](n51d1db749458927d_mv8fd4avgqmu6, 131).
 attr[ast_oxc](n51d1db749458927d_mv8fd4avgqmu6, name, "res").
 child[ast_oxc](n51d1db749458927d_7qrcq5dkq4l78, pattern, 0, n51d1db749458927d_mv8fd4avgqmu6).
 child[ast_oxc](n51d1db749458927d_21q79uaiu4dm1, items, 1, n51d1db749458927d_7qrcq5dkq4l78).
 child[ast_oxc](n51d1db749458927d_qq50dl0sjonac, params, 0, n51d1db749458927d_21q79uaiu4dm1).
 node[ast_oxc](n51d1db749458927d_atidahamvf37, function_body, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_atidahamvf37, 6).
-start[ast_oxc](n51d1db749458927d_atidahamvf37, 136).
 node[ast_oxc](n51d1db749458927d_rrmjss5abe1te, expression_statement, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_rrmjss5abe1te, 6).
-start[ast_oxc](n51d1db749458927d_rrmjss5abe1te, 138).
 node[ast_oxc](n51d1db749458927d_qa0ej90peolp2, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_qa0ej90peolp2, 6).
-start[ast_oxc](n51d1db749458927d_qa0ej90peolp2, 138).
 attr[ast_oxc](n51d1db749458927d_qa0ej90peolp2, optional, false).
 attr[ast_oxc](n51d1db749458927d_qa0ej90peolp2, pure, false).
 node[ast_oxc](n51d1db749458927d_uqq676eo92bne, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_uqq676eo92bne, 6).
-start[ast_oxc](n51d1db749458927d_uqq676eo92bne, 138).
 attr[ast_oxc](n51d1db749458927d_uqq676eo92bne, optional, false).
 node[ast_oxc](n51d1db749458927d_tg8ji8kc2h8h9, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_tg8ji8kc2h8h9, 6).
-start[ast_oxc](n51d1db749458927d_tg8ji8kc2h8h9, 138).
 attr[ast_oxc](n51d1db749458927d_tg8ji8kc2h8h9, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_tg8ji8kc2h8h9, name, "res").
 child[ast_oxc](n51d1db749458927d_uqq676eo92bne, object, 0, n51d1db749458927d_tg8ji8kc2h8h9).
 node[ast_oxc](n51d1db749458927d_qct2k43grdkhe, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_qct2k43grdkhe, 6).
-start[ast_oxc](n51d1db749458927d_qct2k43grdkhe, 142).
 attr[ast_oxc](n51d1db749458927d_qct2k43grdkhe, name, "json").
 child[ast_oxc](n51d1db749458927d_uqq676eo92bne, property, 0, n51d1db749458927d_qct2k43grdkhe).
 child[ast_oxc](n51d1db749458927d_qa0ej90peolp2, callee, 0, n51d1db749458927d_uqq676eo92bne).
 node[ast_oxc](n51d1db749458927d_3u4qajp6k05me, object_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_3u4qajp6k05me, 6).
-start[ast_oxc](n51d1db749458927d_3u4qajp6k05me, 147).
 node[ast_oxc](n51d1db749458927d_39q3kis9gl357, object_property, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_39q3kis9gl357, 6).
-start[ast_oxc](n51d1db749458927d_39q3kis9gl357, 149).
 attr[ast_oxc](n51d1db749458927d_39q3kis9gl357, kind, "Init").
 attr[ast_oxc](n51d1db749458927d_39q3kis9gl357, method, false).
 attr[ast_oxc](n51d1db749458927d_39q3kis9gl357, shorthand, false).
 attr[ast_oxc](n51d1db749458927d_39q3kis9gl357, computed, false).
 node[ast_oxc](n51d1db749458927d_mmonotqq3knm9, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_mmonotqq3knm9, 6).
-start[ast_oxc](n51d1db749458927d_mmonotqq3knm9, 149).
 attr[ast_oxc](n51d1db749458927d_mmonotqq3knm9, variant, "StaticIdentifier").
 attr[ast_oxc](n51d1db749458927d_mmonotqq3knm9, name, "id").
 child[ast_oxc](n51d1db749458927d_39q3kis9gl357, key, 0, n51d1db749458927d_mmonotqq3knm9).
 node[ast_oxc](n51d1db749458927d_sgu8eao0ig9kf, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_sgu8eao0ig9kf, 6).
-start[ast_oxc](n51d1db749458927d_sgu8eao0ig9kf, 153).
 attr[ast_oxc](n51d1db749458927d_sgu8eao0ig9kf, optional, false).
 node[ast_oxc](n51d1db749458927d_75j11a7kncsec, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_75j11a7kncsec, 6).
-start[ast_oxc](n51d1db749458927d_75j11a7kncsec, 153).
 attr[ast_oxc](n51d1db749458927d_75j11a7kncsec, optional, false).
 node[ast_oxc](n51d1db749458927d_fb29fifl3mfrc, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_fb29fifl3mfrc, 6).
-start[ast_oxc](n51d1db749458927d_fb29fifl3mfrc, 153).
 attr[ast_oxc](n51d1db749458927d_fb29fifl3mfrc, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_fb29fifl3mfrc, name, "req").
 child[ast_oxc](n51d1db749458927d_75j11a7kncsec, object, 0, n51d1db749458927d_fb29fifl3mfrc).
 node[ast_oxc](n51d1db749458927d_dcgr0gh3h2kr7, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_dcgr0gh3h2kr7, 6).
-start[ast_oxc](n51d1db749458927d_dcgr0gh3h2kr7, 157).
 attr[ast_oxc](n51d1db749458927d_dcgr0gh3h2kr7, name, "params").
 child[ast_oxc](n51d1db749458927d_75j11a7kncsec, property, 0, n51d1db749458927d_dcgr0gh3h2kr7).
 child[ast_oxc](n51d1db749458927d_sgu8eao0ig9kf, object, 0, n51d1db749458927d_75j11a7kncsec).
 node[ast_oxc](n51d1db749458927d_sjaa73bbuivk8, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_sjaa73bbuivk8, 6).
-start[ast_oxc](n51d1db749458927d_sjaa73bbuivk8, 164).
 attr[ast_oxc](n51d1db749458927d_sjaa73bbuivk8, name, "id").
 child[ast_oxc](n51d1db749458927d_sgu8eao0ig9kf, property, 0, n51d1db749458927d_sjaa73bbuivk8).
 child[ast_oxc](n51d1db749458927d_39q3kis9gl357, value, 0, n51d1db749458927d_sgu8eao0ig9kf).
@@ -950,81 +780,65 @@ attr[ast_oxc](n51d1db749458927d_qq50dl0sjonac, pife, false).
 child[ast_oxc](n51d1db749458927d_root, body, 3, n51d1db749458927d_qq50dl0sjonac).
 node[ast_oxc](n51d1db749458927d_jhgrdindhqah1, function, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_jhgrdindhqah1, 7).
-start[ast_oxc](n51d1db749458927d_jhgrdindhqah1, 173).
 attr[ast_oxc](n51d1db749458927d_jhgrdindhqah1, variant, "FunctionDeclaration").
 node[ast_oxc](n51d1db749458927d_blvefrqn2p5fc, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_blvefrqn2p5fc, 7).
-start[ast_oxc](n51d1db749458927d_blvefrqn2p5fc, 182).
 attr[ast_oxc](n51d1db749458927d_blvefrqn2p5fc, name, "removeUser").
 child[ast_oxc](n51d1db749458927d_jhgrdindhqah1, id, 0, n51d1db749458927d_blvefrqn2p5fc).
 node[ast_oxc](n51d1db749458927d_ukp8r3q199293, formal_parameters, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_ukp8r3q199293, 7).
-start[ast_oxc](n51d1db749458927d_ukp8r3q199293, 192).
 attr[ast_oxc](n51d1db749458927d_ukp8r3q199293, kind, "FormalParameter").
 node[ast_oxc](n51d1db749458927d_dj441i7h571s3, formal_parameter, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_dj441i7h571s3, 7).
-start[ast_oxc](n51d1db749458927d_dj441i7h571s3, 193).
 attr[ast_oxc](n51d1db749458927d_dj441i7h571s3, optional, false).
 attr[ast_oxc](n51d1db749458927d_dj441i7h571s3, readonly, false).
 attr[ast_oxc](n51d1db749458927d_dj441i7h571s3, override, false).
 node[ast_oxc](n51d1db749458927d_abh8hhabjvvaf, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_abh8hhabjvvaf, 7).
-start[ast_oxc](n51d1db749458927d_abh8hhabjvvaf, 193).
 attr[ast_oxc](n51d1db749458927d_abh8hhabjvvaf, name, "req").
 child[ast_oxc](n51d1db749458927d_dj441i7h571s3, pattern, 0, n51d1db749458927d_abh8hhabjvvaf).
 child[ast_oxc](n51d1db749458927d_ukp8r3q199293, items, 0, n51d1db749458927d_dj441i7h571s3).
 node[ast_oxc](n51d1db749458927d_dqi001v5p8a92, formal_parameter, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_dqi001v5p8a92, 7).
-start[ast_oxc](n51d1db749458927d_dqi001v5p8a92, 198).
 attr[ast_oxc](n51d1db749458927d_dqi001v5p8a92, optional, false).
 attr[ast_oxc](n51d1db749458927d_dqi001v5p8a92, readonly, false).
 attr[ast_oxc](n51d1db749458927d_dqi001v5p8a92, override, false).
 node[ast_oxc](n51d1db749458927d_f61ablpcocve7, binding_identifier, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_f61ablpcocve7, 7).
-start[ast_oxc](n51d1db749458927d_f61ablpcocve7, 198).
 attr[ast_oxc](n51d1db749458927d_f61ablpcocve7, name, "res").
 child[ast_oxc](n51d1db749458927d_dqi001v5p8a92, pattern, 0, n51d1db749458927d_f61ablpcocve7).
 child[ast_oxc](n51d1db749458927d_ukp8r3q199293, items, 1, n51d1db749458927d_dqi001v5p8a92).
 child[ast_oxc](n51d1db749458927d_jhgrdindhqah1, params, 0, n51d1db749458927d_ukp8r3q199293).
 node[ast_oxc](n51d1db749458927d_kchl87h2eega2, function_body, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_kchl87h2eega2, 7).
-start[ast_oxc](n51d1db749458927d_kchl87h2eega2, 203).
 node[ast_oxc](n51d1db749458927d_48jjo2cm2q5tb, expression_statement, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_48jjo2cm2q5tb, 7).
-start[ast_oxc](n51d1db749458927d_48jjo2cm2q5tb, 205).
 node[ast_oxc](n51d1db749458927d_ta4nh0tulf944, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_ta4nh0tulf944, 7).
-start[ast_oxc](n51d1db749458927d_ta4nh0tulf944, 205).
 attr[ast_oxc](n51d1db749458927d_ta4nh0tulf944, optional, false).
 attr[ast_oxc](n51d1db749458927d_ta4nh0tulf944, pure, false).
 node[ast_oxc](n51d1db749458927d_67mhda234dno5, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_67mhda234dno5, 7).
-start[ast_oxc](n51d1db749458927d_67mhda234dno5, 205).
 attr[ast_oxc](n51d1db749458927d_67mhda234dno5, optional, false).
 node[ast_oxc](n51d1db749458927d_dartqj93ge7hb, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_dartqj93ge7hb, 7).
-start[ast_oxc](n51d1db749458927d_dartqj93ge7hb, 205).
 attr[ast_oxc](n51d1db749458927d_dartqj93ge7hb, optional, false).
 attr[ast_oxc](n51d1db749458927d_dartqj93ge7hb, pure, false).
 node[ast_oxc](n51d1db749458927d_bcmnmegrueav3, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_bcmnmegrueav3, 7).
-start[ast_oxc](n51d1db749458927d_bcmnmegrueav3, 205).
 attr[ast_oxc](n51d1db749458927d_bcmnmegrueav3, optional, false).
 node[ast_oxc](n51d1db749458927d_lk0rvee7lh526, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_lk0rvee7lh526, 7).
-start[ast_oxc](n51d1db749458927d_lk0rvee7lh526, 205).
 attr[ast_oxc](n51d1db749458927d_lk0rvee7lh526, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_lk0rvee7lh526, name, "res").
 child[ast_oxc](n51d1db749458927d_bcmnmegrueav3, object, 0, n51d1db749458927d_lk0rvee7lh526).
 node[ast_oxc](n51d1db749458927d_r3qmoalarp0k2, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_r3qmoalarp0k2, 7).
-start[ast_oxc](n51d1db749458927d_r3qmoalarp0k2, 209).
 attr[ast_oxc](n51d1db749458927d_r3qmoalarp0k2, name, "status").
 child[ast_oxc](n51d1db749458927d_bcmnmegrueav3, property, 0, n51d1db749458927d_r3qmoalarp0k2).
 child[ast_oxc](n51d1db749458927d_dartqj93ge7hb, callee, 0, n51d1db749458927d_bcmnmegrueav3).
 node[ast_oxc](n51d1db749458927d_2tg9aajmavog6, numeric_literal, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_2tg9aajmavog6, 7).
-start[ast_oxc](n51d1db749458927d_2tg9aajmavog6, 216).
 attr[ast_oxc](n51d1db749458927d_2tg9aajmavog6, base, "Decimal").
 attr[ast_oxc](n51d1db749458927d_2tg9aajmavog6, raw, "204").
 attr[ast_oxc](n51d1db749458927d_2tg9aajmavog6, value, 204).
@@ -1032,7 +846,6 @@ child[ast_oxc](n51d1db749458927d_dartqj93ge7hb, arguments, 0, n51d1db749458927d_
 child[ast_oxc](n51d1db749458927d_67mhda234dno5, object, 0, n51d1db749458927d_dartqj93ge7hb).
 node[ast_oxc](n51d1db749458927d_om1v8ncc1ik12, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_om1v8ncc1ik12, 7).
-start[ast_oxc](n51d1db749458927d_om1v8ncc1ik12, 221).
 attr[ast_oxc](n51d1db749458927d_om1v8ncc1ik12, name, "end").
 child[ast_oxc](n51d1db749458927d_67mhda234dno5, property, 0, n51d1db749458927d_om1v8ncc1ik12).
 child[ast_oxc](n51d1db749458927d_ta4nh0tulf944, callee, 0, n51d1db749458927d_67mhda234dno5).
@@ -1048,37 +861,30 @@ attr[ast_oxc](n51d1db749458927d_jhgrdindhqah1, pife, false).
 child[ast_oxc](n51d1db749458927d_root, body, 4, n51d1db749458927d_jhgrdindhqah1).
 node[ast_oxc](n51d1db749458927d_bjcb895bnh5u8, expression_statement, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_bjcb895bnh5u8, 9).
-start[ast_oxc](n51d1db749458927d_bjcb895bnh5u8, 231).
 node[ast_oxc](n51d1db749458927d_092iln94fmqqe, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_092iln94fmqqe, 9).
-start[ast_oxc](n51d1db749458927d_092iln94fmqqe, 231).
 attr[ast_oxc](n51d1db749458927d_092iln94fmqqe, optional, false).
 attr[ast_oxc](n51d1db749458927d_092iln94fmqqe, pure, false).
 node[ast_oxc](n51d1db749458927d_ii1a3aljt3pq9, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_ii1a3aljt3pq9, 9).
-start[ast_oxc](n51d1db749458927d_ii1a3aljt3pq9, 231).
 attr[ast_oxc](n51d1db749458927d_ii1a3aljt3pq9, optional, false).
 node[ast_oxc](n51d1db749458927d_orbka10mpm359, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_orbka10mpm359, 9).
-start[ast_oxc](n51d1db749458927d_orbka10mpm359, 231).
 attr[ast_oxc](n51d1db749458927d_orbka10mpm359, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_orbka10mpm359, name, "users").
 child[ast_oxc](n51d1db749458927d_ii1a3aljt3pq9, object, 0, n51d1db749458927d_orbka10mpm359).
 node[ast_oxc](n51d1db749458927d_k3dg9v4g24ut1, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_k3dg9v4g24ut1, 9).
-start[ast_oxc](n51d1db749458927d_k3dg9v4g24ut1, 237).
 attr[ast_oxc](n51d1db749458927d_k3dg9v4g24ut1, name, "get").
 child[ast_oxc](n51d1db749458927d_ii1a3aljt3pq9, property, 0, n51d1db749458927d_k3dg9v4g24ut1).
 child[ast_oxc](n51d1db749458927d_092iln94fmqqe, callee, 0, n51d1db749458927d_ii1a3aljt3pq9).
 node[ast_oxc](n51d1db749458927d_vcf5foa6teked, string_literal, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_vcf5foa6teked, 9).
-start[ast_oxc](n51d1db749458927d_vcf5foa6teked, 241).
 attr[ast_oxc](n51d1db749458927d_vcf5foa6teked, value, "/").
 attr[ast_oxc](n51d1db749458927d_vcf5foa6teked, raw, "'/'").
 child[ast_oxc](n51d1db749458927d_092iln94fmqqe, arguments, 0, n51d1db749458927d_vcf5foa6teked).
 node[ast_oxc](n51d1db749458927d_3ojl1hd2ebs83, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_3ojl1hd2ebs83, 9).
-start[ast_oxc](n51d1db749458927d_3ojl1hd2ebs83, 246).
 attr[ast_oxc](n51d1db749458927d_3ojl1hd2ebs83, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_3ojl1hd2ebs83, name, "list").
 child[ast_oxc](n51d1db749458927d_092iln94fmqqe, arguments, 1, n51d1db749458927d_3ojl1hd2ebs83).
@@ -1086,37 +892,30 @@ child[ast_oxc](n51d1db749458927d_bjcb895bnh5u8, expression, 0, n51d1db749458927d
 child[ast_oxc](n51d1db749458927d_root, body, 5, n51d1db749458927d_bjcb895bnh5u8).
 node[ast_oxc](n51d1db749458927d_csl23q589g09e, expression_statement, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_csl23q589g09e, 10).
-start[ast_oxc](n51d1db749458927d_csl23q589g09e, 253).
 node[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, 10).
-start[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, 253).
 attr[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, optional, false).
 attr[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, pure, false).
 node[ast_oxc](n51d1db749458927d_dl09tv9oknvle, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_dl09tv9oknvle, 10).
-start[ast_oxc](n51d1db749458927d_dl09tv9oknvle, 253).
 attr[ast_oxc](n51d1db749458927d_dl09tv9oknvle, optional, false).
 node[ast_oxc](n51d1db749458927d_sn0etc1opu619, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_sn0etc1opu619, 10).
-start[ast_oxc](n51d1db749458927d_sn0etc1opu619, 253).
 attr[ast_oxc](n51d1db749458927d_sn0etc1opu619, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_sn0etc1opu619, name, "users").
 child[ast_oxc](n51d1db749458927d_dl09tv9oknvle, object, 0, n51d1db749458927d_sn0etc1opu619).
 node[ast_oxc](n51d1db749458927d_cqcl7v74qv3ob, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_cqcl7v74qv3ob, 10).
-start[ast_oxc](n51d1db749458927d_cqcl7v74qv3ob, 259).
 attr[ast_oxc](n51d1db749458927d_cqcl7v74qv3ob, name, "get").
 child[ast_oxc](n51d1db749458927d_dl09tv9oknvle, property, 0, n51d1db749458927d_cqcl7v74qv3ob).
 child[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, callee, 0, n51d1db749458927d_dl09tv9oknvle).
 node[ast_oxc](n51d1db749458927d_2ji2glbnumvq1, string_literal, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_2ji2glbnumvq1, 10).
-start[ast_oxc](n51d1db749458927d_2ji2glbnumvq1, 263).
 attr[ast_oxc](n51d1db749458927d_2ji2glbnumvq1, value, "/:id").
 attr[ast_oxc](n51d1db749458927d_2ji2glbnumvq1, raw, "'/:id'").
 child[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, arguments, 0, n51d1db749458927d_2ji2glbnumvq1).
 node[ast_oxc](n51d1db749458927d_e7ivv4m5h7hi6, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_e7ivv4m5h7hi6, 10).
-start[ast_oxc](n51d1db749458927d_e7ivv4m5h7hi6, 271).
 attr[ast_oxc](n51d1db749458927d_e7ivv4m5h7hi6, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_e7ivv4m5h7hi6, name, "getUser").
 child[ast_oxc](n51d1db749458927d_tid4t4jvs9fnf, arguments, 1, n51d1db749458927d_e7ivv4m5h7hi6).
@@ -1124,37 +923,30 @@ child[ast_oxc](n51d1db749458927d_csl23q589g09e, expression, 0, n51d1db749458927d
 child[ast_oxc](n51d1db749458927d_root, body, 6, n51d1db749458927d_csl23q589g09e).
 node[ast_oxc](n51d1db749458927d_qapsa88o8o1s4, expression_statement, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_qapsa88o8o1s4, 11).
-start[ast_oxc](n51d1db749458927d_qapsa88o8o1s4, 281).
 node[ast_oxc](n51d1db749458927d_52l1orva7fqfe, call_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_52l1orva7fqfe, 11).
-start[ast_oxc](n51d1db749458927d_52l1orva7fqfe, 281).
 attr[ast_oxc](n51d1db749458927d_52l1orva7fqfe, optional, false).
 attr[ast_oxc](n51d1db749458927d_52l1orva7fqfe, pure, false).
 node[ast_oxc](n51d1db749458927d_sbcu24gde0o19, static_member_expression, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_sbcu24gde0o19, 11).
-start[ast_oxc](n51d1db749458927d_sbcu24gde0o19, 281).
 attr[ast_oxc](n51d1db749458927d_sbcu24gde0o19, optional, false).
 node[ast_oxc](n51d1db749458927d_u92bdontpsr13, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_u92bdontpsr13, 11).
-start[ast_oxc](n51d1db749458927d_u92bdontpsr13, 281).
 attr[ast_oxc](n51d1db749458927d_u92bdontpsr13, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_u92bdontpsr13, name, "users").
 child[ast_oxc](n51d1db749458927d_sbcu24gde0o19, object, 0, n51d1db749458927d_u92bdontpsr13).
 node[ast_oxc](n51d1db749458927d_tqol64sdbkbbf, identifier_name, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_tqol64sdbkbbf, 11).
-start[ast_oxc](n51d1db749458927d_tqol64sdbkbbf, 287).
 attr[ast_oxc](n51d1db749458927d_tqol64sdbkbbf, name, "delete").
 child[ast_oxc](n51d1db749458927d_sbcu24gde0o19, property, 0, n51d1db749458927d_tqol64sdbkbbf).
 child[ast_oxc](n51d1db749458927d_52l1orva7fqfe, callee, 0, n51d1db749458927d_sbcu24gde0o19).
 node[ast_oxc](n51d1db749458927d_ekf017hf7mscd, string_literal, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_ekf017hf7mscd, 11).
-start[ast_oxc](n51d1db749458927d_ekf017hf7mscd, 294).
 attr[ast_oxc](n51d1db749458927d_ekf017hf7mscd, value, "/:id").
 attr[ast_oxc](n51d1db749458927d_ekf017hf7mscd, raw, "'/:id'").
 child[ast_oxc](n51d1db749458927d_52l1orva7fqfe, arguments, 0, n51d1db749458927d_ekf017hf7mscd).
 node[ast_oxc](n51d1db749458927d_sevdh45dj5hq4, identifier_reference, "src/api/users.js").
 line[ast_oxc](n51d1db749458927d_sevdh45dj5hq4, 11).
-start[ast_oxc](n51d1db749458927d_sevdh45dj5hq4, 302).
 attr[ast_oxc](n51d1db749458927d_sevdh45dj5hq4, variant, "Identifier").
 attr[ast_oxc](n51d1db749458927d_sevdh45dj5hq4, name, "removeUser").
 child[ast_oxc](n51d1db749458927d_52l1orva7fqfe, arguments, 1, n51d1db749458927d_sevdh45dj5hq4).
@@ -1166,81 +958,65 @@ attr[ast_oxc](n51d1db749458927d_root, source_type_variant, "Standard").
 file[ast_oxc](n51d1db749458927d_root, "src/api/users.js").
 node[ast_oxc](n203d8a7f19c029f1_root, program, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_root, 1).
-start[ast_oxc](n203d8a7f19c029f1_root, 0).
 node[ast_oxc](n203d8a7f19c029f1_va6s2h2mukgo3, import_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_va6s2h2mukgo3, 1).
-start[ast_oxc](n203d8a7f19c029f1_va6s2h2mukgo3, 0).
 attr[ast_oxc](n203d8a7f19c029f1_va6s2h2mukgo3, import_kind, "Value").
 node[ast_oxc](n203d8a7f19c029f1_79i8maog61nia, import_default_specifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_79i8maog61nia, 1).
-start[ast_oxc](n203d8a7f19c029f1_79i8maog61nia, 7).
 node[ast_oxc](n203d8a7f19c029f1_cf979bk22p7f4, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_cf979bk22p7f4, 1).
-start[ast_oxc](n203d8a7f19c029f1_cf979bk22p7f4, 7).
 attr[ast_oxc](n203d8a7f19c029f1_cf979bk22p7f4, name, "axios").
 child[ast_oxc](n203d8a7f19c029f1_79i8maog61nia, local, 0, n203d8a7f19c029f1_cf979bk22p7f4).
 child[ast_oxc](n203d8a7f19c029f1_va6s2h2mukgo3, specifiers, 0, n203d8a7f19c029f1_79i8maog61nia).
 node[ast_oxc](n203d8a7f19c029f1_t8esk30o6j452, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_t8esk30o6j452, 1).
-start[ast_oxc](n203d8a7f19c029f1_t8esk30o6j452, 18).
 attr[ast_oxc](n203d8a7f19c029f1_t8esk30o6j452, value, "axios").
 attr[ast_oxc](n203d8a7f19c029f1_t8esk30o6j452, raw, "'axios'").
 child[ast_oxc](n203d8a7f19c029f1_va6s2h2mukgo3, source, 0, n203d8a7f19c029f1_t8esk30o6j452).
 child[ast_oxc](n203d8a7f19c029f1_root, body, 0, n203d8a7f19c029f1_va6s2h2mukgo3).
 node[ast_oxc](n203d8a7f19c029f1_7nbuhvf259br2, variable_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_7nbuhvf259br2, 3).
-start[ast_oxc](n203d8a7f19c029f1_7nbuhvf259br2, 28).
 attr[ast_oxc](n203d8a7f19c029f1_7nbuhvf259br2, kind, "Const").
 attr[ast_oxc](n203d8a7f19c029f1_7nbuhvf259br2, declare, false).
 node[ast_oxc](n203d8a7f19c029f1_kok9pl7pslhed, variable_declarator, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_kok9pl7pslhed, 3).
-start[ast_oxc](n203d8a7f19c029f1_kok9pl7pslhed, 34).
 attr[ast_oxc](n203d8a7f19c029f1_kok9pl7pslhed, definite, false).
 node[ast_oxc](n203d8a7f19c029f1_r8idge97ncj62, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_r8idge97ncj62, 3).
-start[ast_oxc](n203d8a7f19c029f1_r8idge97ncj62, 34).
 attr[ast_oxc](n203d8a7f19c029f1_r8idge97ncj62, name, "api").
 child[ast_oxc](n203d8a7f19c029f1_kok9pl7pslhed, id, 0, n203d8a7f19c029f1_r8idge97ncj62).
 node[ast_oxc](n203d8a7f19c029f1_nsbbvq0mm8245, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_nsbbvq0mm8245, 3).
-start[ast_oxc](n203d8a7f19c029f1_nsbbvq0mm8245, 40).
 attr[ast_oxc](n203d8a7f19c029f1_nsbbvq0mm8245, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_nsbbvq0mm8245, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_vem9gvfuf0i94, static_member_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vem9gvfuf0i94, 3).
-start[ast_oxc](n203d8a7f19c029f1_vem9gvfuf0i94, 40).
 attr[ast_oxc](n203d8a7f19c029f1_vem9gvfuf0i94, optional, false).
 node[ast_oxc](n203d8a7f19c029f1_8jlkk4nfpfl76, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_8jlkk4nfpfl76, 3).
-start[ast_oxc](n203d8a7f19c029f1_8jlkk4nfpfl76, 40).
 attr[ast_oxc](n203d8a7f19c029f1_8jlkk4nfpfl76, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_8jlkk4nfpfl76, name, "axios").
 child[ast_oxc](n203d8a7f19c029f1_vem9gvfuf0i94, object, 0, n203d8a7f19c029f1_8jlkk4nfpfl76).
 node[ast_oxc](n203d8a7f19c029f1_vbsrqoe9op6n9, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vbsrqoe9op6n9, 3).
-start[ast_oxc](n203d8a7f19c029f1_vbsrqoe9op6n9, 46).
 attr[ast_oxc](n203d8a7f19c029f1_vbsrqoe9op6n9, name, "create").
 child[ast_oxc](n203d8a7f19c029f1_vem9gvfuf0i94, property, 0, n203d8a7f19c029f1_vbsrqoe9op6n9).
 child[ast_oxc](n203d8a7f19c029f1_nsbbvq0mm8245, callee, 0, n203d8a7f19c029f1_vem9gvfuf0i94).
 node[ast_oxc](n203d8a7f19c029f1_os41i92n1vu24, object_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_os41i92n1vu24, 3).
-start[ast_oxc](n203d8a7f19c029f1_os41i92n1vu24, 53).
 node[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, object_property, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, 3).
-start[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, 55).
 attr[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, kind, "Init").
 attr[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, method, false).
 attr[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, shorthand, false).
 attr[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, computed, false).
 node[ast_oxc](n203d8a7f19c029f1_s3qno9mtq7m92, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_s3qno9mtq7m92, 3).
-start[ast_oxc](n203d8a7f19c029f1_s3qno9mtq7m92, 55).
 attr[ast_oxc](n203d8a7f19c029f1_s3qno9mtq7m92, variant, "StaticIdentifier").
 attr[ast_oxc](n203d8a7f19c029f1_s3qno9mtq7m92, name, "baseURL").
 child[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, key, 0, n203d8a7f19c029f1_s3qno9mtq7m92).
 node[ast_oxc](n203d8a7f19c029f1_q1cqtlde510q8, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_q1cqtlde510q8, 3).
-start[ast_oxc](n203d8a7f19c029f1_q1cqtlde510q8, 64).
 attr[ast_oxc](n203d8a7f19c029f1_q1cqtlde510q8, value, "https://api.shop.example/v1").
 attr[ast_oxc](n203d8a7f19c029f1_q1cqtlde510q8, raw, "'https://api.shop.example/v1'").
 child[ast_oxc](n203d8a7f19c029f1_cpdjmjitesp9c, value, 0, n203d8a7f19c029f1_q1cqtlde510q8).
@@ -1251,41 +1027,32 @@ child[ast_oxc](n203d8a7f19c029f1_7nbuhvf259br2, declarations, 0, n203d8a7f19c029
 child[ast_oxc](n203d8a7f19c029f1_root, body, 1, n203d8a7f19c029f1_7nbuhvf259br2).
 node[ast_oxc](n203d8a7f19c029f1_aa4dm6fe0u1ae, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_aa4dm6fe0u1ae, 5).
-start[ast_oxc](n203d8a7f19c029f1_aa4dm6fe0u1ae, 99).
 node[ast_oxc](n203d8a7f19c029f1_s68j1pl36t4c8, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_s68j1pl36t4c8, 5).
-start[ast_oxc](n203d8a7f19c029f1_s68j1pl36t4c8, 106).
 attr[ast_oxc](n203d8a7f19c029f1_s68j1pl36t4c8, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_qio1fva9prh3, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_qio1fva9prh3, 5).
-start[ast_oxc](n203d8a7f19c029f1_qio1fva9prh3, 121).
 attr[ast_oxc](n203d8a7f19c029f1_qio1fva9prh3, name, "ping").
 child[ast_oxc](n203d8a7f19c029f1_s68j1pl36t4c8, id, 0, n203d8a7f19c029f1_qio1fva9prh3).
 node[ast_oxc](n203d8a7f19c029f1_ldnb4m67tc696, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_ldnb4m67tc696, 5).
-start[ast_oxc](n203d8a7f19c029f1_ldnb4m67tc696, 125).
 attr[ast_oxc](n203d8a7f19c029f1_ldnb4m67tc696, kind, "FormalParameter").
 child[ast_oxc](n203d8a7f19c029f1_s68j1pl36t4c8, params, 0, n203d8a7f19c029f1_ldnb4m67tc696).
 node[ast_oxc](n203d8a7f19c029f1_45uv5q2oqtfu8, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_45uv5q2oqtfu8, 5).
-start[ast_oxc](n203d8a7f19c029f1_45uv5q2oqtfu8, 128).
 node[ast_oxc](n203d8a7f19c029f1_3k5jbaped2fqa, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_3k5jbaped2fqa, 6).
-start[ast_oxc](n203d8a7f19c029f1_3k5jbaped2fqa, 132).
 node[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, 6).
-start[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, 139).
 attr[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_d3fi3ksoqv013, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_d3fi3ksoqv013, 6).
-start[ast_oxc](n203d8a7f19c029f1_d3fi3ksoqv013, 139).
 attr[ast_oxc](n203d8a7f19c029f1_d3fi3ksoqv013, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_d3fi3ksoqv013, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, callee, 0, n203d8a7f19c029f1_d3fi3ksoqv013).
 node[ast_oxc](n203d8a7f19c029f1_h2si0t63njcq3, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_h2si0t63njcq3, 6).
-start[ast_oxc](n203d8a7f19c029f1_h2si0t63njcq3, 145).
 attr[ast_oxc](n203d8a7f19c029f1_h2si0t63njcq3, value, "https://api.shop.example/v1/health").
 attr[ast_oxc](n203d8a7f19c029f1_h2si0t63njcq3, raw, "'https://api.shop.example/v1/health'").
 child[ast_oxc](n203d8a7f19c029f1_f4bc011uohcqe, arguments, 0, n203d8a7f19c029f1_h2si0t63njcq3).
@@ -1302,84 +1069,67 @@ child[ast_oxc](n203d8a7f19c029f1_aa4dm6fe0u1ae, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 2, n203d8a7f19c029f1_aa4dm6fe0u1ae).
 node[ast_oxc](n203d8a7f19c029f1_0pj23vedr1ivd, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_0pj23vedr1ivd, 9).
-start[ast_oxc](n203d8a7f19c029f1_0pj23vedr1ivd, 187).
 node[ast_oxc](n203d8a7f19c029f1_epo9msmc8135c, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_epo9msmc8135c, 9).
-start[ast_oxc](n203d8a7f19c029f1_epo9msmc8135c, 194).
 attr[ast_oxc](n203d8a7f19c029f1_epo9msmc8135c, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_1lqnjumfsb928, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_1lqnjumfsb928, 9).
-start[ast_oxc](n203d8a7f19c029f1_1lqnjumfsb928, 209).
 attr[ast_oxc](n203d8a7f19c029f1_1lqnjumfsb928, name, "loadUser").
 child[ast_oxc](n203d8a7f19c029f1_epo9msmc8135c, id, 0, n203d8a7f19c029f1_1lqnjumfsb928).
 node[ast_oxc](n203d8a7f19c029f1_6hvbt3r490hab, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_6hvbt3r490hab, 9).
-start[ast_oxc](n203d8a7f19c029f1_6hvbt3r490hab, 217).
 attr[ast_oxc](n203d8a7f19c029f1_6hvbt3r490hab, kind, "FormalParameter").
 node[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, formal_parameter, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, 9).
-start[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, 218).
 attr[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, readonly, false).
 attr[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, override, false).
 node[ast_oxc](n203d8a7f19c029f1_sii70qdlm7ndb, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_sii70qdlm7ndb, 9).
-start[ast_oxc](n203d8a7f19c029f1_sii70qdlm7ndb, 218).
 attr[ast_oxc](n203d8a7f19c029f1_sii70qdlm7ndb, name, "id").
 child[ast_oxc](n203d8a7f19c029f1_26p63snpvdo03, pattern, 0, n203d8a7f19c029f1_sii70qdlm7ndb).
 child[ast_oxc](n203d8a7f19c029f1_6hvbt3r490hab, items, 0, n203d8a7f19c029f1_26p63snpvdo03).
 child[ast_oxc](n203d8a7f19c029f1_epo9msmc8135c, params, 0, n203d8a7f19c029f1_6hvbt3r490hab).
 node[ast_oxc](n203d8a7f19c029f1_6tbctlpg4eujf, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_6tbctlpg4eujf, 9).
-start[ast_oxc](n203d8a7f19c029f1_6tbctlpg4eujf, 222).
 node[ast_oxc](n203d8a7f19c029f1_jkchbqgist8tc, variable_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_jkchbqgist8tc, 10).
-start[ast_oxc](n203d8a7f19c029f1_jkchbqgist8tc, 226).
 attr[ast_oxc](n203d8a7f19c029f1_jkchbqgist8tc, kind, "Const").
 attr[ast_oxc](n203d8a7f19c029f1_jkchbqgist8tc, declare, false).
 node[ast_oxc](n203d8a7f19c029f1_di4t3pslmeto4, variable_declarator, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_di4t3pslmeto4, 10).
-start[ast_oxc](n203d8a7f19c029f1_di4t3pslmeto4, 232).
 attr[ast_oxc](n203d8a7f19c029f1_di4t3pslmeto4, definite, false).
 node[ast_oxc](n203d8a7f19c029f1_42gclerc23tde, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_42gclerc23tde, 10).
-start[ast_oxc](n203d8a7f19c029f1_42gclerc23tde, 232).
 attr[ast_oxc](n203d8a7f19c029f1_42gclerc23tde, name, "res").
 child[ast_oxc](n203d8a7f19c029f1_di4t3pslmeto4, id, 0, n203d8a7f19c029f1_42gclerc23tde).
 node[ast_oxc](n203d8a7f19c029f1_41pqg0gl9ik9a, await_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_41pqg0gl9ik9a, 10).
-start[ast_oxc](n203d8a7f19c029f1_41pqg0gl9ik9a, 238).
 node[ast_oxc](n203d8a7f19c029f1_f007qi8kfcfp5, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_f007qi8kfcfp5, 10).
-start[ast_oxc](n203d8a7f19c029f1_f007qi8kfcfp5, 244).
 attr[ast_oxc](n203d8a7f19c029f1_f007qi8kfcfp5, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_f007qi8kfcfp5, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_beahflc7c10df, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_beahflc7c10df, 10).
-start[ast_oxc](n203d8a7f19c029f1_beahflc7c10df, 244).
 attr[ast_oxc](n203d8a7f19c029f1_beahflc7c10df, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_beahflc7c10df, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_f007qi8kfcfp5, callee, 0, n203d8a7f19c029f1_beahflc7c10df).
 node[ast_oxc](n203d8a7f19c029f1_h1q1sjd35ehi1, template_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_h1q1sjd35ehi1, 10).
-start[ast_oxc](n203d8a7f19c029f1_h1q1sjd35ehi1, 250).
 node[ast_oxc](n203d8a7f19c029f1_nptmrcbmeod21, template_element, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_nptmrcbmeod21, 10).
-start[ast_oxc](n203d8a7f19c029f1_nptmrcbmeod21, 251).
 attr[ast_oxc](n203d8a7f19c029f1_nptmrcbmeod21, tail, false).
 attr[ast_oxc](n203d8a7f19c029f1_nptmrcbmeod21, value_raw, "https://api.shop.example/v1/users/").
 attr[ast_oxc](n203d8a7f19c029f1_nptmrcbmeod21, value_cooked, "https://api.shop.example/v1/users/").
 child[ast_oxc](n203d8a7f19c029f1_h1q1sjd35ehi1, quasis, 0, n203d8a7f19c029f1_nptmrcbmeod21).
 node[ast_oxc](n203d8a7f19c029f1_1ug6ih4sl1vv5, template_element, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_1ug6ih4sl1vv5, 10).
-start[ast_oxc](n203d8a7f19c029f1_1ug6ih4sl1vv5, 290).
 attr[ast_oxc](n203d8a7f19c029f1_1ug6ih4sl1vv5, tail, true).
 attr[ast_oxc](n203d8a7f19c029f1_1ug6ih4sl1vv5, value_raw, "").
 attr[ast_oxc](n203d8a7f19c029f1_1ug6ih4sl1vv5, value_cooked, "").
 child[ast_oxc](n203d8a7f19c029f1_h1q1sjd35ehi1, quasis, 1, n203d8a7f19c029f1_1ug6ih4sl1vv5).
 node[ast_oxc](n203d8a7f19c029f1_jf573c8kn7vc, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_jf573c8kn7vc, 10).
-start[ast_oxc](n203d8a7f19c029f1_jf573c8kn7vc, 287).
 attr[ast_oxc](n203d8a7f19c029f1_jf573c8kn7vc, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_jf573c8kn7vc, name, "id").
 child[ast_oxc](n203d8a7f19c029f1_h1q1sjd35ehi1, expressions, 0, n203d8a7f19c029f1_jf573c8kn7vc).
@@ -1390,25 +1140,20 @@ child[ast_oxc](n203d8a7f19c029f1_jkchbqgist8tc, declarations, 0, n203d8a7f19c029
 child[ast_oxc](n203d8a7f19c029f1_6tbctlpg4eujf, statements, 0, n203d8a7f19c029f1_jkchbqgist8tc).
 node[ast_oxc](n203d8a7f19c029f1_qmpaqgn5njusa, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_qmpaqgn5njusa, 11).
-start[ast_oxc](n203d8a7f19c029f1_qmpaqgn5njusa, 296).
 node[ast_oxc](n203d8a7f19c029f1_bbaf4req045cc, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_bbaf4req045cc, 11).
-start[ast_oxc](n203d8a7f19c029f1_bbaf4req045cc, 303).
 attr[ast_oxc](n203d8a7f19c029f1_bbaf4req045cc, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_bbaf4req045cc, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_crskclb4hp9c5, static_member_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_crskclb4hp9c5, 11).
-start[ast_oxc](n203d8a7f19c029f1_crskclb4hp9c5, 303).
 attr[ast_oxc](n203d8a7f19c029f1_crskclb4hp9c5, optional, false).
 node[ast_oxc](n203d8a7f19c029f1_gk46abkjbeu2d, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_gk46abkjbeu2d, 11).
-start[ast_oxc](n203d8a7f19c029f1_gk46abkjbeu2d, 303).
 attr[ast_oxc](n203d8a7f19c029f1_gk46abkjbeu2d, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_gk46abkjbeu2d, name, "res").
 child[ast_oxc](n203d8a7f19c029f1_crskclb4hp9c5, object, 0, n203d8a7f19c029f1_gk46abkjbeu2d).
 node[ast_oxc](n203d8a7f19c029f1_vpmgtpl2s7os2, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vpmgtpl2s7os2, 11).
-start[ast_oxc](n203d8a7f19c029f1_vpmgtpl2s7os2, 307).
 attr[ast_oxc](n203d8a7f19c029f1_vpmgtpl2s7os2, name, "json").
 child[ast_oxc](n203d8a7f19c029f1_crskclb4hp9c5, property, 0, n203d8a7f19c029f1_vpmgtpl2s7os2).
 child[ast_oxc](n203d8a7f19c029f1_bbaf4req045cc, callee, 0, n203d8a7f19c029f1_crskclb4hp9c5).
@@ -1425,116 +1170,94 @@ child[ast_oxc](n203d8a7f19c029f1_0pj23vedr1ivd, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 3, n203d8a7f19c029f1_0pj23vedr1ivd).
 node[ast_oxc](n203d8a7f19c029f1_2hkvrvif2dc64, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_2hkvrvif2dc64, 14).
-start[ast_oxc](n203d8a7f19c029f1_2hkvrvif2dc64, 318).
 node[ast_oxc](n203d8a7f19c029f1_4ht6nl54cfd5b, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_4ht6nl54cfd5b, 14).
-start[ast_oxc](n203d8a7f19c029f1_4ht6nl54cfd5b, 325).
 attr[ast_oxc](n203d8a7f19c029f1_4ht6nl54cfd5b, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_oqfntfhhul583, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_oqfntfhhul583, 14).
-start[ast_oxc](n203d8a7f19c029f1_oqfntfhhul583, 340).
 attr[ast_oxc](n203d8a7f19c029f1_oqfntfhhul583, name, "order").
 child[ast_oxc](n203d8a7f19c029f1_4ht6nl54cfd5b, id, 0, n203d8a7f19c029f1_oqfntfhhul583).
 node[ast_oxc](n203d8a7f19c029f1_r7baiu9m1acs3, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_r7baiu9m1acs3, 14).
-start[ast_oxc](n203d8a7f19c029f1_r7baiu9m1acs3, 345).
 attr[ast_oxc](n203d8a7f19c029f1_r7baiu9m1acs3, kind, "FormalParameter").
 node[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, formal_parameter, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, 14).
-start[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, 346).
 attr[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, readonly, false).
 attr[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, override, false).
 node[ast_oxc](n203d8a7f19c029f1_iflqbaoghh0f5, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_iflqbaoghh0f5, 14).
-start[ast_oxc](n203d8a7f19c029f1_iflqbaoghh0f5, 346).
 attr[ast_oxc](n203d8a7f19c029f1_iflqbaoghh0f5, name, "item").
 child[ast_oxc](n203d8a7f19c029f1_mpv7nb6lq3b01, pattern, 0, n203d8a7f19c029f1_iflqbaoghh0f5).
 child[ast_oxc](n203d8a7f19c029f1_r7baiu9m1acs3, items, 0, n203d8a7f19c029f1_mpv7nb6lq3b01).
 child[ast_oxc](n203d8a7f19c029f1_4ht6nl54cfd5b, params, 0, n203d8a7f19c029f1_r7baiu9m1acs3).
 node[ast_oxc](n203d8a7f19c029f1_0d8gli1eh1ak9, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_0d8gli1eh1ak9, 14).
-start[ast_oxc](n203d8a7f19c029f1_0d8gli1eh1ak9, 352).
 node[ast_oxc](n203d8a7f19c029f1_b41ejcis7p9jd, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_b41ejcis7p9jd, 15).
-start[ast_oxc](n203d8a7f19c029f1_b41ejcis7p9jd, 356).
 node[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, 15).
-start[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, 363).
 attr[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_sdooo0st64p54, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_sdooo0st64p54, 15).
-start[ast_oxc](n203d8a7f19c029f1_sdooo0st64p54, 363).
 attr[ast_oxc](n203d8a7f19c029f1_sdooo0st64p54, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_sdooo0st64p54, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, callee, 0, n203d8a7f19c029f1_sdooo0st64p54).
 node[ast_oxc](n203d8a7f19c029f1_9ra3pnsbc7da6, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9ra3pnsbc7da6, 15).
-start[ast_oxc](n203d8a7f19c029f1_9ra3pnsbc7da6, 369).
 attr[ast_oxc](n203d8a7f19c029f1_9ra3pnsbc7da6, value, "http://api.internal:3000/orders?src=web").
 attr[ast_oxc](n203d8a7f19c029f1_9ra3pnsbc7da6, raw, "'http://api.internal:3000/orders?src=web'").
 child[ast_oxc](n203d8a7f19c029f1_3ak3jrtcff028, arguments, 0, n203d8a7f19c029f1_9ra3pnsbc7da6).
 node[ast_oxc](n203d8a7f19c029f1_sre0t4l4tvnee, object_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_sre0t4l4tvnee, 15).
-start[ast_oxc](n203d8a7f19c029f1_sre0t4l4tvnee, 412).
 node[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, object_property, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, 15).
-start[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, 414).
 attr[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, kind, "Init").
 attr[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, method, false).
 attr[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, shorthand, false).
 attr[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, computed, false).
 node[ast_oxc](n203d8a7f19c029f1_osb1ihecd7qj2, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_osb1ihecd7qj2, 15).
-start[ast_oxc](n203d8a7f19c029f1_osb1ihecd7qj2, 414).
 attr[ast_oxc](n203d8a7f19c029f1_osb1ihecd7qj2, variant, "StaticIdentifier").
 attr[ast_oxc](n203d8a7f19c029f1_osb1ihecd7qj2, name, "method").
 child[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, key, 0, n203d8a7f19c029f1_osb1ihecd7qj2).
 node[ast_oxc](n203d8a7f19c029f1_6suv2sdh0hdq4, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_6suv2sdh0hdq4, 15).
-start[ast_oxc](n203d8a7f19c029f1_6suv2sdh0hdq4, 422).
 attr[ast_oxc](n203d8a7f19c029f1_6suv2sdh0hdq4, value, "POST").
 attr[ast_oxc](n203d8a7f19c029f1_6suv2sdh0hdq4, raw, "'POST'").
 child[ast_oxc](n203d8a7f19c029f1_a3ca5thp479i, value, 0, n203d8a7f19c029f1_6suv2sdh0hdq4).
 child[ast_oxc](n203d8a7f19c029f1_sre0t4l4tvnee, properties, 0, n203d8a7f19c029f1_a3ca5thp479i).
 node[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, object_property, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, 15).
-start[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, 430).
 attr[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, kind, "Init").
 attr[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, method, false).
 attr[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, shorthand, false).
 attr[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, computed, false).
 node[ast_oxc](n203d8a7f19c029f1_fk6s6sj9um3kc, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_fk6s6sj9um3kc, 15).
-start[ast_oxc](n203d8a7f19c029f1_fk6s6sj9um3kc, 430).
 attr[ast_oxc](n203d8a7f19c029f1_fk6s6sj9um3kc, variant, "StaticIdentifier").
 attr[ast_oxc](n203d8a7f19c029f1_fk6s6sj9um3kc, name, "body").
 child[ast_oxc](n203d8a7f19c029f1_ciervutklbsvb, key, 0, n203d8a7f19c029f1_fk6s6sj9um3kc).
 node[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, 15).
-start[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, 436).
 attr[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_omm3kne8c13a5, static_member_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_omm3kne8c13a5, 15).
-start[ast_oxc](n203d8a7f19c029f1_omm3kne8c13a5, 436).
 attr[ast_oxc](n203d8a7f19c029f1_omm3kne8c13a5, optional, false).
 node[ast_oxc](n203d8a7f19c029f1_9nqb4oeujqolb, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9nqb4oeujqolb, 15).
-start[ast_oxc](n203d8a7f19c029f1_9nqb4oeujqolb, 436).
 attr[ast_oxc](n203d8a7f19c029f1_9nqb4oeujqolb, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_9nqb4oeujqolb, name, "JSON").
 child[ast_oxc](n203d8a7f19c029f1_omm3kne8c13a5, object, 0, n203d8a7f19c029f1_9nqb4oeujqolb).
 node[ast_oxc](n203d8a7f19c029f1_rvqor4mui7151, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_rvqor4mui7151, 15).
-start[ast_oxc](n203d8a7f19c029f1_rvqor4mui7151, 441).
 attr[ast_oxc](n203d8a7f19c029f1_rvqor4mui7151, name, "stringify").
 child[ast_oxc](n203d8a7f19c029f1_omm3kne8c13a5, property, 0, n203d8a7f19c029f1_rvqor4mui7151).
 child[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, callee, 0, n203d8a7f19c029f1_omm3kne8c13a5).
 node[ast_oxc](n203d8a7f19c029f1_4juvg0bq0elt9, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_4juvg0bq0elt9, 15).
-start[ast_oxc](n203d8a7f19c029f1_4juvg0bq0elt9, 451).
 attr[ast_oxc](n203d8a7f19c029f1_4juvg0bq0elt9, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_4juvg0bq0elt9, name, "item").
 child[ast_oxc](n203d8a7f19c029f1_a8i8d1o7is8pa, arguments, 0, n203d8a7f19c029f1_4juvg0bq0elt9).
@@ -1554,80 +1277,64 @@ child[ast_oxc](n203d8a7f19c029f1_2hkvrvif2dc64, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 4, n203d8a7f19c029f1_2hkvrvif2dc64).
 node[ast_oxc](n203d8a7f19c029f1_h0uqacmukv7e6, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_h0uqacmukv7e6, 18).
-start[ast_oxc](n203d8a7f19c029f1_h0uqacmukv7e6, 464).
 node[ast_oxc](n203d8a7f19c029f1_4rcprmj9mosk8, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_4rcprmj9mosk8, 18).
-start[ast_oxc](n203d8a7f19c029f1_4rcprmj9mosk8, 471).
 attr[ast_oxc](n203d8a7f19c029f1_4rcprmj9mosk8, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_q6k4tdc747ln9, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_q6k4tdc747ln9, 18).
-start[ast_oxc](n203d8a7f19c029f1_q6k4tdc747ln9, 486).
 attr[ast_oxc](n203d8a7f19c029f1_q6k4tdc747ln9, name, "drop").
 child[ast_oxc](n203d8a7f19c029f1_4rcprmj9mosk8, id, 0, n203d8a7f19c029f1_q6k4tdc747ln9).
 node[ast_oxc](n203d8a7f19c029f1_kl3bbrckhlmec, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_kl3bbrckhlmec, 18).
-start[ast_oxc](n203d8a7f19c029f1_kl3bbrckhlmec, 490).
 attr[ast_oxc](n203d8a7f19c029f1_kl3bbrckhlmec, kind, "FormalParameter").
 node[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, formal_parameter, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, 18).
-start[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, 491).
 attr[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, readonly, false).
 attr[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, override, false).
 node[ast_oxc](n203d8a7f19c029f1_6ftberhjg2fj9, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_6ftberhjg2fj9, 18).
-start[ast_oxc](n203d8a7f19c029f1_6ftberhjg2fj9, 491).
 attr[ast_oxc](n203d8a7f19c029f1_6ftberhjg2fj9, name, "id").
 child[ast_oxc](n203d8a7f19c029f1_9nq4c6r407ol, pattern, 0, n203d8a7f19c029f1_6ftberhjg2fj9).
 child[ast_oxc](n203d8a7f19c029f1_kl3bbrckhlmec, items, 0, n203d8a7f19c029f1_9nq4c6r407ol).
 child[ast_oxc](n203d8a7f19c029f1_4rcprmj9mosk8, params, 0, n203d8a7f19c029f1_kl3bbrckhlmec).
 node[ast_oxc](n203d8a7f19c029f1_liu6kj24rbh5e, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_liu6kj24rbh5e, 18).
-start[ast_oxc](n203d8a7f19c029f1_liu6kj24rbh5e, 495).
 node[ast_oxc](n203d8a7f19c029f1_730gg1gqh68gc, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_730gg1gqh68gc, 19).
-start[ast_oxc](n203d8a7f19c029f1_730gg1gqh68gc, 499).
 node[ast_oxc](n203d8a7f19c029f1_ogl0f50av7v0b, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_ogl0f50av7v0b, 19).
-start[ast_oxc](n203d8a7f19c029f1_ogl0f50av7v0b, 506).
 attr[ast_oxc](n203d8a7f19c029f1_ogl0f50av7v0b, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_ogl0f50av7v0b, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_ehff8rj7m8pc5, static_member_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_ehff8rj7m8pc5, 19).
-start[ast_oxc](n203d8a7f19c029f1_ehff8rj7m8pc5, 506).
 attr[ast_oxc](n203d8a7f19c029f1_ehff8rj7m8pc5, optional, false).
 node[ast_oxc](n203d8a7f19c029f1_5k870g4s5pua8, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_5k870g4s5pua8, 19).
-start[ast_oxc](n203d8a7f19c029f1_5k870g4s5pua8, 506).
 attr[ast_oxc](n203d8a7f19c029f1_5k870g4s5pua8, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_5k870g4s5pua8, name, "axios").
 child[ast_oxc](n203d8a7f19c029f1_ehff8rj7m8pc5, object, 0, n203d8a7f19c029f1_5k870g4s5pua8).
 node[ast_oxc](n203d8a7f19c029f1_argsc25kksf47, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_argsc25kksf47, 19).
-start[ast_oxc](n203d8a7f19c029f1_argsc25kksf47, 512).
 attr[ast_oxc](n203d8a7f19c029f1_argsc25kksf47, name, "delete").
 child[ast_oxc](n203d8a7f19c029f1_ehff8rj7m8pc5, property, 0, n203d8a7f19c029f1_argsc25kksf47).
 child[ast_oxc](n203d8a7f19c029f1_ogl0f50av7v0b, callee, 0, n203d8a7f19c029f1_ehff8rj7m8pc5).
 node[ast_oxc](n203d8a7f19c029f1_0icv8c67nc6mf, template_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_0icv8c67nc6mf, 19).
-start[ast_oxc](n203d8a7f19c029f1_0icv8c67nc6mf, 519).
 node[ast_oxc](n203d8a7f19c029f1_gss3e5g8m5mo6, template_element, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_gss3e5g8m5mo6, 19).
-start[ast_oxc](n203d8a7f19c029f1_gss3e5g8m5mo6, 520).
 attr[ast_oxc](n203d8a7f19c029f1_gss3e5g8m5mo6, tail, false).
 attr[ast_oxc](n203d8a7f19c029f1_gss3e5g8m5mo6, value_raw, "https://api.shop.example/v1/users/").
 attr[ast_oxc](n203d8a7f19c029f1_gss3e5g8m5mo6, value_cooked, "https://api.shop.example/v1/users/").
 child[ast_oxc](n203d8a7f19c029f1_0icv8c67nc6mf, quasis, 0, n203d8a7f19c029f1_gss3e5g8m5mo6).
 node[ast_oxc](n203d8a7f19c029f1_esmcsl8d5nbu4, template_element, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_esmcsl8d5nbu4, 19).
-start[ast_oxc](n203d8a7f19c029f1_esmcsl8d5nbu4, 559).
 attr[ast_oxc](n203d8a7f19c029f1_esmcsl8d5nbu4, tail, true).
 attr[ast_oxc](n203d8a7f19c029f1_esmcsl8d5nbu4, value_raw, "").
 attr[ast_oxc](n203d8a7f19c029f1_esmcsl8d5nbu4, value_cooked, "").
 child[ast_oxc](n203d8a7f19c029f1_0icv8c67nc6mf, quasis, 1, n203d8a7f19c029f1_esmcsl8d5nbu4).
 node[ast_oxc](n203d8a7f19c029f1_1vdiln5c8c4g6, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_1vdiln5c8c4g6, 19).
-start[ast_oxc](n203d8a7f19c029f1_1vdiln5c8c4g6, 556).
 attr[ast_oxc](n203d8a7f19c029f1_1vdiln5c8c4g6, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_1vdiln5c8c4g6, name, "id").
 child[ast_oxc](n203d8a7f19c029f1_0icv8c67nc6mf, expressions, 0, n203d8a7f19c029f1_1vdiln5c8c4g6).
@@ -1645,70 +1352,56 @@ child[ast_oxc](n203d8a7f19c029f1_h0uqacmukv7e6, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 5, n203d8a7f19c029f1_h0uqacmukv7e6).
 node[ast_oxc](n203d8a7f19c029f1_al73bf8etj3u8, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_al73bf8etj3u8, 22).
-start[ast_oxc](n203d8a7f19c029f1_al73bf8etj3u8, 566).
 node[ast_oxc](n203d8a7f19c029f1_dvmluda0k2n44, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_dvmluda0k2n44, 22).
-start[ast_oxc](n203d8a7f19c029f1_dvmluda0k2n44, 573).
 attr[ast_oxc](n203d8a7f19c029f1_dvmluda0k2n44, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_gkvmp4acotj53, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_gkvmp4acotj53, 22).
-start[ast_oxc](n203d8a7f19c029f1_gkvmp4acotj53, 588).
 attr[ast_oxc](n203d8a7f19c029f1_gkvmp4acotj53, name, "listUsers").
 child[ast_oxc](n203d8a7f19c029f1_dvmluda0k2n44, id, 0, n203d8a7f19c029f1_gkvmp4acotj53).
 node[ast_oxc](n203d8a7f19c029f1_p4il2nc3raoed, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_p4il2nc3raoed, 22).
-start[ast_oxc](n203d8a7f19c029f1_p4il2nc3raoed, 597).
 attr[ast_oxc](n203d8a7f19c029f1_p4il2nc3raoed, kind, "FormalParameter").
 node[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, formal_parameter, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, 22).
-start[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, 598).
 attr[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, readonly, false).
 attr[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, override, false).
 node[ast_oxc](n203d8a7f19c029f1_hvtftes231215, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_hvtftes231215, 22).
-start[ast_oxc](n203d8a7f19c029f1_hvtftes231215, 598).
 attr[ast_oxc](n203d8a7f19c029f1_hvtftes231215, name, "base").
 child[ast_oxc](n203d8a7f19c029f1_fap4mlef9n4d6, pattern, 0, n203d8a7f19c029f1_hvtftes231215).
 child[ast_oxc](n203d8a7f19c029f1_p4il2nc3raoed, items, 0, n203d8a7f19c029f1_fap4mlef9n4d6).
 child[ast_oxc](n203d8a7f19c029f1_dvmluda0k2n44, params, 0, n203d8a7f19c029f1_p4il2nc3raoed).
 node[ast_oxc](n203d8a7f19c029f1_viaj2m7ntfv18, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_viaj2m7ntfv18, 22).
-start[ast_oxc](n203d8a7f19c029f1_viaj2m7ntfv18, 604).
 node[ast_oxc](n203d8a7f19c029f1_sdnbsd8nbpa2d, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_sdnbsd8nbpa2d, 23).
-start[ast_oxc](n203d8a7f19c029f1_sdnbsd8nbpa2d, 608).
 node[ast_oxc](n203d8a7f19c029f1_498bdf62ssj94, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_498bdf62ssj94, 23).
-start[ast_oxc](n203d8a7f19c029f1_498bdf62ssj94, 615).
 attr[ast_oxc](n203d8a7f19c029f1_498bdf62ssj94, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_498bdf62ssj94, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_f77qh4h7pjcf2, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_f77qh4h7pjcf2, 23).
-start[ast_oxc](n203d8a7f19c029f1_f77qh4h7pjcf2, 615).
 attr[ast_oxc](n203d8a7f19c029f1_f77qh4h7pjcf2, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_f77qh4h7pjcf2, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_498bdf62ssj94, callee, 0, n203d8a7f19c029f1_f77qh4h7pjcf2).
 node[ast_oxc](n203d8a7f19c029f1_5q32ornf2mvn7, template_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_5q32ornf2mvn7, 23).
-start[ast_oxc](n203d8a7f19c029f1_5q32ornf2mvn7, 621).
 node[ast_oxc](n203d8a7f19c029f1_c7gti99rnr4p4, template_element, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_c7gti99rnr4p4, 23).
-start[ast_oxc](n203d8a7f19c029f1_c7gti99rnr4p4, 622).
 attr[ast_oxc](n203d8a7f19c029f1_c7gti99rnr4p4, tail, false).
 attr[ast_oxc](n203d8a7f19c029f1_c7gti99rnr4p4, value_raw, "").
 attr[ast_oxc](n203d8a7f19c029f1_c7gti99rnr4p4, value_cooked, "").
 child[ast_oxc](n203d8a7f19c029f1_5q32ornf2mvn7, quasis, 0, n203d8a7f19c029f1_c7gti99rnr4p4).
 node[ast_oxc](n203d8a7f19c029f1_o52cthkua0gfa, template_element, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_o52cthkua0gfa, 23).
-start[ast_oxc](n203d8a7f19c029f1_o52cthkua0gfa, 629).
 attr[ast_oxc](n203d8a7f19c029f1_o52cthkua0gfa, tail, true).
 attr[ast_oxc](n203d8a7f19c029f1_o52cthkua0gfa, value_raw, "/users").
 attr[ast_oxc](n203d8a7f19c029f1_o52cthkua0gfa, value_cooked, "/users").
 child[ast_oxc](n203d8a7f19c029f1_5q32ornf2mvn7, quasis, 1, n203d8a7f19c029f1_o52cthkua0gfa).
 node[ast_oxc](n203d8a7f19c029f1_taksepnm1o5ja, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_taksepnm1o5ja, 23).
-start[ast_oxc](n203d8a7f19c029f1_taksepnm1o5ja, 624).
 attr[ast_oxc](n203d8a7f19c029f1_taksepnm1o5ja, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_taksepnm1o5ja, name, "base").
 child[ast_oxc](n203d8a7f19c029f1_5q32ornf2mvn7, expressions, 0, n203d8a7f19c029f1_taksepnm1o5ja).
@@ -1726,51 +1419,40 @@ child[ast_oxc](n203d8a7f19c029f1_al73bf8etj3u8, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 6, n203d8a7f19c029f1_al73bf8etj3u8).
 node[ast_oxc](n203d8a7f19c029f1_frgek6javtaqd, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_frgek6javtaqd, 26).
-start[ast_oxc](n203d8a7f19c029f1_frgek6javtaqd, 642).
 node[ast_oxc](n203d8a7f19c029f1_jcr00ab8e4ate, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_jcr00ab8e4ate, 26).
-start[ast_oxc](n203d8a7f19c029f1_jcr00ab8e4ate, 649).
 attr[ast_oxc](n203d8a7f19c029f1_jcr00ab8e4ate, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_1e3o48vng25u9, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_1e3o48vng25u9, 26).
-start[ast_oxc](n203d8a7f19c029f1_1e3o48vng25u9, 664).
 attr[ast_oxc](n203d8a7f19c029f1_1e3o48vng25u9, name, "everyone").
 child[ast_oxc](n203d8a7f19c029f1_jcr00ab8e4ate, id, 0, n203d8a7f19c029f1_1e3o48vng25u9).
 node[ast_oxc](n203d8a7f19c029f1_2rfcpdrb7ev32, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_2rfcpdrb7ev32, 26).
-start[ast_oxc](n203d8a7f19c029f1_2rfcpdrb7ev32, 672).
 attr[ast_oxc](n203d8a7f19c029f1_2rfcpdrb7ev32, kind, "FormalParameter").
 child[ast_oxc](n203d8a7f19c029f1_jcr00ab8e4ate, params, 0, n203d8a7f19c029f1_2rfcpdrb7ev32).
 node[ast_oxc](n203d8a7f19c029f1_miqu1o2of3hc5, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_miqu1o2of3hc5, 26).
-start[ast_oxc](n203d8a7f19c029f1_miqu1o2of3hc5, 675).
 node[ast_oxc](n203d8a7f19c029f1_9l8iuajvlq29d, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9l8iuajvlq29d, 27).
-start[ast_oxc](n203d8a7f19c029f1_9l8iuajvlq29d, 679).
 node[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, 27).
-start[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, 686).
 attr[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_oomfhmn84hhpa, static_member_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_oomfhmn84hhpa, 27).
-start[ast_oxc](n203d8a7f19c029f1_oomfhmn84hhpa, 686).
 attr[ast_oxc](n203d8a7f19c029f1_oomfhmn84hhpa, optional, false).
 node[ast_oxc](n203d8a7f19c029f1_cmvrnqu9er2o9, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_cmvrnqu9er2o9, 27).
-start[ast_oxc](n203d8a7f19c029f1_cmvrnqu9er2o9, 686).
 attr[ast_oxc](n203d8a7f19c029f1_cmvrnqu9er2o9, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_cmvrnqu9er2o9, name, "api").
 child[ast_oxc](n203d8a7f19c029f1_oomfhmn84hhpa, object, 0, n203d8a7f19c029f1_cmvrnqu9er2o9).
 node[ast_oxc](n203d8a7f19c029f1_p09uqe7gk5s8a, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_p09uqe7gk5s8a, 27).
-start[ast_oxc](n203d8a7f19c029f1_p09uqe7gk5s8a, 690).
 attr[ast_oxc](n203d8a7f19c029f1_p09uqe7gk5s8a, name, "get").
 child[ast_oxc](n203d8a7f19c029f1_oomfhmn84hhpa, property, 0, n203d8a7f19c029f1_p09uqe7gk5s8a).
 child[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, callee, 0, n203d8a7f19c029f1_oomfhmn84hhpa).
 node[ast_oxc](n203d8a7f19c029f1_m8humcuo973bd, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_m8humcuo973bd, 27).
-start[ast_oxc](n203d8a7f19c029f1_m8humcuo973bd, 694).
 attr[ast_oxc](n203d8a7f19c029f1_m8humcuo973bd, value, "/users/").
 attr[ast_oxc](n203d8a7f19c029f1_m8humcuo973bd, raw, "'/users/'").
 child[ast_oxc](n203d8a7f19c029f1_3fftu21hup11f, arguments, 0, n203d8a7f19c029f1_m8humcuo973bd).
@@ -1787,41 +1469,32 @@ child[ast_oxc](n203d8a7f19c029f1_frgek6javtaqd, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 7, n203d8a7f19c029f1_frgek6javtaqd).
 node[ast_oxc](n203d8a7f19c029f1_vmudfplu1mat9, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vmudfplu1mat9, 30).
-start[ast_oxc](n203d8a7f19c029f1_vmudfplu1mat9, 709).
 node[ast_oxc](n203d8a7f19c029f1_0civobt09jfc9, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_0civobt09jfc9, 30).
-start[ast_oxc](n203d8a7f19c029f1_0civobt09jfc9, 716).
 attr[ast_oxc](n203d8a7f19c029f1_0civobt09jfc9, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_26d75hj10dum, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_26d75hj10dum, 30).
-start[ast_oxc](n203d8a7f19c029f1_26d75hj10dum, 731).
 attr[ast_oxc](n203d8a7f19c029f1_26d75hj10dum, name, "lost").
 child[ast_oxc](n203d8a7f19c029f1_0civobt09jfc9, id, 0, n203d8a7f19c029f1_26d75hj10dum).
 node[ast_oxc](n203d8a7f19c029f1_dpktbm05aad7c, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_dpktbm05aad7c, 30).
-start[ast_oxc](n203d8a7f19c029f1_dpktbm05aad7c, 735).
 attr[ast_oxc](n203d8a7f19c029f1_dpktbm05aad7c, kind, "FormalParameter").
 child[ast_oxc](n203d8a7f19c029f1_0civobt09jfc9, params, 0, n203d8a7f19c029f1_dpktbm05aad7c).
 node[ast_oxc](n203d8a7f19c029f1_uqs0al3lmvln9, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_uqs0al3lmvln9, 30).
-start[ast_oxc](n203d8a7f19c029f1_uqs0al3lmvln9, 738).
 node[ast_oxc](n203d8a7f19c029f1_k6j1oo17kdrp9, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_k6j1oo17kdrp9, 31).
-start[ast_oxc](n203d8a7f19c029f1_k6j1oo17kdrp9, 742).
 node[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, 31).
-start[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, 749).
 attr[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_pb1inqguchtr7, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_pb1inqguchtr7, 31).
-start[ast_oxc](n203d8a7f19c029f1_pb1inqguchtr7, 749).
 attr[ast_oxc](n203d8a7f19c029f1_pb1inqguchtr7, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_pb1inqguchtr7, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, callee, 0, n203d8a7f19c029f1_pb1inqguchtr7).
 node[ast_oxc](n203d8a7f19c029f1_vtbdhrr0bqqd2, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vtbdhrr0bqqd2, 31).
-start[ast_oxc](n203d8a7f19c029f1_vtbdhrr0bqqd2, 755).
 attr[ast_oxc](n203d8a7f19c029f1_vtbdhrr0bqqd2, value, "https://api.shop.example/v1/nowhere").
 attr[ast_oxc](n203d8a7f19c029f1_vtbdhrr0bqqd2, raw, "'https://api.shop.example/v1/nowhere'").
 child[ast_oxc](n203d8a7f19c029f1_3tsn7vpu64b18, arguments, 0, n203d8a7f19c029f1_vtbdhrr0bqqd2).
@@ -1838,53 +1511,42 @@ child[ast_oxc](n203d8a7f19c029f1_vmudfplu1mat9, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 8, n203d8a7f19c029f1_vmudfplu1mat9).
 node[ast_oxc](n203d8a7f19c029f1_9h1vk52mum999, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9h1vk52mum999, 34).
-start[ast_oxc](n203d8a7f19c029f1_9h1vk52mum999, 798).
 node[ast_oxc](n203d8a7f19c029f1_fo2ijto08qt51, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_fo2ijto08qt51, 34).
-start[ast_oxc](n203d8a7f19c029f1_fo2ijto08qt51, 805).
 attr[ast_oxc](n203d8a7f19c029f1_fo2ijto08qt51, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_moje339tlfbnd, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_moje339tlfbnd, 34).
-start[ast_oxc](n203d8a7f19c029f1_moje339tlfbnd, 820).
 attr[ast_oxc](n203d8a7f19c029f1_moje339tlfbnd, name, "blind").
 child[ast_oxc](n203d8a7f19c029f1_fo2ijto08qt51, id, 0, n203d8a7f19c029f1_moje339tlfbnd).
 node[ast_oxc](n203d8a7f19c029f1_tnuk2f8t08h21, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_tnuk2f8t08h21, 34).
-start[ast_oxc](n203d8a7f19c029f1_tnuk2f8t08h21, 825).
 attr[ast_oxc](n203d8a7f19c029f1_tnuk2f8t08h21, kind, "FormalParameter").
 node[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, formal_parameter, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, 34).
-start[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, 826).
 attr[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, readonly, false).
 attr[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, override, false).
 node[ast_oxc](n203d8a7f19c029f1_gea3gsr25kane, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_gea3gsr25kane, 34).
-start[ast_oxc](n203d8a7f19c029f1_gea3gsr25kane, 826).
 attr[ast_oxc](n203d8a7f19c029f1_gea3gsr25kane, name, "url").
 child[ast_oxc](n203d8a7f19c029f1_onnvtjljout62, pattern, 0, n203d8a7f19c029f1_gea3gsr25kane).
 child[ast_oxc](n203d8a7f19c029f1_tnuk2f8t08h21, items, 0, n203d8a7f19c029f1_onnvtjljout62).
 child[ast_oxc](n203d8a7f19c029f1_fo2ijto08qt51, params, 0, n203d8a7f19c029f1_tnuk2f8t08h21).
 node[ast_oxc](n203d8a7f19c029f1_nh9dtdou96qs1, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_nh9dtdou96qs1, 34).
-start[ast_oxc](n203d8a7f19c029f1_nh9dtdou96qs1, 831).
 node[ast_oxc](n203d8a7f19c029f1_a7tt9k0ufr0rd, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_a7tt9k0ufr0rd, 35).
-start[ast_oxc](n203d8a7f19c029f1_a7tt9k0ufr0rd, 835).
 node[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, 35).
-start[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, 842).
 attr[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_3htvakfgievo9, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_3htvakfgievo9, 35).
-start[ast_oxc](n203d8a7f19c029f1_3htvakfgievo9, 842).
 attr[ast_oxc](n203d8a7f19c029f1_3htvakfgievo9, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_3htvakfgievo9, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, callee, 0, n203d8a7f19c029f1_3htvakfgievo9).
 node[ast_oxc](n203d8a7f19c029f1_pgmdpt3pk0rvd, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_pgmdpt3pk0rvd, 35).
-start[ast_oxc](n203d8a7f19c029f1_pgmdpt3pk0rvd, 848).
 attr[ast_oxc](n203d8a7f19c029f1_pgmdpt3pk0rvd, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_pgmdpt3pk0rvd, name, "url").
 child[ast_oxc](n203d8a7f19c029f1_fcd49ckcn6jd5, arguments, 0, n203d8a7f19c029f1_pgmdpt3pk0rvd).
@@ -1901,116 +1563,94 @@ child[ast_oxc](n203d8a7f19c029f1_9h1vk52mum999, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 9, n203d8a7f19c029f1_9h1vk52mum999).
 node[ast_oxc](n203d8a7f19c029f1_9lkrg4r3up4n6, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9lkrg4r3up4n6, 38).
-start[ast_oxc](n203d8a7f19c029f1_9lkrg4r3up4n6, 857).
 node[ast_oxc](n203d8a7f19c029f1_vjfkmme2484aa, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vjfkmme2484aa, 38).
-start[ast_oxc](n203d8a7f19c029f1_vjfkmme2484aa, 864).
 attr[ast_oxc](n203d8a7f19c029f1_vjfkmme2484aa, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_qr4cqemafdcd5, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_qr4cqemafdcd5, 38).
-start[ast_oxc](n203d8a7f19c029f1_qr4cqemafdcd5, 879).
 attr[ast_oxc](n203d8a7f19c029f1_qr4cqemafdcd5, name, "pay").
 child[ast_oxc](n203d8a7f19c029f1_vjfkmme2484aa, id, 0, n203d8a7f19c029f1_qr4cqemafdcd5).
 node[ast_oxc](n203d8a7f19c029f1_6vnnctp4sigo5, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_6vnnctp4sigo5, 38).
-start[ast_oxc](n203d8a7f19c029f1_6vnnctp4sigo5, 882).
 attr[ast_oxc](n203d8a7f19c029f1_6vnnctp4sigo5, kind, "FormalParameter").
 node[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, formal_parameter, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, 38).
-start[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, 883).
 attr[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, readonly, false).
 attr[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, override, false).
 node[ast_oxc](n203d8a7f19c029f1_eav0kcdoordub, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_eav0kcdoordub, 38).
-start[ast_oxc](n203d8a7f19c029f1_eav0kcdoordub, 883).
 attr[ast_oxc](n203d8a7f19c029f1_eav0kcdoordub, name, "item").
 child[ast_oxc](n203d8a7f19c029f1_8aj396p4oog5d, pattern, 0, n203d8a7f19c029f1_eav0kcdoordub).
 child[ast_oxc](n203d8a7f19c029f1_6vnnctp4sigo5, items, 0, n203d8a7f19c029f1_8aj396p4oog5d).
 child[ast_oxc](n203d8a7f19c029f1_vjfkmme2484aa, params, 0, n203d8a7f19c029f1_6vnnctp4sigo5).
 node[ast_oxc](n203d8a7f19c029f1_1fa2qjdnmd4ia, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_1fa2qjdnmd4ia, 38).
-start[ast_oxc](n203d8a7f19c029f1_1fa2qjdnmd4ia, 889).
 node[ast_oxc](n203d8a7f19c029f1_kvcbe0sfedtc3, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_kvcbe0sfedtc3, 39).
-start[ast_oxc](n203d8a7f19c029f1_kvcbe0sfedtc3, 893).
 node[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, 39).
-start[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, 900).
 attr[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_05sigs7q6fvb3, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_05sigs7q6fvb3, 39).
-start[ast_oxc](n203d8a7f19c029f1_05sigs7q6fvb3, 900).
 attr[ast_oxc](n203d8a7f19c029f1_05sigs7q6fvb3, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_05sigs7q6fvb3, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, callee, 0, n203d8a7f19c029f1_05sigs7q6fvb3).
 node[ast_oxc](n203d8a7f19c029f1_pv74v7skokosd, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_pv74v7skokosd, 39).
-start[ast_oxc](n203d8a7f19c029f1_pv74v7skokosd, 906).
 attr[ast_oxc](n203d8a7f19c029f1_pv74v7skokosd, value, "https://payments.example.com/orders").
 attr[ast_oxc](n203d8a7f19c029f1_pv74v7skokosd, raw, "'https://payments.example.com/orders'").
 child[ast_oxc](n203d8a7f19c029f1_9lfvk40fj7ab2, arguments, 0, n203d8a7f19c029f1_pv74v7skokosd).
 node[ast_oxc](n203d8a7f19c029f1_em3bub3jbuppd, object_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_em3bub3jbuppd, 39).
-start[ast_oxc](n203d8a7f19c029f1_em3bub3jbuppd, 945).
 node[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, object_property, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, 39).
-start[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, 947).
 attr[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, kind, "Init").
 attr[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, method, false).
 attr[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, shorthand, false).
 attr[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, computed, false).
 node[ast_oxc](n203d8a7f19c029f1_s5jsnr356q3hb, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_s5jsnr356q3hb, 39).
-start[ast_oxc](n203d8a7f19c029f1_s5jsnr356q3hb, 947).
 attr[ast_oxc](n203d8a7f19c029f1_s5jsnr356q3hb, variant, "StaticIdentifier").
 attr[ast_oxc](n203d8a7f19c029f1_s5jsnr356q3hb, name, "method").
 child[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, key, 0, n203d8a7f19c029f1_s5jsnr356q3hb).
 node[ast_oxc](n203d8a7f19c029f1_s8sq9s2r4mbo2, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_s8sq9s2r4mbo2, 39).
-start[ast_oxc](n203d8a7f19c029f1_s8sq9s2r4mbo2, 955).
 attr[ast_oxc](n203d8a7f19c029f1_s8sq9s2r4mbo2, value, "POST").
 attr[ast_oxc](n203d8a7f19c029f1_s8sq9s2r4mbo2, raw, "'POST'").
 child[ast_oxc](n203d8a7f19c029f1_8b2kls8eplm0b, value, 0, n203d8a7f19c029f1_s8sq9s2r4mbo2).
 child[ast_oxc](n203d8a7f19c029f1_em3bub3jbuppd, properties, 0, n203d8a7f19c029f1_8b2kls8eplm0b).
 node[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, object_property, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, 39).
-start[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, 963).
 attr[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, kind, "Init").
 attr[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, method, false).
 attr[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, shorthand, false).
 attr[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, computed, false).
 node[ast_oxc](n203d8a7f19c029f1_03m12h0hdiq84, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_03m12h0hdiq84, 39).
-start[ast_oxc](n203d8a7f19c029f1_03m12h0hdiq84, 963).
 attr[ast_oxc](n203d8a7f19c029f1_03m12h0hdiq84, variant, "StaticIdentifier").
 attr[ast_oxc](n203d8a7f19c029f1_03m12h0hdiq84, name, "body").
 child[ast_oxc](n203d8a7f19c029f1_ukrn9fp40bfc8, key, 0, n203d8a7f19c029f1_03m12h0hdiq84).
 node[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, 39).
-start[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, 969).
 attr[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_gqtt4bmploota, static_member_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_gqtt4bmploota, 39).
-start[ast_oxc](n203d8a7f19c029f1_gqtt4bmploota, 969).
 attr[ast_oxc](n203d8a7f19c029f1_gqtt4bmploota, optional, false).
 node[ast_oxc](n203d8a7f19c029f1_odsb5b66k75e1, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_odsb5b66k75e1, 39).
-start[ast_oxc](n203d8a7f19c029f1_odsb5b66k75e1, 969).
 attr[ast_oxc](n203d8a7f19c029f1_odsb5b66k75e1, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_odsb5b66k75e1, name, "JSON").
 child[ast_oxc](n203d8a7f19c029f1_gqtt4bmploota, object, 0, n203d8a7f19c029f1_odsb5b66k75e1).
 node[ast_oxc](n203d8a7f19c029f1_gs6r7qiluqqra, identifier_name, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_gs6r7qiluqqra, 39).
-start[ast_oxc](n203d8a7f19c029f1_gs6r7qiluqqra, 974).
 attr[ast_oxc](n203d8a7f19c029f1_gs6r7qiluqqra, name, "stringify").
 child[ast_oxc](n203d8a7f19c029f1_gqtt4bmploota, property, 0, n203d8a7f19c029f1_gs6r7qiluqqra).
 child[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, callee, 0, n203d8a7f19c029f1_gqtt4bmploota).
 node[ast_oxc](n203d8a7f19c029f1_5p6fghjfdk1e6, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_5p6fghjfdk1e6, 39).
-start[ast_oxc](n203d8a7f19c029f1_5p6fghjfdk1e6, 984).
 attr[ast_oxc](n203d8a7f19c029f1_5p6fghjfdk1e6, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_5p6fghjfdk1e6, name, "item").
 child[ast_oxc](n203d8a7f19c029f1_o5hv6he1mh5, arguments, 0, n203d8a7f19c029f1_5p6fghjfdk1e6).
@@ -2030,41 +1670,32 @@ child[ast_oxc](n203d8a7f19c029f1_9lkrg4r3up4n6, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 10, n203d8a7f19c029f1_9lkrg4r3up4n6).
 node[ast_oxc](n203d8a7f19c029f1_2lp75aitshq7d, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_2lp75aitshq7d, 42).
-start[ast_oxc](n203d8a7f19c029f1_2lp75aitshq7d, 997).
 node[ast_oxc](n203d8a7f19c029f1_k43s8rtiktvjb, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_k43s8rtiktvjb, 42).
-start[ast_oxc](n203d8a7f19c029f1_k43s8rtiktvjb, 1004).
 attr[ast_oxc](n203d8a7f19c029f1_k43s8rtiktvjb, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_qrb9dsmdek4f7, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_qrb9dsmdek4f7, 42).
-start[ast_oxc](n203d8a7f19c029f1_qrb9dsmdek4f7, 1019).
 attr[ast_oxc](n203d8a7f19c029f1_qrb9dsmdek4f7, name, "edge").
 child[ast_oxc](n203d8a7f19c029f1_k43s8rtiktvjb, id, 0, n203d8a7f19c029f1_qrb9dsmdek4f7).
 node[ast_oxc](n203d8a7f19c029f1_kjqrnri1t0ui3, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_kjqrnri1t0ui3, 42).
-start[ast_oxc](n203d8a7f19c029f1_kjqrnri1t0ui3, 1023).
 attr[ast_oxc](n203d8a7f19c029f1_kjqrnri1t0ui3, kind, "FormalParameter").
 child[ast_oxc](n203d8a7f19c029f1_k43s8rtiktvjb, params, 0, n203d8a7f19c029f1_kjqrnri1t0ui3).
 node[ast_oxc](n203d8a7f19c029f1_vhgcugo9371bf, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_vhgcugo9371bf, 42).
-start[ast_oxc](n203d8a7f19c029f1_vhgcugo9371bf, 1026).
 node[ast_oxc](n203d8a7f19c029f1_7v033vpfc0npc, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_7v033vpfc0npc, 43).
-start[ast_oxc](n203d8a7f19c029f1_7v033vpfc0npc, 1030).
 node[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, 43).
-start[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, 1037).
 attr[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_47d0to9amhr5f, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_47d0to9amhr5f, 43).
-start[ast_oxc](n203d8a7f19c029f1_47d0to9amhr5f, 1037).
 attr[ast_oxc](n203d8a7f19c029f1_47d0to9amhr5f, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_47d0to9amhr5f, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, callee, 0, n203d8a7f19c029f1_47d0to9amhr5f).
 node[ast_oxc](n203d8a7f19c029f1_s2brh6usv24sb, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_s2brh6usv24sb, 43).
-start[ast_oxc](n203d8a7f19c029f1_s2brh6usv24sb, 1043).
 attr[ast_oxc](n203d8a7f19c029f1_s2brh6usv24sb, value, "https://edge.internal/v1/health").
 attr[ast_oxc](n203d8a7f19c029f1_s2brh6usv24sb, raw, "'https://edge.internal/v1/health'").
 child[ast_oxc](n203d8a7f19c029f1_404sd33p7u0hc, arguments, 0, n203d8a7f19c029f1_s2brh6usv24sb).
@@ -2081,41 +1712,32 @@ child[ast_oxc](n203d8a7f19c029f1_2lp75aitshq7d, declaration, 0, n203d8a7f19c029f
 child[ast_oxc](n203d8a7f19c029f1_root, body, 11, n203d8a7f19c029f1_2lp75aitshq7d).
 node[ast_oxc](n203d8a7f19c029f1_1pbnmnd1kiub9, export_declaration, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_1pbnmnd1kiub9, 46).
-start[ast_oxc](n203d8a7f19c029f1_1pbnmnd1kiub9, 1082).
 node[ast_oxc](n203d8a7f19c029f1_9ms52gc2ebc93, function, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_9ms52gc2ebc93, 46).
-start[ast_oxc](n203d8a7f19c029f1_9ms52gc2ebc93, 1089).
 attr[ast_oxc](n203d8a7f19c029f1_9ms52gc2ebc93, variant, "FunctionDeclaration").
 node[ast_oxc](n203d8a7f19c029f1_6jlrvn18fsrg6, binding_identifier, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_6jlrvn18fsrg6, 46).
-start[ast_oxc](n203d8a7f19c029f1_6jlrvn18fsrg6, 1104).
 attr[ast_oxc](n203d8a7f19c029f1_6jlrvn18fsrg6, name, "metrics").
 child[ast_oxc](n203d8a7f19c029f1_9ms52gc2ebc93, id, 0, n203d8a7f19c029f1_6jlrvn18fsrg6).
 node[ast_oxc](n203d8a7f19c029f1_f75nfnhcaume9, formal_parameters, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_f75nfnhcaume9, 46).
-start[ast_oxc](n203d8a7f19c029f1_f75nfnhcaume9, 1111).
 attr[ast_oxc](n203d8a7f19c029f1_f75nfnhcaume9, kind, "FormalParameter").
 child[ast_oxc](n203d8a7f19c029f1_9ms52gc2ebc93, params, 0, n203d8a7f19c029f1_f75nfnhcaume9).
 node[ast_oxc](n203d8a7f19c029f1_kb0r6tqmptet5, function_body, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_kb0r6tqmptet5, 46).
-start[ast_oxc](n203d8a7f19c029f1_kb0r6tqmptet5, 1114).
 node[ast_oxc](n203d8a7f19c029f1_96k0p8mtu014f, return_statement, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_96k0p8mtu014f, 47).
-start[ast_oxc](n203d8a7f19c029f1_96k0p8mtu014f, 1118).
 node[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, call_expression, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, 47).
-start[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, 1125).
 attr[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, optional, false).
 attr[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, pure, false).
 node[ast_oxc](n203d8a7f19c029f1_igab45aj4o681, identifier_reference, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_igab45aj4o681, 47).
-start[ast_oxc](n203d8a7f19c029f1_igab45aj4o681, 1125).
 attr[ast_oxc](n203d8a7f19c029f1_igab45aj4o681, variant, "Identifier").
 attr[ast_oxc](n203d8a7f19c029f1_igab45aj4o681, name, "fetch").
 child[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, callee, 0, n203d8a7f19c029f1_igab45aj4o681).
 node[ast_oxc](n203d8a7f19c029f1_v7sds5nnkpfre, string_literal, "src/web/client.js").
 line[ast_oxc](n203d8a7f19c029f1_v7sds5nnkpfre, 47).
-start[ast_oxc](n203d8a7f19c029f1_v7sds5nnkpfre, 1131).
 attr[ast_oxc](n203d8a7f19c029f1_v7sds5nnkpfre, value, "http://localhost:9100/metrics").
 attr[ast_oxc](n203d8a7f19c029f1_v7sds5nnkpfre, raw, "'http://localhost:9100/metrics'").
 child[ast_oxc](n203d8a7f19c029f1_jnldfdc55jsq4, arguments, 0, n203d8a7f19c029f1_v7sds5nnkpfre).

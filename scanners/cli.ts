@@ -56,7 +56,7 @@ const put = (text: string | Buffer) => new Promise<void>((done) => { if (sink.wr
 // scanner's own code, so that a scanner changed is a scan stale
 await put([bin, fileURLToPath(import.meta.url), fileURLToPath(new URL('../playground/host.ts', import.meta.url))].map((f) => `-- reads: ${f}\n`).join(''));
 
-const child = spawn(bin, [root, ...(one === undefined ? [] : [one])], { stdio: ['ignore', 'pipe', 'inherit'] });
+const child = spawn(bin, ['--no-start', root, ...(one === undefined ? [] : [one])], { stdio: ['ignore', 'pipe', 'inherit'] });
 const exited = new Promise<number>((done) => child.on('close', (code) => done(code ?? 70)));
 const strings = new Set<string>();
 // the text goes through in chunks, and only the lines that hold a string value are looked at

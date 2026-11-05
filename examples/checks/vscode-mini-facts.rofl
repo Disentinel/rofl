@@ -2,27 +2,21 @@
 -- host gives them (rust/tools/oxc_scan and the host's path and string facts). Regenerate when the scanner moves.
 node[ast_oxc](n6329e4a1ce5a5737_root, program, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_root, 1).
-start[ast_oxc](n6329e4a1ce5a5737_root, 0).
 node[ast_oxc](n6329e4a1ce5a5737_gk07pqn9ddpff, export_declaration, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_gk07pqn9ddpff, 1).
-start[ast_oxc](n6329e4a1ce5a5737_gk07pqn9ddpff, 0).
 node[ast_oxc](n6329e4a1ce5a5737_jlco95qvv2no9, variable_declaration, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_jlco95qvv2no9, 1).
-start[ast_oxc](n6329e4a1ce5a5737_jlco95qvv2no9, 7).
 attr[ast_oxc](n6329e4a1ce5a5737_jlco95qvv2no9, kind, "Const").
 attr[ast_oxc](n6329e4a1ce5a5737_jlco95qvv2no9, declare, false).
 node[ast_oxc](n6329e4a1ce5a5737_spqr2iifi5gcb, variable_declarator, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_spqr2iifi5gcb, 1).
-start[ast_oxc](n6329e4a1ce5a5737_spqr2iifi5gcb, 13).
 attr[ast_oxc](n6329e4a1ce5a5737_spqr2iifi5gcb, definite, false).
 node[ast_oxc](n6329e4a1ce5a5737_9l73h9u59mrkd, binding_identifier, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_9l73h9u59mrkd, 1).
-start[ast_oxc](n6329e4a1ce5a5737_9l73h9u59mrkd, 13).
 attr[ast_oxc](n6329e4a1ce5a5737_9l73h9u59mrkd, name, "HELLO_CHANNEL").
 child[ast_oxc](n6329e4a1ce5a5737_spqr2iifi5gcb, id, 0, n6329e4a1ce5a5737_9l73h9u59mrkd).
 node[ast_oxc](n6329e4a1ce5a5737_r0tcoer9abrha, string_literal, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_r0tcoer9abrha, 1).
-start[ast_oxc](n6329e4a1ce5a5737_r0tcoer9abrha, 29).
 attr[ast_oxc](n6329e4a1ce5a5737_r0tcoer9abrha, value, "vscode:hello").
 attr[ast_oxc](n6329e4a1ce5a5737_r0tcoer9abrha, raw, "'vscode:hello'").
 child[ast_oxc](n6329e4a1ce5a5737_spqr2iifi5gcb, init, 0, n6329e4a1ce5a5737_r0tcoer9abrha).
@@ -31,24 +25,19 @@ child[ast_oxc](n6329e4a1ce5a5737_gk07pqn9ddpff, declaration, 0, n6329e4a1ce5a573
 child[ast_oxc](n6329e4a1ce5a5737_root, body, 0, n6329e4a1ce5a5737_gk07pqn9ddpff).
 node[ast_oxc](n6329e4a1ce5a5737_322lt7hohi2ve, export_declaration, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_322lt7hohi2ve, 2).
-start[ast_oxc](n6329e4a1ce5a5737_322lt7hohi2ve, 45).
 node[ast_oxc](n6329e4a1ce5a5737_9jmcfr0f166b8, variable_declaration, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_9jmcfr0f166b8, 2).
-start[ast_oxc](n6329e4a1ce5a5737_9jmcfr0f166b8, 52).
 attr[ast_oxc](n6329e4a1ce5a5737_9jmcfr0f166b8, kind, "Const").
 attr[ast_oxc](n6329e4a1ce5a5737_9jmcfr0f166b8, declare, false).
 node[ast_oxc](n6329e4a1ce5a5737_p7hbd8a5mmn44, variable_declarator, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_p7hbd8a5mmn44, 2).
-start[ast_oxc](n6329e4a1ce5a5737_p7hbd8a5mmn44, 58).
 attr[ast_oxc](n6329e4a1ce5a5737_p7hbd8a5mmn44, definite, false).
 node[ast_oxc](n6329e4a1ce5a5737_sutave1m0pma7, binding_identifier, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_sutave1m0pma7, 2).
-start[ast_oxc](n6329e4a1ce5a5737_sutave1m0pma7, 58).
 attr[ast_oxc](n6329e4a1ce5a5737_sutave1m0pma7, name, "DEFAULT_PORT").
 child[ast_oxc](n6329e4a1ce5a5737_p7hbd8a5mmn44, id, 0, n6329e4a1ce5a5737_sutave1m0pma7).
 node[ast_oxc](n6329e4a1ce5a5737_ss96j8qjij532, numeric_literal, "mini/common/channels.ts").
 line[ast_oxc](n6329e4a1ce5a5737_ss96j8qjij532, 2).
-start[ast_oxc](n6329e4a1ce5a5737_ss96j8qjij532, 73).
 attr[ast_oxc](n6329e4a1ce5a5737_ss96j8qjij532, base, "Decimal").
 attr[ast_oxc](n6329e4a1ce5a5737_ss96j8qjij532, raw, "8080").
 attr[ast_oxc](n6329e4a1ce5a5737_ss96j8qjij532, value, 8080).
@@ -62,196 +51,158 @@ attr[ast_oxc](n6329e4a1ce5a5737_root, source_type_variant, "Standard").
 file[ast_oxc](n6329e4a1ce5a5737_root, "mini/common/channels.ts").
 node[ast_oxc](n6ce3b3e159e9764b_root, program, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_root, 1).
-start[ast_oxc](n6ce3b3e159e9764b_root, 0).
 node[ast_oxc](n6ce3b3e159e9764b_46aqvvbfh6pgc, import_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_46aqvvbfh6pgc, 1).
-start[ast_oxc](n6ce3b3e159e9764b_46aqvvbfh6pgc, 0).
 attr[ast_oxc](n6ce3b3e159e9764b_46aqvvbfh6pgc, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_a0jd13jhm4an2, import_specifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_a0jd13jhm4an2, 1).
-start[ast_oxc](n6ce3b3e159e9764b_a0jd13jhm4an2, 9).
 attr[ast_oxc](n6ce3b3e159e9764b_a0jd13jhm4an2, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_1s9mk090jf85b, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_1s9mk090jf85b, 1).
-start[ast_oxc](n6ce3b3e159e9764b_1s9mk090jf85b, 9).
 attr[ast_oxc](n6ce3b3e159e9764b_1s9mk090jf85b, name, "spawn").
 child[ast_oxc](n6ce3b3e159e9764b_a0jd13jhm4an2, imported, 0, n6ce3b3e159e9764b_1s9mk090jf85b).
 node[ast_oxc](n6ce3b3e159e9764b_pgc69q4rqp708, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_pgc69q4rqp708, 1).
-start[ast_oxc](n6ce3b3e159e9764b_pgc69q4rqp708, 9).
 attr[ast_oxc](n6ce3b3e159e9764b_pgc69q4rqp708, name, "spawn").
 child[ast_oxc](n6ce3b3e159e9764b_a0jd13jhm4an2, local, 0, n6ce3b3e159e9764b_pgc69q4rqp708).
 child[ast_oxc](n6ce3b3e159e9764b_46aqvvbfh6pgc, specifiers, 0, n6ce3b3e159e9764b_a0jd13jhm4an2).
 node[ast_oxc](n6ce3b3e159e9764b_glc9mip828oo, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_glc9mip828oo, 1).
-start[ast_oxc](n6ce3b3e159e9764b_glc9mip828oo, 22).
 attr[ast_oxc](n6ce3b3e159e9764b_glc9mip828oo, value, "child_process").
 attr[ast_oxc](n6ce3b3e159e9764b_glc9mip828oo, raw, "'child_process'").
 child[ast_oxc](n6ce3b3e159e9764b_46aqvvbfh6pgc, source, 0, n6ce3b3e159e9764b_glc9mip828oo).
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 0, n6ce3b3e159e9764b_46aqvvbfh6pgc).
 node[ast_oxc](n6ce3b3e159e9764b_vd7ov4njmuh0d, import_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_vd7ov4njmuh0d, 2).
-start[ast_oxc](n6ce3b3e159e9764b_vd7ov4njmuh0d, 39).
 attr[ast_oxc](n6ce3b3e159e9764b_vd7ov4njmuh0d, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_nkpu8eoi1k9ne, import_specifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_nkpu8eoi1k9ne, 2).
-start[ast_oxc](n6ce3b3e159e9764b_nkpu8eoi1k9ne, 48).
 attr[ast_oxc](n6ce3b3e159e9764b_nkpu8eoi1k9ne, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_bbp3b4akp4pb4, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_bbp3b4akp4pb4, 2).
-start[ast_oxc](n6ce3b3e159e9764b_bbp3b4akp4pb4, 48).
 attr[ast_oxc](n6ce3b3e159e9764b_bbp3b4akp4pb4, name, "ipcMain").
 child[ast_oxc](n6ce3b3e159e9764b_nkpu8eoi1k9ne, imported, 0, n6ce3b3e159e9764b_bbp3b4akp4pb4).
 node[ast_oxc](n6ce3b3e159e9764b_972p8uij3i36e, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_972p8uij3i36e, 2).
-start[ast_oxc](n6ce3b3e159e9764b_972p8uij3i36e, 48).
 attr[ast_oxc](n6ce3b3e159e9764b_972p8uij3i36e, name, "ipcMain").
 child[ast_oxc](n6ce3b3e159e9764b_nkpu8eoi1k9ne, local, 0, n6ce3b3e159e9764b_972p8uij3i36e).
 child[ast_oxc](n6ce3b3e159e9764b_vd7ov4njmuh0d, specifiers, 0, n6ce3b3e159e9764b_nkpu8eoi1k9ne).
 node[ast_oxc](n6ce3b3e159e9764b_nmfvd0m84jna9, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_nmfvd0m84jna9, 2).
-start[ast_oxc](n6ce3b3e159e9764b_nmfvd0m84jna9, 63).
 attr[ast_oxc](n6ce3b3e159e9764b_nmfvd0m84jna9, value, "electron").
 attr[ast_oxc](n6ce3b3e159e9764b_nmfvd0m84jna9, raw, "'electron'").
 child[ast_oxc](n6ce3b3e159e9764b_vd7ov4njmuh0d, source, 0, n6ce3b3e159e9764b_nmfvd0m84jna9).
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 1, n6ce3b3e159e9764b_vd7ov4njmuh0d).
 node[ast_oxc](n6ce3b3e159e9764b_qndjgq5gm5b7f, import_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_qndjgq5gm5b7f, 3).
-start[ast_oxc](n6ce3b3e159e9764b_qndjgq5gm5b7f, 75).
 attr[ast_oxc](n6ce3b3e159e9764b_qndjgq5gm5b7f, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_9g9ei50re1pb8, import_specifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_9g9ei50re1pb8, 3).
-start[ast_oxc](n6ce3b3e159e9764b_9g9ei50re1pb8, 84).
 attr[ast_oxc](n6ce3b3e159e9764b_9g9ei50re1pb8, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_3mgv59lj34e97, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_3mgv59lj34e97, 3).
-start[ast_oxc](n6ce3b3e159e9764b_3mgv59lj34e97, 84).
 attr[ast_oxc](n6ce3b3e159e9764b_3mgv59lj34e97, name, "HELLO_CHANNEL").
 child[ast_oxc](n6ce3b3e159e9764b_9g9ei50re1pb8, imported, 0, n6ce3b3e159e9764b_3mgv59lj34e97).
 node[ast_oxc](n6ce3b3e159e9764b_dqvdul805bea4, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_dqvdul805bea4, 3).
-start[ast_oxc](n6ce3b3e159e9764b_dqvdul805bea4, 84).
 attr[ast_oxc](n6ce3b3e159e9764b_dqvdul805bea4, name, "HELLO_CHANNEL").
 child[ast_oxc](n6ce3b3e159e9764b_9g9ei50re1pb8, local, 0, n6ce3b3e159e9764b_dqvdul805bea4).
 child[ast_oxc](n6ce3b3e159e9764b_qndjgq5gm5b7f, specifiers, 0, n6ce3b3e159e9764b_9g9ei50re1pb8).
 node[ast_oxc](n6ce3b3e159e9764b_ahrf3cep920r, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_ahrf3cep920r, 3).
-start[ast_oxc](n6ce3b3e159e9764b_ahrf3cep920r, 105).
 attr[ast_oxc](n6ce3b3e159e9764b_ahrf3cep920r, value, "../common/channels.js").
 attr[ast_oxc](n6ce3b3e159e9764b_ahrf3cep920r, raw, "'../common/channels.js'").
 child[ast_oxc](n6ce3b3e159e9764b_qndjgq5gm5b7f, source, 0, n6ce3b3e159e9764b_ahrf3cep920r).
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 2, n6ce3b3e159e9764b_qndjgq5gm5b7f).
 node[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, import_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, 4).
-start[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, 130).
 attr[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_1h09u1itjd331, import_specifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_1h09u1itjd331, 4).
-start[ast_oxc](n6ce3b3e159e9764b_1h09u1itjd331, 139).
 attr[ast_oxc](n6ce3b3e159e9764b_1h09u1itjd331, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_cpgorf467n2j5, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_cpgorf467n2j5, 4).
-start[ast_oxc](n6ce3b3e159e9764b_cpgorf467n2j5, 139).
 attr[ast_oxc](n6ce3b3e159e9764b_cpgorf467n2j5, name, "remove").
 child[ast_oxc](n6ce3b3e159e9764b_1h09u1itjd331, imported, 0, n6ce3b3e159e9764b_cpgorf467n2j5).
 node[ast_oxc](n6ce3b3e159e9764b_75n9j5dt5qbma, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_75n9j5dt5qbma, 4).
-start[ast_oxc](n6ce3b3e159e9764b_75n9j5dt5qbma, 139).
 attr[ast_oxc](n6ce3b3e159e9764b_75n9j5dt5qbma, name, "remove").
 child[ast_oxc](n6ce3b3e159e9764b_1h09u1itjd331, local, 0, n6ce3b3e159e9764b_75n9j5dt5qbma).
 child[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, specifiers, 0, n6ce3b3e159e9764b_1h09u1itjd331).
 node[ast_oxc](n6ce3b3e159e9764b_df5p27psq3pfa, import_specifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_df5p27psq3pfa, 4).
-start[ast_oxc](n6ce3b3e159e9764b_df5p27psq3pfa, 147).
 attr[ast_oxc](n6ce3b3e159e9764b_df5p27psq3pfa, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_uf5bhdqjtjk2c, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_uf5bhdqjtjk2c, 4).
-start[ast_oxc](n6ce3b3e159e9764b_uf5bhdqjtjk2c, 147).
 attr[ast_oxc](n6ce3b3e159e9764b_uf5bhdqjtjk2c, name, "writeAtomic").
 child[ast_oxc](n6ce3b3e159e9764b_df5p27psq3pfa, imported, 0, n6ce3b3e159e9764b_uf5bhdqjtjk2c).
 node[ast_oxc](n6ce3b3e159e9764b_tno2tli37rmjc, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_tno2tli37rmjc, 4).
-start[ast_oxc](n6ce3b3e159e9764b_tno2tli37rmjc, 147).
 attr[ast_oxc](n6ce3b3e159e9764b_tno2tli37rmjc, name, "writeAtomic").
 child[ast_oxc](n6ce3b3e159e9764b_df5p27psq3pfa, local, 0, n6ce3b3e159e9764b_tno2tli37rmjc).
 child[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, specifiers, 1, n6ce3b3e159e9764b_df5p27psq3pfa).
 node[ast_oxc](n6ce3b3e159e9764b_csrob0k9ncko8, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_csrob0k9ncko8, 4).
-start[ast_oxc](n6ce3b3e159e9764b_csrob0k9ncko8, 166).
 attr[ast_oxc](n6ce3b3e159e9764b_csrob0k9ncko8, value, "./pfs.js").
 attr[ast_oxc](n6ce3b3e159e9764b_csrob0k9ncko8, raw, "'./pfs.js'").
 child[ast_oxc](n6ce3b3e159e9764b_d8i8f25ug38pe, source, 0, n6ce3b3e159e9764b_csrob0k9ncko8).
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 3, n6ce3b3e159e9764b_d8i8f25ug38pe).
 node[ast_oxc](n6ce3b3e159e9764b_449k0h0vd4tt6, import_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_449k0h0vd4tt6, 5).
-start[ast_oxc](n6ce3b3e159e9764b_449k0h0vd4tt6, 178).
 attr[ast_oxc](n6ce3b3e159e9764b_449k0h0vd4tt6, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_09h0nr7kolf5, import_specifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_09h0nr7kolf5, 5).
-start[ast_oxc](n6ce3b3e159e9764b_09h0nr7kolf5, 187).
 attr[ast_oxc](n6ce3b3e159e9764b_09h0nr7kolf5, import_kind, "Value").
 node[ast_oxc](n6ce3b3e159e9764b_l3u03nihheb3d, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_l3u03nihheb3d, 5).
-start[ast_oxc](n6ce3b3e159e9764b_l3u03nihheb3d, 187).
 attr[ast_oxc](n6ce3b3e159e9764b_l3u03nihheb3d, name, "startServers").
 child[ast_oxc](n6ce3b3e159e9764b_09h0nr7kolf5, imported, 0, n6ce3b3e159e9764b_l3u03nihheb3d).
 node[ast_oxc](n6ce3b3e159e9764b_kak90nfqhgto8, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_kak90nfqhgto8, 5).
-start[ast_oxc](n6ce3b3e159e9764b_kak90nfqhgto8, 187).
 attr[ast_oxc](n6ce3b3e159e9764b_kak90nfqhgto8, name, "startServers").
 child[ast_oxc](n6ce3b3e159e9764b_09h0nr7kolf5, local, 0, n6ce3b3e159e9764b_kak90nfqhgto8).
 child[ast_oxc](n6ce3b3e159e9764b_449k0h0vd4tt6, specifiers, 0, n6ce3b3e159e9764b_09h0nr7kolf5).
 node[ast_oxc](n6ce3b3e159e9764b_7bsuuva6lnom6, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_7bsuuva6lnom6, 5).
-start[ast_oxc](n6ce3b3e159e9764b_7bsuuva6lnom6, 207).
 attr[ast_oxc](n6ce3b3e159e9764b_7bsuuva6lnom6, value, "./server.js").
 attr[ast_oxc](n6ce3b3e159e9764b_7bsuuva6lnom6, raw, "'./server.js'").
 child[ast_oxc](n6ce3b3e159e9764b_449k0h0vd4tt6, source, 0, n6ce3b3e159e9764b_7bsuuva6lnom6).
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 4, n6ce3b3e159e9764b_449k0h0vd4tt6).
 node[ast_oxc](n6ce3b3e159e9764b_7j5avm30e23r8, variable_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_7j5avm30e23r8, 7).
-start[ast_oxc](n6ce3b3e159e9764b_7j5avm30e23r8, 223).
 attr[ast_oxc](n6ce3b3e159e9764b_7j5avm30e23r8, kind, "Const").
 attr[ast_oxc](n6ce3b3e159e9764b_7j5avm30e23r8, declare, false).
 node[ast_oxc](n6ce3b3e159e9764b_u4revllnnn5ka, variable_declarator, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_u4revllnnn5ka, 7).
-start[ast_oxc](n6ce3b3e159e9764b_u4revllnnn5ka, 229).
 attr[ast_oxc](n6ce3b3e159e9764b_u4revllnnn5ka, definite, false).
 node[ast_oxc](n6ce3b3e159e9764b_0modtq1m59bl8, object_pattern, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_0modtq1m59bl8, 7).
-start[ast_oxc](n6ce3b3e159e9764b_0modtq1m59bl8, 229).
 node[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, binding_property, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, 7).
-start[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, 231).
 attr[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, shorthand, true).
 attr[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, computed, false).
 node[ast_oxc](n6ce3b3e159e9764b_te7o741hrksdb, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_te7o741hrksdb, 7).
-start[ast_oxc](n6ce3b3e159e9764b_te7o741hrksdb, 231).
 attr[ast_oxc](n6ce3b3e159e9764b_te7o741hrksdb, variant, "StaticIdentifier").
 attr[ast_oxc](n6ce3b3e159e9764b_te7o741hrksdb, name, "execFile").
 child[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, key, 0, n6ce3b3e159e9764b_te7o741hrksdb).
 node[ast_oxc](n6ce3b3e159e9764b_7o18dl2f1q6if, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_7o18dl2f1q6if, 7).
-start[ast_oxc](n6ce3b3e159e9764b_7o18dl2f1q6if, 231).
 attr[ast_oxc](n6ce3b3e159e9764b_7o18dl2f1q6if, name, "execFile").
 child[ast_oxc](n6ce3b3e159e9764b_b1job0gjmfds3, value, 0, n6ce3b3e159e9764b_7o18dl2f1q6if).
 child[ast_oxc](n6ce3b3e159e9764b_0modtq1m59bl8, properties, 0, n6ce3b3e159e9764b_b1job0gjmfds3).
 child[ast_oxc](n6ce3b3e159e9764b_u4revllnnn5ka, id, 0, n6ce3b3e159e9764b_0modtq1m59bl8).
 node[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, 7).
-start[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, 244).
 attr[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_tp4hul2kktrg4, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_tp4hul2kktrg4, 7).
-start[ast_oxc](n6ce3b3e159e9764b_tp4hul2kktrg4, 244).
 attr[ast_oxc](n6ce3b3e159e9764b_tp4hul2kktrg4, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_tp4hul2kktrg4, name, "require").
 child[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, callee, 0, n6ce3b3e159e9764b_tp4hul2kktrg4).
 node[ast_oxc](n6ce3b3e159e9764b_hpco8n8qqqab5, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_hpco8n8qqqab5, 7).
-start[ast_oxc](n6ce3b3e159e9764b_hpco8n8qqqab5, 252).
 attr[ast_oxc](n6ce3b3e159e9764b_hpco8n8qqqab5, value, "child_process").
 attr[ast_oxc](n6ce3b3e159e9764b_hpco8n8qqqab5, raw, "'child_process'").
 child[ast_oxc](n6ce3b3e159e9764b_k5vl0b51ha8g, arguments, 0, n6ce3b3e159e9764b_hpco8n8qqqab5).
@@ -260,105 +211,83 @@ child[ast_oxc](n6ce3b3e159e9764b_7j5avm30e23r8, declarations, 0, n6ce3b3e159e976
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 5, n6ce3b3e159e9764b_7j5avm30e23r8).
 node[ast_oxc](n6ce3b3e159e9764b_1n6di10ov4st1, variable_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_1n6di10ov4st1, 8).
-start[ast_oxc](n6ce3b3e159e9764b_1n6di10ov4st1, 270).
 attr[ast_oxc](n6ce3b3e159e9764b_1n6di10ov4st1, kind, "Const").
 attr[ast_oxc](n6ce3b3e159e9764b_1n6di10ov4st1, declare, false).
 node[ast_oxc](n6ce3b3e159e9764b_2k2v906hh9hi4, variable_declarator, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_2k2v906hh9hi4, 8).
-start[ast_oxc](n6ce3b3e159e9764b_2k2v906hh9hi4, 276).
 attr[ast_oxc](n6ce3b3e159e9764b_2k2v906hh9hi4, definite, false).
 node[ast_oxc](n6ce3b3e159e9764b_f9svo5lnmtbp9, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_f9svo5lnmtbp9, 8).
-start[ast_oxc](n6ce3b3e159e9764b_f9svo5lnmtbp9, 276).
 attr[ast_oxc](n6ce3b3e159e9764b_f9svo5lnmtbp9, name, "IStorage").
 child[ast_oxc](n6ce3b3e159e9764b_2k2v906hh9hi4, id, 0, n6ce3b3e159e9764b_f9svo5lnmtbp9).
 node[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, arrow_function_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, 8).
-start[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, 287).
 node[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, formal_parameters, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, 8).
-start[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, 287).
 attr[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, kind, "ArrowFormalParameters").
 node[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, formal_parameter, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, 8).
-start[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, 288).
 attr[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, readonly, false).
 attr[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, override, false).
 node[ast_oxc](n6ce3b3e159e9764b_bdohp0khiaqs2, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_bdohp0khiaqs2, 8).
-start[ast_oxc](n6ce3b3e159e9764b_bdohp0khiaqs2, 288).
 attr[ast_oxc](n6ce3b3e159e9764b_bdohp0khiaqs2, name, "target").
 child[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, pattern, 0, n6ce3b3e159e9764b_bdohp0khiaqs2).
 node[ast_oxc](n6ce3b3e159e9764b_3p7ul6i8pdmo8, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_3p7ul6i8pdmo8, 8).
-start[ast_oxc](n6ce3b3e159e9764b_3p7ul6i8pdmo8, 294).
 node[ast_oxc](n6ce3b3e159e9764b_djf67b4lqmbk, tsunknown_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_djf67b4lqmbk, 8).
-start[ast_oxc](n6ce3b3e159e9764b_djf67b4lqmbk, 296).
 child[ast_oxc](n6ce3b3e159e9764b_3p7ul6i8pdmo8, type_annotation, 0, n6ce3b3e159e9764b_djf67b4lqmbk).
 child[ast_oxc](n6ce3b3e159e9764b_84h79sds0frla, type_annotation, 0, n6ce3b3e159e9764b_3p7ul6i8pdmo8).
 child[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, items, 0, n6ce3b3e159e9764b_84h79sds0frla).
 node[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, formal_parameter, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, 8).
-start[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, 305).
 attr[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, readonly, false).
 attr[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, override, false).
 node[ast_oxc](n6ce3b3e159e9764b_sd0lhkkl6e2, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_sd0lhkkl6e2, 8).
-start[ast_oxc](n6ce3b3e159e9764b_sd0lhkkl6e2, 305).
 attr[ast_oxc](n6ce3b3e159e9764b_sd0lhkkl6e2, name, "key").
 child[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, pattern, 0, n6ce3b3e159e9764b_sd0lhkkl6e2).
 node[ast_oxc](n6ce3b3e159e9764b_cbbug4oq7mk4f, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_cbbug4oq7mk4f, 8).
-start[ast_oxc](n6ce3b3e159e9764b_cbbug4oq7mk4f, 308).
 node[ast_oxc](n6ce3b3e159e9764b_aece0hm9bcp7c, tsunion_type, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_aece0hm9bcp7c, 8).
-start[ast_oxc](n6ce3b3e159e9764b_aece0hm9bcp7c, 310).
 node[ast_oxc](n6ce3b3e159e9764b_5k4fam3muh5j7, tsstring_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_5k4fam3muh5j7, 8).
-start[ast_oxc](n6ce3b3e159e9764b_5k4fam3muh5j7, 310).
 child[ast_oxc](n6ce3b3e159e9764b_aece0hm9bcp7c, types, 0, n6ce3b3e159e9764b_5k4fam3muh5j7).
 node[ast_oxc](n6ce3b3e159e9764b_f6t40rn3gbvv2, tsundefined_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_f6t40rn3gbvv2, 8).
-start[ast_oxc](n6ce3b3e159e9764b_f6t40rn3gbvv2, 319).
 child[ast_oxc](n6ce3b3e159e9764b_aece0hm9bcp7c, types, 1, n6ce3b3e159e9764b_f6t40rn3gbvv2).
 child[ast_oxc](n6ce3b3e159e9764b_cbbug4oq7mk4f, type_annotation, 0, n6ce3b3e159e9764b_aece0hm9bcp7c).
 child[ast_oxc](n6ce3b3e159e9764b_sdfc21h39f7fc, type_annotation, 0, n6ce3b3e159e9764b_cbbug4oq7mk4f).
 child[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, items, 1, n6ce3b3e159e9764b_sdfc21h39f7fc).
 node[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, formal_parameter, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, 8).
-start[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, 330).
 attr[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, readonly, false).
 attr[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, override, false).
 node[ast_oxc](n6ce3b3e159e9764b_gm5c3flg5cur3, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_gm5c3flg5cur3, 8).
-start[ast_oxc](n6ce3b3e159e9764b_gm5c3flg5cur3, 330).
 attr[ast_oxc](n6ce3b3e159e9764b_gm5c3flg5cur3, name, "index").
 child[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, pattern, 0, n6ce3b3e159e9764b_gm5c3flg5cur3).
 node[ast_oxc](n6ce3b3e159e9764b_2a941lqi38pt4, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_2a941lqi38pt4, 8).
-start[ast_oxc](n6ce3b3e159e9764b_2a941lqi38pt4, 335).
 node[ast_oxc](n6ce3b3e159e9764b_tl4bempok2ja7, tsnumber_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_tl4bempok2ja7, 8).
-start[ast_oxc](n6ce3b3e159e9764b_tl4bempok2ja7, 337).
 child[ast_oxc](n6ce3b3e159e9764b_2a941lqi38pt4, type_annotation, 0, n6ce3b3e159e9764b_tl4bempok2ja7).
 child[ast_oxc](n6ce3b3e159e9764b_0370p7mfgkkbc, type_annotation, 0, n6ce3b3e159e9764b_2a941lqi38pt4).
 child[ast_oxc](n6ce3b3e159e9764b_lgekq8v7lco8c, items, 2, n6ce3b3e159e9764b_0370p7mfgkkbc).
 child[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, params, 0, n6ce3b3e159e9764b_lgekq8v7lco8c).
 node[ast_oxc](n6ce3b3e159e9764b_m7oq8d3oorav2, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_m7oq8d3oorav2, 8).
-start[ast_oxc](n6ce3b3e159e9764b_m7oq8d3oorav2, 344).
 node[ast_oxc](n6ce3b3e159e9764b_i06qveb6oc7n5, tsvoid_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_i06qveb6oc7n5, 8).
-start[ast_oxc](n6ce3b3e159e9764b_i06qveb6oc7n5, 346).
 child[ast_oxc](n6ce3b3e159e9764b_m7oq8d3oorav2, type_annotation, 0, n6ce3b3e159e9764b_i06qveb6oc7n5).
 child[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, return_type, 0, n6ce3b3e159e9764b_m7oq8d3oorav2).
 node[ast_oxc](n6ce3b3e159e9764b_5m7qln328u71d, function_body, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_5m7qln328u71d, 8).
-start[ast_oxc](n6ce3b3e159e9764b_5m7qln328u71d, 354).
 child[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, body, 0, n6ce3b3e159e9764b_5m7qln328u71d).
 attr[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, async, false).
 attr[ast_oxc](n6ce3b3e159e9764b_ijqc338m09m4f, pure, false).
@@ -368,85 +297,67 @@ child[ast_oxc](n6ce3b3e159e9764b_1n6di10ov4st1, declarations, 0, n6ce3b3e159e976
 child[ast_oxc](n6ce3b3e159e9764b_root, body, 6, n6ce3b3e159e9764b_1n6di10ov4st1).
 node[ast_oxc](n6ce3b3e159e9764b_70u9vt8ffm12e, export_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_70u9vt8ffm12e, 10).
-start[ast_oxc](n6ce3b3e159e9764b_70u9vt8ffm12e, 360).
 node[ast_oxc](n6ce3b3e159e9764b_sfr4qbmihqbue, class, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_sfr4qbmihqbue, 10).
-start[ast_oxc](n6ce3b3e159e9764b_sfr4qbmihqbue, 367).
 attr[ast_oxc](n6ce3b3e159e9764b_sfr4qbmihqbue, variant, "ClassDeclaration").
 node[ast_oxc](n6ce3b3e159e9764b_2um6lh57qr51b, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_2um6lh57qr51b, 10).
-start[ast_oxc](n6ce3b3e159e9764b_2um6lh57qr51b, 373).
 attr[ast_oxc](n6ce3b3e159e9764b_2um6lh57qr51b, name, "Main").
 child[ast_oxc](n6ce3b3e159e9764b_sfr4qbmihqbue, id, 0, n6ce3b3e159e9764b_2um6lh57qr51b).
 node[ast_oxc](n6ce3b3e159e9764b_f2t8c983jo3oc, class_body, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_f2t8c983jo3oc, 10).
-start[ast_oxc](n6ce3b3e159e9764b_f2t8c983jo3oc, 378).
 node[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, method_definition, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, 11).
-start[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, 381).
 attr[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, type, "MethodDefinition").
 attr[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, kind, "Constructor").
 attr[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, computed, false).
 attr[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, static, false).
 node[ast_oxc](n6ce3b3e159e9764b_io7c7kmrfi2v3, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_io7c7kmrfi2v3, 11).
-start[ast_oxc](n6ce3b3e159e9764b_io7c7kmrfi2v3, 381).
 attr[ast_oxc](n6ce3b3e159e9764b_io7c7kmrfi2v3, variant, "StaticIdentifier").
 attr[ast_oxc](n6ce3b3e159e9764b_io7c7kmrfi2v3, name, "constructor").
 child[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, key, 0, n6ce3b3e159e9764b_io7c7kmrfi2v3).
 node[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, function, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, 11).
-start[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, 392).
 node[ast_oxc](n6ce3b3e159e9764b_7en8k6opndj88, formal_parameters, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_7en8k6opndj88, 11).
-start[ast_oxc](n6ce3b3e159e9764b_7en8k6opndj88, 392).
 attr[ast_oxc](n6ce3b3e159e9764b_7en8k6opndj88, kind, "UniqueFormalParameters").
 node[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, formal_parameter, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, 11).
-start[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, 393).
 attr[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, accessibility, "Private").
 attr[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, readonly, true).
 attr[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, override, false).
 node[ast_oxc](n6ce3b3e159e9764b_fcvlndukp5e2d, decorator, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_fcvlndukp5e2d, 11).
-start[ast_oxc](n6ce3b3e159e9764b_fcvlndukp5e2d, 393).
 node[ast_oxc](n6ce3b3e159e9764b_i29iasau4s6s9, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_i29iasau4s6s9, 11).
-start[ast_oxc](n6ce3b3e159e9764b_i29iasau4s6s9, 394).
 attr[ast_oxc](n6ce3b3e159e9764b_i29iasau4s6s9, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_i29iasau4s6s9, name, "IStorage").
 child[ast_oxc](n6ce3b3e159e9764b_fcvlndukp5e2d, expression, 0, n6ce3b3e159e9764b_i29iasau4s6s9).
 child[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, decorators, 0, n6ce3b3e159e9764b_fcvlndukp5e2d).
 node[ast_oxc](n6ce3b3e159e9764b_l3mdlqh81dfu8, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_l3mdlqh81dfu8, 11).
-start[ast_oxc](n6ce3b3e159e9764b_l3mdlqh81dfu8, 420).
 attr[ast_oxc](n6ce3b3e159e9764b_l3mdlqh81dfu8, name, "storage").
 child[ast_oxc](n6ce3b3e159e9764b_4ep7ad6ijfm7d, pattern, 0, n6ce3b3e159e9764b_l3mdlqh81dfu8).
 node[ast_oxc](n6ce3b3e159e9764b_u0rnalensla86, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_u0rnalensla86, 11).
-start[ast_oxc](n6ce3b3e159e9764b_u0rnalensla86, 427).
 node[ast_oxc](n6ce3b3e159e9764b_iilkr23gi76b1, tstype_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_iilkr23gi76b1, 11).
-start[ast_oxc](n6ce3b3e159e9764b_iilkr23gi76b1, 429).
 node[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, tsproperty_signature, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, 11).
-start[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, 431).
 attr[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, computed, false).
 attr[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, readonly, false).
 node[ast_oxc](n6ce3b3e159e9764b_e2mhi2ifq8u8, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_e2mhi2ifq8u8, 11).
-start[ast_oxc](n6ce3b3e159e9764b_e2mhi2ifq8u8, 431).
 attr[ast_oxc](n6ce3b3e159e9764b_e2mhi2ifq8u8, variant, "StaticIdentifier").
 attr[ast_oxc](n6ce3b3e159e9764b_e2mhi2ifq8u8, name, "dir").
 child[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, key, 0, n6ce3b3e159e9764b_e2mhi2ifq8u8).
 node[ast_oxc](n6ce3b3e159e9764b_pe6e40mctic5c, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_pe6e40mctic5c, 11).
-start[ast_oxc](n6ce3b3e159e9764b_pe6e40mctic5c, 434).
 node[ast_oxc](n6ce3b3e159e9764b_ma9u6il5jotj7, tsstring_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_ma9u6il5jotj7, 11).
-start[ast_oxc](n6ce3b3e159e9764b_ma9u6il5jotj7, 436).
 child[ast_oxc](n6ce3b3e159e9764b_pe6e40mctic5c, type_annotation, 0, n6ce3b3e159e9764b_ma9u6il5jotj7).
 child[ast_oxc](n6ce3b3e159e9764b_gbin35brbf0r4, type_annotation, 0, n6ce3b3e159e9764b_pe6e40mctic5c).
 child[ast_oxc](n6ce3b3e159e9764b_iilkr23gi76b1, members, 0, n6ce3b3e159e9764b_gbin35brbf0r4).
@@ -456,7 +367,6 @@ child[ast_oxc](n6ce3b3e159e9764b_7en8k6opndj88, items, 0, n6ce3b3e159e9764b_4ep7
 child[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, params, 0, n6ce3b3e159e9764b_7en8k6opndj88).
 node[ast_oxc](n6ce3b3e159e9764b_dno7r4rijfndc, function_body, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_dno7r4rijfndc, 11).
-start[ast_oxc](n6ce3b3e159e9764b_dno7r4rijfndc, 446).
 child[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, body, 0, n6ce3b3e159e9764b_dno7r4rijfndc).
 attr[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, type, "FunctionExpression").
 attr[ast_oxc](n6ce3b3e159e9764b_75k9ak48enqd2, generator, false).
@@ -470,59 +380,47 @@ attr[ast_oxc](n6ce3b3e159e9764b_h9f45526oser7, optional, false).
 child[ast_oxc](n6ce3b3e159e9764b_f2t8c983jo3oc, body, 0, n6ce3b3e159e9764b_h9f45526oser7).
 node[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, method_definition, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, 13).
-start[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, 452).
 attr[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, type, "MethodDefinition").
 attr[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, kind, "Method").
 attr[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, computed, false).
 attr[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, static, false).
 node[ast_oxc](n6ce3b3e159e9764b_79b8gn49ovuv, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_79b8gn49ovuv, 13).
-start[ast_oxc](n6ce3b3e159e9764b_79b8gn49ovuv, 452).
 attr[ast_oxc](n6ce3b3e159e9764b_79b8gn49ovuv, variant, "StaticIdentifier").
 attr[ast_oxc](n6ce3b3e159e9764b_79b8gn49ovuv, name, "run").
 child[ast_oxc](n6ce3b3e159e9764b_6b612iedco30a, key, 0, n6ce3b3e159e9764b_79b8gn49ovuv).
 node[ast_oxc](n6ce3b3e159e9764b_jht82i29r1nb5, function, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_jht82i29r1nb5, 13).
-start[ast_oxc](n6ce3b3e159e9764b_jht82i29r1nb5, 455).
 node[ast_oxc](n6ce3b3e159e9764b_bnq3oh84op5td, formal_parameters, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_bnq3oh84op5td, 13).
-start[ast_oxc](n6ce3b3e159e9764b_bnq3oh84op5td, 455).
 attr[ast_oxc](n6ce3b3e159e9764b_bnq3oh84op5td, kind, "UniqueFormalParameters").
 child[ast_oxc](n6ce3b3e159e9764b_jht82i29r1nb5, params, 0, n6ce3b3e159e9764b_bnq3oh84op5td).
 node[ast_oxc](n6ce3b3e159e9764b_fb6fg1tfg322f, tstype_annotation, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_fb6fg1tfg322f, 13).
-start[ast_oxc](n6ce3b3e159e9764b_fb6fg1tfg322f, 457).
 node[ast_oxc](n6ce3b3e159e9764b_i77pmbvinmstd, tsvoid_keyword, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_i77pmbvinmstd, 13).
-start[ast_oxc](n6ce3b3e159e9764b_i77pmbvinmstd, 459).
 child[ast_oxc](n6ce3b3e159e9764b_fb6fg1tfg322f, type_annotation, 0, n6ce3b3e159e9764b_i77pmbvinmstd).
 child[ast_oxc](n6ce3b3e159e9764b_jht82i29r1nb5, return_type, 0, n6ce3b3e159e9764b_fb6fg1tfg322f).
 node[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, function_body, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, 13).
-start[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, 464).
 node[ast_oxc](n6ce3b3e159e9764b_su6ce1k95b0fd, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_su6ce1k95b0fd, 14).
-start[ast_oxc](n6ce3b3e159e9764b_su6ce1k95b0fd, 468).
 node[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, 14).
-start[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, 468).
 attr[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_mn56s6g72t7n6, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_mn56s6g72t7n6, 14).
-start[ast_oxc](n6ce3b3e159e9764b_mn56s6g72t7n6, 468).
 attr[ast_oxc](n6ce3b3e159e9764b_mn56s6g72t7n6, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_mn56s6g72t7n6, name, "writeAtomic").
 child[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, callee, 0, n6ce3b3e159e9764b_mn56s6g72t7n6).
 node[ast_oxc](n6ce3b3e159e9764b_r6ees46ltj2v7, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_r6ees46ltj2v7, 14).
-start[ast_oxc](n6ce3b3e159e9764b_r6ees46ltj2v7, 480).
 attr[ast_oxc](n6ce3b3e159e9764b_r6ees46ltj2v7, value, "/tmp/settings.json").
 attr[ast_oxc](n6ce3b3e159e9764b_r6ees46ltj2v7, raw, "'/tmp/settings.json'").
 child[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, arguments, 0, n6ce3b3e159e9764b_r6ees46ltj2v7).
 node[ast_oxc](n6ce3b3e159e9764b_n8j3a27faslt4, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_n8j3a27faslt4, 14).
-start[ast_oxc](n6ce3b3e159e9764b_n8j3a27faslt4, 502).
 attr[ast_oxc](n6ce3b3e159e9764b_n8j3a27faslt4, value, "{}").
 attr[ast_oxc](n6ce3b3e159e9764b_n8j3a27faslt4, raw, "'{}'").
 child[ast_oxc](n6ce3b3e159e9764b_bb8ghajj4cbt5, arguments, 1, n6ce3b3e159e9764b_n8j3a27faslt4).
@@ -530,21 +428,17 @@ child[ast_oxc](n6ce3b3e159e9764b_su6ce1k95b0fd, expression, 0, n6ce3b3e159e9764b
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 0, n6ce3b3e159e9764b_su6ce1k95b0fd).
 node[ast_oxc](n6ce3b3e159e9764b_t8pbhfgudfk21, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_t8pbhfgudfk21, 15).
-start[ast_oxc](n6ce3b3e159e9764b_t8pbhfgudfk21, 511).
 node[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, 15).
-start[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, 511).
 attr[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_jerubqqveea77, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_jerubqqveea77, 15).
-start[ast_oxc](n6ce3b3e159e9764b_jerubqqveea77, 511).
 attr[ast_oxc](n6ce3b3e159e9764b_jerubqqveea77, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_jerubqqveea77, name, "remove").
 child[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, callee, 0, n6ce3b3e159e9764b_jerubqqveea77).
 node[ast_oxc](n6ce3b3e159e9764b_q3f5a4bf3ebk4, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_q3f5a4bf3ebk4, 15).
-start[ast_oxc](n6ce3b3e159e9764b_q3f5a4bf3ebk4, 518).
 attr[ast_oxc](n6ce3b3e159e9764b_q3f5a4bf3ebk4, value, "/tmp/cache").
 attr[ast_oxc](n6ce3b3e159e9764b_q3f5a4bf3ebk4, raw, "'/tmp/cache'").
 child[ast_oxc](n6ce3b3e159e9764b_56ei252rls6cb, arguments, 0, n6ce3b3e159e9764b_q3f5a4bf3ebk4).
@@ -552,39 +446,31 @@ child[ast_oxc](n6ce3b3e159e9764b_t8pbhfgudfk21, expression, 0, n6ce3b3e159e9764b
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 1, n6ce3b3e159e9764b_t8pbhfgudfk21).
 node[ast_oxc](n6ce3b3e159e9764b_ivmmtchomsfj6, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_ivmmtchomsfj6, 16).
-start[ast_oxc](n6ce3b3e159e9764b_ivmmtchomsfj6, 535).
 node[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, 16).
-start[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, 535).
 attr[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_a9te2d5nkk2m3, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_a9te2d5nkk2m3, 16).
-start[ast_oxc](n6ce3b3e159e9764b_a9te2d5nkk2m3, 535).
 attr[ast_oxc](n6ce3b3e159e9764b_a9te2d5nkk2m3, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_a9te2d5nkk2m3, name, "remove").
 child[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, callee, 0, n6ce3b3e159e9764b_a9te2d5nkk2m3).
 node[ast_oxc](n6ce3b3e159e9764b_0oqqijomhsuue, static_member_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_0oqqijomhsuue, 16).
-start[ast_oxc](n6ce3b3e159e9764b_0oqqijomhsuue, 542).
 attr[ast_oxc](n6ce3b3e159e9764b_0oqqijomhsuue, optional, false).
 node[ast_oxc](n6ce3b3e159e9764b_9jkkk3i10960b, static_member_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_9jkkk3i10960b, 16).
-start[ast_oxc](n6ce3b3e159e9764b_9jkkk3i10960b, 542).
 attr[ast_oxc](n6ce3b3e159e9764b_9jkkk3i10960b, optional, false).
 node[ast_oxc](n6ce3b3e159e9764b_kf2i79c7g5a1d, this_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_kf2i79c7g5a1d, 16).
-start[ast_oxc](n6ce3b3e159e9764b_kf2i79c7g5a1d, 542).
 child[ast_oxc](n6ce3b3e159e9764b_9jkkk3i10960b, object, 0, n6ce3b3e159e9764b_kf2i79c7g5a1d).
 node[ast_oxc](n6ce3b3e159e9764b_sh6qcfigni3tf, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_sh6qcfigni3tf, 16).
-start[ast_oxc](n6ce3b3e159e9764b_sh6qcfigni3tf, 547).
 attr[ast_oxc](n6ce3b3e159e9764b_sh6qcfigni3tf, name, "storage").
 child[ast_oxc](n6ce3b3e159e9764b_9jkkk3i10960b, property, 0, n6ce3b3e159e9764b_sh6qcfigni3tf).
 child[ast_oxc](n6ce3b3e159e9764b_0oqqijomhsuue, object, 0, n6ce3b3e159e9764b_9jkkk3i10960b).
 node[ast_oxc](n6ce3b3e159e9764b_jq47db9hjrcn5, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_jq47db9hjrcn5, 16).
-start[ast_oxc](n6ce3b3e159e9764b_jq47db9hjrcn5, 555).
 attr[ast_oxc](n6ce3b3e159e9764b_jq47db9hjrcn5, name, "dir").
 child[ast_oxc](n6ce3b3e159e9764b_0oqqijomhsuue, property, 0, n6ce3b3e159e9764b_jq47db9hjrcn5).
 child[ast_oxc](n6ce3b3e159e9764b_i81ivvh0eus2f, arguments, 0, n6ce3b3e159e9764b_0oqqijomhsuue).
@@ -592,21 +478,17 @@ child[ast_oxc](n6ce3b3e159e9764b_ivmmtchomsfj6, expression, 0, n6ce3b3e159e9764b
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 2, n6ce3b3e159e9764b_ivmmtchomsfj6).
 node[ast_oxc](n6ce3b3e159e9764b_58vmr9f0iogj3, variable_declaration, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_58vmr9f0iogj3, 17).
-start[ast_oxc](n6ce3b3e159e9764b_58vmr9f0iogj3, 563).
 attr[ast_oxc](n6ce3b3e159e9764b_58vmr9f0iogj3, kind, "Const").
 attr[ast_oxc](n6ce3b3e159e9764b_58vmr9f0iogj3, declare, false).
 node[ast_oxc](n6ce3b3e159e9764b_p1pg1pnsb1d01, variable_declarator, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_p1pg1pnsb1d01, 17).
-start[ast_oxc](n6ce3b3e159e9764b_p1pg1pnsb1d01, 569).
 attr[ast_oxc](n6ce3b3e159e9764b_p1pg1pnsb1d01, definite, false).
 node[ast_oxc](n6ce3b3e159e9764b_o1r9v2gg06n6b, binding_identifier, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_o1r9v2gg06n6b, 17).
-start[ast_oxc](n6ce3b3e159e9764b_o1r9v2gg06n6b, 569).
 attr[ast_oxc](n6ce3b3e159e9764b_o1r9v2gg06n6b, name, "editor").
 child[ast_oxc](n6ce3b3e159e9764b_p1pg1pnsb1d01, id, 0, n6ce3b3e159e9764b_o1r9v2gg06n6b).
 node[ast_oxc](n6ce3b3e159e9764b_9sk833rsgqj61, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_9sk833rsgqj61, 17).
-start[ast_oxc](n6ce3b3e159e9764b_9sk833rsgqj61, 578).
 attr[ast_oxc](n6ce3b3e159e9764b_9sk833rsgqj61, value, "code").
 attr[ast_oxc](n6ce3b3e159e9764b_9sk833rsgqj61, raw, "'code'").
 child[ast_oxc](n6ce3b3e159e9764b_p1pg1pnsb1d01, init, 0, n6ce3b3e159e9764b_9sk833rsgqj61).
@@ -614,30 +496,24 @@ child[ast_oxc](n6ce3b3e159e9764b_58vmr9f0iogj3, declarations, 0, n6ce3b3e159e976
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 3, n6ce3b3e159e9764b_58vmr9f0iogj3).
 node[ast_oxc](n6ce3b3e159e9764b_dgl6ipclubtc, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_dgl6ipclubtc, 18).
-start[ast_oxc](n6ce3b3e159e9764b_dgl6ipclubtc, 588).
 node[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, 18).
-start[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, 588).
 attr[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_cc26vemp1p9s5, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_cc26vemp1p9s5, 18).
-start[ast_oxc](n6ce3b3e159e9764b_cc26vemp1p9s5, 588).
 attr[ast_oxc](n6ce3b3e159e9764b_cc26vemp1p9s5, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_cc26vemp1p9s5, name, "spawn").
 child[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, callee, 0, n6ce3b3e159e9764b_cc26vemp1p9s5).
 node[ast_oxc](n6ce3b3e159e9764b_98mb8ialisoaf, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_98mb8ialisoaf, 18).
-start[ast_oxc](n6ce3b3e159e9764b_98mb8ialisoaf, 594).
 attr[ast_oxc](n6ce3b3e159e9764b_98mb8ialisoaf, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_98mb8ialisoaf, name, "editor").
 child[ast_oxc](n6ce3b3e159e9764b_1dj5olcm9qms8, arguments, 0, n6ce3b3e159e9764b_98mb8ialisoaf).
 node[ast_oxc](n6ce3b3e159e9764b_vlpucnbp5iir7, array_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_vlpucnbp5iir7, 18).
-start[ast_oxc](n6ce3b3e159e9764b_vlpucnbp5iir7, 602).
 node[ast_oxc](n6ce3b3e159e9764b_7us08me3fvgl2, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_7us08me3fvgl2, 18).
-start[ast_oxc](n6ce3b3e159e9764b_7us08me3fvgl2, 603).
 attr[ast_oxc](n6ce3b3e159e9764b_7us08me3fvgl2, value, "--wait").
 attr[ast_oxc](n6ce3b3e159e9764b_7us08me3fvgl2, raw, "'--wait'").
 child[ast_oxc](n6ce3b3e159e9764b_vlpucnbp5iir7, elements, 0, n6ce3b3e159e9764b_7us08me3fvgl2).
@@ -646,30 +522,24 @@ child[ast_oxc](n6ce3b3e159e9764b_dgl6ipclubtc, expression, 0, n6ce3b3e159e9764b_
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 4, n6ce3b3e159e9764b_dgl6ipclubtc).
 node[ast_oxc](n6ce3b3e159e9764b_vv0513ub5t2u9, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_vv0513ub5t2u9, 19).
-start[ast_oxc](n6ce3b3e159e9764b_vv0513ub5t2u9, 617).
 node[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, 19).
-start[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, 617).
 attr[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_hm7jd4v26p8t2, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_hm7jd4v26p8t2, 19).
-start[ast_oxc](n6ce3b3e159e9764b_hm7jd4v26p8t2, 617).
 attr[ast_oxc](n6ce3b3e159e9764b_hm7jd4v26p8t2, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_hm7jd4v26p8t2, name, "execFile").
 child[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, callee, 0, n6ce3b3e159e9764b_hm7jd4v26p8t2).
 node[ast_oxc](n6ce3b3e159e9764b_dafs3n7ois4h9, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_dafs3n7ois4h9, 19).
-start[ast_oxc](n6ce3b3e159e9764b_dafs3n7ois4h9, 626).
 attr[ast_oxc](n6ce3b3e159e9764b_dafs3n7ois4h9, value, "git").
 attr[ast_oxc](n6ce3b3e159e9764b_dafs3n7ois4h9, raw, "'git'").
 child[ast_oxc](n6ce3b3e159e9764b_mbhpkrske2b34, arguments, 0, n6ce3b3e159e9764b_dafs3n7ois4h9).
 node[ast_oxc](n6ce3b3e159e9764b_2u8m96a9je6jb, array_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_2u8m96a9je6jb, 19).
-start[ast_oxc](n6ce3b3e159e9764b_2u8m96a9je6jb, 633).
 node[ast_oxc](n6ce3b3e159e9764b_hduqdtpmk7dfe, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_hduqdtpmk7dfe, 19).
-start[ast_oxc](n6ce3b3e159e9764b_hduqdtpmk7dfe, 634).
 attr[ast_oxc](n6ce3b3e159e9764b_hduqdtpmk7dfe, value, "status").
 attr[ast_oxc](n6ce3b3e159e9764b_hduqdtpmk7dfe, raw, "'status'").
 child[ast_oxc](n6ce3b3e159e9764b_2u8m96a9je6jb, elements, 0, n6ce3b3e159e9764b_hduqdtpmk7dfe).
@@ -678,45 +548,36 @@ child[ast_oxc](n6ce3b3e159e9764b_vv0513ub5t2u9, expression, 0, n6ce3b3e159e9764b
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 5, n6ce3b3e159e9764b_vv0513ub5t2u9).
 node[ast_oxc](n6ce3b3e159e9764b_q5hc30rpvea9, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_q5hc30rpvea9, 20).
-start[ast_oxc](n6ce3b3e159e9764b_q5hc30rpvea9, 648).
 node[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, 20).
-start[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, 648).
 attr[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_in5445avkv6v3, static_member_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_in5445avkv6v3, 20).
-start[ast_oxc](n6ce3b3e159e9764b_in5445avkv6v3, 648).
 attr[ast_oxc](n6ce3b3e159e9764b_in5445avkv6v3, optional, false).
 node[ast_oxc](n6ce3b3e159e9764b_gokcrpubs3901, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_gokcrpubs3901, 20).
-start[ast_oxc](n6ce3b3e159e9764b_gokcrpubs3901, 648).
 attr[ast_oxc](n6ce3b3e159e9764b_gokcrpubs3901, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_gokcrpubs3901, name, "ipcMain").
 child[ast_oxc](n6ce3b3e159e9764b_in5445avkv6v3, object, 0, n6ce3b3e159e9764b_gokcrpubs3901).
 node[ast_oxc](n6ce3b3e159e9764b_k9o4u6ju6vnp1, identifier_name, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_k9o4u6ju6vnp1, 20).
-start[ast_oxc](n6ce3b3e159e9764b_k9o4u6ju6vnp1, 656).
 attr[ast_oxc](n6ce3b3e159e9764b_k9o4u6ju6vnp1, name, "handle").
 child[ast_oxc](n6ce3b3e159e9764b_in5445avkv6v3, property, 0, n6ce3b3e159e9764b_k9o4u6ju6vnp1).
 child[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, callee, 0, n6ce3b3e159e9764b_in5445avkv6v3).
 node[ast_oxc](n6ce3b3e159e9764b_42etpsp7pruic, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_42etpsp7pruic, 20).
-start[ast_oxc](n6ce3b3e159e9764b_42etpsp7pruic, 663).
 attr[ast_oxc](n6ce3b3e159e9764b_42etpsp7pruic, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_42etpsp7pruic, name, "HELLO_CHANNEL").
 child[ast_oxc](n6ce3b3e159e9764b_2hjc65i58obmd, arguments, 0, n6ce3b3e159e9764b_42etpsp7pruic).
 node[ast_oxc](n6ce3b3e159e9764b_9oicdo040snh6, arrow_function_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_9oicdo040snh6, 20).
-start[ast_oxc](n6ce3b3e159e9764b_9oicdo040snh6, 678).
 node[ast_oxc](n6ce3b3e159e9764b_oc9m5o11ouude, formal_parameters, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_oc9m5o11ouude, 20).
-start[ast_oxc](n6ce3b3e159e9764b_oc9m5o11ouude, 678).
 attr[ast_oxc](n6ce3b3e159e9764b_oc9m5o11ouude, kind, "ArrowFormalParameters").
 child[ast_oxc](n6ce3b3e159e9764b_9oicdo040snh6, params, 0, n6ce3b3e159e9764b_oc9m5o11ouude).
 node[ast_oxc](n6ce3b3e159e9764b_qojhscv34ibvb, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_qojhscv34ibvb, 20).
-start[ast_oxc](n6ce3b3e159e9764b_qojhscv34ibvb, 684).
 attr[ast_oxc](n6ce3b3e159e9764b_qojhscv34ibvb, value, "hi").
 attr[ast_oxc](n6ce3b3e159e9764b_qojhscv34ibvb, raw, "'hi'").
 child[ast_oxc](n6ce3b3e159e9764b_9oicdo040snh6, body, 0, n6ce3b3e159e9764b_qojhscv34ibvb).
@@ -728,21 +589,17 @@ child[ast_oxc](n6ce3b3e159e9764b_q5hc30rpvea9, expression, 0, n6ce3b3e159e9764b_
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 6, n6ce3b3e159e9764b_q5hc30rpvea9).
 node[ast_oxc](n6ce3b3e159e9764b_uhtp0h87ukso6, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_uhtp0h87ukso6, 21).
-start[ast_oxc](n6ce3b3e159e9764b_uhtp0h87ukso6, 693).
 node[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, 21).
-start[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, 693).
 attr[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_s39lfmvvolbke, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_s39lfmvvolbke, 21).
-start[ast_oxc](n6ce3b3e159e9764b_s39lfmvvolbke, 693).
 attr[ast_oxc](n6ce3b3e159e9764b_s39lfmvvolbke, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_s39lfmvvolbke, name, "fetch").
 child[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, callee, 0, n6ce3b3e159e9764b_s39lfmvvolbke).
 node[ast_oxc](n6ce3b3e159e9764b_2k7jfll5efs27, string_literal, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_2k7jfll5efs27, 21).
-start[ast_oxc](n6ce3b3e159e9764b_2k7jfll5efs27, 699).
 attr[ast_oxc](n6ce3b3e159e9764b_2k7jfll5efs27, value, "https://update.code.visualstudio.com/api/update").
 attr[ast_oxc](n6ce3b3e159e9764b_2k7jfll5efs27, raw, "'https://update.code.visualstudio.com/api/update'").
 child[ast_oxc](n6ce3b3e159e9764b_9kn3nahf2h2be, arguments, 0, n6ce3b3e159e9764b_2k7jfll5efs27).
@@ -750,15 +607,12 @@ child[ast_oxc](n6ce3b3e159e9764b_uhtp0h87ukso6, expression, 0, n6ce3b3e159e9764b
 child[ast_oxc](n6ce3b3e159e9764b_85a5cgcdp20f3, statements, 7, n6ce3b3e159e9764b_uhtp0h87ukso6).
 node[ast_oxc](n6ce3b3e159e9764b_vepofehufsgia, expression_statement, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_vepofehufsgia, 22).
-start[ast_oxc](n6ce3b3e159e9764b_vepofehufsgia, 753).
 node[ast_oxc](n6ce3b3e159e9764b_g497tba4k2c6b, call_expression, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_g497tba4k2c6b, 22).
-start[ast_oxc](n6ce3b3e159e9764b_g497tba4k2c6b, 753).
 attr[ast_oxc](n6ce3b3e159e9764b_g497tba4k2c6b, optional, false).
 attr[ast_oxc](n6ce3b3e159e9764b_g497tba4k2c6b, pure, false).
 node[ast_oxc](n6ce3b3e159e9764b_8vvulbv7ff5r8, identifier_reference, "mini/node/main.ts").
 line[ast_oxc](n6ce3b3e159e9764b_8vvulbv7ff5r8, 22).
-start[ast_oxc](n6ce3b3e159e9764b_8vvulbv7ff5r8, 753).
 attr[ast_oxc](n6ce3b3e159e9764b_8vvulbv7ff5r8, variant, "Identifier").
 attr[ast_oxc](n6ce3b3e159e9764b_8vvulbv7ff5r8, name, "startServers").
 child[ast_oxc](n6ce3b3e159e9764b_g497tba4k2c6b, callee, 0, n6ce3b3e159e9764b_8vvulbv7ff5r8).
@@ -787,125 +641,100 @@ attr[ast_oxc](n6ce3b3e159e9764b_root, source_type_variant, "Standard").
 file[ast_oxc](n6ce3b3e159e9764b_root, "mini/node/main.ts").
 node[ast_oxc](ndbdc6130c943fdee_root, program, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_root, 1).
-start[ast_oxc](ndbdc6130c943fdee_root, 0).
 node[ast_oxc](ndbdc6130c943fdee_uesbsbv2e4ve5, import_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_uesbsbv2e4ve5, 1).
-start[ast_oxc](ndbdc6130c943fdee_uesbsbv2e4ve5, 0).
 attr[ast_oxc](ndbdc6130c943fdee_uesbsbv2e4ve5, import_kind, "Value").
 node[ast_oxc](ndbdc6130c943fdee_22ihlguf474a1, import_namespace_specifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_22ihlguf474a1, 1).
-start[ast_oxc](ndbdc6130c943fdee_22ihlguf474a1, 7).
 node[ast_oxc](ndbdc6130c943fdee_qs3k8dbpq69cd, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_qs3k8dbpq69cd, 1).
-start[ast_oxc](ndbdc6130c943fdee_qs3k8dbpq69cd, 12).
 attr[ast_oxc](ndbdc6130c943fdee_qs3k8dbpq69cd, name, "fs").
 child[ast_oxc](ndbdc6130c943fdee_22ihlguf474a1, local, 0, ndbdc6130c943fdee_qs3k8dbpq69cd).
 child[ast_oxc](ndbdc6130c943fdee_uesbsbv2e4ve5, specifiers, 0, ndbdc6130c943fdee_22ihlguf474a1).
 node[ast_oxc](ndbdc6130c943fdee_v1pgh1jo23gm, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_v1pgh1jo23gm, 1).
-start[ast_oxc](ndbdc6130c943fdee_v1pgh1jo23gm, 20).
 attr[ast_oxc](ndbdc6130c943fdee_v1pgh1jo23gm, value, "fs").
 attr[ast_oxc](ndbdc6130c943fdee_v1pgh1jo23gm, raw, "'fs'").
 child[ast_oxc](ndbdc6130c943fdee_uesbsbv2e4ve5, source, 0, ndbdc6130c943fdee_v1pgh1jo23gm).
 child[ast_oxc](ndbdc6130c943fdee_root, body, 0, ndbdc6130c943fdee_uesbsbv2e4ve5).
 node[ast_oxc](ndbdc6130c943fdee_f9gvj7t62vc86, import_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_f9gvj7t62vc86, 2).
-start[ast_oxc](ndbdc6130c943fdee_f9gvj7t62vc86, 26).
 attr[ast_oxc](ndbdc6130c943fdee_f9gvj7t62vc86, import_kind, "Value").
 node[ast_oxc](ndbdc6130c943fdee_p5hfjsadv6313, import_namespace_specifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_p5hfjsadv6313, 2).
-start[ast_oxc](ndbdc6130c943fdee_p5hfjsadv6313, 33).
 node[ast_oxc](ndbdc6130c943fdee_mjjebvqddmc2a, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_mjjebvqddmc2a, 2).
-start[ast_oxc](ndbdc6130c943fdee_mjjebvqddmc2a, 38).
 attr[ast_oxc](ndbdc6130c943fdee_mjjebvqddmc2a, name, "https").
 child[ast_oxc](ndbdc6130c943fdee_p5hfjsadv6313, local, 0, ndbdc6130c943fdee_mjjebvqddmc2a).
 child[ast_oxc](ndbdc6130c943fdee_f9gvj7t62vc86, specifiers, 0, ndbdc6130c943fdee_p5hfjsadv6313).
 node[ast_oxc](ndbdc6130c943fdee_95hcj5uojgt0a, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_95hcj5uojgt0a, 2).
-start[ast_oxc](ndbdc6130c943fdee_95hcj5uojgt0a, 49).
 attr[ast_oxc](ndbdc6130c943fdee_95hcj5uojgt0a, value, "https").
 attr[ast_oxc](ndbdc6130c943fdee_95hcj5uojgt0a, raw, "'https'").
 child[ast_oxc](ndbdc6130c943fdee_f9gvj7t62vc86, source, 0, ndbdc6130c943fdee_95hcj5uojgt0a).
 child[ast_oxc](ndbdc6130c943fdee_root, body, 1, ndbdc6130c943fdee_f9gvj7t62vc86).
 node[ast_oxc](ndbdc6130c943fdee_45fjcu2quek02, import_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_45fjcu2quek02, 3).
-start[ast_oxc](ndbdc6130c943fdee_45fjcu2quek02, 58).
 attr[ast_oxc](ndbdc6130c943fdee_45fjcu2quek02, import_kind, "Value").
 node[ast_oxc](ndbdc6130c943fdee_pu5rlc1jd5ctb, import_namespace_specifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_pu5rlc1jd5ctb, 3).
-start[ast_oxc](ndbdc6130c943fdee_pu5rlc1jd5ctb, 65).
 node[ast_oxc](ndbdc6130c943fdee_m69hg7cdhklsf, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_m69hg7cdhklsf, 3).
-start[ast_oxc](ndbdc6130c943fdee_m69hg7cdhklsf, 70).
 attr[ast_oxc](ndbdc6130c943fdee_m69hg7cdhklsf, name, "path").
 child[ast_oxc](ndbdc6130c943fdee_pu5rlc1jd5ctb, local, 0, ndbdc6130c943fdee_m69hg7cdhklsf).
 child[ast_oxc](ndbdc6130c943fdee_45fjcu2quek02, specifiers, 0, ndbdc6130c943fdee_pu5rlc1jd5ctb).
 node[ast_oxc](ndbdc6130c943fdee_vbk177kpasstb, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vbk177kpasstb, 3).
-start[ast_oxc](ndbdc6130c943fdee_vbk177kpasstb, 80).
 attr[ast_oxc](ndbdc6130c943fdee_vbk177kpasstb, value, "path").
 attr[ast_oxc](ndbdc6130c943fdee_vbk177kpasstb, raw, "'path'").
 child[ast_oxc](ndbdc6130c943fdee_45fjcu2quek02, source, 0, ndbdc6130c943fdee_vbk177kpasstb).
 child[ast_oxc](ndbdc6130c943fdee_root, body, 2, ndbdc6130c943fdee_45fjcu2quek02).
 node[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, import_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, 4).
-start[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, 88).
 attr[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, import_kind, "Value").
 node[ast_oxc](ndbdc6130c943fdee_jed85k6fejf62, import_specifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_jed85k6fejf62, 4).
-start[ast_oxc](ndbdc6130c943fdee_jed85k6fejf62, 97).
 attr[ast_oxc](ndbdc6130c943fdee_jed85k6fejf62, import_kind, "Value").
 node[ast_oxc](ndbdc6130c943fdee_rhqsibcvdcok6, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_rhqsibcvdcok6, 4).
-start[ast_oxc](ndbdc6130c943fdee_rhqsibcvdcok6, 97).
 attr[ast_oxc](ndbdc6130c943fdee_rhqsibcvdcok6, name, "dirname").
 child[ast_oxc](ndbdc6130c943fdee_jed85k6fejf62, imported, 0, ndbdc6130c943fdee_rhqsibcvdcok6).
 node[ast_oxc](ndbdc6130c943fdee_nt2ucds5k6087, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_nt2ucds5k6087, 4).
-start[ast_oxc](ndbdc6130c943fdee_nt2ucds5k6087, 97).
 attr[ast_oxc](ndbdc6130c943fdee_nt2ucds5k6087, name, "dirname").
 child[ast_oxc](ndbdc6130c943fdee_jed85k6fejf62, local, 0, ndbdc6130c943fdee_nt2ucds5k6087).
 child[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, specifiers, 0, ndbdc6130c943fdee_jed85k6fejf62).
 node[ast_oxc](ndbdc6130c943fdee_0ej630q4dspf5, import_specifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_0ej630q4dspf5, 4).
-start[ast_oxc](ndbdc6130c943fdee_0ej630q4dspf5, 106).
 attr[ast_oxc](ndbdc6130c943fdee_0ej630q4dspf5, import_kind, "Value").
 node[ast_oxc](ndbdc6130c943fdee_6n008ka44gt58, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_6n008ka44gt58, 4).
-start[ast_oxc](ndbdc6130c943fdee_6n008ka44gt58, 106).
 attr[ast_oxc](ndbdc6130c943fdee_6n008ka44gt58, name, "join").
 child[ast_oxc](ndbdc6130c943fdee_0ej630q4dspf5, imported, 0, ndbdc6130c943fdee_6n008ka44gt58).
 node[ast_oxc](ndbdc6130c943fdee_k7stdc9034pca, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_k7stdc9034pca, 4).
-start[ast_oxc](ndbdc6130c943fdee_k7stdc9034pca, 106).
 attr[ast_oxc](ndbdc6130c943fdee_k7stdc9034pca, name, "join").
 child[ast_oxc](ndbdc6130c943fdee_0ej630q4dspf5, local, 0, ndbdc6130c943fdee_k7stdc9034pca).
 child[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, specifiers, 1, ndbdc6130c943fdee_0ej630q4dspf5).
 node[ast_oxc](ndbdc6130c943fdee_cpb4mr8i08aj2, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_cpb4mr8i08aj2, 4).
-start[ast_oxc](ndbdc6130c943fdee_cpb4mr8i08aj2, 118).
 attr[ast_oxc](ndbdc6130c943fdee_cpb4mr8i08aj2, value, "path").
 attr[ast_oxc](ndbdc6130c943fdee_cpb4mr8i08aj2, raw, "'path'").
 child[ast_oxc](ndbdc6130c943fdee_srei7rnealuqd, source, 0, ndbdc6130c943fdee_cpb4mr8i08aj2).
 child[ast_oxc](ndbdc6130c943fdee_root, body, 3, ndbdc6130c943fdee_srei7rnealuqd).
 node[ast_oxc](ndbdc6130c943fdee_hkfsabjsfmpk1, variable_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_hkfsabjsfmpk1, 6).
-start[ast_oxc](ndbdc6130c943fdee_hkfsabjsfmpk1, 127).
 attr[ast_oxc](ndbdc6130c943fdee_hkfsabjsfmpk1, kind, "Const").
 attr[ast_oxc](ndbdc6130c943fdee_hkfsabjsfmpk1, declare, false).
 node[ast_oxc](ndbdc6130c943fdee_5n6c464mui1if, variable_declarator, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_5n6c464mui1if, 6).
-start[ast_oxc](ndbdc6130c943fdee_5n6c464mui1if, 133).
 attr[ast_oxc](ndbdc6130c943fdee_5n6c464mui1if, definite, false).
 node[ast_oxc](ndbdc6130c943fdee_v7vj3cr6cvrk5, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_v7vj3cr6cvrk5, 6).
-start[ast_oxc](ndbdc6130c943fdee_v7vj3cr6cvrk5, 133).
 attr[ast_oxc](ndbdc6130c943fdee_v7vj3cr6cvrk5, name, "appRoot").
 child[ast_oxc](ndbdc6130c943fdee_5n6c464mui1if, id, 0, ndbdc6130c943fdee_v7vj3cr6cvrk5).
 node[ast_oxc](ndbdc6130c943fdee_3tms35g7qbptb, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_3tms35g7qbptb, 6).
-start[ast_oxc](ndbdc6130c943fdee_3tms35g7qbptb, 143).
 attr[ast_oxc](ndbdc6130c943fdee_3tms35g7qbptb, value, "/opt/app").
 attr[ast_oxc](ndbdc6130c943fdee_3tms35g7qbptb, raw, "'/opt/app'").
 child[ast_oxc](ndbdc6130c943fdee_5n6c464mui1if, init, 0, ndbdc6130c943fdee_3tms35g7qbptb).
@@ -913,21 +742,17 @@ child[ast_oxc](ndbdc6130c943fdee_hkfsabjsfmpk1, declarations, 0, ndbdc6130c943fd
 child[ast_oxc](ndbdc6130c943fdee_root, body, 4, ndbdc6130c943fdee_hkfsabjsfmpk1).
 node[ast_oxc](ndbdc6130c943fdee_04uit4ajncna7, variable_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_04uit4ajncna7, 7).
-start[ast_oxc](ndbdc6130c943fdee_04uit4ajncna7, 155).
 attr[ast_oxc](ndbdc6130c943fdee_04uit4ajncna7, kind, "Const").
 attr[ast_oxc](ndbdc6130c943fdee_04uit4ajncna7, declare, false).
 node[ast_oxc](ndbdc6130c943fdee_sl9ie87rru1p1, variable_declarator, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_sl9ie87rru1p1, 7).
-start[ast_oxc](ndbdc6130c943fdee_sl9ie87rru1p1, 161).
 attr[ast_oxc](ndbdc6130c943fdee_sl9ie87rru1p1, definite, false).
 node[ast_oxc](ndbdc6130c943fdee_8k6t7intnsk2a, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_8k6t7intnsk2a, 7).
-start[ast_oxc](ndbdc6130c943fdee_8k6t7intnsk2a, 161).
 attr[ast_oxc](ndbdc6130c943fdee_8k6t7intnsk2a, name, "updateBase").
 child[ast_oxc](ndbdc6130c943fdee_sl9ie87rru1p1, id, 0, ndbdc6130c943fdee_8k6t7intnsk2a).
 node[ast_oxc](ndbdc6130c943fdee_87k1s2fi19amb, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_87k1s2fi19amb, 7).
-start[ast_oxc](ndbdc6130c943fdee_87k1s2fi19amb, 174).
 attr[ast_oxc](ndbdc6130c943fdee_87k1s2fi19amb, value, "https://update.code.visualstudio.com").
 attr[ast_oxc](ndbdc6130c943fdee_87k1s2fi19amb, raw, "'https://update.code.visualstudio.com'").
 child[ast_oxc](ndbdc6130c943fdee_sl9ie87rru1p1, init, 0, ndbdc6130c943fdee_87k1s2fi19amb).
@@ -935,139 +760,111 @@ child[ast_oxc](ndbdc6130c943fdee_04uit4ajncna7, declarations, 0, ndbdc6130c943fd
 child[ast_oxc](ndbdc6130c943fdee_root, body, 5, ndbdc6130c943fdee_04uit4ajncna7).
 node[ast_oxc](ndbdc6130c943fdee_aa4dm6fe0u1ae, export_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_aa4dm6fe0u1ae, 9).
-start[ast_oxc](ndbdc6130c943fdee_aa4dm6fe0u1ae, 215).
 node[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, function, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, 9).
-start[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, 222).
 attr[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, variant, "FunctionDeclaration").
 node[ast_oxc](ndbdc6130c943fdee_m9c6364ado2f4, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_m9c6364ado2f4, 9).
-start[ast_oxc](ndbdc6130c943fdee_m9c6364ado2f4, 231).
 attr[ast_oxc](ndbdc6130c943fdee_m9c6364ado2f4, name, "writeOutput").
 child[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, id, 0, ndbdc6130c943fdee_m9c6364ado2f4).
 node[ast_oxc](ndbdc6130c943fdee_46r0p6hvrgc1a, formal_parameters, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_46r0p6hvrgc1a, 9).
-start[ast_oxc](ndbdc6130c943fdee_46r0p6hvrgc1a, 242).
 attr[ast_oxc](ndbdc6130c943fdee_46r0p6hvrgc1a, kind, "FormalParameter").
 node[ast_oxc](ndbdc6130c943fdee_j6et06h957id, formal_parameter, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_j6et06h957id, 9).
-start[ast_oxc](ndbdc6130c943fdee_j6et06h957id, 243).
 attr[ast_oxc](ndbdc6130c943fdee_j6et06h957id, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_j6et06h957id, readonly, false).
 attr[ast_oxc](ndbdc6130c943fdee_j6et06h957id, override, false).
 node[ast_oxc](ndbdc6130c943fdee_vhu4pbk505q0b, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vhu4pbk505q0b, 9).
-start[ast_oxc](ndbdc6130c943fdee_vhu4pbk505q0b, 243).
 attr[ast_oxc](ndbdc6130c943fdee_vhu4pbk505q0b, name, "name").
 child[ast_oxc](ndbdc6130c943fdee_j6et06h957id, pattern, 0, ndbdc6130c943fdee_vhu4pbk505q0b).
 node[ast_oxc](ndbdc6130c943fdee_vg7vuje10q493, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vg7vuje10q493, 9).
-start[ast_oxc](ndbdc6130c943fdee_vg7vuje10q493, 247).
 node[ast_oxc](ndbdc6130c943fdee_0dv2u38u4c9vd, tsstring_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_0dv2u38u4c9vd, 9).
-start[ast_oxc](ndbdc6130c943fdee_0dv2u38u4c9vd, 249).
 child[ast_oxc](ndbdc6130c943fdee_vg7vuje10q493, type_annotation, 0, ndbdc6130c943fdee_0dv2u38u4c9vd).
 child[ast_oxc](ndbdc6130c943fdee_j6et06h957id, type_annotation, 0, ndbdc6130c943fdee_vg7vuje10q493).
 child[ast_oxc](ndbdc6130c943fdee_46r0p6hvrgc1a, items, 0, ndbdc6130c943fdee_j6et06h957id).
 node[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, formal_parameter, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, 9).
-start[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, 257).
 attr[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, readonly, false).
 attr[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, override, false).
 node[ast_oxc](ndbdc6130c943fdee_178cv5gnkpa2c, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_178cv5gnkpa2c, 9).
-start[ast_oxc](ndbdc6130c943fdee_178cv5gnkpa2c, 257).
 attr[ast_oxc](ndbdc6130c943fdee_178cv5gnkpa2c, name, "data").
 child[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, pattern, 0, ndbdc6130c943fdee_178cv5gnkpa2c).
 node[ast_oxc](ndbdc6130c943fdee_d4e6kfhjevvf1, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_d4e6kfhjevvf1, 9).
-start[ast_oxc](ndbdc6130c943fdee_d4e6kfhjevvf1, 261).
 node[ast_oxc](ndbdc6130c943fdee_ngi1mneal8qnb, tsstring_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ngi1mneal8qnb, 9).
-start[ast_oxc](ndbdc6130c943fdee_ngi1mneal8qnb, 263).
 child[ast_oxc](ndbdc6130c943fdee_d4e6kfhjevvf1, type_annotation, 0, ndbdc6130c943fdee_ngi1mneal8qnb).
 child[ast_oxc](ndbdc6130c943fdee_mcm10thde5sn, type_annotation, 0, ndbdc6130c943fdee_d4e6kfhjevvf1).
 child[ast_oxc](ndbdc6130c943fdee_46r0p6hvrgc1a, items, 1, ndbdc6130c943fdee_mcm10thde5sn).
 child[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, params, 0, ndbdc6130c943fdee_46r0p6hvrgc1a).
 node[ast_oxc](ndbdc6130c943fdee_hro8kpbst4r17, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_hro8kpbst4r17, 9).
-start[ast_oxc](ndbdc6130c943fdee_hro8kpbst4r17, 270).
 node[ast_oxc](ndbdc6130c943fdee_b3q1mhe527ql4, tsvoid_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_b3q1mhe527ql4, 9).
-start[ast_oxc](ndbdc6130c943fdee_b3q1mhe527ql4, 272).
 child[ast_oxc](ndbdc6130c943fdee_hro8kpbst4r17, type_annotation, 0, ndbdc6130c943fdee_b3q1mhe527ql4).
 child[ast_oxc](ndbdc6130c943fdee_bqmm9ejpjmeu, return_type, 0, ndbdc6130c943fdee_hro8kpbst4r17).
 node[ast_oxc](ndbdc6130c943fdee_07mriu7h9fs29, function_body, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_07mriu7h9fs29, 9).
-start[ast_oxc](ndbdc6130c943fdee_07mriu7h9fs29, 277).
 node[ast_oxc](ndbdc6130c943fdee_p6n4sqg71heje, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_p6n4sqg71heje, 10).
-start[ast_oxc](ndbdc6130c943fdee_p6n4sqg71heje, 280).
 node[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, 10).
-start[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, 280).
 attr[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_1jg914moiss56, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_1jg914moiss56, 10).
-start[ast_oxc](ndbdc6130c943fdee_1jg914moiss56, 280).
 attr[ast_oxc](ndbdc6130c943fdee_1jg914moiss56, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_s8igghi8ghjt2, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_s8igghi8ghjt2, 10).
-start[ast_oxc](ndbdc6130c943fdee_s8igghi8ghjt2, 280).
 attr[ast_oxc](ndbdc6130c943fdee_s8igghi8ghjt2, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_s8igghi8ghjt2, name, "fs").
 child[ast_oxc](ndbdc6130c943fdee_1jg914moiss56, object, 0, ndbdc6130c943fdee_s8igghi8ghjt2).
 node[ast_oxc](ndbdc6130c943fdee_ui3otb3kutoee, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ui3otb3kutoee, 10).
-start[ast_oxc](ndbdc6130c943fdee_ui3otb3kutoee, 283).
 attr[ast_oxc](ndbdc6130c943fdee_ui3otb3kutoee, name, "writeFileSync").
 child[ast_oxc](ndbdc6130c943fdee_1jg914moiss56, property, 0, ndbdc6130c943fdee_ui3otb3kutoee).
 child[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, callee, 0, ndbdc6130c943fdee_1jg914moiss56).
 node[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, 10).
-start[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, 297).
 attr[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_1g1h5svedos05, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_1g1h5svedos05, 10).
-start[ast_oxc](ndbdc6130c943fdee_1g1h5svedos05, 297).
 attr[ast_oxc](ndbdc6130c943fdee_1g1h5svedos05, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_3k9qoagee42n9, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_3k9qoagee42n9, 10).
-start[ast_oxc](ndbdc6130c943fdee_3k9qoagee42n9, 297).
 attr[ast_oxc](ndbdc6130c943fdee_3k9qoagee42n9, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_3k9qoagee42n9, name, "path").
 child[ast_oxc](ndbdc6130c943fdee_1g1h5svedos05, object, 0, ndbdc6130c943fdee_3k9qoagee42n9).
 node[ast_oxc](ndbdc6130c943fdee_t9bhkahnr7nv3, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_t9bhkahnr7nv3, 10).
-start[ast_oxc](ndbdc6130c943fdee_t9bhkahnr7nv3, 302).
 attr[ast_oxc](ndbdc6130c943fdee_t9bhkahnr7nv3, name, "join").
 child[ast_oxc](ndbdc6130c943fdee_1g1h5svedos05, property, 0, ndbdc6130c943fdee_t9bhkahnr7nv3).
 child[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, callee, 0, ndbdc6130c943fdee_1g1h5svedos05).
 node[ast_oxc](ndbdc6130c943fdee_1ciac224js6sb, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_1ciac224js6sb, 10).
-start[ast_oxc](ndbdc6130c943fdee_1ciac224js6sb, 307).
 attr[ast_oxc](ndbdc6130c943fdee_1ciac224js6sb, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_1ciac224js6sb, name, "appRoot").
 child[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, arguments, 0, ndbdc6130c943fdee_1ciac224js6sb).
 node[ast_oxc](ndbdc6130c943fdee_gjrn56tda5po3, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_gjrn56tda5po3, 10).
-start[ast_oxc](ndbdc6130c943fdee_gjrn56tda5po3, 316).
 attr[ast_oxc](ndbdc6130c943fdee_gjrn56tda5po3, value, "out").
 attr[ast_oxc](ndbdc6130c943fdee_gjrn56tda5po3, raw, "'out'").
 child[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, arguments, 1, ndbdc6130c943fdee_gjrn56tda5po3).
 node[ast_oxc](ndbdc6130c943fdee_c9s3hnkaqji46, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_c9s3hnkaqji46, 10).
-start[ast_oxc](ndbdc6130c943fdee_c9s3hnkaqji46, 323).
 attr[ast_oxc](ndbdc6130c943fdee_c9s3hnkaqji46, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_c9s3hnkaqji46, name, "name").
 child[ast_oxc](ndbdc6130c943fdee_4lo68mdbtj2r2, arguments, 2, ndbdc6130c943fdee_c9s3hnkaqji46).
 child[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, arguments, 0, ndbdc6130c943fdee_4lo68mdbtj2r2).
 node[ast_oxc](ndbdc6130c943fdee_g12gem28jr2f9, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_g12gem28jr2f9, 10).
-start[ast_oxc](ndbdc6130c943fdee_g12gem28jr2f9, 330).
 attr[ast_oxc](ndbdc6130c943fdee_g12gem28jr2f9, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_g12gem28jr2f9, name, "data").
 child[ast_oxc](ndbdc6130c943fdee_cham84c2ta3i2, arguments, 1, ndbdc6130c943fdee_g12gem28jr2f9).
@@ -1084,116 +881,93 @@ child[ast_oxc](ndbdc6130c943fdee_aa4dm6fe0u1ae, declaration, 0, ndbdc6130c943fde
 child[ast_oxc](ndbdc6130c943fdee_root, body, 6, ndbdc6130c943fdee_aa4dm6fe0u1ae).
 node[ast_oxc](ndbdc6130c943fdee_0pj23vedr1ivd, export_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_0pj23vedr1ivd, 13).
-start[ast_oxc](ndbdc6130c943fdee_0pj23vedr1ivd, 340).
 node[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, function, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, 13).
-start[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, 347).
 attr[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, variant, "FunctionDeclaration").
 node[ast_oxc](ndbdc6130c943fdee_lgj3upcc5igm3, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_lgj3upcc5igm3, 13).
-start[ast_oxc](ndbdc6130c943fdee_lgj3upcc5igm3, 356).
 attr[ast_oxc](ndbdc6130c943fdee_lgj3upcc5igm3, name, "writeLog").
 child[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, id, 0, ndbdc6130c943fdee_lgj3upcc5igm3).
 node[ast_oxc](ndbdc6130c943fdee_lgd7espfh6916, formal_parameters, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_lgd7espfh6916, 13).
-start[ast_oxc](ndbdc6130c943fdee_lgd7espfh6916, 364).
 attr[ast_oxc](ndbdc6130c943fdee_lgd7espfh6916, kind, "FormalParameter").
 node[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, formal_parameter, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, 13).
-start[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, 365).
 attr[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, readonly, false).
 attr[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, override, false).
 node[ast_oxc](ndbdc6130c943fdee_89ki1rod2nqve, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_89ki1rod2nqve, 13).
-start[ast_oxc](ndbdc6130c943fdee_89ki1rod2nqve, 365).
 attr[ast_oxc](ndbdc6130c943fdee_89ki1rod2nqve, name, "kind").
 child[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, pattern, 0, ndbdc6130c943fdee_89ki1rod2nqve).
 node[ast_oxc](ndbdc6130c943fdee_7if6iom313op7, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_7if6iom313op7, 13).
-start[ast_oxc](ndbdc6130c943fdee_7if6iom313op7, 369).
 node[ast_oxc](ndbdc6130c943fdee_qpik3ojoc1ta4, tsstring_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_qpik3ojoc1ta4, 13).
-start[ast_oxc](ndbdc6130c943fdee_qpik3ojoc1ta4, 371).
 child[ast_oxc](ndbdc6130c943fdee_7if6iom313op7, type_annotation, 0, ndbdc6130c943fdee_qpik3ojoc1ta4).
 child[ast_oxc](ndbdc6130c943fdee_k2t5pomk90651, type_annotation, 0, ndbdc6130c943fdee_7if6iom313op7).
 child[ast_oxc](ndbdc6130c943fdee_lgd7espfh6916, items, 0, ndbdc6130c943fdee_k2t5pomk90651).
 child[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, params, 0, ndbdc6130c943fdee_lgd7espfh6916).
 node[ast_oxc](ndbdc6130c943fdee_qvvs9hp474cu9, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_qvvs9hp474cu9, 13).
-start[ast_oxc](ndbdc6130c943fdee_qvvs9hp474cu9, 378).
 node[ast_oxc](ndbdc6130c943fdee_2jnka14uro7i8, tsvoid_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_2jnka14uro7i8, 13).
-start[ast_oxc](ndbdc6130c943fdee_2jnka14uro7i8, 380).
 child[ast_oxc](ndbdc6130c943fdee_qvvs9hp474cu9, type_annotation, 0, ndbdc6130c943fdee_2jnka14uro7i8).
 child[ast_oxc](ndbdc6130c943fdee_u6iulndm4tvh1, return_type, 0, ndbdc6130c943fdee_qvvs9hp474cu9).
 node[ast_oxc](ndbdc6130c943fdee_cb8tk0ba01mgc, function_body, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_cb8tk0ba01mgc, 13).
-start[ast_oxc](ndbdc6130c943fdee_cb8tk0ba01mgc, 385).
 node[ast_oxc](ndbdc6130c943fdee_8ktto2dm0dl38, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_8ktto2dm0dl38, 14).
-start[ast_oxc](ndbdc6130c943fdee_8ktto2dm0dl38, 388).
 node[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, 14).
-start[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, 388).
 attr[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_4up69ku2p9led, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_4up69ku2p9led, 14).
-start[ast_oxc](ndbdc6130c943fdee_4up69ku2p9led, 388).
 attr[ast_oxc](ndbdc6130c943fdee_4up69ku2p9led, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_qgtak02lobsld, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_qgtak02lobsld, 14).
-start[ast_oxc](ndbdc6130c943fdee_qgtak02lobsld, 388).
 attr[ast_oxc](ndbdc6130c943fdee_qgtak02lobsld, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_qgtak02lobsld, name, "fs").
 child[ast_oxc](ndbdc6130c943fdee_4up69ku2p9led, object, 0, ndbdc6130c943fdee_qgtak02lobsld).
 node[ast_oxc](ndbdc6130c943fdee_hmutanlg58d37, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_hmutanlg58d37, 14).
-start[ast_oxc](ndbdc6130c943fdee_hmutanlg58d37, 391).
 attr[ast_oxc](ndbdc6130c943fdee_hmutanlg58d37, name, "appendFileSync").
 child[ast_oxc](ndbdc6130c943fdee_4up69ku2p9led, property, 0, ndbdc6130c943fdee_hmutanlg58d37).
 child[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, callee, 0, ndbdc6130c943fdee_4up69ku2p9led).
 node[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, template_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, 14).
-start[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, 406).
 node[ast_oxc](ndbdc6130c943fdee_pavabjrcuih0b, template_element, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_pavabjrcuih0b, 14).
-start[ast_oxc](ndbdc6130c943fdee_pavabjrcuih0b, 407).
 attr[ast_oxc](ndbdc6130c943fdee_pavabjrcuih0b, tail, false).
 attr[ast_oxc](ndbdc6130c943fdee_pavabjrcuih0b, value_raw, "").
 attr[ast_oxc](ndbdc6130c943fdee_pavabjrcuih0b, value_cooked, "").
 child[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, quasis, 0, ndbdc6130c943fdee_pavabjrcuih0b).
 node[ast_oxc](ndbdc6130c943fdee_26i82egin9poc, template_element, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_26i82egin9poc, 14).
-start[ast_oxc](ndbdc6130c943fdee_26i82egin9poc, 417).
 attr[ast_oxc](ndbdc6130c943fdee_26i82egin9poc, tail, false).
 attr[ast_oxc](ndbdc6130c943fdee_26i82egin9poc, value_raw, "/logs/").
 attr[ast_oxc](ndbdc6130c943fdee_26i82egin9poc, value_cooked, "/logs/").
 child[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, quasis, 1, ndbdc6130c943fdee_26i82egin9poc).
 node[ast_oxc](ndbdc6130c943fdee_trbakh1ej16k1, template_element, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_trbakh1ej16k1, 14).
-start[ast_oxc](ndbdc6130c943fdee_trbakh1ej16k1, 430).
 attr[ast_oxc](ndbdc6130c943fdee_trbakh1ej16k1, tail, true).
 attr[ast_oxc](ndbdc6130c943fdee_trbakh1ej16k1, value_raw, ".log").
 attr[ast_oxc](ndbdc6130c943fdee_trbakh1ej16k1, value_cooked, ".log").
 child[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, quasis, 2, ndbdc6130c943fdee_trbakh1ej16k1).
 node[ast_oxc](ndbdc6130c943fdee_8cbp8se50uc1a, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_8cbp8se50uc1a, 14).
-start[ast_oxc](ndbdc6130c943fdee_8cbp8se50uc1a, 409).
 attr[ast_oxc](ndbdc6130c943fdee_8cbp8se50uc1a, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_8cbp8se50uc1a, name, "appRoot").
 child[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, expressions, 0, ndbdc6130c943fdee_8cbp8se50uc1a).
 node[ast_oxc](ndbdc6130c943fdee_2eg8fr38snuo7, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_2eg8fr38snuo7, 14).
-start[ast_oxc](ndbdc6130c943fdee_2eg8fr38snuo7, 425).
 attr[ast_oxc](ndbdc6130c943fdee_2eg8fr38snuo7, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_2eg8fr38snuo7, name, "kind").
 child[ast_oxc](ndbdc6130c943fdee_2u6vklickq3i5, expressions, 1, ndbdc6130c943fdee_2eg8fr38snuo7).
 child[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, arguments, 0, ndbdc6130c943fdee_2u6vklickq3i5).
 node[ast_oxc](ndbdc6130c943fdee_g9kmplfctmbn1, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_g9kmplfctmbn1, 14).
-start[ast_oxc](ndbdc6130c943fdee_g9kmplfctmbn1, 437).
 attr[ast_oxc](ndbdc6130c943fdee_g9kmplfctmbn1, value, "").
 attr[ast_oxc](ndbdc6130c943fdee_g9kmplfctmbn1, raw, "''").
 child[ast_oxc](ndbdc6130c943fdee_9hs4ojc99u8pd, arguments, 1, ndbdc6130c943fdee_g9kmplfctmbn1).
@@ -1210,88 +984,70 @@ child[ast_oxc](ndbdc6130c943fdee_0pj23vedr1ivd, declaration, 0, ndbdc6130c943fde
 child[ast_oxc](ndbdc6130c943fdee_root, body, 7, ndbdc6130c943fdee_0pj23vedr1ivd).
 node[ast_oxc](ndbdc6130c943fdee_2hkvrvif2dc64, export_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_2hkvrvif2dc64, 17).
-start[ast_oxc](ndbdc6130c943fdee_2hkvrvif2dc64, 445).
 node[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, function, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, 17).
-start[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, 452).
 attr[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, variant, "FunctionDeclaration").
 node[ast_oxc](ndbdc6130c943fdee_885q1skpp0sp9, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_885q1skpp0sp9, 17).
-start[ast_oxc](ndbdc6130c943fdee_885q1skpp0sp9, 461).
 attr[ast_oxc](ndbdc6130c943fdee_885q1skpp0sp9, name, "cleanUp").
 child[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, id, 0, ndbdc6130c943fdee_885q1skpp0sp9).
 node[ast_oxc](ndbdc6130c943fdee_i59h9kr7lr0gd, formal_parameters, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_i59h9kr7lr0gd, 17).
-start[ast_oxc](ndbdc6130c943fdee_i59h9kr7lr0gd, 468).
 attr[ast_oxc](ndbdc6130c943fdee_i59h9kr7lr0gd, kind, "FormalParameter").
 child[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, params, 0, ndbdc6130c943fdee_i59h9kr7lr0gd).
 node[ast_oxc](ndbdc6130c943fdee_kvtlp4lk6edhc, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_kvtlp4lk6edhc, 17).
-start[ast_oxc](ndbdc6130c943fdee_kvtlp4lk6edhc, 470).
 node[ast_oxc](ndbdc6130c943fdee_sqh4q04o17058, tsvoid_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_sqh4q04o17058, 17).
-start[ast_oxc](ndbdc6130c943fdee_sqh4q04o17058, 472).
 child[ast_oxc](ndbdc6130c943fdee_kvtlp4lk6edhc, type_annotation, 0, ndbdc6130c943fdee_sqh4q04o17058).
 child[ast_oxc](ndbdc6130c943fdee_8o09oi3r4doc9, return_type, 0, ndbdc6130c943fdee_kvtlp4lk6edhc).
 node[ast_oxc](ndbdc6130c943fdee_gml8082h8jjn4, function_body, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_gml8082h8jjn4, 17).
-start[ast_oxc](ndbdc6130c943fdee_gml8082h8jjn4, 477).
 node[ast_oxc](ndbdc6130c943fdee_ti5j7ra1fjoif, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ti5j7ra1fjoif, 18).
-start[ast_oxc](ndbdc6130c943fdee_ti5j7ra1fjoif, 480).
 node[ast_oxc](ndbdc6130c943fdee_7eb5i16sfv1f2, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_7eb5i16sfv1f2, 18).
-start[ast_oxc](ndbdc6130c943fdee_7eb5i16sfv1f2, 480).
 attr[ast_oxc](ndbdc6130c943fdee_7eb5i16sfv1f2, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_7eb5i16sfv1f2, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_lqo9k9piv44r6, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_lqo9k9piv44r6, 18).
-start[ast_oxc](ndbdc6130c943fdee_lqo9k9piv44r6, 480).
 attr[ast_oxc](ndbdc6130c943fdee_lqo9k9piv44r6, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_q9s90kgh28fsa, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_q9s90kgh28fsa, 18).
-start[ast_oxc](ndbdc6130c943fdee_q9s90kgh28fsa, 480).
 attr[ast_oxc](ndbdc6130c943fdee_q9s90kgh28fsa, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_q9s90kgh28fsa, name, "fs").
 child[ast_oxc](ndbdc6130c943fdee_lqo9k9piv44r6, object, 0, ndbdc6130c943fdee_q9s90kgh28fsa).
 node[ast_oxc](ndbdc6130c943fdee_fkfhp0v06iad5, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_fkfhp0v06iad5, 18).
-start[ast_oxc](ndbdc6130c943fdee_fkfhp0v06iad5, 483).
 attr[ast_oxc](ndbdc6130c943fdee_fkfhp0v06iad5, name, "mkdirSync").
 child[ast_oxc](ndbdc6130c943fdee_lqo9k9piv44r6, property, 0, ndbdc6130c943fdee_fkfhp0v06iad5).
 child[ast_oxc](ndbdc6130c943fdee_7eb5i16sfv1f2, callee, 0, ndbdc6130c943fdee_lqo9k9piv44r6).
 node[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, 18).
-start[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, 493).
 attr[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_74eomq4h84mra, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_74eomq4h84mra, 18).
-start[ast_oxc](ndbdc6130c943fdee_74eomq4h84mra, 493).
 attr[ast_oxc](ndbdc6130c943fdee_74eomq4h84mra, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_74eomq4h84mra, name, "join").
 child[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, callee, 0, ndbdc6130c943fdee_74eomq4h84mra).
 node[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, 18).
-start[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, 498).
 attr[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_72chrvdu77bta, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_72chrvdu77bta, 18).
-start[ast_oxc](ndbdc6130c943fdee_72chrvdu77bta, 498).
 attr[ast_oxc](ndbdc6130c943fdee_72chrvdu77bta, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_72chrvdu77bta, name, "dirname").
 child[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, callee, 0, ndbdc6130c943fdee_72chrvdu77bta).
 node[ast_oxc](ndbdc6130c943fdee_vmlug67fjdgt5, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vmlug67fjdgt5, 18).
-start[ast_oxc](ndbdc6130c943fdee_vmlug67fjdgt5, 506).
 attr[ast_oxc](ndbdc6130c943fdee_vmlug67fjdgt5, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_vmlug67fjdgt5, name, "__dirname").
 child[ast_oxc](ndbdc6130c943fdee_p649nm59o0dc5, arguments, 0, ndbdc6130c943fdee_vmlug67fjdgt5).
 child[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, arguments, 0, ndbdc6130c943fdee_p649nm59o0dc5).
 node[ast_oxc](ndbdc6130c943fdee_6psnqh48aaak4, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_6psnqh48aaak4, 18).
-start[ast_oxc](ndbdc6130c943fdee_6psnqh48aaak4, 518).
 attr[ast_oxc](ndbdc6130c943fdee_6psnqh48aaak4, value, "cache").
 attr[ast_oxc](ndbdc6130c943fdee_6psnqh48aaak4, raw, "'cache'").
 child[ast_oxc](ndbdc6130c943fdee_tregnjafb9ao3, arguments, 1, ndbdc6130c943fdee_6psnqh48aaak4).
@@ -1300,42 +1056,34 @@ child[ast_oxc](ndbdc6130c943fdee_ti5j7ra1fjoif, expression, 0, ndbdc6130c943fdee
 child[ast_oxc](ndbdc6130c943fdee_gml8082h8jjn4, statements, 0, ndbdc6130c943fdee_ti5j7ra1fjoif).
 node[ast_oxc](ndbdc6130c943fdee_bimgelsmqh5dd, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_bimgelsmqh5dd, 19).
-start[ast_oxc](ndbdc6130c943fdee_bimgelsmqh5dd, 530).
 node[ast_oxc](ndbdc6130c943fdee_f54pp7h1p927c, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_f54pp7h1p927c, 19).
-start[ast_oxc](ndbdc6130c943fdee_f54pp7h1p927c, 530).
 attr[ast_oxc](ndbdc6130c943fdee_f54pp7h1p927c, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_f54pp7h1p927c, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_d7vuckq3dr8b7, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_d7vuckq3dr8b7, 19).
-start[ast_oxc](ndbdc6130c943fdee_d7vuckq3dr8b7, 530).
 attr[ast_oxc](ndbdc6130c943fdee_d7vuckq3dr8b7, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_vtuh50ljiqcne, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vtuh50ljiqcne, 19).
-start[ast_oxc](ndbdc6130c943fdee_vtuh50ljiqcne, 530).
 attr[ast_oxc](ndbdc6130c943fdee_vtuh50ljiqcne, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_vtuh50ljiqcne, name, "fs").
 child[ast_oxc](ndbdc6130c943fdee_d7vuckq3dr8b7, object, 0, ndbdc6130c943fdee_vtuh50ljiqcne).
 node[ast_oxc](ndbdc6130c943fdee_bhn42becn4sab, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_bhn42becn4sab, 19).
-start[ast_oxc](ndbdc6130c943fdee_bhn42becn4sab, 533).
 attr[ast_oxc](ndbdc6130c943fdee_bhn42becn4sab, name, "rmSync").
 child[ast_oxc](ndbdc6130c943fdee_d7vuckq3dr8b7, property, 0, ndbdc6130c943fdee_bhn42becn4sab).
 child[ast_oxc](ndbdc6130c943fdee_f54pp7h1p927c, callee, 0, ndbdc6130c943fdee_d7vuckq3dr8b7).
 node[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, 19).
-start[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, 540).
 attr[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_eeeen6m874qc7, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_eeeen6m874qc7, 19).
-start[ast_oxc](ndbdc6130c943fdee_eeeen6m874qc7, 540).
 attr[ast_oxc](ndbdc6130c943fdee_eeeen6m874qc7, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_eeeen6m874qc7, name, "dirname").
 child[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, callee, 0, ndbdc6130c943fdee_eeeen6m874qc7).
 node[ast_oxc](ndbdc6130c943fdee_7hjenakq19aq9, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_7hjenakq19aq9, 19).
-start[ast_oxc](ndbdc6130c943fdee_7hjenakq19aq9, 548).
 attr[ast_oxc](ndbdc6130c943fdee_7hjenakq19aq9, value, "/opt/app/tmp/old").
 attr[ast_oxc](ndbdc6130c943fdee_7hjenakq19aq9, raw, "'/opt/app/tmp/old'").
 child[ast_oxc](ndbdc6130c943fdee_idl3f7cd8i07a, arguments, 0, ndbdc6130c943fdee_7hjenakq19aq9).
@@ -1353,40 +1101,31 @@ child[ast_oxc](ndbdc6130c943fdee_2hkvrvif2dc64, declaration, 0, ndbdc6130c943fde
 child[ast_oxc](ndbdc6130c943fdee_root, body, 8, ndbdc6130c943fdee_2hkvrvif2dc64).
 node[ast_oxc](ndbdc6130c943fdee_h0uqacmukv7e6, export_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_h0uqacmukv7e6, 22).
-start[ast_oxc](ndbdc6130c943fdee_h0uqacmukv7e6, 573).
 node[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, function, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, 22).
-start[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, 580).
 attr[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, variant, "FunctionDeclaration").
 node[ast_oxc](ndbdc6130c943fdee_uq92vk3i5iqu3, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_uq92vk3i5iqu3, 22).
-start[ast_oxc](ndbdc6130c943fdee_uq92vk3i5iqu3, 589).
 attr[ast_oxc](ndbdc6130c943fdee_uq92vk3i5iqu3, name, "makeNested").
 child[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, id, 0, ndbdc6130c943fdee_uq92vk3i5iqu3).
 node[ast_oxc](ndbdc6130c943fdee_3hteir9a9cbld, formal_parameters, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_3hteir9a9cbld, 22).
-start[ast_oxc](ndbdc6130c943fdee_3hteir9a9cbld, 599).
 attr[ast_oxc](ndbdc6130c943fdee_3hteir9a9cbld, kind, "FormalParameter").
 node[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, formal_parameter, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, 22).
-start[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, 600).
 attr[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, readonly, false).
 attr[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, override, false).
 node[ast_oxc](ndbdc6130c943fdee_a854sf6c6um74, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_a854sf6c6um74, 22).
-start[ast_oxc](ndbdc6130c943fdee_a854sf6c6um74, 600).
 attr[ast_oxc](ndbdc6130c943fdee_a854sf6c6um74, name, "segments").
 child[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, pattern, 0, ndbdc6130c943fdee_a854sf6c6um74).
 node[ast_oxc](ndbdc6130c943fdee_siucq7ppopcv4, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_siucq7ppopcv4, 22).
-start[ast_oxc](ndbdc6130c943fdee_siucq7ppopcv4, 608).
 node[ast_oxc](ndbdc6130c943fdee_tprjub2v37mp5, tsarray_type, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_tprjub2v37mp5, 22).
-start[ast_oxc](ndbdc6130c943fdee_tprjub2v37mp5, 610).
 node[ast_oxc](ndbdc6130c943fdee_1u5mp4mc822a5, tsstring_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_1u5mp4mc822a5, 22).
-start[ast_oxc](ndbdc6130c943fdee_1u5mp4mc822a5, 610).
 child[ast_oxc](ndbdc6130c943fdee_tprjub2v37mp5, element_type, 0, ndbdc6130c943fdee_1u5mp4mc822a5).
 child[ast_oxc](ndbdc6130c943fdee_siucq7ppopcv4, type_annotation, 0, ndbdc6130c943fdee_tprjub2v37mp5).
 child[ast_oxc](ndbdc6130c943fdee_5o5ue92h5ed28, type_annotation, 0, ndbdc6130c943fdee_siucq7ppopcv4).
@@ -1394,32 +1133,25 @@ child[ast_oxc](ndbdc6130c943fdee_3hteir9a9cbld, items, 0, ndbdc6130c943fdee_5o5u
 child[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, params, 0, ndbdc6130c943fdee_3hteir9a9cbld).
 node[ast_oxc](ndbdc6130c943fdee_dmlnm1g3qqs05, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_dmlnm1g3qqs05, 22).
-start[ast_oxc](ndbdc6130c943fdee_dmlnm1g3qqs05, 619).
 node[ast_oxc](ndbdc6130c943fdee_gk0fum7dqmadf, tsvoid_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_gk0fum7dqmadf, 22).
-start[ast_oxc](ndbdc6130c943fdee_gk0fum7dqmadf, 621).
 child[ast_oxc](ndbdc6130c943fdee_dmlnm1g3qqs05, type_annotation, 0, ndbdc6130c943fdee_gk0fum7dqmadf).
 child[ast_oxc](ndbdc6130c943fdee_jcddd23n84ric, return_type, 0, ndbdc6130c943fdee_dmlnm1g3qqs05).
 node[ast_oxc](ndbdc6130c943fdee_t2oj1ln61r7h7, function_body, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_t2oj1ln61r7h7, 22).
-start[ast_oxc](ndbdc6130c943fdee_t2oj1ln61r7h7, 626).
 node[ast_oxc](ndbdc6130c943fdee_oe2q7e5u5kcgb, variable_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_oe2q7e5u5kcgb, 23).
-start[ast_oxc](ndbdc6130c943fdee_oe2q7e5u5kcgb, 629).
 attr[ast_oxc](ndbdc6130c943fdee_oe2q7e5u5kcgb, kind, "Let").
 attr[ast_oxc](ndbdc6130c943fdee_oe2q7e5u5kcgb, declare, false).
 node[ast_oxc](ndbdc6130c943fdee_r9b2j3g4rtfqc, variable_declarator, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_r9b2j3g4rtfqc, 23).
-start[ast_oxc](ndbdc6130c943fdee_r9b2j3g4rtfqc, 633).
 attr[ast_oxc](ndbdc6130c943fdee_r9b2j3g4rtfqc, definite, false).
 node[ast_oxc](ndbdc6130c943fdee_bkf8sfo03di2e, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_bkf8sfo03di2e, 23).
-start[ast_oxc](ndbdc6130c943fdee_bkf8sfo03di2e, 633).
 attr[ast_oxc](ndbdc6130c943fdee_bkf8sfo03di2e, name, "target").
 child[ast_oxc](ndbdc6130c943fdee_r9b2j3g4rtfqc, id, 0, ndbdc6130c943fdee_bkf8sfo03di2e).
 node[ast_oxc](ndbdc6130c943fdee_hkkgji7dr10la, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_hkkgji7dr10la, 23).
-start[ast_oxc](ndbdc6130c943fdee_hkkgji7dr10la, 642).
 attr[ast_oxc](ndbdc6130c943fdee_hkkgji7dr10la, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_hkkgji7dr10la, name, "appRoot").
 child[ast_oxc](ndbdc6130c943fdee_r9b2j3g4rtfqc, init, 0, ndbdc6130c943fdee_hkkgji7dr10la).
@@ -1427,58 +1159,46 @@ child[ast_oxc](ndbdc6130c943fdee_oe2q7e5u5kcgb, declarations, 0, ndbdc6130c943fd
 child[ast_oxc](ndbdc6130c943fdee_t2oj1ln61r7h7, statements, 0, ndbdc6130c943fdee_oe2q7e5u5kcgb).
 node[ast_oxc](ndbdc6130c943fdee_olfhqj0h7rdgf, for_of_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_olfhqj0h7rdgf, 24).
-start[ast_oxc](ndbdc6130c943fdee_olfhqj0h7rdgf, 652).
 node[ast_oxc](ndbdc6130c943fdee_dnelhmojjpoa2, variable_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_dnelhmojjpoa2, 24).
-start[ast_oxc](ndbdc6130c943fdee_dnelhmojjpoa2, 657).
 attr[ast_oxc](ndbdc6130c943fdee_dnelhmojjpoa2, kind, "Const").
 attr[ast_oxc](ndbdc6130c943fdee_dnelhmojjpoa2, declare, false).
 node[ast_oxc](ndbdc6130c943fdee_5mv2hon3on9o3, variable_declarator, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_5mv2hon3on9o3, 24).
-start[ast_oxc](ndbdc6130c943fdee_5mv2hon3on9o3, 663).
 attr[ast_oxc](ndbdc6130c943fdee_5mv2hon3on9o3, definite, false).
 node[ast_oxc](ndbdc6130c943fdee_60cs1r58e8r35, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_60cs1r58e8r35, 24).
-start[ast_oxc](ndbdc6130c943fdee_60cs1r58e8r35, 663).
 attr[ast_oxc](ndbdc6130c943fdee_60cs1r58e8r35, name, "segment").
 child[ast_oxc](ndbdc6130c943fdee_5mv2hon3on9o3, id, 0, ndbdc6130c943fdee_60cs1r58e8r35).
 child[ast_oxc](ndbdc6130c943fdee_dnelhmojjpoa2, declarations, 0, ndbdc6130c943fdee_5mv2hon3on9o3).
 child[ast_oxc](ndbdc6130c943fdee_olfhqj0h7rdgf, left, 0, ndbdc6130c943fdee_dnelhmojjpoa2).
 node[ast_oxc](ndbdc6130c943fdee_eopu9ui5dbvr, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_eopu9ui5dbvr, 24).
-start[ast_oxc](ndbdc6130c943fdee_eopu9ui5dbvr, 674).
 attr[ast_oxc](ndbdc6130c943fdee_eopu9ui5dbvr, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_eopu9ui5dbvr, name, "segments").
 child[ast_oxc](ndbdc6130c943fdee_olfhqj0h7rdgf, right, 0, ndbdc6130c943fdee_eopu9ui5dbvr).
 node[ast_oxc](ndbdc6130c943fdee_ii1vj9sld1ia2, block_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ii1vj9sld1ia2, 24).
-start[ast_oxc](ndbdc6130c943fdee_ii1vj9sld1ia2, 684).
 node[ast_oxc](ndbdc6130c943fdee_ng7v1ndkntfl6, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ng7v1ndkntfl6, 25).
-start[ast_oxc](ndbdc6130c943fdee_ng7v1ndkntfl6, 688).
 node[ast_oxc](ndbdc6130c943fdee_00ujo250s3vsd, assignment_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_00ujo250s3vsd, 25).
-start[ast_oxc](ndbdc6130c943fdee_00ujo250s3vsd, 688).
 attr[ast_oxc](ndbdc6130c943fdee_00ujo250s3vsd, operator, "Addition").
 node[ast_oxc](ndbdc6130c943fdee_k64ngdk970hm8, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_k64ngdk970hm8, 25).
-start[ast_oxc](ndbdc6130c943fdee_k64ngdk970hm8, 688).
 attr[ast_oxc](ndbdc6130c943fdee_k64ngdk970hm8, variant, "AssignmentTargetIdentifier").
 attr[ast_oxc](ndbdc6130c943fdee_k64ngdk970hm8, name, "target").
 child[ast_oxc](ndbdc6130c943fdee_00ujo250s3vsd, left, 0, ndbdc6130c943fdee_k64ngdk970hm8).
 node[ast_oxc](ndbdc6130c943fdee_boakcrep7fkn9, binary_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_boakcrep7fkn9, 25).
-start[ast_oxc](ndbdc6130c943fdee_boakcrep7fkn9, 698).
 attr[ast_oxc](ndbdc6130c943fdee_boakcrep7fkn9, operator, "Addition").
 node[ast_oxc](ndbdc6130c943fdee_ecj7bfcikid5a, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ecj7bfcikid5a, 25).
-start[ast_oxc](ndbdc6130c943fdee_ecj7bfcikid5a, 698).
 attr[ast_oxc](ndbdc6130c943fdee_ecj7bfcikid5a, value, "/").
 attr[ast_oxc](ndbdc6130c943fdee_ecj7bfcikid5a, raw, "'/'").
 child[ast_oxc](ndbdc6130c943fdee_boakcrep7fkn9, left, 0, ndbdc6130c943fdee_ecj7bfcikid5a).
 node[ast_oxc](ndbdc6130c943fdee_0mho5kesgtq06, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_0mho5kesgtq06, 25).
-start[ast_oxc](ndbdc6130c943fdee_0mho5kesgtq06, 704).
 attr[ast_oxc](ndbdc6130c943fdee_0mho5kesgtq06, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_0mho5kesgtq06, name, "segment").
 child[ast_oxc](ndbdc6130c943fdee_boakcrep7fkn9, right, 0, ndbdc6130c943fdee_0mho5kesgtq06).
@@ -1490,31 +1210,25 @@ attr[ast_oxc](ndbdc6130c943fdee_olfhqj0h7rdgf, await, false).
 child[ast_oxc](ndbdc6130c943fdee_t2oj1ln61r7h7, statements, 1, ndbdc6130c943fdee_olfhqj0h7rdgf).
 node[ast_oxc](ndbdc6130c943fdee_o0nnpnle4jps1, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_o0nnpnle4jps1, 27).
-start[ast_oxc](ndbdc6130c943fdee_o0nnpnle4jps1, 717).
 node[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, 27).
-start[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, 717).
 attr[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_vr47qt1jb6nn8, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_vr47qt1jb6nn8, 27).
-start[ast_oxc](ndbdc6130c943fdee_vr47qt1jb6nn8, 717).
 attr[ast_oxc](ndbdc6130c943fdee_vr47qt1jb6nn8, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_r3g7vq08ct417, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_r3g7vq08ct417, 27).
-start[ast_oxc](ndbdc6130c943fdee_r3g7vq08ct417, 717).
 attr[ast_oxc](ndbdc6130c943fdee_r3g7vq08ct417, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_r3g7vq08ct417, name, "fs").
 child[ast_oxc](ndbdc6130c943fdee_vr47qt1jb6nn8, object, 0, ndbdc6130c943fdee_r3g7vq08ct417).
 node[ast_oxc](ndbdc6130c943fdee_16r3flsohjgv5, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_16r3flsohjgv5, 27).
-start[ast_oxc](ndbdc6130c943fdee_16r3flsohjgv5, 720).
 attr[ast_oxc](ndbdc6130c943fdee_16r3flsohjgv5, name, "mkdirSync").
 child[ast_oxc](ndbdc6130c943fdee_vr47qt1jb6nn8, property, 0, ndbdc6130c943fdee_16r3flsohjgv5).
 child[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, callee, 0, ndbdc6130c943fdee_vr47qt1jb6nn8).
 node[ast_oxc](ndbdc6130c943fdee_k63f8nnov2tjd, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_k63f8nnov2tjd, 27).
-start[ast_oxc](ndbdc6130c943fdee_k63f8nnov2tjd, 730).
 attr[ast_oxc](ndbdc6130c943fdee_k63f8nnov2tjd, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_k63f8nnov2tjd, name, "target").
 child[ast_oxc](ndbdc6130c943fdee_vknpcu964rdk4, arguments, 0, ndbdc6130c943fdee_k63f8nnov2tjd).
@@ -1531,75 +1245,59 @@ child[ast_oxc](ndbdc6130c943fdee_h0uqacmukv7e6, declaration, 0, ndbdc6130c943fde
 child[ast_oxc](ndbdc6130c943fdee_root, body, 9, ndbdc6130c943fdee_h0uqacmukv7e6).
 node[ast_oxc](ndbdc6130c943fdee_al73bf8etj3u8, export_declaration, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_al73bf8etj3u8, 30).
-start[ast_oxc](ndbdc6130c943fdee_al73bf8etj3u8, 742).
 node[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, function, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, 30).
-start[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, 749).
 attr[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, variant, "FunctionDeclaration").
 node[ast_oxc](ndbdc6130c943fdee_smnellq56fgp3, binding_identifier, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_smnellq56fgp3, 30).
-start[ast_oxc](ndbdc6130c943fdee_smnellq56fgp3, 758).
 attr[ast_oxc](ndbdc6130c943fdee_smnellq56fgp3, name, "checkUpdate").
 child[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, id, 0, ndbdc6130c943fdee_smnellq56fgp3).
 node[ast_oxc](ndbdc6130c943fdee_ds3rahupk9u0b, formal_parameters, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_ds3rahupk9u0b, 30).
-start[ast_oxc](ndbdc6130c943fdee_ds3rahupk9u0b, 769).
 attr[ast_oxc](ndbdc6130c943fdee_ds3rahupk9u0b, kind, "FormalParameter").
 child[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, params, 0, ndbdc6130c943fdee_ds3rahupk9u0b).
 node[ast_oxc](ndbdc6130c943fdee_l6vgg2gge8bde, tstype_annotation, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_l6vgg2gge8bde, 30).
-start[ast_oxc](ndbdc6130c943fdee_l6vgg2gge8bde, 771).
 node[ast_oxc](ndbdc6130c943fdee_iht44c2i1vj68, tsvoid_keyword, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_iht44c2i1vj68, 30).
-start[ast_oxc](ndbdc6130c943fdee_iht44c2i1vj68, 773).
 child[ast_oxc](ndbdc6130c943fdee_l6vgg2gge8bde, type_annotation, 0, ndbdc6130c943fdee_iht44c2i1vj68).
 child[ast_oxc](ndbdc6130c943fdee_kgu3qj7fkaui7, return_type, 0, ndbdc6130c943fdee_l6vgg2gge8bde).
 node[ast_oxc](ndbdc6130c943fdee_8jkovte11aem5, function_body, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_8jkovte11aem5, 30).
-start[ast_oxc](ndbdc6130c943fdee_8jkovte11aem5, 778).
 node[ast_oxc](ndbdc6130c943fdee_tlc8r1kucrfb1, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_tlc8r1kucrfb1, 31).
-start[ast_oxc](ndbdc6130c943fdee_tlc8r1kucrfb1, 781).
 node[ast_oxc](ndbdc6130c943fdee_jc1pa74f31pn6, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_jc1pa74f31pn6, 31).
-start[ast_oxc](ndbdc6130c943fdee_jc1pa74f31pn6, 781).
 attr[ast_oxc](ndbdc6130c943fdee_jc1pa74f31pn6, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_jc1pa74f31pn6, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_3g5m9dmu8l11b, static_member_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_3g5m9dmu8l11b, 31).
-start[ast_oxc](ndbdc6130c943fdee_3g5m9dmu8l11b, 781).
 attr[ast_oxc](ndbdc6130c943fdee_3g5m9dmu8l11b, optional, false).
 node[ast_oxc](ndbdc6130c943fdee_iidqh0467q6ie, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_iidqh0467q6ie, 31).
-start[ast_oxc](ndbdc6130c943fdee_iidqh0467q6ie, 781).
 attr[ast_oxc](ndbdc6130c943fdee_iidqh0467q6ie, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_iidqh0467q6ie, name, "https").
 child[ast_oxc](ndbdc6130c943fdee_3g5m9dmu8l11b, object, 0, ndbdc6130c943fdee_iidqh0467q6ie).
 node[ast_oxc](ndbdc6130c943fdee_j8cht0fck2a2c, identifier_name, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_j8cht0fck2a2c, 31).
-start[ast_oxc](ndbdc6130c943fdee_j8cht0fck2a2c, 787).
 attr[ast_oxc](ndbdc6130c943fdee_j8cht0fck2a2c, name, "get").
 child[ast_oxc](ndbdc6130c943fdee_3g5m9dmu8l11b, property, 0, ndbdc6130c943fdee_j8cht0fck2a2c).
 child[ast_oxc](ndbdc6130c943fdee_jc1pa74f31pn6, callee, 0, ndbdc6130c943fdee_3g5m9dmu8l11b).
 node[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, new_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, 31).
-start[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, 791).
 attr[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_kale432bqssp3, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_kale432bqssp3, 31).
-start[ast_oxc](ndbdc6130c943fdee_kale432bqssp3, 795).
 attr[ast_oxc](ndbdc6130c943fdee_kale432bqssp3, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_kale432bqssp3, name, "URL").
 child[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, callee, 0, ndbdc6130c943fdee_kale432bqssp3).
 node[ast_oxc](ndbdc6130c943fdee_34vmbn89hia62, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_34vmbn89hia62, 31).
-start[ast_oxc](ndbdc6130c943fdee_34vmbn89hia62, 799).
 attr[ast_oxc](ndbdc6130c943fdee_34vmbn89hia62, value, "/api/update").
 attr[ast_oxc](ndbdc6130c943fdee_34vmbn89hia62, raw, "'/api/update'").
 child[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, arguments, 0, ndbdc6130c943fdee_34vmbn89hia62).
 node[ast_oxc](ndbdc6130c943fdee_r2q10p2fnvtjc, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_r2q10p2fnvtjc, 31).
-start[ast_oxc](ndbdc6130c943fdee_r2q10p2fnvtjc, 814).
 attr[ast_oxc](ndbdc6130c943fdee_r2q10p2fnvtjc, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_r2q10p2fnvtjc, name, "updateBase").
 child[ast_oxc](ndbdc6130c943fdee_lr2ctlikvj5k6, arguments, 1, ndbdc6130c943fdee_r2q10p2fnvtjc).
@@ -1617,27 +1315,22 @@ child[ast_oxc](ndbdc6130c943fdee_al73bf8etj3u8, declaration, 0, ndbdc6130c943fde
 child[ast_oxc](ndbdc6130c943fdee_root, body, 10, ndbdc6130c943fdee_al73bf8etj3u8).
 node[ast_oxc](ndbdc6130c943fdee_q3000itsp72j7, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_q3000itsp72j7, 34).
-start[ast_oxc](ndbdc6130c943fdee_q3000itsp72j7, 831).
 node[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, 34).
-start[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, 831).
 attr[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_2c0k55k7ih92f, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_2c0k55k7ih92f, 34).
-start[ast_oxc](ndbdc6130c943fdee_2c0k55k7ih92f, 831).
 attr[ast_oxc](ndbdc6130c943fdee_2c0k55k7ih92f, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_2c0k55k7ih92f, name, "writeOutput").
 child[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, callee, 0, ndbdc6130c943fdee_2c0k55k7ih92f).
 node[ast_oxc](ndbdc6130c943fdee_jb102ett76li2, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_jb102ett76li2, 34).
-start[ast_oxc](ndbdc6130c943fdee_jb102ett76li2, 843).
 attr[ast_oxc](ndbdc6130c943fdee_jb102ett76li2, value, "settings.json").
 attr[ast_oxc](ndbdc6130c943fdee_jb102ett76li2, raw, "'settings.json'").
 child[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, arguments, 0, ndbdc6130c943fdee_jb102ett76li2).
 node[ast_oxc](ndbdc6130c943fdee_nnuk8t8dapg4b, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_nnuk8t8dapg4b, 34).
-start[ast_oxc](ndbdc6130c943fdee_nnuk8t8dapg4b, 860).
 attr[ast_oxc](ndbdc6130c943fdee_nnuk8t8dapg4b, value, "{}").
 attr[ast_oxc](ndbdc6130c943fdee_nnuk8t8dapg4b, raw, "'{}'").
 child[ast_oxc](ndbdc6130c943fdee_luvq7fln9rce3, arguments, 1, ndbdc6130c943fdee_nnuk8t8dapg4b).
@@ -1645,21 +1338,17 @@ child[ast_oxc](ndbdc6130c943fdee_q3000itsp72j7, expression, 0, ndbdc6130c943fdee
 child[ast_oxc](ndbdc6130c943fdee_root, body, 11, ndbdc6130c943fdee_q3000itsp72j7).
 node[ast_oxc](ndbdc6130c943fdee_38d7tt8o19qh4, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_38d7tt8o19qh4, 35).
-start[ast_oxc](ndbdc6130c943fdee_38d7tt8o19qh4, 867).
 node[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, 35).
-start[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, 867).
 attr[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_kdu6cl141md59, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_kdu6cl141md59, 35).
-start[ast_oxc](ndbdc6130c943fdee_kdu6cl141md59, 867).
 attr[ast_oxc](ndbdc6130c943fdee_kdu6cl141md59, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_kdu6cl141md59, name, "writeLog").
 child[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, callee, 0, ndbdc6130c943fdee_kdu6cl141md59).
 node[ast_oxc](ndbdc6130c943fdee_j42kprc3cc9p5, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_j42kprc3cc9p5, 35).
-start[ast_oxc](ndbdc6130c943fdee_j42kprc3cc9p5, 876).
 attr[ast_oxc](ndbdc6130c943fdee_j42kprc3cc9p5, value, "main").
 attr[ast_oxc](ndbdc6130c943fdee_j42kprc3cc9p5, raw, "'main'").
 child[ast_oxc](ndbdc6130c943fdee_a9n2aunipdeu2, arguments, 0, ndbdc6130c943fdee_j42kprc3cc9p5).
@@ -1667,21 +1356,17 @@ child[ast_oxc](ndbdc6130c943fdee_38d7tt8o19qh4, expression, 0, ndbdc6130c943fdee
 child[ast_oxc](ndbdc6130c943fdee_root, body, 12, ndbdc6130c943fdee_38d7tt8o19qh4).
 node[ast_oxc](ndbdc6130c943fdee_dgj1nkcpg9ind, expression_statement, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_dgj1nkcpg9ind, 36).
-start[ast_oxc](ndbdc6130c943fdee_dgj1nkcpg9ind, 885).
 node[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, call_expression, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, 36).
-start[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, 885).
 attr[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, optional, false).
 attr[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, pure, false).
 node[ast_oxc](ndbdc6130c943fdee_48ui0lnn2reue, identifier_reference, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_48ui0lnn2reue, 36).
-start[ast_oxc](ndbdc6130c943fdee_48ui0lnn2reue, 885).
 attr[ast_oxc](ndbdc6130c943fdee_48ui0lnn2reue, variant, "Identifier").
 attr[ast_oxc](ndbdc6130c943fdee_48ui0lnn2reue, name, "writeLog").
 child[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, callee, 0, ndbdc6130c943fdee_48ui0lnn2reue).
 node[ast_oxc](ndbdc6130c943fdee_rv10baijtkdsc, string_literal, "mini/node/paths.ts").
 line[ast_oxc](ndbdc6130c943fdee_rv10baijtkdsc, 36).
-start[ast_oxc](ndbdc6130c943fdee_rv10baijtkdsc, 894).
 attr[ast_oxc](ndbdc6130c943fdee_rv10baijtkdsc, value, "shared").
 attr[ast_oxc](ndbdc6130c943fdee_rv10baijtkdsc, raw, "'shared'").
 child[ast_oxc](ndbdc6130c943fdee_2u93gbet0ras1, arguments, 0, ndbdc6130c943fdee_rv10baijtkdsc).
@@ -1693,154 +1378,122 @@ attr[ast_oxc](ndbdc6130c943fdee_root, source_type_variant, "Standard").
 file[ast_oxc](ndbdc6130c943fdee_root, "mini/node/paths.ts").
 node[ast_oxc](nd100d8f9c1968a85_root, program, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_root, 1).
-start[ast_oxc](nd100d8f9c1968a85_root, 0).
 node[ast_oxc](nd100d8f9c1968a85_uesbsbv2e4ve5, import_declaration, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_uesbsbv2e4ve5, 1).
-start[ast_oxc](nd100d8f9c1968a85_uesbsbv2e4ve5, 0).
 attr[ast_oxc](nd100d8f9c1968a85_uesbsbv2e4ve5, import_kind, "Value").
 node[ast_oxc](nd100d8f9c1968a85_22ihlguf474a1, import_namespace_specifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_22ihlguf474a1, 1).
-start[ast_oxc](nd100d8f9c1968a85_22ihlguf474a1, 7).
 node[ast_oxc](nd100d8f9c1968a85_qs3k8dbpq69cd, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_qs3k8dbpq69cd, 1).
-start[ast_oxc](nd100d8f9c1968a85_qs3k8dbpq69cd, 12).
 attr[ast_oxc](nd100d8f9c1968a85_qs3k8dbpq69cd, name, "fs").
 child[ast_oxc](nd100d8f9c1968a85_22ihlguf474a1, local, 0, nd100d8f9c1968a85_qs3k8dbpq69cd).
 child[ast_oxc](nd100d8f9c1968a85_uesbsbv2e4ve5, specifiers, 0, nd100d8f9c1968a85_22ihlguf474a1).
 node[ast_oxc](nd100d8f9c1968a85_v1pgh1jo23gm, string_literal, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_v1pgh1jo23gm, 1).
-start[ast_oxc](nd100d8f9c1968a85_v1pgh1jo23gm, 20).
 attr[ast_oxc](nd100d8f9c1968a85_v1pgh1jo23gm, value, "fs").
 attr[ast_oxc](nd100d8f9c1968a85_v1pgh1jo23gm, raw, "'fs'").
 child[ast_oxc](nd100d8f9c1968a85_uesbsbv2e4ve5, source, 0, nd100d8f9c1968a85_v1pgh1jo23gm).
 child[ast_oxc](nd100d8f9c1968a85_root, body, 0, nd100d8f9c1968a85_uesbsbv2e4ve5).
 node[ast_oxc](nd100d8f9c1968a85_4njr78kqpl7m2, import_declaration, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_4njr78kqpl7m2, 2).
-start[ast_oxc](nd100d8f9c1968a85_4njr78kqpl7m2, 26).
 attr[ast_oxc](nd100d8f9c1968a85_4njr78kqpl7m2, import_kind, "Value").
 node[ast_oxc](nd100d8f9c1968a85_dnnbs61u9bc9e, import_specifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_dnnbs61u9bc9e, 2).
-start[ast_oxc](nd100d8f9c1968a85_dnnbs61u9bc9e, 35).
 attr[ast_oxc](nd100d8f9c1968a85_dnnbs61u9bc9e, import_kind, "Value").
 node[ast_oxc](nd100d8f9c1968a85_gb03a9ja4if63, identifier_name, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_gb03a9ja4if63, 2).
-start[ast_oxc](nd100d8f9c1968a85_gb03a9ja4if63, 35).
 attr[ast_oxc](nd100d8f9c1968a85_gb03a9ja4if63, name, "promises").
 child[ast_oxc](nd100d8f9c1968a85_dnnbs61u9bc9e, imported, 0, nd100d8f9c1968a85_gb03a9ja4if63).
 node[ast_oxc](nd100d8f9c1968a85_b9aq7vde0vac6, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_b9aq7vde0vac6, 2).
-start[ast_oxc](nd100d8f9c1968a85_b9aq7vde0vac6, 35).
 attr[ast_oxc](nd100d8f9c1968a85_b9aq7vde0vac6, name, "promises").
 child[ast_oxc](nd100d8f9c1968a85_dnnbs61u9bc9e, local, 0, nd100d8f9c1968a85_b9aq7vde0vac6).
 child[ast_oxc](nd100d8f9c1968a85_4njr78kqpl7m2, specifiers, 0, nd100d8f9c1968a85_dnnbs61u9bc9e).
 node[ast_oxc](nd100d8f9c1968a85_j88j151eeoqca, string_literal, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_j88j151eeoqca, 2).
-start[ast_oxc](nd100d8f9c1968a85_j88j151eeoqca, 51).
 attr[ast_oxc](nd100d8f9c1968a85_j88j151eeoqca, value, "fs").
 attr[ast_oxc](nd100d8f9c1968a85_j88j151eeoqca, raw, "'fs'").
 child[ast_oxc](nd100d8f9c1968a85_4njr78kqpl7m2, source, 0, nd100d8f9c1968a85_j88j151eeoqca).
 child[ast_oxc](nd100d8f9c1968a85_root, body, 1, nd100d8f9c1968a85_4njr78kqpl7m2).
 node[ast_oxc](nd100d8f9c1968a85_aa4dm6fe0u1ae, export_declaration, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_aa4dm6fe0u1ae, 4).
-start[ast_oxc](nd100d8f9c1968a85_aa4dm6fe0u1ae, 58).
 node[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, function, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, 4).
-start[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, 65).
 attr[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, variant, "FunctionDeclaration").
 node[ast_oxc](nd100d8f9c1968a85_cb46naulvhft9, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_cb46naulvhft9, 4).
-start[ast_oxc](nd100d8f9c1968a85_cb46naulvhft9, 74).
 attr[ast_oxc](nd100d8f9c1968a85_cb46naulvhft9, name, "writeAtomic").
 child[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, id, 0, nd100d8f9c1968a85_cb46naulvhft9).
 node[ast_oxc](nd100d8f9c1968a85_kg8qmsnuut7r3, formal_parameters, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_kg8qmsnuut7r3, 4).
-start[ast_oxc](nd100d8f9c1968a85_kg8qmsnuut7r3, 85).
 attr[ast_oxc](nd100d8f9c1968a85_kg8qmsnuut7r3, kind, "FormalParameter").
 node[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, formal_parameter, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, 4).
-start[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, 86).
 attr[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, optional, false).
 attr[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, readonly, false).
 attr[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, override, false).
 node[ast_oxc](nd100d8f9c1968a85_ne30lsj2b8vte, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_ne30lsj2b8vte, 4).
-start[ast_oxc](nd100d8f9c1968a85_ne30lsj2b8vte, 86).
 attr[ast_oxc](nd100d8f9c1968a85_ne30lsj2b8vte, name, "path").
 child[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, pattern, 0, nd100d8f9c1968a85_ne30lsj2b8vte).
 node[ast_oxc](nd100d8f9c1968a85_cs6b02r09lg09, tstype_annotation, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_cs6b02r09lg09, 4).
-start[ast_oxc](nd100d8f9c1968a85_cs6b02r09lg09, 90).
 node[ast_oxc](nd100d8f9c1968a85_agsp3ocfefgt6, tsstring_keyword, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_agsp3ocfefgt6, 4).
-start[ast_oxc](nd100d8f9c1968a85_agsp3ocfefgt6, 92).
 child[ast_oxc](nd100d8f9c1968a85_cs6b02r09lg09, type_annotation, 0, nd100d8f9c1968a85_agsp3ocfefgt6).
 child[ast_oxc](nd100d8f9c1968a85_s9ms7djvq82j6, type_annotation, 0, nd100d8f9c1968a85_cs6b02r09lg09).
 child[ast_oxc](nd100d8f9c1968a85_kg8qmsnuut7r3, items, 0, nd100d8f9c1968a85_s9ms7djvq82j6).
 node[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, formal_parameter, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, 4).
-start[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, 100).
 attr[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, optional, false).
 attr[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, readonly, false).
 attr[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, override, false).
 node[ast_oxc](nd100d8f9c1968a85_l77591la6kbg5, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_l77591la6kbg5, 4).
-start[ast_oxc](nd100d8f9c1968a85_l77591la6kbg5, 100).
 attr[ast_oxc](nd100d8f9c1968a85_l77591la6kbg5, name, "data").
 child[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, pattern, 0, nd100d8f9c1968a85_l77591la6kbg5).
 node[ast_oxc](nd100d8f9c1968a85_n3gqi4t7023de, tstype_annotation, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_n3gqi4t7023de, 4).
-start[ast_oxc](nd100d8f9c1968a85_n3gqi4t7023de, 104).
 node[ast_oxc](nd100d8f9c1968a85_75gjelk7he6i1, tsstring_keyword, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_75gjelk7he6i1, 4).
-start[ast_oxc](nd100d8f9c1968a85_75gjelk7he6i1, 106).
 child[ast_oxc](nd100d8f9c1968a85_n3gqi4t7023de, type_annotation, 0, nd100d8f9c1968a85_75gjelk7he6i1).
 child[ast_oxc](nd100d8f9c1968a85_epttsuknjhc3, type_annotation, 0, nd100d8f9c1968a85_n3gqi4t7023de).
 child[ast_oxc](nd100d8f9c1968a85_kg8qmsnuut7r3, items, 1, nd100d8f9c1968a85_epttsuknjhc3).
 child[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, params, 0, nd100d8f9c1968a85_kg8qmsnuut7r3).
 node[ast_oxc](nd100d8f9c1968a85_nl14hg3dg0rmb, tstype_annotation, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_nl14hg3dg0rmb, 4).
-start[ast_oxc](nd100d8f9c1968a85_nl14hg3dg0rmb, 113).
 node[ast_oxc](nd100d8f9c1968a85_n7d7gu52uapbc, tsvoid_keyword, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_n7d7gu52uapbc, 4).
-start[ast_oxc](nd100d8f9c1968a85_n7d7gu52uapbc, 115).
 child[ast_oxc](nd100d8f9c1968a85_nl14hg3dg0rmb, type_annotation, 0, nd100d8f9c1968a85_n7d7gu52uapbc).
 child[ast_oxc](nd100d8f9c1968a85_dn9va08c31q6, return_type, 0, nd100d8f9c1968a85_nl14hg3dg0rmb).
 node[ast_oxc](nd100d8f9c1968a85_h7rde6usfh3o1, function_body, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_h7rde6usfh3o1, 4).
-start[ast_oxc](nd100d8f9c1968a85_h7rde6usfh3o1, 120).
 node[ast_oxc](nd100d8f9c1968a85_716gejrfp2pf5, expression_statement, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_716gejrfp2pf5, 5).
-start[ast_oxc](nd100d8f9c1968a85_716gejrfp2pf5, 123).
 node[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, call_expression, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, 5).
-start[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, 123).
 attr[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, optional, false).
 attr[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, pure, false).
 node[ast_oxc](nd100d8f9c1968a85_c9mmlt0jlc815, static_member_expression, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_c9mmlt0jlc815, 5).
-start[ast_oxc](nd100d8f9c1968a85_c9mmlt0jlc815, 123).
 attr[ast_oxc](nd100d8f9c1968a85_c9mmlt0jlc815, optional, false).
 node[ast_oxc](nd100d8f9c1968a85_nn5lq5esgpr4f, identifier_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_nn5lq5esgpr4f, 5).
-start[ast_oxc](nd100d8f9c1968a85_nn5lq5esgpr4f, 123).
 attr[ast_oxc](nd100d8f9c1968a85_nn5lq5esgpr4f, variant, "Identifier").
 attr[ast_oxc](nd100d8f9c1968a85_nn5lq5esgpr4f, name, "fs").
 child[ast_oxc](nd100d8f9c1968a85_c9mmlt0jlc815, object, 0, nd100d8f9c1968a85_nn5lq5esgpr4f).
 node[ast_oxc](nd100d8f9c1968a85_396bnpbadsqf3, identifier_name, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_396bnpbadsqf3, 5).
-start[ast_oxc](nd100d8f9c1968a85_396bnpbadsqf3, 126).
 attr[ast_oxc](nd100d8f9c1968a85_396bnpbadsqf3, name, "writeFileSync").
 child[ast_oxc](nd100d8f9c1968a85_c9mmlt0jlc815, property, 0, nd100d8f9c1968a85_396bnpbadsqf3).
 child[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, callee, 0, nd100d8f9c1968a85_c9mmlt0jlc815).
 node[ast_oxc](nd100d8f9c1968a85_gcrlid8obki18, identifier_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_gcrlid8obki18, 5).
-start[ast_oxc](nd100d8f9c1968a85_gcrlid8obki18, 140).
 attr[ast_oxc](nd100d8f9c1968a85_gcrlid8obki18, variant, "Identifier").
 attr[ast_oxc](nd100d8f9c1968a85_gcrlid8obki18, name, "path").
 child[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, arguments, 0, nd100d8f9c1968a85_gcrlid8obki18).
 node[ast_oxc](nd100d8f9c1968a85_mnsc9maodrm25, identifier_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_mnsc9maodrm25, 5).
-start[ast_oxc](nd100d8f9c1968a85_mnsc9maodrm25, 146).
 attr[ast_oxc](nd100d8f9c1968a85_mnsc9maodrm25, variant, "Identifier").
 attr[ast_oxc](nd100d8f9c1968a85_mnsc9maodrm25, name, "data").
 child[ast_oxc](nd100d8f9c1968a85_5s90vis7e2i58, arguments, 1, nd100d8f9c1968a85_mnsc9maodrm25).
@@ -1857,117 +1510,92 @@ child[ast_oxc](nd100d8f9c1968a85_aa4dm6fe0u1ae, declaration, 0, nd100d8f9c1968a8
 child[ast_oxc](nd100d8f9c1968a85_root, body, 2, nd100d8f9c1968a85_aa4dm6fe0u1ae).
 node[ast_oxc](nd100d8f9c1968a85_0pj23vedr1ivd, export_declaration, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_0pj23vedr1ivd, 8).
-start[ast_oxc](nd100d8f9c1968a85_0pj23vedr1ivd, 156).
 node[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, function, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, 8).
-start[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, 163).
 attr[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, variant, "FunctionDeclaration").
 node[ast_oxc](nd100d8f9c1968a85_ono7lomq5a1j1, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_ono7lomq5a1j1, 8).
-start[ast_oxc](nd100d8f9c1968a85_ono7lomq5a1j1, 178).
 attr[ast_oxc](nd100d8f9c1968a85_ono7lomq5a1j1, name, "remove").
 child[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, id, 0, nd100d8f9c1968a85_ono7lomq5a1j1).
 node[ast_oxc](nd100d8f9c1968a85_s586e5gj8s6v7, formal_parameters, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_s586e5gj8s6v7, 8).
-start[ast_oxc](nd100d8f9c1968a85_s586e5gj8s6v7, 184).
 attr[ast_oxc](nd100d8f9c1968a85_s586e5gj8s6v7, kind, "FormalParameter").
 node[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, formal_parameter, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, 8).
-start[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, 185).
 attr[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, optional, false).
 attr[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, readonly, false).
 attr[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, override, false).
 node[ast_oxc](nd100d8f9c1968a85_s46hftcbhg01a, binding_identifier, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_s46hftcbhg01a, 8).
-start[ast_oxc](nd100d8f9c1968a85_s46hftcbhg01a, 185).
 attr[ast_oxc](nd100d8f9c1968a85_s46hftcbhg01a, name, "target").
 child[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, pattern, 0, nd100d8f9c1968a85_s46hftcbhg01a).
 node[ast_oxc](nd100d8f9c1968a85_n967ttos0t3a, tstype_annotation, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_n967ttos0t3a, 8).
-start[ast_oxc](nd100d8f9c1968a85_n967ttos0t3a, 191).
 node[ast_oxc](nd100d8f9c1968a85_dkra6gebdeh5e, tsstring_keyword, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_dkra6gebdeh5e, 8).
-start[ast_oxc](nd100d8f9c1968a85_dkra6gebdeh5e, 193).
 child[ast_oxc](nd100d8f9c1968a85_n967ttos0t3a, type_annotation, 0, nd100d8f9c1968a85_dkra6gebdeh5e).
 child[ast_oxc](nd100d8f9c1968a85_faskhahnnhui8, type_annotation, 0, nd100d8f9c1968a85_n967ttos0t3a).
 child[ast_oxc](nd100d8f9c1968a85_s586e5gj8s6v7, items, 0, nd100d8f9c1968a85_faskhahnnhui8).
 child[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, params, 0, nd100d8f9c1968a85_s586e5gj8s6v7).
 node[ast_oxc](nd100d8f9c1968a85_1nm03ibnpf14b, tstype_annotation, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_1nm03ibnpf14b, 8).
-start[ast_oxc](nd100d8f9c1968a85_1nm03ibnpf14b, 200).
 node[ast_oxc](nd100d8f9c1968a85_evt2qbeikafvb, tstype_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_evt2qbeikafvb, 8).
-start[ast_oxc](nd100d8f9c1968a85_evt2qbeikafvb, 202).
 node[ast_oxc](nd100d8f9c1968a85_tdn9r1vlj1mdf, identifier_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_tdn9r1vlj1mdf, 8).
-start[ast_oxc](nd100d8f9c1968a85_tdn9r1vlj1mdf, 202).
 attr[ast_oxc](nd100d8f9c1968a85_tdn9r1vlj1mdf, name, "Promise").
 child[ast_oxc](nd100d8f9c1968a85_evt2qbeikafvb, type_name, 0, nd100d8f9c1968a85_tdn9r1vlj1mdf).
 node[ast_oxc](nd100d8f9c1968a85_e6si3er907c66, tstype_parameter_instantiation, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_e6si3er907c66, 8).
-start[ast_oxc](nd100d8f9c1968a85_e6si3er907c66, 209).
 node[ast_oxc](nd100d8f9c1968a85_14tr8ddf014hb, tsvoid_keyword, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_14tr8ddf014hb, 8).
-start[ast_oxc](nd100d8f9c1968a85_14tr8ddf014hb, 210).
 child[ast_oxc](nd100d8f9c1968a85_e6si3er907c66, params, 0, nd100d8f9c1968a85_14tr8ddf014hb).
 child[ast_oxc](nd100d8f9c1968a85_evt2qbeikafvb, type_arguments, 0, nd100d8f9c1968a85_e6si3er907c66).
 child[ast_oxc](nd100d8f9c1968a85_1nm03ibnpf14b, type_annotation, 0, nd100d8f9c1968a85_evt2qbeikafvb).
 child[ast_oxc](nd100d8f9c1968a85_cjbcu6a4b3ica, return_type, 0, nd100d8f9c1968a85_1nm03ibnpf14b).
 node[ast_oxc](nd100d8f9c1968a85_f53s2jasdkfi1, function_body, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_f53s2jasdkfi1, 8).
-start[ast_oxc](nd100d8f9c1968a85_f53s2jasdkfi1, 216).
 node[ast_oxc](nd100d8f9c1968a85_ohrs6e5p6i5ee, expression_statement, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_ohrs6e5p6i5ee, 9).
-start[ast_oxc](nd100d8f9c1968a85_ohrs6e5p6i5ee, 219).
 node[ast_oxc](nd100d8f9c1968a85_bp4srl85g4eu5, await_expression, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_bp4srl85g4eu5, 9).
-start[ast_oxc](nd100d8f9c1968a85_bp4srl85g4eu5, 219).
 node[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, call_expression, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, 9).
-start[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, 225).
 attr[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, optional, false).
 attr[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, pure, false).
 node[ast_oxc](nd100d8f9c1968a85_cssjn0bf9ems6, static_member_expression, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_cssjn0bf9ems6, 9).
-start[ast_oxc](nd100d8f9c1968a85_cssjn0bf9ems6, 225).
 attr[ast_oxc](nd100d8f9c1968a85_cssjn0bf9ems6, optional, false).
 node[ast_oxc](nd100d8f9c1968a85_qgbqc42gme4bb, identifier_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_qgbqc42gme4bb, 9).
-start[ast_oxc](nd100d8f9c1968a85_qgbqc42gme4bb, 225).
 attr[ast_oxc](nd100d8f9c1968a85_qgbqc42gme4bb, variant, "Identifier").
 attr[ast_oxc](nd100d8f9c1968a85_qgbqc42gme4bb, name, "promises").
 child[ast_oxc](nd100d8f9c1968a85_cssjn0bf9ems6, object, 0, nd100d8f9c1968a85_qgbqc42gme4bb).
 node[ast_oxc](nd100d8f9c1968a85_k9ti1e2ju0ljc, identifier_name, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_k9ti1e2ju0ljc, 9).
-start[ast_oxc](nd100d8f9c1968a85_k9ti1e2ju0ljc, 234).
 attr[ast_oxc](nd100d8f9c1968a85_k9ti1e2ju0ljc, name, "rm").
 child[ast_oxc](nd100d8f9c1968a85_cssjn0bf9ems6, property, 0, nd100d8f9c1968a85_k9ti1e2ju0ljc).
 child[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, callee, 0, nd100d8f9c1968a85_cssjn0bf9ems6).
 node[ast_oxc](nd100d8f9c1968a85_8gtr6u6p391l7, identifier_reference, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_8gtr6u6p391l7, 9).
-start[ast_oxc](nd100d8f9c1968a85_8gtr6u6p391l7, 237).
 attr[ast_oxc](nd100d8f9c1968a85_8gtr6u6p391l7, variant, "Identifier").
 attr[ast_oxc](nd100d8f9c1968a85_8gtr6u6p391l7, name, "target").
 child[ast_oxc](nd100d8f9c1968a85_8u7p678hvhje3, arguments, 0, nd100d8f9c1968a85_8gtr6u6p391l7).
 node[ast_oxc](nd100d8f9c1968a85_9947141bs4hg7, object_expression, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_9947141bs4hg7, 9).
-start[ast_oxc](nd100d8f9c1968a85_9947141bs4hg7, 245).
 node[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, object_property, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, 9).
-start[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, 247).
 attr[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, kind, "Init").
 attr[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, method, false).
 attr[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, shorthand, false).
 attr[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, computed, false).
 node[ast_oxc](nd100d8f9c1968a85_r9vhk8er9imtc, identifier_name, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_r9vhk8er9imtc, 9).
-start[ast_oxc](nd100d8f9c1968a85_r9vhk8er9imtc, 247).
 attr[ast_oxc](nd100d8f9c1968a85_r9vhk8er9imtc, variant, "StaticIdentifier").
 attr[ast_oxc](nd100d8f9c1968a85_r9vhk8er9imtc, name, "recursive").
 child[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, key, 0, nd100d8f9c1968a85_r9vhk8er9imtc).
 node[ast_oxc](nd100d8f9c1968a85_brb9oluombaff, boolean_literal, "mini/node/pfs.ts").
 line[ast_oxc](nd100d8f9c1968a85_brb9oluombaff, 9).
-start[ast_oxc](nd100d8f9c1968a85_brb9oluombaff, 258).
 attr[ast_oxc](nd100d8f9c1968a85_brb9oluombaff, value, true).
 child[ast_oxc](nd100d8f9c1968a85_aatre10mt1en2, value, 0, nd100d8f9c1968a85_brb9oluombaff).
 child[ast_oxc](nd100d8f9c1968a85_9947141bs4hg7, properties, 0, nd100d8f9c1968a85_aatre10mt1en2).
@@ -1990,93 +1618,73 @@ attr[ast_oxc](nd100d8f9c1968a85_root, source_type_variant, "Standard").
 file[ast_oxc](nd100d8f9c1968a85_root, "mini/node/pfs.ts").
 node[ast_oxc](n34efd0fd49e79fa1_root, program, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_root, 1).
-start[ast_oxc](n34efd0fd49e79fa1_root, 0).
 node[ast_oxc](n34efd0fd49e79fa1_25777unif2au8, import_declaration, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_25777unif2au8, 1).
-start[ast_oxc](n34efd0fd49e79fa1_25777unif2au8, 0).
 attr[ast_oxc](n34efd0fd49e79fa1_25777unif2au8, import_kind, "Value").
 node[ast_oxc](n34efd0fd49e79fa1_76q7oq9lsa0b1, import_namespace_specifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_76q7oq9lsa0b1, 1).
-start[ast_oxc](n34efd0fd49e79fa1_76q7oq9lsa0b1, 7).
 node[ast_oxc](n34efd0fd49e79fa1_av13pt4svdpve, binding_identifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_av13pt4svdpve, 1).
-start[ast_oxc](n34efd0fd49e79fa1_av13pt4svdpve, 12).
 attr[ast_oxc](n34efd0fd49e79fa1_av13pt4svdpve, name, "net").
 child[ast_oxc](n34efd0fd49e79fa1_76q7oq9lsa0b1, local, 0, n34efd0fd49e79fa1_av13pt4svdpve).
 child[ast_oxc](n34efd0fd49e79fa1_25777unif2au8, specifiers, 0, n34efd0fd49e79fa1_76q7oq9lsa0b1).
 node[ast_oxc](n34efd0fd49e79fa1_oqed4lu1r73i6, string_literal, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_oqed4lu1r73i6, 1).
-start[ast_oxc](n34efd0fd49e79fa1_oqed4lu1r73i6, 21).
 attr[ast_oxc](n34efd0fd49e79fa1_oqed4lu1r73i6, value, "net").
 attr[ast_oxc](n34efd0fd49e79fa1_oqed4lu1r73i6, raw, "'net'").
 child[ast_oxc](n34efd0fd49e79fa1_25777unif2au8, source, 0, n34efd0fd49e79fa1_oqed4lu1r73i6).
 child[ast_oxc](n34efd0fd49e79fa1_root, body, 0, n34efd0fd49e79fa1_25777unif2au8).
 node[ast_oxc](n34efd0fd49e79fa1_qndjgq5gm5b7f, import_declaration, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_qndjgq5gm5b7f, 2).
-start[ast_oxc](n34efd0fd49e79fa1_qndjgq5gm5b7f, 28).
 attr[ast_oxc](n34efd0fd49e79fa1_qndjgq5gm5b7f, import_kind, "Value").
 node[ast_oxc](n34efd0fd49e79fa1_9g9ei50re1pb8, import_specifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_9g9ei50re1pb8, 2).
-start[ast_oxc](n34efd0fd49e79fa1_9g9ei50re1pb8, 37).
 attr[ast_oxc](n34efd0fd49e79fa1_9g9ei50re1pb8, import_kind, "Value").
 node[ast_oxc](n34efd0fd49e79fa1_3mgv59lj34e97, identifier_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_3mgv59lj34e97, 2).
-start[ast_oxc](n34efd0fd49e79fa1_3mgv59lj34e97, 37).
 attr[ast_oxc](n34efd0fd49e79fa1_3mgv59lj34e97, name, "DEFAULT_PORT").
 child[ast_oxc](n34efd0fd49e79fa1_9g9ei50re1pb8, imported, 0, n34efd0fd49e79fa1_3mgv59lj34e97).
 node[ast_oxc](n34efd0fd49e79fa1_dqvdul805bea4, binding_identifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_dqvdul805bea4, 2).
-start[ast_oxc](n34efd0fd49e79fa1_dqvdul805bea4, 37).
 attr[ast_oxc](n34efd0fd49e79fa1_dqvdul805bea4, name, "DEFAULT_PORT").
 child[ast_oxc](n34efd0fd49e79fa1_9g9ei50re1pb8, local, 0, n34efd0fd49e79fa1_dqvdul805bea4).
 child[ast_oxc](n34efd0fd49e79fa1_qndjgq5gm5b7f, specifiers, 0, n34efd0fd49e79fa1_9g9ei50re1pb8).
 node[ast_oxc](n34efd0fd49e79fa1_ahrf3cep920r, string_literal, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ahrf3cep920r, 2).
-start[ast_oxc](n34efd0fd49e79fa1_ahrf3cep920r, 57).
 attr[ast_oxc](n34efd0fd49e79fa1_ahrf3cep920r, value, "../common/channels.js").
 attr[ast_oxc](n34efd0fd49e79fa1_ahrf3cep920r, raw, "'../common/channels.js'").
 child[ast_oxc](n34efd0fd49e79fa1_qndjgq5gm5b7f, source, 0, n34efd0fd49e79fa1_ahrf3cep920r).
 child[ast_oxc](n34efd0fd49e79fa1_root, body, 1, n34efd0fd49e79fa1_qndjgq5gm5b7f).
 node[ast_oxc](n34efd0fd49e79fa1_aa4dm6fe0u1ae, export_declaration, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_aa4dm6fe0u1ae, 4).
-start[ast_oxc](n34efd0fd49e79fa1_aa4dm6fe0u1ae, 83).
 node[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, function, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, 4).
-start[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, 90).
 attr[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, variant, "FunctionDeclaration").
 node[ast_oxc](n34efd0fd49e79fa1_2slnj395u7hjc, binding_identifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_2slnj395u7hjc, 4).
-start[ast_oxc](n34efd0fd49e79fa1_2slnj395u7hjc, 99).
 attr[ast_oxc](n34efd0fd49e79fa1_2slnj395u7hjc, name, "listenOn").
 child[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, id, 0, n34efd0fd49e79fa1_2slnj395u7hjc).
 node[ast_oxc](n34efd0fd49e79fa1_tqakmhprbt0j4, formal_parameters, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_tqakmhprbt0j4, 4).
-start[ast_oxc](n34efd0fd49e79fa1_tqakmhprbt0j4, 107).
 attr[ast_oxc](n34efd0fd49e79fa1_tqakmhprbt0j4, kind, "FormalParameter").
 node[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, formal_parameter, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, 4).
-start[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, 108).
 attr[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, optional, false).
 attr[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, readonly, false).
 attr[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, override, false).
 node[ast_oxc](n34efd0fd49e79fa1_scln7k110b1le, binding_identifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_scln7k110b1le, 4).
-start[ast_oxc](n34efd0fd49e79fa1_scln7k110b1le, 108).
 attr[ast_oxc](n34efd0fd49e79fa1_scln7k110b1le, name, "port").
 child[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, pattern, 0, n34efd0fd49e79fa1_scln7k110b1le).
 node[ast_oxc](n34efd0fd49e79fa1_o6rbcjjs4bbca, tstype_annotation, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_o6rbcjjs4bbca, 4).
-start[ast_oxc](n34efd0fd49e79fa1_o6rbcjjs4bbca, 112).
 node[ast_oxc](n34efd0fd49e79fa1_jut28o98gpald, tsunion_type, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_jut28o98gpald, 4).
-start[ast_oxc](n34efd0fd49e79fa1_jut28o98gpald, 114).
 node[ast_oxc](n34efd0fd49e79fa1_vu0ickoiercq3, tsnumber_keyword, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_vu0ickoiercq3, 4).
-start[ast_oxc](n34efd0fd49e79fa1_vu0ickoiercq3, 114).
 child[ast_oxc](n34efd0fd49e79fa1_jut28o98gpald, types, 0, n34efd0fd49e79fa1_vu0ickoiercq3).
 node[ast_oxc](n34efd0fd49e79fa1_meplvvrovs1e5, tsstring_keyword, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_meplvvrovs1e5, 4).
-start[ast_oxc](n34efd0fd49e79fa1_meplvvrovs1e5, 123).
 child[ast_oxc](n34efd0fd49e79fa1_jut28o98gpald, types, 1, n34efd0fd49e79fa1_meplvvrovs1e5).
 child[ast_oxc](n34efd0fd49e79fa1_o6rbcjjs4bbca, type_annotation, 0, n34efd0fd49e79fa1_jut28o98gpald).
 child[ast_oxc](n34efd0fd49e79fa1_tl39msreojp3a, type_annotation, 0, n34efd0fd49e79fa1_o6rbcjjs4bbca).
@@ -2084,22 +1692,17 @@ child[ast_oxc](n34efd0fd49e79fa1_tqakmhprbt0j4, items, 0, n34efd0fd49e79fa1_tl39
 child[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, params, 0, n34efd0fd49e79fa1_tqakmhprbt0j4).
 node[ast_oxc](n34efd0fd49e79fa1_ptnh0m8aloegc, tstype_annotation, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ptnh0m8aloegc, 4).
-start[ast_oxc](n34efd0fd49e79fa1_ptnh0m8aloegc, 130).
 node[ast_oxc](n34efd0fd49e79fa1_8gj8pud95dl52, tstype_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_8gj8pud95dl52, 4).
-start[ast_oxc](n34efd0fd49e79fa1_8gj8pud95dl52, 132).
 node[ast_oxc](n34efd0fd49e79fa1_e7vnslmli433c, tsqualified_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_e7vnslmli433c, 4).
-start[ast_oxc](n34efd0fd49e79fa1_e7vnslmli433c, 132).
 attr[ast_oxc](n34efd0fd49e79fa1_e7vnslmli433c, variant, "QualifiedName").
 node[ast_oxc](n34efd0fd49e79fa1_r4vvns5geo07b, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_r4vvns5geo07b, 4).
-start[ast_oxc](n34efd0fd49e79fa1_r4vvns5geo07b, 132).
 attr[ast_oxc](n34efd0fd49e79fa1_r4vvns5geo07b, name, "net").
 child[ast_oxc](n34efd0fd49e79fa1_e7vnslmli433c, left, 0, n34efd0fd49e79fa1_r4vvns5geo07b).
 node[ast_oxc](n34efd0fd49e79fa1_09harra4bcoib, identifier_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_09harra4bcoib, 4).
-start[ast_oxc](n34efd0fd49e79fa1_09harra4bcoib, 136).
 attr[ast_oxc](n34efd0fd49e79fa1_09harra4bcoib, name, "Server").
 child[ast_oxc](n34efd0fd49e79fa1_e7vnslmli433c, right, 0, n34efd0fd49e79fa1_09harra4bcoib).
 child[ast_oxc](n34efd0fd49e79fa1_8gj8pud95dl52, type_name, 0, n34efd0fd49e79fa1_e7vnslmli433c).
@@ -2107,39 +1710,31 @@ child[ast_oxc](n34efd0fd49e79fa1_ptnh0m8aloegc, type_annotation, 0, n34efd0fd49e
 child[ast_oxc](n34efd0fd49e79fa1_ppoic9moja2s, return_type, 0, n34efd0fd49e79fa1_ptnh0m8aloegc).
 node[ast_oxc](n34efd0fd49e79fa1_9oajs7tm85kde, function_body, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_9oajs7tm85kde, 4).
-start[ast_oxc](n34efd0fd49e79fa1_9oajs7tm85kde, 143).
 node[ast_oxc](n34efd0fd49e79fa1_jq5augmhchnac, variable_declaration, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_jq5augmhchnac, 5).
-start[ast_oxc](n34efd0fd49e79fa1_jq5augmhchnac, 146).
 attr[ast_oxc](n34efd0fd49e79fa1_jq5augmhchnac, kind, "Const").
 attr[ast_oxc](n34efd0fd49e79fa1_jq5augmhchnac, declare, false).
 node[ast_oxc](n34efd0fd49e79fa1_ev2olac6vgvc8, variable_declarator, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ev2olac6vgvc8, 5).
-start[ast_oxc](n34efd0fd49e79fa1_ev2olac6vgvc8, 152).
 attr[ast_oxc](n34efd0fd49e79fa1_ev2olac6vgvc8, definite, false).
 node[ast_oxc](n34efd0fd49e79fa1_geou9f0d9bka8, binding_identifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_geou9f0d9bka8, 5).
-start[ast_oxc](n34efd0fd49e79fa1_geou9f0d9bka8, 152).
 attr[ast_oxc](n34efd0fd49e79fa1_geou9f0d9bka8, name, "server").
 child[ast_oxc](n34efd0fd49e79fa1_ev2olac6vgvc8, id, 0, n34efd0fd49e79fa1_geou9f0d9bka8).
 node[ast_oxc](n34efd0fd49e79fa1_knrl2o4ec3gl2, call_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_knrl2o4ec3gl2, 5).
-start[ast_oxc](n34efd0fd49e79fa1_knrl2o4ec3gl2, 161).
 attr[ast_oxc](n34efd0fd49e79fa1_knrl2o4ec3gl2, optional, false).
 attr[ast_oxc](n34efd0fd49e79fa1_knrl2o4ec3gl2, pure, false).
 node[ast_oxc](n34efd0fd49e79fa1_o1630s5l2b1rb, static_member_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_o1630s5l2b1rb, 5).
-start[ast_oxc](n34efd0fd49e79fa1_o1630s5l2b1rb, 161).
 attr[ast_oxc](n34efd0fd49e79fa1_o1630s5l2b1rb, optional, false).
 node[ast_oxc](n34efd0fd49e79fa1_tev4d71r7jv7d, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_tev4d71r7jv7d, 5).
-start[ast_oxc](n34efd0fd49e79fa1_tev4d71r7jv7d, 161).
 attr[ast_oxc](n34efd0fd49e79fa1_tev4d71r7jv7d, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_tev4d71r7jv7d, name, "net").
 child[ast_oxc](n34efd0fd49e79fa1_o1630s5l2b1rb, object, 0, n34efd0fd49e79fa1_tev4d71r7jv7d).
 node[ast_oxc](n34efd0fd49e79fa1_ruui1gv4oiq4a, identifier_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ruui1gv4oiq4a, 5).
-start[ast_oxc](n34efd0fd49e79fa1_ruui1gv4oiq4a, 165).
 attr[ast_oxc](n34efd0fd49e79fa1_ruui1gv4oiq4a, name, "createServer").
 child[ast_oxc](n34efd0fd49e79fa1_o1630s5l2b1rb, property, 0, n34efd0fd49e79fa1_ruui1gv4oiq4a).
 child[ast_oxc](n34efd0fd49e79fa1_knrl2o4ec3gl2, callee, 0, n34efd0fd49e79fa1_o1630s5l2b1rb).
@@ -2148,31 +1743,25 @@ child[ast_oxc](n34efd0fd49e79fa1_jq5augmhchnac, declarations, 0, n34efd0fd49e79f
 child[ast_oxc](n34efd0fd49e79fa1_9oajs7tm85kde, statements, 0, n34efd0fd49e79fa1_jq5augmhchnac).
 node[ast_oxc](n34efd0fd49e79fa1_hdanhvr6ms8d4, expression_statement, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_hdanhvr6ms8d4, 6).
-start[ast_oxc](n34efd0fd49e79fa1_hdanhvr6ms8d4, 182).
 node[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, call_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, 6).
-start[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, 182).
 attr[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, optional, false).
 attr[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, pure, false).
 node[ast_oxc](n34efd0fd49e79fa1_1ismvrc0f6321, static_member_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_1ismvrc0f6321, 6).
-start[ast_oxc](n34efd0fd49e79fa1_1ismvrc0f6321, 182).
 attr[ast_oxc](n34efd0fd49e79fa1_1ismvrc0f6321, optional, false).
 node[ast_oxc](n34efd0fd49e79fa1_crferqmnblpg3, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_crferqmnblpg3, 6).
-start[ast_oxc](n34efd0fd49e79fa1_crferqmnblpg3, 182).
 attr[ast_oxc](n34efd0fd49e79fa1_crferqmnblpg3, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_crferqmnblpg3, name, "server").
 child[ast_oxc](n34efd0fd49e79fa1_1ismvrc0f6321, object, 0, n34efd0fd49e79fa1_crferqmnblpg3).
 node[ast_oxc](n34efd0fd49e79fa1_5f1fcmi4s4587, identifier_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_5f1fcmi4s4587, 6).
-start[ast_oxc](n34efd0fd49e79fa1_5f1fcmi4s4587, 189).
 attr[ast_oxc](n34efd0fd49e79fa1_5f1fcmi4s4587, name, "listen").
 child[ast_oxc](n34efd0fd49e79fa1_1ismvrc0f6321, property, 0, n34efd0fd49e79fa1_5f1fcmi4s4587).
 child[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, callee, 0, n34efd0fd49e79fa1_1ismvrc0f6321).
 node[ast_oxc](n34efd0fd49e79fa1_scmpbqginlsi9, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_scmpbqginlsi9, 6).
-start[ast_oxc](n34efd0fd49e79fa1_scmpbqginlsi9, 196).
 attr[ast_oxc](n34efd0fd49e79fa1_scmpbqginlsi9, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_scmpbqginlsi9, name, "port").
 child[ast_oxc](n34efd0fd49e79fa1_q0402rcqfdos6, arguments, 0, n34efd0fd49e79fa1_scmpbqginlsi9).
@@ -2180,10 +1769,8 @@ child[ast_oxc](n34efd0fd49e79fa1_hdanhvr6ms8d4, expression, 0, n34efd0fd49e79fa1
 child[ast_oxc](n34efd0fd49e79fa1_9oajs7tm85kde, statements, 1, n34efd0fd49e79fa1_hdanhvr6ms8d4).
 node[ast_oxc](n34efd0fd49e79fa1_hj74454cr6qoa, return_statement, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_hj74454cr6qoa, 7).
-start[ast_oxc](n34efd0fd49e79fa1_hj74454cr6qoa, 204).
 node[ast_oxc](n34efd0fd49e79fa1_qi2iakipd5478, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_qi2iakipd5478, 7).
-start[ast_oxc](n34efd0fd49e79fa1_qi2iakipd5478, 211).
 attr[ast_oxc](n34efd0fd49e79fa1_qi2iakipd5478, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_qi2iakipd5478, name, "server").
 child[ast_oxc](n34efd0fd49e79fa1_hj74454cr6qoa, argument, 0, n34efd0fd49e79fa1_qi2iakipd5478).
@@ -2199,49 +1786,38 @@ child[ast_oxc](n34efd0fd49e79fa1_aa4dm6fe0u1ae, declaration, 0, n34efd0fd49e79fa
 child[ast_oxc](n34efd0fd49e79fa1_root, body, 2, n34efd0fd49e79fa1_aa4dm6fe0u1ae).
 node[ast_oxc](n34efd0fd49e79fa1_0pj23vedr1ivd, export_declaration, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_0pj23vedr1ivd, 10).
-start[ast_oxc](n34efd0fd49e79fa1_0pj23vedr1ivd, 222).
 node[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, function, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, 10).
-start[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, 229).
 attr[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, variant, "FunctionDeclaration").
 node[ast_oxc](n34efd0fd49e79fa1_u2tpu3in527n7, binding_identifier, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_u2tpu3in527n7, 10).
-start[ast_oxc](n34efd0fd49e79fa1_u2tpu3in527n7, 238).
 attr[ast_oxc](n34efd0fd49e79fa1_u2tpu3in527n7, name, "startServers").
 child[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, id, 0, n34efd0fd49e79fa1_u2tpu3in527n7).
 node[ast_oxc](n34efd0fd49e79fa1_s33sv4u8mnp56, formal_parameters, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_s33sv4u8mnp56, 10).
-start[ast_oxc](n34efd0fd49e79fa1_s33sv4u8mnp56, 250).
 attr[ast_oxc](n34efd0fd49e79fa1_s33sv4u8mnp56, kind, "FormalParameter").
 child[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, params, 0, n34efd0fd49e79fa1_s33sv4u8mnp56).
 node[ast_oxc](n34efd0fd49e79fa1_5scspkuis0gr1, tstype_annotation, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_5scspkuis0gr1, 10).
-start[ast_oxc](n34efd0fd49e79fa1_5scspkuis0gr1, 252).
 node[ast_oxc](n34efd0fd49e79fa1_b7puv74gt94lc, tsvoid_keyword, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_b7puv74gt94lc, 10).
-start[ast_oxc](n34efd0fd49e79fa1_b7puv74gt94lc, 254).
 child[ast_oxc](n34efd0fd49e79fa1_5scspkuis0gr1, type_annotation, 0, n34efd0fd49e79fa1_b7puv74gt94lc).
 child[ast_oxc](n34efd0fd49e79fa1_uk8cp5dft033e, return_type, 0, n34efd0fd49e79fa1_5scspkuis0gr1).
 node[ast_oxc](n34efd0fd49e79fa1_tj88lo1kflfff, function_body, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_tj88lo1kflfff, 10).
-start[ast_oxc](n34efd0fd49e79fa1_tj88lo1kflfff, 259).
 node[ast_oxc](n34efd0fd49e79fa1_eocunual9c8u4, expression_statement, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_eocunual9c8u4, 11).
-start[ast_oxc](n34efd0fd49e79fa1_eocunual9c8u4, 262).
 node[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, call_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, 11).
-start[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, 262).
 attr[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, optional, false).
 attr[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, pure, false).
 node[ast_oxc](n34efd0fd49e79fa1_fms7318ssb1of, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_fms7318ssb1of, 11).
-start[ast_oxc](n34efd0fd49e79fa1_fms7318ssb1of, 262).
 attr[ast_oxc](n34efd0fd49e79fa1_fms7318ssb1of, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_fms7318ssb1of, name, "listenOn").
 child[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, callee, 0, n34efd0fd49e79fa1_fms7318ssb1of).
 node[ast_oxc](n34efd0fd49e79fa1_o1rr8rjtjnnid, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_o1rr8rjtjnnid, 11).
-start[ast_oxc](n34efd0fd49e79fa1_o1rr8rjtjnnid, 271).
 attr[ast_oxc](n34efd0fd49e79fa1_o1rr8rjtjnnid, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_o1rr8rjtjnnid, name, "DEFAULT_PORT").
 child[ast_oxc](n34efd0fd49e79fa1_hi1ph3li171ob, arguments, 0, n34efd0fd49e79fa1_o1rr8rjtjnnid).
@@ -2249,41 +1825,33 @@ child[ast_oxc](n34efd0fd49e79fa1_eocunual9c8u4, expression, 0, n34efd0fd49e79fa1
 child[ast_oxc](n34efd0fd49e79fa1_tj88lo1kflfff, statements, 0, n34efd0fd49e79fa1_eocunual9c8u4).
 node[ast_oxc](n34efd0fd49e79fa1_orgtnihk3aad3, expression_statement, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_orgtnihk3aad3, 12).
-start[ast_oxc](n34efd0fd49e79fa1_orgtnihk3aad3, 287).
 node[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, call_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, 12).
-start[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, 287).
 attr[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, optional, false).
 attr[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, pure, false).
 node[ast_oxc](n34efd0fd49e79fa1_io7bj4gn7o75e, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_io7bj4gn7o75e, 12).
-start[ast_oxc](n34efd0fd49e79fa1_io7bj4gn7o75e, 287).
 attr[ast_oxc](n34efd0fd49e79fa1_io7bj4gn7o75e, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_io7bj4gn7o75e, name, "listenOn").
 child[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, callee, 0, n34efd0fd49e79fa1_io7bj4gn7o75e).
 node[ast_oxc](n34efd0fd49e79fa1_2f8ph2fjd3qr8, static_member_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_2f8ph2fjd3qr8, 12).
-start[ast_oxc](n34efd0fd49e79fa1_2f8ph2fjd3qr8, 296).
 attr[ast_oxc](n34efd0fd49e79fa1_2f8ph2fjd3qr8, optional, false).
 node[ast_oxc](n34efd0fd49e79fa1_569u6irfk38fb, static_member_expression, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_569u6irfk38fb, 12).
-start[ast_oxc](n34efd0fd49e79fa1_569u6irfk38fb, 296).
 attr[ast_oxc](n34efd0fd49e79fa1_569u6irfk38fb, optional, false).
 node[ast_oxc](n34efd0fd49e79fa1_ld9uki9kpbt4e, identifier_reference, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_ld9uki9kpbt4e, 12).
-start[ast_oxc](n34efd0fd49e79fa1_ld9uki9kpbt4e, 296).
 attr[ast_oxc](n34efd0fd49e79fa1_ld9uki9kpbt4e, variant, "Identifier").
 attr[ast_oxc](n34efd0fd49e79fa1_ld9uki9kpbt4e, name, "process").
 child[ast_oxc](n34efd0fd49e79fa1_569u6irfk38fb, object, 0, n34efd0fd49e79fa1_ld9uki9kpbt4e).
 node[ast_oxc](n34efd0fd49e79fa1_o42mcei4jnrrd, identifier_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_o42mcei4jnrrd, 12).
-start[ast_oxc](n34efd0fd49e79fa1_o42mcei4jnrrd, 304).
 attr[ast_oxc](n34efd0fd49e79fa1_o42mcei4jnrrd, name, "env").
 child[ast_oxc](n34efd0fd49e79fa1_569u6irfk38fb, property, 0, n34efd0fd49e79fa1_o42mcei4jnrrd).
 child[ast_oxc](n34efd0fd49e79fa1_2f8ph2fjd3qr8, object, 0, n34efd0fd49e79fa1_569u6irfk38fb).
 node[ast_oxc](n34efd0fd49e79fa1_9khacmi5jcki3, identifier_name, "mini/node/server.ts").
 line[ast_oxc](n34efd0fd49e79fa1_9khacmi5jcki3, 12).
-start[ast_oxc](n34efd0fd49e79fa1_9khacmi5jcki3, 308).
 attr[ast_oxc](n34efd0fd49e79fa1_9khacmi5jcki3, name, "VSCODE_PORT").
 child[ast_oxc](n34efd0fd49e79fa1_2f8ph2fjd3qr8, property, 0, n34efd0fd49e79fa1_9khacmi5jcki3).
 child[ast_oxc](n34efd0fd49e79fa1_ngltcuo655ce7, arguments, 0, n34efd0fd49e79fa1_2f8ph2fjd3qr8).

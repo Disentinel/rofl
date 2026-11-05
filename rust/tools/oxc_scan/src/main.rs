@@ -1,6 +1,6 @@
 // oxc_scan — JS/TS source through oxc, its tree as facts in the [ast_oxc] perspective, without judgement.
 //
-//   oxc_scan DIR [FILE...] [--out OUT]  every JS/TS file under DIR (or the FILEs alone, paths from DIR), facts on stdout, the same bytes
+//   oxc_scan DIR [FILE...] [--out OUT] [--no-start]  every JS/TS file under DIR (or the FILEs alone, paths from DIR), facts on stdout, the same bytes
 //                                      for the same tree; a file oxc refuses is named on stderr and the exit code is 2
 //
 // The tree is oxc_ast's own (the Rust structs, not oxc's ESTree output), read through the Debug that oxc derives on
@@ -9,7 +9,8 @@
 //
 //   node[ast_oxc](Id, Kind, File)                one per oxc node
 //   line[ast_oxc](Id, Line)                      the line it starts on
-//   start[ast_oxc](Id, Offset)                   where it starts, in UTF-16 code units as a JS parser counts
+//   start[ast_oxc](Id, Offset)                   where it starts, in UTF-16 code units as a JS parser counts (left out by --no-start:
+//                                                every edit above a node moves it, and only the parity check reads it)
 //   child[ast_oxc](Parent, Field, Index, Child)  the tree; Index over the raw Vec, a None keeps its place
 //   attr[ast_oxc](Id, Key, Value)                every scalar; a struct without span flattened as key_member
 //   file[ast_oxc](RootId, File)                  one per parsed file
@@ -27,6 +28,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 const P: &str = "ast_oxc";
+static NO_START: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 // --- the Debug text of an oxc tree, read back into a generic tree ---------------------------------------------------
 
@@ -401,7 +403,9 @@ impl Scan<'_> {
         writeln!(self.out, "node[{P}]({me}, {kind}, {}).", self.file).unwrap();
         writeln!(self.out, "line[{P}]({me}, {}).", self.line(n.start)).unwrap();
         let at = if self.utf16.is_empty() { n.start } else { self.utf16[n.start as usize] };
-        writeln!(self.out, "start[{P}]({me}, {at}).").unwrap();
+        if !NO_START.load(Ordering::Relaxed) {
+            writeln!(self.out, "start[{P}]({me}, {at}).").unwrap();
+        }
         if let Some(v) = &n.variant {
             writeln!(self.out, "attr[{P}]({me}, variant, {}).", q(v)).unwrap();
         }
@@ -535,6 +539,10 @@ fn walk(root: &Path, dir: &str, files: &mut Vec<String>, dirs: &mut Vec<String>)
 
 fn main() {
     let mut args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(i) = args.iter().position(|a| a == "--no-start") {
+        args.remove(i);
+        NO_START.store(true, Ordering::Relaxed);
+    }
     let out = args.iter().position(|a| a == "--out").map(|i| {
         args.remove(i);
         args.remove(i)
