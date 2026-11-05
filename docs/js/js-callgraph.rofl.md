@@ -28,7 +28,7 @@ Reads:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_method](js-dataflow.rofl.md#class_method), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [logic_op](js-dataflow.rofl.md#logic_op), [module_export](js-dataflow.rofl.md#module_export), [named_decl](js-dataflow.rofl.md#named_decl), [ns_export](js-dataflow.rofl.md#ns_export), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_method](js-dataflow.rofl.md#obj_method), [obj_prop](js-dataflow.rofl.md#obj_prop), [own_name](js-dataflow.rofl.md#own_name), [param_wrap](js-dataflow.rofl.md#param_wrap), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
@@ -58,7 +58,6 @@ Reads:
   - <a id="binary"></a>`binary`
   - <a id="extends"></a>`extends`
   - <a id="keyed_by"></a>`keyed_by`
-  - <a id="object"></a>`object`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
@@ -75,8 +74,10 @@ Reads:
   - <a id="decorated"></a>`decorated`
   - <a id="enumerates"></a>`enumerates`
   - <a id="executes_if"></a>`executes_if`
+  - <a id="gives"></a>`gives`
   - <a id="has"></a>`has`
   - <a id="hoisted"></a>`hoisted`
+  - <a id="import_meta"></a>`import_meta`
   - <a id="iterates"></a>`iterates`
   - <a id="key"></a>`key`
   - <a id="literal"></a>`literal`
@@ -84,6 +85,7 @@ Reads:
   - <a id="member"></a>`member`
   - <a id="member_expr"></a>`member_expr`
   - <a id="namespace"></a>`namespace`
+  - <a id="object"></a>`object`
   - <a id="optional"></a>`optional`
   - <a id="param"></a>`param`
   - <a id="passes"></a>`passes`
@@ -98,6 +100,7 @@ Reads:
   - <a id="tagged"></a>`tagged`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
+  - <a id="this"></a>`this`
   - <a id="unary"></a>`unary`
   - <a id="value"></a>`value`
 - from the scanner:
@@ -111,12 +114,14 @@ What this file calls a node, and what each word stands for:
 |---|---|
 | <a id="noun-class_property"></a>a class property | a node of kind `class_property` |
 | <a id="noun-member_expression"></a>a member expression | a node of kind `member_expression` |
+| <a id="noun-regex_literal"></a>a regex literal | a node of kind `reg_exp_literal` |
 | a function | a node [`fn_node`](#fn_node) holds of |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
-- <a id="obj_kind_known"></a>A kind K is a classed kind if [`obj_kind_class`](#obj_kind_class)(K, something).
+- <a id="obj_kind_known"></a>A kind E is a classed kind if [`obj_kind_class`](#obj_kind_class)(E, something).
+- <a id="has_class"></a>A node has an expression class if it [is of the class](#expr_class) some class.
 - <a id="has_shape"></a>A call has a shape if it [has the known shape](#shape_known) some shape.
 - <a id="shaped"></a>A call is shaped if it [has the shape](#shape) some shape.
 - <a id="fn_node"></a>A node is a function if [`body`](#body)(it, something).
@@ -137,13 +142,11 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="call_site"></a>A call is a call site in File if [`call`](#call)(it) and [`at`](#at)(it, File, something).
 
-<a id="call_site_kind"></a>The call kind of a call C is K if C [is a call site](#call_site) in some file and C [is of kind](js-model.rofl.md#ast_node) K.
-
 <a id="call_line"></a>The line of a call C is Line if C [is a call site](#call_site) in some file and [`at`](#at)(C, something, Line).
 
 <a id="callee_of"></a>The callee of a call C is a node N if C [is a call site](#call_site) in some file and [`callee`](#callee)(C, N).
 
-<a id="callee_kind"></a>The callee kind of a call C is K if [the callee](#callee_of) of C [is of kind](js-model.rofl.md#ast_node) K.
+<a id="callee_class"></a>A node has the callee class E if [the callee](#callee_of) of it [is of the class](#expr_class) E.
 
 > Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 > iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
@@ -186,29 +189,84 @@ A call
 
 | arg 1 | arg 2 |
 |---|---|
-| `identifier` | `s_identifier` |
-| `arrow_function_expression` | `s_iife` |
-| `function_expression` | `s_iife` |
-| `super` | `s_super` |
-| `tsnon_null_expression` | `s_passes` |
-| `call_expression` | `s_call_result` |
-| `optional_call_expression` | `s_call_result` |
-| `new_expression` | `s_new_result` |
-| `import` | `s_dynamic_import` |
-| `sequence_expression` | `s_sequence` |
-| `parenthesized_expression` | `s_parenthesized` |
-| `tsas_expression` | `s_passes` |
-| `conditional_expression` | `s_conditional` |
-| `yield_expression` | `s_yield_result` |
+| `e_name` | `s_identifier` |
+| `e_fn` | `s_iife` |
+| `e_super` | `s_super` |
+| `e_passes` | `s_passes` |
+| `e_call` | `s_call_result` |
+| `e_new` | `s_new_result` |
+| `e_import` | `s_dynamic_import` |
+| `e_sequence` | `s_sequence` |
+| `e_conditional` | `s_conditional` |
+| `e_yield` | `s_yield_result` |
+| `e_parenthesized` | `s_parenthesized` |
 
-`member_kind` includes `member_expression`, `optional_member_expression`.
+Declared as facts:
+
+- <a id="callee_shape"></a>`callee_shape` — rows in this file
+
+> What an expression IS, by its roles and not by the grammar's kind. A wrapper with no behaviour (`passes`: a
+> parenthesis, `as`, `!`, `satisfies`, an assertion) is `e_passes`; an expression that gives one of its operands
+> is a sequence, and one that gives two is a conditional or, with the logical role, a logical.
+> `e_import` and `e_parenthesized` have no rule: an import() has no callee row and no parenthesis is kept.
+
+<a id="expr_class"></a>A node N is of the class E either:
+
+1. if [`ref`](#ref)(N, something) and E is `e_name`;
+2. if all of:
+   - N is a [function](#fn_node);
+   - E is `e_fn`;
+   - unless [`hoisted`](#hoisted)(N, something);
+   - unless [`member`](#member)(N, something, something);
+3. if [`super`](#super)(N) and E is `e_super`;
+4. if [`passes`](#passes)(N, something) and E is `e_passes`;
+5. if [`call`](#call)(N) and E is `e_call`, unless [`construct`](#construct)(N);
+6. if [`construct`](#construct)(N) and E is `e_new`;
+7. if [`yields`](js-dataflow.rofl.md#yields)(N, something) in the value and E is `e_yield`;
+8. if [`member`](#member)(N, something, something) and E is `e_member`;
+9. if [`member_expr`](#member_expr)(N, something, something) and E is `e_member`;
+10. if [`this`](#this)(N) and E is `e_this`;
+11. if [`array`](#array)(N) and E is `e_array`;
+12. if [`object`](#object)(N) and E is `e_object`;
+13. if [`class`](#class)(N) and E is `e_class`, unless [`hoisted`](#hoisted)(N, something);
+14. if [`template`](#template)(N) and E is `e_template`;
+15. if [`literal`](#literal)(N, something) and E is `e_literal`, unless [`template`](#template)(N);
+16. if N is a [regex literal](#noun-regex_literal) and E is `e_literal`;
+17. if [`import_meta`](#import_meta)(N) and E is `e_meta`;
+18. if [`awaits`](#awaits)(N, something) and E is `e_await`;
+19. if all of:
+   - [`assign`](#assign)(N, something, something);
+   - [`gives`](#gives)(N, something);
+   - E is `e_assignment`;
+   - unless [`unary`](#unary)(N, something, something);
+20. if all of:
+   - [`logical`](#logical)(N, something, something, something);
+   - E is `e_logical`;
+   - unless [`assign`](#assign)(N, something, something);
+21. if all of:
+   - [`gives`](#gives)(N, X);
+   - [`gives`](#gives)(N, Y);
+   - X differs from Y;
+   - E is `e_conditional`;
+   - unless [`logical`](#logical)(N, something, something, something);
+22. if all of:
+   - [`gives`](#gives)(N, something);
+   - E is `e_sequence`;
+   - unless [`assign`](#assign)(N, something, something);
+   - unless [`logical`](#logical)(N, something, something, something);
+   - unless [`unary`](#unary)(N, something, something);
+   - unless N [gives two operands](#gives_two).
+
+<a id="gives_two"></a>A node gives two operands if [`gives`](#gives)(it, X), [`gives`](#gives)(it, Y), and X differs from Y.
+
+<a id="member_kind_expr"></a>A node N is a member read either:
+
+1. if [`member`](#member)(N, something, something);
+2. if [`member_expr`](#member_expr)(N, something, something).
 
 A call
 
-- <a id="member_like"></a>calls through a node N if all of:
-  - [the callee](#callee_of) of it is N;
-  - N [is of kind](js-model.rofl.md#ast_node) K;
-  - [`member_kind`](#member_kind)(K).
+- <a id="member_like"></a>calls through a node N if [the callee](#callee_of) of it is N and N [is a member read](#member_kind_expr).
 - <a id="optional_member"></a>calls through an optional member if all of:
   - [the callee](#callee_of) of it is a node N;
   - [`executes_if`](#executes_if)(N, something, `defined`);
@@ -217,14 +275,9 @@ A call
 
 <a id="callee_obj"></a>The receiver of a call C is a node O if C [calls through](#member_like) N and [`object_of`](js-structure.rofl.md#object_of)(N, O).
 
-<a id="callee_obj_kind"></a>The receiver kind of a call C is K if [the receiver](#callee_obj) of C [is of kind](js-model.rofl.md#ast_node) K.
+<a id="callee_obj_class"></a>A node has the receiver class E if [the receiver](#callee_obj) of it [is of the class](#expr_class) E.
 
 <a id="callee_prop"></a>The property of a call C is a node P if C [calls through](#member_like) a node N and the `property` of N is P.
-
-Declared as facts:
-
-- <a id="callee_shape"></a>`callee_shape` — rows in this file
-- <a id="member_kind"></a>`member_kind` — rows in this file
 
 > A member callee needs two more bits: `computed`, and the object's kind.
 > Receivers are classed by VERDICT, not by type: a member on a string, number,
@@ -238,29 +291,23 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `identifier` | `o_ident` |
-| `member_expression` | `o_member` |
-| `optional_member_expression` | `o_member` |
-| `call_expression` | `o_call` |
-| `optional_call_expression` | `o_call` |
-| `this_expression` | `o_this` |
-| `super` | `o_super` |
-| `array_expression` | `o_array` |
-| `new_expression` | `o_new` |
-| `object_expression` | `o_object_literal` |
-| `string_literal` | `o_literal` |
-| `numeric_literal` | `o_literal` |
-| `big_int_literal` | `o_literal` |
-| `reg_exp_literal` | `o_literal` |
-| `conditional_expression` | `o_conditional` |
-| `sequence_expression` | `o_sequence` |
-| `logical_expression` | `o_logical` |
-| `assignment_expression` | `o_assignment` |
-| `await_expression` | `o_await` |
-| `template_literal` | `o_template` |
-| `tsas_expression` | `o_passes` |
-| `tsnon_null_expression` | `o_passes` |
-| `meta_property` | `o_meta` |
+| `e_name` | `o_ident` |
+| `e_member` | `o_member` |
+| `e_call` | `o_call` |
+| `e_this` | `o_this` |
+| `e_super` | `o_super` |
+| `e_array` | `o_array` |
+| `e_new` | `o_new` |
+| `e_object` | `o_object_literal` |
+| `e_literal` | `o_literal` |
+| `e_conditional` | `o_conditional` |
+| `e_sequence` | `o_sequence` |
+| `e_logical` | `o_logical` |
+| `e_assignment` | `o_assignment` |
+| `e_await` | `o_await` |
+| `e_template` | `o_template` |
+| `e_passes` | `o_passes` |
+| `e_meta` | `o_meta` |
 
 In the main:
 
@@ -268,11 +315,15 @@ In the code:
 
 <a id="obj_class"></a>The receiver class of a call C is a shape Cl either:
 
-1. if [the receiver kind](#callee_obj_kind) of C is K and [`obj_kind_class`](#obj_kind_class)(K, Cl);
+1. if C [has the receiver class](#callee_obj_class) E and [`obj_kind_class`](#obj_kind_class)(E, Cl);
 2. if all of:
-   - [the receiver kind](#callee_obj_kind) of C is K;
+   - C [has the receiver class](#callee_obj_class) E;
    - Cl is `o_other`;
-   - unless K [is a classed kind](#obj_kind_known).
+   - unless E [is a classed kind](#obj_kind_known);
+3. if all of:
+   - [the receiver](#callee_obj) of C is a node O;
+   - Cl is `o_other`;
+   - unless O [has an expression class](#has_class).
 
 `member_shape` lists:
 
@@ -330,7 +381,7 @@ Declared as facts:
 
 <a id="shape_known"></a>A call C has the known shape S either:
 
-1. if [the callee kind](#callee_kind) of C is K and [`callee_shape`](#callee_shape)(K, S);
+1. if C [has the callee class](#callee_class) E and [`callee_shape`](#callee_shape)(E, S);
 2. if all of:
    - C [calls through a computed member](#computed_member) some member access;
    - C [has a static computed key](#computed_key_static);
@@ -364,10 +415,16 @@ Declared as facts:
 
 In the audit:
 
-A kind K
+<a id="catch_all_occupied"></a>A class occupies the catch all if a call C [has the shape](#shape) `s_member_on_other` and C [has the receiver class](#callee_obj_class) it.
 
-- <a id="catch_all_occupied"></a>occupies the catch all if a call C [has the shape](#shape) `s_member_on_other` and [the receiver kind](#callee_obj_kind) of C is K.
-- <a id="unnamed_callee"></a>is an unnamed callee kind if a call C [has the shape](#shape) `s_unclassified` and [the callee kind](#callee_kind) of C is K.
+<a id="unnamed_callee"></a>A class K is an unnamed callee class either:
+
+1. if a call C [has the shape](#shape) `s_unclassified` and C [has the callee class](#callee_class) K;
+2. if all of:
+   - a call C [has the shape](#shape) `s_unclassified`;
+   - [the callee](#callee_of) of C is a node N;
+   - K is `e_no_class`;
+   - unless N [has an expression class](#has_class).
 
 In the code:
 
@@ -856,12 +913,9 @@ In the audit:
 
 <a id="callgraph_kind"></a>A kind K is touched by the call graph either:
 
-1. if [the call kind](#call_site_kind) of some call is K;
-2. if [the callee kind](#callee_kind) of some call is K;
-3. if [the receiver kind](#callee_obj_kind) of some call is K;
-4. if [the property](#callee_prop) of some call [is of kind](js-model.rofl.md#ast_node) K;
-5. if a [function](#fn_node) F [is of kind](js-model.rofl.md#ast_node) K;
-6. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.rofl.md#ast_node) K.
+1. if [the property](#callee_prop) of some call [is of kind](js-model.rofl.md#ast_node) K;
+2. if a [function](#fn_node) F [is of kind](js-model.rofl.md#ast_node) K;
+3. if a node B [binds the function](#fn_binder) some function and B [is of kind](js-model.rofl.md#ast_node) K.
 
 <a id="kind_undeclared"></a>A kind K is undeclared if K [is touched by the call graph](#callgraph_kind), unless `js` [has the node kind](#node_kind) K.
 
@@ -1520,7 +1574,7 @@ In the code:
 <a id="type_decl"></a>`type_decl`(T, Name, File) either:
 
 1. if all of:
-   - [`object`](#object)(T);
+   - [`object`](#object)(T) in the type;
    - [`parent`](#parent)(T, I);
    - [`binds`](#binds)(I, Name) in the type;
    - [`at`](#at)(T, File, something);

@@ -15,11 +15,10 @@
 function call_site(C, to File).
 function callee_of(C, to N).
 call_site[code](C, File)      :- call[value](C), at[tree](C, File, _).
-call_site_kind[code](C, K)    :- call_site[code](C, _), ast_node[code](C, K, _).
 call_line[code](C, Line)      :- call_site[code](C, _), at[tree](C, _, Line).
 
 callee_of[code](C, N)         :- call_site[code](C, _), callee[value](C, N).
-callee_kind[code](C, K)       :- callee_of[code](C, N), ast_node[code](N, K, _).
+callee_class[code](C, E)      :- callee_of[code](C, N), expr_class[code](N, E).
 
 -- Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 -- iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
@@ -44,33 +43,58 @@ call_arg[code](C, I, S)       :- call_site[code](C, _), nth[tree](C, I, A), spre
 -- `tsnon_null_expression`, not `ts_non_null_expression`: atomise() breaks only
 -- between a lower-case and an upper-case letter, so `TSN` survives whole.
 edb(callee_shape).
-callee_shape(identifier,                s_identifier).
-callee_shape(arrow_function_expression, s_iife).
-callee_shape(function_expression,       s_iife).
-callee_shape(super,                     s_super).
-callee_shape(tsnon_null_expression,     s_passes).
-callee_shape(call_expression,           s_call_result).
-callee_shape(optional_call_expression,  s_call_result).
-callee_shape(new_expression,            s_new_result).
-callee_shape(import,                    s_dynamic_import).
-callee_shape(sequence_expression,       s_sequence).
-callee_shape(parenthesized_expression,  s_parenthesized).
-callee_shape(tsas_expression,           s_passes).
-callee_shape(conditional_expression,    s_conditional).
-callee_shape(yield_expression,          s_yield_result).
+callee_shape(e_name,        s_identifier).
+callee_shape(e_fn,          s_iife).
+callee_shape(e_super,       s_super).
+callee_shape(e_passes,      s_passes).
+callee_shape(e_call,        s_call_result).
+callee_shape(e_new,         s_new_result).
+callee_shape(e_import,      s_dynamic_import).
+callee_shape(e_sequence,    s_sequence).
+callee_shape(e_conditional, s_conditional).
+callee_shape(e_yield,       s_yield_result).
+callee_shape(e_parenthesized, s_parenthesized).
 
-edb(member_kind).
-member_kind(member_expression).
-member_kind(optional_member_expression).
+-- What an expression IS, by its roles and not by the grammar's kind. A wrapper with no behaviour (`passes`: a
+-- parenthesis, `as`, `!`, `satisfies`, an assertion) is `e_passes`; an expression that gives one of its operands
+-- is a sequence, and one that gives two is a conditional or, with the logical role, a logical.
+-- `e_import` and `e_parenthesized` have no rule: an import() has no callee row and no parenthesis is kept.
+expr_class[code](N, e_name)        :- ref[value](N, _).
+expr_class[code](N, e_fn)          :- fn_node[code](N), not hoisted[value](N, _), not member[value](N, _, _).
+expr_class[code](N, e_super)       :- super[value](N).
+expr_class[code](N, e_passes)      :- passes[value](N, _).
+expr_class[code](N, e_call)        :- call[value](N), not construct[value](N).
+expr_class[code](N, e_new)         :- construct[value](N).
+expr_class[code](N, e_yield)       :- yields[value](N, _).
+expr_class[code](N, e_member)      :- member[value](N, _, _).
+expr_class[code](N, e_member)      :- member_expr[value](N, _, _).
+expr_class[code](N, e_this)        :- this[value](N).
+expr_class[code](N, e_array)       :- array[value](N).
+expr_class[code](N, e_object)      :- object[value](N).
+expr_class[code](N, e_class)       :- class[value](N), not hoisted[value](N, _).
+expr_class[code](N, e_template)    :- template[value](N).
+expr_class[code](N, e_literal)     :- literal[value](N, _), not template[value](N).
+expr_class[code](N, e_literal)     :- ast_node[code](N, reg_exp_literal, _).
+expr_class[code](N, e_meta)        :- import_meta[value](N).
+expr_class[code](N, e_await)       :- awaits[value](N, _).
+expr_class[code](N, e_assignment)  :- assign[value](N, _, _), gives[value](N, _), not unary[value](N, _, _).
+expr_class[code](N, e_logical)     :- logical[value](N, _, _, _), not assign[value](N, _, _).
+expr_class[code](N, e_conditional) :- gives[value](N, X), gives[value](N, Y), X != Y, not logical[value](N, _, _, _).
+expr_class[code](N, e_sequence)    :- gives[value](N, _), not assign[value](N, _, _), not logical[value](N, _, _, _),
+                                      not unary[value](N, _, _), not gives_two[code](N).
+gives_two[code](N) :- gives[value](N, X), gives[value](N, Y), X != Y.
 
-member_like[code](C, N)     :- callee_of[code](C, N), ast_node[code](N, K, _), member_kind(K).
+member_kind_expr[code](N) :- member[value](N, _, _).
+member_kind_expr[code](N) :- member_expr[value](N, _, _).
+
+member_like[code](C, N)     :- callee_of[code](C, N), member_kind_expr[code](N).
 optional_member[code](C)    :- callee_of[code](C, N), executes_if[value](N, _, defined), object_of[code](N, _).
 computed_member[code](C, N) :- callee_of[code](C, N), member_expr[value](N, _, _).
 static_member[code](C, N)   :- callee_of[code](C, N), member[value](N, _, _).
 
 
 callee_obj[code](C, O)      :- member_like[code](C, N), object_of[code](N, O).
-callee_obj_kind[code](C, K) :- callee_obj[code](C, O), ast_node[code](O, K, _).
+callee_obj_class[code](C, E) :- callee_obj[code](C, O), expr_class[code](O, E).
 callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, property, 0, P).
 
 -- A member callee needs two more bits: `computed`, and the object's kind.
@@ -81,34 +105,29 @@ callee_prop[code](C, P)     :- member_like[code](C, N), ast_child[code](N, prope
 -- so the era axis cannot date them and `o_literal` would promise an answer
 -- that cannot arrive.
 edb(obj_kind_class).
-obj_kind_class(identifier,                 o_ident).
-obj_kind_class(member_expression,          o_member).
-obj_kind_class(optional_member_expression, o_member).
-obj_kind_class(call_expression,            o_call).
-obj_kind_class(optional_call_expression,   o_call).
-obj_kind_class(this_expression,            o_this).
-obj_kind_class(super,                      o_super).
-obj_kind_class(array_expression,           o_array).
-obj_kind_class(new_expression,             o_new).
-obj_kind_class(object_expression,          o_object_literal).
-obj_kind_class(string_literal,             o_literal).
-obj_kind_class(numeric_literal,            o_literal).
-obj_kind_class(big_int_literal,            o_literal).
-obj_kind_class(reg_exp_literal,            o_literal).
+obj_kind_class(e_name,        o_ident).
+obj_kind_class(e_member,      o_member).
+obj_kind_class(e_call,        o_call).
+obj_kind_class(e_this,        o_this).
+obj_kind_class(e_super,       o_super).
+obj_kind_class(e_array,       o_array).
+obj_kind_class(e_new,         o_new).
+obj_kind_class(e_object,      o_object_literal).
+obj_kind_class(e_literal,     o_literal).
+obj_kind_class(e_conditional, o_conditional).
+obj_kind_class(e_sequence,    o_sequence).
+obj_kind_class(e_logical,     o_logical).
+obj_kind_class(e_assignment,  o_assignment).
+obj_kind_class(e_await,       o_await).
+obj_kind_class(e_template,    o_template).
+obj_kind_class(e_passes,      o_passes).
+obj_kind_class(e_meta,        o_meta).
 
-obj_kind_class(conditional_expression,     o_conditional).
-obj_kind_class(sequence_expression,        o_sequence).
-obj_kind_class(logical_expression,         o_logical).
-obj_kind_class(assignment_expression,      o_assignment).
-obj_kind_class(await_expression,           o_await).
-obj_kind_class(template_literal,           o_template).
-obj_kind_class(tsas_expression,            o_passes).
-obj_kind_class(tsnon_null_expression,      o_passes).
-obj_kind_class(meta_property,              o_meta).
-
-obj_kind_known(K)           :- obj_kind_class(K, _).
-obj_class[code](C, Cl)      :- callee_obj_kind[code](C, K), obj_kind_class(K, Cl).
-obj_class[code](C, o_other) :- callee_obj_kind[code](C, K), not obj_kind_known(K).
+obj_kind_known(E)           :- obj_kind_class(E, _).
+obj_class[code](C, Cl)      :- callee_obj_class[code](C, E), obj_kind_class(E, Cl).
+obj_class[code](C, o_other) :- callee_obj_class[code](C, E), not obj_kind_known(E).
+obj_class[code](C, o_other) :- callee_obj[code](C, O), not has_class[code](O).
+has_class[code](O) :- expr_class[code](O, _).
 
 edb(member_shape).
 member_shape(o_ident,          s_member_on_ident).
@@ -144,7 +163,7 @@ computed_key_static[code](C) :- computed_member[code](C, N), member_expr[value](
 computed_key_template[code](C) :- computed_member[code](C, N), member_expr[value](N, _, P), template[value](P).
 
 
-shape_known[code](C, S) :- callee_kind[code](C, K), callee_shape(K, S).
+shape_known[code](C, S) :- callee_class[code](C, E), callee_shape(E, S).
 shape_known[code](C, s_computed_literal_key) :- computed_member[code](C, _),
                                                 computed_key_static[code](C).
 shape_known[code](C, s_computed_template_key) :- computed_key_template[code](C).
@@ -164,9 +183,10 @@ shape[code](C, S)              :- shape_known[code](C, S).
 shape[code](C, s_unclassified) :- call_site[code](C, _), not has_shape[code](C).
 
 catch_all_occupied[audit](K) :- shape[code](C, s_member_on_other),
-                                callee_obj_kind[code](C, K).
+                                callee_obj_class[code](C, K).
 
-unnamed_callee[audit](K) :- shape[code](C, s_unclassified), callee_kind[code](C, K).
+unnamed_callee[audit](K) :- shape[code](C, s_unclassified), callee_class[code](C, K).
+unnamed_callee[audit](e_no_class) :- shape[code](C, s_unclassified), callee_of[code](C, N), not has_class[code](N).
 
 shaped[code](C)         :- shape[code](C, _).
 unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C), not has_shape[code](C).
@@ -421,9 +441,6 @@ fn_binder[code](D, F) :- decl[value](D, _), assign[value](D, _, F), fn_node[code
 fn_binder[code](P, F) :- obj_prop[code](_, P, F), fn_node[code](F).
 fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 
-callgraph_kind[audit](K)  :- call_site_kind[code](_, K).
-callgraph_kind[audit](K)  :- callee_kind[code](_, K).
-callgraph_kind[audit](K)  :- callee_obj_kind[code](_, K).
 callgraph_kind[audit](K)  :- callee_prop[code](_, P), ast_node[code](P, K, _).
 callgraph_kind[audit](K)  :- fn_node[code](F), ast_node[code](F, K, _).
 callgraph_kind[audit](K)  :- fn_binder[code](B, _), ast_node[code](B, K, _).

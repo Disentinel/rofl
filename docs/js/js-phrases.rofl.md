@@ -125,10 +125,8 @@ Declared as facts:
 | `own_key` | "owns_the_key(class CD, key Key)" |
 | `fn_kind` | "is_a_function_kind(kind K)" |
 | `call_site` | "is_a_call_site(call C, in file File)" |
-| `call_site_kind` | "the_call_kind(of call C, is kind K)" |
 | `call_line` | "the_line(of call C, is line Line)" |
 | `callee_of` | "the_callee(of call C, is node N)" |
-| `callee_kind` | "the_callee_kind(of call C, is kind K)" |
 | `member_kind_v` | "is_a_member_kind(kind K)" |
 | `selects` | "selects(member access N, key Key)" |
 | `class_member_static` | "the_static_member(of class CD, key Key, is node V)" |
@@ -471,7 +469,6 @@ Declared as facts:
 | `computed_member` | "calls_through_a_computed_member(call C, member access N)" |
 | `static_member` | "calls_through_a_static_member(call C, member access N)" |
 | `callee_obj` | "the_receiver(of call C, is node O)" |
-| `callee_obj_kind` | "the_receiver_kind(of call C, is kind K)" |
 | `callee_prop` | "the_property(of call C, is node P)" |
 | `obj_kind_known` | "is_a_classed_kind(kind K)" |
 | `obj_class` | "the_receiver_class(of call C, is shape Cl)" |
@@ -480,8 +477,14 @@ Declared as facts:
 | `shape_known` | "has_the_known_shape(call C, shape S)" |
 | `has_shape` | "has_a_shape(call C)" |
 | `shape` | "has_the_shape(call C, shape S)" |
-| `catch_all_occupied` | "occupies_the_catch_all(kind K)" |
-| `unnamed_callee` | "is_an_unnamed_callee_kind(kind K)" |
+| `catch_all_occupied` | "occupies_the_catch_all(class K)" |
+| `unnamed_callee` | "is_an_unnamed_callee_class(class K)" |
+| `callee_class` | "has_the_callee_class(node C, class E)" |
+| `callee_obj_class` | "has_the_receiver_class(node C, class E)" |
+| `expr_class` | "is_of_the_class(node N, class E)" |
+| `gives_two` | "gives_two_operands(node N)" |
+| `member_kind_expr` | "is_a_member_read(node N)" |
+| `has_class` | "has_an_expression_class(node N)" |
 | `shaped` | "is_shaped(call C)" |
 | `unshaped` | "is_unshaped(call C)" |
 | `fn_file` | "is_defined_in(function F, file File)" |

@@ -50,7 +50,6 @@ Reads:
   - <a id="binary"></a>`binary`
   - <a id="extends"></a>`extends`
   - <a id="frozen"></a>`frozen`
-  - <a id="object"></a>`object`
 - from outside these files, in the value:
   - <a id="ambient"></a>`ambient`
   - <a id="array"></a>`array`
@@ -82,6 +81,7 @@ Reads:
   - <a id="member_expr"></a>`member_expr`
   - <a id="module_ref"></a>`module_ref`
   - <a id="namespace"></a>`namespace`
+  - <a id="object"></a>`object`
   - <a id="param"></a>`param`
   - <a id="passes"></a>`passes`
   - <a id="pattern_elem"></a>`pattern_elem`
@@ -3054,7 +3054,7 @@ A node U may be the literal L either:
 
 In the code:
 
-<a id="obj_lit"></a>`obj_lit`(O) if [`object`](#object)(O) in the value, unless [`decl`](#decl)(O, `enum`).
+<a id="obj_lit"></a>`obj_lit`(O) if [`object`](#object)(O), unless [`decl`](#decl)(O, `enum`).
 
 > the members of an object literal: a property holds a value, a method is itself a function
 
