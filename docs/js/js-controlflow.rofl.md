@@ -546,7 +546,12 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 2. if D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
 3. if P [is iterated](#spread_iterated) and [`parent`](#parent)(P, Init);
 4. if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, Init) and [`parent`](#parent)(P, Init);
-5. if [`iterates`](#iterates)(P, something, Init).
+5. if [`iterates`](#iterates)(P, something, Init) and P differs from Init;
+6. if all of:
+   - [`iterates`](#iterates)(P, P, P);
+   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P);
+   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
+7. if [`iterates`](#iterates)(P, P, P) and P [points to](js-concat.rofl.md#may_be_node) Init.
 
 In the flow:
 

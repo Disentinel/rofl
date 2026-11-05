@@ -27,10 +27,12 @@ Reads:
   - <a id="strict"></a>`strict`
 - from outside these files, in the type:
   - <a id="binary"></a>`binary`
+  - <a id="ref"></a>`ref`
 - from outside these files, in the value:
   - <a id="assign"></a>`assign`
   - <a id="binds"></a>`binds`
   - <a id="callee"></a>`callee`
+  - <a id="decl"></a>`decl`
   - <a id="executes_if"></a>`executes_if`
   - <a id="gives"></a>`gives`
   - <a id="import_meta"></a>`import_meta`
@@ -176,6 +178,24 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
    - unless [`binds`](#binds)(P, something);
    - unless [`iterates`](#iterates)(P, P, something);
    - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, P, something).
+
+> a place a pattern can stand in, with nothing in it: no name, no member, no entry, no iteration. It takes nothing and is no array.
+
+<a id="pattern_slot"></a>`pattern_slot`(S) either:
+
+1. if [`pat_in`](js-dataflow.rofl.md#pat_in)(something, something, S);
+2. if [`assign`](#assign)(something, S, something);
+3. if [`decl`](#decl)(S, `catch`).
+
+`object_pat`(P) if all of:
+  - [`pattern_slot`](#pattern_slot)(P);
+  - unless [`binds`](#binds)(P, something);
+  - unless [`ref`](#ref)(P, something) in the value;
+  - unless [`member`](#member)(P, something, something);
+  - unless [`member_expr`](#member_expr)(P, something, something);
+  - unless [`iterates`](#iterates)(P, P, something);
+  - unless [`pat_in`](js-dataflow.rofl.md#pat_in)(something, P, something);
+  - unless [`assign`](#assign)(P, P, something).
 
 > a for-of: the S of iterates that is not the pattern it is
 
