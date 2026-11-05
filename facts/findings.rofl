@@ -3094,7 +3094,7 @@ finding(f_the_refusal_was_a_fact_in_the_other_scanner_already, defect).
 recorded(f_the_refusal_was_a_fact_in_the_other_scanner_already, "2026-09-05").
 demands(f_the_refusal_was_a_fact_in_the_other_scanner_already, rule_and_test).
 finding_note(f_the_refusal_was_a_fact_in_the_other_scanner_already, "THE POSITIVE CONTROL OVERTURNED THE ITEM'S PREMISE, which is the fourth time in four days that measuring first changed the answer. `w_env_scan_failed` said a refused file is lost SILENTLY and that the host must learn to report its own failures. Scanning a two-file corpus with one deliberately unparseable file reported `scanned 2`, exit 0, and wrote a fact file for the broken one containing `src_parse_error[code](\"broken.ts\", \"Unexpected token, expected \\\",\\\" (1:29)\")`. So the capability EXISTS. THERE ARE TWO SCANNERS AND THE DISCIPLINE REACHED ONE OF THEM. scanners/js.ts - the one scanners/cli.ts and materialize.ts drive - catches the parse error, emits `src_parse_error`, and test/scanner.test.ts asserts it BY NAME under the heading `unparseable source yields src_parse_error, not a throw`. scanners/js_ast.ts - the one every rule in the language model reads, the whole call-graph, dataflow, control-flow and era stack - had no try/catch and threw. The principle was stated, tested, and applied to one instance of the pattern rather than to the pattern, which is the same sentence this repository has now written about `orphan_claim`, about the two catch-alls, and about the kind vocabulary. AND NOTHING READS `src_parse_error` EITHER. Grepping the tree: it is emitted in scanners/js.ts, asserted in test/scanner.test.ts, declared `edb` in examples/ditto, and read by NO rule in rules/ and no fact pack. So the older half of the capability is a claim landing where nothing consumes it - the failure mode docs/failure-modes.md catalogues as six of its eight entries - and the newer half did not exist. WHY A THROW IS NOT THE SAFE DIRECTION, since that is the tempting defence: it is loud for a caller scanning one file and SILENT for a corpus, because whoever catches it per file to keep going loses that file with every count still plausible. As a fact the file becomes INVALID in every environment rather than absent from all of them, and `scanned_file[audit]` - every file the scanner reported on, parsed or refused - is the denominator the three reports should always have ranged over.").
-addressed_by(f_the_refusal_was_a_fact_in_the_other_scanner_already, "scanners/js_ast.ts").
+artifact_removed(f_the_refusal_was_a_fact_in_the_other_scanner_already, "scanners/js_ast.ts").
 addressed_by(f_a_refused_file_is_absent_not_invalid, "rules/js-env.rofl").
 
 finding(f_the_feature_vocabulary_audit_read_one_of_three_tables, defect).
@@ -4485,7 +4485,7 @@ finding(f_the_contract_excluded_one_property_in_the_whole_language, defect).
 recorded(f_the_contract_excluded_one_property_in_the_whole_language, "2026-09-08").
 demands(f_the_contract_excluded_one_property_in_the_whole_language, rule_and_test).
 finding_note(f_the_contract_excluded_one_property_in_the_whole_language, "FOUR CELLS SAT BLOCKED FOR THREE SESSIONS BEHIND A SENTENCE THAT WAS TRUE. `cell_blocked(..., scanner_contract)` said a template literal`s text lives in `TemplateElement.value`, a nested object, and scanners/js_ast.ts emits SCALAR own properties only - so the key of ``o[`k`]()`` is knowable at parse time and not derivable from any fact we have. Every clause of that is correct, and the note even ended `it moves when the scanner`s contract moves`. NOBODY HAD MEASURED HOW FAR THE CONTRACT WAS FROM MOVING. Measured 2026-09-08 by walking babel`s own trees: 223 files, 422 482 nodes, every own property that is neither a node nor a node array nor a scalar. With babel`s `extra` scratch set aside, the answer is ONE - `TemplateElement.value`, `{raw, cooked}`, both scalars. The scalars-only contract excluded exactly one property in the whole of JavaScript as babel presents it, and it was the one blocking the cells. THE FIX IS A GENERAL RULE AND NOT A CASE FOR TEMPLATES: a nested object whose members are ALL scalars is flattened, one `ast_attr` per member, `<field>_<member>`. A nested object holding anything non-scalar is still dropped and nothing in the measured corpus is one, so what remains of the hole is declared and empty rather than known and populated. AND `extra` IS DECLARED OUT rather than dropped by accident. It was already excluded - as an object it fell through the branch that emits nothing - which is the wrong reason to exclude the right thing, and the general rule would have swept it in: measured over the fixtures, without the declaration it emits `extra_*` on 235 nodes, carrying `parenStart` (a byte offset) and `trailingComma` (a comma) into a model of the language. NO RULE WAS NEEDED AT THE CALL GRAPH. `selects[flow]` already reads a computed key through `may_be_lit`, so one arm giving a non-interpolated template its cooked text closed all four cells, and the shape went `has_residue` -> `fully_resolved` with `shape_stale[audit]` naming the excuse that had outlived its cause. THE SHAPE OF THE MISTAKE is the one this repository keeps recording about its own gates, one level up: a blocker was attributed to the first component looked at, written down accurately, and then read as a constraint rather than as a setting. It survived because it was TRUE.").
-addressed_by(f_the_contract_excluded_one_property_in_the_whole_language, "scanners/js_ast.ts").
+artifact_removed(f_the_contract_excluded_one_property_in_the_whole_language, "scanners/js_ast.ts").
 
 finding(f_the_site_measured_the_receiver_and_not_the_key, pitfall).
 recorded(f_the_site_measured_the_receiver_and_not_the_key, "2026-09-08").
@@ -4720,7 +4720,7 @@ finding(f_a_bigint_matched_none_of_the_four_branches, pitfall).
 recorded(f_a_bigint_matched_none_of_the_four_branches, "2026-09-08").
 demands(f_a_bigint_matched_none_of_the_four_branches, doc).
 finding_note(f_a_bigint_matched_none_of_the_four_branches, "`1n` REACHED THE STORE AS A NODE WITH NO VALUE AT ALL, and nothing in this repository could have said so. scanners/js_ast.ts dispatches every own property through four branches - node array, node, string/number/boolean scalar, nested object of scalars - and `BigIntLiteral.value` is a native `bigint`, which is NONE of them. It fell through all four and emitted nothing: `const b = 1n` produced one `ast_node` fact and ZERO `ast_attr` rows, the only literal in JavaScript whose value that file dropped, while the contract line at the top of the same file says `every scalar own property`. `extra.raw` holds the text `1n` and `extra` is declared out on purpose, so nothing else carried it either. THE DEFECT IS INVISIBLE BY CONSTRUCTION AND THAT IS THE FINDING. A DROPPED attribute and a node that never had one are the same picture from inside the model: `may_be_lit` simply does not fire, `vocabulary_gap` sees the KIND and is satisfied, `kind_unexercised` sees a node and is satisfied, and every audit here is written over relations that exist rather than over properties that should. The only instrument that can see it is a scan whose expected output is written down - which is why the fix ships with an assertion on the fact TEXT rather than on a derived relation. SAME SHAPE AS THE TEMPLATE CONTRACT ONE ITERATION EARLIER AND THE OPPOSITE CAUSE. There the excluded property was a nested OBJECT and the exclusion was written down and believed for three sessions; here the exclusion was never written down at all, because a four-way `typeof` looks exhaustive and JavaScript has seven primitive types. A branch list is a closed vocabulary that nobody declared as one. The remedy taken is small and general: one `isScalar` predicate both branches share, because the two sites spelled the same three types separately and the second site is the one nobody looks at.").
-addressed_by(f_a_bigint_matched_none_of_the_four_branches, "scanners/js_ast.ts").
+artifact_removed(f_a_bigint_matched_none_of_the_four_branches, "scanners/js_ast.ts").
 
 finding(f_a_for_update_was_never_a_guard_arm, pitfall).
 recorded(f_a_for_update_was_never_a_guard_arm, "2026-09-08").
@@ -6917,6 +6917,12 @@ addressed_by(f_a_settlement_must_cite_something_that_exists, "scripts/render_doc
 -- verifies exactly that, which is why the sha is here rather than in prose.
 -- Twenty-nine of the thirty-three are one commit: the afternoon of deleting.
 edb(removed_in).
+removed_in("models/lang/js/babel-roles.rofl", "68e0902").
+removed_in("scanners/js_ast.ts", "16ff27f").
+removed_in("scanners/js_inherit.ts", "16ff27f").
+removed_in("scanners/oxc_facts.ts", "68e0902").
+removed_in("scripts/roles_parity.ts", "16ff27f").
+removed_in("test/scan-ids.test.ts", "16ff27f").
 removed_in("bench/fork_clone_cost.ts", "c6f0f0f912c9").
 removed_in("rust/rofl/src/bin/rofl_load_bench.rs", "4632c66ef502").
 removed_in("bench/fork_control.ts", "c6f0f0f912c9").
@@ -10491,8 +10497,8 @@ finding(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, defect).
 recorded(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "2026-10-04").
 finding_note(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files,
   "AFTER THE MERGE (main session, 2026-10-04): the width was also written into the READERS of an id, which the change did not list: notebook/kernel.ts (the node label `[text at file:line]` and the `at` lines) and playground/page.html (chips, plain text, ids in a line) matched `n[0-9a-f]{8}_` exactly, so with 16-digit ids the notebook printed raw ids and test:nb `external` went red; now `{8,16}`. An id format has readers outside the scanner; a width change is checked by grepping the pattern, not the producer.").
-addressed_by(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "scanners/js_ast.ts").
-addressed_by(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "test/scan-ids.test.ts").
+artifact_removed(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "scanners/js_ast.ts").
+artifact_removed(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "test/scan-ids.test.ts").
 finding_note(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files,
   "THE NODE ID PREFIX OF scanners/js_ast.ts WAS 32 BITS. It derived from the first 8 hex digits of sha256 of the path: two files with a colliding prefix (about 1% at 10 000 files, about 25% at 50 000) merged their nodes, silently before the model declared `function ast_node`, and since then the world is refused with a promise refusal deep in the engine; the same label scanned twice into one world did the same when its ids repeated with different facts. FIX: idPrefix is 16 hex digits (64 bits, about 7e-11 at 50 000 files); claim() refuses, with both file names, a second label under a taken prefix; ScanSet refuses a label scanned twice into one world, in words (`scanned twice into one world; retract its first scan and forget it before scanning it again`) and is used by runtime/ingest.ts and scanners/volume_locality.ts, the two places a corpus goes into one store; the three consumers that read the prefix by its length (scanners/profile_shape.ts, scanners/volume_locality.ts, playground/host.ts) read 16. test/scan-ids.test.ts. WHAT MOVES: node ids in every generated pack (facts/port-corpus and the seeds are generated and not committed: run scripts/port_corpus.ts); no committed scanned facts of the JavaScript scanner (facts/py-model.rofl is the Python scanner, whose prefix scanners/py_ast.py still takes from 8 hex digits and which declares no function: the same width, the same collision, recorded here and left to the owner because no rule promises over it yet). Goldens are blessed whole. UNVERIFIED: the Python scanner is not widened; a collision cannot be found by search at 64 bits, so claim is held by a forged prefix and not by two real paths.").
 
@@ -10689,8 +10695,8 @@ finding(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, defect).
 recorded(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "2026-10-04").
 finding_note(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files,
   "AFTER THE MERGE (main session, 2026-10-04): the width was also written into the READERS of an id, which the change did not list: notebook/kernel.ts (the node label `[text at file:line]` and the `at` lines) and playground/page.html (chips, plain text, ids in a line) matched `n[0-9a-f]{8}_` exactly, so with 16-digit ids the notebook printed raw ids and test:nb `external` went red; now `{8,16}`. An id format has readers outside the scanner; a width change is checked by grepping the pattern, not the producer.").
-addressed_by(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "scanners/js_ast.ts").
-addressed_by(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "test/scan-ids.test.ts").
+artifact_removed(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "scanners/js_ast.ts").
+artifact_removed(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files, "test/scan-ids.test.ts").
 finding_note(f_a_node_id_prefix_of_thirty_two_bits_merged_two_files,
   "THE NODE ID PREFIX OF scanners/js_ast.ts WAS 32 BITS. It derived from the first 8 hex digits of sha256 of the path: two files with a colliding prefix (about 1% at 10 000 files, about 25% at 50 000) merged their nodes, silently before the model declared `function ast_node`, and since then the world is refused with a promise refusal deep in the engine; the same label scanned twice into one world did the same when its ids repeated with different facts. FIX: idPrefix is 16 hex digits (64 bits, about 7e-11 at 50 000 files); claim() refuses, with both file names, a second label under a taken prefix; ScanSet refuses a label scanned twice into one world, in words (`scanned twice into one world; retract its first scan and forget it before scanning it again`) and is used by runtime/ingest.ts and scanners/volume_locality.ts, the two places a corpus goes into one store; the three consumers that read the prefix by its length (scanners/profile_shape.ts, scanners/volume_locality.ts, playground/host.ts) read 16. test/scan-ids.test.ts. WHAT MOVES: node ids in every generated pack (facts/port-corpus and the seeds are generated and not committed: run scripts/port_corpus.ts); no committed scanned facts of the JavaScript scanner (facts/py-model.rofl is the Python scanner, whose prefix scanners/py_ast.py still takes from 8 hex digits and which declares no function: the same width, the same collision, recorded here and left to the owner because no rule promises over it yet). Goldens are blessed whole. UNVERIFIED: the Python scanner is not widened; a collision cannot be found by search at 64 bits, so claim is held by a forged prefix and not by two real paths.").
 
@@ -11722,7 +11728,7 @@ finding_note(f_retraction_takes_one_fact_and_grows_with_the_world,
 
 finding(f_a_node_id_named_by_its_place_moves_with_the_edit, insight).
 recorded(f_a_node_id_named_by_its_place_moves_with_the_edit, "2026-10-21").
-addressed_by(f_a_node_id_named_by_its_place_moves_with_the_edit, "scanners/js_ast.ts").
+artifact_removed(f_a_node_id_named_by_its_place_moves_with_the_edit, "scanners/js_ast.ts").
 addressed_by(f_a_node_id_named_by_its_place_moves_with_the_edit, "scripts/edit_waves.ts").
 finding_note(f_a_node_id_named_by_its_place_moves_with_the_edit,
   "AS BUILT AND MEASURED, 2026-10-21 (w_stable_node_ids). A JS node id is the file's prefix and 53 bits of a hash of (parent id, step), base 32: about 29 characters where `prefix + n` was about 22. The line left ast_node for ast_line (the line readers are the coordinate projections for people, the TDZ comparison and the resolver's bridge to an observer keyed by line). `scripts/edit_waves.ts CORPUS [--tree DIR]` counts the facts of the whole JS world an edit of one file moves; over examples/vscode/mini and split (17 files, about 52 000 facts), against main's walk-order ids: a function added at the top of node/paths.ts 608 against 5 720, a statement added at the top 583 against 5 909; a blank line 400 against 400 (318 ast_line rows below it, where they were 318 ast_node rows, and 82 coordinate projections: a fact count cannot see that the rows no longer feed every rule that joins ast_node); a string edited inside a statement 150 against 34 (the statement is an element of a list, its step hashes its tree, so the edited statement takes new ids; the old ids moved only when the node count changed); a function renamed 1 378 against 52 (its subtree, accepted by the owner). THE SCANNER'S COST, release node 22 over 188 000 nodes of @babel, parse included: about 3.3 us a node against 2.9 on main, after the shallow hash was folded into words (no strings built), kept by walk position in a Float64Array, the collision check a sort of the hashes and the id spelled by a table; `atomise` is now memoised, which main did not have. KEPT: ast_child keeps its Index. The toy numbers the owner accepted were measured with it, an insertion moves one row per later sibling, and taking it out would touch some 320 premises whose literal 0 means a singular field in some and the first argument in others; it is the next cut if a measurement says so. NOT MINE AND OPEN ON MAIN TOO: scripts/keep_check.ts reports BROKEN on `a world without a file it may read` in this container on main as on this branch.").
@@ -11901,8 +11907,8 @@ finding_note(f_an_edit_stops_at_a_function_summary_and_a_constant_at_the_values,
 finding(f_a_rename_gives_new_ids_to_every_statement_naming_it, defect).
 recorded(f_a_rename_gives_new_ids_to_every_statement_naming_it, "2026-10-23").
 demands(f_a_rename_gives_new_ids_to_every_statement_naming_it, decision).
-addressed_by(f_a_rename_gives_new_ids_to_every_statement_naming_it, "scanners/js_ast.ts").
-addressed_by(f_a_rename_gives_new_ids_to_every_statement_naming_it, "scanners/js_inherit.ts").
+artifact_removed(f_a_rename_gives_new_ids_to_every_statement_naming_it, "scanners/js_ast.ts").
+artifact_removed(f_a_rename_gives_new_ids_to_every_statement_naming_it, "scanners/js_inherit.ts").
 addressed_by(f_a_rename_gives_new_ids_to_every_statement_naming_it, "rust/rofl/src/session.rs").
 addressed_by(f_a_rename_gives_new_ids_to_every_statement_naming_it, "rust/rofl/tests/kept.rs").
 finding_note(f_a_rename_gives_new_ids_to_every_statement_naming_it,
@@ -12315,7 +12321,7 @@ finding_note(f_a_builtin_is_a_wall_of_the_delta_first_plan,
 finding(f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write, insight).
 recorded(f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write, "2026-10-31").
 demands(f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write, decision).
-addressed_by(f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write, "models/lang/js/babel-roles.rofl").
 finding_note(f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write,
   "w_l2_roles STEP ONE, BESIDE THE OLD MODEL (owner, 2026-10-31: build next to the old rules, rules/js-*.rofl untouched). The vocabulary agreed in the doc «Словарь ролей модели JS» (rev 89) is models/lang/js/roles.rofl: 61 roles and 17 marks, each with its sentence; the worlds are books, [value] and [type], with the same roles (a generic applied is call[type], a union binary[type], a conditional type executes_if[type], an interface has[type]); declared and implements are the only bridges, written in [value]; the shared tree (program, at, parent, inside, nth, strict, precedes) is [tree]; nth is a position only and strict(Seq) says a sequence executes in the order of its positions (every value-world sequence the converter writes; one row per sequence, 328 on the 20 files of the check); precedes is declared and no Babel place writes it yet. A PREFIX IS A BOOK (owner, doc rev 91): the raw tree in [ast_babel] is node, child, attr, line, file (the scanner keeps the ast_ names in [code] for the old model only), and the disk is its own ledger, has_file[fs](Dir, Name) and has_dir[fs](Parent, Name), a directory named by its path, in place of six fs_*[code] relations (64 facts on the 12 files of vscode split become 21); the model joins a path with the builtin concat(A, B), which the owner added for it (2026-10-31) and safety.rofl refuses inside a recursion (unbounded_in_recursion). rules/js-modules.rofl reads them; every head of it has the census it had in services, scan_requests, concat_value and both vscode worlds, on both engines. The Babel converter is models/lang/js/babel-roles.rofl over the raw tree in [ast_babel] (the scanner unchanged, its persp option): tables where a kind maps one to one (kind_mark, seq_field, step_field, cond_field, ref_field, bind_root, ...), rules for the rest; a negation in it reads only a table or the raw tree, never a role. Audits, loaded by the checks and not by the model: roles-audit.rofl (roled, a relation written into a world the vocabulary does not declare) and babel-audit.rofl (a kind with no role and no reason in no_role, an identifier neither read nor introduced nor a name a role carries). CHECKED (npm run test:roles, scripts/roles_check.ts): over examples/checks/roles-babel and vscode mini + split, 20 files, every file's roles alone equal its roles in the whole world, no role names two files, every audit empty; --break cross (a rule joining two files' programs) is red. MEASURED, Rust release, 4 cores, vscode 250 files (413 096 nodes, 1 560 726 raw facts), sealed: loading the raw facts 5.2 s, the converter 7.6 s more, the audits 2.2 s more. The cost is the rows written, not the lookups: a hundred rules on a kind of a few nodes cost nothing, a hundred on identifier cost 3 s; dropping identity helpers (b_as over every slot, b_param_inner over every identifier, roled for at) took the converter from about 10 s to 7.6. at(N, File, Line) is written for every node (413 k rows), so the raw tree need not stay hot. EDITS (scripts/edit_waves.ts --roles, vscode mini, the largest file): a blank line at the top moves 318 roles, all at; a function added at the top 448 (at 326, the nth of the program body 33, the tree 32, measured while the callee was step 0); a string changed 60; the first function renamed 492, of them inside 248 and parent 48, because a named child's id is its name and the function's subtree takes new ids. SETTLED with the owner 2026-10-31: the callee is no step of its call (callee names it; the arguments are steps 0..n-1, the doc's nth(C, I, A)), nor are a tag and its template; a callee is evaluated before the arguments, and an await in it puts them after it. OPEN, for the owner: (2) a union of three or more is written as binary[type] over each pair of neighbours, beside nth of its parts; (3) the namespace of a module is its program (namespace(P, P)): the doc of 2026-10-31 dissolves Babel's File node, which gets no at and no role; (4) executes_when is written after await only, as yield resumes on next() and no When says that; (5) ids from the role tree cannot be computed by rules (there is no hash); for Babel and oxc to give the same facts the scanner must compute the id over the steps the roles see (no File, the wrappers stepped through), and that is the scanner's work, measured against these numbers.").
 
@@ -12377,7 +12383,7 @@ finding_note(f_a_kept_scan_misses_what_the_scanner_imports,
 
 finding(f_a_vocabulary_beside_a_model_shares_its_unbracketed_names, insight).
 recorded(f_a_vocabulary_beside_a_model_shares_its_unbracketed_names, "2026-11-01").
-addressed_by(f_a_vocabulary_beside_a_model_shares_its_unbracketed_names, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_vocabulary_beside_a_model_shares_its_unbracketed_names, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_vocabulary_beside_a_model_shares_its_unbracketed_names, "examples/surface/surface.rofl").
 finding_note(f_a_vocabulary_beside_a_model_shares_its_unbracketed_names,
   "LOADING THE ROLES BESIDE THE OLD JS MODEL (w_js_model_on_roles, step 0) MET TWO COLLISIONS, both by name. FIRST: the Babel converter's tables had no perspective, so they were [main], and three of them carry names the old model's tables carry too, with other rows: fn_kind (the converter's adds object_method, class methods and the tsdeclare kinds), member_kind, literal_kind. In one world they would have been one table and the old model's answers would have moved. The converter's 41 tables now live in [ast_babel], beside the raw tree they describe: Babel's own words stay in Babel's book. SECOND: an `alias` is declared in every book (src/structure.ts lowerAlias), so `alias scope(S) is mark(S, scope).` of roles.rofl claimed `scope` in every model loaded with the roles, and the net model's scope[main] was refused. Nothing reads the scope alias; it is deleted and the mark stays readable as mark[value](S, scope). WHAT IS LEFT: an alias cannot be declared for one book, so a vocabulary's alias is a claim on its name across every model it is ever loaded with; the 16 mark aliases left in roles.rofl collide with nothing in the worlds that load them today. A RELATION WITH A DIGIT OR AN UNDERSCORED BOOK IS COUNTED AS @other by the golden census (scripts/goldens.ts census: a name of letters and _ in a book of letters), so str_char0, comp1 and every relation of [ast_babel] move only the @other row: a red there says less than its name suggests. THIRD, the same day: the surface lint kept a foreign-capable column by name alone, so delegates[value] (the role) took the foreign column of delegates[flow] (the model) and a rule reading the role beside resolves was an alarm; xl_fcb keys the column by its book too, xl_fc is its projection, and no other finding of the model moved.").
@@ -12813,7 +12819,7 @@ finding_note(f_template_text_and_an_interpolated_literal_are_one_constant,
 finding(f_hoisted_is_a_role, insight).
 recorded(f_hoisted_is_a_role, "2026-11-04").
 addressed_by(f_hoisted_is_a_role, "models/lang/js/roles.rofl").
-addressed_by(f_hoisted_is_a_role, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_hoisted_is_a_role, "models/lang/js/babel-roles.rofl").
 addressed_by(f_hoisted_is_a_role, "models/lang/js/oxc-roles.rofl").
 finding_note(f_hoisted_is_a_role,
   "VADIM, 2026-11-04 (w_js_model_on_roles, item 5): a new role, hoisted(X, Scope): X exists from the start of Scope, the nearest scope around it. True of `function f(){}` and `class C {}` (also `export default function(){}`), not of `const f = function(){}` or `const C = class {}`. roles.rofl has its sentence, roles-audit.rofl its roled rows, both converters write it (Babel from function_declaration and class_declaration, oxc from the type attribute FunctionDeclaration and ClassDeclaration, nearest scope over inside and the scope mark; the helper that finds the scope in between is restricted to those nodes, the first draft joined every node and wrote 264 000 rows). all.ts has `function hf() { function hn() {} class HC2 {} } const hg = function () {}; const hd = class {}; { function hb() {} }`; parity 0 and 0, roles green. PORTED, no answer moved on the 64 files or the fixture: whole_decl, mention, the two may_be_node arms for a function declaration, and the class_expression arm of the decorated class (class and not hoisted). LEFT: this_binder (binds(F, this) also holds class_private_method, which this_binds_kind does not name, so it would move), the kind tables whole_kind, node_value_kind, eff_alloc_kind (they hold methods or regexps no role names), keyed_named_fn (needs the export wrapper). One thing for Vadim: a class is hoisted by this role though it is in its temporal dead zone until its line; the model reads the word as `exists from the start`, which is what mention and whole_decl want.").
@@ -12839,7 +12845,7 @@ finding_note(f_a_destructuring_is_value_resolution,
 
 finding(f_an_array_pattern_iterates, insight).
 recorded(f_an_array_pattern_iterates, "2026-11-05").
-addressed_by(f_an_array_pattern_iterates, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_an_array_pattern_iterates, "models/lang/js/babel-roles.rofl").
 addressed_by(f_an_array_pattern_iterates, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_an_array_pattern_iterates, "rules/js-controlflow.rofl").
 finding_note(f_an_array_pattern_iterates,
@@ -12874,7 +12880,7 @@ finding_note(f_a_default_a_declarator_and_a_field_flag_are_read_from_the_roles,
 
 finding(f_a_conditional_and_a_logical_operator_give_their_operands, insight).
 recorded(f_a_conditional_and_a_logical_operator_give_their_operands, "2026-11-05").
-addressed_by(f_a_conditional_and_a_logical_operator_give_their_operands, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_conditional_and_a_logical_operator_give_their_operands, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_conditional_and_a_logical_operator_give_their_operands, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_a_conditional_and_a_logical_operator_give_their_operands, "rules/js-dataflow.rofl").
 finding_note(f_a_conditional_and_a_logical_operator_give_their_operands,
@@ -12963,7 +12969,7 @@ finding_note(f_an_optional_member_call_is_a_member_call,
 
 finding(f_the_test_of_a_do_while_guards_its_repetition, insight).
 recorded(f_the_test_of_a_do_while_guards_its_repetition, "2026-11-05").
-addressed_by(f_the_test_of_a_do_while_guards_its_repetition, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_the_test_of_a_do_while_guards_its_repetition, "models/lang/js/babel-roles.rofl").
 addressed_by(f_the_test_of_a_do_while_guards_its_repetition, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_the_test_of_a_do_while_guards_its_repetition, "rules/js-callgraph.rofl").
 finding_note(f_the_test_of_a_do_while_guards_its_repetition, 
@@ -12995,7 +13001,7 @@ finding_note(f_a_value_expression_is_read_from_the_roles,
 
 finding(f_a_method_signature_is_a_member_with_a_function_type, insight).
 recorded(f_a_method_signature_is_a_member_with_a_function_type, "2026-11-05").
-addressed_by(f_a_method_signature_is_a_member_with_a_function_type, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_method_signature_is_a_member_with_a_function_type, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_method_signature_is_a_member_with_a_function_type, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_a_method_signature_is_a_member_with_a_function_type, "rules/js-callgraph.rofl").
 finding_note(f_a_method_signature_is_a_member_with_a_function_type,
@@ -13015,7 +13021,7 @@ finding_note(f_a_callee_and_a_receiver_are_classed_by_role,
 
 finding(f_a_member_without_a_body_exists_only_as_a_type, insight).
 recorded(f_a_member_without_a_body_exists_only_as_a_type, "2026-11-05").
-addressed_by(f_a_member_without_a_body_exists_only_as_a_type, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_member_without_a_body_exists_only_as_a_type, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_member_without_a_body_exists_only_as_a_type, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_a_member_without_a_body_exists_only_as_a_type, "rules/js-callgraph.rofl").
 addressed_by(f_a_member_without_a_body_exists_only_as_a_type, "rules/js-dataflow.rofl").
@@ -13024,7 +13030,7 @@ finding_note(f_a_member_without_a_body_exists_only_as_a_type,
 
 finding(f_the_body_of_a_do_while_is_a_step_before_its_test, insight).
 recorded(f_the_body_of_a_do_while_is_a_step_before_its_test, "2026-11-05").
-addressed_by(f_the_body_of_a_do_while_is_a_step_before_its_test, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_the_body_of_a_do_while_is_a_step_before_its_test, "models/lang/js/babel-roles.rofl").
 addressed_by(f_the_body_of_a_do_while_is_a_step_before_its_test, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_the_body_of_a_do_while_is_a_step_before_its_test, "models/lang/js/roles.rofl").
 addressed_by(f_the_body_of_a_do_while_is_a_step_before_its_test, "rules/js-controlflow.rofl").
@@ -13036,7 +13042,7 @@ finding_note(f_the_body_of_a_do_while_is_a_step_before_its_test,
 finding(f_a_regular_expression_literal_is_a_mark, insight).
 recorded(f_a_regular_expression_literal_is_a_mark, "2026-11-05").
 addressed_by(f_a_regular_expression_literal_is_a_mark, "models/lang/js/roles.rofl").
-addressed_by(f_a_regular_expression_literal_is_a_mark, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_regular_expression_literal_is_a_mark, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_regular_expression_literal_is_a_mark, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_a_regular_expression_literal_is_a_mark, "rules/js-dataflow.rofl").
 finding_note(f_a_regular_expression_literal_is_a_mark,
@@ -13044,7 +13050,7 @@ finding_note(f_a_regular_expression_literal_is_a_mark,
 
 finding(f_a_primitive_literal_is_told_by_its_value, insight).
 recorded(f_a_primitive_literal_is_told_by_its_value, "2026-11-05").
-addressed_by(f_a_primitive_literal_is_told_by_its_value, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_primitive_literal_is_told_by_its_value, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_primitive_literal_is_told_by_its_value, "models/lang/js/oxc-roles.rofl").
 addressed_by(f_a_primitive_literal_is_told_by_its_value, "rules/js-dataflow.rofl").
 addressed_by(f_a_primitive_literal_is_told_by_its_value, "rules/js-ambient.rofl").
@@ -13054,7 +13060,7 @@ finding_note(f_a_primitive_literal_is_told_by_its_value,
 
 finding(f_a_pattern_export_exports_the_names_it_binds, insight).
 recorded(f_a_pattern_export_exports_the_names_it_binds, "2026-11-05").
-addressed_by(f_a_pattern_export_exports_the_names_it_binds, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_pattern_export_exports_the_names_it_binds, "models/lang/js/babel-roles.rofl").
 addressed_by(f_a_pattern_export_exports_the_names_it_binds, "models/lang/js/oxc-roles.rofl").
 finding_note(f_a_pattern_export_exports_the_names_it_binds,
   "Coordinator, 2026-11-05: `export const { a, b: [c], ...r } = o` exports a, c and r as `export const a = 1` exports a. Both converters gave a member (has, key, value) only to a declarator whose id is an identifier; the identifiers a pattern binds were no member of the namespace. Now every binding identifier of the declarator's pattern (through object and array patterns, properties, rest and defaults) is the exported place: Babel b_pat_ident over pattern_down, oxc pat_ident over pat_down, filtered to binding_identifier. Fixture: `export const { epa, epb: [epc], ...epr } = ...; export const [epd, ...epe] = ...`; parity 0 on 3270 facts. MOVED: corpus export_key, key_name, sx_export_key, sx_mod_key +4 each (4 names of pattern exports that no file could import); cf +9 each. A GAP FOUND, NOT FIXED: an array pattern element with a default (`export const [epd = 3] = arr`) has a pattern_elem whose target differs between the converters (@x.1 in Babel, @x.0 in oxc); the existing fixture has no such line, so parity never saw it.").
@@ -13119,13 +13125,13 @@ finding_note(f_a_discarded_expression_must_do_something,
 finding(f_the_role_tree_is_the_nearest_role_ancestor, insight).
 recorded(f_the_role_tree_is_the_nearest_role_ancestor, "2026-11-05").
 addressed_by(f_the_role_tree_is_the_nearest_role_ancestor, "models/lang/js/roles.rofl").
-addressed_by(f_the_role_tree_is_the_nearest_role_ancestor, "scripts/roles_parity.ts").
+artifact_removed(f_the_role_tree_is_the_nearest_role_ancestor, "scripts/roles_parity.ts").
 finding_note(f_the_role_tree_is_the_nearest_role_ancestor,
   "VADIM, 2026-11-05: parent[tree] joins a node that plays a role to the nearest ancestor that plays one, in both converters, and inside is its closure. [tree] is parser-neutral; a wrapper no role names (formal_parameter(s), parenthesized_expression, chain_expression, catch_parameter, expression_statement, the function between method_definition and its body, class_body, export_named_declaration over a specifier, spread_element, directive, rest_element) is no node of it. THE RULE, NOT A LIST: roles.rofl gathers the nodes the roles name (roled, moved here from roles-audit.rofl, one arm per role) and the steps of nth; the converters write only their raw edge, edge[tree](P, C), which only they and roles.rofl read (hoisted and the walks past a pause read the raw edge, since the roles cannot be derived from the tree they build). test:parity now compares parent and inside by position like every other row, and its raw-parent comparison is gone. The model had 99 reads of parent[tree] written against Babel's wrappers; each was read onto the neutral tree: seq_at is the step itself (or the label or case around it) and step_in holds what a step holds, the expression statement's expression being the step; keyed_* and member_ctor_* ask discards for a statement that is a call; a spread has no node (the operand is its place: spread_iterated, hidden_call_*, arg_node, array_elem); the rest target is the rest (rest_in_pattern, param_rest, hidden_call_pos); a labelled statement is its body (label_target, completes_abruptly and abrupt_at say label_escaped of the body, label_name is gone); a decorator is its owner (transfer_site, resolves); an enum is its own scope (scope_declares). MOVED, Babel corpus (64 files, 8M facts): of what the old model said, every row whose nodes are in the tree still stands but 4 (the identity of the rest of `...rest` in the fixture, which is now its target); the rest are rows about nodes the tree no longer has (nearest_v/in_fn 6422, member_ctor_* 9600, guarded 3597, completion_outer/fn_between 1954, try_walk/caught_here 44 each: identifiers and wrappers). NEW: nothing is gained from a loss; guard_arm and arm_under, hidden_call_*, after_abrupt (all.ts: 22), held +10, in_own_decorator, are the same facts named by the expression a statement wraps. step_in is a helper of 174 052 rows on the corpus (the nodes under each step): an inside-pair set the size of inside, to be watched at the reference scale.").
 
 finding(f_a_key_written_as_a_string_is_not_a_literal, insight).
 recorded(f_a_key_written_as_a_string_is_not_a_literal, "2026-11-05").
-addressed_by(f_a_key_written_as_a_string_is_not_a_literal, "models/lang/js/babel-roles.rofl").
+artifact_removed(f_a_key_written_as_a_string_is_not_a_literal, "models/lang/js/babel-roles.rofl").
 finding_note(f_a_key_written_as_a_string_is_not_a_literal,
   "VADIM, 2026-11-05, the converter gaps: a static key written as a string (`{ \"a\": 1 }`, `enum E { \"C\" = 3 }`) names a member and is no literal value: oxc did not write one, Babel did. Babel no longer does (cf: str_value C and str_piece C, two false rows removed). A directive is no expression statement, so its string is no literal: oxc no longer writes one (40 rows at the corpus). A default on a shorthand pattern target (`{ a = 1 } = o`) targets the name in oxc as in Babel. An enum member written as a string has its key in Babel as in oxc. A shorthand target of an assignment (`({ a } = o)`) is one node in oxc and two in Babel (a key and a value), which no converter can make equal: oxc writes key on the one node; the fixture carries no such line, and the difference is the residue of the oxc comparison.").
 
@@ -13156,7 +13162,7 @@ finding_note(f_the_scan_leaves_out_start,
 
 finding(f_the_node_hosts_scan_with_oxc, decision).
 recorded(f_the_node_hosts_scan_with_oxc, "2026-11-05").
-addressed_by(f_the_node_hosts_scan_with_oxc, "scanners/oxc_facts.ts").
+artifact_removed(f_the_node_hosts_scan_with_oxc, "scanners/oxc_facts.ts").
 addressed_by(f_the_node_hosts_scan_with_oxc, "models/lang/js/oxc-to-code.rofl").
 finding_note(f_the_node_hosts_scan_with_oxc,
   "The notebook kernel (rofl-nb, the VS Code worker, notebook/cli) scans a notebook's files with oxc_scan (scanners/oxc_facts.ts) and loads SCAN_MODEL_FILES; only the browser page keeps Babel (MODEL_FILES, playground/host.ts). A notebook's own rules still name ast_node, ast_child, ast_attr, ast_line, ast_file: oxc-to-code.rofl reads them back from [ast_oxc], so no notebook was ported. Two traps met on the way. (1) The converter's helpers had no book, so they were [main] relations named fn_node, key_name, decl_kind and so on, and a notebook's sentence reading fn_node[code] found them written in two places and read nothing; every helper of oxc-roles.rofl is now ox_-prefixed (parity and test:roles unchanged). (2) The relation seen of the converter collided with a notebook's own seen. Over the 14 notebooks that read raw rows the exit codes equal the Babel run's; the answers differ where the parsers' trees do: decorated (root_calls 2 answers against 0, as its prose says), missing (Math.maxx and Object.keyz unknown against missing), external and order (other nodes in some sentences). The raw tree is kept in the notebook world (small) and is not dropped.").
@@ -13185,3 +13191,28 @@ recorded(f_the_model_scan_writes_only_the_attributes_something_reads, "2026-11-0
 addressed_by(f_the_model_scan_writes_only_the_attributes_something_reads, "rust/tools/oxc_scan/src/main.rs").
 finding_note(f_the_model_scan_writes_only_the_attributes_something_reads,
   "COORDINATOR, 2026-11-05: oxc_scan wrote 572 193 attribute facts at vscode 250 against Babel's 312 790. `--no-start`, the scan for the model, now writes only the attributes in READ (21 keys: the ones oxc-roles.rofl names, plus name, value and async that notebooks and the host read); the rest (variant, raw, base, pure, override, definite, pife, shorthand, abstract, const, in, out, regex_*, value_raw, directive, source_type_*) are left out, and a plain `oxc_scan DIR` still writes every scalar. The scanner stays a dumb allow-list; a rule that starts reading another key must add it to READ (test:roles and test:parity turn red when a role loses its attribute). vscode 250, cone: 13 578 555 facts -> 13 197 949 (Babel 13 341 279), eval 34.7 s -> 29.1 s, load 11.1 s -> 6.6 s, peak 1323 -> 1281 MB (Babel 1234); the answers are the same (10 values, 9 sites).").
+
+finding(f_the_browser_scans_with_oxc_as_wasm, decision).
+recorded(f_the_browser_scans_with_oxc_as_wasm, "2026-11-05").
+addressed_by(f_the_browser_scans_with_oxc_as_wasm, "rust/tools/oxc_scan/src/wasm.rs").
+addressed_by(f_the_browser_scans_with_oxc_as_wasm, "scanners/oxc_wasm.ts").
+finding_note(f_the_browser_scans_with_oxc_as_wasm,
+  "VADIM chose wasm, 2026-11-05. The playground and the workbench scan with rust/tools/oxc_scan built as a wasm lib (cargo build --release --lib --target wasm32-unknown-unknown, plain C exports alloc, release, scan, out_ptr, out_len, no wasm-bindgen), so the page emits the very text the CLI writes with --no-start, one code path and no drift; no network block met, the module is about 1 MB. scanners/oxc_wasm.ts loads it: useWasm (sync, workers and node), loadWasm (async, a page's main thread, where Chrome refuses a sync compile of a large module). The page loads NB_MODEL_FILES like the node hosts. Dist ships oxc_scan.wasm.").
+
+finding(f_a_page_that_compiles_wasm_needs_wasm_unsafe_eval, pitfall).
+recorded(f_a_page_that_compiles_wasm_needs_wasm_unsafe_eval, "2026-11-05").
+addressed_by(f_a_page_that_compiles_wasm_needs_wasm_unsafe_eval, "workbench/page.html").
+addressed_by(f_a_page_that_compiles_wasm_needs_wasm_unsafe_eval, "scripts/workbench_auth.ts").
+finding_note(f_a_page_that_compiles_wasm_needs_wasm_unsafe_eval,
+  "test:workbench went red with WebAssembly.instantiate() violating the Content Security policy directive 'unsafe-eval': a page without it cannot compile wasm. The pages take 'wasm-unsafe-eval' in script-src, which permits wasm compilation and no script eval, and the policy assertion of workbench_auth says so.").
+
+finding(f_babel_is_out_of_the_model_and_the_hosts, decision).
+recorded(f_babel_is_out_of_the_model_and_the_hosts, "2026-11-05").
+addressed_by(f_babel_is_out_of_the_model_and_the_hosts, "scanners/oxc_code.ts").
+finding_note(f_babel_is_out_of_the_model_and_the_hosts, 
+  "Removed: the Babel roles, audit and from-code books, test:parity and its script, scanners/js_ast.ts, js_inherit.ts, the scan-ids test, the Babel arms of held, sx_global_open and import_attr, @babel/parser from dist, the playground, the workbench and emit; THIRD_PARTY_NOTICES names oxc. Still on @babel/parser as a devDependency, and in none of the shipped parts: the self-models scanners/js.ts, features.ts, js_resolve.ts, flag_census.ts, which walk Babel ASTs directly, and examples/ditto/demo.ts. The dead lab tools under scripts/js_lab and witness_check, volume_locality read oxc through scanners/oxc_code.ts. Owner decides whether the self-models move to oxc_scan.").
+
+finding(f_the_babel_coverage_tables_remain, issue).
+recorded(f_the_babel_coverage_tables_remain, "2026-11-05").
+finding_note(f_the_babel_coverage_tables_remain,
+  "Deferred, not started: facts/js-kinds.rofl and the handled, ignored, node_kind, shape_*, checked, unknown_because, not_a_construct, frame_deferred, kind_absent_ok, verdict, layer and axis machinery of facts/js-*.rofl and rules/js-model.rofl, js-attrs, js-callgraph, js-controlflow, js-effects, js-vocabulary still describe Babel node kinds. Their consumers are the audits of the JS model over the code relations; cutting them moves undefined_premise[audit] and many census rows, so it is a change of its own.").

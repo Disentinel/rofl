@@ -541,6 +541,7 @@ path_exists("rust/storebench/src/colfile.rs").
 path_exists("rust/storebench/src/column.rs").
 path_exists("rust/storebench/src/scale.rs").
 path_exists("rust/tools/oxc_scan/src/main.rs").
+path_exists("rust/tools/oxc_scan/src/wasm.rs").
 path_exists("rust/tools/rs_scan/src/main.rs").
 path_exists("safety.rofl").
 path_exists("scanners/book_locality.ts").
@@ -552,6 +553,8 @@ path_exists("scanners/gh_runs.py").
 path_exists("scanners/host_lib.ts").
 path_exists("scanners/js_resolve.ts").
 path_exists("scanners/necessity.ts").
+path_exists("scanners/oxc_code.ts").
+path_exists("scanners/oxc_wasm.ts").
 path_exists("scanners/parse_cost.ts").
 path_exists("scanners/ring1_lexgen.ts").
 path_exists("scanners/round_bytes.ts").
@@ -616,6 +619,7 @@ path_exists("scripts/why_dag.ts").
 path_exists("scripts/whycheck-worlds/demand-wall.rofl").
 path_exists("scripts/whycheck.ts").
 path_exists("scripts/witness_check.ts").
+path_exists("scripts/workbench_auth.ts").
 path_exists("scripts/workbench_browser.ts").
 path_exists("scripts/workbench_check.ts").
 path_exists("shrug.rofl").
@@ -659,6 +663,7 @@ path_exists("vscode/visual/pic-notation.ts").
 path_exists("vscode/visual/renderer.ts").
 path_exists("vscode/visual/schema.ts").
 path_exists("vscode/worker.ts").
+path_exists("workbench/page.html").
 path_exists("workbench/page.ts").
 
 reason_len(f_count_is_a_kernel_change_and_the_witness_is_the_set, 33).
