@@ -3882,6 +3882,13 @@ check_file("roles_babel", "models/lang/js/babel-roles.rofl").
 check_file("roles_babel", "models/lang/js/roles-audit.rofl").
 check_file("roles_babel", "models/lang/js/babel-audit.rofl").
 check_file("roles_babel", "examples/checks/roles-babel-facts.rofl").
+-- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
+check_world("roles_oxc").
+check_file("roles_oxc", "models/lang/js/roles.rofl").
+check_file("roles_oxc", "models/lang/js/oxc-roles.rofl").
+check_file("roles_oxc", "models/lang/js/roles-audit.rofl").
+check_file("roles_oxc", "models/lang/js/oxc-audit.rofl").
+check_file("roles_oxc", "examples/checks/roles-oxc-facts.rofl").
 
 -- concat(A, B), the one string constructor: below a recursion it joins, inside one it is refused (safety.rofl)
 check_world("concat_builtin").

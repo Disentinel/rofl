@@ -11,6 +11,8 @@ alias oxc_k(N, K) is node(N, K, _).
 edb(node). edb(line). edb(start). edb(child). edb(attr). edb(file).
 imports(ast_oxc, main). imports(ast_oxc, value). imports(ast_oxc, type). imports(ast_oxc, tree).
 imports(value, ast_oxc). imports(type, ast_oxc). imports(tree, ast_oxc). imports(value, tree).
+imports(value, main). imports(type, main). imports(tree, main).
+imports(main, value). imports(main, type). imports(main, tree).
 
 -- a parenthesis and an optional chain are syntax that Babel's tree does not have: every rule sees
 -- through them, as if the child stood in their place
@@ -669,6 +671,11 @@ typed_type(M, T) :- type_only(M), oxc_k[ast_oxc](M, property_definition), annota
 typed_type(M, T) :- type_member(M), oxc_c[ast_oxc](M, return_type, 0, A), oxc_c[ast_oxc](A, type_annotation, 0, T).
 declared[type](X, T) :- typed_type(X, T), not solo(T, _).
 declared[type](X, R) :- typed_type(X, T), stands(T, R).
+-- <T extends U = D>: a parameter of the type world, its bound and its default
+param[type](F, I, P) :- fn_node(F, Fn), oxc_c[ast_oxc](Fn, type_parameters, 0, D), oxc_c[ast_oxc](D, params, I, P).
+param[type](X, I, P) :- oxc_c[ast_oxc](X, type_parameters, 0, D), not fn_node(X, _), not oxc_k[ast_oxc](X, function), oxc_c[ast_oxc](D, params, I, P).
+bound[type](P, U)    :- oxc_k[ast_oxc](P, tstype_parameter), oxc_c[ast_oxc](P, constraint, 0, U).
+assign[type](P, P, D) :- oxc_k[ast_oxc](P, tstype_parameter), oxc_c[ast_oxc](P, default, 0, D).
 assign[type](A, A, T) :- oxc_k[ast_oxc](A, tstype_alias_declaration), oxc_c[ast_oxc](A, type_annotation, 0, T).
 mark[type](R, call)         :- oxc_k[ast_oxc](R, tstype_reference), oxc_c[ast_oxc](R, type_arguments, 0, _).
 callee[type](R, N)    :- mark[type](R, call), oxc_c[ast_oxc](R, type_name, 0, N).

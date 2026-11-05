@@ -1,0 +1,51 @@
+-- oxc-audit.rofl — the audits of the oxc converter (npm run test:roles): a kind of oxc's tree that stands in no role
+-- and has no reason in `no_role`, a reason for a kind that does have a role, and an identifier that is neither read
+-- nor introduced where no role carries it as a name. The counterpart of babel-audit.rofl.
+
+imports(audit, ast_oxc). imports(audit, main).
+edb(no_role).
+o_kind_seen[ast_oxc](K)   :- node[ast_oxc](_, K, _).
+o_kind_roled[ast_oxc](K)  :- roled[value](N), node[ast_oxc](N, K, _).
+o_kind_roled[ast_oxc](K)  :- roled[type](N), node[ast_oxc](N, K, _).
+o_kind_roled[ast_oxc](K)  :- roled[tree](N), node[ast_oxc](N, K, _).
+kind_without_role[audit](K) :- o_kind_seen[ast_oxc](K), not o_kind_roled[ast_oxc](K), not no_role[ast_oxc](K, _).
+no_role_but_roled[audit](K) :- no_role[ast_oxc](K, _), o_kind_roled[ast_oxc](K).
+-- an identifier that is neither read nor introduced, where no role carries it as a name
+ident_without_role[audit](K, F) :- child[ast_oxc](P, F, _, X), node[ast_oxc](X, identifier_reference, _), node[ast_oxc](P, K, _),
+                                   not ref[value](X, _), not ref[type](X, _), not binds[value](X, _), not binds[type](X, _).
+ident_without_role[audit](K, F) :- child[ast_oxc](P, F, _, X), node[ast_oxc](X, binding_identifier, _), node[ast_oxc](P, K, _),
+                                   not ref[value](X, _), not ref[type](X, _), not binds[value](X, _), not binds[type](X, _),
+                                   not param[type](_, _, X).
+
+-- THE KINDS THAT STAND IN NO ROLE, each with its reason
+no_role[ast_oxc](expression_statement, "stepped through: the expression is the step").
+no_role[ast_oxc](labeled_statement, "stepped through: the label is on the statement").
+no_role[ast_oxc](spread_element, "stepped through: the spread is a role of the parent").
+no_role[ast_oxc](binding_rest_element, "dissolved: rest_params, rest_props or rest_elems of its parent").
+no_role[ast_oxc](formal_parameter_rest, "dissolved: rest_params of the function").
+no_role[ast_oxc](formal_parameters, "dissolved: param of the function").
+no_role[ast_oxc](catch_parameter, "transparent: the pattern inside is the parameter").
+no_role[ast_oxc](chain_expression, "transparent: an optional chain is syntax Babel's tree does not have").
+no_role[ast_oxc](parenthesized_expression, "transparent: a parenthesis is syntax Babel's tree does not have").
+no_role[ast_oxc](export_all_declaration, "dissolved: spread_props of the namespace from its source").
+no_role[ast_oxc](export_named_declaration, "dissolved: its specifiers and declaration are exports of the module").
+no_role[ast_oxc](class_body, "dissolved: its members are has of the class").
+no_role[ast_oxc](tsinterface_body, "dissolved: its members are has of the interface").
+no_role[ast_oxc](tsenum_body, "dissolved: its members are has of the enum").
+no_role[ast_oxc](tstype_annotation, "dissolved: the type is declared at the annotated place").
+no_role[ast_oxc](tstype_parameter_declaration, "dissolved: its parameters are param[type] of the declaration").
+no_role[ast_oxc](tstype_parameter_instantiation, "dissolved: its arguments are steps of the application").
+no_role[ast_oxc](decorator, "dissolved: decorated(X, D) reads its expression").
+no_role[ast_oxc](private_identifier, "dissolved: the name is key or member, the mark private").
+no_role[ast_oxc](elision, "dissolved: a hole keeps the index of the elements after it").
+no_role[ast_oxc](label_identifier, "dissolved: the name of a label is label_name of its statement").
+no_role[ast_oxc](tsindex_signature_name, "dissolved: the key type is keyed_by").
+no_role[ast_oxc](tsinterface_heritage, "dissolved: its expression is extends of the interface").
+no_role[ast_oxc](directive, "no role yet: the model does not read directives").
+no_role[ast_oxc](tsmapped_type, "no role yet").
+no_role[ast_oxc](tstype_predicate, "no role yet: a type predicate is an operation (narrows)").
+no_role[ast_oxc](tsimport_type, "no role yet").
+no_role[ast_oxc](tstemplate_literal_type, "no role yet").
+no_role[ast_oxc](tsoptional_type, "no role yet").
+no_role[ast_oxc](tsrest_type, "no role yet").
+no_role[ast_oxc](tsnamed_tuple_member, "no role yet").

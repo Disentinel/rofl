@@ -59,3 +59,4 @@ const qkobj = { "q-a": 1, "q-b"() {}, 3: 4 }; enum QKE { "qk-a" = 1 }
 let tq1: nsq.Server; let tq2: TQ["k"]; let tq3: TQ[typeof tq1]; type TQ4 = TQ["a"]["b"];
 export function ovf(a: string): void; export function ovf(a: number): void; export function ovf(a: any) { return a; }
 declare function dcf(a: number): void; class OvC { ovm(a: string): void; ovm(a: number): void; ovm(a: any) {} }
+function gf<T extends string = "a">(x: T): T { return x; } class GC<K extends object> { m<Z>(z: Z) {} } interface GI<V extends object> {} type GA<Q = number> = Q;
