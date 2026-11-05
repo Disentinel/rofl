@@ -1476,14 +1476,10 @@ may_be_lit[flow](P, V)  :- pattern_entry[code](P, T), may_be_lit[flow](T, V).
 -- ordinary nested function rebinds it), by a field initialiser (the instance)
 -- and by a static block (the class); a private method binds it too. `this_over`
 -- binds T first: a handful of nodes, then their ancestors.
-edb(this_binds_kind).
-this_binds_kind(function_declaration).
-this_binds_kind(function_expression).
-this_binds_kind(object_method).
-this_binds_kind(class_method).
-this_binds_kind(class_private_method).
 
-this_binder[flow](F)    :- this_binds_kind(K), ast_node[code](F, K, _).
+this_binder[flow](F)    :- binds[value](F, "this"), not decl[value](F, param).
+this_binder[flow](S)    :- class[value](C), has[value](C, S), value[value](S, _), not decl[value](S, param).
+this_binder[flow](B)    :- static_block[value](_, B).
 this_over[flow](F, T)   :- this[value](T),
                            inside[tree](F, T), this_binder[flow](F).
 this_nearer[flow](F, T) :- this_over[flow](F, T), this_over[flow](G, T),
@@ -1556,9 +1552,6 @@ may_be_lit[flow](N, L)   :- private_binds[code](N, M), value[value](M, V), may_b
 
 class_method_of[flow](CD, M) :- class_slot[code](CD, M), private_method[code](M).
 
-this_binds_kind(class_property).
-this_binds_kind(class_private_property).
-this_binds_kind(static_block).
 
 class_field_this[flow](CD, P) :- field_of[flow](CD, _, P, _).
 class_field_this[flow](CD, P) :- private_member[code](CD, _, P), not fn_node[code](P).
