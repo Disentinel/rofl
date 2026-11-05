@@ -76,3 +76,12 @@ lc_repeats_arg("node:timers", "setInterval", 0).
 lc_repeats_method("on", 1).
 lc_repeats_method("addListener", 1).
 lc_repeats_method("addEventListener", 1).
+
+-- a resource that ends by itself is dead once its end is waited for: a handler of its end event, or a callback
+-- the bearing call runs when it ends
+edb(lc_end_event).       -- lc_end_event(Kind, Event): F in R.on(Event, F) or R.once(Event, F) runs when R has ended
+edb(lc_end_callback).    -- lc_end_callback(Origin, Key): a function among the call's arguments runs when the resource ends
+lc_end_event(child, "exit").
+lc_end_event(child, "close").
+lc_end_callback("node:child_process", "exec").
+lc_end_callback("node:child_process", "execFile").

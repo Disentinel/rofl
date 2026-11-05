@@ -1,6 +1,6 @@
 ---
 world: js-controlflow
-books: audit, code, flow, main, surface, tree, value
+books: audit, code, execution, flow, main, surface, tree, value
 default: code
 ---
 
@@ -55,7 +55,6 @@ Reads:
   - <a id="spread_elems"></a>`spread_elems`
   - <a id="spread_props"></a>`spread_props`
   - <a id="static"></a>`static`
-  - <a id="suspends"></a>`suspends`
   - <a id="target"></a>`target`
   - <a id="throws"></a>`throws`
   - <a id="tries"></a>`tries`
@@ -186,21 +185,25 @@ Declared as facts:
 > function: without `nearest_v` an `await` inside a function would guard
 > everything after that function's declaration at module level.
 
-<a id="suspend_at"></a>B suspends from a step I either:
+In the execution:
+
+<a id="suspends"></a>B suspends from a step I either:
 
 1. if all of:
-   - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
+   - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something) in the value;
    - [`step_in`](js-structure.rofl.md#step_in)(S, X);
    - [`inside`](#inside)(G, S);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
    - unless [`iterates`](#iterates)(X, something, something);
 2. if all of:
-   - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something);
+   - [`suspends`](#suspends)(X, a [function](js-callgraph.rofl.md#fn_node) G, something) in the value;
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, X);
    - unless [`iterates`](#iterates)(X, something, something).
 
+In the code:
+
 <a id="after_suspend"></a>A node follows a suspension if all of:
-  - B [suspends](#suspend_at) from a step I;
+  - B [suspends](#suspends) from a step I;
   - [`seq_at`](js-structure.rofl.md#seq_at)(B, J, it);
   - I < J.
 
@@ -550,7 +553,9 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
 > to `spread_element`, which carries both mechanisms — mutant d9 reads the
 > edges instead.
 
-<a id="hidden_call_pos"></a>A node N hides a call by a mechanism E either:
+In the execution:
+
+<a id="hidden_call"></a>A node N hides a call by a mechanism E either:
 
 1. if [`object_pat`](js-structure.rofl.md#object_pat)(N) and E is `accessor_call`;
 2. if [`rest_props`](#rest_props)(something, N) and E is `accessor_call`;
@@ -560,6 +565,8 @@ Caller calls Next if a node X [iterates with the next](#pattern_next) Next and C
    - E is `accessor_call`;
 4. if N [is iterated](#spread_iterated) and E is `iterator_call`;
 5. if [`iterates`](#iterates)(N, something, something) and E is `iterator_call`.
+
+In the code:
 
 <a id="hidden_call_src"></a>The hidden call source of a node P is a node Init either:
 
@@ -603,7 +610,7 @@ In the code:
 
 In the flow:
 
-<a id="hidden_call_unsourced"></a>A node has an unsourced hidden call if it [hides a call by](#hidden_call_pos) some mechanism, unless it [has a sourced hidden call](#hidden_call_sourced).
+<a id="hidden_call_unsourced"></a>A node has an unsourced hidden call if it [hides a call by](#hidden_call) some mechanism, unless it [has a sourced hidden call](#hidden_call_sourced).
 
 In the audit:
 
@@ -615,10 +622,10 @@ In the audit:
 4. if N [has an untraced hidden call from](#hidden_call_untraced) some node;
 5. if N [has an unsourced hidden call](#hidden_call_unsourced).
 
-<a id="hidden_call_unaccounted"></a>A node has an unaccounted hidden call if it [hides a call by](#hidden_call_pos) some mechanism, unless it [has an accounted hidden call](#hidden_call_accounted).
+<a id="hidden_call_unaccounted"></a>A node has an unaccounted hidden call if it [hides a call by](#hidden_call) some mechanism, unless it [has an accounted hidden call](#hidden_call_accounted).
 
 <a id="hidden_call_off_table"></a>A kind K hides a call off the table by a mechanism M if all of:
-  - a node N [hides a call by](#hidden_call_pos) M;
+  - a node N [hides a call by](#hidden_call) M;
   - N [is of kind](js-model.rofl.md#ast_node) K;
   - unless K [transfers by](#transfer_mechanism) M.
 

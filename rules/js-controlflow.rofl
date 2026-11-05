@@ -62,11 +62,11 @@ after_abrupt[code](S) :- abrupt_at[code](B, I), seq_at[code](B, J, S), I < J, no
 -- a MAY and is deliberately not an `abrupt_at` arm. Confined to the suspending
 -- function: without `nearest_v` an `await` inside a function would guard
 -- everything after that function's declaration at module level.
-suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+suspends[execution](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
                           step_in[code](S, X), inside[tree](G, S), seq_at[code](B, I, S).
-suspend_at[code](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
+suspends[execution](B, I) :- suspends[value](X, G, _), not iterates[value](X, _, _), fn_node[code](G),
                           seq_at[code](B, I, X).
-after_suspend[code](S) :- suspend_at[code](B, I), seq_at[code](B, J, S), I < J.
+after_suspend[code](S) :- suspends[execution](B, I), seq_at[code](B, J, S), I < J.
 
 -- A LABEL is a boundary an ordinary break cannot cross: `break outer` kills the
 -- statements between the reference and its target, and the walk stops at the
@@ -273,11 +273,11 @@ calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Calle
 -- the hand-written mechanism column against `transfer_mechanism`; it is blind
 -- to `spread_element`, which carries both mechanisms — mutant d9 reads the
 -- edges instead.
-hidden_call_pos[code](N, accessor_call) :- object_pat[code](N).
-hidden_call_pos[code](T, accessor_call) :- rest_props[value](_, T).
-hidden_call_pos[code](A, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A).
-hidden_call_pos[code](S, iterator_call) :- spread_iterated[code](S).
-hidden_call_pos[code](X, iterator_call) :- iterates[value](X, _, _).
+hidden_call[execution](N, accessor_call) :- object_pat[code](N).
+hidden_call[execution](T, accessor_call) :- rest_props[value](_, T).
+hidden_call[execution](A, accessor_call) :- obj_lit[code](O), spread_props[value](O, _, A).
+hidden_call[execution](S, iterator_call) :- spread_iterated[code](S).
+hidden_call[execution](X, iterator_call) :- iterates[value](X, _, _).
 
 hidden_call_src[code](P, Init) :- pattern_source[code](P, Init), object_pat[code](P).
 hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
@@ -304,17 +304,17 @@ hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
                                       not may_be_lit[flow](Src, _),
                                       not may_be_node[flow](Src, _).
 hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
-hidden_call_unsourced[flow](N)     :- hidden_call_pos[code](N, _), not hidden_call_sourced[code](N).
+hidden_call_unsourced[flow](N)     :- hidden_call[execution](N, _), not hidden_call_sourced[code](N).
 
 hidden_call_accounted[audit](N)   :- hidden_call_fires[code](N).
 hidden_call_accounted[audit](N)   :- hidden_call_builtin[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_primitive[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_untraced[flow](N, _).
 hidden_call_accounted[audit](N)   :- hidden_call_unsourced[flow](N).
-hidden_call_unaccounted[audit](N) :- hidden_call_pos[code](N, _),
+hidden_call_unaccounted[audit](N) :- hidden_call[execution](N, _),
                                      not hidden_call_accounted[audit](N).
 
-hidden_call_off_table[audit](K, M) :- hidden_call_pos[code](N, M),
+hidden_call_off_table[audit](K, M) :- hidden_call[execution](N, M),
                                       ast_node[code](N, K, _),
                                       not transfer_mechanism(K, M).
 
@@ -508,3 +508,8 @@ guarded_at[code](File, Line) :- guarded_call[code](C), at[tree](C, File, _), at[
 imports(code, surface).
 imports(surface, code).
 imports(surface, flow).
+
+-- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

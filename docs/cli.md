@@ -436,6 +436,16 @@ File, Line)`, a resource that keeps the process alive where no
 File, Line)`, one the stop handler does not reach. The worlds `lifecycle_leaky`,
 `lifecycle_clean` and `lifecycle_forgetful` check them over
 `models/lang/js/fixtures/lifecycle/`.
+`overwrites_at(Name, File, Line1, Line2)`: the write of a binding at Line1 is
+overwritten at Line2 before anything reads it (both writes whole steps of one
+sequence, the binding read by no other function); the world
+`lifecycle_overwrites` checks it.
+
+The words of behaviour the model derives live in their worlds (the doc «Словарь
+ролей модели JS», «Миры поведения»): `suspends[execution](Seq, I)`,
+`hidden_call[execution](N, How)`, `transfers[execution](X, Kind)`,
+`fallback[execution](F, Name, Init)`, `coerces[execution](N, X)`,
+`narrows[type](O)`; ask them with `@rules/js.files` alone.
 
 ## A world that asks for its own input
 

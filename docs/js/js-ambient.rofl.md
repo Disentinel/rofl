@@ -1,6 +1,6 @@
 ---
 world: js-ambient
-books: audit, code, flow, main, value
+books: audit, code, execution, flow, main, value
 default: main
 ---
 
@@ -40,7 +40,8 @@ Reads:
 - from facts/js-host.rofl:
   - <a id="host_effect_atom"></a>An effect E is a host effect (`host_effect_atom`)
   - <a id="host_global_effect"></a>A host H attributes the global Name to an effect E (`host_global_effect`)
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the execution: [transfers](js-callgraph.rofl.md#transfers)
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member)
@@ -264,12 +265,12 @@ A call
 - reaches the surface Name if it [calls the global](#amb_global_call) Name.
 - performs the operation `itself` if it [calls the global](#amb_global_call) some name.
 
-> 5c. A construction — `new URL(s)`. A `new_expression` is a `transfer_site`
+> 5c. A construction — `new URL(s)`. A `new_expression` is a `transfers`
 > and not a `call_site`, so the negation is on `resolved_site[code]`: a
 > `new Box()` resolved to a class in this program is not ambient.
 
 <a id="amb_construct"></a>A node constructs the ambient global Name if all of:
-  - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
+  - it [is a transfer site](js-callgraph.rofl.md#transfers) of `new_expression`;
   - [`callee`](#callee)(it, N);
   - a node N [refers to the free](js-dataflow.rofl.md#free_global) Name in some file;
   - Name [is an ambient global](#ambient_global);

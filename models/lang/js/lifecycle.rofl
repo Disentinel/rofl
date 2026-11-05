@@ -24,6 +24,14 @@ deleted_by[lifecycle](E, C) :- host_site[code](C, _, O, K), lc_killed_by_arg(O, 
 deleted_by[lifecycle](E, C) :- callee_of[code](C, N), object_of[code](N, R), selects[flow](N, M),
                                lc_holds[lifecycle](R, E), resource[lifecycle](E, Kind), lc_killed_by_method(Kind, M).
 
+-- the end of a resource that ends by itself, waited for
+deleted_by[lifecycle](E, C) :- callee_of[code](C, N), object_of[code](N, R), selects[flow](N, M), lc_waits_method(M),
+                               argument_at[code](C, 0, V), literal[value](V, Ev),
+                               lc_holds[lifecycle](R, E), resource[lifecycle](E, Kind), lc_end_event(Kind, Ev).
+deleted_by[lifecycle](E, E) :- host_site[code](E, _, O, K), lc_end_callback(O, K), resource[lifecycle](E, _),
+                               argument_at[code](E, _, A), may_be_node[flow](A, F), fn_node[code](F).
+lc_waits_method("on"). lc_waits_method("once").
+
 read_by[lifecycle](E, C) :- host_site[code](C, _, O, K), lc_used_by_arg(O, K, Kind, I),
                             argument_at[code](C, I, A), lc_holds[lifecycle](A, E), resource[lifecycle](E, Kind).
 read_by[lifecycle](E, C) :- callee_of[code](C, N), object_of[code](N, R), selects[flow](N, M),
@@ -99,3 +107,32 @@ leak_unknown_at[lifecycle](Kind, File, Line, ViaLine) :- leak_unknown[lifecycle]
     lc_at[lifecycle](E, File, Line), at[tree](Via, _, ViaLine).
 no_shutdown_at[lifecycle](Kind, File, Line)   :- no_shutdown[lifecycle](E, Kind), lc_at[lifecycle](E, File, Line).
 outlives_stop_at[lifecycle](Kind, File, Line) :- outlives_stop[lifecycle](E, Kind), lc_at[lifecycle](E, File, Line).
+
+-- ---- a binding's value: overwrites. A write W1 of the binding D is overwritten when a later step of the same
+-- sequence writes D again (W2) and nothing reads D from W1 up to W2, W2's own value included. Both writes are
+-- whole steps, so neither runs on a condition; a read of D in another function could run between, so a binding
+-- read from another function is never said to be overwritten.
+updated_by[lifecycle](D, D) :- binder[code](D, _, _, _).
+updated_by[lifecycle](D, A) :- assign_binder[code](A, D).
+
+ow_write_step[lifecycle](D, D, Seq, I) :- binder[code](D, _, _, _), seq_at[code](Seq, I, S), parent[tree](S, D).
+ow_write_step[lifecycle](D, W, Seq, I) :- assign_binder[code](W, D), discards[value](Seq, W), seq_at[code](Seq, I, W).
+
+ow_read[lifecycle](D, E) :- sees_binder[code](E, D), updated_by[lifecycle](D, _), not assigned[code](_, E, _, _, _).
+ow_fn[lifecycle](X, F)   :- ow_read[lifecycle](_, X), nearest_v[flow](F, X).
+ow_fn[lifecycle](X, F)   :- updated_by[lifecycle](_, X), nearest_v[flow](F, X).
+ow_has_fn[lifecycle](X)  :- nearest_v[flow](_, X).
+ow_fn[lifecycle](X, top) :- ow_read[lifecycle](_, X), not ow_has_fn[lifecycle](X).
+ow_fn[lifecycle](X, top) :- updated_by[lifecycle](_, X), not ow_has_fn[lifecycle](X).
+
+ow_read_elsewhere[lifecycle](D) :- updated_by[lifecycle](D, W), ow_fn[lifecycle](W, F),
+                                   ow_read[lifecycle](D, E), ow_fn[lifecycle](E, G), F != G.
+ow_read_step[lifecycle](D, Seq, K) :- ow_read[lifecycle](D, E), seq_at[code](Seq, K, E).
+ow_read_step[lifecycle](D, Seq, K) :- ow_read[lifecycle](D, E), seq_at[code](Seq, K, S), inside[tree](S, E).
+
+ow_read_between[lifecycle](D, W1, W2) :- ow_write_step[lifecycle](D, W1, Seq, I), ow_write_step[lifecycle](D, W2, Seq, J), I < J,
+                                         ow_read_step[lifecycle](D, Seq, K), I < K, K <= J.
+overwrites[lifecycle](W2, W1) :- ow_write_step[lifecycle](D, W1, Seq, I), ow_write_step[lifecycle](D, W2, Seq, J), I < J,
+                                 not ow_read_between[lifecycle](D, W1, W2), not ow_read_elsewhere[lifecycle](D).
+overwrites_at[lifecycle](Name, File, Line1, Line2) :- overwrites[lifecycle](W2, W1), updated_by[lifecycle](D, W1),
+                                                       binder[code](D, Name, _, File), at[tree](W1, _, Line1), at[tree](W2, _, Line2).

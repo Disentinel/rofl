@@ -23,13 +23,13 @@ callee_class[code](C, E)      :- callee_of[code](C, N), expr_class[code](N, E).
 -- Calls the grammar gives no CallExpression: `new C()`, `` tag`x` ``, the
 -- iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
 -- does not resolve them; it makes a miss attributable instead of silent.
-transfer_site[code](X, new_expression)               :- construct[value](X).
-transfer_site[code](X, tagged_template_expression)   :- tagged[value](X, _, _).
-transfer_site[code](X, for_of_statement)             :- for_of[code](X).
-transfer_site[code](Owner, decorator)                :- decorated[value](Owner, _).
+transfers[execution](X, new_expression)               :- construct[value](X).
+transfers[execution](X, tagged_template_expression)   :- tagged[value](X, _, _).
+transfers[execution](X, for_of_statement)             :- for_of[code](X).
+transfers[execution](Owner, decorator)                :- decorated[value](Owner, _).
 
 site[code](X) :- call_site[code](X, _).
-site[code](X) :- transfer_site[code](X, _).
+site[code](X) :- transfers[execution](X, _).
 
 -- The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 call_arg[code](C, I, A)       :- call_site[code](C, _), nth[tree](C, I, A), not spread_args[value](C, _, A).
@@ -265,7 +265,7 @@ obj_member_fn[code](O, Key, F) :- key_name[code](P, Key), obj_prop[code](O, P, F
 -- frame after the class and makes it the caller.
 class_ctor[code](CD, M) :- class_method_of[flow](CD, M), ctor_method[code](M).
 
-resolves[code](X, M) :- transfer_site[code](X, new_expression),
+resolves[code](X, M) :- transfers[execution](X, new_expression),
                         may_be_node[flow](X, I), inst_of[flow](I, CD), class_ctor[code](CD, M).
 
 resolves[code](C, M) :- super[value](N), callee_of[code](C, N),
@@ -390,16 +390,16 @@ merged_param[audit](F, I, N) :- handed_fn[flow](F, I, _), N is count(G : handed_
 -- matched against.
 frontier_at[code](F, S) :- nearest_fn[code](F, C), unresolved_call[code](C, S).
 frontier_at[code](R, S) :- top_call[code](C, R), unresolved_call[code](C, S).
-frontier_at[code](F, K) :- nearest_fn[code](F, X), transfer_site[code](X, K),
+frontier_at[code](F, K) :- nearest_fn[code](F, X), transfers[execution](X, K),
                            not resolved_site[code](X).
-frontier_at[code](R, K) :- top_call[code](X, R), transfer_site[code](X, K),
+frontier_at[code](R, K) :- top_call[code](X, R), transfers[execution](X, K),
                            not resolved_site[code](X).
 
 frontier_named[code](Name, Item) :- frontier_at[code](F, Item), fn_name[code](F, Name).
 frontier_named[code](top, Item)  :- frontier_at[code](R, Item), program[tree](R, _).
 
 frontier_line[code](File, Line, S) :- unresolved_call[code](C, S), at[tree](C, File, _), at[tree](C, _, Line).
-frontier_line[code](File, Line, K) :- transfer_site[code](X, K), not resolved_site[code](X),
+frontier_line[code](File, Line, K) :- transfers[execution](X, K), not resolved_site[code](X),
                                       at[tree](X, File, _), at[tree](X, _, Line).
 
 -- The closed vocabulary of shapes, read off the tables: the denominator is the
@@ -901,15 +901,15 @@ declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](
 -- TypeScript narrows a declared type where the code tests it (`x instanceof Sub`, `'k' in x`,
 -- a guard `isSub(x)` in a test): a receiver of that name or key anywhere in the file is not
 -- held to its declaration
-narrows_at[code](O) :- binary[value](_, "instanceof", O, _).
-narrows_at[code](O) :- binary[value](_, "in", _, O).
-narrows_at[code](O) :- executes_if[value](_, G, truthy), call[value](G), arg_node[code](G, _, O).
-narrows_at[code](O) :- executes_if[value](_, G, falsy), call[value](G), arg_node[code](G, _, O).
-narrows_at[code](O) :- logical[value](P, _, G, _), not assign[value](P, _, _), arg_node[code](G, _, O).
-narrows_at[code](O) :- unary[value](P, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
-narrows_at[code](O) :- logical[value](P, _, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
-narrowed_name[code](File, Name) :- narrows_at[code](O), ident_in[code](O, Name, File).
-narrowed_key[flow](File, Key)   :- narrows_at[code](O), member_node_v[flow](O), at[tree](O, File, _),
+narrows[type](O) :- binary[value](_, "instanceof", O, _).
+narrows[type](O) :- binary[value](_, "in", _, O).
+narrows[type](O) :- executes_if[value](_, G, truthy), call[value](G), arg_node[code](G, _, O).
+narrows[type](O) :- executes_if[value](_, G, falsy), call[value](G), arg_node[code](G, _, O).
+narrows[type](O) :- logical[value](P, _, G, _), not assign[value](P, _, _), arg_node[code](G, _, O).
+narrows[type](O) :- unary[value](P, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
+narrows[type](O) :- logical[value](P, _, _, G), not assign[value](P, _, _), arg_node[code](G, _, O).
+narrowed_name[code](File, Name) :- narrows[type](O), ident_in[code](O, Name, File).
+narrowed_key[flow](File, Key)   :- narrows[type](O), member_node_v[flow](O), at[tree](O, File, _),
                                    selects[flow](O, Key).
 declared_open[flow](C) :- declared_any[flow](C), member_call[flow](C, R, _), ident_in[code](R, Name, File),
                           narrowed_name[code](File, Name).
@@ -961,3 +961,8 @@ unpassed_deref_at[flow](File, Line, Name, DefFile, DefLine) :- resolves[code](C,
                                         sx_param_deref[surface](F, I, Name, DefFile, DefLine),
                                         not call_passes[code](C, I), not call_spreads[code](C),
                                         at[tree](C, File, _), at[tree](C, _, Line).
+
+-- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

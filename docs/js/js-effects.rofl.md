@@ -1,6 +1,6 @@
 ---
 world: js-effects
-books: audit, code, flow, main, surface, tree, value
+books: audit, code, execution, flow, main, surface, tree, value
 default: flow
 ---
 
@@ -622,9 +622,9 @@ In the code:
 1. if [`bin_op`](js-dataflow.rofl.md#bin_op)(N, something, something, something), unless N [inspects](#eff_op_inspects);
 2. if [`un_op`](js-dataflow.rofl.md#un_op)(N, something, something), unless N [inspects](#eff_op_inspects).
 
-In the flow:
+In the execution:
 
-<a id="eff_coerced"></a>A node N coerces a node X either:
+<a id="coerces"></a>A node N coerces a node X either:
 
 1. if N [converts](#eff_converts) and [`bin_op`](js-dataflow.rofl.md#bin_op)(N, something, X, something);
 2. if N [converts](#eff_converts) and [`bin_op`](js-dataflow.rofl.md#bin_op)(N, something, something, X);
@@ -633,25 +633,27 @@ In the flow:
 
 `eff_conv_key` includes `symbol_to_primitive`, "valueOf", "toString".
 
+In the flow:
+
 A node
 
-- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#eff_coerced) X and X [points to](js-concat.rofl.md#may_be_node) some node.
+- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#coerces) X and X [points to](js-concat.rofl.md#may_be_node) some node.
 - <a id="eff_conv_call"></a>coerces through a node M if all of:
   - Key [is a conversion key](#eff_conv_key);
   - [the member](js-dataflow.rofl.md#member_value) Key of a node O holds M;
   - a node X [points to](js-concat.rofl.md#may_be_node) O;
-  - it [coerces](#eff_coerced) X.
+  - it [coerces](#coerces) X.
 - <a id="eff_conv_overridden"></a>coerces with an override X if all of:
   - Key [is a conversion key](#eff_conv_key);
   - [the member](js-dataflow.rofl.md#member_value) Key of a node O holds some node;
   - X [points to](js-concat.rofl.md#may_be_node) O;
-  - it [coerces](#eff_coerced) X.
+  - it [coerces](#coerces) X.
 - <a id="eff_conv_default"></a>coerces by default a node X if it [coerces the object](#eff_conv_object) X, unless it [coerces with an override](#eff_conv_overridden) X.
 - <a id="eff_conv_primitive"></a>coerces the primitive X if all of:
-  - it [coerces](#eff_coerced) X;
+  - it [coerces](#coerces) X;
   - X [may be the literal](js-concat.rofl.md#may_be_lit) some text;
   - unless it [coerces the object](#eff_conv_object) X.
-- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#eff_coerced) X and X neither [may be the literal](js-concat.rofl.md#may_be_lit) some text nor [points to](js-concat.rofl.md#may_be_node) some node.
+- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#coerces) X and X neither [may be the literal](js-concat.rofl.md#may_be_lit) some text nor [points to](js-concat.rofl.md#may_be_node) some node.
 
 Declared as facts:
 
@@ -691,7 +693,7 @@ In the audit:
 
 A node
 
-- <a id="eff_conv_unaccounted"></a>coerces without an account X if it [coerces](#eff_coerced) X, unless it [accounts for coercing](#eff_conv_accounted) X.
+- <a id="eff_conv_unaccounted"></a>coerces without an account X if it [coerces](#coerces) X, unless it [accounts for coercing](#eff_conv_accounted) X.
 - <a id="eff_op_off_kind"></a>inspects off its kind K if all of:
   - it [inspects](#eff_op_inspects);
   - it [is of kind](js-model.rofl.md#ast_node) K;

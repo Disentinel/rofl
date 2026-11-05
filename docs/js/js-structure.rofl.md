@@ -78,6 +78,26 @@ What this file calls a node, and what each word stands for:
 | `audit` | `value` |
 | `audit` | `tree` |
 
+> the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `execution` | `value` |
+| `execution` | `tree` |
+| `execution` | `code` |
+| `execution` | `flow` |
+| `execution` | `main` |
+| `code` | `execution` |
+| `flow` | `execution` |
+| `audit` | `execution` |
+| `surface` | `execution` |
+| `type` | `code` |
+| `type` | `flow` |
+| `code` | `type` |
+| `flow` | `type` |
+
 > the object a member reads, whether its key is a name or computed
 
 <a id="object_of"></a>`object_of`(M, O) either:
