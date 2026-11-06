@@ -7,6 +7,8 @@
   it cannot read says why (docs/workbench.md).
 - Cells evaluate in a fork of the Rust engine's world, and a notebook runs
   only the rules its lines ask about.
+- A notebook with `model: js` scans its code with oxc, Babel is gone; the
+  browser workbench runs the same scanner compiled to wasm.
 - The kernel is ROFL 1.6.0. See docs/releases/1.6.md.
 
 ## 1.5.1 (preview, ROFL 1.5.1)
