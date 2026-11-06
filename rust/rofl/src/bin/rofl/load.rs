@@ -482,7 +482,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
     drop(texts);
-    if cut.files.len() < 2 || !cut.core.contains("[surface](") { return None; }
+    if cut.files.len() < 2 || cut.files.iter().map(|(_, t)| t.len()).sum::<usize>() < VOLUMES_FROM || !cut.core.contains("[surface](") { return None; }
     let mut s = Session::fresh(o.budget);
     set_walls(o, &mut s);
     if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
@@ -510,6 +510,15 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k) { eprintln!("the volumes are not kept: {e}"); }
     }
     Some(code)
+}
+
+/// The bytes of the files' facts from which a world is evaluated by volumes: below them a worker's share does not pay
+/// for its own copy of the core's evaluation and the threads (vscode: 20 files, 10 MB, whole as fast).
+const VOLUMES_FROM: usize = 32 << 20;
+
+/// A file of a set of kept volumes (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): no world of its own to take by delta.
+pub fn is_volume_of_set(p: &std::path::Path) -> bool {
+    p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split_once(".q")).is_some_and(|(_, r)| r.len() > 17 && r.as_bytes()[16] == b'.' && r[..16].bytes().all(|c| c.is_ascii_hexdigit()))
 }
 
 /// The volumes kept at `k`, the core and a world a worker, when every one is there and nothing they were kept from moved.

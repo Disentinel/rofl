@@ -472,7 +472,8 @@ alone, but each small file added to that world costs about 15 s
 ## A corpus larger than one heap
 
 **`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
-the world's facts name two or more files (a node id's prefix, `n<16 hex>_`) and
+the world's facts name two or more files (a node id's prefix, `n<16 hex>_`),
+hold 32 MB or more between them (below that the whole world is as fast) and
 its program writes `[surface]` (the JS model does, `rules/js-surface.rofl`), the
 facts are cut by file and the files dealt to a worker a core, balanced by bytes;
 each worker is a fork of the core (the model, the question, the facts naming no
