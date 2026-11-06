@@ -6,7 +6,9 @@
 // The facts are oxc's tree, raw, in [ast_oxc] (rust/tools/oxc_scan, which models/lang/js/oxc-roles.rofl reads into the
 // roles), and the host's: the paths and the strings of the files (playground/host.ts hostFacts). Without --out they go
 // to stdout. A file oxc refuses is named on stderr and the exit code is 2. Then: `rofl why L @rules/js.files FILE`.
-// A node's id is a hash of its path in the tree, so a file scanned again keeps the ids of what the edit did not touch.
+// A node's id is a hash of its path in the tree, so a file scanned again keeps the ids of what the edit did not touch;
+// for a kept world the engine names the previous output in ROFL_SCAN_PREVIOUS, and a node matched there keeps its id
+// (scanners/oxc_inherit.ts).
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -15,6 +17,7 @@ import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
 import { hostFacts } from '../playground/host.ts';
 import { oxcScan } from './oxc_bin.ts';
+import { inheritText } from './oxc_inherit.ts';
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
 const NOT_CODE = /\.d\.[mc]?ts$|\.min\.js$/;
@@ -46,7 +49,7 @@ const sink = out ? fs.createWriteStream(out) : process.stdout;
 const put = (text: string | Buffer) => new Promise<void>((done) => { if (sink.write(text)) done(); else sink.once('drain', () => done()); });
 // what was read, for the engine's storeroom of scans (docs/cli.md): the files and directories oxc_scan names, and the
 // scanner's own code, so that a scanner changed is a scan stale
-await put([bin, fileURLToPath(import.meta.url), fileURLToPath(new URL('../playground/host.ts', import.meta.url))].map((f) => `-- reads: ${f}\n`).join(''));
+await put([bin, fileURLToPath(import.meta.url), fileURLToPath(new URL('oxc_inherit.ts', import.meta.url)), fileURLToPath(new URL('../playground/host.ts', import.meta.url))].map((f) => `-- reads: ${f}\n`).join(''));
 
 const child = spawn(bin, ['--no-start', root, ...(one === undefined ? [] : [one])], { stdio: ['ignore', 'pipe', 'inherit'] });
 const exited = new Promise<number>((done) => child.on('close', (code) => done(code ?? 70)));
@@ -54,15 +57,19 @@ const strings = new Set<string>();
 // the text goes through in chunks, and only the lines that hold a string value are looked at
 const quoted = /^attr\[ast_oxc\]\(\w+, value, "((?:[^"\\\n]|\\.)*)"\)\.$/gm;
 const decoder = new StringDecoder('utf8');
+const prev = process.env.ROFL_SCAN_PREVIOUS;
+const previous = prev && fs.existsSync(prev) ? fs.readFileSync(prev, 'utf8') : undefined;
+const held: Buffer[] = [];
 let facts = 0, carry = '';
 for await (const chunk of child.stdout) {
-  await put(chunk);
+  if (previous === undefined) await put(chunk); else held.push(chunk);
   const text = carry + decoder.write(chunk), cut = text.lastIndexOf('\n') + 1;
   carry = text.slice(cut);
   const whole = text.slice(0, cut);
   for (let i = whole.indexOf('\n'); i >= 0; i = whole.indexOf('\n', i + 1)) facts++;
   for (const m of whole.matchAll(quoted)) strings.add(m[1].replace(/\\(["\\])/g, '$1'));
 }
+if (previous !== undefined) await put(inheritText(Buffer.concat(held).toString('utf8'), previous));
 const host = hostFacts(files, strings);
 await put(host.join('\n') + '\n');
 await new Promise<void>((done) => (out ? (sink as fs.WriteStream).end(done) : done()));

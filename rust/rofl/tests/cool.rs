@@ -28,17 +28,17 @@ fn tmp(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../target").join(name)
 }
 
-/// Two files' worth of AST-shaped facts, in the id scheme `js_ast.ts` mints:
+/// Two files' worth of AST-shaped facts, in the id scheme the scanner mints:
 /// `n<sha256(path)[0..8]>_<counter>`, so the file is a prefix of every id it
 /// produced. Two volumes, because cooling one must leave the other whole.
 const WORLD: &str = r#"
-ast_file[code](na1b2c3d4_1, "a.js").
+file[ast_oxc](na1b2c3d4_1, "a.js").
 ast_node[code](na1b2c3d4_1, file, "a.js", 1).
 ast_node[code](na1b2c3d4_2, call, "a.js", 3).
 ast_child[code](na1b2c3d4_1, body, 0, na1b2c3d4_2).
 ast_attr[code](na1b2c3d4_2, name, "greet").
 ast_attr[code](na1b2c3d4_2, note, "a quote \" a backslash \\ a tab \t and a newline \n, a bell \u0007 and a form feed \f").
-ast_file[code](nf9e8d7c6_1, "b.js").
+file[ast_oxc](nf9e8d7c6_1, "b.js").
 ast_node[code](nf9e8d7c6_1, file, "b.js", 1).
 ast_node[code](nf9e8d7c6_2, call, "b.js", 7).
 ast_child[code](nf9e8d7c6_1, body, 0, nf9e8d7c6_2).
@@ -77,8 +77,8 @@ fn a_cooled_volume_reheats_to_the_same_world() {
         "cooling took facts belonging to another volume"
     );
     assert!(s.eval.store.fact_count() < hot, "cooling freed nothing");
-    assert_eq!(s.ask("ast_file[code](_, \"a.js\")").unwrap().rows.len(), 0);
-    assert_eq!(s.ask("ast_file[code](_, \"b.js\")").unwrap().rows.len(), 1);
+    assert_eq!(s.ask("file[ast_oxc](_, \"a.js\")").unwrap().rows.len(), 0);
+    assert_eq!(s.ask("file[ast_oxc](_, \"b.js\")").unwrap().rows.len(), 1);
 
     // BACK, and identical.
     let text = std::fs::read_to_string(&out).expect("the cooled file");
@@ -208,7 +208,7 @@ fn a_volume_cooled_by_book_keeps_its_surface_and_reheats_to_the_same_world() {
     assert_eq!(n(&mut s, "callee_of[flow](C, N)"), 2);
 
     let out = tmp("cool_books_a.rofl");
-    let c = s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool by book");
+    let c = s.cool_books("na1b2c3d4_", &["ast_oxc".into(), "code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool by book");
     assert_eq!(c.facts, 6, "the volume's base [code] facts are what is written");
     let text = std::fs::read_to_string(&out).unwrap();
     assert!(!text.contains("[surface]") && !text.contains("[flow]"), "only the base facts of the books leave: {text}");
@@ -232,7 +232,7 @@ fn a_volume_cooled_by_book_keeps_its_surface_and_reheats_to_the_same_world() {
     assert_eq!(s.eval.canonical_state(), before, "a volume cooled by book did not come back the way it left");
 
     // cooled and reheated with no evaluation between: the same
-    s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool");
+    s.cool_books("na1b2c3d4_", &["ast_oxc".into(), "code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool");
     s.reheat(out.to_str().unwrap()).expect("reheat");
     s.evaluate().expect("evaluate");
     assert_eq!(s.eval.canonical_state(), before);
@@ -251,14 +251,14 @@ fn a_volume_holding_a_base_fact_in_an_uncooled_book_is_refused_before_anything_m
     let before = s.eval.canonical_state();
     let out = tmp("cool_books_extra.rofl");
     std::fs::remove_file(&out).ok();
-    let both: Vec<String> = vec!["code".into(), "flow".into()];
+    let both: Vec<String> = vec!["ast_oxc".into(), "code".into(), "flow".into()];
     let e = s.cool_books("na1b2c3d4_", &both, &[], out.to_str().unwrap()).err().expect("a base fact in [extra] was forgotten");
     assert!(e.contains("[extra]") && e.contains("probe"), "{e}");
     assert!(!out.exists(), "a refused cool wrote a file");
     assert_eq!(s.eval.canonical_state(), before, "a refused cool moved the world");
-    let all: Vec<String> = vec!["code".into(), "flow".into(), "extra".into()];
+    let all: Vec<String> = vec!["ast_oxc".into(), "code".into(), "flow".into(), "extra".into()];
     let c = s.cool_books("na1b2c3d4_", &all, &[], out.to_str().unwrap()).expect("cool with the book");
-    assert_eq!(c.books, vec![("code".to_string(), 6), ("extra".to_string(), 1)]);
+    assert_eq!(c.books, vec![("ast_oxc".to_string(), 1), ("code".to_string(), 5), ("extra".to_string(), 1)]);
     assert!(std::fs::read_to_string(&out).unwrap().contains("[extra]"), "the fact did not leave with the volume");
     s.reheat(out.to_str().unwrap()).expect("reheat");
     s.evaluate().expect("evaluate");
@@ -377,7 +377,7 @@ fn a_reheated_volume_answers_why_as_before_cooling() {
     s.evaluate().expect("evaluate");
     assert_eq!(whys(&mut s), before, "reheated by delta");
 
-    s.cool_books("na1b2c3d4_", &["code".into(), "flow".into()], &[], path).expect("cool by book");
+    s.cool_books("na1b2c3d4_", &["ast_oxc".into(), "code".into(), "flow".into()], &[], path).expect("cool by book");
     s.reheat(path).expect("reheat");
     assert_eq!(whys(&mut s), before, "reheated with no evaluation between");
 

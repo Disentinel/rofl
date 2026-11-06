@@ -833,7 +833,12 @@ impl Session {
     pub fn evaluate(&mut self) -> Result<Evaluated, Halt> {
         self.sent = Default::default();
         let r = self.eval.run();
-        let mut e = self.evaluated(r)?;
+        let e = self.evaluated(r)?;
+        self.rounds(e)
+    }
+
+    /// The rounds after an evaluation that reached its end, whole or resumed.
+    fn rounds(&mut self, mut e: Evaluated) -> Result<Evaluated, Halt> {
         // what the world asks to be scanned is scanned, and what it wants of an adapter sent (src/adapter.rs), and what
         // comes back loaded, until it asks for nothing more. The rounds share the evaluation's budget: a recursion
         // through an adapter that never ends meets the wall as a rule that never ends does
@@ -1022,7 +1027,7 @@ impl Session {
         let r = self.eval.resume(more);
         let went_on = matches!(r, Ok((_, true)));
         let r = r.map(|(o, _)| o);
-        let out = self.evaluated(r);
+        let out = self.evaluated(r).and_then(|e| if e.partial { Ok(e) } else { self.rounds(e) });
         self.eval.budget = budget;
         Ok((out?, went_on))
     }
