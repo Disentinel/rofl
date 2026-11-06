@@ -5368,7 +5368,7 @@ impl Eval {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                    if at0 == 0 && (fl.is_some() || !brk!("vclosure_reader_stale" => true; false) && self.vc.vreader_due(&self.store, r, cur)) {
+                    if at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
                         // (an addition fires it on the rows the new edges make)
                         let f = if fl.is_none() && self.add.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
                             let f = self.vfire_news(r, cur)?;
@@ -8386,6 +8386,7 @@ impl Eval {
     /// made is unknown, so the cell it was for (or, when its key is not
     /// bound, every cell of the relation) is a hole — never the ⊕ of the
     /// contributions that survived.
+    #[inline(never)]
     fn lattice_fault(&mut self, rule_id: Option<Sym>, s: &Subst, prems: &[PremRef]) -> Result<(), Halt> {
         let Some(rid) = rule_id else { return Ok(()) };
         let Some(r) = self.rule_of(rid) else { return Ok(()) };
@@ -9993,6 +9994,7 @@ impl Eval {
 
     /// A builtin failed for an error in a rule no lattice decides: the rule's
     /// conclusion under the failed solution is unknown (`lat.carry.plain`).
+    #[inline(never)]
     fn plain_fault(&mut self, rule_id: Option<Sym>, s: &Subst, at: &BodyElem) {
         let Some(r) = rule_id.and_then(|rid| self.rule_of(rid)) else { return };
         if r.lat_close.is_some() {
@@ -10189,7 +10191,7 @@ impl Eval {
     }
 
     fn plain_flush_at(&mut self, lv: i64) -> Result<(), Halt> {
-        let closed = |e: &Eval, rel: Sym| brk!("plain_flush_early" => true; lv == i64::MAX || e.rel_level(rel) < lv);
+        let closed = |e: &Eval, rel: Sym| lv == i64::MAX || e.rel_level(rel) < lv;
         let mut seeds: Vec<(Unknown, bool)> = Vec::new();
         let mut keep: Vec<(Sym, usize, Subst, Term)> = Vec::new();
         for (rid, i, s, marker) in std::mem::take(&mut self.lat.pass.plain_undecided) {

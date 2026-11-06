@@ -589,6 +589,7 @@ impl Eval {
     /// probes) is counted from each run's totals; where a wall or the watcher would speak inside these premises, or a
     /// read would write, nothing is kept and the written path solves them. Some: the solutions, the premise after
     /// the last one solved, and the rows the premises added to those held.
+    #[inline(never)]
     pub(super) fn par_rest(&mut self, body: &[BodyElem], i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<(Vec<Sol>, usize, i64)> {
         if acc.len() < self.par.sols.max(2) {
             return None;

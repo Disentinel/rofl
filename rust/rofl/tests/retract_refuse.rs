@@ -25,8 +25,8 @@ fn a_base_fact_in_another_book_does_not_stop_the_delta() {
     let mut s = world(&format!("{BASE}{rules}"));
     let r = s.retract_delta("k(a)").unwrap();
     match &r {
-        Retraction::Delta(d) => assert!(d.stacked_rules > 0, "the negating rule was not read again whole: {d:?}"),
-        _ => panic!("refused: {r:?}"),
+        Retraction::Delta(d) if d.set.is_none() => assert!(d.stacked_rules > 0, "the negating rule was not read again whole: {d:?}"),
+        _ => panic!("refused: the one-fact delta did not take it: {r:?}"),
     }
     let mut fresh = world(&format!("edb(k).\nedb(dom).\nk(b).\ndom(a).\ndom(c).\n{rules}"));
     assert_eq!(s.eval.canonical_state(), fresh.eval.canonical_state());

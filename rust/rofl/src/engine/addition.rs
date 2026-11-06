@@ -723,7 +723,7 @@ impl Eval {
             d.overdeleted += 1;
             // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
             for y in self.store.citers_one(x) {
-                if self.store.alive(y) && !over.contains(&y) && brk!("add_stale_citer_followed" => true; self.store.cites(y, PremRef::Fact(x))) {
+                if self.store.alive(y) && !over.contains(&y) && self.store.cites(y, PremRef::Fact(x)) {
                     if brk!("overdelete_judged_kept" => false; true) {
                         judged.remove(&y);
                     }
