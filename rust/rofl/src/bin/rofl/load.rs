@@ -307,6 +307,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     set_walls(&o, &mut s);
     if let (Some(cut), Some(p)) = (found.cut, &slot) { resume_disk_wall(&o, &world, &mut s, p, cut); }
     if let (Some(d), Some(p)) = (&by_delta, &slot) { keep_taken(&o, &world, &mut s, p, d); }
+    if !from_disk && by_volumes(&o) {
+        if let Some(code) = answer_by_volumes(&o) { std::process::exit(code); }
+    }
     if !from_disk { build_world(&o, &world, &mut s, &slot); } else { grow_cone(&o, &mut s); }
     if let Some(f) = &o.save {
         std::fs::write(f, s.save()).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
@@ -452,6 +455,81 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).chain(o.below.iter().cloned()).collect();
     keep_loaded(o, world, s, units.unwrap_or_default(), &read, slot, disk);
+}
+
+/// A run its world answers by volumes (`engine/volumes.rs`): questions asked, of a world evaluated once, and
+/// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world.
+fn by_volumes(o: &Opts) -> bool {
+    !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
+        && o.below.is_empty() && o.kept.is_none() && o.save.is_none() && !o.propose && std::env::var("ROFL_VOLUMES").as_deref() != Ok("0")
+}
+
+/// The questions answered by volumes, with the exit code; none when the world is not one (a file alone, no
+/// `[surface]` book) or its volumes refused it, said on stderr, and the world is then evaluated whole.
+fn answer_by_volumes(o: &Opts) -> Option<i32> {
+    let sources = load_sources(o);
+    let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
+    let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
+    drop(texts);
+    if cut.files.len() < 2 || !cut.core.contains("[surface](") { return None; }
+    let mut s = Session::fresh(o.budget);
+    set_walls(o, &mut s);
+    if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
+        fail(o.json, FILE_REFUSED, &format!("refused:\n  {}", d.1.join("\n  ")));
+    }
+    if let Some(rels) = question_rels(o) {
+        if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
+    }
+    let files = cut.files.len();
+    let k = std::thread::available_parallelism().map_or(1, |n| n.get()).min(files);
+    let mut v = match s.by_volumes(rofl::engine::volumes::groups(cut.files, k), files) {
+        Ok(v) => {
+            let st = &v.stats;
+            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} [surface] facts ({} ms of {} ms)", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms);
+            v
+        }
+        Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
+    };
+    for w in &v.worlds { for d in &w.eval.diags { eprintln!("diag: {d}"); } }
+    let (mut refused, mut partial) = (false, false);
+    for q in &o.qs {
+        let Q::Ask(l) = q else { unreachable!() };
+        let mut all: Option<rofl::session::Answer> = None;
+        let mut err = None;
+        let rel = l.split(['(', '[']).next().unwrap_or("").trim().to_string();
+        let mut resident = match s.resident(&v, &rel) {
+            Ok(r) => r,
+            Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
+        };
+        let asked: Vec<&mut Session> = match &mut resident { Some(r) => vec![r], None => v.worlds.iter_mut().collect() };
+        for w in asked {
+            match w.ask(l) {
+                Ok(a) => match &mut all {
+                    None => all = Some(a),
+                    Some(u) => { u.rows.extend(a.rows); u.keys.extend(a.keys); u.shrugs.extend(a.shrugs); u.partial |= a.partial; }
+                },
+                Err(e) => { err = Some(e); break; }
+            }
+        }
+        if let Some(e) = err {
+            refused = true;
+            if o.json { println!("{}", serde_json::json!({ "ok": false, "error": e })) } else { println!("error: {e}\n") }
+            continue;
+        }
+        let mut a = all.expect("a world a worker");
+        a.keys.sort();
+        a.keys.dedup();
+        a.shrugs.sort();
+        a.shrugs.dedup();
+        let mut seen = std::collections::HashSet::new();
+        a.rows.retain(|r| seen.insert(r.clone()));
+        partial |= a.partial;
+        if o.json {
+            let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
+            println!("{}", serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial }));
+        } else { println!("{}\n", ask_text(&a)) }
+    }
+    Some(if refused { QUESTION_REFUSED } else if partial { PARTIAL } else { 0 })
 }
 
 /// The relations a question verb's questions name, which its world asks (docs/demand-cones.md) as a notebook asks

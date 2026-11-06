@@ -126,6 +126,13 @@ pub struct Cooled {
     pub books: Vec<(String, usize)>,
 }
 
+/// A world evaluated by volumes (`Session::by_volumes`): a world a worker, the facts laid into each from the others.
+pub struct Volumes {
+    pub worlds: Vec<Session>,
+    pub laid: Vec<crate::store::FxSet<FactId>>,
+    pub stats: crate::engine::volumes::VolStats,
+}
+
 pub struct Answer {
     /// Variable names in the order they first appear in the query. `_` is
     /// dropped by the parser into a fresh name, so a wildcard is a column too.
@@ -855,6 +862,32 @@ impl Session {
             e.partial = true;
         }
         Ok(e)
+    }
+
+    /// This world, holding the core, and the `groups` of files evaluated by volumes (`engine/volumes.rs`): a world a
+    /// worker, each a fork of the core. Refused when a worker's world asks for input (a scan or an adapter's want),
+    /// which a volume cannot bring alone.
+    pub fn by_volumes(&mut self, groups: Vec<String>, files: usize) -> Result<Volumes, Halt> {
+        let (ws, stats) = self.eval.by_volumes(groups, files)?;
+        let (mut worlds, mut laid) = (Vec::with_capacity(ws.len()), Vec::with_capacity(ws.len()));
+        for w in ws {
+            let mut s = Session { eval: w.e, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
+            let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()? + s.profile_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
+            if n > 0 {
+                return Err(Halt::Strat("a volume asks for input, which it cannot bring alone".into(), String::new()));
+            }
+            worlds.push(s);
+            laid.push(w.laid);
+        }
+        Ok(Volumes { worlds, laid, stats })
+    }
+
+    /// The world that answers a question over `rel` the volumes cannot answer alone (`Eval::resident`), none when
+    /// their union answers it.
+    pub fn resident(&mut self, v: &Volumes, rel: &str) -> Result<Option<Session>, Halt> {
+        let rel = self.eval.h.intern(rel);
+        let ws: Vec<(&Eval, &crate::store::FxSet<FactId>)> = v.worlds.iter().map(|s| &s.eval).zip(v.laid.iter()).collect();
+        Ok(self.eval.resident(&ws, &[rel])?.map(|eval| Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() }))
     }
 
     /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and

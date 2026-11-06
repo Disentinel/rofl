@@ -8621,6 +8621,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "volumes_unexchanged",
+  "what": "a corpus evaluated by volumes lays no worker's [surface] facts into the others: a volume answers from its own files alone",
+  "expect": {
+   "volumes": "the volumes answer otherwise than the whole world"
+  }
+ },
+ {
   "id": "add_hol_shared_kept",
   "what": "a holistic group shared across its percent or subject is asked again by key and keeps its old group",
   "expect": {
@@ -9298,6 +9305,7 @@ const TESTS: Record<string, string> = {
   addition_threshold: 'addition a_threshold_sealed_again_takes',
   addition_closure_row: 'addition a_closure_row_given_a_shorter_path',
   addition_holistic: 'addition a_holistic_aggregate_is_sealed_again',
+  volumes: 'volumes',
   addition_lower_member: 'addition a_member_standing_lower_seals_again_only_its_group',
   addition_derived_by: 'addition a_rule_reading_derived_by',
   addition_fault: 'addition a_fault_the_addition_does_not_reach',

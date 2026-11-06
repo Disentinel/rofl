@@ -31,7 +31,7 @@ pub struct Kept {
 #[derive(Clone, Default)]
 pub struct Chain {
     pub files: Vec<Kept>,
-    held: Vec<std::rc::Rc<Region>>,
+    held: Vec<std::sync::Arc<Region>>,
 }
 
 fn build_id() -> String {
@@ -205,7 +205,7 @@ fn named(r: &mut VolR) -> Result<Vec<Kept>, String> {
 }
 
 /// The volumes an overlay's header names, once each is found where it was, as it was.
-fn chain_of(path: &str, r: &mut VolR) -> Result<Vec<(Kept, std::rc::Rc<Base>)>, String> {
+fn chain_of(path: &str, r: &mut VolR) -> Result<Vec<(Kept, std::sync::Arc<Base>)>, String> {
     let ks = named(r)?;
     if ks.is_empty() {
         return Err(format!("{path}: an overlay over nothing"));
@@ -327,7 +327,7 @@ pub fn open(path: &str) -> Result<Opened, String> {
     }
     let mut chain = Chain::default();
     if over {
-        let (ks, bs): (Vec<Kept>, Vec<std::rc::Rc<Base>>) = chain_of(path, &mut r)?.into_iter().unzip();
+        let (ks, bs): (Vec<Kept>, Vec<std::sync::Arc<Base>>) = chain_of(path, &mut r)?.into_iter().unzip();
         chain = Chain { files: ks, held: bs.iter().map(|b| b.region.clone()).collect() };
         r = r.with_chain(bs);
     }
