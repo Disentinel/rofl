@@ -3,9 +3,10 @@
 //! facts and firings and no rule concluding one fires. What stands is what the pass would derive again, so a world
 //! evaluated in stages pays for its upper stage only.
 //!
-//! A relation is kept when every rule concluding it is a rule it had, with no lattice, dominance, tag or shrug, and
-//! every relation it reads is kept, or a base relation no fact came into or left since and no rule concludes, or what
-//! the kernel read off the program as it was loaded. A threshold is kept with what its sealing knew of its groups. A
+//! A relation is kept when every rule concluding it is a rule it had, with no lattice, dominance or tag, and every
+//! relation it reads is kept, or a base relation no fact came into or left since and no rule concludes, or what the
+//! kernel read off the program as it was loaded, or the shrugs or firings of one kept relation it names
+//! (`shrug(r(X), ..)`, `derived_by($fact(r, ..), ..)`). A threshold is kept with what its sealing knew of its groups. A
 //! relation a hole or a shrug names is kept with what the holes left unknown in it (`carry_kept`): the hole rows of its
 //! rules stand, and its unknowns, with what each was reached from, are carried on to the readers evaluated again. A
 //! relation a cell's or a lattice's hole names (their memos are the pass's), or (well-founded) an undefined row, is
@@ -178,12 +179,24 @@ impl Eval {
                         (r.safe || self.demand.on(**rel))
                             && r.lattice_outer.is_empty()
                             && r.lat_close.is_none()
-                            && !self.shrug_readers.contains(&r.id)
                             && r.clause.head.temporal == Temporal::Now
                     })
             })
             .map(|(rel, _)| *rel)
             .collect();
+        // a shrug or a firing read of one relation (`shrug(r(X), ..)`, `derived_by($fact(r, ..), ..)`) is read of what
+        // the pass writes again of it: of a kept relation, what stands
+        let (shrug, derived_by, s_fact) = (self.v.shrug, self.v.derived_by, self.v.s_fact);
+        let of_kept = |l: &Lit, kept: &FxSet<Sym>| {
+            (l.rel == shrug || l.rel == derived_by)
+                && match l.args.first().map(|t| t.kind()) {
+                    Some(TermK::Func(i)) if self.h.fname(i) == s_fact => self.h.fargs(i).first().and_then(|t| t.as_atom()),
+                    Some(TermK::Func(i)) if l.rel == shrug => Some(self.h.fname(i)),
+                    Some(TermK::Atom(a)) if l.rel == shrug => Some(a),
+                    _ => None,
+                }
+                .is_some_and(|rel| kept.contains(&rel))
+        };
         let demand: HashSet<Sym> = self.demand.rels.iter().map(|(r, _)| *r).chain(self.answer.demand_rels.iter().copied()).collect();
         loop {
             let n = kept.len();
@@ -191,7 +204,7 @@ impl Eval {
                 by_head[rel].iter().all(|r| {
                     r.clause.body.iter().flat_map(|b| b.lits_deep()).all(|l| {
                         l.temporal == Temporal::Now
-                            && (kept.contains(&l.rel) || !w.rules.contains_key(&l.rel) && !now.contains_key(&l.rel) && read_ok(l.rel))
+                            && (kept.contains(&l.rel) || of_kept(l, kept) || !w.rules.contains_key(&l.rel) && !now.contains_key(&l.rel) && read_ok(l.rel))
                     })
                 })
             };

@@ -1147,3 +1147,31 @@ fn a_full_pass_keeps_a_threshold_below_what_was_added() {
         }
     }
 }
+
+/// What reads the shrugs or the firings of one relation (`shrug(r(X), ..)`, `derived_by($fact(r, ..), ..)`) is kept
+/// by a full pass that keeps that relation: the pass writes them again as they stood.
+#[test]
+fn a_full_pass_keeps_a_reader_of_the_shrugs_and_firings_of_a_kept_relation() {
+    let lower = "edb(big). edb(pos). edb(given).
+        big(1152921504606846975). pos(a). pos(c). given(1). given(2).
+        w(c) :- big(B), Z is B + 1, Z > 0.
+        a(X) :- pos(X), not w(X).
+        d(X, Y) :- pos(X), shrug(a(X), _, _).
+        r(X) :- pos(X), d(X, X).
+        seen(X) :- given(X).
+        said(X) :- derived_by[$kernel]($fact(seen, main, $cons(X, $nil)), _, _).";
+    let upper = "top(X) :- pos(X), not r(X), said(1).";
+    let mut s = Session::fresh(BUDGET);
+    s.load(&boot(), None).expect("boot");
+    s.load(lower, None).expect("lower");
+    s.evaluate().expect("lower evaluates");
+    s.load_delta(upper, None).expect("upper");
+    s.eval.run().expect("a full pass");
+    let again: Vec<&str> = s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect();
+    assert!(!again.contains(&"d") && !again.contains(&"r") && !again.contains(&"said"), "the lower relations are kept: {again:?}");
+    let mut fresh = Session::fresh(BUDGET);
+    fresh.load(&boot(), None).expect("boot");
+    fresh.load(lower, None).expect("lower");
+    fresh.load(upper, None).expect("upper");
+    assert_eq!(state(&mut s), state(&mut fresh));
+}
