@@ -3873,6 +3873,7 @@ work(w_full_pass_keeps_frozen_layer,
 work_state(w_full_pass_keeps_frozen_layer, open).
 work_needs(w_full_pass_keeps_frozen_layer, w_derived_as_given).
 work_spawned(w_full_pass_keeps_frozen_layer, f_a_full_pass_evaluated_again_what_nothing_had_touched).
+work_spawned(w_full_pass_keeps_frozen_layer, f_a_reader_of_the_shrugs_or_firings_of_a_kept_relation_is_kept).
 -- 2026-11-03 (f_what_a_hole_left_unknown_lived_one_pass): a relation a rule's fault or a shrug names is kept, its unknowns carried on (also from a volume or an image); addcheck over the worlds with holes: 13 -> 7 lower stages evaluated again. Left: a cell's or a lattice's hole, well-founded worlds, readers of unknown.
 
 work(w_mapped_volume,
