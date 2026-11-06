@@ -1,0 +1,4 @@
+-- models/lang/js/fixtures/lifecycle/overwrites/a.js: x = 1 overwritten by x = 2; z = 1 by z = 3 (z = 2 runs on a
+-- condition); y is read by its second write, w by a closure, neither is overwritten
+lc_expect(overwrites("x", "a.js", 2, 3)).
+lc_expect(overwrites("z", "a.js", 12, 14)).

@@ -45,6 +45,7 @@ check[checks]("rust/rofl/tests/addition.rs", "an_ask_added_grows_the_cone_over_t
 check[checks]("rust/rofl/tests/addition.rs", "corpus_additions_are_a_fresh_evaluation", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_closure_row_given_a_shorter_path_seals_its_aggregate_again", test).
 check[checks]("rust/rofl/tests/addition.rs", "a_full_pass_keeps_a_threshold_below_what_was_added", test).
+check[checks]("rust/rofl/tests/addition.rs", "a_full_pass_keeps_a_reader_of_the_shrugs_and_firings_of_a_kept_relation", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "every_world_loaded_together_holds_its_properties_and_its_state", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_budget_cut_never_reads_as_an_empty_group", test).
 check[checks]("rust/rofl/tests/agg_worlds.rs", "a_budget_cut_never_seals_a_partial_group", test).
@@ -912,6 +913,10 @@ check[checks]("facts/goldens.rofl", "intents_sql", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "join_through_constants", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
+check[checks]("facts/goldens.rofl", "lifecycle_clean", world).
+check[checks]("facts/goldens.rofl", "lifecycle_forgetful", world).
+check[checks]("facts/goldens.rofl", "lifecycle_leaky", world).
+check[checks]("facts/goldens.rofl", "lifecycle_overwrites", world).
 check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).

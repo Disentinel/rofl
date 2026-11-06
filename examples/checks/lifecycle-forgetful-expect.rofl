@@ -1,0 +1,6 @@
+-- models/lang/js/fixtures/lifecycle/forgetful/main.js: SIGINT closes the server through a helper and forgets the
+-- interval; an fd returned (no leak, unknown); a write in a timer after close; a close inside a loop before the next read
+lc_expect(used_after_death(fd, "main.js", 28, 31, 30)).
+lc_expect(used_after_death(stream, "main.js", 22, 23, 24)).
+lc_expect(leak_unknown(fd, "main.js", 17, 18)).
+lc_expect(outlives_stop(interval, "main.js", 6)).

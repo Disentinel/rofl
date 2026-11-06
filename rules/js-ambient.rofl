@@ -132,10 +132,10 @@ amb_global_call[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C
 eff_surface[flow](C, Name)     :- amb_global_call[flow](C, Name).
 eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 
--- 5c. A construction — `new URL(s)`. A `new_expression` is a `transfer_site`
+-- 5c. A construction — `new URL(s)`. A `new_expression` is a `transfers`
 -- and not a `call_site`, so the negation is on `resolved_site[code]`: a
 -- `new Box()` resolved to a class in this program is not ambient.
-amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
+amb_construct[flow](X, Name) :- transfers[execution](X, new_expression),
                                 not resolved_site[code](X),
                                 callee[value](X, N),
                                 free_global[code](N, Name, _),
@@ -250,3 +250,8 @@ amb_exn_carrier[flow](F) :- amb_exn_source[flow](C), nearest_v[flow](F, C).
 amb_exn_carrier[flow](F) :- amb_exn_carrier[flow](G), resolves[code](C, G),
                             nearest_v[flow](F, C), not eff_discharged_at[code](C, exn).
 eff_exn_unexplained[audit](F) :- eff_exn_only[audit](F), not amb_exn_carrier[flow](F).
+
+-- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

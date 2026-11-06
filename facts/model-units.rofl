@@ -155,7 +155,7 @@ unit_concludes("rules/js-dataflow.rofl", array_elem).
 unit_concludes("rules/js-dataflow.rofl", elem_at).
 unit_concludes("rules/js-dataflow.rofl", param_wrap).
 unit_concludes("rules/js-dataflow.rofl", param_of).
-unit_concludes("rules/js-dataflow.rofl", param_default).
+unit_concludes("rules/js-dataflow.rofl", fallback).
 unit_concludes("rules/js-dataflow.rofl", param_bound).
 unit_concludes("rules/js-dataflow.rofl", param_local).
 unit_concludes("rules/js-dataflow.rofl", pattern_takes).
@@ -489,7 +489,7 @@ unit_concludes("rules/js-callgraph.rofl", call_site).
 unit_concludes("rules/js-callgraph.rofl", callee_of).
 unit_concludes("rules/js-callgraph.rofl", call_line).
 unit_concludes("rules/js-callgraph.rofl", callee_class).
-unit_concludes("rules/js-callgraph.rofl", transfer_site).
+unit_concludes("rules/js-callgraph.rofl", transfers).
 unit_concludes("rules/js-callgraph.rofl", site).
 unit_concludes("rules/js-callgraph.rofl", call_arg).
 unit_concludes("rules/js-callgraph.rofl", edb).
@@ -662,7 +662,7 @@ unit_concludes("rules/js-callgraph.rofl", declared_call).
 unit_concludes("rules/js-callgraph.rofl", member_declared).
 unit_concludes("rules/js-callgraph.rofl", declared_open).
 unit_concludes("rules/js-callgraph.rofl", declared_has).
-unit_concludes("rules/js-callgraph.rofl", narrows_at).
+unit_concludes("rules/js-callgraph.rofl", narrows).
 unit_concludes("rules/js-callgraph.rofl", narrowed_name).
 unit_concludes("rules/js-callgraph.rofl", narrowed_key).
 unit_concludes("rules/js-callgraph.rofl", declared_any).
@@ -684,7 +684,7 @@ unit_concludes("rules/js-controlflow.rofl", edb).
 unit_concludes("rules/js-controlflow.rofl", abrupt_kind).
 unit_concludes("rules/js-controlflow.rofl", stmt_seq_field).
 unit_concludes("rules/js-controlflow.rofl", after_abrupt).
-unit_concludes("rules/js-controlflow.rofl", suspend_at).
+unit_concludes("rules/js-controlflow.rofl", suspends).
 unit_concludes("rules/js-controlflow.rofl", after_suspend).
 unit_concludes("rules/js-controlflow.rofl", label_ref).
 unit_concludes("rules/js-controlflow.rofl", label_target).
@@ -722,7 +722,7 @@ unit_concludes("rules/js-controlflow.rofl", spread_iterated).
 unit_concludes("rules/js-controlflow.rofl", pattern_iterates).
 unit_concludes("rules/js-controlflow.rofl", calls).
 unit_concludes("rules/js-controlflow.rofl", pattern_next).
-unit_concludes("rules/js-controlflow.rofl", hidden_call_pos).
+unit_concludes("rules/js-controlflow.rofl", hidden_call).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_src).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_user).
 unit_concludes("rules/js-controlflow.rofl", hidden_call_fires).
@@ -851,7 +851,7 @@ unit_concludes("rules/js-effects.rofl", eff_suspension_word).
 unit_concludes("rules/js-effects.rofl", eff_op_inspects).
 unit_concludes("rules/js-effects.rofl", eff_op_beyond).
 unit_concludes("rules/js-effects.rofl", eff_converts).
-unit_concludes("rules/js-effects.rofl", eff_coerced).
+unit_concludes("rules/js-effects.rofl", coerces).
 unit_concludes("rules/js-effects.rofl", eff_conv_key).
 unit_concludes("rules/js-effects.rofl", eff_conv_object).
 unit_concludes("rules/js-effects.rofl", eff_conv_call).
@@ -910,6 +910,7 @@ unit_concludes("rules/js-globals.rofl", may_be_node).
 unit_concludes("rules/js-globals.rofl", prototype_of).
 unit_concludes("rules/js-globals.rofl", es_prototype_gap).
 unit_concludes("rules/js-globals.rofl", es_instance_unattributed).
+unit_concludes("rules/js-globals.rofl", imports).
 unit_concludes("rules/js-host.rofl", imports).
 unit_concludes("rules/js-host.rofl", edb).
 unit_concludes("rules/js-host.rofl", host_global_ref).
@@ -920,6 +921,7 @@ unit_concludes("rules/js-host.rofl", builtin_member).
 unit_concludes("rules/js-host.rofl", host_import_unknown).
 unit_concludes("rules/js-host.rofl", host_member_call).
 unit_concludes("rules/js-host.rofl", host_global_call).
+unit_concludes("rules/js-host.rofl", may_be_node).
 unit_concludes("rules/js-host.rofl", host_module_call).
 unit_concludes("rules/js-host.rofl", host_site).
 unit_concludes("rules/js-host.rofl", host_site_at).

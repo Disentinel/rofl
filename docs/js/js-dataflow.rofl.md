@@ -1,6 +1,6 @@
 ---
 world: js-dataflow
-books: audit, code, flow, main, surface, tree, type, value
+books: audit, code, execution, flow, main, surface, tree, type, value
 default: code
 ---
 
@@ -29,6 +29,7 @@ Reads:
 - from js-concat, in the flow: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow: [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn)
+- from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
 - from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
@@ -98,7 +99,6 @@ Reads:
   - <a id="static"></a>`static`
   - <a id="static_block"></a>`static_block`
   - <a id="super"></a>`super`
-  - <a id="suspends"></a>`suspends`
   - <a id="target"></a>`target`
   - <a id="template"></a>`template`
   - <a id="template_part"></a>`template_part`
@@ -829,22 +829,25 @@ In the code:
 
 In the flow:
 
-A [function](js-callgraph.rofl.md#fn_node)
+<a id="param_of"></a>A [function](js-callgraph.rofl.md#fn_node) takes Name at an index I if [`param_wrap`](#param_wrap)(it, I, something, L) and [`binds`](#binds)(L, Name).
 
-- <a id="param_of"></a>takes Name at an index I if [`param_wrap`](#param_wrap)(it, I, something, L) and [`binds`](#binds)(L, Name).
-- <a id="param_default"></a>defaults Name to a node Init if all of:
+In the execution:
+
+<a id="fallback"></a>A [function](js-callgraph.rofl.md#fn_node) defaults Name to a node Init if all of:
   - [`param_wrap`](#param_wrap)(it, something, P, L);
   - [`binds`](#binds)(L, Name);
   - [`assign`](#assign)(P, L, Init).
 
+In the flow:
+
 A node
 
 - points to a node N if all of:
-  - F [defaults](#param_default) Name to a node Init;
+  - F [defaults](#fallback) Name to a node Init;
   - Init [points to](js-concat.rofl.md#may_be_node) N;
   - F [uses](#param_use) Name at it.
 - may be the literal L if all of:
-  - F [defaults](#param_default) Name to a node Init;
+  - F [defaults](#fallback) Name to a node Init;
   - Init [may be the literal](js-concat.rofl.md#may_be_lit) L;
   - F [uses](#param_use) Name at it.
 
@@ -2201,12 +2204,12 @@ Declared as facts:
 
 1. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
-   - [`suspends`](#suspends)(Q, something, `later`);
+   - [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, `later`) in the value;
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_overlap`](#keyed_overlap)(M);
 2. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
-   - [`suspends`](#suspends)(Q, something, `next`);
+   - [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, `next`) in the value;
    - [`keyed_again`](#keyed_again)(C, K, M);
    - [`keyed_many`](#keyed_many)(M).
 
@@ -2214,7 +2217,7 @@ Declared as facts:
 
 1. if all of:
    - [`keyed_between`](#keyed_between)(C, K, Q);
-   - [`suspends`](#suspends)(Q, something, something);
+   - [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, something) in the value;
    - [`keyed_again`](#keyed_again)(C, K, M);
 2. if [`keyed_caller`](#keyed_caller)(something, something, M).
 
@@ -2386,7 +2389,7 @@ Declared as facts:
    - G2 [is nearest to](#nearest_v) a node D;
    - [`keyed_drop_runs`](#keyed_drop_runs)(G, G2);
    - unless [`keyed_vsure_out`](#keyed_vsure_out)(V, C, Q);
-2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, something) and [`suspends`](#suspends)(Q, something, something).
+2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, something) and [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, something) in the value.
 
 <a id="keyed_vsure_out"></a>`keyed_vsure_out`(V, C, Q) if all of:
   - [`keyed_vbetween`](#keyed_vbetween)(V, C, P, Q);
@@ -2721,7 +2724,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - [`runs_unknown`](#runs_unknown)(Q);
    - [`keyed_heal_fn`](#keyed_heal_fn)(C, F);
    - [`keyed_open_to`](#keyed_open_to)(F);
-4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, Q) and [`suspends`](#suspends)(Q, something, something).
+4. if [`keyed_heal_span`](#keyed_heal_span)(C, D, Q) and [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, something) in the value.
 
 <a id="keyed_healed"></a>`keyed_healed`(C, D) if [`keyed_heal_at`](#keyed_heal_at)(C, D, something, something, something), unless [`keyed_heal_broken`](#keyed_heal_broken)(C, D).
 
@@ -2787,7 +2790,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
    - G [is nearest to](#nearest_v) a node D;
    - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
-   - [`suspends`](#suspends)(Q, something, something).
+   - [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, something) in the value.
 
 <a id="keyed_outside_at"></a>`keyed_outside_at`(C, J) either:
 
@@ -4214,7 +4217,7 @@ In the code:
 
 1. if [`yields`](#yields)(Y, something) in the value;
 2. if all of:
-   - [`suspends`](#suspends)(Y, something, `next`);
+   - [`suspends`](js-controlflow.rofl.md#suspends)(Y, something, `next`) in the value;
    - unless [`yields`](#yields)(Y, something) in the value;
    - unless [`delegates`](#delegates)(Y, something) in the value.
 
@@ -4406,4 +4409,24 @@ A node E points to a node N either:
   - M [spells](js-structure.rofl.md#key_name) Key.
 
 The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at M replaced with N and/unless [`static`](#static)(M).
+
+> the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `execution` | `value` |
+| `execution` | `tree` |
+| `execution` | `code` |
+| `execution` | `flow` |
+| `execution` | `main` |
+| `code` | `execution` |
+| `flow` | `execution` |
+| `audit` | `execution` |
+| `surface` | `execution` |
+| `type` | `code` |
+| `type` | `flow` |
+| `code` | `type` |
+| `flow` | `type` |
 

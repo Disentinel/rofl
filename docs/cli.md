@@ -415,6 +415,38 @@ Measured on vscode src (11 055 files, 4 cores, release): 72 s and 99.5 M
 facts, 8.9 GB of text, most of the wall writing it; on vscode src/vs/base (499
 files) 1.1 s against 18.7 s for `npm run scan`, 304 MB against 241 MB.
 
+### The lifecycle of a resource: use after death, leaks, a process with no stop
+
+```sh
+npm run scan -- path/to/src --out code.rofl
+rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @rules/js.files models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
+```
+
+`models/lang/js/lifecycle.rofl` is the world `[lifecycle]` over the JS model
+(w_lifecycle_world), for the host's resources that `lifecycle-host.rofl` lists
+(an fd, a stream, a watcher, a server, a socket, a child process, an interval:
+which call bears it, which kills it, which needs it alive, which keep the
+process alive). Its answers, each with the kind and the lines:
+`used_after_death_at(Kind, File, Born, Killed, Used)`; `leaks_at(Kind, How,
+File, Line)`, How `once` or `accumulates` (born in a request handler, an
+interval, an event handler or a loop); `leak_unknown_at(Kind, File, Line,
+ViaLine)`, a resource that leaves its function there; `no_shutdown_at(Kind,
+File, Line)`, a resource that keeps the process alive where no
+`process.on('SIGTERM' | 'SIGINT' | 'SIGHUP', F)` exists; `outlives_stop_at(Kind,
+File, Line)`, one the stop handler does not reach. The worlds `lifecycle_leaky`,
+`lifecycle_clean` and `lifecycle_forgetful` check them over
+`models/lang/js/fixtures/lifecycle/`.
+`overwrites_at(Name, File, Line1, Line2)`: the write of a binding at Line1 is
+overwritten at Line2 before anything reads it (both writes whole steps of one
+sequence, the binding read by no other function); the world
+`lifecycle_overwrites` checks it.
+
+The words of behaviour the model derives live in their worlds (the doc «Словарь
+ролей модели JS», «Миры поведения»): `suspends[execution](Seq, I)`,
+`hidden_call[execution](N, How)`, `transfers[execution](X, Kind)`,
+`fallback[execution](F, Name, Init)`, `coerces[execution](N, X)`,
+`narrows[type](O)`; ask them with `@rules/js.files` alone.
+
 ## A world that asks for its own input
 
 A world can ask for facts it does not have yet. It names a scanner for a kind

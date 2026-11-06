@@ -1,6 +1,6 @@
 ---
 world: js-callgraph
-books: ast_oxc, audit, code, flow, main, surface, tree, type, value
+books: ast_oxc, audit, code, execution, flow, main, surface, tree, type, value
 default: code
 ---
 
@@ -147,17 +147,21 @@ Phrases this file defines in one step, each by the sentence it stands for:
 > iterator protocol of `for-of`, and a decorator. Naming them TRANSFER SITES
 > does not resolve them; it makes a miss attributable instead of silent.
 
-<a id="transfer_site"></a>A node X is a transfer site of a kind N either:
+In the execution:
+
+<a id="transfers"></a>A node X is a transfer site of a kind N either:
 
 1. if [`construct`](#construct)(X) and N is `new_expression`;
 2. if [`tagged`](#tagged)(X, something, something) and N is `tagged_template_expression`;
 3. if [`for_of`](js-structure.rofl.md#for_of)(X) and N is `for_of_statement`;
 4. if [`decorated`](#decorated)(X, something) and N is `decorator`.
 
+In the code:
+
 <a id="site"></a>A node X is a site either:
 
 1. if X [is a call site](#call_site) in some file;
-2. if X [is a transfer site](#transfer_site) of some kind.
+2. if X [is a transfer site](#transfers) of some kind.
 
 > The index is content: without it `f(a, b)` and `f(b, a)` are one fact set.
 
@@ -558,7 +562,7 @@ A [function](#fn_node) answers to a name N if all of:
 <a id="resolves"></a>A call X resolves to M either:
 
 1. if all of:
-   - X [is a transfer site](#transfer_site) of `new_expression`;
+   - X [is a transfer site](#transfers) of `new_expression`;
    - X [points to](js-concat.rofl.md#may_be_node) a node I;
    - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
    - CD [has the constructor](#class_ctor) M;
@@ -823,11 +827,11 @@ In the code:
 2. if a node C [runs at the top of](#top_call) F and C [is unresolved](#unresolved_call) with S;
 3. if all of:
    - F [is the nearest function of](#nearest_fn) a node X;
-   - X [is a transfer site](#transfer_site) of S;
+   - X [is a transfer site](#transfers) of S;
    - unless X [is resolved](#resolved_site);
 4. if all of:
    - a node X [runs at the top of](#top_call) F;
-   - X [is a transfer site](#transfer_site) of S;
+   - X [is a transfer site](#transfers) of S;
    - unless X [is resolved](#resolved_site).
 
 <a id="frontier_named"></a>Name has the frontier by name Item either:
@@ -842,7 +846,7 @@ In the code:
    - [`at`](#at)(C, File, something);
    - [`at`](#at)(C, something, Line);
 2. if all of:
-   - a node X [is a transfer site](#transfer_site) of S;
+   - a node X [is a transfer site](#transfers) of S;
    - [`at`](#at)(X, File, something);
    - [`at`](#at)(X, something, Line);
    - unless X [is resolved](#resolved_site).
@@ -2077,9 +2081,9 @@ In the flow:
 > a guard `isSub(x)` in a test): a receiver of that name or key anywhere in the file is not
 > held to its declaration
 
-In the code:
+In the type:
 
-<a id="narrows_at"></a>`narrows_at`(O) either:
+<a id="narrows"></a>`narrows`(O) either:
 
 1. if [`binary`](#binary)(something, "instanceof", O, something) in the value;
 2. if [`binary`](#binary)(something, "in", something, O) in the value;
@@ -2100,12 +2104,14 @@ In the code:
    - [`arg_node`](js-structure.rofl.md#arg_node)(G, something, O);
    - unless [`assign`](#assign)(P, something, something).
 
-<a id="narrowed_name"></a>`narrowed_name`(File, Name) if [`narrows_at`](#narrows_at)(O) and O [reads](js-dataflow.rofl.md#ident_in) Name in File.
+In the code:
+
+<a id="narrowed_name"></a>`narrowed_name`(File, Name) if [`narrows`](#narrows)(O) and O [reads](js-dataflow.rofl.md#ident_in) Name in File.
 
 In the flow:
 
 <a id="narrowed_key"></a>`narrowed_key`(File, Key) if all of:
-  - [`narrows_at`](#narrows_at)(a [member access](js-dataflow.rofl.md#member_node_v) O);
+  - [`narrows`](#narrows)(a [member access](js-dataflow.rofl.md#member_node_v) O);
   - [`at`](#at)(O, File, something);
   - O [selects](js-dataflow.rofl.md#selects) Key.
 
@@ -2203,4 +2209,24 @@ In the flow:
   - [`at`](#at)(C, something, Line);
   - unless [`call_passes`](#call_passes)(C, I);
   - unless [`call_spreads`](#call_spreads)(C).
+
+> the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `execution` | `value` |
+| `execution` | `tree` |
+| `execution` | `code` |
+| `execution` | `flow` |
+| `execution` | `main` |
+| `code` | `execution` |
+| `flow` | `execution` |
+| `audit` | `execution` |
+| `surface` | `execution` |
+| `type` | `code` |
+| `type` | `flow` |
+| `code` | `type` |
+| `flow` | `type` |
 
