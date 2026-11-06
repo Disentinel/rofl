@@ -4,7 +4,7 @@
 use mimalloc::MiMalloc;
 use std::alloc::{GlobalAlloc, Layout};
 use std::io::Read;
-use std::sync::atomic::{AtomicIsize, Ordering};
+use std::sync::atomic::Ordering;
 
 /// LIVE BYTES, measured by the allocator rather than estimated from
 /// capacities. It is the reading directly comparable to node's `heapUsed`
@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicIsize, Ordering};
 /// (node's own object headers and the collector's slack, and this one's
 /// allocator bookkeeping).
 struct Counting;
-pub(crate) static LIVE: AtomicIsize = AtomicIsize::new(0);
+pub(crate) use rofl::engine::HEAP_LIVE as LIVE;
 
 /// What this thread allocated and freed since it last told `LIVE`: one counter written by every thread at every
 /// allocation is a cache line the threads of a round fight over, so each tells it only past `SLACK` bytes.

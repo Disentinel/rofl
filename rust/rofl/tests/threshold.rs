@@ -185,7 +185,7 @@ fn a_budget_cut_leaves_every_quorum_closed() {
             let mut last = 0;
             for m in ms {
                 let roots: Vec<u32> = st.member_prems(m).iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }).collect();
-                let mut memo = HashMap::new();
+                let mut memo = rofl::store::Heights::default();
                 st.heights(&roots, &mut memo).unwrap();
                 let want = 1 + roots.iter().map(|f| memo[f]).max().unwrap_or(0);
                 assert_eq!(m.height, want, "budget {b}: a member of {desc}");

@@ -363,6 +363,78 @@ impl Cells {
     }
 }
 
+/// Derivation heights by fact id, 4 bytes a fact: a walk of the firings below an aggregate's members reaches most
+/// of a world, where a map paid about 30 bytes an entry.
+#[derive(Clone, Default, Debug)]
+pub struct Heights {
+    v: Vec<u32>,
+    n: usize,
+}
+
+impl Heights {
+    const NONE: u32 = u32::MAX;
+    #[inline]
+    pub fn get(&self, f: &FactId) -> Option<&u32> {
+        self.v.get(*f as usize).filter(|h| **h != Self::NONE)
+    }
+    #[inline]
+    pub fn contains_key(&self, f: &FactId) -> bool {
+        self.get(f).is_some()
+    }
+    pub fn insert(&mut self, f: FactId, h: u32) -> Option<u32> {
+        let i = f as usize;
+        if i >= self.v.len() {
+            self.v.resize((i + 1).next_power_of_two(), Self::NONE);
+        }
+        let was = std::mem::replace(&mut self.v[i], h);
+        if was == Self::NONE {
+            self.n += 1;
+            None
+        } else {
+            Some(was)
+        }
+    }
+    pub fn remove(&mut self, f: &FactId) -> Option<u32> {
+        let was = self.get(f).copied();
+        if was.is_some() {
+            self.v[*f as usize] = Self::NONE;
+            self.n -= 1;
+        }
+        was
+    }
+    pub fn clear(&mut self) {
+        self.v.clear();
+        self.n = 0;
+    }
+    pub fn len(&self) -> usize {
+        self.n
+    }
+    pub fn is_empty(&self) -> bool {
+        self.n == 0
+    }
+    pub fn bytes(&self) -> usize {
+        self.v.capacity() * 4
+    }
+    pub fn retain(&mut self, mut keep: impl FnMut(&FactId, &mut u32) -> bool) {
+        for (i, h) in self.v.iter_mut().enumerate() {
+            if *h != Self::NONE && !keep(&(i as FactId), h) {
+                *h = Self::NONE;
+                self.n -= 1;
+            }
+        }
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (FactId, u32)> + '_ {
+        self.v.iter().enumerate().filter(|(_, h)| **h != Self::NONE).map(|(i, h)| (i as FactId, *h))
+    }
+}
+
+impl std::ops::Index<&FactId> for Heights {
+    type Output = u32;
+    fn index(&self, f: &FactId) -> &u32 {
+        self.get(f).expect("a height asked of a fact with none")
+    }
+}
+
 #[derive(Clone)]
 pub struct Witness {
     pub rule: Sym,
@@ -3251,7 +3323,7 @@ impl Store {
     /// higher than a direct one and the shown proof is acyclic and shortest.
     /// `memo` carries the heights between calls: a caller that asks for many
     /// facts shares one.
-    pub fn witness_of(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Option<WitView<'_>> {
+    pub fn witness_of(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Option<WitView<'_>> {
         let head = *self.wit_head.get(id as usize)?;
         if head == EMPTY {
             return None;
@@ -3283,7 +3355,7 @@ impl Store {
     /// Every firing of `id` as `(height, node)`, in the order `why` shows
     /// them: least height first, then signature. A premise whose height never
     /// became final (a derivation resting only on itself) is the top.
-    fn ranked_firings(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Vec<(u32, u32)> {
+    fn ranked_firings(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(u32, u32)> {
         let mut nodes = Vec::new();
         let mut roots = Vec::new();
         let mut c = self.wit_head[id as usize];
@@ -3315,7 +3387,7 @@ impl Store {
 
     /// Every firing of `id` in the order `witness_of` ranks them, the one it
     /// returns first.
-    pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
+    pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
         if self.wit_head.get(id as usize).is_none_or(|c| *c == EMPTY) {
             return Vec::new();
         }
@@ -3330,7 +3402,7 @@ impl Store {
 
     /// Firings found by the caller (not held here) in the order `witness_of`
     /// ranks the held ones: least height, then signature.
-    pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
+    pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
         let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
         let _ = self.heights(&roots, memo);
         let mut ranked: Vec<(u32, String, (Sym, u32, Vec<PremRef>))> = fs
@@ -3451,7 +3523,7 @@ impl Store {
     /// THE HEIGHT OF A ROW ANSWERED FROM A TREE, as the stored row's would be: its one firing is 1 + the higher of the
     /// edge into the descendant and the row of the parent, so down the chain from the ancestor each row is 1 + the
     /// higher of the row above and its edge. A row that does not hold (cited in a past tick) is 0, as a fact gone is.
-    pub fn vrow_height(&self, k: Sym, memo: &mut HashMap<FactId, u32>) -> u32 {
+    pub fn vrow_height(&self, k: Sym, memo: &mut Heights) -> u32 {
         let Some((ci, book, a, d)) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false)) else { return 0 };
         let Some(v) = self.virtuals.get(ci) else { return 0 };
         let Some(f) = v.forests.iter().find(|(b, _)| *b == book).map(|x| x.1.clone()) else { return 0 };
@@ -3471,7 +3543,7 @@ impl Store {
     }
 
     /// The height of a premise: a fact's from `memo` (computed), a cell's own, a row of a tree's, a negation and a builtin 0.
-    fn prem_height(&self, p: &PremRef, memo: &mut HashMap<FactId, u32>) -> u32 {
+    fn prem_height(&self, p: &PremRef, memo: &mut Heights) -> u32 {
         match p.kind() {
             Prem::Fact(g) => memo.get(&g).copied().unwrap_or(u32::MAX - 1),
             Prem::Cell(x) => self.cells.recs[x as usize].height,
@@ -3615,7 +3687,7 @@ impl Store {
             }
         }
         wkeyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
-        let mut memo = HashMap::new();
+        let mut memo = Heights::default();
         for (k, id) in &wkeyed {
             let id = match id {
                 Wk::Fact(id) => id,
@@ -4144,18 +4216,18 @@ impl Store {
     /// itself never lowers one. `memo` carries finished heights between calls.
     /// Returns a root that never became final: in a least model there is
     /// none, so the caller treats it as a defect.
-    pub fn heights(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>) -> Result<(), FactId> {
+    pub fn heights(&self, roots: &[FactId], memo: &mut Heights) -> Result<(), FactId> {
         self.heights_where(roots, memo, &|_| false)
     }
 
     /// `heights` over the firings `skip` does not name.
-    pub fn heights_where(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>, skip: &dyn Fn(&[PremRef]) -> bool) -> Result<(), FactId> {
+    pub fn heights_where(&self, roots: &[FactId], memo: &mut Heights, skip: &dyn Fn(&[PremRef]) -> bool) -> Result<(), FactId> {
         self.heights_where_head(roots, memo, &|_, _, ps| skip(ps))
     }
 
     /// The facts below `stack` that `memo` does not answer, in discovery
     /// order; `visit` is told each firing and may skip it, or fail the walk.
-    fn region_below(&self, mut stack: Vec<FactId>, memo: &HashMap<FactId, u32>, visit: impl Fn(FactId, Sym, &[PremRef]) -> Result<bool, FactId>) -> Result<Vec<FactId>, FactId> {
+    fn region_below(&self, mut stack: Vec<FactId>, memo: &Heights, visit: impl Fn(FactId, Sym, &[PremRef]) -> Result<bool, FactId>) -> Result<Vec<FactId>, FactId> {
         let mut seen: HashSet<FactId> = HashSet::new();
         let mut order: Vec<FactId> = Vec::new();
         while let Some(f) = stack.pop() {
@@ -4181,12 +4253,12 @@ impl Store {
     }
 
     /// The heights of the rows read by `first` and by the firings of `order`.
-    fn vrow_heights<'a>(&self, first: impl Iterator<Item = &'a [PremRef]>, order: &[FactId], memo: &mut HashMap<FactId, u32>) -> HashMap<Sym, u32> {
+    fn vrow_heights<'a>(&self, first: impl Iterator<Item = &'a [PremRef]>, order: &[FactId], memo: &mut Heights) -> HashMap<Sym, u32> {
         let mut vh: HashMap<Sym, u32> = HashMap::new();
         if self.vrow_of.is_empty() {
             return vh;
         }
-        let read = |ps: &[PremRef], vh: &mut HashMap<Sym, u32>, memo: &mut HashMap<FactId, u32>| {
+        let read = |ps: &[PremRef], vh: &mut HashMap<Sym, u32>, memo: &mut Heights| {
             for p in ps {
                 if let Prem::VRow(k) = p.kind() {
                     vh.entry(k).or_insert_with(|| self.vrow_height(k, memo));
@@ -4205,7 +4277,7 @@ impl Store {
     }
 
     /// `heights_where`, `skip` told whose firing it is and by which rule.
-    pub fn heights_where_head(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>, skip: &dyn Fn(FactId, Sym, &[PremRef]) -> bool) -> Result<(), FactId> {
+    pub fn heights_where_head(&self, roots: &[FactId], memo: &mut Heights, skip: &dyn Fn(FactId, Sym, &[PremRef]) -> bool) -> Result<(), FactId> {
         let order = self.region_below(roots.to_vec(), memo, |f, rule, ps| Ok(skip(f, rule, ps)))?;
         if order.is_empty() {
             return Ok(());
@@ -4294,7 +4366,7 @@ impl Store {
         open: &[(CellId, usize)],
         members: &[Vec<Vec<Vec<PremRef>>>],
         forbidden: &HashSet<CellId>,
-        memo: &mut HashMap<FactId, u32>,
+        memo: &mut Heights,
     ) -> Result<Vec<Vec<Option<(u32, usize)>>>, FactId> {
         let at: HashMap<CellId, usize> = open.iter().enumerate().map(|(i, (c, _))| (*c, i)).collect();
         // every fact below the members, through firings and open cells
@@ -4359,7 +4431,7 @@ impl Store {
 
     /// The graph `quorum_heights` runs Dijkstra over: a firing for every derivation of a fact below the members and of
     /// every member, the firings waiting on each node, and the nodes already reached.
-    fn quorum_graph(&self, open: &[(CellId, usize)], members: &[Vec<Vec<Vec<PremRef>>>], order: &[FactId], at: &HashMap<CellId, usize>, memo: &HashMap<FactId, u32>, vh: &HashMap<u32, u32>) -> QGraph {
+    fn quorum_graph(&self, open: &[(CellId, usize)], members: &[Vec<Vec<Vec<PremRef>>>], order: &[FactId], at: &HashMap<CellId, usize>, memo: &Heights, vh: &HashMap<u32, u32>) -> QGraph {
         let (mut firings, mut users, mut heap) = (Vec::new(), HashMap::new(), BinaryHeap::new());
         let add = |head: QNode, ps: &[PremRef], firings: &mut Vec<QFiring>, users: &mut HashMap<QNode, Vec<usize>>, heap: &mut BinaryHeap<Reverse<(u32, QNode)>>| {
             let idx = firings.len();
@@ -4448,7 +4520,7 @@ impl Store {
 
     /// The premises of one firing of `g` that has `g`'s height: one step of
     /// a least derivation. None when `g` has no height.
-    fn least_firing(&self, g: FactId, height: &HashMap<FactId, u32>) -> Option<&[PremRef]> {
+    fn least_firing(&self, g: FactId, height: &Heights) -> Option<&[PremRef]> {
         let hg = *height.get(&g)?;
         for n in self.chain(g) {
             let ps = self.prems_of(&n);
@@ -4479,7 +4551,7 @@ impl Store {
     /// firing has two premises in `nodes`: a derivation is then a tree and
     /// not a path, and dominance is not a tree either. Cooper, Harvey and
     /// Kennedy's iteration over reverse postorder.
-    pub fn dominators(&self, nodes: &[FactId], height: &HashMap<FactId, u32>) -> Option<Dominators> {
+    pub fn dominators(&self, nodes: &[FactId], height: &Heights) -> Option<Dominators> {
         let at: HashMap<FactId, usize> = nodes.iter().enumerate().map(|(i, f)| (*f, i + 1)).collect();
         let n = nodes.len() + 1;
         let mut preds: Vec<Vec<usize>> = vec![Vec::new(); n];
@@ -4599,7 +4671,7 @@ impl Store {
     /// every firing of that part of the graph. `height` is the memo of
     /// `heights`, holding everything below `f`; a fact missing from it has
     /// no derivation at all.
-    pub fn founded_without(&self, f: FactId, qs: &[FactId], height: &HashMap<FactId, u32>) -> HashSet<FactId> {
+    pub fn founded_without(&self, f: FactId, qs: &[FactId], height: &Heights) -> HashSet<FactId> {
         let hf = height[&f];
         let above = |g: FactId| height.get(&g).is_none_or(|h| *h > hf);
         let mut ok: HashSet<FactId> = HashSet::new();

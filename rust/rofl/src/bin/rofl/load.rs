@@ -315,6 +315,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         std::fs::write(f, s.save()).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     }
     if o.propose { propose_report(&mut s, o.min_rows); return; }
+    if let Some(t) = s.eval.heap_said() { eprintln!("{t}"); }
     let cut = s.eval.store.partial_eval;
     if o.qs.is_empty() || o.state { print_state(&o, &mut s, cut); }
     let (refused, partial) = answers(&mut s, &o, cut);
