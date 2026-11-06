@@ -3156,7 +3156,6 @@ proof_world("agg_tag_ts").
 proof_world("agg_tag_wfs").
 proof_world("agg_tag_why").
 proof_world("agg_tag_witness").
-proof_world("agg_tagc_budget").
 proof_world("agg_tagc_eval").
 proof_world("agg_tagc_holes").
 proof_world("agg_tagc_phrase").
