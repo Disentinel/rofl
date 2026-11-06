@@ -61,6 +61,20 @@ pub struct CostState {
     /// The place of each rule's firing over the whole store in the run's sequence of them, from 1: a relation a
     /// rule reads is live at that firing only where a rule concluding it fired whole before (`activation`).
     pub activation_by_rule: FxMap<Sym, u64>,
+    /// The heap at its highest and what held it there (`note_heap`).
+    pub mem: MemPeak,
+}
+
+/// THE HEAP AT ITS PEAK, BY PART. `live` the most the counting allocator saw (`HEAP_LIVE`) and the rule firing
+/// then; `parts` what the store, the names and the heights held at the last check where the heap had grown by a
+/// sixteenth past the one before, `at` the heap then. What no part names is `unaccounted`: the partial solutions,
+/// a walk's own tables, whatever a firing holds while it runs.
+#[derive(Clone, Default, Debug)]
+pub struct MemPeak {
+    pub live: i64,
+    pub rule: Option<Sym>,
+    pub at: i64,
+    pub parts: Vec<(String, usize)>,
 }
 
 impl Default for CostState {
@@ -70,6 +84,7 @@ impl Default for CostState {
             read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
             argm_by_rule: FxMap::default(), ns_by_rule: FxMap::default(), fires_by_rule: FxMap::default(),
             sols_by_rule: FxMap::default(), new_by_rule: FxMap::default(), fresh_whole_by_rule: FxMap::default(), again_by_rule: FxMap::default(), delta_by_rule: FxMap::default(), activation_by_rule: FxMap::default(),
+            mem: MemPeak::default(),
         }
     }
 }
@@ -241,20 +256,65 @@ impl Eval {
 
 /// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
 /// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
-const PROFILE_RELS: [&str; 22] =
-    ["fires", "conc", "fresh", "fresh_whole", "again", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
+const PROFILE_RELS: [&str; 25] =
+    ["bytes", "peak_bytes", "peak_rule", "fires", "conc", "fresh", "fresh_whole", "again", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
 
 impl Eval {
     /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
     /// there as facts (`profile_text`). A profile given as facts is another world's, read as it is (the reflection
     /// over a measured world, scripts/refine.ts); writing this world's beside it would double the census.
+    /// What the store, the names and the heights hold now, by part.
+    pub fn mem_parts(&self) -> Vec<(String, usize)> {
+        let mut v: Vec<(String, usize)> = self.store.bytes().into_iter().chain(self.h.parts()).map(|(n, b)| (n.replace('.', "_"), b)).collect();
+        v.push(("heights".into(), self.memo.height_memo.bytes() + self.heights_kept.bytes()));
+        v
+    }
+
+    /// `peak:` on stderr, for an evaluation whose heap passed a gigabyte: the peak, the rule firing then, and the
+    /// parts that held it, the largest first (`peak_bytes[profile]` the same as facts).
+    pub fn heap_said(&self) -> Option<String> {
+        let m = &self.cost.mem;
+        if m.live < 1 << 30 {
+            return None;
+        }
+        let mb = |b: i64| b >> 20;
+        let named: usize = m.parts.iter().map(|p| p.1).sum();
+        let mut parts: Vec<(String, i64)> = m.parts.iter().map(|(n, b)| (n.clone(), *b as i64)).collect();
+        parts.push(("unaccounted".into(), (m.at - named as i64).max(0)));
+        parts.sort_by_key(|p| std::cmp::Reverse(p.1));
+        let list: Vec<String> = parts.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
+        let rule = m.rule.map(|r| format!(", firing {}", self.h.name(r))).unwrap_or_default();
+        Some(format!("peak: the heap held {} MB{rule}; at {} MB: {} (MB)", mb(m.live), mb(m.at), list.join(", ")))
+    }
+
+    /// The heap told at a check of the steps or at a rule's end: a new peak keeps the rule firing, and one a
+    /// sixteenth past the last taken apart is taken apart again, so the parts are never more than that below it.
+    #[inline]
+    pub(super) fn note_heap(&mut self) {
+        let live = HEAP_LIVE.load(std::sync::atomic::Ordering::Relaxed) as i64;
+        if live <= self.cost.mem.live {
+            return;
+        }
+        self.cost.mem.live = live;
+        self.cost.mem.rule = self.cur_rule;
+        if live > self.cost.mem.at + self.cost.mem.at / 16 {
+            self.cost.mem.at = live;
+            self.cost.mem.parts = self.mem_parts();
+        }
+    }
+
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");
         let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
-        let reads = self.rules.iter().any(|r| {
-            r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel))
-        });
-        reads && names.iter().all(|n| self.store.rel_persp(&self.h, *n, p).is_empty())
+        self.reads_profile(&PROFILE_RELS) && names.iter().all(|n| self.store.rel_persp(&self.h, *n, p).is_empty())
+    }
+
+    /// Does a rule read one of `rels` in the book `profile`? The heap's bytes are written only where one does: they
+    /// are the allocator's, not the world's, and a world that reads the rest of the profile is not to move by them.
+    fn reads_profile(&mut self, rels: &[&str]) -> bool {
+        let p = self.h.intern("profile");
+        let names: Vec<Sym> = rels.iter().map(|n| self.h.intern(n)).collect();
+        self.rules.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel)))
     }
 
     /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
@@ -276,6 +336,23 @@ impl Eval {
     fn profile_text_in(&mut self, census_book: Option<&str>) -> String {
         use std::fmt::Write;
         let mut out = String::new();
+        if census_book.is_none() && self.reads_profile(&["bytes", "peak_bytes", "peak_rule"]) {
+            for (part, b) in self.mem_parts() {
+                let _ = writeln!(out, "bytes[profile]({part}, {b}).");
+            }
+            let m = self.cost.mem.clone();
+            if m.live > 0 {
+                let _ = writeln!(out, "peak_bytes[profile](heap, {}).", m.live);
+                let named: usize = m.parts.iter().map(|p| p.1).sum();
+                for (part, b) in &m.parts {
+                    let _ = writeln!(out, "peak_bytes[profile]({part}, {b}).");
+                }
+                let _ = writeln!(out, "peak_bytes[profile](unaccounted, {}).", (m.at - named as i64).max(0));
+                if let Some(r) = m.rule {
+                    let _ = writeln!(out, "peak_rule[profile]({}).", self.h.name(r));
+                }
+            }
+        }
         let mut rules: Vec<Rc<ERule>> = self.rules.clone();
         rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
         let count = |m: &FxMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);

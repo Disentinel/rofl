@@ -961,7 +961,7 @@ pub fn fact_json(h: &Heap, s: &Store, id: FactId) -> Value {
 
 /// Every firing of a fact in the order `witness_of` ranks them, each with its signature, as a snapshot's `firings` writes one.
 pub fn firings_json(h: &Heap, s: &Store, id: FactId) -> Vec<Value> {
-    let mut memo = HashMap::new();
+    let mut memo = crate::store::Heights::default();
     s.firings_ranked(h, id, &mut memo)
         .into_iter()
         .map(|(rule, tick, ps)| {
@@ -1035,7 +1035,7 @@ pub fn snapshot(h: &Heap, s: &Store) -> String {
     // `wits` is DERIVED from `firings` and `restore` ignores it — it is in the
     // format because the reference host puts it there, and a snapshot that
     // differs from the reference's by a key is a second format.
-    let mut memo = HashMap::new();
+    let mut memo = crate::store::Heights::default();
     o.list(r#","wits":"#, &fired, |o, (k, id)| {
         let w = s.witness_of(h, *id, &mut memo).unwrap();
         o.s(r#"{"key":"#, k);

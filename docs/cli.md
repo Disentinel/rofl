@@ -595,6 +595,16 @@ would be without it. Per premise
 `widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
 and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure; a
 relation a rule reads and nothing holds is censused with 0 rows and 0 distinct, so a plan knows it is empty; a constant a rule writes in a column is censused as `selects[profile](Rel, Book, Pos, Const, N)`, the rows that hold it, since the column's average misses the skew a constant picks. A premise writing constants in two columns or more is censused as `picks[profile](R, K, N)`, the rows that hold them all, since the fewest of its columns misses their conjunction.
+**The heap** is the one part that is not: a world with a rule that reads `bytes`, `peak_bytes` or `peak_rule` there is
+written `peak_bytes[profile](heap, B)`, the most the `rofl` binary's counting allocator held during the evaluation,
+`peak_bytes[profile](Part, B)` what each part held at the last check where the heap had grown by a sixteenth (the store's
+`recs`, `args`, `tup_*`, `by_key`, `idx`, `wit`; the names `h_*`; `heights`), `peak_bytes[profile](unaccounted, B)` the
+rest of the heap then (partial solutions, a walk's own tables), `peak_rule[profile](R)` the rule firing at the peak where
+one was, and `bytes[profile](Part, B)` the parts at the end; models/engine/memory.rofl reads them as `mem_peak`,
+`mem_end` and `mem_peak_rule` beside its forecast. Without asking: **`peak:` on stderr** of `rofl load` and `rofl ask`,
+where the heap passed a gigabyte, says the same in one line, the largest six parts first (vscode at 250 files with
+witnesses: `peak: the heap held 2916 MB; at 2796 MB: idx 500, unaccounted 499, wit 387, recs 384, args 256, by_key 256 (MB)`).
+These are bytes held, a vector's spare capacity with them, and vary with the allocator: no golden reads them.
 Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
 the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
 the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a
