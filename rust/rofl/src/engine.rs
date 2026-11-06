@@ -8,7 +8,7 @@
 
 use crate::store::Prem;
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 use crate::cell::{key_atoms, rank_cmp, KeyAtom, Algebra, iv_bounds, mk_iv, narrow_iv, INT_MAX, INT_MIN, quorum, set_contains, set_elems, widen_iv, AggOp, Class, IvFault, IvFn, KeyCache, Sorted, Step, TagAlg, TagFault, Val, NINF, PINF};
 use crate::dense::dense_clauses;
@@ -36,6 +36,7 @@ mod want;
 mod layer;
 mod algebra;
 mod books;
+pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
 pub use latkept::Tok;
@@ -1029,11 +1030,32 @@ pub struct WallState {
     resume_at: Option<Box<Cut>>,
     /// the last level an evaluation runs to (`run_on` goes on), and the levels left with the phase of the first
     pub level_wall: Option<i64>,
+    /// the evaluation stops after its last level too, before the closes that end it, so facts may still be admitted
+    pub hold_end: bool,
     level_rest: Option<(Levels, usize)>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     /// What the wall that fell measured: the count, what it counted, and the
     /// limit it passed (a `budget` shrug's `spent(Kind, Spent, Limit)`).
-    spent: std::cell::Cell<Option<(&'static str, i64, i64)>>,
+    spent: Spent,
+}
+
+/// What the last wall measured, set where a `&self` meets the wall: a cell a fork on another thread may hold.
+#[derive(Default)]
+struct Spent(std::sync::Mutex<Option<(&'static str, i64, i64)>>);
+
+impl Clone for Spent {
+    fn clone(&self) -> Spent {
+        Spent(std::sync::Mutex::new(self.get()))
+    }
+}
+
+impl Spent {
+    fn get(&self) -> Option<(&'static str, i64, i64)> {
+        *self.0.lock().unwrap()
+    }
+    fn set(&self, v: Option<(&'static str, i64, i64)>) {
+        *self.0.lock().unwrap() = v;
+    }
 }
 
 impl WallState {
@@ -3830,6 +3852,10 @@ impl Eval {
             self.activate_phase(&rs, ph)?;
             self.poison_readers(&rs)?;
             self.run_data_levels(lv, &ds)?;
+        }
+        if self.wall.hold_end {
+            self.wall.level_rest = Some((Vec::new(), levels.len() + ph0));
+            return Ok(true);
         }
         self.close_plain_rules(i64::MAX)?;
         self.plain_flush(i64::MAX)?;
@@ -17246,4 +17272,10 @@ fn reaches_in(deps: &HashMap<Sym, HashSet<Sym>>, from: Sym, to: Sym) -> bool {
         }
     }
     false
+}
+
+#[allow(dead_code)]
+fn eval_is_send() {
+    fn send<T: Send>() {}
+    send::<Eval>();
 }

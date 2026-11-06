@@ -503,11 +503,33 @@ alone, but each small file added to that world costs about 15 s
 
 ## A corpus larger than one heap
 
-**Every verb above holds one world on one heap.** `rofl scan` writes one file
-of facts, and `rofl ask`, `rofl load` and `rofl serve FILE...` load it whole
-and evaluate it whole; only the finished world is kept as a volume. At the
-reference scale (CLAUDE.md, *The goal*) that is the 23 GB the owner measured.
-A run over more files than fit one heap does not go this way without saying so.
+**`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
+the world's facts name two or more files (a node id's prefix, `n<16 hex>_`),
+hold 32 MB or more between them (below that the whole world is as fast) and
+its program writes `[surface]` (the JS model does, `rules/js-surface.rofl`), the
+facts are cut by file and the files dealt to a worker a core, balanced by bytes;
+each worker is a fork of the core (the model, the question, the facts naming no
+file), which is frozen once and shared, not copied, and evaluates its files on
+its own thread. A level at a time, what a worker made of `[surface]` is laid into
+the others and fired on there, until none makes more (`engine/volumes.rs`). An
+answer is the union of the workers'; a relation with a fact naming no file (a
+count over every file) is concluded again in a world over the core and the
+workers' facts it reads. A `why` is the proof in the worker that holds the fact,
+each `[surface]` axiom another worker laid replaced by its proof there. stderr
+says it: `volumes: N files on K workers, L levels, R rounds laying S [surface]
+facts`. The volumes are kept beside the question's slot under
+`~/.cache/rofl/worlds` (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): the next
+question over the same files is answered from them; an edited file computes
+them anew (not yet by delta). A wall that cuts one worker, the memory wall
+above all, stops them all: the answers are partial (exit 5) and not kept.
+Measured on vscode subset S, 4 cores, release: 250 files 19 s against 50 s
+whole, 500 files 32 s against 71 s, the answers byte for byte; the workers
+together hold what the whole world holds, so memory is not lower: 1 000 files
+reach the memory wall of a 15 GB machine and answer partial
+(`f_a_question_verb_answers_a_corpus_by_volumes`). `whynot`, `excise`,
+`--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
+`rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
+*The goal*) that is the 23 GB the owner measured.
 
 **The design the owner agreed** (2026-10-25): a file is scanned into a volume of
 its own, the volume is cooled to disk and stays there until a question needs
@@ -516,10 +538,10 @@ the file (`rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
-**It is not the engine's default yet.** The owner wants it to be what
-`rofl scan` and the question verbs do by themselves, not a command of its own;
-today none of them scans into a volume per file, cools it and keeps its surface. What exists are its parts and the
-harnesses that drive them, each over `rofl serve`:
+**The question verbs evaluate by volumes (above); what they do not do yet is cool
+them:** every worker stays on the heap through the evaluation, so a corpus larger
+than one heap still does not fit. The other parts and the harnesses that drive
+them, each over `rofl serve`:
 
 | what | how to run it | measured | status |
 |---|---|---|---|

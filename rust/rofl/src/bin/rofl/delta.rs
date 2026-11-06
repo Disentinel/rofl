@@ -21,7 +21,7 @@ pub fn base_beside(slot: &str, walls: &[String], files: &[String]) -> Option<(St
     for e in std::fs::read_dir(dir).ok()?.flatten() {
         let p = e.path();
         // the slot itself, kept by another run since this one looked, is that run's world, not a base
-        if p.extension().is_none_or(|x| x != "vol") || p == Path::new(slot) {
+        if p.extension().is_none_or(|x| x != "vol") || p == Path::new(slot) || crate::load::is_volume_of_set(&p) {
             continue;
         }
         let Some(r) = kept::peek(&p.to_string_lossy()) else { continue };

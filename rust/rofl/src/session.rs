@@ -126,6 +126,13 @@ pub struct Cooled {
     pub books: Vec<(String, usize)>,
 }
 
+/// A world evaluated by volumes (`Session::by_volumes`): a world a worker, the facts laid into each from the others.
+pub struct Volumes {
+    pub worlds: Vec<Session>,
+    pub laid: Vec<crate::store::FxSet<FactId>>,
+    pub stats: crate::engine::volumes::VolStats,
+}
+
 pub struct Answer {
     /// Variable names in the order they first appear in the query. `_` is
     /// dropped by the parser into a fresh name, so a wildcard is a column too.
@@ -860,6 +867,93 @@ impl Session {
             e.partial = true;
         }
         Ok(e)
+    }
+
+    /// This world, holding the core, and the `groups` of files evaluated by volumes (`engine/volumes.rs`): a world a
+    /// worker, each a fork of the core. Refused when a worker's world asks for input (a scan or an adapter's want),
+    /// which a volume cannot bring alone.
+    pub fn by_volumes(&mut self, groups: Vec<String>, files: usize) -> Result<Volumes, Halt> {
+        let (ws, stats) = self.eval.by_volumes(groups, files)?;
+        let (mut worlds, mut laid) = (Vec::with_capacity(ws.len()), Vec::with_capacity(ws.len()));
+        for w in ws {
+            let mut s = Session { eval: w.e, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
+            let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()? + s.profile_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
+            if n > 0 {
+                return Err(Halt::Strat("a volume asks for input, which it cannot bring alone".into(), String::new()));
+            }
+            worlds.push(s);
+            laid.push(w.laid);
+        }
+        Ok(Volumes { worlds, laid, stats })
+    }
+
+    /// The world that answers a question over `rel` the volumes cannot answer alone (`Eval::resident`), none when
+    /// their union answers it.
+    pub fn resident(&mut self, v: &Volumes, rel: &str) -> Result<Option<Session>, Halt> {
+        let rel = self.eval.h.intern(rel);
+        let ws: Vec<(&Eval, &crate::store::FxSet<FactId>)> = v.worlds.iter().map(|s| &s.eval).zip(v.laid.iter()).collect();
+        Ok(self.eval.resident(&ws, &[rel])?.map(|eval| Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() }))
+    }
+
+    /// The why of `query` asked of a corpus by volumes: in the world that holds it (the resident world where one is
+    /// needed, else a worker that holds it as its own), and each axiom of it that another worker laid there, a
+    /// `[surface]` fact or a fact the resident world was given, proved in the worker that made it, its proof set in
+    /// the axiom's place. `all` asks `why_all`.
+    pub fn why_by_volumes(&mut self, v: &mut Volumes, query: &str, all: bool) -> Result<String, String> {
+        let rel = query.split(['(', '[']).next().unwrap_or("").trim().to_string();
+        let resident = self.resident(v, &rel).map_err(|e| describe(&e))?;
+        let core = self.eval.store.len_ids();
+        let ask = |s: &mut Session, q: &str| if all { s.why_all(q) } else { s.why(q) };
+        // a world's own facts: a base fact above the core of a worker is its file's unless it is in [surface]
+        let surface = self.eval.h.intern("surface");
+        let laid_in = |s: &Session, resident: bool| -> HashSet<String> {
+            let st = &s.eval.store;
+            (core..st.len_ids())
+                .filter(|&id| st.alive(id) && st.rec(id).base() && (resident || st.rec(id).persp == surface))
+                .map(|id| st.key(&s.eval.h, id))
+                .collect()
+        };
+        let (mut text, laid) = match resident {
+            Some(mut r) => (ask(&mut r, query)?, laid_in(&r, true)),
+            None => {
+                let held = v.worlds.iter_mut().position(|w| w.why(query).is_ok()).ok_or_else(|| format!("{query} does not hold in any volume"))?;
+                (ask(&mut v.worlds[held], query)?, laid_in(&v.worlds[held], false))
+            }
+        };
+        let laids: Vec<HashSet<String>> = v.worlds.iter().map(|w| laid_in(w, false)).collect();
+        let mut todo = laid;
+        todo.extend(laids.iter().flatten().cloned());
+        for _ in 0..16 {
+            let mut out = String::new();
+            let mut lifted = false;
+            for line in text.lines() {
+                let body = line.trim_start();
+                let key = body.strip_suffix(" [axiom]").filter(|k| todo.contains(*k));
+                let Some(key) = key else {
+                    out.push_str(line);
+                    out.push('\n');
+                    continue;
+                };
+                let pad = &line[..line.len() - body.len()];
+                let maker = (0..v.worlds.len()).find(|&j| !laids[j].contains(key) && v.worlds[j].why(key).is_ok());
+                let Some(j) = maker else {
+                    out.push_str(line);
+                    out.push('\n');
+                    continue;
+                };
+                for l in ask(&mut v.worlds[j], key)?.lines() {
+                    out.push_str(pad);
+                    out.push_str(l);
+                    out.push('\n');
+                }
+                lifted = true;
+            }
+            text = out.trim_end_matches('\n').to_string();
+            if !lifted {
+                break;
+            }
+        }
+        Ok(text)
     }
 
     /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and
