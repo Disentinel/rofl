@@ -284,7 +284,8 @@ impl Eval {
         parts.sort_by_key(|p| std::cmp::Reverse(p.1));
         let list: Vec<String> = parts.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
         let rule = m.rule.map(|r| format!(", firing {}", self.h.name(r))).unwrap_or_default();
-        Some(format!("peak: the heap held {} MB{rule}; at {} MB: {} (MB)", mb(m.live), mb(m.at), list.join(", ")))
+        let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
+        Some(format!("peak: the heap held {} MB{rss}{rule}; at {} MB: {} (MB)", mb(m.live), mb(m.at), list.join(", ")))
     }
 
     /// The heap told at a check of the steps or at a rule's end: a new peak keeps the rule firing, and one a
@@ -343,6 +344,9 @@ impl Eval {
             let m = self.cost.mem.clone();
             if m.live > 0 {
                 let _ = writeln!(out, "peak_bytes[profile](heap, {}).", m.live);
+                if let Some(b) = resident_peak() {
+                    let _ = writeln!(out, "peak_bytes[profile](resident, {b}).");
+                }
                 let named: usize = m.parts.iter().map(|p| p.1).sum();
                 for (part, b) in &m.parts {
                     let _ = writeln!(out, "peak_bytes[profile]({part}, {b}).");
@@ -608,6 +612,23 @@ impl CostState {
     }
 }
 
+/// The most of this process that was resident, in bytes: what the machine gave it. The heap's count is what was
+/// asked of the allocator, a vector's whole capacity with it; a capacity never written is asked and not resident.
+pub fn resident_peak() -> Option<i64> {
+    #[cfg(unix)]
+    {
+        let mut u: libc::rusage = unsafe { std::mem::zeroed() };
+        // SAFETY: getrusage writes the struct it is given and reads nothing else.
+        if unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut u) } != 0 {
+            return None;
+        }
+        let unit = if cfg!(target_os = "macos") { 1 } else { 1024 };
+        Some(u.ru_maxrss as i64 * unit)
+    }
+    #[cfg(not(unix))]
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use crate::session::Session;
@@ -640,3 +661,4 @@ mod tests {
         assert_eq!(s.eval.too_hot().len(), 1);
     }
 }
+
