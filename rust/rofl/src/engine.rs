@@ -6,7 +6,7 @@
 //! reproduces here; `Mode::Strata` is the stock path, and it is not decoration
 //! — the kernel's own `safety.rofl` sub-evaluation runs under it.
 
-use crate::store::Prem;
+use crate::store::{Heights, Prem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Arc as Rc;
 
@@ -664,6 +664,8 @@ pub struct TickOutcome {
 /// THE MEMORY WALL (CLAUDE.md, the goal: where memory runs out, the engine says so; it does not die). The process
 /// sets `MEMORY_FULL` while what it uses is near what it may (bin/rofl/memory.rs); an evaluation stops at its next
 /// check as at the step budget, its hole `memory_exhausted`, and `MEMORY_STOPPED` tells the caller it did.
+/// The heap's live bytes, told by the binary's counting allocator (bin/rofl/seed.rs); 0 where nothing counts.
+pub static HEAP_LIVE: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
 pub static MEMORY_FULL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 pub static MEMORY_STOPPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 pub static MEMORY_USED: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
@@ -819,7 +821,7 @@ pub struct Eval {
     memo: DerivedMemo,
     shrug: ShrugRun,
     /// Heights an addition found of facts below the level it had reached, which nothing later in it moves.
-    heights_kept: HashMap<FactId, u32>,
+    heights_kept: Heights,
     /// The news of the premise the written path is matching, by the set they are and the relation (`par::NewsIx`).
     news_ix: Option<(usize, Sym, Rc<par::NewsIx>)>,
     /// The round each relation closes in, for a cell's seals; 0 for input.
@@ -952,7 +954,7 @@ struct DerivedMemo {
     /// A holistic group read under many percents or subjects, sealed once:
     /// by the correlation less the percent or subject (`hol_share_key`).
     hol_shared: HashMap<datastrat::AggKey, HolShared>,
-    height_memo: HashMap<FactId, u32>,
+    height_memo: Heights,
 }
 
 /// What the shrug model has noted in one evaluation: set empty when the evaluation begins (`shrug_reset`). Held by `Eval`.
@@ -1979,7 +1981,7 @@ pub struct WhyState {
     done: HashSet<(bool, u32)>,
     /// Derivation heights, for the firing `why` shows of each fact; put back
     /// at every question, the store being free to change between two.
-    heights: HashMap<FactId, u32>,
+    heights: Heights,
     /// The cells this `why` has met under each header text (`desc = value`), in
     /// order: a second cell under one header is told apart by `(cell 2)`.
     heads: HashMap<String, Vec<u32>>,
@@ -2288,7 +2290,7 @@ impl Eval {
             thr: ThrState::default(),
             memo: DerivedMemo::default(),
             shrug: ShrugRun::default(),
-            heights_kept: HashMap::new(),
+            heights_kept: Heights::default(),
             news_ix: None,
             round_of: HashMap::new(),
             books: Books::default(),
@@ -5480,12 +5482,12 @@ impl Eval {
                 return if is_base { self.fire_closure(ci) } else { Ok(Front::default()) };
             }
         }
-        if front_at.is_none() {
-            if let Some(p) = self.delta_pick(r, None, 1) {
-                return self.fire_planned(r, &p, None);
-            }
-        }
-        self.fire_rule_from(r, Subst::new(), front_at)
+        let fired = match front_at.is_none().then(|| self.delta_pick(r, None, 1)).flatten() {
+            Some(p) => self.fire_planned(r, &p, None),
+            None => self.fire_rule_from(r, Subst::new(), front_at),
+        };
+        self.note_heap();
+        fired
     }
 
     /// `r` fired over the instances that extend `s0`.
@@ -5858,6 +5860,9 @@ impl Eval {
         if self.steps > self.budget || self.steps & 0x3ff == 0 && self.budget != i64::MAX && self.halted() {
             self.wall.spent.set(Some(("steps", self.steps, self.budget.min(self.steps))));
             return Err(Halt::Budget("budget_exhausted", None));
+        }
+        if self.steps & 0x3ff == 0 {
+            self.note_heap();
         }
         if self.steps & 0x3ff == 0 && MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
             use std::sync::atomic::Ordering::Relaxed;
@@ -7924,7 +7929,7 @@ impl Eval {
                 roots.extend(cs.iter().copied().filter(|f| self.store.alive(*f)));
             }
         }
-        let mut memo: HashMap<FactId, u32> = HashMap::new();
+        let mut memo: Heights = Heights::default();
         let _ = self.store.heights(&roots, &mut memo);
         let mut plan: Vec<(FactId, Sym, Vec<FactId>)> = Vec::new();
         for (p, f) in cells {
@@ -8524,7 +8529,7 @@ impl Eval {
                 .filter(|f| (self.store.alive(*f) || self.lat.pass.superseded.contains(f)) && !self.store.rec(*f).base())
                 .collect();
             if !roots.is_empty() {
-                let mut memo: HashMap<FactId, u32> = HashMap::new();
+                let mut memo: Heights = Heights::default();
                 let _ = self.store.heights(&roots, &mut memo);
                 gone.extend(roots.into_iter().filter(|f| !memo.contains_key(f)));
             }
@@ -8620,7 +8625,7 @@ impl Eval {
                     })
             })
         };
-        let mut memo: HashMap<FactId, u32> = HashMap::new();
+        let mut memo: Heights = Heights::default();
         let _ = store.heights_where_head(&region, &mut memo, &|head, rule, ps| {
             !cells.contains(&store.rec(head).rel)
                 && ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if stale.contains(&g)))
@@ -10641,7 +10646,7 @@ impl Eval {
         let mut cand: Vec<FactId> = self.lat.pass.stale.drain().filter(|f| self.store.alive(*f)).collect();
         cand.sort_unstable();
         let sup = std::mem::take(&mut self.lat.pass.superseded);
-        let mut memo: HashMap<FactId, u32> = HashMap::new();
+        let mut memo: Heights = Heights::default();
         let _ = self.store.heights_where(&cand, &mut memo, &|ps: &[PremRef]| {
             ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if sup.contains(&g)))
         });
@@ -13194,7 +13199,7 @@ impl Eval {
 
     fn all_witnesses(&self) -> HashMap<FKey, Witness> {
         let mut out = HashMap::new();
-        let mut memo = HashMap::new();
+        let mut memo = Heights::default();
         for id in self.store.firing_keys() {
             if let Some(w) = self.store.witness_of(&self.h, id, &mut memo) {
                 out.insert(
@@ -16341,7 +16346,7 @@ impl Eval {
             if a[..n - 1] != lit.args[..n - 1] {
                 continue;
             }
-            let rule = self.store.witness_of(&self.h, f, &mut HashMap::new()).map(|w| self.h.name(w.rule).to_string()).unwrap_or_else(|| "a tick before".into());
+            let rule = self.store.witness_of(&self.h, f, &mut Heights::default()).map(|w| self.h.name(w.rule).to_string()).unwrap_or_else(|| "a tick before".into());
             let t = self.h.canon(a[n]);
             derivs.push(format!("x{t} by {rule}"));
         }

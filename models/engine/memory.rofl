@@ -36,3 +36,9 @@ memory(patterns, C) :- C is count(Rel, Bk, M : mem_pattern(Rel, Bk, M, _, _)).
 mem_idle(Rel, Bk, M, N, W) :- mem_pattern(Rel, Bk, M, N, W), W <= 1.
 memory(idle_pattern_indexes, T) :- S is sum(N ; Rel, Bk, M : mem_idle(Rel, Bk, M, N, _)), T is S * 12.
 memory(idle_patterns, C) :- C is count(Rel, Bk, M : mem_idle(Rel, Bk, M, _, _)).
+
+-- WHAT THE HEAP HELD, as the engine counted it (docs/cli.md, *The profile of an evaluation*): at its peak, by part,
+-- and at the end. The forecast above is judged by these.
+mem_peak(Part, B) :- peak_bytes[profile](Part, B).
+mem_end(Part, B) :- bytes[profile](Part, B).
+mem_peak_rule(R) :- peak_rule[profile](R).
