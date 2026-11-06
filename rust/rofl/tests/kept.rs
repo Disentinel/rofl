@@ -489,10 +489,22 @@ fn files_in(cache: &Path) -> Vec<(String, u64)> {
 fn concurrent_cold_runs_keep_one_world(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("implicit-concurrent");
     let cache = d.0.join("cache");
-    let runs: Vec<Ran> = std::thread::scope(|sc| {
+    // a world large enough that the eight writes overlap: one written in an instant could take turns by chance
+    let big: String = (0..60_000).map(|i| format!("big({i}, \"a fact of some length to fill the volume {i}\").\n")).collect();
+    d.append("rules.rofl", &big);
+    let (temps, runs): (std::collections::BTreeSet<String>, Vec<Ran>) = std::thread::scope(|sc| {
         let hs: Vec<_> = (0..8).map(|_| sc.spawn(|| rofl(&d, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]))).collect();
-        hs.into_iter().map(|h| h.join().unwrap()).collect()
+        // what the writers write under while they write (`<world>.<pid>.new.<pid>.part`): each its own name, or two
+        // write one file
+        let mut temps = std::collections::BTreeSet::new();
+        while !hs.iter().all(|h| h.is_finished()) {
+            temps.extend(files_in(&cache).into_iter().map(|f| f.0).filter(|n| n.ends_with(".part")));
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        (temps, hs.into_iter().map(|h| h.join().unwrap()).collect())
     });
+    let own = |n: &String| n.trim_end_matches(".part").rsplit_once('.').is_some_and(|(new, pid)| new.ends_with(&format!(".{pid}.new")));
+    ensure(!temps.is_empty() && temps.iter().all(own), || format!("the writers wrote under {temps:?}, not each under its own name"))?;
     for r in &runs {
         ensure(r.code == 0 && r.out == runs[0].out && r.err.is_empty(), || format!("a cold run among eight: {} {:?} {:?}", r.code, r.out, r.err))?;
     }
