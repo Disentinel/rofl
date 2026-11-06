@@ -569,7 +569,6 @@ handled(agg, tag_counting, demo, "agg_tag_demo").
 handled(agg, tag_counting, wfs, "agg_tag_wfs").
 handled(agg, tag_counting, ticks, "agg_tagc_ticks").
 handled(agg, tag_counting, holes, "agg_tagc_holes").
-handled(agg, tag_counting, holes, "agg_tagc_budget").
 handled(agg, tag_counting, shrug, "agg_tagc_shrug").
 
 work(w_agg_holistic, "quantile, median, rank: stratified, dedup, the group recomputed; Group witness").

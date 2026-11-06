@@ -692,6 +692,8 @@ function answerRustOnly(w: World): Answer {
       if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
       continue;
     }
+    // a defect (exit 70) where a refusal was due is a red of the world, not of the check: a planted fault met by the engine's own guard
+    if (p.status === 70 && want) { problems.push(`${base} was to be refused (${want}) and met a defect: ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`); continue; }
     if (p.status !== 2 && p.status !== 3) throw new Error(`rofl load died on ${base} (${p.status}): ${p.stderr}`);
     diags.push(`refused ${base} (${p.status === 2 ? 'load' : 'eval'})`);
     dropped.push(`${base}: ${p.stderr.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);

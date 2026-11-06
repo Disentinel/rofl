@@ -300,7 +300,7 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             present.remove(&f);
             let how = s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}"));
             st.retracted.0 += 1;
-            st.retracted.1 += matches!(how, Retraction::Delta(_)) as usize;
+            st.retracted.1 += matches!(&how, Retraction::Delta(d) if d.set.is_none()) as usize;
             if let Some(mut g) = replay(&ops) {
                 let gh = g.retract_delta(&f).unwrap();
                 let mut ops2 = ops.clone();
@@ -786,7 +786,7 @@ fn a_fault_the_addition_does_not_reach_stands() {
     assert!(all.full.keys().all(|k| k.contains("write a hole")), "{all:?}");
     assert!(all.delta * 10 > all.additions * 9 && all.sum.holed > 0, "an addition that reaches a fault is a delta: {all:?}");
     eprintln!("retractions by delta: {} of {}", all.retracted.1, all.retracted.0);
-    assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault: {all:?}");
+    assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault, and go by the one-fact delta: {all:?}");
 }
 
 fn fact_route(r: &mut Rng) -> String {

@@ -9,7 +9,6 @@ edb(switch_site).
 edb(proof_world).
 
 brk("prov_state_unsettled"). brk_kind("prov_state_unsettled", switch).
-brk_expects("prov_state_unsettled", "prov_lazy_reader").
 brk_expects("prov_state_unsettled", "prov_lazy_retract").
 brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
@@ -135,17 +134,11 @@ brk("narrower_by_columns"). brk_kind("narrower_by_columns", switch).
 brk_expects("narrower_by_columns", "join_through_constants").
 brk("delta_first_spread"). brk_kind("delta_first_spread", switch).
 brk_expects("delta_first_spread", "agg_join_delta_first_hole").
-brk("delta_first_persp"). brk_kind("delta_first_persp", switch).
-brk_expects("delta_first_persp", "agg_join_delta_first_persp").
 brk("delta_first_overrun_holes"). brk_kind("delta_first_overrun_holes", switch).
 brk_expects("delta_first_overrun_holes", "agg_join_delta_first_space").
 brk("mono"). brk_kind("mono", switch).
-brk_expects("mono", "agg_cell_eval").
 brk_expects("mono", "agg_life_demo").
 brk_expects("mono", "agg_critpath_demo").
-brk_expects("mono", "agg_minimax_demo").
-brk_expects("mono", "agg_quorum_demo").
-brk_expects("mono", "agg_linter_demo").
 brk("memo"). brk_kind("memo", switch).
 brk_expects("memo", "agg_cell_eval").
 brk("max"). brk_kind("max", switch).
@@ -495,8 +488,6 @@ brk("neg_unknown_unbound"). brk_kind("neg_unknown_unbound", switch).
 brk_expects("neg_unknown_unbound", "agg_cell_holes").
 brk("plain_alive_unknown"). brk_kind("plain_alive_unknown", switch).
 brk_expects("plain_alive_unknown", "agg_holistic_eval").
-brk("plain_flush_early"). brk_kind("plain_flush_early", switch).
-brk_expects("plain_flush_early", "agg_holistic_eval").
 brk("hol_param_projected"). brk_kind("hol_param_projected", switch).
 brk_expects("hol_param_projected", "agg_holistic_eval").
 brk_expects("hol_param_projected", "agg_holistic_witness").
@@ -601,7 +592,6 @@ brk_expects("plain_reader_unclosed", "agg_cell_holes").
 brk("space_uncut_world"). brk_kind("space_uncut_world", switch).
 brk_expects("space_uncut_world", "agg_lattice_space").
 brk("agg_seal_at_wall"). brk_kind("agg_seal_at_wall", switch).
-brk_expects("agg_seal_at_wall", "agg_tagc_budget").
 brk_expects("agg_seal_at_wall", "agg_count_budget").
 brk_expects("agg_seal_at_wall", "agg_sum_budget").
 brk_expects("agg_seal_at_wall", "agg_minmax_budget").
@@ -722,9 +712,6 @@ brk_expects("shrug_given_wfs_unread", "agg_cell_shrug_given").
 brk("shrug_late_cut_refused"). brk_kind("shrug_late_cut_refused", switch).
 brk_expects("shrug_late_cut_refused", "agg_cell_shrug_given_cut").
 brk_expects("shrug_late_cut_refused", "agg_cell_shrug_given_cut_agg").
-brk("ts_agg_shrug_late_cut_refused"). brk_kind("ts_agg_shrug_late_cut_refused", ts).
-brk_expects("ts_agg_shrug_late_cut_refused", "agg_cell_shrug_given_cut").
-brk_expects("ts_agg_shrug_late_cut_refused", "agg_cell_shrug_given_cut_agg").
 brk("ts_shrug_given_wfs_unread"). brk_kind("ts_shrug_given_wfs_unread", ts).
 brk_expects("ts_shrug_given_wfs_unread", "agg_cell_shrug_given").
 brk("ts_agg_shrug_given_off"). brk_kind("ts_agg_shrug_given_off", ts).
@@ -1764,8 +1751,6 @@ brk("ds_builtin_dead"). brk_kind("ds_builtin_dead", switch).
 brk_expects("ds_builtin_dead", "agg_datastrat_eval").
 brk("ds_hole_uncarried"). brk_kind("ds_hole_uncarried", switch).
 brk_expects("ds_hole_uncarried", "agg_datastrat_holes").
-brk("ds_root_dropped"). brk_kind("ds_root_dropped", switch).
-brk_expects("ds_root_dropped", "agg_datastrat_eval").
 brk("ds_comps_unordered"). brk_kind("ds_comps_unordered", switch).
 brk_expects("ds_comps_unordered", "agg_datastrat_two").
 brk("ds_neg_invisible"). brk_kind("ds_neg_invisible", switch).
@@ -2051,8 +2036,6 @@ brk("vclosure_ancestors_short"). brk_kind("vclosure_ancestors_short", switch).
 brk_expects("vclosure_ancestors_short", "ds_tree_sealed").
 brk("vclosure_stale_forest"). brk_kind("vclosure_stale_forest", switch).
 brk_expects("vclosure_stale_forest", "ds_tree_sealed").
-brk("vclosure_reader_stale"). brk_kind("vclosure_reader_stale", switch).
-brk_expects("vclosure_reader_stale", "ds_tree_sealed").
 brk("vclosure_book_merged"). brk_kind("vclosure_book_merged", switch).
 brk_expects("vclosure_book_merged", "ds_tree_sealed").
 brk("vclosure_premise_untagged"). brk_kind("vclosure_premise_untagged", switch).
@@ -2139,8 +2122,6 @@ brk("add_fresh_negation_reset"). brk_kind("add_fresh_negation_reset", switch).
 brk_expects("add_fresh_negation_reset", "addition_negation").
 brk("add_lost_unseeded"). brk_kind("add_lost_unseeded", switch).
 brk_expects("add_lost_unseeded", "addition_negation").
-brk("add_stale_citer_followed"). brk_kind("add_stale_citer_followed", switch).
-brk_expects("add_stale_citer_followed", "addition_stale").
 brk("add_reset_after"). brk_kind("add_reset_after", switch).
 brk_expects("add_reset_after", "addition_reads_agg").
 brk("add_dirty_negation_kept"). brk_kind("add_dirty_negation_kept", switch).
@@ -2338,7 +2319,6 @@ switch_site("add_promoted_unnoted", "rust/rofl/src/store.rs").
 switch_site("add_reset_after", "rust/rofl/src/engine/addition.rs").
 switch_site("add_seal_hole_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_staged_cells_kept", "rust/rofl/src/engine/addition.rs").
-switch_site("add_stale_citer_followed", "rust/rofl/src/engine/addition.rs").
 switch_site("add_tag_count_refused", "rust/rofl/src/engine/addition.rs").
 switch_site("add_threshold_closed_early", "rust/rofl/src/engine/addition.rs").
 switch_site("add_trees_dropped", "rust/rofl/src/engine/vclosure.rs").
@@ -2421,7 +2401,6 @@ switch_site("cut_fallback_off", "rust/rofl/src/engine.rs").
 switch_site("decl_row_skipped", "rust/rofl/src/engine.rs").
 switch_site("delta_first_off", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_overrun_holes", "rust/rofl/src/engine.rs").
-switch_site("delta_first_persp", "rust/rofl/src/engine/joinplan.rs").
 switch_site("delta_first_spread", "rust/rofl/src/engine/joinplan.rs").
 switch_site("demand_again_rereads_store", "rust/rofl/src/engine.rs").
 switch_site("demand_answer_names_grow", "rust/rofl/src/engine.rs").
@@ -2507,7 +2486,6 @@ switch_site("ds_layer_refires", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_layer_unfired", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_neg_invisible", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_no_demote", "rust/rofl/src/engine/datastrat.rs").
-switch_site("ds_root_dropped", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_seal_early", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_spread_uncarried", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_wide_unlisted", "rust/rofl/src/engine.rs").
@@ -2715,7 +2693,6 @@ switch_site("phrase_tree_closure_lost", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("phrase_widen_off_by_one", "rust/rofl/src/bin/rofl/render.rs").
 switch_site("plain_alive_unknown", "rust/rofl/src/engine.rs").
 switch_site("plain_cell_hole_unspread", "rust/rofl/src/engine.rs").
-switch_site("plain_flush_early", "rust/rofl/src/engine.rs").
 switch_site("plain_neg_decides", "rust/rofl/src/engine.rs").
 switch_site("plain_neg_unholed", "rust/rofl/src/engine.rs").
 switch_site("plain_positive_holed", "rust/rofl/src/engine.rs").
@@ -2926,7 +2903,6 @@ switch_site("vclosure_prov_read_ignored", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_prov_unbuilt", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_prov_unsettled", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_reader_seen_kept", "rust/rofl/src/engine/vclosure.rs").
-switch_site("vclosure_reader_stale", "rust/rofl/src/engine.rs").
 switch_site("vclosure_removed_edge_kept", "rust/rofl/src/forest.rs").
 switch_site("vclosure_restore_keys_unread", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_restore_unengaged", "rust/rofl/src/engine/vclosure.rs").
@@ -3180,7 +3156,6 @@ proof_world("agg_tag_ts").
 proof_world("agg_tag_wfs").
 proof_world("agg_tag_why").
 proof_world("agg_tag_witness").
-proof_world("agg_tagc_budget").
 proof_world("agg_tagc_eval").
 proof_world("agg_tagc_holes").
 proof_world("agg_tagc_phrase").

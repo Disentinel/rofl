@@ -1,4 +1,4 @@
-structures: 26 relations of at least 2 rows scanned over 583 live facts, about 160 B per fact (store tables over live facts)
+structures: 26 relations of at least 2 rows scanned over 584 live facts, about 160 B per fact (store tables over live facts)
 
 declared tree dedge(P, C) closure dbelow.
         dedge: 3 edges over 4 nodes, 1 roots, depth 2; one parent per child, no cycle (implies a function from child to parent)

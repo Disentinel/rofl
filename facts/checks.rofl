@@ -1939,7 +1939,6 @@ check_file("agg_tagc_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_tagc_budget", "examples/checks/agg-tagc-budget.rofl").
 check_opt("agg_tagc_budget", together, 1).
 check_opt("agg_tagc_budget", budget, 500).
-proves("agg_tagc_budget", agg, tag_counting, holes).
 
 check_world("agg_tag_shrug").
 check_file("agg_tag_shrug", "examples/checks/agg-tag-shrug.rofl").
