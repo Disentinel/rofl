@@ -6202,6 +6202,7 @@ impl Eval {
         Ok(())
     }
 
+    #[inline(never)]
     fn record_prem(&mut self, b: &BodyElem, r: PremRef, s: &Subst) -> PremRef {
         match b {
             BodyElem::Bi { op, l, r: rr } => {
@@ -10030,6 +10031,7 @@ impl Eval {
     /// A FAULT BELOW A CALL ANSWERED ON DEMAND, in a firing: the call's head
     /// under the solution it was met in is unknown, and so, one call up at a
     /// time, is each call that read it (the premise that called it faulted).
+    #[inline(never)]
     fn demand_fault(&mut self, depth: usize, s: &Subst) {
         if depth == 0 || !self.firing || brk!("demand_fault_unspread" => true; false) {
             return;
@@ -10045,6 +10047,7 @@ impl Eval {
     /// `l` called under `s`: each head of `l`'s call left unknown (past
     /// `unknowns` on the trail) leaves the call above unknown under the
     /// solution it binds, its known arguments only.
+    #[inline(never)]
     fn demand_below(&mut self, depth: usize, l: &Lit, s: &Subst, faults: u64, unknowns: usize) {
         if self.fault_count > faults {
             self.demand_fault(depth, s);
@@ -12330,7 +12333,13 @@ impl Eval {
         let sols = self.solve_body(&rn.body, s3, depth + 1, None, Some(r.id));
         self.demand.rule_ids.pop();
         self.demand.heads.pop();
-        let sols = sols?;
+        self.demand_answers(r, call, &head, sols?)
+    }
+
+    /// What a rule unfolded at a call concluded, as answers of the call: apart and not inlined, so the frame each
+    /// call answered on demand holds through the calls below it stays small.
+    #[inline(never)]
+    fn demand_answers(&mut self, r: &Rc<ERule>, call: &Lit, head: &Lit, sols: Vec<Sol>) -> Result<Vec<(Subst, PremRef)>, Halt> {
         let mut out = Vec::new();
         for sol in sols {
             let persp = walk(&self.h, head.persp, &sol.s);

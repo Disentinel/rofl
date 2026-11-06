@@ -499,6 +499,7 @@ impl Eval {
 
 impl CostState {
     /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
+    #[inline(never)]
     pub(super) fn cost_mark(&mut self, rid: Option<Sym>, at: Option<u64>, b: &BodyElem) -> Option<Mark> {
         let key = (rid?, prem_key(b)?);
         let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
@@ -512,6 +513,7 @@ impl CostState {
     }
 
     /// The premise of `m` solved from `rows_in` rows into `rows_out`.
+    #[inline(never)]
     pub(super) fn note_cost(&mut self, m: Mark, rows_in: usize, rows_out: usize) {
         let wide = std::mem::take(&mut self.widest);
         self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
