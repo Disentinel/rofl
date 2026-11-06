@@ -423,13 +423,11 @@ fn a_sealed_world_kept_by_itself_whys_as_fresh(brk: Option<&str>) -> Result<(), 
 
 /// A cache that cannot be written is said on stderr and the question answered all the same.
 fn an_unwritable_cache_still_answers(brk: Option<&str>) -> Result<(), String> {
-    use std::os::unix::fs::PermissionsExt;
     let d = Dir::new("implicit-ro");
     let cache = d.0.join("ro");
     std::fs::create_dir_all(&cache).unwrap();
-    std::fs::set_permissions(&cache, std::fs::Permissions::from_mode(0o500)).unwrap();
+    std::fs::write(cache.join("rofl"), "a file where the cache's directory goes: no user, root included, writes under it").unwrap();
     let r = rofl_in(BIN, &d, &cache, brk, &["ask", "reaches(a, X)", "boot.rofl", "rules.rofl"]);
-    std::fs::set_permissions(&cache, std::fs::Permissions::from_mode(0o700)).unwrap();
     ensure(r.code == 0 && r.out.contains("X = zebra") && r.err.contains("the world is not kept"), || format!("unwritable cache: {} {:?} {:?}", r.code, r.out, r.err))
 }
 
@@ -546,14 +544,17 @@ fn a_missing_source_is_said_missing(brk: Option<&str>) -> Result<(), String> {
 fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("implicit-series");
     d.write("more.rofl", "edb(calls).\ncalls(zebra, yak).\n");
+    let gone = Dir::new("implicit-gone");
+    gone.write("more.rofl", "edb(calls).\ncalls(zebra, yak).\n");
     let files = |more: bool| -> Vec<&str> { if more { vec!["boot.rofl", "rules.rofl", "more.rofl"] } else { vec!["boot.rofl", "rules.rofl"] } };
-    let check = |what: &str, more: bool, took: &str| -> Result<(), String> {
+    let check_in = |d: &Dir, what: &str, more: bool, took: &str| -> Result<(), String> {
         let args: Vec<&str> = ["ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect();
-        let got = rofl(&d, brk, &args);
-        let want = fresh(&d, brk, &["load", "--ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect::<Vec<_>>());
+        let got = rofl(d, brk, &args);
+        let want = fresh(d, brk, &["load", "--ask", "reaches(a, X)", "--state"].into_iter().chain(files(more)).collect::<Vec<_>>());
         ensure(got.out == want.out && got.code == want.code, || format!("{what}: by delta {} lines, fresh {} lines; {:?}", got.out.lines().count(), want.out.lines().count(), got.err))?;
         ensure(took.is_empty() || got.err.contains(&format!("took 1 file by delta: {took}")), || format!("{what}: wanted one file taken, {took:?}; {:?}", got.err))
     };
+    let check = |what: &str, more: bool, took: &str| check_in(&d, what, more, took);
     check("kept", false, "")?;
     d.write("rules.rofl", &RULES.replace("calls(b, c).\n", ""));
     check("a fact taken out", false, "rules.rofl")?;
@@ -566,7 +567,10 @@ fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
     check("a file come", true, "more.rofl")?;
     d.write("rules.rofl", RULES);
     check("the file edited back", true, "rules.rofl")?;
-    check("a file gone", false, "more.rofl (gone)")
+    // the world without more.rofl stands under the one kept over it, so a file gone is asked of a world kept with it alone
+    check("the world kept without more.rofl", false, "rules.rofl")?;
+    check_in(&gone, "kept with more.rofl", true, "")?;
+    check_in(&gone, "a file gone", false, "more.rofl (gone)")
 }
 
 /// Files that hold facts and rules mixed, edited, removed and added at random, each step asked of the kept world and
@@ -882,7 +886,7 @@ fn a_renamed_local_keeps_its_ids() {
     let d = Dir::new("rename");
     std::fs::create_dir_all(d.0.join("src")).unwrap();
     let cli = root().join("scanners/cli.ts");
-    d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"a.js\").\ndecl(I) :- ast_node[code](I, variable_declarator, _).\nnamed(N) :- ast_node[code](I, identifier, _), ast_attr[code](I, name, N).\n", cli.display()));
+    d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"a.js\").\nimports(main, ast_oxc).\ndecl(I) :- node[ast_oxc](I, variable_declarator, _).\nnamed(N) :- node[ast_oxc](I, binding_identifier, _), attr[ast_oxc](I, name, N).\nnamed(N) :- node[ast_oxc](I, identifier_reference, _), attr[ast_oxc](I, name, N).\n", cli.display()));
     let a = |local: &str| d.write("src/a.js", &format!("export function f(s) {{\n  const {local} = s * 2;\n  return {local} + 1;\n}}\n"));
     let files = ["boot.rofl", "scan.rofl"];
     let ask = |q: &str| rofl(&d, brk, &["ask", q, files[0], files[1]]);

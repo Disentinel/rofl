@@ -68,6 +68,7 @@ impl Eval {
         self.vc.readers.clear();
         self.vc.reader_seen.clear();
         self.vc.vclosure_reason.clear();
+        self.vc.vclosure_blocked.clear();
         self.store.vrow_of.clear();
         self.store.virtuals.clear();
         let decl = crate::structure::closures(&self.h, &self.v, &mut self.store);
@@ -136,15 +137,15 @@ impl Eval {
     /// dropped or answered another way: the world is evaluated again.
     pub fn reprepare_keeping_trees(&mut self) -> bool {
         let kept = (self.vc.vclosures.clone(), self.store.virtuals.clone(), self.store.vrow_of.clone(), self.vc.any, self.store.vlisted, self.store.vwit, self.vc.reader_seen.clone());
+        let was_blocked = self.vc.vclosure_blocked.clone();
         self.reprepare();
         if kept.0.is_empty() && self.vc.vclosures.is_empty() {
             return true;
         }
-        let blocked = |c: &VClosure| c.built == Some(usize::MAX);
         let n = kept.0.len();
         // a closure declared after the others, over a relation that holds no row yet, is engaged as an evaluation engages it
         let same = n <= self.vc.vclosures.len()
-            && kept.0.iter().zip(&self.vc.vclosures).all(|(a, b)| a.rel == b.rel && a.edge == b.edge && a.prov_read == b.prov_read && blocked(a) == blocked(b))
+            && kept.0.iter().zip(&self.vc.vclosures).enumerate().all(|(ci, (a, b))| a.rel == b.rel && a.edge == b.edge && a.prov_read == b.prov_read && was_blocked.contains(&ci) == self.vc.vclosure_blocked.contains(&ci))
             && self.vc.vclosures[n..].iter().map(|c| c.rel).collect::<Vec<_>>().into_iter().all(|r| self.store.rel_all(&self.h, r).iter().all(|f| !self.store.alive(*f)));
         if !same || brk!("add_trees_dropped" => true; false) {
             return false;

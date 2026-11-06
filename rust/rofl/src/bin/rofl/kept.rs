@@ -268,8 +268,23 @@ pub fn keep_capped_over(s: &mut rofl::session::Session, kept: &str, note: &str, 
     Ok((n, false))
 }
 
+/// A world kept whole at `kept`: the volumes set aside under the overlay it replaces go with it, unless another
+/// overlay is kept over them.
 pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Result<u64, String> {
-    keep_bounded(s, kept, note, &[], None)
+    let under = rofl::volume::chain_named(kept);
+    let n = keep_bounded(s, kept, note, &[], None)?;
+    for b in under.iter().rev().filter(|b| set_aside(b)) {
+        let p = Path::new(b);
+        if p.parent().is_some_and(|d| overlays_of(d, p).is_empty()) {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+    Ok(n)
+}
+
+/// A volume moved beside its slot under its sum (`keep_capped_over`): `<key>.<sum>.vol`.
+fn set_aside(p: &str) -> bool {
+    Path::new(p).file_name().is_some_and(|n| n.to_string_lossy().split('.').count() == 3)
 }
 
 /// The volumes beside `p` kept as overlays over it.
