@@ -35,6 +35,7 @@ module_in("bin::rofl::delta", kept).
 module_in("bin::rofl::serve", serve).
 module_in("rofl::session", session).
 module_in("rofl", session).
+module_in("rofl::engine::volumes", session).
 module_in("rofl::rofl_lex", parser).
 module_in("rofl::rofl_parse", parser).
 module_in("rofl::program", parser).
@@ -60,6 +61,7 @@ module_in("rofl::engine::datastrat", evaluator).
 module_in("rofl::engine::labeled", evaluator).
 module_in("rofl::engine::want", evaluator).
 module_in("rofl::engine::resume", evaluator).
+module_in("rofl::engine::books", evaluator).
 module_in("rofl::engine::addition", incremental).
 module_in("rofl::engine::delta", incremental).
 module_in("rofl::engine::layer", incremental).

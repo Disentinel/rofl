@@ -387,7 +387,7 @@ refuses it: the forest is built again and what reads it read again whole); one t
 as it is and is the delta it is in any world (`ds_tree_retract_other`). A rule that
 reads the closure is fired whole when news of the edges reaches it and it has not fired
 since they last changed, since the closure has no news of its own (the case: the edges a
-negation concludes, a level above the rule's first firing; `vclosure_reader_stale`). A
+negation concludes, a level above the rule's first firing). A
 broken forest never loops and is never read: the first parent stands, a node no root
 reaches has no place, and the world is refused after the evaluation by the promise.
 Where the closure's edges are concluded from it, or it is answered on demand, or the

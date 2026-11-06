@@ -62,8 +62,16 @@ what runs. They are published at
   as a script when the world says so ([ASKING.md](ASKING.md#what-it-could-not-see)).
 - VS Code opens a notebook straight from GitHub, private repositories too:
   **ROFL: Open notebook from GitHub…** ([QUICKSTART.md](QUICKSTART.md)).
-- The JS model reads a new layer of roles, and a second scanner, oxc in
-  Rust, writes the same roles; Babel stays the default until the move ends.
+- **A new JS scanner.** `rofl scan` reads JavaScript and TypeScript with oxc,
+  in Rust, and the JS model reads a layer of roles over its tree; Babel is
+  gone. A scan made by 1.5 does not load: scan again.
+- **A large project is split by file.** `rofl ask` and `rofl why` deal the
+  files to a worker a core and join their answers: 500 files of VS Code in
+  32 s instead of 71 s on four cores, the same answers.
+- **Leaks and use after death.** The JS model can say where a timer, a
+  stream, a server or a child process is used after it was closed, is never
+  closed, or keeps the process alive with no stop handler (docs/cli.md, *The
+  lifecycle of a resource*).
 
 ### 1.5 (1.5.0 on 24 October 2026, 1.5.1 on 25 October)
 

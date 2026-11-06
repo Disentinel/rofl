@@ -4035,3 +4035,7 @@ work_state(w_join_through_constants, done).
 work(w_ledger_on_roflenox,
   "The owner, 2026-10-31 (thread «Интенты»): keep the ledger (facts/findings.rofl, facts/worklist.rofl) as a signed book on a Roflenox node instead of only in git. What exists: a world reads `roflenox://HOST/IDENTITY/BOOK` and checks every batch (rust/rofl/src/roflenox.rs, docs/intents.md question 4); nothing writes a book there yet, and an anonymous reader needs an export fact. OPEN: who writes (a person's identity or the project's), how a ledger edit becomes a batch, whether git keeps a copy or only a pointer, how goldens over the ledger (notebook_ledger, rules_findings, rules_worklist, agg_proofs) read it. Writing to the owner's live node needs his go-ahead. ACCEPTANCE: a world loading the ledger from the node gives the same census as from the files, and a tampered batch is refused.").
 work_state(w_ledger_on_roflenox, open).
+
+work(w_unproven_guards,
+  "Five guards lost their planted fault on 2026-11-06 because no world reaches them any more (f_planted_faults_the_engine_outgrew): the overdelete's check that a citer still cites the fact (addition.rs), plain_flush_at's closed-below test (engine.rs), the release of every correlation the data walk met (datastrat.rs), a closure reader fired again on news of its edges (engine.rs), a perspective variable placed where written (joinplan.rs). For each: a world that reaches it and a switch that turns it red, or the guard deleted as dead code.").
+work_state(w_unproven_guards, open).

@@ -553,12 +553,12 @@ impl Eval {
                 return false;
             }
             if let Some((p, was)) = vp[j] {
-                if bound.contains(&p) != was && brk!("delta_first_persp" => false; true) {
+                if bound.contains(&p) != was {
                     return false;
                 }
             }
             matches!(plan[j], BodyElem::Neg(_))
-                || !rest.iter().any(|&k| k != j && matches!(vp[k], Some((p, false)) if all_vars[j].contains(&p)) && brk!("delta_first_persp" => false; true))
+                || !rest.iter().any(|&k| k != j && matches!(vp[k], Some((p, false)) if all_vars[j].contains(&p)))
         };
         let mut bound: Vec<Sym> = pre.to_vec();
         let mut order: Vec<usize> = Vec::new();

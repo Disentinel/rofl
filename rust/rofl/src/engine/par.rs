@@ -462,6 +462,7 @@ impl Eval {
     /// Premise `b`, at `i` of a body, matched against `acc` on threads: what one thread would have made of it, in its
     /// order, or the wall it would have met. None: the premise is not one the threads take, or they found a read
     /// that would write, and the written path matches it.
+    #[inline(never)]
     pub(super) fn par_level(&mut self, b: &BodyElem, i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<Result<Vec<Sol>, Halt>> {
         let (l, neg) = self.frozen_lit(b, depth, rule_id)?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
@@ -589,6 +590,7 @@ impl Eval {
     /// probes) is counted from each run's totals; where a wall or the watcher would speak inside these premises, or a
     /// read would write, nothing is kept and the written path solves them. Some: the solutions, the premise after
     /// the last one solved, and the rows the premises added to those held.
+    #[inline(never)]
     pub(super) fn par_rest(&mut self, body: &[BodyElem], i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<(Vec<Sol>, usize, i64)> {
         if acc.len() < self.par.sols.max(2) {
             return None;
