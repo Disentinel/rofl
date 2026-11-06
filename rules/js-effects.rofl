@@ -317,10 +317,10 @@ eff_op_beyond[flow](N, delete_own)   :- unary[value](N, "delete", _).
 eff_converts[code](N) :- bin_op[code](N, _, _, _), not eff_op_inspects[code](N).
 eff_converts[code](N) :- un_op[code](N, _, _),     not eff_op_inspects[code](N).
 
-eff_coerced[flow](N, X) :- eff_converts[code](N), bin_op[code](N, _, X, _).
-eff_coerced[flow](N, X) :- eff_converts[code](N), bin_op[code](N, _, _, X).
-eff_coerced[flow](N, X) :- eff_converts[code](N), un_op[code](N, _, X).
-eff_coerced[flow](T, X) :- template[value](T), nth[tree](T, _, X).
+coerces[execution](N, X) :- eff_converts[code](N), bin_op[code](N, _, X, _).
+coerces[execution](N, X) :- eff_converts[code](N), bin_op[code](N, _, _, X).
+coerces[execution](N, X) :- eff_converts[code](N), un_op[code](N, _, X).
+coerces[execution](T, X) :- template[value](T), nth[tree](T, _, X).
 
 
 edb(eff_conv_key).
@@ -328,15 +328,15 @@ eff_conv_key(symbol_to_primitive).
 eff_conv_key("valueOf").
 eff_conv_key("toString").
 
-eff_conv_object[flow](N, X)     :- eff_coerced[flow](N, X), may_be_node[flow](X, _).
+eff_conv_object[flow](N, X)     :- coerces[execution](N, X), may_be_node[flow](X, _).
 eff_conv_call[flow](N, M)       :- eff_conv_key(Key), member_value[flow](O, Key, M), may_be_node[flow](X, O),
-                                   eff_coerced[flow](N, X).
+                                   coerces[execution](N, X).
 eff_conv_overridden[flow](N, X) :- eff_conv_key(Key), member_value[flow](O, Key, _), may_be_node[flow](X, O),
-                                   eff_coerced[flow](N, X).
+                                   coerces[execution](N, X).
 eff_conv_default[flow](N, X)    :- eff_conv_object[flow](N, X), not eff_conv_overridden[flow](N, X).
-eff_conv_primitive[flow](N, X)  :- eff_coerced[flow](N, X), may_be_lit[flow](X, _),
+eff_conv_primitive[flow](N, X)  :- coerces[execution](N, X), may_be_lit[flow](X, _),
                                    not eff_conv_object[flow](N, X).
-eff_conv_untraced[flow](N, X)   :- eff_coerced[flow](N, X), not may_be_lit[flow](X, _),
+eff_conv_untraced[flow](N, X)   :- coerces[execution](N, X), not may_be_lit[flow](X, _),
                                    not may_be_node[flow](X, _).
 
 -- A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
@@ -353,7 +353,7 @@ eff_latent[flow](F, L, H) :- eff_conv_untraced[flow](N, _), nearest_v[flow](F, N
 eff_conv_accounted[audit](N, X)   :- eff_conv_primitive[flow](N, X).
 eff_conv_accounted[audit](N, X)   :- eff_conv_object[flow](N, X).
 eff_conv_accounted[audit](N, X)   :- eff_conv_untraced[flow](N, X).
-eff_conv_unaccounted[audit](N, X) :- eff_coerced[flow](N, X), not eff_conv_accounted[audit](N, X).
+eff_conv_unaccounted[audit](N, X) :- coerces[execution](N, X), not eff_conv_accounted[audit](N, X).
 
 eff_op_off_kind[audit](N, K) :- eff_op_inspects[code](N), ast_node[code](N, K, _),
                                 K != binary_expression, K != unary_expression.
@@ -567,3 +567,8 @@ imports(audit, code).
 imports(audit, flow).
 imports(flow, surface).
 imports(audit, surface).
+
+-- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

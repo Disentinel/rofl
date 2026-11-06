@@ -1,0 +1,292 @@
+-- the scan of models/lang/js/fixtures/lifecycle/overwrites/ (npm run scan -- models/lang/js/fixtures/lifecycle/overwrites --out examples/checks/lifecycle-overwrites-facts.rofl), for the world lifecycle_overwrites
+node[ast_oxc](ndc5985b2a377c4ea_root, program, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_root, 1).
+node[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, function, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, 1).
+node[ast_oxc](ndc5985b2a377c4ea_eu859c34319bc, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_eu859c34319bc, 1).
+attr[ast_oxc](ndc5985b2a377c4ea_eu859c34319bc, name, "dead").
+child[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, id, 0, ndc5985b2a377c4ea_eu859c34319bc).
+node[ast_oxc](ndc5985b2a377c4ea_0var5ebmoa2t1, formal_parameters, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_0var5ebmoa2t1, 1).
+attr[ast_oxc](ndc5985b2a377c4ea_0var5ebmoa2t1, kind, "FormalParameter").
+child[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, params, 0, ndc5985b2a377c4ea_0var5ebmoa2t1).
+node[ast_oxc](ndc5985b2a377c4ea_io9h1qume3rff, function_body, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_io9h1qume3rff, 1).
+node[ast_oxc](ndc5985b2a377c4ea_96mii31dc5ks4, variable_declaration, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_96mii31dc5ks4, 2).
+attr[ast_oxc](ndc5985b2a377c4ea_96mii31dc5ks4, kind, "Let").
+attr[ast_oxc](ndc5985b2a377c4ea_96mii31dc5ks4, declare, false).
+node[ast_oxc](ndc5985b2a377c4ea_tf4h6ke0m7cb2, variable_declarator, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_tf4h6ke0m7cb2, 2).
+node[ast_oxc](ndc5985b2a377c4ea_8corvv5grupaa, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_8corvv5grupaa, 2).
+attr[ast_oxc](ndc5985b2a377c4ea_8corvv5grupaa, name, "x").
+child[ast_oxc](ndc5985b2a377c4ea_tf4h6ke0m7cb2, id, 0, ndc5985b2a377c4ea_8corvv5grupaa).
+node[ast_oxc](ndc5985b2a377c4ea_jovuj0njemc84, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_jovuj0njemc84, 2).
+attr[ast_oxc](ndc5985b2a377c4ea_jovuj0njemc84, value, 1).
+child[ast_oxc](ndc5985b2a377c4ea_tf4h6ke0m7cb2, init, 0, ndc5985b2a377c4ea_jovuj0njemc84).
+child[ast_oxc](ndc5985b2a377c4ea_96mii31dc5ks4, declarations, 0, ndc5985b2a377c4ea_tf4h6ke0m7cb2).
+child[ast_oxc](ndc5985b2a377c4ea_io9h1qume3rff, statements, 0, ndc5985b2a377c4ea_96mii31dc5ks4).
+node[ast_oxc](ndc5985b2a377c4ea_qg0grfsukmpm4, expression_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_qg0grfsukmpm4, 3).
+node[ast_oxc](ndc5985b2a377c4ea_f5u8114rd6in1, assignment_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_f5u8114rd6in1, 3).
+attr[ast_oxc](ndc5985b2a377c4ea_f5u8114rd6in1, operator, "Assign").
+node[ast_oxc](ndc5985b2a377c4ea_3fem8apce9qoc, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_3fem8apce9qoc, 3).
+attr[ast_oxc](ndc5985b2a377c4ea_3fem8apce9qoc, name, "x").
+child[ast_oxc](ndc5985b2a377c4ea_f5u8114rd6in1, left, 0, ndc5985b2a377c4ea_3fem8apce9qoc).
+node[ast_oxc](ndc5985b2a377c4ea_u429q5dai9f8c, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_u429q5dai9f8c, 3).
+attr[ast_oxc](ndc5985b2a377c4ea_u429q5dai9f8c, value, 2).
+child[ast_oxc](ndc5985b2a377c4ea_f5u8114rd6in1, right, 0, ndc5985b2a377c4ea_u429q5dai9f8c).
+child[ast_oxc](ndc5985b2a377c4ea_qg0grfsukmpm4, expression, 0, ndc5985b2a377c4ea_f5u8114rd6in1).
+child[ast_oxc](ndc5985b2a377c4ea_io9h1qume3rff, statements, 1, ndc5985b2a377c4ea_qg0grfsukmpm4).
+node[ast_oxc](ndc5985b2a377c4ea_1e6iu4f4j8o93, return_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_1e6iu4f4j8o93, 4).
+node[ast_oxc](ndc5985b2a377c4ea_anr4c812pkotf, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_anr4c812pkotf, 4).
+attr[ast_oxc](ndc5985b2a377c4ea_anr4c812pkotf, name, "x").
+child[ast_oxc](ndc5985b2a377c4ea_1e6iu4f4j8o93, argument, 0, ndc5985b2a377c4ea_anr4c812pkotf).
+child[ast_oxc](ndc5985b2a377c4ea_io9h1qume3rff, statements, 2, ndc5985b2a377c4ea_1e6iu4f4j8o93).
+child[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, body, 0, ndc5985b2a377c4ea_io9h1qume3rff).
+attr[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, type, "FunctionDeclaration").
+attr[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, generator, false).
+attr[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, async, false).
+attr[ast_oxc](ndc5985b2a377c4ea_vr8pnrife4qo5, declare, false).
+child[ast_oxc](ndc5985b2a377c4ea_root, body, 0, ndc5985b2a377c4ea_vr8pnrife4qo5).
+node[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, function, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, 6).
+node[ast_oxc](ndc5985b2a377c4ea_9pplflkv41b36, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_9pplflkv41b36, 6).
+attr[ast_oxc](ndc5985b2a377c4ea_9pplflkv41b36, name, "alive").
+child[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, id, 0, ndc5985b2a377c4ea_9pplflkv41b36).
+node[ast_oxc](ndc5985b2a377c4ea_n8qbup18mi6e5, formal_parameters, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_n8qbup18mi6e5, 6).
+attr[ast_oxc](ndc5985b2a377c4ea_n8qbup18mi6e5, kind, "FormalParameter").
+child[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, params, 0, ndc5985b2a377c4ea_n8qbup18mi6e5).
+node[ast_oxc](ndc5985b2a377c4ea_96pgmrf1d7pf6, function_body, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_96pgmrf1d7pf6, 6).
+node[ast_oxc](ndc5985b2a377c4ea_925t3aqcmcju4, variable_declaration, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_925t3aqcmcju4, 7).
+attr[ast_oxc](ndc5985b2a377c4ea_925t3aqcmcju4, kind, "Let").
+attr[ast_oxc](ndc5985b2a377c4ea_925t3aqcmcju4, declare, false).
+node[ast_oxc](ndc5985b2a377c4ea_t9fieda89djm8, variable_declarator, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_t9fieda89djm8, 7).
+node[ast_oxc](ndc5985b2a377c4ea_1a564g79ge4d3, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_1a564g79ge4d3, 7).
+attr[ast_oxc](ndc5985b2a377c4ea_1a564g79ge4d3, name, "y").
+child[ast_oxc](ndc5985b2a377c4ea_t9fieda89djm8, id, 0, ndc5985b2a377c4ea_1a564g79ge4d3).
+node[ast_oxc](ndc5985b2a377c4ea_4h3b042n3ld19, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_4h3b042n3ld19, 7).
+attr[ast_oxc](ndc5985b2a377c4ea_4h3b042n3ld19, value, 1).
+child[ast_oxc](ndc5985b2a377c4ea_t9fieda89djm8, init, 0, ndc5985b2a377c4ea_4h3b042n3ld19).
+child[ast_oxc](ndc5985b2a377c4ea_925t3aqcmcju4, declarations, 0, ndc5985b2a377c4ea_t9fieda89djm8).
+child[ast_oxc](ndc5985b2a377c4ea_96pgmrf1d7pf6, statements, 0, ndc5985b2a377c4ea_925t3aqcmcju4).
+node[ast_oxc](ndc5985b2a377c4ea_357odkhchnt73, expression_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_357odkhchnt73, 8).
+node[ast_oxc](ndc5985b2a377c4ea_6o9thbneu76u2, assignment_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_6o9thbneu76u2, 8).
+attr[ast_oxc](ndc5985b2a377c4ea_6o9thbneu76u2, operator, "Assign").
+node[ast_oxc](ndc5985b2a377c4ea_jodco7ksv026, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_jodco7ksv026, 8).
+attr[ast_oxc](ndc5985b2a377c4ea_jodco7ksv026, name, "y").
+child[ast_oxc](ndc5985b2a377c4ea_6o9thbneu76u2, left, 0, ndc5985b2a377c4ea_jodco7ksv026).
+node[ast_oxc](ndc5985b2a377c4ea_28ad7fimrbhh2, binary_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_28ad7fimrbhh2, 8).
+attr[ast_oxc](ndc5985b2a377c4ea_28ad7fimrbhh2, operator, "Addition").
+node[ast_oxc](ndc5985b2a377c4ea_lbc42r2qe19g4, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_lbc42r2qe19g4, 8).
+attr[ast_oxc](ndc5985b2a377c4ea_lbc42r2qe19g4, name, "y").
+child[ast_oxc](ndc5985b2a377c4ea_28ad7fimrbhh2, left, 0, ndc5985b2a377c4ea_lbc42r2qe19g4).
+node[ast_oxc](ndc5985b2a377c4ea_v772o151dhcmc, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_v772o151dhcmc, 8).
+attr[ast_oxc](ndc5985b2a377c4ea_v772o151dhcmc, value, 1).
+child[ast_oxc](ndc5985b2a377c4ea_28ad7fimrbhh2, right, 0, ndc5985b2a377c4ea_v772o151dhcmc).
+child[ast_oxc](ndc5985b2a377c4ea_6o9thbneu76u2, right, 0, ndc5985b2a377c4ea_28ad7fimrbhh2).
+child[ast_oxc](ndc5985b2a377c4ea_357odkhchnt73, expression, 0, ndc5985b2a377c4ea_6o9thbneu76u2).
+child[ast_oxc](ndc5985b2a377c4ea_96pgmrf1d7pf6, statements, 1, ndc5985b2a377c4ea_357odkhchnt73).
+node[ast_oxc](ndc5985b2a377c4ea_rvbhtcdhu7agc, return_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_rvbhtcdhu7agc, 9).
+node[ast_oxc](ndc5985b2a377c4ea_628g1ie2q4dl7, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_628g1ie2q4dl7, 9).
+attr[ast_oxc](ndc5985b2a377c4ea_628g1ie2q4dl7, name, "y").
+child[ast_oxc](ndc5985b2a377c4ea_rvbhtcdhu7agc, argument, 0, ndc5985b2a377c4ea_628g1ie2q4dl7).
+child[ast_oxc](ndc5985b2a377c4ea_96pgmrf1d7pf6, statements, 2, ndc5985b2a377c4ea_rvbhtcdhu7agc).
+child[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, body, 0, ndc5985b2a377c4ea_96pgmrf1d7pf6).
+attr[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, type, "FunctionDeclaration").
+attr[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, generator, false).
+attr[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, async, false).
+attr[ast_oxc](ndc5985b2a377c4ea_out04e5inu6s5, declare, false).
+child[ast_oxc](ndc5985b2a377c4ea_root, body, 1, ndc5985b2a377c4ea_out04e5inu6s5).
+node[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, function, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, 11).
+node[ast_oxc](ndc5985b2a377c4ea_f2kdng7n1t6v7, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_f2kdng7n1t6v7, 11).
+attr[ast_oxc](ndc5985b2a377c4ea_f2kdng7n1t6v7, name, "conditional").
+child[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, id, 0, ndc5985b2a377c4ea_f2kdng7n1t6v7).
+node[ast_oxc](ndc5985b2a377c4ea_p2tfb5jla8u1a, formal_parameters, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_p2tfb5jla8u1a, 11).
+attr[ast_oxc](ndc5985b2a377c4ea_p2tfb5jla8u1a, kind, "FormalParameter").
+node[ast_oxc](ndc5985b2a377c4ea_icnb9995e6fpc, formal_parameter, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_icnb9995e6fpc, 11).
+attr[ast_oxc](ndc5985b2a377c4ea_icnb9995e6fpc, optional, false).
+attr[ast_oxc](ndc5985b2a377c4ea_icnb9995e6fpc, readonly, false).
+node[ast_oxc](ndc5985b2a377c4ea_6tjn42a87pfr8, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_6tjn42a87pfr8, 11).
+attr[ast_oxc](ndc5985b2a377c4ea_6tjn42a87pfr8, name, "c").
+child[ast_oxc](ndc5985b2a377c4ea_icnb9995e6fpc, pattern, 0, ndc5985b2a377c4ea_6tjn42a87pfr8).
+child[ast_oxc](ndc5985b2a377c4ea_p2tfb5jla8u1a, items, 0, ndc5985b2a377c4ea_icnb9995e6fpc).
+child[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, params, 0, ndc5985b2a377c4ea_p2tfb5jla8u1a).
+node[ast_oxc](ndc5985b2a377c4ea_jj1fnvqkuh1v9, function_body, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_jj1fnvqkuh1v9, 11).
+node[ast_oxc](ndc5985b2a377c4ea_7at8rq0lcg4ue, variable_declaration, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_7at8rq0lcg4ue, 12).
+attr[ast_oxc](ndc5985b2a377c4ea_7at8rq0lcg4ue, kind, "Let").
+attr[ast_oxc](ndc5985b2a377c4ea_7at8rq0lcg4ue, declare, false).
+node[ast_oxc](ndc5985b2a377c4ea_ua6p025cp9clb, variable_declarator, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ua6p025cp9clb, 12).
+node[ast_oxc](ndc5985b2a377c4ea_1117tfsa8mm35, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_1117tfsa8mm35, 12).
+attr[ast_oxc](ndc5985b2a377c4ea_1117tfsa8mm35, name, "z").
+child[ast_oxc](ndc5985b2a377c4ea_ua6p025cp9clb, id, 0, ndc5985b2a377c4ea_1117tfsa8mm35).
+node[ast_oxc](ndc5985b2a377c4ea_c7604hhpnl3d1, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_c7604hhpnl3d1, 12).
+attr[ast_oxc](ndc5985b2a377c4ea_c7604hhpnl3d1, value, 1).
+child[ast_oxc](ndc5985b2a377c4ea_ua6p025cp9clb, init, 0, ndc5985b2a377c4ea_c7604hhpnl3d1).
+child[ast_oxc](ndc5985b2a377c4ea_7at8rq0lcg4ue, declarations, 0, ndc5985b2a377c4ea_ua6p025cp9clb).
+child[ast_oxc](ndc5985b2a377c4ea_jj1fnvqkuh1v9, statements, 0, ndc5985b2a377c4ea_7at8rq0lcg4ue).
+node[ast_oxc](ndc5985b2a377c4ea_bd1u0r9lellff, if_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_bd1u0r9lellff, 13).
+node[ast_oxc](ndc5985b2a377c4ea_kn8m6d3rh3l4c, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_kn8m6d3rh3l4c, 13).
+attr[ast_oxc](ndc5985b2a377c4ea_kn8m6d3rh3l4c, name, "c").
+child[ast_oxc](ndc5985b2a377c4ea_bd1u0r9lellff, test, 0, ndc5985b2a377c4ea_kn8m6d3rh3l4c).
+node[ast_oxc](ndc5985b2a377c4ea_es2rfrvvfcnac, expression_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_es2rfrvvfcnac, 13).
+node[ast_oxc](ndc5985b2a377c4ea_a281f7c4vgam2, assignment_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_a281f7c4vgam2, 13).
+attr[ast_oxc](ndc5985b2a377c4ea_a281f7c4vgam2, operator, "Assign").
+node[ast_oxc](ndc5985b2a377c4ea_j3d6f0462lr22, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_j3d6f0462lr22, 13).
+attr[ast_oxc](ndc5985b2a377c4ea_j3d6f0462lr22, name, "z").
+child[ast_oxc](ndc5985b2a377c4ea_a281f7c4vgam2, left, 0, ndc5985b2a377c4ea_j3d6f0462lr22).
+node[ast_oxc](ndc5985b2a377c4ea_ve8vqrq26dk43, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ve8vqrq26dk43, 13).
+attr[ast_oxc](ndc5985b2a377c4ea_ve8vqrq26dk43, value, 2).
+child[ast_oxc](ndc5985b2a377c4ea_a281f7c4vgam2, right, 0, ndc5985b2a377c4ea_ve8vqrq26dk43).
+child[ast_oxc](ndc5985b2a377c4ea_es2rfrvvfcnac, expression, 0, ndc5985b2a377c4ea_a281f7c4vgam2).
+child[ast_oxc](ndc5985b2a377c4ea_bd1u0r9lellff, consequent, 0, ndc5985b2a377c4ea_es2rfrvvfcnac).
+child[ast_oxc](ndc5985b2a377c4ea_jj1fnvqkuh1v9, statements, 1, ndc5985b2a377c4ea_bd1u0r9lellff).
+node[ast_oxc](ndc5985b2a377c4ea_feq37jc3moufd, expression_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_feq37jc3moufd, 14).
+node[ast_oxc](ndc5985b2a377c4ea_253t9r39ou75a, assignment_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_253t9r39ou75a, 14).
+attr[ast_oxc](ndc5985b2a377c4ea_253t9r39ou75a, operator, "Assign").
+node[ast_oxc](ndc5985b2a377c4ea_h843af23oabn8, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_h843af23oabn8, 14).
+attr[ast_oxc](ndc5985b2a377c4ea_h843af23oabn8, name, "z").
+child[ast_oxc](ndc5985b2a377c4ea_253t9r39ou75a, left, 0, ndc5985b2a377c4ea_h843af23oabn8).
+node[ast_oxc](ndc5985b2a377c4ea_qupgqfqpouqb7, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_qupgqfqpouqb7, 14).
+attr[ast_oxc](ndc5985b2a377c4ea_qupgqfqpouqb7, value, 3).
+child[ast_oxc](ndc5985b2a377c4ea_253t9r39ou75a, right, 0, ndc5985b2a377c4ea_qupgqfqpouqb7).
+child[ast_oxc](ndc5985b2a377c4ea_feq37jc3moufd, expression, 0, ndc5985b2a377c4ea_253t9r39ou75a).
+child[ast_oxc](ndc5985b2a377c4ea_jj1fnvqkuh1v9, statements, 2, ndc5985b2a377c4ea_feq37jc3moufd).
+node[ast_oxc](ndc5985b2a377c4ea_3u5orbv3676va, return_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_3u5orbv3676va, 15).
+node[ast_oxc](ndc5985b2a377c4ea_ar2p8ua057e4c, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ar2p8ua057e4c, 15).
+attr[ast_oxc](ndc5985b2a377c4ea_ar2p8ua057e4c, name, "z").
+child[ast_oxc](ndc5985b2a377c4ea_3u5orbv3676va, argument, 0, ndc5985b2a377c4ea_ar2p8ua057e4c).
+child[ast_oxc](ndc5985b2a377c4ea_jj1fnvqkuh1v9, statements, 3, ndc5985b2a377c4ea_3u5orbv3676va).
+child[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, body, 0, ndc5985b2a377c4ea_jj1fnvqkuh1v9).
+attr[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, type, "FunctionDeclaration").
+attr[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, generator, false).
+attr[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, async, false).
+attr[ast_oxc](ndc5985b2a377c4ea_qo2983m0edr42, declare, false).
+child[ast_oxc](ndc5985b2a377c4ea_root, body, 2, ndc5985b2a377c4ea_qo2983m0edr42).
+node[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, function, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, 17).
+node[ast_oxc](ndc5985b2a377c4ea_q659cnvta0h0a, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_q659cnvta0h0a, 17).
+attr[ast_oxc](ndc5985b2a377c4ea_q659cnvta0h0a, name, "captured").
+child[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, id, 0, ndc5985b2a377c4ea_q659cnvta0h0a).
+node[ast_oxc](ndc5985b2a377c4ea_rq165q2jpqv09, formal_parameters, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_rq165q2jpqv09, 17).
+attr[ast_oxc](ndc5985b2a377c4ea_rq165q2jpqv09, kind, "FormalParameter").
+child[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, params, 0, ndc5985b2a377c4ea_rq165q2jpqv09).
+node[ast_oxc](ndc5985b2a377c4ea_s6mo4f3vs3cdb, function_body, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_s6mo4f3vs3cdb, 17).
+node[ast_oxc](ndc5985b2a377c4ea_obq0fqhb2kiq1, variable_declaration, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_obq0fqhb2kiq1, 18).
+attr[ast_oxc](ndc5985b2a377c4ea_obq0fqhb2kiq1, kind, "Let").
+attr[ast_oxc](ndc5985b2a377c4ea_obq0fqhb2kiq1, declare, false).
+node[ast_oxc](ndc5985b2a377c4ea_p6nmds3og1353, variable_declarator, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_p6nmds3og1353, 18).
+node[ast_oxc](ndc5985b2a377c4ea_us249bs1egfbd, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_us249bs1egfbd, 18).
+attr[ast_oxc](ndc5985b2a377c4ea_us249bs1egfbd, name, "w").
+child[ast_oxc](ndc5985b2a377c4ea_p6nmds3og1353, id, 0, ndc5985b2a377c4ea_us249bs1egfbd).
+node[ast_oxc](ndc5985b2a377c4ea_rq9ur2i707eq3, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_rq9ur2i707eq3, 18).
+attr[ast_oxc](ndc5985b2a377c4ea_rq9ur2i707eq3, value, 1).
+child[ast_oxc](ndc5985b2a377c4ea_p6nmds3og1353, init, 0, ndc5985b2a377c4ea_rq9ur2i707eq3).
+child[ast_oxc](ndc5985b2a377c4ea_obq0fqhb2kiq1, declarations, 0, ndc5985b2a377c4ea_p6nmds3og1353).
+child[ast_oxc](ndc5985b2a377c4ea_s6mo4f3vs3cdb, statements, 0, ndc5985b2a377c4ea_obq0fqhb2kiq1).
+node[ast_oxc](ndc5985b2a377c4ea_ab5ltdcoaqvpa, variable_declaration, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ab5ltdcoaqvpa, 19).
+attr[ast_oxc](ndc5985b2a377c4ea_ab5ltdcoaqvpa, kind, "Const").
+attr[ast_oxc](ndc5985b2a377c4ea_ab5ltdcoaqvpa, declare, false).
+node[ast_oxc](ndc5985b2a377c4ea_ke8bp6ns2ehf4, variable_declarator, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ke8bp6ns2ehf4, 19).
+node[ast_oxc](ndc5985b2a377c4ea_de8jiogeem464, binding_identifier, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_de8jiogeem464, 19).
+attr[ast_oxc](ndc5985b2a377c4ea_de8jiogeem464, name, "f").
+child[ast_oxc](ndc5985b2a377c4ea_ke8bp6ns2ehf4, id, 0, ndc5985b2a377c4ea_de8jiogeem464).
+node[ast_oxc](ndc5985b2a377c4ea_1ef34o4r9j1n, arrow_function_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_1ef34o4r9j1n, 19).
+node[ast_oxc](ndc5985b2a377c4ea_ekb8dpv1a7414, formal_parameters, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ekb8dpv1a7414, 19).
+attr[ast_oxc](ndc5985b2a377c4ea_ekb8dpv1a7414, kind, "ArrowFormalParameters").
+child[ast_oxc](ndc5985b2a377c4ea_1ef34o4r9j1n, params, 0, ndc5985b2a377c4ea_ekb8dpv1a7414).
+node[ast_oxc](ndc5985b2a377c4ea_8kru4qqrnksk6, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_8kru4qqrnksk6, 19).
+attr[ast_oxc](ndc5985b2a377c4ea_8kru4qqrnksk6, name, "w").
+child[ast_oxc](ndc5985b2a377c4ea_1ef34o4r9j1n, body, 0, ndc5985b2a377c4ea_8kru4qqrnksk6).
+attr[ast_oxc](ndc5985b2a377c4ea_1ef34o4r9j1n, async, false).
+child[ast_oxc](ndc5985b2a377c4ea_ke8bp6ns2ehf4, init, 0, ndc5985b2a377c4ea_1ef34o4r9j1n).
+child[ast_oxc](ndc5985b2a377c4ea_ab5ltdcoaqvpa, declarations, 0, ndc5985b2a377c4ea_ke8bp6ns2ehf4).
+child[ast_oxc](ndc5985b2a377c4ea_s6mo4f3vs3cdb, statements, 1, ndc5985b2a377c4ea_ab5ltdcoaqvpa).
+node[ast_oxc](ndc5985b2a377c4ea_l2f1v9ofju415, expression_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_l2f1v9ofju415, 20).
+node[ast_oxc](ndc5985b2a377c4ea_20s70lvk3lh78, assignment_expression, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_20s70lvk3lh78, 20).
+attr[ast_oxc](ndc5985b2a377c4ea_20s70lvk3lh78, operator, "Assign").
+node[ast_oxc](ndc5985b2a377c4ea_ds8g84lvpfgq9, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_ds8g84lvpfgq9, 20).
+attr[ast_oxc](ndc5985b2a377c4ea_ds8g84lvpfgq9, name, "w").
+child[ast_oxc](ndc5985b2a377c4ea_20s70lvk3lh78, left, 0, ndc5985b2a377c4ea_ds8g84lvpfgq9).
+node[ast_oxc](ndc5985b2a377c4ea_0aa64ge3bbipe, numeric_literal, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_0aa64ge3bbipe, 20).
+attr[ast_oxc](ndc5985b2a377c4ea_0aa64ge3bbipe, value, 2).
+child[ast_oxc](ndc5985b2a377c4ea_20s70lvk3lh78, right, 0, ndc5985b2a377c4ea_0aa64ge3bbipe).
+child[ast_oxc](ndc5985b2a377c4ea_l2f1v9ofju415, expression, 0, ndc5985b2a377c4ea_20s70lvk3lh78).
+child[ast_oxc](ndc5985b2a377c4ea_s6mo4f3vs3cdb, statements, 2, ndc5985b2a377c4ea_l2f1v9ofju415).
+node[ast_oxc](ndc5985b2a377c4ea_v84vlbegoo217, return_statement, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_v84vlbegoo217, 21).
+node[ast_oxc](ndc5985b2a377c4ea_10fjgk656t4jf, identifier_reference, "a.js").
+line[ast_oxc](ndc5985b2a377c4ea_10fjgk656t4jf, 21).
+attr[ast_oxc](ndc5985b2a377c4ea_10fjgk656t4jf, name, "f").
+child[ast_oxc](ndc5985b2a377c4ea_v84vlbegoo217, argument, 0, ndc5985b2a377c4ea_10fjgk656t4jf).
+child[ast_oxc](ndc5985b2a377c4ea_s6mo4f3vs3cdb, statements, 3, ndc5985b2a377c4ea_v84vlbegoo217).
+child[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, body, 0, ndc5985b2a377c4ea_s6mo4f3vs3cdb).
+attr[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, type, "FunctionDeclaration").
+attr[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, generator, false).
+attr[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, async, false).
+attr[ast_oxc](ndc5985b2a377c4ea_f2fkl7fkv7e97, declare, false).
+child[ast_oxc](ndc5985b2a377c4ea_root, body, 3, ndc5985b2a377c4ea_f2fkl7fkv7e97).
+file[ast_oxc](ndc5985b2a377c4ea_root, "a.js").
+has_file[fs](".", "a.js").

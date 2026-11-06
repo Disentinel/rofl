@@ -1,6 +1,6 @@
 ---
 world: js-globals
-books: audit, code, flow, main, value
+books: audit, code, execution, flow, main, value
 default: audit
 ---
 
@@ -29,7 +29,8 @@ Reads:
   - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
   - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the execution: [transfers](js-callgraph.rofl.md#transfers)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow, in the flow: [selects](js-dataflow.rofl.md#selects)
@@ -101,7 +102,7 @@ A call
 - <a id="es_global_invoke"></a>invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of it [is the global](#es_global) Name of Rel with some form.
 
 <a id="es_global_construct"></a>A node constructs the global Name of a release Rel if all of:
-  - it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression`;
+  - it [is a transfer site](js-callgraph.rofl.md#transfers) of `new_expression`;
   - [`callee`](#callee)(it, N);
   - a node N [is the global](#es_global) Name of Rel with some form.
 
@@ -187,4 +188,24 @@ In the audit:
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.
+
+> the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `execution` | `value` |
+| `execution` | `tree` |
+| `execution` | `code` |
+| `execution` | `flow` |
+| `execution` | `main` |
+| `code` | `execution` |
+| `flow` | `execution` |
+| `audit` | `execution` |
+| `surface` | `execution` |
+| `type` | `code` |
+| `type` | `flow` |
+| `code` | `type` |
+| `flow` | `type` |
 

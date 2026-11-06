@@ -3393,9 +3393,13 @@ work_needs(w_js_model_on_roles, w_rust_scanner_oxc).
 
 work(w_lifecycle_world,
   "THE [lifecycle] WORLD OVER THE ROLES (owner, 2026-10-31: there is no L3 level; lifecycle is a world of behaviour, doc «Словарь ролей модели JS» rev 92, «Миры поведения»). The [lifecycle] perspective over roles for JS; first questions are use after death and leaks (created_by without deleted_by); it needs before and resolves as bridges plus open/close pairs from js-host; the old operation words (overwrites, hidden_call, coerces, narrows, transfers, suspends, shadows, only_if) are derived, see the doc. ACCEPTANCE: use after death and a leak each answered over [lifecycle] on a JS fixture that has one and a control that has none, and every derived operation word answering what its old relation (param_default, member_written, sees_binder, hidden_call_pos, eff_coerced, narrows_at, transfer_site, suspend_at) answers today.").
-work_state(w_lifecycle_world, open).
+work_state(w_lifecycle_world, done).
 work_needs(w_lifecycle_world, w_l2_roles).
 work_needs(w_lifecycle_world, w_js_model_on_roles).
+-- 2026-11-05: the first half is in: use after death and leaks over the host's resources, models/lang/js/lifecycle.rofl,
+-- worlds lifecycle_leaky / lifecycle_clean / lifecycle_forgetful (f_the_lifecycle_world_answers_use_after_death_and_leaks).
+-- 2026-11-05: the derived words are the old relations renamed into their worlds, fact for fact
+-- (f_the_words_of_behaviour_live_in_their_worlds); overwrites is new.
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").

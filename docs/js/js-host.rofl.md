@@ -66,6 +66,7 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
+- A node points to it if it [calls the host global](#host_global_call) some name of some host.
 - <a id="host_effect_used"></a>An effect is used by a host call if some call [has the host effect](#host_call_effect) it by some route.
 - <a id="runtime_has_release"></a>A runtime has a release if it [runs the release](#runtime_reaches_release) some release.
 
@@ -155,7 +156,14 @@ A call
   - a node O [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.rofl.md#selects) Key.
 - <a id="host_global_call"></a>calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of it [refers to the global](#host_global_ref) Name of H.
-- <a id="host_module_call"></a>calls the module member Key of a spec Spec if all of:
+
+> what a global of the host returns is a value of its own, born at the call (setInterval's timer)
+
+In the flow:
+
+In the code:
+
+<a id="host_module_call"></a>A call calls the module member Key of a spec Spec if all of:
   - a node X [is a member of the builtin](#builtin_member) of Spec Key;
   - a node G [points to](js-concat.rofl.md#may_be_node) X;
   - [the callee](js-callgraph.rofl.md#callee_of) of it is G.

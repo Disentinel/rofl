@@ -1,0 +1,2 @@
+-- models/lang/js/fixtures/lifecycle/clean/server.js: the control, the same program done right; it expects nothing
+edb(lc_expect).

@@ -181,7 +181,7 @@ sig(rest_in_pattern, "holds_a_rest(declarator D, node R, in file File)").
 sig(rest_binds, "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)").
 sig(param_of, "takes(function F, name Name:2, at index I:1)").
 sig(param_rest, "has_the_rest_parameter(function F, at index J, node R, name Name)").
-sig(param_default, "defaults(function F, name Name, to node Init)").
+sig(fallback, "defaults(function F, name Name, to node Init)").
 sig(param_use, "uses(function F, name Name, at node U)").
 sig(elem_at, "the_element(of node X, index I, is node E)").
 sig(decl_value, "takes_its_value_from(declarator D, node X)").
@@ -271,7 +271,7 @@ sig(meta_unformed, "has_no_meta_form(node N)").
 
 -- controlflow
 sig(abrupt_at, "is_abrupt(sequence B, from step I)").
-sig(suspend_at, "suspends(sequence B, from step I)").
+sig(suspends, "suspends(sequence B, from step I)").
 
 -- ambient
 sig(amb_short_at, "falls_short(effect N:2, of effect label L:0, at host H:1)").
@@ -462,7 +462,7 @@ sig(attr_kind_split, "splits_the_kind(key K, kind Kind)").
 sig(attr_split_ok_unseen, "is_an_unseen_split_excuse(key K, for kind Kind)").
 
 -- callgraph: sites, shapes, the enclosing function, the edge, the frontier, await
-sig(transfer_site, "is_a_transfer_site(node X, of kind K)").
+sig(transfers, "is_a_transfer_site(node X, of kind K)").
 sig(site, "is_a_site(node X)").
 sig(call_arg, "passes_the_argument(call C, node X:2, at index I:1)").
 sig(member_like, "calls_through(call C, member access N)").
@@ -598,7 +598,7 @@ sig(pattern_accessor, "destructures_through_the_accessor(object pattern P, node 
 sig(spread_iterated, "is_iterated(spread S)").
 sig(pattern_iterates, "destructures_through(node P, node M)").
 sig(pattern_next, "iterates_with_the_next(node X, function Next)").
-sig(hidden_call_pos, "hides_a_call_by(node N, mechanism M)").
+sig(hidden_call, "hides_a_call_by(node N, mechanism M)").
 sig(hidden_call_src, "the_hidden_call_source(of node P, is node Init)").
 sig(hidden_call_user, "fires_the_hidden_call(node N, node M)").
 sig(hidden_call_fires, "fires_a_hidden_call(node N)").
@@ -712,7 +712,7 @@ sig(concrete_async_smuggled, "smuggles_a_suspension(spec S, at operation Op)").
 sig(eff_op_inspects, "inspects(node N)").
 sig(eff_op_beyond, "runs_the_hook(node N, hook E)").
 sig(eff_converts, "converts(node N)").
-sig(eff_coerced, "coerces(node N, node X)").
+sig(coerces, "coerces(node N, node X)").
 sig(eff_conv_object, "coerces_the_object(node N, node X)").
 sig(eff_conv_call, "coerces_through(node N, node M)").
 sig(eff_conv_overridden, "coerces_with_an_override(node N, node X)").

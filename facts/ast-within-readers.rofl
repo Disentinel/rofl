@@ -50,12 +50,12 @@ reader_reads(guarded_46_1, ast_within).
 reader_note(guarded_46_1, "the subtree under a guard arm").
 
 reader(suspend_at_72_1, "rules/js-controlflow.rofl", scoped_ascent, fb).
-reader_head(suspend_at_72_1, suspend_at, 72).
+reader_head(suspend_at_72_1, suspends, 72).
 reader_reads(suspend_at_72_1, ast_within).
 reader_note(suspend_at_72_1, "ancestors of a suspend node, stopped below its nearest function (the next premise is the boundary)").
 
 reader(suspend_at_72_2, "rules/js-controlflow.rofl", is_ancestor, bb).
-reader_head(suspend_at_72_2, suspend_at, 72).
+reader_head(suspend_at_72_2, suspends, 72).
 reader_reads(suspend_at_72_2, ast_within).
 reader_note(suspend_at_72_2, "boundary test of the ascent above").
 

@@ -396,12 +396,12 @@ param_wrap[code](F, I, W, L) :- param[value](F, I, L), parent[tree](F, W), assig
 
 param_of[flow](F, I, Name) :- fn_node[code](F), param_wrap[code](F, I, _, L), binds[value](L, Name).
 
-param_default[flow](F, Name, Init) :- fn_node[code](F), param_wrap[code](F, _, P, L), binds[value](L, Name),
+fallback[execution](F, Name, Init) :- fn_node[code](F), param_wrap[code](F, _, P, L), binds[value](L, Name),
                                       assign[value](P, L, Init).
 
-may_be_node[flow](U, N) :- param_default[flow](F, Name, Init), may_be_node[flow](Init, N),
+may_be_node[flow](U, N) :- fallback[execution](F, Name, Init), may_be_node[flow](Init, N),
                            param_use[flow](F, Name, U).
-may_be_lit[flow](U, L)  :- param_default[flow](F, Name, Init), may_be_lit[flow](Init, L),
+may_be_lit[flow](U, L)  :- fallback[execution](F, Name, Init), may_be_lit[flow](Init, L),
                            param_use[flow](F, Name, U).
 
 -- A parameter that is a pattern, `({ port, host }) =>`, alone or with a default for the whole object, binds each name
@@ -1987,3 +1987,8 @@ decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
                                          class_method[code](CD, M), key_name[code](M, Key).
 class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N), static[value](M).
 class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N), not static[value](M).
+
+-- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

@@ -110,7 +110,7 @@ Declared as facts:
 | `rest_binds` | "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)" |
 | `param_of` | "takes(function F, name Name:2, at index I:1)" |
 | `param_rest` | "has_the_rest_parameter(function F, at index J, node R, name Name)" |
-| `param_default` | "defaults(function F, name Name, to node Init)" |
+| `fallback` | "defaults(function F, name Name, to node Init)" |
 | `param_use` | "uses(function F, name Name, at node U)" |
 | `elem_at` | "the_element(of node X, index I, is node E)" |
 | `decl_value` | "takes_its_value_from(declarator D, node X)" |
@@ -205,7 +205,7 @@ Declared as facts:
 | arg 1 | arg 2 |
 |---|---|
 | `abrupt_at` | "is_abrupt(sequence B, from step I)" |
-| `suspend_at` | "suspends(sequence B, from step I)" |
+| `suspends` | "suspends(sequence B, from step I)" |
 
 > ambient
 
@@ -461,7 +461,7 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `transfer_site` | "is_a_transfer_site(node X, of kind K)" |
+| `transfers` | "is_a_transfer_site(node X, of kind K)" |
 | `site` | "is_a_site(node X)" |
 | `call_arg` | "passes_the_argument(call C, node X:2, at index I:1)" |
 | `member_like` | "calls_through(call C, member access N)" |
@@ -608,7 +608,7 @@ Declared as facts:
 | `spread_iterated` | "is_iterated(spread S)" |
 | `pattern_iterates` | "destructures_through(node P, node M)" |
 | `pattern_next` | "iterates_with_the_next(node X, function Next)" |
-| `hidden_call_pos` | "hides_a_call_by(node N, mechanism M)" |
+| `hidden_call` | "hides_a_call_by(node N, mechanism M)" |
 | `hidden_call_src` | "the_hidden_call_source(of node P, is node Init)" |
 | `hidden_call_user` | "fires_the_hidden_call(node N, node M)" |
 | `hidden_call_fires` | "fires_a_hidden_call(node N)" |
@@ -732,7 +732,7 @@ Declared as facts:
 | `eff_op_inspects` | "inspects(node N)" |
 | `eff_op_beyond` | "runs_the_hook(node N, hook E)" |
 | `eff_converts` | "converts(node N)" |
-| `eff_coerced` | "coerces(node N, node X)" |
+| `coerces` | "coerces(node N, node X)" |
 | `eff_conv_object` | "coerces_the_object(node N, node X)" |
 | `eff_conv_call` | "coerces_through(node N, node M)" |
 | `eff_conv_overridden` | "coerces_with_an_override(node N, node X)" |
