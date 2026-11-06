@@ -121,7 +121,11 @@ function worlds(): [string, string[]][] {
   }
 
   out.push(['boot_only', []]);
-  return out;
+  // a world the TypeScript kernel cannot build (facts/checks.rofl, `one_engine, rust`: the profile of an evaluation) is
+  // no case for it to answer
+  const rustOnly = new Set([...fs.readFileSync(path.join(ROOT, 'facts/checks.rofl'), 'utf8')
+    .matchAll(/^check_opt\("([^"]+)", one_engine, rust\)\./gm)].map((m) => m[1]));
+  return out.filter(([name]) => !rustOnly.has(name));
 }
 
 /** Every `.rofl` under a directory, one level of nesting included — `rules/`
@@ -275,7 +279,7 @@ fs.writeFileSync(path.join(out, 'INDEX.tsv'),
 // reader building the world from text must refuse the same ones.
 fs.writeFileSync(path.join(out, 'DROPPED.tsv'), '-- name\tfile\twhy (refused: the kernel refused it)\n' + droppedRows.join('\n') + (droppedRows.length ? '\n' : ''));
 fs.writeFileSync(path.join(out, 'STAMP'),
-  stamp(['boot.rofl', ...all.flatMap(([, fs_]) => fs_.map(rel)), ...codeInputs()]));
+  stamp(['boot.rofl', 'facts/checks.rofl', ...all.flatMap(([, fs_]) => fs_.map(rel)), ...codeInputs()]));
 // A DERIVED FACT THAT CANNOT SAY WHY IT HOLDS is the one provenance failure
 // worth a line here. Reported by name so it cannot be a case that quietly is
 // not there.

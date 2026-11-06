@@ -27,6 +27,10 @@ fn a_resumed_evaluation_is_a_whole_one() {
             continue;
         }
         let want = state(&mut whole);
+        // a world that reads the profile of its evaluation reads what the run cost, which a run cut and resumed costs otherwise
+        if want.contains("[profile](") {
+            continue;
+        }
         checked += 1;
         for k in [2, 3, 7, 40] {
             let b = (w.steps / k).max(1);
