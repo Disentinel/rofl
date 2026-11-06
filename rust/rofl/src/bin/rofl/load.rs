@@ -460,7 +460,7 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
 /// A run its world answers by volumes (`engine/volumes.rs`): questions asked, of a world evaluated once, and
 /// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world.
 fn by_volumes(o: &Opts) -> bool {
-    !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
+    !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_) | Q::Why(_) | Q::WhyAll(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
         && o.below.is_empty() && o.kept.is_none() && o.save.is_none() && !o.propose && std::env::var("ROFL_VOLUMES").as_deref() != Ok("0")
 }
 
@@ -496,14 +496,16 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let mut v = match s.by_volumes(rofl::engine::volumes::groups(cut.files, k), files) {
         Ok(v) => {
             let st = &v.stats;
-            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} [surface] facts ({} ms of {} ms)", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms);
+            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} [surface] facts ({} ms of {} ms); held above the core, laid: {:?}", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms, st.held);
             v
         }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
     for w in &v.worlds { for d in &w.eval.diags { eprintln!("diag: {d}"); } }
     let code = answer_volumes(o, &mut s, &mut v);
-    if let Some(k) = &kept {
+    if v.stats.cut {
+        eprintln!("a wall cut the volumes' evaluation (the memory this process may use, or the budget): its answers are partial, and they are not kept");
+    } else if let Some(k) = &kept {
         let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
         if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k) { eprintln!("the volumes are not kept: {e}"); }
     }
@@ -546,11 +548,24 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
 fn answer_volumes(o: &Opts, s: &mut Session, v: &mut rofl::session::Volumes) -> i32 {
     let (mut refused, mut partial) = (false, false);
     for q in &o.qs {
-        let Q::Ask(l) = q else { unreachable!() };
+        let l = match q {
+            Q::Ask(l) => l,
+            Q::Why(l) | Q::WhyAll(l) => {
+                match s.why_by_volumes(v, l, matches!(q, Q::WhyAll(_))) {
+                    Ok(t) => if o.json { println!("{}", serde_json::json!({ "ok": true, "text": t })) } else { println!("{t}\n") },
+                    Err(e) => {
+                        refused = true;
+                        if o.json { println!("{}", serde_json::json!({ "ok": false, "error": e })) } else { println!("{e}\n") }
+                    }
+                }
+                continue;
+            }
+            _ => unreachable!(),
+        };
         let mut all: Option<rofl::session::Answer> = None;
         let mut err = None;
         let rel = l.split(['(', '[']).next().unwrap_or("").trim().to_string();
-        let mut resident = match s.resident(&v, &rel) {
+        let mut resident = match s.resident(v, &rel) {
             Ok(r) => r,
             Err(e) => fail(o.json, WORLD_REFUSED, &format!("volumes: {}", rofl::describe(&e))),
         };

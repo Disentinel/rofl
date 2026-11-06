@@ -116,6 +116,10 @@ pub struct VolStats {
     pub laid: usize,
     pub ms: u128,
     pub lay_ms: u128,
+    /// the facts each worker holds above the core at the end, and of them those laid by the others
+    pub held: Vec<(u32, usize)>,
+    /// a wall (memory, steps, rows) cut a worker, and the answers are partial
+    pub cut: bool,
 }
 
 fn on_threads<T: Send>(ws: &mut [Worker], f: &(dyn Fn(usize, &mut Worker) -> Result<T, Halt> + Sync)) -> Result<Vec<T>, Halt> {
@@ -204,6 +208,9 @@ impl Eval {
                 let lays = std::sync::Mutex::new(lays.into_iter().map(Some).collect::<Vec<_>>());
                 on_threads(&mut ws, &|i, w| {
                     let lay = lays.lock().unwrap()[i].take().unwrap_or_default();
+                    if w.e.wall.level_rest.is_none() {
+                        return Ok(());
+                    }
                     let mut ids = Vec::with_capacity(lay.len());
                     for (rel, persp, args) in lay {
                         let (id, new) = w.e.store.put(&w.e.h, rel, persp, &args, F_BASE);
@@ -212,8 +219,22 @@ impl Eval {
                             ids.push(id);
                         }
                     }
-                    w.e.admit(&ids)
+                    match w.e.admit(&ids) {
+                        Err(Halt::Budget(..)) => {
+                            w.e.wall.level_rest = None;
+                            Ok(())
+                        }
+                        r => r,
+                    }
                 })?;
+                if ws.iter().any(|w| w.e.wall.level_rest.is_none()) {
+                    break;
+                }
+            }
+            if ws.iter().any(|w| w.e.wall.level_rest.is_none()) {
+                // a wall cut a worker: the others are not given what it would have laid, and every answer is partial
+                st.cut = true;
+                break;
             }
             let lv = ws[0].e.wall.next_level();
             if ws.iter().any(|w| w.e.wall.next_level() != lv) {
@@ -230,9 +251,19 @@ impl Eval {
         on_threads(&mut ws, &|_, w| {
             w.e.wall.hold_end = false;
             w.e.wall.level_wall = None;
-            w.e.run_on().map(|_| ())
+            if w.e.wall.level_rest.is_some() {
+                w.e.run_on()?;
+            }
+            Ok(())
         })?;
+        if st.cut {
+            for w in &mut ws {
+                w.e.store.partial_eval = true;
+            }
+        }
         st.ms = t0.elapsed().as_millis();
+        let core = self.store.len_ids();
+        st.held = ws.iter().map(|w| (w.e.store.len_ids() - core, w.laid.len())).collect();
         Ok((ws, st))
     }
 }
@@ -309,6 +340,7 @@ impl Eval {
         }
         res.store.dirty = true;
         res.run()?;
+        res.store.partial_eval |= ws.iter().any(|(e, _)| e.store.partial_eval);
         Ok(Some(res))
     }
 }
