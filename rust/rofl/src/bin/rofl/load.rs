@@ -291,6 +291,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         }
     }
     let slot = question_slot(&o, &world);
+    if opened.is_none() && by_volumes(&o) {
+        if let Some(code) = answer_by_volumes(&o, &world, &slot) { std::process::exit(code); }
+    }
     let found = open_slot(&o, &world, &slot);
     let mut opened = opened.or(found.opened);
     let mut by_delta = None;
@@ -307,9 +310,6 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     set_walls(&o, &mut s);
     if let (Some(cut), Some(p)) = (found.cut, &slot) { resume_disk_wall(&o, &world, &mut s, p, cut); }
     if let (Some(d), Some(p)) = (&by_delta, &slot) { keep_taken(&o, &world, &mut s, p, d); }
-    if !from_disk && by_volumes(&o) {
-        if let Some(code) = answer_by_volumes(&o) { std::process::exit(code); }
-    }
     if !from_disk { build_world(&o, &world, &mut s, &slot); } else { grow_cone(&o, &mut s); }
     if let Some(f) = &o.save {
         std::fs::write(f, s.save()).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
@@ -466,7 +466,18 @@ fn by_volumes(o: &Opts) -> bool {
 
 /// The questions answered by volumes, with the exit code; none when the world is not one (a file alone, no
 /// `[surface]` book) or its volumes refused it, said on stderr, and the world is then evaluated whole.
-fn answer_by_volumes(o: &Opts) -> Option<i32> {
+fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Option<i32> {
+    // the volumes are kept beside the slot, a set for the question's cone
+    let kept = slot.as_ref().map(|p| {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        question_rels(o).hash(&mut h);
+        format!("{}.q{:016x}", p.trim_end_matches(".vol"), h.finish())
+    });
+    if let Some((mut core, mut v)) = kept.as_ref().and_then(|k| open_volumes(o, k)) {
+        eprintln!("volumes: {} answered from the {} kept volumes", o.qs.len(), v.worlds.len());
+        return Some(answer_volumes(o, &mut core, &mut v));
+    }
     let sources = load_sources(o);
     let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
@@ -491,6 +502,48 @@ fn answer_by_volumes(o: &Opts) -> Option<i32> {
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
     for w in &v.worlds { for d in &w.eval.diags { eprintln!("diag: {d}"); } }
+    let code = answer_volumes(o, &mut s, &mut v);
+    if let Some(k) = &kept {
+        let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k) { eprintln!("the volumes are not kept: {e}"); }
+    }
+    Some(code)
+}
+
+/// The volumes kept at `k`, the core and a world a worker, when every one is there and nothing they were kept from moved.
+fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> {
+    let open = |p: &str| -> Option<Session> {
+        let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
+        let r = crate::kept::parse(&c.note)?;
+        if let Some(m) = crate::kept::moved(&r, c.this_build) {
+            eprintln!("the kept volumes {k} are stale: {m}");
+            return None;
+        }
+        let s = Session::open_volume(p, o.budget).ok()?;
+        crate::kept::touch(p);
+        Some(s)
+    };
+    let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
+    let core = open(&format!("{k}.core.vol"))?;
+    let worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
+    let laid = worlds.iter().map(|_| Default::default()).collect();
+    Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default() }))
+}
+
+/// The core and every worker's world kept at `k`, with what they were read from.
+fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str) -> Result<(), String> {
+    let note = crate::kept::record(world, files, &[], read, &[], None)?;
+    let _ = std::fs::remove_file(format!("{k}.n"));
+    crate::kept::keep_capped(core, &format!("{k}.core.vol"), &note)?;
+    for (i, w) in v.worlds.iter_mut().enumerate() {
+        crate::kept::keep_capped(w, &format!("{k}.w{i}.vol"), &note)?;
+    }
+    std::fs::write(format!("{k}.n"), v.worlds.len().to_string()).map_err(|e| e.to_string())
+}
+
+/// Every question answered from the volumes: the union of the workers' answers, or the resident world's where one
+/// is needed. Returns the exit code.
+fn answer_volumes(o: &Opts, s: &mut Session, v: &mut rofl::session::Volumes) -> i32 {
     let (mut refused, mut partial) = (false, false);
     for q in &o.qs {
         let Q::Ask(l) = q else { unreachable!() };
@@ -499,7 +552,7 @@ fn answer_by_volumes(o: &Opts) -> Option<i32> {
         let rel = l.split(['(', '[']).next().unwrap_or("").trim().to_string();
         let mut resident = match s.resident(&v, &rel) {
             Ok(r) => r,
-            Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
+            Err(e) => fail(o.json, WORLD_REFUSED, &format!("volumes: {}", rofl::describe(&e))),
         };
         let asked: Vec<&mut Session> = match &mut resident { Some(r) => vec![r], None => v.worlds.iter_mut().collect() };
         for w in asked {
@@ -529,7 +582,7 @@ fn answer_by_volumes(o: &Opts) -> Option<i32> {
             println!("{}", serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial }));
         } else { println!("{}\n", ask_text(&a)) }
     }
-    Some(if refused { QUESTION_REFUSED } else if partial { PARTIAL } else { 0 })
+    if refused { QUESTION_REFUSED } else if partial { PARTIAL } else { 0 }
 }
 
 /// The relations a question verb's questions name, which its world asks (docs/demand-cones.md) as a notebook asks
