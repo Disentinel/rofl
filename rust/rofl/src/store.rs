@@ -61,7 +61,7 @@ use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::ops::{Index, IndexMut, Range};
 use crate::arena::{Arena, Pod};
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 mod volume;
 

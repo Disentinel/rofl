@@ -317,6 +317,7 @@ check[checks]("rust/rofl/tests/tree.rs", "a_retraction_where_no_witness_is_kept_
 check[checks]("rust/rofl/tests/tree.rs", "a_snapshot_opened_and_not_evaluated_answers_the_closure_from_its_tree", test).
 check[checks]("rust/rofl/tests/volume.rs", "a_world_kept_as_a_volume_opens_as_itself", test).
 check[checks]("rust/rofl/tests/volume.rs", "edits_kept_as_overlays_open_as_the_fresh_world", test).
+check[checks]("rust/rofl/tests/volumes.rs", "the_volumes_answer_as_the_whole_world", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_is_its_rows", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_no_capability_is_refused", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_the_wrong_arity_is_refused", test).
@@ -1023,6 +1024,7 @@ test_file[checks]("rust/rofl/tests/threshold.rs").
 test_file[checks]("rust/rofl/tests/tick_scale.rs").
 test_file[checks]("rust/rofl/tests/tree.rs").
 test_file[checks]("rust/rofl/tests/volume.rs").
+test_file[checks]("rust/rofl/tests/volumes.rs").
 test_file[checks]("rust/rofl/tests/want.rs").
 test_file[checks]("rust/rofl/tests/why_bins.rs").
 citation_ok[checks](d_veto_belongs_inside).

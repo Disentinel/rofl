@@ -18,7 +18,7 @@
 //! args array for a functor.
 
 use crate::arena::{Arena, VolR, VolW};
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 pub type Sym = u32;
 
@@ -633,6 +633,10 @@ impl Heap {
         }
     }
     #[inline(always)]
+    /// How many functors are named: those of the base and those above it.
+    pub fn funcs_len(&self) -> u32 {
+        self.f0 + self.top.funcs.len() as u32
+    }
     pub fn fname(&self, idx: u32) -> Sym {
         self.node(idx).1.name
     }

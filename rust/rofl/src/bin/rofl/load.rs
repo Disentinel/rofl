@@ -291,6 +291,9 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
         }
     }
     let slot = question_slot(&o, &world);
+    if opened.is_none() && by_volumes(&o) {
+        if let Some(code) = answer_by_volumes(&o, &world, &slot) { std::process::exit(code); }
+    }
     let found = open_slot(&o, &world, &slot);
     let mut opened = opened.or(found.opened);
     let mut by_delta = None;
@@ -452,6 +455,158 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).chain(o.below.iter().cloned()).collect();
     keep_loaded(o, world, s, units.unwrap_or_default(), &read, slot, disk);
+}
+
+/// A run its world answers by volumes (`engine/volumes.rs`): questions asked, of a world evaluated once, and
+/// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world.
+fn by_volumes(o: &Opts) -> bool {
+    !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_) | Q::Why(_) | Q::WhyAll(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
+        && o.below.is_empty() && o.kept.is_none() && o.save.is_none() && !o.propose && std::env::var("ROFL_VOLUMES").as_deref() != Ok("0")
+}
+
+/// The questions answered by volumes, with the exit code; none when the world is not one (a file alone, no
+/// `[surface]` book) or its volumes refused it, said on stderr, and the world is then evaluated whole.
+fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Option<i32> {
+    // the volumes are kept beside the slot, a set for the question's cone
+    let kept = slot.as_ref().map(|p| {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        question_rels(o).hash(&mut h);
+        format!("{}.q{:016x}", p.trim_end_matches(".vol"), h.finish())
+    });
+    if let Some((mut core, mut v)) = kept.as_ref().and_then(|k| open_volumes(o, k)) {
+        eprintln!("volumes: {} answered from the {} kept volumes", o.qs.len(), v.worlds.len());
+        return Some(answer_volumes(o, &mut core, &mut v));
+    }
+    let sources = load_sources(o);
+    let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
+    let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
+    drop(texts);
+    if cut.files.len() < 2 || cut.files.iter().map(|(_, t)| t.len()).sum::<usize>() < VOLUMES_FROM || !cut.core.contains("[surface](") { return None; }
+    let mut s = Session::fresh(o.budget);
+    set_walls(o, &mut s);
+    if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
+        fail(o.json, FILE_REFUSED, &format!("refused:\n  {}", d.1.join("\n  ")));
+    }
+    if let Some(rels) = question_rels(o) {
+        if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
+    }
+    let files = cut.files.len();
+    let k = std::thread::available_parallelism().map_or(1, |n| n.get()).min(files);
+    let mut v = match s.by_volumes(rofl::engine::volumes::groups(cut.files, k), files) {
+        Ok(v) => {
+            let st = &v.stats;
+            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} [surface] facts ({} ms of {} ms); held above the core, laid: {:?}", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms, st.held);
+            v
+        }
+        Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
+    };
+    for w in &v.worlds { for d in &w.eval.diags { eprintln!("diag: {d}"); } }
+    let code = answer_volumes(o, &mut s, &mut v);
+    if v.stats.cut {
+        eprintln!("a wall cut the volumes' evaluation (the memory this process may use, or the budget): its answers are partial, and they are not kept");
+    } else if let Some(k) = &kept {
+        let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k) { eprintln!("the volumes are not kept: {e}"); }
+    }
+    Some(code)
+}
+
+/// The bytes of the files' facts from which a world is evaluated by volumes: below them a worker's share does not pay
+/// for its own copy of the core's evaluation and the threads (vscode: 20 files, 10 MB, whole as fast).
+const VOLUMES_FROM: usize = 32 << 20;
+
+/// A file of a set of kept volumes (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): no world of its own to take by delta.
+pub fn is_volume_of_set(p: &std::path::Path) -> bool {
+    p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split_once(".q")).is_some_and(|(_, r)| r.len() > 17 && r.as_bytes()[16] == b'.' && r[..16].bytes().all(|c| c.is_ascii_hexdigit()))
+}
+
+/// The volumes kept at `k`, the core and a world a worker, when every one is there and nothing they were kept from moved.
+fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> {
+    let open = |p: &str| -> Option<Session> {
+        let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
+        let r = crate::kept::parse(&c.note)?;
+        if let Some(m) = crate::kept::moved(&r, c.this_build) {
+            eprintln!("the kept volumes {k} are stale: {m}");
+            return None;
+        }
+        let s = Session::open_volume(p, o.budget).ok()?;
+        crate::kept::touch(p);
+        Some(s)
+    };
+    let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
+    let core = open(&format!("{k}.core.vol"))?;
+    let worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
+    let laid = worlds.iter().map(|_| Default::default()).collect();
+    Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default() }))
+}
+
+/// The core and every worker's world kept at `k`, with what they were read from.
+fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str) -> Result<(), String> {
+    let note = crate::kept::record(world, files, &[], read, &[], None)?;
+    let _ = std::fs::remove_file(format!("{k}.n"));
+    crate::kept::keep_capped(core, &format!("{k}.core.vol"), &note)?;
+    for (i, w) in v.worlds.iter_mut().enumerate() {
+        crate::kept::keep_capped(w, &format!("{k}.w{i}.vol"), &note)?;
+    }
+    std::fs::write(format!("{k}.n"), v.worlds.len().to_string()).map_err(|e| e.to_string())
+}
+
+/// Every question answered from the volumes: the union of the workers' answers, or the resident world's where one
+/// is needed. Returns the exit code.
+fn answer_volumes(o: &Opts, s: &mut Session, v: &mut rofl::session::Volumes) -> i32 {
+    let (mut refused, mut partial) = (false, false);
+    for q in &o.qs {
+        let l = match q {
+            Q::Ask(l) => l,
+            Q::Why(l) | Q::WhyAll(l) => {
+                match s.why_by_volumes(v, l, matches!(q, Q::WhyAll(_))) {
+                    Ok(t) => if o.json { println!("{}", serde_json::json!({ "ok": true, "text": t })) } else { println!("{t}\n") },
+                    Err(e) => {
+                        refused = true;
+                        if o.json { println!("{}", serde_json::json!({ "ok": false, "error": e })) } else { println!("{e}\n") }
+                    }
+                }
+                continue;
+            }
+            _ => unreachable!(),
+        };
+        let mut all: Option<rofl::session::Answer> = None;
+        let mut err = None;
+        let rel = l.split(['(', '[']).next().unwrap_or("").trim().to_string();
+        let mut resident = match s.resident(v, &rel) {
+            Ok(r) => r,
+            Err(e) => fail(o.json, WORLD_REFUSED, &format!("volumes: {}", rofl::describe(&e))),
+        };
+        let asked: Vec<&mut Session> = match &mut resident { Some(r) => vec![r], None => v.worlds.iter_mut().collect() };
+        for w in asked {
+            match w.ask(l) {
+                Ok(a) => match &mut all {
+                    None => all = Some(a),
+                    Some(u) => { u.rows.extend(a.rows); u.keys.extend(a.keys); u.shrugs.extend(a.shrugs); u.partial |= a.partial; }
+                },
+                Err(e) => { err = Some(e); break; }
+            }
+        }
+        if let Some(e) = err {
+            refused = true;
+            if o.json { println!("{}", serde_json::json!({ "ok": false, "error": e })) } else { println!("error: {e}\n") }
+            continue;
+        }
+        let mut a = all.expect("a world a worker");
+        a.keys.sort();
+        a.keys.dedup();
+        a.shrugs.sort();
+        a.shrugs.dedup();
+        let mut seen = std::collections::HashSet::new();
+        a.rows.retain(|r| seen.insert(r.clone()));
+        partial |= a.partial;
+        if o.json {
+            let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
+            println!("{}", serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial }));
+        } else { println!("{}\n", ask_text(&a)) }
+    }
+    if refused { QUESTION_REFUSED } else if partial { PARTIAL } else { 0 }
 }
 
 /// The relations a question verb's questions name, which its world asks (docs/demand-cones.md) as a notebook asks
