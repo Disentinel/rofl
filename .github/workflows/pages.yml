@@ -3,7 +3,12 @@ name: Pages
 # The notebook page, the playground and the guide as one static site: built on every push and pull request, so a break shows
 # before a merge; published from main to GitHub Pages (Settings, Pages, Source: GitHub Actions).
 on:
+  # ONE RUN PER COMMIT. A branch with a pull request was run twice, once for the push and once for the pull request,
+  # in two concurrency groups (refs/heads/B and refs/pull/N/merge), so neither cancelled the other. A branch is run
+  # by its pull request; main and the release tags by their push.
   push:
+    branches: [main]
+    tags: ['rofl-nb-*']
   pull_request:
   workflow_dispatch:
 

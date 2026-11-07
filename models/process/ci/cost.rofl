@@ -1,0 +1,70 @@
+-- models/process/ci/cost.rofl — where the time of CI goes. The cost of a gate is forecast from its form (which
+-- proofs each break runs, on which engine, in a pool or one after another) and the time of each proof alone;
+-- what the runs took judges the forecast. Facts: scanners/gh_actions.py (the workflows), scanners/gh_runs.py
+-- (the runs), scanners/ci_cost.ts (the worlds, the breaks and their times).
+
+edb(ci_on). edb(ci_concurrency). edb(ci_advisory). edb(ci_job).
+edb(run). edb(run_time). edb(run_head). edb(job_run). edb(job_time). edb(step_time).
+edb(world_ms). edb(world_facts). edb(world_rust_only). edb(break_reads). edb(break_kind). edb(proof_test). edb(control_ms). edb(break_ms).
+
+-- ROFL_JOBS of the node and breaks jobs (.github/workflows/ci.yml)
+pool_width(4).
+
+-- ONE COMMIT, TWO RUNS. A workflow on every push and on pull_request runs a commit of a pull request twice; its
+-- concurrency group is keyed by github.ref, refs/heads/B for one and refs/pull/N/merge for the other, so neither
+-- cancels the other.
+doubled(W) :- ci_on(W, "push", ""), ci_on(W, "pull_request", _).
+twice(W, Sha, R1, R2) :- run(R1, _, W, "push"), run(R2, _, W, "pull_request"), run_head(R1, Sha, B), run_head(R2, Sha, B).
+twice_secs(R2, D) :- twice(_, _, _, R2), run_time(R2, S, E), D is E - S.
+twice_total(T) :- T is sum(D ; R : twice_secs(R, D)).
+twice_count(N) :- N is count(R : twice_secs(R, _)).
+
+-- THE VERDICT AND THE RUN. A job under continue-on-error does not decide its run, but the run is not done until it is.
+advisory_job(J) :- job_run(J, R, N), run(R, _, W, _), P is concat(W, "#"), A is concat(P, N), ci_advisory(A).
+lattice gate_end(R, max E).
+gate_end(R, E) :- job_run(J, R, _), job_time(J, _, E), not advisory_job(J).
+run_secs(R, D) :- run_time(R, S, E), E >= 0, D is E - S.
+gate_secs(R, D) :- gate_end(R, E), run_time(R, S, _), D is E - S.
+held_open(R, D) :- run_secs(R, W), gate_secs(R, G), D is W - G, D > 0.
+job_secs(J, N, D) :- job_run(J, _, N), job_time(J, S, E), E >= 0, D is E - S.
+lattice slowest_job(R, max D).
+slowest_job(R, D) :- job_run(J, R, _), job_secs(J, _, D).
+slowest(R, N, D) :- slowest_job(R, D), job_run(J, R, N), job_secs(J, N, D).
+
+-- THE GOLDENS. Every world by both engines over the pool. A world whose TypeScript answer takes over 5 s pooled, or
+-- holds over 100 000 facts, is past the scale the reference engine is asked to run (facts/checks.rofl, RUST ONLY).
+golden_cpu("rust", T) :- T is sum(M ; W : world_ms(W, "rust", M)).
+golden_cpu("ts", T) :- T is sum(M ; W : world_ms(W, "ts", M), not world_rust_only(W)).
+ts_heavy(W, T, R) :- world_ms(W, "ts", T), world_ms(W, "rust", R), T > 5000, not world_rust_only(W).
+ts_heavy(W, T, R) :- world_ms(W, "ts", T), world_ms(W, "rust", R), world_facts(W, N), N > 100000, T > 0, not world_rust_only(W).
+ts_heavy_cpu(T) :- T is sum(M ; W : ts_heavy(W, M, _)).
+golden_forecast(S) :- golden_cpu("ts", T), golden_cpu("rust", R), pool_width(N), S is (T + R) / (1000 * N).
+golden_measured(R, D) :- job_run(J, R, "node"), step_time(J, _, "goldens (node)", S, E), E >= S, D is E - S.
+
+-- THE BREAKS. A break runs each proof it names once with its fault planted: a switch in the Rust engine reaches
+-- `rofl load` only; an edit of a .rofl, or of src/, is answered by both engines where the world is both engines'.
+-- A proof that is a cargo test is run by its test binary. Every proof is also run once with no break (control).
+proof_cost(B, W, C) :- break_reads(B, W), break_kind(B, "switch"), world_ms(W, "rust", C).
+proof_cost(B, W, C) :- break_reads(B, W), break_kind(B, K), K != "switch", world_rust_only(W), world_ms(W, "rust", C).
+proof_cost(B, W, C) :- break_reads(B, W), break_kind(B, K), K != "switch", not world_rust_only(W), world_ms(W, "rust", R), world_ms(W, "ts", T), C is R + T.
+proof_cost(B, W, C) :- break_reads(B, W), proof_test(W, T), control_ms(T, C).
+unpriced(B, W) :- break_reads(B, W), not priced(B, W).
+priced(B, W) :- proof_cost(B, W, _).
+read_world(W) :- break_reads(_, W), world_ms(W, "rust", _).
+read_test(T) :- break_reads(_, W), proof_test(W, T).
+control_cost(W, C) :- read_world(W), world_rust_only(W), world_ms(W, "rust", C).
+control_cost(W, C) :- read_world(W), not world_rust_only(W), world_ms(W, "rust", R), world_ms(W, "ts", T), C is R + T.
+control_cost(T, C) :- read_test(T), control_ms(T, C).
+
+-- the proofs of the pool, and the cargo tests: before, one after another outside the pool, each run twice per break
+-- (its control again before each); now in the pool, the control once
+pool_cost(C) :- C is sum(X ; B, W : proof_cost(B, W, X), not proof_test(W, _)).
+test_cost(C) :- C is sum(X ; B, W : proof_cost(B, W, X), proof_test(W, _)).
+world_control_cost(C) :- C is sum(X ; W : control_cost(W, X), read_world(W)).
+test_control_cost(C) :- C is sum(X ; T : control_cost(T, X), read_test(T)).
+breaks_before(S) :- pool_cost(P), world_control_cost(K), test_cost(T), pool_width(N), S is (P + K) / (1000 * N) + 2 * T / 1000.
+breaks_after(S) :- pool_cost(P), world_control_cost(K), test_cost(T), test_control_cost(Q), pool_width(N), S is (P + K + T + Q) / (1000 * N).
+breaks_measured(R, D) :- job_run(J, R, "breaks"), step_time(J, _, "planted faults", S, E), E >= S, D is E - S.
+
+-- the tests that cost the most, all breaks summed
+test_total(T, C) :- read_test(T), C is sum(X ; B, W : proof_cost(B, W, X), proof_test(W, T)).

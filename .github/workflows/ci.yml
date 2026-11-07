@@ -1,8 +1,14 @@
 name: CI
 
 on:
+  # ONE RUN PER COMMIT. A branch with a pull request was run twice, once for the push and once for the pull request,
+  # in two concurrency groups (refs/heads/B and refs/pull/N/merge), so neither cancelled the other. A branch is run
+  # by its pull request; main and the release tags by their push.
   push:
+    branches: [main]
+    tags: ['rofl-nb-*']
   pull_request:
+  workflow_dispatch:
 
 # ONE RUN PER REF. Without this every push starts a run and nothing stops the
 # one it superseded, so six pushes to a branch in forty minutes leave six live
@@ -52,8 +58,12 @@ jobs:
         with: { path: .cache/rofl, key: 'rofl-keep-${{ github.sha }}', restore-keys: rofl-keep- }
       - name: goldens (node)
         # the pool's default is the cores less two: one worker on a small runner
-        env: { ROFL_JOBS: 4 }
+        env: { ROFL_JOBS: 4, ROFL_TIMES: '${{ runner.temp }}/world-times.tsv' }
         run: npm test
+      # what each world cost, for scanners/ci_cost.ts --times and models/process/ci/cost.rofl
+      - if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with: { name: ci-cost-worlds, path: '${{ runner.temp }}/world-times.tsv', if-no-files-found: ignore }
       - if: success() || failure()
         uses: actions/cache/save@v4
         with: { path: .cache/rofl, key: 'rofl-keep-${{ github.sha }}-${{ github.run_attempt }}' }
@@ -85,10 +95,9 @@ jobs:
 
   # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
   # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
-  # Not blocking while its control is red on main: f_the_fault_harness_control_is_red_on_main. Blocking again once it is green.
+  # Blocking: its control is green on main again (f_the_fault_harness_control_is_red_on_main).
   breaks:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -101,6 +110,10 @@ jobs:
       - name: planted faults
         env: { ROFL_JOBS: 4 }
         run: npm run test:agg:breaks
+      # what each break and proof cost, for scanners/ci_cost.ts --breaks-times
+      - if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with: { name: ci-cost-breaks, path: rust/target/breaks/agg-breaks-times.json, if-no-files-found: ignore }
 
   # EVERY PLATFORM COMPILES BEFORE A MERGE. The engine job below builds each platform on main and on a tag only, so
   # a pull request that breaks one is green until it lands: bin/rofl/kept.rs called statvfs and kill, and win32 was

@@ -3036,6 +3036,23 @@ check_opt("minimax", one_engine, rust).
 check_opt("linter", one_engine, rust).
 check_opt("agg_linter_demo", one_engine, rust).
 check_opt("notebook_spat", one_engine, rust).
+-- Crossed the cap since, measured 2026-11-07 in a cold pooled `npm test` on 4 workers (TS s / Rust s / facts), and found
+-- by ts_heavy of models/process/ci/cost.rofl: services 86.2 / 7.1 / 180756, concat_value 43.6 / 7.2 / 169119,
+-- lifecycle_leaky 42.2 / 6.2 / 151906, vscode_surface_split 41.7 / 8.2 / 213751, lifecycle_overwrites 40.8 / 6.0 / 143591,
+-- vscode_side_effects 39.7 / 6.4 / 170478, rules_js-dataflow 6.2 / 0.3 / 17599, net 5.9 / 0.5 / 11399: 306 of the
+-- 447 s of TypeScript CPU of the goldens, and concat_value's again under each of its 14 breaks.
+check_opt("services", one_engine, rust).
+check_opt("concat_value", one_engine, rust).
+check_opt("lifecycle_leaky", one_engine, rust).
+check_opt("vscode_surface_split", one_engine, rust).
+check_opt("lifecycle_overwrites", one_engine, rust).
+check_opt("vscode_side_effects", one_engine, rust).
+check_opt("rules_js-dataflow", one_engine, rust).
+check_opt("net", one_engine, rust).
+-- and over 100 000 facts, though TypeScript answered them in a blink beside the others: lifecycle_clean 155967 facts,
+-- lifecycle_forgetful 153324.
+check_opt("lifecycle_clean", one_engine, rust).
+check_opt("lifecycle_forgetful", one_engine, rust).
 -- A JOIN ONLY A DELTA-FIRST PLAN FITS (w_cmp_delta_first, engine/joinplan.rs). hit(Y, Z) :- h(X, Z), l(X, Y), trig(Y, Z)
 -- over 100 + 100 + 3 rows: written order holds h joined to l, 10 000 rows, in a space of 250; the plan that starts from
 -- the news and takes trig second holds a handful. The TypeScript engine solves in written order and hits the wall, so
@@ -4016,3 +4033,11 @@ check_file("lifecycle_overwrites", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-facts.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-expect.rofl").
+
+-- WHERE THE TIME OF CI WENT, found 2026-11-07 (models/process/ci/cost.rofl): the workflows of main, the last 30 runs
+-- of ci.yml, the cost of each world and break; `npm run ci:cost` reads them anew.
+check_world("ci_cost").
+check_file("ci_cost", "models/process/ci/cost.rofl").
+check_file("ci_cost", "models/process/ci/found-2026-11-07/workflows.rofl").
+check_file("ci_cost", "models/process/ci/found-2026-11-07/runs.rofl").
+check_file("ci_cost", "models/process/ci/found-2026-11-07/cost.rofl").
