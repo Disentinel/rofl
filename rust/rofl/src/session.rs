@@ -553,18 +553,27 @@ impl Session {
     /// was not worked out (the world left dirty).
     pub fn retract_set_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         let before = self.base_alive(ids);
-        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids));
+        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids, false));
         self.journal_gone(&before);
         r
     }
 
-    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+    /// `retract_set_delta` of every given fact one file's lower stage gave a world by volumes, its lemmas among them:
+    /// what they proved goes with them, so a world that cut a book takes it.
+    pub fn retract_file_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+        let before = self.base_alive(ids);
+        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids, true));
+        self.journal_gone(&before);
+        r
+    }
+
+    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId], whole_file: bool) -> Result<Result<crate::engine::AddDelta, String>, String> {
         self.settle()?;
         let facts: Vec<FactId> = {
             let mut seen = HashSet::new();
             ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
         };
-        if !ids.is_empty() {
+        if !ids.is_empty() && !whole_file {
             if let Some(why) = self.eval.refuses_retraction() {
                 self.eval.store.dirty = true;
                 return Ok(Err(why));
@@ -652,7 +661,7 @@ impl Session {
         let mut delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
         // what the one-fact delta refuses with the store untouched, the set's pass may take
         if delta.is_err() && self.eval.store.alive(id) && !self.eval.store.dirty {
-            delta = self.retract_set_delta_unjournaled(&[id])?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
+            delta = self.retract_set_delta_unjournaled(&[id], false)?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
         }
         if delta.is_err() {
             if self.eval.store.alive(id) {
@@ -878,7 +887,7 @@ impl Session {
     /// This world, holding the core, and the `groups` of files evaluated by volumes (`engine/volumes.rs`): a world a
     /// worker, each a fork of the core. Refused when a worker's world asks for input (a scan or an adapter's want),
     /// which a volume cannot bring alone.
-    pub fn by_volumes(&mut self, groups: Vec<Vec<String>>, files: usize) -> Result<Volumes, Halt> {
+    pub fn by_volumes(&mut self, groups: Vec<Vec<(String, String)>>, files: usize) -> Result<Volumes, Halt> {
         let (ws, stats) = self.eval.by_volumes(groups, files)?;
         let (mut worlds, mut laid) = (Vec::with_capacity(ws.len()), Vec::with_capacity(ws.len()));
         for w in ws {

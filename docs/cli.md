@@ -526,6 +526,13 @@ one of the lemma's; a world that asks has the site in its cone whatever it asks)
 lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
 fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
 takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
+The kept volumes of `rofl ask`/`why` are the exception, as each file below the cut is a world of its own: the
+volumes are kept with a sum of every file (`<slot>.files`), and when at most one file in eight moved and the rules
+did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
+lemmas and facts it no longer gives taken out of its worker and the new ones put in (`volumes: X of Y files taken
+by delta in Z ms`). An edit that changes what the file shows the others (`[surface]`) is computed anew, said on
+stderr. Measured, vscode 250 facts (67 MB, 4 workers, fast build): one file's line moved, 1 of 150 volumes in
+0.4 s and 4.5 s the run, against 11 s anew; the answer byte for byte the fresh one.
 Measured, vscode subset S, fast build, 4 cores: 250 files by volumes 3 771 MB peak against 3 264 MB cut, 34.6 s
 against 35.6 s, 252 301 answer lines byte for byte; 100 files whole (`ROFL_VOLUMES=0`) 1 598 MB against 1 279 MB.
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked

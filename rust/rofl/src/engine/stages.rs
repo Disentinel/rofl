@@ -193,6 +193,28 @@ impl Eval {
         self.store.dirty = true;
     }
 
+    /// What one file gives a world by volumes, as text: its lower stage's lemmas and its facts outside the cut books
+    /// where the program cuts one (`take_lemmas`), else its base facts. A fork of the core, its own facts above `from`.
+    pub fn given_by_file(&self, text: &str, st: Option<&Stage>) -> Result<Vec<String>, Halt> {
+        let mut low = self.fork();
+        let from = low.store.len_ids();
+        super::volumes::load_text(&mut low, text)?;
+        if let Some(st) = st {
+            low.lower_stage(st)?;
+        }
+        Ok((from..low.store.len_ids())
+            .filter(|&id| low.store.alive(id))
+            .filter(|&id| {
+                let r = low.store.rec(id);
+                match st {
+                    Some(st) => !st.cut.contains(&r.persp) && (r.base() || st.heads.contains(&r.rel)),
+                    None => r.base(),
+                }
+            })
+            .map(|id| low.store.key(&low.h, id))
+            .collect())
+    }
+
     /// A lower stage that reads or concludes `[surface]` is refused where files are evaluated apart: it is evaluated
     /// a file at a time, before anything crosses.
     pub fn refuse_stage_across(&self, st: &Stage, surface: Sym) -> Result<(), Halt> {

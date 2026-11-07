@@ -3460,7 +3460,7 @@ impl Eval {
         self.again = again;
         self.store.kept_layer = kept;
         self.stage_pass = StagePass::Whole;
-        let out = match (self.stage_given.take(), self.lemma_stage()) {
+        let out = match (self.stage_given.clone(), self.lemma_stage()) {
             (Some(given), _) => {
                 self.stage_pass = StagePass::Upper(given);
                 self.run_whole()
