@@ -1105,13 +1105,16 @@ Declared as facts:
   - [`surveyed`](#surveyed)(O);
   - [`parent`](#parent)(something, X).
 
+> a node in a place that holds it, read off the raw tree once: a lemma of the tree's stage
+
+<a id="in_place"></a>`in_place`(X) if all of:
+  - [`child`](#child)(P, F, something, X);
+  - [`node`](#node)(P, PK, something);
+  - [`holds_in_place`](#holds_in_place)(PK, F).
+
 <a id="held"></a>`held`(X) either:
 
-1. if all of:
-   - [`placed`](#placed)(X);
-   - [`child`](#child)(P, F, something, X);
-   - [`node`](#node)(P, PK, something);
-   - [`holds_in_place`](#holds_in_place)(PK, F);
+1. if [`placed`](#placed)(X) and [`in_place`](#in_place)(X);
 2. if [`placed`](#placed)(X) and [`discards`](#discards)(something, X);
 3. if [`placed`](#placed)(X) and [`assigned`](js-dataflow.rofl.md#assigned)(something, something, something, X, something);
 4. if all of:
@@ -1482,9 +1485,7 @@ In the surface:
    - unless N [selects](js-dataflow.rofl.md#selects) some key;
 2. if all of:
    - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
-   - [`child`](#child)(P, F, something, G);
-   - [`node`](#node)(P, PK, something);
-   - unless [`holds_in_place`](#holds_in_place)(PK, F);
+   - unless [`in_place`](#in_place)(G);
    - unless [`discards`](#discards)(something, G).
 
 In the flow:

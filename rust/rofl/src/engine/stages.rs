@@ -27,13 +27,35 @@ impl Eval {
     }
 
     /// The lower stage of the books the plan cuts: every rule reading or concluding one, and downward from them every
-    /// rule concluding what a rule of the stage reads. None when the plan cuts nothing.
+    /// rule concluding what a rule of the stage reads, and beside each every rule concluding what it concludes. None
+    /// when the plan cuts nothing.
+    /// Where asks prunes the program, the lower stage is the whole program's (`lower_full`), as the cone has it: what is
+    /// a lemma does not hang on what is asked.
     pub fn lemma_stage(&mut self) -> Option<Stage> {
+        let all = self.rules.clone();
+        let refs: Vec<&ERule> = all.iter().map(|r| &**r).collect();
+        let mut st = self.lower_of(&refs)?;
+        if let Some(full) = &self.lower_full {
+            let lower: Vec<&ERule> = refs.into_iter().filter(|r| full.contains(&(r.clause.head.rel, r.clause.head.persp.as_atom()))).collect();
+            st.heads = lower.iter().map(|r| r.clause.head.rel).collect();
+            st.rules = Rc::new(lower.iter().map(|r| r.id).collect());
+        }
+        Some(st)
+    }
+
+    /// The lower stage of the whole program, by the relation and book of each rule's head, noted before asks prunes it.
+    pub(super) fn note_lower_full(&mut self, rules: &[ERule]) {
+        let refs: Vec<&ERule> = rules.iter().collect();
+        self.lower_full = None;
+        self.lower_full = self.lower_of(&refs).map(|st| rules.iter().filter(|r| st.rules.contains(&r.id)).map(|r| (r.clause.head.rel, r.clause.head.persp.as_atom())).collect());
+    }
+
+    fn lower_of(&mut self, rules: &[&ERule]) -> Option<Stage> {
         let cut = self.cut_books();
         if cut.is_empty() || self.well_founded {
             return None;
         }
-        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && r.clause.head.temporal != Temporal::Next).cloned().collect();
+        let rules: Vec<&ERule> = rules.iter().copied().filter(|r| r.safe && r.clause.head.temporal != Temporal::Next).collect();
         let mut by_head: HashMap<Sym, Vec<usize>> = HashMap::new();
         for (i, r) in rules.iter().enumerate() {
             by_head.entry(r.clause.head.rel).or_default().push(i);
@@ -62,6 +84,14 @@ impl Eval {
                 taken[i] = true;
             }
             while let Some(i) = todo.pop() {
+                // a relation is below or above whole: every rule concluding it goes with the one taken
+                let head = &rules[i].clause.head;
+                for &j in by_head.get(&head.rel).into_iter().flatten() {
+                    if !taken[j] && rules[j].clause.head.persp == head.persp {
+                        taken[j] = true;
+                        todo.push(j);
+                    }
+                }
                 for l in rules[i].clause.body.iter().flat_map(BodyElem::lits_deep) {
                     for &j in by_head.get(&l.rel).into_iter().flatten() {
                         let same_book = match (l.persp.as_atom(), rules[j].clause.head.persp.as_atom()) {
@@ -90,7 +120,7 @@ impl Eval {
                 format!("{}{} ({} rules)", self.h.name(h.rel), book, n)
             })
             .collect();
-        let lower: Vec<&Rc<ERule>> = rules.iter().zip(&taken).filter(|(_, t)| **t).map(|(r, _)| r).collect();
+        let lower: Vec<&&ERule> = rules.iter().zip(&taken).filter(|(_, t)| **t).map(|(r, _)| r).collect();
         let heads = lower.iter().map(|r| r.clause.head.rel).collect();
         let rules = Rc::new(lower.iter().map(|r| r.id).collect());
         Some(Stage { rules, heads, cut, wide })

@@ -587,6 +587,7 @@ unit_concludes("rules/js-callgraph.rofl", sx_receivable).
 unit_concludes("rules/js-callgraph.rofl", sx_surveyed).
 unit_concludes("rules/js-callgraph.rofl", holds_in_place).
 unit_concludes("rules/js-callgraph.rofl", placed).
+unit_concludes("rules/js-callgraph.rofl", in_place).
 unit_concludes("rules/js-callgraph.rofl", held).
 unit_concludes("rules/js-callgraph.rofl", literal_part).
 unit_concludes("rules/js-callgraph.rofl", stored_in).
@@ -1396,6 +1397,8 @@ unit_concludes("models/lang/js/roles.rofl", climb).
 unit_concludes("models/lang/js/roles.rofl", parent).
 unit_concludes("models/lang/js/roles.rofl", world).
 unit_concludes("models/lang/js/roles.rofl", imports).
+unit_concludes("models/lang/js/oxc-roles.rofl", cut).
+unit_concludes("models/lang/js/oxc-roles.rofl", site).
 unit_concludes("models/lang/js/oxc-roles.rofl", oxc_k).
 unit_concludes("models/lang/js/oxc-roles.rofl", edb).
 unit_concludes("models/lang/js/oxc-roles.rofl", imports).

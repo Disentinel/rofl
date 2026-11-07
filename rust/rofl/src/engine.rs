@@ -819,6 +819,8 @@ pub struct Eval {
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
     /// (`Session::why_all`): a lemma's proof is found again by evaluating its file's lower stage.
     pub lower_texts: Option<Rc<HashMap<String, String>>>,
+    /// The heads of the whole program's lower stage, where asks prunes it (`Eval::lemma_stage`).
+    lower_full: Option<HashSet<(Sym, Option<Sym>)>>,
     /// What a delta under way leaves to the full pass after it: the relations a hole or a shrug may move that the
     /// change reaches (`Eval::hole_world`). No rule concluding one is read by the delta.
     aside: HashSet<Sym>,
@@ -2302,6 +2304,7 @@ impl Eval {
             stage_given: None,
             lemma_heads: None,
             lower_texts: None,
+            lower_full: None,
             aside: HashSet::new(),
             firing: false,
             fault_count: 0,
@@ -2436,6 +2439,15 @@ impl Eval {
         if self.mode == Mode::Strata {
             self.diags.push("asks: the stock evaluator orders every rule by its stratum table, so every rule is kept".to_string());
             return None;
+        }
+        // a world that cuts a book places its lemmas by the plan's site, which `why` reads whatever is asked
+        let (site, plan, cut) = (self.h.intern("site"), self.h.intern("fixpointplan"), self.h.intern("cut"));
+        if !self.store.rel_persp(&self.h, cut, plan).is_empty() {
+            for f in self.store.rel_persp(&self.h, site, plan) {
+                if let Some(rel) = self.store.args(f).first().and_then(|t| t.as_atom()) {
+                    cone.insert(rel);
+                }
+            }
         }
         let (req, main) = (self.v.explain_request, self.v.main);
         for f in self.store.rel_persp(&self.h, req, main) {
@@ -2838,6 +2850,10 @@ impl Eval {
     fn prune_to_cone(&mut self, mut kept: Vec<ERule>) -> Vec<ERule> {
         self.cone = self.asks_cone(&kept);
         self.pruned.clear();
+        self.lower_full = None;
+        if self.cone.is_some() {
+            self.note_lower_full(&kept);
+        }
         if let Some(cone) = &self.cone {
             let kernel = self.kernel_heads();
             let (runs, out): (Vec<ERule>, Vec<ERule>) = kept.into_iter().partition(|r| cone.contains(&r.clause.head.rel) || kernel.contains(&r.clause.head.rel));

@@ -485,7 +485,11 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
     drop(texts);
-    if cut.files.len() < 2 || cut.files.iter().map(|(_, t)| t.len()).sum::<usize>() < VOLUMES_FROM || !cut.core.contains("[surface](") { return None; }
+    // a world that cuts a book is evaluated a file at a time below the cut, on one worker where volumes do not pay
+    let staged = cut.core.contains("cut[fixpointplan](");
+    let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
+    let apart = bytes >= VOLUMES_FROM && cut.core.contains("[surface](");
+    if cut.files.len() < 2 || !(apart || staged) { return None; }
     let mut s = Session::fresh(o.budget);
     set_walls(o, &mut s);
     if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
@@ -495,7 +499,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
     }
     let files = cut.files.len();
-    let k = std::thread::available_parallelism().map_or(1, |n| n.get()).min(files);
+    let k = if apart { std::thread::available_parallelism().map_or(1, |n| n.get()).min(files) } else { 1 };
     let mut v = match s.by_volumes(rofl::engine::volumes::groups(cut.files, k), files) {
         Ok(v) => {
             let st = &v.stats;

@@ -4016,3 +4016,17 @@ check_file("lifecycle_overwrites", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-facts.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-expect.rofl").
+
+-- LEMMA STAGES: a world of the JS model cuts oxc's raw tree (`cut[fixpointplan](ast_oxc)`, models/lang/js/oxc-roles.rofl;
+-- docs/cli.md, *Lemma stages*). The Rust engine drops [ast_oxc] once its lemmas are proven and gives them as facts; the
+-- TypeScript engine evaluates the world whole. Stages are Rust only (the owner, 2026-11-07).
+check_opt("concat_value", one_engine, rust).
+check_opt("lifecycle_clean", one_engine, rust).
+check_opt("lifecycle_forgetful", one_engine, rust).
+check_opt("lifecycle_leaky", one_engine, rust).
+check_opt("lifecycle_overwrites", one_engine, rust).
+check_opt("oxc_roles", one_engine, rust).
+check_opt("roles_oxc", one_engine, rust).
+check_opt("services", one_engine, rust).
+check_opt("vscode_side_effects", one_engine, rust).
+check_opt("vscode_surface_split", one_engine, rust).

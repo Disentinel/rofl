@@ -501,6 +501,37 @@ to about 0.15 GB. The peak, 2.9 GB, is not lowered: it is the round that adds
 alone, but each small file added to that world costs about 15 s
 (`f_a_walk_goes_cold_between_rounds`).
 
+## Lemma stages
+
+**A book the plan names in `cut[fixpointplan](B)` is a world of simpler lemmas.** The engine takes the rules that
+read or conclude `[B]`, and below them every rule concluding what one of them reads: that is the lower stage, closed
+downward, so it reads nothing the rest concludes (`engine/stages.rs`). It is evaluated first and whole; what it
+concluded outside `[B]` are its lemmas, kept as given facts; `[B]`'s facts are dropped; the rest of the program is
+evaluated over the lemmas. The answers are the whole world's. The JS model cuts oxc's raw tree,
+`cut[fixpointplan](ast_oxc)` in models/lang/js/oxc-roles.rofl: about 390 rules below (a relation is below or above
+whole: every rule concluding one goes with the first taken), the roles and a few more above.
+stderr says it: `diag: stage: N rules below, L lemmas, D facts of [B] cut; widest below: …`, the last naming the
+rules whose own cone pulls most into the lower stage (a rule of the upper model that reads `[B]` drags its whole
+cone down with it, and the cut comes late: read the raw tree through a lemma instead, as `in_place[flow]` does).
+
+`rofl ask` and `rofl why` evaluate a world that cuts a book by volumes (below), on one worker when the corpus is
+under 32 MB: the lower stage a file at a time, each in a fork of the core of its own, the worker given only the
+file's lemmas and its facts outside `[B]`, so the raw tree of the corpus is never held at once. A lower stage that
+reads or concludes `[surface]` is refused there (it runs before anything crosses files), and the world is evaluated
+whole. `rofl load` and the other verbs stage the world in place: the lower stage over every file, then `[B]` dropped.
+
+`why` stops at a lemma: `mark[value](n…,class) [lemma roles/types.ts:6]`, the site read off the plan's
+`site[fixpointplan](Rel, Book)` (`at[tree](N, File, Line)` for the JS model: the first fact whose first argument is
+one of the lemma's; a world that asks has the site in its cone whatever it asks). What is a lemma is the whole program's
+lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
+fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
+takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
+Measured, vscode subset S, fast build, 4 cores: 250 files by volumes 3 771 MB peak against 3 264 MB cut, 34.6 s
+against 35.6 s, 252 301 answer lines byte for byte; 100 files whole (`ROFL_VOLUMES=0`) 1 598 MB against 1 279 MB.
+Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
+on Rust (`check_opt(W, one_engine, rust)`). The engine does not yet derive a stage from what is read and asked; a
+stage is the plan's mark.
+
 ## A corpus larger than one heap
 
 **`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
@@ -547,7 +578,7 @@ them, each over `rofl serve`:
 |---|---|---|---|
 | a volume per file, cooled, the surface resident (the driver) | `runtime/split.ts`; `node --experimental-strip-types scripts/vscode_curve.ts DIR N split [--hot K]` over a corpus of `scripts/vscode_corpus.ts`; `npm run test:split` is its gate | 500 vscode files: the whole world's answers exactly, 2.0 GB against 2.5 GB, but 6 335 s against 40 s: each volume reads ~10% of the surface and is evaluated again whole 7.6 times (surface-split.md §7) | correct, not an economy; what it needs next is in §7 |
 | the ingest loop: parse a batch, evaluate, cool volumes under pressure | `node --experimental-strip-types runtime/ingest.ts ROOT SUB N [--batch K] [--pressure F]` (boot and `rules/ingest.rofl`, no JS model) | eslint, 1 426 files: 29.9 s, 1 290 volumes cooled to 200 MB, the world never above 1.94 M facts (docs/scaling-a-corpus.md) | the AST only; the JS model is not evaluated |
-| stages that fit a memory limit, each a process over the last volume | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
+| stages that fit a memory limit, each a process over the last volume (a TypeScript driver, to give way to the plan's stages, *Lemma stages*) | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
 | an evaluation in pieces of a fixed time, each a process resuming the last volume | `node --experimental-strip-types scripts/vscode_pieces.ts FACTS N MS [--state FILE]` | the same state as one run | built (item 3) |
 | a question added above an evaluated lower stage | `node --experimental-strip-types scripts/stage_by_asks.ts FACTS N LOWER,... [kept\|volume]` | 0.38 s against 5.2 s whole at 20 files | built |
 | files added to an evaluated world one by one | `node --experimental-strip-types scripts/ingest_by_delta.ts FACTS N` | byte for byte the whole world; ~3x a file's share at 20 files | built |
