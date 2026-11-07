@@ -639,6 +639,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     }
     sums.sort();
     let t0 = std::time::Instant::now();
+    let mut wave: Vec<(usize, Vec<String>, Vec<String>)> = Vec::new();
     for (i, w) in worlds.iter_mut().enumerate() {
         let gone: std::collections::HashSet<&str> = moved.iter().copied().filter(|f| old.get(*f).is_some_and(|o| o.1 == i)).collect();
         if gone.is_empty() && put[i].is_empty() {
@@ -669,12 +670,53 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         if !add.is_empty() {
             if let Err(e) = w.load_delta(&add, None) { say(&e.join("; ")); return None; }
         }
-        if n > 1 && surface(w) != shown {
-            say("the edit moved what a file shows the others ([surface])");
-            return None;
+        if n > 1 {
+            let after = surface(w);
+            if after != shown {
+                wave.push((i, shown.difference(&after).cloned().collect(), after.difference(&shown).cloned().collect()));
+            }
         }
     }
-    eprintln!("volumes: {} of {} files taken by delta in {} ms", moved.len(), now.len(), t0.elapsed().as_millis());
+    // what a volume shows the others moved: each other volume takes the change by delta, and passes on what that
+    // moves in its own, until nothing moves; a fact another volume still shows stays where it was laid
+    let mut own: Vec<std::collections::BTreeSet<String>> = if wave.is_empty() { Vec::new() } else { worlds.iter_mut().map(&surface).collect() };
+    let mut rounds = 0;
+    while !wave.is_empty() {
+        rounds += 1;
+        if rounds > 64 {
+            say("what the files show one another did not settle in 64 rounds");
+            return None;
+        }
+        let mut next = Vec::new();
+        for (i, lost, more) in std::mem::take(&mut wave) {
+            for (j, w) in worlds.iter_mut().enumerate().filter(|(j, _)| *j != i) {
+                let gone: std::collections::HashSet<&String> = lost.iter().filter(|key| !own.iter().enumerate().any(|(m, o)| m != j && o.contains(*key))).collect();
+                let (st, laid) = (&w.eval.store, w.eval.h.intern("surface"));
+                let held: std::collections::HashMap<String, u32> = (0..st.len_ids()).filter(|&id| st.alive(id) && st.rec(id).base() && st.rec(id).persp == laid).map(|id| (st.key(&w.eval.h, id), id)).collect();
+                let out: Vec<u32> = gone.iter().filter_map(|key| held.get(*key).copied()).collect();
+                let add: String = more.iter().filter(|key| !held.contains_key(*key) && !own[j].contains(*key)).map(|key| format!("{key}.\n")).collect();
+                if out.is_empty() && add.is_empty() {
+                    continue;
+                }
+                match w.retract_file_delta(&out) {
+                    Ok(Ok(_)) => {}
+                    Ok(Err(why)) | Err(why) => { say(&why); return None; }
+                }
+                if !add.is_empty() {
+                    if let Err(e) = w.load_delta(&add, None) { say(&e.join("; ")); return None; }
+                }
+                let after = surface(w);
+                if after != own[j] {
+                    next.push((j, own[j].difference(&after).cloned().collect(), after.difference(&own[j]).cloned().collect()));
+                    own[j] = after;
+                }
+            }
+            own[i] = surface(&mut worlds[i]);
+        }
+        wave = next;
+    }
+    let shown = if rounds > 0 { format!(", what they show the others in {rounds} rounds") } else { String::new() };
+    eprintln!("volumes: {} of {} files taken by delta in {} ms{shown}", moved.len(), now.len(), t0.elapsed().as_millis());
     let laid = worlds.iter().map(|_| Default::default()).collect();
     core.eval.store.dirty = false;
     Some((core, rofl::session::Volumes { worlds: std::mem::take(&mut worlds), laid, stats: Default::default() }, sums))
