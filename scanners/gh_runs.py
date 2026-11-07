@@ -1,6 +1,6 @@
 """gh_runs.py — what GitHub Actions actually did: runs, their jobs and steps, and which run started which.
 
-  python3 scanners/gh_runs.py OWNER/REPO ... [--since ISO] > runs.rofl
+  python3 scanners/gh_runs.py OWNER/REPO ... [--since ISO] [--workflow FILE] [--runs N] > runs.rofl
 
 Reads the Actions API through `gh api`. A run says what started it in its name: the zoo's workflows set
 `run-name` to the event and the cause (`repo/run_id` of the run that dispatched it, or the id of the run
@@ -9,6 +9,7 @@ run read, so a cascade starts at 0.
 
   run(Run, Repo, Workflow, Event)           run_time(Run, Start, End)      run_end(Run, Conclusion)
   run_cause(Run, Cause)                     the run whose end or dispatch started this one
+  run_head(Run, Sha, Branch)                the commit and branch the run checked
   job_run(Job, Run, Name)                   job_time(Job, Start, End)      job_end(Job, Conclusion)
   step_time(Job, Index, Name, Start, End)   step_end(Job, Index, Conclusion)
 """
@@ -31,13 +32,16 @@ def stamp(t: str | None) -> float | None:
 
 
 def main(args: list[str]) -> None:
-    since = None
-    if "--since" in args:
-        i = args.index("--since")
-        since, args = stamp(args[i + 1]), args[:i] + args[i + 2:]
+    opt = {}
+    for k in ("--since", "--workflow", "--runs"):
+        if k in args:
+            i = args.index(k)
+            opt[k], args = args[i + 1], args[:i] + args[i + 2:]
+    since = stamp(opt["--since"]) if "--since" in opt else None
+    where = f"workflows/{opt['--workflow']}/runs" if "--workflow" in opt else "runs"
     runs = []
     for full in args:
-        for r in api(f"repos/{full}/actions/runs?per_page=50")["workflow_runs"]:
+        for r in api(f"repos/{full}/actions/{where}?per_page={opt.get('--runs', 50)}")["workflow_runs"]:
             if since is None or stamp(r["created_at"]) >= since:
                 r["jobs"] = api(f"repos/{full}/actions/runs/{r['id']}/jobs?per_page=100")["jobs"]
                 runs.append(r)
@@ -51,6 +55,7 @@ def main(args: list[str]) -> None:
         ends = [j["completed_at"] for j in r["jobs"] if j["completed_at"]]
         fact("run_time", run, rel(r["run_started_at"]), rel(max(ends)) if ends else -1)
         fact("run_end", run, r["conclusion"] or r["status"])
+        fact("run_head", run, r["head_sha"][:12], r["head_branch"] or "")
         cause = r["display_title"].split(" ")[-1].split("/")[-1]
         if cause in by_id and cause != run:
             fact("run_cause", run, cause)

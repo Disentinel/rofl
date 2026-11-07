@@ -127,6 +127,7 @@
     "whycheck": "node --experimental-strip-types scripts/whycheck.ts",
     "structures": "node --experimental-strip-types scripts/structures.ts",
     "refine": "node --experimental-strip-types scripts/refine.ts",
+    "ci:cost": "sh scripts/ci_cost.sh",
     "whyfloor": "node --experimental-strip-types runtime/report.ts facts/floor-census.rofl rules/floor-census.rofl",
     "whyjoin": "node --experimental-strip-types runtime/report.ts facts/eval-cost.rofl rules/eval-cost.rofl",
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl",
