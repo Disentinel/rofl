@@ -3,9 +3,9 @@
 -- what the runs took judges the forecast. Facts: scanners/gh_actions.py (the workflows), scanners/gh_runs.py
 -- (the runs), scanners/ci_cost.ts (the worlds, the breaks and their times).
 
-edb(ci_on). edb(ci_concurrency). edb(ci_advisory). edb(ci_job).
+edb(ci_on). edb(ci_concurrency). edb(ci_advisory). edb(ci_job). edb(ci_job_name).
 edb(run). edb(run_time). edb(run_head). edb(job_run). edb(job_time). edb(step_time).
-edb(world_ms). edb(world_facts). edb(world_rust_only). edb(break_reads). edb(break_kind). edb(proof_test). edb(control_ms). edb(break_ms).
+edb(world_ms). edb(world_in_tree). edb(world_facts). edb(world_rust_only). edb(break_reads). edb(break_kind). edb(proof_test). edb(control_ms). edb(break_ms). edb(break_capped).
 
 -- ROFL_JOBS of the node and breaks jobs (.github/workflows/ci.yml)
 pool_width(4).
@@ -20,7 +20,7 @@ twice_total(T) :- T is sum(D ; R : twice_secs(R, D)).
 twice_count(N) :- N is count(R : twice_secs(R, _)).
 
 -- THE VERDICT AND THE RUN. A job under continue-on-error does not decide its run, but the run is not done until it is.
-advisory_job(J) :- job_run(J, R, N), run(R, _, W, _), P is concat(W, "#"), A is concat(P, N), ci_advisory(A).
+advisory_job(J) :- job_run(J, R, N), run(R, _, W, _), ci_job(A, W), ci_job_name(A, N), ci_advisory(A).
 lattice gate_end(R, max E).
 gate_end(R, E) :- job_run(J, R, _), job_time(J, _, E), not advisory_job(J).
 run_secs(R, D) :- run_time(R, S, E), E >= 0, D is E - S.

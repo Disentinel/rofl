@@ -4041,3 +4041,10 @@ check_file("ci_cost", "models/process/ci/cost.rofl").
 check_file("ci_cost", "models/process/ci/found-2026-11-07/workflows.rofl").
 check_file("ci_cost", "models/process/ci/found-2026-11-07/runs.rofl").
 check_file("ci_cost", "models/process/ci/found-2026-11-07/cost.rofl").
+
+-- THE INVARIANTS OF CI BEFORE CI RUNS (models/process/ci/gate.rofl; `npm run ci:cost -- --check`, the first job of
+-- ci.yml): each broken once by models/process/ci/gate-proof.rofl, so a rule that stops seeing its fault moves this golden.
+check_world("ci_gate").
+check_file("ci_gate", "models/process/ci/cost.rofl").
+check_file("ci_gate", "models/process/ci/gate.rofl").
+check_file("ci_gate", "models/process/ci/gate-proof.rofl").

@@ -1,0 +1,9 @@
+-- models/process/ci/accepted.rofl — the broken invariants of models/process/ci/gate.rofl accepted, each with why.
+edb(ci_accepted).
+edb(ci_accepted_why).
+
+-- with no complete call tabled, demand_fixpoint's six hundred deep chain unfolds again at every level before the
+-- sign is said: 576 s on the runner against about 1 s with no fault (2026-11-07). A cap of steps on that cargo test
+-- would end it early; the test has none yet.
+ci_accepted("a fault runs away", "demand_done_off", "demand_fixpoint").
+ci_accepted_why("a fault runs away", "demand_done_off", "demand_fixpoint", "no cap of steps on the cargo test yet").

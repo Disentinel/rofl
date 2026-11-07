@@ -5,6 +5,7 @@ ci_concurrency("rofl/ci", "${{ github.workflow }}-${{ github.ref }}", "true").
 ci_on("rofl/ci", "push", "").
 ci_on("rofl/ci", "pull_request", "").
 ci_job("rofl/ci#node", "rofl/ci").
+ci_job_name("rofl/ci#node", "node").
 ci_step("rofl/ci#node/0", "rofl/ci#node", 0).
 ci_step("rofl/ci#node/1", "rofl/ci#node", 1).
 ci_step("rofl/ci#node/2", "rofl/ci#node", 2).
@@ -19,12 +20,14 @@ ci_step("rofl/ci#node/9", "rofl/ci#node", 9).
 ci_guard("rofl/ci#node/9", "success() || failure()").
 ci_step("rofl/ci#node/10", "rofl/ci#node", 10).
 ci_job("rofl/ci#clippy", "rofl/ci").
+ci_job_name("rofl/ci#clippy", "clippy").
 ci_step("rofl/ci#clippy/0", "rofl/ci#clippy", 0).
 ci_step("rofl/ci#clippy/1", "rofl/ci#clippy", 1).
 ci_step("rofl/ci#clippy/2", "rofl/ci#clippy", 2).
 ci_step("rofl/ci#clippy/3", "rofl/ci#clippy", 3).
 ci_step("rofl/ci#clippy/4", "rofl/ci#clippy", 4).
 ci_job("rofl/ci#breaks", "rofl/ci").
+ci_job_name("rofl/ci#breaks", "breaks").
 ci_advisory("rofl/ci#breaks").
 ci_step("rofl/ci#breaks/0", "rofl/ci#breaks", 0).
 ci_step("rofl/ci#breaks/1", "rofl/ci#breaks", 1).
@@ -104,6 +107,7 @@ ci_step("rofl/ci#engine[win32-x64,windows-latest]/5", "rofl/ci#engine[win32-x64,
 ci_step("rofl/ci#engine[win32-x64,windows-latest]/6", "rofl/ci#engine[win32-x64,windows-latest]", 6).
 ci_uploads("rofl/ci#engine[win32-x64,windows-latest]/6", "rofl-win32-x64").
 ci_job("rofl/ci#vsix", "rofl/ci").
+ci_job_name("rofl/ci#vsix", "vsix").
 ci_needs("rofl/ci#vsix", "rofl/ci#engine[linux-x64,ubuntu-latest]").
 ci_needs("rofl/ci#vsix", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]").
 ci_needs("rofl/ci#vsix", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]").
@@ -122,6 +126,7 @@ ci_step("rofl/ci#vsix/7", "rofl/ci#vsix", 7).
 ci_uploads("rofl/ci#vsix/7", "vsix").
 ci_holds("rofl/ci#vsix/7", "vsix").
 ci_job("rofl/ci#release-dry", "rofl/ci").
+ci_job_name("rofl/ci#release-dry", "release-dry").
 ci_needs("rofl/ci#release-dry", "rofl/ci#vsix").
 ci_job_if("rofl/ci#release-dry", "github.event_name == 'push' && github.ref == 'refs/heads/main'").
 ci_env("rofl/ci#release-dry", "marketplace-publish").
@@ -132,6 +137,7 @@ ci_downloads("rofl/ci#release-dry/2", "*", "run").
 ci_step("rofl/ci#release-dry/3", "rofl/ci#release-dry", 3).
 ci_step("rofl/ci#release-dry/4", "rofl/ci#release-dry", 4).
 ci_job("rofl/ci#release", "rofl/ci").
+ci_job_name("rofl/ci#release", "release").
 ci_needs("rofl/ci#release", "rofl/ci#node").
 ci_needs("rofl/ci#release", "rofl/ci#vsix").
 ci_job_if("rofl/ci#release", "startsWith(github.ref, 'refs/tags/rofl-nb-')").
@@ -154,6 +160,7 @@ ci_on("rofl/pages", "push", "").
 ci_on("rofl/pages", "pull_request", "").
 ci_on("rofl/pages", "workflow_dispatch", "").
 ci_job("rofl/pages#build", "rofl/pages").
+ci_job_name("rofl/pages#build", "build").
 ci_step("rofl/pages#build/0", "rofl/pages#build", 0).
 ci_step("rofl/pages#build/1", "rofl/pages#build", 1).
 ci_step("rofl/pages#build/2", "rofl/pages#build", 2).
@@ -162,6 +169,7 @@ ci_step("rofl/pages#build/4", "rofl/pages#build", 4).
 ci_step("rofl/pages#build/5", "rofl/pages#build", 5).
 ci_guard("rofl/pages#build/5", "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'").
 ci_job("rofl/pages#deploy", "rofl/pages").
+ci_job_name("rofl/pages#deploy", "deploy").
 ci_needs("rofl/pages#deploy", "rofl/pages#build").
 ci_job_if("rofl/pages#deploy", "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'").
 ci_env("rofl/pages#deploy", "{'name': 'github-pages', 'url': '${{ steps.deployment.outputs.page_url }}'}").
