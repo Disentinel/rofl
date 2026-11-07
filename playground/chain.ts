@@ -47,7 +47,7 @@ const ROLE: [string, (a: string[], label: (t?: string) => string) => string][] =
   ['es_instance', () => 'a built-in object'],
   ['caught_value', () => 'caught'],
   ['callback_param', () => "the callback's parameter"],
-  ['param_default', () => "the parameter's default"],
+  ['fallback', () => "the parameter's default"],
   ['param_of', (a) => `the parameter ${unq(a[2])}`],
   ['rest_binds', () => 'the rest'],
   ['for_of_use', () => 'an element of the loop'],

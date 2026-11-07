@@ -8,6 +8,7 @@ import { cellsOf } from '../../notebook/front.ts';
 import { editCell, runFile, wall } from '../../notebook/cli.ts';
 import { Kernel } from '../../notebook/kernel.ts';
 import { sentenceSpans } from '../../scripts/read_md.ts';
+import { rustBin } from '../../playground/rust.ts';
 import { render, type Run } from '../render.ts';
 
 type Serial = typeof import('../serial.ts');
@@ -55,6 +56,20 @@ Which cars glow?
 ? X is on the line
 \`\`\`
 `;
+
+/** The Rust engine's spans (the cut the serializer takes) equal the TypeScript reader's, for each text. */
+function parity(serial: Serial): string[] {
+  const bin = rustBin(), texts = [...files.map((f): [string, string] => [f, readFileSync(path.join(ROOT, f), 'utf8')]), ...odd, ...breaks.map(([n, t]): [string, string] => [n, t])];
+  if (!bin) { console.log('     skipped: spans of the Rust engine against the TypeScript reader (no Rust binary)'); return []; }
+  let n = 0;
+  for (const [name, text] of texts) {
+    const rust = serial.sentenceSpans(text), want = sentenceSpans(text), j = rust.findIndex((s, i) => !want[i] || s[0] !== want[i][0] || s[1] !== want[i][1]), k = j >= 0 ? j : Math.min(rust.length, want.length);
+    n += want.length;
+    if (j >= 0 || rust.length !== want.length) return [`${name}: the Rust spans differ from the TypeScript reader's at span ${k}: rust ${JSON.stringify(rust[k])}, typescript ${JSON.stringify(want[k])} (${rust.length} against ${want.length})`];
+  }
+  console.log(`     ${n} spans of ${texts.length} texts the same from the Rust engine as from the TypeScript reader`);
+  return [];
+}
 
 /** What must hold of the serializer, as a list of what does not. `count`: say how many files are the same bytes. */
 function serialChecks(serial: Serial, count: boolean): string[] {
@@ -175,7 +190,7 @@ async function planted(name: string): Promise<string[]> {
 }
 
 const t0 = performance.now();
-const bad = [...serialChecks(await import('../serial.ts'), true), ...agent(await import('../serial.ts'), editCell), ...attribution(await import('../serial.ts'), (await import('../../notebook/kernel.ts')).share)];
+const bad = [...parity(await import('../serial.ts')), ...serialChecks(await import('../serial.ts'), true), ...agent(await import('../serial.ts'), editCell), ...attribution(await import('../serial.ts'), (await import('../../notebook/kernel.ts')).share)];
 // a string from the code that reads as a Markdown link is shown as text; the node beside it is still the one link
 const line = { line: 2, kind: 'answers', text: '? S', verdict: 'answers', total: 1, answers: [{ sentence: '[f() at a.js:3] says "[login](https://evil) [go](command:x)"', literal: '', at: [] }] };
 const md = render({ status: 'ok', errors: [], ms: { load: 0, run: 0 }, paths: { 'a.js': '/w/a.js' }, cells: [{ index: 0, kind: 'prose', line: 1, errors: [], notes: [], lines: [] }, { index: 1, kind: 'rofl', line: 1, errors: [], notes: [], lines: [line] }] } as unknown as Run).cells[0].md;

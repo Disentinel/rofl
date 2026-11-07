@@ -101,6 +101,29 @@ pub struct Forest {
     pub broken: bool,
 }
 
+/// The children by parent, in the order the edges were given: the offsets into the child list, and the list.
+pub(crate) fn children(parent: &[u32]) -> (Vec<u32>, Vec<u32>) {
+    let n = parent.len();
+    let mut start = vec![0u32; n + 1];
+    for &p in parent {
+        if p != NONE {
+            start[p as usize + 1] += 1;
+        }
+    }
+    for i in 0..n {
+        start[i + 1] += start[i];
+    }
+    let mut kids = vec![NONE; start[n] as usize];
+    let mut fill = start.clone();
+    for (c, &p) in parent.iter().enumerate() {
+        if p != NONE {
+            kids[fill[p as usize] as usize] = c as u32;
+            fill[p as usize] += 1;
+        }
+    }
+    (start, kids)
+}
+
 impl Forest {
     /// The forest of `(parent, child)` edges.
     pub fn build(edges: &[(Term, Term)]) -> Forest {
@@ -122,25 +145,7 @@ impl Forest {
                 broken = true;
             }
         }
-        // the children by parent, in the order the edges were given
-        let mut start = vec![0u32; n + 1];
-        for (c, &p) in parent.iter().enumerate() {
-            if p != NONE {
-                start[p as usize + 1] += 1;
-                let _ = c;
-            }
-        }
-        for i in 0..n {
-            start[i + 1] += start[i];
-        }
-        let mut kids = vec![NONE; start[n] as usize];
-        let mut fill = start.clone();
-        for (c, &p) in parent.iter().enumerate() {
-            if p != NONE {
-                kids[fill[p as usize] as usize] = c as u32;
-                fill[p as usize] += 1;
-            }
-        }
+        let (start, kids) = children(&parent);
         let (mut pre, mut end, mut depth) = (vec![NONE; n], vec![0u32; n], vec![0u32; n]);
         let mut order: Vec<u32> = Vec::with_capacity(n);
         let mut stack: Vec<(u32, u32)> = Vec::new();

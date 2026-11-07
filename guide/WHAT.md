@@ -104,31 +104,31 @@ checkout.rofl.md:13: cell 1 · rofl
     - "checkout" is a risky export
   checkout.rofl.md:16: why "checkout" is a risky export
     the value's steps, from where it is written:
-      checkout.js:4  checkout             it is named "checkout"
+      checkout.js:4  checkout             binds[value](it,"checkout")
       checkout.js:4  function checkout()  it answers to "checkout"
                                           "checkout" is a risky export
     the proof:
     "checkout" is a risky export, because
       [function checkout() at checkout.js:4] is a function, in the code, because
-        `function_declaration` is a function kind (given)
-        [function checkout() at checkout.js:4] is of kind `function_declaration` in file "checkout.js", in the code (given)
+        body[value]([function checkout() at checkout.js:4],[function body at checkout.js:4]), because
+          ox_fn_node([function checkout() at checkout.js:4],[function checkout() at checkout.js:4]), because
+            oxc_k[ast_oxc]([function checkout() at checkout.js:4],function), because
+              node[ast_oxc]([function checkout() at checkout.js:4],function,"checkout.js") (given)
+            + 1 side condition holds (nothing says otherwise)
+          oxc_c[ast_oxc]([function checkout() at checkout.js:4],body,0,[function body at checkout.js:4]), because
+            child[ast_oxc]([function checkout() at checkout.js:4],body,0,[function body at checkout.js:4]) (given)
+            unwrapped[ast_oxc]([function body at checkout.js:4],[function body at checkout.js:4]), because
+              node[ast_oxc]([function body at checkout.js:4],function_body,"checkout.js") (given)
+              + 1 side condition holds (nothing says otherwise)
       [function checkout() at checkout.js:4] answers to "checkout", in the code, because
-        [function checkout() at checkout.js:4] is of kind `function_declaration` in file "checkout.js", in the code (given)
-        The `id` of [function checkout() at checkout.js:4] is [checkout at checkout.js:4], in the code (given)
-        [checkout at checkout.js:4] is named "checkout", in the code, because
-          The attribute `name` of [checkout at checkout.js:4] is "checkout", in the code (given)
-      [function checkout() at checkout.js:4] is exported, in the code, because
         [function checkout() at checkout.js:4] is a function, in the code [above]
-        + 1 side condition holds (nothing says otherwise)
-        [function checkout() at checkout.js:4] is within [export named at checkout.js:4], in the code, because
-          [function checkout() at checkout.js:4] is under [export named at checkout.js:4], in the code, because
-            The `declaration` of [export named at checkout.js:4] is [function checkout() at checkout.js:4], in the code (given)
-        [export named at checkout.js:4] is of kind `export_named_declaration` in file "checkout.js", in the code (given)
-        `export_named_declaration` is an export declaration kind (given)
-      [function checkout() at checkout.js:4] may throw, in the code, because
-        [function charge() at pay.js:1] may throw, in the code, because
-          [function charge() at pay.js:1] throws outright, in the code, because
-            [throw at pay.js:2] is of kind `throw_statement` in file "pay.js", in the code (given)
+        target[value]([function checkout() at checkout.js:4],[checkout at checkout.js:4]), because
+          oxc_k[ast_oxc]([function checkout() at checkout.js:4],function) [above]
+          oxc_c[ast_oxc]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]), because
+            child[ast_oxc]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]) (given)
+            unwrapped[ast_oxc]([checkout at checkout.js:4],[checkout at checkout.js:4]), because
+              node[ast_oxc]([checkout at checkout.js:4],binding_identifier,"checkout.js") (given)
+              + 1 side condition holds (nothing says otherwise)
 ```
 <!-- END run -->
 
@@ -163,8 +163,16 @@ checkout.rofl.md:22: cell 2 · rofl
   checkout.rofl.md:22: whynot "safeCheckout" is a risky export
     by file:
       checkout.js: none; it stops at: [function safeCheckout() at checkout.js:9] may throw, in the code
+        why not "safeCheckout" is a risky export in checkout.js:
+          by the rule: N is a risky export if F is a function, in the code, F answers to N, in the code, F is exported, in the code, F may throw, in the code
+            it stops at: [function safeCheckout() at checkout.js:9] may throw, in the code
+              by the rule: F may throw, in the code if G may throw, in the code, G runs its body at once, in the code, C resolves to G, in the code, F is the nearest function of C, in the code, not C is caught here, in the code
+                it stops at: not [checkout() at checkout.js:11] is caught here, in the code, and [checkout() at checkout.js:11] is caught here, in the code does
+          (every failure: --all)
       pay.js: none; it stops at: Some function answers to "safeCheckout", in the code -- none in this file
-    (each file's demonstration: --all)
+        why not "safeCheckout" is a risky export in pay.js:
+          by the rule: N is a risky export if F is a function, in the code, F answers to N, in the code, F is exported, in the code, F may throw, in the code
+            it stops at: Some function answers to "safeCheckout", in the code -- none in this file
 checkout.rofl.md: 1 question answered, 1 invariant fails, 2 explained — FAILS at line 28 (exit 1; see rofl-nb --help)
 ```
 <!-- END run -->
@@ -175,7 +183,9 @@ to be a function that may throw, and it is not, because the one call in it
 that can throw is caught by its `try`. In `pay.js` it stops earlier: no function there answers to
 that name at all. This is the difference between "no" and "not found": the
 answer names the condition that fails, so you can decide whether the code is
-right or the rule is.
+right or the rule is. Of all the ways the rule could have held, `whynot` shows
+the one that came nearest, the one with the fewest conditions left unmet;
+`(every failure: --all)` says that `rofl-nb --all` prints every way it tried.
 
 ## What the model did not see
 

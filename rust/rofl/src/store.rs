@@ -55,13 +55,13 @@
 //! plain vectors, which is what lets one be a file mapped in later.
 
 use crate::cell::{AggOp, Algebra};
-use crate::term::{cmp_js, Heap, Subst, Sym, Term, TermK};
+use crate::term::{cmp_js, freeze_layer, Heap, Subst, Sym, Term, TermK};
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap, BinaryHeap, HashMap, HashSet};
 use std::hash::{BuildHasherDefault, Hash, Hasher};
 use std::ops::{Index, IndexMut, Range};
 use crate::arena::{Arena, Pod};
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 mod volume;
 
@@ -159,9 +159,9 @@ pub struct EvalRecord {
     pub partial: bool,
 }
 
+/// What a witness's premise is, read out of the four bytes it is kept in (`PremRef::kind`).
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-#[repr(C, u32)]
-pub enum PremRef {
+pub enum Prem {
     /// A fact that was matched: the identity, not the spelling.
     Fact(FactId),
     /// The canonical key of an ABSENT pattern, which is not a fact and can
@@ -170,11 +170,78 @@ pub enum PremRef {
     Bi(Sym),
     /// A sealed aggregate cell, the ONE premise an aggregate element records.
     /// Its members and what it sealed live in the cell record, so a witness
-    /// keeps one premise per body element and this stays eight bytes.
+    /// keeps one premise per body element.
     Cell(CellId),
     /// A row of a closure answered from its tree (engine/vclosure.rs): no fact holds it, so the premise is the canonical key
     /// of the row, interned as a negation's is; `VRow(0)` is the unspelled form a match returns and a firing's record spells.
     VRow(Sym),
+}
+
+/// A premise as a witness and a partial solution keep it, in four bytes: a fact's id below 2^31, else the kind in the two
+/// bits under the top one and a symbol or cell of 29 bits. An id past them refuses loudly rather than wrap.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(transparent)]
+pub struct PremRef(u32);
+
+const PREM_OTHER: u32 = 1 << 31;
+const PREM_SHIFT: u32 = 29;
+const PREM_LOW: u32 = (1 << PREM_SHIFT) - 1;
+
+#[allow(non_snake_case)]
+impl PremRef {
+    #[inline]
+    pub fn Fact(f: FactId) -> PremRef {
+        assert!(f < PREM_OTHER, "a fact id past 2^31 cannot be a witness's premise");
+        PremRef(f)
+    }
+    #[inline]
+    fn other(kind: u32, x: u32) -> PremRef {
+        assert!(x <= PREM_LOW, "a symbol or cell past 2^29 cannot be a witness's premise");
+        PremRef(PREM_OTHER | kind << PREM_SHIFT | x)
+    }
+    pub fn Neg(s: Sym) -> PremRef {
+        PremRef::other(0, s)
+    }
+    pub fn Bi(s: Sym) -> PremRef {
+        PremRef::other(1, s)
+    }
+    pub fn Cell(c: CellId) -> PremRef {
+        PremRef::other(2, c)
+    }
+    pub fn VRow(s: Sym) -> PremRef {
+        PremRef::other(3, s)
+    }
+    #[inline]
+    pub fn kind(self) -> Prem {
+        if self.0 & PREM_OTHER == 0 {
+            return Prem::Fact(self.0);
+        }
+        let x = self.0 & PREM_LOW;
+        match (self.0 >> PREM_SHIFT) & 3 {
+            0 => Prem::Neg(x),
+            1 => Prem::Bi(x),
+            2 => Prem::Cell(x),
+            _ => Prem::VRow(x),
+        }
+    }
+}
+
+impl From<Prem> for PremRef {
+    fn from(p: Prem) -> PremRef {
+        match p {
+            Prem::Fact(f) => PremRef::Fact(f),
+            Prem::Neg(s) => PremRef::Neg(s),
+            Prem::Bi(s) => PremRef::Bi(s),
+            Prem::Cell(c) => PremRef::Cell(c),
+            Prem::VRow(s) => PremRef::VRow(s),
+        }
+    }
+}
+
+impl std::fmt::Debug for PremRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.kind().fmt(f)
+    }
 }
 
 // ------------------------------------------------------------------ cells
@@ -274,6 +341,8 @@ pub struct Cells {
     seals: Vec<Seal>,
     /// `(owner, key, tick)`: a cell is sealed once per evaluation of a tick.
     by_key: HashMap<(CellOwner, Box<[Term]>, u32), CellId>,
+    /// where the arenas a volume holds them as were read from (`volume::Cells::write`)
+    was: [Option<crate::arena::Span>; 7],
 }
 
 impl Cells {
@@ -291,6 +360,78 @@ impl Cells {
             self.alts.push(r);
         }
         Member { proj: m.proj, value: m.value, height: m.height, prems, others: (first, m.others.len() as u32) }
+    }
+}
+
+/// Derivation heights by fact id, 4 bytes a fact: a walk of the firings below an aggregate's members reaches most
+/// of a world, where a map paid about 30 bytes an entry.
+#[derive(Clone, Default, Debug)]
+pub struct Heights {
+    v: Vec<u32>,
+    n: usize,
+}
+
+impl Heights {
+    const NONE: u32 = u32::MAX;
+    #[inline]
+    pub fn get(&self, f: &FactId) -> Option<&u32> {
+        self.v.get(*f as usize).filter(|h| **h != Self::NONE)
+    }
+    #[inline]
+    pub fn contains_key(&self, f: &FactId) -> bool {
+        self.get(f).is_some()
+    }
+    pub fn insert(&mut self, f: FactId, h: u32) -> Option<u32> {
+        let i = f as usize;
+        if i >= self.v.len() {
+            self.v.resize((i + 1).next_power_of_two(), Self::NONE);
+        }
+        let was = std::mem::replace(&mut self.v[i], h);
+        if was == Self::NONE {
+            self.n += 1;
+            None
+        } else {
+            Some(was)
+        }
+    }
+    pub fn remove(&mut self, f: &FactId) -> Option<u32> {
+        let was = self.get(f).copied();
+        if was.is_some() {
+            self.v[*f as usize] = Self::NONE;
+            self.n -= 1;
+        }
+        was
+    }
+    pub fn clear(&mut self) {
+        self.v.clear();
+        self.n = 0;
+    }
+    pub fn len(&self) -> usize {
+        self.n
+    }
+    pub fn is_empty(&self) -> bool {
+        self.n == 0
+    }
+    pub fn bytes(&self) -> usize {
+        self.v.capacity() * 4
+    }
+    pub fn retain(&mut self, mut keep: impl FnMut(&FactId, &mut u32) -> bool) {
+        for (i, h) in self.v.iter_mut().enumerate() {
+            if *h != Self::NONE && !keep(&(i as FactId), h) {
+                *h = Self::NONE;
+                self.n -= 1;
+            }
+        }
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (FactId, u32)> + '_ {
+        self.v.iter().enumerate().filter(|(_, h)| **h != Self::NONE).map(|(i, h)| (i as FactId, *h))
+    }
+}
+
+impl std::ops::Index<&FactId> for Heights {
+    type Output = u32;
+    fn index(&self, f: &FactId) -> &u32 {
+        self.get(f).expect("a height asked of a fact with none")
     }
 }
 
@@ -375,6 +516,11 @@ impl PatIndex {
             e = self.prev[e as usize];
         }
         self.under.as_ref().is_some_and(|u| u.holds(facts, vals, k))
+    }
+
+    /// Distinct keys, those of a mapped index under this one counted again where a write met them.
+    fn keys(&self) -> usize {
+        self.values + self.under.as_ref().map_or(0, |u| u.keys())
     }
 
     fn entries(&self) -> usize {
@@ -487,6 +633,40 @@ impl PatIndex {
         }
         out[top..].reverse();
         true
+    }
+
+    /// The index at the bottom of this one: the one a volume mapped, if any.
+    fn bottom(&self) -> &PatIndex {
+        self.under.as_deref().map_or(self, |u| u.bottom())
+    }
+
+    /// The entries above the bottom as one top, in the order they were put: what an overlay holds over the bottom,
+    /// made from the top a volume held over it, when one did.
+    fn above_bottom(&self, facts: &Facts) -> PatIndex {
+        fn was(ix: &PatIndex) -> Option<&PatIndex> {
+            let u = ix.under.as_deref()?;
+            if u.under.is_none() { Some(ix) } else { was(u) }
+        }
+        fn ids_above(ix: &PatIndex, out: &mut Vec<FactId>) {
+            if let Some(u) = &ix.under {
+                ids_above(u, out);
+                out.extend(ix.ids.iter());
+            }
+        }
+        let mut ids = Vec::new();
+        ids_above(self, &mut ids);
+        let (mut top, mut sig) = (PatIndex::new(&self.pos), Vec::new());
+        for k in ids {
+            sig.clear();
+            sig.extend(self.pos.iter().map(|&p| facts.args(k)[p]));
+            top.put(facts, &sig, k);
+        }
+        if let Some(w) = was(self) {
+            top.slots = Arena::derived(top.slots.take(), w.slots.origin());
+            top.ids = Arena::derived(top.ids.take(), w.ids.origin());
+            top.prev = Arena::derived(top.prev.take(), w.prev.origin());
+        }
+        top
     }
 
     /// One index of the base's entries and the top's, in the order they were put: what a volume holds.
@@ -704,19 +884,12 @@ impl Tuples {
         self.top.reserve(n, n_args);
     }
     fn freeze(&mut self) {
-        if self.top.len() == 0 {
-            return;
-        }
-        if self.t0 == 0 {
-            self.base = Rc::new(std::mem::take(&mut self.top));
-        } else {
-            let b = Rc::make_mut(&mut self.base);
-            for t in 0..self.top.len() as TupId {
-                let a = self.top.args(t);
-                b.intern(a, tup_hash(a), || self.top.sks[t as usize]);
+        freeze_layer(&mut self.base, &mut self.top, TupSeg::len, |top, b| {
+            for t in 0..top.len() as TupId {
+                let a = top.args(t);
+                b.intern(a, tup_hash(a), || top.sks[t as usize]);
             }
-            self.top = TupSeg::default();
-        }
+        });
         self.t0 = self.base.len() as TupId;
     }
     fn bytes(&self) -> (usize, usize, usize, usize) {
@@ -1184,6 +1357,14 @@ pub struct Store {
     cells: Rc<Cells>,
     /// Runs holding a record `retire` marked dead and did not yet drop.
     unswept: Vec<(Sym, Sym)>,
+    /// The relations a base fact came into or left since the last whole evaluation noted it (`Eval::note_whole`).
+    pub base_moved: FxSet<Sym>,
+    /// The relations a full pass keeps (`Eval::finished_layer`): `clear_derived` leaves their facts and firings.
+    pub kept_layer: FxSet<Sym>,
+    /// The kernel's rows about what the full pass keeps (a `derived_by` row of a kept fact, a kept aggregate's cell).
+    pub kept_rows: FxSet<FactId>,
+    /// The rules concluding what the full pass keeps: their aggregates' cells stay, cited or not.
+    pub kept_rules: FxSet<Sym>,
     /// Premise -> the facts with a firing that cites it, kept while a program
     /// with a lattice evaluates (`track_citers`), so a withdrawal visits the
     /// firings it touches and not the store. An entry can outlive its firing;
@@ -1192,9 +1373,50 @@ pub struct Store {
     /// The facts with a firing that cites a row of a closure answered from its tree, by the row's descendant: what a
     /// retraction that takes an edge out of the tree looks at (`Eval::retract_set`). Kept beside `citers` by every
     /// firing put since; dropped (to be built again) when a firing cites a row whose ends this store does not know.
-    pub vciters: Option<Rc<FxMap<u64, Vec<(FactId, Sym)>>>>,
-    /// Where the volume this store was read from holds `vciters`: written again as a splice of it.
-    pub(crate) vciters_from: Option<crate::arena::Span>,
+    pub vciters: Option<Rc<VCiters>>,
+}
+
+/// `Store::vciters`: rows `[descendant low, high, fact, row]` in order, as a volume maps them, and the citers put
+/// since by descendant, so neither opening nor keeping a world walks the rows.
+#[derive(Clone, Default)]
+pub struct VCiters {
+    pub rows: Arena<u32>,
+    pub(crate) more: FxMap<u64, Vec<(FactId, Sym)>>,
+    /// where the rows put since were read from: what a volume writes them as a change of
+    pub(crate) more_was: Option<crate::arena::Span>,
+}
+
+impl VCiters {
+    pub fn of(&self, d: u64) -> Vec<(FactId, Sym)> {
+        let (r, at) = (&self.rows, (d as u32, (d >> 32) as u32));
+        let (mut i, mut hi) = (0, r.len() / 4);
+        while i < hi {
+            let m = (i + hi) / 2;
+            if (r[4 * m], r[4 * m + 1]) < at {
+                i = m + 1;
+            } else {
+                hi = m;
+            }
+        }
+        let mut out = Vec::new();
+        while 4 * i < r.len() && (r[4 * i], r[4 * i + 1]) == at {
+            out.push((r[4 * i + 2], r[4 * i + 3]));
+            i += 1;
+        }
+        out.extend(self.more.get(&d).into_iter().flatten());
+        out
+    }
+
+    pub fn put(&mut self, d: u64, id: FactId, k: Sym) {
+        self.more.entry(d).or_default().push((id, k));
+    }
+
+    /// The rows put since, in order.
+    pub(crate) fn more_rows(&self) -> Vec<u32> {
+        let mut rows: Vec<[u32; 4]> = self.more.iter().flat_map(|(d, v)| v.iter().map(move |(f, k)| [*d as u32, (*d >> 32) as u32, *f, *k])).collect();
+        rows.sort_unstable();
+        rows.concat()
+    }
 }
 
 /// The citer index: the facts citing each premise as one column by premise id (`offs`, `ids`), which a volume maps,
@@ -1204,6 +1426,7 @@ pub(crate) struct Citers {
     pub(crate) offs: Arena<u32>,
     pub(crate) ids: Arena<FactId>,
     more: HashMap<FactId, Vec<FactId>>,
+    more_was: Option<crate::arena::Span>,
 }
 
 impl Citers {
@@ -1226,7 +1449,7 @@ impl Citers {
             ids[at[g as usize] as usize] = id;
             at[g as usize] += 1;
         });
-        Citers { offs: offs.into(), ids: ids.into(), more: HashMap::new() }
+        Citers { offs: offs.into(), ids: ids.into(), more: HashMap::new(), more_was: None }
     }
 
     /// One column of what the map and the column hold, for a volume.
@@ -1315,6 +1538,8 @@ struct DupWindow {
 struct Fired {
     base: Rc<HashSlots>,
     own: FxSet<u64>,
+    /// where the firings since the base were read from
+    own_was: Option<crate::arena::Span>,
 }
 
 impl Fired {
@@ -1775,6 +2000,7 @@ impl Store {
                 // derived fact's tick scope is the derivation's
                 let old = self.facts.rec(id).flags();
                 if flags & F_BASE != 0 && old & F_BASE == 0 {
+                    self.base_moved.insert(rel);
                     self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
                     // its height is a base fact's now, and what rests on it may lie lower: an addition to note
                     if let Some(a) = self.arrivals.as_mut().filter(|_| brk!("add_promoted_unnoted" => false; true)) {
@@ -1805,6 +2031,9 @@ impl Store {
             }
         };
         self.n_live += 1;
+        if flags & F_BASE != 0 {
+            self.base_moved.insert(rel);
+        }
         if let Some(a) = self.arrivals.as_mut() {
             a.push(id);
         }
@@ -1870,8 +2099,12 @@ impl Store {
         // each a long set sharing a long prefix with its neighbours, and
         // every merge searched through them. Nothing reads a dead id from a
         // run (every reader skips it) and `sweep` would drop it anyway, so
-        // it is dropped here, where the run is being rewritten regardless.
-        canon.retain(|&i| me.alive(i));
+        // it is dropped here, where the run is being rewritten regardless,
+        // when the run holds one: walking a run that holds none read every
+        // record of a relation an edit touched.
+        if self.unswept.contains(&(rel, persp)) {
+            canon.retain(|&i| me.alive(i));
+        }
         fresh.retain(|&i| me.alive(i));
         if !unordered && v[i].1.by_tup {
             canon.sort_by(|x, y| cmp_args(h, *x, *y));
@@ -1934,14 +2167,18 @@ impl Store {
         })
     }
 
+    fn book_rels(&self, persp: Sym) -> Vec<Sym> {
+        self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect()
+    }
+
     /// Whether the book `persp` holds a live base fact outside `but`, of any relation.
     pub fn book_base_outside(&self, persp: Sym, but: &HashSet<FactId>) -> bool {
-        let rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        let rels = self.book_rels(persp);
         rels.into_iter().any(|r| self.base_outside(r, Some(persp), but))
     }
 
     pub fn book_holds_base(&mut self, h: &Heap, persp: Sym, but: FactId) -> bool {
-        let mut rels: Vec<Sym> = self.idx.own.iter().chain(self.idx.base.iter()).filter(|(_, ps)| ps.iter().any(|(p, _)| *p == persp)).map(|(r, _)| *r).collect();
+        let mut rels = self.book_rels(persp);
         rels.sort_unstable();
         rels.dedup();
         rels.into_iter().any(|r| self.rel_persp(h, r, persp).into_iter().any(|f| f != but && self.rec(f).base()))
@@ -2008,6 +2245,67 @@ impl Store {
             }
         }
         (rows, seen.len().clamp(1, rows.max(1)))
+    }
+
+    /// `probe_stats` for every value of the constant positions `cpos` (one or two) at once, by the values' bits: one
+    /// pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`).
+    pub fn probe_groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> FxMap<(u64, u64), (usize, usize)> {
+        let mut rows: FxMap<(u64, u64), (usize, usize)> = FxMap::default();
+        let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
+        let Some(groups) = self.idx.get(&rel) else { return rows };
+        for (_, r) in groups.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)) {
+            for &k in r.canon.iter().chain(r.arrived.iter()) {
+                if !self.facts.alive(k) {
+                    continue;
+                }
+                let a = self.facts.args(k);
+                let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
+                let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { continue };
+                let c = (c0, c1);
+                rows.entry(c).or_default().0 += 1;
+                if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+                    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+                    for &p in vpos {
+                        x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+                    }
+                    seen.insert((c, x));
+                }
+            }
+        }
+        for (c, _) in seen {
+            rows.get_mut(&c).expect("a value seen is counted").1 += 1;
+        }
+        for v in rows.values_mut() {
+            v.1 = v.1.clamp(1, v.0.max(1));
+        }
+        rows
+    }
+
+    /// What `probe_groups` counted is still so: the rows of `rel` neither grew, nor died, nor came back.
+    pub fn rows_stamp(&self, rel: Sym, persp: Option<Sym>) -> (usize, u64, usize) {
+        (self.rel_len_est(rel, persp), self.deaths.get(&rel).copied().unwrap_or(0), self.revived.get(&rel).map_or(0, Vec::len))
+    }
+
+    /// Every (relation, book) holding a live row, with its live rows and widest arity, in no order: the
+    /// census a profile reports (`Eval::profile_text`).
+    pub fn live_census(&self) -> Vec<(Sym, Sym, usize, usize, usize)> {
+        let mut out = Vec::new();
+        for (rel, groups) in self.idx.iter() {
+            for (p, r) in groups {
+                let (mut n, mut base, mut arity) = (0usize, 0usize, 0usize);
+                for &k in r.canon.iter().chain(r.arrived.iter()) {
+                    if self.alive(k) {
+                        n += 1;
+                        base += usize::from(self.rec(k).base());
+                        arity = arity.max(self.facts.args(k).len());
+                    }
+                }
+                if n > 0 {
+                    out.push((*rel, *p, n, base, arity));
+                }
+            }
+        }
+        out
     }
 
     /// Every live row of `rel`, with its book, in no order: a scan that sorts
@@ -2180,8 +2478,12 @@ impl Store {
         }
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => Some(None),
-            Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => Some(None),
             Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => Some(hits(&self.facts, &run.loose, &bp[&mask], vals, limit)),
+            Some(bp) if bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask) => match narrower(bp, mask) {
+                Some(m) if run.staged.is_empty() => Some(hits(&self.facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit)),
+                Some(_) => None,
+                None => Some(None),
+            },
             _ => None,
         }
     }
@@ -2273,8 +2575,8 @@ impl Store {
         let run = self.run(rel, p).unwrap();
         match &run.by_pat {
             None if run.canon.len() < MIN_INDEXED => return None,
-            Some(bp) if !bp.contains_key(&mask) && bp.len() >= MAX_PATTERNS => return None,
             Some(bp) if run.staged.is_empty() && bp.contains_key(&mask) => return hits(&self.facts, &run.loose, &bp[&mask], vals, limit),
+            Some(bp) if bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask) && narrower(bp, mask).is_none() => return None,
             _ => {}
         }
         let run = self.run_mut(rel, p);
@@ -2285,7 +2587,11 @@ impl Store {
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
         let canon = &run.canon;
-        let by_val = Rc::make_mut(run.by_pat.as_mut().unwrap()).entry(mask).or_insert_with(|| {
+        let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
+        if let Some(m) = narrower(bp, mask).filter(|_| bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask)) {
+            return hits(facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit);
+        }
+        let by_val = bp.entry(mask).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
             PatIndex::build(h, facts, pos, canon)
         });
@@ -2331,9 +2637,7 @@ impl Store {
         let mask = pos.iter().fold(0u32, |m, &q| m | 1 << q);
         let run = self.run(rel, p).unwrap();
         let rows = run.canon.len() + run.arrived.len();
-        let have = run.by_pat.as_ref().map(|bp| {
-            bp.keys().copied().filter(|m| m & mask == *m).max_by_key(|m| (m.count_ones(), *m))
-        });
+        let have = run.by_pat.as_ref().map(|bp| narrower(bp, mask));
         let at = match have.flatten() {
             Some(m) => m,
             None if rows < MIN_INDEXED || run.by_pat.as_ref().is_some_and(|bp| bp.len() >= MAX_PATTERNS) => return None,
@@ -2347,9 +2651,9 @@ impl Store {
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
         let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
-        if !bp.contains_key(&at) {
+        if let std::collections::hash_map::Entry::Vacant(e) = bp.entry(at) {
             let rows: Vec<FactId> = run.canon.iter().chain(run.arrived.iter()).copied().collect();
-            bp.insert(at, PatIndex::build(h, facts, pos, &rows));
+            e.insert(PatIndex::build(h, facts, pos, &rows));
         }
         let by_val = &bp[&at];
         let sub: Vec<Term> = by_val.pos.iter().map(|q| vals[pos.iter().position(|x| x == q).unwrap()]).collect();
@@ -2403,18 +2707,16 @@ impl Store {
         if r.dead() {
             return;
         }
+        if r.base() {
+            self.base_moved.insert(r.rel);
+        }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
         self.bump();
-        if self.wit_head[id as usize] != EMPTY {
-            let mut c = self.wit_head[id as usize];
-            while c != EMPTY {
-                self.wits_live -= 1;
-                c = self.wits[c as usize].next;
-            }
-            self.wit_head[id as usize] = EMPTY;
-        }
+        let k = self.chain(id).count();
+        self.wits_live -= k;
+        self.wit_head[id as usize] = EMPTY;
         if !self.unswept.contains(&(r.rel, r.persp)) {
             self.unswept.push((r.rel, r.persp));
         }
@@ -2427,6 +2729,9 @@ impl Store {
         let r = self.facts.rec(id);
         if r.dead() {
             return;
+        }
+        if r.base() {
+            self.base_moved.insert(r.rel);
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
@@ -2445,11 +2750,8 @@ impl Store {
     /// Drop every firing of a record, live or dead.
     pub fn drop_firings(&mut self, id: FactId) {
         self.chains_cut();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            self.wits_live -= 1;
-            c = self.wits[c as usize].next;
-        }
+        let k = self.chain(id).count();
+        self.wits_live -= k;
         self.wit_head[id as usize] = EMPTY;
     }
 
@@ -2465,7 +2767,7 @@ impl Store {
             for &id in &keys {
                 for (_, _, prems) in self.firings(id) {
                     for p in prems {
-                        if let PremRef::Fact(g) = p {
+                        if let Prem::Fact(g) = p.kind() {
                             f(g, id);
                         }
                     }
@@ -2531,7 +2833,7 @@ impl Store {
         let drop: Vec<FactId> = (0..self.facts.len() as FactId)
             .filter(|&i| {
                 let r = &self.facts.rec(i);
-                !r.dead() && !r.base() && !r.frozen()
+                !r.dead() && !r.base() && !r.frozen() && !self.kept_layer.contains(&r.rel) && !self.kept_rows.contains(&i)
             })
             .collect();
         self.remove_many(&drop);
@@ -2553,22 +2855,10 @@ impl Store {
         }
         let tick = self.tick;
         for id in 0..self.wit_head.len() {
-            let mut prev = EMPTY;
-            let mut c = self.wit_head[id];
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                if n.tick == tick && !standing.contains(&(id as FactId, n.rule)) {
-                    if prev == EMPTY {
-                        self.wit_head[id] = n.next;
-                    } else {
-                        self.wits[prev as usize].next = n.next;
-                    }
-                    self.wits_live -= 1;
-                } else {
-                    prev = c;
-                }
-                c = n.next;
+            if !self.kept_layer.is_empty() && (self.kept_layer.contains(&self.facts.rec(id as FactId).rel) || self.kept_rows.contains(&(id as FactId))) {
+                continue;
             }
+            self.unlink_where(id as FactId, |_, n| n.tick == tick && !standing.contains(&(id as FactId, n.rule)));
         }
         self.compact_wits();
         self.gc_cells();
@@ -2649,13 +2939,7 @@ impl Store {
             if head == EMPTY {
                 continue;
             }
-            let mut n = 0usize;
-            let mut c = head;
-            while c != EMPTY {
-                n += 1;
-                c = self.wits[c as usize].next;
-            }
-            held.push((id, head, n));
+            held.push((id, head, self.chain(id).count()));
         }
         self.remove_many(&to_drop);
         // A separate batch, and disjoint from the one above: nothing on the
@@ -2734,12 +3018,12 @@ impl Store {
     pub fn support(&mut self, id: FactId, w: Witness) -> bool {
         let h = firing_hash(id, w.rule, &w.prems);
         let head = self.wit_head[id as usize];
-        let mut c = if self.fired.insert(h) {
+        let c = if self.fired.insert(h) {
             EMPTY
         } else if let Some(d) = &self.dup_window {
             if let Some(&(f, at)) = d.nodes.get(&h) {
                 let n = self.wits[at as usize];
-                if f == id && n.rule == w.rule && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] == w.prems[..] {
+                if f == id && n.rule == w.rule && self.prems_of(&n) == &w.prems[..] {
                     return false;
                 }
             }
@@ -2747,29 +3031,21 @@ impl Store {
         } else {
             head
         };
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if n.rule == w.rule
-                && n.prems_len as usize == w.prems.len()
-                && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                    == w.prems[..]
-            {
-                return false;
-            }
-            c = n.next;
+        if self.nodes_from(c).any(|n| n.rule == w.rule && n.prems_len as usize == w.prems.len() && self.prems_of(&n) == &w.prems[..]) {
+            return false;
         }
         if let Some(ix) = self.citers.as_mut().map(Rc::make_mut).filter(|_| brk!("citers_unkept" => false; true)) {
             for p in &w.prems {
-                if let PremRef::Fact(g) = p {
-                    ix.more.entry(*g).or_default().push(id);
+                if let Prem::Fact(g) = p.kind() {
+                    ix.more.entry(g).or_default().push(id);
                 }
             }
         }
         if self.vciters.is_some() && brk!("vciters_unkept" => false; true) {
             for p in &w.prems {
-                let PremRef::VRow(k) = p else { continue };
-                match self.vrow_of.get(k) {
-                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).entry(d.bits()).or_default().push((id, *k)),
+                let Prem::VRow(k) = p.kind() else { continue };
+                match self.vrow_of.get(&k) {
+                    Some((_, _, _, d)) => Rc::make_mut(self.vciters.as_mut().unwrap()).put(d.bits(), id, k),
                     None => {
                         self.vciters = None;
                         break;
@@ -2860,37 +3136,17 @@ impl Store {
         };
         let mut out = Vec::new();
         for id in ids {
-            let id = id as usize;
-            let mut prev = EMPTY;
-            let mut c = self.wit_head[id];
-            let mut lost: Vec<Sym> = Vec::new();
-            let mut cited = FactId::MAX;
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                let first = self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                    .iter()
-                    .filter_map(|p| match p {
-                        PremRef::Fact(f) if gone.contains(f) => Some(*f),
-                        _ => None,
-                    })
-                    .min();
-                if let Some(g) = first {
-                    cited = cited.min(g);
-                    if prev == EMPTY {
-                        self.wit_head[id] = n.next;
-                    } else {
-                        self.wits[prev as usize].next = n.next;
-                    }
-                    self.wits_live -= 1;
-                    lost.push(n.rule);
-                } else {
-                    prev = c;
-                }
-                c = n.next;
+            let removed = self.unlink_where(id, |s, n| {
+                s.prems_of(n).iter().any(|p| matches!(p.kind(), Prem::Fact(f) if gone.contains(&f)))
+            });
+            if removed.is_empty() {
+                continue;
             }
-            if !lost.is_empty() {
-                out.push((id as FactId, lost, self.wit_head[id] != EMPTY, cited));
-            }
+            let cited = removed.iter().flat_map(|n| self.prems_of(n)).filter_map(|p| match p.kind() {
+                Prem::Fact(f) if gone.contains(&f) => Some(f),
+                _ => None,
+            }).min().unwrap_or(FactId::MAX);
+            out.push((id, removed.iter().map(|n| n.rule).collect(), self.wit_head[id as usize] != EMPTY, cited));
         }
         out
     }
@@ -2907,15 +3163,7 @@ impl Store {
 
     /// Does a firing of `id` cite `p`? Walked in place: a fact with a long chain is asked once for each premise gone.
     pub fn cites(&self, id: FactId, p: PremRef) -> bool {
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].contains(&p) {
-                return true;
-            }
-            c = n.next;
-        }
-        false
+        self.chain(id).any(|n| self.prems_of(&n).contains(&p))
     }
 
     /// The facts with a firing that cites one of `of`, from the citer index.
@@ -2929,128 +3177,53 @@ impl Store {
 
     /// Does some firing of `id` cite none of `stale`?
     pub fn fired_without(&self, id: FactId, stale: &HashSet<FactId>) -> bool {
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if !self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                .iter()
-                .any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f)))
-            {
-                return true;
-            }
-            c = n.next;
-        }
-        false
+        self.chain(id).any(|n| !self.prems_of(&n).iter().any(|p| matches!(p.kind(), Prem::Fact(f) if stale.contains(&f))))
     }
 
     /// Drop the firings of `id` that cite one of `stale`; their rules.
     pub fn drop_firings_of_citing(&mut self, id: FactId, stale: &HashSet<FactId>) -> Vec<Sym> {
         self.chains_cut();
-        let id = id as usize;
-        let mut prev = EMPTY;
-        let mut c = self.wit_head[id];
-        let mut lost = Vec::new();
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-                .iter()
-                .any(|p| matches!(p, PremRef::Fact(f) if stale.contains(f)))
-            {
-                if prev == EMPTY {
-                    self.wit_head[id] = n.next;
-                } else {
-                    self.wits[prev as usize].next = n.next;
-                }
-                self.wits_live -= 1;
-                lost.push(n.rule);
-            } else {
-                prev = c;
-            }
-            c = n.next;
-        }
-        lost
+        self.unlink_where(id, |s, n| s.prems_of(n).iter().any(|p| matches!(p.kind(), Prem::Fact(f) if stale.contains(&f))))
+            .into_iter()
+            .map(|n| n.rule)
+            .collect()
     }
 
     /// The premises of the oldest firing of a record still held: the one it
     /// was first concluded by, unless that one was removed.
     pub fn first_firing(&self, id: FactId) -> Option<Vec<PremRef>> {
-        let mut c = self.wit_head[id as usize];
-        let mut last = EMPTY;
-        while c != EMPTY {
-            last = c;
-            c = self.wits[c as usize].next;
-        }
-        (last != EMPTY).then(|| {
-            let n = self.wits[last as usize];
-            self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].to_vec()
-        })
+        self.chain(id).last().map(|n| self.prems_of(&n).to_vec())
     }
 
     /// Every firing of `id`: its tick and its premises.
     pub fn firings(&self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let mut out = Vec::new();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            out.push((n.rule, n.tick, self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize].to_vec()));
-            c = n.next;
-        }
-        out
+        self.chain(id).map(|n| (n.rule, n.tick, self.prems_of(&n).to_vec())).collect()
     }
 
     /// Remove one firing, named by its rule and premises. True if it was there.
     pub fn remove_firing(&mut self, id: FactId, rule: Sym, prems: &[PremRef]) -> bool {
         self.chains_cut();
-        let mut prev = EMPTY;
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            if n.rule == rule && self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] == *prems {
-                if prev == EMPTY {
-                    self.wit_head[id as usize] = n.next;
-                } else {
-                    self.wits[prev as usize].next = n.next;
-                }
-                self.wits_live -= 1;
-                return true;
-            }
-            prev = c;
-            c = n.next;
-        }
-        false
+        let mut hit = false;
+        let removed = self.unlink_where(id, |s, n| {
+            let m = !hit && n.rule == rule && s.prems_of(n) == prems;
+            hit |= m;
+            m
+        });
+        !removed.is_empty()
     }
 
     /// The rule of every firing of `id`, one per firing.
     pub fn firing_rules(&self, id: FactId) -> Vec<Sym> {
-        let mut out = Vec::new();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            out.push(self.wits[c as usize].rule);
-            c = self.wits[c as usize].next;
-        }
-        out
+        self.chain(id).map(|n| n.rule).collect()
     }
 
     /// Does any firing of `id` come from `rule`?
     pub fn fired_by(&self, id: FactId, rule: Sym) -> bool {
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            if self.wits[c as usize].rule == rule {
-                return true;
-            }
-            c = self.wits[c as usize].next;
-        }
-        false
+        self.chain(id).any(|n| n.rule == rule)
     }
 
     pub fn support_count(&self, id: FactId) -> usize {
-        let mut c = self.wit_head[id as usize];
-        let mut n = 0;
-        while c != EMPTY {
-            n += 1;
-            c = self.wits[c as usize].next;
-        }
-        n
+        self.chain(id).count()
     }
 
     /// The records the store still holds that are NOT live: removed, or
@@ -3087,13 +3260,61 @@ impl Store {
             .collect()
     }
 
-    fn view(&self, c: u32) -> WitView<'_> {
-        let n = self.wits[c as usize];
-        WitView {
-            rule: n.rule,
-            tick: n.tick,
-            prems: &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize],
+    #[inline]
+    fn prems_of(&self, n: &WitNode) -> &[PremRef] {
+        &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
+    }
+
+    #[inline]
+    fn nodes_from(&self, c: u32) -> impl Iterator<Item = WitNode> + '_ {
+        let mut c = c;
+        std::iter::from_fn(move || {
+            (c != EMPTY).then(|| {
+                let n = self.wits[c as usize];
+                c = n.next;
+                n
+            })
+        })
+    }
+
+    /// The firings of `id`, head first.
+    #[inline]
+    fn chain(&self, id: FactId) -> impl Iterator<Item = WitNode> + '_ {
+        self.nodes_from(self.wit_head[id as usize])
+    }
+
+    /// Unlink the firings of `id` that `dies` names, in place; returns them in list order.
+    #[inline]
+    fn unlink_where(&mut self, id: FactId, mut dies: impl FnMut(&Self, &WitNode) -> bool) -> Vec<WitNode> {
+        let mut out = Vec::new();
+        let mut prev = EMPTY;
+        let mut c = self.wit_head[id as usize];
+        while c != EMPTY {
+            let n = self.wits[c as usize];
+            if dies(&*self, &n) {
+                if prev == EMPTY {
+                    self.wit_head[id as usize] = n.next;
+                } else {
+                    self.wits[prev as usize].next = n.next;
+                }
+                self.wits_live -= 1;
+                out.push(n);
+            } else {
+                prev = c;
+            }
+            c = n.next;
         }
+        out
+    }
+
+    #[inline]
+    fn view_of(&self, n: &WitNode) -> WitView<'_> {
+        WitView { rule: n.rule, tick: n.tick, prems: self.prems_of(n) }
+    }
+
+    #[inline]
+    fn view(&self, c: u32) -> WitView<'_> {
+        self.view_of(&self.wits[c as usize])
     }
 
     /// `witnessOf` (src/store.ts): the firing of LEAST DERIVATION HEIGHT, ties
@@ -3102,7 +3323,7 @@ impl Store {
     /// higher than a direct one and the shown proof is acyclic and shortest.
     /// `memo` carries the heights between calls: a caller that asks for many
     /// facts shares one.
-    pub fn witness_of(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Option<WitView<'_>> {
+    pub fn witness_of(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Option<WitView<'_>> {
         let head = *self.wit_head.get(id as usize)?;
         if head == EMPTY {
             return None;
@@ -3113,6 +3334,7 @@ impl Store {
         brk!("witness_by_signature" => Some(self.view(self.least_signature(h, head))); Some(self.view(self.ranked_firings(h, id, memo)[0].1)))
     }
 
+    #[cfg_attr(not(feature = "breaks"), allow(dead_code))]
     fn least_signature(&self, h: &Heap, head: u32) -> u32 {
         let mut best = head;
         let mut bs = String::new();
@@ -3133,15 +3355,15 @@ impl Store {
     /// Every firing of `id` as `(height, node)`, in the order `why` shows
     /// them: least height first, then signature. A premise whose height never
     /// became final (a derivation resting only on itself) is the top.
-    fn ranked_firings(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Vec<(u32, u32)> {
+    fn ranked_firings(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(u32, u32)> {
         let mut nodes = Vec::new();
         let mut roots = Vec::new();
         let mut c = self.wit_head[id as usize];
         while c != EMPTY {
             nodes.push(c);
             for p in self.view(c).prems {
-                if let PremRef::Fact(g) = p {
-                    roots.push(*g);
+                if let Prem::Fact(g) = p.kind() {
+                    roots.push(g);
                 }
             }
             c = self.wits[c as usize].next;
@@ -3165,7 +3387,7 @@ impl Store {
 
     /// Every firing of `id` in the order `witness_of` ranks them, the one it
     /// returns first.
-    pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
+    pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
         if self.wit_head.get(id as usize).is_none_or(|c| *c == EMPTY) {
             return Vec::new();
         }
@@ -3180,8 +3402,8 @@ impl Store {
 
     /// Firings found by the caller (not held here) in the order `witness_of`
     /// ranks the held ones: least height, then signature.
-    pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut HashMap<FactId, u32>) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let PremRef::Fact(g) = p { Some(*g) } else { None }).collect();
+    pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
         let _ = self.heights(&roots, memo);
         let mut ranked: Vec<(u32, String, (Sym, u32, Vec<PremRef>))> = fs
             .into_iter()
@@ -3204,25 +3426,17 @@ impl Store {
     /// would pick back is a property of the store and not of the world.
     /// The witnesses of `id`, in the order its chain holds them.
     pub fn witnesses(&self, id: FactId) -> Vec<WitView<'_>> {
-        let mut out = Vec::new();
-        let mut c = self.wit_head.get(id as usize).copied().unwrap_or(EMPTY);
-        while c != EMPTY {
-            out.push(self.view(c));
-            c = self.wits[c as usize].next;
-        }
-        out
+        self.nodes_from(self.wit_head.get(id as usize).copied().unwrap_or(EMPTY)).map(|n| self.view_of(&n)).collect()
     }
 
     pub fn supports_of(&self, h: &Heap, id: FactId) -> Vec<(String, Sym, u32, Vec<PremRef>)> {
         let mut out = Vec::new();
         let Some(&head) = self.wit_head.get(id as usize) else { return out };
-        let mut c = head;
-        while c != EMPTY {
-            let v = self.view(c);
+        for n in self.nodes_from(head) {
+            let v = self.view_of(&n);
             let mut sig = String::new();
             self.write_sig(h, &v, &mut sig);
             out.push((sig, v.rule, v.tick, v.prems.to_vec()));
-            c = self.wits[c as usize].next;
         }
         out
     }
@@ -3231,39 +3445,46 @@ impl Store {
         out.push_str(h.name(w.rule));
         for p in w.prems {
             out.push('|');
-            match p {
-                PremRef::Fact(f) => {
+            match p.kind() {
+                Prem::Fact(f) => {
                     out.push_str("fact:");
-                    self.write_key(h, *f, out);
+                    self.write_key(h, f, out);
                 }
-                PremRef::Neg(s) => {
+                Prem::Neg(s) => {
                     out.push_str("neg:");
-                    out.push_str(h.name(*s));
+                    out.push_str(h.name(s));
                 }
-                PremRef::Bi(s) => {
+                Prem::Bi(s) => {
                     out.push_str("b:");
-                    out.push_str(h.name(*s));
+                    out.push_str(h.name(s));
                 }
-                PremRef::Cell(c) => {
+                Prem::Cell(c) => {
                     out.push_str("cell:");
-                    self.write_cell_key(h, *c, out);
+                    self.write_cell_key(h, c, out);
                 }
-                PremRef::VRow(s) => {
+                Prem::VRow(s) => {
                     out.push_str("fact:");
-                    out.push_str(h.name(*s));
+                    out.push_str(h.name(s));
                 }
             }
         }
     }
 
+    /// The premises spelled and sorted: order never depends on the planner's choice.
+    fn sorted_prems(&self, h: &Heap, ps: &[PremRef]) -> Vec<String> {
+        let mut t: Vec<String> = ps.iter().map(|p| self.prem_text(h, *p)).collect();
+        t.sort_by(|a, b| cmp_js(a, b));
+        t
+    }
+
     /// A premise as `canonical_state` spells it in a witness line.
     pub fn prem_text(&self, h: &Heap, p: PremRef) -> String {
-        match p {
-            PremRef::Fact(f) => format!("fact:{}", self.key(h, f)),
-            PremRef::Neg(s) => format!("neg:{}", h.name(s)),
-            PremRef::Bi(s) => format!("bi:{}", h.name(s)),
-            PremRef::VRow(s) => format!("fact:{}", h.name(s)),
-            PremRef::Cell(c) => {
+        match p.kind() {
+            Prem::Fact(f) => format!("fact:{}", self.key(h, f)),
+            Prem::Neg(s) => format!("neg:{}", h.name(s)),
+            Prem::Bi(s) => format!("bi:{}", h.name(s)),
+            Prem::VRow(s) => format!("fact:{}", h.name(s)),
+            Prem::Cell(c) => {
                 let mut o = String::from("cell:");
                 self.write_cell_key(h, c, &mut o);
                 o
@@ -3302,7 +3523,7 @@ impl Store {
     /// THE HEIGHT OF A ROW ANSWERED FROM A TREE, as the stored row's would be: its one firing is 1 + the higher of the
     /// edge into the descendant and the row of the parent, so down the chain from the ancestor each row is 1 + the
     /// higher of the row above and its edge. A row that does not hold (cited in a past tick) is 0, as a fact gone is.
-    pub fn vrow_height(&self, k: Sym, memo: &mut HashMap<FactId, u32>) -> u32 {
+    pub fn vrow_height(&self, k: Sym, memo: &mut Heights) -> u32 {
         let Some((ci, book, a, d)) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false)) else { return 0 };
         let Some(v) = self.virtuals.get(ci) else { return 0 };
         let Some(f) = v.forests.iter().find(|(b, _)| *b == book).map(|x| x.1.clone()) else { return 0 };
@@ -3322,12 +3543,12 @@ impl Store {
     }
 
     /// The height of a premise: a fact's from `memo` (computed), a cell's own, a row of a tree's, a negation and a builtin 0.
-    fn prem_height(&self, p: &PremRef, memo: &mut HashMap<FactId, u32>) -> u32 {
-        match p {
-            PremRef::Fact(g) => memo.get(g).copied().unwrap_or(u32::MAX - 1),
-            PremRef::Cell(x) => self.cells.recs[*x as usize].height,
-            PremRef::VRow(k) => self.vrow_height(*k, memo),
-            PremRef::Neg(_) | PremRef::Bi(_) => 0,
+    fn prem_height(&self, p: &PremRef, memo: &mut Heights) -> u32 {
+        match p.kind() {
+            Prem::Fact(g) => memo.get(&g).copied().unwrap_or(u32::MAX - 1),
+            Prem::Cell(x) => self.cells.recs[x as usize].height,
+            Prem::VRow(k) => self.vrow_height(k, memo),
+            Prem::Neg(_) | Prem::Bi(_) => 0,
         }
     }
 
@@ -3429,16 +3650,22 @@ impl Store {
             let r = &self.facts.rec(*id);
             out.push('\n');
             out.push_str(k);
-            out.push(' ');
-            out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
-            out.push(' ');
-            out.push_str(if r.base() { "base" } else { "drv" });
-            if r.frozen() {
-                out.push_str(" frozen");
-            }
+            push_scope(r, &mut out);
             out.push_str(" support=");
             out.push_str(&self.support_count(*id).to_string());
         }
+        self.write_witnesses(h, &mut out);
+        self.write_cells(h, &mut out);
+        self.write_lattice(h, &mut out);
+        for l in &self.tick_log {
+            out.push('\n');
+            out.push_str(l);
+        }
+        out
+    }
+
+    /// The witness lines of `canonical_state`: one per fact with a firing and per row answered from a structure.
+    fn write_witnesses(&self, h: &Heap, out: &mut String) {
         enum Wk {
             Fact(FactId),
             Row(usize, Sym, Term, Term),
@@ -3460,7 +3687,7 @@ impl Store {
             }
         }
         wkeyed.sort_by(|a, b| cmp_js(&a.0, &b.0));
-        let mut memo = HashMap::new();
+        let mut memo = Heights::default();
         for (k, id) in &wkeyed {
             let id = match id {
                 Wk::Fact(id) => id,
@@ -3494,11 +3721,14 @@ impl Store {
             // engines that agree on the premise SET look like two languages.
             // Measured: `drip` differed on exactly this, two witnesses of
             // 9439 lines, every fact line identical.
-            let mut prems: Vec<String> = w.prems.iter().map(|p| self.prem_text(h, *p)).collect();
-            prems.sort_by(|a, b| cmp_js(a, b));
+            let prems = self.sorted_prems(h, w.prems);
             out.push_str(&prems.join("; "));
             out.push(']');
         }
+    }
+
+    /// The cells of `canonical_state`, after the witnesses and only when there are any, with their members.
+    fn write_cells(&self, h: &Heap, out: &mut String) {
         // THE CELLS, after the witnesses and only when there are any, so a
         // state without an aggregate is byte for byte what it was.
         for (c, like) in self.cells_in_order(h) {
@@ -3519,30 +3749,22 @@ impl Store {
             out.push_str(&format!(" alg={} use={}", alg.text(), alg.strategy().name()));
             if let Some(x) = like {
                 out.push_str(&format!("\nmem {key} = "));
-                self.write_cell_key(h, x, &mut out);
+                self.write_cell_key(h, x, out);
                 continue;
             }
             for (i, m) in self.cell_members(c).iter().enumerate() {
                 out.push_str(&format!("\nmem {key} #{} id={} ", i + 1, self.member_id(h, c, m)));
                 out.push_str(&tuple_text(h, &m.proj));
                 out.push_str(&format!(" h={} [", m.height));
-                let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
-                prems.sort_by(|a, b| cmp_js(a, b));
+                let prems = self.sorted_prems(h, self.member_prems(m));
                 out.push_str(&prems.join("; "));
                 out.push(']');
                 for o in self.member_derivs(m).skip(1) {
-                    let mut ps: Vec<String> = o.iter().map(|p| self.prem_text(h, *p)).collect();
-                    ps.sort_by(|a, b| cmp_js(a, b));
+                    let ps = self.sorted_prems(h, o);
                     out.push_str(&format!(" alt [{}]", ps.join("; ")));
                 }
             }
         }
-        self.write_lattice(h, &mut out);
-        for l in &self.tick_log {
-            out.push('\n');
-            out.push_str(l);
-        }
-        out
     }
 
     /// `derivations` (scripts/derivations.ts): THE CONTRACT, as consequences
@@ -3606,20 +3828,12 @@ impl Store {
             let r = &self.facts.rec(*id);
             out.push_str("\nf ");
             out.push_str(k);
-            out.push(' ');
-            out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
-            out.push(' ');
-            out.push_str(if r.base() { "base" } else { "drv" });
-            if r.frozen() {
-                out.push_str(" frozen");
-            }
+            push_scope(r, &mut out);
             sigs.clear();
-            let mut c = self.wit_head[*id as usize];
-            while c != EMPTY {
+            for n in self.chain(*id) {
                 let mut s = String::new();
-                self.write_sig(h, &self.view(c), &mut s);
+                self.write_sig(h, &self.view_of(&n), &mut s);
                 sigs.push(s);
-                c = self.wits[c as usize].next;
             }
             sigs.sort_by(|a, b| cmp_js(a, b));
             for s in &sigs {
@@ -3638,8 +3852,7 @@ impl Store {
             }
             for (i, m) in self.cell_members(c).iter().enumerate().filter(|_| like.is_none()) {
                 out.push_str(&format!("\n  m {} {} h={}", i + 1, tuple_text(h, &m.proj), m.height));
-                let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
-                prems.sort_by(|a, b| cmp_js(a, b));
+                let prems = self.sorted_prems(h, self.member_prems(m));
                 for p in prems {
                     out.push_str(" | ");
                     out.push_str(&p);
@@ -3763,8 +3976,7 @@ impl Store {
         if self.cells.recs[c as usize].op.dedup_by_projection() {
             return tuple_text(h, &m.proj);
         }
-        let mut prems: Vec<String> = self.member_prems(m).iter().map(|p| self.prem_text(h, *p)).collect();
-        prems.sort_by(|a, b| cmp_js(a, b));
+        let prems = self.sorted_prems(h, self.member_prems(m));
         prems.join("; ")
     }
 
@@ -3789,8 +4001,7 @@ impl Store {
     /// sorted (FNV-1a over `rule@tick|prem; prem`; src/store.ts `firingId`).
     /// A firing a superseded value keeps has one too.
     pub fn firing_id(&self, h: &Heap, rule: Sym, tick: u32, prems: &[PremRef]) -> String {
-        let mut ps: Vec<String> = prems.iter().map(|p| self.prem_text(h, *p)).collect();
-        ps.sort_by(|a, b| cmp_js(a, b));
+        let ps = self.sorted_prems(h, prems);
         let text = brk!("firing_id_tickless" => format!("{}|{}", h.name(rule), ps.join("; ")); format!("{}@{}|{}", h.name(rule), tick, ps.join("; ")));
         fnv64(&text)
     }
@@ -3816,8 +4027,7 @@ impl Store {
             let state = if brk!("fir_superseded_live" => true; self.alive(id)) { "live" } else { "superseded" };
             for (rule, tick, prems) in self.firings(id) {
                 let fid = self.firing_id(h, rule, tick, &prems);
-                let mut ps: Vec<String> = prems.iter().map(|p| self.prem_text(h, *p)).collect();
-                ps.sort_by(|a, b| cmp_js(a, b));
+                let ps = self.sorted_prems(h, &prems);
                 rows.push((key.clone(), fid.clone(), format!("\nfir {key} id={fid} {}@{tick} [{}] {state}", h.name(rule), ps.join("; "))));
             }
         }
@@ -3920,18 +4130,19 @@ impl Store {
         }
         let mut live = vec![false; self.cells.recs.len()];
         for h in self.wit_head.iter() {
-            let mut c = *h;
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
-                    if let PremRef::Cell(x) = p {
-                        live[*x as usize] = true;
+            for n in self.nodes_from(*h) {
+                for p in self.prems_of(&n) {
+                    if let Prem::Cell(x) = p.kind() {
+                        live[x as usize] = true;
                     }
                 }
-                c = n.next;
             }
         }
         for (i, r) in self.cells.recs.iter().enumerate() {
+            let CellOwner::Body { rule, .. } = r.owner;
+            if self.kept_rules.contains(&rule) {
+                live[i] = true;
+            }
             if r.dead {
                 live[i] = false;
             }
@@ -3988,8 +4199,8 @@ impl Store {
             while c != EMPTY {
                 let n = self.wits[c as usize];
                 for p in &mut self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
-                    if let PremRef::Cell(x) = p {
-                        *x = remap[*x as usize];
+                    if let Prem::Cell(x) = p.kind() {
+                        *p = PremRef::Cell(remap[x as usize]);
                     }
                 }
                 c = n.next;
@@ -4005,65 +4216,74 @@ impl Store {
     /// itself never lowers one. `memo` carries finished heights between calls.
     /// Returns a root that never became final: in a least model there is
     /// none, so the caller treats it as a defect.
-    pub fn heights(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>) -> Result<(), FactId> {
+    pub fn heights(&self, roots: &[FactId], memo: &mut Heights) -> Result<(), FactId> {
         self.heights_where(roots, memo, &|_| false)
     }
 
     /// `heights` over the firings `skip` does not name.
-    pub fn heights_where(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>, skip: &dyn Fn(&[PremRef]) -> bool) -> Result<(), FactId> {
+    pub fn heights_where(&self, roots: &[FactId], memo: &mut Heights, skip: &dyn Fn(&[PremRef]) -> bool) -> Result<(), FactId> {
         self.heights_where_head(roots, memo, &|_, _, ps| skip(ps))
     }
 
-    /// `heights_where`, `skip` told whose firing it is and by which rule.
-    pub fn heights_where_head(&self, roots: &[FactId], memo: &mut HashMap<FactId, u32>, skip: &dyn Fn(FactId, Sym, &[PremRef]) -> bool) -> Result<(), FactId> {
+    /// The facts below `stack` that `memo` does not answer, in discovery
+    /// order; `visit` is told each firing and may skip it, or fail the walk.
+    fn region_below(&self, mut stack: Vec<FactId>, memo: &Heights, visit: impl Fn(FactId, Sym, &[PremRef]) -> Result<bool, FactId>) -> Result<Vec<FactId>, FactId> {
         let mut seen: HashSet<FactId> = HashSet::new();
         let mut order: Vec<FactId> = Vec::new();
-        let mut stack: Vec<FactId> = roots.iter().copied().filter(|f| !memo.contains_key(f)).collect();
         while let Some(f) = stack.pop() {
-            if !seen.insert(f) {
+            if memo.contains_key(&f) || !seen.insert(f) {
                 continue;
             }
             order.push(f);
-            let mut c = self.wit_head[f as usize];
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                let ps = &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize];
-                if skip(f, n.rule, ps) {
-                    c = n.next;
+            for n in self.chain(f) {
+                let ps = self.prems_of(&n);
+                if visit(f, n.rule, ps)? {
                     continue;
                 }
                 for p in ps {
-                    if let PremRef::Fact(g) = p {
-                        if !memo.contains_key(g) && !seen.contains(g) {
-                            stack.push(*g);
+                    if let Prem::Fact(g) = p.kind() {
+                        if !memo.contains_key(&g) && !seen.contains(&g) {
+                            stack.push(g);
                         }
                     }
                 }
-                c = n.next;
             }
         }
+        Ok(order)
+    }
+
+    /// The heights of the rows read by `first` and by the firings of `order`.
+    fn vrow_heights<'a>(&self, first: impl Iterator<Item = &'a [PremRef]>, order: &[FactId], memo: &mut Heights) -> HashMap<Sym, u32> {
+        let mut vh: HashMap<Sym, u32> = HashMap::new();
+        if self.vrow_of.is_empty() {
+            return vh;
+        }
+        let read = |ps: &[PremRef], vh: &mut HashMap<Sym, u32>, memo: &mut Heights| {
+            for p in ps {
+                if let Prem::VRow(k) = p.kind() {
+                    vh.entry(k).or_insert_with(|| self.vrow_height(k, memo));
+                }
+            }
+        };
+        for ps in first {
+            read(ps, &mut vh, memo);
+        }
+        for &f in order {
+            for n in self.chain(f) {
+                read(self.prems_of(&n), &mut vh, memo);
+            }
+        }
+        vh
+    }
+
+    /// `heights_where`, `skip` told whose firing it is and by which rule.
+    pub fn heights_where_head(&self, roots: &[FactId], memo: &mut Heights, skip: &dyn Fn(FactId, Sym, &[PremRef]) -> bool) -> Result<(), FactId> {
+        let order = self.region_below(roots.to_vec(), memo, |f, rule, ps| Ok(skip(f, rule, ps)))?;
         if order.is_empty() {
             return Ok(());
         }
         // a row answered from a tree rests on edges alone, never on what reads it: a number, as a cell's
-        let mut vh: HashMap<Sym, u32> = HashMap::new();
-        if !self.vrow_of.is_empty() {
-            for &f in &order {
-                let mut c = self.wit_head[f as usize];
-                while c != EMPTY {
-                    let n = self.wits[c as usize];
-                    for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
-                        if let PremRef::VRow(k) = p {
-                            if !vh.contains_key(k) {
-                                let x = self.vrow_height(*k, memo);
-                                vh.insert(*k, x);
-                            }
-                        }
-                    }
-                    c = n.next;
-                }
-            }
-        }
+        let vh = self.vrow_heights(std::iter::empty(), &order, memo);
         // One entry per firing: its head, how many premises are still open,
         // and the highest finished premise so far.
         struct Firing {
@@ -4076,39 +4296,35 @@ impl Store {
         let mut heap: BinaryHeap<Reverse<(u32, FactId)>> = BinaryHeap::new();
         for &f in &order {
             let rec = &self.facts.rec(f);
-            let mut c = self.wit_head[f as usize];
-            if rec.base() || c == EMPTY {
+            if rec.base() || self.wit_head[f as usize] == EMPTY {
                 heap.push(Reverse((0, f)));
                 continue;
             }
-            while c != EMPTY {
-                let n = self.wits[c as usize];
-                if skip(f, n.rule, &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]) {
-                    c = n.next;
+            for n in self.chain(f) {
+                if skip(f, n.rule, self.prems_of(&n)) {
                     continue;
                 }
                 let mut open = 0usize;
                 let mut best = 0u32;
                 let idx = firings.len();
-                for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
-                    match p {
-                        PremRef::Fact(g) => match memo.get(g) {
+                for p in self.prems_of(&n) {
+                    match p.kind() {
+                        Prem::Fact(g) => match memo.get(&g) {
                             Some(hg) => best = brk!("height_min" => best.min(*hg); best.max(*hg)),
                             None => {
                                 open += 1;
-                                users.entry(*g).or_default().push(idx);
+                                users.entry(g).or_default().push(idx);
                             }
                         },
-                        PremRef::Cell(x) => best = best.max(self.cells.recs[*x as usize].height),
-                        PremRef::VRow(k) => best = best.max(vh.get(k).copied().unwrap_or(0)),
-                        PremRef::Neg(_) | PremRef::Bi(_) => {}
+                        Prem::Cell(x) => best = best.max(self.cells.recs[x as usize].height),
+                        Prem::VRow(k) => best = best.max(vh.get(&k).copied().unwrap_or(0)),
+                        Prem::Neg(_) | Prem::Bi(_) => {}
                     }
                 }
                 firings.push(Firing { head: f, open, best });
                 if open == 0 {
                     heap.push(Reverse((best + 1, f)));
                 }
-                c = n.next;
             }
         }
         while let Some(Reverse((hgt, f))) = heap.pop() {
@@ -4150,147 +4366,49 @@ impl Store {
         open: &[(CellId, usize)],
         members: &[Vec<Vec<Vec<PremRef>>>],
         forbidden: &HashSet<CellId>,
-        memo: &mut HashMap<FactId, u32>,
+        memo: &mut Heights,
     ) -> Result<Vec<Vec<Option<(u32, usize)>>>, FactId> {
-        // a member is reached by the least of its derivations, the first of
-        // them (least signature) among those at that height
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        enum Node {
-            Fact(FactId),
-            Member(usize, usize, usize),
-            Cell(usize),
-        }
         let at: HashMap<CellId, usize> = open.iter().enumerate().map(|(i, (c, _))| (*c, i)).collect();
         // every fact below the members, through firings and open cells
         let mut stack: Vec<FactId> = Vec::new();
         for ps in members.iter().flatten().flatten() {
-            stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }));
+            stack.extend(ps.iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }));
         }
-        let mut seen: HashSet<FactId> = HashSet::new();
-        let mut order: Vec<FactId> = Vec::new();
-        while let Some(f) = stack.pop() {
-            if memo.contains_key(&f) || !seen.insert(f) {
-                continue;
-            }
-            order.push(f);
-            let mut c = self.wit_head[f as usize];
-            while c != EMPTY {
-                for p in self.firing_prems(c) {
-                    match p {
-                        PremRef::Fact(g) if !memo.contains_key(g) && !seen.contains(g) => stack.push(*g),
-                        PremRef::Cell(x) if forbidden.contains(x) && !at.contains_key(x) => {
-                            return Err(f);
-                        }
-                        _ => {}
-                    }
-                }
-                c = self.wits[c as usize].next;
-            }
-        }
-        let mut vh: HashMap<Sym, u32> = HashMap::new();
-        if !self.vrow_of.is_empty() {
-            let mut ks: Vec<Sym> = members.iter().flatten().flatten().flatten().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }).collect();
-            for &f in &order {
-                let mut c = self.wit_head[f as usize];
-                while c != EMPTY {
-                    ks.extend(self.firing_prems(c).iter().filter_map(|p| if let PremRef::VRow(k) = p { Some(*k) } else { None }));
-                    c = self.wits[c as usize].next;
-                }
-            }
-            for k in ks {
-                if !vh.contains_key(&k) {
-                    let x = self.vrow_height(k, memo);
-                    vh.insert(k, x);
-                }
-            }
-        }
-        struct Firing {
-            head: Node,
-            open: usize,
-            best: u32,
-        }
-        let mut firings: Vec<Firing> = Vec::new();
-        let mut users: HashMap<Node, Vec<usize>> = HashMap::new();
-        let mut heap: BinaryHeap<Reverse<(u32, Node)>> = BinaryHeap::new();
-        let add = |head: Node, ps: &[PremRef], firings: &mut Vec<Firing>, users: &mut HashMap<Node, Vec<usize>>, heap: &mut BinaryHeap<Reverse<(u32, Node)>>| {
-            let idx = firings.len();
-            let (mut open_n, mut best) = (0usize, 0u32);
+        let order = self.region_below(stack, memo, |f, _, ps| {
             for p in ps {
-                let dep = match p {
-                    PremRef::Fact(g) => match memo.get(g) {
-                        Some(hg) => {
-                            best = best.max(*hg);
-                            None
-                        }
-                        None => Some(Node::Fact(*g)),
-                    },
-                    PremRef::Cell(x) => match at.get(x) {
-                        Some(i) => Some(Node::Cell(*i)),
-                        None => {
-                            best = best.max(self.cells.recs[*x as usize].height);
-                            None
-                        }
-                    },
-                    PremRef::VRow(k) => {
-                        best = best.max(vh.get(k).copied().unwrap_or(0));
-                        None
+                if let Prem::Cell(x) = p.kind() {
+                    if forbidden.contains(&x) && !at.contains_key(&x) {
+                        return Err(f);
                     }
-                    PremRef::Neg(_) | PremRef::Bi(_) => None,
-                };
-                if let Some(d) = dep {
-                    open_n += 1;
-                    users.entry(d).or_default().push(idx);
                 }
             }
-            firings.push(Firing { head, open: open_n, best });
-            if open_n == 0 {
-                heap.push(Reverse((best + 1, head)));
-            }
-        };
-        for &f in &order {
-            let mut c = self.wit_head[f as usize];
-            if self.facts.rec(f).base() || c == EMPTY {
-                heap.push(Reverse((0, Node::Fact(f))));
-                continue;
-            }
-            while c != EMPTY {
-                add(Node::Fact(f), self.firing_prems(c), &mut firings, &mut users, &mut heap);
-                c = self.wits[c as usize].next;
-            }
-        }
-        for (i, ms) in members.iter().enumerate() {
-            for (j, ds) in ms.iter().enumerate() {
-                for (k, ps) in ds.iter().enumerate() {
-                    add(Node::Member(i, j, k), ps, &mut firings, &mut users, &mut heap);
-                }
-            }
-            if open[i].1 == 0 {
-                heap.push(Reverse((0, Node::Cell(i))));
-            }
-        }
+            Ok(false)
+        })?;
+        let vh = self.vrow_heights(members.iter().flatten().flatten().map(Vec::as_slice), &order, memo);
+        let QGraph { mut firings, mut users, mut heap } = self.quorum_graph(open, members, &order, &at, memo, &vh);
         let mut member_h: Vec<Vec<Option<(u32, usize)>>> = members.iter().map(|ms| vec![None; ms.len()]).collect();
         let mut cell_h: Vec<Option<u32>> = vec![None; open.len()];
         let mut reached: Vec<usize> = vec![0; open.len()];
         while let Some(Reverse((hgt, node))) = heap.pop() {
             match node {
-                Node::Fact(f) => {
+                QNode::Fact(f) => {
                     if memo.contains_key(&f) {
                         continue;
                     }
                     memo.insert(f, hgt);
                 }
-                Node::Member(i, j, k) => {
+                QNode::Member(i, j, k) => {
                     if member_h[i][j].is_some() {
                         continue;
                     }
                     member_h[i][j] = Some((hgt, k));
                     reached[i] += 1;
                     if reached[i] == brk!("thr_first_height" => 1; open[i].1) {
-                        heap.push(Reverse((hgt, Node::Cell(i))));
+                        heap.push(Reverse((hgt, QNode::Cell(i))));
                     }
                     continue;
                 }
-                Node::Cell(i) => {
+                QNode::Cell(i) => {
                     if cell_h[i].is_some() {
                         continue;
                     }
@@ -4311,6 +4429,67 @@ impl Store {
         Ok(member_h)
     }
 
+    /// The graph `quorum_heights` runs Dijkstra over: a firing for every derivation of a fact below the members and of
+    /// every member, the firings waiting on each node, and the nodes already reached.
+    fn quorum_graph(&self, open: &[(CellId, usize)], members: &[Vec<Vec<Vec<PremRef>>>], order: &[FactId], at: &HashMap<CellId, usize>, memo: &Heights, vh: &HashMap<u32, u32>) -> QGraph {
+        let (mut firings, mut users, mut heap) = (Vec::new(), HashMap::new(), BinaryHeap::new());
+        let add = |head: QNode, ps: &[PremRef], firings: &mut Vec<QFiring>, users: &mut HashMap<QNode, Vec<usize>>, heap: &mut BinaryHeap<Reverse<(u32, QNode)>>| {
+            let idx = firings.len();
+            let (mut open_n, mut best) = (0usize, 0u32);
+            for p in ps {
+                let dep = match p.kind() {
+                    Prem::Fact(g) => match memo.get(&g) {
+                        Some(hg) => {
+                            best = best.max(*hg);
+                            None
+                        }
+                        None => Some(QNode::Fact(g)),
+                    },
+                    Prem::Cell(x) => match at.get(&x) {
+                        Some(i) => Some(QNode::Cell(*i)),
+                        None => {
+                            best = best.max(self.cells.recs[x as usize].height);
+                            None
+                        }
+                    },
+                    Prem::VRow(k) => {
+                        best = best.max(vh.get(&k).copied().unwrap_or(0));
+                        None
+                    }
+                    Prem::Neg(_) | Prem::Bi(_) => None,
+                };
+                if let Some(d) = dep {
+                    open_n += 1;
+                    users.entry(d).or_default().push(idx);
+                }
+            }
+            firings.push(QFiring { head, open: open_n, best });
+            if open_n == 0 {
+                heap.push(Reverse((best + 1, head)));
+            }
+        };
+        for &f in order {
+            if self.facts.rec(f).base() || self.wit_head[f as usize] == EMPTY {
+                heap.push(Reverse((0, QNode::Fact(f))));
+                continue;
+            }
+            for n in self.chain(f) {
+                add(QNode::Fact(f), self.prems_of(&n), &mut firings, &mut users, &mut heap);
+            }
+        }
+        for (i, ms) in members.iter().enumerate() {
+            for (j, ds) in ms.iter().enumerate() {
+                for (k, ps) in ds.iter().enumerate() {
+                    add(QNode::Member(i, j, k), ps, &mut firings, &mut users, &mut heap);
+                }
+            }
+            if open[i].1 == 0 {
+                heap.push(Reverse((0, QNode::Cell(i))));
+            }
+        }
+        QGraph { firings, users, heap }
+    }
+
     /// Replace an open quorum's members and height with the closed ones: the
     /// record keeps its id, which the firings that used it cite.
     pub fn reseal_cell(&mut self, id: CellId, members: Vec<NewMember>, height: u32) {
@@ -4329,47 +4508,37 @@ impl Store {
     /// The fact premises of every firing of `id`.
     pub fn fact_premises(&self, id: FactId) -> Vec<FactId> {
         let mut out = Vec::new();
-        let mut c = self.wit_head[id as usize];
-        while c != EMPTY {
-            let n = self.wits[c as usize];
-            for p in &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize] {
-                if let PremRef::Fact(g) = p {
-                    out.push(*g);
+        for n in self.chain(id) {
+            for p in self.prems_of(&n) {
+                if let Prem::Fact(g) = p.kind() {
+                    out.push(g);
                 }
             }
-            c = n.next;
         }
         out
     }
 
-    fn firing_prems(&self, c: u32) -> &[PremRef] {
-        let n = self.wits[c as usize];
-        &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]
-    }
-
     /// The premises of one firing of `g` that has `g`'s height: one step of
     /// a least derivation. None when `g` has no height.
-    fn least_firing(&self, g: FactId, height: &HashMap<FactId, u32>) -> Option<&[PremRef]> {
+    fn least_firing(&self, g: FactId, height: &Heights) -> Option<&[PremRef]> {
         let hg = *height.get(&g)?;
-        let mut c = self.wit_head[g as usize];
-        while c != EMPTY {
-            let ps = self.firing_prems(c);
+        for n in self.chain(g) {
+            let ps = self.prems_of(&n);
             let mut h = 0u32;
             let mut known = true;
             for p in ps {
-                match p {
-                    PremRef::Fact(x) => match height.get(x) {
+                match p.kind() {
+                    Prem::Fact(x) => match height.get(&x) {
                         Some(hx) => h = h.max(*hx),
                         None => known = false,
                     },
-                    PremRef::Cell(x) => h = h.max(self.cells.recs[*x as usize].height),
-                    PremRef::Neg(_) | PremRef::Bi(_) | PremRef::VRow(_) => {}
+                    Prem::Cell(x) => h = h.max(self.cells.recs[x as usize].height),
+                    Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_) => {}
                 }
             }
             if known && h + 1 == hg {
                 return Some(ps);
             }
-            c = self.wits[c as usize].next;
         }
         None
     }
@@ -4382,22 +4551,21 @@ impl Store {
     /// firing has two premises in `nodes`: a derivation is then a tree and
     /// not a path, and dominance is not a tree either. Cooper, Harvey and
     /// Kennedy's iteration over reverse postorder.
-    pub fn dominators(&self, nodes: &[FactId], height: &HashMap<FactId, u32>) -> Option<Dominators> {
+    pub fn dominators(&self, nodes: &[FactId], height: &Heights) -> Option<Dominators> {
         let at: HashMap<FactId, usize> = nodes.iter().enumerate().map(|(i, f)| (*f, i + 1)).collect();
         let n = nodes.len() + 1;
         let mut preds: Vec<Vec<usize>> = vec![Vec::new(); n];
         for (i, &x) in nodes.iter().enumerate() {
-            let mut c = self.wit_head[x as usize];
-            while c != EMPTY {
+            for w in self.chain(x) {
                 let mut inside: Option<usize> = None;
                 let mut usable = true;
-                for p in self.firing_prems(c) {
-                    let PremRef::Fact(g) = p else { continue };
-                    if !height.contains_key(g) {
+                for p in self.prems_of(&w) {
+                    let Prem::Fact(g) = p.kind() else { continue };
+                    if !height.contains_key(&g) {
                         usable = false;
                         break;
                     }
-                    if let Some(&j) = at.get(g) {
+                    if let Some(&j) = at.get(&g) {
                         match inside {
                             Some(k) if k != j => return None,
                             _ => inside = Some(j),
@@ -4407,7 +4575,6 @@ impl Store {
                 if usable {
                     preds[i + 1].push(inside.unwrap_or(0));
                 }
-                c = self.wits[c as usize].next;
             }
         }
         let mut succ: Vec<Vec<usize>> = vec![Vec::new(); n];
@@ -4504,7 +4671,7 @@ impl Store {
     /// every firing of that part of the graph. `height` is the memo of
     /// `heights`, holding everything below `f`; a fact missing from it has
     /// no derivation at all.
-    pub fn founded_without(&self, f: FactId, qs: &[FactId], height: &HashMap<FactId, u32>) -> HashSet<FactId> {
+    pub fn founded_without(&self, f: FactId, qs: &[FactId], height: &Heights) -> HashSet<FactId> {
         let hf = height[&f];
         let above = |g: FactId| height.get(&g).is_none_or(|h| *h > hf);
         let mut ok: HashSet<FactId> = HashSet::new();
@@ -4524,7 +4691,7 @@ impl Store {
                     slow.push(q);
                     continue 'q;
                 };
-                stack.extend(ps.iter().filter_map(|p| if let PremRef::Fact(x) = p { Some(*x) } else { None }));
+                stack.extend(ps.iter().filter_map(|p| if let Prem::Fact(x) = p.kind() { Some(x) } else { None }));
             }
             ok.insert(q);
         }
@@ -4546,20 +4713,18 @@ impl Store {
         let mut users: Vec<Vec<usize>> = vec![Vec::new(); region.len()];
         let mut queue: Vec<usize> = Vec::new();
         for (i, &g) in region.iter().enumerate() {
-            let mut c = self.wit_head[g as usize];
-            while c != EMPTY {
-                let ps = self.firing_prems(c);
-                c = self.wits[c as usize].next;
+            for n in self.chain(g) {
+                let ps = self.prems_of(&n);
                 let mut need: Vec<usize> = Vec::new();
                 let mut dead = false;
                 for p in ps {
-                    let PremRef::Fact(x) = p else { continue };
-                    if *x == f || !height.contains_key(x) {
+                    let Prem::Fact(x) = p.kind() else { continue };
+                    if x == f || !height.contains_key(&x) {
                         dead = true;
                         break;
                     }
-                    if above(*x) {
-                        need.push(at[x]);
+                    if above(x) {
+                        need.push(at[&x]);
                     }
                 }
                 if dead {
@@ -4640,6 +4805,36 @@ impl Store {
     }
 }
 
+/// A node of the quorum height graph: a fact, derivation `k` of member `j` of open cell `i`, or open cell `i`.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum QNode {
+    Fact(FactId),
+    Member(usize, usize, usize),
+    Cell(usize),
+}
+
+struct QFiring {
+    head: QNode,
+    open: usize,
+    best: u32,
+}
+
+struct QGraph {
+    firings: Vec<QFiring>,
+    users: HashMap<QNode, Vec<usize>>,
+    heap: BinaryHeap<Reverse<(u32, QNode)>>,
+}
+
+fn push_scope(r: &FactRec, out: &mut String) {
+    out.push(' ');
+    out.push_str(if r.tick_scope() { "tick" } else { "timeless" });
+    out.push(' ');
+    out.push_str(if r.base() { "base" } else { "drv" });
+    if r.frozen() {
+        out.push_str(" frozen");
+    }
+}
+
 fn pat_sig(h: &Heap, pos: &[usize], args: &[Term], out: &mut Vec<Term>) -> bool {
     out.clear();
     for &p in pos {
@@ -4660,6 +4855,22 @@ fn firing_hash(id: FactId, rule: Sym, prems: &[PremRef]) -> u64 {
 
 fn run_in(idx: &mut Runs, rel: Sym, persp: Sym) -> &mut KeyRun {
     &mut idx.get_mut(&rel).unwrap().iter_mut().find(|(q, _)| *q == persp).unwrap().1
+}
+
+/// The widest index of a pattern narrower than `mask`: it serves `mask` with a superset.
+/// The index, of those whose columns a probe binds, with the most distinct keys: the fewest rows read per probe. By
+/// the count of columns, a key from a small table of constants (a field name) was taken over the node beside it.
+fn narrower(bp: &ArgIndex, mask: u32) -> Option<u32> {
+    let sub = bp.iter().filter(|(m, _)| *m & mask == **m);
+    if crate::brk!("narrower_by_columns" => true; false) {
+        return sub.map(|(m, _)| *m).max_by_key(|m| (m.count_ones(), *m));
+    }
+    sub.max_by_key(|(m, ix)| (ix.keys(), m.count_ones(), **m)).map(|(m, _)| *m)
+}
+
+/// The values of `pos` that the index `by_val` reads, in its order.
+fn sub_vals(by_val: &PatIndex, pos: &[usize], vals: &[Term]) -> Vec<Term> {
+    by_val.pos.iter().map(|q| vals[pos.iter().position(|x| x == q).unwrap()]).collect()
 }
 
 fn hits(facts: &Facts, loose: &[FactId], by_val: &PatIndex, vals: &[Term], limit: usize) -> Option<Vec<FactId>> {
@@ -4715,6 +4926,12 @@ pub fn write_fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term], out: &mut S
     out.push_str("](");
     write_arg_list(h, args, out);
     out.push(')');
+}
+
+pub fn fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term]) -> String {
+    let mut k = String::new();
+    write_fact_key(h, rel, persp, args, &mut k);
+    k
 }
 
 pub fn write_arg_list(h: &Heap, args: &[Term], out: &mut String) {
@@ -5004,6 +5221,21 @@ pub fn resolved_lit_key(
     out.push(')');
 }
 
+/// A projection tuple as `canonical_state` spells it: `(a,b)`.
+pub fn tuple_text(h: &Heap, ts: &[Term]) -> String {
+    let mut o = String::from("(");
+    for (i, t) in ts.iter().enumerate() {
+        if i > 0 {
+            o.push(',');
+        }
+        h.canon_term(*t, &mut o);
+    }
+    o.push(')');
+    o
+}
+
+const _: () = assert!(std::mem::size_of::<PremRef>() == 4 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5252,18 +5484,3 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!(std::mem::size_of::<FactRec>(), 12);
     }
 }
-
-/// A projection tuple as `canonical_state` spells it: `(a,b)`.
-pub fn tuple_text(h: &Heap, ts: &[Term]) -> String {
-    let mut o = String::from("(");
-    for (i, t) in ts.iter().enumerate() {
-        if i > 0 {
-            o.push(',');
-        }
-        h.canon_term(*t, &mut o);
-    }
-    o.push(')');
-    o
-}
-
-const _: () = assert!(std::mem::size_of::<PremRef>() == 8 && std::mem::size_of::<FactRec>() == 12 && std::mem::size_of::<WitNode>() == 20);

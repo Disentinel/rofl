@@ -350,7 +350,7 @@ TypeScript engine. Since 2026-10-01:
 - `rofl serve`: `{"op":"why","session":S,"query":L,"all"?:true}` → `{text}`
   (`all` is `why all`: every member of every cell; a value that is not a
   boolean is refused);
-  `{"op":"whynot",...,"depth"?:N,"nodes"?:N}` → `{holds, text}`; `{"op":"excise",...}`
+  `{"op":"whynot",...,"depth"?:N,"nodes"?:N,"all"?:true}` → `{holds, text}`, the nearest failure or, with `all`, the whole walk; `{"op":"excise",...}`
   → `{removed, added}`. A `why` of a fact that does not hold, and any refused
   question, are `ok:false` with the reference's text as the `error`.
   `RoflSession.why/whynot/excise` in `runtime/port.ts`.

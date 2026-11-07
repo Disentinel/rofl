@@ -1,6 +1,6 @@
 ---
 world: js-host
-books: audit, code, flow, main
+books: audit, code, flow, main, surface, tree
 default: audit
 ---
 
@@ -44,16 +44,17 @@ Reads:
   - <a id="runtime_version"></a>A runtime R is the version V of a runtime F (`runtime_version`)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
-- from js-dataflow, in the code: [destr_prop](js-dataflow.rofl.md#destr_prop), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [key_name](js-dataflow.rofl.md#key_name)
+- from js-dataflow, in the code: [binder](js-dataflow.rofl.md#binder), [declarator_id](js-dataflow.rofl.md#declarator_id), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder)
 - from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
-- from js-model, in the code: [ast_line](js-model.rofl.md#ast_line), [ast_node](js-model.rofl.md#ast_node)
-- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical)
+- from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-modules, in the main: [host_module](js-modules.rofl.md#host_module)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name)
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of)
+- from outside these files, in the main:
+  - <a id="host_member_module"></a>`host_member_module`
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
 
 ## Words
 
@@ -65,6 +66,7 @@ What this file calls a node, and what each word stands for:
 
 Phrases this file defines in one step, each by the sentence it stands for:
 
+- A node points to it if it [calls the host global](#host_global_call) some name of some host.
 - <a id="host_effect_used"></a>An effect is used by a host call if some call [has the host effect](#host_call_effect) it by some route.
 - <a id="runtime_has_release"></a>A runtime has a release if it [runs the release](#runtime_reaches_release) some release.
 
@@ -105,24 +107,24 @@ In the flow:
 
 <a id="builtin_ns"></a>A node is the builtin module of a spec Spec if it [comes out of](js-dataflow.rofl.md#external_value) it and [the canonical builtin](js-modules.rofl.md#builtin_canonical) of it is Spec.
 
+<a id="builtin_ns_at"></a>`builtin_ns_at`(O, Spec) if a node Y [is the builtin module](#builtin_ns) of a spec Spec and a node O [points to](js-concat.rofl.md#may_be_node) Y.
+
+`builtin_ns_at`(O, Sub) if all of:
+  - a node X [is a member of the builtin](#builtin_member) of a spec Spec Key;
+  - [`host_member_module`](#host_member_module)(`node`, Spec, Key, Sub);
+  - a node O [points to](js-concat.rofl.md#may_be_node) X.
+
 <a id="builtin_member"></a>M is a member of the builtin of a spec Spec Key either:
 
 1. if all of:
-   - a node Y [is the builtin module](#builtin_ns) of Spec;
-   - a node O [points to](js-concat.rofl.md#may_be_node) Y;
-   - the `object` of M is O;
+   - [`builtin_ns_at`](#builtin_ns_at)(O, Spec);
+   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
    - M is a [member access](js-dataflow.rofl.md#member_node_v);
    - M [selects](js-dataflow.rofl.md#selects) Key;
 2. if all of:
    - M [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
    - [the canonical builtin](js-modules.rofl.md#builtin_canonical) of S is Spec;
-   - the `imported` of M [is named](js-structure.rofl.md#ast_name) Key;
-3. if all of:
-   - a node Y [is the builtin module](#builtin_ns) of Spec;
-   - a node Init [points to](js-concat.rofl.md#may_be_node) Y;
-   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-   - [`destr_prop`](js-dataflow.rofl.md#destr_prop)(D, M, K, something, something);
-   - a node K [spells](js-dataflow.rofl.md#key_name) Key.
+   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(M, Key).
 
 > An import naming something the generated surface lacks: a typo, a member
 > newer than @types/node, or one the declarations do not carry. The module
@@ -146,32 +148,40 @@ In the audit:
 
 In the code:
 
-<a id="host_member_call"></a>C calls the host member Key of Name in a host H if all of:
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [refers to the global](#host_global_ref) Name of H;
+A call
+
+- <a id="host_member_call"></a>calls the host member Key of Name in a host H if all of:
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - a node O [refers to the global](#host_global_ref) Name of H;
   - N [selects](js-dataflow.rofl.md#selects) Key.
+- <a id="host_global_call"></a>calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of it [refers to the global](#host_global_ref) Name of H.
 
-<a id="host_global_call"></a>C calls the host global Name of a host H if [the callee](js-callgraph.rofl.md#callee_of) of C [refers to the global](#host_global_ref) Name of H.
+> what a global of the host returns is a value of its own, born at the call (setInterval's timer)
 
-<a id="host_module_call"></a>C calls the module member Key of a spec Spec if all of:
+In the flow:
+
+In the code:
+
+<a id="host_module_call"></a>A call calls the module member Key of a spec Spec if all of:
   - a node X [is a member of the builtin](#builtin_member) of Spec Key;
   - a node G [points to](js-concat.rofl.md#may_be_node) X;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is G.
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is G.
 
 > The union, with the receiver in the origin column: the canonical specifier
 > for a module, the global's own name for a member call, and the atom `itself`
 > for a plain call of a global, so the two shapes stay distinguishable.
 
-<a id="host_site"></a>C is a host site of a host N from an origin Spec at Key either:
+<a id="host_site"></a>A call C is a host site of a host N from an origin Spec at Key either:
 
 1. if C [calls the module member](#host_module_call) Key of Spec and N is `node`;
 2. if C [calls the host member](#host_member_call) Key of Spec in N;
 3. if C [calls the host global](#host_global_call) Spec of N and Key is `itself`.
 
 <a id="host_site_at"></a>File has a host site at Line of a host H from an origin Origin at Key if all of:
-  - a node C [is a host site](#host_site) of H from Origin at Key;
-  - C [is in file](js-model.rofl.md#ast_node) File;
-  - C [is at line](js-model.rofl.md#ast_line) Line.
+  - a call C [is a host site](#host_site) of H from Origin at Key;
+  - [`at`](#at)(C, File, something);
+  - [`at`](#at)(C, something, Line).
 
 ## 4. THE EFFECT ROW the effect layer joins against, at a call site, with the
 
@@ -190,7 +200,7 @@ In the code:
 
 In the audit:
 
-<a id="host_call_effect"></a>C has the host effect E by a route N either:
+<a id="host_call_effect"></a>A call C has the host effect E by a route N either:
 
 1. if all of:
    - C [calls the module member](#host_module_call) Key of a spec Spec;
@@ -213,14 +223,14 @@ In the audit:
 > at a coordinate, and the set of effects the corpus exercises
 
 <a id="host_effect_at"></a>File has the host effect E at Line by a route Why if all of:
-  - a node C [has the host effect](#host_call_effect) E by Why;
-  - C [is in file](js-model.rofl.md#ast_node) File;
-  - C [is at line](js-model.rofl.md#ast_line) Line.
+  - a call C [has the host effect](#host_call_effect) E by Why;
+  - [`at`](#at)(C, File, something);
+  - [`at`](#at)(C, something, Line).
 
 > The FRONTIER, expected non-zero: a site here is one the effect layer sees
 > as silent, which it must not mistake for `total`.
 
-<a id="host_call_uneffected"></a>C has no host effect from an origin Origin at Key if C [is a host site](#host_site) of some host from Origin at Key, unless C [has the host effect](#host_call_effect) some effect by some route.
+<a id="host_call_uneffected"></a>A call has no host effect from an origin Origin at Key if it [is a host site](#host_site) of some host from Origin at Key, unless it [has the host effect](#host_call_effect) some effect by some route.
 
 ## 5. THE RUNTIME AXIS — a composition in the ES scale's shape: a runtime
 
@@ -297,8 +307,8 @@ In the audit:
 
 <a id="runtime_no_release"></a>A runtime has no release if it [is the version](#runtime_version) some number of some runtime, unless it [has a release](#runtime_has_release).
 
-<a id="runtime_lib_unsupported"></a>C is unsupported on a runtime R at Key of a prototype P if all of:
-  - C [calls the stdlib](js-env-api.rofl.md#lib_call) Key of P since a release Rel;
+<a id="runtime_lib_unsupported"></a>A call is unsupported on a runtime R at Key of a prototype P if all of:
+  - it [calls the stdlib](js-env-api.rofl.md#lib_call) Key of P since a release Rel;
   - R [has a release](#runtime_has_release);
   - unless R [runs the release](#runtime_reaches_release) Rel.
 
@@ -310,12 +320,12 @@ In the audit:
   - F [adds](#host_member_since) Key of Spec since some text being some number;
   - unless it [reaches the api](#has_api) Key of Spec.
 
-<a id="host_call_absent"></a>C is absent on a runtime R at Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
+<a id="host_call_absent"></a>A call is absent on a runtime R at Key of a spec Spec if it [calls the module member](#host_module_call) Key of Spec and R [lacks the member](#host_member_absent) Key of Spec.
 
 <a id="host_call_absent_at"></a>File has an absent call at Line on a runtime R at Key of a spec Spec if all of:
-  - a node C [is absent on](#host_call_absent) R at Key of Spec;
-  - C [is in file](js-model.rofl.md#ast_node) File;
-  - C [is at line](js-model.rofl.md#ast_line) Line.
+  - a call C [is absent on](#host_call_absent) R at Key of Spec;
+  - [`at`](#at)(C, File, something);
+  - [`at`](#at)(C, something, Line).
 
 > The set difference between two runtimes, WITHIN ONE FAMILY (a browser did
 > not LOSE `fs`), and with no ordering premise, as `lost[audit]` in js-env.
@@ -332,9 +342,10 @@ In the audit:
 > source records; a deprecation note naming its replacement is one join from
 > a remedy.
 
-<a id="host_call_deprecated"></a>C calls a deprecated member Key of a spec Spec if C [calls the module member](#host_module_call) Key of Spec and `node` [deprecates](#host_member_deprecated) Key of Spec.
+A call
 
-<a id="host_call_remedy"></a>C has the host remedy Use for Key of a spec Spec if C [calls a deprecated member](#host_call_deprecated) Key of Spec and `node` [replaces](#host_member_replaced_by) Key of Spec with Use.
+- <a id="host_call_deprecated"></a>calls a deprecated member Key of a spec Spec if it [calls the module member](#host_module_call) Key of Spec and `node` [deprecates](#host_member_deprecated) Key of Spec.
+- <a id="host_call_remedy"></a>has the host remedy Use for Key of a spec Spec if it [calls a deprecated member](#host_call_deprecated) Key of Spec and `node` [replaces](#host_member_replaced_by) Key of Spec with Use.
 
 ## 6. THE GATES. Each is a statement this layer makes about itself, and
 
@@ -411,4 +422,72 @@ A runtime
 
 1. if H [is a host](#host), unless H [is a runtime](#runtime);
 2. if H [is a runtime](#runtime), unless H [is a host](#host).
+
+## 7. THE ENVIRONMENT a program reads: `process.env.NAME`, `process.env[k]`,
+
+> `const { NAME } = process.env`, through any alias of `process.env`. A key the
+> value layer cannot name is said, with its place, rather than dropped.
+
+In the flow:
+
+<a id="env_member"></a>`env_member`(a [member access](js-dataflow.rofl.md#member_node_v) M) if all of:
+  - a node P [refers to the global](#host_global_ref) "process" of `node`;
+  - [`object_of`](js-structure.rofl.md#object_of)(M, P);
+  - M [selects](js-dataflow.rofl.md#selects) "env".
+
+In the surface:
+
+<a id="sx_env"></a>`sx_env`(M) if [`env_member`](#env_member)(M).
+
+In the flow:
+
+<a id="env_object"></a>`env_object`(M) if [`sx_env`](#sx_env)(M).
+
+`env_object`(E) if a node E [points to](js-concat.rofl.md#may_be_node) a node M and [`sx_env`](#sx_env)(M).
+
+`env_object`(R) if all of:
+  - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, R);
+  - [`pat_in`](js-dataflow.rofl.md#pat_in)(R, something, something);
+  - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
+  - [`sx_env`](#sx_env)(Init).
+
+`env_object`(E) if all of:
+  - a node E [sees](js-dataflow.rofl.md#sees_binder) D;
+  - D [binds](js-dataflow.rofl.md#binder) some name to a node Init in some file;
+  - [`env_object`](#env_object)(Init).
+
+<a id="env_key"></a>`env_key`(a [member access](js-dataflow.rofl.md#member_node_v) M) if [`env_object`](#env_object)(O) and [`object_of`](js-structure.rofl.md#object_of)(M, O).
+
+<a id="env_written"></a>`env_written`(M) if [`env_key`](#env_key)(M) and [`assign_op`](js-structure.rofl.md#assign_op)(something, M, something).
+
+<a id="env_read"></a>`env_read`(M, Name) if all of:
+  - [`env_key`](#env_key)(M);
+  - M [selects](js-dataflow.rofl.md#selects) Name;
+  - unless [`env_written`](#env_written)(M).
+
+<a id="env_write"></a>`env_write`(M, Name) if [`env_written`](#env_written)(M) and M [selects](js-dataflow.rofl.md#selects) Name.
+
+<a id="env_read_unnamed"></a>`env_read_unnamed`(M) if all of:
+  - [`env_key`](#env_key)(M);
+  - unless [`env_named`](#env_named)(M);
+  - unless [`env_written`](#env_written)(M).
+
+<a id="env_write_unnamed"></a>`env_write_unnamed`(M) if [`env_written`](#env_written)(M), unless [`env_named`](#env_named)(M).
+
+<a id="env_named"></a>`env_named`(M) if [`env_key`](#env_key)(M) and M [selects](js-dataflow.rofl.md#selects) some key.
+
+<a id="env_read_at"></a>`env_read_at`(Name, File, Line) if all of:
+  - [`env_read`](#env_read)(M, Name);
+  - [`at`](#at)(M, File, something);
+  - [`at`](#at)(M, something, Line).
+
+<a id="env_read_unnamed_at"></a>`env_read_unnamed_at`(File, Line) if all of:
+  - [`env_read_unnamed`](#env_read_unnamed)(M);
+  - [`at`](#at)(M, File, something);
+  - [`at`](#at)(M, something, Line).
+
+<a id="env_write_unnamed_at"></a>`env_write_unnamed_at`(File, Line) if all of:
+  - [`env_write_unnamed`](#env_write_unnamed)(M);
+  - [`at`](#at)(M, File, something);
+  - [`at`](#at)(M, something, Line).
 

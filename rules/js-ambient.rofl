@@ -91,7 +91,7 @@ ambient_effect(Spec, Key, E) :- member_effect[code](Spec, Key, A), eff_of_host(A
 -- selects; `ambient_unenumerated[flow]` names the surfaces in that state.
 ambient_global_default(Name, E) :- host_global_effect(_, Name, A), eff_of_host(A, E).
 amb_global_member[flow](Name, Key) :- free_global[code](O, Name, _),
-                                      ast_child[code](M, object, 0, O),
+                                      object_of[code](M, O),
                                       selects[flow](M, Key),
                                       host_global_effect(_, Name, _).
 ambient_effect(Name, Key, E)       :- amb_global_member[flow](Name, Key),
@@ -122,7 +122,7 @@ eff_operation[flow](C, Key) :- host_module_call[code](C, _, Key).
 
 -- 5a. A member call on an ambient global — `console.log(x)`.
 eff_surface[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C, N),
-                              ast_child[code](N, object, 0, O), free_global[code](O, Name, _),
+                              object_of[code](N, O), free_global[code](O, Name, _),
                               ambient_global(Name).
 
 -- 5b. A plain call of an ambient global — `fetch(u)`, `BigInt(n)`.
@@ -132,12 +132,12 @@ amb_global_call[flow](C, Name) :- unresolved_call[code](C, _), callee_of[code](C
 eff_surface[flow](C, Name)     :- amb_global_call[flow](C, Name).
 eff_operation[flow](C, itself) :- amb_global_call[flow](C, _).
 
--- 5c. A construction — `new URL(s)`. A `new_expression` is a `transfer_site`
+-- 5c. A construction — `new URL(s)`. A `new_expression` is a `transfers`
 -- and not a `call_site`, so the negation is on `resolved_site[code]`: a
 -- `new Box()` resolved to a class in this program is not ambient.
-amb_construct[flow](X, Name) :- transfer_site[code](X, new_expression),
+amb_construct[flow](X, Name) :- transfers[execution](X, new_expression),
                                 not resolved_site[code](X),
-                                ast_child[code](X, callee, 0, N),
+                                callee[value](X, N),
                                 free_global[code](N, Name, _),
                                 ambient_global(Name).
 eff_surface[flow](X, Name)        :- amb_construct[flow](X, Name).
@@ -174,15 +174,16 @@ lib_readonly_only[audit](P, Key) :- lib_readonly_member(P, Key),
 
 -- `ambient_effect` has no heap column, and a prototype's receiver is a value
 -- in THIS program, so a row can only be written where the receiver's heap is
--- decided by the model: a prototype every one of whose `kind_prototype` kinds
--- is a `node_value_kind` has no untraced receiver (`array`, `regexp`), while
--- `"ab".concat(x)` is a read of an untraced receiver.
-amb_proto_untraced(P) :- kind_prototype(K, P), not node_value_kind(K).
+-- decided by the model: a primitive's prototype has an untraced receiver
+-- (`"ab".concat(x)`), while `array` and `regexp` are values the model traces.
+edb(primitive_prototype).
+primitive_prototype(string). primitive_prototype(number). primitive_prototype(boolean). primitive_prototype(bigint).
+amb_proto_untraced(P) :- primitive_prototype(P).
 amb_proto_heap(P, local) :- builtin_prototype(P), not amb_proto_untraced(P).
 
 -- the structural argument as a row: heap-decided here, `global` in js-effects
 amb_proto_recv[flow](M, P) :- builtin_prototype(P), prototype_of[flow](O, P),
-                              ast_child[code](M, object, 0, O), member_node_v[flow](M).
+                              object_of[code](M, O), member_node_v[flow](M).
 amb_proto_heap_split[audit](P, M) :- amb_proto_heap(P, local), amb_proto_recv[flow](M, P),
                                      eff_heap_of[flow](M, global).
 
@@ -249,3 +250,8 @@ amb_exn_carrier[flow](F) :- amb_exn_source[flow](C), nearest_v[flow](F, C).
 amb_exn_carrier[flow](F) :- amb_exn_carrier[flow](G), resolves[code](C, G),
                             nearest_v[flow](F, C), not eff_discharged_at[code](C, exn).
 eff_exn_unexplained[audit](F) :- eff_exn_only[audit](F), not amb_exn_carrier[flow](F).
+
+-- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

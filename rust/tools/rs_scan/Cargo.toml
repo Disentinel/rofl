@@ -1,0 +1,12 @@
+[package]
+name = "rs_scan"
+version = "0.1.0"
+edition = "2021"
+
+# its own workspace: the engine's build never compiles syn
+[workspace]
+
+[dependencies]
+syn = { version = "2", features = ["full", "visit"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"

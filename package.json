@@ -1,7 +1,7 @@
 {
   "name": "@grafema/rofl",
   "private": true,
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "ROFL \u2014 Relation-Oriented Fixpoint Language: a Datalog-family engine with perspectives, explicit time, kernel-emitted provenance and budgets-as-semantics",
   "license": "MIT",
   "type": "module",
@@ -53,6 +53,7 @@
     "build:dense": "node --experimental-strip-types scripts/build_kernel_dense.ts",
     "build:skill": "node --experimental-strip-types scripts/build_skill.ts",
     "cleanliness": "node --experimental-strip-types scanners/cleanliness_report.ts",
+    "engine": "sh scripts/engine.sh",
     "depends": "node --experimental-strip-types scanners/depends.ts",
     "docs": "node --experimental-strip-types scripts/render_docs.ts",
     "evalcost": "node --experimental-strip-types scanners/eval_cost.ts",
@@ -95,6 +96,7 @@
     "rofllint": "node --experimental-strip-types scanners/rofl_lint.ts && node --experimental-strip-types scanners/rofl_lint_report.ts",
     "ruleshape": "node --experimental-strip-types scanners/rule_shape.ts && node --experimental-strip-types scanners/rule_shape_report.ts",
     "scan": "node --experimental-strip-types scanners/cli.ts",
+    "scan:oxc": "sh scripts/oxc_scan.sh",
     "speccheck": "node --experimental-strip-types scanners/spec.ts",
     "storetrace": "node --experimental-strip-types scanners/store_trace.ts && node --experimental-strip-types scanners/store_trace.ts --noreuse",
     "test": "node --experimental-strip-types scripts/goldens.ts",
@@ -102,6 +104,7 @@
     "test:fast": "cd rust && cargo build --profile fast -p rofl --bin rofl && cd .. && ROFL_PROFILE=fast node --experimental-strip-types scripts/goldens.ts",
     "test:agg": "node --experimental-strip-types scripts/agg_mutants.ts",
     "test:agg:breaks": "node --experimental-strip-types scripts/agg_breaks.ts",
+    "test:roles": "node --experimental-strip-types scripts/roles_check.ts",
     "test:split": "node --experimental-strip-types scripts/surface_split.ts --engine rust && node --experimental-strip-types scripts/surface_split.ts --engine ts --order forward && node --experimental-strip-types scripts/surface_split.ts --engine ts --order reverse && node --experimental-strip-types scripts/surface_split.ts --engine rust --break naive && node --experimental-strip-types scripts/surface_split.ts --driver && node --experimental-strip-types scripts/surface_split.ts --driver --hot 4 --order reverse --whys 0 && node --experimental-strip-types scripts/surface_split.ts --driver --break early --whys 0 && node --experimental-strip-types scripts/surface_split.ts --driver --break narrow --whys 0 --order forward && node --experimental-strip-types scripts/surface_split.ts --driver --break nophase --whys 0 --order forward && node --experimental-strip-types scripts/surface_split.ts --driver --break books --whys 0 --order forward",
     "test:english": "node --experimental-strip-types scripts/english_check.ts",
     "test:cut": "node --experimental-strip-types scripts/cut_check.ts",
@@ -123,6 +126,7 @@
     "textcheck": "node --experimental-strip-types scripts/text_check.ts",
     "whycheck": "node --experimental-strip-types scripts/whycheck.ts",
     "structures": "node --experimental-strip-types scripts/structures.ts",
+    "refine": "node --experimental-strip-types scripts/refine.ts",
     "whyfloor": "node --experimental-strip-types runtime/report.ts facts/floor-census.rofl rules/floor-census.rofl",
     "whyjoin": "node --experimental-strip-types runtime/report.ts facts/eval-cost.rofl rules/eval-cost.rofl",
     "whyperm": "node --experimental-strip-types runtime/report.ts facts/permission-inventory.rofl rules/permission-model.rofl",
@@ -130,11 +134,7 @@
     "bench": "node --experimental-strip-types scripts/bench.ts"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.1",
-    "@babel/generator": "^8.0.0",
     "@babel/parser": "^8.0.4",
-    "@babel/plugin-transform-async-to-generator": "^8.0.1",
-    "@babel/plugin-transform-regenerator": "^8.0.2",
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3"
   },

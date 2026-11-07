@@ -1,0 +1,19 @@
+-- What a change touches: the functions its lines fall in, who calls them, and which verbs, parts and terms reach them.
+-- changed[diff](File, Line) is a line the change wrote or removed, at the line of the tree after it.
+
+edb(changed).
+
+touched(F) :- changed[diff](File, L), rs_fn[rs](F, _, _, File, A, N), L >= A, E is A + N, L < E.
+touched_lines(F, K) :- touched(F), K is count(L : changed[diff](File, L), rs_fn[rs](F, _, _, File, A, N), L >= A, E is A + N, L < E).
+outside_fn(File, L) :- changed[diff](File, L), not in_some_fn(File, L).
+in_some_fn(File, L) :- changed[diff](File, L), rs_fn[rs](_, _, _, File, A, N), L >= A, E is A + N, L < E.
+
+-- callers upward, by calls the code names surely
+above(F, F) :- touched(F).
+above(T, G) :- above(T, H), sure(G, H).
+
+verb_hit(V, F) :- touched(F), reaches(V, F).
+verb_hit_n(V, N) :- verb(V), N is count(F : verb_hit(V, F)), N > 0.
+part_hit(P, N) :- part(P, _, _), N is count(F : touched(F), fn_part(F, P)), N > 0.
+term_hit(T, N) :- term(T, _, _), N is count(F : touched(F), term_fn(T, F)), N > 0.
+callers_n(F, N) :- touched(F), N is count(G : above(F, G), G != F).

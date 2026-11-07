@@ -43,7 +43,7 @@ table as a to-do list would delete real data.
 
 **The grouping separates them, and it is one pass.** Ask instead whether the
 column is CONSTANT WITHIN THE GROUP the row already belongs to — for AST facts,
-the volume, which `scanners/js_ast.ts` mints into every id as
+the volume, which `rust/tools/oxc_scan` mints into every id as
 `n<sha256(path)[0..8]>_`:
 
     ast_node|2  (File)   YES — one fact about the whole would do

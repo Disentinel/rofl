@@ -134,9 +134,8 @@ export function print(file: string, r: NbResult, only?: number, shown = SHOWN, f
         for (const g of l.byFile) {
           const stops = g.stops.length > 2 ? [...g.stops.slice(0, 2), `${g.stops.length - 2} more`] : g.stops;
           out.push(`      ${g.files.join(', ')}: ${g.found ? `${g.found} ${g.found === 1 ? 'answer' : 'answers'}` : 'none'}${stops.length ? `; it stops at: ${stops.join('; ')}` : ''}`);
-          if (full) out.push(...g.why.split('\n').map((x) => `        ${x}`));
+          out.push(...g.why.split('\n').map((x) => `        ${x}`));
         }
-        if (!full) out.push(`    (each file's demonstration: --all)`);
         continue;
       }
       const why = !full && l.brief !== undefined ? short(l.chain ?? [], l.brief) : l.why;

@@ -1,6 +1,6 @@
 ---
 world: js-express
-books: code, flow, main, surface
+books: code, flow, main, surface, value
 default: flow
 ---
 
@@ -28,12 +28,14 @@ Reads:
 - from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node), [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from js-structure, in the code: [ast_name](js-structure.rofl.md#ast_name), [ast_value](js-structure.rofl.md#ast_value)
+- from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
+- from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files, in the value:
+  - <a id="call"></a>`call`
+  - <a id="callee"></a>`callee`
+  - <a id="literal"></a>`literal`
 
 ## Words
 
@@ -41,8 +43,6 @@ What this file calls a node, and what each word stands for:
 
 | word | stands for |
 |---|---|
-| <a id="noun-call_expression"></a>a call expression | a node of kind `call_expression` |
-| <a id="noun-numeric_literal"></a>a numeric literal | a node of kind `numeric_literal` |
 | a member access | a node [`member_node_v`](js-dataflow.rofl.md#member_node_v) holds of |
 
 `express_module` includes "express".
@@ -75,7 +75,8 @@ Declared as facts:
 1. if all of:
    - G is a [member access](js-dataflow.rofl.md#member_node_v);
    - G [selects](js-dataflow.rofl.md#selects) "Router";
-   - the `object` of G [points to](js-concat.rofl.md#may_be_node) a node S;
+   - [`object_of`](js-structure.rofl.md#object_of)(G, O);
+   - a node O [points to](js-concat.rofl.md#may_be_node) a node S;
    - S [comes out of](js-dataflow.rofl.md#external_value) S;
    - [`express_module`](#express_module)(S);
 2. if G [points to](js-concat.rofl.md#may_be_node) a node Sp and [`ex_import`](#ex_import)(Sp, "Router").
@@ -83,7 +84,7 @@ Declared as facts:
 <a id="ex_import"></a>`ex_import`(Sp, K) if all of:
   - a node Sp [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
   - [`express_module`](#express_module)(S);
-  - the `imported` of Sp [is named](js-structure.rofl.md#ast_name) K.
+  - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(Sp, K).
 
 In the surface:
 
@@ -93,12 +94,14 @@ In the flow:
 
 `ex_import`(Sp, K) if [`sx_ex_import`](#sx_ex_import)(Sp, K).
 
-<a id="ex_app"></a>`ex_app`(a [call expression](#noun-call_expression) C) if all of:
-  - the `callee` of C [points to](js-concat.rofl.md#may_be_node) a node S;
+<a id="ex_app"></a>`ex_app`(C) if all of:
+  - [`call`](#call)(C);
+  - [`callee`](#callee)(C, G);
+  - a node G [points to](js-concat.rofl.md#may_be_node) a node S;
   - S [comes out of](js-dataflow.rofl.md#external_value) S;
   - [`express_module`](#express_module)(S).
 
-<a id="ex_router"></a>`ex_router`(a [call expression](#noun-call_expression) C) if the `callee` of C is a node G and [`ex_router_fn`](#ex_router_fn)(G).
+<a id="ex_router"></a>`ex_router`(C) if [`call`](#call)(C), [`callee`](#callee)(C, G), and [`ex_router_fn`](#ex_router_fn)(G).
 
 <a id="ex_target"></a>`ex_target`(Y) either:
 
@@ -107,27 +110,29 @@ In the flow:
 
 ## 2. What a call on one registers.
 
-<a id="ex_on"></a>`ex_on`(a [call expression](#noun-call_expression) R, Y, K) if all of:
-  - the `callee` of R is a [member access](js-dataflow.rofl.md#member_node_v) M;
+<a id="ex_on"></a>`ex_on`(R, Y, K) if all of:
+  - [`call`](#call)(R);
+  - [`callee`](#callee)(R, a [member access](js-dataflow.rofl.md#member_node_v) M);
   - M [selects](js-dataflow.rofl.md#selects) K;
-  - the `object` of M [points to](js-concat.rofl.md#may_be_node) a node Y;
+  - [`object_of`](js-structure.rofl.md#object_of)(M, O);
+  - a node O [points to](js-concat.rofl.md#may_be_node) a node Y;
   - [`ex_target`](#ex_target)(Y).
 
 <a id="ex_path"></a>`ex_path`(R, V) if all of:
   - [`ex_on`](#ex_on)(R, something, something);
-  - R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+  - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
   - X [may be the literal](js-concat.rofl.md#may_be_lit) V;
   - [`str_value`](js-concat.rofl.md#str_value)(V).
 
 <a id="ex_fn"></a>`ex_fn`(R, I, F) if all of:
   - [`ex_on`](#ex_on)(R, something, something);
-  - R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
+  - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
   - X [points to](js-concat.rofl.md#may_be_node) a node F;
   - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
 <a id="ex_sub"></a>`ex_sub`(R, I, Y) if all of:
   - [`ex_on`](#ex_on)(R, something, "use");
-  - R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
+  - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
   - X [points to](js-concat.rofl.md#may_be_node) a node Y;
   - [`ex_target`](#ex_target)(Y).
 
@@ -158,11 +163,11 @@ In the flow:
    - [`ex_on`](#ex_on)(R, Y, "use");
 2. if [`ex_sub`](#ex_sub)(R, 0, Y2), [`ex_on`](#ex_on)(R, Y, "use"), and V is "/".
 
-<a id="ex_port_lit"></a>`ex_port_lit`(V) if a [numeric literal](#noun-numeric_literal) N [is written as](js-structure.rofl.md#ast_value) V.
+<a id="ex_port_lit"></a>`ex_port_lit`(V) if [`literal`](#literal)(something, V) and `int` is type_of(V).
 
 <a id="ex_listen"></a>`ex_listen`(Y, P) if all of:
   - [`ex_on`](#ex_on)(R, Y, "listen");
-  - R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
+  - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
   - X [may be the literal](js-concat.rofl.md#may_be_lit) P;
   - [`ex_port_lit`](#ex_port_lit)(P).
 

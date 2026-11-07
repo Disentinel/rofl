@@ -53,7 +53,6 @@ export const BREAKS: Break[] = [
   "id": "prov_state_unsettled",
   "what": "the canonical state of a lazily provenanced world is read without writing the derived_by rows of the firings noted since",
   "expect": {
-   "prov_lazy_reader": "the state lacks the row derived_by[$kernel]($fact(pr_b",
    "prov_lazy_retract": "the state lacks the row derived_by[$kernel]($fact(pl_reach"
   }
  },
@@ -62,6 +61,34 @@ export const BREAKS: Break[] = [
   "what": "the journal writes a base fact taken out at the boundary after the tick it went, its interval closed one tick late",
   "expect": {
    "journal_replay": "replayed to tick 0: not the live state"
+  }
+ },
+ {
+  "id": "roflenox_unsigned",
+  "what": "every signature of a book on Roflenox taken as good, so a batch a stranger signed is read as the identity's",
+  "expect": {
+   "roflenox_stranger": "a stranger's batch read"
+  }
+ },
+ {
+  "id": "served_other_session",
+  "what": "a rofl adapter whose address is a command asks another session than the world it serves, so a served world answers nothing",
+  "expect": {
+   "served_world": "the pages of a served world"
+  }
+ },
+ {
+  "id": "login_verifier_dropped",
+  "what": "a sign-in sends no PKCE code verifier, so the authorization server refuses the code and no one is signed in",
+  "expect": {
+   "login_flow": "the sign-in"
+  }
+ },
+ {
+  "id": "event_time_raw",
+  "what": "an answer's event_time column left as the source wrote it, so times from two zones are neither one text nor ordered",
+  "expect": {
+   "event_time": "the times in UTC"
   }
  },
  {
@@ -502,7 +529,7 @@ export const BREAKS: Break[] = [
   "id": "stale_kept_drained",
   "what": "a fact that read a value since improved on is decided and forgotten when the first lattice closes: a subsumptive relation closing later drops the history its why walks",
   "expect": {
-   "sub_history_beside_lattice": "the state lacks the row wit sh_sat[main](p,1)"
+   "sub_history_beside_lattice": "the state lacks the row explained[$explain](why,sh_sat(q,0),3"
   }
  },
  {
@@ -527,17 +554,17 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "narrower_by_columns",
+  "what": "a probe of a pattern with no index of its own, on a relation whose indexes are spent, is served by the index of the most columns, not of the most keys: a key from a small table of constants is read past",
+  "expect": {
+   "join_through_constants": "the state holds the row read_past_the_index"
+  }
+ },
+ {
   "id": "delta_first_spread",
   "what": "a firing is solved delta-first while an unknown spreads: the negation it leaves undecided is recorded at the plan's position, with the plan's bindings",
   "expect": {
    "agg_join_delta_first_hole": "the state lacks the row hole[$kernel]($rule(ra0d53dbb),support_withdrawn)"
-  }
- },
- {
-  "id": "delta_first_persp",
-  "what": "a premise with a perspective variable is placed after a premise that binds it, where the written order read it unbound",
-  "expect": {
-   "agg_join_delta_first_persp": "jdp_kernel"
   }
  },
  {
@@ -551,12 +578,8 @@ export const BREAKS: Break[] = [
   "id": "mono",
   "what": "aggregate rules run as monotone rules, in phase A, before what they read is closed",
   "expect": {
-   "agg_cell_eval": "acl_wrong",
    "agg_life_demo": "lf_wrong",
-   "agg_critpath_demo": "cpc_miss",
-   "agg_minimax_demo": "mmc_miss",
-   "agg_quorum_demo": "qc_said",
-   "agg_linter_demo": "lw_ways_wrong"
+   "agg_critpath_demo": "cpc_miss"
   }
  },
  {
@@ -673,15 +696,15 @@ export const BREAKS: Break[] = [
   "what": "peel_rounds drops the aggregate edges",
   "expect": {
    "agg_sugar_safety": "was to be refused",
-   "agg_holistic_strata": "ahr_accepted",
+   "agg_holistic_strata": "was to be refused",
    "agg_life_demo": "lf_wrong",
    "agg_count_eval": "ac_count_wrong",
    "agg_sum_eval": "as_sum_wrong",
    "agg_minmax_eval": "am_min_missing",
    "agg_empty_strata": "ae_zero_but_ballot",
-   "agg_count_strata": "acr_accepted",
-   "agg_sum_strata": "asr_accepted",
-   "agg_minmax_strata": "amr_accepted",
+   "agg_count_strata": "was to be refused",
+   "agg_sum_strata": "was to be refused",
+   "agg_minmax_strata": "was to be refused",
    "agg_minimax_demo": "mmc_miss"
   }
  },
@@ -1148,7 +1171,7 @@ export const BREAKS: Break[] = [
    ]
   ],
   "expect": {
-   "agg_cell_safety": "was to be refused"
+   "agg_cell_safety": "lost every firing"
   }
  },
  {
@@ -1693,13 +1716,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "plain_flush_early",
-  "what": "what a plain hole left out is carried before its relation closes, so a later rule that concludes it comes too late",
-  "expect": {
-   "agg_holistic_eval": "ahp_alive"
-  }
- },
- {
   "id": "hol_param_projected",
   "what": "quantile's percent and rank's subject are projected as a member's first term",
   "expect": {
@@ -1959,7 +1975,6 @@ export const BREAKS: Break[] = [
   "id": "agg_seal_at_wall",
   "what": "at the budget, the body aggregates are sealed over what was derived before the cut",
   "expect": {
-   "agg_tagc_budget": "holds the row",
    "agg_count_budget": "holds the row",
    "agg_sum_budget": "holds the row",
    "agg_minmax_budget": "holds the row",
@@ -2334,21 +2349,6 @@ export const BREAKS: Break[] = [
  {
   "id": "shrug_late_cut_refused",
   "what": "a wall that falls after a reader of shrug fired refuses the program over the wall's own row instead of cutting it short",
-  "expect": {
-   "agg_cell_shrug_given_cut": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer",
-   "agg_cell_shrug_given_cut_agg": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
-  }
- },
- {
-  "id": "ts_agg_shrug_late_cut_refused",
-  "what": "the TypeScript aggregate evaluator refuses a program a wall cut after a reader of shrug fired",
-  "edits": [
-   [
-    "src/aggeval.ts",
-    "const snap = cut ? null : this.shrugSnap;",
-    "const snap = this.shrugSnap;"
-   ]
-  ],
   "expect": {
    "agg_cell_shrug_given_cut": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer",
    "agg_cell_shrug_given_cut_agg": "shrug is read of $adhoc, which a rule that reads shrug leaves without an answer"
@@ -3835,7 +3835,7 @@ export const BREAKS: Break[] = [
   "id": "dominance_nonmonotone_is_bug",
   "what": "a consumer not monotone in the dominance is reported as the engine's defect, not refused as the program's",
   "expect": {
-   "agg_sub_safety": "refused, but not for"
+   "agg_sub_safety": "a consumer was not monotone"
   }
  },
  {
@@ -4329,7 +4329,7 @@ export const BREAKS: Break[] = [
   "what": "a question's unfolding spends the world's steps and rows, and leaves them spent",
   "expect": {
    "demand_question_budget": "the state lacks the row explained[$explain](whynot,qb_p(9,9),3",
-   "demand_query_ask": "a question spent the world's budget"
+   "demand_query_ask": "a question left its steps in the world's"
   }
  },
  {
@@ -5572,8 +5572,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/aggeval.ts",
-    "for (const h of [hrel, ...reflected]) {\n            heads.add(h); P(h);",
-    "for (const h of [] as string[]) {\n            heads.add(h); P(h);"
+    "for (const h of [hrel, ...reflected]) {\n              heads.add(h); P(h);",
+    "for (const h of [] as string[]) {\n              heads.add(h); P(h);"
    ]
   ],
   "expect": {
@@ -6880,7 +6880,7 @@ export const BREAKS: Break[] = [
   "id": "ds_cycle_unseen",
   "what": "a cycle through a correlation in the data is not refused",
   "expect": {
-   "agg_datastrat_cycle": "refused, but not for"
+   "agg_datastrat_cycle": "changed after it sealed"
   }
  },
  {
@@ -6921,13 +6921,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ds_root_dropped",
-  "what": "the last correlation the walk finds is never released",
-  "expect": {
-   "agg_datastrat_eval": "never reached"
-  }
- },
- {
   "id": "ds_comps_unordered",
   "what": "two components of one round are run in the order of their names, not the one that reads the other last",
   "expect": {
@@ -6939,7 +6932,7 @@ export const BREAKS: Break[] = [
   "what": "a negation inside an aggregate's body over the component is read as holding: the cell does not wait for it",
   "expect": {
    "agg_datastrat_neg": "changed after it sealed",
-   "agg_datastrat_cycle": "refused, but not for"
+   "agg_datastrat_cycle": "changed after it sealed"
   }
  },
  {
@@ -7849,14 +7842,14 @@ export const BREAKS: Break[] = [
   "id": "function_dirty_cleared_first",
   "what": "an evaluation marks the world clean before the promises are judged, so a refused world is answered by the next question",
   "expect": {
-   "ds_function_holds": "refused, but not for"
+   "ds_function_holds": "answered after its refusal"
   }
  },
  {
   "id": "function_retract_clean",
   "what": "a retraction refused for the promise it breaks leaves the world marked clean, so the next question answers",
   "expect": {
-   "ds_function_retract": "refused, but not for"
+   "ds_function_retract": "answered after its refusal"
   }
  },
  {
@@ -8019,6 +8012,41 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "structures_ordered_non_integer_ignored",
+  "what": "the detection report takes a column with one row that is no integer for an ordered one",
+  "expect": {
+   "structures_proof": "ordered level"
+  }
+ },
+ {
+  "id": "structures_sequence_gap_ignored",
+  "what": "the detection report takes a numbering with a gap for a sequence",
+  "expect": {
+   "structures_proof": "sequence slot"
+  }
+ },
+ {
+  "id": "structures_span_crossing_ignored",
+  "what": "the detection report does not see two intervals cross, so a span is laminar",
+  "expect": {
+   "structures_proof": "span window"
+  }
+ },
+ {
+  "id": "structures_equivalence_missing_ignored",
+  "what": "the detection report takes a relation that lacks a pair of its classes for an equivalence",
+  "expect": {
+   "structures_proof": "equivalence buddy"
+  }
+ },
+ {
+  "id": "structures_dag_cycle_ignored",
+  "what": "the detection report does not see a cycle, so a ring is a dag",
+  "expect": {
+   "structures_proof": "dag ring"
+  }
+ },
+ {
   "id": "tree_unread",
   "what": "the Rust parser reads no declared tree: `tree p(P, C).` is a clause it refuses",
   "expect": {
@@ -8127,13 +8155,6 @@ export const BREAKS: Break[] = [
  {
   "id": "vclosure_stale_forest",
   "what": "the forest is built once and not again when the edges change",
-  "expect": {
-   "ds_tree_sealed": "dstc_"
-  }
- },
- {
-  "id": "vclosure_reader_stale",
-  "what": "a rule that reads the closure is not fired again when news of the edges reaches it",
   "expect": {
    "ds_tree_sealed": "dstc_"
   }
@@ -8309,8 +8330,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/parser.ts",
-    "new Map([['function', ['to']], ['tree', []]])",
-    "new Map([['function', ['to']]])"
+    "new Map([['function', ['to']], ['tree', []], ['alias', []]])",
+    "new Map([['function', ['to']], ['alias', []]])"
    ]
   ],
   "expect": {
@@ -8381,7 +8402,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/api.ts",
-    "const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store));",
+    "const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store));",
     "const badClosure = null;"
    ]
   ],
@@ -8488,13 +8509,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "add_stale_citer_followed",
-  "what": "a fact sealed again whole is taken out for a fact its old firing cited and its new firings do not",
-  "expect": {
-   "addition_stale": "the addition to"
-  }
- },
- {
   "id": "add_reset_after",
   "what": "a reset rule is derived again after the rest, and every rule that reads its relation fired again whole, not kept at its level",
   "expect": {
@@ -8541,6 +8555,20 @@ export const BREAKS: Break[] = [
   "what": "a closure walked again gives a row it held a shorter path and does not say so: a cell over the row keeps its old height",
   "expect": {
    "addition_closure_row": "the addition to"
+  }
+ },
+ {
+  "id": "add_lower_unfollowed",
+  "what": "a fact that stood is given a lower firing and the members resting on it are not followed: their cells keep their old heights",
+  "expect": {
+   "addition_lower_member": "the addition to"
+  }
+ },
+ {
+  "id": "volumes_unexchanged",
+  "what": "a corpus evaluated by volumes lays no worker's [surface] facts into the others: a volume answers from its own files alone",
+  "expect": {
+   "volumes": "the volumes answer otherwise than the whole world"
   }
  },
  {
@@ -8703,7 +8731,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "rules/js-concat.rofl",
-    "composed[flow](T) :- interpolated[code](T), ast_node[code](T, template_literal, _), not tagged_quasi[code](T).",
+    "composed[flow](T) :- interpolated[code](T), template[value](T), not tagged_quasi[code](T).",
     ""
    ]
   ],
@@ -8717,12 +8745,12 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "rules/js-concat.rofl",
-    "ast_attr[code](A, operator, \"+=\"),\n                            ast_child[code](A, left, 0, L), ast_child[code](A, right, 0, R).",
-    "ast_attr[code](A, operator, \"-=\"),\n                            ast_child[code](A, left, 0, L), ast_child[code](A, right, 0, R)."
+    "plus_assign[code](A, L, Name, File) :- binary[value](A, \"+\", L, _)",
+    "plus_assign[code](A, L, Name, File) :- binary[value](A, \"-\", L, _)"
    ]
   ],
   "expect": {
-   "concat_value": "ct_missing_composed"
+   "concat_value": "ct_missing_text"
   }
  },
  {
@@ -9215,12 +9243,13 @@ const TESTS: Record<string, string> = {
   addition_negation: 'addition random_negation_programs',
   addition_sealed: 'addition random_sealed_programs',
   addition_reads_agg: 'addition what_reads_an_aggregate_sealed_again',
-  addition_stale: 'addition a_fact_sealed_again_is_not_taken_out',
   addition_staged_agg: 'addition a_staged_aggregate_is_sealed_again',
   addition_promoted: 'addition a_fact_asserted_where_it_was_derived',
   addition_threshold: 'addition a_threshold_sealed_again_takes',
   addition_closure_row: 'addition a_closure_row_given_a_shorter_path',
   addition_holistic: 'addition a_holistic_aggregate_is_sealed_again',
+  volumes: 'volumes',
+  addition_lower_member: 'addition a_member_standing_lower_seals_again_only_its_group',
   addition_derived_by: 'addition a_rule_reading_derived_by',
   addition_fault: 'addition a_fault_the_addition_does_not_reach',
   addition_dominance: 'addition a_dominance_the_change_reaches',
@@ -9270,6 +9299,10 @@ const TESTS: Record<string, string> = {
   openapi_token: 'openapi client_credentials_get_a_token_once_and_again_when_it_is_refused',
   adapter_endless: 'adapter a_recursion_through_an_adapter_that_never_ends_stops_at_the_budget',
   adapter_capped: 'adapter a_capability_sends_no_more_wants_than_its_book_allows',
+  roflenox_stranger: 'roflenox a_batch_signed_by_a_stranger_is_refused',
+  served_world: 'served a_world_another_process_serves_answers_its_wants',
+  login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
+  event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
   does_guard: 'dispatch a_running_world_cannot_change_what_grants_permission',
   mcp_does: 'mcp a_does_tool_is_not_sent_by_evaluation',

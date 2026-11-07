@@ -120,8 +120,8 @@ disconnected(R, K)  :- body_var(R, K, _), not connected(R, K).
 multi_premise(R)       :- mentions(R, K, _), mentions(R, J, _), K != J.
 
 -- and a body every premise of which feeds the head is a product on purpose:
--- `cell[audit](Lang, K, L) :- node_kind(Lang, K), layer(L).` is the JS
--- matrix. A passenger needs a POSITIVE premise that puts nothing into the
+-- `cell[audit](Lang, K, L) :- node_kind(Lang, K), layer(L).` is the
+-- aggregate matrix of rules/agg.rofl. A passenger needs a POSITIVE premise that puts nothing into the
 -- head — an existential guard like `unblocks(_)`. Positive only: a negated
 -- premise can never feed the head, so counting it would make `p(X) :- q(X),
 -- not r(_).` a passenger rule.

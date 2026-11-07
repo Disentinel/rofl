@@ -1,0 +1,25 @@
+-- examples/checks/profile-hub.rofl — THE DATA THE HYPOTHESES OF models/engine/profile.rofl ARE JUDGED ON. Three small shapes,
+-- each planted for one verdict or forecast; the world loads the pack beside this file (facts/checks.rofl).
+--
+--   a chain of ten (nxt): `depth` fires once per node and scans the nine rows of nxt each time (scan, small_relation;
+--   rescan); `reach` is a closure the kernel answers, forecast `chain` 45 = 9 x 10 / 2, exact
+--   a hub with twelve spokes: `pair` joins spoke with itself on the hub, forecast `join` 12 x 12 / 1 = 144, exact
+--   a ladder of three rungs of three (edge): `two` reaches each far node by three middle ones, so it concludes
+--   27 and keeps 9 (rederives), and its join forecast 18 x 18 / 6 = 54 is loose against 9; `path` is a closure the
+--   kernel answers, forecast `closure` 6 x 6 = 36 against 27 held
+
+nxt(1, 2). nxt(2, 3). nxt(3, 4). nxt(4, 5). nxt(5, 6). nxt(6, 7). nxt(7, 8). nxt(8, 9). nxt(9, 10).
+reach(X, Y) :- nxt(X, Y).
+reach(X, Z) :- reach(X, Y), nxt(Y, Z).
+depth(1, 0).
+depth(B, K) :- nxt(A, B), depth(A, J), K is J + 1.
+
+spoke(h, 1). spoke(h, 2). spoke(h, 3). spoke(h, 4). spoke(h, 5). spoke(h, 6).
+spoke(h, 7). spoke(h, 8). spoke(h, 9). spoke(h, 10). spoke(h, 11). spoke(h, 12).
+pair(X, Y) :- spoke(H, X), spoke(H, Y).
+
+edge(a1, b1). edge(a1, b2). edge(a1, b3). edge(a2, b1). edge(a2, b2). edge(a2, b3). edge(a3, b1). edge(a3, b2). edge(a3, b3).
+edge(b1, c1). edge(b1, c2). edge(b1, c3). edge(b2, c1). edge(b2, c2). edge(b2, c3). edge(b3, c1). edge(b3, c2). edge(b3, c3).
+path(X, Y) :- edge(X, Y).
+path(X, Z) :- path(X, Y), edge(Y, Z).
+two(X, Z) :- edge(X, Y), edge(Y, Z).

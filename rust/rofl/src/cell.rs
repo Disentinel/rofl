@@ -836,13 +836,16 @@ pub enum TagFault { Carrier, Overflow }
 impl TagAlg {
     pub const ALL: [TagAlg; 4] = [TagAlg::Tropical, TagAlg::Viterbi, TagAlg::Trust, TagAlg::Counting];
 
-    pub fn name(self) -> &'static str {
+    fn names(self) -> (&'static str, &'static str) {
         match self {
-            TagAlg::Tropical => "tropical",
-            TagAlg::Viterbi => "viterbi",
-            TagAlg::Trust => "trust",
-            TagAlg::Counting => "counting",
+            TagAlg::Tropical => ("tropical", "$tropical"),
+            TagAlg::Viterbi => ("viterbi", "$viterbi"),
+            TagAlg::Trust => ("trust", "$trust"),
+            TagAlg::Counting => ("counting", "$counting"),
         }
+    }
+    pub fn name(self) -> &'static str {
+        self.names().0
     }
     pub fn from_name(s: &str) -> Option<TagAlg> {
         TagAlg::ALL.into_iter().find(|a| a.name() == s)
@@ -850,12 +853,7 @@ impl TagAlg {
     /// The engine's function of `is` for ⊗, `$tropical(A, B)` and so on: a
     /// name no program writes, which safety.rofl reads as a monotone step.
     pub fn times_name(self) -> &'static str {
-        match self {
-            TagAlg::Tropical => "$tropical",
-            TagAlg::Viterbi => "$viterbi",
-            TagAlg::Trust => "$trust",
-            TagAlg::Counting => "$counting",
-        }
+        self.names().1
     }
     pub fn from_times_name(s: &str) -> Option<TagAlg> {
         TagAlg::ALL.into_iter().find(|a| a.times_name() == s)
@@ -1016,7 +1014,7 @@ mod laws {
         (0..n)
             .map(|_| match op {
                 AggOp::Count => Val::Int(1),
-                AggOp::Or | AggOp::And => Val::Bool(r.next() % 2 == 0),
+                AggOp::Or | AggOp::And => Val::Bool(r.next().is_multiple_of(2)),
                 _ => Val::Int(r.int(1_000_000) as i128),
             })
             .collect()
@@ -1222,7 +1220,7 @@ mod laws {
         let mut keys = KeyCache::new();
         let mut r = Rng(0x6a09_e667_f3bc_c908);
         let names: Vec<Term> = ["a", "b", "zed", "set"].iter().map(|n| h.atom(n)).collect();
-        let mut elem = |r: &mut Rng, h: &mut Heap| -> Term {
+        let elem = |r: &mut Rng, h: &mut Heap| -> Term {
             match r.next() % 3 {
                 0 => names[(r.next() % 4) as usize],
                 1 => Term::int(r.int(12)),
@@ -1311,9 +1309,9 @@ mod laws {
         let mut r = Rng(0x3c6e_f372_fe94_f82b);
         let leq = |a: (i64, i64), b: (i64, i64)| b.0 <= a.0 && a.1 <= b.1;
         let has = |a: (i64, i64), x: i64| a.0 <= x && x <= a.1;
-        let mut iv = |r: &mut Rng| -> (i64, i64) {
-            let lo = if r.next() % 5 == 0 { NINF } else { r.int(20) };
-            let hi = if r.next() % 5 == 0 { PINF } else { lo.max(-20).saturating_add((r.next() % 12) as i64) };
+        let iv = |r: &mut Rng| -> (i64, i64) {
+            let lo = if r.next().is_multiple_of(5) { NINF } else { r.int(20) };
+            let hi = if r.next().is_multiple_of(5) { PINF } else { lo.max(-20).saturating_add((r.next() % 12) as i64) };
             (lo, hi.max(lo))
         };
         let pick = |r: &mut Rng, a: (i64, i64)| -> i64 {
@@ -1327,8 +1325,8 @@ mod laws {
             let (a, b) = (iv(&mut r), iv(&mut r));
             let k = r.int(4);
             let wide = (
-                if r.next() % 2 == 0 || a.0 == NINF { NINF } else { a.0 - (r.next() % 3) as i64 },
-                if r.next() % 2 == 0 || a.1 == PINF { PINF } else { a.1 + (r.next() % 3) as i64 },
+                if r.next().is_multiple_of(2) || a.0 == NINF { NINF } else { a.0 - (r.next() % 3) as i64 },
+                if r.next().is_multiple_of(2) || a.1 == PINF { PINF } else { a.1 + (r.next() % 3) as i64 },
             );
             for f in [IvFn::Add, IvFn::Sub, IvFn::Mul, IvFn::Meet] {
                 let b = if f == IvFn::Mul { (k, k) } else { b };
@@ -1499,19 +1497,19 @@ mod laws {
                 let want = distinct.iter().position(|d| *d == s).map(|i| Val::Int(i as i128 + 1));
                 assert_eq!(got, want, "rank({s}) among {distinct:?}");
             }
-            let before: Vec<_> = [None, Some(Val::Int(25)), Some(Val::Int(90))]
-                .iter()
-                .map(|p| (AggOp::Median.holistic(&v, None, &xs), AggOp::Quantile.holistic(&v, p.or(Some(Val::Int(0))), &xs)))
-                .collect();
+            let probe = |xs: &[Val]| -> Vec<_> {
+                [None, Some(Val::Int(25)), Some(Val::Int(90))]
+                    .iter()
+                    .map(|p| (AggOp::Median.holistic(&v, None, xs), AggOp::Quantile.holistic(&v, p.or(Some(Val::Int(0))), xs)))
+                    .collect()
+            };
+            let before = probe(&xs);
             for _ in 0..4 {
                 for i in (1..xs.len()).rev() {
                     let j = (r.next() % (i as u64 + 1)) as usize;
                     xs.swap(i, j);
                 }
-                let after: Vec<_> = [None, Some(Val::Int(25)), Some(Val::Int(90))]
-                    .iter()
-                    .map(|p| (AggOp::Median.holistic(&v, None, &xs), AggOp::Quantile.holistic(&v, p.or(Some(Val::Int(0))), &xs)))
-                    .collect();
+                let after = probe(&xs);
                 assert_eq!(after, before, "the holistic value is a function of the multiset");
             }
         }
@@ -1545,7 +1543,7 @@ mod laws {
     fn a_rank_over_a_tuple_is_a_position_among_distinct_tuples() {
         let mut h = Heap::default();
         let v = Vocab::new(&mut h);
-        let mut r = Rng(0x7a9_1e5_5eed);
+        let mut r = Rng(0x007a_91e5_5eed);
         let words = ["", "B", "ab", "b", "foo"];
         let atoms: Vec<Term> = words.iter().map(|w| h.atom(w)).collect();
         let strs: Vec<Term> = words.iter().map(|w| h.string(w)).collect();
@@ -1562,11 +1560,11 @@ mod laws {
             _ => strs[k.2],
         };
         for _ in 0..300 {
-            let desc: Vec<bool> = (0..2).map(|_| r.next() % 2 == 0).collect();
+            let desc: Vec<bool> = (0..2).map(|_| r.next().is_multiple_of(2)).collect();
             let mut raw: Vec<[(u8, i64, usize); 2]> = (0..(r.next() % 9) as usize).map(|_| [key(&mut r), key(&mut r)]).collect();
             let atoms_of = |t: &[(u8, i64, usize); 2]| key_atoms(&h, &v, &[term(t[0]), term(t[1])]).unwrap();
             let sorted = Sorted::of_keys(desc.clone(), raw.iter().map(atoms_of).collect());
-            let text = |k: &(u8, i64, usize)| if k.0 == 1 { words[k.2] } else if k.0 == 2 { words[k.2] } else { "" };
+            let text = |k: &(u8, i64, usize)| if matches!(k.0, 1 | 2) { words[k.2] } else { "" };
             let before = |a: &[(u8, i64, usize); 2], b: &[(u8, i64, usize); 2]| {
                 for i in 0..2 {
                     let c = (a[i].0, a[i].1, text(&a[i]).encode_utf16().collect::<Vec<_>>()).cmp(&(b[i].0, b[i].1, text(&b[i]).encode_utf16().collect::<Vec<_>>()));

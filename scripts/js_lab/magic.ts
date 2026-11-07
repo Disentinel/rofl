@@ -4,7 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { scan } from '../../scanners/js_ast.ts';
+import { scan } from '../../scanners/oxc_code.ts';
 import { MODEL_FILES } from '../../notebook/front.ts';
 import { parseProgram } from '../../src/parser.ts';
 
@@ -167,15 +167,15 @@ function hostFacts(paths: string[], strings: Set<string>): string[] {
   const o: string[] = [], dirs = new Set(['.']);
   const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
   for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
-  for (const d of dirs) { o.push(`fs_dir[code](${q(d)}).`); if (d !== '.') o.push(`fs_parent[code](${q(d)}, ${q(dirOf(d))}).`, `fs_dir_in[code](${q(dirOf(d))}, ${q(d.slice(d.lastIndexOf('/') + 1))}, ${q(d)}).`); }
-  for (const p of paths) o.push(`fs_file[code](${q(p)}).`, `fs_dir_of[code](${q(p)}, ${q(dirOf(p))}).`, `fs_file_in[code](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}, ${q(p)}).`);
+  for (const d of dirs) if (d !== '.') o.push(`has_dir[fs](${q(dirOf(d))}, ${q(d.slice(d.lastIndexOf('/') + 1))}).`);
+  for (const p of paths) o.push(`has_file[fs](${q(dirOf(p))}, ${q(p.slice(p.lastIndexOf('/') + 1))}).`);
   for (const s of strings) { if (!s || s.includes('\n')) continue; const segs = s.split('/'); o.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`); segs.forEach((g, k) => o.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`)); if (s.indexOf(':') > 0) o.push(`str_scheme[code](${q(s)}, ${q(s.slice(0, s.indexOf(':')))}).`); }
   return o;
 }
 const facts: string[] = [], strings = new Set<string>();
 const rel = (p: string) => path.relative(corpus, p);
 let astNodes = 0;
-for (const f of files) { const sc = scan(fs.readFileSync(f, 'utf8'), { file: rel(f) }); astNodes += sc.nodes; for (const fact of sc.facts) { facts.push(fact); const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact); if (v) strings.add(v[1].slice(1, -1).replace(/\\(.)/g, '$1')); } }
+for (const f of files) { const sc = scan(fs.readFileSync(f, 'utf8'), { file: rel(f) }); astNodes += sc.facts.filter(x => x.startsWith("ast_node[code]")).length; for (const fact of sc.facts) { facts.push(fact); const v = /^ast_attr\[code\]\(\w+, value, (".*")\)\.$/.exec(fact); if (v) strings.add(v[1].slice(1, -1).replace(/\\(.)/g, '$1')); } }
 const all = [...facts, ...hostFacts(files.map(rel), strings)];
 
 // ---------------------------------------------------------------- one arm

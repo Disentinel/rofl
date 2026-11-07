@@ -3,7 +3,7 @@
 //! new. A node script stands in for the program: it answers the edges of a small tree, and counts its runs.
 //! Planted: `adapter_one_call_per_want` sends each want alone, and the count is red.
 use rofl::session::Session;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const SCRIPT: &str = r#"
 const fs = require('fs');
@@ -28,7 +28,7 @@ fn dir(name: &str) -> PathBuf {
     d
 }
 
-fn world(d: &PathBuf, start: &str) -> String {
+fn world(d: &Path, start: &str) -> String {
     format!(
         "adapter(graph, exec, \"node {} {}\").
 capability(next_of, graph, reads).
@@ -51,7 +51,7 @@ fn evaluated(src: &str) -> Session {
     s
 }
 
-fn runs(d: &PathBuf) -> Vec<usize> {
+fn runs(d: &Path) -> Vec<usize> {
     std::fs::read_to_string(d.join("runs")).unwrap_or_default().lines().map(|l| l.parse().unwrap()).collect()
 }
 

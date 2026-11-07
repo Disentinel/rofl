@@ -34,31 +34,31 @@ fn wrap(i: usize, o: i64) -> usize {
 /// `opens_str/1`, 1 clause — a disjunction.
 pub fn p_opens_str(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (c.kind(i, 0) == Some(Kind::Quote))
+    c.kind(i, 0) == Some(Kind::Quote)
 }
 
 /// `opens_cmt/1`, 1 clause — a disjunction.
 pub fn p_opens_cmt(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (c.kind(i, 0) == Some(Kind::Dash) && c.kind(i, 1) == Some(Kind::Dash))
+    c.kind(i, 0) == Some(Kind::Dash) && c.kind(i, 1) == Some(Kind::Dash)
 }
 
 /// `code_at/1`, 1 clause — a disjunction.
 pub fn p_code_at(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (c.state(i, 0) == Some(State::Code))
+    c.state(i, 0) == Some(State::Code)
 }
 
 /// `str_open/1`, 1 clause — a disjunction.
 pub fn p_str_open(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (c.kind(i, 0) == Some(Kind::Quote) && c.state(i, 0) == Some(State::Code))
+    c.kind(i, 0) == Some(Kind::Quote) && c.state(i, 0) == Some(State::Code)
 }
 
 /// `str_close/1`, 1 clause — a disjunction.
 pub fn p_str_close(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (c.state(i, 0) == Some(State::Str) && c.kind(i, 0) == Some(Kind::Quote))
+    c.state(i, 0) == Some(State::Str) && c.kind(i, 0) == Some(Kind::Quote)
 }
 
 /// `wordch/1`, 3 clauses — a disjunction.
@@ -72,13 +72,13 @@ pub fn p_wordch(c: &Ctx, i: usize) -> bool {
 /// `prevword/1`, 1 clause — a disjunction.
 pub fn p_prevword(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (p_wordch(c, wrap(i, -1)))
+    p_wordch(c, wrap(i, -1))
 }
 
 /// `dollar_before/1`, 1 clause — a disjunction.
 pub fn p_dollar_before(c: &Ctx, i: usize) -> bool {
     if i >= c.len() { return false; }
-    (c.kind(i, -1) == Some(Kind::Dollar) && p_code_at(c, wrap(i, -1)))
+    c.kind(i, -1) == Some(Kind::Dollar) && p_code_at(c, wrap(i, -1))
 }
 
 /// `word_start/1`, 2 clauses — a disjunction.

@@ -1,0 +1,138 @@
+-- lifecycle.rofl — THE WORLD [lifecycle] OVER THE ROLES (w_lifecycle_world; doc «Словарь ролей модели JS»,
+-- «Миры поведения»). An entity is born, read, killed, held; this file names the host's resources only
+-- (models/lang/js/lifecycle-host.rofl says which calls bear and kill them). A resource IS the call that
+-- bore it; a place holds it when its value may be that call's (may_be_node[flow]).
+--
+-- Two questions. Use after death: some path kills the resource and then needs it. A leak: the resource
+-- outlives its owner. The owner of a resource born in a function is the call of that function; of one
+-- born at the top of a module, the process, whose end is a stop place (process.on('SIGTERM', F)).
+-- A leak of a function's resource is `once`, or `accumulates` when the function runs again and again
+-- (a request handler, an interval, a loop); a resource that leaves its function is no leak, it is
+-- unknown, and the way out is said.
+
+imports(lifecycle, code). imports(lifecycle, flow). imports(lifecycle, value).
+imports(lifecycle, tree). imports(lifecycle, main).
+
+-- ---- birth, use, death
+resource[lifecycle](E, Kind) :- host_site[code](E, _, O, K), lc_born_by(O, K, Kind).
+created_by[lifecycle](E, E)  :- resource[lifecycle](E, _).
+
+lc_holds[lifecycle](X, E) :- resource[lifecycle](E, _), may_be_node[flow](X, E).
+
+deleted_by[lifecycle](E, C) :- host_site[code](C, _, O, K), lc_killed_by_arg(O, K, Kind, I),
+                               argument_at[code](C, I, A), lc_holds[lifecycle](A, E), resource[lifecycle](E, Kind).
+deleted_by[lifecycle](E, C) :- callee_of[code](C, N), object_of[code](N, R), selects[flow](N, M),
+                               lc_holds[lifecycle](R, E), resource[lifecycle](E, Kind), lc_killed_by_method(Kind, M).
+
+-- the end of a resource that ends by itself, waited for
+deleted_by[lifecycle](E, C) :- callee_of[code](C, N), object_of[code](N, R), selects[flow](N, M), lc_waits_method(M),
+                               argument_at[code](C, 0, V), literal[value](V, Ev),
+                               lc_holds[lifecycle](R, E), resource[lifecycle](E, Kind), lc_end_event(Kind, Ev).
+deleted_by[lifecycle](E, E) :- host_site[code](E, _, O, K), lc_end_callback(O, K), resource[lifecycle](E, _),
+                               argument_at[code](E, _, A), may_be_node[flow](A, F), fn_node[code](F).
+lc_waits_method("on"). lc_waits_method("once").
+
+read_by[lifecycle](E, C) :- host_site[code](C, _, O, K), lc_used_by_arg(O, K, Kind, I),
+                            argument_at[code](C, I, A), lc_holds[lifecycle](A, E), resource[lifecycle](E, Kind).
+read_by[lifecycle](E, C) :- callee_of[code](C, N), object_of[code](N, R), selects[flow](N, M),
+                            lc_holds[lifecycle](R, E), resource[lifecycle](E, Kind), lc_used_by_method(Kind, M).
+
+-- ---- order, only between the events of one resource: X runs at step I of the sequence Seq
+lc_event[lifecycle](X) :- deleted_by[lifecycle](_, X).
+lc_event[lifecycle](X) :- read_by[lifecycle](_, X).
+lc_step[lifecycle](Seq, I, X) :- lc_event[lifecycle](X), seq_at[code](Seq, I, X).
+lc_step[lifecycle](Seq, I, X) :- lc_event[lifecycle](X), seq_at[code](Seq, I, S), inside[tree](S, X).
+
+-- a step of a loop's body runs again after the steps that follow it
+lc_looped[lifecycle](X, L) :- lc_event[lifecycle](X), repeats[value](L, B), inside[tree](B, X).
+
+before[lifecycle](K, U) :- lc_step[lifecycle](Seq, I, K), lc_step[lifecycle](Seq, J, U), I < J.
+before[lifecycle](K, U) :- lc_looped[lifecycle](K, L), lc_looped[lifecycle](U, L), K != U.
+
+used_after_death[lifecycle](E, K, U) :- deleted_by[lifecycle](E, K), read_by[lifecycle](E, U),
+                                        before[lifecycle](K, U).
+
+-- ---- owners
+lc_owner_fn[lifecycle](E, F) :- resource[lifecycle](E, _), nearest_v[flow](F, E).
+lc_in_fn[lifecycle](E)       :- lc_owner_fn[lifecycle](E, _).
+lc_process_owned[lifecycle](E) :- resource[lifecycle](E, _), not lc_in_fn[lifecycle](E).
+
+-- the way a function's resource leaves it
+escapes_by[lifecycle](E, R)  :- lc_owner_fn[lifecycle](E, _), lc_holds[lifecycle](X, E), returns[value](R, X).
+escapes_by[lifecycle](E, A)  :- lc_owner_fn[lifecycle](E, _), lc_holds[lifecycle](X, E), assign[value](A, T, X),
+                                member[value](T, _, _).
+escapes_by[lifecycle](E, C)  :- lc_owner_fn[lifecycle](E, _), lc_holds[lifecycle](X, E), argument_at[code](C, _, X),
+                                not host_site[code](C, _, _, _), not resolves[code](C, _).
+lc_escapes[lifecycle](E) :- escapes_by[lifecycle](E, _).
+lc_killed[lifecycle](E)  :- deleted_by[lifecycle](E, _).
+
+-- a function that runs again and again: given to the host as a handler, or called in a loop
+lc_repeated_fn[lifecycle](F) :- host_site[code](C, _, O, K), lc_repeats_arg(O, K, I),
+                                argument_at[code](C, I, A), may_be_node[flow](A, F), fn_node[code](F).
+lc_repeated_fn[lifecycle](F) :- callee_of[code](C, N), selects[flow](N, M), lc_repeats_method(M, I),
+                                argument_at[code](C, I, A), may_be_node[flow](A, F), fn_node[code](F).
+lc_repeated[lifecycle](E) :- lc_owner_fn[lifecycle](E, F), lc_repeated_fn[lifecycle](F).
+lc_repeated[lifecycle](E) :- resource[lifecycle](E, _), repeats[value](_, B), inside[tree](B, E).
+
+leaks[lifecycle](E, accumulates) :- lc_in_fn[lifecycle](E), lc_repeated[lifecycle](E),
+                                    not lc_killed[lifecycle](E), not lc_escapes[lifecycle](E).
+leaks[lifecycle](E, once)        :- lc_in_fn[lifecycle](E), not lc_repeated[lifecycle](E),
+                                    not lc_killed[lifecycle](E), not lc_escapes[lifecycle](E).
+leak_unknown[lifecycle](E, Via)  :- escapes_by[lifecycle](E, Via), not lc_killed[lifecycle](E).
+
+-- ---- the process: its stop places, what they reach, what keeps it alive past them
+stop_place[lifecycle](F) :- host_site[code](C, _, "process", "on"), argument_at[code](C, 0, S),
+                            literal[value](S, Sig), lc_stop_signal(Sig),
+                            argument_at[code](C, 1, A), may_be_node[flow](A, F), fn_node[code](F).
+lc_stop_runs[lifecycle](F) :- stop_place[lifecycle](F).
+lc_stop_runs[lifecycle](G) :- lc_stop_runs[lifecycle](F), calls[code](F, G).
+lc_killed_at_stop[lifecycle](E) :- deleted_by[lifecycle](E, K), nearest_fn[code](F, K), lc_stop_runs[lifecycle](F).
+lc_has_stop[lifecycle](process) :- stop_place[lifecycle](_).
+
+-- the process has no stop place at all, and E keeps it alive
+no_shutdown[lifecycle](E, Kind) :- lc_process_owned[lifecycle](E), resource[lifecycle](E, Kind), lc_keeps_alive(Kind),
+                                   not lc_has_stop[lifecycle](process).
+-- the process has one, and E outlives it
+outlives_stop[lifecycle](E, Kind) :- lc_process_owned[lifecycle](E), resource[lifecycle](E, Kind), lc_keeps_alive(Kind),
+                                     lc_has_stop[lifecycle](process), not lc_killed_at_stop[lifecycle](E).
+
+-- ---- the answers at their places
+lc_at[lifecycle](E, File, Line) :- resource[lifecycle](E, _), at[tree](E, File, Line).
+lc_at[lifecycle](X, File, Line) :- lc_event[lifecycle](X), at[tree](X, File, Line).
+
+used_after_death_at[lifecycle](Kind, File, Born, Killed, Used) :- used_after_death[lifecycle](E, K, U), resource[lifecycle](E, Kind),
+    lc_at[lifecycle](E, File, Born), lc_at[lifecycle](K, _, Killed), lc_at[lifecycle](U, _, Used).
+leaks_at[lifecycle](Kind, How, File, Line)  :- leaks[lifecycle](E, How), resource[lifecycle](E, Kind), lc_at[lifecycle](E, File, Line).
+leak_unknown_at[lifecycle](Kind, File, Line, ViaLine) :- leak_unknown[lifecycle](E, Via), resource[lifecycle](E, Kind),
+    lc_at[lifecycle](E, File, Line), at[tree](Via, _, ViaLine).
+no_shutdown_at[lifecycle](Kind, File, Line)   :- no_shutdown[lifecycle](E, Kind), lc_at[lifecycle](E, File, Line).
+outlives_stop_at[lifecycle](Kind, File, Line) :- outlives_stop[lifecycle](E, Kind), lc_at[lifecycle](E, File, Line).
+
+-- ---- a binding's value: overwrites. A write W1 of the binding D is overwritten when a later step of the same
+-- sequence writes D again (W2) and nothing reads D from W1 up to W2, W2's own value included. Both writes are
+-- whole steps, so neither runs on a condition; a read of D in another function could run between, so a binding
+-- read from another function is never said to be overwritten.
+updated_by[lifecycle](D, D) :- binder[code](D, _, _, _).
+updated_by[lifecycle](D, A) :- assign_binder[code](A, D).
+
+ow_write_step[lifecycle](D, D, Seq, I) :- binder[code](D, _, _, _), seq_at[code](Seq, I, S), parent[tree](S, D).
+ow_write_step[lifecycle](D, W, Seq, I) :- assign_binder[code](W, D), discards[value](Seq, W), seq_at[code](Seq, I, W).
+
+ow_read[lifecycle](D, E) :- sees_binder[code](E, D), updated_by[lifecycle](D, _), not assigned[code](_, E, _, _, _).
+ow_fn[lifecycle](X, F)   :- ow_read[lifecycle](_, X), nearest_v[flow](F, X).
+ow_fn[lifecycle](X, F)   :- updated_by[lifecycle](_, X), nearest_v[flow](F, X).
+ow_has_fn[lifecycle](X)  :- nearest_v[flow](_, X).
+ow_fn[lifecycle](X, top) :- ow_read[lifecycle](_, X), not ow_has_fn[lifecycle](X).
+ow_fn[lifecycle](X, top) :- updated_by[lifecycle](_, X), not ow_has_fn[lifecycle](X).
+
+ow_read_elsewhere[lifecycle](D) :- updated_by[lifecycle](D, W), ow_fn[lifecycle](W, F),
+                                   ow_read[lifecycle](D, E), ow_fn[lifecycle](E, G), F != G.
+ow_read_step[lifecycle](D, Seq, K) :- ow_read[lifecycle](D, E), seq_at[code](Seq, K, E).
+ow_read_step[lifecycle](D, Seq, K) :- ow_read[lifecycle](D, E), seq_at[code](Seq, K, S), inside[tree](S, E).
+
+ow_read_between[lifecycle](D, W1, W2) :- ow_write_step[lifecycle](D, W1, Seq, I), ow_write_step[lifecycle](D, W2, Seq, J), I < J,
+                                         ow_read_step[lifecycle](D, Seq, K), I < K, K <= J.
+overwrites[lifecycle](W2, W1) :- ow_write_step[lifecycle](D, W1, Seq, I), ow_write_step[lifecycle](D, W2, Seq, J), I < J,
+                                 not ow_read_between[lifecycle](D, W1, W2), not ow_read_elsewhere[lifecycle](D).
+overwrites_at[lifecycle](Name, File, Line1, Line2) :- overwrites[lifecycle](W2, W1), updated_by[lifecycle](D, W1),
+                                                       binder[code](D, Name, _, File), at[tree](W1, _, Line1), at[tree](W2, _, Line2).

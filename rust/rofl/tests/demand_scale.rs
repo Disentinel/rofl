@@ -29,7 +29,7 @@ fn a_recursion_through_a_closed_demand_relation_is_linear() {
     let secs = t.elapsed().as_secs_f64();
     assert!(!ev.partial, "the evaluation was cut");
     assert_eq!(s.ask("dc_r(X)").unwrap().rows.len(), n + 1);
-    let probes: u64 = s.eval.argm_by_rule.values().sum();
+    let probes: u64 = s.eval.cost.argm_by_rule.values().sum();
     assert!(probes <= 8 * n as u64, "{probes} index probes for a {n}-step chain: a reader of a closed relation refires whole");
     if !cfg!(debug_assertions) {
         assert!(secs < 3.0, "a {n}-step recursion through a closed demand relation took {secs:.2} s");

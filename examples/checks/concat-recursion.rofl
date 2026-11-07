@@ -1,0 +1,9 @@
+-- expect-refusal: it makes an unbounded value inside its recursion
+-- examples/checks/concat-recursion.rofl — A PROGRAM THAT MUST BE REFUSED: concat inside its own recursion.
+--
+-- `grow` reads itself and concatenates, so "a", "aa", "aaa", ... never end; safety.rofl refuses the rule
+-- (unbounded_in_recursion) before anything is evaluated, in both engines.
+
+seed("a").
+grow(X) :- seed(X).
+grow(Y) :- grow(X), Y is concat(X, "a").

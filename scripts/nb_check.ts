@@ -1,9 +1,13 @@
 // npm run test:nb — the notebook's behavioural gate (what runs around the kernel is npm run test:nb:product): the example notebooks by exit code and a few answer lines, and planted defects that must
 // turn it red. The invariants it stands for are named in examples/notebook/self.rofl.md; each check below names its own.
-import { chmodSync, existsSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import * as os from 'node:os';
+import { stripTypeScriptTypes } from 'node:module';
 import * as path from 'node:path';
 import * as vm from 'node:vm';
+import { execFileSync } from 'node:child_process';
+import ts from 'typescript';
 import { Kernel, type NbLine } from '../notebook/kernel.ts';
 import { runFile } from '../notebook/cli.ts';
 import { engineOf } from '../playground/rust.ts';
@@ -75,6 +79,15 @@ Payments blocks nothing.
 \`\`\`datalog
 never blocked(C, payments)
 \`\`\`
+
+\`\`\`datalog
+one_arg(C) :- blocked(C).
+edb(quiet).
+hushed(C) :- quiet(C).
+
+? one_arg(C)
+? hushed(C)
+\`\`\`
 `);
 const holey = planted('holey', 'review.rofl.md', withCell('short_name(C, L) :- blocked(C, _), L is str_len(C) - 1.\n\nnever short_name(C, L)', 'datalog'));
 // a what-if in the notebook against the same notebook over a world without the fact
@@ -123,6 +136,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
   blind: () => cli([blindFile, '--json']),
   review: () => cli([REVIEW], { ROFL_NB_CLAUDE: spy }),
   small: () => cli([path.join(NB, 'small.rofl.md')]),
+  orderNb: () => cli([path.join(NB, 'order.rofl.md')]),
   reviewJson: () => cli([REVIEW, '--json']),
   fails: () => cli([failing]),
   notRead: () => cli([unread]),
@@ -156,6 +170,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
   destructure: () => cli([path.join(NB, 'destructure.rofl.md')]),
   assign: () => cli([path.join(NB, 'assign.rofl.md')]),
   guard: () => cli([path.join(NB, 'guard.rofl.md')]),
+  passes: () => cli([path.join(NB, 'passes.rofl.md')]),
   scopedV8: async (): Promise<Out> => {
     const ran = await cli([path.join(NB, 'scoped.rofl.md'), '--json', '--all']);
     const model: Record<string, Set<string>> = {};
@@ -183,15 +198,71 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const missing = [...observed].filter((o) => !model.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
   },
+  missing: () => cli([path.join(NB, 'missing.rofl.md')]),
+  missingV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'missing.rofl.md'), '--json', '--all']);
+    const said: Record<string, Set<string>> = { missing: new Set(), unknown: new Set(), found: new Set() };
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(missing|unknown|found)\("([\w.]+)"\)$/.exec(a.literal);
+      if (m) said[m[1]].add(m[2]);
+    }
+    const thrown = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'missing/calls.js'), 'utf8'), { __thrown: (tag: string, e: Error) => { if (e.constructor.name === 'TypeError') thrown.add(tag); }, require: () => ({}) });
+    const wrong = [...said.missing].filter((t) => !thrown.has(t)).concat([...said.found].filter((t) => thrown.has(t)));
+    return { code: 0, out: `V8 threw at ${thrown.size} calls; the model said ${said.missing.size} missing, ${said.unknown.size} unknown, ${said.found.size} found; wrong: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
+  imports: () => cli([path.join(NB, 'imports.rofl.md')]),
+  importsNode: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'imports.rofl.md'), '--json', '--all']);
+    const said: Record<string, Set<string>> = { missing: new Set(), unknown: new Set(), found: new Set() };
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(missing|unknown|found)\("([\w.]+)"\)$/.exec(a.literal);
+      if (m) said[m[1]].add(m[2]);
+    }
+    const src = path.join(NB, 'imports'), out = path.join(tmp, 'imports');
+    mkdirSync(out, { recursive: true });
+    for (const f of readdirSync(src).filter((f) => f.endsWith('.ts'))) {
+      const js = ts.transpileModule(readFileSync(path.join(src, f), 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+      writeFileSync(path.join(out, f.replace(/\.ts$/, '.mjs')), js.replace(/from '(\.\/\w+)'/g, "from '$1.mjs'"));
+    }
+    const run = `const t = []; globalThis.probe = (tag, f) => { try { f(); } catch (e) { if (e instanceof TypeError) t.push(tag); } };
+await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.log(JSON.stringify(t));`;
+    const thrown = new Set<string>(JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', run], { encoding: 'utf8' })));
+    const wrong = [...said.missing].filter((t) => !thrown.has(t)).concat([...said.found].filter((t) => thrown.has(t)));
+    return { code: 0, out: `Node threw at ${thrown.size} calls; the model said ${said.missing.size} missing, ${said.unknown.size} unknown, ${said.found.size} found; wrong: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
+  declared: () => cli([path.join(NB, 'declared.rofl.md')]),
+  declaredTsc: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'declared.rofl.md'), '--json', '--all']);
+    const said = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^missing_by_type\((\d+), "(\w+)"\)$/.exec(a.literal);
+      if (m) said.add(`${m[1]}:${m[2]}`);
+    }
+    const file = path.join(NB, 'declared/calls.ts');
+    const program = ts.createProgram([file], { noEmit: true, strict: true, target: ts.ScriptTarget.ES2022 });
+    const errors = new Set(ts.getPreEmitDiagnostics(program).filter((d) => (d.code === 2339 || d.code === 2551) && d.file?.fileName === file).map((d) => {
+      const at = d.file!.getLineAndCharacterOfPosition(d.start!);
+      return `${at.line + 1}:${d.file!.text.slice(d.start!, d.start! + d.length!)}`;
+    }));
+    const wrong = [...said].filter((k) => !errors.has(k)).concat([...errors].filter((k) => !said.has(k)));
+    return { code: 0, out: `TypeScript names ${errors.size} members that do not exist; the model said ${said.size} missing by type; differ: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
   orderV8: async (): Promise<Out> => {
     const ran = await cli([path.join(NB, 'order.rofl.md'), '--json', '--all']);
     const model = new Set<string>(), unordered = new Set<string>();
     for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
       const m = /^(seen|unordered)\("([\w.]+)", (.+)\)$/.exec(a.literal);
-      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3]}`);
+      if (m) (m[1] === 'seen' ? model : unordered).add(`${m[2]}:${m[3].startsWith('"') ? JSON.parse(m[3]) : m[3]}`);
     }
     const observed = new Set<string>();
-    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen: (tag: string, v: unknown) => { if (v !== undefined) observed.add(`${tag}:${String(v)}`); }, process: { argv: [] } });
+    const __seen = (tag: string, v: unknown) => { observed.add(`${tag}:${String(v)}`); };
+    vm.runInNewContext(readFileSync(path.join(NB, 'keyed/order.js'), 'utf8'), { __seen, process: { argv: [] } });
+    vm.runInNewContext(stripTypeScriptTypes(readFileSync(path.join(NB, 'keyed/order_ts.ts'), 'utf8')), { __seen });
+    (globalThis as { __seen?: typeof __seen }).__seen = __seen;
+    await import(pathToFileURL(path.join(NB, 'keyed/order_use.mjs')).href);
+    delete (globalThis as { __seen?: typeof __seen }).__seen;
+    await new Promise((done) => setImmediate(done));
     const missing = [...observed].filter((o) => !model.has(o));
     const extra = [...model].filter((o) => !observed.has(o) && !unordered.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}; in the model where the order is known and V8 never saw it: ${JSON.stringify(extra)}`, stdout: '' };
@@ -214,7 +285,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -261,9 +332,20 @@ test('scoped: an assignment reaches the readers of its own binding and what no b
 test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('destructure: a name bound from an object pattern, in a declarator or a parameter, with a default or off a required module, and a conversion, carry their values', ['destructure'], () => is(destructure, 0) && has(destructure, 'never seen("object.port", 3030)  ->  holds') && has(destructure, 'never seen("default.port", 8082)  ->  holds') && has(destructure, 'never seen("require.port", 5)  ->  holds') && has(destructure, '? seen(Tag, V)  ->  18 answers'), () => destructure);
 test('destructure: every value V8 observes at a read is in the model\'s may-set', ['destructureV8'], () => has(destructureV8, 'missing from the model: []'), () => destructureV8);
+test('missing: a call of a member a receiver seen whole has not got is said missing, and never over a package or a parameter', ['missing'], () => is(missing, 0) && has(missing, '? missing(T)  ->  9 answers') && has(missing, 'never missing("path.nosuch")  ->  holds'), () => missing);
+test('imports: an imported class, a namespace and a module object are seen whole, and what re-exports a package is not', ['imports'], () => is(imports, 0) && has(imports, '? missing(T)  ->  8 answers') && has(imports, 'never missing("O.join")  ->  holds'), () => imports);
+test('imports: Node throws a TypeError at every call said missing and at no call said found', ['importsNode'], () => has(importsNode, 'wrong: []') && has(importsNode, 'said 8 missing'), () => importsNode);
+test('declared: a member a declared type has not got is said missing by type, and not where the code narrows it', ['declared'], () => is(declared, 0) && has(declared, '? missing_by_type(L, K)  ->  21 answers') && has(declared, 'never missing_by_type(25, "extra")  ->  holds'), () => declared);
+test('declared: TypeScript\'s "does not exist" errors are exactly the calls said missing by type', ['declaredTsc'], () => has(declaredTsc, 'differ: []') && has(declaredTsc, 'said 21 missing'), () => declaredTsc);
+test('missing: V8 throws a TypeError at every call said missing and at no call said found', ['missingV8'], () => has(missingV8, 'wrong: []') && has(missingV8, 'said 9 missing'), () => missingV8);
+test('order: a whynot by file prints each file\'s nearest failure, the delete that takes the put out, within fourteen lines, and the whole walk is --all', ['orderNb'], () => {
+  const at = (orderNb.stdout ?? '').split('\n'), i = at.findIndex((l) => l.includes('whynot seen("order.gone", 2)'));
+  return is(orderNb, 0) && i >= 0 && at.slice(i, i + 14).some((l) => l.includes('by [m.delete() at keyed/order.js:9], in the code does')) && at.slice(i, i + 14).some((l) => l.trim() === '(every failure: --all)');
+}, () => orderNb);
 test('order: a Map read holds what V8 holds where the order is known, and every other value is named as unordered', ['orderV8'], () => has(orderV8, 'missing from the model: []; in the model where the order is known and V8 never saw it: []'), () => orderV8);
 test('assign: Object.assign, by the library member the callee is, writes its sources onto its first argument and returns it, across files; a method of the program called assign does neither', ['assign'], () => is(assign, 0) && has(assign, 'seen("E.port", 4000)') && has(assign, 'seen("lib.port", 4000)') && has(assign, 'seen("merged.host", "localhost")') && has(assign, 'called("start")') && has(assign, 'called("late")') && has(assign, 'never seen("bystander.leak", 1)  ->  holds'), () => assign);
-test('guard: a call under `!module.parent` or `require.main === module`, or in a function only they mention, hands its callee no argument; the required arm and an exported function keep theirs', ['guard'], () => is(guard, 0) && has(guard, '? seen(Tag, V)  ->  3 answers') && has(guard, 'seen("listen.port", 7777)') && has(guard, 'seen("listen.port", 4444)') && has(guard, '? dead_fn[code](F)  ->  2 answers') && has(guard, 'never seen("listen.port", 9999)  ->  holds') && has(guard, 'never seen("listen.port", 3333)  ->  holds'), () => guard);
+test('guard: a call under `!module.parent` or `require.main === module`, or in a function only they mention, hands its callee no argument; the required arm, an exported function and a file read as the script keep theirs', ['guard'], () => is(guard, 0) && has(guard, '? seen(Tag, V)  ->  5 answers') && has(guard, 'seen("listen.port", 7777)') && has(guard, 'seen("note.n", 1212)') && has(guard, 'seen("report.n", 2222)') && has(guard, 'seen("listen.port", 4444)') && has(guard, '? dead_fn[code](F)  ->  2 answers') && has(guard, 'never seen("listen.port", 9999)  ->  holds') && has(guard, 'never seen("listen.port", 3333)  ->  holds'), () => guard);
+test('passes: a function handed to a call is passed by name, in place (anonymous) or as a member; a computed call reaches what its receiver holds; a parameter handed two functions is named', ['passes'], () => is(passes, 0) && has(passes, '? handed(I, F, N)  ->  4 answers') && has(passes, 'anonymous)') && has(passes, '"onMsg")') && has(passes, '? may_call[code](A, F)  ->  2 answers') && has(passes, 'on() at passes/handlers.js:20] merges its parameter') && has(passes, '? fires(B)  ->  1 answer') && has(passes, 'fires("onUser")'), () => passes);
 test('I3 a relative require that resolves to no file makes a holding never blind, exit 3, and the head names it', ['cjsBlind'], () => is(cjsBlind, 3) && has(cjsBlind, 'note: 1 relative import or require was not resolved') && /cjs\/cart\.js:\d+ "\.\/missing"/.test(cjsBlind.out) && has(cjsBlind, 'never unreached(N)  ->  holds as far as it sees · 1 relative import or require was not resolved'), () => cjsBlind);
 test('I1 every directive line of review is answered', ['reviewJson'], () => (() => { const r = JSON.parse(reviewJson.stdout ?? ''); const asked = (reviewText.match(/^(\?|never|why|whynot|unsure) /gm) ?? []).length; const said = r.cells.flatMap((c: { lines: { unsure?: unknown }[] }) => c.lines.flatMap((l) => l.unsure ? [l, l] : [l])).length; return asked === said && asked > 0; })(), () => reviewJson);
 test('I4 a run writes nothing into the file', ['review', 'self', 'nat'], () => before(REVIEW) === reviewText && before(path.join(NB, 'self.rofl.md')) === selfText && before(natural) === naturalText);
@@ -318,13 +400,15 @@ test('E3 an excise in the notebook moves the lines the same as the notebook over
 })(), () => ({ code: ex.code, out: (ex.stdout ?? '') + (wo.stdout ?? '') }));
 test('E5 a never over a rule that met an expression it could not evaluate holds only as far as it sees', ['hol'], () => is(hol, 3) && has(hol, 'note: the rule for short name met an expression it could not evaluate') && has(hol, 'never short_name(C, L)  ->  holds as far as it sees · it rests on short name'), () => hol);
 test('I1 a never over a backticked name no fact holds is blind, not holds, and says to ask by variable or by name', ['recurse'], () => has(recurse, 'never `spin` calls `spin`  ->  holds as far as it sees · `spin` names nothing in the model')
-  && has(recurse, 'ask with a variable (never X calls X) or by name, as in: F answers to "spin"') && has(recurse, 'never `nosuchfunction` calls some function  ->  holds as far as it sees · `nosuchfunction` names nothing'), () => recurse);
+  && /ask with a variable \(never X calls X\) or by name, as in: [^\n]*"spin"/.test(recurse.out) && has(recurse, 'never `nosuchfunction` calls some function  ->  holds as far as it sees · `nosuchfunction` names nothing'), () => recurse);
 test('  and with a variable it fails on the function that calls itself', ['recurse'], () => has(recurse, 'never F calls F  ->  FAILS · 1') && has(recurse, '[function spin() at small.js:11] calls [function spin() at small.js:11]'), () => recurse);
 test('  and over a world: a misspelt name is said, one a cell\'s rule mentions is not, one a fact has is not (review)', ['nmWorld', 'review'], () => is(nmWorld, 3) && has(nmWorld, 'never C is blocked by `paymnets`  ->  holds as far as it sees · `paymnets` names nothing in the model, so this line cannot match: check the spelling')
   && has(nmWorld, 'never C is blocked by `legal`  ->  holds\n') && !has(review, 'names nothing'), () => nmWorld);
 test('H2 a rule that climbs for ever stops at ROFL_NB_LIMIT, says the budget ran out and the run was cut short, exit 3', ['climb'], () => is(climb, 3) && has(climb, '? n(5)  ->  at least 1 answer, cut short · the budget ran out before every answer was found') && has(climb, 'CUT SHORT') && climb.ms! < 20_000, () => climb);
 test('H2 the same runaway with the time far off stops at ROFL_NB_MEMORY gigabytes of heap instead, exit 3', ['heavy'], () => is(heavy, 3) && has(heavy, 'the budget ran out') && heavy.ms! < 30_000, () => heavy);
 test('F1 an empty relation asked in one book the program writes in another says which', ['fr'], () => has(fr, 'flagged is written in [audit], not in [main]: ask flagged[audit](...)'), () => fr);
+test('F8 a rule reading a relation at an arity nothing writes says so on its cell', ['fr'], () => has(fr, 'note: the rule for one arg reads blocked with 1 argument, and nothing in the model can put a row there'), () => fr);
+test('F9 a relation declared by edb and holding nothing is an empty answer, not one nothing defines', ['fr'], () => has(fr, '? hushed(C)  ->  0 answers') && !has(fr, 'it rests on quiet'), () => fr);
 test('F2 a positional never works in a rofl cell', ['fr'], () => has(fr, 'never blocked(C, payments)  ->  holds'), () => fr);
 test('F4 a datalog cell under a natural cell answers it', ['fr'], () => has(fr, 'note: answered by the cell below it') && !has(fr, 'not translated yet'), () => fr);
 test('F5 a conjunctive question is refused with what to write instead', ['fr'], () => is(fr, 2) && has(fr, 'a question is one literal; write a rule that joins these'), () => fr);
@@ -368,7 +452,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, destructure, destructureV8, orderV8, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

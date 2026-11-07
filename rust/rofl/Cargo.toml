@@ -11,18 +11,26 @@ memmap2 = "0.9"
 regex = "1"
 # the free space of a disk, before a question verb keeps its world on it (src/bin/rofl/kept.rs)
 libc = "0.2"
+# the allocator under the counting one (src/bin/rofl/seed.rs): an engine that allocates per partial solution
+mimalloc = { version = "0.1.43", default-features = false }
 # an OpenAPI document written in YAML (src/openapi.rs)
 serde_yaml = "0.9"
 # the sql adapter (src/adapter.rs `run_sql`); `cargo build --no-default-features` builds the engine without it
 rusqlite = { version = "0.32", features = ["bundled"], optional = true }
 # the http adapters (src/net.rs: openapi, mcp over http); blocking, on the adapter's own thread, so the engine never sees tokio
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"], optional = true }
+# a book on Roflenox checked: Ed25519 and SHA-256 (src/roflenox.rs); already in the tree under rustls
+ring = { version = "0.17", optional = true }
+
+# signed batches in tests/roflenox.rs
+[dev-dependencies]
+ring = "0.17"
 
 # planted faults for scripts/agg_breaks.ts (src/breaks.rs); never in a normal build
 [features]
 default = ["sql", "net"]
 sql = ["dep:rusqlite"]
-net = ["dep:reqwest"]
+net = ["dep:reqwest", "dep:ring"]
 breaks = []
 
 [lib]
@@ -32,3 +40,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "rofl"
 path = "src/bin/rofl/main.rs"
+
+# the gate is `cargo clippy -p rofl --all-targets -- -D warnings`, in CI; these are the lints the project's style overrules
+[lints.clippy]
+# a pass takes the interner, the store, the perspective and the rows as arguments of their own, so that each is borrowed apart; a struct of them borrows them all at once
+too_many_arguments = "allow"
+# a shape that recurs is named (StagedAlts, AggKey, Levels, SortedGroup); one written once reads where it stands, an alias would only move it
+type_complexity = "allow"

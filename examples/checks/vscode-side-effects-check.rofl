@@ -15,35 +15,35 @@
 --     target += '/' + segment in a loop (_18bs8n5b6m) the initial literal, the += node and five forms, the loop unfolded three
 --                                              levels and the rest the node itself
 --     new URL('/api/update', updateBase) (_o13jg7f3n72) the URL's text, base then relative
-vse_want(nd100d8f9c1968a85_vrukhc1b4n1, fs_mutation, "/tmp/settings.json").
-vse_want(nd100d8f9c1968a85_o9eo0rdhfo2, fs_mutation, "/tmp/cache").
-vse_want(n6ce3b3e159e9764b_26fr14avbm, fs_mutation, "/tmp/settings.json").
-vse_want(n6ce3b3e159e9764b_vfluubk2dv5, fs_mutation, "/tmp/cache").
-vse_want(n34efd0fd49e79fa1_9atl92avtk7, listen, 8080).
-vse_want(n34efd0fd49e79fa1_9atl92avtk7, listen, n34efd0fd49e79fa1_3cddg0nebb5).
-vse_want(n34efd0fd49e79fa1_pbaaf8t6fv4, listen, 8080).
-vse_want(n34efd0fd49e79fa1_ak85bv2kp1, listen, n34efd0fd49e79fa1_3cddg0nebb5).
-vse_want(n6ce3b3e159e9764b_gepbvumfsb2, process, "code").
-vse_want(n6ce3b3e159e9764b_pommbgqhsn4, process, "git").
-vse_want(n6ce3b3e159e9764b_jn80tseuu4, ipc, "vscode:hello").
-vse_want(n6ce3b3e159e9764b_u84riotne07, request, "https://update.code.visualstudio.com/api/update").
-vse_want(ndbdc6130c943fdee_165oo5o40t, fs_mutation, ndbdc6130c943fdee_33ve39110v6).
-vse_want(ndbdc6130c943fdee_165oo5o40t, fs_mutation, join(join("/opt/app", "out"), "settings.json")).
-vse_want(ndbdc6130c943fdee_upipsffqd72, fs_mutation, ndbdc6130c943fdee_99vc46l7h86).
-vse_want(ndbdc6130c943fdee_upipsffqd72, fs_mutation, cat(cat(cat("/opt/app", "/logs/"), "main"), ".log")).
-vse_want(ndbdc6130c943fdee_upipsffqd72, fs_mutation, cat(cat(cat("/opt/app", "/logs/"), "shared"), ".log")).
-vse_want(ndbdc6130c943fdee_c9qek9l3cn4, fs_mutation, ndbdc6130c943fdee_r8g6ar91ss).
-vse_want(ndbdc6130c943fdee_35uoufd9j65, fs_mutation, ndbdc6130c943fdee_g0p0e4hdt82).
-vse_want(ndbdc6130c943fdee_35uoufd9j65, fs_mutation, "/opt/app/tmp").
-vse_want(ndbdc6130c943fdee_q3vqqs7f4m6, fs_mutation, "/opt/app").
-vse_want(ndbdc6130c943fdee_q3vqqs7f4m6, fs_mutation, ndbdc6130c943fdee_ktgc76v2293).
-vse_want(ndbdc6130c943fdee_jljmhv10t17, request, ndbdc6130c943fdee_u6r0ujqfvd).
-vse_want(ndbdc6130c943fdee_jljmhv10t17, request, url("https://update.code.visualstudio.com", "/api/update")).
-vse_want_site(n6ce3b3e159e9764b_m3uuf5k2cj1, fs_mutation).
-vse_want_form(ndbdc6130c943fdee_c9qek9l3cn4, fs_mutation, join(dirname(ref(ndbdc6130c943fdee_cnquges9d91)), "cache")).
-vse_want_form(ndbdc6130c943fdee_q3vqqs7f4m6, fs_mutation, cat("/opt/app", cat("/", ref(ndbdc6130c943fdee_c9enis4bhr1)))).
-vse_want_forms(ndbdc6130c943fdee_c9qek9l3cn4, 1).
-vse_want_forms(ndbdc6130c943fdee_q3vqqs7f4m6, 5).
+vse_want(nd100d8f9c1968a85_5s90vis7e2i58, fs_mutation, "/tmp/settings.json").
+vse_want(nd100d8f9c1968a85_8u7p678hvhje3, fs_mutation, "/tmp/cache").
+vse_want(n6ce3b3e159e9764b_bb8ghajj4cbt5, fs_mutation, "/tmp/settings.json").
+vse_want(n6ce3b3e159e9764b_56ei252rls6cb, fs_mutation, "/tmp/cache").
+vse_want(n34efd0fd49e79fa1_q0402rcqfdos6, listen, 8080).
+vse_want(n34efd0fd49e79fa1_q0402rcqfdos6, listen, n34efd0fd49e79fa1_2f8ph2fjd3qr8).
+vse_want(n34efd0fd49e79fa1_hi1ph3li171ob, listen, 8080).
+vse_want(n34efd0fd49e79fa1_ngltcuo655ce7, listen, n34efd0fd49e79fa1_2f8ph2fjd3qr8).
+vse_want(n6ce3b3e159e9764b_1dj5olcm9qms8, process, "code").
+vse_want(n6ce3b3e159e9764b_mbhpkrske2b34, process, "git").
+vse_want(n6ce3b3e159e9764b_2hjc65i58obmd, ipc, "vscode:hello").
+vse_want(n6ce3b3e159e9764b_9kn3nahf2h2be, request, "https://update.code.visualstudio.com/api/update").
+vse_want(ndbdc6130c943fdee_cham84c2ta3i2, fs_mutation, ndbdc6130c943fdee_4lo68mdbtj2r2).
+vse_want(ndbdc6130c943fdee_cham84c2ta3i2, fs_mutation, join(join("/opt/app", "out"), "settings.json")).
+vse_want(ndbdc6130c943fdee_9hs4ojc99u8pd, fs_mutation, ndbdc6130c943fdee_2u6vklickq3i5).
+vse_want(ndbdc6130c943fdee_9hs4ojc99u8pd, fs_mutation, cat(cat(cat("/opt/app", "/logs/"), "main"), ".log")).
+vse_want(ndbdc6130c943fdee_9hs4ojc99u8pd, fs_mutation, cat(cat(cat("/opt/app", "/logs/"), "shared"), ".log")).
+vse_want(ndbdc6130c943fdee_7eb5i16sfv1f2, fs_mutation, ndbdc6130c943fdee_tregnjafb9ao3).
+vse_want(ndbdc6130c943fdee_f54pp7h1p927c, fs_mutation, ndbdc6130c943fdee_idl3f7cd8i07a).
+vse_want(ndbdc6130c943fdee_f54pp7h1p927c, fs_mutation, "/opt/app/tmp").
+vse_want(ndbdc6130c943fdee_vknpcu964rdk4, fs_mutation, "/opt/app").
+vse_want(ndbdc6130c943fdee_vknpcu964rdk4, fs_mutation, ndbdc6130c943fdee_00ujo250s3vsd).
+vse_want(ndbdc6130c943fdee_jc1pa74f31pn6, request, ndbdc6130c943fdee_lr2ctlikvj5k6).
+vse_want(ndbdc6130c943fdee_jc1pa74f31pn6, request, url("https://update.code.visualstudio.com", "/api/update")).
+vse_want_site(n6ce3b3e159e9764b_i81ivvh0eus2f, fs_mutation).
+vse_want_form(ndbdc6130c943fdee_7eb5i16sfv1f2, fs_mutation, join(dirname(ref(ndbdc6130c943fdee_vmlug67fjdgt5)), "cache")).
+vse_want_form(ndbdc6130c943fdee_vknpcu964rdk4, fs_mutation, cat("/opt/app", cat("/", ref(ndbdc6130c943fdee_0mho5kesgtq06)))).
+vse_want_forms(ndbdc6130c943fdee_7eb5i16sfv1f2, 1).
+vse_want_forms(ndbdc6130c943fdee_vknpcu964rdk4, 5).
 vse_want_site(S, F) :- vse_want(S, F, _).
 vse_want_count(fs_mutation, 10, 9).
 vse_want_count(listen, 3, 3).
@@ -57,7 +57,7 @@ vse_missing_site(S, F) :- vse_want_site(S, F), not side_effect_site(S, F).
 vse_extra_site(S, F)  :- side_effect_site(S, F), not vse_want_site(S, F).
 vse_count_wrong(F)    :- side_effect_count(F, N, V), not vse_want_count(F, N, V).
 vse_count_missing(F)  :- vse_want_count(F, N, V), not side_effect_count(F, N, V).
-vse_env_missing()     :- not side_effect_env(n34efd0fd49e79fa1_3cddg0nebb5, "VSCODE_PORT").
+vse_env_missing()     :- not side_effect_env(n34efd0fd49e79fa1_2f8ph2fjd3qr8, "VSCODE_PORT").
 vse_form_missing(S, F, T) :- vse_want_form(S, F, T), not side_effect_form(S, F, T).
 vse_form_site(S)      :- side_effect_form(S, _, _).
 vse_forms_wrong(S)    :- vse_form_site(S), N is count(T : side_effect_form(S, _, T)), not vse_want_forms(S, N).

@@ -23,10 +23,17 @@ macro_rules! brk {
     };
 }
 
+/// The original of a site, passed through a call so that a linter reads a
+/// `brk!` whose original is a constant as a value, not as `false || x`.
+#[inline(always)]
+pub const fn orig<T>(x: T) -> T {
+    x
+}
+
 #[cfg(not(feature = "breaks"))]
 #[macro_export]
 macro_rules! brk {
     ($($id:literal => $broken:expr),+ ; $orig:expr) => {
-        $orig
+        $crate::breaks::orig($orig)
     };
 }

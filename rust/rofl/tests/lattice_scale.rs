@@ -91,7 +91,7 @@ fn single_source_shortest_paths_are_dijkstras_with_one_fact_per_node() {
     for (i, d) in dist.iter().enumerate() {
         assert_eq!(got.get(&format!("n{i}")), Some(d), "sd(n{i})");
     }
-    let imp = s.eval.lattice_improvements;
+    let imp = s.eval.lat.pass.improvements;
     eprintln!("sssp: {n} nodes, {} edges, {imp} improvements, {} steps, {took:?}", es.len(), ev.steps);
     assert!(imp < 8 * n as u64, "{imp} improvements for {n} keys");
 }
@@ -141,7 +141,7 @@ fn all_pairs_shortest_and_widest_paths_are_floyds() {
             assert_eq!(wgot.get(&format!("n{i},n{j}")), Some(&wd[i][j]), "wide(n{i}, n{j})");
         }
     }
-    let imp = s.eval.lattice_improvements;
+    let imp = s.eval.lat.pass.improvements;
     eprintln!("apsp: {n} nodes, {} edges, {} keys, {imp} improvements, {} steps, {took:?}", es.len(), 2 * n * n, ev.steps);
     assert!(imp < 16 * (2 * n * n) as u64, "{imp} improvements for {} keys", 2 * n * n);
 }
@@ -560,9 +560,9 @@ fn a_wall_names_no_cell_that_improved_only_through_others() {
     assert!(named.iter().all(|l| l.contains("$cons(x,") || l.contains("$cons(y,")), "{named:?}");
     assert!(!st.lines().any(|l| l.contains("support_withdrawn")), "a settled cell was withdrawn");
     let got = values(&mut s, "dist(A, C, D)");
-    for i in 0..n {
-        for j in 0..n {
-            assert_eq!(got.get(&format!("n{i},n{j}")), Some(&d[i][j]), "dist(n{i}, n{j})");
+    for (i, row) in d.iter().enumerate() {
+        for (j, dij) in row.iter().enumerate() {
+            assert_eq!(got.get(&format!("n{i},n{j}")), Some(dij), "dist(n{i}, n{j})");
         }
     }
 }
@@ -576,8 +576,8 @@ fn a_wall_names_no_cell_that_improved_only_through_others() {
 fn a_wall_before_a_cycle_came_round_names_none_of_it() {
     let src = "edb(e).\ne(x, y, 1).\ne(y, x, -2).\n\
                lattice d(A, C, min D).\nd(A, C, D) :- e(A, C, D).\nd(A, C, D) :- d(A, B, D1), e(B, C, W), D is D1 + W.\n";
-    // 14, not 4, since boot.rofl copies its ten stratification ranks (2026-10-04): the window moved by those ten steps
-    let (mut s, ev) = run(src, 14);
+    // the window moves with what boot.rofl derives before d fires: 11 holds d and the relation's hole, 12 only d
+    let (mut s, ev) = run(src, 11);
     assert!(ev.partial, "the wall was not reached");
     let st = s.eval.canonical_state();
     let has = |p: &str| st.lines().any(|l| l.starts_with(p));

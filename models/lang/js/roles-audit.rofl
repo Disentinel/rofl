@@ -1,0 +1,10 @@
+-- roles-audit.rofl — the vocabulary's audits: which arguments of a role are nodes (`roled`), and a relation a converter
+-- writes into a world that roles.rofl does not declare. Loaded by the checks (npm run test:roles), not by the model: a
+-- world that only answers questions does not pay for them.
+
+-- ---- the vocabulary's own audits
+role_undeclared[audit](Rel) :- writes_to[$kernel](R, B), world(B), concludes[$kernel](R, Rel),
+                               not role(Rel, _), not mark_name(Rel), Rel != roled, Rel != plays, Rel != edge, Rel != climb.
+mark_undeclared[audit](M)   :- mark[value](_, M), not mark_name(M).
+mark_undeclared[audit](M)   :- mark[type](_, M), not mark_name(M).
+imports(audit, value). imports(audit, type). imports(audit, tree).

@@ -346,6 +346,13 @@ host_calls_back("setImmediate",   itself,     0, later).
 host_calls_back("queueMicrotask", itself,     0, later).
 host_calls_back("process",        "nextTick", 0, later).
 
+-- a member of a module that is itself a module: `fs.promises` is `node:fs/promises`
+host_member_module(node, "node:fs",       "promises", "node:fs/promises").
+host_member_module(node, "node:dns",      "promises", "node:dns/promises").
+host_member_module(node, "node:readline", "promises", "node:readline/promises").
+host_member_module(node, "node:stream",   "promises", "node:stream/promises").
+host_member_module(node, "node:timers",   "promises", "node:timers/promises").
+
 -- node's callback style: the last argument, called when the operation completes
 host_calls_back("node:fs", "readFile",   last, later).
 host_calls_back("node:fs", "writeFile",  last, later).

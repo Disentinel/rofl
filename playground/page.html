@@ -430,6 +430,9 @@ async function startHost() {
     const m = await import('./lib/host.js');
     host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
   }
+  // the scanner is oxc compiled to wasm (rust/tools/oxc_scan), the one `rofl scan` runs
+  const wasm = await fetch('oxc_scan.wasm').then((r) => r.arrayBuffer());
+  if (viaWorker) await host.call('scanner', wasm); else await (await import('./lib/oxc_wasm.js')).loadWasm(wasm);
   return useModel(modelFor());
 }
 

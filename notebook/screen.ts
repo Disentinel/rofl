@@ -7,6 +7,9 @@ export type Part = { key: string; adapter: string; cap: string; kind: string; sl
 /** The rows of a literal over the last run, null where nothing can put a row there. */
 export type Rows = (lit: string) => Record<string, string>[] | null;
 
+/** The relations a screen is drawn from, read after the run. */
+export const SCREEN_RELS = ['adapter', 'capability', 'component', 'arg', 'want_arg', 'want_of'];
+
 export const KINDS = ['heading', 'text', 'card', 'button', 'field'] as const;
 
 /** The screen of the last run: headings, texts, cards, buttons, then fields, each kind in the order of its wants' keys. */

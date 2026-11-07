@@ -29,8 +29,69 @@ pub struct Widest {
     pub at: Vec<Term>,
 }
 
+/// What each rule's premises cost while it is evaluated, held by `Eval`.
+#[derive(Clone)]
+pub struct CostState {
+    /// What each premise of each rule cost (`cost.rs`), by rule and premise.
+    pub prem_cost: FxMap<(Sym, u64), PremCost>,
+    /// The same by the premise whose news the firing was solved from (0: the whole evaluation, no news).
+    pub prem_cost_at: FxMap<(Sym, u64, u64), PremCost>,
+    pub(super) read_rows: u64,
+    pub(super) widest: Widest,
+    pub(super) wide_floor: usize,
+    /// Rows read under each rule, and the count at which it is next said to be hot.
+    pub read_by_rule: FxMap<Sym, (u64, u64)>,
+    pub(super) hot_read: u64,
+    /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
+    pub on_hot: Option<fn(&str)>,
+    pub hot_said: Vec<String>,
+    pub argm_by_rule: FxMap<Sym, u64>,
+    /// Nanoseconds in each rule's firings, and per round the sum and the longest rule: the bound on firing rules in parallel.
+    pub ns_by_rule: FxMap<Sym, u64>,
+    /// Per rule: firings, solutions concluded, and rows that were new.
+    pub fires_by_rule: FxMap<Sym, u64>,
+    pub sols_by_rule: FxMap<Sym, u64>,
+    pub new_by_rule: FxMap<Sym, u64>,
+    /// Rows new at the rule's whole firing alone: what the store held of its conclusions at every activation after.
+    pub fresh_whole_by_rule: FxMap<Sym, u64>,
+    /// Solutions that added nothing: the witness was recorded before (or, where none is kept, the row stood).
+    pub again_by_rule: FxMap<Sym, u64>,
+    /// Firings solved delta-first.
+    pub delta_by_rule: FxMap<Sym, u64>,
+    /// The place of each rule's firing over the whole store in the run's sequence of them, from 1: a relation a
+    /// rule reads is live at that firing only where a rule concluding it fired whole before (`activation`).
+    pub activation_by_rule: FxMap<Sym, u64>,
+    /// The heap at its highest and what held it there (`note_heap`).
+    pub mem: MemPeak,
+}
+
+/// THE HEAP AT ITS PEAK, BY PART. `live` the most the counting allocator saw (`HEAP_LIVE`) and the rule firing
+/// then; `parts` what the store, the names and the heights held at the last check where the heap had grown by a
+/// sixteenth past the one before, `at` the heap then. What no part names is `unaccounted`: the partial solutions,
+/// a walk's own tables, whatever a firing holds while it runs.
+#[derive(Clone, Default, Debug)]
+pub struct MemPeak {
+    pub live: i64,
+    pub rule: Option<Sym>,
+    pub at: i64,
+    pub parts: Vec<(String, usize)>,
+}
+
+impl Default for CostState {
+    fn default() -> Self {
+        CostState {
+            prem_cost: FxMap::default(), prem_cost_at: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
+            read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
+            argm_by_rule: FxMap::default(), ns_by_rule: FxMap::default(), fires_by_rule: FxMap::default(),
+            sols_by_rule: FxMap::default(), new_by_rule: FxMap::default(), fresh_whole_by_rule: FxMap::default(), again_by_rule: FxMap::default(), delta_by_rule: FxMap::default(), activation_by_rule: FxMap::default(),
+            mem: MemPeak::default(),
+        }
+    }
+}
+
 pub struct Mark {
     key: (Sym, u64),
+    at: u64,
     read0: u64,
     outer: Widest,
     outer_floor: usize,
@@ -66,7 +127,7 @@ impl Hot {
     }
 }
 
-fn prem_key(b: &BodyElem) -> Option<u64> {
+pub(super) fn prem_key(b: &BodyElem) -> Option<u64> {
     let mut h = Fx::default();
     match b {
         BodyElem::Pos(l) | BodyElem::Neg(l) => {
@@ -90,48 +151,22 @@ impl Eval {
     /// A rule crossing `HOT_READ`, and each tenfold after, while it is a quarter of the reading, is said at once
     /// (`on_hot`): a rule that blows up may never end for its report to be read.
     pub(super) fn note_read(&mut self, l: &Lit, s: &Subst, n: usize) {
-        self.read_rows += n as u64;
+        self.cost.read_rows += n as u64;
         if let Some(rid) = self.cur_rule {
-            let first = self.hot_read;
-            let e = self.read_by_rule.entry(rid).or_insert((0, first));
+            let first = self.cost.hot_read;
+            let e = self.cost.read_by_rule.entry(rid).or_insert((0, first));
             e.0 += n as u64;
             if e.0 >= e.1 {
                 e.1 = e.1.saturating_mul(10);
                 let read = e.0;
-                if read * HOT_SHARE >= self.read_rows {
+                if read * HOT_SHARE >= self.cost.read_rows {
                     self.say_hot(rid, l, s);
                 }
             }
         }
-        if n > self.wide_floor && n > self.widest.n {
+        if n > self.cost.wide_floor && n > self.cost.widest.n {
             let at = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
-            self.widest = Widest { n, at };
-        }
-    }
-
-    /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
-    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, b: &BodyElem) -> Option<Mark> {
-        let key = (rid?, prem_key(b)?);
-        let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
-        Some(Mark {
-            key,
-            read0: self.read_rows,
-            outer: std::mem::take(&mut self.widest),
-            outer_floor: std::mem::replace(&mut self.wide_floor, floor),
-        })
-    }
-
-    /// The premise of `m` solved from `rows_in` rows into `rows_out`.
-    pub(super) fn note_cost(&mut self, m: Mark, rows_in: usize, rows_out: usize) {
-        let wide = std::mem::take(&mut self.widest);
-        self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
-        self.wide_floor = m.outer_floor;
-        let c = self.prem_cost.entry(m.key).or_default();
-        c.rows_in += rows_in as u64;
-        c.read += self.read_rows - m.read0;
-        c.rows_out += rows_out as u64;
-        if wide.n > c.widest.n {
-            c.widest = wide;
+            self.cost.widest = Widest { n, at };
         }
     }
 
@@ -147,27 +182,24 @@ impl Eval {
         let mut said = format!(
             "rule {}{head} has read {} rows for {} new facts, a quarter or more of all read; it is reading premise {}{lit}",
             self.h.name(rid),
-            self.read_by_rule[&rid].0,
-            self.new_by_rule.get(&rid).copied().unwrap_or(0),
+            self.cost.read_by_rule[&rid].0,
+            self.cost.new_by_rule.get(&rid).copied().unwrap_or(0),
             k.map_or(String::new(), |k| format!("{}, ", k + 1)),
         );
         if !bound.is_empty() {
             said += &format!(" at {bound}");
         }
-        if let Some(f) = self.on_hot {
+        if let Some(f) = self.cost.on_hot {
             f(&said);
         }
-        self.hot_said.push(said);
+        self.cost.hot_said.push(said);
     }
 
     fn bound_text(&self, l: &Lit, at: &[Term]) -> String {
         let mut bound: Vec<String> = Vec::new();
         for (a, v) in l.args.iter().zip(at) {
             if a.is_var() && self.h.is_ground(*v) {
-                let (mut x, mut y) = (String::new(), String::new());
-                self.h.canon_term(*a, &mut x);
-                self.h.canon_term(*v, &mut y);
-                let b = format!("{x} = {y}");
+                let b = format!("{} = {}", self.h.canon(*a), self.h.canon(*v));
                 if !bound.contains(&b) {
                     bound.push(b);
                 }
@@ -178,19 +210,19 @@ impl Eval {
 
     /// The `n` rules that read the most rows, each at its costliest premise.
     pub fn hot_rules(&self, n: usize) -> Vec<Hot> {
-        let mut by: Vec<(Sym, u64)> = self.read_by_rule.iter().map(|(r, (n, _))| (*r, *n)).filter(|(_, n)| *n > 0).collect();
+        let mut by: Vec<(Sym, u64)> = self.cost.read_by_rule.iter().map(|(r, (n, _))| (*r, *n)).filter(|(_, n)| *n > 0).collect();
         by.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| self.h.name(a.0).cmp(self.h.name(b.0))));
         by.into_iter().take(n).filter_map(|(rid, _)| self.hot_rule(rid)).collect()
     }
 
     /// What rule `rid` read, at its costliest premise.
     pub fn hot_rule(&self, rid: Sym) -> Option<Hot> {
-        let read = self.read_by_rule.get(&rid)?.0;
+        let read = self.cost.read_by_rule.get(&rid)?.0;
         {
             let r = self.rules.iter().find(|r| r.id == rid)?;
             let mut best: Option<(usize, &PremCost)> = None;
             for (i, b) in r.clause.body.iter().enumerate() {
-                let Some(c) = prem_key(b).and_then(|k| self.prem_cost.get(&(rid, k))) else { continue };
+                let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost.get(&(rid, k))) else { continue };
                 if best.is_none_or(|(_, x): (usize, &PremCost)| c.read > x.read) {
                     best = Some((i, c));
                 }
@@ -207,7 +239,7 @@ impl Eval {
                 rule: self.h.name(rid).to_string(),
                 head: self.h.name(r.clause.head.rel).to_string(),
                 read,
-                new: self.new_by_rule.get(&rid).copied().unwrap_or(0),
+                new: self.cost.new_by_rule.get(&rid).copied().unwrap_or(0),
                 at,
                 prem,
                 cost: cost.clone(),
@@ -218,8 +250,407 @@ impl Eval {
 
     /// The rules that read so much of all that is read that the author should hear of them.
     pub fn too_hot(&self) -> Vec<Hot> {
-        self.hot_rules(4).into_iter().filter(|h| h.read >= self.hot_read && h.read * HOT_SHARE >= self.read_rows).collect()
+        self.hot_rules(4).into_iter().filter(|h| h.read >= self.cost.hot_read && h.read * HOT_SHARE >= self.cost.read_rows).collect()
     }
+}
+
+/// The relations the profile writes, all in the book `profile`; a rule that reads one of them asks for the profile.
+/// The book is shared with rules/profile.rofl, which reads the store's shape there under other names.
+const PROFILE_RELS: [&str; 25] =
+    ["bytes", "peak_bytes", "peak_rule", "fires", "conc", "fresh", "fresh_whole", "again", "delta_fires", "activation", "written_order", "order", "width", "width_at", "read", "yield", "widest", "rows", "base", "distinct", "selects", "picks", "program", "kernel_premise", "kernel_head"];
+
+impl Eval {
+    /// Whether a rule reads the book `profile` and the world was given no profile: then the evaluation is written
+    /// there as facts (`profile_text`). A profile given as facts is another world's, read as it is (the reflection
+    /// over a measured world, scripts/refine.ts); writing this world's beside it would double the census.
+    /// What the store, the names and the heights hold now, by part.
+    pub fn mem_parts(&self) -> Vec<(String, usize)> {
+        let mut v: Vec<(String, usize)> = self.store.bytes().into_iter().chain(self.h.parts()).map(|(n, b)| (n.replace('.', "_"), b)).collect();
+        v.push(("heights".into(), self.memo.height_memo.bytes() + self.heights_kept.bytes()));
+        v
+    }
+
+    /// `peak:` on stderr, for an evaluation whose heap passed a gigabyte: the peak, the rule firing then, and the
+    /// parts that held it, the largest first (`peak_bytes[profile]` the same as facts).
+    pub fn heap_said(&self) -> Option<String> {
+        heap_said_over(&[self])
+    }
+
+    /// The heap told at a check of the steps or at a rule's end: a new peak keeps the rule firing, and one a
+    /// sixteenth past the last taken apart is taken apart again, so the parts are never more than that below it.
+    #[inline]
+    pub(super) fn note_heap(&mut self) {
+        let live = HEAP_LIVE.load(std::sync::atomic::Ordering::Relaxed) as i64;
+        if live <= self.cost.mem.live {
+            return;
+        }
+        self.cost.mem.live = live;
+        self.cost.mem.rule = self.cur_rule;
+        if live > self.cost.mem.at + self.cost.mem.at / 16 {
+            self.cost.mem.at = live;
+            self.cost.mem.parts = self.mem_parts();
+        }
+    }
+
+    pub fn profile_wanted(&mut self) -> bool {
+        let p = self.h.intern("profile");
+        let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
+        self.reads_profile(&PROFILE_RELS) && names.iter().all(|n| self.store.rel_persp(&self.h, *n, p).is_empty())
+    }
+
+    /// Does a rule read one of `rels` in the book `profile`? The heap's bytes are written only where one does: they
+    /// are the allocator's, not the world's, and a world that reads the rest of the profile is not to move by them.
+    fn reads_profile(&mut self, rels: &[&str]) -> bool {
+        let p = self.h.intern("profile");
+        let names: Vec<Sym> = rels.iter().map(|n| self.h.intern(n)).collect();
+        self.rules.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p) && names.contains(&l.rel)))
+    }
+
+    /// THE EVALUATION AS FACTS OF THE BOOK `profile`, one a line, in a fixed order, for the rules that read it
+    /// (docs/cli.md, *The profile of an evaluation*). `K` is a premise's written position as `premise_lit` counts it,
+    /// from 1; `Pos` an argument's, from 1. Per rule: `fires(R, N)` firings, `conc(R, N)` solutions concluded,
+    /// `fresh(R, N)` rows that were new, `fresh_whole(R, N)` of them those new at its whole firing, `again(R, N)` solutions that added nothing, neither a row nor a witness, `delta_fires(R, N)` firings solved news first, `activation(R, I)` the place
+    /// of its firing over the whole store among the run's (from 1), `written_order(R, Why)` why the planner kept it
+    /// in written order. Per premise: `width(R, K, N)` partial rows that reached it,
+    /// `read(R, K, N)` rows read from the store there, `yield(R, K, N)` rows that left it, `widest(R, K, N)` its
+    /// widest single read. Per relation of a user's book: `rows(Rel, Book, N)` live rows and `distinct(Rel, Book,
+    /// Pos, N)` the distinct values at `Pos`, the planner's own measure (`Store::probe_stats`). Rows read are
+    /// deterministic, so the same world profiles the same on every run; time is not written.
+    pub fn profile_text(&mut self) -> String {
+        self.profile_text_in(None)
+    }
+
+    /// `census_book` names the book the census is written under instead of the store's own: the kernel's
+    /// relations are in a store of their own and would otherwise be censused as `main` beside the world's.
+    fn profile_text_in(&mut self, census_book: Option<&str>) -> String {
+        use std::fmt::Write;
+        let mut out = String::new();
+        if census_book.is_none() && self.reads_profile(&["bytes", "peak_bytes", "peak_rule"]) {
+            for (part, b) in self.mem_parts() {
+                let _ = writeln!(out, "bytes[profile]({part}, {b}).");
+            }
+            let m = self.cost.mem.clone();
+            if m.live > 0 {
+                let _ = writeln!(out, "peak_bytes[profile](heap, {}).", m.live);
+                if let Some(b) = resident_peak() {
+                    let _ = writeln!(out, "peak_bytes[profile](resident, {b}).");
+                }
+                let named: usize = m.parts.iter().map(|p| p.1).sum();
+                for (part, b) in &m.parts {
+                    let _ = writeln!(out, "peak_bytes[profile]({part}, {b}).");
+                }
+                let _ = writeln!(out, "peak_bytes[profile](unaccounted, {}).", (m.at - named as i64).max(0));
+                if let Some(r) = m.rule {
+                    let _ = writeln!(out, "peak_rule[profile]({}).", self.h.name(r));
+                }
+            }
+        }
+        let mut rules: Vec<Rc<ERule>> = self.rules.clone();
+        rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
+        let count = |m: &FxMap<Sym, u64>, r: Sym| m.get(&r).copied().unwrap_or(0);
+        for r in &rules {
+            let id = self.h.name(r.id).to_string();
+            let _ = writeln!(
+                out,
+                "fires[profile]({id}, {}). conc[profile]({id}, {}). fresh[profile]({id}, {}). delta_fires[profile]({id}, {}).",
+                count(&self.cost.fires_by_rule, r.id),
+                count(&self.cost.sols_by_rule, r.id),
+                count(&self.cost.new_by_rule, r.id),
+                count(&self.cost.delta_by_rule, r.id)
+            );
+            if let Some(i) = self.cost.activation_by_rule.get(&r.id) {
+                let _ = writeln!(out, "activation[profile]({id}, {i}).");
+            }
+            if let Some(n) = self.cost.fresh_whole_by_rule.get(&r.id) {
+                let _ = writeln!(out, "fresh_whole[profile]({id}, {n}).");
+            }
+            if let Some(n) = self.cost.again_by_rule.get(&r.id) {
+                let _ = writeln!(out, "again[profile]({id}, {n}).");
+            }
+            if let Some(why) = self.written_order_reason(r) {
+                let _ = writeln!(out, "written_order[profile]({id}, {why}).");
+            }
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost.get(&(r.id, k))) else { continue };
+                let k = i + 1;
+                let _ = writeln!(
+                    out,
+                    "width[profile]({id}, {k}, {}). read[profile]({id}, {k}, {}). yield[profile]({id}, {k}, {}).",
+                    c.rows_in, c.read, c.rows_out
+                );
+                if c.widest.n > 0 {
+                    let _ = writeln!(out, "widest[profile]({id}, {k}, {}).", c.widest.n);
+                }
+            }
+            // the width by the news position the firing was solved from: a plan is given per position, so it is
+            // judged by its own firings; At 0 is the whole evaluation, as order[profile] counts it
+            let ats: Vec<(usize, u64)> = std::iter::once((0, 0))
+                .chain(r.clause.body.iter().enumerate().filter_map(|(a, b)| prem_key(b).map(|k| (a + 1, k))))
+                .collect();
+            for (at, ak) in ats {
+                for (i, b) in r.clause.body.iter().enumerate() {
+                    let Some(c) = prem_key(b).and_then(|k| self.cost.prem_cost_at.get(&(r.id, ak, k))) else { continue };
+                    let _ = writeln!(out, "width_at[profile]({id}, {at}, {}, {}).", i + 1, c.rows_in);
+                }
+            }
+        }
+        // the orders the planner solved in, by rule and news position, in written positions: from a plan fact or greedy
+        let mut orders: Vec<(String, usize, Vec<usize>, bool)> = Vec::new();
+        for (&(rid, at), slot) in self.add.delta_plans.iter() {
+            let super::joinplan::Slot::Plan(p) = slot else { continue };
+            let Some(r) = self.rules.iter().find(|r| r.id == rid) else { continue };
+            let at = match at {
+                a if a == usize::MAX >> 1 => Some(0),
+                a if a & (1 << 62) != 0 => None,
+                a => self.written_pos(r, a),
+            };
+            let ks: Option<Vec<usize>> = p.perm.iter().map(|&j| self.written_pos(r, j)).collect();
+            if let (Some(at), Some(ks)) = (at, ks) {
+                orders.push((self.h.name(rid).to_string(), at, ks, p.given));
+            }
+        }
+        orders.sort_by(|a, b| cmp_js(&a.0, &b.0).then(a.1.cmp(&b.1)));
+        for (id, at, ks, given) in orders {
+            let list = ks.iter().rev().fold("$nil".to_string(), |t, k| format!("$cons({k}, {t})"));
+            let _ = writeln!(out, "order[profile]({id}, {at}, {list}, {}).", if given { "plan" } else { "greedy" });
+        }
+        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = self
+            .store
+            .live_census()
+            .into_iter()
+            .filter(|&(rel, book, _, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
+            .map(|(rel, book, n, base, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, base, arity))
+            .collect();
+        // a closure answered from its tree holds no row: its pairs are its rows and its two columns' distinct values
+        // are the tree's ancestors and descendants (vclosure.rs vcensus); censused as empty, at 250 files of vscode the
+        // plan read 21 million rows of inside[tree] first, where the greedy order read one
+        let mut closures: HashMap<(Sym, Sym), (u32, u32)> = HashMap::new();
+        for (rel, book, pairs, internal, deep) in self.vc.vcensus(&mut self.store) {
+            if self.v.is_reserved(rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                continue;
+            }
+            closures.insert((rel, book), (internal, deep));
+            census.push((self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, pairs as usize, 0, 2));
+        }
+        // a relation a rule reads and nothing holds is censused as empty: a plan that knows nothing of it puts it last
+        let held: HashSet<(Sym, Sym)> = census.iter().map(|c| (c.2, c.3)).collect();
+        let mut empty: HashSet<(Sym, Sym)> = HashSet::new();
+        for r in &self.rules {
+            for b in r.clause.body.iter() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" || held.contains(&(l.rel, book)) {
+                    continue;
+                }
+                if empty.insert((l.rel, book)) {
+                    census.push((self.h.name(l.rel).to_string(), self.h.name(book).to_string(), l.rel, book, 0, 0, l.args.len()));
+                }
+            }
+        }
+        census.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)));
+        // a constant a rule writes in a column: the rows that hold it, `selects(Rel, Book, Pos, Const, N)`, since the
+        // average over the column's distinct values misses the skew a rule's constant picks (identifier among kinds)
+        let mut selects: Vec<(Sym, Sym, usize, Term)> = Vec::new();
+        for r in &self.rules {
+            for b in r.clause.body.iter() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                    continue;
+                }
+                for (j, &t) in l.args.iter().enumerate() {
+                    if self.h.is_ground(t) && !selects.contains(&(l.rel, book, j, t)) {
+                        selects.push((l.rel, book, j, t));
+                    }
+                }
+            }
+        }
+        let mut selects: Vec<(String, String, usize, String, usize)> = selects
+            .into_iter()
+            .map(|(rel, book, j, t)| {
+                let n = self.store.probe_stats(&self.h, rel, Some(book), &[j], &[t], &[]).0;
+                (self.h.name(rel).to_string(), self.h.name(book).to_string(), j, self.h.canon(t), n)
+            })
+            .collect();
+        selects.sort_by(|a, b| cmp_js(&a.0, &b.0).then_with(|| cmp_js(&a.1, &b.1)).then(a.2.cmp(&b.2)).then_with(|| cmp_js(&a.3, &b.3)));
+        for (rel_name, book_name, j, c, n) in selects {
+            let book_name = census_book.unwrap_or(&book_name);
+            let _ = writeln!(out, "selects[profile]({rel_name}, {book_name}, {}, {c}, {n}).", j + 1);
+        }
+        // a premise writing constants in two columns or more: the rows that hold them all, `picks(R, K, N)`, since the
+        // fewest of its columns' `selects` misses their conjunction (`attr(P, computed, true)`: 13 245 hold true,
+        // 55 015 computed, 2 075 both)
+        let mut picks: Vec<(String, usize, usize)> = Vec::new();
+        for r in &self.rules {
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let l = match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => l,
+                    _ => continue,
+                };
+                let Some(book) = l.persp.as_atom() else { continue };
+                if self.v.is_reserved(l.rel) || is_kernel_ledger(&self.h, book) || self.h.name(book) == "profile" {
+                    continue;
+                }
+                let (js, ts): (Vec<usize>, Vec<Term>) = l.args.iter().enumerate().filter(|(_, &t)| self.h.is_ground(t)).map(|(j, &t)| (j, t)).unzip();
+                if js.len() < 2 {
+                    continue;
+                }
+                let n = self.store.probe_stats(&self.h, l.rel, Some(book), &js, &ts, &[]).0;
+                picks.push((self.h.name(r.id).to_string(), i + 1, n));
+            }
+        }
+        picks.sort_by(|a, b| cmp_js(&a.0, &b.0).then(a.1.cmp(&b.1)));
+        for (id, k, n) in picks {
+            let _ = writeln!(out, "picks[profile]({id}, {k}, {n}).");
+        }
+        // the rows a relation was given as base facts, counted here in one pass: a rule counting them over
+        // asserted_by read 51 million rows at 250 files of vscode
+        for (rel_name, book_name, rel, book, n, base, arity) in census {
+            let book_name = census_book.unwrap_or(&book_name);
+            let _ = writeln!(out, "rows[profile]({rel_name}, {book_name}, {n}). base[profile]({rel_name}, {book_name}, {base}).");
+            for pos in 0..arity {
+                let d = match closures.get(&(rel, book)) {
+                    Some(&(internal, deep)) => [internal, deep][pos] as usize,
+                    None if n == 0 => 0,
+                    None => self.store.probe_stats(&self.h, rel, Some(book), &[], &[], &[pos]).1,
+                };
+                let _ = writeln!(out, "distinct[profile]({rel_name}, {book_name}, {}, {d}).", pos + 1);
+            }
+        }
+        // the kernel's heap is this evaluation's: lent to a copy of the kernel for its text, only when asked
+        if let (None, Some(k)) = (census_book, self.kernel_eval.clone()) {
+            let mut sub = k.1.clone();
+            sub.h = std::mem::take(&mut self.h);
+            out.push_str(&sub.kernel_profile_text());
+            self.h = std::mem::take(&mut sub.h);
+        }
+        out
+    }
+
+    /// THE KERNEL'S OWN PROGRAM PROFILED: this evaluation's `profile_text` (it is safety.rofl's), then
+    /// `program[profile](R, safety)` for each of its rules and their reflection as the world's `premise_lit` and
+    /// `conclusion_lit` would carry it, `kernel_premise[profile](R, K, L)` and `kernel_head[profile](R, L)`, since
+    /// the kernel's rules are reflected in no world of a user's. A hypothesis pack reads them as it reads the
+    /// world's rules (models/engine/profile.rofl). The relations seeded from the world are the kernel's book and
+    /// are not censused; safety.rofl's own are, under the book `safety`.
+    pub fn kernel_profile_text(&mut self) -> String {
+        use std::fmt::Write;
+        let mut out = self.profile_text_in(Some("safety"));
+        let mut rules: Vec<Rc<ERule>> = self.rules.clone();
+        rules.sort_by(|a, b| cmp_js(self.h.name(a.id), self.h.name(b.id)));
+        for r in &rules {
+            let id = self.h.name(r.id).to_string();
+            let _ = writeln!(out, "program[profile]({id}, safety).");
+            let head = crate::reflect::reify_lit(&mut self.h, &self.v, &r.clause.head);
+            let _ = writeln!(out, "kernel_head[profile]({id}, {}).", self.h.canon(head));
+            // a builtin's arithmetic prints as a prefix functor the parser does not read back: its operator alone
+            for (i, b) in r.clause.body.iter().enumerate() {
+                let text = match b {
+                    BodyElem::Bi { op, .. } => format!("$builtin({:?}, $nil)", self.h.name(*op)),
+                    BodyElem::Agg(_) => "$agg".to_string(),
+                    _ => {
+                        let t = crate::reflect::reify_body_elem(&mut self.h, &self.v, b);
+                        self.h.canon(t)
+                    }
+                };
+                let _ = writeln!(out, "kernel_premise[profile]({id}, {}, {text}).", i + 1);
+            }
+        }
+        out
+    }
+}
+
+impl CostState {
+    /// Premise `b` of rule `rid` about to be solved: what its cost is measured from.
+    #[inline(never)]
+    pub(super) fn cost_mark(&mut self, rid: Option<Sym>, at: Option<u64>, b: &BodyElem) -> Option<Mark> {
+        let key = (rid?, prem_key(b)?);
+        let floor = self.prem_cost.get(&key).map_or(0, |c| c.widest.n);
+        Some(Mark {
+            key,
+            at: at.unwrap_or(0),
+            read0: self.read_rows,
+            outer: std::mem::take(&mut self.widest),
+            outer_floor: std::mem::replace(&mut self.wide_floor, floor),
+        })
+    }
+
+    /// The premise of `m` solved from `rows_in` rows into `rows_out`.
+    #[inline(never)]
+    pub(super) fn note_cost(&mut self, m: Mark, rows_in: usize, rows_out: usize) {
+        let wide = std::mem::take(&mut self.widest);
+        self.widest = if wide.n > m.outer.n { wide.clone() } else { m.outer };
+        self.wide_floor = m.outer_floor;
+        let read = self.read_rows - m.read0;
+        let c = self.prem_cost_at.entry((m.key.0, m.at, m.key.1)).or_default();
+        c.rows_in += rows_in as u64;
+        c.read += read;
+        c.rows_out += rows_out as u64;
+        let c = self.prem_cost.entry(m.key).or_default();
+        c.rows_in += rows_in as u64;
+        c.read += read;
+        c.rows_out += rows_out as u64;
+        if wide.n > c.widest.n {
+            c.widest = wide;
+        }
+    }
+}
+
+/// The most of this process that was resident, in bytes: what the machine gave it. The heap's count is what was
+/// asked of the allocator, a vector's whole capacity with it; a capacity never written is asked and not resident.
+/// `peak:` over the worlds of one process, the core and its volumes evaluated on threads beside it: the heap is the
+/// process's, so the peak is the most any of them saw and the rule is the one firing in that world; the parts are
+/// each world's own at its own peak, summed, and with more than one world nothing is unaccounted, since what one
+/// world did not name was the others'.
+pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
+    let top = evals.iter().max_by_key(|e| e.cost.mem.live)?;
+    let m = &top.cost.mem;
+    if m.live < 1 << 30 {
+        return None;
+    }
+    let mb = |b: i64| b >> 20;
+    let mut by: Vec<(String, i64)> = Vec::new();
+    for e in evals {
+        for (n, b) in &e.cost.mem.parts {
+            match by.iter_mut().find(|p| &p.0 == n) {
+                Some(p) => p.1 += *b as i64,
+                None => by.push((n.clone(), *b as i64)),
+            }
+        }
+    }
+    let at = if evals.len() == 1 {
+        let named: i64 = by.iter().map(|p| p.1).sum();
+        by.push(("unaccounted".into(), (m.at - named).max(0)));
+        format!("at {} MB", mb(m.at))
+    } else {
+        format!("the core and {} volumes at their own peaks", evals.len() - 1)
+    };
+    by.sort_by_key(|p| std::cmp::Reverse(p.1));
+    let list: Vec<String> = by.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
+    let rule = m.rule.map(|r| format!(", firing {}", top.h.name(r))).unwrap_or_default();
+    let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
+    Some(format!("peak: the heap held {} MB{rss}{rule}; {at}: {} (MB)", mb(m.live), list.join(", ")))
+}
+
+pub fn resident_peak() -> Option<i64> {
+    #[cfg(unix)]
+    {
+        let mut u: libc::rusage = unsafe { std::mem::zeroed() };
+        // SAFETY: getrusage writes the struct it is given and reads nothing else.
+        if unsafe { libc::getrusage(libc::RUSAGE_SELF, &mut u) } != 0 {
+            return None;
+        }
+        let unit = if cfg!(target_os = "macos") { 1 } else { 1024 };
+        Some(u.ru_maxrss as i64 * unit)
+    }
+    #[cfg(not(unix))]
+    None
 }
 
 #[cfg(test)]
@@ -239,12 +670,12 @@ mod tests {
         }
         src += "inside(b1, u1).\nsees(U, B) :- use(U, N), bind(B, N), inside(B, U).\nother(U) :- use(U, _).\n";
         let mut s = Session::fresh(100_000_000);
-        s.eval.hot_read = 10_000;
-        s.eval.on_hot = Some(|t| eprintln!("hot: {t}"));
+        s.eval.cost.hot_read = 10_000;
+        s.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
         s.load(&src, None).unwrap();
         s.evaluate().unwrap();
         assert!(s.holds("sees(u1, b1)").unwrap());
-        let said = s.eval.hot_said.join("\n");
+        let said = s.eval.cost.hot_said.join("\n");
         let top: Vec<String> = s.eval.hot_rules(3).iter().map(|h| h.sentence()).collect();
         assert!(said.contains("(sees)") && said.contains("= e"), "said: {said}\ntop: {top:#?}");
         let top = &s.eval.hot_rules(1)[0];
@@ -254,3 +685,4 @@ mod tests {
         assert_eq!(s.eval.too_hot().len(), 1);
     }
 }
+

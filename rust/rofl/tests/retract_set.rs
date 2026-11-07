@@ -286,10 +286,9 @@ fn a_tree_edited_in_sequence_is_the_fresh_world() {
         let kept = s.eval.store.vciters.take().expect("the index of the tree's rows is kept");
         s.eval.index_for_retraction();
         let now = s.eval.store.vciters.clone().unwrap();
-        for (d, cites) in now.iter() {
-            for c in cites {
-                assert!(kept.get(d).is_some_and(|k| k.contains(c)), "step {i}: the kept index lacks {c:?}");
-            }
+        for r in now.rows.chunks_exact(4) {
+            let (d, c) = (r[0] as u64 | (r[1] as u64) << 32, (r[2], r[3]));
+            assert!(kept.of(d).contains(&c), "step {i}: the kept index lacks {c:?}");
         }
     }
 }

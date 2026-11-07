@@ -32,6 +32,69 @@ what runs. They are published at
 | [AGENTS.md](AGENTS.md) | The snippet for a project's `CLAUDE.md`, `rofl-nb --json`, the exit codes |
 | [ADAPTERS.md](ADAPTERS.md) | Writing an adapter: how a world asks the outside, a database, a program, an MCP server or an HTTP API, and gets facts back |
 
+## What is new
+
+### 1.6 (November 2026)
+
+- An adapter book can be signed on a Roflenox node and checked by the engine;
+  a `rofl` adapter can ask a world another process serves; a person signs in
+  to an adapter at a browser (`rofl adapter login`); an event time is one
+  instant whatever zone it was written in ([ADAPTERS.md](ADAPTERS.md)).
+- The JS model says when a call names a member its receiver has not got, and
+  reads a `Map` in the order its `set` calls were written.
+- An edit to a kept world costs less: on 250 files of VS Code, the tenth file
+  added one after another takes 4.3 s instead of 13. Each edit is kept over
+  the one before it, so it writes about what it changed: 1.1 MB for a file
+  of 400 facts, where the eighth edit in a row used to write 46 MB. A world
+  that has to be evaluated whole again keeps the parts nothing touched since.
+- A question evaluates only what it needs: the first `rofl ask` over 700
+  files of VS Code takes 49 s and 2.1 GB instead of 104 s and 3.4 GB, and a
+  notebook runs only the rules its lines ask about.
+- A world larger than memory stops, answers what it has as partial (exit 5)
+  and says so; the process is no longer killed halfway
+  ([ASKING.md](ASKING.md#the-second-question-costs-nothing)).
+- `whynot` shows the nearest place a "no" stops, the way with the fewest
+  conditions unmet; `rofl whynot --all` and `rofl-nb --all` print every way
+  it tried.
+- The JS model names more of what it could not trace: calls it could not
+  resolve, calls through an untraced key and what they may run, a parameter
+  handed several functions; and code under `require.main === module` is read
+  as a script when the world says so ([ASKING.md](ASKING.md#what-it-could-not-see)).
+- VS Code opens a notebook straight from GitHub, private repositories too:
+  **ROFL: Open notebook from GitHub…** ([QUICKSTART.md](QUICKSTART.md)).
+- **A new JS scanner.** `rofl scan` reads JavaScript and TypeScript with oxc,
+  in Rust, and the JS model reads a layer of roles over its tree; Babel is
+  gone. A scan made by 1.5 does not load: scan again.
+- **A large project is split by file.** `rofl ask` and `rofl why` deal the
+  files to a worker a core and join their answers: 500 files of VS Code in
+  32 s instead of 71 s on four cores, the same answers.
+- **Leaks and use after death.** The JS model can say where a timer, a
+  stream, a server or a child process is used after it was closed, is never
+  closed, or keeps the process alive with no stop handler (docs/cli.md, *The
+  lifecycle of a resource*).
+
+### 1.5 (1.5.0 on 24 October 2026, 1.5.1 on 25 October)
+
+- **Install it from npm**: `npm install -g @grafema/rofl` ([INSTALL.md](INSTALL.md)).
+  npm downloads the engine for your machine alone. If you had 1.4 from the
+  tarball, run `npm uninstall -g rofl-nb` first. 1.5.1 is the same tool, a 1 MB
+  download instead of 1.6 MB.
+- **Ask about code from any directory.** `rofl scan DIR --out code.rofl`
+  turns JavaScript into facts, and `@rules/js.files` finds the JS model the
+  package carries; `rofl --version` says which version runs
+  ([ASKING.md](ASKING.md)).
+- **Asking again after an edit is cheap.** The kept world takes the changed
+  file in and keeps only what changed beside the world it was kept from. On
+  250 files of VS Code, an edit and the question after it take about one
+  second, and the same question asked again about a third of a second.
+- **A short answer says so.** When a scan fails, or a world grows past the
+  cache's cap (`ROFL_CACHE_GB`), the answer is marked partial and the exit
+  code is 5 ([ASKING.md](ASKING.md#exit-codes)).
+- **A world can ask the outside.** A `want` rule asks a program, a SQLite
+  database, an MCP server, an HTTP API or another ROFL world, and the answers
+  come back as facts the rules read like any other ([ADAPTERS.md](ADAPTERS.md)).
+- A world kept by 1.4 is computed again once: the kept format changed.
+
 ## Further in
 
 The design decisions behind all of this are in [docs/](../docs/), one file a

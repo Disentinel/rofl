@@ -8,8 +8,10 @@ measures how wide it is, builds it by hand on a 14-file corpus, and says what it
 `f_the_surface_split_is_a_book_of_about_sixty_rules_and_the_wall_is_ingest_order_not_memory`.
 
 Status: sections 1-4 are the scouting as it was written (its relation names, such as `sx_export_fn`, are the
-prototype's). Of the work in section 5, items 1-3 are built (section 6); item 4, the driver, is being finished
-and is not in the tree yet; items 5 and 6 are open.
+prototype's). Of the work in section 5, items 1-4 are built (sections 6 and 7: the driver is `runtime/split.ts`,
+correct at 500 vscode files and 140 times slower than the whole world there); items 5 and 6 are open. The owner's
+design (2026-10-25) stands: a volume per file, cooled, with a thin surface; what the driver needs to be an economy
+is the end of section 7. How to run it: docs/cli.md, *A corpus larger than one heap*.
 
 ## What was run
 
@@ -157,7 +159,7 @@ The wall moves from memory to ingest scheduling.
    crossing census, not listed by hand) in one premise and a file-local one (`fn_node`, `ast_child`, `param_of`,
    `returns`) on its foreign column is an alarm unless its other side is `[surface]` or it is excused; a negation over
    `[surface]` marks the head volatile.
-4. **Driver, Rust.** NOT BUILT YET: being finished in its own branch. Cool by (volume, book) in rofl serve and the ingest loop (the surface survives, `[code]`/`[flow]`
+4. **Driver.** BUILT (section 7), over rofl serve in TypeScript, not in Rust. Cool by (volume, book) in rofl serve and the ingest loop (the surface survives, `[code]`/`[flow]`
    go); the ingest as a surface fixpoint with dirty tracking by KEY (volume subscribes to the surface facts keyed on
    the files and functions it names); a volume lift for a `why` that expands a `[surface]` axiom by the origin prefix.
    Unknown, needs a measurement first: `fork()` of a world holding 1 M surface facts.

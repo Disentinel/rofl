@@ -1,7 +1,7 @@
 // The workbench's notebook without a page: its cells as a `.rofl.md`, run by the notebook kernel over the files published with the page, what each
 // cell said as HTML, and a natural cell translated by whatever model the page reaches. The page (workbench/page.ts) and its check load this alone.
 import { Kernel, short, SIGN, VERDICT, type NbCellOut, type NbLine, type NbResult } from '../notebook/kernel.ts';
-import { builtin, cellsOf, codeNames, libFiles, normal, parseFront, translated, unread, MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
+import { builtin, cellsOf, globRe, codeNames, libFiles, normal, parseFront, translated, unread, NB_MODEL_FILES, PHRASE_FILES, SHIPPED } from '../notebook/front.ts';
 import { assemble, worldOf, type Inputs } from '../notebook/world.ts';
 import { homeOf, translatorVocab } from '../playground/host.ts';
 import { QUESTIONS, questionsOnly, sentenceOf, translateOne } from '../notebook/translate.ts';
@@ -39,14 +39,12 @@ export const addWhere = (row: 'top' | 'bottom', newest: boolean): 'start' | 'end
 export const keyAction = (e: { key: string; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, kind: Kind): 'run' | 'translate' | null =>
   e.key !== 'Enter' ? null : e.metaKey || e.ctrlKey ? (kind === 'natural' ? 'translate' : 'run') : e.shiftKey && (kind === 'rofl' || kind === 'datalog') ? 'run' : null;
 /** Every file the page fetches besides its modules, by its path from the root of the tree. */
-export const FILES = [...new Set([...MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', ...SHIPPED])];
+export const FILES = [...new Set([...NB_MODEL_FILES, ...PHRASE_FILES, 'facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl', ...SHIPPED])];
 
 /** Where an opened notebook is and the files beside it, every path from one root: a repository's, a dropped folder's, a site's.
  *  `list`: the files a glob from the root names, sorted. */
 export type Near = { path: string; read(path: string): Promise<string | undefined>; list(glob: string): Promise<string[]> };
 
-/** A glob of `code:`, `*`, `?` and `**`, as a pattern over paths. */
-export const globRe = (g: string) => new RegExp(`^${normal(g).split('/').map((s) => s === '**' ? '\u0000' : s.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]')).join('/').replace(/\u0000\//g, '(?:.*/)?').replace(/\u0000/g, '.*')}$`);
 
 /** A `.rofl.md` as the page's cells: the prose between fences one cell each, every rofl, datalog and natural fence a cell. */
 export function split(text: string): { kind: Kind; text: string }[] {
@@ -229,6 +227,7 @@ export function state(s: Said | undefined): { text: string; cls: string } {
 }
 
 export type { NbCellOut, View };
+export { globRe };
 
 /** The files a relative specifier in the code names that are there and are not code, by their name in the notebook, as the command line finds them. */
 async function dataOf(found: string[], names: Record<string, string>, code: Record<string, string>, near?: Near): Promise<string[]> {

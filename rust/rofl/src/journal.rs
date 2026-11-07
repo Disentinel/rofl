@@ -12,7 +12,7 @@
 //! Words: the top two bits are the kind, the rest the fact; `ESC` entries carry their kind in the low bits and
 //! their values in the words after.
 
-use std::rc::Rc;
+use std::sync::Arc as Rc;
 
 use crate::arena::{Arena, VolR, VolW};
 use crate::store::FactId;
@@ -233,6 +233,11 @@ impl Journal {
     /// What the journal holds, in bytes.
     pub fn bytes(&self) -> usize {
         4 * (self.kept.len() + self.own.len()) + self.kept_text.len() + self.own_text.len() + 8 * (self.kept_at.len() + self.own_at.len())
+    }
+
+    /// What `write` puts in a volume, from the lengths it holds (`Eval::disk_bytes`).
+    pub fn kept_bytes(&self) -> usize {
+        (self.kept.len() + self.own.len()) * 4 + self.kept_text.len() + self.own_text.len() + (self.kept_at.len() + self.own_at.len()) * 8
     }
 
     pub fn write(&self, w: &mut VolW) {

@@ -1,6 +1,6 @@
 ---
 world: js-service
-books: code, flow, main, surface
+books: code, flow, main, surface, tree
 default: main
 ---
 
@@ -30,11 +30,9 @@ Reads:
 
 - from js-callgraph, in the code: [nearest_fn](js-callgraph.rofl.md#nearest_fn), [top_call](js-callgraph.rofl.md#top_call)
 - from js-concat, in the flow: [str_value](js-concat.rofl.md#str_value)
+- from js-dataflow, in the code: [corpus_file](js-dataflow.rofl.md#corpus_file)
 - from js-express, in the surface: [app_listens](js-express.rofl.md#app_listens), [serves](js-express.rofl.md#serves), [sx_ex_str](js-express.rofl.md#sx_ex_str)
 - from js-fetch, in the flow: [requests](js-fetch.rofl.md#requests)
-- from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
-- from outside these files, in the code:
-  - <a id="ast_file"></a>`ast_file`
 - from outside these files:
   - <a id="code_of"></a>`code_of`
   - <a id="http_no_origin"></a>`http_no_origin`
@@ -42,6 +40,8 @@ Reads:
   - <a id="http_unserved"></a>`http_unserved`
   - <a id="net_lost"></a>`net_lost`
   - <a id="url_term"></a>`url_term`
+- from outside these files, in the tree:
+  - <a id="at"></a>`at`
 
 `imports` lists:
 
@@ -52,10 +52,8 @@ Reads:
 | `code` | `main` |
 | `surface` | `main` |
 
-<a id="svc_file"></a>`svc_file`(F) if [`ast_file`](#ast_file)(something, F).
-
 <a id="svc_dir"></a>`svc_dir`(F, X) if all of:
-  - [`svc_file`](#svc_file)(F);
+  - a file F [is in the corpus](js-dataflow.rofl.md#corpus_file);
   - [`code_of`](#code_of)(X, D);
   - L is the length of D;
   - M is the length of F;
@@ -65,7 +63,7 @@ Reads:
   - C is the character L of F;
   - C is "/".
 
-<a id="svc_proc"></a>`svc_proc`(N, X) if a node N [is in file](js-model.rofl.md#ast_node) F and [`svc_dir`](#svc_dir)(F, X).
+<a id="svc_proc"></a>`svc_proc`(N, X) if [`at`](#at)(N, F, something) and [`svc_dir`](#svc_dir)(F, X).
 
 <a id="http_send"></a>`http_send`(C, X, M, U) if [`requests`](js-fetch.rofl.md#requests)(C, M, U) and [`svc_proc`](#svc_proc)(C, X).
 

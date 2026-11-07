@@ -39,7 +39,7 @@ Declared as facts:
 | `member_node_v` | "member access" |
 | `scope_node` | "scope" |
 
-`kind_set` includes `value_transparent`, `literal_kind`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`, `block_scope_kind`, `call_like_v`, `call_kind`.
+`kind_set` includes `value_transparent`, `node_value_kind`, `member_kind_v`, `class_field_kind`, `private_member_kind`, `this_binds_kind`.
 
 Declared as facts:
 
@@ -63,6 +63,7 @@ Declared as facts:
 | `keyed_put_before` | "is_put_before(node V, call C)" |
 | `keyed_put_after` | "is_put_after(node V, call C)" |
 | `keyed_taken_out` | "is_taken_out_before(node V, call C, by call R)" |
+| `keyed_private_reached` | "reaches_the_private(node N, method G)" |
 | `interpolated` | "is_interpolated(template T)" |
 | `binder` | "binds(declarator D, name Name, to node Init, in file File)" |
 | `binder_at_top` | "is_at_the_top(declarator D)" |
@@ -96,7 +97,6 @@ Declared as facts:
 | `external_module` | "is_an_external_module(module Spec)" |
 | `external_value` | "comes_out_of(node N, module Spec)" |
 | `external_import` | "imports_from_outside(node Sp, name Local, from module Spec, in file File)" |
-| `external_destructured` | "destructures_from_outside(declarator D, at node Prop, name Local, in file File)" |
 | `callback_param` | "is_called_back_with(node P, in function F, from module Spec)" |
 | `ext_call` | "is_an_external_call_of(invocation C, module Spec)" |
 | `ext_member` | "is_an_external_member_of(member access M, module Spec)" |
@@ -110,7 +110,7 @@ Declared as facts:
 | `rest_binds` | "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)" |
 | `param_of` | "takes(function F, name Name:2, at index I:1)" |
 | `param_rest` | "has_the_rest_parameter(function F, at index J, node R, name Name)" |
-| `param_default` | "defaults(function F, name Name, to node Init)" |
+| `fallback` | "defaults(function F, name Name, to node Init)" |
 | `param_use` | "uses(function F, name Name, at node U)" |
 | `elem_at` | "the_element(of node X, index I, is node E)" |
 | `decl_value` | "takes_its_value_from(declarator D, node X)" |
@@ -124,12 +124,9 @@ Declared as facts:
 | `member_value` | "the_member(of node O, key Key, holds node V)" |
 | `own_key` | "owns_the_key(class CD, key Key)" |
 | `fn_kind` | "is_a_function_kind(kind K)" |
-| `call_kind` | "is_a_call_kind(kind K)" |
 | `call_site` | "is_a_call_site(call C, in file File)" |
-| `call_site_kind` | "the_call_kind(of call C, is kind K)" |
 | `call_line` | "the_line(of call C, is line Line)" |
 | `callee_of` | "the_callee(of call C, is node N)" |
-| `callee_kind` | "the_callee_kind(of call C, is kind K)" |
 | `member_kind_v` | "is_a_member_kind(kind K)" |
 | `selects` | "selects(member access N, key Key)" |
 | `class_member_static` | "the_static_member(of class CD, key Key, is node V)" |
@@ -207,8 +204,8 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `abrupt_at` | "is_abrupt(node B, at field F, from index I)" |
-| `suspend_at` | "suspends(node B, at field F, from index I)" |
+| `abrupt_at` | "is_abrupt(sequence B, from step I)" |
+| `suspends` | "suspends(sequence B, from step I)" |
 
 > ambient
 
@@ -464,7 +461,7 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `transfer_site` | "is_a_transfer_site(node X, of kind K)" |
+| `transfers` | "is_a_transfer_site(node X, of kind K)" |
 | `site` | "is_a_site(node X)" |
 | `call_arg` | "passes_the_argument(call C, node X:2, at index I:1)" |
 | `member_like` | "calls_through(call C, member access N)" |
@@ -472,8 +469,6 @@ Declared as facts:
 | `computed_member` | "calls_through_a_computed_member(call C, member access N)" |
 | `static_member` | "calls_through_a_static_member(call C, member access N)" |
 | `callee_obj` | "the_receiver(of call C, is node O)" |
-| `callee_obj_kind` | "the_receiver_kind(of call C, is kind K)" |
-| `callee_prop` | "the_property(of call C, is node P)" |
 | `obj_kind_known` | "is_a_classed_kind(kind K)" |
 | `obj_class` | "the_receiver_class(of call C, is shape Cl)" |
 | `computed_key_static` | "has_a_static_computed_key(call C)" |
@@ -481,8 +476,15 @@ Declared as facts:
 | `shape_known` | "has_the_known_shape(call C, shape S)" |
 | `has_shape` | "has_a_shape(call C)" |
 | `shape` | "has_the_shape(call C, shape S)" |
-| `catch_all_occupied` | "occupies_the_catch_all(kind K)" |
-| `unnamed_callee` | "is_an_unnamed_callee_kind(kind K)" |
+| `catch_all_occupied` | "occupies_the_catch_all(class K)" |
+| `unnamed_callee` | "is_an_unnamed_callee_class(class K)" |
+| `callee_class` | "has_the_callee_class(node C, class E)" |
+| `callee_obj_class` | "has_the_receiver_class(node C, class E)" |
+| `expr_class` | "is_of_the_class(node N, class E)" |
+| `gives_two` | "gives_two_operands(node N)" |
+| `member_kind_expr` | "is_a_member_read(node N)" |
+| `has_class` | "has_an_expression_class(node N)" |
+| `type_owner` | "owns_members_declared_as_types(type T)" |
 | `shaped` | "is_shaped(call C)" |
 | `unshaped` | "is_unshaped(call C)" |
 | `fn_file` | "is_defined_in(function F, file File)" |
@@ -501,6 +503,11 @@ Declared as facts:
 | `calls_named` | "calls_by_name(name Z, name B)" |
 | `calls_in` | "names_a_call_to(name Z:1, name B:2, in file File:0)" |
 | `passes_function` | "passes_the_function(call C, function F:2, named name Name:3, at index I:1)" |
+| `written_arg` | "is_written_as_the_argument(call C, at index I, node A)" |
+| `may_resolve` | "may_resolve_to(call C, function F)" |
+| `may_call` | "may_call(function A, function F)" |
+| `handed_fn` | "is_handed_the_function(function F, at index I, function G)" |
+| `merged_param` | "merges_its_parameter(function F, at index I, handed functions N)" |
 
 `sig` lists:
 
@@ -574,7 +581,6 @@ Declared as facts:
 | `after_abrupt` | "follows_an_abrupt_completion(node S)" |
 | `after_suspend` | "follows_a_suspension(node S)" |
 | `stmt_seq_unseen` | "is_an_unseen_statement_field(field F)" |
-| `label_name` | "the_label_name(of label LS, is name N)" |
 | `label_ref` | "refers_to_the_label(node X, name N)" |
 | `label_target` | "targets_the_label(node X, label LS)" |
 | `completes_abruptly` | "completes_abruptly(node S)" |
@@ -602,7 +608,7 @@ Declared as facts:
 | `spread_iterated` | "is_iterated(spread S)" |
 | `pattern_iterates` | "destructures_through(node P, node M)" |
 | `pattern_next` | "iterates_with_the_next(node X, function Next)" |
-| `hidden_call_pos` | "hides_a_call_by(node N, mechanism M)" |
+| `hidden_call` | "hides_a_call_by(node N, mechanism M)" |
 | `hidden_call_src` | "the_hidden_call_source(of node P, is node Init)" |
 | `hidden_call_user` | "fires_the_hidden_call(node N, node M)" |
 | `hidden_call_fires` | "fires_a_hidden_call(node N)" |
@@ -611,7 +617,7 @@ Declared as facts:
 | `hidden_call_traced` | "has_a_traced_hidden_call(node N)" |
 | `hidden_call_untraced` | "has_an_untraced_hidden_call_from(node N, node Src)" |
 | `hidden_call_sourced` | "has_a_sourced_hidden_call(node N)" |
-| `hidden_call_unsourced` | "has_an_unsourced_hidden_call(node N, of kind K)" |
+| `hidden_call_unsourced` | "has_an_unsourced_hidden_call(node N)" |
 | `hidden_call_accounted` | "has_an_accounted_hidden_call(node N)" |
 | `hidden_call_unaccounted` | "has_an_unaccounted_hidden_call(node N)" |
 | `hidden_call_off_table` | "hides_a_call_off_the_table(kind K, by mechanism M)" |
@@ -726,7 +732,7 @@ Declared as facts:
 | `eff_op_inspects` | "inspects(node N)" |
 | `eff_op_beyond` | "runs_the_hook(node N, hook E)" |
 | `eff_converts` | "converts(node N)" |
-| `eff_coerced` | "coerces(node N, node X)" |
+| `coerces` | "coerces(node N, node X)" |
 | `eff_conv_object` | "coerces_the_object(node N, node X)" |
 | `eff_conv_call` | "coerces_through(node N, node M)" |
 | `eff_conv_overridden` | "coerces_with_an_override(node N, node X)" |
@@ -841,6 +847,8 @@ Declared as facts:
 | `catch_names` | "declares_its_caught_name(catch H, name Name, in file File)" |
 | `sees_decl` | "sees_the_declaration(identifier E, declaration D)" |
 | `reads_the_file_as` | "is_read_as_the(view V)" |
+| `runs_as_script` | "runs_as_the_script(file File)" |
+| `exported_decl` | "is_exported_where_declared(function F)" |
 | `up_d` | "climbs_from(declaration D, node P)" |
 | `class_like` | "is_a_class(node O)" |
 | `constant_global` | "is_a_constant_global(name Name)" |
@@ -980,7 +988,10 @@ Declared as facts:
 
 | arg 1 | arg 2 |
 |---|---|
-| `fs_file_in` | "holds_the_file(directory D, text Seg, being file T)" |
+| `has_file` | "holds_the_file(directory D, text Name)" |
+| `has_dir` | "holds_the_directory(directory D, text Name)" |
+| `file_at` | "holds_the_file(directory D, text Seg, being file T)" |
+| `dir_at` | "holds_the_directory(directory D, text Seg, being directory C)" |
 | `str_char0` | "starts_with(text S, text C)" |
 | `str_scheme` | "has_the_scheme(text S, text Scheme)" |
 | `import_site` | "is_an_import_site(node I, of form N)" |

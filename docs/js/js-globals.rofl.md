@@ -1,6 +1,6 @@
 ---
 world: js-globals
-books: audit, code, flow, main
+books: audit, code, execution, flow, main, value
 default: audit
 ---
 
@@ -29,15 +29,17 @@ Reads:
   - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
   - <a id="lib_static"></a>A name Name has the static Key since a release Rel (`lib_static`)
-- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [transfer_site](js-callgraph.rofl.md#transfer_site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph, in the execution: [transfers](js-callgraph.rofl.md#transfers)
 - from js-concat, in the flow: [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
 - from js-dataflow, in the flow: [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
+- from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the main:
   - <a id="lib_static_shape"></a>`lib_static_shape`
-- from the scanner, in the code:
-  - <a id="ast_child"></a>A node is a child of a node (`ast_child`)
+- from outside these files, in the value:
+  - <a id="callee"></a>`callee`
 
 ## Words
 
@@ -67,10 +69,10 @@ In the audit:
 
 In the code:
 
-<a id="es_static"></a>A node selects the static Key of Name from a release Rel if all of:
+<a id="es_static"></a>N selects the static Key of Name from a release Rel if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
-  - the `object` of it is O;
-  - it [selects](js-dataflow.rofl.md#selects) Key;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - N [selects](js-dataflow.rofl.md#selects) Key;
   - Name [has the static](#lib_static) Key since Rel.
 
 > a member off a KNOWN global that TypeScript does not carry: a newer
@@ -81,7 +83,7 @@ In the audit:
 
 <a id="es_static_unattributed"></a>A node selects an unattributed static Key of Name if all of:
   - a node O [is the global](#es_global) Name of some release with some form;
-  - the `object` of it is O;
+  - [`object_of`](js-structure.rofl.md#object_of)(it, O);
   - it [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the static](#lib_static) Key since some release.
 
@@ -94,11 +96,15 @@ In the code:
 
 > `String(n)` CALLS the global, `new Error(m)` CONSTRUCTS it: two facts
 
-<a id="es_static_call"></a>C calls the static Key of Name from a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of C [selects the static](#es_static) Key of Name from Rel.
+A call
 
-<a id="es_global_invoke"></a>C invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of C [is the global](#es_global) Name of Rel with some form.
+- <a id="es_static_call"></a>calls the static Key of Name from a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of it [selects the static](#es_static) Key of Name from Rel.
+- <a id="es_global_invoke"></a>invokes the global Name of a release Rel if [the callee](js-callgraph.rofl.md#callee_of) of it [is the global](#es_global) Name of Rel with some form.
 
-<a id="es_global_construct"></a>A node constructs the global Name of a release Rel if it [is a transfer site](js-callgraph.rofl.md#transfer_site) of `new_expression` and the `callee` of it [is the global](#es_global) Name of Rel with some form.
+<a id="es_global_construct"></a>A node constructs the global Name of a release Rel if all of:
+  - it [is a transfer site](js-callgraph.rofl.md#transfers) of `new_expression`;
+  - [`callee`](#callee)(it, N);
+  - a node N [is the global](#es_global) Name of Rel with some form.
 
 > `new Math()` is a TypeError and the model says why: `Math` is a
 > `namespace_object` with no constructor declared behind it. A runtime error
@@ -140,7 +146,7 @@ An environment
 > global nothing in this program binds evaluates to a value whose prototype
 > is that global's, and THE CONSTRUCTION SITE STANDS FOR THE VALUE:
 > `may_be_node(X, X)`, the abstraction js-dataflow already uses for
-> `array_expression`, not a new `kind_prototype` row (`new Map()` and
+> `array_expression`, not a new `kind_proto` arm (`new Map()` and
 > `new Box()` are one kind and two questions). The binder and assignment arms
 > of `may_be_node` then carry the instance to the receiver for free.
 > 
@@ -174,11 +180,32 @@ In the audit:
   - Form [is constructible](#constructible_form);
   - unless Name [has the prototype](#lib_global_prototype) some prototype.
 
-<a id="es_instance_unattributed"></a>C calls an unattributed instance member Key of Name if all of:
-  - C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
-  - [the callee](js-callgraph.rofl.md#callee_of) of C is a node N;
-  - the `object` of N [points to](js-concat.rofl.md#may_be_node) a node X;
+<a id="es_instance_unattributed"></a>A call calls an unattributed instance member Key of Name if all of:
+  - it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - a node O [points to](js-concat.rofl.md#may_be_node) a node X;
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.
+
+> the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `execution` | `value` |
+| `execution` | `tree` |
+| `execution` | `code` |
+| `execution` | `flow` |
+| `execution` | `main` |
+| `code` | `execution` |
+| `flow` | `execution` |
+| `audit` | `execution` |
+| `surface` | `execution` |
+| `type` | `code` |
+| `type` | `flow` |
+| `code` | `type` |
+| `flow` | `type` |
 

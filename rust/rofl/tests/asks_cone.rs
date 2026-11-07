@@ -97,6 +97,12 @@ fn cone_rows<'a>(state: &'a str, rel: &str, cone: &BTreeSet<String>) -> BTreeSet
     rows(state, rel).into_iter().filter(|l| !l.contains("(asks,") && !l.contains("(asks)") && (!matches!(rel, "derived_by" | "asserted_by") || named(l))).collect()
 }
 
+/// A cone that reads the engine's profile of the run: under asks the run is the cone's, and its measurements are that
+/// run's (docs/cli.md, *Profile*), so they and what reads them are not the whole world's by design.
+fn reads_the_run(state: &str, cone: &BTreeSet<String>) -> bool {
+    cone.iter().any(|c| rows(state, c).iter().any(|l| l.contains("[profile](")))
+}
+
 /// The state without the rows that say what is asked: they differ by how the ask arrived.
 fn unasked(state: &str) -> String {
     state.lines().filter(|l| !l.starts_with("asks[main](") && !l.starts_with("edb[main](asks)") && !l.contains("$fact(asks,") && !l.contains("$cons(asks,") && !l.contains("(asks,") && !l.contains("(asks)") && !l.contains("$fact(edb,main,$cons(asks,")).collect::<Vec<_>>().join("\n")
@@ -174,6 +180,9 @@ fn every_world_answers_an_asked_relation_as_it_does_without_asks() {
                     assert!(cone.contains(rel.as_str()), "{w}: {rel} not in its own cone");
                     if cone.iter().any(|c| rows(&full.state, c).iter().any(|l| l.contains(" drv "))) && asked.state.len() < full.state.len() {
                         pruned += 1;
+                    }
+                    if reads_the_run(&full.state, &cone) {
+                        continue;
                     }
                     if let Some(d) = same_in_cone(&mut full, &mut asked, &cone, rel) {
                         failures.push(format!("{w}: asks({rel}): {d}"));
@@ -396,7 +405,8 @@ fn literal(row: &str) -> Option<String> {
 }
 
 /// THE SWEEP, EVERY DERIVED RELATION ASKED (up to ASKS_SWEEP_N per world, 12 by default), walled worlds included under their
-/// walls: a world refused without asks is refused with any ask, and with the same words; a world answered without asks is
+/// walls: a world refused without asks is refused with any ask, and with the same words, unless the ask's cone leaves out a
+/// promise and says so (f_a_promise_outside_the_cone_is_not_judged); a world answered without asks is
 /// answered with each, the rows of every relation in the cone equal, and, where neither run met its wall, `why` and `whynot`
 /// of its first rows equal and no hole the whole world lacks; a question about a relation outside the cone is refused, never
 /// answered. ASKS_SHARD=i/n runs every n-th world from the i-th.
@@ -433,6 +443,7 @@ fn every_derived_relation_asked_answers_as_the_whole_world_or_refuses() {
                     asks += 1;
                     refusals += 1;
                     match run_walled(&format!("{src}\nasks({h}).\n"), wall) {
+                        Ok(a) if a.s.eval.diags.iter().any(|d| d.starts_with("asks: the promises of")) => {}
                         Ok(_) => failures.push(format!("{w}: refused without asks ({e}), answered with asks({h})")),
                         Err(a) if a != e => failures.push(format!("{w}: refused without asks ({e}), with asks({h}) for another reason ({a})")),
                         Err(_) => {}
@@ -459,7 +470,7 @@ fn every_derived_relation_asked_answers_as_the_whole_world_or_refuses() {
                 }
                 continue;
             };
-            if !exact {
+            if !exact || reads_the_run(&full.state, &cone) {
                 continue;
             }
             let calls = call_driven(&asked);

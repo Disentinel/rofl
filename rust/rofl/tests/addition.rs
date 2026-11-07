@@ -157,7 +157,7 @@ fn derived(state: &str) -> Vec<String> {
 fn same_answers(delta: &mut Session, fresh: &mut Session, was: &[String], now: &[String]) -> Result<usize, String> {
     // asking a relation answered on demand makes a fact for the call: the questions go to copies
     let (mut d2, mut f2);
-    let (delta, fresh) = if delta.eval.answers_on_demand() {
+    let (delta, fresh) = if delta.eval.demand.answers_on_demand() {
         d2 = delta.fork();
         f2 = fresh.fork();
         (&mut d2, &mut f2)
@@ -216,6 +216,7 @@ impl Stats {
                 s.negated += d.negated;
                 s.overdeleted += d.overdeleted;
                 s.rederived += d.rederived;
+                s.holed += d.holed;
             }
             Addition::Full(why) => {
                 for w in why.split("; ") {
@@ -249,6 +250,7 @@ impl Stats {
         s.negated += d.negated;
         s.overdeleted += d.overdeleted;
         s.rederived += d.rederived;
+        s.holed += d.holed;
     }
 }
 
@@ -298,7 +300,7 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             present.remove(&f);
             let how = s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}"));
             st.retracted.0 += 1;
-            st.retracted.1 += matches!(how, Retraction::Delta(_)) as usize;
+            st.retracted.1 += matches!(&how, Retraction::Delta(d) if d.set.is_none()) as usize;
             if let Some(mut g) = replay(&ops) {
                 let gh = g.retract_delta(&f).unwrap();
                 let mut ops2 = ops.clone();
@@ -552,14 +554,48 @@ fn an_edge_and_a_reader_added_to_a_declared_tree_keep_the_closure_answered_from_
     s.load(&boot(), None).unwrap();
     s.load(head, None).unwrap();
     s.evaluate().unwrap();
-    assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{:?}", s.eval.vclosure_info());
+    assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_info(&s.eval.h));
     let mut ops = vec![Op::Load(head.into())];
     for (op, text) in [("assert", "t_in(n4, n5)."), ("load", "t_cnt(A, N) :- t_pick(A), N is count(D : t_within(A, D))."), ("assert", "t_in(n0, n1). t_pick(n0).")] {
         let a = if op == "assert" { s.assert_delta(text).unwrap().1 } else { s.load_delta(text, None).unwrap().1 };
         assert!(matches!(a, Addition::Delta(_)), "{text}: {a:?}");
-        assert!(s.eval.vclosure_info().iter().all(|(_, on)| *on), "{text}: {:?}", s.eval.vclosure_info());
+        assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{text}: {:?}", s.eval.vc.vclosure_info(&s.eval.h));
         ops.push(if op == "assert" { Op::Assert(text.into()) } else { Op::Load(text.into()) });
         assert_eq!(state(&mut s), state(&mut replay(&ops).unwrap()), "{text}");
+    }
+}
+
+/// A tree declared into an evaluated world whose readers already read its closure, empty until then: the closure is
+/// engaged over the edges that stand and each reader fires again whole, and the world is the one evaluated with the
+/// declaration (where no witness is kept, a rule added at all is refused by the negations of the program's reflection). A reader under a negation or an aggregate concluded what the rows withdraw: the
+/// world is evaluated again.
+#[test]
+fn a_tree_declared_into_an_evaluated_world_is_answered_from_its_forest_by_delta() {
+    {
+        let head = "edb(t_pick). edb(t_cand). edb(t_link).\nt_link(n4, n5). t_in(P, C) :- t_link(P, C).\nt_in(n1, n2). t_in(n2, n4). t_in(n1, n3). t_pick(n1). t_pick(n2). t_cand(n1, n4). t_cand(n3, n4). t_cand(n2, n5).\nt_bf(A, D) :- t_pick(A), t_within(A, D).\nt_two(A, D) :- t_cand(A, D), t_within(A, X), t_in(X, D).\n".to_string();
+        let mut s = Session::fresh(BUDGET);
+        s.load(&boot(), None).unwrap();
+        s.load(&head, None).unwrap();
+        s.evaluate().unwrap();
+        let decl = "tree t_in(P, C) closure t_within.";
+        let a = s.load_delta(decl, None).unwrap().1;
+        assert!(matches!(a, Addition::Delta(_)), "{a:?}");
+        assert!(s.eval.vc.vclosure_info(&s.eval.h).iter().all(|(_, on)| *on), "{:?}", s.eval.vc.vclosure_info(&s.eval.h));
+        assert_eq!(state(&mut s), state(&mut replay(&[Op::Load(head.clone()), Op::Load(decl.into())]).unwrap()));
+        for neg in ["t_neg(A, D) :- t_cand(A, D), not t_within(A, D).", "t_cnt(A, N) :- t_pick(A), N is count(D : t_within(A, D))."] {
+            let mut s = Session::fresh(BUDGET);
+            s.load(&boot(), None).unwrap();
+            s.load(&format!("{head}{neg}\n"), None).unwrap();
+            s.evaluate().unwrap();
+            assert!(matches!(s.load_delta(decl, None).unwrap().1, Addition::Full(_)), "{neg}");
+        }
+        // edges that stood before the declaration and break it refuse the world
+        let mut s = Session::fresh(BUDGET);
+        s.load(&boot(), None).unwrap();
+        s.load(&format!("{head}t_in(n3, n4).\n"), None).unwrap();
+        s.evaluate().unwrap();
+        let a = s.load_delta(decl, None).unwrap().1;
+        assert!(matches!(&a, Addition::Full(w) if w.contains("promise is broken")), "{a:?}");
     }
 }
 
@@ -613,6 +649,16 @@ fn an_aggregate_over_what_did_not_change_fires_on_what_grew() {
         let d = one_addition(&program, Op::Assert("e(b).".into()));
         assert!(d.monotone > 0 && d.stacked_rules == 0, "{seal}{d:?}");
     }
+}
+
+/// A fact that stood and is given a lower firing lowers what rests on it: an aggregate is sealed again at the groups of
+/// the members that rest on it, not whole (a cell lists its members' heights).
+#[test]
+fn a_member_standing_lower_seals_again_only_its_group() {
+    let groups: String = (2..=20).map(|k| format!("grp(g{k}). in(g{k}, x{k}). s(x{k}).\n")).collect();
+    let program = format!("edb(e). edb(s). edb(in). edb(grp).\ne(a, b). e(b, c). e(c, d). s(a). grp(g1). in(g1, d).\n{groups}reach(X) :- s(X).\nreach(Y) :- reach(X), e(X, Y).\nmember(G, X) :- in(G, X), reach(X).\ncnt(G, N) :- grp(G), N is count(X : member(G, X)).\n");
+    let d = one_addition(&program, Op::Assert("s(c).".into()));
+    assert!(d.stacked_cells > 0 && d.stacked_cells <= 2, "{d:?}");
 }
 
 /// Programs of joins, recursion and negation only: every negation the fine path keeps, its withdrawals and what they
@@ -720,7 +766,8 @@ fn fact_fault(r: &mut Rng) -> String {
 }
 
 /// A world holding a rule's fault (an arithmetic type error, a hole and its shrugs) and a rule that reads the shrugs:
-/// an addition that reaches neither the rule nor what reads it is a delta, and the hole and the shrugs stand.
+/// an addition that reaches neither the rule nor what reads it is a delta, and the hole and the shrugs stand; one that
+/// reaches them is a delta of the rest, and what they may move is evaluated again after it.
 #[test]
 fn a_fault_the_addition_does_not_reach_stands() {
     let rules = [
@@ -733,10 +780,13 @@ fn a_fault_the_addition_does_not_reach_stands() {
         "q(X) :- n(X), not p(X, X).",
         "c(X, N) :- n(X), N is count(Y : p(X, Y)).",
     ];
-    let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=14, 10);
+    let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=40, 10);
     assert!(all.delta * 2 > all.additions, "most additions reach no fault: {all:?}");
-    assert!(all.full.keys().all(|k| k.contains("faulted") || k.contains("write a hole")), "{all:?}");
-    assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault: {all:?}");
+    // a new fault is the firing's, met only as the delta fires: that addition is evaluated again
+    assert!(all.full.keys().all(|k| k.contains("write a hole")), "{all:?}");
+    assert!(all.delta * 10 > all.additions * 9 && all.sum.holed > 0, "an addition that reaches a fault is a delta: {all:?}");
+    eprintln!("retractions by delta: {} of {}", all.retracted.1, all.retracted.0);
+    assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault, and go by the one-fact delta: {all:?}");
 }
 
 fn fact_route(r: &mut Rng) -> String {
@@ -1062,4 +1112,66 @@ fn corpus_additions_are_a_fresh_evaluation() {
 fn a_closure_row_given_a_shorter_path_seals_its_aggregate_again() {
     let program = "edb(e). edb(n).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\nq(X) :- n(X), not p(X, X).\nc(X, N) :- n(X), N is count(Y : p(X, Y)).\nn(b). n(e). n(c). e(d, b). e(c, c). e(c, d). e(a, e). e(b, c).\n";
     one_addition(program, Op::Assert("e(c, b). n(a).".into()));
+}
+
+/// A threshold below an upper rule added later, in a world that keeps its witnesses and in one sealed: the full pass
+/// after the addition keeps the threshold as the last whole evaluation left it, with what its sealing knew of its groups,
+/// and the world equals one evaluated whole, explanations included.
+#[test]
+fn a_full_pass_keeps_a_threshold_below_what_was_added() {
+    for seal in ["", "sealed(provenance)."] {
+        let lower = format!(
+            "{seal} edb(e). edb(n).
+            e(a, b). e(b, c). e(c, a). e(a, d). e(c, d). n(a). n(b). n(c). n(d).
+            popular(Y) :- n(Y), at_least(2, X : e(X, Y)).
+            popular(Y) :- n(Y), at_least(1, X : e(X, Y), popular(X)).
+            far(X, Y) :- e(X, Y).
+            far(X, Z) :- far(X, Y), e(Y, Z)."
+        );
+        let upper = "top(X) :- far(a, X), not popular(X).";
+        let mut s = Session::fresh(BUDGET);
+        s.load(&boot(), None).expect("boot");
+        s.load(&lower, None).expect("lower");
+        s.evaluate().expect("lower evaluates");
+        s.load_delta(upper, None).expect("upper");
+        s.evaluate().expect("evaluates again");
+        let again: Vec<&str> = s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect();
+        assert!(!again.contains(&"popular") && !again.contains(&"far"), "{seal}: the lower relations are kept: {again:?}");
+        let mut fresh = Session::fresh(BUDGET);
+        fresh.load(&boot(), None).expect("boot");
+        fresh.load(&lower, None).expect("lower");
+        fresh.load(upper, None).expect("upper");
+        assert_eq!(state(&mut s), state(&mut fresh), "{seal}");
+        for q in ["popular(d)", "popular(a)", "far(a, d)", "top(b)"] {
+            assert_eq!(s.why(q), fresh.why(q), "{seal}: why {q}");
+        }
+    }
+}
+
+/// What reads the shrugs or the firings of one relation (`shrug(r(X), ..)`, `derived_by($fact(r, ..), ..)`) is kept
+/// by a full pass that keeps that relation: the pass writes them again as they stood.
+#[test]
+fn a_full_pass_keeps_a_reader_of_the_shrugs_and_firings_of_a_kept_relation() {
+    let lower = "edb(big). edb(pos). edb(given).
+        big(1152921504606846975). pos(a). pos(c). given(1). given(2).
+        w(c) :- big(B), Z is B + 1, Z > 0.
+        a(X) :- pos(X), not w(X).
+        d(X, Y) :- pos(X), shrug(a(X), _, _).
+        r(X) :- pos(X), d(X, X).
+        seen(X) :- given(X).
+        said(X) :- derived_by[$kernel]($fact(seen, main, $cons(X, $nil)), _, _).";
+    let upper = "top(X) :- pos(X), not r(X), said(1).";
+    let mut s = Session::fresh(BUDGET);
+    s.load(&boot(), None).expect("boot");
+    s.load(lower, None).expect("lower");
+    s.evaluate().expect("lower evaluates");
+    s.load_delta(upper, None).expect("upper");
+    s.eval.run().expect("a full pass");
+    let again: Vec<&str> = s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect();
+    assert!(!again.contains(&"d") && !again.contains(&"r") && !again.contains(&"said"), "the lower relations are kept: {again:?}");
+    let mut fresh = Session::fresh(BUDGET);
+    fresh.load(&boot(), None).expect("boot");
+    fresh.load(lower, None).expect("lower");
+    fresh.load(upper, None).expect("upper");
+    assert_eq!(state(&mut s), state(&mut fresh));
 }

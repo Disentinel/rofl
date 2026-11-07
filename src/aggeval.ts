@@ -41,7 +41,7 @@ import {
   V, IFACE, ARITY, RESERVED, decodeRules, type DRule, factTerm, canonClause, encodeRule,
   sealedBodies, SEALED_PROVENANCE, KERNEL_PERSP, MAIN, isKernelLedger, atomTerm, list, unlist,
   wellFoundedDeclared, reifyTerm, reifyBodyElem, decodeDominances, type DomRule, evalStrOp, BUDGET_REASON, resolveBook,
-  SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm,
+  SPACE_REASON, RULE_HOLE, STR_TYPE, STR_INDEX, STR_SEP, ATOM_NAME, unAtomTerm, KERNEL_BOOK,
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText, shown } from './shrug.ts';
 import { tarjan } from './scc.ts';
@@ -327,6 +327,7 @@ export function aggRefusalText(reason: string, rel: string | null): string {
     case 'set_pattern': return `${setPatternReason('the value of its head')}; this head's relation is no join lattice`;
     case 'join_value_off_carrier': return "it reads a join lattice with a value no value of its carrier can match, so the literal could never hold: a union's value is `set(E, ...)`, a hull's `iv(Lo, Hi)` with Lo <= Hi, a bitor's an integer of [0, 2^60); the slot takes a variable, such a value, `set(T)` or `iv(A, B)` of variables and integers (`ninf` a low end, `inf` a high one)";
     case 'lattice_unwidened': return "it computes a hull's value from that hull's own value by an interval function (ivadd, ivsub, ivmul, ivmeet) inside its recursion, and no relation on that cycle declares a widening, so nothing bounds how often the value can grow: declare one, `lattice p(K, hull I) widen N.`";
+    case 'unbounded_in_recursion': return "it makes an unbounded value inside its recursion: a builtin marked unbounded (concat, hash) makes a value the program did not hold, and a rule that calls one may not read a relation that depends on its own head, or the values could grow without end, unless that read walks an edge of a declared tree; call it below the recursion, or walk a tree";
     case 'order_nonmonotone': return "it reads a relation with a declared order inside its recursion, or concludes one, and is not monotone in that order: a value of an ordered relation may flow only into a value of a head that improves the same way (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) and into a comparison that stays true as the value improves (V < N for min, V > N for max); under pareto each value moves on its own, and under lex only the first value, strictly (+, - or a copy), may be compared, and each later value goes only into the value at its own place of a lex head whose first value is computed from the first one read";
     case 'lattice_nonmonotone': return "it reads a lattice relation inside its recursion and is not monotone in the value: the value may flow only into a lattice head's value (directly, or through X is V + E, V - E, E - V, min(V, E), max(V, E)) in the direction that head improves, or into a comparison that stays true as the value improves (D < N for min, D > N for max, B = true for or, B = false for and); a join's value (union, hull, bitor) only into a head of the same join or as S in `E in S` and `A subset S`, and a hull's through an interval function, X is ivadd(V, E), ivsub(V, E), ivsub(E, V), ivmul(V, K), ivmeet(V, E)";
     case 'tag_weight_reads_tag': return 'its head\'s tag is its weight, and the weight reads a tag of the body the engine multiplies in (⊗ through the body), so that tag would count twice: leave the head\'s tag a variable the body does not bind, and the engine writes the ⊗ of the body\'s tags (docs/aggregates.md, "Tags, as built")';
@@ -516,11 +517,53 @@ export function reachable(peel: Peel): Map<string, Set<string>> {
 
 const edgeKey = (a: string, b: string): string => `${a}\u0001${b}`;
 
+/** A RELATION IS RANKED BY ITS NAME AND ITS BOOK (`books.rs`). One the program writes in two books or more is a node per
+ *  book, `delegates[value]` beside `delegates[flow]`; a literal of a variable book reads every book; `whole` keeps a
+ *  relation one node, as the kernel's book is. */
+export class Books {
+  private node = new Map<string, string>();
+  private nodes = new Map<string, string[]>();
+  private nodeSet = new Set<string>();
+  constructor(rules: PeelRule[] = [], whole: (rel: string) => boolean = () => false) {
+    const seen = new Map<string, Set<string>>();
+    for (const r of rules) {
+      if (r.clause.head.temporal === 'next') continue;
+      for (const l of [r.clause.head, ...r.clause.body.flatMap(litsOf)]) {
+        if (l.persp.k !== 'a') continue;
+        let s = seen.get(l.rel);
+        if (!s) { s = new Set(); seen.set(l.rel, s); }
+        s.add(l.persp.name);
+      }
+    }
+    for (const [rel, bs] of seen) {
+      if (bs.size < 2 || KERNEL_BOOK.has(rel) || whole(rel)) continue;
+      const all = [...bs].sort().map((b) => { const n = `${rel}[${b}]`; this.node.set(edgeKey(rel, b), n); this.nodeSet.add(n); return n; });
+      this.nodes.set(rel, all);
+    }
+  }
+  lit(l: Lit): string[] {
+    const all = this.nodes.get(l.rel);
+    if (!all) return [l.rel];
+    return l.persp.k === 'a' ? [this.fact(l.rel, l.persp.name)] : all;
+  }
+  fact(rel: string, persp: string): string { return this.node.get(edgeKey(rel, persp)) ?? rel; }
+  head(l: Lit): string { return l.persp.k === 'a' ? this.fact(l.rel, l.persp.name) : l.rel; }
+  isNode(s: string): boolean { return this.nodeSet.has(s); }
+  rounds(round: Map<string, number>): Map<string, number> {
+    const out = new Map(round);
+    for (const [rel, all] of this.nodes) {
+      const rs = all.map((n) => round.get(n)).filter((x): x is number => x !== undefined);
+      if (rs.length > 0) out.set(rel, Math.max(...rs));
+    }
+    return out;
+  }
+}
+
 /** `peel_rounds`: the round number IS the stratum number, and a stall is the
  *  rejection. An aggregate's edge is a negation's; a lattice read from outside
  *  its recursion is strict; what the kernel writes at a close sits above. `demote` holds the `head\u0001inner` pairs whose
  *  aggregate edge is positive instead: a component a data-level stratification takes (`dataDemotable`). */
-export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set()): Peel {
+export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [string, string][], demote: Set<string> = new Set(), books: Books = new Books()): Peel {
   const pos = new Map<string, Set<string>>(), neg = new Map<string, Set<string>>();
   const heads = new Set<string>();
   const aggEdges: [string, string, string][] = [];
@@ -529,33 +572,35 @@ export function peelRounds(rules: PeelRule[], lattices: string[], domEdges: [str
   const P = (h: string) => { let s = pos.get(h); if (!s) { s = new Set(); pos.set(h, s); } return s; };
   const N = (h: string) => { let s = neg.get(h); if (!s) { s = new Set(); neg.set(h, s); } return s; };
   const reflected = [V.agg_cell, V.agg_member, V.agg_member_prem, V.agg_sealed, V.hole];
+  const add = (s: Set<string>, l: Lit) => { for (const n of books.lit(l)) s.add(n); };
   for (const r of rules) {
     if (r.clause.head.temporal === 'next') continue;
-    const hrel = r.clause.head.rel;
-    heads.add(hrel); P(hrel); N(hrel);
-    for (const b of r.clause.body) {
-      if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) N(hrel).add(b.lit.rel);
-      else if (b.t === 'pos') P(hrel).add(b.lit.rel);
-      else if (b.t === 'neg') N(hrel).add(b.lit.rel);
-      else if (b.t === 'agg' && b.op === 'at_least') {
-        for (const x of b.body) {
-          if (x.t === 'pos') P(hrel).add(x.lit.rel);
-          else if (x.t === 'neg') N(hrel).add(x.lit.rel);
-        }
-        for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
-      } else if (b.t === 'agg') {
-        for (const l of litsOf(b)) {
-          for (const h of [hrel, ...reflected]) {
-            heads.add(h); P(h);
-            if (h === hrel && demote.has(edgeKey(hrel, l.rel))) {
-              P(h).add(l.rel);
-              if (!demoted.some((d) => d[0] === r.id && d[1] === b.at)) demoted.push([r.id, b.at!]);
-              continue;
-            }
-            N(h).add(l.rel);
-            if (h === hrel) soft.add(edgeKey(h, l.rel));
+    for (const hrel of books.lit(r.clause.head)) {
+      heads.add(hrel); P(hrel); N(hrel);
+      for (const b of r.clause.body) {
+        if (b.t === 'pos' && r.latticeOuter.includes(b.lit.rel)) add(N(hrel), b.lit);
+        else if (b.t === 'pos') add(P(hrel), b.lit);
+        else if (b.t === 'neg') add(N(hrel), b.lit);
+        else if (b.t === 'agg' && b.op === 'at_least') {
+          for (const x of b.body) {
+            if (x.t === 'pos') add(P(hrel), x.lit);
+            else if (x.t === 'neg') add(N(hrel), x.lit);
           }
-          aggEdges.push([r.id, hrel, l.rel]);
+          for (const h of reflected) { heads.add(h); P(h); N(h).add(hrel); }
+        } else if (b.t === 'agg') {
+          for (const inner of litsOf(b).flatMap((l) => books.lit(l))) {
+            for (const h of [hrel, ...reflected]) {
+              heads.add(h); P(h);
+              if (h === hrel && demote.has(edgeKey(hrel, inner))) {
+                P(h).add(inner);
+                if (!demoted.some((d) => d[0] === r.id && d[1] === b.at)) demoted.push([r.id, b.at!]);
+                continue;
+              }
+              N(h).add(inner);
+              if (h === hrel) soft.add(edgeKey(h, inner));
+            }
+            aggEdges.push([r.id, hrel, inner]);
+          }
         }
       }
     }
@@ -932,6 +977,7 @@ export class AggEval {
   private thrFocus: Map<string, ThrFocus> | null = null;
   private heightMemo = new Map<string, number>();
   private roundOf = new Map<string, number>();
+  private books = new Books();
   /** Whether a run has planned its levels: `roundOf`, or under well-founded semantics the stratum table. */
   planned = false;
   private derivedRels = new Set<string>();
@@ -1399,6 +1445,9 @@ export class AggEval {
       }
       for (const [rel, sub] of this.subs) if (cone.has(rel)) for (const x of sub.reads) cone.add(x);
     }
+    // a promise no rule of the cone reads is not judged (owner, 2026-10-30)
+    const unjudged = [...new Set([...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)])].filter((r) => !cone.has(r) && kept.some((k) => k.clause.head.rel === r)).sort(cmpStr);
+    if (unjudged.length) this.diags.push(`asks: the promises of ${unjudged.join(', ')} are not judged, as no rule of the cone reads them`);
     return cone;
   }
 
@@ -1408,12 +1457,11 @@ export class AggEval {
     return [IFACE.unknown, 'shrug', 'explain_request', ...(this.wellFounded ? [IFACE.stratum] : [])];
   }
 
-  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a declared function's or
-   *  tree's relation; a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
+  /** THE RULES THAT CAN MAKE THE WHOLE WORLD REFUSE, whose heads join every cone (rust/rofl `Eval::refusal_heads`): a rule reading `unknown` or `shrug`; a rule into a tag, or reading or concluding a subsumptive relation; one concluding a
    *  relation answered on demand with an aggregate or a lattice read; under well_founded every aggregate and demand-backed rule; and every
    *  relation a stall of the whole program's rounds leaves unsettled. */
   private refusalHeads(kept: ERule[]): string[] {
-    const out: string[] = [...readFunctions(this.store).map((f) => f.rel), ...readTrees(this.store).map((t) => t.rel)];
+    const out: string[] = [];
     const demand = this.answer.demandRels;
     for (const r of kept) {
       const head = r.clause.head.rel;
@@ -1425,7 +1473,8 @@ export class AggEval {
     }
     if (this.mode === 'rounds') {
       const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-      const peel = peelRounds(kept, [...this.lattices.keys()], domEdges);
+      this.books = this.booksOf(kept);
+      const peel = peelRounds(kept, [...this.lattices.keys()], domEdges, new Set(), this.books);
       if (peel.stalled) {
         const heads = new Set(kept.map((r) => r.clause.head.rel));
         out.push(...peel.stuck.filter((s) => heads.has(s)));
@@ -1487,7 +1536,7 @@ export class AggEval {
     if (this.bootstrap || (rules.length === 0 && this.latticeRows.length === 0 && this.domRels.size === 0)) return emptyAnswer();
     // WHAT safety.rofl IS ASKED is a function of the reflected program alone: one program, asked once
     const keyed = [V.rule, V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos, V.premise_neg,
-      V.premise_agg, V.reserved, V.lattice_decl, V.tag_decl, V.lattice_widen, V.dominance, V.order_comp];
+      V.premise_agg, V.uses_builtin, V.structure_decl, V.reserved, V.lattice_decl, V.tag_decl, V.lattice_widen, V.dominance, V.order_comp];
     const parts = [...rules.map((r) => r.id), JSON.stringify(this.latticeRows), ...this.tagRefused.flat()];
     for (const rel of keyed) for (const f of this.store.relAll(rel)) parts.push(f.key);
     const memoKey = digest53(parts.join('\n'));
@@ -1509,7 +1558,7 @@ export class AggEval {
     const pol = policyStore(SAFETY_DENSE);
     const add = (rel: string, persp: string, args: Term[]) => pol.add(rel, persp, args, F_BASE);
     for (const rel of [V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense, V.premise_pos,
-      V.premise_neg, V.premise_agg, V.reserved, V.lattice_decl, V.lattice_widen, V.dominance, V.order_comp]) {
+      V.premise_neg, V.premise_agg, V.uses_builtin, V.structure_decl, V.reserved, V.lattice_decl, V.lattice_widen, V.dominance, V.order_comp]) {
       for (const f of this.store.relAll(rel)) {
         const a0 = f.args[0];
         if (a0 !== undefined && a0.k === 'a' && this.tagChanged.has(a0.name) && rel !== V.lattice_decl) continue;
@@ -1517,7 +1566,7 @@ export class AggEval {
       }
     }
     const seeded = new Set<string>([V.premise_lit, V.conclusion_lit, V.has_premise, V.concludes, V.conclusion_tense,
-      V.premise_pos, V.premise_neg, V.premise_agg]);
+      V.premise_pos, V.premise_neg, V.premise_agg, V.uses_builtin]);
     for (const r of rules) {
       if (!this.tagChanged.has(r.id)) continue;
       const enc = encodeRule(r.clause);
@@ -1628,7 +1677,9 @@ export class AggEval {
     }
     const sub = new AggEval(pol, POLICY_BUDGET, 'strata', true);
     let settled = true;
-    try { sub.run(); } catch (e) { settled = false; this.diags.push(`safety.rofl did not settle: ${(e as Error).message}`); }
+    try {
+      if (sub.run().partial) throw new Error(`its budget of ${POLICY_BUDGET} steps ran out`);
+    } catch (e) { settled = false; this.diags.push(`safety.rofl did not settle: ${(e as Error).message}`); }
     const atoms = (rel: string): string[] => {
       const out: string[] = [];
       for (const f of pol.relAll(rel)) if (f.args[0]?.k === 'a' && !out.includes(f.args[0].name)) out.push(f.args[0].name);
@@ -1704,7 +1755,7 @@ export class AggEval {
   private peelOnce(): Peel {
     if (this.peelCache === null) {
       const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-      this.peelCache = peelRounds(this.rules, [...this.lattices.keys()], domEdges);
+      this.peelCache = peelRounds(this.rules, [...this.lattices.keys()], domEdges, new Set(), this.booksOf(this.rules));
     }
     return this.peelCache;
   }
@@ -1778,7 +1829,8 @@ export class AggEval {
       if (this.mode === 'rounds') {
         const lats = [...this.lattices.keys()];
         const domEdges: [string, string][] = [...this.subs].flatMap(([p, x]) => x.reads.map((b): [string, string] => [p, b]));
-        let peel = peelRounds(this.rules, lats, domEdges);
+        this.books = this.booksOf(this.rules);
+        let peel = peelRounds(this.rules, lats, domEdges, new Set(), this.books);
         // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be stratified by its data: ranked as one round
         if (peel.stalled) peel = this.takeDataComponents(peel, lats, domEdges) ?? peel;
         if (peel.stalled) {
@@ -1786,7 +1838,7 @@ export class AggEval {
           for (const [rid, head, inner] of peel.aggEdges) {
             if (stuck.has(head) && stuck.has(inner) && reachesIn(deps, inner, head)) {
               const r = this.rules.find((x) => x.id === rid);
-              const b = r?.clause.body.find((x) => x.t === 'agg' && litsOf(x).some((l) => l.rel === inner));
+              const b = r?.clause.body.find((x) => x.t === 'agg' && litsOf(x).some((l) => this.books.lit(l).includes(inner)));
               const op = b && b.t === 'agg' ? b.op : 'an aggregate';
               throw new Rejected(`program rejected: ${op} in rule ${rid} reads ${inner}, which depends on the rule's own conclusion ${head}: an aggregate reads a closed relation; a recursive min/max is a lattice declaration (docs/aggregates.md)`);
             }
@@ -1802,9 +1854,9 @@ export class AggEval {
             ? `program rejected: nothing on the cycle ${c} can be settled first: it reads its own conclusion under a negation (-/->) or an aggregate (-agg->)`
             : `program rejected: round ${peel.rounds + 1} settled nothing while ${peel.stuck.join(', ')} remained`);
         }
-        this.roundOf = new Map(peel.round);
+        this.roundOf = this.books.rounds(peel.round);
         this.planned = true;
-        levels = levelSplit(stratRules, (r) => (r.clause.head.temporal === 'next' ? Infinity : peel.round.get(r.clause.head.rel) ?? Infinity));
+        levels = levelSplit(stratRules, (r) => (r.clause.head.temporal === 'next' ? Infinity : this.roundOf.get(this.books.head(r.clause.head)) ?? Infinity));
       }
       const late = this.answer.late;
       const first = mono.filter((r) => !late.has(r.id));
@@ -1880,12 +1932,12 @@ export class AggEval {
   /** The peel that ranks each component of a stalled one `dataDemotable` finds as a round, with the components recorded
    *  for the evaluation; null when there is no such component or the program stalls anyway. */
   private takeDataComponents(stalled: Peel, lats: string[], domEdges: [string, string][]): Peel | null {
-    const barred = (rel: string): boolean => this.lattices.has(rel) || this.subs.has(rel) || this.carried.has(rel)
+    const barred = (rel: string): boolean => this.books.isNode(rel) || this.lattices.has(rel) || this.subs.has(rel) || this.carried.has(rel)
       || this.demandRels.some(([d]) => d === rel) || this.tags.countRel.has(rel) || [...this.tags.countRel.values()].includes(rel)
       || this.rules.some((r) => r.clause.head.rel === rel && (r.hasThr || r.latClose !== null || r.latticeOuter.length > 0));
     const [demote, comps] = dataDemotable(stalled, barred);
     if (demote.size === 0) return null;
-    const again = peelRounds(this.rules, lats, domEdges, demote);
+    const again = peelRounds(this.rules, lats, domEdges, demote, this.books);
     if (again.stalled) return null;
     const least = (set: Set<string>): string => [...set].sort(cmpStr)[0];
     comps.sort((a, b) => cmpStr(least(a), least(b)));
@@ -5170,7 +5222,13 @@ export class AggEval {
     return this.derivedRels.has(rel) ? Infinity : 0;
   }
 
-  private ruleLevel(r: ERule): number { return r.clause.head.temporal === 'next' ? Infinity : this.relLevel(r.clause.head.rel); }
+  private ruleLevel(r: ERule): number { return r.clause.head.temporal === 'next' ? Infinity : this.relLevel(this.books.head(r.clause.head)); }
+
+  /** The relations ranked by name and book (`Books`). */
+  private booksOf(rules: PeelRule[]): Books {
+    const read = new Set([...this.subs.values()].flatMap((x) => x.reads));
+    return new Books(rules, (rel) => this.lattices.has(rel) || this.subs.has(rel) || read.has(rel));
+  }
 
   /** RULES CLOSE, AND ONLY THEN DOES A PLAIN UNKNOWN REACH THEM. */
   private closePlainRules(lv: number): void {
@@ -7910,7 +7968,7 @@ export class AggEval {
   private negDemo(key: string): string | null {
     let lit: Lit;
     try { lit = this.parseLit(key); } catch { return null; }
-    try { return this.whynotAt(lit, { maxDepth: 1, maxNodes: 64 })[1]; } catch (e) { if (e instanceof Wall || e instanceof Rejected || e instanceof Bug) return null; throw e; }
+    try { return this.whynotAt(lit, { maxDepth: 1, maxNodes: 64, all: true })[1]; } catch (e) { if (e instanceof Wall || e instanceof Rejected || e instanceof Bug) return null; throw e; }
   }
 
   /** One literal, written as ROFL, lowered to what the evaluator runs. */
@@ -7995,16 +8053,17 @@ export class AggEval {
   // ----------------------------------------------------------- whynot
 
   /** `whynot`: the demonstration that a literal fails; `[holds, text]`. Renames from zero, as `whyText`. */
-  whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
+  whynotText(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, shown?: string): [boolean, string] {
     const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
     this.asking = true;
     try { return this.whynotAt(lit, b, shown); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; this.forgetAsked(); }
   }
 
-  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, shown?: string): [boolean, string] {
-    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map<string, Set<number>>() };
-    if (!this.dag) ctx.done.set = () => ctx.done;
+  private whynotAt(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, shown?: string): [boolean, string] {
+    const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set(), done: new Map<string, Set<number>>(), all: b.all === true };
+    // the nearest failure is chosen over the tree: a literal met again is walked again, never referred to
+    if (!this.dag || !ctx.all) ctx.done.set = () => ctx.done;
     const s: Subst = new Map();
     const k = this.resolvedLitKey(lit, s);
     this.asked = [];
@@ -8272,7 +8331,7 @@ export class AggEval {
     ctx.nodes++;
     const pad = '  '.repeat(2 * level - 1);
     const rules = this.rules.filter((r) => r.clause.head.rel === lit.rel);
-    if (rules.length === 0) { next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists${this.unloaded(lit.rel)}` }); return; }
+    if (rules.length === 0) { next.push({ t: 'line', line: `${pad}no rule concludes '${lit.rel}' and no matching base fact exists${this.unloaded(lit.rel)}`, m: ['leaf', level, 0] }); return; }
     for (const r of rules) next.push({ t: 'rule', lit, r, level });
   }
 
@@ -8283,15 +8342,16 @@ export class AggEval {
     let s: Subst | null = this.evalBuiltin('=', rn.head.persp, lit.persp, new Map(), null);
     const n = Math.min(rn.head.args.length, lit.args.length);
     for (let i = 0; s && i < n; i++) s = this.evalBuiltin('=', rn.head.args[i], lit.args[i], s, null);
-    if (s === null || rn.head.args.length !== lit.args.length) { next.push({ t: 'line', line: `${pad}rule ${r.id}: head does not unify` }); return; }
+    if (s === null || rn.head.args.length !== lit.args.length) { next.push({ t: 'line', line: `${pad}rule ${r.id}: head does not unify`, m: ['nohead', level, 0] }); return; }
     this.wnUnwalked.clear();
+    this.wnLeft.clear();
     const failures = this.failingPremises(rn, s, r.id);
-    next.push({ t: 'line', line: `${pad}rule ${r.id}: ${r.canon}` });
-    for (const [key, n] of [...this.wnUnwalked].sort((a, b) => cmpStr(a[0], b[0])).slice(0, 12)) next.push({ t: 'line', line: `${pad}  followed 16 of ${n} matches of ${key}` });
+    next.push({ t: 'line', line: `${pad}rule ${r.id}: ${r.canon}`, m: ['rule', level, 0] });
+    for (const [key, n] of [...this.wnUnwalked].sort((a, b) => cmpStr(a[0], b[0])).slice(0, 12)) next.push({ t: 'line', line: `${pad}  followed 16 of ${n} matches of ${key}`, m: ['info', level, 0] });
     const keys = [...failures.keys()].sort(cmpStr).slice(0, 12);
-    if (keys.length === 0) next.push({ t: 'line', line: `${pad}  (no failing premise found within exploration bounds)` });
+    if (keys.length === 0) next.push({ t: 'line', line: `${pad}  (no failing premise found within exploration bounds)`, m: ['nofail', level, 0] });
     for (const f of keys) {
-      next.push({ t: 'line', line: `${pad}  failed premise: ${f}` });
+      next.push({ t: 'line', line: `${pad}  failed premise: ${f}`, m: ['premise', level, this.wnLeft.get(f) ?? 0] });
       const sub = failures.get(f);
       if (sub) next.push({ t: 'deeper', lit: sub, level: level + 1 });
     }
@@ -8300,13 +8360,14 @@ export class AggEval {
   /** Everything that makes the walk terminate: the cycle path, the depth cap, the node cap, each said in the output. */
   private explainDeeper(lit: Lit, level: number, ctx: WnCtx, next: WnTask[]): void {
     const pad = '  '.repeat(2 * level - 1);
-    if (level > ctx.maxDepth) { if (ctx.maxDepth > 1) next.push({ t: 'line', line: `${pad}[depth limit ${ctx.maxDepth} reached]` }); return; }
-    if (ctx.nodes >= ctx.maxNodes) { next.push({ t: 'line', line: `${pad}[node limit ${ctx.maxNodes} reached]` }); return; }
+    if (level > ctx.maxDepth) { if (ctx.maxDepth > 1) next.push({ t: 'line', line: `${pad}[depth limit ${ctx.maxDepth} reached]`, m: ['cut', level, 0] }); return; }
+    if (ctx.nodes >= ctx.maxNodes) { next.push({ t: 'line', line: `${pad}[node limit ${ctx.maxNodes} reached]`, m: ['cut', level, 0] }); return; }
     const ck = this.cycleKey(lit);
-    if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]` }); return; }
-    if (isGround(lit.persp) && lit.args.every(isGround)) {
+    if (ctx.path.has(ck)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [cycle]`, m: ['cut', level, 0] }); return; }
+    // the nearest failure is chosen over the tree: a literal met again is walked again, never referred to
+    if (ctx.all && isGround(lit.persp) && lit.args.every(isGround)) {
       let at = ctx.done.get(ck);
-      if (at !== undefined && at.has(level)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]` }); return; }
+      if (at !== undefined && at.has(level)) { next.push({ t: 'line', line: `${pad}${this.resolvedLitKey(lit, new Map())} [above]`, m: ['cut', level, 0] }); return; }
       if (at === undefined) { at = new Set(); ctx.done.set(ck, at); }
       at.add(level);
     }
@@ -8316,15 +8377,17 @@ export class AggEval {
 
   /** THE DEMONSTRATION, WALKED WITH A STACK OF ITS OWN (as `renderTree` walks `why`): a failure as deep as the bounds
    *  allow takes no frame per level, and each line is written once. */
-  private explainTree(lit: Lit, ctx: WnCtx): string[] { return this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx); }
+  private explainTree(lit: Lit, ctx: WnCtx): string[] {
+    return wnShown(this.explainFrom([{ t: 'failure', lit, level: 1 }], ctx), ctx.all);
+  }
 
-  private explainFrom(tasks: WnTask[], ctx: WnCtx): string[] {
-    const lines: string[] = [], todo: WnTask[] = tasks.reverse(), next: WnTask[] = [];
+  private explainFrom(tasks: WnTask[], ctx: WnCtx): [string, WnMark | undefined][] {
+    const lines: [string, WnMark | undefined][] = [], todo: WnTask[] = tasks.reverse(), next: WnTask[] = [];
     for (let t = todo.pop(); t !== undefined; t = todo.pop()) {
       if (t.t === 'failure') this.explainFailure(t.lit, t.level, ctx, next);
       else if (t.t === 'rule') this.explainRule(t.lit, t.r, t.level, next);
       else if (t.t === 'deeper') this.explainDeeper(t.lit, t.level, ctx, next);
-      else if (t.t === 'line') lines.push(t.line);
+      else if (t.t === 'line') lines.push([t.line, t.m]);
       else ctx.path.delete(t.ck);
       for (let i = next.length - 1; i >= 0; i--) todo.push(next[i]);
       next.length = 0;
@@ -8336,14 +8399,14 @@ export class AggEval {
    *  volume, a key prefix its scanner minted (rust/rofl/src/session.rs `cool`): `vols` pairs each prefix with the file's name. One walk
    *  keeps each file's candidates apart, 16 a premise and 2000 steps each, where the plain walk takes the first 16 of all; below the
    *  premises a file stops at, its demonstration is the plain one. */
-  whynotFiles(lit: Lit, b: { maxDepth: number; maxNodes: number }, vols: [string, string][]): WhynotFile[] {
+  whynotFiles(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, vols: [string, string][]): WhynotFile[] {
     const saved = this.renameCounter, asking = this.asking;
     this.renameCounter = 0;
     this.asking = true;
     try { return this.whynotFilesAt(lit, b, vols); } finally { this.renameCounter = saved; this.asking = asking; this.asked = []; this.demandTrail = []; this.forgetAsked(); }
   }
 
-  private whynotFilesAt(lit: Lit, b: { maxDepth: number; maxNodes: number }, vols: [string, string][]): WhynotFile[] {
+  private whynotFilesAt(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, vols: [string, string][]): WhynotFile[] {
     const names = new Map(vols), lens = [...new Set(vols.map(([p]) => p.length))];
     const volOf = (t: Term): string | undefined => {
       if (t.k === 'a' || t.k === 'f') for (const n of lens) { const v = names.get(t.name.slice(0, n)); if (v !== undefined) return v; }
@@ -8355,6 +8418,7 @@ export class AggEval {
     for (const [s] of this.matchPremise(lit, new Map(), 0, null)) { const v = of(lit, s); if (v !== undefined) found.set(v, (found.get(v) ?? 0) + 1); }
     const head = of(lit, new Map());
     const walks: { r: ERule; outs: Map<string, Map<string, Lit | null>>; split?: string }[] = [];
+    this.wnLeft.clear();
     for (const r of this.rules.filter((x) => x.clause.head.rel === lit.rel)) {
       const rn = this.renameClause(r.clause);
       let s: Subst | null = this.evalBuiltin('=', rn.head.persp, lit.persp, new Map(), null);
@@ -8372,16 +8436,16 @@ export class AggEval {
         const own = w.outs.get(name) ?? (w.split ? new Map([[`${w.split} -- none in this file`, null]]) : w.outs.get('') ?? new Map<string, Lit | null>());
         const keys = [...own.keys()].sort(cmpStr).slice(0, 12);
         if (keys.length === 0) continue;
-        tasks.push({ t: 'line', line: `  rule ${w.r.id}: ${w.r.canon}` });
+        tasks.push({ t: 'line', line: `  rule ${w.r.id}: ${w.r.canon}`, m: ['rule', 1, 0] });
         for (const f of keys) {
-          tasks.push({ t: 'line', line: `    failed premise: ${f}` });
+          tasks.push({ t: 'line', line: `    failed premise: ${f}`, m: ['premise', 1, this.wnLeft.get(f) ?? 0] });
           const sub = own.get(f);
           if (sub) tasks.push({ t: 'deeper', lit: sub, level: 2 });
         }
         stops.push(...keys);
       }
-      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map() };
-      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...this.explainFrom(tasks, ctx)].join('\n') };
+      const ctx: WnCtx = { maxDepth: Math.max(1, b.maxDepth), maxNodes: Math.max(1, b.maxNodes), nodes: 0, path: new Set([this.cycleKey(lit)]), done: new Map(), all: b.all ?? false };
+      return { file: name, found: found.get(name) ?? 0, stops, text: [`whynot ${k} in ${name}:`, ...wnShown(this.explainFrom(tasks, ctx), ctx.all)].join('\n') };
     });
   }
 
@@ -8399,6 +8463,8 @@ export class AggEval {
 
   /** A whynot's premises with more matches than it follows, and how many. */
   private wnUnwalked = new Map<string, number>();
+  /** Each failure of a whynot's rule, and how many premises follow the one it failed at. */
+  private wnLeft = new Map<string, number>();
 
   /** THE ORDER A WHYNOT WALKS A BODY IN starts from what the question binds: a premise sharing nothing bound waits until one
    *  does, so a constant of the question narrows the walk instead of a premise ranging over the whole corpus. Asked with
@@ -8422,7 +8488,7 @@ export class AggEval {
     if (vw) { out = vw.out(at); nodes = vw.nodes(at); }
     nodes.n++;
     if (nodes.n > 2000 || k >= body.length) return;
-    const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
+    const put = (key: string, v: Lit | null) => { if (!out.has(key)) { out.set(key, v); this.wnLeft.set(key, body.length - k - 1); } };
     const b = body[k];
     if (b.t === 'pos') {
       const unknowns = this.demandTrail.length;
@@ -8474,7 +8540,7 @@ export class AggEval {
 
   /** WHYNOT OF A THRESHOLD. */
   private exploreThreshold(body: BodyElem[], k: number, s: Subst, a: AggElem, rid: string, out: Map<string, Lit | null>, nodes: { n: number }, vw?: VolWalk, at?: string): void {
-    const put = (key: string, v: Lit | null) => { if (!out.has(key)) out.set(key, v); };
+    const put = (key: string, v: Lit | null) => { if (!out.has(key)) { out.set(key, v); this.wnLeft.set(key, body.length - k - 1); } };
     const [plan, corr] = this.aggCorr(rid, a, s);
     const desc = this.aggDesc(a, s);
     const nr = resolve(a.res, s);
@@ -8527,6 +8593,8 @@ interface WnCtx {
   maxDepth: number; maxNodes: number; nodes: number; path: Set<string>;
   /** The ground literals demonstrated, with the levels each was written at: the depth below a level is what the demonstration shows, so one reached again at a level it was written at is referred to, at another it is written again. */
   done: Map<string, Set<number>>;
+  /** Every failure the walk met, or only the nearest (`wnNearest`). */
+  all: boolean;
 }
 /** A by-file walk (`whynotFiles`): the file of a candidate, and each file's failures and steps; `split`, the premise it first parted at. */
 interface VolWalk { of: (l: Lit, s: Subst) => string | undefined; out: (at?: string) => Map<string, Lit | null>; nodes: (at?: string) => { n: number }; split?: string }
@@ -8534,7 +8602,46 @@ interface VolWalk { of: (l: Lit, s: Subst) => string | undefined; out: (at?: str
 export type WhynotFile = { file: string; found: number; stops: string[]; text: string };
 /** One step of `whynot`'s walk (`explainTree`). */
 type WnTask = { t: 'failure'; lit: Lit; level: number } | { t: 'rule'; lit: Lit; r: ERule; level: number }
-  | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string } | { t: 'unpath'; ck: string };
+  | { t: 'deeper'; lit: Lit; level: number } | { t: 'line'; line: string; m?: WnMark } | { t: 'unpath'; ck: string };
+/** What a line of `whynot`'s walk is, at which level, and for a failed premise how many premises follow it. */
+type WnMark = [k: 'rule' | 'nohead' | 'info' | 'premise' | 'nofail' | 'leaf' | 'cut', level: number, left: number];
+/** A chain the walk cut short, or a rule it found no failure of: farther than every chain that ends. */
+const WN_FAR = 1_000_000;
+
+/** The lines a whynot prints: every one under `all`, else the nearest failure. */
+function wnShown(lines: [string, WnMark | undefined][], all: boolean): string[] {
+  const kept = all ? [] : wnNearest(lines);
+  return all || kept.length >= lines.length ? lines.map(([l]) => l) : [...kept.map((i) => lines[i][0]), '  (every failure: --all)'];
+}
+/** THE NEAREST FAILURE of a whynot's walk: the lines kept. A chain costs the premises it leaves unmet: at each rule those after
+ *  the one it failed at, and one at its end, a premise nothing supports, a negation blocked or a builtin false. The rule and the
+ *  failure of least cost are kept, the first of equal ones, with the matches that rule did not follow. The walk is written in
+ *  preorder, so a line's parts come after it: they are costed from the last line up, with no frame per level. */
+function wnNearest(ls: [string, WnMark | undefined][]): number[] {
+  const n = ls.length, parent: number[] = new Array(n).fill(-2), premiseAt: number[] = [], ruleAt: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const m = ls[i][1];
+    if (m === undefined) continue;
+    const [k, level] = m;
+    if (k === 'rule' || k === 'nohead' || k === 'leaf' || k === 'cut') parent[i] = level > 1 ? premiseAt[level - 1] ?? -2 : n;
+    else parent[i] = ruleAt[level] ?? -2;
+    if (k === 'rule') ruleAt[level] = i;
+    if (k === 'premise') premiseAt[level] = i;
+  }
+  const best: number[] = new Array(n + 1).fill(-1), cost: number[] = new Array(n + 1).fill(Infinity);
+  for (let i = n - 1; i >= 0; i--) {
+    const m = ls[i][1];
+    if (m === undefined || parent[i] === -2 || m[0] === 'info') continue;
+    const c = m[0] === 'leaf' ? 1 : m[0] === 'rule' ? (best[i] < 0 ? WN_FAR : cost[i]) : m[0] === 'premise' ? m[2] + (best[i] < 0 ? 1 : cost[i]) : WN_FAR;
+    if (c <= cost[parent[i]]) { cost[parent[i]] = c; best[parent[i]] = i; }
+  }
+  const kept: number[] = [];
+  for (let at = best[n]; at >= 0; at = best[at]) {
+    kept.push(at);
+    if (ls[at][1]![0] === 'rule') for (let j = at + 1; ls[j]?.[1]?.[0] === 'info'; j++) kept.push(j);
+  }
+  return kept;
+}
 type CellRecNew = Omit<CellRec, 'key'>;
 type CellMemberNew = CellMember;
 

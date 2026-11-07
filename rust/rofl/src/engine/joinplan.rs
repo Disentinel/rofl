@@ -30,11 +30,13 @@
 //! store, with no news (each rule's first), is ordered the same way from
 //! nothing bound, and needs a larger gain (`MARGIN_FULL`).
 //!
-//! WHICH RULES: those whose plan is positive and negated premises only, in a
-//! world with no lattice, and not an aggregate, threshold, closure or demand
-//! rule: a builtin or fault reads the order it is solved in (a hole is
-//! attributed at the premise that failed), and a lattice withdraws what a
-//! firing read. A rule concluding `@next` is kept in written order unless the
+//! WHICH RULES: those that neither read nor conclude a lattice cell (a cell
+//! withdraws what a firing read, and improves in the order its candidates
+//! arrive), and not an aggregate, threshold, closure or demand rule.
+//! A builtin is a wall: every element written before it is placed before it
+//! and none written after it, so the partial solutions that reach it, and the
+//! holes it makes, are the written order's; the order moves only between two
+//! builtins, and a news premise after a builtin keeps the written order. A rule concluding `@next` is kept in written order unless the
 //! store is unordered: in the engine's order the first firing to stage a fact
 //! is its witness, and the solutions' order is the written one.
 //!
@@ -53,11 +55,12 @@
 //! concluded, so a witness is the one the written order would have built.
 
 use super::*;
+use super::cost::prem_key;
 
 pub(super) struct DeltaPlan {
     body: Rc<[BodyElem]>,
     /// `perm[k]` is the position in `ERule::plan` of `body[k]`.
-    perm: Vec<usize>,
+    pub(super) perm: Vec<usize>,
     /// Estimated cost of the whole firing per news row.
     unit: f64,
     /// The written-order firing: rows touched by the premises before `i`, the
@@ -70,6 +73,8 @@ pub(super) struct DeltaPlan {
     tail: f64,
     /// The relations the estimates read and their size when they were made.
     watch: Vec<(Sym, Option<Sym>, usize)>,
+    /// The order is a plan fact's (`planned_order`), taken whatever the estimate says.
+    pub(super) given: bool,
 }
 
 #[derive(Clone)]
@@ -94,27 +99,20 @@ fn stale(now: usize, then: usize) -> bool {
 }
 
 impl Eval {
-    /// The plan for news at plan position `at` (None: a firing over the whole
-    /// store, no news) when it is cheaper than the written order for `n` news
-    /// rows; None keeps the written order.
-    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
-        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
-    }
-
     /// A plan can start from the news at `at`: when `delta_pick` still found none, the written order is the cheaper.
     pub(super) fn plannable(&self, r: &Rc<ERule>, at: usize) -> bool {
-        matches!(self.delta_plans.get(&self.plan_key(r, Some(at))), Some(Slot::Plan(_)))
+        matches!(self.add.delta_plans.get(&self.add.plan_key(r, Some(at))), Some(Slot::Plan(_)))
     }
 
     pub(super) fn delta_pick(&mut self, r: &Rc<ERule>, at: Option<usize>, n: usize) -> Option<Rc<DeltaPlan>> {
         if brk!("delta_first_off" => true; false)
-            || brk!("delta_first_spread" => false; !self.lat_spread.is_empty())
+            || brk!("delta_first_spread" => false; !self.lat.carry.spread.is_empty())
         {
             return None;
         }
-        let key = self.plan_key(r, at);
-        self.vrefresh();
-        let fresh = match self.delta_plans.get(&key) {
+        let key = self.add.plan_key(r, at);
+        self.vc.vrefresh(&mut self.store);
+        let fresh = match self.add.delta_plans.get(&key) {
             Some(Slot::No) => return None,
             Some(Slot::Plan(p)) => p.watch.iter().all(|&(rel, persp, then)| !stale(self.len_est(rel, persp), then)),
             None => false,
@@ -124,16 +122,22 @@ impl Eval {
                 Some(p) => Slot::Plan(Rc::new(p)),
                 None => Slot::No,
             };
-            self.delta_plans.insert(key, slot);
+            self.add.delta_plans.insert(key, slot);
         }
-        let Some(Slot::Plan(p)) = self.delta_plans.get(&key) else { return None };
+        let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
         } else {
             p.pre + p.cur * (1.0 + p.fan.min(n)) + p.cur * p.fan * (n / p.rows_i.max(1.0)).min(1.0) * p.tail
         };
-        if n * p.unit * if at.is_none() { MARGIN_FULL } else { MARGIN } < written {
+        // the margins cover the engine's own estimate; a given order is the plan's to answer for: the firing over
+        // the whole store takes it as it is, a round takes it where its cost comes under the written firing's
+        if p.given && at.is_none() {
+            return Some(p.clone());
+        }
+        let margin = if p.given { 1.0 } else if at.is_none() { MARGIN_FULL } else { MARGIN };
+        if n * p.unit * margin < written {
             Some(p.clone())
         } else {
             None
@@ -142,27 +146,59 @@ impl Eval {
 
     /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
     fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
-        match self.vclosure_for(rel) {
-            Some(ci) => self.vlen(ci),
+        match self.vc.vclosure_for(rel) {
+            Some(ci) => self.vc.vlen(ci),
             None => self.store.rel_len_est(rel, persp),
         }
     }
 
     fn delta_eligible(&self, r: &Rc<ERule>) -> bool {
-        !self.naive
-            && self.lattices.is_empty()
-            && !r.has_agg
-            && !r.has_thr
-            && !r.has_demand_prem
-            && !self.closure_of.contains_key(&r.id)
-            && (r.clause.head.temporal != Temporal::Next || self.store.unordered)
-            && r.plan.len() >= 2
-            && r.plan.iter().all(|b| match b {
-                BodyElem::Pos(_) => true,
-                BodyElem::Neg(l) => !self.demand_rels.iter().any(|(d, _)| *d == l.rel),
-                BodyElem::Bi { .. } => self.adding,
-                BodyElem::Agg(_) => false,
-            })
+        self.written_order_reason(r).is_none()
+    }
+
+    /// A rule that concludes into a lattice cell or reads one, under a negation or an aggregate too, or a cell carried
+    /// across a tick: a cell improves in the order its candidates arrive and withdraws what a firing read.
+    fn touches_lattice(&self, r: &ERule) -> bool {
+        let lat = |rel: Sym| self.lat.is_cell(rel) || self.lat.algebra(rel).join_of.is_some() || self.carried.contains_key(&rel);
+        lat(r.clause.head.rel) || r.lat_close.is_some() || !r.lattice_outer.is_empty() || r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| lat(l.rel))
+    }
+
+    /// Why `r` is kept in written order, or None where a delta-first plan may be built for it (`written_order[profile]`).
+    pub(super) fn written_order_reason(&self, r: &Rc<ERule>) -> Option<&'static str> {
+        if self.naive {
+            return Some("naive");
+        }
+        if self.lat.has_cells() && self.touches_lattice(r) {
+            return Some("lattice");
+        }
+        if r.has_agg {
+            return Some("aggregate");
+        }
+        if r.has_thr {
+            return Some("threshold");
+        }
+        if r.has_demand_prem {
+            return Some("demand");
+        }
+        if self.clo.closure_of.contains_key(&r.id) {
+            return Some("closure");
+        }
+        if r.clause.head.temporal == Temporal::Next && !self.store.unordered {
+            return Some("next");
+        }
+        if r.plan.len() < 2 {
+            return Some("one_premise");
+        }
+        for b in r.plan.iter() {
+            match b {
+                BodyElem::Pos(_) => {}
+                BodyElem::Neg(l) if self.demand.on(l.rel) => return Some("negated_demand"),
+                BodyElem::Neg(_) => {}
+                BodyElem::Bi { .. } => {}
+                BodyElem::Agg(_) => return Some("aggregate_premise"),
+            }
+        }
+        None
     }
 
     /// The variable sets a builtin can run from: one fully bound among them, it holds or binds the rest (`is` and `in`
@@ -199,17 +235,17 @@ impl Eval {
         }
         // A CLOSURE ANSWERED FROM ITS TREE has no rows to count: its matches for a bound end are read off the tree's shape,
         // and with neither end bound it costs every row, which no plan starts from.
-        if let Some(ci) = self.vclosure_for(l.rel) {
-            let (rows, fan) = self.vstat(ci, &cpos, &vpos);
+        if let Some(ci) = self.vc.vclosure_for(l.rel) {
+            let (rows, fan) = self.vc.vstat(&mut self.store, ci, &cpos, &vpos);
             return Stat { rows, fan };
         }
         // A DECLARED FUNCTION (`function p(K, to V).`, a promise checked after every evaluation) answers at
         // most one row for a bound key: a premise whose key is bound, by a constant or a variable, is one
         // match per binding and needs no pass over its rows to say so. Per book, so only a premise that
         // names its book.
-        if let (Some(fk), Some(_)) = (self.function_keys.get(&l.rel), persp) {
+        if let (Some(fk), Some(_)) = (self.ds.function_keys.get(&l.rel), persp) {
             if !vpos.is_empty() && fk.iter().all(|k| cpos.contains(k) || vpos.contains(k)) {
-                self.promise_stats += 1;
+                self.ds.promise_stats += 1;
                 let size = self.store.rel_len_est(l.rel, persp);
                 return Stat { rows: size as f64, fan: if size == 0 { 0.0 } else { 1.0 } };
             }
@@ -222,13 +258,13 @@ impl Eval {
         key.push(u64::MAX);
         key.extend(vpos.iter().map(|&p| p as u64));
         let size = self.len_est(l.rel, persp);
-        let (rows, distinct) = match self.delta_stats.get(&key) {
+        let (rows, distinct) = match self.add.delta_stats.get(&key) {
             Some(&(then, rows, d)) if !stale(size, then) => (rows, d),
             _ => {
                 let t = std::time::Instant::now();
-                let (rows, d) = self.store.probe_stats(&self.h, l.rel, persp, &cpos, &cvals, &vpos);
-                self.delta_ns += t.elapsed().as_nanos() as u64;
-                self.delta_stats.insert(key, (size, rows, d));
+                let (rows, d) = self.probe_counted(l.rel, persp, &cpos, &cvals, &vpos);
+                self.add.delta_ns += t.elapsed().as_nanos() as u64;
+                self.add.delta_stats.insert(key, (size, rows, d));
                 (rows, d)
             }
         };
@@ -236,31 +272,29 @@ impl Eval {
         Stat { rows: rows as f64, fan: if rows == 0 { 0.0 } else { fan.max(1.0) } }
     }
 
-    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
-    /// of counting each relation it reaches again, whole.
-    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
-        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
-        ks.sort_unstable();
-        let mut flat: Vec<u64> = Vec::new();
-        for k in ks {
-            let (then, rows, d) = self.delta_stats[k];
-            flat.push(k.len() as u64);
-            flat.extend(k);
-            flat.extend([then as u64, rows as u64, d as u64]);
+    /// `Store::probe_stats`, read off one pass over all the constants of a premise's shape once a second constant of
+    /// it is asked while its rows stand as they were counted.
+    fn probe_counted(&mut self, rel: Sym, persp: Option<Sym>, cpos: &[usize], cvals: &[Term], vpos: &[usize]) -> (usize, usize) {
+        if !(1..=2).contains(&cpos.len()) {
+            return self.store.probe_stats(&self.h, rel, persp, cpos, cvals, vpos);
         }
-        w.arena(&flat);
-    }
-
-    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
-        let flat = r.arena::<u64>()?;
-        let mut i = 0;
-        while i < flat.len() {
-            let n = flat[i] as usize;
-            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
-            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
-            i += 1 + n + 3;
+        let at = (cvals[0].bits(), cvals.get(1).map_or(0, |t| t.bits()));
+        let stamp = self.store.rows_stamp(rel, persp);
+        let g = self.add.delta_groups.entry((rel, persp, cpos.to_vec(), vpos.to_vec())).or_default();
+        if g.stamp != stamp {
+            *g = super::DeltaGroups { stamp, ..Default::default() };
         }
-        Ok(())
+        if let Some(counts) = &g.counts {
+            return counts.get(&at).copied().unwrap_or((0, 1));
+        }
+        g.misses += 1;
+        if g.misses < 2 {
+            return self.store.probe_stats(&self.h, rel, persp, cpos, cvals, vpos);
+        }
+        let counts = self.store.probe_groups(&self.h, rel, persp, cpos, vpos);
+        let got = counts.get(&at).copied().unwrap_or((0, 1));
+        g.counts = Some(counts);
+        got
     }
 
     fn delta_build(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<DeltaPlan> {
@@ -327,10 +361,145 @@ impl Eval {
             }
         }
 
-        // the delta-first order
-        let (order, unit) = self.greedy_order(r, news.map(|_| i), &[], &[])?;
+        // the delta-first order: a plan fact's, or the greedy one
+        let (order, unit, given) = match self.planned_order(r, news.map(|_| i)) {
+            Some(o) => {
+                let u = self.order_unit(r, &o, news.map(|_| i));
+                (o, u, true)
+            }
+            None => {
+                let (o, u) = self.greedy_order(r, news.map(|_| i), &[], &[])?;
+                (o, u, false)
+            }
+        };
         let body: Vec<BodyElem> = order.iter().map(|&j| plan[j].clone()).collect();
-        Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch })
+        Some(DeltaPlan { body: Rc::from(body), perm: order, unit, pre, cur, fan: fan_i, rows_i: size_i, tail, watch, given })
+    }
+
+    /// The cost per news row of firing `r` in `order`, the greedy order's own accounting over an order given: a plan
+    /// fact chooses the order, and the choice between the delta-first firing and the written one stays the engine's
+    /// (`delta_pick`). Taken free, a given order fired from every news row where the greedy one knew the written
+    /// firing was cheaper: the same order 3 2 1 of member_value read 296 319 rows greedy and 7 381 348 given.
+    fn order_unit(&mut self, r: &Rc<ERule>, order: &[usize], start: Option<usize>) -> f64 {
+        let mut bound: Vec<Sym> = Vec::new();
+        let (mut unit, mut cur_d) = (0.0f64, 1.0f64);
+        for (k, &j) in order.iter().enumerate() {
+            let mut vs = Vec::new();
+            r.plan[j].vars(&self.h, &mut vs);
+            match &r.plan[j] {
+                BodyElem::Pos(l) if k == 0 && start == Some(j) => {
+                    let size = self.len_est(l.rel, l.persp.as_atom()).max(1) as f64;
+                    let st0 = self.delta_stat(l, &[]);
+                    (unit, cur_d) = (1.0, if st0.rows == 0.0 { 0.0 } else { (st0.rows / size).min(1.0) });
+                }
+                BodyElem::Pos(l) => {
+                    let st = self.delta_stat(l, &bound);
+                    unit += cur_d * (1.0 + st.fan);
+                    cur_d = (cur_d * st.fan).min(1e15);
+                }
+                _ => unit += cur_d,
+            }
+            for v in vs {
+                if !bound.contains(&v) {
+                    bound.push(v);
+                }
+            }
+        }
+        unit
+    }
+
+    /// The written position (from 1, as `premise_lit` counts) of `r`'s plan element `j`, and back.
+    pub(super) fn written_pos(&self, r: &ERule, j: usize) -> Option<usize> {
+        let key = prem_key(&r.plan[j])?;
+        r.clause.body.iter().position(|b| prem_key(b) == Some(key)).map(|k| k + 1)
+    }
+
+    fn plan_pos(&self, r: &ERule, k: usize) -> Option<usize> {
+        let key = prem_key(r.clause.body.get(k.checked_sub(1)?)?)?;
+        r.plan.iter().position(|b| prem_key(b) == Some(key))
+    }
+
+    /// THE ORDER A PLAN FACT GIVES: `plan[fixpointplan](R, At, Order)`, At the written position of the news premise (0 the
+    /// firing over the whole store) and Order the written positions of every premise, from 1 (docs/cli.md, *The plan as
+    /// facts*). The engine takes the order as it is, whatever its own estimate says, once it holds up (whether to fire
+    /// from the news in that order or in the written one stays its choice, `order_unit`): every premise once, the
+    /// news first, a negation after what binds the variables it shares, a builtin after one of the sets that run it and
+    /// where the written order has it (a builtin is a wall, so the holes it makes stay the written order's). A fact that
+    /// does not hold up is left alone and the greedy order is built; a rule kept in written order reads none.
+    pub(super) fn planned_order(&mut self, r: &Rc<ERule>, at: Option<usize>) -> Option<Vec<usize>> {
+        let (rel, book) = (self.h.intern("plan"), self.h.intern("fixpointplan"));
+        let want_at = match at {
+            Some(i) => self.written_pos(r, i)? as i64,
+            None => 0,
+        };
+        let mut order: Option<Vec<usize>> = None;
+        for f in self.store.rel_persp(&self.h, rel, book) {
+            let args = self.store.args(f).to_vec();
+            if args.len() != 3 || args[0].as_atom() != Some(r.id) || args[1].as_int() != Some(want_at) {
+                continue;
+            }
+            let (mut ks, mut t) = (Vec::new(), args[2]);
+            loop {
+                match t.kind() {
+                    TermK::Func(i) if self.h.name(self.h.fname(i)) == "$cons" => {
+                        ks.push(usize::try_from(self.h.fargs(i)[0].as_int()?).ok()?);
+                        t = self.h.fargs(i)[1];
+                    }
+                    TermK::Atom(a) if self.h.name(a) == "$nil" => break,
+                    _ => return None,
+                }
+            }
+            order = ks.iter().map(|&k| self.plan_pos(r, k)).collect();
+            break;
+        }
+        let order = order?;
+        let plan = &r.plan;
+        let mut seen = vec![false; plan.len()];
+        for &j in &order {
+            if seen[j] {
+                return None;
+            }
+            seen[j] = true;
+        }
+        if seen.iter().any(|s| !s) || at.is_some_and(|i| order.first() != Some(&i)) {
+            return None;
+        }
+        let vars_of = |h: &Heap, b: &BodyElem| {
+            let mut v = Vec::new();
+            b.vars(h, &mut v);
+            v
+        };
+        let mut head_vars = Vec::new();
+        for a in &r.clause.head.args {
+            self.h.vars_of(*a, &mut head_vars);
+        }
+        let all_vars: Vec<Vec<Sym>> = plan.iter().map(|b| vars_of(&self.h, b)).collect();
+        let mut bound: Vec<Sym> = Vec::new();
+        for (n, &j) in order.iter().enumerate() {
+            match &plan[j] {
+                BodyElem::Neg(_) => {
+                    let local = |v: &Sym| !head_vars.contains(v) && all_vars.iter().enumerate().all(|(k, vs)| k == j || !vs.contains(v));
+                    if !all_vars[j].iter().all(|v| bound.contains(v) || local(v)) {
+                        return None;
+                    }
+                }
+                BodyElem::Bi { .. } => {
+                    if !self.bi_needs(&plan[j]).iter().any(|ns| ns.iter().all(|v| bound.contains(v))) {
+                        return None;
+                    }
+                    if order[..n].iter().any(|&k| k > j) || order[n + 1..].iter().any(|&k| k < j) {
+                        return None;
+                    }
+                }
+                BodyElem::Pos(_) | BodyElem::Agg(_) => {}
+            }
+            for v in &all_vars[j] {
+                if !bound.contains(v) {
+                    bound.push(*v);
+                }
+            }
+        }
+        Some(order)
     }
 
     /// THE GREEDY ORDER of `r`'s plan, its positions `skip` left out: from the news premise `start`, or from the
@@ -376,14 +545,20 @@ impl Eval {
                 wb.extend(all_vars[j].iter().copied());
             }
         }
+        // A BUILTIN IS A WALL: what is written before it is joined before it and nothing written after it is, so the
+        // partial solutions that reach it, and the holes it makes, are the written order's
+        let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && matches!(plan[k], BodyElem::Bi { .. }));
         let placeable = |j: usize, bound: &[Sym], rest: &[usize]| -> bool {
+            if walled(j, rest) {
+                return false;
+            }
             if let Some((p, was)) = vp[j] {
-                if bound.contains(&p) != was && brk!("delta_first_persp" => false; true) {
+                if bound.contains(&p) != was {
                     return false;
                 }
             }
             matches!(plan[j], BodyElem::Neg(_))
-                || !rest.iter().any(|&k| k != j && matches!(vp[k], Some((p, false)) if all_vars[j].contains(&p)) && brk!("delta_first_persp" => false; true))
+                || !rest.iter().any(|&k| k != j && matches!(vp[k], Some((p, false)) if all_vars[j].contains(&p)))
         };
         let mut bound: Vec<Sym> = pre.to_vec();
         let mut order: Vec<usize> = Vec::new();
@@ -391,6 +566,9 @@ impl Eval {
         let (mut unit, mut cur_d) = (0.0f64, 1.0f64);
         if let Some(i) = start {
             let BodyElem::Pos(l) = &plan[i] else { return None };
+            if walled(i, &rest) {
+                return None;
+            }
             rest.retain(|&j| j != i);
             if !placeable(i, &[], &rest) {
                 return None;
@@ -489,25 +667,27 @@ impl Eval {
             e.peak_rows = peak;
             e.fire_rule_from(r, Subst::new(), keys.map(|k| (p.perm[0], k)))
         };
-        let (peak, undecided) = (self.peak_rows, self.lat_undecided.len());
+        let (peak, undecided) = (self.peak_rows, self.lat.carry.undecided.len());
         let outer = self.cur_rule.replace(r.id);
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
+        self.sn_perm = self.sn.is_some().then(|| Rc::new(p.perm.clone()));
         let before = self.steps;
         let sols = self.solve_body(&p.body, Subst::new(), 0, keys.map(|k| (0, k)), Some(r.id));
+        self.sn_perm = None;
         self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;
         // a negation records the position it was undecided at; none is while no unknown spreads
-        debug_assert_eq!(self.lat_undecided.len(), undecided);
+        debug_assert_eq!(self.lat.carry.undecided.len(), undecided);
         let sols = match sols {
             Err(Halt::Overrun) => return written(self, peak),
             s => self.solved(r, s, before)?,
         };
         let n = sols.len() as i64;
-        *self.fires_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.delta_by_rule.entry(r.id).or_insert(0) += 1;
-        *self.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
+        *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.cost.delta_by_rule.entry(r.id).or_insert(0) += 1;
+        *self.cost.sols_by_rule.entry(r.id).or_insert(0) += n as u64;
         let sols = sols
             .into_iter()
             .map(|mut sol| {
@@ -519,6 +699,42 @@ impl Eval {
                 sol
             })
             .collect();
-        self.conclude_all(r, sols, Front::default(), false)
+        self.conclude_all(r, sols, Front::default(), true)
+    }
+}
+
+impl AddState {
+    /// The plan for news at plan position `at` (None: a firing over the whole
+    /// store, no news) when it is cheaper than the written order for `n` news
+    /// rows; None keeps the written order.
+    fn plan_key(&self, r: &Rc<ERule>, at: Option<usize>) -> (Sym, usize) {
+        (r.id, at.unwrap_or(usize::MAX >> 1) | if self.adding { 1 << 62 } else { 0 })
+    }
+
+    /// The counts `delta_stat` took, kept with a volume: an edit to a world opened from disk plans from them instead
+    /// of counting each relation it reaches again, whole.
+    pub(crate) fn write_stats(&self, w: &mut crate::arena::VolW) {
+        let mut ks: Vec<&Vec<u64>> = self.delta_stats.keys().collect();
+        ks.sort_unstable();
+        let mut flat: Vec<u64> = Vec::new();
+        for k in ks {
+            let (then, rows, d) = self.delta_stats[k];
+            flat.push(k.len() as u64);
+            flat.extend(k);
+            flat.extend([then as u64, rows as u64, d as u64]);
+        }
+        w.arena(&flat);
+    }
+
+    pub(crate) fn read_stats(&mut self, r: &mut crate::arena::VolR) -> Result<(), String> {
+        let flat = r.arena::<u64>()?;
+        let mut i = 0;
+        while i < flat.len() {
+            let n = flat[i] as usize;
+            let k = flat.get(i + 1..i + 1 + n + 3).ok_or("a volume's planner counts are cut short")?;
+            self.delta_stats.insert(k[..n].to_vec(), (k[n] as usize, k[n + 1] as usize, k[n + 2] as usize));
+            i += 1 + n + 3;
+        }
+        Ok(())
     }
 }

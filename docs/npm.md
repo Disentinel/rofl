@@ -30,7 +30,7 @@ release job of `.github/workflows/ci.yml` stages them from a
   package's engine.
 - the library (`import { Rofl } from '@grafema/rofl'`, `./port`, `boot.rofl`,
   the inquiry, policy and decision packs), the JS model (`rules/js.files` and
-  what it lists), the scanner with `@babel/parser` vendored, the guide and the
+  what it lists), the scanner (`oxc_scan.wasm`, oxc built from `rust/tools/oxc_scan`), the guide and the
   examples.
 
 **`@grafema/rofl-<os>-<cpu>`** for `linux-x64`, `linux-arm64`, `darwin-x64`,

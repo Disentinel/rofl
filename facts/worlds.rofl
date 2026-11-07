@@ -33,15 +33,10 @@ world_omits(w_ledger, "rules/worklist.rofl").
 world_omits(w_ledger, "facts/worklist.rofl").
 world_omits(w_ledger, "facts/js-attrs.rofl").
 world_omits(w_ledger, "facts/js-callgraph.rofl").
-world_omits(w_ledger, "facts/js-controlflow.rofl").
-world_omits(w_ledger, "facts/js-dataflow.rofl").
 world_omits(w_ledger, "facts/js-env.rofl").
-world_omits(w_ledger, "facts/js-kinds.rofl").
 world_omits(w_ledger, "facts/js-lib-surface.rofl").
 world_omits(w_ledger, "facts/js-modules.rofl").
 world_omits(w_ledger, "facts/js-resolve.rofl").
-world_omits(w_ledger, "facts/js-shapes.rofl").
-world_omits(w_ledger, "facts/js-statements.rofl").
 world_omits(w_ledger, "rules/js-attrs.rofl").
 world_omits(w_ledger, "rules/js-concat.rofl").
 world_omits(w_ledger, "rules/js-callgraph.rofl").
@@ -61,7 +56,6 @@ world_omits(w_ledger, "rules/js-vocabulary.rofl").
 -- `who` per pack that no world here supplies. Same class as the line
 -- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
 -- RUN, which is what the closure is for.
-world_omits(w_ledger, "rules/js-pack-home.rofl").
 -- ...and the third of the same family, from the wip/curve merge:
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
@@ -107,7 +101,7 @@ world_omits(w_ledger, "rules/js-ambient.rofl").
 -- IT IS ALSO THE INDEX. The checker READS every witness row here, because
 -- witness rows live in both ledgers and this is the one world that holds both.
 world(w_queue).
-world_note(w_queue, "the plan plus the coverage matrix plus the findings ledger: where work(W, Note), open_cell[audit] and layer(L) are all askable, and the world the checker reads its own witness list from").
+world_note(w_queue, "the plan plus the findings ledger: where work(W, Note), next_work[audit] is askable, and the world the checker reads its own witness list from").
 world_pack(w_queue, "rules/worlds.rofl").
 world_pack(w_queue, "facts/worlds.rofl").
 world_pack(w_queue, "rules/findings.rofl").
@@ -116,14 +110,9 @@ world_pack(w_queue, "rules/worklist.rofl").
 world_pack(w_queue, "facts/worklist.rofl").
 world_pack(w_queue, "facts/refactoring.rofl").
 world_pack(w_queue, "rules/js-model.rofl").
-world_pack(w_queue, "facts/js-kinds.rofl").
-world_pack(w_queue, "facts/js-shapes.rofl").
 world_pack(w_queue, "facts/js-modules.rofl").
 world_pack(w_queue, "facts/js-callgraph.rofl").
 world_pack(w_queue, "facts/js-resolve.rofl").
-world_pack(w_queue, "facts/js-dataflow.rofl").
-world_pack(w_queue, "facts/js-statements.rofl").
-world_pack(w_queue, "facts/js-controlflow.rofl").
 world_pack(w_queue, "facts/js-effects.rofl").
 -- the era packs answer a different question on a different corpus, and the
 -- resolver, attribute and vocabulary rules each have a test file that builds
@@ -149,7 +138,6 @@ world_omits(w_queue, "rules/js-vocabulary.rofl").
 -- `who` per pack that no world here supplies. Same class as the line
 -- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
 -- RUN, which is what the closure is for.
-world_omits(w_queue, "rules/js-pack-home.rofl").
 -- ...and the third of the same family, from the wip/curve merge:
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
@@ -202,13 +190,8 @@ world_pack(w_js_corpus, "rules/js-dataflow.rofl").
 world_pack(w_js_corpus, "rules/js-model.rofl").
 world_pack(w_js_corpus, "rules/js-callgraph.rofl").
 world_pack(w_js_corpus, "rules/js-controlflow.rofl").
-world_pack(w_js_corpus, "facts/js-kinds.rofl").
 world_pack(w_js_corpus, "facts/js-callgraph.rofl").
-world_pack(w_js_corpus, "facts/js-dataflow.rofl").
 world_pack(w_js_corpus, "facts/js-modules.rofl").
-world_pack(w_js_corpus, "facts/js-shapes.rofl").
-world_pack(w_js_corpus, "facts/js-statements.rofl").
-world_pack(w_js_corpus, "facts/js-controlflow.rofl").
 world_corpus(w_js_corpus, "alpha.mjs", "test/fixtures/js-call/alpha.mjs").
 world_corpus(w_js_corpus, "beta.mjs", "test/fixtures/js-call/beta.mjs").
 world_corpus(w_js_corpus, "gamma.mjs", "test/fixtures/js-call/gamma.mjs").
@@ -240,7 +223,6 @@ world_omits(w_js_corpus, "rules/js-vocabulary.rofl").
 -- `who` per pack that no world here supplies. Same class as the line
 -- above and refused for the same reason. THE CLOSURE CAUGHT IT IN ONE
 -- RUN, which is what the closure is for.
-world_omits(w_js_corpus, "rules/js-pack-home.rofl").
 -- ...and the third of the same family, from the wip/curve merge:
 -- `facts/js-cost.rofl` is a per-rule COST table, a fact about the rules
 -- rather than about any corpus, so no world here has a use for it.
@@ -296,13 +278,8 @@ world_pack(w_js_effects, "rules/js-model.rofl").
 world_pack(w_js_effects, "rules/js-callgraph.rofl").
 world_pack(w_js_effects, "rules/js-controlflow.rofl").
 world_pack(w_js_effects, "rules/js-effects.rofl").
-world_pack(w_js_effects, "facts/js-kinds.rofl").
 world_pack(w_js_effects, "facts/js-callgraph.rofl").
-world_pack(w_js_effects, "facts/js-dataflow.rofl").
 world_pack(w_js_effects, "facts/js-modules.rofl").
-world_pack(w_js_effects, "facts/js-shapes.rofl").
-world_pack(w_js_effects, "facts/js-statements.rofl").
-world_pack(w_js_effects, "facts/js-controlflow.rofl").
 world_pack(w_js_effects, "facts/js-effects.rofl").
 world_corpus(w_js_effects, "alpha.mjs", "test/fixtures/js-call/alpha.mjs").
 world_corpus(w_js_effects, "beta.mjs", "test/fixtures/js-call/beta.mjs").
@@ -330,7 +307,6 @@ world_omits(w_js_effects, "rules/js-modules.rofl").
 world_pack(w_js_effects, "rules/js-surface.rofl").
 world_omits(w_js_effects, "rules/js-resolve.rofl").
 world_omits(w_js_effects, "rules/js-vocabulary.rofl").
-world_omits(w_js_effects, "rules/js-pack-home.rofl").
 -- AND THE HOST SURFACE, 2026-09-09, from the branch that landed beside this
 -- one. `w_js_effects` was written when these three packs did not exist, and
 -- the closure asked about all three in one run. REFUSED: this world's subject
@@ -407,13 +383,8 @@ world_pack(w_js_ambient, "rules/js-globals.rofl").
 world_pack(w_js_ambient, "rules/js-host.rofl").
 world_pack(w_js_ambient, "rules/js-effects.rofl").
 world_pack(w_js_ambient, "rules/js-ambient.rofl").
-world_pack(w_js_ambient, "facts/js-kinds.rofl").
 world_pack(w_js_ambient, "facts/js-callgraph.rofl").
-world_pack(w_js_ambient, "facts/js-dataflow.rofl").
 world_pack(w_js_ambient, "facts/js-modules.rofl").
-world_pack(w_js_ambient, "facts/js-shapes.rofl").
-world_pack(w_js_ambient, "facts/js-statements.rofl").
-world_pack(w_js_ambient, "facts/js-controlflow.rofl").
 world_pack(w_js_ambient, "facts/js-effects.rofl").
 world_pack(w_js_ambient, "facts/js-globals.rofl").
 world_pack(w_js_ambient, "facts/js-lib-surface.rofl").
@@ -444,4 +415,3 @@ world_omits(w_js_ambient, "facts/js-cost.rofl").
 -- reads the rules as facts and `js-pack-home` needs each pack loaded under a
 -- `who` of its own, which no world here does.
 world_omits(w_js_ambient, "rules/js-vocabulary.rofl").
-world_omits(w_js_ambient, "rules/js-pack-home.rofl").

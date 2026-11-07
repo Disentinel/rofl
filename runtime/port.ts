@@ -55,6 +55,8 @@ export interface Evaluated {
    *  reading one against the other is a category error made here once. */
   peakRows: number;
   space: number;
+  /** The relations a full pass evaluated again although the world held them whole before it (engine/layer.rs). */
+  again?: string[];
   /** The rules that read so much for what they add that their author should
    *  hear of it, one sentence each, the costliest premise named (Rust only). */
   hot?: string[];
@@ -162,13 +164,13 @@ export class RoflSession {
   }
 
   /** `Rofl.whynot`. A literal that holds is an answer, not a rejection. */
-  async whynot(query: string, opts: { depth?: number; nodes?: number } = {}): Promise<{ holds: boolean; text: string }> {
+  async whynot(query: string, opts: { depth?: number; nodes?: number; all?: boolean } = {}): Promise<{ holds: boolean; text: string }> {
     const r = await this.port.send({ op: 'whynot', session: this.id, query, ...opts });
     return { holds: r.holds as boolean, text: r.text as string };
   }
 
   /** `Rofl.whynotFiles`: a row for each file of `files`, a key prefix and the file's name. */
-  async whynotFiles(query: string, files: [string, string][], opts: { depth?: number; nodes?: number } = {}): Promise<{ file: string; found: number; stops: string[]; text: string }[]> {
+  async whynotFiles(query: string, files: [string, string][], opts: { depth?: number; nodes?: number; all?: boolean } = {}): Promise<{ file: string; found: number; stops: string[]; text: string }[]> {
     const r = await this.port.send({ op: 'whynot', session: this.id, query, files, ...opts });
     return r.files as { file: string; found: number; stops: string[]; text: string }[];
   }
@@ -182,7 +184,7 @@ export class RoflSession {
 
   /** COOL A VOLUME TO DISK: write its base facts out as ROFL and drop them.
    *
-   *  A volume is a KEY PREFIX minted by the scanner — `scanners/js_ast.ts`
+   *  A volume is a KEY PREFIX minted by the scanner — `rust/tools/oxc_scan`
    *  exports `idPrefix(file)` — so residency is decided before anything is
    *  loaded, and no rule ever mentions a volume. The kernel's own books are
    *  excluded: `asserted_by` and `in_perspective` are what the kernel says

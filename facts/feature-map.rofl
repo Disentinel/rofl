@@ -54,6 +54,7 @@ feature("op:=", language).
 feature("op:>", language).
 feature("op:>=", language).
 feature("op:atom_of", language).
+feature("op:hash", language).
 feature("op:is", language).
 feature("op:mod", language).
 feature("op:str_char", language).

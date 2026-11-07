@@ -425,7 +425,6 @@ attr_needs(js, assignment_expression, operator, "&&=", logical_assignment).
 -- era.ts.txt. What noticed was `feature_unexercised[audit]`, once the waiver
 -- was withdrawn on purpose to see whether anything still needed it.
 
-
 -- ===========================================================================
 -- THE THIRD GATE SHAPE: WHAT IS *NOT* AROUND A NODE.
 --
@@ -442,7 +441,6 @@ attr_needs(js, assignment_expression, operator, "&&=", logical_assignment).
 -- async ancestor" and "is inside a function at all" coincide for this feature.
 edb(outside_attr_needs).
 outside_attr_needs(js, await_expression, async, true, top_level_await).
-
 
 -- ===========================================================================
 -- THE FOURTH GATE SHAPE: WHAT IS *INSIDE* A NODE (w_meta_property, 2026-09-08).

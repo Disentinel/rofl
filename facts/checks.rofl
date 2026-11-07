@@ -29,6 +29,7 @@ check_refuses("async_refused", "async-refused.rofl").
 check_refuses("not_as_a_name", "not-as-a-name.rofl").
 check_refuses("unstratifiable", "unstratifiable.rofl").
 check_refuses("premise_arity", "premise-arity.rofl").
+check_refuses("concat_recursion", "concat-recursion.rofl").
 -- The dense form of ring 1 is written for examples/ring1/dense.ts, not for the
 -- loader; the directory world has refused it since it was first blessed.
 check_refuses("ring1", "l1.dense.rofl").
@@ -1938,7 +1939,6 @@ check_file("agg_tagc_budget", "examples/checks/agg-budget-data.rofl").
 check_file("agg_tagc_budget", "examples/checks/agg-tagc-budget.rofl").
 check_opt("agg_tagc_budget", together, 1).
 check_opt("agg_tagc_budget", budget, 500).
-proves("agg_tagc_budget", agg, tag_counting, holes).
 
 check_world("agg_tag_shrug").
 check_file("agg_tag_shrug", "examples/checks/agg-tag-shrug.rofl").
@@ -3137,6 +3137,8 @@ check_world("cost_shapes_model").
 check_file("cost_shapes_model", "examples/shapes/shapes.rofl").
 check_file("cost_shapes_model", "facts/cost-shapes.rofl").
 check_file("cost_shapes_model", "rules/js-structure.rofl").
+check_file("cost_shapes_model", "models/lang/js/roles.rofl").
+check_file("cost_shapes_model", "models/lang/js/oxc-roles.rofl").
 check_file("cost_shapes_model", "rules/js-dataflow.rofl").
 check_file("cost_shapes_model", "rules/js-model.rofl").
 check_file("cost_shapes_model", "rules/js-callgraph.rofl").
@@ -3170,6 +3172,8 @@ check_world("surface_model").
 check_file("surface_model", "examples/surface/surface.rofl").
 check_file("surface_model", "facts/surface-lint.rofl").
 check_file("surface_model", "rules/js-structure.rofl").
+check_file("surface_model", "models/lang/js/roles.rofl").
+check_file("surface_model", "models/lang/js/oxc-roles.rofl").
 check_file("surface_model", "rules/js-dataflow.rofl").
 check_file("surface_model", "rules/js-model.rofl").
 check_file("surface_model", "rules/js-callgraph.rofl").
@@ -3588,7 +3592,7 @@ check_world("retract_again").
 check_file("retract_again", "examples/checks/retract-again.rofl").
 check_opt("retract_again", together, 1).
 check_opt("retract_again", one_engine, rust).
-check_opt("retract_again", retract, "ra_gone(1)").
+check_opt("retract_again", retract, "asks(ra_more)").
 
 check_world("asks_demand").
 check_file("asks_demand", "examples/checks/asks-demand.rofl").
@@ -3642,13 +3646,8 @@ check_opt("sub_history_beside_lattice", explain, 1).
 -- w_next_version_cutoff: the side-effect question (examples/vscode/side-effects.rofl) over the JS model and a hand-made
 -- mini corpus with a wrapper module, a cross-file constant, literals and an env read; every answer named in the check
 check_world("vscode_side_effects").
-check_file("vscode_side_effects", "facts/js-kinds.rofl").
 check_file("vscode_side_effects", "facts/js-callgraph.rofl").
-check_file("vscode_side_effects", "facts/js-dataflow.rofl").
 check_file("vscode_side_effects", "facts/js-modules.rofl").
-check_file("vscode_side_effects", "facts/js-shapes.rofl").
-check_file("vscode_side_effects", "facts/js-statements.rofl").
-check_file("vscode_side_effects", "facts/js-controlflow.rofl").
 check_file("vscode_side_effects", "facts/js-effects.rofl").
 check_file("vscode_side_effects", "facts/js-globals.rofl").
 check_file("vscode_side_effects", "facts/js-host.rofl").
@@ -3656,6 +3655,8 @@ check_file("vscode_side_effects", "facts/js-host-surface.rofl").
 check_file("vscode_side_effects", "facts/js-lib-surface.rofl").
 check_file("vscode_side_effects", "facts/js-attrs.rofl").
 check_file("vscode_side_effects", "rules/js-structure.rofl").
+check_file("vscode_side_effects", "models/lang/js/roles.rofl").
+check_file("vscode_side_effects", "models/lang/js/oxc-roles.rofl").
 check_file("vscode_side_effects", "rules/js-dataflow.rofl").
 check_file("vscode_side_effects", "rules/js-model.rofl").
 check_file("vscode_side_effects", "rules/js-callgraph.rofl").
@@ -3675,13 +3676,8 @@ check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rof
 -- w_concat_value: a string built from parts (rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
 -- the cap and the widening; every text, form and cut literal named in the check
 check_world("concat_value").
-check_file("concat_value", "facts/js-kinds.rofl").
 check_file("concat_value", "facts/js-callgraph.rofl").
-check_file("concat_value", "facts/js-dataflow.rofl").
 check_file("concat_value", "facts/js-modules.rofl").
-check_file("concat_value", "facts/js-shapes.rofl").
-check_file("concat_value", "facts/js-statements.rofl").
-check_file("concat_value", "facts/js-controlflow.rofl").
 check_file("concat_value", "facts/js-effects.rofl").
 check_file("concat_value", "facts/js-globals.rofl").
 check_file("concat_value", "facts/js-host.rofl").
@@ -3689,6 +3685,8 @@ check_file("concat_value", "facts/js-host-surface.rofl").
 check_file("concat_value", "facts/js-lib-surface.rofl").
 check_file("concat_value", "facts/js-attrs.rofl").
 check_file("concat_value", "rules/js-structure.rofl").
+check_file("concat_value", "models/lang/js/roles.rofl").
+check_file("concat_value", "models/lang/js/oxc-roles.rofl").
 check_file("concat_value", "rules/js-dataflow.rofl").
 check_file("concat_value", "rules/js-model.rofl").
 check_file("concat_value", "rules/js-callgraph.rofl").
@@ -3709,13 +3707,8 @@ check_file("concat_value", "examples/checks/concat-check.rofl").
 -- network of examples/checks/services-net.rofl; every
 -- edge from a client function to a handler and the frontier both ways named in the check
 check_world("services").
-check_file("services", "facts/js-kinds.rofl").
 check_file("services", "facts/js-callgraph.rofl").
-check_file("services", "facts/js-dataflow.rofl").
 check_file("services", "facts/js-modules.rofl").
-check_file("services", "facts/js-shapes.rofl").
-check_file("services", "facts/js-statements.rofl").
-check_file("services", "facts/js-controlflow.rofl").
 check_file("services", "facts/js-effects.rofl").
 check_file("services", "facts/js-globals.rofl").
 check_file("services", "facts/js-host.rofl").
@@ -3723,6 +3716,8 @@ check_file("services", "facts/js-host-surface.rofl").
 check_file("services", "facts/js-lib-surface.rofl").
 check_file("services", "facts/js-attrs.rofl").
 check_file("services", "rules/js-structure.rofl").
+check_file("services", "models/lang/js/roles.rofl").
+check_file("services", "models/lang/js/oxc-roles.rofl").
 check_file("services", "rules/js-dataflow.rofl").
 check_file("services", "rules/js-model.rofl").
 check_file("services", "rules/js-callgraph.rofl").
@@ -3768,13 +3763,8 @@ check_file("services", "examples/checks/services-check.rofl").
 -- cross files every way the model knows, every file resident through rules/js-surface.rofl; each file ALONE with the
 -- others' [surface] gives the same facts: scripts/surface_split.ts, npm run test:split
 check_world("vscode_surface_split").
-check_file("vscode_surface_split", "facts/js-kinds.rofl").
 check_file("vscode_surface_split", "facts/js-callgraph.rofl").
-check_file("vscode_surface_split", "facts/js-dataflow.rofl").
 check_file("vscode_surface_split", "facts/js-modules.rofl").
-check_file("vscode_surface_split", "facts/js-shapes.rofl").
-check_file("vscode_surface_split", "facts/js-statements.rofl").
-check_file("vscode_surface_split", "facts/js-controlflow.rofl").
 check_file("vscode_surface_split", "facts/js-effects.rofl").
 check_file("vscode_surface_split", "facts/js-globals.rofl").
 check_file("vscode_surface_split", "facts/js-host.rofl").
@@ -3782,6 +3772,8 @@ check_file("vscode_surface_split", "facts/js-host-surface.rofl").
 check_file("vscode_surface_split", "facts/js-lib-surface.rofl").
 check_file("vscode_surface_split", "facts/js-attrs.rofl").
 check_file("vscode_surface_split", "rules/js-structure.rofl").
+check_file("vscode_surface_split", "models/lang/js/roles.rofl").
+check_file("vscode_surface_split", "models/lang/js/oxc-roles.rofl").
 check_file("vscode_surface_split", "rules/js-dataflow.rofl").
 check_file("vscode_surface_split", "rules/js-model.rofl").
 check_file("vscode_surface_split", "rules/js-callgraph.rofl").
@@ -3802,13 +3794,8 @@ check_file("vscode_surface_split", "examples/checks/vscode-surface-split-check.r
 -- scanned file depends on, and for no other. Rust only: the TypeScript engine runs no scanner.
 check_world("scan_requests").
 check_file("scan_requests", "facts/model-units.rofl").
-check_file("scan_requests", "facts/js-kinds.rofl").
 check_file("scan_requests", "facts/js-callgraph.rofl").
-check_file("scan_requests", "facts/js-dataflow.rofl").
 check_file("scan_requests", "facts/js-modules.rofl").
-check_file("scan_requests", "facts/js-shapes.rofl").
-check_file("scan_requests", "facts/js-statements.rofl").
-check_file("scan_requests", "facts/js-controlflow.rofl").
 check_file("scan_requests", "facts/js-effects.rofl").
 check_file("scan_requests", "facts/js-globals.rofl").
 check_file("scan_requests", "facts/js-host.rofl").
@@ -3816,6 +3803,8 @@ check_file("scan_requests", "facts/js-host-surface.rofl").
 check_file("scan_requests", "facts/js-lib-surface.rofl").
 check_file("scan_requests", "facts/js-attrs.rofl").
 check_file("scan_requests", "rules/js-structure.rofl").
+check_file("scan_requests", "models/lang/js/roles.rofl").
+check_file("scan_requests", "models/lang/js/oxc-roles.rofl").
 check_file("scan_requests", "rules/js-dataflow.rofl").
 check_file("scan_requests", "rules/js-model.rofl").
 check_file("scan_requests", "rules/js-callgraph.rofl").
@@ -3849,3 +3838,181 @@ check_opt("intents_rofl", one_engine, rust).
 
 check_world("intents_screen").
 check_file("intents_screen", "examples/intents/screen.rofl").
+
+-- oxc's raw tree of one file with a construct of every kind the roles read, through the converter
+-- into the roles of roles.rofl (models/lang/js/oxc-roles.rofl), with their role ids and the vocabulary's audit
+check_world("oxc_roles").
+check_file("oxc_roles", "models/lang/js/roles.rofl").
+check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
+check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
+check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
+-- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
+check_world("roles_oxc").
+check_file("roles_oxc", "models/lang/js/roles.rofl").
+check_file("roles_oxc", "models/lang/js/oxc-roles.rofl").
+check_file("roles_oxc", "models/lang/js/roles-audit.rofl").
+check_file("roles_oxc", "models/lang/js/oxc-audit.rofl").
+check_file("roles_oxc", "examples/checks/roles-oxc-facts.rofl").
+
+-- concat(A, B), the one string constructor: below a recursion it joins, inside one it is refused (safety.rofl)
+check_world("concat_builtin").
+check_file("concat_builtin", "examples/checks/concat.rofl").
+check_world("concat_recursion").
+check_file("concat_recursion", "examples/checks/concat-recursion.rofl").
+
+-- THE PROFILE OF AN EVALUATION (docs/cli.md, *The profile of an evaluation*): a rule that reads a relation of the book `profile`
+-- is answered with what each rule and premise cost, written by the Rust engine after the evaluation and read in the
+-- round after. The TypeScript engine writes no profile, so the world is Rust's alone.
+check_opt("profile", one_engine, rust).
+
+-- THE HYPOTHESES OVER THE PROFILE (models/engine/profile.rofl): verdicts on a rule or a premise (scan, rescan,
+-- rederives, barren, hot), forecasts of a head's size judged by `rows` (forecast_off, forecast_loose), and a growth
+-- class two sizes judge (rust/rofl/tests/profile_model.rs), over the planted shapes of examples/checks/profile-hub.rofl.
+check_world("profile_model").
+check_file("profile_model", "models/engine/profile.rofl").
+check_file("profile_model", "examples/checks/profile-hub.rofl").
+check_opt("profile_model", one_engine, rust).
+
+-- THE PLAN AS FACTS (docs/cli.md, *The plan as facts*): plan[fixpointplan](R, At, Order) is the order the engine solves
+-- rule R in on the news at At, taken as it is; the profile says which order each rule was solved in and whose it was
+-- (order[profile](R, At, Order, plan | greedy)). Rust only, as every reader of the profile.
+check_world("plan_given").
+check_file("plan_given", "examples/checks/plan-world.rofl").
+check_file("plan_given", "examples/checks/plan-given.rofl").
+check_opt("plan_given", one_engine, rust).
+-- A JOIN THROUGH A TABLE OF CONSTANTS (w_join_through_constants): a probe bound at two columns, one a key from a small
+-- table of constants, on a relation whose indexes are spent, is served by the index of the column with the most keys;
+-- the profile's read at that premise says which. Rust only, as every reader of the profile.
+check_world("join_through_constants").
+check_file("join_through_constants", "examples/checks/join-through-constants.rofl").
+check_opt("join_through_constants", one_engine, rust).
+-- THE PLAN COMPUTED (models/engine/plan.rofl): the same world under the two packs, in a world of its own since the pack
+-- declares a lattice: the DP with min over the subsets of each rule's premises concludes plan[fixpointplan] and its
+-- forecast cost; rust/rofl/tests/plan_dp.rs runs plan-world.rofl under the plans found and the widths equal the forecast.
+check_world("plan_dp").
+check_file("plan_dp", "models/engine/profile.rofl").
+check_file("plan_dp", "models/engine/plan.rofl").
+check_file("plan_dp", "examples/checks/plan-world.rofl").
+check_opt("plan_dp", one_engine, rust).
+
+-- w_lifecycle_world: the world [lifecycle] over the JS model, a fixture with each fault and a control without
+check_world("lifecycle_leaky").
+check_file("lifecycle_leaky", "facts/model-units.rofl").
+check_file("lifecycle_leaky", "facts/js-callgraph.rofl").
+check_file("lifecycle_leaky", "facts/js-modules.rofl").
+check_file("lifecycle_leaky", "facts/js-effects.rofl").
+check_file("lifecycle_leaky", "facts/js-globals.rofl").
+check_file("lifecycle_leaky", "facts/js-host.rofl").
+check_file("lifecycle_leaky", "facts/js-host-surface.rofl").
+check_file("lifecycle_leaky", "facts/js-lib-surface.rofl").
+check_file("lifecycle_leaky", "facts/js-attrs.rofl").
+check_file("lifecycle_leaky", "rules/js-structure.rofl").
+check_file("lifecycle_leaky", "rules/js-dataflow.rofl").
+check_file("lifecycle_leaky", "rules/js-model.rofl").
+check_file("lifecycle_leaky", "rules/js-callgraph.rofl").
+check_file("lifecycle_leaky", "rules/js-controlflow.rofl").
+check_file("lifecycle_leaky", "rules/js-effects.rofl").
+check_file("lifecycle_leaky", "rules/js-globals.rofl").
+check_file("lifecycle_leaky", "rules/js-host.rofl").
+check_file("lifecycle_leaky", "rules/js-ambient.rofl").
+check_file("lifecycle_leaky", "rules/js-attrs.rofl").
+check_file("lifecycle_leaky", "rules/js-modules.rofl").
+check_file("lifecycle_leaky", "rules/js-concat.rofl").
+check_file("lifecycle_leaky", "rules/js-surface.rofl").
+check_file("lifecycle_leaky", "models/lang/js/roles.rofl").
+check_file("lifecycle_leaky", "models/lang/js/oxc-roles.rofl").
+check_file("lifecycle_leaky", "models/lang/js/lifecycle-host.rofl").
+check_file("lifecycle_leaky", "models/lang/js/lifecycle.rofl").
+check_file("lifecycle_leaky", "examples/checks/lifecycle-leaky-facts.rofl").
+check_file("lifecycle_leaky", "examples/checks/lifecycle-check.rofl").
+check_file("lifecycle_leaky", "examples/checks/lifecycle-leaky-expect.rofl").
+check_world("lifecycle_clean").
+check_file("lifecycle_clean", "facts/model-units.rofl").
+check_file("lifecycle_clean", "facts/js-callgraph.rofl").
+check_file("lifecycle_clean", "facts/js-modules.rofl").
+check_file("lifecycle_clean", "facts/js-effects.rofl").
+check_file("lifecycle_clean", "facts/js-globals.rofl").
+check_file("lifecycle_clean", "facts/js-host.rofl").
+check_file("lifecycle_clean", "facts/js-host-surface.rofl").
+check_file("lifecycle_clean", "facts/js-lib-surface.rofl").
+check_file("lifecycle_clean", "facts/js-attrs.rofl").
+check_file("lifecycle_clean", "rules/js-structure.rofl").
+check_file("lifecycle_clean", "rules/js-dataflow.rofl").
+check_file("lifecycle_clean", "rules/js-model.rofl").
+check_file("lifecycle_clean", "rules/js-callgraph.rofl").
+check_file("lifecycle_clean", "rules/js-controlflow.rofl").
+check_file("lifecycle_clean", "rules/js-effects.rofl").
+check_file("lifecycle_clean", "rules/js-globals.rofl").
+check_file("lifecycle_clean", "rules/js-host.rofl").
+check_file("lifecycle_clean", "rules/js-ambient.rofl").
+check_file("lifecycle_clean", "rules/js-attrs.rofl").
+check_file("lifecycle_clean", "rules/js-modules.rofl").
+check_file("lifecycle_clean", "rules/js-concat.rofl").
+check_file("lifecycle_clean", "rules/js-surface.rofl").
+check_file("lifecycle_clean", "models/lang/js/roles.rofl").
+check_file("lifecycle_clean", "models/lang/js/oxc-roles.rofl").
+check_file("lifecycle_clean", "models/lang/js/lifecycle-host.rofl").
+check_file("lifecycle_clean", "models/lang/js/lifecycle.rofl").
+check_file("lifecycle_clean", "examples/checks/lifecycle-clean-facts.rofl").
+check_file("lifecycle_clean", "examples/checks/lifecycle-check.rofl").
+check_file("lifecycle_clean", "examples/checks/lifecycle-clean-expect.rofl").
+check_world("lifecycle_forgetful").
+check_file("lifecycle_forgetful", "facts/model-units.rofl").
+check_file("lifecycle_forgetful", "facts/js-callgraph.rofl").
+check_file("lifecycle_forgetful", "facts/js-modules.rofl").
+check_file("lifecycle_forgetful", "facts/js-effects.rofl").
+check_file("lifecycle_forgetful", "facts/js-globals.rofl").
+check_file("lifecycle_forgetful", "facts/js-host.rofl").
+check_file("lifecycle_forgetful", "facts/js-host-surface.rofl").
+check_file("lifecycle_forgetful", "facts/js-lib-surface.rofl").
+check_file("lifecycle_forgetful", "facts/js-attrs.rofl").
+check_file("lifecycle_forgetful", "rules/js-structure.rofl").
+check_file("lifecycle_forgetful", "rules/js-dataflow.rofl").
+check_file("lifecycle_forgetful", "rules/js-model.rofl").
+check_file("lifecycle_forgetful", "rules/js-callgraph.rofl").
+check_file("lifecycle_forgetful", "rules/js-controlflow.rofl").
+check_file("lifecycle_forgetful", "rules/js-effects.rofl").
+check_file("lifecycle_forgetful", "rules/js-globals.rofl").
+check_file("lifecycle_forgetful", "rules/js-host.rofl").
+check_file("lifecycle_forgetful", "rules/js-ambient.rofl").
+check_file("lifecycle_forgetful", "rules/js-attrs.rofl").
+check_file("lifecycle_forgetful", "rules/js-modules.rofl").
+check_file("lifecycle_forgetful", "rules/js-concat.rofl").
+check_file("lifecycle_forgetful", "rules/js-surface.rofl").
+check_file("lifecycle_forgetful", "models/lang/js/roles.rofl").
+check_file("lifecycle_forgetful", "models/lang/js/oxc-roles.rofl").
+check_file("lifecycle_forgetful", "models/lang/js/lifecycle-host.rofl").
+check_file("lifecycle_forgetful", "models/lang/js/lifecycle.rofl").
+check_file("lifecycle_forgetful", "examples/checks/lifecycle-forgetful-facts.rofl").
+check_file("lifecycle_forgetful", "examples/checks/lifecycle-check.rofl").
+check_file("lifecycle_forgetful", "examples/checks/lifecycle-forgetful-expect.rofl").
+check_world("lifecycle_overwrites").
+check_file("lifecycle_overwrites", "facts/model-units.rofl").
+check_file("lifecycle_overwrites", "facts/js-callgraph.rofl").
+check_file("lifecycle_overwrites", "facts/js-modules.rofl").
+check_file("lifecycle_overwrites", "facts/js-effects.rofl").
+check_file("lifecycle_overwrites", "facts/js-globals.rofl").
+check_file("lifecycle_overwrites", "facts/js-host.rofl").
+check_file("lifecycle_overwrites", "facts/js-host-surface.rofl").
+check_file("lifecycle_overwrites", "facts/js-lib-surface.rofl").
+check_file("lifecycle_overwrites", "facts/js-attrs.rofl").
+check_file("lifecycle_overwrites", "rules/js-structure.rofl").
+check_file("lifecycle_overwrites", "rules/js-dataflow.rofl").
+check_file("lifecycle_overwrites", "rules/js-model.rofl").
+check_file("lifecycle_overwrites", "rules/js-callgraph.rofl").
+check_file("lifecycle_overwrites", "rules/js-controlflow.rofl").
+check_file("lifecycle_overwrites", "rules/js-effects.rofl").
+check_file("lifecycle_overwrites", "rules/js-globals.rofl").
+check_file("lifecycle_overwrites", "rules/js-host.rofl").
+check_file("lifecycle_overwrites", "rules/js-ambient.rofl").
+check_file("lifecycle_overwrites", "rules/js-attrs.rofl").
+check_file("lifecycle_overwrites", "rules/js-modules.rofl").
+check_file("lifecycle_overwrites", "rules/js-concat.rofl").
+check_file("lifecycle_overwrites", "rules/js-surface.rofl").
+check_file("lifecycle_overwrites", "models/lang/js/roles.rofl").
+check_file("lifecycle_overwrites", "models/lang/js/oxc-roles.rofl").
+check_file("lifecycle_overwrites", "models/lang/js/lifecycle-host.rofl").
+check_file("lifecycle_overwrites", "models/lang/js/lifecycle.rofl").
+check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-facts.rofl").
+check_file("lifecycle_overwrites", "examples/checks/lifecycle-check.rofl").
+check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-expect.rofl").

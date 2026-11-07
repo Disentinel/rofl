@@ -88,9 +88,9 @@ fn a_tropical_tag_bounds_what_the_plain_rules_enumerate() {
         }
     }
     assert_eq!(got.len(), n * n);
-    for i in 0..n {
-        for j in 0..n {
-            assert_eq!(got.get(&format!("n{i},n{j}")), Some(&d[i][j]), "cost(n{i}, n{j})");
+    for (i, row) in d.iter().enumerate() {
+        for (j, dij) in row.iter().enumerate() {
+            assert_eq!(got.get(&format!("n{i},n{j}")), Some(dij), "cost(n{i}, n{j})");
         }
     }
     eprintln!("plain: {cut} cost facts when the budget cut it; tagged: {} facts, settled in {} steps", got.len(), ev2.steps);
@@ -122,12 +122,12 @@ fn viterbi_and_trust_are_the_fixed_points_of_their_semirings() {
         }
         loop {
             let mut moved = false;
-            for a in 0..n {
+            for row in &mut best {
                 for (b, c, w) in &es {
-                    if best[a][*b] >= 0 {
-                        let v = times(times(unit, *w), best[a][*b]);
-                        if v > best[a][*c] {
-                            best[a][*c] = v;
+                    if row[*b] >= 0 {
+                        let v = times(times(unit, *w), row[*b]);
+                        if v > row[*c] {
+                            row[*c] = v;
                             moved = true;
                         }
                     }
@@ -138,9 +138,9 @@ fn viterbi_and_trust_are_the_fixed_points_of_their_semirings() {
             }
         }
         assert_eq!(got.len(), n * n, "{name}: one fact per pair");
-        for a in 0..n {
-            for c in 0..n {
-                assert_eq!(got.get(&format!("n{a},n{c}")), Some(&best[a][c]), "{name}(n{a}, n{c})");
+        for (a, row) in best.iter().enumerate() {
+            for (c, bac) in row.iter().enumerate() {
+                assert_eq!(got.get(&format!("n{a},n{c}")), Some(bac), "{name}(n{a}, n{c})");
             }
         }
     }
@@ -171,10 +171,10 @@ fn counting_is_the_matrix_product_of_the_multiplicities() {
     let m3 = mul(&m2, &m);
     for (q, want) in [("two(A, C, N)", &m2), ("three(A, C, N)", &m3)] {
         let got = values(&mut s, q);
-        for i in 0..n {
-            for j in 0..n {
+        for (i, row) in want.iter().enumerate() {
+            for (j, &w) in row.iter().enumerate() {
                 let g = got.get(&format!("n{i},n{j}")).copied();
-                assert_eq!(g, (want[i][j] > 0).then_some(want[i][j]), "{q} at n{i}, n{j}");
+                assert_eq!(g, (w > 0).then_some(w), "{q} at n{i}, n{j}");
             }
         }
     }

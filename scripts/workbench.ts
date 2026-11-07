@@ -2,7 +2,7 @@
 // Publish the directory as an artifact with capabilities {db:{}, room:{}, sample:{}, user:{scopes:["profile"]}}, or serve it as it is.
 import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, readdirSync } from 'node:fs';
 import * as path from 'node:path';
-import { emitAll } from './emit.ts';
+import { emitAll, wasmScanner } from './emit.ts';
 import { FILES } from '../workbench/bench.ts';
 import { EXCHANGE } from '../workbench/github.ts';
 
@@ -12,8 +12,8 @@ const OUT = path.resolve(oi >= 0 ? argv[oi + 1] : `${ROOT}workbench/dist`);
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/lib`, { recursive: true });
 
-// a notebook opened from a link or a folder reads its code with the JS scanner, and the scanner with babel
-copyFileSync(`${ROOT}node_modules/@babel/parser/lib/index.js`, `${OUT}/lib/babel-parser.js`);
+// a notebook opened from a link or a folder reads its code with the JS scanner, which is oxc in wasm
+copyFileSync(wasmScanner(ROOT), `${OUT}/oxc_scan.wasm`);
 emitAll(ROOT, `${OUT}/lib`, ['workbench/page.ts']);
 const copy = (from: string, to: string) => { mkdirSync(path.dirname(`${OUT}/${to}`), { recursive: true }); copyFileSync(`${ROOT}${from}`, `${OUT}/${to}`); };
 for (const f of FILES) copy(f, f);

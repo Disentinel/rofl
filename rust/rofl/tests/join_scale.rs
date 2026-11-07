@@ -101,11 +101,11 @@ fn live_variables_are_the_iterative_solvers() {
         let (n, vars) = (25, 6);
         let mut succ: Vec<Vec<usize>> = vec![Vec::new(); n];
         let mut src = String::from("edb(succ).\nedb(use).\nedb(def).\n");
-        for i in 0..n {
+        for (i, out) in succ.iter_mut().enumerate() {
             for _ in 0..1 + r.next() % 2 {
                 let j = r.next() % n;
-                if !succ[i].contains(&j) {
-                    succ[i].push(j);
+                if !out.contains(&j) {
+                    out.push(j);
                     src.push_str(&format!("succ(b{i}, b{j}).\n"));
                 }
             }
@@ -253,7 +253,7 @@ fn every_door_reads_a_set_by_its_value() {
     assert!(s.ask("r(k, set(Y))").is_ok(), "set(Y) has one spelling");
     let why = s.why("r(k, set(b, a))").unwrap();
     assert!(why.contains("[lattice union: a cover of 2 contributions]"), "{why}");
-    let b = rofl::engine::WhynotBounds { max_depth: 4, max_nodes: 64 };
+    let b = rofl::engine::WhynotBounds { max_depth: 4, max_nodes: 64, all: false };
     let (holds, text) = s.whynot("r(k, set(a, a, b))", &b).unwrap();
     assert!(holds, "{text}");
     assert!(s.whynot("r(k, set(b, Y))", &b).is_err());

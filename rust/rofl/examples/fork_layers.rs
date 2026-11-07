@@ -55,7 +55,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let src = std::fs::read_to_string(&args[0]).unwrap();
     let vols: Vec<String> = args[1..].iter().map(|p| std::fs::read_to_string(p).unwrap()).collect();
-    let mut cc = core(&src);
+    let cc = core(&src);
     let mut cl = core(&src);
     println!("core facts={} ids={}", cc.eval.store.fact_count(), cc.eval.store.len_ids());
 
@@ -92,7 +92,7 @@ fn main() {
         let mut held: Vec<Session> = vols
             .iter()
             .map(|v| {
-                let f = if layer { cl.fork() } else { Session { eval: cc.eval.fork(), dangling: cc.dangling, asks: cc.asks, kept: None } };
+                let f = if layer { cl.fork() } else { Session { eval: cc.eval.fork(), dangling: cc.dangling, asks: cc.asks, kept: Default::default(), post: None, sent: Default::default(), profiled: cc.profiled } };
                 volume(f, v)
             })
             .collect();

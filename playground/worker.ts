@@ -1,7 +1,8 @@
 // The worker: the host behind messages, so a run never freezes the page.
-import { init, run, why, explain } from './host.ts';
+import { init, run, why, explain, scanner: useWasm } from './host.ts';
+import { useWasm } from '../scanners/oxc_wasm.ts';
 
-const ops: Record<string, (...a: never[]) => unknown> = { init, run, why, explain };
+const ops: Record<string, (...a: never[]) => unknown> = { init, run, why, explain, scanner: useWasm };
 self.onmessage = (e: MessageEvent) => {
   const { id, op, args } = e.data;
   try { postMessage({ id, ok: true, value: ops[op](...(args as never[])) }); } catch (err) { postMessage({ id, ok: false, error: (err as Error).message }); }

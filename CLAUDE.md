@@ -58,7 +58,7 @@ Before a brief goes to a worker, the coordinator answers these in it:
     npm run findings         the ledger, rendered
     npm run features         what the system can do, which demo shows it, what promises it
     npm run repl             `? L`, `why L`, `whynot L`, `excise F`, `budget N { CMD }`; answers in sentences where a phrase exists, asks in them, loads a `.rofl.md` world
-    npm run scan             -- <dir> [--out F]   a directory of JS/TS in, the facts the JS model reads out; then `rofl why L @rules/js.files F` (docs/cli.md)
+    npm run scan             -- <dir> [--out F]   a directory of JS/TS in, oxc's tree (rust/tools/oxc_scan, [ast_oxc]) and the host's path and string facts out; then `rofl why L @rules/js.files F`, whose models/lang/js/oxc-roles.rofl reads the tree into the roles (docs/cli.md). The notebook host still scans with Babel
     npm run report           -- <files>   the epistemic report over a set of packs
     npm run depends          · cleanliness · layering · nullary — the models over the tree itself
     npm run speccheck        every duty in facts/spec.rofl, and which check stands for it; `-- --write` rewrites the [checks] book
@@ -68,12 +68,20 @@ Before a brief goes to a worker, the coordinator answers these in it:
     npm run conform          `-- [--break sign|escape|rank|book|refusal] [files]`   the host of ring 1 checked against examples/ring1/host.rofl, clause by clause; `--break` spoils one duty so the check is seen to fail
     npm run nb               -- <file.rofl.md> [--json] [--cell N] [--all]   run a notebook (`--all`: every answer, and every why's proof whole instead of the value's steps and the proof with its side conditions counted, docs/md-world.md); runs go to a kept kernel started on first use, so a cell edit costs the cells; `ROFL_NB_DAEMON=0` runs in-process; `-- vocab [word]` lists the sentences a cell can use; `-- edit F --cell N [--lang L]` writes the new text of cell N from stdin and refuses, file untouched, unless it reads back as written. **Edit a `.rofl.md` only so**: VS Code opens it as a notebook, and `create_file` / `replace_string_in_file` / `edit_notebook_file` shred it or drop a cell's fence
     npm run whycheck         `-- [world ...]`   `why`, `why all`, `whynot`, `excise` from `rofl serve` and `rofl load` against src/api.ts, byte for byte and refusals included, over every world `npm test` loads, aggregate worlds too, pooled over ROFL_JOBS processes; needs `cargo build --release` in rust/
-    npm run structures       `-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure` and `alias` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/
+    npm run structures       `-- [--min-rows N] <files>`   the detection report: over boot.rofl and the files, read-only, which `function`, `tree ... closure`, `alias`, `ordered`, `sequence`, `span`, `equivalence` and `dag` declarations of docs/data-structures.md the data of a world would take, with the rows each saves and the near misses with their facts; `-- --check` runs the proof fixture against its committed report; needs `cargo build --release` in rust/
     npm run test:split       the surface-split parity gate (docs/surface-split.md): each file of examples/vscode/mini and split alone with the others' [surface] facts must equal the whole world fact for fact, forward and reverse, Rust then TypeScript; run it after touching a rule of rules/js-*.rofl that reads across files, and `scripts/surface_split.ts --break naive` (or `nosurface`) must be red
     npm run bench            `[-- --write]`   the reference benchmark: vscode at a pinned commit, the side-effect question, the median of three runs of each measure (the cone and the witnessed world at 250 files, adding a file and opening a kept world at 20) on the Rust release build, against the last version in facts/bench.rofl; `--write` appends this version's medians there. Run it on a quiet machine before a release
     npm run test:npm         the npm packages `npm run dist` packed (@grafema/rofl and this machine's @grafema/rofl-<os>-<cpu>), installed from the tarballs alone into an empty prefix with an empty HOME and no registry, and run from outside the tree: `rofl ask`, `rofl scan` and the JS model by `@rules/js.files`, a kept world, `rofl-nb`, the library; and the faults that must be loud (no engine, an engine of another version, a tag of another version, a signal). Run it after touching scripts/dist.ts, npm/ or how the engine finds its tree
+    npm run engine           `[-- REF]`   the Rust engine's own code as facts (rust/tools/rs_scan), for the model of the engine in models/engine/: its parts, glossary and call paths (`npm run nb -- models/engine/parts.rofl.md`); with REF (a commit or A..B) the tree as REF left it and the lines it changed, and `npm run nb -- models/engine/blast.rofl.md` says what the change touches: functions, callers, verbs, parts, words
+    npm run test:roles       `-- [DIR...] [--cost] [--fixture]`   the roles layer of the JS model (models/lang/js: roles.rofl the vocabulary, oxc-roles.rofl the converter from oxc's tree, scanned by rust/tools/oxc_scan): each file's roles alone must equal its roles in the whole world, the audits (a kind with no role and no reason, an identifier in no role, a role the vocabulary does not declare) must be empty, and the same world with a rule planted across files (`--break cross`) must be red; `--cost` adds raw facts in, roles out and peak memory; `--fixture` rewrites examples/checks/roles-oxc-facts.rofl for the world roles_oxc
+    npm run scan:oxc         -- <dir> [FILE...] [--out F]   oxc's tree alone, without the host facts (rust/tools/oxc_scan, which `npm run scan` runs): raw, in [ast_oxc] (node, line, start, child, attr, file, parse_error); models/lang/js/oxc-roles.rofl reads it into the roles (docs/cli.md)
+    npm run refine           `-- <files> [--out F]`   the refine loop over a world: ask (the order and width of every rule, from the profile), reflect (models/engine/plan.rofl beside models/engine/profile.rofl in a world of its own: the plan facts and the width each forecasts), refine (the facts written to F, or stdout, to travel with the model), ask again (the width under them); the report on stderr sets before, forecast and after side by side and marks a plan that cost more `worse`; `-- --check` runs it over examples/checks/plan-world.rofl and judges it; needs `cargo build --release` in rust/. The agent's skill for the loop is .claude/skills/refine-plan/SKILL.md
 
 <!-- END commands -->
+
+The Rust code's form has a gate of its own, no npm script: from rust/, `cargo clippy -p rofl --all-targets -- -D warnings`
+exits 0, and CI runs it on every push and pull request (job `clippy`, the toolchain pinned to 1.95.0, beside a
+`cargo check --features breaks`). The lints the style overrules are in rust/rofl/Cargo.toml, `[lints.clippy]`.
 
 Knobs: **fewer is the rule** (owner, 2026-10-05). The interface has as few tools
 as possible, and what is configuration goes in as a config, a preset or a view,
@@ -144,9 +152,30 @@ Decided by the owner; each is a finding, read it before arguing with it.
   `derived_by` when something asks. A world that asks `asks(R)` runs only the
   rules R needs, and a question outside the cone is refused, not answered
   wrong (docs/demand-cones.md).
+- **A corpus lives as volumes** (owner, 2026-10-25). A file is scanned into a
+  volume of its own, cooled to disk, and a thin `[surface]` of what escapes it
+  stays beside it. It is to be the engine's default behaviour, not a command
+  of its own (owner, 2026-10-25): `rofl ask` and `rofl why` now evaluate a
+  corpus by volumes on a worker a core by themselves, but keep every volume
+  on the heap, not cooled; before a run over more files than one
+  heap holds, read docs/cli.md, *A corpus larger than one heap*, for the parts
+  that exist and how to run them, and say which one the run uses.
 
 What changed for an agent, and the known gaps, are in docs/releases/1.5.md
 (and 1.4.md, 1.3.md, 1.2.md, 1.1.md before it).
+
+## Where an agent finds a feature
+
+docs/cli.md is the agent's manual of the engine: every verb, the kept worlds,
+the exit codes, the `rofl serve` protocol, the paths for a corpus larger than
+one heap and what `hot:` on stderr means. guide/ is the book for a person using
+`rofl-nb` (guide/AGENTS.md for an agent in another project). docs/ holds the
+design decisions; README.md, *What is in the tree*, maps the rest.
+
+**A feature is done when an agent reading only this file and docs/cli.md finds
+it**: its command, or one line saying it has none yet and which harness drives
+it. A capability that lives only in a script's header, a design note or a
+finding is not findable, and the next agent builds around it.
 
 ## Testing has a hard limit
 

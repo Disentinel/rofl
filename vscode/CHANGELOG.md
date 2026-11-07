@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.0 (preview, ROFL 1.6.0)
+
+- **ROFL: Open notebook from GitHub…** opens a notebook of any repository the
+  editor's GitHub account can read, private ones too, without a clone; a link
+  it cannot read says why (docs/workbench.md).
+- Cells evaluate in a fork of the Rust engine's world, and a notebook runs
+  only the rules its lines ask about.
+- A notebook with `model: js` scans its code with oxc, Babel is gone; the
+  browser workbench runs the same scanner compiled to wasm.
+- The kernel is ROFL 1.6.0. See docs/releases/1.6.md.
+
 ## 1.5.1 (preview, ROFL 1.5.1)
 
 - The rounds of one evaluation share its budget: a world whose adapter answer

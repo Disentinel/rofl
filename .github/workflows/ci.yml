@@ -32,11 +32,17 @@ jobs:
           npm ci
           npx tsc -p tsconfig.json
       # THE GOLDENS RUN THE RUST ENGINE. `npm test` and goldens.ts spawn
-      # rust/target/release binaries; CI built none, so bun died on ENOENT.
+      # rust/target/release binaries; CI built none, so bun died on ENOENT. The wasm target is the notebook's scanner (oxc_scan.wasm).
       - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: rust }
+        with:
+          workspaces: |
+            rust
+            rust/tools/oxc_scan
       - run: cd rust && cargo build --release
+      # the scanner `rofl scan` and the JS worlds run (scanners/cli.ts)
+      - run: cd rust/tools/oxc_scan && cargo build --release
       # THE KEEP, AND WHERE IT IS NOT TRUSTED. `npm test` reads back a world's answer kept under the hash of everything
       # it is a function of (scripts/keep.ts), so a pull request runs warm on the keep of earlier runs. A wrongly kept
       # answer that equals the golden would turn a real regression green, so a push to main and a release tag run COLD,
@@ -61,6 +67,41 @@ jobs:
           node --experimental-strip-types scripts/dist.ts
           node --experimental-strip-types scripts/npm_check.ts
 
+  # THE ENGINE'S CODE READS AS RUST. Every target of the crate clean under clippy, a warning a red; the lints the
+  # style overrules are in rust/rofl/Cargo.toml, [lints.clippy], each with its reason. The toolchain is pinned so
+  # that the lint set moves only when it is bumped here, not with each stable release. The planted-fault build is
+  # checked beside it: a lint fix in the normal build can remove a binding only a fault uses (src/breaks.rs).
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with: { components: clippy }
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: clippy }
+      - run: cd rust && cargo clippy -p rofl --all-targets -- -D warnings
+      - run: cd rust && cargo check -p rofl --all-targets --features breaks
+        env: { RUSTFLAGS: -D warnings }
+
+  # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
+  # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
+  # Not blocking while its control is red on main: f_the_fault_harness_control_is_red_on_main. Blocking again once it is green.
+  breaks:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: rust, key: breaks }
+      - run: npm ci
+      - name: planted faults
+        env: { ROFL_JOBS: 4 }
+        run: npm run test:agg:breaks
+
   # EVERY PLATFORM COMPILES BEFORE A MERGE. The engine job below builds each platform on main and on a tag only, so
   # a pull request that breaks one is green until it lands: bin/rofl/kept.rs called statvfs and kill, and win32 was
   # red on main for five merges and blocked the 1.4.0 release. A cargo check per target, on every push and pull
@@ -72,7 +113,7 @@ jobs:
         include:
           - { triple: x86_64-pc-windows-msvc, os: windows-latest }
           - { triple: x86_64-pc-windows-gnu, os: ubuntu-latest, apt: gcc-mingw-w64-x86-64 }
-          - { triple: x86_64-apple-darwin, os: macos-14 }
+          - { triple: x86_64-apple-darwin, os: macos-15 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -97,8 +138,8 @@ jobs:
         include:
           - { target: linux-x64, os: ubuntu-latest }
           - { target: linux-arm64, os: ubuntu-24.04-arm }
-          - { target: darwin-x64, os: macos-14, triple: x86_64-apple-darwin }
-          - { target: darwin-arm64, os: macos-14 }
+          - { target: darwin-x64, os: macos-15, triple: x86_64-apple-darwin }
+          - { target: darwin-arm64, os: macos-15 }
           - { target: win32-x64, os: windows-latest }
     runs-on: ${{ matrix.os }}
     steps:
@@ -106,12 +147,21 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: '${{ matrix.triple }}' }
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: rust, key: '${{ matrix.target }}' }
+        with: { workspaces: 'rust\nrust/tools/oxc_scan', key: '${{ matrix.target }}' }
       - run: cd rust && cargo build --release --bin rofl ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
+      - run: cd rust/tools/oxc_scan && cargo build --release ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
+      # the engine and its scanner, side by side: rust/target/rofl-<target>/ for dist
+      - shell: bash
+        run: |
+          mkdir stage
+          x=${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
+          t=${{ matrix.triple && format('{0}/', matrix.triple) || '' }}
+          cp rust/target/${t}release/rofl$x stage/
+          cp rust/tools/oxc_scan/target/${t}release/oxc_scan$x stage/
       - uses: actions/upload-artifact@v4
         with:
           name: rofl-${{ matrix.target }}
-          path: rust/target/${{ matrix.triple && format('{0}/', matrix.triple) || '' }}release/rofl${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
+          path: stage/*
 
   vsix:
     needs: engine
@@ -124,13 +174,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown }
       - run: npm ci && (cd vscode && npm ci)
       # each platform's engine in rust/target/rofl-<target>; this runner's own in release, which the guide check runs
       - uses: actions/download-artifact@v4
         with: { path: rust/target }
       - name: one VSIX per platform
         run: |
-          chmod +x rust/target/rofl-*/rofl*
+          chmod +x rust/target/rofl-*/*
           mkdir -p rust/target/release vsix && cp rust/target/rofl-linux-x64/rofl rust/target/release/
           for t in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
             node --experimental-strip-types scripts/dist.ts --target $t

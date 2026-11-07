@@ -4,7 +4,7 @@
 //! built").
 use rofl::cell::AggOp;
 use rofl::session::Session;
-use rofl::store::PremRef;
+use rofl::store::Prem;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::time::Instant;
@@ -184,8 +184,8 @@ fn a_budget_cut_leaves_every_quorum_closed() {
             let mut top = 0;
             let mut last = 0;
             for m in ms {
-                let roots: Vec<u32> = st.member_prems(m).iter().filter_map(|p| if let PremRef::Fact(f) = p { Some(*f) } else { None }).collect();
-                let mut memo = HashMap::new();
+                let roots: Vec<u32> = st.member_prems(m).iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }).collect();
+                let mut memo = rofl::store::Heights::default();
                 st.heights(&roots, &mut memo).unwrap();
                 let want = 1 + roots.iter().map(|f| memo[f]).max().unwrap_or(0);
                 assert_eq!(m.height, want, "budget {b}: a member of {desc}");

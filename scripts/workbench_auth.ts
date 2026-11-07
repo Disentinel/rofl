@@ -274,13 +274,13 @@ await said('worker', async () => {
   want((await (await ask({ kind: 'oauth', revoke: 'gho' })).json()).revoked === false, 'worker: a revoke GitHub answered 404 was said to be revoked');
 });
 
-// the page runs no script but its own and ELK pinned by its hash, and fetches only from its own files, GitHub and the worker
+// the page runs no script but its own and ELK pinned by its hash (and may compile wasm: its scanner is oxc, which is no script), and fetches only from its own files, GitHub and the worker
 await said('policy', async () => {
   const root = path.dirname(path.dirname(lib));
   const csp = /<meta http-equiv="Content-Security-Policy" content="([^"]*)">/.exec(readFileSync(path.join(root, 'index.html'), 'utf8'))?.[1] ?? '';
   const d: Record<string, string> = Object.fromEntries(csp.split(';').map((x) => x.trim().split(/\s+/)).map(([k, ...v]) => [k, v.join(' ')]));
   const pic = readFileSync(path.join(root, 'lib/pictures.js'), 'utf8'), elk = /export const ELK = '([^']+)'/.exec(pic)?.[1];
-  want(elk && d['script-src'] === `'self' ${elk}` && d['object-src'] === "'none'" && d['base-uri'] === "'none'" && d['img-src'] === "'self' data:"
+  want(elk && d['script-src'] === `'self' 'wasm-unsafe-eval' ${elk}` && d['object-src'] === "'none'" && d['base-uri'] === "'none'" && d['img-src'] === "'self' data:"
     && /^'self' https:\/\/api\.github\.com https:\/\/raw\.githubusercontent\.com https:\/\/[^\s/]+$/.test(d['connect-src'] ?? ''), `policy: the page's Content-Security-Policy is "${csp}"`);
   want(pic.includes('s.integrity = CDN[src];') && /sha384-[A-Za-z0-9+/]{64}/.test(pic) && pic.includes("s.crossOrigin = 'anonymous';"), 'policy: ELK is loaded without its hash');
 });

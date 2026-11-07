@@ -124,7 +124,7 @@ impl Eval {
             }
             let mut at: Vec<Term> = Vec::new();
             let fits = p.sproj.iter().zip(m.iter()).all(|(t, x)| {
-                if self.holds_unknown(*x) {
+                if self.unk.holds_unknown(&self.h, &self.v, *x) {
                     return true;
                 }
                 match (self.unk_parts(*t), self.by_parts(*t)) {
@@ -148,7 +148,7 @@ impl Eval {
         p.sure
             && !p.neg
             && p.pat.iter().zip(&p.lab).all(|(t, l)| t.is_some() || l.is_some())
-            && p.sproj.iter().all(|t| !self.holds_unknown(*t) || self.unk_parts(*t).is_some() || self.by_parts(*t).is_some())
+            && p.sproj.iter().all(|t| !self.unk.holds_unknown(&self.h, &self.v, *t) || self.unk_parts(*t).is_some() || self.by_parts(*t).is_some())
     }
 
     /// How many regions `nl` labels have over `nc` constants: each takes a

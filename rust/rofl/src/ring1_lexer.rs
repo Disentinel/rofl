@@ -50,12 +50,12 @@ pub fn step(k: &[Kind], i: usize, s: State) -> State {
     match s {
         State::Cmt => {
             if at(0) == Some(Kind::Nl) { return State::Code; }
-            if !(at(0) == Some(Kind::Nl)) { return State::Cmt; }
+            if at(0) != Some(Kind::Nl) { return State::Cmt; }
             State::Cmt
         }
         State::Code => {
-            if at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash) && !(at(0) == Some(Kind::Quote)) { return State::Cmt; }
-            if !(at(0) == Some(Kind::Quote)) && !(at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash)) { return State::Code; }
+            if at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash) && at(0) != Some(Kind::Quote) { return State::Cmt; }
+            if at(0) != Some(Kind::Quote) && !(at(0) == Some(Kind::Dash) && at(1) == Some(Kind::Dash)) { return State::Code; }
             if at(0) == Some(Kind::Quote) { return State::Str; }
             State::Code
         }
@@ -63,7 +63,7 @@ pub fn step(k: &[Kind], i: usize, s: State) -> State {
             State::Str
         }
         State::Str => {
-            if !(at(0) == Some(Kind::Quote)) && !(at(0) == Some(Kind::Backslash)) { return State::Str; }
+            if at(0) != Some(Kind::Quote) && at(0) != Some(Kind::Backslash) { return State::Str; }
             if at(0) == Some(Kind::Backslash) { return State::Esc; }
             if at(0) == Some(Kind::Quote) { return State::Code; }
             State::Str
@@ -73,12 +73,16 @@ pub fn step(k: &[Kind], i: usize, s: State) -> State {
 
 /// `st/2` for every position: the state the automaton is IN at i.
 pub fn states(src: &str) -> Vec<State> {
-    let k: Vec<Kind> = src.chars().map(kind_of).collect();
+    states_of(&src.chars().map(kind_of).collect::<Vec<Kind>>())
+}
+
+/// `states` over the kinds of the characters, read once by a caller that keeps them.
+pub fn states_of(k: &[Kind]) -> Vec<State> {
     let mut out = Vec::with_capacity(k.len());
     let mut s = State::Code;
     for i in 0..k.len() {
         out.push(s);
-        s = step(&k, i, s);
+        s = step(k, i, s);
     }
     out
 }

@@ -6,6 +6,7 @@ import type { Run, Shown } from './render.ts';
 import type { Cell as Ask } from './worker.ts';
 import type { NbCellOut } from '../notebook/kernel.ts';
 import { lsp } from './lsp.ts';
+import { fetchNotebook } from './github.ts';
 import { HARNESSES, standing } from '../notebook/model.ts';
 import { VIEW_MIME, type View } from '../notebook/draw.ts';
 import { backendOf } from '../notebook/draw-text.ts';
@@ -392,7 +393,9 @@ export function activate(ctx: vscode.ExtensionContext) {
     vscode.commands.registerCommand('rofl-notebook.restart', restart),
     vscode.workspace.onDidChangeConfiguration((e) => { if (e.affectsConfiguration('rofl.engine')) restart(); }),
     vscode.commands.registerCommand('rofl-notebook.reading', readingView),
-    vscode.commands.registerCommand('rofl-notebook.chooseModel', chooseModel));
+    vscode.commands.registerCommand('rofl-notebook.chooseModel', chooseModel),
+    vscode.commands.registerCommand('rofl-notebook.openGitHub', (link?: string) => openGitHub(ctx, link)),
+    vscode.window.registerUriHandler({ handleUri: (u) => { const gh = new URLSearchParams(u.query).get('gh'); if (u.path === '/open' && gh) void openGitHub(ctx, gh); } }));
   translations();
   /** Reading view: the inputs of the sentences and datalog cells collapsed to their first line, their outputs kept, and back. VS Code keeps it
    *  in the editor's view state; the file never sees it. A bare cell is prose as written and stays open. The indices it acted on. */
@@ -412,4 +415,17 @@ export function activate(ctx: vscode.ExtensionContext) {
     void vscode.window.tabGroups.close(tab).then(() => vscode.commands.executeCommand('vscode.openWith', uri, TYPE));
   }
   return { result: (uri: vscode.Uri) => results.get(uri.toString()), verdict: (cell: vscode.NotebookCell) => verdict(cell).map((i) => i.text), notes: (file: string) => [...notesOn(file, false), ...notesOn(file, true)] };
+}
+
+/** A notebook on GitHub, read with the editor's GitHub sign-in into a copy, opened; `vscode://GrafemaLabs.rofl/open?gh=owner/repo/path@ref` too. */
+async function openGitHub(ctx: vscode.ExtensionContext, link?: string) {
+  link ??= await vscode.window.showInputBox({ prompt: 'A notebook on GitHub, private ones too: its link, or owner/repo/path.rofl.md@ref', placeHolder: 'https://github.com/owner/repo/blob/main/notebook.rofl.md' });
+  if (!link) return;
+  try {
+    const file = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'ROFL: reading the notebook from GitHub' }, () => fetchNotebook(link!, ctx.globalStorageUri.fsPath, async () => {
+      const s = await vscode.authentication.getSession('github', ['repo'], { createIfNone: true });
+      return { token: s.accessToken, login: s.account.label };
+    }));
+    await vscode.window.showNotebookDocument(await vscode.workspace.openNotebookDocument(vscode.Uri.file(file)));
+  } catch (e) { void vscode.window.showErrorMessage(`ROFL: ${(e as Error).message}`); }
 }

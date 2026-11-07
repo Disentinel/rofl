@@ -34,7 +34,7 @@ fn a_world_kept_as_a_volume_opens_as_itself() {
             bad.push(format!("{name}: opens as another, {}", first_diff(&want, &got)));
             continue;
         }
-        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.subs.keys().copied()).map(|r| s.eval.h.name(r).to_string()).collect();
+        let rels: Vec<String> = s.eval.store.lat_regs.iter().map(|r| r.rel).chain(s.eval.lat.subs().map(|(p, _)| p)).map(|r| s.eval.h.name(r).to_string()).collect();
         for rel in rels {
             for k in s.fact_keys(Some(&rel)).into_iter().take(40) {
                 let (a, b) = (s.why_all(&k), o.why_all(&k));
@@ -92,8 +92,9 @@ fn edits_kept_as_overlays_open_as_the_fresh_world() {
     let mut below = move |k: usize| { seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17; (seed % k as u64) as usize };
     for step in 0..6 {
         let mut o = Session::open_volume(&from, BUDGET).unwrap_or_else(|e| panic!("step {step}: {e}"));
-        let base = o.kept.clone().unwrap();
-        assert_eq!(base.path, at("base.vol"), "step {step}: the base is the one whole volume");
+        let chain = o.kept.files.clone();
+        assert_eq!(chain[0].path, at("base.vol"), "step {step}: the chain starts at the one whole volume");
+        assert_eq!(chain.len(), step + 1, "step {step}: each overlay is kept over the one before it");
         let out: Vec<String> = (0..1 + below(4)).map(|_| facts.swap_remove(below(facts.len()))).collect();
         let (ids, _, _) = o.facts_of(&out.join("\n")).unwrap();
         o.retract_set_delta(&ids).unwrap().unwrap();
@@ -101,7 +102,7 @@ fn edits_kept_as_overlays_open_as_the_fresh_world() {
         o.load_delta(&more.join("\n"), None).unwrap();
         facts.extend(more);
         let path = at(&format!("over{step}.vol"));
-        let bytes = o.keep_volume_as(&path, "", None, Some(&base)).unwrap();
+        let bytes = o.keep_volume_as(&path, "", None, &chain).unwrap();
         assert!(bytes * 32 < base_bytes, "step {step}: an overlay of {bytes} bytes over a base of {base_bytes}");
         let mut back = Session::open_volume(&path, BUDGET).unwrap_or_else(|e| panic!("step {step}: {e}"));
         let (got, want) = (state(&mut back), fresh(&facts));

@@ -74,8 +74,9 @@ $ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
 
 `partial` равно `false`: каждая строка, которая следует из фактов, на месте.
 Оно становится `true`, а код выхода — 5, когда вычисление оборвал бюджет или
-не удалось сканирование; тогда строк может не хватать, и вывод говорит об
-этом прямо, вместо того чтобы выдать короткий список за полный.
+предел памяти, доступной процессу, или не удалось сканирование; тогда строк
+может не хватать, и вывод говорит об этом прямо, вместо того чтобы выдать
+короткий список за полный.
 
 ## Почему
 
@@ -83,28 +84,28 @@ $ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
 ```
 $ rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23
 risky[main]("checkout")  <= re667b5bf @tick 0
-  fn_name[code](n017f49dbfbe9e0a8_fa4unkv52g4,"checkout")  <= r4664ba89 @tick 0
-    ast_node[code](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [axiom]
-    ast_child[code](n017f49dbfbe9e0a8_fa4unkv52g4,id,0,n017f49dbfbe9e0a8_pi9h9ptud43) [axiom]
-    ast_name[code](n017f49dbfbe9e0a8_pi9h9ptud43,"checkout")  <= r4a879967 @tick 0
-      ast_attr[code](n017f49dbfbe9e0a8_pi9h9ptud43,name,"checkout") [axiom]
-  exported_fn[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= r0df9c422 @tick 0
-    fn_node[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= re519a619 @tick 0
-      fn_kind[main](function_declaration) [axiom]
-      ast_node[code](n017f49dbfbe9e0a8_fa4unkv52g4,function_declaration,"checkout.js") [axiom]
-    not in_fn[code](n017f49dbfbe9e0a8_fa4unkv52g4) [finite failure]
-      whynot in_fn[code](n017f49dbfbe9e0a8_fa4unkv52g4):
-        rule r61bef758: in_fn[code](?N)@now :- nearest_v[flow](?_$0,?N)@now
-          failed premise: nearest_v[flow](?_$0#0,n017f49dbfbe9e0a8_fa4unkv52g4)
-    ast_within[code](n017f49dbfbe9e0a8_9l7lmkrrho2,n017f49dbfbe9e0a8_fa4unkv52g4)  <= rd361b6b6 @tick 0
-      ast_in[code](n017f49dbfbe9e0a8_9l7lmkrrho2,n017f49dbfbe9e0a8_fa4unkv52g4)  <= r9e3f8aba @tick 0
-        ast_child[code](n017f49dbfbe9e0a8_9l7lmkrrho2,declaration,0,n017f49dbfbe9e0a8_fa4unkv52g4) [axiom]
-    ast_node[code](n017f49dbfbe9e0a8_9l7lmkrrho2,export_named_declaration,"checkout.js") [axiom]
-    export_kind[main](export_named_declaration) [axiom]
-  may_throw[code](n017f49dbfbe9e0a8_fa4unkv52g4)  <= rbef6bec0 @tick 0
-    may_throw[code](na31b9c7ff583580b_v300rg8uh91)  <= r8e0a1ee0 @tick 0
-      throws_outright[code](na31b9c7ff583580b_v300rg8uh91)  <= rd720c658 @tick 0
-        ast_node[code](na31b9c7ff583580b_o5a7dfnm0m1,throw_statement,"pay.js") [axiom]
+  fn_name[code](n017f49dbfbe9e0a8_en4a19n90pa5f,"checkout")  <= rb448fa01 @tick 0
+    fn_node[code](n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r631ec945 @tick 0
+      body[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_einjg9erj696f)  <= rc5fd0cdb @tick 0
+        ox_fn_node[main](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r6e736128 @tick 0
+          oxc_k[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function)  <= r30763fea @tick 0
+            node[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function,"checkout.js") [axiom]
+          not ox_wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f) [finite failure]
+            whynot ox_wrapped_fn[main](n017f49dbfbe9e0a8_en4a19n90pa5f):
+              rule r8433a96c: ox_wrapped_fn[main](?Fn)@now :- ox_method_member[main](?_$0,?Fn)@now
+                failed premise: ox_method_member[main](?_$0#0,n017f49dbfbe9e0a8_en4a19n90pa5f)
+              rule r295bcd7b: ox_wrapped_fn[main](?Fn)@now :- ox_type_only_method[main](?_$0,?Fn)@now
+                failed premise: ox_type_only_method[main](?_$0#1,n017f49dbfbe9e0a8_en4a19n90pa5f)
+        oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f)  <= rce71f102 @tick 0
+          child[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,body,0,n017f49dbfbe9e0a8_einjg9erj696f) [axiom]
+          unwrapped[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,n017f49dbfbe9e0a8_einjg9erj696f)  <= r89ad7666 @tick 0
+            node[ast_oxc](n017f49dbfbe9e0a8_einjg9erj696f,function_body,"checkout.js") [axiom]
+            not ox_wrapper_kind[main](function_body) [finite failure]
+              whynot ox_wrapper_kind[main](function_body):
+                no rule concludes 'ox_wrapper_kind' and no matching base fact exists
+    target[value](n017f49dbfbe9e0a8_en4a19n90pa5f,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= rc88cb927 @tick 0
+      oxc_k[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,function) [above]
+      oxc_c[ast_oxc](n017f49dbfbe9e0a8_en4a19n90pa5f,id,0,n017f49dbfbe9e0a8_5dtpbvqf99hq1)  <= rce71f102 @tick 0
 ```
 <!-- END run -->
 
@@ -121,22 +122,31 @@ risky[main]("checkout")  <= re667b5bf @tick 0
 
 ## Почему нет
 
-<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' --depth 1 @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl -->
 ```
-$ rofl whynot 'risky("safeCheckout")' --depth 1 @rules/js.files shop.rofl
+$ rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl
 whynot risky[main]("safeCheckout"):
   rule re667b5bf: risky[main](?N)@now :- fn_name[code](?F,?N)@now, exported_fn[code](?F)@now, may_throw[code](?F)@now
-    failed premise: may_throw[code](n017f49dbfbe9e0a8_gjdh70j2637)
+    failed premise: may_throw[code](n017f49dbfbe9e0a8_0o34j1j12he7d)
+      rule rbef6bec0: may_throw[code](?F)@now :- may_throw[code](?G)@now, sync_body[code](?G)@now, resolves[code](?C,?G)@now, nearest_fn[code](?F,?C)@now, not caught_here[code](?C)@now
+        failed premise: not caught_here[code](n017f49dbfbe9e0a8_fr031il3tivb6) -- blocked: caught_here[code](n017f49dbfbe9e0a8_fr031il3tivb6) holds
+  (every failure: --all)
 ```
 <!-- END run -->
 
 Единственное правило, которое могло бы заключить `risky("safeCheckout")`, и
-посылка, которая не выполнилась: `may_throw` узла, который и есть
-`safeCheckout`. `--depth 2` идёт на одно правило дальше и среди способов,
-которыми `may_throw` мог бы выполниться, называет тот, что был перекрыт:
-`not caught_here(C)` не выполняется, потому что выполняется
-`caught_here(C)` — вызов `checkout` стоит внутри `try`. Каждый уровень вниз
-умножает число строк; `--depth N` и `--nodes N` ограничивают обход.
+посылка, которая в нём не выполнилась: `may_throw` узла, который и есть
+`safeCheckout`. На одно правило ниже — почему не выполнилась она. Функция
+может бросить исключение, когда вызывает другую, которая может его бросить,
+если только вызов не перехвачен, а здесь он перехвачен: `not caught_here(C)`
+перекрыто, потому что выполняется `caught_here(C)` — вызов `checkout` стоит
+внутри `try`.
+
+`whynot` перебирает все пути, которыми правило могло бы выполниться, и
+печатает ближайший — тот, где осталось меньше всего невыполненных условий.
+Последняя строка, `(every failure: --all)`, говорит, что были и другие;
+`rofl whynot --all` печатает их все. `--depth N` и `--nodes N` ограничивают,
+как далеко заходит обход.
 
 ## Чего он не видел
 
@@ -154,6 +164,22 @@ F = "checkout.js", L = 2, S = "./log.js"
 файлом и строкой. Агент, который спрашивает о коде, должен задавать и этот
 вопрос: ответ над миром с неразрешённым импортом выполняется лишь настолько,
 насколько модель видит.
+
+Импорт — не единственное место, где модель может потерять нить, и у каждого
+из остальных есть своё отношение, о котором спрашивают так же:
+
+| отношение | выполняется для |
+|---|---|
+| `unresolved_call[code](C, Shape)` | вызова, который модель не смогла связать с функцией, которую он запускает, с формой его вызываемого выражения |
+| `may_call[code](A, F)` | функции `A`, в которой есть вызов `o[k]()` с ключом, который модель не проследила, и функции `F` из тех, что лежат в `o`: вызов может её запустить; это держится отдельно от `calls`, где только то, что известно наверняка |
+| `merged_param[audit](F, I, N)` | параметра `I` функции `F`, в который вызывающие передают `N` разных функций, так что то, что он вызывает, — их объединение, а не та одна, которую передал каждый |
+
+Код под `if (require.main === module)` выполняется, только когда его файл
+запущен как скрипт. По умолчанию модель читает каждый файл как библиотеку, и
+этот код для неё не выполняется никогда. Мир, в котором это не так, говорит
+об этом фактом: `runs_as_script("bin/cli.js")` читает этот один файл так,
+как его запускает node, а `reads_the_file_as(script)` — так читает каждый
+файл.
 
 ## Второй вопрос ничего не стоит
 
@@ -175,7 +201,17 @@ the kept world took 1 file by delta: pay.js (scanned again) (1 facts out, 4 over
 о чём сказано на stderr; мир, который перерастает предел во время
 вычисления, останавливается на нём, отвечает тем, что есть, как частичным
 ответом (код выхода 5), и продолжает с места остановки, когда его спросят
-под большим пределом.
+под большим пределом. То же с памятью: мир, который перерастает память,
+доступную процессу (предел его контейнера или то, что свободно на машине),
+останавливается на ней, отвечает частично с кодом выхода 5, говорит об этом
+на stderr и не сохраняется. Движок сообщает об этом, а не погибает на
+полпути.
+
+Вопрос вычисляет только ту часть модели, которая ему нужна: `rofl ask`, `why`
+и `whynot` запускают те правила, до которых дотягивается их вопрос, и
+никакие другие, а следующий вопрос о другом достраивает сохранённый мир на
+то, что нужно ему. На 700 файлах VS Code с моделью JavaScript первый вопрос
+занимает 49 с и 2,1 ГБ, тогда как вычисление всей модели — 104 с и 3,4 ГБ.
 
 ## Коды выхода
 
@@ -186,7 +222,7 @@ the kept world took 1 file by delta: pay.js (scanned again) (1 facts out, 4 over
 | 2 | файл отвергнут: он не разбирается или не загружается; или мир `--kept` устарел |
 | 3 | мир отвергнут при вычислении: объявленная структура не выполняется, или отрицание проходит через цикл |
 | 4 | вопрос отвергнут: `why` литерала с переменной внутри, `excise` факта, который не был дан, вопрос вне объявленного конуса мира |
-| 5 | ответ дан, но из мира, оборванного его бюджетом, его памятью или неудавшимся сканированием; строк может не хватать |
+| 5 | ответ дан, но из мира, оборванного его бюджетом, его пределом по числу строк, пределом памяти процесса или неудавшимся сканированием; строк может не хватать |
 | 70 | дефект самого движка |
 
 Отказ сильнее частичного ответа: запуск с отвергнутым вопросом завершается

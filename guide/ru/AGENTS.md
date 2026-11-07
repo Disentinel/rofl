@@ -11,7 +11,8 @@ Claude Code не знает, что `rofl-nb` существует. Вставь
 ## Команды
 
     rofl-nb <file.rofl.md> [--json] [--cell N]   что говорит каждая ячейка
-    rofl-nb <file.rofl.md> --all                 все ответы, а не первые 12 (JSON: 50)
+    rofl-nb <file.rofl.md> --all                 ничего не сокращая: все ответы, а не первые 12 (JSON: 50),
+                                                 каждое доказательство целиком, каждый провал, встреченный whynot
     rofl-nb <file.rofl.md> --timing              время каждой фазы, на stderr
     rofl-nb <file.rofl.md> --format F            `draw` в форме F: mermaid, dot, argdown, vega-lite, ... (DRAWING.md)
     rofl-nb edit <file.rofl.md> --cell N         новый текст ячейки N со stdin (`--lang L` для новой ячейки); единственный
@@ -66,3 +67,12 @@ ROFL_NB_UNTRACKED_COMMAND=<sh>  prints the files your version control tracks, fo
 `rofl:visual/graph.rofl.md`, и закончите ячейку строкой `draw graph`. Слова,
 раскладки и шаги описаны в [docs/schemas.md](../../docs/schemas.md); каждый
 вид картинки — в [DRAWING.md](DRAWING.md).
+
+## За пределами блокнота
+
+Вопрос о коде из командной строки, без блокнота, задают `rofl ask`,
+`rofl why` и `rofl whynot` ([ASKING.md](ASKING.md)). Все команды, миры,
+которые они хранят, коды выхода и протокол `rofl serve` описаны в
+[docs/cli.md](../../docs/cli.md). Мир вычисляется в одной куче: прежде чем
+направить его на тысячи файлов, прочтите там раздел *A corpus larger than
+one heap*.

@@ -692,6 +692,8 @@ function answerRustOnly(w: World): Answer {
       if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
       continue;
     }
+    // a defect (exit 70) where a refusal was due is a red of the world, not of the check: a planted fault met by the engine's own guard
+    if (p.status === 70 && want) { problems.push(`${base} was to be refused (${want}) and met a defect: ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`); continue; }
     if (p.status !== 2 && p.status !== 3) throw new Error(`rofl load died on ${base} (${p.status}): ${p.stderr}`);
     diags.push(`refused ${base} (${p.status === 2 ? 'load' : 'eval'})`);
     dropped.push(`${base}: ${p.stderr.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);
@@ -836,7 +838,7 @@ export function deepExplain(): string[] {
     try {
       const why = r.why(`p(${n})`);
       if (!why.ok || why.text.length !== 27_268_619 || !why.text.endsWith(`${n} is +(${n - 1},1) [builtin]`)) out.push(`${what}: why of a chain ${n} deep is ${why.text.length} characters (${why.text.slice(0, 80)}), not the Rust engine's 27268619`);
-      const wn = r.whynot(`w(${n})`, { depth: n + 10, nodes: 10 * n });
+      const wn = r.whynot(`w(${n})`, { depth: n + 10, nodes: 10 * n, all: true });
       const lines = wn.text.split('\n').length;
       if (wn.holds || wn.text.length !== 36_597_181 || lines !== 6022) out.push(`${what}: whynot of a chain ${n} deep is ${wn.text.length} characters in ${lines} lines (${wn.text.slice(0, 80)}), not the Rust engine's 36597181 in 6022`);
     } catch (e) { out.push(`${what}: ${(e as Error).message}`); }
@@ -1147,7 +1149,7 @@ function refuse(e: unknown): never {
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
   own();
-  // `rofl why L @rules/js.files code.rofl` reads the model the notebook host reads (docs/cli.md)
+  // `rofl why L @rules/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
   const listed = fs.readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'rules', f)));
   if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
