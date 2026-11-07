@@ -72,20 +72,21 @@ pub fn cut(texts: &[&str]) -> Cut {
     Cut { core, files }
 }
 
-/// The files dealt to `k` groups balanced by bytes, the largest first.
-pub fn groups(files: Vec<(String, String)>, k: usize) -> Vec<String> {
+/// The files dealt to `k` groups balanced by bytes, the largest first: each group the texts of its files.
+pub fn groups(files: Vec<(String, String)>, k: usize) -> Vec<Vec<String>> {
     let mut files = files;
     files.sort_by_key(|(_, t)| std::cmp::Reverse(t.len()));
-    let mut gs: Vec<String> = vec![String::new(); k.max(1)];
+    let mut gs: Vec<(usize, Vec<String>)> = vec![(0, Vec::new()); k.max(1)];
     for (_, t) in files {
-        let g = (0..gs.len()).min_by_key(|&g| gs[g].len()).unwrap();
-        gs[g].push_str(&t);
+        let g = (0..gs.len()).min_by_key(|&g| gs[g].0).unwrap();
+        gs[g].0 += t.len();
+        gs[g].1.push(t);
     }
-    gs
+    gs.into_iter().map(|g| g.1).collect()
 }
 
 /// A term of `src` named again in `dst`: what the two share below `syms` and `funcs` is the core's and the same in both.
-fn copy_term(t: Term, src: &Heap, dst: &mut Heap, syms: Sym, funcs: u32) -> Term {
+pub(super) fn copy_term(t: Term, src: &Heap, dst: &mut Heap, syms: Sym, funcs: u32) -> Term {
     match t.kind() {
         TermK::Atom(s) if s >= syms => Term::atom(dst.intern(src.name(s))),
         TermK::Str(s) if s >= syms => Term::str(dst.intern(src.name(s))),
@@ -122,6 +123,15 @@ pub struct VolStats {
     pub cut: bool,
 }
 
+fn load_text(e: &mut Eval, text: &str) -> Result<(), Halt> {
+    let r = crate::program::load_program(e, text, None);
+    if r.ok {
+        Ok(())
+    } else {
+        Err(Halt::Strat(r.diagnostics.join("\n"), String::new()))
+    }
+}
+
 fn on_threads<T: Send>(ws: &mut [Worker], f: &(dyn Fn(usize, &mut Worker) -> Result<T, Halt> + Sync)) -> Result<Vec<T>, Halt> {
     let out: Vec<Result<T, Halt>> = std::thread::scope(|sc| {
         let hs: Vec<_> = ws.iter_mut().enumerate().map(|(i, w)| sc.spawn(move || f(i, w))).collect();
@@ -132,9 +142,13 @@ fn on_threads<T: Send>(ws: &mut [Worker], f: &(dyn Fn(usize, &mut Worker) -> Res
 
 impl Eval {
     /// The world of this core and the `groups` of files evaluated by volumes, one worker a group, each on its thread.
-    pub fn by_volumes(&mut self, groups: Vec<String>, files: usize) -> Result<(Vec<Worker>, VolStats), Halt> {
+    pub fn by_volumes(&mut self, groups: Vec<Vec<String>>, files: usize) -> Result<(Vec<Worker>, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
+        let stage = self.lemma_stage();
+        if let Some(st) = &stage {
+            self.refuse_stage_across(st, surface)?;
+        }
         self.settle_provenance();
         self.h.freeze();
         self.store.freeze(&self.h);
@@ -148,10 +162,22 @@ impl Eval {
             })
             .collect();
         let mut st = VolStats { workers: k, files, ..Default::default() };
+        let stage = stage.map(Rc::new);
         on_threads(&mut ws, &|i, w| {
-            let r = crate::program::load_program(&mut w.e, &groups[i], None);
-            if !r.ok {
-                return Err(Halt::Strat(r.diagnostics.join("\n"), String::new()));
+            match &stage {
+                // the lower stage a file at a time, each in a world of its own the lemmas leave
+                Some(stage) => {
+                    let base = w.e.fork();
+                    let from = base.store.len_ids();
+                    for text in &groups[i] {
+                        let mut low = base.fork();
+                        load_text(&mut low, text)?;
+                        low.lower_stage(stage)?;
+                        w.e.take_lemmas(&low, stage, from, syms, funcs);
+                    }
+                    w.e.stage_given = Some(stage.rules.clone());
+                }
+                None => load_text(&mut w.e, &groups[i].concat())?,
             }
             w.read_to = w.e.store.len_ids();
             w.e.wall.level_wall = Some(i64::MIN);

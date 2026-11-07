@@ -36,6 +36,7 @@ mod want;
 mod layer;
 mod algebra;
 mod books;
+mod stages;
 pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
@@ -160,6 +161,15 @@ struct DoneTable {
     answers: Vec<(Vec<Term>, PremRef)>,
     by: HashMap<usize, (HashMap<Term, Vec<usize>>, Vec<usize>)>,
     rows: i64,
+}
+
+/// The rules a pass fires, by the lower stage's (`engine/stages.rs`).
+#[derive(Clone, Default)]
+pub(crate) enum StagePass {
+    #[default]
+    Whole,
+    Lower(Rc<FxSet<Sym>>),
+    Upper(Rc<FxSet<Sym>>),
 }
 
 pub struct ERule {
@@ -800,6 +810,12 @@ pub struct Eval {
     whole: Option<Rc<layer::Whole>>,
     /// What the last whole evaluation left unknown, for the full pass under way to carry on from what it keeps.
     kept_carry: Option<Rc<layer::Carried>>,
+    /// Which rules the pass under way fires, where the plan cuts a book (`engine/stages.rs`).
+    stage_pass: StagePass,
+    /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
+    pub stage_given: Option<Rc<FxSet<Sym>>>,
+    /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
+    lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// What a delta under way leaves to the full pass after it: the relations a hole or a shrug may move that the
     /// change reaches (`Eval::hole_world`). No rule concluding one is read by the delta.
     aside: HashSet<Sym>,
@@ -2279,6 +2295,9 @@ impl Eval {
             shrug_readers: HashSet::new(),
             whole: None,
             kept_carry: None,
+            stage_pass: StagePass::Whole,
+            stage_given: None,
+            lemma_heads: None,
             aside: HashSet::new(),
             firing: false,
             fault_count: 0,
@@ -3420,7 +3439,15 @@ impl Eval {
         self.kept_carry = self.whole.take().and_then(|w| w.carry.clone());
         self.again = again;
         self.store.kept_layer = kept;
-        let out = self.run_whole();
+        self.stage_pass = StagePass::Whole;
+        let out = match (self.stage_given.take(), self.lemma_stage()) {
+            (Some(given), _) => {
+                self.stage_pass = StagePass::Upper(given);
+                self.run_whole()
+            }
+            (None, Some(st)) => self.run_staged(st),
+            (None, None) => self.run_whole(),
+        };
         if !self.store.kept_rules.is_empty() {
             let rules = std::mem::take(&mut self.store.kept_rules);
             self.restore_cells_of(Some(&rules));
@@ -3552,7 +3579,7 @@ impl Eval {
     fn run_pass_from(&mut self) -> Result<Outcome, Halt> {
         self.wall.cutting = Some(Box::default());
         let from = self.wall.resume_at.as_ref().and_then(|c| c.phase);
-        let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && !self.store.kept_layer.contains(&r.clause.head.rel)).cloned().collect();
+        let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && !self.store.kept_layer.contains(&r.clause.head.rel) && self.stage_fires(r)).cloned().collect();
         let readers = self.shrug_readers.clone();
         // a rule into a subsumptive relation whose dominance reads a relation
         // fires once that relation is closed, at its level
@@ -12818,7 +12845,7 @@ impl Eval {
     fn round_rules(&self) -> Vec<Rc<ERule>> {
         self.rules
             .iter()
-            .filter(|r| r.safe && r.clause.head.rel != self.v.stratum && !self.store.kept_layer.contains(&r.clause.head.rel))
+            .filter(|r| r.safe && r.clause.head.rel != self.v.stratum && !self.store.kept_layer.contains(&r.clause.head.rel) && self.stage_fires(r))
             .filter(|r| !(self.wfs.skip_cone && self.unknown_cone.contains(&r.clause.head.rel)))
             .cloned()
             .collect()
@@ -15352,10 +15379,15 @@ impl Eval {
             // To the plain explainer any fact the store holds is an axiom —
             // a kernel-emitted row such as `derived_by` among them.
             None => {
-                let mark = if self.store.alive(id) && (self.plain || self.store.rec(id).base()) {
-                    "[axiom]"
+                let mark = if self.store.alive(id) && self.is_lemma(id) {
+                    match self.lemma_site(id) {
+                        Some(at) => format!("[lemma {at}]"),
+                        None => "[lemma]".into(),
+                    }
+                } else if self.store.alive(id) && (self.plain || self.store.rec(id).base()) {
+                    "[axiom]".into()
                 } else {
-                    "[past tick]"
+                    "[past tick]".into()
                 };
                 next.push(WhyTask::Line(format!("{pad}{key} {mark}")));
             }

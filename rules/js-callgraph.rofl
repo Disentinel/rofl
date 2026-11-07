@@ -566,7 +566,9 @@ holds_in_place(object_property, value).
 
 -- asked only of a place that may hold a surveyed object of its own file
 placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), parent[tree](_, A).
-held[flow](A) :- placed[flow](A), child[ast_oxc](P, F, _, A), node[ast_oxc](P, PK, _), holds_in_place(PK, F).
+-- a node in a place that holds it, read off the raw tree once: a lemma of the tree's stage
+in_place[flow](A) :- child[ast_oxc](P, F, _, A), node[ast_oxc](P, PK, _), holds_in_place(PK, F).
+held[flow](A) :- placed[flow](A), in_place[flow](A).
 held[flow](A) :- placed[flow](A), discards[value](_, A).
 held[flow](A) :- placed[flow](A), assigned[code](_, _, _, A, _).
 held[flow](A) :- placed[flow](A), nth[tree](C, _, A), not spread_args[value](C, _, A), callee[value](C, CE),
@@ -698,8 +700,7 @@ sx_global_key[surface](Name, Key) :- member_written[flow](N), object_of[code](N,
                                      es_global[code](G, Name, _, _), selects[flow](N, Key).
 sx_global_open[surface](Name) :- member_written[flow](N), object_of[code](N, G),
                                  es_global[code](G, Name, _, _), not selects[flow](N, _).
-sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), child[ast_oxc](P, F, _, G),
-                                 node[ast_oxc](P, PK, _), not holds_in_place(PK, F), not discards[value](_, G).
+sx_global_open[surface](Name) :- es_global[code](G, Name, _, _), not in_place[flow](G), not discards[value](_, G).
 call_finds[flow](C) :- callee[value](C, N), es_static[code](N, _, _, _).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, Name, _, _), sx_global_key[surface](Name, Key).
 call_finds[flow](C) :- member_call[flow](C, R, Key), es_global[code](R, _, _, constructor_binding),

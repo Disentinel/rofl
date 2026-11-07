@@ -872,7 +872,7 @@ impl Session {
     /// This world, holding the core, and the `groups` of files evaluated by volumes (`engine/volumes.rs`): a world a
     /// worker, each a fork of the core. Refused when a worker's world asks for input (a scan or an adapter's want),
     /// which a volume cannot bring alone.
-    pub fn by_volumes(&mut self, groups: Vec<String>, files: usize) -> Result<Volumes, Halt> {
+    pub fn by_volumes(&mut self, groups: Vec<Vec<String>>, files: usize) -> Result<Volumes, Halt> {
         let (ws, stats) = self.eval.by_volumes(groups, files)?;
         let (mut worlds, mut laid) = (Vec::with_capacity(ws.len()), Vec::with_capacity(ws.len()));
         for w in ws {

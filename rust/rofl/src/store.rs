@@ -2688,6 +2688,13 @@ impl Store {
     // ------------------------------------------------------------ removals
 
 
+    /// A derived fact made a lemma: given to what reads it, its proof in a world cut away.
+    pub fn make_lemma(&mut self, id: FactId) {
+        let r = self.facts.rec(id);
+        self.base_moved.insert(r.rel);
+        self.facts.add_flags(id, F_BASE);
+    }
+
     pub fn remove_many(&mut self, ids: &[FactId]) {
         if ids.is_empty() {
             return;
