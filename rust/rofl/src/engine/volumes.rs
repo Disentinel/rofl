@@ -213,21 +213,33 @@ impl Eval {
                         let r = ws[i].e.store.rec(id);
                         match reads.get(&r.rel) {
                             Some(Some(_)) if k <= 64 => pend[i].push((id, 1 << i, ws[i].e.store.args(id).iter().map(|t| spelt(&ws[i].e.h, *t)).collect())),
-                            Some(_) => (0..k).filter(|&j| j != i).for_each(|j| to[j].push((i, id))),
+                            Some(_) => pend[i].push((id, !0, Vec::new())),
                             None => {}
                         }
                     }
                 }
                 for (j, w) in ws.iter().enumerate() {
-                    note_values(&w.e, &by_rel, &mut vals[j]);
+                    note_values(&w.e, &by_rel, surface, &mut vals[j]);
                 }
                 for (i, p) in pend.iter_mut().enumerate() {
                     let e = &ws[i].e;
                     p.retain_mut(|(id, sent, args)| {
+                        // a fact to every volume is sent once, to those that do not hold it
+                        if *sent == !0 {
+                            let sig = signed(e, *id);
+                            for (j, v) in vals.iter().enumerate().filter(|(j, _)| *j != i) {
+                                if !v.2.contains(&sig) {
+                                    to[j].push((i, *id));
+                                }
+                            }
+                            return false;
+                        }
                         let Some(Some(keys)) = reads.get(&e.store.rec(*id).rel) else { return false };
-                        let was = *sent;
+                        let (was, sig) = (*sent, signed(e, *id));
                         for (j, v) in vals.iter().enumerate().filter(|(j, _)| was & 1 << j == 0) {
-                            if keys.iter().any(|g| g.iter().all(|key| v.0.get(&(key.rel, key.persp, key.at)).is_some_and(|vs| vs.contains(&args[key.pos])))) {
+                            if v.2.contains(&sig) {
+                                *sent |= 1 << j;
+                            } else if keys.iter().any(|g| g.iter().all(|key| v.0.get(&(key.rel, key.persp, key.at)).is_some_and(|vs| vs.contains(&args[key.pos])))) {
                                 to[j].push((i, *id));
                                 *sent |= 1 << j;
                             }
@@ -437,9 +449,22 @@ fn reads_of(e: &Eval, at: &FxMap<Sym, Vec<(usize, usize)>>, open: &FxSet<Sym>, s
     Some(keys)
 }
 
-/// The values a volume holds where a `[surface]` fact is joined, by the hash of their spelling, read up to `.1`.
+/// The values a volume holds where a `[surface]` fact is joined, by the hash of their spelling, read up to `.1`, and
+/// the `[surface]` facts it holds, by `signed`.
 #[derive(Default)]
-struct Values(FxMap<(Sym, Option<Sym>, usize), FxSet<u64>>, FactId);
+struct Values(FxMap<(Sym, Option<Sym>, usize), FxSet<u64>>, FactId, FxSet<u64>);
+
+/// A fact by the hash of its spelling, the same in every volume's heap.
+fn signed(e: &Eval, id: FactId) -> u64 {
+    spelt_str(&e.store.key(&e.h, id))
+}
+
+fn spelt_str(s: &str) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    s.hash(&mut h);
+    h.finish()
+}
 
 fn spelt(h: &Heap, t: Term) -> u64 {
     use std::hash::{Hash, Hasher};
@@ -448,10 +473,13 @@ fn spelt(h: &Heap, t: Term) -> u64 {
     s.finish()
 }
 
-fn note_values(e: &Eval, by_rel: &FxMap<Sym, Vec<(Option<Sym>, usize)>>, v: &mut Values) {
+fn note_values(e: &Eval, by_rel: &FxMap<Sym, Vec<(Option<Sym>, usize)>>, surface: Sym, v: &mut Values) {
     let to = e.store.len_ids();
     for id in v.1..to {
         let r = e.store.rec(id);
+        if r.persp == surface && e.store.alive(id) {
+            v.2.insert(signed(e, id));
+        }
         let Some(ks) = by_rel.get(&r.rel) else { continue };
         if !e.store.alive(id) {
             continue;
