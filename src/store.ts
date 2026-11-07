@@ -14,6 +14,7 @@ export interface FactRec {
   scope: Scope;
   base: boolean;    // asserted (EDB / kernel-emitted) rather than rule-derived
   frozen: boolean;  // provenance from completed ticks; survives re-evaluation
+  lemma?: string;   // a lemma of a book the plan cuts (Rust only): where it stands, `File:Line`, or '' with no site
 }
 
 export type PremRef =

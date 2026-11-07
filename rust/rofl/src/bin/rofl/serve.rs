@@ -509,7 +509,16 @@ impl Server {
         });
         let row = rows.get(&key).cloned();
         Ok(match op {
-            "fact" => json!({ "fact": facts.get(&key).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).or_else(|| row.map(|(r, b, args)| rofl::seed::virtual_json(&e.h, r, b, &args))) }),
+            "fact" => {
+                let fact = facts.get(&key).map(|&f| {
+                    let mut j = rofl::seed::fact_json(&e.h, &e.store, f);
+                    if let Some(at) = e.lemma_mark(f) {
+                        j["lemma"] = json!(at);
+                    }
+                    j
+                });
+                json!({ "fact": fact.or_else(|| row.map(|(r, b, args)| rofl::seed::virtual_json(&e.h, r, b, &args))) })
+            }
             _ => json!({ "firings": match (facts.get(&key), row) {
                 (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
                 (None, Some((r, b, args))) if args.len() == 2 => e.store.virtual_firing(&e.h, r, b, args[0], args[1]).map(|(rule, tick, prems)| {

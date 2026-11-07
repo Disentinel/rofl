@@ -514,8 +514,9 @@ stderr says it: `diag: stage: N rules below, L lemmas, D facts of [B] cut; wides
 rules whose own cone pulls most into the lower stage (a rule of the upper model that reads `[B]` drags its whole
 cone down with it, and the cut comes late: read the raw tree through a lemma instead, as `in_place[flow]` does).
 
-`rofl ask` and `rofl why` evaluate a world that cuts a book by volumes (below), on one worker when the corpus is
-under 32 MB: the lower stage a file at a time, each in a fork of the core of its own, the worker given only the
+`rofl ask` and `rofl why` evaluate a world that cuts a book by volumes (below) from 32 MB of corpus on, on one
+worker when it has no `[surface]` (under 32 MB it is staged in place and kept whole, its answer read back fastest
+so): the lower stage a file at a time, each in a fork of the core of its own, the worker given only the
 file's lemmas and its facts outside `[B]`, so the raw tree of the corpus is never held at once. A lower stage that
 reads or concludes `[surface]` is refused there (it runs before anything crosses files), and the world is evaluated
 whole. `rofl load` and the other verbs stage the world in place: the lower stage over every file, then `[B]` dropped.
@@ -526,7 +527,7 @@ one of the lemma's; a world that asks has the site in its cone whatever it asks)
 lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
 fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
 takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
-The kept volumes of `rofl ask`/`why` are the exception, as each file below the cut is a world of its own: the
+The kept volumes of `rofl ask`/`why` (from 32 MB) are the exception, as each file below the cut is a world of its own: the
 volumes are kept with a sum of every file (`<slot>.files`), and when at most one file in eight moved and the rules
 did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
 lemmas and facts it no longer gives taken out of its worker and the new ones put in (`volumes: X of Y files taken

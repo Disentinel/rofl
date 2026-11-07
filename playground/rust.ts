@@ -135,7 +135,7 @@ export class RustEngine implements Engine {
 type Fact = FactRec & { key: string };
 /** A premise as the reference spells it: a row the Rust engine keeps virtual is a fact there (canonicalState's `fact:`). */
 const premOf = (p: any): PremRef => p.t === 'vrow' ? { t: 'fact', key: p.key } : p;
-const factOf = (j: any): Fact => ({ key: j.key, rel: j.rel, persp: j.persp, args: j.args.map(termFromJson), scope: j.scope, base: j.base, frozen: j.frozen });
+const factOf = (j: any): Fact => ({ key: j.key, rel: j.rel, persp: j.persp, args: j.args.map(termFromJson), scope: j.scope, base: j.base, frozen: j.frozen, ...(j.lemma !== undefined && { lemma: j.lemma }) });
 
 /** The reads a run makes of an evaluated world, answered by the Rust engine and kept: the surface why, whynot and a query read (playground/host.ts proofs). */
 function rustStore(ask: (req: Record<string, unknown>) => Record<string, any>, partial: boolean): Store {
