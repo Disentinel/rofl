@@ -514,9 +514,8 @@ stderr says it: `diag: stage: N rules below, L lemmas, D facts of [B] cut; wides
 rules whose own cone pulls most into the lower stage (a rule of the upper model that reads `[B]` drags its whole
 cone down with it, and the cut comes late: read the raw tree through a lemma instead, as `in_place[flow]` does).
 
-`rofl ask` and `rofl why` evaluate a world that cuts a book by volumes (below) from 32 MB of corpus on, on one
-worker when it has no `[surface]` (under 32 MB it is staged in place and kept whole, its answer read back fastest
-so): the lower stage a file at a time, each in a fork of the core of its own, the worker given only the
+`rofl ask` and `rofl why` evaluate a world that cuts a book by volumes (below) from 32 MB of corpus on (under
+32 MB it is staged in place and kept whole, its answer read back fastest so): the lower stage a file at a time, each in a fork of the core of its own, the worker given only the
 file's lemmas and its facts outside `[B]`, so the raw tree of the corpus is never held at once. A lower stage that
 reads or concludes `[surface]` is refused there (it runs before anything crosses files), and the world is evaluated
 whole. `rofl load` and the other verbs stage the world in place: the lower stage over every file, then `[B]` dropped.
@@ -531,12 +530,15 @@ The kept volumes of `rofl ask`/`why` (from 32 MB) are the exception, as each fil
 volumes are kept with a sum of every file (`<slot>.files`), and when at most one file in eight moved and the rules
 did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
 lemmas and facts it no longer gives taken out of its worker and the new ones put in (`volumes: X of Y files taken
-by delta in Z ms`). An edit that changes what the file shows the others (`[surface]`) is passed on by delta too:
-each other worker takes the facts that came and loses those that went (unless another volume still shows them),
-and passes on what that moves in its own, until nothing moves (`, what they show the others in R rounds`).
-Measured, vscode 250: an exported function renamed, 1.6 s of delta in 2 rounds, 5.3 s the run against 10 s anew;
-half of a file's facts gone, 4.7 s in 3 rounds; the answers byte for byte the fresh ones. Measured, vscode 250 facts (67 MB, 4 workers, fast build): one file's line moved, 1 of 150 volumes in
-0.4 s and 4.5 s the run, against 11 s anew; the answer byte for byte the fresh one.
+by delta in Z ms`). What the edit moves in other volumes is passed on by delta too, round by round
+(`, what they show the others in R rounds`): first everything the facts gone reach is taken out at once in every
+volume (what cites them, and the copies laid elsewhere of what a volume made, and what cites those), then what
+still holds where it is made is laid again, and what was made anew goes where its readers' keys say. A cycle
+through the volumes (a fact one derives from a copy of what another derived from it) so keeps nothing alive.
+Each worker remembers what was laid in it and for which rules (`<slot>.w<i>.laid`).
+Measured, vscode 250 (fast build, 4 workers): half of one file's nodes gone (an edit that removes answers in
+other files), 6.3 s of delta in 7 rounds, 10.5 s the run against 13.5 s anew; an exported function renamed,
+1.6 s of delta; the answers byte for byte the fresh ones.
 Measured, vscode subset S, fast build, 4 cores: 250 files by volumes 3 771 MB peak against 3 264 MB cut, 34.6 s
 against 35.6 s, 252 301 answer lines byte for byte; 100 files whole (`ROFL_VOLUMES=0`) 1 598 MB against 1 279 MB.
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
@@ -546,31 +548,33 @@ stage is the plan's mark.
 ## A corpus larger than one heap
 
 **`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
-the world's facts name two or more files (a node id's prefix, `n<16 hex>_`),
-hold 32 MB or more between them (below that the whole world is as fast) and
-its program writes `[surface]` (the JS model does, `rules/js-surface.rofl`), the
+the world's facts name two or more files (a node id's prefix, `n<16 hex>_`) and
+hold 32 MB or more between them (below that the whole world is as fast), the
 facts are cut by file and the files dealt to a worker a core, balanced by bytes;
 each worker is a fork of the core (the model, the question, the facts naming no
 file), which is frozen once and shared, not copied, and evaluates its files on
-its own thread. A level at a time, what a worker made of `[surface]` is laid into
-the workers that read it and fired on there, until none makes more (`engine/volumes.rs`).
-Who reads a fact comes from the rules: a premise reading it is joined with the
-others by some of its arguments, and the fact goes to a worker holding, in the
-premise it is joined with, the value it carries there (a premise alone in its
-rule reads for its head, by the head's keys). A key's partner stands no higher
-than the fact, so the fact arrives, or is not needed, before a rule above it
-reads it, under a negation too; a relation read in an aggregate or an open book
-goes to every worker. Measured at vscode 250 (4 workers): a worker holds 31 000
-facts the others laid where it held 50 000, the answers byte for byte. An
+its own thread. A level at a time, what a worker made is laid into the workers
+that read it and fired on there, until none makes more (`engine/volumes.rs`).
+Nothing in the model declares what crosses files: who reads a fact comes from
+the rules, any relation. A fact is at home in the volume of its first node's
+file, and a rule fires only where the first premise of its body's largest join
+(its anchor) is at home. Every other premise reads by a key: the fact goes to a
+volume holding, in the premise nearer the anchor it is joined with, the values
+it carries in every variable the two share, and only where the premise's
+constants match. A reader under a negation or in an aggregate is keyed by what
+is closed below its rule, and fires once all it is to see is laid; a part of a
+body no variable joins to the anchor goes to every worker. Measured at vscode
+250 (4 workers): 72 000 facts laid across the workers (522 000 when a key took
+one shared variable at a time), the answers byte for byte. An
 answer is the union of the workers'; a relation with a fact naming no file (a
 count over every file) is concluded again in a world over the core and the
 workers' facts it reads. A `why` is the proof in the worker that holds the fact,
-each `[surface]` axiom another worker laid replaced by its proof there. stderr
-says it: `volumes: N files on K workers, L levels, R rounds laying S [surface]
+each axiom another worker laid replaced by its proof there. stderr
+says it: `volumes: N files on K workers, L levels, R rounds laying S
 facts`. The volumes are kept beside the question's slot under
 `~/.cache/rofl/worlds` (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): the next
-question over the same files is answered from them; an edited file computes
-them anew (not yet by delta). A wall that cuts one worker, the memory wall
+question over the same files is answered from them; an edited file is taken by
+delta (*Lemma stages*, above). A wall that cuts one worker, the memory wall
 above all, stops them all: the answers are partial (exit 5) and not kept.
 Measured on vscode subset S, 4 cores, release: 250 files 19 s against 50 s
 whole, 500 files 32 s against 71 s, the answers byte for byte; the workers
@@ -588,6 +592,9 @@ the file (`rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
+The volumes of the question verbs no longer need that book: what crosses files
+comes from the rules' keys (above), and `[surface]` is a book like any other to
+them; the driver of `runtime/split.ts` and its gate still exchange it alone.
 **The question verbs evaluate by volumes (above); what they do not do yet is cool
 them:** every worker stays on the heap through the evaluation, so a corpus larger
 than one heap still does not fit. The other parts and the harnesses that drive
