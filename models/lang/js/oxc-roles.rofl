@@ -4,6 +4,11 @@
 -- roles of each world, [tree] the structure every world shares. Every rule reads one node and its
 -- neighbours, so a file's roles come from that file's facts alone.
 
+-- THE STAGE (docs/cli.md, *Lemma stages*): the raw tree is a world of its own, cut once the roles it gives are proven.
+-- What the rules reading it conclude outside it are lemmas, each placed by its node's at[tree].
+cut[fixpointplan](ast_oxc).
+site[fixpointplan](at, tree).
+
 -- the raw tree, under short names
 alias oxc_k(N, K) is node(N, K, _).
 edb(node). edb(line). edb(start). edb(child). edb(attr). edb(file).

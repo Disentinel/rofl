@@ -564,6 +564,12 @@ impl Session {
             let mut seen = HashSet::new();
             ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
         };
+        if !ids.is_empty() {
+            if let Some(why) = self.eval.refuses_retraction() {
+                self.eval.store.dirty = true;
+                return Ok(Err(why));
+            }
+        }
         if facts.is_empty() {
             return Ok(Ok(Default::default()));
         }
@@ -1801,6 +1807,9 @@ impl Session {
 
     fn retract_unjournaled(&mut self, query: &str) -> Result<(), String> {
         let id = self.base_fact(query)?;
+        if let Some(why) = self.eval.refuses_retraction() {
+            return Err(why);
+        }
         let doomed = self.doomed(id);
         let rel = self.eval.store.rec(id).rel;
         let asks = rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
@@ -1827,6 +1836,9 @@ impl Session {
 
     fn retract_delta_unjournaled(&mut self, query: &str) -> Result<Retraction, String> {
         let id = self.base_fact(query)?;
+        if let Some(why) = self.eval.refuses_retraction() {
+            return Err(why);
+        }
         let rel = self.eval.store.rec(id).rel;
         let ft = self.fact_term(id);
         let request = [self.eval.h.mkf_named("retract", &[ft])];
@@ -2143,7 +2155,45 @@ impl Session {
     /// where `why` prints a digest of the first `WHY_MEMBERS`.
     pub fn why_all(&mut self, query: &str) -> Result<String, String> {
         let lit = self.why_lit(query)?;
-        self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
+        let text = self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))?;
+        self.unfold_lemmas(text)
+    }
+
+    /// Every `[lemma …]` of a `why` text set in its proof: its file's lower stage evaluated again in a fork of this
+    /// world, the lemma's `why` read there. A lemma whose file this world was not given the text of stays.
+    fn unfold_lemmas(&mut self, text: String) -> Result<String, String> {
+        let Some(texts) = self.eval.lower_texts.clone() else { return Ok(text) };
+        let Some(st) = self.eval.lemma_stage() else { return Ok(text) };
+        let mut lows: HashMap<String, Session> = HashMap::new();
+        let mut out = String::new();
+        for line in text.lines() {
+            let body = line.trim_start();
+            let key = body.find(" [lemma").filter(|_| body.ends_with(']')).map(|i| &body[..i]);
+            let file = key.and_then(crate::engine::volumes::file_of).filter(|f| texts.contains_key(*f));
+            let (Some(key), Some(file)) = (key, file) else {
+                out.push_str(line);
+                out.push('\n');
+                continue;
+            };
+            if !lows.contains_key(file) {
+                let mut eval = self.eval.fork();
+                eval.lower_texts = None;
+                let r = crate::program::load_program(&mut eval, &texts[file], None);
+                if !r.ok {
+                    return Err(r.diagnostics.join("\n"));
+                }
+                eval.lower_stage(&st).map_err(|e| crate::describe(&e))?;
+                lows.insert(file.to_string(), Session { eval, dangling: 0, asks: 0, profiled: true, kept: Default::default(), post: None, sent: Default::default() });
+            }
+            let low = lows.get_mut(file).expect("put above");
+            let pad = &line[..line.len() - body.len()];
+            for l in low.why_all(key)?.lines() {
+                out.push_str(pad);
+                out.push_str(l);
+                out.push('\n');
+            }
+        }
+        Ok(out.trim_end_matches('\n').to_string())
     }
 
     /// THE EXPLAIN BRIDGE, and why it exists: `why` and `whynot` are host

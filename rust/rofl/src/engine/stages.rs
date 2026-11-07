@@ -239,4 +239,15 @@ impl Eval {
         }
         None
     }
+
+    /// Why a retraction is refused here: the world cut a book and holds lemmas, given facts no file names, whose proof
+    /// is gone, so nothing could take out the lemmas a fact taken out had proved. None in a world that holds none.
+    pub fn refuses_retraction(&mut self) -> Option<String> {
+        let st = self.lemma_stage()?;
+        let held = st.heads.iter().any(|&rel| self.store.rel_all(&self.h, rel).into_iter().any(|f| self.store.rec(f).base()));
+        held.then(|| {
+            let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
+            format!("the world cut {} and holds the lemmas proved from it: a fact taken out would leave the lemmas it proved; evaluate the files anew", books.join(" "))
+        })
+    }
 }

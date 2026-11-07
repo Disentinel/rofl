@@ -559,6 +559,10 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
 /// is needed. Returns the exit code.
 fn answer_volumes(o: &Opts, s: &mut Session, v: &mut rofl::session::Volumes) -> i32 {
     let (mut refused, mut partial) = (false, false);
+    lower_texts(o, s);
+    for w in &mut v.worlds {
+        w.eval.lower_texts.clone_from(&s.eval.lower_texts);
+    }
     for q in &o.qs {
         let l = match q {
             Q::Ask(l) => l,
@@ -823,6 +827,18 @@ fn print_state(o: &Opts, s: &mut Session, cut: bool) {
     if o.json { println!("{}", serde_json::json!({ "ok": true, "state": s.eval.canonical_state(), "partial": cut })) } else { print!("{}", s.eval.canonical_state()) }
 }
 
+/// Where a `why --all` is asked of a world that cut a book, the texts of its files by the node prefix they name: what
+/// unfolds a lemma (`Session::why_all`).
+fn lower_texts(o: &Opts, s: &mut Session) {
+    if s.eval.lower_texts.is_some() || !o.qs.iter().any(|q| matches!(q, Q::WhyAll(_))) || s.eval.lemma_stage().is_none() {
+        return;
+    }
+    let sources = load_sources(o);
+    let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
+    let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
+    s.eval.lower_texts = Some(std::sync::Arc::new(cut.files.into_iter().collect()));
+}
+
 /// Every question answered in order. Returns whether one was refused and whether the answers are partial.
 fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
     let bounds = WhynotBounds::clamped(o.depth, o.nodes);
@@ -832,6 +848,7 @@ fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
     for f in &failed { eprintln!("a scan failed, so the answers may be short of what it would have brought: {f}"); }
     partial |= !failed.is_empty();
     let mut refused = false;
+    lower_texts(o, s);
     for q in &o.qs {
         let (text, js, bad, part) = answer(s, q, &bounds, &failed);
         refused |= bad;

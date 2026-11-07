@@ -816,6 +816,9 @@ pub struct Eval {
     pub stage_given: Option<Rc<FxSet<Sym>>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
+    /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
+    /// (`Session::why_all`): a lemma's proof is found again by evaluating its file's lower stage.
+    pub lower_texts: Option<Rc<HashMap<String, String>>>,
     /// What a delta under way leaves to the full pass after it: the relations a hole or a shrug may move that the
     /// change reaches (`Eval::hole_world`). No rule concluding one is read by the delta.
     aside: HashSet<Sym>,
@@ -2298,6 +2301,7 @@ impl Eval {
             stage_pass: StagePass::Whole,
             stage_given: None,
             lemma_heads: None,
+            lower_texts: None,
             aside: HashSet::new(),
             firing: false,
             fault_count: 0,

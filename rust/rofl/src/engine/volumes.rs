@@ -8,7 +8,7 @@ use super::*;
 
 /// The file a fact's line names: its node prefix, `n` and 16 hex digits before `_`. None for a line that names no
 /// file or more than one: the core, which every worker holds.
-fn file_of(line: &str) -> Option<&str> {
+pub fn file_of(line: &str) -> Option<&str> {
     let b = line.as_bytes();
     let mut found: Option<&str> = None;
     let mut i = 0;
