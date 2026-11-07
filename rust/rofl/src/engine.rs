@@ -30,6 +30,7 @@ mod alias;
 mod prov;
 mod resume;
 mod cost;
+pub use cost::heap_said_over;
 mod par;
 mod latkept;
 mod want;
