@@ -558,13 +558,21 @@ says it: `volumes: N files on K workers, L levels, R rounds laying S [surface]
 facts`. The volumes are kept beside the question's slot under
 `~/.cache/rofl/worlds` (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): the next
 question over the same files is answered from them; an edited file computes
-them anew (not yet by delta). A wall that cuts one worker, the memory wall
-above all, stops them all: the answers are partial (exit 5) and not kept.
-Measured on vscode subset S, 4 cores, release: 250 files 19 s against 50 s
-whole, 500 files 32 s against 71 s, the answers byte for byte; the workers
-together hold what the whole world holds, so memory is not lower: 1 000 files
-reach the memory wall of a 15 GB machine and answer partial
-(`f_a_question_verb_answers_a_corpus_by_volumes`). `whynot`, `excise`,
+them anew (not yet by delta). **Past a quarter of the memory the process may use** (the memory wall's
+measure, below), the workers are cooled before the next level: each writes its
+facts and names to a volume under the system's temporary directory and goes on
+mapped from it, the file removed once mapped, so what no rule reads again lies
+in pages the system takes back, and only what the next levels make is on the
+heap (`volume::cool_in_place`); stderr says before how many levels. A disk too
+full to write one leaves that worker on the heap, said on stderr. A wall that
+cuts one worker, the memory wall above all, stops them all: the answers are
+partial (exit 5) and not kept. Measured on vscode subset S, 4 cores, release:
+250 files 18 s against 50 s whole, 500 files 32 s against 71 s, the answers
+byte for byte; 1 000 files, which the whole world does not fit on a 15 GB
+machine and the workers on the heap reach its wall at, answer whole in 123 s
+of evaluation, cooled before 2 of 16 levels, at most 5.8 GB of heap
+(`f_a_question_verb_answers_a_corpus_by_volumes`,
+`f_volumes_cooled_under_pressure_answer_a_thousand_files`). `whynot`, `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.
@@ -576,9 +584,10 @@ the file (`rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
-**The question verbs evaluate by volumes (above); what they do not do yet is cool
-them:** every worker stays on the heap through the evaluation, so a corpus larger
-than one heap still does not fit. The other parts and the harnesses that drive
+**The question verbs evaluate by volumes and cool them under pressure (above);**
+what they do not do yet is keep a cooled volume closed: a worker's volume stays
+mapped through the evaluation, so the disk holds a corpus as large as the heap
+would, and each cooling writes the worker's volume whole again. The other parts and the harnesses that drive
 them, each over `rofl serve`:
 
 | what | how to run it | measured | status |

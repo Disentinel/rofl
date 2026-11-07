@@ -36,8 +36,15 @@ fn answers(s: &mut Session, q: &str) -> BTreeSet<Vec<String>> {
     s.ask(q).unwrap().rows.into_iter().collect()
 }
 
+/// Then again past a quarter of the memory the process may use, where the workers are cooled to disk before each level and go
+/// on mapped from it: the same facts and answers. One test, as the memory measured is the process's.
 #[test]
 fn the_volumes_answer_as_the_whole_world() {
+    check(false);
+    check(true);
+}
+
+fn check(cool: bool) {
     let ts = texts();
     let refs: Vec<&str> = ts.iter().map(String::as_str).collect();
     let mut whole = Session::fresh(BUDGET);
@@ -49,7 +56,19 @@ fn the_volumes_answer_as_the_whole_world() {
     assert_eq!(files, 19);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[cut.core.as_str()], None).unwrap();
-    let mut v = core.by_volumes(rofl::engine::volumes::groups(cut.files, 4), files).unwrap();
+    let mem = |used: i64, may: i64| {
+        rofl::engine::MEMORY_USED.store(used, std::sync::atomic::Ordering::Relaxed);
+        rofl::engine::MEMORY_LIMIT.store(may, std::sync::atomic::Ordering::Relaxed);
+    };
+    if cool {
+        mem(2, 2);
+    }
+    let v = core.by_volumes(rofl::engine::volumes::groups(cut.files, 4), files);
+    if cool {
+        mem(0, 0);
+    }
+    let mut v = v.unwrap();
+    assert!(!cool || v.stats.cooled > 0, "{:?}", v.stats);
 
     let union: BTreeSet<String> = v.worlds.iter().flat_map(keys).collect();
     let all = keys(&whole);

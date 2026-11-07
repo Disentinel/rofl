@@ -156,10 +156,11 @@ Decided by the owner; each is a finding, read it before arguing with it.
   volume of its own, cooled to disk, and a thin `[surface]` of what escapes it
   stays beside it. It is to be the engine's default behaviour, not a command
   of its own (owner, 2026-10-25): `rofl ask` and `rofl why` now evaluate a
-  corpus by volumes on a worker a core by themselves, but keep every volume
-  on the heap, not cooled; before a run over more files than one
-  heap holds, read docs/cli.md, *A corpus larger than one heap*, for the parts
-  that exist and how to run them, and say which one the run uses.
+  corpus by volumes on a worker a core by themselves, and cool the workers to
+  mapped volumes past a quarter of the memory the process may use; before a
+  run over more files than one heap holds, read docs/cli.md, *A corpus larger
+  than one heap*, for the parts that exist and how to run them, and say which
+  one the run uses.
 
 What changed for an agent, and the known gaps, are in docs/releases/1.5.md
 (and 1.4.md, 1.3.md, 1.2.md, 1.1.md before it).

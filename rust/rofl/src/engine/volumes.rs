@@ -121,6 +121,8 @@ pub struct VolStats {
     pub held: Vec<(u32, usize)>,
     /// a wall (memory, steps, rows) cut a worker, and the answers are partial
     pub cut: bool,
+    /// the levels before which the workers were cooled, the process past a quarter of the memory it may use
+    pub cooled: usize,
 }
 
 pub(super) fn load_text(e: &mut Eval, text: &str) -> Result<(), Halt> {
@@ -138,6 +140,30 @@ fn on_threads<T: Send>(ws: &mut [Worker], f: &(dyn Fn(usize, &mut Worker) -> Res
         hs.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(Halt::Bug("a volume's worker panicked".into())))).collect()
     });
     out.into_iter().collect()
+}
+
+/// Whether the process uses more than a quarter of the memory it may (`MEMORY_USED`, `MEMORY_LIMIT`, set by the
+/// binary's watcher): then the workers are cooled before the next level. A level of vscode's 1 000 files grows the heap
+/// by a third of what a 15 GB machine may use, so a half is met too late.
+fn pressed() -> bool {
+    let (used, may) = (MEMORY_USED.load(std::sync::atomic::Ordering::Relaxed), MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed));
+    may > 0 && used * 4 > may
+}
+
+impl Worker {
+    /// The worker's world kept at `path` and mapped back from it, the evaluation going on where it stood: what it
+    /// holds lies in the file's pages, which the system takes back from the heap where nothing reads them.
+    /// Worker `i`'s world before level `lv` cooled in place (`volume::cool_in_place`), under the system's temporary
+    /// directory, the file removed once mapped. A volume that cannot be written (a full disk) stays on the heap.
+    fn cool(&mut self, i: usize, lv: i64) {
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("rofl-vol-{}-{n}-w{i}-{lv}.vol", std::process::id())).to_string_lossy().to_string();
+        if let Err(e) = crate::volume::cool_in_place(&path, &mut self.e) {
+            eprintln!("volumes: worker {i} stays on the heap: {e}");
+        }
+        let _ = std::fs::remove_file(&path);
+    }
 }
 
 impl Eval {
@@ -268,7 +294,12 @@ impl Eval {
             }
             let Some(lv) = lv else { break };
             st.levels += 1;
-            on_threads(&mut ws, &|_, w| {
+            let cool = pressed();
+            st.cooled += cool as usize;
+            on_threads(&mut ws, &|i, w| {
+                if cool {
+                    w.cool(i, lv);
+                }
                 w.e.wall.level_wall = Some(lv);
                 w.e.run_on().map(|_| ())
             })?;
