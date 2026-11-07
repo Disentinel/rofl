@@ -13,7 +13,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spawn } from 'node:child_process';
-import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
 import { hostFacts } from '../playground/host.ts';
 import { oxcScan } from './oxc_bin.ts';
@@ -56,18 +55,19 @@ const exited = new Promise<number>((done) => child.on('close', (code) => done(co
 const strings = new Set<string>();
 // the text goes through in chunks, and only the lines that hold a string value are looked at
 const quoted = /^attr\[ast_oxc\]\(\w+, value, "((?:[^"\\\n]|\\.)*)"\)\.$/gm;
-const decoder = new StringDecoder('utf8');
 const prev = process.env.ROFL_SCAN_PREVIOUS;
 const previous = prev && fs.existsSync(prev) ? fs.readFileSync(prev, 'utf8') : undefined;
 const held: Buffer[] = [];
-let facts = 0, carry = '';
-for await (const chunk of child.stdout) {
+// a line is cut at a byte, and a string kept is copied out: a slice of the text would hold the whole chunk, and the
+// chunks before it through the carry, for as long as the scan runs
+let facts = 0, carry = Buffer.alloc(0);
+for await (const chunk of child.stdout as AsyncIterable<Buffer>) {
   if (previous === undefined) await put(chunk); else held.push(chunk);
-  const text = carry + decoder.write(chunk), cut = text.lastIndexOf('\n') + 1;
-  carry = text.slice(cut);
-  const whole = text.slice(0, cut);
+  const bytes = carry.length ? Buffer.concat([carry, chunk]) : chunk, cut = bytes.lastIndexOf(10) + 1;
+  carry = Buffer.from(bytes.subarray(cut));
+  const whole = bytes.toString('utf8', 0, cut);
   for (let i = whole.indexOf('\n'); i >= 0; i = whole.indexOf('\n', i + 1)) facts++;
-  for (const m of whole.matchAll(quoted)) strings.add(m[1].replace(/\\(["\\])/g, '$1'));
+  for (const m of whole.matchAll(quoted)) strings.add(Buffer.from(m[1].replace(/\\(["\\])/g, '$1')).toString());
 }
 if (previous !== undefined) await put(inheritText(Buffer.concat(held).toString('utf8'), previous));
 const host = hostFacts(files, strings);

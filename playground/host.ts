@@ -120,7 +120,8 @@ export function hostFacts(paths: string[], strings: Set<string>): string[] {
   for (const d of dirs) if (d !== '.') out.push(`has_dir[fs](${q(dirOf(d))}, ${q(base(d))}).`);
   for (const p of paths) out.push(`has_file[fs](${q(dirOf(p))}, ${q(base(p))}).`);
   for (const s of strings) {
-    if (!s || s.includes('\n')) continue;
+    // a specifier is one line and short; every segment repeats the string, so a long one costs its length times its slashes
+    if (!s || s.includes('\n') || s.length > 4096) continue;
     const segs = s.split('/');
     out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`);
     segs.forEach((g, k) => out.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`));
