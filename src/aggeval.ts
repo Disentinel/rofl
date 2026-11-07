@@ -7676,7 +7676,8 @@ export class AggEval {
     else {
       const w = this.whyWitness(id);
       if (w === undefined) {
-        next.push(line(`${pad}${key} ${this.alive(id) && (this.plain || r.base) ? '[axiom]' : '[past tick]'}`));
+        const mark = r.lemma !== undefined ? (r.lemma ? `[lemma ${r.lemma}]` : '[lemma]') : this.alive(id) && (this.plain || r.base) ? '[axiom]' : '[past tick]';
+        next.push(line(`${pad}${key} ${mark}`));
       } else {
         next.push(line(`${pad}${key}  <= ${w.ruleId} @tick ${w.tick}`));
         if (this.whyUnk !== null && r.rel === IFACE.unknown && r.args.length === 1) {

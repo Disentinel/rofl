@@ -194,6 +194,8 @@ export function legible(text: string): string {
     .replace(/^(\s*)whynot (.*):$/, '$1why not $2:')
     .replace(/failed premise: /, 'it stops at: ')
     .replace(/ \[axiom\]$/, ' (given)')
+    .replace(/ \[lemma ([^\]]+)\]$/, ' (a lemma, $1)')
+    .replace(/ \[lemma\]$/, ' (a lemma)')
     .replace(/ \[finite failure\]$/, ' (nothing says so)')
     .replace(/ \[builtin fails\]$/, ' (false)')
     .replace(/ \[builtin\]$/, ' (arithmetic)')

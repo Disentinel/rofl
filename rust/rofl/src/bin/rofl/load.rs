@@ -485,11 +485,12 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
     drop(texts);
-    // a world that cuts a book is evaluated a file at a time below the cut, on one worker where volumes do not pay
+    // under VOLUMES_FROM a world is kept whole, its answer read back fastest so; above, a world that cuts a book is
+    // evaluated a file at a time below the cut, on one worker where [surface] does not part it
     let staged = cut.core.contains("cut[fixpointplan](");
     let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
-    let apart = bytes >= VOLUMES_FROM && cut.core.contains("[surface](");
-    if cut.files.len() < 2 || !(apart || staged) { return None; }
+    let apart = cut.core.contains("[surface](");
+    if cut.files.len() < 2 || bytes < VOLUMES_FROM || !(apart || staged) { return None; }
     let mut s = Session::fresh(o.budget);
     set_walls(o, &mut s);
     if let Err(d) = s.load_all(&[cut.core.as_str()], None) {

@@ -263,6 +263,11 @@ impl Eval {
         self.lemma_heads.as_ref().is_some_and(|(_, h)| h.contains(&r.rel))
     }
 
+    /// What `why` says of a lemma's place, `File:Line` or empty where the plan names no site; none when `id` is no lemma.
+    pub fn lemma_mark(&mut self, id: FactId) -> Option<String> {
+        (self.store.alive(id) && self.is_lemma(id)).then(|| self.lemma_site(id).unwrap_or_default())
+    }
+
     /// Where a lemma stands, by the plan's `site[fixpointplan](Rel, Book)`: the first fact of `Rel[Book]` whose first
     /// argument is one of the lemma's, its other arguments joined by `:` (`at[tree](N, File, Line)`: `File:Line`).
     pub(super) fn lemma_site(&mut self, id: FactId) -> Option<String> {
