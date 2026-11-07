@@ -6,15 +6,17 @@
 // --breaks-times is rust/target/breaks/agg-breaks-times.json, the pool's durations of the last
 // scripts/agg_breaks.ts run. The table of breaks and the worlds are read from the tree.
 //
-//   world_ms(W, Engine, Ms)          a world's answer by one engine (ts | rust); the longest run read
+//   world_ms(W, Engine, Ms)          a world's answer by an engine that ran it (ts | rust); the longest run read
+//   world_in_tree(W)                 a world npm test loads
 //   world_facts(W, N)                the facts of its state
 //   world_rust_only(W)               check_opt(W, one_engine, rust)
 //   break_reads(B, W)                a break of scripts/agg_breaks.ts and a proof it must turn red
+//   break_capped(B, W)               that proof run under the cap of steps, the sign being the cut
 //   break_kind(B, K)                 switch (brk! in the Rust engine) | edit (a .rofl copied) | ts (src/ copied)
 //   proof_test(W, T)                 a proof that is a cargo test: `cargo test --test T`
 //   break_ms(B, W, Ms)               the break planted, that proof run          control_ms(W, Ms)   the proof with no break
 import * as fs from 'node:fs';
-import { BREAKS, TESTS } from '../scripts/agg_breaks.ts';
+import { BREAKS, TESTS, CUT } from '../scripts/agg_breaks.ts';
 import { worlds } from '../scripts/goldens.ts';
 
 const arg = (k: string): string | undefined => { const i = process.argv.indexOf(k); return i < 0 ? undefined : process.argv[i + 1]; };
@@ -26,9 +28,10 @@ const times = arg('--times');
 if (times) {
   const most = new Map<string, number>(), facts = new Map<string, number>();
   for (const l of fs.readFileSync(times, 'utf8').split('\n').filter(Boolean)) {
-    const [w, ts, rs, n] = l.split('\t');
+    const [w, ts, rs, n, ran] = l.split('\t');
     facts.set(w, Math.max(facts.get(w) ?? 0, +n));
     for (const [e, ms] of [['ts', +ts], ['rust', +rs]] as const) {
+      if (ran !== 'both' && ran !== e) continue;
       const k = `${w}\t${e}`;
       if (ms > (most.get(k) ?? -1)) most.set(k, ms);
     }
@@ -36,10 +39,10 @@ if (times) {
   for (const [k, ms] of [...most].sort()) { const [w, e] = k.split('\t'); fact('world_ms', w, e, ms); }
   for (const [w, n] of [...facts].sort()) fact('world_facts', w, n);
 }
-for (const w of worlds()) if (w.oneEngine === 'rust') fact('world_rust_only', w.name);
+for (const w of worlds()) { fact('world_in_tree', w.name); if (w.oneEngine === 'rust') fact('world_rust_only', w.name); }
 for (const b of BREAKS) {
   fact('break_kind', b.id, !b.edits?.length ? 'switch' : b.edits.some(([f]) => f.startsWith('src/')) ? 'ts' : 'edit');
-  for (const w of Object.keys(b.expect)) fact('break_reads', b.id, w);
+  for (const [w, sign] of Object.entries(b.expect)) { fact('break_reads', b.id, w); if (sign === CUT) fact('break_capped', b.id, w); }
 }
 for (const [w, t] of Object.entries(TESTS)) fact('proof_test', w, t);
 const bt = arg('--breaks-times');

@@ -1,0 +1,36 @@
+-- models/process/ci/gate-proof.rofl — each invariant of gate.rofl broken once, so the world ci_gate shows it red;
+-- one of them accepted. Prices as main would leave them, form as a change would.
+edb(ci_on). edb(world_rust_only). edb(world_ms). edb(world_in_tree). edb(world_facts). edb(break_reads). edb(break_kind). edb(break_ms). edb(control_ms).
+
+ci_on("w/ci", "push", "").
+ci_on("w/ci", "pull_request", "").
+
+-- a world past the TypeScript cap, on both engines
+world_in_tree("slow_ts").
+world_ms("slow_ts", "ts", 9000).
+world_ms("slow_ts", "rust", 500).
+
+-- a break whose proof runs away from its control, one accepted, and one the change adds on a world of 400 s
+world_in_tree("w1").
+world_rust_only("w1").
+world_ms("w1", "rust", 1000).
+control_ms("w1", 1000).
+break_kind("b_slow", "switch").
+break_reads("b_slow", "w1").
+break_ms("b_slow", "w1", 90000).
+break_kind("b_ok", "switch").
+break_reads("b_ok", "w1").
+break_ms("b_ok", "w1", 900).
+break_kind("b_known", "switch").
+break_reads("b_known", "w1").
+break_ms("b_known", "w1", 95000).
+ci_accepted("a fault runs away", "b_known", "w1").
+
+world_in_tree("w_big").
+world_rust_only("w_big").
+world_ms("w_big", "rust", 400000).
+break_kind("b_new", "switch").
+break_reads("b_new", "w_big").
+
+-- a world no run on main priced
+world_in_tree("w_new").

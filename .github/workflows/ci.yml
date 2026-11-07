@@ -21,7 +21,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # THE INVARIANTS OF CI, BEFORE CI RUNS. The form of the gates read from this tree, priced by the last run on main
+  # (its ci-cost-* artifacts), and models/process/ci/gate.rofl over them on the TypeScript engine: no build, seconds.
+  # A change that makes a gate slower than it may, puts a world past the TypeScript cap, plants a fault that runs
+  # away or runs a commit twice is red here, before the long jobs start.
+  model:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: invariants of CI
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: node --experimental-strip-types scripts/ci_cost.ts --check
+
   node:
+    needs: model
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,6 +115,7 @@ jobs:
   # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
   # Blocking: its control is green on main again (f_the_fault_harness_control_is_red_on_main).
   breaks:
+    needs: model
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

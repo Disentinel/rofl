@@ -1,0 +1,50 @@
+-- models/process/ci/gate.rofl — what a change does to CI, judged before CI runs it, beside cost.rofl. The form is the
+-- tree's (scanners/ci_cost.ts and scanners/gh_actions.py over the change); the prices are the last run on main (its
+-- ci-cost-worlds and ci-cost-breaks artifacts), which ran each break's proofs and each world cold. A broken invariant
+-- is red unless models/process/ci/accepted.rofl accepts it: a decision, and it shows up as a diff.
+
+edb(ci_accepted).
+
+-- the worth of a wall second against the pool's CPU: a change may add this much to a gate's wall unaccepted
+growth_allowed(30).
+
+-- A PROOF THE CHANGE ADDS. A (break, proof) main did not run is priced by its proof alone (cost.rofl, proof_cost);
+-- one main ran by what it took there, fault planted.
+main_ran(B, W) :- break_ms(B, W, _).
+proof_ms(B, W, C) :- break_reads(B, W), break_ms(B, W, C).
+proof_ms(B, W, C) :- break_reads(B, W), not main_ran(B, W), proof_cost(B, W, C).
+added(B, W) :- break_reads(B, W), not main_ran(B, W).
+added_ms(B, W, C) :- added(B, W), proof_cost(B, W, C).
+control_of(W, C) :- read_world(W), control_ms(W, C).
+control_of(T, C) :- read_test(T), control_ms(T, C).
+control_of(W, C) :- read_world(W), not control_ms(W, _), control_cost(W, C).
+control_of(T, C) :- read_test(T), not control_ms(T, _), control_cost(T, C).
+
+main_proofs(C) :- C is sum(X ; B, W : break_ms(B, W, X)).
+main_controls(C) :- C is sum(X ; W : control_ms(W, X)).
+now_proofs(C) :- C is sum(X ; B, W : proof_ms(B, W, X)).
+now_controls(C) :- C is sum(X ; W : control_of(W, X)).
+breaks_cpu_main(C) :- main_proofs(P), main_controls(K), C is P + K.
+breaks_cpu_now(C) :- now_proofs(P), now_controls(K), C is P + K.
+breaks_growth(S) :- breaks_cpu_main(M), breaks_cpu_now(N), pool_width(P), S is (N - M) / (1000 * P).
+
+-- A FAULT THAT RUNS AWAY: its proof took twenty times its control and half a minute more, and no cap of steps cuts it
+proof_control(B, W, C) :- break_reads(B, W), control_ms(W, C).
+proof_control(B, W, C) :- break_reads(B, W), proof_test(W, T), control_ms(T, C).
+runaway(B, W, X) :- break_ms(B, W, X), proof_control(B, W, C), L is 20 * C, X > L, X > 30000, not break_capped(B, W).
+
+-- A WORLD THE TREE HAS AND MAIN DID NOT PRICE: its cost is not known until main runs it
+unpriced_world(W) :- world_in_tree(W), not world_ms(W, "rust", _), not world_ms(W, "ts", _).
+unpriced_ts(W) :- world_in_tree(W), not world_rust_only(W), world_ms(W, "rust", _), not world_ms(W, "ts", _).
+
+-- THE INVARIANTS
+broken("one run per commit", W, "") :- doubled(W).
+broken("TypeScript past the cap", W, "") :- ts_heavy(W, _, _).
+broken("a fault runs away", B, W) :- runaway(B, W, _).
+broken("the breaks grow", "breaks", "") :- breaks_growth(S), growth_allowed(A), S > A.
+red(I, A, B) :- broken(I, A, B), not ci_accepted(I, A, B).
+
+not_priced("a proof main did not run", B, W) :- added(B, W), not added_ms(B, W, _).
+not_priced("a world main did not run", W, "") :- unpriced_world(W).
+not_priced("a world main ran on Rust alone, now both", W, "") :- unpriced_ts(W).
+held_accepted(I, A, B) :- broken(I, A, B), ci_accepted(I, A, B).

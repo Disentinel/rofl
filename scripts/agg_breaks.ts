@@ -9629,7 +9629,8 @@ export async function runBreak(b: Break, ws: World[], p: Plant): Promise<Verdict
 
 /** A break that runs away is shown by the wall cutting it, and a budget of CAP steps cuts it in a second where the
  *  default takes minutes; a world that sign reads is also run with no break under the same cap, which must not cut it. */
-const CUT = 'cut by the budget', CAP = 1_000_000;
+export const CUT = 'cut by the budget';
+const CAP = 1_000_000;
 
 /** `runBreak` or a control, with how long it took. */
 export async function timedBreak(b: Break, ws: World[], p: Plant): Promise<{ v: Verdict; ms: number }> {
@@ -9853,17 +9854,21 @@ if (isMain) {
       { env: { ROFL_PROFILE: 'breaks', ROFL_BREAK: '', ROFL_KERNEL_OVERRIDE: '', ROFL_BOOT: '', ROFL_READER: '', ROFL_TREE: '' } });
     const res = new Map<string, unknown>();
     order.forEach((i, k) => { res.set(jobs[i].key, ran[k].v); past[jobs[i].key] = ran[k].ms; });
-    saveTimes(past);
     for (const w of controls) { const r = res.get(`control/${w.name}`); if (r !== null) bad.push(`control, no break planted: ${r}`); }
     for (const [k, r] of res) if (k.startsWith('capped/') && r !== null) bad.push(`control under the cap of ${CAP} steps: ${r}`);
     chosen.forEach((b, i) => {
       const p = plants[i];
       if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
-      if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl'), true));
+      if (Object.keys(b.expect).some((n) => REPORTS[n])) {
+        const t = Date.now();
+        out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl'), true));
+        for (const n of Object.keys(b.expect).filter((n) => REPORTS[n])) past[`${b.id}/${n}`] = Date.now() - t;
+      }
       if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, res));
       const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
       out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
     });
+    saveTimes(past);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

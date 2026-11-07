@@ -15,6 +15,7 @@ a matrix value are kept or dropped; any other `if:` is a guard, kept as text.
   ci_job(J, W)                       ci_needs(J, J2)          ci_job_if(J, Text)
   ci_status_if(J)                    the job's `if:` asks how its needs ended, so a skipped one does not skip it
   ci_advisory(J)                     continue-on-error: the job's red does not fail its run
+  ci_job_name(J, Name)               the name a run gives the job: its `name:`, else its key
   ci_env(J, Env)                     ci_step(S, J, Index)     ci_guard(S, Text)
   ci_uploads(S, Artifact)            ci_downloads(S, Artifact, From)   From: run | triggering_run
   ci_holds(S, File)                  a file the step makes or puts in an artifact
@@ -138,6 +139,8 @@ class Repo:
             j = self.jname(w, jid, combo)
             env = {f"matrix.{k}": v for k, v in combo.items()}
             fact("ci_job", j, w)
+            if not combo:
+                fact("ci_job_name", j, sub(job.get("name", jid), env))
             for n in needs:
                 for c in self.names[n]:
                     fact("ci_needs", j, self.jname(w, n, c))

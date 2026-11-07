@@ -837,6 +837,7 @@ check[checks]("facts/goldens.rofl", "ast_within_readers", world).
 check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "ci_cost", world).
+check[checks]("facts/goldens.rofl", "ci_gate", world).
 check[checks]("facts/goldens.rofl", "closure_base_fact", world).
 check[checks]("facts/goldens.rofl", "concat_builtin", world).
 check[checks]("facts/goldens.rofl", "concat_recursion", world).
@@ -972,6 +973,7 @@ check[checks]("scripts/measurement_check.ts", "npm run measurecheck", gate).
 check[checks]("scripts/goldens.ts", "npm run test", gate).
 check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
+check[checks](".github/workflows/ci.yml", "invariants of CI", ci).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "npm packages", ci).
