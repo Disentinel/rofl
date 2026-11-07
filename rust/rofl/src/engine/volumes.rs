@@ -185,6 +185,16 @@ impl Eval {
             w.e.run().map(|_| ())
         })?;
         drop(groups);
+        let reads = ws.first().map(|w| surface_reads(&w.e, surface)).unwrap_or_default();
+        let mut vals: Vec<Values> = (0..k).map(|_| Values::default()).collect();
+        let mut pend: Vec<Vec<(FactId, u64, Vec<u64>)>> = vec![Vec::new(); k];
+        let mut by_rel: FxMap<Sym, Vec<(Option<Sym>, usize)>> = FxMap::default();
+        for key in reads.values().flatten().flatten().flatten() {
+            let ks = by_rel.entry(key.rel).or_default();
+            if !ks.contains(&(key.persp, key.at)) {
+                ks.push((key.persp, key.at));
+            }
+        }
         loop {
             loop {
                 let t = std::time::Instant::now();
@@ -196,7 +206,36 @@ impl Eval {
                         (from..to).filter(|&id| w.e.store.alive(id) && !w.laid.contains(&id) && w.e.store.rec(id).persp == surface).collect()
                     })
                     .collect();
-                if made.iter().all(|m| m.is_empty()) || k == 1 || brk!("volumes_unexchanged" => true; false) {
+                // each fact goes to the volumes that read it: those holding a value it is joined by
+                let mut to: Vec<Vec<(usize, FactId)>> = vec![Vec::new(); k];
+                for (i, ids) in made.iter().enumerate() {
+                    for &id in ids {
+                        let r = ws[i].e.store.rec(id);
+                        match reads.get(&r.rel) {
+                            Some(Some(_)) if k <= 64 => pend[i].push((id, 1 << i, ws[i].e.store.args(id).iter().map(|t| spelt(&ws[i].e.h, *t)).collect())),
+                            Some(_) => (0..k).filter(|&j| j != i).for_each(|j| to[j].push((i, id))),
+                            None => {}
+                        }
+                    }
+                }
+                for (j, w) in ws.iter().enumerate() {
+                    note_values(&w.e, &by_rel, &mut vals[j]);
+                }
+                for (i, p) in pend.iter_mut().enumerate() {
+                    let e = &ws[i].e;
+                    p.retain_mut(|(id, sent, args)| {
+                        let Some(Some(keys)) = reads.get(&e.store.rec(*id).rel) else { return false };
+                        let was = *sent;
+                        for (j, v) in vals.iter().enumerate().filter(|(j, _)| was & 1 << j == 0) {
+                            if keys.iter().any(|g| g.iter().all(|key| v.0.get(&(key.rel, key.persp, key.at)).is_some_and(|vs| vs.contains(&args[key.pos])))) {
+                                to[j].push((i, *id));
+                                *sent |= 1 << j;
+                            }
+                        }
+                        sent.count_ones() < k as u32
+                    });
+                }
+                if to.iter().all(|m| m.is_empty()) || k == 1 || brk!("volumes_unexchanged" => true; false) {
                     break;
                 }
                 st.rounds += 1;
@@ -206,7 +245,7 @@ impl Eval {
                 unsafe impl Sync for Ptr {}
                 let ptrs: Vec<Ptr> = ws.iter_mut().map(|w| Ptr(w as *mut Worker)).collect();
                 let lays: Vec<Vec<(Sym, Sym, Vec<Term>)>> = std::thread::scope(|sc| {
-                    let (ptrs, made) = (&ptrs, &made);
+                    let (ptrs, to) = (&ptrs, &to);
                     let hs: Vec<_> = (0..k)
                         .map(|i| {
                             sc.spawn(move || {
@@ -214,14 +253,12 @@ impl Eval {
                                 let p = ptrs[i].0;
                                 let dst = unsafe { &mut (*p).e.h };
                                 let mut v = Vec::new();
-                                for (j, ids) in made.iter().enumerate().filter(|(j, _)| *j != i) {
+                                for &(j, id) in &to[i] {
                                     let q = ptrs[j].0 as *const Worker;
                                     let src = unsafe { &(*q).e };
-                                    for &id in ids {
-                                        let rec = src.store.rec(id);
-                                        let args = src.store.args(id).iter().map(|t| copy_term(*t, &src.h, dst, syms, funcs)).collect();
-                                        v.push((rec.rel, rec.persp, args));
-                                    }
+                                    let rec = src.store.rec(id);
+                                    let args = src.store.args(id).iter().map(|t| copy_term(*t, &src.h, dst, syms, funcs)).collect();
+                                    v.push((rec.rel, rec.persp, args));
                                 }
                                 v
                             })
@@ -292,6 +329,140 @@ impl Eval {
         st.held = ws.iter().map(|w| (w.e.store.len_ids() - core, w.laid.len())).collect();
         Ok((ws, st))
     }
+}
+
+/// Where a premise reading a `[surface]` relation is joined: its argument `pos` is the value at `at` of a fact of
+/// `rel` (in `persp`, or any book) the reading volume holds.
+struct Key {
+    pos: usize,
+    rel: Sym,
+    persp: Option<Sym>,
+    at: usize,
+}
+
+/// Who reads each `[surface]` relation, by the rules of a worker that has run: by the keys of every premise reading
+/// it, or `None` when every volume is to have it (read in an aggregate or an open book, or joined by nothing a level
+/// no higher than its own). A key's partner is closed by the end of the fact's own level, so a fact is delivered, or
+/// is not needed, before any rule above it reads it, under a negation as well. A premise alone in its body reads for
+/// its head: in `[surface]` the volume it stands in proves the head and lays it itself; elsewhere it is read where
+/// the head is, by the head's keys. A relation no premise reads goes nowhere.
+fn surface_reads(e: &Eval, surface: Sym) -> FxMap<Sym, Option<Vec<Vec<Key>>>> {
+    let mut at: FxMap<Sym, Vec<(usize, usize)>> = FxMap::default();
+    let mut open: FxSet<Sym> = FxSet::default();
+    fn note(at: &mut FxMap<Sym, Vec<(usize, usize)>>, open: &mut FxSet<Sym>, body: &[BodyElem], r: usize, top: bool) {
+        for (n, b) in body.iter().enumerate() {
+            match b {
+                BodyElem::Pos(l) | BodyElem::Neg(l) if !top || l.persp.as_atom().is_none() => {
+                    open.insert(l.rel);
+                }
+                BodyElem::Pos(l) | BodyElem::Neg(l) => at.entry(l.rel).or_default().push((r, n)),
+                BodyElem::Agg(a) => note(at, open, &a.body, r, false),
+                _ => {}
+            }
+        }
+    }
+    for (i, r) in e.rules.iter().enumerate() {
+        note(&mut at, &mut open, &r.clause.body, i, true);
+    }
+    let mut out: FxMap<Sym, Option<Vec<Vec<Key>>>> = FxMap::default();
+    let rels: FxSet<Sym> = e.rules.iter().filter(|r| r.clause.head.persp.as_atom() == Some(surface)).map(|r| r.clause.head.rel).collect();
+    for rel in rels {
+        let mut seen = FxSet::default();
+        out.insert(rel, keys_of(e, &at, &open, surface, rel, Some(surface), e.rel_level(rel), &mut seen));
+    }
+    out
+}
+
+/// The keys by which the premises of `rel` (in `persp`) are joined, as positions of `rel`'s own arguments; `None`
+/// when a fact of it may be needed anywhere.
+#[allow(clippy::too_many_arguments)]
+fn keys_of(e: &Eval, at: &FxMap<Sym, Vec<(usize, usize)>>, open: &FxSet<Sym>, surface: Sym, rel: Sym, persp: Option<Sym>, level: i64, seen: &mut FxSet<Sym>) -> Option<Vec<Vec<Key>>> {
+    if open.contains(&rel) || !seen.insert(rel) {
+        return None;
+    }
+    let keys = reads_of(e, at, open, surface, rel, persp, level, seen);
+    seen.remove(&rel);
+    keys
+}
+
+#[allow(clippy::too_many_arguments)]
+fn reads_of(e: &Eval, at: &FxMap<Sym, Vec<(usize, usize)>>, open: &FxSet<Sym>, surface: Sym, rel: Sym, persp: Option<Sym>, level: i64, seen: &mut FxSet<Sym>) -> Option<Vec<Vec<Key>>> {
+    let mut keys = Vec::new();
+    for &(ri, n) in at.get(&rel).into_iter().flatten() {
+        let r = &e.rules[ri];
+        let body = &r.clause.body;
+        let (BodyElem::Pos(l) | BodyElem::Neg(l)) = &body[n] else { continue };
+        if l.persp.as_atom() != persp && persp.is_some() {
+            continue;
+        }
+        if body.iter().enumerate().all(|(m, q)| m == n || !matches!(q, BodyElem::Pos(_))) {
+            let head = &r.clause.head;
+            if head.persp.as_atom() == Some(surface) {
+                continue;
+            }
+            // read where the head is read: the head's keys, carried back to this premise's arguments
+            for g in keys_of(e, at, open, surface, head.rel, head.persp.as_atom(), level, seen)? {
+                let back: Vec<Key> = g
+                    .into_iter()
+                    .filter_map(|k| {
+                        let TermK::Var(v) = head.args.get(k.pos)?.kind() else { return None };
+                        l.args.iter().position(|a| a.kind() == TermK::Var(v)).map(|pos| Key { pos, ..k })
+                    })
+                    .collect();
+                if back.is_empty() {
+                    return None;
+                }
+                keys.push(back);
+            }
+            continue;
+        }
+        // every join of an argument with another premise no higher: a fact is read where all of them meet a value
+        let group: Vec<Key> = l
+            .args
+            .iter()
+            .enumerate()
+            .filter_map(|(pos, t)| match t.kind() { TermK::Var(v) => Some((pos, v)), _ => None })
+            .flat_map(|(pos, v)| {
+                body.iter().enumerate().filter(move |(m, _)| *m != n).filter_map(move |(_, q)| match q {
+                    BodyElem::Pos(q) if e.rel_level(q.rel) <= level => q.args.iter().position(|a| a.kind() == TermK::Var(v)).map(|at| Key { pos, rel: q.rel, persp: q.persp.as_atom(), at }),
+                    _ => None,
+                })
+            })
+            .collect();
+        if group.is_empty() {
+            return None;
+        }
+        keys.push(group);
+    }
+    Some(keys)
+}
+
+/// The values a volume holds where a `[surface]` fact is joined, by the hash of their spelling, read up to `.1`.
+#[derive(Default)]
+struct Values(FxMap<(Sym, Option<Sym>, usize), FxSet<u64>>, FactId);
+
+fn spelt(h: &Heap, t: Term) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut s = std::collections::hash_map::DefaultHasher::new();
+    h.canon(t).hash(&mut s);
+    s.finish()
+}
+
+fn note_values(e: &Eval, by_rel: &FxMap<Sym, Vec<(Option<Sym>, usize)>>, v: &mut Values) {
+    let to = e.store.len_ids();
+    for id in v.1..to {
+        let r = e.store.rec(id);
+        let Some(ks) = by_rel.get(&r.rel) else { continue };
+        if !e.store.alive(id) {
+            continue;
+        }
+        for &(persp, at) in ks.iter().filter(|(p, _)| p.is_none_or(|p| p == r.persp)) {
+            if let Some(t) = e.store.args(id).get(at) {
+                v.0.entry((r.rel, persp, at)).or_default().insert(spelt(&e.h, *t));
+            }
+        }
+    }
+    v.1 = to;
 }
 
 /// Whether a term names a file's node, at any depth: what makes a fact one volume's.

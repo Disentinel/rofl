@@ -550,7 +550,15 @@ facts are cut by file and the files dealt to a worker a core, balanced by bytes;
 each worker is a fork of the core (the model, the question, the facts naming no
 file), which is frozen once and shared, not copied, and evaluates its files on
 its own thread. A level at a time, what a worker made of `[surface]` is laid into
-the others and fired on there, until none makes more (`engine/volumes.rs`). An
+the workers that read it and fired on there, until none makes more (`engine/volumes.rs`).
+Who reads a fact comes from the rules: a premise reading it is joined with the
+others by some of its arguments, and the fact goes to a worker holding, in the
+premise it is joined with, the value it carries there (a premise alone in its
+rule reads for its head, by the head's keys). A key's partner stands no higher
+than the fact, so the fact arrives, or is not needed, before a rule above it
+reads it, under a negation too; a relation read in an aggregate or an open book
+goes to every worker. Measured at vscode 250 (4 workers): a worker holds 31 000
+facts the others laid where it held 50 000, the answers byte for byte. An
 answer is the union of the workers'; a relation with a fact naming no file (a
 count over every file) is concluded again in a world over the core and the
 workers' facts it reads. A `why` is the proof in the worker that holds the fact,
