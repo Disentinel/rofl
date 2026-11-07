@@ -109,7 +109,7 @@ pub struct Worker {
     sent: FxSet<(u32, FactId, u32)>,
     unadmitted: Vec<FactId>,
     /// the rules each laid fact was laid for, and those a fact already laid was laid for again since the last round
-    laid_for: FxMap<FactId, Vec<u32>>,
+    pub laid_for: FxMap<FactId, Vec<u32>>,
     retag: Vec<(FactId, u32)>,
     me: u32,
     home_of: FxMap<Sym, Option<u32>>,
@@ -360,6 +360,8 @@ struct Key {
     rel: Sym,
     persp: Option<Sym>,
     at: usize,
+    /// the arity of the partner's premise
+    parity: usize,
     mode: Mode,
     /// the rule whose premise reads the fact, by its index
     rule: u32,
@@ -483,7 +485,7 @@ fn joins<'a>(l: &'a Lit, partners: impl Iterator<Item = &'a Lit> + Clone) -> Vec
     for (pos, v) in vars(l) {
         for q in partners.clone() {
             if let Some(at) = var_at(q, v) {
-                let k = Key { pos, arity: l.args.len(), rel: q.rel, persp: q.persp.as_atom(), at, mode: Mode::Any, rule: 0 };
+                let k = Key { pos, arity: l.args.len(), rel: q.rel, persp: q.persp.as_atom(), at, parity: q.args.len(), mode: Mode::Any, rule: 0 };
                 if !out.contains(&k) {
                     out.push(k);
                 }
@@ -559,7 +561,7 @@ impl Routes {
             }
             let any: Vec<Key> = vars(l)
                 .filter(|(_, v)| partners.iter().any(|q| !std::ptr::eq(*q, l) && var_at(q, *v).is_some()))
-                .map(|(pos, _)| Key { pos, arity: l.args.len(), rel: ANY, persp: None, at: 0, mode: Mode::Any, rule: 0 })
+                .map(|(pos, _)| Key { pos, arity: l.args.len(), rel: ANY, persp: None, at: 0, parity: 0, mode: Mode::Any, rule: 0 })
                 .collect();
             (!any.is_empty()).then_some(any)
         };
@@ -984,3 +986,278 @@ impl Eval {
     }
 }
 
+
+/// Volume `i` to read and volume `j` to write, of the same slice.
+fn pair<'a>(ws: &'a mut [&mut Eval], i: usize, j: usize) -> (&'a Eval, &'a mut Eval) {
+    if i < j {
+        let (a, b) = ws.split_at_mut(j);
+        (&*a[i], &mut *b[0])
+    } else {
+        let (a, b) = ws.split_at_mut(i);
+        (&*b[0], &mut *a[j])
+    }
+}
+
+/// What crosses volumes, for a delta taken by kept volumes after the evaluation (`Volumes::pass_on`): the routes of
+/// the evaluation, asked of the volumes' stores instead of the values noted while it ran.
+pub struct Crossing {
+    rt: Routes,
+    syms: Sym,
+    funcs: u32,
+}
+
+/// The facts laid into a volume, and the rules each was laid for.
+#[derive(Default, Clone)]
+pub struct Laid {
+    pub ids: FxSet<FactId>,
+    pub rules: FxMap<FactId, Vec<u32>>,
+}
+
+impl Crossing {
+    /// The crossing of volumes `ws` over `core`, whose files' nodes are at home where `homes` says.
+    pub fn of(core: &Eval, ws: &[&Eval], homes: FxMap<u64, u32>) -> Crossing {
+        let n0 = core.store.len_ids();
+        let mut local: FxSet<Sym> = core.rules.iter().map(|r| r.clause.head.rel).collect();
+        for w in ws {
+            local.extend((n0..w.store.len_ids()).map(|id| w.store.rec(id).rel));
+        }
+        let mut rt = Routes::of(ws.first().copied().unwrap_or(core), &local);
+        rt.homes = homes;
+        Crossing { rt, syms: core.h.syms.len() as Sym, funcs: core.h.funcs_len() }
+    }
+
+    /// Where volume `me`'s rules fire.
+    pub fn anchors(&self, me: u32) -> Rc<Anchors> {
+        Rc::new(Anchors { by_rule: Rc::new(self.rt.anchors.clone()), homes: Rc::new(self.rt.homes.clone()), me })
+    }
+
+    fn at_home(&self, e: &Eval, id: FactId, me: usize, cache: &mut FxMap<Sym, Option<u32>>) -> bool {
+        let hs = homes_of(&e.h, e.store.args(id), &self.rt, cache);
+        hs.is_empty() || hs.contains(&(me as u32))
+    }
+
+    /// Whether volume `j` holds a fact of the key's partner whose argument is `t` (of `src`'s heap), as the key reads.
+    fn holds(&self, k: &Key, t: Term, src: &Heap, j: usize, w: &mut Eval, laid: &Laid, cache: &mut FxMap<Sym, Option<u32>>) -> bool {
+        let Some(t) = find_term(t, src, &w.h, self.syms, self.funcs) else { return false };
+        if k.rel == ANY {
+            return true;
+        }
+        let cands = w.store.arg_matches(&w.h, k.rel, k.persp, k.parity, &[k.at], &[t]).unwrap_or_else(|| match k.persp {
+            Some(p) => w.store.rel_persp(&w.h, k.rel, p),
+            None => w.store.rel_all(&w.h, k.rel),
+        });
+        cands.into_iter().any(|c| {
+            w.store.alive(c)
+                && w.store.args(c).get(k.at) == Some(&t)
+                && match k.mode {
+                    Mode::Any => true,
+                    Mode::Own => self.at_home(w, c, j, cache),
+                    Mode::Rule => self.at_home(w, c, j, cache) || laid.rules.get(&c).is_some_and(|r| r.contains(&k.rule)),
+                }
+        })
+    }
+
+    /// The volumes a fact `id` volume `i` made goes to, each with the rules it is laid for there: its homes, and those
+    /// holding what its readers join it by.
+    pub fn targets(&self, i: usize, id: FactId, ws: &mut [&mut Eval], laid: &[Laid], cache: &mut FxMap<Sym, Option<u32>>) -> Vec<(usize, u32)> {
+        let k = ws.len();
+        let (rec, args, homes) = {
+            let e = &*ws[i];
+            let rec = e.store.rec(id);
+            (rec, e.store.args(id).to_vec(), homes_of(&e.h, e.store.args(id), &self.rt, cache))
+        };
+        let route = self.rt.route(rec.rel, rec.persp);
+        let mut out = Vec::new();
+        if matches!(route, Route::Nowhere) {
+            return out;
+        }
+        out.extend(homes.into_iter().filter(|&w| w as usize != i).map(|w| (w as usize, u32::MAX)));
+        match route {
+            Route::Nowhere => {}
+            Route::All => out.extend((0..k).filter(|&j| j != i).map(|j| (j, u32::MAX))),
+            Route::Keys(a, b) => {
+                for key in a.iter().chain(b).filter(|key| key.arity == args.len()) {
+                    for j in (0..k).filter(|&j| j != i) {
+                        let (src, w) = pair(ws, i, j);
+                        if !out.contains(&(j, key.rule)) && self.holds(key, args[key.pos], &src.h, j, w, &laid[j], cache) {
+                            out.push((j, key.rule));
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// The facts the other volumes made that a fact `id` volume `i` holds now joins, as (volume, fact, rule): what
+    /// they are to lay in `i`. `only`: for a fact laid in `i` again for that rule alone.
+    pub fn pulls(&self, i: usize, id: FactId, only: Option<u32>, ws: &mut [&mut Eval], laid: &[Laid], cache: &mut FxMap<Sym, Option<u32>>) -> Vec<(usize, FactId, u32)> {
+        let (rec, args, home) = {
+            let e = &*ws[i];
+            (e.store.rec(id), e.store.args(id).to_vec(), self.at_home(e, id, i, cache))
+        };
+        let mut wanted: Vec<(Term, &(Sym, Option<Sym>, Key))> = Vec::new();
+        for at in 0..args.len() {
+            for place in [(rec.rel, Some(rec.persp), at), (rec.rel, None, at)] {
+                for r in self.rt.readers.get(&place).into_iter().flatten() {
+                    let ok = match (only, r.2.mode) {
+                        (Some(o), Mode::Rule) => r.2.rule == o,
+                        (Some(_), _) => false,
+                        (None, Mode::Own) => home,
+                        (None, Mode::Any) => true,
+                        (None, Mode::Rule) => home || laid[i].rules.get(&id).is_some_and(|rs| rs.contains(&r.2.rule)),
+                    };
+                    if ok && r.2.parity == args.len() {
+                        wanted.push((args[at], r));
+                    }
+                }
+            }
+        }
+        if only.is_none() {
+            let mut stack: Vec<Term> = args.clone();
+            while let Some(t) = stack.pop() {
+                if let TermK::Func(f) = t.kind() {
+                    stack.extend_from_slice(ws[i].h.fargs(f));
+                }
+                for r in self.rt.readers.get(&(ANY, None, 0)).into_iter().flatten() {
+                    wanted.push((t, r));
+                }
+            }
+        }
+        let mut out = Vec::new();
+        for j in (0..ws.len()).filter(|&j| j != i) {
+            let (src, w) = pair(ws, i, j);
+            for &(t, &(rel, persp, key)) in &wanted {
+                let Some(t) = find_term(t, &src.h, &w.h, self.syms, self.funcs) else { continue };
+                let cands = w.store.arg_matches(&w.h, rel, persp, key.arity, &[key.pos], &[t]).unwrap_or_else(|| match persp {
+                    Some(p) => w.store.rel_persp(&w.h, rel, p),
+                    None => w.store.rel_all(&w.h, rel),
+                });
+                for c in cands {
+                    let r = w.store.rec(c);
+                    let a = w.store.args(c);
+                    if w.store.alive(c) && !laid[j].ids.contains(&c) && r.rel == rel && persp.is_none_or(|p| p == r.persp) && a.len() == key.arity && a[key.pos] == t && !out.contains(&(j, c, key.rule)) {
+                        out.push((j, c, key.rule));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// `t` of `src` named in `dst`, its new names made there.
+    pub fn copy(&self, t: Term, src: &Heap, dst: &mut Heap) -> Term {
+        copy_term(t, src, dst, self.syms, self.funcs)
+    }
+
+    /// `t` of `src` in `dst`, None where `dst` has no name for it.
+    pub fn find(&self, t: Term, src: &Heap, dst: &Heap) -> Option<Term> {
+        find_term(t, src, dst, self.syms, self.funcs)
+    }
+}
+
+/// What moved in a volume by a delta: the facts it made anew, and the facts laid in it laid again for a rule.
+#[derive(Default)]
+pub struct Change {
+    pub at: usize,
+    pub made: Vec<FactId>,
+    pub again: Vec<(FactId, u32)>,
+}
+
+/// What each volume takes in a round of a delta: the facts it lays (named in its own
+/// heap, with the rules they are laid for), and those laid already, laid for more rules.
+pub struct Plan {
+    pub lay: Vec<Vec<(Sym, Sym, Vec<Term>, Vec<u32>)>>,
+    pub again: Vec<Vec<(FactId, Vec<u32>)>>,
+}
+
+impl Crossing {
+    /// The round of a delta that passes `wave` on: a fact made anew goes where it is read, and brings what it joins.
+    pub fn plan(&self, wave: &[Change], ws: &mut [&mut Eval], laid: &[Laid], caches: &mut [FxMap<Sym, Option<u32>>]) -> Plan {
+        let k = ws.len();
+        let mut want: Vec<Vec<(usize, FactId, u32)>> = vec![Vec::new(); k];
+        for c in wave {
+            let i = c.at;
+            for &f in &c.made {
+                for (j, rule) in self.targets(i, f, ws, laid, &mut caches[i]) {
+                    want[j].push((i, f, rule));
+                }
+                for (j, g, rule) in self.pulls(i, f, None, ws, laid, &mut caches[i]) {
+                    want[i].push((j, g, rule));
+                }
+            }
+            for &(f, rule) in &c.again {
+                for (j, g, r) in self.pulls(i, f, Some(rule), ws, laid, &mut caches[i]) {
+                    want[i].push((j, g, r));
+                }
+            }
+        }
+        let mut lay: Vec<Vec<(Sym, Sym, Vec<Term>, Vec<u32>)>> = vec![Vec::new(); k];
+        let mut again: Vec<Vec<(FactId, Vec<u32>)>> = vec![Vec::new(); k];
+        for (j, mut ws_j) in want.into_iter().enumerate() {
+            ws_j.sort_unstable();
+            ws_j.dedup();
+            let mut by: Vec<((usize, FactId), Vec<u32>)> = Vec::new();
+            for (p, f, rule) in ws_j {
+                match by.last_mut() {
+                    Some((key, rs)) if *key == (p, f) => rs.push(rule),
+                    _ => by.push(((p, f), vec![rule])),
+                }
+            }
+            for ((p, f), rules) in by {
+                if let Some(g) = self.copy_in(p, f, j, ws) {
+                    if laid[j].ids.contains(&g) {
+                        again[j].push((g, rules));
+                    }
+                    continue;
+                }
+                let (src, w) = pair(ws, p, j);
+                let rec = src.store.rec(f);
+                let args = src.store.args(f).iter().map(|t| copy_term(*t, &src.h, &mut w.h, self.syms, self.funcs)).collect();
+                lay[j].push((rec.rel, rec.persp, args, rules));
+            }
+        }
+        Plan { lay, again }
+    }
+
+    /// What a delta overdeletes across the volumes from `seeds` (facts of a volume gone, or base facts about to go):
+    /// in each volume what cites them, at any depth, and wherever a fact a volume made is laid, the copy and what
+    /// cites that. A fact one volume derives again from a copy of what another derived from it holds in neither once
+    /// both go together, so a cycle through the volumes keeps nothing alive.
+    pub fn doomed(&self, seeds: Vec<(usize, FactId)>, ws: &mut [&mut Eval], laid: &[Laid]) -> Vec<FxSet<FactId>> {
+        let k = ws.len();
+        let mut seen: Vec<FxSet<FactId>> = vec![FxSet::default(); k];
+        let mut stack: Vec<(usize, FactId)> = seeds.into_iter().filter(|&(i, f)| seen[i].insert(f)).collect();
+        while let Some((i, f)) = stack.pop() {
+            for h in ws[i].store.citers_one(f) {
+                if ws[i].store.alive(h) && seen[i].insert(h) {
+                    stack.push((i, h));
+                }
+            }
+            if laid[i].ids.contains(&f) {
+                continue;
+            }
+            for j in (0..k).filter(|&j| j != i) {
+                if let Some(g) = self.copy_in(i, f, j, ws) {
+                    if laid[j].ids.contains(&g) && seen[j].insert(g) {
+                        stack.push((j, g));
+                    }
+                }
+            }
+        }
+        seen
+    }
+
+    /// Whether a volume other than `j` holds the fact `g` of `j` alive as its own.
+    pub fn made_elsewhere(&self, j: usize, g: FactId, ws: &mut [&mut Eval], laid: &[Laid]) -> bool {
+        (0..ws.len()).filter(|&i| i != j).any(|i| self.copy_in(j, g, i, ws).is_some_and(|x| !laid[i].ids.contains(&x)))
+    }
+
+    /// The fact `f` of volume `i` as volume `j` holds it, alive; None where it does not.
+    fn copy_in(&self, i: usize, f: FactId, j: usize, ws: &mut [&mut Eval]) -> Option<FactId> {
+        let (src, w) = pair(ws, i, j);
+        let rec = src.store.rec(f);
+        let args: Option<Vec<Term>> = src.store.args(f).iter().map(|t| find_term(*t, &src.h, &w.h, self.syms, self.funcs)).collect();
+        w.store.get(rec.rel, rec.persp, &args?).filter(|g| w.store.alive(*g))
+    }
+}
