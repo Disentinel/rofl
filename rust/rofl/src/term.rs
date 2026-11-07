@@ -57,6 +57,16 @@ impl Interner {
         }
         self.n0 + self.top.intern(s, h)
     }
+    /// The id of a name already interned, without interning it.
+    pub fn find(&self, s: &str) -> Option<Sym> {
+        let h = name_hash(s.as_bytes());
+        if self.n0 > 0 {
+            if let Some(id) = self.base.find(s, h) {
+                return Some(id);
+            }
+        }
+        self.top.find(s, h).map(|j| self.n0 + j)
+    }
     #[inline]
     pub fn name(&self, id: Sym) -> &str {
         let j = id.wrapping_sub(self.n0);
@@ -607,6 +617,16 @@ impl Heap {
             }
         }
         Term::func(self.f0 + self.top.mkf(name, args, h))
+    }
+    /// The functor already built of `name` over `args`, without building it.
+    pub fn find_f(&self, name: Sym, args: &[Term]) -> Option<Term> {
+        let h = cons_hash(name, args);
+        if self.f0 > 0 {
+            if let Some(i) = self.base.find(name, args, h) {
+                return Some(Term::func(i));
+            }
+        }
+        self.top.find(name, args, h).map(|i| Term::func(self.f0 + i))
     }
     /// Move every name and functor under the mark, so that a clone shares
     /// them; `Store::freeze` is the other half of a fork.

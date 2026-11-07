@@ -485,12 +485,9 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
     drop(texts);
-    // under VOLUMES_FROM a world is kept whole, its answer read back fastest so; above, a world that cuts a book is
-    // evaluated a file at a time below the cut, on one worker where [surface] does not part it
-    let staged = cut.core.contains("cut[fixpointplan](");
+    // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
     let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
-    let apart = cut.core.contains("[surface](");
-    if cut.files.len() < 2 || bytes < VOLUMES_FROM || !(apart || staged) { return None; }
+    if cut.files.len() < 2 || bytes < VOLUMES_FROM { return None; }
     let mut s = Session::fresh(o.budget);
     set_walls(o, &mut s);
     if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
@@ -506,14 +503,14 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         return Some(code);
     }
     let files = cut.files.len();
-    let k = if apart { std::thread::available_parallelism().map_or(1, |n| n.get()).min(files) } else { 1 };
+    let k = std::thread::available_parallelism().map_or(1, |n| n.get()).min(files);
     let core_sum = sum(&cut.core);
     let gs = rofl::engine::volumes::groups(cut.files, k);
     let sums: Vec<(String, u64, usize)> = gs.iter().enumerate().flat_map(|(i, g)| g.iter().map(move |(f, t)| (f.clone(), sum(t), i))).collect();
     let mut v = match s.by_volumes(gs, files) {
         Ok(v) => {
             let st = &v.stats;
-            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} [surface] facts ({} ms of {} ms); held above the core, laid: {:?}", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms, st.held);
+            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} facts ({} ms of {} ms); held above the core, laid: {:?}", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms, st.held);
             v
         }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
