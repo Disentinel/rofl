@@ -531,8 +531,11 @@ The kept volumes of `rofl ask`/`why` (from 32 MB) are the exception, as each fil
 volumes are kept with a sum of every file (`<slot>.files`), and when at most one file in eight moved and the rules
 did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
 lemmas and facts it no longer gives taken out of its worker and the new ones put in (`volumes: X of Y files taken
-by delta in Z ms`). An edit that changes what the file shows the others (`[surface]`) is computed anew, said on
-stderr. Measured, vscode 250 facts (67 MB, 4 workers, fast build): one file's line moved, 1 of 150 volumes in
+by delta in Z ms`). An edit that changes what the file shows the others (`[surface]`) is passed on by delta too:
+each other worker takes the facts that came and loses those that went (unless another volume still shows them),
+and passes on what that moves in its own, until nothing moves (`, what they show the others in R rounds`).
+Measured, vscode 250: an exported function renamed, 1.6 s of delta in 2 rounds, 5.3 s the run against 10 s anew;
+half of a file's facts gone, 4.7 s in 3 rounds; the answers byte for byte the fresh ones. Measured, vscode 250 facts (67 MB, 4 workers, fast build): one file's line moved, 1 of 150 volumes in
 0.4 s and 4.5 s the run, against 11 s anew; the answer byte for byte the fresh one.
 Measured, vscode subset S, fast build, 4 cores: 250 files by volumes 3 771 MB peak against 3 264 MB cut, 34.6 s
 against 35.6 s, 252 301 answer lines byte for byte; 100 files whole (`ROFL_VOLUMES=0`) 1 598 MB against 1 279 MB.

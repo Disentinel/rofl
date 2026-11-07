@@ -814,6 +814,9 @@ pub struct Eval {
     stage_pass: StagePass,
     /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
     pub stage_given: Option<Rc<FxSet<Sym>>>,
+    /// Where this world is one volume of a corpus (`engine/volumes.rs`): a rule fires only where its anchor is at home.
+    pub anchors: Option<Rc<volumes::Anchors>>,
+    anchor_home: FxMap<Sym, Option<u32>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
@@ -2302,6 +2305,8 @@ impl Eval {
             kept_carry: None,
             stage_pass: StagePass::Whole,
             stage_given: None,
+            anchors: None,
+            anchor_home: FxMap::default(),
             lemma_heads: None,
             lower_texts: None,
             lower_full: None,
@@ -5735,6 +5740,11 @@ impl Eval {
             );
             self.diag_once(msg);
             return Ok(());
+        }
+        if let Some(a) = &self.anchors {
+            if !a.fires(r.id, &sol.s, &self.h, &mut self.anchor_home) {
+                return Ok(());
+            }
         }
         if head.temporal == Temporal::Next {
             return self.stage(r.id, head.rel, persp, args, &sol.prems);
