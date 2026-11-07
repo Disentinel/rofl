@@ -604,6 +604,9 @@ one was, and `bytes[profile](Part, B)` the parts at the end; models/engine/memor
 `mem_end` and `mem_peak_rule` beside its forecast. Without asking: **`peak:` on stderr** of `rofl load` and `rofl ask`,
 where the heap passed a gigabyte, says the same in one line, the largest six parts first (vscode at 250 files with
 witnesses, the whole world: `peak: the heap held 3776 MB (3135 MB resident at most); at 3685 MB: wit 1276, idx 500, unaccounted 499, recs 384, args 256, by_key 256 (MB)`).
+A world answered by volumes (`rofl ask`'s default over a corpus) says the process's peak, and the parts summed over
+the core and each volume at its own peak, with no `unaccounted`, since the heap is shared by the workers' threads
+(the same 250 files: `peak: the heap held 4003 MB (3761 MB resident at most); the core and 4 volumes at their own peaks: wit 1278, idx 539, recs 390, args 264, by_key 260, h_syms 237 (MB)`).
 A part is what was asked of the allocator, a vector's whole capacity with it; a capacity never written is not resident,
 which is why the heap is above the resident peak (reserving the witnesses' vectors whole beforehand moved the resident
 peak by nothing). They vary with the allocator: no golden reads them.
