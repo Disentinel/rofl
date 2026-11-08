@@ -115,6 +115,20 @@ pub struct Worker {
     home_of: FxMap<Sym, Option<u32>>,
     /// the hash of each name's spelling (`spelt`)
     names: FxMap<Sym, u64>,
+    /// the volumes the worker was cooled to, the whole one first: each later cooling writes only what changed over them
+    cooled: Cooled,
+}
+
+/// The volumes a worker was cooled to, removed with it: what is mapped of them stays mapped.
+#[derive(Default)]
+struct Cooled(Vec<crate::volume::Kept>);
+
+impl Drop for Cooled {
+    fn drop(&mut self) {
+        for k in &self.0 {
+            let _ = std::fs::remove_file(&k.path);
+        }
+    }
 }
 
 /// A fact laid into a volume, with the rules it is laid for, or one laid already, laid for more rules.
@@ -139,6 +153,9 @@ pub struct VolStats {
     pub cut: bool,
     /// the levels before which the workers were cooled, the process past a quarter of the memory it may use
     pub cooled: usize,
+    /// the volumes written in cooling, whole and over, and their bytes on disk
+    pub cool_files: usize,
+    pub cool_bytes: u64,
 }
 
 pub(super) fn load_text(e: &mut Eval, text: &str) -> Result<(), Halt> {
@@ -169,16 +186,20 @@ fn pressed() -> bool {
 impl Worker {
     /// The worker's world kept at `path` and mapped back from it, the evaluation going on where it stood: what it
     /// holds lies in the file's pages, which the system takes back from the heap where nothing reads them.
-    /// Worker `i`'s world before level `lv` cooled in place (`volume::cool_in_place`), under the system's temporary
-    /// directory, the file removed once mapped. A volume that cannot be written (a full disk) stays on the heap.
+    /// Worker `i`'s world before level `lv` cooled in place (`volume::cool_in_place`) under the system's temporary
+    /// directory, over the volumes it was cooled to before; they are removed with the worker. A volume that cannot be
+    /// written (a full disk) stays on the heap.
     fn cool(&mut self, i: usize, lv: i64) {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path = std::env::temp_dir().join(format!("rofl-vol-{}-{n}-w{i}-{lv}.vol", std::process::id())).to_string_lossy().to_string();
-        if let Err(e) = crate::volume::cool_in_place(&path, &mut self.e) {
-            eprintln!("volumes: worker {i} stays on the heap: {e}");
+        match crate::volume::cool_in_place(&path, &mut self.e, &self.cooled.0) {
+            Ok(k) => self.cooled.0.push(k),
+            Err(e) => {
+                eprintln!("volumes: worker {i} stays on the heap: {e}");
+                let _ = std::fs::remove_file(&path);
+            }
         }
-        let _ = std::fs::remove_file(&path);
     }
 }
 
@@ -200,7 +221,7 @@ impl Eval {
             .map(|_| {
                 let mut e = self.fork();
                 e.par.threads = 1;
-                Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default(), names: FxMap::default() }
+                Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default(), names: FxMap::default(), cooled: Cooled::default() }
             })
             .collect();
         let mut st = VolStats { workers: k, files, ..Default::default() };
@@ -380,6 +401,8 @@ impl Eval {
         st.ms = t0.elapsed().as_millis();
         let core = self.store.len_ids();
         st.held = ws.iter().map(|w| (w.e.store.len_ids() - core, w.laid.len())).collect();
+        st.cool_files = ws.iter().map(|w| w.cooled.0.len()).sum();
+        st.cool_bytes = ws.iter().flat_map(|w| &w.cooled.0).map(|k| k.size).sum();
         Ok((ws, st))
     }
 }

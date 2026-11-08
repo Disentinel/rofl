@@ -68,7 +68,7 @@ fn check(cool: bool) {
         mem(0, 0);
     }
     let mut v = v.unwrap();
-    assert!(!cool || v.stats.cooled > 0, "{:?}", v.stats);
+    assert!(!cool || v.stats.cooled > 1 && v.stats.cool_files == v.stats.cooled * v.stats.workers, "{:?}", v.stats);
 
     let union: BTreeSet<String> = v.worlds.iter().flat_map(keys).collect();
     let all = keys(&whole);

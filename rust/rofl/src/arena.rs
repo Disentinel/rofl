@@ -76,7 +76,12 @@ impl Deref for Region {
 impl Drop for Region {
     fn drop(&mut self) {
         let at = self.ptr as usize;
-        ORIGINS.with(|o| o.borrow_mut().retain(|x| x.start < at || x.start >= at + self.len.max(1)));
+        let mut o = origins();
+        let gone: Vec<usize> = o.range(at..at + self.len.max(1)).map(|(&s, _)| s).collect();
+        for s in gone {
+            o.remove(&s);
+        }
+        drop(o);
         #[cfg(unix)]
         if let Hold::Stitched = self.hold {
             // SAFETY: a stitched region is one mapping of `len` bytes at `ptr`, made by `stitch`.
@@ -94,32 +99,31 @@ struct Origin {
     made: Option<Span>,
 }
 
-thread_local! {
-    static ORIGINS: std::cell::RefCell<Vec<Origin>> = const { std::cell::RefCell::new(Vec::new()) };
+/// Every mapped region's origin, for the whole process: a worker cooled on one thread is cooled again on another.
+static ORIGINS: std::sync::Mutex<std::collections::BTreeMap<usize, Origin>> = std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+fn origins() -> std::sync::MutexGuard<'static, std::collections::BTreeMap<usize, Origin>> {
+    ORIGINS.lock().unwrap_or_else(|e| e.into_inner())
 }
 
 /// Where the bytes `b`, mapped, came from: a span of a volume, or all the values a stitched span holds.
 fn span_of(b: &[u8]) -> Option<Span> {
     let p = b.as_ptr() as usize;
-    ORIGINS.with(|o| {
-        let o = o.borrow();
-        let x = o.iter().find(|x| x.start <= p && p < x.end)?;
-        match &x.made {
-            None => (p + b.len() <= x.end).then(|| Span { file: x.file, at: p - x.start, bytes: b.len(), deltas: Rc::from([]) }),
-            Some(s) => (p == x.start && p + b.len() == x.end).then(|| s.clone()),
-        }
-    })
+    let o = origins();
+    let x = o.range(..=p).next_back().map(|(_, x)| x).filter(|x| p < x.end)?;
+    match &x.made {
+        None => (p + b.len() <= x.end).then(|| Span { file: x.file, at: p - x.start, bytes: b.len(), deltas: Rc::from([]) }),
+        Some(s) => (p == x.start && p + b.len() == x.end).then(|| s.clone()),
+    }
 }
 
 /// The bytes of the volume whose sum is `file`, while it is mapped.
 fn whole(file: u64) -> Option<&'static [u8]> {
-    ORIGINS.with(|o| {
-        let o = o.borrow();
-        let x = o.iter().find(|x| x.file == file && x.made.is_none())?;
-        // SAFETY: a whole volume's mapping, live while it is registered; read while the writer runs, which holds the
-        // world that maps it.
-        Some(unsafe { std::slice::from_raw_parts(x.start as *const u8, x.end - x.start) })
-    })
+    let o = origins();
+    let x = o.values().find(|x| x.file == file && x.made.is_none())?;
+    // SAFETY: a whole volume's mapping, live while it is registered; read while the writer runs, which holds the
+    // world that maps it.
+    Some(unsafe { std::slice::from_raw_parts(x.start as *const u8, x.end - x.start) })
 }
 
 /// What a volume writes over values another volume holds: values put over some of them and values after them, or
@@ -954,7 +958,7 @@ fn stitch<T: Pod>(base: &Base, at: usize, bytes: usize, deltas: &[Delta], len: u
             return Err(fail("protect"));
         }
         let start = s as usize;
-        ORIGINS.with(|o| o.borrow_mut().push(Origin { start, end: start + total, file: 0, made: Some(made) }));
+        origins().insert(start, Origin { start, end: start + total, file: 0, made: Some(made) });
         Arena::mapped(&region, lead, len).ok_or_else(|| "a volume's reference could not be mapped".into())
     }
 }
@@ -968,7 +972,7 @@ pub fn map_file(path: &str) -> std::io::Result<Rc<Region>> {
     let r = Rc::new(Region { ptr: m.as_ptr(), len: m.len(), hold: Hold::Map(m) });
     if let Some(file) = file_id(&r) {
         let start = r.ptr as usize;
-        ORIGINS.with(|o| o.borrow_mut().push(Origin { start, end: start + r.len, file, made: None }));
+        origins().insert(start, Origin { start, end: start + r.len, file, made: None });
     }
     Ok(r)
 }
