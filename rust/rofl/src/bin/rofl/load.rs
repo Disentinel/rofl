@@ -511,6 +511,9 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         Ok(v) => {
             let st = &v.stats;
             eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} facts ({} ms of {} ms); held above the core, laid: {:?}", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms, st.held);
+            if st.cooled > 0 {
+                eprintln!("volumes: past a quarter of the memory this process may use, the workers were cooled to disk before {} of the levels", st.cooled);
+            }
             v
         }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
