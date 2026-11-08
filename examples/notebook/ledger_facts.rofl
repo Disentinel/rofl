@@ -9,6 +9,7 @@
 
 path_exists(".claude/skills/refine-plan/SKILL.md").
 path_exists(".github/workflows/ci.yml").
+path_exists(".github/workflows/pages.yml").
 path_exists(".gitignore").
 path_exists("CLAUDE.md").
 path_exists("README.md").
@@ -355,9 +356,14 @@ path_exists("models/engine/parts.rofl").
 path_exists("models/engine/plan.rofl").
 path_exists("models/engine/profile.rofl").
 path_exists("models/engine/sols.rofl").
+path_exists("models/lang/js/lifecycle-host.rofl").
+path_exists("models/lang/js/lifecycle.rofl").
 path_exists("models/lang/js/oxc-roles.rofl").
 path_exists("models/lang/js/oxc-to-code.rofl").
 path_exists("models/lang/js/roles.rofl").
+path_exists("models/process/ci/accepted.rofl").
+path_exists("models/process/ci/cost.rofl").
+path_exists("models/process/ci/gate.rofl").
 path_exists("notebook/book.ts").
 path_exists("notebook/cli.ts").
 path_exists("notebook/draw.ts").
@@ -474,7 +480,9 @@ path_exists("rust/rofl/src/engine/layer.rs").
 path_exists("rust/rofl/src/engine/par.rs").
 path_exists("rust/rofl/src/engine/prov.rs").
 path_exists("rust/rofl/src/engine/resume.rs").
+path_exists("rust/rofl/src/engine/stages.rs").
 path_exists("rust/rofl/src/engine/vclosure.rs").
+path_exists("rust/rofl/src/engine/volumes.rs").
 path_exists("rust/rofl/src/forest.rs").
 path_exists("rust/rofl/src/image.rs").
 path_exists("rust/rofl/src/kernel.rs").
@@ -528,6 +536,7 @@ path_exists("rust/rofl/tests/threshold.rs").
 path_exists("rust/rofl/tests/tick_scale.rs").
 path_exists("rust/rofl/tests/tree.rs").
 path_exists("rust/rofl/tests/volume.rs").
+path_exists("rust/rofl/tests/volumes.rs").
 path_exists("rust/rofl/tests/why_bins.rs").
 path_exists("rust/run_corpus.sh").
 path_exists("rust/share_curve.sh").
@@ -540,6 +549,7 @@ path_exists("rust/tools/oxc_scan/src/wasm.rs").
 path_exists("rust/tools/rs_scan/src/main.rs").
 path_exists("safety.rofl").
 path_exists("scanners/book_locality.ts").
+path_exists("scanners/ci_cost.ts").
 path_exists("scanners/cli.ts").
 path_exists("scanners/eval_cost.ts").
 path_exists("scanners/features.ts").
@@ -549,6 +559,7 @@ path_exists("scanners/host_lib.ts").
 path_exists("scanners/js_resolve.ts").
 path_exists("scanners/necessity.ts").
 path_exists("scanners/oxc_code.ts").
+path_exists("scanners/oxc_inherit.ts").
 path_exists("scanners/oxc_wasm.ts").
 path_exists("scanners/parse_cost.ts").
 path_exists("scanners/ring1_lexgen.ts").
@@ -564,6 +575,7 @@ path_exists("scripts/agg_mutants.ts").
 path_exists("scripts/agg_prose.ts").
 path_exists("scripts/agg_select.ts").
 path_exists("scripts/bench.ts").
+path_exists("scripts/ci_cost.ts").
 path_exists("scripts/cut_check.ts").
 path_exists("scripts/declared_check.ts").
 path_exists("scripts/derivations.ts").

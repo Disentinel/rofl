@@ -339,6 +339,24 @@ impl Store {
         }
     }
 
+    /// What a volume does not hold, taken from `old`, the store it was written from: the views over the facts, the
+    /// counts of deaths and revivals, the journal and the arrivals, which the evaluation going on reads.
+    pub fn take_unkept(&mut self, old: &mut Store) {
+        (self.dirty, self.partial_eval) = (old.dirty, old.partial_eval);
+        self.arrivals = old.arrivals.take();
+        self.journal = std::mem::take(&mut old.journal);
+        self.virtuals = std::mem::take(&mut old.virtuals);
+        self.aliases = std::mem::take(&mut old.aliases);
+        (self.vlisted, self.vwit) = (old.vlisted, old.vwit);
+        self.deaths = std::mem::take(&mut old.deaths);
+        self.revived = std::mem::take(&mut old.revived);
+        self.dup_window = old.dup_window.take();
+        self.base_moved = std::mem::take(&mut old.base_moved);
+        self.kept_layer = std::mem::take(&mut old.kept_layer);
+        self.kept_rows = std::mem::take(&mut old.kept_rows);
+        self.kept_rules = std::mem::take(&mut old.kept_rules);
+    }
+
     /// The store a volume holds, its columns mapped.
     pub fn read_volume(r: &mut VolR) -> Result<Store, String> {
         let mut s = Store::new();
