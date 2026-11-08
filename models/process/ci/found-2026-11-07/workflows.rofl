@@ -1,0 +1,182 @@
+-- the workflows of main on 2026-11-07, read by scanners/gh_actions.py
+ci_repo("rofl").
+ci_workflow("rofl/ci", "rofl", "CI").
+ci_concurrency("rofl/ci", "${{ github.workflow }}-${{ github.ref }}", "true").
+ci_on("rofl/ci", "push", "").
+ci_on("rofl/ci", "pull_request", "").
+ci_job("rofl/ci#node", "rofl/ci").
+ci_job_name("rofl/ci#node", "node").
+ci_step("rofl/ci#node/0", "rofl/ci#node", 0).
+ci_step("rofl/ci#node/1", "rofl/ci#node", 1).
+ci_step("rofl/ci#node/2", "rofl/ci#node", 2).
+ci_step("rofl/ci#node/3", "rofl/ci#node", 3).
+ci_step("rofl/ci#node/4", "rofl/ci#node", 4).
+ci_step("rofl/ci#node/5", "rofl/ci#node", 5).
+ci_step("rofl/ci#node/6", "rofl/ci#node", 6).
+ci_step("rofl/ci#node/7", "rofl/ci#node", 7).
+ci_guard("rofl/ci#node/7", "!(github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-')))").
+ci_step("rofl/ci#node/8", "rofl/ci#node", 8).
+ci_step("rofl/ci#node/9", "rofl/ci#node", 9).
+ci_guard("rofl/ci#node/9", "success() || failure()").
+ci_step("rofl/ci#node/10", "rofl/ci#node", 10).
+ci_job("rofl/ci#clippy", "rofl/ci").
+ci_job_name("rofl/ci#clippy", "clippy").
+ci_step("rofl/ci#clippy/0", "rofl/ci#clippy", 0).
+ci_step("rofl/ci#clippy/1", "rofl/ci#clippy", 1).
+ci_step("rofl/ci#clippy/2", "rofl/ci#clippy", 2).
+ci_step("rofl/ci#clippy/3", "rofl/ci#clippy", 3).
+ci_step("rofl/ci#clippy/4", "rofl/ci#clippy", 4).
+ci_job("rofl/ci#breaks", "rofl/ci").
+ci_job_name("rofl/ci#breaks", "breaks").
+ci_advisory("rofl/ci#breaks").
+ci_step("rofl/ci#breaks/0", "rofl/ci#breaks", 0).
+ci_step("rofl/ci#breaks/1", "rofl/ci#breaks", 1).
+ci_step("rofl/ci#breaks/2", "rofl/ci#breaks", 2).
+ci_step("rofl/ci#breaks/3", "rofl/ci#breaks", 3).
+ci_step("rofl/ci#breaks/4", "rofl/ci#breaks", 4).
+ci_step("rofl/ci#breaks/5", "rofl/ci#breaks", 5).
+ci_job("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]", "rofl/ci").
+ci_step("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]/0", "rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]", 0).
+ci_step("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]/1", "rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]", 1).
+ci_step("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]/2", "rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]", 2).
+ci_step("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]/3", "rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]", 3).
+ci_guard("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]/3", "matrix.apt").
+ci_step("rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]/4", "rofl/ci#platforms[x86_64-pc-windows-msvc,windows-latest]", 4).
+ci_job("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]", "rofl/ci").
+ci_step("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]/0", "rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]", 0).
+ci_step("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]/1", "rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]", 1).
+ci_step("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]/2", "rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]", 2).
+ci_step("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]/3", "rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]", 3).
+ci_guard("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]/3", "gcc-mingw-w64-x86-64").
+ci_step("rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]/4", "rofl/ci#platforms[x86_64-pc-windows-gnu,ubuntu-latest,gcc-mingw-w64-x86-64]", 4).
+ci_job("rofl/ci#platforms[x86_64-apple-darwin,macos-15]", "rofl/ci").
+ci_step("rofl/ci#platforms[x86_64-apple-darwin,macos-15]/0", "rofl/ci#platforms[x86_64-apple-darwin,macos-15]", 0).
+ci_step("rofl/ci#platforms[x86_64-apple-darwin,macos-15]/1", "rofl/ci#platforms[x86_64-apple-darwin,macos-15]", 1).
+ci_step("rofl/ci#platforms[x86_64-apple-darwin,macos-15]/2", "rofl/ci#platforms[x86_64-apple-darwin,macos-15]", 2).
+ci_step("rofl/ci#platforms[x86_64-apple-darwin,macos-15]/3", "rofl/ci#platforms[x86_64-apple-darwin,macos-15]", 3).
+ci_guard("rofl/ci#platforms[x86_64-apple-darwin,macos-15]/3", "matrix.apt").
+ci_step("rofl/ci#platforms[x86_64-apple-darwin,macos-15]/4", "rofl/ci#platforms[x86_64-apple-darwin,macos-15]", 4).
+ci_job("rofl/ci#engine[linux-x64,ubuntu-latest]", "rofl/ci").
+ci_job_if("rofl/ci#engine[linux-x64,ubuntu-latest]", "github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))").
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/0", "rofl/ci#engine[linux-x64,ubuntu-latest]", 0).
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/1", "rofl/ci#engine[linux-x64,ubuntu-latest]", 1).
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/2", "rofl/ci#engine[linux-x64,ubuntu-latest]", 2).
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/3", "rofl/ci#engine[linux-x64,ubuntu-latest]", 3).
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/4", "rofl/ci#engine[linux-x64,ubuntu-latest]", 4).
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/5", "rofl/ci#engine[linux-x64,ubuntu-latest]", 5).
+ci_step("rofl/ci#engine[linux-x64,ubuntu-latest]/6", "rofl/ci#engine[linux-x64,ubuntu-latest]", 6).
+ci_uploads("rofl/ci#engine[linux-x64,ubuntu-latest]/6", "rofl-linux-x64").
+ci_job("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", "rofl/ci").
+ci_job_if("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", "github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))").
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/0", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 0).
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/1", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 1).
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/2", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 2).
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/3", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 3).
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/4", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 4).
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/5", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 5).
+ci_step("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/6", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]", 6).
+ci_uploads("rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]/6", "rofl-linux-arm64").
+ci_job("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", "rofl/ci").
+ci_job_if("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", "github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))").
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/0", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 0).
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/1", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 1).
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/2", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 2).
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/3", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 3).
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/4", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 4).
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/5", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 5).
+ci_step("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/6", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]", 6).
+ci_uploads("rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]/6", "rofl-darwin-x64").
+ci_job("rofl/ci#engine[darwin-arm64,macos-15]", "rofl/ci").
+ci_job_if("rofl/ci#engine[darwin-arm64,macos-15]", "github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))").
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/0", "rofl/ci#engine[darwin-arm64,macos-15]", 0).
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/1", "rofl/ci#engine[darwin-arm64,macos-15]", 1).
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/2", "rofl/ci#engine[darwin-arm64,macos-15]", 2).
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/3", "rofl/ci#engine[darwin-arm64,macos-15]", 3).
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/4", "rofl/ci#engine[darwin-arm64,macos-15]", 4).
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/5", "rofl/ci#engine[darwin-arm64,macos-15]", 5).
+ci_step("rofl/ci#engine[darwin-arm64,macos-15]/6", "rofl/ci#engine[darwin-arm64,macos-15]", 6).
+ci_uploads("rofl/ci#engine[darwin-arm64,macos-15]/6", "rofl-darwin-arm64").
+ci_job("rofl/ci#engine[win32-x64,windows-latest]", "rofl/ci").
+ci_job_if("rofl/ci#engine[win32-x64,windows-latest]", "github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))").
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/0", "rofl/ci#engine[win32-x64,windows-latest]", 0).
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/1", "rofl/ci#engine[win32-x64,windows-latest]", 1).
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/2", "rofl/ci#engine[win32-x64,windows-latest]", 2).
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/3", "rofl/ci#engine[win32-x64,windows-latest]", 3).
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/4", "rofl/ci#engine[win32-x64,windows-latest]", 4).
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/5", "rofl/ci#engine[win32-x64,windows-latest]", 5).
+ci_step("rofl/ci#engine[win32-x64,windows-latest]/6", "rofl/ci#engine[win32-x64,windows-latest]", 6).
+ci_uploads("rofl/ci#engine[win32-x64,windows-latest]/6", "rofl-win32-x64").
+ci_job("rofl/ci#vsix", "rofl/ci").
+ci_job_name("rofl/ci#vsix", "vsix").
+ci_needs("rofl/ci#vsix", "rofl/ci#engine[linux-x64,ubuntu-latest]").
+ci_needs("rofl/ci#vsix", "rofl/ci#engine[linux-arm64,ubuntu-24.04-arm]").
+ci_needs("rofl/ci#vsix", "rofl/ci#engine[darwin-x64,macos-15,x86_64-apple-darwin]").
+ci_needs("rofl/ci#vsix", "rofl/ci#engine[darwin-arm64,macos-15]").
+ci_needs("rofl/ci#vsix", "rofl/ci#engine[win32-x64,windows-latest]").
+ci_job_if("rofl/ci#vsix", "github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))").
+ci_step("rofl/ci#vsix/0", "rofl/ci#vsix", 0).
+ci_step("rofl/ci#vsix/1", "rofl/ci#vsix", 1).
+ci_step("rofl/ci#vsix/2", "rofl/ci#vsix", 2).
+ci_step("rofl/ci#vsix/3", "rofl/ci#vsix", 3).
+ci_step("rofl/ci#vsix/4", "rofl/ci#vsix", 4).
+ci_downloads("rofl/ci#vsix/4", "*", "run").
+ci_step("rofl/ci#vsix/5", "rofl/ci#vsix", 5).
+ci_step("rofl/ci#vsix/6", "rofl/ci#vsix", 6).
+ci_step("rofl/ci#vsix/7", "rofl/ci#vsix", 7).
+ci_uploads("rofl/ci#vsix/7", "vsix").
+ci_holds("rofl/ci#vsix/7", "vsix").
+ci_job("rofl/ci#release-dry", "rofl/ci").
+ci_job_name("rofl/ci#release-dry", "release-dry").
+ci_needs("rofl/ci#release-dry", "rofl/ci#vsix").
+ci_job_if("rofl/ci#release-dry", "github.event_name == 'push' && github.ref == 'refs/heads/main'").
+ci_env("rofl/ci#release-dry", "marketplace-publish").
+ci_step("rofl/ci#release-dry/0", "rofl/ci#release-dry", 0).
+ci_step("rofl/ci#release-dry/1", "rofl/ci#release-dry", 1).
+ci_step("rofl/ci#release-dry/2", "rofl/ci#release-dry", 2).
+ci_downloads("rofl/ci#release-dry/2", "*", "run").
+ci_step("rofl/ci#release-dry/3", "rofl/ci#release-dry", 3).
+ci_step("rofl/ci#release-dry/4", "rofl/ci#release-dry", 4).
+ci_job("rofl/ci#release", "rofl/ci").
+ci_job_name("rofl/ci#release", "release").
+ci_needs("rofl/ci#release", "rofl/ci#node").
+ci_needs("rofl/ci#release", "rofl/ci#vsix").
+ci_job_if("rofl/ci#release", "startsWith(github.ref, 'refs/tags/rofl-nb-')").
+ci_env("rofl/ci#release", "marketplace-publish").
+ci_step("rofl/ci#release/0", "rofl/ci#release", 0).
+ci_step("rofl/ci#release/1", "rofl/ci#release", 1).
+ci_step("rofl/ci#release/2", "rofl/ci#release", 2).
+ci_downloads("rofl/ci#release/2", "*", "run").
+ci_step("rofl/ci#release/3", "rofl/ci#release", 3).
+ci_step("rofl/ci#release/4", "rofl/ci#release", 4).
+ci_step("rofl/ci#release/5", "rofl/ci#release", 5).
+ci_guard("rofl/ci#release/5", "env.AZURE_CLIENT_ID != ''").
+ci_step("rofl/ci#release/6", "rofl/ci#release", 6).
+ci_guard("rofl/ci#release/6", "env.AZURE_CLIENT_ID != ''").
+ci_step("rofl/ci#release/7", "rofl/ci#release", 7).
+ci_guard("rofl/ci#release/7", "env.OVSX_PAT != ''").
+ci_workflow("rofl/pages", "rofl", "Pages").
+ci_concurrency("rofl/pages", "${{ github.workflow }}-${{ github.ref }}", "true").
+ci_on("rofl/pages", "push", "").
+ci_on("rofl/pages", "pull_request", "").
+ci_on("rofl/pages", "workflow_dispatch", "").
+ci_job("rofl/pages#build", "rofl/pages").
+ci_job_name("rofl/pages#build", "build").
+ci_step("rofl/pages#build/0", "rofl/pages#build", 0).
+ci_step("rofl/pages#build/1", "rofl/pages#build", 1).
+ci_step("rofl/pages#build/2", "rofl/pages#build", 2).
+ci_step("rofl/pages#build/3", "rofl/pages#build", 3).
+ci_step("rofl/pages#build/4", "rofl/pages#build", 4).
+ci_step("rofl/pages#build/5", "rofl/pages#build", 5).
+ci_guard("rofl/pages#build/5", "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'").
+ci_job("rofl/pages#deploy", "rofl/pages").
+ci_job_name("rofl/pages#deploy", "deploy").
+ci_needs("rofl/pages#deploy", "rofl/pages#build").
+ci_job_if("rofl/pages#deploy", "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'").
+ci_env("rofl/pages#deploy", "{'name': 'github-pages', 'url': '${{ steps.deployment.outputs.page_url }}'}").
+ci_step("rofl/pages#deploy/0", "rofl/pages#deploy", 0).
+ci_matches("*", "rofl-darwin-arm64").
+ci_matches("*", "rofl-darwin-x64").
+ci_matches("*", "rofl-linux-arm64").
+ci_matches("*", "rofl-linux-x64").
+ci_matches("*", "rofl-win32-x64").
+ci_matches("*", "vsix").

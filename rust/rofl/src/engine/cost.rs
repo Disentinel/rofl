@@ -273,19 +273,7 @@ impl Eval {
     /// `peak:` on stderr, for an evaluation whose heap passed a gigabyte: the peak, the rule firing then, and the
     /// parts that held it, the largest first (`peak_bytes[profile]` the same as facts).
     pub fn heap_said(&self) -> Option<String> {
-        let m = &self.cost.mem;
-        if m.live < 1 << 30 {
-            return None;
-        }
-        let mb = |b: i64| b >> 20;
-        let named: usize = m.parts.iter().map(|p| p.1).sum();
-        let mut parts: Vec<(String, i64)> = m.parts.iter().map(|(n, b)| (n.clone(), *b as i64)).collect();
-        parts.push(("unaccounted".into(), (m.at - named as i64).max(0)));
-        parts.sort_by_key(|p| std::cmp::Reverse(p.1));
-        let list: Vec<String> = parts.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
-        let rule = m.rule.map(|r| format!(", firing {}", self.h.name(r))).unwrap_or_default();
-        let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
-        Some(format!("peak: the heap held {} MB{rss}{rule}; at {} MB: {} (MB)", mb(m.live), mb(m.at), list.join(", ")))
+        heap_said_over(&[self])
     }
 
     /// The heap told at a check of the steps or at a rule's end: a new peak keeps the rule firing, and one a
@@ -616,6 +604,40 @@ impl CostState {
 
 /// The most of this process that was resident, in bytes: what the machine gave it. The heap's count is what was
 /// asked of the allocator, a vector's whole capacity with it; a capacity never written is asked and not resident.
+/// `peak:` over the worlds of one process, the core and its volumes evaluated on threads beside it: the heap is the
+/// process's, so the peak is the most any of them saw and the rule is the one firing in that world; the parts are
+/// each world's own at its own peak, summed, and with more than one world nothing is unaccounted, since what one
+/// world did not name was the others'.
+pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
+    let top = evals.iter().max_by_key(|e| e.cost.mem.live)?;
+    let m = &top.cost.mem;
+    if m.live < 1 << 30 {
+        return None;
+    }
+    let mb = |b: i64| b >> 20;
+    let mut by: Vec<(String, i64)> = Vec::new();
+    for e in evals {
+        for (n, b) in &e.cost.mem.parts {
+            match by.iter_mut().find(|p| &p.0 == n) {
+                Some(p) => p.1 += *b as i64,
+                None => by.push((n.clone(), *b as i64)),
+            }
+        }
+    }
+    let at = if evals.len() == 1 {
+        let named: i64 = by.iter().map(|p| p.1).sum();
+        by.push(("unaccounted".into(), (m.at - named).max(0)));
+        format!("at {} MB", mb(m.at))
+    } else {
+        format!("the core and {} volumes at their own peaks", evals.len() - 1)
+    };
+    by.sort_by_key(|p| std::cmp::Reverse(p.1));
+    let list: Vec<String> = by.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
+    let rule = m.rule.map(|r| format!(", firing {}", top.h.name(r))).unwrap_or_default();
+    let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
+    Some(format!("peak: the heap held {} MB{rss}{rule}; {at}: {} (MB)", mb(m.live), list.join(", ")))
+}
+
 pub fn resident_peak() -> Option<i64> {
     #[cfg(unix)]
     {

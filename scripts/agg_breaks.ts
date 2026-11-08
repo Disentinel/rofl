@@ -35,7 +35,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { execSync, execFileSync } from 'node:child_process';
+import { execSync, execFileSync, spawnSync } from 'node:child_process';
 import { worlds, declared, parse, checkWorld, answerTS, answerRust, type World } from './goldens.ts';
 import { runPool, type Task } from './pool.ts';
 import { parseSelector, select, inputs } from './agg_select.ts';
@@ -9227,7 +9227,7 @@ function proofReports(b: Break, bin: string, control: boolean): Verdict {
 
 /** A proof that is no world and no report: a cargo test of rust/rofl/tests (a guard on a counter or the clock, which no
  *  canonical state shows), passing with no fault and failing, with the sign in its output, with one planted. */
-const TESTS: Record<string, string> = {
+export const TESTS: Record<string, string> = {
   demand_scale: 'demand_scale',
   demand_query_ask: 'demand_query',
   demand_fixpoint: 'demand_fixpoint',
@@ -9316,19 +9316,39 @@ const TESTS: Record<string, string> = {
   want_shows_read: 'want what_shows_answers_is_read_by_no_rule',
 };
 
-function proofTests(b: Break, profile: string, control: boolean): Verdict {
+/** The test binaries of rust/rofl, built once by `cargo test --no-run` and then run directly, so that the pool runs them
+ *  side by side: cargo holds its build lock while the tests of one `cargo test` run. */
+function testBins(profile: string): Map<string, string> {
+  const out = execSync(`cd rust && cargo test --profile ${profile} --features breaks -p rofl --tests --no-run --message-format=json`,
+    { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 });
+  const bins = new Map<string, string>();
+  for (const l of out.split('\n')) {
+    if (!l.startsWith('{')) continue;
+    const j = JSON.parse(l) as { reason: string; executable?: string | null; target?: { name: string; kind: string[] } };
+    if (j.reason === 'compiler-artifact' && j.executable && j.target?.kind.includes('test')) bins.set(j.target.name, j.executable);
+  }
+  return bins;
+}
+
+/** One test of TESTS run by its binary, with the break `id` planted ('' for none): passed, and what it said. */
+export function timedTest(exe: string, t: string, id: string): { v: [boolean, string]; ms: number } {
+  const t0 = Date.now();
+  const crate = path.join(ROOT, 'rust/rofl');
+  const r = spawnSync(exe, t.split(' ').slice(1), { cwd: crate, encoding: 'utf8', maxBuffer: 1 << 28,
+    env: { ...process.env, ROFL_BREAK: id, CARGO_MANIFEST_DIR: crate } });
+  return { v: [r.status === 0, `${r.stdout}${r.stderr}${r.error ?? ''}`], ms: Date.now() - t0 };
+}
+
+/** The verdict of a break on the cargo tests it names, from the runs of the pool: `control/test:T` with no break,
+ *  `B/W` with it. */
+function proofTests(b: Break, res: Map<string, unknown>): Verdict {
   const lines: string[] = [], bad: string[] = [];
   for (const [name, sign] of Object.entries(b.expect)) {
     const t = TESTS[name];
     if (!t) continue;
-    const feat = control ? '--features breaks ' : '';
-    const run = (id: string): [boolean, string] => {
-      try {
-        return [true, execSync(`cd rust && cargo test --profile ${profile} ${feat}-p rofl --test ${t} 2>&1`, { cwd: ROOT, encoding: 'utf8', env: { ...process.env, ROFL_BREAK: id } })];
-      } catch (e) { return [false, String((e as { stdout?: string }).stdout ?? e)]; }
-    };
-    if (control && !run('')[0]) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
-    const [ok, text] = run(control ? b.id : '');
+    const [cok] = res.get(`control/test:${t}`) as [boolean, string];
+    if (!cok) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
+    const [ok, text] = res.get(`${b.id}/${name}`) as [boolean, string];
     const killed = !ok && text.includes(sign);
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
     if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}`}`);
@@ -9609,7 +9629,8 @@ export async function runBreak(b: Break, ws: World[], p: Plant): Promise<Verdict
 
 /** A break that runs away is shown by the wall cutting it, and a budget of CAP steps cuts it in a second where the
  *  default takes minutes; a world that sign reads is also run with no break under the same cap, which must not cut it. */
-const CUT = 'cut by the budget', CAP = 1_000_000;
+export const CUT = 'cut by the budget';
+const CAP = 1_000_000;
 
 /** `runBreak` or a control, with how long it took. */
 export async function timedBreak(b: Break, ws: World[], p: Plant): Promise<{ v: Verdict; ms: number }> {
@@ -9808,9 +9829,21 @@ if (isMain) {
     for (const w of new Set(chosen.flatMap((b) => wsOf(b).filter((x) => b.expect[x.name] === CUT)))) {
       jobs.push({ key: `capped/${w.name}`, task: { mod: self, fn: 'timedControl', args: [{ ...w, cap: CAP }, want.get(w.name), false] } });
     }
+    // the cargo tests: each run once with no break, then once per break that names it
+    const tests = [...new Set(chosen.flatMap((b) => Object.keys(b.expect).map((n) => TESTS[n]).filter(Boolean)))];
+    const bins = tests.length ? testBins('breaks') : new Map<string, string>();
+    const bin = (t: string): string => {
+      const exe = bins.get(t.split(' ')[0]);
+      if (!exe) throw new Error(`no test binary ${t.split(' ')[0]} in rust/rofl/tests`);
+      return exe;
+    };
+    for (const t of tests) jobs.push({ key: `control/test:${t}`, task: { mod: self, fn: 'timedTest', args: [bin(t), t, ''] } });
     chosen.forEach((b, i) => {
       const p = plants[i];
       if (p instanceof Error) return;
+      for (const [name, t] of Object.keys(b.expect).map((n) => [n, TESTS[n]]).filter(([, t]) => t)) {
+        jobs.push({ key: `${b.id}/${name}`, task: { mod: self, fn: 'timedTest', args: [bin(t), t, b.id] } });
+      }
       for (const w of wsOf(b)) {
         jobs.push({ key: `${b.id}/${w.name}`, task: { mod: self, fn: 'timedBreak', args: [{ ...b, expect: { [w.name]: b.expect[w.name] } }, [w], p] } });
       }
@@ -9821,17 +9854,21 @@ if (isMain) {
       { env: { ROFL_PROFILE: 'breaks', ROFL_BREAK: '', ROFL_KERNEL_OVERRIDE: '', ROFL_BOOT: '', ROFL_READER: '', ROFL_TREE: '' } });
     const res = new Map<string, unknown>();
     order.forEach((i, k) => { res.set(jobs[i].key, ran[k].v); past[jobs[i].key] = ran[k].ms; });
-    saveTimes(past);
     for (const w of controls) { const r = res.get(`control/${w.name}`); if (r !== null) bad.push(`control, no break planted: ${r}`); }
     for (const [k, r] of res) if (k.startsWith('capped/') && r !== null) bad.push(`control under the cap of ${CAP} steps: ${r}`);
     chosen.forEach((b, i) => {
       const p = plants[i];
       if (p instanceof Error) { out.push({ lines: [], bad: [`${b.id}: ${p.message}`] }); return; }
-      if (Object.keys(b.expect).some((n) => REPORTS[n])) out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl'), true));
-      if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, 'breaks', true));
+      if (Object.keys(b.expect).some((n) => REPORTS[n])) {
+        const t = Date.now();
+        out.push(proofReports(b, path.join(ROOT, 'rust/target/breaks/rofl'), true));
+        for (const n of Object.keys(b.expect).filter((n) => REPORTS[n])) past[`${b.id}/${n}`] = Date.now() - t;
+      }
+      if (Object.keys(b.expect).some((n) => TESTS[n])) out.push(proofTests(b, res));
       const vs = wsOf(b).map((w) => res.get(`${b.id}/${w.name}`) as Verdict);
       out.push({ lines: vs.flatMap((v) => v.lines), bad: vs.flatMap((v) => v.bad) });
     });
+    saveTimes(past);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

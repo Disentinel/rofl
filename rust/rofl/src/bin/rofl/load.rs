@@ -516,6 +516,8 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
     for w in &v.worlds { for d in &w.eval.diags { eprintln!("diag: {d}"); } }
+    let evals: Vec<&rofl::engine::Eval> = std::iter::once(&s.eval).chain(v.worlds.iter().map(|w| &w.eval)).collect();
+    if let Some(t) = rofl::engine::heap_said_over(&evals) { eprintln!("{t}"); }
     let code = answer_volumes(o, &mut s, &mut v);
     if v.stats.cut {
         eprintln!("a wall cut the volumes' evaluation (the memory this process may use, or the budget): its answers are partial, and they are not kept");

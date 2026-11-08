@@ -14,6 +14,8 @@ a matrix value are kept or dropped; any other `if:` is a guard, kept as text.
   ci_concurrency(W, Group, Cancel)   one run at a time; Cancel "true" stops the running one, else a newer start drops the waiting one
   ci_job(J, W)                       ci_needs(J, J2)          ci_job_if(J, Text)
   ci_status_if(J)                    the job's `if:` asks how its needs ended, so a skipped one does not skip it
+  ci_advisory(J)                     continue-on-error: the job's red does not fail its run
+  ci_job_name(J, Name)               the name a run gives the job: its `name:`, else its key
   ci_env(J, Env)                     ci_step(S, J, Index)     ci_guard(S, Text)
   ci_uploads(S, Artifact)            ci_downloads(S, Artifact, From)   From: run | triggering_run
   ci_holds(S, File)                  a file the step makes or puts in an artifact
@@ -137,9 +139,13 @@ class Repo:
             j = self.jname(w, jid, combo)
             env = {f"matrix.{k}": v for k, v in combo.items()}
             fact("ci_job", j, w)
+            if not combo:
+                fact("ci_job_name", j, sub(job.get("name", jid), env))
             for n in needs:
                 for c in self.names[n]:
                     fact("ci_needs", j, self.jname(w, n, c))
+            if str(job.get("continue-on-error", "")).lower() == "true":
+                fact("ci_advisory", j)
             if "if" in job:
                 fact("ci_job_if", j, job["if"])
                 if re.search(r"\b(success|failure|always|cancelled)\(\)", str(job["if"])):
@@ -190,8 +196,8 @@ class Repo:
                 if "*" not in p:
                     self.hold(s, pathlib.Path(p).name)
         elif name == "actions/download-artifact":
-            fact("ci_downloads", s, w.get("name") or w.get("pattern"), "triggering_run" if "run-id" in w else "run")
-            patterns.add(w.get("name") or w.get("pattern"))
+            fact("ci_downloads", s, w.get("name") or w.get("pattern") or "*", "triggering_run" if "run-id" in w else "run")
+            patterns.add(w.get("name") or w.get("pattern") or "*")
         elif name == "softprops/action-gh-release":
             fact("ci_releases", s, self.name, re.sub(r"\$\{\{.*?\}\}", "", w.get("tag_name", "")), "draft" if w.get("draft") == "true" else "public")
         elif name == "peter-evans/repository-dispatch":
