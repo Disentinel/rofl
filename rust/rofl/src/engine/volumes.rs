@@ -113,6 +113,8 @@ pub struct Worker {
     retag: Vec<(FactId, u32)>,
     me: u32,
     home_of: FxMap<Sym, Option<u32>>,
+    /// the hash of each name's spelling (`spelt`)
+    names: FxMap<Sym, u64>,
 }
 
 /// A fact laid into a volume, with the rules it is laid for, or one laid already, laid for more rules.
@@ -198,7 +200,7 @@ impl Eval {
             .map(|_| {
                 let mut e = self.fork();
                 e.par.threads = 1;
-                Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default() }
+                Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default(), names: FxMap::default() }
             })
             .collect();
         let mut st = VolStats { workers: k, files, ..Default::default() };
@@ -246,7 +248,7 @@ impl Eval {
                 let t = std::time::Instant::now();
                 // the values each volume came to hold since the last round, and where its readers' facts are wanted
                 let fresh: Vec<Fresh> = on_threads(&mut ws, &|_, w| Ok(w.note(&routes)))?;
-                let to = exchange(&mut ws, &routes, &fresh, syms, funcs);
+                let to = exchange(&mut ws, &routes, &fresh, core, syms, funcs);
                 if to.iter().all(|m| m.is_empty()) || k == 1 || brk!("volumes_unexchanged" => true; false) {
                     // what was laid is fired on once all it brings is laid too: a reader under a negation or in an
                     // aggregate finds every fact it is to see before it fires
@@ -439,22 +441,12 @@ fn terms_at(args: &[Term], c: &Cols) -> Option<Vec<Term>> {
 }
 
 /// The terms at `c` by their spelling together (`spelt`).
-fn spelt_at(h: &Heap, args: &[Term], c: &Cols) -> Option<u64> {
-    use std::hash::{Hash, Hasher};
-    let mut s = std::collections::hash_map::DefaultHasher::new();
+fn spelt_at(h: &Heap, args: &[Term], c: &Cols, names: &mut FxMap<Sym, u64>) -> Option<u64> {
+    let mut v = 0x9e37_79b9_7f4a_7c15;
     for x in cols(c) {
-        spelt(h, *args.get(x)?).hash(&mut s);
+        v = mix(v, spelt(h, *args.get(x)?, names));
     }
-    Some(s.finish())
-}
-
-/// The value a volume notes for key `k` of a fact with `args`: of its arguments at the key's positions, or of the
-/// one term (`ANY`) found anywhere.
-fn key_val(h: &Heap, args: &[Term], k: &Key) -> Option<u64> {
-    if k.rel == ANY {
-        return Some(spelt(h, *args.get(k.pos[0] as usize)?));
-    }
-    spelt_at(h, args, &k.pos)
+    Some(v)
 }
 
 /// The facts of `rel` in `st` whose arguments at `c` are `ts`: by the index of the first, the rest compared.
@@ -487,6 +479,9 @@ struct Routes {
     homes: FxMap<u64, u32>,
     /// each rule's anchor: the premise where its body is joined
     anchors: FxMap<Sym, Lit>,
+    /// the keys of `by` as checks of a fact, each with the rules it is laid for, by the arguments they read (and
+    /// whether they read a term anywhere, `ANY`)
+    checks: FxMap<(Sym, Option<Sym>), Vec<(Cols, bool, Vec<(Key, Vec<u32>)>)>>,
 }
 
 /// The volume a node's file is at home in, by the 16 hex digits of its prefix; None for an atom that is no node.
@@ -756,6 +751,21 @@ impl Routes {
                     }
                 }
                 rt.readers.entry((k.rel, k.persp, k.at)).or_default().push((rel, persp, *k));
+                // keys that differ by their rule alone are one check, the rule mattering only to a key of its rule
+                let check = Key { rule: if k.mode == Mode::Rule { k.rule } else { 0 }, ..*k };
+                let by_pos = rt.checks.entry((rel, persp)).or_default();
+                let gs = match by_pos.iter().position(|(p, any, _)| *p == k.pos && *any == (k.rel == ANY)) {
+                    Some(n) => &mut by_pos[n].2,
+                    None => {
+                        by_pos.push((k.pos, k.rel == ANY, Vec::new()));
+                        &mut by_pos.last_mut().unwrap().2
+                    }
+                };
+                match gs.iter_mut().find(|(c, _)| *c == check) {
+                    Some((_, rs)) if !rs.contains(&k.rule) => rs.push(k.rule),
+                    Some(_) => {}
+                    None => gs.push((check, vec![k.rule])),
+                }
             }
         }
         rt
@@ -771,9 +781,9 @@ impl Routes {
 }
 
 /// The values a volume holds where its readers' facts are joined, by `spelt`: of the facts it made, of those laid
-/// into it, of those laid for a rule, and anywhere in any fact; read up to `.4`.
+/// into it, of those laid for a rule, and anywhere in any fact; read up to `.4`; `.5` every value of the first three.
 #[derive(Default)]
-struct Values(FxMap<(Sym, Option<Sym>, Cols), FxSet<u64>>, FxMap<(Sym, Option<Sym>, Cols), FxSet<u64>>, FxMap<(Sym, Option<Sym>, Cols, u32), FxSet<u64>>, FxSet<u64>, FactId);
+struct Values(FxMap<(Sym, Option<Sym>, Cols), FxSet<u64>>, FxMap<(Sym, Option<Sym>, Cols), FxSet<u64>>, FxMap<(Sym, Option<Sym>, Cols, u32), FxSet<u64>>, FxSet<u64>, FactId, FxSet<u64>);
 
 impl Values {
     fn has(&self, k: &Key, v: u64) -> bool {
@@ -822,25 +832,32 @@ enum Val {
     Deep(Term),
 }
 
-/// A term by the hash of its spelling, the same in every volume's heap.
-fn spelt(h: &Heap, t: Term) -> u64 {
-    use std::hash::{Hash, Hasher};
-    fn go(h: &Heap, t: Term, s: &mut std::collections::hash_map::DefaultHasher) {
-        match t.kind() {
-            TermK::Atom(x) => (0u8, h.name(x)).hash(s),
-            TermK::Str(x) => (1u8, h.name(x)).hash(s),
-            TermK::Func(i) => {
-                (2u8, h.name(h.fname(i))).hash(s);
-                for a in h.fargs(i) {
-                    go(h, *a, s);
-                }
+/// A term by the hash of its spelling, the same in every volume's heap; a name's hash kept in `names`.
+fn spelt(h: &Heap, t: Term, names: &mut FxMap<Sym, u64>) -> u64 {
+    let mut name = |x: Sym| -> u64 {
+        *names.entry(x).or_insert_with(|| {
+            use std::hash::{Hash, Hasher};
+            let mut s = std::collections::hash_map::DefaultHasher::new();
+            h.name(x).hash(&mut s);
+            s.finish()
+        })
+    };
+    match t.kind() {
+        TermK::Atom(x) => mix(0, name(x)),
+        TermK::Str(x) => mix(1, name(x)),
+        TermK::Func(i) => {
+            let mut v = mix(2, name(h.fname(i)));
+            for a in h.fargs(i) {
+                v = mix(v, spelt(h, *a, names));
             }
-            _ => (3u8, t.bits()).hash(s),
+            v
         }
+        _ => mix(3, t.bits()),
     }
-    let mut s = std::collections::hash_map::DefaultHasher::new();
-    go(h, t, &mut s);
-    s.finish()
+}
+
+fn mix(a: u64, b: u64) -> u64 {
+    (a.rotate_left(5) ^ b).wrapping_mul(0x517c_c1b7_2722_0a95)
 }
 
 /// `t` of `src` in `dst`, when `dst` has every name and functor it is built of; None when no fact of `dst` holds it.
@@ -867,6 +884,7 @@ impl Worker {
         let to = st.len_ids();
         let retag = std::mem::take(&mut self.retag);
         let v = &mut self.vals;
+        let names = &mut self.names;
         let mut one = |id: FactId, only: Option<u32>| {
             let r = st.rec(id);
             let args = st.args(id);
@@ -875,20 +893,25 @@ impl Worker {
             let laid = !homes.is_empty() && !homes.contains(&self.me);
             let tags = self.laid_for.get(&id);
             for p in rt.places.get(&r.rel).into_iter().flatten().filter(|p| p.persp.is_none_or(|q| q == r.persp)) {
-                let Some(x) = spelt_at(h, args, &p.at) else { continue };
+                let Some(x) = spelt_at(h, args, &p.at, names) else { continue };
                 let place = (r.rel, p.persp, p.at);
                 if only.is_none() {
                     if !laid {
+                        v.5.insert(x);
                         if v.0.entry(place).or_default().insert(x) {
                             fresh.push((place, New::Own, Val::Fact(id)));
                         }
                         continue;
+                    }
+                    if p.laid {
+                        v.5.insert(x);
                     }
                     if p.laid && v.1.entry(place).or_default().insert(x) {
                         fresh.push((place, New::Laid, Val::Fact(id)));
                     }
                 }
                 for &rule in tags.into_iter().flatten().filter(|r| only.is_none_or(|o| o == **r) && p.rules.contains(r)) {
+                    v.5.insert(x);
                     if v.2.entry((r.rel, p.persp, p.at, rule)).or_default().insert(x) {
                         fresh.push((place, New::For(rule), Val::Fact(id)));
                     }
@@ -900,7 +923,7 @@ impl Worker {
                     if let TermK::Func(i) = t.kind() {
                         stack.extend_from_slice(h.fargs(i));
                     }
-                    if v.3.insert(spelt(h, t)) {
+                    if v.3.insert(spelt(h, t, names)) {
                         fresh.push(((ANY, None, [NO; 4]), New::Deep, Val::Deep(t)));
                     }
                 }
@@ -923,7 +946,7 @@ impl Worker {
 
 /// Which facts go where this round, as (publisher, fact, the rules it is laid for) by receiver: each volume's new
 /// facts to the volumes holding what they are joined by, and its older facts joined by what the others came to hold.
-fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], syms: Sym, funcs: u32) -> Vec<Vec<(usize, FactId, Vec<u32>)>> {
+fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], core: FactId, syms: Sym, funcs: u32) -> Vec<Vec<(usize, FactId, Vec<u32>)>> {
     struct Ptr(*mut Worker);
     unsafe impl Send for Ptr {}
     unsafe impl Sync for Ptr {}
@@ -938,11 +961,13 @@ fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], syms: Sym, funcs: u
                     // their values and heaps, which no thread writes in this phase
                     let p = ptrs[i].0;
                     let (st, h) = unsafe { (&mut (*p).e.store, &(*p).e.h) };
-                    let (sent, laid, read_to, home_of) = unsafe { (&mut (*p).sent, &(*p).laid, &mut (*p).read_to, &mut (*p).home_of) };
+                    let (sent, laid, read_to, home_of, names) = unsafe { (&mut (*p).sent, &(*p).laid, &mut (*p).read_to, &mut (*p).home_of, &mut (*p).names) };
                     let vals = |j: usize| unsafe { &(*ptrs[j].0).vals };
                     let heap = |j: usize| unsafe { &(*ptrs[j].0).e.h };
                     let mut out = Vec::new();
                     let to = st.len_ids();
+                    // the facts read before this round, which the others' new values are to find; those since go by their own values
+                    let from = *read_to;
                     for id in *read_to..to {
                         if !st.alive(id) || laid.contains(&id) {
                             continue;
@@ -960,13 +985,24 @@ fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], syms: Sym, funcs: u
                         match route {
                             Route::Nowhere => {}
                             Route::All => out.extend((0..k).filter(|&j| j != i && sent.insert((j as u32, id, u32::MAX))).map(|j| (j, id, u32::MAX))),
-                            Route::Keys(a, b) => {
+                            Route::Keys(..) => {
                                 let args = st.args(id);
-                                let ks: Vec<(&Key, u64)> = a.iter().chain(b).filter(|k| k.arity == args.len() && k.fits(args)).filter_map(|k| Some((k, key_val(h, args, k)?))).collect();
-                                for j in (0..k).filter(|&j| j != i) {
-                                    for (key, v) in &ks {
-                                        if vals(j).has(key, *v) && sent.insert((j as u32, id, key.rule)) {
-                                            out.push((j, id, key.rule));
+                                let cs = [rt.checks.get(&(r.rel, Some(r.persp))), rt.checks.get(&(r.rel, None))];
+                                for (pos, any, keys) in cs.into_iter().flatten().flatten() {
+                                    let Some(v) = (if *any { args.get(pos[0] as usize).map(|t| spelt(h, *t, names)) } else { spelt_at(h, args, pos, names) }) else { continue };
+                                    for j in (0..k).filter(|&j| j != i) {
+                                        let vj = vals(j);
+                                        if !*any && !vj.5.contains(&v) {
+                                            continue;
+                                        }
+                                        for (key, rules) in keys.iter().filter(|(k, _)| k.arity == args.len() && k.fits(args)) {
+                                            if vj.has(key, v) {
+                                                for &rule in rules {
+                                                    if sent.insert((j as u32, id, rule)) {
+                                                        out.push((j, id, rule));
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -974,7 +1010,9 @@ fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], syms: Sym, funcs: u
                         }
                     }
                     *read_to = to;
-                    for (j, fr) in fresh.iter().enumerate().filter(|(j, _)| *j != i) {
+                    // a name of another volume as this one has it, or not; this heap takes no name in the exchange
+                    let mut found: FxMap<(usize, Sym), Option<Sym>> = FxMap::default();
+                    for (j, fr) in fresh.iter().enumerate().filter(|(j, _)| *j != i && from > core) {
                         for &(place, new, val) in fr {
                             let Some(rs) = rt.readers.get(&place) else { continue };
                             let mut ts: Option<Vec<Term>> = None;
@@ -989,15 +1027,40 @@ fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], syms: Sym, funcs: u
                                             },
                                             Val::Deep(t) => vec![t],
                                         };
-                                        match there.iter().map(|t| find_term(*t, heap(j), h, syms, funcs)).collect::<Option<Vec<_>>>() {
+                                        match there.iter().map(|t| match t.kind() {
+                                            TermK::Atom(x) if x >= syms => found.entry((j, x)).or_insert_with(|| h.syms.find(heap(j).name(x))).map(Term::atom),
+                                            _ => find_term(*t, heap(j), h, syms, funcs),
+                                        }).collect::<Option<Vec<_>>>() {
                                             Some(x) => ts.insert(x),
                                             None => break,
                                         }
                                     }
                                 };
                                 for c in matching(st, h, rel, persp, key.arity, &key.pos, ts) {
-                                    if key.fits(st.args(c)) && !laid.contains(&c) && c < to && sent.insert((j as u32, c, key.rule)) {
+                                    if (core..from).contains(&c) && key.fits(st.args(c)) && !laid.contains(&c) && sent.insert((j as u32, c, key.rule)) {
                                         out.push((j, c, key.rule));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // what a fact laid for a rule is joined with next in that rule, where this volume holds it, goes
+                    // with it: the join is followed here, not a round later from there
+                    let mut next = 0;
+                    while next < out.len() {
+                        let (j, id, rule) = out[next];
+                        next += 1;
+                        if rule == u32::MAX {
+                            continue;
+                        }
+                        let r = st.rec(id);
+                        let args = st.args(id).to_vec();
+                        for p in rt.places.get(&r.rel).into_iter().flatten().filter(|p| p.persp.is_none_or(|q| q == r.persp) && p.rules.contains(&rule)) {
+                            let Some(ts) = terms_at(&args, &p.at) else { continue };
+                            for &(rel, persp, key) in rt.readers.get(&(r.rel, p.persp, p.at)).into_iter().flatten().filter(|(_, _, k)| k.mode == Mode::Rule && k.rule == rule && k.parity == args.len()) {
+                                for c in matching(st, h, rel, persp, key.arity, &key.pos, &ts) {
+                                    if key.fits(st.args(c)) && !laid.contains(&c) && sent.insert((j as u32, c, rule)) {
+                                        out.push((j, c, rule));
                                     }
                                 }
                             }
