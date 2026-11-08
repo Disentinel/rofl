@@ -374,7 +374,7 @@ golden_state("agg_narrow_why", "38bf85382f1a010f", 1581).
 golden_state("agg_precise_holes", "7b8fdc15bb2a25b3", 2704).
 golden_state("agg_precise_oracle", "ca8a43251b71d3fe", 319094).
 golden_state("agg_precise_scale", "e2e58c1129bf32c9", 3172).
-golden_state("agg_proofs", "aa43ea87c098dfb4", 37089).
+golden_state("agg_proofs", "1fdf5c54b4003a4f", 37091).
 golden_state("agg_prose", "8b7645c978aea130", 1148).
 golden_state("agg_quorum_demo", "1bbe4c1a2b86f4e0", 3434).
 golden_state("agg_rank_tuple_eval", "30552a674ce9ad6b", 1750).
@@ -18362,14 +18362,14 @@ golden_rel("agg_proofs", "algebra_known[main]", 9).
 golden_rel("agg_proofs", "algebra_note[main]", 9).
 golden_rel("agg_proofs", "algebra_permits_recursion[main]", 6).
 golden_rel("agg_proofs", "artifact_removed[main]", 299).
-golden_rel("agg_proofs", "asserted_by[$kernel]", 13895).
+golden_rel("agg_proofs", "asserted_by[$kernel]", 13896).
 golden_rel("agg_proofs", "authority[main]", 5).
 golden_rel("agg_proofs", "blocker_kind[main]", 2).
 golden_rel("agg_proofs", "blocks[main]", 11).
 golden_rel("agg_proofs", "boot_rank[main]", 10).
 golden_rel("agg_proofs", "cell[audit]", 476).
 golden_rel("agg_proofs", "check_file[main]", 1568).
-golden_rel("agg_proofs", "check_opt[main]", 698).
+golden_rel("agg_proofs", "check_opt[main]", 699).
 golden_rel("agg_proofs", "check_refuses[main]", 8).
 golden_rel("agg_proofs", "check_world[main]", 458).
 golden_rel("agg_proofs", "claim[main]", 444).
