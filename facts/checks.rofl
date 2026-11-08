@@ -3049,6 +3049,9 @@ check_opt("lifecycle_overwrites", one_engine, rust).
 check_opt("vscode_side_effects", one_engine, rust).
 check_opt("rules_js-dataflow", one_engine, rust).
 check_opt("net", one_engine, rust).
+-- Crossed it 2026-11-08, found by the first job of ci.yml (gate.rofl) on run 42385412132 of main: agg_sugar_safety
+-- 5.1 / 0.3 / 2055.
+check_opt("agg_sugar_safety", one_engine, rust).
 -- and over 100 000 facts, though TypeScript answered them in a blink beside the others: lifecycle_clean 155967 facts,
 -- lifecycle_forgetful 153324.
 check_opt("lifecycle_clean", one_engine, rust).
