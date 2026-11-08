@@ -129,7 +129,7 @@ pub struct Cooled {
 /// A world evaluated by volumes (`Session::by_volumes`): a world a worker, the facts laid into each from the others.
 pub struct Volumes {
     pub worlds: Vec<Session>,
-    pub laid: Vec<crate::store::FxSet<FactId>>,
+    pub laid: Vec<crate::engine::volumes::Laid>,
     pub stats: crate::engine::volumes::VolStats,
 }
 
@@ -553,17 +553,32 @@ impl Session {
     /// was not worked out (the world left dirty).
     pub fn retract_set_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         let before = self.base_alive(ids);
-        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids));
+        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids, false));
         self.journal_gone(&before);
         r
     }
 
-    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+    /// `retract_set_delta` of every given fact one file's lower stage gave a world by volumes, its lemmas among them:
+    /// what they proved goes with them, so a world that cut a book takes it.
+    pub fn retract_file_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+        let before = self.base_alive(ids);
+        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids, true));
+        self.journal_gone(&before);
+        r
+    }
+
+    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId], whole_file: bool) -> Result<Result<crate::engine::AddDelta, String>, String> {
         self.settle()?;
         let facts: Vec<FactId> = {
             let mut seen = HashSet::new();
             ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
         };
+        if !ids.is_empty() && !whole_file {
+            if let Some(why) = self.eval.refuses_retraction() {
+                self.eval.store.dirty = true;
+                return Ok(Err(why));
+            }
+        }
         if facts.is_empty() {
             return Ok(Ok(Default::default()));
         }
@@ -646,7 +661,7 @@ impl Session {
         let mut delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
         // what the one-fact delta refuses with the store untouched, the set's pass may take
         if delta.is_err() && self.eval.store.alive(id) && !self.eval.store.dirty {
-            delta = self.retract_set_delta_unjournaled(&[id])?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
+            delta = self.retract_set_delta_unjournaled(&[id], false)?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
         }
         if delta.is_err() {
             if self.eval.store.alive(id) {
@@ -872,7 +887,7 @@ impl Session {
     /// This world, holding the core, and the `groups` of files evaluated by volumes (`engine/volumes.rs`): a world a
     /// worker, each a fork of the core. Refused when a worker's world asks for input (a scan or an adapter's want),
     /// which a volume cannot bring alone.
-    pub fn by_volumes(&mut self, groups: Vec<String>, files: usize) -> Result<Volumes, Halt> {
+    pub fn by_volumes(&mut self, groups: Vec<Vec<(String, String)>>, files: usize) -> Result<Volumes, Halt> {
         let (ws, stats) = self.eval.by_volumes(groups, files)?;
         let (mut worlds, mut laid) = (Vec::with_capacity(ws.len()), Vec::with_capacity(ws.len()));
         for w in ws {
@@ -882,16 +897,31 @@ impl Session {
                 return Err(Halt::Strat("a volume asks for input, which it cannot bring alone".into(), String::new()));
             }
             worlds.push(s);
-            laid.push(w.laid);
+            laid.push(crate::engine::volumes::Laid { ids: w.laid, rules: w.laid_for });
         }
         Ok(Volumes { worlds, laid, stats })
+    }
+
+    /// Facts laid into this evaluated world as base facts, and fired on by delta: each one's id, and whether it is
+    /// new. A delta that cannot be worked out is said.
+    pub fn put_delta(&mut self, facts: &[(Sym, Sym, Vec<Term>)]) -> Result<Vec<(FactId, bool)>, String> {
+        self.told(crate::journal::Verb::LoadDelta, |s| {
+            let mark = s.eval.prep_mark();
+            s.eval.store.arrivals = Some(Vec::new());
+            let put: Vec<(FactId, bool)> = facts.iter().map(|(r, p, a)| s.eval.store.put(&s.eval.h, *r, *p, a, crate::store::F_BASE)).collect();
+            let ids = s.eval.store.arrivals.take().unwrap_or_default();
+            match s.loaded_delta(mark, ids) {
+                Addition::Full(why) => Err(why),
+                _ => Ok(put),
+            }
+        })
     }
 
     /// The world that answers a question over `rel` the volumes cannot answer alone (`Eval::resident`), none when
     /// their union answers it.
     pub fn resident(&mut self, v: &Volumes, rel: &str) -> Result<Option<Session>, Halt> {
         let rel = self.eval.h.intern(rel);
-        let ws: Vec<(&Eval, &crate::store::FxSet<FactId>)> = v.worlds.iter().map(|s| &s.eval).zip(v.laid.iter()).collect();
+        let ws: Vec<(&Eval, &crate::store::FxSet<FactId>)> = v.worlds.iter().map(|s| &s.eval).zip(v.laid.iter().map(|l| &l.ids)).collect();
         Ok(self.eval.resident(&ws, &[rel])?.map(|eval| Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() }))
     }
 
@@ -904,23 +934,20 @@ impl Session {
         let resident = self.resident(v, &rel).map_err(|e| describe(&e))?;
         let core = self.eval.store.len_ids();
         let ask = |s: &mut Session, q: &str| if all { s.why_all(q) } else { s.why(q) };
-        // a world's own facts: a base fact above the core of a worker is its file's unless it is in [surface]
-        let surface = self.eval.h.intern("surface");
-        let laid_in = |s: &Session, resident: bool| -> HashSet<String> {
+        // a world's own facts: a base fact above the core of the resident world is given it; a worker's laid facts
+        // are the others'
+        let given = |s: &Session| -> HashSet<String> {
             let st = &s.eval.store;
-            (core..st.len_ids())
-                .filter(|&id| st.alive(id) && st.rec(id).base() && (resident || st.rec(id).persp == surface))
-                .map(|id| st.key(&s.eval.h, id))
-                .collect()
+            (core..st.len_ids()).filter(|&id| st.alive(id) && st.rec(id).base()).map(|id| st.key(&s.eval.h, id)).collect()
         };
+        let laids: Vec<HashSet<String>> = v.worlds.iter().zip(&v.laid).map(|(w, l)| l.ids.iter().filter(|&&id| w.eval.store.alive(id)).map(|&id| w.eval.store.key(&w.eval.h, id)).collect()).collect();
         let (mut text, laid) = match resident {
-            Some(mut r) => (ask(&mut r, query)?, laid_in(&r, true)),
+            Some(mut r) => (ask(&mut r, query)?, given(&r)),
             None => {
                 let held = v.worlds.iter_mut().position(|w| w.why(query).is_ok()).ok_or_else(|| format!("{query} does not hold in any volume"))?;
-                (ask(&mut v.worlds[held], query)?, laid_in(&v.worlds[held], false))
+                (ask(&mut v.worlds[held], query)?, laids[held].clone())
             }
         };
-        let laids: Vec<HashSet<String>> = v.worlds.iter().map(|w| laid_in(w, false)).collect();
         let mut todo = laid;
         todo.extend(laids.iter().flatten().cloned());
         for _ in 0..16 {
@@ -1801,6 +1828,9 @@ impl Session {
 
     fn retract_unjournaled(&mut self, query: &str) -> Result<(), String> {
         let id = self.base_fact(query)?;
+        if let Some(why) = self.eval.refuses_retraction() {
+            return Err(why);
+        }
         let doomed = self.doomed(id);
         let rel = self.eval.store.rec(id).rel;
         let asks = rel == self.eval.v.asks || (rel == self.eval.v.explain_request && self.eval.cone.is_some());
@@ -1827,6 +1857,9 @@ impl Session {
 
     fn retract_delta_unjournaled(&mut self, query: &str) -> Result<Retraction, String> {
         let id = self.base_fact(query)?;
+        if let Some(why) = self.eval.refuses_retraction() {
+            return Err(why);
+        }
         let rel = self.eval.store.rec(id).rel;
         let ft = self.fact_term(id);
         let request = [self.eval.h.mkf_named("retract", &[ft])];
@@ -2143,7 +2176,45 @@ impl Session {
     /// where `why` prints a digest of the first `WHY_MEMBERS`.
     pub fn why_all(&mut self, query: &str) -> Result<String, String> {
         let lit = self.why_lit(query)?;
-        self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))
+        let text = self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))?;
+        self.unfold_lemmas(text)
+    }
+
+    /// Every `[lemma …]` of a `why` text set in its proof: its file's lower stage evaluated again in a fork of this
+    /// world, the lemma's `why` read there. A lemma whose file this world was not given the text of stays.
+    fn unfold_lemmas(&mut self, text: String) -> Result<String, String> {
+        let Some(texts) = self.eval.lower_texts.clone() else { return Ok(text) };
+        let Some(st) = self.eval.lemma_stage() else { return Ok(text) };
+        let mut lows: HashMap<String, Session> = HashMap::new();
+        let mut out = String::new();
+        for line in text.lines() {
+            let body = line.trim_start();
+            let key = body.find(" [lemma").filter(|_| body.ends_with(']')).map(|i| &body[..i]);
+            let file = key.and_then(crate::engine::volumes::file_of).filter(|f| texts.contains_key(*f));
+            let (Some(key), Some(file)) = (key, file) else {
+                out.push_str(line);
+                out.push('\n');
+                continue;
+            };
+            if !lows.contains_key(file) {
+                let mut eval = self.eval.fork();
+                eval.lower_texts = None;
+                let r = crate::program::load_program(&mut eval, &texts[file], None);
+                if !r.ok {
+                    return Err(r.diagnostics.join("\n"));
+                }
+                eval.lower_stage(&st).map_err(|e| crate::describe(&e))?;
+                lows.insert(file.to_string(), Session { eval, dangling: 0, asks: 0, profiled: true, kept: Default::default(), post: None, sent: Default::default() });
+            }
+            let low = lows.get_mut(file).expect("put above");
+            let pad = &line[..line.len() - body.len()];
+            for l in low.why_all(key)?.lines() {
+                out.push_str(pad);
+                out.push_str(l);
+                out.push('\n');
+            }
+        }
+        Ok(out.trim_end_matches('\n').to_string())
     }
 
     /// THE EXPLAIN BRIDGE, and why it exists: `why` and `whynot` are host
@@ -2549,3 +2620,138 @@ fn trim_heap() {
 
 #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
 fn trim_heap() {}
+
+impl Volumes {
+    /// A delta of the files: per volume the base facts it takes out and the text it takes in (`edits`), passed on
+    /// to the others round by round until nothing moves. A round first overdeletes across the volumes what the facts
+    /// gone reach (`Crossing::doomed`), and takes the laid copies of it out everywhere at once, then lays again what
+    /// still holds where it is made, and what was made anew (`Crossing::plan`). The rounds it took; an error where a
+    /// volume could not take its part by delta.
+    pub fn pass_on(&mut self, cross: &crate::engine::volumes::Crossing, edits: Vec<(usize, Vec<FactId>, String)>) -> Result<usize, String> {
+        use crate::engine::volumes::Change;
+        let k = self.worlds.len();
+        let mut caches: Vec<crate::store::FxMap<Sym, Option<u32>>> = vec![Default::default(); k];
+        let mut base: Vec<Vec<FactId>> = vec![Vec::new(); k];
+        let mut texts: Vec<String> = vec![String::new(); k];
+        let mut seeds: Vec<(usize, FactId)> = Vec::new();
+        for (i, out, add) in edits {
+            seeds.extend(out.iter().map(|&f| (i, f)));
+            base[i] = out;
+            texts[i] = add;
+        }
+        for w in &mut self.worlds {
+            w.eval.index_for_retraction();
+        }
+        let mut wave: Vec<Change> = Vec::new();
+        // the laid copies taken out, till what they copy holds again where it is made
+        let mut taken: Vec<Vec<(FactId, Vec<u32>)>> = vec![Vec::new(); k];
+        let mut relaid = false;
+        let mut rounds = 0;
+        loop {
+            let first = rounds == 0;
+            if !first && wave.is_empty() && seeds.is_empty() && !relaid {
+                break;
+            }
+            rounds += 1;
+            if rounds > 64 {
+                return Err("what the volumes show one another did not settle in 64 rounds".into());
+            }
+            let doomed = {
+                let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
+                cross.doomed(std::mem::take(&mut seeds), &mut ws, &self.laid)
+            };
+            let before: Vec<Vec<bool>> = self.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect();
+            for j in 0..k {
+                let mut copies: Vec<FactId> = doomed[j].iter().copied().filter(|g| self.laid[j].ids.contains(g)).collect();
+                copies.sort_unstable();
+                let mut out = std::mem::take(&mut base[j]);
+                out.extend(copies.iter().copied().filter(|g| self.worlds[j].eval.store.alive(*g)));
+                if !out.is_empty() {
+                    self.worlds[j].retract_file_delta(&out)??;
+                }
+                for g in copies {
+                    self.laid[j].ids.remove(&g);
+                    let tags = self.laid[j].rules.remove(&g).unwrap_or_default();
+                    taken[j].push((g, tags));
+                }
+                let add = std::mem::take(&mut texts[j]);
+                if !add.is_empty() {
+                    self.worlds[j].load_delta(&add, None).map_err(|e| e.join("; "))?;
+                }
+            }
+            let mut plan = {
+                let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
+                let mut plan = cross.plan(&wave, &mut ws, &self.laid, &mut caches);
+                // a copy taken out is laid again where a volume still makes what it copies
+                relaid = false;
+                for (j, gs) in taken.iter_mut().enumerate() {
+                    for (g, tags) in std::mem::take(gs) {
+                        if ws[j].store.alive(g) {
+                            continue;
+                        }
+                        if cross.made_elsewhere(j, g, &mut ws, &self.laid) {
+                            let st = &ws[j].store;
+                            let rec = st.rec(g);
+                            plan.lay[j].push((rec.rel, rec.persp, st.args(g).to_vec(), tags));
+                            relaid = true;
+                        } else {
+                            gs.push((g, tags));
+                        }
+                    }
+                }
+                plan
+            };
+            let mut next = Vec::new();
+            for j in 0..k {
+                let lay = std::mem::take(&mut plan.lay[j]);
+                let again = std::mem::take(&mut plan.again[j]);
+                let w = &mut self.worlds[j];
+                let laid = &mut self.laid[j];
+                let mut ch = Change { at: j, ..Default::default() };
+                if !lay.is_empty() {
+                    let facts: Vec<(Sym, Sym, Vec<Term>)> = lay.iter().map(|(r, p, a, _)| (*r, *p, a.clone())).collect();
+                    for ((id, new), (_, _, _, rules)) in w.put_delta(&facts)?.into_iter().zip(lay) {
+                        if new {
+                            laid.ids.insert(id);
+                            laid.rules.insert(id, rules);
+                        } else if laid.ids.contains(&id) {
+                            let tags = laid.rules.entry(id).or_default();
+                            for r in rules {
+                                if !tags.contains(&r) {
+                                    tags.push(r);
+                                    ch.again.push((id, r));
+                                }
+                            }
+                        }
+                    }
+                }
+                for (id, rules) in again {
+                    let tags = laid.rules.entry(id).or_default();
+                    for r in rules {
+                        if !tags.contains(&r) {
+                            tags.push(r);
+                            ch.again.push((id, r));
+                        }
+                    }
+                }
+                let st = &w.eval.store;
+                for id in 0..st.len_ids() {
+                    let was = before[j].get(id as usize).copied().unwrap_or(false);
+                    if laid.ids.contains(&id) || was == st.alive(id) {
+                        continue;
+                    }
+                    if !was {
+                        ch.made.push(id);
+                    } else if !doomed[j].contains(&id) {
+                        seeds.push((j, id));
+                    }
+                }
+                if !(ch.made.is_empty() && ch.again.is_empty()) {
+                    next.push(ch);
+                }
+            }
+            wave = next;
+        }
+        Ok(rounds)
+    }
+}

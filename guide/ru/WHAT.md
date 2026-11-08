@@ -104,31 +104,31 @@ checkout.rofl.md:13: cell 1 · rofl
     - "checkout" is a risky export
   checkout.rofl.md:16: why "checkout" is a risky export
     the value's steps, from where it is written:
-      checkout.js:4  checkout             binds[value](it,"checkout")
       checkout.js:4  function checkout()  it answers to "checkout"
                                           "checkout" is a risky export
     the proof:
     "checkout" is a risky export, because
       [function checkout() at checkout.js:4] is a function, in the code, because
-        body[value]([function checkout() at checkout.js:4],[function body at checkout.js:4]), because
-          ox_fn_node([function checkout() at checkout.js:4],[function checkout() at checkout.js:4]), because
-            oxc_k[ast_oxc]([function checkout() at checkout.js:4],function), because
-              node[ast_oxc]([function checkout() at checkout.js:4],function,"checkout.js") (given)
-            + 1 side condition holds (nothing says otherwise)
-          oxc_c[ast_oxc]([function checkout() at checkout.js:4],body,0,[function body at checkout.js:4]), because
-            child[ast_oxc]([function checkout() at checkout.js:4],body,0,[function body at checkout.js:4]) (given)
-            unwrapped[ast_oxc]([function body at checkout.js:4],[function body at checkout.js:4]), because
-              node[ast_oxc]([function body at checkout.js:4],function_body,"checkout.js") (given)
-              + 1 side condition holds (nothing says otherwise)
+        body[value]([function checkout() at checkout.js:4],[function body at checkout.js:4]) (a lemma, checkout.js:4)
       [function checkout() at checkout.js:4] answers to "checkout", in the code, because
         [function checkout() at checkout.js:4] is a function, in the code [above]
-        target[value]([function checkout() at checkout.js:4],[checkout at checkout.js:4]), because
-          oxc_k[ast_oxc]([function checkout() at checkout.js:4],function) [above]
-          oxc_c[ast_oxc]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]), because
-            child[ast_oxc]([function checkout() at checkout.js:4],id,0,[checkout at checkout.js:4]) (given)
-            unwrapped[ast_oxc]([checkout at checkout.js:4],[checkout at checkout.js:4]), because
-              node[ast_oxc]([checkout at checkout.js:4],binding_identifier,"checkout.js") (given)
-              + 1 side condition holds (nothing says otherwise)
+        target[value]([function checkout() at checkout.js:4],[checkout at checkout.js:4]) (a lemma, checkout.js:4)
+        binds[value]([checkout at checkout.js:4],"checkout") (a lemma, checkout.js:4)
+      [function checkout() at checkout.js:4] is exported, in the code, because
+        [function checkout() at checkout.js:4] is a function, in the code [above]
+        + 1 side condition holds (nothing says otherwise)
+        declares_export[code]([function checkout() at checkout.js:4]), because
+          target[value]([function checkout() at checkout.js:4],[checkout at checkout.js:4]) (a lemma, checkout.js:4)
+          has[value]([checkout.js at checkout.js:1],[checkout at checkout.js:4]) (a lemma, checkout.js:1)
+      [function checkout() at checkout.js:4] may throw, in the code, because
+        [function charge() at pay.js:1] may throw, in the code, because
+          [function charge() at pay.js:1] throws outright, in the code, because
+            exits[value]([throw at pay.js:2],throw) (a lemma, pay.js:2)
+            [function charge() at pay.js:1] is nearest to [throw at pay.js:2], in the flow, because
+              [function charge() at pay.js:1] is nearest to [if at pay.js:2], in the flow, because
+                [function charge() at pay.js:1] is nearest to [function body at pay.js:1], in the flow, because
+                  [function charge() at pay.js:1] is a function, in the code, because
+                    body[value]([function charge() at pay.js:1],[function body at pay.js:1]) (a lemma, pay.js:1)
 ```
 <!-- END run -->
 

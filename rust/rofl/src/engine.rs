@@ -37,6 +37,7 @@ mod want;
 mod layer;
 mod algebra;
 mod books;
+mod stages;
 pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
@@ -161,6 +162,15 @@ struct DoneTable {
     answers: Vec<(Vec<Term>, PremRef)>,
     by: HashMap<usize, (HashMap<Term, Vec<usize>>, Vec<usize>)>,
     rows: i64,
+}
+
+/// The rules a pass fires, by the lower stage's (`engine/stages.rs`).
+#[derive(Clone, Default)]
+pub(crate) enum StagePass {
+    #[default]
+    Whole,
+    Lower(Rc<FxSet<Sym>>),
+    Upper(Rc<FxSet<Sym>>),
 }
 
 pub struct ERule {
@@ -801,6 +811,20 @@ pub struct Eval {
     whole: Option<Rc<layer::Whole>>,
     /// What the last whole evaluation left unknown, for the full pass under way to carry on from what it keeps.
     kept_carry: Option<Rc<layer::Carried>>,
+    /// Which rules the pass under way fires, where the plan cuts a book (`engine/stages.rs`).
+    stage_pass: StagePass,
+    /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
+    pub stage_given: Option<Rc<FxSet<Sym>>>,
+    /// Where this world is one volume of a corpus (`engine/volumes.rs`): a rule fires only where its anchor is at home.
+    pub anchors: Option<Rc<volumes::Anchors>>,
+    anchor_home: FxMap<Sym, Option<u32>>,
+    /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
+    lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
+    /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
+    /// (`Session::why_all`): a lemma's proof is found again by evaluating its file's lower stage.
+    pub lower_texts: Option<Rc<HashMap<String, String>>>,
+    /// The heads of the whole program's lower stage, where asks prunes it (`Eval::lemma_stage`).
+    lower_full: Option<HashSet<(Sym, Option<Sym>)>>,
     /// What a delta under way leaves to the full pass after it: the relations a hole or a shrug may move that the
     /// change reaches (`Eval::hole_world`). No rule concluding one is read by the delta.
     aside: HashSet<Sym>,
@@ -2280,6 +2304,13 @@ impl Eval {
             shrug_readers: HashSet::new(),
             whole: None,
             kept_carry: None,
+            stage_pass: StagePass::Whole,
+            stage_given: None,
+            anchors: None,
+            anchor_home: FxMap::default(),
+            lemma_heads: None,
+            lower_texts: None,
+            lower_full: None,
             aside: HashSet::new(),
             firing: false,
             fault_count: 0,
@@ -2414,6 +2445,15 @@ impl Eval {
         if self.mode == Mode::Strata {
             self.diags.push("asks: the stock evaluator orders every rule by its stratum table, so every rule is kept".to_string());
             return None;
+        }
+        // a world that cuts a book places its lemmas by the plan's site, which `why` reads whatever is asked
+        let (site, plan, cut) = (self.h.intern("site"), self.h.intern("fixpointplan"), self.h.intern("cut"));
+        if !self.store.rel_persp(&self.h, cut, plan).is_empty() {
+            for f in self.store.rel_persp(&self.h, site, plan) {
+                if let Some(rel) = self.store.args(f).first().and_then(|t| t.as_atom()) {
+                    cone.insert(rel);
+                }
+            }
         }
         let (req, main) = (self.v.explain_request, self.v.main);
         for f in self.store.rel_persp(&self.h, req, main) {
@@ -2816,6 +2856,10 @@ impl Eval {
     fn prune_to_cone(&mut self, mut kept: Vec<ERule>) -> Vec<ERule> {
         self.cone = self.asks_cone(&kept);
         self.pruned.clear();
+        self.lower_full = None;
+        if self.cone.is_some() {
+            self.note_lower_full(&kept);
+        }
         if let Some(cone) = &self.cone {
             let kernel = self.kernel_heads();
             let (runs, out): (Vec<ERule>, Vec<ERule>) = kept.into_iter().partition(|r| cone.contains(&r.clause.head.rel) || kernel.contains(&r.clause.head.rel));
@@ -3421,7 +3465,15 @@ impl Eval {
         self.kept_carry = self.whole.take().and_then(|w| w.carry.clone());
         self.again = again;
         self.store.kept_layer = kept;
-        let out = self.run_whole();
+        self.stage_pass = StagePass::Whole;
+        let out = match (self.stage_given.clone(), self.lemma_stage()) {
+            (Some(given), _) => {
+                self.stage_pass = StagePass::Upper(given);
+                self.run_whole()
+            }
+            (None, Some(st)) => self.run_staged(st),
+            (None, None) => self.run_whole(),
+        };
         if !self.store.kept_rules.is_empty() {
             let rules = std::mem::take(&mut self.store.kept_rules);
             self.restore_cells_of(Some(&rules));
@@ -3553,7 +3605,7 @@ impl Eval {
     fn run_pass_from(&mut self) -> Result<Outcome, Halt> {
         self.wall.cutting = Some(Box::default());
         let from = self.wall.resume_at.as_ref().and_then(|c| c.phase);
-        let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && !self.store.kept_layer.contains(&r.clause.head.rel)).cloned().collect();
+        let safe_rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && !self.store.kept_layer.contains(&r.clause.head.rel) && self.stage_fires(r)).cloned().collect();
         let readers = self.shrug_readers.clone();
         // a rule into a subsumptive relation whose dominance reads a relation
         // fires once that relation is closed, at its level
@@ -5689,6 +5741,11 @@ impl Eval {
             );
             self.diag_once(msg);
             return Ok(());
+        }
+        if let Some(a) = &self.anchors {
+            if !a.fires(r.id, &sol.s, &self.h, &mut self.anchor_home) {
+                return Ok(());
+            }
         }
         if head.temporal == Temporal::Next {
             return self.stage(r.id, head.rel, persp, args, &sol.prems);
@@ -12819,7 +12876,7 @@ impl Eval {
     fn round_rules(&self) -> Vec<Rc<ERule>> {
         self.rules
             .iter()
-            .filter(|r| r.safe && r.clause.head.rel != self.v.stratum && !self.store.kept_layer.contains(&r.clause.head.rel))
+            .filter(|r| r.safe && r.clause.head.rel != self.v.stratum && !self.store.kept_layer.contains(&r.clause.head.rel) && self.stage_fires(r))
             .filter(|r| !(self.wfs.skip_cone && self.unknown_cone.contains(&r.clause.head.rel)))
             .cloned()
             .collect()
@@ -15353,10 +15410,15 @@ impl Eval {
             // To the plain explainer any fact the store holds is an axiom —
             // a kernel-emitted row such as `derived_by` among them.
             None => {
-                let mark = if self.store.alive(id) && (self.plain || self.store.rec(id).base()) {
-                    "[axiom]"
+                let mark = if self.store.alive(id) && self.is_lemma(id) {
+                    match self.lemma_site(id) {
+                        Some(at) => format!("[lemma {at}]"),
+                        None => "[lemma]".into(),
+                    }
+                } else if self.store.alive(id) && (self.plain || self.store.rec(id).base()) {
+                    "[axiom]".into()
                 } else {
-                    "[past tick]"
+                    "[past tick]".into()
                 };
                 next.push(WhyTask::Line(format!("{pad}{key} {mark}")));
             }

@@ -79,6 +79,11 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let all = rofl::brk!("kept_delta_all_files" => true; false);
     let mut p = plan_files(s, files, &old, &stamps, all)?;
     plan_gone(r, files, &mut p)?;
+    if p.moved {
+        if let Some(why) = s.eval.refuses_retraction() {
+            return Err(why);
+        }
+    }
     let (ids, live) = (s.eval.store.len_ids() as usize, s.eval.store.fact_count());
     if (ids - live) * 4 > ids {
         return Err(format!("{} of its {ids} fact records are of facts gone: it is evaluated whole to drop them", ids - live));
@@ -134,6 +139,8 @@ struct Plan<'a> {
     add: String,
     took: Vec<String>,
     texts: HashMap<&'a str, String>,
+    /// a file the world was kept from changed or went: what it gave may have to be taken out
+    moved: bool,
 }
 
 impl<'a> Plan<'a> {
@@ -147,7 +154,7 @@ impl<'a> Plan<'a> {
 
 /// Each file named: kept as it stood, read again (its rules must not have changed), or read for the first time.
 fn plan_files<'a>(s: &mut Session, files: &'a [String], old: &HashMap<&str, &Unit>, stamps: &HashMap<&str, &str>, all: bool) -> Result<Plan<'a>, String> {
-    let mut p = Plan { stays: Vec::new(), goes: Vec::new(), add: String::new(), took: Vec::new(), texts: HashMap::new() };
+    let mut p = Plan { stays: Vec::new(), goes: Vec::new(), add: String::new(), took: Vec::new(), texts: HashMap::new(), moved: false };
     for f in files {
         match old.get(f.as_str()) {
             Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => p.stays.extend(&u.facts),
@@ -158,6 +165,7 @@ fn plan_files<'a>(s: &mut Session, files: &'a [String], old: &HashMap<&str, &Uni
                     return Err(format!("the rules of {} changed", kept::shown(f)));
                 }
                 p.stays.extend(ids.iter().copied());
+                p.moved = true;
                 if rofl::brk!("kept_delta_keeps_old" => false; true) {
                     p.goes.extend(&u.facts);
                 }
@@ -186,6 +194,7 @@ fn plan_gone(r: &Record, files: &[String], p: &mut Plan) -> Result<(), String> {
             p.goes.extend(&u.facts);
         }
         p.took.push(format!("{} (gone)", kept::shown(&u.path)));
+        p.moved = true;
     }
     Ok(())
 }

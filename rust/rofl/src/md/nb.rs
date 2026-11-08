@@ -58,6 +58,8 @@ pub fn legible(text: &str) -> String {
         let l = re_sub(r"^(\s*)whynot (.*):$", &l, false, |c| format!("{}why not {}:", &c[1], &c[2]));
         let l = rx::sub("failed premise: ", &l, false, "it stops at: ");
         let l = rx::sub(r" \[axiom\]$", &l, false, " (given)");
+        let l = re_sub(r" \[lemma ([^\]]+)\]$", &l, false, |c| format!(" (a lemma, {})", &c[1]));
+        let l = rx::sub(r" \[lemma\]$", &l, false, " (a lemma)");
         let l = rx::sub(r" \[finite failure\]$", &l, false, " (nothing says so)");
         let l = rx::sub(r" \[builtin fails\]$", &l, false, " (false)");
         let l = rx::sub(r" \[builtin\]$", &l, false, " (arithmetic)");

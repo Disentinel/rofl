@@ -3049,6 +3049,9 @@ check_opt("lifecycle_overwrites", one_engine, rust).
 check_opt("vscode_side_effects", one_engine, rust).
 check_opt("rules_js-dataflow", one_engine, rust).
 check_opt("net", one_engine, rust).
+-- Crossed it 2026-11-08, found by the first job of ci.yml (gate.rofl) on run 42385412132 of main: agg_sugar_safety
+-- 5.1 / 0.3 / 2055.
+check_opt("agg_sugar_safety", one_engine, rust).
 -- and over 100 000 facts, though TypeScript answered them in a blink beside the others: lifecycle_clean 155967 facts,
 -- lifecycle_forgetful 153324.
 check_opt("lifecycle_clean", one_engine, rust).
@@ -4033,6 +4036,20 @@ check_file("lifecycle_overwrites", "models/lang/js/lifecycle.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-facts.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-check.rofl").
 check_file("lifecycle_overwrites", "examples/checks/lifecycle-overwrites-expect.rofl").
+
+-- LEMMA STAGES: a world of the JS model cuts oxc's raw tree (`cut[fixpointplan](ast_oxc)`, models/lang/js/oxc-roles.rofl;
+-- docs/cli.md, *Lemma stages*). The Rust engine drops [ast_oxc] once its lemmas are proven and gives them as facts; the
+-- TypeScript engine evaluates the world whole. Stages are Rust only (the owner, 2026-11-07).
+check_opt("concat_value", one_engine, rust).
+check_opt("lifecycle_clean", one_engine, rust).
+check_opt("lifecycle_forgetful", one_engine, rust).
+check_opt("lifecycle_leaky", one_engine, rust).
+check_opt("lifecycle_overwrites", one_engine, rust).
+check_opt("oxc_roles", one_engine, rust).
+check_opt("roles_oxc", one_engine, rust).
+check_opt("services", one_engine, rust).
+check_opt("vscode_side_effects", one_engine, rust).
+check_opt("vscode_surface_split", one_engine, rust).
 
 -- WHERE THE TIME OF CI WENT, found 2026-11-07 (models/process/ci/cost.rofl): the workflows of main, the last 30 runs
 -- of ci.yml, the cost of each world and break; `npm run ci:cost` reads them anew.
