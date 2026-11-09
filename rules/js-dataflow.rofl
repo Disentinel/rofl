@@ -795,10 +795,6 @@ keyed_ret_known[code](F) :- keyed_ret_need[code](F).
 keyed_ret_open[code](F)  :- keyed_ret_need[code](F), ret_plain[flow](F, R), keyed_open[code](R).
 keyed_ret_open[code](F)  :- keyed_ret_need[code](F), async[value](F).
 keyed_ret_open[code](F)  :- keyed_ret_need[code](F), generator[value](F).
-sx_ret_known[surface](F) :- sx_esc[surface](F), keyed_ret_known[code](F).
-sx_ret_open[surface](F)  :- sx_esc[surface](F), keyed_ret_open[code](F).
-keyed_ret_known[code](F) :- sx_ret_known[surface](F).
-keyed_ret_open[code](F)  :- sx_ret_open[surface](F).
 keyed_open[code](C) :- keyed_want[code](C), call[value](C), not resolved_site[code](C).
 keyed_open[code](C) :- keyed_want[code](C), call[value](C), resolves[code](C, F),
                        not keyed_ret_known[code](F).

@@ -91,8 +91,8 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 | `why` with `all`, `whynot` with `depth`, `nodes`, `all` | the verbs' options | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `op: ask` | rows of a query | `runtime/ingest.ts` | KEEP | |
 | `ask` with `keys` | the matched facts in `canonicalState`'s key form | `runtime/split.ts`, `scripts/vscode_curve.ts` (since the audit) | KEEP: the decision to remove it predates its callers | |
-| `op: assert`, `tick` | assert text; advance a tick. On an evaluated session `assert` is an addition by delta and answers `full` (null, or why it evaluated again) | `scripts/surface_split.ts` (`assert`), `scripts/whycheck.ts` (`tick`) | KEEP (the core of the protocol; `docs/port-surface.md`) | |
-| `op: fork` | the cheap copy of a session | `scripts/surface_split.ts` | KEEP (the protocol's headline verb, `docs/port-surface.md`) | |
+| `op: assert`, `tick` | assert text; advance a tick. On an evaluated session `assert` is an addition by delta and answers `full` (null, or why it evaluated again) | `scripts/whycheck.ts` (`tick`) | KEEP (the core of the protocol; `docs/port-surface.md`) | |
+| `op: fork` | the cheap copy of a session | (none since the split gate was retired) | KEEP (the protocol's headline verb, `docs/port-surface.md`) | |
 | `op: state` | the state to a path, or as text | `scripts/goldens.ts` | KEEP | |
 | `op: cool_many` | cool several volumes in one pass | `runtime/ingest.ts` | KEEP | |
 | `op: cool` | cool one volume, by book with `books` and `keep` | `runtime/split.ts` (since the audit); `cool_many` does not cool by book | KEEP: the decision to merge it predates its caller | |
@@ -136,7 +136,7 @@ their sources, their `[[bin]]` entries in `rust/rofl/Cargo.toml` and their rows 
 | variable | what it does | consumers | verdict | status |
 |---|---|---|---|---|
 | `ROFL_JOBS` | width of the process pool | `scripts/pool.ts`, `scripts/whycheck.ts`, CLAUDE.md | KEEP | |
-| `ROFL_PROFILE` | cargo profile whose binaries scripts run (`release`, `fast`, `breaks`) | `scripts/goldens.ts`, `scripts/sentences.ts`, `scripts/read.ts`, `scripts/structures.ts`, `scripts/whycheck.ts`, `scripts/agg_breaks.ts`, `scripts/addcheck.ts`, `scripts/surface_split.ts`, `scripts/vscode_curve.ts`, `runtime/port.ts`, `package.json` (`test:fast`), `rust/run_corpus.sh`, `rust/bytes_table.sh` | KEEP (`breaks` is INTERNAL) | |
+| `ROFL_PROFILE` | cargo profile whose binaries scripts run (`release`, `fast`, `breaks`) | `scripts/goldens.ts`, `scripts/sentences.ts`, `scripts/read.ts`, `scripts/structures.ts`, `scripts/whycheck.ts`, `scripts/agg_breaks.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `runtime/port.ts`, `package.json` (`test:fast`), `rust/run_corpus.sh`, `rust/bytes_table.sh` | KEEP (`breaks` is INTERNAL) | |
 | `ROFL_NO_BROWSER` | go without Chrome in `test:workbench`; unset, a missing Chrome is a red | `scripts/workbench_check.ts` | KEEP | |
 | `ROFL_VSCODE` | the VS Code binary of the editor tests | `vscode/test/run.ts`, `vscode/test/dist.ts` | KEEP | |
 | `ROFL_BLESS_STRUCTURES` | rewrite the committed report of the structures proof fixture | `rust/rofl/tests/structures.rs` | KEEP | |

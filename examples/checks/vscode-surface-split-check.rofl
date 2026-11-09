@@ -1,8 +1,6 @@
 -- examples/checks/vscode-surface-split-check.rofl — vscode_surface_split: the side-effect question over the 19 files of
--- examples/vscode/mini and examples/vscode/split (facts in vscode-split-facts.rofl), every file resident, through the
--- [surface] book (rules/js-surface.rofl). Every answer named; red if one is missing or one more appears. The same facts
--- come out of each file evaluated ALONE with the others' [surface]: scripts/surface_split.ts (npm run test:split) is
--- that gate, and its planted break is the original model with no surface. The files, by node prefix:
+-- examples/vscode/mini and examples/vscode/split (facts in vscode-split-facts.rofl), every file resident: the answers
+-- that cross files. Every answer named; red if one is missing or one more appears. The files, by node prefix:
 --   mini/common/channels.ts n6329e4a1ce5a5737   split/app.ts       n34281c6d11fa17ac   split/guard.ts     n1757fbf66a95b84a
 --   mini/node/main.ts       n6ce3b3e159e9764b   split/cb.ts        n4eee02055dfecceb   split/lib.ts       n2cab440d5303505d
 --   mini/node/pfs.ts        nd100d8f9c1968a85   split/consumer.ts  n1684850c959c2a12   split/reexports.ts n7260e653f095f551

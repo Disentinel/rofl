@@ -38,6 +38,8 @@ Reads:
 - from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
+- from outside these files, in the code:
+  - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
@@ -240,35 +242,10 @@ In the code:
   - it [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
   - [`fn_value`](js-surface.rofl.md#fn_value)(G).
 
-> A cycle is asked of the edges that can lie on one: a function nothing calls or that calls
-> nothing is on no cycle, and peeling such ends four times over leaves the cycles whole and
-> the closure a seventeenth of the call graph's (vscode 250). `eff_reaches` is reach inside
-> what is left, which is all the recursion test reads.
+> `eff_reaches` is reach over the call graph, walked and never stored (a graph closure): a
+> function reaches itself only on a cycle, which is all the recursion test reads.
 
-<a id="eff_ring1"></a>`eff_ring1`(F, G) if all of:
-  - a node F [has a call to](#eff_calls) a node G;
-  - G [has a call to](#eff_calls) some function;
-  - some node [has a call to](#eff_calls) F.
-
-<a id="eff_ring2"></a>`eff_ring2`(F, G) if all of:
-  - [`eff_ring1`](#eff_ring1)(F, G);
-  - [`eff_ring1`](#eff_ring1)(G, something);
-  - [`eff_ring1`](#eff_ring1)(something, F).
-
-<a id="eff_ring3"></a>`eff_ring3`(F, G) if all of:
-  - [`eff_ring2`](#eff_ring2)(F, G);
-  - [`eff_ring2`](#eff_ring2)(G, something);
-  - [`eff_ring2`](#eff_ring2)(something, F).
-
-<a id="eff_ring"></a>`eff_ring`(F, G) if all of:
-  - [`eff_ring3`](#eff_ring3)(F, G);
-  - [`eff_ring3`](#eff_ring3)(G, something);
-  - [`eff_ring3`](#eff_ring3)(something, F).
-
-A node
-
-- <a id="eff_reaches"></a>reaches by calling a node G if [`eff_ring`](#eff_ring)(it, G).
-- reaches by calling a node H if it [reaches by calling](#eff_reaches) a node G and [`eff_ring`](#eff_ring)(G, H).
+`eff_reaches` holds of each node and every node a path of `eff_calls` leads to.
 
 In the flow:
 

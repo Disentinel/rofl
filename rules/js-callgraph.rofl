@@ -517,10 +517,6 @@ receivable[flow](NS) :- ts_namespace[code](NS), namespace[value](NS, B), has[typ
 surveyed[flow](O)   :- receivable[flow](O).
 surveyed[flow](CD)  :- class_like[flow](CD).
 -- the three, mirrored for a node that left its file
-sx_receivable[surface](O) :- sx_esc[surface](O), receivable[flow](O).
-receivable[flow](O)       :- sx_receivable[surface](O).
-sx_surveyed[surface](O)   :- sx_esc[surface](O), surveyed[flow](O).
-surveyed[flow](O)         :- sx_surveyed[surface](O).
 
 -- A place that hands its value nowhere the model cannot follow: a member read
 -- off it, a binding, a name it is assigned to, a test, a closed function's
@@ -599,8 +595,6 @@ sx_open[surface](O)  :- literal_part[flow](O, P), has[value](O, P), not key_name
 sx_open[surface](O)  :- literal_part[flow](O, P), key_name[code](P, "__proto__").
 -- a member function whose `this` the model does not follow may write onto it
 this_unfollowed[flow](F) :- this_host[flow](F, _), not class_method[code](_, F).
-sx_this_unfollowed[surface](F) :- sx_esc[surface](F), this_unfollowed[flow](F).
-this_unfollowed[flow](F)       :- sx_this_unfollowed[surface](F).
 sx_open[surface](O)  :- receivable[flow](O), member_value[flow](O, _, V), may_be_node[flow](V, F),
                         this_unfollowed[flow](F).
 -- a class whose prototype may change: read as `C.prototype`, decorated, a base not
@@ -639,8 +633,6 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), lib_member
 static_open[flow](CD) :- class_like[flow](CD), ambient[value](CD).
 static_open[flow](CD) :- class_like[flow](CD), member_value[flow](CD, _, V), may_be_node[flow](V, F),
                          this_unfollowed[flow](F).
-sx_static_open[surface](CD) :- sx_esc[surface](CD), static_open[flow](CD).
-static_open[flow](CD)       :- sx_static_open[surface](CD).
 call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
 
 -- A TypeScript namespace has every name its body exports, a value or not

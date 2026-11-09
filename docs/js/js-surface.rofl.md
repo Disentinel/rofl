@@ -6,43 +6,23 @@ default: surface
 
 # js-surface
 
-> rules/js-surface.rofl — THE [surface] BOOK: what a file offers the others, and the only way a rule reads another file.
-> 
-> A file is a volume (docs/surface-split.md). Its [code] and [flow] facts are concluded from its own facts plus this
-> book; a rule that joins facts of two files reads the other side through a `sx_*` relation here and nothing else, so a
-> volume evaluated alone with the others' [surface] concludes what the whole world concludes about it
-> (scripts/surface_split.ts is the gate). Three shapes of crossing, three shapes of surface:
-> 
->   EXPORTS   keyed by the file path: what a module offers under a name (`sx_export_node`, `sx_export_val`,
->             `sx_export_lit`), its default, its `module.exports`, its module object, its top-level effect.
->   SUBSCRIPTIONS   keyed by the CALLEE, published by the CALLER: what a call hands a function (an argument's values,
->             a callback's origin, being called at all, unguarded, from reachable code). The callee's volume reads them;
->             the caller never reads the callee's parameters.
->   ESCAPING NODES  keyed by a node that LEFT its file: a function's return summary, and for every escaping node the
->             facts about it the model reads (`sx_node`, `sx_lit`, `sx_member`, `sx_fn` ...), each mirrored back into
->             its relation. What leaves takes its contents with it: the values, members and elements of an escaping
->             node escape too. A volume that learns something of an escaping node (a member written onto an imported
->             object) publishes it as the owner does.
-> 
-> With every file resident each `sx_*` relation is a projection of facts that already hold and each mirror restates
-> one, so the public facts are the model's (f_..._surface_book). The one exception is precision: a call of a function
-> whose return is its own parameter takes that call's argument (`sx_ret_param`), not every caller's.
+> rules/js-surface.rofl — THE [surface] BOOK: what a file offers the others (exports, what a call hands a function,
+> the nodes that leave their file), kept where a rule reads it as a relation of its own. Volumes route every relation
+> by the rules' keys, so nothing here is needed to cross files: the mirrors that restated an escaping node's facts
+> back into their relations were removed 2026-11-09 (docs/surface-split.md). A call of a function whose return is its
+> own parameter takes that call's argument (`sx_ret_param`), not every caller's.
 
 > ---------------------------------------------------------------- what escapes
 
 Reads:
 
-- from js-ambient, in the flow: [amb_exn_carrier](js-ambient.rofl.md#amb_exn_carrier)
-- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [class_ctor](js-callgraph.rofl.md#class_ctor), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside)
+- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
 - from js-concat, in the flow: [may_be](js-concat.rofl.md#may_be)
-- from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
-- from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
-- from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [keyed_runs_m](js-dataflow.rofl.md#keyed_runs_m), [keyed_runs_out](js-dataflow.rofl.md#keyed_runs_out), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_like](js-dataflow.rofl.md#class_like), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_unset_field](js-dataflow.rofl.md#class_unset_field), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [holds_members](js-dataflow.rofl.md#holds_members), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [made_of](js-dataflow.rofl.md#made_of), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_field_runs](js-dataflow.rofl.md#member_field_runs), [member_field_sure](js-dataflow.rofl.md#member_field_sure), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
-- from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
-- from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
-- from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
-- from js-host, in the flow: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
+- from js-controlflow, in the code: [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable)
+- from js-controlflow, in the flow: [thrown_by](js-controlflow.rofl.md#thrown_by)
+- from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
+- from js-effects, in the flow: [eff_module](js-effects.rofl.md#eff_module), [effect_of_module](js-effects.rofl.md#effect_of_module)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
@@ -65,41 +45,6 @@ What this file calls a node, and what each word stands for:
 | word | stands for |
 |---|---|
 | a function | a node [`fn_node`](js-callgraph.rofl.md#fn_node) holds of |
-
-Phrases this file defines in one step, each by the sentence it stands for:
-
-- A node points to a node M if [`sx_node`](#sx_node)(it, M).
-- A node may be the literal V if [`sx_lit`](#sx_lit)(it, V).
-- The member K of a node O holds a node V if [`sx_member`](#sx_member)(O, K, V).
-- The plain member K of a node O is a node V if [`sx_mplain`](#sx_mplain)(O, K, V).
-- The static member K of a class O is a node V if [`sx_mstatic`](#sx_mstatic)(O, K, V).
-- The instance member K of a class O is a node V if [`sx_mproto`](#sx_mproto)(O, K, V).
-- The accessor of a node O at a key K is a node M if [`sx_accessor`](#sx_accessor)(O, K, M).
-- The accessor of a node O and X at a key K is a node M if [`sx_accessor_as`](#sx_accessor_as)(O, K, M, X).
-- A class has a field own or inherited K holding a node V a static S if [`sx_field`](#sx_field)(it, K, V, S).
-- A node comes out of a module S if [`sx_ext`](#sx_ext)(it, S).
-- N is the builtin module of a spec S if [`sx_bns`](#sx_bns)(N, S).
-- N is a member of the builtin of a spec S a key K if [`sx_bmember`](#sx_bmember)(N, S, K).
-- N is an instance of a name G from a release R if [`sx_es`](#sx_es)(N, G, R).
-- F is a generator function if [`sx_gen`](#sx_gen)(F).
-- A call makes a generator of F if [`sx_gen_of`](#sx_gen_of)(it, F).
-- F runs its body at once if [`sx_sync`](#sx_sync)(F).
-- F is async if [`sx_abody`](#sx_abody)(F).
-- A node stands for an instance of a class C if [`sx_inst`](#sx_inst)(it, C).
-- A class has the constructor M if [`sx_ctor`](#sx_ctor)(it, M).
-- The constructor of a class C is M if [`sx_ctor_of`](#sx_ctor_of)(C, M).
-- A class constructs with effect an effect label L at a host H if [`sx_class_eff`](#sx_class_eff)(it, L, H).
-- A node is a class if [`sx_class`](#sx_class)(it).
-- F always throws if [`sx_always`](#sx_always)(F).
-- F may throw if [`sx_may_throw`](#sx_may_throw)(F).
-- F throws out a node V if [`sx_thrown`](#sx_thrown)(F, V).
-- F yields a node E if [`sx_yields`](#sx_yields)(F, E).
-- F has the latent effect L at a host H if [`sx_eff_latent`](#sx_eff_latent)(F, L, H).
-- The effect of F is an effect N if [`sx_effect_of`](#sx_effect_of)(F, N).
-- A node has a call to G if [`sx_eff_calls`](#sx_eff_calls)(it, G).
-- A node reaches by calling a node G if [`sx_eff_reaches`](#sx_eff_reaches)(it, G).
-- F carries an exception if [`sx_exn_carrier`](#sx_exn_carrier)(F).
-- G is sent a node V if [`sx_next`](#sx_next)(G, V).
 
 <a id="sx_esc"></a>`sx_esc`(N) either:
 
@@ -136,87 +81,13 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_lit"></a>`sx_lit`(N, V) if [`sx_esc`](#sx_esc)(N) and a node N [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
 
-<a id="sx_member"></a>`sx_member`(O, K, V) if [`sx_esc`](#sx_esc)(O) and [the member](js-dataflow.rofl.md#member_value) K of a node O holds a node V.
-
-<a id="sx_mplain"></a>`sx_mplain`(O, K, V) if [`sx_esc`](#sx_esc)(O) and [the plain member](js-dataflow.rofl.md#member_plain) K of a node O is a node V.
-
-<a id="sx_mstatic"></a>`sx_mstatic`(O, K, V) if [`sx_esc`](#sx_esc)(O) and [the static member](js-dataflow.rofl.md#class_member_static) K of a class O is a node V.
-
-<a id="sx_mproto"></a>`sx_mproto`(O, K, V) if [`sx_esc`](#sx_esc)(O) and [the instance member](js-dataflow.rofl.md#class_member_proto) K of a class O is a node V.
-
-<a id="sx_accessor"></a>`sx_accessor`(O, K, M) if [`sx_esc`](#sx_esc)(O) and [the accessor](js-controlflow.rofl.md#accessor_of) of a node O at a key K is a node M.
-
-<a id="sx_accessor_as"></a>`sx_accessor_as`(O, K, M, X) if [`sx_esc`](#sx_esc)(O), and [the accessor](js-controlflow.rofl.md#accessor_as) of a node O and X at a key K is a node M.
-
-<a id="sx_field"></a>`sx_field`(C, K, V, S) if [`sx_esc`](#sx_esc)(C) and a class C [has a field own or inherited](js-dataflow.rofl.md#field_at) K holding a node V a static S.
-
-<a id="sx_unset_field"></a>`sx_unset_field`(C, K) if [`sx_esc`](#sx_esc)(C) and [`class_unset_field`](js-dataflow.rofl.md#class_unset_field)(C, K).
-
-<a id="sx_field_sure"></a>`sx_field_sure`(C, K, J) if [`sx_esc`](#sx_esc)(C) and [`member_field_sure`](js-dataflow.rofl.md#member_field_sure)(C, K, J).
-
-<a id="sx_field_runs"></a>`sx_field_runs`(C, K, J, G) if [`sx_esc`](#sx_esc)(C) and [`member_field_runs`](js-dataflow.rofl.md#member_field_runs)(C, K, J, G).
-
 <a id="sx_elem"></a>`sx_elem`(X, I, E) if [`sx_esc`](#sx_esc)(X) and [`array_elem`](js-dataflow.rofl.md#array_elem)(X, I, E).
 
 <a id="sx_name"></a>`sx_name`(E, Name) if [`sx_elem`](#sx_elem)(something, something, E) and [`ref`](#ref)(E, Name).
 
-<a id="sx_proto"></a>`sx_proto`(N, P) if [`sx_esc`](#sx_esc)(N) and [`kind_proto`](js-dataflow.rofl.md#kind_proto)(N, P).
-
-<a id="sx_ext"></a>`sx_ext`(N, S) if [`sx_esc`](#sx_esc)(N) and a node N [comes out of](js-dataflow.rofl.md#external_value) a module S.
-
-<a id="sx_bns"></a>`sx_bns`(N, S) if [`sx_esc`](#sx_esc)(N) and N [is the builtin module](js-host.rofl.md#builtin_ns) of a spec S.
-
-<a id="sx_bmember"></a>`sx_bmember`(N, S, K) if [`sx_esc`](#sx_esc)(N) and N [is a member of the builtin](js-host.rofl.md#builtin_member) of a spec S a key K.
-
-<a id="sx_es"></a>`sx_es`(N, G, R) if [`sx_esc`](#sx_esc)(N) and N [is an instance](js-globals.rofl.md#es_instance) of a name G from a release R.
-
 <a id="sx_fn"></a>`sx_fn`(a [function](js-callgraph.rofl.md#fn_node) F) if [`sx_esc`](#sx_esc)(F).
 
-<a id="sx_gen"></a>`sx_gen`(F) if [`sx_esc`](#sx_esc)(F) and F [is a generator function](js-dataflow.rofl.md#gen_fn).
-
-<a id="sx_gen_of"></a>`sx_gen_of`(C, F) if [`sx_esc`](#sx_esc)(C) and a call C [makes a generator of](js-dataflow.rofl.md#gen_of) F.
-
-<a id="sx_sync"></a>`sx_sync`(F) if [`sx_esc`](#sx_esc)(F) and F [runs its body at once](js-controlflow.rofl.md#sync_body).
-
-<a id="sx_abody"></a>`sx_abody`(F) if [`sx_esc`](#sx_esc)(F) and F [is async](js-controlflow.rofl.md#async_body).
-
 <a id="sx_fn_name"></a>`sx_fn_name`(F, X) if [`sx_esc`](#sx_esc)(F) and F [answers to](js-callgraph.rofl.md#fn_name) a name X.
-
-<a id="sx_nested"></a>`sx_nested`(F) if [`sx_esc`](#sx_esc)(F) and [`fn_nested`](#fn_nested)(F).
-
-<a id="sx_inst"></a>`sx_inst`(I, C) if [`sx_esc`](#sx_esc)(I) and a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class C.
-
-<a id="sx_isa"></a>`sx_isa`(I, C) if [`sx_esc`](#sx_esc)(I) and [`isa`](js-dataflow.rofl.md#isa)(I, C).
-
-<a id="sx_holds"></a>`sx_holds`(O) if [`sx_esc`](#sx_esc)(O) and [`holds_members`](js-dataflow.rofl.md#holds_members)(O).
-
-<a id="sx_made"></a>`sx_made`(I, C) if [`sx_esc`](#sx_esc)(I) and [`made_of`](js-dataflow.rofl.md#made_of)(I, C).
-
-<a id="sx_ctor"></a>`sx_ctor`(C, M) if [`sx_esc`](#sx_esc)(C) and a class C [has the constructor](js-callgraph.rofl.md#class_ctor) M.
-
-<a id="sx_ctor_of"></a>`sx_ctor_of`(C, M) if [`sx_esc`](#sx_esc)(C) and [the constructor](js-dataflow.rofl.md#ctor_of) of a class C is M.
-
-<a id="sx_class_eff"></a>`sx_class_eff`(C, L, H) if [`sx_esc`](#sx_esc)(C) and a class C [constructs with effect](js-effects.rofl.md#class_construct_eff) an effect label L at a host H.
-
-<a id="sx_class"></a>`sx_class`(C) if [`sx_esc`](#sx_esc)(C) and a node C [is a class](js-dataflow.rofl.md#class_like).
-
-<a id="sx_always"></a>`sx_always`(F) if [`sx_esc`](#sx_esc)(F) and F [always throws](js-controlflow.rofl.md#always_throws).
-
-<a id="sx_may_throw"></a>`sx_may_throw`(F) if [`sx_esc`](#sx_esc)(F) and F [may throw](js-controlflow.rofl.md#may_throw).
-
-<a id="sx_thrown"></a>`sx_thrown`(F, V) if [`sx_esc`](#sx_esc)(F) and F [throws out](js-controlflow.rofl.md#thrown_by) a node V.
-
-<a id="sx_yields"></a>`sx_yields`(F, E) if [`sx_esc`](#sx_esc)(F) and F [yields](js-dataflow.rofl.md#yields) a node E.
-
-<a id="sx_eff_latent"></a>`sx_eff_latent`(F, L, H) if [`sx_esc`](#sx_esc)(F) and F [has the latent effect](js-effects.rofl.md#eff_latent) L at a host H.
-
-<a id="sx_effect_of"></a>`sx_effect_of`(F, N) if [`sx_esc`](#sx_esc)(F) and [the effect](js-effects.rofl.md#effect_of) of F is an effect N.
-
-<a id="sx_eff_calls"></a>`sx_eff_calls`(F, G) if [`sx_esc`](#sx_esc)(F) and a node F [has a call to](js-effects.rofl.md#eff_calls) G.
-
-<a id="sx_eff_reaches"></a>`sx_eff_reaches`(F, G) if [`sx_esc`](#sx_esc)(F) and a node F [reaches by calling](js-effects.rofl.md#eff_reaches) a node G.
-
-<a id="sx_keyed_runs"></a>`sx_keyed_runs`(F, M) if [`sx_esc`](#sx_esc)(F) and [`keyed_runs_m`](js-dataflow.rofl.md#keyed_runs_m)(F, M).
 
 <a id="sx_sub_inst"></a>`sx_sub_inst`(C, I) if [`sx_esc`](#sx_esc)(C) and [`sub_inst`](js-dataflow.rofl.md#sub_inst)(C, I).
 
@@ -232,28 +103,12 @@ Phrases this file defines in one step, each by the sentence it stands for:
 1. if [`sx_drops_any`](#sx_drops_any)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H);
 2. if [`sx_dwalked`](#sx_dwalked)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H).
 
-<a id="sx_runs_out"></a>`sx_runs_out`(F) if [`sx_esc`](#sx_esc)(F) and [`keyed_runs_out`](js-dataflow.rofl.md#keyed_runs_out)(F).
-
-<a id="sx_exn_carrier"></a>`sx_exn_carrier`(F) if [`sx_esc`](#sx_esc)(F) and F [carries an exception](js-ambient.rofl.md#amb_exn_carrier).
-
-<a id="sx_outside"></a>`sx_outside`(F) if [`sx_esc`](#sx_esc)(F) and [`runs_outside`](js-callgraph.rofl.md#runs_outside)(F).
-
 In the flow:
 
 `may_be`(N, E, M) either:
 
 1. if [`sx_node`](#sx_node)(N, M) and E is `node`;
 2. if [`sx_lit`](#sx_lit)(N, M) and E is `lit`.
-
-`class_unset_field`(C, K) if [`sx_unset_field`](#sx_unset_field)(C, K).
-
-`member_field_sure`(C, K, J) if [`sx_field_sure`](#sx_field_sure)(C, K, J).
-
-`member_field_runs`(C, K, J, G) if [`sx_field_runs`](#sx_field_runs)(C, K, J, G).
-
-`array_elem`(X, I, E) if [`sx_elem`](#sx_elem)(X, I, E).
-
-`kind_proto`(N, P) if [`sx_proto`](#sx_proto)(N, P).
 
 > `fn_node`, `fn_name` and `in_fn` are syntax and are negated below the flow, so a function read as a VALUE, which may be
 > another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
@@ -263,55 +118,16 @@ In the flow:
 1. if F is a [function](js-callgraph.rofl.md#fn_node);
 2. if [`sx_fn`](#sx_fn)(F).
 
-In the code:
-
-In the flow:
-
 <a id="fn_label"></a>`fn_label`(F, X) either:
 
 1. if F [answers to](js-callgraph.rofl.md#fn_name) a name X;
 2. if [`sx_fn_name`](#sx_fn_name)(F, X).
 
-<a id="fn_nested"></a>`fn_nested`(F) either:
-
-1. if F is a [function](js-callgraph.rofl.md#fn_node) and F [is inside a function](js-controlflow.rofl.md#in_fn);
-2. if [`sx_nested`](#sx_nested)(F).
-
-`isa`(I, C) if [`sx_isa`](#sx_isa)(I, C).
-
-`holds_members`(O) if [`sx_holds`](#sx_holds)(O).
-
-`made_of`(I, C) if [`sx_made`](#sx_made)(I, C).
+<a id="fn_nested"></a>`fn_nested`(a [function](js-callgraph.rofl.md#fn_node) F) if F [is inside a function](js-controlflow.rofl.md#in_fn).
 
 In the code:
-
-In the flow:
-
-In the code:
-
-In the flow:
-
-In the code:
-
-`keyed_runs_m`(F, M) if [`sx_keyed_runs`](#sx_keyed_runs)(F, M).
-
-In the flow:
-
-`sub_inst`(C, I) if [`sx_sub_inst`](#sx_sub_inst)(C, I).
-
-In the code:
-
-`drops_any`(F) if [`sx_drops_any`](#sx_drops_any)(F).
 
 `dcall`(F, H) if [`sx_dcall`](#sx_dcall)(F, H).
-
-`keyed_runs_out`(F) if [`sx_runs_out`](#sx_runs_out)(F).
-
-In the flow:
-
-In the code:
-
-`runs_outside`(F) if [`sx_outside`](#sx_outside)(F).
 
 > ---------------------------------------------------------------- exports, by the module's path
 

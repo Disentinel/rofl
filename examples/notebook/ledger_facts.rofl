@@ -617,7 +617,6 @@ path_exists("scripts/release_publish.sh").
 path_exists("scripts/render_docs.ts").
 path_exists("scripts/sentences.ts").
 path_exists("scripts/stage_plan.ts").
-path_exists("scripts/surface_split.ts").
 path_exists("scripts/text_check.ts").
 path_exists("scripts/view.ts").
 path_exists("scripts/vscode_curve.ts").

@@ -31,7 +31,6 @@ Reads:
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
-- from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
 - from outside these files, in the value:
   - <a id="call"></a>`call`
   - <a id="callee"></a>`callee`
@@ -85,14 +84,6 @@ Declared as facts:
   - a node Sp [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
   - [`express_module`](#express_module)(S);
   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(Sp, K).
-
-In the surface:
-
-<a id="sx_ex_import"></a>`sx_ex_import`(Sp, K) if [`sx_esc`](js-surface.rofl.md#sx_esc)(Sp) and [`ex_import`](#ex_import)(Sp, K).
-
-In the flow:
-
-`ex_import`(Sp, K) if [`sx_ex_import`](#sx_ex_import)(Sp, K).
 
 <a id="ex_app"></a>`ex_app`(C) if all of:
   - [`call`](#call)(C);
@@ -186,14 +177,6 @@ In the flow:
 ## 3. ACROSS FILES. A router is made in one file and mounted in another; what
 
 > a file registers on one is published, and the mounts compose in [surface].
-
-In the surface:
-
-<a id="sx_ex_target"></a>`sx_ex_target`(Y) if [`sx_esc`](js-surface.rofl.md#sx_esc)(Y) and [`ex_target`](#ex_target)(Y).
-
-In the flow:
-
-`ex_target`(Y) if [`sx_ex_target`](#sx_ex_target)(Y).
 
 In the surface:
 

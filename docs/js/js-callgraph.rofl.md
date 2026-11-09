@@ -34,7 +34,7 @@ Reads:
 - from js-modules: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_esc](js-surface.rofl.md#sx_esc), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
+- from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from outside these files, in the ast_oxc:
   - <a id="child"></a>`child`
   - <a id="node"></a>`node`
@@ -1031,22 +1031,6 @@ In the flow:
 
 > the three, mirrored for a node that left its file
 
-In the surface:
-
-<a id="sx_receivable"></a>`sx_receivable`(O) if [`sx_esc`](js-surface.rofl.md#sx_esc)(O) and [`receivable`](#receivable)(O).
-
-In the flow:
-
-`receivable`(O) if [`sx_receivable`](#sx_receivable)(O).
-
-In the surface:
-
-<a id="sx_surveyed"></a>`sx_surveyed`(O) if [`sx_esc`](js-surface.rofl.md#sx_esc)(O) and [`surveyed`](#surveyed)(O).
-
-In the flow:
-
-`surveyed`(O) if [`sx_surveyed`](#sx_surveyed)(O).
-
 > A place that hands its value nowhere the model cannot follow: a member read
 > off it, a binding, a name it is assigned to, a test, a closed function's
 > argument, or a value dropped (`discards`). Any other place (returned, in an array, an argument of a call the
@@ -1205,14 +1189,6 @@ In the flow:
 
 In the surface:
 
-<a id="sx_this_unfollowed"></a>`sx_this_unfollowed`(F) if [`sx_esc`](js-surface.rofl.md#sx_esc)(F) and [`this_unfollowed`](#this_unfollowed)(F).
-
-In the flow:
-
-`this_unfollowed`(F) if [`sx_this_unfollowed`](#sx_this_unfollowed)(F).
-
-In the surface:
-
 `sx_open`(O) if all of:
   - [`receivable`](#receivable)(O);
   - [the member](js-dataflow.rofl.md#member_value) some key of a node O holds a node V;
@@ -1316,14 +1292,6 @@ In the flow:
    - [the member](js-dataflow.rofl.md#member_value) some key of CD holds a node V;
    - V [points to](js-dataflow.rofl.md#may_be_node) a node F;
    - [`this_unfollowed`](#this_unfollowed)(F).
-
-In the surface:
-
-<a id="sx_static_open"></a>`sx_static_open`(CD) if [`sx_esc`](js-surface.rofl.md#sx_esc)(CD) and [`static_open`](#static_open)(CD).
-
-In the flow:
-
-`static_open`(CD) if [`sx_static_open`](#sx_static_open)(CD).
 
 `call_open`(C) if [`call_on`](#call_on)(C, O, something) and [`static_open`](#static_open)(O).
 

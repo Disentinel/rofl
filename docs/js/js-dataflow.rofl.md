@@ -36,7 +36,7 @@ Reads:
 - from js-controlflow: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
 - from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
 - from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
-- from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop), [eff_reaches](js-effects.rofl.md#eff_reaches)
+- from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop)
 - from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
 - from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
@@ -45,6 +45,7 @@ Reads:
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
 - from outside these files:
   - <a id="dreach"></a>`dreach`
+  - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
   - <a id="keyed_upstream"></a>`keyed_upstream`
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
@@ -1703,18 +1704,6 @@ In the code:
 2. if [`keyed_ret_need`](#keyed_ret_need)(F) and [`async`](#async)(F);
 3. if [`keyed_ret_need`](#keyed_ret_need)(F) and [`generator`](#generator)(F).
 
-In the surface:
-
-<a id="sx_ret_known"></a>`sx_ret_known`(F) if [`sx_esc`](js-surface.rofl.md#sx_esc)(F) and [`keyed_ret_known`](#keyed_ret_known)(F).
-
-<a id="sx_ret_open"></a>`sx_ret_open`(F) if [`sx_esc`](js-surface.rofl.md#sx_esc)(F) and [`keyed_ret_open`](#keyed_ret_open)(F).
-
-In the code:
-
-`keyed_ret_known`(F) if [`sx_ret_known`](#sx_ret_known)(F).
-
-`keyed_ret_open`(F) if [`sx_ret_open`](#sx_ret_open)(F).
-
 <a id="keyed_open"></a>`keyed_open`(C) either:
 
 1. if all of:
@@ -2324,7 +2313,7 @@ Declared as facts:
    - [`keyed_caller`](#keyed_caller)(G, Q, F);
    - [`keyed_many`](#keyed_many)(F);
 5. if [`keyed_caller`](#keyed_caller)(G, something, F) and [`keyed_overlap`](#keyed_overlap)(F);
-6. if [`keyed_once_need`](#keyed_once_need)(G) and G [reaches by calling](js-effects.rofl.md#eff_reaches) G.
+6. if [`keyed_once_need`](#keyed_once_need)(G) and G [reaches by calling](#eff_reaches) G.
 
 `keyed_noisy`(C, K) either:
 

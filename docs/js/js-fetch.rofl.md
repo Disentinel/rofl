@@ -27,7 +27,6 @@ Reads:
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [selects](js-dataflow.rofl.md#selects)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
-- from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
 - from outside these files, in the value:
   - <a id="call"></a>`call`
   - <a id="callee"></a>`callee`
@@ -138,14 +137,6 @@ In the flow:
   - a node Sp [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(Sp, K);
   - [`http_client`](#http_client)(S, K, something).
-
-In the surface:
-
-<a id="sx_cl_import"></a>`sx_cl_import`(Sp, S, K) if [`sx_esc`](js-surface.rofl.md#sx_esc)(Sp) and [`cl_import`](#cl_import)(Sp, S, K).
-
-In the flow:
-
-`cl_import`(Sp, S, K) if [`sx_cl_import`](#sx_cl_import)(Sp, S, K).
 
 <a id="cl_how"></a>`cl_how`(C, How, Base) if all of:
   - [`call`](#call)(C);

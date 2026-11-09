@@ -54,7 +54,7 @@ Reads:
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
-- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
+- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="nth"></a>`nth`
@@ -902,20 +902,6 @@ Declared as facts:
 
 In the surface:
 
-<a id="sx_composed"></a>`sx_composed`(C) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`composed`](#composed)(C).
-
-<a id="sx_textable"></a>`sx_textable`(C) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`textable`](#textable)(C).
-
-<a id="sx_summarized"></a>`sx_summarized`(C) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`summarized`](#summarized)(C).
-
-<a id="sx_choices"></a>`sx_choices`(C, D, K) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`choices`](#choices)(C, D, K).
-
-<a id="sx_text_at"></a>`sx_text_at`(C, D, T, E) if [`sx_esc`](js-surface.rofl.md#sx_esc)(C) and [`text_at`](#text_at)(C, D, T, E).
-
-<a id="sx_vlib_fn"></a>`sx_vlib_fn`(X, S, K) if [`sx_esc`](js-surface.rofl.md#sx_esc)(X) and [`vlib_fn`](#vlib_fn)(X, S, K).
-
-<a id="sx_vlib_ns"></a>`sx_vlib_ns`(Y, S) if [`sx_esc`](js-surface.rofl.md#sx_esc)(Y) and [`vlib_ns`](#vlib_ns)(Y, S).
-
 <a id="sx_str"></a>`sx_str`(V) either:
 
 1. if [`sx_lit`](js-surface.rofl.md#sx_lit)(something, V) and [`str_value`](#str_value)(V);
@@ -925,20 +911,6 @@ In the surface:
 5. if [`sx_ret_plit`](js-surface.rofl.md#sx_ret_plit)(something, V) and [`str_value`](#str_value)(V).
 
 In the flow:
-
-`composed`(C) if [`sx_composed`](#sx_composed)(C).
-
-`textable`(C) if [`sx_textable`](#sx_textable)(C).
-
-`summarized`(C) if [`sx_summarized`](#sx_summarized)(C).
-
-`choices`(C, D, K) if [`sx_choices`](#sx_choices)(C, D, K).
-
-`text_at`(C, D, T, E) if [`sx_text_at`](#sx_text_at)(C, D, T, E).
-
-`vlib_fn`(X, S, K) if [`sx_vlib_fn`](#sx_vlib_fn)(X, S, K).
-
-`vlib_ns`(Y, S) if [`sx_vlib_ns`](#sx_vlib_ns)(Y, S).
 
 `str_value`(V) if [`sx_str`](#sx_str)(V).
 
