@@ -9,9 +9,11 @@
 --   unresolved[audit]        a path into the crate that denotes nothing
 --
 -- A scope sees its own names, then the names of the scopes around it up to its module; a module does not see its
--- parent's. A `use a::*` gives the names of what `a` denotes where the scope has none of its own. Two names of one
--- scope are not told apart by their order: a `let x` that shadows a `let x` of the same block is one place with it.
--- The names of the standard library denote nothing here.
+-- parent's. A `use a::*` gives the names of what `a` denotes where the scope has none of its own. A `let` opens a
+-- scope of its own for the steps after it, after(D), so `let x = x.f()` reads the `x` before it and a later `let x`
+-- is another place; the value a pattern is matched against in a condition (`if let Some(x) = x`) is read in
+-- before(L), the scope around it less the names that pattern binds. The names of the standard library denote
+-- nothing here.
 --
 -- extern_crate(Name, File): a crate of the tree that another names by Name, and the file of its root. Given beside.
 
@@ -22,9 +24,43 @@ edb(extern_crate).
 scope[rust](S)  :- mark[value](S, scope).
 module[rust](M) :- namespace[value](M, _).
 import[rust](U) :- decl[value](U, import).
-nearest in_scope[rust](S, N) of parent[tree](S, N) where scope[rust](S).
+nearest near_scope[rust](S, N) of parent[tree](S, N) where scope[rust](S).
 nearest in_module[rust](M, N) of parent[tree](M, N) where module[rust](M).
 nearest in_import[rust](U, N) of parent[tree](U, N) where import[rust](U).
+
+-- ===================================================================== THE SCOPE A NODE IS READ IN
+-- the steps of a block that declares with `let`: step_scope(Bk, I, S), the scope its step I is read in
+let_step[rust](Bk, I, D) :- nth[tree](Bk, I, D), decl[value](D, let), scope[rust](Bk).
+is_let[rust](D)    :- decl[value](D, let).
+has_lets[rust](Bk) :- let_step[rust](Bk, _, _).
+step_scope[rust](Bk, 0, Bk) :- has_lets[rust](Bk).
+step_scope[rust](Bk, J, after(D)) :- let_step[rust](Bk, I, D), J is I + 1.
+step_scope[rust](Bk, J, S) :- step_scope[rust](Bk, I, S), nth[tree](Bk, I, St), not is_let[rust](St), J is I + 1, nth[tree](Bk, J, _).
+step_node[rust](St) :- nth[tree](Bk, _, St), has_lets[rust](Bk).
+nearest in_step[rust](St, N) of parent[tree](St, N) where step_node[rust](St).
+at_step[rust](N, Bk, I) :- near_scope[rust](Bk, N), has_lets[rust](Bk), nth[tree](Bk, I, N).
+at_step[rust](N, Bk, I) :- near_scope[rust](Bk, N), has_lets[rust](Bk), in_step[rust](St, N), nth[tree](Bk, I, St).
+-- bound_by(B, L): the pattern of the assignment L introduces B
+let_pat[rust](L, P) :- assign[value](L, P, _).
+let_pat[rust](L, P) :- target[value](L, P), decl[value](L, let).
+bound_by[rust](P, L) :- let_pat[rust](L, P), binds[value](P, _).
+bound_by[rust](B, L) :- binds[value](B, _), inside[tree](P, B), let_pat[rust](L, P).
+let_bound[rust](B, D) :- bound_by[rust](B, D), at_step[rust](B, Bk, I), nth[tree](Bk, I, D), is_let[rust](D).
+is_let_bound[rust](B) :- let_bound[rust](B, _).
+-- the value a condition matches: read without the names its pattern binds
+cond_value[rust](V, L) :- assign[value](L, _, V), not is_let[rust](L), bound_by[rust](_, L).
+is_cond_value[rust](V) :- cond_value[rust](V, _).
+nearest in_cond[rust](V, N) of parent[tree](V, N) where is_cond_value[rust](V).
+read_before[rust](N, L) :- cond_value[rust](N, L), near_scope[rust](S, N), not has_lets[rust](S).
+read_before[rust](N, L) :- in_cond[rust](V, N), cond_value[rust](V, L), near_scope[rust](S, N), near_scope[rust](S, V), not has_lets[rust](S).
+is_read_before[rust](N) :- read_before[rust](N, _).
+
+in_scope[rust](S, N) :- near_scope[rust](S, N), not has_lets[rust](S), not is_read_before[rust](N).
+in_scope[rust](S, N) :- at_step[rust](N, Bk, I), step_scope[rust](Bk, I, S), not is_let_bound[rust](N).
+in_scope[rust](after(D), B) :- let_bound[rust](B, D).
+in_scope[rust](P, after(D)) :- let_step[rust](Bk, I, D), step_scope[rust](Bk, I, P).
+in_scope[rust](before(L), N) :- read_before[rust](N, L).
+in_scope[rust](P, before(L)) :- cond_value[rust](_, L), near_scope[rust](S, L), in_scope[rust](P, S).
 
 -- ===================================================================== MODULES AND THEIR FILES
 -- `mod m;` in a file names m.rs or m/mod.rs beside it: in the file's directory for mod.rs, lib.rs and main.rs, in
@@ -60,6 +96,7 @@ scope_bind[rust](S, Name, B) :- named[rust](B, Name), in_scope[rust](S, B), not 
 -- a macro marked `macro_export` is a name of its crate's root
 scope_bind[rust](R, Name, B) :- decorated[value](A, M), key[value](A, "macro_export"), target[value](M, B), named[rust](B, Name),
                                 in_module[rust](Mod, M), crate_root[rust](Mod, R).
+scope_bind[rust](before(L), Name, B) :- cond_value[rust](_, L), near_scope[rust](S, L), scope_bind[rust](S, Name, B), not bound_by[rust](B, L).
 -- a scope that introduces a name introduces it within itself: a method its `self`
 scope_bind[rust](S, Name, S) :- named[rust](S, Name), scope[rust](S).
 -- `Self` is the type an impl is of, and a trait itself

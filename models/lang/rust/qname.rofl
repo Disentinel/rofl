@@ -1,0 +1,44 @@
+-- qname.rofl — THE NAME OF A FUNCTION OF RUST AS A PATH, for a person to read and for two trees to be set side by
+-- side: `rofl::engine::Eval::step`. Read from the roles, names.rofl and calls.rofl.
+--
+-- crate_name(File, Name): the file of a crate's root and the name its paths start with. Given beside.
+edb(crate_name).
+
+-- the modules of a crate are a tree, and a name grows along it
+tree mod_under(P, C).
+mod_under[rust](P, C) :- mod_parent[rust](C, P).
+mod_word[rust](C, Name) :- mod_file[rust](M, C), module_ref[value](M, Name).
+mod_word[rust](M, Name) :- namespace[value](M, B), M != B, target[value](M, N), binds[value](N, Name).
+mod_q[rust](R, Q) :- program[tree](R, File), crate_name(File, Q).
+mod_q[rust](C, Q) :- mod_under[rust](P, C), mod_q[rust](P, PQ), mod_word[rust](C, Name), Q is concat(PQ, concat("::", Name)).
+type_word[rust](T, Name) :- ref[type](T, Name).
+type_word[rust](G, Name) :- callee[type](G, T), type_word[rust](T, Name).
+type_word[rust](R, Name) :- unary[type](R, _, T), type_word[rust](T, Name).
+type_word[rust](T, Name) :- member[type](T, _, Name).
+owner_word[rust](I, Name) :- impl[rust](I), declared[value](I, T), type_word[rust](T, Name).
+owner_word[rust](T, Name) :- decl[type](T, trait), target[type](T, N), binds[type](N, Name).
+-- a function written inside a function is named under it
+tree fn_under(P, F).
+fn_under[rust](P, F) :- in_fn[rust](P, F), fn_item[rust](F).
+nested_fn[rust](F)   :- fn_under[rust](_, F).
+fn_q[rust](F, Q) :- fn_item[rust](F), target[value](F, N), binds[value](N, Name), not nested_fn[rust](F), in_module[rust](M, F),
+                    mod_q[rust](M, MQ), Q is concat(MQ, concat("::", Name)).
+fn_q[rust](F, Q) :- fn_under[rust](P, F), fn_q[rust](P, PQ), target[value](F, N), binds[value](N, Name), Q is concat(PQ, concat("::", Name)).
+fn_q[rust](F, Q) :- fn_item[rust](F), has[value](I, F), key[value](F, Name), owner_word[rust](I, TN), in_module[rust](M, I),
+                    mod_q[rust](M, MQ), Q is concat(MQ, concat("::", concat(TN, concat("::", Name)))).
+
+-- A PATH OUT OF THE CRATE, as text: `fs::read` under `use std::fs` is "std::fs::read". Both the name as written and
+-- the name as its `use` spells it are given.
+tree path_step(P, N).
+path_step[rust](P, N) :- member[value](N, P, _).
+path_text[rust](N, Name) :- ref[value](N, Name), member[value](_, N, _), not denoted[rust](N).
+path_text[rust](N, T)    :- ref[value](N, Name), member[value](_, N, _), in_scope[rust](S, N), found[rust](S, Name, B),
+                            import_leaf[rust](B), path_text[rust](B, T).
+path_text[rust](N, T)    :- path_step[rust](P, N), path_text[rust](P, PT), member[value](N, P, Name), T is concat(PT, concat("::", Name)).
+
+-- TEST CODE: what stands under `#[cfg(test)]` or `#[test]`
+test_item[rust](X) :- decorated[value](A, X), key[value](A, "test").
+test_item[rust](X) :- decorated[value](A, X), key[value](A, "cfg"), nth[tree](A, _, L), literal[value](L, "test").
+nearest in_test[rust](T, N) of parent[tree](T, N) where test_item[rust](T).
+test_fn[rust](F) :- fn_item[rust](F), test_item[rust](F).
+test_fn[rust](F) :- fn_item[rust](F), in_test[rust](_, F).

@@ -1,14 +1,15 @@
 -- models/engine/features.rofl — THE FEATURES OF THE ENGINE, found by the form of its code. The taxonomy is
 -- Grafema's (_ai/research/feature-taxonomy.md), the one rules/features.rofl applies to src/api.ts:
 --
---   ENTRY_POINT  a name the outside may say, at the place the code tells it from the others. Here: a string a
---                dispatcher matches on (`"why" => ...`, `a == "--kept"`): rs_case[rs] of rust/tools/rs_scan.
---   BEHAVIOR     what the code does once the name is said: the functions the matching arm calls, and on, by the
---                calls the code names surely (models/engine/parts.rofl `sure`).
+--   ENTRY_POINT  a name the outside may say, at the place the code tells it from the others: a test of a value
+--                against a string (`"why" => ...`, `a == "--kept"`, `Some("view")`) in a dispatcher.
+--   BEHAVIOR     the code that runs because the name was said: the region the test guards, and every region
+--                elsewhere guarded by a test of a value the first one chose. The choice travels as a constant: a
+--                variant (`"sum" => AggOp::Sum`, matched again in the fold), `true` in a field a flag sets, `Some`.
 --   FEATURE      entry points that share a behaviour: one capability, said in several ways.
---   CONTRACT     the names said inside the behaviour of another: an entry whose dispatcher an entry reaches is its
---                input (a flag of a verb), and a dispatcher of the `says` side is what it may answer.
+--   CONTRACT     the names said inside the behaviour of another.
 --
+-- It reads the Rust model over the roles (models/lang/rust: names, calls, flow) and nothing of the parser.
 -- A dispatcher is tied to its modality by hand, as a part is tied to its modules; one the table does not hold is
 -- unplaced_dispatch[audit], so a new way in turns up instead of going unseen.
 
@@ -38,51 +39,138 @@ modality("rofl::md::nb::tally", says).
 modality("rofl::md::nb::verdict_of", says).
 modality("rofl::md::nb::exit_of", says).
 
-cases_n(D, N) :- rs_fn[rs](D, _, _, _, _, _), N is count(S : rs_case[rs](D, S, _, _)), N > 0.
-unplaced_dispatch[audit](D, N) :- cases_n(D, N), N >= 5, not placed_dispatch(D).
-placed_dispatch(D) :- modality(D, _).
-dangling_modality[audit](D) :- modality(D, _), not cases_n(D, _).
+extern_crate("rofl", "rust/rofl/src/lib.rs").
+crate_name("rust/rofl/src/lib.rs", "rofl").
+crate_name("rust/rofl/src/bin/rofl/main.rs", "bin::rofl").
+
+-- ===================================================================== TESTS OF A VALUE
+-- the parts of a condition that must all hold, or any of which may: `a && b`, `a || b`
+cond_part(G, G) :- executes_if[value](_, G, truthy).
+cond_part(G, X) :- cond_part(G, Y), logical[value](Y, _, X, _).
+cond_part(G, X) :- cond_part(G, Y), logical[value](Y, _, _, X).
+-- pat_test(N, P, X): N runs when the pattern P takes the value X: a match arm, a `let` in a condition, `matches!`
+pat_test(N, P, X) :- executes_if[value](N, P, matches), assign[value](_, P, X).
+pat_test(N, P, X) :- executes_if[value](N, G, truthy), cond_part(G, T), assign[value](T, P, X).
+-- the alternatives of a pattern, and what stands inside its constructors of the standard library and its tuples
+alt_part(P, P)  :- pat_test(_, P, _).
+alt_part(P, X)  :- alt_part(P, Y), binary[value](Y, "|", X, _).
+alt_part(P, X)  :- alt_part(P, Y), binary[value](Y, "|", _, X).
+deep_part(P, X) :- alt_part(P, X).
+deep_part(P, X) :- deep_part(P, Y), pattern_elem[value](Y, _, X), not crate_pat[rust](Y).
+deep_part(P, X) :- deep_part(P, Y), binary[value](Y, "|", X, _).
+deep_part(P, X) :- deep_part(P, Y), binary[value](Y, "|", _, X).
 
 -- ===================================================================== ENTRY_POINT
-entry(D, Name) :- modality(D, _), rs_case[rs](D, Name, _, _).
+str_test(N, S) :- pat_test(N, P, _), deep_part(P, X), literal[value](X, S), string is type_of(S).
+str_test(N, S) :- executes_if[value](N, G, truthy), cond_part(G, T), binary[value](T, "==", _, R), literal[value](R, S), string is type_of(S).
+str_test(N, S) :- executes_if[value](N, G, truthy), cond_part(G, T), binary[value](T, "==", L, _), literal[value](L, S), string is type_of(S).
+dispatcher(F, D) :- fn_q[rust](F, D), modality(D, _).
+arm(D, Name, N)  :- str_test(N, Name), in_fn[rust](F, N), dispatcher(F, D).
+entry(D, Name)   :- arm(D, Name, _).
 entry_kind(D, Name, K) :- entry(D, Name), modality(D, K).
 
+tests_n(F, N) :- fn_item[rust](F), not test_fn[rust](F), N is count(X, S : str_test(X, S), in_fn[rust](F, X)), N >= 5.
+unplaced_dispatch[audit](D, N) :- tests_n(F, N), fn_q[rust](F, D), not modality(D, _).
+dangling_modality[audit](D)    :- modality(D, _), not entry(D, _).
+
+-- ===================================================================== THE CHOICE CARRIED AS A VALUE
+-- tests(N, X, T): N runs when the value at X is the constant T
+tests(N, X, v(V)) :- pat_test(N, P, X), deep_part(P, Y), denotes[rust](Y, V), variant_of[rust](V, _).
+tests(N, X, v(V)) :- pat_test(N, P, X), deep_part(P, Y), crate_ctor[rust](Y, V), variant_of[rust](V, _).
+tests(N, X, c(W)) :- pat_test(N, P, X), alt_part(P, Y), std_ctor[rust](Y, W).
+tests(N, X, c(W)) :- pat_test(N, P, X), alt_part(P, Y), destructs[value](Y, C), std_ctor[rust](C, W).
+tests(N, X, b(B)) :- pat_test(N, P, X), alt_part(P, Y), const[rust](Y, b(B)).
+tests(N, X, s(S)) :- pat_test(N, P, X), deep_part(P, Y), const[rust](Y, s(S)).
+tests(N, X, b(true))  :- executes_if[value](N, G, truthy), cond_part(G, X).
+tests(N, X, b(false)) :- executes_if[value](N, G, truthy), cond_part(G, U), unary[value](U, "!", X).
+tests(N, X, b(false)) :- executes_if[value](N, X, falsy).
+tests(N, X, T) :- executes_if[value](N, G, truthy), cond_part(G, E), binary[value](E, "==", X, R), const[rust](R, T).
+tests(N, X, T) :- executes_if[value](N, G, truthy), cond_part(G, E), binary[value](E, "==", R, X), const[rust](R, T).
+edb(asks_ctor).
+asks_ctor("is_some", "Some"). asks_ctor("is_none", "None").
+tests(N, X, c(W)) :- executes_if[value](N, G, truthy), cond_part(G, C), callee[value](C, M), member[value](M, X, A), asks_ctor(A, W).
+-- a value an entry gave, whatever it is: the body of a loop over it runs, and what `!x.is_empty()` guards
+tests(N, X, val) :- executes_if[value](N, X, next).
+tests(N, X, val) :- executes_if[value](N, G, truthy), cond_part(G, U), unary[value](U, "!", C), callee[value](C, M), member[value](M, X, "is_empty").
+
+-- THE REGIONS OF AN ENTRY: the code its test guards, and the code guarded by a test of a constant written there
+sel(D, Name, N) :- arm(D, Name, N).
+sel(D, Name, N) :- tag(X, T, D, Name), tests(N, X, T), T != val.
+sel(D, Name, N) :- tag(X, val, D, Name), tests(N, X, val), not foreign(X).
+-- what of a region can choose or do: its constants, its calls, its assignments; each under every guard around it
+guarded(N) :- executes_if[value](N, _, _).
+acts(X) :- const[rust](X, _).
+acts(X) :- mark[value](X, call).
+acts(X) :- assign[value](X, _, _), not decl[value](X, _).
+within(X, N) :- acts(X), inside[tree](N, X), guarded(N).
+within(X, X) :- guarded(X), acts(X).
+
+-- a constant written in a region travels unchanged; a variant, a string and a given value also through the
+-- containers of the standard library
+tag(X, T, D, Name)    :- sel(D, Name, N), within(X, N), const[rust](X, T).
+tag(Y, T, D, Name)    :- tag(X, T, D, Name), copy[rust](X, Y).
+tag(Y, v(V), D, Name) :- tag(X, v(V), D, Name), wrap[rust](X, Y).
+tag(Y, s(S), D, Name) :- tag(X, s(S), D, Name), wrap[rust](X, Y).
+tag(Y, val, D, Name)  :- tag(X, val, D, Name), wrap[rust](X, Y).
+-- a value an arm gives that is no constant: what it assigns to a place outside, what it puts into a container
+is_const(X) :- const[rust](X, _).
+gives_val(V, D, Name) :- arm(D, Name, N), within(A, N), assign[value](A, _, V), not is_const(V).
+gives_val(A, D, Name) :- arm(D, Name, N), within(C, N), std_call[rust](C, _, M), std_method(M, in), nth[tree](C, _, A), not is_const(A).
+tag(V, val, D, Name) :- gives_val(V, D, Name).
+-- A PLACE ONLY ENTRIES FILL. A value given says its entry was said only where nothing else writes the place: the
+-- arguments of the process hold what `ask` put first and everything the caller typed, and a loop over them runs
+-- either way. foreign(X): a value that began outside every arm may be at X. What an arm gives is the arm's,
+-- wherever it took it from; a container made empty brings nothing.
+edb(std_fresh).
+std_fresh("new"). std_fresh("default"). std_fresh("with_capacity").
+fresh(C) :- callee[value](C, M), member[value](M, _, Name), std_fresh(Name), not resolved[rust](C).
+fed(Y) :- copy[rust](_, Y).
+fed(Y) :- wrap[rust](_, Y).
+given(V) :- gives_val(V, _, _).
+from(X) :- copy[rust](X, _).
+from(X) :- wrap[rust](X, _).
+foreign(X) :- from(X), not fed(X), not is_const(X), not fresh(X), not given(X).
+foreign(Y) :- foreign(X), copy[rust](X, Y), not given(Y).
+foreign(Y) :- foreign(X), wrap[rust](X, Y), not given(Y).
+-- THE NAME SAID, BUILT INTO A STRING: `format!("--{cmd}")` in the arm that tested `cmd` for the name is that string
+src_local(X, B) :- ref[value](X, _), denotes[rust](X, B), local[rust](B).
+src_local(C, B) :- callee[value](C, M), member[value](M, R, Name), rs_same_value(Name), src_local(R, B).
+tested_local(N, B) :- pat_test(N, _, X), src_local(X, B).
+tag(M, s(V), D, Name) :- arm(D, Name, N), within(M, N), callee[value](M, F), ref[value](F, "format!"), nth[tree](M, 0, L),
+                         literal[value](L, Text), denotes[rust](L, B), tested_local(N, B), 2 is str_segs(Text, "{"),
+                         Pre is str_pre(Text, "{"), Suf is str_seg(Text, "}", 1), V is concat(Pre, concat(Name, Suf)).
+
 -- ===================================================================== BEHAVIOR
--- a sure call and the line it stands on
-call_line(F, G, L) :- rs_call_to[rs](F, G, L), rs_known(G).
-call_line(F, G, L) :- rs_call_ty[rs](F, T, N, L), rs_method[rs](G, T, N).
-call_line(F, G, L) :- recv_callee(F, Id, G), L is Id / 10000.
-call_line(F, G, L) :- bare_call(F, N, M, L), glob_sees(M, P), rs_fn[rs](G, N, P, _, _, _).
+region(N) :- sel(_, _, N).
+-- a region another name of the same dispatcher chose and this one did not: said `ask`, the code under `Why` waits
+-- for another word
+excluded(D, Name, N) :- sel(D, Other, N), entry(D, Name), Other != Name, not sel(D, Name, N).
+barred(D, Name, C)   :- excluded(D, Name, N), within(C, N), mark[value](C, call).
+-- the calls that run for an entry: those of its regions, and those of every function they reach, less the barred
+runs_call(D, Name, C) :- sel(D, Name, N), within(C, N), mark[value](C, call), not barred(D, Name, C).
+runs_call(D, Name, C) :- does_fn(D, Name, H), in_fn[rust](H, C), mark[value](C, call), not barred(D, Name, C).
+does_fn(D, Name, H)   :- runs_call(D, Name, C), ran[rust](C, H), fn_item[rust](H), not test_fn[rust](H).
+does(D, Name, HQ)   :- does_fn(D, Name, H), fn_q[rust](H, HQ).
+does_n(D, Name, N)  :- entry(D, Name), N is count(H : does(D, Name, H)).
 
-arm_calls(D, Name, G) :- entry(D, Name), rs_case[rs](D, Name, A, B), call_line(D, G, L), L >= A, L <= B.
+-- THE SITES OF AN ENTRY: the lines of its regions
+span(N, File, A, B) :- region(N), at[tree](N, File, A), ends[tree](N, B).
+span(N, File, A, A) :- region(N), at[tree](N, File, A), not ends[tree](N, _).
+site(D, Name, File, A, B) :- sel(D, Name, N), span(N, File, A, B).
+sites_n(D, Name, N) :- entry(D, Name), N is count(File, A : site(D, Name, File, A, _)).
+-- and the functions a region is written in, beyond the dispatcher: where the choice is read again
+far_site(D, Name, FQ) :- sel(D, Name, N), in_fn[rust](F, N), fn_q[rust](F, FQ), FQ != D.
 
--- THE CHOICE CARRIED AS A VALUE. An arm that calls nothing names a variant of an enum (`"sum" => AggOp::Sum`), and
--- the choice is told again wherever the code matches on that variant; an arm there may name a variant in its turn.
-picks(D, Name, TV)  :- entry(D, Name), rs_case[rs](D, Name, A, B), rs_variant_use[rs](D, TV, L), L >= A, L <= B.
-picks(D, Name, TV2) :- picks(D, Name, TV), rs_variant_arm[rs](G, TV, A, B), rs_variant_use[rs](G, TV2, L), L >= A, L <= B.
-value_calls(D, Name, H) :- picks(D, Name, TV), rs_variant_arm[rs](G, TV, A, B), call_line(G, H, L), L >= A, L <= B.
+-- where a value the entry gave is read
+reads(D, Name, FQ) :- tag(X, val, D, Name), in_fn[rust](F, X), fn_q[rust](F, FQ), FQ != D.
 
--- THE SITES OF AN ENTRY: the lines that run because of it and of no other case: its arm, and the arms on what it picks
-site(D, Name, D, A, B) :- entry(D, Name), rs_case[rs](D, Name, A, B).
-site(D, Name, G, A, B) :- picks(D, Name, TV), rs_variant_arm[rs](G, TV, A, B).
-sites_n(D, Name, N) :- entry(D, Name), N is count(G, A : site(D, Name, G, A, _)).
-
--- what a function reaches, asked only of the functions an arm calls
-arm_root(G) :- arm_calls(_, _, G).
-arm_root(G) :- value_calls(_, _, G).
-below(G, G) :- arm_root(G).
-below(G, H) :- below(G, X), sure(X, H).
-
-does(D, Name, H) :- arm_calls(D, Name, G), below(G, H).
-does(D, Name, H) :- value_calls(D, Name, G), below(G, H).
-does_n(D, Name, N) :- entry(D, Name), N is count(H : does(D, Name, H)).
-
--- AN ENTRY NOTHING HERE EXPLAINS: its arm calls nothing and names no variant, so what it changes travels as a
--- plain value (a local set, a field written, a string built) to where it is read. A model of values would see it.
-by_value[audit](D, Name) :- entry(D, Name), not arm_calls(D, Name, _), not picks(D, Name, _).
+-- AN ENTRY NOTHING HERE EXPLAINS: its arm calls nothing, writes no constant another place tests, gives no value read elsewhere
+explained(D, Name) :- does(D, Name, _).
+explained(D, Name) :- far_site(D, Name, _).
+explained(D, Name) :- reads(D, Name, _).
+by_value[audit](D, Name) :- entry(D, Name), not explained(D, Name).
 
 -- ===================================================================== FEATURE
--- two entries of one modality with the same behaviour, without a key: no function tells them apart
 differs(D, A, B) :- does(D, A, H), entry(D, B), not does(D, B, H).
 same_feature(D, A, B) :- entry(D, A), entry(D, B), A < B, does(D, A, _), does(D, B, _),
                          not differs(D, A, B), not differs(D, B, A).
@@ -90,9 +178,6 @@ same_feature(D, A, B) :- entry(D, A), entry(D, B), A < B, does(D, A, _), does(D,
 -- ===================================================================== CONTRACT
 -- the inputs of an entry: the entries of another dispatcher its behaviour reaches
 takes(D, Name, D2, K) :- does(D, Name, D2), modality(D2, K), D2 != D.
--- which parts and which words of the glossary an entry is made of
-entry_part(D, Name, P, N) :- entry(D, Name), part(P, _, _), N is count(H : does(D, Name, H), fn_part(H, P)), N > 0.
-entry_term(D, Name, T, N) :- entry(D, Name), term(T, _, _), N is count(H : does(D, Name, H), term_fn(T, H)), N > 0.
 
 -- ===================================================================== EFFECTS
 -- effect_call(Path, Name, Kind): a function of the standard library that touches the world, and how
@@ -115,7 +200,6 @@ effect_call("std::env", "current_exe", env_read).
 effect_call("std::env", "temp_dir", env_read).
 effect_call("std::process", "exit", exit).
 effect_call("std::process::Command", "new", exec).
-effect_call("Command", "new", exec).
 effect_call("std::net::TcpListener", "bind", listen).
 effect_call("std::thread", "spawn", thread).
 effect_call("std::thread", "scope", thread).
@@ -123,22 +207,22 @@ effect_call("std::io", "stdin", stdin).
 effect_call("std::time::Instant", "now", clock).
 effect_call("std::time::SystemTime", "now", clock).
 
-effect_at(F, K, L) :- rs_call[rs](F, "path", N, Q, L), effect_call(Q, N, K).
-effect(F, K) :- effect_at(F, K, _).
-entry_effect(D, Name, K, N) :- entry(D, Name), effect_call(_, _, K), N is count(H : does(D, Name, H), effect(H, K)), N > 0.
+effect_at(C, K) :- callee[value](C, Fn), member[value](Fn, P, N), effect_call(Q, N, K), path_text[rust](P, Q).
+effect(F, K)    :- effect_at(C, K), in_fn[rust](F, C).
+entry_effect(D, Name, K, N) :- entry(D, Name), effect_call(_, _, K), N is count(H : does_fn(D, Name, H), effect(H, K)), N > 0.
 
 -- ===================================================================== WHOSE CODE
--- how many verbs a function serves: one is that verb's own code, most of them is the engine under every verb
-verb_does(V, H) :- does("bin::rofl::run", V, H).
-verbs_n(N) :- N is count(V : entry("bin::rofl::run", V), verb_does(V, _)).
-serves_n(H, N) :- rs_known(H), N is count(V : verb_does(V, H)), N > 0.
-own_of(V, H) :- verb_does(V, H), serves_n(H, 1).
--- the engine under the verbs: a function more than half of them reach (a third is Grafema's bound for cross-cutting
--- code; here four verbs are one arm, so the half)
-wide(H) :- serves_n(H, N), verbs_n(M), N * 2 > M.
+-- how many entries of a dispatcher a function serves: most of them is the machinery under that way in
+entries_of(D, M) :- modality(D, _), M is count(X : entry(D, X), does(D, X, _)).
+serves_n(D, H, N) :- modality(D, _), does(D, _, H), N is count(X : does(D, X, H)).
+common(D, H) :- serves_n(D, H, N), entries_of(D, M), N * 2 > M.
+-- the engine under the verbs (a third is Grafema's bound for cross-cutting code; here four verbs are one arm, so the half)
+wide(H) :- common("bin::rofl::run", H).
+own(D, Name, H) :- does(D, Name, H), not common(D, H).
 
 -- ===================================================================== THE COUNTS
-entries_n(K, N) :- modality(_, K), N is count(D, X : entry_kind(D, X, K)).
+entries_n(K, N)  :- modality(_, K), N is count(D, X : entry_kind(D, X, K)).
 by_value_n(K, N) :- modality(_, K), N is count(D, X : by_value[audit](D, X), entry_kind(D, X, K)).
 wide_n(N) :- N is count(H : wide(H)).
-own_n(V, N) :- entry("bin::rofl::run", V), N is count(H : own_of(V, H)).
+own_n(D, Name, N) :- entry(D, Name), N is count(H : own(D, Name, H)).
+regions_n(D, Name, N) :- entry(D, Name), N is count(R : sel(D, Name, R)).

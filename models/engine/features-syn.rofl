@@ -1,0 +1,144 @@
+-- models/engine/features.rofl — THE FEATURES OF THE ENGINE, found by the form of its code. The taxonomy is
+-- Grafema's (_ai/research/feature-taxonomy.md), the one rules/features.rofl applies to src/api.ts:
+--
+--   ENTRY_POINT  a name the outside may say, at the place the code tells it from the others. Here: a string a
+--                dispatcher matches on (`"why" => ...`, `a == "--kept"`): rs_case[rs] of rust/tools/rs_scan.
+--   BEHAVIOR     what the code does once the name is said: the functions the matching arm calls, and on, by the
+--                calls the code names surely (models/engine/parts.rofl `sure`).
+--   FEATURE      entry points that share a behaviour: one capability, said in several ways.
+--   CONTRACT     the names said inside the behaviour of another: an entry whose dispatcher an entry reaches is its
+--                input (a flag of a verb), and a dispatcher of the `says` side is what it may answer.
+--
+-- A dispatcher is tied to its modality by hand, as a part is tied to its modules; one the table does not hold is
+-- unplaced_dispatch[audit], so a new way in turns up instead of going unseen.
+
+-- ===================================================================== THE WAYS IN
+-- modality(Dispatcher, Kind): verb, flag, op (of rofl serve), builtin, aggregate, declaration, marker, auth
+-- (how an adapter signs in), says (the reasons the engine names in an answer: the out side of a contract).
+modality("bin::rofl::run", verb).
+modality("bin::rofl::load::parse", flag).
+modality("bin::rofl::seed::parse_args", flag).
+modality("bin::rofl::serve::Server::handle", op).
+modality("bin::rofl::serve::Server::op_change", op).
+modality("bin::rofl::serve::Server::op_world", op).
+modality("bin::rofl::serve::Server::op_read", op).
+modality("rofl::engine::eval_str_op", builtin).
+modality("rofl::engine::eval_arith", builtin).
+modality("rofl::ring1_preds::by_name", builtin).
+modality("rofl::cell::AggOp::from_name", aggregate).
+modality("rofl::cell::IvFn::from_name", aggregate).
+modality("rofl::structure::check_decl", declaration).
+modality("rofl::reflect::Temporal::from_marker", marker).
+modality("rofl::net::declared", auth).
+modality("rofl::net::credential", auth).
+modality("rofl::engine::agg_refusal_text", says).
+modality("rofl::engine::Eval::hole_meta", says).
+modality("rofl::engine::Eval::refuse_lattices", says).
+modality("rofl::md::nb::tally", says).
+modality("rofl::md::nb::verdict_of", says).
+modality("rofl::md::nb::exit_of", says).
+
+cases_n(D, N) :- rs_fn[rs](D, _, _, _, _, _), N is count(S : rs_case[rs](D, S, _, _)), N > 0.
+unplaced_dispatch[audit](D, N) :- cases_n(D, N), N >= 5, not placed_dispatch(D).
+placed_dispatch(D) :- modality(D, _).
+dangling_modality[audit](D) :- modality(D, _), not cases_n(D, _).
+
+-- ===================================================================== ENTRY_POINT
+entry(D, Name) :- modality(D, _), rs_case[rs](D, Name, _, _).
+entry_kind(D, Name, K) :- entry(D, Name), modality(D, K).
+
+-- ===================================================================== BEHAVIOR
+-- a sure call and the line it stands on
+call_line(F, G, L) :- rs_call_to[rs](F, G, L), rs_known(G).
+call_line(F, G, L) :- rs_call_ty[rs](F, T, N, L), rs_method[rs](G, T, N).
+call_line(F, G, L) :- recv_callee(F, Id, G), L is Id / 10000.
+call_line(F, G, L) :- bare_call(F, N, M, L), glob_sees(M, P), rs_fn[rs](G, N, P, _, _, _).
+
+arm_calls(D, Name, G) :- entry(D, Name), rs_case[rs](D, Name, A, B), call_line(D, G, L), L >= A, L <= B.
+
+-- THE CHOICE CARRIED AS A VALUE. An arm that calls nothing names a variant of an enum (`"sum" => AggOp::Sum`), and
+-- the choice is told again wherever the code matches on that variant; an arm there may name a variant in its turn.
+picks(D, Name, TV)  :- entry(D, Name), rs_case[rs](D, Name, A, B), rs_variant_use[rs](D, TV, L), L >= A, L <= B.
+picks(D, Name, TV2) :- picks(D, Name, TV), rs_variant_arm[rs](G, TV, A, B), rs_variant_use[rs](G, TV2, L), L >= A, L <= B.
+value_calls(D, Name, H) :- picks(D, Name, TV), rs_variant_arm[rs](G, TV, A, B), call_line(G, H, L), L >= A, L <= B.
+
+-- THE SITES OF AN ENTRY: the lines that run because of it and of no other case: its arm, and the arms on what it picks
+site(D, Name, D, A, B) :- entry(D, Name), rs_case[rs](D, Name, A, B).
+site(D, Name, G, A, B) :- picks(D, Name, TV), rs_variant_arm[rs](G, TV, A, B).
+sites_n(D, Name, N) :- entry(D, Name), N is count(G, A : site(D, Name, G, A, _)).
+
+-- what a function reaches, asked only of the functions an arm calls
+arm_root(G) :- arm_calls(_, _, G).
+arm_root(G) :- value_calls(_, _, G).
+below(G, G) :- arm_root(G).
+below(G, H) :- below(G, X), sure(X, H).
+
+does(D, Name, H) :- arm_calls(D, Name, G), below(G, H).
+does(D, Name, H) :- value_calls(D, Name, G), below(G, H).
+does_n(D, Name, N) :- entry(D, Name), N is count(H : does(D, Name, H)).
+
+-- AN ENTRY NOTHING HERE EXPLAINS: its arm calls nothing and names no variant, so what it changes travels as a
+-- plain value (a local set, a field written, a string built) to where it is read. A model of values would see it.
+by_value[audit](D, Name) :- entry(D, Name), not arm_calls(D, Name, _), not picks(D, Name, _).
+
+-- ===================================================================== FEATURE
+-- two entries of one modality with the same behaviour, without a key: no function tells them apart
+differs(D, A, B) :- does(D, A, H), entry(D, B), not does(D, B, H).
+same_feature(D, A, B) :- entry(D, A), entry(D, B), A < B, does(D, A, _), does(D, B, _),
+                         not differs(D, A, B), not differs(D, B, A).
+
+-- ===================================================================== CONTRACT
+-- the inputs of an entry: the entries of another dispatcher its behaviour reaches
+takes(D, Name, D2, K) :- does(D, Name, D2), modality(D2, K), D2 != D.
+-- which parts and which words of the glossary an entry is made of
+entry_part(D, Name, P, N) :- entry(D, Name), part(P, _, _), N is count(H : does(D, Name, H), fn_part(H, P)), N > 0.
+entry_term(D, Name, T, N) :- entry(D, Name), term(T, _, _), N is count(H : does(D, Name, H), term_fn(T, H)), N > 0.
+
+-- ===================================================================== EFFECTS
+-- effect_call(Path, Name, Kind): a function of the standard library that touches the world, and how
+effect_call("std::fs", "read_to_string", fs_read).
+effect_call("std::fs", "read", fs_read).
+effect_call("std::fs", "read_dir", fs_read).
+effect_call("std::fs", "metadata", fs_read).
+effect_call("std::fs::File", "open", fs_read).
+effect_call("std::fs", "write", fs_write).
+effect_call("std::fs", "create_dir_all", fs_write).
+effect_call("std::fs", "rename", fs_write).
+effect_call("std::fs::OpenOptions", "new", fs_write).
+effect_call("std::fs::File", "create", fs_write).
+effect_call("std::fs", "remove_file", fs_delete).
+effect_call("std::fs", "remove_dir_all", fs_delete).
+effect_call("std::env", "var", env_read).
+effect_call("std::env", "var_os", env_read).
+effect_call("std::env", "current_dir", env_read).
+effect_call("std::env", "current_exe", env_read).
+effect_call("std::env", "temp_dir", env_read).
+effect_call("std::process", "exit", exit).
+effect_call("std::process::Command", "new", exec).
+effect_call("Command", "new", exec).
+effect_call("std::net::TcpListener", "bind", listen).
+effect_call("std::thread", "spawn", thread).
+effect_call("std::thread", "scope", thread).
+effect_call("std::io", "stdin", stdin).
+effect_call("std::time::Instant", "now", clock).
+effect_call("std::time::SystemTime", "now", clock).
+
+effect_at(F, K, L) :- rs_call[rs](F, "path", N, Q, L), effect_call(Q, N, K).
+effect(F, K) :- effect_at(F, K, _).
+entry_effect(D, Name, K, N) :- entry(D, Name), effect_call(_, _, K), N is count(H : does(D, Name, H), effect(H, K)), N > 0.
+
+-- ===================================================================== WHOSE CODE
+-- how many verbs a function serves: one is that verb's own code, most of them is the engine under every verb
+verb_does(V, H) :- does("bin::rofl::run", V, H).
+verbs_n(N) :- N is count(V : entry("bin::rofl::run", V), verb_does(V, _)).
+serves_n(H, N) :- rs_known(H), N is count(V : verb_does(V, H)), N > 0.
+own_of(V, H) :- verb_does(V, H), serves_n(H, 1).
+-- the engine under the verbs: a function more than half of them reach (a third is Grafema's bound for cross-cutting
+-- code; here four verbs are one arm, so the half)
+wide(H) :- serves_n(H, N), verbs_n(M), N * 2 > M.
+
+-- ===================================================================== THE COUNTS
+entries_n(K, N) :- modality(_, K), N is count(D, X : entry_kind(D, X, K)).
+by_value_n(K, N) :- modality(_, K), N is count(D, X : by_value[audit](D, X), entry_kind(D, X, K)).
+wide_n(N) :- N is count(H : wide(H)).
+own_n(V, N) :- entry("bin::rofl::run", V), N is count(H : own_of(V, H)).

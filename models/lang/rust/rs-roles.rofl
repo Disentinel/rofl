@@ -21,6 +21,7 @@
 -- ONE WORD THE VOCABULARY DID NOT HAVE: destructs(P, C), "the pattern P takes apart a value made by C, and matches
 -- only such a value" (`Some(x)`, `Verb::Load { kept }`). A pattern that is a literal, a path or a name in capitals
 -- matches by equality and needs no word: it is that literal, that member, that ref, standing where a pattern stands.
+-- AND ONE FOR THE TREE: ends(N, Line), the line a node ends on, for a change said in lines to find its nodes.
 -- An or-pattern is binary(P, "|", L, R), `x @ P` binary(P, "@", X, P): the value goes to both sides.
 --
 -- By convention, not by lookup: a lone identifier in a pattern binds when it starts in lower case and reads a
@@ -30,6 +31,8 @@ cut[fixpointplan](ast_rs).
 site[fixpointplan](at, tree).
 
 role(destructs, "the pattern P takes apart a value made by the constructor C, and matches only such a value").
+role(ends, "N ends on Line, where that is another line than the one it stands on").
+roled[tree](N) :- ends[tree](N, _).
 roled[value](N) :- destructs[value](N, _).
 roled[value](N) :- destructs[value](_, N).
 
@@ -55,6 +58,7 @@ rs_c[ast_rs](P, F, I, C) :- child[ast_rs](P, F, I, X), unwrapped[ast_rs](X, C).
 
 at[tree](N, File, Line) :- node[ast_rs](N, _, File), line[ast_rs](N, Line).
 program[tree](P, File)  :- node[ast_rs](P, source_file, File).
+ends[tree](N, Line)     :- last[ast_rs](N, Line).
 edge[tree](P, C)        :- child[ast_rs](P, _, _, C).
 
 -- THE ORDER OF EVALUATION: nth. A sequence field gives its members from Offset on, a step field one child.
@@ -398,6 +402,8 @@ rs_attr_on(A, X)   :- rs_attr_next(A, X), not rs_k[ast_rs](X, attribute_item).
 rs_attr_on(A, X)   :- rs_attr_next(A, Y), rs_k[ast_rs](Y, attribute_item), rs_attr_on(Y, X).
 decorated[value](At, X) :- rs_attr_on(A, Y), unwrapped[ast_rs](Y, X), child[ast_rs](A, c, 0, At).
 key[value](At, Name)    :- rs_k[ast_rs](At, attribute), child[ast_rs](At, c, 0, N), rs_text[ast_rs](N, Name).
+-- a bare word among its arguments is that word: `cfg(test)`
+literal[value](N, Name) :- rs_id(N, Name, attribute, arg).
 
 -- MODULES ----------------------------------------------------------------------------------------------
 
