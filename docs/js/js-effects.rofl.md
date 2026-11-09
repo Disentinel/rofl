@@ -29,10 +29,9 @@ Reads:
 - from js-ambient: [eff_here](js-ambient.rofl.md#eff_here), [eff_operation](js-ambient.rofl.md#eff_operation), [eff_surface](js-ambient.rofl.md#eff_surface)
 - from js-ambient, in the main: [ambient_effect](js-ambient.rofl.md#ambient_effect), [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [calls](js-callgraph.rofl.md#calls), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [in_own_decorator](js-callgraph.rofl.md#in_own_decorator), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-concat: [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node)
 - from js-controlflow, in the code: [caught_here](js-controlflow.rofl.md#caught_here), [in_fn](js-controlflow.rofl.md#in_fn), [in_try_block](js-controlflow.rofl.md#in_try_block), [may_throw](js-controlflow.rofl.md#may_throw), [pattern_accessor](js-controlflow.rofl.md#pattern_accessor), [pattern_next](js-controlflow.rofl.md#pattern_next), [try_catches](js-controlflow.rofl.md#try_catches)
 - from js-dataflow, in the code: [bin_op](js-dataflow.rofl.md#bin_op), [call_like](js-dataflow.rofl.md#call_like), [class_slot](js-dataflow.rofl.md#class_slot), [corpus_file](js-dataflow.rofl.md#corpus_file), [name_scope](js-dataflow.rofl.md#name_scope), [top_read](js-dataflow.rofl.md#top_read), [un_op](js-dataflow.rofl.md#un_op), [yield_back](js-dataflow.rofl.md#yield_back)
-- from js-dataflow: [delegates](js-dataflow.rofl.md#delegates), [inst_of](js-dataflow.rofl.md#inst_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [try_unhandled](js-dataflow.rofl.md#try_unhandled)
+- from js-dataflow: [delegates](js-dataflow.rofl.md#delegates), [inst_of](js-dataflow.rofl.md#inst_of), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [try_unhandled](js-dataflow.rofl.md#try_unhandled)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
@@ -637,23 +636,23 @@ In the flow:
 
 A node
 
-- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#coerces) X and X [points to](js-concat.rofl.md#may_be_node) some node.
+- <a id="eff_conv_object"></a>coerces the object X if it [coerces](#coerces) X and X [points to](js-dataflow.rofl.md#may_be_node) some node.
 - <a id="eff_conv_call"></a>coerces through a node M if all of:
   - Key [is a conversion key](#eff_conv_key);
   - [the member](js-dataflow.rofl.md#member_value) Key of a node O holds M;
-  - a node X [points to](js-concat.rofl.md#may_be_node) O;
+  - a node X [points to](js-dataflow.rofl.md#may_be_node) O;
   - it [coerces](#coerces) X.
 - <a id="eff_conv_overridden"></a>coerces with an override X if all of:
   - Key [is a conversion key](#eff_conv_key);
   - [the member](js-dataflow.rofl.md#member_value) Key of a node O holds some node;
-  - X [points to](js-concat.rofl.md#may_be_node) O;
+  - X [points to](js-dataflow.rofl.md#may_be_node) O;
   - it [coerces](#coerces) X.
 - <a id="eff_conv_default"></a>coerces by default a node X if it [coerces the object](#eff_conv_object) X, unless it [coerces with an override](#eff_conv_overridden) X.
 - <a id="eff_conv_primitive"></a>coerces the primitive X if all of:
   - it [coerces](#coerces) X;
-  - X [may be the literal](js-concat.rofl.md#may_be_lit) some text;
+  - X [may be the literal](js-dataflow.rofl.md#may_be_lit) some text;
   - unless it [coerces the object](#eff_conv_object) X.
-- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#coerces) X and X neither [may be the literal](js-concat.rofl.md#may_be_lit) some text nor [points to](js-concat.rofl.md#may_be_node) some node.
+- <a id="eff_conv_untraced"></a>coerces the untraced X if it [coerces](#coerces) X and X neither [may be the literal](js-dataflow.rofl.md#may_be_lit) some text nor [points to](js-dataflow.rofl.md#may_be_node) some node.
 
 Declared as facts:
 
@@ -931,7 +930,7 @@ A node
 - has the effect L at a host H if it [defines with effect](#class_define_eff) L at H.
 - has the effect L at a host H if all of:
   - [`construct`](#construct)(it);
-  - it [points to](js-concat.rofl.md#may_be_node) a node I;
+  - it [points to](js-dataflow.rofl.md#may_be_node) a node I;
   - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
   - CD [constructs with effect](#class_construct_eff) L at H.
 

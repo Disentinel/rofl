@@ -21,10 +21,10 @@ default: flow
 
 Reads:
 
-- from js-concat: [composed](js-concat.rofl.md#composed), [may_be_lit](js-concat.rofl.md#may_be_lit), [may_be_node](js-concat.rofl.md#may_be_node), [str_value](js-concat.rofl.md#str_value), [text_at](js-concat.rofl.md#text_at)
+- from js-concat: [composed](js-concat.rofl.md#composed), [str_value](js-concat.rofl.md#str_value), [text_at](js-concat.rofl.md#text_at)
 - from js-concat, in the main: [concat_depth](js-concat.rofl.md#concat_depth)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [selects](js-dataflow.rofl.md#selects)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from js-surface, in the surface: [sx_esc](js-surface.rofl.md#sx_esc)
@@ -111,7 +111,7 @@ In the flow:
    - E is `call`;
    - X is `root`;
 2. if all of:
-   - a node G [points to](js-concat.rofl.md#may_be_node) N;
+   - a node G [points to](js-dataflow.rofl.md#may_be_node) N;
    - N [comes out of](js-dataflow.rofl.md#external_value) N;
    - [`http_client`](#http_client)(N, `call`, something);
    - E is `call`;
@@ -119,7 +119,7 @@ In the flow:
 3. if [`cl_member`](#cl_member)(G, N, E), [`cl_rooted`](#cl_rooted)(G), and X is `root`;
 4. if [`cl_member`](#cl_member)(G, N, E) and X is `inst`, unless [`cl_rooted`](#cl_rooted)(G);
 5. if all of:
-   - a node G [points to](js-concat.rofl.md#may_be_node) a node Sp;
+   - a node G [points to](js-dataflow.rofl.md#may_be_node) a node Sp;
    - [`cl_import`](#cl_import)(Sp, N, E);
    - X is `root`.
 
@@ -131,7 +131,7 @@ In the flow:
 <a id="cl_rooted"></a>`cl_rooted`(G) if all of:
   - [`cl_member`](#cl_member)(G, something, something);
   - [`object_of`](js-structure.rofl.md#object_of)(G, O);
-  - a node O [points to](js-concat.rofl.md#may_be_node) a node S;
+  - a node O [points to](js-dataflow.rofl.md#may_be_node) a node S;
   - S [comes out of](js-dataflow.rofl.md#external_value) S.
 
 <a id="cl_import"></a>`cl_import`(Sp, S, K) if all of:
@@ -164,13 +164,13 @@ In the flow:
 
 `cl_method`(C, `get`) if [`cl_how`](#cl_how)(C, opts(I), something), unless [`argument_at`](js-structure.rofl.md#argument_at)(C, I, something).
 
-<a id="cl_known"></a>`cl_known`(X) if [`cl_opts`](#cl_opts)(something, X) and a node X [points to](js-concat.rofl.md#may_be_node) some node.
+<a id="cl_known"></a>`cl_known`(X) if [`cl_opts`](#cl_opts)(something, X) and a node X [points to](js-dataflow.rofl.md#may_be_node) some node.
 
 `cl_method`(C, `any`) if [`cl_opts`](#cl_opts)(C, X), unless [`cl_known`](#cl_known)(X).
 
 <a id="cl_method_at"></a>`cl_method_at`(C, P) if all of:
   - [`cl_opts`](#cl_opts)(C, X);
-  - a node X [points to](js-concat.rofl.md#may_be_node) a node O;
+  - a node X [points to](js-dataflow.rofl.md#may_be_node) a node O;
   - [the member](js-dataflow.rofl.md#member_value) "method" of O holds a node P.
 
 <a id="cl_has_method"></a>`cl_has_method`(C) if [`cl_method_at`](#cl_method_at)(C, something).
@@ -182,7 +182,7 @@ In the flow:
 
 <a id="cl_method_lit"></a>`cl_method_lit`(C, P, M) if all of:
   - [`cl_method_at`](#cl_method_at)(C, P);
-  - a node P [may be the literal](js-concat.rofl.md#may_be_lit) V;
+  - a node P [may be the literal](js-dataflow.rofl.md#may_be_lit) V;
   - [`http_method`](#http_method)(V, M).
 
 `cl_method`(C, M) if [`cl_method_lit`](#cl_method_lit)(C, something, M).
@@ -202,7 +202,7 @@ In the surface:
 
 `concat_wanted`(X) if all of:
   - [`cl_url_arg`](#cl_url_arg)(something, Y);
-  - a node Y [points to](js-concat.rofl.md#may_be_node) a node X;
+  - a node Y [points to](js-dataflow.rofl.md#may_be_node) a node X;
   - [`composed`](js-concat.rofl.md#composed)(X).
 
 In the flow:
@@ -211,11 +211,11 @@ In the flow:
 
 1. if all of:
    - [`cl_url_arg`](#cl_url_arg)(C, Y);
-   - a node Y [may be the literal](js-concat.rofl.md#may_be_lit) V;
+   - a node Y [may be the literal](js-dataflow.rofl.md#may_be_lit) V;
    - [`str_value`](js-concat.rofl.md#str_value)(V);
 2. if all of:
    - [`cl_url_arg`](#cl_url_arg)(C, Y);
-   - a node Y [points to](js-concat.rofl.md#may_be_node) a node X;
+   - a node Y [points to](js-dataflow.rofl.md#may_be_node) a node X;
    - [`concat_depth`](js-concat.rofl.md#concat_depth)(D);
    - [`text_at`](js-concat.rofl.md#text_at)(X, D, V, something).
 

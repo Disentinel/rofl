@@ -93,10 +93,11 @@ unit_concludes("rules/js-structure.rofl", meta_unformed).
 unit_concludes("rules/js-structure.rofl", meta_form_conflict).
 unit_concludes("rules/js-dataflow.rofl", ident_in).
 unit_concludes("rules/js-dataflow.rofl", ident).
+unit_concludes("rules/js-dataflow.rofl", may_be_node).
 unit_concludes("rules/js-dataflow.rofl", may_be_lit).
+unit_concludes("rules/js-dataflow.rofl", may_be).
 unit_concludes("rules/js-dataflow.rofl", undef_binder).
 unit_concludes("rules/js-dataflow.rofl", interpolated).
-unit_concludes("rules/js-dataflow.rofl", may_be_node).
 unit_concludes("rules/js-dataflow.rofl", edb).
 unit_concludes("rules/js-dataflow.rofl", var_decl_kind).
 unit_concludes("rules/js-dataflow.rofl", var_decl).
@@ -185,7 +186,12 @@ unit_concludes("rules/js-dataflow.rofl", after_spread).
 unit_concludes("rules/js-dataflow.rofl", arg_at).
 unit_concludes("rules/js-dataflow.rofl", param_rest).
 unit_concludes("rules/js-dataflow.rofl", param_use).
+unit_concludes("rules/js-dataflow.rofl", input_param).
+unit_concludes("rules/js-dataflow.rofl", input_of).
+unit_concludes("rules/js-dataflow.rofl", input_node).
+unit_concludes("rules/js-dataflow.rofl", input_lit).
 unit_concludes("rules/js-dataflow.rofl", returns).
+unit_concludes("rules/js-dataflow.rofl", recv_call).
 unit_concludes("rules/js-dataflow.rofl", keeps_argument).
 unit_concludes("rules/js-dataflow.rofl", keeps_argument_static).
 unit_concludes("rules/js-dataflow.rofl", converts).
@@ -405,6 +411,8 @@ unit_concludes("rules/js-dataflow.rofl", this_host).
 unit_concludes("rules/js-dataflow.rofl", class_slot).
 unit_concludes("rules/js-dataflow.rofl", class_method).
 unit_concludes("rules/js-dataflow.rofl", class_method_of).
+unit_concludes("rules/js-dataflow.rofl", method_fn).
+unit_concludes("rules/js-dataflow.rofl", input_this).
 unit_concludes("rules/js-dataflow.rofl", sub_inst).
 unit_concludes("rules/js-dataflow.rofl", field_of).
 unit_concludes("rules/js-dataflow.rofl", field_at).
@@ -907,7 +915,7 @@ unit_concludes("rules/js-globals.rofl", es_construct_not_constructor).
 unit_concludes("rules/js-globals.rofl", es_global_unsupported).
 unit_concludes("rules/js-globals.rofl", es_static_unsupported).
 unit_concludes("rules/js-globals.rofl", es_instance).
-unit_concludes("rules/js-globals.rofl", may_be_node).
+unit_concludes("rules/js-globals.rofl", may_be).
 unit_concludes("rules/js-globals.rofl", prototype_of).
 unit_concludes("rules/js-globals.rofl", es_prototype_gap).
 unit_concludes("rules/js-globals.rofl", es_instance_unattributed).
@@ -922,7 +930,7 @@ unit_concludes("rules/js-host.rofl", builtin_member).
 unit_concludes("rules/js-host.rofl", host_import_unknown).
 unit_concludes("rules/js-host.rofl", host_member_call).
 unit_concludes("rules/js-host.rofl", host_global_call).
-unit_concludes("rules/js-host.rofl", may_be_node).
+unit_concludes("rules/js-host.rofl", may_be).
 unit_concludes("rules/js-host.rofl", host_module_call).
 unit_concludes("rules/js-host.rofl", host_site).
 unit_concludes("rules/js-host.rofl", host_site_at).
@@ -1173,7 +1181,7 @@ unit_concludes("rules/js-concat.rofl", tagged_quasi).
 unit_concludes("rules/js-concat.rofl", composed).
 unit_concludes("rules/js-concat.rofl", plus_site).
 unit_concludes("rules/js-concat.rofl", plus_operand).
-unit_concludes("rules/js-concat.rofl", may_be_node).
+unit_concludes("rules/js-concat.rofl", may_be).
 unit_concludes("rules/js-concat.rofl", plus_assign).
 unit_concludes("rules/js-concat.rofl", sx_mwrite).
 unit_concludes("rules/js-concat.rofl", edb).
@@ -1189,7 +1197,6 @@ unit_concludes("rules/js-concat.rofl", proto_call).
 unit_concludes("rules/js-concat.rofl", vlib_op).
 unit_concludes("rules/js-concat.rofl", path_cut).
 unit_concludes("rules/js-concat.rofl", base_of).
-unit_concludes("rules/js-concat.rofl", may_be_lit).
 unit_concludes("rules/js-concat.rofl", cshape).
 unit_concludes("rules/js-concat.rofl", op_shape).
 unit_concludes("rules/js-concat.rofl", joined).
@@ -1286,6 +1293,7 @@ unit_concludes("rules/js-surface.rofl", sx_drop_runs).
 unit_concludes("rules/js-surface.rofl", sx_runs_out).
 unit_concludes("rules/js-surface.rofl", sx_exn_carrier).
 unit_concludes("rules/js-surface.rofl", sx_outside).
+unit_concludes("rules/js-surface.rofl", may_be).
 unit_concludes("rules/js-surface.rofl", may_be_node).
 unit_concludes("rules/js-surface.rofl", may_be_lit).
 unit_concludes("rules/js-surface.rofl", member_value).
@@ -1361,6 +1369,9 @@ unit_concludes("rules/js-surface.rofl", sx_ret_lit).
 unit_concludes("rules/js-surface.rofl", sx_ret_pnode).
 unit_concludes("rules/js-surface.rofl", sx_ret_plit).
 unit_concludes("rules/js-surface.rofl", sx_ret_param).
+unit_concludes("rules/js-surface.rofl", sx_ret_own).
+unit_concludes("rules/js-surface.rofl", sx_ret_input).
+unit_concludes("rules/js-surface.rofl", sx_ret_this).
 unit_concludes("rules/js-surface.rofl", falls_off).
 unit_concludes("rules/js-surface.rofl", sx_ret_undef).
 unit_concludes("rules/js-surface.rofl", sx_gen_ret).
