@@ -1,0 +1,4 @@
+-- models/engine/feature-hit.rofl — THE ENTRIES WHOSE OWN LINES A CHANGE WROTE: a changed line inside a site of the
+-- entry (models/engine/features.rofl), not merely in a function it reaches. Read beside blast.rofl and a diff.
+hit_line(D, Name, File, L) :- changed[diff](File, L), rs_fn[rs](G, _, _, File, _, _), site(D, Name, G, A, B), L >= A, L <= B.
+hit(D, Name, K) :- entry(D, Name), K is count(File, L : hit_line(D, Name, File, L)), K > 0.
