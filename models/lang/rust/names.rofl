@@ -1,0 +1,131 @@
+-- names.rofl — WHAT A NAME OF RUST DENOTES, read from the roles (models/lang/js/roles.rofl, written for Rust by
+-- rs-roles.rofl). Nothing here reads the parser's tree.
+--
+--   in_scope[rust](S, N)     S is the nearest scope around N
+--   in_module[rust](M, N)    M is the module N is written in: a file's root, or a `mod m { }`
+--   denotes[rust](N, D)      the name or path N stands for the declaration D: a function, a struct, an enum, a
+--                            variant, a trait, a const, a static, a module, a type parameter, or the pattern node
+--                            that introduces a local
+--   unresolved[audit]        a path into the crate that denotes nothing
+--
+-- A scope sees its own names, then the names of the scopes around it up to its module; a module does not see its
+-- parent's. A `use a::*` gives the names of what `a` denotes where the scope has none of its own. Two names of one
+-- scope are not told apart by their order: a `let x` that shadows a `let x` of the same block is one place with it.
+-- The names of the standard library denote nothing here.
+--
+-- extern_crate(Name, File): a crate of the tree that another names by Name, and the file of its root. Given beside.
+
+imports(rust, value). imports(rust, type). imports(rust, tree). imports(rust, main). imports(main, rust).
+imports(audit, rust).
+edb(extern_crate).
+
+scope[rust](S)  :- mark[value](S, scope).
+module[rust](M) :- namespace[value](M, _).
+import[rust](U) :- decl[value](U, import).
+nearest in_scope[rust](S, N) of parent[tree](S, N) where scope[rust](S).
+nearest in_module[rust](M, N) of parent[tree](M, N) where module[rust](M).
+nearest in_import[rust](U, N) of parent[tree](U, N) where import[rust](U).
+
+-- ===================================================================== MODULES AND THEIR FILES
+-- `mod m;` in a file names m.rs or m/mod.rs beside it: in the file's directory for mod.rs, lib.rs and main.rs, in
+-- the directory of the file's own name otherwise
+edb(rs_dir_file).
+rs_dir_file("mod.rs"). rs_dir_file("lib.rs"). rs_dir_file("main.rs").
+rs_file_last(File, Last) :- program[tree](_, File), K is str_segs(File, "/"), I is K - 1, Last is str_seg(File, "/", I).
+mod_home[rust](Root, Home) :- program[tree](Root, File), rs_file_last(File, Last), rs_dir_file(Last),
+                              A is str_len(File), B is str_len(Last), L is A - B - 1, Home is str_sub(File, 0, L).
+mod_home[rust](Root, Home) :- program[tree](Root, File), rs_file_last(File, Last), not rs_dir_file(Last),
+                              A is str_len(File), L is A - 3, Home is str_sub(File, 0, L).
+mod_file[rust](M, Root) :- module_ref[value](M, Name), in_module[rust](P, M), mod_home[rust](P, Home),
+                           File is concat(Home, concat("/", concat(Name, ".rs"))), program[tree](Root, File).
+mod_file[rust](M, Root) :- module_ref[value](M, Name), in_module[rust](P, M), mod_home[rust](P, Home),
+                           File is concat(Home, concat("/", concat(Name, "/mod.rs"))), program[tree](Root, File).
+mod_parent[rust](C, P) :- mod_file[rust](M, C), in_module[rust](P, M).
+mod_parent[rust](C, P) :- module[rust](C), in_module[rust](P, C).
+has_parent[rust](C)    :- mod_parent[rust](C, _).
+crate_root[rust](M, M) :- module[rust](M), not has_parent[rust](M).
+crate_root[rust](M, R) :- mod_parent[rust](M, P), crate_root[rust](P, R).
+
+-- ===================================================================== THE NAMES OF A SCOPE
+named[rust](B, Name) :- binds[value](B, Name).
+named[rust](B, Name) :- binds[type](B, Name).
+-- an item's name belongs to the scope the item is written in, not to the item
+item_bind[rust](B, S) :- target[value](D, B), hoisted[value](D, S).
+item_bind[rust](B, S) :- target[type](D, B), hoisted[value](D, S).
+item_bind[rust](B, S) :- assign[value](D, B, _), hoisted[value](D, S).
+item_bind[rust](B, S) :- assign[type](D, B, _), hoisted[value](D, S).
+item_name[rust](B)    :- item_bind[rust](B, _).
+scope_bind[rust](S, Name, B) :- item_bind[rust](B, S), named[rust](B, Name).
+scope_bind[rust](S, Name, B) :- named[rust](B, Name), in_scope[rust](S, B), not item_name[rust](B), not scope[rust](B).
+-- a macro marked `macro_export` is a name of its crate's root
+scope_bind[rust](R, Name, B) :- decorated[value](A, M), key[value](A, "macro_export"), target[value](M, B), named[rust](B, Name),
+                                in_module[rust](Mod, M), crate_root[rust](Mod, R).
+-- a scope that introduces a name introduces it within itself: a method its `self`
+scope_bind[rust](S, Name, S) :- named[rust](S, Name), scope[rust](S).
+-- `Self` is the type an impl is of, and a trait itself
+impl[rust](I) :- declared[value](I, _), scope[rust](I), not body[value](I, _).
+scope_bind[rust](I, "Self", T) :- impl[rust](I), declared[value](I, T).
+scope_bind[rust](T, "Self", N) :- decl[type](T, trait), target[type](T, N).
+scope_has[rust](S, Name) :- scope_bind[rust](S, Name, _).
+
+-- ===================================================================== LOOKUP, asked only for the names read
+need[rust](S, Name) :- ref[value](N, Name), in_scope[rust](S, N).
+need[rust](S, Name) :- ref[type](N, Name), in_scope[rust](S, N).
+need[rust](P, Name) :- need[rust](S, Name), not scope_has[rust](S, Name), not module[rust](S), in_scope[rust](P, S).
+need[rust](M, Name) :- need[rust](S, Name), not scope_has[rust](S, Name), glob_of[rust](S, M), module[rust](M).
+need[rust](M, Name) :- member[value](_, P, Name), denotes[rust](P, M), module[rust](M).
+need[rust](M, Name) :- member[type](_, P, Name), denotes[rust](P, M), module[rust](M).
+found[rust](S, Name, B) :- need[rust](S, Name), scope_bind[rust](S, Name, B).
+found[rust](S, Name, B) :- need[rust](S, Name), not scope_has[rust](S, Name), not module[rust](S), in_scope[rust](P, S),
+                           found[rust](P, Name, B).
+glob_of[rust](S, M) :- spread_props[value](W, 0, Q), in_import[rust](_, W), in_scope[rust](S, W), denotes[rust](Q, M).
+found[rust](S, Name, B) :- need[rust](S, Name), not scope_has[rust](S, Name), glob_of[rust](S, M), found[rust](M, Name, B).
+found[rust](S, Name, V) :- need[rust](S, Name), not scope_has[rust](S, Name), glob_of[rust](S, E), has[type](E, V), key[type](V, Name).
+
+-- ===================================================================== WHAT A BINDING STANDS FOR
+import_leaf[rust](B) :- named[rust](B, _), in_import[rust](_, B).
+type_name[rust](B)   :- target[type](_, B).
+bind_decl[rust](B, D) :- target[value](D, B), hoisted[value](D, _), not module_ref[value](D, _).
+bind_decl[rust](B, R) :- target[value](M, B), mod_file[rust](M, R).
+bind_decl[rust](B, D) :- target[type](D, B).
+bind_decl[rust](B, D) :- assign[value](D, B, _), hoisted[value](D, _).
+bind_decl[rust](B, D) :- assign[type](D, B, _), hoisted[value](D, _).
+-- a name a `use` introduces stands for what its path denotes
+bind_decl[rust](B, D) :- import_leaf[rust](B), member[value](B, _, _), denotes[rust](B, D).
+bind_decl[rust](A, D) :- import_leaf[rust](A), assign[value](_, A, Q), denotes[rust](Q, D).
+bind_decl[rust](B, D) :- import_leaf[rust](B), passes[value](B, P), denotes[rust](P, D).
+-- the type `Self` stands for
+bind_decl[rust](T, D) :- scope_bind[rust](_, "Self", T), denotes[rust](T, D).
+bind_decl[rust](N, D) :- scope_bind[rust](D, "Self", N), decl[type](D, trait).
+-- a variant found through a glob over its enum is itself
+bind_decl[rust](V, V) :- has[type](E, V), decl[type](E, enum).
+-- a local: the node that introduces it
+bind_decl[rust](B, B) :- named[rust](B, _), not item_name[rust](B), not import_leaf[rust](B), not type_name[rust](B).
+
+-- ===================================================================== DENOTES
+denotes[rust](N, D) :- ref[value](N, Name), in_scope[rust](S, N), found[rust](S, Name, B), bind_decl[rust](B, D).
+denotes[rust](N, D) :- ref[type](N, Name), in_scope[rust](S, N), found[rust](S, Name, B), bind_decl[rust](B, D).
+denotes[rust](N, R) :- ref[value](N, "crate"), in_module[rust](M, N), crate_root[rust](M, R).
+denotes[rust](N, P) :- ref[value](N, "super"), in_module[rust](M, N), mod_parent[rust](M, P).
+denotes[rust](N, M) :- ref[value](N, "self"), not mark[value](N, this), in_module[rust](M, N).
+denotes[rust](N, R) :- ref[value](N, Name), member[value](_, N, _), extern_crate(Name, File), program[tree](R, File).
+-- a path: a name of a module, a variant of an enum, a function of a type's impls
+rs_member(N, P, Name) :- member[value](N, P, Name).
+rs_member(N, P, Name) :- member[type](N, P, Name).
+denotes[rust](N, D) :- rs_member(N, P, Name), denotes[rust](P, M), module[rust](M), found[rust](M, Name, B), bind_decl[rust](B, D).
+denotes[rust](N, V) :- rs_member(N, P, Name), denotes[rust](P, E), has[type](E, V), key[type](V, Name).
+denotes[rust](N, F) :- rs_member(N, P, Name), denotes[rust](P, T), assoc[rust](T, Name, F).
+-- a type applied or borrowed denotes what its head denotes
+denotes[rust](G, D) :- callee[type](G, T), denotes[rust](T, D).
+denotes[rust](R, D) :- unary[type](R, _, T), denotes[rust](T, D).
+
+impl_type[rust](I, T)  :- impl[rust](I), declared[value](I, Tn), denotes[rust](Tn, T).
+assoc[rust](T, Name, F) :- impl_type[rust](I, T), has[value](I, F), key[value](F, Name).
+-- a trait's own functions, and those of the impls that answer it
+assoc[rust](T, Name, F) :- decl[type](T, trait), has[value](T, F), key[value](F, Name).
+impl_trait[rust](I, Tr) :- implements[value](I, Tn), denotes[rust](Tn, Tr).
+
+-- ===================================================================== WHERE THE NAMES ARE DARK
+-- a path under a module of the crate that denotes nothing
+unresolved[audit](N, Name) :- rs_member(N, P, Name), denotes[rust](P, M), module[rust](M), not denoted[rust](N).
+denoted[rust](N) :- denotes[rust](N, _).

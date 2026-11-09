@@ -89,7 +89,8 @@ strict[tree](Seq)    :- nth[tree](Seq, _, _).
 edb(rs_scope_kind).
 rs_scope_kind(source_file). rs_scope_kind(block). rs_scope_kind(function_item). rs_scope_kind(closure_expression).
 rs_scope_kind(match_arm). rs_scope_kind(if_expression). rs_scope_kind(while_expression). rs_scope_kind(for_expression).
-rs_scope_kind(impl_item). rs_scope_kind(trait_item).
+rs_scope_kind(impl_item). rs_scope_kind(trait_item). rs_scope_kind(struct_item). rs_scope_kind(enum_item).
+rs_scope_kind(type_item).
 mark[value](S, scope) :- rs_scope_kind(K), rs_k[ast_rs](S, K).
 mark[value](M, scope) :- rs_k[ast_rs](M, mod_item), child[ast_rs](M, body, 0, _).
 
@@ -374,6 +375,7 @@ declared[value](I, T)   :- rs_k[ast_rs](I, impl_item), child[ast_rs](I, type, 0,
 implements[value](I, T) :- rs_k[ast_rs](I, impl_item), child[ast_rs](I, trait, 0, T).
 
 decl[type](P, param)  :- rs_k[ast_rs](P, type_parameter).
+target[type](P, N)    :- rs_k[ast_rs](P, type_parameter), child[ast_rs](P, name, 0, N).
 binds[type](N, Name)  :- rs_k[ast_rs](P, type_parameter), child[ast_rs](P, name, 0, N), rs_text[ast_rs](N, Name).
 bound[type](P, U)     :- rs_k[ast_rs](P, type_parameter), child[ast_rs](P, bounds, 0, TB), child[ast_rs](TB, c, _, U).
 
@@ -428,6 +430,7 @@ binds[type](X, Name)  :- rs_use_name(X, Name).
 assign[value](X, A, Q) :- rs_use_item(X), rs_k[ast_rs](X, use_as_clause), child[ast_rs](X, alias, 0, A), child[ast_rs](X, path, 0, Q).
 passes[value](X, P)    :- rs_use_item(X), rs_k[ast_rs](X, self), rs_use_base(X, P).
 spread_props[value](W, 0, Q) :- rs_k[ast_rs](W, use_wildcard), child[ast_rs](W, c, 0, Q).
+spread_props[value](W, 0, P) :- rs_k[ast_rs](W, use_wildcard), not child[ast_rs](W, c, 0, _), rs_use_base(W, P).
 
 -- TYPES ------------------------------------------------------------------------------------------------
 

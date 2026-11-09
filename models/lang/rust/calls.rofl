@@ -1,0 +1,113 @@
+-- calls.rofl — WHAT AN EXPRESSION OF RUST MAY HOLD, AND WHICH FUNCTION A CALL RUNS, read from the roles and from
+-- names.rofl. Nothing here reads the parser's tree.
+--
+--   carried[rust](T, D)   the type written at T has values of the crate's type D in it: T is D, or D is applied
+--                         inside it (`Option<Store>`, `&[Rule]`, `HashMap<String, Vec<Rule>>`)
+--   holds[rust](E, D)     the expression E may be a value of D, or a standard container with one inside
+--   calls[rust](C, G, How) the call C runs the function G: `path` (the callee names it), `typed` (a method of a type
+--                         its receiver holds), `local` (a closure kept in a local); `by_name`, weaker, where the
+--                         receiver holds nothing known and one method of the crate has the name
+--   in_fn[rust](F, N)     F is the function item N is written in (a closure belongs to the function around it)
+--
+-- THE ABSTRACTION: a type of the standard library is a container without a face. What is inside `Option`, `Vec`,
+-- `Rc<RefCell<..>>`, a tuple or a reference is held by the whole, and a method the held type does not have
+-- (`unwrap`, `iter`, `get`, `clone`) gives a value that holds the same. So a receiver is typed through any
+-- wrapping without a table of the standard library, at the price of saying "may hold" where the compiler knows.
+-- A call that leaves the crate gives what its arguments hold (`Some(x)`, `Box::new(x)`); a closure holds what
+-- it returns, and its parameters what the receiver of the method it is passed to holds.
+
+fn_item[rust](F) :- decl[value](F, function).
+nearest in_fn[rust](F, N) of parent[tree](F, N) where fn_item[rust](F).
+
+-- ===================================================================== TYPES WRITTEN
+ty_named[rust](T) :- ref[type](T, _).
+ty_named[rust](T) :- member[type](T, _, _).
+own_type[rust](D) :- decl[type](D, K), K != alias, K != param.
+carried[rust](T, D) :- ty_named[rust](T), denotes[rust](T, D), own_type[rust](D).
+carried[rust](T, D) :- ty_named[rust](T), denotes[rust](T, A), assign[type](A, _, T2), carried[rust](T2, D).
+carried[rust](T, D) :- ty_named[rust](T), denotes[rust](T, P), bound[type](P, U), carried[rust](U, D).
+carried[rust](G, D) :- callee[type](G, T), carried[rust](T, D).
+carried[rust](G, D) :- mark[type](G, call), nth[tree](G, _, A), carried[rust](A, D).
+carried[rust](R, D) :- unary[type](R, _, T), carried[rust](T, D).
+carried[rust](A, D) :- mark[type](A, array), nth[tree](A, _, E), carried[rust](E, D).
+
+field_type[rust](S, Key, T) :- has[type](S, Fd), key[type](Fd, Key), value[type](Fd, T).
+has_field[rust](S, Key)     :- field_type[rust](S, Key, _).
+variant_of[rust](V, E)      :- has[type](E, V), decl[type](E, enum).
+
+-- ===================================================================== METHODS
+method[rust](D, Name, G)  :- assoc[rust](D, Name, G).
+-- through a trait: the function of every impl that answers it; and a trait's own function for the types that answer
+method[rust](Tr, Name, G) :- impl_trait[rust](I, Tr), has[value](I, G), key[value](G, Name).
+method[rust](D, Name, G)  :- impl_type[rust](I, D), impl_trait[rust](I, Tr), has[value](Tr, G), key[value](G, Name).
+has_method[rust](D, Name) :- method[rust](D, Name, _).
+
+-- ===================================================================== WHAT A PLACE HOLDS
+-- a pattern, from the value it takes apart
+pat_holds[rust](P, D) :- declared[value](P, T), carried[rust](T, D).
+pat_holds[rust](P, D) :- assign[value](_, P, V), holds[rust](V, D).
+pat_holds[rust](P, D) :- iterates[value](_, P, V), holds[rust](V, D).
+-- a pattern over a constructor of the crate takes each part at its declared type; any other passes the whole
+crate_ctor[rust](P, V) :- destructs[value](P, C), denotes[rust](C, V).
+crate_pat[rust](P)     :- crate_ctor[rust](P, _).
+pat_holds[rust](X, D) :- pattern_elem[value](P, _, X), pat_holds[rust](P, D), not crate_pat[rust](P).
+pat_holds[rust](X, D) :- pattern_elem[value](P, I, X), crate_ctor[rust](P, V), has[type](V, T), key[type](T, I), carried[rust](T, D).
+pat_holds[rust](X, D) :- pattern_prop[value](P, Key, X), crate_ctor[rust](P, V), field_type[rust](V, Key, T), carried[rust](T, D).
+edb(rs_pat_op).
+rs_pat_op("|"). rs_pat_op("@").
+pat_holds[rust](X, D) :- binary[value](P, Op, X, _), rs_pat_op(Op), pat_holds[rust](P, D).
+pat_holds[rust](X, D) :- binary[value](P, Op, _, X), rs_pat_op(Op), pat_holds[rust](P, D).
+-- the parameters of a closure passed to a method: what the receiver holds
+pat_holds[rust](P, D) :- param[value](Cl, _, P), nth[tree](C, _, Cl), callee[value](C, M), member[value](M, Recv, _), holds[rust](Recv, D).
+-- `self`: the type of the impl, or the trait
+pat_holds[rust](F, D) :- binds[value](F, "self"), has[value](I, F), impl_type[rust](I, D).
+pat_holds[rust](F, T) :- binds[value](F, "self"), has[value](T, F), decl[type](T, trait).
+-- a const or a static, at its declared type
+pat_holds[rust](C, D) :- assign[value](C, N, _), hoisted[value](C, _), declared[value](N, T), carried[rust](T, D).
+
+-- ===================================================================== WHAT AN EXPRESSION HOLDS
+holds[rust](N, D) :- ref[value](N, _), denotes[rust](N, B), pat_holds[rust](B, D).
+holds[rust](N, E) :- denotes[rust](N, V), variant_of[rust](V, E), not ty_named[rust](N).
+holds[rust](N, D) :- mark[value](N, object), declared[value](N, T), denotes[rust](T, D), own_type[rust](D).
+holds[rust](N, E) :- mark[value](N, object), declared[value](N, T), denotes[rust](T, V), variant_of[rust](V, E).
+holds[rust](C, E) :- callee[value](C, F), denotes[rust](F, V), variant_of[rust](V, E).
+holds[rust](C, S) :- callee[value](C, F), denotes[rust](F, S), decl[type](S, struct).
+holds[rust](C, D) :- sure_call[rust](C, G), fn_item[rust](G), declared[value](G, T), carried[rust](T, D).
+holds[rust](C, D) :- sure_call[rust](C, Cl), not fn_item[rust](Cl), holds[rust](Cl, D).
+callee_node[rust](N) :- callee[value](_, N).
+holds[rust](N, D) :- member[value](N, O, Key), holds[rust](O, DO), field_type[rust](DO, Key, T), carried[rust](T, D).
+holds[rust](N, D) :- member[value](N, O, Key), holds[rust](O, D), not has_field[rust](D, Key), not callee_node[rust](N).
+-- a method the held type does not have is the container's
+holds[rust](C, D) :- callee[value](C, M), member[value](M, Recv, Name), holds[rust](Recv, D), not has_method[rust](D, Name).
+-- a call that leaves the crate gives what its arguments hold
+holds[rust](C, D) :- mark[value](C, call), callee[value](C, F), not denoted[rust](F), nth[tree](C, _, A), holds[rust](A, D).
+edb(rs_through_op).
+rs_through_op("&"). rs_through_op("*").
+holds[rust](N, D) :- passes[value](N, X), holds[rust](X, D).
+holds[rust](N, D) :- unary[value](N, Op, X), rs_through_op(Op), holds[rust](X, D).
+holds[rust](N, D) :- gives[value](N, X), holds[rust](X, D).
+holds[rust](N, D) :- member_expr[value](N, O, _), holds[rust](O, D).
+holds[rust](A, D) :- mark[value](A, array), nth[tree](A, _, X), holds[rust](X, D).
+holds[rust](Cl, D) :- body[value](Cl, B), not fn_item[rust](Cl), holds[rust](B, D).
+
+-- ===================================================================== CALLS
+sure_call[rust](C, G)  :- calls[rust](C, G, _).
+calls[rust](C, G, path)  :- callee[value](C, F), denotes[rust](F, G), fn_item[rust](G).
+calls[rust](C, G, typed) :- callee[value](C, M), member[value](M, Recv, Name), holds[rust](Recv, D), method[rust](D, Name, G).
+calls[rust](C, Cl, local) :- callee[value](C, F), ref[value](F, _), denotes[rust](F, B), assign[value](_, B, Cl), body[value](Cl, _).
+
+method_name[rust](Name, G) :- has[value](_, G), key[value](G, Name), fn_item[rust](G).
+named_twice[rust](Name)    :- method_name[rust](Name, A), method_name[rust](Name, B), A != B.
+typed_call[rust](C)        :- calls[rust](C, _, typed).
+by_name[rust](C, G) :- callee[value](C, M), member[value](M, _, Name), method_name[rust](Name, G), not named_twice[rust](Name),
+                       not typed_call[rust](C), not denoted[rust](M).
+
+runs[rust](C, G)   :- calls[rust](C, G, _), fn_item[rust](G).
+runs[rust](C, G)   :- by_name[rust](C, G).
+fn_calls[rust](F, G) :- runs[rust](C, G), in_fn[rust](F, C).
+
+-- ===================================================================== WHERE THE CALLS ARE DARK
+-- a method call some type of the crate could answer, on a receiver that holds nothing known
+resolved[rust](C) :- runs[rust](C, _).
+dark_call[audit](C, Name) :- callee[value](C, M), member[value](M, _, Name), method_name[rust](Name, _), not resolved[rust](C),
+                             not denoted[rust](M).
