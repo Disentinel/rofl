@@ -32,6 +32,8 @@ ident[code](N, Name)        :- ident_in[code](N, Name, _).
 -- NOT a literal: it has identity and methods, so it is a node value below.
 may_be_node[flow](E, N) :- may_be[flow](E, node(N)).
 may_be_lit[flow](E, V)  :- may_be[flow](E, lit(V)).
+may_be_node[flow](E, N) :- may_be[flow](E, input(S)), input_node[flow](S, N).
+may_be_lit[flow](E, V)  :- may_be[flow](E, input(S)), input_lit[flow](S, V).
 
 may_be[flow](E, lit(V)) :- literal[value](E, V).
 
@@ -352,7 +354,7 @@ pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent
 -- holds the value it takes apart, a declarator's init or the argument of its call.
 may_be[flow](R, node(N)) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
                             may_be_node[flow](Init, N).
-may_be[flow](R, node(O)) :- param[value](F, I, R), pat_in[code](R, _, _), sx_arg_node[surface](F, I, O).
+may_be[flow](R, input(param(F, I))) :- param[value](F, I, R), pat_in[code](R, _, _).
 may_be[flow](T, node(N)) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
                             array_elem[flow](A, I, V), may_be_node[flow](V, N).
 -- the default of a target is a conditional source of it
@@ -535,18 +537,28 @@ may_be[flow](U, node(R)) :- param_rest[code](F, _, R, Name), param_use[flow](F, 
 -- (`function f(x) { var x }`) is the same binding, read there too.
 param_use[flow](F, Name, U) :- name_scope[code](U, Name, _, F), param_bound[flow](F, Name).
 
--- The caller publishes what it hands the callee (rules/js-surface.rofl), the callee reads it.
-may_be[flow](U, lit(V)) :- sx_arg_lit[surface](F, I, V), param_of[flow](F, I, Name), param_use[flow](F, Name, U).
-may_be[flow](U, node(N)) :- sx_arg_node[surface](F, I, N), param_of[flow](F, I, Name), param_use[flow](F, Name, U).
+-- A read of a parameter is the function's INPUT, not its callers' values: the body says what it does with
+-- `param(F, I)` once, whoever calls it. What the input may be is what the callers hand it (rules/js-surface.rofl),
+-- and that is what `may_be_node` and `may_be_lit` read inside the body.
+may_be[flow](U, input(param(F, I))) :- param_of[flow](F, I, Name), param_use[flow](F, Name, U).
+input_node[flow](param(F, I), N) :- sx_arg_node[surface](F, I, N).
+input_lit[flow](param(F, I), V)  :- sx_arg_lit[surface](F, I, V).
 
--- A call may be whatever the function it resolves to returns: its return summary, and where a return is the
--- function's own parameter, THIS call's argument (`sx_ret_param`, rules/js-surface.rofl).
+-- A call is its function's summary applied to THIS call: what the function returns of its own, and what it
+-- returns of an input, here this call's argument or receiver (`sx_ret_own`, `sx_ret_input`, `sx_ret_this`,
+-- rules/js-surface.rofl). An input of an enclosing function is not this call's to give: the summary holds its values.
 returns[flow](F, E) :- exits[value](R, return), returns[value](R, E), nearest_v[flow](F, R).
 returns[flow](F, E) :- fn_node[code](F), returns[value](F, E).
 
-may_be[flow](C, lit(V)) :- resolves[code](C, F), sx_ret_lit[surface](F, V).
-may_be[flow](C, node(N)) :- resolves[code](C, F), sx_ret_node[surface](F, N).
-may_be[flow](C, V) :- resolves[code](C, F), sx_ret_param[surface](F, I), arg_at[flow](C, I, A), may_be[flow](A, V).
+may_be[flow](C, V) :- resolves[code](C, F), sx_ret_own[surface](F, V).
+may_be[flow](C, V) :- resolves[code](C, F), sx_ret_input[surface](F, I), arg_at[flow](C, I, A), may_be[flow](A, V).
+-- `this` is the receiver where the call names one, and only the instances `this` may be in the function at all
+recv_call[code](C, R) :- call[value](C), callee[value](C, N), member[value](N, _, _), object_of[code](N, R),
+                         not super[value](R).
+may_be[flow](C, node(I)) :- resolves[code](C, F), sx_ret_this[surface](F), recv_call[code](C, R),
+                            may_be_node[flow](R, I), input_node[flow](this(F), I).
+may_be[flow](C, node(I)) :- resolves[code](C, F), sx_ret_this[surface](F), not recv_call[code](C, _),
+                            input_node[flow](this(F), I).
 
 -- =========================================================================
 -- 7b. LIBRARY CALLS THAT MOVE A VALUE, by the contract of the library member
@@ -1420,15 +1432,14 @@ this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).
 class_slot[code](CD, M)       :- class[value](CD), has[value](CD, M).
 class_method[code](CD, M)    :- class_slot[code](CD, M), fn_node[code](M), not private[value](M).
 class_method_of[flow](CD, M) :- class_method[code](CD, M).
-may_be[flow](T, node(I)) :- class_method_of[flow](CD, M), not static[value](M),
-                             inst_of[flow](I, CD), this_host[flow](M, T).
+may_be[flow](T, input(this(M))) :- class_method_of[flow](_, M), not static[value](M), this_host[flow](M, T).
+input_node[flow](this(M), I) :- class_method_of[flow](CD, M), not static[value](M), inst_of[flow](I, CD).
 -- an instance of a subclass runs the parent's methods and constructor with
 -- itself as `this`, so `this.m()` there reaches the subclass's override; a
 -- subclass of another file's class tells that file (`sx_sub_inst`)
 sub_inst[flow](SD, I) :- super_of[flow](CD, SD), inst_of[flow](I, CD).
 sub_inst[flow](SD, I) :- super_of[flow](MD, SD), sub_inst[flow](MD, I).
-may_be[flow](T, node(I)) :- class_method_of[flow](SD, M), not static[value](M), this_host[flow](M, T),
-                             sub_inst[flow](SD, I).
+input_node[flow](this(M), I) :- class_method_of[flow](SD, M), not static[value](M), sub_inst[flow](SD, I).
 may_be[flow](T, node(CD)) :- class_method_of[flow](CD, M), static[value](M),
                              this_host[flow](M, T).
 

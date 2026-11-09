@@ -196,6 +196,18 @@ sx_ret_lit[surface](F, V)   :- ret_plain[flow](F, E), may_be_lit[flow](E, V).
 sx_ret_pnode[surface](F, N) :- ret_param[flow](F, _, E), may_be_node[flow](E, N).
 sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
+-- the summary a call applies: what the function returns of its own, and which of its inputs it returns; an input of
+-- an enclosing function is returned as the values it holds
+sx_ret_own[surface](F, node(N))  :- call_returns[flow](F, E), may_be[flow](E, node(N)).
+sx_ret_own[surface](F, lit(V))   :- call_returns[flow](F, E), may_be[flow](E, lit(V)).
+sx_ret_own[surface](F, node(N))  :- call_returns[flow](F, E), may_be[flow](E, input(param(G, I))), G != F,
+                                    input_node[flow](param(G, I), N).
+sx_ret_own[surface](F, lit(V))   :- call_returns[flow](F, E), may_be[flow](E, input(param(G, I))), G != F,
+                                    input_lit[flow](param(G, I), V).
+sx_ret_own[surface](F, node(N))  :- call_returns[flow](F, E), may_be[flow](E, input(this(G))), G != F,
+                                    input_node[flow](this(G), N).
+sx_ret_input[surface](F, I)      :- call_returns[flow](F, E), may_be[flow](E, input(param(F, I))).
+sx_ret_this[surface](F)          :- call_returns[flow](F, E), may_be[flow](E, input(this(F))).
 -- a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
 -- cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
 falls_off[code](F) :- body[value](F, B), not returns[value](F, B), not completes_abruptly[code](B).
