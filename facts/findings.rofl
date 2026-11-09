@@ -6919,6 +6919,8 @@ addressed_by(f_a_settlement_must_cite_something_that_exists, "scripts/render_doc
 edb(removed_in).
 removed_in("models/lang/js/babel-roles.rofl", "68e0902").
 removed_in("scanners/js_ast.ts", "16ff27f").
+removed_in("scripts/surface_split.ts", "1473531").
+removed_in("facts/surface-lint.rofl", "1473531").
 removed_in("scanners/js_inherit.ts", "16ff27f").
 removed_in("scanners/oxc_facts.ts", "68e0902").
 removed_in("scripts/roles_parity.ts", "16ff27f").
@@ -13384,3 +13386,10 @@ addressed_by(f_a_graph_closure_is_walked_not_stored, "rust/rofl/src/graph.rs").
 addressed_by(f_a_graph_closure_is_walked_not_stored, "docs/data-structures.md").
 finding_note(f_a_graph_closure_is_walked_not_stored,
   "The owner, 2026-11-09: build `graph` (a closure with cycles) before the tree's nearest-ancestor walks. BUILT: `graph E(X, Y) closure C.` lowers as a tree's closure does, with no promise checked, and the Rust engine answers C from the graph of each book (graph.rs, held inside Forest so every reader of a tree's closure reads it too): Tarjan's components numbered sinks first prune a search, one end bound is a walk, a row's derived_by rows are every lowered rule that fires (the base where the edge is, the step where an edge into the end leaves a node the start reaches), its why a shortest path. The census agrees with TypeScript's rules (ds_graph_holds, ds_graph_sealed, both engines). WHAT IT DOES NOT TAKE: may_be, the value flow that grows fastest. Its edges are read through values (a field read through the object that flowed there, a call resolved through the function that flowed there), so the closure concludes its own edges, which no walk of a graph built beforehand answers; that is the instance question of f_a_call_is_its_functions_summary_applied_to_it. The JS model declares `graph dcall(F, H) closure dreach.` (the drop walks become views over it) and `graph keyed_src(E, S) closure keyed_upstream.`; eff_reaches is not one, since a third rule (sx_eff_reaches) starts it from pairs of other files.").
+
+finding(f_the_surface_mirrors_are_gone_because_volumes_cross_by_keys, insight).
+recorded(f_the_surface_mirrors_are_gone_because_volumes_cross_by_keys, "2026-11-09").
+addressed_by(f_the_surface_mirrors_are_gone_because_volumes_cross_by_keys, "rules/js-surface.rofl").
+addressed_by(f_the_surface_mirrors_are_gone_because_volumes_cross_by_keys, "docs/surface-split.md").
+finding_note(f_the_surface_mirrors_are_gone_because_volumes_cross_by_keys,
+  "The owner, 2026-11-09: the [surface] exchange is not needed, volumes already cross by the rules' keys (f_volumes_cross_by_the_rules_keys). It stood in the way of `eff_reaches` as a graph closure: `eff_reaches :- sx_eff_reaches` fed the closure's own rows back as its edges. REMOVED: every exact mirror (`X :- sx_X` where `sx_X` is only a projection of `X`, guarded by `sx_esc` or not), 62 of them, and then every `sx_*` relation no rule read any more, 118 statements in all. Every world's facts outside [surface] and the rule reflection are the same, checked state against state on the worlds the JS model runs in. `eff_reaches` is now `graph eff_calls(F, G) closure eff_reaches.`: the four peeled rings that kept its stored closure small are gone with it, since a walk stores nothing; the relation now holds reach over the whole call graph, of which its readers ask only pairs on a cycle, the same answers. RETIRED with the mirrors: the parity gate `npm run test:split` (a file alone with the others' [surface] equals the whole world: no longer promised) and the lint over the model (world `surface_model`). LEFT: the `sx_*` relations with a meaning of their own (`sx_open`, `sx_esc`, the subscriptions keyed by the callee); renaming their book is cosmetic and not done. runtime/split.ts, the TypeScript driver, is unchecked since; its numbers in docs/cli.md are history.").
