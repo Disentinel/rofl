@@ -9,7 +9,7 @@
 | [js-callgraph](js-callgraph.rofl.md) | 530 | 191 | 88 | 95 | 29 | 732 | 75 | 7 | 63 | 0 |
 | [js-concat](js-concat.rofl.md) | 206 | 70 | 0 | 59 | 2 | 338 | 23 | 7 | 11 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 228 | 86 | 71 | 6 | 11 | 242 | 23 | 5 | 32 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 886 | 394 | 132 | 250 | 34 | 1653 | 155 | 8 | 67 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 968 | 428 | 132 | 284 | 34 | 1853 | 177 | 8 | 67 | 0 |
 | [js-effects](js-effects.rofl.md) | 220 | 128 | 114 | 10 | 6 | 324 | 22 | 4 | 29 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 44 | 33 | 32 | 0 | 0 | 42 | 5 | 1 | 18 | 0 |
@@ -22,10 +22,10 @@
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-service](js-service.rofl.md) | 19 | 14 | 1 | 12 | 0 | 16 | 2 | 1 | 7 | 0 |
 | [js-structure](js-structure.rofl.md) | 68 | 20 | 4 | 15 | 2 | 22 | 13 | 2 | 30 | 0 |
-| [js-surface](js-surface.rofl.md) | 173 | 135 | 33 | 101 | 3 | 280 | 11 | 1 | 11 | 0 |
+| [js-surface](js-surface.rofl.md) | 181 | 142 | 33 | 108 | 3 | 294 | 11 | 1 | 11 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 6 | 4 | 4 | 0 | 0 | 4 | 2 | 0 | 1 | 0 |
 
-597 heads without a phrase across these files.
+634 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -938,5 +938,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 A relation defined in two books is two relations; a signature reads only at the first.
 
 - `field_init` in the flow and in the code
+- `new_of` in the code and in the flow
 - `arg_at` in the flow and in the main
 

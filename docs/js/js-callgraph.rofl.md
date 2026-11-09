@@ -25,7 +25,7 @@ Reads:
 - from facts/js-host.rofl, in the main:
   - <a id="host_calls_back"></a>An origin Origin calls back its argument Key and an argument Arg and a when When (`host_calls_back`)
 - from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_method](js-dataflow.rofl.md#class_method), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [logic_op](js-dataflow.rofl.md#logic_op), [named_decl](js-dataflow.rofl.md#named_decl), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_method](js-dataflow.rofl.md#obj_method), [obj_prop](js-dataflow.rofl.md#obj_prop), [own_name](js-dataflow.rofl.md#own_name), [param_wrap](js-dataflow.rofl.md#param_wrap), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [inst_of](js-dataflow.rofl.md#inst_of), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [isa](js-dataflow.rofl.md#isa), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_at](js-dataflow.rofl.md#member_at), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj](js-dataflow.rofl.md#member_obj), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
 - from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
@@ -563,8 +563,8 @@ A [function](#fn_node) answers to a name N if all of:
 1. if all of:
    - X [is a transfer site](#transfers) of `new_expression`;
    - X [points to](js-dataflow.rofl.md#may_be_node) a node I;
-   - I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD;
-   - CD [has the constructor](#class_ctor) M;
+   - [`isa`](js-dataflow.rofl.md#isa)(I, CD);
+   - a class CD [has the constructor](#class_ctor) M;
 2. if all of:
    - [`super`](#super)(N);
    - [the callee](#callee_of) of X is a node N;
@@ -1013,7 +1013,7 @@ In the flow:
 
 1. if [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O);
 2. if [`array`](#array)(O);
-3. if O [stands for an instance of](js-dataflow.rofl.md#inst_of) some class;
+3. if [`isa`](js-dataflow.rofl.md#isa)(O, something);
 4. if O [is an instance](js-globals.rofl.md#es_instance) of Name from some release and Name [has the prototype](#lib_global_prototype) some prototype;
 5. if all of:
    - [`ts_namespace`](js-dataflow.rofl.md#ts_namespace)(O);
@@ -1240,7 +1240,7 @@ In the surface:
   - M [is a constructor](#ctor_method);
   - M [returns](js-dataflow.rofl.md#returns) some node.
 
-`sx_open`(I) if a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class CD and [`sx_open`](#sx_open)(CD).
+`sx_open`(I) if [`isa`](js-dataflow.rofl.md#isa)(I, CD) and [`sx_open`](#sx_open)(CD).
 
 > a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
 

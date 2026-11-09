@@ -45,6 +45,8 @@ shape_ok(this_nearer, not_closer, "no_nearest_relation: the nearest this-binder 
 shape_ok(ox_import_local, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(ox_key_name, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(ox_pat_down, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
+shape_ok(holds_members, twin_bodies, "small_set: one arm per kind of object a member is read on (an object literal, a module, an instance, a class, a library value), each one premise").
+shape_ok(proto_holder, twin_bodies, "small_set: a class or an instance in general holds the prototype half, one premise each").
 shape_ok(ox_pat_target, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(ox_spec_of, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").
 shape_ok(target, twin_bodies, "small_set: the oxc converter reads one file's tree, arms of a head that differ in the kind they name; the cost is the converter's, measured by npm run test:roles --cost").

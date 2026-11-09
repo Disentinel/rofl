@@ -35,6 +35,7 @@ sx_esc[surface](A) :- sx_rest_elem[surface](_, _, A).
 sx_esc[surface](I) :- sx_sub_inst[surface](_, I).
 sx_esc[surface](I) :- sx_esc[surface](C), inst_of[flow](I, C).
 sx_esc[surface](C) :- sx_esc[surface](I), inst_of[flow](I, C).
+sx_esc[surface](C) :- sx_esc[surface](I), isa[flow](I, C).
 -- ... and what an escaping node holds
 sx_esc[surface](M) :- sx_esc[surface](N), may_be_node[flow](N, M).
 sx_esc[surface](V) :- sx_esc[surface](O), member_value[flow](O, _, V).
@@ -71,6 +72,9 @@ sx_abody[surface](F)         :- sx_esc[surface](F), async_body[code](F).
 sx_fn_name[surface](F, A)    :- sx_esc[surface](F), fn_name[code](F, A).
 sx_nested[surface](F)        :- sx_esc[surface](F), fn_nested[flow](F).
 sx_inst[surface](I, C)       :- sx_esc[surface](I), inst_of[flow](I, C).
+sx_isa[surface](I, C)        :- sx_esc[surface](I), isa[flow](I, C).
+sx_holds[surface](O)         :- sx_esc[surface](O), holds_members[flow](O).
+sx_made[surface](I, C)       :- sx_esc[surface](I), made_of[flow](I, C).
 sx_ctor[surface](C, M)       :- sx_esc[surface](C), class_ctor[code](C, M).
 sx_ctor_of[surface](C, M)    :- sx_esc[surface](C), ctor_of[flow](C, M).
 sx_class_eff[surface](C, L, H) :- sx_esc[surface](C), class_construct_eff[flow](C, L, H).
@@ -123,6 +127,9 @@ fn_label[flow](F, A)          :- sx_fn_name[surface](F, A).
 fn_nested[flow](F)            :- fn_node[code](F), in_fn[code](F).
 fn_nested[flow](F)            :- sx_nested[surface](F).
 inst_of[flow](I, C)           :- sx_inst[surface](I, C).
+isa[flow](I, C)               :- sx_isa[surface](I, C).
+holds_members[flow](O)        :- sx_holds[surface](O).
+made_of[flow](I, C)           :- sx_made[surface](I, C).
 class_ctor[code](C, M)        :- sx_ctor[surface](C, M).
 ctor_of[flow](C, M)           :- sx_ctor_of[surface](C, M).
 class_construct_eff[flow](C, L, H) :- sx_class_eff[surface](C, L, H).
@@ -207,6 +214,7 @@ sx_ret_own[surface](F, node, N) :- call_returns[flow](F, E), may_be[flow](E, inp
 sx_ret_own[surface](F, lit, V)  :- call_returns[flow](F, E), may_be[flow](E, input, S), input_of[flow](S, G), G != F,
                                    input_lit[flow](S, V).
 sx_ret_input[surface](F, I)     :- call_returns[flow](F, E), may_be[flow](E, input, S), input_param[flow](S, F, I).
+sx_ret_self[surface](F)         :- call_returns[flow](F, E), may_be[flow](E, input, S), input_this[flow](S, F).
 sx_ret_this[surface](F, I)      :- call_returns[flow](F, E), may_be[flow](E, input, S), input_this[flow](S, F),
                                    input_node[flow](S, I).
 -- a function that may end without a value: its body may complete normally (`completes_abruptly` names those that

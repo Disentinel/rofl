@@ -266,7 +266,7 @@ obj_member_fn[code](O, Key, F) :- key_name[code](P, Key), obj_prop[code](O, P, F
 class_ctor[code](CD, M) :- class_method_of[flow](CD, M), ctor_method[code](M).
 
 resolves[code](X, M) :- transfers[execution](X, new_expression),
-                        may_be_node[flow](X, I), inst_of[flow](I, CD), class_ctor[code](CD, M).
+                        may_be_node[flow](X, I), isa[flow](I, CD), class_ctor[code](CD, M).
 
 resolves[code](C, M) :- super[value](N), callee_of[code](C, N),
                         may_be_node[flow](N, SD), ctor_of[flow](SD, M).
@@ -510,7 +510,7 @@ reassigned[flow](D)     :- assign_binder[code](_, D).
 -- The objects whose members can be known, and the classes whose prototype they read.
 receivable[flow](O) :- obj_lit[code](O).
 receivable[flow](O) :- array[value](O).
-receivable[flow](I) :- inst_of[flow](I, _).
+receivable[flow](I) :- isa[flow](I, _).
 receivable[flow](X) :- es_instance[flow](X, Name, _), lib_global_prototype(Name, _).
 receivable[flow](NS) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, _).
 receivable[flow](NS) :- ts_namespace[code](NS), namespace[value](NS, B), has[type](B, _).
@@ -611,7 +611,7 @@ sx_open[surface](CD) :- class_like[flow](CD), class_slot[code](CD, M), decorated
 sx_open[surface](CD) :- class_like[flow](CD), type_open[flow](CD).
 sx_open[surface](CD) :- super_of[flow](CD, SD), sx_open[surface](SD).
 sx_open[surface](CD) :- class_method_of[flow](CD, M), ctor_method[code](M), returns[flow](M, _).
-sx_open[surface](I)  :- inst_of[flow](I, CD), sx_open[surface](CD).
+sx_open[surface](I)  :- isa[flow](I, CD), sx_open[surface](CD).
 
 -- a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
 member_call[flow](C, R, Key) :- call[value](C), callee[value](C, N),

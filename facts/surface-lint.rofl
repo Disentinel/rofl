@@ -157,3 +157,6 @@ xl_ok(contract_call, contract_fn, "the library member is a node of the file that
 xl_ok(coroutine_of, runs_coroutine, "a library's package is the same string in every file: its contract is read by the string, not by a node").
 xl_ok(may_be, returns_argument, "a library's package is the same string in every file: its contract is read by the string, not by a node").
 xl_ok(ex_router_fn, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
+xl_ok(sx_mset, wputc, "wputc is keyed by its call, in the call's own file; the class it names only filters the instance the mirrored isa gives").
+xl_ok(member_ctor_late, member_ctor_inside, "the read is inside the constructor only in the constructor's own file: for another file's class there is no row, rightly").
+xl_ok(member_set_sure, member_ctor_late, "the read is inside the constructor only in the constructor's own file: for another file's class there is no row, rightly").
