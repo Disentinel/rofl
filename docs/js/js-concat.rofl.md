@@ -523,6 +523,8 @@ Declared as facts:
 > piece carries whether it is surely a string (`yes`), which a `+` needs from
 > at least one side.
 
+`slot` of A and B is read through its rules and never stored.
+
 <a id="slot"></a>`slot`(C, I) either:
 
 1. if [`parts`](#parts)(C, I, something);

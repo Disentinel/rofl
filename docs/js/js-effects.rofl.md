@@ -275,6 +275,8 @@ A node N has the effect E at a host X either:
 > unknown is what the function DOES). `eff_member_both` is the never-both half
 > of that partition; the never-neither half is a sum in the test.
 
+`eff_obj_traced` of A is read through its rules and never stored.
+
 <a id="eff_heap_of"></a>M touches the heap N either:
 
 1. if all of:
@@ -286,7 +288,11 @@ A node N has the effect E at a host X either:
    - N is `global`;
    - unless M [has a traced object](#eff_obj_traced).
 
+`eff_assign` of A is read through its rules and never stored.
+
 In the code:
+
+`eff_assign_target` of A and B is read through its rules and never stored.
 
 <a id="eff_assign_target"></a>X writes to a node L if X [is a write](#eff_assign) and [`assign_op`](js-structure.rofl.md#assign_op)(X, L, something).
 
@@ -441,6 +447,8 @@ Declared as facts:
 > `eff_join_short` is the one place the join is READ: a caller's name joined
 > with its callee's must give the caller's own back. `eff_purer_callee`
 > compares rows: the callee lacks one of the caller's and has none it lacks.
+
+`eff_subject` of A is read through its rules and never stored.
 
 In the flow:
 
@@ -786,6 +794,8 @@ In the flow:
 > `B => class extends B { static { init() } }` at each call). Methods are not
 > field kinds: they are latent.
 > `class_accessor_property` adds no label beyond a plain field.
+
+`eff_class_body` of A and B is read through its rules and never stored.
 
 In the code:
 

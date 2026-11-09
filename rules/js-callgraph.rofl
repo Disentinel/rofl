@@ -125,6 +125,7 @@ obj_kind_known(E)           :- obj_kind_class(E, _).
 obj_class[code](C, Cl)      :- callee_obj_class[code](C, E), obj_kind_class(E, Cl).
 obj_class[code](C, o_other) :- callee_obj_class[code](C, E), not obj_kind_known(E).
 obj_class[code](C, o_other) :- callee_obj[code](C, O), not has_class[code](O).
+view has_class(A).
 has_class[code](O) :- expr_class[code](O, _).
 
 edb(member_shape).
@@ -189,12 +190,14 @@ catch_all_occupied[audit](K) :- shape[code](C, s_member_on_other),
 unnamed_callee[audit](K) :- shape[code](C, s_unclassified), callee_class[code](C, K).
 unnamed_callee[audit](e_no_class) :- shape[code](C, s_unclassified), callee_of[code](C, N), not has_class[code](N).
 
+view shaped(A).
 shaped[code](C)         :- shape[code](C, _).
 unshaped[audit](C)      :- call_site[code](C, _), not shaped[code](C), not has_shape[code](C).
 multi_shape[audit](C, A, B) :- shape[code](C, A), shape[code](C, B), A != B.
 
 -- =========================================================================
 -- 3. THE ENCLOSING FUNCTION
+view fn_node(A).
 fn_node[code](F)     :- body[value](F, _).
 fn_file[code](F, File) :- fn_node[code](F), at[tree](F, File, _).
 
@@ -241,6 +244,7 @@ dec_up[code](C, H)     :- dec_up[code](C, G), nearest_v[flow](H, G), in_own_deco
 nearest_fn[code](F, C) :- site[code](C), nearest_v[flow](F, C), not in_own_decorator[code](F, C).
 nearest_fn[code](F, C) :- dec_up[code](C, G), nearest_v[flow](F, G), not in_own_decorator[code](F, C).
 
+view enclosed(A).
 enclosed[code](C)      :- nearest_fn[code](_, C).
 top_call[code](C, R)   :- site[code](C), at[tree](C, File, _),
                           program[tree](R, File), not enclosed[code](C).
@@ -889,6 +893,7 @@ member_declared[audit](C, P)   :- member_call[flow](C, R, Key), declared_lib[flo
                                   host_type_member(_, B, Key).
 declared_open[flow](C)         :- member_call[flow](C, R, _), declared_lib[flow](R, P), host_up[flow](P, B),
                                   host_type_open(_, B).
+view declared_has(A).
 declared_has[flow](C)          :- member_declared[audit](C, _).
 declared_open[flow](C)         :- declared_call[flow](C, T, _), type_open[flow](T).
 -- TypeScript narrows a declared type where the code tests it (`x instanceof Sub`, `'k' in x`,
@@ -929,6 +934,7 @@ imports(code, surface).
 -- TypeError when that line runs. A call with a spread passes what it cannot
 -- count, and a parameter with a default is never `undefined`; neither is asked.
 call_spreads[code](C) :- spread_args[value](C, _, _).
+view call_passes(A, B).
 call_passes[code](C, I) :- argument_at[code](C, I, _).
 
 param_defaulted[code](F, I) :- param_wrap[code](F, I, _, _).

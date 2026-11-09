@@ -24,6 +24,8 @@ dsn_link2(b2, f1). dsn_link2(b2, f2). dsn_off(b2, f2).
 dsn_in[ast](P, C) :- dsn_link2(P, C), not dsn_off(P, C), dsn_kind(P, _).
 -- what an ancestor is: a base fact, a rule, and one through a negation
 dsn_kind(r1, fn). dsn_kind(b1, fn). dsn_kind(d1, fn). dsn_kind(r2, fn). dsn_kind(b2, block). dsn_kind(c3, fn).
+-- a view a nearest is walked over keeps its rows: the walk reads them (docs/data-structures.md, View)
+view dsn_fn(N).
 dsn_fn[code](N) :- dsn_kind(N, fn).
 dsn_scope[code](N) :- dsn_kind(N, _), not dsn_fn[code](N).
 dsn_scope[code](r1).

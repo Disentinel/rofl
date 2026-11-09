@@ -110,7 +110,7 @@ unit_concludes("rules/js-dataflow.rofl", binder_at_top).
 unit_concludes("rules/js-dataflow.rofl", sees_binder).
 unit_concludes("rules/js-dataflow.rofl", scope_node).
 unit_concludes("rules/js-dataflow.rofl", lexical_binder).
-unit_concludes("rules/js-dataflow.rofl", up_s).
+unit_concludes("rules/js-dataflow.rofl", scope_of).
 unit_concludes("rules/js-dataflow.rofl", nearest_s).
 unit_concludes("rules/js-dataflow.rofl", encloses_s).
 unit_concludes("rules/js-dataflow.rofl", closer_s).
@@ -119,7 +119,6 @@ unit_concludes("rules/js-dataflow.rofl", scope_declares).
 unit_concludes("rules/js-dataflow.rofl", named_here).
 unit_concludes("rules/js-dataflow.rofl", own_name).
 unit_concludes("rules/js-dataflow.rofl", named_decl).
-unit_concludes("rules/js-dataflow.rofl", up_d).
 unit_concludes("rules/js-dataflow.rofl", decl_region).
 unit_concludes("rules/js-dataflow.rofl", decl_at_top).
 unit_concludes("rules/js-dataflow.rofl", catch_names).
@@ -286,6 +285,7 @@ unit_concludes("rules/js-dataflow.rofl", keyed_between).
 unit_concludes("rules/js-dataflow.rofl", keyed_target).
 unit_concludes("rules/js-dataflow.rofl", keyed_runs_m).
 unit_concludes("rules/js-dataflow.rofl", keyed_runs_out).
+unit_concludes("rules/js-dataflow.rofl", keyed_calls_out).
 unit_concludes("rules/js-dataflow.rofl", keyed_crosses).
 unit_concludes("rules/js-dataflow.rofl", keyed_hand_need).
 unit_concludes("rules/js-dataflow.rofl", keyed_handed).

@@ -229,6 +229,7 @@ part_value[flow](C, I, V) :- parts[flow](C, I, P), may_be_node[flow](P, V).
 -- level above 0 each text of the one composed value the part may be. Each
 -- piece carries whether it is surely a string (`yes`), which a `+` needs from
 -- at least one side.
+view slot(A, B).
 slot[flow](C, I) :- parts[flow](C, I, _).
 slot[flow](C, I) :- part_lit[flow](C, I, _).
 last_slot[flow](C, L) :- slot[flow](C, 0), L is max(I : slot[flow](C, I)).

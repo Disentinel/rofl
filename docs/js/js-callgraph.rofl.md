@@ -321,6 +321,8 @@ In the code:
    - Cl is `o_other`;
    - unless O [has an expression class](#has_class).
 
+`has_class` of A is read through its rules and never stored.
+
 `member_shape` lists:
 
 | arg 1 | arg 2 |
@@ -431,6 +433,8 @@ In the audit:
    - K is `e_no_class`;
    - unless N [has an expression class](#has_class).
 
+`shaped` of A is read through its rules and never stored.
+
 In the code:
 
 In the audit:
@@ -441,6 +445,8 @@ A call
 - <a id="multi_shape"></a>has two shapes X and B if it [has the shape](#shape) X, it [has the shape](#shape) B, and X differs from B.
 
 ## 3. The enclosing function
+
+`fn_node` of A is read through its rules and never stored.
 
 In the code:
 
@@ -526,6 +532,8 @@ A [function](#fn_node) answers to a name N if all of:
    - [`dec_up`](#dec_up)(C, G);
    - F [is nearest to](#nearest_v) a node G;
    - unless F [has its decorator at](#in_own_decorator) C.
+
+`enclosed` of A is read through its rules and never stored.
 
 <a id="top_call"></a>A node runs at the top of a node R if all of:
   - it [is a site](#site);
@@ -2043,6 +2051,8 @@ In the flow:
   - [`host_up`](#host_up)(P, B);
   - [`host_type_open`](#host_type_open)(something, B).
 
+`declared_has` of A is read through its rules and never stored.
+
 <a id="declared_has"></a>`declared_has`(C) if [`member_declared`](#member_declared)(C, something).
 
 `declared_open`(C) if [`declared_call`](#declared_call)(C, T, something) and [`type_open`](#type_open)(T).
@@ -2141,6 +2151,8 @@ In the audit:
 In the code:
 
 <a id="call_spreads"></a>`call_spreads`(C) if [`spread_args`](#spread_args)(C, something, something).
+
+`call_passes` of A and B is read through its rules and never stored.
 
 <a id="call_passes"></a>`call_passes`(C, I) if [`argument_at`](js-structure.rofl.md#argument_at)(C, I, something).
 

@@ -112,6 +112,7 @@ ox_through(S, X) :- oxc_k[ast_oxc](S, K), ox_steps_through(K, F), oxc_c[ast_oxc]
 -- kept as a relation, which held a row per node of the tree (423 559 of 14.4 M at vscode 250)
 nth[tree](Seq, I, S) :- ox_slot(Seq, I, S), oxc_k[ast_oxc](S, KS), not ox_steps_through(KS, _).
 nth[tree](Seq, I, X) :- ox_slot(Seq, I, S), ox_through(S, X).
+view strict(A).
 strict[tree](Seq) :- ox_slot(Seq, _, _).
 
 -- precedes, where a spread sits between two positions (its hidden iterator or getters)

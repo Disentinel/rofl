@@ -46,6 +46,7 @@ may_be[flow](N, node, M)      :- sx_node[surface](N, M).
 may_be[flow](N, lit, V)       :- sx_lit[surface](N, V).
 -- `fn_node`, `fn_name` and `in_fn` are syntax and are negated below the flow, so a function read as a VALUE, which may be
 -- another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
+view fn_value(A).
 fn_value[flow](F)             :- fn_node[code](F).
 fn_value[flow](F)             :- sx_fn[surface](F).
 fn_label[flow](F, A)          :- fn_name[code](F, A).
@@ -66,8 +67,10 @@ sx_effect_module[surface](File, N)     :- effect_of_module[flow](File, N).
 -- ---------------------------------------------------------------- what a call hands its callee
 sx_arg_lit[surface](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V).
 sx_arg_node[surface](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
+view sx_called(A).
 sx_called[surface](F)         :- resolves[code](_, F).
 -- how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
+view arg_given(A).
 arg_given[code](C)     :- argument_at[code](C, _, _).
 arg_count[code](C, 0)  :- callee[value](C, _), not arg_given[code](C).
 arg_count[code](C, N)  :- argument_at[code](C, I, _), N is I + 1, not argument_at[code](C, N, _),

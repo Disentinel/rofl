@@ -414,6 +414,8 @@ In the flow:
    - [`setter`](#setter)(M, M);
    - N is "set".
 
+`accessor_of` of A, B and C is read through its rules and never stored.
+
 <a id="accessor_obj"></a>`accessor_obj`(Obj) if [the accessor](#accessor_of) of a node Obj at some key is some node.
 
 <a id="accessor_recv"></a>`accessor_recv`(a [member access](js-dataflow.rofl.md#member_node_v) N, Obj) if all of:

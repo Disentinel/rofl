@@ -47,6 +47,7 @@ Reads:
   - <a id="dreach"></a>`dreach`
   - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
   - <a id="keyed_upstream"></a>`keyed_upstream`
+  - <a id="scope_of"></a>`scope_of`
 - from outside these files, in the flow:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
@@ -133,9 +134,7 @@ What this file calls a node, and what each word stands for:
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
-- <a id="nearest_s"></a>A [scope](#scope_node) is the nearest scope of D if [`up_s`](#up_s)(D, it).
 - <a id="named_decl"></a>A node declares the name Name in File if it [carries its own name](#own_name) Name and File and `around`.
-- <a id="decl_region"></a>D is scoped to a [scope](#scope_node) R if D [climbs from](#up_d) R.
 - <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="spread_arg"></a>An invocation has a spread at an index I if [`spread_args`](#spread_args)(it, I, something).
 - <a id="class_like"></a>A node is a class if [`class`](#class)(it).
@@ -163,6 +162,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
    - [`binds`](#binds)(N, Name);
    - [`at`](#at)(N, File, something);
    - unless N is a [function](js-callgraph.rofl.md#fn_node).
+
+`ident` of A and B is read through its rules and never stored.
 
 ## 2. What a value is
 
@@ -240,6 +241,8 @@ In the flow:
 
 `var_decl_kind` includes `var`, `let`, `const`, `using`, `await_using`.
 
+`var_decl` of A is read through its rules and never stored.
+
 In the code:
 
 <a id="var_decl"></a>`var_decl`(D) if [`var_decl_kind`](#var_decl_kind)(K) and [`decl`](#decl)(D, K).
@@ -256,6 +259,8 @@ In the code:
   - [`assign`](#assign)(D, I, Init);
   - [`binds`](#binds)(I, Name);
   - [`at`](#at)(D, File, something).
+
+`scoped_binder` of A and B is read through its rules and never stored.
 
 <a id="scoped_binder"></a>D is scoped in File if D [binds](#binder) some name to some node in File.
 
@@ -321,13 +326,11 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 
 <a id="lexical_binder"></a>D is lexical if [`decl`](#decl)(D, `let` or `const`).
 
-> Nearest scope, over declarators only. `ast_within(R, D)` first, with D
-> bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
-> product, −11.5 % of a world.
+> The nearest scope around a node, walked up the tree.
 
-<a id="up_s"></a>`up_s`(D, P) if D [is scoped](#scoped_binder) in some file and [`parent`](#parent)(P, D).
+`scope_of` in the `code` of R and D holds where R is the nearest ancestor of D along `parent` in the `tree` that `scope_node` in the `code` holds of.
 
-`up_s`(D, P2) if [`up_s`](#up_s)(D, P) and [`parent`](#parent)(P2, P), unless P is a [scope](#scope_node).
+<a id="nearest_s"></a>R is the nearest scope of D if D [is scoped](#scoped_binder) in some file and [`scope_of`](#scope_of)(R, D).
 
 <a id="encloses_s"></a>A [scope](#scope_node) encloses D if D [is scoped](#scoped_binder) in some file and [`inside`](#inside)(it, D).
 
@@ -394,12 +397,7 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
    - N is `itself`;
    - unless [`named_here`](#named_here)(X).
 
-<a id="up_d"></a>D climbs from a node P if D [declares the name](#named_decl) some name in some file and [`parent`](#parent)(P, D).
-
-D climbs from a node P2 if all of:
-  - D [climbs from](#up_d) a node P;
-  - [`parent`](#parent)(P2, P);
-  - unless P is a [scope](#scope_node).
+<a id="decl_region"></a>D is scoped to R if D [declares the name](#named_decl) some name in some file and [`scope_of`](#scope_of)(R, D).
 
 <a id="decl_at_top"></a>D is declared at the top if D [declares the name](#named_decl) some name in some file, unless D [is scoped to](#decl_region) some scope.
 
@@ -848,6 +846,8 @@ In the flow:
 > A parameter that is a pattern, `({ port, host }) =>`, alone or with a default for the whole object, binds each name
 > to a member of the argument at its index; `param_bound` is the union every scope rule reads.
 
+`param_bound` of A and B is read through its rules and never stored.
+
 <a id="param_bound"></a>`param_bound`(F, Name) if F [takes](#param_of) Name at some index.
 
 In the code:
@@ -933,6 +933,8 @@ The member Key of a node O holds a node V if all of:
 2. if E [points to](#may_be_node) some node.
 
 ## 7. Across a call
+
+`call_like` of A is read through its rules and never stored.
 
 In the code:
 
@@ -2146,20 +2148,24 @@ Declared as facts:
 > the call graph (`eff_reaches` is reach inside its cycles only); another
 > file's function brings its answer with it (`sx_keyed_runs`, `sx_runs_out`)
 
-`keyed_runs_m`(F, M) if a node F [has a call to](js-effects.rofl.md#eff_calls) G and [`keyed_runs_m`](#keyed_runs_m)(G, M).
+`keyed_runs_m`(F, M) if a node F [reaches by calling](#eff_reaches) a node M and [`keyed_target`](#keyed_target)(M).
 
 <a id="keyed_runs_out"></a>`keyed_runs_out`(F) either:
 
 1. if [`runs_outside`](js-callgraph.rofl.md#runs_outside)(F);
-2. if F [has a call to](js-effects.rofl.md#eff_calls) G and [`keyed_runs_out`](#keyed_runs_out)(G).
+2. if F [reaches by calling](#eff_reaches) a node G and [`runs_outside`](js-callgraph.rofl.md#runs_outside)(G).
+
+`keyed_calls_out` of F is read through its rules and never stored.
+
+<a id="keyed_calls_out"></a>`keyed_calls_out`(F) if all of:
+  - a node F [has a call to](js-effects.rofl.md#eff_calls) G;
+  - [`at`](#at)(F, File, something);
+  - unless [`at`](#at)(G, File, something).
 
 <a id="keyed_crosses"></a>`keyed_crosses`(F) either:
 
-1. if all of:
-   - a node F [has a call to](js-effects.rofl.md#eff_calls) G;
-   - [`at`](#at)(F, File, something);
-   - unless [`at`](#at)(G, File, something);
-2. if a node F [has a call to](js-effects.rofl.md#eff_calls) G and [`keyed_crosses`](#keyed_crosses)(G).
+1. if [`keyed_calls_out`](#keyed_calls_out)(F);
+2. if F [reaches by calling](#eff_reaches) a node G and [`keyed_calls_out`](#keyed_calls_out)(G).
 
 <a id="keyed_hand_need"></a>`keyed_hand_need`(G) if [`keyed_runs_m`](#keyed_runs_m)(G, something).
 
@@ -2571,7 +2577,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 <a id="drops_any"></a>`drops_any`(G) either:
 
 1. if [`keyed_dropper`](#keyed_dropper)(G);
-2. if G [has a call to](js-effects.rofl.md#eff_calls) H and [`drops_any`](#drops_any)(H).
+2. if G [reaches by calling](#eff_reaches) a node H and [`keyed_dropper`](#keyed_dropper)(H).
 
 <a id="dcall"></a>`dcall`(F, H) if a node F [has a call to](js-effects.rofl.md#eff_calls) H and [`drops_any`](#drops_any)(H).
 
@@ -3617,6 +3623,8 @@ The member Key of a node CD holds a node V if all of:
 > The key an expression selects. Static and computed collapse here:
 > `may_be_lit` closes the distance for `o[k]`.
 
+`member_node_v` of A is read through its rules and never stored.
+
 <a id="selects"></a>N selects Key if [`prop_name`](js-structure.rofl.md#prop_name)(N, something, Key).
 
 In the code:
@@ -3868,6 +3876,8 @@ In the flow:
    - unless a node N [is inside a function](js-controlflow.rofl.md#in_fn);
    - unless [`member_dropped`](#member_dropped)(O, Key).
 
+`member_viewed` of A is read through its rules and never stored.
+
 <a id="member_viewed"></a>`member_viewed`(N) if [`member_unset`](#member_unset)(N, something, something).
 
 <a id="member_may_lack"></a>`member_may_lack`(N) if [`member_unset`](#member_unset)(N, O, Key), unless [`member_set_sure`](#member_set_sure)(N, O, Key).
@@ -3992,6 +4002,8 @@ In the code:
 In the flow:
 
 <a id="class_method_of"></a>A class has the method M if [`class_method`](#class_method)(it, M).
+
+`method_fn` of A is read through its rules and never stored.
 
 <a id="method_fn"></a>`method_fn`(M) if some class [has the method](#class_method_of) M.
 

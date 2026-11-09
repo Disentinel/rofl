@@ -429,6 +429,10 @@ A site
 > StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
 > verdict. A default binds `"default"`, a namespace `"*"`.
 
+`import_specifier_node` of A is read through its rules and never stored.
+
+`import_spec` of A and B is read through its rules and never stored.
+
 <a id="import_spec"></a>A site has the import specifier Sp if Sp [names an import](#import_specifier_node) and [`parent`](#parent)(it, Sp).
 
 <a id="spec_local"></a>A node binds locally L if all of:
