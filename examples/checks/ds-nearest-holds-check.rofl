@@ -1,0 +1,58 @@
+-- examples/checks/ds-nearest-holds-check.rofl — ds_nearest_holds and ds_nearest_sealed: every reader of the declared
+-- nearest holds exactly the rows of its undeclared twin (`_u`).
+dsnc_diff(owner, A, B, x) :- dsn_owner[flow](A, B), not dsn_owner_u[flow](A, B).
+dsnc_diff(owner, A, B, x) :- dsn_owner_u[flow](A, B), not dsn_owner[flow](A, B).
+dsnc_diff(block, A, B, x) :- dsn_block[flow](A, B), not dsn_block_u[flow](A, B).
+dsnc_diff(block, A, B, x) :- dsn_block_u[flow](A, B), not dsn_block[flow](A, B).
+dsnc_diff(bb, A, B, x) :- dsn_bb(A, B), not dsn_bb_u(A, B).
+dsnc_diff(bb, A, B, x) :- dsn_bb_u(A, B), not dsn_bb(A, B).
+dsnc_diff(bf, A, B, x) :- dsn_bf(A, B), not dsn_bf_u(A, B).
+dsnc_diff(bf, A, B, x) :- dsn_bf_u(A, B), not dsn_bf(A, B).
+dsnc_diff(fb, A, B, x) :- dsn_fb(A, B), not dsn_fb_u(A, B).
+dsnc_diff(fb, A, B, x) :- dsn_fb_u(A, B), not dsn_fb(A, B).
+dsnc_diff(ff, A, B, x) :- dsn_ff(A, B), not dsn_ff_u(A, B).
+dsnc_diff(ff, A, B, x) :- dsn_ff_u(A, B), not dsn_ff(A, B).
+dsnc_diff(neg, A, B, x) :- dsn_neg(A, B), not dsn_neg_u(A, B).
+dsnc_diff(neg, A, B, x) :- dsn_neg_u(A, B), not dsn_neg(A, B).
+dsnc_diff(cnt, A, B, x) :- dsn_cnt(A, B), not dsn_cnt_u(A, B).
+dsnc_diff(cnt, A, B, x) :- dsn_cnt_u(A, B), not dsn_cnt(A, B).
+dsnc_diff(rec, A, B, x) :- dsn_rec(A, B), not dsn_rec_u(A, B).
+dsnc_diff(rec, A, B, x) :- dsn_rec_u(A, B), not dsn_rec(A, B).
+dsnc_diff(lone, A, x, x) :- dsn_lone(A), not dsn_lone_u(A).
+dsnc_diff(lone, A, x, x) :- dsn_lone_u(A), not dsn_lone(A).
+dsnc_diff(two, A, B, C) :- dsn_two(A, B, C), not dsn_two_u(A, B, C).
+dsnc_diff(two, A, B, C) :- dsn_two_u(A, B, C), not dsn_two(A, B, C).
+dsnc_diff(feed, A, x, x) :- dsn_feed(A), not dsn_feed_u(A).
+dsnc_diff(feed, A, x, x) :- dsn_feed_u(A), not dsn_feed(A).
+alarm(dsnc_diff).
+-- the rows each must hold, and those it must not
+dsnc_lost(owner) :- not dsn_owner[flow](r1, a1).
+dsnc_lost(owner) :- not dsn_owner[flow](r1, b1).
+dsnc_lost(owner) :- not dsn_owner[flow](b1, c1).
+dsnc_lost(owner) :- not dsn_owner[flow](b1, d1).
+dsnc_lost(owner) :- not dsn_owner[flow](d1, e1).
+dsnc_lost(owner) :- not dsn_owner[flow](r1, f1).
+dsnc_lost(owner) :- not dsn_owner[flow](c3, d3).
+dsnc_lost(block) :- not dsn_block[flow](b2, f1).
+dsnc_lost(block) :- not dsn_block[flow](r1, c1).
+dsnc_lost(neg) :- not dsn_neg(r1, c1).
+dsnc_lost(cnt) :- not dsn_cnt(b1, 2).
+dsnc_lost(rec) :- not dsn_rec(e1, r1).
+dsnc_lost(lone) :- not dsn_lone(lone).
+alarm(dsnc_lost).
+dsnc_wrong(x) :- dsn_owner[flow](r1, c1).
+dsnc_wrong(x) :- dsn_owner[flow](r1, f2).
+dsnc_wrong(x) :- dsn_owner[flow](N, N).
+dsnc_wrong(x) :- dsn_owner[ast](_, _).
+alarm(dsnc_wrong).
+-- the rows are in the state the engine prints, listed when the engine stores none of them
+-- expect-row: dsn_owner[flow](r1,a1) tick drv
+-- expect-row: dsn_owner[flow](c3,d3) tick drv
+-- expect-no-row: dsn_owner[flow](r1,c1)
+dsnc_owner(N) :- N is count(A, D : dsn_owner[flow](A, D)).
+dsnc_block(N) :- N is count(A, D : dsn_block[flow](A, D)).
+dsnc_rows_wrong() :- dsnc_owner(N), N != 14.
+dsnc_rows_wrong() :- dsnc_block(N), N != 11.
+dsnc_rows_wrong() :- not dsnc_owner(_).
+dsnc_rows_wrong() :- not dsnc_block(_).
+alarm(dsnc_rows_wrong).

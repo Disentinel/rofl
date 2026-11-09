@@ -7,6 +7,11 @@ that joins two files reads only `[surface]`; the question's answers come from su
 measures how wide it is, builds it by hand on a 14-file corpus, and says what it costs. Numbers: the finding
 `f_the_surface_split_is_a_book_of_about_sixty_rules_and_the_wall_is_ingest_order_not_memory`.
 
+**Retired 2026-11-09.** Volumes route every relation by the rules' keys (`f_volumes_cross_by_the_rules_keys`), so
+the JS model no longer mirrors an escaping node's facts back through `[surface]`: the mirrors, the parity gate
+(`npm run test:split`, `surface_split.ts (removed)`) and the lint over the model (world `surface_model`) are gone. What
+is left of `rules/js-surface.rofl` are the relations with a meaning of their own. The rest of this note is history.
+
 Status: sections 1-4 are the scouting as it was written (its relation names, such as `sx_export_fn`, are the
 prototype's). Of the work in section 5, items 1-4 are built (sections 6 and 7: the driver is `runtime/split.ts`,
 correct at 500 vscode files and 140 times slower than the whole world there); items 5 and 6 are open. The owner's
@@ -184,12 +189,12 @@ The wall moves from memory to ingest scheduling.
 - **A function read as a value is asked in `[flow]`** (`fn_value`, `fn_label`, `fn_nested`): mirroring into
   `fn_node`, which `nearest_v` negates, made the program unstratifiable.
 - **The gate.** World `vscode_surface_split` (both engines) holds the answers with every file resident;
-  `scripts/surface_split.ts` (`npm run test:split`) evaluates each of the 14 files alone with the others' surface to
+  `surface_split.ts (removed)` (`npm run test:split`) evaluates each of the 14 files alone with the others' surface to
   a fixpoint, forward and reverse, and every fact of every file equals the whole world's: 420 surface facts, 93
   evaluations. The planted break (the model before the book, no surface) loses 84 of 184 answers and invents 16.
 - **The lint** (item 3; `f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise`) is rules over the
   rule reflection, `examples/surface/surface.rofl`, seeded by `xl_seed(Rel, Col)` and excused by `xl_ok` in
-  `facts/surface-lint.rofl`. Foreign-capability is a column, propagated through the rules' own heads from the seeds;
+  `surface-lint.rofl (removed)`. Foreign-capability is a column, propagated through the rules' own heads from the seeds;
   `xl_finding` is a file-local premise read at a foreign key, `xl_alarm` one with no excuse, `xl_ok_stale` an excuse
   with no finding; `volatile_direct` and `volatile_head` are the heads a driver must not cool before the surface is
   quiescent (in the model one head, the js-effects rule over `not sx_eff_module`). It reads a mirrored relation as the channel; over the
@@ -226,7 +231,7 @@ The wall moves from memory to ingest scheduling.
   loses its base copy, until the why rests on base facts of lifted volumes and core. Then the lifted volumes are
   cooled by book again and the published facts made base again: the resident world is the one it was (the gate
   compares it byte for byte).
-- **The gate**, `npm run test:split` (scripts/surface_split.ts `--driver`): the 14 files in both orders, every volume's
+- **The gate**, `npm run test:split` (surface_split.ts (removed) `--driver`): the 14 files in both orders, every volume's
   facts at its last evaluation equal the whole world's (as for the hand loop), the resident world's 57 answers equal
   the whole world's, and every one of the 29 whys of a `side_effect_value` answer is a PROOF in the whole world: every
   fact it shows holds there, every axiom is a base fact there and none is a `[surface]` fact, every negation it shows

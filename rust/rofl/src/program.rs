@@ -1191,6 +1191,7 @@ struct Pending {
     declared: std::collections::HashSet<Sym>,
     closure_of: HashMap<Sym, Sym>,
     aliased: std::collections::HashSet<Sym>,
+    nearests: std::collections::HashSet<Sym>,
     batch_rules: std::collections::HashSet<Sym>,
     batch_facts: std::collections::HashSet<Sym>,
 }
@@ -1201,6 +1202,7 @@ impl Pending {
             declared: crate::structure::declared(&e.h, &e.v, &mut e.store),
             closure_of: crate::structure::closures(&e.h, &e.v, &mut e.store),
             aliased: crate::structure::aliased(&e.h, &e.v, &mut e.store),
+            nearests: crate::structure::nearests(&e.h, &e.v, &mut e.store),
             ..Default::default()
         }
     }
@@ -1252,6 +1254,12 @@ impl Pending {
         // a name an alias cannot take: another alias's, or a tree's closure
         let taken: std::collections::HashSet<Sym> = self.aliased.iter().chain(self.closure_of.keys()).copied().collect();
         match crate::structure::check_decl(&e.h, &e.v, pc, &self.declared, &taken, &concluded) {
+            Ok(()) if st.cond.is_some() => {
+                self.declared.insert(pc.head.rel);
+                self.nearests.insert(pc.head.rel);
+                self.lowered.extend(crate::structure::lower_nearest(&e.h, pc));
+                self.structs.push(pc.clone());
+            }
             Ok(()) if st.source.is_some() => {
                 self.aliased.insert(pc.head.rel);
                 self.batch_rules.insert(pc.head.rel);
@@ -1299,7 +1307,7 @@ impl Pending {
     fn clause(&mut self, e: &mut Eval, pc: &rofl_parse::Clause, who: Option<&str>, trusted: bool) {
         match to_clause(&mut e.h, &e.v, pc) {
             Ok(c) => {
-                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &self.closure_of, &self.aliased) {
+                if let Some(d) = crate::structure::check_closure_head(&e.h, &c, &self.closure_of, &self.aliased, &self.nearests) {
                     self.diags.push(d);
                     return;
                 }

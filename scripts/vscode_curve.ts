@@ -43,7 +43,7 @@ if (mode === 'split') {
       open = '';
       const ps = new Set([...line.matchAll(NODE)].map((m) => m[1]));
       if (ps.size === 0) { core.push(line); continue; }
-      if (ps.size > 1) throw new Error(`a base fact names two files, as scripts/surface_split.ts refuses: ${line.slice(0, 200)}`);
+      if (ps.size > 1) throw new Error(`a base fact names two files, which a volume per file cannot hold: ${line.slice(0, 200)}`);
       const p = [...ps][0];
       if (!byPrefix.has(p)) byPrefix.set(p, []);
       byPrefix.get(p)!.push(line);

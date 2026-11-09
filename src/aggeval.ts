@@ -32,6 +32,7 @@ import {
   type KeyAtom, rankCmp, keyDir, keyAtoms, sortedOfKeys, rankOf,
 } from './cell.ts';
 import { type Tags, readTags, tagsAsLattices, lowerTags, declRows } from './tag.ts';
+import { unfoldViews, renameApart } from './view.ts';
 import { Store, type FactStore, type FactRec, type PremRef, type Witness, type LatReg, type CellRec, type CellMember, factKey, premText,
   cellKeyText, cellValueText, sameKeys } from './store.ts';
 import { parseLiteral } from './parser.ts';
@@ -45,7 +46,7 @@ import {
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText, shown } from './shrug.ts';
 import { tarjan } from './scc.ts';
-import { readFunctions, readTrees } from './structure.ts';
+import { readFunctions, readTrees, declaredOf } from './structure.ts';
 import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
 import { checkWants } from './want.ts';
@@ -870,6 +871,8 @@ export class AggEval {
   private declRefused: string[] = [];
   tags: Tags = { byRel: new Map(), countRel: new Map(), countOf: new Map(), refused: [] };
   private tagChanged = new Set<string>();
+  viewReason: string[] = [];
+  private views = new Map<string, Clause[]>();
   private tagRefused: [string, string][] = [];
   private carried = new Map<string, string>();
   private nextRules = new Set<string>();
@@ -1148,8 +1151,12 @@ export class AggEval {
     const decls = declRows(this.store, V.lattice_decl, this.declRefused);
     this.tags = readTags(this.store, decls);
     const low = lowerTags(this.tags, decoded.rules);
-    const rules = low.rules;
-    this.tagChanged = low.changed;
+    const cells = new Set([...decls.map(([r]) => r), ...tagsAsLattices(this.tags).map(([r]) => r)]);
+    const unf = unfoldViews(declaredOf(this.store, 'view'), low.rules, (r) => cells.has(r), this.wellFounded);
+    const rules = unf.rules;
+    this.tagChanged = new Set([...low.changed, ...unf.changed]);
+    this.viewReason = unf.reasons;
+    this.views = unf.views;
     this.tagRefused = low.refused;
     this.latticeRows = [...decls, ...tagsAsLattices(this.tags)];
     this.lattices = new Map();
@@ -6885,6 +6892,19 @@ export class AggEval {
   /** Matches for one positive premise: store facts plus demand unfolding. */
   matchPremise(l: Lit, s: Subst, depth: number, only: Set<string> | null): [Subst, PremRef][] {
     if (l.temporal === 'init' && this.store.tick !== 0) return [];
+    // A QUESTION OF A VIEW (no rule reads one: each was unfolded) is each of its rules' bodies solved under it
+    const vw = this.views.get(l.rel);
+    if (vw !== undefined) {
+      const out: [Subst, PremRef][] = [];
+      for (const c0 of vw) {
+        const c = renameApart(c0);
+        let u: Subst | null = unify(l.persp, c.head.persp, s);
+        for (let k = 0; k < l.args.length && u !== null; k++) u = unify(l.args[k], c.head.args[k], u);
+        if (u === null || l.args.length !== c.head.args.length) continue;
+        for (const sol of this.solveBody(c.body, u, depth + 1, null, null)) out.push([sol.s, { t: 'bi', desc: `view ${l.rel}` }]);
+      }
+      return out;
+    }
     const drs = this.demandRels.find(([r]) => r === l.rel);
     // A CLOSED RELATION'S ANSWERS ARE ALL IN THE STORE at its fixpoint (its rules fire bottom-up and its news refires every reader): read, not unfolded
     // A CALL MET AGAIN INSIDE ITS OWN UNFOLDING would unfold without end. It reads the answers found so far, and the first call unfolds again

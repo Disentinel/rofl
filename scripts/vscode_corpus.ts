@@ -1,6 +1,6 @@
 // The facts of the side-effect question's corpus (examples/vscode/side-effects.rofl), as the notebook host makes them.
 //   fixture [BASE SUB OUT]          examples/vscode/mini -> examples/checks/vscode-mini-facts.rofl, mini + split ->
-//                                   examples/checks/vscode-split-facts.rofl (the surface-split gate, scripts/surface_split.ts);
+//                                   examples/checks/vscode-split-facts.rofl (world vscode_surface_split);
 //                                   or BASE/SUB -> OUT
 //   corpus ROOT OUT [N...]          vscode's subset S (src/vs/{base,platform,code,server} and extensions/, no tests), in
 //                                   that order and by path within it; OUT/files.lst, and OUT/facts-<N>.rofl holding the

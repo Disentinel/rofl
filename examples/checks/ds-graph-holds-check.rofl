@@ -1,0 +1,88 @@
+-- examples/checks/ds-graph-holds-check.rofl — ds_graph_holds and ds_graph_sealed: every reader of the declared graph's
+-- closure holds exactly the rows of its undeclared twin (`_u`).
+dsgc_diff(bb, A, B, x) :- dsg_bb(A, B), not dsg_bb_u(A, B).
+dsgc_diff(bb, A, B, x) :- dsg_bb_u(A, B), not dsg_bb(A, B).
+dsgc_diff(bf, A, B, x) :- dsg_bf(A, B), not dsg_bf_u(A, B).
+dsgc_diff(bf, A, B, x) :- dsg_bf_u(A, B), not dsg_bf(A, B).
+dsgc_diff(fb, A, B, x) :- dsg_fb(A, B), not dsg_fb_u(A, B).
+dsgc_diff(fb, A, B, x) :- dsg_fb_u(A, B), not dsg_fb(A, B).
+dsgc_diff(ff, A, B, x) :- dsg_ff(A, B), not dsg_ff_u(A, B).
+dsgc_diff(ff, A, B, x) :- dsg_ff_u(A, B), not dsg_ff(A, B).
+dsgc_diff(ffb, A, B, C) :- dsg_ffb(A, B, C), not dsg_ffb_u(A, B, C).
+dsgc_diff(ffb, A, B, C) :- dsg_ffb_u(A, B, C), not dsg_ffb(A, B, C).
+dsgc_diff(neg, A, B, x) :- dsg_neg(A, B), not dsg_neg_u(A, B).
+dsgc_diff(neg, A, B, x) :- dsg_neg_u(A, B), not dsg_neg(A, B).
+dsgc_diff(cnt, A, B, x) :- dsg_cnt(A, B), not dsg_cnt_u(A, B).
+dsgc_diff(cnt, A, B, x) :- dsg_cnt_u(A, B), not dsg_cnt(A, B).
+dsgc_diff(up, A, B, x) :- dsg_up(A, B), not dsg_up_u(A, B).
+dsgc_diff(up, A, B, x) :- dsg_up_u(A, B), not dsg_up(A, B).
+dsgc_diff(both, A, B, x) :- dsg_both(A, B), not dsg_both_u(A, B).
+dsgc_diff(both, A, B, x) :- dsg_both_u(A, B), not dsg_both(A, B).
+dsgc_diff(feed, A, x, x) :- dsg_feed(A), not dsg_feed_u(A).
+dsgc_diff(feed, A, x, x) :- dsg_feed_u(A), not dsg_feed(A).
+dsgc_diff(feed2, A, x, x) :- dsg_feed2(A), not dsg_feed2_u(A).
+dsgc_diff(feed2, A, x, x) :- dsg_feed2_u(A), not dsg_feed2(A).
+dsgc_diff(rec, A, B, x) :- dsg_rec(A, B), not dsg_rec_u(A, B).
+dsgc_diff(rec, A, B, x) :- dsg_rec_u(A, B), not dsg_rec(A, B).
+dsgc_diff(deep, A, x, x) :- dsg_deep(A), not dsg_deep_u(A).
+dsgc_diff(deep, A, x, x) :- dsg_deep_u(A), not dsg_deep(A).
+dsgc_diff(lone, A, x, x) :- dsg_lone(A), not dsg_lone_u(A).
+dsgc_diff(lone, A, x, x) :- dsg_lone_u(A), not dsg_lone(A).
+dsgc_diff(other, A, B, x) :- dsg_other(A, B), not dsg_other_u(A, B).
+dsgc_diff(other, A, B, x) :- dsg_other_u(A, B), not dsg_other(A, B).
+dsgc_diff(cross, A, B, x) :- dsg_cross(A, B), not dsg_cross_u(A, B).
+dsgc_diff(cross, A, B, x) :- dsg_cross_u(A, B), not dsg_cross(A, B).
+dsgc_diff(within_code, A, B, x) :- dsg_within[code](A, B), not dsg_within_u[code](A, B).
+dsgc_diff(in_code, A, B, x) :- dsg_in[code](A, B), not dsg_in_u[code](A, B).
+dsgc_diff(within_code, A, B, x) :- dsg_within_u[code](A, B), not dsg_within[code](A, B).
+dsgc_diff(in_code, A, B, x) :- dsg_in_u[code](A, B), not dsg_in[code](A, B).
+dsgc_diff(within_other, A, B, x) :- dsg_within[other](A, B), not dsg_within_u[other](A, B).
+dsgc_diff(in_other, A, B, x) :- dsg_in[other](A, B), not dsg_in_u[other](A, B).
+dsgc_diff(within_other, A, B, x) :- dsg_within_u[other](A, B), not dsg_within[other](A, B).
+dsgc_diff(in_other, A, B, x) :- dsg_in_u[other](A, B), not dsg_in[other](A, B).
+alarm(dsgc_diff).
+-- the rows each must hold
+dsgc_lost(within) :- not dsg_within[code](r1, c1).
+dsgc_lost(within) :- not dsg_within[code](r1, e1).
+dsgc_lost(within) :- not dsg_within[code](r1, c5).
+dsgc_lost(within) :- not dsg_within[code](r2, x3).
+dsgc_lost(within) :- not dsg_within[other](o1, o3).
+dsgc_lost(bb) :- not dsg_bb(r1, c1).
+dsgc_lost(bf) :- not dsg_bf(r1, e1).
+dsgc_lost(fb) :- not dsg_fb(c1, a1).
+dsgc_lost(ff) :- not dsg_ff(a2, c3).
+dsgc_lost(ffb) :- not dsg_ffb(other, o1, o3).
+dsgc_lost(neg) :- not dsg_neg(a2, c1).
+dsgc_lost(cnt) :- not dsg_cnt(r2, 3).
+dsgc_lost(up) :- not dsg_up(c1, r1).
+dsgc_lost(late) :- not dsg_bf(r1, f1).
+dsgc_lost(late) :- not dsg_within[code](a1, f1).
+dsgc_lost(both) :- not dsg_both(r1, c1).
+dsgc_lost(feed2) :- not dsg_feed2(e1).
+dsgc_lost(rec) :- not dsg_rec(c1, c1).
+dsgc_lost(deep) :- not dsg_deep(c1).
+dsgc_lost(lone) :- not dsg_lone(r3).
+dsgc_lost(other) :- not dsg_other(o1, o3).
+alarm(dsgc_lost).
+-- a node is no ancestor of itself, and the other book holds none of this book's rows
+dsgc_strict(x) :- dsg_within[code](N, N), dsg_lone(N).
+dsgc_lost(cycle) :- not dsg_within[code](r1, r1).
+dsgc_lost(cycle) :- not dsg_within[code](c5, c5).
+dsgc_lost(cycle) :- not dsg_within[code](b2, b1).
+dsgc_lost(cycle) :- not dsg_within[other](a2, a2).
+dsgc_strict(x) :- dsg_within[code](o1, _).
+dsgc_strict(x) :- dsg_within[other](r1, _).
+alarm(dsgc_strict).
+-- the rows are in the state the engine prints, listed when the engine stores none of them
+-- expect-row: dsg_within[code](r1,c1) tick drv
+-- expect-row: dsg_within[code](r1,f1) tick drv
+-- expect-row: dsg_within[other](o1,a2) tick drv
+-- expect-no-row: dsg_within[code](c1,c1)
+-- counts: 41 rows of the closure in the code book, 6 in the other
+dsgc_code(N) :- N is count(A, D : dsg_within[code](A, D)).
+dsgc_other(N) :- N is count(A, D : dsg_within[other](A, D)).
+dsgc_rows_wrong() :- dsgc_code(N), N != 68.
+dsgc_rows_wrong() :- dsgc_other(N), N != 16.
+dsgc_rows_wrong() :- not dsgc_code(_).
+dsgc_rows_wrong() :- not dsgc_other(_).
+alarm(dsgc_rows_wrong).

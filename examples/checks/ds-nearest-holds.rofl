@@ -1,0 +1,74 @@
+-- examples/checks/ds-nearest-holds.rofl — A DECLARED NEAREST, the data of the ds_nearest_holds and ds_nearest_sealed
+-- worlds (docs/data-structures.md): `nearest R(A, D) of E(A, D) where S(A)` holds where A is the nearest strict
+-- ancestor of D along a declared tree that S holds of. A declaration changes no fact: the rows the Rust engine
+-- answers by walking the tree and the rows the lowered rules derive hold those of a twin (`_u`) written by hand,
+-- reader by reader.
+
+edb(dsn_link).
+edb(dsn_node).
+edb(dsn_cand).
+edb(dsn_pick).
+edb(dsn_seed).
+edb(dsn_kind).
+edb(dsn_off).
+edb(dsn_link2).
+tree dsn_in(P, C).
+dsn_in[ast](r1, a1). dsn_in[ast](r1, a2). dsn_in[ast](a1, b1). dsn_in[ast](a1, b2).
+dsn_in[ast](b1, c1). dsn_in[ast](c1, d1). dsn_in[ast](d1, e1). dsn_in[ast](a2, b3).
+dsn_in[ast](r2, x1). dsn_in[ast](x1, x2).
+-- an edge another rule concludes, through two levels, and one a negation concludes
+dsn_link(x2, x3). dsn_link(b3, c3). dsn_link(c3, d3).
+dsn_lv1(P, C) :- dsn_link(P, C).
+dsn_in[ast](P, C) :- dsn_lv1(P, C).
+dsn_link2(b2, f1). dsn_link2(b2, f2). dsn_off(b2, f2).
+dsn_in[ast](P, C) :- dsn_link2(P, C), not dsn_off(P, C), dsn_kind(P, _).
+-- what an ancestor is: a base fact, a rule, and one through a negation
+dsn_kind(r1, fn). dsn_kind(b1, fn). dsn_kind(d1, fn). dsn_kind(r2, fn). dsn_kind(b2, block). dsn_kind(c3, fn).
+dsn_fn[code](N) :- dsn_kind(N, fn).
+dsn_scope[code](N) :- dsn_kind(N, _), not dsn_fn[code](N).
+dsn_scope[code](r1).
+nearest dsn_owner[flow](F, X) of dsn_in[ast](F, X) where dsn_fn[code](F).
+nearest dsn_block[flow](S, X) of dsn_in[ast](S, X) where dsn_scope[code](S).
+dsn_node(r1). dsn_node(r2). dsn_node(a1). dsn_node(a2). dsn_node(b1). dsn_node(b2). dsn_node(b3). dsn_node(c1).
+dsn_node(c3). dsn_node(d1). dsn_node(d3). dsn_node(e1). dsn_node(f1). dsn_node(x1). dsn_node(x2). dsn_node(x3). dsn_node(lone).
+dsn_cand(r1, a1). dsn_cand(r1, c1). dsn_cand(b1, c1). dsn_cand(b1, e1). dsn_cand(d1, e1). dsn_cand(r2, x3). dsn_cand(r1, f1).
+dsn_pick(r1). dsn_pick(b1). dsn_pick(d1). dsn_pick(e1). dsn_pick(c3). dsn_pick(nowhere).
+dsn_seed(e1, e1). dsn_seed(x3, x3).
+
+-- THE READERS, each declared (`dsn_*`) and written over the twin (`dsn_*_u`)
+dsn_bb(A, D)    :- dsn_cand(A, D), dsn_owner[flow](A, D).
+dsn_bf(A, D)    :- dsn_pick(A), dsn_owner[flow](A, D).
+dsn_fb(D, A)    :- dsn_pick(D), dsn_owner[flow](A, D).
+dsn_ff(A, D)    :- dsn_owner[flow](A, D).
+dsn_neg(A, D)   :- dsn_cand(A, D), not dsn_owner[flow](A, D).
+dsn_cnt(A, N)   :- dsn_pick(A), N is count(D : dsn_owner[flow](A, D)).
+dsn_rec(X, Y)   :- dsn_seed(X, Y).
+dsn_rec(X, Z)   :- dsn_rec(X, Y), dsn_owner[flow](Z, Y).
+dsn_lone(N)     :- dsn_node(N), not dsn_owner[flow](_, N), not dsn_owner[flow](N, _).
+dsn_two(X, F, S) :- dsn_owner[flow](F, X), dsn_block[flow](S, X).
+dsn_feed(D)     :- dsn_bf(A, _), dsn_owner[flow](A, D).
+
+dsn_in_u[ast](r1, a1). dsn_in_u[ast](r1, a2). dsn_in_u[ast](a1, b1). dsn_in_u[ast](a1, b2).
+dsn_in_u[ast](b1, c1). dsn_in_u[ast](c1, d1). dsn_in_u[ast](d1, e1). dsn_in_u[ast](a2, b3).
+dsn_in_u[ast](r2, x1). dsn_in_u[ast](x1, x2).
+dsn_lv1_u(P, C) :- dsn_link(P, C).
+dsn_in_u[ast](P, C) :- dsn_lv1_u(P, C).
+dsn_in_u[ast](P, C) :- dsn_link2(P, C), not dsn_off(P, C), dsn_kind(P, _).
+dsn_fn_u[code](N) :- dsn_kind(N, fn).
+dsn_scope_u[code](N) :- dsn_kind(N, _), not dsn_fn_u[code](N).
+dsn_scope_u[code](r1).
+dsn_owner_u[flow](F, X) :- dsn_in_u[ast](F, X), dsn_fn_u[code](F).
+dsn_owner_u[flow](F, X) :- dsn_owner_u[flow](F, P), not dsn_fn_u[code](P), dsn_in_u[ast](P, X).
+dsn_block_u[flow](S, X) :- dsn_in_u[ast](S, X), dsn_scope_u[code](S).
+dsn_block_u[flow](S, X) :- dsn_block_u[flow](S, P), not dsn_scope_u[code](P), dsn_in_u[ast](P, X).
+dsn_bb_u(A, D)    :- dsn_cand(A, D), dsn_owner_u[flow](A, D).
+dsn_bf_u(A, D)    :- dsn_pick(A), dsn_owner_u[flow](A, D).
+dsn_fb_u(D, A)    :- dsn_pick(D), dsn_owner_u[flow](A, D).
+dsn_ff_u(A, D)    :- dsn_owner_u[flow](A, D).
+dsn_neg_u(A, D)   :- dsn_cand(A, D), not dsn_owner_u[flow](A, D).
+dsn_cnt_u(A, N)   :- dsn_pick(A), N is count(D : dsn_owner_u[flow](A, D)).
+dsn_rec_u(X, Y)   :- dsn_seed(X, Y).
+dsn_rec_u(X, Z)   :- dsn_rec_u(X, Y), dsn_owner_u[flow](Z, Y).
+dsn_lone_u(N)     :- dsn_node(N), not dsn_owner_u[flow](_, N), not dsn_owner_u[flow](N, _).
+dsn_two_u(X, F, S) :- dsn_owner_u[flow](F, X), dsn_block_u[flow](S, X).
+dsn_feed_u(D)     :- dsn_bf_u(A, _), dsn_owner_u[flow](A, D).

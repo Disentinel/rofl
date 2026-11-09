@@ -522,7 +522,7 @@ impl Server {
             _ => json!({ "firings": match (facts.get(&key), row) {
                 (Some(f), _) => rofl::seed::firings_json(&e.h, &e.store, *f),
                 (None, Some((r, b, args))) if args.len() == 2 => e.store.virtual_firing(&e.h, r, b, args[0], args[1]).map(|(rule, tick, prems)| {
-                    vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|k| json!({ "t": "fact", "key": k })).collect::<Vec<_>>() })]
+                    vec![json!({ "ruleId": e.h.name(rule), "tick": tick, "prems": prems.iter().map(|(t, k)| json!({ "t": t, "key": k })).collect::<Vec<_>>() })]
                 }).unwrap_or_default(),
                 _ => Vec::new(),
             } }),

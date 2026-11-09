@@ -1,0 +1,2 @@
+-- examples/checks/ds-nearest-sealed.rofl — the ds_nearest_sealed world keeps no witness (`sealed(provenance)`); the files of ds_nearest_holds are its data.
+sealed(provenance).

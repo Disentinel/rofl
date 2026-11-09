@@ -1162,16 +1162,71 @@ pub struct VirtualRel {
     pub base_rule: Sym,
     pub step_rule: Sym,
     pub forests: Rc<[(Sym, Rc<crate::forest::Forest>)]>,
+    /// a declared `nearest`: the book of its edges, and what the ancestor is, in its book
+    pub near: Option<NearSpec>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct NearSpec {
+    pub rbook: Sym,
+    pub ebook: Sym,
+    pub cond: Sym,
+    pub sbook: Sym,
+}
+
+/// A premise of a row's firing: a fact, the row above it, a negation.
+pub enum VPrem {
+    Fact(Sym, Sym, Vec<Term>),
+    Row(Term, Term),
+    Neg(Sym, Sym, Term),
 }
 
 impl VirtualRel {
+    /// The firing of the row `(a, d)` of `book`, its premises in the order of the lowered rule's body
+    /// (src/structure.ts): a closure's edge into `d`, after the row above in a step; a nearest's edge and what its
+    /// ancestor is, or in a step the row above, the parent's not being it, and the edge.
+    pub fn firing_prems(&self, book: Sym, a: Term, d: Term) -> Option<(Sym, Vec<VPrem>)> {
+        let (rule, p, step) = self.firing(book, a, d)?;
+        let (ebook, near) = match self.near {
+            Some(n) => (n.ebook, Some(n)),
+            None => (book, None),
+        };
+        let edge = VPrem::Fact(self.edge, ebook, vec![p, d]);
+        Some((rule, match (step, near) {
+            (false, None) => vec![edge],
+            (true, None) => vec![VPrem::Row(a, p), edge],
+            (false, Some(n)) => vec![edge, VPrem::Fact(n.cond, n.sbook, vec![a])],
+            (true, Some(n)) => vec![VPrem::Row(a, p), VPrem::Neg(n.cond, n.sbook, p), edge],
+        }))
+    }
+
+    /// A premise as a witness spells it.
+    pub fn prem_key(&self, h: &Heap, book: Sym, p: &VPrem) -> String {
+        let mut k = String::new();
+        match p {
+            VPrem::Fact(r, b, args) => {
+                k.push_str("fact:");
+                write_fact_key(h, *r, *b, args, &mut k);
+            }
+            VPrem::Row(a, p) => {
+                k.push_str("fact:");
+                write_fact_key(h, self.rel, book, &[*a, *p], &mut k);
+            }
+            VPrem::Neg(r, b, x) => {
+                k.push_str("neg:");
+                write_fact_key(h, *r, *b, &[*x], &mut k);
+            }
+        }
+        k
+    }
+
     /// The firing of the row `(a, d)` of `book`: its rule, and the parent of `d` when it is not `a`.
     pub fn firing(&self, book: Sym, a: Term, d: Term) -> Option<(Sym, Term, bool)> {
         let f = &self.forests.iter().find(|(b, _)| *b == book)?.1;
         if !f.is_ancestor(a, d) {
             return None;
         }
-        let p = f.parent_of(d)?;
+        let p = f.step_of(a, d)?;
         Some(if p == a { (self.base_rule, p, false) } else { (self.step_rule, p, true) })
     }
 }
@@ -3537,16 +3592,31 @@ impl Store {
         if !f.is_ancestor(a, d) {
             return 0;
         }
-        let mut edges = Vec::new();
+        // down the chain from the ancestor, each firing is 1 + the higher of the row above and its facts
+        let mut chain: Vec<Vec<FactId>> = Vec::new();
         let mut c = d;
-        while c != a {
-            let Some(p) = f.parent_of(c) else { return 0 };
-            let Some(e) = self.get(v.edge, book, &[p, c]) else { return 0 };
-            edges.push(e);
-            c = p;
+        loop {
+            let Some((_, ps)) = v.firing_prems(book, a, c) else { return 0 };
+            let (mut facts, mut up) = (Vec::new(), None);
+            for p in ps {
+                match p {
+                    VPrem::Fact(r, b, args) => match self.get(r, b, &args) {
+                        Some(e) => facts.push(e),
+                        None => return 0,
+                    },
+                    VPrem::Row(_, p) => up = Some(p),
+                    VPrem::Neg(..) => {}
+                }
+            }
+            chain.push(facts);
+            match up {
+                Some(p) => c = p,
+                None => break,
+            }
         }
-        let _ = self.heights(&edges, memo);
-        edges.iter().rev().fold(0, |h, e| h.max(memo.get(e).copied().unwrap_or(0)) + 1)
+        let all: Vec<FactId> = chain.concat();
+        let _ = self.heights(&all, memo);
+        chain.iter().rev().fold(0, |h, fs| fs.iter().fold(h, |m, e| m.max(memo.get(e).copied().unwrap_or(0))) + 1)
     }
 
     /// The height of a premise: a fact's from `memo` (computed), a cell's own, a row of a tree's, a negation and a builtin 0.
@@ -3571,22 +3641,18 @@ impl Store {
     }
 
     /// The one firing of such a row: the rule, the tick and the premises' keys in the order of the rule's body (src/structure.ts).
-    pub fn virtual_firing(&self, h: &Heap, rel: Sym, book: Sym, a: Term, d: Term) -> Option<(Sym, u32, Vec<String>)> {
+    pub fn virtual_firing(&self, h: &Heap, rel: Sym, book: Sym, a: Term, d: Term) -> Option<(Sym, u32, Vec<(String, String)>)> {
         if !self.vwit {
             return None;
         }
         let v = self.listed().find(|v| v.rel == rel)?;
-        let (rule, p, step) = v.firing(book, a, d)?;
-        let mut edge = String::new();
-        write_fact_key(h, v.edge, book, &[p, d], &mut edge);
-        let mut prems = Vec::new();
-        if step {
-            let mut up = String::new();
-            write_fact_key(h, v.rel, book, &[a, p], &mut up);
-            prems.push(up);
-        }
-        prems.push(edge);
-        Some((rule, self.tick, prems))
+        let (rule, ps) = v.firing_prems(book, a, d)?;
+        let prems = ps.iter().map(|p| {
+            let k = v.prem_key(h, book, p);
+            let (t, key) = k.split_once(':').expect("a spelled premise");
+            (t.to_string(), key.to_string())
+        });
+        Some((rule, self.tick, prems.collect()))
     }
 
     /// The keys of those rows, and of the rows of the aliases.
@@ -3627,11 +3693,16 @@ impl Store {
         }
         // THE ROWS OF A RELATION ANSWERED FROM A STRUCTURE, generated: each is a derived fact of its tick, as the
         // rules it stands for would have made it, with its one firing where the world keeps witnesses
+        // a graph's row has a firing for each way into its end, as the lowered rules fire
+        let mut support: HashMap<String, u32> = HashMap::new();
         for v in self.listed() {
             for (book, f) in v.forests.iter() {
                 f.each_pair(|a, d| {
                     let mut k = String::new();
                     write_fact_key(h, v.rel, *book, &[a, d], &mut k);
+                    if f.is_graph() {
+                        support.insert(k.clone(), f.firing_count(a, d));
+                    }
                     keyed.push((k, None));
                 });
             }
@@ -3651,7 +3722,8 @@ impl Store {
             let Some(id) = id else {
                 out.push('\n');
                 out.push_str(k);
-                out.push_str(if self.vwit { " tick drv support=1" } else { " tick drv support=0" });
+                let n = if self.vwit { support.get(k).copied().unwrap_or(1) } else { 0 };
+                out.push_str(&format!(" tick drv support={n}"));
                 continue;
             };
             let r = &self.facts.rec(*id);
@@ -3700,14 +3772,8 @@ impl Store {
                 Wk::Fact(id) => id,
                 Wk::Row(ci, book, a, d) => {
                     let v = &self.virtuals[*ci];
-                    let Some((rule, p, step)) = v.firing(*book, *a, *d) else { continue };
-                    let mut prems = vec![String::from("fact:")];
-                    write_fact_key(h, v.edge, *book, &[p, *d], &mut prems[0]);
-                    if step {
-                        let mut up = String::from("fact:");
-                        write_fact_key(h, v.rel, *book, &[*a, p], &mut up);
-                        prems.push(up);
-                    }
+                    let Some((rule, ps)) = v.firing_prems(*book, *a, *d) else { continue };
+                    let mut prems: Vec<String> = ps.iter().map(|p| v.prem_key(h, *book, p)).collect();
                     prems.sort_by(|x, y| cmp_js(x, y));
                     out.push_str(&format!("\nwit {k} <- {}@{} [{}]", h.name(rule), self.tick, prems.join("; ")));
                     continue;
@@ -3805,14 +3871,12 @@ impl Store {
                 f.each_pair(|a, d| {
                     let mut k = String::new();
                     write_fact_key(h, v.rel, *book, &[a, d], &mut k);
-                    if let Some((rule, p, step)) = v.firing(*book, a, d).filter(|_| self.vwit) {
+                    if let Some((rule, ps)) = v.firing_prems(*book, a, d).filter(|_| self.vwit) {
                         let mut s = String::from(h.name(rule));
-                        if step {
-                            s.push_str("|fact:");
-                            write_fact_key(h, v.rel, *book, &[a, p], &mut s);
+                        for p in &ps {
+                            s.push('|');
+                            s.push_str(&v.prem_key(h, *book, p));
                         }
-                        s.push_str("|fact:");
-                        write_fact_key(h, v.edge, *book, &[p, d], &mut s);
                         vsig.insert(k.clone(), s);
                     }
                     keyed.push((k, None));

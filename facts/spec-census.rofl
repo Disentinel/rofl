@@ -341,6 +341,7 @@ check[checks]("facts/goldens.rofl", "atlas-launch", world).
 check[checks]("facts/goldens.rofl", "blam", world).
 check[checks]("facts/goldens.rofl", "bleep", world).
 check[checks]("facts/goldens.rofl", "ci", world).
+check[checks]("facts/goldens.rofl", "cognitive-tours", world).
 check[checks]("facts/goldens.rofl", "counter", world).
 check[checks]("facts/goldens.rofl", "cram", world).
 check[checks]("facts/goldens.rofl", "critpath", world).
@@ -880,6 +881,10 @@ check[checks]("facts/goldens.rofl", "ds_function_retract", world).
 check[checks]("facts/goldens.rofl", "ds_function_syntax", world).
 check[checks]("facts/goldens.rofl", "ds_function_tick", world).
 check[checks]("facts/goldens.rofl", "ds_function_wall", world).
+check[checks]("facts/goldens.rofl", "ds_graph_holds", world).
+check[checks]("facts/goldens.rofl", "ds_graph_sealed", world).
+check[checks]("facts/goldens.rofl", "ds_nearest_holds", world).
+check[checks]("facts/goldens.rofl", "ds_nearest_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_demand_book", world).
 check[checks]("facts/goldens.rofl", "ds_tree_demand_book_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_demand_edge", world).
@@ -958,7 +963,6 @@ check[checks]("facts/goldens.rofl", "strata_boot_alone", world).
 check[checks]("facts/goldens.rofl", "strata_boot_canon", world).
 check[checks]("facts/goldens.rofl", "strata_unranked_negation", world).
 check[checks]("facts/goldens.rofl", "sub_history_beside_lattice", world).
-check[checks]("facts/goldens.rofl", "surface_model", world).
 check[checks]("facts/goldens.rofl", "unify_occurs", world).
 check[checks]("facts/goldens.rofl", "unstratifiable", world).
 check[checks]("facts/goldens.rofl", "vscode_side_effects", world).

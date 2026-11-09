@@ -1,5 +1,4 @@
 // The surface-split driver's checks of the program and of the keys (runtime/split.ts), on hand-written reflections.
-// The driver itself, with the engine, is scripts/surface_split.ts --driver (npm run test:split).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { argsOf, checkKeys, keyOf, keysOf, phaseFaults, phases, programFrom } from '../runtime/split.ts';

@@ -1,0 +1,86 @@
+-- examples/checks/ds-graph-holds.rofl — A DECLARED GRAPH WITH ITS CLOSURE, the data of the ds_graph_holds and
+-- ds_graph_sealed worlds (docs/data-structures.md): the readers of ds-tree-holds.rofl over a graph with cycles and
+-- nodes with two parents. A declaration changes no fact: the closure the Rust engine answers by walking the graph
+-- and the closure the lowered rules derive hold the rows of a twin (`_u`) written by hand, reader by reader.
+
+edb(dsg_link).
+edb(dsg_node).
+edb(dsg_cand).
+edb(dsg_pick).
+edb(dsg_bound).
+edb(dsg_seed).
+edb(dsg_hop).
+graph dsg_in(P, C) closure dsg_within.
+dsg_in[code](r1, a1). dsg_in[code](r1, a2). dsg_in[code](a1, b1). dsg_in[code](a1, b2).
+dsg_in[code](b1, c1). dsg_in[code](a2, b3).
+dsg_in[code](r2, x1). dsg_in[code](x1, x2).
+dsg_in[other](o1, o2). dsg_in[other](o2, o3). dsg_in[other](o3, a2).
+dsg_link(x2, x3). dsg_link(c1, d1). dsg_link(d1, e1). dsg_link(b3, c3).
+dsg_lv1(P, C) :- dsg_link(P, C).
+dsg_lv2(P, C) :- dsg_lv1(P, C).
+dsg_in[code](P, C) :- dsg_lv2(P, C).
+dsg_hop(c3, c4). dsg_hop(c4, c5).
+dsg_in[code](P, C) :- dsg_in[code](Q, P), dsg_hop(P, C).
+-- an edge a negation concludes: it arrives at a level above the rules that read the closure fire at first
+edb(dsg_link2).
+edb(dsg_off).
+dsg_link2(b2, f1). dsg_off(b2, z9).
+dsg_in[code](P, C) :- dsg_link2(P, C), not dsg_off(P, C).
+dsg_node(r1). dsg_node(r2). dsg_node(r3). dsg_node(a1). dsg_node(a2). dsg_node(b1). dsg_node(b2). dsg_node(b3).
+dsg_node(c1). dsg_node(c3). dsg_node(c4). dsg_node(c5). dsg_node(d1). dsg_node(e1). dsg_node(x1). dsg_node(x2). dsg_node(x3).
+dsg_cand(r1, c1). dsg_cand(a1, c1). dsg_cand(b1, c1). dsg_cand(c1, c1). dsg_cand(a2, c1). dsg_cand(r2, c1).
+dsg_cand(r1, e1). dsg_cand(a1, e1). dsg_cand(r1, c5). dsg_cand(r2, x3). dsg_cand(x1, x3). dsg_cand(x3, r2). dsg_cand(r3, r3).
+dsg_pick(r1). dsg_pick(a1). dsg_pick(c1). dsg_pick(e1). dsg_pick(r2). dsg_pick(r3). dsg_pick(nowhere).
+dsg_bound(a1). dsg_bound(r1).
+dsg_seed(c1, c1). dsg_seed(x2, x2).
+
+-- THE READERS, each declared (`dsg_*`) and written over the twin (`dsg_*_u`)
+dsg_bb(A, D)    :- dsg_cand(A, D), dsg_within[code](A, D).
+dsg_bf(A, D)    :- dsg_pick(A), dsg_within[code](A, D).
+dsg_fb(D, A)    :- dsg_pick(D), dsg_within[code](A, D).
+dsg_ff(A, D)    :- dsg_within[code](A, D).
+dsg_ffb(B, A, D) :- dsg_within[B](A, D).
+dsg_neg(A, D)   :- dsg_cand(A, D), not dsg_within[code](A, D).
+dsg_cnt(A, N)   :- dsg_pick(A), N is count(D : dsg_within[code](A, D)).
+dsg_up(D, A)    :- dsg_pick(D), dsg_within[code](A, D), dsg_bound(B), dsg_within[code](A, B).
+dsg_both(A, D)  :- dsg_within[code](A, D), dsg_in[code](A, X), dsg_within[code](X, D).
+dsg_feed(A)     :- dsg_bf(A, _).
+dsg_feed2(D)    :- dsg_feed(A), dsg_within[code](A, D).
+dsg_rec(X, Y)   :- dsg_seed(X, Y).
+dsg_rec(X, Z)   :- dsg_rec(X, Y), dsg_within[code](Y, Z).
+dsg_deep(N)     :- dsg_node(N), dsg_within[code](r1, N), dsg_within[code](a1, N).
+dsg_lone(N)     :- dsg_node(N), not dsg_within[code](_, N), not dsg_within[code](N, _).
+dsg_other(A, D) :- dsg_within[other](A, D).
+dsg_cross(A, D) :- dsg_within[code](A, D), dsg_in[other](A, _).
+
+dsg_in_u[code](r1, a1). dsg_in_u[code](r1, a2). dsg_in_u[code](a1, b1). dsg_in_u[code](a1, b2).
+dsg_in_u[code](b1, c1). dsg_in_u[code](a2, b3).
+dsg_in_u[code](r2, x1). dsg_in_u[code](x1, x2).
+dsg_in_u[other](o1, o2). dsg_in_u[other](o2, o3). dsg_in_u[other](o3, a2).
+dsg_lv1_u(P, C) :- dsg_link(P, C).
+dsg_lv2_u(P, C) :- dsg_lv1_u(P, C).
+dsg_in_u[code](P, C) :- dsg_lv2_u(P, C).
+dsg_in_u[code](P, C) :- dsg_in_u[code](Q, P), dsg_hop(P, C).
+dsg_in_u[code](P, C) :- dsg_link2(P, C), not dsg_off(P, C).
+dsg_within_u[B](P, C) :- dsg_in_u[B](P, C).
+dsg_within_u[B](P, D) :- dsg_within_u[B](P, X), dsg_in_u[B](X, D).
+dsg_bb_u(A, D)    :- dsg_cand(A, D), dsg_within_u[code](A, D).
+dsg_bf_u(A, D)    :- dsg_pick(A), dsg_within_u[code](A, D).
+dsg_fb_u(D, A)    :- dsg_pick(D), dsg_within_u[code](A, D).
+dsg_ff_u(A, D)    :- dsg_within_u[code](A, D).
+dsg_ffb_u(B, A, D) :- dsg_within_u[B](A, D).
+dsg_neg_u(A, D)   :- dsg_cand(A, D), not dsg_within_u[code](A, D).
+dsg_cnt_u(A, N)   :- dsg_pick(A), N is count(D : dsg_within_u[code](A, D)).
+dsg_up_u(D, A)    :- dsg_pick(D), dsg_within_u[code](A, D), dsg_bound(B), dsg_within_u[code](A, B).
+dsg_both_u(A, D)  :- dsg_within_u[code](A, D), dsg_in_u[code](A, X), dsg_within_u[code](X, D).
+dsg_feed_u(A)     :- dsg_bf_u(A, _).
+dsg_feed2_u(D)    :- dsg_feed_u(A), dsg_within_u[code](A, D).
+dsg_rec_u(X, Y)   :- dsg_seed(X, Y).
+dsg_rec_u(X, Z)   :- dsg_rec_u(X, Y), dsg_within_u[code](Y, Z).
+dsg_deep_u(N)     :- dsg_node(N), dsg_within_u[code](r1, N), dsg_within_u[code](a1, N).
+dsg_lone_u(N)     :- dsg_node(N), not dsg_within_u[code](_, N), not dsg_within_u[code](N, _).
+dsg_other_u(A, D) :- dsg_within_u[other](A, D).
+dsg_cross_u(A, D) :- dsg_within_u[code](A, D), dsg_in_u[other](A, _).
+-- CYCLES: a loop through r1, a1 and b2, one node with an edge to itself, two edges into one node
+dsg_in[code](b2, r1). dsg_in[code](c5, c5). dsg_in[code](x3, x1). dsg_in[other](a2, o1).
+dsg_in_u[code](b2, r1). dsg_in_u[code](c5, c5). dsg_in_u[code](x3, x1). dsg_in_u[other](a2, o1).

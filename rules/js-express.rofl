@@ -31,8 +31,6 @@ ex_router_fn[flow](G) :- member_node_v[flow](G), selects[flow](G, "Router"), obj
 ex_router_fn[flow](G) :- may_be_node[flow](G, Sp), ex_import[flow](Sp, "Router").
 ex_import[flow](Sp, K) :- external_import[code](Sp, _, S, _), express_module(S),
                           import_ident_key[code](Sp, K).
-sx_ex_import[surface](Sp, K) :- sx_esc[surface](Sp), ex_import[flow](Sp, K).
-ex_import[flow](Sp, K) :- sx_ex_import[surface](Sp, K).
 ex_app[flow](C) :- call[value](C), callee[value](C, G),
                    may_be_node[flow](G, S), external_value[flow](S, S), express_module(S).
 ex_router[flow](C) :- call[value](C), callee[value](C, G), ex_router_fn[flow](G).
@@ -65,8 +63,6 @@ keyed_obj[flow](Y, express_app) :- sx_ex_app[surface](Y).
 -- =========================================================================
 -- 3. ACROSS FILES. A router is made in one file and mounted in another; what
 -- a file registers on one is published, and the mounts compose in [surface].
-sx_ex_target[surface](Y) :- sx_esc[surface](Y), ex_target[flow](Y).
-ex_target[flow](Y) :- sx_ex_target[surface](Y).
 sx_ex_app[surface](Y) :- ex_app[flow](Y).
 sx_ex_route[surface](Y, M, V, H, R) :- ex_route[flow](Y, M, V, H, R).
 sx_ex_mount[surface](Y, V, Y2) :- ex_mount[flow](Y, V, Y2).

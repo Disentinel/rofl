@@ -27,6 +27,7 @@ mod labeled;
 mod joinplan;
 mod vclosure;
 mod alias;
+mod view;
 mod prov;
 mod resume;
 mod cost;
@@ -736,6 +737,9 @@ pub struct Eval {
     /// The rules the aliases read from their sources lower to (engine/alias.rs), not fired: before they are planned,
     /// and planned; each rewritten reader's body as written; why an alias is rows; the dropped columns named so far.
     alias_drules: Vec<DRule>,
+    view_drules: Vec<DRule>,
+    view_rels: HashSet<Sym>,
+    pub view_reason: Vec<String>,
     alias_rules: Vec<Rc<ERule>>,
     alias_orig: HashMap<Sym, Clause>,
     pub alias_reason: Vec<String>,
@@ -1114,6 +1118,15 @@ pub struct VClosureState {
     /// Forests built, and rows read from them, by this engine.
     pub builds: u64,
     pub rows_read: u64,
+    /// A delta moved a nearest's rows the way it cannot follow: an addition took one out, a retraction put one in.
+    near_moved: bool,
+    /// the forests of a nearest each reader last fired over: what its news are counted against
+    reader_forest: HashMap<(Sym, usize), Rc<[(Sym, Rc<crate::forest::Forest>)]>>,
+    /// the closures a rule reads under a negation, and each one's forests as a delta found them (None: not built)
+    neg_read: HashSet<usize>,
+    base: HashMap<usize, Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
+    /// a delta met a closure read under a negation with no forest from before it to count the change against
+    unbased: bool,
 }
 
 /// The declared functions and trees, their promises, and the data-stratified components. Held by `Eval`.
@@ -2258,6 +2271,9 @@ impl Eval {
             ds: DsState::default(),
             vc: VClosureState::default(),
             alias_drules: Vec::new(),
+            view_drules: Vec::new(),
+            view_rels: HashSet::new(),
+            view_reason: Vec::new(),
             alias_rules: Vec::new(),
             alias_orig: HashMap::new(),
             alias_reason: Vec::new(),
@@ -2645,6 +2661,7 @@ impl Eval {
         self.lat.lattice_rows = decls;
         self.lat.lattice_rows.extend(self.tags.as_lattices(&self.v));
         self.lat.read_algebras(&self.v, &self.tags);
+        let rules = self.view_unfold(rules);
         let rules = self.alias_lower(rules);
         self.register_dominances();
         let widens = lattice_widens(&mut self.h, &self.v, &mut self.store);

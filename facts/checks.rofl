@@ -3187,39 +3187,7 @@ check_file("cost_shapes_model", "examples/checks/cost-shapes-model.rofl").
 -- The planted world (examples/shapes) is held on both.
 check_opt("cost_shapes_model", one_engine, rust).
 
--- docs/surface-split.md item 3: the surface lint over the JS model (examples/surface/surface.rofl)
-check_world("surface_model").
-check_file("surface_model", "examples/surface/surface.rofl").
-check_file("surface_model", "facts/surface-lint.rofl").
-check_file("surface_model", "rules/js-structure.rofl").
-check_file("surface_model", "models/lang/js/roles.rofl").
-check_file("surface_model", "models/lang/js/oxc-roles.rofl").
-check_file("surface_model", "rules/js-dataflow.rofl").
-check_file("surface_model", "rules/js-model.rofl").
-check_file("surface_model", "rules/js-callgraph.rofl").
-check_file("surface_model", "rules/js-controlflow.rofl").
-check_file("surface_model", "rules/js-effects.rofl").
-check_file("surface_model", "rules/js-globals.rofl").
-check_file("surface_model", "rules/js-host.rofl").
-check_file("surface_model", "rules/js-ambient.rofl").
-check_file("surface_model", "rules/js-attrs.rofl").
-check_file("surface_model", "rules/js-modules.rofl").
-check_file("surface_model", "rules/js-concat.rofl").
-check_file("surface_model", "rules/js-surface.rofl").
-check_file("surface_model", "rules/net/net-addr.rofl").
-check_file("surface_model", "rules/net/net-host.rofl").
-check_file("surface_model", "rules/net/net-dns.rofl").
-check_file("surface_model", "rules/net/net-proto.rofl").
-check_file("surface_model", "rules/net/net-tls.rofl").
-check_file("surface_model", "rules/net/net-access.rofl").
-check_file("surface_model", "rules/net/net-http.rofl").
-check_file("surface_model", "rules/net/net-hops.rofl").
-check_file("surface_model", "rules/js-fetch.rofl").
-check_file("surface_model", "rules/js-express.rofl").
-check_file("surface_model", "rules/js-service.rofl").
-check_file("surface_model", "examples/checks/surface-model.rofl").
 -- ONE ENGINE for the same reason as cost_shapes_model: the reflection of the model nests `$var` deep.
-check_opt("surface_model", one_engine, rust).
 
 -- w_data_structures: who reads ast_within / ast_in and what each asks of the tree
 check_world("ast_within_readers").
@@ -3321,6 +3289,29 @@ check_file("ds_tree_holds", "examples/checks/ds-tree-broken-6-cycles.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-7-both.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-8-closure.rofl").
 check_opt("ds_tree_holds", together, 1).
+
+check_world("ds_graph_holds").
+check_file("ds_graph_holds", "examples/checks/ds-graph-holds.rofl").
+check_file("ds_graph_holds", "examples/checks/ds-graph-holds-check.rofl").
+check_opt("ds_graph_holds", together, 1).
+
+check_world("ds_graph_sealed").
+check_file("ds_graph_sealed", "examples/checks/ds-graph-sealed.rofl").
+check_file("ds_graph_sealed", "examples/checks/ds-graph-holds.rofl").
+check_file("ds_graph_sealed", "examples/checks/ds-graph-holds-check.rofl").
+check_opt("ds_graph_sealed", together, 1).
+
+-- docs/data-structures.md, Nearest: a declared nearest answered by walking its tree, held to a twin over hand-written rules
+check_world("ds_nearest_holds").
+check_file("ds_nearest_holds", "examples/checks/ds-nearest-holds.rofl").
+check_file("ds_nearest_holds", "examples/checks/ds-nearest-holds-check.rofl").
+check_opt("ds_nearest_holds", together, 1).
+
+check_world("ds_nearest_sealed").
+check_file("ds_nearest_sealed", "examples/checks/ds-nearest-sealed.rofl").
+check_file("ds_nearest_sealed", "examples/checks/ds-nearest-holds.rofl").
+check_file("ds_nearest_sealed", "examples/checks/ds-nearest-holds-check.rofl").
+check_opt("ds_nearest_sealed", together, 1).
 
 check_world("ds_tree_sealed").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-sealed.rofl").
@@ -3781,7 +3772,7 @@ check_file("services", "examples/checks/services-check.rofl").
 
 -- w_next_version_cutoff, the surface split (docs/surface-split.md): the same question over mini + 10 hand-made files that
 -- cross files every way the model knows, every file resident through rules/js-surface.rofl; each file ALONE with the
--- others' [surface] gives the same facts: scripts/surface_split.ts, npm run test:split
+-- others' [surface] gave the same facts until the split gate was retired (2026-11-09)
 check_world("vscode_surface_split").
 check_file("vscode_surface_split", "facts/js-callgraph.rofl").
 check_file("vscode_surface_split", "facts/js-modules.rofl").

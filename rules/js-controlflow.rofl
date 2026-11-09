@@ -401,6 +401,7 @@ may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code]
 -- `export { f as g }` contains no function, so the second arm joins
 -- `export_local`, which already excludes re-exports and type-only exports.
 -- `export_all_declaration` introduces no local entry.
+view in_fn(N).
 in_fn[code](N)   :- nearest_v[flow](_, N).
 
 -- A declaration is exported when a name it introduces is a member of a namespace, a module's or a TypeScript one's:

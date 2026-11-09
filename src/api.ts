@@ -20,7 +20,7 @@ import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPa
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown, type WhynotFile } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
 import { lowerWant, WANT_ROWS } from './want.ts';
-import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure, lowerAlias, declaredAliases } from './structure.ts';
+import { checkStructureDecl, structureRows, declaredStructures, checkFunctions, checkTrees, checkClosureHead, declaredClosures, concludedBy, lowerClosure, lowerAlias, lowerNearest, declaredAliases, declaredOf } from './structure.ts';
 
 export interface LoadResult { ok: boolean; diagnostics: string[]; }
 export interface QueryRow { text: string; bindings: Record<string, string>; }
@@ -534,7 +534,7 @@ export class Rofl {
       return null;
     }
     if (!trusted && WANT_ROWS.has(c0.head.rel)) return `${canonClause(c0)}: '${c0.head.rel}' is written only by a want head (\`want Cap(Args) :- Body.\`)`;
-    const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store));
+    const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store), declaredOf(this.store, 'nearest'));
     if (badClosure) return badClosure;
     const badBook = this.checkKernelBook(c0);
     if (badBook) return badBook;
@@ -696,8 +696,14 @@ export class Rofl {
     const bad = checkStructureDecl(c, (rel) => ARITY[rel], declaredStructures(this.store), (rel) => concludedBy(this.store, rel), taken);
     if (bad) return bad;
     for (const [rel, args] of structureRows(c)) this.store.add(rel, KERNEL_PERSP, args, { scope: 'timeless', base: true });
-    // an alias is the rule it lowers to (src/structure.ts `lowerAlias`), read as any rule is
-    if (c.structure!.source) {
+    // a nearest is the rules it lowers to (src/structure.ts `lowerNearest`), read as any rules are
+    if (c.structure!.cond) {
+      for (const t of lowerNearest(c)) {
+        const bad2 = this.addClause(parseProgram(t)[0], undefined, true, true);
+        if (bad2) return bad2;
+      }
+    } else if (c.structure!.source) {
+      // an alias is the rule it lowers to (src/structure.ts `lowerAlias`), read as any rule is
       const bad2 = this.addClause(parseProgram(lowerAlias(c))[0], undefined, true, true);
       if (bad2) return bad2;
     }

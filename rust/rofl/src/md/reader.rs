@@ -40,6 +40,9 @@ pub const LATTICE_WORD: [(&str, &str); 12] = [("least", "min"), ("greatest", "ma
     ("bitwise or", "bitor"), ("sum", "sum"), ("count", "count"), ("median", "median"), ("quantile", "quantile"), ("rank", "rank")];
 const NAME: &str = "(?:_|[A-Z][A-Za-z0-9_]*)";
 pub const TREE_DECL: &str = r"^Each child of `(\w+)` has one parent and no node is its own ancestor(?:, and `(\w+)` holds of each node and every ancestor of it)?\.$";
+const NEAREST_DECL: &str = r"^`(\w+)`(?: in the `(\$?\w+)`)? of ([A-Z]\w*) and ([A-Z]\w*) holds where [A-Z]\w* is the nearest ancestor of [A-Z]\w* along `(\w+)`(?: in the `(\$?\w+)`)? that `(\w+)`(?: in the `(\$?\w+)`)? holds of\.$";
+const GRAPH_DECL: &str = r"^`(\w+)` holds of each node and every node a path of `(\w+)` leads to\.$";
+const VIEW_DECL: &str = r"^`(\w+)`(?: of (.+?))? is read through its rules and never stored\.$";
 const ALIAS_DECL: &str = r#"^(?:<a id="\w+"><\/a>)?`(\w+)`(?: of (.+?))? is another name for `(\w+)`(?: of (.+?))?\.$"#;
 pub const TAG_DECL: &str = r"^Each `(\w+)` fact(?: of (.+?))? carries an? (tropical|viterbi|trust|counting) tag (_|[A-Z][A-Za-z0-9_]*)\.$";
 
@@ -1495,6 +1498,21 @@ impl R {
         if let Some(m) = rx::exec(ALIAS_DECL, text) {
             let list = |x: Option<String>| -> String { x.filter(|x| !x.is_empty()).map(|x| rx::split(", | and ", &x).join(", ")).unwrap_or_default() };
             self.decls.push(format!("alias {}({}) is {}({}).", g(&m, 1), list(opt(&m, 2)), g(&m, 3), list(opt(&m, 4))));
+            return true;
+        }
+        if let Some(m) = rx::exec(NEAREST_DECL, text) {
+            let lit = |r: usize, b: usize, args: &str| format!("{}{}({args})", g(&m, r), if has(&m, b) && !g(&m, b).is_empty() { format!("[{}]", g(&m, b)) } else { String::new() });
+            let (a, d) = (g(&m, 3), g(&m, 4));
+            self.decls.push(format!("nearest {} of {} where {}.", lit(1, 2, &format!("{a}, {d}")), lit(5, 6, &format!("{a}, {d}")), lit(7, 8, a)));
+            return true;
+        }
+        if let Some(m) = rx::exec(GRAPH_DECL, text) {
+            self.decls.push(format!("graph {}(X, Y) closure {}.", g(&m, 2), g(&m, 1)));
+            return true;
+        }
+        if let Some(m) = rx::exec(VIEW_DECL, text) {
+            let list = |x: Option<String>| -> String { x.filter(|x| !x.is_empty()).map(|x| rx::split(", | and ", &x).join(", ")).unwrap_or_default() };
+            self.decls.push(format!("view {}({}).", g(&m, 1), list(opt(&m, 2))));
             return true;
         }
         if let Some(m) = rx::exec(TREE_DECL, text) {

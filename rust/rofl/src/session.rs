@@ -45,7 +45,7 @@ use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBound
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
-use crate::term::{Heap, Sym, Term, TermK};
+use crate::term::{Heap, Subst, Sym, Term, TermK};
 
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {
@@ -1544,7 +1544,10 @@ impl Session {
         let question = Question { query, rel, persp, persp_opt, args, b };
 
         let mut partial = self.eval.store.partial_eval;
-        let found = if self.eval.demand.answers_open(rel) && brk!("ask_store_only" => false; true) {
+        let found = if self.eval.is_view(rel) {
+            let sols = self.eval.view_answer(rel, persp_opt, &question.args).map_err(|h| describe(&h))?;
+            self.found_of(&question, &sols)
+        } else if self.eval.demand.answers_open(rel) && brk!("ask_store_only" => false; true) {
             let (found, unnamed) = self.answer_demanded(&question)?;
             partial |= unnamed;
             found
@@ -1581,12 +1584,17 @@ impl Session {
             }
             Err(h) => return Err(describe(&h)),
         };
+        Ok((self.found_of(question, &sols), unnamed))
+    }
+
+    /// The rows of a question, one per distinct text of its solutions, in the reference's order.
+    fn found_of(&mut self, question: &Question, sols: &[Subst]) -> Found {
         let vars = &question.b.vars;
         let mut named: Vec<usize> = (0..vars.len()).collect();
         named.sort_by(|a, b| crate::term::cmp_js(&vars[*a], &vars[*b]));
         let mut got: Vec<(String, Vec<String>, String)> = Vec::new();
         let mut texts: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for sol in &sols {
+        for sol in sols {
             let row: Vec<String> = vars
                 .iter()
                 .map(|v| {
@@ -1606,7 +1614,7 @@ impl Session {
         got.sort_by(|a, b| crate::term::cmp_js(&a.0, &b.0));
         let n = got.len();
         let (rows, keys): (Vec<Vec<String>>, Vec<String>) = got.into_iter().map(|(_, r, k)| (r, k)).unzip();
-        Ok((Found { rows, keys, scanned: n, probed: false }, unnamed))
+        Found { rows, keys, scanned: n, probed: false }
     }
 
     /// A question answered from the stored rows, and from the rows a declared structure reads off.

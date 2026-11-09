@@ -43,7 +43,7 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-callgraph, in the execution: [transfers](js-callgraph.rofl.md#transfers)
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
-- from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [nearest_v](js-dataflow.rofl.md#nearest_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [member_node_v](js-dataflow.rofl.md#member_node_v), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member)
 - from js-effects, in the audit: [eff_exn_only](js-effects.rofl.md#eff_exn_only)
 - from js-effects, in the code: [eff_discharged_at](js-effects.rofl.md#eff_discharged_at)
@@ -53,6 +53,8 @@ Reads:
 - from js-host, in the code: [host_module_call](js-host.rofl.md#host_module_call), [member_effect](js-host.rofl.md#member_effect)
 - from js-modules: [host_module](js-modules.rofl.md#host_module)
 - from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
+- from outside these files, in the flow:
+  - <a id="nearest_v"></a>A function F is nearest to a node R (`nearest_v`)
 - from outside these files:
   - <a id="lib_readonly_member"></a>`lib_readonly_member`
   - <a id="lib_readonly_view"></a>`lib_readonly_view`
@@ -438,11 +440,11 @@ A surface
 
 <a id="amb_exn_carrier"></a>F carries an exception either:
 
-1. if a call C [is an exception source](#amb_exn_source) and F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+1. if a call C [is an exception source](#amb_exn_source) and F [is nearest to](#nearest_v) C;
 2. if all of:
    - G [carries an exception](#amb_exn_carrier);
    - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
-   - F [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+   - F [is nearest to](#nearest_v) C;
    - unless C [discharges here](js-effects.rofl.md#eff_discharged_at) `exn`.
 
 In the audit:
