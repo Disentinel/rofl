@@ -68,7 +68,7 @@ host_member_call[code](C, H, Name, Key) :- callee_of[code](C, N),
 host_global_call[code](C, H, Name) :- callee_of[code](C, N), host_global_ref[code](N, H, Name).
 
 -- what a global of the host returns is a value of its own, born at the call (setInterval's timer)
-may_be[flow](C, node(C)) :- host_global_call[code](C, _, _).
+may_be[flow](C, node, C) :- host_global_call[code](C, _, _).
 
 host_module_call[code](C, Spec, Key) :- builtin_member[flow](X, Spec, Key), may_be_node[flow](G, X),
                                         callee_of[code](C, G).

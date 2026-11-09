@@ -91,7 +91,7 @@ es_static_unsupported[audit](E, N, Name, Key) :- es_static[code](N, Name, Key, R
 es_instance[flow](X, Name, Rel) :- es_global_construct[code](X, Name, Rel),
                                    lib_global(Name, _, Form), constructible_form(Form).
 
-may_be[flow](X, node(X)) :- es_instance[flow](X, _, _).
+may_be[flow](X, node, X) :- es_instance[flow](X, _, _).
 
 prototype_of[flow](E, P) :- may_be_node[flow](E, X), es_instance[flow](X, Name, _),
                             lib_global_prototype(Name, P).

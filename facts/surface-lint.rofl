@@ -129,12 +129,12 @@ xl_ok(keyed_vdrop_may, nearest_v, "the function around a removal of the collecti
 -- `this` in a parent's method may be a subclass's instance: the subclass's file tells the parent's (`sx_sub_inst`), each
 -- file forwarding it one `extends` up, and the parent's file reads its own methods.
 xl_ok(sub_inst, super_of, "a parent of another file forwards the instance itself, through sx_sub_inst").
-xl_ok(may_be_node, class_method_of, "the parent's own methods, in its volume: sub_inst arrives there through sx_sub_inst").
-xl_ok(may_be_node, class_field_this, "the parent's own fields, in its volume: sub_inst arrives there through sx_sub_inst").
+xl_ok(input_node, class_method_of, "the parent's own methods, in its volume: sub_inst arrives there through sx_sub_inst").
+xl_ok(may_be, class_field_this, "the parent's own fields, in its volume: sub_inst arrives there through sx_sub_inst").
 
 -- A generator's own volume: `next_send(G, V)` reaches G's file through the mirror of `sx_next`, and these read G's
 -- own yields and delegations there; a volume holding another file's G reads no row and owes none.
-xl_ok(may_be_node, nearest_v, "the generator's own yields, in its volume: next_send(G, _) arrives there through sx_next").
+xl_ok(may_be, nearest_v, "the generator's own yields, in its volume: next_send(G, _) arrives there through sx_next").
 xl_ok(next_send, delegates, "the generator's own delegation, in its volume: next_send(G, _) arrives there through sx_next").
 
 -- The arm for the volume's own argument; another file's array element spread into the call is named by `sx_name`.
@@ -155,6 +155,5 @@ xl_ok(cl_how, http_client, "a library's specifier is the same string in every fi
 xl_ok(ex_app, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
 xl_ok(contract_call, contract_fn, "the library member is a node of the file that reads it; an alias exported to another file is not recognised there (declared)").
 xl_ok(coroutine_of, runs_coroutine, "a library's package is the same string in every file: its contract is read by the string, not by a node").
-xl_ok(may_be_node, returns_argument, "a library's package is the same string in every file: its contract is read by the string, not by a node").
-xl_ok(may_be_lit, returns_argument, "a library's package is the same string in every file: its contract is read by the string, not by a node").
+xl_ok(may_be, returns_argument, "a library's package is the same string in every file: its contract is read by the string, not by a node").
 xl_ok(ex_router_fn, express_module, "a library's specifier is the same string in every file: the table of its members is read by the string, not by a node").
