@@ -192,6 +192,7 @@ unit_concludes("rules/js-dataflow.rofl", input_node).
 unit_concludes("rules/js-dataflow.rofl", input_lit).
 unit_concludes("rules/js-dataflow.rofl", returns).
 unit_concludes("rules/js-dataflow.rofl", recv_call).
+unit_concludes("rules/js-dataflow.rofl", self_recv).
 unit_concludes("rules/js-dataflow.rofl", keeps_argument).
 unit_concludes("rules/js-dataflow.rofl", keeps_argument_static).
 unit_concludes("rules/js-dataflow.rofl", converts).
@@ -386,6 +387,11 @@ unit_concludes("rules/js-dataflow.rofl", at_call).
 unit_concludes("rules/js-dataflow.rofl", wput).
 unit_concludes("rules/js-dataflow.rofl", wputc).
 unit_concludes("rules/js-dataflow.rofl", sx_mset).
+unit_concludes("rules/js-dataflow.rofl", sx_wconst).
+unit_concludes("rules/js-dataflow.rofl", sx_runs).
+unit_concludes("rules/js-dataflow.rofl", sx_runs_c).
+unit_concludes("rules/js-dataflow.rofl", runs_recv).
+unit_concludes("rules/js-dataflow.rofl", lands).
 unit_concludes("rules/js-dataflow.rofl", dput).
 unit_concludes("rules/js-dataflow.rofl", cput).
 unit_concludes("rules/js-dataflow.rofl", sx_wcls).

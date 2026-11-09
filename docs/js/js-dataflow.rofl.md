@@ -724,20 +724,33 @@ In the flow:
    - [`declarator_id`](#declarator_id)(D, R);
    - [`pat_in`](#pat_in)(R, something, something);
    - D [takes its value from](#decl_value) a node Init;
-   - Init [points to](#may_be_node) a node N;
+   - [`may_be`](js-concat.rofl.md#may_be)(Init, `node`, N);
    - E is `node`;
 2. if all of:
+   - [`declarator_id`](#declarator_id)(D, R);
+   - [`pat_in`](#pat_in)(R, something, something);
+   - D [takes its value from](#decl_value) a node Init;
+   - [`may_be`](js-concat.rofl.md#may_be)(Init, `input`, N);
+   - E is `input`;
+3. if all of:
    - [`input_param`](#input_param)(N, F, I);
    - [`param`](#param)(F, I, R);
    - [`pat_in`](#pat_in)(R, something, something);
    - E is `input`;
-3. if all of:
+4. if all of:
    - [`pattern_elem`](#pattern_elem)(P, I, R);
    - [`pat_in`](#pat_in)(something, P, R);
    - a node P [points to](#may_be_node) a node X;
    - [`array_elem`](#array_elem)(X, I, V);
-   - a node V [points to](#may_be_node) a node N;
-   - E is `node`.
+   - [`may_be`](js-concat.rofl.md#may_be)(V, `node`, N);
+   - E is `node`;
+5. if all of:
+   - [`pattern_elem`](#pattern_elem)(P, I, R);
+   - [`pat_in`](#pat_in)(something, P, R);
+   - a node P [points to](#may_be_node) a node X;
+   - [`array_elem`](#array_elem)(X, I, V);
+   - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, N);
+   - E is `input`.
 
 > the default of a target is a conditional source of it
 
@@ -793,7 +806,7 @@ In the flow:
   - D [takes its value from](#decl_value) a node Init;
   - Init [points to](#may_be_node) a node X;
   - [`array_elem`](#array_elem)(X, Index, V);
-  - a node V [points to](#may_be_node) a node N;
+  - [`may_be`](js-concat.rofl.md#may_be)(V, `node`, N);
   - a node E [reads](#ident_in) Local in File;
   - E [sees](#sees_binder) D.
 
@@ -1193,25 +1206,28 @@ In the code:
 
 In the flow:
 
-`may_be`(C, N, I) either:
+`may_be`(C, `node`, I) if all of:
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - [`sx_ret_self`](js-surface.rofl.md#sx_ret_self)(F);
+  - [`recv_key`](#recv_key)(C, R, Key);
+  - [`may_be`](js-concat.rofl.md#may_be)(R, `node`, I);
+  - [`isa`](#isa)(I, CD);
+  - [`sx_lookup`](#sx_lookup)(CD, Key, F).
+
+<a id="self_recv"></a>`self_recv`(C, R) if all of:
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - [`sx_ret_self`](js-surface.rofl.md#sx_ret_self)(F);
+  - [`recv_call`](#recv_call)(C, R).
+
+`may_be`(C, N, T) either:
 
 1. if all of:
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_self`](js-surface.rofl.md#sx_ret_self)(F);
-   - [`recv_key`](#recv_key)(C, R, Key);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `node`, I);
-   - [`isa`](#isa)(I, CD);
-   - [`sx_lookup`](#sx_lookup)(CD, Key, F);
-   - N is `node`;
-2. if all of:
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_self`](js-surface.rofl.md#sx_ret_self)(F);
-   - [`recv_call`](#recv_call)(C, R);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, I);
+   - [`self_recv`](#self_recv)(C, R);
+   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
    - N is `input`;
-3. if all of:
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_this`](js-surface.rofl.md#sx_ret_this)(F, I);
+2. if all of:
+   - C [resolves to](js-callgraph.rofl.md#resolves) F;
+   - [`sx_ret_this`](js-surface.rofl.md#sx_ret_this)(F, T);
    - N is `node`;
    - unless [`recv_call`](#recv_call)(C, something).
 
@@ -1284,10 +1300,18 @@ Declared as facts:
   - [`callee`](#callee)(C, G);
   - [`call`](#call)(C).
 
-`may_be`(C, `node`, O) if all of:
-  - [`merge_call`](#merge_call)(C);
-  - an invocation C [passes](#arg_at) a node T at 0;
-  - T [points to](#may_be_node) a node O.
+`may_be`(C, N, O) either:
+
+1. if all of:
+   - [`merge_call`](#merge_call)(C);
+   - an invocation C [passes](#arg_at) a node T at 0;
+   - [`may_be`](js-concat.rofl.md#may_be)(T, `node`, O);
+   - N is `node`;
+2. if all of:
+   - [`merge_call`](#merge_call)(C);
+   - an invocation C [passes](#arg_at) a node T at 0;
+   - [`may_be`](js-concat.rofl.md#may_be)(T, `input`, O);
+   - N is `input`.
 
 In the surface:
 
@@ -3111,7 +3135,9 @@ In the flow:
 3. if [`sx_wsum_in`](#sx_wsum_in)(G, something, something, S);
 4. if [`sx_wcls`](#sx_wcls)(G, S, something, something, something, something);
 5. if [`sx_wcls_in`](#sx_wcls_in)(G, S, something, something, something);
-6. if [`sx_wcls_in`](#sx_wcls_in)(G, something, something, something, S).
+6. if [`sx_wcls_in`](#sx_wcls_in)(G, something, something, something, S);
+7. if [`sx_runs`](#sx_runs)(G, S, something, something);
+8. if [`sx_runs_c`](#sx_runs_c)(G, S, something, something, something).
 
 In the surface:
 
@@ -3124,7 +3150,9 @@ In the surface:
 1. if [`sx_wsum`](#sx_wsum)(G, S, Key, something, something);
 2. if [`sx_wsum_in`](#sx_wsum_in)(G, S, Key, something);
 3. if [`sx_wcls`](#sx_wcls)(G, S, something, Key, something, something);
-4. if [`sx_wcls_in`](#sx_wcls_in)(G, S, something, Key, something).
+4. if [`sx_wcls_in`](#sx_wcls_in)(G, S, something, Key, something);
+5. if [`sx_runs`](#sx_runs)(G, S, M, SM) and [`sx_wsum`](#sx_wsum)(M, SM, Key, something, something);
+6. if [`sx_runs_c`](#sx_runs_c)(G, S, something, M, SM) and [`sx_wsum`](#sx_wsum)(M, SM, Key, something, something).
 
 > What the callee's input is at THIS call: the argument; the instance a `new` makes; the caller's own `this` for
 > `super`; at a call on a receiver (`r.m()`, a getter), each instance `r` may be whose class finds the callee under
@@ -3154,7 +3182,10 @@ In the flow:
 
 In the surface:
 
-<a id="sx_lookup"></a>`sx_lookup`(CD, Key, G) if [the instance member](#class_member_proto) Key of a class CD is a node V and [`may_be`](js-concat.rofl.md#may_be)(V, `node`, G).
+<a id="sx_lookup"></a>`sx_lookup`(CD, Key, G) if all of:
+  - [the instance member](#class_member_proto) Key of a class CD is a node V;
+  - CD [is a class](#class_like);
+  - [`may_be`](js-concat.rofl.md#may_be)(V, `node`, G).
 
 In the flow:
 
@@ -3194,21 +3225,21 @@ In the flow:
 
 > a summary at the call, in the caller's terms; `wputc` holds only for an instance of class CD
 
-<a id="wput"></a>`wput`(C, S, Key, VK, X) either:
+<a id="wput"></a>`wput`(C, S, Key, N, X) either:
 
-1. if [`applies`](#applies)(C, G) and [`sx_wsum`](#sx_wsum)(G, S, Key, VK, X);
+1. if [`applies`](#applies)(C, G), [`sx_wsum`](#sx_wsum)(G, S, Key, `input`, X), and N is `input`;
 2. if all of:
    - [`applies`](#applies)(C, G);
    - [`sx_wsum_in`](#sx_wsum_in)(G, S, Key, Y);
-   - [`at_call`](#at_call)(C, Y, VK, X).
+   - [`at_call`](#at_call)(C, Y, N, X).
 
-<a id="wputc"></a>`wputc`(C, S, CD, Key, VK, X) either:
+<a id="wputc"></a>`wputc`(C, S, CD, Key, N, X) either:
 
-1. if [`applies`](#applies)(C, G) and [`sx_wcls`](#sx_wcls)(G, S, CD, Key, VK, X);
+1. if [`applies`](#applies)(C, G), [`sx_wcls`](#sx_wcls)(G, S, CD, Key, `input`, X), and N is `input`;
 2. if all of:
    - [`applies`](#applies)(C, G);
    - [`sx_wcls_in`](#sx_wcls_in)(G, S, CD, Key, Y);
-   - [`at_call`](#at_call)(C, Y, VK, X).
+   - [`at_call`](#at_call)(C, Y, N, X).
 
 In the surface:
 
@@ -3219,6 +3250,93 @@ In the surface:
    - [`wputc`](#wputc)(C, S, CD, Key, VK, X);
    - [`at_call`](#at_call)(C, S, `node`, I);
    - [`isa`](#isa)(I, CD).
+
+> What a callee writes that its inputs do not decide (a node or a literal of its own) is not copied into the caller:
+> the caller's summary says which function's own writes land on which of its inputs (`sx_runs`, per class where a
+> call on the input decides the method, `sx_runs_c`), and an instance reads them where they were written.
+
+<a id="sx_wconst"></a>`sx_wconst`(G, S) if [`sx_wsum`](#sx_wsum)(G, S, something, `node` or `lit`, something).
+
+<a id="sx_runs"></a>`sx_runs`(G, S, G, S) if [`sx_wconst`](#sx_wconst)(G, S).
+
+`sx_wconst`(G, S) if [`sx_wcls`](#sx_wcls)(G, S, something, something, `node` or `lit`, something).
+
+`sx_runs`(H, T, M, SM) if all of:
+  - [`applies`](#applies)(C, G);
+  - [`sx_runs`](#sx_runs)(G, S, M, SM);
+  - [`at_call`](#at_call)(C, S, `input`, T);
+  - [`input_of`](#input_of)(T, H).
+
+<a id="sx_runs_c"></a>`sx_runs_c`(H, T, CD, M, SM) if all of:
+  - [`applies`](#applies)(C, G);
+  - [`sx_runs_c`](#sx_runs_c)(G, S, CD, M, SM);
+  - [`at_call`](#at_call)(C, S, `input`, T);
+  - [`input_of`](#input_of)(T, H).
+
+In the flow:
+
+<a id="runs_recv"></a>`runs_recv`(C, T, G, S) if all of:
+  - [`recv_key`](#recv_key)(C, R, MKey);
+  - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
+  - [`applies`](#applies)(C, G);
+  - [`sx_wthis`](#sx_wthis)(G, S).
+
+In the surface:
+
+`sx_runs_c`(H, T, CD, M, SM) either:
+
+1. if all of:
+   - [`runs_recv`](#runs_recv)(C, T, G, S);
+   - [`sx_runs`](#sx_runs)(G, S, M, SM);
+   - [`recv_key`](#recv_key)(C, something, MKey);
+   - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
+   - [`input_of`](#input_of)(T, H);
+2. if all of:
+   - [`runs_recv`](#runs_recv)(C, T, G, S);
+   - [`sx_runs_c`](#sx_runs_c)(G, S, CD, M, SM);
+   - [`recv_key`](#recv_key)(C, something, MKey);
+   - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
+   - [`input_of`](#input_of)(T, H).
+
+In the flow:
+
+<a id="lands"></a>`lands`(I, M, SM) if all of:
+  - [`applies`](#applies)(C, G);
+  - [`sx_runs`](#sx_runs)(G, S, M, SM);
+  - [`at_call`](#at_call)(C, S, `node`, I).
+
+`lands`(I, M, SM) if all of:
+  - [`applies`](#applies)(C, G);
+  - [`sx_runs_c`](#sx_runs_c)(G, S, CD, M, SM);
+  - [`at_call`](#at_call)(C, S, `node`, I);
+  - [`isa`](#isa)(I, CD).
+
+`lands`(I, M2, SM2) if all of:
+  - [`meth_on`](#meth_on)(I, something, M);
+  - [`sx_wthis`](#sx_wthis)(M, S);
+  - [`sx_runs`](#sx_runs)(M, S, M2, SM2).
+
+`lands`(I, M2, SM2) if all of:
+  - [`meth_on`](#meth_on)(I, C, M);
+  - [`sx_wthis`](#sx_wthis)(M, S);
+  - [`sx_runs_c`](#sx_runs_c)(M, S, C, M2, SM2).
+
+In the surface:
+
+`sx_mset`(I, Key, N, X) either:
+
+1. if [`lands`](#lands)(I, M, SM), [`sx_wsum`](#sx_wsum)(M, SM, Key, `node`, X), and N is `node`;
+2. if [`lands`](#lands)(I, M, SM), [`sx_wsum`](#sx_wsum)(M, SM, Key, `lit`, X), and N is `lit`;
+3. if all of:
+   - [`lands`](#lands)(I, M, SM);
+   - [`sx_wcls`](#sx_wcls)(M, SM, CD, Key, `node`, X);
+   - [`isa`](#isa)(I, CD);
+   - N is `node`;
+4. if all of:
+   - [`lands`](#lands)(I, M, SM);
+   - [`sx_wcls`](#sx_wcls)(M, SM, CD, Key, `lit`, X);
+   - [`isa`](#isa)(I, CD);
+   - N is `lit`.
 
 > onto the caller's input: the caller's summary
 
@@ -3328,20 +3446,20 @@ In the flow:
 
 In the surface:
 
-`sx_mset`(I, Key, VK, X) if all of:
+`sx_mset`(I, Key, `input`, X) if all of:
   - [`meth_on`](#meth_on)(I, something, M);
   - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wsum`](#sx_wsum)(M, S, Key, VK, X).
+  - [`sx_wsum`](#sx_wsum)(M, S, Key, `input`, X).
 
 `sx_mset`(I, Key, `input`, P) if all of:
   - [`meth_on`](#meth_on)(I, something, M);
   - [`sx_wthis`](#sx_wthis)(M, S);
   - [`sx_wsum_in`](#sx_wsum_in)(M, S, Key, P).
 
-`sx_mset`(I, Key, VK, X) if all of:
+`sx_mset`(I, Key, `input`, X) if all of:
   - [`meth_on`](#meth_on)(I, C, M);
   - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wcls`](#sx_wcls)(M, S, C, Key, VK, X).
+  - [`sx_wcls`](#sx_wcls)(M, S, C, Key, `input`, X).
 
 `sx_mset`(I, Key, `input`, P) if all of:
   - [`meth_on`](#meth_on)(I, C, M);
@@ -4640,9 +4758,15 @@ In the flow:
    - G [is sent](#next_send) a node V;
    - G [is nearest to](#nearest_v) a node Y;
    - [`yield_back`](#yield_back)(Y);
-   - V [points to](#may_be_node) a node X;
+   - [`may_be`](js-concat.rofl.md#may_be)(V, `node`, X);
    - N is `node`;
 2. if all of:
+   - G [is sent](#next_send) a node V;
+   - G [is nearest to](#nearest_v) a node Y;
+   - [`yield_back`](#yield_back)(Y);
+   - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, X);
+   - N is `input`;
+3. if all of:
    - [`delegates`](#delegates)(Y, Z) in the value;
    - a call Z [resolves to](js-callgraph.rofl.md#resolves) Inner;
    - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(Inner, X);
