@@ -240,7 +240,7 @@ struct LevelRun {
     here: Vec<Rc<ERule>>,
 }
 
-const UNBASED: &str = "a negation reads a closure answered from its tree, and no tree stood before the change to count it against";
+const UNBASED: &str = "a nearest, or a closure a negation reads, had no forest from before the change to count it against";
 
 /// Whether the rule `id` fires at level `lv`.
 fn fired_at(st: &Fine, lv: i64, id: Sym) -> bool {
@@ -464,6 +464,7 @@ impl Eval {
         if self.vc.any && !self.store.vlisted {
             self.vc.vpublish(&mut self.store);
         }
+        self.vsettle_forests();
         Ok(d)
     }
 
@@ -545,6 +546,7 @@ impl Eval {
             self.store.dirty = true;
             return Err(UNBASED.into());
         }
+        self.vsettle_forests();
         Ok(d)
     }
 
