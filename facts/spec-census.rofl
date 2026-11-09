@@ -341,6 +341,7 @@ check[checks]("facts/goldens.rofl", "atlas-launch", world).
 check[checks]("facts/goldens.rofl", "blam", world).
 check[checks]("facts/goldens.rofl", "bleep", world).
 check[checks]("facts/goldens.rofl", "ci", world).
+check[checks]("facts/goldens.rofl", "cognitive-tours", world).
 check[checks]("facts/goldens.rofl", "counter", world).
 check[checks]("facts/goldens.rofl", "cram", world).
 check[checks]("facts/goldens.rofl", "critpath", world).
