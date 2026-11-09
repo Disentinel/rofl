@@ -1305,12 +1305,16 @@ winput[flow](G, X)  :- sx_wsum_in[surface](G, _, _, X).
 winput[flow](G, S)  :- sx_wcls[surface](G, S, _, _, _, _).
 winput[flow](G, S)  :- sx_wcls_in[surface](G, S, _, _, _).
 winput[flow](G, X)  :- sx_wcls_in[surface](G, _, _, _, X).
+winput[flow](G, S)  :- sx_runs[surface](G, S, _, _).
+winput[flow](G, S)  :- sx_runs_c[surface](G, S, _, _, _).
 sx_wparam[surface](G, S, I) :- winput[flow](G, S), input_param[flow](S, G, I).
 sx_wthis[surface](G, S)     :- winput[flow](G, S), input_this[flow](S, G).
 sx_wkey[surface](G, S, Key) :- sx_wsum[surface](G, S, Key, _, _).
 sx_wkey[surface](G, S, Key) :- sx_wsum_in[surface](G, S, Key, _).
 sx_wkey[surface](G, S, Key) :- sx_wcls[surface](G, S, _, Key, _, _).
 sx_wkey[surface](G, S, Key) :- sx_wcls_in[surface](G, S, _, Key, _).
+sx_wkey[surface](G, S, Key) :- sx_runs[surface](G, S, M, SM), sx_wsum[surface](M, SM, Key, _, _).
+sx_wkey[surface](G, S, Key) :- sx_runs_c[surface](G, S, _, M, SM), sx_wsum[surface](M, SM, Key, _, _).
 
 -- What the callee's input is at THIS call: the argument; the instance a `new` makes; the caller's own `this` for
 -- `super`; at a call on a receiver (`r.m()`, a getter), each instance `r` may be whose class finds the callee under
@@ -1329,12 +1333,37 @@ at_call[flow](C, S, node, made(C, CD)) :- applies[flow](C, G), sx_wthis[surface]
 at_call[flow](C, S, input, T) :- applies[flow](C, G), sx_wthis[surface](G, S), super_recv[code](C),
                                  nearest_fn[code](H, C), input_this[flow](T, H).
 -- a summary at the call, in the caller's terms; `wputc` holds only for an instance of class CD
-wput[flow](C, S, Key, VK, X) :- applies[flow](C, G), sx_wsum[surface](G, S, Key, VK, X).
+wput[flow](C, S, Key, input, X) :- applies[flow](C, G), sx_wsum[surface](G, S, Key, input, X).
 wput[flow](C, S, Key, VK, X) :- applies[flow](C, G), sx_wsum_in[surface](G, S, Key, Y), at_call[flow](C, Y, VK, X).
-wputc[flow](C, S, CD, Key, VK, X) :- applies[flow](C, G), sx_wcls[surface](G, S, CD, Key, VK, X).
+wputc[flow](C, S, CD, Key, input, X) :- applies[flow](C, G), sx_wcls[surface](G, S, CD, Key, input, X).
 wputc[flow](C, S, CD, Key, VK, X) :- applies[flow](C, G), sx_wcls_in[surface](G, S, CD, Key, Y), at_call[flow](C, Y, VK, X).
 sx_mset[surface](I, Key, VK, X) :- wput[flow](C, S, Key, VK, X), at_call[flow](C, S, node, I).
 sx_mset[surface](I, Key, VK, X) :- wputc[flow](C, S, CD, Key, VK, X), at_call[flow](C, S, node, I), isa[flow](I, CD).
+-- What a callee writes that its inputs do not decide (a node or a literal of its own) is not copied into the caller:
+-- the caller's summary says which function's own writes land on which of its inputs (`sx_runs`, per class where a
+-- call on the input decides the method, `sx_runs_c`), and an instance reads them where they were written.
+sx_wconst[surface](G, S) :- sx_wsum[surface](G, S, _, node, _).
+sx_wconst[surface](G, S) :- sx_wsum[surface](G, S, _, lit, _).
+sx_runs[surface](G, S, G, S) :- sx_wconst[surface](G, S).
+sx_wconst[surface](G, S) :- sx_wcls[surface](G, S, _, _, node, _).
+sx_wconst[surface](G, S) :- sx_wcls[surface](G, S, _, _, lit, _).
+sx_runs[surface](H, T, M, SM) :- applies[flow](C, G), sx_runs[surface](G, S, M, SM), at_call[flow](C, S, input, T),
+                                 input_of[flow](T, H).
+sx_runs_c[surface](H, T, CD, M, SM) :- applies[flow](C, G), sx_runs_c[surface](G, S, CD, M, SM), at_call[flow](C, S, input, T),
+                                       input_of[flow](T, H).
+runs_recv[flow](C, T, G, S) :- recv_key[flow](C, R, MKey), may_be[flow](R, input, T), applies[flow](C, G), sx_wthis[surface](G, S).
+sx_runs_c[surface](H, T, CD, M, SM) :- runs_recv[flow](C, T, G, S), sx_runs[surface](G, S, M, SM), recv_key[flow](C, _, MKey),
+                                       sx_lookup[surface](CD, MKey, G), input_of[flow](T, H).
+sx_runs_c[surface](H, T, CD, M, SM) :- runs_recv[flow](C, T, G, S), sx_runs_c[surface](G, S, CD, M, SM), recv_key[flow](C, _, MKey),
+                                       sx_lookup[surface](CD, MKey, G), input_of[flow](T, H).
+lands[flow](I, M, SM) :- applies[flow](C, G), sx_runs[surface](G, S, M, SM), at_call[flow](C, S, node, I).
+lands[flow](I, M, SM) :- applies[flow](C, G), sx_runs_c[surface](G, S, CD, M, SM), at_call[flow](C, S, node, I), isa[flow](I, CD).
+lands[flow](I, M2, SM2) :- meth_on[flow](I, _, M), sx_wthis[surface](M, S), sx_runs[surface](M, S, M2, SM2).
+lands[flow](I, M2, SM2) :- meth_on[flow](I, C, M), sx_wthis[surface](M, S), sx_runs_c[surface](M, S, C, M2, SM2).
+sx_mset[surface](I, Key, node, X) :- lands[flow](I, M, SM), sx_wsum[surface](M, SM, Key, node, X).
+sx_mset[surface](I, Key, lit, X)  :- lands[flow](I, M, SM), sx_wsum[surface](M, SM, Key, lit, X).
+sx_mset[surface](I, Key, node, X) :- lands[flow](I, M, SM), sx_wcls[surface](M, SM, CD, Key, node, X), isa[flow](I, CD).
+sx_mset[surface](I, Key, lit, X)  :- lands[flow](I, M, SM), sx_wcls[surface](M, SM, CD, Key, lit, X), isa[flow](I, CD).
 -- onto the caller's input: the caller's summary
 sx_wsum[surface](H, T, Key, node, X)  :- wput[flow](C, S, Key, node, X), at_call[flow](C, S, input, T), input_of[flow](T, H).
 sx_wsum[surface](H, T, Key, lit, X)   :- wput[flow](C, S, Key, lit, X), at_call[flow](C, S, input, T), input_of[flow](T, H).
@@ -1368,9 +1397,9 @@ may_be[flow](N, VK, X) :- member_at[flow](N, _, I, Key), sx_mset[surface](I, Key
 sx_meth[surface](C, M) :- class_method_of[flow](C, M), not static[value](M).
 meth_on[flow](I, C, M) :- inst_of[flow](I, C), sx_meth[surface](C, M).
 meth_on[flow](I, C, M) :- sub_inst[flow](SD, I), inst_of[flow](I, C), sx_meth[surface](SD, M).
-sx_mset[surface](I, Key, VK, X)    :- meth_on[flow](I, _, M), sx_wthis[surface](M, S), sx_wsum[surface](M, S, Key, VK, X).
+sx_mset[surface](I, Key, input, X) :- meth_on[flow](I, _, M), sx_wthis[surface](M, S), sx_wsum[surface](M, S, Key, input, X).
 sx_mset[surface](I, Key, input, P) :- meth_on[flow](I, _, M), sx_wthis[surface](M, S), sx_wsum_in[surface](M, S, Key, P).
-sx_mset[surface](I, Key, VK, X)    :- meth_on[flow](I, C, M), sx_wthis[surface](M, S), sx_wcls[surface](M, S, C, Key, VK, X).
+sx_mset[surface](I, Key, input, X) :- meth_on[flow](I, C, M), sx_wthis[surface](M, S), sx_wcls[surface](M, S, C, Key, input, X).
 sx_mset[surface](I, Key, input, P) :- meth_on[flow](I, C, M), sx_wthis[surface](M, S), sx_wcls_in[surface](M, S, C, Key, P).
 sx_mset[surface](J, Key, VK, X) :- sx_mset[surface](I, Key, VK, X), made_of[flow](I, CD), inst_of[flow](J, CD).
 member_value[flow](J, Key, V)   :- sx_mwrite[surface](I, Key, V), made_of[flow](I, CD), inst_of[flow](J, CD).
