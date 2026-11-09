@@ -59,8 +59,8 @@ pub struct VClosure {
     pairs: u64,
     deep: u64,
     internal: u64,
-    /// a nearest's forests before the last build: its news are the rows that build changed
-    prev: Option<Rc<[(Sym, Rc<Forest>)]>>,
+    /// a nearest answers nothing before the level the stratification gives its step, which negates its condition
+    open: bool,
 }
 
 impl Eval {
@@ -72,6 +72,7 @@ impl Eval {
         self.vc.readers.clear();
         self.vc.reader_seen.clear();
         self.vc.reader_forest.clear();
+        self.vc.settled.clear();
         self.vc.neg_read.clear();
         self.vc.base.clear();
         self.vc.vclosure_reason.clear();
@@ -120,7 +121,7 @@ impl Eval {
                 let src = self.store.alias_view(edge).map(|v| v.src);
                 if in_cone(&reach, edge, ebook) || src.is_some_and(|s| in_cone(&reach, s, None)) {
                     why = "its edges are concluded from it".to_string();
-                } else if let Some(Ok(n)) = near.filter(|n| n.as_ref().is_ok_and(|n| self.near_cond_open(rel, n.cond, &lowered))) {
+                } else if let Some(Ok(n)) = near.filter(|n| n.as_ref().is_ok_and(|n| in_cone(&reach, n.cond, Some(n.sbook)))) {
                     why = format!("{} is concluded from it", self.h.name(n.cond));
                 }
             }
@@ -156,7 +157,7 @@ impl Eval {
             }
             let view = self.store.alias_view(edge).cloned();
             let src = view.as_ref().map_or(edge, |v| v.src);
-            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0, prev: None });
+            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0, open: true });
             let near = near.and_then(|n| n.ok());
             self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()), near });
             if !why.is_empty() {
@@ -164,13 +165,6 @@ impl Eval {
                 self.vc.vclosure_blocked.insert(ci);
             }
         }
-    }
-
-    /// Can the condition of a nearest still grow while the nearest is read? A mark that comes late takes rows out, which
-    /// no reader can follow, and the evaluation orders by relations, not by books: the condition must not be concluded
-    /// from the nearest through any book.
-    fn near_cond_open(&self, rel: Sym, cond: Sym, lowered: &[Sym]) -> bool {
-        readers_cone(HashSet::from([rel]), self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next), reads_any).contains(&cond)
     }
 
     /// A nearest's edges and what its ancestor is, read off the base rule it lowers to (`R[b](A, D) :- E[e](A, D), S[s](A).`).
@@ -189,7 +183,7 @@ impl Eval {
     /// the keys its firings cite are kept, so what was derived over them stands. False where a closure is declared,
     /// dropped or answered another way: the world is evaluated again.
     pub fn reprepare_keeping_trees(&mut self) -> bool {
-        let kept = (self.vc.vclosures.clone(), self.store.virtuals.clone(), self.store.vrow_of.clone(), self.vc.any, self.store.vlisted, self.store.vwit, self.vc.reader_seen.clone());
+        let kept = (self.vc.vclosures.clone(), self.store.virtuals.clone(), self.store.vrow_of.clone(), self.vc.any, self.store.vlisted, self.store.vwit, self.vc.reader_seen.clone(), self.vc.reader_forest.clone(), self.vc.settled.clone());
         let was_blocked = self.vc.vclosure_blocked.clone();
         self.reprepare();
         if kept.0.is_empty() && self.vc.vclosures.is_empty() {
@@ -213,6 +207,8 @@ impl Eval {
         self.store.vlisted = kept.4;
         self.store.vwit = kept.5;
         self.vc.reader_seen = kept.6;
+        self.vc.reader_forest = kept.7;
+        self.vc.settled = kept.8;
         if n < self.vc.vclosures.len() {
             let witnessed = !self.prov.no_witness;
             let mode = !self.lat.has_cells() && self.assume.is_none() && !self.well_founded && !self.naive && self.lat.counts().next().is_none() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
@@ -266,8 +262,10 @@ impl Eval {
                 }
             }
             let on = mode && !lemma && !self.vc.vclosure_blocked.contains(&ci) && !(witnessed && self.vc.vclosures[ci].prov_read);
+            let near = self.store.virtuals[ci].near.is_some();
             let c = &mut self.vc.vclosures[ci];
             c.active = on;
+            c.open = !near;
             c.built = None;
             c.pairs = 0;
             self.store.virtuals[ci].forests = Rc::from(Vec::new());
@@ -275,6 +273,7 @@ impl Eval {
         self.store.vwit = witnessed;
         self.vc.reader_seen.clear();
         self.vc.reader_forest.clear();
+        self.vc.settled.clear();
         self.vc.any = self.vc.vclosures.iter().any(|c| c.active);
     }
 
@@ -287,11 +286,16 @@ impl Eval {
         }
         if !brk!("vclosure_restore_unengaged" => true; false) {
             self.vclosure_engage();
+            // the world was evaluated: every level was reached
+            for c in &mut self.vc.vclosures {
+                c.open = true;
+            }
             // a volume brings the rows read and the forests built, published once they are read (`read_forests`)
             if !self.store.vrow_of.is_empty() {
                 return;
             }
             self.vc.vpublish(&mut self.store);
+            self.vsettle_forests();
             // the rows the snapshot's witnesses and members cite are named by their keys: read now, for their heights
             let mut keys: Vec<Sym> = Vec::new();
             for id in self.store.firing_keys() {
@@ -557,17 +561,52 @@ impl Eval {
 }
 
 impl Eval {
+    /// THE LEVEL OF A NEAREST REACHED: its step reads its condition under a negation, so the stratification puts it
+    /// above what concludes the condition, and before that level it answers nothing. At it the closure opens and every
+    /// rule that reads it, at this level or below, fires whole over the condition complete; one above fires at its own.
+    pub(super) fn vopen_below(&mut self, lv: i64) -> Result<(), Halt> {
+        let opening: Vec<usize> = (0..self.vc.vclosures.len())
+            .filter(|ci| {
+                let (c, step) = (&self.vc.vclosures[*ci], self.store.virtuals[*ci].step_rule);
+                c.active && !c.open && self.rules.iter().find(|r| r.id == step).is_none_or(|r| self.rule_level(r) <= lv)
+            })
+            .collect();
+        if opening.is_empty() {
+            return Ok(());
+        }
+        for &ci in &opening {
+            let c = &mut self.vc.vclosures[ci];
+            (c.open, c.built) = (true, None);
+            self.vc.reader_seen.retain(|(_, x), _| *x != ci);
+            self.vc.reader_forest.retain(|(_, x), _| *x != ci);
+            // a negation reads the forests as they stand
+            self.vc.vforests(&mut self.store, ci);
+        }
+        let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r) && self.rule_level(r) <= lv).cloned().collect();
+        self.activate(&readers)
+    }
+
     /// The forests of each closure a negation reads, as a delta finds them: its change is counted against them
     /// (`vneg_rows`).
     pub(super) fn vsnapshot(&mut self) {
         self.vc.base.clear();
         self.vc.unbased = false;
-        for &ci in &self.vc.neg_read {
-            let c = &self.vc.vclosures[ci];
-            if c.active {
-                let forests = (c.built.is_some() && c.built != Some(usize::MAX)).then(|| self.store.virtuals[ci].forests.clone());
-                self.vc.base.insert(ci, forests);
-            }
+        for ci in self.vfollowed() {
+            self.vc.base.insert(ci, self.vc.settled.get(&ci).cloned());
+        }
+    }
+
+    /// The closures a delta counts its change against: each nearest, and each closure a negation reads.
+    fn vfollowed(&self) -> Vec<usize> {
+        (0..self.vc.vclosures.len()).filter(|ci| self.vc.vclosures[*ci].active && (self.store.virtuals[*ci].near.is_some() || self.vc.neg_read.contains(ci))).collect()
+    }
+
+    /// The forests of the followed closures as the store now stands: what the next delta counts against.
+    pub(super) fn vsettle_forests(&mut self) {
+        self.vc.settled.clear();
+        for ci in self.vfollowed() {
+            let f = self.vc.vforests(&mut self.store, ci);
+            self.vc.settled.insert(ci, f);
         }
     }
 
@@ -638,7 +677,11 @@ impl Eval {
                 touched.extend(self.store.args(*id).first().copied());
             }
         }
-        let prev = self.vc.reader_forest.insert((rule, ci), forests.clone()).or_else(|| self.vc.vclosures[ci].prev.clone());
+        // what the reader saw: the forest it last fired over, else the one the delta found
+        let prev = self.vc.reader_forest.insert((rule, ci), forests.clone()).or_else(|| self.vc.base.get(&ci).cloned().flatten());
+        if prev.is_none() {
+            self.vc.unbased = true;
+        }
         let (mut was, mut now) = (FxSet::default(), FxSet::default());
         for t in &touched {
             for (_, f) in prev.iter().flat_map(|p| p.iter()) {
@@ -862,6 +905,9 @@ impl VClosureState {
                 c.deaths = store.deaths.get(&c.src).copied().unwrap_or(0);
                 c.revived = store.revived.get(&c.src).map_or(0, Vec::len);
                 store.virtuals[ci].forests = Rc::from(fs);
+                if store.virtuals[ci].near.is_some() || self.neg_read.contains(&ci) {
+                    self.settled.insert(ci, store.virtuals[ci].forests.clone());
+                }
             }
         }
         Ok(())
@@ -883,6 +929,9 @@ impl VClosureState {
     /// The forests of a closure, one for each book of its edge relation, as the edges stand: built again when the edge
     /// relation has changed since.
     fn vforests(&mut self, store: &mut Store, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
+        if !self.vclosures[ci].open {
+            return Rc::from(Vec::new());
+        }
         let edge = self.vclosures[ci].src;
         let near = store.virtuals[ci].near;
         let n = self.vseen(store, ci);
@@ -932,9 +981,6 @@ impl VClosureState {
                     books.into_iter().map(|(b, es)| (b, Rc::new(if graph { Forest::build_graph(&es) } else { Forest::build(&es) }))).collect()
                 }
             };
-            if near.is_some() {
-                self.vclosures[ci].prev = Some(store.virtuals[ci].forests.clone());
-            }
             self.vclosures[ci].mark = store.len_ids();
             self.vclosures[ci].deaths = store.deaths.get(&edge).copied().unwrap_or(0);
             self.vclosures[ci].revived = store.revived.get(&edge).map_or(0, Vec::len);

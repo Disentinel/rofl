@@ -1125,6 +1125,8 @@ pub struct VClosureState {
     /// the closures a rule reads under a negation, and each one's forests as a delta found them (None: not built)
     neg_read: HashSet<usize>,
     base: HashMap<usize, Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
+    /// the forests of each nearest and each closure a negation reads as the last evaluation or delta left them
+    settled: HashMap<usize, Rc<[(Sym, Rc<crate::forest::Forest>)]>>,
     /// a delta met a closure read under a negation with no forest from before it to count the change against
     unbased: bool,
 }
@@ -3869,6 +3871,7 @@ impl Eval {
         self.write_shrugs(partial)?;
         brk!("function_dirty_cleared_first" => self.store.dirty = false; ());
         self.vc.vpublish(&mut self.store);
+        self.vsettle_forests();
         self.ds.check_promises(&self.h, &self.store)?;
         self.store.dirty = false;
         self.store.partial_eval = partial;
@@ -3900,6 +3903,7 @@ impl Eval {
             if from.is_some_and(|p| p > ph) {
                 continue;
             }
+            self.vopen_below(lv)?;
             if from != Some(ph) {
                 self.close_plain_rules(lv)?;
                 self.plain_flush(lv)?;
@@ -3929,6 +3933,7 @@ impl Eval {
             self.wall.level_rest = Some((Vec::new(), levels.len() + ph0));
             return Ok(true);
         }
+        self.vopen_below(i64::MAX)?;
         self.close_plain_rules(i64::MAX)?;
         self.plain_flush(i64::MAX)?;
         // what a lattice's close writes can reach a threshold, and the

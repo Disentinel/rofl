@@ -596,9 +596,10 @@ The Rust engine answers it from the edges' forest with each node's nearest marke
 mode), no row stored, in a world with witnesses or without, where the edges are a declared `tree`; otherwise, or where
 the condition or the edges are concluded from it, the rows are stored and `vclosure_off` says why. Books count for the
 edges: `declared[flow]` reading `parent` does not make `declared[value]` concluded from it, and edges that come late
-only add rows. They do not for the condition, which the evaluation orders by relation: a mark that comes late would
-take a row out, so a condition concluded from the nearest through any book keeps its rows stored (the role climb
-`up_role`, whose `plays` reads roles that read the tree). A closure concluded below a lemma stage, or whose rows stand
+only add rows. The condition counts by book too, and a mark that came late would take a row out; so a nearest answers
+nothing until the evaluation reaches the level the stratification gives its step, which negates the condition, as it
+would a negation: there the condition is whole, the forest is built and the readers fire (`vopen_below`). The role
+climb `up_role`, whose `plays` reads roles that read the tree, is walked so. A closure concluded below a lemma stage, or whose rows stand
 as facts, is stored as well: its rows are lemmas. A
 row's firings are the lowered rules' (the step's negated premise cited as a negation). The JS model declares
 `up_role` (the role tree's climb over the parser's `edge`) and `nearest_v`.
@@ -607,7 +608,8 @@ A delta follows the rows under each node an edge or a mark changed at: an additi
 the readers; one that takes a row out, and a retraction that puts one in, evaluate the world again. A rule that reads
 any closure answered from its tree under a negation is told the rows the delta put in (the firings they block go) and
 took out (the negation now holds), counted against the forests the delta found (`vneg_rows`). *Saves* the rows: with
-`inside`, which the same book test let go, vscode 1000 files 42.3M stored facts → 31.3M, peak 5.8 → 5.4 GB.
+`up_role`, once it opens at its level, vscode 1000 files 42.3M stored facts → 31.3M, peak 5.8 → 5.2 GB, 129 → 112 s,
+the answers byte for byte; at 100 files the walked closures are 1.51M rows, `inside` 1.14M of them, `up_role` 0.22M.
 `ds_nearest_holds` and `ds_nearest_sealed` hold every reader to a twin over the rules written by hand.
 
 ## The other five, as built
