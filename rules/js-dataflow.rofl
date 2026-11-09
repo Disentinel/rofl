@@ -1319,7 +1319,7 @@ super_recv[code](C) :- callee_of[code](C, N), super[value](N).
 super_recv[code](C) :- call[value](C), callee[value](C, N), member[value](N, _, _), object_of[code](N, R), super[value](R).
 recv_key[flow](C, R, Key) :- recv_call[code](C, R), callee[value](C, N), selects[flow](N, Key).
 recv_key[flow](N, R, Key) :- accessor_read[code](N, _), object_of[code](N, R), selects[flow](N, Key).
-sx_lookup[surface](CD, Key, G) :- class_member_proto[flow](CD, Key, V), may_be[flow](V, node, G).
+sx_lookup[surface](CD, Key, G) :- class_member_proto[flow](CD, Key, V), class_like[flow](CD), may_be[flow](V, node, G).
 applies[flow](C, G) :- resolves[code](C, G).
 applies[flow](C, M) :- new_of[flow](C, CD), ctor_of[flow](CD, M).
 at_call[flow](C, S, VK, X)  :- applies[flow](C, G), sx_wparam[surface](G, S, I), arg_at[flow](C, I, A), may_be[flow](A, VK, X).
