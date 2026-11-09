@@ -1046,7 +1046,7 @@ keyed_vbetween[code](V, C, P, S) :- keyed_vspan[code](V, C, P, S, top), not in_f
 keyed_vdiffers[code](D, P) :- keyed_vdrop_cand[code](D, P), keyed_key[code](D, K1), keyed_key[code](P, K2), K1 != K2.
 keyed_vdrop_cand[code](D, P) :- keyed_vbetween[code](_, C, P, _), keyed_read_site[code](C, H, _, _), keyed_drop[code](D, H).
 keyed_vdrop_at[code](V, C, Q, D) :- keyed_vbetween[code](V, C, P, Q), keyed_vdrop_cand[code](D, P), not keyed_vdiffers[code](D, P).
-keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, D), resolves[code](Q, G), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2),
+keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, D), resolves[code](Q, G), nearest_v[flow](G2, D), dwalk_v[code](G, G2),
                                not keyed_vsure_out[code](V, C, Q).
 keyed_vdrop_may[code](V, C) :- keyed_vdrop_at[code](V, C, Q, _), suspends[value](Q, _, _).
 keyed_vsure_out[code](V, C, Q) :- keyed_vbetween[code](V, C, P, Q), nth[tree](B, _, Q), discards[value](B, Q),
@@ -1078,7 +1078,7 @@ keyed_fill[code](C, J) :- keyed_fill_cand[code](C, P, J), keyed_key[code](P, K),
 -- statement of its body with no `return` in a statement before it, and nothing
 -- the function runs removes from the collection. A method is called on `this`.
 keyed_stmt_need[code](G) :- keyed_fn_need[code](G).
-keyed_stmt_need[code](G) :- keyed_drop_runs[code](G, _).
+keyed_stmt_need[code](G) :- drops_any[code](G).
 keyed_body_stmt[code](G, K, X) :- keyed_stmt_need[code](G), body[value](G, Gb), nth[tree](Gb, K, X),
                                   discards[value](Gb, X).
 keyed_early[code](G, K) :- keyed_body_stmt[code](G, K, _), nearest_v[flow](G, R), exits[value](R, return),
@@ -1099,9 +1099,20 @@ keyed_one_target[code](Q, G) :- keyed_local_call[code](Q, G), private_method[cod
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, P), keyed_put_of[code](P, H, _).
 keyed_sure_at[code](G, H, P, K) :- keyed_body_stmt[code](G, K, Q), keyed_one_target[code](Q, G2), keyed_sure[code](G2, H, P).
 keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G, D).
-keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G2, D), keyed_drop_runs[code](G, G2).
-keyed_drop_runs[code](G, G) :- keyed_drop[code](D, _), nearest_v[flow](G, D).
-keyed_drop_runs[code](F, G) :- eff_calls[code](F, H), keyed_drop_runs[code](H, G).
+keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), nearest_v[flow](G2, D), dwalk_hop[code](G, G2).
+-- What a run may remove from a collection is asked of a few functions; the calls are walked down from those alone,
+-- and only into a function that may remove anything (`drops_any`, one row a function): the pairs of every function
+-- with every function it reaches grew with the square of the corpus.
+keyed_dropper[code](G) :- keyed_drop[code](D, _), nearest_v[flow](G, D).
+drops_any[code](G) :- keyed_dropper[code](G).
+drops_any[code](F) :- eff_calls[code](F, H), drops_any[code](H).
+dcall[code](F, H)  :- eff_calls[code](F, H), drops_any[code](H).
+dwalk_hop[code](G, G) :- keyed_hop_fn[code](G, _), drops_any[code](G).
+dwalk_hop[code](S, Y) :- dwalk_hop[code](S, X), dcall[code](X, Y).
+dwalk_v[code](G, G) :- keyed_vdrop_at[code](_, _, Q, _), resolves[code](Q, G), drops_any[code](G).
+dwalk_v[code](S, Y) :- dwalk_v[code](S, X), dcall[code](X, Y).
+dwalk_p[code](F, F) :- keyed_drop_may[code](C, J, _), keyed_pbetween[code](C, J, Q), resolves[code](Q, F), drops_any[code](F).
+dwalk_p[code](S, Y) :- dwalk_p[code](S, X), dcall[code](X, Y).
 keyed_sure[code](G, H, P) :- keyed_sure_at[code](G, H, P, K), not keyed_early[code](G, K), not keyed_g_drops[code](G, H).
 keyed_fill_call[code](C, P, J) :- keyed_read_site[code](C, H, B, I), keyed_call[code](C, H, _, _, _),
                                   nth[tree](B, J, Q), discards[value](B, Q), J < I, keyed_one_target[code](Q, G), keyed_sure[code](G, H, P).
@@ -1179,7 +1190,7 @@ keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), keyed_read_site[code](C
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
                           resolves[code](Q, G).
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
-                          resolves[code](Q, F), keyed_drop_runs[code](F, G).
+                          resolves[code](Q, F), dwalk_p[code](F, G).
 keyed_lost[code](C, J) :- keyed_drop_may[code](C, J, D), nearest_v[flow](G, D), keyed_pbetween[code](C, J, Q),
                           suspends[value](Q, _, _).
 keyed_outside_at[code](C, J) :- keyed_pbetween[code](C, J, Q), runs_unknown[code](Q).

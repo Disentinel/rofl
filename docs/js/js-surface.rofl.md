@@ -37,7 +37,7 @@ Reads:
 - from js-concat, in the flow: [may_be](js-concat.rofl.md#may_be)
 - from js-controlflow, in the code: [always_throws](js-controlflow.rofl.md#always_throws), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [may_throw](js-controlflow.rofl.md#may_throw), [reachable](js-controlflow.rofl.md#reachable), [sync_body](js-controlflow.rofl.md#sync_body)
 - from js-controlflow, in the flow: [accessor_as](js-controlflow.rofl.md#accessor_as), [accessor_of](js-controlflow.rofl.md#accessor_of), [thrown_by](js-controlflow.rofl.md#thrown_by)
-- from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [keyed_drop_runs](js-dataflow.rofl.md#keyed_drop_runs), [keyed_runs_m](js-dataflow.rofl.md#keyed_runs_m), [keyed_runs_out](js-dataflow.rofl.md#keyed_runs_out), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
+- from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [keyed_runs_m](js-dataflow.rofl.md#keyed_runs_m), [keyed_runs_out](js-dataflow.rofl.md#keyed_runs_out), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
 - from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [class_like](js-dataflow.rofl.md#class_like), [class_member_proto](js-dataflow.rofl.md#class_member_proto), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_unset_field](js-dataflow.rofl.md#class_unset_field), [ctor_of](js-dataflow.rofl.md#ctor_of), [external_value](js-dataflow.rofl.md#external_value), [field_at](js-dataflow.rofl.md#field_at), [gen_fn](js-dataflow.rofl.md#gen_fn), [gen_of](js-dataflow.rofl.md#gen_of), [holds_members](js-dataflow.rofl.md#holds_members), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [kind_proto](js-dataflow.rofl.md#kind_proto), [made_of](js-dataflow.rofl.md#made_of), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_field_runs](js-dataflow.rofl.md#member_field_runs), [member_field_sure](js-dataflow.rofl.md#member_field_sure), [member_plain](js-dataflow.rofl.md#member_plain), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
 - from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_reaches](js-effects.rofl.md#eff_reaches)
 - from js-effects, in the flow: [class_construct_eff](js-effects.rofl.md#class_construct_eff), [eff_latent](js-effects.rofl.md#eff_latent), [eff_module](js-effects.rofl.md#eff_module), [effect_of](js-effects.rofl.md#effect_of), [effect_of_module](js-effects.rofl.md#effect_of_module)
@@ -220,7 +220,17 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 <a id="sx_sub_inst"></a>`sx_sub_inst`(C, I) if [`sx_esc`](#sx_esc)(C) and [`sub_inst`](js-dataflow.rofl.md#sub_inst)(C, I).
 
-<a id="sx_drop_runs"></a>`sx_drop_runs`(F, G) if [`sx_esc`](#sx_esc)(F) and [`keyed_drop_runs`](js-dataflow.rofl.md#keyed_drop_runs)(F, G).
+<a id="sx_drops_any"></a>`sx_drops_any`(F) if [`sx_esc`](#sx_esc)(F) and [`drops_any`](js-dataflow.rofl.md#drops_any)(F).
+
+<a id="sx_dwalked"></a>`sx_dwalked`(H) either:
+
+1. if [`sx_drops_any`](#sx_drops_any)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H);
+2. if [`sx_dwalked`](#sx_dwalked)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H).
+
+<a id="sx_dcall"></a>`sx_dcall`(F, H) either:
+
+1. if [`sx_drops_any`](#sx_drops_any)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H);
+2. if [`sx_dwalked`](#sx_dwalked)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H).
 
 <a id="sx_runs_out"></a>`sx_runs_out`(F) if [`sx_esc`](#sx_esc)(F) and [`keyed_runs_out`](js-dataflow.rofl.md#keyed_runs_out)(F).
 
@@ -291,7 +301,9 @@ In the flow:
 
 In the code:
 
-`keyed_drop_runs`(F, G) if [`sx_drop_runs`](#sx_drop_runs)(F, G).
+`drops_any`(F) if [`sx_drops_any`](#sx_drops_any)(F).
+
+`dcall`(F, H) if [`sx_dcall`](#sx_dcall)(F, H).
 
 `keyed_runs_out`(F) if [`sx_runs_out`](#sx_runs_out)(F).
 

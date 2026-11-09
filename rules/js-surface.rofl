@@ -89,7 +89,11 @@ sx_eff_calls[surface](F, G)  :- sx_esc[surface](F), eff_calls[code](F, G).
 sx_eff_reaches[surface](F, G) :- sx_esc[surface](F), eff_reaches[code](F, G).
 sx_keyed_runs[surface](F, M) :- sx_esc[surface](F), keyed_runs_m[code](F, M).
 sx_sub_inst[surface](C, I) :- sx_esc[surface](C), sub_inst[flow](C, I).
-sx_drop_runs[surface](F, G) :- sx_esc[surface](F), keyed_drop_runs[code](F, G).
+sx_drops_any[surface](F) :- sx_esc[surface](F), drops_any[code](F).
+sx_dwalked[surface](H)    :- sx_drops_any[surface](F), dcall[code](F, H).
+sx_dwalked[surface](H)    :- sx_dwalked[surface](F), dcall[code](F, H).
+sx_dcall[surface](F, H)   :- sx_drops_any[surface](F), dcall[code](F, H).
+sx_dcall[surface](F, H)   :- sx_dwalked[surface](F), dcall[code](F, H).
 sx_runs_out[surface](F) :- sx_esc[surface](F), keyed_runs_out[code](F).
 sx_exn_carrier[surface](F)   :- sx_esc[surface](F), amb_exn_carrier[flow](F).
 sx_outside[surface](F)       :- sx_esc[surface](F), runs_outside[code](F).
@@ -144,7 +148,8 @@ eff_calls[code](F, G)         :- sx_eff_calls[surface](F, G).
 eff_reaches[code](F, G)       :- sx_eff_reaches[surface](F, G).
 keyed_runs_m[code](F, M)      :- sx_keyed_runs[surface](F, M).
 sub_inst[flow](C, I)          :- sx_sub_inst[surface](C, I).
-keyed_drop_runs[code](F, G)   :- sx_drop_runs[surface](F, G).
+drops_any[code](F)            :- sx_drops_any[surface](F).
+dcall[code](F, H)             :- sx_dcall[surface](F, H).
 keyed_runs_out[code](F)       :- sx_runs_out[surface](F).
 amb_exn_carrier[flow](F)      :- sx_exn_carrier[surface](F).
 runs_outside[code](F)         :- sx_outside[surface](F).

@@ -39,7 +39,8 @@ xl_seed(sx_accessor, 3).
 xl_seed(sx_eff_reaches, 2).
 xl_seed(sx_field_runs, 4).
 xl_seed(sx_keyed_runs, 2).
-xl_seed(sx_drop_runs, 2).
+xl_seed(sx_dwalked, 1).
+xl_seed(sx_dcall, 2).
 xl_seed(sx_sub_inst, 2).
 
 -- THE REGISTER, after the rewrite (rules/js-surface.rofl; the baseline of 2026-10-05 had 214 rows `awaiting_rewrite`,
@@ -115,8 +116,8 @@ xl_ok(member_unset, obj_own_key, "a literal of the read's own file (the ast_node
 -- a file.
 xl_ok(member_const_read, member_const_set, "a literal of the read's own file (member_unset matches the file)").
 xl_ok(member_ctor_late, member_read_fn, "the read's own function, matched against the mirrored eff_reaches of what runs before the write").
--- What a call may run is asked backwards along the call graph (keyed_runs_m, keyed_drop_runs, keyed_runs_out), and a
--- function of another file brings its answer with it (sx_keyed_runs, sx_drop_runs, sx_runs_out).
+-- What a call may run is asked backwards along the call graph (keyed_runs_m, keyed_runs_out; what may remove is walked down from the asking functions, dwalk_*), and a
+-- function of another file brings its answer with it (sx_keyed_runs, sx_runs_out; the walk's edges sx_dcall).
 xl_ok(keyed_handed, keyed_hand_need, "the volume's own instance or function, matched; one another file hands on is sx_esc").
 xl_ok(keyed_crosses, at, "the test that a callee is NOT of the caller's file: true alike in the volume and the whole").
 xl_ok(keyed_crosses, keyed_crosses, "a callee of another file makes the caller cross by the arm beside, so its own answer adds nothing").

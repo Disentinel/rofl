@@ -2428,7 +2428,7 @@ Declared as facts:
    - [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, D);
    - a call Q [resolves to](js-callgraph.rofl.md#resolves) G;
    - G2 [is nearest to](#nearest_v) a node D;
-   - [`keyed_drop_runs`](#keyed_drop_runs)(G, G2);
+   - [`dwalk_v`](#dwalk_v)(G, G2);
    - unless [`keyed_vsure_out`](#keyed_vsure_out)(V, C, Q);
 2. if [`keyed_vdrop_at`](#keyed_vdrop_at)(V, C, Q, something) and [`suspends`](js-controlflow.rofl.md#suspends)(Q, something, something) in the value.
 
@@ -2494,7 +2494,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 <a id="keyed_stmt_need"></a>`keyed_stmt_need`(G) either:
 
 1. if [`keyed_fn_need`](#keyed_fn_need)(G);
-2. if [`keyed_drop_runs`](#keyed_drop_runs)(G, something).
+2. if [`drops_any`](#drops_any)(G).
 
 <a id="keyed_body_stmt"></a>`keyed_body_stmt`(G, K, X) if all of:
   - [`keyed_stmt_need`](#keyed_stmt_need)(G);
@@ -2576,12 +2576,44 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - [`keyed_hop_fn`](#keyed_hop_fn)(G, H);
    - [`keyed_drop`](#keyed_drop)(D, H);
    - G2 [is nearest to](#nearest_v) a node D;
-   - [`keyed_drop_runs`](#keyed_drop_runs)(G, G2).
+   - [`dwalk_hop`](#dwalk_hop)(G, G2).
 
-<a id="keyed_drop_runs"></a>`keyed_drop_runs`(G, N) either:
+> What a run may remove from a collection is asked of a few functions; the calls are walked down from those alone,
+> and only into a function that may remove anything (`drops_any`, one row a function): the pairs of every function
+> with every function it reaches grew with the square of the corpus.
 
-1. if [`keyed_drop`](#keyed_drop)(D, something), G [is nearest to](#nearest_v) a node D, and N is G;
-2. if G [has a call to](js-effects.rofl.md#eff_calls) H and [`keyed_drop_runs`](#keyed_drop_runs)(H, N).
+<a id="keyed_dropper"></a>`keyed_dropper`(G) if [`keyed_drop`](#keyed_drop)(D, something) and G [is nearest to](#nearest_v) a node D.
+
+<a id="drops_any"></a>`drops_any`(G) either:
+
+1. if [`keyed_dropper`](#keyed_dropper)(G);
+2. if G [has a call to](js-effects.rofl.md#eff_calls) H and [`drops_any`](#drops_any)(H).
+
+<a id="dcall"></a>`dcall`(F, H) if a node F [has a call to](js-effects.rofl.md#eff_calls) H and [`drops_any`](#drops_any)(H).
+
+<a id="dwalk_hop"></a>`dwalk_hop`(G, N) either:
+
+1. if [`keyed_hop_fn`](#keyed_hop_fn)(G, something), [`drops_any`](#drops_any)(G), and N is G;
+2. if [`dwalk_hop`](#dwalk_hop)(G, X) and [`dcall`](#dcall)(X, N).
+
+<a id="dwalk_v"></a>`dwalk_v`(G, N) either:
+
+1. if all of:
+   - [`keyed_vdrop_at`](#keyed_vdrop_at)(something, something, Q, something);
+   - a call Q [resolves to](js-callgraph.rofl.md#resolves) G;
+   - [`drops_any`](#drops_any)(G);
+   - N is G;
+2. if [`dwalk_v`](#dwalk_v)(G, X) and [`dcall`](#dcall)(X, N).
+
+<a id="dwalk_p"></a>`dwalk_p`(F, N) either:
+
+1. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, something);
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - a call Q [resolves to](js-callgraph.rofl.md#resolves) F;
+   - [`drops_any`](#drops_any)(F);
+   - N is F;
+2. if [`dwalk_p`](#dwalk_p)(F, X) and [`dcall`](#dcall)(X, N).
 
 <a id="keyed_sure"></a>`keyed_sure`(G, H, P) if all of:
   - [`keyed_sure_at`](#keyed_sure_at)(G, H, P, K);
@@ -2826,7 +2858,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - G [is nearest to](#nearest_v) a node D;
    - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
    - a call Q [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`keyed_drop_runs`](#keyed_drop_runs)(F, G);
+   - [`dwalk_p`](#dwalk_p)(F, G);
 4. if all of:
    - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
    - G [is nearest to](#nearest_v) a node D;

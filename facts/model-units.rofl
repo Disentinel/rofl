@@ -327,7 +327,12 @@ unit_concludes("rules/js-dataflow.rofl", keyed_this_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_one_target).
 unit_concludes("rules/js-dataflow.rofl", keyed_sure_at).
 unit_concludes("rules/js-dataflow.rofl", keyed_g_drops).
-unit_concludes("rules/js-dataflow.rofl", keyed_drop_runs).
+unit_concludes("rules/js-dataflow.rofl", keyed_dropper).
+unit_concludes("rules/js-dataflow.rofl", drops_any).
+unit_concludes("rules/js-dataflow.rofl", dcall).
+unit_concludes("rules/js-dataflow.rofl", dwalk_hop).
+unit_concludes("rules/js-dataflow.rofl", dwalk_v).
+unit_concludes("rules/js-dataflow.rofl", dwalk_p).
 unit_concludes("rules/js-dataflow.rofl", keyed_sure).
 unit_concludes("rules/js-dataflow.rofl", keyed_fill_call).
 unit_concludes("rules/js-dataflow.rofl", keyed_ctor_put).
@@ -1332,7 +1337,9 @@ unit_concludes("rules/js-surface.rofl", sx_eff_calls).
 unit_concludes("rules/js-surface.rofl", sx_eff_reaches).
 unit_concludes("rules/js-surface.rofl", sx_keyed_runs).
 unit_concludes("rules/js-surface.rofl", sx_sub_inst).
-unit_concludes("rules/js-surface.rofl", sx_drop_runs).
+unit_concludes("rules/js-surface.rofl", sx_drops_any).
+unit_concludes("rules/js-surface.rofl", sx_dwalked).
+unit_concludes("rules/js-surface.rofl", sx_dcall).
 unit_concludes("rules/js-surface.rofl", sx_runs_out).
 unit_concludes("rules/js-surface.rofl", sx_exn_carrier).
 unit_concludes("rules/js-surface.rofl", sx_outside).
@@ -1380,7 +1387,8 @@ unit_concludes("rules/js-surface.rofl", eff_calls).
 unit_concludes("rules/js-surface.rofl", eff_reaches).
 unit_concludes("rules/js-surface.rofl", keyed_runs_m).
 unit_concludes("rules/js-surface.rofl", sub_inst).
-unit_concludes("rules/js-surface.rofl", keyed_drop_runs).
+unit_concludes("rules/js-surface.rofl", drops_any).
+unit_concludes("rules/js-surface.rofl", dcall).
 unit_concludes("rules/js-surface.rofl", keyed_runs_out).
 unit_concludes("rules/js-surface.rofl", amb_exn_carrier).
 unit_concludes("rules/js-surface.rofl", runs_outside).
