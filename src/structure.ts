@@ -12,10 +12,12 @@ import { Rejected } from './aggeval.ts';
 
 const srcTerm = (t: Term): string => (t.k === 'v' ? (t.name.startsWith('_$') ? '_' : t.name) : t.k === 'f' ? `${t.name}(${t.args.map(srcTerm).join(', ')})` : canonTerm(t));
 const litSrc = (l: Lit): string => `${l.rel}(${l.args.map(srcTerm).join(', ')})`;
+const litBookSrc = (l: Lit): string => (l.perspExplicit ? litSrc(l).replace('(', `[${srcTerm(l.persp)}](`) : litSrc(l));
 
 /** `function ast_name(N, to Name)` as a reader wrote it, a tree's `closure` after it, an alias's literal. */
 export function structureText(c: Clause): string {
   const s = c.structure!;
+  if (s.cond) return `${s.kind} ${litBookSrc(c.head)} of ${litBookSrc(s.source!)} where ${litBookSrc(s.cond)}`;
   return `${s.kind} ${c.head.rel}(${c.head.args.map((t, k) => (s.roles[k] ? `${s.roles[k]} ` : '') + srcTerm(t)).join(', ')})${s.closure === undefined ? '' : ` closure ${s.closure}`}${s.source ? ` is ${litSrc(s.source)}` : ''}`;
 }
 
@@ -37,6 +39,7 @@ export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number |
   if (s.kind === 'graph' && c.head.args.length !== 2) return `${what}: a graph has two arguments, the edge's ends: graph ${rel}(X, Y)`;
   if (s.kind === 'tree' && c.head.args.length !== 2) return `${what}: a tree has two arguments, the parent and the child: tree ${rel}(P, C)`;
   if (s.kind === 'alias') return checkAlias(c, what, arityOf, concluded, taken);
+  if (s.kind === 'nearest') return checkNearest(c, what, arityOf, declared, concluded);
   if (declared.has(rel)) return `${what}: '${rel}' is declared a structure twice`;
   const cl = s.closure;
   if (cl !== undefined) {
@@ -48,6 +51,37 @@ export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number |
     if (other) return `${what}: '${cl}' is also concluded by ${other}; a closure has no other conclusion`;
   }
   return null;
+}
+
+/** A NEAREST AT THE DOOR (`check_nearest`, rust/rofl/src/structure.rs): `nearest R(A, D) of E(A, D) where S(A)`, its own relation, read at the ancestor and the descendant, each literal in a book named and at no other tick, nothing else concluding it. */
+function checkNearest(c: Clause, what: string, arityOf: (rel: string) => number | undefined, declared: ReadonlySet<string>, concluded: (rel: string) => string | null): string | null {
+  const rel = c.head.rel, e = c.structure!.source!, w = c.structure!.cond!;
+  const shape = 'nearest R(A, D) of E(A, D) where S(A)';
+  if (c.head.args.length !== 2) return `${what}: a nearest has two arguments, the ancestor and the descendant: ${shape}`;
+  for (const l of [c.head, e, w]) if (l.persp.k === 'v' || l.temporal !== 'now') return `${what}: each literal names its book and no tick`;
+  const same = (x: Term, y: Term) => x.k === 'v' && y.k === 'v' && x.name === y.name;
+  const [a, d] = c.head.args;
+  if (e.args.length !== 2 || !same(e.args[0], a) || !same(e.args[1], d)) return `${what}: the edges are read at the ancestor and the descendant: ${shape}`;
+  if (w.args.length !== 1 || !same(w.args[0], a)) return `${what}: the condition is read at the ancestor alone: ${shape}`;
+  for (const x of [e.rel, w.rel]) {
+    if (x === rel) return `${what}: a nearest reads other relations than itself`;
+    if (RESERVED.has(x) || x.startsWith('$') || arityOf(x) !== undefined) return `${what}: '${x}' is a kernel relation and a nearest reads the program's relations`;
+  }
+  if (declared.has(rel)) return `${what}: '${rel}' is declared a structure twice`;
+  const other = concluded(rel);
+  if (other) return `${what}: '${rel}' is also concluded by ${other}; a nearest has no other conclusion`;
+  return null;
+}
+
+/** THE LOWERING OF `nearest` (`lower_nearest`, rust/rofl/src/structure.rs): the edge into the descendant from an ancestor `S` holds of, and the walk up past one it does not. TypeScript evaluates them; the Rust engine answers from the tree. */
+export function lowerNearest(c: Clause): string[] {
+  const e = c.structure!.source!, w = c.structure!.cond!;
+  const names = c.head.args.flatMap((x) => (x.k === 'v' ? [x.name] : []));
+  let p = 'P';
+  while (names.includes(p)) p += 'P';
+  const [a, d] = names;
+  const at = (l: Lit, args: string) => `${litBookSrc(l).split('(')[0]}(${args})`;
+  return [`${litBookSrc(c.head)} :- ${litBookSrc(e)}, ${litBookSrc(w)}.`, `${litBookSrc(c.head)} :- ${at(c.head, `${a}, ${p}`)}, not ${at(w, p)}, ${at(e, `${p}, ${d}`)}.`];
 }
 
 /** AN ALIAS AT THE DOOR (`check_alias`, rust/rofl/src/structure.rs): the relation is new (no rule or fact concludes it, no other alias or closure is `taken` by it), and the literal it reads is another relation's, each argument of the alias in it and nothing else named. */
@@ -68,8 +102,10 @@ function checkAlias(c: Clause, what: string, arityOf: (rel: string) => number | 
 }
 
 /** THE CLOSURE OF A TREE IS THE DECLARATION'S, and nothing else concludes it, nor an alias's: the refusal of a clause that does (`rule` or `fact`), or nothing. */
-export function checkClosureHead(c: Clause, closures: ReadonlyMap<string, string>, aliases: ReadonlySet<string> = new Set()): string | null {
-  if (aliases.has(c.head.rel)) return `${c.body.length === 0 ? 'fact' : 'rule'} rejected: '${c.head.rel}' is declared an alias and has no other conclusion: ${canonClause(c)}`;
+export function checkClosureHead(c: Clause, closures: ReadonlyMap<string, string>, aliases: ReadonlySet<string> = new Set(), nearests: ReadonlySet<string> = new Set()): string | null {
+  for (const [set, kind] of [[aliases, 'an alias'], [nearests, 'a nearest']] as const) {
+    if (set.has(c.head.rel)) return `${c.body.length === 0 ? 'fact' : 'rule'} rejected: '${c.head.rel}' is declared ${kind} and has no other conclusion: ${canonClause(c)}`;
+  }
   const tree = closures.get(c.head.rel);
   if (tree === undefined) return null;
   return `${c.body.length === 0 ? 'fact' : 'rule'} rejected: '${c.head.rel}' is the closure of the tree ${tree} and has no other conclusion: ${canonClause(c)}`;

@@ -101,6 +101,8 @@ pub struct Forest {
     pub broken: bool,
     /// a declared `graph`: cycles allowed, answered by walking (graph.rs), the tree's arrays empty
     graph: Option<Box<crate::graph::Graph>>,
+    /// a declared `nearest`: for each node the nearest strict ancestor the condition holds of, `NONE` for none
+    near: Option<Arena<u32>>,
 }
 
 /// The children by parent, in the order the edges were given: the offsets into the child list, and the list.
@@ -185,7 +187,7 @@ impl Forest {
             internal += (start[v + 1] > start[v]) as u32;
         }
         let idx = Idx::of(&nodes, |_| true);
-        Forest { nodes: nodes.into(), idx, parent: parent.into(), pre: pre.into(), order: order.into(), end: end.into(), depth: depth.into(), pairs, deep, internal, broken, graph: None }
+        Forest { nodes: nodes.into(), idx, parent: parent.into(), pre: pre.into(), order: order.into(), end: end.into(), depth: depth.into(), pairs, deep, internal, broken, graph: None, near: None }
     }
 
     /// The graph of `(from, to)` edges, cycles allowed.
@@ -197,15 +199,41 @@ impl Forest {
         f
     }
 
+    /// The forest of `(parent, child)` edges answering `nearest`: each node's nearest strict ancestor of those `marked`.
+    pub fn build_nearest(edges: &[(Term, Term)], marked: &crate::store::FxSet<u64>) -> Forest {
+        let mut f = Forest::build(edges);
+        let mut near = vec![NONE; f.nodes.len()];
+        for &v in f.order.iter() {
+            let p = f.parent[v as usize];
+            if p != NONE {
+                near[v as usize] = if marked.contains(&f.nodes[p as usize].bits()) { p } else { near[p as usize] };
+            }
+        }
+        let mut ups: crate::store::FxSet<u32> = crate::store::FxSet::default();
+        f.pairs = 0;
+        for &u in &near {
+            if u != NONE {
+                f.pairs += 1;
+                ups.insert(u);
+            }
+        }
+        (f.deep, f.internal) = (f.pairs as u32, ups.len() as u32);
+        f.near = Some(near.into());
+        f
+    }
+
     pub fn is_graph(&self) -> bool {
         self.graph.is_some()
     }
 
     /// The forest as a volume keeps it: its arrays and its table as they are, mapped back when read.
     pub(crate) fn write(&self, w: &mut VolW) {
-        w.u32(self.graph.is_some() as u32);
+        w.u32(if self.graph.is_some() { 1 } else if self.near.is_some() { 2 } else { 0 });
         if let Some(g) = &self.graph {
             return g.write(w);
+        }
+        if let Some(near) = &self.near {
+            w.arena(near);
         }
         w.arena(&self.nodes);
         // nodes put in since the table was made go in its free slots while it has room as `of` leaves it, else in a
@@ -231,11 +259,13 @@ impl Forest {
         if let Some(g) = &self.graph {
             return g.kept_by(w);
         }
-        self.nodes.len() < 1 << 14 || (w.in_base(&self.nodes) && [&self.parent, &self.pre, &self.order, &self.end, &self.depth].iter().all(|a| w.in_base(*a)))
+        self.nodes.len() < 1 << 14 || (w.in_base(&self.nodes) && [&self.parent, &self.pre, &self.order, &self.end, &self.depth].into_iter().chain(&self.near).all(|a| w.in_base(a)))
     }
 
     pub(crate) fn read(r: &mut VolR) -> Result<Forest, String> {
-        if r.u32()? == 1 {
+        let kind = r.u32()?;
+        let near: Option<Arena<u32>> = if kind == 2 { Some(r.arena()?) } else { None };
+        if kind == 1 {
             let g = crate::graph::Graph::read(r)?;
             let mut f = Forest::build(&[]);
             (f.pairs, f.deep, f.internal) = (g.pairs, g.deep, g.internal);
@@ -244,9 +274,9 @@ impl Forest {
         }
         let (nodes, table): (Arena<Term>, Arena<u32>) = (r.arena()?, r.arena()?);
         let [parent, pre, order, end, depth] = [(); 5].map(|_| r.arena::<u32>());
-        let f = Forest { idx: Idx { table, over: FxMap::default() }, parent: parent?, pre: pre?, order: order?, end: end?, depth: depth?, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()?, broken: r.u32()? == 1, nodes, graph: None };
+        let f = Forest { idx: Idx { table, over: FxMap::default() }, parent: parent?, pre: pre?, order: order?, end: end?, depth: depth?, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()?, broken: r.u32()? == 1, nodes, graph: None, near };
         let n = f.nodes.len();
-        if !f.idx.table.len().is_power_of_two() || [&f.parent, &f.pre, &f.end, &f.depth].iter().any(|a| a.len() != n) || f.order.len() > n {
+        if !f.idx.table.len().is_power_of_two() || [&f.parent, &f.pre, &f.end, &f.depth].into_iter().chain(&f.near).any(|a| a.len() != n) || f.order.len() > n {
             return Err("a volume's forest is not a forest".into());
         }
         Ok(f)
@@ -332,6 +362,9 @@ impl Forest {
         if let Some(g) = &self.graph {
             return g.is_ancestor(a, d);
         }
+        if let Some(near) = &self.near {
+            return matches!((self.at(a), self.at(d)), (Some(a), Some(d)) if near[d as usize] == a);
+        }
         match (self.at(a), self.at(d)) {
             (Some(a), Some(d)) => {
                 let (pa, pd) = (self.pre[a as usize], self.pre[d as usize]);
@@ -379,6 +412,12 @@ impl Forest {
             return g.ancestors(d, out);
         }
         let Some(mut v) = self.at(d) else { return };
+        if let Some(near) = &self.near {
+            if near[v as usize] != NONE {
+                out.push(self.nodes[near[v as usize] as usize]);
+            }
+            return;
+        }
         for _ in 0..self.depth[v as usize].saturating_sub(brk!("vclosure_ancestors_short" => 1; 0)) {
             v = self.parent[v as usize];
             out.push(self.nodes[v as usize]);
@@ -391,6 +430,20 @@ impl Forest {
             return g.descendants(a, out);
         }
         let Some(v) = self.at(a) else { return };
+        if let Some(near) = &self.near {
+            // below a node another ancestor is nearest to, nothing is nearest to `a`
+            let (mut k, hi) = (self.pre[v as usize] + 1, self.end[v as usize]);
+            while k < hi {
+                let x = self.order[k as usize];
+                if near[x as usize] == v {
+                    out.push(self.nodes[x as usize]);
+                    k += 1;
+                } else {
+                    k = self.end[x as usize];
+                }
+            }
+            return;
+        }
         let (lo, hi) = (self.pre[v as usize] + brk!("vclosure_nonstrict" => 0; 1), self.end[v as usize] - brk!("vclosure_descendants_short" => 1; 0));
         out.extend(self.order[lo as usize..hi.max(lo) as usize].iter().map(|x| self.nodes[*x as usize]));
     }
@@ -399,6 +452,14 @@ impl Forest {
     pub fn each_pair(&self, mut f: impl FnMut(Term, Term)) {
         if let Some(g) = &self.graph {
             return g.each_pair(f);
+        }
+        if let Some(near) = &self.near {
+            for &v in self.order.iter() {
+                if self.pre[v as usize] != NONE && near[v as usize] != NONE {
+                    f(self.nodes[near[v as usize] as usize], self.nodes[v as usize]);
+                }
+            }
+            return;
         }
         for &v in self.order.iter() {
             if self.pre[v as usize] == NONE {
@@ -412,10 +473,41 @@ impl Forest {
         }
     }
 
+    /// The rows into `t` and every node below it: what a change of the edges or the marks at `t` can move.
+    pub fn rows_under(&self, t: Term, out: &mut crate::store::FxSet<(u64, u64)>) {
+        if self.near.is_some() {
+            return self.near_rows_under(t, out);
+        }
+        let mut xs = vec![t];
+        self.descendants(t, &mut xs);
+        let mut up = Vec::new();
+        for x in xs {
+            up.clear();
+            self.ancestors(x, &mut up);
+            out.extend(up.iter().map(|a| (a.bits(), x.bits())));
+        }
+    }
+
+    /// A nearest's rows into `t` and every node below it.
+    pub fn near_rows_under(&self, t: Term, out: &mut crate::store::FxSet<(u64, u64)>) {
+        let (Some(near), Some(v)) = (&self.near, self.at(t)) else { return };
+        for k in self.pre[v as usize]..self.end[v as usize] {
+            let x = self.order[k as usize];
+            if near[x as usize] != NONE {
+                out.insert((self.nodes[near[x as usize] as usize].bits(), self.nodes[x as usize].bits()));
+            }
+        }
+    }
+
     /// Rows of the strict closure with this node as the ancestor.
     pub fn subtree(&self, a: Term) -> u64 {
         if let Some(g) = &self.graph {
             return g.subtree(a);
+        }
+        if self.near.is_some() {
+            let mut v = Vec::new();
+            self.descendants(a, &mut v);
+            return v.len() as u64;
         }
         self.at(a).map_or(0, |v| (self.end[v as usize] - self.pre[v as usize] - 1) as u64)
     }
@@ -430,6 +522,6 @@ impl Forest {
 
     /// Heap bytes held.
     pub fn bytes(&self) -> usize {
-        self.graph.as_ref().map_or(0, |g| g.bytes()) + self.nodes.len() * (8 + 4 * 5 + 16) + self.order.len() * 4
+        self.graph.as_ref().map_or(0, |g| g.bytes()) + self.near.as_ref().map_or(0, |n| n.len() * 4) + self.nodes.len() * (8 + 4 * 5 + 16) + self.order.len() * 4
     }
 }

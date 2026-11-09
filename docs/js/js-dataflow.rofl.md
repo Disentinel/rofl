@@ -47,6 +47,8 @@ Reads:
   - <a id="dreach"></a>`dreach`
   - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
   - <a id="keyed_upstream"></a>`keyed_upstream`
+- from outside these files, in the flow:
+  - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
@@ -943,20 +945,10 @@ In the code:
 > (`fn_kind` is its set). The value layer's own copy, `fn_node_v[flow]` over
 > `fn_kind_v`, was the same six kinds defined twice, and js-controlflow read both.
 
-> Nearest enclosing function over ANY node, walked DOWN from the function in
-> two linear rules. The argmin-as-negation-over-a-quadratic form was 35 % of a
-> fixpoint and no reorder fixes a shape. rules/js-callgraph.rofl keeps
-> `nearest_fn` over sites only; a mutant anchors on that copy.
+> Nearest enclosing function over ANY node: walked on the role tree, never stored.
+> rules/js-callgraph.rofl keeps `nearest_fn` over sites only; a mutant anchors on that copy.
 
-In the flow:
-
-<a id="nearest_v"></a>F is nearest to a node X either:
-
-1. if F is a [function](js-callgraph.rofl.md#fn_node) and [`parent`](#parent)(F, X);
-2. if all of:
-   - F [is nearest to](#nearest_v) a node P;
-   - [`parent`](#parent)(P, X);
-   - unless P is a [function](js-callgraph.rofl.md#fn_node).
+`nearest_v` in the `flow` of F and X holds where F is the nearest ancestor of X along `parent` in the `tree` that `fn_node` in the `code` holds of.
 
 > A CALL UNDER AN ENTRY GUARD IS NOT PART OF THE PROGRAM A LIBRARY IS. Code under
 > `if (!module.parent)` or `if (require.main === module)` runs when the file is

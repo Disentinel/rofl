@@ -4,7 +4,7 @@
 
 -- ---- the vocabulary's own audits
 role_undeclared[audit](Rel) :- writes_to[$kernel](R, B), world(B), concludes[$kernel](R, Rel),
-                               not role(Rel, _), not mark_name(Rel), Rel != roled, Rel != plays, Rel != edge, Rel != climb.
+                               not role(Rel, _), not mark_name(Rel), Rel != roled, Rel != plays, Rel != edge, Rel != up_role.
 mark_undeclared[audit](M)   :- mark[value](_, M), not mark_name(M).
 mark_undeclared[audit](M)   :- mark[type](_, M), not mark_name(M).
 imports(audit, value). imports(audit, type). imports(audit, tree).

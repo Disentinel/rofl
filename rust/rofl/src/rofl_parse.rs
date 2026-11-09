@@ -121,6 +121,16 @@ pub fn src_term(h: &Heap, t: Term, out: &mut String) {
     }
 }
 
+/// A literal as source text with its book: `parent[tree](F, X)`.
+pub fn lit_book_src(h: &Heap, l: &Lit) -> String {
+    let o = lit_src(h, l);
+    match l.book {
+        Book::Named(b) => o.replacen('(', &format!("[{}](", h.name(b)), 1),
+        Book::Var(v) => o.replacen('(', &format!("[{}](", h.name(v)), 1),
+        Book::Bare => o,
+    }
+}
+
 /// A bare literal as source text: `ast_child(P, _, _, C)`.
 pub fn lit_src(h: &Heap, l: &Lit) -> String {
     let mut o = format!("{}(", h.name(l.rel));
@@ -138,6 +148,9 @@ pub fn lit_src(h: &Heap, l: &Lit) -> String {
 /// tag's, `tag cost(A, C, tropical T)`.
 pub fn decl_text(h: &Heap, c: &Clause) -> String {
     if let Some(st) = &c.structure {
+        if let (Some(e), Some(w)) = (&st.source, &st.cond) {
+            return format!("{} {} of {} where {}", h.name(st.kind), lit_book_src(h, &c.head), lit_book_src(h, e), lit_book_src(h, w));
+        }
         let mut o = format!("{} {}(", h.name(st.kind), h.name(c.head.rel));
         for (k, t) in c.head.args.iter().enumerate() {
             if k > 0 {
@@ -289,7 +302,7 @@ pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"]), ("tree"
 /// marks it (`None` for a key position), for a tree the relation it is the
 /// closure of, and for an alias the literal it is (`alias ast_in(P, C) is ast_child(P, _, _, C)`).
 #[derive(Clone, Debug, PartialEq)]
-pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>>, pub closure: Option<Sym>, pub source: Option<Lit> }
+pub struct Structure { pub kind: Sym, pub roles: Vec<Option<Sym>>, pub closure: Option<Sym>, pub source: Option<Lit>, pub cond: Option<Lit> }
 
 /// A clause, or a lattice declaration: `lattice dist(A, C, min D).` is the
 /// head `dist(A, C, D)` with no body and `lattice` the operation `min`;
@@ -971,7 +984,30 @@ impl<'a> Parser<'a> {
             source = Some(l);
         }
         self.decl_dot(&what)?;
-        Ok(Clause { structure: Some(Structure { kind, roles, closure, source }), ..Self::decl_clause(rel, args) })
+        Ok(Clause { structure: Some(Structure { kind, roles, closure, source, cond: None }), ..Self::decl_clause(rel, args) })
+    }
+
+    /// `nearestdecl := 'nearest' lit 'of' lit 'where' lit '.'`: `nearest R[b](A, D) of E[e](A, D) where S[s](A).`, the
+    /// nearest proper ancestor `A` of `D` along the edges `E` that `S` holds of (docs/data-structures.md).
+    fn nearest_decl(&mut self) -> P<Clause> {
+        let s = self.bump().ok_or("nearest: end of input")?;
+        let kind = self.sym(&s);
+        let head = self.lit()?;
+        let what = format!("nearest {}", self.h.name(head.rel));
+        let shape = "nearest R(A, D) of E(A, D) where S(A)";
+        if !self.is_word(0, "of") {
+            return Err(format!("{what}: `of` names the edges walked up: {shape}"));
+        }
+        self.bump();
+        let edge = self.lit().map_err(|e| format!("{what}: `of` is followed by the edges, a literal ({e})"))?;
+        if !self.is_word(0, "where") {
+            return Err(format!("{what}: `where` names what the ancestor is: {shape}"));
+        }
+        self.bump();
+        let cond = self.lit().map_err(|e| format!("{what}: `where` is followed by a literal ({e})"))?;
+        self.decl_dot(&what)?;
+        let roles = vec![None; head.args.len()];
+        Ok(Clause { head, structure: Some(Structure { kind, roles, closure: None, source: Some(edge), cond: Some(cond) }), ..Self::decl_clause(kind, Vec::new()) })
     }
 
     /// `domrule := lit '<=' lit ':-' body '.'` (docs/aggregates.md,
@@ -1008,6 +1044,9 @@ impl<'a> Parser<'a> {
         }
         if brk!("order_unread" => false; (self.is_word(0, "pareto") || self.is_word(0, "lex")) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident)) {
             return self.order_decl();
+        }
+        if self.is_word(0, "nearest") && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
+            return self.nearest_decl();
         }
         for (kind, words) in STRUCTURE_KINDS {
             if brk!("function_unread" => false; self.is_word(0, kind)) && !(*kind == "tree" && brk!("tree_unread" => true; false)) && matches!(self.peek_at(1), Some(s) if s.tok == Tok::Word && self.word_kind(s) == WordKind::Ident) {
@@ -1175,7 +1214,11 @@ pub fn show(h: &Heap, c: &Clause) -> String {
     if let Some(st) = &c.structure {
         let roles = st.roles.iter().map(|r| r.map_or("key", |r| h.name(r))).collect::<Vec<_>>().join(" ");
         let closure = st.closure.map_or(String::new(), |cl| format!(" closure {}", h.name(cl)));
-        return format!("(structure {} [{}] {}{closure})", h.name(st.kind), roles, show_lit(h, &c.head));
+        let near = match (&st.source, &st.cond) {
+            (Some(e), Some(w)) => format!(" of {} where {}", show_lit(h, e), show_lit(h, w)),
+            _ => String::new(),
+        };
+        return format!("(structure {} [{}] {}{closure}{near})", h.name(st.kind), roles, show_lit(h, &c.head));
     }
     if let (Some(kind), Some(dirs)) = (c.lattice, &c.ord) {
         let dirs = dirs.iter().map(|d| h.name(*d)).collect::<Vec<_>>().join(" ");

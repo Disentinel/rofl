@@ -240,6 +240,8 @@ struct LevelRun {
     here: Vec<Rc<ERule>>,
 }
 
+const UNBASED: &str = "a negation reads a closure answered from its tree, and no tree stood before the change to count it against";
+
 /// Whether the rule `id` fires at level `lv`.
 fn fired_at(st: &Fine, lv: i64, id: Sym) -> bool {
     st.lvl[&id] == lv
@@ -447,7 +449,17 @@ impl Eval {
             self.clo.closures_engage(&self.store);
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
+        self.vc.near_moved = false;
+        self.vsnapshot();
         let d = self.worked_out_beside_holes(added, &[], &fresh, &grown, &moved, called)?;
+        if self.vc.near_moved {
+            self.store.dirty = true;
+            return Err("the addition took a row out of a nearest".into());
+        }
+        if self.vc.unbased {
+            self.store.dirty = true;
+            return Err(UNBASED.into());
+        }
         // a closure declared by the addition lists its rows from now on
         if self.vc.any && !self.store.vlisted {
             self.vc.vpublish(&mut self.store);
@@ -519,10 +531,21 @@ impl Eval {
         }
         // a base fact a rule concludes too loses its firings with it, and their rows (it is derived again at its level
         // where a rule still makes it)
+        self.vsnapshot();
         let fired: Vec<FactId> = facts.iter().copied().filter(|f| !self.store.firings(*f).is_empty()).collect();
         self.withdraw_unswept(&fired, |_, _| true);
         self.store.remove_many(&all);
-        self.worked_out_beside_holes(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[])
+        self.vc.near_moved = false;
+        let d = self.worked_out_beside_holes(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[])?;
+        if self.vc.near_moved {
+            self.store.dirty = true;
+            return Err("the retraction put a row into a nearest".into());
+        }
+        if self.vc.unbased {
+            self.store.dirty = true;
+            return Err(UNBASED.into());
+        }
+        Ok(d)
     }
 
     /// The addition worked out over the program without the rules of what a hole or a shrug may move that it reaches
@@ -578,14 +601,16 @@ impl Eval {
 
     /// The bindings a fact gives a negated premise of the fine path, where it matches the premise's pattern.
     fn bind_neg(&self, n: &NegAt, f: FactId) -> Option<Subst> {
-        let rec = self.store.rec(f);
-        let args = self.store.args(f);
+        self.bind_neg_row(n, self.store.rec(f).persp, self.store.args(f))
+    }
+
+    fn bind_neg_row(&self, n: &NegAt, persp: Sym, args: &[Term]) -> Option<Subst> {
         if args.len() != n.lit.args.len() {
             return None;
         }
         let mut s = Subst::new();
         if n.persp {
-            s = unify(&self.h, n.lit.persp, Term::atom(rec.persp), &s)?;
+            s = unify(&self.h, n.lit.persp, Term::atom(persp), &s)?;
         }
         for k in &n.binds {
             s = unify(&self.h, n.lit.args[*k], args[*k], &s)?;
@@ -598,6 +623,12 @@ impl Eval {
     fn neg_seeds(&self, n: &NegAt, facts: Vec<FactId>) -> Vec<Subst> {
         let mut seen: HashSet<Vec<(Sym, u64)>> = HashSet::new();
         facts.into_iter().filter_map(|g| self.bind_neg(n, g)).filter(|s| seen.insert(s.iter().map(|(v, t)| (*v, t.bits())).collect())).collect()
+    }
+
+    /// The bindings rows of a closure answered from its tree give a negated premise, each once.
+    fn neg_row_seeds(&self, n: &NegAt, rows: &[(Sym, [Term; 2])]) -> Vec<Subst> {
+        let mut seen: HashSet<Vec<(Sym, u64)>> = HashSet::new();
+        rows.iter().filter_map(|(b, args)| self.bind_neg_row(n, *b, args)).filter(|s| seen.insert(s.iter().map(|(v, t)| (*v, t.bits())).collect())).collect()
     }
 
     /// THE ROUNDS OF A LEVEL, over the news of every level below and then over what each round made, semi-naively. A
@@ -926,18 +957,33 @@ impl Eval {
     /// held, and what rested on them goes whole, to be derived again.
     fn block_firings(&mut self, lv: i64, plan: &Plan, st: &mut Fine, d: &mut AddDelta) -> Result<(), Halt> {
         let mut seeds: Vec<FactId> = Vec::new();
+        let mut vrows: HashMap<Sym, Vec<(Sym, [Term; 2])>> = HashMap::new();
+        for (_, ns) in plan.negs.iter().filter(|(r, _)| fired_at(st, lv, r.id)) {
+            for n in ns {
+                if let std::collections::hash_map::Entry::Vacant(e) = vrows.entry(n.lit.rel) {
+                    if let Some((came, _)) = self.vneg_rows(n.lit.rel, &st.news, &st.gone) {
+                        e.insert(came);
+                    }
+                }
+            }
+        }
         for (r, ns) in plan.negs.iter().filter(|(r, _)| fired_at(st, lv, r.id)) {
-            let dropped: Vec<usize> = ns.iter().filter(|n| st.news.by_rel.contains_key(&n.lit.rel)).map(|n| n.at).collect();
+            let dropped: Vec<usize> = ns.iter().filter(|n| st.news.by_rel.contains_key(&n.lit.rel) || vrows.get(&n.lit.rel).is_some_and(|v| !v.is_empty())).map(|n| n.at).collect();
             if dropped.is_empty() {
                 continue;
             }
             let keep: Vec<usize> = (0..r.plan.len()).filter(|i| !dropped.contains(i)).collect();
             for n in ns.iter().filter(|n| dropped.contains(&n.at)) {
-                let mut blockers: Vec<FactId> = st.news.by_rel[&n.lit.rel].iter().copied().collect();
-                blockers.sort_unstable();
                 let pre = self.neg_vars(n);
                 let order = self.bound_order(r, &keep, &pre);
-                let starts = self.neg_seeds(n, blockers);
+                let starts = match vrows.get(&n.lit.rel) {
+                    Some(rows) => self.neg_row_seeds(n, rows),
+                    None => {
+                        let mut blockers: Vec<FactId> = st.news.by_rel[&n.lit.rel].iter().copied().collect();
+                        blockers.sort_unstable();
+                        self.neg_seeds(n, blockers)
+                    }
+                };
                 for sol in self.solve_bound(r, &keep, order.as_deref(), starts)? {
                     let mut prems = sol.prems.clone();
                     for j in &dropped {
@@ -1136,11 +1182,16 @@ impl Eval {
         // a fact gone for good below makes a negation over it hold
         for (r, ns) in plan.negs.iter().filter(|(r, _)| fired_at(st, lv, r.id)) {
             for n in ns {
-                let mut freed: Vec<FactId> = st.gone.get(&n.lit.rel).cloned().unwrap_or_default();
-                freed.sort_unstable();
                 let (pre, all) = (self.neg_vars(n), (0..r.plan.len()).collect::<Vec<usize>>());
                 let order = self.bound_order(r, &all, &pre);
-                let seeds = self.neg_seeds(n, freed);
+                let seeds = match self.vneg_rows(n.lit.rel, &st.news, &st.gone) {
+                    Some((_, went)) => self.neg_row_seeds(n, &went),
+                    None => {
+                        let mut freed: Vec<FactId> = st.gone.get(&n.lit.rel).cloned().unwrap_or_default();
+                        freed.sort_unstable();
+                        self.neg_seeds(n, freed)
+                    }
+                };
                 for sol in self.solve_bound(r, &all, order.as_deref(), seeds)? {
                     self.conclude(r, sol, &mut out)?;
                 }

@@ -558,7 +558,7 @@ unfolds where the view is one rule of one positive premise (`not in_fn(Q)` reads
 *Rows instead*, both engines, `view_reason` saying which: a view with no rule, a lattice, a well-founded world, a rule
 of the view that stages or aggregates, a view that reads itself (through other views or not), one read inside an
 aggregate or in another tense, and one read negated past one literal. A recursive view is a walk, not a name for a
-body: the nearest ancestor with a property (`nearest_v`, `climb`) needs the tree's own walk, not built yet.
+body: the nearest ancestor with a property is its own declaration, `nearest` (below).
 
 *Saves* the view's rows and the joins that made them; the reader's join is the longer for it.
 
@@ -581,6 +581,34 @@ The planner's size of the closure is a bound from the components (two paths to o
 or taken out builds the book's graph again. *Saves*: the pairs; a walk costs what it reaches, each time it is asked.
 `ds_graph_holds` and `ds_graph_sealed` hold every reader of `ds_tree_holds` over a graph with cycles to its twin over
 the rules written by hand.
+
+## Nearest, as built
+
+Built 2026-11-09. `nearest nearest_v[flow](F, X) of parent[tree](F, X) where fn_node[code](F).` holds where F is the
+nearest strict ancestor of X along the edges that the condition holds of. Its sentence: `` `nearest_v` in the `flow`
+of F and X holds where F is the nearest ancestor of X along `parent` in the `tree` that `fn_node` in the `code` holds
+of. `` It lowers to two rules, which TypeScript evaluates:
+
+    nearest_v[flow](F, X) :- parent[tree](F, X), fn_node[code](F).
+    nearest_v[flow](F, X) :- nearest_v[flow](F, P), not fn_node[code](P), parent[tree](P, X).
+
+The Rust engine answers it from the edges' forest with each node's nearest marked ancestor beside it (`Forest`, near
+mode), no row stored, in a world with witnesses or without, where the edges are a declared `tree`; otherwise, or where
+the condition or the edges are concluded from it, the rows are stored and `vclosure_off` says why. Books count for the
+edges: `declared[flow]` reading `parent` does not make `declared[value]` concluded from it, and edges that come late
+only add rows. They do not for the condition, which the evaluation orders by relation: a mark that comes late would
+take a row out, so a condition concluded from the nearest through any book keeps its rows stored (the role climb
+`up_role`, whose `plays` reads roles that read the tree). A closure concluded below a lemma stage, or whose rows stand
+as facts, is stored as well: its rows are lemmas. A
+row's firings are the lowered rules' (the step's negated premise cited as a negation). The JS model declares
+`up_role` (the role tree's climb over the parser's `edge`) and `nearest_v`.
+
+A delta follows the rows under each node an edge or a mark changed at: an addition that puts rows in feeds them to
+the readers; one that takes a row out, and a retraction that puts one in, evaluate the world again. A rule that reads
+any closure answered from its tree under a negation is told the rows the delta put in (the firings they block go) and
+took out (the negation now holds), counted against the forests the delta found (`vneg_rows`). *Saves* the rows: with
+`inside`, which the same book test let go, vscode 1000 files 42.3M stored facts → 31.3M, peak 5.8 → 5.4 GB.
+`ds_nearest_holds` and `ds_nearest_sealed` hold every reader to a twin over the rules written by hand.
 
 ## The other five, as built
 

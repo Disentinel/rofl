@@ -21,9 +21,11 @@ Reads:
 - from js-controlflow, in the code: [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable)
 - from js-controlflow, in the flow: [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [nearest_v](js-dataflow.rofl.md#nearest_v), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [next_send](js-dataflow.rofl.md#next_send), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
 - from js-effects, in the flow: [eff_module](js-effects.rofl.md#eff_module), [effect_of_module](js-effects.rofl.md#effect_of_module)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
+- from outside these files, in the flow:
+  - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
@@ -199,7 +201,7 @@ In the surface:
 1. if a call C [resolves to](js-callgraph.rofl.md#resolves) F and C neither [is guarded](js-controlflow.rofl.md#guarded) nor [is inside a function](js-controlflow.rofl.md#in_fn);
 2. if all of:
    - G [is reachable](js-controlflow.rofl.md#reachable);
-   - G [is nearest to](js-dataflow.rofl.md#nearest_v) a node C;
+   - G [is nearest to](#nearest_v) a node C;
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
    - unless C [is guarded](js-controlflow.rofl.md#guarded).
 
@@ -323,7 +325,7 @@ In the code:
    - unless a node B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
 2. if all of:
    - [`exits`](#exits)(R, `return`);
-   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R;
+   - F [is nearest to](#nearest_v) a node R;
    - unless [`returns`](js-dataflow.rofl.md#returns)(R, something) in the value.
 
 In the surface:

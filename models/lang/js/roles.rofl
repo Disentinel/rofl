@@ -400,9 +400,9 @@ plays[tree](N) :- roled[value](N).
 plays[tree](N) :- roled[type](N).
 plays[tree](N) :- roled[tree](N).
 plays[tree](N) :- nth[tree](_, _, N).
-climb[tree](C, P) :- edge[tree](P, C), plays[tree](C).
-climb[tree](C, Q) :- climb[tree](C, P), not plays[tree](P), edge[tree](Q, P).
-parent[tree](P, C) :- climb[tree](C, P), plays[tree](P).
+tree edge(P, C).
+nearest up_role[tree](P, C) of edge[tree](P, C) where plays[tree](P).
+parent[tree](P, C) :- up_role[tree](P, C), plays[tree](C).
 -- the role tree is a forest and `inside` its closure
 tree parent(P, C) closure inside.
 

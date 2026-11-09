@@ -68,6 +68,9 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, take
     if kind == "alias" {
         return check_alias(h, v, c, &what, taken, concluded);
     }
+    if kind == "nearest" {
+        return check_nearest(h, v, c, &what, declared, concluded);
+    }
     if brk!("function_twice_admitted" => false; declared.contains(&rel)) {
         return Err(format!("{what}: '{}' is declared a structure twice", h.name(rel)));
     }
@@ -90,6 +93,65 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, take
         }
     }
     Ok(())
+}
+
+/// A NEAREST AT THE DOOR (`checkNearest`, src/structure.ts): `nearest R(A, D) of E(A, D) where S(A)`, its own relation,
+/// read at the ancestor and the descendant, each literal in a book named and at no other tick, nothing else concluding it.
+fn check_nearest(h: &Heap, v: &Vocab, c: &Clause, what: &str, declared: &HashSet<Sym>, concluded: &dyn Fn(Sym) -> Option<String>) -> Result<(), String> {
+    let st = c.structure.as_ref().expect("a structure");
+    let (e, w) = (st.source.as_ref().expect("edges"), st.cond.as_ref().expect("a condition"));
+    let shape = "nearest R(A, D) of E(A, D) where S(A)";
+    let rel = c.head.rel;
+    if c.head.args.len() != 2 {
+        return Err(format!("{what}: a nearest has two arguments, the ancestor and the descendant: {shape}"));
+    }
+    for l in [&c.head, e, w] {
+        if matches!(l.book, crate::rofl_parse::Book::Var(_)) || l.tense != crate::rofl_parse::Tense::Now {
+            return Err(format!("{what}: each literal names its book and no tick"));
+        }
+    }
+    let (a, d) = (c.head.args[0], c.head.args[1]);
+    if e.args.len() != 2 || e.args[0] != a || e.args[1] != d {
+        return Err(format!("{what}: the edges are read at the ancestor and the descendant: {shape}"));
+    }
+    if w.args.len() != 1 || w.args[0] != a {
+        return Err(format!("{what}: the condition is read at the ancestor alone: {shape}"));
+    }
+    for x in [e.rel, w.rel] {
+        if x == rel {
+            return Err(format!("{what}: a nearest reads other relations than itself"));
+        }
+        if v.is_reserved(x) || h.name(x).starts_with('$') || v.arity_of(x).is_some() {
+            return Err(format!("{what}: '{}' is a kernel relation and a nearest reads the program's relations", h.name(x)));
+        }
+    }
+    if declared.contains(&rel) {
+        return Err(format!("{what}: '{}' is declared a structure twice", h.name(rel)));
+    }
+    if let Some(other) = concluded(rel) {
+        return Err(format!("{what}: '{}' is also concluded by {other}; a nearest has no other conclusion", h.name(rel)));
+    }
+    Ok(())
+}
+
+/// THE LOWERING OF `nearest` (`lowerNearest`, src/structure.ts): the two rules the author would have written, the edge
+/// into the descendant from an ancestor `S` holds of, and the walk up past one it does not. TypeScript evaluates them;
+/// this engine answers the relation from the tree (engine/vclosure.rs).
+pub fn lower_nearest(h: &Heap, c: &Clause) -> Vec<String> {
+    use crate::rofl_parse::lit_book_src;
+    let st = c.structure.as_ref().expect("a structure");
+    let (e, w) = (st.source.as_ref().expect("edges"), st.cond.as_ref().expect("a condition"));
+    let names: Vec<String> = c.head.args.iter().filter_map(var_of).map(|x| h.name(x).to_string()).collect();
+    let mut p = String::from("P");
+    while names.contains(&p) {
+        p.push('P');
+    }
+    let (r, a, d) = (lit_book_src(h, &c.head), names[0].clone(), names[1].clone());
+    let at = |l: &crate::rofl_parse::Lit, args: &str| format!("{}({args})", lit_book_src(h, l).split('(').next().unwrap());
+    vec![
+        format!("{r} :- {}, {}.", lit_book_src(h, e), lit_book_src(h, w)),
+        format!("{r} :- {}, not {}, {}.", at(&c.head, &format!("{a}, {p}")), at(w, &p), at(e, &format!("{p}, {d}"))),
+    ]
 }
 
 /// AN ALIAS AT THE DOOR: the relation is new (no rule or fact concludes it, no other alias or closure is `taken` by it), and the
@@ -136,14 +198,16 @@ fn var_of(t: &Term) -> Option<Sym> {
 
 /// THE CLOSURE OF A TREE IS THE DECLARATION'S, and nothing else concludes it
 /// (`checkClosureHead`, src/structure.ts): the refusal of a clause that does.
-pub fn check_closure_head(h: &Heap, c: &crate::reflect::Clause, closures: &HashMap<Sym, Sym>, aliases: &HashSet<Sym>) -> Option<String> {
-    if aliases.contains(&c.head.rel) {
-        return Some(format!(
-            "{} rejected: '{}' is declared an alias and has no other conclusion: {}",
-            if c.body.is_empty() { "fact" } else { "rule" },
-            h.name(c.head.rel),
-            crate::reflect::canon_clause(h, c)
-        ));
+pub fn check_closure_head(h: &Heap, c: &crate::reflect::Clause, closures: &HashMap<Sym, Sym>, aliases: &HashSet<Sym>, nearests: &HashSet<Sym>) -> Option<String> {
+    for (set, kind) in [(aliases, "an alias"), (nearests, "a nearest")] {
+        if set.contains(&c.head.rel) {
+            return Some(format!(
+                "{} rejected: '{}' is declared {kind} and has no other conclusion: {}",
+                if c.body.is_empty() { "fact" } else { "rule" },
+                h.name(c.head.rel),
+                crate::reflect::canon_clause(h, c)
+            ));
+        }
     }
     let tree = closures.get(&c.head.rel).filter(|_| !brk!("tree_closure_head_open" => true; false))?;
     Some(format!(
@@ -220,6 +284,11 @@ pub fn aliased(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
 /// The relations declared a graph.
 pub fn graphs(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
     decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "graph").map(|d| d.0).collect()
+}
+
+/// The relations declared a nearest.
+pub fn nearests(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
+    decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "nearest").map(|d| d.0).collect()
 }
 
 /// The relations declared a view.

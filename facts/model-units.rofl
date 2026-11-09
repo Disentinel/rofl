@@ -1356,7 +1356,8 @@ unit_concludes("models/lang/js/roles.rofl", ambient).
 unit_concludes("models/lang/js/roles.rofl", mark_name).
 unit_concludes("models/lang/js/roles.rofl", roled).
 unit_concludes("models/lang/js/roles.rofl", plays).
-unit_concludes("models/lang/js/roles.rofl", climb).
+unit_concludes("models/lang/js/roles.rofl", edge).
+unit_concludes("models/lang/js/roles.rofl", up_role).
 unit_concludes("models/lang/js/roles.rofl", parent).
 unit_concludes("models/lang/js/roles.rofl", world).
 unit_concludes("models/lang/js/roles.rofl", imports).

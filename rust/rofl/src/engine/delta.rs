@@ -210,7 +210,7 @@ impl Eval {
     /// hiding another (empty where it is).
     fn delta_refusals(&mut self, f: FactId) -> Vec<&'static str> {
         let mut out = Vec::new();
-        if self.vedges_reached(self.store.rec(f).rel) {
+        if self.vedges_reached(self.store.rec(f).rel) || self.near_reached(&self.grow(&HashSet::from([self.store.rec(f).rel]), &HashSet::new()), false) {
             out.push("the fact reaches the edges of a closure answered from its tree, which a retraction builds again");
         }
         out.extend(self.world_refusals());

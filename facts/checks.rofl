@@ -3301,6 +3301,18 @@ check_file("ds_graph_sealed", "examples/checks/ds-graph-holds.rofl").
 check_file("ds_graph_sealed", "examples/checks/ds-graph-holds-check.rofl").
 check_opt("ds_graph_sealed", together, 1).
 
+-- docs/data-structures.md, Nearest: a declared nearest answered by walking its tree, held to a twin over hand-written rules
+check_world("ds_nearest_holds").
+check_file("ds_nearest_holds", "examples/checks/ds-nearest-holds.rofl").
+check_file("ds_nearest_holds", "examples/checks/ds-nearest-holds-check.rofl").
+check_opt("ds_nearest_holds", together, 1).
+
+check_world("ds_nearest_sealed").
+check_file("ds_nearest_sealed", "examples/checks/ds-nearest-sealed.rofl").
+check_file("ds_nearest_sealed", "examples/checks/ds-nearest-holds.rofl").
+check_file("ds_nearest_sealed", "examples/checks/ds-nearest-holds-check.rofl").
+check_opt("ds_nearest_sealed", together, 1).
+
 check_world("ds_tree_sealed").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-sealed.rofl").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-holds.rofl").

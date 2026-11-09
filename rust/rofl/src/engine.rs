@@ -1118,6 +1118,15 @@ pub struct VClosureState {
     /// Forests built, and rows read from them, by this engine.
     pub builds: u64,
     pub rows_read: u64,
+    /// A delta moved a nearest's rows the way it cannot follow: an addition took one out, a retraction put one in.
+    near_moved: bool,
+    /// the forests of a nearest each reader last fired over: what its news are counted against
+    reader_forest: HashMap<(Sym, usize), Rc<[(Sym, Rc<crate::forest::Forest>)]>>,
+    /// the closures a rule reads under a negation, and each one's forests as a delta found them (None: not built)
+    neg_read: HashSet<usize>,
+    base: HashMap<usize, Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
+    /// a delta met a closure read under a negation with no forest from before it to count the change against
+    unbased: bool,
 }
 
 /// The declared functions and trees, their promises, and the data-stratified components. Held by `Eval`.

@@ -781,6 +781,11 @@ impl<'a> R<'a> {
                 let of = |ts: &[Term]| { let v: Vec<String> = ts.iter().map(|t| name(*t)).collect(); match v.len() { 0 => String::new(), 1 => format!(" of {}", v[0]), k => format!(" of {} and {}", v[..k - 1].join(", "), v[k - 1]) } };
                 return format!("<a id=\"{}\"></a>`{rel}`{} is another name for `{}`{}.\n\n", h.name(c.head.rel), of(&c.head.args), h.name(src.rel), of(&src.args));
             }
+            if let (Some(e), Some(s)) = (&st.source, &st.cond) {
+                let named = |l: &Lit| match l.book { Book::Bare => h.name(l.rel).to_string(), b => format!("{}` in the `{}", h.name(l.rel), self.book_name(b)) };
+                let (a, d) = (c.head.args.first().map(|t| name(*t)).unwrap_or_default(), c.head.args.get(1).map(|t| name(*t)).unwrap_or_default());
+                return format!("`{rel}` of {a} and {d} holds where {a} is the nearest ancestor of {d} along `{}` that `{}` holds of.\n\n", named(e), named(s));
+            }
             if h.name(st.kind) == "graph" {
                 let cl = st.closure.map_or(String::new(), |cl| h.name(cl).to_string());
                 return format!("`{cl}` holds of each node and every node a path of `{rel}` leads to.\n\n");

@@ -451,13 +451,9 @@ call_like[code](C) :- construct[value](C).
 -- (`fn_kind` is its set). The value layer's own copy, `fn_node_v[flow]` over
 -- `fn_kind_v`, was the same six kinds defined twice, and js-controlflow read both.
 
--- Nearest enclosing function over ANY node, walked DOWN from the function in
--- two linear rules. The argmin-as-negation-over-a-quadratic form was 35 % of a
--- fixpoint and no reorder fixes a shape. rules/js-callgraph.rofl keeps
--- `nearest_fn` over sites only; a mutant anchors on that copy.
-nearest_v[flow](F, X)  :- fn_node[code](F), parent[tree](F, X).
-nearest_v[flow](F, X)  :- nearest_v[flow](F, P), not fn_node[code](P),
-                          parent[tree](P, X).
+-- Nearest enclosing function over ANY node: walked on the role tree, never stored.
+-- rules/js-callgraph.rofl keeps `nearest_fn` over sites only; a mutant anchors on that copy.
+nearest nearest_v[flow](F, X) of parent[tree](F, X) where fn_node[code](F).
 
 -- A CALL UNDER AN ENTRY GUARD IS NOT PART OF THE PROGRAM A LIBRARY IS. Code under
 -- `if (!module.parent)` or `if (require.main === module)` runs when the file is

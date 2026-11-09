@@ -19,12 +19,14 @@ Reads:
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern), [spread_of](js-dataflow.rofl.md#spread_of)
-- from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [nearest_v](js-dataflow.rofl.md#nearest_v), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
 - from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in)
 - from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
+- from outside these files, in the flow:
+  - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
@@ -81,7 +83,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="try_catches"></a>A node has a handler if [`tries`](#tries)(it, something).
 - <a id="caught_here"></a>A node is caught here if [`try_walk`](#try_walk)(something, it).
 - <a id="reached_unguarded"></a>F is reached unguarded if [`sx_reached`](js-surface.rofl.md#sx_reached)(F).
-- <a id="in_fn"></a>A node is inside a function if some function [is nearest to](js-dataflow.rofl.md#nearest_v) it.
+- <a id="in_fn"></a>A node is inside a function if some function [is nearest to](#nearest_v) it.
 - <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
 ## 1. A POSITION THAT ONLY RUNS SOMETIMES — one row per (parent, arm), read from the roles (`executes_if`). `&&`,
@@ -373,7 +375,7 @@ In the code:
 
 <a id="sync_body"></a>A [function](js-callgraph.rofl.md#fn_node) runs its body at once unless it [runs its body later](#deferred_body).
 
-<a id="has_return"></a>F has a return if [`exits`](#exits)(R, `return`) and F [is nearest to](js-dataflow.rofl.md#nearest_v) a node R.
+<a id="has_return"></a>F has a return if [`exits`](#exits)(R, `return`) and F [is nearest to](#nearest_v) a node R.
 
 <a id="top_throw"></a>A [function](js-callgraph.rofl.md#fn_node) throws at the top if [`body`](#body)(it, B), [`parent`](#parent)(B, S), and [`exits`](#exits)(S, `throw`).
 
@@ -656,7 +658,7 @@ In the code:
 
 <a id="throws_outright"></a>F throws outright if all of:
   - [`exits`](#exits)(T, `throw`);
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node T;
+  - F [is nearest to](#nearest_v) a node T;
   - unless T [is caught here](#caught_here).
 
 > `may_throw` is a handful of rows and binds G, so `resolves` is probed by
@@ -680,7 +682,7 @@ F may throw if all of:
   - G [is async](#async_body);
   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
   - a node X [awaits](js-callgraph.rofl.md#await_arg) C;
-  - F [is nearest to](js-dataflow.rofl.md#nearest_v) X;
+  - F [is nearest to](#nearest_v) X;
   - unless X [is caught here](#caught_here).
 
 In the flow:
@@ -689,7 +691,7 @@ In the flow:
 
 1. if all of:
    - [`throws`](#throws)(T, V);
-   - F [is nearest to](js-dataflow.rofl.md#nearest_v) a node T;
+   - F [is nearest to](#nearest_v) a node T;
    - unless T [is caught here](#caught_here);
 2. if all of:
    - G [throws out](#thrown_by) V;
@@ -702,7 +704,7 @@ In the flow:
    - G [is async](#async_body);
    - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
    - a node X [awaits](js-callgraph.rofl.md#await_arg) C;
-   - F [is nearest to](js-dataflow.rofl.md#nearest_v) X;
+   - F [is nearest to](#nearest_v) X;
    - unless X [is caught here](#caught_here).
 
 <a id="caught_value"></a>A node P catches a node V either:
@@ -741,7 +743,7 @@ B is abrupt from a step I either:
 
 1. if all of:
    - a call C [is a throwing call](#throwing_call);
-   - G [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+   - G [is nearest to](#nearest_v) C;
    - [`step_in`](js-structure.rofl.md#step_in)(S, C);
    - [`inside`](#inside)(G, S);
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, S);
@@ -749,7 +751,7 @@ B is abrupt from a step I either:
    - unless C [is stopped by](#try_stops) S;
 2. if all of:
    - a call C [is a throwing call](#throwing_call);
-   - some function [is nearest to](js-dataflow.rofl.md#nearest_v) C;
+   - some function [is nearest to](#nearest_v) C;
    - [`seq_at`](js-structure.rofl.md#seq_at)(B, I, C).
 
 > After an abrupt transfer the rest NEVER runs; `guarded` says MAY, on purpose.

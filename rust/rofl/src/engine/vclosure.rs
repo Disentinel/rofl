@@ -59,6 +59,8 @@ pub struct VClosure {
     pairs: u64,
     deep: u64,
     internal: u64,
+    /// a nearest's forests before the last build: its news are the rows that build changed
+    prev: Option<Rc<[(Sym, Rc<Forest>)]>>,
 }
 
 impl Eval {
@@ -69,33 +71,57 @@ impl Eval {
         self.vc.skip.clear();
         self.vc.readers.clear();
         self.vc.reader_seen.clear();
+        self.vc.reader_forest.clear();
+        self.vc.neg_read.clear();
+        self.vc.base.clear();
         self.vc.vclosure_reason.clear();
         self.vc.vclosure_blocked.clear();
         self.store.vrow_of.clear();
         self.store.virtuals.clear();
-        let decl = crate::structure::closures(&self.h, &self.v, &mut self.store);
+        let mut decl: Vec<(Sym, Sym)> = crate::structure::closures(&self.h, &self.v, &mut self.store).into_iter().collect();
+        let nearests = crate::structure::nearests(&self.h, &self.v, &mut self.store);
+        let mut near_of: HashMap<Sym, Result<crate::store::NearSpec, &str>> = HashMap::new();
+        for rel in &nearests {
+            let (spec, edge) = self.near_spec(*rel);
+            decl.push((*rel, edge));
+            near_of.insert(*rel, spec);
+        }
         if decl.is_empty() {
             return;
         }
-        let mut decl: Vec<(Sym, Sym)> = decl.into_iter().collect();
         decl.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)));
         let closure_rels: HashSet<Sym> = decl.iter().map(|d| d.0).collect();
         let prov_read = self.provenance_read();
         let graphs = crate::structure::graphs(&self.h, &self.v, &mut self.store);
+        let trees: HashSet<Sym> = crate::structure::trees(&self.h, &self.v, &mut self.store).iter().map(|t| t.rel).collect();
         for (rel, edge) in decl {
             let ci = self.vc.vclosures.len();
             let lowered: Vec<Sym> = self.rules.iter().filter(|r| r.clause.head.rel == rel).map(|r| r.id).collect();
+            let near = near_of.get(&rel).cloned();
             let mut why = String::new();
             if lowered.len() != 2 {
                 why = format!("{} rules conclude it, not the two the declaration lowers to", lowered.len());
+            } else if let Some(Err(w)) = near {
+                why = w.to_string();
+            } else if near.is_some() && !trees.contains(&edge) {
+                why = "its edges are not declared a tree".to_string();
             } else if closure_rels.contains(&edge) {
                 why = "its edges are another closure".to_string();
             } else if !brk!("vclosure_demand_unread" => true; false) && (self.demand.on(rel) || self.demand.on(edge)) {
                 why = "it is answered on demand".to_string();
             } else {
-                let reach = readers_cone(HashSet::from([rel]), self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next), reads_any);
-                if reach.contains(&edge) || reach.contains(&self.store.alias_view(edge).map_or(edge, |v| v.src)) {
+                let book_of = |pick: &dyn Fn(&ERule) -> Option<Option<Sym>>| self.rules.iter().filter(|r| lowered.contains(&r.id)).find_map(|r| pick(r)).flatten();
+                let rbook = book_of(&|r| Some(r.clause.head.persp.as_atom()));
+                let ebook = book_of(&|r| r.clause.body.iter().find_map(|b| match b {
+                    BodyElem::Pos(l) if l.rel == edge => Some(l.persp.as_atom()),
+                    _ => None,
+                }));
+                let reach = book_cone((rel, rbook), self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next));
+                let src = self.store.alias_view(edge).map(|v| v.src);
+                if in_cone(&reach, edge, ebook) || src.is_some_and(|s| in_cone(&reach, s, None)) {
                     why = "its edges are concluded from it".to_string();
+                } else if let Some(Ok(n)) = near.filter(|n| n.as_ref().is_ok_and(|n| self.near_cond_open(rel, n.cond, &lowered))) {
+                    why = format!("{} is concluded from it", self.h.name(n.cond));
                 }
             }
             if !why.is_empty() {
@@ -114,8 +140,13 @@ impl Eval {
             for r in readers {
                 self.vc.readers.entry(r).or_default().push(ci);
             }
+            if self.rules.iter().any(|r| r.clause.body.iter().any(|b| matches!(b, BodyElem::Neg(l) if l.rel == rel))) {
+                self.vc.neg_read.insert(ci);
+            }
+            // the base reads no row of the relation itself; the step does
+            let base = |id: &Sym| self.rules.iter().any(|r| r.id == *id && !r.clause.body.iter().any(|b| matches!(b, BodyElem::Pos(l) if l.rel == rel)));
             let rule_ids = match lowered.as_slice() {
-                [a, b] if self.rules.iter().any(|r| r.id == *a && r.clause.body.len() == 1) => (*a, *b),
+                [a, b] if base(a) => (*a, *b),
                 [a, b] => (*b, *a),
                 _ => (rel, rel),
             };
@@ -125,12 +156,31 @@ impl Eval {
             }
             let view = self.store.alias_view(edge).cloned();
             let src = view.as_ref().map_or(edge, |v| v.src);
-            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0 });
-            self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()) });
+            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0, prev: None });
+            let near = near.and_then(|n| n.ok());
+            self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()), near });
             if !why.is_empty() {
                 self.vc.vclosures[ci].built = Some(usize::MAX);
                 self.vc.vclosure_blocked.insert(ci);
             }
+        }
+    }
+
+    /// Can the condition of a nearest still grow while the nearest is read? A mark that comes late takes rows out, which
+    /// no reader can follow, and the evaluation orders by relations, not by books: the condition must not be concluded
+    /// from the nearest through any book.
+    fn near_cond_open(&self, rel: Sym, cond: Sym, lowered: &[Sym]) -> bool {
+        readers_cone(HashSet::from([rel]), self.rules.iter().filter(|r| !lowered.contains(&r.id) && r.clause.head.temporal != Temporal::Next), reads_any).contains(&cond)
+    }
+
+    /// A nearest's edges and what its ancestor is, read off the base rule it lowers to (`R[b](A, D) :- E[e](A, D), S[s](A).`).
+    fn near_spec(&self, rel: Sym) -> (Result<crate::store::NearSpec, &'static str>, Sym) {
+        let base = self.rules.iter().find(|r| r.clause.head.rel == rel && r.clause.body.len() == 2);
+        let Some(r) = base else { return (Err("its base rule is not there"), rel) };
+        let (BodyElem::Pos(e), BodyElem::Pos(w)) = (&r.clause.body[0], &r.clause.body[1]) else { return (Err("its base rule is not the one it lowers to"), rel) };
+        match (r.clause.head.persp.as_atom(), e.persp.as_atom(), w.persp.as_atom()) {
+            (Some(rbook), Some(ebook), Some(sbook)) => (Ok(crate::store::NearSpec { rbook, ebook, cond: w.rel, sbook }), e.rel),
+            _ => (Err("a book of it is not named"), e.rel),
         }
     }
 
@@ -203,7 +253,19 @@ impl Eval {
         let mode = !self.lat.has_cells() && self.assume.is_none() && !self.well_founded && !self.naive && self.lat.counts().next().is_none() && std::env::var_os("ROFL_NO_VCLOSURE").is_none();
         let witnessed = !self.prov.no_witness && !brk!("vclosure_prov_read_ignored" => true; false);
         for ci in 0..self.vc.vclosures.len() {
-            let on = mode && !self.vc.vclosure_blocked.contains(&ci) && !(witnessed && self.vc.vclosures[ci].prov_read);
+            // a closure of a lemma stage's lower world: its rows are lemmas, given to the upper world as facts
+            let (rel, base, step) = (self.store.virtuals[ci].rel, self.store.virtuals[ci].base_rule, self.store.virtuals[ci].step_rule);
+            let lemma = match &self.stage_pass {
+                StagePass::Lower(s) | StagePass::Upper(s) => s.contains(&base) || s.contains(&step),
+                StagePass::Whole => false,
+            } || self.store.rel_all(&self.h, rel).iter().any(|f| self.store.alive(*f));
+            if lemma {
+                let why = format!("{}: it is concluded below a lemma stage, whose rows are given as lemmas", self.h.name(rel));
+                if !self.vc.vclosure_reason.contains(&why) {
+                    self.vc.vclosure_reason.push(why);
+                }
+            }
+            let on = mode && !lemma && !self.vc.vclosure_blocked.contains(&ci) && !(witnessed && self.vc.vclosures[ci].prov_read);
             let c = &mut self.vc.vclosures[ci];
             c.active = on;
             c.built = None;
@@ -212,6 +274,7 @@ impl Eval {
         }
         self.store.vwit = witnessed;
         self.vc.reader_seen.clear();
+        self.vc.reader_forest.clear();
         self.vc.any = self.vc.vclosures.iter().any(|c| c.active);
     }
 
@@ -219,7 +282,7 @@ impl Eval {
     /// program is read and the closures that may be answered from their trees are engaged, the forests built from the edges
     /// the snapshot holds when first asked.
     pub fn vclosure_restore(&mut self) {
-        if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() {
+        if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() && crate::structure::nearests(&self.h, &self.v, &mut self.store).is_empty() {
             return;
         }
         if !brk!("vclosure_restore_unengaged" => true; false) {
@@ -277,6 +340,13 @@ impl Eval {
         }
         for ci in 0..self.vc.vclosures.len() {
             if !self.vc.vclosures[ci].active {
+                continue;
+            }
+            if self.store.virtuals[ci].near.is_some() {
+                if let Some(seeds) = self.vnear_retract(ci, facts) {
+                    out.extend(seeds);
+                    touched.push(ci);
+                }
                 continue;
             }
             let src = self.vc.vclosures[ci].src;
@@ -432,9 +502,21 @@ impl Eval {
     pub(super) fn vfire_news(&mut self, r: &Rc<ERule>, cur: &Front) -> Result<Front, Halt> {
         let all: Vec<usize> = (0..r.plan.len()).collect();
         let mut at: Vec<(Lit, usize, Vec<usize>, Vec<usize>)> = Vec::new();
+        let mut near: Vec<(Lit, usize, Vec<usize>)> = Vec::new();
         for b in r.plan.iter() {
             let BodyElem::Pos(l) = b else { continue };
             let Some(ci) = self.vc.vclosure_for(l.rel) else { continue };
+            if self.store.virtuals[ci].near.is_some() {
+                let mut pre = Vec::new();
+                for t in l.args.iter().chain([&l.persp]) {
+                    self.h.vars_of(*t, &mut pre);
+                }
+                match self.bound_order(r, &all, &pre) {
+                    Some(o) if l.args.len() == 2 => near.push((l.clone(), ci, o)),
+                    _ => return self.fire_rule(r, None),
+                }
+                continue;
+            }
             if !cur.by_rel.contains_key(&self.vc.vclosures[ci].src) {
                 continue;
             }
@@ -451,6 +533,13 @@ impl Eval {
             }
         }
         let mut out = Front::default();
+        for (l, ci, o) in near {
+            let rows = self.vnear_news(r.id, ci, cur);
+            let seeds: Vec<Subst> = rows.into_iter().filter_map(|(book, a, d)| unify(&self.h, l.persp, Term::atom(book), &Subst::new()).and_then(|s| unify_all(&self.h, &l.args, &[a, d], &s))).collect();
+            for sol in self.solve_bound(r, &all, Some(&o), seeds)? {
+                self.conclude(r, sol, &mut out)?;
+            }
+        }
         for (l, ci, oe, o) in at {
             let (ends, rows) = self.vc.vnews(&mut self.store, ci, cur);
             let seeds: Vec<Subst> = ends.into_iter().filter_map(|(book, d)| unify(&self.h, l.persp, Term::atom(book), &Subst::new()).and_then(|s| unify(&self.h, l.args[1], d, &s))).collect();
@@ -468,6 +557,155 @@ impl Eval {
 }
 
 impl Eval {
+    /// The forests of each closure a negation reads, as a delta finds them: its change is counted against them
+    /// (`vneg_rows`).
+    pub(super) fn vsnapshot(&mut self) {
+        self.vc.base.clear();
+        self.vc.unbased = false;
+        for &ci in &self.vc.neg_read {
+            let c = &self.vc.vclosures[ci];
+            if c.active {
+                let forests = (c.built.is_some() && c.built != Some(usize::MAX)).then(|| self.store.virtuals[ci].forests.clone());
+                self.vc.base.insert(ci, forests);
+            }
+        }
+    }
+
+    /// THE ROWS A DELTA PUT INTO AND TOOK OUT OF a closure a negation reads, by its book: under each node an edge of the
+    /// news or of what went leads into, and each node its condition came to hold or stopped holding of, the rows the
+    /// forests hold now against those the delta found. None for a relation that is no such closure.
+    pub(super) fn vneg_rows(&mut self, rel: Sym, news: &Front, gone: &HashMap<Sym, Vec<FactId>>) -> Option<(Vec<(Sym, [Term; 2])>, Vec<(Sym, [Term; 2])>)> {
+        let ci = self.vc.vclosure_for(rel)?;
+        let base = self.vc.base.get(&ci)?.clone();
+        let src = self.vc.vclosures[ci].src;
+        let near = self.store.virtuals[ci].near;
+        let mut touched: Vec<Term> = Vec::new();
+        let ids = |r: Sym| news.by_rel.get(&r).into_iter().flatten().copied().chain(gone.get(&r).into_iter().flatten().copied()).collect::<Vec<FactId>>();
+        for id in ids(src) {
+            if near.is_none_or(|n| self.store.rec(id).persp == n.ebook) {
+                touched.extend(self.vc.vedge(&self.store, ci, id).map(|e| e.1));
+            }
+        }
+        if let Some(n) = near {
+            for id in ids(n.cond) {
+                if self.store.rec(id).persp == n.sbook {
+                    touched.extend(self.store.args(id).first().copied());
+                }
+            }
+        }
+        if touched.is_empty() {
+            return Some((Vec::new(), Vec::new()));
+        }
+        let Some(base) = base else {
+            self.vc.unbased = true;
+            return Some((Vec::new(), Vec::new()));
+        };
+        let forests = self.vc.vforests(&mut self.store, ci);
+        let rows = |fs: &[(Sym, Rc<Forest>)]| {
+            let mut out: FxSet<(Sym, u64, u64)> = FxSet::default();
+            for (book, f) in fs {
+                let mut set = FxSet::default();
+                for t in &touched {
+                    f.rows_under(*t, &mut set);
+                }
+                out.extend(set.into_iter().map(|(a, d)| (*book, a, d)));
+            }
+            out
+        };
+        let (was, now) = (rows(&base), rows(&forests));
+        let pick = |a: &FxSet<(Sym, u64, u64)>, b: &FxSet<(Sym, u64, u64)>| {
+            let mut v: Vec<(Sym, [Term; 2])> = a.iter().filter(|r| !b.contains(*r)).map(|(k, x, y)| (*k, [Term::from_bits(*x), Term::from_bits(*y)])).collect();
+            v.sort_unstable_by_key(|(k, [x, y])| (*k, x.bits(), y.bits()));
+            v
+        };
+        Some((pick(&now, &was), pick(&was, &now)))
+    }
+
+    /// THE NEWS OF A NEAREST, in an addition: the rows its build put in under the new edges' children and the nodes its
+    /// condition newly holds of, against the forest before. A row it took out is no news an addition can follow
+    /// (`near_moved`): the world is evaluated again.
+    fn vnear_news(&mut self, rule: Sym, ci: usize, cur: &Front) -> Vec<(Sym, Term, Term)> {
+        let forests = self.vc.vforests(&mut self.store, ci);
+        let Some(s) = self.store.virtuals[ci].near else { return Vec::new() };
+        let mut touched: Vec<Term> = Vec::new();
+        for id in cur.by_rel.get(&self.vc.vclosures[ci].src).into_iter().flatten() {
+            if self.store.rec(*id).persp == s.ebook {
+                touched.extend(self.vc.vedge(&self.store, ci, *id).map(|e| e.1));
+            }
+        }
+        for id in cur.by_rel.get(&s.cond).into_iter().flatten() {
+            if self.store.rec(*id).persp == s.sbook {
+                touched.extend(self.store.args(*id).first().copied());
+            }
+        }
+        let prev = self.vc.reader_forest.insert((rule, ci), forests.clone()).or_else(|| self.vc.vclosures[ci].prev.clone());
+        let (mut was, mut now) = (FxSet::default(), FxSet::default());
+        for t in &touched {
+            for (_, f) in prev.iter().flat_map(|p| p.iter()) {
+                f.near_rows_under(*t, &mut was);
+            }
+            for (_, f) in forests.iter() {
+                f.near_rows_under(*t, &mut now);
+            }
+        }
+        if was.iter().any(|r| !now.contains(r)) {
+            self.vc.near_moved = true;
+        }
+        let mut out: Vec<(Sym, Term, Term)> = now.iter().filter(|r| !was.contains(*r)).map(|(a, d)| (s.rbook, Term::from_bits(*a), Term::from_bits(*d))).collect();
+        out.sort_unstable_by_key(|(_, a, d)| (a.bits(), d.bits()));
+        out
+    }
+
+    /// A NEAREST IN A RETRACTION: its forest built again as the store stands without `facts`, and the facts that cited a
+    /// row under what went that no longer holds, to overdelete. A row the retraction put in is no news it can follow
+    /// (`near_moved`).
+    fn vnear_retract(&mut self, ci: usize, facts: &[FactId]) -> Option<Vec<FactId>> {
+        let s = self.store.virtuals[ci].near?;
+        let src = self.vc.vclosures[ci].src;
+        let mut touched: Vec<Term> = Vec::new();
+        for &f in facts {
+            let rc = self.store.rec(f);
+            if rc.rel == src && rc.persp == s.ebook {
+                touched.extend(self.vc.vedge(&self.store, ci, f).map(|e| e.1));
+            } else if rc.rel == s.cond && rc.persp == s.sbook {
+                touched.extend(self.store.args(f).first().copied());
+            }
+        }
+        if touched.is_empty() || self.vc.vclosures[ci].built.is_none() {
+            return None;
+        }
+        let old = self.store.virtuals[ci].forests.clone();
+        let (mut was, mut now) = (FxSet::default(), FxSet::default());
+        for t in &touched {
+            for (_, f) in old.iter() {
+                f.near_rows_under(*t, &mut was);
+            }
+        }
+        self.vc.vclosures[ci].built = None;
+        let forests = self.vc.vforests(&mut self.store, ci);
+        for t in &touched {
+            for (_, f) in forests.iter() {
+                f.near_rows_under(*t, &mut now);
+            }
+        }
+        if now.iter().any(|r| !was.contains(r)) {
+            self.vc.near_moved = true;
+        }
+        if self.store.vciters.is_none() {
+            self.vindex_citers();
+        }
+        let mut out = Vec::new();
+        for (a, d) in was.into_iter().filter(|r| !now.contains(r)) {
+            let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().map(|m| m.of(d)).unwrap_or_default();
+            for (y, k) in cites {
+                if self.store.alive(y) && self.store.cites(y, PremRef::VRow(k)) && self.vrow_entry(k).is_some_and(|(c, b, x, dd)| c == ci && b == s.rbook && x.bits() == a && dd.bits() == d) {
+                    out.push(y);
+                }
+            }
+        }
+        Some(out)
+    }
+
     /// The row a premise's key names: as it was cited in this engine, or read back from the key where the premise came from a snapshot.
     pub(super) fn vrow_entry(&mut self, k: Sym) -> Option<(usize, Sym, Term, Term)> {
         if let Some(e) = self.store.vrow_of.get(&k) {
@@ -498,17 +736,23 @@ impl Eval {
         let (ci, book, a, d) = self.vrow_entry(k)?;
         self.vc.vforests(&mut self.store, ci);
         let v = &self.store.virtuals[ci];
-        let (rule, parent, step) = v.firing(book, a, d)?;
-        let (rel, step_rule) = (v.edge, v.step_rule);
-        let edge = match self.store.get(rel, book, &[parent, d]) {
-            Some(e) => e,
-            None => self.alias_fact(rel, book, &[parent, d])?,
-        };
-        if !brk!("vclosure_derive_always_step" => true; step) {
-            return Some((rule, vec![PremRef::Fact(edge)]));
+        let (rule, ps) = v.firing_prems(book, a, d)?;
+        let rule = brk!("vclosure_derive_always_step" => v.step_rule; rule);
+        let mut out = Vec::with_capacity(ps.len());
+        for p in ps {
+            out.push(match p {
+                crate::store::VPrem::Fact(r, b, args) => match self.store.get(r, b, &args) {
+                    Some(e) => PremRef::Fact(e),
+                    None => PremRef::Fact(self.alias_fact(r, b, &args)?),
+                },
+                crate::store::VPrem::Row(a, p) => PremRef::VRow(self.vc.vrow_key(&mut self.h, &mut self.store, ci, book, a, p)),
+                crate::store::VPrem::Neg(r, b, x) => {
+                    let k = fact_key(&self.h, r, b, &[x]);
+                    PremRef::Neg(self.h.intern(&k))
+                }
+            });
         }
-        let up = self.vc.vrow_key(&mut self.h, &mut self.store, ci, book, a, parent);
-        Some((step_rule, vec![PremRef::VRow(up), PremRef::Fact(edge)]))
+        Some((rule, out))
     }
 
     /// A row answered from the tree, as `why` writes a fact: its firing, and below it the premises, a row written out once
@@ -533,6 +777,14 @@ impl Eval {
         !brk!("vclosure_unknown_row_absent" => true; false) && self.store.virtuals[ci].forests.iter().any(|(b, f)| *b == book && f.is_ancestor(*a, *d))
     }
 
+    /// Does a change of these relations reach what a nearest answered from its tree reads: its edges, or (`cond_only`)
+    /// what its ancestor is, the growth of which may take a row out.
+    pub(super) fn near_reached(&self, grown: &HashSet<Sym>, cond_only: bool) -> bool {
+        self.vc.any && self.vc.vclosures.iter().zip(self.store.virtuals.iter()).any(|(c, v)| {
+            c.active && v.near.is_some_and(|n| grown.contains(&n.cond) || (!cond_only && grown.contains(&c.src)))
+        })
+    }
+
     /// Can a change of `rel` reach the edges of a closure answered from its tree, through the rules (a negation and an
     /// aggregate included)? A retraction that cannot leaves every forest as it is, and is worked out as a delta.
     pub(super) fn vedges_reached(&self, rel: Sym) -> bool {
@@ -542,6 +794,30 @@ impl Eval {
         let edges: HashSet<Sym> = self.vc.vclosures.iter().filter(|c| c.active).map(|c| c.src).collect();
         let reached = readers_cone(HashSet::from([rel]), self.rules.iter(), reads_any).iter().any(|r| edges.contains(r));
         reached && !brk!("vclosure_retract_edge_delta" => true; false)
+    }
+}
+
+/// The relations, each with its book (None: every book, as a variable names it), that `seed` reaches through `rules`: a
+/// rule fires on a premise of a relation in the set whose book can be the same.
+fn book_cone<'a>(seed: (Sym, Option<Sym>), rules: impl Iterator<Item = &'a Rc<ERule>> + Clone) -> HashSet<(Sym, Option<Sym>)> {
+    let mut set = HashSet::from([seed]);
+    loop {
+        let n = set.len();
+        for r in rules.clone() {
+            if r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| in_cone(&set, l.rel, l.persp.as_atom())) {
+                set.insert((r.clause.head.rel, r.clause.head.persp.as_atom()));
+            }
+        }
+        if set.len() == n {
+            return set;
+        }
+    }
+}
+
+fn in_cone(set: &HashSet<(Sym, Option<Sym>)>, rel: Sym, book: Option<Sym>) -> bool {
+    set.contains(&(rel, None)) || match book {
+        Some(_) => set.contains(&(rel, book)),
+        None => set.iter().any(|(r, _)| *r == rel),
     }
 }
 
@@ -608,10 +884,35 @@ impl VClosureState {
     /// relation has changed since.
     fn vforests(&mut self, store: &mut Store, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
         let edge = self.vclosures[ci].src;
-        let n = store.rel_len_est(edge, None);
+        let near = store.virtuals[ci].near;
+        let n = self.vseen(store, ci);
         if self.vclosures[ci].built != Some(n) && !(self.vclosures[ci].built.is_some() && brk!("vclosure_stale_forest" => true; false)) {
-            let forests = match self.vextended(store, ci) {
+            let forests = match self.vextended(store, ci).filter(|_| near.is_none()) {
                 Some(f) => f,
+                None if near.is_some() => {
+                    let s = near.unwrap();
+                    let mut es: Vec<(Term, Term)> = Vec::new();
+                    let mut rows = 0;
+                    let mut seen: FxSet<(u64, u64)> = FxSet::default();
+                    store.each_row(edge, |persp, id| {
+                        if let Some((p, c)) = self.vedge(store, ci, id).filter(|_| persp == s.ebook) {
+                            rows += 1;
+                            if seen.insert((p.bits(), c.bits())) {
+                                es.push((p, c));
+                            }
+                        }
+                    });
+                    let mut marked: FxSet<u64> = FxSet::default();
+                    store.each_row(s.cond, |persp, id| {
+                        if let [x] = store.args(id) {
+                            if persp == s.sbook {
+                                marked.insert(x.bits());
+                            }
+                        }
+                    });
+                    self.vclosures[ci].rows = rows;
+                    vec![(s.rbook, Rc::new(Forest::build_nearest(&es, &marked)))]
+                }
                 None => {
                     let mut books: FxMap<Sym, Vec<(Term, Term)>> = FxMap::default();
                     let mut rows = 0;
@@ -631,6 +932,9 @@ impl VClosureState {
                     books.into_iter().map(|(b, es)| (b, Rc::new(if graph { Forest::build_graph(&es) } else { Forest::build(&es) }))).collect()
                 }
             };
+            if near.is_some() {
+                self.vclosures[ci].prev = Some(store.virtuals[ci].forests.clone());
+            }
             self.vclosures[ci].mark = store.len_ids();
             self.vclosures[ci].deaths = store.deaths.get(&edge).copied().unwrap_or(0);
             self.vclosures[ci].revived = store.revived.get(&edge).map_or(0, Vec::len);
@@ -704,7 +1008,7 @@ impl VClosureState {
     /// The closures `vretract_edges` built again, told the edge relation as it now stands: no rebuild follows.
     pub(super) fn vretract_done(&mut self, store: &Store, touched: &[usize]) {
         for &ci in touched {
-            let n = store.rel_len_est(self.vclosures[ci].src, None);
+            let n = self.vseen(store, ci);
             let forests = store.virtuals[ci].forests.clone();
             let src = self.vclosures[ci].src;
             let (deaths, revived) = (store.deaths.get(&src).copied().unwrap_or(0), store.revived.get(&src).map_or(0, Vec::len));
@@ -823,10 +1127,11 @@ impl VClosureState {
         let mut due = false;
         for &ci in cis.clone().iter() {
             let c = &self.vclosures[ci];
-            if !c.active || !cur.by_rel.contains_key(&c.src) {
+            let cond = store.virtuals[ci].near.map(|n| n.cond);
+            if !c.active || !(cur.by_rel.contains_key(&c.src) || cond.is_some_and(|x| cur.by_rel.contains_key(&x))) {
                 continue;
             }
-            let rows = store.rel_len_est(c.src, None);
+            let rows = self.vseen(store, ci);
             if self.reader_seen.get(&(r.id, ci)) != Some(&rows) {
                 due = true;
             }
@@ -867,13 +1172,24 @@ impl VClosureState {
         (edges.into_iter().map(|(b, _, c)| (b, c)).collect(), rows)
     }
 
+    /// What a reader of the closure saw: the rows of its edges, and of a nearest's condition.
+    fn vseen(&self, store: &Store, ci: usize) -> usize {
+        let near = store.virtuals[ci].near;
+        // a count, and the deaths beside it: an edge put in and another taken out leave the count as it was
+        let seen = |r: Sym| store.rel_len_est(r, None).wrapping_add(store.deaths.get(&r).map_or(0, |d| *d as usize).wrapping_mul(7_919));
+        seen(self.vclosures[ci].src).wrapping_add(near.map_or(0, |s| seen(s.cond).wrapping_mul(1_000_003)))
+    }
+
     /// A whole firing of a rule that reads a closure notes the rows its edges had.
     pub(super) fn vreader_fired(&mut self, store: &Store, r: &Rc<ERule>) {
         let Some(cis) = self.readers.get(&r.id) else { return };
         for &ci in cis.clone().iter() {
             if self.vclosures[ci].active {
-                let rows = store.rel_len_est(self.vclosures[ci].src, None);
+                let rows = self.vseen(store, ci);
                 self.reader_seen.insert((r.id, ci), rows);
+                if store.virtuals[ci].near.is_some() {
+                    self.reader_forest.insert((r.id, ci), store.virtuals[ci].forests.clone());
+                }
             }
         }
     }

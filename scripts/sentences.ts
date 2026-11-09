@@ -93,8 +93,8 @@ export function said(md: string): string[] {
       });
       continue;
     }
-    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one|(?:of .+? )?is another name for|(?:of .+? )?is read through its rules) |^Each `(\w+)` fact|^Each child of `(\w+)` has one parent|^`\w+` holds of each node and every node a path of `(\w+)`|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
-    if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3] ?? d[4] ?? d[5]}, "${plain(p)}").`);
+    const d = /^`(\w+)`(?: in the `\$?\w+`)? (?:keeps|is ordered|has one|(?:of .+? )?is another name for|(?:of .+? )?is read through its rules) |^Each `(\w+)` fact|^Each child of `(\w+)` has one parent|^`\w+` holds of each node and every node a path of `(\w+)`|^`(\w+)`(?: in the `\$?\w+`)? of \w+ and \w+ holds where \w+ is the nearest ancestor|^A fact that \[[^\]]*\]\(#(\w+)\)/.exec(p.trim());
+    if (d) out.push(`sentence_of(${d[1] ?? d[2] ?? d[3] ?? d[4] ?? d[5] ?? d[6]}, "${plain(p)}").`);
   }
   return out;
 }

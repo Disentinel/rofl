@@ -488,6 +488,25 @@ class P {
     return { head: { rel, persp: mka('main'), perspExplicit: false, args, temporal: 'now' }, body: [], structure: { kind, roles, ...(closure === undefined ? {} : { closure }), ...(source ? { source } : {}) } };
   }
 
+  /**   nearestdecl := 'nearest' literal 'of' literal 'where' literal '.'
+   *  `nearest R[b](A, D) of E[e](A, D) where S[s](A).`: the nearest proper ancestor `A` of `D` along the edges `E` that
+   *  `S` holds of (docs/data-structures.md). */
+  nearestDecl(): Clause {
+    const kind = this.next().v;
+    const head = this.literal();
+    const what = `nearest ${head.rel}`;
+    const shape = 'nearest R(A, D) of E(A, D) where S(A)';
+    if (this.peek().t !== 'ident' || this.peek().v !== 'of') this.err(`${what}: \`of\` names the edges walked up: ${shape}`);
+    this.next();
+    const source = this.literal();
+    if (this.peek().t !== 'ident' || this.peek().v !== 'where') this.err(`${what}: \`where\` names what the ancestor is: ${shape}`);
+    this.next();
+    const cond = this.literal();
+    if (this.peek().t !== '.') this.noDot(`${what}: the declaration`);
+    this.next();
+    return { head, body: [], structure: { kind, roles: head.args.map(() => ''), source, cond } };
+  }
+
   clause(): Clause {
     this.freshCounter = 0; // wildcard names are clause-local => content-addressed
     if (this.peek().t === 'ident' && this.peek().v === 'lattice' && this.toks[this.pos + 1].t === 'ident') {
@@ -498,6 +517,9 @@ class P {
     }
     if (this.peek().t === 'ident' && ORDER_KINDS.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
       return this.orderDecl();
+    }
+    if (this.peek().t === 'ident' && this.peek().v === 'nearest' && this.toks[this.pos + 1].t === 'ident') {
+      return this.nearestDecl();
     }
     if (this.peek().t === 'ident' && STRUCTURE_ROLES.has(this.peek().v) && this.toks[this.pos + 1].t === 'ident') {
       return this.structureDecl();
