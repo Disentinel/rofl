@@ -1,0 +1,68 @@
+-- rs-audit.rofl — the audits of the Rust converter: a kind of the tree that stands in no role and has no reason in
+-- `no_role`, a reason for a kind that does have a role, and an identifier that is neither read nor introduced where
+-- no role carries it as a name.
+
+imports(audit, ast_rs). imports(audit, main).
+edb(no_role).
+r_kind_seen[ast_rs](K)  :- node[ast_rs](_, K, _).
+r_kind_roled[ast_rs](K) :- roled[value](N), node[ast_rs](N, K, _).
+r_kind_roled[ast_rs](K) :- roled[type](N), node[ast_rs](N, K, _).
+r_kind_roled[ast_rs](K) :- roled[tree](N), node[ast_rs](N, K, _).
+kind_without_role[audit](K) :- r_kind_seen[ast_rs](K), not r_kind_roled[ast_rs](K), not no_role[ast_rs](K, _).
+no_role_but_roled[audit](K) :- no_role[ast_rs](K, _), r_kind_roled[ast_rs](K).
+ident_without_role[audit](K, F) :- rs_id(X, _, K, F), not ref[value](X, _), not binds[value](X, _), not member[value](X, _, _), not rs_name_field(K, F).
+-- how much of the tree the roles hold: the nodes of a kind, and those of them in some role
+r_node_roled[ast_rs](N) :- roled[value](N), node[ast_rs](N, _, _).
+r_node_roled[ast_rs](N) :- roled[type](N), node[ast_rs](N, _, _).
+r_node_roled[ast_rs](N) :- roled[tree](N), node[ast_rs](N, _, _).
+kind_unroled[audit](K, N) :- r_kind_roled[ast_rs](K), N is count(X : node[ast_rs](X, K, _), not r_node_roled[ast_rs](X)), N > 0.
+
+-- THE KINDS THAT STAND IN NO ROLE, each with its reason
+no_role[ast_rs](expression_statement, "transparent: the expression is the step").
+no_role[ast_rs](parenthesized_expression, "transparent").
+no_role[ast_rs](unsafe_block, "transparent: the block inside is the value").
+no_role[ast_rs](const_block, "transparent: the block inside is the value").
+no_role[ast_rs](generic_function, "transparent: the function is the callee; its type arguments are not read").
+no_role[ast_rs](reference_pattern, "transparent: the pattern inside takes the value").
+no_role[ast_rs](mut_pattern, "transparent: the name inside is introduced").
+no_role[ast_rs](ref_pattern, "transparent: the name inside is introduced").
+no_role[ast_rs](match_pattern, "transparent: the pattern inside is the test; its guard is executes_if of the arm's value").
+no_role[ast_rs](else_clause, "transparent: what is inside executes_if falsy").
+no_role[ast_rs](arguments, "dissolved: its members are the steps of the call").
+no_role[ast_rs](type_arguments, "dissolved: its members are the steps of the application").
+no_role[ast_rs](parameters, "dissolved: param of the function").
+no_role[ast_rs](closure_parameters, "dissolved: param of the closure").
+no_role[ast_rs](parameter, "dissolved: its pattern is the parameter, its type declared there").
+no_role[ast_rs](self_parameter, "dissolved: the function binds self").
+no_role[ast_rs](match_block, "dissolved: its arms are tests of the match").
+no_role[ast_rs](field_initializer_list, "dissolved: its members are has of the object").
+no_role[ast_rs](base_field_initializer, "dissolved: spread_props of the object").
+no_role[ast_rs](field_declaration_list, "dissolved: its members are has of the struct or variant").
+no_role[ast_rs](ordered_field_declaration_list, "dissolved: its types are has of the struct or variant").
+no_role[ast_rs](enum_variant_list, "dissolved: its members are has of the enum").
+no_role[ast_rs](field_pattern, "dissolved: pattern_prop of the struct pattern").
+no_role[ast_rs](field_identifier, "dissolved: the name is key or member").
+no_role[ast_rs](attribute_item, "dissolved: decorated reads its attribute").
+no_role[ast_rs](visibility_modifier, "dissolved: access of the item").
+no_role[ast_rs](scoped_use_list, "dissolved: its items are members of its path").
+no_role[ast_rs](use_list, "dissolved: its items are members of the list's path").
+no_role[ast_rs](type_parameters, "dissolved: its parameters are decl[type]").
+no_role[ast_rs](trait_bounds, "dissolved: bound of the parameter, extends of the trait").
+no_role[ast_rs](label, "dissolved: labeled_as and jumps_to carry the name").
+no_role[ast_rs](function_modifiers, "no role yet: unsafe, const and extern on a function are not read").
+no_role[ast_rs](lifetime_parameter, "no role yet: lifetimes are not read").
+no_role[ast_rs](const_parameter, "no role yet").
+no_role[ast_rs](where_clause, "no role yet").
+no_role[ast_rs](where_predicate, "no role yet").
+no_role[ast_rs](higher_ranked_trait_bound, "no role yet").
+no_role[ast_rs](associated_type, "no role yet").
+no_role[ast_rs](extern_modifier, "no role yet").
+no_role[ast_rs](empty_statement, "nothing: a lone `;`").
+no_role[ast_rs](token_tree, "tokens: a macro's arguments the scanner could not read as code, or the body of a macro").
+no_role[ast_rs](token_tree_pattern, "tokens: the matcher of a macro").
+no_role[ast_rs](token_repetition, "tokens").
+no_role[ast_rs](token_repetition_pattern, "tokens").
+no_role[ast_rs](token_binding_pattern, "tokens").
+no_role[ast_rs](fragment_specifier, "tokens").
+no_role[ast_rs](metavariable, "tokens").
+no_role[ast_rs](macro_rule, "tokens: a macro's rule is its matcher and its body").

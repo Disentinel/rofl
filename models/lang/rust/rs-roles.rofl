@@ -1,0 +1,447 @@
+-- rs-roles.rofl — tree-sitter's Rust tree (rust/tools/rs_tree, [ast_rs]) into the roles of models/lang/js/roles.rofl.
+--
+-- The vocabulary is the one the JS model reads, loaded beside this file. Every rule reads one node and its
+-- neighbours, so a file's roles come from that file's facts alone. How Rust is read in the words of the vocabulary:
+--
+--   a path `a::b` is member(N, A, "b"): a module, a type and an enum are objects of their names
+--   a macro call is a call whose callee reads the name with its `!` (`format!`); its arguments are its steps where
+--   the scanner could read them
+--   `impl T { fn f }` is an object of functions: has(Impl, F), key(F, "f"), declared(Impl, T), and implements(Impl, Tr)
+--   for `impl Tr for T`; a method binds `self` as a JS function binds `this`
+--   `Opts { a, ..b }` is an object whose type is written: declared(O, T), has, key, value, spread_props
+--   `e?` passes e and returns it; `&e`, `*e` are unary; `e as T` passes e with T declared at it
+--   the last expression of a block gives the block its value; a closure whose body is an expression returns it
+--   a match arm: assign(Arm, Pattern, Scrutinee), executes_if(Value, Pattern, matches), its guard truthy
+--   `let P = e` in a condition and `matches!(e, P)` are tests: assign(L, P, e), and L is truthy when P matched
+--   an attribute `#[cfg(test)]` is decorated(A, Item) with key(A, "cfg") and its arguments as steps
+--   `use a::{b, c as d}`: each name binds and is the member it stands for (or assign(U, d, a::c)); `use a::*` is
+--   spread_props; `mod m;` is module_ref(M, "m"), `mod m { }` a namespace
+--   a string with `{name}` holes reads name: ref(S, "name") beside literal(S, Text)
+--
+-- ONE WORD THE VOCABULARY DID NOT HAVE: destructs(P, C), "the pattern P takes apart a value made by C, and matches
+-- only such a value" (`Some(x)`, `Verb::Load { kept }`). A pattern that is a literal, a path or a name in capitals
+-- matches by equality and needs no word: it is that literal, that member, that ref, standing where a pattern stands.
+-- An or-pattern is binary(P, "|", L, R), `x @ P` binary(P, "@", X, P): the value goes to both sides.
+--
+-- By convention, not by lookup: a lone identifier in a pattern binds when it starts in lower case and reads a
+-- constant when it starts with a capital (`None`). The compiler decides by scope; its lints hold the convention.
+
+cut[fixpointplan](ast_rs).
+site[fixpointplan](at, tree).
+
+role(destructs, "the pattern P takes apart a value made by the constructor C, and matches only such a value").
+roled[value](N) :- destructs[value](N, _).
+roled[value](N) :- destructs[value](_, N).
+
+alias rs_k(N, K) is node(N, K, _).
+alias rs_text(N, V) is attr(N, text, V).
+edb(node). edb(line). edb(last). edb(child). edb(attr). edb(file).
+imports(ast_rs, main). imports(ast_rs, value). imports(ast_rs, type). imports(ast_rs, tree).
+imports(value, ast_rs). imports(type, ast_rs). imports(tree, ast_rs). imports(value, tree).
+imports(value, main). imports(type, main). imports(tree, main).
+imports(main, value). imports(main, type). imports(main, tree).
+
+-- syntax around one child: every rule sees through it, as if the child stood in its place
+edb(rs_wrapper).
+rs_wrapper(parenthesized_expression, c). rs_wrapper(unsafe_block, c).      rs_wrapper(const_block, body).
+rs_wrapper(generic_function, function).  rs_wrapper(reference_pattern, c). rs_wrapper(mut_pattern, c).
+rs_wrapper(ref_pattern, c).              rs_wrapper(match_pattern, c).     rs_wrapper(else_clause, c).
+rs_wrapper(expression_statement, c).
+unwrapped[ast_rs](X, X) :- node[ast_rs](X, K, _), not rs_wrapper(K, _).
+unwrapped[ast_rs](X, Y) :- node[ast_rs](X, K, _), rs_wrapper(K, F), child[ast_rs](X, F, 0, Z), unwrapped[ast_rs](Z, Y).
+rs_c[ast_rs](P, F, I, C) :- child[ast_rs](P, F, I, X), unwrapped[ast_rs](X, C).
+
+-- TREE ---------------------------------------------------------------------------------------------
+
+at[tree](N, File, Line) :- node[ast_rs](N, _, File), line[ast_rs](N, Line).
+program[tree](P, File)  :- node[ast_rs](P, source_file, File).
+edge[tree](P, C)        :- child[ast_rs](P, _, _, C).
+
+-- THE ORDER OF EVALUATION: nth. A sequence field gives its members from Offset on, a step field one child.
+edb(rs_seq_field).
+rs_seq_field(source_file, c, 0).      rs_seq_field(block, c, 0).            rs_seq_field(declaration_list, c, 0).
+rs_seq_field(tuple_expression, c, 0). rs_seq_field(array_expression, c, 0). rs_seq_field(arguments, c, 0).
+rs_seq_field(macro_invocation, arg, 0). rs_seq_field(attribute, arg, 0).    rs_seq_field(index_expression, c, 0).
+rs_seq_field(range_expression, c, 0). rs_seq_field(type_arguments, c, 0).   rs_seq_field(tuple_type, c, 0).
+edb(rs_step_field).
+rs_step_field(binary_expression, left, 0).    rs_step_field(binary_expression, right, 1).
+rs_step_field(field_expression, value, 0).    rs_step_field(unary_expression, c, 0).
+rs_step_field(reference_expression, value, 0). rs_step_field(try_expression, c, 0).
+rs_step_field(return_expression, c, 0).       rs_step_field(break_expression, c, 0).
+rs_step_field(if_expression, condition, 0).   rs_step_field(while_expression, condition, 0).
+rs_step_field(for_expression, value, 0).      rs_step_field(match_expression, value, 0).
+rs_step_field(let_declaration, value, 0).     rs_step_field(let_declaration, pattern, 1).
+rs_step_field(let_condition, value, 0).       rs_step_field(let_condition, pattern, 1).
+rs_step_field(assignment_expression, left, 0). rs_step_field(assignment_expression, right, 1).
+rs_step_field(compound_assignment_expr, left, 0). rs_step_field(compound_assignment_expr, right, 1).
+rs_step_field(type_cast_expression, value, 0). rs_step_field(field_initializer, value, 0).
+rs_step_field(const_item, value, 0).          rs_step_field(static_item, value, 0).
+rs_step_field(array_type, element, 0).
+
+-- the arguments of a call are the steps of the call, not of the list the grammar puts them in
+rs_holder(C, C)  :- rs_k[ast_rs](C, K), K != arguments, K != type_arguments.
+rs_holder(As, C) :- rs_k[ast_rs](As, arguments), child[ast_rs](C, arguments, 0, As).
+rs_holder(As, G) :- rs_k[ast_rs](As, type_arguments), child[ast_rs](G, type_arguments, 0, As), rs_k[ast_rs](G, generic_type).
+nth[tree](Seq, I, S) :- rs_seq_field(K, F, Off), rs_k[ast_rs](L, K), rs_c[ast_rs](L, F, J, S), rs_holder(L, Seq), I is J + Off.
+nth[tree](Seq, I, S) :- rs_step_field(K, F, I), rs_k[ast_rs](Seq, K), rs_c[ast_rs](Seq, F, 0, S).
+strict[tree](Seq)    :- nth[tree](Seq, _, _).
+
+edb(rs_scope_kind).
+rs_scope_kind(source_file). rs_scope_kind(block). rs_scope_kind(function_item). rs_scope_kind(closure_expression).
+rs_scope_kind(match_arm). rs_scope_kind(if_expression). rs_scope_kind(while_expression). rs_scope_kind(for_expression).
+rs_scope_kind(impl_item). rs_scope_kind(trait_item).
+mark[value](S, scope) :- rs_scope_kind(K), rs_k[ast_rs](S, K).
+mark[value](M, scope) :- rs_k[ast_rs](M, mod_item), child[ast_rs](M, body, 0, _).
+
+-- NAMES AND LITERALS ---------------------------------------------------------------------------------
+
+-- where an identifier is no expression: a pattern, the name of what its parent declares, a key, a token
+edb(rs_pat_field).
+rs_pat_field(let_declaration, pattern). rs_pat_field(parameter, pattern).  rs_pat_field(closure_parameters, c).
+rs_pat_field(for_expression, pattern).  rs_pat_field(let_condition, pattern). rs_pat_field(match_pattern, c).
+rs_pat_field(tuple_pattern, c).         rs_pat_field(tuple_struct_pattern, c). rs_pat_field(slice_pattern, c).
+rs_pat_field(or_pattern, c).            rs_pat_field(reference_pattern, c). rs_pat_field(mut_pattern, c).
+rs_pat_field(ref_pattern, c).           rs_pat_field(field_pattern, pattern). rs_pat_field(captured_pattern, c).
+edb(rs_name_field).
+rs_name_field(function_item, name).     rs_name_field(function_signature_item, name). rs_name_field(const_item, name).
+rs_name_field(static_item, name).       rs_name_field(mod_item, name).     rs_name_field(macro_definition, name).
+rs_name_field(enum_variant, name).      rs_name_field(const_parameter, name). rs_name_field(scoped_identifier, name).
+rs_name_field(macro_invocation, macro). rs_name_field(attribute, c).       rs_name_field(label, c).
+rs_name_field(lifetime, c).             rs_name_field(use_as_clause, alias). rs_name_field(use_declaration, argument).
+rs_name_field(use_list, c).             rs_name_field(token_tree, c).      rs_name_field(token_repetition, c).
+rs_name_field(token_tree_pattern, c).   rs_name_field(struct_item, name).  rs_name_field(enum_item, name).
+rs_name_field(trait_item, name).        rs_name_field(type_item, name).    rs_name_field(type_parameter, name).
+rs_name_field(scoped_type_identifier, name). rs_name_field(type_binding, name). rs_name_field(associated_type, name).
+rs_name_field(lifetime_parameter, name). rs_name_field(attribute, arg).
+
+rs_id(N, Name, PK, F) :- rs_k[ast_rs](N, identifier), rs_text[ast_rs](N, Name), child[ast_rs](P, F, _, N), rs_k[ast_rs](P, PK).
+rs_pat_id(N, Name)    :- rs_id(N, Name, PK, F), rs_pat_field(PK, F).
+binds[value](N, Name) :- rs_pat_id(N, Name), not attr[ast_rs](N, upper, true).
+ref[value](N, Name)   :- rs_pat_id(N, Name), attr[ast_rs](N, upper, true).
+ref[value](N, Name)   :- rs_id(N, Name, PK, F), not rs_pat_field(PK, F), not rs_name_field(PK, F), not rs_use_root(N, _).
+ref[value](N, "self") :- rs_k[ast_rs](N, self), child[ast_rs](P, _, _, N), rs_k[ast_rs](P, PK), PK != self_parameter, PK != use_list.
+mark[value](N, this)  :- rs_k[ast_rs](N, self), child[ast_rs](P, _, _, N), rs_k[ast_rs](P, PK), PK != self_parameter,
+                         PK != use_list, PK != scoped_identifier, PK != scoped_type_identifier, PK != scoped_use_list.
+ref[value](N, Name)   :- rs_k[ast_rs](N, K), rs_path_word(K), rs_text[ast_rs](N, Name), child[ast_rs](P, _, _, N),
+                         rs_k[ast_rs](P, PK), PK != visibility_modifier.
+edb(rs_path_word).
+rs_path_word(crate). rs_path_word(super).
+-- a format string reads the names in its holes
+ref[value](S, Name)   :- attr[ast_rs](S, hole, Name).
+
+ref[type](N, Name)    :- rs_k[ast_rs](N, type_identifier), rs_text[ast_rs](N, Name), child[ast_rs](P, F, _, N), rs_k[ast_rs](P, PK),
+                         not rs_name_field(PK, F).
+ref[type](N, Name)    :- rs_k[ast_rs](N, primitive_type), rs_text[ast_rs](N, Name).
+ref[type](N, "!")     :- rs_k[ast_rs](N, never_type).
+
+edb(rs_lit_kind).
+rs_lit_kind(string_literal). rs_lit_kind(raw_string_literal). rs_lit_kind(char_literal). rs_lit_kind(integer_literal).
+literal[value](N, V)        :- rs_lit_kind(K), rs_k[ast_rs](N, K), attr[ast_rs](N, value, V).
+literal[value](N, int(T))   :- rs_k[ast_rs](N, integer_literal), rs_text[ast_rs](N, T), not attr[ast_rs](N, value, _).
+literal[value](N, float(T)) :- rs_k[ast_rs](N, float_literal), rs_text[ast_rs](N, T).
+literal[value](N, true)     :- rs_k[ast_rs](N, boolean_literal), rs_text[ast_rs](N, "true").
+literal[value](N, false)    :- rs_k[ast_rs](N, boolean_literal), rs_text[ast_rs](N, "false").
+literal[value](N, unit)     :- rs_k[ast_rs](N, unit_expression).
+literal[type](N, unit)      :- rs_k[ast_rs](N, unit_type).
+
+-- CALLS ------------------------------------------------------------------------------------------------
+
+mark[value](C, call) :- rs_k[ast_rs](C, call_expression).
+callee[value](C, F)  :- rs_k[ast_rs](C, call_expression), rs_c[ast_rs](C, function, 0, F).
+mark[value](M, call) :- rs_k[ast_rs](M, macro_invocation).
+callee[value](M, N)  :- rs_k[ast_rs](M, macro_invocation), child[ast_rs](M, macro, 0, N).
+ref[value](N, Name)  :- rs_id(N, T, macro_invocation, macro), Name is concat(T, "!").
+-- `matches!(e, P)`: a test of e against P
+assign[value](M, P, X) :- rs_k[ast_rs](M, macro_invocation), rs_c[ast_rs](M, pattern, 0, P), rs_c[ast_rs](M, arg, 0, X).
+
+-- FUNCTIONS --------------------------------------------------------------------------------------------
+
+rs_fn(F) :- rs_k[ast_rs](F, function_item).
+rs_fn(F) :- rs_k[ast_rs](F, closure_expression).
+body[value](F, B) :- rs_fn(F), rs_c[ast_rs](F, body, 0, B).
+returns[value](F, E) :- rs_k[ast_rs](F, closure_expression), rs_c[ast_rs](F, body, 0, E), not rs_k[ast_rs](E, block).
+rs_has_self(F) :- child[ast_rs](F, parameters, 0, Ps), child[ast_rs](Ps, c, 0, S), rs_k[ast_rs](S, self_parameter).
+binds[value](F, "self") :- rs_has_self(F).
+-- the place of a parameter among the parameters that are not `self`, its pattern, and the node that may hold its type
+rs_param(F, I, P, Pm) :- rs_k[ast_rs](F, function_item), child[ast_rs](F, parameters, 0, Ps), child[ast_rs](Ps, c, J, Pm),
+                         rs_k[ast_rs](Pm, parameter), rs_has_self(F), I is J - 1, rs_c[ast_rs](Pm, pattern, 0, P).
+rs_param(F, I, P, Pm) :- rs_k[ast_rs](F, function_item), child[ast_rs](F, parameters, 0, Ps), child[ast_rs](Ps, c, I, Pm),
+                         rs_k[ast_rs](Pm, parameter), not rs_has_self(F), rs_c[ast_rs](Pm, pattern, 0, P).
+rs_param(F, I, P, Pm) :- rs_k[ast_rs](F, closure_expression), child[ast_rs](F, parameters, 0, Ps), child[ast_rs](Ps, c, I, Pm),
+                         rs_k[ast_rs](Pm, parameter), rs_c[ast_rs](Pm, pattern, 0, P).
+rs_param(F, I, P, P)  :- rs_k[ast_rs](F, closure_expression), child[ast_rs](F, parameters, 0, Ps), rs_c[ast_rs](Ps, c, I, P),
+                         not rs_k[ast_rs](P, parameter).
+param[value](F, I, P)  :- rs_param(F, I, P, _).
+decl[value](P, param)  :- rs_param(_, _, P, _).
+declared[value](P, T)  :- rs_param(_, _, P, Pm), child[ast_rs](Pm, type, 0, T).
+-- what a function returns is declared at the function
+declared[value](F, T)  :- rs_fn(F), child[ast_rs](F, return_type, 0, T).
+
+-- a function of an impl or a trait is a member with a key; any other introduces its name where it stands
+rs_member(Owner, X) :- child[ast_rs](DL, c, _, X), rs_k[ast_rs](DL, declaration_list), child[ast_rs](Owner, body, 0, DL),
+                       rs_k[ast_rs](Owner, OK), rs_owner_kind(OK).
+edb(rs_owner_kind).
+rs_owner_kind(impl_item). rs_owner_kind(trait_item).
+rs_member_fn(F) :- rs_member(_, F), rs_k[ast_rs](F, function_item).
+decl[value](F, function) :- rs_k[ast_rs](F, function_item).
+target[value](F, N)   :- rs_k[ast_rs](F, function_item), child[ast_rs](F, name, 0, N), not rs_member_fn(F).
+binds[value](N, Name) :- rs_id(N, Name, function_item, name), child[ast_rs](F, name, 0, N), not rs_member_fn(F).
+key[value](F, Name)   :- rs_member_fn(F), child[ast_rs](F, name, 0, N), rs_text[ast_rs](N, Name).
+has[value](Owner, F)  :- rs_member(Owner, F), rs_k[ast_rs](F, function_item).
+
+returns[value](R, E) :- rs_k[ast_rs](R, return_expression), rs_c[ast_rs](R, c, 0, E).
+exits[value](R, return) :- rs_k[ast_rs](R, return_expression).
+passes[value](T, E)  :- rs_k[ast_rs](T, try_expression), rs_c[ast_rs](T, c, 0, E).
+returns[value](T, E) :- rs_k[ast_rs](T, try_expression), rs_c[ast_rs](T, c, 0, E).
+
+-- the last of a block, when it is an expression and no `;` ends it, is the value of the block
+rs_block_n(B, N)  :- rs_k[ast_rs](B, block), N is count(J : child[ast_rs](B, c, J, _)).
+rs_last(B, X)     :- rs_block_n(B, N), I is N - 1, child[ast_rs](B, c, I, X).
+edb(rs_not_value).
+rs_not_value(let_declaration). rs_not_value(empty_statement). rs_not_value(function_item). rs_not_value(use_declaration).
+rs_not_value(const_item). rs_not_value(static_item). rs_not_value(struct_item). rs_not_value(enum_item).
+rs_not_value(impl_item). rs_not_value(type_item). rs_not_value(macro_definition). rs_not_value(attribute_item).
+rs_not_value(mod_item). rs_not_value(trait_item).
+gives[value](B, E) :- rs_last(B, X), rs_k[ast_rs](X, K), not rs_not_value(K), not attr[ast_rs](X, token, ";"), unwrapped[ast_rs](X, E).
+discards[value](B, E) :- rs_k[ast_rs](B, block), child[ast_rs](B, c, _, X), attr[ast_rs](X, token, ";"), unwrapped[ast_rs](X, E).
+
+-- MEMBERS ----------------------------------------------------------------------------------------------
+
+member[value](N, O, Key) :- rs_k[ast_rs](N, field_expression), rs_c[ast_rs](N, value, 0, O), child[ast_rs](N, field, 0, F),
+                            rs_k[ast_rs](F, field_identifier), rs_text[ast_rs](F, Key).
+member[value](N, O, Key) :- rs_k[ast_rs](N, field_expression), rs_c[ast_rs](N, value, 0, O), child[ast_rs](N, field, 0, F),
+                            rs_k[ast_rs](F, integer_literal), attr[ast_rs](F, value, Key).
+member[value](N, P, Key) :- rs_k[ast_rs](N, scoped_identifier), child[ast_rs](N, path, 0, P), child[ast_rs](N, name, 0, K),
+                            rs_text[ast_rs](K, Key), not rs_macro_name(N).
+member[value](N, P, Key) :- rs_macro_name(N), child[ast_rs](N, path, 0, P), child[ast_rs](N, name, 0, K),
+                            rs_text[ast_rs](K, T), Key is concat(T, "!").
+rs_macro_name(N) :- rs_k[ast_rs](N, scoped_identifier), child[ast_rs](M, macro, 0, N).
+member[type](N, P, Key)  :- rs_k[ast_rs](N, scoped_type_identifier), child[ast_rs](N, path, 0, P), child[ast_rs](N, name, 0, K),
+                            rs_text[ast_rs](K, Key).
+member_expr[value](N, O, E) :- rs_k[ast_rs](N, index_expression), rs_c[ast_rs](N, c, 0, O), rs_c[ast_rs](N, c, 1, E).
+
+-- BINDINGS AND ASSIGNMENTS ----------------------------------------------------------------------------
+
+decl[value](D, let)    :- rs_k[ast_rs](D, let_declaration).
+assign[value](D, P, V) :- rs_k[ast_rs](D, let_declaration), rs_c[ast_rs](D, pattern, 0, P), rs_c[ast_rs](D, value, 0, V).
+target[value](D, P)    :- rs_k[ast_rs](D, let_declaration), rs_c[ast_rs](D, pattern, 0, P), not child[ast_rs](D, value, 0, _).
+declared[value](P, T)  :- rs_k[ast_rs](D, let_declaration), rs_c[ast_rs](D, pattern, 0, P), child[ast_rs](D, type, 0, T).
+executes_if[value](E, D, unmatched) :- rs_k[ast_rs](D, let_declaration), rs_c[ast_rs](D, alternative, 0, E).
+
+assign[value](A, L, R) :- rs_k[ast_rs](A, assignment_expression), rs_c[ast_rs](A, left, 0, L), rs_c[ast_rs](A, right, 0, R).
+-- `+=` is a binary and an assign of itself
+edb(rs_compound).
+rs_compound("+=", "+"). rs_compound("-=", "-"). rs_compound("*=", "*"). rs_compound("/=", "/"). rs_compound("%=", "%").
+rs_compound("|=", "|"). rs_compound("&=", "&"). rs_compound("^=", "^"). rs_compound("<<=", "<<"). rs_compound(">>=", ">>").
+binary[value](A, Op, L, R) :- rs_k[ast_rs](A, compound_assignment_expr), attr[ast_rs](A, operator, O), rs_compound(O, Op),
+                              rs_c[ast_rs](A, left, 0, L), rs_c[ast_rs](A, right, 0, R).
+assign[value](A, L, A)     :- rs_k[ast_rs](A, compound_assignment_expr), rs_c[ast_rs](A, left, 0, L).
+
+edb(rs_value_item).
+rs_value_item(const_item, const). rs_value_item(static_item, static).
+decl[value](C, Kind)   :- rs_value_item(K, Kind), rs_k[ast_rs](C, K).
+binds[value](N, Name)  :- rs_value_item(K, _), rs_id(N, Name, K, name).
+target[value](C, N)    :- rs_value_item(K, _), rs_k[ast_rs](C, K), child[ast_rs](C, name, 0, N), not child[ast_rs](C, value, 0, _).
+assign[value](C, N, V) :- rs_value_item(K, _), rs_k[ast_rs](C, K), child[ast_rs](C, name, 0, N), rs_c[ast_rs](C, value, 0, V).
+declared[value](N, T)  :- rs_value_item(K, _), rs_k[ast_rs](C, K), child[ast_rs](C, name, 0, N), child[ast_rs](C, type, 0, T).
+has[value](Owner, C)   :- rs_member(Owner, C), rs_k[ast_rs](C, const_item).
+
+-- an item exists from the start of the scope it is written in
+edb(rs_item_kind).
+rs_item_kind(function_item). rs_item_kind(const_item). rs_item_kind(static_item). rs_item_kind(struct_item).
+rs_item_kind(enum_item). rs_item_kind(trait_item). rs_item_kind(type_item). rs_item_kind(mod_item).
+rs_item_kind(use_declaration). rs_item_kind(macro_definition). rs_item_kind(impl_item).
+rs_hoist_up(X, P) :- rs_item_kind(K), rs_k[ast_rs](X, K), child[ast_rs](P, _, _, X).
+rs_hoist_up(X, Q) :- rs_hoist_up(X, P), not mark[value](P, scope), child[ast_rs](Q, _, _, P).
+hoisted[value](X, S) :- rs_hoist_up(X, S), mark[value](S, scope).
+
+-- PATTERNS -------------------------------------------------------------------------------------------
+
+edb(rs_ctor_pattern).
+rs_ctor_pattern(tuple_struct_pattern). rs_ctor_pattern(struct_pattern).
+destructs[value](P, C) :- rs_ctor_pattern(K), rs_k[ast_rs](P, K), child[ast_rs](P, type, 0, C).
+edb(rs_elem_pattern).
+rs_elem_pattern(tuple_struct_pattern). rs_elem_pattern(tuple_pattern). rs_elem_pattern(slice_pattern).
+-- `..` stands for any number of places: the places after it are counted from the end, and are not given
+rs_rest_at(P, J)     :- child[ast_rs](P, c, J, R), rs_k[ast_rs](R, remaining_field_pattern).
+rs_after_rest(P, I)  :- rs_rest_at(P, J), child[ast_rs](P, c, I, _), I >= J.
+pattern_elem[value](P, I, X) :- rs_elem_pattern(K), rs_k[ast_rs](P, K), rs_c[ast_rs](P, c, I, X), not rs_after_rest(P, I).
+rest_elems[value](P, I, R)   :- rs_elem_pattern(K), rs_k[ast_rs](P, K), rs_rest_at(P, I), child[ast_rs](P, c, I, R).
+pattern_prop[value](P, Key, X) :- rs_k[ast_rs](P, struct_pattern), child[ast_rs](P, c, _, FP), child[ast_rs](FP, name, 0, X),
+                                  rs_k[ast_rs](X, shorthand_field_identifier), rs_text[ast_rs](X, Key).
+binds[value](X, Key)           :- rs_k[ast_rs](X, shorthand_field_identifier), rs_text[ast_rs](X, Key).
+pattern_prop[value](P, Key, X) :- rs_k[ast_rs](P, struct_pattern), child[ast_rs](P, c, _, FP), child[ast_rs](FP, name, 0, N),
+                                  rs_k[ast_rs](N, field_identifier), rs_text[ast_rs](N, Key), rs_c[ast_rs](FP, pattern, 0, X).
+binary[value](P, "|", L, R)    :- rs_k[ast_rs](P, or_pattern), rs_c[ast_rs](P, c, 0, L), rs_c[ast_rs](P, c, 1, R).
+binary[value](P, "@", L, R)    :- rs_k[ast_rs](P, captured_pattern), rs_c[ast_rs](P, c, 0, L), rs_c[ast_rs](P, c, 1, R).
+binary[value](P, "..=", L, R)  :- rs_k[ast_rs](P, range_pattern), rs_c[ast_rs](P, left, 0, L), rs_c[ast_rs](P, right, 0, R).
+
+-- VALUES -----------------------------------------------------------------------------------------------
+
+mark[value](O, object) :- rs_k[ast_rs](O, struct_expression).
+declared[value](O, T)  :- rs_k[ast_rs](O, struct_expression), child[ast_rs](O, name, 0, T).
+rs_init(O, I, M)       :- rs_k[ast_rs](O, struct_expression), child[ast_rs](O, body, 0, L), child[ast_rs](L, c, I, M).
+has[value](O, M)       :- rs_init(O, _, M), not rs_k[ast_rs](M, base_field_initializer).
+key[value](M, Name)    :- rs_k[ast_rs](M, field_initializer), child[ast_rs](M, field, 0, K), rs_text[ast_rs](K, Name).
+key[value](M, Name)    :- rs_k[ast_rs](M, field_initializer), child[ast_rs](M, field, 0, K), attr[ast_rs](K, value, Name).
+value[value](M, V)     :- rs_k[ast_rs](M, field_initializer), rs_c[ast_rs](M, value, 0, V).
+key[value](M, Name)    :- rs_k[ast_rs](M, shorthand_field_initializer), child[ast_rs](M, c, 0, X), rs_text[ast_rs](X, Name).
+value[value](M, X)     :- rs_k[ast_rs](M, shorthand_field_initializer), child[ast_rs](M, c, 0, X).
+spread_props[value](O, I, X) :- rs_init(O, I, M), rs_k[ast_rs](M, base_field_initializer), rs_c[ast_rs](M, c, 0, X).
+mark[value](A, array)  :- rs_k[ast_rs](A, tuple_expression).
+mark[value](A, array)  :- rs_k[ast_rs](A, array_expression).
+
+-- CONDUCTORS -------------------------------------------------------------------------------------------
+
+edb(rs_logical_op).
+rs_logical_op("&&"). rs_logical_op("||").
+rs_binary(N, Op, L, R) :- rs_k[ast_rs](N, binary_expression), attr[ast_rs](N, operator, Op), rs_c[ast_rs](N, left, 0, L),
+                          rs_c[ast_rs](N, right, 0, R).
+binary[value](N, Op, L, R)  :- rs_binary(N, Op, L, R), not rs_logical_op(Op).
+logical[value](N, Op, L, R) :- rs_binary(N, Op, L, R), rs_logical_op(Op).
+gives[value](N, L)          :- rs_binary(N, Op, L, _), rs_logical_op(Op).
+gives[value](N, R)          :- rs_binary(N, Op, _, R), rs_logical_op(Op).
+executes_if[value](R, L, truthy) :- rs_binary(_, "&&", L, R).
+executes_if[value](R, L, falsy)  :- rs_binary(_, "||", L, R).
+unary[value](N, Op, X)  :- rs_k[ast_rs](N, unary_expression), attr[ast_rs](N, token, Op), rs_c[ast_rs](N, c, 0, X).
+unary[value](N, "&", X) :- rs_k[ast_rs](N, reference_expression), rs_c[ast_rs](N, value, 0, X).
+passes[value](N, X)     :- rs_k[ast_rs](N, type_cast_expression), rs_c[ast_rs](N, value, 0, X).
+declared[value](N, T)   :- rs_k[ast_rs](N, type_cast_expression), child[ast_rs](N, type, 0, T).
+rs_range(N, Op) :- rs_k[ast_rs](N, range_expression), attr[ast_rs](N, token, Op).
+binary[value](N, Op, L, R) :- rs_range(N, Op), rs_c[ast_rs](N, c, 0, L), rs_c[ast_rs](N, c, 1, R).
+unary[value](N, Op, X)     :- rs_range(N, Op), rs_c[ast_rs](N, c, 0, X), not child[ast_rs](N, c, 1, _).
+literal[value](N, unit)    :- rs_range(N, _), not child[ast_rs](N, c, 0, _).
+
+-- CONTROL ----------------------------------------------------------------------------------------------
+
+edb(rs_cond_field).
+rs_cond_field(if_expression, consequence, truthy). rs_cond_field(if_expression, alternative, falsy).
+rs_cond_field(while_expression, body, truthy).
+executes_if[value](N, G, How) :- rs_cond_field(K, F, How), rs_k[ast_rs](S, K), rs_c[ast_rs](S, F, 0, N), rs_c[ast_rs](S, condition, 0, G).
+gives[value](If, X) :- rs_k[ast_rs](If, if_expression), rs_c[ast_rs](If, consequence, 0, X).
+gives[value](If, X) :- rs_k[ast_rs](If, if_expression), rs_c[ast_rs](If, alternative, 0, X).
+-- a `let` in a condition is a test: truthy when its pattern matched
+assign[value](L, P, X) :- rs_k[ast_rs](L, let_condition), rs_c[ast_rs](L, pattern, 0, P), rs_c[ast_rs](L, value, 0, X).
+
+rs_arm(M, I, Arm) :- rs_k[ast_rs](M, match_expression), child[ast_rs](M, body, 0, B), child[ast_rs](B, c, I, Arm), rs_k[ast_rs](Arm, match_arm).
+assign[value](Arm, P, X) :- rs_arm(M, _, Arm), rs_c[ast_rs](Arm, pattern, 0, P), rs_c[ast_rs](M, value, 0, X).
+executes_if[value](V, P, matches) :- rs_arm(_, _, Arm), rs_c[ast_rs](Arm, pattern, 0, P), rs_c[ast_rs](Arm, value, 0, V).
+executes_if[value](V, G, truthy)  :- rs_arm(_, _, Arm), child[ast_rs](Arm, pattern, 0, MP), rs_c[ast_rs](MP, condition, 0, G),
+                                     rs_c[ast_rs](Arm, value, 0, V).
+gives[value](M, V)  :- rs_arm(M, _, Arm), rs_c[ast_rs](Arm, value, 0, V).
+nth[tree](M, J, P)  :- rs_arm(M, I, Arm), rs_c[ast_rs](Arm, pattern, 0, P), J is I + 1.
+
+edb(rs_loop_kind).
+rs_loop_kind(while_expression). rs_loop_kind(loop_expression). rs_loop_kind(for_expression).
+repeats[value](L, B) :- rs_loop_kind(K), rs_k[ast_rs](L, K), rs_c[ast_rs](L, body, 0, B).
+iterates[value](L, P, X) :- rs_k[ast_rs](L, for_expression), rs_c[ast_rs](L, pattern, 0, P), rs_c[ast_rs](L, value, 0, X).
+executes_if[value](B, X, next) :- rs_k[ast_rs](L, for_expression), rs_c[ast_rs](L, body, 0, B), rs_c[ast_rs](L, value, 0, X).
+exits[value](J, break)    :- rs_k[ast_rs](J, break_expression).
+exits[value](J, continue) :- rs_k[ast_rs](J, continue_expression).
+rs_label_of(X, Name) :- child[ast_rs](X, c, _, Lb), rs_k[ast_rs](Lb, label), child[ast_rs](Lb, c, 0, I), rs_text[ast_rs](I, Name).
+labeled_as[value](L, Name) :- rs_loop_kind(K), rs_k[ast_rs](L, K), rs_label_of(L, Name).
+jumps_to[value](J, Name)   :- exits[value](J, _), rs_label_of(J, Name).
+
+-- ITEMS ------------------------------------------------------------------------------------------------
+
+edb(rs_type_item).
+rs_type_item(struct_item, struct). rs_type_item(enum_item, enum). rs_type_item(trait_item, trait). rs_type_item(type_item, alias).
+decl[type](S, Kind)   :- rs_type_item(K, Kind), rs_k[ast_rs](S, K).
+target[type](S, N)    :- rs_type_item(K, _), rs_k[ast_rs](S, K), child[ast_rs](S, name, 0, N), K != type_item.
+binds[type](N, Name)  :- rs_type_item(K, _), rs_k[ast_rs](S, K), child[ast_rs](S, name, 0, N), rs_text[ast_rs](N, Name).
+assign[type](A, N, T) :- rs_k[ast_rs](A, type_item), child[ast_rs](A, name, 0, N), child[ast_rs](A, type, 0, T).
+
+-- the members of a struct and of a variant: named fields with a key, places with their number
+rs_fields(S, L) :- rs_k[ast_rs](S, struct_item), child[ast_rs](S, body, 0, L).
+rs_fields(V, L) :- rs_k[ast_rs](V, enum_variant), child[ast_rs](V, body, 0, L).
+has[type](S, Fd)    :- rs_fields(S, L), child[ast_rs](L, c, _, Fd), rs_k[ast_rs](Fd, field_declaration).
+key[type](Fd, Name) :- rs_k[ast_rs](Fd, field_declaration), child[ast_rs](Fd, name, 0, N), rs_text[ast_rs](N, Name).
+value[type](Fd, T)  :- rs_k[ast_rs](Fd, field_declaration), child[ast_rs](Fd, type, 0, T).
+has[type](S, T)     :- rs_fields(S, L), rs_k[ast_rs](L, ordered_field_declaration_list), child[ast_rs](L, type, _, T).
+key[type](T, I)     :- rs_k[ast_rs](L, ordered_field_declaration_list), child[ast_rs](L, type, I, T).
+value[type](T, T)   :- rs_k[ast_rs](L, ordered_field_declaration_list), child[ast_rs](L, type, _, T).
+has[type](E, V)     :- rs_k[ast_rs](E, enum_item), child[ast_rs](E, body, 0, L), child[ast_rs](L, c, _, V), rs_k[ast_rs](V, enum_variant).
+key[type](V, Name)  :- rs_k[ast_rs](V, enum_variant), child[ast_rs](V, name, 0, N), rs_text[ast_rs](N, Name).
+
+-- a trait: what it asks for is a member in the world of types, what it gives a function as any other
+has[type](T, Sig)    :- rs_member(T, Sig), rs_k[ast_rs](Sig, function_signature_item).
+key[type](Sig, Name) :- rs_k[ast_rs](Sig, function_signature_item), child[ast_rs](Sig, name, 0, N), rs_text[ast_rs](N, Name).
+declared[type](Sig, T) :- rs_k[ast_rs](Sig, function_signature_item), child[ast_rs](Sig, return_type, 0, T).
+extends[type](T, B)  :- rs_k[ast_rs](T, trait_item), child[ast_rs](T, bounds, 0, TB), child[ast_rs](TB, c, _, B).
+
+-- an impl: whose functions these are, and the trait they answer
+declared[value](I, T)   :- rs_k[ast_rs](I, impl_item), child[ast_rs](I, type, 0, T).
+implements[value](I, T) :- rs_k[ast_rs](I, impl_item), child[ast_rs](I, trait, 0, T).
+
+decl[type](P, param)  :- rs_k[ast_rs](P, type_parameter).
+binds[type](N, Name)  :- rs_k[ast_rs](P, type_parameter), child[ast_rs](P, name, 0, N), rs_text[ast_rs](N, Name).
+bound[type](P, U)     :- rs_k[ast_rs](P, type_parameter), child[ast_rs](P, bounds, 0, TB), child[ast_rs](TB, c, _, U).
+
+decl[value](M, macro) :- rs_k[ast_rs](M, macro_definition).
+target[value](M, N)   :- rs_k[ast_rs](M, macro_definition), child[ast_rs](M, name, 0, N).
+binds[value](N, Name) :- rs_id(N, T, macro_definition, name), Name is concat(T, "!").
+
+edb(rs_seen_kind).
+rs_seen_kind(function_item, value). rs_seen_kind(const_item, value). rs_seen_kind(static_item, value).
+rs_seen_kind(mod_item, value). rs_seen_kind(use_declaration, value). rs_seen_kind(struct_item, type).
+rs_seen_kind(enum_item, type). rs_seen_kind(trait_item, type). rs_seen_kind(type_item, type). rs_seen_kind(field_declaration, type).
+rs_seen(X, any)    :- child[ast_rs](X, c, _, V), rs_k[ast_rs](V, visibility_modifier), not child[ast_rs](V, c, _, _).
+rs_seen(X, family) :- child[ast_rs](X, c, _, V), rs_k[ast_rs](V, visibility_modifier), child[ast_rs](V, c, _, _).
+access[value](X, How) :- rs_seen(X, How), rs_k[ast_rs](X, K), rs_seen_kind(K, value).
+access[type](X, How)  :- rs_seen(X, How), rs_k[ast_rs](X, K), rs_seen_kind(K, type).
+
+-- an attribute stands before what it is on, other attributes between
+rs_attr_next(A, X) :- rs_k[ast_rs](A, attribute_item), child[ast_rs](P, F, I, A), J is I + 1, child[ast_rs](P, F, J, X).
+rs_attr_on(A, X)   :- rs_attr_next(A, X), not rs_k[ast_rs](X, attribute_item).
+rs_attr_on(A, X)   :- rs_attr_next(A, Y), rs_k[ast_rs](Y, attribute_item), rs_attr_on(Y, X).
+decorated[value](At, X) :- rs_attr_on(A, Y), unwrapped[ast_rs](Y, X), child[ast_rs](A, c, 0, At).
+key[value](At, Name)    :- rs_k[ast_rs](At, attribute), child[ast_rs](At, c, 0, N), rs_text[ast_rs](N, Name).
+
+-- MODULES ----------------------------------------------------------------------------------------------
+
+namespace[value](P, P) :- rs_k[ast_rs](P, source_file).
+decl[value](M, namespace) :- rs_k[ast_rs](M, mod_item).
+target[value](M, N)    :- rs_k[ast_rs](M, mod_item), child[ast_rs](M, name, 0, N).
+binds[value](N, Name)  :- rs_id(N, Name, mod_item, name).
+namespace[value](M, B) :- rs_k[ast_rs](M, mod_item), child[ast_rs](M, body, 0, B).
+module_ref[value](M, Name) :- rs_k[ast_rs](M, mod_item), not child[ast_rs](M, body, 0, _), child[ast_rs](M, name, 0, N), rs_text[ast_rs](N, Name).
+
+-- `use`: the items of a list stand under the path of the list
+decl[value](U, import) :- rs_k[ast_rs](U, use_declaration).
+rs_use_base(X, P) :- child[ast_rs](L, c, _, X), rs_k[ast_rs](L, use_list), child[ast_rs](SL, list, 0, L), child[ast_rs](SL, path, 0, P).
+rs_use_left(X, X) :- rs_use_base(X, _).
+rs_use_left(X, Z) :- rs_use_left(X, Y), child[ast_rs](Y, path, 0, Z).
+rs_use_left(X, Z) :- rs_use_left(X, Y), rs_k[ast_rs](Y, use_wildcard), child[ast_rs](Y, c, 0, Z).
+rs_use_root(R, P) :- rs_use_base(X, P), rs_use_left(X, R), rs_k[ast_rs](R, identifier).
+member[value](R, P, Name) :- rs_use_root(R, P), rs_text[ast_rs](R, Name).
+-- the names a `use` introduces, in both worlds: a path's last name, a lone name, an alias, `self` for the list's path
+rs_use_item(X) :- child[ast_rs](U, argument, 0, X), rs_k[ast_rs](U, use_declaration).
+rs_use_item(X) :- child[ast_rs](L, c, _, X), rs_k[ast_rs](L, use_list).
+rs_use_name(X, Name) :- rs_use_item(X), rs_k[ast_rs](X, identifier), rs_text[ast_rs](X, Name).
+rs_use_name(X, Name) :- rs_use_item(X), rs_k[ast_rs](X, scoped_identifier), child[ast_rs](X, name, 0, N), rs_text[ast_rs](N, Name).
+rs_use_name(A, Name) :- rs_use_item(X), rs_k[ast_rs](X, use_as_clause), child[ast_rs](X, alias, 0, A), rs_text[ast_rs](A, Name).
+rs_use_name(X, Name) :- rs_use_item(X), rs_k[ast_rs](X, self), rs_use_base(X, P), rs_path_name(P, Name).
+rs_path_name(P, Name) :- rs_k[ast_rs](P, identifier), rs_text[ast_rs](P, Name).
+rs_path_name(P, Name) :- rs_k[ast_rs](P, scoped_identifier), child[ast_rs](P, name, 0, N), rs_text[ast_rs](N, Name).
+binds[value](X, Name) :- rs_use_name(X, Name).
+binds[type](X, Name)  :- rs_use_name(X, Name).
+assign[value](X, A, Q) :- rs_use_item(X), rs_k[ast_rs](X, use_as_clause), child[ast_rs](X, alias, 0, A), child[ast_rs](X, path, 0, Q).
+passes[value](X, P)    :- rs_use_item(X), rs_k[ast_rs](X, self), rs_use_base(X, P).
+spread_props[value](W, 0, Q) :- rs_k[ast_rs](W, use_wildcard), child[ast_rs](W, c, 0, Q).
+
+-- TYPES ------------------------------------------------------------------------------------------------
+
+-- a generic applied is a call in the world of types
+mark[type](G, call)  :- rs_k[ast_rs](G, generic_type).
+callee[type](G, T)   :- rs_k[ast_rs](G, generic_type), child[ast_rs](G, type, 0, T).
+unary[type](R, "&", T)    :- rs_k[ast_rs](R, reference_type), child[ast_rs](R, type, 0, T).
+unary[type](R, "*", T)    :- rs_k[ast_rs](R, pointer_type), child[ast_rs](R, type, 0, T).
+unary[type](R, "dyn", T)  :- rs_k[ast_rs](R, dynamic_type), child[ast_rs](R, trait, 0, T).
+unary[type](R, "impl", T) :- rs_k[ast_rs](R, abstract_type), child[ast_rs](R, trait, 0, T).
+mark[type](A, array)  :- rs_k[ast_rs](A, array_type).
+mark[type](A, array)  :- rs_k[ast_rs](A, tuple_type).
+callee[type](F, T)    :- rs_k[ast_rs](F, function_type), child[ast_rs](F, trait, 0, T).
+param[type](F, I, P)  :- rs_k[ast_rs](F, function_type), child[ast_rs](F, parameters, 0, Ps), child[ast_rs](Ps, c, I, P).
+declared[type](F, T)  :- rs_k[ast_rs](F, function_type), child[ast_rs](F, return_type, 0, T).
+key[type](B, Name)    :- rs_k[ast_rs](B, type_binding), child[ast_rs](B, name, 0, N), rs_text[ast_rs](N, Name).
+value[type](B, T)     :- rs_k[ast_rs](B, type_binding), child[ast_rs](B, type, 0, T).
