@@ -155,6 +155,13 @@ export function structureRows(c: Clause): [string, Term[]][] {
 }
 
 /** The relations the program declares a structure of, and the closures of its trees; not an alias, of which a promise (a tree, a function) may be declared too. */
+/** The closures the declared trees and graphs stand for, by name. */
+export function closureNames(store: FactStore): Set<string> {
+  const out = new Set<string>();
+  for (const f of store.relPersp(V.structure_closure, KERNEL_PERSP)) if (f.args[1].k === 'a') out.add(f.args[1].name);
+  return out;
+}
+
 export function declaredStructures(store: FactStore): Set<string> {
   const out = new Set<string>();
   for (const f of store.relPersp(V.structure_decl, KERNEL_PERSP)) if (f.args[0].k === 'a' && !(f.args[2].k === 'a' && f.args[2].name === 'alias')) out.add(f.args[0].name);

@@ -11,7 +11,7 @@ const cmpJs = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 export interface Unfolded { rules: DRule[]; changed: Set<string>; reasons: string[]; views: Map<string, Clause[]> }
 
-export function unfoldViews(decl: Set<string>, rules: DRule[], isCell: (rel: string) => boolean, wellFounded: boolean): Unfolded {
+export function unfoldViews(decl: Set<string>, rules: DRule[], isCell: (rel: string) => boolean, wellFounded: boolean, walked: Set<string>): Unfolded {
   const out: Unfolded = { rules, changed: new Set(), reasons: [], views: new Map() };
   if (decl.size === 0) return out;
   const views = new Map<string, DRule[]>();
@@ -36,6 +36,7 @@ export function unfoldViews(decl: Set<string>, rules: DRule[], isCell: (rel: str
   for (;;) {
     const refuse: [string, string][] = [];
     for (const rel of views.keys()) if (below(rel).some((x) => reach(x).has(rel))) refuse.push([rel, 'it reads itself']);
+    for (const r of rules) if (walked.has(r.clause.head.rel)) for (const l of r.clause.body.flatMap(litsOf)) if (views.has(l.rel)) refuse.push([l.rel, 'a nearest or a closure is walked over it']);
     for (const r of rules) for (const b of r.clause.body) {
       if (b.t === 'pos' && views.has(b.lit.rel) && b.lit.temporal !== 'now') refuse.push([b.lit.rel, 'a rule reads it in another tense']);
       else if (b.t === 'neg' && views.has(b.lit.rel)) {

@@ -117,11 +117,14 @@ eff_here[flow](N, alloc, none) :- regexp[value](N).
 -- an assignment target is a read (`console.log` really is `read<global>`; the
 -- unknown is what the function DOES). `eff_member_both` is the never-both half
 -- of that partition; the never-neither half is a sum in the test.
+view eff_obj_traced(A).
 eff_obj_traced[flow](M) :- member_obj[flow](M, _, _).
 eff_heap_of[flow](M, local)  :- eff_obj_traced[flow](M), member_node_v[flow](M).
 eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
 
+view eff_assign(A).
 eff_assign[code](A)           :- assign_op[code](A, _, _).
+view eff_assign_target(A, B).
 eff_assign_target[code](A, L) :- eff_assign[code](A), assign_op[code](A, L, _).
 eff_compound[code](A)         :- eff_assign[code](A), not plain_assign[flow](A).
 eff_member_target[code](L)    :- eff_assign_target[code](_, L), member_node_v[flow](L).
@@ -210,6 +213,7 @@ eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G
 -- `eff_join_short` is the one place the join is READ: a caller's name joined
 -- with its callee's must give the caller's own back. `eff_purer_callee`
 -- compares rows: the callee lacks one of the caller's and has none it lacks.
+view eff_subject(A).
 eff_subject[flow](F)        :- fn_node[code](F).
 eff_lh[flow](L, H)          :- eff_latent[flow](_, L, H).
 eff_lh[flow](L, H)          :- eff_module[flow](_, L, H).
@@ -424,6 +428,7 @@ eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
 -- `B => class extends B { static { init() } }` at each call). Methods are not
 -- field kinds: they are latent.
 -- `class_accessor_property` adds no label beyond a plain field.
+view eff_class_body(A, B).
 eff_class_body[code](CD, P) :- class_slot[code](CD, P).
 eff_class_body[code](CD, P) :- static_block[value](CD, P).
 eff_field_value[code](CD, P, V) :- eff_class_body[code](CD, P), value[value](P, V).

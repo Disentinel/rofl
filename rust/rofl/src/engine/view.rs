@@ -22,6 +22,8 @@ impl Eval {
         for r in rules.iter().filter(|r| decl.contains(&r.clause.head.rel)) {
             views.entry(r.clause.head.rel).or_default().push(r.clone());
         }
+        // the rules a declared walk lowers to: the engine walks it from its declaration, which names the view's rows
+        let walked: HashSet<Sym> = crate::structure::nearests(&self.h, &self.v, &mut self.store).into_iter().chain(crate::structure::closures(&self.h, &self.v, &mut self.store).into_keys()).collect();
         let mut names: Vec<Sym> = decl.into_iter().collect();
         names.sort_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
         for rel in &names {
@@ -51,6 +53,11 @@ impl Eval {
                 }
             }
             for r in &rules {
+                if walked.contains(&r.clause.head.rel) {
+                    for l in r.clause.body.iter().flat_map(|b| b.lits_deep()).filter(|l| views.contains_key(&l.rel)) {
+                        refuse.push((l.rel, "a nearest or a closure is walked over it"));
+                    }
+                }
                 for b in &r.clause.body {
                     match b {
                         BodyElem::Pos(l) if views.contains_key(&l.rel) && l.temporal != Temporal::Now => refuse.push((l.rel, "a rule reads it in another tense")),

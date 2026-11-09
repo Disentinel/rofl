@@ -27,6 +27,7 @@
 function ident_in(N, to Name, to File).
 ident_in[code](N, Name, File) :- ref[value](N, Name), at[tree](N, File, _).
 ident_in[code](N, Name, File) :- binds[value](N, Name), not fn_node[code](N), at[tree](N, File, _).
+view ident(A, B).
 ident[code](N, Name)        :- ident_in[code](N, Name, _).
 
 -- =========================================================================
@@ -74,6 +75,7 @@ may_be[flow](E, node, E) :- regexp[value](E).
 -- A declarator is a place a `var`, `let`, `const` or `using` declares.
 edb(var_decl_kind).
 var_decl_kind(var). var_decl_kind(let). var_decl_kind(const). var_decl_kind(using). var_decl_kind(await_using).
+view var_decl(A).
 var_decl[code](D) :- var_decl_kind(K), decl[value](D, K).
 declarator_id[code](D, I) :- var_decl[code](D), assign[value](D, I, _).
 declarator_id[code](D, I) :- var_decl[code](D), target[value](D, I).
@@ -82,6 +84,7 @@ function binder(D, to Name, to Init, to File).
 binder[code](D, Name, Init, File) :- var_decl[code](D), assign[value](D, I, Init), binds[value](I, Name),
                                      at[tree](D, File, _).
 
+view scoped_binder(A, B).
 scoped_binder[code](D, File) :- binder[code](D, _, _, File).
 
 -- A declarator with a plain name and NO initialiser (`let r;`, `var r;`, the
@@ -121,12 +124,9 @@ scope_node[code](R) :- fn_node[code](R).
 lexical_binder[code](D) :- decl[value](D, let).
 lexical_binder[code](D) :- decl[value](D, const).
 
--- Nearest scope, over declarators only. `ast_within(R, D)` first, with D
--- bound, walks ancestors; `scope_node(R)` first built the (binder × scope)
--- product, −11.5 % of a world.
-up_s[code](D, P)       :- scoped_binder[code](D, _), parent[tree](P, D).
-up_s[code](D, P2)      :- up_s[code](D, P), not scope_node[code](P), parent[tree](P2, P).
-nearest_s[code](R, D)  :- up_s[code](D, R), scope_node[code](R).
+-- The nearest scope around a node, walked up the tree.
+nearest scope_of[code](R, D) of parent[tree](R, D) where scope_node[code](R).
+nearest_s[code](R, D)  :- scoped_binder[code](D, _), scope_of[code](R, D).
 encloses_s[code](R, D) :- scoped_binder[code](D, _), inside[tree](R, D), scope_node[code](R).
 closer_s[code](R, D)   :- encloses_s[code](R, D), nearest_s[code](S, D), R != S.
 
@@ -168,9 +168,7 @@ own_name[code](X, Name, File, itself) :- decl[value](X, function), not named_her
 own_name[code](X, Name, File, itself) :- decl[value](X, class), not named_here[code](X), at[tree](X, File, _),
                                          target[value](X, I), binds[value](I, Name).
 named_decl[code](D, Name, File)  :- own_name[code](D, Name, File, around).
-up_d[code](D, P)         :- named_decl[code](D, _, _), parent[tree](P, D).
-up_d[code](D, P2)        :- up_d[code](D, P), not scope_node[code](P), parent[tree](P2, P).
-decl_region[code](D, R)  :- up_d[code](D, R), scope_node[code](R).
+decl_region[code](D, R)  :- named_decl[code](D, _, _), scope_of[code](R, D).
 decl_at_top[code](D)     :- named_decl[code](D, _, _), not decl_region[code](D, _).
 catch_names[code](H, Name, File) :- decl[value](P, catch), binds[value](P, Name), parent[tree](H, P),
                                     at[tree](H, File, _).
@@ -406,6 +404,7 @@ may_be[flow](U, VK, V) :- fallback[execution](F, Name, Init), may_be[flow](Init,
 
 -- A parameter that is a pattern, `({ port, host }) =>`, alone or with a default for the whole object, binds each name
 -- to a member of the argument at its index; `param_bound` is the union every scope rule reads.
+view param_bound(A, B).
 param_bound[flow](F, Name) :- param_of[flow](F, _, Name).
 param_local[code](F, Local, T) :- param[value](F, _, R), pat_in[code](R, _, T), binds[value](T, Local).
 param_bound[flow](F, Name) :- param_local[code](F, Name, _).
@@ -444,6 +443,7 @@ valued[flow](E) :- may_be_node[flow](E, _).
 
 -- =========================================================================
 -- 7. ACROSS A CALL
+view call_like(A).
 call_like[code](C) :- call[value](C).
 call_like[code](C) :- construct[value](C).
 
@@ -952,11 +952,13 @@ keyed_runs_m[code](M, M) :- keyed_target[code](M).
 -- what a call may run, asked backwards from the functions in question along
 -- the call graph (`eff_reaches` is reach inside its cycles only); another
 -- file's function brings its answer with it (`sx_keyed_runs`, `sx_runs_out`)
-keyed_runs_m[code](F, M) :- eff_calls[code](F, G), keyed_runs_m[code](G, M).
+keyed_runs_m[code](F, M) :- eff_reaches[code](F, M), keyed_target[code](M).
 keyed_runs_out[code](F) :- runs_outside[code](F).
-keyed_runs_out[code](F) :- eff_calls[code](F, G), keyed_runs_out[code](G).
-keyed_crosses[code](F) :- eff_calls[code](F, G), at[tree](F, File, _), not at[tree](G, File, _).
-keyed_crosses[code](F) :- eff_calls[code](F, G), keyed_crosses[code](G).
+keyed_runs_out[code](F) :- eff_reaches[code](F, G), runs_outside[code](G).
+view keyed_calls_out(F).
+keyed_calls_out[code](F) :- eff_calls[code](F, G), at[tree](F, File, _), not at[tree](G, File, _).
+keyed_crosses[code](F) :- keyed_calls_out[code](F).
+keyed_crosses[code](F) :- eff_reaches[code](F, G), keyed_calls_out[code](G).
 keyed_hand_need[code](G) :- keyed_runs_m[code](G, _).
 keyed_hand_need[code](G) :- keyed_once_need[code](G).
 keyed_hand_need[code](I) :- keyed_once_need[code](G), class_method_of[flow](CD, G), inst_of[flow](I, CD).
@@ -1097,7 +1099,7 @@ keyed_g_drops[code](G, H) :- keyed_hop_fn[code](G, H), keyed_drop[code](D, H), n
 -- with every function it reaches grew with the square of the corpus.
 keyed_dropper[code](G) :- keyed_drop[code](D, _), nearest_v[flow](G, D).
 drops_any[code](G) :- keyed_dropper[code](G).
-drops_any[code](F) :- eff_calls[code](F, H), drops_any[code](H).
+drops_any[code](F) :- eff_reaches[code](F, H), keyed_dropper[code](H).
 dcall[code](F, H)  :- eff_calls[code](F, H), drops_any[code](H).
 -- the walks are answered from the graph of those calls, cycles and all: no pair of them is stored
 graph dcall(F, H) closure dreach.
@@ -1452,6 +1454,7 @@ member_value[flow](CD, Key, V) :- super_of[flow](CD, SD),
 
 -- The key an expression selects. Static and computed collapse here:
 -- `may_be_lit` closes the distance for `o[k]`.
+view member_node_v(A).
 member_node_v[flow](N)      :- object_of[code](N, _).
 selects[flow](N, Key)       :- prop_name[code](N, _, Key).
 computed_key[code](N, P)    :- member_expr[value](N, _, P).
@@ -1547,6 +1550,7 @@ member_set_sure[flow](N, O, Key) :- member_const_read[flow](N, O, Key, W), neare
                                     not member_dropped[flow](O, Key).
 member_set_sure[flow](N, O, Key) :- member_const_read[flow](N, O, Key, W), not in_fn[code](W), not in_fn[code](N),
                                     not member_dropped[flow](O, Key).
+view member_viewed(A).
 member_viewed[flow](N) :- member_unset[flow](N, _, _).
 member_may_lack[flow](N) :- member_unset[flow](N, O, Key), not member_set_sure[flow](N, O, Key).
 
@@ -1602,6 +1606,7 @@ this_host[flow](F, T)   :- this_over[flow](F, T), not this_nearer[flow](F, T).
 class_slot[code](CD, M)       :- class[value](CD), has[value](CD, M).
 class_method[code](CD, M)    :- class_slot[code](CD, M), fn_node[code](M), not private[value](M).
 class_method_of[flow](CD, M) :- class_method[code](CD, M).
+view method_fn(A).
 method_fn[flow](M) :- class_method_of[flow](_, M).
 input_this[flow](this(M), M) :- method_fn[flow](M), not static[value](M).
 may_be[flow](T, input, S) :- input_this[flow](S, M), this_host[flow](M, T).

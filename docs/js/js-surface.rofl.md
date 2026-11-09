@@ -115,6 +115,8 @@ In the flow:
 > `fn_node`, `fn_name` and `in_fn` are syntax and are negated below the flow, so a function read as a VALUE, which may be
 > another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
 
+`fn_value` of A is read through its rules and never stored.
+
 <a id="fn_value"></a>`fn_value`(F) either:
 
 1. if F is a [function](js-callgraph.rofl.md#fn_node);
@@ -163,9 +165,13 @@ In the surface:
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
   - X [points to](js-dataflow.rofl.md#may_be_node) a node N.
 
+`sx_called` of A is read through its rules and never stored.
+
 <a id="sx_called"></a>`sx_called`(F) if some call [resolves to](js-callgraph.rofl.md#resolves) F.
 
 > how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
+
+`arg_given` of A is read through its rules and never stored.
 
 In the code:
 
