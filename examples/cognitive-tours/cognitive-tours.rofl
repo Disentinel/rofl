@@ -1,0 +1,74 @@
+-- cognitive-tours.rofl — the mechanical half of the audit-tours and
+-- audit-waypoints skills of Cognitive Tours (github.com/margaretstorey/
+-- cognitive-tours), as rules over a map and the repo it describes.
+--
+-- The skills ask a language model to find drift between a map of waypoints,
+-- edges and tours and the code. Some of what they look for is judgment: a
+-- bridge that does not bridge, a description that no longer matches its file.
+-- That stays with the model and the author. The rest is lookup, and lookup
+-- should answer the same way every time and say why: that is this file.
+--
+-- Nothing here writes to the map. Every finding is a question for the
+-- author, the same contract the skills keep.
+--
+-- Facts come from scan.py (the map, git, docs/adr). The relations it writes:
+edb(waypoint).       -- waypoint(Id, Label)
+edb(wtype).          -- wtype(Id, Type)              Goal, Feature, ADR, ...
+edb(anchored).       -- anchored(Id, File)           the waypoint's filePath
+edb(file_exists).    -- file_exists(File)            in the checkout scanned
+edb(drafted).        -- drafted(Id)                  says "drafted/written by Claude"
+edb(map_status).     -- map_status(Id, deferred)     label starts "(deferred)"
+edb(edge).           -- edge(From, Label, To)        labels are free text
+edb(tour).           -- tour(Id, Name)
+edb(stop).           -- stop(Tour, N, Waypoint)      N from 1
+edb(narrative).      -- narrative(Tour, N)           stop N has a bridge
+edb(bridge_mentions). -- bridge_mentions(Tour, N, W) bridge of N names W by label
+edb(adr_doc).        -- adr_doc(File, Status)        first word of **Status**
+edb(changed_since).  -- changed_since(File)          git log since the date
+
+linked(A, B)        :- edge(A, _, B).
+in_tour(W)          :- stop(_, _, W).
+anchored_file(F)    :- anchored(_, F).
+covered(F)          :- anchored(W, F), in_tour(W).
+next_stop(T, N, W2) :- stop(T, N, _), stop(T, M, W2), M = N + 1.
+
+-- Section A of audit-tours: coverage. What changed that the map does not know.
+no_waypoint[audit](F) :- changed_since(F), not anchored_file(F).
+in_no_tour[audit](F)  :- changed_since(F), anchored_file(F), not covered(F).
+
+-- audit-waypoints, the part that is lookup: the anchor points at nothing.
+dead_anchor[audit](W, F) :- anchored(W, F), not file_exists(F).
+
+-- Section B of audit-tours, the parts that are lookup.
+-- Redundant path: A -L-> C where A -L-> B ... -L-> C already says it. Only
+-- within one label: "contains" chains, "implemented by" chains. Labels are
+-- free text, so this is only as good as their spelling.
+reach_by(A, L, B) :- edge(A, L, B).
+reach_by(A, L, C) :- edge(A, L, B), reach_by(B, L, C).
+redundant_edge[audit](A, L, B) :- edge(A, L, B), edge(A, L, X), X != B, reach_by(X, L, B).
+
+-- Missing stop: a waypoint linked to two consecutive stops, in no tour.
+missing_stop[audit](T, N, W) :- stop(T, N, A), next_stop(T, N, B), linked(A, W), linked(W, B), not in_tour(W).
+
+-- Bridge to the wrong place: the bridge of stop N names a waypoint that is
+-- neither the next stop nor anywhere in the tour.
+wrong_place[audit](T, N, W) :- bridge_mentions(T, N, W), next_stop(T, N, B), W != B, not stop(T, _, W).
+
+-- A stop with a stop after it and no bridge to it.
+silent_stop[audit](T, N) :- stop(T, N, _), next_stop(T, N, _), not narrative(T, N).
+
+-- Provenance: drafted by Claude and not yet rewritten by a person.
+unverified[audit](W) :- drafted(W).
+
+-- On the map, with no edge and in no tour.
+orphan[audit](W) :- waypoint(W, _), not linked(W, _), not linked(_, W), not in_tour(W).
+
+-- ADRs. The paper's story (arXiv 2611.08456, section V) is a decision the
+-- code had moved away from while its ADR still said Accepted. Seeing that
+-- the code contradicts a decision is judgment. Keeping the status of a
+-- decision the same in the doc and on the map is bookkeeping, and that is
+-- what these check: the doc's Status line against the waypoint's label.
+map_said(W, deferred) :- map_status(W, deferred).
+map_said(W, accepted) :- wtype(W, "ADR"), not map_status(W, deferred).
+adr_status_drift[audit](W, F, Doc, Map) :- anchored(W, F), adr_doc(F, Doc), map_said(W, Map), Doc != Map.
+adr_unmapped[audit](F) :- adr_doc(F, accepted), not anchored_file(F).
