@@ -40,6 +40,7 @@ pub const LATTICE_WORD: [(&str, &str); 12] = [("least", "min"), ("greatest", "ma
     ("bitwise or", "bitor"), ("sum", "sum"), ("count", "count"), ("median", "median"), ("quantile", "quantile"), ("rank", "rank")];
 const NAME: &str = "(?:_|[A-Z][A-Za-z0-9_]*)";
 pub const TREE_DECL: &str = r"^Each child of `(\w+)` has one parent and no node is its own ancestor(?:, and `(\w+)` holds of each node and every ancestor of it)?\.$";
+const VIEW_DECL: &str = r"^`(\w+)`(?: of (.+?))? is read through its rules and never stored\.$";
 const ALIAS_DECL: &str = r#"^(?:<a id="\w+"><\/a>)?`(\w+)`(?: of (.+?))? is another name for `(\w+)`(?: of (.+?))?\.$"#;
 pub const TAG_DECL: &str = r"^Each `(\w+)` fact(?: of (.+?))? carries an? (tropical|viterbi|trust|counting) tag (_|[A-Z][A-Za-z0-9_]*)\.$";
 
@@ -1495,6 +1496,11 @@ impl R {
         if let Some(m) = rx::exec(ALIAS_DECL, text) {
             let list = |x: Option<String>| -> String { x.filter(|x| !x.is_empty()).map(|x| rx::split(", | and ", &x).join(", ")).unwrap_or_default() };
             self.decls.push(format!("alias {}({}) is {}({}).", g(&m, 1), list(opt(&m, 2)), g(&m, 3), list(opt(&m, 4))));
+            return true;
+        }
+        if let Some(m) = rx::exec(VIEW_DECL, text) {
+            let list = |x: Option<String>| -> String { x.filter(|x| !x.is_empty()).map(|x| rx::split(", | and ", &x).join(", ")).unwrap_or_default() };
+            self.decls.push(format!("view {}({}).", g(&m, 1), list(opt(&m, 2))));
             return true;
         }
         if let Some(m) = rx::exec(TREE_DECL, text) {

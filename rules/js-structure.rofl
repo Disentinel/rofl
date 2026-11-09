@@ -36,6 +36,7 @@ seq_at[code](B, I, S) :- nth[tree](B, I, S), strict[tree](B), parent[tree](B, S)
 seq_at[code](B, I, W) :- nth[tree](B, I, X), strict[tree](B), parent[tree](W, X), parent[tree](B, W),
                          not executes_if[value](W, X, matches).
 -- what a step holds: what is inside it, and an expression statement's expression, which is the step itself
+view step_in(S, X).
 step_in[code](S, X) :- seq_at[code](_, _, S), inside[tree](S, X).
 step_in[code](S, S) :- discards[value](_, S).
 

@@ -919,6 +919,8 @@ The member Key of a node O holds a node V if all of:
   - a node X [points to](#may_be_node) a node Src;
   - [the member](#member_value) Key of Src holds V.
 
+`valued` of E is read through its rules and never stored.
+
 <a id="valued"></a>A node E is valued either:
 
 1. if E [may be the literal](#may_be_lit) some text;
@@ -3033,6 +3035,10 @@ In the flow:
 1. if [`keyed_read`](#keyed_read)(C, something);
 2. if [`keyed_walk_at`](#keyed_walk_at)(C, something, something);
 3. if [`keyed_each_at`](#keyed_each_at)(C, something, something, something).
+
+`read_holds_node` of E and N is read through its rules and never stored.
+
+`read_holds_lit` of E and L is read through its rules and never stored.
 
 <a id="read_holds_node"></a>`read_holds_node`(E, N) either:
 

@@ -141,6 +141,8 @@ What this file calls a node, and what each word stands for:
 
 > what a step holds: what is inside it, and an expression statement's expression, which is the step itself
 
+`step_in` of S and X is read through its rules and never stored.
+
 <a id="step_in"></a>`step_in`(S, X) either:
 
 1. if [`seq_at`](#seq_at)(something, something, S) and [`inside`](#inside)(S, X);

@@ -438,6 +438,7 @@ may_be[flow](E, node, R) :- rest_binds[code](D, R, Local, File),
 spread_of[code](O, A) :- obj_lit[code](O), spread_props[value](O, _, A).
 member_value[flow](O, Key, V) :- spread_of[code](O, A), may_be_node[flow](A, Src), member_value[flow](Src, Key, V).
 
+view valued(E).
 valued[flow](E) :- may_be_lit[flow](E, _).
 valued[flow](E) :- may_be_node[flow](E, _).
 
@@ -1254,6 +1255,8 @@ keyed_holds_key[flow](U, K) :- keyed_each_at[flow](U, C, X, 1), keyed_put[flow](
 keyed_viewed[flow](C) :- keyed_read[flow](C, _).
 keyed_viewed[flow](E) :- keyed_walk_at[flow](E, _, _).
 keyed_viewed[flow](U) :- keyed_each_at[flow](U, _, _, _).
+view read_holds_node(E, N).
+view read_holds_lit(E, L).
 read_holds_node[flow](E, N) :- may_be_node[flow](E, N), not keyed_viewed[flow](E).
 read_holds_node[flow](E, N) :- keyed_holds[flow](E, V), may_be_node[flow](V, N).
 read_holds_lit[flow](E, L)  :- may_be_lit[flow](E, L), not keyed_viewed[flow](E), not member_viewed[flow](E).

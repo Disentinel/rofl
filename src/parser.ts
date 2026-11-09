@@ -45,7 +45,7 @@ export const ORDER_KINDS = new Set(['pareto', 'lex']);
 /** The declared data structures (docs/data-structures.md) and the role words
  *  each one marks its arguments with: words where a role stands, names
  *  elsewhere. `function` marks the values a key determines with `to`. */
-export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']], ['tree', []], ['alias', []]]);
+export const STRUCTURE_ROLES: ReadonlyMap<string, readonly string[]> = new Map([['function', ['to']], ['tree', []], ['alias', []], ['view', []]]);
 
 class P {
   toks: Tok[];
@@ -447,7 +447,7 @@ class P {
   }
 
   /**   structdecl := kind ident '(' [ role ] term [ ',' [ role ] term ]* ')' [ 'closure' ident | 'is' literal ] '.'
-   *    kind       := 'function' | 'tree' | 'alias'
+   *    kind       := 'function' | 'tree' | 'alias' | 'view'
    *    role       := 'to'
    *  Words, not keywords: one declares only when a second name follows. An
    *  argument without a role is part of the key. */

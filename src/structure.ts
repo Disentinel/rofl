@@ -98,8 +98,13 @@ export function lowerAlias(c: Clause): string {
 
 /** The relations declared an alias. */
 export function declaredAliases(store: FactStore): Set<string> {
+  return declaredOf(store, 'alias');
+}
+
+/** The relations declared of one kind. */
+export function declaredOf(store: FactStore, kind: string): Set<string> {
   const out = new Set<string>();
-  for (const f of store.relPersp(V.structure_decl, KERNEL_PERSP)) if (f.args[0].k === 'a' && f.args[2].k === 'a' && f.args[2].name === 'alias') out.add(f.args[0].name);
+  for (const f of store.relPersp(V.structure_decl, KERNEL_PERSP)) if (f.args[0].k === 'a' && f.args[2].k === 'a' && f.args[2].name === kind) out.add(f.args[0].name);
   return out;
 }
 

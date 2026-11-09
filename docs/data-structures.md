@@ -51,6 +51,7 @@ variable they mark, as `min` and `max` do in `pareto p(K, min C, max T).`
 | --- | --- | --- |
 | tree | `tree ast_in(P, C).` `tree ast_in(P, C) closure ast_within.` | `` Each child of `ast_in` has one parent and no node is its own ancestor. `` and, with the closure, `` ... ancestor, and `ast_within` holds of each node and every ancestor of it. `` |
 | alias | `alias in_fn(N, F) is nearest_v(N, F).` `alias ast_in(P, C) is ast_child(P, _, _, C).` | `` `in_fn` is `nearest_v`. `` `` `ast_in` is `ast_child` without its field and position. `` |
+| view | `view step_in(S, X).` | `` `step_in` is read through its rules, never stored. `` |
 | function | `function ast_name(N, to Name).` | `` `ast_name` has one Name for each N. `` |
 | span | `span src_range(N, from S, to E).` `span src_range(N, from S, to E) laminar.` | `` Each `src_range` of N runs from S to E. `` and `` ... and any two are nested or apart. `` |
 | equivalence | `equivalence same(A, B) of copy_edge(A, B).` | `` `same` is the equivalence that `copy_edge` generates. `` |
@@ -542,6 +543,23 @@ the rule written by hand.
 
 *Saves*, on vscode at 250 files sealed: ast_in and ast_name, about 560k rows (12% of the facts). A sealed cell over an
 alias records the source among its sealed relations; the census compares, the spelling differs from TypeScript.
+
+## View, as built
+
+Built 2026-11-09. `view step_in(S, X).` says the relation is a name for its rules' bodies: no row of it is stored, in
+either engine, with or without witnesses. Every rule that reads it is unfolded before it is judged and planned
+(`rust/rofl/src/engine/view.rs`, `src/view.ts`): one copy of the reader for each rule of the view, the view's
+variables renamed apart and its head unified with the premise; a copy whose premise does not unify is dropped. A copy
+keeps the reader's id, the k-th after the first is `<id>~k`; each is judged as it runs, as a tag's rewritten rule. A
+firing cites the facts of the view's body, so `why` of a reader shows them in place of the view's row. A negated read
+unfolds where the view is one rule of one positive premise (`not in_fn(Q)` reads `not nearest_v(_, Q)`).
+
+*Rows instead*, both engines, `view_reason` saying which: a view with no rule, a lattice, a well-founded world, a rule
+of the view that stages or aggregates, a view that reads itself (through other views or not), one read inside an
+aggregate or in another tense, and one read negated past one literal. A recursive view is a walk, not a name for a
+body: the nearest ancestor with a property (`nearest_v`, `climb`) needs the tree's own walk, not built yet.
+
+*Saves* the view's rows and the joins that made them; the reader's join is the longer for it.
 
 ## The other five, as built
 

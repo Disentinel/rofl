@@ -745,6 +745,11 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       decls.push(`alias ${m[1]}(${list(m[2]).join(', ')}) is ${m[3]}(${list(m[4]).join(', ')}).`);
       return true;
     }
+    m = VIEW_DECL.exec(text);
+    if (m) {
+      decls.push(`view ${m[1]}(${(m[2] ? m[2].split(/, | and /) : []).join(', ')}).`);
+      return true;
+    }
     m = TREE_DECL.exec(text);
     if (m) {
       decls.push(`tree ${m[1]}(P, C)${m[2] ? ` closure ${m[2]}` : ''}.`);
@@ -1584,6 +1589,7 @@ export const sentenceSpans = (md: string): [number, number][] => {
 
 /** A tag declaration (docs/aggregates.md, "The sentence form, as built"): `Each \`cost\` fact of A and C carries a tropical tag T.` */
 const TREE_DECL = /^Each child of `(\w+)` has one parent and no node is its own ancestor(?:, and `(\w+)` holds of each node and every ancestor of it)?\.$/;
+const VIEW_DECL = /^`(\w+)`(?: of (.+?))? is read through its rules and never stored\.$/;
 const ALIAS_DECL = /^(?:<a id="\w+"><\/a>)?`(\w+)`(?: of (.+?))? is another name for `(\w+)`(?: of (.+?))?\.$/;
 const TAG_DECL = /^Each `(\w+)` fact(?: of (.+?))? carries an? (tropical|viterbi|trust|counting) tag (_|[A-Z][A-Za-z0-9_]*)\.$/;
 

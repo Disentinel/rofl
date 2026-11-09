@@ -781,6 +781,11 @@ impl<'a> R<'a> {
                 let of = |ts: &[Term]| { let v: Vec<String> = ts.iter().map(|t| name(*t)).collect(); match v.len() { 0 => String::new(), 1 => format!(" of {}", v[0]), k => format!(" of {} and {}", v[..k - 1].join(", "), v[k - 1]) } };
                 return format!("<a id=\"{}\"></a>`{rel}`{} is another name for `{}`{}.\n\n", h.name(c.head.rel), of(&c.head.args), h.name(src.rel), of(&src.args));
             }
+            if h.name(st.kind) == "view" {
+                let v: Vec<String> = c.head.args.iter().map(|t| name(*t)).collect();
+                let of = match v.len() { 0 => String::new(), 1 => format!(" of {}", v[0]), k => format!(" of {} and {}", v[..k - 1].join(", "), v[k - 1]) };
+                return format!("`{rel}`{of} is read through its rules and never stored.\n\n");
+            }
             if h.name(st.kind) == "tree" {
                 let closed = st.closure.filter(|_| !brk!("phrase_tree_closure_lost" => true; false)).map_or(String::new(), |cl| format!(", and `{}` holds of each node and every ancestor of it", h.name(cl)));
                 return format!("Each child of `{rel}` has one parent and no node is its own ancestor{closed}.\n\n");

@@ -214,6 +214,11 @@ pub fn aliased(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
     decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "alias").map(|d| d.0).collect()
 }
 
+/// The relations declared a view.
+pub fn viewed(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
+    decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "view").map(|d| d.0).collect()
+}
+
 /// The closure each declared tree stands for, by the closure's name.
 pub fn closures(h: &Heap, v: &Vocab, store: &mut Store) -> HashMap<Sym, Sym> {
     let mut out = HashMap::new();

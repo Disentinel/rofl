@@ -783,6 +783,8 @@ A node
 > `export_local`, which already excludes re-exports and type-only exports.
 > `export_all_declaration` introduces no local entry.
 
+`in_fn` of N is read through its rules and never stored.
+
 > A declaration is exported when a name it introduces is a member of a namespace, a module's or a TypeScript one's:
 > `export function f`, `export class C`, `export const a = 1`, `export const { a, b = () => 1 } = o`.
 
