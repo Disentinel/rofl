@@ -573,7 +573,7 @@ export const WALL_HOLE = /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m;
 /** The rules of the files, a notebook (`.rofl.md`) read through the md reader: what a world declares, whichever form it is written in. */
 export const filesText = (files: string[]): string => files.filter((f) => fs.existsSync(f)).map((f) =>
   f.endsWith('.rofl.md') ? fs.readFileSync(readWorldMd(f).rofl, 'utf8') : f.endsWith('.rofl') ? fs.readFileSync(f, 'utf8') : '').join('\n');
-export const treeDeclared = (files: string[]): boolean => /^tree \w+\(.*\) closure \w+\./m.test(filesText(files));
+export const treeDeclared = (files: string[]): boolean => /^(?:tree|graph) \w+\(.*\) closure \w+\./m.test(filesText(files));
 export const treeSealed = (files: string[]): boolean => treeDeclared(files) && /^sealed\(provenance\)\./m.test(filesText(files));
 /** What the state with the closure stored says against the state answered from the tree: null where they agree or the stored one is cut by a wall. */
 export const storedIsCut = (tree: string, stored: string): boolean => WALL_HOLE.test(stored) && !WALL_HOLE.test(tree);

@@ -43,6 +43,9 @@ Reads:
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
 - from js-surface, in the flow: [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
+- from outside these files:
+  - <a id="dreach"></a>`dreach`
+  - <a id="keyed_upstream"></a>`keyed_upstream`
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
@@ -1770,9 +1773,7 @@ In the code:
 
 > a source that reaches itself builds its value in a loop
 
-<a id="keyed_upstream"></a>`keyed_upstream`(E, S) if [`keyed_src`](#keyed_src)(E, S).
-
-`keyed_upstream`(E, T) if [`keyed_upstream`](#keyed_upstream)(E, S) and [`keyed_src`](#keyed_src)(S, T).
+`keyed_upstream` holds of each node and every node a path of `keyed_src` leads to.
 
 `keyed_open`(E) if [`keyed_upstream`](#keyed_upstream)(E, E).
 
@@ -2593,10 +2594,23 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
 
 <a id="dcall"></a>`dcall`(F, H) if a node F [has a call to](js-effects.rofl.md#eff_calls) H and [`drops_any`](#drops_any)(H).
 
+> the walks are answered from the graph of those calls, cycles and all: no pair of them is stored
+
+`dreach` holds of each node and every node a path of `dcall` leads to.
+
+`dwalk_hop` of S and Y is read through its rules and never stored.
+
+`dwalk_v` of S and Y is read through its rules and never stored.
+
+`dwalk_p` of S and Y is read through its rules and never stored.
+
 <a id="dwalk_hop"></a>`dwalk_hop`(G, N) either:
 
 1. if [`keyed_hop_fn`](#keyed_hop_fn)(G, something), [`drops_any`](#drops_any)(G), and N is G;
-2. if [`dwalk_hop`](#dwalk_hop)(G, X) and [`dcall`](#dcall)(X, N).
+2. if all of:
+   - [`keyed_hop_fn`](#keyed_hop_fn)(G, something);
+   - [`drops_any`](#drops_any)(G);
+   - [`dreach`](#dreach)(G, N).
 
 <a id="dwalk_v"></a>`dwalk_v`(G, N) either:
 
@@ -2605,7 +2619,11 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - a call Q [resolves to](js-callgraph.rofl.md#resolves) G;
    - [`drops_any`](#drops_any)(G);
    - N is G;
-2. if [`dwalk_v`](#dwalk_v)(G, X) and [`dcall`](#dcall)(X, N).
+2. if all of:
+   - [`keyed_vdrop_at`](#keyed_vdrop_at)(something, something, Q, something);
+   - a call Q [resolves to](js-callgraph.rofl.md#resolves) G;
+   - [`drops_any`](#drops_any)(G);
+   - [`dreach`](#dreach)(G, N).
 
 <a id="dwalk_p"></a>`dwalk_p`(F, N) either:
 
@@ -2615,7 +2633,12 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - a call Q [resolves to](js-callgraph.rofl.md#resolves) F;
    - [`drops_any`](#drops_any)(F);
    - N is F;
-2. if [`dwalk_p`](#dwalk_p)(F, X) and [`dcall`](#dcall)(X, N).
+2. if all of:
+   - [`keyed_drop_may`](#keyed_drop_may)(C, J, something);
+   - [`keyed_pbetween`](#keyed_pbetween)(C, J, Q);
+   - a call Q [resolves to](js-callgraph.rofl.md#resolves) F;
+   - [`drops_any`](#drops_any)(F);
+   - [`dreach`](#dreach)(F, N).
 
 <a id="keyed_sure"></a>`keyed_sure`(G, H, P) if all of:
   - [`keyed_sure_at`](#keyed_sure_at)(G, H, P, K);

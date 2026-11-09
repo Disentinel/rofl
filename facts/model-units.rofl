@@ -249,7 +249,6 @@ unit_concludes("rules/js-dataflow.rofl", sx_ret_known).
 unit_concludes("rules/js-dataflow.rofl", sx_ret_open).
 unit_concludes("rules/js-dataflow.rofl", keyed_open).
 unit_concludes("rules/js-dataflow.rofl", keyed_fn_need).
-unit_concludes("rules/js-dataflow.rofl", keyed_upstream).
 unit_concludes("rules/js-dataflow.rofl", keyed_lits).
 unit_concludes("rules/js-dataflow.rofl", keyed_key).
 unit_concludes("rules/js-dataflow.rofl", keyed_const_name).

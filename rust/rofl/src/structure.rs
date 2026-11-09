@@ -59,6 +59,9 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, take
             return Err(format!("{what}: the values a key determines come last, after the key: function {}(N, to V)", h.name(rel)));
         }
     }
+    if kind == "graph" && c.head.args.len() != 2 {
+        return Err(format!("{what}: a graph has two arguments, the edge's ends: graph {}(X, Y)", h.name(rel)));
+    }
     if kind == "tree" && c.head.args.len() != 2 && !brk!("tree_arity_unchecked" => true; false) {
         return Err(format!("{what}: a tree has two arguments, the parent and the child: tree {}(P, C)", h.name(rel)));
     }
@@ -70,8 +73,8 @@ pub fn check_decl(h: &Heap, v: &Vocab, c: &Clause, declared: &HashSet<Sym>, take
     }
     if let Some(cl) = st.closure {
         let cn = h.name(cl);
-        if kind != "tree" {
-            return Err(format!("{what}: only a tree has a closure"));
+        if kind != "tree" && kind != "graph" {
+            return Err(format!("{what}: only a tree or a graph has a closure"));
         }
         if cl == rel {
             return Err(format!("{what}: a tree's closure is another relation than its edges"));
@@ -212,6 +215,11 @@ fn decls(h: &Heap, v: &Vocab, store: &mut Store) -> Vec<(Sym, Term, Sym)> {
 /// The relations declared an alias.
 pub fn aliased(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
     decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "alias").map(|d| d.0).collect()
+}
+
+/// The relations declared a graph.
+pub fn graphs(h: &Heap, v: &Vocab, store: &mut Store) -> HashSet<Sym> {
+    decls(h, v, store).into_iter().filter(|d| h.name(d.2) == "graph").map(|d| d.0).collect()
 }
 
 /// The relations declared a view.

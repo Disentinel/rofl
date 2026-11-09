@@ -820,8 +820,7 @@ keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder
 keyed_open[code](E) :- keyed_want[code](E), sees_binder[code](E, D), sees_binder[code](L, D), compound_write[code](_, L).
 keyed_open[code](E) :- keyed_src[code](E, S), keyed_open[code](S).
 -- a source that reaches itself builds its value in a loop
-keyed_upstream[code](E, S) :- keyed_src[code](E, S).
-keyed_upstream[code](E, T) :- keyed_upstream[code](E, S), keyed_src[code](S, T).
+graph keyed_src(E, S) closure keyed_upstream.
 keyed_open[code](E) :- keyed_upstream[code](E, E).
 keyed_lits[code](A) :- keyed_want[code](A), may_be_lit[flow](A, L), may_be_lit[flow](A, M), L != M.
 keyed_key[code](C, Key) :- keyed_key_arg[code](C, A), keyed_want[code](A), may_be_lit[flow](A, Key),
@@ -1108,12 +1107,17 @@ keyed_dropper[code](G) :- keyed_drop[code](D, _), nearest_v[flow](G, D).
 drops_any[code](G) :- keyed_dropper[code](G).
 drops_any[code](F) :- eff_calls[code](F, H), drops_any[code](H).
 dcall[code](F, H)  :- eff_calls[code](F, H), drops_any[code](H).
+-- the walks are answered from the graph of those calls, cycles and all: no pair of them is stored
+graph dcall(F, H) closure dreach.
+view dwalk_hop(S, Y).
+view dwalk_v(S, Y).
+view dwalk_p(S, Y).
 dwalk_hop[code](G, G) :- keyed_hop_fn[code](G, _), drops_any[code](G).
-dwalk_hop[code](S, Y) :- dwalk_hop[code](S, X), dcall[code](X, Y).
+dwalk_hop[code](G, Y) :- keyed_hop_fn[code](G, _), drops_any[code](G), dreach[code](G, Y).
 dwalk_v[code](G, G) :- keyed_vdrop_at[code](_, _, Q, _), resolves[code](Q, G), drops_any[code](G).
-dwalk_v[code](S, Y) :- dwalk_v[code](S, X), dcall[code](X, Y).
+dwalk_v[code](G, Y) :- keyed_vdrop_at[code](_, _, Q, _), resolves[code](Q, G), drops_any[code](G), dreach[code](G, Y).
 dwalk_p[code](F, F) :- keyed_drop_may[code](C, J, _), keyed_pbetween[code](C, J, Q), resolves[code](Q, F), drops_any[code](F).
-dwalk_p[code](S, Y) :- dwalk_p[code](S, X), dcall[code](X, Y).
+dwalk_p[code](F, Y) :- keyed_drop_may[code](C, J, _), keyed_pbetween[code](C, J, Q), resolves[code](Q, F), drops_any[code](F), dreach[code](F, Y).
 keyed_sure[code](G, H, P) :- keyed_sure_at[code](G, H, P, K), not keyed_early[code](G, K), not keyed_g_drops[code](G, H).
 keyed_fill_call[code](C, P, J) :- keyed_read_site[code](C, H, B, I), keyed_call[code](C, H, _, _, _),
                                   nth[tree](B, J, Q), discards[value](B, Q), J < I, keyed_one_target[code](Q, G), keyed_sure[code](G, H, P).

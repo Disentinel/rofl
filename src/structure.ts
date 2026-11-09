@@ -34,12 +34,13 @@ export function checkStructureDecl(c: Clause, arityOf: (rel: string) => number |
     if (first < 0) return `${what}: a function names the value its key determines, marked \`to\`: function ${rel}(N, to V)`;
     if (s.roles.slice(first).some((r) => !r)) return `${what}: the values a key determines come last, after the key: function ${rel}(N, to V)`;
   }
+  if (s.kind === 'graph' && c.head.args.length !== 2) return `${what}: a graph has two arguments, the edge's ends: graph ${rel}(X, Y)`;
   if (s.kind === 'tree' && c.head.args.length !== 2) return `${what}: a tree has two arguments, the parent and the child: tree ${rel}(P, C)`;
   if (s.kind === 'alias') return checkAlias(c, what, arityOf, concluded, taken);
   if (declared.has(rel)) return `${what}: '${rel}' is declared a structure twice`;
   const cl = s.closure;
   if (cl !== undefined) {
-    if (s.kind !== 'tree') return `${what}: only a tree has a closure`;
+    if (s.kind !== 'tree' && s.kind !== 'graph') return `${what}: only a tree or a graph has a closure`;
     if (cl === rel) return `${what}: a tree's closure is another relation than its edges`;
     if (RESERVED.has(cl) || cl.startsWith('$') || arityOf(cl) !== undefined) return `${what}: '${cl}' is a kernel relation and cannot be the closure of a tree`;
     if (declared.has(cl)) return `${what}: '${cl}' is declared a structure twice`;

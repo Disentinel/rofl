@@ -781,6 +781,10 @@ impl<'a> R<'a> {
                 let of = |ts: &[Term]| { let v: Vec<String> = ts.iter().map(|t| name(*t)).collect(); match v.len() { 0 => String::new(), 1 => format!(" of {}", v[0]), k => format!(" of {} and {}", v[..k - 1].join(", "), v[k - 1]) } };
                 return format!("<a id=\"{}\"></a>`{rel}`{} is another name for `{}`{}.\n\n", h.name(c.head.rel), of(&c.head.args), h.name(src.rel), of(&src.args));
             }
+            if h.name(st.kind) == "graph" {
+                let cl = st.closure.map_or(String::new(), |cl| h.name(cl).to_string());
+                return format!("`{cl}` holds of each node and every node a path of `{rel}` leads to.\n\n");
+            }
             if h.name(st.kind) == "view" {
                 let v: Vec<String> = c.head.args.iter().map(|t| name(*t)).collect();
                 let of = match v.len() { 0 => String::new(), 1 => format!(" of {}", v[0]), k => format!(" of {} and {}", v[..k - 1].join(", "), v[k - 1]) };

@@ -1,0 +1,2 @@
+-- examples/checks/ds-graph-sealed.rofl — the ds_graph_sealed world keeps no witness (`sealed(provenance)`); the files of ds_graph_holds are its data.
+sealed(provenance).

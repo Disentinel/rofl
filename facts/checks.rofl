@@ -3322,6 +3322,17 @@ check_file("ds_tree_holds", "examples/checks/ds-tree-broken-7-both.rofl").
 check_file("ds_tree_holds", "examples/checks/ds-tree-broken-8-closure.rofl").
 check_opt("ds_tree_holds", together, 1).
 
+check_world("ds_graph_holds").
+check_file("ds_graph_holds", "examples/checks/ds-graph-holds.rofl").
+check_file("ds_graph_holds", "examples/checks/ds-graph-holds-check.rofl").
+check_opt("ds_graph_holds", together, 1).
+
+check_world("ds_graph_sealed").
+check_file("ds_graph_sealed", "examples/checks/ds-graph-sealed.rofl").
+check_file("ds_graph_sealed", "examples/checks/ds-graph-holds.rofl").
+check_file("ds_graph_sealed", "examples/checks/ds-graph-holds-check.rofl").
+check_opt("ds_graph_sealed", together, 1).
+
 check_world("ds_tree_sealed").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-sealed.rofl").
 check_file("ds_tree_sealed", "examples/checks/ds-tree-holds.rofl").

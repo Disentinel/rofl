@@ -51,6 +51,7 @@ variable they mark, as `min` and `max` do in `pareto p(K, min C, max T).`
 | --- | --- | --- |
 | tree | `tree ast_in(P, C).` `tree ast_in(P, C) closure ast_within.` | `` Each child of `ast_in` has one parent and no node is its own ancestor. `` and, with the closure, `` ... ancestor, and `ast_within` holds of each node and every ancestor of it. `` |
 | alias | `alias in_fn(N, F) is nearest_v(N, F).` `alias ast_in(P, C) is ast_child(P, _, _, C).` | `` `in_fn` is `nearest_v`. `` `` `ast_in` is `ast_child` without its field and position. `` |
+| graph | `graph calls(F, G) closure reaches.` | `` `reaches` holds of each node and every node a path of `calls` leads to. `` |
 | view | `view step_in(S, X).` | `` `step_in` is read through its rules, never stored. `` |
 | function | `function ast_name(N, to Name).` | `` `ast_name` has one Name for each N. `` |
 | span | `span src_range(N, from S, to E).` `span src_range(N, from S, to E) laminar.` | `` Each `src_range` of N runs from S to E. `` and `` ... and any two are nested or apart. `` |
@@ -560,6 +561,26 @@ aggregate or in another tense, and one read negated past one literal. A recursiv
 body: the nearest ancestor with a property (`nearest_v`, `climb`) needs the tree's own walk, not built yet.
 
 *Saves* the view's rows and the joins that made them; the reader's join is the longer for it.
+
+## Graph, as built
+
+Built 2026-11-09. `graph dcall(F, H) closure dreach.` is the tree's closure without the tree's promise: cycles and
+nodes with two parents are allowed, and nothing is checked. It lowers to the same two rules (`dreach[B](P, C) :-
+dcall[B](P, C).` and the step), which TypeScript evaluates. The Rust engine answers the closure from the graph of the
+edges of each book (`rust/rofl/src/graph.rs`, inside `Forest`), with no row stored, in a world with witnesses or
+without:
+
+- the strongly connected components (Tarjan), numbered sinks first, so a path never goes to a higher number: a search
+  from `a` towards `d` leaves out every node below `d`'s component, and a node reaches itself only when its component
+  has a cycle;
+- one end bound: a walk forward or backward; both: a search; neither: a walk from every node;
+- a row's firings are the base where the edge itself is and the step where an edge into the end leaves a node the
+  start reaches, so its `derived_by` rows are the lowered rules'; its derivation in `why` follows a shortest path.
+
+The planner's size of the closure is a bound from the components (two paths to one place count twice). An edge added
+or taken out builds the book's graph again. *Saves*: the pairs; a walk costs what it reaches, each time it is asked.
+`ds_graph_holds` and `ds_graph_sealed` hold every reader of `ds_tree_holds` over a graph with cycles to its twin over
+the rules written by hand.
 
 ## The other five, as built
 

@@ -283,7 +283,7 @@ fn word_ops() -> &'static [&'static str] {
 
 /// The kinds of declared data structure (docs/data-structures.md) with the
 /// role words each marks its arguments by: words, names elsewhere.
-pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"]), ("tree", &[]), ("alias", &[]), ("view", &[])];
+pub const STRUCTURE_KINDS: &[(&str, &[&str])] = &[("function", &["to"]), ("tree", &[]), ("alias", &[]), ("view", &[]), ("graph", &[])];
 
 /// A declared data structure: its kind, per head argument the role word that
 /// marks it (`None` for a key position), for a tree the relation it is the

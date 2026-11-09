@@ -97,7 +97,6 @@ xl_ok(keyed_ctor_put, keyed_born, "the collection a function of the read's file 
 xl_ok(keyed_ctor_put, keyed_shared, "the collection a function of the read's file fills, matched against the read").
 xl_ok(keyed_fill, keyed_key, "a put of a function of the read's file").
 xl_ok(keyed_fill_ctor, keyed_key, "a put of a function of the read's file").
-xl_ok(keyed_g_drops, nearest_v, "the function around a removal of the collection's own file, matched against the mirrored eff_reaches").
 xl_ok(keyed_lost_ctor, body, "the read's own method, bound by its body").
 xl_ok(keyed_lost_ctor, keyed_made, "the collection's own new node, matched against what was handed out").
 xl_ok(keyed_heal_at, keyed_key, "a put of a function of the read's file").
@@ -126,6 +125,8 @@ xl_ok(keyed_dsure_at, keyed_dsure, "a callee of the call's own file (keyed_one_t
 xl_ok(keyed_vsure_out, keyed_dsure, "a callee of the call's own file (keyed_one_target)").
 xl_ok(keyed_vsure_out, keyed_dsure_key, "a removal of the collection's own file (keyed_drop matches the file)").
 xl_ok(keyed_vsure_out, keyed_read_site, "the collection a function of the read's file empties, matched against the read").
+xl_ok(dwalk_v, dreach, "a callee of another file walks the calls its file sent with it (sx_dcall)").
+xl_ok(dwalk_p, dreach, "a callee of another file walks the calls its file sent with it (sx_dcall)").
 xl_ok(keyed_vdrop_may, nearest_v, "the function around a removal of the collection's own file, matched").
 -- `this` in a parent's method may be a subclass's instance: the subclass's file tells the parent's (`sx_sub_inst`), each
 -- file forwarding it one `extends` up, and the parent's file reads its own methods.

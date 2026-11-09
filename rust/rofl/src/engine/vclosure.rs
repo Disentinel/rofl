@@ -43,6 +43,8 @@ pub struct VClosure {
     /// The relation whose facts are the edges: the edge relation, or the source of an alias it is (engine/alias.rs).
     pub src: Sym,
     view: Option<crate::store::AliasView>,
+    /// declared a `graph`: cycles allowed, answered by walking (graph.rs)
+    graph: bool,
     pub active: bool,
     /// Where witnesses are kept, a rule reads the closure's `derived_by` rows: it is rows then.
     prov_read: bool,
@@ -79,6 +81,7 @@ impl Eval {
         decl.sort_by(|a, b| cmp_js(self.h.name(a.0), self.h.name(b.0)));
         let closure_rels: HashSet<Sym> = decl.iter().map(|d| d.0).collect();
         let prov_read = self.provenance_read();
+        let graphs = crate::structure::graphs(&self.h, &self.v, &mut self.store);
         for (rel, edge) in decl {
             let ci = self.vc.vclosures.len();
             let lowered: Vec<Sym> = self.rules.iter().filter(|r| r.clause.head.rel == rel).map(|r| r.id).collect();
@@ -122,7 +125,7 @@ impl Eval {
             }
             let view = self.store.alias_view(edge).cloned();
             let src = view.as_ref().map_or(edge, |v| v.src);
-            self.vc.vclosures.push(VClosure { rel, edge, src, view, active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0 });
+            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0 });
             self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()) });
             if !why.is_empty() {
                 self.vc.vclosures[ci].built = Some(usize::MAX);
@@ -399,8 +402,12 @@ impl Eval {
         for v in &self.store.virtuals {
             for (book, f) in v.forests.iter() {
                 f.each_pair(|a, d| {
-                    let rule = if f.parent_of(d) == Some(a) { v.base_rule } else { v.step_rule };
-                    rows.push((v.rel, *book, a, d, rule));
+                    let (base, step) = f.firings(a, d);
+                    for (fires, rule) in [(base, v.base_rule), (step, v.step_rule)] {
+                        if fires {
+                            rows.push((v.rel, *book, a, d, rule));
+                        }
+                    }
                 });
             }
         }
@@ -620,7 +627,8 @@ impl VClosureState {
                     self.vclosures[ci].rows = rows;
                     let mut books: Vec<(Sym, Vec<(Term, Term)>)> = books.into_iter().collect();
                     books.sort_by_key(|b| b.0);
-                    books.into_iter().map(|(b, es)| (b, Rc::new(Forest::build(&es)))).collect()
+                    let graph = self.vclosures[ci].graph;
+                    books.into_iter().map(|(b, es)| (b, Rc::new(if graph { Forest::build_graph(&es) } else { Forest::build(&es) }))).collect()
                 }
             };
             self.vclosures[ci].mark = store.len_ids();
@@ -685,7 +693,7 @@ impl VClosureState {
                 Some(f) => {
                     Rc::make_mut(&mut f.1).rebuild_trees(&[], &es);
                 }
-                None => forests.push((b, Rc::new(Forest::build(&es)))),
+                None => forests.push((b, Rc::new(if self.vclosures[ci].graph { Forest::build_graph(&es) } else { Forest::build(&es) }))),
             }
         }
         forests.sort_by_key(|b| b.0);

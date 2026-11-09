@@ -1171,7 +1171,7 @@ impl VirtualRel {
         if !f.is_ancestor(a, d) {
             return None;
         }
-        let p = f.parent_of(d)?;
+        let p = f.step_of(a, d)?;
         Some(if p == a { (self.base_rule, p, false) } else { (self.step_rule, p, true) })
     }
 }
@@ -3539,11 +3539,14 @@ impl Store {
         }
         let mut edges = Vec::new();
         let mut c = d;
-        while c != a {
-            let Some(p) = f.parent_of(c) else { return 0 };
+        loop {
+            let Some(p) = f.step_of(a, c) else { return 0 };
             let Some(e) = self.get(v.edge, book, &[p, c]) else { return 0 };
             edges.push(e);
             c = p;
+            if c == a {
+                break;
+            }
         }
         let _ = self.heights(&edges, memo);
         edges.iter().rev().fold(0, |h, e| h.max(memo.get(e).copied().unwrap_or(0)) + 1)
@@ -3627,11 +3630,16 @@ impl Store {
         }
         // THE ROWS OF A RELATION ANSWERED FROM A STRUCTURE, generated: each is a derived fact of its tick, as the
         // rules it stands for would have made it, with its one firing where the world keeps witnesses
+        // a graph's row has a firing for each way into its end, as the lowered rules fire
+        let mut support: HashMap<String, u32> = HashMap::new();
         for v in self.listed() {
             for (book, f) in v.forests.iter() {
                 f.each_pair(|a, d| {
                     let mut k = String::new();
                     write_fact_key(h, v.rel, *book, &[a, d], &mut k);
+                    if f.is_graph() {
+                        support.insert(k.clone(), f.firing_count(a, d));
+                    }
                     keyed.push((k, None));
                 });
             }
@@ -3651,7 +3659,8 @@ impl Store {
             let Some(id) = id else {
                 out.push('\n');
                 out.push_str(k);
-                out.push_str(if self.vwit { " tick drv support=1" } else { " tick drv support=0" });
+                let n = if self.vwit { support.get(k).copied().unwrap_or(1) } else { 0 };
+                out.push_str(&format!(" tick drv support={n}"));
                 continue;
             };
             let r = &self.facts.rec(*id);
