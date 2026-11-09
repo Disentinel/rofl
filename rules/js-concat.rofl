@@ -60,18 +60,18 @@ plus_operand[code](C, X) :- plus_site[code](C, _, X).
 composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, V), str_value[flow](V).
 composed[flow](C) :- plus_operand[code](C, X), may_be_node[flow](X, D), composed[flow](D).
 
-may_be_node[flow](C, C) :- composed[flow](C).
+may_be[flow](C, node(C)) :- composed[flow](C).
 
 -- `x += v` writes the binding, as `x = x + v` would: every read of the binding
 -- may be the composed value at the assignment. Scoped as section 4 of
 -- js-dataflow scopes `=`; a target no binder or parameter owns stays silent.
 plus_assign[code](A, L, Name, File) :- binary[value](A, "+", L, _), assign[value](A, L, A), ref[value](L, Name),
                                        at[tree](A, File, _).
-may_be_node[flow](E, A) :- composed[flow](A), plus_assign[code](A, L, Name, File),
-                           binds_name[code](D, Name, File), sees_binder[code](L, D),
-                           ident_in[code](E, Name, File), sees_binder[code](E, D).
-may_be_node[flow](U, A) :- composed[flow](A), plus_assign[code](A, L, Name, _),
-                           param_use[flow](F, Name, L), param_use[flow](F, Name, U).
+may_be[flow](E, node(A)) :- composed[flow](A), plus_assign[code](A, L, Name, File),
+                            binds_name[code](D, Name, File), sees_binder[code](L, D),
+                            ident_in[code](E, Name, File), sees_binder[code](E, D).
+may_be[flow](U, node(A)) :- composed[flow](A), plus_assign[code](A, L, Name, _),
+                            param_use[flow](F, Name, L), param_use[flow](F, Name, U).
 sx_mwrite[surface](O, Key, A) :- composed[flow](A), binary[value](A, "+", L, _), assign[value](A, L, A),
                                  object_of[code](L, Obj),
 
@@ -163,7 +163,7 @@ path_cut[flow](C, B) :- base_of[flow](C, B), arg_at[flow](C, 1, E), may_be_lit[f
 path_cut[flow](C, R) :- base_of[flow](C, B), arg_at[flow](C, 1, E), may_be_lit[flow](E, X),
                         str_value[flow](X), LB is str_len(B), LX is str_len(X), LX < LB,
                         S is LB - LX, T is str_sub(B, S, LX), T = X, R is str_sub(B, 0, S).
-may_be_lit[flow](C, V) :- path_cut[flow](C, V).
+may_be[flow](C, lit(V)) :- path_cut[flow](C, V).
 
 -- =========================================================================
 -- 4. THE PARTS AND THE JOIN. Read by the texts below and by a question; the

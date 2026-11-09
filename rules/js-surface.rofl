@@ -90,8 +90,8 @@ sx_runs_out[surface](F) :- sx_esc[surface](F), keyed_runs_out[code](F).
 sx_exn_carrier[surface](F)   :- sx_esc[surface](F), amb_exn_carrier[flow](F).
 sx_outside[surface](F)       :- sx_esc[surface](F), runs_outside[code](F).
 
-may_be_node[flow](N, M)       :- sx_node[surface](N, M).
-may_be_lit[flow](N, V)        :- sx_lit[surface](N, V).
+may_be[flow](N, node(M)) :- sx_node[surface](N, M).
+may_be[flow](N, lit(V)) :- sx_lit[surface](N, V).
 member_value[flow](O, K, V)   :- sx_member[surface](O, K, V).
 member_plain[flow](O, K, V)   :- sx_mplain[surface](O, K, V).
 class_member_static[flow](O, K, V) :- sx_mstatic[surface](O, K, V).
@@ -161,8 +161,8 @@ arg_count[code](C, N)  :- argument_at[code](C, I, _), N is I + 1, not argument_a
 
                           not call_spreads[code](C).
 sx_arg_short[surface](F, N) :- resolves[code](C, F), arg_count[code](C, N).
-may_be_lit[flow](U, undefined) :- sx_arg_short[surface](F, N), param_of[flow](F, I, Name), I >= N,
-                                  param_use[flow](F, Name, U).
+may_be[flow](U, lit(undefined)) :- sx_arg_short[surface](F, N), param_of[flow](F, I, Name), I >= N,
+                                   param_use[flow](F, Name, U).
 sx_reached[surface](F)        :- resolves[code](C, F), not guarded[code](C).
 sx_reach[surface](F)          :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
 sx_reach[surface](F)          :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F), not guarded[code](C).
@@ -201,7 +201,7 @@ sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 falls_off[code](F) :- body[value](F, B), not returns[value](F, B), not completes_abruptly[code](B).
 falls_off[code](F) :- exits[value](R, return), not returns[value](R, _), nearest_v[flow](F, R).
 sx_ret_undef[surface](F) :- falls_off[code](F), not generator[value](F), not ctor_method[code](F).
-may_be_lit[flow](C, undefined) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[surface](F).
+may_be[flow](C, lit(undefined)) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[surface](F).
 sx_gen_ret[surface](F, N)   :- returns[flow](F, E), generator[value](F), may_be_node[flow](E, N).
 sx_gen_rlit[surface](F, V)  :- returns[flow](F, E), generator[value](F), may_be_lit[flow](E, V).
 
