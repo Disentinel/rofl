@@ -358,10 +358,14 @@ pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent
 -- the pattern, read like `fs.readFile` (object_of, prop_name, computed_key in rules/js-structure.rofl); the pattern
 -- holds the value it takes apart, a declarator's init or the argument of its call.
 may_be[flow](R, node, N) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
-                            may_be_node[flow](Init, N).
+                            may_be[flow](Init, node, N).
+may_be[flow](R, input, S) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
+                             may_be[flow](Init, input, S).
 may_be[flow](R, input, S) :- input_param[flow](S, F, I), param[value](F, I, R), pat_in[code](R, _, _).
 may_be[flow](T, node, N) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
-                            array_elem[flow](A, I, V), may_be_node[flow](V, N).
+                            array_elem[flow](A, I, V), may_be[flow](V, node, N).
+may_be[flow](T, input, S) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
+                             array_elem[flow](A, I, V), may_be[flow](V, input, S).
 -- the default of a target is a conditional source of it
 may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be[flow](Init, VK, V).
 
@@ -385,7 +389,7 @@ elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 
 may_be[flow](E, node, N) :- destructures_at[code](D, Local, Index, File),
                             decl_value[flow](D, Init), may_be_node[flow](Init, A), array_elem[flow](A, Index, V),
-                            may_be_node[flow](V, N),
+                            may_be[flow](V, node, N),
                             ident_in[code](E, Local, File), sees_binder[code](E, D).
 
 -- A defaulted parameter has an index (the `left` of its `assignment_pattern`)
@@ -568,7 +572,8 @@ recv_call[code](C, R) :- call[value](C), callee[value](C, N), member[value](N, _
                          not super[value](R).
 may_be[flow](C, node, I)  :- resolves[code](C, F), sx_ret_self[surface](F), recv_key[flow](C, R, Key), may_be[flow](R, node, I),
                              isa[flow](I, CD), sx_lookup[surface](CD, Key, F).
-may_be[flow](C, input, T) :- resolves[code](C, F), sx_ret_self[surface](F), recv_call[code](C, R), may_be[flow](R, input, T).
+self_recv[flow](C, R) :- resolves[code](C, F), sx_ret_self[surface](F), recv_call[code](C, R).
+may_be[flow](C, input, T) :- self_recv[flow](C, R), may_be[flow](R, input, T).
 may_be[flow](C, node, I) :- resolves[code](C, F), sx_ret_this[surface](F, I), not recv_call[code](C, _).
 
 -- =========================================================================
@@ -611,7 +616,8 @@ merge_fn[flow](Spec) :- merges_into_first_module(Spec), external_value[flow](Spe
 merge_call[flow](C) :- merge_fn[flow](X), may_be_node[flow](G, X), callee[value](C, G),
                        call[value](C).
 
-may_be[flow](C, node, O) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be_node[flow](T, O).
+may_be[flow](C, node, O) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be[flow](T, node, O).
+may_be[flow](C, input, S) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be[flow](T, input, S).
 sx_mwrite[surface](O, Key, V) :- merge_call[flow](C), arg_at[flow](C, 0, T), may_be_node[flow](T, O),
                                  arg_at[flow](C, I, S), I > 0, may_be_node[flow](S, Src),
                                  member_value[flow](Src, Key, V).
@@ -2006,7 +2012,9 @@ next_send[flow](Inner, V) :- next_send[flow](Outer, V), delegates[flow](Outer, I
 yield_back[code](Y) :- yields[value](Y, _).
 yield_back[code](Y) :- suspends[value](Y, _, next), not yields[value](Y, _), not delegates[value](Y, _).
 may_be[flow](Y, node, X) :- next_send[flow](G, V), nearest_v[flow](G, Y), yield_back[code](Y),
-                            may_be_node[flow](V, X).
+                            may_be[flow](V, node, X).
+may_be[flow](Y, input, S) :- next_send[flow](G, V), nearest_v[flow](G, Y), yield_back[code](Y),
+                             may_be[flow](V, input, S).
 
 may_be[flow](Y, node, X) :- delegates[value](Y, A), resolves[code](A, Inner),
                             ret_node_any[flow](Inner, X).
