@@ -34,7 +34,24 @@ what runs. They are published at
 
 ## What is new
 
-### 1.6 (November 2026)
+### On main, not yet in a release
+
+- **A proof stops where the code is read.** The JS model first turns oxc's
+  tree of each file into plainer facts, its lemmas. A notebook's proof now
+  stops at a lemma and names its line, `(a lemma, checkout.js:4)`, instead
+  of walking on through the scanner's tree under it
+  ([WHAT.md](WHAT.md#the-answer-and-its-proof)).
+- **Larger projects answer whole.** When memory runs short, each worker
+  writes what it holds to disk and goes on reading it from there: 1 000
+  files of VS Code, which 1.6 answered only in part on a 15 GB machine, now
+  answer whole in under three minutes, with 6.7 GB on disk.
+- **An edit to a large kept world costs about the edit.** In a project
+  split by file, 1.6 evaluated every file again after an edit; now only the
+  edited files are, and what they change in the others is passed on to
+  them. On 250 files of VS Code, renaming an exported function is handled
+  in 1.6 s.
+
+### 1.6 (7 November 2026)
 
 - An adapter book can be signed on a Roflenox node and checked by the engine;
   a `rofl` adapter can ask a world another process serves; a person signs in

@@ -112,7 +112,7 @@ The same proof as the notebook's, in the engine's own form. Each line is a
 fact; `<= re667b5bf @tick 0` names the rule that derived it; the lines
 indented under it are the facts that rule used; `[axiom]` is a fact that was
 given, by the scanner or by a rule file, and nothing is under an axiom. A node of the code is its id,
-not a name: `n017f49dbfbe9e0a8_fa4unkv52g4` is the function `checkout`, and
+not a name: `n017f49dbfbe9e0a8_en4a19n90pa5f` is the function `checkout`, and
 the `fn_name` line right under it is what ties the two together. The whole
 proof runs to some 150 lines. The notebook's sentence form, with
 `[function checkout() at checkout.js:4]` where the id is, is the one to

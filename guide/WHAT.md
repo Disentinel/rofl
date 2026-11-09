@@ -143,9 +143,13 @@ a step. Then the proof,
 indented as a tree: `checkout` is a risky export *because* it is a function,
 *because* it answers to the name, *because* it is exported, and *because* it
 may throw; and it may throw *because* `charge` may throw, *because* `charge`
-throws outright at `pay.js:2`. Each leaf is marked `(given)`: a fact read
-straight from the code. A line marked `[above]` was already proved higher
-up. "Side conditions" are the `unless` parts of rules, the things that hold
+throws outright at `pay.js:2`. A leaf marked `(a lemma, checkout.js:4)` is
+a fact the model read off that line before anything else ran: what oxc's
+tree of the file says there, put plainly (this is a function, that is its
+body). The proof stops at it and names the line, so it does not run on
+through the scanner's tree. A leaf marked `(given)` is a fact read straight
+from the code or a rule file. A line marked `[above]` was already proved
+higher up. "Side conditions" are the `unless` parts of rules, the things that hold
 because nothing in the code says otherwise; they are counted, and `--all`
 prints them.
 
