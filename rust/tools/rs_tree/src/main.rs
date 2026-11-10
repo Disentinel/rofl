@@ -23,7 +23,7 @@
 // `arg` children, parsed as such; the second argument of `matches!` is its `pattern`. Where nothing of them reads,
 // the grammar's token tree stands.
 //
-// Ids: the file's hash and a hash of the parent's id and the child's step (its field and its name when it has one,
+// Ids: the file's prefix as the engine reads a volume's (`n`, 16 hex digits, `_`) and a hash of the parent's id and the child's step (its field and its name when it has one,
 // its kind and place among its like otherwise), so a node keeps its id when code is added above it.
 use std::fmt::Write as _;
 use std::path::Path;
@@ -433,7 +433,7 @@ fn main() {
         let tree = parser.parse(&src, None).unwrap();
         let mut starts = vec![0];
         starts.extend(src.bytes().enumerate().filter(|(_, b)| *b == b'\n').map(|(i, _)| i + 1));
-        let p = format!("r{:08x}", fnv(&[file.as_bytes()]) & 0xffff_ffff);
+        let p = format!("n{:016x}_", fnv(&[file.as_bytes()]));
         let mut s = Scan { out: String::new(), file: &file, prefix: p.clone(), starts, parser };
         let root = format!("{p}root");
         s.fact("file", &[&q(&root), &q(&file)]);

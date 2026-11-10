@@ -507,7 +507,7 @@ struct Routes {
     checks: FxMap<(Sym, Option<Sym>), Vec<(Cols, bool, Vec<(Key, Vec<u32>)>)>>,
 }
 
-/// The volume a node's file is at home in, by the 16 hex digits of its prefix; None for an atom that is no node.
+/// The volume a node's file is at home in, by the 16 hex digits of its prefix; None for a name that is no node; a node is named by an atom or a string.
 fn home(h: &Heap, s: Sym, homes: &FxMap<u64, u32>, cache: &mut FxMap<Sym, Option<u32>>) -> Option<u32> {
     *cache.entry(s).or_insert_with(|| {
         let b = h.name(s).as_bytes();
@@ -525,7 +525,7 @@ fn homes_of(h: &Heap, args: &[Term], rt: &Routes, cache: &mut FxMap<Sym, Option<
 fn first_home(h: &Heap, args: &[Term], look: impl Fn(Term) -> Term + Copy, homes: &FxMap<u64, u32>, cache: &mut FxMap<Sym, Option<u32>>) -> Option<u32> {
     for &t in args {
         match look(t).kind() {
-            TermK::Atom(s) => {
+            TermK::Atom(s) | TermK::Str(s) => {
                 if let Some(w) = home(h, s, homes, cache) {
                     return Some(w);
                 }
@@ -1111,7 +1111,7 @@ fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], core: FactId, syms:
 /// Whether a term names a file's node, at any depth: what makes a fact one volume's.
 fn names_node(t: Term, h: &Heap) -> bool {
     match t.kind() {
-        TermK::Atom(s) => {
+        TermK::Atom(s) | TermK::Str(s) => {
             let b = h.name(s).as_bytes();
             b.len() >= 18 && b[0] == b'n' && b[17] == b'_' && b[1..17].iter().all(|c| c.is_ascii_hexdigit())
         }
