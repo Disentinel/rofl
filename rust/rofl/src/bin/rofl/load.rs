@@ -689,9 +689,8 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
             .filter(|(_, key)| rofl::engine::volumes::file_of(key).is_some_and(|f| gone.contains(f)))
             .collect();
         let had: std::collections::HashSet<&str> = held.iter().map(|(_, key)| key.as_str()).collect();
-        let whole = w.eval.has_nearest();
-        let out: Vec<u32> = held.iter().filter(|(_, key)| whole || !given.contains(key)).map(|(id, _)| *id).collect();
-        let add: String = given.iter().filter(|key| whole || !had.contains(key.as_str())).map(|key| format!("{key}.\n")).collect();
+        let out: Vec<u32> = held.iter().filter(|(_, key)| !given.contains(key)).map(|(id, _)| *id).collect();
+        let add: String = given.iter().filter(|key| !had.contains(key.as_str())).map(|key| format!("{key}.\n")).collect();
         edits.push((i, out, add));
     }
     // what moved in a volume goes to the volumes that read it, and what that moves there on, until nothing moves
