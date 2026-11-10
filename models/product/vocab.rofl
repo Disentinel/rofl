@@ -1,0 +1,118 @@
+-- models/product/vocab.rofl — THE WORDS A SOFTWARE PRODUCT IS DESCRIBED IN, and the relations between them. A draft
+-- for the owner to strike and rename: `by` says whose word it is, `source` where a relation's facts come from in
+-- this tree today (`missing` = nothing writes it yet). The words of ROFL's own subject (world, volume, book, corpus)
+-- are not here: they are what this product is about, not what a product is.
+
+edb(word).     -- (word, layer)
+edb(ru).       -- (word, the owner's word)
+edb(by).       -- (word, owner | agent)
+edb(says).     -- (word, one sentence)
+edb(eg).       -- (word, one example from this tree)
+edb(rel).      -- (relation, from, to)
+edb(rel_says).
+edb(source).   -- (relation, scanner | rule | owner | missing)
+edb(lives).    -- (relation, where its facts or rules are today)
+
+word(product, thing).   ru(product, "продукт").    by(product, owner).
+word(part, thing).      ru(part, "часть").          by(part, owner).
+word(file, code).       ru(file, "файл").           by(file, owner).
+word(fn, code).         ru(fn, "функция").          by(fn, owner).
+word(entry, thing).     ru(entry, "точка входа").   by(entry, owner).
+word(surface, thing).   ru(surface, "интерфейс").   by(surface, agent).
+word(feature, thing).   ru(feature, "фича").        by(feature, owner).
+word(effect, thing).    ru(effect, "побочный эффект"). by(effect, owner).
+word(promise, thing).   ru(promise, "обещание").    by(promise, owner).
+word(parameter, thing). ru(parameter, "параметр").  by(parameter, owner).
+word(target, thing).    ru(target, "цель").         by(target, owner).
+word(check, evidence).  ru(check, "проверка").      by(check, owner).
+word(example, evidence). ru(example, "пример").     by(example, owner).
+word(doc, evidence).    ru(doc, "документация").    by(doc, owner).
+word(user, thing).      ru(user, "пользователь").   by(user, owner).
+word(change, change).   ru(change, "правка").       by(change, owner).
+word(work, change).     ru(work, "работа").         by(work, owner).
+word(finding, change).  ru(finding, "находка").     by(finding, owner).
+word(release, change).  ru(release, "релиз").       by(release, owner).
+
+says(product, "what is released in versions and used").
+says(part, "a piece of the product with code of its own").
+says(entry, "a name by which a user reaches the product").
+says(surface, "the place an entry is typed or called at").
+says(feature, "what the product can do, named as its user would name it").
+says(effect, "what running code does to the world outside it, with the value it does it with").
+says(promise, "what must hold of a feature every time").
+says(parameter, "a measurable property of a feature").
+says(target, "the value of a parameter the owner wants").
+says(check, "something that is run and answers yes or no").
+says(example, "a run that shows a feature to a reader").
+says(doc, "a place where a user finds a feature").
+says(user, "who the feature is for").
+says(change, "one edit of the tree, reviewed as one").
+says(work, "something the owner wants done, with a name").
+says(finding, "something learned, written down").
+says(release, "a set of changes given a version").
+
+eg(product, "ROFL").
+eg(part, "the engine; the JS model; the notebook; the VS Code extension").
+eg(entry, "rofl why; --kept; serve op resume; ROFL_JOBS; the keyword nearest").
+eg(surface, "the command line; rofl serve; the language; the environment").
+eg(feature, "explain an answer: reached by rofl why, by rofl load --why, by serve op why, by a notebook's why L").
+eg(effect, "writes a kept world under ~/.cache/rofl/worlds; listens on port 8080").
+eg(promise, "a broken promise refuses the world; a file refused exits 2").
+eg(parameter, "time of the first whole evaluation; peak memory; evaluation steps").
+eg(target, "5 minutes at 11 100 files").
+eg(check, "a world of npm test against its golden; a planted fault; the clippy gate").
+eg(example, "a demo under examples/").
+eg(doc, "docs/cli.md").
+eg(user, "an agent; a person").
+eg(change, "a pull request").
+eg(work, "w_disk_wall").
+eg(finding, "f_rust_is_the_engine_ts_is_the_reference").
+eg(release, "1.6.0").
+
+rel(has_part, product, part).    source(has_part, owner).     lives(has_part, "README.md, What is in the tree").
+rel(owns, part, file).           source(owns, rule).          lives(owns, "models/engine/parts.rofl").
+rel(defines, file, fn).          source(defines, scanner).    lives(defines, "rust/tools/rs_tree, models/lang/rust").
+rel(calls, fn, fn).              source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").
+rel(causes, fn, effect).         source(causes, rule).        lives(causes, "models/engine/features.rofl").
+rel(at, entry, surface).         source(at, rule).            lives(at, "models/engine/features.rofl").
+rel(handled_by, entry, fn).      source(handled_by, rule).    lives(handled_by, "models/engine/features.rofl").
+rel(offers, entry, feature).     source(offers, missing).
+rel(tunes, entry, feature).      source(tunes, missing).
+rel(runs, feature, fn).          source(runs, rule).          lives(runs, "models/engine/features.rofl, per entry").
+rel(does, feature, effect).      source(does, rule).          lives(does, "models/engine/features.rofl, per entry").
+rel(within, feature, part).      source(within, missing).
+rel(promises, feature, promise). source(promises, missing).
+rel(has, feature, parameter).    source(has, missing).
+rel(aims, parameter, target).    source(aims, owner).         lives(aims, "CLAUDE.md, The goal").
+rel(serves, feature, user).      source(serves, missing).
+rel(proves, check, promise).     source(proves, owner).       lives(proves, "facts/checks.rofl, facts/spec.rofl").
+rel(exercises, check, feature).  source(exercises, missing).
+rel(shows, example, feature).    source(shows, scanner).      lives(shows, "facts/feature-map.rofl, the TypeScript api only").
+rel(found_in, feature, doc).     source(found_in, missing).
+rel(writes, change, fn).         source(writes, scanner).     lives(writes, "scripts/features.sh").
+rel(moves, change, feature).     source(moves, rule).         lives(moves, "models/engine/feature-diff.rofl").
+rel(means, change, feature).     source(means, owner).        lives(means, "models/engine/intent-read.rofl").
+rel(closes, change, work).       source(closes, owner).       lives(closes, "facts/findings.rofl, facts/worklist.rofl").
+rel(records, change, finding).   source(records, owner).      lives(records, "facts/findings.rofl").
+rel(repairs, change, change).    source(repairs, owner).      lives(repairs, "models/engine/intent-read.rofl").
+rel(ships, release, change).     source(ships, missing).
+
+rel_says(offers, "the entry is one way to use the feature; several entries may offer one feature").
+rel_says(tunes, "the entry changes how the feature runs, not what it answers: a knob").
+rel_says(within, "the parts whose code the feature runs").
+rel_says(promises, "the promise is about this feature").
+rel_says(exercises, "the check runs the feature").
+rel_says(found_in, "the document names an entry that offers the feature").
+rel_says(moves, "the feature's code, reach or effects differ across the change").
+rel_says(means, "the change was said to move the feature, and when it was said").
+
+uses(W) :- rel(_, W, _).
+uses(W) :- rel(_, _, W).
+loose(R, W)  :- rel(R, W, _), not word(W, _).
+loose(R, W)  :- rel(R, _, W), not word(W, _).
+alone(W)     :- word(W, _), not uses(W).
+unsaid(W)    :- word(W, L), L != code, not says(W, _).
+unshown(W)   :- word(W, L), L != code, not eg(W, _).
+unsourced(R) :- rel(R, _, _), not source(R, _).
+gap(R, A, B) :- rel(R, A, B), source(R, missing).
+by_hand(R, A, B) :- rel(R, A, B), source(R, owner).
