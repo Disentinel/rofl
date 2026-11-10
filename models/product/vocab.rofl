@@ -3,7 +3,7 @@
 -- this tree today (`missing` = nothing writes it yet). The words of ROFL's own subject (world, volume, book, corpus)
 -- are not here: they are what this product is about, not what a product is.
 
-edb(word).     -- (word, layer)
+edb(word).     -- (word, is | about | history): what the product is, what is known and shown about it, what happened to it
 edb(ru).       -- (word, the owner's word)
 edb(by).       -- (word, owner | agent)
 edb(says).     -- (word, one sentence)
@@ -13,111 +13,110 @@ edb(rel_says).
 edb(source).   -- (relation, scanner | rule | owner | missing)
 edb(lives).    -- (relation, where its facts or rules are today)
 
-word(product, thing).   ru(product, "продукт").    by(product, owner).
-word(form, thing).      ru(form, "форма выпуска").  by(form, owner).
-word(channel, thing).   ru(channel, "канал поставки"). by(channel, agent).
-word(platform, thing).  ru(platform, "платформа").     by(platform, owner).
-word(breakdown, thing).     ru(breakdown, "разбивка").      by(breakdown, owner).
-word(unit, thing).      ru(unit, "единица разбивки"). by(unit, agent).
-word(entry, thing).     ru(entry, "точка входа").   by(entry, owner).
-word(feature, thing).   ru(feature, "фича").        by(feature, owner).
-word(effect, thing).    ru(effect, "побочный эффект"). by(effect, owner).
-word(contract, thing).   ru(contract, "обещание").    by(contract, owner).
-word(metric, thing). ru(metric, "параметр").  by(metric, owner).
-word(target, thing).    ru(target, "цель").         by(target, owner).
-word(check, evidence).  ru(check, "проверка").      by(check, owner).
-word(example, evidence). ru(example, "пример").     by(example, owner).
-word(doc, evidence).    ru(doc, "документация").    by(doc, owner).
-word(user, thing).      ru(user, "пользователь").   by(user, owner).
-word(change, change).   ru(change, "правка").       by(change, owner).
-word(work, change).     ru(work, "работа").         by(work, owner).
-word(finding, change).  ru(finding, "находка").     by(finding, owner).
-word(release, change).  ru(release, "релиз").       by(release, owner).
+word(product, is).      ru(product, "продукт").         by(product, owner).
+word(form, is).         ru(form, "форма выпуска").      by(form, owner).
+word(platform, is).     ru(platform, "платформа").      by(platform, owner).
+word(channel, is).      ru(channel, "канал поставки").  by(channel, agent).
+word(breakdown, is).    ru(breakdown, "разбивка").      by(breakdown, owner).
+word(unit, is).         ru(unit, "единица разбивки").   by(unit, owner).
+word(entry, is).        ru(entry, "точка входа").       by(entry, owner).
+word(feature, is).      ru(feature, "фича").            by(feature, owner).
+word(effect, is).       ru(effect, "побочный эффект").  by(effect, owner).
+word(user, is).         ru(user, "пользователь").       by(user, owner).
+word(contract, about).  ru(contract, "обещание").       by(contract, owner).
+word(metric, about).    ru(metric, "параметр").         by(metric, owner).
+word(target, about).    ru(target, "цель").             by(target, owner).
+word(evidence, about).  ru(evidence, "свидетельство").  by(evidence, owner).
+word(view, about).      ru(view, "вид").                by(view, owner).
+word(finding, about).   ru(finding, "находка").         by(finding, owner).
+word(change, history).  ru(change, "изменения").       by(change, owner).
+word(work, history).    ru(work, "работа").             by(work, owner).
 
 says(product, "what is released in versions and used").
 says(form, "how a user works with the product").
-says(channel, "where a form is got from, version by version").
 says(platform, "what a form runs on").
-says(breakdown, "one way to cut the product into pieces, with its own name for a piece").
+says(channel, "where a form is got from, version by version").
+says(breakdown, "one way to cut the product, its changes or its work into pieces, with its own name for a piece").
 says(unit, "a piece under one breakdown").
 says(entry, "a name by which a user reaches the product").
 says(feature, "what the product can do, named as its user would name it").
 says(effect, "what running code does to the world outside it, with the value it does it with").
+says(user, "who a feature or a view is for").
 says(contract, "what must hold of a feature every time").
 says(metric, "a measurable property of a feature").
 says(target, "the value of a metric the owner wants").
-says(check, "something that is run and answers yes or no").
-says(example, "a run that shows a feature to a reader").
-says(doc, "a place where a user finds a feature").
-says(user, "who the feature is for").
-says(change, "one edit of the tree, reviewed as one").
-says(work, "something the owner wants done, with a name").
+says(evidence, "something that was run and stands for a claim about the product").
+says(view, "what is known about the product, laid out for one user to read").
 says(finding, "something learned, written down").
-says(release, "a set of changes given a version").
+says(change, "what was done to the product").
+says(work, "what the owner wants done to the product").
 
 eg(product, "ROFL").
 eg(form, "the command line; a library; an editor extension; a web page").
-eg(channel, "the npm registry; the VS Code Marketplace; a GitHub release; the site").
 eg(platform, "linux-x64; VS Code 1.143; a browser; Node 22").
-eg(breakdown, "by deployment: services; by architecture: components; by code: crates, files, types, functions").
-eg(unit, "the service api; the component planner; the function Session::why").
+eg(channel, "the npm registry; the VS Code Marketplace; a GitHub release; the site").
+eg(breakdown, "of the product, by code: crates, files, functions; by deployment: services; of the changes, by review: pull requests; by version: releases; of the work, by goal: work items; by conversation: threads").
+eg(unit, "the function Session::why; the service api; pull request 224; release 1.6.0; w_disk_wall").
 eg(entry, "rofl why; --kept; serve op resume; ROFL_JOBS; the keyword nearest").
 eg(feature, "explain an answer: reached by rofl why, by rofl load --why, by serve op why, by a notebook's why L").
 eg(effect, "writes a kept world under ~/.cache/rofl/worlds; listens on port 8080").
-eg(contract, "a broken contract refuses the world; a file refused exits 2").
+eg(user, "an agent; a person").
+eg(contract, "a broken promise refuses the world; a file refused exits 2").
 eg(metric, "time of the first whole evaluation; peak memory; evaluation steps").
 eg(target, "5 minutes at 11 100 files").
-eg(check, "a world of npm test against its golden; a planted fault; the clippy gate").
-eg(example, "a demo under examples/").
-eg(doc, "docs/cli.md").
-eg(user, "an agent; a person").
-eg(change, "a pull request").
-eg(work, "w_disk_wall").
+eg(evidence, "a world of npm test against its golden; a planted fault; a demo; a run of the benchmark").
+eg(view, "docs/cli.md; the commands block of CLAUDE.md; npm run findings; release notes; a diagram").
 eg(finding, "f_rust_is_the_engine_ts_is_the_reference").
-eg(release, "1.6.0").
+eg(change, "the commits of main").
+eg(work, "the worklist; the threads of the project").
 
-rel(comes_as, product, form).   source(comes_as, owner).    lives(comes_as, "models/product/forms.rofl").
-rel(delivers, channel, form).   source(delivers, owner).     lives(delivers, "models/product/forms.rofl").
-rel(runs_on, form, platform).   source(runs_on, owner).      lives(runs_on, "npm/platform.ts, vscode/package.json").
-rel(out_in, release, channel).  source(out_in, scanner).     lives(out_in, "scanners/release_forms.py").
-rel(cut_by, product, breakdown).    source(cut_by, owner).       lives(cut_by, "README.md, What is in the tree; models/engine/parts.rofl").
-rel(of, unit, breakdown).           source(of, scanner).         lives(of, "rust/tools/rs_tree; models/engine/parts.rofl").
-rel(inside, unit, unit).        source(inside, scanner).     lives(inside, "models/lang/rust; models/engine/parts.rofl").
-rel(lies_in, unit, unit).       source(lies_in, rule).       lives(lies_in, "models/engine/parts.rofl").
-rel(calls, unit, unit).              source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").
-rel(causes, unit, effect).         source(causes, rule).        lives(causes, "models/engine/features.rofl").
-rel(at, entry, form).            source(at, rule).            lives(at, "models/engine/features.rofl").
-rel(handled_by, entry, unit).      source(handled_by, rule).    lives(handled_by, "models/engine/features.rofl").
-rel(offers, entry, feature).     source(offers, missing).
-rel(tunes, entry, feature).      source(tunes, missing).
-rel(runs, feature, unit).          source(runs, rule).          lives(runs, "models/engine/features.rofl, per entry").
-rel(does, feature, effect).      source(does, rule).          lives(does, "models/engine/features.rofl, per entry").
+rel(comes_as, product, form).     source(comes_as, owner).     lives(comes_as, "models/product/forms.rofl").
+rel(runs_on, form, platform).     source(runs_on, owner).      lives(runs_on, "npm/platform.ts, vscode/package.json").
+rel(delivers, channel, form).     source(delivers, owner).     lives(delivers, "models/product/forms.rofl").
+rel(cut_by, product, breakdown).  source(cut_by, owner).       lives(cut_by, "README.md, What is in the tree; models/engine/parts.rofl").
+rel(cut_by, change, breakdown).
+rel(cut_by, work, breakdown).
+rel(of, unit, breakdown).         source(of, scanner).         lives(of, "rust/tools/rs_tree; models/engine/parts.rofl; scripts/features.sh").
+rel(inside, unit, unit).          source(inside, scanner).     lives(inside, "models/lang/rust; models/engine/parts.rofl").
+rel(lies_in, unit, unit).         source(lies_in, rule).       lives(lies_in, "models/engine/parts.rofl").
+rel(calls, unit, unit).           source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").
+rel(causes, unit, effect).        source(causes, rule).        lives(causes, "models/engine/features.rofl").
+rel(at, entry, form).             source(at, rule).            lives(at, "models/engine/features.rofl").
+rel(handled_by, entry, unit).     source(handled_by, rule).    lives(handled_by, "models/engine/features.rofl").
+rel(offers, entry, feature).      source(offers, missing).
+rel(tunes, entry, feature).       source(tunes, missing).
+rel(runs, feature, unit).         source(runs, rule).          lives(runs, "models/engine/features.rofl, per entry").
+rel(does, feature, effect).       source(does, rule).          lives(does, "models/engine/features.rofl, per entry").
+rel(serves, feature, user).       source(serves, missing).
 rel(promises, feature, contract). source(promises, missing).
-rel(has, feature, metric).    source(has, missing).
-rel(aims, metric, target).    source(aims, owner).         lives(aims, "CLAUDE.md, The goal").
-rel(serves, feature, user).      source(serves, missing).
-rel(proves, check, contract).     source(proves, owner).       lives(proves, "facts/checks.rofl, facts/spec.rofl").
-rel(exercises, check, feature).  source(exercises, missing).
-rel(shows, example, feature).    source(shows, scanner).      lives(shows, "facts/feature-map.rofl, the TypeScript api only").
-rel(found_in, feature, doc).     source(found_in, missing).
-rel(writes, change, unit).         source(writes, scanner).     lives(writes, "scripts/features.sh").
-rel(moves, change, feature).     source(moves, rule).         lives(moves, "models/engine/feature-diff.rofl").
-rel(means, change, feature).     source(means, owner).        lives(means, "models/engine/intent-read.rofl").
-rel(closes, change, work).       source(closes, owner).       lives(closes, "facts/findings.rofl, facts/worklist.rofl").
-rel(records, change, finding).   source(records, owner).      lives(records, "facts/findings.rofl").
-rel(repairs, change, change).    source(repairs, owner).      lives(repairs, "models/engine/intent-read.rofl").
-rel(ships, release, change).     source(ships, missing).
+rel(has, feature, metric).        source(has, missing).
+rel(aims, metric, target).        source(aims, owner).         lives(aims, "CLAUDE.md, The goal").
+rel(backs, evidence, contract).   source(backs, owner).        lives(backs, "facts/checks.rofl, facts/spec.rofl").
+rel(exercises, evidence, feature). source(exercises, scanner). lives(exercises, "facts/feature-map.rofl, the TypeScript api only").
+rel(measures, evidence, metric).  source(measures, scanner).   lives(measures, "facts/bench.rofl, one benchmark").
+rel(presents, view, feature).     source(presents, missing).
+rel(presents, view, entry).
+rel(reads, user, view).           source(reads, missing).
+rel(writes, unit, unit).          source(writes, scanner).     lives(writes, "scripts/features.sh").
+rel(moves, unit, feature).        source(moves, rule).         lives(moves, "models/engine/feature-diff.rofl").
+rel(means, unit, feature).        source(means, owner).        lives(means, "models/engine/intent-read.rofl, said of the pull request").
+rel(records, unit, finding).      source(records, owner).      lives(records, "facts/findings.rofl").
+rel(repairs, unit, unit).         source(repairs, owner).      lives(repairs, "models/engine/intent-read.rofl").
+rel(out_in, unit, channel).       source(out_in, scanner).     lives(out_in, "scanners/release_forms.py").
 
-rel_says(offers, "the entry is one way to use the feature; several entries may offer one feature").
 rel_says(inside, "the smaller unit is in the larger one, both of one breakdown: a tree per breakdown").
-rel_says(lies_in, "a unit of one breakdown is in a unit of another: a function in a component, a component in a service").
+rel_says(lies_in, "a unit of one breakdown is in a unit of another: a function in a component, a pull request in a release; and across what is cut: a pull request in the work item it closes").
 rel_says(calls, "said of functions by the code; of the units of any other breakdown it is derived through lies_in").
+rel_says(offers, "the entry is one way to use the feature; several entries may offer one feature").
 rel_says(tunes, "the entry changes how the feature runs, not what it answers: a knob").
-rel_says(promises, "the contract is about this feature").
-rel_says(exercises, "the check runs the feature").
-rel_says(found_in, "the document names an entry that offers the feature").
-rel_says(moves, "the feature's code, reach or effects differ across the change").
-rel_says(means, "the change was said to move the feature, and when it was said").
+rel_says(backs, "the evidence answered yes or no to the contract").
+rel_says(exercises, "the evidence ran the feature").
+rel_says(measures, "the evidence gave the metric a value").
+rel_says(presents, "the view names the feature or an entry that offers it").
+rel_says(writes, "a unit of the changes edited a unit of the product").
+rel_says(moves, "the feature's code, reach or effects differ across the unit of the changes").
+rel_says(means, "the unit of the work was said to move the feature, and when it was said").
+rel_says(out_in, "a release is held by the channel").
 
 uses(W) :- rel(_, W, _).
 uses(W) :- rel(_, _, W).
