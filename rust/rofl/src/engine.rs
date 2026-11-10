@@ -819,6 +819,8 @@ pub struct Eval {
     stage_pass: StagePass,
     /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
     pub stage_given: Option<Rc<FxSet<Sym>>>,
+    /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
+    pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
     /// Where this world is one volume of a corpus (`engine/volumes.rs`): a rule fires only where its anchor is at home.
     pub anchors: Option<Rc<volumes::Anchors>>,
     anchor_home: FxMap<Sym, Option<u32>>,
@@ -2324,6 +2326,7 @@ impl Eval {
             kept_carry: None,
             stage_pass: StagePass::Whole,
             stage_given: None,
+            staged_away: None,
             anchors: None,
             anchor_home: FxMap::default(),
             lemma_heads: None,
@@ -3485,6 +3488,7 @@ impl Eval {
         self.again = again;
         self.store.kept_layer = kept;
         self.stage_pass = StagePass::Whole;
+        self.staged_away = None;
         let out = match (self.stage_given.clone(), self.lemma_stage()) {
             (Some(given), _) => {
                 self.stage_pass = StagePass::Upper(given);
