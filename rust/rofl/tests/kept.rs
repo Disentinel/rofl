@@ -322,6 +322,23 @@ fn a_traded_facts_file_is_no_base(brk: Option<&str>) -> Result<(), String> {
     ensure(got.out == want.out && got.code == want.code && !got.err.contains("by delta"), || format!("traded: {} {:?}", got.code, got.err))
 }
 
+/// A nearest moved by an edit both ways is followed by the delta: a mark gone puts rows in for what stood under it, a
+/// mark come takes rows out, and each time what read the rows equals the evaluation anew.
+fn a_nearest_moved_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("nearest");
+    d.write("near.rofl", "edb(parent). edb(mark). edb(leaf).\nnearest near(A, D) of parent(A, D) where mark(A).\nowner(D, A) :- leaf(D), near(A, D).\n");
+    let tree = "parent(r, x). parent(x, y). parent(y, z). parent(r, w).\nleaf(z). leaf(y). leaf(w).\n";
+    let args = ["ask", "owner(D, A)", "boot.rofl", "near.rofl", "t.rofl"];
+    d.write("t.rofl", &format!("{tree}mark(r). mark(x).\n"));
+    answered(&rofl(&d, brk, &args), "D = z, A = x", "kept")?;
+    for (marks, want) in [("mark(r).", "D = z, A = r"), ("mark(r). mark(y).", "D = z, A = y"), ("mark(r). mark(x). mark(y).", "D = y, A = x")] {
+        d.write("t.rofl", &format!("{tree}{marks}\n"));
+        let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+        ensure(got.out == fresh.out && got.out.contains(want) && got.err.contains("by delta"), || format!("{marks}: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))?;
+    }
+    Ok(())
+}
+
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.
 fn touched_is_not_stale(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("touch");
@@ -769,7 +786,7 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 28] = [
+const CASES: [(&str, Case); 29] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -798,6 +815,7 @@ const CASES: [(&str, Case); 28] = [
     ("the_disk_cap_stops_and_a_larger_one_goes_on", the_disk_cap_stops_and_a_larger_one_goes_on),
     ("a_far_world_is_no_base", a_far_world_is_no_base),
     ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
+    ("a_nearest_moved_goes_by_delta", a_nearest_moved_goes_by_delta),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

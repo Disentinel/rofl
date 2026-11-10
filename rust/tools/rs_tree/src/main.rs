@@ -29,6 +29,30 @@ use std::fmt::Write as _;
 use std::path::Path;
 use tree_sitter::{Node, Parser};
 
+const BODIES: &[&str] = &["block", "declaration_list", "field_declaration_list", "enum_variant_list", "match_block"];
+
+/// The text of a node outside the bodies under it, hashed: what an edit inside a body leaves as it was.
+fn shape(n: Node, src: &str) -> u64 {
+    fn cut<'a>(n: Node, src: &'a str, from: &mut usize, out: &mut Vec<&'a [u8]>) {
+        let mut c = n.walk();
+        for ch in n.children(&mut c) {
+            if BODIES.contains(&ch.kind()) {
+                out.push(&src.as_bytes()[*from..ch.start_byte().max(*from)]);
+                *from = ch.end_byte();
+            } else {
+                cut(ch, src, from, out);
+            }
+        }
+    }
+    if BODIES.contains(&n.kind()) {
+        return 0;
+    }
+    let (mut from, mut out) = (n.start_byte(), Vec::new());
+    cut(n, src, &mut from, &mut out);
+    out.push(&src.as_bytes()[from..n.end_byte().max(from)]);
+    fnv(&out)
+}
+
 fn fnv(parts: &[&[u8]]) -> u64 {
     let mut h: u64 = 0xcbf29ce484222325;
     for p in parts {
@@ -170,7 +194,7 @@ impl Scan<'_> {
             for (i, ch) in n.children(&mut c).enumerate() {
                 if ch.is_named() && ch.kind() != "token_tree" {
                     let f = n.field_name_for_child(i as u32).unwrap_or("c");
-                    let cid = self.child_id(id, f, ch, src, 0);
+                    let cid = self.child_id(id, f, ch, src, &mut Vec::new());
                     self.fact("child", &[&q(id), f, "0", &q(&cid)]);
                     self.node(ch, src, base, &cid);
                 }
@@ -217,19 +241,24 @@ impl Scan<'_> {
             }
             let f = f.unwrap_or("c");
             let at = bump(&mut counts, f);
-            let nth = bump(&mut like, &format!("{f}/{}", ch.kind()));
-            let cid = self.child_id(id, f, ch, src, nth);
+            let cid = self.child_id(id, f, ch, src, &mut like);
             self.fact("child", &[&q(id), f, &at.to_string(), &q(&cid)]);
             self.node(ch, src, base, &cid);
         }
     }
 
-    fn child_id(&self, parent: &str, field: &str, ch: Node, src: &str, nth: usize) -> String {
+    /// A child's id: its parent's and its step. The step is its name where it has one, else its shape outside the
+    /// bodies it holds (`shape`), each counted among its siblings alike: code added beside a node, or inside the body
+    /// of one, leaves the ids of the others as they were.
+    fn child_id(&self, parent: &str, field: &str, ch: Node, src: &str, like: &mut Vec<(String, usize)>) -> String {
         let name = ch.child_by_field_name("name").filter(|x| x.named_child_count() == 0).map(|x| &src[x.start_byte()..x.end_byte()]);
         let step = match name {
-            Some(nm) if nth == 0 => format!("{field}/{}/{nm}", ch.kind()),
-            Some(nm) => format!("{field}/{}/{nm}#{nth}", ch.kind()),
-            None => format!("{field}/{}#{nth}", ch.kind()),
+            Some(nm) => format!("{field}/{}/{nm}", ch.kind()),
+            None => format!("{field}/{}~{:x}", ch.kind(), shape(ch, src)),
+        };
+        let step = match bump(like, &step) {
+            0 => step,
+            nth => format!("{step}#{nth}"),
         };
         format!("{}{:012x}", self.prefix, fnv(&[parent.as_bytes(), step.as_bytes()]) & 0xffff_ffff_ffff)
     }

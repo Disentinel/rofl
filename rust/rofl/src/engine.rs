@@ -1122,6 +1122,11 @@ pub struct VClosureState {
     near_moved: bool,
     /// the forests of each nearest a retraction touched, as it found them, and the nodes it touched there
     near_was: HashMap<usize, (Rc<[(Sym, Rc<crate::forest::Forest>)]>, Vec<Term>)>,
+    /// the rows of a nearest a delta took out whose citers went with them, and those it put in each reader was fired on
+    near_out: crate::store::FxSet<(usize, u64, u64)>,
+    near_in: HashMap<(Sym, usize), crate::store::FxSet<(u64, u64)>>,
+    /// the rows a reader met taken out in the middle of a level: followed when the level ends, or the delta is given up
+    near_owed: crate::store::FxSet<(usize, u64, u64)>,
     /// the forests of a nearest each reader last fired over: what its news are counted against
     reader_forest: HashMap<(Sym, usize), Rc<[(Sym, Rc<crate::forest::Forest>)]>>,
     /// the closures a rule reads under a negation, and each one's forests as a delta found them (None: not built)

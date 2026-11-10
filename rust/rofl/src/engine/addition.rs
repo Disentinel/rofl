@@ -450,6 +450,9 @@ impl Eval {
         }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
         self.vc.near_moved = false;
+        self.vc.near_out.clear();
+        self.vc.near_in.clear();
+        self.vc.near_owed.clear();
         self.vsnapshot();
         let d = self.worked_out_beside_holes(added, &[], &fresh, &grown, &moved, called)?;
         if self.vc.near_moved {
@@ -537,6 +540,9 @@ impl Eval {
         self.withdraw_unswept(&fired, |_, _| true);
         self.store.remove_many(&all);
         self.vc.near_moved = false;
+        self.vc.near_out.clear();
+        self.vc.near_in.clear();
+        self.vc.near_owed.clear();
         self.vc.near_was.clear();
         let d = self.worked_out_beside_holes(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[])?;
         if self.vnear_put_in() {
@@ -803,6 +809,10 @@ impl Eval {
         for lv in levels {
             self.fine_level(lv, plan, &mut st, d)?;
         }
+        // a row taken out after the last level has no level left for what cited it to be derived again at
+        if !self.vnear_went(i64::MAX, &st.news, &st.gone).is_empty() || self.vc.near_owed.iter().any(|r| !self.vc.near_out.contains(r)) {
+            self.vc.near_moved = true;
+        }
         self.drop_unreached_cells(&st)?;
         self.settle_thresholds(&st.news)
     }
@@ -938,6 +948,8 @@ impl Eval {
     /// rounds of what is fired, and then what was gone at the level is derived again.
     fn fine_level(&mut self, lv: i64, plan: &Plan, st: &mut Fine, d: &mut AddDelta) -> Result<(), Halt> {
         let rules = self.level_rules(lv, plan, st);
+        let went = self.vnear_went(lv, &st.news, &st.gone);
+        self.overdelete(went, &mut st.over, &mut st.over_base, d);
         self.block_firings(lv, plan, st, d)?;
         let level = self.level_whole(lv, plan, st, rules, d)?;
         self.fire_whole(&level, st, d)?;
@@ -945,12 +957,21 @@ impl Eval {
         self.store.arrivals = Some(Vec::new());
         self.store.close_dup_window();
         self.store.open_dup_window();
-        let r = self.rederive_gone(lv, plan, &level, st).and_then(|out| self.conclude_level(lv, plan, &level, st, out));
-        let arrived = self.store.arrivals.take().unwrap_or_default();
-        r?;
-        self.settle_arrived(&arrived, &level, st, d);
-        self.settle_gone(lv, st, d);
-        Ok(())
+        loop {
+            let r = self.rederive_gone(lv, plan, &level, st).and_then(|out| self.conclude_level(lv, plan, &level, st, out));
+            let arrived = self.store.arrivals.take().unwrap_or_default();
+            r?;
+            self.settle_arrived(&arrived, &level, st, d);
+            self.settle_gone(lv, st, d);
+            // a nearest this level's own facts moved: what cited a row it took out goes and is derived again here, and
+            // the readers of this level fire on the rows it put in
+            let went = self.vnear_went(lv, &st.news, &st.gone);
+            if went.is_empty() && !(st.retracting && !self.vnear_unfired(lv, &st.news, &st.gone).is_empty()) {
+                return Ok(());
+            }
+            self.overdelete(went, &mut st.over, &mut st.over_base, d);
+            self.store.arrivals = Some(Vec::new());
+        }
     }
 
     /// The rules that fire at a level, sorted as the evaluation sorts them.
@@ -1186,6 +1207,9 @@ impl Eval {
     /// The rest of a level's rounds: a fact gone for good makes its negations hold, the added rules fire whole, and the
     /// news of the level fires the rules at it semi-naively; then the thresholds below close.
     fn conclude_level(&mut self, lv: i64, plan: &Plan, level: &LevelRun, st: &mut Fine, mut out: Front) -> Result<(), Halt> {
+        if st.retracting {
+            self.vnear_came(lv, &st.news, &st.gone, &mut out)?;
+        }
         // a fact gone for good below makes a negation over it hold
         for (r, ns) in plan.negs.iter().filter(|(r, _)| fired_at(st, lv, r.id)) {
             for n in ns {
@@ -1244,6 +1268,12 @@ impl Eval {
     /// tree: its tree is built again, and what cited a row of it that no longer holds goes, at the levels above.
     fn settle_gone(&mut self, lv: i64, st: &mut Fine, d: &mut AddDelta) {
         let mut edges_gone: Vec<FactId> = Vec::new();
+        // (a level settled again, when a nearest it moved brought facts of it back: gone is what is gone now)
+        for (rel, ids) in st.gone.iter_mut() {
+            if ids.first().is_some_and(|x| self.fact_level(*rel, self.store.rec(*x).persp) == lv) {
+                ids.retain(|x| { let rc = self.store.rec(*x); self.fact_level(rc.rel, rc.persp) != lv });
+            }
+        }
         for x in &st.over {
             let rc = self.store.rec(*x);
             let rel = rc.rel;

@@ -660,6 +660,139 @@ impl Eval {
         Some((pick(&now, &was), pick(&was, &now)))
     }
 
+    /// THE ROWS A DELTA PUT INTO AND TOOK OUT OF A NEAREST so far: under each node an edge that came or went leads into
+    /// and each node its condition came to hold or stopped holding of, the forest now against the one the delta found.
+    fn vnear_delta(&mut self, ci: usize, news: &Front, gone: &HashMap<Sym, Vec<FactId>>) -> Option<(FxSet<(u64, u64)>, FxSet<(u64, u64)>)> {
+        let s = self.store.virtuals[ci].near?;
+        let src = self.vc.vclosures[ci].src;
+        let ids = |r: Sym| news.by_rel.get(&r).into_iter().flatten().copied().chain(gone.get(&r).into_iter().flatten().copied()).collect::<Vec<FactId>>();
+        let mut touched: Vec<Term> = Vec::new();
+        for id in ids(src) {
+            if self.store.rec(id).persp == s.ebook {
+                touched.extend(self.vc.vedge(&self.store, ci, id).map(|e| e.1));
+            }
+        }
+        for id in ids(s.cond) {
+            if self.store.rec(id).persp == s.sbook {
+                touched.extend(self.store.args(id).first().copied());
+            }
+        }
+        if touched.is_empty() {
+            return None;
+        }
+        let Some(base) = self.vc.base.get(&ci).cloned().flatten() else {
+            self.vc.unbased = true;
+            return None;
+        };
+        let forests = self.vc.vforests(&mut self.store, ci);
+        let (mut was, mut now) = (FxSet::default(), FxSet::default());
+        for t in &touched {
+            for (_, f) in base.iter() {
+                f.near_rows_under(*t, &mut was);
+            }
+            for (_, f) in forests.iter() {
+                f.near_rows_under(*t, &mut now);
+            }
+        }
+        let came = now.iter().filter(|r| !was.contains(*r)).copied().collect();
+        let went = was.iter().filter(|r| !now.contains(*r)).copied().collect();
+        Some((came, went))
+    }
+
+    /// The nearests answered from their trees.
+    fn vnears(&self) -> Vec<usize> {
+        (0..self.vc.vclosures.len()).filter(|ci| self.vc.vclosures[*ci].active && self.store.virtuals[*ci].near.is_some()).collect()
+    }
+
+    /// A ROW A DELTA TOOK OUT OF A NEAREST takes with it what cited it: the facts to overdelete as level `lv` begins,
+    /// which are derived again at their level where another row or rule makes them. A citer below `lv` could not be
+    /// (its level is past): the delta is given up (`near_moved`).
+    pub(super) fn vnear_went(&mut self, lv: i64, news: &Front, gone: &HashMap<Sym, Vec<FactId>>) -> Vec<FactId> {
+        let mut out = Vec::new();
+        for ci in self.vnears() {
+            let Some((_, went)) = self.vnear_delta(ci, news, gone) else { continue };
+            let Some(s) = self.store.virtuals[ci].near else { continue };
+            for (a, d) in went {
+                if !self.vc.near_out.insert((ci, a, d)) {
+                    continue;
+                }
+                if self.store.vciters.is_none() {
+                    self.vindex_citers();
+                }
+                let cites: Vec<(FactId, Sym)> = self.store.vciters.as_ref().map(|m| m.of(d)).unwrap_or_default();
+                for (y, k) in cites {
+                    if self.store.alive(y) && self.store.cites(y, PremRef::VRow(k)) && self.vrow_entry(k).is_some_and(|(c, b, x, dd)| c == ci && b == s.rbook && x.bits() == a && dd.bits() == d) {
+                        let rc = self.store.rec(y);
+                        if self.fact_level(rc.rel, rc.persp) < lv {
+                            self.vc.near_moved = true;
+                        }
+                        out.push(y);
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    /// A ROW A RETRACTION PUT INTO A NEAREST is news to the rules that read it: each plain reader of level `lv` solved
+    /// from each such row it was not yet fired on, bound to its premise over the nearest.
+    pub(super) fn vnear_came(&mut self, lv: i64, news: &Front, gone: &HashMap<Sym, Vec<FactId>>, out: &mut Front) -> Result<(), Halt> {
+        for (ci, readers) in self.vnear_unfired(lv, news, gone) {
+            let Some(s) = self.store.virtuals[ci].near else { continue };
+            let rel = self.vc.vclosures[ci].rel;
+            for (r, rows) in readers {
+                let all: Vec<usize> = (0..r.plan.len()).collect();
+                let lits: Vec<Lit> = r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { (l.rel == rel && l.args.len() == 2).then(|| l.clone()) } else { None }).collect();
+                for l in lits {
+                    let mut pre = Vec::new();
+                    for t in l.args.iter().chain([&l.persp]) {
+                        self.h.vars_of(*t, &mut pre);
+                    }
+                    let Some(o) = self.bound_order(&r, &all, &pre) else {
+                        let f = self.fire_rule(&r, None)?;
+                        merge_front(out, f);
+                        break;
+                    };
+                    let seeds: Vec<Subst> = rows.iter().filter_map(|(a, d)| unify(&self.h, l.persp, Term::atom(s.rbook), &Subst::new()).and_then(|x| unify_all(&self.h, &l.args, &[Term::from_bits(*a), Term::from_bits(*d)], &x))).collect();
+                    for sol in self.solve_bound(&r, &all, Some(&o), seeds)? {
+                        self.conclude(&r, sol, out)?;
+                    }
+                }
+                self.vc.near_in.entry((r.id, ci)).or_default().extend(rows);
+                self.vc.vreader_fired(&self.store, &r);
+            }
+        }
+        Ok(())
+    }
+
+    /// The rows a delta put into each nearest so far that a plain reader of level `lv` was not fired on, by reader.
+    pub(super) fn vnear_unfired(&mut self, lv: i64, news: &Front, gone: &HashMap<Sym, Vec<FactId>>) -> Vec<(usize, Vec<(Rc<ERule>, Vec<(u64, u64)>)>)> {
+        let mut out = Vec::new();
+        for ci in self.vnears() {
+            let Some((came, _)) = self.vnear_delta(ci, news, gone) else { continue };
+            if came.is_empty() {
+                continue;
+            }
+            let mut by = Vec::new();
+            for r in self.rules.iter().filter(|r| self.vnear_reader(r, ci) && self.rule_level(r) == lv) {
+                let mut rows: Vec<(u64, u64)> = came.iter().filter(|x| !self.vc.near_in.get(&(r.id, ci)).is_some_and(|m| m.contains(*x))).copied().collect();
+                if !rows.is_empty() {
+                    rows.sort_unstable();
+                    by.push((r.clone(), rows));
+                }
+            }
+            if !by.is_empty() {
+                out.push((ci, by));
+            }
+        }
+        out
+    }
+
+    /// Whether `r` reads the nearest `ci` and fires here.
+    fn vnear_reader(&self, r: &Rc<ERule>, ci: usize) -> bool {
+        self.vc.readers.get(&r.id).is_some_and(|cs| cs.contains(&ci)) && r.safe && self.stage_fires(r)
+    }
+
     /// THE NEWS OF A NEAREST, in an addition: the rows its build put in under the new edges' children and the nodes its
     /// condition newly holds of, against the forest before. A row it took out is no news an addition can follow
     /// (`near_moved`): the world is evaluated again.
@@ -691,17 +824,15 @@ impl Eval {
                 f.near_rows_under(*t, &mut now);
             }
         }
-        if was.iter().any(|r| !now.contains(r)) {
-            self.vc.near_moved = true;
-        }
+        self.vc.near_owed.extend(was.iter().filter(|r| !now.contains(*r)).map(|r| (ci, r.0, r.1)));
         let mut out: Vec<(Sym, Term, Term)> = now.iter().filter(|r| !was.contains(*r)).map(|(a, d)| (s.rbook, Term::from_bits(*a), Term::from_bits(*d))).collect();
         out.sort_unstable_by_key(|(_, a, d)| (a.bits(), d.bits()));
         out
     }
 
-    /// Whether the retraction, now whole, left a nearest a row it did not hold before: no news a retraction can
-    /// follow. A row a level put in and a later level took out (the condition gone a level before the edges under it)
-    /// is none.
+    /// Whether the retraction, now whole, left a nearest a row it did not hold before that some rule reading it was not
+    /// fired on (`vnear_came`). A row a level put in and a later level took out (the condition gone a level before the
+    /// edges under it) is none.
     pub(super) fn vnear_put_in(&mut self) -> bool {
         let was: Vec<_> = self.vc.near_was.drain().collect();
         for (ci, (old, touched)) in was {
@@ -715,19 +846,22 @@ impl Eval {
                     f.near_rows_under(*t, &mut now);
                 }
             }
-            if now.iter().any(|r| !before.contains(r)) {
-                return true;
+            let put: Vec<(u64, u64)> = now.iter().filter(|r| !before.contains(*r)).copied().collect();
+            if !put.is_empty() {
+                let rel = self.vc.vclosures[ci].rel;
+                let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.contains(&ci))).cloned().collect();
+                for r in readers {
+                    let plain = self.vnear_reader(&r, ci) && !r.plan.iter().any(|b| !matches!(b, BodyElem::Pos(_)) && b.lits_deep().iter().any(|l| l.rel == rel));
+                    let fired = self.vc.near_in.get(&(r.id, ci));
+                    if !plain || put.iter().any(|x| !fired.is_some_and(|m| m.contains(x))) {
+                        return true;
+                    }
+                }
             }
             // its readers were brought to this forest by the retraction: their next news are counted against it
             self.vc.reader_forest.retain(|(_, x), _| *x != ci);
         }
         false
-    }
-
-    /// Whether the program declares a nearest: a change inside a file may then move rows no delta follows, and a file
-    /// changed is taken out whole and put in whole.
-    pub fn has_nearest(&self) -> bool {
-        self.store.virtuals.iter().any(|v| v.near.is_some())
     }
 
     /// A NEAREST IN A RETRACTION: its forest built again as the store stands without `facts`, and the facts that cited a

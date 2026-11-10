@@ -34,7 +34,8 @@ path_step[rust](P, N) :- member[value](N, P, _).
 path_text[rust](N, Name) :- ref[value](N, Name), member[value](_, N, _), not denoted[rust](N).
 path_text[rust](N, T)    :- ref[value](N, Name), member[value](_, N, _), in_scope[rust](S, N), found[rust](S, Name, B),
                             import_leaf[rust](B), path_text[rust](B, T).
-path_text[rust](N, T)    :- path_step[rust](P, N), path_text[rust](P, PT), member[value](N, P, Name), T is concat(PT, concat("::", Name)).
+path_text[rust](N, T)    :- path_step[rust](P, N), path_text[rust](P, PT), member[value](N, P, Name), string is type_of(Name),
+                            T is concat(PT, concat("::", Name)).
 
 -- TEST CODE: what stands under `#[cfg(test)]` or `#[test]`
 test_item[rust](X) :- decorated[value](A, X), key[value](A, "test").
