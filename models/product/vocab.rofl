@@ -30,6 +30,8 @@ word(evidence, about).  ru(evidence, "свидетельство").  by(evidence
 word(view, about).      ru(view, "вид").                by(view, owner).
 word(change, history).  ru(change, "изменения").       by(change, owner).
 word(work, history).    ru(work, "работа").             by(work, owner).
+word(snapshot, history). ru(snapshot, "снимок").        by(snapshot, agent).
+word(state, history).   ru(state, "состояние").         by(state, owner).
 
 says(product, "what is released in versions and used").
 says(form, "how a user works with the product").
@@ -48,6 +50,8 @@ says(evidence, "something that was run and stands for a claim about the product"
 says(view, "what is known about the product, laid out for one user to read").
 says(change, "what was done to the product").
 says(work, "what the owner wants done to the product").
+says(snapshot, "the product as it stands at one moment; every fact of what the product is holds in a snapshot").
+says(state, "where a thing stands in its life; the states of one kind of thing and their order are its lifecycle").
 
 eg(product, "ROFL").
 eg(form, "the command line; a library; an editor extension; a web page").
@@ -66,6 +70,8 @@ eg(evidence, "a world of npm test against its golden; a planted fault; a demo; a
 eg(view, "docs/cli.md; the commands block of CLAUDE.md; npm run findings; release notes; a diagram").
 eg(change, "the commits of main").
 eg(work, "the worklist; the findings; the threads of the project").
+eg(snapshot, "the tree at commit 023db82; what release 1.6.0 holds").
+eg(state, "of a unit of the work: open, taken, done, dismissed; of a feature: shipped, removed; of evidence: fresh, stale").
 
 rel(comes_as, product, form).     source(comes_as, owner).     lives(comes_as, "models/product/forms.rofl").
 rel(runs_on, form, platform).     source(runs_on, owner).      lives(runs_on, "npm/platform.ts, vscode/package.json").
@@ -94,6 +100,14 @@ rel(measures, evidence, metric).  source(measures, scanner).   lives(measures, "
 rel(presents, view, feature).     source(presents, missing).
 rel(presents, view, entry).
 rel(reads, user, view).           source(reads, missing).
+rel(before, snapshot, snapshot).  source(before, scanner).     lives(before, "git; scanners/release_forms.py: tagged").
+rel(from, unit, snapshot).        source(from, scanner).       lives(from, "scripts/features.sh").
+rel(to, unit, snapshot).          source(to, scanner).         lives(to, "scripts/features.sh").
+rel(in_state, unit, state).       source(in_state, owner).     lives(in_state, "facts/worklist.rofl: work_state; facts/findings.rofl: addressed_by, dismissed").
+rel(in_state, feature, state).
+rel(in_state, evidence, state).
+rel(in_state, view, state).
+rel(then, state, state).          source(then, missing).
 rel(writes, unit, unit).          source(writes, scanner).     lives(writes, "scripts/features.sh").
 rel(moves, unit, feature).        source(moves, rule).         lives(moves, "models/engine/feature-diff.rofl").
 rel(means, unit, feature).        source(means, owner).        lives(means, "models/engine/intent-read.rofl, said of the pull request").
@@ -111,6 +125,10 @@ rel_says(backs, "the evidence answered yes or no to the contract").
 rel_says(exercises, "the evidence ran the feature").
 rel_says(measures, "the evidence gave the metric a value").
 rel_says(presents, "the view names the feature or an entry that offers it").
+rel_says(before, "the order of the snapshots; before and after of anything else is read through it").
+rel_says(from, "the snapshot a unit of the changes starts from; `to` the one it leaves").
+rel_says(in_state, "holds in a snapshot; a unit of the changes takes a thing from one state to the next").
+rel_says(then, "the second state may follow the first: the lifecycle of a kind of thing").
 rel_says(writes, "a unit of the changes edited a unit of the product").
 rel_says(moves, "the feature's code, reach or effects differ across the unit of the changes").
 rel_says(means, "the unit of the work was said to move the feature, and when it was said").
