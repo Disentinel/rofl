@@ -15,9 +15,8 @@ edb(lives).    -- (relation, where its facts or rules are today)
 
 word(product, thing).   ru(product, "продукт").    by(product, owner).
 word(form, thing).      ru(form, "форма выпуска").  by(form, owner).
-word(part, thing).      ru(part, "часть").          by(part, owner).
-word(file, code).       ru(file, "файл").           by(file, owner).
-word(fn, code).         ru(fn, "функция").          by(fn, owner).
+word(split, thing).     ru(split, "разбивка").      by(split, owner).
+word(unit, thing).      ru(unit, "единица разбивки"). by(unit, agent).
 word(entry, thing).     ru(entry, "точка входа").   by(entry, owner).
 word(surface, thing).   ru(surface, "интерфейс").   by(surface, agent).
 word(feature, thing).   ru(feature, "фича").        by(feature, owner).
@@ -36,7 +35,8 @@ word(release, change).  ru(release, "релиз").       by(release, owner).
 
 says(product, "what is released in versions and used").
 says(form, "a shape the product reaches its user in, with a version of its own").
-says(part, "a piece of the product with code of its own").
+says(split, "one way to cut the product into pieces, with its own name for a piece").
+says(unit, "a piece under one split").
 says(entry, "a name by which a user reaches the product").
 says(surface, "the place an entry is typed or called at").
 says(feature, "what the product can do, named as its user would name it").
@@ -55,7 +55,8 @@ says(release, "a set of changes given a version").
 
 eg(product, "ROFL").
 eg(form, "the npm package; the VS Code extension; the website playground").
-eg(part, "the engine; the JS model; the notebook; the VS Code extension").
+eg(split, "by deployment: services; by architecture: components; by code: crates, files, types, functions").
+eg(unit, "the service api; the component planner; the function Session::why").
 eg(entry, "rofl why; --kept; serve op resume; ROFL_JOBS; the keyword nearest").
 eg(surface, "the command line; rofl serve; the language; the environment").
 eg(feature, "explain an answer: reached by rofl why, by rofl load --why, by serve op why, by a notebook's why L").
@@ -72,20 +73,20 @@ eg(work, "w_disk_wall").
 eg(finding, "f_rust_is_the_engine_ts_is_the_reference").
 eg(release, "1.6.0").
 
-rel(has_part, product, part).    source(has_part, owner).     lives(has_part, "README.md, What is in the tree").
 rel(comes_as, product, form).   source(comes_as, owner).    lives(comes_as, "models/product/forms.rofl").
 rel(out_in, release, form).     source(out_in, scanner).    lives(out_in, "scanners/release_forms.py").
-rel(owns, part, file).           source(owns, rule).          lives(owns, "models/engine/parts.rofl").
-rel(defines, file, fn).          source(defines, scanner).    lives(defines, "rust/tools/rs_tree, models/lang/rust").
-rel(calls, fn, fn).              source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").
-rel(causes, fn, effect).         source(causes, rule).        lives(causes, "models/engine/features.rofl").
+rel(cut_by, product, split).    source(cut_by, owner).       lives(cut_by, "README.md, What is in the tree; models/engine/parts.rofl").
+rel(of, unit, split).           source(of, scanner).         lives(of, "rust/tools/rs_tree; models/engine/parts.rofl").
+rel(inside, unit, unit).        source(inside, scanner).     lives(inside, "models/lang/rust; models/engine/parts.rofl").
+rel(lies_in, unit, unit).       source(lies_in, rule).       lives(lies_in, "models/engine/parts.rofl").
+rel(calls, unit, unit).              source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").
+rel(causes, unit, effect).         source(causes, rule).        lives(causes, "models/engine/features.rofl").
 rel(at, entry, surface).         source(at, rule).            lives(at, "models/engine/features.rofl").
-rel(handled_by, entry, fn).      source(handled_by, rule).    lives(handled_by, "models/engine/features.rofl").
+rel(handled_by, entry, unit).      source(handled_by, rule).    lives(handled_by, "models/engine/features.rofl").
 rel(offers, entry, feature).     source(offers, missing).
 rel(tunes, entry, feature).      source(tunes, missing).
-rel(runs, feature, fn).          source(runs, rule).          lives(runs, "models/engine/features.rofl, per entry").
+rel(runs, feature, unit).          source(runs, rule).          lives(runs, "models/engine/features.rofl, per entry").
 rel(does, feature, effect).      source(does, rule).          lives(does, "models/engine/features.rofl, per entry").
-rel(within, feature, part).      source(within, missing).
 rel(promises, feature, promise). source(promises, missing).
 rel(has, feature, parameter).    source(has, missing).
 rel(aims, parameter, target).    source(aims, owner).         lives(aims, "CLAUDE.md, The goal").
@@ -94,7 +95,7 @@ rel(proves, check, promise).     source(proves, owner).       lives(proves, "fac
 rel(exercises, check, feature).  source(exercises, missing).
 rel(shows, example, feature).    source(shows, scanner).      lives(shows, "facts/feature-map.rofl, the TypeScript api only").
 rel(found_in, feature, doc).     source(found_in, missing).
-rel(writes, change, fn).         source(writes, scanner).     lives(writes, "scripts/features.sh").
+rel(writes, change, unit).         source(writes, scanner).     lives(writes, "scripts/features.sh").
 rel(moves, change, feature).     source(moves, rule).         lives(moves, "models/engine/feature-diff.rofl").
 rel(means, change, feature).     source(means, owner).        lives(means, "models/engine/intent-read.rofl").
 rel(closes, change, work).       source(closes, owner).       lives(closes, "facts/findings.rofl, facts/worklist.rofl").
@@ -103,8 +104,10 @@ rel(repairs, change, change).    source(repairs, owner).      lives(repairs, "mo
 rel(ships, release, change).     source(ships, missing).
 
 rel_says(offers, "the entry is one way to use the feature; several entries may offer one feature").
+rel_says(inside, "the smaller unit is in the larger one, both of one split: a tree per split").
+rel_says(lies_in, "a unit of one split is in a unit of another: a function in a component, a component in a service").
+rel_says(calls, "said of functions by the code; of the units of any other split it is derived through lies_in").
 rel_says(tunes, "the entry changes how the feature runs, not what it answers: a knob").
-rel_says(within, "the parts whose code the feature runs").
 rel_says(promises, "the promise is about this feature").
 rel_says(exercises, "the check runs the feature").
 rel_says(found_in, "the document names an entry that offers the feature").
@@ -116,8 +119,8 @@ uses(W) :- rel(_, _, W).
 loose(R, W)  :- rel(R, W, _), not word(W, _).
 loose(R, W)  :- rel(R, _, W), not word(W, _).
 alone(W)     :- word(W, _), not uses(W).
-unsaid(W)    :- word(W, L), L != code, not says(W, _).
-unshown(W)   :- word(W, L), L != code, not eg(W, _).
+unsaid(W)    :- word(W, _), not says(W, _).
+unshown(W)   :- word(W, _), not eg(W, _).
 unsourced(R) :- rel(R, _, _), not source(R, _).
 gap(R, A, B) :- rel(R, A, B), source(R, missing).
 by_hand(R, A, B) :- rel(R, A, B), source(R, owner).
