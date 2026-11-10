@@ -474,7 +474,8 @@ fn spelt_at(h: &Heap, args: &[Term], c: &Cols, names: &mut FxMap<Sym, u64>) -> O
 
 /// The facts of `rel` in `st` whose arguments at `c` are `ts`: by the index of the first, the rest compared.
 fn matching(st: &mut crate::store::Store, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, c: &Cols, ts: &[Term]) -> Vec<FactId> {
-    let cands = st.arg_matches(h, rel, persp, arity, &[c[0] as usize], &ts[..1]).unwrap_or_else(|| match persp {
+    let pos: Vec<usize> = cols(c).collect();
+    let cands = st.arg_matches(h, rel, persp, arity, &pos[..ts.len().min(pos.len())], &ts[..ts.len().min(pos.len())]).unwrap_or_else(|| match persp {
         Some(p) => st.rel_persp(h, rel, p),
         None => st.rel_all(h, rel),
     });
@@ -1283,7 +1284,7 @@ impl Crossing {
 
     /// The facts the other volumes made that a fact `id` volume `i` holds now joins, as (volume, fact, rule): what
     /// they are to lay in `i`. `only`: for a fact laid in `i` again for that rule alone.
-    pub fn pulls(&self, i: usize, id: FactId, only: Option<u32>, ws: &mut [&mut Eval], laid: &[Laid], cache: &mut FxMap<Sym, Option<u32>>) -> Vec<(usize, FactId, u32)> {
+    pub fn pulls(&self, i: usize, id: FactId, only: Option<u32>, ws: &mut [&mut Eval], laid: &[Laid], cache: &mut FxMap<Sym, Option<u32>>, asked: &mut FxSet<(u64, usize)>) -> Vec<(usize, FactId, u32)> {
         let (rec, args, home) = {
             let e = &*ws[i];
             (e.store.rec(id), e.store.args(id).to_vec(), self.at_home(e, id, i, cache))
@@ -1310,18 +1311,22 @@ impl Crossing {
                 if let TermK::Func(f) = t.kind() {
                     stack.extend_from_slice(ws[i].h.fargs(f));
                 }
-                for r in self.rt.readers.get(&(ANY, None, [NO; 4])).into_iter().flatten() {
-                    wanted.push((vec![t], r));
+                // a reader joined by a value anywhere is asked once a value: what it brings is the same for every fact
+                for (n, r) in self.rt.readers.get(&(ANY, None, [NO; 4])).into_iter().flatten().enumerate() {
+                    if asked.insert((t.bits(), n)) {
+                        wanted.push((vec![t], r));
+                    }
                 }
             }
         }
         let mut out = Vec::new();
+        let mut seen = FxSet::default();
         for j in (0..ws.len()).filter(|&j| j != i) {
             let (src, w) = pair(ws, i, j);
             for (ts, &(rel, persp, key)) in &wanted {
                 let Some(ts) = ts.iter().map(|t| find_term(*t, &src.h, &w.h, self.syms, self.funcs)).collect::<Option<Vec<_>>>() else { continue };
                 for c in matching(&mut w.store, &w.h, rel, persp, key.arity, &key.pos, &ts) {
-                    if key.fits(w.store.args(c)) && !laid[j].ids.contains(&c) && !out.contains(&(j, c, key.rule)) {
+                    if key.fits(w.store.args(c)) && !laid[j].ids.contains(&c) && seen.insert((j, c, key.rule)) {
                         out.push((j, c, key.rule));
                     }
                 }
@@ -1363,16 +1368,17 @@ impl Crossing {
         let mut want: Vec<Vec<(usize, FactId, u32)>> = vec![Vec::new(); k];
         for c in wave {
             let i = c.at;
+            let mut asked = FxSet::default();
             for &f in &c.made {
                 for (j, rule) in self.targets(i, f, ws, laid, &mut caches[i]) {
                     want[j].push((i, f, rule));
                 }
-                for (j, g, rule) in self.pulls(i, f, None, ws, laid, &mut caches[i]) {
+                for (j, g, rule) in self.pulls(i, f, None, ws, laid, &mut caches[i], &mut asked) {
                     want[i].push((j, g, rule));
                 }
             }
             for &(f, rule) in &c.again {
-                for (j, g, r) in self.pulls(i, f, Some(rule), ws, laid, &mut caches[i]) {
+                for (j, g, r) in self.pulls(i, f, Some(rule), ws, laid, &mut caches[i], &mut asked) {
                     want[i].push((j, g, r));
                 }
             }
