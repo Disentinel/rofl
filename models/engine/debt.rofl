@@ -1,0 +1,26 @@
+-- models/engine/debt.rofl — WHERE THE STATEMENT OF THE WORK AND THE WORK PARTED, counted. Proxies, read off
+-- intent.rofl: they say where to look, not that what is there is wrong.
+--
+-- COGNITIVE DEBT: what the system now does that nobody agreed to beforehand. A change owes one for each thing that
+-- moved and was never said (side) or said only once the work was under way (said_late); an entry carries what the
+-- changes left on it until the owner acknowledges it: acknowledged(Kind, Name, P).
+-- TECHNICAL DEBT: what the system takes for an intent beyond the intent: how many entries not meant had their own
+-- code written (width), what was meant and did not move (unmet), and the changes that had to repair what an
+-- earlier one left: repairs(Fix, Cause), said where the repair was asked for.
+edb(acknowledged).
+edb(repairs).
+
+unsaid(P, X) :- side(P, X).
+unsaid(P, X) :- said_late(P, X).
+on_entry(entry(K, Name), K, Name)     :- entry_at[snap](_, _, Name, K).
+on_entry(new(K, Name), K, Name)       :- entry_at[snap](_, _, Name, K).
+on_entry(effect(K, Name, E), K, Name) :- did_effect(_, K, Name, E).
+owed(K, Name, P, X) :- unsaid(P, X), on_entry(X, K, Name), not acknowledged(K, Name, P).
+
+cognitive(P, N)   :- pr(P, _, _, _), N is count(X : unsaid(P, X)).
+meant_n(P, N)     :- pr(P, _, _, _), N is count(X : was_meant(P, X)).
+width(P, N)       :- side_under_n(P, N).
+owes(K, Name, N)  :- owed(K, Name, _, _), N is count(P, X : owed(K, Name, P, X)).
+interest(Q, N)    :- repairs(_, Q), N is count(F : repairs(F, Q)).
+repair_fns(Q, N)  :- repairs(_, Q), N is count(F, H : repairs(F, Q), wrote[snap](F, H, _)).
+debt(P, Meant, Unsaid, Width, Unmet) :- meant_n(P, Meant), cognitive(P, Unsaid), width(P, Width), unmet_n(P, Unmet).

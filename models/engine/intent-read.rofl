@@ -38,3 +38,7 @@ meant_engine(233, title). meant_entry(233, verb, "ask", title). meant_entry(233,
 meant_engine(236, title).
 meant_new(238, declaration, "nearest", title). meant_new(238, declaration, "view", title).
 meant_engine(240, title). meant_entry(240, declaration, "nearest", title).
+
+-- repairs(Fix, Cause), as the thread of the repair says: #225 put back what leaving Babel (#220) and volumes by
+-- default (#224, a file gone made ask fail) broke; #226 re-aimed the planted faults whose code left with Babel.
+repairs(225, 220). repairs(225, 224). repairs(226, 220).
