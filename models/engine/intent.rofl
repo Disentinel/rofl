@@ -2,16 +2,22 @@
 -- words the feature diff (feature-diff.rofl) answers in; what moved and was not meant is a side effect, what was
 -- meant and did not move is unmet.
 --
---   meant_entry(P, Kind, Name)     P is to change what this entry does
---   meant_new(P, Kind, Name)       P is to add this entry
---   meant_effect(P, Name, Effect)  the entry is to touch the world in this way from now on
---   meant_engine(P)                P is to rewrite the engine under the entries
+--   meant_entry(P, Kind, Name, When)     P is to change what this entry does
+--   meant_new(P, Kind, Name, When)       P is to add this entry
+--   meant_effect(P, Name, Effect, When)  the entry is to touch the world in this way from now on
+--   meant_engine(P, When)                P is to rewrite the engine under the entries
+--   said_in(P, When, Where)              where it was said: a message, a title
 --
--- A change with no intent said means to leave the engine as it is.
+-- When is who said it and at what moment: `asked` (the owner, before), `planned` (the worker, before the work),
+-- `during` (the worker, while working), `reported` (the worker, after), `title` (read off the change's title by a
+-- reader, the weakest). A change with no intent said means to leave the engine as it is.
 edb(meant_entry).
 edb(meant_new).
 edb(meant_effect).
 edb(meant_engine).
+edb(said_in).
+before(asked). before(planned).
+late(during). late(reported).
 
 did_entry(P, K, Name)     :- sharp(P, K, _, Name, _).
 did_new(P, K, Name)       :- came(P, K, _, Name), K != says.
@@ -20,23 +26,33 @@ did_engine(P)             :- rewrote_shared(P, _).
 -- under an entry: code only some entries reach, written
 did_under(P, K, Name)     :- rewrote_own(P, D, Name, _), pr(P, _, A, _), entry_at[snap](A, D, Name, K).
 
-meant(P, K, Name) :- meant_entry(P, K, Name).
-meant(P, K, Name) :- meant_new(P, K, Name).
-side(P, entry(K, Name))     :- did_entry(P, K, Name), not meant(P, K, Name).
-side(P, new(K, Name))       :- did_new(P, K, Name), not meant_new(P, K, Name).
-side(P, effect(K, Name, E)) :- did_effect(P, K, Name, E), not meant_effect(P, Name, E).
-side(P, engine)             :- did_engine(P), not meant_engine(P).
+-- what was meant of each thing a change can do, and when it was first said
+meant(P, entry(K, Name), W)     :- meant_entry(P, K, Name, W).
+meant(P, entry(K, Name), W)     :- meant_new(P, K, Name, W).
+meant(P, new(K, Name), W)       :- meant_new(P, K, Name, W).
+meant(P, effect(K, Name, E), W) :- meant_effect(P, Name, E, W), did_effect(P, K, Name, E).
+meant(P, engine, W)             :- meant_engine(P, W).
+did(P, entry(K, Name))     :- did_entry(P, K, Name).
+did(P, new(K, Name))       :- did_new(P, K, Name).
+did(P, effect(K, Name, E)) :- did_effect(P, K, Name, E).
+did(P, engine)             :- did_engine(P).
+was_meant(P, X)   :- meant(P, X, _).
+meant_before(P, X) :- meant(P, X, W), before(W).
+-- moved and never said
+side(P, X)       :- did(P, X), not was_meant(P, X).
+-- moved, and said only once the work was under way or over: nobody could agree to it beforehand
+said_late(P, X)  :- did(P, X), meant(P, X, W), late(W), not meant_before(P, X).
 -- an entry not meant whose own code was written: weaker than its lines, wider
-side_under(P, K, Name)      :- did_under(P, K, Name), not meant(P, K, Name), not did_entry(P, K, Name).
+side_under(P, K, Name) :- did_under(P, K, Name), not was_meant(P, entry(K, Name)), not did_entry(P, K, Name).
 
 moved_for(P, K, Name) :- did_entry(P, K, Name).
 moved_for(P, K, Name) :- did_under(P, K, Name).
 moved_for(P, K, Name) :- did_new(P, K, Name).
-unmet(P, entry(K, Name))     :- meant_entry(P, K, Name), not moved_for(P, K, Name).
-unmet(P, new(K, Name))       :- meant_new(P, K, Name), not did_new(P, K, Name).
-unmet(P, effect(Name, E))    :- meant_effect(P, Name, E), not had_effect(P, Name, E).
-had_effect(P, Name, E)       :- pr(P, _, A, _), effect_at[snap](A, _, Name, E).
-unmet(P, engine)             :- meant_engine(P), not did_engine(P).
+unmet(P, entry(K, Name))  :- meant_entry(P, K, Name, _), not moved_for(P, K, Name).
+unmet(P, new(K, Name))    :- meant_new(P, K, Name, _), not did_new(P, K, Name).
+unmet(P, effect(Name, E)) :- meant_effect(P, Name, E, _), not had_effect(P, Name, E).
+had_effect(P, Name, E)    :- pr(P, _, A, _), effect_at[snap](A, _, Name, E).
+unmet(P, engine)          :- meant_engine(P, _), not did_engine(P).
 
 side_n(P, N)       :- pr(P, _, _, _), N is count(X : side(P, X)).
 side_under_n(P, N) :- pr(P, _, _, _), N is count(K, Name : side_under(P, K, Name)).
