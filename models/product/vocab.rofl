@@ -15,10 +15,10 @@ edb(lives).    -- (relation, where its facts or rules are today)
 
 word(product, thing).   ru(product, "продукт").    by(product, owner).
 word(form, thing).      ru(form, "форма выпуска").  by(form, owner).
+word(channel, thing).   ru(channel, "канал поставки"). by(channel, agent).
 word(split, thing).     ru(split, "разбивка").      by(split, owner).
 word(unit, thing).      ru(unit, "единица разбивки"). by(unit, agent).
 word(entry, thing).     ru(entry, "точка входа").   by(entry, owner).
-word(surface, thing).   ru(surface, "интерфейс").   by(surface, agent).
 word(feature, thing).   ru(feature, "фича").        by(feature, owner).
 word(effect, thing).    ru(effect, "побочный эффект"). by(effect, owner).
 word(promise, thing).   ru(promise, "обещание").    by(promise, owner).
@@ -34,11 +34,11 @@ word(finding, change).  ru(finding, "находка").     by(finding, owner).
 word(release, change).  ru(release, "релиз").       by(release, owner).
 
 says(product, "what is released in versions and used").
-says(form, "a shape the product reaches its user in, with a version of its own").
+says(form, "how a user works with the product").
+says(channel, "where a form is got from, version by version").
 says(split, "one way to cut the product into pieces, with its own name for a piece").
 says(unit, "a piece under one split").
 says(entry, "a name by which a user reaches the product").
-says(surface, "the place an entry is typed or called at").
 says(feature, "what the product can do, named as its user would name it").
 says(effect, "what running code does to the world outside it, with the value it does it with").
 says(promise, "what must hold of a feature every time").
@@ -54,11 +54,11 @@ says(finding, "something learned, written down").
 says(release, "a set of changes given a version").
 
 eg(product, "ROFL").
-eg(form, "the npm package; the VS Code extension; the website playground").
+eg(form, "the command line; a library; an editor extension; a web page").
+eg(channel, "the npm registry; the VS Code Marketplace; a GitHub release; the site").
 eg(split, "by deployment: services; by architecture: components; by code: crates, files, types, functions").
 eg(unit, "the service api; the component planner; the function Session::why").
 eg(entry, "rofl why; --kept; serve op resume; ROFL_JOBS; the keyword nearest").
-eg(surface, "the command line; rofl serve; the language; the environment").
 eg(feature, "explain an answer: reached by rofl why, by rofl load --why, by serve op why, by a notebook's why L").
 eg(effect, "writes a kept world under ~/.cache/rofl/worlds; listens on port 8080").
 eg(promise, "a broken promise refuses the world; a file refused exits 2").
@@ -74,14 +74,15 @@ eg(finding, "f_rust_is_the_engine_ts_is_the_reference").
 eg(release, "1.6.0").
 
 rel(comes_as, product, form).   source(comes_as, owner).    lives(comes_as, "models/product/forms.rofl").
-rel(out_in, release, form).     source(out_in, scanner).    lives(out_in, "scanners/release_forms.py").
+rel(delivers, channel, form).   source(delivers, owner).     lives(delivers, "models/product/forms.rofl").
+rel(out_in, release, channel).  source(out_in, scanner).     lives(out_in, "scanners/release_forms.py").
 rel(cut_by, product, split).    source(cut_by, owner).       lives(cut_by, "README.md, What is in the tree; models/engine/parts.rofl").
 rel(of, unit, split).           source(of, scanner).         lives(of, "rust/tools/rs_tree; models/engine/parts.rofl").
 rel(inside, unit, unit).        source(inside, scanner).     lives(inside, "models/lang/rust; models/engine/parts.rofl").
 rel(lies_in, unit, unit).       source(lies_in, rule).       lives(lies_in, "models/engine/parts.rofl").
 rel(calls, unit, unit).              source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").
 rel(causes, unit, effect).         source(causes, rule).        lives(causes, "models/engine/features.rofl").
-rel(at, entry, surface).         source(at, rule).            lives(at, "models/engine/features.rofl").
+rel(at, entry, form).            source(at, rule).            lives(at, "models/engine/features.rofl").
 rel(handled_by, entry, unit).      source(handled_by, rule).    lives(handled_by, "models/engine/features.rofl").
 rel(offers, entry, feature).     source(offers, missing).
 rel(tunes, entry, feature).      source(tunes, missing).

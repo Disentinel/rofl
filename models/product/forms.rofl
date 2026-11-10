@@ -1,16 +1,29 @@
--- models/product/forms.rofl — THE FORMS A PRODUCT IS RELEASED IN, and the invariant over them (owner, 2026-11-10):
--- every form is released when a fresh version is. The versions each form holds are read by
--- scanners/release_forms.py (tagged, published, asked); what the forms are and what each is made of is said here.
+-- models/product/forms.rofl — THE FORMS A PRODUCT IS TAKEN IN, the channels each is delivered by, and the invariant
+-- over them (owner, 2026-11-10): every form is released when a fresh version is. A form is how a user works with
+-- the product (as a medicine comes as a tablet or an injection); a channel is where the form is got from. The
+-- versions each channel holds are read by scanners/release_forms.py (tagged, published, asked).
 
 edb(form).      -- (form, the owner's name for it)
-edb(piece).     -- (form, a piece every version of it has)
-edb(follows).   -- (form, tag | main): what a publication of it is made from
+edb(channel).   -- (channel, its name)
+edb(delivers).  -- (channel, form)
+edb(piece).     -- (channel, a piece every version in it has)
+edb(follows).   -- (channel, tag | main): what a publication in it is made from
 
-form(github, "GitHub release").        follows(github, tag).
-form(npm, "npm package").              follows(npm, tag).
-form(marketplace, "VS Code extension, Marketplace").  follows(marketplace, tag).
-form(open_vsx, "VS Code extension, Open VSX").        follows(open_vsx, tag).
-form(site, "website: notebook page, playground, guide").  follows(site, main).
+form(cli, "command line: rofl, rofl-nb").
+form(library, "library for a program").
+form(extension, "editor extension: notebooks in VS Code").
+form(web, "web page: notebook page, playground, guide").
+
+delivers(npm, cli).          delivers(github, cli).
+delivers(npm, library).
+delivers(marketplace, extension).  delivers(open_vsx, extension).  delivers(github, extension).
+delivers(site, web).
+
+channel(github, "GitHub release").        follows(github, tag).
+channel(npm, "npm package").              follows(npm, tag).
+channel(marketplace, "VS Code extension, Marketplace").  follows(marketplace, tag).
+channel(open_vsx, "VS Code extension, Open VSX").        follows(open_vsx, tag).
+channel(site, "website: notebook page, playground, guide").  follows(site, main).
 
 piece(github, "release").
 piece(npm, "@grafema/rofl").
@@ -31,9 +44,14 @@ latest(V)     :- tagged(V, N), not later(N).
 -- the invariant, and the ways a form stands outside it
 skipped(F, V)    :- since(F, V), not has(F, V).
 partial(F, V, P) :- has(F, V), tagged(V, _), piece(F, P), not published(F, P, V).
-behind(F)        :- form(F, _), asked(F), latest(V), not has(F, V).
-never(F)         :- form(F, _), asked(F), not began(F).
-unversioned(F)   :- form(F, _), follows(F, main).
-unknown(F)       :- form(F, _), follows(F, tag), not asked(F).
+behind(F)        :- channel(F, _), asked(F), latest(V), not has(F, V).
+never(F)         :- channel(F, _), asked(F), not began(F).
+unversioned(F)   :- channel(F, _), follows(F, main).
+unknown(F)       :- channel(F, _), follows(F, tag), not asked(F).
 stray(F, V)      :- has(F, V), not tagged(V, _).
 empty_tag(V)     :- tagged(V, _), not out(V).
+
+-- the same, of a form: it is out in a version when one of its channels holds it
+form_out(Fm, V)    :- delivers(C, Fm), has(C, V).
+form_behind(Fm)    :- form(Fm, _), latest(V), not form_out(Fm, V).
+form_narrow(Fm, C) :- delivers(C, Fm), latest(V), form_out(Fm, V), not has(C, V).
