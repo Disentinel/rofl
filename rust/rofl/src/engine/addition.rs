@@ -537,10 +537,15 @@ impl Eval {
         self.withdraw_unswept(&fired, |_, _| true);
         self.store.remove_many(&all);
         self.vc.near_moved = false;
+        self.vc.near_was.clear();
         let d = self.worked_out_beside_holes(&[], facts, &HashSet::new(), &grown, &HashSet::new(), &[])?;
-        if self.vc.near_moved {
+        if self.vnear_put_in() {
             self.store.dirty = true;
             return Err("the retraction put a row into a nearest".into());
+        }
+        if self.vc.near_moved {
+            self.store.dirty = true;
+            return Err("the retraction made news that took a row out of a nearest".into());
         }
         if self.vc.unbased {
             self.store.dirty = true;
@@ -558,7 +563,7 @@ impl Eval {
         let reached: HashSet<Sym> = grown.iter().copied().chain(self.call_relations(called, fresh, grown)).collect();
         let aside = self.hole_world(&reached, fresh)?;
         if aside.is_empty() {
-            return self.add_worked_out(added, removed, fresh, grown, moved, called).map_err(String::from);
+            return self.add_worked_out(added, removed, fresh, grown, moved, called);
         }
         let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| !aside.contains(&r.clause.head.rel)).cloned().collect();
         let at: HashMap<Sym, usize> = rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
@@ -1517,7 +1522,7 @@ impl Eval {
 
     /// An addition's own work: the lattices and calls it reaches, every rule sorted by how it fires again, what it
     /// refuses, what goes, and the window the fine path runs in.
-    fn add_worked_out(&mut self, added: &[FactId], removed: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, &'static str> {
+    fn add_worked_out(&mut self, added: &[FactId], removed: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, String> {
         let call_rels = self.call_relations(called, fresh, grown);
         let (lats, joins) = self.lattices_reached(grown)?;
         let mut plan = Plan { lats, joins, call_rels, ..Plan::default() };
@@ -1560,12 +1565,17 @@ impl Eval {
         match r {
             Ok(true) => {
                 self.store.dirty = true;
-                Err("a staged fact has more than one firing, and the evaluation kept the first, by its schedule")
+                Err("a staged fact has more than one firing, and the evaluation kept the first, by its schedule".into())
             }
             Ok(false) => Ok(d),
-            Err(_) => {
+            Err(e) => {
                 self.store.dirty = true;
-                Err("the addition would write a hole, keep a lattice's history or meet a wall, and the world is evaluated again")
+                let rule = match &e {
+                    Halt::Budget(_, Some(r)) => self.rule_at.get(r).map(|&i| format!(" in a rule of {}", self.h.name(self.rules[i].clause.head.rel))).unwrap_or_default(),
+                    _ => String::new(),
+                };
+                let spent = self.wall.spent.get().map(|(k, n, of)| format!(" ({n} {k} of {of})")).unwrap_or_default();
+                Err(format!("the addition stopped at {}{rule}{spent}, and the world is evaluated again", crate::describe(&e)))
             }
         }
     }

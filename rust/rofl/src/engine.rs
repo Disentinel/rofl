@@ -1120,6 +1120,8 @@ pub struct VClosureState {
     pub rows_read: u64,
     /// A delta moved a nearest's rows the way it cannot follow: an addition took one out, a retraction put one in.
     near_moved: bool,
+    /// the forests of each nearest a retraction touched, as it found them, and the nodes it touched there
+    near_was: HashMap<usize, (Rc<[(Sym, Rc<crate::forest::Forest>)]>, Vec<Term>)>,
     /// the forests of a nearest each reader last fired over: what its news are counted against
     reader_forest: HashMap<(Sym, usize), Rc<[(Sym, Rc<crate::forest::Forest>)]>>,
     /// the closures a rule reads under a negation, and each one's forests as a delta found them (None: not built)

@@ -699,9 +699,40 @@ impl Eval {
         out
     }
 
+    /// Whether the retraction, now whole, left a nearest a row it did not hold before: no news a retraction can
+    /// follow. A row a level put in and a later level took out (the condition gone a level before the edges under it)
+    /// is none.
+    pub(super) fn vnear_put_in(&mut self) -> bool {
+        let was: Vec<_> = self.vc.near_was.drain().collect();
+        for (ci, (old, touched)) in was {
+            let forests = self.vc.vforests(&mut self.store, ci);
+            let (mut before, mut now) = (FxSet::default(), FxSet::default());
+            for t in &touched {
+                for (_, f) in old.iter() {
+                    f.near_rows_under(*t, &mut before);
+                }
+                for (_, f) in forests.iter() {
+                    f.near_rows_under(*t, &mut now);
+                }
+            }
+            if now.iter().any(|r| !before.contains(r)) {
+                return true;
+            }
+            // its readers were brought to this forest by the retraction: their next news are counted against it
+            self.vc.reader_forest.retain(|(_, x), _| *x != ci);
+        }
+        false
+    }
+
+    /// Whether the program declares a nearest: a change inside a file may then move rows no delta follows, and a file
+    /// changed is taken out whole and put in whole.
+    pub fn has_nearest(&self) -> bool {
+        self.store.virtuals.iter().any(|v| v.near.is_some())
+    }
+
     /// A NEAREST IN A RETRACTION: its forest built again as the store stands without `facts`, and the facts that cited a
-    /// row under what went that no longer holds, to overdelete. A row the retraction put in is no news it can follow
-    /// (`near_moved`).
+    /// row under what went that no longer holds, to overdelete. What it put in is judged once the retraction is whole
+    /// (`vnear_put_in`).
     fn vnear_retract(&mut self, ci: usize, facts: &[FactId]) -> Option<Vec<FactId>> {
         let s = self.store.virtuals[ci].near?;
         let src = self.vc.vclosures[ci].src;
@@ -718,6 +749,7 @@ impl Eval {
             return None;
         }
         let old = self.store.virtuals[ci].forests.clone();
+        self.vc.near_was.entry(ci).or_insert_with(|| (old.clone(), Vec::new())).1.extend(&touched);
         let (mut was, mut now) = (FxSet::default(), FxSet::default());
         for t in &touched {
             for (_, f) in old.iter() {
@@ -730,9 +762,6 @@ impl Eval {
             for (_, f) in forests.iter() {
                 f.near_rows_under(*t, &mut now);
             }
-        }
-        if now.iter().any(|r| !was.contains(r)) {
-            self.vc.near_moved = true;
         }
         if self.store.vciters.is_none() {
             self.vindex_citers();
