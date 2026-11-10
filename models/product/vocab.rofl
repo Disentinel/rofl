@@ -14,6 +14,7 @@ edb(source).   -- (relation, scanner | rule | owner | missing)
 edb(lives).    -- (relation, where its facts or rules are today)
 
 word(product, thing).   ru(product, "продукт").    by(product, owner).
+word(form, thing).      ru(form, "форма выпуска").  by(form, owner).
 word(part, thing).      ru(part, "часть").          by(part, owner).
 word(file, code).       ru(file, "файл").           by(file, owner).
 word(fn, code).         ru(fn, "функция").          by(fn, owner).
@@ -34,6 +35,7 @@ word(finding, change).  ru(finding, "находка").     by(finding, owner).
 word(release, change).  ru(release, "релиз").       by(release, owner).
 
 says(product, "what is released in versions and used").
+says(form, "a shape the product reaches its user in, with a version of its own").
 says(part, "a piece of the product with code of its own").
 says(entry, "a name by which a user reaches the product").
 says(surface, "the place an entry is typed or called at").
@@ -52,6 +54,7 @@ says(finding, "something learned, written down").
 says(release, "a set of changes given a version").
 
 eg(product, "ROFL").
+eg(form, "the npm package; the VS Code extension; the website playground").
 eg(part, "the engine; the JS model; the notebook; the VS Code extension").
 eg(entry, "rofl why; --kept; serve op resume; ROFL_JOBS; the keyword nearest").
 eg(surface, "the command line; rofl serve; the language; the environment").
@@ -70,6 +73,8 @@ eg(finding, "f_rust_is_the_engine_ts_is_the_reference").
 eg(release, "1.6.0").
 
 rel(has_part, product, part).    source(has_part, owner).     lives(has_part, "README.md, What is in the tree").
+rel(comes_as, product, form).   source(comes_as, owner).    lives(comes_as, "models/product/forms.rofl").
+rel(out_in, release, form).     source(out_in, scanner).    lives(out_in, "scanners/release_forms.py").
 rel(owns, part, file).           source(owns, rule).          lives(owns, "models/engine/parts.rofl").
 rel(defines, file, fn).          source(defines, scanner).    lives(defines, "rust/tools/rs_tree, models/lang/rust").
 rel(calls, fn, fn).              source(calls, rule).         lives(calls, "models/lang/rust/calls.rofl").

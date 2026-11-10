@@ -1,0 +1,39 @@
+-- models/product/forms.rofl — THE FORMS A PRODUCT IS RELEASED IN, and the invariant over them (owner, 2026-11-10):
+-- every form is released when a fresh version is. The versions each form holds are read by
+-- scanners/release_forms.py (tagged, published, asked); what the forms are and what each is made of is said here.
+
+edb(form).      -- (form, the owner's name for it)
+edb(piece).     -- (form, a piece every version of it has)
+edb(follows).   -- (form, tag | main): what a publication of it is made from
+
+form(github, "GitHub release").        follows(github, tag).
+form(npm, "npm package").              follows(npm, tag).
+form(marketplace, "VS Code extension, Marketplace").  follows(marketplace, tag).
+form(open_vsx, "VS Code extension, Open VSX").        follows(open_vsx, tag).
+form(site, "website: notebook page, playground, guide").  follows(site, main).
+
+piece(github, "release").
+piece(npm, "@grafema/rofl").
+piece(npm, "@grafema/rofl-linux-x64").   piece(npm, "@grafema/rofl-linux-arm64").
+piece(npm, "@grafema/rofl-darwin-x64").  piece(npm, "@grafema/rofl-darwin-arm64").
+piece(npm, "@grafema/rofl-win32-x64").
+piece(marketplace, "linux-x64").   piece(marketplace, "linux-arm64").
+piece(marketplace, "darwin-x64").  piece(marketplace, "darwin-arm64").
+piece(marketplace, "win32-x64").
+
+has(F, V)     :- published(F, _, V).
+began(F)      :- has(F, _).
+since(F, V)   :- has(F, V0), tagged(V0, N0), tagged(V, N), N0 < N.
+out(V)        :- has(_, V).
+later(N)      :- tagged(_, N), tagged(_, M), N < M.
+latest(V)     :- tagged(V, N), not later(N).
+
+-- the invariant, and the ways a form stands outside it
+skipped(F, V)    :- since(F, V), not has(F, V).
+partial(F, V, P) :- has(F, V), tagged(V, _), piece(F, P), not published(F, P, V).
+behind(F)        :- form(F, _), asked(F), latest(V), not has(F, V).
+never(F)         :- form(F, _), asked(F), not began(F).
+unversioned(F)   :- form(F, _), follows(F, main).
+unknown(F)       :- form(F, _), follows(F, tag), not asked(F).
+stray(F, V)      :- has(F, V), not tagged(V, _).
+empty_tag(V)     :- tagged(V, _), not out(V).
