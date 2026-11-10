@@ -506,11 +506,12 @@ alone, but each small file added to that world costs about 15 s
 **A book the plan names in `cut[fixpointplan](B)` is a world of simpler lemmas.** The engine takes the rules that
 read or conclude `[B]`, and below them every rule concluding what one of them reads: that is the lower stage, closed
 downward, so it reads nothing the rest concludes (`engine/stages.rs`). It is evaluated first and whole; what it
-concluded outside `[B]` are its lemmas, kept as given facts; `[B]`'s facts are dropped; the rest of the program is
-evaluated over the lemmas. The answers are the whole world's. The JS model cuts oxc's raw tree,
+concluded outside `[B]` and a rule above it reads are its lemmas, kept as given facts; `[B]`'s facts are dropped, and
+so is what it concluded that nothing above reads; the rest of the program is evaluated over the lemmas. A question
+about a dropped relation is refused, naming why (exit 4), never answered empty. The answers are the whole world's. The JS model cuts oxc's raw tree,
 `cut[fixpointplan](ast_oxc)` in models/lang/js/oxc-roles.rofl: about 390 rules below (a relation is below or above
 whole: every rule concluding one goes with the first taken), the roles and a few more above.
-stderr says it: `diag: stage: N rules below, L lemmas, D facts of [B] cut; widest below: …`, the last naming the
+stderr says it: `diag: stage: N rules below, L lemmas, D facts of [B] cut, U nothing above reads; widest below: …`, the last naming the
 rules whose own cone pulls most into the lower stage (a rule of the upper model that reads `[B]` drags its whole
 cone down with it, and the cut comes late: read the raw tree through a lemma instead, as `in_place[flow]` does).
 
