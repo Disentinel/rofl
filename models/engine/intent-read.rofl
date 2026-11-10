@@ -1,0 +1,12 @@
+-- models/engine/intent-read.rofl — THE INTENT OF PAST CHANGES AS THEIR TITLES READ. Nobody said these before the
+-- work: they are one reader's reading of a title, good to try intent.rofl on and no evidence of what was meant.
+meant_engine(219).
+meant_engine(224). meant_entry(224, verb, "ask"). meant_entry(224, verb, "why"). meant_effect(224, "ask", thread). meant_effect(224, "why", thread).
+meant_entry(225, flag, "--kept").
+meant_engine(228).
+meant_engine(230).
+meant_engine(233). meant_entry(233, verb, "ask"). meant_entry(233, verb, "why").
+meant_engine(234). meant_entry(234, verb, "why"). meant_entry(234, flag, "--why").
+meant_engine(236).
+meant_engine(238). meant_new(238, declaration, "graph"). meant_new(238, declaration, "nearest"). meant_new(238, declaration, "view").
+meant_engine(240). meant_entry(240, declaration, "nearest").
