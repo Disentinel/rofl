@@ -724,6 +724,12 @@ impl Eval {
         false
     }
 
+    /// Whether the program declares a nearest: a change inside a file may then move rows no delta follows, and a file
+    /// changed is taken out whole and put in whole.
+    pub fn has_nearest(&self) -> bool {
+        self.store.virtuals.iter().any(|v| v.near.is_some())
+    }
+
     /// A NEAREST IN A RETRACTION: its forest built again as the store stands without `facts`, and the facts that cited a
     /// row under what went that no longer holds, to overdelete. What it put in is judged once the retraction is whole
     /// (`vnear_put_in`).

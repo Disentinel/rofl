@@ -1,0 +1,47 @@
+-- models/engine/delta.rofl — WHAT A DELTA OF A CORPUS BY VOLUMES RUNS, asked of the engine's own code: which of the
+-- functions it reaches read a relation whole (the cost that grows with the world, not with the change), and which
+-- give the delta up for an evaluation anew. Over models/lang/rust and qname.rofl.
+
+edb(root).    -- (name, function): where a question starts
+edb(whole).   -- (function): it reads a relation or the store whole
+edb(gives_up). -- (function, how): it marks the world to be evaluated again
+
+root(volume_delta, "rofl::session::Volumes::pass_on").
+root(file_delta, "bin::rofl::load::delta_volumes").
+root(rederive, "rofl::engine::addition::Eval::rederive_gone").
+root(conclude, "rofl::engine::addition::Eval::conclude_level").
+root(fire_whole, "rofl::engine::addition::Eval::fire_whole").
+root(first_pass, "rofl::engine::volumes::Eval::by_volumes").
+
+whole("rofl::store::Store::rel_all").
+whole("rofl::store::Store::rel_persp").
+whole("rofl::store::Store::rel_all_ro").
+whole("rofl::store::Store::rel_persp_ro").
+whole("rofl::store::Store::each_row").
+whole("rofl::store::Store::len_ids").
+
+graph calls_fn(F, G) closure runs_under.
+calls_fn(F, G) :- fn_calls[rust](F, G).
+under(R, F) :- root(R, Q), fn_q[rust](F, Q).
+under(R, G) :- root(R, Q), fn_q[rust](F, Q), runs_under(F, G).
+
+-- a function that itself calls a whole reader, by the reader
+sweeps(F, W) :- fn_calls[rust](F, G), fn_q[rust](G, W), whole(W).
+sweeper(R, Q, W) :- under(R, F), sweeps(F, W), fn_q[rust](F, Q).
+-- what the first pass does not run and the delta does: the delta's own
+own_sweeper(Q, W) :- sweeper(volume_delta, Q, W), not sweeper(first_pass, Q, W).
+under_count(R, N) :- root(R, _), N is count(F : under(R, F)).
+
+-- a function that marks the world dirty: the delta is given up and the world evaluated again
+dirties(F) :- assign[value](A, T, _), member[value](T, _, "dirty"), in_fn[rust](F, A).
+gives_up(R, Q) :- under(R, F), dirties(F), fn_q[rust](F, Q).
+-- the functions the delta runs that the first pass does not
+own(Q) :- under(volume_delta, F), not under(first_pass, F), fn_q[rust](F, Q).
+
+-- who touches a field by its name, among what a root runs
+edb(state).  -- (field): a field of the exchange between volumes
+state("ids"). state("rules"). state("laid").
+touches(R, Q, Key) :- under(R, F), member[value](N, _, Key), state(Key), in_fn[rust](F, N), fn_q[rust](F, Q).
+-- the first step from a root toward a sweeper: which of the root's own calls leads there
+first_step(R, GQ, Q, W) :- root(R, RQ), fn_q[rust](F, RQ), fn_calls[rust](F, G), runs_under(G, H), sweeps(H, W), fn_q[rust](G, GQ), fn_q[rust](H, Q).
+first_step(R, GQ, GQ, W) :- root(R, RQ), fn_q[rust](F, RQ), fn_calls[rust](F, G), sweeps(G, W), fn_q[rust](G, GQ).

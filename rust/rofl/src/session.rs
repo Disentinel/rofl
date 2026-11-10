@@ -2721,6 +2721,7 @@ impl Volumes {
                     for ((id, new), (_, _, _, rules)) in w.put_delta(&facts)?.into_iter().zip(lay) {
                         if new {
                             laid.ids.insert(id);
+                            ch.again.extend(rules.iter().map(|&r| (id, r)));
                             laid.rules.insert(id, rules);
                         } else if laid.ids.contains(&id) {
                             let tags = laid.rules.entry(id).or_default();
