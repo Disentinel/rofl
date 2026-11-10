@@ -640,7 +640,9 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         if r.engine_env_hold(c.this_build).is_some() || !r.scans.is_empty() {
             return None;
         }
-        Session::open_volume(p, o.budget).ok()
+        let mut s = Session::open_volume(p, o.budget).ok()?;
+        set_walls(o, &mut s);
+        Some(s)
     };
     let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
     let mut core = open(&format!("{k}.core.vol"))?;
