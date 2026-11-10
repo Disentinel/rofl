@@ -21,11 +21,20 @@ meant_engine(225, planned).
 -- the stack came while working and was reported.
 meant_engine(226, during).
 
+-- #234, thread "Сделать леммы и стадии в fixpointplan" (its first messages read): the plan said a stage cut by
+-- cut[fixpointplan], the engine cooling the world below, why stopping at a lemma; the owner said to go. That an
+-- edited file of a kept world is computed anew came while working.
+meant_engine(234, planned). meant_entry(234, verb, "why", planned). meant_entry(234, flag, "--why", planned).
+meant_entry(234, flag, "--why-all", planned). meant_entry(234, flag, "--kept", during).
+
+-- #238, thread "Переосмыслить may-be в JS dataflow" (its first messages read): the owner asked for a may-be that
+-- does not blow up; the worker proposed a declared structure `graph ... closure` in the engine before any code.
+meant_engine(238, planned). meant_new(238, declaration, "graph", planned).
+
 meant_engine(219, title).
 meant_engine(228, title).
 meant_engine(230, title).
 meant_engine(233, title). meant_entry(233, verb, "ask", title). meant_entry(233, verb, "why", title).
-meant_engine(234, title). meant_entry(234, verb, "why", title). meant_entry(234, flag, "--why", title).
 meant_engine(236, title).
-meant_engine(238, title). meant_new(238, declaration, "graph", title). meant_new(238, declaration, "nearest", title). meant_new(238, declaration, "view", title).
+meant_new(238, declaration, "nearest", title). meant_new(238, declaration, "view", title).
 meant_engine(240, title). meant_entry(240, declaration, "nearest", title).
