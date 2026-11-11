@@ -4054,3 +4054,31 @@ work_state(w_read_under_the_memory_wall, open).
 work(w_rofl_by_the_product_model,
   "The owner, 2026-11-10: describe the WHOLE of ROFL by the abstract model of a software product (models/product/vocab.rofl: product, form, platform, channel, breakdown, unit, entry, feature, effect, user, contract, metric, target, evidence, view, change, work, snapshot, state) and write the invariants the owner wants over it. Today only forms and channels are filled (models/product/forms.rofl, scanners/release_forms.py) and the engine's entries, units and effects (models/engine/features.rofl). To do: (1) fill every relation of the vocabulary for ROFL, the ones whose source is `missing` first (offers, tunes, serves, promises, has, presents, reads, then), reusing facts/feature-map.rofl, spec.rofl, checks.rofl, commands.rofl, bench.rofl, worklist.rofl, findings.rofl rather than writing them again; (2) the invariants, each a rule with an empty answer when it holds, the owner names them; the first he named: every form is released when a fresh version is (broken today: Open VSX never published, the site has no version, tag 1.3.0 released nowhere, nothing in CI checks it); candidates to put to him: a feature no evidence exercises, a contract no evidence backs, an entry no view presents, a metric with a target and no measurement, a unit of the changes whose `moves` is not in the `means` of its unit of the work; (3) a command and a check world for it, found from CLAUDE.md. Open with the owner: the English word for the form of release, whether the ledger's records are split by kind (of 440 open findings 149 are action items).").
 work_state(w_rofl_by_the_product_model, open).
+
+work(w_scroll,
+  "The owner, 2026-11-11 (thread on the delta of volumes): the store becomes ONE LONG SCROLL over raw mapped memory, in place of volumes that copy facts to one another. His words: a cooled volume is a fold (a spoiler: its content is not seen, is known to be there, can be unfolded); it is the addressing of memory by pages and of a disk by logical volumes; the indexes are digests, a service volume of their own, the book [index]; nothing is to be invented above what the machine's memory does already. Why: a delta of volumes of 7 files of 123 takes 17 s against 55 anew, and 8 of them are the exchange (the plan of what to lay, the copies, their files, the rounds), which exists because a fact's number and a name's number mean something only inside their volume (f_half_the_time_of_a_delta_of_volumes_is_where_no_rule_reads_a_row). One pull request, its parts in this order, the engine working and its answers equal after each; each part's forecast is written in models/engine/delta-model.rofl before it is built and a measure judges it.").
+work_state(w_scroll, open).
+
+work(w_scroll_names,
+  "Part 1 of w_scroll. ONE DICTIONARY OF NAMES for every volume: a name or a compound term a rule makes has one number wherever it is made, so a term reads the same in every volume and nothing is translated (copy_term, find_term, the spelling of a term to ask a neighbour). Today the names the files spell are named in the core before the volumes fork; what rules make each volume numbers alone.").
+work_state(w_scroll_names, open).
+work_needs(w_scroll, w_scroll_names).
+
+work(w_scroll_address,
+  "Part 2 of w_scroll. A FACT'S ADDRESS IS ONE FOR THE WORLD: fold and place, short inside a fold, long across, and a registry of folds (file and version, its range, the file on disk, what it was computed from) that a restart reads to map each fold back at its place without reading it. Inside a fold only offsets. A fold is in the registry once it is written whole; one in the registry does not change.").
+work_state(w_scroll_address, open).
+work_needs(w_scroll, w_scroll_address).
+work_needs(w_scroll_address, w_scroll_names).
+
+work(w_scroll_foreign_premise,
+  "Part 3 of w_scroll. A RULE READS A PREMISE WHERE IT LIES: a firing cites a fact of another fold by its address, a key is looked up in the folds the [index] names (a key that names a node goes to its file's fold), and the exchange between volumes is deleted (Crossing::plan, targets, pulls, the laid copies and their files, the rounds of taking out and laying again). Open when it was written: who fires a rule when its premise appears in another fold, and where the fact it concludes lives.").
+work_state(w_scroll_foreign_premise, open).
+work_needs(w_scroll, w_scroll_foreign_premise).
+work_needs(w_scroll_foreign_premise, w_scroll_address).
+
+work(w_scroll_edit_is_a_version,
+  "Part 4 of w_scroll. AN EDIT OF A FILE APPENDS A VERSION OF ITS FOLD: the old fold goes out of the registry (kept as history or removed as a file), the new facts go to new addresses, none is used again, nothing is rewritten clean; what stood on the old fold is derived again and no more. The memory the process may use is kept by the watcher giving back to the system the folds longest unread.").
+work_state(w_scroll_edit_is_a_version, open).
+work_needs(w_scroll, w_scroll_edit_is_a_version).
+work_needs(w_scroll_edit_is_a_version, w_scroll_foreign_premise).
+
