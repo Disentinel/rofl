@@ -768,6 +768,12 @@ impl Eval {
             over.insert(x);
             d.overdeleted += 1;
             self.meter_rel(x, Count::Out);
+            if meter::on() {
+                use std::hash::{Hash, Hasher};
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                self.store.key(&self.h, x).hash(&mut h);
+                meter::went(self.h.name(self.store.rec(x).rel), h.finish());
+            }
             // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
             for y in self.store.citers_one(x) {
                 if self.store.alive(y) && !over.contains(&y) && self.store.cites(y, PremRef::Fact(x)) {
