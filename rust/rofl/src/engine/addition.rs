@@ -740,10 +740,13 @@ impl Eval {
                 let gone = |p: &PremRef| matches!(p.kind(), Prem::Fact(g) if over.contains(&g) || over_base.contains(&g) || !store.alive(g));
                 let firings = store.firings(x);
                 let own = comp.get(&store.rec(x).rel);
+                let proved = self.add.falls.as_ref().is_some_and(|f| !f.contains(&x));
                 let below = |g: FactId| {
                     let rc = store.rec(g);
                     let rel = rc.rel;
-                    self.fact_level(rel, rc.persp) < lv || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
+                    self.fact_level(rel, rc.persp) < lv
+                        || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
+                        || self.add.falls.as_ref().is_some_and(|f| proved && !f.contains(&g))
                 };
                 let stands = |ps: &[PremRef]| ps.iter().all(|p| match p.kind() {
                     Prem::Fact(g) => store.alive(g) && !over.contains(&g) && !over_base.contains(&g) && below(g),
@@ -972,6 +975,7 @@ impl Eval {
         }
         self.meter_seeds("removed", &seeds);
         self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
+        self.add.falls = None;
     }
 
     /// One level, in the order the fine path settles it: the firings a new fact blocks, the rules derived whole, the

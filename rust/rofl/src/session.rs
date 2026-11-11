@@ -2717,9 +2717,17 @@ impl Volumes {
             if rounds > 64 {
                 return Err("what the volumes show one another did not settle in 64 rounds".into());
             }
-            let doomed = {
+            // what the seeds reach, less what is proved again from what they do not reach: that stands, its copies with it
+            let doomed: Vec<crate::store::FxSet<FactId>> = {
                 let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
-                cross.doomed(std::mem::take(&mut seeds), &mut ws, &self.laid)
+                let from = std::mem::take(&mut seeds);
+                let reach = cross.doomed(from.clone(), &mut ws, &self.laid);
+                let stands = cross.stands(&reach, &from, &mut ws, &self.laid);
+                let doomed: Vec<crate::store::FxSet<FactId>> = reach.iter().zip(&stands).map(|(r, s)| r.difference(s).copied().collect()).collect();
+                for (w, d) in ws.iter_mut().zip(&doomed) {
+                    w.add.falls = Some(d.clone());
+                }
+                doomed
             };
             let before: Vec<Vec<bool>> = self.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect();
             // every volume takes its part out and in on a thread of its own: a volume writes only itself
@@ -2755,6 +2763,7 @@ impl Volumes {
                     w.eval.meter_read("takes_in", &mark);
                     meter::step("takes_in", add.lines().count());
                 }
+                w.eval.add.falls = None;
                 Ok(())
             })?;
             // what stands once its volume took its part out and in: copies are judged by it below, so where the copies

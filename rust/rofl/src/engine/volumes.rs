@@ -1444,6 +1444,55 @@ impl Crossing {
         seen
     }
 
+    /// WHAT OF `reach` STANDS ALL THE SAME, proved from the ground up: a fact with a firing whose premises are facts
+    /// the retraction does not reach or facts proved so before it, and a copy whose original is one. The least such
+    /// set, so nothing in it rests on itself, through a volume or through several; `seeds` go whatever cites them.
+    /// A firing over an aggregate's cell or a closure's row proves nothing here: it is judged where it is derived.
+    pub fn stands(&self, reach: &[FxSet<FactId>], seeds: &[(usize, FactId)], ws: &mut [&mut Eval], laid: &[Laid]) -> Vec<FxSet<FactId>> {
+        let k = ws.len();
+        let gone: FxSet<(usize, FactId)> = seeds.iter().copied().collect();
+        let mut stands: Vec<FxSet<FactId>> = vec![FxSet::default(); k];
+        let mut queue: Vec<(usize, FactId)> = reach.iter().enumerate().flat_map(|(i, r)| r.iter().map(move |f| (i, *f))).collect();
+        while let Some((i, f)) = queue.pop() {
+            if stands[i].contains(&f) || gone.contains(&(i, f)) || !ws[i].store.alive(f) {
+                continue;
+            }
+            let holds = |g: FactId, w: &Eval, stands: &FxSet<FactId>| w.store.alive(g) && (!reach[i].contains(&g) || stands.contains(&g));
+            let mut proved = ws[i].store.firings(f).iter().any(|(_, _, ps)| {
+                ps.iter().all(|p| match p.kind() {
+                    Prem::Fact(g) => holds(g, &*ws[i], &stands[i]),
+                    Prem::Neg(_) | Prem::Bi(_) => true,
+                    _ => false,
+                })
+            });
+            if !proved && laid[i].ids.contains(&f) {
+                for j in (0..k).filter(|&j| j != i) {
+                    if let Some(g) = self.copy_in(i, f, j, ws) {
+                        if !laid[j].ids.contains(&g) && (!reach[j].contains(&g) || stands[j].contains(&g)) {
+                            proved = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if !proved {
+                continue;
+            }
+            stands[i].insert(f);
+            queue.extend(ws[i].store.citers_one(f).into_iter().filter(|h| reach[i].contains(h)).map(|h| (i, h)));
+            if !laid[i].ids.contains(&f) {
+                for j in (0..k).filter(|&j| j != i) {
+                    if let Some(g) = self.copy_in(i, f, j, ws) {
+                        if laid[j].ids.contains(&g) && reach[j].contains(&g) {
+                            queue.push((j, g));
+                        }
+                    }
+                }
+            }
+        }
+        stands
+    }
+
     /// Whether a volume other than `j` holds the fact `g` of `j` alive as its own.
     pub fn made_elsewhere(&self, j: usize, g: FactId, ws: &mut [&mut Eval], laid: &[Laid]) -> bool {
         (0..ws.len()).filter(|&i| i != j).any(|i| self.copy_in(j, g, i, ws).is_some_and(|x| !laid[i].ids.contains(&x)))

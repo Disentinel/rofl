@@ -1271,6 +1271,9 @@ pub struct AddState {
     retract_seeds: Vec<FactId>,
     /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
     kept: HashMap<FactId, HashSet<FactId>>,
+    /// Of what a retraction reaches, the facts nothing proves again across the volumes (`Crossing::stands`): the
+    /// retraction's first overdeletion keeps every other fact where a firing of it stands over facts not among them.
+    pub falls: Option<crate::store::FxSet<FactId>>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
