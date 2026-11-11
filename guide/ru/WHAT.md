@@ -127,8 +127,8 @@ checkout.rofl.md:13: cell 1 · rofl
             [function charge() at pay.js:1] is nearest to [throw at pay.js:2], in the flow, because
               [function charge() at pay.js:1] is nearest to [if at pay.js:2], in the flow, because
                 [function charge() at pay.js:1] is nearest to [function body at pay.js:1], in the flow, because
-                  [function charge() at pay.js:1] is a function, in the code, because
-                    body[value]([function charge() at pay.js:1],[function body at pay.js:1]) (a lemma, pay.js:1)
+                  parent[tree]([function charge() at pay.js:1],[function body at pay.js:1]), because
+                    up_role[tree]([function charge() at pay.js:1],[function body at pay.js:1]), because
 ```
 <!-- END run -->
 
