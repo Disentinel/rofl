@@ -678,21 +678,21 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         w.eval.anchors = Some(cross.anchors(i as u32));
     }
     let t0 = rofl::engine::meter::spent("opens", t);
+    // what each file put gives now, the files spread over the cores
+    let puts: Vec<&str> = put.iter().flatten().copied().collect();
+    let gives = match core.eval.given_by_files(&puts.iter().map(|f| now[f]).collect::<Vec<_>>(), stage.as_ref()) {
+        Ok(g) => g,
+        Err(e) => { say(&rofl::describe(&e)); return None; }
+    };
+    let mut gives: std::collections::HashMap<&str, Vec<String>> = puts.into_iter().zip(gives).collect();
+    rofl::engine::meter::spent("gives", t0);
     let mut edits = Vec::new();
     for (i, w) in worlds.iter_mut().enumerate() {
         let gone: std::collections::HashSet<&str> = moved.iter().copied().filter(|f| old.get(*f).is_some_and(|o| o.1 == i)).collect();
         if gone.is_empty() && put[i].is_empty() {
             continue;
         }
-        let t = std::time::Instant::now();
-        let mut given: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for f in &put[i] {
-            match core.eval.given_by_file(now[f], stage.as_ref()) {
-                Ok(keys) => given.extend(keys),
-                Err(e) => { say(&rofl::describe(&e)); return None; }
-            }
-        }
-        rofl::engine::meter::spent("gives", t);
+        let given: std::collections::HashSet<String> = put[i].iter().flat_map(|f| gives.remove(*f).unwrap_or_default()).collect();
         // what the others laid here is theirs, not the file's
         let st = &w.eval.store;
         // (a fact of a file names a node of it: only a fact with an argument that may is spelled out)
