@@ -2677,6 +2677,10 @@ impl Eval {
         self.lat.lattice_rows = decls;
         self.lat.lattice_rows.extend(self.tags.as_lattices(&self.v));
         self.lat.read_algebras(&self.v, &self.tags);
+        // (an order planned for a rule holds the variables of the rule as it was built then)
+        if brk!("plans_outlive_rules" => false; true) {
+            self.add.delta_plans.clear();
+        }
         let rules = self.view_unfold(rules);
         let rules = self.alias_lower(rules);
         self.register_dominances();

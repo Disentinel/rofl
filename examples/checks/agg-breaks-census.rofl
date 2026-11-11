@@ -2219,6 +2219,8 @@ brk("kept_stale_args"). brk_kind("kept_stale_args", switch).
 brk_expects("kept_stale_args", "kept_walls").
 brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
 brk_expects("kept_stale_engine", "kept_engine").
+brk("plans_outlive_rules"). brk_kind("plans_outlive_rules", switch).
+brk_expects("plans_outlive_rules", "kept_js_sources").
 brk("volumes_dict_unkept"). brk_kind("volumes_dict_unkept", switch).
 brk_expects("volumes_dict_unkept", "kept_damaged").
 brk("kept_unsummed"). brk_kind("kept_unsummed", switch).
@@ -2704,6 +2706,7 @@ switch_site("plain_reader_unclosed", "rust/rofl/src/engine.rs").
 switch_site("plain_rule_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
+switch_site("plans_outlive_rules", "rust/rofl/src/engine.rs").
 switch_site("post_resends_flying", "rust/rofl/src/adapter.rs").
 switch_site("promoted_tick_scope_kept", "rust/rofl/src/store.rs").
 switch_site("prov_reader_deferred", "rust/rofl/src/engine/prov.rs").
