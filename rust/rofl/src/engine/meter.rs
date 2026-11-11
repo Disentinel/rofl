@@ -7,6 +7,9 @@
 //! still makes what they copy, `orphan(Rel, N)` copies that stand when the rounds end though no volume makes what they
 //! copy. Per rule: `whole(R, Head, N)` times it was
 //! withdrawn and fired over the whole store, `keyed(R, Head, N)` times it was asked again at the keys a change named.
+//! `seed(Step, Cause, Rel, N)` the facts a step began taking out, by what began it: `removed` a fact given out,
+//! `negation` a firing a new fact blocks, `nearest` a row gone from a nearest, `tree` an edge gone from a closure,
+//! `whole` a rule derived whole that no longer makes it, `keyed` an aggregate asked again that no longer makes it.
 //! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
 //! `moved(Step, N)` the facts it was given.
 
@@ -29,6 +32,21 @@ struct Meter {
     rel: BTreeMap<String, [u64; 7]>,
     rule: BTreeMap<(&'static str, String, String), u64>,
     step: BTreeMap<&'static str, (u64, u64)>,
+    seed: BTreeMap<(&'static str, &'static str, String), u64>,
+}
+
+thread_local! {
+    static STEP: std::cell::Cell<&'static str> = const { std::cell::Cell::new("alone") };
+}
+
+/// The step of a volume this thread is in, for the seeds counted on it.
+pub fn in_step(step: &'static str) {
+    STEP.with(|s| s.set(step));
+}
+
+pub fn seed(cause: &'static str, rel: &str) {
+    let step = STEP.with(|s| s.get());
+    with(|m| *m.seed.entry((step, cause, rel.to_string())).or_default() += 1);
 }
 
 static METER: Mutex<Option<Meter>> = Mutex::new(None);
@@ -73,6 +91,9 @@ pub fn write() {
     }
     for ((how, id, head), n) in &m.rule {
         let _ = writeln!(out, "{how}[delta]({id}, {head}, {n}).");
+    }
+    for ((step, cause, r), n) in &m.seed {
+        let _ = writeln!(out, "seed[delta]({step}, {cause}, {r}, {n}).");
     }
     for (s, (n, facts)) in &m.step {
         let _ = writeln!(out, "step[delta]({s}, {n}).\nmoved[delta]({s}, {facts}).");

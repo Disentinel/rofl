@@ -800,6 +800,14 @@ impl Eval {
         }
     }
 
+    fn meter_seeds(&self, cause: &'static str, seeds: &[FactId]) {
+        if meter::on() {
+            for x in seeds {
+                meter::seed(cause, self.h.name(self.store.rec(*x).rel));
+            }
+        }
+    }
+
     fn meter_rule(&self, how: &'static str, r: &ERule) {
         if meter::on() {
             meter::rule(how, self.h.name(r.id), self.h.name(r.clause.head.rel));
@@ -956,6 +964,7 @@ impl Eval {
         if brk!("retract_rederive_all" => true; false) {
             seeds.extend(self.store.live_ids().into_iter().filter(|f| !self.store.rec(*f).base()));
         }
+        self.meter_seeds("removed", &seeds);
         self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
     }
 
@@ -964,6 +973,7 @@ impl Eval {
     fn fine_level(&mut self, lv: i64, plan: &Plan, st: &mut Fine, d: &mut AddDelta) -> Result<(), Halt> {
         let rules = self.level_rules(lv, plan, st);
         let went = self.vnear_went(lv, &st.news, &st.gone);
+        self.meter_seeds("nearest", &went);
         self.overdelete(went, &mut st.over, &mut st.over_base, d);
         self.block_firings(lv, plan, st, d)?;
         let level = self.level_whole(lv, plan, st, rules, d)?;
@@ -984,6 +994,7 @@ impl Eval {
             if went.is_empty() && !(st.retracting && !self.vnear_unfired(lv, &st.news, &st.gone).is_empty()) {
                 return Ok(());
             }
+            self.meter_seeds("nearest", &went);
             self.overdelete(went, &mut st.over, &mut st.over_base, d);
             self.store.arrivals = Some(Vec::new());
         }
@@ -1046,6 +1057,7 @@ impl Eval {
             }
         }
         // what lost a firing goes whole (it may have gone with that firing already), and what rests on it, through each other
+        self.meter_seeds("negation", &seeds);
         self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
         Ok(())
     }
@@ -1161,6 +1173,7 @@ impl Eval {
             }
         }
         let lost: Vec<FactId> = level.held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
+        self.meter_seeds("whole", &lost);
         self.overdelete(lost, &mut st.over, &mut st.over_base, d);
         st.touched.extend(level.held.iter().copied());
         Ok(())
@@ -1309,6 +1322,7 @@ impl Eval {
             edges_gone.sort_unstable();
             let (seeds, touched) = self.vretract_edges(&edges_gone);
             self.vc.vretract_done(&self.store, &touched);
+            self.meter_seeds("tree", &seeds);
             self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
         }
     }
@@ -1536,6 +1550,7 @@ impl Eval {
             }
         }
         let lost: Vec<FactId> = held.iter().copied().filter(|id| !self.store.alive(*id)).collect();
+        self.meter_seeds("keyed", &lost);
         self.overdelete(lost, over, over_base, d);
         touched.extend(held);
         Ok(())

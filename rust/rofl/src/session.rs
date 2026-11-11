@@ -2742,15 +2742,20 @@ impl Volumes {
             }
             on_threads(&mut self.worlds, &parts, |w, (out, add)| {
                 if !out.is_empty() {
+                    meter::in_step("takes_out");
                     w.retract_file_delta(out)??;
                     meter::step("takes_out", out.len());
                 }
                 if !add.is_empty() {
+                    meter::in_step("takes_in");
                     w.load_delta(add, None).map_err(|e| e.join("; "))?;
                     meter::step("takes_in", add.lines().count());
                 }
                 Ok(())
             })?;
+            // what stands once its volume took its part out and in: copies are judged by it below, so where the copies
+            // laid into its volume take it out after all, it is a seed of the next round
+            let mid: Vec<Vec<bool>> = self.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect();
             let mut plan = {
                 let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
                 let mut plan = cross.plan(&wave, &mut ws, &self.laid, &mut caches);
@@ -2780,6 +2785,7 @@ impl Volumes {
                     return Ok(Vec::new());
                 }
                 let facts: Vec<(Sym, Sym, Vec<Term>)> = lay.iter().map(|(r, p, a, _)| (*r, *p, a.clone())).collect();
+                meter::in_step("lays");
                 meter::step("lays", facts.len());
                 w.put_delta(&facts)
             })?;
@@ -2824,6 +2830,7 @@ impl Volumes {
                         seeds.push((j, id));
                     }
                 }
+                seeds.extend((0..mid[j].len() as FactId).filter(|g| mid[j][*g as usize] && !st.alive(*g) && !laid.ids.contains(g) && !(before[j].get(*g as usize).copied().unwrap_or(false) && !doomed[j].contains(g))).map(|g| (j, g)));
                 if !(ch.made.is_empty() && ch.again.is_empty()) {
                     next.push(ch);
                 }
