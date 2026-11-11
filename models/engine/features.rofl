@@ -216,7 +216,9 @@ effect_call("std::time::SystemTime", "now", clock).
 
 effect_at(C, K) :- callee[value](C, Fn), member[value](Fn, P, N), effect_call(Q, N, K), path_text[rust](P, Q).
 effect(F, K)    :- effect_at(C, K), in_fn[rust](F, C).
-entry_effect(D, Name, K, N) :- entry(D, Name), effect_call(_, _, K), N is count(H : does_fn(D, Name, H), effect(H, K)), N > 0.
+effect_by(D, Name, K, H) :- does_fn(D, Name, H), effect(H, K).
+effect_of(D, Name, K)    :- effect_by(D, Name, K, _).
+entry_effect(D, Name, K, N) :- effect_of(D, Name, K), N is count(H : effect_by(D, Name, K, H)).
 
 -- ===================================================================== WHOSE CODE
 -- how many entries of a dispatcher a function serves: most of them is the machinery under that way in

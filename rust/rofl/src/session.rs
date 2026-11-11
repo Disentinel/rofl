@@ -2763,7 +2763,9 @@ impl Volumes {
                 relaid = false;
                 for (j, gs) in taken.iter_mut().enumerate() {
                     for (g, tags) in std::mem::take(gs) {
+                        // (it stands by a firing of the volume's own: watched on, that firing may go as copies are laid)
                         if ws[j].store.alive(g) {
+                            gs.push((g, tags));
                             continue;
                         }
                         if cross.made_elsewhere(j, g, &mut ws, &self.laid) {
