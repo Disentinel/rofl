@@ -1,0 +1,64 @@
+-- models/engine/delta-model.rofl — HYPOTHESES ABOUT A DELTA, AS RULES THE DELTA'S OWN FACTS JUDGE. Loaded beside the
+-- rules of a world (no corpus: the reflection of the rules is what it reads) and the facts a delta of that world
+-- wrote under ROFL_DELTA_FACTS (rust/rofl/src/engine/meter.rs): out, kept, back, tries per relation; whole, keyed per
+-- rule; step, moved per step of a volume. Everything here is in the book `delta`.
+--
+-- A FORECAST says from the shape of the rules what a delta must do; a VERDICT sets it beside what the delta did:
+--   whole_by_shape(R, Rel)   an aggregate whose key a change of Rel does not name: the rule is withdrawn and fired
+--                            over the whole store (Eval::agg_keys gives the key up)
+--   returns_by_shape(Rel)    a relation recursive with itself: a fact of it that loses a firing is never kept in
+--                            place (Eval::overdelete), it goes and is derived again where it still holds
+-- and the verdicts: `held` the forecast and the delta agree, `off` the forecast said it and the delta did not,
+-- `unforeseen` the delta did it and no forecast said it. What is unforeseen is what the model has no word for yet.
+
+edb(out). edb(kept). edb(back). edb(tries). edb(whole). edb(keyed). edb(step). edb(moved).
+
+-- ------------------------------------------------------------------------------------ the reflection, by slot
+dm_lit[delta](R, K, Rel, As) :- premise_lit(R, K, L), L = $lit(Rel, _, As, _).
+dm_agg[delta](R, K, Body)    :- premise_lit(R, K, L), L = $agg(_, _, _, _, Body).
+dm_head[delta](R, Rel, As)   :- conclusion_lit(R, 1, L), L = $lit(Rel, _, As, _).
+-- a literal inside an aggregate, by its place in the body
+dm_in[delta](R, K, 1, B)     :- dm_agg[delta](R, K, B).
+dm_in[delta](R, K, J, T)     :- dm_in[delta](R, K, I, $cons(_, T)), J is I + 1.
+dm_inlit[delta](R, K, J, Rel, As) :- dm_in[delta](R, K, J, $cons(L, _)), L = $lit(Rel, _, As, _).
+-- the variables of an argument list
+dm_args[delta](As)           :- dm_lit[delta](_, _, _, As).
+dm_args[delta](As)           :- dm_inlit[delta](_, _, _, _, As).
+dm_args[delta](As)           :- dm_head[delta](_, _, As).
+dm_tail[delta](As, As)       :- dm_args[delta](As).
+dm_tail[delta](As, T)        :- dm_tail[delta](As, $cons(_, T)).
+dm_has[delta](As, V)         :- dm_tail[delta](As, $cons($var(V), _)).
+
+-- ------------------------------------------------------------------------- an aggregate fired whole, by shape
+-- the key: a variable of the head that the aggregate's body names
+dm_key[delta](R, K, V)       :- dm_head[delta](R, _, H), dm_has[delta](H, V), dm_inlit[delta](R, K, _, _, As), dm_has[delta](As, V).
+-- a literal the rule reads, outside the aggregate or in it, that leaves a variable of the key free
+dm_free[delta](R, Rel, V)    :- dm_key[delta](R, K, V), dm_inlit[delta](R, K, _, Rel, As), not dm_has[delta](As, V).
+dm_free[delta](R, Rel, V)    :- dm_key[delta](R, _, V), dm_lit[delta](R, _, Rel, As), not dm_has[delta](As, V).
+whole_by_shape[delta](R, Rel) :- dm_free[delta](R, Rel, _).
+
+-- ------------------------------------------------------------------------ a relation that returns, by shape
+dm_dep[delta](Rel, P)        :- dm_head[delta](R, Rel, _), dm_lit[delta](R, _, P, _).
+dm_dep[delta](Rel, P)        :- dm_head[delta](R, Rel, _), dm_inlit[delta](R, _, _, P, _).
+dm_reach[delta](Rel, P)      :- dm_dep[delta](Rel, P).
+dm_reach[delta](Rel, P)      :- dm_reach[delta](Rel, Q), dm_dep[delta](Q, P).
+returns_by_shape[delta](Rel) :- dm_reach[delta](Rel, Rel).
+
+-- ------------------------------------------------------------------------------------------------ verdicts
+dm_moved[delta](Rel)         :- out[delta](Rel, _).
+dm_moved[delta](Rel)         :- back[delta](Rel, _).
+dm_moved[delta](Rel)         :- kept[delta](Rel, _).
+dm_fired[delta](R, Head, N)  :- whole[delta](R, Head, N).
+-- an aggregate the forecast names, over a relation the delta moved: it was fired whole
+whole_held[delta](Head, R, Rel, N)   :- whole_by_shape[delta](R, Rel), dm_moved[delta](Rel), whole[delta](R, Head, N).
+whole_off[delta](Head, R, Rel)       :- whole_by_shape[delta](R, Rel), dm_moved[delta](Rel), dm_head[delta](R, Head, _), not dm_fired[delta](R, Head, _).
+whole_unforeseen[delta](Head, R, N)  :- whole[delta](R, Head, N), not whole_by_shape[delta](R, _).
+-- a relation recursive with itself: nothing of it kept in place, and what went of it and came back
+returns_held[delta](Rel, Out, Back)  :- returns_by_shape[delta](Rel), out[delta](Rel, Out), back[delta](Rel, Back), not kept[delta](Rel, _).
+returns_off[delta](Rel, Kept)        :- returns_by_shape[delta](Rel), kept[delta](Rel, Kept).
+-- taken out and derived again with no recursion to say why, and never once kept in place
+returns_unforeseen[delta](Rel, Out, Back) :- out[delta](Rel, Out), back[delta](Rel, Back), not returns_by_shape[delta](Rel), not kept[delta](Rel, _).
+-- the sum of it: of what the delta took out, how much it derived again, and how much of that a forecast names
+back_total[delta](T)         :- T is sum(N ; Rel : back[delta](Rel, N)).
+back_foreseen[delta](T)      :- T is sum(B ; Rel : returns_held[delta](Rel, _, B)).
+back_unforeseen[delta](T)    :- T is sum(B ; Rel : returns_unforeseen[delta](Rel, _, B)).

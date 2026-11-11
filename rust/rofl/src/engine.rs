@@ -22,6 +22,7 @@ use crate::term::*;
 
 mod datastrat;
 mod addition;
+pub mod meter;
 mod delta;
 mod labeled;
 mod joinplan;

@@ -37,6 +37,7 @@
 //! dominance reached, a staged fact two firings reach, a world that keeps no
 //! witness beyond the monotone part, and for added rules a program whose
 //! preparation moves more than the rules it runs.
+use super::meter::{self, Count};
 use crate::store::Prem;
 use super::*;
 
@@ -753,6 +754,7 @@ impl Eval {
                     let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
                     self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if dead.contains(&g))));
                     d.kept += 1;
+                    self.meter_rel(x, Count::Kept);
                     self.add.kept.entry(x).or_default().extend(dead);
                     judged.insert(x);
                     continue;
@@ -765,6 +767,7 @@ impl Eval {
             }
             over.insert(x);
             d.overdeleted += 1;
+            self.meter_rel(x, Count::Out);
             // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
             for y in self.store.citers_one(x) {
                 if self.store.alive(y) && !over.contains(&y) && self.store.cites(y, PremRef::Fact(x)) {
@@ -789,6 +792,18 @@ impl Eval {
             }
         }
         rel_scc(&next).0
+    }
+
+    fn meter_rel(&self, x: FactId, c: Count) {
+        if meter::on() {
+            meter::rel(self.h.name(self.store.rec(x).rel), c);
+        }
+    }
+
+    fn meter_rule(&self, how: &'static str, r: &ERule) {
+        if meter::on() {
+            meter::rule(how, self.h.name(r.id), self.h.name(r.clause.head.rel));
+        }
     }
 
     /// THE PART OF AN ADDITION THAT IS KEPT, level by level (DRed over the levels of a stratified program): at each
@@ -1047,6 +1062,9 @@ impl Eval {
         let heads: HashSet<Sym> = wide.iter().map(|r| r.clause.head.rel).collect();
         let own = self.settle_keyed(lv, plan, st, own, &wide, &heads, d)?;
         let here: Vec<Rc<ERule>> = own.iter().chain(&wide).cloned().collect();
+        for r in own.iter().chain(&wide) {
+            self.meter_rule("whole", r);
+        }
         let (held, into) = self.withdraw_whole(&own, &heads, st);
         Ok(LevelRun { rules, held, heads, into, here })
     }
@@ -1075,6 +1093,7 @@ impl Eval {
             let changed: HashSet<FactId> = st.over.iter().chain(&st.over_base).chain(&st.touched).copied().collect();
             match self.agg_keys(&r, lv, &st.news, &changed) {
                 Some(seeds) => {
+                    self.meter_rule("keyed", &r);
                     self.refire_keyed(&r, seeds, &mut st.news, &mut st.over, &mut st.over_base, &mut st.touched, d)?;
                     by_key.insert(r.clause.head.rel);
                 }
@@ -1169,6 +1188,7 @@ impl Eval {
             let mut still: Vec<FactId> = Vec::new();
             let mut came = false;
             for x in pending {
+                self.meter_rel(x, Count::Tries);
                 let was = self.store.alive(x) && !self.store.rec(x).base();
                 self.rederive_one(x, &st.by_head, &mut orders, &mut out)?;
                 if !self.store.alive(x) {
@@ -1258,6 +1278,9 @@ impl Eval {
             }
             if st.over.contains(&id) || level.held.contains(&id) {
                 d.rederived += st.over.contains(&id) as usize;
+                if st.over.contains(&id) {
+                    self.meter_rel(id, Count::Back);
+                }
             } else {
                 st.news.note(rel, id);
             }

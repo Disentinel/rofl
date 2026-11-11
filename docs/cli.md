@@ -706,6 +706,19 @@ per_row | per_round | kernel)` is the class of a recursive rule, which only two 
 `profile_model` over examples/checks/profile-hub.rofl (a chain, a hub, a ladder, each planted for one verdict or forecast),
 Rust only.
 
+**A delta as facts** is the book `delta`. It has no command yet: a harness sets `ROFL_DELTA_FACTS=FILE` on a
+`rofl ask` that takes a kept corpus by delta, and the engine writes there what the delta did (`engine/meter.rs`),
+counts and no time: per relation `out[delta](Rel, N)` facts taken out with what they rested on, `kept[delta](Rel, N)`
+facts that lost a firing and stood on another, `back[delta](Rel, N)` facts taken out and derived again,
+`tries[delta](Rel, N)` attempts to derive one again; per rule `whole[delta](R, Head, N)` times it was withdrawn and
+fired over the whole store and `keyed[delta](R, Head, N)` times it was asked again at the keys a change named; per
+step of a volume `step[delta](takes_out|takes_in|lays, N)` and `moved[delta](Step, Facts)`.
+models/engine/delta-model.rofl holds the hypotheses, each a forecast from the shape of the rules and a verdict against
+these facts: loaded beside the rules of the world and the file, with no corpus (it reads the reflection), it answers in
+seconds `whole_held[delta](Head, R, Rel, N)` (an aggregate whose key a change of `Rel` does not name was fired whole,
+as forecast), `returns_held[delta](Rel, Out, Back)` (a relation recursive with itself went and was derived again),
+their `_off` (the forecast was false) and `_unforeseen` (the delta did what no hypothesis says).
+
 **The plan as facts** is the book `fixpointplan`: `plan[fixpointplan](R, At, Order)` gives rule `R` (its id, as
 `premise_lit` names it) the order to solve its premises in when fired on the news at written position `At` (0 the firing
 over the whole store), `Order` the written positions of every premise as a `$cons` list, from 1. The engine takes the

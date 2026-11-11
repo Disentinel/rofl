@@ -38,6 +38,7 @@
 //! What is deliberately NOT here: any way to mutate the world mid-evaluation,
 //! and any query that hides whether it probed or scanned.
 
+use crate::engine::meter;
 use std::collections::{HashMap, HashSet};
 
 use crate::describe;
@@ -2660,6 +2661,12 @@ impl Volumes {
     /// still holds where it is made, and what was made anew (`Crossing::plan`). The rounds it took; an error where a
     /// volume could not take its part by delta.
     pub fn pass_on(&mut self, cross: &crate::engine::volumes::Crossing, edits: Vec<(usize, Vec<FactId>, String)>) -> Result<usize, String> {
+        let rounds = self.pass_rounds(cross, edits);
+        meter::write();
+        rounds
+    }
+
+    fn pass_rounds(&mut self, cross: &crate::engine::volumes::Crossing, edits: Vec<(usize, Vec<FactId>, String)>) -> Result<usize, String> {
         use crate::engine::volumes::Change;
         let k = self.worlds.len();
         let mut caches: Vec<crate::store::FxMap<Sym, Option<u32>>> = vec![Default::default(); k];
@@ -2710,9 +2717,11 @@ impl Volumes {
             on_threads(&mut self.worlds, &parts, |w, (out, add)| {
                 if !out.is_empty() {
                     w.retract_file_delta(out)??;
+                    meter::step("takes_out", out.len());
                 }
                 if !add.is_empty() {
                     w.load_delta(add, None).map_err(|e| e.join("; "))?;
+                    meter::step("takes_in", add.lines().count());
                 }
                 Ok(())
             })?;
@@ -2745,6 +2754,7 @@ impl Volumes {
                     return Ok(Vec::new());
                 }
                 let facts: Vec<(Sym, Sym, Vec<Term>)> = lay.iter().map(|(r, p, a, _)| (*r, *p, a.clone())).collect();
+                meter::step("lays", facts.len());
                 w.put_delta(&facts)
             })?;
             for (j, (lay, put)) in lays.into_iter().zip(puts).enumerate() {
