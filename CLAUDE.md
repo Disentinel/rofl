@@ -127,6 +127,17 @@ mirrored in TS and are not to be attempted there: a world that exercises one is
 checked on Rust only, and TS is not asked to run worlds large enough to be slow
 (f_rust_is_the_engine_ts_is_the_reference).
 
+**Iterate on `fast`, measure the result on release.** A one-line edit of the
+engine costs about 7 minutes of `cargo build --release` on 4 cores (thin LTO and
+one codegen unit rebuild the whole crate) and about 1 minute of `cargo build
+--profile fast` (`ROFL_PROFILE=fast` for the scripts), and the two engines ran
+equally fast with byte-identical answers (the JS model over axios/lib, 2.9 s,
+2026-11-11). So every build between edits is `fast`; release is built once, for
+the number a report or a ledger fact states. What a `fast` edit costs is the
+optimizer on the edited module's codegen unit (frontend and link are about 4 s
+together), so a large module is a slow edit; `lto = "off"` halves it again but
+the engine then runs 14% slower.
+
 ## The owner's principles that bind an agent
 
 Decided by the owner; each is a finding, read it before arguing with it.
