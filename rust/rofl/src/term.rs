@@ -18,6 +18,7 @@
 //! args array for a functor.
 
 use crate::arena::{Arena, VolR, VolW};
+use crate::dict::{Dict, Seen, SHARED0};
 use std::sync::Arc as Rc;
 
 pub type Sym = u32;
@@ -45,10 +46,27 @@ pub struct Interner {
     n0: Sym,
     base: Rc<Names>,
     top: Names,
+    /// The dictionary the volumes of a world name in (`crate::dict`): with one, a name new above the base is named
+    /// there, from `SHARED0` up, and `top` holds only the keys a proof quotes (`own`).
+    dict: Option<Rc<Dict>>,
+    seen: Seen,
 }
 
 impl Interner {
     pub fn intern(&mut self, s: &str) -> Sym {
+        let h = name_hash(s.as_bytes());
+        if self.n0 > 0 {
+            if let Some(id) = self.base.find(s, h) {
+                return id;
+            }
+        }
+        match &self.dict {
+            Some(d) => SHARED0 + self.seen.intern(d, s, h),
+            None => self.n0 + self.top.intern(s, h),
+        }
+    }
+    /// A name no fact holds, the key a proof quotes: this heap's own under any dictionary, and below 2^29 there.
+    pub fn own(&mut self, s: &str) -> Sym {
         let h = name_hash(s.as_bytes());
         if self.n0 > 0 {
             if let Some(id) = self.base.find(s, h) {
@@ -65,10 +83,16 @@ impl Interner {
                 return Some(id);
             }
         }
+        if let Some(k) = self.dict.as_ref().and_then(|d| self.seen.find(d, s, h).or_else(|| d.find(s, h))) {
+            return Some(SHARED0 + k);
+        }
         self.top.find(s, h).map(|j| self.n0 + j)
     }
     #[inline]
     pub fn name(&self, id: Sym) -> &str {
+        if id >= SHARED0 {
+            return self.dict.as_ref().expect("a name of a dictionary this heap does not read").name(id - SHARED0);
+        }
         let j = id.wrapping_sub(self.n0);
         if (j as usize) < self.top.len() {
             self.top.name(j)
@@ -76,6 +100,7 @@ impl Interner {
             self.base.name(id)
         }
     }
+    /// How many names are this heap's own: the base's and those above it, the dictionary's apart.
     pub fn len(&self) -> usize {
         self.n0 as usize + self.top.len()
     }
@@ -180,7 +205,7 @@ struct Names {
 /// through the tail buffer. Rotated last because a product's low bits, which
 /// the table masks, depend only on its operands' low bits: unrotated, names
 /// sharing the first byte of each chunk crowd into one run of slots.
-fn name_hash(b: &[u8]) -> u64 {
+pub(crate) fn name_hash(b: &[u8]) -> u64 {
     const K: u64 = 0x51_7c_c1_b7_27_22_0a_95;
     let mut h: u64 = 0;
     let mut chunks = b.chunks_exact(8);
@@ -372,10 +397,10 @@ impl Term {
 
 #[derive(Clone, Copy)]
 #[repr(C)]
-struct FuncNode {
-    name: Sym,
-    start: u32,
-    len: u32,
+pub(crate) struct FuncNode {
+    pub(crate) name: Sym,
+    pub(crate) start: u32,
+    pub(crate) len: u32,
 }
 
 /// Where terms live. Functor arguments are slices of one flat vector, so a
@@ -390,6 +415,8 @@ pub struct Heap {
     f0: u32,
     base: Rc<Funcs>,
     top: Funcs,
+    /// What `syms.seen` is to names: the compound terms of the dictionary this heap has met.
+    seen: Seen,
 }
 
 #[derive(Default, Clone)]
@@ -414,7 +441,7 @@ struct Funcs {
 
 const CONS_EMPTY: u32 = u32::MAX;
 
-fn cons_hash(name: Sym, args: &[Term]) -> u64 {
+pub(crate) fn cons_hash(name: Sym, args: &[Term]) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325 ^ (name as u64);
     for a in args {
         h ^= a.bits();
@@ -565,7 +592,7 @@ impl Heap {
         let (funcs, ftop) = if funcs { (base, Funcs::read(r)?) } else { (base, Funcs::default()) };
         let n0 = names.len() as Sym;
         let f0 = funcs.funcs.len() as u32;
-        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top }, f0, base: Rc::new(funcs), top: ftop })
+        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top, dict: None, seen: Seen::default() }, f0, base: Rc::new(funcs), top: ftop, seen: Seen::default() })
     }
 }
 
@@ -597,6 +624,29 @@ impl Heap {
     pub fn intern(&mut self, s: &str) -> Sym {
         self.syms.intern(s)
     }
+    /// The key a proof quotes, a name no fact holds (`Interner::own`).
+    pub fn key(&mut self, s: &str) -> Sym {
+        self.syms.own(s)
+    }
+    /// The dictionary this heap names in from here on, one made where it has none: what a fork of it names, every
+    /// other fork reads under the same number.
+    pub fn share(&mut self, d: Option<Rc<Dict>>) -> Rc<Dict> {
+        let d = d.or_else(|| self.syms.dict.clone()).unwrap_or_default();
+        if !self.syms.dict.as_ref().is_some_and(|x| Rc::ptr_eq(x, &d)) {
+            (self.syms.seen, self.seen) = Default::default();
+        }
+        self.syms.dict = Some(d.clone());
+        d
+    }
+    pub fn dict(&self) -> Option<&Rc<Dict>> {
+        self.syms.dict.as_ref()
+    }
+    /// The dictionary of `from` and what it has met of it, kept by the heap read back in its place.
+    pub fn shares_as(&mut self, from: &mut Heap) {
+        self.syms.dict = from.syms.dict.take();
+        self.syms.seen = std::mem::take(&mut from.syms.seen);
+        self.seen = std::mem::take(&mut from.seen);
+    }
     pub fn atom(&mut self, s: &str) -> Term {
         Term::atom(self.syms.intern(s))
     }
@@ -616,7 +666,10 @@ impl Heap {
                 return Term::func(i);
             }
         }
-        Term::func(self.f0 + self.top.mkf(name, args, h))
+        match &self.syms.dict {
+            Some(d) => Term::func(SHARED0 + self.seen.mkf(d, name, args, h)),
+            None => Term::func(self.f0 + self.top.mkf(name, args, h)),
+        }
     }
     /// The functor already built of `name` over `args`, without building it.
     pub fn find_f(&self, name: Sym, args: &[Term]) -> Option<Term> {
@@ -625,6 +678,9 @@ impl Heap {
             if let Some(i) = self.base.find(name, args, h) {
                 return Some(Term::func(i));
             }
+        }
+        if let Some(k) = self.syms.dict.as_ref().and_then(|d| self.seen.find_f(d, name, args, h).or_else(|| d.find_f(name, args, h))) {
+            return Some(Term::func(SHARED0 + k));
         }
         self.top.find(name, args, h).map(|i| Term::func(self.f0 + i))
     }
@@ -657,11 +713,21 @@ impl Heap {
     pub fn funcs_len(&self) -> u32 {
         self.f0 + self.top.funcs.len() as u32
     }
+    #[inline(always)]
+    fn dict_of(&self) -> &Dict {
+        self.syms.dict.as_ref().expect("a term of a dictionary this heap does not read")
+    }
     pub fn fname(&self, idx: u32) -> Sym {
+        if idx >= SHARED0 {
+            return self.dict_of().node(idx - SHARED0).name;
+        }
         self.node(idx).1.name
     }
     #[inline(always)]
     pub fn fargs(&self, idx: u32) -> &[Term] {
+        if idx >= SHARED0 {
+            return self.dict_of().fargs(idx - SHARED0);
+        }
         let (s, f) = self.node(idx);
         &s.args[f.start as usize..(f.start + f.len) as usize]
     }
@@ -766,10 +832,9 @@ impl Heap {
                 out.push_str(if n == DS_ANY && brk!("ds_any_printed_raw" => false; true) { "_" } else { n })
             }
             TermK::Func(i) => {
-                let (s, f) = self.node(i);
-                out.push_str(self.name(f.name));
+                out.push_str(self.name(self.fname(i)));
                 out.push('(');
-                for (k, a) in s.args[f.start as usize..(f.start + f.len) as usize].iter().enumerate() {
+                for (k, a) in self.fargs(i).iter().enumerate() {
                     if k > 0 {
                         out.push(',');
                     }

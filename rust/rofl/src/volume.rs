@@ -85,6 +85,8 @@ pub fn cool_in_place(path: &str, e: &mut Eval, chain: &[Kept]) -> Result<Kept, S
         store.take_unkept(&mut e.store);
     }
     e.store = store;
+    let mut h = h;
+    h.shares_as(&mut e.h);
     e.h = h;
     Ok(Kept { path: path.to_string(), size, id })
 }

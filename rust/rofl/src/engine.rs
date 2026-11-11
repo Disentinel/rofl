@@ -6306,17 +6306,17 @@ impl Eval {
                 let rt = resolve(&mut self.h, *rr, s);
                 let cv = canon_vars(&mut self.h, &[lt, rt]);
                 let d = format!("{} {} {}", self.h.canon(cv[0]), self.h.name(*op), self.h.canon(cv[1]));
-                PremRef::Bi(self.h.intern(&d))
+                PremRef::Bi(self.h.key(&d))
             }
             BodyElem::Neg(l) => {
                 let k = self.anon_lit_key(l, s);
-                PremRef::Neg(self.h.intern(&k))
+                PremRef::Neg(self.h.key(&k))
             }
             BodyElem::Pos(l) => match r.kind() {
                 Prem::VRow(_) => self.vc.vrow_ref(&mut self.h, &mut self.store, l, s),
                 Prem::Bi(_) => {
                     let k = format!("open {}", self.anon_lit_key(l, s));
-                    PremRef::Bi(self.h.intern(&k))
+                    PremRef::Bi(self.h.key(&k))
                 }
                 _ => r,
             },
@@ -12496,7 +12496,7 @@ impl Eval {
                 out.push((sol.s, PremRef::Fact(id)));
             } else {
                 let k = format!("open {}", self.lit_key(call, &sol.s));
-                let sy = self.h.intern(&k);
+                let sy = self.h.key(&k);
                 out.push((sol.s, PremRef::Bi(sy)));
             }
         }

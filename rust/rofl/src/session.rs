@@ -286,11 +286,19 @@ impl Session {
 
     /// The world a volume holds, its facts, names and witnesses read from the file where they lie.
     pub fn open_volume(path: &str, budget: i64) -> Result<Session, String> {
+        Session::open_volume_in(path, budget, None)
+    }
+
+    /// `open_volume` of one of a world's volumes, which names in the dictionary `dict` they share.
+    pub fn open_volume_in(path: &str, budget: i64, dict: Option<std::sync::Arc<crate::dict::Dict>>) -> Result<Session, String> {
         let mut o = crate::volume::open(path)?;
         let evaluated = !o.store.dirty && !o.store.partial_eval;
         let cut_short = !o.store.dirty && o.store.partial_eval;
         o.store.dirty = !evaluated && !cut_short;
         let mut h = o.heap;
+        if dict.is_some() {
+            h.share(dict);
+        }
         let v = Vocab::new(&mut h);
         bootstrap_kernel(&mut h, &v, &mut o.store);
         // (preparing the program clears the rows of the trees the volume brings)

@@ -975,7 +975,7 @@ impl Eval {
                 crate::store::VPrem::Row(a, p) => PremRef::VRow(self.vc.vrow_key(&mut self.h, &mut self.store, ci, book, a, p)),
                 crate::store::VPrem::Neg(r, b, x) => {
                     let k = fact_key(&self.h, r, b, &[x]);
-                    PremRef::Neg(self.h.intern(&k))
+                    PremRef::Neg(self.h.key(&k))
                 }
             });
         }
@@ -1526,7 +1526,7 @@ impl VClosureState {
     }
 
     fn vrow_key(&self, h: &mut Heap, store: &mut Store, ci: usize, book: Sym, a: Term, d: Term) -> Sym {
-        let k = h.intern(&fact_key(&*h, self.vclosures[ci].rel, book, &[a, d]));
+        let k = h.key(&fact_key(&*h, self.vclosures[ci].rel, book, &[a, d]));
         store.vrow_of.name(k, (ci, book, a, d));
         k
     }

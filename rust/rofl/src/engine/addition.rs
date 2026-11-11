@@ -1053,7 +1053,7 @@ impl Eval {
                     for j in &dropped {
                         let BodyElem::Neg(l) = &r.plan[*j] else { unreachable!() };
                         let k = self.anon_lit_key(l, &sol.s);
-                        prems.insert(*j, PremRef::Neg(self.h.intern(&k)));
+                        prems.insert(*j, PremRef::Neg(self.h.key(&k)));
                     }
                     let head = &r.clause.head;
                     let persp = walk(&self.h, head.persp, &sol.s);

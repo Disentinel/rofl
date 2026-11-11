@@ -5,6 +5,7 @@
 //! level. The answers are the union of the workers'.
 
 use super::*;
+use crate::dict::SHARED0;
 
 /// The file a fact's line names: its node prefix, `n` and 16 hex digits before `_`. None for a line that names no
 /// file or more than one: the core, which every worker holds.
@@ -85,14 +86,16 @@ pub fn groups(files: Vec<(String, String)>, k: usize) -> Vec<Vec<(String, String
     gs.into_iter().map(|g| g.1).collect()
 }
 
-/// A term of `src` named again in `dst`: what the two share below `syms` and `funcs` is the core's and the same in both.
+/// A term of `src` named again in `dst`: what the two share below `syms` and `funcs` is the core's and the same in
+/// both, and so is what they name in one dictionary (`crate::dict`); only a heap's own goes by its spelling.
 pub fn copy_term(t: Term, src: &Heap, dst: &mut Heap, syms: Sym, funcs: u32) -> Term {
+    let own = |s: Sym| (syms..SHARED0).contains(&s);
     match t.kind() {
-        TermK::Atom(s) if s >= syms => Term::atom(dst.intern(src.name(s))),
-        TermK::Str(s) if s >= syms => Term::str(dst.intern(src.name(s))),
-        TermK::Func(i) if i >= funcs => {
+        TermK::Atom(s) if own(s) => Term::atom(dst.intern(src.name(s))),
+        TermK::Str(s) if own(s) => Term::str(dst.intern(src.name(s))),
+        TermK::Func(i) if (funcs..SHARED0).contains(&i) => {
             let name = src.fname(i);
-            let name = if name >= syms { dst.intern(src.name(name)) } else { name };
+            let name = if own(name) { dst.intern(src.name(name)) } else { name };
             let args: Vec<Term> = src.fargs(i).iter().map(|a| copy_term(*a, src, dst, syms, funcs)).collect();
             dst.mkf(name, &args)
         }
@@ -233,6 +236,7 @@ impl Eval {
             }
         }
         self.h.freeze();
+        self.h.share(None);
         self.store.freeze(&self.h);
         let (syms, funcs) = (self.h.syms.len() as Sym, self.h.funcs_len());
         let k = groups.len();
@@ -916,12 +920,17 @@ fn mix(a: u64, b: u64) -> u64 {
 
 /// `t` of `src` in `dst`, when `dst` has every name and functor it is built of; None when no fact of `dst` holds it.
 fn find_term(t: Term, src: &Heap, dst: &Heap, syms: Sym, funcs: u32) -> Option<Term> {
+    let own = |s: Sym| (syms..SHARED0).contains(&s);
+    super::meter::count("term_asked", 1);
+    if matches!(t.kind(), TermK::Atom(s) | TermK::Str(s) if own(s)) || matches!(t.kind(), TermK::Func(i) if (funcs..SHARED0).contains(&i)) {
+        super::meter::count("term_named_again", 1);
+    }
     match t.kind() {
-        TermK::Atom(s) if s >= syms => dst.syms.find(src.name(s)).map(Term::atom),
-        TermK::Str(s) if s >= syms => dst.syms.find(src.name(s)).map(Term::str),
-        TermK::Func(i) if i >= funcs => {
+        TermK::Atom(s) if own(s) => dst.syms.find(src.name(s)).map(Term::atom),
+        TermK::Str(s) if own(s) => dst.syms.find(src.name(s)).map(Term::str),
+        TermK::Func(i) if (funcs..SHARED0).contains(&i) => {
             let name = src.fname(i);
-            let name = if name >= syms { dst.syms.find(src.name(name))? } else { name };
+            let name = if own(name) { dst.syms.find(src.name(name))? } else { name };
             let args: Option<Vec<Term>> = src.fargs(i).iter().map(|a| find_term(*a, src, dst, syms, funcs)).collect();
             dst.find_f(name, &args?)
         }
@@ -1082,7 +1091,7 @@ fn exchange(ws: &mut [Worker], rt: &Routes, fresh: &[Fresh], core: FactId, syms:
                                             Val::Deep(t) => vec![t],
                                         };
                                         match there.iter().map(|t| match t.kind() {
-                                            TermK::Atom(x) if x >= syms => found.entry((j, x)).or_insert_with(|| h.syms.find(heap(j).name(x))).map(Term::atom),
+                                            TermK::Atom(x) if (syms..SHARED0).contains(&x) => found.entry((j, x)).or_insert_with(|| h.syms.find(heap(j).name(x))).map(Term::atom),
                                             _ => find_term(*t, heap(j), h, syms, funcs),
                                         }).collect::<Option<Vec<_>>>() {
                                             Some(x) => ts.insert(x),

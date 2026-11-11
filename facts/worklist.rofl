@@ -4061,7 +4061,7 @@ work_state(w_scroll, open).
 
 work(w_scroll_names,
   "Part 1 of w_scroll. ONE DICTIONARY OF NAMES for every volume: a name or a compound term a rule makes has one number wherever it is made, so a term reads the same in every volume and nothing is translated (copy_term, find_term, the spelling of a term to ask a neighbour). Today the names the files spell are named in the core before the volumes fork; what rules make each volume numbers alone.").
-work_state(w_scroll_names, open).
+work_state(w_scroll_names, done).
 work_needs(w_scroll, w_scroll_names).
 
 work(w_scroll_address,

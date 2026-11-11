@@ -16,6 +16,8 @@
 //! `walked(What, N)` the records a pass over a whole volume walked (the citer index made, a snapshot of what stands,
 //! the facts of a volume looked through for a file's, a forest or an index built whole, a forest or a mapped array
 //! copied), summed over the volumes and rounds.
+//! `counted(What, N)` what the crossing between volumes did N times: a term asked of a neighbour (`term_asked`), and of
+//! those the ones the neighbour numbers otherwise, found by their spelling (`term_named_again`).
 //! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
 //! `moved(Step, N)` the facts it was given. A delta of one world (bin/rofl/delta.rs) writes them too, its steps takes_out and takes_in.
 
@@ -43,6 +45,7 @@ struct Meter {
     once: BTreeMap<String, std::collections::HashSet<u64>>,
     walk: BTreeMap<&'static str, u64>,
     spent: BTreeMap<&'static str, u128>,
+    count: BTreeMap<&'static str, u64>,
 }
 
 thread_local! {
@@ -89,6 +92,11 @@ pub fn walk(what: &'static str, records: usize) {
     with(|m| *m.walk.entry(what).or_default() += records as u64);
 }
 
+/// Something that happened `n` times more: `counted(What, N)`.
+pub fn count(what: &'static str, n: usize) {
+    with(|m| *m.count.entry(what).or_default() += n as u64);
+}
+
 /// The time a part of the delta took since `t`: `spent(What, Ms)`, the one fact that differs from run to run.
 pub fn spent(what: &'static str, t: std::time::Instant) -> std::time::Instant {
     with(|m| *m.spent.entry(what).or_default() += t.elapsed().as_micros());
@@ -126,6 +134,9 @@ pub fn write() {
     }
     for (what, n) in &m.walk {
         let _ = writeln!(out, "walked[delta]({what}, {n}).");
+    }
+    for (what, n) in &m.count {
+        let _ = writeln!(out, "counted[delta]({what}, {n}).");
     }
     for (what, us) in &m.spent {
         let _ = writeln!(out, "spent[delta]({what}, {}).", us / 1000);

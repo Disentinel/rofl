@@ -526,6 +526,7 @@ one of the lemma's; a world that asks has the site in its cone whatever it asks)
 lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
 fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
 takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
+The volumes of a world name what their rules make in one dictionary (`rust/rofl/src/dict.rs`), kept beside them as `<slot>.q<sum>.names`: a term reads the same in every volume and none is spelled to cross.
 The kept volumes of `rofl ask`/`why` (from 32 MB) are the exception, as each file below the cut is a world of its own: the
 volumes are kept with a sum of every file (`<slot>.files`), and when at most one file in eight moved and the rules
 did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
@@ -715,7 +716,7 @@ fired over the whole store and `keyed[delta](R, Head, N)` times it was asked aga
 those not laid again when the rounds ended though a volume still makes what they copy, `orphan[delta](Rel, N)` copies
 that stand though no volume makes what they copy (the last two are defects where not zero: `copy_owed`, `copy_orphan`); `seed[delta](Step, Cause,
 Rel, N)` the facts a step began taking out and what began it (`removed`, `negation`, `nearest`, `tree`, `whole`, `keyed`),
-`walked[delta](What, N)` the records a pass over a whole volume walked, `spent[delta](What, Ms)` the time of each part of the delta (the one fact that differs from run to run; `time_unforeseen[delta](What, Ms, Pct)` is a part of a twentieth of the time or more whose rules read no row), `read[delta](Step, R, Head, N)` the rows rule `R` read in a step, the delta's weight (`heavy[delta](Step, Head, Rows, Pct)`
+`walked[delta](What, N)` the records a pass over a whole volume walked, `counted[delta](What, N)` what the crossing between volumes did N times (`term_asked` of a neighbour, `term_named_again` where it was numbered otherwise there: none since the volumes name in one dictionary), `spent[delta](What, Ms)` the time of each part of the delta (the one fact that differs from run to run; `time_unforeseen[delta](What, Ms, Pct)` is a part of a twentieth of the time or more whose rules read no row), `read[delta](Step, R, Head, N)` the rows rule `R` read in a step, the delta's weight (`heavy[delta](Step, Head, Rows, Pct)`
 names what reads a twentieth of it or more); per
 step of a volume `step[delta](takes_out|takes_in|lays, N)` and `moved[delta](Step, Facts)`.
 models/engine/delta-model.rofl holds the hypotheses, each a forecast from the shape of the rules and a verdict against

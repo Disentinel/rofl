@@ -547,6 +547,7 @@ pub fn is_volume_of_set(p: &std::path::Path) -> bool {
 
 /// The volumes kept at `k`, the core and a world a worker, when every one is there and nothing they were kept from moved.
 fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> {
+    let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names")).ok()?);
     let open = |p: &str| -> Option<Session> {
         let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
         let r = crate::kept::parse(&c.note)?;
@@ -554,7 +555,7 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
             eprintln!("the kept volumes {k} are stale: {m}");
             return None;
         }
-        let s = Session::open_volume(p, o.budget).ok()?;
+        let s = Session::open_volume_in(p, o.budget, Some(dict.clone())).ok()?;
         crate::kept::touch(p);
         Some(s)
     };
@@ -578,6 +579,8 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
         keep(w, &format!("{k}.w{i}.vol"))?;
         write_laid(&format!("{k}.w{i}.laid"), &v.laid[i])?;
     }
+    // (the names and terms the volumes share, under the numbers their facts hold)
+    core.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
     let mut list = format!("core {:016x}\n", sums.0);
     for (f, h, i) in sums.1 {
         list.push_str(&format!("{f} {h:016x} {i}\n"));
@@ -641,6 +644,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         if !moved.is_empty() { say(&format!("{} of {} files moved", moved.len(), now.len())); }
         return None;
     }
+    let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names")).ok()?);
     let open = |p: &str| -> Option<Session> {
         let t = std::time::Instant::now();
         let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
@@ -649,7 +653,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         if r.engine_env_hold(c.this_build).is_some() || !r.scans.is_empty() {
             return None;
         }
-        let mut s = Session::open_volume(p, o.budget).ok()?;
+        let mut s = Session::open_volume_in(p, o.budget, Some(dict.clone())).ok()?;
         set_walls(o, &mut s);
         Some(s)
     };
