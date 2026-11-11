@@ -2219,6 +2219,8 @@ brk("kept_stale_args"). brk_kind("kept_stale_args", switch).
 brk_expects("kept_stale_args", "kept_walls").
 brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
 brk_expects("kept_stale_engine", "kept_engine").
+brk("volumes_dict_unkept"). brk_kind("volumes_dict_unkept", switch).
+brk_expects("volumes_dict_unkept", "kept_damaged").
 brk("kept_unsummed"). brk_kind("kept_unsummed", switch).
 brk_expects("kept_unsummed", "kept_damaged").
 brk("kept_stamp_mtime"). brk_kind("kept_stamp_mtime", switch).
@@ -2919,6 +2921,7 @@ switch_site("vclosure_wit_unwritten", "rust/rofl/src/store.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
 switch_site("volume_unknowns_dropped", "rust/rofl/src/session.rs").
 switch_site("volumes_cool_views_lost", "rust/rofl/src/volume.rs").
+switch_site("volumes_dict_unkept", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("volumes_unexchanged", "rust/rofl/src/engine/volumes.rs").
 switch_site("want_answer_concluded", "rust/rofl/src/engine/want.rs").
 switch_site("want_arity_off_by_one", "rust/rofl/src/engine/want.rs").
