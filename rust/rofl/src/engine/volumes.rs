@@ -213,6 +213,25 @@ impl Eval {
             self.refuse_stage_across(st, surface)?;
         }
         self.settle_provenance();
+        // ONE NUMBER FOR A NAME IN EVERY VOLUME: the strings the files spell are named in the core before it is
+        // frozen, so a fact reads the same wherever it stands and is laid without being named again. (A string with
+        // an escape, and a name a rule makes, are still each volume's own. A quote in a comment names a string no
+        // fact holds: a name too many, nothing else.)
+        for (_, text) in groups.iter().flatten() {
+            let mut rest = text.as_str();
+            while let Some(a) = rest.find('"') {
+                let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
+                let end = a + 1 + n;
+                if rest.as_bytes()[end] == b'"' {
+                    self.h.intern(&rest[a + 1..end]);
+                    rest = &rest[end + 1..];
+                } else {
+                    // an escape or a line's end: past the string's closing quote, or the line
+                    let line = rest[end..].find('\n').map_or(rest.len(), |x| end + x);
+                    rest = &rest[line..];
+                }
+            }
+        }
         self.h.freeze();
         self.store.freeze(&self.h);
         let (syms, funcs) = (self.h.syms.len() as Sym, self.h.funcs_len());
