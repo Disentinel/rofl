@@ -8939,6 +8939,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "volumes_dict_unkept",
+  "what": "the dictionary the volumes of a world name in is not kept beside them: the volumes kept hold numbers nothing names, and the next run cannot open them",
+  "expect": {
+   "kept_damaged": "deltas_of_volumes_one_after_another:"
+  }
+ },
+ {
   "id": "kept_unsummed",
   "what": "a volume's sum is not compared, so a kept file changed after it was written is answered",
   "expect": {

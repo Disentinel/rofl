@@ -403,20 +403,40 @@ fn a_volume_waits_for_its_copy(brk: Option<&str>) -> Result<(), String> {
 fn deltas_of_volumes_one_after_another(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("volumes-again");
     let n = |i: usize| format!("n{i:016x}");
-    let text: String = (0..24).map(|i| format!("parent(\"{0}_r\", \"{0}_x\").\nparent(\"{0}_x\", \"{0}_y\").\nmark(\"{0}_r\").\nleaf(\"{0}_y\").\n", n(i))).collect();
-    d.write("m.rofl", "edb(parent). edb(mark). edb(leaf).\nnearest near(A, D) of parent(A, D) where mark(A).\nt(D, A) :- leaf(D), near(A, D).\n");
-    let args = ["ask", "t(D, A)", "boot.rofl", "m.rofl", "f.rofl"];
+    let text: String = (0..24).map(|i| format!("parent(\"{0}_r\", \"{0}_x\").\nparent(\"{0}_x\", \"{0}_y\").\nmark(\"{0}_r\").\nleaf(\"{0}_y\").\nnext(\"{0}_r\", \"{1}_r\").\n", n(i), n((i + 1) % 24))).collect();
+    // (`u` makes a term in the volume of one file that `v` joins in the volume of the next: it crosses as it is)
+    d.write("m.rofl", "edb(parent). edb(mark). edb(leaf). edb(next).\nnearest near(A, D) of parent(A, D) where mark(A).\nt(D, A) :- leaf(D), near(A, D).\nu(B, at(A)) :- next(A, B), mark(A).\nv(C, W) :- next(B, C), u(B, W).\n");
+    let args = |q: &'static str| ["ask", q, "boot.rofl", "m.rofl", "f.rofl"];
     let env = [("ROFL_VOLUMES", "1".to_string())];
     d.write("f.rofl", &text);
-    let kept = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+    let kept = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
     ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("not kept by volumes: {} {:?}", kept.code, kept.err))?;
     for (step, more) in [format!("mark(\"{}_x\").\n", n(0)), String::new(), format!("mark(\"{}_x\").\n", n(3))].iter().enumerate() {
         d.write("f.rofl", &format!("{text}{more}"));
-        let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
-        let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{step}")), &env, brk, &args);
+        let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
+        let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{step}")), &env, brk, &args("t(D, A)"));
         ensure(got.out == anew.out && got.err.contains("files taken by delta"), || format!("edit {step} of volumes one after another: {:?} against {:?}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))?;
     }
-    Ok(())
+    // a term a volume made is read by its neighbour and by the kept volumes opened again under the number it was given
+    let crossed = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("v(C, W)"));
+    let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[], brk, &args("v(C, W)"));
+    ensure(crossed.code == 0 && crossed.out.lines().count() >= 24 && sorted(&crossed.out) == sorted(&whole.out), || format!("a term made in one volume and joined in another: {:?} against {:?}; {:?}", crossed.out.lines().count(), whole.out.lines().count(), crossed.err))?;
+    // the volumes are a kept world while their registry names them: without it they are computed anew
+    let worlds = d.0.join("cache/rofl/worlds");
+    let regs: Vec<std::path::PathBuf> = std::fs::read_dir(&worlds).unwrap().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "scroll")).collect();
+    ensure(!regs.is_empty(), || "the kept volumes have no registry".to_string())?;
+    for r in regs {
+        std::fs::remove_file(r).unwrap();
+    }
+    let again = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
+    let anew = rofl_env(BIN, &d, &d.0.join("anew-last"), &env, brk, &args("t(D, A)"));
+    ensure(again.out == anew.out && again.err.contains("volumes: 24 files"), || format!("volumes with no registry were read: {:?}", again.err))
+}
+
+fn sorted(s: &str) -> Vec<&str> {
+    let mut l: Vec<&str> = s.lines().collect();
+    l.sort_unstable();
+    l
 }
 
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.

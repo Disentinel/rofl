@@ -590,7 +590,9 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
         write_laid(&format!("{k}.w{i}.laid"), &v.laid[i])?;
     }
     // (the names and terms the volumes share, under the numbers their facts hold)
-    core.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
+    if rofl::brk!("volumes_dict_unkept" => false; true) {
+        core.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
+    }
     Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i))).collect() }.write(k)
 }
 
