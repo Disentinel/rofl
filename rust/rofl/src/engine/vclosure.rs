@@ -592,7 +592,13 @@ impl Eval {
         self.vc.base.clear();
         self.vc.unbased = false;
         for ci in self.vfollowed() {
-            self.vc.base.insert(ci, self.vc.settled.get(&ci).cloned());
+            // (a world opened over a base holds no forest it built whole, `write_forests`: it is built from the edges
+            // as they stand, which is what its readers last fired over)
+            let f = match self.vc.settled.get(&ci) {
+                Some(f) => f.clone(),
+                None => self.vc.vforests(&mut self.store, ci),
+            };
+            self.vc.base.insert(ci, Some(f));
         }
     }
 

@@ -398,6 +398,27 @@ fn a_volume_waits_for_its_copy(brk: Option<&str>) -> Result<(), String> {
     volumes_delta("waits", model, &each, "q2(\"F0_x\").\nq1(\"F0_x\").\n", "q2(\"F0_x\").\nbad(\"F1_y\").\n", brk)
 }
 
+/// Volumes taken by delta are kept over the volumes they were opened from, and the next edit is taken by delta from
+/// those: a nearest moved one way and back again, each time the files' answer anew.
+fn deltas_of_volumes_one_after_another(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("volumes-again");
+    let n = |i: usize| format!("n{i:016x}");
+    let text: String = (0..24).map(|i| format!("parent(\"{0}_r\", \"{0}_x\").\nparent(\"{0}_x\", \"{0}_y\").\nmark(\"{0}_r\").\nleaf(\"{0}_y\").\n", n(i))).collect();
+    d.write("m.rofl", "edb(parent). edb(mark). edb(leaf).\nnearest near(A, D) of parent(A, D) where mark(A).\nt(D, A) :- leaf(D), near(A, D).\n");
+    let args = ["ask", "t(D, A)", "boot.rofl", "m.rofl", "f.rofl"];
+    let env = [("ROFL_VOLUMES", "1".to_string())];
+    d.write("f.rofl", &text);
+    let kept = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+    ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("not kept by volumes: {} {:?}", kept.code, kept.err))?;
+    for (step, more) in [format!("mark(\"{}_x\").\n", n(0)), String::new(), format!("mark(\"{}_x\").\n", n(3))].iter().enumerate() {
+        d.write("f.rofl", &format!("{text}{more}"));
+        let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+        let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{step}")), &env, brk, &args);
+        ensure(got.out == anew.out && got.err.contains("files taken by delta"), || format!("edit {step} of volumes one after another: {:?} against {:?}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))?;
+    }
+    Ok(())
+}
+
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.
 fn touched_is_not_stale(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("touch");
@@ -845,7 +866,7 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 32] = [
+const CASES: [(&str, Case); 33] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -878,6 +899,7 @@ const CASES: [(&str, Case); 32] = [
     ("a_nearest_row_gone_and_back_goes_by_delta", a_nearest_row_gone_and_back_goes_by_delta),
     ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
     ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
+    ("deltas_of_volumes_one_after_another", deltas_of_volumes_one_after_another),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

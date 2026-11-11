@@ -500,7 +500,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     if let Some((mut core, mut v, sums)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
         let code = answer_volumes(o, &mut core, &mut v);
         let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
-        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut core, &mut v, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums)) { eprintln!("the volumes are not kept: {e}"); }
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut core, &mut v, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums), true) { eprintln!("the volumes are not kept: {e}"); }
         return Some(code);
     }
     let files = cut.files.len();
@@ -527,7 +527,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         eprintln!("a wall cut the volumes' evaluation (the memory this process may use, or the budget): its answers are partial, and they are not kept");
     } else if let Some(k) = &kept {
         let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
-        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k, (core_sum, &sums)) { eprintln!("the volumes are not kept: {e}"); }
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k, (core_sum, &sums), false) { eprintln!("the volumes are not kept: {e}"); }
     }
     Some(code)
 }
@@ -563,13 +563,15 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
 
 /// The core and every worker's world kept at `k`, with what they were read from, and beside them (`<k>.files`) the
 /// sum of the core's text and of each file's, with the worker that holds it: what a later run takes by delta.
-fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str, sums: (u64, &[(String, u64, usize)])) -> Result<(), String> {
+fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str, sums: (u64, &[(String, u64, usize)]), over: bool) -> Result<(), String> {
     let note = crate::kept::record(world, files, &[], read, &[], None)?;
     let _ = std::fs::remove_file(format!("{k}.n"));
     let _ = std::fs::remove_file(format!("{k}.files"));
-    crate::kept::keep_capped(core, &format!("{k}.core.vol"), &note)?;
+    // (taken by delta, each is written as an overlay over the volume it was opened from: what the edit moved, not the world)
+    let keep = |s: &mut Session, p: &str| if over { crate::kept::keep_capped_over(s, p, &note, true).map(drop) } else { crate::kept::keep_capped(s, p, &note).map(drop) };
+    keep(core, &format!("{k}.core.vol"))?;
     for (i, w) in v.worlds.iter_mut().enumerate() {
-        crate::kept::keep_capped(w, &format!("{k}.w{i}.vol"), &note)?;
+        keep(w, &format!("{k}.w{i}.vol"))?;
         write_laid(&format!("{k}.w{i}.laid"), &v.laid[i])?;
     }
     let mut list = format!("core {:016x}\n", sums.0);
