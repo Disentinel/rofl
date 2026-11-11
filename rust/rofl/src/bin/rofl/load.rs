@@ -547,22 +547,33 @@ pub fn is_volume_of_set(p: &std::path::Path) -> bool {
 
 /// The volumes kept at `k`, the core and a world a worker, when every one is there and nothing they were kept from moved.
 fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> {
+    let reg = Registry::read(k)?;
     let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names")).ok()?);
-    let open = |p: &str| -> Option<Session> {
+    let checked = |p: &str| -> Option<()> {
         let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
         let r = crate::kept::parse(&c.note)?;
         if let Some(m) = crate::kept::moved(&r, c.this_build) {
             eprintln!("the kept volumes {k} are stale: {m}");
             return None;
         }
-        let s = Session::open_volume_in(p, o.budget, Some(dict.clone())).ok()?;
-        crate::kept::touch(p);
-        Some(s)
+        Some(())
     };
-    let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
-    let core = open(&format!("{k}.core.vol"))?;
-    let worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
-    let laid = (0..n).map(|i| read_laid(&format!("{k}.w{i}.laid"))).collect::<Option<Vec<_>>>()?;
+    let open = |p: &str| Session::open_volume_in(p, o.budget, Some(dict.clone())).ok();
+    let n = reg.folds;
+    let paths: Vec<String> = std::iter::once(format!("{k}.core.vol")).chain((0..n).map(|i| format!("{k}.w{i}.vol"))).collect();
+    for p in &paths {
+        checked(p)?;
+    }
+    // each volume opened on a thread of its own, what was laid in it read beside it
+    let (core, opened) = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..n).map(|i| { let (open, p) = (&open, &paths[i + 1]); sc.spawn(move || Some((open(p)?, read_laid(&format!("{k}.w{i}.laid"))?))) }).collect();
+        (open(&paths[0]), hs.into_iter().map(|h| h.join().ok().flatten()).collect::<Option<Vec<_>>>())
+    });
+    let core = core?;
+    let (worlds, laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
+    for p in &paths {
+        crate::kept::touch(p);
+    }
     Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default() }))
 }
 
@@ -570,8 +581,7 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
 /// sum of the core's text and of each file's, with the worker that holds it: what a later run takes by delta.
 fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str, sums: (u64, &[(String, u64, usize)]), over: bool) -> Result<(), String> {
     let note = crate::kept::record(world, files, &[], read, &[], None)?;
-    let _ = std::fs::remove_file(format!("{k}.n"));
-    let _ = std::fs::remove_file(format!("{k}.files"));
+    let _ = std::fs::remove_file(format!("{k}.scroll"));
     // (taken by delta, each is written as an overlay over the volume it was opened from: what the edit moved, not the world)
     let keep = |s: &mut Session, p: &str| if over { crate::kept::keep_capped_over(s, p, &note, true).map(drop) } else { crate::kept::keep_capped(s, p, &note).map(drop) };
     keep(core, &format!("{k}.core.vol"))?;
@@ -581,33 +591,75 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
     }
     // (the names and terms the volumes share, under the numbers their facts hold)
     core.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
-    let mut list = format!("core {:016x}\n", sums.0);
-    for (f, h, i) in sums.1 {
-        list.push_str(&format!("{f} {h:016x} {i}\n"));
-    }
-    std::fs::write(format!("{k}.files"), list).map_err(|e| e.to_string())?;
-    std::fs::write(format!("{k}.n"), v.worlds.len().to_string()).map_err(|e| e.to_string())
+    Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i))).collect() }.write(k)
 }
 
-/// The facts the others laid into a kept volume, by id, each with the rules it was laid for (`<k>.w<i>.laid`).
+/// THE REGISTRY OF A SET OF KEPT VOLUMES (`<k>.scroll`): how many folds there are beside the core, the sum of the
+/// core's text, and each file with its sum and the fold that holds it. Written last and whole, under another name
+/// first: the volumes, what was laid in each and the dictionary are a kept world once it names them, and what it
+/// does not name is nothing. A later run reads it alone to know what to map and what moved.
+struct Registry {
+    folds: usize,
+    core: u64,
+    files: std::collections::HashMap<String, (u64, usize)>,
+}
+
+impl Registry {
+    fn write(&self, k: &str) -> Result<(), String> {
+        let mut list = format!("scroll 1\nfolds {}\ncore {:016x}\n", self.folds, self.core);
+        let mut files: Vec<_> = self.files.iter().collect();
+        files.sort();
+        for (f, (h, i)) in files {
+            list.push_str(&format!("file {f} {h:016x} {i}\n"));
+        }
+        let tmp = format!("{k}.scroll.{}.new", std::process::id());
+        std::fs::write(&tmp, list).and_then(|_| std::fs::rename(&tmp, format!("{k}.scroll"))).map_err(|e| e.to_string())
+    }
+    fn read(k: &str) -> Option<Registry> {
+        let text = std::fs::read_to_string(format!("{k}.scroll")).ok()?;
+        let mut lines = text.lines();
+        if lines.next()? != "scroll 1" {
+            return None;
+        }
+        let folds = lines.next()?.strip_prefix("folds ")?.parse().ok()?;
+        let core = u64::from_str_radix(lines.next()?.strip_prefix("core ")?, 16).ok()?;
+        let mut files = std::collections::HashMap::new();
+        for l in lines {
+            let mut p = l.strip_prefix("file ")?.split(' ');
+            let (f, h, i) = (p.next()?, p.next()?, p.next()?);
+            files.insert(f.to_string(), (u64::from_str_radix(h, 16).ok()?, i.parse().ok()?));
+        }
+        Some(Registry { folds, core, files })
+    }
+}
+
+/// The facts the others laid into a kept volume, by id, each with the rules it was laid for (`<k>.w<i>.laid`):
+/// numbers of four bytes, a fact's id, how many rules, the rules.
 fn write_laid(p: &str, l: &rofl::engine::volumes::Laid) -> Result<(), String> {
     let mut ids: Vec<&u32> = l.ids.iter().collect();
     ids.sort();
-    let mut out = String::new();
+    let mut out: Vec<u8> = Vec::with_capacity(ids.len() * 12);
     for id in ids {
-        let rs: Vec<String> = l.rules.get(id).into_iter().flatten().map(u32::to_string).collect();
-        out.push_str(&format!("{id} {}\n", rs.join(",")));
+        let rs = l.rules.get(id).map_or(&[][..], |r| &r[..]);
+        for x in [*id, rs.len() as u32].iter().chain(rs) {
+            out.extend_from_slice(&x.to_le_bytes());
+        }
     }
     std::fs::write(p, out).map_err(|e| e.to_string())
 }
 
 fn read_laid(p: &str) -> Option<rofl::engine::volumes::Laid> {
+    let b = std::fs::read(p).ok()?;
+    let mut xs = b.chunks_exact(4).map(|c| u32::from_le_bytes(c.try_into().unwrap()));
     let mut l = rofl::engine::volumes::Laid::default();
-    for line in std::fs::read_to_string(p).ok()?.lines() {
-        let (id, rs) = line.split_once(' ')?;
-        let id: u32 = id.parse().ok()?;
+    while let Some(id) = xs.next() {
+        let n = xs.next()? as usize;
+        let rs: Vec<u32> = xs.by_ref().take(n).collect();
+        if rs.len() != n {
+            return None;
+        }
         l.ids.insert(id);
-        l.rules.insert(id, rs.split(',').filter(|r| !r.is_empty()).map(str::parse).collect::<Result<_, _>>().ok()?);
+        l.rules.insert(id, rs);
     }
     Some(l)
 }
@@ -624,15 +676,7 @@ fn sum(text: &str) -> u64 {
 /// lemmas where the program cuts a book), a file come given to the worker holding least. None, said on stderr, where
 /// the core moved, too many files did, a delta is not worked out, or an edit moved what a worker shows the others.
 fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<(Session, rofl::session::Volumes, Vec<(String, u64, usize)>)> {
-    let list = std::fs::read_to_string(format!("{k}.files")).ok()?;
-    let mut lines = list.lines();
-    let core_sum = lines.next()?.strip_prefix("core ").and_then(|h| u64::from_str_radix(h, 16).ok())?;
-    let mut old: std::collections::HashMap<String, (u64, usize)> = std::collections::HashMap::new();
-    for l in lines {
-        let mut p = l.split(' ');
-        let (f, h, i) = (p.next()?, p.next()?, p.next()?);
-        old.insert(f.to_string(), (u64::from_str_radix(h, 16).ok()?, i.parse().ok()?));
-    }
+    let Registry { folds: n, core: core_sum, files: old } = Registry::read(k)?;
     let say = |why: &str| eprintln!("the kept volumes {k} are not taken by delta: {why}; computed anew");
     if sum(&cut.core) != core_sum {
         say("the rules or the facts naming no file changed");
@@ -645,27 +689,34 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         return None;
     }
     let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names")).ok()?);
-    let open = |p: &str| -> Option<Session> {
+    // a volume is checked here and opened on a thread of its own, what was laid in it read beside it
+    let checked = |p: &str| -> Option<()> {
         let t = std::time::Instant::now();
         let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
         rofl::engine::meter::spent("sums", t);
         let r = crate::kept::parse(&c.note)?;
-        if r.engine_env_hold(c.this_build).is_some() || !r.scans.is_empty() {
-            return None;
-        }
+        (r.engine_env_hold(c.this_build).is_none() && r.scans.is_empty()).then_some(())
+    };
+    let open = |p: &str| -> Option<Session> {
         let mut s = Session::open_volume_in(p, o.budget, Some(dict.clone())).ok()?;
         set_walls(o, &mut s);
         Some(s)
     };
     let t = std::time::Instant::now();
-    let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
-    let mut core = open(&format!("{k}.core.vol"))?;
-    let mut worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
+    checked(&format!("{k}.core.vol"))?;
+    for i in 0..n {
+        checked(&format!("{k}.w{i}.vol"))?;
+    }
+    let (core, opened) = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..n).map(|i| { let open = &open; sc.spawn(move || Some((open(&format!("{k}.w{i}.vol"))?, read_laid(&format!("{k}.w{i}.laid"))?))) }).collect();
+        (open(&format!("{k}.core.vol")), hs.into_iter().map(|h| h.join().ok().flatten()).collect::<Option<Vec<_>>>())
+    });
+    let mut core = core?;
+    let (mut worlds, mut laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
     let stage = core.eval.lemma_stage();
     for w in &mut worlds {
         w.eval.stage_given = stage.as_ref().map(|st| st.rules.clone());
     }
-    let mut laid = (0..n).map(|i| read_laid(&format!("{k}.w{i}.laid"))).collect::<Option<Vec<_>>>()?;
     let mut sums: Vec<(String, u64, usize)> = Vec::new();
     let mut put: Vec<Vec<&str>> = vec![Vec::new(); n];
     for (f, t) in &now {
