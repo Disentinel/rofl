@@ -86,3 +86,37 @@ fn check(cool: bool) {
     }
     assert!(v.stats.laid > 0 && v.stats.rounds > 0, "{:?}", v.stats);
 }
+
+/// A WALKED CLOSURE WHOSE EDGES CROSS THE FILES: a path that leaves a file and comes back through a third is the
+/// whole world's path, by volumes too.
+#[test]
+fn a_walked_closure_crosses_the_volumes() {
+    // the edges given, and the edges a rule concludes
+    walked("edb(edge). edb(start).\ngraph edge(X, Y) closure reach.\nfrom(S, Y) :- start(S), reach(S, Y).\n");
+    walked("edb(link). edb(start).\nedge(X, Y) :- link(X, Y).\ngraph edge(X, Y) closure reach.\nfrom(S, Y) :- start(S), reach(S, Y).\n");
+}
+
+fn walked(model: &str) {
+    let (a, b, c) = ("n00000000000000aa", "n00000000000000bb", "n00000000000000cc");
+    let rel = if model.contains("link") { "link" } else { "edge" };
+    let facts = format!(
+        "start(\"{a}_1\").\n{rel}(\"{a}_1\", \"{a}_2\").\n{rel}(\"{a}_2\", \"{b}_1\").\n{rel}(\"{b}_1\", \"{b}_2\").\n{rel}(\"{b}_2\", \"{c}_1\").\n{rel}(\"{c}_1\", \"{c}_2\").\n{rel}(\"{c}_2\", \"{a}_3\").\nstart(\"{c}_1\").\n"
+    );
+    let refs = [model, facts.as_str()];
+    let mut whole = Session::fresh(BUDGET);
+    whole.load_all(&refs, None).unwrap();
+    whole.evaluate().unwrap();
+    let cut = rofl::engine::volumes::cut(&refs);
+    assert_eq!(cut.files.len(), 3);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    let mut v = core.by_volumes(rofl::engine::volumes::groups(cut.files, 3), 3).unwrap();
+    let q = "from(S, Y)";
+    let by = match core.resident(&v, "from").unwrap() {
+        Some(mut r) => answers(&mut r, q),
+        None => v.worlds.iter_mut().flat_map(|w| answers(w, q)).collect(),
+    };
+    let all = answers(&mut whole, q);
+    assert_eq!(all.len(), 8);
+    assert_eq!(by, all, "the volumes walk a closure otherwise than the whole world");
+}

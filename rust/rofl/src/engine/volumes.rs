@@ -754,6 +754,11 @@ impl Routes {
                 }
             }
         }
+        // a graph's closure is walked over the edges a volume holds, and a path leaves a file and comes back: every
+        // volume has every edge
+        for c in e.vc.vclosures.iter().filter(|c| c.is_graph()) {
+            by.insert((c.src, None), None);
+        }
         let mut rt = Routes { by, anchors, ..Default::default() };
         for (&(rel, persp), keys) in &rt.by {
             for k in keys.iter().flatten() {
