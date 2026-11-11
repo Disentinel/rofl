@@ -499,6 +499,12 @@ impl Forest {
         }
     }
 
+    /// Whether `a` is the nearest marked node above `d`.
+    pub fn near_is(&self, a: u64, d: Term) -> bool {
+        let (Some(near), Some(v)) = (&self.near, self.at(d)) else { return false };
+        near[v as usize] != NONE && self.nodes[near[v as usize] as usize].bits() == a
+    }
+
     /// Rows of the strict closure with this node as the ancestor.
     pub fn subtree(&self, a: Term) -> u64 {
         if let Some(g) = &self.graph {

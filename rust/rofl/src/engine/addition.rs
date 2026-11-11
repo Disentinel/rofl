@@ -810,7 +810,7 @@ impl Eval {
             self.fine_level(lv, plan, &mut st, d)?;
         }
         // a row taken out after the last level has no level left for what cited it to be derived again at
-        if !self.vnear_went(i64::MAX, &st.news, &st.gone).is_empty() || self.vc.near_owed.iter().any(|r| !self.vc.near_out.contains(r)) {
+        if !self.vnear_went(i64::MAX, &st.news, &st.gone).is_empty() || self.vnear_owes() {
             self.vc.near_moved = true;
         }
         self.drop_unreached_cells(&st)?;

@@ -830,6 +830,16 @@ impl Eval {
         out
     }
 
+    /// Whether a row a reader saw gone is gone and no level took out what cited it. A row gone while its edges were
+    /// derived again and back when they stood holds as it did: what cites it stands.
+    pub(super) fn vnear_owes(&mut self) -> bool {
+        let owed: Vec<(usize, u64, u64)> = self.vc.near_owed.iter().filter(|r| !self.vc.near_out.contains(*r)).copied().collect();
+        owed.into_iter().any(|(ci, a, d)| {
+            let forests = self.vc.vforests(&mut self.store, ci);
+            !forests.iter().any(|(_, f)| f.near_is(a, Term::from_bits(d)))
+        })
+    }
+
     /// Whether the retraction, now whole, left a nearest a row it did not hold before that some rule reading it was not
     /// fired on (`vnear_came`). A row a level put in and a later level took out (the condition gone a level before the
     /// edges under it) is none.

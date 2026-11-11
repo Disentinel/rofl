@@ -12,6 +12,10 @@ root(rederive, "rofl::engine::addition::Eval::rederive_gone").
 root(conclude, "rofl::engine::addition::Eval::conclude_level").
 root(fire_whole, "rofl::engine::addition::Eval::fire_whole").
 root(first_pass, "rofl::engine::volumes::Eval::by_volumes").
+-- the three steps a volume takes in a round of the delta
+root(takes_out, "rofl::session::Session::retract_file_delta").
+root(takes_in, "rofl::session::Session::load_delta").
+root(lays, "rofl::session::Session::put_delta").
 
 whole("rofl::store::Store::rel_all").
 whole("rofl::store::Store::rel_persp").
