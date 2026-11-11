@@ -2689,6 +2689,28 @@ impl Volumes {
         loop {
             let first = rounds == 0;
             if !first && wave.is_empty() && seeds.is_empty() && !relaid {
+                if meter::on() {
+                    // a copy taken out and not laid again though a volume makes what it copies: the rounds ended owing it
+                    let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
+                    for (j, gs) in taken.iter().enumerate() {
+                        for (g, _) in gs {
+                            if !ws[j].store.alive(*g) && cross.made_elsewhere(j, *g, &mut ws, &self.laid) {
+                                let rel = ws[j].store.rec(*g).rel;
+                                meter::rel(ws[j].h.name(rel), meter::Count::Owed);
+                            }
+                        }
+                    }
+                    // a copy that stands though no volume makes what it copies
+                    for j in 0..ws.len() {
+                        let ids: Vec<FactId> = self.laid[j].ids.iter().copied().filter(|g| ws[j].store.alive(*g)).collect();
+                        for g in ids {
+                            if !cross.made_elsewhere(j, g, &mut ws, &self.laid) {
+                                let rel = ws[j].store.rec(g).rel;
+                                meter::rel(ws[j].h.name(rel), meter::Count::Orphan);
+                            }
+                        }
+                    }
+                }
                 break;
             }
             rounds += 1;
@@ -2708,6 +2730,10 @@ impl Volumes {
                 let mut out = std::mem::take(&mut base[j]);
                 out.extend(copies.iter().copied().filter(|g| self.worlds[j].eval.store.alive(*g)));
                 for g in copies {
+                    if meter::on() {
+                        let e = &self.worlds[j].eval;
+                        meter::rel(e.h.name(e.store.rec(g).rel), meter::Count::Taken);
+                    }
                     self.laid[j].ids.remove(&g);
                     let tags = self.laid[j].rules.remove(&g).unwrap_or_default();
                     taken[j].push((g, tags));

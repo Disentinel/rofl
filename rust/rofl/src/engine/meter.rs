@@ -2,7 +2,10 @@
 //! Counted only where ROFL_DELTA_FACTS names the file they are written to (a harness's oracle, docs/knobs.md);
 //! counts, no time, so the same delta writes the same facts. Per relation: `out(Rel, N)` facts taken out with what
 //! they rested on, `kept(Rel, N)` facts that lost a firing and stood on another, `back(Rel, N)` facts taken out and
-//! derived again, `tries(Rel, N)` attempts to derive one again. Per rule: `whole(R, Head, N)` times it was
+//! derived again, `tries(Rel, N)` attempts to derive one again; between volumes, `taken(Rel, N)` copies a volume was
+//! laid that were taken out of it, `owed(Rel, N)` of them those not laid again when the rounds ended though a volume
+//! still makes what they copy, `orphan(Rel, N)` copies that stand when the rounds end though no volume makes what they
+//! copy. Per rule: `whole(R, Head, N)` times it was
 //! withdrawn and fired over the whole store, `keyed(R, Head, N)` times it was asked again at the keys a change named.
 //! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
 //! `moved(Step, N)` the facts it was given.
@@ -16,11 +19,14 @@ pub enum Count {
     Kept,
     Back,
     Tries,
+    Taken,
+    Owed,
+    Orphan,
 }
 
 #[derive(Default)]
 struct Meter {
-    rel: BTreeMap<String, [u64; 4]>,
+    rel: BTreeMap<String, [u64; 7]>,
     rule: BTreeMap<(&'static str, String, String), u64>,
     step: BTreeMap<&'static str, (u64, u64)>,
 }
@@ -61,7 +67,7 @@ pub fn write() {
     use std::fmt::Write;
     let mut out = String::new();
     for (r, n) in &m.rel {
-        for (name, n) in ["out", "kept", "back", "tries"].iter().zip(n).filter(|(_, n)| **n > 0) {
+        for (name, n) in ["out", "kept", "back", "tries", "taken", "owed", "orphan"].iter().zip(n).filter(|(_, n)| **n > 0) {
             let _ = writeln!(out, "{name}[delta]({r}, {n}).");
         }
     }

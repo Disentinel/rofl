@@ -8,10 +8,13 @@
 --                            over the whole store (Eval::agg_keys gives the key up)
 --   returns_by_shape(Rel)    a relation recursive with itself: a fact of it that loses a firing is never kept in
 --                            place (Eval::overdelete), it goes and is derived again where it still holds
+--   every copy returns        a copy taken out of a volume is laid there again where a volume still makes what it
+--                            copies (Volumes::pass_on): none is owed when the rounds end, and none stands
+--                            that no volume makes (an orphan)
 -- and the verdicts: `held` the forecast and the delta agree, `off` the forecast said it and the delta did not,
 -- `unforeseen` the delta did it and no forecast said it. What is unforeseen is what the model has no word for yet.
 
-edb(out). edb(kept). edb(back). edb(tries). edb(whole). edb(keyed). edb(step). edb(moved).
+edb(out). edb(kept). edb(back). edb(tries). edb(whole). edb(keyed). edb(step). edb(moved). edb(taken). edb(owed). edb(orphan).
 
 -- ------------------------------------------------------------------------------------ the reflection, by slot
 dm_lit[delta](R, K, Rel, As) :- premise_lit(R, K, L), L = $lit(Rel, _, As, _).
@@ -62,3 +65,8 @@ returns_unforeseen[delta](Rel, Out, Back) :- out[delta](Rel, Out), back[delta](R
 back_total[delta](T)         :- T is sum(N ; Rel : back[delta](Rel, N)).
 back_foreseen[delta](T)      :- T is sum(B ; Rel : returns_held[delta](Rel, _, B)).
 back_unforeseen[delta](T)    :- T is sum(B ; Rel : returns_unforeseen[delta](Rel, _, B)).
+-- a copy owed: the volume that read it counts and joins without it, and answers short
+copy_owed[delta](Rel, N)     :- owed[delta](Rel, N).
+-- a copy with no original: a volume reads a fact no volume makes
+copy_orphan[delta](Rel, N)   :- orphan[delta](Rel, N).
+copies_taken[delta](T)       :- T is sum(N ; Rel : taken[delta](Rel, N)).
