@@ -459,7 +459,8 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
 }
 
 /// A run its world answers by volumes (`engine/volumes.rs`): questions asked, of a world evaluated once, and
-/// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world.
+/// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world, `=1` of volumes
+/// under VOLUMES_FROM.
 fn by_volumes(o: &Opts) -> bool {
     !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_) | Q::Why(_) | Q::WhyAll(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
         && o.below.is_empty() && o.kept.is_none() && o.save.is_none() && !o.propose && std::env::var("ROFL_VOLUMES").as_deref() != Ok("0")
@@ -487,7 +488,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     drop(texts);
     // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
     let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
-    if cut.files.len() < 2 || bytes < VOLUMES_FROM { return None; }
+    if cut.files.len() < 2 || bytes < VOLUMES_FROM && std::env::var("ROFL_VOLUMES").as_deref() != Ok("1") { return None; }
     let mut s = Session::fresh(o.budget);
     set_walls(o, &mut s);
     if let Err(d) = s.load_all(&[cut.core.as_str()], None) {

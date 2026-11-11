@@ -339,6 +339,65 @@ fn a_nearest_moved_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
+/// A nearest row gone and back within a retraction (its tree's edges are concluded, and derived again where a fact
+/// below them lost one of two firings) leaves the nearest as it stood: the edit goes by delta.
+fn a_nearest_row_gone_and_back_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("nearest-back");
+    d.write("near.rofl", "edb(e). edb(root). edb(alt). edb(mark). edb(leaf).\nlive(X) :- root(X).\nlive(X) :- alt(X).\nlive(X) :- live(Y), e(Y, X).\nparent(A, D) :- e(A, D), live(A).\nnearest near(A, D) of parent(A, D) where mark(A).\nowner(D, A) :- leaf(D), near(A, D).\n");
+    let tree = "root(r). e(r, x). e(x, y). e(y, z). mark(r). mark(x). leaf(z). leaf(y).\n";
+    let args = ["ask", "owner(D, A)", "boot.rofl", "near.rofl", "t.rofl"];
+    d.write("t.rofl", &format!("{tree}alt(x).\n"));
+    answered(&rofl(&d, brk, &args), "D = z, A = x", "kept")?;
+    d.write("t.rofl", tree);
+    let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+    ensure(got.out == fresh.out && got.err.contains("by delta"), || format!("a nearest row gone and back: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))
+}
+
+/// A DELTA OF VOLUMES, a corpus of 24 files small enough to read: `model` over the files' facts `was`, kept by the
+/// question, then `now` taken by delta, and the answers are those of the files evaluated anew. Files 0 and 1 are the
+/// widest, so they stand in two volumes wherever there are two; every other file reads what they make.
+fn volumes_delta(name: &str, model: &str, each: &dyn Fn(usize, &dyn Fn(usize) -> String) -> String, was: &str, now: &str, brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new(name);
+    let n = |i: usize| format!("n{i:016x}");
+    let mut text = String::new();
+    for i in 0..24 {
+        text += &format!("here(\"{}_z\").\n", n(i));
+        if i < 2 {
+            text += &(0..4).map(|k| format!("pad(\"{}_{k}\").\n", n(i))).collect::<String>();
+        } else {
+            text += &each(i, &n);
+        }
+    }
+    d.write("m.rofl", &format!("edb(here). edb(pad).\n{model}"));
+    let args = ["ask", "t(Z, X)", "boot.rofl", "m.rofl", "f.rofl"];
+    let env = [("ROFL_VOLUMES", "1".to_string())];
+    let fill = |t: &str| t.replace("F0", &n(0)).replace("F1", &n(1));
+    d.write("f.rofl", &format!("{text}{}", fill(was)));
+    let kept = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+    ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("{name}: not kept by volumes: {} {:?}", kept.code, kept.err))?;
+    d.write("f.rofl", &format!("{text}{}", fill(now)));
+    let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+    let anew = rofl_env(BIN, &d, &d.0.join("anew"), &env, brk, &args);
+    ensure(got.out == anew.out && got.err.contains("files taken by delta"), || format!("{name}: a delta of volumes answers otherwise than the files anew: {} lines against {}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))
+}
+
+/// A copy with no original goes: a fact a volume made for the length of a round (its `not` read a copy not yet laid)
+/// was copied to the others, and goes from them when the copy that takes it out is laid.
+fn a_copy_with_no_original_goes(brk: Option<&str>) -> Result<(), String> {
+    let model = "edb(q). edb(link). edb(bad). edb(uses).\nr(X) :- link(Y, X), bad(Y).\np(X) :- q(X), not r(X).\nt(Z, X) :- uses(Z, X), here(Z), p(X).\n";
+    let each = |i: usize, n: &dyn Fn(usize) -> String| format!("uses(\"{0}_z\", \"{1}_x\").\nuses(\"{0}_z\", \"{2}_x\").\n", n(i), n(0), n(5));
+    let was = format!("link(\"F1_y\", \"F0_x\").\nq(\"n{:016x}_x\").\n", 5);
+    volumes_delta("orphan", model, &each, &was, &format!("{was}q(\"F0_x\").\nbad(\"F1_y\").\n"), brk)
+}
+
+/// A volume waits for its copy: the copy was taken out while a firing of the volume's own held the fact up, that
+/// firing went as copies were laid, and the original, standing all along, is laid there again.
+fn a_volume_waits_for_its_copy(brk: Option<&str>) -> Result<(), String> {
+    let model = "edb(q1). edb(q2). edb(link). edb(bad). edb(uses).\nr(Z) :- link(Y, Z), bad(Y).\nw(Z) :- here(Z), not r(Z).\np(X) :- q1(X).\np(X) :- q2(X).\np(X) :- uses(Z, X), w(Z).\nt(Z, X) :- uses(Z, X), here(Z), p(X).\n";
+    let each = |i: usize, n: &dyn Fn(usize) -> String| format!("uses(\"{0}_z\", \"{1}_x\").\nlink(\"{2}_y\", \"{0}_z\").\n", n(i), n(0), n(1));
+    volumes_delta("waits", model, &each, "q2(\"F0_x\").\nq1(\"F0_x\").\n", "q2(\"F0_x\").\nbad(\"F1_y\").\n", brk)
+}
+
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.
 fn touched_is_not_stale(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("touch");
@@ -786,7 +845,7 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 29] = [
+const CASES: [(&str, Case); 32] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -816,6 +875,9 @@ const CASES: [(&str, Case); 29] = [
     ("a_far_world_is_no_base", a_far_world_is_no_base),
     ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
     ("a_nearest_moved_goes_by_delta", a_nearest_moved_goes_by_delta),
+    ("a_nearest_row_gone_and_back_goes_by_delta", a_nearest_row_gone_and_back_goes_by_delta),
+    ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
+    ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
