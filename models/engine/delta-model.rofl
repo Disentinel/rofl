@@ -139,3 +139,16 @@ time_unforeseen[delta](What, Ms, Pct) :- long[delta](What, Ms, Pct), not reads_r
 renamed_pct[delta](P)        :- counted[delta](term_asked, A), counted[delta](term_named_again, N), A > 0, P is N * 100 / A.
 one_dictionary_gains_little[delta](P) :- renamed_pct[delta](P), P < 10.
 one_dictionary_gains_much[delta](P)   :- renamed_pct[delta](P), P >= 10.
+
+-- ------------------------------------------------------------------------------------------ a premise read in place
+-- THE FORECAST OF READING A PREMISE WHERE IT LIES (w_scroll_foreign_premise), from the shape of the crossing: a copy
+-- laid is found twice, once by the plan asking the neighbours' indexes on one thread and once by the rule that joins
+-- it; what the rule then concludes is derived whichever way the premise is seen. So reading in place takes off the
+-- plan and leaves the laying's firings: `in_place_gains[delta](Pct)` is the plan's share of the delta's wall parts,
+-- the most it can give in time; what it gives in memory is the copies (`taken`, and the half of a volume that is
+-- laid).
+wall_part[delta](opens). wall_part[delta](gives). wall_part[delta](finds). wall_part[delta](dooms).
+wall_part[delta](out_and_in). wall_part[delta](plans). wall_part[delta](lays). wall_part[delta](notes).
+wall_part[delta](answers). wall_part[delta](keeps).
+wall_total[delta](T)         :- T is sum(Ms ; What : spent[delta](What, Ms), wall_part[delta](What)).
+in_place_gains[delta](Pct)   :- spent[delta](plans, P), wall_total[delta](T), T > 0, Pct is P * 100 / T.
