@@ -146,10 +146,17 @@ region(N) :- sel(_, _, N).
 -- for another word
 excluded(D, Name, N) :- sel(D, Other, N), entry(D, Name), Other != Name, not sel(D, Name, N).
 barred(D, Name, C)   :- excluded(D, Name, N), within(C, N), mark[value](C, call).
--- the calls that run for an entry: those of its regions, and those of every function they reach, less the barred
-runs_call(D, Name, C) :- sel(D, Name, N), within(C, N), mark[value](C, call), not barred(D, Name, C).
-runs_call(D, Name, C) :- does_fn(D, Name, H), in_fn[rust](H, C), mark[value](C, call), not barred(D, Name, C).
-does_fn(D, Name, H)   :- runs_call(D, Name, C), ran[rust](C, H), fn_item[rust](H), not test_fn[rust](H).
+-- THE FUNCTIONS AN ENTRY DOES: those the calls of its regions enter, and every function they reach, less the barred.
+-- Only a call written in a region can be barred, so the rest of the calls are one graph for every entry, walked and
+-- not stored; an entry's own part is where it enters that graph: from its regions, and from the calls in a region
+-- of a function it does.
+regional(C) :- sel(_, _, N), within(C, N), mark[value](C, call).
+graph plain_call(F, G) closure plain_reach.
+plain_call(F, G) :- in_fn[rust](F, C), mark[value](C, call), not regional(C), ran[rust](C, G), fn_item[rust](G), not test_fn[rust](G).
+enters(D, Name, G) :- sel(D, Name, N), within(C, N), mark[value](C, call), not barred(D, Name, C), ran[rust](C, G), fn_item[rust](G), not test_fn[rust](G).
+enters(D, Name, G) :- does_fn(D, Name, H), in_fn[rust](H, C), regional(C), not barred(D, Name, C), ran[rust](C, G), fn_item[rust](G), not test_fn[rust](G).
+does_fn(D, Name, G) :- enters(D, Name, G).
+does_fn(D, Name, H) :- enters(D, Name, G), plain_reach(G, H).
 does(D, Name, HQ)   :- does_fn(D, Name, H), fn_q[rust](H, HQ).
 does_n(D, Name, N)  :- entry(D, Name), N is count(H : does(D, Name, H)).
 
