@@ -557,7 +557,8 @@ unfolds where the view is one rule of one positive premise (`not in_fn(Q)` reads
 
 *Rows instead*, both engines, `view_reason` saying which: a view with no rule, a lattice, a well-founded world, a rule
 of the view that stages or aggregates, a view that reads itself (through other views or not), one read inside an
-aggregate or in another tense, and one read negated past one literal. A recursive view is a walk, not a name for a
+aggregate or in another tense, one read negated past one literal, and one a `nearest` or a closure is walked over (its
+condition or edges: the walk reads the view's rows, which are never stored). A recursive view is a walk, not a name for a
 body: the nearest ancestor with a property is its own declaration, `nearest` (below).
 
 *Saves* the view's rows and the joins that made them; the reader's join is the longer for it.

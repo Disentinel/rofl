@@ -11,6 +11,8 @@ pub struct Stage {
     pub rules: Rc<FxSet<Sym>>,
     /// the relations its rules conclude: what of them stands outside the cut books is a lemma
     pub heads: FxSet<Sym>,
+    /// the heads a rule above the stage reads: only these are lemmas, the rest goes with the cut books
+    pub given: FxSet<Sym>,
     pub cut: Vec<Sym>,
     /// the rules of the lower stage whose own cone is widest, said with it
     pub wide: Vec<String>,
@@ -40,6 +42,9 @@ impl Eval {
             st.heads = lower.iter().map(|r| r.clause.head.rel).collect();
             st.rules = Rc::new(lower.iter().map(|r| r.id).collect());
         }
+        // what a rule above reads, and what the world asks, is given
+        let asked: Vec<Sym> = self.store.rel_all(&self.h, self.v.asks).into_iter().filter_map(|f| self.store.args(f).first().and_then(|t| t.as_atom())).collect();
+        st.given = all.iter().filter(|r| !st.rules.contains(&r.id)).flat_map(|r| r.clause.body.iter().flat_map(BodyElem::lits_deep).map(|l| l.rel).collect::<Vec<_>>()).chain(asked).filter(|rel| st.heads.contains(rel)).collect();
         Some(st)
     }
 
@@ -123,7 +128,7 @@ impl Eval {
         let lower: Vec<&&ERule> = rules.iter().zip(&taken).filter(|(_, t)| **t).map(|(r, _)| r).collect();
         let heads = lower.iter().map(|r| r.clause.head.rel).collect();
         let rules = Rc::new(lower.iter().map(|r| r.id).collect());
-        Some(Stage { rules, heads, cut, wide })
+        Some(Stage { rules, heads, given: FxSet::default(), cut, wide })
     }
 
     /// Whether a rule fires in the pass under way: in the lower stage, only its rules; above it, none of them.
@@ -147,10 +152,13 @@ impl Eval {
         low?;
         let mut drop = Vec::new();
         let mut lemmas = Vec::new();
+        let mut unread = Vec::new();
         for id in self.store.all_facts() {
             let r = self.store.rec(id);
             if st.cut.contains(&r.persp) {
                 drop.push(id);
+            } else if !r.base() && st.heads.contains(&r.rel) && !st.given.contains(&r.rel) {
+                unread.push(id);
             } else if !r.base() && st.heads.contains(&r.rel) {
                 lemmas.push(id);
             }
@@ -158,9 +166,12 @@ impl Eval {
         for &id in &lemmas {
             self.store.make_lemma(id);
         }
+        let unread_n = unread.len();
+        drop.extend(unread);
         self.store.remove_many(&drop);
+        self.note_staged_away(&st);
         let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
-        self.diags.push(format!("stage: {} rules below, {} lemmas, {} facts of {} cut; widest below: {}", st.rules.len(), lemmas.len(), drop.len(), books.join(" "), st.wide.join(", ")));
+        self.diags.push(format!("stage: {} rules below, {} lemmas, {} facts of {} cut, {} nothing above reads; widest below: {}", st.rules.len(), lemmas.len(), drop.len() - unread_n, books.join(" "), unread_n, st.wide.join(", ")));
         self.stage_pass = StagePass::Upper(st.rules);
         self.run_whole()
     }
@@ -184,7 +195,7 @@ impl Eval {
                 continue;
             }
             let r = low.store.rec(id);
-            if st.cut.contains(&r.persp) || !(r.base() || st.heads.contains(&r.rel)) {
+            if st.cut.contains(&r.persp) || !(r.base() || st.given.contains(&r.rel)) {
                 continue;
             }
             let args: Vec<Term> = low.store.args(id).iter().map(|t| super::volumes::copy_term(*t, &low.h, &mut self.h, syms, funcs)).collect();
@@ -207,7 +218,7 @@ impl Eval {
             .filter(|&id| {
                 let r = low.store.rec(id);
                 match st {
-                    Some(st) => !st.cut.contains(&r.persp) && (r.base() || st.heads.contains(&r.rel)),
+                    Some(st) => !st.cut.contains(&r.persp) && (r.base() || st.given.contains(&r.rel)),
                     None => r.base(),
                 }
             })
@@ -280,6 +291,22 @@ impl Eval {
             }
         }
         Ok(())
+    }
+
+    /// What a staged evaluation takes away: the cut books, and the relations concluded below that nothing above reads.
+    pub(super) fn note_staged_away(&mut self, st: &Stage) {
+        self.staged_away = Some((st.cut.clone(), st.heads.iter().copied().filter(|r| !st.given.contains(r)).collect()));
+    }
+
+    /// Why a question is refused where the stage took its rows away: a relation of a cut book, or one concluded below
+    /// that nothing above reads, is not kept. None when the world kept it.
+    pub fn staged_away(&self, rel: Sym, book: Option<Sym>) -> Option<String> {
+        let (cut, gone) = self.staged_away.as_ref()?;
+        let n = self.h.name(rel);
+        if let Some(b) = book.filter(|b| cut.contains(b)) {
+            return Some(format!("'{n}[{}]' is a book the plan cuts (`cut[fixpointplan]`): its facts were dropped once the lower stage had proved its lemmas", self.h.name(b)));
+        }
+        gone.contains(&rel).then(|| format!("'{n}' is concluded below the plan's cut and nothing above it reads it, so it is not kept as a lemma"))
     }
 
     /// Whether a fact is a lemma: given, in a relation the lower stage concludes.

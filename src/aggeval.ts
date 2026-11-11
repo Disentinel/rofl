@@ -46,7 +46,7 @@ import {
 } from './reflect.ts';
 import { reasonOf, reasonText, causeText, shown } from './shrug.ts';
 import { tarjan } from './scc.ts';
-import { readFunctions, readTrees, declaredOf } from './structure.ts';
+import { readFunctions, readTrees, declaredOf, closureNames } from './structure.ts';
 import { policyStore, planReuse, noReuse, reusedRec, digest53, type ReusePlan } from './reuse.ts';
 import { SAFETY_DENSE } from './kernel-dense.ts';
 import { checkWants } from './want.ts';
@@ -1152,7 +1152,7 @@ export class AggEval {
     this.tags = readTags(this.store, decls);
     const low = lowerTags(this.tags, decoded.rules);
     const cells = new Set([...decls.map(([r]) => r), ...tagsAsLattices(this.tags).map(([r]) => r)]);
-    const unf = unfoldViews(declaredOf(this.store, 'view'), low.rules, (r) => cells.has(r), this.wellFounded);
+    const unf = unfoldViews(declaredOf(this.store, 'view'), low.rules, (r) => cells.has(r), this.wellFounded, new Set([...declaredOf(this.store, 'nearest'), ...closureNames(this.store)]));
     const rules = unf.rules;
     this.tagChanged = new Set([...low.changed, ...unf.changed]);
     this.viewReason = unf.reasons;

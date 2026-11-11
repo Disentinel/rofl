@@ -1542,6 +1542,9 @@ impl Session {
         if let Some(m) = self.eval.outside_cone(rel) {
             return Err(m);
         }
+        if let Some(m) = self.eval.staged_away(rel, (!matches!(lit.book, Book::Bare)).then_some(persp)) {
+            return Err(m);
+        }
         if rel == self.eval.v.derived_by || rel == self.eval.v.asserted_by {
             self.eval.settle_provenance();
         }
