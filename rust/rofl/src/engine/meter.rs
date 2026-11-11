@@ -12,6 +12,8 @@
 //! `whole` a rule derived whole that no longer makes it, `keyed` an aggregate asked again that no longer makes it.
 //! `read(Step, R, Head, N)` the rows of the store rule `R` read in a step, the delta's weight: rows read are the
 //! same on every machine, time is not.
+//! `walked(What, N)` the records a pass over a whole volume walked (the citer index made, a snapshot of what stands,
+//! the facts of a volume looked through for a file's), summed over the volumes and rounds.
 //! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
 //! `moved(Step, N)` the facts it was given. A delta of one world (bin/rofl/delta.rs) writes them too, its steps takes_out and takes_in.
 
@@ -37,6 +39,7 @@ struct Meter {
     seed: BTreeMap<(&'static str, &'static str, String), u64>,
     read: BTreeMap<(&'static str, String, String), u64>,
     once: BTreeMap<String, std::collections::HashSet<u64>>,
+    walk: BTreeMap<&'static str, u64>,
 }
 
 thread_local! {
@@ -78,6 +81,11 @@ pub fn went(name: &str, key: u64) {
     });
 }
 
+/// A pass over a volume whole, by the records it walks: `walked(What, N)`, what a delta costs by the world and not by the edit.
+pub fn walk(what: &'static str, records: usize) {
+    with(|m| *m.walk.entry(what).or_default() += records as u64);
+}
+
 pub fn rule(how: &'static str, id: &str, head: &str) {
     with(|m| *m.rule.entry((how, id.to_string(), head.to_string())).or_default() += 1);
 }
@@ -106,6 +114,9 @@ pub fn write() {
     }
     for (r, keys) in &m.once {
         let _ = writeln!(out, "once[delta]({r}, {}).", keys.len());
+    }
+    for (what, n) in &m.walk {
+        let _ = writeln!(out, "walked[delta]({what}, {n}).");
     }
     for ((how, id, head), n) in &m.rule {
         let _ = writeln!(out, "{how}[delta]({id}, {head}, {n}).");

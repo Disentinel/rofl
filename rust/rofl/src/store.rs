@@ -1280,6 +1280,9 @@ pub struct Store {
     pub dirty: bool,
     /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
     pub arrivals: Option<Vec<FactId>>,
+    /// Where set, every fact that goes or comes back is noted with whether it stood before (`Volumes::pass_rounds`):
+    /// what a round moved, without a look at every record. A fact made new is known by its id.
+    pub flips: Option<Vec<(FactId, bool)>>,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
     /// what the world was told and when (`crate::journal`)
@@ -2073,6 +2076,9 @@ impl Store {
                 }
                 self.facts.set_flags(id, flags);
                 self.revived.entry(rel).or_default().push(id);
+                if let Some(f) = self.flips.as_mut() {
+                    f.push((id, false));
+                }
                 revived = true;
                 id
             }
@@ -2773,6 +2779,9 @@ impl Store {
             self.base_moved.insert(r.rel);
         }
         self.facts.add_flags(id, F_DEAD);
+        if let Some(f) = self.flips.as_mut() {
+            f.push((id, true));
+        }
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
         self.bump();
@@ -2796,6 +2805,9 @@ impl Store {
             self.base_moved.insert(r.rel);
         }
         self.facts.add_flags(id, F_DEAD);
+        if let Some(f) = self.flips.as_mut() {
+            f.push((id, true));
+        }
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
         self.bump();
@@ -2825,6 +2837,7 @@ impl Store {
     /// The premise -> citing facts index, built from the firings the store holds.
     pub fn index_citers(&mut self) {
         let keys = self.firing_keys();
+        crate::engine::meter::walk("citer_index", keys.len());
         let ix = Citers::column(self.facts.len(), |f| {
             for &id in &keys {
                 for (_, _, prems) in self.firings(id) {

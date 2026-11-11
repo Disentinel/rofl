@@ -2729,7 +2729,15 @@ impl Volumes {
                 }
                 doomed
             };
-            let before: Vec<Vec<bool>> = self.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect();
+            // what the round moves is noted as it moves: each fact that went, came back or was made, with whether it
+            // stood before the round and whether it stands once its volume took its part out and in (a fact made in
+            // the round did not stand before it, whatever went of it since: the made are read first)
+            let mut moved: Vec<crate::store::FxMap<FactId, (bool, bool)>> = vec![Default::default(); k];
+            let mut first: Vec<FactId> = Vec::with_capacity(k);
+            for w in &mut self.worlds {
+                w.eval.store.flips = Some(Vec::new());
+                first.push(w.eval.store.len_ids());
+            }
             // every volume takes its part out and in on a thread of its own: a volume writes only itself
             let mut parts: Vec<(Vec<FactId>, String)> = Vec::with_capacity(k);
             for j in 0..k {
@@ -2768,7 +2776,17 @@ impl Volumes {
             })?;
             // what stands once its volume took its part out and in: copies are judged by it below, so where the copies
             // laid into its volume take it out after all, it is a seed of the next round
-            let mid: Vec<Vec<bool>> = self.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect();
+            for (j, w) in self.worlds.iter_mut().enumerate() {
+                let st = &mut w.eval.store;
+                let flips = st.flips.replace(Vec::new()).unwrap_or_default();
+                for (g, was) in (first[j]..st.len_ids()).map(|g| (g, false)).chain(flips) {
+                    moved[j].entry(g).or_insert((was, false));
+                }
+                for (g, m) in moved[j].iter_mut() {
+                    m.1 = st.alive(*g);
+                }
+                first[j] = st.len_ids();
+            }
             let mut plan = {
                 let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
                 let mut plan = cross.plan(&wave, &mut ws, &self.laid, &mut caches);
@@ -2836,9 +2854,16 @@ impl Volumes {
                         }
                     }
                 }
+                // (what the laying moved stood, or did not, before the round as it did mid-round)
+                let flips = w.eval.store.flips.take().unwrap_or_default();
+                for (g, was) in (first[j]..w.eval.store.len_ids()).map(|g| (g, false)).chain(flips) {
+                    moved[j].entry(g).or_insert((was, was));
+                }
                 let st = &w.eval.store;
-                for id in 0..st.len_ids() {
-                    let was = before[j].get(id as usize).copied().unwrap_or(false);
+                let mut ids: Vec<FactId> = moved[j].keys().copied().collect();
+                ids.sort_unstable();
+                for &id in &ids {
+                    let was = moved[j][&id].0;
                     if laid.ids.contains(&id) || was == st.alive(id) {
                         continue;
                     }
@@ -2848,7 +2873,7 @@ impl Volumes {
                         seeds.push((j, id));
                     }
                 }
-                seeds.extend((0..mid[j].len() as FactId).filter(|g| mid[j][*g as usize] && !st.alive(*g) && !laid.ids.contains(g) && !(before[j].get(*g as usize).copied().unwrap_or(false) && !doomed[j].contains(g))).map(|g| (j, g)));
+                seeds.extend(ids.iter().copied().filter(|g| moved[j][g].1 && !st.alive(*g) && !laid.ids.contains(g) && !(moved[j][g].0 && !doomed[j].contains(g))).map(|g| (j, g)));
                 if !(ch.made.is_empty() && ch.again.is_empty()) {
                     next.push(ch);
                 }

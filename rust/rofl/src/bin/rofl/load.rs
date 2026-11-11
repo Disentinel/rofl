@@ -686,11 +686,18 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         }
         // what the others laid here is theirs, not the file's
         let st = &w.eval.store;
+        // (a fact of a file names a node of it: only a fact with an argument that may is spelled out)
+        let node_of = |t: &rofl::term::Term| match t.kind() {
+            rofl::term::TermK::Atom(x) | rofl::term::TermK::Str(x) => rofl::engine::volumes::file_of(w.eval.h.name(x)).is_some_and(|f| gone.contains(f)),
+            rofl::term::TermK::Func(_) => true,
+            _ => false,
+        };
         let held: Vec<(u32, String)> = (0..st.len_ids())
-            .filter(|&id| st.alive(id) && st.rec(id).base() && !laid[i].ids.contains(&id))
+            .filter(|&id| st.alive(id) && st.rec(id).base() && !laid[i].ids.contains(&id) && st.args(id).iter().any(node_of))
             .map(|id| (id, st.key(&w.eval.h, id)))
             .filter(|(_, key)| rofl::engine::volumes::file_of(key).is_some_and(|f| gone.contains(f)))
             .collect();
+        rofl::engine::meter::walk("held", st.len_ids() as usize);
         let had: std::collections::HashSet<&str> = held.iter().map(|(_, key)| key.as_str()).collect();
         let out: Vec<u32> = held.iter().filter(|(_, key)| !given.contains(key)).map(|(id, _)| *id).collect();
         let add: String = given.iter().filter(|key| !had.contains(key.as_str())).map(|key| format!("{key}.\n")).collect();

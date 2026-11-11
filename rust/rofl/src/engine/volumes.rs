@@ -422,6 +422,12 @@ impl Eval {
         st.held = ws.iter().map(|w| (w.e.store.len_ids() - core, w.laid.len())).collect();
         st.cool_files = ws.iter().map(|w| w.cooled.0.len()).sum();
         st.cool_bytes = ws.iter().flat_map(|w| &w.cooled.0).map(|k| k.size).sum();
+        // what a retraction reads is indexed here, on the volumes' threads, and kept with them: an edit then indexes
+        // what it moved, not the world
+        on_threads(&mut ws, &|_, w| {
+            w.e.index_for_retraction();
+            Ok(())
+        })?;
         Ok((ws, st))
     }
 }

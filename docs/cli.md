@@ -715,7 +715,7 @@ fired over the whole store and `keyed[delta](R, Head, N)` times it was asked aga
 those not laid again when the rounds ended though a volume still makes what they copy, `orphan[delta](Rel, N)` copies
 that stand though no volume makes what they copy (the last two are defects where not zero: `copy_owed`, `copy_orphan`); `seed[delta](Step, Cause,
 Rel, N)` the facts a step began taking out and what began it (`removed`, `negation`, `nearest`, `tree`, `whole`, `keyed`),
-`read[delta](Step, R, Head, N)` the rows rule `R` read in a step, the delta's weight (`heavy[delta](Step, Head, Rows, Pct)`
+`walked[delta](What, N)` the records a pass over a whole volume walked, `read[delta](Step, R, Head, N)` the rows rule `R` read in a step, the delta's weight (`heavy[delta](Step, Head, Rows, Pct)`
 names what reads a twentieth of it or more); per
 step of a volume `step[delta](takes_out|takes_in|lays, N)` and `moved[delta](Step, Facts)`.
 models/engine/delta-model.rofl holds the hypotheses, each a forecast from the shape of the rules and a verdict against

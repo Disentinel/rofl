@@ -317,6 +317,7 @@ impl Eval {
     /// What cites a row of a tree, by the row's descendant (`Store::vciters`), from every firing the store keeps.
     pub(super) fn vindex_citers(&mut self) {
         let mut cited: Vec<(FactId, Sym)> = Vec::new();
+        super::meter::walk("row_citer_index", self.store.len_ids() as usize);
         for id in self.store.firing_keys() {
             for (_, _, prems) in self.store.firings(id) {
                 for p in prems {
