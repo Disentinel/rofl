@@ -1001,7 +1001,7 @@ impl Eval {
             // a nearest this level's own facts moved: what cited a row it took out goes and is derived again here, and
             // the readers of this level fire on the rows it put in
             let went = self.vnear_went(lv, &st.news, &st.gone);
-            if went.is_empty() && !(st.retracting && !self.vnear_unfired(lv, &st.news, &st.gone).is_empty()) {
+            if went.is_empty() && (!st.retracting || self.vnear_unfired(lv, &st.news, &st.gone).is_empty()) {
                 return Ok(());
             }
             self.meter_seeds("nearest", &went);

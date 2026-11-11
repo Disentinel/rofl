@@ -264,7 +264,7 @@ impl Eval {
                     self.vc.vclosure_reason.push(why);
                 }
             }
-            let on = mode && !lemma && !self.vc.vclosure_blocked.contains(&ci) && !(witnessed && self.vc.vclosures[ci].prov_read);
+            let on = mode && !lemma && !self.vc.vclosure_blocked.contains(&ci) && (!witnessed || !self.vc.vclosures[ci].prov_read);
             let near = self.store.virtuals[ci].near.is_some();
             let c = &mut self.vc.vclosures[ci];
             c.active = on;

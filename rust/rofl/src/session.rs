@@ -2897,7 +2897,7 @@ impl Volumes {
                         seeds.push((j, id));
                     }
                 }
-                seeds.extend(ids.iter().copied().filter(|g| moved[j][g].1 && !st.alive(*g) && !laid.ids.contains(g) && !(moved[j][g].0 && !doomed[j].contains(g))).map(|g| (j, g)));
+                seeds.extend(ids.iter().copied().filter(|g| moved[j][g].1 && !st.alive(*g) && !laid.ids.contains(g) && (!moved[j][g].0 || doomed[j].contains(g))).map(|g| (j, g)));
                 if !(ch.made.is_empty() && ch.again.is_empty()) {
                     next.push(ch);
                 }
