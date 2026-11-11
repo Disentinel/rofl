@@ -2629,6 +2629,30 @@ fn trim_heap() {
 #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
 fn trim_heap() {}
 
+/// `f` over each world and its part, every world on a thread of its own; the first error.
+fn on_threads<P: Sync, T: Send>(worlds: &mut [Session], parts: &[P], f: impl Fn(&mut Session, &P) -> Result<T, String> + Sync) -> Result<Vec<T>, String> {
+    struct Own<'a>(&'a mut Session);
+    // SAFETY: the worlds of a set of volumes are evaluated on threads of their own (engine/volumes.rs); one is moved to
+    // a thread whole and is no one else's while it is there
+    unsafe impl Send for Own<'_> {}
+    let f = &f;
+    let out: Vec<Result<T, String>> = std::thread::scope(|sc| {
+        let hs: Vec<_> = worlds
+            .iter_mut()
+            .zip(parts)
+            .map(|(w, p)| {
+                let w = Own(w);
+                sc.spawn(move || {
+                    let w = w;
+                    f(w.0, p)
+                })
+            })
+            .collect();
+        hs.into_iter().map(|h| h.join().unwrap_or_else(|_| Err("a volume's worker panicked".into()))).collect()
+    });
+    out.into_iter().collect()
+}
+
 impl Volumes {
     /// A delta of the files: per volume the base facts it takes out and the text it takes in (`edits`), passed on
     /// to the others round by round until nothing moves. A round first overdeletes across the volumes what the facts
@@ -2669,24 +2693,29 @@ impl Volumes {
                 cross.doomed(std::mem::take(&mut seeds), &mut ws, &self.laid)
             };
             let before: Vec<Vec<bool>> = self.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect();
+            // every volume takes its part out and in on a thread of its own: a volume writes only itself
+            let mut parts: Vec<(Vec<FactId>, String)> = Vec::with_capacity(k);
             for j in 0..k {
                 let mut copies: Vec<FactId> = doomed[j].iter().copied().filter(|g| self.laid[j].ids.contains(g)).collect();
                 copies.sort_unstable();
                 let mut out = std::mem::take(&mut base[j]);
                 out.extend(copies.iter().copied().filter(|g| self.worlds[j].eval.store.alive(*g)));
-                if !out.is_empty() {
-                    self.worlds[j].retract_file_delta(&out)??;
-                }
                 for g in copies {
                     self.laid[j].ids.remove(&g);
                     let tags = self.laid[j].rules.remove(&g).unwrap_or_default();
                     taken[j].push((g, tags));
                 }
-                let add = std::mem::take(&mut texts[j]);
-                if !add.is_empty() {
-                    self.worlds[j].load_delta(&add, None).map_err(|e| e.join("; "))?;
-                }
+                parts.push((out, std::mem::take(&mut texts[j])));
             }
+            on_threads(&mut self.worlds, &parts, |w, (out, add)| {
+                if !out.is_empty() {
+                    w.retract_file_delta(out)??;
+                }
+                if !add.is_empty() {
+                    w.load_delta(add, None).map_err(|e| e.join("; "))?;
+                }
+                Ok(())
+            })?;
             let mut plan = {
                 let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
                 let mut plan = cross.plan(&wave, &mut ws, &self.laid, &mut caches);
@@ -2710,26 +2739,30 @@ impl Volumes {
                 plan
             };
             let mut next = Vec::new();
-            for j in 0..k {
-                let lay = std::mem::take(&mut plan.lay[j]);
+            let lays: Vec<Vec<(Sym, Sym, Vec<Term>, Vec<u32>)>> = (0..k).map(|j| std::mem::take(&mut plan.lay[j])).collect();
+            let puts = on_threads(&mut self.worlds, &lays, |w, lay| {
+                if lay.is_empty() {
+                    return Ok(Vec::new());
+                }
+                let facts: Vec<(Sym, Sym, Vec<Term>)> = lay.iter().map(|(r, p, a, _)| (*r, *p, a.clone())).collect();
+                w.put_delta(&facts)
+            })?;
+            for (j, (lay, put)) in lays.into_iter().zip(puts).enumerate() {
                 let again = std::mem::take(&mut plan.again[j]);
                 let w = &mut self.worlds[j];
                 let laid = &mut self.laid[j];
                 let mut ch = Change { at: j, ..Default::default() };
-                if !lay.is_empty() {
-                    let facts: Vec<(Sym, Sym, Vec<Term>)> = lay.iter().map(|(r, p, a, _)| (*r, *p, a.clone())).collect();
-                    for ((id, new), (_, _, _, rules)) in w.put_delta(&facts)?.into_iter().zip(lay) {
-                        if new {
-                            laid.ids.insert(id);
-                            ch.again.extend(rules.iter().map(|&r| (id, r)));
-                            laid.rules.insert(id, rules);
-                        } else if laid.ids.contains(&id) {
-                            let tags = laid.rules.entry(id).or_default();
-                            for r in rules {
-                                if !tags.contains(&r) {
-                                    tags.push(r);
-                                    ch.again.push((id, r));
-                                }
+                for ((id, new), (_, _, _, rules)) in put.into_iter().zip(lay) {
+                    if new {
+                        laid.ids.insert(id);
+                        ch.again.extend(rules.iter().map(|&r| (id, r)));
+                        laid.rules.insert(id, rules);
+                    } else if laid.ids.contains(&id) {
+                        let tags = laid.rules.entry(id).or_default();
+                        for r in rules {
+                            if !tags.contains(&r) {
+                                tags.push(r);
+                                ch.again.push((id, r));
                             }
                         }
                     }
