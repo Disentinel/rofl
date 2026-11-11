@@ -713,7 +713,10 @@ facts that lost a firing and stood on another, `back[delta](Rel, N)` facts taken
 `tries[delta](Rel, N)` attempts to derive one again; per rule `whole[delta](R, Head, N)` times it was withdrawn and
 fired over the whole store and `keyed[delta](R, Head, N)` times it was asked again at the keys a change named; between volumes `taken[delta](Rel, N)` copies taken out of a volume, `owed[delta](Rel, N)` of them
 those not laid again when the rounds ended though a volume still makes what they copy, `orphan[delta](Rel, N)` copies
-that stand though no volume makes what they copy (the last two are defects where not zero: `copy_owed`, `copy_orphan`); per
+that stand though no volume makes what they copy (the last two are defects where not zero: `copy_owed`, `copy_orphan`); `seed[delta](Step, Cause,
+Rel, N)` the facts a step began taking out and what began it (`removed`, `negation`, `nearest`, `tree`, `whole`, `keyed`),
+`read[delta](Step, R, Head, N)` the rows rule `R` read in a step, the delta's weight (`heavy[delta](Step, Head, Rows, Pct)`
+names what reads a twentieth of it or more); per
 step of a volume `step[delta](takes_out|takes_in|lays, N)` and `moved[delta](Step, Facts)`.
 models/engine/delta-model.rofl holds the hypotheses, each a forecast from the shape of the rules and a verdict against
 these facts: loaded beside the rules of the world and the file, with no corpus (it reads the reflection), it answers in

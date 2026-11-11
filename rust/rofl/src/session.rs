@@ -2743,12 +2743,16 @@ impl Volumes {
             on_threads(&mut self.worlds, &parts, |w, (out, add)| {
                 if !out.is_empty() {
                     meter::in_step("takes_out");
+                    let mark = w.eval.read_mark();
                     w.retract_file_delta(out)??;
+                    w.eval.meter_read("takes_out", &mark);
                     meter::step("takes_out", out.len());
                 }
                 if !add.is_empty() {
                     meter::in_step("takes_in");
+                    let mark = w.eval.read_mark();
                     w.load_delta(add, None).map_err(|e| e.join("; "))?;
+                    w.eval.meter_read("takes_in", &mark);
                     meter::step("takes_in", add.lines().count());
                 }
                 Ok(())
@@ -2789,7 +2793,10 @@ impl Volumes {
                 let facts: Vec<(Sym, Sym, Vec<Term>)> = lay.iter().map(|(r, p, a, _)| (*r, *p, a.clone())).collect();
                 meter::in_step("lays");
                 meter::step("lays", facts.len());
-                w.put_delta(&facts)
+                let mark = w.eval.read_mark();
+                let put = w.put_delta(&facts);
+                w.eval.meter_read("lays", &mark);
+                put
             })?;
             for (j, (lay, put)) in lays.into_iter().zip(puts).enumerate() {
                 let again = std::mem::take(&mut plan.again[j]);

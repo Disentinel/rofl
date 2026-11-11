@@ -292,6 +292,28 @@ impl Eval {
         }
     }
 
+    /// The rows each rule has read so far, to be set against later (`meter_read`).
+    pub fn read_mark(&self) -> FxMap<Sym, u64> {
+        if !super::meter::on() {
+            return FxMap::default();
+        }
+        self.cost.read_by_rule.iter().map(|(r, n)| (*r, n.0)).collect()
+    }
+
+    /// What each rule read since `mark`, counted to the step of a delta it was read in (`engine/meter.rs`).
+    pub fn meter_read(&self, step: &'static str, mark: &FxMap<Sym, u64>) {
+        if !super::meter::on() {
+            return;
+        }
+        for (r, n) in &self.cost.read_by_rule {
+            let read = n.0 - mark.get(r).copied().unwrap_or(0);
+            if read > 0 {
+                let head = self.rule_at.get(r).map_or("", |i| self.h.name(self.rules[*i].clause.head.rel));
+                super::meter::read(step, self.h.name(*r), head, read);
+            }
+        }
+    }
+
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");
         let names: Vec<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();

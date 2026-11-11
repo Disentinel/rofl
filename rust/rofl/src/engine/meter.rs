@@ -10,6 +10,8 @@
 //! `seed(Step, Cause, Rel, N)` the facts a step began taking out, by what began it: `removed` a fact given out,
 //! `negation` a firing a new fact blocks, `nearest` a row gone from a nearest, `tree` an edge gone from a closure,
 //! `whole` a rule derived whole that no longer makes it, `keyed` an aggregate asked again that no longer makes it.
+//! `read(Step, R, Head, N)` the rows of the store rule `R` read in a step, the delta's weight: rows read are the
+//! same on every machine, time is not.
 //! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
 //! `moved(Step, N)` the facts it was given.
 
@@ -33,6 +35,7 @@ struct Meter {
     rule: BTreeMap<(&'static str, String, String), u64>,
     step: BTreeMap<&'static str, (u64, u64)>,
     seed: BTreeMap<(&'static str, &'static str, String), u64>,
+    read: BTreeMap<(&'static str, String, String), u64>,
 }
 
 thread_local! {
@@ -79,6 +82,10 @@ pub fn step(step: &'static str, facts: usize) {
     });
 }
 
+pub fn read(step: &'static str, id: &str, head: &str, rows: u64) {
+    with(|m| *m.read.entry((step, id.to_string(), head.to_string())).or_default() += rows);
+}
+
 /// The facts counted so far, written to the file ROFL_DELTA_FACTS names; nothing where no delta ran.
 pub fn write() {
     let (Some(path), Some(m)) = (std::env::var_os("ROFL_DELTA_FACTS"), METER.lock().unwrap().take()) else { return };
@@ -94,6 +101,9 @@ pub fn write() {
     }
     for ((step, cause, r), n) in &m.seed {
         let _ = writeln!(out, "seed[delta]({step}, {cause}, {r}, {n}).");
+    }
+    for ((step, id, head), n) in &m.read {
+        let _ = writeln!(out, "read[delta]({step}, {id}, {head}, {n}).");
     }
     for (s, (n, facts)) in &m.step {
         let _ = writeln!(out, "step[delta]({s}, {n}).\nmoved[delta]({s}, {facts}).");
