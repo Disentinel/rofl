@@ -1147,6 +1147,7 @@ impl VClosureState {
                         }
                     });
                     self.vclosures[ci].rows = rows;
+                    super::meter::walk("nearest_forest", rows + marked.len());
                     vec![(s.rbook, Rc::new(Forest::build_nearest(&es, &marked)))]
                 }
                 None => {
@@ -1162,6 +1163,7 @@ impl VClosureState {
                         }
                     });
                     self.vclosures[ci].rows = rows;
+                    super::meter::walk("forest", rows);
                     let mut books: Vec<(Sym, Vec<(Term, Term)>)> = books.into_iter().collect();
                     books.sort_by_key(|b| b.0);
                     let graph = self.vclosures[ci].graph;
