@@ -498,9 +498,13 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
     }
     if let Some((mut core, mut v, sums)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
+        let t = std::time::Instant::now();
         let code = answer_volumes(o, &mut core, &mut v);
+        let t = rofl::engine::meter::spent("answers", t);
         let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
         if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut core, &mut v, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums), true) { eprintln!("the volumes are not kept: {e}"); }
+        rofl::engine::meter::spent("keeps", t);
+        rofl::engine::meter::write();
         return Some(code);
     }
     let files = cut.files.len();
@@ -638,7 +642,9 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         return None;
     }
     let open = |p: &str| -> Option<Session> {
+        let t = std::time::Instant::now();
         let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
+        rofl::engine::meter::spent("sums", t);
         let r = crate::kept::parse(&c.note)?;
         if r.engine_env_hold(c.this_build).is_some() || !r.scans.is_empty() {
             return None;
@@ -647,6 +653,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         set_walls(o, &mut s);
         Some(s)
     };
+    let t = std::time::Instant::now();
     let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
     let mut core = open(&format!("{k}.core.vol"))?;
     let mut worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
@@ -670,13 +677,14 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     for (i, w) in worlds.iter_mut().enumerate() {
         w.eval.anchors = Some(cross.anchors(i as u32));
     }
-    let t0 = std::time::Instant::now();
+    let t0 = rofl::engine::meter::spent("opens", t);
     let mut edits = Vec::new();
     for (i, w) in worlds.iter_mut().enumerate() {
         let gone: std::collections::HashSet<&str> = moved.iter().copied().filter(|f| old.get(*f).is_some_and(|o| o.1 == i)).collect();
         if gone.is_empty() && put[i].is_empty() {
             continue;
         }
+        let t = std::time::Instant::now();
         let mut given: std::collections::HashSet<String> = std::collections::HashSet::new();
         for f in &put[i] {
             match core.eval.given_by_file(now[f], stage.as_ref()) {
@@ -684,6 +692,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
                 Err(e) => { say(&rofl::describe(&e)); return None; }
             }
         }
+        rofl::engine::meter::spent("gives", t);
         // what the others laid here is theirs, not the file's
         let st = &w.eval.store;
         // (a fact of a file names a node of it: only a fact with an argument that may is spelled out)
@@ -705,9 +714,10 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     }
     // what moved in a volume goes to the volumes that read it, and what that moves there on, until nothing moves
     let mut v = rofl::session::Volumes { worlds: std::mem::take(&mut worlds), laid: std::mem::take(&mut laid), stats: Default::default() };
+    rofl::engine::meter::spent("finds", t0);
     let rounds = match v.pass_on(&cross, edits) {
         Ok(r) => r,
-        Err(why) => { say(&why); return None; }
+        Err(why) => { rofl::engine::meter::write(); say(&why); return None; }
     };
     let shown = if rounds > 0 { format!(", what they show the others in {rounds} rounds") } else { String::new() };
     eprintln!("volumes: {} of {} files taken by delta in {} ms{shown}", moved.len(), now.len(), t0.elapsed().as_millis());

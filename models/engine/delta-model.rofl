@@ -14,7 +14,7 @@
 -- and the verdicts: `held` the forecast and the delta agree, `off` the forecast said it and the delta did not,
 -- `unforeseen` the delta did it and no forecast said it. What is unforeseen is what the model has no word for yet.
 
-edb(out). edb(kept). edb(back). edb(tries). edb(whole). edb(keyed). edb(step). edb(moved). edb(taken). edb(owed). edb(orphan). edb(seed). edb(read). edb(once). edb(walked).
+edb(out). edb(kept). edb(back). edb(tries). edb(whole). edb(keyed). edb(step). edb(moved). edb(taken). edb(owed). edb(orphan). edb(seed). edb(read). edb(once). edb(walked). edb(spent).
 
 -- ------------------------------------------------------------------------------------ the reflection, by slot
 dm_lit[delta](R, K, Rel, As) :- premise_lit(R, K, L), L = $lit(Rel, _, As, _).
@@ -117,3 +117,13 @@ once_total[delta](T)         :- T is sum(N ; Rel : once[delta](Rel, N)).
 walks_whole[delta](What, N)  :- walked[delta](What, N).
 walked_total[delta](T)       :- T is sum(N ; What : walked[delta](What, N)).
 given_total[delta](T)        :- moved[delta](takes_out, A), moved[delta](takes_in, B), T is A + B.
+
+-- --------------------------------------------------------------------------------------------- where the time is
+-- THE TIME OF A DELTA IS WHERE ITS ROWS ARE READ: the forecast is that the parts whose rules read rows (a volume
+-- takes out and in, a volume is laid copies) carry the time. A part of a twentieth of the time or more that reads
+-- no row is time the model has no word for.
+reads_rows[delta](out_and_in). reads_rows[delta](lays).
+spent_total[delta](T)        :- T is sum(Ms ; What : spent[delta](What, Ms)).
+long[delta](What, Ms, Pct)   :- spent[delta](What, Ms), spent_total[delta](T), T > 0, Pct is Ms * 100 / T, Pct >= 5.
+time_held[delta](What, Ms, Pct)       :- long[delta](What, Ms, Pct), reads_rows[delta](What).
+time_unforeseen[delta](What, Ms, Pct) :- long[delta](What, Ms, Pct), not reads_rows[delta](What).

@@ -1306,6 +1306,8 @@ pub struct Store {
     pub deaths: FxMap<Sym, u64>,
     /// Facts of each relation put back under the id they had, in the order they came back.
     pub revived: FxMap<Sym, Vec<FactId>>,
+    /// Facts retired, in the order they went, of the relations a nearest is told by (its edges, its condition).
+    pub died: FxMap<Sym, Vec<FactId>>,
     /// The rules whose cells are a counting tag's (the engine's sum over the
     /// derivations `p@count`): their cells carry the `tag` flag.
     pub tag_rules: HashSet<Sym>,
@@ -2648,12 +2650,16 @@ impl Store {
         let facts = &self.facts;
         let run = run_in(&mut self.idx, rel, p);
         let canon = &run.canon;
+        if Rc::strong_count(run.by_pat.as_ref().unwrap()) > 1 {
+            crate::engine::meter::walk("index_copied", canon.len() * run.by_pat.as_ref().unwrap().len());
+        }
         let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
         if let Some(m) = narrower(bp, mask).filter(|_| bp.len() >= MAX_PATTERNS && !bp.contains_key(&mask)) {
             return hits(facts, &run.loose, &bp[&m], &sub_vals(&bp[&m], pos, vals), limit);
         }
         let by_val = bp.entry(mask).or_insert_with(|| {
             self.argm_cloned += canon.len() as u64;
+            crate::engine::meter::walk("index_built", canon.len());
             PatIndex::build(h, facts, pos, canon)
         });
         hits(facts, &run.loose, by_val, vals, limit)
@@ -2714,6 +2720,7 @@ impl Store {
         let bp = Rc::make_mut(run.by_pat.as_mut().unwrap());
         if let std::collections::hash_map::Entry::Vacant(e) = bp.entry(at) {
             let rows: Vec<FactId> = run.canon.iter().chain(run.arrived.iter()).copied().collect();
+            crate::engine::meter::walk("index_built", rows.len());
             e.insert(PatIndex::build(h, facts, pos, &rows));
         }
         let by_val = &bp[&at];
@@ -2735,6 +2742,9 @@ impl Store {
             return;
         }
         let mut sig = Vec::new();
+        if Rc::strong_count(by_pat) > 1 {
+            crate::engine::meter::walk("index_copied", run.canon.len() * by_pat.len());
+        }
         for by_val in Rc::make_mut(by_pat).values_mut() {
             let pos = by_val.pos.clone();
             for &k in &run.staged {
@@ -2784,6 +2794,9 @@ impl Store {
         }
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
+        if let Some(d) = self.died.get_mut(&r.rel) {
+            d.push(id);
+        }
         self.bump();
         let k = self.chain(id).count();
         self.wits_live -= k;
@@ -2810,6 +2823,9 @@ impl Store {
         }
         self.n_live -= 1;
         *self.deaths.entry(r.rel).or_default() += 1;
+        if let Some(d) = self.died.get_mut(&r.rel) {
+            d.push(id);
+        }
         self.bump();
         if !self.unswept.contains(&(r.rel, r.persp)) {
             self.unswept.push((r.rel, r.persp));

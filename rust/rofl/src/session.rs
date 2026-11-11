@@ -2661,9 +2661,7 @@ impl Volumes {
     /// still holds where it is made, and what was made anew (`Crossing::plan`). The rounds it took; an error where a
     /// volume could not take its part by delta.
     pub fn pass_on(&mut self, cross: &crate::engine::volumes::Crossing, edits: Vec<(usize, Vec<FactId>, String)>) -> Result<usize, String> {
-        let rounds = self.pass_rounds(cross, edits);
-        meter::write();
-        rounds
+        self.pass_rounds(cross, edits)
     }
 
     fn pass_rounds(&mut self, cross: &crate::engine::volumes::Crossing, edits: Vec<(usize, Vec<FactId>, String)>) -> Result<usize, String> {
@@ -2678,9 +2676,11 @@ impl Volumes {
             base[i] = out;
             texts[i] = add;
         }
+        let t = std::time::Instant::now();
         for w in &mut self.worlds {
             w.eval.index_for_retraction();
         }
+        meter::spent("indexes", t);
         let mut wave: Vec<Change> = Vec::new();
         // the laid copies taken out, till what they copy holds again where it is made
         let mut taken: Vec<Vec<(FactId, Vec<u32>)>> = vec![Vec::new(); k];
@@ -2690,6 +2690,7 @@ impl Volumes {
             let first = rounds == 0;
             if !first && wave.is_empty() && seeds.is_empty() && !relaid {
                 if meter::on() {
+                    let t = std::time::Instant::now();
                     // a copy taken out and not laid again though a volume makes what it copies: the rounds ended owing it
                     let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
                     for (j, gs) in taken.iter().enumerate() {
@@ -2710,6 +2711,7 @@ impl Volumes {
                             }
                         }
                     }
+                    meter::spent("checks", t);
                 }
                 break;
             }
@@ -2717,6 +2719,7 @@ impl Volumes {
             if rounds > 64 {
                 return Err("what the volumes show one another did not settle in 64 rounds".into());
             }
+            let t = std::time::Instant::now();
             // what the seeds reach, less what is proved again from what they do not reach: that stands, its copies with it
             let doomed: Vec<crate::store::FxSet<FactId>> = {
                 let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
@@ -2729,6 +2732,7 @@ impl Volumes {
                 }
                 doomed
             };
+            let t = meter::spent("dooms", t);
             // what the round moves is noted as it moves: each fact that went, came back or was made, with whether it
             // stood before the round and whether it stands once its volume took its part out and in (a fact made in
             // the round did not stand before it, whatever went of it since: the made are read first)
@@ -2760,20 +2764,25 @@ impl Volumes {
                 if !out.is_empty() {
                     meter::in_step("takes_out");
                     let mark = w.eval.read_mark();
+                    let t = std::time::Instant::now();
                     w.retract_file_delta(out)??;
+                    meter::spent("each_out", t);
                     w.eval.meter_read("takes_out", &mark);
                     meter::step("takes_out", out.len());
                 }
                 if !add.is_empty() {
                     meter::in_step("takes_in");
                     let mark = w.eval.read_mark();
+                    let t = std::time::Instant::now();
                     w.load_delta(add, None).map_err(|e| e.join("; "))?;
+                    meter::spent("each_in", t);
                     w.eval.meter_read("takes_in", &mark);
                     meter::step("takes_in", add.lines().count());
                 }
                 w.eval.add.falls = None;
                 Ok(())
             })?;
+            let t = meter::spent("out_and_in", t);
             // what stands once its volume took its part out and in: copies are judged by it below, so where the copies
             // laid into its volume take it out after all, it is a seed of the next round
             for (j, w) in self.worlds.iter_mut().enumerate() {
@@ -2789,7 +2798,9 @@ impl Volumes {
             }
             let mut plan = {
                 let mut ws: Vec<&mut Eval> = self.worlds.iter_mut().map(|s| &mut s.eval).collect();
+                let tp = std::time::Instant::now();
                 let mut plan = cross.plan(&wave, &mut ws, &self.laid, &mut caches);
+                meter::spent("plan_of_wave", tp);
                 // a copy taken out is laid again where a volume still makes what it copies
                 relaid = false;
                 for (j, gs) in taken.iter_mut().enumerate() {
@@ -2811,6 +2822,7 @@ impl Volumes {
                 }
                 plan
             };
+            let t = meter::spent("plans", t);
             let mut next = Vec::new();
             let lays: Vec<Vec<(Sym, Sym, Vec<Term>, Vec<u32>)>> = (0..k).map(|j| std::mem::take(&mut plan.lay[j])).collect();
             let puts = on_threads(&mut self.worlds, &lays, |w, lay| {
@@ -2825,6 +2837,7 @@ impl Volumes {
                 w.eval.meter_read("lays", &mark);
                 put
             })?;
+            let t = meter::spent("lays", t);
             for (j, (lay, put)) in lays.into_iter().zip(puts).enumerate() {
                 let again = std::mem::take(&mut plan.again[j]);
                 let w = &mut self.worlds[j];
@@ -2879,6 +2892,7 @@ impl Volumes {
                 }
             }
             wave = next;
+            meter::spent("notes", t);
         }
         Ok(rounds)
     }

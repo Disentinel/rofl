@@ -313,6 +313,7 @@ impl<T: Pod> Arena<T> {
     pub fn to_mut(&mut self) -> &mut Vec<T> {
         if let Arena::Mapped { .. } = self {
             let v = self.to_vec();
+            crate::engine::meter::walk("mapped_copied", std::mem::size_of_val(v.as_slice()));
             *self = match span_of(bytes_of(self)) {
                 Some(from) => Arena::Copied { v, from },
                 None => Arena::Heap(v),

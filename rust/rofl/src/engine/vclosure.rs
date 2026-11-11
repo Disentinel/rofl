@@ -56,6 +56,8 @@ pub struct VClosure {
     /// `Store::revived`)
     deaths: u64,
     revived: usize,
+    /// a nearest: how far it has read what went of its edges, and what came back and went of its condition
+    near_at: [usize; 3],
     pairs: u64,
     deep: u64,
     internal: u64,
@@ -157,7 +159,7 @@ impl Eval {
             }
             let view = self.store.alias_view(edge).cloned();
             let src = view.as_ref().map_or(edge, |v| v.src);
-            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, pairs: 0, deep: 0, internal: 0, open: true });
+            self.vc.vclosures.push(VClosure { rel, edge, src, view, graph: graphs.contains(&edge), active: false, prov_read, built: None, rows: 0, mark: 0, deaths: 0, revived: 0, near_at: [0; 3], pairs: 0, deep: 0, internal: 0, open: true });
             let near = near.and_then(|n| n.ok());
             self.store.virtuals.push(crate::store::VirtualRel { rel, edge, base_rule: rule_ids.0, step_rule: rule_ids.1, forests: Rc::from(Vec::new()), near });
             if !why.is_empty() {
@@ -907,7 +909,9 @@ impl Eval {
                 f.near_rows_under(*t, &mut was);
             }
         }
-        self.vc.vclosures[ci].built = None;
+        drop(old);
+        // (not the count it was built at: it is brought up to what went)
+        self.vc.vclosures[ci].built = Some(usize::MAX);
         let forests = self.vc.vforests(&mut self.store, ci);
         for t in &touched {
             for (_, f) in forests.iter() {
@@ -1091,6 +1095,9 @@ impl VClosureState {
                 (c.built, c.rows, c.mark, c.pairs, c.deep, c.internal) = (Some(n? as usize), rows? as usize, mark? as FactId, pairs?, deep?, internal?);
                 c.deaths = store.deaths.get(&c.src).copied().unwrap_or(0);
                 c.revived = store.revived.get(&c.src).map_or(0, Vec::len);
+                if let Some(s) = store.virtuals[ci].near {
+                    c.near_at = Self::vnear_at(store, c.src, s.cond);
+                }
                 store.virtuals[ci].forests = Rc::from(fs);
                 if store.virtuals[ci].near.is_some() || self.neg_read.contains(&ci) {
                     self.settled.insert(ci, store.virtuals[ci].forests.clone());
@@ -1123,7 +1130,9 @@ impl VClosureState {
         let near = store.virtuals[ci].near;
         let n = self.vseen(store, ci);
         if self.vclosures[ci].built != Some(n) && !(self.vclosures[ci].built.is_some() && brk!("vclosure_stale_forest" => true; false)) {
-            let forests = match self.vextended(store, ci).filter(|_| near.is_none()) {
+            let t = std::time::Instant::now();
+            let moved = if near.is_some() { self.vnear_moved(store, ci) } else { self.vextended(store, ci) };
+            let forests = match moved {
                 Some(f) => f,
                 None if near.is_some() => {
                     let s = near.unwrap();
@@ -1173,15 +1182,94 @@ impl VClosureState {
             self.vclosures[ci].mark = store.len_ids();
             self.vclosures[ci].deaths = store.deaths.get(&edge).copied().unwrap_or(0);
             self.vclosures[ci].revived = store.revived.get(&edge).map_or(0, Vec::len);
+            if let Some(s) = near {
+                self.vclosures[ci].near_at = Self::vnear_at(store, edge, s.cond);
+            }
             let c = &mut self.vclosures[ci];
             c.pairs = forests.iter().map(|f| f.1.pairs).sum();
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
             c.internal = forests.iter().map(|f| f.1.internal as u64).sum();
             c.built = Some(n);
             store.virtuals[ci].forests = Rc::from(forests);
+            super::meter::spent("each_forest", t);
             self.builds += 1;
         }
         store.virtuals[ci].forests.clone()
+    }
+
+    /// How far a nearest has read what went of its edges `src` and what came back and went of its condition; from
+    /// here on the store notes what goes of both.
+    fn vnear_at(store: &mut Store, src: Sym, cond: Sym) -> [usize; 3] {
+        let died = store.died.entry(src).or_default().len();
+        [died, store.revived.get(&cond).map_or(0, Vec::len), store.died.entry(cond).or_default().len()]
+    }
+
+    /// The forest of the nearest `ci` with what moved since it was built: the edges and the marks that came, came back
+    /// or went, and the trees they are in built again (`Forest::renear`). What it costs is what moved and the trees it
+    /// reaches. None where the store did not note what went, or the edges are a view's.
+    fn vnear_moved(&mut self, store: &mut Store, ci: usize) -> Option<Vec<(Sym, Rc<Forest>)>> {
+        let c = &self.vclosures[ci];
+        c.built?;
+        let s = store.virtuals[ci].near?;
+        if c.view.is_some() {
+            return None;
+        }
+        let (src, mark) = (c.src, c.mark);
+        let [(book, old)] = &store.virtuals[ci].forests[..] else { return None };
+        let since = |m: &FxMap<Sym, Vec<FactId>>, r: Sym, at: usize| m.get(&r).map_or(&[][..], |v| &v[at.min(v.len())..]).to_vec();
+        let (mut edges, mut conds) = (since(&store.revived, src, c.revived), since(&store.revived, s.cond, c.near_at[1]));
+        edges.extend(since(&store.died, src, c.near_at[0]));
+        conds.extend(since(&store.died, s.cond, c.near_at[2]));
+        store.died.get(&src)?;
+        store.died.get(&s.cond)?;
+        for id in mark..store.len_ids() {
+            let r = store.rec(id).rel;
+            if r == src {
+                edges.push(id);
+            } else if r == s.cond {
+                conds.push(id);
+            }
+        }
+        edges.sort_unstable();
+        edges.dedup();
+        let (mut removed, mut added, mut touched) = (Vec::new(), Vec::new(), Vec::new());
+        let mut rows = c.rows as i64;
+        for id in edges {
+            if store.rec(id).persp != s.ebook {
+                continue;
+            }
+            let Some((p, ch)) = self.vedge(store, ci, id) else { continue };
+            let held = old.parent_of(ch).is_some_and(|q| q.bits() == p.bits());
+            match (store.alive(id), held) {
+                (true, false) => {
+                    added.push((p, ch));
+                    rows += 1;
+                }
+                (false, true) => {
+                    removed.push((p, ch));
+                    rows -= 1;
+                }
+                _ => {}
+            }
+        }
+        for id in conds {
+            if let [x] = store.args(id) {
+                if store.rec(id).persp == s.sbook {
+                    touched.push(*x);
+                }
+            }
+        }
+        let (book, mut f) = (*book, old.clone());
+        if !(removed.is_empty() && added.is_empty() && touched.is_empty()) {
+            // (the store's hold on it let go: it is copied only where a delta keeps it as it found it)
+            store.virtuals[ci].forests = Rc::from(Vec::new());
+            if Rc::strong_count(&f) > 1 {
+                super::meter::walk("forest_copied", f.nodes());
+            }
+            Rc::make_mut(&mut f).renear(&removed, &added, &touched, &|x| store.has(s.cond, s.sbook, &[x]));
+        }
+        self.vclosures[ci].rows = rows.max(0) as usize;
+        Some(vec![(book, f)])
     }
 
     /// The edge a fact of the closure's edge relation is, its parent and child; an alias's from the row of its source.

@@ -287,6 +287,9 @@ impl Forest {
         let (n, o) = (self.nodes.len() as u32, self.order.len() as u32);
         let shift = |v: u32, by: u32| if v == NONE { NONE } else { v + by };
         self.idx.over.extend(add.nodes.iter().enumerate().map(|(i, t)| (t.bits(), i as u32 + n)));
+        if let (Some(a), Some(b)) = (self.near.as_mut(), &add.near) {
+            a.to_mut().extend(b.iter().map(|&v| shift(v, n)));
+        }
         self.nodes.to_mut().extend_from_slice(&add.nodes);
         self.parent.to_mut().extend(add.parent.iter().map(|&v| shift(v, n)));
         self.pre.to_mut().extend(add.pre.iter().map(|&v| shift(v, o)));
@@ -353,6 +356,60 @@ impl Forest {
         dropped
     }
 
+    /// A NEAREST WHOSE EDGES OR MARKS MOVED: each tree holding the child of an edge of `removed`, either end of an edge
+    /// of `added` or a node of `touched` (one the condition came to hold of, or stopped) is built again from its edges
+    /// that stand and those added, its marks asked of `marked`; the rest of the forest stands as it is numbered. The
+    /// cost is the trees reached. False for a forest that is no nearest.
+    pub fn renear(&mut self, removed: &[(Term, Term)], added: &[(Term, Term)], touched: &[Term], marked: &dyn Fn(Term) -> bool) -> bool {
+        if self.near.is_none() {
+            return false;
+        }
+        let out: crate::store::FxSet<(u64, u64)> = removed.iter().map(|(p, c)| (p.bits(), c.bits())).collect();
+        let (mut roots, mut rooted): (Vec<u32>, crate::store::FxSet<u32>) = Default::default();
+        for t in removed.iter().map(|e| e.1).chain(added.iter().flat_map(|(p, c)| [*p, *c])).chain(touched.iter().copied()) {
+            let Some(mut v) = self.at(t) else { continue };
+            for _ in 0..self.depth[v as usize] {
+                v = self.parent[v as usize];
+            }
+            if rooted.insert(v) {
+                roots.push(v);
+            }
+        }
+        let mut stand: Vec<(Term, Term)> = Vec::new();
+        let mut ups: crate::store::FxSet<u32> = crate::store::FxSet::default();
+        for r in roots {
+            let (lo, hi) = (self.pre[r as usize], self.end[r as usize]);
+            for k in lo..hi {
+                let v = self.order[k as usize];
+                if v != r {
+                    let e = (self.nodes[self.parent[v as usize] as usize], self.nodes[v as usize]);
+                    if !out.contains(&(e.0.bits(), e.1.bits())) {
+                        stand.push(e);
+                    }
+                }
+                let u = self.near.as_ref().unwrap()[v as usize];
+                if u != NONE {
+                    self.pairs -= 1;
+                    ups.insert(u);
+                }
+            }
+            for k in lo..hi {
+                let v = self.order[k as usize];
+                self.pre.to_mut()[v as usize] = NONE;
+            }
+        }
+        self.internal -= ups.len() as u32;
+        self.deep = self.pairs as u32;
+        stand.extend_from_slice(added);
+        let marks: crate::store::FxSet<u64> = stand.iter().map(|e| e.0).filter(|p| marked(*p)).map(|p| p.bits()).collect();
+        self.append(Forest::build_nearest(&stand, &marks));
+        true
+    }
+
+    pub fn nodes(&self) -> usize {
+        self.nodes.len()
+    }
+
     fn at(&self, t: Term) -> Option<u32> {
         self.idx.get(&self.nodes, t.bits()).filter(|v| self.pre[*v as usize] != NONE)
     }
@@ -401,7 +458,7 @@ impl Forest {
     }
 
     /// The parent of `d`, the root having none.
-    fn parent_of(&self, d: Term) -> Option<Term> {
+    pub fn parent_of(&self, d: Term) -> Option<Term> {
         let v = self.at(d)?;
         Some(self.nodes[*self.parent.get(v as usize).filter(|p| **p != NONE)? as usize])
     }

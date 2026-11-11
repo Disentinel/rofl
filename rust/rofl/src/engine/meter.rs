@@ -1,6 +1,7 @@
 //! WHAT A DELTA DID, AS FACTS of the book `delta`, for models/engine/delta-model.rofl to judge its hypotheses by.
 //! Counted only where ROFL_DELTA_FACTS names the file they are written to (a harness's oracle, docs/knobs.md);
-//! counts, no time, so the same delta writes the same facts. Per relation: `out(Rel, N)` facts taken out with what
+//! counts, so the same delta writes the same facts, and beside them `spent(What, Ms)`, the time of each part of it, which
+//! differs from run to run and is there to be set against the counts. Per relation: `out(Rel, N)` facts taken out with what
 //! they rested on, `kept(Rel, N)` facts that lost a firing and stood on another, `back(Rel, N)` facts taken out and
 //! derived again, `once(Rel, N)` the facts taken out, each counted one time, `tries(Rel, N)` attempts to derive one again; between volumes, `taken(Rel, N)` copies a volume was
 //! laid that were taken out of it, `owed(Rel, N)` of them those not laid again when the rounds ended though a volume
@@ -13,7 +14,8 @@
 //! `read(Step, R, Head, N)` the rows of the store rule `R` read in a step, the delta's weight: rows read are the
 //! same on every machine, time is not.
 //! `walked(What, N)` the records a pass over a whole volume walked (the citer index made, a snapshot of what stands,
-//! the facts of a volume looked through for a file's), summed over the volumes and rounds.
+//! the facts of a volume looked through for a file's, a forest or an index built whole, a forest or a mapped array
+//! copied), summed over the volumes and rounds.
 //! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
 //! `moved(Step, N)` the facts it was given. A delta of one world (bin/rofl/delta.rs) writes them too, its steps takes_out and takes_in.
 
@@ -40,6 +42,7 @@ struct Meter {
     read: BTreeMap<(&'static str, String, String), u64>,
     once: BTreeMap<String, std::collections::HashSet<u64>>,
     walk: BTreeMap<&'static str, u64>,
+    spent: BTreeMap<&'static str, u128>,
 }
 
 thread_local! {
@@ -86,6 +89,12 @@ pub fn walk(what: &'static str, records: usize) {
     with(|m| *m.walk.entry(what).or_default() += records as u64);
 }
 
+/// The time a part of the delta took since `t`: `spent(What, Ms)`, the one fact that differs from run to run.
+pub fn spent(what: &'static str, t: std::time::Instant) -> std::time::Instant {
+    with(|m| *m.spent.entry(what).or_default() += t.elapsed().as_micros());
+    std::time::Instant::now()
+}
+
 pub fn rule(how: &'static str, id: &str, head: &str) {
     with(|m| *m.rule.entry((how, id.to_string(), head.to_string())).or_default() += 1);
 }
@@ -117,6 +126,9 @@ pub fn write() {
     }
     for (what, n) in &m.walk {
         let _ = writeln!(out, "walked[delta]({what}, {n}).");
+    }
+    for (what, us) in &m.spent {
+        let _ = writeln!(out, "spent[delta]({what}, {}).", us / 1000);
     }
     for ((how, id, head), n) in &m.rule {
         let _ = writeln!(out, "{how}[delta]({id}, {head}, {n}).");
