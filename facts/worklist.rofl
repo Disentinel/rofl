@@ -4066,19 +4066,22 @@ work_needs(w_scroll, w_scroll_names).
 
 work(w_scroll_address,
   "Part 2 of w_scroll. A FACT'S ADDRESS IS ONE FOR THE WORLD: fold and place, short inside a fold, long across, and a registry of folds (file and version, its range, the file on disk, what it was computed from) that a restart reads to map each fold back at its place without reading it. Inside a fold only offsets. A fold is in the registry once it is written whole; one in the registry does not change.").
-work_state(w_scroll_address, open).
+work_state(w_scroll_address, done).
+work_spawned(w_scroll_address, f_a_set_of_kept_volumes_is_what_its_registry_names).
 work_needs(w_scroll, w_scroll_address).
 work_needs(w_scroll_address, w_scroll_names).
 
 work(w_scroll_foreign_premise,
   "Part 3 of w_scroll. A RULE READS A PREMISE WHERE IT LIES: a firing cites a fact of another fold by its address, a key is looked up in the folds the [index] names (a key that names a node goes to its file's fold), and the exchange between volumes is deleted (Crossing::plan, targets, pulls, the laid copies and their files, the rounds of taking out and laying again). Open when it was written: who fires a rule when its premise appears in another fold, and where the fact it concludes lives.").
 work_state(w_scroll_foreign_premise, open).
+work_spawned(w_scroll_foreign_premise, f_the_copies_laid_are_what_keeps_a_lookup_at_home).
 work_needs(w_scroll, w_scroll_foreign_premise).
 work_needs(w_scroll_foreign_premise, w_scroll_address).
 
 work(w_scroll_edit_is_a_version,
   "Part 4 of w_scroll. AN EDIT OF A FILE APPENDS A VERSION OF ITS FOLD: the old fold goes out of the registry (kept as history or removed as a file), the new facts go to new addresses, none is used again, nothing is rewritten clean; what stood on the old fold is derived again and no more. The memory the process may use is kept by the watcher giving back to the system the folds longest unread.").
 work_state(w_scroll_edit_is_a_version, open).
+work_spawned(w_scroll_edit_is_a_version, f_a_tree_built_again_took_a_new_place_each_time).
 work_needs(w_scroll, w_scroll_edit_is_a_version).
 work_needs(w_scroll_edit_is_a_version, w_scroll_foreign_premise).
 
