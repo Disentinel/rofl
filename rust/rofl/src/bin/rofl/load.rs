@@ -593,6 +593,10 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
     if rofl::brk!("volumes_dict_unkept" => false; true) {
         core.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
     }
+    // (the folds the volumes' facts lie in, under the numbers they hold)
+    if let Some(f) = v.worlds.first().and_then(|w| w.eval.store.folds.as_ref()) {
+        std::fs::write(format!("{k}.folds"), f.text()).map_err(|e| e.to_string())?;
+    }
     Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i, v.places.get(f).cloned().unwrap_or_default()))).collect() }.write(k)
 }
 
@@ -722,8 +726,10 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let mut core = core?;
     let (mut worlds, mut laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
     let stage = core.eval.lemma_stage();
+    let folds = std::fs::read_to_string(format!("{k}.folds")).ok().and_then(|t| rofl::fold::Folds::read(&t)).map(std::sync::Arc::new);
     for w in &mut worlds {
         w.eval.stage_given = stage.as_ref().map(|st| st.rules.clone());
+        w.eval.store.folds = folds.clone();
     }
     let mut sums: Vec<(String, u64, usize)> = Vec::new();
     let mut put: Vec<Vec<&str>> = vec![Vec::new(); n];
@@ -781,10 +787,33 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let places = old.iter().filter(|(f, _)| now.contains_key(f.as_str())).map(|(f, o)| (f.clone(), o.2.clone())).collect();
     let mut v = rofl::session::Volumes { worlds: std::mem::take(&mut worlds), laid: std::mem::take(&mut laid), stats: Default::default(), places, put_from: Vec::new() };
     rofl::engine::meter::spent("finds", t1);
+    // (for the judge of the folds: what stood before the delta)
+    let stood: Option<Vec<Vec<bool>>> = (rofl::engine::meter::on() && folds.is_some()).then(|| v.worlds.iter().map(|w| (0..w.eval.store.len_ids()).map(|id| w.eval.store.alive(id)).collect()).collect());
     let rounds = match v.pass_on(&cross, edits) {
         Ok(r) => r,
         Err(why) => { rofl::engine::meter::write(); say(&why); return None; }
     };
+    // THE FOLDS JUDGED BY THE DELTA: a fact the delta took out must lie in a fold whose set holds a file that moved
+    if let (Some(stood), Some(folds)) = (stood, &folds) {
+        let hold = folds.holding(&moved);
+        let (mut held, mut went, mut missed, mut missed_laid) = (0, 0, 0, 0);
+        for (i, was) in stood.iter().enumerate() {
+            let st = &v.worlds[i].eval.store;
+            for (id, _) in was.iter().enumerate().filter(|(_, a)| **a) {
+                let h = hold.get(st.fold_of(id as u32) as usize).copied().unwrap_or(false);
+                held += h as usize;
+                if !st.alive(id as u32) {
+                    went += 1;
+                    if !h {
+                        if v.laid[i].ids.contains(&(id as u32)) { missed_laid += 1 } else { missed += 1 }
+                    }
+                }
+            }
+        }
+        for (what, n) in [("fold_held", held), ("fold_went", went), ("fold_missed", missed), ("fold_missed_laid", missed_laid), ("folds", folds.len())] {
+            rofl::engine::meter::walk(what, n);
+        }
+    }
     // the text a volume was given lies from the first id it took: each new fact is its file's from now on
     for (i, from) in v.put_from.clone().into_iter().enumerate() {
         let (Some(from), st, h) = (from, &v.worlds[i].eval.store, &v.worlds[i].eval.h) else { continue };

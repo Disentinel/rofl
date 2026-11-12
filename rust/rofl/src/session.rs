@@ -2795,7 +2795,10 @@ impl Volumes {
                     let mark = w.eval.read_mark();
                     let t = std::time::Instant::now();
                     from = Some(w.eval.store.len_ids());
-                    w.load_delta(add, None).map_err(|e| e.join("; "))?;
+                    w.eval.store.fold_by_name = true;
+                    let put = w.load_delta(add, None).map_err(|e| e.join("; "));
+                    w.eval.store.fold_by_name = false;
+                    put?;
                     meter::spent("each_in", t);
                     w.eval.meter_read("takes_in", &mark);
                     meter::step("takes_in", add.lines().count());

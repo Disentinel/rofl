@@ -138,7 +138,7 @@ impl Drop for Cooled {
 
 /// A fact laid into a volume, with the rules it is laid for, or one laid already, laid for more rules.
 enum Lay {
-    New(Sym, Sym, Vec<Term>, Vec<u32>),
+    New(Sym, Sym, Vec<Term>, Vec<u32>, u32),
     Again(FactId, Vec<u32>),
 }
 
@@ -198,7 +198,10 @@ impl Worker {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path = std::env::temp_dir().join(format!("rofl-vol-{}-{n}-w{i}-{lv}.vol", std::process::id())).to_string_lossy().to_string();
-        match crate::volume::cool_in_place(&path, &mut self.e, &self.cooled.0) {
+        let folds = self.e.store.folds.clone();
+        let cooled = crate::volume::cool_in_place(&path, &mut self.e, &self.cooled.0);
+        self.e.store.folds = folds;
+        match cooled {
             Ok(k) => self.cooled.0.push(k),
             Err(e) => {
                 eprintln!("volumes: worker {i} stays on the heap: {e}");
@@ -239,6 +242,8 @@ impl Eval {
         }
         self.h.freeze();
         self.h.share(None);
+        let folds = Rc::new(crate::fold::Folds::default());
+        self.store.fold_by(folds.clone());
         self.store.freeze(&self.h);
         let (syms, funcs) = (self.h.syms.len() as Sym, self.h.funcs_len());
         let k = groups.len();
@@ -262,7 +267,9 @@ impl Eval {
                         load_text(&mut low, text)?;
                         low.lower_stage(stage)?;
                         let a = w.e.store.len_ids();
+                        w.e.store.fold_now = folds.of_file(f);
                         w.e.take_lemmas(&low, stage, from, syms, funcs);
+                        w.e.store.fold_now = crate::fold::NONE;
                         w.places.push((f.clone(), a, w.e.store.len_ids()));
                     }
                     w.e.stage_given = Some(stage.rules.clone());
@@ -270,7 +277,9 @@ impl Eval {
                 None => {
                     for (f, text) in &groups[i] {
                         let a = w.e.store.len_ids();
+                        w.e.store.fold_now = folds.of_file(f);
                         load_text(&mut w.e, text)?;
+                        w.e.store.fold_now = crate::fold::NONE;
                         w.places.push((f.clone(), a, w.e.store.len_ids()));
                     }
                 }
@@ -353,7 +362,7 @@ impl Eval {
                                         continue;
                                     }
                                     let args = src.store.args(*id).iter().map(|t| copy_term(*t, &src.h, dst, syms, funcs)).collect();
-                                    v.push(Lay::New(rec.rel, rec.persp, args, rules.clone()));
+                                    v.push(Lay::New(rec.rel, rec.persp, args, rules.clone(), src.store.fold_of(*id)));
                                 }
                                 v
                             })
@@ -371,9 +380,10 @@ impl Eval {
                     }
                     for l in lay {
                         let (id, rules) = match l {
-                            Lay::New(rel, persp, args, rules) => {
+                            Lay::New(rel, persp, args, rules, fold) => {
                                 let (id, new) = w.e.store.put(&w.e.h, rel, persp, &args, F_BASE);
                                 if new {
+                                    w.e.store.set_fold(id, fold);
                                     w.laid.insert(id);
                                     w.unadmitted.push(id);
                                     w.laid_for.insert(id, rules);

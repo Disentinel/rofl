@@ -1398,6 +1398,16 @@ pub struct Store {
     /// against a `Map<key, Map<sig, Witness>>` of two hash tables and two
     /// strings per firing on the JS side.
     wit_head: Col<u32>,
+    /// The fold each fact lies in (`crate::fold`), while the world has a table of folds: a fact put lies in
+    /// `fold_now`, one concluded in the fold of its first firing's premises.
+    fold: Col<u32>,
+    pub folds: Option<Rc<crate::fold::Folds>>,
+    pub fold_now: u32,
+    fold_memo: FxMap<(u32, u32), u32>,
+    /// The fold of the file a term names, once found: what a row of a walked closure a firing cites lies in, by its ends.
+    fold_named: FxMap<u64, u32>,
+    /// A base fact put lies in the fold of the file it names, not in `fold_now`: a delta's text, of several files.
+    pub fold_by_name: bool,
     wits: Col<WitNode>,
     prem_arena: Col<PremRef>,
     /// `firing_hash` of every node on a chain, and of some that left one: a
@@ -1848,6 +1858,7 @@ impl Store {
         self.keys_n = 0;
         self.idx.freeze();
         self.wit_head.freeze();
+        self.fold.freeze();
         self.wits.freeze();
         self.prem_arena.freeze();
         self.fired.freeze();
@@ -1928,6 +1939,7 @@ impl Store {
         let id = self.facts.len() as FactId;
         self.facts.push(FactRec::new(rel, persp, tup, flags));
         self.wit_head.push(EMPTY);
+        self.fold_put(h, id);
         self.key_insert(id);
         self.n_live += 1;
         if let Some(a) = self.arrivals.as_mut() {
@@ -2062,6 +2074,7 @@ impl Store {
                 if flags & F_BASE != 0 && old & F_BASE == 0 {
                     self.base_moved.insert(rel);
                     self.facts.set_flags(id, brk!("promoted_tick_scope_kept" => old | F_BASE; (old & !F_TICK) | flags));
+                    self.fold_put(h, id);
                     // its height is a base fact's now, and what rests on it may lie lower: an addition to note
                     if let Some(a) = self.arrivals.as_mut().filter(|_| brk!("add_promoted_unnoted" => false; true)) {
                         a.push(id);
@@ -2077,6 +2090,7 @@ impl Store {
                     self.sweep();
                 }
                 self.facts.set_flags(id, flags);
+                self.fold_put(h, id);
                 self.revived.entry(rel).or_default().push(id);
                 if let Some(f) = self.flips.as_mut() {
                     f.push((id, false));
@@ -2089,6 +2103,7 @@ impl Store {
                 let id = self.facts.len() as FactId;
                 self.facts.push(FactRec::new(rel, persp, tup, flags));
                 self.wit_head.push(EMPTY);
+                self.fold_put(h, id);
                 self.key_insert(id);
                 id
             }
@@ -3098,6 +3113,108 @@ impl Store {
         self.prem_arena = prems.into();
     }
 
+    // --------------------------------------------------------------- folds
+
+    /// From here on each fact has its fold in `folds`; the facts held so far are of no file.
+    pub fn fold_by(&mut self, folds: Rc<crate::fold::Folds>) {
+        let n = self.facts.len();
+        if self.fold.len() < n {
+            let more = n - self.fold.len();
+            self.fold.own.extend(std::iter::repeat_n(crate::fold::NONE, more));
+        }
+        self.folds = Some(folds);
+    }
+    #[inline]
+    fn fold_put(&mut self, h: &Heap, id: FactId) {
+        if self.folds.is_some() {
+            let f = if self.fold_by_name && self.facts.rec(id).base() { let a = self.facts.args(id).to_vec(); self.fold_naming(h, &a) } else { self.fold_now };
+            match self.fold.len().cmp(&(id as usize)) {
+                std::cmp::Ordering::Equal => self.fold.push(f),
+                _ => self.fold[id as usize] = f,
+            }
+        }
+    }
+    /// The fold of the file the first of `ts` that names a node names.
+    fn fold_naming(&mut self, h: &Heap, ts: &[Term]) -> u32 {
+        for t in ts {
+            let f = match t.kind() {
+                TermK::Atom(x) | TermK::Str(x) => match self.fold_named.get(&t.bits()) {
+                    Some(f) => *f,
+                    None => {
+                        let f = crate::engine::volumes::file_of(h.name(x)).map_or(crate::fold::NONE, |f| self.folds.as_ref().unwrap().of_file(f));
+                        self.fold_named.insert(t.bits(), f);
+                        f
+                    }
+                },
+                TermK::Func(i) => self.fold_naming(h, h.fargs(i)),
+                _ => crate::fold::NONE,
+            };
+            if f != crate::fold::NONE {
+                return f;
+            }
+        }
+        crate::fold::NONE
+    }
+    /// A row of a walked closure with the ends `ends` is named for a firing: the files they name are found.
+    pub fn fold_row(&mut self, h: &Heap, ends: &[Term]) {
+        if self.folds.is_some() {
+            for t in ends {
+                self.fold_naming(h, std::slice::from_ref(t));
+            }
+        }
+    }
+    /// The fold `id` lies in; of no file where the world keeps none.
+    #[inline]
+    pub fn fold_of(&self, id: FactId) -> u32 {
+        self.fold.get(id as usize).copied().unwrap_or(crate::fold::NONE)
+    }
+    pub fn set_fold(&mut self, id: FactId, f: u32) {
+        if self.folds.is_some() {
+            self.fold[id as usize] = f;
+        }
+    }
+    fn fold_union(&mut self, a: u32, b: u32) -> u32 {
+        use crate::fold::{ALL, NONE};
+        if a == b || b == NONE || a == ALL {
+            return a;
+        }
+        if a == NONE || b == ALL {
+            return b;
+        }
+        let key = (a.min(b), a.max(b));
+        if let Some(k) = self.fold_memo.get(&key) {
+            return *k;
+        }
+        let k = self.folds.as_ref().unwrap().union(a, b);
+        self.fold_memo.insert(key, k);
+        k
+    }
+    /// The fold of the facts `prems` cite, and of the members of the cells they cite.
+    fn fold_of_prems(&mut self, prems: &[PremRef]) -> u32 {
+        let mut f = crate::fold::NONE;
+        for p in prems {
+            match p.kind() {
+                Prem::Fact(g) => f = self.fold_union(f, self.fold_of(g)),
+                Prem::Cell(c) => {
+                    let cited: Vec<FactId> = self.cell_members(c).iter().flat_map(|m| self.member_prems(m)).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
+                    for g in cited {
+                        f = self.fold_union(f, self.fold_of(g));
+                    }
+                }
+                Prem::VRow(k) => {
+                    if let Some((_, _, a, d)) = self.vrow_of.get(&k) {
+                        for t in [a, d] {
+                            let g = self.fold_named.get(&t.bits()).copied().unwrap_or(crate::fold::NONE);
+                            f = self.fold_union(f, g);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        f
+    }
+
     // ---------------------------------------------------------- provenance
 
     /// Record one firing. THE SIGNATURE IS NOT STORED: a signature is
@@ -3143,6 +3260,10 @@ impl Store {
                     }
                 }
             }
+        }
+        if self.folds.is_some() && head == EMPTY && !self.facts.rec(id).base() {
+            let f = self.fold_of_prems(&w.prems);
+            self.fold[id as usize] = f;
         }
         let at = self.prem_arena.len() as u32;
         self.prem_arena.extend_from_slice(&w.prems);
