@@ -236,3 +236,9 @@ all[shared](N)        :- N is sum(K ; P : sample[shared](P, K)).
 split_part[shared](N) :- N is sum(K ; P : sample[shared](P, K), split[shared](P)).
 anew_ms[shared](Ms)   :- all[shared](A), split_part[shared](S), anew_ms_one_store[shared](T), threads[shared](C), Ms is T * (A - S) / A + T * S / A / C.
 shared_pays[shared](Ms) :- anew_ms[shared](Ms), anew_ms_volumes[shared](V), Ms < V.
+-- the first step: one worker, and the files' lower stage on the cores it leaves (one core: 13 samples of 60 in the
+-- lower stage, 8 reading the files, 85 s)
+lower_sample[shared](21, 60). anew_ms_one_worker[shared](85000).
+anew_ms_lower_on_threads[shared](Ms) :- lower_sample[shared](L, A), anew_ms_one_worker[shared](T), threads[shared](C), Ms is T * (A - L) / A + T * L / A / C.
+-- measured: one worker on four cores, anew and by delta, answers equal
+anew_ms_lower_measured[shared](65250). delta_ms_one_worker[shared](18978).

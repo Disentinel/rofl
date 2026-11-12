@@ -247,10 +247,12 @@ impl Eval {
         self.store.freeze(&self.h);
         let (syms, funcs) = (self.h.syms.len() as Sym, self.h.funcs_len());
         let k = groups.len();
+        // the cores the workers leave: fewer workers than cores, and each has threads of its own
+        let spare = (std::thread::available_parallelism().map_or(1, |n| n.get()) / k.max(1)).max(1);
         let mut ws: Vec<Worker> = (0..k)
             .map(|_| {
                 let mut e = self.fork();
-                e.par.threads = 1;
+                e.par.threads = spare;
                 Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default(), names: FxMap::default(), cooled: Cooled::default(), places: Vec::new() }
             })
             .collect();
@@ -262,15 +264,35 @@ impl Eval {
                 Some(stage) => {
                     let base = w.e.fork();
                     let from = base.store.len_ids();
-                    for (f, text) in &groups[i] {
-                        let mut low = base.fork();
-                        load_text(&mut low, text)?;
-                        low.lower_stage(stage)?;
-                        let a = w.e.store.len_ids();
-                        w.e.store.fold_now = folds.of_file(f);
-                        w.e.take_lemmas(&low, stage, from, syms, funcs);
-                        w.e.store.fold_now = crate::fold::NONE;
-                        w.places.push((f.clone(), a, w.e.store.len_ids()));
+                    // (`spare` files at a time, each on a thread in a fork of its own; their lemmas taken in the files' order)
+                    struct Own(Eval);
+                    // SAFETY: as the workers themselves: a fork is moved to a thread whole and given back whole
+                    unsafe impl Send for Own {}
+                    for files in groups[i].chunks(spare) {
+                        let forks: Vec<Own> = files.iter().map(|_| Own(base.fork())).collect();
+                        let lows: Vec<Result<Own, Halt>> = std::thread::scope(|sc| {
+                            let hs: Vec<_> = forks
+                                .into_iter()
+                                .zip(files)
+                                .map(|(own, (_, text))| {
+                                    sc.spawn(move || {
+                                        let mut own = own;
+                                        load_text(&mut own.0, text)?;
+                                        own.0.lower_stage(stage)?;
+                                        Ok(own)
+                                    })
+                                })
+                                .collect();
+                            hs.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(Halt::Bug("a volume's worker panicked".into())))).collect()
+                        });
+                        for (low, (f, _)) in lows.into_iter().zip(files) {
+                            let low = low?.0;
+                            let a = w.e.store.len_ids();
+                            w.e.store.fold_now = folds.of_file(f);
+                            w.e.take_lemmas(&low, stage, from, syms, funcs);
+                            w.e.store.fold_now = crate::fold::NONE;
+                            w.places.push((f.clone(), a, w.e.store.len_ids()));
+                        }
                     }
                     w.e.stage_given = Some(stage.rules.clone());
                 }
