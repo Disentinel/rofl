@@ -222,3 +222,17 @@ delta_ms[led](Ms)   :- delta_ms_today[led](T), Ms is T - T / 3 + T / 30.
 -- measured after: the delta, and what the three still read
 delta_ms_after[led](18464). read_after[led](parent, 0). read_after[led](at_step, 37752). read_after[led](does_fn, 1963514).
 forecast_held[led](R)  :- read[led](R, N), read_after[led](R, A), A * 10 < N * 1000.
+
+-- ------------------------------------------------------------------------- threads that write one scroll
+-- THE FORECAST OF THREADS WRITING ONE SCROLL, from where a whole evaluation in one store spends its time on four cores
+-- (60 samples of the thread that evaluates, #225's tree anew; the ledger says how): concluding is written by one
+-- thread, and the threads that match stand parked nine samples of ten. A thread that owns a region of the scroll
+-- concludes into it while the others conclude into theirs, and all read every region as the round began: what is
+-- split is the matching and the concluding, what stays on one thread is the reading of the files and the rest.
+sample[shared](concludes, 22). sample[shared](matches, 16). sample[shared](reads_files, 7). sample[shared](rest, 15).
+anew_ms_one_store[shared](80000). anew_ms_volumes[shared](50000). threads[shared](4).
+split[shared](concludes). split[shared](matches).
+all[shared](N)        :- N is sum(K ; P : sample[shared](P, K)).
+split_part[shared](N) :- N is sum(K ; P : sample[shared](P, K), split[shared](P)).
+anew_ms[shared](Ms)   :- all[shared](A), split_part[shared](S), anew_ms_one_store[shared](T), threads[shared](C), Ms is T * (A - S) / A + T * S / A / C.
+shared_pays[shared](Ms) :- anew_ms[shared](Ms), anew_ms_volumes[shared](V), Ms < V.
