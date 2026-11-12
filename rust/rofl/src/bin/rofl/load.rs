@@ -574,7 +574,7 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
     for p in &paths {
         crate::kept::touch(p);
     }
-    Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default() }))
+    Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default(), places: Default::default(), put_from: Vec::new() }))
 }
 
 /// The core and every worker's world kept at `k`, with what they were read from, and beside them (`<k>.files`) the
@@ -593,26 +593,31 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
     if rofl::brk!("volumes_dict_unkept" => false; true) {
         core.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
     }
-    Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i))).collect() }.write(k)
+    Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i, v.places.get(f).cloned().unwrap_or_default()))).collect() }.write(k)
 }
 
 /// THE REGISTRY OF A SET OF KEPT VOLUMES (`<k>.scroll`): how many folds there are beside the core, the sum of the
-/// core's text, and each file with its sum and the fold that holds it. Written last and whole, under another name
-/// first: the volumes, what was laid in each and the dictionary are a kept world once it names them, and what it
-/// does not name is nothing. A later run reads it alone to know what to map and what moved.
+/// core's text, and each file with its sum, the fold that holds it and the places in the fold its facts lie at (ids,
+/// from and to). Written last and whole, under another name first: the volumes, what was laid in each and the
+/// dictionary are a kept world once it names them, and what it does not name is nothing. A later run reads it alone
+/// to know what to map, what moved, and where the facts of a file that moved are.
 struct Registry {
     folds: usize,
     core: u64,
-    files: std::collections::HashMap<String, (u64, usize)>,
+    files: std::collections::HashMap<String, (u64, usize, Vec<(u32, u32)>)>,
 }
 
 impl Registry {
     fn write(&self, k: &str) -> Result<(), String> {
-        let mut list = format!("scroll 1\nfolds {}\ncore {:016x}\n", self.folds, self.core);
+        let mut list = format!("scroll 2\nfolds {}\ncore {:016x}\n", self.folds, self.core);
         let mut files: Vec<_> = self.files.iter().collect();
         files.sort();
-        for (f, (h, i)) in files {
-            list.push_str(&format!("file {f} {h:016x} {i}\n"));
+        for (f, (h, i, at)) in files {
+            list.push_str(&format!("file {f} {h:016x} {i}"));
+            for (a, b) in at {
+                list.push_str(&format!(" {a}-{b}"));
+            }
+            list.push('\n');
         }
         let tmp = format!("{k}.scroll.{}.new", std::process::id());
         std::fs::write(&tmp, list).and_then(|_| std::fs::rename(&tmp, format!("{k}.scroll"))).map_err(|e| e.to_string())
@@ -620,7 +625,7 @@ impl Registry {
     fn read(k: &str) -> Option<Registry> {
         let text = std::fs::read_to_string(format!("{k}.scroll")).ok()?;
         let mut lines = text.lines();
-        if lines.next()? != "scroll 1" {
+        if lines.next()? != "scroll 2" {
             return None;
         }
         let folds = lines.next()?.strip_prefix("folds ")?.parse().ok()?;
@@ -629,7 +634,8 @@ impl Registry {
         for l in lines {
             let mut p = l.strip_prefix("file ")?.split(' ');
             let (f, h, i) = (p.next()?, p.next()?, p.next()?);
-            files.insert(f.to_string(), (u64::from_str_radix(h, 16).ok()?, i.parse().ok()?));
+            let at = p.map(|r| r.split_once('-').and_then(|(a, b)| Some((a.parse().ok()?, b.parse().ok()?)))).collect::<Option<Vec<(u32, u32)>>>()?;
+            files.insert(f.to_string(), (u64::from_str_radix(h, 16).ok()?, i.parse().ok()?, at));
         }
         Some(Registry { folds, core, files })
     }
@@ -685,7 +691,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         return None;
     }
     let now: std::collections::HashMap<&str, &str> = cut.files.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
-    let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|(h, _)| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
+    let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|(h, _, _)| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
     if moved.is_empty() || moved.len() * 8 > now.len().max(8) {
         if !moved.is_empty() { say(&format!("{} of {} files moved", moved.len(), now.len())); }
         return None;
@@ -742,7 +748,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         Err(e) => { say(&rofl::describe(&e)); return None; }
     };
     let mut gives: std::collections::HashMap<&str, Vec<String>> = puts.into_iter().zip(gives).collect();
-    rofl::engine::meter::spent("gives", t0);
+    let t1 = rofl::engine::meter::spent("gives", t0);
     let mut edits = Vec::new();
     for (i, w) in worlds.iter_mut().enumerate() {
         let gone: std::collections::HashSet<&str> = moved.iter().copied().filter(|f| old.get(*f).is_some_and(|o| o.1 == i)).collect();
@@ -758,24 +764,40 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
             rofl::term::TermK::Func(_) => true,
             _ => false,
         };
-        let held: Vec<(u32, String)> = (0..st.len_ids())
+        // (a file's facts lie where the registry says its text was given)
+        let at: Vec<(u32, u32)> = gone.iter().flat_map(|f| old.get(*f).map_or(&[][..], |o| &o.2[..])).copied().collect();
+        rofl::engine::meter::walk("held", at.iter().map(|(a, b)| (b - a) as usize).sum());
+        let held: Vec<(u32, String)> = at.into_iter().flat_map(|(a, b)| a..b)
             .filter(|&id| st.alive(id) && st.rec(id).base() && !laid[i].ids.contains(&id) && st.args(id).iter().any(node_of))
             .map(|id| (id, st.key(&w.eval.h, id)))
             .filter(|(_, key)| rofl::engine::volumes::file_of(key).is_some_and(|f| gone.contains(f)))
             .collect();
-        rofl::engine::meter::walk("held", st.len_ids() as usize);
         let had: std::collections::HashSet<&str> = held.iter().map(|(_, key)| key.as_str()).collect();
         let out: Vec<u32> = held.iter().filter(|(_, key)| !given.contains(key)).map(|(id, _)| *id).collect();
         let add: String = given.iter().filter(|key| !had.contains(key.as_str())).map(|key| format!("{key}.\n")).collect();
         edits.push((i, out, add));
     }
     // what moved in a volume goes to the volumes that read it, and what that moves there on, until nothing moves
-    let mut v = rofl::session::Volumes { worlds: std::mem::take(&mut worlds), laid: std::mem::take(&mut laid), stats: Default::default() };
-    rofl::engine::meter::spent("finds", t0);
+    let places = old.iter().filter(|(f, _)| now.contains_key(f.as_str())).map(|(f, o)| (f.clone(), o.2.clone())).collect();
+    let mut v = rofl::session::Volumes { worlds: std::mem::take(&mut worlds), laid: std::mem::take(&mut laid), stats: Default::default(), places, put_from: Vec::new() };
+    rofl::engine::meter::spent("finds", t1);
     let rounds = match v.pass_on(&cross, edits) {
         Ok(r) => r,
         Err(why) => { rofl::engine::meter::write(); say(&why); return None; }
     };
+    // the text a volume was given lies from the first id it took: each new fact is its file's from now on
+    for (i, from) in v.put_from.clone().into_iter().enumerate() {
+        let (Some(from), st, h) = (from, &v.worlds[i].eval.store, &v.worlds[i].eval.h) else { continue };
+        for id in (from..st.len_ids()).take_while(|&id| st.rec(id).base() && !v.laid[i].ids.contains(&id)) {
+            let key = st.key(h, id);
+            let Some(f) = rofl::engine::volumes::file_of(&key) else { continue };
+            let at = v.places.entry(f.to_string()).or_default();
+            match at.last_mut() {
+                Some(l) if l.1 == id => l.1 = id + 1,
+                _ => at.push((id, id + 1)),
+            }
+        }
+    }
     let shown = if rounds > 0 { format!(", what they show the others in {rounds} rounds") } else { String::new() };
     eprintln!("volumes: {} of {} files taken by delta in {} ms{shown}", moved.len(), now.len(), t0.elapsed().as_millis());
     core.eval.store.dirty = false;

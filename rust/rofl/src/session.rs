@@ -132,6 +132,10 @@ pub struct Volumes {
     pub worlds: Vec<Session>,
     pub laid: Vec<crate::engine::volumes::Laid>,
     pub stats: crate::engine::volumes::VolStats,
+    /// Where each file's facts lie in the volume that holds it: the ids its text was given, as ranges.
+    pub places: HashMap<String, Vec<(FactId, FactId)>>,
+    /// The first id each volume gave the text a delta put in it (`pass_on`); none where it put none.
+    pub put_from: Vec<Option<FactId>>,
 }
 
 pub struct Answer {
@@ -899,7 +903,11 @@ impl Session {
     pub fn by_volumes(&mut self, groups: Vec<Vec<(String, String)>>, files: usize) -> Result<Volumes, Halt> {
         let (ws, stats) = self.eval.by_volumes(groups, files)?;
         let (mut worlds, mut laid) = (Vec::with_capacity(ws.len()), Vec::with_capacity(ws.len()));
+        let mut places: HashMap<String, Vec<(FactId, FactId)>> = HashMap::new();
         for w in ws {
+            for (f, a, b) in w.places {
+                places.entry(f).or_default().push((a, b));
+            }
             let mut s = Session { eval: w.e, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
             let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()? + s.profile_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
             if n > 0 {
@@ -908,7 +916,7 @@ impl Session {
             worlds.push(s);
             laid.push(crate::engine::volumes::Laid { ids: w.laid, rules: w.laid_for });
         }
-        Ok(Volumes { worlds, laid, stats })
+        Ok(Volumes { worlds, laid, stats, places, put_from: Vec::new() })
     }
 
     /// Facts laid into this evaluated world as base facts, and fired on by delta: each one's id, and whether it is
@@ -2771,7 +2779,8 @@ impl Volumes {
                 }
                 parts.push((out, std::mem::take(&mut texts[j])));
             }
-            on_threads(&mut self.worlds, &parts, |w, (out, add)| {
+            let from = on_threads(&mut self.worlds, &parts, |w, (out, add)| {
+                let mut from = None;
                 if !out.is_empty() {
                     meter::in_step("takes_out");
                     let mark = w.eval.read_mark();
@@ -2785,14 +2794,18 @@ impl Volumes {
                     meter::in_step("takes_in");
                     let mark = w.eval.read_mark();
                     let t = std::time::Instant::now();
+                    from = Some(w.eval.store.len_ids());
                     w.load_delta(add, None).map_err(|e| e.join("; "))?;
                     meter::spent("each_in", t);
                     w.eval.meter_read("takes_in", &mark);
                     meter::step("takes_in", add.lines().count());
                 }
                 w.eval.add.falls = None;
-                Ok(())
+                Ok(from)
             })?;
+            if rounds == 1 {
+                self.put_from = from;
+            }
             let t = meter::spent("out_and_in", t);
             // what stands once its volume took its part out and in: copies are judged by it below, so where the copies
             // laid into its volume take it out after all, it is a seed of the next round

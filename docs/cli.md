@@ -529,7 +529,7 @@ fork of the world and its proof set in the lemma's place. A world that cut a boo
 takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
 The volumes of a world name what their rules make in one dictionary (`rust/rofl/src/dict.rs`), kept beside them as `<slot>.q<sum>.names`: a term reads the same in every volume and none is spelled to cross.
 The kept volumes of `rofl ask`/`why` (from 32 MB) are the exception, as each file below the cut is a world of its own: the
-volumes are kept with their registry (`<slot>.q<sum>.scroll`: how many volumes, the sum of the core's text, each file with its sum and the volume that holds it; written last, so a set half written is no kept world), and when at most one file in eight moved and the rules
+volumes are kept with their registry (`<slot>.q<sum>.scroll`: how many volumes, the sum of the core's text, each file with its sum, the volume that holds it and the ids its facts lie at there, so an edit finds a file's facts without reading the volume; written last, so a set half written is no kept world), and when at most one file in eight moved and the rules
 did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
 lemmas and facts it no longer gives taken out of its worker and the new ones put in (`volumes: X of Y files taken
 by delta in Z ms`). What the edit moves in other volumes is passed on by delta too, round by round

@@ -120,6 +120,8 @@ pub struct Worker {
     names: FxMap<Sym, u64>,
     /// the volumes the worker was cooled to, the whole one first: each later cooling writes only what changed over them
     cooled: Cooled,
+    /// where each of its files' facts lie: the file, and the ids its text was given
+    pub places: Vec<(String, FactId, FactId)>,
 }
 
 /// The volumes a worker was cooled to, removed with it: what is mapped of them stays mapped.
@@ -244,7 +246,7 @@ impl Eval {
             .map(|_| {
                 let mut e = self.fork();
                 e.par.threads = 1;
-                Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default(), names: FxMap::default(), cooled: Cooled::default() }
+                Worker { e, laid: FxSet::default(), read_to: 0, vals: Values::default(), sent: FxSet::default(), unadmitted: Vec::new(), laid_for: FxMap::default(), retag: Vec::new(), me: 0, home_of: FxMap::default(), names: FxMap::default(), cooled: Cooled::default(), places: Vec::new() }
             })
             .collect();
         let mut st = VolStats { workers: k, files, ..Default::default() };
@@ -255,15 +257,23 @@ impl Eval {
                 Some(stage) => {
                     let base = w.e.fork();
                     let from = base.store.len_ids();
-                    for (_, text) in &groups[i] {
+                    for (f, text) in &groups[i] {
                         let mut low = base.fork();
                         load_text(&mut low, text)?;
                         low.lower_stage(stage)?;
+                        let a = w.e.store.len_ids();
                         w.e.take_lemmas(&low, stage, from, syms, funcs);
+                        w.places.push((f.clone(), a, w.e.store.len_ids()));
                     }
                     w.e.stage_given = Some(stage.rules.clone());
                 }
-                None => load_text(&mut w.e, &groups[i].iter().map(|f| f.1.as_str()).collect::<String>())?,
+                None => {
+                    for (f, text) in &groups[i] {
+                        let a = w.e.store.len_ids();
+                        load_text(&mut w.e, text)?;
+                        w.places.push((f.clone(), a, w.e.store.len_ids()));
+                    }
+                }
             }
             w.e.wall.level_wall = Some(i64::MIN);
             w.e.wall.hold_end = true;
