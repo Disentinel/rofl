@@ -512,9 +512,9 @@ impl Eval {
     /// no such order.
     pub(super) fn vfire_news(&mut self, r: &Rc<ERule>, cur: &Front) -> Result<Front, Halt> {
         let all: Vec<usize> = (0..r.plan.len()).collect();
-        let mut at: Vec<(Lit, usize, Vec<usize>, Vec<usize>)> = Vec::new();
+        let mut at: Vec<(Lit, usize, Vec<usize>, Vec<usize>, usize)> = Vec::new();
         let mut near: Vec<(Lit, usize, Vec<usize>)> = Vec::new();
-        for b in r.plan.iter() {
+        for (j, b) in r.plan.iter().enumerate() {
             let BodyElem::Pos(l) = b else { continue };
             let Some(ci) = self.vc.vclosure_for(l.rel) else { continue };
             if self.store.virtuals[ci].near.is_some() {
@@ -539,7 +539,7 @@ impl Eval {
                 self.h.vars_of(*t, &mut end);
             }
             match (self.bound_order(r, &all, &end), self.bound_order(r, &all, &pre)) {
-                (Some(oe), Some(o)) if l.args.len() == 2 => at.push((l.clone(), ci, oe, o)),
+                (Some(oe), Some(o)) if l.args.len() == 2 => at.push((l.clone(), ci, oe, o, j)),
                 _ => return self.fire_rule(r, None),
             }
         }
@@ -551,8 +551,9 @@ impl Eval {
                 self.conclude(r, sol, &mut out)?;
             }
         }
-        for (l, ci, oe, o) in at {
-            let (ends, rows) = self.vc.vnews(&mut self.store, ci, cur);
+        for (l, ci, oe, o, j) in at {
+            let (ends, mut rows) = self.vc.vnews(&mut self.store, ci, cur);
+            self.vrows_led(r, &l, j, &mut rows)?;
             let seeds: Vec<Subst> = ends.into_iter().filter_map(|(book, d)| unify(&self.h, l.persp, Term::atom(book), &Subst::new()).and_then(|s| unify(&self.h, l.args[1], d, &s))).collect();
             for sol in self.solve_bound(r, &all, Some(&oe), seeds)? {
                 self.conclude(r, sol, &mut out)?;
@@ -568,6 +569,41 @@ impl Eval {
 }
 
 impl Eval {
+    /// THE NEW ROWS OF A CLOSURE THAT THE REST OF THE RULE CAN LEAD TO: an edge new in a graph makes a row from each
+    /// node above it to each below, and a rule that reads the closure from a few nodes (the entries of a verb) joins
+    /// few of them. Where the rest of the body is solved from the row's ancestor, the rows are cut to the ancestors
+    /// it has a solution for, before any row is a seed.
+    fn vrows_led(&mut self, r: &Rc<ERule>, l: &Lit, j: usize, rows: &mut Vec<(Sym, Term, Term)>) -> Result<(), Halt> {
+        const FEW: usize = 256;
+        if rows.len() <= FEW {
+            return Ok(());
+        }
+        let mut pre = Vec::new();
+        for t in [&l.args[0], &l.persp] {
+            self.h.vars_of(*t, &mut pre);
+        }
+        // only what the ancestor binds: a premise over the descendant alone would be read whole an ancestor
+        let rest: Vec<usize> = (0..r.plan.len())
+            .filter(|&k| {
+                k != j && matches!(&r.plan[k], BodyElem::Pos(m) if { let mut v = Vec::new(); m.args.iter().for_each(|t| self.h.vars_of(*t, &mut v)); pre.iter().any(|x| v.contains(x)) })
+            })
+            .collect();
+        let Some(o) = self.bound_order(r, &rest, &pre).filter(|_| !rest.is_empty()) else { return Ok(()) };
+        let mut led: FxSet<(Sym, u64)> = FxSet::default();
+        let mut asked: FxSet<(Sym, u64)> = FxSet::default();
+        for &(book, a, _) in rows.iter() {
+            if !asked.insert((book, a.bits())) {
+                continue;
+            }
+            let Some(s) = unify(&self.h, l.persp, Term::atom(book), &Subst::new()).and_then(|s| unify(&self.h, l.args[0], a, &s)) else { continue };
+            if !self.solve_bound(r, &rest, Some(&o), vec![s])?.is_empty() {
+                led.insert((book, a.bits()));
+            }
+        }
+        rows.retain(|(book, a, _)| led.contains(&(*book, a.bits())));
+        Ok(())
+    }
+
     /// THE LEVEL OF A NEAREST REACHED: its step reads its condition under a negation, so the stratification puts it
     /// above what concludes the condition, and before that level it answers nothing. At it the closure opens and every
     /// rule that reads it, at this level or below, fires whole over the condition complete; one above fires at its own.

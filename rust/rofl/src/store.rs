@@ -3313,11 +3313,9 @@ impl Store {
         while c != EMPTY {
             let n = self.wits[c as usize];
             let h = firing_hash(id, n.rule, &self.prem_arena[n.prems_at as usize..(n.prems_at + n.prems_len) as usize]);
-            if brk!("window_chain_unlisted" => false; true) {
-                if let Some((f, _)) = d.nodes.insert(h, (id, c)) {
-                    d.begun.remove(&f);
-                    whole = false;
-                }
+            if let Some((f, _)) = d.nodes.insert(h, (id, c)) {
+                d.begun.remove(&f);
+                whole = false;
             }
             c = n.next;
         }

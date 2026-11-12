@@ -12072,6 +12072,20 @@ impl Eval {
             return self.match_premise(&src, s, depth, only);
         }
         if let Some(ci) = self.vc.vclosure_for(l.rel) {
+            // (news at a closure whose rows are facts too: the rows of those facts, not every row of the tree)
+            if let Some(o) = only {
+                let mut news: Vec<FactId> = o.iter().copied().collect();
+                news.sort_unstable();
+                let mut out = Vec::new();
+                for f in news {
+                    let (fp, fargs) = (self.store.rec(f).persp, self.store.args(f).to_vec());
+                    if let Some(s2) = unify(&self.h, l.persp, Term::atom(fp), s).and_then(|s2| unify_all(&self.h, &l.args, &fargs, &s2)) {
+                        out.extend(self.vmatch(ci, l, &s2));
+                    }
+                }
+                self.note_read(l, s, out.len());
+                return Ok(out);
+            }
             let out = self.vmatch(ci, l, s);
             self.note_read(l, s, out.len());
             return Ok(out);

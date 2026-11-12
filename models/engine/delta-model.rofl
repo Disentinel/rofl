@@ -204,3 +204,21 @@ out_today[judged](704805). back_today[judged](679934). tries_today[judged](74343
 tries_left[judged](N)   :- out_today[judged](O), back_today[judged](B), N is O - B.
 in_ms[judged](Ms)       :- tries_left[judged](N), tries_today[judged](T), in_ms_today[judged](A), Ms is A * N / T.
 judging_pays[judged](Ms) :- in_ms[judged](Ms), in_ms_today[judged](A), Ms * 4 < A.
+
+-- ------------------------------------------------------------------------- a closure premise is led by its news
+-- THE FORECAST OF READING A CLOSURE BY ITS NEWS, from the shape of two premises. A premise over a `nearest` whose rows
+-- are stored facts was matched as a closure and so read every row, whatever the news were: its reads should be the
+-- rows of the news. A new edge of a walked graph gives ancestors x descendants row seeds, and a rule that joins the
+-- ancestor to the rest of its body solved the rest once a seed: solved once an ancestor, the seeds left are the rows
+-- of the ancestors the rest of the body holds. Counted on #225 in one store on one core after [judged].
+read_today[led](parent, 2200000). news[led](parent, 610).
+read_today[led](at_step, 2070000). news[led](at_step, 7).
+read_today[led](does_fn, 3250000). delta_ms_today[led](24000).
+-- a news fact is read with the rows it joins: a hundred a fact is the bound on a tree of this size
+read[led](R, N)     :- news[led](R, K), N is K * 100.
+read_pays[led](R)   :- read[led](R, N), read_today[led](R, T), N * 10 < T.
+-- gdb gave these three a third of the delta; led by the news they should leave at most a tenth of that
+delta_ms[led](Ms)   :- delta_ms_today[led](T), Ms is T - T / 3 + T / 30.
+-- measured after: the delta, and what the three still read
+delta_ms_after[led](18464). read_after[led](parent, 0). read_after[led](at_step, 37752). read_after[led](does_fn, 1963514).
+forecast_held[led](R)  :- read[led](R, N), read_after[led](R, A), A * 10 < N * 1000.

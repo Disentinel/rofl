@@ -2253,8 +2253,6 @@ brk("retract_many_silent"). brk_kind("retract_many_silent", switch).
 brk_expects("retract_many_silent", "retract_two_facts").
 brk("retract_unrederived"). brk_kind("retract_unrederived", switch).
 brk_expects("retract_unrederived", "set_base_made").
-brk("window_chain_unlisted"). brk_kind("window_chain_unlisted", switch).
-brk_expects("window_chain_unlisted", "set_random").
 brk("overdelete_judged_kept"). brk_kind("overdelete_judged_kept", switch).
 brk_expects("overdelete_judged_kept", "set_random").
 brk("overdelete_kept_by_own_component"). brk_kind("overdelete_kept_by_own_component", switch).
@@ -2965,7 +2963,6 @@ switch_site("widen_why_one_step", "rust/rofl/src/engine.rs").
 switch_site("widen_why_root_bare", "rust/rofl/src/engine.rs").
 switch_site("widen_whynot_bare", "rust/rofl/src/engine.rs").
 switch_site("widening_flag_off", "rust/rofl/src/engine.rs").
-switch_site("window_chain_unlisted", "rust/rofl/src/store.rs").
 switch_site("withdraw_all_rows_kept", "rust/rofl/src/engine/delta.rs").
 switch_site("withdrawn_cell_stale_src", "rust/rofl/src/engine.rs").
 switch_site("witness_by_signature", "rust/rofl/src/store.rs").

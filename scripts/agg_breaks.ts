@@ -9053,13 +9053,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "window_chain_unlisted",
-  "what": "a fact derived again is told to the window of firings as whole while its chain is not listed in it, so a firing it had is put on it again",
-  "expect": {
-   "set_random": "sets differ from the fresh world"
-  }
- },
- {
   "id": "overdelete_judged_kept",
   "what": "a fact that stands by a firing keeps its firings that cite what went, so one of them holds it up when the firing that stood goes",
   "expect": {
