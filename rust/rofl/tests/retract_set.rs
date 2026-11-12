@@ -73,6 +73,19 @@ fn first_diff(a: &str, b: &str) -> String {
     format!("held but not fresh {extra:?}; fresh but not held {lack:?}")
 }
 
+/// A base fact a rule makes too stands when it is taken out: derived again by the rule, as the fresh world has it.
+#[test]
+fn a_base_fact_a_rule_still_makes_stands() {
+    let rules = "edb(q). edb(p).\np(X) :- q(X).\nr(X) :- p(X).\n";
+    let facts: Vec<String> = ["q(a).", "p(a).", "p(b)."].iter().map(|f| f.to_string()).collect();
+    let want = world(rules, &facts[..1]).eval.canonical_state();
+    let mut s = world(rules, &facts);
+    let ids = ids_of(&mut s, &facts[1..]);
+    assert!(matches!(s.retract_facts_delta(&ids).unwrap(), Retraction::Delta(_)), "taken by delta");
+    let got = s.eval.canonical_state();
+    assert!(got == want, "a base fact a rule makes: {}", first_diff(&want, &got));
+}
+
 #[test]
 fn a_set_taken_out_in_one_pass_is_the_fresh_world() {
     let mut refused: BTreeMap<String, usize> = BTreeMap::new();

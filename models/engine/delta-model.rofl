@@ -190,3 +190,17 @@ edit_ms[folds](Ms)       :- edit_share[folds](P), anew_ms[folds](A), Ms is A * P
 -- the forecast holds while the folds are few beside the facts and the edit by folds is forecast under the delta of today
 folds_are_few[folds](N)  :- sets[folds](N), derived[folds](D), N * 1000 < D.
 folds_pay[folds](Ms)     :- edit_ms[folds](Ms), delta_ms[folds](T), Ms < T.
+
+-- ------------------------------------------------------------------------- what goes is judged by the firings kept
+-- THE FORECAST OF JUDGING AN OVERDELETION BY THE FIRINGS THE STORE KEEPS, from the shape of the overdeletion: it took
+-- out whatever cited a fact gone unless a firing stood on premises outside the fact's own recursion, so in a recursive
+-- relation one fact gone took the relation's reach with it, and each was derived again by solving its rules with the
+-- head bound (`tries`), again and again while one before it on the chain was still out. A world keeps every firing,
+-- so what stands can be read off them: of what the seeds reach, a fact with a firing over premises not reached, or
+-- proved so before it, stands, and no rule is solved for it. What is left to try is what went and did not come back
+-- by a firing it had. Counted on #225 in one store on one core, the delta of today (the ledger says how).
+out_today[judged](704805). back_today[judged](679934). tries_today[judged](743431). in_ms_today[judged](91541).
+-- at most what came back came by a firing it had: the tries left are at least what stayed out
+tries_left[judged](N)   :- out_today[judged](O), back_today[judged](B), N is O - B.
+in_ms[judged](Ms)       :- tries_left[judged](N), tries_today[judged](T), in_ms_today[judged](A), Ms is A * N / T.
+judging_pays[judged](Ms) :- in_ms[judged](Ms), in_ms_today[judged](A), Ms * 4 < A.

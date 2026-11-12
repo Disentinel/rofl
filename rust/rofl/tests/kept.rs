@@ -696,8 +696,9 @@ fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
     check("a file come", true, "more.rofl")?;
     d.write("rules.rofl", RULES);
     check("the file edited back", true, "rules.rofl")?;
-    // the world without more.rofl stands under the one kept over it, so a file gone is asked of a world kept with it alone
-    check("the world kept without more.rofl", false, "rules.rofl")?;
+    // (the world without more.rofl stands under the one kept over it while the overlays are small beside it, and is
+    // taken from; else the file goes from the world with it: so a file gone is asked of a world kept with it alone)
+    check("the world kept without more.rofl", false, "")?;
     check_in(&gone, "kept with more.rofl", true, "")?;
     check_in(&gone, "a file gone", false, "more.rofl (gone)")
 }

@@ -1271,8 +1271,9 @@ pub struct AddState {
     mark: FactId,
     /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
     retract_seeds: Vec<FactId>,
-    /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
-    kept: HashMap<FactId, HashSet<FactId>>,
+    /// What the overdeletion took out though a firing of it over a cell or a row was not judged (`overdelete`): only
+    /// these, and a base fact that lost its firings, are derived again by their rules; the rest comes back by the news.
+    retry: crate::store::FxSet<FactId>,
     /// Of what a retraction reaches, the facts nothing proves again across the volumes (`Crossing::stands`): the
     /// retraction's first overdeletion keeps every other fact where a firing of it stands over facts not among them.
     pub falls: Option<crate::store::FxSet<FactId>>,

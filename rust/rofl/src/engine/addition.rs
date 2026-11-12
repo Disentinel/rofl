@@ -703,23 +703,22 @@ impl Eval {
         r
     }
 
-    /// DRed's overdeletion: each of `seeds` (which lost a firing, and may have gone with it) goes whole, and so does
-    /// every fact with a firing that cites one gone, through each other; a base fact stays and loses its firings, to
-    /// be given them again.
+    /// WHAT GOES WITH `seeds` (each lost a firing, and may have gone with it), JUDGED BY THE FIRINGS KEPT: what the seeds
+    /// reach through the firings that cite them, less what stands all the same, proved from the ground up by a firing
+    /// whose premises are facts not reached or facts proved so before it (the least such set: nothing in it rests on
+    /// itself). What does not stand goes whole, to be derived again; what stands loses the firings that cite what went.
+    /// A base fact stays and loses its firings, to be given them again. A cell or a row is judged where it is reset or
+    /// taken out, and what cites it is a seed then: so it proves for a fact reached, and not for a seed.
     fn overdelete(&mut self, seeds: Vec<FactId>, over: &mut HashSet<FactId>, over_base: &mut HashSet<FactId>, d: &mut AddDelta) {
         // the citer index, made when something first goes and kept by every firing added since
         if !seeds.is_empty() && !self.store.has_citers() {
             self.store.index_citers();
         }
-        let lost: HashSet<FactId> = seeds.iter().copied().collect();
-        let comp = self.rel_components();
-        // (kept, and queued since by nothing: a copy queued before it was judged)
-        let mut judged: HashSet<FactId> = HashSet::new();
-        // lowest level first: a fact is judged once everything below it that goes has gone
-        let mut queue: std::collections::BinaryHeap<std::cmp::Reverse<(i64, FactId)>> =
-            seeds.into_iter().map(|x| std::cmp::Reverse(({ let rc = self.store.rec(x); self.fact_level(rc.rel, rc.persp) }, x))).collect();
-        while let Some(std::cmp::Reverse((lv, x))) = queue.pop() {
-            if over.contains(&x) || over_base.contains(&x) || judged.contains(&x) {
+        let lost: FxSet<FactId> = seeds.iter().copied().collect();
+        let mut reach: FxSet<FactId> = FxSet::default();
+        let mut stack = seeds;
+        while let Some(x) = stack.pop() {
+            if over.contains(&x) || over_base.contains(&x) || reach.contains(&x) {
                 continue;
             }
             if self.store.rec(x).base() {
@@ -730,38 +729,33 @@ impl Eval {
             if !self.store.alive(x) && !brk!("add_lost_unseeded" => false; lost.contains(&x)) {
                 continue;
             }
-            // A FACT A FIRING STILL HOLDS UP STAYS: the firings that cite what went are withdrawn, and where one is
-            // left whose premises are facts that stand, none of a relation recursive with the fact's, the fact keeps
-            // it and nothing above it moves. (A premise recursive with it may rest on the fact through a cycle, and a
-            // cell or a row may be replaced: the fact goes whole then, and is derived again. A premise that goes after
-            // this, of the same level, brings the fact back here: `judged` lets it be judged again.)
-            if self.store.alive(x) {
-                let store = &self.store;
-                let gone = |p: &PremRef| matches!(p.kind(), Prem::Fact(g) if over.contains(&g) || over_base.contains(&g) || !store.alive(g));
-                let firings = store.firings(x);
-                let own = comp.get(&store.rec(x).rel);
-                let proved = self.add.falls.as_ref().is_some_and(|f| !f.contains(&x));
-                let below = |g: FactId| {
-                    let rc = store.rec(g);
-                    let rel = rc.rel;
-                    self.fact_level(rel, rc.persp) < lv
-                        || brk!("overdelete_kept_by_own_component" => true; comp.get(&rel) != own || own.is_none())
-                        || self.add.falls.as_ref().is_some_and(|f| proved && !f.contains(&g))
-                };
-                let stands = |ps: &[PremRef]| ps.iter().all(|p| match p.kind() {
-                    Prem::Fact(g) => store.alive(g) && !over.contains(&g) && !over_base.contains(&g) && below(g),
-                    Prem::Neg(_) | Prem::Bi(_) => true,
-                    _ => false,
-                });
-                if firings.iter().any(|(_, _, ps)| !ps.iter().any(gone) && stands(ps)) {
-                    let dead: HashSet<FactId> = firings.iter().flat_map(|(_, _, ps)| ps.iter()).filter(|p| gone(p)).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
-                    self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if dead.contains(&g))));
-                    d.kept += 1;
-                    self.meter_rel(x, Count::Kept);
-                    self.add.kept.entry(x).or_default().extend(dead);
-                    judged.insert(x);
-                    continue;
-                }
+            reach.insert(x);
+            // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
+            stack.extend(self.store.citers_one(x).into_iter().filter(|y| self.store.alive(*y) && !over.contains(y) && !reach.contains(y) && self.store.cites(*y, PremRef::Fact(x))));
+        }
+        let mut stands: FxSet<FactId> = FxSet::default();
+        let mut queue: Vec<FactId> = reach.iter().copied().collect();
+        while let Some(x) = queue.pop() {
+            if stands.contains(&x) || !self.store.alive(x) {
+                continue;
+            }
+            let (store, seed) = (&self.store, lost.contains(&x));
+            let proved = store.firings(x).iter().any(|(_, _, ps)| ps.iter().all(|p| match p.kind() {
+                Prem::Fact(g) => store.alive(g) && !over.contains(&g) && brk!("overdelete_kept_by_own_component" => true; !reach.contains(&g) || stands.contains(&g)),
+                Prem::Neg(_) | Prem::Bi(_) => true,
+                Prem::Cell(_) | Prem::VRow(_) => !seed,
+            }));
+            if proved {
+                stands.insert(x);
+                queue.extend(store.citers_one(x).into_iter().filter(|y| reach.contains(y) && !stands.contains(y)));
+            }
+        }
+        let (mut out, mut kept): (Vec<FactId>, Vec<FactId>) = reach.into_iter().partition(|x| !stands.contains(x));
+        out.sort_unstable();
+        kept.sort_unstable();
+        for x in out {
+            if lost.contains(&x) && self.store.firings(x).iter().any(|(_, _, ps)| ps.iter().any(|p| matches!(p.kind(), Prem::Cell(_) | Prem::VRow(_)))) {
+                self.add.retry.insert(x);
             }
             self.withdraw_unswept(&[x], |_, _| true);
             if self.store.alive(x) {
@@ -777,30 +771,21 @@ impl Eval {
                 self.store.key(&self.h, x).hash(&mut h);
                 meter::went(self.h.name(self.store.rec(x).rel), h.finish());
             }
-            // (the index lists a firing withdrawn since: a citer is followed where a firing of it still cites the fact)
-            for y in self.store.citers_one(x) {
-                if self.store.alive(y) && !over.contains(&y) && self.store.cites(y, PremRef::Fact(x)) {
-                    if brk!("overdelete_judged_kept" => false; true) {
-                        judged.remove(&y);
-                    }
-                    queue.push(std::cmp::Reverse(({ let rc = self.store.rec(y); self.fact_level(rc.rel, rc.persp) }, y)));
-                }
+        }
+        for x in kept {
+            let store = &self.store;
+            let dead: HashSet<FactId> = store.firings(x).iter().flat_map(|(_, _, ps)| ps.iter()).filter_map(|p| match p.kind() {
+                Prem::Fact(g) if !store.alive(g) || over.contains(&g) => Some(g),
+                _ => None,
+            }).collect();
+            if brk!("overdelete_judged_kept" => true; dead.is_empty()) {
+                continue;
             }
+            self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if dead.contains(&g))));
+            d.kept += 1;
+            self.meter_rel(x, Count::Kept);
         }
         self.store.sweep();
-    }
-
-    /// The strongly connected components of the relations, each relation's by the rules that conclude it reading
-    /// another (under a negation and an aggregate too): two relations in one may rest on each other.
-    fn rel_components(&self) -> HashMap<Sym, usize> {
-        let mut next: HashMap<Sym, Vec<Sym>> = HashMap::new();
-        for r in self.rules.iter() {
-            let reads = next.entry(r.clause.head.rel).or_default();
-            for l in r.clause.body.iter().flat_map(|b| b.lits_deep()) {
-                reads.push(l.rel);
-            }
-        }
-        rel_scc(&next).0
     }
 
     fn meter_rel(&self, x: FactId, c: Count) {
@@ -831,7 +816,7 @@ impl Eval {
     /// fact gone for good below makes a negation over it hold (the rule solved with it bound to the premise); and the
     /// news of every level below, and what this level made, fires the rules of the level semi-naively.
     fn fine_levels(&mut self, added: &[FactId], removed: &[FactId], plan: &Plan, grown: &HashSet<Sym>, d: &mut AddDelta) -> Result<(), Halt> {
-        self.add.kept.clear();
+        self.add.retry.clear();
         self.heights_kept.clear();
         let mut levels: std::collections::BTreeSet<i64> = plan.mono.iter().chain(&plan.new_plain).chain(&plan.recompute).chain(plan.negs.iter().map(|(r, _)| r)).map(|r| self.rule_level(r)).collect();
         levels.extend(grown.iter().filter(|r| !plan.dirty.contains(r)).map(|r| self.rel_level(*r)));
@@ -1189,8 +1174,9 @@ impl Eval {
         Ok(())
     }
 
-    /// The facts gone at a level are derived again from what holds, until nothing more comes back; each that stands
-    /// takes every firing it has, once all that came back stands. Returns what was concluded.
+    /// What went at a level unjudged (`retry`), and a base fact that went or lost its firings, is derived again by its
+    /// rules from what holds. What comes back joins the level's news, and the rules fire on it: so one pass is enough,
+    /// and a fact that rests on one derived after it comes back by that. Returns what was concluded.
     fn rederive_gone(&mut self, lv: i64, plan: &Plan, level: &LevelRun, st: &mut Fine) -> Result<Front, Halt> {
         let mut again: Vec<FactId> = st
             .over
@@ -1199,50 +1185,18 @@ impl Eval {
             .copied()
             .filter(|x| {
                 let rec = self.store.rec(*x);
-                self.fact_level(rec.rel, rec.persp) == lv && !plan.dirty.contains(&rec.rel) && !level.heads.contains(&rec.rel) && (rec.base() || !self.store.alive(*x))
+                self.fact_level(rec.rel, rec.persp) == lv && !plan.dirty.contains(&rec.rel) && !level.heads.contains(&rec.rel) && (rec.base() || !self.store.alive(*x) && self.add.retry.contains(x))
             })
             .collect();
         again.sort_unstable();
         let mut out = Front::default();
         let mut orders: HashMap<Sym, Option<Vec<usize>>> = HashMap::new();
-        // until nothing more comes back: a fact of a recursion may rest on one derived again after it
-        let mut pending = if brk!("retract_unrederived" => st.retracting; false) { Vec::new() } else { again.clone() };
-        loop {
-            let mut still: Vec<FactId> = Vec::new();
-            let mut came = false;
-            for x in pending {
-                self.meter_rel(x, Count::Tries);
-                let was = self.store.alive(x) && !self.store.rec(x).base();
-                self.rederive_one(x, &st.by_head, &mut orders, &mut out)?;
-                if !self.store.alive(x) {
-                    still.push(x);
-                } else if !was && !self.store.rec(x).base() {
-                    came = true;
-                }
-            }
-            pending = still;
-            if !came || pending.is_empty() || brk!("rederive_once" => true; false) {
-                break;
-            }
+        if brk!("retract_unrederived" => st.retracting; false) {
+            return Ok(out);
         }
-        // and each that stands takes every firing it has, now that all that came back stands
-        // (and each kept for a firing that stood, where a premise of a firing it lost came back)
-        let kept_here: Vec<FactId> = {
-            let store = &self.store;
-            let mut v: Vec<FactId> = self
-                .add
-                .kept
-                .iter()
-                .filter(|(x, lost)| store.alive(**x) && { let rc = store.rec(**x); self.fact_level(rc.rel, rc.persp) } == lv && lost.iter().any(|g| store.alive(*g)))
-                .map(|(x, _)| *x)
-                .collect();
-            v.sort_unstable();
-            v
-        };
-        if (again.len() > 1 || !kept_here.is_empty()) && !brk!("retract_unrederived" => st.retracting; false) {
-            for x in again.iter().copied().filter(|x| self.store.alive(*x)).chain(kept_here).collect::<Vec<_>>() {
-                self.rederive_one(x, &st.by_head, &mut orders, &mut out)?;
-            }
+        for x in again {
+            self.meter_rel(x, Count::Tries);
+            self.rederive_one(x, &st.by_head, &mut orders, &mut out)?;
         }
         Ok(out)
     }
@@ -1299,12 +1253,12 @@ impl Eval {
             if !self.store.alive(id) || rel == self.v.derived_by {
                 continue;
             }
-            if st.over.contains(&id) || level.held.contains(&id) {
-                d.rederived += st.over.contains(&id) as usize;
-                if st.over.contains(&id) {
-                    self.meter_rel(id, Count::Back);
-                }
-            } else {
+            if st.over.contains(&id) {
+                d.rederived += 1;
+                self.meter_rel(id, Count::Back);
+            }
+            // (a fact that went and came back is news to what went with it: nothing else derives that again)
+            if !level.held.contains(&id) {
                 st.news.note(rel, id);
             }
         }

@@ -2252,9 +2252,7 @@ brk_expects("retract_reset_any_book", "retract_other_book").
 brk("retract_many_silent"). brk_kind("retract_many_silent", switch).
 brk_expects("retract_many_silent", "retract_two_facts").
 brk("retract_unrederived"). brk_kind("retract_unrederived", switch).
-brk_expects("retract_unrederived", "set_random").
-brk("rederive_once"). brk_kind("rederive_once", switch).
-brk_expects("rederive_once", "set_random").
+brk_expects("retract_unrederived", "set_base_made").
 brk("window_chain_unlisted"). brk_kind("window_chain_unlisted", switch).
 brk_expects("window_chain_unlisted", "set_random").
 brk("overdelete_judged_kept"). brk_kind("overdelete_judged_kept", switch).
@@ -2730,7 +2728,6 @@ switch_site("rank_members_unordered", "rust/rofl/src/engine.rs").
 switch_site("rank_reach_blind", "rust/rofl/src/engine.rs").
 switch_site("rank_share_coarse", "rust/rofl/src/engine.rs").
 switch_site("rank_tuple_insertion", "rust/rofl/src/cell.rs").
-switch_site("rederive_once", "rust/rofl/src/engine/addition.rs").
 switch_site("refire_fault_unexcused", "rust/rofl/src/engine.rs").
 switch_site("refire_lattice_unclosed", "rust/rofl/src/engine/delta.rs").
 switch_site("refl_neg", "rust/rofl/src/reflect.rs").

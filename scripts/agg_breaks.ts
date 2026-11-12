@@ -9047,16 +9047,9 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "retract_unrederived",
-  "what": "a retraction overdeletes what rests on the facts and derives none of it again",
+  "what": "a retraction derives nothing again by its rules: a base fact taken out that a rule still makes stays out",
   "expect": {
-   "set_random": "sets differ from the fresh world"
-  }
- },
- {
-  "id": "rederive_once",
-  "what": "what a retraction overdeleted is derived again once, not until nothing more comes back: a fact of a recursion that rests on one derived after it stays out",
-  "expect": {
-   "set_random": "sets differ from the fresh world"
+   "set_base_made": "a base fact a rule makes"
   }
  },
  {
@@ -9068,14 +9061,14 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "overdelete_judged_kept",
-  "what": "a fact kept by a firing that stood is not judged again when a premise of another of its firings goes after it, so that firing stays",
+  "what": "a fact that stands by a firing keeps its firings that cite what went, so one of them holds it up when the firing that stood goes",
   "expect": {
    "set_random": "sets differ from the fresh world"
   }
  },
  {
   "id": "overdelete_kept_by_own_component",
-  "what": "a fact is kept by a firing whose premise is of a relation recursive with its own, which may rest on the fact itself",
+  "what": "a fact is kept by a firing whose premise is itself among what the seeds reach and not proved to stand, so two facts that rest on each other hold each other up",
   "expect": {
    "set_random": "sets differ from the fresh world"
   }
@@ -9294,6 +9287,7 @@ export const TESTS: Record<string, string> = {
   retract_other_book: 'retract_refuse a_base_fact_in_another_book_does_not_stop_the_delta',
   // a set of base facts taken out in one pass (w_incremental_retraction)
   set_random: 'retract_set a_set_taken_out_in_one_pass_is_the_fresh_world',
+  set_base_made: 'retract_set a_base_fact_a_rule_still_makes_stands',
   set_js: 'retract_set a_js_files_facts_taken_out_are_the_fresh_world',
   set_tree: 'retract_set a_tree_edited_in_sequence_is_the_fresh_world',
   set_js_steps: 'retract_set random_js_steps_1',
