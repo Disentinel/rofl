@@ -172,3 +172,21 @@ lookups_added_indexed[volumes](Pct) :- looked_up[volumes](no_node, A), looked_up
                                     looked_up_total[volumes](T), Pct is (A + B) * 100 / T.
 next_door_pays[volumes](K, Pct)  :- lookups_added[volumes](K, Pct), laying_pct[volumes](L), Pct < L.
 next_door_costs[volumes](K, Pct) :- lookups_added[volumes](K, Pct), laying_pct[volumes](L), Pct >= L.
+
+-- --------------------------------------------------------------------------- a fact lies where its premises' files say
+-- THE FORECAST OF AN ADDRESS THAT IS THE SET OF FILES A FACT WAS DERIVED FROM (the owner, 2026-11-12): a fold is a set
+-- of files, a fact derived from premises in folds A and B lies in the fold of their files together, and an edit of a
+-- file drops the folds whose set holds it and derives them again; the rest is not opened. Counted on the first
+-- evaluation of the engine's own model, 123 files in one volume, by each fact's first firing (the ledger says how).
+derived[folds](6352254). sets[folds](3493). largest_set[folds](16). in_one_file[folds](5177930).
+in_two_folds[folds](35152).
+-- an edit of the 7 files of #225: the folds whose set holds one, and the derived facts in them
+edit_folds[folds](1657). edit_facts[folds](784748).
+-- what the delta of today takes out for the same edit, and the time of the whole evaluation and of that delta, ms
+taken_out_today[folds](59000). anew_ms[folds](45000). delta_ms[folds](15000).
+-- the share of the world an edit derives again, and the time that is of the whole evaluation
+edit_share[folds](Pct)   :- edit_facts[folds](E), derived[folds](D), Pct is E * 100 / D.
+edit_ms[folds](Ms)       :- edit_share[folds](P), anew_ms[folds](A), Ms is A * P / 100.
+-- the forecast holds while the folds are few beside the facts and the edit by folds is forecast under the delta of today
+folds_are_few[folds](N)  :- sets[folds](N), derived[folds](D), N * 1000 < D.
+folds_pay[folds](Ms)     :- edit_ms[folds](Ms), delta_ms[folds](T), Ms < T.
