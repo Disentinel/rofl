@@ -6318,8 +6318,24 @@ impl Eval {
                 PremRef::Bi(self.h.key(&d))
             }
             BodyElem::Neg(l) => {
-                let k = self.anon_lit_key(l, s);
-                PremRef::Neg(self.h.key(&k))
+                let p = walk(&self.h, l.persp, s);
+                let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+                if !self.h.is_ground(p) || args.iter().any(|a| !self.h.is_ground(*a)) {
+                    let k = self.anon_key(l.rel, p, &args);
+                    return PremRef::Neg(self.h.key(&k));
+                }
+                let of: Vec<u64> = [0, l.rel as u64, p.bits()].into_iter().chain(args.iter().map(|a| a.bits())).collect();
+                let rel = l.rel;
+                PremRef::Neg(self.h.key_of(&of, |h| {
+                    let mut out = String::new();
+                    out.push_str(h.name(rel));
+                    out.push('[');
+                    h.canon_term(p, &mut out);
+                    out.push_str("](");
+                    write_arg_list(h, &args, &mut out);
+                    out.push(')');
+                    out
+                }))
             }
             BodyElem::Pos(l) => match r.kind() {
                 Prem::VRow(_) => self.vc.vrow_ref(&mut self.h, &mut self.store, l, s),

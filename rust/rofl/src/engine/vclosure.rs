@@ -1566,9 +1566,16 @@ impl VClosureState {
     }
 
     fn vrow_key(&self, h: &mut Heap, store: &mut Store, ci: usize, book: Sym, a: Term, d: Term) -> Sym {
-        let k = h.key(&fact_key(&*h, self.vclosures[ci].rel, book, &[a, d]));
-        store.vrow_of.name(k, (ci, book, a, d));
-        store.fold_row(h, &[a, d]);
+        let rel = self.vclosures[ci].rel;
+        let k = if h.is_ground(a) && h.is_ground(d) {
+            h.key_of(&[1, ci as u64, book as u64, a.bits(), d.bits()], |h| fact_key(h, rel, book, &[a, d]))
+        } else {
+            h.key(&fact_key(&*h, rel, book, &[a, d]))
+        };
+        if store.vrow_of.get(&k).is_none() {
+            store.vrow_of.name(k, (ci, book, a, d));
+            store.fold_row(h, &[a, d]);
+        }
         k
     }
 }

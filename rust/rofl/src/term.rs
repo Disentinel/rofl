@@ -417,6 +417,18 @@ pub struct Heap {
     top: Funcs,
     /// What `syms.seen` is to names: the compound terms of the dictionary this heap has met.
     seen: Seen,
+    keys: KeyMemo,
+}
+
+/// The keys a proof quotes by what they are keys of (`Heap::key_of`): a key met again is not spelled again. A fork
+/// begins with none.
+#[derive(Default)]
+struct KeyMemo(std::collections::HashMap<u64, Vec<(Box<[u64]>, Sym)>, std::hash::BuildHasherDefault<crate::store::Fx>>);
+
+impl Clone for KeyMemo {
+    fn clone(&self) -> Self {
+        KeyMemo::default()
+    }
 }
 
 #[derive(Default, Clone)]
@@ -592,7 +604,7 @@ impl Heap {
         let (funcs, ftop) = if funcs { (base, Funcs::read(r)?) } else { (base, Funcs::default()) };
         let n0 = names.len() as Sym;
         let f0 = funcs.funcs.len() as u32;
-        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top, dict: None, seen: Seen::default() }, f0, base: Rc::new(funcs), top: ftop, seen: Seen::default() })
+        Ok(Heap { syms: Interner { n0, base: Rc::new(names), top, dict: None, seen: Seen::default() }, f0, base: Rc::new(funcs), top: ftop, seen: Seen::default(), keys: KeyMemo::default() })
     }
 }
 
@@ -627,6 +639,23 @@ impl Heap {
     /// The key a proof quotes, a name no fact holds (`Interner::own`).
     pub fn key(&mut self, s: &str) -> Sym {
         self.syms.own(s)
+    }
+    /// The key of what `of` says (a kind and the numbers of its terms, all ground): spelled by `spell` the first time.
+    pub fn key_of(&mut self, of: &[u64], spell: impl FnOnce(&Heap) -> String) -> Sym {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        for x in of {
+            h = (h ^ x).wrapping_mul(0x1000_0000_01b3);
+        }
+        if let Some(k) = self.keys.0.get(&h).and_then(|v| v.iter().find(|(o, _)| **o == *of)) {
+            return k.1;
+        }
+        let k = self.syms.own(&spell(self));
+        // (a whole evaluation meets a key once and an edit the same few again and again: the memory is an edit's)
+        if self.keys.0.len() >= 1 << 17 {
+            self.keys.0.clear();
+        }
+        self.keys.0.entry(h).or_default().push((of.into(), k));
+        k
     }
     /// The dictionary this heap names in from here on, one made where it has none: what a fork of it names, every
     /// other fork reads under the same number.

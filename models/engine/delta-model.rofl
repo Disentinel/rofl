@@ -242,3 +242,10 @@ lower_sample[shared](21, 60). anew_ms_one_worker[shared](85000).
 anew_ms_lower_on_threads[shared](Ms) :- lower_sample[shared](L, A), anew_ms_one_worker[shared](T), threads[shared](C), Ms is T * (A - L) / A + T * L / A / C.
 -- measured: one worker on four cores, anew and by delta, answers equal
 anew_ms_lower_measured[shared](65250). delta_ms_one_worker[shared](18978).
+-- a key a proof quotes (of an absence, of a closure's row) spelled once: 11 samples of 60 were in spelling them
+-- (one worker, four cores, 65 s); at most those go
+keys_sample[shared](11, 60).
+anew_ms_keys_once[shared](Ms) :- keys_sample[shared](K, A), anew_ms_lower_measured[shared](T), Ms is T * (A - K) / A.
+-- measured: with every key kept the evaluation did not move (65.5 s, the heap 470 MB more: anew a key is met once);
+-- with the last 131 072 kept, 56.3 s anew and the delta 14.2 s (19.0)
+anew_ms_keys_measured[shared](56313). delta_ms_keys_measured[shared](14187).
