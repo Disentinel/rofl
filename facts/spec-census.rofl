@@ -252,6 +252,7 @@ check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_another_book_
 check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_the_same_book_is_taken_by_the_sets_pass", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "the_engine_delta_refuses_two_facts_at_once", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_base_fact_a_rule_still_makes_stands", test).
+check[checks]("rust/rofl/tests/retract_set.rs", "a_fact_kept_by_a_longer_proof_stands_higher_in_its_cell", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_set_taken_out_in_one_pass_is_the_fresh_world", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "random_js_steps_1", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "random_js_steps_2", test).

@@ -782,6 +782,8 @@ impl Eval {
                 continue;
             }
             self.withdraw_unswept(&[x], |_, ps| ps.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if dead.contains(&g))));
+            // (it may stand higher by the firings left: a cell a member of which rests on it lists the height)
+            self.add.refired.push(x);
             d.kept += 1;
             self.meter_rel(x, Count::Kept);
         }
