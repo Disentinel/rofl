@@ -249,3 +249,14 @@ anew_ms_keys_once[shared](Ms) :- keys_sample[shared](K, A), anew_ms_lower_measur
 -- measured: with every key kept the evaluation did not move (65.5 s, the heap 470 MB more: anew a key is met once);
 -- with the last 131 072 kept, 56.3 s anew and the delta 14.2 s (19.0)
 anew_ms_keys_measured[shared](56313). delta_ms_keys_measured[shared](14187).
+
+-- THE WORK CUT BY FILE (the owner's choice, 2026-11-12): one store; what a rule that never leaves a file concludes is
+-- derived a file at a time on the workers, and the rules that cross files fire once over all of it. Counted anew
+-- (the ledger says how): firings of the lower stage, of the rules above it that never left a file, of those that did.
+firings[byfile](lower, 5611395). firings[byfile](in_file, 5480949). firings[byfile](across, 3515269).
+-- the evaluation above the lower stage is 36 s of the 56 (38 samples of 60); its share by firings goes to the
+-- workers, but what they conclude is taken into the store on one thread, at about what concluding costs (a third)
+upper_ms[byfile](36000). whole_ms[byfile](56313). taking_share[byfile](33).
+in_file_ms[byfile](Ms)  :- firings[byfile](in_file, I), firings[byfile](across, X), upper_ms[byfile](U), Ms is U * I / (I + X).
+anew_ms[byfile](Ms)     :- in_file_ms[byfile](L), whole_ms[byfile](W), taking_share[byfile](T), threads[shared](C), Ms is W - L + L * (100 - T) / 100 / C + L * T / 100.
+byfile_pays[byfile](Ms) :- anew_ms[byfile](Ms), anew_ms_volumes[shared](V), Ms < V.
