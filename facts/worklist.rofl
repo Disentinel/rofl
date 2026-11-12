@@ -4085,3 +4085,9 @@ work_spawned(w_scroll_edit_is_a_version, f_a_tree_built_again_took_a_new_place_e
 work_needs(w_scroll, w_scroll_edit_is_a_version).
 work_needs(w_scroll_edit_is_a_version, w_scroll_foreign_premise).
 
+work(w_scroll_regions,
+  "The step of w_scroll_foreign_premise that is built first, from f_volumes_do_twice_the_work_of_one_store. THREADS WRITE ONE SCROLL, EACH ITS OWN REGION: one store and one evaluation; a fact's number names its region and its place there; a region is written by one thread and never moves under a reader (columns in pieces appended, not vectors grown); the key of a fact says which region it is put in, so one fact has one writer and its firings one order; a round matches on every thread with nothing written, then concludes on every thread, each into its region, and what a round wrote is read from the next. The steps, each with the answers of every world as before: (1) the columns of the store by region, one region; (2) the keys, the tuples of arguments, the firings and the runs of fresh facts by region; (3) a round's conclusions of plain rules bucketed by region and put on threads; (4) a round's rules matched on threads over the store as the round began; (5) the files read on threads. ACCEPTANCE: #225's tree on the engine's model anew in one store on four cores under the volumes' 50 s with the answers equal, and its delta under the volumes' 15 s; then the volumes' workers, the exchange and the copies laid go (w_scroll_foreign_premise). AT THE REFERENCE SCALE a fact's number in a premise is 29 bits today (PremRef), about what 11 100 files give: the number widens with the regions. KNOWN BOUND: what stays on one thread (the plans, the forests, the levels: a quarter of the samples) bounds the gain at three to four times whatever the cores.").
+work_state(w_scroll_regions, open).
+work_needs(w_scroll_foreign_premise, w_scroll_regions).
+work_spawned(w_scroll_regions, f_volumes_do_twice_the_work_of_one_store).
+
