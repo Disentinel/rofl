@@ -207,16 +207,16 @@ fn below(u: &Rc<Unit>, child: u32, out: &mut Vec<(Rc<Stretch>, u32)>) {
 fn held(s: &Stretch, h: &Heap, (rel, arity, p): Place, v: Term) -> Vec<FactId> {
     let mut out = Vec::new();
     s.matches(h, rel, None, arity as usize, &[p as usize], &[v], &mut out);
-    out.retain(|&k| s.store().args(k).get(p as usize) == Some(&v));
+    out.retain(|&k| s.args(k).get(p as usize) == Some(&v));
     out
 }
 
 /// The keys of the facts a stretch holds itself that are not of the files `files`.
 fn surface(s: &Stretch, cx: &Ctx, files: (u32, u32), dir: &mut FxMap<Key, Vec<FactId>>) {
     for id in s.lo..s.hi {
-        let r = s.store().rec(id);
+        let r = s.rec(id);
         let Some(ps) = cx.joins.places.get(&r.rel).filter(|_| !r.dead()) else { continue };
-        let a = s.store().args(id);
+        let a = s.args(id);
         for &(_, p) in ps.iter().filter(|(n, _)| *n as usize == a.len()) {
             let v = a[p as usize];
             if !cx.within(v, files) {
@@ -944,7 +944,7 @@ impl Eval {
                 let mut front = Front::default();
                 for s in &at_home {
                     for id in s.lo..s.hi {
-                        let r = s.store().rec(id);
+                        let r = s.rec(id);
                         if !r.dead() && firsts[k].contains(&r.rel) {
                             front.note(r.rel, id);
                         }

@@ -1056,6 +1056,8 @@ pub struct Stretch {
     kept: Option<Kept>,
     pub lo: FactId,
     pub hi: FactId,
+    /// kept: its own facts read where they lie, until it is unfolded
+    raw: std::sync::OnceLock<Raw>,
     /// of a file's own unit kept: its trees, built again when first asked
     forests: std::sync::OnceLock<Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
     /// the relations it wrote a fact of, and the facts lying elsewhere it holds a firing of: both in order
@@ -1072,6 +1074,17 @@ struct Kept {
     at: usize,
     /// for a stretch that left trees: builds them again over its facts
     trees: Option<Rc<Trees>>,
+}
+
+/// A kept stretch's own facts where they lie: four words a fact (relation, book, flags, arity), the arguments, where
+/// each fact's arguments begin, and its facts by relation.
+struct Raw {
+    recs: crate::arena::Arena<u32>,
+    args: crate::arena::Arena<u64>,
+    at: Vec<u32>,
+    by_rel: FxMap<Sym, Vec<FactId>>,
+    /// its facts by the hash of their key, made when first asked
+    keys: std::sync::OnceLock<FxMap<u64, Vec<FactId>>>,
 }
 
 /// What builds again the trees of a stretch unfolded.
@@ -1157,7 +1170,7 @@ impl Stretch {
         }
         let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
         let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
-        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, rels: self.rels.clone(), far: self.far.clone(), keyed: Default::default(), forests: Default::default() })
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, rels: self.rels.clone(), far: self.far.clone(), keyed: Default::default(), forests: Default::default(), raw: Default::default() })
     }
 
     /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
@@ -1203,7 +1216,7 @@ impl Stretch {
         r.arena::<u32>()?;
         r.arena::<PremRef>()?;
         let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests: Default::default() })
+        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests: Default::default(), raw: Default::default() })
     }
 
     /// The stretch itself: as it was settled, or read now from where it is kept.
@@ -1217,6 +1230,84 @@ impl Stretch {
                 Self::unfold(k.over.0.clone(), &k.over.1, self.lo, self.hi, &recs, &args, &fired, &prems)
             };
             read(&mut r).expect("a kept stretch read once reads again")
+        })
+    }
+
+    fn raw(&self) -> Option<&Raw> {
+        if self.store.get().is_some() {
+            return None;
+        }
+        let k = self.kept.as_ref()?;
+        Some(self.raw.get_or_init(|| {
+            let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
+            let (recs, args) = (r.arena::<u32>().expect("a kept stretch"), r.arena::<u64>().expect("a kept stretch"));
+            let mut at = Vec::with_capacity(recs.len() / 4 + 1);
+            let mut by_rel: FxMap<Sym, Vec<FactId>> = FxMap::default();
+            let mut o = 0u32;
+            for (i, x) in recs.chunks_exact(4).enumerate() {
+                at.push(o);
+                o += x[3];
+                by_rel.entry(x[0]).or_default().push(self.lo + i as FactId);
+            }
+            at.push(o);
+            Raw { recs, args, at, by_rel, keys: Default::default() }
+        }))
+    }
+
+    /// A fact of its own, without unfolding it.
+    pub fn rec(&self, id: FactId) -> FactRec {
+        match self.raw() {
+            Some(r) => {
+                let i = 4 * (id - self.lo) as usize;
+                FactRec::new(r.recs[i], r.recs[i + 1], 0, r.recs[i + 2] as u8)
+            }
+            None => self.store().facts.rec(id),
+        }
+    }
+
+    /// The arguments of a fact of its own, without unfolding it.
+    pub fn args(&self, id: FactId) -> &[Term] {
+        match self.raw() {
+            Some(r) => {
+                let i = (id - self.lo) as usize;
+                let a = &r.args[r.at[i] as usize..r.at[i + 1] as usize];
+                // SAFETY: a term is its bits (`repr(transparent)`), as `write` kept them
+                unsafe { std::slice::from_raw_parts(a.as_ptr() as *const Term, a.len()) }
+            }
+            None => self.store().args(id),
+        }
+    }
+
+    /// Its own live facts of a relation.
+    fn of_rel(&self, rel: Sym) -> Vec<FactId> {
+        if let Some(r) = self.raw() {
+            return r.by_rel.get(&rel).cloned().unwrap_or_default();
+        }
+        let s = self.store();
+        let mut out = Vec::new();
+        for (_, run) in s.idx.get(&rel).into_iter().flatten() {
+            out.extend(run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| k >= self.lo && s.alive(k)));
+        }
+        out
+    }
+
+    /// The fact of its own of this key.
+    fn find(&self, h: u64, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        let Some(r) = self.raw() else {
+            let s = self.store();
+            return s.probe(&s.keys, h, rel, persp, args).filter(|&i| s.alive(i));
+        };
+        let keys = r.keys.get_or_init(|| {
+            let mut m: FxMap<u64, Vec<FactId>> = FxMap::default();
+            for id in self.lo..self.hi {
+                let x = self.rec(id);
+                m.entry(hash_key(x.rel, x.persp, self.args(id))).or_default().push(id);
+            }
+            m
+        });
+        keys.get(&h)?.iter().copied().find(|&k| {
+            let x = self.rec(k);
+            x.rel == rel && x.persp == persp && self.args(k) == args
         })
     }
 
@@ -1264,12 +1355,9 @@ impl Stretch {
             return ix.clone();
         }
         let mut ix: FxMap<u64, Vec<FactId>> = FxMap::default();
-        let s = self.store();
-        for (_, run) in s.idx.get(&rel).into_iter().flatten() {
-            for k in run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| k >= self.lo && s.alive(k)) {
-                if let Some(&t) = s.args(k).get(p as usize) {
-                    ix.entry(if h.is_ground(t) { t.bits() } else { OPEN }).or_default().push(k);
-                }
+        for k in self.of_rel(rel) {
+            if let Some(&t) = self.args(k).get(p as usize) {
+                ix.entry(if h.is_ground(t) { t.bits() } else { OPEN }).or_default().push(k);
             }
         }
         let ix = Rc::new(ix);
@@ -1293,11 +1381,17 @@ impl Stretch {
                 best = Some((ix, v.bits()));
             }
         }
-        let s = self.store();
-        let Some((ix, v)) = best else { return s.top_matches(h, rel, persp, arity, pos, vals, out) };
+        let fits = |k: FactId| {
+            let a = self.args(k);
+            a.len() == arity && persp.is_none_or(|q| self.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v))
+        };
+        let Some((ix, v)) = best else {
+            out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
+            return;
+        };
         for k in ix.get(&v).into_iter().chain(ix.get(&OPEN)).flatten().copied() {
-            let a = s.args(k);
-            if a.len() == arity && persp.is_none_or(|q| s.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v)) {
+            let a = self.args(k);
+            if a.len() == arity && persp.is_none_or(|q| self.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v)) {
                 out.push(k);
             }
         }
@@ -1368,9 +1462,8 @@ impl Near {
     /// Every live row of `rel` a stretch holds itself, with its book; a fact two stretches say comes twice.
     fn each(&self, rel: Sym, mut f: impl FnMut(Sym, FactId)) {
         for s in self.all().filter(|s| self.whole && s.rels.binary_search(&rel).is_ok()) {
-            let Some(groups) = s.store().idx.get(&rel) else { continue };
-            for (p, run) in groups {
-                run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| k >= s.lo && s.store().alive(k)).for_each(|k| f(*p, k));
+            for k in s.of_rel(rel) {
+                f(s.rec(k).persp, k);
             }
         }
     }
@@ -1450,7 +1543,7 @@ impl Facts {
             Some(r) => *r,
             None => match &self.near {
                 // an id no stretch read here holds is no fact here
-                Some(n) if i >= n.core => n.of(id).map_or(FactRec::new(0, 0, 0, F_DEAD), |s| s.store().facts.rec(id)),
+                Some(n) if i >= n.core => n.of(id).map_or(FactRec::new(0, 0, 0, F_DEAD), |s| s.rec(id)),
                 _ => {
                     let r = *self.recs.below(i);
                     FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
@@ -1472,8 +1565,23 @@ impl Facts {
     }
     #[inline(always)]
     pub fn args(&self, id: FactId) -> &[Term] {
+        if let Some(s) = self.near_of(id) {
+            return s.args(id);
+        }
         let (s, t) = self.tup_of(id);
         s.args(t)
+    }
+    /// The stretch read here a fact lies in, for one not this store's own nor its base's.
+    #[inline(always)]
+    fn near_of(&self, id: FactId) -> Option<&Stretch> {
+        let i = id as usize;
+        if self.recs.own.get(i.wrapping_sub(self.recs.mark)).is_some() {
+            return None;
+        }
+        match &self.near {
+            Some(n) if i >= n.core => Some(n.of(id).expect("a fact of no stretch read here")),
+            _ => None,
+        }
     }
     #[inline]
     pub fn arity(&self, id: FactId) -> usize {
@@ -1524,6 +1632,9 @@ impl Facts {
     /// are hash-consed, so the same tuple is the same rendering and the
     /// comparison is over before it starts.
     pub fn cmp_args(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
+        if self.near_of(a).is_some() || self.near_of(b).is_some() {
+            return cmp_args_rendered(h, self.args(a), self.args(b));
+        }
         let ((sa, ia), (sb, ib)) = (self.tup_of(a), self.tup_of(b));
         if std::ptr::eq(sa, sb) && ia == ib {
             return Ordering::Equal;
@@ -2426,7 +2537,7 @@ impl Store {
         let n = self.facts.near.as_ref()?;
         let pos: Vec<usize> = (0..args.len()).collect();
         let h = hash_key(rel, persp, args);
-        n.holders(rel, Some(persp), &pos, args).into_iter().find_map(|s| s.store().probe(&s.store().keys, h, rel, persp, args).filter(|&i| s.store().alive(i)))
+        n.holders(rel, Some(persp), &pos, args).into_iter().find_map(|s| s.find(h, rel, persp, args))
     }
 
     /// The ids of this store's base and of its own layer: every id but those of the stretches it reads.
@@ -2693,31 +2804,7 @@ impl Store {
         let (mut rels, mut far): (Vec<Sym>, Vec<FactId>) = (self.idx.own.keys().copied().collect(), self.far_heads.keys().copied().collect());
         rels.sort_unstable();
         far.sort_unstable();
-        Stretch { store: self.into(), kept: None, lo, hi: lo + n, rels, far, keyed: Default::default(), forests: Default::default() }
-    }
-
-    /// What this stretch itself holds of the candidates of a premise: a superset.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn top_matches(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], out: &mut Vec<FactId>) {
-        let lo = self.facts.recs.mark as FactId;
-        if let Some(Some(v)) = self.own_matches_ro(h, rel, persp, arity, pos, vals, usize::MAX) {
-            out.extend(v.into_iter().filter(|&k| {
-                k >= lo && {
-                    let a = self.args(k);
-                    a.len() == arity && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v))
-                }
-            }));
-            return;
-        }
-        let Some(groups) = self.idx.get(&rel) else { return };
-        for (_, run) in groups.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)) {
-            out.extend(run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| {
-                k >= lo && self.alive(k) && {
-                    let a = self.args(k);
-                    a.len() == arity && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v))
-                }
-            }));
-        }
+        Stretch { store: self.into(), kept: None, lo, hi: lo + n, rels, far, keyed: Default::default(), forests: Default::default(), raw: Default::default() }
     }
 
     /// The candidates the stretches read here hold, added to this store's own, read whole where it declined: a
