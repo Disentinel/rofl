@@ -1048,6 +1048,7 @@ fn a_renamed_local_keeps_its_ids() {
 /// (`sp`). Every rule is fired in the units, and narrow groups make the tree deep.
 #[test]
 fn a_world_by_levels_answers_as_the_world_whole() {
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
     let d = Dir::new("levels");
     let model = "anc(P, C) :- parent(C, P).\nanc(A, C) :- parent(C, P), anc(A, P), parent(P, Q).\nin_fn(F, N) :- anc(F, N), func(F).\n\
         resolves(C, F) :- refers(C, Nm), defines(F, Nm).\ncalls(F, G) :- in_fn(F, C), resolves(C, G).\n\
@@ -1056,7 +1057,9 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         up(L, F) :- toleaf(F, L).\nup(L, G) :- up(L, F), calls(G, F), func(G).\nhasleaf(F) :- toleaf(F, L).\nlive(F) :- func(F), not dead(F).\n\
         lcalls(F, G) :- calls(F, G), live(G).\nrlive(F, G) :- lcalls(F, G).\nrlive(F, H) :- rlive(F, G), lcalls(G, H), func(H).\n\
         noleaf(F) :- func(F), not hasleaf(F).\ncnl(F, G) :- calls(F, G), noleaf(G).\ncnl2(F, H) :- cnl(F, G), cnl(G, H).\n\
-        special(nm_0_0).\nsp(F) :- special(Nm), defines(F, Nm), not dead(F).\n";
+        special(nm_0_0).\nsp(F) :- special(Nm), defines(F, Nm), not dead(F).\n\
+        hascnl2(F) :- cnl2(F, H).\nquiet(F) :- func(F), not hascnl2(F).\nqc(F, G) :- quiet(G), calls(F, G).\nqq(F, G) :- quiet(F), qc(F, G).\n\
+        nearest nfn(F, X) of edge(F, X) where func(F).\nheld_by(F, X) :- stmt(X), nfn(F, X), not dead(F).\n";
     let (files, fns, mut seed) = (24usize, 3usize, 7u64);
     let mut rnd = |n: usize| {
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -1071,13 +1074,14 @@ fn a_world_by_levels_answers_as_the_world_whole() {
             k += 1;
             text += &format!("func({fun}).\ndefines({fun}, nm_{f}_{g}).\n");
             let mut stack = vec![fun];
-            for _ in 0..8 {
+            // (one function long enough for its statements to be solved a run at a time)
+            for _ in 0..if f == 2 && g == 0 { 300 } else { 8 } {
                 let s = node(k);
                 k += 1;
                 for _ in 0..rnd(3).min(stack.len() - 1) {
                     stack.pop();
                 }
-                text += &format!("parent({s}, {}).\n", stack.last().unwrap());
+                text += &format!("parent({s}, {p}).\nedge({p}, {s}).\nstmt({s}).\n", p = stack.last().unwrap());
                 if stack.len() < 4 {
                     stack.push(s.clone());
                 }
@@ -1101,11 +1105,11 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         }
         out
     };
-    d.write("w.rofl", &booked(&format!("{model}{text}")));
-    for q in ["cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"] {
+    d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
+    for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"] {
         let args = ["ask", q, "boot.rofl", "w.rofl"];
         let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
-        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())], None, &args);
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())], planted.as_deref(), &args);
         assert!(whole.code == 0 && !whole.out.is_empty(), "{q}: the world whole: {} {:?}", whole.code, whole.err);
         let all_below = got.err.lines().find(|l| l.contains("levels: of ")).is_some_and(|l| {
             let n: Vec<&str> = l.split("levels: of ").nth(1).unwrap().split(' ').collect();

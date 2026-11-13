@@ -31,6 +31,8 @@ pub struct Joins {
     home: Rc<(FxSet<Sym>, FxSet<Sym>)>,
     /// the rules that read no file: settled once in the core, before the files (`Eval::settle_core`)
     pub core: Rc<FxSet<Sym>>,
+    /// the rules of the closures answered from a file's tree: no unit fires them
+    pub tree_rules: FxSet<Sym>,
     /// why the rules left to the world's reader are not of the units' shape, most first; the rest read what those conclude
     pub held: String,
     places: FxMap<Sym, Vec<(u8, u8)>>,
@@ -410,7 +412,7 @@ impl Eval {
                 up.clear();
             }
         }
-        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), ..Default::default() };
+        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), tree_rules, ..Default::default() };
         let mut by_layer: std::collections::BTreeMap<u32, FxSet<Sym>> = Default::default();
         for r in &up {
             by_layer.entry(layer[&booked(&r.clause.head)]).or_default().insert(r.id);
@@ -622,7 +624,9 @@ impl Eval {
                 e.0.wall.cutting = Some(Box::default());
                 e.0.propagate(front)?;
                 // (a front with nothing at home ran no round to end it)
-                e.0.homing = None;
+                if brk!("levels_home_round_kept" => false; true) {
+                    e.0.homing = None;
+                }
             }
             let mut front = Front::default();
             for id in seeds {
@@ -649,7 +653,9 @@ impl Eval {
                 e.0.own_kept(stage.0, from)?;
                 // its trees are left as they stand at the end, a nearest whose level the file's rules never reached
                 // opened: the units above read them
-                e.0.vopen_below(i64::MAX)?;
+                if brk!("levels_nearest_closed" => false; true) {
+                    e.0.vopen_below(i64::MAX)?;
+                }
                 e.0.vc.vrefresh(&mut e.0.store);
                 Ok(done(e, (x as u32, x as u32 + 1), Vec::new(), FxMap::default(), Rc::default()))
             })?;

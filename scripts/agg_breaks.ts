@@ -8894,6 +8894,27 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "levels_home_round_kept",
+  "what": "a group of a world by levels with nothing at home never ends its home round, and what its children make together from another premise is not fired",
+  "expect": {
+   "levels_whole": "qq[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_nearest_closed",
+  "what": "a file's unit is frozen with a nearest its rules never reached still closed, and the units above read an empty tree",
+  "expect": {
+   "levels_whole": "held_by[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_tree_sliced",
+  "what": "a unit that solves a run of partial solutions at a time reads a tree from its own store, which holds none, and not from the unit of the node's file",
+  "expect": {
+   "levels_whole": "held_by[d](A, B): by levels"
+  }
+ },
+ {
   "id": "kept_stale_files",
   "what": "a kept world is answered whatever happened to the files it was computed from",
   "expect": {
@@ -9267,6 +9288,7 @@ export const TESTS: Record<string, string> = {
   snapshot_round_trip: 'agg_worlds every_world_loaded_together',
   // a world kept on disk (docs/cli.md): each case of tests/kept.rs names itself where it fails
   kept_rule: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  levels_whole: 'kept a_world_by_levels_answers_as_the_world_whole',
   kept_boot: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_md: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_scan: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

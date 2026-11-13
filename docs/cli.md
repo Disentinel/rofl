@@ -533,7 +533,7 @@ a lemma and `why --all` unfolds it as any other. The promise refuses when broken
 where `own` names one, a relation a file states that no `own` names, and a fact of a named relation that is of no
 one file each refuse the world by volumes, naming the fact (then it is evaluated whole). Where the plan names no
 `own`, the lower stage alone is evaluated by file, as before. The Rust model declares it for its tree
-(models/lang/rust/rs-roles.rofl); the JS model does not yet.
+(models/lang/rust/rs-roles.rofl) and the JS model for oxc's (models/lang/js/oxc-roles.rofl).
 
 `why` stops at a lemma: `mark[value](n…,class) [lemma roles/types.ts:6]`, the site read off the plan's
 `site[fixpointplan](Rel, Book)` (`at[tree](N, File, Line)` for the JS model: the first fact whose first argument is

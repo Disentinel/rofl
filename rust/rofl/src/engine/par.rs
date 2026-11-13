@@ -640,7 +640,7 @@ impl Eval {
             || self.assume.is_some()
             || self.demand.on(l.rel)
             // (a unit reads a tree from the unit of the node's file, a partial solution at a time)
-            || self.vc.vclosure_for(l.rel).is_some() && (!(self.store.unordered && l.args.len() == 2) || self.store.reads_trees())
+            || self.vc.vclosure_for(l.rel).is_some() && (!(self.store.unordered && l.args.len() == 2) || brk!("levels_tree_sliced" => false; self.store.reads_trees()))
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
             || !l.args.iter().all(plain)
