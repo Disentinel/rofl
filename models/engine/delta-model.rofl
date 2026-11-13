@@ -294,3 +294,9 @@ refuted[byhash](found, 45000, 48000).
 walked_ms[bytimer](3300).
 anew_ms[bytimer](walked, Ms) :- threads[shared](C), walked_ms[bytimer](S), Ms is 46500 - S + S / C + S / 10.
 measured_ms[bytimer](walked, 42200).
+-- (in pairs, the build before and this in turn, medians of three: 54.2 s to 51.1, and the four volumes 44.2 to 41.2)
+paired_ms[bytimer](one, 54200, 51100). paired_ms[bytimer](volumes, 44200, 41200).
+-- A ROUND SEARCHED AHEAD on the threads (every firing that starts from its news, before any is concluded): forecast
+-- from the 8 s of search one thread still did, a share of 3 s; in pairs 45.5 s without and 46.0 with. The heavy
+-- firings were on the threads already; the small ones are little together. Taken out.
+refuted[bytimer](ahead, 42500, 46000).
