@@ -1042,6 +1042,80 @@ fn a_renamed_local_keeps_its_ids() {
     check().unwrap_or_else(|e| panic!("{e}"));
 }
 
+/// A WORLD BY LEVELS (`engine/levels.rs`) answers as the world whole: files of functions that call one another by
+/// name, absences asked above the files (`dead`, `leaf`), rules above an absence, recursive ones too (`up`, `rlive`),
+/// an absence of what read an absence (`noleaf`), two premises of one layer (`cnl2`), a premise the core states
+/// (`sp`). Every rule is fired in the units, and narrow groups make the tree deep.
+#[test]
+fn a_world_by_levels_answers_as_the_world_whole() {
+    let d = Dir::new("levels");
+    let model = "anc(P, C) :- parent(C, P).\nanc(A, C) :- parent(C, P), anc(A, P), parent(P, Q).\nin_fn(F, N) :- anc(F, N), func(F).\n\
+        resolves(C, F) :- refers(C, Nm), defines(F, Nm).\ncalls(F, G) :- in_fn(F, C), resolves(C, G).\n\
+        reach(F, G) :- calls(F, G).\nreach(F, H) :- reach(F, G), calls(G, H), func(H).\ncalled(G) :- calls(F, G).\ncaller(F) :- calls(F, G).\n\
+        dead(F) :- func(F), not called(F).\nleaf(F) :- func(F), not caller(F).\ntoleaf(F, L) :- calls(F, L), leaf(L).\n\
+        up(L, F) :- toleaf(F, L).\nup(L, G) :- up(L, F), calls(G, F), func(G).\nhasleaf(F) :- toleaf(F, L).\nlive(F) :- func(F), not dead(F).\n\
+        lcalls(F, G) :- calls(F, G), live(G).\nrlive(F, G) :- lcalls(F, G).\nrlive(F, H) :- rlive(F, G), lcalls(G, H), func(H).\n\
+        noleaf(F) :- func(F), not hasleaf(F).\ncnl(F, G) :- calls(F, G), noleaf(G).\ncnl2(F, H) :- cnl(F, G), cnl(G, H).\n\
+        special(nm_0_0).\nsp(F) :- special(Nm), defines(F, Nm), not dead(F).\n";
+    let (files, fns, mut seed) = (24usize, 3usize, 7u64);
+    let mut rnd = |n: usize| {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (seed >> 33) as usize % n
+    };
+    let mut text = String::new();
+    for f in 0..files {
+        let node = |k: usize| format!("n{:016x}_{k}", f + 1);
+        let mut k = 0;
+        for g in 0..fns {
+            let fun = node(k);
+            k += 1;
+            text += &format!("func({fun}).\ndefines({fun}, nm_{f}_{g}).\n");
+            let mut stack = vec![fun];
+            for _ in 0..8 {
+                let s = node(k);
+                k += 1;
+                for _ in 0..rnd(3).min(stack.len() - 1) {
+                    stack.pop();
+                }
+                text += &format!("parent({s}, {}).\n", stack.last().unwrap());
+                if stack.len() < 4 {
+                    stack.push(s.clone());
+                }
+                if rnd(4) == 0 {
+                    let to = if rnd(100) < 60 { f } else { (f + 1 + rnd(3)).min(files - 1) };
+                    text += &format!("refers({s}, nm_{to}_{}).\n", rnd(fns));
+                }
+            }
+        }
+    }
+    // every relation in a book: a rule of the units names its book
+    let booked = |t: &str| {
+        let mut out = String::new();
+        let mut word = String::new();
+        for c in t.chars() {
+            if c == '(' && !word.is_empty() {
+                out += "[d]";
+            }
+            if c.is_ascii_alphanumeric() || c == '_' { word.push(c) } else { word.clear() }
+            out.push(c);
+        }
+        out
+    };
+    d.write("w.rofl", &booked(&format!("{model}{text}")));
+    for q in ["cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"] {
+        let args = ["ask", q, "boot.rofl", "w.rofl"];
+        let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())], None, &args);
+        assert!(whole.code == 0 && !whole.out.is_empty(), "{q}: the world whole: {} {:?}", whole.code, whole.err);
+        let all_below = got.err.lines().find(|l| l.contains("levels: of ")).is_some_and(|l| {
+            let n: Vec<&str> = l.split("levels: of ").nth(1).unwrap().split(' ').collect();
+            n[0] == n[2] && !l.contains(" 0 in 0 layers") || q.starts_with("reach")
+        });
+        assert!(got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
+        assert!(all_below && !got.err.contains("evaluated whole") && !got.err.contains("panicked"), "{q}: not every rule was fired in the units: {:?}", got.err);
+    }
+}
+
 #[test]
 fn a_kept_world_answers_and_refuses_as_docs_cli_says() {
     // a fault planted by scripts/agg_breaks.ts reaches every binary a case runs

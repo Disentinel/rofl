@@ -125,6 +125,10 @@ impl Eval {
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
+        // a unit reads by key alone what lies outside it: from the news, never in written order
+        if self.by_seed && at.is_some() {
+            return Some(p.clone());
+        }
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
@@ -606,7 +610,8 @@ impl Eval {
                 }
                 let st = self.delta_stat(l, &bound);
                 let joined = all_vars[j].iter().any(|v| bound.contains(v));
-                if best.is_none_or(|(_, f, b)| st.fan < f || (st.fan == f && joined && !b)) {
+                // (a unit counts only its own rows: there the shared variable decides)
+                if best.is_none_or(|(_, f, b)| if self.by_seed && joined != b { joined } else { st.fan < f || (st.fan == f && joined && !b) }) {
                     best = Some((at, st.fan, joined));
                 }
             }

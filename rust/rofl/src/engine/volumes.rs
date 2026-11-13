@@ -276,14 +276,22 @@ impl Eval {
                     let joins = joins.lock().unwrap().take().expect("one worker by levels");
                     let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
                     let cross = joins.cross.len();
+                    let up: Vec<Sym> = joins.up.iter().flat_map(|l| l.iter().copied()).collect();
+                    let layers = joins.up.len();
                     let t = std::time::Instant::now();
                     let lv = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
-                    let unit = lv.top.clone();
                     let ms = t.elapsed().as_millis();
                     let from = w.e.store.len_ids();
                     lv.read_by(&mut w.e);
-                    w.e.diags.push(format!("levels: of {} rules {} below, {cross} of them where units meet; {} facts in {} units in {ms} ms", w.e.rules.iter().filter(|r| r.safe).count(), stage.rules.len(), unit.stretch.hi - from, unit.count()));
-                    w.e.stage_given = Some(stage.below());
+                    w.e.diags.push(format!(
+                        "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units in {ms} ms",
+                        w.e.rules.iter().filter(|r| r.safe).count(),
+                        stage.rules.len() + up.len(),
+                        up.len(),
+                        lv.mark - from,
+                        lv.tops.iter().map(|t| t.count()).sum::<usize>()
+                    ));
+                    w.e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
                 }
                 // the lower stage a file at a time, each in a world of its own the lemmas leave
                 Some(stage) => {
@@ -499,7 +507,7 @@ impl Eval {
             st.cooled += cool as usize;
             on_threads(&mut ws, &|i, w| {
                 // (a world that reads stretches is not cooled whole: its stretches are what cools)
-                if cool && w.e.store.near().is_empty() {
+                if cool && !w.e.store.reads_near() {
                     w.cool(i, lv);
                 }
                 w.e.wall.level_wall = Some(lv);

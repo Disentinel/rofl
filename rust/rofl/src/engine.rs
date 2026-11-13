@@ -829,6 +829,10 @@ pub struct Eval {
     pub anchors: Option<Rc<volumes::Anchors>>,
     /// In a group of a world by levels: which child each fact below lies under.
     pub meeting: Option<Rc<levels::Meeting>>,
+    /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
+    by_seed: bool,
+    /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
+    homing: Option<Rc<FxSet<Sym>>>,
     anchor_home: FxMap<Sym, Option<u32>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
@@ -2348,6 +2352,8 @@ impl Eval {
             anchors: None,
             anchor_home: FxMap::default(),
             meeting: None,
+            by_seed: false,
+            homing: None,
             lemma_heads: None,
             lower_texts: None,
             lower_full: None,
@@ -5447,6 +5453,7 @@ impl Eval {
                 }
             }
             self.rounds.push((sum, mx));
+            self.homing = None;
             front = std::mem::take(&mut self.cur_front);
         }
         self.live_front = outer;
@@ -5505,6 +5512,9 @@ impl Eval {
                         let Some(keys) = cur.by_rel.get(&l.rel) else {
                             continue;
                         };
+                        if self.homing.as_ref().is_some_and(|a| levels::first_at(r, a) != Some(i)) {
+                            continue;
+                        }
                         let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
                         let keys = &*keys;
                         if twice {
@@ -5518,6 +5528,7 @@ impl Eval {
                         }
                         let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
                             Some(p) => e.fire_planned(r, &p, Some(keys)),
+                            None if e.by_seed && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
                         let f = self.fire_at(r, i + 1, fl.take(), fire);
@@ -5570,6 +5581,9 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
+        if self.by_seed && front_at.is_none() {
+            return Ok(Front::default());
+        }
         // the rules a declared closure lowers to are not fired where the closure is answered from its tree
         if self.vc.any {
             if self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active) {

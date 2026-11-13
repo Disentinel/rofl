@@ -1079,6 +1079,11 @@ impl Stretch {
         ix
     }
 
+    /// The relations this stretch wrote a fact of.
+    pub fn rels(&self) -> impl Iterator<Item = Sym> + '_ {
+        self.store.idx.own.keys().copied()
+    }
+
     /// What this stretch itself holds of the candidates of a premise, read by the argument fewest of its facts share.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn matches(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], out: &mut Vec<FactId>) {
@@ -1113,6 +1118,8 @@ pub type Route = dyn Fn(Sym, Option<Sym>, &[usize], &[Term], &mut Vec<u32>) -> b
 pub struct Near {
     /// the ids below are the base's
     core: usize,
+    /// the layers of the world settled before this one, read by every unit of it: below `list`
+    lower: Option<Rc<Lower>>,
     /// in the order of `lo`
     list: Vec<Rc<Stretch>>,
     route: Option<Rc<Route>>,
@@ -1124,6 +1131,12 @@ pub struct Near {
     whole: bool,
 }
 
+/// Stretches many stores read, in the order of `lo`, and where a key is found in them.
+pub struct Lower {
+    pub list: Vec<Rc<Stretch>>,
+    pub route: Rc<Route>,
+}
+
 /// The rows of one relation in the stretches a store reads, by book: each fact once, the lowest id of those that
 /// say it, in key order.
 type NearRows = Rc<Vec<(Sym, Vec<FactId>)>>;
@@ -1131,7 +1144,7 @@ type NearRows = Rc<Vec<(Sym, Vec<FactId>)>>;
 impl Near {
     /// Every live row of `rel` a stretch holds itself, with its book; a fact two stretches say comes twice.
     fn each(&self, rel: Sym, mut f: impl FnMut(Sym, FactId)) {
-        for s in self.list.iter().filter(|_| self.whole) {
+        for s in self.all().filter(|_| self.whole) {
             let Some(groups) = s.store.idx.get(&rel) else { continue };
             for (p, run) in groups {
                 run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| k >= s.lo && s.store.alive(k)).for_each(|k| f(*p, k));
@@ -1175,17 +1188,29 @@ impl Near {
         self.rows.lock().unwrap().insert(rel, r.clone());
         r
     }
+    fn all(&self) -> impl Iterator<Item = &Rc<Stretch>> {
+        self.lower.iter().flat_map(|l| l.list.iter()).chain(self.list.iter())
+    }
     fn holders(&self, rel: Sym, persp: Option<Sym>, pos: &[usize], vals: &[Term]) -> Vec<&Stretch> {
+        let mut out = Vec::new();
         let mut at = Vec::new();
-        match &self.route {
-            Some(r) if r(rel, persp, pos, vals, &mut at) => at.into_iter().map(|i| &*self.list[i as usize]).collect(),
-            _ => self.list.iter().map(|s| &**s).collect(),
+        for (list, route) in self.lower.iter().map(|l| (&l.list, Some(&l.route))).chain([(&self.list, self.route.as_ref())]) {
+            at.clear();
+            match route {
+                Some(r) if r(rel, persp, pos, vals, &mut at) => out.extend(at.iter().map(|&i| &*list[i as usize])),
+                _ => out.extend(list.iter().map(|s| &**s)),
+            }
         }
+        out
     }
     #[inline]
     fn of(&self, id: FactId) -> Option<&Stretch> {
-        let i = self.list.partition_point(|s| s.lo <= id);
-        let s = self.list.get(i.checked_sub(1)?)?;
+        let list = match (&self.lower, self.list.first()) {
+            (Some(l), s) if s.is_none_or(|s| id < s.lo) => &l.list,
+            _ => &self.list,
+        };
+        let i = list.partition_point(|s| s.lo <= id);
+        let s = list.get(i.checked_sub(1)?)?;
         (id < s.hi).then_some(&**s)
     }
 }
@@ -2204,19 +2229,20 @@ impl Store {
 
     /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
-    pub fn read_near(&mut self, mark: FactId, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, whole: bool) {
+    pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, whole: bool) {
         let core = self.facts.recs.mark;
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
-        self.facts.near = Some(Rc::new(Near { core, list, route, rows: Rc::default(), lens: Rc::default(), whole }));
+        assert!(lower.as_ref().and_then(|l| l.list.last()).is_none_or(|s| s.hi <= list.first().map_or(mark, |f| f.lo)));
+        self.facts.near = Some(Rc::new(Near { core, lower, list, route, rows: Rc::default(), lens: Rc::default(), whole }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
         self.fold.mark = mark as usize;
     }
 
-    /// The stretches this store reads.
-    pub fn near(&self) -> &[Rc<Stretch>] {
-        self.facts.near.as_ref().map_or(&[], |n| &n.list)
+    /// Whether this store reads stretches.
+    pub fn reads_near(&self) -> bool {
+        self.facts.near.is_some()
     }
 
     /// THIS STORE AS A STRETCH AT `lo`: its own facts take the ids from `lo` up, in the order they were put, in
@@ -3823,7 +3849,7 @@ impl Store {
     pub fn firings(&self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
         let mut out: Vec<(Sym, u32, Vec<PremRef>)> = self.chain(id).map(|n| (n.rule, n.tick, self.prems_of(&n).to_vec())).collect();
         if let Some(n) = self.facts.near.as_ref().filter(|_| !self.here(id)) {
-            for s in &n.list {
+            for s in n.all() {
                 let c = if s.lo <= id && id < s.hi { s.store.wit_head[id as usize] } else { s.store.far_heads.get(&id).copied().unwrap_or(EMPTY) };
                 out.extend(s.store.nodes_from(c).map(|n| (n.rule, n.tick, s.store.prems_of(&n).to_vec())));
             }
@@ -6151,7 +6177,7 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!((a.hi - a.lo, b.hi - b.lo), (50, 51));
         let (a, b) = (Rc::new(a), Rc::new(b));
         let mut top = s.clone();
-        top.read_near(b.hi, vec![a.clone(), b.clone()], None, true);
+        top.read_near(b.hi, None, vec![a.clone(), b.clone()], None, true);
         for (st, from) in [(&a, 0), (&b, 30)] {
             for k in 0..25u32 {
                 let (e, d) = (st.lo + 2 * k, st.lo + 2 * k + 1);
