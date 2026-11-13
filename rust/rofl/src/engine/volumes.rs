@@ -290,12 +290,13 @@ impl Eval {
                     let lv = Rc::new(lv);
                     w.e.levels = Some(lv.clone());
                     w.e.diags.push(format!(
-                        "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units in {ms} ms; left to the reader by their shape: {held}",
+                        "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units, {} of the files libraries, in {ms} ms; left to the reader by their shape: {held}",
                         w.e.rules.iter().filter(|r| r.safe).count(),
                         w.e.rules.iter().filter(|r| r.safe && (stage.rules.contains(&r.id) || up.contains(&r.id) || trees.contains(&r.id))).count(),
                         up.len() - core,
                         lv.mark - from,
-                        lv.tops.iter().map(|t| t.count()).sum::<usize>()
+                        lv.tops.iter().map(|t| t.count()).sum::<usize>(),
+                        lv.libs
                     ));
                     w.e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
                 }

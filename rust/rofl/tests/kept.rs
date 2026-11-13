@@ -1060,7 +1060,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         special(nm_0_0).\nsp(F) :- special(Nm), defines(F, Nm), not dead(F).\n\
         hascnl2(F) :- cnl2(F, H).\nquiet(F) :- func(F), not hascnl2(F).\nqc(F, G) :- quiet(G), calls(F, G).\nqq(F, G) :- quiet(F), qc(F, G).\n\
         nearest nfn(F, X) of edge(F, X) where func(F).\nheld_by(F, X) :- stmt(X), nfn(F, X), not dead(F).\n";
-    let (files, fns, mut seed) = (24usize, 3usize, 7u64);
+    let (files, fns, mut seed) = (64usize, 3usize, 7u64);
     let mut rnd = |n: usize| {
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
         (seed >> 33) as usize % n
@@ -1086,7 +1086,8 @@ fn a_world_by_levels_answers_as_the_world_whole() {
                     stack.push(s.clone());
                 }
                 if rnd(4) == 0 {
-                    let to = if rnd(100) < 60 { f } else { (f + 1 + rnd(3)).min(files - 1) };
+                    // (the first file is a library: most of the others call into it)
+                    let to = if rnd(100) < 60 { f } else if rnd(2) == 0 { 0 } else { (f + 1 + rnd(3)).min(files - 1) };
                     text += &format!("refers({s}, nm_{to}_{}).\n", rnd(fns));
                 }
             }
@@ -1117,6 +1118,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         });
         assert!(got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
         assert!(all_below && !got.err.contains("evaluated whole") && !got.err.contains("panicked"), "{q}: not every rule was fired in the units: {:?}", got.err);
+        assert!(got.err.contains(" of the files libraries") && !got.err.contains(" 0 of the files libraries"), "{q}: no file was taken for a library: {:?}", got.err);
     }
     // the units are kept, each stretch's own facts and firings, and a question asked again is answered from them
     let levels = [("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())];
@@ -1135,7 +1137,10 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     let less = text.replacen(&format!("{gone}\n"), "", 1);
     let n = |k: usize| format!("n{:016x}_{k}", 10);
     let more = format!("{less}func({f}).\ndefines({f}, nm_new).\nparent({s}, {f}).\nedge({f}, {s}).\nstmt({s}).\nrefers({s}, nm_3_0).\nrefers({s}, nm_new).\n", f = n(1000), s = n(1001));
-    for (name, text) in [("a call gone", &less), ("a function come", &more), ("the call back", &format!("{more}{gone}\n"))] {
+    // (and a call taken out of the library, which most units read)
+    let lib_gone = text.lines().find(|l| l.starts_with("refers(n0000000000000001_")).expect("a call in the library").to_string();
+    let lib_less = format!("{more}{gone}\n").replacen(&format!("{lib_gone}\n"), "", 1);
+    for (name, text) in [("a call gone", &less), ("a function come", &more), ("the call back", &format!("{more}{gone}\n")), ("a call gone from the library", &lib_less)] {
         d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
         for (i, q) in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"].iter().enumerate() {
             let args = ["ask", q, "boot.rofl", "w.rofl"];
@@ -1145,7 +1150,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
             if i == 0 {
                 let said = got.err.lines().find(|l| l.contains("units settled again")).unwrap_or_else(|| panic!("{name}: the edit was not taken by the units: {:?}", got.err));
                 let nums: Vec<usize> = said.split(' ').filter_map(|w| w.parse().ok()).collect();
-                assert!(nums[2] > 0 && nums[2] * 2 < nums[3], "{name}: {said}");
+                assert!(nums[2] > 0 && (nums[2] * 2 < nums[3] || name.ends_with("library")), "{name}: {said}");
             } else {
                 assert!(got.err.contains("kept volumes"), "{name}, {q}: asked again it was not answered from what the edit kept: {:?}", got.err);
             }
