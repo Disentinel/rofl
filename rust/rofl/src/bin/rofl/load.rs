@@ -572,9 +572,9 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
     });
     let core = core?;
     let (mut worlds, laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
-    if std::path::Path::new(&format!("{k}.units")).exists() {
+    if rofl::volume::has_units(k) {
         let w = worlds.first_mut()?;
-        let lv = std::sync::Arc::new(rofl::volume::open_units(&format!("{k}.units"), &w.eval).map_err(|e| eprintln!("the kept units {k}: {e}")).ok()?);
+        let lv = std::sync::Arc::new(rofl::volume::open_units(k, &w.eval).map_err(|e| eprintln!("the kept units {k}: {e}")).ok()?);
         lv.read_by(&mut w.eval);
         w.eval.levels = Some(lv);
     }
@@ -612,10 +612,7 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
         std::fs::write(format!("{k}.folds"), f.text()).map_err(|e| e.to_string())?;
     }
     // (a world settled by levels: its units, each stretch's own facts and firings)
-    let _ = std::fs::remove_file(format!("{k}.units"));
-    if let Some(lv) = units {
-        rofl::volume::keep_units(&format!("{k}.units"), &lv)?;
-    }
+    rofl::volume::keep_units(k, units.as_deref())?;
     Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i, v.places.get(f).cloned().unwrap_or_default()))).collect() }.write(k)
 }
 
@@ -713,7 +710,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         say("the rules or the facts naming no file changed");
         return None;
     }
-    let units = std::path::Path::new(&format!("{k}.units")).exists();
+    let units = rofl::volume::has_units(k);
     let now: std::collections::HashMap<&str, &str> = cut.files.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
     let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|(h, _, _)| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
     if moved.is_empty() || moved.len() * 8 > now.len().max(8) {
@@ -752,7 +749,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
             return None;
         }
         let w = worlds.first_mut()?;
-        let before = rofl::volume::open_units(&format!("{k}.units"), &w.eval).map_err(|e| say(&e)).ok()?;
+        let before = rofl::volume::open_units(k, &w.eval).map_err(|e| say(&e)).ok()?;
         let named: std::collections::HashMap<u64, (&str, &str)> = now.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (*f, *t)))).collect();
         let files: Vec<(String, String)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), t.to_string()))).collect::<Option<_>>().or_else(|| { say("a file came or went in a world settled by levels"); None })?;
         let changed = files.iter().enumerate().filter(|(_, (f, _))| moved.contains(&f.as_str())).map(|(i, _)| i as u32).collect();
@@ -765,6 +762,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         };
         let (again, same) = lv.again.unwrap_or_default();
         eprintln!("volumes: {} of {} files edited; {again} of {} units settled again, {same} of them concluding what they had ({} ms)", moved.len(), files.len(), lv.tops.iter().map(|t| t.count()).sum::<usize>(), t.elapsed().as_millis());
+        rofl::engine::meter::spent("units", t);
         lv.read_by(&mut w.eval);
         w.eval.levels = Some(std::sync::Arc::new(lv));
         let mut sums: Vec<(String, u64, usize)> = files.iter().map(|(f, t)| (f.clone(), sum(t), 0)).collect();

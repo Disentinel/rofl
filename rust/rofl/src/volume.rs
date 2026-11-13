@@ -110,22 +110,68 @@ pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, cha
 /// The units of a world settled by levels (`engine/levels.rs`), beside the volume of the core they stand over.
 const UNITS: &[u8; 16] = b"ROFL-UNITS-1\n\0\0\0";
 
-pub fn keep_units(path: &str, lv: &crate::engine::levels::Levels) -> Result<(), String> {
-    let mut w = VolW::bounded(path, None).map_err(|x| x.to_string())?;
-    w.bytes(UNITS);
-    w.text(&build_id());
-    lv.write(&mut w)?;
-    w.finish().map(drop).map_err(|x| x.to_string())
+/// THE UNITS AS A SCROLL at `k`: segments `<k>.u<n>`, each written once and whole, the newest naming every stretch
+/// it holds or an earlier one holds; `<k>.units` names the newest. An edit appends a segment of what it settled
+/// again, and a segment no longer named is let go. None: no units are kept at `k`.
+pub fn keep_units(k: &str, lv: Option<&crate::engine::levels::Levels>) -> Result<(), String> {
+    let was = newest_segment(k);
+    let n = was.map_or(0, |n| n + 1);
+    let named = match lv {
+        Some(lv) => {
+            let path = format!("{k}.u{n}");
+            let mut w = VolW::bounded(&path, None).map_err(|x| x.to_string())?;
+            w.bytes(UNITS);
+            w.text(&build_id());
+            let segs = lv.write(&mut w)?;
+            w.finish().map_err(|x| x.to_string())?;
+            let tmp = format!("{k}.units.{}.new", std::process::id());
+            std::fs::write(&tmp, format!("{n}\n")).and_then(|_| std::fs::rename(&tmp, format!("{k}.units"))).map_err(|x| x.to_string())?;
+            segs
+        }
+        None => {
+            let _ = std::fs::remove_file(format!("{k}.units"));
+            Default::default()
+        }
+    };
+    for m in 0..n.max(was.map_or(0, |w| w + 1)) {
+        if !named.contains(&m) && (lv.is_none() || m != n) {
+            let _ = std::fs::remove_file(format!("{k}.u{m}"));
+        }
+    }
+    Ok(())
 }
 
-/// The units kept at `path`, over `e`, their core opened.
-pub fn open_units(path: &str, e: &Eval) -> Result<crate::engine::levels::Levels, String> {
-    let map = crate::arena::map_file(path).map_err(|x| x.to_string())?;
-    let mut r = VolR::new(map.clone(), UNITS.len());
-    if !map.starts_with(UNITS) || r.text()? != build_id() || !r.sum_holds() {
-        return Err(format!("{path}: not the units of this build"));
-    }
-    crate::engine::levels::Levels::read(e, &mut r)
+fn newest_segment(k: &str) -> Option<u32> {
+    std::fs::read_to_string(format!("{k}.units")).ok()?.trim().parse().ok()
+}
+
+/// Whether units are kept at `k`.
+pub fn has_units(k: &str) -> bool {
+    newest_segment(k).is_some()
+}
+
+/// The units kept at `k`, over `e`, their core opened.
+pub fn open_units(k: &str, e: &Eval) -> Result<crate::engine::levels::Levels, String> {
+    let n = newest_segment(k).ok_or_else(|| format!("{k}: no units are kept"))?;
+    let open = |m: u32| -> Result<(std::sync::Arc<crate::arena::Region>, VolR), String> {
+        let path = format!("{k}.u{m}");
+        let map = crate::arena::map_file(&path).map_err(|x| x.to_string())?;
+        let mut r = VolR::new(map.clone(), UNITS.len());
+        if !map.starts_with(UNITS) || r.text()? != build_id() || !r.sum_holds() {
+            return Err(format!("{path}: not the units of this build"));
+        }
+        Ok((map, r))
+    };
+    let (_, mut r) = open(n)?;
+    let seen = std::cell::RefCell::new(std::collections::HashMap::<u32, std::sync::Arc<crate::arena::Region>>::new());
+    crate::engine::levels::Levels::read(e, &mut r, n, &|m| {
+        if let Some(map) = seen.borrow().get(&m) {
+            return Ok(std::sync::Arc::clone(map));
+        }
+        let map = open(m)?.0;
+        seen.borrow_mut().insert(m, std::sync::Arc::clone(&map));
+        Ok(map)
+    })
 }
 
 fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {

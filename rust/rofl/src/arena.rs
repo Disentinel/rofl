@@ -517,6 +517,10 @@ impl VolW {
     pub fn u32(&mut self, x: u32) {
         self.bytes(&x.to_ne_bytes());
     }
+    /// Where the next byte is written.
+    pub fn at(&self) -> usize {
+        self.at
+    }
     pub fn u64(&mut self, x: u64) {
         self.bytes(&x.to_ne_bytes());
     }

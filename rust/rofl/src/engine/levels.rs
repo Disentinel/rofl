@@ -351,9 +351,10 @@ fn read_dir(r: &mut VolR) -> Result<FxMap<Key, Vec<FactId>>, String> {
 }
 
 impl Levels {
-    /// THE UNITS AS THEY ARE KEPT: the files in the world's order, the places a key is read at, each stretch once
-    /// (`Stretch::write`) and each unit with its files, its children and its directories.
-    pub fn write(&self, w: &mut VolW) -> Result<(), String> {
+    /// THE UNITS AS THEY ARE KEPT, a segment of the scroll: the files in the world's order, the places a key is read
+    /// at, each stretch once (`Stretch::write`, or where an earlier segment holds it) and each unit with its files,
+    /// its children and its directories. The segments it names besides its own.
+    pub fn write(&self, w: &mut VolW) -> Result<FxSet<u32>, String> {
         let mut files: Vec<(u64, u32)> = self.cx.files.iter().map(|(h, i)| (*h, *i)).collect();
         files.sort_unstable();
         w.arena(&files.iter().flat_map(|(h, i)| [*h, *i as u64]).collect::<Vec<u64>>());
@@ -390,9 +391,21 @@ impl Levels {
             }
             walk0(t, &mut leaves);
         }
+        let mut segs: FxSet<u32> = FxSet::default();
         w.u32(ss.len() as u32);
         for s in &ss {
-            s.write(w, leaves.contains(&s.lo))?;
+            match s.kept_at() {
+                Some((seg, start)) => {
+                    segs.insert(seg);
+                    w.u32(1);
+                    w.u32(seg);
+                    w.u64(start as u64);
+                }
+                None => {
+                    w.u32(0);
+                    s.write(w, leaves.contains(&s.lo))?;
+                }
+            }
         }
         let at = |u: &Rc<Unit>| us.iter().position(|x| Rc::ptr_eq(x, u)).unwrap() as u32;
         w.u32(us.len() as u32);
@@ -411,11 +424,12 @@ impl Levels {
         let mut masks: Vec<[u64; 2]> = self.cx.masks.lock().unwrap().iter().flat_map(|(rel, ms)| ms.iter().map(move |m| [*rel as u64, *m])).collect();
         masks.sort_unstable();
         w.arena(&masks.concat());
-        Ok(())
+        Ok(segs)
     }
 
     /// The units `write` kept, over `e`: the core they were settled over, opened, its dictionary theirs.
-    pub fn read(e: &Eval, r: &mut VolR) -> Result<Levels, String> {
+    /// `seg` the segment `r` reads, `open` another by its number.
+    pub fn read(e: &Eval, r: &mut VolR, seg: u32, open: &dyn Fn(u32) -> Result<Rc<crate::arena::Region>, String>) -> Result<Levels, String> {
         let bad = || "the kept units are not units".to_string();
         let files: FxMap<u64, u32> = r.arena::<u64>()?.chunks_exact(2).map(|x| (x[0], x[1] as u32)).collect();
         let mut joins = Joins::default();
@@ -426,7 +440,12 @@ impl Levels {
         let mut ss: Vec<Rc<Stretch>> = Vec::new();
         let over = Rc::new((e.fork().store, e.h.clone()));
         for _ in 0..r.u32()? {
-            ss.push(Rc::new(Stretch::read(&over, r)?));
+            ss.push(Rc::new(if r.u32()? == 0 {
+                Stretch::read(&over, r, seg)?
+            } else {
+                let (s, start) = (r.u32()?, r.u64()? as usize);
+                Stretch::read(&over, &mut VolR::new(open(s)?, start), s)?
+            }));
         }
         let mut us: Vec<Rc<Unit>> = Vec::new();
         for _ in 0..r.u32()? {

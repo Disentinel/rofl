@@ -1072,6 +1072,9 @@ struct Kept {
     over: Rc<(Store, Heap)>,
     map: Rc<crate::arena::Region>,
     at: usize,
+    /// the segment of the scroll it lies in, and where its record begins there
+    seg: u32,
+    start: usize,
 }
 
 /// A kept stretch's own facts where they lie: four words a fact (relation, book, flags, arity), the arguments, where
@@ -1213,7 +1216,8 @@ impl Stretch {
 
     /// The stretch `write` kept, to be unfolded when first read: over `over`, a fork of the core that wrote nothing
     /// and the core's heap.
-    pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR) -> Result<Stretch, String> {
+    pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR, seg: u32) -> Result<Stretch, String> {
+        let start = r.at();
         let (lo, hi) = (r.u32()?, r.u32()?);
         let (rels, far) = (r.arena::<u32>()?.to_vec(), r.arena::<u32>()?.to_vec());
         let at = r.at();
@@ -1233,8 +1237,13 @@ impl Stretch {
         if !fs.is_empty() {
             let _ = forests.set(fs);
         }
-        let kept = Some(Kept { over: over.clone(), map: r.map(), at });
+        let kept = Some(Kept { over: over.clone(), map: r.map(), at, seg, start });
         Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests, raw: Default::default() })
+    }
+
+    /// The segment of the scroll it is kept in, and where its record begins there.
+    pub fn kept_at(&self) -> Option<(u32, usize)> {
+        self.kept.as_ref().map(|k| (k.seg, k.start))
     }
 
     /// The stretch itself: as it was settled, or read now from where it is kept.
