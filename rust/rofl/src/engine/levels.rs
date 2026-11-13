@@ -176,6 +176,8 @@ pub(super) fn first_at(r: &ERule, (home, trees): &(FxSet<Sym>, FxSet<Sym>)) -> O
 }
 
 struct Ctx {
+    /// one number a world: what a thread remembers of the files of values is of this world
+    id: usize,
     h: Heap,
     files: FxMap<u64, u32>,
     joins: Joins,
@@ -187,10 +189,28 @@ struct Ctx {
 unsafe impl Send for Ctx {}
 unsafe impl Sync for Ctx {}
 
+static WORLDS: AtomicUsize = AtomicUsize::new(1);
+thread_local! {
+    /// the file of each name the world numbers once, as this thread has found it for the world of this number
+    static FILE_OF: std::cell::RefCell<(usize, FxMap<Sym, Option<u32>>)> = std::cell::RefCell::default();
+}
+
 impl Ctx {
     /// The file a value is a node of, by its place in the world's order.
     fn file(&self, t: Term) -> Option<u32> {
         let (TermK::Atom(s) | TermK::Str(s)) = t.kind() else { return None };
+        if self.h.is_own(s) {
+            return self.file_named(s);
+        }
+        FILE_OF.with(|m| {
+            let mut m = m.borrow_mut();
+            if m.0 != self.id {
+                *m = (self.id, FxMap::default());
+            }
+            *m.1.entry(s).or_insert_with(|| self.file_named(s))
+        })
+    }
+    fn file_named(&self, s: Sym) -> Option<u32> {
         let b = self.h.name(s).as_bytes();
         if b.len() < 18 || b[0] != b'n' || b[17] != b'_' {
             return None;
@@ -478,7 +498,7 @@ impl Levels {
         for x in r.arena::<u64>()?.chunks_exact(2) {
             masks.entry(x[0] as Sym).or_default().insert(x[1]);
         }
-        Ok(Levels { tops, cx: Rc::new(Ctx { h: e.h.clone(), files, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts })
+        Ok(Levels { tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts })
     }
 
     /// The unit of layer `k` over exactly `files`.
@@ -776,7 +796,7 @@ impl Eval {
     /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world. `fan`
     /// units make the one above.
     pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize, edit: Option<Edit>) -> Result<Levels, Halt> {
-        let cx = Rc::new(Ctx { h: self.h.clone(), files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
+        let cx = Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: self.h.clone(), files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
         // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
