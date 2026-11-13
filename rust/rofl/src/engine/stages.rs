@@ -51,6 +51,30 @@ impl Reach {
     }
 }
 
+/// The reach of each relation in each book; under `ANY`, of what a rule concludes into a book it names by a variable,
+/// and of what `own` says a file states.
+#[derive(Clone, PartialEq, Default)]
+struct Reaches(FxMap<(Sym, Sym), Reach>);
+pub(super) const ANY: Sym = Sym::MAX;
+
+/// The relation and book a literal names; `ANY` where its book is a variable.
+pub(super) fn booked(l: &Lit) -> (Sym, Sym) {
+    (l.rel, l.persp.as_atom().unwrap_or(ANY))
+}
+
+impl Reaches {
+    fn key(l: &Lit) -> (Sym, Sym) {
+        booked(l)
+    }
+    /// What a literal reads or concludes: its book's and what is of any book; every book's where it names none.
+    fn of(&self, l: &Lit) -> Option<Reach> {
+        match l.persp.as_atom() {
+            Some(b) => [self.0.get(&(l.rel, b)), self.0.get(&(l.rel, ANY))].into_iter().flatten().copied().reduce(Reach::meet),
+            None => self.0.iter().filter(|(k, _)| k.0 == l.rel).map(|(_, r)| *r).reduce(Reach::meet),
+        }
+    }
+}
+
 /// The premises of a rule that are of a file, each by the variables that name it.
 #[derive(Default)]
 struct Prems {
@@ -58,31 +82,37 @@ struct Prems {
     negs: Vec<Vec<Sym>>,
     /// what a relation not judged yet would name at best: it holds nothing so far
     unjudged: Vec<Sym>,
+    /// the variables an `=` says are one value
+    same: Vec<(Sym, Sym)>,
 }
 
 impl Prems {
     /// False where a premise may be of any file. The members of an aggregate's cell are of one file where a premise
     /// inside it holds, as a node of its file, a variable the cell is of.
-    fn read(&mut self, h: &Heap, body: &[BodyElem], of: &dyn Fn(Sym) -> Option<Reach>) -> bool {
+    fn read(&mut self, h: &Heap, eq: Sym, body: &[BodyElem], of: &dyn Fn(&Lit) -> Option<Reach>) -> bool {
         let own = |l: &Lit, mask: u64| -> Vec<Sym> { l.args.iter().enumerate().filter(|(i, _)| *i < 64 && mask >> i & 1 == 1).filter_map(|(_, t)| named(h, *t)).collect() };
         for b in body {
             match b {
                 BodyElem::Pos(l) | BodyElem::Neg(l) if l.temporal != Temporal::Now => return false,
-                BodyElem::Pos(l) => match of(l.rel) {
+                BodyElem::Pos(l) => match of(l) {
                     Some(Reach::Across) => return false,
                     Some(Reach::Free) => {}
                     Some(Reach::File(m)) => self.sets.push(own(l, m)),
                     None => self.unjudged.extend(own(l, u64::MAX)),
                 },
-                BodyElem::Neg(l) => match of(l.rel) {
+                BodyElem::Neg(l) => match of(l) {
                     Some(Reach::Across) => return false,
                     Some(Reach::Free) | None => {}
                     Some(Reach::File(m)) => self.negs.push(own(l, m)),
                 },
-                BodyElem::Bi { .. } => {}
+                BodyElem::Bi { op, l, r } => {
+                    if let (true, Some(a), Some(b)) = (*op == eq, named(h, *l), named(h, *r)) {
+                        self.same.push((a, b));
+                    }
+                }
                 BodyElem::Agg(a) => {
                     let (n, u) = (self.sets.len(), self.unjudged.len());
-                    if !self.read(h, &a.body, of) {
+                    if !self.read(h, eq, &a.body, of) {
                         return false;
                     }
                     let of_file = self.sets.len() > n;
@@ -111,16 +141,16 @@ fn named(h: &Heap, t: Term) -> Option<Sym> {
     }
 }
 
-fn rule_reach(h: &Heap, r: &ERule, of: &dyn Fn(Sym) -> Option<Reach>) -> Reach {
+fn rule_reach(h: &Heap, eq: Sym, r: &ERule, of: &dyn Fn(&Lit) -> Option<Reach>) -> Reach {
     let c = &r.clause;
     if !r.safe || r.has_thr || r.has_demand_prem || !r.lattice_outer.is_empty() || r.lat_close.is_some() || c.head.temporal != Temporal::Now {
         return Reach::Across;
     }
     let mut p = Prems::default();
-    if !p.read(h, &c.body, of) {
+    if !p.read(h, eq, &c.body, of) {
         return Reach::Across;
     }
-    let Prems { mut sets, negs, unjudged } = p;
+    let Prems { mut sets, negs, unjudged, same } = p;
     let Some(mut group) = sets.pop().or_else(|| (!unjudged.is_empty()).then(Vec::new)) else {
         return if negs.is_empty() { Reach::Free } else { Reach::Across };
     };
@@ -129,6 +159,9 @@ fn rule_reach(h: &Heap, r: &ERule, of: &dyn Fn(Sym) -> Option<Reach>) -> Reach {
         group.extend(sets.swap_remove(i));
     }
     group.extend(unjudged);
+    while let Some(v) = same.iter().find_map(|&(a, b)| [(a, b), (b, a)].into_iter().find(|(x, y)| group.contains(x) && !group.contains(y)).map(|p| p.1)) {
+        group.push(v);
+    }
     if negs.iter().any(|n| !n.iter().any(|v| group.contains(v))) {
         return Reach::Across;
     }
@@ -144,24 +177,24 @@ fn rule_reach(h: &Heap, r: &ERule, of: &dyn Fn(Sym) -> Option<Reach>) -> Reach {
 impl Eval {
     /// The reach of every relation, by the arguments `own` declares: the greatest that every rule keeps. What a rule of
     /// the stage `lower` concludes is of one file whatever its shape: it is evaluated a file at a time.
-    fn reaches(&mut self, own: &FxMap<Sym, u64>, lower: &FxSet<Sym>) -> FxMap<Sym, Reach> {
+    fn reaches(&mut self, own: &FxMap<Sym, u64>, lower: &FxSet<Sym>) -> Reaches {
         let rules = self.rules.clone();
-        let heads: FxSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
-        let stated: FxSet<Sym> = self.store.all_facts().into_iter().map(|f| self.store.rec(f).rel).collect();
-        let mut at: FxMap<Sym, Reach> = own.iter().map(|(r, m)| (*r, Reach::File(*m))).collect();
-        // a relation no rule concludes and no `own` names: the model's where it states it, else it holds nothing
-        for rel in stated.into_iter().filter(|r| !heads.contains(r) && !own.contains_key(r)) {
-            at.insert(rel, Reach::Free);
+        let heads: FxSet<(Sym, Sym)> = rules.iter().map(|r| Reaches::key(&r.clause.head)).collect();
+        let stated: FxSet<(Sym, Sym)> = self.store.all_facts().into_iter().map(|f| self.store.rec(f)).map(|r| (r.rel, r.persp)).collect();
+        let mut at = Reaches(own.iter().map(|(r, m)| ((*r, ANY), Reach::File(*m))).collect());
+        // a relation no rule concludes into the book and no `own` names: the model's where it states it, else it holds nothing
+        for k in stated.into_iter().filter(|k| !heads.contains(k) && !heads.contains(&(k.0, ANY)) && !own.contains_key(&k.0)) {
+            at.0.insert(k, Reach::Free);
         }
         loop {
             let mut next = at.clone();
-            let of = |rel: Sym| at.get(&rel).copied();
+            let of = |l: &Lit| at.of(l);
             for r in rules.iter() {
-                let x = match rule_reach(&self.h, r, &of) {
+                let x = match rule_reach(&self.h, self.v.op_eq, r, &of) {
                     Reach::Across if lower.contains(&r.id) => Reach::File(0),
                     x => x,
                 };
-                next.entry(r.clause.head.rel).and_modify(|e| *e = e.meet(x)).or_insert(x);
+                next.0.entry(Reaches::key(&r.clause.head)).and_modify(|e| *e = e.meet(x)).or_insert(x);
             }
             if next == at {
                 return at;
@@ -203,7 +236,7 @@ impl Eval {
         let walked: FxSet<Sym> = (0..self.store.virtuals.len()).filter(|ci| !self.vc.vclosure_blocked.contains(ci)).map(|ci| self.store.virtuals[ci].rel).collect();
         for r in self.rules.clone().iter().filter(|r| !st.rules.contains(&r.id)) {
             let rel = r.clause.head.rel;
-            match at.get(&rel) {
+            match at.of(&r.clause.head) {
                 Some(Reach::File(_)) if !walked.contains(&rel) => {
                     rules.insert(r.id);
                     st.heads.insert(rel);

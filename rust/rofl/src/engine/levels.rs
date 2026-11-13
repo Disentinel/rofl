@@ -9,8 +9,8 @@
 //! the units of the value's file up to there, and in the holders the directories name.
 
 use super::*;
-use super::stages::Stage;
-use crate::store::{Lower, Route, Stretch};
+use super::stages::{booked, Stage, ANY};
+use crate::store::{Lower, Route, Stretch, TreeOf};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering::Relaxed};
 use std::sync::Mutex;
 
@@ -26,8 +26,13 @@ pub struct Joins {
     pub cross: FxSet<Sym>,
     /// the layers above, in order: rules of the same shape that may also ask an absence of a layer below
     pub up: Vec<Rc<FxSet<Sym>>>,
-    /// the relations a file states or a rule fired in units concludes: a fact of one is at home in one unit
-    home: Rc<FxSet<Sym>>,
+    /// the relations a file states or a rule fired in units concludes: a fact of one is at home in one unit; and
+    /// the closures answered from a file's tree, which have no fact
+    home: Rc<(FxSet<Sym>, FxSet<Sym>)>,
+    /// the rules that read no file: settled once in the core, before the files (`Eval::settle_core`)
+    pub core: Rc<FxSet<Sym>>,
+    /// why the rules left to the world's reader are not of the units' shape, most first; the rest read what those conclude
+    pub held: String,
     places: FxMap<Sym, Vec<(u8, u8)>>,
     mates: FxMap<Place, Vec<Place>>,
 }
@@ -76,9 +81,9 @@ impl Meeting {
 
 /// The premise a rule takes the facts at home by: its first of the relations `home` (what files state and units
 /// conclude), else its first; the same in every unit, so a firing whose premises are all settled is found once.
-pub(super) fn first_at(r: &ERule, home: &FxSet<Sym>) -> Option<usize> {
+pub(super) fn first_at(r: &ERule, (home, trees): &(FxSet<Sym>, FxSet<Sym>)) -> Option<usize> {
     let at = |f: &dyn Fn(Sym) -> bool| r.plan.iter().position(|b| matches!(b, BodyElem::Pos(l) if f(l.rel)));
-    at(&|rel| home.contains(&rel)).or_else(|| at(&|_| true))
+    at(&|rel| home.contains(&rel)).or_else(|| at(&|rel| !trees.contains(&rel)))
 }
 
 struct Ctx {
@@ -220,7 +225,7 @@ impl Levels {
     /// `e`, a fork of the core the units were settled over that wrote nothing, reads them from here on.
     pub fn read_by(&self, e: &mut Eval) {
         e.store.folds = None;
-        e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, true);
+        e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, None);
     }
 }
 
@@ -249,7 +254,27 @@ impl Eval {
         odd.extend(self.demand.rels.iter().map(|(r, _)| *r));
         odd.extend([self.v.shrug, self.v.unknown]);
         let walked: FxSet<Sym> = self.clo.closures.iter().flat_map(|c| [c.base, c.step]).chain(self.vc.skip.keys().copied()).collect();
-        let lit = |l: &Lit| l.temporal == Temporal::Now && l.persp.is_atom() && !odd.contains(&l.rel);
+        // a closure answered from a tree whose edges, and the condition of a nearest, a file settles alone: a unit
+        // reads it from the tree the file's unit left
+        let settled = |rel: Sym, book: Option<Sym>| rules.iter().filter(|r| r.safe && r.clause.head.rel == rel && book.is_none_or(|b| [b, ANY].contains(&booked(&r.clause.head).1))).all(|r| st.rules.contains(&r.id));
+        let trees: FxSet<Sym> = (0..self.vc.vclosures.len())
+            .filter(|&ci| {
+                let c = &self.vc.vclosures[ci];
+                !self.vc.vclosure_blocked.contains(&ci)
+                    && !c.is_graph()
+                    && match self.store.virtuals[ci].near {
+                        Some(n) => settled(c.src, Some(n.ebook)) && settled(n.cond, Some(n.sbook)),
+                        None => settled(c.src, None),
+                    }
+            })
+            .map(|ci| self.vc.vclosures[ci].rel)
+            .collect();
+        let tree_rules: FxSet<Sym> = self.vc.skip.iter().filter(|(_, ci)| trees.contains(&self.vc.vclosures[**ci].rel)).map(|(r, _)| *r).collect();
+        let lit = |l: &Lit| l.temporal == Temporal::Now && l.persp.is_atom() && (!odd.contains(&l.rel) || trees.contains(&l.rel));
+        // what reads no file is the core's: no file fires it, and the world's reader does not either
+        let core: FxSet<Sym> = st.free.iter().filter(|id| !walked.contains(*id)).copied().collect();
+        st.free.retain(|id| !core.contains(id));
+        st.rules = Rc::new(st.rules.iter().filter(|id| !core.contains(*id)).copied().collect());
         let joined = |r: &ERule| {
             let ls: Vec<&Lit> = r.clause.body.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l) } else { None }).collect();
             let mut part: Vec<usize> = (0..ls.len()).collect();
@@ -263,9 +288,14 @@ impl Eval {
             }
             !ls.is_empty() && part.iter().all(|x| *x == part[0])
         };
+        // (a builtin is a wall to the order of a firing: a premise written after one is not fired from its news)
+        let walled = |r: &ERule| r.plan.iter().rposition(|b| matches!(b, BodyElem::Pos(_))).is_some_and(|last| r.plan[..last].iter().any(|b| matches!(b, BodyElem::Bi { .. })));
         let shape = |r: &ERule, neg: bool| {
             r.safe && (neg || !r.has_neg) && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.has_demand_prem && !r.demand_strict && !walked.contains(&r.id)
                 && lit(&r.clause.head)
+                && !walled(r)
+                && !trees.contains(&r.clause.head.rel)
+                && r.clause.body.iter().any(|b| matches!(b, BodyElem::Pos(l) if !trees.contains(&l.rel)))
                 && r.clause.body.iter().all(|b| match b {
                     BodyElem::Pos(l) => lit(l),
                     BodyElem::Neg(l) => neg && lit(l),
@@ -274,12 +304,14 @@ impl Eval {
                 })
                 && joined(r)
         };
+        // a relation in a book is open while a rule left to the world's reader concludes it
+        let opens = |open: &FxSet<(Sym, Sym)>, l: &Lit| open.contains(&booked(l)) || open.contains(&(l.rel, ANY));
         let mut cross: Vec<&Rc<ERule>> = rules.iter().filter(|r| !st.rules.contains(&r.id) && shape(r, false)).collect();
         loop {
-            let closed = |id: &Sym| st.rules.contains(id) && !st.free.contains(id) || cross.iter().any(|r| r.id == *id);
-            let open: FxSet<Sym> = rules.iter().filter(|r| r.safe && !closed(&r.id)).map(|r| r.clause.head.rel).collect();
+            let closed = |id: &Sym| st.rules.contains(id) && !st.free.contains(id) || core.contains(id) || tree_rules.contains(id) || cross.iter().any(|r| r.id == *id);
+            let open: FxSet<(Sym, Sym)> = rules.iter().filter(|r| r.safe && !closed(&r.id)).map(|r| booked(&r.clause.head)).collect();
             let n = cross.len();
-            cross.retain(|r| !open.contains(&r.clause.head.rel) && r.clause.body.iter().all(|b| !matches!(b, BodyElem::Pos(l) if open.contains(&l.rel))));
+            cross.retain(|r| !opens(&open, &r.clause.head) && r.clause.body.iter().all(|b| !matches!(b, BodyElem::Pos(l) if opens(&open, l))));
             if cross.len() == n {
                 break;
             }
@@ -287,29 +319,54 @@ impl Eval {
         // the layers above: a rule that asks an absence waits for the layer that settles it, and what reads it follows
         let mut up: Vec<&Rc<ERule>> = rules.iter().filter(|r| !st.rules.contains(&r.id) && !cross.iter().any(|c| c.id == r.id) && shape(r, true)).collect();
         let home = loop {
-            let ids: FxSet<Sym> = st.rules.iter().filter(|id| !st.free.contains(*id)).copied().chain(cross.iter().chain(&up).map(|r| r.id)).collect();
-            let open: FxSet<Sym> = rules.iter().filter(|r| r.safe && !ids.contains(&r.id)).map(|r| r.clause.head.rel).collect();
-            let home: FxSet<Sym> = st.own.keys().copied().chain(rules.iter().filter(|r| ids.contains(&r.id)).map(|r| r.clause.head.rel)).collect();
+            let ids: FxSet<Sym> = st.rules.iter().filter(|id| !st.free.contains(*id)).chain(&core).chain(&tree_rules).copied().chain(cross.iter().chain(&up).map(|r| r.id)).collect();
+            let open: FxSet<(Sym, Sym)> = rules.iter().filter(|r| r.safe && !ids.contains(&r.id)).map(|r| booked(&r.clause.head)).collect();
+            let home: FxSet<Sym> = st.own.keys().copied().chain(rules.iter().filter(|r| ids.contains(&r.id)).map(|r| r.clause.head.rel)).filter(|rel| !trees.contains(rel)).collect();
             let n = up.len();
             up.retain(|r| {
-                !open.contains(&r.clause.head.rel)
-                    && r.clause.body.iter().all(|b| b.lits_deep().iter().all(|l| !open.contains(&l.rel)))
+                !opens(&open, &r.clause.head) && r.clause.body.iter().all(|b| b.lits_deep().iter().all(|l| !opens(&open, l)))
             });
             if up.len() == n {
                 break home;
             }
         };
-        let mut layer: FxMap<Sym, u32> = FxMap::default();
+        let below: FxSet<Sym> = st.rules.iter().filter(|id| !st.free.contains(*id)).chain(&core).chain(&tree_rules).copied().chain(cross.iter().chain(&up).map(|r| r.id)).collect();
+        let mut why: FxMap<String, usize> = FxMap::default();
+        for r in rules.iter().filter(|r| r.safe && !below.contains(&r.id) && !shape(r, true)) {
+            let read = r.clause.body.iter().flat_map(|b| b.lits_deep()).find(|l| !lit(l));
+            let w = if r.has_agg {
+                "counts or folds".to_string()
+            } else if r.has_thr || !r.lattice_outer.is_empty() || r.has_demand_prem || r.demand_strict {
+                "a threshold, a lattice or a demand".into()
+            } else if walked.contains(&r.id) {
+                "a closure walked".into()
+            } else if !lit(&r.clause.head) {
+                format!("concludes {}", self.h.name(r.clause.head.rel))
+            } else if let Some(l) = read {
+                format!("reads {}", self.h.name(l.rel))
+            } else if !joined(r) {
+                "premises not joined".into()
+            } else if walled(r) {
+                "a builtin before a premise".into()
+            } else {
+                "other".into()
+            };
+            *why.entry(w).or_default() += 1;
+        }
+        let mut why: Vec<(String, usize)> = why.into_iter().collect();
+        why.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        let held = why.iter().take(8).map(|(w, n)| format!("{n} {w}")).collect::<Vec<_>>().join(", ");
+        let mut layer: FxMap<(Sym, Sym), u32> = FxMap::default();
         for round in 0..up.len() + 2 {
             let mut moved = false;
             for r in &up {
-                let at = |l: &Lit| layer.get(&l.rel).copied().unwrap_or(0);
+                let at = |l: &Lit| layer.get(&booked(l)).copied().unwrap_or(0);
                 let l = r.clause.body.iter().fold(1, |m, b| match b {
                     BodyElem::Pos(l) => m.max(at(l)),
                     BodyElem::Neg(l) => m.max(at(l) + 1),
                     _ => m,
                 });
-                let e = layer.entry(r.clause.head.rel).or_default();
+                let e = layer.entry(booked(&r.clause.head)).or_default();
                 if l > *e {
                     (*e, moved) = (l, true);
                 }
@@ -321,10 +378,10 @@ impl Eval {
                 up.clear();
             }
         }
-        let mut joins = Joins { home: Rc::new(home), ..Default::default() };
+        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), ..Default::default() };
         let mut by_layer: std::collections::BTreeMap<u32, FxSet<Sym>> = Default::default();
         for r in &up {
-            by_layer.entry(layer[&r.clause.head.rel]).or_default().insert(r.id);
+            by_layer.entry(layer[&booked(&r.clause.head)]).or_default().insert(r.id);
         }
         joins.up = by_layer.into_values().map(Rc::new).collect();
         joins.cross = cross.iter().map(|r| r.id).collect();
@@ -373,6 +430,21 @@ impl Eval {
         (st, joins)
     }
 
+    /// The rules that read no file fired in this core, before it is frozen and the files fork it.
+    pub fn settle_core(&mut self, rules: Rc<FxSet<Sym>>) -> Result<(), Halt> {
+        if rules.is_empty() {
+            return Ok(());
+        }
+        self.stage_pass = StagePass::Lower(rules);
+        let out = self.run_whole();
+        self.stage_pass = StagePass::Whole;
+        if out?.partial {
+            return Err(Halt::Budget("budget_exhausted", None));
+        }
+        self.store.settled = self.store.len_ids();
+        Ok(())
+    }
+
     /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world. `fan`
     /// units make the one above.
     pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize) -> Result<Levels, Halt> {
@@ -388,6 +460,7 @@ impl Eval {
         let home = cx.joins.home.clone();
         let rel_at = |r: &ERule, i: usize| if let BodyElem::Pos(l) = &r.plan[i] { l.rel } else { unreachable!() };
         let firsts: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).filter_map(|r| first_at(r, &home).map(|i| rel_at(r, i))).collect()).collect();
+        let mut trees: Option<Rc<TreeOf>> = None;
         struct Stage1<'a>(&'a Stage);
         // SAFETY: the stage is read
         unsafe impl Sync for Stage1<'_> {}
@@ -428,7 +501,7 @@ impl Eval {
         // a unit of layer `k` over `kids`: it reads the layers below (`lower`) of the whole world by key, takes at
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
         // together where two of them meet
-        let unit = |k: usize, lower: &Option<Rc<Lower>>, lo: FactId, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32)| -> Result<Unit, Halt> {
+        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, lo: FactId, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32)| -> Result<Unit, Halt> {
             let mut near: Vec<(Rc<Stretch>, u32)> = Vec::new();
             for (c, k) in kids.iter().enumerate() {
                 below(k, c as u32, &mut near);
@@ -467,7 +540,7 @@ impl Eval {
             let mut e = fork();
             let mark = bump.load(Relaxed);
             e.0.meeting = Some(Rc::new(Meeting { core: lo, mark, under: near.iter().map(|(s, c)| (s.lo, *c)).collect() }));
-            e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, false);
+            e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone());
             e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
             e.0.wall.hold_end = true;
             e.0.by_seed = true;
@@ -511,15 +584,21 @@ impl Eval {
             let at_home = |d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
             let mut units = level(files.len(), &|x| {
                 if k > 0 {
-                    return unit(k, &lower, lo, at_home(0, x), Vec::new(), (x as u32, x as u32 + 1));
+                    return unit(k, &lower, &trees, lo, at_home(0, x), Vec::new(), (x as u32, x as u32 + 1));
                 }
                 let mut e = fork();
                 let from = e.0.store.len_ids();
                 volumes::load_text(&mut e.0, &files[x].1)?;
                 e.0.lower_stage(stage.0)?;
                 e.0.own_kept(stage.0, from)?;
+                // (its trees are left as they stand at the end: the units above read them)
+                e.0.vc.vrefresh(&mut e.0.store);
                 Ok(done(e, (x as u32, x as u32 + 1), Vec::new(), FxMap::default(), Rc::default()))
             })?;
+            if k == 0 {
+                let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
+                trees = Some(Rc::new(move |t: Term| cx.file(t).map(|f| of[f as usize].clone())));
+            }
             let mut depths = vec![units.clone()];
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
@@ -531,7 +610,7 @@ impl Eval {
                         return Ok(Unit { stretch: k.stretch.clone(), files: k.files, kids: k.kids.clone(), dir: k.dir.clone(), inner: k.inner.clone() });
                     }
                     let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
-                    unit(k, &lower, lo, at_home(d, x), kids, files)
+                    unit(k, &lower, &trees, lo, at_home(d, x), kids, files)
                 })?;
                 depths.push(units.clone());
             }

@@ -221,6 +221,7 @@ impl Eval {
         let levels = std::env::var("ROFL_VOLUMES").as_deref() == Ok("levels");
         let (stage, joins) = if levels {
             let (st, j) = self.level_stage();
+            self.settle_core(j.core.clone())?;
             (Some(st), Mutex::new(Some(j)))
         } else {
             (self.lemma_stage(), Mutex::new(None))
@@ -273,18 +274,19 @@ impl Eval {
         on_threads(&mut ws, &|i, w| {
             match &stage {
                 Some(stage) if levels => {
-                    let joins = joins.lock().unwrap().take().expect("one worker by levels");
+                    let mut joins = joins.lock().unwrap().take().expect("one worker by levels");
                     let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
                     let cross = joins.cross.len();
-                    let up: Vec<Sym> = joins.up.iter().flat_map(|l| l.iter().copied()).collect();
+                    let up: Vec<Sym> = joins.up.iter().flat_map(|l| l.iter().copied()).chain(joins.core.iter().copied()).collect();
                     let layers = joins.up.len();
+                    let held = std::mem::take(&mut joins.held);
                     let t = std::time::Instant::now();
                     let lv = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
                     let ms = t.elapsed().as_millis();
                     let from = w.e.store.len_ids();
                     lv.read_by(&mut w.e);
                     w.e.diags.push(format!(
-                        "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units in {ms} ms",
+                        "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units in {ms} ms; left to the reader by their shape: {held}",
                         w.e.rules.iter().filter(|r| r.safe).count(),
                         stage.rules.len() + up.len(),
                         up.len(),

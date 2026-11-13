@@ -1129,7 +1129,12 @@ pub struct Near {
     /// whether a read of a whole relation here takes the stretches' rows: the world's reader does; a unit reads its
     /// children by key alone, and a whole read of it is of what it wrote itself
     whole: bool,
+    /// in a unit: the stretch of the file a node is of, whose trees answer for the node
+    trees: Option<Rc<TreeOf>>,
 }
+
+/// The stretch a file's own unit left, by a node of the file.
+pub type TreeOf = dyn Fn(Term) -> Option<Rc<Stretch>> + Send + Sync;
 
 /// Stretches many stores read, in the order of `lo`, and where a key is found in them.
 pub struct Lower {
@@ -1476,6 +1481,9 @@ pub struct Store {
     pub aliases: Vec<AliasView>,
     /// Whether the canonical state lists their rows: the last evaluation of this tick answered them.
     pub vlisted: bool,
+    /// The facts below stand in every evaluation with their firings: a core settled them before it was frozen
+    /// (`Eval::settle_core`), and no rule that concludes them fires again.
+    pub settled: FactId,
     /// Whether the world keeps witnesses: a listed row is then a fact with one firing, written with its witness.
     pub vwit: bool,
     /// The row a `PremRef::VRow` key names: the closure's number, the book and the two ends.
@@ -2229,15 +2237,24 @@ impl Store {
 
     /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
-    pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, whole: bool) {
+    pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, trees: Option<Rc<TreeOf>>) {
+        let whole = trees.is_none();
         let core = self.facts.recs.mark;
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
         assert!(lower.as_ref().and_then(|l| l.list.last()).is_none_or(|s| s.hi <= list.first().map_or(mark, |f| f.lo)));
-        self.facts.near = Some(Rc::new(Near { core, lower, list, route, rows: Rc::default(), lens: Rc::default(), whole }));
+        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, rows: Rc::default(), lens: Rc::default(), whole }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
         self.fold.mark = mark as usize;
+    }
+
+    /// In a unit of a world by levels, the forests of the closure `ci` that answer for `node`: those its file's unit
+    /// left (none for a value of no file). None where this store builds its own.
+    pub fn tree_of(&self, ci: usize, node: Option<Term>) -> Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>> {
+        let trees = self.facts.near.as_ref()?.trees.as_ref()?;
+        let node = node.expect("a unit reads a tree from a node, never whole");
+        Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.store.virtuals[ci].forests.clone()))
     }
 
     /// Whether this store reads stretches.
@@ -3376,7 +3393,9 @@ impl Store {
     pub fn clear_derived(&mut self, row_of: Option<RowOf<'_>>) {
         self.chains_cut();
         self.vlisted = false;
+        let settled = self.settled;
         let drop: Vec<FactId> = self.ids_here()
+            .filter(|&i| i >= settled)
             .filter(|&i| {
                 let r = &self.facts.rec(i);
                 !r.dead() && !r.base() && !r.frozen() && !self.kept_layer.contains(&r.rel) && !self.kept_rows.contains(&i)
@@ -3400,7 +3419,7 @@ impl Store {
             }
         }
         let tick = self.tick;
-        for id in self.ids_here() {
+        for id in self.ids_here().filter(|&i| i >= settled) {
             if !self.kept_layer.is_empty() && (self.kept_layer.contains(&self.facts.rec(id as FactId).rel) || self.kept_rows.contains(&(id as FactId))) {
                 continue;
             }
@@ -6177,7 +6196,7 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!((a.hi - a.lo, b.hi - b.lo), (50, 51));
         let (a, b) = (Rc::new(a), Rc::new(b));
         let mut top = s.clone();
-        top.read_near(b.hi, None, vec![a.clone(), b.clone()], None, true);
+        top.read_near(b.hi, None, vec![a.clone(), b.clone()], None, None);
         for (st, from) in [(&a, 0), (&b, 30)] {
             for k in 0..25u32 {
                 let (e, d) = (st.lo + 2 * k, st.lo + 2 * k + 1);

@@ -462,7 +462,10 @@ impl Eval {
         let persp = walk(&self.h, l.persp, s).as_atom();
         let (ta, td) = (resolve(&mut self.h, l.args[0], s), resolve(&mut self.h, l.args[1], s));
         if let (Some(p), true, true) = (persp, self.h.is_ground(ta), self.h.is_ground(td)) {
-            let forests = self.vc.vforests(&mut self.store, ci);
+            let forests = match self.store.tree_of(ci, Some(td)) {
+                Some(f) => f,
+                None => self.vc.vforests(&mut self.store, ci),
+            };
             return forests.iter().any(|(b, f)| *b == p && f.is_ancestor(ta, td));
         }
         !self.vmatch(ci, l, s).is_empty()
@@ -1407,7 +1410,10 @@ impl VClosureState {
 
     /// The rows of the closure `ci` that hold the ends given (a bound end is a ground term), in the book given or in every one.
     pub fn vrows(&mut self, store: &mut Store, ci: usize, book: Option<Sym>, a: Option<Term>, d: Option<Term>) -> Vec<(Sym, Term, Term)> {
-        let forests = self.vforests(store, ci);
+        let forests = match store.tree_of(ci, d.or(a)) {
+            Some(f) => f,
+            None => self.vforests(store, ci),
+        };
         let mut out = Vec::new();
         for (b, f) in forests.iter() {
             if book.is_some_and(|p| p != *b) && !brk!("vclosure_book_merged" => true; false) {

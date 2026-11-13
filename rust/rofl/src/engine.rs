@@ -832,7 +832,7 @@ pub struct Eval {
     /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
     by_seed: bool,
     /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
-    homing: Option<Rc<FxSet<Sym>>>,
+    homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
     anchor_home: FxMap<Sym, Option<u32>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
