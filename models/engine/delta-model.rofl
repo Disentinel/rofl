@@ -269,3 +269,5 @@ anew_ms_shape[byfile](Ms) :- shape_ms[byfile](L), whole_ms[byfile](W), taking_sh
 -- not say time: by the engine's own time by rule the rules of one file were 14.1 s of 35.7, not 17.7 of 36.
 anew_ms_byfile_measured[byfile](49924). delta_ms_byfile_measured[byfile](8160).
 rule_ms[byfile](of_file, 14112). rule_ms[byfile](across, 21629).
+-- the same stage under the volumes' four workers (the default path): 31.7 s anew against 50, 7.3 s the delta against 15
+anew_ms_byfile_volumes[byfile](31676). delta_ms_byfile_volumes[byfile](7279).
