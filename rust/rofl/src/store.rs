@@ -1056,6 +1056,8 @@ pub struct Stretch {
     kept: Option<Kept>,
     pub lo: FactId,
     pub hi: FactId,
+    /// of a file's own unit kept: its trees, built again when first asked
+    forests: std::sync::OnceLock<Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
     /// the relations it wrote a fact of, and the facts lying elsewhere it holds a firing of: both in order
     rels: Vec<Sym>,
     far: Vec<FactId>,
@@ -1091,12 +1093,13 @@ const OPEN: u64 = u64::MAX;
 impl Stretch {
     /// A STRETCH AS IT IS KEPT: its own facts in the order of their ids and every firing it holds, of them and of
     /// facts that lie elsewhere. Nothing of what it read is written, and its indexes are made again when it is read.
-    pub fn write(&self, w: &mut crate::arena::VolW) -> Result<(), String> {
+    /// `trees`: it is a file's own, whose trees the units above read.
+    pub fn write(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<(), String> {
         let order: Vec<FactId> = (self.lo..self.hi).collect();
         let p = self.parts(&order, &|f| f)?;
         w.u32(self.lo);
         w.u32(self.hi);
-        w.u32(self.store().virtuals.iter().any(|v| !v.forests.is_empty()) as u32);
+        w.u32(trees as u32);
         w.arena(&self.rels);
         w.arena(&self.far);
         w.arena(&p.recs);
@@ -1154,7 +1157,18 @@ impl Stretch {
         }
         let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
         let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
-        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, rels: self.rels.clone(), far: self.far.clone(), keyed: Default::default() })
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, rels: self.rels.clone(), far: self.far.clone(), keyed: Default::default(), forests: Default::default() })
+    }
+
+    /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
+    /// absence, no tree row and no builtin by a key of its own.
+    pub fn carriable(&self) -> bool {
+        let s = self.store();
+        s.prem_arena.own.iter().all(|p| match p.kind() {
+            Prem::Fact(_) => true,
+            Prem::Bi(k) => k == 0,
+            _ => false,
+        })
     }
 
     /// Whether the two hold the same facts.
@@ -1189,7 +1203,7 @@ impl Stretch {
         r.arena::<u32>()?;
         r.arena::<PremRef>()?;
         let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default() })
+        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests: Default::default() })
     }
 
     /// The stretch itself: as it was settled, or read now from where it is kept.
@@ -1202,12 +1216,20 @@ impl Stretch {
                 let (recs, args, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
                 Self::unfold(k.over.0.clone(), &k.over.1, self.lo, self.hi, &recs, &args, &fired, &prems)
             };
-            let store = read(&mut r).expect("a kept stretch read once reads again");
-            match &k.trees {
-                Some(t) => t(store),
-                None => store,
-            }
+            read(&mut r).expect("a kept stretch read once reads again")
         })
+    }
+
+    /// The forests of the closure `ci` this stretch answers with: as it was settled, or of a file's unit kept,
+    /// built again over its facts when first asked.
+    pub fn forests(&self, ci: usize) -> Rc<[(Sym, Rc<crate::forest::Forest>)]> {
+        let Some(t) = self.kept.as_ref().and_then(|k| k.trees.as_ref()) else { return self.store().virtuals[ci].forests.clone() };
+        let fs = self.forests.get_or_init(|| {
+            let s = self.store().clone();
+            let _one = UNFOLD.lock().unwrap();
+            t(s).virtuals.iter().map(|v| v.forests.clone()).collect()
+        });
+        fs.get(ci).cloned().unwrap_or_else(|| Rc::from(Vec::new()))
     }
 
     /// The facts of a stretch put under the ids `lo..hi` into `fork`, in the order given, with their firings.
@@ -2452,6 +2474,97 @@ impl Store {
         self.fold.mark = mark as usize;
     }
 
+    /// Whether a fact of this id stands for this store: the base's, or of a stretch it reads.
+    pub fn reads_id(&self, id: FactId) -> bool {
+        match &self.facts.near {
+            Some(n) => (id as usize) < n.core || n.live(id).is_some(),
+            None => true,
+        }
+    }
+
+    /// THE FACTS OF `old` THAT STAND, CARRIED HERE: a fact with a firing whose premises stand (read here, or a fact
+    /// of `old` carried before it), least first, so nothing stands on itself alone; each put here with every firing
+    /// of it that stands, unless a stretch read here holds it now. Asked of a store that wrote nothing of `old`'s.
+    pub fn carry(&mut self, h: &Heap, old: &Stretch) -> usize {
+        let s = old.store();
+        let n = (old.hi - old.lo) as usize;
+        let own = |f: FactId| (old.lo <= f && f < old.hi).then(|| (f - old.lo) as usize);
+        let mut fired: Vec<(usize, Sym, u32, Vec<PremRef>)> = Vec::new();
+        for a in 0..n {
+            let id = old.lo + a as FactId;
+            if !s.alive(id) {
+                continue;
+            }
+            for w in s.chain(id) {
+                let ps = s.prems_of(&w);
+                if ps.iter().all(|p| match p.kind() {
+                    Prem::Fact(f) => own(f).is_some() || self.reads_id(f),
+                    _ => true,
+                }) {
+                    fired.push((a, w.rule, w.tick, ps.to_vec()));
+                }
+            }
+        }
+        // the firings waiting on facts of `old`, and how many each waits on
+        let mut open: Vec<usize> = vec![0; fired.len()];
+        let mut users: FxMap<usize, Vec<usize>> = FxMap::default();
+        for (i, f) in fired.iter().enumerate() {
+            for p in &f.3 {
+                if let Prem::Fact(g) = p.kind() {
+                    if let Some(b) = own(g) {
+                        open[i] += 1;
+                        users.entry(b).or_default().push(i);
+                    }
+                }
+            }
+        }
+        let mut new_id = vec![EMPTY; n];
+        let mut order: Vec<usize> = Vec::new();
+        let mut queue: Vec<usize> = (0..fired.len()).filter(|&i| open[i] == 0).collect();
+        while let Some(i) = queue.pop() {
+            let a = fired[i].0;
+            if new_id[a] != EMPTY {
+                continue;
+            }
+            let (r, args) = (s.rec(old.lo + a as FactId), s.args(old.lo + a as FactId).to_vec());
+            new_id[a] = match self.find_near(r.rel, r.persp, &args) {
+                Some(there) => there,
+                None => {
+                    order.push(a);
+                    let ground = args.iter().all(|t| h.is_ground(*t));
+                    self.put_kept(h, r.rel, r.persp, &args, r.flags() & !F_DEAD, ground)
+                }
+            };
+            for &j in users.get(&a).into_iter().flatten() {
+                open[j] -= 1;
+                if open[j] == 0 {
+                    queue.push(j);
+                }
+            }
+        }
+        for (a, rule, tick, ps) in fired {
+            let id = new_id[a];
+            if id == EMPTY || !self.here(id) {
+                continue;
+            }
+            let mut mapped = Vec::with_capacity(ps.len());
+            for p in &ps {
+                mapped.push(match p.kind() {
+                    Prem::Fact(f) => match own(f) {
+                        Some(b) if new_id[b] == EMPTY => break,
+                        Some(b) => PremRef::Fact(new_id[b]),
+                        None => *p,
+                    },
+                    _ => *p,
+                });
+            }
+            if mapped.len() == ps.len() {
+                self.support(id, Witness { rule, tick, prems: mapped });
+            }
+        }
+        order.len()
+    }
+
     /// This reader reads by id, and no other way, the stretches an edit replaced.
     pub fn reads_ghosts(&mut self, ghosts: Vec<Rc<Stretch>>) {
         if let Some(n) = self.facts.near.as_mut().filter(|_| !ghosts.is_empty()) {
@@ -2516,7 +2629,7 @@ impl Store {
     pub fn tree_of(&self, ci: usize, node: Option<Term>) -> Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>> {
         let trees = self.facts.near.as_ref()?.trees.as_ref()?;
         let node = node.expect("a unit reads a tree from a node, never whole");
-        Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.store().virtuals[ci].forests.clone()))
+        Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.forests(ci)))
     }
 
     /// Whether this store reads its trees from the units of the files.
@@ -2580,7 +2693,7 @@ impl Store {
         let (mut rels, mut far): (Vec<Sym>, Vec<FactId>) = (self.idx.own.keys().copied().collect(), self.far_heads.keys().copied().collect());
         rels.sort_unstable();
         far.sort_unstable();
-        Stretch { store: self.into(), kept: None, lo, hi: lo + n, rels, far, keyed: Default::default() }
+        Stretch { store: self.into(), kept: None, lo, hi: lo + n, rels, far, keyed: Default::default(), forests: Default::default() }
     }
 
     /// What this stretch itself holds of the candidates of a premise: a superset.

@@ -379,9 +379,20 @@ impl Levels {
         }
         let live = ss.len();
         ss.extend(self.ghosts.iter());
+        // (the files' own units, whose trees the units above read)
+        let mut leaves: FxSet<FactId> = FxSet::default();
+        if let Some(t) = self.tops.first() {
+            fn walk0(u: &Unit, out: &mut FxSet<FactId>) {
+                if u.kids.is_empty() {
+                    out.insert(u.stretch.lo);
+                }
+                u.kids.iter().for_each(|k| walk0(k, out));
+            }
+            walk0(t, &mut leaves);
+        }
         w.u32(ss.len() as u32);
         for s in &ss {
-            s.write(w)?;
+            s.write(w, leaves.contains(&s.lo))?;
         }
         let at = |u: &Rc<Unit>| us.iter().position(|x| Rc::ptr_eq(x, u)).unwrap() as u32;
         w.u32(us.len() as u32);
@@ -414,13 +425,14 @@ impl Levels {
         let mark = r.u32()?;
         let mut ss: Vec<Rc<Stretch>> = Vec::new();
         let over = Rc::new((e.fork().store, e.h.clone()));
-        let ev = Fork(e.fork());
-        let trees: Rc<crate::store::Trees> = Rc::new(move |store| {
-            let mut f = ev.0.fork();
-            f.store = store;
-            let Eval { vc, store, .. } = &mut f;
-            vc.vrefresh(store);
-            std::mem::take(&mut f.store)
+        struct Vc(VClosureState);
+        // SAFETY: cloned under the lock that unfolds a stretch at a time
+        unsafe impl Send for Vc {}
+        unsafe impl Sync for Vc {}
+        let vc = Vc(e.vc.clone());
+        let trees: Rc<crate::store::Trees> = Rc::new(move |mut store| {
+            vc.0.clone().vrefresh(&mut store);
+            store
         });
         for _ in 0..r.u32()? {
             ss.push(Rc::new(Stretch::read(&over, &trees, r)?));
@@ -755,6 +767,8 @@ impl Eval {
         let rules_of: Vec<Rc<FxSet<Sym>>> = std::iter::once(Rc::new(cx.joins.cross.clone())).chain(cx.joins.up.iter().cloned()).collect();
         let home = cx.joins.home.clone();
         let rel_at = |r: &ERule, i: usize| if let BodyElem::Pos(l) = &r.plan[i] { l.rel } else { unreachable!() };
+        // the relations the rules of the first layer read
+        let read_rels: FxSet<Sym> = self.rules.iter().filter(|r| rules_of[0].contains(&r.id)).flat_map(|r| r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.rel) } else { None })).collect();
         let firsts: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).filter_map(|r| first_at(r, &home).map(|i| rel_at(r, i))).collect()).collect();
         let mut trees: Option<Rc<TreeOf>> = None;
         struct Stage1<'a>(&'a Stage);
@@ -849,17 +863,42 @@ impl Eval {
         // a unit of layer `k` over `kids`: it reads the layers below (`lower`) of the whole world by key, takes at
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
         // together where two of them meet
-        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32)| -> Result<Unit, Halt> {
+        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32), old: Option<Rc<Unit>>| -> Result<Unit, Halt> {
             let mut near: Vec<(Rc<Stretch>, u32)> = Vec::new();
             for (c, k) in kids.iter().enumerate() {
                 below(k, c as u32, &mut near);
+            }
+            // A GROUP MENDED: what it made stands where what it read stands, and only where a child moved is it met
+            // again (a group of the first layer, whose firings read no absence)
+            let old = old.filter(|o| k == 0 && !o.kids.is_empty() && o.stretch.carriable());
+            // (mended: the stretches below that are new, and the keys their facts hold)
+            let (mut fresh, mut fresh_keys): (FxSet<FactId>, FxSet<Key>) = Default::default();
+            let mut seeds: Vec<FactId> = Vec::new();
+            if let Some(o) = &old {
+                let mut was: Vec<(Rc<Stretch>, u32)> = Vec::new();
+                o.kids.iter().for_each(|k| below(k, 0, &mut was));
+                let was: FxSet<FactId> = was.iter().map(|(s, _)| s.lo).collect();
+                for (st, _) in near.iter().filter(|(s, _)| !was.contains(&s.lo)) {
+                    fresh.insert(st.lo);
+                    let sto = st.store();
+                    for id in st.lo..st.hi {
+                        let r = sto.rec(id);
+                        if r.dead() || !read_rels.contains(&r.rel) {
+                            continue;
+                        }
+                        seeds.push(id);
+                        let a = sto.args(id);
+                        for &(_, p) in cx.joins.places.get(&r.rel).into_iter().flatten().filter(|(n, _)| *n as usize == a.len()) {
+                            fresh_keys.insert((r.rel, p, a[p as usize]));
+                        }
+                    }
+                }
             }
             near.sort_unstable_by_key(|(s, _)| s.lo);
             let los: Vec<FactId> = near.iter().map(|(s, _)| s.lo).collect();
             let at = |lo: FactId| &near[los.binary_search(&lo).expect("a holder below")].0;
             // the directories of the children: a key of a file below has come home
             let (mut dir, mut inner): (FxMap<Key, Vec<FactId>>, FxMap<Key, Vec<FactId>>) = Default::default();
-            let mut seeds: Vec<FactId> = Vec::new();
             for (c, k) in kids.iter().enumerate() {
                 for (key, hs) in k.dir.iter() {
                     let &(rel, p, v) = key;
@@ -867,11 +906,13 @@ impl Eval {
                     if f.is_some() { &mut inner } else { &mut dir }.entry(*key).or_default().extend(hs);
                     // a seed: a fact under one child that a rule joins with one under another
                     for &(n, _) in cx.joins.places[&rel].iter().filter(|(_, q)| *q == p) {
-                        let met = cx.joins.mates.get(&(rel, n, p)).into_iter().flatten().any(|&m| {
-                            kids.iter().enumerate().filter(|(d, _)| *d != c).any(|(_, d)| match f {
+                        let met = cx.joins.mates.get(&(rel, n, p)).into_iter().flatten().any(|&m| match &old {
+                            // (a fact below that is new is a seed already; one that stood meets only what is new)
+                            Some(_) => !hs.iter().any(|h| fresh.contains(h)) && fresh_keys.contains(&(m.0, m.2, v)),
+                            None => kids.iter().enumerate().filter(|(d, _)| *d != c).any(|(_, d)| match f {
                                 Some(f) if d.files.0 <= f && f < d.files.1 => d.holds(&cx, m, v, f),
                                 _ => d.dir.contains_key(&(m.0, m.2, v)),
-                            })
+                            }),
                         });
                         if met {
                             for &h in hs {
@@ -895,6 +936,10 @@ impl Eval {
             e.0.by_seed = true;
             e.0.run_whole()?;
             e.0.seen_at.clear();
+            if let Some(o) = &old {
+                let Eval { store, h, .. } = &mut e.0;
+                store.carry(h, &o.stretch);
+            }
             if k > 0 {
                 let mut front = Front::default();
                 for s in &at_home {
@@ -943,7 +988,7 @@ impl Eval {
                     return Ok(kept(&o, Vec::new()));
                 }
                 if k > 0 {
-                    return unit(k, &lower, &trees, at_home(0, x), Vec::new(), one);
+                    return unit(k, &lower, &trees, at_home(0, x), Vec::new(), one, None);
                 }
                 let mut e = fork();
                 let from = e.0.store.len_ids();
@@ -976,7 +1021,7 @@ impl Eval {
                     if let Some(o) = was(k, files).filter(|o| stands(o, &below)) {
                         return Ok(kept(&o, kids));
                     }
-                    unit(k, &lower, &trees, at_home(d, x), kids, files)
+                    unit(k, &lower, &trees, at_home(d, x), kids, files, was(k, files))
                 })?;
                 depths.push(units.clone());
             }
