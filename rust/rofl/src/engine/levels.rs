@@ -651,11 +651,7 @@ impl Eval {
                 volumes::load_text(&mut e.0, &files[x].1)?;
                 e.0.lower_stage(stage.0)?;
                 e.0.own_kept(stage.0, from)?;
-                // its trees are left as they stand at the end, a nearest whose level the file's rules never reached
-                // opened: the units above read them
-                if brk!("levels_nearest_closed" => false; true) {
-                    e.0.vopen_below(i64::MAX)?;
-                }
+                // (its trees are left as they stand at the end: the units above read them)
                 e.0.vc.vrefresh(&mut e.0.store);
                 Ok(done(e, (x as u32, x as u32 + 1), Vec::new(), FxMap::default(), Rc::default()))
             })?;

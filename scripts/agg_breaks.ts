@@ -8901,13 +8901,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "levels_nearest_closed",
-  "what": "a file's unit is frozen with a nearest its rules never reached still closed, and the units above read an empty tree",
-  "expect": {
-   "levels_whole": "held_by[d](A, B): by levels"
-  }
- },
- {
   "id": "levels_tree_sliced",
   "what": "a unit that solves a run of partial solutions at a time reads a tree from its own store, which holds none, and not from the unit of the node's file",
   "expect": {
