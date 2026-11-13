@@ -255,8 +255,8 @@ impl Eval {
     }
 
     /// The stage this world was evaluated by: a file at a time where it was given its files' lemmas, else the cut alone.
-    pub(super) fn stage_here(&mut self) -> Option<Stage> {
-        if self.stage_given.is_some() { self.lemma_stage() } else { self.cut_stage() }
+    pub fn stage_here(&mut self) -> Option<Stage> {
+        if self.stage_given.is_some() && self.levels.is_none() { self.lemma_stage() } else { self.cut_stage() }
     }
 
     /// A relation `own[fixpointplan]` names is stated by files alone: a fact of it that is of no one file is refused.
@@ -598,7 +598,8 @@ impl Eval {
     /// Whether a fact is a lemma: given, in a relation the lower stage concludes.
     pub(super) fn is_lemma(&mut self, id: FactId) -> bool {
         let r = self.store.rec(id);
-        if !r.base() {
+        let cut = self.store.lemma_cut.is_some() && !self.store.here(id);
+        if !r.base() && !cut {
             return false;
         }
         let key = (self.rules.len() + usize::from(self.stage_given.is_some()), self.cut_books());

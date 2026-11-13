@@ -2197,6 +2197,9 @@ impl Session {
     /// language, as `ask` is: a caller who can write a rule can write a why.
     pub fn why(&mut self, query: &str) -> Result<String, String> {
         let lit = self.why_lit(query)?;
+        if self.eval.levels.is_some() {
+            self.eval.store.lemma_cut = self.eval.stage_here().map(|st| std::sync::Arc::new(st.rules.iter().copied().filter(|r| !st.free.contains(r)).collect()));
+        }
         self.eval.why_text(&lit, Some(query))
     }
 
@@ -2204,6 +2207,7 @@ impl Session {
     /// where `why` prints a digest of the first `WHY_MEMBERS`.
     pub fn why_all(&mut self, query: &str) -> Result<String, String> {
         let lit = self.why_lit(query)?;
+        self.eval.store.lemma_cut = None;
         let text = self.eval.why_text_with(&lit, &WhyOpts { members: usize::MAX, query: String::new() }, Some(query))?;
         self.unfold_lemmas(text)
     }

@@ -1126,6 +1126,8 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     let one = whole.out.lines().next().expect("an answer").replace("A = ", "qq[d](").replace(", B = ", ", ") + ")";
     let why = |cache: &str| rofl_env(BIN, &d, &d.0.join(cache), &levels, planted.as_deref(), &["why", &one, "boot.rofl", "w.rofl"]);
     let (fresh, kept) = (why("why"), why("why"));
+    let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["why", &one, "boot.rofl", "w.rofl"]);
+    assert!(whole.out == fresh.out, "why {one}: by levels {:?}\nthe world whole {:?}", fresh.out, whole.out);
     assert!(fresh.code == 0 && kept.err.contains("kept volumes") && kept.out == fresh.out && fresh.out.lines().count() > 2, "why {one}: from the kept units {:?} {:?}\nfresh {:?}", kept.out, kept.err, fresh.out);
 }
 
