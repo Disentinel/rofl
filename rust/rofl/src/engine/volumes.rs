@@ -361,9 +361,14 @@ impl Eval {
             loop {
                 let t = std::time::Instant::now();
                 // the values each volume came to hold since the last round, and where its readers' facts are wanted
-                let fresh: Vec<Fresh> = on_threads(&mut ws, &|_, w| Ok(w.note(&routes)))?;
-                let to = exchange(&mut ws, &routes, &fresh, core, syms, funcs);
-                if to.iter().all(|m| m.is_empty()) || k == 1 || brk!("volumes_unexchanged" => true; false) {
+                // (a lone volume has nobody to lay for: nothing is noted)
+                let to = if k == 1 {
+                    Vec::new()
+                } else {
+                    let fresh: Vec<Fresh> = on_threads(&mut ws, &|_, w| Ok(w.note(&routes)))?;
+                    exchange(&mut ws, &routes, &fresh, core, syms, funcs)
+                };
+                if to.iter().all(|m| m.is_empty()) || brk!("volumes_unexchanged" => true; false) {
                     // what was laid is fired on once all it brings is laid too: a reader under a negation or in an
                     // aggregate finds every fact it is to see before it fires
                     if ws.iter().all(|w| w.unadmitted.is_empty()) {
