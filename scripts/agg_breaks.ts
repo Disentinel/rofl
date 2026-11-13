@@ -9360,7 +9360,9 @@ function proofTests(b: Break, res: Map<string, unknown>): Verdict {
     const [ok, text] = res.get(`${b.id}/${name}`) as [boolean, string];
     const killed = !ok && text.includes(sign);
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
-    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}`}`);
+    // (a test red otherwise than the fault's sign says what it said: the line after its panic)
+    const said = () => { const ls = text.split('\n'), at = ls.findIndex((l) => l.includes('panicked at')); return (at < 0 ? ls.slice(-3).join(' | ') : `${ls[at]} ${ls[at + 1] ?? ''}`).slice(0, 600); };
+    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}: ${said()}`}`);
   }
   return { lines, bad };
 }
