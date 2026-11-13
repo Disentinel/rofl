@@ -282,7 +282,7 @@ impl Eval {
                     let ms = t.elapsed().as_millis();
                     let from = w.e.store.len_ids();
                     lv.read_by(&mut w.e);
-                    w.e.diags.push(format!("levels: {} rules below, {cross} of them where units meet; {} facts in {} units in {ms} ms", stage.rules.len(), unit.stretch.hi - from, unit.count()));
+                    w.e.diags.push(format!("levels: of {} rules {} below, {cross} of them where units meet; {} facts in {} units in {ms} ms", w.e.rules.iter().filter(|r| r.safe).count(), stage.rules.len(), unit.stretch.hi - from, unit.count()));
                     w.e.stage_given = Some(stage.below());
                 }
                 // the lower stage a file at a time, each in a world of its own the lemmas leave
