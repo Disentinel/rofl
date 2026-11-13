@@ -2257,6 +2257,11 @@ impl Store {
         Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.store.virtuals[ci].forests.clone()))
     }
 
+    /// Whether this store reads its trees from the units of the files.
+    pub fn reads_trees(&self) -> bool {
+        self.facts.near.as_ref().is_some_and(|n| n.trees.is_some())
+    }
+
     /// Whether this store reads stretches.
     pub fn reads_near(&self) -> bool {
         self.facts.near.is_some()

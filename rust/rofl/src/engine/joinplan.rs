@@ -551,7 +551,8 @@ impl Eval {
         }
         // A BUILTIN IS A WALL: what is written before it is joined before it and nothing written after it is, so the
         // partial solutions that reach it, and the holes it makes, are the written order's
-        let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && matches!(plan[k], BodyElem::Bi { .. }));
+        let walls: Vec<bool> = (0..plan.len()).map(|k| if self.by_seed { self.wall(plan, k) } else { matches!(plan[k], BodyElem::Bi { .. }) }).collect();
+        let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && walls[k]);
         let placeable = |j: usize, bound: &[Sym], rest: &[usize]| -> bool {
             if walled(j, rest) {
                 return false;

@@ -279,6 +279,7 @@ impl Eval {
                     let cross = joins.cross.len();
                     let up: Vec<Sym> = joins.up.iter().flat_map(|l| l.iter().copied()).chain(joins.core.iter().copied()).collect();
                     let layers = joins.up.len();
+                    let core = joins.core.len();
                     let held = std::mem::take(&mut joins.held);
                     let t = std::time::Instant::now();
                     let lv = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
@@ -288,8 +289,8 @@ impl Eval {
                     w.e.diags.push(format!(
                         "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units in {ms} ms; left to the reader by their shape: {held}",
                         w.e.rules.iter().filter(|r| r.safe).count(),
-                        stage.rules.len() + up.len(),
-                        up.len(),
+                        w.e.rules.iter().filter(|r| r.safe && (stage.rules.contains(&r.id) || up.contains(&r.id))).count(),
+                        up.len() - core,
                         lv.mark - from,
                         lv.tops.iter().map(|t| t.count()).sum::<usize>()
                     ));

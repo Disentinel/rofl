@@ -288,12 +288,15 @@ impl Eval {
             }
             !ls.is_empty() && part.iter().all(|x| *x == part[0])
         };
-        // (a builtin is a wall to the order of a firing: a premise written after one is not fired from its news)
-        let walled = |r: &ERule| r.plan.iter().rposition(|b| matches!(b, BodyElem::Pos(_))).is_some_and(|last| r.plan[..last].iter().any(|b| matches!(b, BodyElem::Bi { .. })));
+        // a builtin is a wall to the order of a firing: a premise written after one is not fired from its news, so, as
+        // an absence, it is read where a layer below closed it
+        let wall_at = |r: &ERule| (0..r.plan.len()).find(|&k| self.wall(&r.plan, k)).unwrap_or(r.plan.len());
+        let after = |r: &'_ ERule| -> Vec<Lit> { r.plan.iter().skip(wall_at(r)).filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.clone()) } else { None }).collect() };
+        let walled = |r: &ERule| !after(r).is_empty();
         let shape = |r: &ERule, neg: bool| {
             r.safe && (neg || !r.has_neg) && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.has_demand_prem && !r.demand_strict && !walked.contains(&r.id)
                 && lit(&r.clause.head)
-                && !walled(r)
+                && (neg || !walled(r))
                 && !trees.contains(&r.clause.head.rel)
                 && r.clause.body.iter().any(|b| matches!(b, BodyElem::Pos(l) if !trees.contains(&l.rel)))
                 && r.clause.body.iter().all(|b| match b {
@@ -318,13 +321,41 @@ impl Eval {
         }
         // the layers above: a rule that asks an absence waits for the layer that settles it, and what reads it follows
         let mut up: Vec<&Rc<ERule>> = rules.iter().filter(|r| !st.rules.contains(&r.id) && !cross.iter().any(|c| c.id == r.id) && shape(r, true)).collect();
+        let mut barred: FxSet<Sym> = FxSet::default();
         let home = loop {
             let ids: FxSet<Sym> = st.rules.iter().filter(|id| !st.free.contains(*id)).chain(&core).chain(&tree_rules).copied().chain(cross.iter().chain(&up).map(|r| r.id)).collect();
             let open: FxSet<(Sym, Sym)> = rules.iter().filter(|r| r.safe && !ids.contains(&r.id)).map(|r| booked(&r.clause.head)).collect();
             let home: FxSet<Sym> = st.own.keys().copied().chain(rules.iter().filter(|r| ids.contains(&r.id)).map(|r| r.clause.head.rel)).filter(|rel| !trees.contains(rel)).collect();
             let n = up.len();
+            // what a rule's head reads, through the rules of the layers: a premise after a builtin may not read it
+            let mut reads: FxMap<(Sym, Sym), FxSet<(Sym, Sym)>> = FxMap::default();
+            for r in &up {
+                reads.entry(booked(&r.clause.head)).or_default().extend(r.clause.body.iter().flat_map(|b| b.lits_deep()).map(booked));
+            }
+            let reaches = |from: (Sym, Sym), to: (Sym, Sym)| {
+                let (mut seen, mut todo) = (FxSet::default(), vec![from]);
+                while let Some(x) = todo.pop() {
+                    if x == to {
+                        return true;
+                    }
+                    if seen.insert(x) {
+                        todo.extend(reads.get(&x).into_iter().flatten().copied());
+                    }
+                }
+                false
+            };
+            let turns: FxSet<Sym> = up
+                .iter()
+                .filter(|r| {
+                    let w = wall_at(r);
+                    let first = first_at(r, &(home.clone(), trees.clone()));
+                    w < r.plan.len() && (first.is_none_or(|i| i > w) || after(r).iter().any(|l| reaches(booked(l), booked(&r.clause.head))))
+                })
+                .map(|r| r.id)
+                .collect();
+            barred.extend(turns.iter().copied());
             up.retain(|r| {
-                !opens(&open, &r.clause.head) && r.clause.body.iter().all(|b| b.lits_deep().iter().all(|l| !opens(&open, l)))
+                !turns.contains(&r.id) && !opens(&open, &r.clause.head) && r.clause.body.iter().all(|b| b.lits_deep().iter().all(|l| !opens(&open, l)))
             });
             if up.len() == n {
                 break home;
@@ -332,7 +363,7 @@ impl Eval {
         };
         let below: FxSet<Sym> = st.rules.iter().filter(|id| !st.free.contains(*id)).chain(&core).chain(&tree_rules).copied().chain(cross.iter().chain(&up).map(|r| r.id)).collect();
         let mut why: FxMap<String, usize> = FxMap::default();
-        for r in rules.iter().filter(|r| r.safe && !below.contains(&r.id) && !shape(r, true)) {
+        for r in rules.iter().filter(|r| r.safe && !below.contains(&r.id) && (!shape(r, true) || barred.contains(&r.id))) {
             let read = r.clause.body.iter().flat_map(|b| b.lits_deep()).find(|l| !lit(l));
             let w = if r.has_agg {
                 "counts or folds".to_string()
@@ -347,7 +378,7 @@ impl Eval {
             } else if !joined(r) {
                 "premises not joined".into()
             } else if walled(r) {
-                "a builtin before a premise".into()
+                "a builtin before a premise that reads the rule's own conclusion".into()
             } else {
                 "other".into()
             };
@@ -366,6 +397,7 @@ impl Eval {
                     BodyElem::Neg(l) => m.max(at(l) + 1),
                     _ => m,
                 });
+                let l = after(r).iter().fold(l, |m, p| m.max(at(p) + 1));
                 let e = layer.entry(booked(&r.clause.head)).or_default();
                 if l > *e {
                     (*e, moved) = (l, true);
@@ -431,6 +463,28 @@ impl Eval {
     }
 
     /// The rules that read no file fired in this core, before it is frozen and the files fork it.
+    /// Whether the builtin at `k` holds the written order in a unit. One that binds does: what reaches it, and the
+    /// holes it makes, are the written order's. `=` never does, and a comparison does not once the premises written
+    /// before it bound its sides: it faults on what they found, and they are fired from their own news.
+    pub(super) fn wall(&self, plan: &[BodyElem], k: usize) -> bool {
+        let BodyElem::Bi { op, l, r } = &plan[k] else { return false };
+        if *op == self.v.op_eq {
+            return false;
+        }
+        if ![self.v.op_ne, self.v.op_lt, self.v.op_le, self.v.op_gt, self.v.op_ge].contains(op) {
+            return true;
+        }
+        let (mut need, mut have) = (Vec::new(), Vec::new());
+        self.h.vars_of(*l, &mut need);
+        self.h.vars_of(*r, &mut need);
+        for b in &plan[..k] {
+            if let BodyElem::Pos(p) = b {
+                p.args.iter().for_each(|a| self.h.vars_of(*a, &mut have));
+            }
+        }
+        !need.iter().all(|v| have.contains(v))
+    }
+
     pub fn settle_core(&mut self, rules: Rc<FxSet<Sym>>) -> Result<(), Halt> {
         if rules.is_empty() {
             return Ok(());
@@ -567,6 +621,8 @@ impl Eval {
                 e.0.homing = Some(home.clone());
                 e.0.wall.cutting = Some(Box::default());
                 e.0.propagate(front)?;
+                // (a front with nothing at home ran no round to end it)
+                e.0.homing = None;
             }
             let mut front = Front::default();
             for id in seeds {
@@ -591,7 +647,9 @@ impl Eval {
                 volumes::load_text(&mut e.0, &files[x].1)?;
                 e.0.lower_stage(stage.0)?;
                 e.0.own_kept(stage.0, from)?;
-                // (its trees are left as they stand at the end: the units above read them)
+                // its trees are left as they stand at the end, a nearest whose level the file's rules never reached
+                // opened: the units above read them
+                e.0.vopen_below(i64::MAX)?;
                 e.0.vc.vrefresh(&mut e.0.store);
                 Ok(done(e, (x as u32, x as u32 + 1), Vec::new(), FxMap::default(), Rc::default()))
             })?;
