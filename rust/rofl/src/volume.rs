@@ -107,6 +107,27 @@ pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, cha
     write_world(w, e)
 }
 
+/// The units of a world settled by levels (`engine/levels.rs`), beside the volume of the core they stand over.
+const UNITS: &[u8; 16] = b"ROFL-UNITS-1\n\0\0\0";
+
+pub fn keep_units(path: &str, lv: &crate::engine::levels::Levels) -> Result<(), String> {
+    let mut w = VolW::bounded(path, None).map_err(|x| x.to_string())?;
+    w.bytes(UNITS);
+    w.text(&build_id());
+    lv.write(&mut w)?;
+    w.finish().map(drop).map_err(|x| x.to_string())
+}
+
+/// The units kept at `path`, over `e`, their core opened.
+pub fn open_units(path: &str, e: &Eval) -> Result<crate::engine::levels::Levels, String> {
+    let map = crate::arena::map_file(path).map_err(|x| x.to_string())?;
+    let mut r = VolR::new(map.clone(), UNITS.len());
+    if !map.starts_with(UNITS) || r.text()? != build_id() || !r.sum_holds() {
+        return Err(format!("{path}: not the units of this build"));
+    }
+    crate::engine::levels::Levels::read(e, &mut r)
+}
+
 fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {
     let (staged, answer) = (e.staged_kept(), e.safety().clone());
     let (h, s) = (&mut e.h, &mut e.store);

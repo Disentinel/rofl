@@ -833,6 +833,8 @@ pub struct Eval {
     by_seed: bool,
     /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
     homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
+    /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
+    pub levels: Option<Rc<levels::Levels>>,
     anchor_home: FxMap<Sym, Option<u32>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
@@ -2354,6 +2356,7 @@ impl Eval {
             meeting: None,
             by_seed: false,
             homing: None,
+            levels: None,
             lemma_heads: None,
             lower_texts: None,
             lower_full: None,

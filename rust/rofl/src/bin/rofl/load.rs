@@ -571,7 +571,13 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
         (open(&paths[0]), hs.into_iter().map(|h| h.join().ok().flatten()).collect::<Option<Vec<_>>>())
     });
     let core = core?;
-    let (worlds, laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
+    let (mut worlds, laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
+    if std::path::Path::new(&format!("{k}.units")).exists() {
+        let w = worlds.first_mut()?;
+        let lv = std::sync::Arc::new(rofl::volume::open_units(&format!("{k}.units"), &w.eval).map_err(|e| eprintln!("the kept units {k}: {e}")).ok()?);
+        lv.read_by(&mut w.eval);
+        w.eval.levels = Some(lv);
+    }
     for p in &paths {
         crate::kept::touch(p);
     }
@@ -581,16 +587,20 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
 /// The core and every worker's world kept at `k`, with what they were read from, and beside them (`<k>.files`) the
 /// sum of the core's text and of each file's, with the worker that holds it: what a later run takes by delta.
 fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str, sums: (u64, &[(String, u64, usize)]), over: bool) -> Result<(), String> {
-    if v.worlds.iter().any(|w| w.eval.store.reads_near()) {
-        return Err("a world settled by levels reads its units where they lie, and their stretches are not written yet".into());
-    }
+    let units = v.worlds.first().and_then(|w| w.eval.levels.clone());
     let note = crate::kept::record(world, files, &[], read, &[], None)?;
     let _ = std::fs::remove_file(format!("{k}.scroll"));
     // (taken by delta, each is written as an overlay over the volume it was opened from: what the edit moved, not the world)
     let keep = |s: &mut Session, p: &str| if over { crate::kept::keep_capped_over(s, p, &note, true).map(drop) } else { crate::kept::keep_capped(s, p, &note).map(drop) };
     keep(core, &format!("{k}.core.vol"))?;
     for (i, w) in v.worlds.iter_mut().enumerate() {
-        keep(w, &format!("{k}.w{i}.vol"))?;
+        // (a world that reads its units is kept as the core it stands on)
+        let near = w.eval.store.reads_none();
+        let done = keep(w, &format!("{k}.w{i}.vol"));
+        if let Some(n) = near {
+            w.eval.store.reads_again(n);
+        }
+        done?;
         write_laid(&format!("{k}.w{i}.laid"), &v.laid[i])?;
     }
     // (the names and terms the volumes share, under the numbers their facts hold)
@@ -600,6 +610,11 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut 
     // (the folds the volumes' facts lie in, under the numbers they hold)
     if let Some(f) = v.worlds.first().and_then(|w| w.eval.store.folds.as_ref()) {
         std::fs::write(format!("{k}.folds"), f.text()).map_err(|e| e.to_string())?;
+    }
+    // (a world settled by levels: its units, each stretch's own facts and firings)
+    let _ = std::fs::remove_file(format!("{k}.units"));
+    if let Some(lv) = units {
+        rofl::volume::keep_units(&format!("{k}.units"), &lv)?;
     }
     Registry { folds: v.worlds.len(), core: sums.0, files: sums.1.iter().map(|(f, h, i)| (f.clone(), (*h, *i, v.places.get(f).cloned().unwrap_or_default()))).collect() }.write(k)
 }
@@ -696,6 +711,10 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let say = |why: &str| eprintln!("the kept volumes {k} are not taken by delta: {why}; computed anew");
     if sum(&cut.core) != core_sum {
         say("the rules or the facts naming no file changed");
+        return None;
+    }
+    if std::path::Path::new(&format!("{k}.units")).exists() {
+        say("a world settled by levels is not yet taken by delta");
         return None;
     }
     let now: std::collections::HashMap<&str, &str> = cut.files.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();

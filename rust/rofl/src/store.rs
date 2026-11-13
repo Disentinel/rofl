@@ -1062,6 +1062,67 @@ pub struct Stretch {
 const OPEN: u64 = u64::MAX;
 
 impl Stretch {
+    /// A STRETCH AS IT IS KEPT: its own facts in the order of their ids and every firing it holds, of them and of
+    /// facts that lie elsewhere. Nothing of what it read is written, and its indexes are made again when it is read.
+    pub fn write(&self, w: &mut crate::arena::VolW) -> Result<(), String> {
+        let s = &self.store;
+        let (mut recs, mut args): (Vec<u32>, Vec<u64>) = Default::default();
+        for id in self.lo..self.hi {
+            let r = s.rec(id);
+            if r.dead() {
+                return Err("a stretch holds a fact retired".into());
+            }
+            let a = s.args(id);
+            recs.extend([r.rel, r.persp, r.flags() as u32, a.len() as u32]);
+            args.extend(a.iter().map(|t| t.bits()));
+        }
+        let (mut fired, mut prems): (Vec<u32>, Vec<PremRef>) = Default::default();
+        let mut far: Vec<FactId> = s.far_heads.keys().copied().collect();
+        far.sort_unstable();
+        for id in (self.lo..self.hi).chain(far) {
+            let nodes: Vec<WitNode> = s.chain(id).collect();
+            for n in nodes.iter().rev() {
+                fired.extend([id, n.rule, n.tick, n.prems_len]);
+                prems.extend_from_slice(s.prems_of(n));
+            }
+        }
+        w.u32(self.lo);
+        w.u32(self.hi);
+        w.arena(&recs);
+        w.arena(&args);
+        w.arena(&fired);
+        w.arena(&prems);
+        Ok(())
+    }
+
+    /// The stretch `write` kept, its facts put again under the ids they had into `fork`, a fork of the core that
+    /// wrote nothing.
+    pub fn read(mut fork: Store, h: &Heap, r: &mut crate::arena::VolR) -> Result<Stretch, String> {
+        let (lo, hi) = (r.u32()?, r.u32()?);
+        let (recs, args, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+        fork.read_near(lo, None, Vec::new(), None, None);
+        let bad = || "a kept stretch is not one".to_string();
+        let mut at = 0;
+        for (k, x) in recs.chunks_exact(4).enumerate() {
+            let a: Vec<Term> = args.get(at..at + x[3] as usize).ok_or_else(bad)?.iter().map(|b| Term::from_bits(*b)).collect();
+            at += a.len();
+            let ground = a.iter().all(|t| h.is_ground(*t));
+            if fork.put_kept(h, x[0], x[1], &a, x[2] as u8, ground) != lo + k as FactId {
+                return Err(bad());
+            }
+        }
+        let mut at = 0;
+        for x in fired.chunks_exact(4) {
+            let ps = prems.get(at..at + x[3] as usize).ok_or_else(bad)?.to_vec();
+            at += ps.len();
+            fork.support(x[0], Witness { rule: x[1], tick: x[2], prems: ps });
+        }
+        if lo + (recs.len() / 4) as FactId != hi {
+            return Err(bad());
+        }
+        Ok(fork.into_stretch(h, lo))
+    }
+
     fn keyed(&self, h: &Heap, rel: Sym, p: u8) -> Rc<FxMap<u64, Vec<FactId>>> {
         if let Some(ix) = self.keyed.read().unwrap().get(&(rel, p)) {
             return ix.clone();
@@ -2247,6 +2308,41 @@ impl Store {
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
         self.fold.mark = mark as usize;
+    }
+
+    /// Every key a premise of this store's own firings quotes renamed by `f`, and the rows such keys name, which are
+    /// returned: a unit's keys are its heap's own until the world gives them one number (`engine/levels.rs`).
+    pub fn rename_keys(&mut self, mut f: impl FnMut(Sym) -> Sym) -> Vec<(Sym, VRow)> {
+        for p in self.prem_arena.own.iter_mut() {
+            *p = match p.kind() {
+                Prem::Neg(k) => PremRef::Neg(f(k)),
+                Prem::Bi(k) if k != 0 => PremRef::Bi(f(k)),
+                Prem::VRow(k) if k != 0 => PremRef::VRow(f(k)),
+                _ => continue,
+            };
+        }
+        let rows: Vec<(Sym, VRow)> = self.vrow_of.own.drain().map(|(k, v)| (f(k), v)).collect();
+        self.vrow_of.own.extend(rows.iter().copied());
+        rows
+    }
+
+    /// This store, which wrote nothing, set as it was before it read stretches (a volume holds it so, the stretches
+    /// are kept beside it), and what `reads_again` takes to set it back.
+    pub fn reads_none(&mut self) -> Option<(Rc<Near>, usize)> {
+        let n = self.facts.near.take()?;
+        assert!(self.facts.recs.own.is_empty(), "a store that reads stretches and wrote is no reader");
+        let mark = self.facts.recs.mark;
+        for m in [&mut self.facts.recs.mark, &mut self.wit_head.mark, &mut self.fold.mark] {
+            *m = n.core;
+        }
+        Some((n, mark))
+    }
+
+    pub fn reads_again(&mut self, (n, mark): (Rc<Near>, usize)) {
+        for m in [&mut self.facts.recs.mark, &mut self.wit_head.mark, &mut self.fold.mark] {
+            *m = mark;
+        }
+        self.facts.near = Some(n);
     }
 
     /// In a unit of a world by levels, the forests of the closure `ci` that answer for `node`: those its file's unit

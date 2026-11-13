@@ -287,6 +287,8 @@ impl Eval {
                     let ms = t.elapsed().as_millis();
                     let from = w.e.store.len_ids();
                     lv.read_by(&mut w.e);
+                    let lv = Rc::new(lv);
+                    w.e.levels = Some(lv.clone());
                     w.e.diags.push(format!(
                         "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units in {ms} ms; left to the reader by their shape: {held}",
                         w.e.rules.iter().filter(|r| r.safe).count(),

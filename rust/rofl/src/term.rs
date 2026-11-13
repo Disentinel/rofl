@@ -670,6 +670,10 @@ impl Heap {
     pub fn dict(&self) -> Option<&Rc<Dict>> {
         self.syms.dict.as_ref()
     }
+    /// Whether `k` is a name of this heap's own (`key`): no other heap reads it under that number.
+    pub fn is_own(&self, k: Sym) -> bool {
+        k >= self.syms.n0 && k < SHARED0
+    }
     /// The dictionary of `from` and what it has met of it, kept by the heap read back in its place.
     pub fn shares_as(&mut self, from: &mut Heap) {
         self.syms.dict = from.syms.dict.take();

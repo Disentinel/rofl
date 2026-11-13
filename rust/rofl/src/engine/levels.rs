@@ -11,6 +11,7 @@
 use super::*;
 use super::stages::{booked, Stage, ANY};
 use crate::store::{Lower, Route, Stretch, TreeOf};
+use crate::arena::{VolR, VolW};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering::Relaxed};
 use std::sync::Mutex;
 
@@ -221,13 +222,116 @@ pub struct Levels {
     pub tops: Vec<Rc<Unit>>,
     cx: Rc<Ctx>,
     pub mark: FactId,
+    /// the core's heap with the keys the units' proofs quote, each numbered once for the world, and the tree rows
+    /// such keys name
+    keys: Heap,
+    rows: Vec<(Sym, crate::store::VRow)>,
 }
 
 impl Levels {
     /// `e`, a fork of the core the units were settled over that wrote nothing, reads them from here on.
     pub fn read_by(&self, e: &mut Eval) {
         e.store.folds = None;
+        e.h = self.keys.clone();
+        for (k, v) in &self.rows {
+            e.store.vrow_of.name(*k, *v);
+        }
         e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, None);
+    }
+}
+
+fn write_dir(w: &mut VolW, d: &FxMap<Key, Vec<FactId>>) {
+    let mut keys: Vec<(&Key, &Vec<FactId>)> = d.iter().collect();
+    keys.sort_unstable_by_key(|(k, _)| (k.0, k.1, k.2.bits()));
+    let mut out: Vec<u64> = Vec::new();
+    for (k, hs) in keys {
+        out.extend([k.0 as u64, k.1 as u64, k.2.bits(), hs.len() as u64]);
+        out.extend(hs.iter().map(|h| *h as u64));
+    }
+    w.arena(&out);
+}
+
+fn read_dir(r: &mut VolR) -> Result<FxMap<Key, Vec<FactId>>, String> {
+    let a = r.arena::<u64>()?;
+    let mut out = FxMap::default();
+    let mut i = 0;
+    while i + 4 <= a.len() {
+        let n = a[i + 3] as usize;
+        let hs = a.get(i + 4..i + 4 + n).ok_or("a kept directory ends early")?;
+        out.insert((a[i] as Sym, a[i + 1] as u8, Term::from_bits(a[i + 2])), hs.iter().map(|h| *h as FactId).collect());
+        i += 4 + n;
+    }
+    Ok(out)
+}
+
+impl Levels {
+    /// THE UNITS AS THEY ARE KEPT: the files in the world's order, the places a key is read at, each stretch once
+    /// (`Stretch::write`) and each unit with its files, its children and its directories.
+    pub fn write(&self, w: &mut VolW) -> Result<(), String> {
+        let mut files: Vec<(u64, u32)> = self.cx.files.iter().map(|(h, i)| (*h, *i)).collect();
+        files.sort_unstable();
+        w.arena(&files.iter().flat_map(|(h, i)| [*h, *i as u64]).collect::<Vec<u64>>());
+        let mut places: Vec<[u32; 3]> = self.cx.joins.places.iter().flat_map(|(rel, ps)| ps.iter().map(move |(n, p)| [*rel, *n as u32, *p as u32])).collect();
+        places.sort_unstable();
+        w.arena(&places.concat());
+        w.u32(self.mark);
+        fn walk<'a>(u: &'a Rc<Unit>, ss: &mut Vec<&'a Rc<Stretch>>, us: &mut Vec<&'a Rc<Unit>>) {
+            if us.iter().any(|x| Rc::ptr_eq(x, u)) {
+                return;
+            }
+            for k in &u.kids {
+                walk(k, ss, us);
+            }
+            if !ss.iter().any(|x| Rc::ptr_eq(x, &u.stretch)) {
+                ss.push(&u.stretch);
+            }
+            us.push(u);
+        }
+        let (mut ss, mut us) = (Vec::new(), Vec::new());
+        for t in &self.tops {
+            walk(t, &mut ss, &mut us);
+        }
+        w.u32(ss.len() as u32);
+        for s in &ss {
+            s.write(w)?;
+        }
+        let at = |u: &Rc<Unit>| us.iter().position(|x| Rc::ptr_eq(x, u)).unwrap() as u32;
+        w.u32(us.len() as u32);
+        for u in &us {
+            w.u32(ss.iter().position(|x| Rc::ptr_eq(x, &u.stretch)).unwrap() as u32);
+            w.u32(u.files.0);
+            w.u32(u.files.1);
+            w.arena(&u.kids.iter().map(at).collect::<Vec<u32>>());
+            write_dir(w, &u.dir);
+            write_dir(w, &u.inner);
+        }
+        w.arena(&self.tops.iter().map(at).collect::<Vec<u32>>());
+        Ok(())
+    }
+
+    /// The units `write` kept, over `e`: the core they were settled over, opened, its dictionary theirs.
+    pub fn read(e: &Eval, r: &mut VolR) -> Result<Levels, String> {
+        let bad = || "the kept units are not units".to_string();
+        let files: FxMap<u64, u32> = r.arena::<u64>()?.chunks_exact(2).map(|x| (x[0], x[1] as u32)).collect();
+        let mut joins = Joins::default();
+        for x in r.arena::<u32>()?.chunks_exact(3) {
+            joins.places.entry(x[0]).or_default().push((x[1] as u8, x[2] as u8));
+        }
+        let mark = r.u32()?;
+        let mut ss: Vec<Rc<Stretch>> = Vec::new();
+        for _ in 0..r.u32()? {
+            let mut f = e.fork();
+            ss.push(Rc::new(Stretch::read(std::mem::take(&mut f.store), &e.h, r)?));
+        }
+        let mut us: Vec<Rc<Unit>> = Vec::new();
+        for _ in 0..r.u32()? {
+            let stretch = ss.get(r.u32()? as usize).ok_or_else(bad)?.clone();
+            let files = (r.u32()?, r.u32()?);
+            let kids = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
+            us.push(Rc::new(Unit { stretch, files, kids, dir: Rc::new(read_dir(r)?), inner: Rc::new(read_dir(r)?) }));
+        }
+        let tops = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
+        Ok(Levels { tops, cx: Rc::new(Ctx { h: e.h.clone(), files, joins }), mark, keys: e.h.clone(), rows: Vec::new() })
     }
 }
 
@@ -509,6 +613,7 @@ impl Eval {
         let bump = AtomicU32::new(core);
         let base = Fork(self.fork());
         let one = Mutex::new(());
+        let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(Vec::new()));
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let all = (0, files.len() as u32);
         // the rules of each layer, and the relations each takes the facts at home by
@@ -547,7 +652,13 @@ impl Eval {
         };
         let done = |e: Fork, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<FxMap<Key, Vec<FactId>>>| {
             let mut e = e;
-            let store = std::mem::take(&mut e.0.store);
+            let mut store = std::mem::take(&mut e.0.store);
+            // the keys its proofs quote are its heap's own: the world numbers each once
+            {
+                let (mut m, mut memo) = (keys.lock().unwrap(), FxMap::<Sym, Sym>::default());
+                let named = store.rename_keys(|k| if e.0.h.is_own(k) { *memo.entry(k).or_insert_with(|| m.key(e.0.h.name(k))) } else { k });
+                rows.lock().unwrap().extend(named);
+            }
             let n = store.len_ids() - store.layer_mark();
             let stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
             drop((one.lock().unwrap(), e));
@@ -677,6 +788,6 @@ impl Eval {
             tops.push(units.pop().expect("a world of a file at least"));
             layers.push(depths);
         }
-        Ok(Levels { tops, cx, mark: bump.load(Relaxed) })
+        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap() })
     }
 }

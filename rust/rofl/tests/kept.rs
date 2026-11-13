@@ -1118,6 +1118,15 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         assert!(got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
         assert!(all_below && !got.err.contains("evaluated whole") && !got.err.contains("panicked"), "{q}: not every rule was fired in the units: {:?}", got.err);
     }
+    // the units are kept, each stretch's own facts and firings, and a question asked again is answered from them
+    let levels = [("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())];
+    let again = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
+    let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
+    assert!(again.err.contains("answered from the 1 kept volumes") && sorted(&again.out) == sorted(&whole.out), "qq[d](A, B) asked again: {:?} {:?}", again.out.lines().count(), again.err);
+    let one = whole.out.lines().next().expect("an answer").replace("A = ", "qq[d](").replace(", B = ", ", ") + ")";
+    let why = |cache: &str| rofl_env(BIN, &d, &d.0.join(cache), &levels, planted.as_deref(), &["why", &one, "boot.rofl", "w.rofl"]);
+    let (fresh, kept) = (why("why"), why("why"));
+    assert!(fresh.code == 0 && kept.err.contains("kept volumes") && kept.out == fresh.out && fresh.out.lines().count() > 2, "why {one}: from the kept units {:?} {:?}\nfresh {:?}", kept.out, kept.err, fresh.out);
 }
 
 #[test]
