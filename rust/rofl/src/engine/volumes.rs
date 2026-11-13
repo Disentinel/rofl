@@ -355,7 +355,8 @@ impl Eval {
         for (i, w) in ws.iter_mut().enumerate() {
             w.read_to = core;
             w.me = i as u32;
-            w.e.anchors = Some(Rc::new(Anchors { by_rule: by_rule.clone(), homes: at.clone(), me: i as u32 }));
+            // (a lone volume is the home of every node: every firing is its own)
+            w.e.anchors = (k > 1).then(|| Rc::new(Anchors { by_rule: by_rule.clone(), homes: at.clone(), me: i as u32 }));
         }
         loop {
             loop {

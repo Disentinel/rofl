@@ -745,7 +745,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let homes = sums.iter().filter_map(|(f, _, i)| u64::from_str_radix(f, 16).ok().map(|x| (x, *i as u32))).collect();
     let cross = rofl::engine::volumes::Crossing::of(&core.eval, &worlds.iter().map(|w| &w.eval).collect::<Vec<_>>(), homes);
     for (i, w) in worlds.iter_mut().enumerate() {
-        w.eval.anchors = Some(cross.anchors(i as u32));
+        w.eval.anchors = (n > 1).then(|| cross.anchors(i as u32));
     }
     let t0 = rofl::engine::meter::spent("opens", t);
     // what each file put gives now, the files spread over the cores

@@ -271,3 +271,11 @@ anew_ms_byfile_measured[byfile](49924). delta_ms_byfile_measured[byfile](8160).
 rule_ms[byfile](of_file, 14112). rule_ms[byfile](across, 21629).
 -- the same stage under the volumes' four workers (the default path): 31.7 s anew against 50, 7.3 s the delta against 15
 anew_ms_byfile_volumes[byfile](31676). delta_ms_byfile_volumes[byfile](7279).
+
+-- THE WRITING CUT BY A HASH OF THE ADDRESS (the owner, 2026-11-13). One worker after the files' part, by samples:
+-- of 34 s the writing is 14, the search left on one thread 9, the rest 8. A worker writes the facts whose key hashes
+-- to it; taking a round's conclusions apart by hash and putting the stretches together is counted as a tenth.
+whole_ms[byhash](48600). serial_ms[byhash](writing, 14000). serial_ms[byhash](search, 9000). serial_ms[byhash](rest, 8000).
+cut_ms[byhash](Part, Ms)  :- serial_ms[byhash](Part, S), threads[shared](C), Ms is S / C + S / 10.
+anew_ms[byhash](writing, Ms) :- whole_ms[byhash](W), serial_ms[byhash](writing, S), cut_ms[byhash](writing, X), Ms is W - S + X.
+anew_ms[byhash](search, Ms)  :- anew_ms[byhash](writing, A), serial_ms[byhash](search, S), cut_ms[byhash](search, X), Ms is A - S + X.
