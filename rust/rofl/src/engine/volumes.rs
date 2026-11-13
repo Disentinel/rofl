@@ -218,7 +218,10 @@ impl Eval {
         let surface = self.h.intern("surface");
         let stage = self.lemma_stage();
         if let Some(st) = &stage {
-            self.refuse_stage_across(st, surface)?;
+            // (the rules above the cut that the stage took are of one file by their shape: nothing of theirs crosses)
+            if let Some(low) = self.cut_stage() {
+                self.refuse_stage_across(&low, surface)?;
+            }
             self.refuse_own_outside(st)?;
         }
         self.settle_provenance();
