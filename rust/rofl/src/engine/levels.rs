@@ -14,6 +14,14 @@
 //! with the same facts it is laid at the ids it had (`Stretch::relaid`), and what read it stands. A stretch
 //! replaced stays where it lies, read by id alone (`Levels::ghosts`): a proof kept from before names by it a fact
 //! that holds still, and is led to where the fact lies now (`Store::current`).
+//!
+//! A group settled again is MENDED where it can be: the firings it had are carried where their premises stand, a
+//! premise of a stretch replaced found where the same fact lies now (`Store::carry`), and it is seeded only by what
+//! came: under it at its own layer, below where it is at home or answers a key the group asked, and by the facts
+//! that name a node whose rows in a tree moved. A firing through an absence of a relation a fact came to, or through
+//! a row of a tree, is fired again from its premises. A firing found from a fact of below is kept where its first
+//! premise is at home (`Meeting::crosses`). Not mended, settled whole: a group that read an aggregate, or one that
+//! asked a key a fact went from under a relation an absence reads.
 
 use super::*;
 use super::stages::{booked, Stage, ANY};
@@ -129,10 +137,13 @@ pub struct Meeting {
     mark: FactId,
     /// the stretches below in the order of `lo`, each with its end and its child
     under: Vec<(FactId, FactId, u32)>,
+    /// a group mended is seeded by facts of anywhere below: the stretches at home at it, the ids under which the
+    /// core is at home at it, and what tells a rule's premise at home (`first_at`)
+    home: Option<(Vec<(FactId, FactId)>, FactId, Rc<(FxSet<Sym>, FxSet<Sym>)>)>,
 }
 
 impl Meeting {
-    pub fn crosses(&self, prems: &[PremRef]) -> bool {
+    pub fn crosses(&self, r: &ERule, prems: &[PremRef]) -> bool {
         let mut one = None;
         for p in prems {
             let Prem::Fact(f) = p.kind() else { continue };
@@ -151,7 +162,9 @@ impl Meeting {
             }
         }
         // premises of the layers below alone: fired here, where the first of them is at home
-        one.is_none()
+        one.is_none() && self.home.as_ref().is_none_or(|(at, core, by)| {
+            first_at(r, by).and_then(|i| prems.get(i)).is_some_and(|p| matches!(p.kind(), Prem::Fact(f) if f < *core || at.iter().any(|(lo, hi)| *lo <= f && f < *hi)))
+        })
     }
 }
 
@@ -317,12 +330,17 @@ impl Levels {
     /// `e`, a fork of the core the units were settled over that wrote nothing, reads them from here on.
     pub fn read_by(&self, e: &mut Eval) {
         e.store.folds = None;
+        self.named_by(e);
+        e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, None);
+        e.store.reads_ghosts(self.ghosts.clone());
+    }
+
+    /// `e` names the keys the units' proofs quote as they do.
+    pub fn named_by(&self, e: &mut Eval) {
         e.h = self.keys.clone();
         for (k, v) in &self.rows {
             e.store.vrow_of.name(*k, *v);
         }
-        e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, None);
-        e.store.reads_ghosts(self.ghosts.clone());
     }
 }
 
@@ -767,10 +785,18 @@ impl Eval {
         let ghosts: Mutex<Vec<Rc<Stretch>>> = Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.ghosts.clone()));
         let moved: Mutex<Vec<FxSet<u64>>> = Mutex::default();
         let (again, same) = (AtomicUsize::new(0), AtomicUsize::new(0));
+        // (and what moved that a group mended must meet: the stretches made anew, the relations a fact came to, the
+        // keys a fact went from under a relation an absence reads, the files edited)
+        let new_ids: Mutex<Vec<FxSet<FactId>>> = Mutex::default();
+        let (came, gone): (Mutex<FxSet<Sym>>, Mutex<FxSet<u64>>) = Default::default();
+        let negs: FxMap<Sym, Vec<Sym>> = self.rules.iter().map(|r| (r.id, r.plan.iter().filter_map(|b| if let BodyElem::Neg(l) = b { Some(l.rel) } else { None }).collect::<Vec<_>>())).filter(|(_, n)| !n.is_empty()).collect();
+        let negated: FxSet<Sym> = negs.values().flatten().copied().collect();
+        // (the nodes of the files edited whose rows in a tree moved, filled when the files are settled)
+        let shifted: Mutex<FxSet<u64>> = Mutex::default();
         let was = |k: usize, files: (u32, u32)| edit.as_ref().and_then(|e| e.0.find(k, files));
         let base = Fork(self.fork());
         let one = Mutex::new(());
-        let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(Vec::new()));
+        let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let all = (0, files.len() as u32);
         // the rules of each layer, and the relations each takes the facts at home by
@@ -778,7 +804,7 @@ impl Eval {
         let home = cx.joins.home.clone();
         let rel_at = |r: &ERule, i: usize| if let BodyElem::Pos(l) = &r.plan[i] { l.rel } else { unreachable!() };
         // the relations the rules of the first layer read
-        let read_rels: FxSet<Sym> = self.rules.iter().filter(|r| rules_of[0].contains(&r.id)).flat_map(|r| r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.rel) } else { None })).collect();
+        let read_rels: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).flat_map(|r| r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.rel) } else { None })).collect()).collect();
         let firsts: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).filter_map(|r| first_at(r, &home).map(|i| rel_at(r, i))).collect()).collect();
         let mut trees: Option<Rc<TreeOf>> = None;
         struct Stage1<'a>(&'a Stage);
@@ -847,12 +873,23 @@ impl Eval {
                     None => {
                         replaced.lock().unwrap().insert(o.stretch.lo);
                         ghosts.lock().unwrap().push(o.stretch.clone());
-                        let mut keys: FxSet<u64> = FxSet::default();
+                        let (mut keys, mut went): (FxSet<u64>, FxSet<u64>) = Default::default();
                         {
                             let ms = cx.masks.lock().unwrap();
-                            stretch.differs(&o.stretch, |rel, args| answers(&cx.h, rel, args, ms.get(&rel), |key| { keys.insert(key); }));
+                            let mut rels = came.lock().unwrap();
+                            let mut ids = new_ids.lock().unwrap();
+                                stretch.differs(&o.stretch, |rel, args, new| {
+                                answers(&cx.h, rel, args, ms.get(&rel), |key| { keys.insert(key); });
+                                if let Some(id) = new {
+                                    rels.insert(rel);
+                                    ids[k].insert(id);
+                                } else if negated.contains(&rel) {
+                                    answers(&cx.h, rel, args, ms.get(&rel), |key| { went.insert(key); });
+                                }
+                            });
                         }
                         moved.lock().unwrap()[k].extend(keys);
+                        gone.lock().unwrap().extend(went);
                     }
                 }
             }
@@ -878,33 +915,29 @@ impl Eval {
             for (c, k) in kids.iter().enumerate() {
                 below(k, c as u32, &mut near);
             }
-            // A GROUP MENDED: what it made stands where what it read stands, and only where a child moved is it met
-            // again (a group of the first layer, whose firings read no absence)
-            let old = old.filter(|o| k == 0 && !o.kids.is_empty() && o.stretch.carriable());
-            // (mended: the stretches below that are new, and the keys their facts hold)
-            let (mut fresh, mut fresh_keys): (FxSet<FactId>, FxSet<Key>) = Default::default();
+            // A GROUP MENDED: what it made stands where what it read stands, and only what moved is met again: a
+            // stretch below made anew, a fact that names a node of a file edited, a firing that read an absence of a
+            // relation a fact came to or a row of a tree. Not where a fact went from under an absence it asked: what
+            // that absence gives now stands on facts that stood.
+            let old = old.filter(|o| !o.kids.is_empty() && o.stretch.carriable() && { let g = gone.lock().unwrap(); !o.asked.iter().any(|a| g.contains(a)) });
+            near.sort_unstable_by_key(|(s, _)| s.lo);
+            // (mended, it is seeded by the facts that came: in the layers below wherever they lie, at its own layer
+            // under it; and by those under it and at home that name a node whose rows in a tree moved)
             let mut seeds: Vec<FactId> = Vec::new();
-            if let Some(o) = &old {
-                let mut was: Vec<(Rc<Stretch>, u32)> = Vec::new();
-                o.kids.iter().for_each(|k| below(k, 0, &mut was));
-                let was: FxSet<FactId> = was.iter().map(|(s, _)| s.lo).collect();
-                for (st, _) in near.iter().filter(|(s, _)| !was.contains(&s.lo)) {
-                    fresh.insert(st.lo);
-                    let sto = st.store();
+            if old.is_some() {
+                let ids = new_ids.lock().unwrap();
+                seeds.extend(ids[..k].iter().flatten());
+                seeds.extend(ids[k].iter().filter(|&&id| near.partition_point(|(s, _)| s.lo <= id).checked_sub(1).is_some_and(|i| id < near[i].0.hi)));
+                let shifted = shifted.lock().unwrap();
+                for st in near.iter().map(|(s, _)| s).chain(&at_home).filter(|_| !shifted.is_empty()) {
                     for id in st.lo..st.hi {
-                        let r = sto.rec(id);
-                        if r.dead() || !read_rels.contains(&r.rel) {
-                            continue;
-                        }
-                        seeds.push(id);
-                        let a = sto.args(id);
-                        for &(_, p) in cx.joins.places.get(&r.rel).into_iter().flatten().filter(|(n, _)| *n as usize == a.len()) {
-                            fresh_keys.insert((r.rel, p, a[p as usize]));
+                        let r = st.rec(id);
+                        if !r.dead() && read_rels[k].contains(&r.rel) && st.args(id).iter().any(|t| shifted.contains(&t.bits())) {
+                            seeds.push(id);
                         }
                     }
                 }
             }
-            near.sort_unstable_by_key(|(s, _)| s.lo);
             let los: Vec<FactId> = near.iter().map(|(s, _)| s.lo).collect();
             let at = |lo: FactId| &near[los.binary_search(&lo).expect("a holder below")].0;
             // the directories of the children: a key of a file below has come home
@@ -916,9 +949,9 @@ impl Eval {
                     if f.is_some() { &mut inner } else { &mut dir }.entry(*key).or_default().extend(hs);
                     // a seed: a fact under one child that a rule joins with one under another
                     for &(n, _) in cx.joins.places[&rel].iter().filter(|(_, q)| *q == p) {
-                        let met = cx.joins.mates.get(&(rel, n, p)).into_iter().flatten().any(|&m| match &old {
-                            // (a fact below that is new is a seed already; one that stood meets only what is new)
-                            Some(_) => !hs.iter().any(|h| fresh.contains(h)) && fresh_keys.contains(&(m.0, m.2, v)),
+                        // (mended, what stood is met from what came)
+                        let met = old.is_none() && cx.joins.mates.get(&(rel, n, p)).into_iter().flatten().any(|&m| match &old {
+                            Some(_) => false,
                             None => kids.iter().enumerate().filter(|(d, _)| *d != c).any(|(_, d)| match f {
                                 Some(f) if d.files.0 <= f && f < d.files.1 => d.holds(&cx, m, v, f),
                                 _ => d.dir.contains_key(&(m.0, m.2, v)),
@@ -939,7 +972,8 @@ impl Eval {
             let mut e = fork();
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
-            e.0.meeting = Some(Rc::new(Meeting { mark, under: near.iter().map(|(s, c)| (s.lo, s.hi, *c)).collect() }));
+            let homes = old.as_ref().map(|_| (at_home.iter().map(|s| (s.lo, s.hi)).collect(), if files == all { core } else { 0 }, home.clone()));
+            e.0.meeting = Some(Rc::new(Meeting { mark, under: near.iter().map(|(s, c)| (s.lo, s.hi, *c)).collect(), home: homes }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone());
             e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
             e.0.wall.hold_end = true;
@@ -948,9 +982,20 @@ impl Eval {
             e.0.seen_at.clear();
             if let Some(o) = &old {
                 let Eval { store, h, .. } = &mut e.0;
-                store.carry(h, &o.stretch);
+                let came = came.lock().unwrap();
+                let ghosts = ghosts.lock().unwrap();
+                seeds.extend(store.carry(h, &o.stretch, |rule, ps| {
+                    !ps.iter().any(|p| matches!(p.kind(), crate::store::Prem::VRow(_))) && !negs.get(&rule).is_some_and(|ns| ns.iter().any(|r| came.contains(r)))
+                }, |f| {
+                    let g = ghosts.iter().find(|g| g.lo <= f && f < g.hi)?;
+                    let r = g.rec(f);
+                    Some((r.rel, r.persp, g.args(f).to_vec()))
+                }));
+                seeds.sort_unstable();
+                seeds.dedup();
             }
-            if k > 0 {
+            // (mended, what came at home is a seed with the rest)
+            if k > 0 && old.is_none() {
                 let mut front = Front::default();
                 for s in &at_home {
                     for id in s.lo..s.hi {
@@ -978,7 +1023,19 @@ impl Eval {
             }
             let mut front = Front::default();
             for id in seeds {
-                front.note(e.0.store.rec(id).rel, id);
+                let r = e.0.store.rec(id);
+                // (mended: a fact that came below is news here where it is at home, or answers a key asked here)
+                let news = match &old {
+                    Some(o) if !e.0.store.here(id) && !near.iter().chain(at_home.iter().map(|s| (s.clone(), 0)).collect::<Vec<_>>().iter()).any(|(s, _)| s.lo <= id && id < s.hi) => {
+                        let (mut hit, ms) = (false, cx.masks.lock().unwrap());
+                        answers(&cx.h, r.rel, e.0.store.args(id), ms.get(&r.rel), |key| hit |= o.asked.binary_search(&key).is_ok());
+                        hit
+                    }
+                    _ => true,
+                };
+                if !r.dead() && news && (old.is_none() || read_rels[k].contains(&r.rel)) {
+                    front.note(r.rel, id);
+                }
             }
             e.0.wall.cutting = Some(Box::default());
             e.0.propagate(front)?;
@@ -991,6 +1048,7 @@ impl Eval {
             let lower = (k > 0).then(|| lower_of(&cx, &tops));
             let below: FxSet<u64> = moved.lock().unwrap().iter().flatten().copied().collect();
             moved.lock().unwrap().push(FxSet::default());
+            new_ids.lock().unwrap().push(FxSet::default());
             let at_home = |d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
             let mut units = level(files.len(), &|x| {
                 let one = (x as u32, x as u32 + 1);
@@ -1010,6 +1068,21 @@ impl Eval {
                 Ok(done(e, k, one, Vec::new(), FxMap::default(), Rc::default(), Asked::default()))
             })?;
             if k == 0 {
+                // (a row of a tree comes or goes only between nodes of a file edited)
+                for (x, u) in units.iter().enumerate() {
+                    let Some(o) = was(0, (x as u32, x as u32 + 1)).filter(|o| o.stretch.lo != u.stretch.lo) else { continue };
+                    for ci in 0..self.vc.vclosures.len() {
+                        let rows = |s: &Stretch| {
+                            let mut out: FxSet<(Sym, u64, u64)> = FxSet::default();
+                            for (b, f) in s.forests(ci).iter() {
+                                f.each_pair(|a, d| { out.insert((*b, a.bits(), d.bits())); });
+                            }
+                            out
+                        };
+                        let (now, then) = (rows(&u.stretch), rows(&o.stretch));
+                        shifted.lock().unwrap().extend(now.symmetric_difference(&then).flat_map(|&(_, a, d)| [a, d]));
+                    }
+                }
                 let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
                 trees = Some(Rc::new(move |t: Term| {
                     let s = &of[cx.file(t)? as usize];

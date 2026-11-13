@@ -753,6 +753,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         let named: std::collections::HashMap<u64, (&str, &str)> = now.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (*f, *t)))).collect();
         let files: Vec<(String, String)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), t.to_string()))).collect::<Option<_>>().or_else(|| { say("a file came or went in a world settled by levels"); None })?;
         let changed = files.iter().enumerate().filter(|(_, (f, _))| moved.contains(&f.as_str())).map(|(i, _)| i as u32).collect();
+        before.named_by(&mut w.eval);
         let (st, joins) = w.eval.level_stage();
         w.eval.store.settled = w.eval.store.len_ids();
         let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);

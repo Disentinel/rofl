@@ -1150,6 +1150,17 @@ fn a_world_by_levels_answers_as_the_world_whole() {
                 assert!(got.err.contains("kept volumes"), "{name}, {q}: asked again it was not answered from what the edit kept: {:?}", got.err);
             }
         }
+        // (and a why after it, through an absence and through the joins, quotes what the world whole quotes)
+        for (q, head) in [("noleaf[d](A)", "noleaf[d]("), ("qq[d](A, B)", "qq[d](")] {
+            let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["ask", q, "boot.rofl", "w.rofl"]);
+            for line in whole.out.lines().take(3) {
+                let fact = format!("{head}{})", line.replace("A = ", "").replace(", B = ", ", "));
+                let args = ["why", fact.as_str(), "boot.rofl", "w.rofl"];
+                let want = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
+                let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &args);
+                assert!(want.code == 0 && got.out == want.out, "{name}, why {fact}: by levels {:?}\nthe world whole {:?}", got.out, want.out);
+            }
+        }
     }
 }
 

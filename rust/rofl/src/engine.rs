@@ -5813,7 +5813,7 @@ impl Eval {
                 return Ok(());
             }
         }
-        if self.meeting.as_ref().is_some_and(|m| !m.crosses(&sol.prems)) {
+        if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems)) {
             return Ok(());
         }
         if head.temporal == Temporal::Next {

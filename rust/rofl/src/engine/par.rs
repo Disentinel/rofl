@@ -533,7 +533,7 @@ impl Eval {
         let (l, neg) = self.frozen_lit(b, depth, rule_id).filter(|(l, _)| self.vc.vclosure_for(l.rel).is_none())?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
         let news = front_news(front_at, i, neg);
-        if !off && !(news.is_some() && self.store.reads_near()) {
+        if !(off || news.is_some() && self.store.reads_near()) {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
         let except = if depth == 0 && !neg { self.sn_except(i) } else { None };

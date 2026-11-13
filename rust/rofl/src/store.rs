@@ -1184,33 +1184,34 @@ impl Stretch {
     }
 
     /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
-    /// absence, no tree row and no builtin by a key of its own.
+    /// aggregate.
     pub fn carriable(&self) -> bool {
-        let s = self.store();
-        s.prem_arena.own.iter().all(|p| match p.kind() {
-            Prem::Fact(_) => true,
-            Prem::Bi(k) => k == 0,
-            _ => false,
-        })
+        !self.store().prem_arena.own.iter().any(|p| matches!(p.kind(), Prem::Cell(_)))
     }
 
     /// Whether the two hold the same facts.
     pub fn same_as(&self, old: &Stretch) -> bool {
         let mut same = self.hi - self.lo == old.hi - old.lo;
         if same {
-            self.differs(old, |_, _| same = false);
+            self.differs(old, |_, _, _| same = false);
         }
         same
     }
 
     /// Every fact one of the two holds and the other does not.
-    pub fn differs(&self, old: &Stretch, mut f: impl FnMut(Sym, &[Term])) {
+    /// Every fact one of the two holds and the other does not: its id here if it came, none if it went.
+    pub fn differs(&self, old: &Stretch, mut f: impl FnMut(Sym, &[Term], Option<FactId>)) {
         let (s, o) = (self.store(), old.store());
         let key = |st: &'_ Store, id: FactId| (st.rec(id).rel, st.rec(id).persp);
-        let mine: FxSet<(Sym, Sym, &[Term])> = (self.lo..self.hi).filter(|&id| s.alive(id)).map(|id| (key(s, id).0, key(s, id).1, s.args(id))).collect();
+        let mine: FxMap<(Sym, Sym, &[Term]), FactId> = (self.lo..self.hi).filter(|&id| s.alive(id)).map(|id| ((key(s, id).0, key(s, id).1, s.args(id)), id)).collect();
         let theirs: FxSet<(Sym, Sym, &[Term])> = (old.lo..old.hi).filter(|&id| o.alive(id)).map(|id| (key(o, id).0, key(o, id).1, o.args(id))).collect();
-        for k in mine.symmetric_difference(&theirs) {
-            f(k.0, k.2);
+        for (k, &id) in &mine {
+            if !theirs.contains(k) {
+                f(k.0, k.2, Some(id));
+            }
+        }
+        for k in theirs.iter().filter(|k| !mine.contains_key(*k)) {
+            f(k.0, k.2, None);
         }
     }
 
@@ -2619,23 +2620,38 @@ impl Store {
     /// THE FACTS OF `old` THAT STAND, CARRIED HERE: a fact with a firing whose premises stand (read here, or a fact
     /// of `old` carried before it), least first, so nothing stands on itself alone; each put here with every firing
     /// of it that stands, unless a stretch read here holds it now. Asked of a store that wrote nothing of `old`'s.
-    pub fn carry(&mut self, h: &Heap, old: &Stretch) -> usize {
+    pub fn carry(&mut self, h: &Heap, old: &Stretch, keep: impl Fn(Sym, &[PremRef]) -> bool, was: impl Fn(FactId) -> Option<(Sym, Sym, Vec<Term>)>) -> Vec<FactId> {
         let s = old.store();
         let n = (old.hi - old.lo) as usize;
         let own = |f: FactId| (old.lo <= f && f < old.hi).then(|| (f - old.lo) as usize);
         let mut fired: Vec<(usize, Sym, u32, Vec<PremRef>)> = Vec::new();
+        // (a firing that may not stand: what it read that stands is to fire again)
+        let mut again: Vec<FactId> = Vec::new();
+        // (a premise of a stretch replaced stands where the same fact lies now)
+        let mut now: FxMap<FactId, Option<FactId>> = FxMap::default();
         for a in 0..n {
             let id = old.lo + a as FactId;
             if !s.alive(id) {
                 continue;
             }
-            for w in s.chain(id) {
-                let ps = s.prems_of(&w);
-                if ps.iter().all(|p| match p.kind() {
-                    Prem::Fact(f) => own(f).is_some() || self.reads_id(f),
-                    _ => true,
-                }) {
-                    fired.push((a, w.rule, w.tick, ps.to_vec()));
+            'w: for w in s.chain(id) {
+                let mut ps = s.prems_of(&w).to_vec();
+                for p in ps.iter_mut() {
+                    if let Prem::Fact(f) = p.kind() {
+                        if own(f).is_some() || self.reads_id(f) {
+                            continue;
+                        }
+                        let there = *now.entry(f).or_insert_with(|| was(f).and_then(|(rel, persp, args)| self.find_near(rel, persp, &args)));
+                        match there {
+                            Some(g) => *p = PremRef::Fact(g),
+                            None => continue 'w,
+                        }
+                    }
+                }
+                if keep(w.rule, &ps) {
+                    fired.push((a, w.rule, w.tick, ps));
+                } else {
+                    again.extend(ps.iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }));
                 }
             }
         }
@@ -2696,7 +2712,10 @@ impl Store {
                 self.support(id, Witness { rule, tick, prems: mapped });
             }
         }
-        order.len()
+        again.into_iter().filter_map(|f| match own(f) {
+            Some(b) => (new_id[b] != EMPTY).then_some(new_id[b]),
+            None => Some(f),
+        }).collect()
     }
 
     /// This reader reads by id, and no other way, the stretches an edit replaced.
