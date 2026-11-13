@@ -3952,6 +3952,10 @@ impl Store {
     /// `memo` carries the heights between calls: a caller that asks for many
     /// facts shares one.
     pub fn witness_of(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Option<WitView<'_>> {
+        // (a fact of a stretch is shown as its unit proved it)
+        if !self.here(id) {
+            return self.facts.near.as_ref()?.of(id)?.store.witness_of(h, id, memo);
+        }
         let head = *self.wit_head.get(id as usize)?;
         if head == EMPTY {
             return None;
@@ -4016,6 +4020,9 @@ impl Store {
     /// Every firing of `id` in the order `witness_of` ranks them, the one it
     /// returns first.
     pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        if !self.here(id) {
+            return self.facts.near.as_ref().and_then(|n| n.of(id)).map_or(Vec::new(), |s| s.store.firings_ranked(h, id, memo));
+        }
         if self.wit_head.get(id as usize).is_none_or(|c| *c == EMPTY) {
             return Vec::new();
         }
