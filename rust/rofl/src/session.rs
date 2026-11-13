@@ -2231,6 +2231,10 @@ impl Session {
             if !lows.contains_key(file) {
                 let mut eval = self.eval.fork();
                 eval.lower_texts = None;
+                // (a reader of units: the file's lower stage is evaluated over the core alone)
+                if eval.levels.take().is_some() {
+                    eval.store.reads_none();
+                }
                 let r = crate::program::load_program(&mut eval, &texts[file], None);
                 if !r.ok {
                     return Err(r.diagnostics.join("\n"));

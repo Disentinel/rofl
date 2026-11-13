@@ -900,6 +900,7 @@ impl Eval {
         let shifted: Mutex<FxSet<u64>> = Mutex::default();
         let was = |k: usize, files: (u32, u32)| edit.as_ref().and_then(|e| e.0.find(k, files));
         let base = Fork(self.fork());
+        let core_names = (self.h.syms.len() as Sym, self.h.funcs_len());
         let one = Mutex::new(());
         let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
@@ -1162,6 +1163,7 @@ impl Eval {
             // the files alone, every one at once
             let mut alone: Vec<Rc<Unit>> = Vec::new();
             if k == 0 {
+                let forks = &one;
                 let mut units = level(n, &|x| {
                     let one = (x as u32, x as u32 + 1);
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| e.1.contains(&one.0))) {
@@ -1169,11 +1171,22 @@ impl Eval {
                     }
                     let mut e = fork();
                     let from = e.0.store.len_ids();
-                    volumes::load_text(&mut e.0, &files[x].1)?;
+                    match &cx.joins.low {
+                        // the books the plan cuts are read in a world let go: its lemmas and the file's facts
+                        // outside the books are given to the unit, as the world whole keeps them
+                        Some(low) => {
+                            let mut raw = fork();
+                            volumes::load_text(&mut raw.0, &files[x].1)?;
+                            raw.0.lower_stage(low)?;
+                            raw.0.own_kept(stage.0, from)?;
+                            e.0.take_lemmas(&raw.0, low, from, core_names.0, core_names.1);
+                            drop((forks.lock().unwrap(), raw));
+                        }
+                        None => volumes::load_text(&mut e.0, &files[x].1)?,
+                    }
                     e.0.lower_stage(stage.0)?;
-                    e.0.own_kept(stage.0, from)?;
-                    if let Some(low) = &cx.joins.low {
-                        e.0.cut_away(low);
+                    if cx.joins.low.is_none() {
+                        e.0.own_kept(stage.0, from)?;
                     }
                     // (its trees are left as they stand at the end: the units above read them)
                     e.0.vc.vrefresh(&mut e.0.store);
