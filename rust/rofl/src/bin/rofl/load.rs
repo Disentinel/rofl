@@ -713,10 +713,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         say("the rules or the facts naming no file changed");
         return None;
     }
-    if std::path::Path::new(&format!("{k}.units")).exists() {
-        say("a world settled by levels is not yet taken by delta");
-        return None;
-    }
+    let units = std::path::Path::new(&format!("{k}.units")).exists();
     let now: std::collections::HashMap<&str, &str> = cut.files.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
     let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|(h, _, _)| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
     if moved.is_empty() || moved.len() * 8 > now.len().max(8) {
@@ -748,6 +745,32 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     });
     let mut core = core?;
     let (mut worlds, mut laid): (Vec<Session>, Vec<rofl::engine::volumes::Laid>) = opened?.into_iter().unzip();
+    if units {
+        // A WORLD SETTLED BY LEVELS: the units whose answer may have moved are settled again, the others stand
+        if old.len() != now.len() || moved.iter().any(|f| !old.contains_key(*f)) {
+            say("a file came or went in a world settled by levels");
+            return None;
+        }
+        let w = worlds.first_mut()?;
+        let before = rofl::volume::open_units(&format!("{k}.units"), &w.eval).map_err(|e| say(&e)).ok()?;
+        let named: std::collections::HashMap<u64, (&str, &str)> = now.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (*f, *t)))).collect();
+        let files: Vec<(String, String)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), t.to_string()))).collect::<Option<_>>().or_else(|| { say("a file came or went in a world settled by levels"); None })?;
+        let changed = files.iter().enumerate().filter(|(_, (f, _))| moved.contains(&f.as_str())).map(|(i, _)| i as u32).collect();
+        let (st, joins) = w.eval.level_stage();
+        w.eval.store.settled = w.eval.store.len_ids();
+        let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
+        let lv = match w.eval.fork().by_levels(&files, &st, joins, fan, Some(rofl::engine::levels::Edit(&before, changed))) {
+            Ok(lv) => lv,
+            Err(e) => { say(&rofl::describe(&e)); return None; }
+        };
+        let (again, same) = lv.again.unwrap_or_default();
+        eprintln!("volumes: {} of {} files edited; {again} of {} units settled again, {same} of them concluding what they had ({} ms)", moved.len(), files.len(), lv.tops.iter().map(|t| t.count()).sum::<usize>(), t.elapsed().as_millis());
+        lv.read_by(&mut w.eval);
+        w.eval.levels = Some(std::sync::Arc::new(lv));
+        let mut sums: Vec<(String, u64, usize)> = files.iter().map(|(f, t)| (f.clone(), sum(t), 0)).collect();
+        sums.sort();
+        return Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default(), places: Default::default(), put_from: Vec::new() }, sums));
+    }
     let stage = core.eval.lemma_stage();
     let folds = std::fs::read_to_string(format!("{k}.folds")).ok().and_then(|t| rofl::fold::Folds::read(&t)).map(std::sync::Arc::new);
     for w in &mut worlds {

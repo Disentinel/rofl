@@ -283,7 +283,7 @@ impl Eval {
                     let trees = std::mem::take(&mut joins.tree_rules);
                     let held = std::mem::take(&mut joins.held);
                     let t = std::time::Instant::now();
-                    let lv = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
+                    let lv = w.e.fork().by_levels(&groups[i], stage, joins, fan, None)?;
                     let ms = t.elapsed().as_millis();
                     let from = w.e.store.len_ids();
                     lv.read_by(&mut w.e);

@@ -1068,6 +1068,19 @@ struct Kept {
     over: Rc<(Store, Heap)>,
     map: Rc<crate::arena::Region>,
     at: usize,
+    /// for a stretch that left trees: builds them again over its facts
+    trees: Option<Rc<Trees>>,
+}
+
+/// What builds again the trees of a stretch unfolded.
+pub type Trees = dyn Fn(Store) -> Store;
+
+/// A stretch's own facts and firings as they are kept.
+struct Parts {
+    recs: Vec<u32>,
+    args: Vec<u64>,
+    fired: Vec<u32>,
+    prems: Vec<PremRef>,
 }
 
 static UNFOLD: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -1079,49 +1092,103 @@ impl Stretch {
     /// A STRETCH AS IT IS KEPT: its own facts in the order of their ids and every firing it holds, of them and of
     /// facts that lie elsewhere. Nothing of what it read is written, and its indexes are made again when it is read.
     pub fn write(&self, w: &mut crate::arena::VolW) -> Result<(), String> {
+        let order: Vec<FactId> = (self.lo..self.hi).collect();
+        let p = self.parts(&order, &|f| f)?;
+        w.u32(self.lo);
+        w.u32(self.hi);
+        w.u32(self.store().virtuals.iter().any(|v| !v.forests.is_empty()) as u32);
+        w.arena(&self.rels);
+        w.arena(&self.far);
+        w.arena(&p.recs);
+        w.arena(&p.args);
+        w.arena(&p.fired);
+        w.arena(&p.prems);
+        Ok(())
+    }
+
+    /// Its own facts in `order` and every firing it holds, each of its own ids named by `to`.
+    fn parts(&self, order: &[FactId], to: &dyn Fn(FactId) -> FactId) -> Result<Parts, String> {
         let s = self.store();
-        let (mut recs, mut args): (Vec<u32>, Vec<u64>) = Default::default();
-        for id in self.lo..self.hi {
+        let mut p = Parts { recs: Vec::new(), args: Vec::new(), fired: Vec::new(), prems: Vec::new() };
+        for &id in order {
             let r = s.rec(id);
             if r.dead() {
                 return Err("a stretch holds a fact retired".into());
             }
             let a = s.args(id);
-            recs.extend([r.rel, r.persp, r.flags() as u32, a.len() as u32]);
-            args.extend(a.iter().map(|t| t.bits()));
+            p.recs.extend([r.rel, r.persp, r.flags() as u32, a.len() as u32]);
+            p.args.extend(a.iter().map(|t| t.bits()));
         }
-        let (mut fired, mut prems): (Vec<u32>, Vec<PremRef>) = Default::default();
-        let mut far: Vec<FactId> = s.far_heads.keys().copied().collect();
-        far.sort_unstable();
-        for id in (self.lo..self.hi).chain(far) {
+        for &id in order.iter().chain(&self.far) {
             let nodes: Vec<WitNode> = s.chain(id).collect();
             for n in nodes.iter().rev() {
-                fired.extend([id, n.rule, n.tick, n.prems_len]);
-                prems.extend_from_slice(s.prems_of(n));
+                p.fired.extend([to(id), n.rule, n.tick, n.prems_len]);
+                p.prems.extend(s.prems_of(n).iter().map(|q| match q.kind() {
+                    Prem::Fact(f) => PremRef::Fact(to(f)),
+                    _ => *q,
+                }));
             }
         }
-        w.u32(self.lo);
-        w.u32(self.hi);
-        w.arena(&self.rels);
-        w.arena(&self.far);
-        w.arena(&recs);
-        w.arena(&args);
-        w.arena(&fired);
-        w.arena(&prems);
-        Ok(())
+        Ok(p)
+    }
+
+    /// THE SAME FACTS UNDER THE IDS THEY HAD: this stretch, settled again where `old` stood, laid at `old`'s ids
+    /// with the firings it holds now, into `fork` (a fork of the core that wrote nothing); none where the two do
+    /// not hold the same facts. What cites a fact of `old` cites it still.
+    pub fn relaid(&self, old: &Stretch, fork: Store, h: &Heap) -> Option<Stretch> {
+        if self.hi - self.lo != old.hi - old.lo {
+            return None;
+        }
+        let (s, o) = (self.store(), old.store());
+        let at: FxMap<(Sym, Sym, &[Term]), FactId> = (old.lo..old.hi).map(|id| ((o.rec(id).rel, o.rec(id).persp, o.args(id)), id)).collect();
+        let mut order = vec![EMPTY; (old.hi - old.lo) as usize];
+        let mut to = vec![EMPTY; order.len()];
+        for id in self.lo..self.hi {
+            let r = s.rec(id);
+            let was = *at.get(&(r.rel, r.persp, s.args(id)))?;
+            if r.dead() || o.rec(was).dead() || order[(was - old.lo) as usize] != EMPTY {
+                return None;
+            }
+            order[(was - old.lo) as usize] = id;
+            to[(id - self.lo) as usize] = was;
+        }
+        let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
+        let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, rels: self.rels.clone(), far: self.far.clone(), keyed: Default::default() })
+    }
+
+    /// Whether the two hold the same facts.
+    pub fn same_as(&self, old: &Stretch) -> bool {
+        let mut same = self.hi - self.lo == old.hi - old.lo;
+        if same {
+            self.differs(old, |_, _| same = false);
+        }
+        same
+    }
+
+    /// Every fact one of the two holds and the other does not.
+    pub fn differs(&self, old: &Stretch, mut f: impl FnMut(Sym, &[Term])) {
+        let (s, o) = (self.store(), old.store());
+        let key = |st: &'_ Store, id: FactId| (st.rec(id).rel, st.rec(id).persp);
+        let mine: FxSet<(Sym, Sym, &[Term])> = (self.lo..self.hi).filter(|&id| s.alive(id)).map(|id| (key(s, id).0, key(s, id).1, s.args(id))).collect();
+        let theirs: FxSet<(Sym, Sym, &[Term])> = (old.lo..old.hi).filter(|&id| o.alive(id)).map(|id| (key(o, id).0, key(o, id).1, o.args(id))).collect();
+        for k in mine.symmetric_difference(&theirs) {
+            f(k.0, k.2);
+        }
     }
 
     /// The stretch `write` kept, to be unfolded when first read: over `over`, a fork of the core that wrote nothing
     /// and the core's heap.
-    pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR) -> Result<Stretch, String> {
-        let at = r.at();
+    pub fn read(over: &Rc<(Store, Heap)>, trees: &Rc<Trees>, r: &mut crate::arena::VolR) -> Result<Stretch, String> {
         let (lo, hi) = (r.u32()?, r.u32()?);
+        let trees = (r.u32()? != 0).then(|| trees.clone());
         let (rels, far) = (r.arena::<u32>()?.to_vec(), r.arena::<u32>()?.to_vec());
+        let at = r.at();
         r.arena::<u32>()?;
         r.arena::<u64>()?;
         r.arena::<u32>()?;
         r.arena::<PremRef>()?;
-        let kept = Some(Kept { over: over.clone(), map: r.map(), at });
+        let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees });
         Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default() })
     }
 
@@ -1131,17 +1198,23 @@ impl Stretch {
             let k = self.kept.as_ref().expect("a stretch not kept is unfolded");
             let _one = UNFOLD.lock().unwrap();
             let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
-            Self::unfold(k.over.0.clone(), &k.over.1, &mut r).expect("a kept stretch read once reads again")
+            let read = |r: &mut crate::arena::VolR| -> Result<Store, String> {
+                let (recs, args, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+                Self::unfold(k.over.0.clone(), &k.over.1, self.lo, self.hi, &recs, &args, &fired, &prems)
+            };
+            let store = read(&mut r).expect("a kept stretch read once reads again");
+            match &k.trees {
+                Some(t) => t(store),
+                None => store,
+            }
         })
     }
 
-    /// The facts of a kept stretch put again under the ids they had into `fork`.
-    fn unfold(mut fork: Store, h: &Heap, r: &mut crate::arena::VolR) -> Result<Store, String> {
-        let (lo, hi) = (r.u32()?, r.u32()?);
-        r.arena::<u32>()?;
-        r.arena::<u32>()?;
-        let (recs, args, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+    /// The facts of a stretch put under the ids `lo..hi` into `fork`, in the order given, with their firings.
+    #[allow(clippy::too_many_arguments)]
+    fn unfold(mut fork: Store, h: &Heap, lo: FactId, hi: FactId, recs: &[u32], args: &[u64], fired: &[u32], prems: &[PremRef]) -> Result<Store, String> {
         fork.read_near(lo, None, Vec::new(), None, None);
+        Rc::make_mut(fork.facts.near.as_mut().expect("set above")).top = hi;
         let bad = || "a kept stretch is not one".to_string();
         let mut at = 0;
         for (k, x) in recs.chunks_exact(4).enumerate() {
@@ -1235,6 +1308,10 @@ pub struct Near {
     whole: bool,
     /// in a unit: the stretch of the file a node is of, whose trees answer for the node
     trees: Option<Rc<TreeOf>>,
+    /// the stretches an edit replaced: a proof kept from before may still name a fact by its id there
+    ghosts: Option<Rc<Lower>>,
+    /// this store's own ids end here: a stretch laid again where it stood may name a fact that lies above it
+    top: FactId,
 }
 
 /// The stretch a file's own unit left, by a node of the file.
@@ -1242,8 +1319,23 @@ pub type TreeOf = dyn Fn(Term) -> Option<Rc<Stretch>> + Send + Sync;
 
 /// Stretches many stores read, in the order of `lo`, and where a key is found in them.
 pub struct Lower {
-    pub list: Vec<Rc<Stretch>>,
-    pub route: Rc<Route>,
+    list: Vec<Rc<Stretch>>,
+    route: Rc<Route>,
+    /// the places in `list` in the order of `lo`
+    by_lo: Vec<u32>,
+}
+
+impl Lower {
+    pub fn new(list: Vec<Rc<Stretch>>, route: Rc<Route>) -> Lower {
+        let mut by_lo: Vec<u32> = (0..list.len() as u32).collect();
+        by_lo.sort_unstable_by_key(|&i| list[i as usize].lo);
+        Lower { list, route, by_lo }
+    }
+    fn of(&self, id: FactId) -> Option<&Stretch> {
+        let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);
+        let s = &self.list[*self.by_lo.get(i.checked_sub(1)?)? as usize];
+        (id < s.hi).then_some(&**s)
+    }
 }
 
 /// The rows of one relation in the stretches a store reads, by book: each fact once, the lowest id of those that
@@ -1314,13 +1406,17 @@ impl Near {
     }
     #[inline]
     fn of(&self, id: FactId) -> Option<&Stretch> {
-        let list = match (&self.lower, self.list.first()) {
-            (Some(l), s) if s.is_none_or(|s| id < s.lo) => &l.list,
-            _ => &self.list,
-        };
-        let i = list.partition_point(|s| s.lo <= id);
-        let s = list.get(i.checked_sub(1)?)?;
-        (id < s.hi).then_some(&**s)
+        self.live(id).or_else(|| self.ghosts.as_ref()?.of(id))
+    }
+    /// The stretch of the world as it stands that holds the id.
+    #[inline]
+    fn live(&self, id: FactId) -> Option<&Stretch> {
+        // (an edit settles a unit again above what was there: a stretch of a layer below may lie above one of this)
+        let i = self.list.partition_point(|s| s.lo <= id);
+        match i.checked_sub(1).map(|i| &*self.list[i]).filter(|s| id < s.hi) {
+            Some(s) => Some(s),
+            None => self.lower.as_ref()?.of(id),
+        }
     }
 }
 
@@ -2321,7 +2417,7 @@ impl Store {
     /// Whether the id is this store's own or its base's, not a stretch's.
     #[inline]
     pub fn here(&self, id: FactId) -> bool {
-        self.facts.near.as_ref().is_none_or(|n| (id as usize) < n.core || id as usize >= self.facts.recs.mark)
+        self.facts.near.as_ref().is_none_or(|n| (id as usize) < n.core || id as usize >= self.facts.recs.mark && id < n.top)
     }
 
     #[inline]
@@ -2349,11 +2445,35 @@ impl Store {
         let core = self.facts.recs.mark;
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
-        assert!(lower.as_ref().and_then(|l| l.list.last()).is_none_or(|s| s.hi <= list.first().map_or(mark, |f| f.lo)));
-        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, rows: Rc::default(), lens: Rc::default(), whole }));
+        assert!(lower.iter().flat_map(|l| l.list.iter()).all(|s| s.hi <= mark));
+        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, rows: Rc::default(), lens: Rc::default(), whole, ghosts: None, top: FactId::MAX }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
         self.fold.mark = mark as usize;
+    }
+
+    /// This reader reads by id, and no other way, the stretches an edit replaced.
+    pub fn reads_ghosts(&mut self, ghosts: Vec<Rc<Stretch>>) {
+        if let Some(n) = self.facts.near.as_mut().filter(|_| !ghosts.is_empty()) {
+            Rc::make_mut(n).ghosts = Some(Rc::new(Lower::new(ghosts, Rc::new(|_, _, _, _, _| false))));
+        }
+    }
+
+    /// The id the fact `id` names has in the world as it stands: its own, or for a fact of a stretch an edit
+    /// replaced, the id of the same fact where it lies now.
+    pub fn current(&self, id: FactId) -> FactId {
+        let Some(n) = self.facts.near.as_ref().filter(|n| n.ghosts.is_some()) else { return id };
+        if self.here(id) || n.live(id).is_some() {
+            return id;
+        }
+        let (r, a) = (self.rec(id), self.args(id).to_vec());
+        self.find_near(r.rel, r.persp, &a).or_else(|| self.find_here(r.rel, r.persp, &a)).unwrap_or(id)
+    }
+
+    /// The stretches read here that hold a fact this store wrote a firing of, by their `lo`.
+    pub fn far_homes(&self) -> Vec<FactId> {
+        let Some(n) = &self.facts.near else { return Vec::new() };
+        self.far_heads.keys().filter_map(|&id| n.live(id).map(|s| s.lo)).collect()
     }
 
     /// Every key a premise of this store's own firings quotes renamed by `f`, and the rows such keys name, which are
@@ -4025,6 +4145,7 @@ impl Store {
         fn view(s: &Store, n: WitNode) -> WitView<'_> {
             WitView { rule: n.rule, tick: n.tick, prems: s.prems_of(&n) }
         }
+        let id = self.current(id);
         let mut out: Vec<WitView<'_>> = self.chain(id).map(|n| view(self, n)).collect();
         if let Some(n) = self.facts.near.as_ref().filter(|_| !self.here(id)) {
             for s in n.all() {

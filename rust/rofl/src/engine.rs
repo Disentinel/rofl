@@ -12044,8 +12044,9 @@ impl Eval {
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
             Some(keys) => {
-                // (the index read only as far as it is narrower than the news)
-                let narrow = self.index_probe(l, s, persp, keys.len().saturating_sub(1));
+                // (the index read only as far as it is narrower than the news; a store that reads stretches would ask
+                // them all for what the news already holds)
+                let narrow = if self.store.reads_near() { None } else { self.index_probe(l, s, persp, keys.len().saturating_sub(1)) };
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => {
@@ -15466,6 +15467,7 @@ impl Eval {
     }
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        let id = self.store.current(id);
         let r = self.store.rec(id);
         let key = fact_key(&self.h, r.rel, r.persp, self.store.args(id));
         let pad = "  ".repeat(indent);

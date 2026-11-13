@@ -7,6 +7,13 @@
 //! joins at (`Joins::places`), a value that is not a node of the unit's own files. Each unit keeps the directory of
 //! such keys below it (`Unit::dir`), and of those that came home at it (`Unit::inner`): a key read at a unit is in
 //! the units of the value's file up to there, and in the holders the directories name.
+//!
+//! AN EDIT settles again only the units whose answer may have moved. A unit keeps what it asked: the stretches a
+//! key led it to (`Unit::reads`) and the keys themselves (`Unit::asked`), found or not. After an edit a unit is
+//! settled again where a stretch it read was replaced, or a fact came or went under a key it asked; settled again
+//! with the same facts it is laid at the ids it had (`Stretch::relaid`), and what read it stands. A stretch
+//! replaced stays where it lies, read by id alone (`Levels::ghosts`): a proof kept from before names by it a fact
+//! that holds still, and is led to where the fact lies now (`Store::current`).
 
 use super::*;
 use super::stages::{booked, Stage, ANY};
@@ -49,14 +56,79 @@ pub struct Unit {
     dir: Rc<FxMap<Key, Vec<FactId>>>,
     /// keys of a file below held under another child than the file's
     inner: Rc<FxMap<Key, Vec<FactId>>>,
+    /// the stretches it took whole (its children's, those at home at its place in the layers below, a file's for
+    /// its trees, those that hold a fact it fired again), by their `lo`, and the keys it asked the layers below and
+    /// its children, in order
+    reads: Rc<Vec<FactId>>,
+    asked: Rc<Vec<u64>>,
+}
+
+/// What the unit settled on this thread asks, while it is settled.
+#[derive(Default)]
+struct Asked {
+    reads: FxSet<FactId>,
+    keys: FxSet<u64>,
+    /// the arguments its reads of a relation gave, as bits
+    masks: FxSet<(Sym, u64)>,
+}
+
+thread_local! {
+    static ASKED: std::cell::RefCell<Option<Asked>> = const { std::cell::RefCell::new(None) };
+}
+
+fn asks(f: impl FnOnce(&mut Asked)) {
+    ASKED.with(|a| {
+        if let Some(a) = a.borrow_mut().as_mut() {
+            f(a)
+        }
+    })
+}
+
+/// A read as it is kept among those asked: the relation, the arguments it gave (`mask`, their bits) and their values
+/// in the order of the arguments. No argument given asks every fact of the relation.
+fn key_of(rel: Sym, mask: u64, vals: impl Iterator<Item = Term>) -> u64 {
+    use std::hash::{BuildHasher, Hasher};
+    let mut h = std::hash::BuildHasherDefault::<crate::store::Fx>::default().build_hasher();
+    h.write_u32(rel);
+    h.write_u64(mask);
+    vals.for_each(|v| h.write_u64(v.bits()));
+    h.finish()
+}
+/// The mask of a read that is answered by a fact with a variable: any read of the relation.
+const ANY_READ: u64 = u64::MAX;
+
+/// The unit settled on this thread asked the facts of `rel` with `vals` at `pos`. (A ground value is one number in
+/// every unit: the dictionary is the world's.)
+fn asked(h: &Heap, rel: Sym, pos: &[usize], vals: &[Term]) {
+    asks(|a| {
+        let mut given: Vec<(usize, Term)> = pos.iter().copied().zip(vals.iter().copied()).filter(|(p, v)| *p < 63 && h.is_ground(*v)).collect();
+        given.sort_unstable_by_key(|g| g.0);
+        let mask = given.iter().fold(0u64, |m, g| m | 1 << g.0);
+        a.keys.insert(key_of(rel, mask, given.iter().map(|g| g.1)));
+        a.masks.insert((rel, mask));
+    })
+}
+
+/// The reads a fact answers, of those that give the arguments `masks` name.
+fn answers(h: &Heap, rel: Sym, args: &[Term], masks: Option<&FxSet<u64>>, mut f: impl FnMut(u64)) {
+    let plain = |v: Term| h.is_ground(v);
+    f(key_of(rel, 0, std::iter::empty()));
+    if !args.iter().all(|v| plain(*v)) {
+        f(key_of(rel, ANY_READ, std::iter::empty()));
+    }
+    for &m in masks.into_iter().flatten().filter(|m| **m != 0 && (63 - m.leading_zeros() as usize) < args.len()) {
+        let at = |i: &usize| m >> i & 1 == 1;
+        if (0..args.len()).filter(at).all(|i| plain(args[i])) {
+            f(key_of(rel, m, (0..args.len()).filter(at).map(|i| args[i])));
+        }
+    }
 }
 
 /// Which child each premise of a firing lies under: a group keeps a firing only two children make, or one of its own.
 pub struct Meeting {
-    core: FactId,
     mark: FactId,
-    /// the stretches below in the order of `lo`, each with its child
-    under: Vec<(FactId, u32)>,
+    /// the stretches below in the order of `lo`, each with its end and its child
+    under: Vec<(FactId, FactId, u32)>,
 }
 
 impl Meeting {
@@ -64,13 +136,14 @@ impl Meeting {
         let mut one = None;
         for p in prems {
             let Prem::Fact(f) = p.kind() else { continue };
-            if f < self.core {
-                continue;
-            }
             if f >= self.mark {
                 return true;
             }
-            let c = self.under[self.under.partition_point(|u| u.0 <= f) - 1].1;
+            // (a fact of the core or of a layer below is under no child)
+            let Some(&(_, hi, c)) = self.under.partition_point(|u| u.0 <= f).checked_sub(1).map(|i| &self.under[i]) else { continue };
+            if f >= hi {
+                continue;
+            }
             match one {
                 None => one = Some(c),
                 Some(d) if d != c => return true,
@@ -93,6 +166,8 @@ struct Ctx {
     h: Heap,
     files: FxMap<u64, u32>,
     joins: Joins,
+    /// the arguments the reads of a relation gave, in any unit: what a fact come or gone is asked by
+    masks: Mutex<FxMap<Sym, FxSet<u64>>>,
 }
 
 // SAFETY: the heap is the core's, frozen; the threads read it.
@@ -156,8 +231,11 @@ fn surface(s: &Stretch, cx: &Ctx, files: (u32, u32), dir: &mut FxMap<Key, Vec<Fa
 
 /// Where a reader over `kids` finds a key: in the units of the value's file down from them and the holders their
 /// directories name, a value of no file below in the holders `dir` names. `los` are the stretches the reader reads.
-fn route_over(cx: Rc<Ctx>, kids: Vec<Rc<Unit>>, files: (u32, u32), los: Vec<FactId>, inner: Rc<FxMap<Key, Vec<FactId>>>, dir: Rc<FxMap<Key, Vec<FactId>>>) -> Rc<Route> {
+fn route_over(cx: Rc<Ctx>, kids: Vec<Rc<Unit>>, files: (u32, u32), los: Vec<FactId>, inner: Rc<FxMap<Key, Vec<FactId>>>, dir: Rc<FxMap<Key, Vec<FactId>>>, own: bool) -> Rc<Route> {
     Rc::new(move |rel: Sym, _: Option<Sym>, pos: &[usize], vals: &[Term], out: &mut Vec<u32>| {
+        if own {
+            asked(&cx.h, rel, pos, vals);
+        }
         let Some(ps) = cx.joins.places.get(&rel) else { return false };
         // by the value the fewest units hold
         let mut best: Option<Vec<u32>> = None;
@@ -200,10 +278,13 @@ fn lower_of(cx: &Rc<Ctx>, tops: &[Rc<Unit>]) -> Rc<Lower> {
         let los: Vec<FactId> = near.iter().map(|(s, _)| s.lo).collect();
         // (a layer holds few of the relations: the others do not ask its directory)
         let rels: FxSet<Sym> = near.iter().flat_map(|(s, _)| s.rels()).collect();
-        routes.push((list.len() as u32, rels, route_over(cx.clone(), vec![t.clone()], t.files, los, Rc::default(), t.dir.clone())));
+        routes.push((list.len() as u32, rels, route_over(cx.clone(), vec![t.clone()], t.files, los, Rc::default(), t.dir.clone(), false)));
         list.extend(near.into_iter().map(|(s, _)| s));
     }
+    let cx_h = cx.clone();
     let route: Rc<Route> = Rc::new(move |rel: Sym, persp: Option<Sym>, pos: &[usize], vals: &[Term], out: &mut Vec<u32>| {
+        // (asked whether a layer holds the relation yet or not: a fact of it come later answers)
+        asked(&cx_h.h, rel, pos, vals);
         let mut at = Vec::new();
         for (off, _, r) in routes.iter().filter(|(_, rels, _)| rels.contains(&rel)) {
             at.clear();
@@ -214,7 +295,7 @@ fn lower_of(cx: &Rc<Ctx>, tops: &[Rc<Unit>]) -> Rc<Lower> {
         }
         true
     });
-    Rc::new(Lower { list, route })
+    Rc::new(Lower::new(list, route))
 }
 
 /// A world settled by levels: the one unit of each layer, to be read where it lies.
@@ -226,6 +307,10 @@ pub struct Levels {
     /// such keys name
     keys: Heap,
     rows: Vec<(Sym, crate::store::VRow)>,
+    /// after an edit: the units settled again, and of them those that concluded what they had
+    pub again: Option<(usize, usize)>,
+    /// the stretches edits replaced
+    ghosts: Vec<Rc<Stretch>>,
 }
 
 impl Levels {
@@ -237,6 +322,7 @@ impl Levels {
             e.store.vrow_of.name(*k, *v);
         }
         e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, None);
+        e.store.reads_ghosts(self.ghosts.clone());
     }
 }
 
@@ -291,6 +377,8 @@ impl Levels {
         for t in &self.tops {
             walk(t, &mut ss, &mut us);
         }
+        let live = ss.len();
+        ss.extend(self.ghosts.iter());
         w.u32(ss.len() as u32);
         for s in &ss {
             s.write(w)?;
@@ -304,8 +392,14 @@ impl Levels {
             w.arena(&u.kids.iter().map(at).collect::<Vec<u32>>());
             write_dir(w, &u.dir);
             write_dir(w, &u.inner);
+            w.arena(&u.reads[..]);
+            w.arena(&u.asked[..]);
         }
         w.arena(&self.tops.iter().map(at).collect::<Vec<u32>>());
+        w.u32(live as u32);
+        let mut masks: Vec<[u64; 2]> = self.cx.masks.lock().unwrap().iter().flat_map(|(rel, ms)| ms.iter().map(move |m| [*rel as u64, *m])).collect();
+        masks.sort_unstable();
+        w.arena(&masks.concat());
         Ok(())
     }
 
@@ -320,20 +414,54 @@ impl Levels {
         let mark = r.u32()?;
         let mut ss: Vec<Rc<Stretch>> = Vec::new();
         let over = Rc::new((e.fork().store, e.h.clone()));
+        let ev = Fork(e.fork());
+        let trees: Rc<crate::store::Trees> = Rc::new(move |store| {
+            let mut f = ev.0.fork();
+            f.store = store;
+            let Eval { vc, store, .. } = &mut f;
+            vc.vrefresh(store);
+            std::mem::take(&mut f.store)
+        });
         for _ in 0..r.u32()? {
-            ss.push(Rc::new(Stretch::read(&over, r)?));
+            ss.push(Rc::new(Stretch::read(&over, &trees, r)?));
         }
         let mut us: Vec<Rc<Unit>> = Vec::new();
         for _ in 0..r.u32()? {
             let stretch = ss.get(r.u32()? as usize).ok_or_else(bad)?.clone();
             let files = (r.u32()?, r.u32()?);
             let kids = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
-            us.push(Rc::new(Unit { stretch, files, kids, dir: Rc::new(read_dir(r)?), inner: Rc::new(read_dir(r)?) }));
+            us.push(Rc::new(Unit { stretch, files, kids, dir: Rc::new(read_dir(r)?), inner: Rc::new(read_dir(r)?), reads: Rc::new(r.arena::<u32>()?.to_vec()), asked: Rc::new(r.arena::<u64>()?.to_vec()) }));
         }
         let tops = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
-        Ok(Levels { tops, cx: Rc::new(Ctx { h: e.h.clone(), files, joins }), mark, keys: e.h.clone(), rows: Vec::new() })
+        let ghosts = ss.split_off((r.u32()? as usize).min(ss.len()));
+        let mut masks: FxMap<Sym, FxSet<u64>> = FxMap::default();
+        for x in r.arena::<u64>()?.chunks_exact(2) {
+            masks.entry(x[0] as Sym).or_default().insert(x[1]);
+        }
+        Ok(Levels { tops, cx: Rc::new(Ctx { h: e.h.clone(), files, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts })
+    }
+
+    /// The unit of layer `k` over exactly `files`.
+    fn find(&self, k: usize, files: (u32, u32)) -> Option<Rc<Unit>> {
+        let mut u = self.tops.get(k)?;
+        while u.files != files {
+            u = u.kids.iter().find(|c| c.files.0 <= files.0 && files.1 <= c.files.1)?;
+        }
+        Some(u.clone())
+    }
+
+    /// The files in the world's order, by name.
+    pub fn files(&self) -> Vec<u64> {
+        let mut fs: Vec<(u32, u64)> = self.cx.files.iter().map(|(h, i)| (*i, *h)).collect();
+        fs.sort_unstable();
+        fs.into_iter().map(|(_, h)| h).collect()
     }
 }
+
+/// The world as it was settled before an edit, and the files whose text moved, by their places.
+pub struct Edit<'a>(pub &'a Levels, pub FxSet<u32>);
+// SAFETY: the units of the world before are read
+unsafe impl Sync for Edit<'_> {}
 
 impl Unit {
     pub fn count(&self) -> usize {
@@ -607,10 +735,17 @@ impl Eval {
 
     /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world. `fan`
     /// units make the one above.
-    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize) -> Result<Levels, Halt> {
-        let cx = Rc::new(Ctx { h: self.h.clone(), files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins });
+    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize, edit: Option<Edit>) -> Result<Levels, Halt> {
+        let cx = Rc::new(Ctx { h: self.h.clone(), files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
         let core = self.store.len_ids();
-        let bump = AtomicU32::new(core);
+        let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
+        // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
+        // settled again, how many of them with the facts they had
+        let replaced: Mutex<FxSet<FactId>> = Mutex::default();
+        let ghosts: Mutex<Vec<Rc<Stretch>>> = Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.ghosts.clone()));
+        let moved: Mutex<Vec<FxSet<u64>>> = Mutex::default();
+        let (again, same) = (AtomicUsize::new(0), AtomicUsize::new(0));
+        let was = |k: usize, files: (u32, u32)| edit.as_ref().and_then(|e| e.0.find(k, files));
         let base = Fork(self.fork());
         let one = Mutex::new(());
         let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(Vec::new()));
@@ -650,9 +785,18 @@ impl Eval {
             e.0.store.folds = None;
             e
         };
-        let done = |e: Fork, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<FxMap<Key, Vec<FactId>>>| {
+        let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<FxMap<Key, Vec<FactId>>>, asked: Asked| {
             let mut e = e;
             let mut store = std::mem::take(&mut e.0.store);
+            let mut asked = asked;
+            asked.reads.extend(store.far_homes());
+            {
+                let mut ms = cx.masks.lock().unwrap();
+                for (rel, m) in asked.masks.drain() {
+                    asked.keys.insert(key_of(rel, ANY_READ, std::iter::empty()));
+                    ms.entry(rel).or_default().insert(m);
+                }
+            }
             // the keys its proofs quote are its heap's own: the world numbers each once
             {
                 let (mut m, mut memo) = (keys.lock().unwrap(), FxMap::<Sym, Sym>::default());
@@ -660,15 +804,52 @@ impl Eval {
                 rows.lock().unwrap().extend(named);
             }
             let n = store.len_ids() - store.layer_mark();
-            let stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
+            let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
             drop((one.lock().unwrap(), e));
+            if let Some(o) = was(k, files) {
+                again.fetch_add(1, Relaxed);
+                // (a file's own facts are proved from themselves and the core: where they are the same, so are the
+                // proofs, and the unit stands as it was with its trees)
+                if k == 0 && kids.is_empty() && stretch.same_as(&o.stretch) {
+                    same.fetch_add(1, Relaxed);
+                    return Unit { stretch: o.stretch.clone(), files, kids, dir: o.dir.clone(), inner: o.inner.clone(), reads: o.reads.clone(), asked: o.asked.clone() };
+                }
+                let laid = if k > 0 || !kids.is_empty() { stretch.relaid(&o.stretch, fork().0.store, &cx.h) } else { None };
+                match laid {
+                    Some(s) => {
+                        same.fetch_add(1, Relaxed);
+                        stretch = s;
+                    }
+                    None => {
+                        replaced.lock().unwrap().insert(o.stretch.lo);
+                        ghosts.lock().unwrap().push(o.stretch.clone());
+                        let mut keys: FxSet<u64> = FxSet::default();
+                        {
+                            let ms = cx.masks.lock().unwrap();
+                            stretch.differs(&o.stretch, |rel, args| answers(&cx.h, rel, args, ms.get(&rel), |key| { keys.insert(key); }));
+                        }
+                        moved.lock().unwrap()[k].extend(keys);
+                    }
+                }
+            }
             surface(&stretch, &cx, files, &mut dir);
-            Unit { stretch: Rc::new(stretch), files, kids, dir: Rc::new(dir), inner }
+            let (mut reads, mut keys): (Vec<FactId>, Vec<u64>) = (asked.reads.into_iter().collect(), asked.keys.into_iter().collect());
+            reads.sort_unstable();
+            keys.sort_unstable();
+            Unit { stretch: Rc::new(stretch), files, kids, dir: Rc::new(dir), inner, reads: Rc::new(reads), asked: Rc::new(keys) }
+        };
+        // a unit of the world before, over the children as they are now
+        let kept = |o: &Unit, kids: Vec<Rc<Unit>>| Unit { stretch: o.stretch.clone(), files: o.files, kids, dir: o.dir.clone(), inner: o.inner.clone(), reads: o.reads.clone(), asked: o.asked.clone() };
+        // whether what a unit of the world before read stands: no stretch it read replaced, no fact come or gone
+        // under a key it asked the layers below
+        let stands = |o: &Unit, below: &FxSet<u64>| {
+            let r = replaced.lock().unwrap();
+            !o.reads.iter().any(|s| r.contains(s)) && (below.is_empty() || !o.asked.iter().any(|a| below.contains(a)))
         };
         // a unit of layer `k` over `kids`: it reads the layers below (`lower`) of the whole world by key, takes at
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
         // together where two of them meet
-        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, lo: FactId, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32)| -> Result<Unit, Halt> {
+        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32)| -> Result<Unit, Halt> {
             let mut near: Vec<(Rc<Stretch>, u32)> = Vec::new();
             for (c, k) in kids.iter().enumerate() {
                 below(k, c as u32, &mut near);
@@ -703,10 +884,11 @@ impl Eval {
             seeds.sort_unstable();
             seeds.dedup();
             let inner = Rc::new(inner);
-            let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone())));
+            let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()), true));
             let mut e = fork();
             let mark = bump.load(Relaxed);
-            e.0.meeting = Some(Rc::new(Meeting { core: lo, mark, under: near.iter().map(|(s, c)| (s.lo, *c)).collect() }));
+            ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
+            e.0.meeting = Some(Rc::new(Meeting { mark, under: near.iter().map(|(s, c)| (s.lo, s.hi, *c)).collect() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone());
             e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
             e.0.wall.hold_end = true;
@@ -745,17 +927,23 @@ impl Eval {
             }
             e.0.wall.cutting = Some(Box::default());
             e.0.propagate(front)?;
-            Ok(done(e, files, kids, dir, inner))
+            let asked = ASKED.with(|a| a.borrow_mut().take()).unwrap_or_default();
+            Ok(done(e, k, files, kids, dir, inner, asked))
         };
         let mut layers: Vec<Vec<Vec<Rc<Unit>>>> = Vec::new();
         let mut tops: Vec<Rc<Unit>> = Vec::new();
         for k in 0..rules_of.len() {
             let lower = (k > 0).then(|| lower_of(&cx, &tops));
-            let lo = bump.load(Relaxed);
+            let below: FxSet<u64> = moved.lock().unwrap().iter().flatten().copied().collect();
+            moved.lock().unwrap().push(FxSet::default());
             let at_home = |d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
             let mut units = level(files.len(), &|x| {
+                let one = (x as u32, x as u32 + 1);
+                if let Some(o) = was(k, one).filter(|o| if k == 0 { !edit.as_ref().is_some_and(|e| e.1.contains(&one.0)) } else { stands(o, &below) }) {
+                    return Ok(kept(&o, Vec::new()));
+                }
                 if k > 0 {
-                    return unit(k, &lower, &trees, lo, at_home(0, x), Vec::new(), (x as u32, x as u32 + 1));
+                    return unit(k, &lower, &trees, at_home(0, x), Vec::new(), one);
                 }
                 let mut e = fork();
                 let from = e.0.store.len_ids();
@@ -764,11 +952,15 @@ impl Eval {
                 e.0.own_kept(stage.0, from)?;
                 // (its trees are left as they stand at the end: the units above read them)
                 e.0.vc.vrefresh(&mut e.0.store);
-                Ok(done(e, (x as u32, x as u32 + 1), Vec::new(), FxMap::default(), Rc::default()))
+                Ok(done(e, k, one, Vec::new(), FxMap::default(), Rc::default(), Asked::default()))
             })?;
             if k == 0 {
                 let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
-                trees = Some(Rc::new(move |t: Term| cx.file(t).map(|f| of[f as usize].clone())));
+                trees = Some(Rc::new(move |t: Term| {
+                    let s = &of[cx.file(t)? as usize];
+                    asks(|a| { a.reads.insert(s.lo); });
+                    Some(s.clone())
+                }));
             }
             let mut depths = vec![units.clone()];
             while units.len() > 1 {
@@ -778,16 +970,20 @@ impl Eval {
                     let kids = groups[x].clone();
                     if kids.len() == 1 {
                         let k = &kids[0];
-                        return Ok(Unit { stretch: k.stretch.clone(), files: k.files, kids: k.kids.clone(), dir: k.dir.clone(), inner: k.inner.clone() });
+                        return Ok(kept(k, k.kids.clone()));
                     }
                     let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
-                    unit(k, &lower, &trees, lo, at_home(d, x), kids, files)
+                    if let Some(o) = was(k, files).filter(|o| stands(o, &below)) {
+                        return Ok(kept(&o, kids));
+                    }
+                    unit(k, &lower, &trees, at_home(d, x), kids, files)
                 })?;
                 depths.push(units.clone());
             }
             tops.push(units.pop().expect("a world of a file at least"));
             layers.push(depths);
         }
-        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap() })
+        let again = edit.is_some().then(|| (again.load(Relaxed), same.load(Relaxed)));
+        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap() })
     }
 }

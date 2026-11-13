@@ -1129,6 +1129,28 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["why", &one, "boot.rofl", "w.rofl"]);
     assert!(whole.out == fresh.out, "why {one}: by levels {:?}\nthe world whole {:?}", fresh.out, whole.out);
     assert!(fresh.code == 0 && kept.err.contains("kept volumes") && kept.out == fresh.out && fresh.out.lines().count() > 2, "why {one}: from the kept units {:?} {:?}\nfresh {:?}", kept.out, kept.err, fresh.out);
+    // AN EDIT OF ONE FILE settles again the units that asked what moved, and the world answers as it does whole: a
+    // call taken out of a file, then a function put into another that calls into a third
+    let gone = text.lines().find(|l| l.starts_with("refers(n0000000000000006_")).expect("a call in the sixth file").to_string();
+    let less = text.replacen(&format!("{gone}\n"), "", 1);
+    let n = |k: usize| format!("n{:016x}_{k}", 10);
+    let more = format!("{less}func({f}).\ndefines({f}, nm_new).\nparent({s}, {f}).\nedge({f}, {s}).\nstmt({s}).\nrefers({s}, nm_3_0).\nrefers({s}, nm_new).\n", f = n(1000), s = n(1001));
+    for (name, text) in [("a call gone", &less), ("a function come", &more), ("the call back", &format!("{more}{gone}\n"))] {
+        d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
+        for (i, q) in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"].iter().enumerate() {
+            let args = ["ask", q, "boot.rofl", "w.rofl"];
+            let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
+            let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &args);
+            assert!(whole.code == 0 && got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{name}, {q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
+            if i == 0 {
+                let said = got.err.lines().find(|l| l.contains("units settled again")).unwrap_or_else(|| panic!("{name}: the edit was not taken by the units: {:?}", got.err));
+                let nums: Vec<usize> = said.split(' ').filter_map(|w| w.parse().ok()).collect();
+                assert!(nums[2] > 0 && nums[2] * 2 < nums[3], "{name}: {said}");
+            } else {
+                assert!(got.err.contains("kept volumes"), "{name}, {q}: asked again it was not answered from what the edit kept: {:?}", got.err);
+            }
+        }
+    }
 }
 
 #[test]
