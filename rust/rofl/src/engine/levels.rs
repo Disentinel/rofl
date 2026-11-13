@@ -403,7 +403,19 @@ impl Levels {
     pub fn read_by(&self, e: &mut Eval) {
         e.store.folds = None;
         self.named_by(e);
-        e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, None);
+        // (a tree is read from the unit of the node's file, as the units read it)
+        let mut leaves: Vec<Rc<Stretch>> = Vec::new();
+        fn walk(u: &Unit, out: &mut Vec<Rc<Stretch>>) {
+            if u.kids.is_empty() {
+                out.push(u.stretch.clone());
+            }
+            u.kids.iter().for_each(|k| walk(k, out));
+        }
+        self.tops.first().into_iter().for_each(|t| walk(t, &mut leaves));
+        let cis: FxSet<usize> = self.cx.joins.home.1.iter().filter_map(|rel| e.vc.vclosure_for(*rel)).collect();
+        let (cx, of) = (self.cx.clone(), leaves.clone());
+        let trees: Rc<TreeOf> = Rc::new(move |t: Term| Some(of[cx.file(t)? as usize].clone()));
+        e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, Some(trees), Some((leaves, cis)));
         e.store.reads_ghosts(self.ghosts.clone());
     }
 
@@ -451,6 +463,9 @@ impl Levels {
         let mut places: Vec<[u32; 3]> = self.cx.joins.places.iter().flat_map(|(rel, ps)| ps.iter().map(move |(n, p)| [*rel, *n as u32, *p as u32])).collect();
         places.sort_unstable();
         w.arena(&places.concat());
+        let mut trees: Vec<Sym> = self.cx.joins.home.1.iter().copied().collect();
+        trees.sort_unstable();
+        w.arena(&trees);
         w.u32(self.mark);
         w.u32(self.libs);
         fn walk<'a>(u: &'a Rc<Unit>, ss: &mut Vec<&'a Rc<Stretch>>, us: &mut Vec<&'a Rc<Unit>>) {
@@ -527,6 +542,7 @@ impl Levels {
         for x in r.arena::<u32>()?.chunks_exact(3) {
             joins.places.entry(x[0]).or_default().push((x[1] as u8, x[2] as u8));
         }
+        joins.home = Rc::new((FxSet::default(), r.arena::<Sym>()?.iter().copied().collect()));
         let (mark, libs) = (r.u32()?, r.u32()?);
         let mut ss: Vec<Rc<Stretch>> = Vec::new();
         let over = Rc::new((e.fork().store, e.h.clone()));
@@ -1048,7 +1064,7 @@ impl Eval {
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let homes = old.as_ref().map(|_| (at_home.iter().map(|s| (s.lo, s.hi)).collect(), if files == all { core } else { 0 }, home.clone()));
             e.0.meeting = Some(Rc::new(Meeting { mark, under: near.iter().map(|(s, c)| (s.lo, s.hi, *c)).collect(), home: homes, libs: libk.as_ref().map_or(Vec::new(), |l| l.at.clone()), apart }));
-            e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone());
+            e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
             e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
             e.0.wall.hold_end = true;
             e.0.by_seed = true;

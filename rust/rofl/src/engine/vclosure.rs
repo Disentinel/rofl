@@ -1170,6 +1170,10 @@ impl VClosureState {
         if !self.vclosures[ci].open {
             return Rc::from(Vec::new());
         }
+        if let Some(f) = store.held_trees(ci) {
+            store.virtuals[ci].forests = f.clone();
+            return f;
+        }
         let edge = self.vclosures[ci].src;
         let near = store.virtuals[ci].near;
         let n = self.vseen(store, ci);

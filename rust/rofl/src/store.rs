@@ -1350,7 +1350,7 @@ impl Stretch {
     /// The facts of a stretch put under the ids `lo..hi` into `fork`, in the order given, with their firings.
     #[allow(clippy::too_many_arguments)]
     fn unfold(mut fork: Store, h: &Heap, lo: FactId, hi: FactId, recs: &[u32], args: &[u64], fired: &[u32], prems: &[PremRef]) -> Result<Store, String> {
-        fork.read_near(lo, None, Vec::new(), None, None);
+        fork.read_near(lo, None, Vec::new(), None, None, None);
         Rc::make_mut(fork.facts.near.as_mut().expect("set above")).top = hi;
         let bad = || "a kept stretch is not one".to_string();
         let mut at = 0;
@@ -1448,11 +1448,16 @@ pub struct Near {
     whole: bool,
     /// in a unit: the stretch of the file a node is of, whose trees answer for the node
     trees: Option<Rc<TreeOf>>,
+    /// in the world's reader: the closures the trees of the files' own units answer, each with the forests of
+    /// every file
+    forest: Option<FxMap<usize, Forests>>,
     /// the stretches an edit replaced: a proof kept from before may still name a fact by its id there
     ghosts: Option<Rc<Lower>>,
     /// this store's own ids end here: a stretch laid again where it stood may name a fact that lies above it
     top: FactId,
 }
+
+pub type Forests = Rc<[(Sym, Rc<crate::forest::Forest>)]>;
 
 /// The stretch a file's own unit left, by a node of the file.
 pub type TreeOf = dyn Fn(Term) -> Option<Rc<Stretch>> + Send + Sync;
@@ -1763,10 +1768,7 @@ impl VirtualRel {
 
     /// The firing of the row `(a, d)` of `book`: its rule, and the parent of `d` when it is not `a`.
     pub fn firing(&self, book: Sym, a: Term, d: Term) -> Option<(Sym, Term, bool)> {
-        let f = &self.forests.iter().find(|(b, _)| *b == book)?.1;
-        if !f.is_ancestor(a, d) {
-            return None;
-        }
+        let f = &self.forests.iter().find(|(b, f)| *b == book && f.is_ancestor(a, d))?.1;
         let p = f.step_of(a, d)?;
         Some(if p == a { (self.base_rule, p, false) } else { (self.step_rule, p, true) })
     }
@@ -2597,13 +2599,14 @@ impl Store {
 
     /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
-    pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, trees: Option<Rc<TreeOf>>) {
-        let whole = trees.is_none();
+    pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, trees: Option<Rc<TreeOf>>, forest: Option<(Vec<Rc<Stretch>>, FxSet<usize>)>) {
+        let whole = trees.is_none() || forest.is_some();
+        let forest: Option<FxMap<usize, Forests>> = forest.map(|(leaves, cis)| cis.into_iter().map(|ci| (ci, leaves.iter().flat_map(|s| s.forests(ci).to_vec()).collect())).collect());
         let core = self.facts.recs.mark;
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
         assert!(lower.iter().flat_map(|l| l.list.iter()).all(|s| s.hi <= mark));
-        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, rows: Rc::default(), lens: Rc::default(), whole, ghosts: None, top: FactId::MAX }));
+        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, forest, rows: Rc::default(), lens: Rc::default(), whole, ghosts: None, top: FactId::MAX }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
         self.fold.mark = mark as usize;
@@ -2777,12 +2780,26 @@ impl Store {
         self.facts.near = Some(n);
     }
 
-    /// In a unit of a world by levels, the forests of the closure `ci` that answer for `node`: those its file's unit
-    /// left (none for a value of no file). None where this store builds its own.
+    /// In a world by levels, the forests of the closure `ci` that answer for `node`: those its file's unit left
+    /// (none for a value of no file); for no node, in the world's reader, those of every file. None where this
+    /// store builds its own.
     pub fn tree_of(&self, ci: usize, node: Option<Term>) -> Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>> {
-        let trees = self.facts.near.as_ref()?.trees.as_ref()?;
-        let node = node.expect("a unit reads a tree from a node, never whole");
-        Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.forests(ci)))
+        let near = self.facts.near.as_ref()?;
+        let trees = near.trees.as_ref()?;
+        let all = match &near.forest {
+            Some(by) => Some(by.get(&ci)?),
+            None => None,
+        };
+        match (node, all) {
+            (Some(node), _) => Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.forests(ci))),
+            (None, Some(all)) => Some(all.clone()),
+            (None, None) => panic!("a unit reads a tree from a node, never whole"),
+        }
+    }
+
+    /// In the world's reader, the trees of the closure `ci` the files' units left, all of them.
+    pub fn held_trees(&self, ci: usize) -> Option<Forests> {
+        self.facts.near.as_ref()?.forest.as_ref()?.get(&ci).cloned()
     }
 
     /// Whether this store reads its trees from the units of the files.
@@ -4749,8 +4766,7 @@ impl Store {
     pub fn vrow_height(&self, k: Sym, memo: &mut Heights) -> u32 {
         let Some((ci, book, a, d)) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false)) else { return 0 };
         let Some(v) = self.virtuals.get(ci) else { return 0 };
-        let Some(f) = v.forests.iter().find(|(b, _)| *b == book).map(|x| x.1.clone()) else { return 0 };
-        if !f.is_ancestor(a, d) {
+        if !v.forests.iter().any(|(b, f)| *b == book && f.is_ancestor(a, d)) {
             return 0;
         }
         // down the chain from the ancestor, each firing is 1 + the higher of the row above and its facts
@@ -6737,7 +6753,7 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!((a.hi - a.lo, b.hi - b.lo), (50, 51));
         let (a, b) = (Rc::new(a), Rc::new(b));
         let mut top = s.clone();
-        top.read_near(b.hi, None, vec![a.clone(), b.clone()], None, None);
+        top.read_near(b.hi, None, vec![a.clone(), b.clone()], None, None, None);
         for (st, from) in [(&a, 0), (&b, 30)] {
             for k in 0..25u32 {
                 let (e, d) = (st.lo + 2 * k, st.lo + 2 * k + 1);
