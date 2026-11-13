@@ -488,7 +488,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     drop(texts);
     // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
     let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
-    if cut.files.len() < 2 || bytes < VOLUMES_FROM && std::env::var("ROFL_VOLUMES").as_deref() != Ok("1") { return None; }
+    if cut.files.len() < 2 || bytes < VOLUMES_FROM && !matches!(std::env::var("ROFL_VOLUMES").as_deref(), Ok("1" | "one" | "levels")) { return None; }
     let mut s = Session::fresh(o.budget);
     set_walls(o, &mut s);
     if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
