@@ -425,17 +425,8 @@ impl Levels {
         let mark = r.u32()?;
         let mut ss: Vec<Rc<Stretch>> = Vec::new();
         let over = Rc::new((e.fork().store, e.h.clone()));
-        struct Vc(VClosureState);
-        // SAFETY: cloned under the lock that unfolds a stretch at a time
-        unsafe impl Send for Vc {}
-        unsafe impl Sync for Vc {}
-        let vc = Vc(e.vc.clone());
-        let trees: Rc<crate::store::Trees> = Rc::new(move |mut store| {
-            vc.0.clone().vrefresh(&mut store);
-            store
-        });
         for _ in 0..r.u32()? {
-            ss.push(Rc::new(Stretch::read(&over, &trees, r)?));
+            ss.push(Rc::new(Stretch::read(&over, r)?));
         }
         let mut us: Vec<Rc<Unit>> = Vec::new();
         for _ in 0..r.u32()? {

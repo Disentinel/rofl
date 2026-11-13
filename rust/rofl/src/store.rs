@@ -1058,7 +1058,7 @@ pub struct Stretch {
     pub hi: FactId,
     /// kept: its own facts read where they lie, until it is unfolded
     raw: std::sync::OnceLock<Raw>,
-    /// of a file's own unit kept: its trees, built again when first asked
+    /// of a file's own unit kept: its trees, as they were kept
     forests: std::sync::OnceLock<Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
     /// the relations it wrote a fact of, and the facts lying elsewhere it holds a firing of: both in order
     rels: Vec<Sym>,
@@ -1072,8 +1072,6 @@ struct Kept {
     over: Rc<(Store, Heap)>,
     map: Rc<crate::arena::Region>,
     at: usize,
-    /// for a stretch that left trees: builds them again over its facts
-    trees: Option<Rc<Trees>>,
 }
 
 /// A kept stretch's own facts where they lie: four words a fact (relation, book, flags, arity), the arguments, where
@@ -1086,9 +1084,6 @@ struct Raw {
     /// its facts by the hash of their key, made when first asked
     keys: std::sync::OnceLock<FxMap<u64, Vec<FactId>>>,
 }
-
-/// What builds again the trees of a stretch unfolded.
-pub type Trees = dyn Fn(Store) -> Store;
 
 /// A stretch's own facts and firings as they are kept.
 struct Parts {
@@ -1106,19 +1101,31 @@ const OPEN: u64 = u64::MAX;
 impl Stretch {
     /// A STRETCH AS IT IS KEPT: its own facts in the order of their ids and every firing it holds, of them and of
     /// facts that lie elsewhere. Nothing of what it read is written, and its indexes are made again when it is read.
-    /// `trees`: it is a file's own, whose trees the units above read.
+    /// `trees`: it is a file's own, whose trees the units above read, and they are kept with it.
     pub fn write(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<(), String> {
         let order: Vec<FactId> = (self.lo..self.hi).collect();
         let p = self.parts(&order, &|f| f)?;
         w.u32(self.lo);
         w.u32(self.hi);
-        w.u32(trees as u32);
         w.arena(&self.rels);
         w.arena(&self.far);
         w.arena(&p.recs);
         w.arena(&p.args);
         w.arena(&p.fired);
         w.arena(&p.prems);
+        let fs: Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>> = match (trees, self.forests.get()) {
+            (false, _) => Vec::new(),
+            (true, Some(fs)) => fs.clone(),
+            (true, None) => self.store().virtuals.iter().map(|v| v.forests.clone()).collect(),
+        };
+        w.u32(fs.len() as u32);
+        for f in &fs {
+            w.u32(f.len() as u32);
+            for (b, t) in f.iter() {
+                w.u32(*b);
+                t.write(w);
+            }
+        }
         Ok(())
     }
 
@@ -1206,17 +1213,28 @@ impl Stretch {
 
     /// The stretch `write` kept, to be unfolded when first read: over `over`, a fork of the core that wrote nothing
     /// and the core's heap.
-    pub fn read(over: &Rc<(Store, Heap)>, trees: &Rc<Trees>, r: &mut crate::arena::VolR) -> Result<Stretch, String> {
+    pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR) -> Result<Stretch, String> {
         let (lo, hi) = (r.u32()?, r.u32()?);
-        let trees = (r.u32()? != 0).then(|| trees.clone());
         let (rels, far) = (r.arena::<u32>()?.to_vec(), r.arena::<u32>()?.to_vec());
         let at = r.at();
         r.arena::<u32>()?;
         r.arena::<u64>()?;
         r.arena::<u32>()?;
         r.arena::<PremRef>()?;
-        let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests: Default::default(), raw: Default::default() })
+        let mut fs: Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>> = Vec::new();
+        for _ in 0..r.u32()? {
+            let mut f = Vec::new();
+            for _ in 0..r.u32()? {
+                f.push((r.u32()?, Rc::new(crate::forest::Forest::read(r)?)));
+            }
+            fs.push(Rc::from(f));
+        }
+        let forests = std::sync::OnceLock::new();
+        if !fs.is_empty() {
+            let _ = forests.set(fs);
+        }
+        let kept = Some(Kept { over: over.clone(), map: r.map(), at });
+        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests, raw: Default::default() })
     }
 
     /// The stretch itself: as it was settled, or read now from where it is kept.
@@ -1311,16 +1329,12 @@ impl Stretch {
         })
     }
 
-    /// The forests of the closure `ci` this stretch answers with: as it was settled, or of a file's unit kept,
-    /// built again over its facts when first asked.
+    /// The forests of the closure `ci` this stretch answers with: as it was settled, or as a file's unit kept them.
     pub fn forests(&self, ci: usize) -> Rc<[(Sym, Rc<crate::forest::Forest>)]> {
-        let Some(t) = self.kept.as_ref().and_then(|k| k.trees.as_ref()) else { return self.store().virtuals[ci].forests.clone() };
-        let fs = self.forests.get_or_init(|| {
-            let s = self.store().clone();
-            let _one = UNFOLD.lock().unwrap();
-            t(s).virtuals.iter().map(|v| v.forests.clone()).collect()
-        });
-        fs.get(ci).cloned().unwrap_or_else(|| Rc::from(Vec::new()))
+        match self.forests.get() {
+            Some(fs) => fs.get(ci).cloned().unwrap_or_else(|| Rc::from(Vec::new())),
+            None => self.store().virtuals[ci].forests.clone(),
+        }
     }
 
     /// The facts of a stretch put under the ids `lo..hi` into `fork`, in the order given, with their firings.
