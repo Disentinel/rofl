@@ -277,11 +277,12 @@ impl Eval {
                     let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
                     let cross = joins.cross.len();
                     let t = std::time::Instant::now();
-                    let unit = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
+                    let lv = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
+                    let unit = lv.top.clone();
                     let ms = t.elapsed().as_millis();
                     let from = w.e.store.len_ids();
-                    w.e.take_units(&unit, stage);
-                    w.e.diags.push(format!("levels: {} rules below, {cross} of them where units meet; {} facts in {} units in {ms} ms, {} taken", stage.rules.len(), unit.stretch.hi - from, unit.count(), w.e.store.len_ids() - from));
+                    lv.read_by(&mut w.e);
+                    w.e.diags.push(format!("levels: {} rules below, {cross} of them where units meet; {} facts in {} units in {ms} ms", stage.rules.len(), unit.stretch.hi - from, unit.count()));
                     w.e.stage_given = Some(stage.below());
                 }
                 // the lower stage a file at a time, each in a world of its own the lemmas leave
@@ -497,7 +498,8 @@ impl Eval {
             let cool = pressed();
             st.cooled += cool as usize;
             on_threads(&mut ws, &|i, w| {
-                if cool {
+                // (a world that reads stretches is not cooled whole: its stretches are what cools)
+                if cool && w.e.store.near().is_empty() {
                     w.cool(i, lv);
                 }
                 w.e.wall.level_wall = Some(lv);

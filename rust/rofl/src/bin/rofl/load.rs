@@ -581,6 +581,9 @@ fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> 
 /// The core and every worker's world kept at `k`, with what they were read from, and beside them (`<k>.files`) the
 /// sum of the core's text and of each file's, with the worker that holds it: what a later run takes by delta.
 fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str, sums: (u64, &[(String, u64, usize)]), over: bool) -> Result<(), String> {
+    if v.worlds.iter().any(|w| !w.eval.store.near().is_empty()) {
+        return Err("a world settled by levels reads its units where they lie, and their stretches are not written yet".into());
+    }
     let note = crate::kept::record(world, files, &[], read, &[], None)?;
     let _ = std::fs::remove_file(format!("{k}.scroll"));
     // (taken by delta, each is written as an overlay over the volume it was opened from: what the edit moved, not the world)

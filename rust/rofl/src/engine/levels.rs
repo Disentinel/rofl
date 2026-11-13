@@ -111,7 +111,7 @@ fn below(u: &Rc<Unit>, child: u32, out: &mut Vec<(Rc<Stretch>, u32)>) {
 /// The facts a stretch holds itself with `v` at argument `p`.
 fn held(s: &Stretch, h: &Heap, (rel, arity, p): Place, v: Term) -> Vec<FactId> {
     let mut out = Vec::new();
-    s.store.top_matches(h, rel, None, arity as usize, &[p as usize], &[v], &mut out);
+    s.matches(h, rel, None, arity as usize, &[p as usize], &[v], &mut out);
     out.retain(|&k| s.store.args(k).get(p as usize) == Some(&v));
     out
 }
@@ -131,6 +131,61 @@ fn surface(s: &Stretch, cx: &Ctx, files: (u32, u32), dir: &mut FxMap<Key, Vec<Fa
                 }
             }
         }
+    }
+}
+
+/// Where a reader over `kids` finds a key: in the units of the value's file down from them and the holders their
+/// directories name, a value of no file below in the holders `dir` names. `los` are the stretches the reader reads.
+fn route_over(cx: Rc<Ctx>, kids: Vec<Rc<Unit>>, files: (u32, u32), los: Vec<FactId>, inner: Rc<FxMap<Key, Vec<FactId>>>, dir: Rc<FxMap<Key, Vec<FactId>>>) -> Rc<Route> {
+    Rc::new(move |rel: Sym, _: Option<Sym>, pos: &[usize], vals: &[Term], out: &mut Vec<u32>| {
+        let Some(ps) = cx.joins.places.get(&rel) else { return false };
+        // by the value the fewest units hold
+        let mut best: Option<Vec<u32>> = None;
+        for (p, v) in pos.iter().zip(vals).map(|(p, v)| (*p as u8, *v)).filter(|(p, _)| ps.iter().any(|(_, q)| q == p)) {
+            let key = (rel, p, v);
+            let mut at_v = Vec::new();
+            let mut put = |lo: &FactId| at_v.extend(los.binary_search(lo).ok().map(|i| i as u32));
+            match cx.file(v).filter(|f| files.0 <= *f && *f < files.1) {
+                Some(f) => {
+                    let mut at = &kids;
+                    while let Some(k) = at.iter().find(|k| k.files.0 <= f && f < k.files.1) {
+                        put(&k.stretch.lo);
+                        k.inner.get(&key).into_iter().flatten().for_each(&mut put);
+                        at = &k.kids;
+                    }
+                    inner.get(&key).into_iter().flatten().for_each(&mut put);
+                }
+                None => dir.get(&key).into_iter().flatten().for_each(&mut put),
+            }
+            if best.as_ref().is_none_or(|b| at_v.len() < b.len()) {
+                best = Some(at_v);
+            }
+        }
+        let Some(best) = best else { return false };
+        out.extend(best);
+        out.sort_unstable();
+        out.dedup();
+        true
+    })
+}
+
+/// A world settled by levels: its one unit, to be read where it lies.
+pub struct Levels {
+    pub top: Rc<Unit>,
+    cx: Rc<Ctx>,
+    mark: FactId,
+}
+
+impl Levels {
+    /// `e`, a fork of the core the units were settled over that wrote nothing, reads them from here on.
+    pub fn read_by(&self, e: &mut Eval) {
+        let mut near = Vec::new();
+        below(&self.top, 0, &mut near);
+        near.sort_unstable_by_key(|(s, _)| s.lo);
+        let los: Vec<FactId> = near.iter().map(|(s, _)| s.lo).collect();
+        let route = route_over(self.cx.clone(), vec![self.top.clone()], self.top.files, los, Rc::default(), self.top.dir.clone());
+        e.store.folds = None;
+        e.store.read_near(self.mark, near.into_iter().map(|(s, _)| s).collect(), Some(route));
     }
 }
 
@@ -215,6 +270,21 @@ impl Eval {
             }
             joins.cross.insert(r.id);
         }
+        // where any rule reads by a value: a constant, a variable another premise holds, a negation's every argument
+        for r in rules.iter() {
+            let lits: Vec<(&Lit, bool)> = r.clause.body.iter().flat_map(|b| b.lits_deep().into_iter().map(move |l| (l, matches!(b, BodyElem::Pos(_))))).collect();
+            for (i, (a, pos)) in lits.iter().enumerate() {
+                for (p, t) in a.args.iter().enumerate() {
+                    if *pos && t.is_var() && !lits.iter().enumerate().any(|(j, (b, _))| j != i && b.args.contains(t)) {
+                        continue;
+                    }
+                    let ps = joins.places.entry(a.rel).or_default();
+                    if !ps.contains(&(a.args.len() as u8, p as u8)) {
+                        ps.push((a.args.len() as u8, p as u8));
+                    }
+                }
+            }
+        }
         let mut all: FxSet<Sym> = (*st.rules).clone();
         for r in &cross {
             all.insert(r.id);
@@ -227,7 +297,7 @@ impl Eval {
 
     /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world. `fan`
     /// units make the one above.
-    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize) -> Result<Rc<Unit>, Halt> {
+    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize) -> Result<Levels, Halt> {
         let cx = Rc::new(Ctx { h: self.h.clone(), files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins });
         let core = self.store.len_ids();
         let bump = AtomicU32::new(core);
@@ -306,7 +376,7 @@ impl Eval {
                         if f.is_some() { &mut inner } else { &mut dir }.entry(*key).or_default().extend(hs);
                         // a seed: a fact under one child that a rule joins with one under another
                         for &(n, _) in cx.joins.places[&rel].iter().filter(|(_, q)| *q == p) {
-                            let met = cx.joins.mates[&(rel, n, p)].iter().any(|&m| {
+                            let met = cx.joins.mates.get(&(rel, n, p)).into_iter().flatten().any(|&m| {
                                 kids.iter().enumerate().filter(|(d, _)| *d != c).any(|(_, d)| match f {
                                     Some(f) if d.files.0 <= f && f < d.files.1 => d.holds(&cx, m, v, f),
                                     _ => d.dir.contains_key(&(m.0, m.2, v)),
@@ -323,30 +393,7 @@ impl Eval {
                 seeds.sort_unstable();
                 seeds.dedup();
                 let inner = Rc::new(inner);
-                let route: Rc<Route> = {
-                    let (cx, kids, los, inner, dir) = (cx.clone(), kids.clone(), los.clone(), inner.clone(), dir.clone());
-                    Rc::new(move |rel: Sym, _: Option<Sym>, pos: &[usize], vals: &[Term], out: &mut Vec<u32>| {
-                        let Some(ps) = cx.joins.places.get(&rel) else { return false };
-                        let Some((p, v)) = pos.iter().zip(vals).map(|(p, v)| (*p as u8, *v)).find(|(p, _)| ps.iter().any(|(_, q)| q == p)) else { return false };
-                        let key = (rel, p, v);
-                        let mut put = |lo: &FactId| out.extend(los.binary_search(lo).ok().map(|i| i as u32));
-                        match cx.file(v).filter(|f| files.0 <= *f && *f < files.1) {
-                            Some(f) => {
-                                let mut at = &kids;
-                                while let Some(k) = at.iter().find(|k| k.files.0 <= f && f < k.files.1) {
-                                    put(&k.stretch.lo);
-                                    k.inner.get(&key).into_iter().flatten().for_each(&mut put);
-                                    at = &k.kids;
-                                }
-                                inner.get(&key).into_iter().flatten().for_each(&mut put);
-                            }
-                            None => dir.get(&key).into_iter().flatten().for_each(&mut put),
-                        }
-                        out.sort_unstable();
-                        out.dedup();
-                        true
-                    })
-                };
+                let route = route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()));
                 let mut e = fork();
                 let mark = bump.load(Relaxed);
                 e.0.meeting = Some(Rc::new(Meeting { core, mark, under: near.iter().map(|(s, c)| (s.lo, *c)).collect() }));
@@ -364,22 +411,7 @@ impl Eval {
                 Ok(done(e, files, kids, dir, inner))
             })?;
         }
-        Ok(units.pop().expect("a world of a file at least"))
-    }
-
-    /// What the units of a world by levels hold, given to this world as a file's lemmas are (`take_lemmas`).
-    pub fn take_units(&mut self, u: &Unit, st: &Stage) {
-        for k in &u.kids {
-            self.take_units(k, st);
-        }
-        let s = &u.stretch;
-        for id in s.lo..s.hi {
-            let r = s.store.rec(id);
-            if r.dead() || st.cut.contains(&r.persp) || !(r.base() || st.given.contains(&r.rel)) {
-                continue;
-            }
-            self.store.put(&self.h, r.rel, r.persp, s.store.args(id), F_BASE);
-        }
-        self.store.dirty = true;
+        let top = units.pop().expect("a world of a file at least");
+        Ok(Levels { top, cx, mark: bump.load(Relaxed) })
     }
 }
