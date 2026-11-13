@@ -1067,6 +1067,9 @@ pub struct Stretch {
     keyed: std::sync::RwLock<FxMap<(Sym, u8), Rc<FxMap<u64, Vec<FactId>>>>>,
 }
 
+/// The segment of a stretch cooled to a file of its own, out of the kept scroll.
+pub const COOLED: u32 = u32::MAX;
+
 /// A stretch where it is kept: the fork of the core it is put into, the core's heap, and its place in the file.
 struct Kept {
     over: Rc<(Store, Heap)>,
@@ -1106,16 +1109,28 @@ impl Stretch {
     /// facts that lie elsewhere. Nothing of what it read is written, and its indexes are made again when it is read.
     /// `trees`: it is a file's own, whose trees the units above read, and they are kept with it.
     pub fn write(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<(), String> {
-        let order: Vec<FactId> = (self.lo..self.hi).collect();
-        let p = self.parts(&order, &|f| f)?;
         w.u32(self.lo);
         w.u32(self.hi);
         w.arena(&self.rels);
         w.arena(&self.far);
-        w.arena(&p.recs);
-        w.arena(&p.args);
-        w.arena(&p.fired);
-        w.arena(&p.prems);
+        match &self.kept {
+            // (kept already: what lies there is what it would write)
+            Some(k) => {
+                let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
+                w.arena(&r.arena::<u32>()?[..]);
+                w.arena(&r.arena::<u64>()?[..]);
+                w.arena(&r.arena::<u32>()?[..]);
+                w.arena(&r.arena::<PremRef>()?[..]);
+            }
+            None => {
+                let order: Vec<FactId> = (self.lo..self.hi).collect();
+                let p = self.parts(&order, &|f| f)?;
+                w.arena(&p.recs);
+                w.arena(&p.args);
+                w.arena(&p.fired);
+                w.arena(&p.prems);
+            }
+        }
         let fs: Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>> = match (trees, self.forests.get()) {
             (false, _) => Vec::new(),
             (true, Some(fs)) => fs.clone(),
@@ -1242,9 +1257,15 @@ impl Stretch {
         Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests, raw: Default::default() })
     }
 
-    /// The segment of the scroll it is kept in, and where its record begins there.
+    /// The segment of the scroll it is kept in, and where its record begins there. None for one cooled out of
+    /// the scroll (`COOLED`), which a segment writes as its own.
     pub fn kept_at(&self) -> Option<(u32, usize)> {
-        self.kept.as_ref().map(|k| (k.seg, k.start))
+        self.kept.as_ref().filter(|k| k.seg != COOLED).map(|k| (k.seg, k.start))
+    }
+
+    /// Whether it lies in a file, read from there.
+    pub fn cooled(&self) -> bool {
+        self.kept.is_some()
     }
 
     /// The stretch itself: as it was settled, or read now from where it is kept.

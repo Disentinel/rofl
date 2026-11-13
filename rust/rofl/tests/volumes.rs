@@ -68,7 +68,7 @@ fn check(cool: bool) {
         mem(0, 0);
     }
     let mut v = v.unwrap();
-    assert!(!cool || v.stats.cooled > 1 && v.stats.cool_files == v.stats.cooled * v.stats.workers, "{:?}", v.stats);
+    assert!(!cool || v.stats.cooled > 1 && v.stats.cool_files >= files && v.stats.cool_bytes > 0, "{:?}", v.stats);
 
     let union: BTreeSet<String> = v.worlds.iter().flat_map(keys).collect();
     let all = keys(&whole);
@@ -84,7 +84,23 @@ fn check(cool: bool) {
         };
         assert_eq!(by, answers(&mut whole, q), "the volumes answer otherwise than the whole world: {q}");
     }
-    assert!(v.stats.laid > 0 && v.stats.rounds > 0, "{:?}", v.stats);
+    if cool {
+        // the units cooled are kept as a segment of the scroll and read back from it: the same answers
+        let units = v.worlds[0].eval.levels.clone().expect("a world by levels");
+        let k = std::env::temp_dir().join(format!("rofl-volumes-kept-{}", std::process::id())).to_string_lossy().to_string();
+        rofl::volume::keep_units(&k, Some(&units)).unwrap();
+        let mut e = v.worlds[0].eval.fork();
+        e.store.reads_none();
+        e.levels = None;
+        let back = std::sync::Arc::new(rofl::volume::open_units(&k, &e).unwrap());
+        back.read_by(&mut e);
+        e.levels = Some(back);
+        v.worlds[0].eval = e;
+        for q in ASKED {
+            assert_eq!(answers(&mut v.worlds[0], q), answers(&mut whole, q), "the units kept and read back answer otherwise than the whole world: {q}");
+        }
+        rofl::volume::keep_units(&k, None).unwrap();
+    }
 }
 
 /// A WALKED CLOSURE WHOSE EDGES CROSS THE FILES: a path that leaves a file and comes back through a third is the

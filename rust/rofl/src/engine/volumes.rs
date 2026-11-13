@@ -184,7 +184,7 @@ fn on_threads<T: Send>(ws: &mut [Worker], f: &(dyn Fn(usize, &mut Worker) -> Res
 /// Whether the process uses more than a quarter of the memory it may (`MEMORY_USED`, `MEMORY_LIMIT`, set by the
 /// binary's watcher): then the workers are cooled before the next level. A level of vscode's 1 000 files grows the heap
 /// by a third of what a 15 GB machine may use, so a half is met too late.
-fn pressed() -> bool {
+pub(super) fn pressed() -> bool {
     let (used, may) = (MEMORY_USED.load(std::sync::atomic::Ordering::Relaxed), MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed));
     may > 0 && used * 4 > may
 }
@@ -272,6 +272,7 @@ impl Eval {
             .collect();
         let mut st = VolStats { workers: k, files, ..Default::default() };
         let stage = stage.map(Rc::new);
+        let cooled = Mutex::new((0, 0, 0));
         on_threads(&mut ws, &|i, w| {
             match &stage {
                 Some(stage) if levels => {
@@ -300,6 +301,7 @@ impl Eval {
                         lv.libs
                     ));
                     w.e.diags.extend(lv.said.iter().cloned());
+                    *cooled.lock().unwrap() = (lv.cooled.times, lv.cooled.units, lv.cooled.bytes);
                     w.e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
                     // (the rules left to the reader were fired in a unit of their own: it reads, and fires nothing)
                     return Ok(());
@@ -380,6 +382,7 @@ impl Eval {
             w.e.run().map(|_| ())
         })?;
         if levels {
+            (st.cooled, st.cool_files, st.cool_bytes) = *cooled.lock().unwrap();
             st.ms = t0.elapsed().as_millis();
             let core = self.store.len_ids();
             st.held = ws.iter().map(|w| (w.e.store.len_ids() - core, 0)).collect();

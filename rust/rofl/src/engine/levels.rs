@@ -417,7 +417,31 @@ pub struct Levels {
     ghosts: Vec<Rc<Stretch>>,
     /// what the evaluation of the rules left to the reader said
     pub said: Vec<String>,
+    pub cooled: Cooled,
 }
+
+/// The units cooled under the memory's pressure: how many, in how many bytes, how many times, and the files they
+/// lie in, which go with the world.
+#[derive(Default)]
+pub struct Cooled {
+    pub units: usize,
+    pub bytes: u64,
+    pub times: usize,
+    paths: Vec<String>,
+}
+
+impl Drop for Cooled {
+    fn drop(&mut self) {
+        for p in &self.paths {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+}
+
+struct Over(Rc<(crate::store::Store, Heap)>);
+// SAFETY: a fork of the core that wrote nothing, read by the stretches unfolded over it
+unsafe impl Send for Over {}
+unsafe impl Sync for Over {}
 
 impl Levels {
     /// `e`, a fork of the core the units were settled over that wrote nothing, reads them from here on.
@@ -582,7 +606,7 @@ impl Levels {
         for x in r.arena::<u64>()?.chunks_exact(2) {
             masks.entry(x[0] as Sym).or_default().insert(x[1]);
         }
-        Ok(Levels { libs, tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, perm: Default::default(), joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new() })
+        Ok(Levels { libs, tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, perm: Default::default(), joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default() })
     }
 
     /// The unit of layer `k` over exactly `files`.
@@ -918,20 +942,80 @@ impl Eval {
         unsafe impl Sync for Stage1<'_> {}
         let stage = Stage1(st);
         // a level's units, each taken by whoever is free
-        let level = |n: usize, f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
-            let next = AtomicUsize::new(0);
-            let out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
-            std::thread::scope(|sc| {
-                for _ in 0..threads.min(n) {
-                    sc.spawn(|| loop {
-                        let x = next.fetch_add(1, Relaxed);
-                        if x >= n {
-                            break;
-                        }
-                        *out[x].lock().unwrap() = Some(f(x));
-                    });
+        // UNDER THE MEMORY'S PRESSURE the units done are cooled: their stretches written to a file of the system's
+        // temporary directory and read from there, where a fact is read in place and the heap holds none of them
+        let cooled = Mutex::new(Cooled::default());
+        let over: std::sync::OnceLock<Over> = std::sync::OnceLock::new();
+        let cool = |us: &mut [&mut Unit], trees: bool| {
+            let us: Vec<&mut &mut Unit> = us.iter_mut().filter(|u| !u.stretch.cooled() && u.stretch.lo < u.stretch.hi && Rc::strong_count(&u.stretch) == 1).collect();
+            if us.is_empty() {
+                return;
+            }
+            static N: AtomicUsize = AtomicUsize::new(0);
+            let path = std::env::temp_dir().join(format!("rofl-units-{}-{}.seg", std::process::id(), N.fetch_add(1, Relaxed))).to_string_lossy().to_string();
+            let written = (|| -> Result<(Vec<usize>, usize), String> {
+                let mut w = VolW::bounded(&path, None).map_err(|x| x.to_string())?;
+                let mut starts = Vec::with_capacity(us.len());
+                for u in &us {
+                    starts.push(w.at());
+                    u.stretch.write(&mut w, trees && u.kids.is_empty())?;
                 }
+                Ok((starts, w.finish().map_err(|x| x.to_string())?))
+            })();
+            let read = written.and_then(|(starts, bytes)| {
+                let map = crate::arena::map_file(&path).map_err(|x| x.to_string())?;
+                let over = over.get_or_init(|| {
+                    let _g = one.lock().unwrap();
+                    let mut store = base.0.fork().store;
+                    store.folds = None;
+                    Over(Rc::new((store, cx.h.clone())))
+                });
+                let ss: Vec<Stretch> = starts.iter().map(|&at| Stretch::read(&over.0, &mut VolR::new(map.clone(), at), crate::store::COOLED)).collect::<Result<_, _>>()?;
+                Ok((ss, bytes))
             });
+            let mut c = cooled.lock().unwrap();
+            match read {
+                Ok((ss, bytes)) => {
+                    c.units += ss.len();
+                    c.bytes += bytes as u64;
+                    c.times += 1;
+                    c.paths.push(path);
+                    for (u, s) in us.into_iter().zip(ss) {
+                        u.stretch = Rc::new(s);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("volumes: {} units stay on the heap: {e}", us.len());
+                    let _ = std::fs::remove_file(&path);
+                }
+            }
+        };
+        // (a level goes a run of units at a time, so that those done are cooled while the rest are still to do)
+        let level = |n: usize, trees: bool, f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
+            let next = AtomicUsize::new(0);
+            let mut out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
+            let (mut from, run) = (0, (threads * 32).max(64));
+            while from < n {
+                let to = (from + run).min(n);
+                std::thread::scope(|sc| {
+                    for _ in 0..threads.min(to - from) {
+                        sc.spawn(|| loop {
+                            let x = next.fetch_add(1, Relaxed);
+                            if x >= to {
+                                next.fetch_sub(1, Relaxed);
+                                break;
+                            }
+                            *out[x].lock().unwrap() = Some(f(x));
+                        });
+                    }
+                });
+                next.store(to, Relaxed);
+                if volumes::pressed() {
+                    let mut done: Vec<&mut Unit> = out[..to].iter_mut().filter_map(|u| u.get_mut().unwrap().as_mut()?.as_mut().ok()).collect();
+                    cool(&mut done, trees);
+                }
+                from = to;
+            }
             out.into_iter().map(|u| u.into_inner().unwrap().unwrap_or_else(|| Err(Halt::Bug("a unit's thread panicked".into()))).map(Rc::new)).collect()
         };
         let fork = || {
@@ -1164,7 +1248,7 @@ impl Eval {
             let mut alone: Vec<Rc<Unit>> = Vec::new();
             if k == 0 {
                 let forks = &one;
-                let mut units = level(n, &|x| {
+                let mut units = level(n, true, &|x| {
                     let one = (x as u32, x as u32 + 1);
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| e.1.contains(&one.0))) {
                         return Ok(kept(&o, Vec::new()));
@@ -1250,7 +1334,7 @@ impl Eval {
                 };
                 let mut units = match k {
                     0 => alone[from..to].to_vec(),
-                    _ => level(to - from, &|i| {
+                    _ => level(to - from, false, &|i| {
                         let one = ((from + i) as u32, (from + i) as u32 + 1);
                         match was(k, one).filter(|o| stands(o, &moved_below)) {
                             Some(o) => Ok(kept(&o, Vec::new())),
@@ -1262,7 +1346,7 @@ impl Eval {
                 while units.len() > 1 {
                     let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
                     let d = depths.len();
-                    units = level(groups.len(), &|x| {
+                    units = level(groups.len(), false, &|x| {
                         let kids = groups[x].clone();
                         if kids.len() == 1 {
                             let k = &kids[0];
@@ -1319,6 +1403,6 @@ impl Eval {
             tops.push(Rc::new(top));
         }
         let again = edit.is_some().then(|| (again.load(Relaxed), same.load(Relaxed)));
-        Ok(Levels { libs: nlibs as u32, tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said })
+        Ok(Levels { libs: nlibs as u32, tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap() })
     }
 }
