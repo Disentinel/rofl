@@ -434,6 +434,17 @@ impl Eval {
             return Ok(Outcome { partial: true, staged: 0 });
         }
         low?;
+        let (lemmas, cut, unread) = self.cut_away(&st);
+        self.note_staged_away(&st);
+        let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
+        self.diags.push(format!("stage: {} rules below, {lemmas} lemmas, {cut} facts of {} cut, {unread} nothing above reads; widest below: {}", st.rules.len(), books.join(" "), st.wide.join(", ")));
+        self.stage_pass = StagePass::Upper(st.rules);
+        self.run_whole()
+    }
+
+    /// Once the lower stage `st` is evaluated, of this store's own facts: its conclusions outside the cut books are
+    /// made lemmas, the cut books' facts and what nothing above reads are dropped. How many of each.
+    pub(super) fn cut_away(&mut self, st: &Stage) -> (usize, usize, usize) {
         let mut drop = Vec::new();
         let mut lemmas = Vec::new();
         let mut unread = Vec::new();
@@ -450,14 +461,10 @@ impl Eval {
         for &id in &lemmas {
             self.store.make_lemma(id);
         }
-        let unread_n = unread.len();
+        let n = (lemmas.len(), drop.len(), unread.len());
         drop.extend(unread);
         self.store.remove_many(&drop);
-        self.note_staged_away(&st);
-        let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
-        self.diags.push(format!("stage: {} rules below, {} lemmas, {} facts of {} cut, {} nothing above reads; widest below: {}", st.rules.len(), lemmas.len(), drop.len() - unread_n, books.join(" "), unread_n, st.wide.join(", ")));
-        self.stage_pass = StagePass::Upper(st.rules);
-        self.run_whole()
+        n
     }
 
     /// The lower stage evaluated alone, whole: a stop by a wall is a budget's halt.
@@ -580,7 +587,7 @@ impl Eval {
     }
 
     /// What a staged evaluation takes away: the cut books, and the relations concluded below that nothing above reads.
-    pub(super) fn note_staged_away(&mut self, st: &Stage) {
+    pub fn note_staged_away(&mut self, st: &Stage) {
         self.staged_away = Some((st.cut.clone(), st.heads.iter().copied().filter(|r| !st.given.contains(r)).collect()));
     }
 

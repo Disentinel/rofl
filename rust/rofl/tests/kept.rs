@@ -378,7 +378,7 @@ fn volumes_delta(name: &str, model: &str, each: &dyn Fn(usize, &dyn Fn(usize) ->
     d.write("f.rofl", &format!("{text}{}", fill(now)));
     let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
     let anew = rofl_env(BIN, &d, &d.0.join("anew"), &env, brk, &args);
-    ensure(got.out == anew.out && got.err.contains("files taken by delta"), || format!("{name}: a delta of volumes answers otherwise than the files anew: {} lines against {}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))
+    ensure(got.out == anew.out && got.err.contains("units settled again"), || format!("{name}: a delta of volumes answers otherwise than the files anew: {} lines against {}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))
 }
 
 /// A copy with no original goes: a fact a volume made for the length of a round (its `not` read a copy not yet laid)
@@ -415,7 +415,7 @@ fn deltas_of_volumes_one_after_another(brk: Option<&str>) -> Result<(), String> 
         d.write("f.rofl", &format!("{text}{more}"));
         let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
         let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{step}")), &env, brk, &args("t(D, A)"));
-        ensure(got.out == anew.out && got.err.contains("files taken by delta"), || format!("edit {step} of volumes one after another: {:?} against {:?}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))?;
+        ensure(got.out == anew.out && got.err.contains("units settled again"), || format!("edit {step} of volumes one after another: {:?} against {:?}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))?;
     }
     // a term a volume made is read by its neighbour and by the kept volumes opened again under the number it was given
     let crossed = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("v(C, W)"));

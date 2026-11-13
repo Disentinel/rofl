@@ -218,7 +218,8 @@ impl Eval {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
         // (the check harness's switch: the files by levels, `engine/levels.rs`)
-        let levels = std::env::var("ROFL_VOLUMES").as_deref() == Ok("levels");
+        let levels = std::env::var("ROFL_VOLUMES").as_deref() != Ok("old");
+        let groups = if levels { vec![groups.into_iter().flatten().collect::<Vec<_>>()] } else { groups };
         let (stage, joins) = if levels {
             let (st, j) = self.level_stage();
             self.settle_core(j.core.clone())?;
@@ -298,7 +299,10 @@ impl Eval {
                         lv.tops.iter().map(|t| t.count()).sum::<usize>(),
                         lv.libs
                     ));
+                    w.e.diags.extend(lv.said.iter().cloned());
                     w.e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
+                    // (the rules left to the reader were fired in a unit of their own: it reads, and fires nothing)
+                    return Ok(());
                 }
                 // the lower stage a file at a time, each in a world of its own the lemmas leave
                 Some(stage) => {
@@ -375,6 +379,12 @@ impl Eval {
             w.e.wall.hold_end = true;
             w.e.run().map(|_| ())
         })?;
+        if levels {
+            st.ms = t0.elapsed().as_millis();
+            let core = self.store.len_ids();
+            st.held = ws.iter().map(|w| (w.e.store.len_ids() - core, 0)).collect();
+            return Ok((ws, st));
+        }
         // the volume each file's nodes are at home in
         let homes: FxMap<u64, u32> = groups.iter().enumerate().flat_map(|(i, g)| g.iter().filter_map(move |(f, _)| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32)))).collect();
         drop(groups);

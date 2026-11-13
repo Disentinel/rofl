@@ -764,6 +764,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         let (again, same) = lv.again.unwrap_or_default();
         eprintln!("volumes: {} of {} files edited; {again} of {} units settled again, {same} of them concluding what they had ({} ms)", moved.len(), files.len(), lv.tops.iter().map(|t| t.count()).sum::<usize>(), t.elapsed().as_millis());
         rofl::engine::meter::spent("units", t);
+        for d in &lv.said { eprintln!("diag: {d}"); }
         lv.read_by(&mut w.eval);
         w.eval.levels = Some(std::sync::Arc::new(lv));
         let mut sums: Vec<(String, u64, usize)> = files.iter().map(|(f, t)| (f.clone(), sum(t), 0)).collect();
