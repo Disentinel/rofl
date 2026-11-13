@@ -969,7 +969,7 @@ pub fn resolve(h: &mut Heap, t: Term, s: &Subst) -> Term {
 
 /// Would resolving this term under `s` build anything new? A functor whose
 /// variables are all unbound resolves to itself.
-fn touches(h: &Heap, t: Term, s: &Subst) -> bool {
+pub fn touches(h: &Heap, t: Term, s: &Subst) -> bool {
     match t.kind() {
         TermK::Var(v) => lookup(s, v).is_some(),
         TermK::Func(i) => {

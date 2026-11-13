@@ -1163,7 +1163,7 @@ impl VClosureState {
 
     /// The forests of a closure, one for each book of its edge relation, as the edges stand: built again when the edge
     /// relation has changed since.
-    fn vforests(&mut self, store: &mut Store, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
+    pub(super) fn vforests(&mut self, store: &mut Store, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
         if !self.vclosures[ci].open {
             return Rc::from(Vec::new());
         }

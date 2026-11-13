@@ -279,3 +279,18 @@ whole_ms[byhash](48600). serial_ms[byhash](writing, 14000). serial_ms[byhash](se
 cut_ms[byhash](Part, Ms)  :- serial_ms[byhash](Part, S), threads[shared](C), Ms is S / C + S / 10.
 anew_ms[byhash](writing, Ms) :- whole_ms[byhash](W), serial_ms[byhash](writing, S), cut_ms[byhash](writing, X), Ms is W - S + X.
 anew_ms[byhash](search, Ms)  :- anew_ms[byhash](writing, A), serial_ms[byhash](search, S), cut_ms[byhash](search, X), Ms is A - S + X.
+-- JUDGED 2026-11-13, AND THE FORECAST ABOVE FALLS WITH ITS MEASURE. The 14 s of writing were gdb samples; timers
+-- in the engine itself say of one run anew (46 s): the files' part 15 s on four threads, the upper pass 25 s on one,
+-- the rest 5 (indexed for retraction, kept, answered). In the upper pass the rules take 19 s: the search 12.5, the
+-- writing of 4.05M solutions 5.4. Three trials of the writing moved nothing: the fact looked up on the threads
+-- before it is written (forecast 45 s, got 48), the table of tuples half as full (the probe steps 4.6 to 1.1 a call,
+-- the time the same), no table of tuples at all (the same).
+upper_ms[bytimer](search, 12500). upper_ms[bytimer](writing, 5400). upper_ms[bytimer](rest, 7000).
+refuted[byhash](found, 45000, 48000).
+-- WHERE THE SEARCH IS ONE THREAD'S: a premise the threads do not take. `enters` by the news of does_fn reads
+-- in_fn, a closure walked: 74 000 news gave 9.4M rows on one thread in 2.6 s, and 3.4M more in 0.6. The forecast
+-- for the walked premise read on the threads: those 3.3 s on four threads and a tenth of them to hand out, and
+-- what else stops at a walk (3.0M partial solutions) the same way.
+walked_ms[bytimer](3300).
+anew_ms[bytimer](walked, Ms) :- threads[shared](C), walked_ms[bytimer](S), Ms is 46500 - S + S / C + S / 10.
+measured_ms[bytimer](walked, 42200).

@@ -46,6 +46,8 @@ struct Frozen<'a> {
     nix: NewsIx,
     /// the rows this round's news at an earlier position reads, excluded here (`Eval::sn`)
     except: Option<Rc<FxSet<FactId>>>,
+    /// a closure answered from its trees: the trees as they stand, one for each book
+    walked: Option<&'a [(Sym, Rc<crate::forest::Forest>)]>,
 }
 
 // SAFETY: the store and the heap share their bases through `Rc`, which is why neither is `Sync`. The threads only
@@ -147,6 +149,8 @@ enum Found<'a> {
     Pos(Cands<'a>),
     /// `@init` after the first tick: no candidate, no read
     Off,
+    /// the rows of a walked closure, unified
+    Walked(Vec<Subst>),
 }
 
 /// A piece of one solution's candidates unified: the candidates kept and the matches, in order.
@@ -273,6 +277,10 @@ impl<'a> Frozen<'a> {
         }
         let persp_t = walk(self.h, self.l.persp, &a.s);
         let persp = persp_t.as_atom();
+        if let Some(forests) = self.walked {
+            let rows = self.walk(forests, persp_t, persp, &a.s)?;
+            return Some(if self.neg { Found::Neg(rows.is_empty()) } else { Found::Walked(rows) });
+        }
         let limit = self.news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1));
         let (narrow, probed) = self.probe(&a.s, persp, limit)?;
         *probes += probed as u64;
@@ -299,6 +307,53 @@ impl<'a> Frozen<'a> {
         let mut scratch = Subst::new();
         let hit = c.rows().iter().any(|rows| rows.iter().any(|&f| self.kept(&c, f) && self.unifies(&c, a, f, &mut scratch)));
         Some(Found::Neg(!hit))
+    }
+
+    /// `vmatch` unwritten, where a firing's order is unobservable: the rows of the trees the ends of `s` name, each
+    /// unified. None: an end is a term to be made.
+    fn walk(&self, forests: &[(Sym, Rc<crate::forest::Forest>)], persp_t: Term, persp: Option<Sym>, s: &Subst) -> Option<Vec<Subst>> {
+        let (l, h) = (self.l, self.h);
+        let end = |t: Term| -> Option<Option<Term>> {
+            let t = walk(h, t, s);
+            match t.kind() {
+                TermK::Var(_) => Some(None),
+                TermK::Func(_) if crate::term::touches(h, t, s) => None,
+                _ => Some(h.is_ground(t).then_some(t)),
+            }
+        };
+        let (a, d) = (end(l.args[0])?, end(l.args[1])?);
+        let mut out = Vec::new();
+        let mut ends = Vec::new();
+        for (b, f) in forests {
+            if persp.is_some_and(|p| p != *b) || persp.is_none() && is_kernel_ledger(h, *b) {
+                continue;
+            }
+            let Some(s2) = (match persp {
+                Some(_) => Some(s.clone()),
+                None => unify(h, persp_t, Term::atom(*b), s),
+            }) else {
+                continue;
+            };
+            let mut row = |x: Term, y: Term| out.extend(unify_all(h, &l.args, &[x, y], &s2));
+            ends.clear();
+            match (a, d) {
+                (Some(a), Some(d)) => {
+                    if f.is_ancestor(a, d) {
+                        row(a, d);
+                    }
+                }
+                (Some(a), None) => {
+                    f.descendants(a, &mut ends);
+                    ends.iter().for_each(|&d| row(a, d));
+                }
+                (None, Some(d)) => {
+                    f.ancestors(d, &mut ends);
+                    ends.iter().for_each(|&a| row(a, d));
+                }
+                (None, None) => f.each_pair(row),
+            }
+        }
+        Some(out)
     }
 
     fn kept(&self, c: &Cands, f: FactId) -> bool {
@@ -365,6 +420,7 @@ struct Level {
     wide: usize,
     at: Option<Subst>,
     probes: u64,
+    walked: usize,
 }
 
 /// The solutions from `from` on, each row's first only, in order.
@@ -409,6 +465,16 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
                     }
                 }
                 Found::Off => {}
+                Found::Walked(rows) => {
+                    lv.read += rows.len();
+                    lv.walked += rows.len();
+                    next.extend(rows.into_iter().map(|s| {
+                        let mut prems = Vec::with_capacity(a.prems.len() + 1);
+                        prems.extend_from_slice(&a.prems);
+                        prems.push(PremRef::VRow(0));
+                        Sol { s, prems }
+                    }));
+                }
                 Found::Pos(c) => {
                     let mut read = 0;
                     for rows in c.rows() {
@@ -464,14 +530,14 @@ impl Eval {
     /// that would write, and the written path matches it.
     #[inline(never)]
     pub(super) fn par_level(&mut self, b: &BodyElem, i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<Result<Vec<Sol>, Halt>> {
-        let (l, neg) = self.frozen_lit(b, depth, rule_id)?;
+        let (l, neg) = self.frozen_lit(b, depth, rule_id).filter(|(l, _)| self.vc.vclosure_for(l.rel).is_none())?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
         let news = front_news(front_at, i, neg);
         if !off {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
         let except = if depth == 0 && !neg { self.sn_except(i) } else { None };
-        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default(), except };
+        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default(), except, walked: None };
         let threads = self.par.threads;
 
         // the candidates of each partial solution, found over runs of them
@@ -573,7 +639,7 @@ impl Eval {
             || !self.lat.carry.spread.is_empty()
             || self.assume.is_some()
             || self.demand.on(l.rel)
-            || self.vc.vclosure_for(l.rel).is_some()
+            || self.vc.vclosure_for(l.rel).is_some() && !(self.store.unordered && l.args.len() == 2)
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
             || !l.args.iter().all(plain)
@@ -596,8 +662,10 @@ impl Eval {
             return None;
         }
         let mut lits: Vec<(&Lit, bool)> = Vec::new();
-        for b in &body[i..] {
+        for (k, b) in body[i..].iter().enumerate() {
             match self.frozen_lit(b, depth, rule_id) {
+                // (news at a walked closure are read by the written path)
+                Some((l, _)) if front_at.is_some_and(|(p, _)| p == i + k) && self.vc.vclosure_for(l.rel).is_some() => break,
                 Some(x) => lits.push(x),
                 None => break,
             }
@@ -610,6 +678,10 @@ impl Eval {
         for (k, &(l, neg)) in lits.iter().enumerate() {
             match news_at {
                 _ if frs_off(l, tick) => {}
+                _ if self.vc.vclosure_for(l.rel).is_some() => {
+                    let ci = self.vc.vclosure_for(l.rel).unwrap();
+                    self.vc.vforests(&mut self.store, ci);
+                }
                 Some((p, limit)) if p == i && k == 0 && !neg => self.par_prepare(l, acc, limit),
                 _ if k == 0 => self.par_prepare(l, acc, usize::MAX),
                 _ => self.store.absorb_for_read(&self.h, l.rel, l.persp.as_atom()),
@@ -621,7 +693,8 @@ impl Eval {
             .map(|(k, &(l, neg))| {
                 let news = front_news(front_at, i + k, neg);
                 let except = if depth == 0 && !neg { self.sn_except(i + k) } else { None };
-                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default(), except }
+                let walked = self.vc.vclosure_for(l.rel).map(|ci| &self.store.virtuals[ci].forests[..]);
+                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default(), except, walked }
             })
             .collect();
         let sort = !self.store.unordered;
@@ -643,6 +716,7 @@ impl Eval {
                 t.ins += x.ins;
                 t.outs += x.outs;
                 t.read += x.read;
+                t.walked += x.walked;
                 t.probes += x.probes;
                 if x.ins > 0 {
                     t.last = x.last;
@@ -699,6 +773,7 @@ impl Eval {
             if let Some(rid) = self.cur_rule {
                 *self.cost.argm_by_rule.entry(rid).or_insert(0) += t.probes;
             }
+            self.vc.rows_read += t.walked as u64;
             self.par_levels += 1;
             let g = t.outs as i64 - if i + k == 0 { 0 } else { t.ins as i64 };
             self.rows += g;
