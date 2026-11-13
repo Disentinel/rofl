@@ -185,7 +185,7 @@ impl Levels {
         let los: Vec<FactId> = near.iter().map(|(s, _)| s.lo).collect();
         let route = route_over(self.cx.clone(), vec![self.top.clone()], self.top.files, los, Rc::default(), self.top.dir.clone());
         e.store.folds = None;
-        e.store.read_near(self.mark, near.into_iter().map(|(s, _)| s).collect(), Some(route));
+        e.store.read_near(self.mark, near.into_iter().map(|(s, _)| s).collect(), Some(route), true);
     }
 }
 
@@ -397,7 +397,7 @@ impl Eval {
                 let mut e = fork();
                 let mark = bump.load(Relaxed);
                 e.0.meeting = Some(Rc::new(Meeting { core, mark, under: near.iter().map(|(s, c)| (s.lo, *c)).collect() }));
-                e.0.store.read_near(mark, near.iter().map(|(s, _)| s.clone()).collect(), Some(route));
+                e.0.store.read_near(mark, near.iter().map(|(s, _)| s.clone()).collect(), Some(route), false);
                 e.0.stage_pass = StagePass::Lower(stage.1.clone());
                 e.0.wall.hold_end = true;
                 e.0.run_whole()?;

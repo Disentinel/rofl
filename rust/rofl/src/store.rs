@@ -1119,6 +1119,9 @@ pub struct Near {
     /// the rows of a relation the stretches hold, by book, as first read
     rows: Rc<std::sync::Mutex<FxMap<Sym, NearRows>>>,
     lens: Rc<std::sync::Mutex<FxMap<Sym, Rc<Vec<(Sym, usize)>>>>>,
+    /// whether a read of a whole relation here takes the stretches' rows: the world's reader does; a unit reads its
+    /// children by key alone, and a whole read of it is of what it wrote itself
+    whole: bool,
 }
 
 /// The rows of one relation in the stretches a store reads, by book: each fact once, the lowest id of those that
@@ -1128,7 +1131,7 @@ type NearRows = Rc<Vec<(Sym, Vec<FactId>)>>;
 impl Near {
     /// Every live row of `rel` a stretch holds itself, with its book; a fact two stretches say comes twice.
     fn each(&self, rel: Sym, mut f: impl FnMut(Sym, FactId)) {
-        for s in &self.list {
+        for s in self.list.iter().filter(|_| self.whole) {
             let Some(groups) = s.store.idx.get(&rel) else { continue };
             for (p, run) in groups {
                 run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| k >= s.lo && s.store.alive(k)).for_each(|k| f(*p, k));
@@ -2201,11 +2204,11 @@ impl Store {
 
     /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
-    pub fn read_near(&mut self, mark: FactId, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>) {
+    pub fn read_near(&mut self, mark: FactId, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, whole: bool) {
         let core = self.facts.recs.mark;
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
-        self.facts.near = Some(Rc::new(Near { core, list, route, rows: Rc::default(), lens: Rc::default() }));
+        self.facts.near = Some(Rc::new(Near { core, list, route, rows: Rc::default(), lens: Rc::default(), whole }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
         self.fold.mark = mark as usize;
@@ -6148,7 +6151,7 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!((a.hi - a.lo, b.hi - b.lo), (50, 51));
         let (a, b) = (Rc::new(a), Rc::new(b));
         let mut top = s.clone();
-        top.read_near(b.hi, vec![a.clone(), b.clone()], None);
+        top.read_near(b.hi, vec![a.clone(), b.clone()], None, true);
         for (st, from) in [(&a, 0), (&b, 30)] {
             for k in 0..25u32 {
                 let (e, d) = (st.lo + 2 * k, st.lo + 2 * k + 1);
