@@ -555,27 +555,18 @@ impl Session {
     /// was not worked out (the world left dirty).
     pub fn retract_set_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         let before = self.base_alive(ids);
-        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids, false));
+        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids));
         self.journal_gone(&before);
         r
     }
 
-    /// `retract_set_delta` of every given fact one file's lower stage gave a world by volumes, its lemmas among them:
-    /// what they proved goes with them, so a world that cut a book takes it.
-    pub fn retract_file_delta(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
-        let before = self.base_alive(ids);
-        let r = self.told(crate::journal::Verb::RetractSet, |s| s.retract_set_delta_unjournaled(ids, true));
-        self.journal_gone(&before);
-        r
-    }
-
-    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId], whole_file: bool) -> Result<Result<crate::engine::AddDelta, String>, String> {
+    fn retract_set_delta_unjournaled(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         self.settle()?;
         let facts: Vec<FactId> = {
             let mut seen = HashSet::new();
             ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
         };
-        if !ids.is_empty() && !whole_file {
+        if !ids.is_empty() {
             if let Some(why) = self.eval.refuses_retraction() {
                 self.eval.store.dirty = true;
                 return Ok(Err(why));
@@ -663,7 +654,7 @@ impl Session {
         let mut delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
         // what the one-fact delta refuses with the store untouched, the set's pass may take
         if delta.is_err() && self.eval.store.alive(id) && !self.eval.store.dirty {
-            delta = self.retract_set_delta_unjournaled(&[id], false)?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
+            delta = self.retract_set_delta_unjournaled(&[id])?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
         }
         if delta.is_err() {
             if self.eval.store.alive(id) {

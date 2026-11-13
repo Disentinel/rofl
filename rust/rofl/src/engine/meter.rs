@@ -3,10 +3,7 @@
 //! counts, so the same delta writes the same facts, and beside them `spent(What, Ms)`, the time of each part of it, which
 //! differs from run to run and is there to be set against the counts. Per relation: `out(Rel, N)` facts taken out with what
 //! they rested on, `kept(Rel, N)` facts that lost a firing and stood on another, `back(Rel, N)` facts taken out and
-//! derived again, `once(Rel, N)` the facts taken out, each counted one time, `tries(Rel, N)` attempts to derive one again; between volumes, `taken(Rel, N)` copies a volume was
-//! laid that were taken out of it, `owed(Rel, N)` of them those not laid again when the rounds ended though a volume
-//! still makes what they copy, `orphan(Rel, N)` copies that stand when the rounds end though no volume makes what they
-//! copy. Per rule: `whole(R, Head, N)` times it was
+//! derived again, `once(Rel, N)` the facts taken out, each counted one time, `tries(Rel, N)` attempts to derive one again. Per rule: `whole(R, Head, N)` times it was
 //! withdrawn and fired over the whole store, `keyed(R, Head, N)` times it was asked again at the keys a change named.
 //! `seed(Step, Cause, Rel, N)` the facts a step began taking out, by what began it: `removed` a fact given out,
 //! `negation` a firing a new fact blocks, `nearest` a row gone from a nearest, `tree` an edge gone from a closure,
@@ -16,10 +13,9 @@
 //! `walked(What, N)` the records a pass over a whole volume walked (the citer index made, a snapshot of what stands,
 //! the facts of a volume looked through for a file's, a forest or an index built whole, a forest or a mapped array
 //! copied), summed over the volumes and rounds.
-//! `counted(What, N)` what the crossing between volumes did N times: a term asked of a neighbour (`term_asked`), and of
-//! those the ones the neighbour numbers otherwise, found by their spelling (`term_named_again`).
-//! Per step of a delta by volumes: `step(Step, N)` times a volume took facts out, in, or was laid copies, and
-//! `moved(Step, N)` the facts it was given. A delta of one world (bin/rofl/delta.rs) writes them too, its steps takes_out and takes_in.
+//! `counted(What, N)` what happened N times.
+//! Per step of a delta of one world (bin/rofl/delta.rs): `step(Step, N)` times it took facts out or in, and
+//! `moved(Step, N)` the facts it was given.
 
 use std::collections::BTreeMap;
 use std::sync::{Mutex, OnceLock};
@@ -30,14 +26,11 @@ pub enum Count {
     Kept,
     Back,
     Tries,
-    Taken,
-    Owed,
-    Orphan,
 }
 
 #[derive(Default)]
 struct Meter {
-    rel: BTreeMap<String, [u64; 7]>,
+    rel: BTreeMap<String, [u64; 4]>,
     rule: BTreeMap<(&'static str, String, String), u64>,
     step: BTreeMap<&'static str, (u64, u64)>,
     seed: BTreeMap<(&'static str, &'static str, String), u64>,
@@ -125,7 +118,7 @@ pub fn write() {
     use std::fmt::Write;
     let mut out = String::new();
     for (r, n) in &m.rel {
-        for (name, n) in ["out", "kept", "back", "tries", "taken", "owed", "orphan"].iter().zip(n).filter(|(_, n)| **n > 0) {
+        for (name, n) in ["out", "kept", "back", "tries"].iter().zip(n).filter(|(_, n)| **n > 0) {
             let _ = writeln!(out, "{name}[delta]({r}, {n}).");
         }
     }
