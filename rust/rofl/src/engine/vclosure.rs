@@ -254,7 +254,8 @@ impl Eval {
             // a closure of a lemma stage's lower world: its rows are lemmas, given to the upper world as facts
             let (rel, base, step) = (self.store.virtuals[ci].rel, self.store.virtuals[ci].base_rule, self.store.virtuals[ci].step_rule);
             let lemma = match &self.stage_pass {
-                StagePass::Lower(s) | StagePass::Upper(s) => s.contains(&base) || s.contains(&step),
+                StagePass::Lower(s) => (s.contains(&base) || s.contains(&step)) && !self.stage_both.contains(&base),
+                StagePass::Upper(s) => s.contains(&base) || s.contains(&step),
                 StagePass::Whole => false,
             } || self.store.rel_all(&self.h, rel).iter().any(|f| self.store.alive(*f))
                 || self.staged_away.as_ref().is_some_and(|(_, gone)| gone.contains(&rel));
@@ -284,7 +285,7 @@ impl Eval {
     /// program is read and the closures that may be answered from their trees are engaged, the forests built from the edges
     /// the snapshot holds when first asked.
     pub fn vclosure_restore(&mut self) {
-        if let Some(st) = self.lemma_stage() {
+        if let Some(st) = self.stage_here() {
             self.note_staged_away(&st);
         }
         if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() && crate::structure::nearests(&self.h, &self.v, &mut self.store).is_empty() {

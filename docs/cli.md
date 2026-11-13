@@ -521,6 +521,20 @@ file's lemmas and its facts outside `[B]`, so the raw tree of the corpus is neve
 reads or concludes `[surface]` is refused there (it runs before anything crosses files), and the world is evaluated
 whole. `rofl load` and the other verbs stage the world in place: the lower stage over every file, then `[B]` dropped.
 
+**`own[fixpointplan](Rel, I)` widens what a file's world does** (`Eval::lemma_stage`, `engine/stages.rs`). It says
+of a relation a file states that argument I, from 0, of every fact holds a node of that file (`none` for I where no
+argument does); the node's name says its file. From that and the shape of the rules the engine derives which rules
+above the cut cannot leave a file: the premises that are of a file each hold, as a node of it, a variable they share;
+an absence is asked of such a node; an aggregate's cell is of such a node. Those rules are evaluated in the file's
+world with its lower stage, on the cores the worker leaves, and what they conclude is given as the lower stage's
+lemmas are, all of it, so every answer is the whole world's; the rules that may cross files fire once over what the
+files gave. A closure answered from its tree is walked on both sides and its rows are not given. `why` stops at such
+a lemma and `why --all` unfolds it as any other. The promise refuses when broken: a fact with no node of its file
+where `own` names one, a relation a file states that no `own` names, and a fact of a named relation that is of no
+one file each refuse the world by volumes, naming the fact (then it is evaluated whole). Where the plan names no
+`own`, the lower stage alone is evaluated by file, as before. The Rust model declares it for its tree
+(models/lang/rust/rs-roles.rofl); the JS model does not yet.
+
 `why` stops at a lemma: `mark[value](n…,class) [lemma roles/types.ts:6]`, the site read off the plan's
 `site[fixpointplan](Rel, Book)` (`at[tree](N, File, Line)` for the JS model: the first fact whose first argument is
 one of the lemma's; a world that asks has the site in its cone whatever it asks). What is a lemma is the whole program's

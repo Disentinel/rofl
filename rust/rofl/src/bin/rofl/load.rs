@@ -729,7 +729,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let stage = core.eval.lemma_stage();
     let folds = std::fs::read_to_string(format!("{k}.folds")).ok().and_then(|t| rofl::fold::Folds::read(&t)).map(std::sync::Arc::new);
     for w in &mut worlds {
-        w.eval.stage_given = stage.as_ref().map(|st| st.rules.clone());
+        w.eval.stage_given = stage.as_ref().map(|st| st.below());
         w.eval.store.folds = folds.clone();
     }
     let mut sums: Vec<(String, u64, usize)> = Vec::new();

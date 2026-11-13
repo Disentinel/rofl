@@ -219,6 +219,7 @@ impl Eval {
         let stage = self.lemma_stage();
         if let Some(st) = &stage {
             self.refuse_stage_across(st, surface)?;
+            self.refuse_own_outside(st)?;
         }
         self.settle_provenance();
         // ONE NUMBER FOR A NAME IN EVERY VOLUME: the strings the files spell are named in the core before it is
@@ -264,37 +265,62 @@ impl Eval {
                 Some(stage) => {
                     let base = w.e.fork();
                     let from = base.store.len_ids();
-                    // (`spare` files at a time, each on a thread in a fork of its own; their lemmas taken in the files' order)
+                    // (each on a thread in a fork of its own; their lemmas taken in the files' order)
                     struct Own(Eval);
                     // SAFETY: as the workers themselves: a fork is moved to a thread whole and given back whole
                     unsafe impl Send for Own {}
-                    for files in groups[i].chunks(spare) {
-                        let forks: Vec<Own> = files.iter().map(|_| Own(base.fork())).collect();
-                        let lows: Vec<Result<Own, Halt>> = std::thread::scope(|sc| {
-                            let hs: Vec<_> = forks
-                                .into_iter()
-                                .zip(files)
-                                .map(|(own, (_, text))| {
-                                    sc.spawn(move || {
-                                        let mut own = own;
-                                        load_text(&mut own.0, text)?;
-                                        own.0.lower_stage(stage)?;
-                                        Ok(own)
-                                    })
-                                })
-                                .collect();
-                            hs.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(Halt::Bug("a volume's worker panicked".into())))).collect()
-                        });
-                        for (low, (f, _)) in lows.into_iter().zip(files) {
-                            let low = low?.0;
-                            let a = w.e.store.len_ids();
-                            w.e.store.fold_now = folds.of_file(f);
-                            w.e.take_lemmas(&low, stage, from, syms, funcs);
-                            w.e.store.fold_now = crate::fold::NONE;
-                            w.places.push((f.clone(), a, w.e.store.len_ids()));
+                    // SAFETY: the base is only forked from, and a fork reads what it shares (`given_by_files`)
+                    unsafe impl Sync for Own {}
+                    // the next file to whoever is free; no thread runs far ahead of the file being taken
+                    let files = &groups[i];
+                    let (next, taken) = (std::sync::atomic::AtomicUsize::new(0), std::sync::atomic::AtomicUsize::new(0));
+                    let (tx, rx) = std::sync::mpsc::channel::<(usize, Result<Own, Halt>)>();
+                    let base = Own(base);
+                    // a fork is made and dropped one at a time: what it shares with the base is counted without a lock
+                    let one = std::sync::Mutex::new(());
+                    std::thread::scope(|sc| -> Result<(), Halt> {
+                        use std::sync::atomic::Ordering::Relaxed;
+                        for _ in 0..spare.min(files.len()) {
+                            let (tx, next, taken, base, one) = (tx.clone(), &next, &taken, &base, &one);
+                            sc.spawn(move || {
+                                let base = base;
+                                loop {
+                                    let x = next.fetch_add(1, Relaxed);
+                                    if x >= files.len() {
+                                        break;
+                                    }
+                                    while x > taken.load(Relaxed) + 4 * spare {
+                                        std::thread::sleep(std::time::Duration::from_millis(1));
+                                    }
+                                    let mut own = {
+                                        let _g = one.lock().unwrap();
+                                        Own(base.0.fork())
+                                    };
+                                    let low = load_text(&mut own.0, &files[x].1).and_then(|_| own.0.lower_stage(stage)).and_then(|_| own.0.own_kept(stage, from));
+                                    if tx.send((x, low.map(|_| own))).is_err() {
+                                        break;
+                                    }
+                                }
+                            });
                         }
-                    }
-                    w.e.stage_given = Some(stage.rules.clone());
+                        drop(tx);
+                        let mut early: FxMap<usize, Own> = FxMap::default();
+                        for (x, low) in rx {
+                            early.insert(x, low.inspect_err(|_| next.store(files.len(), Relaxed))?);
+                            while let Some(low) = early.remove(&taken.load(Relaxed)) {
+                                let f = &files[taken.load(Relaxed)].0;
+                                let a = w.e.store.len_ids();
+                                w.e.store.fold_now = folds.of_file(f);
+                                w.e.take_lemmas(&low.0, stage, from, syms, funcs);
+                                w.e.store.fold_now = crate::fold::NONE;
+                                w.places.push((f.clone(), a, w.e.store.len_ids()));
+                                drop((one.lock().unwrap(), low));
+                                taken.fetch_add(1, Relaxed);
+                            }
+                        }
+                        Ok(())
+                    })?;
+                    w.e.stage_given = Some(stage.below());
                 }
                 None => {
                     for (f, text) in &groups[i] {

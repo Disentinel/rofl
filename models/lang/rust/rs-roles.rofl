@@ -28,6 +28,9 @@
 -- constant when it starts with a capital (`None`). The compiler decides by scope; its lints hold the convention.
 
 cut[fixpointplan](ast_rs).
+-- every node of the tree is named by its file, so what is concluded of the nodes of one file is that file's lemma
+own[fixpointplan](node, 0). own[fixpointplan](line, 0). own[fixpointplan](last, 0). own[fixpointplan](file, 0).
+own[fixpointplan](attr, 0). own[fixpointplan](child, 0). own[fixpointplan](child, 3).
 site[fixpointplan](at, tree).
 
 role(destructs, "the pattern P takes apart a value made by the constructor C, and matches only such a value").

@@ -260,3 +260,12 @@ upper_ms[byfile](36000). whole_ms[byfile](56313). taking_share[byfile](33).
 in_file_ms[byfile](Ms)  :- firings[byfile](in_file, I), firings[byfile](across, X), upper_ms[byfile](U), Ms is U * I / (I + X).
 anew_ms[byfile](Ms)     :- in_file_ms[byfile](L), whole_ms[byfile](W), taking_share[byfile](T), threads[shared](C), Ms is W - L + L * (100 - T) / 100 / C + L * T / 100.
 byfile_pays[byfile](Ms) :- anew_ms[byfile](Ms), anew_ms_volumes[shared](V), Ms < V.
+-- BY THE RULES' SHAPE (own[fixpointplan] of the tree's facts, engine/stages.rs `rule_reach`) fewer rules are of one
+-- file than never left one: 190 with 4 426 062 firings; the other 85 read what may cross (need: glob_of, denotes).
+firings[byfile](by_shape, 4426062). firings[byfile](not_by_shape, 4570156).
+shape_ms[byfile](Ms)      :- firings[byfile](by_shape, I), firings[byfile](not_by_shape, X), upper_ms[byfile](U), Ms is U * I / (I + X).
+anew_ms_shape[byfile](Ms) :- shape_ms[byfile](L), whole_ms[byfile](W), taking_share[byfile](T), threads[shared](C), Ms is W - L + L * (100 - T) / 100 / C + L * T / 100.
+-- MEASURED (the ledger: f_the_rules_of_one_file_are_derived_in_its_world): 49.9 s anew, 8.2 s the delta. Firings did
+-- not say time: by the engine's own time by rule the rules of one file were 14.1 s of 35.7, not 17.7 of 36.
+anew_ms_byfile_measured[byfile](49924). delta_ms_byfile_measured[byfile](8160).
+rule_ms[byfile](of_file, 14112). rule_ms[byfile](across, 21629).

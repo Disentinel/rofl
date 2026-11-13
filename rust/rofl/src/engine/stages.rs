@@ -16,9 +16,260 @@ pub struct Stage {
     pub cut: Vec<Sym>,
     /// the rules of the lower stage whose own cone is widest, said with it
     pub wide: Vec<String>,
+    /// `own[fixpointplan](Rel, I)`: the arguments that hold a node of the fact's own file, by relation
+    pub own: FxMap<Sym, u64>,
+    /// the rules of the stage that read no file, or walk a closure: fired above it too
+    pub free: FxSet<Sym>,
+}
+
+impl Stage {
+    /// The rules the pass above the stage does not fire.
+    pub fn below(&self) -> Rc<FxSet<Sym>> {
+        if self.free.is_empty() {
+            return self.rules.clone();
+        }
+        Rc::new(self.rules.iter().copied().filter(|r| !self.free.contains(r)).collect())
+    }
+}
+
+/// Whose file the facts of a relation are of: of none (`Free`), each of one file whose node the positions of the
+/// mask hold (`File`), or of any (`Across`).
+#[derive(Clone, Copy, PartialEq)]
+enum Reach {
+    Free,
+    File(u64),
+    Across,
+}
+
+impl Reach {
+    fn meet(self, o: Reach) -> Reach {
+        match (self, o) {
+            (Reach::Across, _) | (_, Reach::Across) => Reach::Across,
+            (Reach::Free, x) | (x, Reach::Free) => x,
+            (Reach::File(a), Reach::File(b)) => Reach::File(a & b),
+        }
+    }
+}
+
+/// The premises of a rule that are of a file, each by the variables that name it.
+#[derive(Default)]
+struct Prems {
+    sets: Vec<Vec<Sym>>,
+    negs: Vec<Vec<Sym>>,
+    /// what a relation not judged yet would name at best: it holds nothing so far
+    unjudged: Vec<Sym>,
+}
+
+impl Prems {
+    /// False where a premise may be of any file. The members of an aggregate's cell are of one file where a premise
+    /// inside it holds, as a node of its file, a variable the cell is of.
+    fn read(&mut self, h: &Heap, body: &[BodyElem], of: &dyn Fn(Sym) -> Option<Reach>) -> bool {
+        let own = |l: &Lit, mask: u64| -> Vec<Sym> { l.args.iter().enumerate().filter(|(i, _)| *i < 64 && mask >> i & 1 == 1).filter_map(|(_, t)| named(h, *t)).collect() };
+        for b in body {
+            match b {
+                BodyElem::Pos(l) | BodyElem::Neg(l) if l.temporal != Temporal::Now => return false,
+                BodyElem::Pos(l) => match of(l.rel) {
+                    Some(Reach::Across) => return false,
+                    Some(Reach::Free) => {}
+                    Some(Reach::File(m)) => self.sets.push(own(l, m)),
+                    None => self.unjudged.extend(own(l, u64::MAX)),
+                },
+                BodyElem::Neg(l) => match of(l.rel) {
+                    Some(Reach::Across) => return false,
+                    Some(Reach::Free) | None => {}
+                    Some(Reach::File(m)) => self.negs.push(own(l, m)),
+                },
+                BodyElem::Bi { .. } => {}
+                BodyElem::Agg(a) => {
+                    let (n, u) = (self.sets.len(), self.unjudged.len());
+                    if !self.read(h, &a.body, of) {
+                        return false;
+                    }
+                    let of_file = self.sets.len() > n;
+                    if of_file && !self.sets[n..].iter().flatten().chain(&self.unjudged[u..]).any(|v| a.shared.contains(v)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+}
+
+/// The reach of what a rule concludes, by the reach `of` what it reads: a node's name says its file, so premises that
+/// hold one variable where each holds a node of its own file are of one file, and an absence asked of such a node is
+/// settled there.
+/// The variable whose node a term names: itself, or the one argument of a term of one argument (`after(D)`).
+fn named(h: &Heap, t: Term) -> Option<Sym> {
+    match t.kind() {
+        TermK::Var(v) => Some(v),
+        TermK::Func(i) => match h.fargs(i) {
+            [a] => named(h, *a),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+fn rule_reach(h: &Heap, r: &ERule, of: &dyn Fn(Sym) -> Option<Reach>) -> Reach {
+    let c = &r.clause;
+    if !r.safe || r.has_thr || r.has_demand_prem || !r.lattice_outer.is_empty() || r.lat_close.is_some() || c.head.temporal != Temporal::Now {
+        return Reach::Across;
+    }
+    let mut p = Prems::default();
+    if !p.read(h, &c.body, of) {
+        return Reach::Across;
+    }
+    let Prems { mut sets, negs, unjudged } = p;
+    let Some(mut group) = sets.pop().or_else(|| (!unjudged.is_empty()).then(Vec::new)) else {
+        return if negs.is_empty() { Reach::Free } else { Reach::Across };
+    };
+    while !sets.is_empty() {
+        let Some(i) = sets.iter().position(|s| s.iter().any(|v| group.contains(v))) else { return Reach::Across };
+        group.extend(sets.swap_remove(i));
+    }
+    group.extend(unjudged);
+    if negs.iter().any(|n| !n.iter().any(|v| group.contains(v))) {
+        return Reach::Across;
+    }
+    let mut mask = 0u64;
+    for (i, t) in c.head.args.iter().enumerate().take(64) {
+        if named(h, *t).is_some_and(|v| group.contains(&v)) {
+            mask |= 1 << i;
+        }
+    }
+    Reach::File(mask)
 }
 
 impl Eval {
+    /// The reach of every relation, by the arguments `own` declares: the greatest that every rule keeps. What a rule of
+    /// the stage `lower` concludes is of one file whatever its shape: it is evaluated a file at a time.
+    fn reaches(&mut self, own: &FxMap<Sym, u64>, lower: &FxSet<Sym>) -> FxMap<Sym, Reach> {
+        let rules = self.rules.clone();
+        let heads: FxSet<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
+        let stated: FxSet<Sym> = self.store.all_facts().into_iter().map(|f| self.store.rec(f).rel).collect();
+        let mut at: FxMap<Sym, Reach> = own.iter().map(|(r, m)| (*r, Reach::File(*m))).collect();
+        // a relation no rule concludes and no `own` names: the model's where it states it, else it holds nothing
+        for rel in stated.into_iter().filter(|r| !heads.contains(r) && !own.contains_key(r)) {
+            at.insert(rel, Reach::Free);
+        }
+        loop {
+            let mut next = at.clone();
+            let of = |rel: Sym| at.get(&rel).copied();
+            for r in rules.iter() {
+                let x = match rule_reach(&self.h, r, &of) {
+                    Reach::Across if lower.contains(&r.id) => Reach::File(0),
+                    x => x,
+                };
+                next.entry(r.clause.head.rel).and_modify(|e| *e = e.meet(x)).or_insert(x);
+            }
+            if next == at {
+                return at;
+            }
+            at = next;
+        }
+    }
+
+    /// `own[fixpointplan](Rel, I)`: a file states Rel, and argument I of it, from 0, holds a node of that file; `none`
+    /// for I where no argument does.
+    fn own_declared(&mut self) -> FxMap<Sym, u64> {
+        let (rel, book) = (self.h.intern("own"), self.h.intern("fixpointplan"));
+        let mut out: FxMap<Sym, u64> = FxMap::default();
+        for f in self.store.rel_persp(&self.h, rel, book) {
+            if let [r, i] = self.store.args(f) {
+                let Some(r) = r.as_atom() else { continue };
+                let m = out.entry(r).or_default();
+                if let TermK::Int(i @ 0..64) = i.kind() {
+                    *m |= 1 << i;
+                }
+            }
+        }
+        out
+    }
+
+    /// THE STAGE OF A WORLD EVALUATED A FILE AT A TIME: the lower stage of the books the plan cuts, and with it every
+    /// rule above that cannot leave a file, by what `own[fixpointplan]` says of the facts given and the shape of the
+    /// rules (`rule_reach`). What they conclude is a lemma of the file as the lower stage's is, and all of it is given.
+    /// Where the plan names no `own`, the lower stage alone.
+    pub fn lemma_stage(&mut self) -> Option<Stage> {
+        let mut st = self.cut_stage()?;
+        let own = self.own_declared();
+        if own.is_empty() {
+            return Some(st);
+        }
+        let at = self.reaches(&own, &st.rules);
+        let mut rules: FxSet<Sym> = (*st.rules).clone();
+        // a closure answered from its tree is walked in the file's world and in this one: its rows are not given
+        let walked: FxSet<Sym> = (0..self.store.virtuals.len()).filter(|ci| !self.vc.vclosure_blocked.contains(ci)).map(|ci| self.store.virtuals[ci].rel).collect();
+        for r in self.rules.clone().iter().filter(|r| !st.rules.contains(&r.id)) {
+            let rel = r.clause.head.rel;
+            match at.get(&rel) {
+                Some(Reach::File(_)) if !walked.contains(&rel) => {
+                    rules.insert(r.id);
+                    st.heads.insert(rel);
+                    st.given.insert(rel);
+                }
+                Some(Reach::Free | Reach::File(_)) => {
+                    rules.insert(r.id);
+                    st.free.insert(r.id);
+                }
+                _ => {}
+            }
+        }
+        st.rules = Rc::new(rules);
+        st.own = own;
+        Some(st)
+    }
+
+    /// The stage this world was evaluated by: a file at a time where it was given its files' lemmas, else the cut alone.
+    pub(super) fn stage_here(&mut self) -> Option<Stage> {
+        if self.stage_given.is_some() { self.lemma_stage() } else { self.cut_stage() }
+    }
+
+    /// A relation `own[fixpointplan]` names is stated by files alone: a fact of it that is of no one file is refused.
+    pub fn refuse_own_outside(&mut self, st: &Stage) -> Result<(), Halt> {
+        let rels: Vec<Sym> = st.own.keys().copied().collect();
+        for rel in rels {
+            if let Some(&f) = self.store.rel_all(&self.h, rel).iter().find(|f| self.store.alive(**f)) {
+                let n = self.h.name(rel);
+                return Err(Halt::reject(format!("{} is of no one file, and `own[fixpointplan]({n}, _)` says a file states '{n}'", self.store.key(&self.h, f))));
+            }
+        }
+        Ok(())
+    }
+
+    /// What a file's world gives is checked against the plan: an argument `own[fixpointplan]` names holds a node of
+    /// the one file, and the file states no relation the plan does not name. The world's own facts are above `from`.
+    pub fn own_kept(&self, st: &Stage, from: FactId) -> Result<(), Halt> {
+        if st.own.is_empty() {
+            return Ok(());
+        }
+        let mut file: Option<String> = None;
+        for id in (from..self.store.len_ids()).filter(|&id| self.store.alive(id)) {
+            let r = self.store.rec(id);
+            if !r.base() {
+                continue;
+            }
+            let Some(m) = st.own.get(&r.rel) else {
+                let n = self.h.name(r.rel);
+                return Err(Halt::reject(format!("{} is stated by a file, and the plan names what a file states: say `own[fixpointplan]({n}, I)` of each argument I that holds a node of the file, or `own[fixpointplan]({n}, none)`", self.store.key(&self.h, id))));
+            };
+            for (i, t) in self.store.args(id).iter().enumerate().filter(|(i, _)| *i < 64 && m >> i & 1 == 1) {
+                let named = match t.kind() {
+                    TermK::Atom(x) | TermK::Str(x) => super::volumes::file_of(self.h.name(x)),
+                    _ => None,
+                };
+                if named.is_none() || file.as_deref().is_some_and(|f| Some(f) != named) {
+                    return Err(Halt::reject(format!("{} holds at argument {i} no node of its file, and `own[fixpointplan]({}, {i})` says every fact of it does", self.store.key(&self.h, id), self.h.name(r.rel))));
+                }
+                if file.is_none() {
+                    file = named.map(str::to_string);
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// The books the plan cuts: `cut[fixpointplan](B)`.
     fn cut_books(&mut self) -> Vec<Sym> {
         let (rel, book) = (self.h.intern("cut"), self.h.intern("fixpointplan"));
@@ -33,7 +284,7 @@ impl Eval {
     /// when the plan cuts nothing.
     /// Where asks prunes the program, the lower stage is the whole program's (`lower_full`), as the cone has it: what is
     /// a lemma does not hang on what is asked.
-    pub fn lemma_stage(&mut self) -> Option<Stage> {
+    pub fn cut_stage(&mut self) -> Option<Stage> {
         let all = self.rules.clone();
         let refs: Vec<&ERule> = all.iter().map(|r| &**r).collect();
         let mut st = self.lower_of(&refs)?;
@@ -128,7 +379,7 @@ impl Eval {
         let lower: Vec<&&ERule> = rules.iter().zip(&taken).filter(|(_, t)| **t).map(|(r, _)| r).collect();
         let heads = lower.iter().map(|r| r.clause.head.rel).collect();
         let rules = Rc::new(lower.iter().map(|r| r.id).collect());
-        Some(Stage { rules, heads, given: FxSet::default(), cut, wide })
+        Some(Stage { rules, heads, given: FxSet::default(), cut, wide, own: FxMap::default(), free: FxSet::default() })
     }
 
     /// Whether a rule fires in the pass under way: in the lower stage, only its rules; above it, none of them.
@@ -179,6 +430,7 @@ impl Eval {
     /// The lower stage evaluated alone, whole: a stop by a wall is a budget's halt.
     pub fn lower_stage(&mut self, st: &Stage) -> Result<(), Halt> {
         self.stage_pass = StagePass::Lower(st.rules.clone());
+        self.stage_both = Rc::new(st.free.clone());
         let out = self.run_whole();
         self.stage_pass = StagePass::Whole;
         match out? {
@@ -212,6 +464,7 @@ impl Eval {
         super::volumes::load_text(&mut low, text)?;
         if let Some(st) = st {
             low.lower_stage(st)?;
+            low.own_kept(st, from)?;
         }
         Ok((from..low.store.len_ids())
             .filter(|&id| low.store.alive(id))
@@ -315,9 +568,9 @@ impl Eval {
         if !r.base() {
             return false;
         }
-        let key = (self.rules.len(), self.cut_books());
+        let key = (self.rules.len() + usize::from(self.stage_given.is_some()), self.cut_books());
         if self.lemma_heads.as_ref().is_none_or(|(k, _)| *k != key) {
-            let heads = self.lemma_stage().map(|st| Rc::new(st.heads)).unwrap_or_default();
+            let heads = self.stage_here().map(|st| Rc::new(st.heads)).unwrap_or_default();
             self.lemma_heads = Some((key, heads));
         }
         self.lemma_heads.as_ref().is_some_and(|(_, h)| h.contains(&r.rel))
@@ -360,7 +613,7 @@ impl Eval {
     /// Why a retraction is refused here: the world cut a book and holds lemmas, given facts no file names, whose proof
     /// is gone, so nothing could take out the lemmas a fact taken out had proved. None in a world that holds none.
     pub fn refuses_retraction(&mut self) -> Option<String> {
-        let st = self.lemma_stage()?;
+        let st = self.stage_here()?;
         let held = st.heads.iter().any(|&rel| self.store.rel_all(&self.h, rel).into_iter().any(|f| self.store.rec(f).base()));
         held.then(|| {
             let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();

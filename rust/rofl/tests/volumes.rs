@@ -120,3 +120,96 @@ fn walked(model: &str) {
     assert_eq!(all.len(), 8);
     assert_eq!(by, all, "the volumes walk a closure otherwise than the whole world");
 }
+
+const BY_FILE: &str = "cut[fixpointplan](raw).\n\
+own[fixpointplan](node, 0). own[fixpointplan](child, 0). own[fixpointplan](child, 1). own[fixpointplan](name, 0).\n\
+edb(node). edb(child). edb(name).\n\
+kind(N, K) :- node[raw](N, K).\n\
+edge(P, C) :- child[raw](P, C).\n\
+named(N, S) :- name[raw](N, S).\n\
+graph edge(P, C) closure under.\n\
+has_child(P) :- edge(P, _).\n\
+leaf(N) :- kind(N, _), not has_child(N).\n\
+kids(P, N) :- has_child(P), N is count(C : edge(P, C)).\n\
+deep(A, D) :- under(A, D), leaf(D).\n\
+same(A, B) :- named(A, S), named(B, S).\n\
+twin(A) :- same(A, B), leaf(B).\n\
+lonely(N) :- leaf(N), not twin(N).\n";
+
+fn by_file_facts() -> String {
+    let (a, b, c) = ("n00000000000000aa", "n00000000000000bb", "n00000000000000cc");
+    let mut t = String::new();
+    for f in [a, b, c] {
+        for (n, k) in [(1, "fn"), (2, "block"), (3, "call"), (4, "call")] {
+            t.push_str(&format!("node[raw](\"{f}_{n}\", {k}).\n"));
+        }
+        t.push_str(&format!("child[raw](\"{f}_1\", \"{f}_2\").\nchild[raw](\"{f}_2\", \"{f}_3\").\nchild[raw](\"{f}_2\", \"{f}_4\").\n"));
+    }
+    t.push_str(&format!("name[raw](\"{a}_3\", \"go\").\nname[raw](\"{b}_4\", \"go\").\nname[raw](\"{c}_3\", \"stop\").\nname[raw](\"{a}_1\", \"main\").\n"));
+    t
+}
+
+/// THE WORK CUT BY FILE (`Eval::lemma_stage`, `own[fixpointplan]`): the rules that cannot leave a file, a negation, a
+/// count and a walked closure among them, are evaluated in the file's world and what they conclude is given; the rules
+/// that cross files fire over it. The answers are the whole world's, on one worker and on three.
+#[test]
+fn the_rules_of_one_file_are_evaluated_in_its_world() {
+    let facts = by_file_facts();
+    let refs = [BY_FILE, facts.as_str()];
+    let mut whole = Session::fresh(BUDGET);
+    whole.load_all(&refs, None).unwrap();
+    whole.evaluate().unwrap();
+    let cut = rofl::engine::volumes::cut(&refs);
+    assert_eq!(cut.files.len(), 3);
+    for k in [1, 3] {
+        let mut core = Session::fresh(BUDGET);
+        core.load_all(&[cut.core.as_str()], None).unwrap();
+        let st = core.eval.lemma_stage().expect("the plan cuts a book");
+        let heads: BTreeSet<&str> = st.heads.iter().map(|r| core.eval.h.name(*r)).collect();
+        for of_file in ["has_child", "leaf", "kids", "deep"] {
+            assert!(heads.contains(of_file), "{of_file} is of one file: {heads:?}");
+        }
+        for across in ["same", "twin", "lonely", "under"] {
+            assert!(!heads.contains(across), "{across} is not given by a file: {heads:?}");
+        }
+        let mut v = core.by_volumes(rofl::engine::volumes::groups(cut.files.clone(), k), 3).unwrap();
+        for (q, rel, n) in [("leaf(N)", "leaf", 6), ("kids(P, N)", "kids", 6), ("deep(A, D)", "deep", 12), ("same(A, B)", "same", 6), ("twin(A)", "twin", 3), ("lonely(N)", "lonely", 3)] {
+            let by = match core.resident(&v, rel).unwrap() {
+                Some(mut r) => answers(&mut r, q),
+                None => v.worlds.iter_mut().flat_map(|w| answers(w, q)).collect(),
+            };
+            let all = answers(&mut whole, q);
+            assert_eq!(all.len(), n, "{q}: {all:?}");
+            assert_eq!(by, all, "{q} on {k} workers");
+        }
+        if k == 1 {
+            // what the file's world concluded is a lemma here, and `why --all` proves it in that world again
+            let w = &mut v.worlds[0];
+            let fact = "lonely(\"n00000000000000aa_4\")";
+            let short = w.why(fact).unwrap();
+            assert!(short.contains("leaf") && short.contains("[lemma"), "why stops at the file's lemma:\n{short}");
+            w.eval.lower_texts = Some(std::sync::Arc::new(cut.files.iter().cloned().collect()));
+            let all = w.why_all(fact).unwrap();
+            assert!(!all.contains("[lemma") && all.contains("has_child"), "why --all unfolds it:\n{all}");
+        }
+    }
+}
+
+/// A fact that breaks what the plan says of its relation refuses the world: a node of another file where `own` names
+/// the fact's file, and a relation a file states that the plan does not name.
+#[test]
+fn a_file_that_breaks_the_plan_is_refused() {
+    for (more, said) in [
+        ("child[raw](\"n00000000000000aa_1\", \"n00000000000000bb_1\").\n", "is of no one file"),
+        ("child[raw](\"n00000000000000aa_1\", top).\n", "no node of its file"),
+        ("seen(\"n00000000000000aa_1\").\n", "the plan names what a file states"),
+    ] {
+        let facts = by_file_facts() + more;
+        let refs = [BY_FILE, facts.as_str()];
+        let cut = rofl::engine::volumes::cut(&refs);
+        let mut core = Session::fresh(BUDGET);
+        core.load_all(&[cut.core.as_str()], None).unwrap();
+        let e = core.by_volumes(rofl::engine::volumes::groups(cut.files, 1), 3).err().map(|e| rofl::describe(&e)).unwrap_or_default();
+        assert!(e.contains(said), "refused with {said:?}: {e}");
+    }
+}
