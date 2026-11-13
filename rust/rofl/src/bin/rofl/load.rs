@@ -508,7 +508,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         return Some(code);
     }
     let files = cut.files.len();
-    let one = std::env::var("ROFL_VOLUMES").as_deref() == Ok("one");
+    let one = matches!(std::env::var("ROFL_VOLUMES").as_deref(), Ok("one" | "levels"));
     let k = if one { 1 } else { std::thread::available_parallelism().map_or(1, |n| n.get()).min(files) };
     let core_sum = sum(&cut.core);
     let gs = rofl::engine::volumes::groups(cut.files, k);

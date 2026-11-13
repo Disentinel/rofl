@@ -40,6 +40,7 @@ mod layer;
 mod algebra;
 mod books;
 mod stages;
+pub mod levels;
 pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
@@ -826,6 +827,8 @@ pub struct Eval {
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
     /// Where this world is one volume of a corpus (`engine/volumes.rs`): a rule fires only where its anchor is at home.
     pub anchors: Option<Rc<volumes::Anchors>>,
+    /// In a group of a world by levels: which child each fact below lies under.
+    pub meeting: Option<Rc<levels::Meeting>>,
     anchor_home: FxMap<Sym, Option<u32>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
@@ -2344,6 +2347,7 @@ impl Eval {
             staged_away: None,
             anchors: None,
             anchor_home: FxMap::default(),
+            meeting: None,
             lemma_heads: None,
             lower_texts: None,
             lower_full: None,
@@ -5791,6 +5795,9 @@ impl Eval {
             if !a.fires(r.id, &sol.s, &self.h, &mut self.anchor_home) {
                 return Ok(());
             }
+        }
+        if self.meeting.as_ref().is_some_and(|m| !m.crosses(&sol.prems)) {
+            return Ok(());
         }
         if head.temporal == Temporal::Next {
             return self.stage(r.id, head.rel, persp, args, &sol.prems);

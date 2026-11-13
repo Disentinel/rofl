@@ -6,6 +6,7 @@
 
 use super::*;
 use crate::dict::SHARED0;
+use std::sync::Mutex;
 
 /// The file a fact's line names: its node prefix, `n` and 16 hex digits before `_`. None for a line that names no
 /// file or more than one: the core, which every worker holds.
@@ -216,7 +217,14 @@ impl Eval {
     pub fn by_volumes(&mut self, groups: Vec<Vec<(String, String)>>, files: usize) -> Result<(Vec<Worker>, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
-        let stage = self.lemma_stage();
+        // (the check harness's switch: the files by levels, `engine/levels.rs`)
+        let levels = std::env::var("ROFL_VOLUMES").as_deref() == Ok("levels");
+        let (stage, joins) = if levels {
+            let (st, j) = self.level_stage();
+            (Some(st), Mutex::new(Some(j)))
+        } else {
+            (self.lemma_stage(), Mutex::new(None))
+        };
         if let Some(st) = &stage {
             // (the rules above the cut that the stage took are of one file by their shape: nothing of theirs crosses)
             if let Some(low) = self.cut_stage() {
@@ -264,6 +272,18 @@ impl Eval {
         let stage = stage.map(Rc::new);
         on_threads(&mut ws, &|i, w| {
             match &stage {
+                Some(stage) if levels => {
+                    let joins = joins.lock().unwrap().take().expect("one worker by levels");
+                    let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
+                    let cross = joins.cross.len();
+                    let t = std::time::Instant::now();
+                    let unit = w.e.fork().by_levels(&groups[i], stage, joins, fan)?;
+                    let ms = t.elapsed().as_millis();
+                    let from = w.e.store.len_ids();
+                    w.e.take_units(&unit, stage);
+                    w.e.diags.push(format!("levels: {} rules below, {cross} of them where units meet; {} facts in {} units in {ms} ms, {} taken", stage.rules.len(), unit.stretch.hi - from, unit.count(), w.e.store.len_ids() - from));
+                    w.e.stage_given = Some(stage.below());
+                }
                 // the lower stage a file at a time, each in a world of its own the lemmas leave
                 Some(stage) => {
                     let base = w.e.fork();

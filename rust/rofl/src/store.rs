@@ -859,10 +859,6 @@ impl Tuples {
         s.args(i)
     }
     #[inline]
-    fn arity(&self, t: TupId) -> usize {
-        self.args(t).len()
-    }
-    #[inline]
     pub fn len(&self) -> usize {
         self.t0 as usize + self.top.len()
     }
@@ -1050,6 +1046,48 @@ pub struct Facts {
     recs: Col<FactRec>,
     bflags: Rc<Arena<u8>>,
     tups: Tuples,
+    near: Option<Rc<Near>>,
+}
+
+/// A STRETCH OF THE SCROLL: a store settled and not written again, its own facts at `lo..hi` for every reader.
+pub struct Stretch {
+    pub store: Store,
+    pub lo: FactId,
+    pub hi: FactId,
+}
+
+// SAFETY: a stretch is only read, and no read of it counts again what it shares.
+unsafe impl Send for Stretch {}
+unsafe impl Sync for Stretch {}
+
+/// The stretches of `Near::list`, by their places there, that may hold a fact of the relation in the book (None:
+/// any book) with the values at the positions; false, any of them may.
+pub type Route = dyn Fn(Sym, Option<Sym>, &[usize], &[Term], &mut Vec<u32>) -> bool + Send + Sync;
+
+/// THE STRETCHES A STORE READS WHERE THEY LIE, beside its base and its own layer: their ids are between the two.
+#[derive(Clone, Default)]
+pub struct Near {
+    /// the ids below are the base's
+    core: usize,
+    /// in the order of `lo`
+    list: Vec<Rc<Stretch>>,
+    route: Option<Rc<Route>>,
+}
+
+impl Near {
+    fn holders(&self, rel: Sym, persp: Option<Sym>, pos: &[usize], vals: &[Term]) -> Vec<&Stretch> {
+        let mut at = Vec::new();
+        match &self.route {
+            Some(r) if r(rel, persp, pos, vals, &mut at) => at.into_iter().map(|i| &*self.list[i as usize]).collect(),
+            _ => self.list.iter().map(|s| &**s).collect(),
+        }
+    }
+    #[inline]
+    fn of(&self, id: FactId) -> Option<&Stretch> {
+        let i = self.list.partition_point(|s| s.lo <= id);
+        let s = self.list.get(i.checked_sub(1)?)?;
+        (id < s.hi).then_some(&**s)
+    }
 }
 
 impl Facts {
@@ -1058,19 +1096,36 @@ impl Facts {
         let i = id as usize;
         match self.recs.own.get(i.wrapping_sub(self.recs.mark)) {
             Some(r) => *r,
-            None => {
-                let r = *self.recs.below(i);
-                FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
-            }
+            None => match &self.near {
+                // an id no stretch read here holds is no fact here
+                Some(n) if i >= n.core => n.of(id).map_or(FactRec::new(0, 0, 0, F_DEAD), |s| s.store.facts.rec(id)),
+                _ => {
+                    let r = *self.recs.below(i);
+                    FactRec { packed: r.tup() | (self.bflags[i] as u32) << 28, ..r }
+                }
+            },
+        }
+    }
+    /// The pool a fact's arguments lie in and their tuple there: its own, or its stretch's.
+    #[inline(always)]
+    fn tup_of(&self, id: FactId) -> (&TupSeg, TupId) {
+        let i = id as usize;
+        match self.recs.own.get(i.wrapping_sub(self.recs.mark)) {
+            Some(r) => self.tups.seg(r.tup()),
+            None => match &self.near {
+                Some(n) if i >= n.core => n.of(id).expect("a fact of no stretch read here").store.facts.tup_of(id),
+                _ => self.tups.seg(self.recs.below(i).tup()),
+            },
         }
     }
     #[inline(always)]
     pub fn args(&self, id: FactId) -> &[Term] {
-        self.tups.args(self.recs[id as usize].tup())
+        let (s, t) = self.tup_of(id);
+        s.args(t)
     }
     #[inline]
     pub fn arity(&self, id: FactId) -> usize {
-        self.tups.arity(self.recs[id as usize].tup())
+        self.args(id).len()
     }
     #[inline]
     pub fn alive(&self, id: FactId) -> bool {
@@ -1117,11 +1172,10 @@ impl Facts {
     /// are hash-consed, so the same tuple is the same rendering and the
     /// comparison is over before it starts.
     pub fn cmp_args(&self, h: &Heap, a: FactId, b: FactId) -> Ordering {
-        let (ta, tb) = (self.recs[a as usize].tup(), self.recs[b as usize].tup());
-        if ta == tb {
+        let ((sa, ia), (sb, ib)) = (self.tup_of(a), self.tup_of(b));
+        if std::ptr::eq(sa, sb) && ia == ib {
             return Ordering::Equal;
         }
-        let ((sa, ia), (sb, ib)) = (self.tups.seg(ta), self.tups.seg(tb));
         let (ka, kb) = (sa.sks[ia as usize], sb.sks[ib as usize]);
         if ka != 0 && kb != 0 && ka != kb {
             return ka.cmp(&kb);
@@ -1398,6 +1452,8 @@ pub struct Store {
     /// against a `Map<key, Map<sig, Witness>>` of two hash tables and two
     /// strings per firing on the JS side.
     wit_head: Col<u32>,
+    /// The head of the chain of firings this store holds for a fact of a stretch it reads.
+    far_heads: FxMap<FactId, u32>,
     /// The fold each fact lies in (`crate::fold`), while the world has a table of folds: a fact put lies in
     /// `fold_now`, one concluded in the fold of its first firing's premises.
     fold: Col<u32>,
@@ -1918,7 +1974,7 @@ impl Store {
         self.facts.mark() as FactId
     }
     pub fn all_facts(&self) -> Vec<FactId> {
-        (0..self.facts.len() as FactId)
+        self.ids_here()
             .filter(|&i| self.alive(i))
             .collect()
     }
@@ -2000,7 +2056,156 @@ impl Store {
     }
 
     fn find(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        self.find_here(rel, persp, args).or_else(|| self.find_near(rel, persp, args))
+    }
+
+    fn find_here(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
         self.find_rec(rel, persp, args).filter(|&i| self.alive(i))
+    }
+
+    /// The live fact of this key in a stretch read here.
+    fn find_near(&self, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        let n = self.facts.near.as_ref()?;
+        let pos: Vec<usize> = (0..args.len()).collect();
+        let h = hash_key(rel, persp, args);
+        n.holders(rel, Some(persp), &pos, args).into_iter().find_map(|s| s.store.probe(&s.store.keys, h, rel, persp, args).filter(|&i| s.store.alive(i)))
+    }
+
+    /// The ids of this store's base and of its own layer: every id but those of the stretches it reads.
+    fn ids_here(&self) -> std::iter::Chain<Range<FactId>, Range<FactId>> {
+        let (mark, len) = (self.facts.recs.mark as FactId, self.facts.len() as FactId);
+        let core = self.facts.near.as_ref().map_or(mark, |n| n.core as FactId);
+        (0..core).chain(mark..len)
+    }
+
+    /// Whether the id is this store's own or its base's, not a stretch's.
+    #[inline]
+    fn here(&self, id: FactId) -> bool {
+        self.facts.near.as_ref().is_none_or(|n| (id as usize) < n.core || id as usize >= self.facts.recs.mark)
+    }
+
+    #[inline]
+    fn head(&self, id: FactId) -> u32 {
+        if self.here(id) {
+            self.wit_head[id as usize]
+        } else {
+            self.far_heads.get(&id).copied().unwrap_or(EMPTY)
+        }
+    }
+
+    #[inline]
+    fn set_head(&mut self, id: FactId, c: u32) {
+        if self.here(id) {
+            self.wit_head[id as usize] = c;
+        } else {
+            self.far_heads.insert(id, c);
+        }
+    }
+
+    /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
+    /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
+    pub fn read_near(&mut self, mark: FactId, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>) {
+        let core = self.facts.recs.mark;
+        assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
+        assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
+        self.facts.near = Some(Rc::new(Near { core, list, route }));
+        self.facts.recs.mark = mark as usize;
+        self.wit_head.mark = mark as usize;
+        self.fold.mark = mark as usize;
+    }
+
+    /// The stretches this store reads.
+    pub fn near(&self) -> &[Rc<Stretch>] {
+        self.facts.near.as_ref().map_or(&[], |n| &n.list)
+    }
+
+    /// THIS STORE AS A STRETCH AT `lo`: its own facts take the ids from `lo` up, in the order they were put, in
+    /// every place the store names one (the key table, the runs and their indexes, the premises of its firings).
+    /// It is not written again.
+    pub fn into_stretch(mut self, h: &Heap, lo: FactId) -> Stretch {
+        for (rel, persp) in self.idx.arriving() {
+            self.absorb(h, rel, persp);
+        }
+        let was = self.facts.recs.mark as FactId;
+        assert!(lo >= was, "a stretch lies above every stretch it read");
+        let d = lo - was;
+        let n = self.facts.recs.own.len() as FactId;
+        if d > 0 {
+            let up = |k: &mut FactId| {
+                if *k != EMPTY && *k >= was {
+                    *k += d;
+                }
+            };
+            self.keys.iter_mut().for_each(up);
+            for (_, run) in self.idx.own.values_mut().flatten() {
+                for a in [&mut run.canon, &mut run.arrived] {
+                    if a.iter().any(|&k| k >= was) {
+                        a.to_mut().iter_mut().for_each(up);
+                    }
+                }
+                run.loose.iter_mut().for_each(up);
+                run.staged.iter_mut().for_each(up);
+                if let Some(bp) = run.by_pat.as_mut() {
+                    for ix in Rc::make_mut(bp).values_mut() {
+                        assert!(ix.under.is_none(), "a stretch's index lies over none");
+                        if ix.ids.iter().any(|&k| k >= was) {
+                            ix.ids.to_mut().iter_mut().for_each(up);
+                        }
+                    }
+                }
+            }
+            for p in self.prem_arena.own.iter_mut() {
+                if let Prem::Fact(f) = p.kind() {
+                    if f >= was {
+                        *p = PremRef::Fact(f + d);
+                    }
+                }
+            }
+            self.facts.recs.mark = lo as usize;
+            self.wit_head.mark = lo as usize;
+            self.fold.mark = lo as usize;
+            self.fired.own.clear();
+        }
+        self.dup_window = None;
+        Stretch { store: self, lo, hi: lo + n }
+    }
+
+    /// What this stretch itself holds of the candidates of a premise: a superset.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn top_matches(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], out: &mut Vec<FactId>) {
+        let lo = self.facts.recs.mark as FactId;
+        if let Some(Some(v)) = self.own_matches_ro(h, rel, persp, arity, pos, vals, usize::MAX) {
+            out.extend(v.into_iter().filter(|&k| k >= lo));
+            return;
+        }
+        let Some(groups) = self.idx.get(&rel) else { return };
+        for (_, run) in groups.iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)) {
+            out.extend(run.canon.iter().chain(run.arrived.iter()).copied().filter(|&k| {
+                k >= lo && self.alive(k) && {
+                    let a = self.args(k);
+                    a.len() == arity && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v))
+                }
+            }));
+        }
+    }
+
+    /// The candidates the stretches read here hold, added to this store's own, read whole where it declined: a
+    /// caller that scans reads this store alone.
+    #[allow(clippy::too_many_arguments)]
+    fn with_near(&mut self, h: &Heap, own: Option<Vec<FactId>>, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term]) -> Option<Vec<FactId>> {
+        if pos.is_empty() {
+            return None;
+        }
+        let mut out = match (own, persp) {
+            (Some(v), _) => v,
+            (None, Some(p)) => self.rel_persp(h, rel, p),
+            (None, None) => self.rel_all(h, rel),
+        };
+        let n = self.facts.near.clone().unwrap();
+        for s in n.holders(rel, persp, pos, vals) {
+            s.store.top_matches(h, rel, persp, arity, pos, vals, &mut out);
+        }
+        Some(out)
     }
 
     fn key_insert(&mut self, id: FactId) {
@@ -2099,6 +2304,9 @@ impl Store {
                 id
             }
             None => {
+                if let Some(id) = self.find_near(rel, persp, args) {
+                    return (id, false);
+                }
                 let tup = self.facts.tups.intern(h, args);
                 let id = self.facts.len() as FactId;
                 self.facts.push(FactRec::new(rel, persp, tup, flags));
@@ -2451,6 +2659,9 @@ impl Store {
     // --------------------------------------------------------------- index
 
     pub fn indexed(&self, rel: Sym, persp: Option<Sym>) -> bool {
+        if self.facts.near.is_some() {
+            return true;
+        }
         let Some(v) = self.idx.get(&rel) else {
             return false;
         };
@@ -2520,6 +2731,24 @@ impl Store {
     /// `arg_matches` from a store that is not written: the outer None when it would merge a group or build an index.
     #[allow(clippy::too_many_arguments)]
     pub fn arg_matches_ro(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], limit: usize) -> Option<Option<Vec<FactId>>> {
+        let own = self.own_matches_ro(h, rel, persp, arity, pos, vals, limit)?;
+        let Some(n) = &self.facts.near else { return Some(own) };
+        if pos.is_empty() {
+            return Some(None);
+        }
+        let mut out = match (own, persp) {
+            (Some(v), _) => v,
+            (None, Some(p)) => self.rel_persp_ro(rel, p)?,
+            (None, None) => self.rel_all_ro(h, rel)?,
+        };
+        for s in n.holders(rel, persp, pos, vals) {
+            s.store.top_matches(h, rel, persp, arity, pos, vals, &mut out);
+        }
+        Some(Some(out))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn own_matches_ro(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], limit: usize) -> Option<Option<Vec<FactId>>> {
         if pos.is_empty() {
             return Some(None);
         }
@@ -2529,7 +2758,7 @@ impl Store {
         let Some(p) = persp else {
             let mut out = Vec::new();
             for q in self.persps_sorted(h, rel) {
-                match self.arg_matches_ro(h, rel, Some(q), arity, pos, vals, limit.saturating_sub(out.len()))? {
+                match self.own_matches_ro(h, rel, Some(q), arity, pos, vals, limit.saturating_sub(out.len()))? {
                     Some(part) => out.extend(part),
                     None if limit == usize::MAX => out.extend(self.rel_persp_ro(rel, q)?),
                     None => return Some(None),
@@ -2539,7 +2768,7 @@ impl Store {
         };
         let Some(run) = self.run(rel, p) else { return Some(Some(Vec::new())) };
         if pos.len() == arity {
-            let hit = self.find(rel, p, vals);
+            let hit = self.find_here(rel, p, vals);
             let mut out: Vec<FactId> = hit.into_iter().collect();
             out.extend(run.loose.iter().copied().filter(|&k| self.alive(k) && Some(k) != hit));
             return Some(Some(out));
@@ -2583,7 +2812,16 @@ impl Store {
     /// `arg_matches` where it answers with at most `limit` facts; None where it would answer more, without
     /// listing them.
     #[allow(clippy::too_many_arguments)]
-    pub fn arg_matches_upto(
+    pub fn arg_matches_upto(&mut self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], limit: usize) -> Option<Vec<FactId>> {
+        let own = self.own_matches_upto(h, rel, persp, arity, pos, vals, limit);
+        if self.facts.near.is_none() {
+            return own;
+        }
+        self.with_near(h, own, rel, persp, arity, pos, vals)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn own_matches_upto(
         &mut self,
         h: &Heap,
         rel: Sym,
@@ -2602,7 +2840,7 @@ impl Store {
         let Some(p) = persp else {
             let mut out = Vec::new();
             for q in self.persps_sorted(h, rel) {
-                match self.arg_matches_upto(h, rel, Some(q), arity, pos, vals, limit.saturating_sub(out.len())) {
+                match self.own_matches_upto(h, rel, Some(q), arity, pos, vals, limit.saturating_sub(out.len())) {
                     Some(part) => out.extend(part),
                     None if limit == usize::MAX => out.extend(self.rel_persp(h, rel, q)),
                     None => return None,
@@ -2619,7 +2857,7 @@ impl Store {
             return Some(Vec::new());
         }
         if pos.len() == arity {
-            let hit = self.find(rel, p, vals);
+            let hit = self.find_here(rel, p, vals);
             let mut out: Vec<FactId> = hit.into_iter().collect();
             if let Some(run) = self.run(rel, p) {
                 out.extend(run.loose.iter().copied().filter(|&k| self.alive(k) && Some(k) != hit));
@@ -2936,7 +3174,7 @@ impl Store {
     pub fn clear_derived(&mut self, row_of: Option<RowOf<'_>>) {
         self.chains_cut();
         self.vlisted = false;
-        let drop: Vec<FactId> = (0..self.facts.len() as FactId)
+        let drop: Vec<FactId> = self.ids_here()
             .filter(|&i| {
                 let r = &self.facts.rec(i);
                 !r.dead() && !r.base() && !r.frozen() && !self.kept_layer.contains(&r.rel) && !self.kept_rows.contains(&i)
@@ -2945,7 +3183,7 @@ impl Store {
         self.remove_many(&drop);
         let mut standing: HashSet<(FactId, Sym)> = HashSet::new();
         if let Some(row_of) = row_of {
-            for id in 0..self.facts.len() as FactId {
+            for id in self.ids_here() {
                 let r = self.facts.rec(id);
                 if r.dead() {
                     continue;
@@ -2960,7 +3198,7 @@ impl Store {
             }
         }
         let tick = self.tick;
-        for id in 0..self.wit_head.len() {
+        for id in self.ids_here() {
             if !self.kept_layer.is_empty() && (self.kept_layer.contains(&self.facts.rec(id as FactId).rel) || self.kept_rows.contains(&(id as FactId))) {
                 continue;
             }
@@ -2999,13 +3237,13 @@ impl Store {
         // the rows a structure answers are derived rows of the tick that ends
         self.vlisted = false;
         // a superseded lattice value's history ends with its tick
-        for id in 0..self.facts.len() as FactId {
+        for id in self.ids_here() {
             if self.facts.rec(id).dead() {
                 self.drop_firings(id);
             }
         }
         let mut stale: Vec<FactId> = Vec::new();
-        for id in 0..self.facts.len() as FactId {
+        for id in self.ids_here() {
             let r = self.facts.rec(id);
             // `rec.base || rec.scope !== 'timeless'` — the frozen layer is the
             // DERIVED TIMELESS records and nothing else.
@@ -3020,7 +3258,7 @@ impl Store {
             }
             self.facts.add_flags(id, F_FROZEN);
         }
-        let to_drop: Vec<FactId> = (0..self.facts.len() as FactId)
+        let to_drop: Vec<FactId> = self.ids_here()
             .filter(|&i| {
                 let r = &self.facts.rec(i);
                 !r.dead() && r.tick_scope()
@@ -3075,7 +3313,7 @@ impl Store {
     /// every round's provenance for the life of the evaluation.
     fn compact_wits(&mut self) {
         self.chains_cut();
-        if self.wits.len() <= 2 * self.wits_live + 1024 {
+        if self.wits.len() <= 2 * self.wits_live + 1024 || self.facts.near.is_some() {
             return;
         }
         let mut wits = Vec::with_capacity(self.wits_live);
@@ -3225,7 +3463,7 @@ impl Store {
     /// fact on the JS side, src/store.ts:693).
     pub fn support(&mut self, id: FactId, w: Witness) -> bool {
         let h = firing_hash(id, w.rule, &w.prems);
-        let head = self.wit_head[id as usize];
+        let head = self.head(id);
         let c = if self.fired.insert(h) {
             EMPTY
         } else if let Some(d) = &self.dup_window {
@@ -3261,7 +3499,7 @@ impl Store {
                 }
             }
         }
-        if self.folds.is_some() && head == EMPTY && !self.facts.rec(id).base() {
+        if self.folds.is_some() && head == EMPTY && self.here(id) && !self.facts.rec(id).base() {
             let f = self.fold_of_prems(&w.prems);
             self.fold[id as usize] = f;
         }
@@ -3272,9 +3510,9 @@ impl Store {
             tick: w.tick,
             prems_at: at,
             prems_len: w.prems.len() as u32,
-            next: self.wit_head[id as usize],
+            next: head,
         });
-        self.wit_head[id as usize] = self.wits.len() as u32 - 1;
+        self.set_head(id, self.wits.len() as u32 - 1);
         self.wits_live += 1;
         if let Some(d) = self.dup_window.as_mut() {
             if head == EMPTY {
@@ -3342,7 +3580,7 @@ impl Store {
                 v.dedup();
                 v
             }
-            None => (0..self.wit_head.len() as FactId).collect(),
+            None => self.ids_here().collect(),
         };
         let mut out = Vec::new();
         for id in ids {
@@ -3407,7 +3645,14 @@ impl Store {
 
     /// Every firing of `id`: its tick and its premises.
     pub fn firings(&self, id: FactId) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        self.chain(id).map(|n| (n.rule, n.tick, self.prems_of(&n).to_vec())).collect()
+        let mut out: Vec<(Sym, u32, Vec<PremRef>)> = self.chain(id).map(|n| (n.rule, n.tick, self.prems_of(&n).to_vec())).collect();
+        if let Some(n) = self.facts.near.as_ref().filter(|_| !self.here(id)) {
+            for s in &n.list {
+                let c = if s.lo <= id && id < s.hi { s.store.wit_head[id as usize] } else { s.store.far_heads.get(&id).copied().unwrap_or(EMPTY) };
+                out.extend(s.store.nodes_from(c).map(|n| (n.rule, n.tick, s.store.prems_of(&n).to_vec())));
+            }
+        }
+        out
     }
 
     /// Remove one firing, named by its rule and premises. True if it was there.
@@ -3452,7 +3697,7 @@ impl Store {
     }
 
     pub fn dead_ids(&self) -> Vec<FactId> {
-        (0..self.facts.len() as FactId)
+        self.ids_here()
             .filter(|id| !self.alive(*id) && self.wit_head.get(*id as usize).is_some())
             .collect()
     }
@@ -3461,11 +3706,11 @@ impl Store {
     /// inline; this is that walk for the readers who want the facts and not
     /// the rendering.
     pub fn live_ids(&self) -> Vec<FactId> {
-        (0..self.facts.len() as FactId).filter(|id| self.alive(*id)).collect()
+        self.ids_here().filter(|id| self.alive(*id)).collect()
     }
 
     pub fn firing_keys(&self) -> Vec<FactId> {
-        (0..self.wit_head.len() as FactId)
+        self.ids_here()
             .filter(|&i| self.wit_head[i as usize] != EMPTY)
             .collect()
     }
@@ -3490,7 +3735,7 @@ impl Store {
     /// The firings of `id`, head first.
     #[inline]
     fn chain(&self, id: FactId) -> impl Iterator<Item = WitNode> + '_ {
-        self.nodes_from(self.wit_head[id as usize])
+        self.nodes_from(self.head(id))
     }
 
     /// Unlink the firings of `id` that `dies` names, in place; returns them in list order.
@@ -3834,7 +4079,7 @@ impl Store {
     /// distinguish, and the contract this port is measured against.
     pub fn canonical_state(&self, h: &Heap) -> String {
         let mut keyed: Vec<(String, Option<FactId>)> = Vec::with_capacity(self.n_live + self.virtual_rows());
-        for id in 0..self.facts.len() as FactId {
+        for id in self.ids_here() {
             if self.alive(id) {
                 keyed.push((self.key(h, id), Some(id)));
             }
@@ -4007,7 +4252,7 @@ impl Store {
     /// nothing in this function reads any of them.
     pub fn derivations(&self, h: &Heap) -> String {
         let mut keyed: Vec<(String, Option<FactId>)> = Vec::with_capacity(self.n_live);
-        for id in 0..self.facts.len() as FactId {
+        for id in self.ids_here() {
             if self.alive(id) {
                 keyed.push((self.key(h, id), Some(id)));
             }
@@ -5691,6 +5936,61 @@ sks {:>10} B ({:>4.1}% of {})",
         writes(&mut sh, &mut sibling);
         assert_eq!(s.canonical_state(&h), base);
         assert_eq!(layer.canonical_state(&lh), done.3);
+    }
+
+    /// A store reads the stretches of two stores settled apart as one store holding all of it would: a fact by its
+    /// number, the candidates of a key, a key's fact, a firing's premises; and a firing it finds for a stretch's
+    /// fact is its own to keep.
+    #[test]
+    fn a_store_reads_stretches_where_they_lie() {
+        let (mut h, mut s, p, m, _) = world();
+        let (q, rule) = (h.intern("q"), h.intern("r1"));
+        let v: Vec<Term> = (0..60).map(|i| h.atom(&format!("v{i:02}"))).collect();
+        s.put(&h, p, m, &[v[59], v[58]], F_BASE);
+        h.freeze();
+        s.freeze(&h);
+        let core = s.len_ids();
+        let unit = |from: usize, extra: Option<(usize, usize)>| {
+            let mut u = s.clone();
+            for i in from..from + 25 {
+                let (e, _) = u.put(&h, p, m, &[v[i], v[i + 1]], F_BASE);
+                let (d, _) = u.put(&h, q, m, &[v[i]], 0);
+                u.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(e)] });
+            }
+            if let Some((x, y)) = extra {
+                u.put(&h, p, m, &[v[x], v[y]], F_BASE);
+            }
+            u.arg_matches(&h, p, Some(m), 2, &[0], &[v[from]]);
+            u
+        };
+        let a = unit(0, None).into_stretch(&h, core);
+        let b = unit(30, Some((30, 3))).into_stretch(&h, a.hi);
+        assert_eq!((a.hi - a.lo, b.hi - b.lo), (50, 51));
+        let (a, b) = (Rc::new(a), Rc::new(b));
+        let mut top = s.clone();
+        top.read_near(b.hi, vec![a.clone(), b.clone()], None);
+        for (st, from) in [(&a, 0), (&b, 30)] {
+            for k in 0..25u32 {
+                let (e, d) = (st.lo + 2 * k, st.lo + 2 * k + 1);
+                let i = from + k as usize;
+                assert_eq!(top.args(e), &[v[i], v[i + 1]]);
+                assert_eq!((top.rec(d).rel, top.args(d)), (q, &[v[i]][..]));
+                assert_eq!(top.firings(d), vec![(rule, 0, vec![PremRef::Fact(e)])]);
+                assert_eq!(top.get(p, m, &[v[i], v[i + 1]]), Some(e));
+            }
+        }
+        let mut into3 = top.arg_matches(&h, p, Some(m), 2, &[1], &[v[3]]).unwrap();
+        into3.retain(|&k| top.args(k)[1] == v[3]);
+        into3.sort_unstable();
+        assert_eq!(into3, vec![a.lo + 4, b.hi - 1]);
+        assert_eq!(top.arg_matches_ro(&h, p, Some(m), 2, &[0], &[v[31]], usize::MAX), Some(Some(vec![0, b.lo + 2])));
+        let d = b.lo + 1;
+        assert_eq!(top.put(&h, q, m, &[v[30]], 0), (d, false));
+        assert!(top.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(b.hi - 1)] }));
+        assert!(!top.support(d, Witness { rule, tick: 0, prems: vec![PremRef::Fact(b.hi - 1)] }));
+        assert_eq!(top.firings(d), vec![(rule, 0, vec![PremRef::Fact(b.hi - 1)]), (rule, 0, vec![PremRef::Fact(b.lo)])]);
+        assert_eq!(top.put(&h, q, m, &[v[58]], 0), (b.hi, true));
+        assert_eq!(b.store.firings(d).len(), 1);
     }
 
     #[test]
