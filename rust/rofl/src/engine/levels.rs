@@ -446,7 +446,6 @@ unsafe impl Sync for Over {}
 impl Levels {
     /// `e`, a fork of the core the units were settled over that wrote nothing, reads them from here on.
     pub fn read_by(&self, e: &mut Eval) {
-        e.store.folds = None;
         // (it is evaluated: the units are its world)
         e.store.dirty = false;
         if let Some(st) = e.cut_stage() {
@@ -966,8 +965,7 @@ impl Eval {
                 let map = crate::arena::map_file(&path).map_err(|x| x.to_string())?;
                 let over = over.get_or_init(|| {
                     let _g = one.lock().unwrap();
-                    let mut store = base.0.fork().store;
-                    store.folds = None;
+                    let store = base.0.fork().store;
                     Over(Rc::new((store, cx.h.clone())))
                 });
                 let ss: Vec<Stretch> = starts.iter().map(|&at| Stretch::read(&over.0, &mut VolR::new(map.clone(), at), crate::store::COOLED)).collect::<Result<_, _>>()?;
@@ -1022,7 +1020,6 @@ impl Eval {
             let _g = one.lock().unwrap();
             let mut e = Fork(base.0.fork());
             e.0.par.threads = 1;
-            e.0.store.folds = None;
             e
         };
         let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<FxMap<Key, Vec<FactId>>>, asked: Asked| {

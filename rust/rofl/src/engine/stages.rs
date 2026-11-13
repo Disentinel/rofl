@@ -496,62 +496,6 @@ impl Eval {
         self.store.dirty = true;
     }
 
-    /// What one file gives a world by volumes, as text: its lower stage's lemmas and its facts outside the cut books
-    /// where the program cuts one (`take_lemmas`), else its base facts. A fork of the core, its own facts above `from`.
-    pub fn given_by_file(&self, text: &str, st: Option<&Stage>) -> Result<Vec<String>, Halt> {
-        let mut low = self.fork();
-        let from = low.store.len_ids();
-        super::volumes::load_text(&mut low, text)?;
-        if let Some(st) = st {
-            low.lower_stage(st)?;
-            low.own_kept(st, from)?;
-        }
-        Ok((from..low.store.len_ids())
-            .filter(|&id| low.store.alive(id))
-            .filter(|&id| {
-                let r = low.store.rec(id);
-                match st {
-                    Some(st) => !st.cut.contains(&r.persp) && (r.base() || st.given.contains(&r.rel)),
-                    None => r.base(),
-                }
-            })
-            .map(|id| low.store.key(&low.h, id))
-            .collect())
-    }
-
-    /// `given_by_file` of each text, the files spread over the cores: each thread works in a fork of its own.
-    pub fn given_by_files(&self, texts: &[&str], st: Option<&Stage>) -> Result<Vec<Vec<String>>, Halt> {
-        let n = std::thread::available_parallelism().map_or(1, |c| c.get()).min(texts.len());
-        if n < 2 {
-            return texts.iter().map(|t| self.given_by_file(t, st)).collect();
-        }
-        struct Own<'a>(Eval, Option<&'a Stage>);
-        // SAFETY: as the workers of a set of volumes (engine/volumes.rs): each fork is moved to a thread whole, and
-        // the stage is only read
-        unsafe impl Send for Own<'_> {}
-        let forks: Vec<Own> = (0..n).map(|_| Own(self.fork(), st)).collect();
-        let out: Vec<Result<Vec<(usize, Vec<String>)>, Halt>> = std::thread::scope(|sc| {
-            let hs: Vec<_> = forks
-                .into_iter()
-                .enumerate()
-                .map(|(i, own)| {
-                    sc.spawn(move || {
-                        let own = own;
-                        (i..texts.len()).step_by(n).map(|x| own.0.given_by_file(texts[x], own.1).map(|g| (x, g))).collect()
-                    })
-                })
-                .collect();
-            hs.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(Halt::Bug("a worker panicked".into())))).collect()
-        });
-        let mut by: Vec<Vec<String>> = vec![Vec::new(); texts.len()];
-        for part in out {
-            for (x, g) in part? {
-                by[x] = g;
-            }
-        }
-        Ok(by)
-    }
-
     /// A lower stage that reads or concludes `[surface]` is refused where files are evaluated apart: it is evaluated
     /// a file at a time, before anything crosses.
     pub fn refuse_stage_across(&self, st: &Stage, surface: Sym) -> Result<(), Halt> {

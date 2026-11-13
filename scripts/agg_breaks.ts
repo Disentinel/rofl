@@ -8565,20 +8565,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "volumes_unexchanged",
-  "what": "a corpus evaluated by volumes lays no worker's [surface] facts into the others: a volume answers from its own files alone",
-  "expect": {
-   "volumes": "the volumes answer otherwise than the whole world"
-  }
- },
- {
-  "id": "volumes_cool_views_lost",
-  "what": "a worker cooled to disk takes back its facts and names but not the store's views over them (closures, aliases, deaths): the evaluation going on reads views of nothing",
-  "expect": {
-   "volumes": "panicked"
-  }
- },
- {
   "id": "add_hol_shared_kept",
   "what": "a holistic group shared across its percent or subject is asked again by key and keeps its old group",
   "expect": {

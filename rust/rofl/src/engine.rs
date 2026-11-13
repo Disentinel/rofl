@@ -825,8 +825,6 @@ pub struct Eval {
     stage_both: Rc<FxSet<Sym>>,
     /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
-    /// Where this world is one volume of a corpus (`engine/volumes.rs`): a rule fires only where its anchor is at home.
-    pub anchors: Option<Rc<volumes::Anchors>>,
     /// In a group of a world by levels: which child each fact below lies under.
     pub meeting: Option<Rc<levels::Meeting>>,
     /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
@@ -835,7 +833,6 @@ pub struct Eval {
     homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
     /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
     pub levels: Option<Rc<levels::Levels>>,
-    anchor_home: FxMap<Sym, Option<u32>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
@@ -1280,14 +1277,9 @@ pub struct AddState {
     heights: HashSet<Sym>,
     /// The first id an addition's facts take: a fact below it stood before.
     mark: FactId,
-    /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
-    retract_seeds: Vec<FactId>,
     /// What the overdeletion took out though a firing of it over a cell or a row was not judged (`overdelete`): only
     /// these, and a base fact that lost its firings, are derived again by their rules; the rest comes back by the news.
     retry: crate::store::FxSet<FactId>,
-    /// Of what a retraction reaches, the facts nothing proves again across the volumes (`Crossing::stands`): the
-    /// retraction's first overdeletion keeps every other fact where a firing of it stands over facts not among them.
-    pub falls: Option<crate::store::FxSet<FactId>>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -2351,8 +2343,6 @@ impl Eval {
             stage_given: None,
             stage_both: Rc::default(),
             staged_away: None,
-            anchors: None,
-            anchor_home: FxMap::default(),
             meeting: None,
             by_seed: false,
             homing: None,
@@ -5807,11 +5797,6 @@ impl Eval {
             );
             self.diag_once(msg);
             return Ok(());
-        }
-        if let Some(a) = &self.anchors {
-            if !a.fires(r.id, &sol.s, &self.h, &mut self.anchor_home) {
-                return Ok(());
-            }
         }
         if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems)) {
             return Ok(());

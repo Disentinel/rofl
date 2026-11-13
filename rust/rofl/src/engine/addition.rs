@@ -950,7 +950,7 @@ impl Eval {
         if removed.is_empty() {
             return;
         }
-        let mut seeds: Vec<FactId> = std::mem::take(&mut self.add.retract_seeds);
+        let mut seeds: Vec<FactId> = Vec::new();
         for &f in removed {
             st.over.insert(f);
             if brk!("retract_set_unpropagated" => false; true) {
@@ -962,7 +962,6 @@ impl Eval {
         }
         self.meter_seeds("removed", &seeds);
         self.overdelete(seeds, &mut st.over, &mut st.over_base, d);
-        self.add.falls = None;
     }
 
     /// One level, in the order the fine path settles it: the firings a new fact blocks, the rules derived whole, the

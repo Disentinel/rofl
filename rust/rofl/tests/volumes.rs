@@ -1,5 +1,5 @@
 //! A CORPUS AS VOLUMES, held to the whole world (`engine/volumes.rs`): the JS model and the side-effect question over
-//! the 19 files of examples/vscode/mini and split, evaluated whole and by volumes on four workers. Every fact that names
+//! the 19 files of examples/vscode/mini and split, evaluated whole and by volumes. Every fact that names
 //! a file is the whole world's, no more and no fewer, and every answer of the question, the counts over every file
 //! among them, is the whole world's.
 use rofl::session::Session;
@@ -36,7 +36,7 @@ fn answers(s: &mut Session, q: &str) -> BTreeSet<Vec<String>> {
     s.ask(q).unwrap().rows.into_iter().collect()
 }
 
-/// Then again past a quarter of the memory the process may use, where the workers are cooled to disk before each level and go
+/// Then again past a quarter of the memory the process may use, where the units done are cooled to disk and go
 /// on mapped from it: the same facts and answers. One test, as the memory measured is the process's.
 #[test]
 fn the_volumes_answer_as_the_whole_world() {
@@ -63,41 +63,36 @@ fn check(cool: bool) {
     if cool {
         mem(2, 2);
     }
-    let v = core.by_volumes(rofl::engine::volumes::groups(cut.files, 4), files);
+    let v = core.by_volumes(&cut.files);
     if cool {
         mem(0, 0);
     }
-    let mut v = v.unwrap();
-    assert!(!cool || v.stats.cooled > 1 && v.stats.cool_files >= files && v.stats.cool_bytes > 0, "{:?}", v.stats);
+    let (mut v, stats) = v.unwrap();
+    assert!(!cool || stats.cooled > 1 && stats.cool_files >= files && stats.cool_bytes > 0, "{stats:?}");
 
-    let union: BTreeSet<String> = v.worlds.iter().flat_map(keys).collect();
+    let union = keys(&v);
     let all = keys(&whole);
     let missing: Vec<&String> = all.difference(&union).take(5).collect();
     let invented: Vec<&String> = union.difference(&all).take(5).collect();
     assert!(missing.is_empty() && invented.is_empty(), "the volumes answer otherwise than the whole world: missing {missing:?}, invented {invented:?}");
 
     for q in ASKED {
-        let rel = q.split('(').next().unwrap();
-        let by = match core.resident(&v, rel).unwrap() {
-            Some(mut r) => answers(&mut r, q),
-            None => v.worlds.iter_mut().flat_map(|w| answers(w, q)).collect(),
-        };
-        assert_eq!(by, answers(&mut whole, q), "the volumes answer otherwise than the whole world: {q}");
+        assert_eq!(answers(&mut v, q), answers(&mut whole, q), "the volumes answer otherwise than the whole world: {q}");
     }
     if cool {
         // the units cooled are kept as a segment of the scroll and read back from it: the same answers
-        let units = v.worlds[0].eval.levels.clone().expect("a world by levels");
+        let units = v.eval.levels.clone().expect("a world by levels");
         let k = std::env::temp_dir().join(format!("rofl-volumes-kept-{}", std::process::id())).to_string_lossy().to_string();
         rofl::volume::keep_units(&k, Some(&units)).unwrap();
-        let mut e = v.worlds[0].eval.fork();
+        let mut e = v.eval.fork();
         e.store.reads_none();
         e.levels = None;
         let back = std::sync::Arc::new(rofl::volume::open_units(&k, &e).unwrap());
         back.read_by(&mut e);
         e.levels = Some(back);
-        v.worlds[0].eval = e;
+        v.eval = e;
         for q in ASKED {
-            assert_eq!(answers(&mut v.worlds[0], q), answers(&mut whole, q), "the units kept and read back answer otherwise than the whole world: {q}");
+            assert_eq!(answers(&mut v, q), answers(&mut whole, q), "the units kept and read back answer otherwise than the whole world: {q}");
         }
         rofl::volume::keep_units(&k, None).unwrap();
     }
@@ -126,12 +121,9 @@ fn walked(model: &str) {
     assert_eq!(cut.files.len(), 3);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[cut.core.as_str()], None).unwrap();
-    let mut v = core.by_volumes(rofl::engine::volumes::groups(cut.files, 3), 3).unwrap();
+    let mut v = core.by_volumes(&cut.files).unwrap().0;
     let q = "from(S, Y)";
-    let by = match core.resident(&v, "from").unwrap() {
-        Some(mut r) => answers(&mut r, q),
-        None => v.worlds.iter_mut().flat_map(|w| answers(w, q)).collect(),
-    };
+    let by = answers(&mut v, q);
     let all = answers(&mut whole, q);
     assert_eq!(all.len(), 8);
     assert_eq!(by, all, "the volumes walk a closure otherwise than the whole world");
@@ -167,7 +159,7 @@ fn by_file_facts() -> String {
 
 /// THE WORK CUT BY FILE (`Eval::lemma_stage`, `own[fixpointplan]`): the rules that cannot leave a file, a negation, a
 /// count and a walked closure among them, are evaluated in the file's world and what they conclude is given; the rules
-/// that cross files fire over it. The answers are the whole world's, on one worker and on three.
+/// that cross files fire over it. The answers are the whole world's.
 #[test]
 fn the_rules_of_one_file_are_evaluated_in_its_world() {
     let facts = by_file_facts();
@@ -177,37 +169,30 @@ fn the_rules_of_one_file_are_evaluated_in_its_world() {
     whole.evaluate().unwrap();
     let cut = rofl::engine::volumes::cut(&refs);
     assert_eq!(cut.files.len(), 3);
-    for k in [1, 3] {
-        let mut core = Session::fresh(BUDGET);
-        core.load_all(&[cut.core.as_str()], None).unwrap();
-        let st = core.eval.lemma_stage().expect("the plan cuts a book");
-        let heads: BTreeSet<&str> = st.heads.iter().map(|r| core.eval.h.name(*r)).collect();
-        for of_file in ["has_child", "leaf", "kids", "deep"] {
-            assert!(heads.contains(of_file), "{of_file} is of one file: {heads:?}");
-        }
-        for across in ["same", "twin", "lonely", "under"] {
-            assert!(!heads.contains(across), "{across} is not given by a file: {heads:?}");
-        }
-        let mut v = core.by_volumes(rofl::engine::volumes::groups(cut.files.clone(), k), 3).unwrap();
-        for (q, rel, n) in [("leaf(N)", "leaf", 6), ("kids(P, N)", "kids", 6), ("deep(A, D)", "deep", 12), ("same(A, B)", "same", 6), ("twin(A)", "twin", 3), ("lonely(N)", "lonely", 3)] {
-            let by = match core.resident(&v, rel).unwrap() {
-                Some(mut r) => answers(&mut r, q),
-                None => v.worlds.iter_mut().flat_map(|w| answers(w, q)).collect(),
-            };
-            let all = answers(&mut whole, q);
-            assert_eq!(all.len(), n, "{q}: {all:?}");
-            assert_eq!(by, all, "{q} on {k} workers");
-        }
-        if k == 1 {
-            // what the file's world concluded is a lemma here, and `why --all` proves it in that world again
-            let w = &mut v.worlds[0];
-            let fact = "lonely(\"n00000000000000aa_4\")";
-            let short = w.why(fact).unwrap();
-            assert!(short.contains("leaf") && short.contains("[lemma"), "why stops at the file's lemma:\n{short}");
-            w.eval.lower_texts = Some(std::sync::Arc::new(cut.files.iter().cloned().collect()));
-            let all = w.why_all(fact).unwrap();
-            assert!(!all.contains("[lemma") && all.contains("has_child"), "why --all unfolds it:\n{all}");
-        }
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    let st = core.eval.lemma_stage().expect("the plan cuts a book");
+    let heads: BTreeSet<&str> = st.heads.iter().map(|r| core.eval.h.name(*r)).collect();
+    for of_file in ["has_child", "leaf", "kids", "deep"] {
+        assert!(heads.contains(of_file), "{of_file} is of one file: {heads:?}");
+    }
+    for across in ["same", "twin", "lonely", "under"] {
+        assert!(!heads.contains(across), "{across} is not given by a file: {heads:?}");
+    }
+    let mut v = core.by_volumes(&cut.files).unwrap().0;
+    for (q, n) in [("leaf(N)", 6), ("kids(P, N)", 6), ("deep(A, D)", 12), ("same(A, B)", 6), ("twin(A)", 3), ("lonely(N)", 3)] {
+        let all = answers(&mut whole, q);
+        assert_eq!(all.len(), n, "{q}: {all:?}");
+        assert_eq!(answers(&mut v, q), all, "{q}");
+    }
+    {
+        let w = &mut v;
+        let fact = "lonely(\"n00000000000000aa_4\")";
+        let short = w.why(fact).unwrap();
+        assert!(short.contains("leaf") && short.contains("[lemma"), "why stops at the file's lemma:\n{short}");
+        w.eval.lower_texts = Some(std::sync::Arc::new(cut.files.iter().cloned().collect()));
+        let all = w.why_all(fact).unwrap();
+        assert!(!all.contains("[lemma") && all.contains("has_child"), "why --all unfolds it:\n{all}");
     }
 }
 
@@ -225,7 +210,7 @@ fn a_file_that_breaks_the_plan_is_refused() {
         let cut = rofl::engine::volumes::cut(&refs);
         let mut core = Session::fresh(BUDGET);
         core.load_all(&[cut.core.as_str()], None).unwrap();
-        let e = core.by_volumes(rofl::engine::volumes::groups(cut.files, 1), 3).err().map(|e| rofl::describe(&e)).unwrap_or_default();
+        let e = core.by_volumes(&cut.files).err().map(|e| rofl::describe(&e)).unwrap_or_default();
         assert!(e.contains(said), "refused with {said:?}: {e}");
     }
 }

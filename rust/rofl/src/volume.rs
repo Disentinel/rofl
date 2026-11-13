@@ -51,46 +51,6 @@ pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::
     write_world(w, e)
 }
 
-/// The store and the heap of `e` written to `path` and read back from it, mapped: the same facts and names, lying in
-/// the file's pages instead of the heap's. The rest of the evaluation is untouched, so it goes on where it stood.
-/// Over the volumes `e` was cooled to before (`chain`), only what changed since is written. They and the file must
-/// stay where they are while the world may be cooled again over them.
-pub fn cool_in_place(path: &str, e: &mut Eval, chain: &[Kept]) -> Result<Kept, String> {
-    let ids = chain.iter().map(|k| k.id).collect();
-    let mut w = if chain.is_empty() { VolW::bounded(path, None) } else { VolW::over(path, None, ids) }.map_err(|x| x.to_string())?;
-    w.bytes(if chain.is_empty() { MAGIC } else { OVER });
-    w.text(&build_id());
-    w.text("");
-    if !chain.is_empty() {
-        w.u32(chain.len() as u32);
-        for k in chain {
-            w.text(&k.path);
-            w.u64(k.size);
-            w.u64(k.id);
-        }
-    }
-    e.store.write_volume(&mut w);
-    e.h.write_volume(&mut w);
-    w.finish().map_err(|x| x.to_string())?;
-    let Header { mut r, over, .. } = header(path)?;
-    let size = r.region().len() as u64;
-    if over {
-        let bases = chain_of(path, &mut r)?.into_iter().map(|(_, b)| b).collect();
-        r = r.with_chain(bases);
-    }
-    let id = r.id();
-    let mut store = Store::read_volume(&mut r)?;
-    let h = Heap::read_volume(&mut r)?;
-    if crate::brk!("volumes_cool_views_lost" => false; true) {
-        store.take_unkept(&mut e.store);
-    }
-    e.store = store;
-    let mut h = h;
-    h.shares_as(&mut e.h);
-    e.h = h;
-    Ok(Kept { path: path.to_string(), size, id })
-}
-
 /// `keep` as an overlay over `chain`, the volumes the world was opened from: every arena made from them is named
 /// there with what changed in it since, not written. Read back while they are where they were.
 pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, chain: &[Kept]) -> std::io::Result<usize> {

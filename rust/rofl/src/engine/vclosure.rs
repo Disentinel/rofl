@@ -1585,7 +1585,6 @@ impl VClosureState {
         };
         if store.vrow_of.get(&k).is_none() {
             store.vrow_of.name(k, (ci, book, a, d));
-            store.fold_row(h, &[a, d]);
         }
         k
     }

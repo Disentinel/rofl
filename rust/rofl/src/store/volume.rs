@@ -275,7 +275,6 @@ impl Store {
             }
         }
         col(w, &self.wit_head);
-        col(w, &self.fold);
         col(w, &self.wits);
         col(w, &self.prem_arena);
         self.fired.write(w);
@@ -408,8 +407,6 @@ impl Store {
         s.idx = Runs { base: Rc::new(groups), own: Groups::default() };
         let heads: Arena<u32> = r.arena()?;
         s.wit_head = Col { mark: heads.len(), base: Rc::new(heads), own: Vec::new(), ..Col::default() };
-        let folds: Arena<u32> = r.arena()?;
-        s.fold = Col { mark: folds.len(), base: Rc::new(folds), own: Vec::new(), ..Col::default() };
         let wits: Arena<WitNode> = r.arena()?;
         s.wits = Col { mark: wits.len(), base: Rc::new(wits), own: Vec::new(), ..Col::default() };
         let prems: Arena<PremRef> = r.arena()?;

@@ -28,7 +28,6 @@ pub mod corpus;
 pub mod dense;
 pub mod dict;
 pub mod engine;
-pub mod fold;
 pub mod forest;
 pub mod graph;
 pub mod image;

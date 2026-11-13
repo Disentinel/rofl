@@ -1110,7 +1110,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"] {
         let args = ["ask", q, "boot.rofl", "w.rofl"];
         let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
-        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())], planted.as_deref(), &args);
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string())], planted.as_deref(), &args);
         assert!(whole.code == 0 && !whole.out.is_empty(), "{q}: the world whole: {} {:?}", whole.code, whole.err);
         let all_below = got.err.lines().find(|l| l.contains("levels: of ")).is_some_and(|l| {
             let n: Vec<&str> = l.split("levels: of ").nth(1).unwrap().split(' ').collect();
@@ -1121,16 +1121,16 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         assert!(got.err.contains(" of the files libraries") && !got.err.contains(" 0 of the files libraries"), "{q}: no file was taken for a library: {:?}", got.err);
     }
     // the units are kept, each stretch's own facts and firings, and a question asked again is answered from them
-    let levels = [("ROFL_VOLUMES", "levels".to_string()), ("ROFL_FAN", "3".to_string())];
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string())];
     let again = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
     let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
-    assert!(again.err.contains("answered from the 1 kept volumes") && sorted(&again.out) == sorted(&whole.out), "qq[d](A, B) asked again: {:?} {:?}", again.out.lines().count(), again.err);
+    assert!(again.err.contains("answered from the kept units") && sorted(&again.out) == sorted(&whole.out), "qq[d](A, B) asked again: {:?} {:?}", again.out.lines().count(), again.err);
     let one = whole.out.lines().next().expect("an answer").replace("A = ", "qq[d](").replace(", B = ", ", ") + ")";
     let why = |cache: &str| rofl_env(BIN, &d, &d.0.join(cache), &levels, planted.as_deref(), &["why", &one, "boot.rofl", "w.rofl"]);
     let (fresh, kept) = (why("why"), why("why"));
     let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["why", &one, "boot.rofl", "w.rofl"]);
     assert!(whole.out == fresh.out, "why {one}: by levels {:?}\nthe world whole {:?}", fresh.out, whole.out);
-    assert!(fresh.code == 0 && kept.err.contains("kept volumes") && kept.out == fresh.out && fresh.out.lines().count() > 2, "why {one}: from the kept units {:?} {:?}\nfresh {:?}", kept.out, kept.err, fresh.out);
+    assert!(fresh.code == 0 && kept.err.contains("kept units") && kept.out == fresh.out && fresh.out.lines().count() > 2, "why {one}: from the kept units {:?} {:?}\nfresh {:?}", kept.out, kept.err, fresh.out);
     // AN EDIT OF ONE FILE settles again the units that asked what moved, and the world answers as it does whole: a
     // call taken out of a file, then a function put into another that calls into a third
     let gone = text.lines().find(|l| l.starts_with("refers(n0000000000000006_")).expect("a call in the sixth file").to_string();
@@ -1152,7 +1152,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
                 let nums: Vec<usize> = said.split(' ').filter_map(|w| w.parse().ok()).collect();
                 assert!(nums[2] > 0 && (nums[2] * 2 < nums[3] || name.ends_with("library")), "{name}: {said}");
             } else {
-                assert!(got.err.contains("kept volumes"), "{name}, {q}: asked again it was not answered from what the edit kept: {:?}", got.err);
+                assert!(got.err.contains("units settled again") || got.err.contains("kept units"), "{name}, {q}: neither taken by the units nor answered from them: {:?}", got.err);
             }
         }
         // (and a why after it, through an absence and through the joins, quotes what the world whole quotes)
