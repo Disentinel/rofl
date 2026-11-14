@@ -8922,10 +8922,10 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "levels_news_of_the_round_before",
-  "what": "the news taken for a round's premises are kept into the next round, which fires on them again and not on its own",
+  "id": "levels_far_firing_dropped",
+  "what": "a unit an edit mends carries the firings of its own facts only: a fact of another unit's stretch it wrote a firing of is lost where that unit no longer concludes it",
   "expect": {
-   "levels_whole": ": by levels"
+   "levels_whole": "a call gone, rlive[d](A, B): by levels"
   }
  },
  {

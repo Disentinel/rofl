@@ -2679,29 +2679,35 @@ impl Store {
 
     /// THE FACTS OF `old` THAT STAND, CARRIED HERE: a fact with a firing whose premises stand (read here, or a fact
     /// of `old` carried before it), least first, so nothing stands on itself alone; each put here with every firing
-    /// of it that stands, unless a stretch read here holds it now. Asked of a store that wrote nothing of `old`'s.
-    pub fn carry(&mut self, h: &Heap, old: &Stretch, keep: impl Fn(Sym, &[PremRef]) -> bool, was: impl Fn(FactId) -> Option<(Sym, Sym, Vec<Term>)>) -> Vec<FactId> {
+    /// of it that stands, unless a stretch read here holds it now. So too a fact of another stretch that `old` wrote a
+    /// firing of: the firing stands with it, and where no stretch holds the fact now it is put here. Asked of a store
+    /// that wrote nothing of `old`'s.
+    pub fn carry(&mut self, h: &Heap, old: &Stretch, keep: impl Fn(Sym, &[PremRef]) -> bool, was: impl Fn(FactId) -> Option<(Sym, Sym, Vec<Term>, u8)>) -> Vec<FactId> {
         let s = old.store();
         let n = (old.hi - old.lo) as usize;
-        let own = |f: FactId| (old.lo <= f && f < old.hi).then(|| (f - old.lo) as usize);
+        // (the facts of `old`, then those of other stretches it wrote a firing of)
+        let far = brk!("levels_far_firing_dropped" => &[][..]; &old.far[..]);
+        let own = |f: FactId| if old.lo <= f && f < old.hi { Some((f - old.lo) as usize) } else { far.binary_search(&f).ok().map(|j| n + j) };
+        let id_of = |a: usize| if a < n { old.lo + a as FactId } else { far[a - n] };
         let mut fired: Vec<(usize, Sym, u32, Vec<PremRef>)> = Vec::new();
         // (a firing that may not stand: what it read that stands is to fire again)
         let mut again: Vec<FactId> = Vec::new();
         // (a premise of a stretch replaced stands where the same fact lies now)
         let mut now: FxMap<FactId, Option<FactId>> = FxMap::default();
-        for a in 0..n {
-            let id = old.lo + a as FactId;
-            if !s.alive(id) {
+        for a in 0..n + far.len() {
+            let id = id_of(a);
+            if a < n && !s.alive(id) {
                 continue;
             }
-            'w: for w in s.chain(id) {
+            let head = if a < n { s.head(id) } else { s.far_heads.get(&id).copied().unwrap_or(EMPTY) };
+            'w: for w in s.nodes_from(head) {
                 let mut ps = s.prems_of(&w).to_vec();
                 for p in ps.iter_mut() {
                     if let Prem::Fact(f) = p.kind() {
                         if own(f).is_some() || self.reads_id(f) {
                             continue;
                         }
-                        let there = *now.entry(f).or_insert_with(|| was(f).and_then(|(rel, persp, args)| self.find_near(rel, persp, &args)));
+                        let there = *now.entry(f).or_insert_with(|| was(f).and_then(|(rel, persp, args, _)| self.find_near(rel, persp, &args)));
                         match there {
                             Some(g) => *p = PremRef::Fact(g),
                             None => continue 'w,
@@ -2728,7 +2734,7 @@ impl Store {
                 }
             }
         }
-        let mut new_id = vec![EMPTY; n];
+        let mut new_id = vec![EMPTY; n + far.len()];
         let mut order: Vec<usize> = Vec::new();
         let mut queue: Vec<usize> = (0..fired.len()).filter(|&i| open[i] == 0).collect();
         while let Some(i) = queue.pop() {
@@ -2736,13 +2742,23 @@ impl Store {
             if new_id[a] != EMPTY {
                 continue;
             }
-            let (r, args) = (s.rec(old.lo + a as FactId), s.args(old.lo + a as FactId).to_vec());
-            new_id[a] = match self.find_near(r.rel, r.persp, &args) {
+            let id = id_of(a);
+            let (rel, persp, args, flags) = if a < n {
+                let r = s.rec(id);
+                (r.rel, r.persp, s.args(id).to_vec(), r.flags())
+            } else if self.reads_id(id) {
+                let r = self.rec(id);
+                (r.rel, r.persp, self.args(id).to_vec(), r.flags())
+            } else {
+                let Some(f) = was(id) else { continue };
+                f
+            };
+            new_id[a] = match self.find_near(rel, persp, &args) {
                 Some(there) => there,
                 None => {
                     order.push(a);
                     let ground = args.iter().all(|t| h.is_ground(*t));
-                    self.put_kept(h, r.rel, r.persp, &args, r.flags() & !F_DEAD, ground)
+                    self.put_kept(h, rel, persp, &args, flags & !F_DEAD, ground)
                 }
             };
             for &j in users.get(&a).into_iter().flatten() {
@@ -2754,7 +2770,7 @@ impl Store {
         }
         for (a, rule, tick, ps) in fired {
             let id = new_id[a];
-            if id == EMPTY || !self.here(id) {
+            if id == EMPTY || a < n && !self.here(id) {
                 continue;
             }
             let mut mapped = Vec::with_capacity(ps.len());
@@ -2772,10 +2788,12 @@ impl Store {
                 self.support(id, Witness { rule, tick, prems: mapped });
             }
         }
+        // (a fact of another stretch put here is news to this store)
+        let came = order.iter().filter(|&&a| a >= n).map(|&a| new_id[a]);
         again.into_iter().filter_map(|f| match own(f) {
             Some(b) => (new_id[b] != EMPTY).then_some(new_id[b]),
             None => Some(f),
-        }).collect()
+        }).chain(came).collect()
     }
 
     /// This reader reads by id, and no other way, the stretches an edit replaced.

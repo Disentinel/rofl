@@ -1419,7 +1419,7 @@ impl Eval {
                 }, |f| {
                     let g = ghosts.iter().find(|g| g.lo <= f && f < g.hi)?;
                     let r = g.rec(f);
-                    Some((r.rel, r.persp, g.args(f).to_vec()))
+                    Some((r.rel, r.persp, g.args(f).to_vec(), r.flags()))
                 }));
                 seeds.sort_unstable();
                 seeds.dedup();

@@ -83,10 +83,12 @@ fn rofl_env(bin: &str, dir: &Dir, cache: &Path, env: &[(&str, String)], brk: Opt
     let mut c = Command::new(bin);
     c.args(args).current_dir(&dir.0).env("XDG_CACHE_HOME", cache).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB").envs(env.iter().map(|(k, v)| (*k, v)));
     if let Some(b) = brk { c.env("ROFL_BREAK", b); }
-    // the memory is the machine's: a neighbour's run that fills it stops this one, which keeps nothing and is run again
+    // the memory is the machine's: a neighbour's run that fills it stops this one, which keeps nothing and is run
+    // again; thirty times in all the runs of this process, so that a world short of memory by itself ends
+    static AGAIN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(30);
     let mut o = c.output().unwrap();
-    for _ in 0..30 {
-        if !String::from_utf8_lossy(&o.stderr).contains("reached the memory this process may use") { break }
+    while String::from_utf8_lossy(&o.stderr).contains("reached the memory this process may use") {
+        if AGAIN.fetch_update(std::sync::atomic::Ordering::Relaxed, std::sync::atomic::Ordering::Relaxed, |n| n.checked_sub(1)).is_err() { break }
         std::thread::sleep(std::time::Duration::from_secs(2));
         o = c.output().unwrap();
     }
@@ -1102,8 +1104,9 @@ fn a_world_by_levels_answers_as_the_world_whole() {
                     text += &format!("alias({s}, nm_{}_{}, nm_{}_{}).\n", rnd(files), rnd(fns), rnd(files), rnd(fns));
                 }
                 if rnd(4) == 0 {
-                    // (the first file is a library: most of the others call into it)
-                    let to = if rnd(100) < 60 { f } else if rnd(2) == 0 { 0 } else { (f + 1 + rnd(3)).min(files - 1) };
+                    // (the first file is a library: most of the others call into it; some call far away, so that a
+                    // chain of calls crosses the widest groups more than once)
+                    let to = if rnd(100) < 60 { f } else if rnd(2) == 0 { 0 } else if rnd(3) == 0 { (f + files / 2 + rnd(3)) % files } else { (f + 1 + rnd(3)).min(files - 1) };
                     text += &format!("refers({s}, nm_{to}_{}).\n", rnd(fns));
                 }
             }
