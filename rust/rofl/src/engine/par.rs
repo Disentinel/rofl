@@ -206,7 +206,14 @@ fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T 
         return (0..n).map(f).collect();
     }
     let out: Vec<Mutex<Option<T>>> = (0..n).map(|_| Mutex::new(None)).collect();
-    let task = |k: usize| *out[k].lock().unwrap() = Some(f(k));
+    let lent = super::levels::lend();
+    let task = |k: usize| {
+        let v = match &lent {
+            Some(l) => l.on(|| f(k)),
+            None => f(k),
+        };
+        *out[k].lock().unwrap() = Some(v)
+    };
     let task: &(dyn Fn(usize) + Sync) = &task;
     // SAFETY: the lifetime is erased for the kept threads; this call returns only once none of them holds the batch.
     let task: *const (dyn Fn(usize) + Sync) = unsafe { std::mem::transmute(task) };
@@ -232,6 +239,9 @@ fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T 
         std::panic::resume_unwind(p);
     }
     assert!(!b.panicked.load(Ordering::Relaxed), "a thread matching a premise panicked");
+    if let Some(l) = lent {
+        l.back();
+    }
     out.into_iter().map(|m| m.into_inner().unwrap().unwrap()).collect()
 }
 

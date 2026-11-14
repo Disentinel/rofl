@@ -94,6 +94,47 @@ fn asks(f: impl FnOnce(&mut Asked)) {
     })
 }
 
+/// What helpers ask while they match a premise for the unit settled on another thread (`par::spread`): each keeps its
+/// own, given to the unit when the batch ends.
+pub(super) struct Lent(Mutex<Vec<Asked>>);
+
+/// For a batch of helpers, where a unit is settled on this thread.
+pub(super) fn lend() -> Option<Lent> {
+    ASKED.with(|a| a.borrow().is_some()).then(|| Lent(Mutex::default()))
+}
+
+impl Lent {
+    /// `f` on a thread of the batch: on a helper's, what it asks is kept here.
+    pub(super) fn on<T>(&self, f: impl FnOnce() -> T) -> T {
+        struct Back<'a>(&'a Lent);
+        impl Drop for Back<'_> {
+            fn drop(&mut self) {
+                if let Some(a) = ASKED.with(|a| a.borrow_mut().take()) {
+                    self.0.0.lock().unwrap().push(a);
+                }
+            }
+        }
+        let helper = ASKED.with(|a| {
+            let mut a = a.borrow_mut();
+            a.is_none() && {
+                *a = Some(Asked::default());
+                true
+            }
+        });
+        let _back = helper.then(|| Back(self));
+        f()
+    }
+    pub(super) fn back(self) {
+        asks(|a| {
+            for x in self.0.into_inner().unwrap() {
+                a.reads.extend(x.reads);
+                a.keys.extend(x.keys);
+                a.masks.extend(x.masks);
+            }
+        })
+    }
+}
+
 /// A read as it is kept among those asked: the relation, the arguments it gave (`mask`, their bits) and their values
 /// in the order of the arguments. No argument given asks every fact of the relation.
 fn key_of(rel: Sym, mask: u64, vals: impl Iterator<Item = Term>) -> u64 {
@@ -1114,7 +1155,10 @@ impl Eval {
             }
         };
         // (a level goes a run of units at a time, so that those done are cooled while the rest are still to do)
+        // (the threads a unit may match its premises on: those its level leaves free)
+        let width = AtomicUsize::new(1);
         let level = |n: usize, trees: bool, f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
+            width.store((threads / n.clamp(1, threads)).max(1), Relaxed);
             let next = AtomicUsize::new(0);
             let mut out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
             let (mut from, run) = (0, (threads * 32).max(64));
@@ -1330,6 +1374,7 @@ impl Eval {
             let inner = Rc::new(inner);
             let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()), true));
             let mut e = fork();
+            e.0.par.threads = width.load(Relaxed);
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();
@@ -1559,6 +1604,7 @@ impl Eval {
                 _ => Rc::new(match was(k, all).filter(|o| stands(o, &moved_below)) {
                     Some(o) => kept(&o, part_tops),
                     None => {
+                        width.store(threads, Relaxed);
                         let lows = (0..part_tops.len()).map(|p| layers.iter().map(|l| l[p].last().expect("a part's top")[0].clone()).collect()).collect();
                         let at_home = tops.iter().map(|t| t.stretch.clone()).filter(|s| s.lo < s.hi).collect();
                         unit(k, &lower, &trees, at_home, part_tops, lows, all, was(k, all), &None, k > 0)?
