@@ -444,6 +444,18 @@ struct Level {
     walked: usize,
 }
 
+/// The news of a round at a premise of a rule: every fact of the round's, or those kept of them.
+#[derive(Clone)]
+pub(super) enum News {
+    All,
+    Kept(Rc<FxSet<FactId>>),
+}
+
+/// What the threads only read.
+struct Read<T>(T);
+// SAFETY: nothing is written while a batch reads it (`Frozen`).
+unsafe impl<T> Sync for Read<T> {}
+
 /// A firing of a round put off, to be solved with the round's others on the threads (`Eval::presolve`): the rule, its
 /// premise the news are at, the news, the rows excluded at the premises before (`Eval::sn`), the order taken.
 #[derive(Clone)]
@@ -675,6 +687,22 @@ impl Eval {
         lits
     }
 
+    /// The news of a round at each premise listed, taken on the threads: what the sieve and the seeds let go is asked
+    /// a fact at a time.
+    pub(super) fn news_ahead(&mut self, mut list: Vec<(Rc<ERule>, usize)>, cur: &Front) {
+        list.sort_unstable_by_key(|(r, i)| (r.id, *i));
+        list.dedup_by_key(|(r, i)| (r.id, *i));
+        let read = Read((&*self, &list, cur));
+        let read = &read;
+        let got: Vec<Option<News>> = spread(self.par.threads, list.len(), true, |k| {
+            let (e, list, cur) = read.0;
+            let (r, i) = &list[k];
+            let BodyElem::Pos(l) = &r.plan[*i] else { return None };
+            e.news_of(r, *i, l.rel, cur.by_rel.get(&l.rel)?)
+        });
+        self.news_taken = list.iter().map(|(r, i)| (r.id, *i)).zip(got).collect();
+    }
+
     /// THE FIRINGS OF A ROUND SOLVED TOGETHER, each on one thread as far as the threads take its premises, over the
     /// store as the round found it. A fact another firing of the round concludes is not read here: it is news of the
     /// next round, which finds what it makes. (In a unit: no premise of its layer is an absence.) The firing then
@@ -698,9 +726,10 @@ impl Eval {
                 }
             }
         }
-        // (a job's news go a run at a time, as the runs of `par_rest` do)
-        let run = (self.par.sols / 4).max(1);
+        // (a job's news go a run at a time, as the runs of `par_rest` do; shorter runs where the round has few news,
+        // so that no thread is left without one)
         let order: Vec<Vec<FactId>> = jobs.iter().map(|j| j.keys.iter().copied().collect()).collect();
+        let run = (order.iter().map(|o| o.len()).sum::<usize>() / (self.par.threads * 8)).clamp(1, (self.par.sols / 4).max(1));
         let tasks: Vec<(usize, usize)> = order.iter().enumerate().flat_map(|(x, o)| (0..o.len().div_ceil(run)).map(move |c| (x, c * run))).collect();
         let frs: Vec<Vec<Frozen>> = tasks
             .iter()

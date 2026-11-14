@@ -842,6 +842,10 @@ pub struct Eval {
     presolving: Option<Vec<par::RoundJob>>,
     presolved: FxMap<(Sym, usize), (par::RoundJob, par::Made)>,
     pre_now: Option<par::Made>,
+    /// Before them, the premises the round has news at are listed (`news_listing`) and the news of each taken on the
+    /// threads (`news_taken`, `Eval::news_ahead`).
+    news_listing: Option<Vec<(Rc<ERule>, usize)>>,
+    news_taken: FxMap<(Sym, usize), Option<par::News>>,
     /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
     pub levels: Option<Rc<levels::Levels>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
@@ -2361,6 +2365,8 @@ impl Eval {
             sieve: None,
             seeded: None,
             presolving: None,
+            news_listing: None,
+            news_taken: FxMap::default(),
             presolved: FxMap::default(),
             pre_now: None,
             levels: None,
@@ -5446,7 +5452,13 @@ impl Eval {
             };
             let active = self.active.clone();
             self.presolved.clear();
+            self.news_taken.clear();
             if self.meeting.is_some() && par::free(self.par.threads) > 1 && at.is_none() && j0 == 0 {
+                self.news_listing = Some(Vec::new());
+                let listed = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
+                let list = self.news_listing.take().unwrap_or_default();
+                listed?;
+                self.news_ahead(list, &cur);
                 self.presolving = Some(Vec::new());
                 let gathered = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
                 let jobs = self.presolving.take().unwrap_or_default();
@@ -5497,7 +5509,7 @@ impl Eval {
                 if self.bridging.as_ref().is_some_and(|b| !b.contains(&r.id)) {
                     return Ok(());
                 }
-                let gathering = self.presolving.is_some();
+                let gathering = self.presolving.is_some() || self.news_listing.is_some();
                 if self.naive {
                     if gathering {
                         return Ok(());
@@ -5567,18 +5579,23 @@ impl Eval {
                             }
                         }
                         // (solved with the round's others: the news and the rows excluded are those it was solved with)
+                        if let Some(list) = self.news_listing.as_mut() {
+                            let before = (0..i).filter(|_| twice).filter(|&j| matches!(&r.plan[j], BodyElem::Pos(lj) if cur.by_rel.contains_key(&lj.rel)));
+                            list.extend(before.chain([i]).map(|j| (r.clone(), j)));
+                            continue;
+                        }
                         let (pre, made) = self.presolved.remove(&(r.id, i)).map_or((None, None), |(j, m)| (Some(j), Some(m)));
                         let news = match &pre {
                             Some(_) => None,
-                            None => match self.news_at(r, i, l.rel, keys) {
+                            None => match self.news_of(r, i, l.rel, keys) {
                                 Some(k) => Some(k),
                                 None => continue,
                             },
                         };
                         let keys = match (&pre, &news) {
                             (Some(p), _) => &p.keys,
-                            (None, Some(k)) => &**k,
-                            (None, None) => unreachable!(),
+                            (None, Some(par::News::Kept(k))) => &**k,
+                            (None, _) => keys,
                         };
                         if let Some(p) = &pre {
                             self.sn = p.sn.clone();
@@ -5587,7 +5604,10 @@ impl Eval {
                             for (j, e) in excl.iter_mut().enumerate() {
                                 let BodyElem::Pos(lj) = &r.plan[j] else { continue };
                                 let Some(kj) = cur.by_rel.get(&lj.rel) else { continue };
-                                *e = self.news_at(r, j, lj.rel, kj).map(|k| Rc::new(k.into_owned()));
+                                *e = self.news_of(r, j, lj.rel, kj).map(|k| match k {
+                                    par::News::All => Rc::new(kj.clone()),
+                                    par::News::Kept(k) => k,
+                                });
                             }
                             self.sn = excl.iter().any(Option::is_some).then(|| Rc::new(excl));
                         }
@@ -5646,6 +5666,16 @@ impl Eval {
 
     /// The news of a round that fire `r` from its premise `i`: in a unit, less those its layer's sieve lets go and
     /// the seeds that met no premise the rule joins this one with.
+    fn news_of(&self, r: &ERule, i: usize, rel: Sym, keys: &FxSet<FactId>) -> Option<par::News> {
+        if let Some(n) = self.news_taken.get(&(r.id, i)) {
+            return n.clone();
+        }
+        self.news_at(r, i, rel, keys).map(|k| match k {
+            std::borrow::Cow::Borrowed(_) => par::News::All,
+            std::borrow::Cow::Owned(k) => par::News::Kept(Rc::new(k)),
+        })
+    }
+
     fn news_at<'a>(&self, r: &ERule, i: usize, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
         let keys = self.news_since(r, rel, keys)?;
         let sv = self.sieve.as_ref().filter(|sv| sv.sifts(r.id, i));
