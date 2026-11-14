@@ -8901,13 +8901,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "levels_library_bridge_unmet",
-  "what": "the unit over the libraries and the rest keeps nothing that facts of the rest make only through a library's fact, and they never meet",
-  "expect": {
-   "levels_whole": "via2[d](A, B): by levels"
-  }
- },
- {
   "id": "kept_stale_files",
   "what": "a kept world is answered whatever happened to the files it was computed from",
   "expect": {

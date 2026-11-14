@@ -155,8 +155,6 @@ impl Eval {
         self.h.freeze();
         self.h.share(None);
         self.store.freeze(&self.h);
-        // (the check harness's oracle: how many units meet in one)
-        let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
         let cross = joins.cross.len();
         let up: Vec<Sym> = joins.up.iter().flat_map(|l| l.iter().copied()).chain(joins.core.iter().copied()).collect();
         let (layers, core) = (joins.up.len(), joins.core.len());
@@ -164,18 +162,17 @@ impl Eval {
         let held = std::mem::take(&mut joins.held);
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
-        let lv = e.fork().by_levels(files, &stage, joins, fan, None)?;
+        let lv = e.fork().by_levels(files, &stage, joins, None)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
         lv.read_by(&mut e);
         e.diags.push(format!(
-            "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units, {} of the files libraries, in {ms} ms; left to the reader by their shape: {held}",
+            "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units, in {ms} ms; left to the reader by their shape: {held}",
             e.rules.iter().filter(|r| r.safe).count(),
             e.rules.iter().filter(|r| r.safe && (stage.rules.contains(&r.id) || up.contains(&r.id) || trees.contains(&r.id))).count(),
             up.len() - core,
             lv.mark - from,
-            lv.tops.iter().map(|t| t.count()).sum::<usize>(),
-            lv.libs
+            lv.tops.iter().map(|t| t.count()).sum::<usize>()
         ));
         e.diags.extend(lv.said.iter().cloned());
         let st = VolStats { files: files.len(), ms: t0.elapsed().as_millis(), facts: (lv.mark - from) as usize, cooled: lv.cooled.times, cool_files: lv.cooled.units, cool_bytes: lv.cooled.bytes };

@@ -50,6 +50,7 @@ Every flag has a consumer.
 | `ROFL_CACHE_GB` | the hard cap, in GB, on the worlds the question verbs keep by themselves (default 50, two worlds of the reference scale); a world over it is answered and not kept (docs/cli.md) | the owner's decision of 2026-10-21, `rust/rofl/tests/kept.rs` | KEEP: a user knob, the one way to size the cache | |
 | `ROFL_VOLUMES` | `0` answers a question verb from the whole world instead of by volumes; `1` answers by volumes a corpus under the 32 MB where they begin, so a test reads an edit of a few lines taken by the units (`engine/volumes.rs`, `engine/levels.rs`, docs/cli.md) | `rust/rofl/src/bin/rofl/load.rs`, `rust/rofl/tests/kept.rs` | INTERNAL: the oracle a check compares the volumes with | |
 | `ROFL_FAN` | how many units a group of a world by levels holds (8) | `rust/rofl/tests/kept.rs` | INTERNAL: a small fan makes a small world's tree deep, for the check | |
+| `ROFL_LEAF` | how many files a unit of files alone holds in a world by levels (16) | `rust/rofl/tests/kept.rs` | INTERNAL: a small leaf gives a small world units to meet, for the check | |
 | `ROFL_DELTA_FACTS` | the file a delta of volumes writes what it did to, as facts of the book `delta` (`engine/meter.rs`, docs/cli.md, *A delta as facts*) | `models/engine/delta-model.rofl` reads the file; no script yet | INTERNAL: the oracle of the delta model; to become the world's own book, as the profile is | |
 | `ROFL_VSTATS` | print the virtual closure's counters on stderr | none: the definition only | REMOVE | done |
 

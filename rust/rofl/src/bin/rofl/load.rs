@@ -652,8 +652,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let (st, joins) = s.eval.level_stage();
     s.eval.store.settled = s.eval.store.len_ids();
     // (the check harness's oracle: how many units meet in one)
-    let fan = std::env::var("ROFL_FAN").ok().and_then(|x| x.parse().ok()).unwrap_or(8);
-    let lv = match s.eval.fork().by_levels(&files, &st, joins, fan, Some(rofl::engine::levels::Edit(&before, changed))) {
+    let lv = match s.eval.fork().by_levels(&files, &st, joins, Some(rofl::engine::levels::Edit(&before, changed))) {
         Ok(lv) => lv,
         Err(e) => { say(&rofl::describe(&e)); return None; }
     };

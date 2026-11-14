@@ -258,7 +258,7 @@ fn answers(h: &Heap, rel: Sym, args: &[Term], masks: Option<&FxSet<u64>>, mut f:
 /// under it that share their values: at the lowest unit over them, the layers below read wherever they lie. And one of
 /// facts of the unit's layer that meet only through a fact of a layer below: at the lowest unit under which every
 /// premise is at home, of the layers below too (a fact of a layer below is at home in that layer's unit at the same
-/// place). The core is at home nowhere and read by all, and so are the libraries' facts to a unit of the rest.
+/// place). The core is at home nowhere and read by all.
 pub struct Meeting {
     mark: FactId,
     /// the stretches under the unit in the order of `lo`: each with its end, its child, the files of its unit and
@@ -270,12 +270,6 @@ pub struct Meeting {
     core: FactId,
     top: bool,
     by: Rc<(FxSet<Sym>, FxSet<Sym>)>,
-    /// what the libraries concluded at this layer, to a unit of the rest: a firing that stands on it and on nothing
-    /// of this unit's layer is the libraries' own; and their stretches of every layer
-    libs: Vec<(FactId, FactId)>,
-    libs_all: Vec<(FactId, FactId)>,
-    /// the unit over the libraries and the rest: what facts of the rest make only through a library's is kept here
-    apart: bool,
     /// where a builtin walls a rule's order: the premises after it are at home nowhere
     walls: Rc<FxMap<Sym, usize>>,
 }
@@ -288,7 +282,7 @@ impl Meeting {
         // the premises at home under the unit: of its layer (where in the rule, the child, the files of the unit that
         // concluded it) and of the layers below (the child, none for one at home at the unit itself)
         let (mut mine, mut low): (Vec<(usize, u32, (u32, u32))>, Vec<(usize, Option<u32>)>) = Default::default();
-        let (mut lib, mut out) = (false, false);
+        let mut out = false;
         for (i, p) in prems.iter().enumerate().take(self.walls.get(&r.id).copied().unwrap_or(usize::MAX)) {
             let Prem::Fact(f) = p.kind() else { continue };
             if f >= self.mark {
@@ -302,16 +296,14 @@ impl Meeting {
                 continue;
             }
             match self.under.partition_point(|u| u.0 <= f).checked_sub(1).map(|i| &self.under[i]).filter(|u| f < u.1) {
-                Some(u) if self.apart && u.2 == 0 => lib |= u.4,
                 Some(u) if u.4 => mine.push((i, u.2, u.3)),
                 Some(u) => low.push((i, Some(u.2))),
-                None if within(&self.libs, f) => lib = true,
-                None => out |= !within(&self.libs_all, f),
+                None => out = true,
             }
         }
         // of the layers below alone: where the first of them is at home
         if mine.is_empty() {
-            return !bridging && !lib && first_at(r, &self.by).and_then(|i| prems.get(i)).is_some_and(|p| matches!(p.kind(), Prem::Fact(f) if within(&self.here, f) || self.top && f < self.core));
+            return !bridging && first_at(r, &self.by).and_then(|i| prems.get(i)).is_some_and(|p| matches!(p.kind(), Prem::Fact(f) if within(&self.here, f) || self.top && f < self.core));
         }
         // one of them over the others concluded last: its unit found the firing
         if mine.len() < 2 || mine.iter().any(|t| mine.iter().all(|p| t.2.0 <= p.2.0 && p.2.1 <= t.2.1)) {
@@ -336,18 +328,14 @@ impl Meeting {
         let two = mine.iter().any(|p| p.1 != mine[0].1);
         let ks: Vec<usize> = mine.iter().map(|p| p.0).collect();
         if parts(&ks) < 2 {
-            return two && !self.apart && !bridging;
+            return two && !bridging;
         }
         // they meet only through a fact of a layer below: kept under what holds every premise
-        if out {
+        let all: Vec<usize> = ks.iter().copied().chain(low.iter().map(|l| l.0)).collect();
+        if out || parts(&all) > 1 {
             return false;
         }
-        let all: Vec<usize> = ks.iter().copied().chain(low.iter().map(|l| l.0)).collect();
-        if parts(&all) > 1 {
-            // only through what is read by all: the unit over the libraries and the rest keeps it
-            return brk!("levels_library_bridge_unmet" => false; self.apart);
-        }
-        low.iter().any(|l| l.1.is_none_or(|c| c != mine[0].1)) || two && !self.apart
+        low.iter().any(|l| l.1.is_none_or(|c| c != mine[0].1)) || two
     }
 }
 
@@ -377,8 +365,8 @@ struct Ctx {
     id: usize,
     h: Heap,
     files: FxMap<u64, u32>,
-    /// the place each file was given, once the libraries are known: they are put first (`by_levels`)
-    perm: std::sync::OnceLock<Vec<u32>>,
+    /// how many files a unit of files alone holds
+    leaf: usize,
     joins: Joins,
     /// the arguments the reads of a relation gave, in any unit: what a fact come or gone is asked by
     masks: Mutex<FxMap<Sym, FxSet<u64>>>,
@@ -398,18 +386,17 @@ impl Ctx {
     /// The file a value is a node of, by its place in the world's order.
     fn file(&self, t: Term) -> Option<u32> {
         let (TermK::Atom(s) | TermK::Str(s)) = t.kind() else { return None };
-        let given = FILE_OF.with(|m| {
+        FILE_OF.with(|m| {
             let mut m = m.borrow_mut();
             if m.0 != self.id {
                 *m = (self.id, FxMap::default());
             }
             *m.1.entry(s).or_insert_with(|| self.file_named(s))
-        });
-        given.map(|f| self.perm.get().map_or(f, |p| p[f as usize]))
+        })
     }
     /// The files by name, each with its place in the world's order.
     fn order(&self) -> Vec<(u64, u32)> {
-        self.files.iter().map(|(h, i)| (*h, self.perm.get().map_or(*i, |p| p[*i as usize]))).collect()
+        self.files.iter().map(|(h, i)| (*h, *i)).collect()
     }
     fn file_named(&self, s: Sym) -> Option<u32> {
         let b = self.h.name(s).as_bytes();
@@ -421,43 +408,6 @@ impl Ctx {
     fn within(&self, t: Term, files: (u32, u32)) -> bool {
         self.file(t).is_some_and(|f| files.0 <= f && f < files.1)
     }
-}
-
-/// What the libraries concluded, for the units of the rest: where it lies, at this layer (`at`) and in every layer up
-/// to it (`all`), and what of it came by an edit at this layer.
-struct LibK {
-    at: Vec<(FactId, FactId)>,
-    all: Vec<(FactId, FactId)>,
-    came: Vec<FactId>,
-}
-
-/// THE LIBRARIES, by what the files alone state: where a rule joins two relations at a value that is no node of the
-/// holder's file and one file alone holds one side, that file is named by each file on the other; and a file is
-/// named by each that states a node of it. A file named by more than `over` others is a library.
-fn libraries(cx: &Ctx, units: &[Rc<Unit>], over: usize) -> Vec<usize> {
-    let mut held: FxMap<Key, Vec<u32>> = FxMap::default();
-    for (x, u) in units.iter().enumerate() {
-        for key in u.dir.keys() {
-            held.entry(*key).or_default().push(x as u32);
-        }
-    }
-    let mut named: Vec<FxSet<u32>> = vec![FxSet::default(); units.len()];
-    for (&(rel, p, v), a) in &held {
-        if let Some(f) = cx.file(v) {
-            named[f as usize].extend(a.iter().filter(|x| **x != f));
-        }
-        for &(n, _) in cx.joins.places.get(&rel).into_iter().flatten().filter(|(_, q)| *q == p) {
-            for m in cx.joins.mates.get(&(rel, n, p)).into_iter().flatten() {
-                let Some(b) = held.get(&(m.0, m.2, v)) else { continue };
-                // (a value both sides of which many files hold names no file)
-                let (one, many) = if a.len() <= b.len() { (a, b) } else { (b, a) };
-                if let [f] = one[..] {
-                    named[f as usize].extend(many.iter().filter(|x| **x != f));
-                }
-            }
-        }
-    }
-    (0..units.len()).filter(|&f| named[f].len() > over).collect()
 }
 
 struct Fork(Eval);
@@ -612,15 +562,12 @@ fn reader_trees(cx: &Rc<Ctx>, tops: &[Rc<Unit>], e: &Eval) -> (Rc<TreeOf>, (Vec<
     tops.first().into_iter().for_each(|t| walk(t, &mut leaves));
     let cis: FxSet<usize> = cx.joins.home.1.iter().filter_map(|rel| e.vc.vclosure_for(*rel)).collect();
     let (cx, of) = (cx.clone(), leaves.clone());
-    (Rc::new(move |t: Term| Some(of[cx.file(t)? as usize].clone())), (leaves, cis))
+    (Rc::new(move |t: Term| Some(of[cx.file(t)? as usize / cx.leaf].clone())), (leaves, cis))
 }
 
 /// A world settled by levels: the one unit of each layer and, where rules were left to the world's reader, the unit
 /// of what they conclude, to be read where they lie.
 pub struct Levels {
-    /// how many of the files, the first in the world's order, are libraries: a tree of their own in each layer,
-    /// settled before the rest, which reads it where it lies
-    pub libs: u32,
     pub tops: Vec<Rc<Unit>>,
     cx: Rc<Ctx>,
     pub mark: FactId,
@@ -722,7 +669,7 @@ impl Levels {
         trees.sort_unstable();
         w.arena(&trees);
         w.u32(self.mark);
-        w.u32(self.libs);
+        w.u32(self.cx.leaf as u32);
         fn walk<'a>(u: &'a Rc<Unit>, ss: &mut Vec<&'a Rc<Stretch>>, us: &mut Vec<&'a Rc<Unit>>) {
             if us.iter().any(|x| Rc::ptr_eq(x, u)) {
                 return;
@@ -798,7 +745,7 @@ impl Levels {
             joins.places.entry(x[0]).or_default().push((x[1] as u8, x[2] as u8));
         }
         joins.home = Rc::new((FxSet::default(), r.arena::<Sym>()?.iter().copied().collect()));
-        let (mark, libs) = (r.u32()?, r.u32()?);
+        let (mark, leaf) = (r.u32()?, r.u32()?.max(1) as usize);
         let mut ss: Vec<Rc<Stretch>> = Vec::new();
         let over = Rc::new((e.fork().store, e.h.clone()));
         for _ in 0..r.u32()? {
@@ -822,7 +769,7 @@ impl Levels {
         for x in r.arena::<u64>()?.chunks_exact(2) {
             masks.entry(x[0] as Sym).or_default().insert(x[1]);
         }
-        Ok(Levels { libs, tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, perm: Default::default(), joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default() })
+        Ok(Levels { tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, leaf, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default() })
     }
 
     /// The unit of layer `k` over exactly `files`.
@@ -1124,10 +1071,12 @@ impl Eval {
         Ok(())
     }
 
-    /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world. `fan`
-    /// units make the one above.
-    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, fan: usize, edit: Option<Edit>) -> Result<Levels, Halt> {
-        let cx = Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: self.h.clone(), perm: Default::default(), files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
+    /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world.
+    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, edit: Option<Edit>) -> Result<Levels, Halt> {
+        // (the check harness's oracles: how many files a unit of files alone holds, how many units meet in one)
+        let env = |name: &str, by: usize| std::env::var(name).ok().and_then(|x| x.parse().ok()).unwrap_or(by);
+        let (leaf, fan) = (edit.as_ref().map_or(env("ROFL_LEAF", 16).max(1), |e| e.0.cx.leaf), env("ROFL_FAN", 8));
+        let cx = Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: self.h.clone(), leaf, files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
         // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
@@ -1158,18 +1107,13 @@ impl Eval {
         let rel_at = |r: &ERule, i: usize| if let BodyElem::Pos(l) = &r.plan[i] { l.rel } else { unreachable!() };
         let firsts: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).filter_map(|r| first_at(r, &home).map(|i| rel_at(r, i))).collect()).collect();
         // the rules of each layer that two facts of the layer may fire without sharing a value: through a fact of a
-        // layer below, which is then news to them; and, where the world has libraries, through any fact, which may be
-        // a library's
-        let libbed = std::sync::atomic::AtomicBool::new(edit.as_ref().is_some_and(|e| e.0.libs > 0));
-        let bridgy = |through: bool| -> Vec<Rc<FxSet<Sym>>> {
+        // layer below, which is then news to them
+        let bridgy: Vec<Rc<FxSet<Sym>>> = {
             rules_of.iter().map(|rs| {
                 let heads: FxSet<Sym> = self.rules.iter().filter(|r| rs.contains(&r.id)).map(|r| r.clause.head.rel).collect();
                 Rc::new(self.rules.iter().filter(|r| rs.contains(&r.id)).filter(|r| {
                     let ls: Vec<&Lit> = r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l) } else { None }).filter(|l| heads.contains(&l.rel) || home.1.contains(&l.rel)).collect();
                     let shares = |a: &Lit, b: &Lit| a.args.iter().any(|t| t.is_var() && b.args.contains(t));
-                    if through {
-                        return ls.iter().enumerate().any(|(i, a)| heads.contains(&a.rel) && ls[..i].iter().any(|b| heads.contains(&b.rel) && !shares(a, b)));
-                    }
                     let mut part: Vec<usize> = (0..ls.len()).collect();
                     for i in 0..ls.len() {
                         for j in 0..i {
@@ -1219,12 +1163,9 @@ impl Eval {
             }
             out
         });
-        let bridgy = (bridgy(false), bridgy(true));
-        let bmates = (mated(&bridgy.0), mated(&bridgy.1));
-        let bplaces: (Vec<FxSet<Place>>, Vec<FxSet<Place>>) = (bmates.0.iter().map(|m| m.iter().map(|x| x.0).collect()).collect(), bmates.1.iter().map(|m| m.iter().map(|x| x.0).collect()).collect());
-        let bplaces = |k: usize| if libbed.load(Relaxed) { &bplaces.1[k] } else { &bplaces.0[k] };
-        let bmates = |k: usize| if libbed.load(Relaxed) { &bmates.1[k] } else { &bmates.0[k] };
-        let bridgy = |k: usize| if libbed.load(Relaxed) { &bridgy.1[k] } else { &bridgy.0[k] };
+        let bmates = mated(&bridgy);
+        let bplaces: Vec<FxSet<Place>> = bmates.iter().map(|m| m.iter().map(|x| x.0).collect()).collect();
+        let (bplaces, bmates, bridgy) = (|k: usize| &bplaces[k], |k: usize| &bmates[k], |k: usize| &bridgy[k]);
         // where a builtin walls a rule's order: the premises after it are read as an absence is, at home nowhere
         let walls: Rc<FxMap<Sym, usize>> = Rc::new(self.rules.iter().filter_map(|r| Some((r.id, (0..r.plan.len()).find(|&i| self.wall(&r.plan, i))?))).collect());
         // the relations the rules of the first layer read
@@ -1395,7 +1336,7 @@ impl Eval {
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
         // together where two of them meet
         // (`lows`: under each child, the units of the layers below at its place)
-        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, lows: Vec<Vec<Rc<Unit>>>, files: (u32, u32), old: Option<Rc<Unit>>, libk: &Option<LibK>, apart: bool| -> Result<Unit, Halt> {
+        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, lows: Vec<Vec<Rc<Unit>>>, files: (u32, u32), old: Option<Rc<Unit>>| -> Result<Unit, Halt> {
             let mut near: Vec<(Rc<Stretch>, u32)> = Vec::new();
             let mut low_near: Vec<(Rc<Stretch>, u32)> = Vec::new();
             let (mut under, mut sp) = (Vec::new(), Vec::new());
@@ -1424,7 +1365,6 @@ impl Eval {
             if old.is_some() {
                 let ids = new_ids.lock().unwrap();
                 seeds.extend(ids[..k].iter().flatten());
-                seeds.extend(libk.iter().flat_map(|l| &l.came));
                 seeds.extend(ids[k].iter().filter(|&&id| near.partition_point(|(s, _)| s.lo <= id).checked_sub(1).is_some_and(|i| id < near[i].0.hi)));
                 let shifted = shifted.lock().unwrap();
                 for st in near.iter().map(|(s, _)| s).chain(&at_home).filter(|_| !shifted.is_empty()) {
@@ -1458,9 +1398,8 @@ impl Eval {
                         } else if !cx.joins.places[&rel].iter().any(|(n, q)| *q == p && bplaces(k).contains(&(rel, *n, p))) {
                             continue;
                         }
-                        // (mended, what stood is met from what came; over the libraries and the rest, a fact of
-                        // the rest is met with the libraries': through one of theirs it may meet another of the rest)
-                        if old.is_some() || apart && c == 0 {
+                        // (mended, what stood is met from what came)
+                        if old.is_some() {
                             continue;
                         }
                         // a seed: a fact under one child that a rule joins with one under another
@@ -1473,9 +1412,9 @@ impl Eval {
                             let others = || (0..kids.len()).filter(|d| *d != c);
                             // (of the unit's layer on both sides: it fires any rule; else one of the layers below
                             // is a side, and only a rule whose facts of the layer it joins takes the news)
-                            let mets: Vec<Place> = if own && !apart { ms().copied().filter(|&m| others().any(|d| holds(&kids[d], m))).collect() } else { Vec::new() };
+                            let mets: Vec<Place> = if own { ms().copied().filter(|&m| others().any(|d| holds(&kids[d], m))).collect() } else { Vec::new() };
                             let met = !mets.is_empty();
-                            let low = k > 0 && bplaces(k).contains(&(rel, n, p)) && ms().any(|&m| bmates(k).contains(&((rel, n, p), m)) && others().any(|d| of(d).skip((own && !apart) as usize).any(|d| holds(d, m))));
+                            let low = k > 0 && bplaces(k).contains(&(rel, n, p)) && ms().any(|&m| bmates(k).contains(&((rel, n, p), m)) && others().any(|d| of(d).skip(own as usize).any(|d| holds(d, m))));
                             if met || low {
                                 for &h in hs {
                                     let ids = held(at(h), &cx.h, (rel, n, p), v);
@@ -1512,7 +1451,7 @@ impl Eval {
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();
             here.sort_unstable();
-            e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), libs: libk.as_ref().map_or(Vec::new(), |l| l.at.clone()), libs_all: libk.as_ref().map_or(Vec::new(), |l| l.all.clone()), apart, walls: walls.clone() }));
+            e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), walls: walls.clone() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
             e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
             e.0.wall.hold_end = true;
@@ -1757,11 +1696,10 @@ impl Eval {
             drop((one.lock().unwrap(), e));
             Ok(sv)
         };
-        // the units of each layer: by part (the libraries, the rest), by depth, by place
-        let mut layers: Vec<Vec<Vec<Vec<Rc<Unit>>>>> = Vec::new();
+        // the units of each layer: by depth, by place; a unit of files alone holds `leaf` of them
+        let mut layers: Vec<Vec<Vec<Rc<Unit>>>> = Vec::new();
         let mut tops: Vec<Rc<Unit>> = Vec::new();
-        let mut nlibs = edit.as_ref().map_or(0, |e| e.0.libs as usize);
-        let n = files.len();
+        let ranges: Vec<(u32, u32)> = (0..files.len()).step_by(leaf).map(|a| (a as u32, (a + leaf).min(files.len()) as u32)).collect();
         for k in 0..rules_of.len() {
             let lower = (k > 0).then(|| lower_of(&cx, &tops));
             let mut moved_below: FxSet<u64> = moved.lock().unwrap().iter().flatten().copied().collect();
@@ -1775,30 +1713,31 @@ impl Eval {
             };
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
-            let at_home = |p: usize, d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[p][d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
-            // the files alone, every one at once
-            let mut alone: Vec<Rc<Unit>> = Vec::new();
-            if k == 0 {
+            let at_home = |d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
+            let mut units = if k == 0 {
+                // the files alone, every one at once
                 let forks = &one;
-                let mut units = level(n, true, &|x| {
-                    let one = (x as u32, x as u32 + 1);
-                    if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| e.1.contains(&one.0))) {
+                let units = level(ranges.len(), true, &|x| {
+                    let one = ranges[x];
+                    if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| (one.0..one.1).any(|f| e.1.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
                     }
                     let mut e = fork();
                     let from = e.0.store.len_ids();
-                    match &cx.joins.low {
-                        // the books the plan cuts are read in a world let go: its lemmas and the file's facts
-                        // outside the books are given to the unit, as the world whole keeps them
-                        Some(low) => {
-                            let mut raw = fork();
-                            volumes::load_text(&mut raw.0, &files[x].1)?;
-                            raw.0.lower_stage(low)?;
-                            raw.0.own_kept(stage.0, from)?;
-                            e.0.take_lemmas(&raw.0, low, from, core_names.0, core_names.1);
-                            drop((forks.lock().unwrap(), raw));
+                    for (_, text) in &files[one.0 as usize..one.1 as usize] {
+                        match &cx.joins.low {
+                            // the books the plan cuts are read in a world let go: its lemmas and the file's facts
+                            // outside the books are given to the unit, as the world whole keeps them
+                            Some(low) => {
+                                let mut raw = fork();
+                                volumes::load_text(&mut raw.0, text)?;
+                                raw.0.lower_stage(low)?;
+                                raw.0.own_kept(stage.0, from)?;
+                                e.0.take_lemmas(&raw.0, low, from, core_names.0, core_names.1);
+                                drop((forks.lock().unwrap(), raw));
+                            }
+                            None => volumes::load_text(&mut e.0, text)?,
                         }
-                        None => volumes::load_text(&mut e.0, &files[x].1)?,
                     }
                     e.0.lower_stage(stage.0)?;
                     if cx.joins.low.is_none() {
@@ -1810,7 +1749,7 @@ impl Eval {
                 })?;
                 // (a row of a tree comes or goes only between nodes of a file edited)
                 for (x, u) in units.iter().enumerate() {
-                    let Some(o) = was(0, (x as u32, x as u32 + 1)).filter(|o| o.stretch.lo != u.stretch.lo) else { continue };
+                    let Some(o) = was(0, ranges[x]).filter(|o| o.stretch.lo != u.stretch.lo) else { continue };
                     for ci in 0..self.vc.vclosures.len() {
                         let rows = |s: &Stretch| {
                             let mut out: FxSet<(Sym, u64, u64)> = FxSet::default();
@@ -1823,100 +1762,40 @@ impl Eval {
                         shifted.lock().unwrap().extend(now.symmetric_difference(&then).flat_map(|&(_, a, d)| [a, d]));
                     }
                 }
-                // THE LIBRARIES FIRST in the world's order, from here on (an edit keeps the order it found)
-                if edit.is_none() {
-                    let libs = libraries(&cx, &units, 32);
-                    if !libs.is_empty() && libs.len() < n {
-                        let order: Vec<usize> = libs.iter().copied().chain((0..n).filter(|x| !libs.contains(x))).collect();
-                        let mut perm = vec![0u32; n];
-                        for (new, &old) in order.iter().enumerate() {
-                            perm[old] = new as u32;
-                        }
-                        units = order.iter().enumerate().map(|(new, &old)| Rc::new(Unit { files: (new as u32, new as u32 + 1), ..kept(&units[old], Vec::new()) })).collect();
-                        cx.perm.set(perm).expect("the order is given once");
-                        nlibs = libs.len();
-                        libbed.store(true, Relaxed);
-                    }
-                }
                 let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
                 trees = Some(Rc::new(move |t: Term| {
-                    let s = &of[cx.file(t)? as usize];
+                    let s = &of[cx.file(t)? as usize / leaf];
                     asks(|a| { a.reads.insert(s.lo); });
                     Some(s.clone())
                 }));
-                alone = units;
-            }
-            let parts: Vec<(usize, usize)> = if nlibs == 0 { vec![(0, n)] } else { vec![(0, nlibs), (nlibs, n)] };
-            let (mut part_tops, mut by_part): (Vec<Rc<Unit>>, Vec<Vec<Vec<Rc<Unit>>>>) = Default::default();
-            for (p, &(from, to)) in parts.iter().enumerate() {
-                // above the files' own layer the rest reads what the libraries concluded at this layer, as it reads
-                // the layers below
-                let (lower, moved_below, libk) = match part_tops.first().filter(|_| k > 0) {
-                    Some(lib) => {
-                        let mut under = Vec::new();
-                        spans(lib, 0, &mut under);
-                        let mut at: Vec<(FactId, FactId)> = under.iter().map(|u| (u.0, u.1)).collect();
-                        at.sort_unstable();
-                        layers.iter().for_each(|l| spans(&l[0].last().expect("a part's top")[0], 0, &mut under));
-                        let mut all: Vec<(FactId, FactId)> = under.iter().map(|u| (u.0, u.1)).collect();
-                        all.sort_unstable();
-                        let came = new_ids.lock().unwrap()[k].iter().copied().collect();
-                        let mut keys = moved_below.clone();
-                        keys.extend(moved.lock().unwrap()[k].iter());
-                        let lows: Vec<Rc<Unit>> = tops.iter().chain([lib]).cloned().collect();
-                        (Some(lower_of(&cx, &lows)), keys, Some(LibK { at, all, came }))
-                    }
-                    None => (lower.clone(), moved_below.clone(), None),
-                };
-                let mut units = match k {
-                    0 => alone[from..to].to_vec(),
-                    _ => level(to - from, false, &|i| {
-                        let one = ((from + i) as u32, (from + i) as u32 + 1);
-                        match was(k, one).filter(|o| stands(o, &moved_below)) {
-                            Some(o) => Ok(kept(&o, Vec::new())),
-                            None => unit(k, &lower, &trees, at_home(p, 0, i), Vec::new(), Vec::new(), one, None, &libk, false),
-                        }
-                    })?,
-                };
-                let mut depths = vec![units.clone()];
-                while units.len() > 1 {
-                    let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
-                    let d = depths.len();
-                    units = level(groups.len(), false, &|x| {
-                        let kids = groups[x].clone();
-                        if kids.len() == 1 {
-                            let k = &kids[0];
-                            return Ok(kept(k, k.kids.clone()));
-                        }
-                        let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
-                        if let Some(o) = was(k, files).filter(|o| stands(o, &moved_below)) {
-                            return Ok(kept(&o, kids));
-                        }
-                        let lows = (0..kids.len()).map(|c| layers.iter().map(|l| l[p][d - 1][x * fan.max(2) + c].clone()).collect()).collect();
-                        unit(k, &lower, &trees, at_home(p, d, x), kids, lows, files, was(k, files), &libk, false)
-                    })?;
-                    depths.push(units.clone());
-                }
-                part_tops.push(units.pop().expect("a part of a file at least"));
-                by_part.push(depths);
-            }
-            // the libraries and the rest under one unit: in the files' own layer it meets them as any group does;
-            // above, the rest has read the libraries, and it fires what stands on a fact at home at it, and what
-            // facts of the rest make only through a library's (`Meeting::apart`)
-            let top = match part_tops.len() {
-                1 => part_tops.pop().expect("one part"),
-                _ => Rc::new(match was(k, all).filter(|o| stands(o, &moved_below)) {
-                    Some(o) => kept(&o, part_tops),
-                    None => {
-                        width.store(threads, Relaxed);
-                        let lows = (0..part_tops.len()).map(|p| layers.iter().map(|l| l[p].last().expect("a part's top")[0].clone()).collect()).collect();
-                        let at_home = tops.iter().map(|t| t.stretch.clone()).filter(|s| s.lo < s.hi).collect();
-                        unit(k, &lower, &trees, at_home, part_tops, lows, all, was(k, all), &None, k > 0)?
-                    }
-                }),
+                units
+            } else {
+                level(ranges.len(), false, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
+                    Some(o) => Ok(kept(&o, Vec::new())),
+                    None => unit(k, &lower, &trees, at_home(0, i), Vec::new(), Vec::new(), ranges[i], None),
+                })?
             };
-            tops.push(top);
-            layers.push(by_part);
+            let mut depths = vec![units.clone()];
+            while units.len() > 1 {
+                let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
+                let d = depths.len();
+                units = level(groups.len(), false, &|x| {
+                    let kids = groups[x].clone();
+                    if kids.len() == 1 {
+                        let k = &kids[0];
+                        return Ok(kept(k, k.kids.clone()));
+                    }
+                    let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
+                    if let Some(o) = was(k, files).filter(|o| stands(o, &moved_below)) {
+                        return Ok(kept(&o, kids));
+                    }
+                    let lows = (0..kids.len()).map(|c| layers.iter().map(|l| l[d - 1][x * fan.max(2) + c].clone()).collect()).collect();
+                    unit(k, &lower, &trees, at_home(d, x), kids, lows, files, was(k, files))
+                })?;
+                depths.push(units.clone());
+            }
+            tops.push(units.pop().expect("a file at least"));
+            layers.push(depths);
         }
         // THE READER'S UNIT: the rules left to the world's reader by their shape are fired whole over the layers, and
         // what they conclude is one more stretch it reads; after an edit, again, unless no stretch was replaced
@@ -1946,6 +1825,6 @@ impl Eval {
             tops.push(Rc::new(top));
         }
         let again = edit.is_some().then(|| (again.load(Relaxed), same.load(Relaxed)));
-        Ok(Levels { libs: nlibs as u32, tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap() })
+        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap() })
     }
 }

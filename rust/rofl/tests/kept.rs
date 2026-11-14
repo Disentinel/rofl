@@ -1117,7 +1117,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "via[d](A, B)", "via2[d](A, B)"] {
         let args = ["ask", q, "boot.rofl", "w.rofl"];
         let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
-        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string())], planted.as_deref(), &args);
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())], planted.as_deref(), &args);
         assert!(whole.code == 0 && !whole.out.is_empty(), "{q}: the world whole: {} {:?}", whole.code, whole.err);
         let all_below = got.err.lines().find(|l| l.contains("levels: of ")).is_some_and(|l| {
             let n: Vec<&str> = l.split("levels: of ").nth(1).unwrap().split(' ').collect();
@@ -1125,10 +1125,9 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         });
         assert!(got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
         assert!(all_below && !got.err.contains("evaluated whole") && !got.err.contains("panicked"), "{q}: not every rule was fired in the units: {:?}", got.err);
-        assert!(got.err.contains(" of the files libraries") && !got.err.contains(" 0 of the files libraries"), "{q}: no file was taken for a library: {:?}", got.err);
     }
     // the units are kept, each stretch's own facts and firings, and a question asked again is answered from them
-    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string())];
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
     let again = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
     let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
     assert!(again.err.contains("answered from the kept units") && sorted(&again.out) == sorted(&whole.out), "qq[d](A, B) asked again: {:?} {:?}", again.out.lines().count(), again.err);
