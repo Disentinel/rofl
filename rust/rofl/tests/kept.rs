@@ -83,7 +83,13 @@ fn rofl_env(bin: &str, dir: &Dir, cache: &Path, env: &[(&str, String)], brk: Opt
     let mut c = Command::new(bin);
     c.args(args).current_dir(&dir.0).env("XDG_CACHE_HOME", cache).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB").envs(env.iter().map(|(k, v)| (*k, v)));
     if let Some(b) = brk { c.env("ROFL_BREAK", b); }
-    let o = c.output().unwrap();
+    // the memory is the machine's: a neighbour's run that fills it stops this one, which keeps nothing and is run again
+    let mut o = c.output().unwrap();
+    for _ in 0..30 {
+        if !String::from_utf8_lossy(&o.stderr).contains("reached the memory this process may use") { break }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        o = c.output().unwrap();
+    }
     Ran { out: String::from_utf8_lossy(&o.stdout).into(), err: String::from_utf8_lossy(&o.stderr).into(), code: o.status.code().unwrap_or(-1) }
 }
 
