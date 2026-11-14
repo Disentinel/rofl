@@ -1368,8 +1368,11 @@ impl Eval {
             // A GROUP MENDED: what it made stands where what it read stands, and only what moved is met again: a
             // stretch below made anew, a fact that names a node of a file edited, a firing that read an absence of a
             // relation a fact came to or a row of a tree. Not where a fact went from under an absence it asked: what
-            // that absence gives now stands on facts that stood.
+            // that absence gives now stands on facts that stood; nor where the sieve let go news by a value that passes
+            // now: what stood is offered again whole.
+            let sifted = sieve_now.lock().unwrap().clone();
             let old = old.filter(|o| !o.kids.is_empty() && o.stretch.carriable() && { let g = gone.lock().unwrap(); !o.asked.iter().any(|a| g.contains(a)) });
+            let old = old.filter(|o| !sifted.iter().flat_map(|sv| &sv.moved).any(|m| o.asked.binary_search(m).is_ok()));
             near.sort_unstable_by_key(|(s, _)| s.lo);
             // (mended, it is seeded by the facts that came: in the layers below wherever they lie, at its own layer
             // under it; and by those under it and at home that name a node whose rows in a tree moved)
