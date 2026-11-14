@@ -902,7 +902,7 @@ pub struct Eval {
     known_answer: Option<RuleAnswer>,
     /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
     /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
-    safety_memo: Option<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>,
+    safety_memo: Option<Rc<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>>,
     /// The profile of safety.rofl's own evaluation, as `profile_text` writes it, with `program[profile](R, safety)` and
     /// the reflection of its rules (`kernel_premise`, `kernel_head`): appended to the world's profile when a rule
     /// reads it, so that the kernel's program is judged by the same hypotheses as the world's (docs/cli.md, *The
@@ -3055,11 +3055,11 @@ impl Eval {
         judged.sort_unstable();
         judged.push(self.tag_refused.iter().flat_map(|(a, b)| [Term::atom(*a), Term::atom(*b)]).collect());
         if let Some(a) = known {
-            self.safety_memo = Some((judged, a.clone(), None));
+            self.safety_memo = Some(Rc::new((judged, a.clone(), None)));
             self.h = h;
             return a;
         }
-        if let Some((_, answer, err)) = self.safety_memo.as_ref().filter(|m| m.0 == judged) {
+        if let Some((_, answer, err)) = self.safety_memo.as_deref().filter(|m| m.0 == judged) {
             if let Some(e) = err {
                 self.diags.push(e.clone());
             }
@@ -3095,7 +3095,7 @@ impl Eval {
         if err.is_none() {
             self.safety_kept = Some(sub);
         }
-        self.safety_memo = Some((judged, answer.clone(), err));
+        self.safety_memo = Some(Rc::new((judged, answer.clone(), err)));
         answer
     }
 
