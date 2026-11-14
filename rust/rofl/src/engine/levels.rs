@@ -1232,7 +1232,8 @@ impl Eval {
                 super::par::UNITS.fetch_sub(1, Relaxed);
             }
         }
-        let level = |n: usize, trees: bool, f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
+        // (`first`: the order they are taken in, where not as they lie: the largest first, so none is left to end alone)
+        let level = |n: usize, trees: bool, first: &[usize], f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
             let next = AtomicUsize::new(0);
             let mut out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
             let (mut from, run) = (0, (threads * 32).max(64));
@@ -1248,14 +1249,16 @@ impl Eval {
                             }
                             super::par::UNITS.fetch_add(1, Relaxed);
                             let _busy = Busy;
+                            let x = first.get(x).copied().unwrap_or(x);
                             *out[x].lock().unwrap() = Some(f(x));
                         });
                     }
                 });
                 next.store(to, Relaxed);
                 if volumes::pressed() {
-                    let mut done: Vec<&mut Unit> = out[..to].iter_mut().filter_map(|u| u.get_mut().unwrap().as_mut()?.as_mut().ok()).collect();
-                    cool(&mut done, trees);
+                    let mut done: Vec<&mut Unit> = out.iter_mut().filter_map(|u| u.get_mut().unwrap().as_mut()?.as_mut().ok()).collect();
+                    let (cool, per) = (&cool, done.len().div_ceil(threads).max(1));
+                    std::thread::scope(|sc| done.chunks_mut(per).for_each(|us| { sc.spawn(move || cool(us, trees)); }));
                 }
                 from = to;
             }
@@ -1264,7 +1267,7 @@ impl Eval {
         let fork = || {
             let _g = one.lock().unwrap();
             let mut e = Fork(base.0.fork());
-            e.0.par.threads = 1;
+            e.0.par.threads = threads;
             e
         };
         let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<FxMap<Key, Vec<FactId>>>, asked: Asked| {
@@ -1453,7 +1456,6 @@ impl Eval {
             let inner = Rc::new(inner);
             let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()), true));
             let mut e = fork();
-            e.0.par.threads = threads;
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();
@@ -1707,7 +1709,12 @@ impl Eval {
         let mut layers: Vec<Vec<Vec<Rc<Unit>>>> = Vec::new();
         let mut tops: Vec<Rc<Unit>> = Vec::new();
         let ranges: Vec<(u32, u32)> = (0..files.len()).step_by(leaf).map(|a| (a as u32, (a + leaf).min(files.len()) as u32)).collect();
+        let mut largest: Vec<usize> = (0..ranges.len()).collect();
+        largest.sort_by_key(|&x| std::cmp::Reverse(files[ranges[x].0 as usize..ranges[x].1 as usize].iter().map(|f| f.1.len()).sum::<usize>()));
+        // (what each layer took: before its units, then each depth of them from the files up)
+        let mut took: Vec<String> = Vec::new();
         for k in 0..rules_of.len() {
+            let t0 = std::time::Instant::now();
             let lower = (k > 0).then(|| lower_of(&cx, &tops));
             let mut moved_below: FxSet<u64> = moved.lock().unwrap().iter().flatten().copied().collect();
             *sieve_now.lock().unwrap() = match &lower {
@@ -1721,10 +1728,11 @@ impl Eval {
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
             let at_home = |d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
+            let mut ms = vec![t0.elapsed().as_millis()];
             let mut units = if k == 0 {
                 // the files alone, every one at once
                 let forks = &one;
-                let units = level(ranges.len(), true, &|x| {
+                let units = level(ranges.len(), true, &largest, &|x| {
                     let one = ranges[x];
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| (one.0..one.1).any(|f| e.1.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
@@ -1777,16 +1785,17 @@ impl Eval {
                 }));
                 units
             } else {
-                level(ranges.len(), false, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
+                level(ranges.len(), false, &largest, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
                     Some(o) => Ok(kept(&o, Vec::new())),
                     None => unit(k, &lower, &trees, at_home(0, i), Vec::new(), Vec::new(), ranges[i], None),
                 })?
             };
+            ms.push(t0.elapsed().as_millis());
             let mut depths = vec![units.clone()];
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
                 let d = depths.len();
-                units = level(groups.len(), false, &|x| {
+                units = level(groups.len(), false, &[], &|x| {
                     let kids = groups[x].clone();
                     if kids.len() == 1 {
                         let k = &kids[0];
@@ -1800,7 +1809,9 @@ impl Eval {
                     unit(k, &lower, &trees, at_home(d, x), kids, lows, files, was(k, files))
                 })?;
                 depths.push(units.clone());
+                ms.push(t0.elapsed().as_millis());
             }
+            took.push(ms.iter().scan(0, |at, &m| Some(m - std::mem::replace(at, m))).map(|m| m.to_string()).collect::<Vec<_>>().join("+"));
             tops.push(units.pop().expect("a file at least"));
             layers.push(depths);
         }
@@ -1808,7 +1819,7 @@ impl Eval {
         // what they conclude is one more stretch it reads; after an edit, again, unless no stretch was replaced
         let k = rules_of.len();
         let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).copied().collect();
-        let mut said = Vec::new();
+        let mut said = vec![format!("levels: ms a layer, before its units and at each depth of them: {}", took.join(", "))];
         if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
@@ -1816,7 +1827,6 @@ impl Eval {
                 Some(o) => kept(&o, Vec::new()),
                 None => {
                     let mut e = fork();
-                    e.0.par.threads = threads;
                     let (trees, forest) = reader_trees(&cx, &tops, &e.0);
                     e.0.store.read_near(bump.load(Relaxed), Some(lower_of(&cx, &tops)), Vec::new(), None, Some(trees), Some(forest));
                     e.0.stage_given = Some(Rc::new(given));
@@ -1825,7 +1835,7 @@ impl Eval {
                     if e.0.run()?.partial {
                         return Err(Halt::Budget("budget_exhausted", None));
                     }
-                    said = std::mem::take(&mut e.0.diags);
+                    said.append(&mut e.0.diags);
                     done(e, k, all, Vec::new(), FxMap::default(), Rc::default(), Asked::default())
                 }
             };
