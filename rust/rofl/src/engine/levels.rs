@@ -1225,9 +1225,14 @@ impl Eval {
         };
         // (a level goes a run of units at a time, so that those done are cooled while the rest are still to do)
         // (the threads a unit may match its premises on: those its level leaves free)
-        let width = AtomicUsize::new(1);
+        // (a unit takes for its firings the threads no other unit is settled on)
+        struct Busy;
+        impl Drop for Busy {
+            fn drop(&mut self) {
+                super::par::UNITS.fetch_sub(1, Relaxed);
+            }
+        }
         let level = |n: usize, trees: bool, f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
-            width.store(if n <= threads { threads } else { 1 }, Relaxed);
             let next = AtomicUsize::new(0);
             let mut out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
             let (mut from, run) = (0, (threads * 32).max(64));
@@ -1241,6 +1246,8 @@ impl Eval {
                                 next.fetch_sub(1, Relaxed);
                                 break;
                             }
+                            super::par::UNITS.fetch_add(1, Relaxed);
+                            let _busy = Busy;
                             *out[x].lock().unwrap() = Some(f(x));
                         });
                     }
@@ -1446,7 +1453,7 @@ impl Eval {
             let inner = Rc::new(inner);
             let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()), true));
             let mut e = fork();
-            e.0.par.threads = width.load(Relaxed);
+            e.0.par.threads = threads;
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();

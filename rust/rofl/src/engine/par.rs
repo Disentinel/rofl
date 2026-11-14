@@ -201,8 +201,17 @@ impl Batch {
     }
 }
 
-/// `f` over `0..n`, on `threads` threads when `wide`, the results in the order of the indexes.
+/// The units of a world by levels being settled now, each on a thread of its own.
+pub(super) static UNITS: AtomicUsize = AtomicUsize::new(0);
+
+/// The threads of `threads` a firing may take: those no other unit is settled on.
+pub(super) fn free(threads: usize) -> usize {
+    threads.saturating_sub(UNITS.load(Ordering::Relaxed).saturating_sub(1))
+}
+
+/// `f` over `0..n`, on the free of `threads` threads when `wide`, the results in the order of the indexes.
 fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+    let threads = free(threads);
     if !wide || threads < 2 || n < 2 {
         return (0..n).map(f).collect();
     }

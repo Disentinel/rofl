@@ -5446,7 +5446,7 @@ impl Eval {
             };
             let active = self.active.clone();
             self.presolved.clear();
-            if self.meeting.is_some() && self.par.threads > 1 && at.is_none() && j0 == 0 {
+            if self.meeting.is_some() && par::free(self.par.threads) > 1 && at.is_none() && j0 == 0 {
                 self.presolving = Some(Vec::new());
                 let gathered = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
                 let jobs = self.presolving.take().unwrap_or_default();
