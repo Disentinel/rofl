@@ -1064,7 +1064,22 @@ pub struct Stretch {
     rels: Vec<Sym>,
     far: Vec<FactId>,
     /// its own facts of a relation by the value at one argument, made when first read so
-    keyed: std::sync::RwLock<FxMap<(Sym, u8), Rc<FxMap<u64, Vec<FactId>>>>>,
+    keyed: Keyed,
+}
+
+type Keys = FxMap<u64, Vec<FactId>>;
+
+/// By the place of the relation in `rels` and the argument: the first four each in a cell written once, read with no
+/// lock by every thread; the others behind one.
+struct Keyed {
+    low: Box<[[std::sync::OnceLock<Keys>; 4]]>,
+    high: std::sync::RwLock<FxMap<(Sym, u8), Box<Keys>>>,
+}
+
+impl Keyed {
+    fn of(rels: &[Sym]) -> Keyed {
+        Keyed { low: rels.iter().map(|_| Default::default()).collect(), high: Default::default() }
+    }
 }
 
 /// The segment of a stretch cooled to a file of its own, out of the kept scroll.
@@ -1195,7 +1210,7 @@ impl Stretch {
         }
         let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
         let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
-        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, rels: self.rels.clone(), far: self.far.clone(), keyed: Default::default(), forests: Default::default(), raw: Default::default() })
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), forests: Default::default(), raw: Default::default() })
     }
 
     /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
@@ -1254,7 +1269,7 @@ impl Stretch {
             let _ = forests.set(fs);
         }
         let kept = Some(Kept { over: over.clone(), map: r.map(), at, seg, start });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, rels, far, keyed: Default::default(), forests, raw: Default::default() })
+        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, forests, raw: Default::default() })
     }
 
     /// The segment of the scroll it is kept in, and where its record begins there. None for one cooled out of
@@ -1395,42 +1410,61 @@ impl Stretch {
         Ok(fork.into_stretch(h, lo).store.into_inner().unwrap())
     }
 
-    fn keyed(&self, h: &Heap, rel: Sym, p: u8) -> Rc<FxMap<u64, Vec<FactId>>> {
-        if let Some(ix) = self.keyed.read().unwrap().get(&(rel, p)) {
-            return ix.clone();
-        }
-        let mut ix: FxMap<u64, Vec<FactId>> = FxMap::default();
-        for k in self.of_rel(rel) {
-            if let Some(&t) = self.args(k).get(p as usize) {
-                ix.entry(if h.is_ground(t) { t.bits() } else { OPEN }).or_default().push(k);
+    /// None: it wrote no fact of the relation.
+    fn keyed(&self, h: &Heap, rel: Sym, p: u8) -> Option<&Keys> {
+        let i = self.rels.binary_search(&rel).ok()?;
+        let make = || {
+            let mut ix = Keys::default();
+            for k in self.of_rel(rel) {
+                if let Some(&t) = self.args(k).get(p as usize) {
+                    ix.entry(if h.is_ground(t) { t.bits() } else { OPEN }).or_default().push(k);
+                }
             }
+            ix
+        };
+        if let Some(cell) = self.keyed.low[i].get(p as usize) {
+            return Some(cell.get_or_init(make));
         }
-        let ix = Rc::new(ix);
-        self.keyed.write().unwrap().insert((rel, p), ix.clone());
-        ix
+        // SAFETY: a box put in is never taken out nor written while the stretch lives.
+        let lent = |b: &Keys| unsafe { &*(b as *const Keys) };
+        if let Some(ix) = self.keyed.high.read().unwrap().get(&(rel, p)) {
+            return Some(lent(ix));
+        }
+        let ix = Box::new(make());
+        Some(lent(self.keyed.high.write().unwrap().entry((rel, p)).or_insert(ix)))
     }
 
     /// The relations this stretch wrote a fact of.
     pub fn rels(&self) -> impl Iterator<Item = Sym> + '_ {
         self.rels.iter().copied()
     }
+    pub fn wrote(&self, rel: Sym) -> bool {
+        self.rels.binary_search(&rel).is_ok()
+    }
 
     /// What this stretch itself holds of the candidates of a premise, read by the argument fewest of its facts share.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn matches(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], out: &mut Vec<FactId>) {
-        let mut best: Option<(Rc<FxMap<u64, Vec<FactId>>>, u64)> = None;
-        let len = |ix: &FxMap<u64, Vec<FactId>>, v: u64| ix.get(&v).map_or(0, Vec::len) + ix.get(&OPEN).map_or(0, Vec::len);
+        if !self.wrote(rel) {
+            return;
+        }
+        let mut best: Option<(&Keys, u64, usize)> = None;
+        let len = |ix: &Keys, v: u64| ix.get(&v).map_or(0, Vec::len) + ix.get(&OPEN).map_or(0, Vec::len);
         for (&p, v) in pos.iter().zip(vals).filter(|(p, v)| **p < 256 && h.is_ground(**v)) {
-            let ix = self.keyed(h, rel, p as u8);
-            if best.as_ref().is_none_or(|(b, w)| len(&ix, v.bits()) < len(b, *w)) {
-                best = Some((ix, v.bits()));
+            let Some(ix) = self.keyed(h, rel, p as u8) else { return };
+            let n = len(ix, v.bits());
+            if n == 0 {
+                return;
+            }
+            if best.as_ref().is_none_or(|b| n < b.2) {
+                best = Some((ix, v.bits(), n));
             }
         }
         let fits = |k: FactId| {
             let a = self.args(k);
             a.len() == arity && persp.is_none_or(|q| self.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v))
         };
-        let Some((ix, v)) = best else {
+        let Some((ix, v, _)) = best else {
             out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
             return;
         };
@@ -1489,13 +1523,16 @@ pub struct Lower {
     route: Rc<Route>,
     /// the places in `list` in the order of `lo`
     by_lo: Vec<u32>,
+    /// the relations a stretch of `list` wrote a fact of
+    rels: FxSet<Sym>,
 }
 
 impl Lower {
     pub fn new(list: Vec<Rc<Stretch>>, route: Rc<Route>) -> Lower {
         let mut by_lo: Vec<u32> = (0..list.len() as u32).collect();
         by_lo.sort_unstable_by_key(|&i| list[i as usize].lo);
-        Lower { list, route, by_lo }
+        let rels = list.iter().flat_map(|s| s.rels()).collect();
+        Lower { list, route, by_lo, rels }
     }
     fn of(&self, id: FactId) -> Option<&Stretch> {
         let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);
@@ -2617,6 +2654,12 @@ impl Store {
         self.wit_head.mark = mark as usize;
     }
 
+    /// Whether a fact of the relation is here or in a stretch read here.
+    pub fn holds_any(&self, rel: Sym) -> bool {
+        self.idx.get(&rel).is_some_and(|v| v.iter().any(|(_, r)| !r.canon.is_empty() || !r.arrived.is_empty()))
+            || self.facts.near.as_ref().is_some_and(|n| n.lower.as_ref().is_some_and(|l| l.rels.contains(&rel)) || n.list.iter().any(|s| s.wrote(rel)))
+    }
+
     /// Whether a fact of this id stands for this store: the base's, or of a stretch it reads.
     pub fn reads_id(&self, id: FactId) -> bool {
         match &self.facts.near {
@@ -2867,7 +2910,7 @@ impl Store {
         let (mut rels, mut far): (Vec<Sym>, Vec<FactId>) = (self.idx.own.keys().copied().collect(), self.far_heads.keys().copied().collect());
         rels.sort_unstable();
         far.sort_unstable();
-        Stretch { store: self.into(), kept: None, lo, hi: lo + n, rels, far, keyed: Default::default(), forests: Default::default(), raw: Default::default() }
+        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, forests: Default::default(), raw: Default::default() }
     }
 
     /// The candidates the stretches read here hold, added to this store's own, read whole where it declined: a

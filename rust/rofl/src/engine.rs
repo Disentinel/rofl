@@ -833,6 +833,8 @@ pub struct Eval {
     homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
     /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
     bridging: Option<Rc<FxSet<Sym>>>,
+    /// In a unit of a layer: what lets go the news that can fire nothing (`levels::Sieve`).
+    sieve: Option<Rc<levels::Sieve>>,
     /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
     pub levels: Option<Rc<levels::Levels>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
@@ -2349,6 +2351,7 @@ impl Eval {
             by_seed: false,
             homing: None,
             bridging: None,
+            sieve: None,
             levels: None,
             lemma_heads: None,
             lower_texts: None,
@@ -5313,8 +5316,11 @@ impl Eval {
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         // a batch resumed in is active already
         if self.wall.resume_at.is_none() {
-            self.active.extend(sorted.iter().cloned());
-            self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+            // (each put after its equals, as a stable sort of the two lists puts it)
+            for r in &sorted {
+                let at = self.active.partition_point(|a| cmp_js(&a.canon, &r.canon) != std::cmp::Ordering::Greater);
+                self.active.insert(at, r.clone());
+            }
         }
         self.fire_all(sorted)
     }
@@ -5519,7 +5525,26 @@ impl Eval {
                         if self.bridging.is_some() && (0..i).any(|k| self.wall(&r.plan, k)) {
                             continue;
                         }
-                        let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
+                        // (in a unit: a premise of a relation it sees no fact of has no answer yet, and a fact of it
+                        // come later is news that reads these)
+                        if let Some(m) = self.meeting.as_ref() {
+                            let none = r.plan.iter().enumerate().find_map(|(j, b)| match b {
+                                BodyElem::Pos(lj) if j != i && lj.temporal == Temporal::Now && m.of_facts(lj.rel) && !self.store.holds_any(lj.rel) => Some(lj.rel),
+                                _ => None,
+                            });
+                            if let Some(rel) = none {
+                                levels::asked_any(rel);
+                                continue;
+                            }
+                        }
+                        let Some(mut keys) = self.news_since(r, l.rel, keys) else { continue };
+                        if let Some(sv) = self.sieve.as_ref().filter(|sv| sv.sifts(r.id, i)) {
+                            let kept: FxSet<FactId> = keys.iter().copied().filter(|&f| sv.lets(&self.h, r.id, i, self.store.args(f))).collect();
+                            if kept.is_empty() {
+                                continue;
+                            }
+                            keys = std::borrow::Cow::Owned(kept);
+                        }
                         let keys = &*keys;
                         if twice {
                             let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
