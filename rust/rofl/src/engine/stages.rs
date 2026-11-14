@@ -356,7 +356,7 @@ impl Eval {
             let head = r.clause.head.persp.as_atom().is_some_and(|b| cut.contains(&b));
             let reads = r.clause.body.iter().flat_map(BodyElem::lits_deep).any(|l| match l.persp.as_atom() {
                 Some(b) => cut.contains(&b),
-                None => cut_rels.contains(&l.rel) || cut.iter().any(|b| !self.store.rel_persp(&self.h, l.rel, *b).is_empty()),
+                None => cut_rels.contains(&l.rel) || cut.iter().any(|b| self.store.any_in(&self.h, l.rel, *b)),
             });
             if head || reads {
                 taken[i] = true;

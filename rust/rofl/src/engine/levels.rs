@@ -537,11 +537,19 @@ pub struct Cooled {
     paths: Vec<String>,
 }
 
-impl Drop for Cooled {
-    fn drop(&mut self) {
+impl Cooled {
+    /// The files of the units cooled, taken off the disk: what dropping does, for a process that ends without
+    /// giving its world back a piece at a time.
+    pub fn leave(&self) {
         for p in &self.paths {
             let _ = std::fs::remove_file(p);
         }
+    }
+}
+
+impl Drop for Cooled {
+    fn drop(&mut self) {
+        self.leave();
     }
 }
 

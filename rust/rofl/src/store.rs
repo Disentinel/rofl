@@ -3213,6 +3213,16 @@ impl Store {
         }
     }
 
+    /// Whether a live fact of `rel` stands in the book `persp`, here or in a stretch read here: `rel_persp` not empty,
+    /// without the rows of the stretches gathered and sorted.
+    pub fn any_in(&mut self, h: &Heap, rel: Sym, persp: Sym) -> bool {
+        if self.facts.near.as_ref().is_some_and(|n| n.len(rel, Some(persp)) > 0) {
+            return true;
+        }
+        self.absorb(h, rel, persp);
+        self.run(rel, persp).is_some_and(|r| r.canon.iter().any(|&i| self.alive(i)))
+    }
+
     /// The rows of a group here in key order, and with them those the stretches read here hold.
     fn beside_near(&self, h: &Heap, rel: Sym, persp: Sym, own: Vec<FactId>) -> Vec<FactId> {
         let Some(n) = &self.facts.near else { return own };

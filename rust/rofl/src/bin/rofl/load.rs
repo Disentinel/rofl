@@ -497,6 +497,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums), true) { eprintln!("the volumes are not kept: {e}"); }
         rofl::engine::meter::spent("keeps", t);
         rofl::engine::meter::write();
+        leave(s, cut);
         return Some(code);
     }
     let mut core = Session::fresh(o.budget);
@@ -524,7 +525,14 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         let sums: Vec<(String, u64)> = cut.files.iter().map(|(f, t)| (f.clone(), sum(t))).collect();
         if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, k, (sum(&cut.core), &sums), false) { eprintln!("the volumes are not kept: {e}"); }
     }
+    leave(s, (core, cut));
     Some(code)
+}
+
+/// The process ends after its answer: the world is not given back a piece at a time (1.5 s of 66 at 750 files).
+fn leave(s: Session, rest: impl Sized) {
+    if let Some(l) = &s.eval.levels { l.cooled.leave(); }
+    std::mem::forget((s, rest));
 }
 
 /// The bytes of the files' facts from which a world is evaluated by volumes: below them the whole world is as fast
