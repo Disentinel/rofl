@@ -833,8 +833,6 @@ pub struct Eval {
     homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
     /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
     bridging: Option<Rc<FxSet<Sym>>>,
-    /// In a unit of a layer: what lets go the news that can fire nothing (`levels::Sieve`).
-    sieve: Option<Rc<levels::Sieve>>,
     /// The round of a group's seeds: the rules each is news to (`levels::Seeded`).
     seeded: Option<Rc<levels::Seeded>>,
     /// In a unit on several threads, a round's firings are gathered (`presolving`), solved together (`presolved`,
@@ -914,6 +912,8 @@ pub struct Eval {
     /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
     /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
     safety_memo: Option<Rc<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>>,
+    /// the books and the rounds `peel_levels` found for the rules as they stand
+    peeled: Option<Rc<(Books, HashMap<Sym, u32>)>>,
     /// The profile of safety.rofl's own evaluation, as `profile_text` writes it, with `program[profile](R, safety)` and
     /// the reflection of its rules (`kernel_premise`, `kernel_head`): appended to the world's profile when a rule
     /// reads it, so that the kernel's program is judged by the same hypotheses as the world's (docs/cli.md, *The
@@ -2362,7 +2362,6 @@ impl Eval {
             by_seed: false,
             homing: None,
             bridging: None,
-            sieve: None,
             seeded: None,
             presolving: None,
             news_listing: None,
@@ -2401,6 +2400,7 @@ impl Eval {
             answer: RuleAnswer::default(),
             known_answer: known,
             safety_memo: None,
+            peeled: None,
             safety_kept: None,
             kernel_eval: None,
             prov: ProvState::default(),
@@ -2711,6 +2711,7 @@ impl Eval {
         if brk!("plans_outlive_rules" => false; true) {
             self.add.delta_plans.clear();
         }
+        self.peeled = None;
         let rules = self.view_unfold(rules);
         let rules = self.alias_lower(rules);
         self.register_dominances();
@@ -3744,21 +3745,30 @@ impl Eval {
     /// The rounds of the program peeled: the monotone rules a round above the first that are lifted to their level,
     /// and the levels of the rules that wait for their body to close. A stall is the program's rejection.
     fn peel_levels(&mut self, mono: &[Rc<ERule>], strat_rules: &[Rc<ERule>]) -> Result<(HashSet<Sym>, Levels), Halt> {
-        let lats: Vec<Sym> = self.lat.cell_rels().collect();
-        let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
-        self.refresh_books();
-        let mut peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
-        if peel.stalled {
-            // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
-            // stratified by its data (`datastrat.rs`): ranked as one round
-            if let Some(by_data) = self.take_data_components(&peel, &lats, &dom_edges) {
-                peel = by_data;
+        // (the rounds are the rules' alone unless the data ranks a component: peeled once while the rules stand)
+        if let Some(p) = self.peeled.clone() {
+            (self.books, self.round_of) = (p.0.clone(), p.1.clone());
+        } else {
+            let lats: Vec<Sym> = self.lat.cell_rels().collect();
+            let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
+            self.refresh_books();
+            let mut peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
+            let by_rules = !peel.stalled;
+            if peel.stalled {
+                // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
+                // stratified by its data (`datastrat.rs`): ranked as one round
+                if let Some(by_data) = self.take_data_components(&peel, &lats, &dom_edges) {
+                    peel = by_data;
+                }
+            }
+            if peel.stalled {
+                return Err(self.stall_error(&peel));
+            }
+            self.round_of = self.books.rounds(&peel.round);
+            if by_rules {
+                self.peeled = Some(Rc::new((self.books.clone(), self.round_of.clone())));
             }
         }
-        if peel.stalled {
-            return Err(self.stall_error(&peel));
-        }
-        self.round_of = self.books.rounds(&peel.round);
         let lifted: Vec<Rc<ERule>> = if self.by_component() {
             mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next && self.round_of.get(&self.books.head(&r.clause.head)).is_some_and(|k| *k > 0)).cloned().collect()
         } else {
@@ -5668,8 +5678,8 @@ impl Eval {
         sn.get(at)?.clone()
     }
 
-    /// The news of a round that fire `r` from its premise `i`: in a unit, less those its layer's sieve lets go and
-    /// the seeds that met no premise the rule joins this one with.
+    /// The news of a round that fire `r` from its premise `i`: in a unit, less the seeds that met no premise the rule
+    /// joins this one with.
     fn news_of(&self, r: &ERule, i: usize, rel: Sym, keys: &FxSet<FactId>) -> Option<par::News> {
         if let Some(n) = self.news_taken.get(&(r.id, i)) {
             return n.clone();
@@ -5682,12 +5692,8 @@ impl Eval {
 
     fn news_at<'a>(&self, r: &ERule, i: usize, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
         let keys = self.news_since(r, rel, keys)?;
-        let sv = self.sieve.as_ref().filter(|sv| sv.sifts(r.id, i));
-        let sd = self.seeded.as_ref();
-        if sv.is_none() && sd.is_none() {
-            return Some(keys);
-        }
-        let kept: FxSet<FactId> = keys.iter().copied().filter(|&f| sd.is_none_or(|sd| sd.lets(r.id, i, f)) && sv.is_none_or(|sv| sv.lets(&self.h, r.id, i, self.store.args(f)))).collect();
+        let Some(sd) = self.seeded.as_ref() else { return Some(keys) };
+        let kept: FxSet<FactId> = keys.iter().copied().filter(|&f| sd.lets(r.id, i, f)).collect();
         (!kept.is_empty()).then_some(std::borrow::Cow::Owned(kept))
     }
 

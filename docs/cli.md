@@ -598,7 +598,8 @@ of disk. A world its units refuse (a wall met, a fact that breaks the plan's
 cores, the side-effect question over vscode, kept too: 250 files 18.1 s, 750
 files 56 s (the workers it replaced, the same hour: 19.1 and 54.4 s, on a tenth
 more processor time), a third of it the files' own rules; one fact edited in
-one file of 250 and asked again, 11.5 s (`f_levels_reach_the_workers`). `whynot`, `excise`,
+one file of 250 and asked again, 9.2 s
+(`f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). `whynot`, `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.

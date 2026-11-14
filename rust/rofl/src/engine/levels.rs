@@ -165,65 +165,6 @@ fn asked(h: &Heap, rel: Sym, pos: &[usize], vals: &[Term]) {
     })
 }
 
-/// THE SIEVE OF A LAYER. A rule's premises of relations settled below the layer, joined once over the layers below
-/// where the join is small: a fact that is news to a premise of the rule and whose value is in no row of that join
-/// fires nothing, and is let go without a read. (The world whole fires such a rule once, from its smallest premise; a
-/// unit takes every fact of its layer as news.) What a unit let go it asked, as a key of the rule: the row come later
-/// moves it.
-#[derive(Default)]
-pub struct Sieve {
-    at: FxMap<(Sym, usize), Vec<Sift>>,
-    /// after an edit: the keys of what passes now, and of the joins not taken now
-    moved: Vec<u64>,
-}
-
-/// One argument of a premise as a join of the rule binds it: the values it takes there. No argument: the join is
-/// empty and the rule fires nothing.
-struct Sift {
-    mask: u64,
-    col: Option<usize>,
-    rows: Rc<FxSet<u64>>,
-}
-
-const SIFT: u64 = 1 << 62;
-/// (the join was empty)
-const SIFT_NONE: u64 = 1 << 61;
-/// A join is taken while it is forecast to stay under so many rows.
-const SIFT_ROWS: f64 = 100_000.0;
-
-/// The key of a value let go at an argument (`p`) of premise `i` by the join `c` of the rule; with no value, of any.
-fn sift_key(rule: Sym, c: usize, i: usize, p: Option<usize>, v: Option<u64>) -> u64 {
-    let mask = SIFT | (c as u64) << 32 | (i as u64) << 8 | p.map_or(SIFT_NONE, |p| p as u64);
-    key_of(rule, mask, v.into_iter().map(Term::from_bits))
-}
-
-impl Sieve {
-    pub(super) fn sifts(&self, rule: Sym, i: usize) -> bool {
-        self.at.contains_key(&(rule, i))
-    }
-    /// Whether the fact, news at premise `i` of the rule, may fire it.
-    pub(super) fn lets(&self, h: &Heap, rule: Sym, i: usize, args: &[Term]) -> bool {
-        let Some(sifts) = self.at.get(&(rule, i)) else { return true };
-        for s in sifts {
-            let v = match s.col {
-                None => None,
-                Some(c) => match args.get(c).filter(|t| h.is_ground(**t)) {
-                    Some(t) if !s.rows.contains(&t.bits()) => Some(t.bits()),
-                    _ => continue,
-                },
-            };
-            if brk!("levels_sieve_unasked" => false; true) {
-                asks(|a| {
-                    a.keys.insert(key_of(rule, s.mask, v.into_iter().map(Term::from_bits)));
-                    a.keys.insert(key_of(rule, s.mask, std::iter::empty()));
-                });
-            }
-            return false;
-        }
-        true
-    }
-}
-
 /// THE SEEDS OF A GROUP, each with the places it met a fact under another child at (its own, the other's): a seed is
 /// news to a premise of a rule that joins it there with a premise of the other place. Another firing it is part of
 /// lies under one child, where it was made, or has a pair of its own that met.
@@ -1090,7 +1031,6 @@ impl Eval {
         // (and what moved that a group mended must meet: the stretches made anew, the relations a fact came to, the
         // keys a fact went from under a relation an absence reads, the files edited)
         let new_ids: Mutex<Vec<FxSet<FactId>>> = Mutex::default();
-        let sieve_now: Mutex<Option<Rc<Sieve>>> = Mutex::default();
         let (came, gone): (Mutex<FxSet<Sym>>, Mutex<FxSet<u64>>) = Default::default();
         let negs: FxMap<Sym, Vec<Sym>> = self.rules.iter().map(|r| (r.id, r.plan.iter().filter_map(|b| if let BodyElem::Neg(l) = b { Some(l.rel) } else { None }).collect::<Vec<_>>())).filter(|(_, n)| !n.is_empty()).collect();
         let negated: FxSet<Sym> = negs.values().flatten().copied().collect();
@@ -1272,6 +1212,8 @@ impl Eval {
             e.0.par.threads = threads;
             e
         };
+        // a layer's rules made ready once: every unit of the layer starts from it
+        let ready: Mutex<Option<Fork>> = Mutex::default();
         let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<FxMap<Key, Vec<FactId>>>, asked: Asked| {
             let mut e = e;
             let mut store = std::mem::take(&mut e.0.store);
@@ -1368,11 +1310,8 @@ impl Eval {
             // A GROUP MENDED: what it made stands where what it read stands, and only what moved is met again: a
             // stretch below made anew, a fact that names a node of a file edited, a firing that read an absence of a
             // relation a fact came to or a row of a tree. Not where a fact went from under an absence it asked: what
-            // that absence gives now stands on facts that stood; nor where the sieve let go news by a value that passes
-            // now: what stood is offered again whole.
-            let sifted = sieve_now.lock().unwrap().clone();
+            // that absence gives now stands on facts that stood.
             let old = old.filter(|o| !o.kids.is_empty() && o.stretch.carriable() && { let g = gone.lock().unwrap(); !o.asked.iter().any(|a| g.contains(a)) });
-            let old = old.filter(|o| !sifted.iter().flat_map(|sv| &sv.moved).any(|m| o.asked.binary_search(m).is_ok()));
             near.sort_unstable_by_key(|(s, _)| s.lo);
             // (mended, it is seeded by the facts that came: in the layers below wherever they lie, at its own layer
             // under it; and by those under it and at home that name a node whose rows in a tree moved)
@@ -1460,19 +1399,17 @@ impl Eval {
             seeds.dedup();
             let inner = Rc::new(inner);
             let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()), true));
-            let mut e = fork();
+            let mut e = {
+                let p = ready.lock().unwrap();
+                let _g = one.lock().unwrap();
+                Fork(p.as_ref().expect("the layer made ready").0.fork())
+            };
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();
             here.sort_unstable();
             e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), walls: walls.clone() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
-            e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
-            e.0.wall.hold_end = true;
-            e.0.by_seed = true;
-            e.0.sieve = sieve_now.lock().unwrap().clone();
-            e.0.run_whole()?;
-            e.0.seen_at.clear();
             if let Some(o) = &old {
                 let Eval { store, h, .. } = &mut e.0;
                 let came = came.lock().unwrap();
@@ -1550,165 +1487,8 @@ impl Eval {
             e.0.propagate(front)?;
             e.0.seeded = None;
             let asked = ASKED.with(|a| a.borrow_mut().take()).unwrap_or_default();
-            Ok(done(e, k, files, kids, dir, inner, asked))
-        };
-        // the sieve of layer `k`, over the layers under `tops`: each join of settled premises taken from its premise of
-        // fewest facts, by the variables bound, while the rows forecast stay few; the same join of two rules once
-        let stats: std::cell::RefCell<FxMap<(Sym, Vec<(usize, u64)>, Option<usize>), (usize, usize)>> = Default::default();
-        type Taken = (bool, Option<Vec<Rc<FxSet<u64>>>>);
-        let taken: std::cell::RefCell<FxMap<Vec<u64>, Taken>> = Default::default();
-        /// A join of a rule: its place among the rule's joins, every premise of it, those taken in their order with
-        /// their variables, and the join's name whatever its variables are called.
-        struct Join {
-            c: usize,
-            all: Vec<Lit>,
-            ms: Vec<Lit>,
-            vs: Vec<Term>,
-            sig: Vec<u64>,
-        }
-        let sieve_of = |k: usize, lower: &Rc<Lower>, tops: &[Rc<Unit>]| -> Result<Sieve, Halt> {
-            let below = st.below();
-            let late: FxSet<Sym> = self.rules.iter().filter(|r| rules_of[k..].iter().any(|l| l.contains(&r.id)) || !(below.contains(&r.id) || cx.joins.core.contains(&r.id))).map(|r| r.clause.head.rel).collect();
-            let reader = || {
-                let mut e = fork();
-                let (trees, forest) = reader_trees(&cx, tops, &e.0);
-                e.0.store.read_near(bump.load(Relaxed), Some(lower.clone()), Vec::new(), None, Some(trees), Some(forest));
-                e.0.whole = None;
-                e.0.firing = true;
-                e
-            };
-            let e = reader();
-            // the rows of a premise with its constants, and the values they take at an argument
-            let stat = |l: &Lit, p: Option<usize>| -> (usize, usize) {
-                let cs: Vec<(usize, u64)> = l.args.iter().enumerate().filter(|(_, t)| e.0.h.is_ground(**t)).map(|(i, t)| (i, t.bits())).collect();
-                *stats.borrow_mut().entry((l.rel, cs.clone(), p)).or_insert_with(|| {
-                    let (cp, cv): (Vec<usize>, Vec<Term>) = cs.iter().map(|(i, b)| (*i, Term::from_bits(*b))).unzip();
-                    e.0.store.probe_stats(&e.0.h, l.rel, None, &cp, &cv, &p.into_iter().collect::<Vec<_>>())
-                })
-            };
-            let pos = |r: &'_ ERule| -> Vec<usize> { r.plan.iter().enumerate().filter(|(_, b)| matches!(b, BodyElem::Pos(l) if l.temporal == Temporal::Now)).map(|x| x.0).collect() };
-            let lit = |r: &ERule, i: usize| -> Lit { match &r.plan[i] { BodyElem::Pos(l) => l.clone(), _ => unreachable!() } };
-            let joins = |lits: &[Lit]| -> Vec<Join> {
-                let settled: Vec<&Lit> = lits.iter().filter(|l| !late.contains(&l.rel) && !home.1.contains(&l.rel)).collect();
-                // the settled premises a variable joins, one after another
-                let mut part: Vec<usize> = (0..settled.len()).collect();
-                for a in 0..settled.len() {
-                    for b in a + 1..settled.len() {
-                        if part[a] != part[b] && settled[a].args.iter().any(|t| t.is_var() && settled[b].args.contains(t)) {
-                            let (x, y) = (part[a].min(part[b]), part[a].max(part[b]));
-                            part.iter_mut().filter(|p| **p == y).for_each(|p| *p = x);
-                        }
-                    }
-                }
-                let mut out = Vec::new();
-                for c in (0..settled.len()).filter(|c| part[*c] == *c) {
-                    let all: Vec<&Lit> = (0..settled.len()).filter(|j| part[*j] == c).map(|j| settled[j]).collect();
-                    let mut rest: Vec<(usize, &Lit)> = all.iter().map(|l| (stat(l, None).0, *l)).collect();
-                    rest.sort_by_key(|x| x.0);
-                    let mut ms: Vec<&Lit> = Vec::new();
-                    let mut rows = rest[0].0 as f64;
-                    if rows <= SIFT_ROWS {
-                        ms.push(rest.remove(0).1);
-                        loop {
-                            let bound = |t: &Term| t.is_var() && ms.iter().any(|m| m.args.contains(t));
-                            let fan = |l: &Lit| l.args.iter().enumerate().filter(|(_, t)| bound(t)).map(|(p, _)| { let (n, d) = stat(l, Some(p)); n as f64 / d.max(1) as f64 }).fold(f64::INFINITY, f64::min);
-                            let Some((at, f)) = (0..rest.len()).map(|j| (j, fan(rest[j].1))).filter(|x| x.1.is_finite()).min_by(|a, b| a.1.total_cmp(&b.1)) else { break };
-                            if rows * f.max(1.0) > SIFT_ROWS {
-                                break;
-                            }
-                            rows *= f.max(1.0);
-                            ms.push(rest.remove(at).1);
-                        }
-                    }
-                    let mut vs: Vec<Term> = Vec::new();
-                    for t in ms.iter().flat_map(|l| l.args.iter()).filter(|t| t.is_var()) {
-                        if !vs.contains(t) {
-                            vs.push(*t);
-                        }
-                    }
-                    let mut sig: Vec<u64> = Vec::new();
-                    for l in &ms {
-                        sig.extend([u64::MAX, l.rel as u64, l.persp.bits()]);
-                        sig.extend(l.args.iter().map(|t| vs.iter().position(|v| v == t).map_or(t.bits(), |v| 1 << 63 | v as u64)));
-                    }
-                    out.push(Join { c, all: all.into_iter().cloned().collect(), ms: ms.into_iter().cloned().collect(), vs, sig });
-                }
-                out
-            };
-            let rules: Vec<(&Rc<ERule>, Vec<usize>, Vec<Lit>)> = self.rules.iter().filter(|r| rules_of[k].contains(&r.id)).map(|r| { let at = pos(r); let lits = at.iter().map(|i| lit(r, *i)).collect(); (r, at, lits) }).collect();
-            // the joins not taken yet, each once, on the threads
-            let mut jobs: Vec<(Vec<u64>, Vec<BodyElem>, Vec<Term>)> = Vec::new();
-            for (_, _, lits) in &rules {
-                for j in joins(lits) {
-                    if !j.ms.is_empty() && !taken.borrow().contains_key(&j.sig) && !jobs.iter().any(|x| x.0 == j.sig) {
-                        jobs.push((j.sig, j.ms.into_iter().map(BodyElem::Pos).collect(), j.vs));
-                    }
-                }
-            }
-            let (next, made): (AtomicUsize, Vec<Mutex<Option<Result<Taken, Halt>>>>) = (AtomicUsize::new(0), jobs.iter().map(|_| Mutex::new(None)).collect());
-            std::thread::scope(|sc| {
-                for _ in 0..threads.min(jobs.len()) {
-                    sc.spawn(|| {
-                        let mut e = reader();
-                        loop {
-                            let x = next.fetch_add(1, Relaxed);
-                            let Some((_, body, vs)) = jobs.get(x) else { break };
-                            let got = e.0.solve_body(body, Subst::new(), 0, None, None).map(|sols| {
-                                let (mut got, mut open): (Vec<FxSet<u64>>, bool) = (vec![FxSet::default(); vs.len()], false);
-                                for sol in &sols {
-                                    for (v, t) in vs.iter().enumerate() {
-                                        let t = walk(&e.0.h, *t, &sol.s);
-                                        open |= !e.0.h.is_ground(t);
-                                        got[v].insert(t.bits());
-                                    }
-                                }
-                                (sols.is_empty(), (!open).then(|| got.into_iter().map(Rc::new).collect::<Vec<_>>()))
-                            });
-                            *made[x].lock().unwrap() = Some(got);
-                        }
-                        drop((one.lock().unwrap(), e));
-                    });
-                }
-            });
-            for ((sig, _, _), m) in jobs.into_iter().zip(made) {
-                let m = m.into_inner().unwrap().unwrap_or_else(|| Err(Halt::Bug("a join's thread panicked".into())))?;
-                taken.borrow_mut().insert(sig, m);
-            }
-            let mut sv = Sieve::default();
-            for (r, at, lits) in &rules {
-                for j in joins(lits) {
-                    let c = j.c;
-                    // (the keys an edit moves name an argument by the join's shape: what it bound this time or not)
-                    let shaped = |l: &Lit| l.args.iter().enumerate().filter(|(_, t)| t.is_var() && j.all.iter().any(|m| m.args.contains(t))).map(|(p, _)| p).collect::<Vec<_>>();
-                    // whether the join is empty, and the values each variable takes in it; None: the join is not taken
-                    let (none, cols): Taken = if j.ms.is_empty() { (false, None) } else { taken.borrow()[&j.sig].clone() };
-                    for (i, l) in at.iter().zip(lits.iter()) {
-                        if none {
-                            let mask = SIFT | (c as u64) << 32 | (*i as u64) << 8 | SIFT_NONE;
-                            sv.at.entry((r.id, *i)).or_default().push(Sift { mask, col: None, rows: Default::default() });
-                            continue;
-                        }
-                        if edit.is_some() {
-                            sv.moved.push(sift_key(r.id, c, *i, None, None));
-                        }
-                        for p in shaped(l) {
-                            match cols.as_ref().and_then(|cs| Some(&cs[j.vs.iter().position(|v| *v == l.args[p])?])) {
-                                Some(vals) => {
-                                    if edit.is_some() {
-                                        sv.moved.extend(vals.iter().map(|v| sift_key(r.id, c, *i, Some(p), Some(*v))));
-                                    }
-                                    let mask = SIFT | (c as u64) << 32 | (*i as u64) << 8 | p as u64;
-                                    sv.at.entry((r.id, *i)).or_default().push(Sift { mask, col: Some(p), rows: vals.clone() });
-                                }
-                                None if edit.is_some() => sv.moved.push(sift_key(r.id, c, *i, Some(p), None)),
-                                None => {}
-                            }
-                        }
-                    }
-                }
-            }
-            drop((one.lock().unwrap(), e));
-            Ok(sv)
+            let out = done(e, k, files, kids, dir, inner, asked);
+            Ok(out)
         };
         // the units of each layer: by depth, by place; a unit of files alone holds `leaf` of them
         let mut layers: Vec<Vec<Vec<Rc<Unit>>>> = Vec::new();
@@ -1718,20 +1498,22 @@ impl Eval {
         largest.sort_by_key(|&x| std::cmp::Reverse(files[ranges[x].0 as usize..ranges[x].1 as usize].iter().map(|f| f.1.len()).sum::<usize>()));
         // (what each layer took: before its units, then each depth of them from the files up)
         let mut took: Vec<String> = Vec::new();
-        for k in 0..rules_of.len() {
+        for (k, rules_k) in rules_of.iter().enumerate() {
             let t0 = std::time::Instant::now();
             let lower = (k > 0).then(|| lower_of(&cx, &tops));
-            let mut moved_below: FxSet<u64> = moved.lock().unwrap().iter().flatten().copied().collect();
-            *sieve_now.lock().unwrap() = match &lower {
-                Some(l) => {
-                    let sv = sieve_of(k, l, &tops)?;
-                    moved_below.extend(&sv.moved);
-                    Some(Rc::new(sv))
-                }
-                None => None,
-            };
+            let moved_below: FxSet<u64> = moved.lock().unwrap().iter().flatten().copied().collect();
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
+            {
+                let mut e = fork();
+                e.0.stage_pass = StagePass::Lower(rules_k.clone());
+                e.0.wall.hold_end = true;
+                e.0.by_seed = true;
+                e.0.run_whole()?;
+                e.0.seen_at.clear();
+                let _g = one.lock().unwrap();
+                *ready.lock().unwrap() = Some(e);
+            }
             let at_home = |d: usize, x: usize| -> Vec<Rc<Stretch>> { layers.iter().map(|l| l[d][x].stretch.clone()).filter(|s| s.lo < s.hi).collect() };
             let mut ms = vec![t0.elapsed().as_millis()];
             let mut units = if k == 0 {
@@ -1765,7 +1547,8 @@ impl Eval {
                     }
                     // (its trees are left as they stand at the end: the units above read them)
                     e.0.vc.vrefresh(&mut e.0.store);
-                    Ok(done(e, k, one, Vec::new(), FxMap::default(), Rc::default(), Asked::default()))
+                    let out = done(e, k, one, Vec::new(), FxMap::default(), Rc::default(), Asked::default());
+                    Ok(out)
                 })?;
                 // (a row of a tree comes or goes only between nodes of a file edited)
                 for (x, u) in units.iter().enumerate() {

@@ -687,8 +687,8 @@ impl Eval {
         lits
     }
 
-    /// The news of a round at each premise listed, taken on the threads: what the sieve and the seeds let go is asked
-    /// a fact at a time.
+    /// The news of a round at each premise listed, taken on the threads: what the seeds let go is asked a fact at
+    /// a time.
     pub(super) fn news_ahead(&mut self, mut list: Vec<(Rc<ERule>, usize)>, cur: &Front) {
         list.sort_unstable_by_key(|(r, i)| (r.id, *i));
         list.dedup_by_key(|(r, i)| (r.id, *i));

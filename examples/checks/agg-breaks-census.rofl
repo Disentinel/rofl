@@ -2206,8 +2206,6 @@ brk("levels_tree_sliced"). brk_kind("levels_tree_sliced", switch).
 brk_expects("levels_tree_sliced", "levels_whole").
 brk("levels_lower_unmet"). brk_kind("levels_lower_unmet", switch).
 brk_expects("levels_lower_unmet", "levels_whole").
-brk("levels_sieve_unasked"). brk_kind("levels_sieve_unasked", switch).
-brk_expects("levels_sieve_unasked", "levels_whole").
 brk("levels_guard_unasked"). brk_kind("levels_guard_unasked", switch).
 brk_expects("levels_guard_unasked", "levels_whole").
 brk("levels_seed_every_place"). brk_kind("levels_seed_every_place", switch).
@@ -2646,7 +2644,6 @@ switch_site("levels_leaf_first_file", "rust/rofl/src/engine/levels.rs").
 switch_site("levels_lower_unmet", "rust/rofl/src/engine/levels.rs").
 switch_site("levels_news_of_the_round_before", "rust/rofl/src/engine.rs").
 switch_site("levels_seed_every_place", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_sieve_unasked", "rust/rofl/src/engine/levels.rs").
 switch_site("levels_solved_run_lost", "rust/rofl/src/engine/par.rs").
 switch_site("levels_tree_sliced", "rust/rofl/src/engine/par.rs").
 switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").

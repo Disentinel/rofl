@@ -2618,6 +2618,13 @@ impl Store {
         (0..core).chain(mark..len)
     }
 
+    /// Those of them from `from` on.
+    fn ids_from(&self, from: FactId) -> std::iter::Chain<Range<FactId>, Range<FactId>> {
+        let (mark, len) = (self.facts.recs.mark as FactId, self.facts.len() as FactId);
+        let core = self.facts.near.as_ref().map_or(mark, |n| n.core as FactId);
+        (from.min(core)..core).chain(mark.max(from)..len)
+    }
+
     /// Whether the id is this store's own or its base's, not a stretch's.
     #[inline]
     pub fn here(&self, id: FactId) -> bool {
@@ -3960,8 +3967,7 @@ impl Store {
         self.chains_cut();
         self.vlisted = false;
         let settled = self.settled;
-        let drop: Vec<FactId> = self.ids_here()
-            .filter(|&i| i >= settled)
+        let drop: Vec<FactId> = self.ids_from(settled)
             .filter(|&i| {
                 let r = &self.facts.rec(i);
                 !r.dead() && !r.base() && !r.frozen() && !self.kept_layer.contains(&r.rel) && !self.kept_rows.contains(&i)
@@ -3969,7 +3975,8 @@ impl Store {
             .collect();
         self.remove_many(&drop);
         let mut standing: HashSet<(FactId, Sym)> = HashSet::new();
-        if let Some(row_of) = row_of {
+        // (a row stands for a firing: where no fact above the settled ones has one, nothing asks)
+        if let Some(row_of) = row_of.filter(|_| self.ids_from(settled).any(|i| self.head(i) != EMPTY)) {
             for id in self.ids_here() {
                 let r = self.facts.rec(id);
                 if r.dead() {
@@ -3985,7 +3992,7 @@ impl Store {
             }
         }
         let tick = self.tick;
-        for id in self.ids_here().filter(|&i| i >= settled) {
+        for id in self.ids_from(settled) {
             if !self.kept_layer.is_empty() && (self.kept_layer.contains(&self.facts.rec(id as FactId).rel) || self.kept_rows.contains(&(id as FactId))) {
                 continue;
             }

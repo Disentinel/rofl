@@ -8901,13 +8901,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "levels_sieve_unasked",
-  "what": "the sieve of a layer lets a fact go and the unit does not record the value it was let go by: an edit that makes the value pass leaves the unit as it stood",
-  "expect": {
-   "levels_whole": "a function come, cnl2[d](A, B): by levels"
-  }
- },
- {
   "id": "levels_guard_unasked",
   "what": "a rule with a premise of a relation the unit sees no fact of takes no news and the unit does not record that it asked: the first fact of the relation, come by an edit, fires nothing there",
   "expect": {
