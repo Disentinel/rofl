@@ -29,7 +29,21 @@ pub struct Graph {
     pub pairs: u64,
     pub deep: u32,
     pub internal: u32,
+    memo: Memo,
 }
+
+/// What a walk forward from a component reached, as a bit per node, kept while the graph stands: a test of both ends
+/// asked again from one start reads a bit. Emptied whole past MEMO_BYTES.
+#[derive(Default)]
+struct Memo(std::sync::Mutex<(FxMap<u32, std::sync::Arc<Vec<u64>>>, usize)>);
+
+impl Clone for Memo {
+    fn clone(&self) -> Memo {
+        Memo::default()
+    }
+}
+
+const MEMO_BYTES: usize = 64 << 20;
 
 fn csr(n: usize, es: &[(u32, u32)], rev: bool) -> (Vec<u32>, Vec<u32>) {
     let mut start = vec![0u32; n + 1];
@@ -73,7 +87,7 @@ impl Graph {
         }
         let deep = (0..n).filter(|&v| istart[v + 1] > istart[v]).count() as u32;
         let internal = (0..n).filter(|&v| ostart[v + 1] > ostart[v]).count() as u32;
-        let mut g = Graph { nodes: nodes.into(), idx, ostart: ostart.into(), oadj: oadj.into(), istart: istart.into(), iadj: iadj.into(), comp: comp.into(), cyclic: cyclic.into(), pairs: 0, deep, internal };
+        let mut g = Graph { nodes: nodes.into(), idx, ostart: ostart.into(), oadj: oadj.into(), istart: istart.into(), iadj: iadj.into(), comp: comp.into(), cyclic: cyclic.into(), pairs: 0, deep, internal, memo: Memo::default() };
         g.pairs = g.pairs_bound(ncomp, &size);
         g
     }
@@ -116,7 +130,7 @@ impl Graph {
         let [ostart, oadj, istart, iadj, comp] = [(); 5].map(|_| r.arena::<u32>());
         let cyclic: Arena<u32> = r.arena()?;
         let idx = nodes.iter().enumerate().map(|(i, t)| (t.bits(), i as u32)).collect();
-        let g = Graph { nodes, idx, ostart: ostart?, oadj: oadj?, istart: istart?, iadj: iadj?, comp: comp?, cyclic, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()? };
+        let g = Graph { nodes, idx, ostart: ostart?, oadj: oadj?, istart: istart?, iadj: iadj?, comp: comp?, cyclic, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()?, memo: Memo::default() };
         if g.ostart.len() != g.nodes.len() + 1 || g.istart.len() != g.nodes.len() + 1 || g.comp.len() != g.nodes.len() {
             return Err("a volume's graph is not a graph".into());
         }
@@ -186,13 +200,33 @@ impl Graph {
         None
     }
 
+    fn reached(&self, a: u32) -> std::sync::Arc<Vec<u64>> {
+        let c = self.comp[a as usize];
+        if let Some(r) = self.memo.0.lock().unwrap().0.get(&c) {
+            return r.clone();
+        }
+        let mut bits = vec![0u64; self.nodes.len().div_ceil(64)];
+        for y in self.walk(a, true) {
+            bits[y as usize / 64] |= 1 << (y % 64);
+        }
+        let r = std::sync::Arc::new(bits);
+        let mut m = self.memo.0.lock().unwrap();
+        m.1 += r.len() * 8;
+        if m.1 > MEMO_BYTES {
+            m.0.clear();
+            m.1 = r.len() * 8;
+        }
+        m.0.insert(c, r.clone());
+        r
+    }
+
     pub fn is_ancestor(&self, a: Term, d: Term) -> bool {
         let (Some(a), Some(d)) = (self.at(a), self.at(d)) else { return false };
         let (ca, cd) = (self.comp[a as usize], self.comp[d as usize]);
         if ca == cd {
             return self.cyclic[ca as usize] == 1;
         }
-        ca > cd && self.pred(a, d).is_some()
+        ca > cd && self.reached(a)[d as usize / 64] >> (d % 64) & 1 == 1
     }
 
     /// The node before `d` on a shortest path from `a`: `a` itself where the edge is.
@@ -207,14 +241,16 @@ impl Graph {
         let (Some(av), Some(dv)) = (self.at(a), self.at(d)) else { return (false, false) };
         let ins = &self.iadj[self.istart[dv as usize] as usize..self.istart[dv as usize + 1] as usize];
         let base = ins.contains(&av);
-        let step = ins.iter().any(|&p| self.is_ancestor(a, self.nodes[p as usize]));
+        let r = self.reached(av);
+        let step = ins.iter().any(|&p| r[p as usize / 64] >> (p % 64) & 1 == 1);
         (base, step)
     }
 
     pub fn firing_count(&self, a: Term, d: Term) -> u32 {
         let (Some(av), Some(dv)) = (self.at(a), self.at(d)) else { return 0 };
         let ins = &self.iadj[self.istart[dv as usize] as usize..self.istart[dv as usize + 1] as usize];
-        ins.contains(&av) as u32 + ins.iter().filter(|&&p| self.is_ancestor(a, self.nodes[p as usize])).count() as u32
+        let r = self.reached(av);
+        ins.contains(&av) as u32 + ins.iter().filter(|&&p| r[p as usize / 64] >> (p % 64) & 1 == 1).count() as u32
     }
 
     pub fn ancestors(&self, d: Term, out: &mut Vec<Term>) {

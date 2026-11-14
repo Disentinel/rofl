@@ -51,44 +51,6 @@ pub fn keep(path: &str, e: &mut Eval, note: &str, bound: Option<usize>) -> std::
     write_world(w, e)
 }
 
-/// The store and the heap of `e` written to `path` and read back from it, mapped: the same facts and names, lying in
-/// the file's pages instead of the heap's. The rest of the evaluation is untouched, so it goes on where it stood.
-/// Over the volumes `e` was cooled to before (`chain`), only what changed since is written. They and the file must
-/// stay where they are while the world may be cooled again over them.
-pub fn cool_in_place(path: &str, e: &mut Eval, chain: &[Kept]) -> Result<Kept, String> {
-    let ids = chain.iter().map(|k| k.id).collect();
-    let mut w = if chain.is_empty() { VolW::bounded(path, None) } else { VolW::over(path, None, ids) }.map_err(|x| x.to_string())?;
-    w.bytes(if chain.is_empty() { MAGIC } else { OVER });
-    w.text(&build_id());
-    w.text("");
-    if !chain.is_empty() {
-        w.u32(chain.len() as u32);
-        for k in chain {
-            w.text(&k.path);
-            w.u64(k.size);
-            w.u64(k.id);
-        }
-    }
-    e.store.write_volume(&mut w);
-    e.h.write_volume(&mut w);
-    w.finish().map_err(|x| x.to_string())?;
-    let Header { mut r, over, .. } = header(path)?;
-    let size = r.region().len() as u64;
-    if over {
-        let bases = chain_of(path, &mut r)?.into_iter().map(|(_, b)| b).collect();
-        r = r.with_chain(bases);
-    }
-    let id = r.id();
-    let mut store = Store::read_volume(&mut r)?;
-    let h = Heap::read_volume(&mut r)?;
-    if crate::brk!("volumes_cool_views_lost" => false; true) {
-        store.take_unkept(&mut e.store);
-    }
-    e.store = store;
-    e.h = h;
-    Ok(Kept { path: path.to_string(), size, id })
-}
-
 /// `keep` as an overlay over `chain`, the volumes the world was opened from: every arena made from them is named
 /// there with what changed in it since, not written. Read back while they are where they were.
 pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, chain: &[Kept]) -> std::io::Result<usize> {
@@ -103,6 +65,73 @@ pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, cha
         w.u64(k.id);
     }
     write_world(w, e)
+}
+
+/// The units of a world settled by levels (`engine/levels.rs`), beside the volume of the core they stand over.
+const UNITS: &[u8; 16] = b"ROFL-UNITS-1\n\0\0\0";
+
+/// THE UNITS AS A SCROLL at `k`: segments `<k>.u<n>`, each written once and whole, the newest naming every stretch
+/// it holds or an earlier one holds; `<k>.units` names the newest. An edit appends a segment of what it settled
+/// again, and a segment no longer named is let go. None: no units are kept at `k`.
+pub fn keep_units(k: &str, lv: Option<&crate::engine::levels::Levels>) -> Result<(), String> {
+    let was = newest_segment(k);
+    let n = was.map_or(0, |n| n + 1);
+    let named = match lv {
+        Some(lv) => {
+            let path = format!("{k}.u{n}");
+            let mut w = VolW::bounded(&path, None).map_err(|x| x.to_string())?;
+            w.bytes(UNITS);
+            w.text(&build_id());
+            let segs = lv.write(&mut w)?;
+            w.finish().map_err(|x| x.to_string())?;
+            let tmp = format!("{k}.units.{}.new", std::process::id());
+            std::fs::write(&tmp, format!("{n}\n")).and_then(|_| std::fs::rename(&tmp, format!("{k}.units"))).map_err(|x| x.to_string())?;
+            segs
+        }
+        None => {
+            let _ = std::fs::remove_file(format!("{k}.units"));
+            Default::default()
+        }
+    };
+    for m in 0..n.max(was.map_or(0, |w| w + 1)) {
+        if !named.contains(&m) && (lv.is_none() || m != n) {
+            let _ = std::fs::remove_file(format!("{k}.u{m}"));
+        }
+    }
+    Ok(())
+}
+
+fn newest_segment(k: &str) -> Option<u32> {
+    std::fs::read_to_string(format!("{k}.units")).ok()?.trim().parse().ok()
+}
+
+/// Whether units are kept at `k`.
+pub fn has_units(k: &str) -> bool {
+    newest_segment(k).is_some()
+}
+
+/// The units kept at `k`, over `e`, their core opened.
+pub fn open_units(k: &str, e: &Eval) -> Result<crate::engine::levels::Levels, String> {
+    let n = newest_segment(k).ok_or_else(|| format!("{k}: no units are kept"))?;
+    let open = |m: u32| -> Result<(std::sync::Arc<crate::arena::Region>, VolR), String> {
+        let path = format!("{k}.u{m}");
+        let map = crate::arena::map_file(&path).map_err(|x| x.to_string())?;
+        let mut r = VolR::new(map.clone(), UNITS.len());
+        if !map.starts_with(UNITS) || r.text()? != build_id() || !r.sum_holds() {
+            return Err(format!("{path}: not the units of this build"));
+        }
+        Ok((map, r))
+    };
+    let (_, mut r) = open(n)?;
+    let seen = std::cell::RefCell::new(std::collections::HashMap::<u32, std::sync::Arc<crate::arena::Region>>::new());
+    crate::engine::levels::Levels::read(e, &mut r, n, &|m| {
+        if let Some(map) = seen.borrow().get(&m) {
+            return Ok(std::sync::Arc::clone(map));
+        }
+        let map = open(m)?.0;
+        seen.borrow_mut().insert(m, std::sync::Arc::clone(&map));
+        Ok(map)
+    })
 }
 
 fn write_world(mut w: VolW, e: &mut Eval) -> std::io::Result<usize> {

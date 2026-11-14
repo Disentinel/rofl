@@ -8565,20 +8565,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "volumes_unexchanged",
-  "what": "a corpus evaluated by volumes lays no worker's [surface] facts into the others: a volume answers from its own files alone",
-  "expect": {
-   "volumes": "the volumes answer otherwise than the whole world"
-  }
- },
- {
-  "id": "volumes_cool_views_lost",
-  "what": "a worker cooled to disk takes back its facts and names but not the store's views over them (closures, aliases, deaths): the evaluation going on reads views of nothing",
-  "expect": {
-   "volumes": "panicked"
-  }
- },
- {
   "id": "add_hol_shared_kept",
   "what": "a holistic group shared across its percent or subject is asked again by key and keeps its old group",
   "expect": {
@@ -8894,6 +8880,62 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "levels_home_round_kept",
+  "what": "a group of a world by levels with nothing at home never ends its home round, and what its children make together from another premise is not fired",
+  "expect": {
+   "levels_whole": "qq[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_tree_sliced",
+  "what": "a unit that solves a run of partial solutions at a time reads a tree from its own store, which holds none, and not from the unit of the node's file",
+  "expect": {
+   "levels_whole": "held_by[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_lower_unmet",
+  "what": "a group of a world by levels does not look at what the layers below hold under its children, and two facts of its layer that meet only through a fact of a layer below never meet",
+  "expect": {
+   "levels_whole": "via2[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_guard_unasked",
+  "what": "a rule with a premise of a relation the unit sees no fact of takes no news and the unit does not record that it asked: the first fact of the relation, come by an edit, fires nothing there",
+  "expect": {
+   "levels_whole": "a function come, marked[d](A): by levels"
+  }
+ },
+ {
+  "id": "levels_seed_every_place",
+  "what": "a seed of a group is news to a rule only where the rule joins it at every place it met a fact at, not at one: a fact two rules join at one value fires neither",
+  "expect": {
+   "levels_whole": "ac[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_solved_run_lost",
+  "what": "of a firing's news solved a run at a time with its round's others, the last run is lost",
+  "expect": {
+   "levels_whole": ": by levels"
+  }
+ },
+ {
+  "id": "levels_far_firing_dropped",
+  "what": "a unit an edit mends carries the firings of its own facts only: a fact of another unit's stretch it wrote a firing of is lost where that unit no longer concludes it",
+  "expect": {
+   "levels_whole": "a call gone, rlive[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_leaf_first_file",
+  "what": "an edit settles again a unit of files only where its first file was edited: a file further in it stays as it stood",
+  "expect": {
+   "levels_whole": "a call gone: volumes: 1 of 64 files edited; 0 of"
+  }
+ },
+ {
   "id": "kept_stale_files",
   "what": "a kept world is answered whatever happened to the files it was computed from",
   "expect": {
@@ -8936,6 +8978,20 @@ export const BREAKS: Break[] = [
   "what": "a kept world is answered by a binary that is not the one that kept it",
   "expect": {
    "kept_engine": "the_engine_changed:"
+  }
+ },
+ {
+  "id": "plans_outlive_rules",
+  "what": "an order planned for a rule is kept when the rules are built again: a rule that reads a view has other variables then, the order binds the old ones and the conclusion, open, is skipped",
+  "expect": {
+   "kept_js_sources": "an import of unused.js added"
+  }
+ },
+ {
+  "id": "volumes_dict_unkept",
+  "what": "the dictionary the volumes of a world name in is not kept beside them: the volumes kept hold numbers nothing names, and the next run cannot open them",
+  "expect": {
+   "kept_damaged": "deltas_of_volumes_one_after_another:"
   }
  },
  {
@@ -9033,35 +9089,21 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "retract_unrederived",
-  "what": "a retraction overdeletes what rests on the facts and derives none of it again",
+  "what": "a retraction derives nothing again by its rules: a base fact taken out that a rule still makes stays out",
   "expect": {
-   "set_random": "sets differ from the fresh world"
-  }
- },
- {
-  "id": "rederive_once",
-  "what": "what a retraction overdeleted is derived again once, not until nothing more comes back: a fact of a recursion that rests on one derived after it stays out",
-  "expect": {
-   "set_random": "sets differ from the fresh world"
-  }
- },
- {
-  "id": "window_chain_unlisted",
-  "what": "a fact derived again is told to the window of firings as whole while its chain is not listed in it, so a firing it had is put on it again",
-  "expect": {
-   "set_random": "sets differ from the fresh world"
+   "set_base_made": "a base fact a rule makes"
   }
  },
  {
   "id": "overdelete_judged_kept",
-  "what": "a fact kept by a firing that stood is not judged again when a premise of another of its firings goes after it, so that firing stays",
+  "what": "a fact that stands by a firing keeps its firings that cite what went, so one of them holds it up when the firing that stood goes",
   "expect": {
    "set_random": "sets differ from the fresh world"
   }
  },
  {
   "id": "overdelete_kept_by_own_component",
-  "what": "a fact is kept by a firing whose premise is of a relation recursive with its own, which may rest on the fact itself",
+  "what": "a fact is kept by a firing whose premise is itself among what the seeds reach and not proved to stand, so two facts that rest on each other hold each other up",
   "expect": {
    "set_random": "sets differ from the fresh world"
   }
@@ -9267,6 +9309,7 @@ export const TESTS: Record<string, string> = {
   snapshot_round_trip: 'agg_worlds every_world_loaded_together',
   // a world kept on disk (docs/cli.md): each case of tests/kept.rs names itself where it fails
   kept_rule: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
+  levels_whole: 'kept a_world_by_levels_answers_as_the_world_whole',
   kept_boot: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_md: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_scan: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
@@ -9280,6 +9323,7 @@ export const TESTS: Record<string, string> = {
   retract_other_book: 'retract_refuse a_base_fact_in_another_book_does_not_stop_the_delta',
   // a set of base facts taken out in one pass (w_incremental_retraction)
   set_random: 'retract_set a_set_taken_out_in_one_pass_is_the_fresh_world',
+  set_base_made: 'retract_set a_base_fact_a_rule_still_makes_stands',
   set_js: 'retract_set a_js_files_facts_taken_out_are_the_fresh_world',
   set_tree: 'retract_set a_tree_edited_in_sequence_is_the_fresh_world',
   set_js_steps: 'retract_set random_js_steps_1',
@@ -9358,7 +9402,9 @@ function proofTests(b: Break, res: Map<string, unknown>): Verdict {
     const [ok, text] = res.get(`${b.id}/${name}`) as [boolean, string];
     const killed = !ok && text.includes(sign);
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
-    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}`}`);
+    // (a test red otherwise than the fault's sign says what it said: the line after its panic)
+    const said = () => { const ls = text.split('\n'), at = ls.findIndex((l) => l.includes('panicked at')); return (at < 0 ? ls.slice(-3).join(' | ') : `${ls[at]} ${ls[at + 1] ?? ''}`).slice(0, 600); };
+    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}: ${said()}`}`);
   }
   return { lines, bad };
 }

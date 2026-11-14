@@ -121,6 +121,7 @@ struct Scan<'o> {
     ty: Option<String>,
     trait_: Option<String>,
     func: Vec<String>,
+    in_pat: usize,
 }
 
 impl Scan<'_> {
@@ -132,6 +133,32 @@ impl Scan<'_> {
 
     fn here(&self) -> Option<&String> {
         self.func.last()
+    }
+
+    /// `Type::Variant` as the type's module says it: a path whose last two segments are capitalised (`Self` is the type at hand)
+    fn variant(&self, p: &syn::Path) -> Option<String> {
+        let n = p.segments.len();
+        if n < 2 { return None }
+        let (t, v) = (p.segments[n - 2].ident.to_string(), p.segments[n - 1].ident.to_string());
+        let cap = |s: &str| s.chars().next().is_some_and(|c| c.is_uppercase());
+        if !cap(&v) || !cap(&t) { return None }
+        let t = if t == "Self" { self.ty.clone()? } else { self.qualify(&t) };
+        Some(format!("{t}::{v}"))
+    }
+
+    fn pat_variants(&self, p: &syn::Pat, out: &mut Vec<String>) {
+        match p {
+            syn::Pat::Path(x) => out.extend(self.variant(&x.path)),
+            syn::Pat::TupleStruct(x) => { out.extend(self.variant(&x.path)); x.elems.iter().for_each(|c| self.pat_variants(c, out)) }
+            syn::Pat::Struct(x) => { out.extend(self.variant(&x.path)); x.fields.iter().for_each(|f| self.pat_variants(&f.pat, out)) }
+            syn::Pat::Or(o) => o.cases.iter().for_each(|c| self.pat_variants(c, out)),
+            syn::Pat::Tuple(t) => t.elems.iter().for_each(|c| self.pat_variants(c, out)),
+            syn::Pat::Slice(t) => t.elems.iter().for_each(|c| self.pat_variants(c, out)),
+            syn::Pat::Reference(r) => self.pat_variants(&r.pat, out),
+            syn::Pat::Paren(r) => self.pat_variants(&r.pat, out),
+            syn::Pat::Ident(i) => if let Some((_, sub)) = &i.subpat { self.pat_variants(sub, out) },
+            _ => {}
+        }
     }
 
     fn function(&mut self, name: &str, vis: &syn::Visibility, sig: &syn::Signature, span: proc_macro2::Span, body: impl FnOnce(&mut Self)) {
@@ -427,13 +454,47 @@ impl<'ast> Visit<'ast> for Scan<'_> {
                 }
             }
         }
+        if self.in_pat == 0 {
+            if let (Some(f), Some(v)) = (self.here().cloned(), self.variant(&p.path)) {
+                self.out.fact("rs_variant_use", &[&f, &v, &line(p.span())]);
+            }
+        }
         visit::visit_expr_path(self, p);
+    }
+
+    fn visit_pat(&mut self, p: &'ast syn::Pat) {
+        self.in_pat += 1;
+        visit::visit_pat(self, p);
+        self.in_pat -= 1;
+    }
+
+    /// `if x == "lit" { .. }` and `if let T::V(..) = x { .. }`: the block is the arm of that case
+    fn visit_expr_if(&mut self, i: &'ast syn::ExprIf) {
+        if let Some(f) = self.here().cloned() {
+            let (from, to) = (line(i.span()), num(i.then_branch.brace_token.span.close().end().line));
+            let mut strs = Vec::new();
+            cond_strs(&i.cond, &mut strs);
+            for s in strs {
+                self.out.fact("rs_case", &[&f, &s, &from, &to]);
+            }
+            if let syn::Expr::Let(l) = &*i.cond {
+                let mut vs = Vec::new();
+                self.pat_variants(&l.pat, &mut vs);
+                for v in vs {
+                    self.out.fact("rs_variant_arm", &[&f, &v, &from, &to]);
+                }
+            }
+        }
+        visit::visit_expr_if(self, i);
     }
 
     fn visit_expr_struct(&mut self, s: &'ast syn::ExprStruct) {
         if let Some(f) = self.here().cloned() {
             let t = self.qualify(path_str(&s.path).rsplit("::").next().unwrap_or(""));
             self.out.fact("rs_builds", &[&f, &t]);
+            if let Some(v) = self.variant(&s.path) {
+                self.out.fact("rs_variant_use", &[&f, &v, &line(s.span())]);
+            }
         }
         visit::visit_expr_struct(self, s);
     }
@@ -445,6 +506,11 @@ impl<'ast> Visit<'ast> for Scan<'_> {
             let (from, to) = (line(a.span()), num(a.span().end().line));
             for s in strs {
                 self.out.fact("rs_case", &[&f, &s, &from, &to]);
+            }
+            let mut vs = Vec::new();
+            self.pat_variants(&a.pat, &mut vs);
+            for v in vs {
+                self.out.fact("rs_variant_arm", &[&f, &v, &from, &to]);
             }
         }
         visit::visit_arm(self, a);
@@ -490,6 +556,18 @@ fn chain(e: &syn::Expr) -> Option<(String, String)> {
 /// a method call named by where it stands: line * 10000 + column
 fn call_id(s: proc_macro2::Span) -> String {
     num(s.start().line * 10000 + s.start().column)
+}
+
+/// the strings a condition compares with by `==`, through `&&`, `||` and parentheses
+fn cond_strs(e: &syn::Expr, out: &mut Vec<String>) {
+    match e {
+        syn::Expr::Binary(b) if matches!(b.op, syn::BinOp::Eq(_)) => {
+            if let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = &*b.right { out.push(s.value()) }
+        }
+        syn::Expr::Binary(b) if matches!(b.op, syn::BinOp::And(_) | syn::BinOp::Or(_)) => { cond_strs(&b.left, out); cond_strs(&b.right, out) }
+        syn::Expr::Paren(p) => cond_strs(&p.expr, out),
+        _ => {}
+    }
 }
 
 fn pat_strs(p: &syn::Pat, out: &mut Vec<String>) {
@@ -664,7 +742,7 @@ fn main() {
         out.fact("rs_mod", &[module, &file]);
         out.fact("rs_file", &[&file, &num(text.lines().count())]);
         let uses = all_uses.iter().filter(|u| &u.0 == module).cloned().collect();
-        let mut s = Scan { out: &mut out, types: &types, all_uses: &all_uses, file, root: root.clone(), module: module.clone(), uses, ty: None, trait_: None, func: Vec::new() };
+        let mut s = Scan { out: &mut out, types: &types, all_uses: &all_uses, file, root: root.clone(), module: module.clone(), uses, ty: None, trait_: None, func: Vec::new(), in_pat: 0 };
         s.visit_file(ast);
     }
     print!("{}", out.0);

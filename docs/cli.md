@@ -516,10 +516,24 @@ rules whose own cone pulls most into the lower stage (a rule of the upper model 
 cone down with it, and the cut comes late: read the raw tree through a lemma instead, as `in_place[flow]` does).
 
 `rofl ask` and `rofl why` evaluate a world that cuts a book by volumes (below) from 32 MB of corpus on (under
-32 MB it is staged in place and kept whole, its answer read back fastest so): the lower stage a file at a time, each in a fork of the core of its own, the worker given only the
+32 MB it is staged in place and kept whole, its answer read back fastest so): the lower stage a file at a time, each in a fork of the core that is let go, the file's unit given only the
 file's lemmas and its facts outside `[B]`, so the raw tree of the corpus is never held at once. A lower stage that
 reads or concludes `[surface]` is refused there (it runs before anything crosses files), and the world is evaluated
 whole. `rofl load` and the other verbs stage the world in place: the lower stage over every file, then `[B]` dropped.
+
+**`own[fixpointplan](Rel, I)` widens what a file's world does** (`Eval::lemma_stage`, `engine/stages.rs`). It says
+of a relation a file states that argument I, from 0, of every fact holds a node of that file (`none` for I where no
+argument does); the node's name says its file. From that and the shape of the rules the engine derives which rules
+above the cut cannot leave a file: the premises that are of a file each hold, as a node of it, a variable they share;
+an absence is asked of such a node; an aggregate's cell is of such a node. Those rules are evaluated in the file's
+world with its lower stage, and what they conclude is given as the lower stage's
+lemmas are, all of it, so every answer is the whole world's; the rules that may cross files fire once over what the
+files gave. A closure answered from its tree is walked on both sides and its rows are not given. `why` stops at such
+a lemma and `why --all` unfolds it as any other. The promise refuses when broken: a fact with no node of its file
+where `own` names one, a relation a file states that no `own` names, and a fact of a named relation that is of no
+one file each refuse the world by volumes, naming the fact (then it is evaluated whole). Where the plan names no
+`own`, the lower stage alone is evaluated by file, as before. The Rust model declares it for its tree
+(models/lang/rust/rs-roles.rofl) and the JS model for oxc's (models/lang/js/oxc-roles.rofl).
 
 `why` stops at a lemma: `mark[value](n…,class) [lemma roles/types.ts:6]`, the site read off the plan's
 `site[fixpointplan](Rel, Book)` (`at[tree](N, File, Line)` for the JS model: the first fact whose first argument is
@@ -527,21 +541,16 @@ one of the lemma's; a world that asks has the site in its cone whatever it asks)
 lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
 fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
 takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
-The kept volumes of `rofl ask`/`why` (from 32 MB) are the exception, as each file below the cut is a world of its own: the
-volumes are kept with a sum of every file (`<slot>.files`), and when at most one file in eight moved and the rules
-did not, only the moved files' volumes take the edit, by delta: the file's lower stage evaluated again alone, the
-lemmas and facts it no longer gives taken out of its worker and the new ones put in (`volumes: X of Y files taken
-by delta in Z ms`). What the edit moves in other volumes is passed on by delta too, round by round
-(`, what they show the others in R rounds`): first everything the facts gone reach is taken out at once in every
-volume (what cites them, and the copies laid elsewhere of what a volume made, and what cites those), then what
-still holds where it is made is laid again, and what was made anew goes where its readers' keys say. A cycle
-through the volumes (a fact one derives from a copy of what another derived from it) so keeps nothing alive.
-Each worker remembers what was laid in it and for which rules (`<slot>.w<i>.laid`).
-Measured, vscode 250 (fast build, 4 workers): half of one file's nodes gone (an edit that removes answers in
-other files), 6.3 s of delta in 7 rounds, 10.5 s the run against 13.5 s anew; an exported function renamed,
-1.6 s of delta; the answers byte for byte the fresh ones.
-Measured, vscode subset S, fast build, 4 cores: 250 files by volumes 3 771 MB peak against 3 264 MB cut, 34.6 s
-against 35.6 s, 252 301 answer lines byte for byte; 100 files whole (`ROFL_VOLUMES=0`) 1 598 MB against 1 279 MB.
+The units of a world name what their rules make in one dictionary (`rust/rofl/src/dict.rs`), kept beside them as `<slot>.q<sum>.names`: a term reads the same in every unit and none is spelled to cross.
+The world `rofl ask`/`why` keep by volumes (from 32 MB) is the exception to "computed anew": it is kept as its units
+(*A corpus larger than one heap*, below) with a registry (`<slot>.q<sum>.scroll`: the sum of the core's text and of each file's; written last, so a set half written is no kept world), and when at most one file in eight moved, none came or went and the rules
+did not move, only the units whose answer may have moved are settled again (`volumes: X of Y files edited; A of U
+units settled again, S of them concluding what they had`; the unit of the edited file is its sixteen files, settled whole): a unit keeps the stretches it read and the keys it asked,
+and is settled again where one of those stretches was replaced or a fact came or went under such a key; a group is
+mended, its firings carried where their premises stand, where it read no aggregate (`engine/levels.rs`). The answers
+are those of the files evaluated anew (`cargo test -p rofl --test kept`). A file come or gone is computed anew.
+A `why --all` of such a world unfolds a lemma over the core and its file alone; a `whynot` nested inside an unfolded
+lemma may name another failed premise than the world whole does (`f_levels_are_the_one_path_by_volumes`).
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
 on Rust (`check_opt(W, one_engine, rust)`). The engine does not yet derive a stage from what is read and asked; a
 stage is the plan's mark.
@@ -551,48 +560,46 @@ stage is the plan's mark.
 **`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
 the world's facts name two or more files (a node id's prefix, `n<16 hex>_`) and
 hold 32 MB or more between them (below that the whole world is as fast), the
-facts are cut by file and the files dealt to a worker a core, balanced by bytes;
-each worker is a fork of the core (the model, the question, the facts naming no
-file), which is frozen once and shared, not copied, and evaluates its files on
-its own thread. A level at a time, what a worker made is laid into the workers
-that read it and fired on there, until none makes more (`engine/volumes.rs`).
-Nothing in the model declares what crosses files: who reads a fact comes from
-the rules, any relation. A fact is at home in the volume of its first node's
-file, and a rule fires only where the first premise of its body's largest join
-(its anchor) is at home. Every other premise reads by a key: the fact goes to a
-volume holding, in the premise nearer the anchor it is joined with, the values
-it carries in every variable the two share, and only where the premise's
-constants match. A reader under a negation or in an aggregate is keyed by what
-is closed below its rule, and fires once all it is to see is laid; a part of a
-body no variable joins to the anchor goes to every worker. Measured at vscode
-250 (4 workers): 72 000 facts laid across the workers (522 000 when a key took
-one shared variable at a time), the answers byte for byte. An
-answer is the union of the workers'; a relation with a fact naming no file (a
-count over every file) is concluded again in a world over the core and the
-workers' facts it reads. A `why` is the proof in the worker that holds the fact,
-each axiom another worker laid replaced by its proof there. stderr
-says it: `volumes: N files on K workers, L levels, R rounds laying S
-facts`. The volumes are kept beside the question's slot under
-`~/.cache/rofl/worlds` (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): the next
-question over the same files is answered from them; an edited file is taken by
-delta (*Lemma stages*, above). **Past a quarter of the memory the process may use** (the memory wall's
-measure, below), the workers are cooled before the next level: each writes its
-facts and names to a volume under the system's temporary directory and goes on
-mapped from it, so what no rule reads again lies in pages the system takes
-back, and only what the next levels make is on the heap
-(`volume::cool_in_place`). A worker cooled before writes only what changed as
-an overlay over its earlier volumes; they are removed with the worker. Stderr
-says before how many levels, how many volumes and how many MB of disk. A disk too
-full to write one leaves that worker on the heap, said on stderr. A wall that
-cuts one worker, the memory wall above all, stops them all: the answers are
-partial (exit 5) and not kept. Measured on vscode subset S, 4 cores, release:
-250 files 18 s against 50 s whole, 500 files 32 s against 71 s, the answers
-byte for byte; 1 000 files, which the whole world does not fit on a 15 GB
-machine and the workers on the heap reach its wall at, answer whole in 167 s
-of evaluation, cooled before 5 of 16 levels (the first cooling about 0.9 GB a
-worker, the last three 3 to 12 MB), 6.7 GB of disk, at most 8.9 GB of heap
-(`f_a_question_verb_answers_a_corpus_by_volumes`,
-`f_volumes_cooled_under_pressure_answer_a_thousand_files`). `whynot`, `excise`,
+facts are cut by file and the world is settled BY LEVELS (`engine/volumes.rs`,
+`engine/levels.rs`). The core (the model, the question, the facts naming no
+file) is frozen once and read by all, not copied. The files are settled sixteen
+at a time, on a thread, by the rules that cannot leave a file; their store is
+then a UNIT, a frozen stretch of one scroll, numbered once for the world and not
+written again (one file a unit made 1700 units of 250 files, and most reads went
+through the directories of neighbours). A group of units (eight) is settled over the stretches below it, read
+where they lie, and derives only what its children make together; so up, to one
+unit, the world, and the same again for each layer of rules above an absence or
+an aggregate. A unit takes for its firings the threads no other unit is settled
+on. Nothing in the
+model declares what crosses files: a unit is found from outside by the facts
+that hold, at an argument a rule joins at, a node of another file, and every
+unit keeps the directory of such keys below it. The few rules whose shape gives
+them to no unit are fired once in a last unit that reads all the others. One
+world, the reader, then reads every unit and fires nothing: it answers the
+questions, and a `why` is its proof (a lemma of a cut book is where it stops;
+`--all` unfolds it). stderr says it: `volumes: N files settled by levels, F
+facts in their units`, `diag: levels: of R rules B below, ...` with the
+rules left to the last unit by their shape, and `diag: levels: ms a layer, ...`:
+for each layer the milliseconds before its units, then at each depth of them
+from the files up. What is kept beside the question's
+slot under `~/.cache/rofl/worlds`: the reader (`<slot>.q<sum>.vol`, the core it
+stands on), the names (`.names`), the units as segments (`.u<n>`, the newest
+named in `.units`) and the registry (`.scroll`). The next question over the
+same files is answered from them (`volumes: N answered from the kept units`),
+the units read where they lie in the file; an edited file settles again only
+the units it moved (*Lemma stages*, above), which are written as a new segment.
+**Past a quarter of the memory the process may use** (the memory wall's
+measure, below), the units done are cooled: written to a segment under the
+system's temporary directory (`rofl-units-<pid>-<n>.seg`, removed at the end)
+and read back mapped from it, so what no unit reads again lies in pages the
+system takes back. Stderr says how many times, how many units and how many MB
+of disk. A world its units refuse (a wall met, a fact that breaks the plan's
+`own`) is said on stderr and evaluated whole. Measured on the release build, 4
+cores, the side-effect question over vscode, kept too: 250 files 18.1 s, 750
+files 56 s (the workers it replaced, the same hour: 19.1 and 54.4 s, on a tenth
+more processor time), a third of it the files' own rules; one fact edited in
+one file of 250 and asked again, 9.2 s
+(`f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). `whynot`, `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.
@@ -604,13 +611,10 @@ the file (`rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
-The volumes of the question verbs no longer need that book: what crosses files
+The units of the question verbs need no such book: what crosses files
 comes from the rules' keys (above), and `[surface]` is a book like any other to
-them; the driver of `runtime/split.ts` and its gate still exchange it alone.
-**The question verbs evaluate by volumes and cool them under pressure (above);**
-what they do not do yet is keep a cooled volume closed: a worker's volumes stay
-mapped through the evaluation, so the disk holds what the heap would, and an
-arena a later level writes to is copied whole back to the heap. The other parts and the harnesses that drive
+them; the driver of `runtime/split.ts` still exchanges it alone.
+**The question verbs evaluate by levels and cool the units under pressure (above).** The other parts and the harnesses that drive
 them, each over `rofl serve`:
 
 | what | how to run it | measured | status |
@@ -706,6 +710,24 @@ per_row | per_round | kernel)` is the class of a recursive rule, which only two 
 (rust/rofl/tests/profile_model.rs). The pack's own rules are profiled and left out of what it says. World
 `profile_model` over examples/checks/profile-hub.rofl (a chain, a hub, a ladder, each planted for one verdict or forecast),
 Rust only.
+
+**A delta as facts** is the book `delta`. It has no command yet: a harness sets `ROFL_DELTA_FACTS=FILE` on a
+`rofl ask` that takes a kept corpus by delta, and the engine writes there what the delta did (`engine/meter.rs`),
+counts and no time: per relation `out[delta](Rel, N)` facts taken out with what they rested on, `kept[delta](Rel, N)`
+facts that lost a firing and stood on another, `back[delta](Rel, N)` facts taken out and derived again,
+`tries[delta](Rel, N)` attempts to derive one again; per rule `whole[delta](R, Head, N)` times it was withdrawn and
+fired over the whole store and `keyed[delta](R, Head, N)` times it was asked again at the keys a change named; `seed[delta](Step, Cause,
+Rel, N)` the facts a step began taking out and what began it (`removed`, `negation`, `nearest`, `tree`, `whole`, `keyed`),
+`walked[delta](What, N)` the records a pass over a whole store walked, `spent[delta](What, Ms)` the time of each part of the delta (the one fact that differs from run to run; `time_unforeseen[delta](What, Ms, Pct)` is a part of a twentieth of the time or more whose rules read no row), `read[delta](Step, R, Head, N)` the rows rule `R` read in a step, the delta's weight (`heavy[delta](Step, Head, Rows, Pct)`
+names what reads a twentieth of it or more); per
+step `step[delta](takes_out|takes_in, N)` and `moved[delta](Step, Facts)`. An edit taken by the units of a world by
+levels writes its times (`spent`) and what it walked; the model's hypotheses about copies laid between volumes judge
+a mechanism that is gone (`f_levels_are_the_one_path_by_volumes`).
+models/engine/delta-model.rofl holds the hypotheses, each a forecast from the shape of the rules and a verdict against
+these facts: loaded beside the rules of the world and the file, with no corpus (it reads the reflection), it answers in
+seconds `whole_held[delta](Head, R, Rel, N)` (an aggregate whose key a change of `Rel` does not name was fired whole,
+as forecast), `returns_held[delta](Rel, Out, Back)` (a relation recursive with itself went and was derived again),
+their `_off` (the forecast was false) and `_unforeseen` (the delta did what no hypothesis says).
 
 **The plan as facts** is the book `fixpointplan`: `plan[fixpointplan](R, At, Order)` gives rule `R` (its id, as
 `premise_lit` names it) the order to solve its premises in when fired on the news at written position `At` (0 the firing

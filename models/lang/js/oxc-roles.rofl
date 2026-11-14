@@ -8,6 +8,9 @@
 -- What the rules reading it conclude outside it are lemmas, each placed by its node's at[tree].
 cut[fixpointplan](ast_oxc).
 site[fixpointplan](at, tree).
+-- every node of the tree is named by its file, so what is concluded of the nodes of one file is that file's lemma
+own[fixpointplan](node, 0). own[fixpointplan](line, 0). own[fixpointplan](start, 0). own[fixpointplan](file, 0).
+own[fixpointplan](attr, 0). own[fixpointplan](child, 0). own[fixpointplan](child, 3).
 
 -- the raw tree, under short names
 alias oxc_k(N, K) is node(N, K, _).

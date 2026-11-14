@@ -22,6 +22,7 @@ use crate::term::*;
 
 mod datastrat;
 mod addition;
+pub mod meter;
 mod delta;
 mod labeled;
 mod joinplan;
@@ -39,6 +40,7 @@ mod layer;
 mod algebra;
 mod books;
 mod stages;
+pub mod levels;
 pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
@@ -819,11 +821,31 @@ pub struct Eval {
     stage_pass: StagePass,
     /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
     pub stage_given: Option<Rc<FxSet<Sym>>>,
+    /// the rules of the stage under way that the pass above it fires too (`Stage::free`)
+    stage_both: Rc<FxSet<Sym>>,
     /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
-    /// Where this world is one volume of a corpus (`engine/volumes.rs`): a rule fires only where its anchor is at home.
-    pub anchors: Option<Rc<volumes::Anchors>>,
-    anchor_home: FxMap<Sym, Option<u32>>,
+    /// In a group of a world by levels: which child each fact below lies under.
+    pub meeting: Option<Rc<levels::Meeting>>,
+    /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
+    by_seed: bool,
+    /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
+    homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
+    /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
+    bridging: Option<Rc<FxSet<Sym>>>,
+    /// The round of a group's seeds: the rules each is news to (`levels::Seeded`).
+    seeded: Option<Rc<levels::Seeded>>,
+    /// In a unit on several threads, a round's firings are gathered (`presolving`), solved together (`presolved`,
+    /// `Eval::presolve`) and then concluded each in its turn (`pre_now`: the one firing now).
+    presolving: Option<Vec<par::RoundJob>>,
+    presolved: FxMap<(Sym, usize), (par::RoundJob, par::Made)>,
+    pre_now: Option<par::Made>,
+    /// Before them, the premises the round has news at are listed (`news_listing`) and the news of each taken on the
+    /// threads (`news_taken`, `Eval::news_ahead`).
+    news_listing: Option<Vec<(Rc<ERule>, usize)>>,
+    news_taken: FxMap<(Sym, usize), Option<par::News>>,
+    /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
+    pub levels: Option<Rc<levels::Levels>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
@@ -889,7 +911,9 @@ pub struct Eval {
     known_answer: Option<RuleAnswer>,
     /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
     /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
-    safety_memo: Option<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>,
+    safety_memo: Option<Rc<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>>,
+    /// the books and the rounds `peel_levels` found for the rules as they stand; a fork made after takes them
+    peeled: Option<Rc<(Books, HashMap<Sym, u32>)>>,
     /// The profile of safety.rofl's own evaluation, as `profile_text` writes it, with `program[profile](R, safety)` and
     /// the reflection of its rules (`kernel_premise`, `kernel_head`): appended to the world's profile when a rule
     /// reads it, so that the kernel's program is judged by the same hypotheses as the world's (docs/cli.md, *The
@@ -1122,6 +1146,13 @@ pub struct VClosureState {
     pub rows_read: u64,
     /// A delta moved a nearest's rows the way it cannot follow: an addition took one out, a retraction put one in.
     near_moved: bool,
+    /// the forests of each nearest a retraction touched, as it found them, and the nodes it touched there
+    near_was: HashMap<usize, (Rc<[(Sym, Rc<crate::forest::Forest>)]>, Vec<Term>)>,
+    /// the rows of a nearest a delta took out whose citers went with them, and those it put in each reader was fired on
+    near_out: crate::store::FxSet<(usize, u64, u64)>,
+    near_in: HashMap<(Sym, usize), crate::store::FxSet<(u64, u64)>>,
+    /// the rows a reader met taken out in the middle of a level: followed when the level ends, or the delta is given up
+    near_owed: crate::store::FxSet<(usize, u64, u64)>,
     /// the forests of a nearest each reader last fired over: what its news are counted against
     reader_forest: HashMap<(Sym, usize), Rc<[(Sym, Rc<crate::forest::Forest>)]>>,
     /// the closures a rule reads under a negation, and each one's forests as a delta found them (None: not built)
@@ -1261,10 +1292,9 @@ pub struct AddState {
     heights: HashSet<Sym>,
     /// The first id an addition's facts take: a fact below it stood before.
     mark: FactId,
-    /// What a retraction overdeletes besides the citers of its facts: the facts that cited a row of a tree it took out (`vretract_edges`).
-    retract_seeds: Vec<FactId>,
-    /// Facts the overdeletion kept for a firing that stands (`overdelete`): each takes again, at its level, every firing it has.
-    kept: HashMap<FactId, HashSet<FactId>>,
+    /// What the overdeletion took out though a firing of it over a cell or a row was not judged (`overdelete`): only
+    /// these, and a base fact that lost its firings, are derived again by their rules; the rest comes back by the news.
+    retry: crate::store::FxSet<FactId>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,
@@ -2326,9 +2356,19 @@ impl Eval {
             kept_carry: None,
             stage_pass: StagePass::Whole,
             stage_given: None,
+            stage_both: Rc::default(),
             staged_away: None,
-            anchors: None,
-            anchor_home: FxMap::default(),
+            meeting: None,
+            by_seed: false,
+            homing: None,
+            bridging: None,
+            seeded: None,
+            presolving: None,
+            news_listing: None,
+            news_taken: FxMap::default(),
+            presolved: FxMap::default(),
+            pre_now: None,
+            levels: None,
             lemma_heads: None,
             lower_texts: None,
             lower_full: None,
@@ -2360,6 +2400,7 @@ impl Eval {
             answer: RuleAnswer::default(),
             known_answer: known,
             safety_memo: None,
+            peeled: None,
             safety_kept: None,
             kernel_eval: None,
             prov: ProvState::default(),
@@ -2666,6 +2707,11 @@ impl Eval {
         self.lat.lattice_rows = decls;
         self.lat.lattice_rows.extend(self.tags.as_lattices(&self.v));
         self.lat.read_algebras(&self.v, &self.tags);
+        // (an order planned for a rule holds the variables of the rule as it was built then)
+        if brk!("plans_outlive_rules" => false; true) {
+            self.add.delta_plans.clear();
+        }
+        self.peeled = None;
         let rules = self.view_unfold(rules);
         let rules = self.alias_lower(rules);
         self.register_dominances();
@@ -3027,11 +3073,11 @@ impl Eval {
         judged.sort_unstable();
         judged.push(self.tag_refused.iter().flat_map(|(a, b)| [Term::atom(*a), Term::atom(*b)]).collect());
         if let Some(a) = known {
-            self.safety_memo = Some((judged, a.clone(), None));
+            self.safety_memo = Some(Rc::new((judged, a.clone(), None)));
             self.h = h;
             return a;
         }
-        if let Some((_, answer, err)) = self.safety_memo.as_ref().filter(|m| m.0 == judged) {
+        if let Some((_, answer, err)) = self.safety_memo.as_deref().filter(|m| m.0 == judged) {
             if let Some(e) = err {
                 self.diags.push(e.clone());
             }
@@ -3067,7 +3113,7 @@ impl Eval {
         if err.is_none() {
             self.safety_kept = Some(sub);
         }
-        self.safety_memo = Some((judged, answer.clone(), err));
+        self.safety_memo = Some(Rc::new((judged, answer.clone(), err)));
         answer
     }
 
@@ -3489,7 +3535,7 @@ impl Eval {
         self.store.kept_layer = kept;
         self.stage_pass = StagePass::Whole;
         self.staged_away = None;
-        let out = match (self.stage_given.clone(), self.lemma_stage()) {
+        let out = match (self.stage_given.clone(), self.cut_stage()) {
             (Some(given), _) => {
                 self.stage_pass = StagePass::Upper(given);
                 self.run_whole()
@@ -3696,24 +3742,42 @@ impl Eval {
         self.end_pass(outcome, &strat_rules)
     }
 
-    /// The rounds of the program peeled: the monotone rules a round above the first that are lifted to their level,
-    /// and the levels of the rules that wait for their body to close. A stall is the program's rejection.
-    fn peel_levels(&mut self, mono: &[Rc<ERule>], strat_rules: &[Rc<ERule>]) -> Result<(HashSet<Sym>, Levels), Halt> {
+    /// The rounds are the rules' alone unless the data ranks a component: peeled once while the rules stand, for this
+    /// world and its forks (the books name relations in the heap: a fork made after shares the names). Some: the
+    /// rules alone stall, with what was peeled.
+    pub(super) fn peel_ahead(&mut self) -> Option<(Peel, Vec<Sym>, Vec<(Sym, Sym)>)> {
+        if self.peeled.is_some() {
+            return None;
+        }
         let lats: Vec<Sym> = self.lat.cell_rels().collect();
         let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
         self.refresh_books();
-        let mut peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
+        let peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
         if peel.stalled {
+            return Some((peel, lats, dom_edges));
+        }
+        self.peeled = Some(Rc::new((self.books.clone(), self.books.rounds(&peel.round))));
+        None
+    }
+
+    /// The rounds of the program peeled: the monotone rules a round above the first that are lifted to their level,
+    /// and the levels of the rules that wait for their body to close. A stall is the program's rejection.
+    fn peel_levels(&mut self, mono: &[Rc<ERule>], strat_rules: &[Rc<ERule>]) -> Result<(HashSet<Sym>, Levels), Halt> {
+        match self.peel_ahead() {
             // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
             // stratified by its data (`datastrat.rs`): ranked as one round
-            if let Some(by_data) = self.take_data_components(&peel, &lats, &dom_edges) {
-                peel = by_data;
+            Some((peel, lats, dom_edges)) => {
+                let Some(peel) = self.take_data_components(&peel, &lats, &dom_edges) else { return Err(self.stall_error(&peel)) };
+                if peel.stalled {
+                    return Err(self.stall_error(&peel));
+                }
+                self.round_of = self.books.rounds(&peel.round);
+            }
+            None => {
+                let p = self.peeled.clone().expect("the rounds peeled");
+                (self.books, self.round_of) = (p.0.clone(), p.1.clone());
             }
         }
-        if peel.stalled {
-            return Err(self.stall_error(&peel));
-        }
-        self.round_of = self.books.rounds(&peel.round);
         let lifted: Vec<Rc<ERule>> = if self.by_component() {
             mono.iter().filter(|r| r.clause.head.temporal != Temporal::Next && self.round_of.get(&self.books.head(&r.clause.head)).is_some_and(|k| *k > 0)).cloned().collect()
         } else {
@@ -5288,8 +5352,11 @@ impl Eval {
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         // a batch resumed in is active already
         if self.wall.resume_at.is_none() {
-            self.active.extend(sorted.iter().cloned());
-            self.active.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+            // (each put after its equals, as a stable sort of the two lists puts it)
+            for r in &sorted {
+                let at = self.active.partition_point(|a| cmp_js(&a.canon, &r.canon) != std::cmp::Ordering::Greater);
+                self.active.insert(at, r.clone());
+            }
         }
         self.fire_all(sorted)
     }
@@ -5403,6 +5470,22 @@ impl Eval {
                 }
             };
             let active = self.active.clone();
+            self.presolved.clear();
+            self.news_taken.clear();
+            if self.meeting.is_some() && par::free(self.par.threads) > 1 && at.is_none() && j0 == 0 {
+                self.news_listing = Some(Vec::new());
+                let listed = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
+                let list = self.news_listing.take().unwrap_or_default();
+                listed?;
+                self.news_ahead(list, &cur);
+                self.presolving = Some(Vec::new());
+                let gathered = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
+                let jobs = self.presolving.take().unwrap_or_default();
+                gathered?;
+                if jobs.len() > 1 {
+                    self.presolved = self.presolve(jobs);
+                }
+            }
             let (mut sum, mut mx) = (0u64, 0u64);
             for (j, r) in active.iter().enumerate().skip(j0) {
                 let t = std::time::Instant::now();
@@ -5424,6 +5507,9 @@ impl Eval {
                 }
             }
             self.rounds.push((sum, mx));
+            self.homing = None;
+            self.bridging = None;
+            self.seeded = None;
             front = std::mem::take(&mut self.cur_front);
         }
         self.live_front = outer;
@@ -5439,7 +5525,14 @@ impl Eval {
     fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, at0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
         {
             {
+                if self.bridging.as_ref().is_some_and(|b| !b.contains(&r.id)) {
+                    return Ok(());
+                }
+                let gathering = self.presolving.is_some() || self.news_listing.is_some();
                 if self.naive {
+                    if gathering {
+                        return Ok(());
+                    }
                     let f = self.fire_rule(r, None)?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
@@ -5449,7 +5542,7 @@ impl Eval {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                    if at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
+                    if !gathering && at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
                         // (an addition fires it on the rows the new edges make)
                         let f = if fl.is_none() && self.add.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
                             let f = self.vfire_news(r, cur)?;
@@ -5469,32 +5562,93 @@ impl Eval {
                     return Ok(());
                 }
                 if r.has_demand_prem {
+                    if gathering {
+                        return Ok(());
+                    }
                     let f = self.fire_at(r, 1, fl.take(), |e| e.fire_rule(r, None))?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
                 // a firing whose premises are news at two places is found once from each
                 let twice = r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(l) if cur.by_rel.contains_key(&l.rel))).count() > 1;
-                let window = twice && self.store.open_dup_window();
+                let window = twice && !gathering && self.store.open_dup_window();
                 let fired = (|| -> Result<(), Halt> {
                     for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
                         let BodyElem::Pos(l) = b else { continue };
                         let Some(keys) = cur.by_rel.get(&l.rel) else {
                             continue;
                         };
-                        let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
-                        let keys = &*keys;
-                        if twice {
+                        if self.homing.as_ref().is_some_and(|a| levels::first_at(r, a) != Some(i)) {
+                            continue;
+                        }
+                        // (a fact of a layer below through which others meet is no news to a premise after a builtin that walls the order)
+                        if self.bridging.is_some() && (0..i).any(|k| self.wall(&r.plan, k)) {
+                            continue;
+                        }
+                        // (in a unit: a premise of a relation it sees no fact of has no answer yet, and a fact of it
+                        // come later is news that reads these)
+                        if let Some(m) = self.meeting.as_ref() {
+                            let none = r.plan.iter().enumerate().find_map(|(j, b)| match b {
+                                BodyElem::Pos(lj) if j != i && lj.temporal == Temporal::Now && m.of_facts(lj.rel) && !self.store.holds_any(lj.rel) => Some(lj.rel),
+                                _ => None,
+                            });
+                            if let Some(rel) = none {
+                                if brk!("levels_guard_unasked" => false; true) {
+                                    levels::asked_any(rel);
+                                }
+                                continue;
+                            }
+                        }
+                        // (solved with the round's others: the news and the rows excluded are those it was solved with)
+                        if let Some(list) = self.news_listing.as_mut() {
+                            let before = (0..i).filter(|_| twice).filter(|&j| matches!(&r.plan[j], BodyElem::Pos(lj) if cur.by_rel.contains_key(&lj.rel)));
+                            list.extend(before.chain([i]).map(|j| (r.clone(), j)));
+                            continue;
+                        }
+                        let (pre, made) = self.presolved.remove(&(r.id, i)).map_or((None, None), |(j, m)| (Some(j), Some(m)));
+                        let news = match &pre {
+                            Some(_) => None,
+                            None => match self.news_of(r, i, l.rel, keys) {
+                                Some(k) => Some(k),
+                                None => continue,
+                            },
+                        };
+                        let keys = match (&pre, &news) {
+                            (Some(p), _) => &p.keys,
+                            (None, Some(par::News::Kept(k))) => &**k,
+                            (None, _) => keys,
+                        };
+                        if let Some(p) = &pre {
+                            self.sn = p.sn.clone();
+                        } else if twice {
                             let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
                             for (j, e) in excl.iter_mut().enumerate() {
                                 let BodyElem::Pos(lj) = &r.plan[j] else { continue };
                                 let Some(kj) = cur.by_rel.get(&lj.rel) else { continue };
-                                *e = self.news_since(r, lj.rel, kj).map(|k| Rc::new(k.into_owned()));
+                                *e = self.news_of(r, j, lj.rel, kj).map(|k| match k {
+                                    par::News::All => Rc::new(kj.clone()),
+                                    par::News::Kept(k) => k,
+                                });
                             }
                             self.sn = excl.iter().any(Option::is_some).then(|| Rc::new(excl));
                         }
-                        let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
-                            Some(p) => e.fire_planned(r, &p, Some(keys)),
+                        if gathering {
+                            let sn = self.sn.take();
+                            if let Some(plan) = self.delta_pick(r, Some(i), keys.len()) {
+                                let job = par::RoundJob { rule: r.clone(), at: i, keys: keys.clone(), sn, plan };
+                                self.presolving.as_mut().unwrap().push(job);
+                            }
+                            continue;
+                        }
+                        let plan = pre.as_ref().map(|p| p.plan.clone());
+                        let fire = |e: &mut Eval| match plan.or_else(|| e.delta_pick(r, Some(i), keys.len())) {
+                            Some(p) => {
+                                e.pre_now = made;
+                                let f = e.fire_planned(r, &p, Some(keys));
+                                e.pre_now = None;
+                                f
+                            }
+                            None if e.by_seed && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
                         let f = self.fire_at(r, i + 1, fl.take(), fire);
@@ -5507,6 +5661,9 @@ impl Eval {
                     self.store.close_dup_window();
                 }
                 fired?;
+                if gathering {
+                    return Ok(());
+                }
                 // NEWS READ INSIDE A THRESHOLD: the rule fires again, and its
                 // thresholds solve only the groups the news reaches.
                 if brk!("thr_no_refire" => false; r.thr_rels.iter().any(|rel| cur.by_rel.contains_key(rel))) {
@@ -5528,6 +5685,25 @@ impl Eval {
         sn.get(at)?.clone()
     }
 
+    /// The news of a round that fire `r` from its premise `i`: in a unit, less the seeds that met no premise the rule
+    /// joins this one with.
+    fn news_of(&self, r: &ERule, i: usize, rel: Sym, keys: &FxSet<FactId>) -> Option<par::News> {
+        if let Some(n) = self.news_taken.get(&(r.id, i)) {
+            return n.clone();
+        }
+        self.news_at(r, i, rel, keys).map(|k| match k {
+            std::borrow::Cow::Borrowed(_) => par::News::All,
+            std::borrow::Cow::Owned(k) => par::News::Kept(Rc::new(k)),
+        })
+    }
+
+    fn news_at<'a>(&self, r: &ERule, i: usize, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
+        let keys = self.news_since(r, rel, keys)?;
+        let Some(sd) = self.seeded.as_ref() else { return Some(keys) };
+        let kept: FxSet<FactId> = keys.iter().copied().filter(|&f| sd.lets(r.id, i, f)).collect();
+        (!kept.is_empty()).then_some(std::borrow::Cow::Owned(kept))
+    }
+
     /// THE NEWS OF A ROUND THAT ARE NEWS FOR `r`: the facts the rule's whole firing in `fire_all` did not see, those
     /// with an id from the store's length at that firing. The first round carries every conclusion of the whole
     /// firings, and a rule activated after its producers joined them already: fired again on them in written order it
@@ -5547,6 +5723,9 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
+        if self.by_seed && front_at.is_none() {
+            return Ok(Front::default());
+        }
         // the rules a declared closure lowers to are not fired where the closure is answered from its tree
         if self.vc.any {
             if self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active) {
@@ -5768,10 +5947,8 @@ impl Eval {
             self.diag_once(msg);
             return Ok(());
         }
-        if let Some(a) = &self.anchors {
-            if !a.fires(r.id, &sol.s, &self.h, &mut self.anchor_home) {
-                return Ok(());
-            }
+        if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems, self.bridging.is_some())) {
+            return Ok(());
         }
         if head.temporal == Temporal::Next {
             return self.stage(r.id, head.rel, persp, args, &sol.prems);
@@ -6299,17 +6476,33 @@ impl Eval {
                 let rt = resolve(&mut self.h, *rr, s);
                 let cv = canon_vars(&mut self.h, &[lt, rt]);
                 let d = format!("{} {} {}", self.h.canon(cv[0]), self.h.name(*op), self.h.canon(cv[1]));
-                PremRef::Bi(self.h.intern(&d))
+                PremRef::Bi(self.h.key(&d))
             }
             BodyElem::Neg(l) => {
-                let k = self.anon_lit_key(l, s);
-                PremRef::Neg(self.h.intern(&k))
+                let p = walk(&self.h, l.persp, s);
+                let args: Vec<Term> = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
+                if !self.h.is_ground(p) || args.iter().any(|a| !self.h.is_ground(*a)) {
+                    let k = self.anon_key(l.rel, p, &args);
+                    return PremRef::Neg(self.h.key(&k));
+                }
+                let of: Vec<u64> = [0, l.rel as u64, p.bits()].into_iter().chain(args.iter().map(|a| a.bits())).collect();
+                let rel = l.rel;
+                PremRef::Neg(self.h.key_of(&of, |h| {
+                    let mut out = String::new();
+                    out.push_str(h.name(rel));
+                    out.push('[');
+                    h.canon_term(p, &mut out);
+                    out.push_str("](");
+                    write_arg_list(h, &args, &mut out);
+                    out.push(')');
+                    out
+                }))
             }
             BodyElem::Pos(l) => match r.kind() {
                 Prem::VRow(_) => self.vc.vrow_ref(&mut self.h, &mut self.store, l, s),
                 Prem::Bi(_) => {
                     let k = format!("open {}", self.anon_lit_key(l, s));
-                    PremRef::Bi(self.h.intern(&k))
+                    PremRef::Bi(self.h.key(&k))
                 }
                 _ => r,
             },
@@ -11985,8 +12178,9 @@ impl Eval {
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
             Some(keys) => {
-                // (the index read only as far as it is narrower than the news)
-                let narrow = self.index_probe(l, s, persp, keys.len().saturating_sub(1));
+                // (the index read only as far as it is narrower than the news; a store that reads stretches would ask
+                // them all for what the news already holds)
+                let narrow = if self.store.reads_near() { None } else { self.index_probe(l, s, persp, keys.len().saturating_sub(1)) };
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => {
@@ -12056,6 +12250,20 @@ impl Eval {
             return self.match_premise(&src, s, depth, only);
         }
         if let Some(ci) = self.vc.vclosure_for(l.rel) {
+            // (news at a closure whose rows are facts too: the rows of those facts, not every row of the tree)
+            if let Some(o) = only {
+                let mut news: Vec<FactId> = o.iter().copied().collect();
+                news.sort_unstable();
+                let mut out = Vec::new();
+                for f in news {
+                    let (fp, fargs) = (self.store.rec(f).persp, self.store.args(f).to_vec());
+                    if let Some(s2) = unify(&self.h, l.persp, Term::atom(fp), s).and_then(|s2| unify_all(&self.h, &l.args, &fargs, &s2)) {
+                        out.extend(self.vmatch(ci, l, &s2));
+                    }
+                }
+                self.note_read(l, s, out.len());
+                return Ok(out);
+            }
             let out = self.vmatch(ci, l, s);
             self.note_read(l, s, out.len());
             return Ok(out);
@@ -12489,7 +12697,7 @@ impl Eval {
                 out.push((sol.s, PremRef::Fact(id)));
             } else {
                 let k = format!("open {}", self.lit_key(call, &sol.s));
-                let sy = self.h.intern(&k);
+                let sy = self.h.key(&k);
                 out.push((sol.s, PremRef::Bi(sy)));
             }
         }
@@ -15393,6 +15601,7 @@ impl Eval {
     }
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        let id = self.store.current(id);
         let r = self.store.rec(id);
         let key = fact_key(&self.h, r.rel, r.persp, self.store.args(id));
         let pad = "  ".repeat(indent);

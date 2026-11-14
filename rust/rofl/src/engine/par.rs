@@ -13,6 +13,7 @@
 //! them, and every read is noted with its solution, in order. So a wall falls where it fell and the answers are the
 //! same, byte for byte, on any number of threads.
 use crate::store::Prem;
+use super::joinplan::DeltaPlan;
 use super::*;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
@@ -46,6 +47,8 @@ struct Frozen<'a> {
     nix: NewsIx,
     /// the rows this round's news at an earlier position reads, excluded here (`Eval::sn`)
     except: Option<Rc<FxSet<FactId>>>,
+    /// a closure answered from its trees: the trees as they stand, one for each book
+    walked: Option<&'a [(Sym, Rc<crate::forest::Forest>)]>,
 }
 
 // SAFETY: the store and the heap share their bases through `Rc`, which is why neither is `Sync`. The threads only
@@ -147,6 +150,8 @@ enum Found<'a> {
     Pos(Cands<'a>),
     /// `@init` after the first tick: no candidate, no read
     Off,
+    /// the rows of a walked closure, unified
+    Walked(Vec<Subst>),
 }
 
 /// A piece of one solution's candidates unified: the candidates kept and the matches, in order.
@@ -196,17 +201,34 @@ impl Batch {
     }
 }
 
-/// `f` over `0..n`, on `threads` threads when `wide`, the results in the order of the indexes.
+/// The units of a world by levels being settled now, each on a thread of its own.
+pub(super) static UNITS: AtomicUsize = AtomicUsize::new(0);
+
+/// The threads of `threads` a firing may take: those no other unit is settled on.
+pub(super) fn free(threads: usize) -> usize {
+    threads.saturating_sub(UNITS.load(Ordering::Relaxed).saturating_sub(1))
+}
+
+/// `f` over `0..n`, on the free of `threads` threads when `wide`, the results in the order of the indexes.
 fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+    let threads = free(threads);
     if !wide || threads < 2 || n < 2 {
         return (0..n).map(f).collect();
     }
+    // (the kept threads serve one batch at a time: where another unit has them, this one goes alone)
+    let Ok(mut pool) = POOL.try_lock() else { return (0..n).map(f).collect() };
     let out: Vec<Mutex<Option<T>>> = (0..n).map(|_| Mutex::new(None)).collect();
-    let task = |k: usize| *out[k].lock().unwrap() = Some(f(k));
+    let lent = super::levels::lend();
+    let task = |k: usize| {
+        let v = match &lent {
+            Some(l) => l.on(|| f(k)),
+            None => f(k),
+        };
+        *out[k].lock().unwrap() = Some(v)
+    };
     let task: &(dyn Fn(usize) + Sync) = &task;
     // SAFETY: the lifetime is erased for the kept threads; this call returns only once none of them holds the batch.
     let task: *const (dyn Fn(usize) + Sync) = unsafe { std::mem::transmute(task) };
-    let mut pool = POOL.lock().unwrap();
     while pool.len() + 1 < threads {
         let (tx, rx) = std::sync::mpsc::channel::<Arc<Batch>>();
         std::thread::spawn(move || rx.into_iter().for_each(|b| b.help()));
@@ -228,6 +250,9 @@ fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T 
         std::panic::resume_unwind(p);
     }
     assert!(!b.panicked.load(Ordering::Relaxed), "a thread matching a premise panicked");
+    if let Some(l) = lent {
+        l.back();
+    }
     out.into_iter().map(|m| m.into_inner().unwrap().unwrap()).collect()
 }
 
@@ -273,8 +298,12 @@ impl<'a> Frozen<'a> {
         }
         let persp_t = walk(self.h, self.l.persp, &a.s);
         let persp = persp_t.as_atom();
+        if let Some(forests) = self.walked {
+            let rows = self.walk(forests, persp_t, persp, &a.s)?;
+            return Some(if self.neg { Found::Neg(rows.is_empty()) } else { Found::Walked(rows) });
+        }
         let limit = self.news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1));
-        let (narrow, probed) = self.probe(&a.s, persp, limit)?;
+        let (narrow, probed) = if self.news.is_some() && self.store.reads_near() { (None, false) } else { self.probe(&a.s, persp, limit)? };
         *probes += probed as u64;
         let mut c = Cands { persp_t, persp, segs: Vec::new(), owned: Vec::new(), keep: Keep::All };
         match (&self.news, narrow) {
@@ -299,6 +328,53 @@ impl<'a> Frozen<'a> {
         let mut scratch = Subst::new();
         let hit = c.rows().iter().any(|rows| rows.iter().any(|&f| self.kept(&c, f) && self.unifies(&c, a, f, &mut scratch)));
         Some(Found::Neg(!hit))
+    }
+
+    /// `vmatch` unwritten, where a firing's order is unobservable: the rows of the trees the ends of `s` name, each
+    /// unified. None: an end is a term to be made.
+    fn walk(&self, forests: &[(Sym, Rc<crate::forest::Forest>)], persp_t: Term, persp: Option<Sym>, s: &Subst) -> Option<Vec<Subst>> {
+        let (l, h) = (self.l, self.h);
+        let end = |t: Term| -> Option<Option<Term>> {
+            let t = walk(h, t, s);
+            match t.kind() {
+                TermK::Var(_) => Some(None),
+                TermK::Func(_) if crate::term::touches(h, t, s) => None,
+                _ => Some(h.is_ground(t).then_some(t)),
+            }
+        };
+        let (a, d) = (end(l.args[0])?, end(l.args[1])?);
+        let mut out = Vec::new();
+        let mut ends = Vec::new();
+        for (b, f) in forests {
+            if persp.is_some_and(|p| p != *b) || persp.is_none() && is_kernel_ledger(h, *b) {
+                continue;
+            }
+            let Some(s2) = (match persp {
+                Some(_) => Some(s.clone()),
+                None => unify(h, persp_t, Term::atom(*b), s),
+            }) else {
+                continue;
+            };
+            let mut row = |x: Term, y: Term| out.extend(unify_all(h, &l.args, &[x, y], &s2));
+            ends.clear();
+            match (a, d) {
+                (Some(a), Some(d)) => {
+                    if f.is_ancestor(a, d) {
+                        row(a, d);
+                    }
+                }
+                (Some(a), None) => {
+                    f.descendants(a, &mut ends);
+                    ends.iter().for_each(|&d| row(a, d));
+                }
+                (None, Some(d)) => {
+                    f.ancestors(d, &mut ends);
+                    ends.iter().for_each(|&a| row(a, d));
+                }
+                (None, None) => f.each_pair(row),
+            }
+        }
+        Some(out)
     }
 
     fn kept(&self, c: &Cands, f: FactId) -> bool {
@@ -356,7 +432,7 @@ impl<'a> Frozen<'a> {
 
 /// One premise over one run: the partial solutions it was solved from and left, the matches of the run's last
 /// solution, the rows read, the widest read and the solution it was read under, the index probes.
-#[derive(Default)]
+#[derive(Clone, Default)]
 struct Level {
     ins: usize,
     outs: usize,
@@ -365,6 +441,37 @@ struct Level {
     wide: usize,
     at: Option<Subst>,
     probes: u64,
+    walked: usize,
+}
+
+/// The news of a round at a premise of a rule: every fact of the round's, or those kept of them.
+#[derive(Clone)]
+pub(super) enum News {
+    All,
+    Kept(Rc<FxSet<FactId>>),
+}
+
+/// What the threads only read.
+struct Read<T>(T);
+// SAFETY: nothing is written while a batch reads it (`Frozen`).
+unsafe impl<T> Sync for Read<T> {}
+
+/// A firing of a round put off, to be solved with the round's others on the threads (`Eval::presolve`): the rule, its
+/// premise the news are at, the news, the rows excluded at the premises before (`Eval::sn`), the order taken.
+#[derive(Clone)]
+pub(super) struct RoundJob {
+    pub rule: Rc<ERule>,
+    pub at: usize,
+    pub keys: FxSet<FactId>,
+    pub sn: Option<Rc<Vec<Option<Rc<FxSet<FactId>>>>>>,
+    pub plan: Rc<DeltaPlan>,
+}
+
+/// What the threads made of a `RoundJob`: the premises they took and what each run of its news left.
+#[derive(Clone)]
+pub(super) struct Made {
+    lits: usize,
+    runs: Vec<(Vec<Sol>, Vec<Level>)>,
 }
 
 /// The solutions from `from` on, each row's first only, in order.
@@ -409,6 +516,16 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
                     }
                 }
                 Found::Off => {}
+                Found::Walked(rows) => {
+                    lv.read += rows.len();
+                    lv.walked += rows.len();
+                    next.extend(rows.into_iter().map(|s| {
+                        let mut prems = Vec::with_capacity(a.prems.len() + 1);
+                        prems.extend_from_slice(&a.prems);
+                        prems.push(PremRef::VRow(0));
+                        Sol { s, prems }
+                    }));
+                }
                 Found::Pos(c) => {
                     let mut read = 0;
                     for rows in c.rows() {
@@ -464,14 +581,14 @@ impl Eval {
     /// that would write, and the written path matches it.
     #[inline(never)]
     pub(super) fn par_level(&mut self, b: &BodyElem, i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<Result<Vec<Sol>, Halt>> {
-        let (l, neg) = self.frozen_lit(b, depth, rule_id)?;
+        let (l, neg) = self.frozen_lit(b, depth, rule_id).filter(|(l, _)| self.vc.vclosure_for(l.rel).is_none())?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
         let news = front_news(front_at, i, neg);
-        if !off {
+        if !(off || news.is_some() && self.store.reads_near()) {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
         let except = if depth == 0 && !neg { self.sn_except(i) } else { None };
-        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default(), except };
+        let fr = Frozen { store: &self.store, h: &self.h, l, neg, news, off, nix: NewsIx::default(), except, walked: None };
         let threads = self.par.threads;
 
         // the candidates of each partial solution, found over runs of them
@@ -557,6 +674,97 @@ impl Eval {
         Some(Ok(next))
     }
 
+    /// The premises of a job's order the threads take, from its first.
+    fn job_lits<'b>(&self, j: &'b RoundJob) -> Vec<(&'b Lit, bool)> {
+        let mut lits = Vec::new();
+        for (k, b) in j.plan.body.iter().enumerate() {
+            match self.frozen_lit(b, 0, Some(j.rule.id)) {
+                Some((l, _)) if k == 0 && self.vc.vclosure_for(l.rel).is_some() => break,
+                Some(x) => lits.push(x),
+                None => break,
+            }
+        }
+        lits
+    }
+
+    /// The news of a round at each premise listed, taken on the threads: what the seeds let go is asked a fact at
+    /// a time.
+    pub(super) fn news_ahead(&mut self, mut list: Vec<(Rc<ERule>, usize)>, cur: &Front) {
+        list.sort_unstable_by_key(|(r, i)| (r.id, *i));
+        list.dedup_by_key(|(r, i)| (r.id, *i));
+        let read = Read((&*self, &list, cur));
+        let read = &read;
+        let got: Vec<Option<News>> = spread(self.par.threads, list.len(), true, |k| {
+            let (e, list, cur) = read.0;
+            let (r, i) = &list[k];
+            let BodyElem::Pos(l) = &r.plan[*i] else { return None };
+            e.news_of(r, *i, l.rel, cur.by_rel.get(&l.rel)?)
+        });
+        self.news_taken = list.iter().map(|(r, i)| (r.id, *i)).zip(got).collect();
+    }
+
+    /// THE FIRINGS OF A ROUND SOLVED TOGETHER, each on one thread as far as the threads take its premises, over the
+    /// store as the round found it. A fact another firing of the round concludes is not read here: it is news of the
+    /// next round, which finds what it makes. (In a unit: no premise of its layer is an absence.) The firing then
+    /// takes what was made here in its turn (`par_rest`) and concludes it as it would.
+    pub(super) fn presolve(&mut self, jobs: Vec<RoundJob>) -> FxMap<(Sym, usize), (RoundJob, Made)> {
+        let was = std::mem::replace(&mut self.firing, true);
+        let tick = self.store.tick;
+        let seed = [Sol { s: Subst::new(), prems: Vec::new() }];
+        for j in &jobs {
+            for (k, (l, neg)) in self.job_lits(j).into_iter().enumerate() {
+                match k {
+                    _ if frs_off(l, tick) => {}
+                    _ if self.vc.vclosure_for(l.rel).is_some() => {
+                        let ci = self.vc.vclosure_for(l.rel).unwrap();
+                        self.vc.vforests(&mut self.store, ci);
+                    }
+                    0 if !neg && self.store.reads_near() => {}
+                    0 if !neg => self.par_prepare(l, &seed, j.keys.len().saturating_sub(1)),
+                    0 => self.par_prepare(l, &seed, usize::MAX),
+                    _ => self.store.absorb_for_read(&self.h, l.rel, l.persp.as_atom()),
+                }
+            }
+        }
+        // (a job's news go a run at a time, as the runs of `par_rest` do; shorter runs where the round has few news,
+        // so that no thread is left without one)
+        let order: Vec<Vec<FactId>> = jobs.iter().map(|j| j.keys.iter().copied().collect()).collect();
+        let run = (order.iter().map(|o| o.len()).sum::<usize>() / (self.par.threads * 8)).clamp(1, (self.par.sols / 4).max(1));
+        let tasks: Vec<(usize, usize)> = order.iter().enumerate().flat_map(|(x, o)| (0..o.len().div_ceil(run)).map(move |c| (x, c * run))).collect();
+        let frs: Vec<Vec<Frozen>> = tasks
+            .iter()
+            .map(|&(x, from)| {
+                let j = &jobs[x];
+                self.job_lits(j)
+                    .into_iter()
+                    .enumerate()
+                    .map(|(k, (l, neg))| {
+                        let news = (k == 0 && !neg).then(|| (&j.keys, order[x][from..(from + run).min(order[x].len())].to_vec()));
+                        let except = if neg { None } else { j.sn.as_ref().and_then(|sn| sn.get(j.plan.perm[k])?.clone()) };
+                        let walked = self.vc.vclosure_for(l.rel).map(|ci| &self.store.virtuals[ci].forests[..]);
+                        Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default(), except, walked }
+                    })
+                    .collect()
+            })
+            .collect();
+        let sort = !self.store.unordered;
+        let made: Vec<Option<(Vec<Sol>, Vec<Level>)>> = spread(self.par.threads, tasks.len(), true, |t| if frs[t].is_empty() { None } else { solve_run(&frs[t], &seed, sort) });
+        let lits: Vec<usize> = jobs.iter().map(|j| self.job_lits(j).len()).collect();
+        drop(frs);
+        self.firing = was;
+        let mut runs: Vec<Option<Vec<(Vec<Sol>, Vec<Level>)>>> = jobs.iter().map(|_| Some(Vec::new())).collect();
+        for (&(x, _), m) in tasks.iter().zip(made) {
+            match (runs[x].as_mut(), m) {
+                (Some(r), Some(m)) => r.push(m),
+                _ => runs[x] = None,
+            }
+        }
+        if brk!("levels_solved_run_lost" => true; false) {
+            runs.iter_mut().flatten().filter(|r| r.len() > 1).for_each(|r| { r.pop(); });
+        }
+        jobs.into_iter().zip(runs).zip(lits).filter_map(|((job, runs), lits)| Some(((job.rule.id, job.at), (job, Made { lits, runs: runs? })))).collect()
+    }
+
     /// The premise `b` as the threads read it, and whether it is negated; None where the written path must match it.
     fn frozen_lit<'b>(&self, b: &'b BodyElem, depth: usize, rule_id: Option<Sym>) -> Option<(&'b Lit, bool)> {
         let (l, neg) = match b {
@@ -573,7 +781,8 @@ impl Eval {
             || !self.lat.carry.spread.is_empty()
             || self.assume.is_some()
             || self.demand.on(l.rel)
-            || self.vc.vclosure_for(l.rel).is_some()
+            // (a unit reads a tree from the unit of the node's file, a partial solution at a time)
+            || self.vc.vclosure_for(l.rel).is_some() && (!(self.store.unordered && l.args.len() == 2) || brk!("levels_tree_sliced" => false; self.store.reads_trees()))
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
             || !l.args.iter().all(plain)
@@ -592,12 +801,16 @@ impl Eval {
     /// the last one solved, and the rows the premises added to those held.
     #[inline(never)]
     pub(super) fn par_rest(&mut self, body: &[BodyElem], i: usize, acc: &[Sol], depth: usize, front_at: Option<(usize, &FxSet<FactId>)>, rule_id: Option<Sym>) -> Option<(Vec<Sol>, usize, i64)> {
-        if acc.len() < self.par.sols.max(2) {
+        // (a firing solved with its round's others brings what the threads made of these premises)
+        let pre = if i == 0 && depth == 0 { self.pre_now.take() } else { None };
+        if pre.is_none() && acc.len() < self.par.sols.max(2) {
             return None;
         }
         let mut lits: Vec<(&Lit, bool)> = Vec::new();
-        for b in &body[i..] {
+        for (k, b) in body[i..].iter().enumerate() {
             match self.frozen_lit(b, depth, rule_id) {
+                // (news at a walked closure are read by the written path)
+                Some((l, _)) if front_at.is_some_and(|(p, _)| p == i + k) && self.vc.vclosure_for(l.rel).is_some() => break,
                 Some(x) => lits.push(x),
                 None => break,
             }
@@ -607,9 +820,18 @@ impl Eval {
         }
         let news_at = front_at.map(|(p, keys)| (p, keys.len().saturating_sub(1)));
         let tick = self.store.tick;
-        for (k, &(l, neg)) in lits.iter().enumerate() {
+        let pre = pre.filter(|p| p.lits == lits.len());
+        if pre.is_none() && acc.len() < self.par.sols.max(2) {
+            return None;
+        }
+        for (k, &(l, neg)) in lits.iter().enumerate().filter(|_| pre.is_none()) {
             match news_at {
                 _ if frs_off(l, tick) => {}
+                _ if self.vc.vclosure_for(l.rel).is_some() => {
+                    let ci = self.vc.vclosure_for(l.rel).unwrap();
+                    self.vc.vforests(&mut self.store, ci);
+                }
+                Some((p, _)) if p == i && k == 0 && !neg && self.store.reads_near() => {}
                 Some((p, limit)) if p == i && k == 0 && !neg => self.par_prepare(l, acc, limit),
                 _ if k == 0 => self.par_prepare(l, acc, usize::MAX),
                 _ => self.store.absorb_for_read(&self.h, l.rel, l.persp.as_atom()),
@@ -617,17 +839,21 @@ impl Eval {
         }
         let frs: Vec<Frozen> = lits
             .iter()
+            .filter(|_| pre.is_none())
             .enumerate()
             .map(|(k, &(l, neg))| {
                 let news = front_news(front_at, i + k, neg);
                 let except = if depth == 0 && !neg { self.sn_except(i + k) } else { None };
-                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default(), except }
+                let walked = self.vc.vclosure_for(l.rel).map(|ci| &self.store.virtuals[ci].forests[..]);
+                Frozen { store: &self.store, h: &self.h, l, neg, news, off: frs_off(l, tick), nix: NewsIx::default(), except, walked }
             })
             .collect();
         let sort = !self.store.unordered;
         let run = (self.par.sols / 4).max(1);
-        let runs: Vec<Option<(Vec<Sol>, Vec<Level>)>> =
-            spread(self.par.threads, acc.len().div_ceil(run), true, |k| solve_run(&frs, &acc[k * run..((k + 1) * run).min(acc.len())], sort));
+        let runs: Vec<Option<(Vec<Sol>, Vec<Level>)>> = match pre {
+            Some(p) => p.runs.into_iter().map(Some).collect(),
+            None => spread(self.par.threads, acc.len().div_ceil(run), true, |k| solve_run(&frs, &acc[k * run..((k + 1) * run).min(acc.len())], sort)),
+        };
         drop(frs);
         let Some(runs) = runs.into_iter().collect::<Option<Vec<_>>>() else {
             self.par_given_back += 1;
@@ -643,6 +869,7 @@ impl Eval {
                 t.ins += x.ins;
                 t.outs += x.outs;
                 t.read += x.read;
+                t.walked += x.walked;
                 t.probes += x.probes;
                 if x.ins > 0 {
                     t.last = x.last;
@@ -699,6 +926,7 @@ impl Eval {
             if let Some(rid) = self.cur_rule {
                 *self.cost.argm_by_rule.entry(rid).or_insert(0) += t.probes;
             }
+            self.vc.rows_read += t.walked as u64;
             self.par_levels += 1;
             let g = t.outs as i64 - if i + k == 0 { 0 } else { t.ins as i64 };
             self.rows += g;

@@ -459,14 +459,15 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
 }
 
 /// A run its world answers by volumes (`engine/volumes.rs`): questions asked, of a world evaluated once, and
-/// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world.
+/// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world, `=1` of volumes
+/// under VOLUMES_FROM.
 fn by_volumes(o: &Opts) -> bool {
     !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_) | Q::Why(_) | Q::WhyAll(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
         && o.below.is_empty() && o.kept.is_none() && o.save.is_none() && !o.propose && std::env::var("ROFL_VOLUMES").as_deref() != Ok("0")
 }
 
-/// The questions answered by volumes, with the exit code; none when the world is not one (a file alone, no
-/// `[surface]` book) or its volumes refused it, said on stderr, and the world is then evaluated whole.
+/// The questions answered by volumes, with the exit code; none when the world is not one (a file alone, or its files
+/// under VOLUMES_FROM) or the volumes refused it, said on stderr, and the world is then evaluated whole.
 fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Option<i32> {
     // the volumes are kept beside the slot, a set for the question's cone
     let kept = slot.as_ref().map(|p| {
@@ -475,9 +476,9 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         question_rels(o).hash(&mut h);
         format!("{}.q{:016x}", p.trim_end_matches(".vol"), h.finish())
     });
-    if let Some((mut core, mut v)) = kept.as_ref().and_then(|k| open_volumes(o, k)) {
-        eprintln!("volumes: {} answered from the {} kept volumes", o.qs.len(), v.worlds.len());
-        return Some(answer_volumes(o, &mut core, &mut v));
+    if let Some(mut s) = kept.as_ref().and_then(|k| open_volumes(o, k)) {
+        eprintln!("volumes: {} answered from the kept units", o.qs.len());
+        return Some(answer_volumes(o, &mut s));
     }
     let sources = load_sources(o);
     // a source gone is said by the kept world's slot, which knows it was there
@@ -487,119 +488,131 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     drop(texts);
     // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
     let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
-    if cut.files.len() < 2 || bytes < VOLUMES_FROM { return None; }
-    let mut s = Session::fresh(o.budget);
-    set_walls(o, &mut s);
-    if let Err(d) = s.load_all(&[cut.core.as_str()], None) {
+    if cut.files.len() < 2 || bytes < VOLUMES_FROM && std::env::var("ROFL_VOLUMES").as_deref() != Ok("1") { return None; }
+    let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
+    if let Some((mut s, sums)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
+        let t = std::time::Instant::now();
+        let code = answer_volumes(o, &mut s);
+        let t = rofl::engine::meter::spent("answers", t);
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums), true) { eprintln!("the volumes are not kept: {e}"); }
+        rofl::engine::meter::spent("keeps", t);
+        rofl::engine::meter::write();
+        return Some(code);
+    }
+    let mut core = Session::fresh(o.budget);
+    set_walls(o, &mut core);
+    if let Err(d) = core.load_all(&[cut.core.as_str()], None) {
         fail(o.json, FILE_REFUSED, &format!("refused:\n  {}", d.1.join("\n  ")));
     }
     if let Some(rels) = question_rels(o) {
-        if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
+        if let Err(e) = core.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
     }
-    if let Some((mut core, mut v, sums)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
-        let code = answer_volumes(o, &mut core, &mut v);
-        let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
-        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut core, &mut v, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums)) { eprintln!("the volumes are not kept: {e}"); }
-        return Some(code);
-    }
-    let files = cut.files.len();
-    let k = std::thread::available_parallelism().map_or(1, |n| n.get()).min(files);
-    let core_sum = sum(&cut.core);
-    let gs = rofl::engine::volumes::groups(cut.files, k);
-    let sums: Vec<(String, u64, usize)> = gs.iter().enumerate().flat_map(|(i, g)| g.iter().map(move |(f, t)| (f.clone(), sum(t), i))).collect();
-    let mut v = match s.by_volumes(gs, files) {
-        Ok(v) => {
-            let st = &v.stats;
-            eprintln!("volumes: {} files on {} workers, {} levels, {} rounds laying {} facts ({} ms of {} ms); held above the core, laid: {:?}", st.files, st.workers, st.levels, st.rounds, st.laid, st.lay_ms, st.ms, st.held);
+    let mut s = match core.by_volumes(&cut.files) {
+        Ok((s, st)) => {
+            eprintln!("volumes: {} files settled by levels, {} facts in their units ({} ms)", st.files, st.facts, st.ms);
             if st.cooled > 0 {
-                eprintln!("volumes: past a quarter of the memory this process may use, the workers were cooled to disk before {} of the levels, {} volumes of {} MB", st.cooled, st.cool_files, st.cool_bytes >> 20);
+                eprintln!("volumes: past a quarter of the memory this process may use, the units done were cooled to disk {} times, {} units of {} MB", st.cooled, st.cool_files, st.cool_bytes >> 20);
             }
-            v
+            s
         }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
-    for w in &v.worlds { for d in &w.eval.diags { eprintln!("diag: {d}"); } }
-    let evals: Vec<&rofl::engine::Eval> = std::iter::once(&s.eval).chain(v.worlds.iter().map(|w| &w.eval)).collect();
-    if let Some(t) = rofl::engine::heap_said_over(&evals) { eprintln!("{t}"); }
-    let code = answer_volumes(o, &mut s, &mut v);
-    if v.stats.cut {
-        eprintln!("a wall cut the volumes' evaluation (the memory this process may use, or the budget): its answers are partial, and they are not kept");
-    } else if let Some(k) = &kept {
-        let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
-        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, &mut v, k, (core_sum, &sums)) { eprintln!("the volumes are not kept: {e}"); }
+    for d in &s.eval.diags { eprintln!("diag: {d}"); }
+    if let Some(t) = rofl::engine::heap_said_over(&[&core.eval, &s.eval]) { eprintln!("{t}"); }
+    let code = answer_volumes(o, &mut s);
+    if let Some(k) = &kept {
+        let sums: Vec<(String, u64)> = cut.files.iter().map(|(f, t)| (f.clone(), sum(t))).collect();
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, k, (sum(&cut.core), &sums), false) { eprintln!("the volumes are not kept: {e}"); }
     }
     Some(code)
 }
 
-/// The bytes of the files' facts from which a world is evaluated by volumes: below them a worker's share does not pay
-/// for its own copy of the core's evaluation and the threads (vscode: 20 files, 10 MB, whole as fast).
+/// The bytes of the files' facts from which a world is evaluated by volumes: below them the whole world is as fast
+/// (vscode: 20 files, 10 MB).
 const VOLUMES_FROM: usize = 32 << 20;
 
-/// A file of a set of kept volumes (`<slot>.q<sum>.core.vol`, `.w<i>.vol`): no world of its own to take by delta.
+/// A file of a world kept by volumes (`<slot>.q<sum>.vol`): no world of its own to take by delta.
 pub fn is_volume_of_set(p: &std::path::Path) -> bool {
     p.file_name().and_then(|n| n.to_str()).and_then(|n| n.split_once(".q")).is_some_and(|(_, r)| r.len() > 17 && r.as_bytes()[16] == b'.' && r[..16].bytes().all(|c| c.is_ascii_hexdigit()))
 }
 
-/// The volumes kept at `k`, the core and a world a worker, when every one is there and nothing they were kept from moved.
-fn open_volumes(o: &Opts, k: &str) -> Option<(Session, rofl::session::Volumes)> {
-    let open = |p: &str| -> Option<Session> {
-        let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
-        let r = crate::kept::parse(&c.note)?;
-        if let Some(m) = crate::kept::moved(&r, c.this_build) {
-            eprintln!("the kept volumes {k} are stale: {m}");
+/// The reader kept at `k` over its dictionary and units, not yet reading them; none where one is missing.
+fn open_reader(o: &Opts, k: &str, held: impl Fn(&crate::kept::Record, bool) -> bool) -> Option<Session> {
+    let p = format!("{k}.vol");
+    let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names")).ok()?);
+    let t = std::time::Instant::now();
+    let c = rofl::volume::check_seen(&p, crate::kept::seen().as_deref()).ok()?;
+    rofl::engine::meter::spent("sums", t);
+    if !held(&crate::kept::parse(&c.note)?, c.this_build) || !rofl::volume::has_units(k) { return None; }
+    let mut s = Session::open_volume_in(&p, o.budget, Some(dict)).ok()?;
+    set_walls(o, &mut s);
+    Some(s)
+}
+
+/// The world kept by volumes at `k`, reading its units, when nothing it was kept from moved.
+fn open_volumes(o: &Opts, k: &str) -> Option<Session> {
+    Registry::read(k)?;
+    let mut s = open_reader(o, k, |r, this_build| match crate::kept::moved(r, this_build) {
+        Some(m) => { eprintln!("the kept volumes {k} are stale: {m}"); false }
+        None => true,
+    })?;
+    let lv = std::sync::Arc::new(rofl::volume::open_units(k, &s.eval).map_err(|e| eprintln!("the kept units {k}: {e}")).ok()?);
+    lv.read_by(&mut s.eval);
+    s.eval.levels = Some(lv);
+    crate::kept::touch(&format!("{k}.vol"));
+    Some(s)
+}
+
+/// The reader kept at `k` (`<k>.vol`: the core it stands on), with what it was read from; beside it the names its
+/// facts share (`<k>.names`), its units (`<k>.u<n>`) and the registry (`<k>.scroll`): what a later run takes by delta.
+fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Session, k: &str, sums: (u64, &[(String, u64)]), over: bool) -> Result<(), String> {
+    let units = s.eval.levels.clone();
+    let note = crate::kept::record(world, files, &[], read, &[], None)?;
+    let _ = std::fs::remove_file(format!("{k}.scroll"));
+    let p = format!("{k}.vol");
+    let near = s.eval.store.reads_none();
+    // (taken by delta, it is written as an overlay over the volume it was opened from)
+    let done = if over { crate::kept::keep_capped_over(s, &p, &note, true).map(drop) } else { crate::kept::keep_capped(s, &p, &note).map(drop) };
+    if let Some(n) = near {
+        s.eval.store.reads_again(n);
+    }
+    done?;
+    if rofl::brk!("volumes_dict_unkept" => false; true) {
+        s.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
+    }
+    rofl::volume::keep_units(k, units.as_deref())?;
+    Registry { core: sums.0, files: sums.1.iter().cloned().collect() }.write(k)
+}
+
+/// THE REGISTRY OF A WORLD KEPT BY VOLUMES (`<k>.scroll`): the sum of the core's text and each file with its sum.
+/// Written last and whole, under another name first: the reader, its units and the dictionary are a kept world once
+/// it names them. A later run reads it alone to know what moved.
+struct Registry {
+    core: u64,
+    files: std::collections::HashMap<String, u64>,
+}
+
+impl Registry {
+    fn write(&self, k: &str) -> Result<(), String> {
+        let mut list = format!("scroll 3\ncore {:016x}\n", self.core);
+        let mut files: Vec<_> = self.files.iter().collect();
+        files.sort();
+        for (f, h) in files {
+            list.push_str(&format!("file {f} {h:016x}\n"));
+        }
+        let tmp = format!("{k}.scroll.{}.new", std::process::id());
+        std::fs::write(&tmp, list).and_then(|_| std::fs::rename(&tmp, format!("{k}.scroll"))).map_err(|e| e.to_string())
+    }
+    fn read(k: &str) -> Option<Registry> {
+        let text = std::fs::read_to_string(format!("{k}.scroll")).ok()?;
+        let mut lines = text.lines();
+        if lines.next()? != "scroll 3" {
             return None;
         }
-        let s = Session::open_volume(p, o.budget).ok()?;
-        crate::kept::touch(p);
-        Some(s)
-    };
-    let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
-    let core = open(&format!("{k}.core.vol"))?;
-    let worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
-    let laid = (0..n).map(|i| read_laid(&format!("{k}.w{i}.laid"))).collect::<Option<Vec<_>>>()?;
-    Some((core, rofl::session::Volumes { worlds, laid, stats: Default::default() }))
-}
-
-/// The core and every worker's world kept at `k`, with what they were read from, and beside them (`<k>.files`) the
-/// sum of the core's text and of each file's, with the worker that holds it: what a later run takes by delta.
-fn keep_volumes(world: &[String], files: &[String], read: &[String], core: &mut Session, v: &mut rofl::session::Volumes, k: &str, sums: (u64, &[(String, u64, usize)])) -> Result<(), String> {
-    let note = crate::kept::record(world, files, &[], read, &[], None)?;
-    let _ = std::fs::remove_file(format!("{k}.n"));
-    let _ = std::fs::remove_file(format!("{k}.files"));
-    crate::kept::keep_capped(core, &format!("{k}.core.vol"), &note)?;
-    for (i, w) in v.worlds.iter_mut().enumerate() {
-        crate::kept::keep_capped(w, &format!("{k}.w{i}.vol"), &note)?;
-        write_laid(&format!("{k}.w{i}.laid"), &v.laid[i])?;
+        let core = u64::from_str_radix(lines.next()?.strip_prefix("core ")?, 16).ok()?;
+        let files = lines.map(|l| { let (f, h) = l.strip_prefix("file ")?.split_once(' ')?; Some((f.to_string(), u64::from_str_radix(h, 16).ok()?)) }).collect::<Option<_>>()?;
+        Some(Registry { core, files })
     }
-    let mut list = format!("core {:016x}\n", sums.0);
-    for (f, h, i) in sums.1 {
-        list.push_str(&format!("{f} {h:016x} {i}\n"));
-    }
-    std::fs::write(format!("{k}.files"), list).map_err(|e| e.to_string())?;
-    std::fs::write(format!("{k}.n"), v.worlds.len().to_string()).map_err(|e| e.to_string())
-}
-
-/// The facts the others laid into a kept volume, by id, each with the rules it was laid for (`<k>.w<i>.laid`).
-fn write_laid(p: &str, l: &rofl::engine::volumes::Laid) -> Result<(), String> {
-    let mut ids: Vec<&u32> = l.ids.iter().collect();
-    ids.sort();
-    let mut out = String::new();
-    for id in ids {
-        let rs: Vec<String> = l.rules.get(id).into_iter().flatten().map(u32::to_string).collect();
-        out.push_str(&format!("{id} {}\n", rs.join(",")));
-    }
-    std::fs::write(p, out).map_err(|e| e.to_string())
-}
-
-fn read_laid(p: &str) -> Option<rofl::engine::volumes::Laid> {
-    let mut l = rofl::engine::volumes::Laid::default();
-    for line in std::fs::read_to_string(p).ok()?.lines() {
-        let (id, rs) = line.split_once(' ')?;
-        let id: u32 = id.parse().ok()?;
-        l.ids.insert(id);
-        l.rules.insert(id, rs.split(',').filter(|r| !r.is_empty()).map(str::parse).collect::<Result<_, _>>().ok()?);
-    }
-    Some(l)
 }
 
 fn sum(text: &str) -> u64 {
@@ -609,158 +622,54 @@ fn sum(text: &str) -> u64 {
     h.finish()
 }
 
-/// The kept volumes at `k` brought by delta to the files `cut` holds, where only the files moved and few of them: each
-/// file changed or gone taken out of the worker that holds it, what it gives now put in (`Eval::given_by_file`: its
-/// lemmas where the program cuts a book), a file come given to the worker holding least. None, said on stderr, where
-/// the core moved, too many files did, a delta is not worked out, or an edit moved what a worker shows the others.
-fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<(Session, rofl::session::Volumes, Vec<(String, u64, usize)>)> {
-    let list = std::fs::read_to_string(format!("{k}.files")).ok()?;
-    let mut lines = list.lines();
-    let core_sum = lines.next()?.strip_prefix("core ").and_then(|h| u64::from_str_radix(h, 16).ok())?;
-    let mut old: std::collections::HashMap<String, (u64, usize)> = std::collections::HashMap::new();
-    for l in lines {
-        let mut p = l.split(' ');
-        let (f, h, i) = (p.next()?, p.next()?, p.next()?);
-        old.insert(f.to_string(), (u64::from_str_radix(h, 16).ok()?, i.parse().ok()?));
-    }
+/// The world kept by volumes at `k` brought by delta to the files `cut` holds, where only the files' texts moved and
+/// few of them: the units whose answer may have moved are settled again, the others stand. None, said on stderr,
+/// where the core moved, a file came or went, too many files moved, or the units refuse the edit.
+fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<(Session, Vec<(String, u64)>)> {
+    let Registry { core: core_sum, files: old } = Registry::read(k)?;
     let say = |why: &str| eprintln!("the kept volumes {k} are not taken by delta: {why}; computed anew");
     if sum(&cut.core) != core_sum {
         say("the rules or the facts naming no file changed");
         return None;
     }
     let now: std::collections::HashMap<&str, &str> = cut.files.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
-    let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|(h, _)| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
+    let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|h| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
     if moved.is_empty() || moved.len() * 8 > now.len().max(8) {
         if !moved.is_empty() { say(&format!("{} of {} files moved", moved.len(), now.len())); }
         return None;
     }
-    let open = |p: &str| -> Option<Session> {
-        let c = rofl::volume::check_seen(p, crate::kept::seen().as_deref()).ok()?;
-        let r = crate::kept::parse(&c.note)?;
-        if r.engine_env_hold(c.this_build).is_some() || !r.scans.is_empty() {
-            return None;
-        }
-        Session::open_volume(p, o.budget).ok()
+    if old.len() != now.len() || moved.iter().any(|f| !old.contains_key(*f)) {
+        say("a file came or went");
+        return None;
+    }
+    let t = std::time::Instant::now();
+    let mut s = open_reader(o, k, |r, this_build| r.engine_env_hold(this_build).is_none() && r.scans.is_empty())?;
+    let before = rofl::volume::open_units(k, &s.eval).map_err(|e| say(&e)).ok()?;
+    let named: std::collections::HashMap<u64, (&str, &str)> = now.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (*f, *t)))).collect();
+    let files: Vec<(String, String)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), t.to_string()))).collect::<Option<_>>().or_else(|| { say("a file came or went"); None })?;
+    let changed = files.iter().enumerate().filter(|(_, (f, _))| moved.contains(&f.as_str())).map(|(i, _)| i as u32).collect();
+    before.named_by(&mut s.eval);
+    let (st, joins) = s.eval.level_stage();
+    s.eval.store.settled = s.eval.store.len_ids();
+    // (the check harness's oracle: how many units meet in one)
+    let lv = match s.eval.fork().by_levels(&files, &st, joins, Some(rofl::engine::levels::Edit(&before, changed))) {
+        Ok(lv) => lv,
+        Err(e) => { say(&rofl::describe(&e)); return None; }
     };
-    let n: usize = std::fs::read_to_string(format!("{k}.n")).ok()?.trim().parse().ok()?;
-    let mut core = open(&format!("{k}.core.vol"))?;
-    let mut worlds = (0..n).map(|i| open(&format!("{k}.w{i}.vol"))).collect::<Option<Vec<_>>>()?;
-    let stage = core.eval.lemma_stage();
-    for w in &mut worlds {
-        w.eval.stage_given = stage.as_ref().map(|st| st.rules.clone());
-    }
-    let mut laid = (0..n).map(|i| read_laid(&format!("{k}.w{i}.laid"))).collect::<Option<Vec<_>>>()?;
-    let mut sums: Vec<(String, u64, usize)> = Vec::new();
-    let mut put: Vec<Vec<&str>> = vec![Vec::new(); n];
-    for (f, t) in &now {
-        let i = old.get(*f).map(|o| o.1).unwrap_or_else(|| (0..n).min_by_key(|&i| worlds[i].eval.store.fact_count()).unwrap_or(0));
-        sums.push((f.to_string(), sum(t), i));
-        if moved.contains(f) {
-            put[i].push(f);
-        }
-    }
+    let (again, same) = lv.again.unwrap_or_default();
+    eprintln!("volumes: {} of {} files edited; {again} of {} units settled again, {same} of them concluding what they had ({} ms)", moved.len(), files.len(), lv.tops.iter().map(|t| t.count()).sum::<usize>(), t.elapsed().as_millis());
+    rofl::engine::meter::spent("units", t);
+    for d in &lv.said { eprintln!("diag: {d}"); }
+    lv.read_by(&mut s.eval);
+    s.eval.levels = Some(std::sync::Arc::new(lv));
+    let mut sums: Vec<(String, u64)> = files.iter().map(|(f, t)| (f.clone(), sum(t))).collect();
     sums.sort();
-    let homes = sums.iter().filter_map(|(f, _, i)| u64::from_str_radix(f, 16).ok().map(|x| (x, *i as u32))).collect();
-    let cross = rofl::engine::volumes::Crossing::of(&core.eval, &worlds.iter().map(|w| &w.eval).collect::<Vec<_>>(), homes);
-    for (i, w) in worlds.iter_mut().enumerate() {
-        w.eval.anchors = Some(cross.anchors(i as u32));
-    }
-    let t0 = std::time::Instant::now();
-    let mut edits = Vec::new();
-    for (i, w) in worlds.iter_mut().enumerate() {
-        let gone: std::collections::HashSet<&str> = moved.iter().copied().filter(|f| old.get(*f).is_some_and(|o| o.1 == i)).collect();
-        if gone.is_empty() && put[i].is_empty() {
-            continue;
-        }
-        let mut given: std::collections::HashSet<String> = std::collections::HashSet::new();
-        for f in &put[i] {
-            match core.eval.given_by_file(now[f], stage.as_ref()) {
-                Ok(keys) => given.extend(keys),
-                Err(e) => { say(&rofl::describe(&e)); return None; }
-            }
-        }
-        // what the others laid here is theirs, not the file's
-        let st = &w.eval.store;
-        let held: Vec<(u32, String)> = (0..st.len_ids())
-            .filter(|&id| st.alive(id) && st.rec(id).base() && !laid[i].ids.contains(&id))
-            .map(|id| (id, st.key(&w.eval.h, id)))
-            .filter(|(_, key)| rofl::engine::volumes::file_of(key).is_some_and(|f| gone.contains(f)))
-            .collect();
-        let had: std::collections::HashSet<&str> = held.iter().map(|(_, key)| key.as_str()).collect();
-        let out: Vec<u32> = held.iter().filter(|(_, key)| !given.contains(key)).map(|(id, _)| *id).collect();
-        let add: String = given.iter().filter(|key| !had.contains(key.as_str())).map(|key| format!("{key}.\n")).collect();
-        edits.push((i, out, add));
-    }
-    // what moved in a volume goes to the volumes that read it, and what that moves there on, until nothing moves
-    let mut v = rofl::session::Volumes { worlds: std::mem::take(&mut worlds), laid: std::mem::take(&mut laid), stats: Default::default() };
-    let rounds = match v.pass_on(&cross, edits) {
-        Ok(r) => r,
-        Err(why) => { say(&why); return None; }
-    };
-    let shown = if rounds > 0 { format!(", what they show the others in {rounds} rounds") } else { String::new() };
-    eprintln!("volumes: {} of {} files taken by delta in {} ms{shown}", moved.len(), now.len(), t0.elapsed().as_millis());
-    core.eval.store.dirty = false;
-    Some((core, v, sums))
+    Some((s, sums))
 }
 
-/// Every question answered from the volumes: the union of the workers' answers, or the resident world's where one
-/// is needed. Returns the exit code.
-fn answer_volumes(o: &Opts, s: &mut Session, v: &mut rofl::session::Volumes) -> i32 {
-    let (mut refused, mut partial) = (false, false);
-    lower_texts(o, s);
-    for w in &mut v.worlds {
-        w.eval.lower_texts.clone_from(&s.eval.lower_texts);
-    }
-    for q in &o.qs {
-        let l = match q {
-            Q::Ask(l) => l,
-            Q::Why(l) | Q::WhyAll(l) => {
-                match s.why_by_volumes(v, l, matches!(q, Q::WhyAll(_))) {
-                    Ok(t) => if o.json { println!("{}", serde_json::json!({ "ok": true, "text": t })) } else { println!("{t}\n") },
-                    Err(e) => {
-                        refused = true;
-                        if o.json { println!("{}", serde_json::json!({ "ok": false, "error": e })) } else { println!("{e}\n") }
-                    }
-                }
-                continue;
-            }
-            _ => unreachable!(),
-        };
-        let mut all: Option<rofl::session::Answer> = None;
-        let mut err = None;
-        let rel = l.split(['(', '[']).next().unwrap_or("").trim().to_string();
-        let mut resident = match s.resident(v, &rel) {
-            Ok(r) => r,
-            Err(e) => fail(o.json, WORLD_REFUSED, &format!("volumes: {}", rofl::describe(&e))),
-        };
-        let asked: Vec<&mut Session> = match &mut resident { Some(r) => vec![r], None => v.worlds.iter_mut().collect() };
-        for w in asked {
-            match w.ask(l) {
-                Ok(a) => match &mut all {
-                    None => all = Some(a),
-                    Some(u) => { u.rows.extend(a.rows); u.keys.extend(a.keys); u.shrugs.extend(a.shrugs); u.partial |= a.partial; }
-                },
-                Err(e) => { err = Some(e); break; }
-            }
-        }
-        if let Some(e) = err {
-            refused = true;
-            if o.json { println!("{}", serde_json::json!({ "ok": false, "error": e })) } else { println!("error: {e}\n") }
-            continue;
-        }
-        let mut a = all.expect("a world a worker");
-        a.keys.sort();
-        a.keys.dedup();
-        a.shrugs.sort();
-        a.shrugs.dedup();
-        let mut seen = std::collections::HashSet::new();
-        a.rows.retain(|r| seen.insert(r.clone()));
-        partial |= a.partial;
-        if o.json {
-            let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
-            println!("{}", serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial }));
-        } else { println!("{}\n", ask_text(&a)) }
-    }
+/// Every question answered by the reader. Returns the exit code.
+fn answer_volumes(o: &Opts, s: &mut Session) -> i32 {
+    let (refused, partial) = answers(s, o, false);
     if refused { QUESTION_REFUSED } else if partial { PARTIAL } else { 0 }
 }
 

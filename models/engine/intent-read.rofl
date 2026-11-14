@@ -1,0 +1,44 @@
+-- models/engine/intent-read.rofl — WHAT THE LAST CHANGES MEANT, as it was said. Where the thread of the work was
+-- read, each line is a thing the owner asked or the worker said there, with its moment; where only the title was
+-- read, the moment is `title`: one reader's reading, good to try intent.rofl on and no evidence of what was meant.
+
+-- #224, thread "Сделать тома путём по умолчанию": the plan said ask, why, whynot and load by volumes on threads over
+-- a shared core; volumes kept on disk came while working; the report said whynot, excise and load still whole.
+meant_entry(224, verb, "ask", planned). meant_entry(224, verb, "why", planned). meant_entry(224, verb, "whynot", planned).
+meant_entry(224, verb, "load", planned).
+meant_entry(224, flag, "--ask", planned). meant_entry(224, flag, "--why", planned). meant_entry(224, flag, "--why-all", planned).
+meant_engine(224, planned).
+meant_effect(224, "ask", thread, planned). meant_effect(224, "why", thread, planned).
+meant_effect(224, "--why", fs_write, during). meant_effect(224, "--why-all", fs_write, during).
+
+-- #225, thread "Построить мир жизненного цикла JS": the owner asked for green tests; the plan named node ids kept
+-- over a rescan, a JS edit by delta, a file gone; that a resumed evaluation runs its rounds came while working, and
+-- the report named scans and the profile of them.
+meant_entry(225, flag, "--kept", planned).
+meant_engine(225, planned).
+
+-- #226, same thread: the owner said to sort the planted faults out; cold paths moved out of the hot recursion for
+-- the stack came while working and was reported.
+meant_engine(226, during).
+
+-- #234, thread "Сделать леммы и стадии в fixpointplan" (its first messages read): the plan said a stage cut by
+-- cut[fixpointplan], the engine cooling the world below, why stopping at a lemma; the owner said to go. That an
+-- edited file of a kept world is computed anew came while working.
+meant_engine(234, planned). meant_entry(234, verb, "why", planned). meant_entry(234, flag, "--why", planned).
+meant_entry(234, flag, "--why-all", planned). meant_entry(234, flag, "--kept", during).
+
+-- #238, thread "Переосмыслить may-be в JS dataflow" (its first messages read): the owner asked for a may-be that
+-- does not blow up; the worker proposed a declared structure `graph ... closure` in the engine before any code.
+meant_engine(238, planned). meant_new(238, declaration, "graph", planned).
+
+meant_engine(219, title).
+meant_engine(228, title).
+meant_engine(230, title).
+meant_engine(233, title). meant_entry(233, verb, "ask", title). meant_entry(233, verb, "why", title).
+meant_engine(236, title).
+meant_new(238, declaration, "nearest", title). meant_new(238, declaration, "view", title).
+meant_engine(240, title). meant_entry(240, declaration, "nearest", title).
+
+-- repairs(Fix, Cause), as the thread of the repair says: #225 put back what leaving Babel (#220) and volumes by
+-- default (#224, a file gone made ask fail) broke; #226 re-aimed the planted faults whose code left with Babel.
+repairs(225, 220). repairs(225, 224). repairs(226, 220).

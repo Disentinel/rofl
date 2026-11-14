@@ -73,6 +73,32 @@ fn first_diff(a: &str, b: &str) -> String {
     format!("held but not fresh {extra:?}; fresh but not held {lack:?}")
 }
 
+/// A base fact a rule makes too stands when it is taken out: derived again by the rule, as the fresh world has it.
+#[test]
+fn a_base_fact_a_rule_still_makes_stands() {
+    let rules = "edb(q). edb(p).\np(X) :- q(X).\nr(X) :- p(X).\n";
+    let facts: Vec<String> = ["q(a).", "p(a).", "p(b)."].iter().map(|f| f.to_string()).collect();
+    let want = world(rules, &facts[..1]).eval.canonical_state();
+    let mut s = world(rules, &facts);
+    let ids = ids_of(&mut s, &facts[1..]);
+    assert!(matches!(s.retract_facts_delta(&ids).unwrap(), Retraction::Delta(_)), "taken by delta");
+    let got = s.eval.canonical_state();
+    assert!(got == want, "a base fact a rule makes: {}", first_diff(&want, &got));
+}
+
+/// A fact that keeps a longer proof when its shortest goes stands higher, and the cell that counts it lists the height.
+#[test]
+fn a_fact_kept_by_a_longer_proof_stands_higher_in_its_cell() {
+    let rules = "edb(e). edb(n).\np(X, Y) :- e(X, Y).\np(X, Z) :- p(X, Y), e(Y, Z).\nc(X, N) :- n(X), N is count(Y : p(X, Y)).\n";
+    let facts: Vec<String> = ["n(c).", "e(c, e).", "e(e, d).", "e(d, b).", "e(c, d)."].iter().map(|f| f.to_string()).collect();
+    let want = world(rules, &facts[..4]).eval.canonical_state();
+    let mut s = world(rules, &facts);
+    let ids = ids_of(&mut s, &facts[4..]);
+    assert!(matches!(s.retract_facts_delta(&ids).unwrap(), Retraction::Delta(_)), "taken by delta");
+    let got = s.eval.canonical_state();
+    assert!(got == want, "a fact kept by a longer proof: {}", first_diff(&want, &got));
+}
+
 #[test]
 fn a_set_taken_out_in_one_pass_is_the_fresh_world() {
     let mut refused: BTreeMap<String, usize> = BTreeMap::new();

@@ -282,9 +282,14 @@ pub fn keep_capped(s: &mut rofl::session::Session, kept: &str, note: &str) -> Re
     Ok(n)
 }
 
-/// A volume moved beside its slot under its sum (`keep_capped_over`): `<key>.<sum>.vol`.
+/// A volume moved beside its slot under its sum (`keep_capped_over`): `<key>.<sum>.vol`, the key a world's or a
+/// volume's of a world by volumes (`<key>.q<sum>.w0`).
 fn set_aside(p: &str) -> bool {
-    Path::new(p).file_name().is_some_and(|n| n.to_string_lossy().split('.').count() == 3)
+    Path::new(p).file_name().is_some_and(|n| {
+        let n = n.to_string_lossy();
+        let parts: Vec<&str> = n.split('.').collect();
+        parts.len() >= 3 && parts[parts.len() - 2].len() == 16 && parts[parts.len() - 2].bytes().all(|b| b.is_ascii_hexdigit())
+    })
 }
 
 /// The volumes beside `p` kept as overlays over it.
