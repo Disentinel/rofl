@@ -1045,7 +1045,8 @@ fn a_renamed_local_keeps_its_ids() {
 /// A WORLD BY LEVELS (`engine/levels.rs`) answers as the world whole: files of functions that call one another by
 /// name, absences asked above the files (`dead`, `leaf`), rules above an absence, recursive ones too (`up`, `rlive`),
 /// an absence of what read an absence (`noleaf`), two premises of one layer (`cnl2`), a premise the core states
-/// (`sp`). Every rule is fired in the units, and narrow groups make the tree deep.
+/// (`sp`), two facts of two files that meet only through a fact of a layer below (`via`), one that any file or a library
+/// states (`via2`). Every rule is fired in the units, and narrow groups make the tree deep.
 #[test]
 fn a_world_by_levels_answers_as_the_world_whole() {
     let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
@@ -1059,7 +1060,10 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         noleaf(F) :- func(F), not hasleaf(F).\ncnl(F, G) :- calls(F, G), noleaf(G).\ncnl2(F, H) :- cnl(F, G), cnl(G, H).\n\
         special(nm_0_0).\nsp(F) :- special(Nm), defines(F, Nm), not dead(F).\n\
         hascnl2(F) :- cnl2(F, H).\nquiet(F) :- func(F), not hascnl2(F).\nqc(F, G) :- quiet(G), calls(F, G).\nqq(F, G) :- quiet(F), qc(F, G).\n\
-        nearest nfn(F, X) of edge(F, X) where func(F).\nheld_by(F, X) :- stmt(X), nfn(F, X), not dead(F).\n";
+        nearest nfn(F, X) of edge(F, X) where func(F).\nheld_by(F, X) :- stmt(X), nfn(F, X), not dead(F).\n\
+        lcalled(G, F) :- lcalls(F, G).\nvia(F, H) :- lcalls(F, G), calls(G, G2), lcalled(G2, H).\n\
+        uses(F, Nm) :- in_fn(F, C), refers(C, Nm), live(F).\ndefd(Nm, H) :- defines(H, Nm), live(H).\n\
+        via2(F, H) :- uses(F, Nm), alias(S, Nm, Nm2), defd(Nm2, H).\n";
     let (files, fns, mut seed) = (64usize, 3usize, 7u64);
     let mut rnd = |n: usize| {
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -1085,6 +1089,9 @@ fn a_world_by_levels_answers_as_the_world_whole() {
                 if stack.len() < 4 {
                     stack.push(s.clone());
                 }
+                if rnd(6) == 0 {
+                    text += &format!("alias({s}, nm_{}_{}, nm_{}_{}).\n", rnd(files), rnd(fns), rnd(files), rnd(fns));
+                }
                 if rnd(4) == 0 {
                     // (the first file is a library: most of the others call into it)
                     let to = if rnd(100) < 60 { f } else if rnd(2) == 0 { 0 } else { (f + 1 + rnd(3)).min(files - 1) };
@@ -1107,7 +1114,7 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         out
     };
     d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
-    for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"] {
+    for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "via[d](A, B)", "via2[d](A, B)"] {
         let args = ["ask", q, "boot.rofl", "w.rofl"];
         let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
         let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string())], planted.as_deref(), &args);

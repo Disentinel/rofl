@@ -831,6 +831,8 @@ pub struct Eval {
     by_seed: bool,
     /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
     homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
+    /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
+    bridging: Option<Rc<FxSet<Sym>>>,
     /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
     pub levels: Option<Rc<levels::Levels>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
@@ -2346,6 +2348,7 @@ impl Eval {
             meeting: None,
             by_seed: false,
             homing: None,
+            bridging: None,
             levels: None,
             lemma_heads: None,
             lower_texts: None,
@@ -5447,6 +5450,7 @@ impl Eval {
             }
             self.rounds.push((sum, mx));
             self.homing = None;
+            self.bridging = None;
             front = std::mem::take(&mut self.cur_front);
         }
         self.live_front = outer;
@@ -5462,6 +5466,9 @@ impl Eval {
     fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, at0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
         {
             {
+                if self.bridging.as_ref().is_some_and(|b| !b.contains(&r.id)) {
+                    return Ok(());
+                }
                 if self.naive {
                     let f = self.fire_rule(r, None)?;
                     merge_front(&mut self.cur_front, f);
@@ -5506,6 +5513,10 @@ impl Eval {
                             continue;
                         };
                         if self.homing.as_ref().is_some_and(|a| levels::first_at(r, a) != Some(i)) {
+                            continue;
+                        }
+                        // (a fact of a layer below through which others meet is no news to a premise after a builtin that walls the order)
+                        if self.bridging.is_some() && (0..i).any(|k| self.wall(&r.plan, k)) {
                             continue;
                         }
                         let Some(keys) = self.news_since(r, l.rel, keys) else { continue };
@@ -5798,7 +5809,7 @@ impl Eval {
             self.diag_once(msg);
             return Ok(());
         }
-        if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems)) {
+        if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems, self.bridging.is_some())) {
             return Ok(());
         }
         if head.temporal == Temporal::Next {

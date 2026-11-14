@@ -1,7 +1,8 @@
 //! A CORPUS BY LEVELS. A file is settled alone, in a fork of the core, by every rule of the stage; its store is then a
 //! stretch of the scroll (`store::Stretch`): numbered once for the world, not written again. A group of units is
 //! settled over the stretches below it, read where they lie, and derives only what two of its children make together;
-//! so up to one unit, the world. Units of a level do not read one another, and a thread takes each.
+//! so up to one unit, the world. Units of a level do not read one another, and a thread takes each. Where each
+//! firing is kept, so that it is found once, is `Meeting`.
 //!
 //! What a unit must be found by from outside is its SURFACE, written by no rule: a fact with, at an argument a rule
 //! joins at (`Joins::places`), a value that is not a node of the unit's own files. Each unit keeps the directory of
@@ -19,8 +20,7 @@
 //! premise of a stretch replaced found where the same fact lies now (`Store::carry`), and it is seeded only by what
 //! came: under it at its own layer, below where it is at home or answers a key the group asked, and by the facts
 //! that name a node whose rows in a tree moved. A firing through an absence of a relation a fact came to, or through
-//! a row of a tree, is fired again from its premises. A firing found from a fact of below is kept where its first
-//! premise is at home (`Meeting::crosses`). Not mended, settled whole: a group that read an aggregate, or one that
+//! a row of a tree, is fired again from its premises. Not mended, settled whole: a group that read an aggregate, or one that
 //! asked a key a fact went from under a relation an absence reads.
 
 use super::*;
@@ -134,45 +134,101 @@ fn answers(h: &Heap, rel: Sym, args: &[Term], masks: Option<&FxSet<u64>>, mut f:
     }
 }
 
-/// Which child each premise of a firing lies under: a group keeps a firing only two children make, or one of its own.
+/// WHERE A FIRING IS KEPT. One that stands on a fact the unit concluded: there. One of facts of the layers below alone:
+/// where the first of them is at home (`first_at`), the others read wherever they lie. One of facts of the unit's layer
+/// under it that share their values: at the lowest unit over them, the layers below read wherever they lie. And one of
+/// facts of the unit's layer that meet only through a fact of a layer below: at the lowest unit under which every
+/// premise is at home, of the layers below too (a fact of a layer below is at home in that layer's unit at the same
+/// place). The core is at home nowhere and read by all, and so are the libraries' facts to a unit of the rest.
 pub struct Meeting {
     mark: FactId,
-    /// the stretches below in the order of `lo`, each with its end and its child
-    under: Vec<(FactId, FactId, u32)>,
-    /// a group mended is seeded by facts of anywhere below: the stretches at home at it, the ids under which the
-    /// core is at home at it, and what tells a rule's premise at home (`first_at`)
-    home: Option<(Vec<(FactId, FactId)>, FactId, Rc<(FxSet<Sym>, FxSet<Sym>)>)>,
-    /// what the libraries concluded at this layer, read here as the layers below are: a firing that stands on it
-    /// and on nothing of this unit is the libraries' own
+    /// the stretches under the unit in the order of `lo`: each with its end, its child, the files of its unit and
+    /// whether it is of the unit's layer
+    under: Vec<(FactId, FactId, u32, (u32, u32), bool)>,
+    /// the stretches of the layers below at home at the unit
+    here: Vec<(FactId, FactId)>,
+    /// the facts below this are the core's: at home in the world's unit for a firing of the layers below alone
+    core: FactId,
+    top: bool,
+    by: Rc<(FxSet<Sym>, FxSet<Sym>)>,
+    /// what the libraries concluded at this layer, to a unit of the rest: a firing that stands on it and on nothing
+    /// of this unit's layer is the libraries' own; and their stretches of every layer
     libs: Vec<(FactId, FactId)>,
-    /// the unit over the libraries and the rest: what the two make together the rest made
+    libs_all: Vec<(FactId, FactId)>,
+    /// the unit over the libraries and the rest: what facts of the rest make only through a library's is kept here
     apart: bool,
+    /// where a builtin walls a rule's order: the premises after it are at home nowhere
+    walls: Rc<FxMap<Sym, usize>>,
 }
 
 impl Meeting {
-    pub fn crosses(&self, r: &ERule, prems: &[PremRef]) -> bool {
-        let (mut one, mut lib) = (None, false);
-        for p in prems {
+    /// (`bridging`: in the round of the facts through which others meet, only what meets so is kept; the rest is
+    /// found from its own news)
+    pub fn crosses(&self, r: &ERule, prems: &[PremRef], bridging: bool) -> bool {
+        let within = |at: &[(FactId, FactId)], f: FactId| at.partition_point(|l| l.0 <= f).checked_sub(1).is_some_and(|i| f < at[i].1);
+        // the premises at home under the unit: of its layer (where in the rule, the child, the files of the unit that
+        // concluded it) and of the layers below (the child, none for one at home at the unit itself)
+        let (mut mine, mut low): (Vec<(usize, u32, (u32, u32))>, Vec<(usize, Option<u32>)>) = Default::default();
+        let (mut lib, mut out) = (false, false);
+        for (i, p) in prems.iter().enumerate().take(self.walls.get(&r.id).copied().unwrap_or(usize::MAX)) {
             let Prem::Fact(f) = p.kind() else { continue };
             if f >= self.mark {
                 return true;
             }
-            lib |= self.libs.partition_point(|l| l.0 <= f).checked_sub(1).is_some_and(|i| f < self.libs[i].1);
-            // (a fact of the core or of a layer below is under no child)
-            let Some(&(_, hi, c)) = self.under.partition_point(|u| u.0 <= f).checked_sub(1).map(|i| &self.under[i]) else { continue };
-            if f >= hi {
+            if f < self.core {
                 continue;
             }
-            match one {
-                None => one = Some(c),
-                Some(d) if d != c && !self.apart => return true,
-                _ => {}
+            if within(&self.here, f) {
+                low.push((i, None));
+                continue;
+            }
+            match self.under.partition_point(|u| u.0 <= f).checked_sub(1).map(|i| &self.under[i]).filter(|u| f < u.1) {
+                Some(u) if self.apart && u.2 == 0 => lib |= u.4,
+                Some(u) if u.4 => mine.push((i, u.2, u.3)),
+                Some(u) => low.push((i, Some(u.2))),
+                None if within(&self.libs, f) => lib = true,
+                None => out |= !within(&self.libs_all, f),
             }
         }
-        // premises of the layers below alone: fired here, where the first of them is at home
-        one.is_none() && !lib && self.home.as_ref().is_none_or(|(at, core, by)| {
-            first_at(r, by).and_then(|i| prems.get(i)).is_some_and(|p| matches!(p.kind(), Prem::Fact(f) if f < *core || at.iter().any(|(lo, hi)| *lo <= f && f < *hi)))
-        })
+        // of the layers below alone: where the first of them is at home
+        if mine.is_empty() {
+            return !bridging && !lib && first_at(r, &self.by).and_then(|i| prems.get(i)).is_some_and(|p| matches!(p.kind(), Prem::Fact(f) if within(&self.here, f) || self.top && f < self.core));
+        }
+        // one of them over the others concluded last: its unit found the firing
+        if mine.len() < 2 || mine.iter().any(|t| mine.iter().all(|p| t.2.0 <= p.2.0 && p.2.1 <= t.2.1)) {
+            return false;
+        }
+        // how many parts the premises `of` fall into, joined by the variables they share and by the rows of trees
+        let parts = |of: &[usize]| {
+            let lit = |i: usize| if let Some(BodyElem::Pos(l)) = r.plan.get(i) { Some(l) } else { None };
+            let nodes: Vec<usize> = (0..prems.len().min(r.plan.len())).filter(|&i| lit(i).is_some() && (of.contains(&i) || !matches!(prems[i].kind(), Prem::Fact(_)))).collect();
+            let mut part: Vec<usize> = (0..nodes.len()).collect();
+            for x in 0..nodes.len() {
+                for y in 0..x {
+                    let (a, b) = (lit(nodes[x]).unwrap(), lit(nodes[y]).unwrap());
+                    if a.args.iter().any(|t| t.is_var() && b.args.contains(t)) {
+                        let (m, n) = (part[x], part[y]);
+                        part.iter_mut().filter(|z| **z == m).for_each(|z| *z = n);
+                    }
+                }
+            }
+            nodes.iter().zip(&part).filter(|(i, _)| of.contains(i)).map(|(_, c)| *c).collect::<FxSet<usize>>().len()
+        };
+        let two = mine.iter().any(|p| p.1 != mine[0].1);
+        let ks: Vec<usize> = mine.iter().map(|p| p.0).collect();
+        if parts(&ks) < 2 {
+            return two && !self.apart && !bridging;
+        }
+        // they meet only through a fact of a layer below: kept under what holds every premise
+        if out {
+            return false;
+        }
+        let all: Vec<usize> = ks.iter().copied().chain(low.iter().map(|l| l.0)).collect();
+        if parts(&all) > 1 {
+            // only through what is read by all: the unit over the libraries and the rest keeps it
+            return brk!("levels_library_bridge_unmet" => false; self.apart);
+        }
+        low.iter().any(|l| l.1.is_none_or(|c| c != mine[0].1)) || two && !self.apart
     }
 }
 
@@ -238,9 +294,11 @@ impl Ctx {
     }
 }
 
-/// What the libraries concluded at a layer, for the units of the rest: where it lies, and what of it came by an edit.
+/// What the libraries concluded, for the units of the rest: where it lies, at this layer (`at`) and in every layer up
+/// to it (`all`), and what of it came by an edit at this layer.
 struct LibK {
     at: Vec<(FactId, FactId)>,
+    all: Vec<(FactId, FactId)>,
     came: Vec<FactId>,
 }
 
@@ -285,6 +343,14 @@ fn below(u: &Rc<Unit>, child: u32, out: &mut Vec<(Rc<Stretch>, u32)>) {
     for k in &u.kids {
         below(k, child, out);
     }
+}
+
+/// The stretches of a unit and of those under it, each with the unit's files.
+fn spans(u: &Unit, child: u32, out: &mut Vec<(FactId, FactId, u32, (u32, u32))>) {
+    if u.stretch.lo < u.stretch.hi {
+        out.push((u.stretch.lo, u.stretch.hi, child, u.files));
+    }
+    u.kids.iter().for_each(|k| spans(k, child, out));
 }
 
 /// The facts a stretch holds itself with `v` at argument `p`.
@@ -677,22 +743,28 @@ impl Eval {
         let core: FxSet<Sym> = st.free.iter().filter(|id| !walked.contains(*id)).copied().collect();
         st.free.retain(|id| !core.contains(id));
         st.rules = Rc::new(st.rules.iter().filter(|id| !core.contains(*id)).copied().collect());
-        let joined = |r: &ERule| {
-            let ls: Vec<&Lit> = r.clause.body.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l) } else { None }).collect();
-            let mut part: Vec<usize> = (0..ls.len()).collect();
-            for i in 0..ls.len() {
-                for j in 0..i {
-                    if ls[i].args.iter().any(|t| t.is_var() && ls[j].args.contains(t)) {
-                        let (a, b) = (part[i], part[j]);
-                        part.iter_mut().filter(|x| **x == a).for_each(|x| *x = b);
-                    }
-                }
-            }
-            !ls.is_empty() && part.iter().all(|x| *x == part[0])
-        };
         // a builtin is a wall to the order of a firing: a premise written after one is not fired from its news, so, as
         // an absence, it is read where a layer below closed it
         let wall_at = |r: &ERule| (0..r.plan.len()).find(|&k| self.wall(&r.plan, k)).unwrap_or(r.plan.len());
+        // (what the core states is at home in no unit, and a premise after a wall is read as an absence is: the
+        // other premises must be joined without them, or no unit finds where they meet)
+        let stated: FxSet<Sym> = self.store.live_census().into_iter().map(|c| c.0).chain(rules.iter().filter(|r| core.contains(&r.id)).map(|r| r.clause.head.rel)).collect();
+        let joined = |r: &ERule| {
+            let one = |ls: Vec<&Lit>| {
+                let mut part: Vec<usize> = (0..ls.len()).collect();
+                for i in 0..ls.len() {
+                    for j in 0..i {
+                        if ls[i].args.iter().any(|t| t.is_var() && ls[j].args.contains(t)) {
+                            let (a, b) = (part[i], part[j]);
+                            part.iter_mut().filter(|x| **x == a).for_each(|x| *x = b);
+                        }
+                    }
+                }
+                part.iter().all(|x| *x == part[0])
+            };
+            let pos = |n: usize| r.plan.iter().take(n).filter_map(|b| if let BodyElem::Pos(l) = b { Some(l) } else { None });
+            pos(r.plan.len()).next().is_some() && one(pos(r.plan.len()).collect()) && one(pos(wall_at(r)).filter(|l| !stated.contains(&l.rel)).collect())
+        };
         let after = |r: &'_ ERule| -> Vec<Lit> { r.plan.iter().skip(wall_at(r)).filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.clone()) } else { None }).collect() };
         let walled = |r: &ERule| !after(r).is_empty();
         let shape = |r: &ERule, neg: bool| {
@@ -932,9 +1004,62 @@ impl Eval {
         let rules_of: Vec<Rc<FxSet<Sym>>> = std::iter::once(Rc::new(cx.joins.cross.clone())).chain(cx.joins.up.iter().cloned()).collect();
         let home = cx.joins.home.clone();
         let rel_at = |r: &ERule, i: usize| if let BodyElem::Pos(l) = &r.plan[i] { l.rel } else { unreachable!() };
+        let firsts: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).filter_map(|r| first_at(r, &home).map(|i| rel_at(r, i))).collect()).collect();
+        // the rules of each layer that two facts of the layer may fire without sharing a value: through a fact of a
+        // layer below, which is then news to them; and, where the world has libraries, through any fact, which may be
+        // a library's
+        let libbed = std::sync::atomic::AtomicBool::new(edit.as_ref().is_some_and(|e| e.0.libs > 0));
+        let bridgy = |through: bool| -> Vec<Rc<FxSet<Sym>>> {
+            rules_of.iter().map(|rs| {
+                let heads: FxSet<Sym> = self.rules.iter().filter(|r| rs.contains(&r.id)).map(|r| r.clause.head.rel).collect();
+                Rc::new(self.rules.iter().filter(|r| rs.contains(&r.id)).filter(|r| {
+                    let ls: Vec<&Lit> = r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l) } else { None }).filter(|l| heads.contains(&l.rel) || home.1.contains(&l.rel)).collect();
+                    let shares = |a: &Lit, b: &Lit| a.args.iter().any(|t| t.is_var() && b.args.contains(t));
+                    if through {
+                        return ls.iter().enumerate().any(|(i, a)| heads.contains(&a.rel) && ls[..i].iter().any(|b| heads.contains(&b.rel) && !shares(a, b)));
+                    }
+                    let mut part: Vec<usize> = (0..ls.len()).collect();
+                    for i in 0..ls.len() {
+                        for j in 0..i {
+                            if shares(ls[i], ls[j]) {
+                                let (a, b) = (part[i], part[j]);
+                                part.iter_mut().filter(|x| **x == a).for_each(|x| *x = b);
+                            }
+                        }
+                    }
+                    ls.iter().zip(&part).filter(|(l, _)| heads.contains(&l.rel)).map(|(_, p)| *p).collect::<FxSet<usize>>().len() > 1
+                }).map(|r| r.id).collect())
+            }).collect()
+        };
+        // (and the places such a rule joins two premises at)
+        let mated = |rs: &Vec<Rc<FxSet<Sym>>>| -> Vec<FxSet<(Place, Place)>> {
+            rs.iter().map(|rs| {
+                let mut out = FxSet::default();
+                for r in self.rules.iter().filter(|r| rs.contains(&r.id)) {
+                    let ls: Vec<&Lit> = r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l) } else { None }).collect();
+                    for (i, a) in ls.iter().enumerate() {
+                        for (_, b) in ls.iter().enumerate().filter(|(j, _)| *j != i) {
+                            for (p, t) in a.args.iter().enumerate().filter(|(_, t)| t.is_var()) {
+                                for (q, _) in b.args.iter().enumerate().filter(|(_, u)| *u == t) {
+                                    out.insert(((a.rel, a.args.len() as u8, p as u8), (b.rel, b.args.len() as u8, q as u8)));
+                                }
+                            }
+                        }
+                    }
+                }
+                out
+            }).collect()
+        };
+        let bridgy = (bridgy(false), bridgy(true));
+        let bmates = (mated(&bridgy.0), mated(&bridgy.1));
+        let bplaces: (Vec<FxSet<Place>>, Vec<FxSet<Place>>) = (bmates.0.iter().map(|m| m.iter().map(|x| x.0).collect()).collect(), bmates.1.iter().map(|m| m.iter().map(|x| x.0).collect()).collect());
+        let bplaces = |k: usize| if libbed.load(Relaxed) { &bplaces.1[k] } else { &bplaces.0[k] };
+        let bmates = |k: usize| if libbed.load(Relaxed) { &bmates.1[k] } else { &bmates.0[k] };
+        let bridgy = |k: usize| if libbed.load(Relaxed) { &bridgy.1[k] } else { &bridgy.0[k] };
+        // where a builtin walls a rule's order: the premises after it are read as an absence is, at home nowhere
+        let walls: Rc<FxMap<Sym, usize>> = Rc::new(self.rules.iter().filter_map(|r| Some((r.id, (0..r.plan.len()).find(|&i| self.wall(&r.plan, i))?))).collect());
         // the relations the rules of the first layer read
         let read_rels: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).flat_map(|r| r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.rel) } else { None })).collect()).collect();
-        let firsts: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).filter_map(|r| first_at(r, &home).map(|i| rel_at(r, i))).collect()).collect();
         let mut trees: Option<Rc<TreeOf>> = None;
         struct Stage1<'a>(&'a Stage);
         // SAFETY: the stage is read
@@ -1097,11 +1222,24 @@ impl Eval {
         // a unit of layer `k` over `kids`: it reads the layers below (`lower`) of the whole world by key, takes at
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
         // together where two of them meet
-        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, files: (u32, u32), old: Option<Rc<Unit>>, libk: &Option<LibK>, apart: bool| -> Result<Unit, Halt> {
+        // (`lows`: under each child, the units of the layers below at its place)
+        let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, lows: Vec<Vec<Rc<Unit>>>, files: (u32, u32), old: Option<Rc<Unit>>, libk: &Option<LibK>, apart: bool| -> Result<Unit, Halt> {
             let mut near: Vec<(Rc<Stretch>, u32)> = Vec::new();
+            let mut low_near: Vec<(Rc<Stretch>, u32)> = Vec::new();
+            let (mut under, mut sp) = (Vec::new(), Vec::new());
             for (c, k) in kids.iter().enumerate() {
                 below(k, c as u32, &mut near);
+                spans(k, c as u32, &mut sp);
+                under.extend(sp.drain(..).map(|(lo, hi, c, fs)| (lo, hi, c, fs, true)));
+                for l in lows.get(c).into_iter().flatten() {
+                    below(l, c as u32, &mut low_near);
+                    spans(l, c as u32, &mut sp);
+                    under.extend(sp.drain(..).map(|(lo, hi, c, fs)| (lo, hi, c, fs, false)));
+                }
             }
+            under.sort_unstable();
+            low_near.sort_unstable_by_key(|(s, _)| s.lo);
+            let low_los: Vec<FactId> = low_near.iter().map(|(s, _)| s.lo).collect();
             // A GROUP MENDED: what it made stands where what it read stands, and only what moved is met again: a
             // stretch below made anew, a fact that names a node of a file edited, a firing that read an absence of a
             // relation a fact came to or a row of a tree. Not where a fact went from under an absence it asked: what
@@ -1127,41 +1265,76 @@ impl Eval {
                 }
             }
             let los: Vec<FactId> = near.iter().map(|(s, _)| s.lo).collect();
-            let at = |lo: FactId| &near[los.binary_search(&lo).expect("a holder below")].0;
+            let at = |lo: FactId| match los.binary_search(&lo) {
+                Ok(i) => &near[i].0,
+                Err(_) => &low_near[low_los.binary_search(&lo).expect("a holder below")].0,
+            };
             // the directories of the children: a key of a file below has come home
             let (mut dir, mut inner): (FxMap<Key, Vec<FactId>>, FxMap<Key, Vec<FactId>>) = Default::default();
-            for (c, k) in kids.iter().enumerate() {
-                for (key, hs) in k.dir.iter() {
-                    let &(rel, p, v) = key;
-                    let f = cx.file(v).filter(|f| files.0 <= *f && *f < files.1);
-                    if f.is_some() { &mut inner } else { &mut dir }.entry(*key).or_default().extend(hs);
-                    // a seed: a fact under one child that a rule joins with one under another
-                    for &(n, _) in cx.joins.places[&rel].iter().filter(|(_, q)| *q == p) {
-                        // (mended, what stood is met from what came)
-                        let met = old.is_none() && !apart && cx.joins.mates.get(&(rel, n, p)).into_iter().flatten().any(|&m| match &old {
-                            Some(_) => false,
-                            None => kids.iter().enumerate().filter(|(d, _)| *d != c).any(|(_, d)| match f {
+            // (the units under a child that hold facts: its own of this layer, and those of the layers below at its place)
+            let of = |c: usize| std::iter::once(&kids[c]).chain(brk!("levels_lower_unmet" => None; lows.get(c)).into_iter().flatten().filter(|_| !bplaces(k).is_empty()));
+            // (the facts through which facts of the layer may meet that share no value: news to the rules of that shape)
+            let mut bridges: Vec<FactId> = Vec::new();
+            for c in 0..kids.len() {
+                for (own, u) in of(c).enumerate().map(|(j, u)| (j == 0, u)) {
+                    for (key, hs) in u.dir.iter() {
+                        let &(rel, p, v) = key;
+                        let f = cx.file(v).filter(|f| files.0 <= *f && *f < files.1);
+                        if own {
+                            if f.is_some() { &mut inner } else { &mut dir }.entry(*key).or_default().extend(hs);
+                        } else if !cx.joins.places[&rel].iter().any(|(n, q)| *q == p && bplaces(k).contains(&(rel, *n, p))) {
+                            continue;
+                        }
+                        // (mended, what stood is met from what came; over the libraries and the rest, a fact of
+                        // the rest is met with the libraries': through one of theirs it may meet another of the rest)
+                        if old.is_some() || apart && c == 0 {
+                            continue;
+                        }
+                        // a seed: a fact under one child that a rule joins with one under another
+                        for &(n, _) in cx.joins.places[&rel].iter().filter(|(_, q)| *q == p) {
+                            let holds = |d: &Rc<Unit>, m: Place| match f {
                                 Some(f) if d.files.0 <= f && f < d.files.1 => d.holds(&cx, m, v, f),
                                 _ => d.dir.contains_key(&(m.0, m.2, v)),
-                            }),
-                        });
-                        if met {
-                            for &h in hs {
-                                seeds.extend(held(at(h), &cx.h, (rel, n, p), v));
+                            };
+                            let ms = || cx.joins.mates.get(&(rel, n, p)).into_iter().flatten();
+                            let others = || (0..kids.len()).filter(|d| *d != c);
+                            // (of the unit's layer on both sides: it fires any rule; else one of the layers below
+                            // is a side, and only a rule whose facts of the layer it joins takes the news)
+                            let met = own && !apart && ms().any(|&m| others().any(|d| holds(&kids[d], m)));
+                            let low = k > 0 && bplaces(k).contains(&(rel, n, p)) && ms().any(|&m| bmates(k).contains(&((rel, n, p), m)) && others().any(|d| of(d).skip((own && !apart) as usize).any(|d| holds(d, m))));
+                            if met || low {
+                                for &h in hs {
+                                    let ids = held(at(h), &cx.h, (rel, n, p), v);
+                                    if low {
+                                        bridges.extend(&ids);
+                                    }
+                                    if met {
+                                        seeds.extend(ids);
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+            // what the layers below concluded at a group's place is news to it at any premise of such a rule
+            if old.is_none() && !kids.is_empty() && !bridgy(k).is_empty() {
+                for st in &at_home {
+                    bridges.extend((st.lo..st.hi).filter(|&id| read_rels[k].contains(&st.rec(id).rel)));
+                }
+            }
+            bridges.sort_unstable();
+            bridges.dedup();
             seeds.sort_unstable();
             seeds.dedup();
             let inner = Rc::new(inner);
             let route = (!kids.is_empty()).then(|| route_over(cx.clone(), kids.clone(), files, los.clone(), inner.clone(), Rc::new(dir.clone()), true));
             let mut e = fork();
             let mark = bump.load(Relaxed);
-            ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
-            let homes = old.as_ref().map(|_| (at_home.iter().map(|s| (s.lo, s.hi)).collect(), if files == all { core } else { 0 }, home.clone()));
-            e.0.meeting = Some(Rc::new(Meeting { mark, under: near.iter().map(|(s, c)| (s.lo, s.hi, *c)).collect(), home: homes, libs: libk.as_ref().map_or(Vec::new(), |l| l.at.clone()), apart }));
+            ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
+            let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();
+            here.sort_unstable();
+            e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), libs: libk.as_ref().map_or(Vec::new(), |l| l.at.clone()), libs_all: libk.as_ref().map_or(Vec::new(), |l| l.all.clone()), apart, walls: walls.clone() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
             e.0.stage_pass = StagePass::Lower(rules_of[k].clone());
             e.0.wall.hold_end = true;
@@ -1209,12 +1382,25 @@ impl Eval {
                     e.0.homing = None;
                 }
             }
+            if !bridges.is_empty() {
+                let mut front = Front::default();
+                for id in bridges {
+                    let r = e.0.store.rec(id);
+                    if !r.dead() {
+                        front.note(r.rel, id);
+                    }
+                }
+                e.0.bridging = Some(bridgy(k).clone());
+                e.0.wall.cutting = Some(Box::default());
+                e.0.propagate(front)?;
+                e.0.bridging = None;
+            }
             let mut front = Front::default();
             for id in seeds {
                 let r = e.0.store.rec(id);
-                // (mended: a fact that came below is news here where it is at home, or answers a key asked here)
+                // (mended: a fact that came below is news here where it is at home here or under, or answers a key asked here)
                 let news = match &old {
-                    Some(o) if !e.0.store.here(id) && !near.iter().chain(at_home.iter().map(|s| (s.clone(), 0)).collect::<Vec<_>>().iter()).any(|(s, _)| s.lo <= id && id < s.hi) => {
+                    Some(o) if !e.0.store.here(id) && !near.iter().chain(&low_near).map(|(s, _)| s).chain(&at_home).any(|s| s.lo <= id && id < s.hi) => {
                         let (mut hit, ms) = (false, cx.masks.lock().unwrap());
                         answers(&cx.h, r.rel, e.0.store.args(id), ms.get(&r.rel), |key| hit |= o.asked.binary_search(&key).is_ok());
                         hit
@@ -1300,6 +1486,7 @@ impl Eval {
                         units = order.iter().enumerate().map(|(new, &old)| Rc::new(Unit { files: (new as u32, new as u32 + 1), ..kept(&units[old], Vec::new()) })).collect();
                         cx.perm.set(perm).expect("the order is given once");
                         nlibs = libs.len();
+                        libbed.store(true, Relaxed);
                     }
                 }
                 let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
@@ -1318,14 +1505,17 @@ impl Eval {
                 let (lower, moved_below, libk) = match part_tops.first().filter(|_| k > 0) {
                     Some(lib) => {
                         let mut under = Vec::new();
-                        below(lib, 0, &mut under);
-                        let mut at: Vec<(FactId, FactId)> = under.iter().map(|(s, _)| (s.lo, s.hi)).collect();
+                        spans(lib, 0, &mut under);
+                        let mut at: Vec<(FactId, FactId)> = under.iter().map(|u| (u.0, u.1)).collect();
                         at.sort_unstable();
+                        layers.iter().for_each(|l| spans(&l[0].last().expect("a part's top")[0], 0, &mut under));
+                        let mut all: Vec<(FactId, FactId)> = under.iter().map(|u| (u.0, u.1)).collect();
+                        all.sort_unstable();
                         let came = new_ids.lock().unwrap()[k].iter().copied().collect();
                         let mut keys = moved_below.clone();
                         keys.extend(moved.lock().unwrap()[k].iter());
-                        let layers: Vec<Rc<Unit>> = tops.iter().chain([lib]).cloned().collect();
-                        (Some(lower_of(&cx, &layers)), keys, Some(LibK { at, came }))
+                        let lows: Vec<Rc<Unit>> = tops.iter().chain([lib]).cloned().collect();
+                        (Some(lower_of(&cx, &lows)), keys, Some(LibK { at, all, came }))
                     }
                     None => (lower.clone(), moved_below.clone(), None),
                 };
@@ -1335,7 +1525,7 @@ impl Eval {
                         let one = ((from + i) as u32, (from + i) as u32 + 1);
                         match was(k, one).filter(|o| stands(o, &moved_below)) {
                             Some(o) => Ok(kept(&o, Vec::new())),
-                            None => unit(k, &lower, &trees, at_home(p, 0, i), Vec::new(), one, None, &libk, false),
+                            None => unit(k, &lower, &trees, at_home(p, 0, i), Vec::new(), Vec::new(), one, None, &libk, false),
                         }
                     })?,
                 };
@@ -1353,7 +1543,8 @@ impl Eval {
                         if let Some(o) = was(k, files).filter(|o| stands(o, &moved_below)) {
                             return Ok(kept(&o, kids));
                         }
-                        unit(k, &lower, &trees, at_home(p, d, x), kids, files, was(k, files), &libk, false)
+                        let lows = (0..kids.len()).map(|c| layers.iter().map(|l| l[p][d - 1][x * fan.max(2) + c].clone()).collect()).collect();
+                        unit(k, &lower, &trees, at_home(p, d, x), kids, lows, files, was(k, files), &libk, false)
                     })?;
                     depths.push(units.clone());
                 }
@@ -1361,12 +1552,17 @@ impl Eval {
                 by_part.push(depths);
             }
             // the libraries and the rest under one unit: in the files' own layer it meets them as any group does;
-            // above, the rest has read the libraries, and it fires only what the core gives it and what follows
+            // above, the rest has read the libraries, and it fires what stands on a fact at home at it, and what
+            // facts of the rest make only through a library's (`Meeting::apart`)
             let top = match part_tops.len() {
                 1 => part_tops.pop().expect("one part"),
                 _ => Rc::new(match was(k, all).filter(|o| stands(o, &moved_below)) {
                     Some(o) => kept(&o, part_tops),
-                    None => unit(k, &lower, &trees, Vec::new(), part_tops, all, was(k, all), &None, k > 0)?,
+                    None => {
+                        let lows = (0..part_tops.len()).map(|p| layers.iter().map(|l| l[p].last().expect("a part's top")[0].clone()).collect()).collect();
+                        let at_home = tops.iter().map(|t| t.stretch.clone()).filter(|s| s.lo < s.hi).collect();
+                        unit(k, &lower, &trees, at_home, part_tops, lows, all, was(k, all), &None, k > 0)?
+                    }
                 }),
             };
             tops.push(top);
