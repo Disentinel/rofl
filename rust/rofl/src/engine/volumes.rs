@@ -152,6 +152,8 @@ impl Eval {
                 }
             }
         }
+        // (the rounds of the rules, once for every fork)
+        self.peel_ahead();
         self.h.freeze();
         self.h.share(None);
         self.store.freeze(&self.h);

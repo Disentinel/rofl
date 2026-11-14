@@ -2940,7 +2940,7 @@ impl Store {
                 all
             }
         };
-        let n = self.facts.near.clone().unwrap();
+        let n = self.facts.near.as_ref().unwrap();
         let from = out.len();
         for s in n.holders(rel, persp, pos, vals) {
             s.matches(h, rel, persp, arity, pos, vals, &mut out);

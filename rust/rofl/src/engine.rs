@@ -912,7 +912,7 @@ pub struct Eval {
     /// The last judgment of `safety_answer`, by the facts it was judged from: a preparation over the same program
     /// (an ask added, a kept world opened again) reads it instead of evaluating safety.rofl again.
     safety_memo: Option<Rc<(Vec<Vec<Term>>, RuleAnswer, Option<String>)>>,
-    /// the books and the rounds `peel_levels` found for the rules as they stand
+    /// the books and the rounds `peel_levels` found for the rules as they stand; a fork made after takes them
     peeled: Option<Rc<(Books, HashMap<Sym, u32>)>>,
     /// The profile of safety.rofl's own evaluation, as `profile_text` writes it, with `program[profile](R, safety)` and
     /// the reflection of its rules (`kernel_premise`, `kernel_head`): appended to the world's profile when a rule
@@ -3742,31 +3742,40 @@ impl Eval {
         self.end_pass(outcome, &strat_rules)
     }
 
+    /// The rounds are the rules' alone unless the data ranks a component: peeled once while the rules stand, for this
+    /// world and its forks (the books name relations in the heap: a fork made after shares the names). Some: the
+    /// rules alone stall, with what was peeled.
+    pub(super) fn peel_ahead(&mut self) -> Option<(Peel, Vec<Sym>, Vec<(Sym, Sym)>)> {
+        if self.peeled.is_some() {
+            return None;
+        }
+        let lats: Vec<Sym> = self.lat.cell_rels().collect();
+        let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
+        self.refresh_books();
+        let peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
+        if peel.stalled {
+            return Some((peel, lats, dom_edges));
+        }
+        self.peeled = Some(Rc::new((self.books.clone(), self.books.rounds(&peel.round))));
+        None
+    }
+
     /// The rounds of the program peeled: the monotone rules a round above the first that are lifted to their level,
     /// and the levels of the rules that wait for their body to close. A stall is the program's rejection.
     fn peel_levels(&mut self, mono: &[Rc<ERule>], strat_rules: &[Rc<ERule>]) -> Result<(HashSet<Sym>, Levels), Halt> {
-        // (the rounds are the rules' alone unless the data ranks a component: peeled once while the rules stand)
-        if let Some(p) = self.peeled.clone() {
-            (self.books, self.round_of) = (p.0.clone(), p.1.clone());
-        } else {
-            let lats: Vec<Sym> = self.lat.cell_rels().collect();
-            let dom_edges: Vec<(Sym, Sym)> = self.lat.subs().flat_map(|(p, x)| x.reads.iter().map(move |b| (p, *b))).collect();
-            self.refresh_books();
-            let mut peel = peel_rounds(&self.rules, &self.v, &self.books, &lats, &dom_edges, &HashSet::new());
-            let by_rules = !peel.stalled;
-            if peel.stalled {
-                // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
-                // stratified by its data (`datastrat.rs`): ranked as one round
-                if let Some(by_data) = self.take_data_components(&peel, &lats, &dom_edges) {
-                    peel = by_data;
+        match self.peel_ahead() {
+            // A COMPONENT WHOSE ONLY STRICT EDGES ARE AGGREGATES' may be
+            // stratified by its data (`datastrat.rs`): ranked as one round
+            Some((peel, lats, dom_edges)) => {
+                let Some(peel) = self.take_data_components(&peel, &lats, &dom_edges) else { return Err(self.stall_error(&peel)) };
+                if peel.stalled {
+                    return Err(self.stall_error(&peel));
                 }
+                self.round_of = self.books.rounds(&peel.round);
             }
-            if peel.stalled {
-                return Err(self.stall_error(&peel));
-            }
-            self.round_of = self.books.rounds(&peel.round);
-            if by_rules {
-                self.peeled = Some(Rc::new((self.books.clone(), self.round_of.clone())));
+            None => {
+                let p = self.peeled.clone().expect("the rounds peeled");
+                (self.books, self.round_of) = (p.0.clone(), p.1.clone());
             }
         }
         let lifted: Vec<Rc<ERule>> = if self.by_component() {
