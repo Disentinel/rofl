@@ -175,8 +175,8 @@ Decided by the owner; each is a finding, read it before arguing with it.
   than one heap*, for the parts that exist and how to run them, and say which
   one the run uses.
 
-What changed for an agent, and the known gaps, are in docs/releases/1.5.md
-(and 1.4.md, 1.3.md, 1.2.md, 1.1.md before it).
+What changed for an agent, and the known gaps, are in docs/releases/1.7.md
+(and 1.6.md, 1.5.md, 1.4.md, 1.3.md, 1.2.md, 1.1.md before it).
 
 ## Where an agent finds a feature
 

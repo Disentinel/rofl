@@ -34,22 +34,22 @@ what runs. They are published at
 
 ## What is new
 
-### On main, not yet in a release
+### 1.7 (15 November 2026)
 
 - **A proof stops where the code is read.** The JS model first turns oxc's
   tree of each file into plainer facts, its lemmas. A notebook's proof now
   stops at a lemma and names its line, `(a lemma, checkout.js:4)`, instead
   of walking on through the scanner's tree under it
   ([WHAT.md](WHAT.md#the-answer-and-its-proof)).
-- **Larger projects answer whole.** When memory runs short, each worker
-  writes what it holds to disk and goes on reading it from there: 1 000
-  files of VS Code, which 1.6 answered only in part on a 15 GB machine, now
-  answer whole in under three minutes, with 6.7 GB on disk.
-- **An edit to a large kept world costs about the edit.** In a project
-  split by file, 1.6 evaluated every file again after an edit; now only the
-  edited files are, and what they change in the others is passed on to
-  them. On 250 files of VS Code, renaming an exported function is handled
-  in 1.6 s.
+- **Larger projects answer whole.** A large project is cut by file and
+  settled a few files at a time, then group by group up to the whole; what
+  is done is written to disk when memory runs short and read from there.
+  1 000 files of VS Code, which 1.6 answered only in part on a 15 GB
+  machine, now answer whole.
+- **An edit to a large kept world costs about the edit.** 1.6 evaluated
+  every file again after an edit; now only the parts that asked about what
+  changed are. On 250 files of VS Code, one fact edited in one file is
+  answered in about 5 s where the first answer took about 20.
 
 ### 1.6 (7 November 2026)
 
