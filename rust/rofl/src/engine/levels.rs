@@ -212,10 +212,12 @@ impl Sieve {
                     _ => continue,
                 },
             };
-            asks(|a| {
-                a.keys.insert(key_of(rule, s.mask, v.into_iter().map(Term::from_bits)));
-                a.keys.insert(key_of(rule, s.mask, std::iter::empty()));
-            });
+            if brk!("levels_sieve_unasked" => false; true) {
+                asks(|a| {
+                    a.keys.insert(key_of(rule, s.mask, v.into_iter().map(Term::from_bits)));
+                    a.keys.insert(key_of(rule, s.mask, std::iter::empty()));
+                });
+            }
             return false;
         }
         true
@@ -234,7 +236,7 @@ pub struct Seeded {
 impl Seeded {
     pub(super) fn lets(&self, rule: Sym, i: usize, f: FactId) -> bool {
         let Some(ms) = self.met.get(&f) else { return true };
-        self.pairs.get(&(rule, i)).is_some_and(|ps| ms.iter().any(|m| ps.contains(m)))
+        self.pairs.get(&(rule, i)).is_some_and(|ps| brk!("levels_seed_every_place" => ms.iter().all(|m| ps.contains(m)); ms.iter().any(|m| ps.contains(m))))
     }
 }
 
@@ -1734,7 +1736,7 @@ impl Eval {
                 let forks = &one;
                 let units = level(ranges.len(), true, &largest, &|x| {
                     let one = ranges[x];
-                    if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| (one.0..one.1).any(|f| e.1.contains(&f)))) {
+                    if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| brk!("levels_leaf_first_file" => one.0..one.0 + 1; one.0..one.1).any(|f| e.1.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
                     }
                     let mut e = fork();

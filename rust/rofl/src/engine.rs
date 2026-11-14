@@ -5452,7 +5452,9 @@ impl Eval {
             };
             let active = self.active.clone();
             self.presolved.clear();
-            self.news_taken.clear();
+            if brk!("levels_news_of_the_round_before" => false; true) {
+                self.news_taken.clear();
+            }
             if self.meeting.is_some() && par::free(self.par.threads) > 1 && at.is_none() && j0 == 0 {
                 self.news_listing = Some(Vec::new());
                 let listed = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
@@ -5574,7 +5576,9 @@ impl Eval {
                                 _ => None,
                             });
                             if let Some(rel) = none {
-                                levels::asked_any(rel);
+                                if brk!("levels_guard_unasked" => false; true) {
+                                    levels::asked_any(rel);
+                                }
                                 continue;
                             }
                         }

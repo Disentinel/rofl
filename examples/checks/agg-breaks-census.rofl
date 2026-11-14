@@ -2206,6 +2206,18 @@ brk("levels_tree_sliced"). brk_kind("levels_tree_sliced", switch).
 brk_expects("levels_tree_sliced", "levels_whole").
 brk("levels_lower_unmet"). brk_kind("levels_lower_unmet", switch).
 brk_expects("levels_lower_unmet", "levels_whole").
+brk("levels_sieve_unasked"). brk_kind("levels_sieve_unasked", switch).
+brk_expects("levels_sieve_unasked", "levels_whole").
+brk("levels_guard_unasked"). brk_kind("levels_guard_unasked", switch).
+brk_expects("levels_guard_unasked", "levels_whole").
+brk("levels_seed_every_place"). brk_kind("levels_seed_every_place", switch).
+brk_expects("levels_seed_every_place", "levels_whole").
+brk("levels_solved_run_lost"). brk_kind("levels_solved_run_lost", switch).
+brk_expects("levels_solved_run_lost", "levels_whole").
+brk("levels_news_of_the_round_before"). brk_kind("levels_news_of_the_round_before", switch).
+brk_expects("levels_news_of_the_round_before", "levels_whole").
+brk("levels_leaf_first_file"). brk_kind("levels_leaf_first_file", switch).
+brk_expects("levels_leaf_first_file", "levels_whole").
 brk("kept_stale_files"). brk_kind("kept_stale_files", switch).
 brk_expects("kept_stale_files", "kept_rule").
 brk_expects("kept_stale_files", "kept_boot").
@@ -2628,8 +2640,14 @@ switch_site("lattice_whynot_no_path", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
+switch_site("levels_guard_unasked", "rust/rofl/src/engine.rs").
 switch_site("levels_home_round_kept", "rust/rofl/src/engine/levels.rs").
+switch_site("levels_leaf_first_file", "rust/rofl/src/engine/levels.rs").
 switch_site("levels_lower_unmet", "rust/rofl/src/engine/levels.rs").
+switch_site("levels_news_of_the_round_before", "rust/rofl/src/engine.rs").
+switch_site("levels_seed_every_place", "rust/rofl/src/engine/levels.rs").
+switch_site("levels_sieve_unasked", "rust/rofl/src/engine/levels.rs").
+switch_site("levels_solved_run_lost", "rust/rofl/src/engine/par.rs").
 switch_site("levels_tree_sliced", "rust/rofl/src/engine/par.rs").
 switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").
 switch_site("max", "rust/rofl/src/cell.rs").

@@ -8901,6 +8901,48 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "levels_sieve_unasked",
+  "what": "the sieve of a layer lets a fact go and the unit does not record the value it was let go by: an edit that makes the value pass leaves the unit as it stood",
+  "expect": {
+   "levels_whole": "a function come, cnl2[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_guard_unasked",
+  "what": "a rule with a premise of a relation the unit sees no fact of takes no news and the unit does not record that it asked: the first fact of the relation, come by an edit, fires nothing there",
+  "expect": {
+   "levels_whole": "a function come, marked[d](A): by levels"
+  }
+ },
+ {
+  "id": "levels_seed_every_place",
+  "what": "a seed of a group is news to a rule only where the rule joins it at every place it met a fact at, not at one: a fact two rules join at one value fires neither",
+  "expect": {
+   "levels_whole": "ac[d](A, B): by levels"
+  }
+ },
+ {
+  "id": "levels_solved_run_lost",
+  "what": "of a firing's news solved a run at a time with its round's others, the last run is lost",
+  "expect": {
+   "levels_whole": ": by levels"
+  }
+ },
+ {
+  "id": "levels_news_of_the_round_before",
+  "what": "the news taken for a round's premises are kept into the next round, which fires on them again and not on its own",
+  "expect": {
+   "levels_whole": ": by levels"
+  }
+ },
+ {
+  "id": "levels_leaf_first_file",
+  "what": "an edit settles again a unit of files only where its first file was edited: a file further in it stays as it stood",
+  "expect": {
+   "levels_whole": "a call gone: volumes: 1 of 64 files edited; 0 of"
+  }
+ },
+ {
   "id": "kept_stale_files",
   "what": "a kept world is answered whatever happened to the files it was computed from",
   "expect": {

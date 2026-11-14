@@ -1046,7 +1046,8 @@ fn a_renamed_local_keeps_its_ids() {
 /// name, absences asked above the files (`dead`, `leaf`), rules above an absence, recursive ones too (`up`, `rlive`),
 /// an absence of what read an absence (`noleaf`), two premises of one layer (`cnl2`), a premise the core states
 /// (`sp`), two facts of two files that meet only through a fact of a layer below (`via`), one that any file or a library
-/// states (`via2`). Every rule is fired in the units, and narrow groups make the tree deep.
+/// states (`via2`), facts two rules join at one value with two relations (`aliased` and `adef` beside `resolves`, asked together by `ac`), a
+/// premise of a relation nothing concludes until an edit (`marked`). Every rule is fired in the units, and narrow groups make the tree deep.
 #[test]
 fn a_world_by_levels_answers_as_the_world_whole() {
     let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
@@ -1063,7 +1064,9 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         nearest nfn(F, X) of edge(F, X) where func(F).\nheld_by(F, X) :- stmt(X), nfn(F, X), not dead(F).\n\
         lcalled(G, F) :- lcalls(F, G).\nvia(F, H) :- lcalls(F, G), calls(G, G2), lcalled(G2, H).\n\
         uses(F, Nm) :- in_fn(F, C), refers(C, Nm), live(F).\ndefd(Nm, H) :- defines(H, Nm), live(H).\n\
-        via2(F, H) :- uses(F, Nm), alias(S, Nm, Nm2), defd(Nm2, H).\n";
+        via2(F, H) :- uses(F, Nm), alias(S, Nm, Nm2), defd(Nm2, H).\n\
+        aliased(C, S) :- refers(C, Nm), alias(S, Nm, Nm2).\nadef(F, S) :- defines(F, Nm), alias(S, Nm, Nm2).\n\
+        ac(C, F) :- resolves(C, F), aliased(C, S), adef(F, S2).\nmk(Nm) :- mark(X, Nm).\nmarked(G) :- defd(Nm, G), mk(Nm).\n";
     let (files, fns, mut seed) = (64usize, 3usize, 7u64);
     let mut rnd = |n: usize| {
         seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
@@ -1114,14 +1117,14 @@ fn a_world_by_levels_answers_as_the_world_whole() {
         out
     };
     d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
-    for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "via[d](A, B)", "via2[d](A, B)"] {
+    for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "via[d](A, B)", "via2[d](A, B)", "ac[d](A, B)"] {
         let args = ["ask", q, "boot.rofl", "w.rofl"];
         let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
         let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())], planted.as_deref(), &args);
         assert!(whole.code == 0 && !whole.out.is_empty(), "{q}: the world whole: {} {:?}", whole.code, whole.err);
         let all_below = got.err.lines().find(|l| l.contains("levels: of ")).is_some_and(|l| {
             let n: Vec<&str> = l.split("levels: of ").nth(1).unwrap().split(' ').collect();
-            n[0] == n[2] && !l.contains(" 0 in 0 layers") || q.starts_with("reach")
+            n[0] == n[2] && !l.contains(" 0 in 0 layers") || q.starts_with("reach") || q.starts_with("ac[")
         });
         assert!(got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
         assert!(all_below && !got.err.contains("evaluated whole") && !got.err.contains("panicked"), "{q}: not every rule was fired in the units: {:?}", got.err);
@@ -1143,16 +1146,21 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     let less = text.replacen(&format!("{gone}\n"), "", 1);
     let n = |k: usize| format!("n{:016x}_{k}", 10);
     let more = format!("{less}func({f}).\ndefines({f}, nm_new).\nparent({s}, {f}).\nedge({f}, {s}).\nstmt({s}).\nrefers({s}, nm_3_0).\nrefers({s}, nm_new).\n", f = n(1000), s = n(1001));
+    // (and the first facts of a relation no unit saw a fact of, which name functions of files the edit leaves alone)
+    let more = format!("{more}{}", [20, 41].iter().flat_map(|f| (0..fns).map(move |g| format!("mark({}, nm_{f}_{g}).\n", n(1001)))).collect::<String>());
+    let before = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &["ask", "marked[d](A)", "boot.rofl", "w.rofl"]);
+    assert!(before.code == 0 && before.out.starts_with("(empty)"), "marked[d](A) before a file states a mark: {:?} {:?}", before.out, before.err);
     // (and a call taken out of the library, which most units read)
     let lib_gone = text.lines().find(|l| l.starts_with("refers(n0000000000000001_")).expect("a call in the library").to_string();
     let lib_less = format!("{more}{gone}\n").replacen(&format!("{lib_gone}\n"), "", 1);
     for (name, text) in [("a call gone", &less), ("a function come", &more), ("the call back", &format!("{more}{gone}\n")), ("a call gone from the library", &lib_less)] {
         d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
-        for (i, q) in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)"].iter().enumerate() {
+        for (i, q) in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "marked[d](A)"].iter().enumerate() {
             let args = ["ask", q, "boot.rofl", "w.rofl"];
             let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
             let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &args);
             assert!(whole.code == 0 && got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{name}, {q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
+            assert!(*q != "marked[d](A)" || name == "a call gone" || !whole.out.starts_with("(empty)"), "{name}: no function is marked");
             if i == 0 {
                 let said = got.err.lines().find(|l| l.contains("units settled again")).unwrap_or_else(|| panic!("{name}: the edit was not taken by the units: {:?}", got.err));
                 let nums: Vec<usize> = said.split(' ').filter_map(|w| w.parse().ok()).collect();

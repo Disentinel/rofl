@@ -759,6 +759,9 @@ impl Eval {
                 _ => runs[x] = None,
             }
         }
+        if brk!("levels_solved_run_lost" => true; false) {
+            runs.iter_mut().flatten().filter(|r| r.len() > 1).for_each(|r| { r.pop(); });
+        }
         jobs.into_iter().zip(runs).zip(lits).filter_map(|((job, runs), lits)| Some(((job.rule.id, job.at), (job, Made { lits, runs: runs? })))).collect()
     }
 
