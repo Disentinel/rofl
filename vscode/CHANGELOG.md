@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.0 (preview, ROFL 1.7.0)
+
+- A notebook's proof stops at a lemma of the JS model and names its line,
+  instead of walking the scanner's tree under it.
+- The kernel is ROFL 1.7.0: a large project is settled a few files at a time
+  and an edit costs about the edit. See docs/releases/1.7.md.
+
 ## 1.6.0 (preview, ROFL 1.6.0)
 
 - **ROFL: Open notebook from GitHub…** opens a notebook of any repository the
