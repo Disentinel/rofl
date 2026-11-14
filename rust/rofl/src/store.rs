@@ -1584,8 +1584,10 @@ impl Near {
             None => by.push((p, vec![k])),
         });
         for (_, v) in &mut by {
-            v.sort_unstable_by(|&a, &b| facts.cmp_args(h, a, b).then(a.cmp(&b)));
-            v.dedup_by(|b, a| facts.args(*a) == facts.args(*b));
+            let mut rows: Vec<(&[Term], FactId)> = v.iter().map(|&k| (facts.args(k), k)).collect();
+            rows.sort_unstable_by(|a, b| cmp_args_rendered(h, a.0, b.0).then(a.1.cmp(&b.1)));
+            rows.dedup_by(|b, a| a.0 == b.0);
+            *v = rows.into_iter().map(|r| r.1).collect();
         }
         let r: NearRows = Rc::new(by);
         self.rows.lock().unwrap().insert(rel, r.clone());

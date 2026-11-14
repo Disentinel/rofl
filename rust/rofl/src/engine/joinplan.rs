@@ -58,7 +58,7 @@ use super::*;
 use super::cost::prem_key;
 
 pub(super) struct DeltaPlan {
-    body: Rc<[BodyElem]>,
+    pub(super) body: Rc<[BodyElem]>,
     /// `perm[k]` is the position in `ERule::plan` of `body[k]`.
     pub(super) perm: Vec<usize>,
     /// Estimated cost of the whole firing per news row.

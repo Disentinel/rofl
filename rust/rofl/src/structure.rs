@@ -462,9 +462,8 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
                 return Err(format!("program rejected: tree {}: node ({}) has two parents in the book {}: ({}) and ({}){more}", h.name(t.rel), two[0].0, h.name(book), ps[0], ps[1]));
             }
             let up: FxMap<u64, u64> = parents.iter().map(|(c, (_, ps))| (*c, ps[0].bits())).collect();
-            let text: FxMap<u64, String> = parents.iter().flat_map(|(c, (ct, ps))| [(*c, canon(*ct)), (ps[0].bits(), canon(ps[0]))]).collect();
-            let mut nodes: Vec<u64> = up.keys().copied().collect();
-            nodes.sort_by(|a, b| cmp_js(&text[a], &text[b]));
+            // (a node has one parent here: the cycles are the same in whatever order the nodes are walked)
+            let nodes: Vec<u64> = up.keys().copied().collect();
             let mut mark: FxMap<u64, u32> = FxMap::default();
             let mut cycles: Vec<Vec<u64>> = Vec::new();
             let mut stamp = 0u32;
@@ -493,6 +492,7 @@ pub fn check_trees(h: &Heap, store: &Store, ts: &[Tree]) -> Result<(), String> {
             if cycles.is_empty() || brk!("tree_cycle_unchecked" => true; false) {
                 continue;
             }
+            let text: FxMap<u64, String> = cycles.iter().flatten().map(|x| (*x, canon(Term::from_bits(*x)))).collect();
             let least = |cy: &Vec<u64>| cy.iter().map(|x| text[x].clone()).min_by(|a, b| cmp_js(a, b)).unwrap();
             cycles.sort_by(|a, b| cmp_js(&least(a), &least(b)));
             let cy = &cycles[0];

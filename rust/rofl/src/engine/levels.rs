@@ -222,6 +222,22 @@ impl Sieve {
     }
 }
 
+/// THE SEEDS OF A GROUP, each with the places it met a fact under another child at (its own, the other's): a seed is
+/// news to a premise of a rule that joins it there with a premise of the other place. Another firing it is part of
+/// lies under one child, where it was made, or has a pair of its own that met.
+#[derive(Default)]
+pub struct Seeded {
+    met: FxMap<FactId, Vec<(Place, Place)>>,
+    pairs: Rc<FxMap<(Sym, usize), FxSet<(Place, Place)>>>,
+}
+
+impl Seeded {
+    pub(super) fn lets(&self, rule: Sym, i: usize, f: FactId) -> bool {
+        let Some(ms) = self.met.get(&f) else { return true };
+        self.pairs.get(&(rule, i)).is_some_and(|ps| ms.iter().any(|m| ps.contains(m)))
+    }
+}
+
 /// The reads a fact answers, of those that give the arguments `masks` name.
 fn answers(h: &Heap, rel: Sym, args: &[Term], masks: Option<&FxSet<u64>>, mut f: impl FnMut(u64)) {
     let plain = |v: Term| h.is_ground(v);
@@ -1186,6 +1202,23 @@ impl Eval {
                 out
             }).collect()
         };
+        // (the places a rule joins a premise with another at, by its place in the rule's order)
+        let pairs: Rc<FxMap<(Sym, usize), FxSet<(Place, Place)>>> = Rc::new({
+            let mut out: FxMap<(Sym, usize), FxSet<(Place, Place)>> = FxMap::default();
+            for r in self.rules.iter().filter(|r| rules_of.iter().any(|rs| rs.contains(&r.id))) {
+                let ls: Vec<(usize, &Lit)> = r.plan.iter().enumerate().filter_map(|(i, b)| if let BodyElem::Pos(l) = b { Some((i, l)) } else { None }).collect();
+                for &(i, a) in &ls {
+                    for &(_, b) in ls.iter().filter(|(j, _)| *j != i) {
+                        for (p, t) in a.args.iter().enumerate().filter(|(_, t)| t.is_var()) {
+                            for (q, _) in b.args.iter().enumerate().filter(|(_, u)| *u == t) {
+                                out.entry((r.id, i)).or_default().insert(((a.rel, a.args.len() as u8, p as u8), (b.rel, b.args.len() as u8, q as u8)));
+                            }
+                        }
+                    }
+                }
+            }
+            out
+        });
         let bridgy = (bridgy(false), bridgy(true));
         let bmates = (mated(&bridgy.0), mated(&bridgy.1));
         let bplaces: (Vec<FxSet<Place>>, Vec<FxSet<Place>>) = (bmates.0.iter().map(|m| m.iter().map(|x| x.0).collect()).collect(), bmates.1.iter().map(|m| m.iter().map(|x| x.0).collect()).collect());
@@ -1253,7 +1286,7 @@ impl Eval {
         // (the threads a unit may match its premises on: those its level leaves free)
         let width = AtomicUsize::new(1);
         let level = |n: usize, trees: bool, f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
-            width.store((threads / n.clamp(1, threads)).max(1), Relaxed);
+            width.store(if n <= threads { threads } else { 1 }, Relaxed);
             let next = AtomicUsize::new(0);
             let mut out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
             let (mut from, run) = (0, (threads * 32).max(64));
@@ -1414,6 +1447,7 @@ impl Eval {
             let of = |c: usize| std::iter::once(&kids[c]).chain(brk!("levels_lower_unmet" => None; lows.get(c)).into_iter().flatten().filter(|_| !bplaces(k).is_empty()));
             // (the facts through which facts of the layer may meet that share no value: news to the rules of that shape)
             let mut bridges: Vec<FactId> = Vec::new();
+            let mut met_at: FxMap<FactId, Vec<(Place, Place)>> = FxMap::default();
             for c in 0..kids.len() {
                 for (own, u) in of(c).enumerate().map(|(j, u)| (j == 0, u)) {
                     for (key, hs) in u.dir.iter() {
@@ -1439,7 +1473,8 @@ impl Eval {
                             let others = || (0..kids.len()).filter(|d| *d != c);
                             // (of the unit's layer on both sides: it fires any rule; else one of the layers below
                             // is a side, and only a rule whose facts of the layer it joins takes the news)
-                            let met = own && !apart && ms().any(|&m| others().any(|d| holds(&kids[d], m)));
+                            let mets: Vec<Place> = if own && !apart { ms().copied().filter(|&m| others().any(|d| holds(&kids[d], m))).collect() } else { Vec::new() };
+                            let met = !mets.is_empty();
                             let low = k > 0 && bplaces(k).contains(&(rel, n, p)) && ms().any(|&m| bmates(k).contains(&((rel, n, p), m)) && others().any(|d| of(d).skip((own && !apart) as usize).any(|d| holds(d, m))));
                             if met || low {
                                 for &h in hs {
@@ -1448,6 +1483,9 @@ impl Eval {
                                         bridges.extend(&ids);
                                     }
                                     if met {
+                                        for &id in &ids {
+                                            met_at.entry(id).or_default().extend(mets.iter().map(|&m| ((rel, n, p), m)));
+                                        }
                                         seeds.extend(ids);
                                     }
                                 }
@@ -1553,7 +1591,11 @@ impl Eval {
                 }
             }
             e.0.wall.cutting = Some(Box::default());
+            if old.is_none() && !met_at.is_empty() {
+                e.0.seeded = Some(Rc::new(Seeded { met: met_at, pairs: pairs.clone() }));
+            }
             e.0.propagate(front)?;
+            e.0.seeded = None;
             let asked = ASKED.with(|a| a.borrow_mut().take()).unwrap_or_default();
             Ok(done(e, k, files, kids, dir, inner, asked))
         };
