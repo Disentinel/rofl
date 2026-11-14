@@ -545,7 +545,7 @@ The units of a world name what their rules make in one dictionary (`rust/rofl/sr
 The world `rofl ask`/`why` keep by volumes (from 32 MB) is the exception to "computed anew": it is kept as its units
 (*A corpus larger than one heap*, below) with a registry (`<slot>.q<sum>.scroll`: the sum of the core's text and of each file's; written last, so a set half written is no kept world), and when at most one file in eight moved, none came or went and the rules
 did not move, only the units whose answer may have moved are settled again (`volumes: X of Y files edited; A of U
-units settled again, S of them concluding what they had`): a unit keeps the stretches it read and the keys it asked,
+units settled again, S of them concluding what they had`; the unit of the edited file is its sixteen files, settled whole): a unit keeps the stretches it read and the keys it asked,
 and is settled again where one of those stretches was replaced or a fact came or went under such a key; a group is
 mended, its firings carried where their premises stand, where it read no aggregate (`engine/levels.rs`). The answers
 are those of the files evaluated anew (`cargo test -p rofl --test kept`). A file come or gone is computed anew.
@@ -562,14 +562,15 @@ the world's facts name two or more files (a node id's prefix, `n<16 hex>_`) and
 hold 32 MB or more between them (below that the whole world is as fast), the
 facts are cut by file and the world is settled BY LEVELS (`engine/volumes.rs`,
 `engine/levels.rs`). The core (the model, the question, the facts naming no
-file) is frozen once and read by all, not copied. A file is settled alone, on a
-thread, by the rules that cannot leave a file; its store is then a UNIT, a
-frozen stretch of one scroll, numbered once for the world and not written
-again. A group of units (eight) is settled over the stretches below it, read
+file) is frozen once and read by all, not copied. The files are settled sixteen
+at a time, on a thread, by the rules that cannot leave a file; their store is
+then a UNIT, a frozen stretch of one scroll, numbered once for the world and not
+written again (one file a unit made 1700 units of 250 files, and most reads went
+through the directories of neighbours). A group of units (eight) is settled over the stretches below it, read
 where they lie, and derives only what its children make together; so up, to one
 unit, the world, and the same again for each layer of rules above an absence or
-an aggregate. A file that more than 32 others name (a library) stands in a tree
-of its own, so the others do not meet through it at every level. Nothing in the
+an aggregate. A unit takes for its firings the threads no other unit is settled
+on. Nothing in the
 model declares what crosses files: a unit is found from outside by the facts
 that hold, at an argument a rule joins at, a node of another file, and every
 unit keeps the directory of such keys below it. The few rules whose shape gives
@@ -577,8 +578,10 @@ them to no unit are fired once in a last unit that reads all the others. One
 world, the reader, then reads every unit and fires nothing: it answers the
 questions, and a `why` is its proof (a lemma of a cut book is where it stops;
 `--all` unfolds it). stderr says it: `volumes: N files settled by levels, F
-facts in their units`, and `diag: levels: of R rules B below, ...` with the
-rules left to the last unit by their shape. What is kept beside the question's
+facts in their units`, `diag: levels: of R rules B below, ...` with the
+rules left to the last unit by their shape, and `diag: levels: ms a layer, ...`:
+for each layer the milliseconds before its units, then at each depth of them
+from the files up. What is kept beside the question's
 slot under `~/.cache/rofl/worlds`: the reader (`<slot>.q<sum>.vol`, the core it
 stands on), the names (`.names`), the units as segments (`.u<n>`, the newest
 named in `.units`) and the registry (`.scroll`). The next question over the
@@ -591,9 +594,11 @@ system's temporary directory (`rofl-units-<pid>-<n>.seg`, removed at the end)
 and read back mapped from it, so what no unit reads again lies in pages the
 system takes back. Stderr says how many times, how many units and how many MB
 of disk. A world its units refuse (a wall met, a fact that breaks the plan's
-`own`) is said on stderr and evaluated whole. No time or memory is stated here
-yet: the path is measured once, whole, on the release build
-(`f_levels_are_the_one_path_by_volumes`). `whynot`, `excise`,
+`own`) is said on stderr and evaluated whole. Measured on the release build, 4
+cores, the side-effect question over vscode, kept too: 250 files 18.1 s, 750
+files 56 s (the workers it replaced, the same hour: 19.1 and 54.4 s, on a tenth
+more processor time), a third of it the files' own rules; one fact edited in
+one file of 250 and asked again, 7.9 s (`f_levels_reach_the_workers`). `whynot`, `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.

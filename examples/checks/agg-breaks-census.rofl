@@ -2206,8 +2206,6 @@ brk("levels_tree_sliced"). brk_kind("levels_tree_sliced", switch).
 brk_expects("levels_tree_sliced", "levels_whole").
 brk("levels_lower_unmet"). brk_kind("levels_lower_unmet", switch).
 brk_expects("levels_lower_unmet", "levels_whole").
-brk("levels_library_bridge_unmet"). brk_kind("levels_library_bridge_unmet", switch).
-brk_expects("levels_library_bridge_unmet", "levels_whole").
 brk("kept_stale_files"). brk_kind("kept_stale_files", switch).
 brk_expects("kept_stale_files", "kept_rule").
 brk_expects("kept_stale_files", "kept_boot").
@@ -2631,7 +2629,6 @@ switch_site("lattice_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
 switch_site("levels_home_round_kept", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_library_bridge_unmet", "rust/rofl/src/engine/levels.rs").
 switch_site("levels_lower_unmet", "rust/rofl/src/engine/levels.rs").
 switch_site("levels_tree_sliced", "rust/rofl/src/engine/par.rs").
 switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").
