@@ -26,6 +26,7 @@ pub mod volume;
 pub mod cell;
 pub mod corpus;
 pub mod dense;
+pub mod dict;
 pub mod engine;
 pub mod forest;
 pub mod graph;

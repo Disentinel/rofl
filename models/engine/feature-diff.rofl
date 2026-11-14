@@ -1,0 +1,95 @@
+-- models/engine/feature-diff.rofl — WHAT A CHANGE DID, SAID BY FEATURE. It reads the features of the tree before a
+-- change and after it (models/engine/features.rofl, asked of each tree and kept as [snap] facts by
+-- scripts/features.sh) and says what moved: a name the outside may say came or went, an entry does more or less,
+-- the code under an entry was rewritten, an entry touches the world in a new way.
+--
+--   pr(P, Before, After, Title)          a change and the two trees
+--   entry_at[snap](Tree, D, Name, Kind)  an entry point of the tree
+--   does_at[snap](Tree, D, Name, Fn)     a function its behaviour holds
+--   effect_at[snap](Tree, D, Name, Kind) a way its behaviour touches the world
+--   wrote[snap](P, Fn, Lines)            a function of the tree after P whose lines P wrote
+--   wrote_outside[snap](P, File, Lines)  lines P wrote in the engine outside every function (types, constants)
+--   shared[snap](Tree, Fn)               a function most verbs reach
+--   hit[snap](P, D, Name, Lines)         an entry in whose own sites (its arm, the arms on what it picks) P wrote
+--   part[snap](P, Part, Fns)             a part of the engine (models/engine/parts.rofl) and the functions P wrote in it
+--   term[snap](P, Term, Fns)             a word of the glossary whose code P wrote in
+--   files[snap](P, Top, Files, Lines)    the files of P under a top directory of the tree
+--   golden[snap](P, World, How)          a world whose committed answer P moved (facts/goldens.rofl): new, moved, gone
+
+edb(pr).
+edb(entry_at).
+edb(does_at).
+edb(effect_at).
+edb(wrote).
+edb(wrote_outside).
+edb(shared).
+edb(hit).
+edb(files).
+edb(golden).
+edb(part).
+edb(term).
+
+-- ===================================================================== NAMES
+came(P, K, D, Name) :- pr(P, B, A, _), entry_at[snap](A, D, Name, K), not entry_at[snap](B, D, Name, K).
+went(P, K, D, Name) :- pr(P, B, A, _), entry_at[snap](B, D, Name, K), not entry_at[snap](A, D, Name, K).
+stayed(P, D, Name) :- pr(P, B, A, _), entry_at[snap](A, D, Name, K), entry_at[snap](B, D, Name, K).
+
+-- ===================================================================== BEHAVIOUR
+-- an entry that stayed and reaches a function it did not, or no longer reaches one it did
+gained(P, D, Name, H) :- stayed(P, D, Name), pr(P, B, A, _), does_at[snap](A, D, Name, H), not does_at[snap](B, D, Name, H).
+lost(P, D, Name, H)   :- stayed(P, D, Name), pr(P, B, A, _), does_at[snap](B, D, Name, H), not does_at[snap](A, D, Name, H).
+-- the code under an entry that P wrote in
+rewrote(P, D, Name, H) :- pr(P, _, A, _), wrote[snap](P, H, _), does_at[snap](A, D, Name, H).
+
+-- the engine under every verb, and the code of some verbs only
+rewrote_shared(P, H) :- pr(P, _, A, _), wrote[snap](P, H, _), shared[snap](A, H).
+rewrote_own(P, D, Name, H) :- rewrote(P, D, Name, H), not rewrote_shared(P, H).
+-- written, and no entry the model knows reaches it
+rewrote_unreached(P, H) :- wrote[snap](P, H, _), not reached_after(P, H).
+reached_after(P, H) :- pr(P, _, A, _), wrote[snap](P, H, _), does_at[snap](A, _, _, H).
+
+-- ===================================================================== EFFECTS
+effect_came(P, D, Name, K) :- stayed(P, D, Name), pr(P, B, A, _), effect_at[snap](A, D, Name, K), not effect_at[snap](B, D, Name, K).
+effect_went(P, D, Name, K) :- stayed(P, D, Name), pr(P, B, A, _), effect_at[snap](B, D, Name, K), not effect_at[snap](A, D, Name, K).
+
+-- ===================================================================== ONE LINE AN ENTRY
+moved(P, D, Name) :- gained(P, D, Name, _).
+moved(P, D, Name) :- lost(P, D, Name, _).
+moved(P, D, Name) :- rewrote_own(P, D, Name, _).
+moved(P, D, Name) :- effect_came(P, D, Name, _).
+moved(P, D, Name) :- effect_went(P, D, Name, _).
+gained_n(P, D, Name, N) :- moved(P, D, Name), N is count(H : gained(P, D, Name, H)).
+lost_n(P, D, Name, N)   :- moved(P, D, Name), N is count(H : lost(P, D, Name, H)).
+rewrote_n(P, D, Name, N) :- moved(P, D, Name), N is count(H : rewrote_own(P, D, Name, H)).
+entry_delta(P, D, Name, G, L, W) :- gained_n(P, D, Name, G), lost_n(P, D, Name, L), rewrote_n(P, D, Name, W).
+
+wrote_n(P, N) :- pr(P, _, _, _), N is count(H : wrote[snap](P, H, _)).
+shared_n(P, N) :- pr(P, _, _, _), N is count(H : rewrote_shared(P, H)).
+unreached_n(P, N) :- pr(P, _, _, _), N is count(H : rewrote_unreached(P, H)).
+moved_n(P, K, N) :- pr(P, _, A, _), entry_at[snap](A, _, _, K), N is count(D, Name : moved(P, D, Name), entry_at[snap](A, D, Name, K)), N > 0.
+
+-- ===================================================================== WHAT KIND OF CHANGE (Grafema, the inverse of
+-- "feature request -> graph delta")
+kind(P, new_entry)      :- came(P, K, _, _), K != says.
+kind(P, entry_removed)  :- went(P, K, _, _), K != says.
+kind(P, says_more)      :- came(P, says, _, _).
+kind(P, new_effect)     :- effect_came(P, _, _, _).
+kind(P, reach_changed)  :- gained(P, _, _, _).
+kind(P, reach_changed)  :- lost(P, _, _, _).
+kind(P, engine_under_all) :- rewrote_shared(P, _).
+kind(P, own_code)       :- rewrote_own(P, _, _, _).
+kind(P, outside_engine) :- pr(P, _, _, _), wrote_n(P, 0), not wrote_outside[snap](P, _, _).
+kind(P, data_only)      :- pr(P, _, _, _), wrote_n(P, 0), wrote_outside[snap](P, _, _).
+
+-- ===================================================================== THE ENTRIES A CHANGE WROTE IN, BY NAME
+sharp(P, K, D, Name, Lines) :- hit[snap](P, D, Name, Lines), pr(P, _, A, _), entry_at[snap](A, D, Name, K).
+sharp_n(P, K, N) :- pr(P, _, A, _), entry_at[snap](A, _, _, K), N is count(D, Name : sharp(P, K, D, Name, _)), N > 0.
+kind(P, entry_rewritten) :- sharp(P, _, _, _, _).
+
+-- ===================================================================== WHAT WAS OBSERVED TO MOVE
+golden_n(P, How, N) :- golden[snap](P, _, How), N is count(W : golden[snap](P, W, How)).
+kind(P, answers_moved) :- golden[snap](P, _, moved).
+kind(P, worlds_added)  :- golden[snap](P, _, new).
+-- the engine was written and no committed answer moved: a change of form, or one no world of the tree sees
+kind(P, engine_no_answer_moved) :- pr(P, _, _, _), wrote[snap](P, _, _), not answer_touched(P).
+answer_touched(P) :- golden[snap](P, _, _).

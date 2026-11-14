@@ -1,0 +1,302 @@
+-- models/engine/delta-model.rofl — HYPOTHESES ABOUT A DELTA, AS RULES THE DELTA'S OWN FACTS JUDGE. Loaded beside the
+-- rules of a world (no corpus: the reflection of the rules is what it reads) and the facts a delta of that world
+-- wrote under ROFL_DELTA_FACTS (rust/rofl/src/engine/meter.rs): out, kept, back, tries per relation; whole, keyed per
+-- rule; step, moved per step of a volume. Everything here is in the book `delta`.
+--
+-- A FORECAST says from the shape of the rules what a delta must do; a VERDICT sets it beside what the delta did:
+--   whole_by_shape(R, Rel)   an aggregate whose key a change of Rel does not name: the rule is withdrawn and fired
+--                            over the whole store (Eval::agg_keys gives the key up)
+--   returns_by_shape(Rel)    a relation recursive with itself: a fact of it that loses a firing is never kept in
+--                            place (Eval::overdelete), it goes and is derived again where it still holds
+--   every copy returns        a copy taken out of a volume is laid there again where a volume still makes what it
+--                            copies (Volumes::pass_on): none is owed when the rounds end, and none stands
+--                            that no volume makes (an orphan)
+-- and the verdicts: `held` the forecast and the delta agree, `off` the forecast said it and the delta did not,
+-- `unforeseen` the delta did it and no forecast said it. What is unforeseen is what the model has no word for yet.
+
+edb(out). edb(kept). edb(back). edb(tries). edb(whole). edb(keyed). edb(step). edb(moved). edb(taken). edb(owed). edb(orphan). edb(seed). edb(read). edb(once). edb(walked). edb(spent). edb(counted).
+
+-- ------------------------------------------------------------------------------------ the reflection, by slot
+dm_lit[delta](R, K, Rel, As) :- premise_lit(R, K, L), L = $lit(Rel, _, As, _).
+dm_agg[delta](R, K, Body)    :- premise_lit(R, K, L), L = $agg(_, _, _, _, Body).
+dm_head[delta](R, Rel, As)   :- conclusion_lit(R, 1, L), L = $lit(Rel, _, As, _).
+-- a literal inside an aggregate, by its place in the body
+dm_in[delta](R, K, 1, B)     :- dm_agg[delta](R, K, B).
+dm_in[delta](R, K, J, T)     :- dm_in[delta](R, K, I, $cons(_, T)), J is I + 1.
+dm_inlit[delta](R, K, J, Rel, As) :- dm_in[delta](R, K, J, $cons(L, _)), L = $lit(Rel, _, As, _).
+-- the variables of an argument list
+dm_args[delta](As)           :- dm_lit[delta](_, _, _, As).
+dm_args[delta](As)           :- dm_inlit[delta](_, _, _, _, As).
+dm_args[delta](As)           :- dm_head[delta](_, _, As).
+dm_tail[delta](As, As)       :- dm_args[delta](As).
+dm_tail[delta](As, T)        :- dm_tail[delta](As, $cons(_, T)).
+dm_has[delta](As, V)         :- dm_tail[delta](As, $cons($var(V), _)).
+
+-- ------------------------------------------------------------------------- an aggregate fired whole, by shape
+-- the key: a variable of the head that the aggregate's body names
+dm_key[delta](R, K, V)       :- dm_head[delta](R, _, H), dm_has[delta](H, V), dm_inlit[delta](R, K, _, _, As), dm_has[delta](As, V).
+-- a literal the rule reads, outside the aggregate or in it, that leaves a variable of the key free
+dm_free[delta](R, Rel, V)    :- dm_key[delta](R, K, V), dm_inlit[delta](R, K, _, Rel, As), not dm_has[delta](As, V).
+dm_free[delta](R, Rel, V)    :- dm_key[delta](R, _, V), dm_lit[delta](R, _, Rel, As), not dm_has[delta](As, V).
+whole_by_shape[delta](R, Rel) :- dm_free[delta](R, Rel, _).
+
+-- ------------------------------------------------------------------------ a relation that returns, by shape
+dm_dep[delta](Rel, P)        :- dm_head[delta](R, Rel, _), dm_lit[delta](R, _, P, _).
+dm_dep[delta](Rel, P)        :- dm_head[delta](R, Rel, _), dm_inlit[delta](R, _, _, P, _).
+dm_reach[delta](Rel, P)      :- dm_dep[delta](Rel, P).
+dm_reach[delta](Rel, P)      :- dm_reach[delta](Rel, Q), dm_dep[delta](Q, P).
+returns_by_shape[delta](Rel) :- dm_reach[delta](Rel, Rel).
+
+-- ------------------------------------------------------------------------------------------------ verdicts
+dm_moved[delta](Rel)         :- out[delta](Rel, _).
+dm_moved[delta](Rel)         :- back[delta](Rel, _).
+dm_moved[delta](Rel)         :- kept[delta](Rel, _).
+dm_fired[delta](R, Head, N)  :- whole[delta](R, Head, N).
+-- an aggregate the forecast names, over a relation the delta moved: it was fired whole
+whole_held[delta](Head, R, Rel, N)   :- whole_by_shape[delta](R, Rel), dm_moved[delta](Rel), whole[delta](R, Head, N).
+whole_off[delta](Head, R, Rel)       :- whole_by_shape[delta](R, Rel), dm_moved[delta](Rel), dm_head[delta](R, Head, _), not dm_fired[delta](R, Head, _).
+whole_unforeseen[delta](Head, R, N)  :- whole[delta](R, Head, N), not whole_by_shape[delta](R, _).
+-- a relation recursive with itself: nothing of it kept in place, and what went of it and came back
+returns_held[delta](Rel, Out, Back)  :- returns_by_shape[delta](Rel), out[delta](Rel, Out), back[delta](Rel, Back), not kept[delta](Rel, _).
+returns_off[delta](Rel, Kept)        :- returns_by_shape[delta](Rel), kept[delta](Rel, Kept).
+-- taken out and derived again with no recursion to say why, and never once kept in place
+returns_unforeseen[delta](Rel, Out, Back) :- out[delta](Rel, Out), back[delta](Rel, Back), not returns_by_shape[delta](Rel), not kept[delta](Rel, _).
+-- the sum of it: of what the delta took out, how much it derived again, and how much of that a forecast names
+back_total[delta](T)         :- T is sum(N ; Rel : back[delta](Rel, N)).
+back_foreseen[delta](T)      :- T is sum(B ; Rel : returns_held[delta](Rel, _, B)).
+back_unforeseen[delta](T)    :- T is sum(B ; Rel : returns_unforeseen[delta](Rel, _, B)).
+-- a copy owed: the volume that read it counts and joins without it, and answers short
+copy_owed[delta](Rel, N)     :- owed[delta](Rel, N).
+-- a copy with no original: a volume reads a fact no volume makes
+copy_orphan[delta](Rel, N)   :- orphan[delta](Rel, N).
+copies_taken[delta](T)       :- T is sum(N ; Rel : taken[delta](Rel, N)).
+-- what a volume loses as copies are laid into it: an addition takes out only what a new fact blocks or moves
+lay_takes[delta](Cause, Rel, N) :- seed[delta](lays, Cause, Rel, N).
+
+-- ---------------------------------------------------------------------------------------------- the weight
+-- rows read are the weight of a delta: by step, by the relation a rule concludes, and the share of each in the whole
+read_step[delta](Step, T)        :- read[delta](Step, _, _, _), T is sum(N ; R : read[delta](Step, R, _, N)).
+read_total[delta](T)             :- T is sum(N ; Step : read_step[delta](Step, N)).
+read_head[delta](Step, Head, T)  :- read[delta](Step, _, Head, _), T is sum(N ; R : read[delta](Step, R, Head, N)).
+heavy[delta](Step, Head, T, Pct) :- read_head[delta](Step, Head, T), read_total[delta](All), All > 0, Pct is T * 100 / All, Pct >= 5.
+-- what a rule fired whole weighs, beside the forecast that it would be
+whole_weight[delta](Head, T)     :- whole[delta](R, Head, _), T is sum(N ; Step : read[delta](Step, R, Head, N)).
+-- the forecast of the weight: what is heavy is what returns (a relation recursive with itself is taken out and derived
+-- again); a heavy head that does not return is weight the model has no word for
+heavy_held[delta](Step, Head, Pct)       :- heavy[delta](Step, Head, _, Pct), returns_by_shape[delta](Head).
+heavy_unforeseen[delta](Step, Head, Pct) :- heavy[delta](Step, Head, _, Pct), not returns_by_shape[delta](Head).
+
+-- ------------------------------------------------------------------------------- the boundary of a volume
+-- THE SAME EDIT TAKEN BY ONE WORLD, its facts loaded beside these in the book `alone` (the delta's facts with [delta]
+-- written [alone]), is the delta with no boundary: no copy, no laying, no round. The forecast: a copy that is the
+-- original (a volume reads the fact where it stands) leaves a delta of volumes only what the world alone does.
+--   a fact goes once          what goes more than once goes so by the boundary: in several volumes, or round after round
+--   no more goes              what volumes take out and the world alone does not is doomed by reach across the boundary
+--   laying is the boundary    the world alone reads no more rows than the volumes read taking out and in
+alone_out[delta](Rel, N)     :- out[alone](Rel, N).
+alone_read[delta](T)         :- T is sum(N ; Step : alone_step[delta](Step, N)).
+alone_step[delta](Step, T)   :- read[alone](Step, _, _, _), T is sum(N ; R : read[alone](Step, R, _, N)).
+repeated[delta](Rel, N)      :- out[delta](Rel, O), once[delta](Rel, U), N is O - U, N > 0.
+reach_more[delta](Rel, N)    :- once[delta](Rel, U), out[alone](Rel, A), N is U - A, N > 0.
+reach_more[delta](Rel, U)    :- once[delta](Rel, U), not alone_went[delta](Rel).
+alone_went[delta](Rel)       :- out[alone](Rel, _).
+repeated_total[delta](T)     :- T is sum(N ; Rel : repeated[delta](Rel, N)).
+reach_more_total[delta](T)   :- T is sum(N ; Rel : reach_more[delta](Rel, N)).
+out_total[delta](T)          :- T is sum(N ; Rel : out[delta](Rel, N)).
+alone_out_total[delta](T)    :- T is sum(N ; Rel : out[alone](Rel, N)).
+-- the verdict of the third: the rows the volumes read outside the laying, beside the rows of the world alone
+within[delta](T)             :- read_step[delta](takes_out, A), read_step[delta](takes_in, B), T is A + B.
+laying_held[delta](Alone, Within)  :- alone_read[delta](Alone), within[delta](Within), Within >= Alone.
+laying_off[delta](Alone, Within)   :- alone_read[delta](Alone), within[delta](Within), Alone > Within.
+-- a fact that stands after the edit and went all the same: it went once or more and is back
+once_total[delta](T)         :- T is sum(N ; Rel : once[delta](Rel, N)).
+
+-- ------------------------------------------------------------------------------------------ the world's part
+-- AN EDIT COSTS BY THE EDIT: the forecast is that a delta walks no volume whole. A pass that does is off by the
+-- records it walked, and beside them stand the facts the delta was given, to say how many times over.
+walks_whole[delta](What, N)  :- walked[delta](What, N).
+walked_total[delta](T)       :- T is sum(N ; What : walked[delta](What, N)).
+given_total[delta](T)        :- moved[delta](takes_out, A), moved[delta](takes_in, B), T is A + B.
+
+-- --------------------------------------------------------------------------------------------- where the time is
+-- THE TIME OF A DELTA IS WHERE ITS ROWS ARE READ: the forecast is that the parts whose rules read rows (a volume
+-- takes out and in, a volume is laid copies) carry the time. A part of a twentieth of the time or more that reads
+-- no row is time the model has no word for.
+reads_rows[delta](out_and_in). reads_rows[delta](lays).
+spent_total[delta](T)        :- T is sum(Ms ; What : spent[delta](What, Ms)).
+long[delta](What, Ms, Pct)   :- spent[delta](What, Ms), spent_total[delta](T), T > 0, Pct is Ms * 100 / T, Pct >= 5.
+time_held[delta](What, Ms, Pct)       :- long[delta](What, Ms, Pct), reads_rows[delta](What).
+time_unforeseen[delta](What, Ms, Pct) :- long[delta](What, Ms, Pct), not reads_rows[delta](What).
+
+-- ------------------------------------------------------------------------------------------ one dictionary of names
+-- THE FORECAST OF ONE DICTIONARY (w_scroll_names), from what the volumes hold: a volume makes about 720 000 names above
+-- the core and a thousand of them are in a fact, 25 000 compound terms and 20 000 of them in a fact; the names the
+-- files spell are the core's already. So few of the terms a volume asks a neighbour for are numbered otherwise there,
+-- and one dictionary takes little time off the plan of what to lay: it is the ground a premise read where it lies
+-- stands on, not a gain of its own. `renamed_pct` is the share; the forecast holds under a tenth. (#225 before the
+-- dictionary: 12 of a hundred, 1.5M of 11.9M terms asked, so the forecast was short by a little; with the dictionary
+-- the share is nothing, and the plan's time says what it was worth.)
+renamed_pct[delta](P)        :- counted[delta](term_asked, A), counted[delta](term_named_again, N), A > 0, P is N * 100 / A.
+one_dictionary_gains_little[delta](P) :- renamed_pct[delta](P), P < 10.
+one_dictionary_gains_much[delta](P)   :- renamed_pct[delta](P), P >= 10.
+
+-- ------------------------------------------------------------------------------------------ a premise read in place
+-- THE FORECAST OF READING A PREMISE WHERE IT LIES (w_scroll_foreign_premise), from the shape of the crossing: a copy
+-- laid is found twice, once by the plan asking the neighbours' indexes on one thread and once by the rule that joins
+-- it; what the rule then concludes is derived whichever way the premise is seen. So reading in place takes off the
+-- plan and leaves the laying's firings: `in_place_gains[delta](Pct)` is the plan's share of the delta's wall parts,
+-- the most it can give in time; what it gives in memory is the copies (`taken`, and the half of a volume that is
+-- laid).
+wall_part[delta](opens). wall_part[delta](gives). wall_part[delta](finds). wall_part[delta](dooms).
+wall_part[delta](out_and_in). wall_part[delta](plans). wall_part[delta](lays). wall_part[delta](notes).
+wall_part[delta](answers). wall_part[delta](keeps).
+wall_total[delta](T)         :- T is sum(Ms ; What : spent[delta](What, Ms), wall_part[delta](What)).
+in_place_gains[delta](Pct)   :- spent[delta](plans, P), wall_total[delta](T), T > 0, Pct is P * 100 / T.
+
+-- ------------------------------------------------------------------------------------- a premise looked up next door
+-- THE FORECAST OF LOOKING A PREMISE UP IN THE NEIGHBOURS' FOLDS IN PLACE OF LAYING COPIES (w_scroll_foreign_premise),
+-- from what a lookup's key names. A key that names a node of the volume's own files is answered at home, as now. One
+-- that names a node of another file goes to that file's fold, one lookup more. One that names no node may be answered
+-- in any fold: a lookup more in each of the others. The copies laid are what keeps every lookup at home, so the price
+-- of having none is the lookups added, as a share of those made; the laying it would save is `laying_pct`. The counts
+-- are of the first evaluation of the engine's own model, 123 files in 4 volumes (the ledger says how they were taken).
+looked_up[volumes](no_node, 6126177). looked_up[volumes](node_at_home, 58612205). looked_up[volumes](node_away, 1385522).
+laying_pct[volumes](14).
+workers[volumes](4). workers[volumes](8). workers[volumes](12).
+looked_up_total[volumes](T)      :- T is sum(N ; What : looked_up[volumes](What, N)).
+lookups_added[volumes](K, Pct)   :- workers[volumes](K), looked_up[volumes](no_node, A), looked_up[volumes](node_away, B),
+                                    looked_up_total[volumes](T), Pct is (A * (K - 1) + B) * 100 / T.
+-- With an [index] that says in one look which folds hold a key that names no node, each such lookup is one look more
+-- whatever the number of folds.
+lookups_added_indexed[volumes](Pct) :- looked_up[volumes](no_node, A), looked_up[volumes](node_away, B),
+                                    looked_up_total[volumes](T), Pct is (A + B) * 100 / T.
+next_door_pays[volumes](K, Pct)  :- lookups_added[volumes](K, Pct), laying_pct[volumes](L), Pct < L.
+next_door_costs[volumes](K, Pct) :- lookups_added[volumes](K, Pct), laying_pct[volumes](L), Pct >= L.
+
+-- --------------------------------------------------------------------------- a fact lies where its premises' files say
+-- THE FORECAST OF AN ADDRESS THAT IS THE SET OF FILES A FACT WAS DERIVED FROM (the owner, 2026-11-12): a fold is a set
+-- of files, a fact derived from premises in folds A and B lies in the fold of their files together, and an edit of a
+-- file drops the folds whose set holds it and derives them again; the rest is not opened. Counted on the first
+-- evaluation of the engine's own model, 123 files in one volume, by each fact's first firing (the ledger says how).
+derived[folds](6352254). sets[folds](3493). largest_set[folds](16). in_one_file[folds](5177930).
+in_two_folds[folds](35152).
+-- an edit of the 7 files of #225: the folds whose set holds one, and the derived facts in them
+edit_folds[folds](1657). edit_facts[folds](784748).
+-- what the delta of today takes out for the same edit, and the time of the whole evaluation and of that delta, ms
+taken_out_today[folds](59000). anew_ms[folds](45000). delta_ms[folds](15000).
+-- the share of the world an edit derives again, and the time that is of the whole evaluation
+edit_share[folds](Pct)   :- edit_facts[folds](E), derived[folds](D), Pct is E * 100 / D.
+edit_ms[folds](Ms)       :- edit_share[folds](P), anew_ms[folds](A), Ms is A * P / 100.
+-- the forecast holds while the folds are few beside the facts and the edit by folds is forecast under the delta of today
+folds_are_few[folds](N)  :- sets[folds](N), derived[folds](D), N * 1000 < D.
+folds_pay[folds](Ms)     :- edit_ms[folds](Ms), delta_ms[folds](T), Ms < T.
+
+-- ------------------------------------------------------------------------- what goes is judged by the firings kept
+-- THE FORECAST OF JUDGING AN OVERDELETION BY THE FIRINGS THE STORE KEEPS, from the shape of the overdeletion: it took
+-- out whatever cited a fact gone unless a firing stood on premises outside the fact's own recursion, so in a recursive
+-- relation one fact gone took the relation's reach with it, and each was derived again by solving its rules with the
+-- head bound (`tries`), again and again while one before it on the chain was still out. A world keeps every firing,
+-- so what stands can be read off them: of what the seeds reach, a fact with a firing over premises not reached, or
+-- proved so before it, stands, and no rule is solved for it. What is left to try is what went and did not come back
+-- by a firing it had. Counted on #225 in one store on one core, the delta of today (the ledger says how).
+out_today[judged](704805). back_today[judged](679934). tries_today[judged](743431). in_ms_today[judged](91541).
+-- at most what came back came by a firing it had: the tries left are at least what stayed out
+tries_left[judged](N)   :- out_today[judged](O), back_today[judged](B), N is O - B.
+in_ms[judged](Ms)       :- tries_left[judged](N), tries_today[judged](T), in_ms_today[judged](A), Ms is A * N / T.
+judging_pays[judged](Ms) :- in_ms[judged](Ms), in_ms_today[judged](A), Ms * 4 < A.
+
+-- ------------------------------------------------------------------------- a closure premise is led by its news
+-- THE FORECAST OF READING A CLOSURE BY ITS NEWS, from the shape of two premises. A premise over a `nearest` whose rows
+-- are stored facts was matched as a closure and so read every row, whatever the news were: its reads should be the
+-- rows of the news. A new edge of a walked graph gives ancestors x descendants row seeds, and a rule that joins the
+-- ancestor to the rest of its body solved the rest once a seed: solved once an ancestor, the seeds left are the rows
+-- of the ancestors the rest of the body holds. Counted on #225 in one store on one core after [judged].
+read_today[led](parent, 2200000). news[led](parent, 610).
+read_today[led](at_step, 2070000). news[led](at_step, 7).
+read_today[led](does_fn, 3250000). delta_ms_today[led](24000).
+-- a news fact is read with the rows it joins: a hundred a fact is the bound on a tree of this size
+read[led](R, N)     :- news[led](R, K), N is K * 100.
+read_pays[led](R)   :- read[led](R, N), read_today[led](R, T), N * 10 < T.
+-- gdb gave these three a third of the delta; led by the news they should leave at most a tenth of that
+delta_ms[led](Ms)   :- delta_ms_today[led](T), Ms is T - T / 3 + T / 30.
+-- measured after: the delta, and what the three still read
+delta_ms_after[led](18464). read_after[led](parent, 0). read_after[led](at_step, 37752). read_after[led](does_fn, 1963514).
+forecast_held[led](R)  :- read[led](R, N), read_after[led](R, A), A * 10 < N * 1000.
+
+-- ------------------------------------------------------------------------- threads that write one scroll
+-- THE FORECAST OF THREADS WRITING ONE SCROLL, from where a whole evaluation in one store spends its time on four cores
+-- (60 samples of the thread that evaluates, #225's tree anew; the ledger says how): concluding is written by one
+-- thread, and the threads that match stand parked nine samples of ten. A thread that owns a region of the scroll
+-- concludes into it while the others conclude into theirs, and all read every region as the round began: what is
+-- split is the matching and the concluding, what stays on one thread is the reading of the files and the rest.
+sample[shared](concludes, 22). sample[shared](matches, 16). sample[shared](reads_files, 7). sample[shared](rest, 15).
+anew_ms_one_store[shared](80000). anew_ms_volumes[shared](50000). threads[shared](4).
+split[shared](concludes). split[shared](matches).
+all[shared](N)        :- N is sum(K ; P : sample[shared](P, K)).
+split_part[shared](N) :- N is sum(K ; P : sample[shared](P, K), split[shared](P)).
+anew_ms[shared](Ms)   :- all[shared](A), split_part[shared](S), anew_ms_one_store[shared](T), threads[shared](C), Ms is T * (A - S) / A + T * S / A / C.
+shared_pays[shared](Ms) :- anew_ms[shared](Ms), anew_ms_volumes[shared](V), Ms < V.
+-- the first step: one worker, and the files' lower stage on the cores it leaves (one core: 13 samples of 60 in the
+-- lower stage, 8 reading the files, 85 s)
+lower_sample[shared](21, 60). anew_ms_one_worker[shared](85000).
+anew_ms_lower_on_threads[shared](Ms) :- lower_sample[shared](L, A), anew_ms_one_worker[shared](T), threads[shared](C), Ms is T * (A - L) / A + T * L / A / C.
+-- measured: one worker on four cores, anew and by delta, answers equal
+anew_ms_lower_measured[shared](65250). delta_ms_one_worker[shared](18978).
+-- a key a proof quotes (of an absence, of a closure's row) spelled once: 11 samples of 60 were in spelling them
+-- (one worker, four cores, 65 s); at most those go
+keys_sample[shared](11, 60).
+anew_ms_keys_once[shared](Ms) :- keys_sample[shared](K, A), anew_ms_lower_measured[shared](T), Ms is T * (A - K) / A.
+-- measured: with every key kept the evaluation did not move (65.5 s, the heap 470 MB more: anew a key is met once);
+-- with the last 131 072 kept, 56.3 s anew and the delta 14.2 s (19.0)
+anew_ms_keys_measured[shared](56313). delta_ms_keys_measured[shared](14187).
+
+-- THE WORK CUT BY FILE (the owner's choice, 2026-11-12): one store; what a rule that never leaves a file concludes is
+-- derived a file at a time on the workers, and the rules that cross files fire once over all of it. Counted anew
+-- (the ledger says how): firings of the lower stage, of the rules above it that never left a file, of those that did.
+firings[byfile](lower, 5611395). firings[byfile](in_file, 5480949). firings[byfile](across, 3515269).
+-- the evaluation above the lower stage is 36 s of the 56 (38 samples of 60); its share by firings goes to the
+-- workers, but what they conclude is taken into the store on one thread, at about what concluding costs (a third)
+upper_ms[byfile](36000). whole_ms[byfile](56313). taking_share[byfile](33).
+in_file_ms[byfile](Ms)  :- firings[byfile](in_file, I), firings[byfile](across, X), upper_ms[byfile](U), Ms is U * I / (I + X).
+anew_ms[byfile](Ms)     :- in_file_ms[byfile](L), whole_ms[byfile](W), taking_share[byfile](T), threads[shared](C), Ms is W - L + L * (100 - T) / 100 / C + L * T / 100.
+byfile_pays[byfile](Ms) :- anew_ms[byfile](Ms), anew_ms_volumes[shared](V), Ms < V.
+-- BY THE RULES' SHAPE (own[fixpointplan] of the tree's facts, engine/stages.rs `rule_reach`) fewer rules are of one
+-- file than never left one: 190 with 4 426 062 firings; the other 85 read what may cross (need: glob_of, denotes).
+firings[byfile](by_shape, 4426062). firings[byfile](not_by_shape, 4570156).
+shape_ms[byfile](Ms)      :- firings[byfile](by_shape, I), firings[byfile](not_by_shape, X), upper_ms[byfile](U), Ms is U * I / (I + X).
+anew_ms_shape[byfile](Ms) :- shape_ms[byfile](L), whole_ms[byfile](W), taking_share[byfile](T), threads[shared](C), Ms is W - L + L * (100 - T) / 100 / C + L * T / 100.
+-- MEASURED (the ledger: f_the_rules_of_one_file_are_derived_in_its_world): 49.9 s anew, 8.2 s the delta. Firings did
+-- not say time: by the engine's own time by rule the rules of one file were 14.1 s of 35.7, not 17.7 of 36.
+anew_ms_byfile_measured[byfile](49924). delta_ms_byfile_measured[byfile](8160).
+rule_ms[byfile](of_file, 14112). rule_ms[byfile](across, 21629).
+-- the same stage under the volumes' four workers (the default path): 31.7 s anew against 50, 7.3 s the delta against 15
+anew_ms_byfile_volumes[byfile](31676). delta_ms_byfile_volumes[byfile](7279).
+
+-- THE WRITING CUT BY A HASH OF THE ADDRESS (the owner, 2026-11-13). One worker after the files' part, by samples:
+-- of 34 s the writing is 14, the search left on one thread 9, the rest 8. A worker writes the facts whose key hashes
+-- to it; taking a round's conclusions apart by hash and putting the stretches together is counted as a tenth.
+whole_ms[byhash](48600). serial_ms[byhash](writing, 14000). serial_ms[byhash](search, 9000). serial_ms[byhash](rest, 8000).
+cut_ms[byhash](Part, Ms)  :- serial_ms[byhash](Part, S), threads[shared](C), Ms is S / C + S / 10.
+anew_ms[byhash](writing, Ms) :- whole_ms[byhash](W), serial_ms[byhash](writing, S), cut_ms[byhash](writing, X), Ms is W - S + X.
+anew_ms[byhash](search, Ms)  :- anew_ms[byhash](writing, A), serial_ms[byhash](search, S), cut_ms[byhash](search, X), Ms is A - S + X.
+-- JUDGED 2026-11-13, AND THE FORECAST ABOVE FALLS WITH ITS MEASURE. The 14 s of writing were gdb samples; timers
+-- in the engine itself say of one run anew (46 s): the files' part 15 s on four threads, the upper pass 25 s on one,
+-- the rest 5 (indexed for retraction, kept, answered). In the upper pass the rules take 19 s: the search 12.5, the
+-- writing of 4.05M solutions 5.4. Three trials of the writing moved nothing: the fact looked up on the threads
+-- before it is written (forecast 45 s, got 48), the table of tuples half as full (the probe steps 4.6 to 1.1 a call,
+-- the time the same), no table of tuples at all (the same).
+upper_ms[bytimer](search, 12500). upper_ms[bytimer](writing, 5400). upper_ms[bytimer](rest, 7000).
+refuted[byhash](found, 45000, 48000).
+-- WHERE THE SEARCH IS ONE THREAD'S: a premise the threads do not take. `enters` by the news of does_fn reads
+-- in_fn, a closure walked: 74 000 news gave 9.4M rows on one thread in 2.6 s, and 3.4M more in 0.6. The forecast
+-- for the walked premise read on the threads: those 3.3 s on four threads and a tenth of them to hand out, and
+-- what else stops at a walk (3.0M partial solutions) the same way.
+walked_ms[bytimer](3300).
+anew_ms[bytimer](walked, Ms) :- threads[shared](C), walked_ms[bytimer](S), Ms is 46500 - S + S / C + S / 10.
+measured_ms[bytimer](walked, 42200).
+-- (in pairs, the build before and this in turn, medians of three: 54.2 s to 51.1, and the four volumes 44.2 to 41.2)
+paired_ms[bytimer](one, 54200, 51100). paired_ms[bytimer](volumes, 44200, 41200).
+-- A ROUND SEARCHED AHEAD on the threads (every firing that starts from its news, before any is concluded): forecast
+-- from the 8 s of search one thread still did, a share of 3 s; in pairs 45.5 s without and 46.0 with. The heavy
+-- firings were on the threads already; the small ones are little together. Taken out.
+refuted[bytimer](ahead, 42500, 46000).

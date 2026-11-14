@@ -783,7 +783,7 @@ fn a_fault_the_addition_does_not_reach_stands() {
     let all = sweep("fault", "edb(e). edb(n). edb(w).\nw(z, x).", &rules, fact_fault, 1..=40, 10);
     assert!(all.delta * 2 > all.additions, "most additions reach no fault: {all:?}");
     // a new fault is the firing's, met only as the delta fires: that addition is evaluated again
-    assert!(all.full.keys().all(|k| k.contains("write a hole")), "{all:?}");
+    assert!(all.full.keys().all(|k| k.contains("wrote a hole")), "{all:?}");
     assert!(all.delta * 10 > all.additions * 9 && all.sum.holed > 0, "an addition that reaches a fault is a delta: {all:?}");
     eprintln!("retractions by delta: {} of {}", all.retracted.1, all.retracted.0);
     assert!(all.retracted.1 * 2 > all.retracted.0, "most retractions reach no fault, and go by the one-fact delta: {all:?}");

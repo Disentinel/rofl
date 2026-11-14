@@ -17,3 +17,4 @@ verb_hit_n(V, N) :- verb(V), N is count(F : verb_hit(V, F)), N > 0.
 part_hit(P, N) :- part(P, _, _), N is count(F : touched(F), fn_part(F, P)), N > 0.
 term_hit(T, N) :- term(T, _, _), N is count(F : touched(F), term_fn(T, F)), N > 0.
 callers_n(F, N) :- touched(F), N is count(G : above(F, G), G != F).
+outside_lines(File, K) :- outside_fn(File, _), K is count(L : outside_fn(File, L)).

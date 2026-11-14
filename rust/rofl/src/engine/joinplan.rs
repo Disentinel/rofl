@@ -58,7 +58,7 @@ use super::*;
 use super::cost::prem_key;
 
 pub(super) struct DeltaPlan {
-    body: Rc<[BodyElem]>,
+    pub(super) body: Rc<[BodyElem]>,
     /// `perm[k]` is the position in `ERule::plan` of `body[k]`.
     pub(super) perm: Vec<usize>,
     /// Estimated cost of the whole firing per news row.
@@ -125,6 +125,10 @@ impl Eval {
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
+        // a unit reads by key alone what lies outside it: from the news, never in written order
+        if self.by_seed && at.is_some() {
+            return Some(p.clone());
+        }
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
@@ -547,7 +551,8 @@ impl Eval {
         }
         // A BUILTIN IS A WALL: what is written before it is joined before it and nothing written after it is, so the
         // partial solutions that reach it, and the holes it makes, are the written order's
-        let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && matches!(plan[k], BodyElem::Bi { .. }));
+        let walls: Vec<bool> = (0..plan.len()).map(|k| if self.by_seed { self.wall(plan, k) } else { matches!(plan[k], BodyElem::Bi { .. }) }).collect();
+        let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && walls[k]);
         let placeable = |j: usize, bound: &[Sym], rest: &[usize]| -> bool {
             if walled(j, rest) {
                 return false;
@@ -606,7 +611,8 @@ impl Eval {
                 }
                 let st = self.delta_stat(l, &bound);
                 let joined = all_vars[j].iter().any(|v| bound.contains(v));
-                if best.is_none_or(|(_, f, b)| st.fan < f || (st.fan == f && joined && !b)) {
+                // (a unit counts only its own rows: there the shared variable decides)
+                if best.is_none_or(|(_, f, b)| if self.by_seed && joined != b { joined } else { st.fan < f || (st.fan == f && joined && !b) }) {
                     best = Some((at, st.fan, joined));
                 }
             }

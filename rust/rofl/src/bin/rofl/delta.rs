@@ -91,15 +91,25 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let (mut scans, again) = plan_scans(s, r, &stamps, all, &mut p)?;
     let out = going(std::mem::take(&mut p.goes), &p.stays);
     let mut n_out = out.len();
+    use rofl::engine::meter;
+    meter::in_step("takes_out");
+    meter::step("takes_out", out.len());
+    let mark = s.eval.read_mark();
     let d = s.retract_set_delta(&out)??;
+    s.eval.meter_read("takes_out", &mark);
     let mut touched = d.overdeleted + d.rederived;
     if !p.add.is_empty() {
+        meter::in_step("takes_in");
+        meter::step("takes_in", 1);
+        let mark = s.eval.read_mark();
         match s.load_delta(&p.add, None) {
             Err(d) => return Err(d.join("; ")),
             Ok((_, Addition::Full(why))) => return Err(why),
             Ok(_) => {}
         }
+        s.eval.meter_read("takes_in", &mark);
     }
+    meter::write();
     for rec in &again {
         scans.push(ScanUnit::of(s, rec));
     }

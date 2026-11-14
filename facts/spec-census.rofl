@@ -197,6 +197,7 @@ check[checks]("rust/rofl/tests/journal.rs", "a_journal_from_a_seed_is_no_replay"
 check[checks]("rust/rofl/tests/kept.rs", "a_holes_unknowns_survive_an_image_and_a_volume", test).
 check[checks]("rust/rofl/tests/kept.rs", "js_sources_edited_go_by_delta", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_renamed_local_keeps_its_ids", test).
+check[checks]("rust/rofl/tests/kept.rs", "a_world_by_levels_answers_as_the_world_whole", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_kept_world_answers_and_refuses_as_docs_cli_says", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "single_source_shortest_paths_are_dijkstras_with_one_fact_per_node", test).
 check[checks]("rust/rofl/tests/lattice_scale.rs", "all_pairs_shortest_and_widest_paths_are_floyds", test).
@@ -251,6 +252,8 @@ check[checks]("rust/rofl/tests/resume.rs", "a_resumed_evaluation_is_a_whole_one"
 check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_another_book_does_not_stop_the_delta", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_the_same_book_is_taken_by_the_sets_pass", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "the_engine_delta_refuses_two_facts_at_once", test).
+check[checks]("rust/rofl/tests/retract_set.rs", "a_base_fact_a_rule_still_makes_stands", test).
+check[checks]("rust/rofl/tests/retract_set.rs", "a_fact_kept_by_a_longer_proof_stands_higher_in_its_cell", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_set_taken_out_in_one_pass_is_the_fresh_world", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "random_js_steps_1", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "random_js_steps_2", test).
@@ -319,6 +322,9 @@ check[checks]("rust/rofl/tests/tree.rs", "a_snapshot_opened_and_not_evaluated_an
 check[checks]("rust/rofl/tests/volume.rs", "a_world_kept_as_a_volume_opens_as_itself", test).
 check[checks]("rust/rofl/tests/volume.rs", "edits_kept_as_overlays_open_as_the_fresh_world", test).
 check[checks]("rust/rofl/tests/volumes.rs", "the_volumes_answer_as_the_whole_world", test).
+check[checks]("rust/rofl/tests/volumes.rs", "a_walked_closure_crosses_the_volumes", test).
+check[checks]("rust/rofl/tests/volumes.rs", "the_rules_of_one_file_are_evaluated_in_its_world", test).
+check[checks]("rust/rofl/tests/volumes.rs", "a_file_that_breaks_the_plan_is_refused", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_is_its_rows", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_no_capability_is_refused", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_the_wrong_arity_is_refused", test).

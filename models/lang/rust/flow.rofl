@@ -1,0 +1,124 @@
+-- flow.rofl — WHERE A VALUE OF RUST GOES UNCHANGED, read from the roles, names.rofl and calls.rofl.
+--
+--   copy[rust](X, Y)   the value at X may be the value at Y, the same value: a name read, an assignment, an argument
+--                      into its parameter, a result into its call, a field written and read
+--   const[rust](X, T)  the expression X is a constant the code can test for: a variant of the crate v(V), true or
+--                      false b(B), a constructor of the standard library c("Some"), c("None"), a string s(S)
+--   wrap[rust](X, Y)   the value at X is inside the value at Y or the other way round, through the standard library
+--
+-- A PLACE is a node where it has one (the pattern node of a local or a parameter, a const item) and a term where it
+-- has none: fld(S, Key), the field Key of the struct or variant S, whatever object holds it; res(F), what the
+-- function or closure F gives back. A field is one place for every object of its type, and a function one for
+-- every call of it: a value that enters either is seen at every reader.
+--
+-- Only copies: a value built from another (`a + 1`, `f(a)` out of the crate, an element of a collection) is
+-- another value. So a walk from a constant stays the size of the places that hold that constant, and a question
+-- about what derives from a value is a different, wider one that this file does not answer.
+
+body_owner[rust](F) :- body[value](F, _).
+nearest in_body[rust](F, N) of parent[tree](F, N) where body_owner[rust](F).
+
+-- ===================================================================== CONSTANTS
+const[rust](X, v(V)) :- denotes[rust](X, V), variant_of[rust](V, _), not ty_named[rust](X), not callee_node[rust](X).
+const[rust](C, v(V)) :- callee[value](C, F), denotes[rust](F, V), variant_of[rust](V, _).
+const[rust](O, v(V)) :- mark[value](O, object), declared[value](O, T), denotes[rust](T, V), variant_of[rust](V, _).
+const[rust](X, b(B)) :- literal[value](X, B), atom is type_of(B), B != unit.
+const[rust](X, s(S)) :- literal[value](X, S), string is type_of(S).
+-- a name in capitals that denotes nothing in the crate, read or called: `None`, `Some(x)`, `Ok(x)`
+std_ctor[rust](N, Name) :- ref[value](N, Name), not denoted[rust](N), K is str_char(Name, 0), rs_capital(K).
+const[rust](N, c(Name)) :- std_ctor[rust](N, Name), not callee_node[rust](N).
+const[rust](C, c(Name)) :- callee[value](C, F), std_ctor[rust](F, Name).
+edb(rs_capital).
+rs_capital("A"). rs_capital("B"). rs_capital("C"). rs_capital("D"). rs_capital("E"). rs_capital("F"). rs_capital("G").
+rs_capital("H"). rs_capital("I"). rs_capital("J"). rs_capital("K"). rs_capital("L"). rs_capital("M"). rs_capital("N").
+rs_capital("O"). rs_capital("P"). rs_capital("Q"). rs_capital("R"). rs_capital("S"). rs_capital("T"). rs_capital("U").
+rs_capital("V"). rs_capital("W"). rs_capital("X"). rs_capital("Y"). rs_capital("Z").
+
+-- ===================================================================== COPIES
+-- a name read is its place; a place written takes the value
+local[rust](B) :- named[rust](B, _), bind_decl[rust](B, B).
+copy[rust](B, N) :- ref[value](N, _), denotes[rust](N, B), local[rust](B), not literal[value](N, _).
+copy[rust](C, N) :- ref[value](N, _), denotes[rust](N, C), assign[value](C, _, _), hoisted[value](C, _).
+copy[rust](V, C) :- assign[value](C, _, V), hoisted[value](C, _).
+copy[rust](V, P) :- assign[value](_, P, V), local[rust](P).
+copy[rust](V, B) :- assign[value](_, T, V), ref[value](T, _), denotes[rust](T, B), local[rust](B).
+-- fields: of a struct by the type its holder holds, of a variant by the constructor written
+copy[rust](V, fld(S, Key)) :- assign[value](_, T, V), member[value](T, O, Key), holds[rust](O, S), has_field[rust](S, Key).
+copy[rust](fld(S, Key), N) :- member[value](N, O, Key), holds[rust](O, S), has_field[rust](S, Key).
+obj_of[rust](O, S) :- mark[value](O, object), declared[value](O, T), denotes[rust](T, S).
+copy[rust](V, fld(S, Key)) :- obj_of[rust](O, S), has[value](O, M), key[value](M, Key), value[value](M, V).
+copy[rust](A, fld(V, I))   :- callee[value](C, F), denotes[rust](F, V), has_field[rust](V, I), nth[tree](C, I, A).
+copy[rust](fld(V, Key), X) :- pattern_prop[value](P, Key, X), crate_ctor[rust](P, V), local[rust](X).
+copy[rust](fld(V, I), X)   :- pattern_elem[value](P, I, X), crate_ctor[rust](P, V), local[rust](X).
+-- arguments into parameters; a method called by its path takes its receiver first
+by_path_self[rust](C, G) :- calls[rust](C, G, path), binds[value](G, "self").
+ran[rust](C, G) :- sure_call[rust](C, G).
+ran[rust](C, G) :- by_name[rust](C, G).
+copy[rust](A, P) :- ran[rust](C, G), nth[tree](C, I, A), param[value](G, I, P), not by_path_self[rust](C, G).
+copy[rust](A, P) :- by_path_self[rust](C, G), nth[tree](C, I, A), I > 0, J is I - 1, param[value](G, J, P).
+copy[rust](A, G) :- by_path_self[rust](C, G), nth[tree](C, 0, A).
+copy[rust](R, G) :- ran[rust](C, G), callee[value](C, M), member[value](M, R, _), binds[value](G, "self"), not by_path_self[rust](C, G).
+-- results
+copy[rust](E, res(F)) :- returns[value](F, E), body[value](F, E).
+copy[rust](E, res(F)) :- returns[value](R, E), not body[value](R, _), not passes[value](R, E), in_body[rust](F, R).
+copy[rust](B, res(F)) :- body[value](F, B).
+copy[rust](res(G), C) :- ran[rust](C, G).
+-- wrappers
+copy[rust](X, N) :- gives[value](N, X).
+copy[rust](X, N) :- passes[value](N, X).
+copy[rust](X, N) :- unary[value](N, Op, X), rs_through_op(Op).
+-- methods of the standard library that give their receiver's value
+edb(rs_same_value).
+rs_same_value("clone"). rs_same_value("as_ref"). rs_same_value("as_mut"). rs_same_value("as_deref"). rs_same_value("to_owned").
+rs_same_value("cloned"). rs_same_value("copied"). rs_same_value("borrow"). rs_same_value("borrow_mut"). rs_same_value("take").
+rs_same_value("into"). rs_same_value("as_str").
+copy[rust](R, C) :- callee[value](C, M), member[value](M, R, Name), rs_same_value(Name), not resolved[rust](C).
+
+-- ===================================================================== THROUGH THE CONTAINERS OF THE STANDARD LIBRARY
+-- wrap[rust](X, Y): the value at X is inside the value at Y, or the other way round, with only the standard library
+-- between them: `Some(x)`, a tuple and its parts, `v.push(x)` and `v.iter().next()`, a pattern that is not a
+-- constructor of the crate. A constant of the crate is still itself on the other side; `true` and `Some` are not
+-- (the wrapper is what they are).
+--
+-- std_method(Name, How): what the library's containers do with what is in them, said once, by the method's name:
+--   out   the call gives the receiver's inside, or the receiver still
+--   in    an argument goes inside the receiver
+--   each  a closure given takes the receiver's inside as its parameters
+--   from  the call gives what the closure given gives
+edb(std_method).
+std_method("unwrap", out). std_method("expect", out). std_method("unwrap_or", out). std_method("unwrap_or_else", out).
+std_method("unwrap_or_default", out). std_method("ok", out). std_method("ok_or", out). std_method("ok_or_else", out).
+std_method("map_err", out). std_method("iter", out). std_method("iter_mut", out). std_method("into_iter", out).
+std_method("next", out). std_method("peekable", out). std_method("peek", out). std_method("first", out).
+std_method("last", out). std_method("get", out). std_method("get_mut", out). std_method("pop", out).
+std_method("remove", out). std_method("rev", out). std_method("skip", out). std_method("chain", out).
+std_method("enumerate", out). std_method("zip", out). std_method("drain", out). std_method("values", out).
+std_method("as_str", out). std_method("as_slice", out). std_method("lock", out). std_method("filter", out).
+std_method("collect", out). std_method("to_vec", out). std_method("to_string", out). std_method("as_deref_mut", out).
+std_method("push", in). std_method("insert", in). std_method("push_back", in). std_method("push_front", in).
+std_method("extend", in). std_method("push_str", in). std_method("replace", in).
+std_method("map", each). std_method("and_then", each). std_method("filter", each). std_method("filter_map", each).
+std_method("for_each", each). std_method("any", each). std_method("all", each). std_method("find", each).
+std_method("is_some_and", each). std_method("is_ok_and", each). std_method("flat_map", each). std_method("position", each).
+std_method("map", from). std_method("and_then", from). std_method("filter_map", from). std_method("flat_map", from).
+std_method("unwrap_or_else", from). std_method("or_else", from). std_method("then", from).
+
+std_call[rust](C, R, Name) :- callee[value](C, M), member[value](M, R, Name), not resolved[rust](C), not denoted[rust](M).
+place_of[rust](R, B) :- ref[value](R, _), denotes[rust](R, B), local[rust](B).
+place_of[rust](R, fld(S, Key)) :- member[value](R, O, Key), holds[rust](O, S), has_field[rust](S, Key).
+place_of[rust](R, Pl) :- unary[value](R, Op, X), rs_through_op(Op), place_of[rust](X, Pl).
+wrap[rust](R, C)  :- std_call[rust](C, R, Name), std_method(Name, out).
+wrap[rust](A, Pl) :- std_call[rust](C, R, Name), std_method(Name, in), nth[tree](C, _, A), place_of[rust](R, Pl).
+wrap[rust](R, P)  :- std_call[rust](C, R, Name), std_method(Name, each), nth[tree](C, _, Cl), param[value](Cl, _, P).
+wrap[rust](res(Cl), C) :- std_call[rust](C, _, Name), std_method(Name, from), nth[tree](C, _, Cl), body[value](Cl, _).
+wrap[rust](A, C)  :- callee[value](C, F), std_ctor[rust](F, _), nth[tree](C, _, A).
+wrap[rust](X, A)  :- mark[value](A, array), nth[tree](A, _, X).
+wrap[rust](O, N)  :- member_expr[value](N, O, _).
+wrap[rust](O, N)  :- member[value](N, O, Key), int is type_of(Key).
+wrap[rust](V, Pl) :- assign[value](_, T, V), member_expr[value](T, O, _), place_of[rust](O, Pl).
+-- a pattern takes the value whole, and its parts take theirs from it
+copy[rust](V, P) :- assign[value](_, P, V), not local[rust](P), not ref[value](P, _), not member[value](P, _, _).
+wrap[rust](V, P) :- iterates[value](_, P, V).
+wrap[rust](P, X) :- pattern_elem[value](P, _, X), not crate_pat[rust](P).
+copy[rust](P, X) :- binary[value](P, Op, X, _), rs_pat_op(Op).
+copy[rust](P, X) :- binary[value](P, Op, _, X), rs_pat_op(Op).

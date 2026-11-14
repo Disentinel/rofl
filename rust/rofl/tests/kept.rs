@@ -83,7 +83,15 @@ fn rofl_env(bin: &str, dir: &Dir, cache: &Path, env: &[(&str, String)], brk: Opt
     let mut c = Command::new(bin);
     c.args(args).current_dir(&dir.0).env("XDG_CACHE_HOME", cache).env_remove("ROFL_BREAK").env_remove("ROFL_CACHE_GB").envs(env.iter().map(|(k, v)| (*k, v)));
     if let Some(b) = brk { c.env("ROFL_BREAK", b); }
-    let o = c.output().unwrap();
+    // the memory is the machine's: a neighbour's run that fills it stops this one, which keeps nothing and is run
+    // again; thirty times in all the runs of this process, so that a world short of memory by itself ends
+    static AGAIN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(30);
+    let mut o = c.output().unwrap();
+    while String::from_utf8_lossy(&o.stderr).contains("reached the memory this process may use") {
+        if AGAIN.fetch_update(std::sync::atomic::Ordering::Relaxed, std::sync::atomic::Ordering::Relaxed, |n| n.checked_sub(1)).is_err() { break }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+        o = c.output().unwrap();
+    }
     Ran { out: String::from_utf8_lossy(&o.stdout).into(), err: String::from_utf8_lossy(&o.stderr).into(), code: o.status.code().unwrap_or(-1) }
 }
 
@@ -320,6 +328,123 @@ fn a_traded_facts_file_is_no_base(brk: Option<&str>) -> Result<(), String> {
     let args = ["ask", "reaches(a, X)", "boot.rofl", "rules.rofl", "b.rofl"];
     let (got, want) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
     ensure(got.out == want.out && got.code == want.code && !got.err.contains("by delta"), || format!("traded: {} {:?}", got.code, got.err))
+}
+
+/// A nearest moved by an edit both ways is followed by the delta: a mark gone puts rows in for what stood under it, a
+/// mark come takes rows out, and each time what read the rows equals the evaluation anew.
+fn a_nearest_moved_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("nearest");
+    d.write("near.rofl", "edb(parent). edb(mark). edb(leaf).\nnearest near(A, D) of parent(A, D) where mark(A).\nowner(D, A) :- leaf(D), near(A, D).\n");
+    let tree = "parent(r, x). parent(x, y). parent(y, z). parent(r, w).\nleaf(z). leaf(y). leaf(w).\n";
+    let args = ["ask", "owner(D, A)", "boot.rofl", "near.rofl", "t.rofl"];
+    d.write("t.rofl", &format!("{tree}mark(r). mark(x).\n"));
+    answered(&rofl(&d, brk, &args), "D = z, A = x", "kept")?;
+    for (marks, want) in [("mark(r).", "D = z, A = r"), ("mark(r). mark(y).", "D = z, A = y"), ("mark(r). mark(x). mark(y).", "D = y, A = x")] {
+        d.write("t.rofl", &format!("{tree}{marks}\n"));
+        let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+        ensure(got.out == fresh.out && got.out.contains(want) && got.err.contains("by delta"), || format!("{marks}: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))?;
+    }
+    Ok(())
+}
+
+/// A nearest row gone and back within a retraction (its tree's edges are concluded, and derived again where a fact
+/// below them lost one of two firings) leaves the nearest as it stood: the edit goes by delta.
+fn a_nearest_row_gone_and_back_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("nearest-back");
+    d.write("near.rofl", "edb(e). edb(root). edb(alt). edb(mark). edb(leaf).\nlive(X) :- root(X).\nlive(X) :- alt(X).\nlive(X) :- live(Y), e(Y, X).\nparent(A, D) :- e(A, D), live(A).\nnearest near(A, D) of parent(A, D) where mark(A).\nowner(D, A) :- leaf(D), near(A, D).\n");
+    let tree = "root(r). e(r, x). e(x, y). e(y, z). mark(r). mark(x). leaf(z). leaf(y).\n";
+    let args = ["ask", "owner(D, A)", "boot.rofl", "near.rofl", "t.rofl"];
+    d.write("t.rofl", &format!("{tree}alt(x).\n"));
+    answered(&rofl(&d, brk, &args), "D = z, A = x", "kept")?;
+    d.write("t.rofl", tree);
+    let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+    ensure(got.out == fresh.out && got.err.contains("by delta"), || format!("a nearest row gone and back: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))
+}
+
+/// A DELTA OF VOLUMES, a corpus of 24 files small enough to read: `model` over the files' facts `was`, kept by the
+/// question, then `now` taken by delta, and the answers are those of the files evaluated anew. Files 0 and 1 are the
+/// widest, so they stand in two volumes wherever there are two; every other file reads what they make.
+fn volumes_delta(name: &str, model: &str, each: &dyn Fn(usize, &dyn Fn(usize) -> String) -> String, was: &str, now: &str, brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new(name);
+    let n = |i: usize| format!("n{i:016x}");
+    let mut text = String::new();
+    for i in 0..24 {
+        text += &format!("here(\"{}_z\").\n", n(i));
+        if i < 2 {
+            text += &(0..4).map(|k| format!("pad(\"{}_{k}\").\n", n(i))).collect::<String>();
+        } else {
+            text += &each(i, &n);
+        }
+    }
+    d.write("m.rofl", &format!("edb(here). edb(pad).\n{model}"));
+    let args = ["ask", "t(Z, X)", "boot.rofl", "m.rofl", "f.rofl"];
+    let env = [("ROFL_VOLUMES", "1".to_string())];
+    let fill = |t: &str| t.replace("F0", &n(0)).replace("F1", &n(1));
+    d.write("f.rofl", &format!("{text}{}", fill(was)));
+    let kept = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+    ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("{name}: not kept by volumes: {} {:?}", kept.code, kept.err))?;
+    d.write("f.rofl", &format!("{text}{}", fill(now)));
+    let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
+    let anew = rofl_env(BIN, &d, &d.0.join("anew"), &env, brk, &args);
+    ensure(got.out == anew.out && got.err.contains("units settled again"), || format!("{name}: a delta of volumes answers otherwise than the files anew: {} lines against {}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))
+}
+
+/// A copy with no original goes: a fact a volume made for the length of a round (its `not` read a copy not yet laid)
+/// was copied to the others, and goes from them when the copy that takes it out is laid.
+fn a_copy_with_no_original_goes(brk: Option<&str>) -> Result<(), String> {
+    let model = "edb(q). edb(link). edb(bad). edb(uses).\nr(X) :- link(Y, X), bad(Y).\np(X) :- q(X), not r(X).\nt(Z, X) :- uses(Z, X), here(Z), p(X).\n";
+    let each = |i: usize, n: &dyn Fn(usize) -> String| format!("uses(\"{0}_z\", \"{1}_x\").\nuses(\"{0}_z\", \"{2}_x\").\n", n(i), n(0), n(5));
+    let was = format!("link(\"F1_y\", \"F0_x\").\nq(\"n{:016x}_x\").\n", 5);
+    volumes_delta("orphan", model, &each, &was, &format!("{was}q(\"F0_x\").\nbad(\"F1_y\").\n"), brk)
+}
+
+/// A volume waits for its copy: the copy was taken out while a firing of the volume's own held the fact up, that
+/// firing went as copies were laid, and the original, standing all along, is laid there again.
+fn a_volume_waits_for_its_copy(brk: Option<&str>) -> Result<(), String> {
+    let model = "edb(q1). edb(q2). edb(link). edb(bad). edb(uses).\nr(Z) :- link(Y, Z), bad(Y).\nw(Z) :- here(Z), not r(Z).\np(X) :- q1(X).\np(X) :- q2(X).\np(X) :- uses(Z, X), w(Z).\nt(Z, X) :- uses(Z, X), here(Z), p(X).\n";
+    let each = |i: usize, n: &dyn Fn(usize) -> String| format!("uses(\"{0}_z\", \"{1}_x\").\nlink(\"{2}_y\", \"{0}_z\").\n", n(i), n(0), n(1));
+    volumes_delta("waits", model, &each, "q2(\"F0_x\").\nq1(\"F0_x\").\n", "q2(\"F0_x\").\nbad(\"F1_y\").\n", brk)
+}
+
+/// Volumes taken by delta are kept over the volumes they were opened from, and the next edit is taken by delta from
+/// those: a nearest moved one way and back again, each time the files' answer anew.
+fn deltas_of_volumes_one_after_another(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("volumes-again");
+    let n = |i: usize| format!("n{i:016x}");
+    let text: String = (0..24).map(|i| format!("parent(\"{0}_r\", \"{0}_x\").\nparent(\"{0}_x\", \"{0}_y\").\nmark(\"{0}_r\").\nleaf(\"{0}_y\").\nnext(\"{0}_r\", \"{1}_r\").\n", n(i), n((i + 1) % 24))).collect();
+    // (`u` makes a term in the volume of one file that `v` joins in the volume of the next: it crosses as it is)
+    d.write("m.rofl", "edb(parent). edb(mark). edb(leaf). edb(next).\nnearest near(A, D) of parent(A, D) where mark(A).\nt(D, A) :- leaf(D), near(A, D).\nu(B, at(A)) :- next(A, B), mark(A).\nv(C, W) :- next(B, C), u(B, W).\n");
+    let args = |q: &'static str| ["ask", q, "boot.rofl", "m.rofl", "f.rofl"];
+    let env = [("ROFL_VOLUMES", "1".to_string())];
+    d.write("f.rofl", &text);
+    let kept = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
+    ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("not kept by volumes: {} {:?}", kept.code, kept.err))?;
+    for (step, more) in [format!("mark(\"{}_x\").\n", n(0)), String::new(), format!("mark(\"{}_x\").\n", n(3))].iter().enumerate() {
+        d.write("f.rofl", &format!("{text}{more}"));
+        let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
+        let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{step}")), &env, brk, &args("t(D, A)"));
+        ensure(got.out == anew.out && got.err.contains("units settled again"), || format!("edit {step} of volumes one after another: {:?} against {:?}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))?;
+    }
+    // a term a volume made is read by its neighbour and by the kept volumes opened again under the number it was given
+    let crossed = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("v(C, W)"));
+    let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[], brk, &args("v(C, W)"));
+    ensure(crossed.code == 0 && crossed.out.lines().count() >= 24 && sorted(&crossed.out) == sorted(&whole.out), || format!("a term made in one volume and joined in another: {:?} against {:?}; {:?}", crossed.out.lines().count(), whole.out.lines().count(), crossed.err))?;
+    // the volumes are a kept world while their registry names them: without it they are computed anew
+    let worlds = d.0.join("cache/rofl/worlds");
+    let regs: Vec<std::path::PathBuf> = std::fs::read_dir(&worlds).unwrap().flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "scroll")).collect();
+    ensure(!regs.is_empty(), || "the kept volumes have no registry".to_string())?;
+    for r in regs {
+        std::fs::remove_file(r).unwrap();
+    }
+    let again = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args("t(D, A)"));
+    let anew = rofl_env(BIN, &d, &d.0.join("anew-last"), &env, brk, &args("t(D, A)"));
+    ensure(again.out == anew.out && again.err.contains("volumes: 24 files"), || format!("volumes with no registry were read: {:?}", again.err))
+}
+
+fn sorted(s: &str) -> Vec<&str> {
+    let mut l: Vec<&str> = s.lines().collect();
+    l.sort_unstable();
+    l
 }
 
 /// Touched without a change, or beside a file that changed and was never read, the world is not stale.
@@ -579,8 +704,9 @@ fn edits_by_delta_are_the_fresh_world(brk: Option<&str>) -> Result<(), String> {
     check("a file come", true, "more.rofl")?;
     d.write("rules.rofl", RULES);
     check("the file edited back", true, "rules.rofl")?;
-    // the world without more.rofl stands under the one kept over it, so a file gone is asked of a world kept with it alone
-    check("the world kept without more.rofl", false, "rules.rofl")?;
+    // (the world without more.rofl stands under the one kept over it while the overlays are small beside it, and is
+    // taken from; else the file goes from the world with it: so a file gone is asked of a world kept with it alone)
+    check("the world kept without more.rofl", false, "")?;
     check_in(&gone, "kept with more.rofl", true, "")?;
     check_in(&gone, "a file gone", false, "more.rofl (gone)")
 }
@@ -769,7 +895,7 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 28] = [
+const CASES: [(&str, Case); 33] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -798,6 +924,11 @@ const CASES: [(&str, Case); 28] = [
     ("the_disk_cap_stops_and_a_larger_one_goes_on", the_disk_cap_stops_and_a_larger_one_goes_on),
     ("a_far_world_is_no_base", a_far_world_is_no_base),
     ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
+    ("a_nearest_moved_goes_by_delta", a_nearest_moved_goes_by_delta),
+    ("a_nearest_row_gone_and_back_goes_by_delta", a_nearest_row_gone_and_back_goes_by_delta),
+    ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
+    ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
+    ("deltas_of_volumes_one_after_another", deltas_of_volumes_one_after_another),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
@@ -917,6 +1048,148 @@ fn a_renamed_local_keeps_its_ids() {
         ensure(load(&d.0.join("cache"), "decl(I)") == fresh, || "a fresh load read the inherited scan of the storeroom".into())
     };
     check().unwrap_or_else(|e| panic!("{e}"));
+}
+
+/// A WORLD BY LEVELS (`engine/levels.rs`) answers as the world whole: files of functions that call one another by
+/// name, absences asked above the files (`dead`, `leaf`), rules above an absence, recursive ones too (`up`, `rlive`),
+/// an absence of what read an absence (`noleaf`), two premises of one layer (`cnl2`), a premise the core states
+/// (`sp`), two facts of two files that meet only through a fact of a layer below (`via`), one that any file or a library
+/// states (`via2`), facts two rules join at one value with two relations (`aliased` and `adef` beside `resolves`, asked together by `ac`), a
+/// premise of a relation nothing concludes until an edit (`marked`). Every rule is fired in the units, and narrow groups make the tree deep.
+#[test]
+fn a_world_by_levels_answers_as_the_world_whole() {
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let d = Dir::new("levels");
+    let model = "anc(P, C) :- parent(C, P).\nanc(A, C) :- parent(C, P), anc(A, P), parent(P, Q).\nin_fn(F, N) :- anc(F, N), func(F).\n\
+        resolves(C, F) :- refers(C, Nm), defines(F, Nm).\ncalls(F, G) :- in_fn(F, C), resolves(C, G).\n\
+        reach(F, G) :- calls(F, G).\nreach(F, H) :- reach(F, G), calls(G, H), func(H).\ncalled(G) :- calls(F, G).\ncaller(F) :- calls(F, G).\n\
+        dead(F) :- func(F), not called(F).\nleaf(F) :- func(F), not caller(F).\ntoleaf(F, L) :- calls(F, L), leaf(L).\n\
+        up(L, F) :- toleaf(F, L).\nup(L, G) :- up(L, F), calls(G, F), func(G).\nhasleaf(F) :- toleaf(F, L).\nlive(F) :- func(F), not dead(F).\n\
+        lcalls(F, G) :- calls(F, G), live(G).\nrlive(F, G) :- lcalls(F, G).\nrlive(F, H) :- rlive(F, G), lcalls(G, H), func(H).\n\
+        noleaf(F) :- func(F), not hasleaf(F).\ncnl(F, G) :- calls(F, G), noleaf(G).\ncnl2(F, H) :- cnl(F, G), cnl(G, H).\n\
+        special(nm_0_0).\nsp(F) :- special(Nm), defines(F, Nm), not dead(F).\n\
+        hascnl2(F) :- cnl2(F, H).\nquiet(F) :- func(F), not hascnl2(F).\nqc(F, G) :- quiet(G), calls(F, G).\nqq(F, G) :- quiet(F), qc(F, G).\n\
+        nearest nfn(F, X) of edge(F, X) where func(F).\nheld_by(F, X) :- stmt(X), nfn(F, X), not dead(F).\n\
+        lcalled(G, F) :- lcalls(F, G).\nvia(F, H) :- lcalls(F, G), calls(G, G2), lcalled(G2, H).\n\
+        uses(F, Nm) :- in_fn(F, C), refers(C, Nm), live(F).\ndefd(Nm, H) :- defines(H, Nm), live(H).\n\
+        via2(F, H) :- uses(F, Nm), alias(S, Nm, Nm2), defd(Nm2, H).\n\
+        aliased(C, S) :- refers(C, Nm), alias(S, Nm, Nm2).\nadef(F, S) :- defines(F, Nm), alias(S, Nm, Nm2).\n\
+        ac(C, F) :- resolves(C, F), aliased(C, S), adef(F, S2).\nmk(Nm) :- mark(X, Nm).\nmarked(G) :- defd(Nm, G), mk(Nm).\n";
+    let (files, fns, mut seed) = (64usize, 3usize, 7u64);
+    let mut rnd = |n: usize| {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (seed >> 33) as usize % n
+    };
+    let mut text = String::new();
+    for f in 0..files {
+        let node = |k: usize| format!("n{:016x}_{k}", f + 1);
+        let mut k = 0;
+        for g in 0..fns {
+            let fun = node(k);
+            k += 1;
+            text += &format!("func({fun}).\ndefines({fun}, nm_{f}_{g}).\n");
+            let mut stack = vec![fun];
+            // (one function long enough for its statements to be solved a run at a time)
+            for _ in 0..if f == 2 && g == 0 { 300 } else { 8 } {
+                let s = node(k);
+                k += 1;
+                for _ in 0..rnd(3).min(stack.len() - 1) {
+                    stack.pop();
+                }
+                text += &format!("parent({s}, {p}).\nedge({p}, {s}).\nstmt({s}).\n", p = stack.last().unwrap());
+                if stack.len() < 4 {
+                    stack.push(s.clone());
+                }
+                if rnd(6) == 0 {
+                    text += &format!("alias({s}, nm_{}_{}, nm_{}_{}).\n", rnd(files), rnd(fns), rnd(files), rnd(fns));
+                }
+                if rnd(4) == 0 {
+                    // (the first file is a library: most of the others call into it; some call far away, so that a
+                    // chain of calls crosses the widest groups more than once)
+                    let to = if rnd(100) < 60 { f } else if rnd(2) == 0 { 0 } else if rnd(3) == 0 { (f + files / 2 + rnd(3)) % files } else { (f + 1 + rnd(3)).min(files - 1) };
+                    text += &format!("refers({s}, nm_{to}_{}).\n", rnd(fns));
+                }
+            }
+        }
+    }
+    // every relation in a book: a rule of the units names its book
+    let booked = |t: &str| {
+        let mut out = String::new();
+        let mut word = String::new();
+        for c in t.chars() {
+            if c == '(' && !word.is_empty() {
+                out += "[d]";
+            }
+            if c.is_ascii_alphanumeric() || c == '_' { word.push(c) } else { word.clear() }
+            out.push(c);
+        }
+        out
+    };
+    d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
+    for q in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "via[d](A, B)", "via2[d](A, B)", "ac[d](A, B)"] {
+        let args = ["ask", q, "boot.rofl", "w.rofl"];
+        let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &[("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())], planted.as_deref(), &args);
+        assert!(whole.code == 0 && !whole.out.is_empty(), "{q}: the world whole: {} {:?}", whole.code, whole.err);
+        let all_below = got.err.lines().find(|l| l.contains("levels: of ")).is_some_and(|l| {
+            let n: Vec<&str> = l.split("levels: of ").nth(1).unwrap().split(' ').collect();
+            n[0] == n[2] && !l.contains(" 0 in 0 layers") || q.starts_with("reach") || q.starts_with("ac[")
+        });
+        assert!(got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
+        assert!(all_below && !got.err.contains("evaluated whole") && !got.err.contains("panicked"), "{q}: not every rule was fired in the units: {:?}", got.err);
+    }
+    // the units are kept, each stretch's own facts and firings, and a question asked again is answered from them
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
+    let again = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
+    let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["ask", "qq[d](A, B)", "boot.rofl", "w.rofl"]);
+    assert!(again.err.contains("answered from the kept units") && sorted(&again.out) == sorted(&whole.out), "qq[d](A, B) asked again: {:?} {:?}", again.out.lines().count(), again.err);
+    let one = whole.out.lines().next().expect("an answer").replace("A = ", "qq[d](").replace(", B = ", ", ") + ")";
+    let why = |cache: &str| rofl_env(BIN, &d, &d.0.join(cache), &levels, planted.as_deref(), &["why", &one, "boot.rofl", "w.rofl"]);
+    let (fresh, kept) = (why("why"), why("why"));
+    let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["why", &one, "boot.rofl", "w.rofl"]);
+    assert!(whole.out == fresh.out, "why {one}: by levels {:?}\nthe world whole {:?}", fresh.out, whole.out);
+    assert!(fresh.code == 0 && kept.err.contains("kept units") && kept.out == fresh.out && fresh.out.lines().count() > 2, "why {one}: from the kept units {:?} {:?}\nfresh {:?}", kept.out, kept.err, fresh.out);
+    // AN EDIT OF ONE FILE settles again the units that asked what moved, and the world answers as it does whole: a
+    // call taken out of a file, then a function put into another that calls into a third
+    let gone = text.lines().find(|l| l.starts_with("refers(n0000000000000006_")).expect("a call in the sixth file").to_string();
+    let less = text.replacen(&format!("{gone}\n"), "", 1);
+    let n = |k: usize| format!("n{:016x}_{k}", 10);
+    let more = format!("{less}func({f}).\ndefines({f}, nm_new).\nparent({s}, {f}).\nedge({f}, {s}).\nstmt({s}).\nrefers({s}, nm_3_0).\nrefers({s}, nm_new).\n", f = n(1000), s = n(1001));
+    // (and the first facts of a relation no unit saw a fact of, which name functions of files the edit leaves alone)
+    let more = format!("{more}{}", [20, 41].iter().flat_map(|f| (0..fns).map(move |g| format!("mark({}, nm_{f}_{g}).\n", n(1001)))).collect::<String>());
+    let before = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &["ask", "marked[d](A)", "boot.rofl", "w.rofl"]);
+    assert!(before.code == 0 && before.out.starts_with("(empty)"), "marked[d](A) before a file states a mark: {:?} {:?}", before.out, before.err);
+    // (and a call taken out of the library, which most units read)
+    let lib_gone = text.lines().find(|l| l.starts_with("refers(n0000000000000001_")).expect("a call in the library").to_string();
+    let lib_less = format!("{more}{gone}\n").replacen(&format!("{lib_gone}\n"), "", 1);
+    for (name, text) in [("a call gone", &less), ("a function come", &more), ("the call back", &format!("{more}{gone}\n")), ("a call gone from the library", &lib_less)] {
+        d.write("w.rofl", &format!("tree edge(P, C).\n{}", booked(&format!("{model}{text}"))));
+        for (i, q) in ["qq[d](A, B)", "held_by[d](A, B)", "cnl2[d](A, B)", "rlive[d](A, B)", "up[d](A, B)", "sp[d](A)", "noleaf[d](A)", "reach[d](A, B)", "marked[d](A)"].iter().enumerate() {
+            let args = ["ask", q, "boot.rofl", "w.rofl"];
+            let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
+            let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &args);
+            assert!(whole.code == 0 && got.code == 0 && sorted(&got.out) == sorted(&whole.out), "{name}, {q}: by levels {} lines against {} whole; {:?}", got.out.lines().count(), whole.out.lines().count(), got.err);
+            assert!(*q != "marked[d](A)" || name == "a call gone" || !whole.out.starts_with("(empty)"), "{name}: no function is marked");
+            if i == 0 {
+                let said = got.err.lines().find(|l| l.contains("units settled again")).unwrap_or_else(|| panic!("{name}: the edit was not taken by the units: {:?}", got.err));
+                let nums: Vec<usize> = said.split(' ').filter_map(|w| w.parse().ok()).collect();
+                assert!(nums[2] > 0 && (nums[2] * 2 < nums[3] || name.ends_with("library")), "{name}: {said}");
+            } else {
+                assert!(got.err.contains("units settled again") || got.err.contains("kept units"), "{name}, {q}: neither taken by the units nor answered from them: {:?}", got.err);
+            }
+        }
+        // (and a why after it, through an absence and through the joins, quotes what the world whole quotes)
+        for (q, head) in [("noleaf[d](A)", "noleaf[d]("), ("qq[d](A, B)", "qq[d](")] {
+            let whole = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &["ask", q, "boot.rofl", "w.rofl"]);
+            for line in whole.out.lines().take(3) {
+                let fact = format!("{head}{})", line.replace("A = ", "").replace(", B = ", ", "));
+                let args = ["why", fact.as_str(), "boot.rofl", "w.rofl"];
+                let want = rofl_env(BIN, &d, &d.0.join("whole"), &[("ROFL_VOLUMES", "0".to_string())], None, &args);
+                let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &args);
+                assert!(want.code == 0 && got.out == want.out, "{name}, why {fact}: by levels {:?}\nthe world whole {:?}", got.out, want.out);
+            }
+        }
+    }
 }
 
 #[test]

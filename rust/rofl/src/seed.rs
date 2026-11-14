@@ -79,9 +79,9 @@ fn read_prems<'a>(
                     *dangling += 1;
                 }
             },
-            "neg" => prems.push(PremRef::Neg(h.intern(&p.key))),
-            "vrow" => prems.push(PremRef::VRow(h.intern(&p.key))),
-            _ => prems.push(PremRef::Bi(h.intern(&p.desc))),
+            "neg" => prems.push(PremRef::Neg(h.key(&p.key))),
+            "vrow" => prems.push(PremRef::VRow(h.key(&p.key))),
+            _ => prems.push(PremRef::Bi(h.key(&p.desc))),
         }
     }
     ok.then_some(prems)

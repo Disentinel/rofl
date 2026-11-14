@@ -285,10 +285,33 @@ impl Eval {
             return;
         }
         self.cost.mem.live = live;
+        HEAP_PEAK.fetch_max(live, std::sync::atomic::Ordering::Relaxed);
         self.cost.mem.rule = self.cur_rule;
         if live > self.cost.mem.at + self.cost.mem.at / 16 {
             self.cost.mem.at = live;
             self.cost.mem.parts = self.mem_parts();
+        }
+    }
+
+    /// The rows each rule has read so far, to be set against later (`meter_read`).
+    pub fn read_mark(&self) -> FxMap<Sym, u64> {
+        if !super::meter::on() {
+            return FxMap::default();
+        }
+        self.cost.read_by_rule.iter().map(|(r, n)| (*r, n.0)).collect()
+    }
+
+    /// What each rule read since `mark`, counted to the step of a delta it was read in (`engine/meter.rs`).
+    pub fn meter_read(&self, step: &'static str, mark: &FxMap<Sym, u64>) {
+        if !super::meter::on() {
+            return;
+        }
+        for (r, n) in &self.cost.read_by_rule {
+            let read = n.0 - mark.get(r).copied().unwrap_or(0);
+            if read > 0 {
+                let head = self.rule_at.get(r).map_or("", |i| self.h.name(self.rules[*i].clause.head.rel));
+                super::meter::read(step, self.h.name(*r), head, read);
+            }
         }
     }
 
@@ -602,6 +625,9 @@ impl CostState {
     }
 }
 
+/// The highest any world of this process saw the heap (`note_heap`).
+static HEAP_PEAK: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
 /// The most of this process that was resident, in bytes: what the machine gave it. The heap's count is what was
 /// asked of the allocator, a vector's whole capacity with it; a capacity never written is asked and not resident.
 /// `peak:` over the worlds of one process, the core and its volumes evaluated on threads beside it: the heap is the
@@ -611,10 +637,16 @@ impl CostState {
 pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
     let top = evals.iter().max_by_key(|e| e.cost.mem.live)?;
     let m = &top.cost.mem;
+    let mb = |b: i64| b >> 20;
+    // (a world by levels: the peak is a unit's, which is gone with its parts)
+    let peak = HEAP_PEAK.load(std::sync::atomic::Ordering::Relaxed);
+    if peak > m.live && peak >= 1 << 30 {
+        let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
+        return Some(format!("peak: the heap held {} MB{rss}, while the units were settled", mb(peak)));
+    }
     if m.live < 1 << 30 {
         return None;
     }
-    let mb = |b: i64| b >> 20;
     let mut by: Vec<(String, i64)> = Vec::new();
     for e in evals {
         for (n, b) in &e.cost.mem.parts {

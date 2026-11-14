@@ -1,0 +1,14 @@
+[package]
+name = "rs_tree"
+version = "0.1.0"
+edition = "2021"
+
+# its own workspace: the engine's build never compiles tree-sitter
+[workspace]
+
+[dependencies]
+tree-sitter = "0.25"
+tree-sitter-rust = "0.24"
+
+[profile.release]
+opt-level = 3

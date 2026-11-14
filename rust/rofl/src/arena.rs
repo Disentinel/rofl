@@ -313,6 +313,7 @@ impl<T: Pod> Arena<T> {
     pub fn to_mut(&mut self) -> &mut Vec<T> {
         if let Arena::Mapped { .. } = self {
             let v = self.to_vec();
+            crate::engine::meter::walk("mapped_copied", std::mem::size_of_val(v.as_slice()));
             *self = match span_of(bytes_of(self)) {
                 Some(from) => Arena::Copied { v, from },
                 None => Arena::Heap(v),
@@ -515,6 +516,10 @@ impl VolW {
     }
     pub fn u32(&mut self, x: u32) {
         self.bytes(&x.to_ne_bytes());
+    }
+    /// Where the next byte is written.
+    pub fn at(&self) -> usize {
+        self.at
     }
     pub fn u64(&mut self, x: u64) {
         self.bytes(&x.to_ne_bytes());
@@ -769,6 +774,13 @@ impl VolR {
     pub fn new(map: Rc<Region>, from: usize) -> VolR {
         let end = map.len().saturating_sub(8);
         VolR { map, i: from, end, chain: Vec::new(), vouched: 0 }
+    }
+    /// Where the next read is, and the volume read: a reader made over them reads on from here.
+    pub fn at(&self) -> usize {
+        self.i
+    }
+    pub fn map(&self) -> Rc<Region> {
+        self.map.clone()
     }
     /// An overlay's reader: what it names read from `chain`.
     pub fn with_chain(mut self, chain: Vec<Rc<Base>>) -> VolR {
