@@ -1018,7 +1018,7 @@ impl Eval {
     pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, edit: Option<Edit>) -> Result<Levels, Halt> {
         // (the check harness's oracles: how many files a unit of files alone holds, how many units meet in one)
         let env = |name: &str, by: usize| std::env::var(name).ok().and_then(|x| x.parse().ok()).unwrap_or(by);
-        let (leaf, fan) = (edit.as_ref().map_or(env("ROFL_LEAF", 16).max(1), |e| e.0.cx.leaf), env("ROFL_FAN", 8));
+        let (leaf, fan) = (edit.as_ref().map_or(env("ROFL_LEAF", 4).max(1), |e| e.0.cx.leaf), env("ROFL_FAN", 8));
         let cx = Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: self.h.clone(), leaf, files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
