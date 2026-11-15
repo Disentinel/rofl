@@ -363,6 +363,14 @@ impl Cells {
     }
 }
 
+/// A tree row as a firing cites it: by its key in the store that wrote the firing, for a unit's keys are not its
+/// readers' (`engine/levels.rs`).
+type VKey = (usize, Sym);
+
+fn vkey(src: &Store, k: Sym) -> VKey {
+    (src as *const Store as usize, k)
+}
+
 /// Derivation heights by fact id, 4 bytes a fact: a walk of the firings below an aggregate's members reaches most
 /// of a world, where a map paid about 30 bytes an entry.
 #[derive(Clone, Default, Debug)]
@@ -1806,6 +1814,27 @@ impl VirtualRel {
         }))
     }
 
+    /// The firings down the chain of the row `(a, d)`: `firing_prems` of `(a, d)`, then of the row above, up to the
+    /// one an edge out of `a` makes.
+    pub fn chain_prems(&self, forests: &[(Sym, Rc<crate::forest::Forest>)], book: Sym, a: Term, d: Term) -> Option<Vec<Vec<VPrem>>> {
+        let f = &forests.iter().find(|(b, f)| *b == book && f.is_ancestor(a, d))?.1;
+        let (ebook, near) = match self.near {
+            Some(n) => (n.ebook, Some(n)),
+            None => (book, None),
+        };
+        let steps = f.steps(a, d)?;
+        Some(steps.windows(2).map(|w| {
+            let (c, p) = (w[0], w[1]);
+            let edge = VPrem::Fact(self.edge, ebook, vec![p, c]);
+            match (p != a, near) {
+                (false, None) => vec![edge],
+                (true, None) => vec![VPrem::Row(a, p), edge],
+                (false, Some(n)) => vec![edge, VPrem::Fact(n.cond, n.sbook, vec![a])],
+                (true, Some(n)) => vec![VPrem::Row(a, p), VPrem::Neg(n.cond, n.sbook, p), edge],
+            }
+        }).collect())
+    }
+
     /// A premise as a witness spells it.
     pub fn prem_key(&self, h: &Heap, book: Sym, p: &VPrem) -> String {
         let mut k = String::new();
@@ -2351,6 +2380,8 @@ pub struct WitView<'a> {
     pub rule: Sym,
     pub tick: u32,
     pub prems: &'a [PremRef],
+    /// the store that wrote it, whose names its premises' keys are
+    pub src: &'a Store,
 }
 
 fn hash_key(rel: Sym, persp: Sym, args: &[Term]) -> u64 {
@@ -2831,9 +2862,27 @@ impl Store {
                 _ => continue,
             };
         }
+        if self.cells.prems.iter().any(|p| matches!(p.kind(), Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_))) {
+            for p in Rc::make_mut(&mut self.cells).prems.iter_mut() {
+                *p = match p.kind() {
+                    Prem::Neg(k) => PremRef::Neg(f(k)),
+                    Prem::Bi(k) if k != 0 => PremRef::Bi(f(k)),
+                    Prem::VRow(k) if k != 0 => PremRef::VRow(f(k)),
+                    _ => continue,
+                };
+            }
+        }
         let rows: Vec<(Sym, VRow)> = self.vrow_of.own.drain().map(|(k, v)| (f(k), v)).collect();
         self.vrow_of.own.extend(rows.iter().copied());
         rows
+    }
+
+    /// The cells of `s`, a store forked from the same core that settled the world's aggregates (by levels, the
+    /// reader's unit): a firing read from it names its cells by their place there.
+    pub fn read_cells(&mut self, s: &Store) {
+        if s.cells.recs.len() >= self.cells.recs.len() {
+            self.cells = s.cells.clone();
+        }
     }
 
     /// This store, which wrote nothing, set as it was before it read stretches (a volume holds it so, the stretches
@@ -4369,7 +4418,7 @@ impl Store {
     /// stretches that hold one.
     fn views(&self, id: FactId) -> Vec<WitView<'_>> {
         fn view(s: &Store, n: WitNode) -> WitView<'_> {
-            WitView { rule: n.rule, tick: n.tick, prems: s.prems_of(&n) }
+            WitView { rule: n.rule, tick: n.tick, prems: s.prems_of(&n), src: s }
         }
         let id = self.current(id);
         let mut out: Vec<WitView<'_>> = self.chain(id).map(|n| view(self, n)).collect();
@@ -4496,7 +4545,7 @@ impl Store {
 
     #[inline]
     fn view_of(&self, n: &WitNode) -> WitView<'_> {
-        WitView { rule: n.rule, tick: n.tick, prems: self.prems_of(n) }
+        WitView { rule: n.rule, tick: n.tick, prems: self.prems_of(n), src: self }
     }
 
     #[inline]
@@ -4520,7 +4569,7 @@ impl Store {
                 let mut rank = |v: &WitView<'_>| {
                     let mut sig = String::new();
                     self.write_sig(h, v, &mut sig);
-                    (v.prems.iter().fold(0u32, |a, p| a.max(self.prem_height(p, memo))), sig)
+                    (v.prems.iter().fold(0u32, |a, p| a.max(self.prem_height(self, p, memo))), sig)
                 };
                 let mut ranked: Vec<((u32, String), WitView<'_>)> = vs.into_iter().map(|v| (rank(&v), v)).collect();
                 ranked.sort_by(|a, b| a.0 .0.cmp(&b.0 .0).then_with(|| cmp_js(&a.0 .1, &b.0 .1)));
@@ -4578,7 +4627,7 @@ impl Store {
             .map(|n| {
                 let mut hgt = 0u32;
                 for p in self.view(n).prems {
-                    hgt = hgt.max(self.prem_height(p, memo));
+                    hgt = hgt.max(self.prem_height(self, p, memo));
                 }
                 let mut sig = String::new();
                 self.write_sig(h, &self.view(n), &mut sig);
@@ -4593,7 +4642,9 @@ impl Store {
     /// returns first.
     pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
         if !self.here(id) {
-            return self.rank_firings(h, self.firings(id), memo);
+            // (read where they were written: a firing's rows are named by its store's keys)
+            let fs = self.views(id).into_iter().map(|v| ((v.rule, v.tick, v.prems.to_vec()), v.src)).collect();
+            return self.rank(h, fs, memo);
         }
         if self.wit_head.get(id as usize).is_none_or(|c| *c == EMPTY) {
             return Vec::new();
@@ -4610,14 +4661,19 @@ impl Store {
     /// Firings found by the caller (not held here) in the order `witness_of`
     /// ranks the held ones: least height, then signature.
     pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
+        self.rank(h, fs.into_iter().map(|f| (f, self)).collect(), memo)
+    }
+
+    /// `rank_firings` of firings each with the store that wrote it.
+    fn rank(&self, h: &Heap, fs: Vec<((Sym, u32, Vec<PremRef>), &Store)>, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.0 .2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
         let _ = self.heights(&roots, memo);
         let mut ranked: Vec<(u32, String, (Sym, u32, Vec<PremRef>))> = fs
             .into_iter()
-            .map(|f| {
-                let hgt = f.2.iter().fold(0u32, |a, p| a.max(self.prem_height(p, memo)));
+            .map(|(f, src)| {
+                let hgt = f.2.iter().fold(0u32, |a, p| a.max(self.prem_height(src, p, memo)));
                 let mut sig = String::new();
-                self.write_sig(h, &WitView { rule: f.0, tick: f.1, prems: &f.2 }, &mut sig);
+                self.write_sig(h, &WitView { rule: f.0, tick: f.1, prems: &f.2, src }, &mut sig);
                 (hgt + 1, sig, f)
             })
             .collect();
@@ -4731,44 +4787,46 @@ impl Store {
     /// edge into the descendant and the row of the parent, so down the chain from the ancestor each row is 1 + the
     /// higher of the row above and its edge. A row that does not hold (cited in a past tick) is 0, as a fact gone is.
     pub fn vrow_height(&self, k: Sym, memo: &mut Heights) -> u32 {
-        let Some((ci, book, a, d)) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false)) else { return 0 };
-        let Some(v) = self.virtuals.get(ci) else { return 0 };
-        if !v.forests.iter().any(|(b, f)| *b == book && f.is_ancestor(a, d)) {
-            return 0;
+        self.vrow_height_in(self, k, memo)
+    }
+
+    /// The facts of the firings down a tree row's chain, from the descendant up to the ancestor; None for a row that
+    /// does not hold.
+    fn vrow_chain(&self, k: Sym) -> Option<Vec<Vec<FactId>>> {
+        let (ci, book, a, d) = self.vrow_of.get(&k).filter(|_| !brk!("vclosure_height_zero" => true; false))?;
+        let v = self.virtuals.get(ci)?;
+        // (the row's tree lies here, or by levels in the unit of the node's file, which says whether it kept the
+        // rows' firings)
+        let held = |fs: &[(Sym, Rc<crate::forest::Forest>)]| fs.iter().any(|(b, f)| *b == book && f.is_ancestor(a, d));
+        let (forests, wit) = match self.facts.near.as_ref().and_then(|n| n.trees.as_ref()).filter(|_| !held(&v.forests)).and_then(|t| t(d)) {
+            Some(s) => (s.forests(ci), s.store().vwit),
+            None => (v.forests.clone(), self.vwit),
+        };
+        if !wit {
+            return None;
         }
+        v.chain_prems(&forests, book, a, d)?.into_iter().map(|ps| {
+            ps.into_iter().filter_map(|p| match p {
+                VPrem::Fact(r, b, args) => Some(self.get(r, b, &args).ok_or(())),
+                _ => None,
+            }).collect::<Result<Vec<FactId>, ()>>().ok()
+        }).collect()
+    }
+
+    /// `vrow_height` of the row `src` names `k`.
+    fn vrow_height_in(&self, src: &Store, k: Sym, memo: &mut Heights) -> u32 {
+        let Some(chain) = src.vrow_chain(k) else { return 0 };
+        let _ = self.heights(&chain.concat(), memo);
         // down the chain from the ancestor, each firing is 1 + the higher of the row above and its facts
-        let mut chain: Vec<Vec<FactId>> = Vec::new();
-        let mut c = d;
-        loop {
-            let Some((_, ps)) = v.firing_prems(book, a, c) else { return 0 };
-            let (mut facts, mut up) = (Vec::new(), None);
-            for p in ps {
-                match p {
-                    VPrem::Fact(r, b, args) => match self.get(r, b, &args) {
-                        Some(e) => facts.push(e),
-                        None => return 0,
-                    },
-                    VPrem::Row(_, p) => up = Some(p),
-                    VPrem::Neg(..) => {}
-                }
-            }
-            chain.push(facts);
-            match up {
-                Some(p) => c = p,
-                None => break,
-            }
-        }
-        let all: Vec<FactId> = chain.concat();
-        let _ = self.heights(&all, memo);
         chain.iter().rev().fold(0, |h, fs| fs.iter().fold(h, |m, e| m.max(memo.get(e).copied().unwrap_or(0))) + 1)
     }
 
     /// The height of a premise: a fact's from `memo` (computed), a cell's own, a row of a tree's, a negation and a builtin 0.
-    fn prem_height(&self, p: &PremRef, memo: &mut Heights) -> u32 {
+    fn prem_height(&self, src: &Store, p: &PremRef, memo: &mut Heights) -> u32 {
         match p.kind() {
             Prem::Fact(g) => memo.get(&g).copied().unwrap_or(u32::MAX - 1),
-            Prem::Cell(x) => self.cells.recs[x as usize].height,
-            Prem::VRow(k) => self.vrow_height(k, memo),
+            Prem::Cell(x) => src.cells.recs[x as usize].height,
+            Prem::VRow(k) => self.vrow_height_in(src, k, memo),
             Prem::Neg(_) | Prem::Bi(_) => 0,
         }
     }
@@ -5468,24 +5526,21 @@ impl Store {
     }
 
     /// The heights of the rows read by `first` and by the firings of `order`.
-    fn vrow_heights<'a>(&self, first: impl Iterator<Item = &'a [PremRef]>, order: &[FactId], memo: &mut Heights) -> HashMap<Sym, u32> {
-        let mut vh: HashMap<Sym, u32> = HashMap::new();
-        if self.vrow_of.is_empty() {
-            return vh;
-        }
-        let read = |ps: &[PremRef], vh: &mut HashMap<Sym, u32>, memo: &mut Heights| {
+    fn vrow_heights<'a>(&self, first: impl Iterator<Item = &'a [PremRef]>, order: &[FactId], memo: &mut Heights) -> HashMap<VKey, u32> {
+        let mut vh: HashMap<VKey, u32> = HashMap::new();
+        let read = |src: &Store, ps: &[PremRef], vh: &mut HashMap<VKey, u32>, memo: &mut Heights| {
             for p in ps {
                 if let Prem::VRow(k) = p.kind() {
-                    vh.entry(k).or_insert_with(|| self.vrow_height(k, memo));
+                    vh.entry(vkey(src, k)).or_insert_with(|| self.vrow_height_in(src, k, memo));
                 }
             }
         };
         for ps in first {
-            read(ps, &mut vh, memo);
+            read(self, ps, &mut vh, memo);
         }
         for &f in order {
             for n in self.views(f) {
-                read(n.prems, &mut vh, memo);
+                read(n.src, n.prems, &mut vh, memo);
             }
         }
         vh
@@ -5533,7 +5588,7 @@ impl Store {
                             }
                         },
                         Prem::Cell(x) => best = best.max(self.cells.recs[x as usize].height),
-                        Prem::VRow(k) => best = best.max(vh.get(&k).copied().unwrap_or(0)),
+                        Prem::VRow(k) => best = best.max(vh.get(&vkey(n.src, k)).copied().unwrap_or(0)),
                         Prem::Neg(_) | Prem::Bi(_) => {}
                     }
                 }
@@ -5647,7 +5702,7 @@ impl Store {
 
     /// The graph `quorum_heights` runs Dijkstra over: a firing for every derivation of a fact below the members and of
     /// every member, the firings waiting on each node, and the nodes already reached.
-    fn quorum_graph(&self, open: &[(CellId, usize)], members: &[Vec<Vec<Vec<PremRef>>>], order: &[FactId], at: &HashMap<CellId, usize>, memo: &Heights, vh: &HashMap<u32, u32>) -> QGraph {
+    fn quorum_graph(&self, open: &[(CellId, usize)], members: &[Vec<Vec<Vec<PremRef>>>], order: &[FactId], at: &HashMap<CellId, usize>, memo: &Heights, vh: &HashMap<VKey, u32>) -> QGraph {
         let (mut firings, mut users, mut heap) = (Vec::new(), HashMap::new(), BinaryHeap::new());
         let add = |head: QNode, ps: &[PremRef], firings: &mut Vec<QFiring>, users: &mut HashMap<QNode, Vec<usize>>, heap: &mut BinaryHeap<Reverse<(u32, QNode)>>| {
             let idx = firings.len();
@@ -5669,7 +5724,7 @@ impl Store {
                         }
                     },
                     Prem::VRow(k) => {
-                        best = best.max(vh.get(&k).copied().unwrap_or(0));
+                        best = best.max(vh.get(&vkey(self, k)).copied().unwrap_or(0));
                         None
                     }
                     Prem::Neg(_) | Prem::Bi(_) => None,

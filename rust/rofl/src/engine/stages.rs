@@ -289,7 +289,7 @@ impl Eval {
             };
             for (i, t) in self.store.args(id).iter().enumerate().filter(|(i, _)| *i < 64 && m >> i & 1 == 1) {
                 let named = match t.kind() {
-                    TermK::Atom(x) | TermK::Str(x) => super::volumes::file_of(self.h.name(x)),
+                    TermK::Atom(x) | TermK::Str(x) => super::volumes::node_file(self.h.name(x)),
                     _ => None,
                 };
                 if named.is_none() || file.as_deref().is_some_and(|f| Some(f) != named) {
