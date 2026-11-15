@@ -71,7 +71,7 @@ jobs:
       # it is a function of (scripts/keep.ts), so a pull request runs warm on the keep of earlier runs. A wrongly kept
       # answer that equals the golden would turn a real regression green, so a push to main and a release tag run COLD,
       # with nothing restored: the truth before a merge lands and before a release. Every run saves what it computed.
-      - if: "!(github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-')))"
+      - if: "!((github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-')))"
         uses: actions/cache/restore@v4
         with: { path: .cache/rofl, key: 'rofl-keep-${{ github.sha }}', restore-keys: rofl-keep- }
       - name: goldens (node)
@@ -113,9 +113,11 @@ jobs:
 
   # EVERY PLANTED FAULT TURNS ITS WORLDS RED. scripts/agg_breaks.ts: one `--features breaks` build, each fault switched
   # on beside a no-break control. A change to brk! or to a line a fault sits on is held to it here, not on a laptop.
-  # Blocking: its control is green on main again (f_the_fault_harness_control_is_red_on_main).
+  # Blocking: its control is green on main again (f_the_fault_harness_control_is_red_on_main). Not on a pull request:
+  # it is two thirds of a request's run, and the merge train (merge-train.yml) runs it once over every request it lands.
   breaks:
     needs: model
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -164,7 +166,7 @@ jobs:
   # tag only: a branch's binaries ship nowhere, and main still finds a platform's break
   # before a release does.
   engine:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))
     strategy:
       matrix:
         include:
@@ -197,7 +199,7 @@ jobs:
 
   vsix:
     needs: engine
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/rofl-nb-'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -234,7 +236,7 @@ jobs:
   # 1.5.1 tag failed on (ENEEDAUTH). Only a push to main and a tag may use that environment (docs/npm.md: its branch policy).
   release-dry:
     needs: vsix
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: { contents: read, id-token: write }
     environment: marketplace-publish
