@@ -27,7 +27,7 @@ const out: string[] = [];
 for (const w of worlds()) {
   const files = ['boot.rofl', ...inputs(w).map((f) => path.relative(ROOT, f))];
   for (const f of files) out.push(`world_file[snap](${q(tree)}, ${q(w.name)}, ${q(f)}).`);
-  for (const [k, flag] of Object.entries(FLAG)) if ((w as Record<string, unknown>)[k] !== undefined) out.push(`ran_with[snap](${q(tree)}, ${q(w.name)}, ${q(flag)}).`);
+  for (const [k, flag] of Object.entries(FLAG)) if ((w as unknown as Record<string, unknown>)[k] !== undefined) out.push(`ran_with[snap](${q(tree)}, ${q(w.name)}, ${q(flag)}).`);
   for (const f of files.slice(1)) wordsOf(path.join(ROOT, f));
 }
 for (const [f, ws] of words) for (const t of ws) out.push(`file_word[snap](${q(tree)}, ${q(path.relative(ROOT, f))}, ${q(t)}).`);
