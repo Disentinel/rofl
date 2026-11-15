@@ -55,6 +55,8 @@ pub struct Joins {
     mates: FxMap<Place, Vec<Place>>,
     /// the lower stage of the books the plan cuts: a file's unit keeps its lemmas and drops the books
     low: Option<Stage>,
+    /// the rules that read the world's profile (`Eval::profile_rules`): fired by the reader once the units are settled
+    pub prof: FxSet<Sym>,
 }
 
 pub struct Unit {
@@ -770,7 +772,11 @@ impl Eval {
     pub fn level_stage(&mut self) -> (Stage, Joins) {
         let low = self.cut_stage();
         let mut st = self.lemma_stage().unwrap_or_else(|| Stage { rules: Rc::default(), heads: FxSet::default(), given: FxSet::default(), cut: Vec::new(), wide: Vec::new(), own: FxMap::default(), free: FxSet::default() });
-        let rules = self.rules.clone();
+        // (what reads the world's profile waits for the units' count: no unit fires it, the reader does after them)
+        let prof = self.profile_rules();
+        st.rules = Rc::new(st.rules.iter().filter(|id| !prof.contains(*id)).copied().collect());
+        st.free.retain(|id| !prof.contains(id));
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| !prof.contains(&r.id)).cloned().collect();
         let mut odd: FxSet<Sym> = self.lat.cell_rels().collect();
         odd.extend(self.store.virtuals.iter().map(|v| v.rel));
         odd.extend(self.store.aliases.iter().map(|a| a.rel));
@@ -939,7 +945,7 @@ impl Eval {
                 up.clear();
             }
         }
-        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), tree_rules, low, ..Default::default() };
+        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), tree_rules, low, prof, ..Default::default() };
         let mut by_layer: std::collections::BTreeMap<u32, FxSet<Sym>> = Default::default();
         for r in &up {
             by_layer.entry(layer[&booked(&r.clause.head)]).or_default().insert(r.id);
@@ -1636,7 +1642,7 @@ impl Eval {
         // THE READER'S UNIT: the rules left to the world's reader by their shape are fired whole over the layers, and
         // what they conclude is one more stretch it reads; after an edit, again, unless no stretch was replaced
         let k = rules_of.len();
-        let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).copied().collect();
+        let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).chain(&cx.joins.prof).copied().collect();
         let mut said = vec![format!("levels: ms a layer, before its units and at each depth of them: {}", took.join(", "))];
         if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());

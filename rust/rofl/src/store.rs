@@ -946,7 +946,7 @@ impl<T: Pod> Col<T> {
         if self.low.is_empty() {
             &self.base[i]
         } else {
-            self.low.get(&i).unwrap_or(&self.base[i])
+            self.low.get(&i).unwrap_or_else(|| &self.base[i])
         }
     }
     fn get(&self, i: usize) -> Option<&T> {
@@ -5397,13 +5397,20 @@ impl Store {
     /// firing that does. Run where firings are dropped (`clear_derived`, and
     /// the end of a tick once its staged conclusions are written), never
     /// between a staged conclusion and the boundary that writes it.
+    /// The facts whose firings this store holds: all of them, but in a store that reads stretches, whose ids
+    /// between the core and its own are the stretches' and their firings theirs.
+    fn held_heads(&self) -> impl Iterator<Item = usize> {
+        let core = self.facts.near.as_ref().map_or(self.wit_head.mark, |n| n.core);
+        (0..core).chain(self.wit_head.mark..self.wit_head.len())
+    }
+
     pub fn gc_cells(&mut self) {
         if self.cells.recs.is_empty() {
             return;
         }
         let mut live = vec![false; self.cells.recs.len()];
-        for h in self.wit_head.iter() {
-            for n in self.nodes_from(*h) {
+        for id in self.held_heads() {
+            for n in self.nodes_from(self.wit_head[id]) {
                 for p in self.prems_of(&n) {
                     if let Prem::Cell(x) = p.kind() {
                         live[x as usize] = true;
@@ -5467,7 +5474,7 @@ impl Store {
         }
         // Only the live firings are renumbered: a node a removal orphaned is
         // read by nothing, and `compact_wits` drops its premises.
-        for h in 0..self.wit_head.len() {
+        for h in self.held_heads() {
             let mut c = self.wit_head[h];
             while c != EMPTY {
                 let n = self.wits[c as usize];
