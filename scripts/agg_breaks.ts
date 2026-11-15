@@ -7960,8 +7960,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/structure.ts",
-    "if (declared.has(rel)) return",
-    "if (false && declared.has(rel)) return"
+    "if (declared.has(rel)) return `${what}: '${rel}' is declared a structure twice`;\n  const cl = s.closure;",
+    "if (false && declared.has(rel)) return `${what}: '${rel}' is declared a structure twice`;\n  const cl = s.closure;"
    ]
   ],
   "expect": {
@@ -8330,8 +8330,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/parser.ts",
-    "new Map([['function', ['to']], ['tree', []], ['alias', []]])",
-    "new Map([['function', ['to']], ['alias', []]])"
+    "new Map([['function', ['to']], ['tree', []], ['alias', []], ['view', []], ['graph', []]])",
+    "new Map([['function', ['to']], ['alias', []], ['view', []], ['graph', []]])"
    ]
   ],
   "expect": {
@@ -8402,7 +8402,7 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "src/api.ts",
-    "const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store));",
+    "const badClosure = lowered ? null : checkClosureHead(c0, declaredClosures(this.store), declaredAliases(this.store), declaredOf(this.store, 'nearest'));",
     "const badClosure = null;"
    ]
   ],
@@ -9173,7 +9173,7 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "vclosure_reader_seen_kept",
-  "what": "a rule that reads a tree keeps what it saw of the edges across a retraction, a count an addition of as many edges gives again, and is not fired on their rows",
+  "what": "what a rule that reads a tree saw of its edges is their count alone, which an addition of as many as a retraction took out gives again, so it is not fired on their rows",
   "expect": {
    "set_tree": "step 2:"
   }
