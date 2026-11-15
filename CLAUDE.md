@@ -42,6 +42,12 @@ Before a brief goes to a worker, the coordinator answers these in it:
    at what cost? The worker is asked to name any such constraint it meets.
 5. Does its acceptance measure the goal, or only that the code does what the
    brief says?
+6. What is it meant to do, in three lines of what the worlds measure (owner,
+   2026-11-15): whose answers move (the worlds that say which feature), what
+   gets cheaper (steps, rows at the peak), and that the rest holds. As facts
+   they are `meant_answers` and `meant_cheaper` of
+   models/engine/feature-behaviour.rofl, and `npm run engine:features` sets
+   them against what the change did.
 
 ## Commands
 

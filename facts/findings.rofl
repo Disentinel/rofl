@@ -13891,3 +13891,16 @@ addressed_by(f_a_whynot_with_no_text_walks_what_the_world_kept, "rust/rofl/src/e
 addressed_by(f_a_whynot_with_no_text_walks_what_the_world_kept, "rust/rofl/src/bin/rofl/serve.rs").
 finding_note(f_a_whynot_with_no_text_walks_what_the_world_kept,
   "THE THAW'S REFUSAL WAS TOO WIDE, AND THE GUIDE CAUGHT IT (CI node, STALE guide/ASKING.md). A world with no text of its files (a notebook's kernel) answered every whynot of a literal the lower stage concludes with `is proved in a file from [ast_oxc], which this world cut; the text of its file was not given`, where before it walked the literal's rules and named the failed premises, truly: those premises are lemmas the world kept whole. The lie f_a_whynot_below_the_cut_thaws_the_file_it_names found is of a rule that reads a cut book, whose rows are away; so with no text the refusal is now said only of a literal in a cut book or one a rule of which reads a cut book, and every other is walked where it stands (Eval::explain_thawed). `rofl serve` keeps what its load ops gave (a path, or the text where there was none) and thaws from it (Eval::lower_source). guide/ASKING.md reads as on main again. LEFT: the notebook's kernel (the engine as wasm, rust/rofl/src/md/nb.rs) is given no text, so a whynot of it that reaches a rule over a cut book is still refused, not thawed; a literal that names no one file is refused as before, whatever its rules read.").
+
+finding(f_a_brief_says_its_intent_in_what_the_worlds_measure, decision).
+recorded(f_a_brief_says_its_intent_in_what_the_worlds_measure, "2026-11-15").
+addressed_by(f_a_brief_says_its_intent_in_what_the_worlds_measure, "CLAUDE.md").
+addressed_by(f_a_brief_says_its_intent_in_what_the_worlds_measure, "models/engine/feature-behaviour.rofl").
+finding_note(f_a_brief_says_its_intent_in_what_the_worlds_measure,
+  "The owner, 2026-11-15: a brief says what the change is meant to do in three lines of what the worlds of npm test measure: whose answers move (the worlds that say which feature), what gets cheaper (steps, rows at the peak), and that the rest holds. The words are the ones a change is judged in afterwards (meant_answers, meant_cheaper against side_answer, side_dearer, unmet_answers, unmet_cheaper), so an intent is checked and not retold. CLAUDE.md, Briefs, question 6.").
+
+finding(f_where_a_node_ends_is_a_word_of_its_own, decision).
+recorded(f_where_a_node_ends_is_a_word_of_its_own, "2026-11-15").
+addressed_by(f_where_a_node_ends_is_a_word_of_its_own, "models/lang/rust/rs-roles.rofl").
+finding_note(f_where_a_node_ends_is_a_word_of_its_own,
+  "The owner, 2026-11-15: the last line of a node stays a word of its own, `ends[tree](N, Line)`, and `at[tree]` does not become a range. It is read where a changed line is put in the function that holds it (fn_span in models/engine/feature-hit.rofl, span in models/engine/features.rofl), by the Rust model alone; `at` is read in about 95 places of the frozen JS rules, which would all change for a column they do not read. Whether the range join costs much is the engine's to say (`hot:`), not the rule author's to plan: it joins by file, so a diff costs its changed lines times the functions of their files. This reverses what was proposed on 2026-11-10.").
