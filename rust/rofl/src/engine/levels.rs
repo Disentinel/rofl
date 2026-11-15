@@ -525,6 +525,8 @@ pub struct Levels {
     /// what the evaluation of the rules left to the reader said
     pub said: Vec<String>,
     pub cooled: Cooled,
+    /// what the units spent, summed (`CostState::absorb`): the world's profile, as an evaluation whole keeps its own
+    pub cost: super::cost::CostState,
 }
 
 /// The units cooled under the memory's pressure: how many, in how many bytes, how many times, and the files they
@@ -724,7 +726,7 @@ impl Levels {
         for x in r.arena::<u64>()?.chunks_exact(2) {
             masks.entry(x[0] as Sym).or_default().insert(x[1]);
         }
-        Ok(Levels { tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, leaf, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default() })
+        Ok(Levels { tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, leaf, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default(), cost: Default::default() })
     }
 
     /// The unit of layer `k` over exactly `files`.
@@ -1049,7 +1051,10 @@ impl Eval {
         // (the nodes of the files edited whose rows in a tree moved, filled when the files are settled)
         let shifted: Mutex<FxSet<u64>> = Mutex::default();
         let was = |k: usize, files: (u32, u32)| edit.as_ref().and_then(|e| e.0.find(k, files));
-        let base = Fork(self.fork());
+        // (each unit counts what it spends from nothing; the world's count is their sum, `Levels.cost`)
+        let mut base = Fork(self.fork());
+        base.0.cost = self.cost.anew();
+        let cost = Mutex::new(self.cost.anew());
         let core_names = (self.h.syms.len() as Sym, self.h.funcs_len());
         let one = Mutex::new(());
         let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
@@ -1244,6 +1249,16 @@ impl Eval {
                 let named = store.rename_keys(|k| if e.0.h.is_own(k) { *memo.entry(k).or_insert_with(|| m.key(e.0.h.name(k))) } else { k });
                 rows.lock().unwrap().extend(named);
             }
+            {
+                let mut c = cost.lock().unwrap();
+                let hot = c.absorb(&e.0.cost);
+                if !hot.is_empty() {
+                    let _g = one.lock().unwrap();
+                    std::mem::swap(&mut e.0.cost, &mut c);
+                    e.0.say_hot_world(&hot);
+                    std::mem::swap(&mut e.0.cost, &mut c);
+                }
+            }
             let n = store.len_ids() - store.layer_mark();
             let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
             drop((one.lock().unwrap(), e));
@@ -1414,7 +1429,9 @@ impl Eval {
             let mut e = {
                 let p = ready.lock().unwrap();
                 let _g = one.lock().unwrap();
-                Fork(p.as_ref().expect("the layer made ready").0.fork())
+                let mut e = Fork(p.as_ref().expect("the layer made ready").0.fork());
+                e.0.cost = e.0.cost.anew();
+                e
             };
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
@@ -1548,6 +1565,7 @@ impl Eval {
                                 raw.0.lower_stage(low)?;
                                 raw.0.own_kept(stage.0, from)?;
                                 e.0.take_lemmas(&raw.0, low, from, core_names.0, core_names.1);
+                                e.0.cost.absorb(&raw.0.cost);
                                 drop((forks.lock().unwrap(), raw));
                             }
                             None => volumes::load_text(&mut e.0, text)?,
@@ -1644,6 +1662,6 @@ impl Eval {
             tops.push(Rc::new(top));
         }
         let again = edit.is_some().then(|| (again.load(Relaxed), same.load(Relaxed)));
-        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap() })
+        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap(), cost: cost.into_inner().unwrap() })
     }
 }

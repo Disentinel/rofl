@@ -41,7 +41,7 @@ pub struct CostState {
     pub(super) wide_floor: usize,
     /// Rows read under each rule, and the count at which it is next said to be hot.
     pub read_by_rule: FxMap<Sym, (u64, u64)>,
-    pub(super) hot_read: u64,
+    pub hot_read: u64,
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
@@ -86,6 +86,73 @@ impl Default for CostState {
             sols_by_rule: FxMap::default(), new_by_rule: FxMap::default(), fresh_whole_by_rule: FxMap::default(), again_by_rule: FxMap::default(), delta_by_rule: FxMap::default(), activation_by_rule: FxMap::default(),
             mem: MemPeak::default(),
         }
+    }
+}
+
+impl CostState {
+    /// A fresh count that says hot rules as this one does: what a unit settled apart spends, from nothing.
+    pub fn anew(&self) -> CostState {
+        CostState { hot_read: self.hot_read, on_hot: self.on_hot, ..CostState::default() }
+    }
+
+    /// WHAT A WORLD SETTLED BY LEVELS SPENT IS THE SUM OF ITS UNITS: `o`, one unit's count, added to this one. The
+    /// rules whose rows read crossed the next tenfold of `hot_read` here, while a quarter or more of all read, are
+    /// returned, to be said as a rule of the whole world is.
+    pub fn absorb(&mut self, o: &CostState) -> Vec<Sym> {
+        fn add(to: &mut FxMap<Sym, u64>, from: &FxMap<Sym, u64>) {
+            for (k, v) in from {
+                *to.entry(*k).or_default() += v;
+            }
+        }
+        fn prem(to: &mut PremCost, c: &PremCost) {
+            (to.rows_in, to.read, to.rows_out) = (to.rows_in + c.rows_in, to.read + c.read, to.rows_out + c.rows_out);
+            if c.widest.n > to.widest.n {
+                to.widest = c.widest.clone();
+            }
+        }
+        for (k, c) in &o.prem_cost {
+            prem(self.prem_cost.entry(*k).or_default(), c);
+        }
+        for (k, c) in &o.prem_cost_at {
+            prem(self.prem_cost_at.entry(*k).or_default(), c);
+        }
+        self.read_rows += o.read_rows;
+        if o.widest.n > self.widest.n {
+            self.widest = o.widest.clone();
+        }
+        let first = self.hot_read;
+        let mut crossed = Vec::new();
+        for (r, (n, _)) in &o.read_by_rule {
+            let e = self.read_by_rule.entry(*r).or_insert((0, first));
+            e.0 += n;
+            if e.0 >= e.1 {
+                while e.0 >= e.1 {
+                    e.1 = e.1.saturating_mul(10);
+                }
+                crossed.push(*r);
+            }
+        }
+        crossed.retain(|r| self.read_by_rule[r].0 * HOT_SHARE >= self.read_rows);
+        for (m, from) in [
+            (&mut self.argm_by_rule, &o.argm_by_rule),
+            (&mut self.ns_by_rule, &o.ns_by_rule),
+            (&mut self.fires_by_rule, &o.fires_by_rule),
+            (&mut self.sols_by_rule, &o.sols_by_rule),
+            (&mut self.new_by_rule, &o.new_by_rule),
+            (&mut self.fresh_whole_by_rule, &o.fresh_whole_by_rule),
+            (&mut self.again_by_rule, &o.again_by_rule),
+            (&mut self.delta_by_rule, &o.delta_by_rule),
+        ] {
+            add(m, from);
+        }
+        for (r, i) in &o.activation_by_rule {
+            self.activation_by_rule.entry(*r).or_insert(*i);
+        }
+        if o.mem.live > self.mem.live {
+            self.mem = o.mem.clone();
+        }
+        self.hot_said.extend(o.hot_said.iter().cloned());
+        crossed
     }
 }
 
@@ -193,6 +260,19 @@ impl Eval {
             f(&said);
         }
         self.cost.hot_said.push(said);
+    }
+
+    /// The rules of a world settled by levels whose rows read, summed over its units, crossed `hot_read` (`absorb`),
+    /// said as `say_hot` says one: this count is the world's.
+    pub(super) fn say_hot_world(&mut self, rids: &[Sym]) {
+        for rid in rids {
+            let Some(h) = self.hot_rule(*rid) else { continue };
+            let said = format!("{}, summed over the units it fired in", h.sentence());
+            if let Some(f) = self.cost.on_hot {
+                f(&said);
+            }
+            self.cost.hot_said.push(said);
+        }
     }
 
     fn bound_text(&self, l: &Lit, at: &[Term]) -> String {

@@ -310,6 +310,7 @@ impl Eval {
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
         lv.read_by(&mut e);
+        e.cost.absorb(&lv.cost);
         e.diags.push(format!(
             "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units, in {ms} ms; left to the reader by their shape: {held}",
             e.rules.iter().filter(|r| r.safe).count(),

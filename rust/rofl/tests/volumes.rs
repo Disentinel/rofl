@@ -277,3 +277,22 @@ fn the_rows_a_lower_unit_cites_are_its_own() {
     assert!(want.len() == 12 && want.iter().all(|h| !h.is_empty()), "{want:?}");
     assert_eq!(heights(reader), want);
 }
+
+/// WHAT A WORLD BY LEVELS SPENT IS THE SUM OF ITS UNITS: the rules fired in the files' units are in the reader's
+/// count, as a world whole keeps its own (`hot_rules`, the profile), and one whose rows read, summed, cross the
+/// threshold is said hot though no unit alone crossed it.
+#[test]
+fn the_units_spend_into_the_worlds_count() {
+    let facts = by_file_facts();
+    let refs = [BY_FILE, facts.as_str()];
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    core.eval.cost.hot_read = 20;
+    let v = core.by_volumes(&cut.files).unwrap().0;
+    let heads: BTreeSet<String> = v.eval.hot_rules(100).into_iter().map(|h| h.head).collect();
+    for of_file in ["has_child", "leaf"] {
+        assert!(heads.contains(of_file), "{of_file} fired in the files' units: {heads:?}");
+    }
+    assert!(v.eval.cost.hot_said.iter().any(|s| s.contains("summed over the units")), "{:#?}", v.eval.cost.hot_said);
+}
