@@ -1640,7 +1640,11 @@ has_recv[code](N)                       :- member_node_v[flow](N).
 may_be[flow](C, VK, X)                  :- resolves[code](C, F), sx_ret_field[surface](F, Key), not has_recv[code](C), this_val[flow](F, Key, VK, X).
 -- what an object holds under a Key, where somebody asks (`key_ask`): what was written onto it, what it holds
 -- plain, and where the Key is a getter there, what the getter hands out, read off the same object
-key_ask[flow](I, Key)                   :- key_wanted[flow](R, Key), bare_node[flow](R, I).
+-- the objects a receiver is, where the call is to say which: its own, and what callers hand a parameter
+recv_obj[flow](R, I)                    :- may_be[flow](R, node, I).
+recv_obj[flow](R, I)                    :- may_be[flow](R, input, S), input_param[flow](S, _, _), input_node[flow](S, I).
+recv_obj[flow](R, I)                    :- may_be[flow](R, input, T), hop_node[flow](T, I).
+key_ask[flow](I, Key)                   :- key_wanted[flow](R, Key), recv_obj[flow](R, I).
 key_ask[flow](I, Key)                   :- this_key[flow](M, Key), input_this[flow](S, M), input_node[flow](S, I).
 key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), sx_mset[surface](I, Key, VK, X), holds_members[flow](I).
 key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), member_plain[flow](I, Key, V), may_be[flow](V, VK, X),
@@ -1649,7 +1653,35 @@ key_getter[flow](I, Key, G)             :- key_ask[flow](I, Key), member_value[f
 key_of[flow](I, Key, VK, X)             :- key_getter[flow](I, Key, G), sx_ret_own[surface](G, VK, X).
 key_ask[flow](I, K2)                    :- key_getter[flow](I, _, G), sx_ret_field[surface](G, K2).
 key_of[flow](I, Key, VK, X)             :- key_getter[flow](I, Key, G), sx_ret_field[surface](G, K2), key_of[flow](I, K2, VK, X).
-key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), bare_node[flow](R, I), key_of[flow](I, Key, VK, X).
+key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), recv_obj[flow](R, I), key_of[flow](I, Key, VK, X).
+-- A METHOD RUN ON THE OBJECT A FIELD HOLDS (`this.inner.get()`) is the method's input too: `hop(M, K, M2)`, what M2
+-- hands out when run on the object M's own K holds. Which object that is, is the call's to say: a RUN of a method
+-- on an object (`run(I, M)`), asked by a call on an object and by a run that hands on to the object in a field.
+-- Only the runs somebody asks; a chain of objects is walked object by object, a fixpoint with no depth to bound.
+hop_at[flow](C, M, K, M2)               :- resolves[code](C, M2), sx_ret_inst[surface](M2), recv_of[flow](C, R), may_be[flow](R, input, field(M, K)).
+hop_at[flow](C, M, K, M3)               :- resolves[code](C, M2), sx_ret_hop[surface](M2, K, M3), recv_of[flow](C, R), may_be[flow](R, input, S), input_this[flow](S, M).
+may_be[flow](C, input, hop(M, K, M2))   :- hop_at[flow](C, M, K, M2).
+this_key[flow](M, K)                    :- hop_at[flow](_, M, K, _).
+run[flow](I, M)                         :- resolves[code](C, M), sx_ret_hop[surface](M, _, _), recv_of[flow](C, R), recv_obj[flow](R, I).
+run[flow](I2, M2)                       :- run[flow](I, M), sx_ret_hop[surface](M, K, M2), key_node[flow](I, K, I2).
+run[flow](I2, M2)                       :- hop_at[flow](_, M, K, M2), field_holds[flow](M, K, I2).
+key_ask[flow](I, K)                     :- run[flow](I, M), sx_ret_hop[surface](M, K, _).
+key_ask[flow](I, Key)                   :- run[flow](I, M), sx_ret_field[surface](M, Key).
+key_node[flow](I, K, I2)                :- key_of[flow](I, K, node, I2).
+key_node[flow](I, K, I2)                :- key_of[flow](I, K, inst, via(_, I2)).
+key_node[flow](I, K, I2)                :- key_of[flow](I, K, input, T), input_node[flow](T, I2).
+ret_of[flow](I, M, VK, X)               :- run[flow](I, M), sx_ret_field[surface](M, Key), key_of[flow](I, Key, VK, X).
+ret_of[flow](I, M, VK, X)               :- run[flow](I, M), sx_ret_hop[surface](M, K, M2), key_node[flow](I, K, I2), ret_of[flow](I2, M2, VK, X).
+may_be[flow](C, VK, X)                  :- resolves[code](C, M), sx_ret_hop[surface](M, _, _), recv_of[flow](C, R), recv_obj[flow](R, I), ret_of[flow](I, M, VK, X).
+-- in the body it is the general case: any object the field may hold
+field_holds[flow](M, K, I)              :- field_node[flow](field(M, K), I).
+hop_val[flow](M, K, M2, VK, X)          :- hop_at[flow](_, M, K, M2), field_holds[flow](M, K, I2), ret_of[flow](I2, M2, VK, X).
+input_lit[flow](hop(M, K, M2), V)       :- hop_val[flow](M, K, M2, lit, V).
+input_lit[flow](hop(M, K, M2), V)       :- hop_val[flow](M, K, M2, input, T), input_lit[flow](T, V).
+hop_node[flow](hop(M, K, M2), X)        :- hop_val[flow](M, K, M2, node, X).
+hop_node[flow](hop(M, K, M2), X)        :- hop_val[flow](M, K, M2, inst, via(_, X)).
+hop_node[flow](hop(M, K, M2), X)        :- hop_val[flow](M, K, M2, input, T), input_node[flow](T, X).
+input_node[flow](T, X)                  :- hop_node[flow](T, X).
 key_on[flow](R, Key, input, field(M, Key)) :- key_this[flow](R, Key, M).
 key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), may_be[flow](R, inst, via(C, O)), via_holds[flow](C, O, Key, VK, X).
 via_obj[flow](N, O, C, Obj)          :- may_be[flow](O, inst, via(C, Obj)), object_of[code](N, O), member_node_v[flow](N).
