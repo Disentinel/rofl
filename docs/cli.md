@@ -75,6 +75,13 @@ where the walk goes below the cut, and closes with `K answers in this file`;
 `--json` gives `{"ok", "file", "found", "stops", "text"}`. `--in` works over a
 world evaluated whole as well.
 
+What it costs (vscode, release, 4 cores, 2026-11-15): the table takes what the
+ask it counts takes, a bound whynot or an opened row 1 to 2 s more: 0.9 s and
+1.6 s at 250 files, 3.1 s and 5.2 s at 1000 with 3.6 to 4.9 GB resident. The
+seconds past the first are the kept world opened whole, the same for `ask`
+(`w_a_kept_world_opens_whole`). A bare name is read in `[main]` by `whynot`
+and in any book by `ask`: write the book, `calls[code](A, B)`.
+
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
