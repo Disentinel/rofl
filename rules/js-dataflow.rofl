@@ -1314,7 +1314,7 @@ member_value[flow](CD, Key, M) :- class_method[code](CD, M), key_name[code](M, K
 -- another file's: the write is published for it (rules/js-surface.rofl) and read back.
 mwrite_at[flow](Obj, Key, V) :- object_of[code](L, Obj), selects[flow](L, Key),
                                 assign[value](A, L, V), plain_assign[flow](A), not store_sym[flow](A).
-sx_mwrite[surface](O, Key, V) :- mwrite_at[flow](Obj, Key, V), own_node[flow](Obj, O).
+sx_mwrite[surface](O, Key, V) :- mwrite_at[flow](Obj, Key, V), held_node[flow](Obj, O).
 member_value[flow](O, Key, V) :- sx_mwrite[surface](O, Key, V).
 
 -- A write onto an INPUT (`this.x = v`, `o.x = v` with `o` a parameter) is the function's summary: it lands on what
@@ -1357,7 +1357,7 @@ sx_lookup[surface](CD, Key, G) :- class_member_proto[flow](CD, Key, V), class_li
 applies[flow](C, G) :- resolves[code](C, G).
 applies[flow](C, M) :- new_of[flow](C, CD), ctor_of[flow](CD, M).
 at_call[flow](C, S, VK, X)  :- applies[flow](C, G), sx_wparam[surface](G, S, I), arg_at[flow](C, I, A), may_be[flow](A, VK, X).
-at_call[flow](C, S, node, I) :- applies[flow](C, G), sx_wthis[surface](G, S), recv_key[flow](C, R, Key), own_node[flow](R, I),
+at_call[flow](C, S, node, I) :- applies[flow](C, G), sx_wthis[surface](G, S), recv_key[flow](C, R, Key), held_node[flow](R, I),
                                 isa[flow](I, CD), sx_lookup[surface](CD, Key, G).
 at_call[flow](C, S, node, made(C, CD)) :- applies[flow](C, G), sx_wthis[surface](G, S), new_of[flow](C, CD).
 -- what a callee writes onto an instance handed to it lands on the object the label names
@@ -1626,8 +1626,10 @@ field_node[flow](field(M, Key), X)      :- this_val[flow](M, Key, inst, via(_, X
 field_node[flow](field(M, Key), X)      :- this_val[flow](M, Key, input, T), input_node[flow](T, X).
 input_node[flow](T, X)                  :- field_node[flow](T, X).
 -- what is done to the object `this.key` holds is done to every object the key may hold, the general case: a
--- write onto it, and a callee's write onto it where it is handed on
-sx_mwrite[surface](O, Key, V)           :- mwrite_at[flow](Obj, Key, V), may_be[flow](Obj, input, T), field_node[flow](T, O).
+-- write onto it, a method run on it (`held_node`), and a callee's write onto it where it is handed on
+view held_node(A, B).
+held_node[flow](E, N)                   :- own_node[flow](E, N).
+held_node[flow](E, N)                   :- may_be[flow](E, input, T), field_node[flow](T, N).
 sx_mset[surface](I, Key, VK, X)         :- wput[flow](C, S, Key, VK, X), at_call[flow](C, S, input, T), field_node[flow](T, I).
 sx_mset[surface](I, Key, VK, X)         :- wputc[flow](C, S, CD, Key, VK, X), at_call[flow](C, S, input, T), field_node[flow](T, I), isa[flow](I, CD).
 input_lit[flow](field(M, Key), V)       :- this_val[flow](M, Key, input, T), input_lit[flow](T, V).
