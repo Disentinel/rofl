@@ -3477,8 +3477,8 @@ work(w_the_sentence_form_never_fails_silently,
 work_state(w_the_sentence_form_never_fails_silently, done).
 
 work(w_every_picture_its_own_frame,
-  "`draw space` WITHOUT A PER-PICTURE `frame` MERGES ALL PICTURES INTO ONE CANVAS (beside f_whole_picture_frames_do_not_follow_the_frame_decision). A picture without a frame is its own frame, or the draw refuses with a reason.").
-work_state(w_every_picture_its_own_frame, open).
+  "`draw space` WITHOUT A PER-PICTURE `frame` MERGES ALL PICTURES INTO ONE CANVAS (beside f_whole_picture_frames_do_not_follow_the_frame_decision). A picture without a frame is its own frame, or the draw refuses with a reason. DONE 2026-11-15: framesOf (the whole picture's frames) now takes membership as scoped does (notebook/draw.ts membership, PAIRS): a mark belongs to every frame it is placed in, and a link, box, partner or child whose far end is outside the frame is not drawn in it. Not run here: test:workbench and test:vscode need the wasm scanner; CI judges the goldens.").
+work_state(w_every_picture_its_own_frame, done).
 
 work(w_js_dead_call_sites,
   "arg_at TAKES ARGUMENTS FROM DEAD CALL SITES: code under `if (!module.parent) main()` or `require.main === module` (1021 and 778 files in the demo repo) contributes values to every callee. Model the entry guards (dead_guard / dead_fn in the demo's js-net-listen.rofl) and keep their sites out of arg_at, with a world over both guard shapes. DONE 2026-10-11: `dead_site[code]` (rules/js-dataflow.rofl section 7) keeps the calls under `!module.parent` / `require.main === module` (also `module === require.main`, `&&` form), the else arm of `module.parent` / `require.main !== module`, and the calls in a function declaration or declarator whose every mention in its file is under such an arm (`dead_fn`, by name, syntax only because arg_at sits under the fixpoint) out of arg_at. Proof: examples/notebook/guard.rofl.md. Declared limit: a function reached only through another dead function is dead only if it is itself mentioned only under a guard.").
