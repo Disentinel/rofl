@@ -1171,6 +1171,8 @@ impl VClosureState {
             return Rc::from(Vec::new());
         }
         if let Some(f) = store.held_trees(ci) {
+            let c = &mut self.vclosures[ci];
+            (c.pairs, c.deep, c.internal) = f.iter().fold((0, 0, 0), |(p, d, i), (_, f)| (p + f.pairs, d + f.deep as u64, i + f.internal as u64));
             store.virtuals[ci].forests = f.clone();
             return f;
         }
