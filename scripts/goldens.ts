@@ -1154,7 +1154,7 @@ function refuse(e: unknown): never {
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
   own();
-  // `rofl why L @models/lang/js/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
+  // `rofl why L @js code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
   const listed = fs.readFileSync(path.join(ROOT, 'models/lang/js/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'models/lang/js', f)));
   if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`models/lang/js/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));

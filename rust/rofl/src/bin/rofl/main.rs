@@ -16,7 +16,8 @@
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
-//! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@models/lang/js/js.files`, the JS model);
+//! `@NAME` is the model library NAME (`@js`, models/lang/js/library.rofl: its files, refused by an engine older than it needs);
+//! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@models/lang/js/js.files`);
 //! a LIST that is no file from the current directory is read from the tree the command came with (md::installed_tree).
 //! `roflenox://HOST/IDENTITY/BOOK` stands for the book BOOK as IDENTITY signed it on that node, checked (src/roflenox.rs).
 mod delta;
@@ -41,6 +42,10 @@ fn listed(args: Vec<String>) -> Vec<String> {
             Err(e) => { eprintln!("{e}"); std::process::exit(load::FILE_REFUSED) }
         },
         None => vec![a],
+        Some(name) if !name.contains(['/', '.']) => match rofl::md::library(name) {
+            Ok(files) => files.into_iter().map(|f| f.to_string_lossy().into_owned()).collect(),
+            Err(e) => { eprintln!("{e}"); std::process::exit(load::USAGE) }
+        },
         Some(list) => {
             // a list that is no file from here is the installed tree's: `@models/lang/js/js.files` from any directory
             let here = std::path::PathBuf::from(list);

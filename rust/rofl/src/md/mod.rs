@@ -18,6 +18,7 @@ use reader::{read_md, R};
 use rx::g;
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
+use crate::term::{Heap, TermK};
 
 const VISUAL: [&str; 6] = ["graph", "notation", "space", "table", "time", "viewpoints"];
 const INQUIRY: [&str; 6] = ["epistemic", "intents", "obligations", "ontology", "perspectives", "terminology"];
@@ -550,3 +551,43 @@ pub fn unread(report: &str) -> Option<String> {
     (!said.is_empty()).then(|| format!("not everything was read\n{}", said.iter().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n")))
 }
 
+
+/// The engine's version: the tree's package.json it was built in.
+pub fn engine_version() -> &'static str {
+    let pkg = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../package.json"));
+    pkg.split("\"version\"").nth(1).and_then(|s| s.split('"').nth(1)).unwrap_or("0.0.0")
+}
+
+fn version_key(v: &str) -> Vec<u64> {
+    v.split(['.', '-']).map(|p| p.parse().unwrap_or(0)).collect()
+}
+
+/// A MODEL LIBRARY (docs/cli.md, *Model libraries*): `models/lang/NAME/library.rofl` of the tree above the current
+/// directory, else of the tree this command came with, names its version, the engine it needs, the list of its files and
+/// its scanner. `@NAME` is that list; an engine older than the one it needs is refused, saying both.
+pub fn library(name: &str) -> Result<Vec<PathBuf>, String> {
+    let rel = format!("models/lang/{name}/library.rofl");
+    let here = std::env::current_dir().ok().and_then(|d| tree_above(&d));
+    let manifest = here.into_iter().chain(installed_tree()).map(|t| t.join(&rel)).find(|p| p.is_file())
+        .ok_or_else(|| format!("@{name}: no model library {rel} in this tree or the one rofl came with"))?;
+    let text = read_file(&manifest)?;
+    let mut h = Heap::default();
+    let clauses = crate::rofl_parse::parse(&mut h, &text).map_err(|e| format!("{}: {e}", manifest.display()))?;
+    let fact = |rel: &str| -> Option<Vec<String>> {
+        clauses.iter().find(|c| c.body.is_empty() && h.name(c.head.rel) == rel).map(|c| {
+            c.head.args.iter().map(|t| match t.kind() {
+                TermK::Atom(s) | TermK::Str(s) => h.name(s).to_string(),
+                TermK::Int(i) => i.to_string(),
+                _ => String::new(),
+            }).collect()
+        })
+    };
+    let needs = fact("needs_engine").and_then(|a| a.get(1).cloned()).ok_or_else(|| format!("{}: no needs_engine({name}, Version)", manifest.display()))?;
+    if version_key(engine_version()) < version_key(&needs) {
+        return Err(format!("@{name}: the library {} needs the engine {needs} or later, and this is {}", manifest.display(), engine_version()));
+    }
+    let list = fact("files").and_then(|a| a.get(1).cloned()).ok_or_else(|| format!("{}: no files({name}, List)", manifest.display()))?;
+    let dir = manifest.parent().unwrap_or(Path::new(""));
+    let listed = read_file(&dir.join(&list))?;
+    Ok(listed.lines().map(str::trim).filter(|l| !l.is_empty()).map(|l| normal(&dir.join(l))).collect())
+}

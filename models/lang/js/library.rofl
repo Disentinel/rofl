@@ -1,0 +1,8 @@
+-- THE JS MODEL AS A LIBRARY OF THE ENGINE: what `@js` names (docs/cli.md, *Model libraries*).
+-- The library has a version of its own and says which engine it needs; an older engine refuses it and says both.
+library(js, "1.0.0").
+needs_engine(js, "1.7.0").
+-- the files of the model, in the order they load, from this directory
+files(js, "js.files").
+-- what turns a directory of JS/TS into the facts the model reads: its command and the form of its output
+scanner(js, "rofl scan", text).

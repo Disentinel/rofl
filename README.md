@@ -114,7 +114,7 @@ recommendation[main](ship_it,no_go)  <= r989a9b8b @tick 0
 ```
 
 The JS model (`models/lang/js/rules/js-*.rofl`, listed by `models/lang/js/js.files`) ships for
-`rofl ... @models/lang/js/js.files`. The other rule packs in this repository are models
+`rofl ... @js`. The other rule packs in this repository are models
 OF this repository — its ledger, its own layering — and do not ship.
 
 **Large worlds are the other engine's.** `src/` is built for small ones; the
@@ -134,10 +134,10 @@ points; the whole list is in `package.json`.
 | `src/` | the kernel: parser, store, evaluator, reflection, API, REPL. Zero runtime dependencies, closed vocabulary (below), mechanically checked | `repl` |
 | `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
 | `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by test/kernel-policy-program.test.ts (gate removed 2026-09-11) |
-| `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
-| `models/lang/js/` | the roles layer of the JS model (w_l2_roles): the vocabulary `roles.rofl`, worlds `[value]` `[type]` `[tree]`, and `oxc-roles.rofl`, its converter from oxc's tree in `[ast_oxc]`, with the audits a check loads (`roles-oxc.files`); `models/lang/js/rules/js-*.rofl` read it, and what they do not read yet comes through `oxc-to-code.rofl`; the `[lifecycle]` world over the model, `lifecycle.rofl` with the host's resources in `lifecycle-host.rofl` (use after death, leaks, no stop) | `test:roles` `ask` |
+| `scanners/` | code and cost turned into facts (the JS/TS scanner lives with its model, in `models/lang/js/scanner/`): the Babel scanner of the self-models (`js.ts`), the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
+| `models/lang/js/` | **the JS model, a library of the engine** with a version of its own (`library.rofl`: its version, the engine it needs, its files `js.files`, its scanner; docs/cli.md, *Model libraries*): its rules `rules/js-*.rofl`, their tables `facts/js-*.rofl`, the roles layer (`roles.rofl`, worlds `[value]` `[type]` `[tree]`, and `oxc-roles.rofl`, its converter from oxc's tree in `[ast_oxc]`, with the audits a check loads, `roles-oxc.files`), the scanner (`scanner/`: `oxc_scan` and the host facts of `rofl scan`), the rules rendered in sentences (`docs/`), and the `[lifecycle]` world over the model (`lifecycle.rofl`, `lifecycle-host.rofl`) | `@js` `scan` `test:roles` |
 | `models/engine/` | the model of the engine itself: its Rust code scanned by `rust/tools/rs_scan` into `rs_*[rs]` facts, calls resolved where the code names them surely (`code.rofl`), its 17 parts and the glossary's words tied to the code (`parts.rofl`), and what a change touches (`blast.rofl`); the hypotheses over an evaluation's profile, judged by it (`profile.rofl`, world `profile_model`), and the join order planned from it as a fixpoint with min, concluded as the `plan[fixpointplan]` facts the engine obeys (`plan.rofl`, world `plan_dp`); the rest not swept by `npm test` | `engine` `nb` |
-| `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`: since 1.1 `js-surface.rofl`, the `[surface]` book a file shows the others, docs/surface-split.md, and `js-concat.rofl`, a string built from parts as a node with parts and its text as a term), the service graph (`js-fetch.rofl`, `js-express.rofl`, `js-service.rofl`) and the net library it walks (`net/`: names, addresses, listeners, hops, guards, tls), the stage plan's checks (`stage-plan.rofl`), the aggregates programme (`agg.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` `test:split` |
+| `rules/` | the inquiry kernel, the decision packs (the JS model's rule packs moved to `models/lang/js/rules/`, among them the service graph `js-fetch.rofl`, `js-express.rofl`, `js-service.rofl`) and the net library it walks (`net/`: names, addresses, listeners, hops, guards, tls), the stage plan's checks (`stage-plan.rofl`), the aggregates programme (`agg.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` `test:split` |
 | `shrug.rofl` | the closed vocabulary of a shrug, the third answer: every cause and reason an engine may write in `shrug(Target, Reason, Meta)` (docs/aggregates.md) | compiled into `src/kernel-dense.ts` by `build:dense` |
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
@@ -290,7 +290,7 @@ model then runs in the Rust engine:
 
 ```sh
 npm run scan -- path/to/src --out code.rofl
-rofl why 'flows[code]("api/server.js", "api/users.js")' @models/lang/js/js.files code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @js code.rofl
 ```
 
 The stages, the relations each writes and the exit codes are in docs/cli.md.

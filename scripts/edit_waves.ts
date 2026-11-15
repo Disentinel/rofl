@@ -1,7 +1,7 @@
 // node scripts/edit_waves.ts CORPUS [--tree DIR] [--roles]   facts an edit of one file moves in the whole JS world (w_stable_node_ids)
 //
 // CORPUS is a directory of JS/TS. Each edit below is made to a copy of it, the copy scanned with DIR's scanner and
-// evaluated under DIR's @models/lang/js/js.files on this tree's Rust release build; the state is compared with the unedited
+// evaluated under DIR's @js on this tree's Rust release build; the state is compared with the unedited
 // world's, and the facts gone plus the facts new are counted, scanner facts and derived apart. DIR is this tree by
 // default: run it again with `--tree` on a worktree of another commit to see what that commit's node ids cost.
 // `--roles` evaluates the roles layer instead (models/lang/js/oxc.files over the raw tree in [ast_oxc]): what an

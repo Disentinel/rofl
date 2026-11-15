@@ -85,14 +85,13 @@ A world is kept only when the memory the process may still use holds about three
 times its volume (indexing it for a delta and writing it); otherwise it is
 answered and not kept, said on stderr.
 
-**`@LIST`** stands for the files LIST names, one a line, each read from LIST's
-directory. `@models/lang/js/js.files` is the JS model, the files the notebook host
-loads (`notebook/front.ts` `MODEL_FILES`; `npm test` fails when the two differ).
-A LIST that is no file from the current directory is read from the tree the
-command came with: the tree above the path the binary was called by (the npm
-package calls it by a path inside itself), else the one above the binary. So
-`@models/lang/js/js.files` works from any directory, and a `.rofl.md`'s vocabulary is
-found the same way.
+**`@NAME`** is the model library NAME (*Model libraries*, below): `@js` is
+the JS model. **`@LIST`**, a path, stands for the files LIST names, one a
+line, each read from LIST's directory. A library or a LIST that is not found
+from the current directory is read from the tree the command came with: the
+tree above the path the binary was called by (the npm package calls it by a
+path inside itself), else the one above the binary. So `@js` works from any
+directory, and a `.rofl.md`'s vocabulary is found the same way.
 
 **`roflenox://HOST/IDENTITY/BOOK`** stands for the book BOOK as IDENTITY signed
 it on that Roflenox node, every batch of the chain checked (guide/ADAPTERS.md,
@@ -328,13 +327,36 @@ by delta.
 A refusal wins over a partial answer: a run with a refused question exits 4.
 A state dump of a cut world exits 0; its holes are in the dump.
 
+## Model libraries
+
+A model of a language is a library of the engine, kept in a folder of its own,
+`models/lang/NAME/`, with a version of its own. The JS model is the first:
+`models/lang/js/` holds its rules (`rules/`), their tables (`facts/`), its
+roles and converter (`roles.rofl`, `oxc-roles.rofl`), its scanner
+(`scanner/`: oxc_scan and the host facts), its rendered docs (`docs/`) and
+its manifest, `library.rofl`. The manifest is facts:
+
+| fact | says |
+|---|---|
+| `library(js, "1.0.0")` | the library and its version |
+| `needs_engine(js, "1.7.0")` | the oldest engine it runs on; an older one refuses `@js`, naming both versions (exit 1) |
+| `files(js, "js.files")` | the list of its files in load order, from its folder; `npm test` holds it to `notebook/front.ts` `MODEL_FILES` |
+| `scanner(js, "rofl scan", text)` | the command that turns a directory of source into the facts the model reads, and the form it writes them in |
+
+The engine knows no library by name: `@js` reads `models/lang/js/library.rofl`
+of the tree above the current directory, else of the tree the command came
+with. The scanner is a program of its own, never built into the engine:
+`oxc_scan` ships beside `rofl` in each platform package, and a world names it
+as its scanner (*A world that asks for its own input*). Its rule worlds are
+checked by `npm test` under the names they always had (`rules_js-dataflow`).
+
 ## JS code, through the Rust engine
 
 Two commands, a directory of JS or TS in, an answer out:
 
 ```sh
 npm run scan -- path/to/src --out code.rofl          # installed from npm: rofl scan path/to/src --out code.rofl
-rofl why 'flows[code]("api/server.js", "api/users.js")' @models/lang/js/js.files code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @js code.rofl
 ```
 
 From the npm package `rofl scan` is `npm run scan --`, and a world that asks for
@@ -345,7 +367,7 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 | `npm run scan` | node: `models/lang/js/scanner/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
 | the scanner | `models/lang/js/scanner/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `models/lang/js/scanner/oxc_scan/src/main.rs` |
 | the host facts | `playground/host.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
-| the model | `rofl`, Rust | `@models/lang/js/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`models/lang/js/docs/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
+| the model | `rofl`, Rust | `@js` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`models/lang/js/docs/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
@@ -421,7 +443,7 @@ files) 1.1 s against 18.7 s for `npm run scan`, 304 MB against 241 MB.
 
 ```sh
 npm run scan -- path/to/src --out code.rofl
-rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @models/lang/js/js.files models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
+rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @js models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
 ```
 
 `models/lang/js/lifecycle.rofl` is the world `[lifecycle]` over the JS model
@@ -447,7 +469,7 @@ The words of behaviour the model derives live in their worlds (the doc «Сло�
 ролей модели JS», «Миры поведения»): `suspends[execution](Seq, I)`,
 `hidden_call[execution](N, How)`, `transfers[execution](X, Kind)`,
 `fallback[execution](F, Name, Init)`, `coerces[execution](N, X)`,
-`narrows[type](O)`; ask them with `@models/lang/js/js.files` alone.
+`narrows[type](O)`; ask them with `@js` alone.
 
 ## A world that asks for its own input
 
@@ -461,7 +483,7 @@ scan_request(js, "main.js").
 scan_request(js, F) :- depends[code](_, F).
 ```
 
-`rofl load @models/lang/js/js.files examples/checks/scan-world.rofl` scans `main.js`,
+`rofl load @js examples/checks/scan-world.rofl` scans `main.js`,
 then `lib/greet.js` that it imports, then `lib/shout.js`, and never
 `lib/unused.js`. A scanner is any command: the path is its last argument and
 what it prints is loaded as ROFL, rules as well as facts. Each request runs

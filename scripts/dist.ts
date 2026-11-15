@@ -117,7 +117,7 @@ rmSync(path.join(PKG, 'vscode'), { recursive: true });
 
 // the library's types (its JavaScript is the commands' own, above) and what the engine reads from its tree: models/lang/js/js.files names the model from models/lang/js/
 execFileSync(process.execPath, [path.join(ROOT, 'node_modules/typescript/bin/tsc'), '-p', path.join(ROOT, 'tsconfig.build.json'), '--outDir', path.join(PKG, 'dist')], { stdio: 'inherit' });
-for (const f of [...root.files.filter((f: string) => f !== 'dist/' && f !== 'README.md'), 'models/lang/js/js.files']) cpSync(path.join(ROOT, f), path.join(PKG, f), { recursive: true });
+for (const f of [...root.files.filter((f: string) => f !== 'dist/' && f !== 'README.md'), 'models/lang/js/js.files', 'models/lang/js/library.rofl']) cpSync(path.join(ROOT, f), path.join(PKG, f), { recursive: true });
 for (const f of readFileSync(path.join(ROOT, 'models/lang/js/js.files'), 'utf8').split('\n').filter(Boolean)) if (!existsSync(path.join(PKG, 'models/lang/js', f))) throw new Error(`models/lang/js/js.files names ${f}, which the package does not carry`);
 execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 const packed = [`grafema-rofl-${version}.tgz`];
