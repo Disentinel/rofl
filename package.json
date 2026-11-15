@@ -55,6 +55,7 @@
     "cleanliness": "node --experimental-strip-types scanners/cleanliness_report.ts",
     "engine": "sh scripts/engine.sh",
     "engine:features": "sh scripts/features.sh",
+    "product": "sh scripts/product.sh",
     "depends": "node --experimental-strip-types scanners/depends.ts",
     "docs": "node --experimental-strip-types scripts/render_docs.ts",
     "evalcost": "node --experimental-strip-types scanners/eval_cost.ts",
