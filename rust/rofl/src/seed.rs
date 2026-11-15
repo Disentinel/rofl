@@ -966,7 +966,7 @@ pub fn firings_json(h: &Heap, s: &Store, id: FactId) -> Vec<Value> {
         .into_iter()
         .map(|(rule, tick, ps)| {
             let mut sig = String::new();
-            s.write_sig(h, &crate::store::WitView { rule, tick, prems: &ps }, &mut sig);
+            s.write_sig(h, &crate::store::WitView { rule, tick, prems: &ps, src: s }, &mut sig);
             value(|o| firing(o, h, s, &sig, rule, tick, &ps))
         })
         .collect()
