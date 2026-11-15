@@ -101,7 +101,7 @@ function rofl(files: string[]): any {
   // load is nearly free, which leaves a single real fixpoint at `evaluate`.
   // test/js-corpus-world.ts measured this at 16.9 s -> 10.0 s and compared
   // fifteen relations byte for byte across the change.
-  const order = (f: string) => (f === 'boot.rofl' ? 0 : f.startsWith('rules/') ? 1 : 2);
+  const order = (f: string) => (f === 'boot.rofl' ? 0 : /(^|\/)rules\//.test(f) ? 1 : 2);
   const sorted = [...files].sort((a, b) => order(a) - order(b) || (a < b ? -1 : 1));
   const res = r.load(sorted.map(read).join('\n'), { budget: 50_000_000 });
   if (!res.ok) { console.error(`world: ${sorted.join(', ')}: ${res.diagnostics[0]}`); process.exit(1); }

@@ -816,7 +816,7 @@ export function concernsOf(files: [string, string][]): Concerns {
   for (const [f, text] of files) {
     for (const part of text.split(/^-- (?=\d+\. )/m).slice(1)) {
       const t = part.slice(0, part.indexOf('\n')).replace(/^\d+\. /, '').split(/ — |: |, |\. /)[0].replace(/[.`]/g, '').trim();
-      const label = `${f.slice(9, -5)}: ${t.split(' ').map((w, i) => (/[A-Z]/.test(w) && w === w.toUpperCase()) || i === 0 ? w.toLowerCase() : w).join(' ')}`;
+      const label = `${f.replace(/^.*\/|\.rofl$/g, '').replace(/^js-/, '')}: ${t.split(' ').map((w, i) => (/[A-Z]/.test(w) && w === w.toUpperCase()) || i === 0 ? w.toLowerCase() : w).join(' ')}`;
       for (const c of parseProgram(part.slice(part.indexOf('\n') + 1))) {
         if (!c.body.length) continue;
         concerns.rules[ruleIdOf(c)] ??= label;

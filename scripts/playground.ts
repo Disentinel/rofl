@@ -34,7 +34,7 @@ const { vocab, functions } = translatorVocab(model, phrases);
 writeFileSync(`${OUT}/vocab.txt`, vocab.join('\n') + '\n');
 writeFileSync(`${OUT}/functions.txt`, functions.join('\n') + '\n');
 
-const concerns = concernsOf(NB_MODEL_FILES.filter((x) => x.startsWith('rules/')).map((f) => [f, read(f)]));
+const concerns = concernsOf(NB_MODEL_FILES.filter((x) => /(^|\/)rules\//.test(x)).map((f) => [f, read(f)]));
 writeFileSync(`${OUT}/concerns.json`, JSON.stringify(concerns));
 
 // The NPC yard: the kernel's boot, the yard's rules and phrases, and the section of npc.rofl each rule sits in.
