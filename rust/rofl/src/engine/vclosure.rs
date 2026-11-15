@@ -1390,10 +1390,6 @@ impl VClosureState {
             c.deep = forests.iter().map(|f| f.1.deep as u64).sum();
             c.internal = forests.iter().map(|f| f.1.internal as u64).sum();
         }
-        // what a reader saw is a count of edges, which an addition of as many as were taken out would give again
-        if brk!("vclosure_reader_seen_kept" => false; true) {
-            self.reader_seen.retain(|(_, ci), _| !touched.contains(ci));
-        }
         // the trees changed: the rows' provenance is written again when next it is read (`vsettle`)
         if !touched.is_empty() && brk!("vclosure_prov_unbuilt" => false; true) {
             self.builds += 1;
@@ -1550,7 +1546,8 @@ impl VClosureState {
     fn vseen(&self, store: &Store, ci: usize) -> usize {
         let near = store.virtuals[ci].near;
         // a count, and the deaths beside it: an edge put in and another taken out leave the count as it was
-        let seen = |r: Sym| store.rel_len_est(r, None).wrapping_add(store.deaths.get(&r).map_or(0, |d| *d as usize).wrapping_mul(7_919));
+        let deaths = |r: Sym| if brk!("vclosure_reader_seen_kept" => true; false) { 0 } else { store.deaths.get(&r).map_or(0, |d| *d as usize) };
+        let seen = |r: Sym| store.rel_len_est(r, None).wrapping_add(deaths(r).wrapping_mul(7_919));
         seen(self.vclosures[ci].src).wrapping_add(near.map_or(0, |s| seen(s.cond).wrapping_mul(1_000_003)))
     }
 
