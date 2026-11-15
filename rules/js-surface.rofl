@@ -120,6 +120,7 @@ sx_ret_own[surface](F, node, N) :- call_returns[flow](F, E), may_be[flow](E, inp
 sx_ret_own[surface](F, lit, V)  :- call_returns[flow](F, E), may_be[flow](E, input, S), input_of[flow](S, G), G != F,
                                    input_lit[flow](S, V).
 sx_ret_input[surface](F, I)     :- call_returns[flow](F, E), may_be[flow](E, input, S), input_param[flow](S, F, I).
+sx_ret_field[surface](F, Key)   :- call_returns[flow](F, E), may_be[flow](E, input, field(F, Key)).
 sx_ret_self[surface](F)         :- call_returns[flow](F, E), may_be[flow](E, input, S), input_this[flow](S, F).
 sx_ret_this[surface](F, I)      :- call_returns[flow](F, E), may_be[flow](E, input, S), input_this[flow](S, F),
                                    input_node[flow](S, I).

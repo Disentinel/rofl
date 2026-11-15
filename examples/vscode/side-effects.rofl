@@ -104,11 +104,22 @@ se_param(Fn, I, F) :- se_site(S, F, J), arg_at[flow](S, J, A), param_use[flow](F
 se_site(W, F, I)   :- resolves[code](W, Fn), sx_param_sink[surface](Fn, I, F).
 -- the wrapper is the callee's: it publishes which parameter it hands on (rules/js-surface.rofl)
 sx_param_sink[surface](Fn, I, F) :- se_param(Fn, I, F).
+-- A METHOD THAT HANDS A FIELD OF ITS OWN `this` TO A SITE is a wrapper too (`save() { fs.writeFileSync(this.path) }`):
+-- its call is a site whose value is that field of the call's receiver, the instance's own value (`key_on`).
+se_field(Fn, Key, F) :- se_site(S, F, J), arg_at[flow](S, J, A), may_be[flow](A, input, field(Fn, Key)).
+se_field(Fn, Key, F) :- se_fsite(_, F, R, Key), key_on[flow](R, Key, input, field(Fn, Key)).
+sx_field_sink[surface](Fn, Key, F) :- se_field(Fn, Key, F).
+se_fsite(W, F, R, Key) :- resolves[code](W, Fn), sx_field_sink[surface](Fn, Key, F), recv_call[code](W, R).
+key_wanted[flow](R, Key) :- se_fsite(_, _, R, Key).
 imports(main, surface).
 imports(surface, main).
 
 -- 5. THE ANSWER.
 side_effect_site(S, F) :- se_site(S, F, _).
+side_effect_site(S, F) :- se_fsite(S, F, _, _).
+side_effect_value(S, F, V) :- se_fsite(S, F, R, Key), key_on[flow](R, Key, lit, V).
+side_effect_value(S, F, V) :- se_fsite(S, F, R, Key), key_on[flow](R, Key, input, T), input_lit[flow](T, V).
+side_effect_value(S, F, T) :- se_fsite(S, F, R, Key), key_on[flow](R, Key, node, C), not summarized[flow](C), may_be_text[flow](C, T).
 side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_lit[flow](A, V).
 side_effect_value(S, F, V) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, V), not summarized[flow](V).
 side_effect_value(S, F, T) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), not summarized[flow](C),
