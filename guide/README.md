@@ -97,7 +97,7 @@ what runs. They are published at
   tarball, run `npm uninstall -g rofl-nb` first. 1.5.1 is the same tool, a 1 MB
   download instead of 1.6 MB.
 - **Ask about code from any directory.** `rofl scan DIR --out code.rofl`
-  turns JavaScript into facts, and `@rules/js.files` finds the JS model the
+  turns JavaScript into facts, and `@models/lang/js/js.files` finds the JS model the
   package carries; `rofl --version` says which version runs
   ([ASKING.md](ASKING.md)).
 - **Asking again after an edit is cheap.** The kept world takes the changed

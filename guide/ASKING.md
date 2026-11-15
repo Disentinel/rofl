@@ -48,15 +48,15 @@ the one the JavaScript model writes to.
 
 ## Ask
 
-<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' @models/lang/js/js.files shop.rofl -->
 ```
-$ rofl ask 'risky(N)' @rules/js.files shop.rofl
+$ rofl ask 'risky(N)' @models/lang/js/js.files shop.rofl
 N = "charge"
 N = "checkout"
 ```
 <!-- END run -->
 
-One row a line, the variable and its value. `@rules/js.files` is the
+One row a line, the variable and its value. `@models/lang/js/js.files` is the
 JavaScript model, the twenty-odd rule files that say what `may_throw` means;
 the `rofl` command finds them in its own package, so the line works from any
 directory. The world is the model plus `shop.rofl`, and `shop.rofl` fetches
@@ -64,9 +64,9 @@ the code.
 
 For a program, `--json` prints the same answer as one object a line:
 
-<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' --json @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' --json @models/lang/js/js.files shop.rofl -->
 ```
-$ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
+$ rofl ask 'risky(N)' --json @models/lang/js/js.files shop.rofl
 {"keys":["risky[main](\"checkout\")","risky[main](\"charge\")"],"ok":true,"partial":false,"rows":[["\"checkout\""],["\"charge\""]],"shrugs":[],"vars":["N"]}
 ```
 <!-- END run -->
@@ -79,9 +79,9 @@ off as the whole one.
 
 ## Why
 
-<!-- BEGIN run guide/examples/first: rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23 -->
+<!-- BEGIN run guide/examples/first: rofl why 'risky("checkout")' @models/lang/js/js.files shop.rofl | head -23 -->
 ```
-$ rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23
+$ rofl why 'risky("checkout")' @models/lang/js/js.files shop.rofl | head -23
 risky[main]("checkout")  <= re667b5bf @tick 0
   fn_name[code](n017f49dbfbe9e0a8_en4a19n90pa5f,"checkout")  <= rb448fa01 @tick 0
     fn_node[code](n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r631ec945 @tick 0
@@ -120,9 +120,9 @@ read; the command line's is the one to parse.
 
 ## Why not
 
-<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' @models/lang/js/js.files shop.rofl -->
 ```
-$ rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl
+$ rofl whynot 'risky("safeCheckout")' @models/lang/js/js.files shop.rofl
 whynot risky[main]("safeCheckout"):
   rule re667b5bf: risky[main](?N)@now :- fn_name[code](?F,?N)@now, exported_fn[code](?F)@now, may_throw[code](?F)@now
     failed premise: may_throw[code](n017f49dbfbe9e0a8_0o34j1j12he7d)
@@ -149,9 +149,9 @@ every one. `--depth N` and `--nodes N` bound how far the walk goes.
 The notebook prints a note about `./log.js` before anything else. On the
 command line the gap is a relation like any other, and you ask for it:
 
-<!-- BEGIN run guide/examples/first: rofl ask 'unresolved_relative[code](F,L,S)' @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl ask 'unresolved_relative[code](F,L,S)' @models/lang/js/js.files shop.rofl -->
 ```
-$ rofl ask 'unresolved_relative[code](F,L,S)' @rules/js.files shop.rofl
+$ rofl ask 'unresolved_relative[code](F,L,S)' @models/lang/js/js.files shop.rofl
 F = "checkout.js", L = 2, S = "./log.js"
 ```
 <!-- END run -->

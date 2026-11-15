@@ -232,7 +232,7 @@ score();
 ` },
     cells: [
   { kind: 'prose', text: 'This notebook reads play.js in sentences. The first cells define words, and every cell below may use them: a word is defined before it is used.' },
-  { kind: 'prose', text: 'When one thing runs after another. Siblings in a list run in order: statements, arguments, elements. A function body runs where the function is called, and every run starts at the top level of the file. A callback runs where facts/js-host.rofl says: forEach and map call it at once, inside the call; setTimeout and then call it later, after the whole synchronous run. Of two later callbacks no order is claimed, since that is when timers fire and promises settle. A write comes too late for a read when it comes after the read in one list, when every call that runs it comes after one that runs the read, or when it only runs later.' },
+  { kind: 'prose', text: 'When one thing runs after another. Siblings in a list run in order: statements, arguments, elements. A function body runs where the function is called, and every run starts at the top level of the file. A callback runs where models/lang/js/facts/js-host.rofl says: forEach and map call it at once, inside the call; setTimeout and then call it later, after the whole synchronous run. Of two later callbacks no order is claimed, since that is when timers fire and promises settle. A write comes too late for a read when it comes after the read in one list, when every call that runs it comes after one that runs the read, or when it only runs later.' },
   { kind: 'formal', text: `A node N runs apart from B if G is nearest to N and G is within B.
 
 A node Q comes after P if all of:
@@ -430,7 +430,7 @@ async function startHost() {
     const m = await import('./lib/host.js');
     host = { where: 'the page', call: async (op, ...args) => { await new Promise((r) => setTimeout(r, 30)); return m[op](...args); } };
   }
-  // the scanner is oxc compiled to wasm (rust/tools/oxc_scan), the one `rofl scan` runs
+  // the scanner is oxc compiled to wasm (models/lang/js/scanner/oxc_scan), the one `rofl scan` runs
   const wasm = await fetch('oxc_scan.wasm').then((r) => r.arrayBuffer());
   if (viaWorker) await host.call('scanner', wasm); else await (await import('./lib/oxc_wasm.js')).loadWasm(wasm);
   return useModel(modelFor());

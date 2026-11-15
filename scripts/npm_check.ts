@@ -96,7 +96,7 @@ writeFileSync(path.join(work, 'src/main.js'), "import { greet } from './lib/gree
 writeFileSync(path.join(work, 'src/lib/greet.js'), "export function greet(who) { return 'hello ' + who; }\n");
 const scan = run('rofl', ['scan', 'src', '--out', 'code.rofl'], work, env);
 said(scan.status === 0 && existsSync(path.join(work, 'code.rofl')), 'rofl scan src --out code.rofl', `exit ${scan.status}, ${scan.stderr.trim()}`);
-const jsq = ['ask', 'depends[code](F, G)', '@rules/js.files', 'code.rofl'], timed = () => { const t = performance.now(), r = run('rofl', jsq, work, env); return { ...r, ms: performance.now() - t }; };
+const jsq = ['ask', 'depends[code](F, G)', '@models/lang/js/js.files', 'code.rofl'], timed = () => { const t = performance.now(), r = run('rofl', jsq, work, env); return { ...r, ms: performance.now() - t }; };
 const worlds = path.join(env.HOME!, '.cache/rofl/worlds'), listing = () => existsSync(worlds) ? readdirSync(worlds).filter((f) => f.endsWith('.vol')).sort().join(',') : '';
 const first = timed(), kept = listing(), second = timed(), after = listing();
 rmSync(worlds, { recursive: true, force: true });
@@ -109,16 +109,16 @@ said(second.status === 0 && second.stdout === first.stdout && kept !== '' && aft
 // a world that scans for itself, `scanner(js, "rofl scan src")` as docs/cli.md says: with rofl on PATH it answers; called by its full path
 // with no rofl on PATH, the scanner cannot be started, and the answer is partial with the failure said, never whole and empty
 writeFileSync(path.join(work, 'w.rofl'), 'scanner(js, "rofl scan src").\nscan_request(js, "main.js").\nscan_request(js, F) :- depends[code](_, F).\n');
-const selfScan = run('rofl', ['ask', 'depends[code](F, G)', '@rules/js.files', 'w.rofl'], work, env);
+const selfScan = run('rofl', ['ask', 'depends[code](F, G)', '@models/lang/js/js.files', 'w.rofl'], work, env);
 said(selfScan.status === 0 && selfScan.stdout === rows, 'a world that scans with `rofl scan src` answers', `exit ${selfScan.status}, ${JSON.stringify(selfScan.stdout)}${selfScan.stderr ? ` stderr ${JSON.stringify(selfScan.stderr.slice(0, 300))}` : ''}`);
 const noPath = { ...user(prefix, path.join(tmp, 'home-nopath')), PATH: [tools, '/usr/bin', '/bin'].join(path.delimiter) };
-const unstarted = run(rofl, ['ask', 'depends[code](F, G)', '@rules/js.files', 'w.rofl'], work, noPath);
+const unstarted = run(rofl, ['ask', 'depends[code](F, G)', '@models/lang/js/js.files', 'w.rofl'], work, noPath);
 said(unstarted.status === 5 && unstarted.stdout.includes('[partial: a scan failed') && unstarted.stderr.includes('a scan failed') && unstarted.stderr.includes('rofl: '),
   'FAULT the same world with no rofl on PATH: its scanner cannot start, the answer is partial (exit 5), the failure said', `exit ${unstarted.status}, ${JSON.stringify(unstarted.stdout)}, stderr ${JSON.stringify(unstarted.stderr.slice(0, 300))}`);
 
 // what the command costs in front of the engine: one question from the kept world, ten times through it and ten times to the binary itself
 const pkgDir = path.join(prefix, 'lib/node_modules/@grafema/rofl'), engineBin = path.join(prefix, `lib/node_modules/@grafema/rofl-${own}/bin/rofl`);
-const same = ['ask', 'depends[code](F, G)', `@${path.join(pkgDir, 'rules/js.files')}`, 'code.rofl'];
+const same = ['ask', 'depends[code](F, G)', `@${path.join(pkgDir, 'models/lang/js/js.files')}`, 'code.rofl'];
 const median = (cmd: string) => { const ms: number[] = []; for (let i = 0; i < 10; i++) { const t = performance.now(), r = run(cmd, same, work, env); ms.push(performance.now() - t); if (r.stdout !== rows) return NaN; } return ms.sort((x, y) => x - y)[5]; };
 run(rofl, same, work, env);
 const viaShim = median(rofl), viaBin = median(engineBin);

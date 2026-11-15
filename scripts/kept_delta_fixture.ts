@@ -1,5 +1,5 @@
 // The corpus of rust/rofl/tests/kept_delta.rs: six small JS modules, each in three versions, each version scanned
-// alone (scanners/cli.ts, the scanner `rofl` runs) into rust/rofl/tests/fixtures/delta/<name>.<version>.rofl. A test
+// alone (models/lang/js/scanner/cli.ts, the scanner `rofl` runs) into rust/rofl/tests/fixtures/delta/<name>.<version>.rofl. A test
 // step puts one version of a module in place, takes one out, or brings one back, and asks the kept world by delta
 // against a fresh evaluation. Run again only when the scanner's output changes:
 //   node --experimental-strip-types scripts/kept_delta_fixture.ts
@@ -51,7 +51,7 @@ for (const [name, versions] of Object.entries(MODULES)) fs.writeFileSync(path.jo
 for (const [name, versions] of Object.entries(MODULES)) {
   versions.forEach((text, v) => {
     fs.writeFileSync(path.join(dir, name), text);
-    const facts = execFileSync('node', ['--experimental-strip-types', path.join(ROOT, 'scanners/cli.ts'), dir, name], { encoding: 'utf8' });
+    const facts = execFileSync('node', ['--experimental-strip-types', path.join(ROOT, 'models/lang/js/scanner/cli.ts'), dir, name], { encoding: 'utf8' });
     const kept = facts.split('\n').filter((l) => !l.startsWith('-- reads:')).join('\n');
     fs.writeFileSync(path.join(OUT, `${name.replace(/\.js$/, '')}.${v}.rofl`), kept);
   });

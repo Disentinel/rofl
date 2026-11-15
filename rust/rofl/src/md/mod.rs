@@ -4,7 +4,7 @@
 //!
 //! The vocabulary and the model files are the tree's: the nearest directory above the `.rofl.md` that holds
 //! `boot.rofl` and `facts/phrases.rofl`, else the one above the binary (`rust/target/<profile>/rofl`). The JS model
-//! (`model: js`) is the list `rules/js.files`, which `npm test` holds to notebook/front.ts `MODEL_FILES`.
+//! (`model: js`) is the list `models/lang/js/js.files`, which `npm test` holds to notebook/front.ts `MODEL_FILES`.
 mod blocks;
 mod omap;
 #[macro_use]
@@ -71,10 +71,10 @@ pub fn parse_front(text: &str) -> Front {
 /// The files, from the root of the tree, the reading needs: the model and the vocabulary it is read in.
 fn lib_files(root: &Path, path: &str, front: &Front) -> Result<(Vec<PathBuf>, Vec<PathBuf>), String> {
     let mut phrases = vec!["facts/phrases.rofl"];
-    if front.js || rx::test(r"(^|\/)docs\/js\/", path) { phrases.push("facts/js-phrases.rofl"); }
+    if front.js || rx::test(r"(^|\/)lang\/js\/docs\/", path) { phrases.push("models/lang/js/facts/js-phrases.rofl"); }
     if rx::test(r"(^|\/)docs\/rings\/", path) { phrases.push("facts/kernel-phrases.rofl"); phrases.push("facts/ring1-phrases.rofl"); }
     let model = if front.js {
-        read_file(&root.join("rules/js.files"))?.lines().map(str::trim).filter(|l| !l.is_empty()).map(|l| normal(&root.join("rules").join(l))).collect()
+        read_file(&root.join("models/lang/js/js.files"))?.lines().map(str::trim).filter(|l| !l.is_empty()).map(|l| normal(&root.join("models/lang/js").join(l))).collect()
     } else { vec![root.join("boot.rofl")] };
     Ok((model, phrases.iter().map(|f| root.join(f)).collect()))
 }

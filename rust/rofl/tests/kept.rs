@@ -1003,7 +1003,7 @@ fn but_ids(state: &str) -> Vec<String> {
     v
 }
 
-/// JS SOURCES BY DELTA: a world that scans its JS (the scanner of scanners/cli.ts, the model of rules/js.files) kept
+/// JS SOURCES BY DELTA: a world that scans its JS (the scanner of models/lang/js/scanner/cli.ts, the model of models/lang/js/js.files) kept
 /// by a question; an edit of one source scans that file again alone and the world takes it by delta; an import
 /// added asks for a file no scan had, scanned and taken; the import taken away again lets that scan go. Each step's
 /// answer and state are a fresh run's, but for the ids of nodes kept from a file's previous scan. (The JS model in a
@@ -1020,9 +1020,9 @@ fn js_sources_edited_go_by_delta() {
     for f in ["main.js", "lib/greet.js", "lib/shout.js", "lib/unused.js"] {
         std::fs::copy(root().join("examples/scan/src").join(f), d.0.join("src").join(f)).unwrap();
     }
-    let cli = root().join("scanners/cli.ts");
+    let cli = root().join("models/lang/js/scanner/cli.ts");
     d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"main.js\").\nscan_request(js, F) :- depends[code](_, F).\n", cli.display()));
-    let model = format!("@{}", root().join("rules/js.files").display());
+    let model = format!("@{}", root().join("models/lang/js/js.files").display());
     let q = ["ask", "calls(A, B)", "--state", &model, "scan.rofl"];
     let step = |what: &str, want_delta: Option<&str>| -> Result<(), String> {
         let got = rofl(&d, brk, &q);
@@ -1055,7 +1055,7 @@ fn a_renamed_local_keeps_its_ids() {
     let brk = planted.as_deref();
     let d = Dir::new("rename");
     std::fs::create_dir_all(d.0.join("src")).unwrap();
-    let cli = root().join("scanners/cli.ts");
+    let cli = root().join("models/lang/js/scanner/cli.ts");
     d.write("scan.rofl", &format!("edb(scanner).\nedb(scan_done).\nedb(scan_failed).\nscanner(js, \"node --experimental-strip-types {} src\").\nscan_request(js, \"a.js\").\nimports(main, ast_oxc).\ndecl(I) :- node[ast_oxc](I, variable_declarator, _).\nnamed(N) :- node[ast_oxc](I, binding_identifier, _), attr[ast_oxc](I, name, N).\nnamed(N) :- node[ast_oxc](I, identifier_reference, _), attr[ast_oxc](I, name, N).\n", cli.display()));
     let a = |local: &str| d.write("src/a.js", &format!("export function f(s) {{\n  const {local} = s * 2;\n  return {local} + 1;\n}}\n"));
     let files = ["boot.rofl", "scan.rofl"];

@@ -5,7 +5,7 @@ Notebook: `examples/notebook/cli_exits.rofl.md`. Run it with
 
 Learned the notebook tool from `README.md` and `CLAUDE.md` only, plus what
 they point to (`examples/notebook/self.rofl.md`, `examples/notebook/small.rofl.md`,
-`docs/js/js-effects.rofl.md`) — no other source under `notebook/` was read.
+`models/lang/js/docs/js-effects.rofl.md`) — no other source under `notebook/` was read.
 Grafema (`/Users/vadimr/grafema`, read-only) was read directly with `grep`/`Read`
 to ground the questions the notebook asks; only files under `examples/notebook/`
 were written.
@@ -75,7 +75,7 @@ only speak to one:
   a probe failure — the model's `resolves` told the two `displayNode`s apart
   where my first, cruder grep did not.
 - *A `try`/`finally` an exit skips.* **Unverified by this notebook.** I read
-  all of `docs/js/js-effects.rofl.md` (which README points to) and found
+  all of `models/lang/js/docs/js-effects.rofl.md` (which README points to) and found
   relations for a try's *handler* (`try_catches`, `caught_here`,
   `in_try_block`) but none for its *finalizer*; I could not build "this exit
   is inside a try whose finally never runs" from what I had. It is real: the
@@ -110,7 +110,7 @@ and the worlds it stands on; run with `npm run nb -- F.rofl.md [--json]
 `code:` path rule, no table syntax is given inline. Everything below came from
 opening `examples/notebook/self.rofl.md` and `examples/notebook/small.rofl.md`
 (each only named once, in passing prose) and, for the vocabulary, from
-`docs/js/js-effects.rofl.md` and `docs/js/index.md` (README: "the JS model,
+`models/lang/js/docs/js-effects.rofl.md` and `models/lang/js/docs/index.md` (README: "the JS model,
 rendered").
 
 - **Guessed and got wrong: `code:` takes absolute paths.** First front matter used
@@ -162,8 +162,8 @@ rendered").
   the notebook rather than force a query that doesn't exist.
 
 - **Not found at all: a "this call is inside a try whose finally would be
-  skipped" relation.** Read the whole of `docs/js/js-effects.rofl.md` (all
-  ~1000 lines/clauses) and `docs/js/index.md`'s full relation index looking
+  skipped" relation.** Read the whole of `models/lang/js/docs/js-effects.rofl.md` (all
+  ~1000 lines/clauses) and `models/lang/js/docs/index.md`'s full relation index looking
   for one. Found the catch side (`try_catches`, `caught_here`,
   `in_try_block`) and nothing for the finally side. Said so in the notebook
   instead of a wrong invariant.
@@ -181,7 +181,7 @@ First tool call in this task (`date`, in `/Users/vadimr/rofl-nb-blind`):
 **03:36:38**. First fully-working run of `cli_exits.rofl.md` — all seven
 cells read, a real `never` verdict computed (`never C exits in a shared
 helper` → `FAILS · 1`) — completed **04:05:50**. **≈29 minutes.** Most of that
-was reading `docs/js/js-effects.rofl.md` end to end looking for a
+was reading `models/lang/js/docs/js-effects.rofl.md` end to end looking for a
 finally-block relation, and the two ~70-75s cold model-builds (once because I
 hadn't yet learned the daemon exists, once because it had idled out between
 edits) plus the background-notification confusion around the first of them.

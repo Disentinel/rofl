@@ -385,7 +385,7 @@ test('W2 the proof under a chain counts its side conditions instead of writing t
 test('W3 --all prints each why whole, the proof as it was before the chain, and no chain', ['sidesAll', 'sidesJson'], () => is(sidesAll, 0) && !has(sidesAll, "the value's steps")
   && whys(sidesJson).every((l) => sidesAll.stdout!.includes(`: ${l.text}\n${l.why!.split('\n').map((x) => `    ${x}`).join('\n')}\n`)), () => sidesAll);
 test('W4 a phrase that names an argument the fact has not is passed over, not a crash of the proof (sig(assigned) counts from 1)', [], () => {
-  const v = new Vocabulary(); v.addText(['facts/phrases.rofl', 'facts/js-phrases.rofl'].map((f) => readFileSync(path.join(ROOT, f), 'utf8')).join('\n'));
+  const v = new Vocabulary(); v.addText(['facts/phrases.rofl', 'models/lang/js/facts/js-phrases.rofl'].map((f) => readFileSync(path.join(ROOT, f), 'utf8')).join('\n'));
   const rule = 'rule r1: param_assigned[flow](?F,?Name)@now :- assign_param[flow](?A,?F)@now, assigned[code](?A,?_$0,?Name,?_$1,?_$2)@now';
   try { return v.sayAll(rule).includes('assigned[code](?A,?_$0,?Name,?_$1,?_$2)'); } catch { return false; }
 });

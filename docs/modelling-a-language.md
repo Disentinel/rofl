@@ -231,7 +231,7 @@ decisive.
 **It holds.** Thirteen node kinds across two languages, two layers, eight cells
 modelled and four deliberately ignored with reasons: the audit reported 26 cells,
 12 covered, 14 unaccounted. Adding `layer(scope).` — one fact, with
-`rules/js-model.rofl` byte-identical afterwards — gave 39 cells and 27
+`models/lang/js/rules/js-model.rofl` byte-identical afterwards — gave 39 cells and 27
 unaccounted, both up by exactly 13, one per kind.
 
 Two controls, because growth alone proves nothing. A foreign fact moves neither
@@ -308,7 +308,7 @@ because no evaluation here hit a bound and everything deliberately outside the
 model is already a waiver. They are exercised in the test instead of being
 filled with plausible-looking rows.
 
-The JS matrix itself (the kind tables, `handled`, `ignored`, the audits of `rules/js-model.rofl`) was removed on 2026-11-05 with Babel, whose kinds it counted; the mechanism is kept for aggregates in `rules/agg.rofl`. Cross-language agreement is
+The JS matrix itself (the kind tables, `handled`, `ignored`, the audits of `models/lang/js/rules/js-model.rofl`) was removed on 2026-11-05 with Babel, whose kinds it counted; the mechanism is kept for aggregates in `rules/agg.rofl`. Cross-language agreement is
 derived rather than asserted — `converges[audit](Layer, Rule, A, B)` reports the
 eight places two languages are modelled by the same rule in the same layer.
 

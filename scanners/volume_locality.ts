@@ -47,9 +47,9 @@ const read = (p: string): string => fs.readFileSync(path.join(REPO, p), 'utf8');
 /** Every pack of this tree that exists, in load order. */
 export function packs(): string {
   const named = ['boot.rofl',
-    'facts/js-callgraph.rofl', 'facts/js-modules.rofl',
-    'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl',
-    'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl', 'rules/js-surface.rofl'];
+    'models/lang/js/facts/js-callgraph.rofl', 'models/lang/js/facts/js-modules.rofl',
+    'models/lang/js/rules/js-structure.rofl', 'models/lang/js/rules/js-dataflow.rofl', 'models/lang/js/rules/js-model.rofl',
+    'models/lang/js/rules/js-callgraph.rofl', 'models/lang/js/rules/js-controlflow.rofl', 'models/lang/js/rules/js-surface.rofl'];
   return named.filter((p) => fs.existsSync(path.join(REPO, p))).map(read).join('\n');
 }
 

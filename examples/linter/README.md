@@ -1,6 +1,6 @@
 # Linter — a smell is a count, and a count is a rule
 
-`npm run lint -- rules/js-dataflow.rofl` says which relations are probably
+`npm run lint -- models/lang/js/rules/js-dataflow.rofl` says which relations are probably
 tables (five or more rules conclude one), which pairs of relations are read
 together by five or more rules, which bodies have seven or more conditions,
 and a few kinds of repetition (several routes under one name, twin bodies,
@@ -61,7 +61,7 @@ and three long bodies, five ways), then `may_be_lit` and `member_value` (four).
 
 `agg_linter_demo` loads `linter.rofl` with two rule files to read:
 
-- `corpus-dataflow.rofl`, a frozen copy of `rules/js-dataflow.rofl` (4f997a6),
+- `corpus-dataflow.rofl`, a frozen copy of `models/lang/js/rules/js-dataflow.rofl` (4f997a6),
   so that an edit to the model does not move the answers;
 - `corpus-fixture.rofl`, rules that sit on every threshold: 4 and 5 bodies,
   a pair read by 4 rules and one by 5, a body of 6 premises and one of 7, a

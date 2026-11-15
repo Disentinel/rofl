@@ -3,7 +3,7 @@
 -- kernel's own programs (boot.rofl, safety.rofl, policy.rofl,
 -- rules/strata.rofl) derive from it. Read by `rofl render`, which renders
 -- those programs as docs/rings; loaded by nothing else. The format is
--- facts/js-phrases.rofl's.
+-- models/lang/js/facts/js-phrases.rofl's.
 edb(phrase).
 -- the reflection: what the kernel records about every clause it loads
 phrase(has_conclusion, "<0:rule> has the conclusion <1:literal>").

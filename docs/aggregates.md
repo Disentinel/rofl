@@ -4030,7 +4030,7 @@ workaround in `examples/`, which goes when the workaround goes.
 The retire column owns the workarounds themselves (`workaround_site`): the
 counting-semiring linter in `scripts/lint.ts`, the fold in `examples/wtf`,
 the sums in `examples/slop`, `examples/spat`, `examples/aka` and
-`examples/blam`, `seq_later` in `rules/js-dataflow.rofl`, the quorum counts in
+`examples/blam`, `seq_later` in `models/lang/js/rules/js-dataflow.rofl`, the quorum counts in
 `examples/moot` and `examples/goof`, the host argmin in `examples/rip`, the
 interval merge in `examples/spat` and the set search in `examples/moot`, the
 host semiring folds (`runtime/semirings.ts`, `examples/huh`, `examples/spat`),

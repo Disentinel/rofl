@@ -25,8 +25,7 @@ surface_decl("boot.rofl").
 -- ============================================================= THE LIBRARIES
 -- `library_decl(Name, PathPrefix)`. One library today; the whole point of the
 -- decision is that there will be more, and a second one costs four facts.
-library_decl(js, "rules/js-").
-library_decl(js, "facts/js-").
+library_decl(js, "models/lang/js/").
 library_decl(js, "scanners/js").
 library_decl(js, "test/js-").
 library_decl(js, "test/fixtures/js-").

@@ -23,7 +23,7 @@
 // WHY A COMMITTED GOLDEN AND NOT A REGENERATED ONE. The old harness regenerated
 // its expectation before every run, so a change to any `.rofl` moved the
 // expectation with it and could not go red. Measured: deleting
-// `abrupt_kind(break_statement).` from rules/js-controlflow.rofl left it 150/150
+// `abrupt_kind(break_statement).` from models/lang/js/rules/js-controlflow.rofl left it 150/150
 // green. A golden is taken at a working state and committed, or it is not a
 // golden.
 //
@@ -163,20 +163,25 @@ export function worlds(): World[] {
     else if (e.endsWith('.rofl.md')) out.push({ name: e.replace(/\.rofl\.md$/, ''), files: worldFiles(p) });  // executable Markdown; a plain .md is a document
   }
   const rl = path.join(ROOT, 'rules');
-  const pack = (dir: string, prefix: string): void => {
+  const pack = (dir: string, prefix: string, factsDir = path.join(ROOT, 'facts')): void => {
     for (const e of fs.readdirSync(dir).sort()) {
       const p = path.join(dir, e);
-      if (fs.statSync(p).isDirectory()) { pack(p, `${prefix}${e}_`); continue; }
+      if (fs.statSync(p).isDirectory()) { pack(p, `${prefix}${e}_`, factsDir); continue; }
       // a world authored as Markdown (`.rofl.md`) is read into rules first (scripts/read.ts) and loaded from there
       if (!e.endsWith('.rofl') && !e.endsWith('.rofl.md')) continue;
       const stem = e.replace(/\.rofl(\.md)?$/, '');
-      const facts = path.join(ROOT, 'facts', `${stem}.rofl`);
+      const facts = path.join(factsDir, `${stem}.rofl`);
       const file = e.endsWith('.rofl.md') ? worldFiles(p) : [p];
       out.push({ name: `rules_${prefix}${stem}`,
         files: fs.existsSync(facts) ? [facts, ...file] : file });
     }
   };
   pack(rl, '');
+  // a model library (models/lang/L) keeps its rules and their facts in rules/ and facts/ of its own: each rule file a world
+  for (const lang of fs.readdirSync(path.join(ROOT, 'models/lang')).sort()) {
+    const lib = path.join(ROOT, 'models/lang', lang);
+    if (fs.existsSync(path.join(lib, 'rules'))) pack(path.join(lib, 'rules'), '', path.join(lib, 'facts'));
+  }
   out.push({ name: 'boot_only', files: [] });
   // A WALKED WORLD DECLARED ONE-ENGINE (check_opt(W, one_engine, rust)): a world found by walking has no check_world
   // block, so the option alone is read for it, and a name that is no world is refused rather than ignored
@@ -1149,9 +1154,9 @@ function refuse(e: unknown): never {
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
   own();
-  // `rofl why L @rules/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
-  const listed = fs.readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'rules', f)));
-  if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
+  // `rofl why L @models/lang/js/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
+  const listed = fs.readFileSync(path.join(ROOT, 'models/lang/js/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'models/lang/js', f)));
+  if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`models/lang/js/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
   const blessing = rest.includes('--bless'), hosts = rest.includes('--hosts');
   let engine: EngineChoice = 'both', engineWhy = '';
@@ -1213,7 +1218,7 @@ if (isMain) {
     // BLESSING SAYS WHAT IT CHANGES. The one real hazard of a committed golden
     // is blessing over a defect, and it was paid for within an hour of this
     // file existing: a bless ran while a planted mutant was still in
-    // rules/js-controlflow.rofl, and `abrupt_kind[main] 4 -> 3` went into the
+    // models/lang/js/rules/js-controlflow.rofl, and `abrupt_kind[main] 4 -> 3` went into the
     // expectation as the truth. Refusing to bless on a dirty tree is the wrong
     // guard — changing a rule IS the reason to bless — so the guard is that the
     // delta is printed and lands in the commit for a person to read.

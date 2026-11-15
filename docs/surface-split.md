@@ -10,7 +10,7 @@ measures how wide it is, builds it by hand on a 14-file corpus, and says what it
 **Retired 2026-11-09.** Volumes route every relation by the rules' keys (`f_volumes_cross_by_the_rules_keys`), so
 the JS model no longer mirrors an escaping node's facts back through `[surface]`: the mirrors, the parity gate
 (`npm run test:split`, `surface_split.ts (removed)`) and the lint over the model (world `surface_model`) are gone. What
-is left of `rules/js-surface.rofl` are the relations with a meaning of their own. The rest of this note is history.
+is left of `models/lang/js/rules/js-surface.rofl` are the relations with a meaning of their own. The rest of this note is history.
 
 Status: sections 1-4 are the scouting as it was written (its relation names, such as `sx_export_fn`, are the
 prototype's). Of the work in section 5, items 1-4 are built (sections 6 and 7: the driver is `runtime/split.ts`,
@@ -153,7 +153,7 @@ The wall moves from memory to ingest scheduling.
 
 ## 5. Work (each about one workflow unless noted)
 
-1. **Rules.** DONE (section 6: 49 rules rewritten, the book is `rules/js-surface.rofl`). Rewrite about 45 rules in js-dataflow (:464-467, :473-474, :723-731, :765, :768, :784-791, :803-806,
+1. **Rules.** DONE (section 6: 49 rules rewritten, the book is `models/lang/js/rules/js-surface.rofl`). Rewrite about 45 rules in js-dataflow (:464-467, :473-474, :723-731, :765, :768, :784-791, :803-806,
    :819, :841), js-callgraph (:295-341), js-controlflow (:189, :377-386, :412-446), js-effects (12), js-ambient (:260)
    and the question's wrapper; the new rules file `js-surface` (about 60 rules with the escape tables, `calls`, `eff_*`).
 2. **Parity gate.** DONE (section 6: world `vscode_surface_split`, `npm run test:split`). A world `vscode_surface_split` over the 14-file corpus: every file alone + core + others' surface
@@ -174,7 +174,7 @@ The wall moves from memory to ingest scheduling.
 
 ## 6. Built: the book, the gate and the lint (items 1-3)
 
-`rules/js-surface.rofl` is the `[surface]` book; the finding is
+`models/lang/js/rules/js-surface.rofl` is the `[surface]` book; the finding is
 `f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world`.
 
 - **Three shapes.** Exports keyed by the module's path (`sx_export_node`, `sx_export_val`, `sx_export_lit`,

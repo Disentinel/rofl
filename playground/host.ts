@@ -10,7 +10,7 @@ import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { BOOK_ROWS } from '../src/want.ts';
-import { scanText } from '../scanners/oxc_wasm.ts';
+import { scanText } from '../models/lang/js/scanner/oxc_wasm.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
 import { ARITH_OPS, varsOf, canonTerm, mka, litsOf, termsOf, type Clause, type Lit, type Term } from '../src/unify.ts';
@@ -85,7 +85,7 @@ function labelNodes(kind: Map<string, string>, kid: Map<string, string>, attr: M
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
-/** The facts of the code: oxc's tree of each file (scanners/oxc_wasm.ts, the scan of `rofl scan --no-start`), and the host's of the paths and of every string a file holds. */
+/** The facts of the code: oxc's tree of each file (models/lang/js/scanner/oxc_wasm.ts, the scan of `rofl scan --no-start`), and the host's of the paths and of every string a file holds. */
 export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
   const facts: string[] = [], nodes: Record<string, Node> = {}, parseErrors: Record<string, string> = {}, strings = new Set<string>();
   const kind = new Map<string, string>(), kid = new Map<string, string>(), attr = new Map<string, string>();
@@ -107,27 +107,6 @@ export function codeFacts(files: Record<string, string>, data: string[] = []): {
   }
   labelNodes(kind, kid, attr, nodes);
   return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
-}
-
-/** What the host tells the module graph and a scanner cannot: the files and directories there are, and each string cut the way a specifier is read. */
-export function hostFacts(paths: string[], strings: Set<string>): string[] {
-  // quoted the way the scanner quotes: ROFL has five escapes, and JSON's `\u0000` for a control character refuses the whole batch
-  const q = (x: string) => '"' + x.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"', out: string[] = [], dirs = new Set(['.']);
-  const dirOf = (p: string) => { const i = p.lastIndexOf('/'); return i < 0 ? '.' : p.slice(0, i); };
-  for (const p of paths) for (let d = dirOf(p); d !== '.'; d = dirOf(d)) dirs.add(d);
-  // the disk is a ledger of its own, [fs]: a directory, named by its path, has a file or a directory by its name
-  const base = (p: string) => p.slice(p.lastIndexOf('/') + 1);
-  for (const d of dirs) if (d !== '.') out.push(`has_dir[fs](${q(dirOf(d))}, ${q(base(d))}).`);
-  for (const p of paths) out.push(`has_file[fs](${q(dirOf(p))}, ${q(base(p))}).`);
-  for (const s of strings) {
-    // a specifier is one line and short; every segment repeats the string, so a long one costs its length times its slashes
-    if (!s || s.includes('\n') || s.length > 4096) continue;
-    const segs = s.split('/');
-    out.push(`str_segs[code](${q(s)}, ${segs.length}).`, `str_char0[code](${q(s)}, ${q(String.fromCodePoint(s.codePointAt(0)!))}).`);
-    segs.forEach((g, k) => out.push(`str_seg[code](${q(s)}, ${k}, ${q(g)}).`));
-    if (s.indexOf(':') > 0) out.push(`str_scheme[code](${q(s)}, ${q(s.slice(0, s.indexOf(':')))}).`);
-  }
-  return out;
 }
 
 /** The head's variables that nothing in the body gives a value. */

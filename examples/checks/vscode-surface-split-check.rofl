@@ -22,7 +22,7 @@
 --   a path built in another file     locations.ts n3ea02c0aa5d7188d, writer.ts ndc27e34f71d5ff1f: LOGS, an
 --                                    exported template; cacheFile(name), a returned path.join; withExt(base), a `+` whose
 --                                    part is writer.ts's template; LOGS + '/all.log' in writer.ts over the imported template.
---                                    Each answers with its node and its text (rules/js-concat.rofl), and mini/node/paths.ts
+--                                    Each answers with its node and its text (models/lang/js/rules/js-concat.rofl), and mini/node/paths.ts
 --                                    with the texts and nodes of examples/checks/vscode-side-effects-check.rofl
 --   an imported class                app.ts `new Registry()` of lib.ts's `export class`: Registry.open's mkdirSync and the
 --                                    call `r.open('/srv/data')` both answer '/srv/data'

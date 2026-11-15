@@ -26,7 +26,7 @@ highest-damage instance of the same problem.
 The overall figure is diluted by generated packs, which carry almost no
 comments. In the packs people write, **there is more prose than code by line.**
 Individual files run higher: `boot.rofl` is 83% comment, `facts/worklist.rofl`
-82%, `rules/js-ambient.rofl` 75%.
+82%, `models/lang/js/rules/js-ambient.rofl` 75%.
 
 None of it is reachable by any query. A ROFL comment is invisible to the engine.
 
@@ -237,8 +237,8 @@ kinds. Measured across hand-written packs and examples:
 | Mean lines per block | 8.9 |
 | Files containing any | 78 |
 
-The largest concentrations: `facts/worklist.rofl` 126 blocks, `rules/js-dataflow.rofl`
-124, `rules/js-controlflow.rofl` 107, `facts/findings.rofl` 82.
+The largest concentrations: `facts/worklist.rofl` 126 blocks, `models/lang/js/rules/js-dataflow.rofl`
+124, `models/lang/js/rules/js-controlflow.rofl` 107, `facts/findings.rofl` 82.
 
 ### The shape of the check
 

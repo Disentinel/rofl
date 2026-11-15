@@ -16,7 +16,7 @@
 //!
 //! A question verb is `rofl load` with that one question; `--json` prints each answer as `rofl serve` does.
 //! `--kept F [--anew]` keeps the world evaluated at F, and later runs answer from F until it is stale (kept.rs).
-//! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@rules/js.files`, the JS model);
+//! `@LIST` stands for the files LIST names, one a line, each from LIST's directory (`@models/lang/js/js.files`, the JS model);
 //! a LIST that is no file from the current directory is read from the tree the command came with (md::installed_tree).
 //! `roflenox://HOST/IDENTITY/BOOK` stands for the book BOOK as IDENTITY signed it on that node, checked (src/roflenox.rs).
 mod delta;
@@ -42,7 +42,7 @@ fn listed(args: Vec<String>) -> Vec<String> {
         },
         None => vec![a],
         Some(list) => {
-            // a list that is no file from here is the installed tree's: `@rules/js.files` from any directory
+            // a list that is no file from here is the installed tree's: `@models/lang/js/js.files` from any directory
             let here = std::path::PathBuf::from(list);
             let list = match rofl::md::installed_tree().map(|t| t.join(list)) {
                 Some(t) if !here.is_file() && t.is_file() => t,

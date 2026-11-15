@@ -46,7 +46,7 @@ prose_claim("facts/spec.rofl", "---- START.md section 8 WAS REPLACED, ITEM BY IT
 prose_pointer("facts/spec.rofl", "---- START.md section 8 WAS REPLACED, ITEM BY ITEM, BY LIMIT").
 prose_claim("facts/spec.rofl", "...AND THE LINE THAT INHERITED THE COMPOUND NEVER CAUGHT UP.").
 prose_pointer("facts/spec.rofl", "...AND THE LINE THAT INHERITED THE COMPOUND NEVER CAUGHT UP.").
-prose_site("rules/js-dataflow.rofl").
+prose_site("models/lang/js/rules/js-dataflow.rofl").
 prose_site("rules/worklist.rofl").
 retire_site(count, "scripts/lint.ts").
 retire_pattern("scripts/lint.ts").

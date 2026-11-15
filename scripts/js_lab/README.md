@@ -3,7 +3,7 @@
 Kept so the work survives the container. Nothing here runs in `npm test`.
 
 - `rewrites.diff` — the 23 accepted rewrites of the optimisation loop over
-  `MODEL_FILES` (base = the concatenation of rules/js-*.rofl at the time),
+  `MODEL_FILES` (base = the concatenation of models/lang/js/rules/js-*.rofl at the time),
   with `ast_within` left in its two-rule closure form, which the Rust kernel
   recognises (`rofl load --seed SEED --closure`). Public facts identical at 40 files.
 - `optloop.ts` — the loop: one rewrite a round, oracle = phrased relations

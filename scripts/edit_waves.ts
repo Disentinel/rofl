@@ -1,7 +1,7 @@
 // node scripts/edit_waves.ts CORPUS [--tree DIR] [--roles]   facts an edit of one file moves in the whole JS world (w_stable_node_ids)
 //
 // CORPUS is a directory of JS/TS. Each edit below is made to a copy of it, the copy scanned with DIR's scanner and
-// evaluated under DIR's @rules/js.files on this tree's Rust release build; the state is compared with the unedited
+// evaluated under DIR's @models/lang/js/js.files on this tree's Rust release build; the state is compared with the unedited
 // world's, and the facts gone plus the facts new are counted, scanner facts and derived apart. DIR is this tree by
 // default: run it again with `--tree` on a worktree of another commit to see what that commit's node ids cost.
 // `--roles` evaluates the roles layer instead (models/lang/js/oxc.files over the raw tree in [ast_oxc]): what an
@@ -37,9 +37,9 @@ const EDITS: [string, (s: string) => string][] = [
 
 function world(dir: string): Set<string> {
   const facts = path.join(dir, '..', path.basename(dir) + '.facts.rofl');
-  execFileSync('node', ['--experimental-strip-types', path.join(tree, 'scanners/cli.ts'), dir, '--out', facts], { stdio: ['ignore', 'ignore', 'ignore'] });
+  execFileSync('node', ['--experimental-strip-types', path.join(tree, 'models/lang/js/scanner/cli.ts'), dir, '--out', facts], { stdio: ['ignore', 'ignore', 'ignore'] });
   const model = roles ? ['--budget', '4000000000', '--space', '40000000', '@' + path.join(tree, 'models/lang/js/oxc.files')]
-    : ['@' + path.join(tree, 'rules/js.files')];
+    : ['@' + path.join(tree, 'models/lang/js/js.files')];
   const out = execFileSync(rofl, ['load', ...model, facts], { maxBuffer: 1 << 30, encoding: 'utf8' });
   return new Set(out.split('\n').flatMap((l) => /^([a-z_]\w*(?:\[\w+\])?\(.*\)) tick /.exec(l)?.[1] ?? []));
 }

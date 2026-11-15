@@ -77,7 +77,7 @@ twin(A, B, HA, HB, File) :- body_sig(A, S), body_sig(B, S), A != B,
 -- ...AND TWO ARMS OF ONE HEAD WITH ONE BODY, which differ only in a constant
 -- the head carries: `eff_here(U, read, local)` and `eff_here(U, write, local)`
 -- over the same two premises. That is a two-row table written as two rules,
--- and whether the table is better is exactly the argument rules/js-effects.rofl
+-- and whether the table is better is exactly the argument models/lang/js/rules/js-effects.rofl
 -- makes AGAINST it for `eff_op_inspects` — so a row, not a verdict.
 paired_arm(A, B, H, File) :- body_sig(A, S), body_sig(B, S), A != B,
                              clause(A, File, LA, H, _, _), clause(B, File, LB, H, _, _),

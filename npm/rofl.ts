@@ -3,8 +3,8 @@
 // directory as given; its exit is this command's exit, a signal included. Where Node can, the engine replaces this process
 // (process.execve): nothing stands between the caller and the engine, so killing either kills the one process. Elsewhere it
 // runs as a child: the signals this process gets are passed on, and an engine killed by a signal kills this process by it.
-// The engine is called by a path inside this package, so it reads `@rules/js.files` and a notebook's vocabulary from here.
-// `rofl scan DIR [FILE] [--out F]` is the JS scanner (scanners/cli.ts), the one command the engine does not carry;
+// The engine is called by a path inside this package, so it reads `@models/lang/js/js.files` and a notebook's vocabulary from here.
+// `rofl scan DIR [FILE] [--out F]` is the JS scanner (models/lang/js/scanner/cli.ts), the one command the engine does not carry;
 // `rofl --version` is this package's version and the engine binary it runs, which engine() has held to that version.
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -15,7 +15,7 @@ import { engine, ROOT } from './platform.ts';
 
 const args = process.argv.slice(2);
 if (args[0] === 'scan') {
-  const scanner = new URL('../scanners/cli.ts', import.meta.url);
+  const scanner = new URL('../models/lang/js/scanner/cli.ts', import.meta.url);
   process.argv = [process.argv[0], fileURLToPath(scanner), ...args.slice(1)];
   await import(scanner.href);
 } else {

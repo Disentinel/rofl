@@ -2,7 +2,7 @@
 -- RULES (examples/linter/README.md; docs/aggregates.md, "Acceptance demos").
 -- The rules are examples/linter/linter.rofl, reading the reflection of two
 -- rule files loaded with them: corpus-dataflow.rofl, a frozen copy of
--- rules/js-dataflow.rofl, and corpus-fixture.rofl, rules written to sit on
+-- models/lang/js/rules/js-dataflow.rofl, and corpus-fixture.rofl, rules written to sit on
 -- the thresholds.
 --
 -- Held by three oracles. The `lw_` rows are what scripts/lint.ts printed over

@@ -63,7 +63,7 @@ function shim(): string {
   if (shimDir) return shimDir;
   shimDir = mkdtempSync(path.join(tmpdir(), 'rofl-guide-'));
   const engine = path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE ?? 'release', 'rofl');
-  writeFileSync(path.join(shimDir, 'rofl'), `#!/bin/sh\nif [ "$1" = scan ]; then shift; exec ${JSON.stringify(process.execPath)} --experimental-strip-types ${JSON.stringify(path.join(ROOT, 'scanners/cli.ts'))} "$@"; fi\nexec ${JSON.stringify(engine)} "$@"\n`, { mode: 0o755 });
+  writeFileSync(path.join(shimDir, 'rofl'), `#!/bin/sh\nif [ "$1" = scan ]; then shift; exec ${JSON.stringify(process.execPath)} --experimental-strip-types ${JSON.stringify(path.join(ROOT, 'models/lang/js/scanner/cli.ts'))} "$@"; fi\nexec ${JSON.stringify(engine)} "$@"\n`, { mode: 0o755 });
   return shimDir;
 }
 
