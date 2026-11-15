@@ -3374,11 +3374,18 @@ work_needs(w_rust_default_backend, w_rust_cli).
 work(w_rust_rofl_md,
   "PART DONE 2026-10-16 (f_the_rofl_md_reader_is_native_and_reads_every_world_alike): the reader of worlds, rust/rofl/src/md/, read wherever the binary names a file and by rofl render --out DIR X.rofl.md; npm run mdcheck holds it to scripts/read.ts over every .rofl.md (132 of 132). PART DONE 2026-10-16 (f_the_rust_binary_runs_a_notebook_and_prints_it_as_the_kernel_does): rofl nb FILE.rofl.md answers every directive but draw and prints the text of the TypeScript kernel, 78 of 78 notebooks in the slice alike (npm run nbcheck; the slowest 17.9 s in TS, 1.0 s in Rust). LEFT: draw (about 18 kinds), a notebook over code or model: js, --json, the notes of vacuous, slip, together, holed and emptied, and goldens and test:nb reading notebooks through Rust. `.rofl.md` NOTEBOOKS AND THE SENTENCE FORM IN RUST: the cell reader, the directives (? never unsure why whynot excise extends), the phrase layer that facts/phrases.rofl and facts/js-phrases.rofl feed, and the rendering of answers in sentences. ACCEPTANCE: every notebook world gives the same verdicts and the same text in both engines.").
 work_state(w_rust_rofl_md, open).
+-- STILL OPEN 2026-11-15: the reader and `rofl nb` are native (src/md/), but `draw` is refused (md/nb.rs: "not native yet"),
+-- and so is a notebook over code (`model: js`, `code:`); --json, the notes of vacuous, slip, together, holed and emptied,
+-- and goldens and test:nb reading notebooks through Rust are not done. The first two are what the playground and the
+-- thin client wait on.
 work_needs(w_rust_rofl_md, w_rust_cli).
 
 work(w_l2_roles,
   "A LANGUAGE-NEUTRAL ROLE LAYER UNDER THE JS MODEL (f_two_parsers_are_the_occasion_for_a_language_neutral_model). The JS model reads roles, not AST kinds; a rule that genuinely needs AST detail is named and becomes a JS-only role or the normalizer's duty. One normalizer per parser, written as rules: Babel facts to roles first. Vocabulary governance from day one: every role relation declared, an unclaimed one an alarm. Reflective sites (Proxy, eval, computed access the model cannot follow) are shrugs with reason opaque_boundary, never guessed edges. Polyglot survey before the shared roles are frozen. ACCEPTANCE LADDER: (1) the JS model over roles through the Babel normalizer gives today's answers -- goldens and the V8 oracle; (2) see w_rust_scanner_oxc; (3) a second language.").
-work_state(w_l2_roles, open).
+work_state(w_l2_roles, done).
+-- DONE 2026-11-15 (f_the_roles_ladder_is_closed): rung 1 and 2 by #220 (the JS model over the roles, oxc the only scanner,
+-- Babel removed), rung 3 by models/lang/rust (rust/tools/rs_tree writes [ast_rs], rs-roles.rofl reads it into the roles of
+-- models/lang/js/roles.rofl, two words beyond them; the engine's own code is asked through it, npm run engine:features).
 -- PROGRESS 2026-10-31 (f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write): step one built BESIDE the
 -- model, which does not read it yet: models/lang/js/roles.rofl (the vocabulary of the doc «Словарь ролей модели JS»,
 -- worlds as books [value] / [type] / [tree]) and babel-roles.rofl over the raw tree in [ast_babel]; npm run test:roles
@@ -3387,7 +3394,10 @@ work_state(w_l2_roles, open).
 
 work(w_js_model_on_roles,
   "THE JS MODEL MOVED ONTO THE ROLES, oxc the scanner by default, Babel removed (owner, 2026-11-01: translate the rules keeping their names, one stream, one group of roles at a time). Steps: the roles and the Babel converter in every world of the model; names and scopes; functions; calls and members; values; control; modules; TS types; the coverage matrix as role x layer and the raw tree out of the world; oxc by default; Babel removed. ACCEPTANCE per step before oxc: not one fact of the model's own relations moves in any world, both engines. ACCEPTANCE of the oxc step: the model's answers over a Babel scan and an oxc scan of the same files compared by place, every difference fixed or recorded with its reason; then one bless.").
-work_state(w_js_model_on_roles, open).
+work_state(w_js_model_on_roles, done).
+-- DONE 2026-11-05, closed 2026-11-15 (f_the_roles_ladder_is_closed): #220 moved the rules onto the roles, oxc by default,
+-- Babel removed (the roles, audit and from-code books, test:parity, scanners/js_ast.ts, @babel/parser). Today's rules still
+-- reading the raw tree are the contested ones named in f_the_last_raw_rules_wait_on_meanings.
 work_needs(w_js_model_on_roles, w_l2_roles).
 work_needs(w_js_model_on_roles, w_rust_scanner_oxc).
 
@@ -3403,7 +3413,9 @@ work_needs(w_lifecycle_world, w_js_model_on_roles).
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").
-work_state(w_rust_scanner_oxc, open).
+work_state(w_rust_scanner_oxc, done).
+-- DONE 2026-11-05, closed 2026-11-15 (f_the_roles_ladder_is_closed): rust/tools/oxc_scan, `rofl scan` / `npm run scan`, writes
+-- oxc's tree and the host facts; models/lang/js/oxc-roles.rofl is its normalizer; it is the only scanner of the JS model.
 work_needs(w_rust_scanner_oxc, w_l2_roles).
 work_needs(w_rust_scanner_oxc, w_rust_cli).
 
@@ -3477,8 +3489,8 @@ work(w_the_sentence_form_never_fails_silently,
 work_state(w_the_sentence_form_never_fails_silently, done).
 
 work(w_every_picture_its_own_frame,
-  "`draw space` WITHOUT A PER-PICTURE `frame` MERGES ALL PICTURES INTO ONE CANVAS (beside f_whole_picture_frames_do_not_follow_the_frame_decision). A picture without a frame is its own frame, or the draw refuses with a reason.").
-work_state(w_every_picture_its_own_frame, open).
+  "`draw space` WITHOUT A PER-PICTURE `frame` MERGES ALL PICTURES INTO ONE CANVAS (beside f_whole_picture_frames_do_not_follow_the_frame_decision). A picture without a frame is its own frame, or the draw refuses with a reason. DONE 2026-11-15: framesOf (the whole picture's frames) now takes membership as scoped does (notebook/draw.ts membership, PAIRS): a mark belongs to every frame it is placed in, and a link, box, partner or child whose far end is outside the frame is not drawn in it. Not run here: test:workbench and test:vscode need the wasm scanner; CI judges the goldens.").
+work_state(w_every_picture_its_own_frame, done).
 
 work(w_js_dead_call_sites,
   "arg_at TAKES ARGUMENTS FROM DEAD CALL SITES: code under `if (!module.parent) main()` or `require.main === module` (1021 and 778 files in the demo repo) contributes values to every callee. Model the entry guards (dead_guard / dead_fn in the demo's js-net-listen.rofl) and keep their sites out of arg_at, with a world over both guard shapes. DONE 2026-10-11: `dead_site[code]` (rules/js-dataflow.rofl section 7) keeps the calls under `!module.parent` / `require.main === module` (also `module === require.main`, `&&` form), the else arm of `module.parent` / `require.main !== module`, and the calls in a function declaration or declarator whose every mention in its file is under such an arm (`dead_fn`, by name, syntax only because arg_at sits under the fixpoint) out of arg_at. Proof: examples/notebook/guard.rofl.md. Declared limit: a function reached only through another dead function is dead only if it is itself mentioned only under a guard.").
@@ -3837,7 +3849,7 @@ work_state(w_next_version_cutoff, done).
 work_needs(w_next_version_cutoff, w_incremental_addition).
 
 work(w_cutoff_agent_usability,
-  "ACCEPTANCE OF THE NEXT VERSION (the owner, 2026-10-05: the new version must be usable productively by an agent): a fresh agent with no context of the building sessions gets the vscode corpus (subset S, /home/dev/corpora/REPORT.md) and the side-effect question, and only what ships: the docs, the agent table in CLAUDE.md, one entry point (the CLI or the notebook), the question's recipe. It must produce the 500-800 answers with an understandable why per answer by itself. Every stumble (an unclear flag, a refusal text that does not say what to do, an unreadable provenance, a superfluous step, a wall it cannot interpret) becomes a fix before the release. Run it at least twice (after fixes) and record the transcript summary as a finding.").
+  "ACCEPTANCE OF THE NEXT VERSION (the owner, 2026-10-05: the new version must be usable productively by an agent): a fresh agent with no context of the building sessions gets the vscode corpus (subset S, /home/dev/corpora/REPORT.md) and the side-effect question, and only what ships: the docs, the agent table in CLAUDE.md, one entry point (the CLI or the notebook), the question's recipe. It must produce the 500-800 answers with an understandable why per answer by itself. Every stumble (an unclear flag, a refusal text that does not say what to do, an unreadable provenance, a superfluous step, a wall it cannot interpret) becomes a fix before the release. Run it at least twice (after fixes) and record the transcript summary as a finding. FIRST RUN 2026-11-15 (f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things): two fresh agents (Opus, Sonnet), six questions over vscode subset S, 36 stumbles in 17 themes, each theme an item below (w_au_*); the second run waits on them.").
 work_state(w_cutoff_agent_usability, open).
 work_needs(w_cutoff_agent_usability, w_next_version_cutoff).
 
@@ -4058,6 +4070,9 @@ work_state(w_rofl_by_the_product_model, open).
 work(w_scroll,
   "The owner, 2026-11-11 (thread on the delta of volumes): the store becomes ONE LONG SCROLL over raw mapped memory, in place of volumes that copy facts to one another. His words: a cooled volume is a fold (a spoiler: its content is not seen, is known to be there, can be unfolded); it is the addressing of memory by pages and of a disk by logical volumes; the indexes are digests, a service volume of their own, the book [index]; nothing is to be invented above what the machine's memory does already. Why: a delta of volumes of 7 files of 123 takes 17 s against 55 anew, and 8 of them are the exchange (the plan of what to lay, the copies, their files, the rounds), which exists because a fact's number and a name's number mean something only inside their volume (f_half_the_time_of_a_delta_of_volumes_is_where_no_rule_reads_a_row). One pull request, its parts in this order, the engine working and its answers equal after each; each part's forecast is written in models/engine/delta-model.rofl before it is built and a measure judges it.").
 work_state(w_scroll, open).
+-- STILL OPEN 2026-11-15: parts 1 to 3 are done and the store is one path (levels, units read where they lie, #244, 1.7.0:
+-- 250 files 18 to 21 s, 750 files 60 to 68 s on 4 cores, an edit of one file about 5 s). NOT YET: the goal's number at
+-- the reference scale (11 100 files in 5 minutes) is not measured; it waits on the owner's run, and part 4 is open.
 
 work(w_scroll_names,
   "Part 1 of w_scroll. ONE DICTIONARY OF NAMES for every volume: a name or a compound term a rule makes has one number wherever it is made, so a term reads the same in every volume and nothing is translated (copy_term, find_term, the spelling of a term to ask a neighbour). Today the names the files spell are named in the core before the volumes fork; what rules make each volume numbers alone.").
@@ -4083,6 +4098,11 @@ work_needs(w_scroll_foreign_premise, w_scroll_address).
 work(w_scroll_edit_is_a_version,
   "Part 4 of w_scroll. AN EDIT OF A FILE APPENDS A VERSION OF ITS FOLD: the old fold goes out of the registry (kept as history or removed as a file), the new facts go to new addresses, none is used again, nothing is rewritten clean; what stood on the old fold is derived again and no more. The memory the process may use is kept by the watcher giving back to the system the folds longest unread.").
 work_state(w_scroll_edit_is_a_version, open).
+-- STILL OPEN 2026-11-15: an edit settles again only the units it moved, a mended unit keeps its firings
+-- (f_a_mended_unit_dropped_the_firings_it_wrote_for_other_stretches), the forests reuse the slots a dropped tree left
+-- (f_a_tree_built_again_took_a_new_place_each_time), and the units done are cooled past a quarter of the memory. NOT AS WRITTEN:
+-- a mended unit is rewritten, not appended as a new version at new addresses; the memory the process may use is kept by
+-- cooling the units done, not by giving back the folds longest unread. Say which of the two the owner wants before it is built.
 work_spawned(w_scroll_edit_is_a_version, f_a_tree_built_again_took_a_new_place_each_time).
 work_needs(w_scroll, w_scroll_edit_is_a_version).
 work_needs(w_scroll_edit_is_a_version, w_scroll_foreign_premise).
@@ -4096,4 +4116,86 @@ work_spawned(w_scroll_regions, f_one_store_on_every_core_nears_the_volumes).
 work_spawned(w_scroll_regions, f_three_firings_of_four_lie_in_one_file).
 work_spawned(w_scroll_regions, f_the_rules_of_one_file_are_derived_in_its_world).
 work_spawned(w_scroll_regions, f_in_one_store_the_search_is_spread_and_the_writing_is_one_threads).
+
+-- THE FRESH AGENT'S STUMBLES (w_cutoff_agent_usability, first run 2026-11-15; transcripts and stumbles books in the project
+-- files, agent-usability/). One item per theme of themes.rofl there.
+work(w_au_kept_cone_grows_wrong,
+  "DEFECT, the first to fix. A kept world asked a question outside its cone grows by delta and answers WRONG, silently, exit 0. Repro in the tree: `npm run scan -- examples/services/src --out svc.rofl`; with an empty ~/.cache/rofl: `rofl ask 'call_like[code](C)' @rules/js.files svc.rofl`, then `rofl ask 'may_be_node[flow](A, X)' @rules/js.files svc.rofl` answers 2 rows; with the cache emptied the second alone answers 161. On vscode base the grown world answered (empty) where fresh says X = \"fs\", and a whynot built on it named a premise that holds. docs/cli.md (rofl ask) promises the growth. Acceptance: a check world asks a narrow cone, then a wider one, and equals the fresh answer; at least the two relations above.").
+work_state(w_au_kept_cone_grows_wrong, open).
+work_spawned(w_au_kept_cone_grows_wrong, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_memory_wall_before_the_kernel,
+  "The memory wall did not fire before the kernel: three runs on a 15 GB machine (base 493 files with --space 2e8; base+platform 2 617 files) ended exit 137 with no engine line, resident about twice the heap at the stop. cli.md promises the world stops and says so. Acceptance: on a machine with no cgroup limit a run that outgrows memory ends with the wall said and a partial answer, measured at 2 617 vscode files.").
+work_state(w_au_memory_wall_before_the_kernel, open).
+work_spawned(w_au_memory_wall_before_the_kernel, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_no_whole_fallback_past_units,
+  "`volumes: wall: budget_exhausted; the world is evaluated whole`: when the units path meets a wall it falls back to the whole world on one heap, which at that size cannot fit (platform 3 097 files: silent for 4m45; 2 617 files: killed). The fallback also made an edit slower than the cold run (82 s against 54 s). Answer partial from the units with the wall named, or say which unit and which wall with how much spent.").
+work_state(w_au_no_whole_fallback_past_units, open).
+work_spawned(w_au_no_whole_fallback_past_units, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_default_walls_hold_js,
+  "The default walls cut the JS model at 41 files (spent(rows, 500001, 500000)); the shrug says `budget` while the wall is --space, and --budget alone changes nothing. Both agents guessed --space values. Make the defaults hold the JS model over a few thousand files, or name the flag and a value that would suffice in the shrug; put tested values per corpus size beside rofl ask in docs/cli.md.").
+work_state(w_au_default_walls_hold_js, open).
+work_spawned(w_au_default_walls_hold_js, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_side_effect_question_findable,
+  "The side-effect question is named in cli.md many times but the file that asks it (examples/vscode/side-effects.rofl) is not; one agent found it in README, the other from a stale path on stderr, after reading 16 600 lines of docs/js/. Add to cli.md, JS section: the file, its answer relations, and the two commands (scan, ask). Also answer the agent's question 'for N files on M GB, which path runs' in one sentence (the drivers table of *A corpus larger than one heap* reads as harness, not as an entry point).").
+work_state(w_au_side_effect_question_findable, open).
+work_spawned(w_au_side_effect_question_findable, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_answers_name_places,
+  "Answers are node ids (S = n2bf..._1vkc...): both agents wrote their own rule joining at[tree] for file:line, and `rofl ask 'a(X), b(X)'` is refused as 'no closing dot', not as 'one literal; put the join in a rule file'. side_effect_value prints node ids for non-literal values and `undefined` unexplained. Render a node id as file:line (and its text) in ask answers, or give the side-effect relations File and Line; say what undefined means.").
+work_state(w_au_answers_name_places, open).
+work_spawned(w_au_answers_name_places, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_why_for_a_reviewer,
+  "rofl why is correct but unreadable for a reviewer: 141, 177 and 883 lines, about 90% import resolution and expanded negations with ids; the readable notebook form (the steps the value took, one per line) cannot be had over code here because the notebook host needs oxc_scan.wasm. A summary form of why from the CLI: the source lines the proof touches in order, file:line and text, negations counted.").
+work_state(w_au_why_for_a_reviewer, open).
+work_spawned(w_au_why_for_a_reviewer, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_whynot_picks_the_missing_fact,
+  "whynot's nearest failure walks the wrapper/decorator rule into the model's internals; the real cause (no se_fn / se_name fact for `write`, `utimes`) appears only in --all, as 'head does not unify'. Prefer the chain that ends at a missing base fact of a user book, and say it as 'no fact se_name(fs_mutation, \"utimes\"); its facts are ...'.").
+work_state(w_au_whynot_picks_the_missing_fact, open).
+work_spawned(w_au_whynot_picks_the_missing_fact, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_side_effect_names,
+  "The side-effect fixture misses fs mutators (fs.write, promises.utimes in base/node; found by whynot), reports vscode's own path.ts literals as values reaching fs calls (\"\", \".\", \"/\") when base/common is in the world, and reports undefined for a parameter with a default (rimrafMove). examples/vscode/side-effects.rofl, not the frozen rules/js-*.rofl; removing false answers needs no decision.").
+work_state(w_au_side_effect_names, open).
+work_spawned(w_au_side_effect_names, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_promise_executor_calls,
+  "calls[code] has no edge from a function to the executor it hands to `new Promise(...)`: listProcesses (ps.ts:14) and resolveTerminalEncoding do not reach the exec inside their executors, silently, no unresolved_call. Both agents hit it on the transitive reach question. Touches rules/js-*.rofl (frozen): a decision of the owner; at least the call should be said as unresolved. Also ship a documented reaches_effect(F, Family).").
+work_state(w_au_promise_executor_calls, open).
+work_spawned(w_au_promise_executor_calls, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_scan_without_cargo,
+  "`npm run scan` tries a cargo build of oxc_scan.wasm and prints a raw rustc error (E0463, wasm32 target missing) on every scan, then writes complete facts; both agents distrusted the output. The native scanner is enough there: do not try the wasm build from the CLI path, and let the notebook host use the native binary when the wasm is absent.").
+work_state(w_au_scan_without_cargo, open).
+work_spawned(w_au_scan_without_cargo, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_kept_world_said,
+  "What a kept world does is not said: 'the kept world ... is stale: the files named are others; computed anew' reads as an error on a first run; a repeat answered from a small kept world prints nothing; 'volumes: 1 answered from the kept units' leaves '1' unclear; a world by volumes is kept per question (a new question 30 s and 700 MB again, 7 GB of cache in half an hour) while cli.md says another question is answered from it. Say 'no kept world for these files', one line on every kept answer, and the cache size after a run that kept a lot.").
+work_state(w_au_kept_world_said, open).
+work_spawned(w_au_kept_world_said, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_string_edit_by_delta,
+  "An edit that changes a string literal is not taken by delta ('the rules or the facts naming no file changed; computed anew', 30 s whole at 312 files): the host's string facts (str_segs, str_seg ...) carry no file prefix. Most edits touch a string; key them by the file that holds them.").
+work_state(w_au_string_edit_by_delta, open).
+work_spawned(w_au_string_edit_by_delta, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_docs_arg_order,
+  "docs/js/ renders each relation as a sentence with the subject first and never gives the positional head: host_effect_at was asked in the sentence's order and answered with the columns swapped; nearest_fn and inside[tree] had to be tried both ways. Print the head (host_effect_at(E, File, Line, Why)) under every sentence, and document the [tree] roles (at, inside, parent, nth).").
+work_state(w_au_docs_arg_order, open).
+work_spawned(w_au_docs_arg_order, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_parse_error_position,
+  "A rule file with `Line =< 822` is refused with 'term: not the start of one', no line, column or token, after a stderr line that it would be computed anew. Give the position and the token, and suggest <=.").
+work_state(w_au_parse_error_position, open).
+work_spawned(w_au_parse_error_position, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_au_narrowing_and_progress,
+  "When a world fails for size nothing says which files or directories grew it (vscode base: test/ doubled it); an agent narrows by guessing. A long ask prints no heartbeat, so an agent with a 2-minute foreground limit cannot tell a stuck run from a slow one. Rank the largest units by facts when a wall is met; a progress line every N seconds on stderr.").
+work_state(w_au_narrowing_and_progress, open).
+work_spawned(w_au_narrowing_and_progress, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
