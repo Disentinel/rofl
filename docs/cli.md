@@ -121,14 +121,13 @@ A world is kept only when the memory the process may still use holds about three
 times its volume (indexing it for a delta and writing it); otherwise it is
 answered and not kept, said on stderr.
 
-**`@LIST`** stands for the files LIST names, one a line, each read from LIST's
-directory. `@rules/js.files` is the JS model, the files the notebook host
-loads (`notebook/front.ts` `MODEL_FILES`; `npm test` fails when the two differ).
-A LIST that is no file from the current directory is read from the tree the
-command came with: the tree above the path the binary was called by (the npm
-package calls it by a path inside itself), else the one above the binary. So
-`@rules/js.files` works from any directory, and a `.rofl.md`'s vocabulary is
-found the same way.
+**`@NAME`** is the model library NAME (*Model libraries*, below): `@js` is
+the JS model. **`@LIST`**, a path, stands for the files LIST names, one a
+line, each read from LIST's directory. A library or a LIST that is not found
+from the current directory is read from the tree the command came with: the
+tree above the path the binary was called by (the npm package calls it by a
+path inside itself), else the one above the binary. So `@js` works from any
+directory, and a `.rofl.md`'s vocabulary is found the same way.
 
 **`roflenox://HOST/IDENTITY/BOOK`** stands for the book BOOK as IDENTITY signed
 it on that Roflenox node, every batch of the chain checked (guide/ADAPTERS.md,
@@ -364,13 +363,66 @@ by delta.
 A refusal wins over a partial answer: a run with a refused question exits 4.
 A state dump of a cut world exits 0; its holes are in the dump.
 
+## Model libraries
+
+A model of a language is a library of the engine, kept in a folder of its own,
+`models/lang/NAME/`, with a version of its own. The JS model is the first:
+`models/lang/js/` holds its rules (`rules/`), their tables (`facts/`), its
+roles and converter (`roles.rofl`, `oxc-roles.rofl`), its scanner
+(`scanner/`: oxc_scan and the host facts), its rendered docs (`docs/`) and
+its manifest, `library.rofl`. The manifest is facts:
+
+| fact | says |
+|---|---|
+| `library(js, "1.0.0")` | the library and its version |
+| `needs_engine(js, "1.7.0")` | the oldest engine it runs on; an older one refuses `@js`, naming both versions (exit 1) |
+| `files(js, "js.files")` | the list of its files in load order, from its folder; `npm test` holds it to `notebook/front.ts` `MODEL_FILES` |
+| `scanner(js, "rofl scan", columns)` | the command that turns a directory of source into the facts the model reads, and the form it writes them in (`text` or `columns`, below) |
+
+The engine knows no library by name: `@js` reads `models/lang/js/library.rofl`
+of the tree above the current directory, else of the tree the command came
+with. The scanner is a program of its own, never built into the engine:
+`oxc_scan` ships beside `rofl` in each platform package, and a world names it
+as its scanner (*A world that asks for its own input*). Its rule worlds are
+checked by `npm test` under the names they always had (`rules_js-dataflow`).
+
+**The scanner's contract: text or columns.** A scanner writes base facts on
+its standard output, in either of two forms, and both engines read both; the
+form is told by the text itself. *Text* is ROFL source, a fact a line. The
+*column form* opens with the line `-- rofl columns 1` among its first comments
+and holds, per source file, a table of the terms it names and a block a
+relation of the numbers of those terms, a column an argument:
+
+```
+-- rofl columns 1
+-- reads: src/a.js
+T 3
+a n3f2c9e0a1b2c3d4_1
+a Identifier
+s src/a.js
+R node ast_oxc 3 1
+0
+1
+2
+```
+
+`T N` opens a table of N terms, one a line: `a NAME` an atom, `s TEXT` a
+string (`\\`, `\n`, `\r` escaped), `i N` an integer. `R REL BOOK ARITY ROWS`
+is ROWS facts of `REL[BOOK]` (`-` the bare book), then ARITY lines, each the
+column of one argument as table numbers in base 36. A table holds until the
+next, so the scanner keeps no state across files; node ids stay the hashes
+they are in text. Any other line is text, read as text is (a `-- ` line a
+comment). `rofl scan` writes columns (vscode's `vs/base/common`, 155 files:
+16.7 MB against 65.9 MB of text, the same facts) unless it is asked to keep the
+ids of a previous scan (`ROFL_SCAN_PREVIOUS`), when it writes text.
+
 ## JS code, through the Rust engine
 
 Two commands, a directory of JS or TS in, an answer out:
 
 ```sh
 npm run scan -- path/to/src --out code.rofl          # installed from npm: rofl scan path/to/src --out code.rofl
-rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @js code.rofl
 ```
 
 From the npm package `rofl scan` is `npm run scan --`, and a world that asks for
@@ -378,17 +430,17 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 
 | stage | runs on | reads | writes |
 |---|---|---|---|
-| `npm run scan` | node: `scanners/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
-| the scanner | `rust/tools/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `rust/tools/oxc_scan/src/main.rs` |
-| the host facts | `playground/host.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
-| the model | `rofl`, Rust | `@rules/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`docs/js/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
+| `npm run scan` | node: `models/lang/js/scanner/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
+| the scanner | `models/lang/js/scanner/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `models/lang/js/scanner/oxc_scan/src/main.rs` |
+| the host facts | `models/lang/js/scanner/host_facts.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
+| the model | `rofl`, Rust | `@js` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`models/lang/js/docs/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
 host gives a `.rofl.md` with `model: js` (`npm run nb`, the VS Code worker): both scan with oxc, the notebook host and the
-browser page (playground, workbench) through `rust/tools/oxc_scan` compiled to wasm (`scanners/oxc_wasm.ts`, the facts of
+browser page (playground, workbench) through `models/lang/js/scanner/oxc_scan` compiled to wasm (`models/lang/js/scanner/oxc_wasm.ts`, the facts of
 `--no-start` byte for byte; `oxc_scan.wasm` is built by `cargo build --release --lib --target wasm32-unknown-unknown` in
-`rust/tools/oxc_scan`, and `rustup target add wasm32-unknown-unknown` is its one prerequisite), `scanners/cli.ts` for a
+`models/lang/js/scanner/oxc_scan`, and `rustup target add wasm32-unknown-unknown` is its one prerequisite), `models/lang/js/scanner/cli.ts` for a
 directory through the native binary. A notebook also reads `ast_node`, `ast_child`, `ast_attr` over oxc's tree
 (`models/lang/js/oxc-to-code.rofl`).
 
@@ -414,8 +466,8 @@ and as much for each `rofl why` run alone, since each builds the world.
 vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
 two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `oxc-roles.rofl`
 writes them from oxc's tree in `[ast_oxc]` (the raw relations are `node`, `child`, `attr`,
-`line` and `file`: a ledger is named by its book, not by a prefix). `rules/js-*.rofl` read
-the roles of the oxc converter (`rules/js.files`); `npm run test:roles` drives the layer, and
+`line` and `file`: a ledger is named by its book, not by a prefix). `models/lang/js/rules/js-*.rofl` read
+the roles of the oxc converter (`models/lang/js/js.files`); `npm run test:roles` drives the layer, and
 `rofl load @models/lang/js/oxc.files code.rofl` writes the roles of a corpus scanned by `npm run scan`. Pass `--budget` and `--space` at hundreds of files: the
 default budget cuts the state without saying so.
 
@@ -425,7 +477,7 @@ default budget cuts the state without saying so.
 npm run scan:oxc -- path/to/src --out oxc.rofl
 ```
 
-`rust/tools/oxc_scan` (its own cargo workspace, so the engine's build never
+`models/lang/js/scanner/oxc_scan` (its own cargo workspace, so the engine's build never
 compiles oxc) reads the same files as `npm run scan` through oxc and writes
 oxc's own tree, the Rust structs of `oxc_ast` and not its ESTree output, raw
 and without judgement into the `[ast_oxc]` perspective: `node(Id, Kind,
@@ -457,7 +509,7 @@ files) 1.1 s against 18.7 s for `npm run scan`, 304 MB against 241 MB.
 
 ```sh
 npm run scan -- path/to/src --out code.rofl
-rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @rules/js.files models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
+rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @js models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
 ```
 
 `models/lang/js/lifecycle.rofl` is the world `[lifecycle]` over the JS model
@@ -483,7 +535,7 @@ The words of behaviour the model derives live in their worlds (the doc «Сло�
 ролей модели JS», «Миры поведения»): `suspends[execution](Seq, I)`,
 `hidden_call[execution](N, How)`, `transfers[execution](X, Kind)`,
 `fallback[execution](F, Name, Init)`, `coerces[execution](N, X)`,
-`narrows[type](O)`; ask them with `@rules/js.files` alone.
+`narrows[type](O)`; ask them with `@js` alone.
 
 ## A world that asks for its own input
 
@@ -492,12 +544,12 @@ of input and asks for paths; each evaluation runs every new request at once,
 loads what the scanner prints, and evaluates again, until nothing new is asked.
 
 ```
-scanner(js, "node --experimental-strip-types scanners/cli.ts examples/scan/src").
+scanner(js, "node --experimental-strip-types models/lang/js/scanner/cli.ts examples/scan/src").
 scan_request(js, "main.js").
 scan_request(js, F) :- depends[code](_, F).
 ```
 
-`rofl load @rules/js.files examples/checks/scan-world.rofl` scans `main.js`,
+`rofl load @js examples/checks/scan-world.rofl` scans `main.js`,
 then `lib/greet.js` that it imports, then `lib/shout.js`, and never
 `lib/unused.js`. A scanner is any command: the path is its last argument and
 what it prints is loaded as ROFL, rules as well as facts. Each request runs
@@ -511,7 +563,7 @@ on stderr, `[partial: a scan failed ...]` under the rows (`"partial":true` in
 `--json`), exit 5. The world itself holds `scan_failed` to ask about.
 
 **A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
-for each file and directory (`scanners/cli.ts` names the file it parsed and
+for each file and directory (`models/lang/js/scanner/cli.ts` names the file it parsed and
 every directory it listed), has its output kept under
 `$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read stamped:
 a file by its bytes, a directory by the names in it. The next run takes the
@@ -522,7 +574,7 @@ being the model's evaluation.
 
 A file scanned again for a kept world (`rofl ask` after an edit) is handed
 its previous output, the stale kept one, in `ROFL_SCAN_PREVIOUS`, and
-`scanners/cli.ts` gives a node it matches there its old id: a local renamed
+`models/lang/js/scanner/cli.ts` gives a node it matches there its old id: a local renamed
 moves the facts that hold its name, not those of every statement naming it.
 What it prints then is kept marked `-- inherited` and answers only such a
 rescan; a world evaluated from its files (`rofl load`, `npm test`) scans from
@@ -650,7 +702,7 @@ thaw of a run reads every source to cut its file out of them). `excise`,
 **The design the owner agreed** (2026-10-25): a file is scanned into a volume of
 its own, the volume is cooled to disk and stays there until a question needs
 it, and beside it lives the file's `[surface]`, a thin volume of what escapes
-the file (`rules/js-surface.rofl`). The design is in
+the file (`models/lang/js/rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).

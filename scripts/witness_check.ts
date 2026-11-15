@@ -66,7 +66,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../src/api.ts';
-import { scan } from '../scanners/oxc_code.ts';
+import { scan } from '../models/lang/js/scanner/oxc_code.ts';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -101,7 +101,7 @@ function rofl(files: string[]): any {
   // load is nearly free, which leaves a single real fixpoint at `evaluate`.
   // test/js-corpus-world.ts measured this at 16.9 s -> 10.0 s and compared
   // fifteen relations byte for byte across the change.
-  const order = (f: string) => (f === 'boot.rofl' ? 0 : f.startsWith('rules/') ? 1 : 2);
+  const order = (f: string) => (f === 'boot.rofl' ? 0 : /(^|\/)rules\//.test(f) ? 1 : 2);
   const sorted = [...files].sort((a, b) => order(a) - order(b) || (a < b ? -1 : 1));
   const res = r.load(sorted.map(read).join('\n'), { budget: 50_000_000 });
   if (!res.ok) { console.error(`world: ${sorted.join(', ')}: ${res.diagnostics[0]}`); process.exit(1); }
@@ -135,13 +135,13 @@ export function worldMap(): Map<string, WorldSpec> {
  *  builtins are arithmetic and comparison only, so NO RULE CAN TAKE A SPECIFIER
  *  APART: without these, `str_scheme[code]` is empty, `node:fs` never
  *  classifies as a `node_builtin`, `resolved_builtin[code]` derives nothing and
- *  the whole module door of rules/js-modules.rofl and rules/js-host.rofl is
+ *  the whole module door of models/lang/js/rules/js-modules.rofl and models/lang/js/rules/js-host.rofl is
  *  SILENT — with no diagnostic, because an empty relation is a fact about the
  *  query until proven otherwise.
  *
  *  ADDED 2026-09-09 by w_effect_ambient_call, and the reason is that the gap
  *  was invisible until a world needed the module door: every world declared
- *  before it either refused rules/js-modules.rofl or had a corpus of relative
+ *  before it either refused models/lang/js/rules/js-modules.rofl or had a corpus of relative
  *  specifiers, so the missing facts subtracted nothing anybody had asked for.
  *  It only ADDS facts, and only for a corpus that writes an import — a world
  *  that does not load the modules pack holds them unread. */

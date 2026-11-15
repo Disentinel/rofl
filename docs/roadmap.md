@@ -87,14 +87,14 @@ finding, and listed so that this page does not read as the whole release
   one line each, above a proof whose side conditions are counted; `npm run nb
   -- --all` prints every answer and every proof whole
   (f_every_why_line_of_a_notebook_failed; `docs/md-world.md`).
-- **The `[surface]` book**: `rules/js-surface.rofl`, the cross-file rules
+- **The `[surface]` book**: `models/lang/js/rules/js-surface.rofl`, the cross-file rules
   rewritten to read another file only through it, the gate world
   `vscode_surface_split` (`npm run test:split`) and the surface lint
   (f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world,
   f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise;
   `docs/surface-split.md`). The driver that cools volumes is not built yet.
 - **Path values**: a string built from parts is a node with parts, its text a
-  term (`rules/js-concat.rofl`;
+  term (`models/lang/js/rules/js-concat.rofl`;
   f_a_string_built_from_parts_is_a_node_with_parts_and_its_text_is_a_term).
 - **The owner's decisions on walls and promises**
   (f_the_owner_settles_walls_promises_and_incremental): a wall's cut may move
@@ -141,7 +141,7 @@ What has to exist for it to be code rather than a description of code
    reader and does not wait for this;
 2. the desugaring as data in the tree: phrase to relation, noun to kind guard,
    book block to perspective, map to table. Phrase to relation is data for
-   every world now: the JS model's in `facts/js-phrases.rofl`, an authored
+   every world now: the JS model's in `models/lang/js/facts/js-phrases.rofl`, an authored
    world's written beside its rules by the reader as `phrase` facts;
 3. the two checks, both in the reader: a use with nowhere to link (which is
    what "use before definition" became), and a numbered alternative that does
@@ -154,7 +154,7 @@ What has to exist for it to be code rather than a description of code
    (f_why_and_the_query_answer_in_the_sentences_of_the_document).
    For files it exists: `rofl render` (rust/rofl/src/bin/rofl/render.rs)
    renders a program to Markdown from its rules, with phrases as facts, and
-   `docs/js/` is the JS model rendered
+   `models/lang/js/docs/` is the JS model rendered
    (f_the_renderer_from_rules_to_prose_parses_only_and_its_fallback_is_the_lint).
    Reader and renderer share the phrase facts, so the reader is the half that
    is left, and `collapse then expand` is the formatter. The phrase of a
@@ -164,7 +164,7 @@ What has to exist for it to be code rather than a description of code
    classify signatures and `npm run sentences` proposes one for every relation
    that has none (f_the_eight_structures_run_and_the_name_is_not_the_sentence).
    A signature whose name differs from its relation is a proposed rename.
-   The reader exists too, `npm run read -- docs/js/X.md rules/X.rofl`, and
+   The reader exists too, `npm run read -- models/lang/js/docs/X.md rules/X.rofl`, and
    the round trip over the JS model is 1178 of 1178 with every relation
    signed. What two days of that established, what the form is now, what
    the round trip cannot see, and what is open, is `docs/sentence-form.md`;
@@ -209,4 +209,4 @@ bullet, the reader does from the lead. Whether a bullet is a condition or
 another rule of its lead is the open decision.
 
 Evidence: the rewrites of the household week, `safety.rofl`, the inquiry
-kernel and `rules/js-dataflow.rofl`, linked from the findings above.
+kernel and `models/lang/js/rules/js-dataflow.rofl`, linked from the findings above.

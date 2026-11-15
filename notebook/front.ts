@@ -1,17 +1,17 @@
 // What a notebook is before anything runs: its front matter, its cells, and the files a host must read for it. No I/O, no dependencies.
 // A notebook is a world written as Markdown (`X.rofl.md`); the fenced ```rofl, ```datalog and ```natural blocks are its cells.
 
-/** The JS model, which is rules/js.files (scripts/goldens.ts holds the two to each other) and what `rofl scan` reads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
-export const MODEL_FILES = ['boot.rofl', 'facts/model-units.rofl',
-  'facts/js-callgraph.rofl', 'facts/js-modules.rofl',
-  'facts/js-effects.rofl', 'facts/js-globals.rofl', 'facts/js-host.rofl', 'facts/js-host-surface.rofl', 'facts/js-lib-surface.rofl', 'facts/js-attrs.rofl',
-  'rules/js-structure.rofl', 'rules/js-dataflow.rofl', 'rules/js-model.rofl', 'rules/js-callgraph.rofl', 'rules/js-controlflow.rofl',
-  'rules/js-effects.rofl', 'rules/js-globals.rofl', 'rules/js-host.rofl', 'rules/js-ambient.rofl', 'rules/js-attrs.rofl', 'rules/js-modules.rofl',
-  'rules/js-concat.rofl', 'rules/js-surface.rofl',
+/** The JS model, which is models/lang/js/js.files (scripts/goldens.ts holds the two to each other) and what `rofl scan` reads: structure, dataflow, calls, control flow, effects, globals, the host and the module graph between the files. */
+export const MODEL_FILES = ['boot.rofl', 'models/lang/js/facts/model-units.rofl',
+  'models/lang/js/facts/js-callgraph.rofl', 'models/lang/js/facts/js-modules.rofl',
+  'models/lang/js/facts/js-effects.rofl', 'models/lang/js/facts/js-globals.rofl', 'models/lang/js/facts/js-host.rofl', 'models/lang/js/facts/js-host-surface.rofl', 'models/lang/js/facts/js-lib-surface.rofl', 'models/lang/js/facts/js-attrs.rofl',
+  'models/lang/js/rules/js-structure.rofl', 'models/lang/js/rules/js-dataflow.rofl', 'models/lang/js/rules/js-model.rofl', 'models/lang/js/rules/js-callgraph.rofl', 'models/lang/js/rules/js-controlflow.rofl',
+  'models/lang/js/rules/js-effects.rofl', 'models/lang/js/rules/js-globals.rofl', 'models/lang/js/rules/js-host.rofl', 'models/lang/js/rules/js-ambient.rofl', 'models/lang/js/rules/js-attrs.rofl', 'models/lang/js/rules/js-modules.rofl',
+  'models/lang/js/rules/js-concat.rofl', 'models/lang/js/rules/js-surface.rofl',
   'models/lang/js/roles.rofl', 'models/lang/js/oxc-roles.rofl'];
 /** What a notebook host loads: the model, and oxc-to-code.rofl so a cell's own rules may still name ast_node, ast_child, ast_attr, ast_line and ast_file. */
 export const NB_MODEL_FILES = [...MODEL_FILES, 'models/lang/js/oxc-to-code.rofl'];
-export const PHRASE_FILES = ['facts/phrases.rofl', 'facts/js-phrases.rofl'];
+export const PHRASE_FILES = ['facts/phrases.rofl', 'models/lang/js/facts/js-phrases.rofl'];
 
 /** What ROFL ships for a notebook to read: the draw vocabularies and the inquiry rules. `reads:` names one as `rofl:visual/graph.rofl.md` or
  *  `rofl:rules/inquiry/epistemic.rofl`, which is that file of the tree or of the installed package. */
@@ -74,7 +74,7 @@ export const translated = (cells: NbCell[], c: NbCell): boolean => {
 /** The files, from the root of the tree, whose text the kernel needs (the model over oxc's tree: every host that reads them runs the scanner): the model and the vocabulary it is read in. A rendered model's file is read in that model's words. */
 export function libFiles(path: string, front: Front): { model: string[]; phrases: string[] } {
   const phrases = ['facts/phrases.rofl'];
-  if (front.model === 'js' || /(^|\/)docs\/js\//.test(path)) phrases.push('facts/js-phrases.rofl');
+  if (front.model === 'js' || /(^|\/)lang\/js\/docs\//.test(path)) phrases.push('models/lang/js/facts/js-phrases.rofl');
   if (/(^|\/)docs\/rings\//.test(path)) phrases.push('facts/kernel-phrases.rofl', 'facts/ring1-phrases.rofl');
   return { model: front.model === 'js' ? NB_MODEL_FILES : ['boot.rofl'], phrases };
 }

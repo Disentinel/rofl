@@ -208,7 +208,7 @@ contradiction_site(w_agg_reconcile_docs, "docs/roadmap.md", "1.1: one aggregate,
 contradiction_site(w_agg_reconcile_docs, "facts/spec.rofl", "s8_out_of_scope and l_no_aggregation cite aggregation as prohibited").
 contradiction_site(w_agg_reconcile_docs, "facts/deviations.rofl", "r_optimizations_exist, rendered into README.md: l_no_aggregation still reads no aggregation").
 contradiction_site(w_agg_reconcile_docs, "rules/worklist.rofl", "leverage is a boolean because the kernel has no aggregation").
-contradiction_site(w_agg_retire_workarounds, "rules/js-dataflow.rofl", "seq_later: a maximum as the absence of a later element (and docs/js rendered from it)").
+contradiction_site(w_agg_retire_workarounds, "models/lang/js/rules/js-dataflow.rofl", "seq_later: a maximum as the absence of a later element (and docs/js rendered from it)").
 contradiction_site(w_agg_retire_workarounds, "examples/slop/README.md", "SUM is a chain because v0 has no aggregation").
 contradiction_site(w_agg_retire_workarounds, "examples/slop/slop.rofl", "SUM: a range is a chain").
 contradiction_site(w_agg_retire_workarounds, "examples/spat/README.md", "the sum is a chain fold").
@@ -1073,7 +1073,7 @@ work_needs(w_agg_incremental_ready, w_agg_tags).
 work_needs(w_agg_incremental_ready, w_agg_holistic).
 work_needs(w_agg_incremental_ready, w_agg_subsumption).
 
-work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; rules/js-dataflow.rofl seq_later RETIRED 2026-10-04 by the owner's decision (re-measured on a quiet machine after engine-fast: identical answers and time, f_a_max_over_base_data_costs_the_self_shard); KEPT with a reason (`workaround_kept`): runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace), and examples/slop, kept until w_agg_data_strat retired it (f_an_aggregate_is_refused_by_relation_and_not_by_data); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
+work(w_agg_retire_workarounds, "delete what the kinds replace, and the prose that explains the workaround; the sites are `workaround_site` rows, the prose `contradiction_site` rows, what stood in for an aggregate at each a `workaround_marker`; RETIRED: scripts/lint.ts, wtf, spat (rules and host), aka, blam, huh, moot, goof, rip; models/lang/js/rules/js-dataflow.rofl seq_later RETIRED 2026-10-04 by the owner's decision (re-measured on a quiet machine after engine-fast: identical answers and time, f_a_max_over_base_data_costs_the_self_shard); KEPT with a reason (`workaround_kept`): runtime/semirings.ts (the shared host fold over a support, which a kernel tag does not replace), and examples/slop, kept until w_agg_data_strat retired it (f_an_aggregate_is_refused_by_relation_and_not_by_data); done only with a work_proof world, agg_prose, red while a marker stands that is not kept").
 work_state(w_agg_retire_workarounds, done).
 work_proof(w_agg_retire_workarounds, "agg_prose").
 work_sweeps(w_agg_retire_workarounds, retire).

@@ -1,0 +1,147 @@
+-- js-attrs.rofl — AN ATTRIBUTE THE SCANNER EMITS AND NO RULE READS
+-- (`w_unconsumed_attribute`). Four times a design note claimed a fact was
+-- missing that was already on the store, because the note was written while
+-- looking at the RULES. So ask the rules: clauses are stored as facts after
+-- parsing, and "which attribute keys does any rule name" is a query over
+-- `premise_lit`, through `lit_rel` and `lit_arg` from models/lang/js/rules/js-vocabulary.rofl.
+-- Its own pack because it needs a corpus and the vocabulary pack is
+-- deliberately corpus-free.
+
+-- What a rule names, literal by literal: one literal naming a key AND a
+-- value, where a key read with a variable value is a rule reading every value.
+attr_lit(L, K, V)      :- lit_rel(L, ast_attr), lit_arg(L, 2, K), lit_arg(L, 3, V).
+attr_lit_kvar(L, $var(X)) :- attr_lit(L, $var(X), _).
+attr_lit_vvar(L, $var(X)) :- attr_lit(L, _, $var(X)).
+
+-- a key some rule names; a key read with the value free, for which
+-- `unconsumed_value` must not fire; a (key, value) pair named outright
+attr_key_read(K)       :- attr_lit(L, K, _), not attr_lit_kvar(L, K).
+attr_key_read_free(K)  :- attr_lit(L, K, V), not attr_lit_kvar(L, K), attr_lit_vvar(L, V).
+attr_pair_read(K, V)   :- attr_lit(L, K, V), not attr_lit_kvar(L, K), not attr_lit_vvar(L, V).
+
+-- THE TWO AUDITS: a whole key nobody reads (`async`, `generator`, `prefix`),
+-- and a key read only with constant values, one of which no rule names. Two
+-- excuse lists: a key the model will never read is a different fact from one nobody has
+-- read YET. The first list's criterion is measurable: the distinction the
+-- attribute carries is also carried by something the model reads, usually
+-- the kind (`optional` is `optional_member_expression`).
+edb(attr_unread_ok).       -- attr_unread_ok(Key, Reason)
+edb(attr_deferred).        -- attr_deferred(Key, WorkItem)
+edb(attr_value_unread_ok). -- attr_value_unread_ok(Key, Value, Reason)
+
+attr_pair_seen(K, V) :- ast_attr[code](_, K, V).
+attr_key_seen(K) :- attr_pair_seen(K, _).
+unconsumed_attr[audit](K) :- attr_key_seen(K), not attr_key_read(K),
+                             not attr_unread_ok(K, _), not attr_deferred(K, _).
+unconsumed_value[audit](K, V) :- attr_pair_seen(K, V), attr_key_read(K),
+                                 not attr_key_read_free(K), not attr_pair_read(K, V),
+                                 not attr_value_unread_ok(K, V, _).
+
+-- both excuse lists guarded: a
+-- misspelling would silently readmit the key to nothing
+attr_unread_ok_unseen[audit](K)   :- attr_unread_ok(K, _), not ast_attr[code](_, K, _).
+attr_unread_ok_read[audit](K)     :- attr_unread_ok(K, _), attr_key_read(K).
+attr_value_ok_unseen[audit](K, V) :- attr_value_unread_ok(K, V, _), not ast_attr[code](_, K, V).
+attr_deferred_unseen[audit](K)    :- attr_deferred(K, _), not ast_attr[code](_, K, _).
+attr_deferred_read[audit](K)      :- attr_deferred(K, _), attr_key_read(K).
+attr_double_excused[audit](K)     :- attr_unread_ok(K, _), attr_deferred(K, _).
+
+-- A KEY READ THROUGH A TABLE, which `attr_key_read` cannot see: js-env reads
+-- `attr_needs(L, K, Key, V, F), ast_attr[code](N, Key, V)`, so the literal
+-- carries two variables, and `async` sat in `attr_deferred` while a table
+-- read it 398 times. A rule joining a two-variable `ast_attr` literal to
+-- another relation carrying the same two variables reads whatever pairs that
+-- relation holds; going from its NAME to its ROWS is not a query, so the
+-- bridge is two lines by hand and `attr_table_unbridged[audit]` makes the
+-- list impossible to forget. BOTH literals must be positive: a negated
+-- co-literal FILTERS the pairs (`unconsumed_value` has that shape), a
+-- positive one SUPPLIES them.
+pos_prem(R, L)    :- premise_lit(R, _, L), L = $lit(_, _, _, _).
+attr_lit_kvvar(L) :- attr_lit(L, K, V), attr_lit_kvar(L, K), attr_lit_vvar(L, V).
+attr_table_read(Rel, I, J) :- pos_prem(R, L), attr_lit_kvvar(L), attr_lit(L, K, V),
+                              pos_prem(R, L2), lit_rel(L2, Rel), Rel != ast_attr,
+                              lit_arg(L2, I, K), lit_arg(L2, J, V).
+
+edb(attr_table_bridged).   -- attr_table_bridged(Relation)
+attr_table_unbridged[audit](Rel, I, J) :- attr_table_read(Rel, I, J),
+                                          not attr_table_bridged(Rel).
+attr_table_bridged_unread[audit](Rel)  :- attr_table_bridged(Rel), not attr_table_read(Rel, _, _).
+
+-- the bridge itself, feeding both audits
+attr_pair_read(K, V) :- attr_needs(_, _, K, V, _).
+attr_pair_read(K, V) :- outside_attr_needs(_, _, K, V, _).
+attr_key_read(K)     :- attr_pair_read(K, _).
+
+-- WHICH KINDS IN A GUARDED POSITION CARRY NO SUCH ATTRIBUTE AT ALL
+-- (`f_a_positive_attribute_test_is_blind_to_a_kind_that_has_no_such_attribute`).
+-- A constant-valued `ast_attr` premise whose subject variable is also the
+-- PARENT of an `ast_child` premise in the same rule is a guard over a
+-- position; the field is what makes the population meaningful (a bare sweep
+-- reports `computed` absent from `block_statement`, true and useless). Where
+-- the clause also pins the subject to a declared kind through `ast_node`,
+-- only that kind is the population. The mirror reading, a guard on the CHILD
+-- of an `ast_child` premise, is not seen: the two clauses with that shape pin
+-- their kind and the kind arm covers them.
+rule_prem(R, L)            :- pos_prem(R, L).
+rule_prem(R, L)            :- premise_lit(R, _, $not(L)).
+attr_test_lit(L, S, K)     :- attr_lit(L, K, V), lit_arg(L, 1, S),
+                              not attr_lit_kvar(L, K), not attr_lit_vvar(L, V).
+attr_test_svar(L, $var(X)) :- attr_test_lit(L, $var(X), _).
+child_lit(L, S, F)         :- body_lit(L), lit_rel(L, ast_child),
+                              lit_arg(L, 1, S), lit_arg(L, 2, F).
+child_lit_svar(L, $var(X)) :- child_lit(L, $var(X), _).
+child_lit_fvar(L, $var(X)) :- child_lit(L, _, $var(X)).
+
+attr_guard_slot(R, K, S, F)    :- rule_prem(R, L), attr_test_lit(L, S, K), attr_test_svar(L, S),
+                                  rule_prem(R, L2), child_lit(L2, S, F), child_lit_svar(L2, S),
+                                  not child_lit_fvar(L2, F).
+attr_guard_kind(R, K, S, Kind) :- rule_prem(R, L), attr_test_lit(L, S, K), attr_test_svar(L, S),
+                                  rule_prem(R, L2), lit_rel(L2, ast_node), lit_arg(L2, 1, S),
+                                  lit_arg(L2, 2, Kind), ast_node[code](_, Kind, _).
+attr_guard_pinned(R, K, S)     :- attr_guard_kind(R, K, S, _).
+
+attr_slot_gap(K, F, Kind) :- attr_guard_slot(R, K, S, F), not attr_guard_pinned(R, K, S),
+                             ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
+                             not ast_attr[code](P, K, _).
+attr_slot_gap(K, F, Kind) :- attr_guard_slot(R, K, S, F), attr_guard_kind(R, K, S, Kind),
+                             ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
+                             not ast_attr[code](P, K, _).
+
+-- THE POLARITY IS THE GATE. A gap under a NEGATED test is harmless:
+-- `not ast_attr(P, computed, true)` keeps a node with no `computed` at all,
+-- which `key_name` in js-structure relies on. The same gap under a POSITIVE
+-- test silently drops those nodes. The report carries both, the audit only
+-- the positive ones, and swapping `key_name`'s negation for `computed, false`
+-- moves two rows across — the survivor the finding recorded with no oracle.
+attr_guard_slot_pos(R, K, S, F) :- pos_prem(R, L), attr_test_lit(L, S, K), attr_test_svar(L, S),
+                                   rule_prem(R, L2), child_lit(L2, S, F), child_lit_svar(L2, S),
+                                   not child_lit_fvar(L2, F).
+attr_pos_slot_gap(K, F, Kind) :- attr_guard_slot_pos(R, K, S, F), not attr_guard_pinned(R, K, S),
+                                 ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
+                                 not ast_attr[code](P, K, _).
+attr_pos_slot_gap(K, F, Kind) :- attr_guard_slot_pos(R, K, S, F), attr_guard_kind(R, K, S, Kind),
+                                 ast_child[code](P, F, _, _), ast_node[code](P, Kind, _),
+                                 not ast_attr[code](P, K, _).
+
+edb(attr_slot_gap_ok).    -- attr_slot_gap_ok(Key, Field, Kind, Reason)
+attr_blind_guard[audit](K, F, Kind)   :- attr_pos_slot_gap(K, F, Kind),
+                                         not attr_slot_gap_ok(K, F, Kind, _).
+
+-- the excuse list is checked against the WHOLE report: an excuse no longer
+-- needed because a guard became a negation is still a true row
+attr_slot_gap_ok_unseen[audit](K, F, Kind) :- attr_slot_gap_ok(K, F, Kind, _),
+                                              not attr_slot_gap(K, F, Kind).
+
+-- THE HALF NO KIND-LEVEL READING CAN STATE: `class_private_method` carries
+-- `computed` on its accessor forms and not on the plain one, so the presence
+-- of an attribute can depend on ANOTHER attribute of the same node. A split
+-- kind is present in the slot, so `attr_slot_gap` finds nothing, and the
+-- guard is blind to exactly the nodes that lack it.
+attr_kind_has(Kind, K)   :- ast_node[code](P, Kind, _), ast_attr[code](P, K, _).
+attr_kind_lacks(Kind, K) :- attr_kind_has(Kind, K), ast_node[code](P, Kind, _),
+                            not ast_attr[code](P, K, _).
+
+edb(attr_split_ok).       -- attr_split_ok(Key, Kind, Reason)
+attr_kind_split[audit](K, Kind) :- attr_key_read(K), attr_kind_lacks(Kind, K),
+                                   not attr_split_ok(K, Kind, _).
+attr_split_ok_unseen[audit](K, Kind) :- attr_split_ok(K, Kind, _), not attr_kind_lacks(Kind, K).

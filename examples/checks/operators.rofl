@@ -6,7 +6,7 @@
 -- by nothing a golden could see. A world is cheaper than an argument and holds
 -- both engines to them.
 edb(path).
-path("rules/js-dataflow.rofl").
+path("models/lang/js/rules/js-dataflow.rofl").
 path("src/api.ts").
 
 n(7). n(12).

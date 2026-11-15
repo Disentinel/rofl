@@ -53,7 +53,7 @@ why side_effect_value(nd100d8f9c1968a85_vrukhc1b4n1, fs_mutation, "/tmp/settings
 why side_effect_value(n34efd0fd49e79fa1_9atl92avtk7, listen, 8080)
 ```
 
-> A path built from parts (`paths.ts`, rules/js-concat.rofl): a `path.join`, a template, a `dirname` and a `+=` in a
+> A path built from parts (`paths.ts`, models/lang/js/rules/js-concat.rofl): a `path.join`, a template, a `dirname` and a `+=` in a
 > loop. Where every part is literal the value is its TEXT, a term the host renders (`join(join("/opt/app", "out"),
 > "settings.json")` is `/opt/app/out/settings.json`); where a part is unknown it is a FORM, the part kept as
 > `ref(P)`; the loop unfolds three levels and the rest is the `+=` itself, `node(X)`. `part_value` lists what each

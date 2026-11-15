@@ -1127,7 +1127,105 @@ pub fn pieces(src: &str, size: usize) -> Vec<&str> {
 }
 
 pub fn parse(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
+    if is_columns(src) { return columns(h, src); }
     parse_lexed(h, lex(src))
+}
+
+/// THE COLUMN FORM OF BASE FACTS (docs/cli.md, *Model libraries*, the scanner's contract): what a scanner may write in
+/// place of fact text, read without the lexer. The header is one of the comments the text opens with; `-- ` lines are comments as in text (a scanner's
+/// `-- reads:`); `T N` opens a table of N terms, one a line (`a NAME` an atom, `s TEXT` a string with `\\` and `\n`
+/// escaped, `i N` an integer), which the blocks after it read until the next table; `R REL BOOK ARITY ROWS` is a block of
+/// ROWS facts of REL in BOOK (`-` the bare one), then ARITY lines, the column of each argument as table numbers in base 36.
+/// Any other line is text, read as text is: a scanner's facts in columns and a few more of its own beside them.
+pub const COLUMNS: &str = "-- rofl columns 1";
+
+/// The header among the comments a text opens with (a kept scan's `-- kept:` lines come first).
+pub fn is_columns(src: &str) -> bool {
+    src.lines().take_while(|l| l.starts_with("--")).any(|l| l.trim_end() == COLUMNS)
+}
+
+/// The facts the blocks of a column text hold.
+pub fn column_rows(src: &str) -> usize {
+    src.lines().filter_map(|l| l.strip_prefix("R ")).filter_map(|l| l.rsplit(' ').next()?.parse::<usize>().ok()).sum()
+}
+
+/// The facts a scanner's output holds, a line of text each, in either form: the column form's tables and columns
+/// are not lines of text.
+pub fn scanned_facts(src: &str) -> usize {
+    let fact = |l: &str| !l.starts_with("--") && l.trim_end().ends_with('.');
+    if !is_columns(src) { return src.lines().filter(|l| fact(l)).count(); }
+    let (mut n, mut skip) = (0, 0usize);
+    for l in src.lines() {
+        if skip > 0 { skip -= 1; continue; }
+        let num = |l: &str, k: usize| l.split(' ').nth(k).and_then(|x| x.parse::<usize>().ok()).unwrap_or(0);
+        if l.starts_with("T ") { skip = num(l, 1); } else if l.starts_with("R ") { n += num(l, 4); skip = num(l, 3); } else if fact(l) { n += 1; }
+    }
+    n
+}
+
+pub fn columns(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
+    let mut out = Vec::new();
+    let mut table: Vec<Term> = Vec::new();
+    let mut text = String::new();
+    let mut lines = src.lines().enumerate();
+    let bad = |n: usize, why: &str| format!("line {}: {why}", n + 1);
+    while let Some((n, l)) = lines.next() {
+        if l.is_empty() || l.starts_with("--") { continue; }
+        let mut w = l.split(' ');
+        match w.next() {
+            Some("T") => {
+                let size: usize = w.next().and_then(|x| x.parse().ok()).ok_or_else(|| bad(n, "T takes the number of terms"))?;
+                table.clear();
+                table.reserve(size);
+                for _ in 0..size {
+                    let (n, t) = lines.next().ok_or_else(|| bad(n, "the table ends early"))?;
+                    let (k, v) = t.split_at(t.len().min(2));
+                    table.push(match k {
+                        "a " => Term::atom(h.intern(v)),
+                        "s " => Term::str(h.intern(&unescape_col(v))),
+                        "i " => v.parse::<i64>().ok().and_then(Term::try_int).ok_or_else(|| bad(n, "not an integer term"))?,
+                        _ => return Err(bad(n, "a term is `a NAME`, `s TEXT` or `i N`")),
+                    });
+                }
+            }
+            Some("R") => {
+                let (Some(rel), Some(book), Some(arity), Some(rows)) = (w.next(), w.next(), w.next(), w.next()) else { return Err(bad(n, "R takes REL BOOK ARITY ROWS")) };
+                let (arity, rows): (usize, usize) = (arity.parse().map_err(|_| bad(n, "arity"))?, rows.parse().map_err(|_| bad(n, "rows"))?);
+                let rel = h.intern(rel);
+                let book = if book == "-" { Book::Bare } else { Book::Named(h.intern(book)) };
+                let first = out.len();
+                out.extend((0..rows).map(|_| Clause { head: Lit { rel, book, args: Vec::with_capacity(arity), tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false }));
+                for _ in 0..arity {
+                    let (n, col) = lines.next().ok_or_else(|| bad(n, "the block ends early"))?;
+                    let mut got = 0;
+                    for (c, x) in out[first..].iter_mut().zip(col.split(' ')) {
+                        let k = usize::from_str_radix(x, 36).map_err(|_| bad(n, "a column holds numbers in base 36"))?;
+                        c.head.args.push(*table.get(k).ok_or_else(|| bad(n, "a number past the table"))?);
+                        got += 1;
+                    }
+                    if got != rows { return Err(bad(n, "a column of another length than its block")); }
+                }
+            }
+            _ => {
+                text.push_str(l);
+                text.push('\n');
+                continue;
+            }
+        }
+        if !text.is_empty() { out.extend(parse_lexed(h, lex(&std::mem::take(&mut text)))?); }
+    }
+    if !text.is_empty() { out.extend(parse_lexed(h, lex(&text))?); }
+    Ok(out)
+}
+
+fn unescape_col(v: &str) -> String {
+    if !v.contains('\\') { return v.to_string(); }
+    let mut o = String::with_capacity(v.len());
+    let mut it = v.chars();
+    while let Some(c) = it.next() {
+        if c == '\\' { match it.next() { Some('n') => o.push('\n'), Some('r') => o.push('\r'), Some(x) => o.push(x), None => {} } } else { o.push(c) }
+    }
+    o
 }
 
 /// A text's characters and tokens: what `parse` reads, made without the heap, so on any thread.

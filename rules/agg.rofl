@@ -1,6 +1,6 @@
 -- rules/agg.rofl — THE AGGREGATES PROGRAMME AS A MATRIX AND A QUEUE.
 -- The design, and why a proof is a registered world: docs/aggregates.md.
--- Shapes copied from rules/js-model.rofl and rules/worklist.rofl, keyed on
+-- Shapes copied from models/lang/js/rules/js-model.rofl and rules/worklist.rofl, keyed on
 -- Lang = agg; those two are hard-wired to js and loaded in w_queue.
 -- Worlds: `rules_agg` (facts/agg.rofl + this) and `agg_proofs` (the same with
 -- facts/checks.rofl and facts/findings.rofl, declared in facts/checks.rofl).
@@ -77,7 +77,7 @@ unknown_ledger[audit](What) :- claim(What, _, _, _, _, _), not claim_kind(What).
 alarm(unknown_ledger).
 
 -- THE COLUMN LIST IS THE OWNER'S, as a row, as the layer list is in
--- rules/js-model.rofl: `obligation(L)` is one fact and opens a cell in every
+-- models/lang/js/rules/js-model.rofl: `obligation(L)` is one fact and opens a cell in every
 -- row, so the column and the owners of its cells land together, and a column
 -- the owner did not authorise is an alarm.
 edb(obligation_authorised).

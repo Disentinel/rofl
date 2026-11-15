@@ -27,10 +27,10 @@ The engine comes in a package of its own for each platform
 ## The engine, for an agent
 
     rofl scan src --out code.rofl                                     # a directory of JS/TS in, facts out
-    rofl ask 'depends[code](F, G)' @rules/js.files code.rofl         # the rows, one a line; --json for one JSON line
-    rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
+    rofl ask 'depends[code](F, G)' @js code.rofl         # the rows, one a line; --json for one JSON line
+    rofl why 'flows[code]("api/server.js", "api/users.js")' @js code.rofl
 
-`@rules/js.files` is the JS model this package carries, from any directory.
+`@js` is the JS model this package carries, from any directory.
 A world is kept under `~/.cache/rofl/worlds`: the same files asked again
 are answered from it without evaluating. Exit 0 whole, 2 a file refused,
 3 the world, 4 the question, 5 partial, 70 a defect; 127 when the engine for

@@ -1,6 +1,6 @@
 // untyped.ts — which one-letter variables nothing in their rule types.
 //
-//   npm run untyped -- rules/js-*.rofl        (needs rust/target/release/rofl render)
+//   npm run untyped -- models/lang/js/rules/js-*.rofl        (needs rust/target/release/rofl render)
 import { readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { Rofl } from '../src/api.ts';
@@ -11,7 +11,7 @@ const argv = process.argv.slice(2);
 if (!argv.length) { console.error('usage: npm run untyped -- <rules.rofl...>'); process.exit(2); }
 
 const facts = execFileSync(`${ROOT}rust/target/release/rofl`, ['render', '--facts', ...argv], { maxBuffer: 1 << 28 }).toString();
-const vocab = readFileSync(`${ROOT}facts/js-phrases.rofl`, 'utf8');
+const vocab = readFileSync(`${ROOT}models/lang/js/facts/js-phrases.rofl`, 'utf8');
 // the typed positions of every signed or phrased relation
 // the arities each relation is used with: a signature types one arity, and a name used with two is reported
 const arities = new Map<string, Set<number>>();
@@ -58,7 +58,7 @@ const unsignedArity = rows('unsigned_arity(Rel, A)');
 if (unsignedArity.length) console.log('a signed name used with an arity no signature covers: ' + unsignedArity.map((x) => `${x.Rel}/${x.A}`).join(', '));
 const bySigned = new Map<string, Set<string>>(); for (const b of [...inSigned, ...inUnsigned]) { const s = bySigned.get(String(b.Rel)) ?? new Set(); s.add(clean(b.V)); bySigned.set(String(b.Rel), s); }
 const debtRels = new Set(inUnsigned.map((b) => String(b.Rel)));
-const docs = readdirSync(`${ROOT}docs/js`).filter((f: string) => f.endsWith('.rofl.md')).map((f: string) => readFileSync(`${ROOT}docs/js/${f}`, 'utf8')).join('\n');
+const docs = readdirSync(`${ROOT}models/lang/js/docs`).filter((f: string) => f.endsWith('.rofl.md')).map((f: string) => readFileSync(`${ROOT}models/lang/js/docs/${f}`, 'utf8')).join('\n');
 for (const [rel, vs] of [...bySigned].sort((a, b) => b[1].size - a[1].size).slice(0, 25)) {
   const line = new RegExp(`^<a id="${rel}"></a>(.*)$`, 'm').exec(docs);
   console.log(`  ${rel.padEnd(24)} ${[...vs].sort().join(' ').padEnd(6)} ${(debtRels.has(rel) ? 'debt' : 'own').padEnd(5)} ${line ? line[1].replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').slice(0, 110) : ''}`);

@@ -305,7 +305,7 @@ A rule reads a relation Rel though nothing defines it if it [aggregates over](#p
 > property is transitive and every step separately licensed does not license
 > the walk. Nine such rows existed in a bare boot.rofl, one per audit rule,
 > so the audit exempted itself before any program was loaded; the tree of
-> this file plus `rules/js-*.rofl` and `rules/findings.rofl` held 122, and
+> this file plus `models/lang/js/rules/js-*.rofl` and `rules/findings.rofl` held 122, and
 > reported `crossing` 0 and `leak` 0 for all of them.
 > 
 > NOTHING REPLACES IT AT RULE LEVEL, because there was nothing there to
@@ -381,7 +381,7 @@ A rule reads a relation Rel though nothing defines it if it [aggregates over](#p
 > AND THE CROSSING THIS FILE DELIBERATELY DOES NOT DECLARE. An audit rule
 > that quantifies over the ledger — `answer_without_trace[audit](S, Env, P)
 > :- resolve_answer[Env](S, P), not explained[Env](S).` in
-> `rules/js-resolve.rofl` is the shape — reads `$var("Env")`, which has no
+> `models/lang/js/rules/js-resolve.rofl` is the shape — reads `$var("Env")`, which has no
 > `authority` fact and so can never be the From of an `imports`. That is the
 > case `collects` exists for, and `collects(audit).` would license all four
 > such crossings in that layer at a stroke.
@@ -400,7 +400,7 @@ A rule reads a relation Rel though nothing defines it if it [aggregates over](#p
 > it is true and where it derives a row. `collects` is narrow enough for that
 > to be safe: `collects_from` requires `not perspective(A)`, so a layer
 > declaring it never stops the audit saying no about a ledger that HAS a
-> name — `rules/js-*.rofl` crosses `code -> audit`, and that one still needs
+> name — `models/lang/js/rules/js-*.rofl` crosses `code -> audit`, and that one still needs
 > `imports(audit, code)` written out.
 
 > ============ the widened negation, appended below the cited region ========

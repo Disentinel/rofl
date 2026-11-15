@@ -330,8 +330,8 @@
 +passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_node[code](F),
 +                                        ast_name[code](A, Name).
  
- -- A function handed over and CALLED, by facts/js-host.rofl's `host_calls_back`.
- -- Not a `resolves` edge: rules/js-dataflow.rofl binds a resolved call's
+ -- A function handed over and CALLED, by models/lang/js/facts/js-host.rofl's `host_calls_back`.
+ -- Not a `resolves` edge: models/lang/js/rules/js-dataflow.rofl binds a resolved call's
  -- arguments to the callee's parameters and its return to the call's value, and
  -- a callback gets neither (`map` passes elements and returns an array).
 -callback_site[code](C, P, Key)        :- callee_of[code](C, N), ast_child[code](N, object, 0, O),
