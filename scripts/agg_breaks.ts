@@ -9024,6 +9024,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "kept_cone_lemmas_unread",
+  "what": "a kept world that dropped what is below the plan's cut grows its cone without the lemmas its files' lower stage proves, so the rules it adds read nothing and a wider question answers what a fresh world does not",
+  "expect": {
+   "kept_rule": "a_cone_grown_below_the_cut_takes_its_lemmas_again:"
+  }
+ },
+ {
   "id": "kept_verbs_compute",
   "what": "a question verb keeps nothing and computes every time",
   "expect": {

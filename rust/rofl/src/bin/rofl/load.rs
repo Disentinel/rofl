@@ -732,13 +732,19 @@ fn asked(s: &mut Session) -> Vec<String> {
 }
 
 /// A kept world asked for less than the question needs grows its cone over what it holds, by delta; one that asks
-/// nothing holds every rule already.
+/// nothing holds every rule already. Where the world dropped what is below the plan's cut, the lemmas the new cone
+/// needs are proved again from its files, by their lower stage alone, and come in with the asks.
 fn grow_cone(o: &Opts, s: &mut Session) {
     let Some(rels) = question_rels(o) else { return };
     let had = asked(s);
     let more: Vec<String> = rels.into_iter().filter(|r| !had.contains(r)).collect();
     if had.is_empty() || more.is_empty() { return; }
-    if let Err(e) = s.assert_delta(&asks_text(&more)) { fail(o.json, USAGE, &e); }
+    let asks = asks_text(&more);
+    let sources = load_sources(o);
+    let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
+    let lemmas = s.lower_lemmas(&texts.iter().map(String::as_str).collect::<Vec<_>>(), &asks).unwrap_or_else(|e| refuse(s, o.json, e));
+    if !lemmas.is_empty() { eprintln!("the kept world grew its cone below the plan's cut: {} lemmas proved again from its files", lemmas.lines().count()); }
+    if let Err(e) = s.assert_delta(&format!("{asks}{lemmas}")) { fail(o.json, USAGE, &e); }
     if s.eval.store.dirty {
         if let Err(e) = s.evaluate() { refuse(s, o.json, rofl::describe(&e)); }
     }

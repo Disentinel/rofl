@@ -6087,8 +6087,8 @@ impl Eval {
             };
             if cur_rule != rid || cur_prems != prems {
                 let (mut a, mut b) = (String::new(), String::new());
-                self.store.write_sig(&self.h, &WitView { rule: cur_rule, tick, prems: &cur_prems }, &mut a);
-                self.store.write_sig(&self.h, &WitView { rule: rid, tick, prems }, &mut b);
+                self.store.write_sig(&self.h, &WitView { rule: cur_rule, tick, prems: &cur_prems, src: &self.store }, &mut a);
+                self.store.write_sig(&self.h, &WitView { rule: rid, tick, prems, src: &self.store }, &mut b);
                 if cmp_js(&b, &a) == std::cmp::Ordering::Less {
                     let st = self.staged.get_mut(&staged_key).unwrap();
                     st.rule = rid;

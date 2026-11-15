@@ -483,6 +483,18 @@ impl Forest {
         }
     }
 
+    /// The nodes from `d` up to its ancestor `a`, `d` first and `a` last, each the `step_of` the one before.
+    pub fn steps(&self, a: Term, d: Term) -> Option<Vec<Term>> {
+        if let Some(g) = &self.graph {
+            return g.steps(a, d);
+        }
+        let mut out = vec![d];
+        while out[out.len() - 1] != a {
+            out.push(self.parent_of(out[out.len() - 1])?);
+        }
+        Some(out)
+    }
+
     /// How many firings make the row `(a, d)`: one in a tree; in a graph the edge itself and each edge into `d` from a
     /// node `a` reaches.
     pub fn firing_count(&self, a: Term, d: Term) -> u32 {
