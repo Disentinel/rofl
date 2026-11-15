@@ -17021,6 +17021,12 @@ impl Eval {
             if !below {
                 return Ok(None);
             }
+            // (no text to thaw: a literal whose rules read no cut book is walked here, over the lemmas this world kept)
+            let cut = |l: &Lit| l.persp.as_atom().is_some_and(|b| st.cut.contains(&b));
+            let reads_cut = cut(lit) || self.rules.iter().filter(|r| r.clause.head.rel == lit.rel).any(|r| r.clause.body.iter().flat_map(BodyElem::lits_deep).any(cut));
+            if file.is_some() && !reads_cut {
+                return Ok(None);
+            }
             ctx.nodes += 1;
             let pad = "  ".repeat(2 * level - 1);
             let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
@@ -17035,11 +17041,19 @@ impl Eval {
         lines.map(Some)
     }
 
+    /// A source this world was loaded from, for a thaw to read again: its path, or its text where it has no path.
+    pub fn lower_source(&mut self, path: String, text: Option<String>) {
+        let mut all = self.lower_sources.take().map(|a| (*a).clone()).unwrap_or_default();
+        all.push((path, text));
+        self.lower_sources = Some(Rc::new(all));
+        self.lower_texts = None;
+    }
+
     /// The text of the file a node prefix names, where this world was given its files' (`lower_texts`), or what they
     /// are cut from (`lower_sources`, read once).
     fn lower_text(&mut self, file: &str) -> Option<String> {
         if self.lower_texts.is_none() {
-            let sources = self.lower_sources.take()?;
+            let sources = self.lower_sources.clone()?;
             let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
             let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
             self.lower_texts = Some(Rc::new(cut.files.into_iter().collect()));

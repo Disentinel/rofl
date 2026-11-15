@@ -59,8 +59,10 @@ walk goes on there, the same text as in a world with nothing cut
 sources are read when the first walk goes below the cut, and not before. A
 literal there that names no one file is said, not walked: `... is proved in a
 file from [Book], which this world cut; it names no one file: ask it of a node
-of a file`; so is one whose world was not given the files' text (a `rofl serve`
-session). TypeScript evaluates the world whole and cuts nothing.
+of a file`; so is one whose world was not given the files' text and whose
+rules read a cut book; one whose rules read only what the world kept is
+walked where it stands. `rofl serve` thaws from what its `load` ops gave; a
+notebook's kernel is given no text. TypeScript evaluates the world whole and cuts nothing.
 
 **An open whynot over a corpus is a table of files.** Asked of a world read
 from units (*A corpus larger than one heap*) with a variable in the question,
