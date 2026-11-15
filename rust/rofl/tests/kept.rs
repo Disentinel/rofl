@@ -1192,6 +1192,84 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     }
 }
 
+/// AN ABSENCE BELOW THE CUT IS WALKED IN ITS FILE, THAWED (`Eval::explain_thawed`). A world that cut a book holds its
+/// lemmas and not what they were proved from: a `whynot` whose walk reaches a rule of the lower stage reads the
+/// file's text again and goes on in it alone. Judged against the same world with nothing cut, text for text: the
+/// corpus by levels, asked anew and from the kept units, and the cut world whole. An open question that holds is a
+/// table of files read off the units, and a row opens with `--in`.
+#[test]
+fn an_absence_below_the_cut_is_walked_in_its_file_thawed() {
+    let d = Dir::new("thaw");
+    let model = "own[fixpointplan](node, 0). own[fixpointplan](child, 0). own[fixpointplan](child, 1). own[fixpointplan](name, 0).\n\
+        edb(node). edb(child). edb(name).\n\
+        kind(N, K) :- node[raw](N, K).\nedge(P, C) :- child[raw](P, C).\nnamed(N, S) :- name[raw](N, S).\n\
+        has_child(P) :- edge(P, _).\nleaf(N) :- kind(N, _), not has_child(N).\n\
+        same(A, B) :- named(A, S), named(B, S).\ntwin(A) :- same(A, B), leaf(B).\nlonely(N) :- leaf(N), not twin(N).\n\
+        callsite(N, S) :- node[raw](N, call), name[raw](N, S).\n\
+        block_kid(C) :- child[raw](P, C), node[raw](P, block), node[raw](C, fn).\n\
+        calls(A, B) :- callsite(A, S), named(B, S), kind(B, fn).\n";
+    let n = |i: usize| format!("n{i:016x}");
+    let mut facts = String::new();
+    for i in 0..12 {
+        let f = n(i);
+        for (k, kind) in [(1, "fn"), (2, "block"), (3, "call"), (4, "call")] {
+            facts += &format!("node[raw](\"{f}_{k}\", {kind}).\n");
+        }
+        facts += &format!("child[raw](\"{f}_1\", \"{f}_2\").\nchild[raw](\"{f}_2\", \"{f}_3\").\nchild[raw](\"{f}_2\", \"{f}_4\").\n");
+        let names: &[(usize, &str)] = match i % 4 { 0 => &[(3, "go"), (1, "main")], 1 => &[(4, "go")], 2 => &[(3, "stop")], _ => &[] };
+        for (k, s) in names {
+            facts += &format!("name[raw](\"{f}_{k}\", \"{s}\").\n");
+        }
+    }
+    d.write("cut.rofl", &format!("cut[fixpointplan](raw).\n{model}"));
+    d.write("whole.rofl", model);
+    d.write("f.rofl", &facts);
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
+    let whole = [("ROFL_VOLUMES", "0".to_string())];
+    let rel = |q: &str| q.split('(').next().unwrap().to_string();
+    let run = |q: &str, more: &[&str], world: &str, cache: &str, env: &[(&str, String)]| {
+        let args: Vec<&str> = ["whynot", "--all", q].iter().chain(more).chain(&["boot.rofl", world, "f.rofl"]).copied().collect();
+        rofl_env(BIN, &d, &d.0.join(format!("{cache}-{}", rel(q))), env, None, &args)
+    };
+    let (mut below, mut absent) = (0, 0);
+    for i in [0, 1, 3, 6] {
+        for k in 1..5 {
+            let x = format!("\"{}_{k}\"", n(i));
+            for q in [format!("callsite({x}, S)"), format!("block_kid({x})"), format!("calls({x}, B)"), format!("lonely({x})"), format!("leaf({x})"), format!("twin({x})")] {
+                let truth = run(&q, &[], "whole.rofl", "truth", &whole);
+                assert_eq!(truth.code, 0, "{q}: {}", truth.err);
+                if truth.out.contains("nothing to demonstrate") {
+                    continue;
+                }
+                absent += 1;
+                below += truth.out.contains("[raw]") as usize;
+                let (anew, kept, cut) = (run(&q, &[], "cut.rofl", "levels", &levels), run(&q, &[], "cut.rofl", "levels", &levels), run(&q, &[], "cut.rofl", "cut", &whole));
+                assert!(anew.out == truth.out, "{q} by levels:\n{}\nthe world with nothing cut:\n{}\n{}", anew.out, truth.out, anew.err);
+                assert!(kept.out == truth.out && kept.err.contains("answered from the kept units"), "{q} from the kept units:\n{}\n{}", kept.out, kept.err);
+                assert!(cut.out == truth.out, "{q} in the cut world whole:\n{}\nthe world with nothing cut:\n{}", cut.out, truth.out);
+            }
+        }
+    }
+    assert!(absent > 40 && below > 20, "the corpus asks too little below the cut: {below} of {absent} absences");
+    // a failure of the lower stage that names no file is said, not walked over the lemmas
+    let q = format!("calls(A, \"{}_1\")", n(0));
+    let open = run(&q, &[], "cut.rofl", "levels", &levels);
+    assert!(open.out.contains("which this world cut; it names no one file"), "{q}:\n{}", open.out);
+    // an open question that holds: the files and how many answers each holds, off the units
+    let table = run("twin(A)", &[], "cut.rofl", "levels", &levels);
+    assert!(table.out.contains("holds: 9 answers in 9 of 12 files") && table.out.contains("none in 3 files:") && table.out.contains(&format!("{}  0", n(3))), "the table of files:\n{}\n{}", table.out, table.err);
+    // and a row opened: the question in that file alone, as the world with nothing cut answers it there
+    for q in ["twin(A)", "calls(A, B)", "block_kid(A)", "callsite(A, S)", "lonely(A)"] {
+        for i in [0, 3] {
+            let file = n(i);
+            let truth = run(q, &["--in", &file], "whole.rofl", "truth", &whole);
+            let row = run(q, &["--in", &file], "cut.rofl", "levels", &levels);
+            assert!(truth.code == 0 && truth.out.contains(&format!(" in {file}:")), "{q} in {file}: {} {}", truth.out, truth.err);
+            assert!(row.out == truth.out, "{q} in {file} by levels:\n{}\nthe world with nothing cut:\n{}\n{}", row.out, truth.out, row.err);
+        }
+    }
+}
+
 #[test]
 fn a_kept_world_answers_and_refuses_as_docs_cli_says() {
     // a fault planted by scripts/agg_breaks.ts reaches every binary a case runs

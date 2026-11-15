@@ -26,6 +26,12 @@ pub fn file_of(line: &str) -> Option<&str> {
     found
 }
 
+/// The first file a text names by a node of it: its prefix, 16 hex digits after `n` and before `_`.
+pub fn first_file(text: &str) -> Option<&str> {
+    let b = text.as_bytes();
+    (0..b.len().saturating_sub(17)).find(|&i| b[i] == b'n' && (i == 0 || !b[i - 1].is_ascii_alphanumeric() && b[i - 1] != b'_') && b[i + 17] == b'_' && b[i + 1..i + 17].iter().all(|c| c.is_ascii_hexdigit())).map(|i| &text[i + 1..i + 17])
+}
+
 /// A text cut by the file each of its facts names: the core lines (rules, and facts naming no one file) and, in the
 /// order first met, each file's lines.
 pub struct Cut {

@@ -851,6 +851,10 @@ pub struct Eval {
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
     /// (`Session::why_all`): a lemma's proof is found again by evaluating its file's lower stage.
     pub lower_texts: Option<Rc<HashMap<String, String>>>,
+    /// The files those texts are cut from when one is first needed: each a path, or the text it was read into.
+    pub lower_sources: Option<Rc<Vec<(String, Option<String>)>>>,
+    /// A file thawed (`Eval::thaw`): it holds the books of its file, which the world it was forked from cut.
+    thawed: bool,
     /// The heads of the whole program's lower stage, where asks prunes it (`Eval::lemma_stage`).
     lower_full: Option<HashSet<(Sym, Option<Sym>)>>,
     /// What a delta under way leaves to the full pass after it: the relations a hole or a shrug may move that the
@@ -862,6 +866,8 @@ pub struct Eval {
     fault_count: u64,
     /// A whynot by file under way: the files, and what each has met (`whynot_files`).
     wn_vols: Option<VolWalk>,
+    /// The one file a whynot is asked in (`whynot_in`), by its node prefix.
+    wn_only: Option<String>,
     /// A whynot's premises with more matches than it follows, and how many.
     wn_unwalked: HashMap<String, usize>,
     /// Each failure of a whynot's rule, and how many premises follow the one it failed at.
@@ -2371,11 +2377,14 @@ impl Eval {
             levels: None,
             lemma_heads: None,
             lower_texts: None,
+            lower_sources: None,
+            thawed: false,
             lower_full: None,
             aside: HashSet::new(),
             firing: false,
             fault_count: 0,
             wn_vols: None,
+            wn_only: None,
             wn_unwalked: HashMap::new(),
             wn_left: HashMap::new(),
             last_fault: None,
@@ -12201,7 +12210,7 @@ impl Eval {
                     }
                 }
             }
-            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
+            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered && !self.store.reads_near() => self.question_cands(l, s, persp),
             None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
@@ -15296,6 +15305,9 @@ pub struct VolWalk {
     lens: Vec<usize>,
     outs: HashMap<String, HashMap<String, Option<Lit>>>,
     split: Option<String>,
+    /// the one file asked of a corpus (`whynot_in`): every node the scanner minted names its file, and the
+    /// candidates of the other files are not walked
+    only: Option<String>,
 }
 
 /// A file's row of whynot by file: its answers, and the premises it stopped
@@ -15308,6 +15320,24 @@ pub struct WhynotFile {
     pub text: String,
 }
 
+/// A term of `src` named in `dst`, by its spelling: a variable, an atom and a string by their names.
+fn port_term(t: Term, src: &Heap, dst: &mut Heap) -> Term {
+    match t.kind() {
+        TermK::Var(s) => Term::var(dst.intern(src.name(s))),
+        TermK::Atom(s) => Term::atom(dst.intern(src.name(s))),
+        TermK::Str(s) => Term::str(dst.intern(src.name(s))),
+        TermK::Int(_) => t,
+        TermK::Func(i) => {
+            let name = dst.intern(src.name(src.fname(i)));
+            let args: Vec<Term> = src.fargs(i).iter().map(|a| port_term(*a, src, dst)).collect();
+            dst.mkf(name, &args)
+        }
+    }
+}
+
+/// The rows of each kind an answer by file shows: the files that hold most, and the first that hold none.
+const BY_FILE_SHOWN: usize = 12;
+
 struct WnCtx {
     max_depth: usize,
     max_nodes: usize,
@@ -15319,6 +15349,15 @@ struct WnCtx {
     done: HashMap<String, HashSet<usize>>,
     /// Every failure the walk met, or only the nearest (`wn_nearest`).
     all: bool,
+    /// The lower stage of a world that cut a book (found once), and the files the walk thawed, by their prefix.
+    stage: Option<Option<Rc<stages::Stage>>>,
+    thawed: HashMap<String, Eval>,
+}
+
+impl WnCtx {
+    fn new(b: &WhynotBounds, path: HashSet<String>) -> WnCtx {
+        WnCtx { max_depth: b.max_depth.max(1), max_nodes: b.max_nodes.max(1), nodes: 0, path, done: HashMap::new(), all: b.all, stage: None, thawed: HashMap::new() }
+    }
 }
 
 impl Eval {
@@ -16401,18 +16440,15 @@ impl Eval {
     }
 
     fn whynot_at(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
-        let mut ctx = WnCtx {
-            max_depth: b.max_depth.max(1),
-            max_nodes: b.max_nodes.max(1),
-            nodes: 0,
-            path: HashSet::new(),
-            done: HashMap::new(),
-            all: b.all,
-        };
+        let mut ctx = WnCtx::new(b, HashSet::new());
         let s = Subst::default();
         self.demand.asked.clear();
-        if !self.match_premise(lit, &s, 0, None)?.is_empty() {
+        let found = self.match_premise(lit, &s, 0, None)?;
+        if !found.is_empty() {
             let k = self.lit_key(lit, &s);
+            if let Some(table) = self.held_by_file(lit, &k, &found) {
+                return Ok((true, table));
+            }
             let k = match shown {
                 Some(q) if self.plain => q.to_string(),
                 _ => k,
@@ -16454,6 +16490,46 @@ impl Eval {
         ctx.path.insert(self.cycle_key(lit));
         lines.extend(self.explain_tree(lit, &mut ctx)?);
         Ok((false, lines.join("\n")))
+    }
+
+    /// AN OPEN QUESTION THAT HOLDS, OVER A CORPUS, IS A TABLE OF FILES: how many answers each file holds, read off
+    /// the units, and the files that hold none. Why a file holds none is not walked here: a row opens when the
+    /// question is asked in that file (`whynot_files`), which thaws it alone. An answer is of the file its first
+    /// node names. None for a ground question and for a world that is not read from units.
+    fn held_by_file(&mut self, lit: &Lit, k: &str, found: &[(Subst, PremRef)]) -> Option<String> {
+        let mut files: Vec<String> = self.levels.as_ref()?.files().into_iter().map(|f| format!("n{f:016x}")).collect();
+        files.sort_unstable();
+        if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
+            return None;
+        }
+        let mut held: HashMap<String, usize> = HashMap::new();
+        for (s, _) in found {
+            let key = self.lit_key(lit, s);
+            if let Some(f) = volumes::first_file(&key) {
+                *held.entry(format!("n{f}")).or_default() += 1;
+            }
+        }
+        let none: Vec<&String> = files.iter().filter(|f| !held.contains_key(*f)).collect();
+        let mut lines = vec![format!("{k} holds: {} answers in {} of {} files", found.len(), files.len() - none.len(), files.len())];
+        let mut some: Vec<(&String, &usize)> = held.iter().collect();
+        some.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
+        for (f, n) in some.iter().take(BY_FILE_SHOWN) {
+            lines.push(format!("  {f}  {n}"));
+        }
+        if some.len() > BY_FILE_SHOWN {
+            lines.push(format!("  ... and {} more files that hold answers", some.len() - BY_FILE_SHOWN));
+        }
+        if !none.is_empty() {
+            lines.push(format!("  none in {} files:", none.len()));
+            for f in none.iter().take(BY_FILE_SHOWN) {
+                lines.push(format!("  {f}  0"));
+            }
+            if none.len() > BY_FILE_SHOWN {
+                lines.push(format!("  ... and {} more files that hold none", none.len() - BY_FILE_SHOWN));
+            }
+            lines.push("  why a file holds none: ask again with --in and a node of the file".to_string());
+        }
+        Some(lines.join("\n"))
     }
 
     /// WHYNOT OF A LATTICE VALUE, where its cell holds another or is a hole:
@@ -16885,9 +16961,13 @@ impl Eval {
 
     /// One node: for every rule that could conclude the literal, the failing
     /// premise instances, each followed in turn (`explain_rule`).
-    fn explain_failure(&mut self, lit: &Lit, level: usize, ctx: &mut WnCtx, next: &mut Vec<WnTask>) {
-        ctx.nodes += 1;
+    fn explain_failure(&mut self, lit: &Lit, level: usize, ctx: &mut WnCtx, next: &mut Vec<WnTask>) -> Result<(), Halt> {
         let pad = "  ".repeat(2 * level - 1);
+        if let Some(lines) = self.explain_thawed(lit, level, ctx)? {
+            next.extend(lines.into_iter().map(|(x, m)| WnTask::Line(x, m)));
+            return Ok(());
+        }
+        ctx.nodes += 1;
         let rules: Vec<Rc<ERule>> = self
             .rules
             .iter()
@@ -16901,11 +16981,88 @@ impl Eval {
                 format!("{pad}no rule concludes '{}' and no matching base fact exists{unloaded}", self.h.name(lit.rel)),
                 Some((WnKind::Leaf, level, 0)),
             ));
-            return;
+            return Ok(());
         }
         // each rule is explored when its turn comes, after the one before it
         // has been followed down: what renaming and exploring meet is in order
         next.extend(rules.into_iter().map(|r| WnTask::Rule(lit.clone(), r, level)));
+        Ok(())
+    }
+
+    /// A FAILURE BELOW THE CUT IS WALKED IN ITS FILE, THAWED. A world that cut a book holds the lemmas of its lower
+    /// stage and not what they were proved from, so a walk of that stage's rules over it would name a premise that
+    /// held. The literal names its file by a node; the file's text is read again, its lower stage evaluated in a
+    /// fork over the core alone (`thaw`), and the walk goes on there: the lower stage reads no other file. One that
+    /// names no file, or whose text this world was not given, is said, not walked.
+    fn explain_thawed(&mut self, lit: &Lit, level: usize, ctx: &mut WnCtx) -> Result<Option<Vec<WnLine>>, Halt> {
+        if self.thawed {
+            return Ok(None);
+        }
+        if ctx.stage.is_none() {
+            ctx.stage = Some(self.lemma_stage().map(Rc::new));
+        }
+        let Some(st) = ctx.stage.clone().flatten() else { return Ok(None) };
+        if !st.heads.contains(&lit.rel) {
+            return Ok(None);
+        }
+        let key = self.lit_key(lit, &Subst::default());
+        let file = volumes::file_of(&key).map(str::to_string);
+        if let Some(f) = &file {
+            if !ctx.thawed.contains_key(f) {
+                if let Some(text) = self.lower_text(f) {
+                    let low = self.thaw(&text, &st)?;
+                    ctx.thawed.insert(f.clone(), low);
+                }
+            }
+        }
+        let Some((f, mut low)) = file.as_ref().and_then(|f| ctx.thawed.remove_entry(f)) else {
+            // (a rule that reads no file is fired above the stage too: what it reads is here)
+            let below = self.rules.iter().any(|r| r.clause.head.rel == lit.rel && st.rules.contains(&r.id) && !st.free.contains(&r.id));
+            if !below {
+                return Ok(None);
+            }
+            ctx.nodes += 1;
+            let pad = "  ".repeat(2 * level - 1);
+            let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
+            let why = if file.is_some() { "the text of its file was not given" } else { "it names no one file: ask it of a node of a file" };
+            return Ok(Some(vec![(format!("{pad}{key} is proved in a file from {}, which this world cut; {why}", books.join(", ")), Some((WnKind::Cut, level, 0)))]));
+        };
+        let there = Lit { rel: lit.rel, persp: port_term(lit.persp, &self.h, &mut low.h), persp_explicit: lit.persp_explicit, args: lit.args.iter().map(|a| port_term(*a, &self.h, &mut low.h)).collect(), temporal: lit.temporal };
+        low.rename_counter = self.rename_counter;
+        let lines = low.questioned(|e| e.explain_from(vec![WnTask::Failure(there, level)], ctx));
+        self.rename_counter = low.rename_counter;
+        ctx.thawed.insert(f, low);
+        lines.map(Some)
+    }
+
+    /// The text of the file a node prefix names, where this world was given its files' (`lower_texts`), or what they
+    /// are cut from (`lower_sources`, read once).
+    fn lower_text(&mut self, file: &str) -> Option<String> {
+        if self.lower_texts.is_none() {
+            let sources = self.lower_sources.take()?;
+            let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
+            let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
+            self.lower_texts = Some(Rc::new(cut.files.into_iter().collect()));
+        }
+        self.lower_texts.as_ref()?.get(file).cloned()
+    }
+
+    /// A FILE THAWED: a fork of this world over the core alone that reads the file's `text` again and evaluates its
+    /// lower stage whole, keeping the books the world cut. What `why --all` unfolds a lemma in and a `whynot` walks
+    /// below the cut in.
+    pub fn thaw(&self, text: &str, st: &stages::Stage) -> Result<Eval, Halt> {
+        let mut low = self.fork();
+        low.lower_texts = None;
+        low.lower_sources = None;
+        low.thawed = true;
+        // (a reader of units: the file's lower stage is evaluated over the core alone)
+        if low.levels.take().is_some() {
+            low.store.reads_none();
+        }
+        volumes::load_text(&mut low, text)?;
+        low.lower_stage(st)?;
+        low.demand.asking = true;
+        Ok(low)
     }
 
     /// One rule that could conclude `lit`: its failing premise instances, each
@@ -16995,7 +17152,7 @@ impl Eval {
         let mut next: Vec<WnTask> = Vec::new();
         while let Some(t) = todo.pop() {
             match t {
-                WnTask::Failure(l, level) => self.explain_failure(&l, level, ctx, &mut next),
+                WnTask::Failure(l, level) => self.explain_failure(&l, level, ctx, &mut next)?,
                 WnTask::Rule(l, r, level) => self.explain_rule(&l, &r, level, &mut next)?,
                 WnTask::Deeper(l, level) => self.explain_deeper(&l, level, ctx, &mut next),
                 WnTask::Line(x, m) => lines.push((x, m)),
@@ -17018,7 +17175,14 @@ impl Eval {
     pub fn whynot_files(&mut self, lit: &Lit, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
         let asking = std::mem::replace(&mut self.demand.asking, true);
-        let r = self.questioned(|e| e.whynot_files_at(lit, b, vols));
+        let r = match self.thawed_for(lit, vols) {
+            Ok(Some((mut low, there))) => {
+                low.wn_only = self.wn_only.clone();
+                low.whynot_files(&there, b, vols)
+            }
+            Ok(None) => self.questioned(|e| e.whynot_files_at(lit, b, vols)),
+            Err(h) => Err(h),
+        };
         self.wn_vols = None;
         self.demand.asking = asking;
         self.demand.asked.clear();
@@ -17028,12 +17192,37 @@ impl Eval {
         r
     }
 
+    /// WHYNOT IN ONE FILE OF A CORPUS, the row of the table opened: the walk parted by file as `whynot_files` parts
+    /// it, every node the scanner minted naming its file, and only the candidates of `file` (a node prefix) walked.
+    pub fn whynot_in(&mut self, lit: &Lit, b: &WhynotBounds, file: &str) -> Result<WhynotFile, Halt> {
+        self.wn_only = Some(file.to_string());
+        let r = self.whynot_files(lit, b, &[(file.to_string(), file.to_string())]);
+        self.wn_only = None;
+        r.map(|mut rows| rows.remove(0))
+    }
+
+    /// A question of one file whose rules are of the lower stage a world cut: the file thawed, and the question there.
+    fn thawed_for(&mut self, lit: &Lit, vols: &[(String, String)]) -> Result<Option<(Eval, Lit)>, Halt> {
+        let [(prefix, _)] = vols else { return Ok(None) };
+        if self.thawed {
+            return Ok(None);
+        }
+        let Some(st) = self.lemma_stage() else { return Ok(None) };
+        if !st.heads.contains(&lit.rel) {
+            return Ok(None);
+        }
+        let Some(text) = self.lower_text(prefix.trim_start_matches('n')) else { return Ok(None) };
+        let mut low = self.thaw(&text, &st)?;
+        let there = Lit { rel: lit.rel, persp: port_term(lit.persp, &self.h, &mut low.h), persp_explicit: lit.persp_explicit, args: lit.args.iter().map(|a| port_term(*a, &self.h, &mut low.h)).collect(), temporal: lit.temporal };
+        Ok(Some((low, there)))
+    }
+
     fn whynot_files_at(&mut self, lit: &Lit, b: &WhynotBounds, vols: &[(String, String)]) -> Result<Vec<WhynotFile>, Halt> {
         let names: HashMap<String, String> = vols.iter().cloned().collect();
         let mut lens: Vec<usize> = vols.iter().map(|(p, _)| p.len()).collect();
         lens.sort_unstable();
         lens.dedup();
-        let walk = VolWalk { names, lens, outs: HashMap::new(), split: None };
+        let walk = VolWalk { names, lens, outs: HashMap::new(), split: None, only: self.wn_only.clone() };
         let mut found: HashMap<String, usize> = HashMap::new();
         for (s, _) in self.match_premise(lit, &Subst::default(), 0, None)? {
             if let Some(v) = self.vol_of_lit(&walk, lit, &s) {
@@ -17094,14 +17283,7 @@ impl Eval {
                 }
                 stops.extend(keys);
             }
-            let mut ctx = WnCtx {
-                max_depth: b.max_depth.max(1),
-                max_nodes: b.max_nodes.max(1),
-                nodes: 0,
-                path: HashSet::from([self.cycle_key(lit)]),
-                done: HashMap::new(),
-                all: b.all,
-            };
+            let mut ctx = WnCtx::new(b, HashSet::from([self.cycle_key(lit)]));
             let mut text = vec![format!("whynot {k} in {name}:")];
             let lines = self.explain_from(tasks, &mut ctx)?;
             text.extend(wn_shown(lines, b.all));
@@ -17129,6 +17311,12 @@ impl Eval {
         let mut steps: HashMap<String, usize> = HashMap::new();
         for s2 in s2s {
             let v = self.vol_of_lit(&w, l, &s2).unwrap_or_default();
+            if !v.is_empty() && w.only.as_ref().is_some_and(|o| *o != v) {
+                if w.split.is_none() {
+                    w.split = Some(self.lit_key(l, s));
+                }
+                continue;
+            }
             let n = taken.entry(v.clone()).or_default();
             if *n >= 16 {
                 continue;
@@ -17161,11 +17349,16 @@ impl Eval {
 
     fn vol_of_term(&self, w: &VolWalk, t: Term) -> Option<String> {
         let name = match t.kind() {
-            TermK::Atom(a) => a,
+            TermK::Atom(a) | TermK::Str(a) => a,
             TermK::Func(i) => self.h.fname(i),
             _ => return None,
         };
         let n = self.h.name(name);
+        if w.only.is_some() {
+            if let Some(f) = volumes::first_file(n).filter(|_| n.starts_with('n')) {
+                return Some(format!("n{f}"));
+            }
+        }
         if let Some(v) = w.lens.iter().find_map(|&k| n.get(..k).and_then(|p| w.names.get(p))) {
             return Some(v.clone());
         }
