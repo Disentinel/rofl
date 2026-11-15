@@ -52,6 +52,8 @@ import { own } from './own.ts';
 import { closure, fileHash, filesHash, forget, KEEP, keyOf, keptOr, planted, sha, tallied } from './keep.ts';
 import { MODEL_FILES } from '../notebook/front.ts';
 
+// an error in its first lines, past what the engine says on the side of any run (`hot:`, `cost:`)
+const said = (err: string): string => err.split('\n').filter((l) => l.trim() && !/^(hot|cost): /.test(l)).slice(0, 3).join(' / ');
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const GOLDEN = path.join(ROOT, 'facts/goldens.rofl');
 // ROFL_PROFILE names the cargo profile whose `rofl load` answers for Rust:
@@ -565,11 +567,11 @@ function answerTSTogether(w: World, Engine: typeof Rofl): Answer {
     }
     diags.push(`refused ${base} (${cls})`);
     dropped.push(`${base}: ${msg.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);
-    if (!want) problems.push(`${base} refused: ${msg.trim().split('\n').slice(0, 3).join(' / ')}`);
-    else if (!msg.includes(want)) problems.push(`${base} refused, but not for '${want}': ${msg.trim().split('\n').slice(0, 3).join(' / ')}`);
+    if (!want) problems.push(`${base} refused: ${said(msg)}`);
+    else if (!msg.includes(want)) problems.push(`${base} refused, but not for '${want}': ${said(msg)}`);
   }
   const { r, failed } = togetherWorld(w, keep, Engine);
-  if (failed !== null) problems.push(`the world does not evaluate: ${failed.trim().split('\n').slice(0, 3).join(' / ')}`);
+  if (failed !== null) problems.push(`the world does not evaluate: ${said(failed)}`);
   const state = r.store.canonicalState();
   if ((!w.budget && !w.space || w.cap) && /^hole\[\$kernel\]\(.*,(budget|space)_exhausted\) /m.test(state)) problems.push('the world was cut by the budget');
   problems.push(...rowProblems(keep, state));
@@ -714,18 +716,18 @@ function answerRustOnly(w: World): Answer {
       continue;
     }
     // a defect (exit 70) where a refusal was due is a red of the world, not of the check: a planted fault met by the engine's own guard
-    if (p.status === 70 && want) { problems.push(`${base} was to be refused (${want}) and met a defect: ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`); continue; }
+    if (p.status === 70 && want) { problems.push(`${base} was to be refused (${want}) and met a defect: ${said(p.stderr)}`); continue; }
     if (p.status !== 2 && p.status !== 3) throw new Error(`rofl load died on ${base} (${p.status}): ${p.stderr}`);
     diags.push(`refused ${base} (${p.status === 2 ? 'load' : 'eval'})`);
     dropped.push(`${base}: ${p.stderr.split('\n').filter((l) => l.trim()).slice(-1)[0]?.trim() ?? ''}`);
-    if (!want) problems.push(`${base} refused: ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
-    else if (!p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
+    if (!want) problems.push(`${base} refused: ${said(p.stderr)}`);
+    else if (!p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${said(p.stderr)}`);
   }
   const runArgs = [boot, ...opts, ...(w.explain ? ['--explain'] : []), ...belowArgs(keep), ...keep];
   const snap = snapshotPath(keep);
   const p = spawnSync(RUST, ['load', ...runArgs, ...saveTo(snap)], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
   if (p.status !== 0) {
-    problems.push(`the world does not evaluate (${p.status}): ${p.stderr.trim().split('\n').slice(0, 3).join(' / ')}`);
+    problems.push(`the world does not evaluate (${p.status}): ${said(p.stderr)}`);
   }
   const state = p.stdout;
   // A WORLD THE BUDGET CUT PROVES NOTHING: its alarms may not have been
