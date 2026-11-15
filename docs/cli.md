@@ -581,7 +581,8 @@ questions, and a `why` is its proof (a lemma of a cut book is where it stops;
 facts in their units`, `diag: levels: of R rules B below, ...` with the
 rules left to the last unit by their shape, and `diag: levels: ms a layer, ...`:
 for each layer the milliseconds before its units, then at each depth of them
-from the files up. What is kept beside the question's
+from the files up, and `diag: levels: the reader's unit ... took N ms`: the rules
+left to the last unit, fired whole over the layers, which no layer's time holds. What is kept beside the question's
 slot under `~/.cache/rofl/worlds`: the reader (`<slot>.q<sum>.vol`, the core it
 stands on), the names (`.names`), the units as segments (`.u<n>`, the newest
 named in `.units`) and the registry (`.scroll`). The next question over the

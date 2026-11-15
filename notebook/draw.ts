@@ -159,14 +159,23 @@ export function grid(v: View) {
   return { vals, rows: order(vals.map((f) => f.args[0])), cols: order(vals.map((f) => f.args[1])) };
 }
 
+/** The frames each mark is placed in: a mark belongs to every one of them. */
+const membership = (v: View) => {
+  const of = new Map<string, Set<string>>();
+  for (const f of v.facts.filter((f) => f.rel === 'frame')) (of.get(f.args[0]) ?? of.set(f.args[0], new Set()).get(f.args[0])!).add(unquote(f.args[1]));
+  return of;
+};
+const PAIRS = ['link', 'link_tagged', 'inside', 'partner', 'child'];   // a pair whose far end is outside the frame is not drawn in it
+
 /** A view's frames, when its marks name one (`A mark M is in the frame F`): a view per frame, in order (numbers by value, else by name), each
  *  holding the facts about its marks and about marks in no frame, and each after the first compared with the one before (a mark new, gone). */
 export function framesOf(v: View): { key: string; view: View }[] | null {
-  const of = new Map(v.facts.filter((f) => f.rel === 'frame').map((f) => [f.args[0], f.args[1]]));
+  const of = membership(v);
   if (!of.size) return null;
-  const keys = [...new Set(of.values())].sort((a, b) => (/^-?\d+$/.test(a) && /^-?\d+$/.test(b) ? Number(a) - Number(b) : 0) || a.localeCompare(b));
+  const keys = [...new Set([...of.values()].flatMap((s) => [...s]))].sort((a, b) => (/^-?\d+$/.test(a) && /^-?\d+$/.test(b) ? Number(a) - Number(b) : 0) || a.localeCompare(b));
   const one = (k: string): View => {
-    const facts = v.facts.filter((f) => f.rel !== 'frame' && (!of.has(f.args[0]) || of.get(f.args[0]) === k));
+    const here = (id: string) => !of.has(id) || of.get(id)!.has(k);
+    const facts = v.facts.filter((f) => f.rel !== 'frame' && here(f.args[0]) && (!PAIRS.includes(f.rel) || here(f.args[1])));
     const ids = new Set(facts.flatMap((f) => f.rel === 'value' ? [f.args[0]] : f.rel === 'message' ? [f.args[0]] : f.args.filter((a) => v.marks[a])));
     return { ...v, facts, marks: Object.fromEntries(Object.entries(v.marks).filter(([id]) => ids.has(id))), cells: v.cells, notes: [] };
   };
@@ -191,10 +200,8 @@ export function framesOf(v: View): { key: string; view: View }[] | null {
 const SETTINGS = ['tag_colour', 'icon_drawing', 'draws', 'shows', 'projection', 'axis'];
 export function scoped(v: View, key?: string): View {
   if (key === undefined) return { ...v, facts: v.facts.filter((f) => f.rel !== 'frame' || v.marks[f.args[0]]) };
-  const of = new Map<string, Set<string>>();
-  for (const f of v.facts.filter((f) => f.rel === 'frame')) (of.get(f.args[0]) ?? of.set(f.args[0], new Set()).get(f.args[0])!).add(unquote(f.args[1]));
+  const of = membership(v);
   const mine = (id: string) => !!of.get(id)?.has(key);   // a mark may be in several frames: a part drawn in each flow it takes part in
-  const PAIRS = ['link', 'link_tagged', 'inside'];   // a link or a box that leaves the frame goes with its far end
   const facts = v.facts.filter((f) => f.rel !== 'frame' && (SETTINGS.includes(f.rel) || (mine(f.args[0]) && (!PAIRS.includes(f.rel) || mine(f.args[1])))));
   const marks = Object.fromEntries(Object.entries(v.marks).filter(([id]) => mine(id)));
   const notes = Object.keys(marks).length ? v.notes : [...v.notes, `nothing is in the frame ${key}: say which marks are, "A mark M is in the frame \`${key}\` if …"`];

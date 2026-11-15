@@ -109,6 +109,11 @@ corpus(vscode_f120, 120, "4 cores, 15 GB").  facts(vscode_f120, 1028273, counted
 took(vscode_f20, read, 5340667).     took(vscode_f20, concluded, 1182816).   took(vscode_f20, seconds, 4).
 took(vscode_f60, read, 14718306).    took(vscode_f60, concluded, 3026858).   took(vscode_f60, seconds, 12).
 took(vscode_f120, read, 41443492).   took(vscode_f120, concluded, 8463239).  took(vscode_f120, seconds, 83).
+-- the same corpora on the path `rofl ask` takes by itself (settled by levels), the release build, in milliseconds:
+-- the whole, the layers, and what is outside them, the reader's unit
+took(vscode_f20, levels_ms, 3986).   took(vscode_f20, layers_ms, 2500).    took(vscode_f20, reader_ms, 800).
+took(vscode_f60, levels_ms, 10070).  took(vscode_f60, layers_ms, 5850).    took(vscode_f60, reader_ms, 3600).
+took(vscode_f120, levels_ms, 51580). took(vscode_f120, layers_ms, 17300).  took(vscode_f120, reader_ms, 32400).
 aims_explode(edit_cost, 0).
 
 -- ===================================================================== THE READINGS
