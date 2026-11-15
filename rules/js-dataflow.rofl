@@ -1658,7 +1658,8 @@ key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), recv_obj[fl
 -- hands out when run on the object M's own K holds. Which object that is, is the call's to say: a RUN of a method
 -- on an object (`run(I, M)`), asked by a call on an object and by a run that hands on to the object in a field.
 -- Only the runs somebody asks; a chain of objects is walked object by object, a fixpoint with no depth to bound.
-hop_at[flow](C, M, K, M2)               :- resolves[code](C, M2), sx_ret_inst[surface](M2), recv_of[flow](C, R), may_be[flow](R, input, field(M, K)).
+recv_field[flow](R, M, K)               :- may_be[flow](R, input, field(M, K)).
+hop_at[flow](C, M, K, M2)               :- resolves[code](C, M2), sx_ret_inst[surface](M2), recv_of[flow](C, R), recv_field[flow](R, M, K).
 hop_at[flow](C, M, K, M3)               :- resolves[code](C, M2), sx_ret_hop[surface](M2, K, M3), recv_of[flow](C, R), may_be[flow](R, input, S), input_this[flow](S, M).
 may_be[flow](C, input, hop(M, K, M2))   :- hop_at[flow](C, M, K, M2).
 this_key[flow](M, K)                    :- hop_at[flow](_, M, K, _).

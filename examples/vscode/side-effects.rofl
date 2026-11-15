@@ -111,12 +111,35 @@ se_field(Fn, Key, F) :- se_fsite(_, F, R, Key), key_on[flow](R, Key, input, fiel
 sx_field_sink[surface](Fn, Key, F) :- se_field(Fn, Key, F).
 se_fsite(W, F, R, Key) :- resolves[code](W, Fn), sx_field_sink[surface](Fn, Key, F), recv_call[code](W, R).
 key_wanted[flow](R, Key) :- se_fsite(_, _, R, Key).
+-- and a method that runs such a method ON THE OBJECT ITS FIELD HOLDS (`flush() { this.inner.save() }`): which object
+-- that is, is the call's to say, so the run is walked object by object from the call (`se_run`), as `run` is.
+se_sink(M, F)        :- sx_field_sink[surface](M, _, F).
+se_sink(M, F)        :- sx_hop_sink[surface](M, _, _, F).
+se_hop(M, K, M2, F)  :- resolves[code](W, M2), se_sink(M2, F), recv_call[code](W, R), recv_field[flow](R, M, K).
+se_hop(M, K, M3, F)  :- resolves[code](W, M2), sx_hop_sink[surface](M2, K, M3, F), recv_call[code](W, R), may_be[flow](R, input, S), input_this[flow](S, M).
+sx_hop_sink[surface](M, K, M2, F) :- se_hop(M, K, M2, F).
+this_key[flow](M, K) :- se_hop(M, K, _, _).
+se_run(I, M, F)      :- resolves[code](W, M), se_sink(M, F), recv_call[code](W, R), recv_obj[flow](R, I).
+se_run(I2, M2, F)    :- se_run(I, M, F), sx_hop_sink[surface](M, K, M2, F), key_node[flow](I, K, I2).
+se_run(I2, M2, F)    :- se_hop(M, K, M2, F), field_holds[flow](M, K, I2).
+key_ask[flow](I, K)   :- se_run(I, M, F), sx_hop_sink[surface](M, K, _, F).
+key_ask[flow](I, Key) :- se_run(I, M, F), sx_field_sink[surface](M, Key, F).
+se_eff(I, M, F, VK, X) :- se_run(I, M, F), sx_field_sink[surface](M, Key, F), key_of[flow](I, Key, VK, X).
+se_eff(I, M, F, VK, X) :- se_run(I, M, F), sx_hop_sink[surface](M, K, M2, F), key_node[flow](I, K, I2), se_eff(I2, M2, F, VK, X).
+se_osite(W, F, I, M) :- resolves[code](W, M), sx_hop_sink[surface](M, _, _, F), recv_call[code](W, R), recv_obj[flow](R, I).
+se_gsite(W, F, I2, M2) :- resolves[code](W, M2), se_sink(M2, F), recv_call[code](W, R), recv_field[flow](R, M, K), field_holds[flow](M, K, I2).
 imports(main, surface).
 imports(surface, main).
 
 -- 5. THE ANSWER.
 side_effect_site(S, F) :- se_site(S, F, _).
 side_effect_site(S, F) :- se_fsite(S, F, _, _).
+side_effect_site(S, F) :- se_osite(S, F, _, _).
+side_effect_site(S, F) :- se_gsite(S, F, _, _).
+side_effect_value(S, F, V) :- se_osite(S, F, I, M), se_eff(I, M, F, lit, V).
+side_effect_value(S, F, V) :- se_osite(S, F, I, M), se_eff(I, M, F, input, T), input_lit[flow](T, V).
+side_effect_value(S, F, V) :- se_gsite(S, F, I, M), se_eff(I, M, F, lit, V).
+side_effect_value(S, F, V) :- se_gsite(S, F, I, M), se_eff(I, M, F, input, T), input_lit[flow](T, V).
 side_effect_value(S, F, V) :- se_fsite(S, F, R, Key), key_on[flow](R, Key, lit, V).
 side_effect_value(S, F, V) :- se_fsite(S, F, R, Key), key_on[flow](R, Key, input, T), input_lit[flow](T, V).
 side_effect_value(S, F, T) :- se_fsite(S, F, R, Key), key_on[flow](R, Key, node, C), not summarized[flow](C), may_be_text[flow](C, T).
