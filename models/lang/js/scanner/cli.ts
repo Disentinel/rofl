@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import { hostFacts } from './host_facts.ts';
 import { oxcScan } from './oxc_bin.ts';
 import { inheritText } from './oxc_inherit.ts';
+import { COLUMNS, toColumns, valueStrings } from './columns.ts';
+import { isColumns, fromColumns } from '../../../../src/parser.ts';
 
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
 const NOT_CODE = /\.d\.[mc]?ts$|\.min\.js$/;
@@ -48,16 +50,22 @@ const sink = out ? fs.createWriteStream(out) : process.stdout;
 const put = (text: string | Buffer) => new Promise<void>((done) => { if (sink.write(text)) done(); else sink.once('drain', () => done()); });
 // what was read, for the engine's storeroom of scans (docs/cli.md): the files and directories oxc_scan names, and the
 // scanner's own code, so that a scanner changed is a scan stale
+if (process.env.ROFL_SCAN_PREVIOUS === undefined) await put(`${COLUMNS}\n`);
 await put([bin, fileURLToPath(import.meta.url), fileURLToPath(new URL('oxc_inherit.ts', import.meta.url)), fileURLToPath(new URL('../../../../playground/host.ts', import.meta.url))].map((f) => `-- reads: ${f}\n`).join(''));
 
-const child = spawn(bin, ['--no-start', root, ...(one === undefined ? [] : [one])], { stdio: ['ignore', 'pipe', 'inherit'] });
+const prev = process.env.ROFL_SCAN_PREVIOUS;
+const kept = prev && fs.existsSync(prev) ? fs.readFileSync(prev, 'utf8') : undefined;
+const previous = kept !== undefined && isColumns(kept) ? fromColumns(kept) : kept;
+// the column form (docs/cli.md, Model libraries) unless a kept world asks to inherit ids from its previous scan, which
+// is read as text
+const columns = prev === undefined;
+const child = spawn(bin, ['--no-start', ...(columns ? ['--columns'] : []), root, ...(one === undefined ? [] : [one])], { stdio: ['ignore', 'pipe', 'inherit'] });
 const exited = new Promise<number>((done) => child.on('close', (code) => done(code ?? 70)));
 const strings = new Set<string>();
 // the text goes through in chunks, and only the lines that hold a string value are looked at
 const quoted = /^attr\[ast_oxc\]\(\w+, value, "((?:[^"\\\n]|\\.)*)"\)\.$/gm;
-const prev = process.env.ROFL_SCAN_PREVIOUS;
-const previous = prev && fs.existsSync(prev) ? fs.readFileSync(prev, 'utf8') : undefined;
 const held: Buffer[] = [];
+const readColumns = valueStrings((v) => strings.add(v), (n) => { facts += n; });
 // a line is cut at a byte, and a string kept is copied out: a slice of the text would hold the whole chunk, and the
 // chunks before it through the carry, for as long as the scan runs
 let facts = 0, carry = Buffer.alloc(0);
@@ -66,12 +74,13 @@ for await (const chunk of child.stdout as AsyncIterable<Buffer>) {
   const bytes = carry.length ? Buffer.concat([carry, chunk]) : chunk, cut = bytes.lastIndexOf(10) + 1;
   carry = Buffer.from(bytes.subarray(cut));
   const whole = bytes.toString('utf8', 0, cut);
+  if (columns) { readColumns(whole); continue; }
   for (let i = whole.indexOf('\n'); i >= 0; i = whole.indexOf('\n', i + 1)) facts++;
   for (const m of whole.matchAll(quoted)) strings.add(Buffer.from(m[1].replace(/\\(["\\])/g, '$1')).toString());
 }
 if (previous !== undefined) await put(inheritText(Buffer.concat(held).toString('utf8'), previous));
 const host = hostFacts(files, strings);
-await put(host.join('\n') + '\n');
+await put(columns ? toColumns(host) : host.join('\n') + '\n');
 await new Promise<void>((done) => (out ? (sink as fs.WriteStream).end(done) : done()));
 const code = await exited;
 console.error(`${one === undefined ? files.length : 1} files, ${facts + host.length} facts${out ? ` -> ${out}` : ''}`);

@@ -19,7 +19,7 @@
 // Ids as scanners/js_ast.ts makes them: the file's prefix and a hash of the parent's id and the child's step (its
 // name when it has one, its shallow shape in a list, its field when single), so a node keeps its id when code is
 // added above it; the program itself is `<prefix>root`. Semantic slots (node_id, scope_id, symbol_id, reference_id) and the source text are left out.
-use oxc_scan::{q, scan, set_no_start, P};
+use oxc_scan::{q, scan, set_no_start, to_columns, P};
 use std::collections::BTreeMap;
 use std::io::Write as _;
 use std::path::Path;
@@ -50,6 +50,7 @@ fn main() {
         args.remove(i);
         set_no_start();
     }
+    let columns = args.iter().position(|a| a == "--columns").map(|i| args.remove(i)).is_some();
     let out = args.iter().position(|a| a == "--out").map(|i| {
         args.remove(i);
         args.remove(i)
@@ -67,6 +68,9 @@ fn main() {
         None => Box::new(std::io::BufWriter::new(std::io::stdout().lock())),
     };
     let abs = std::fs::canonicalize(root).unwrap();
+    if columns {
+        writeln!(w, "-- rofl columns 1").unwrap();
+    }
     for f in parsed.iter().chain(dirs.iter()) {
         writeln!(w, "-- reads: {}", abs.join(f).display()).unwrap();
     }
@@ -86,6 +90,7 @@ fn main() {
                     Ok(src) => scan(&src, f),
                     Err(e) => Err(format!("parse_error[{P}]({}, {}).\n", q(f), q(&e.to_string()))),
                 };
+                let r = if columns { r.map(|t| to_columns(&t).expect("the scanner reads its own facts")).map_err(|t| to_columns(&t).expect("the scanner reads its own facts")) } else { r };
                 if tx.send((i, r)).is_err() {
                     break;
                 }
@@ -105,7 +110,7 @@ fn main() {
                         t
                     }
                 };
-                facts += text.bytes().filter(|&b| b == b'\n').count();
+                facts += if columns { text.lines().filter(|l| l.starts_with("R ")).map(|l| l.rsplit(' ').next().and_then(|n| n.parse::<usize>().ok()).unwrap_or(0)).sum() } else { text.bytes().filter(|&b| b == b'\n').count() };
                 w.write_all(text.as_bytes()).unwrap();
                 at += 1;
             }

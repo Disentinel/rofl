@@ -2299,13 +2299,16 @@ impl Session {
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
-        let mut src = String::new();
+        let (mut src, mut cols) = (String::new(), false);
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
             let rec = scan_rec(kind, path, text, scanners.get(kind).cloned(), ran);
+            cols |= crate::rofl_parse::is_columns(&rec.unit);
             src.push_str(&rec.unit);
             self.eval.scans.push(rec);
         }
+        // a scanner that writes columns makes the whole of them columns, the others' text read as text there
+        if cols { src.insert_str(0, &format!("{}\n", crate::rofl_parse::COLUMNS)); }
         self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
         Ok(todo.len())
     }
@@ -2508,7 +2511,7 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
     let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(scan_path).collect());
     let unit = match ran {
         Ok(out) => {
-            let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
+            let n = crate::rofl_parse::scanned_facts(&out);
             format!("{out}\nscan_done({kind}, {path}, {n}).\n")
         }
         Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),

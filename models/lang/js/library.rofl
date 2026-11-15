@@ -5,4 +5,4 @@ needs_engine(js, "1.7.0").
 -- the files of the model, in the order they load, from this directory
 files(js, "js.files").
 -- what turns a directory of JS/TS into the facts the model reads: its command and the form of its output
-scanner(js, "rofl scan", text).
+scanner(js, "rofl scan", columns).

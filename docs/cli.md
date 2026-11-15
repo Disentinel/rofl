@@ -341,7 +341,7 @@ its manifest, `library.rofl`. The manifest is facts:
 | `library(js, "1.0.0")` | the library and its version |
 | `needs_engine(js, "1.7.0")` | the oldest engine it runs on; an older one refuses `@js`, naming both versions (exit 1) |
 | `files(js, "js.files")` | the list of its files in load order, from its folder; `npm test` holds it to `notebook/front.ts` `MODEL_FILES` |
-| `scanner(js, "rofl scan", text)` | the command that turns a directory of source into the facts the model reads, and the form it writes them in |
+| `scanner(js, "rofl scan", columns)` | the command that turns a directory of source into the facts the model reads, and the form it writes them in (`text` or `columns`, below) |
 
 The engine knows no library by name: `@js` reads `models/lang/js/library.rofl`
 of the tree above the current directory, else of the tree the command came
@@ -349,6 +349,36 @@ with. The scanner is a program of its own, never built into the engine:
 `oxc_scan` ships beside `rofl` in each platform package, and a world names it
 as its scanner (*A world that asks for its own input*). Its rule worlds are
 checked by `npm test` under the names they always had (`rules_js-dataflow`).
+
+**The scanner's contract: text or columns.** A scanner writes base facts on
+its standard output, in either of two forms, and both engines read both; the
+form is told by the text itself. *Text* is ROFL source, a fact a line. The
+*column form* opens with the line `-- rofl columns 1` among its first comments
+and holds, per source file, a table of the terms it names and a block a
+relation of the numbers of those terms, a column an argument:
+
+```
+-- rofl columns 1
+-- reads: src/a.js
+T 3
+a n3f2c9e0a1b2c3d4_1
+a Identifier
+s src/a.js
+R node ast_oxc 3 1
+0
+1
+2
+```
+
+`T N` opens a table of N terms, one a line: `a NAME` an atom, `s TEXT` a
+string (`\\`, `\n`, `\r` escaped), `i N` an integer. `R REL BOOK ARITY ROWS`
+is ROWS facts of `REL[BOOK]` (`-` the bare book), then ARITY lines, each the
+column of one argument as table numbers in base 36. A table holds until the
+next, so the scanner keeps no state across files; node ids stay the hashes
+they are in text. Any other line is text, read as text is (a `-- ` line a
+comment). `rofl scan` writes columns (vscode's `vs/base/common`, 155 files:
+16.7 MB against 65.9 MB of text, the same facts) unless it is asked to keep the
+ids of a previous scan (`ROFL_SCAN_PREVIOUS`), when it writes text.
 
 ## JS code, through the Rust engine
 
@@ -366,7 +396,7 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 |---|---|---|---|
 | `npm run scan` | node: `models/lang/js/scanner/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
 | the scanner | `models/lang/js/scanner/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `models/lang/js/scanner/oxc_scan/src/main.rs` |
-| the host facts | `playground/host.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
+| the host facts | `models/lang/js/scanner/host_facts.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
 | the model | `rofl`, Rust | `@js` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`models/lang/js/docs/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no

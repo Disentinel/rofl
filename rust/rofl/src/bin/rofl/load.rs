@@ -487,7 +487,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
     drop(texts);
     // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
-    let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
+    let bytes: usize = cut.files.iter().map(|(_, t)| text_bytes(t)).sum();
     if cut.files.len() < 2 || bytes < VOLUMES_FROM && std::env::var("ROFL_VOLUMES").as_deref() != Ok("1") { return None; }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
     if let Some((mut s, sums)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
@@ -538,6 +538,13 @@ fn leave(s: Session, rest: impl Sized) {
 /// The bytes of the files' facts from which a world is evaluated by volumes: below them the whole world is as fast
 /// (vscode: 20 files, 10 MB).
 const VOLUMES_FROM: usize = 32 << 20;
+
+/// The bytes a file's facts take as text: a fact of the column form stands for the 75 its line took (vscode's
+/// vs/base/common, oxc's tree: 65.5 MB of text for 873 thousand facts).
+fn text_bytes(t: &str) -> usize {
+    if !rofl::rofl_parse::is_columns(t) { return t.len(); }
+    rofl::rofl_parse::column_rows(t) * 75
+}
 
 /// A file of a world kept by volumes (`<slot>.q<sum>.vol`): no world of its own to take by delta.
 pub fn is_volume_of_set(p: &std::path::Path) -> bool {

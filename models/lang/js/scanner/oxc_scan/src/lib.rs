@@ -563,3 +563,90 @@ mod tests {
         assert!(e.starts_with("parse_error[ast_oxc](\"bad.js\", ") && e.lines().count() == 1);
     }
 }
+
+// --- the column form (the engine's rofl_parse::columns) ---------------------------------------------------------------
+
+/// One file's facts, as `scan` writes them, in the column form: a table of its terms, then a block a relation.
+pub fn to_columns(text: &str) -> Result<String, String> {
+    use std::collections::HashMap;
+    #[derive(Hash, PartialEq, Eq, Clone)]
+    enum T { A(String), S(String), I(i64) }
+    let (mut terms, mut index): (Vec<T>, HashMap<T, usize>) = (Vec::new(), HashMap::new());
+    let mut blocks: Vec<((String, String), Vec<Vec<usize>>)> = Vec::new();
+    let mut at_block: HashMap<(String, String, usize), usize> = HashMap::new();
+    let b = text.as_bytes();
+    let mut i = 0;
+    let skip_ws = |i: &mut usize| while *i < b.len() && (b[*i] as char).is_ascii_whitespace() { *i += 1 };
+    loop {
+        skip_ws(&mut i);
+        if i >= b.len() { break; }
+        if b[i..].starts_with(b"--") { while i < b.len() && b[i] != b'\n' { i += 1 } continue; }
+        let s = i;
+        while i < b.len() && b[i] != b'[' && b[i] != b'(' { i += 1 }
+        let rel = text[s..i].to_string();
+        let book = if b.get(i) == Some(&b'[') {
+            let s = i + 1;
+            while i < b.len() && b[i] != b']' { i += 1 }
+            i += 1;
+            text[s..i - 1].to_string()
+        } else { "-".to_string() };
+        if b.get(i) != Some(&b'(') { return Err(format!("to_columns: no ( after {rel}")); }
+        i += 1;
+        let mut row = Vec::new();
+        loop {
+            skip_ws(&mut i);
+            let t = if b.get(i) == Some(&b'"') {
+                i += 1;
+                let mut o = String::new();
+                let mut s = i;
+                while i < b.len() && b[i] != b'"' {
+                    if b[i] == b'\\' { o.push_str(&text[s..i]); o.push(b[i + 1] as char); i += 2; s = i; } else { i += 1 }
+                }
+                o.push_str(&text[s..i]);
+                i += 1;
+                T::S(o)
+            } else {
+                let s = i;
+                while i < b.len() && b[i] != b',' && b[i] != b')' { i += 1 }
+                let w = text[s..i].trim();
+                match w.parse::<i64>() { Ok(n) => T::I(n), Err(_) => T::A(w.to_string()) }
+            };
+            let k = *index.entry(t.clone()).or_insert_with(|| { terms.push(t); terms.len() - 1 });
+            row.push(k);
+            skip_ws(&mut i);
+            match b.get(i) { Some(b',') => i += 1, Some(b')') => { i += 1; break } _ => return Err(format!("to_columns: a fact of {rel} does not close")) }
+        }
+        if b.get(i) != Some(&b'.') { return Err(format!("to_columns: no . after a fact of {rel}")); }
+        i += 1;
+        let key = (rel.clone(), book.clone(), row.len());
+        let at = *at_block.entry(key).or_insert_with(|| { blocks.push(((rel, book), vec![Vec::new(); row.len()])); blocks.len() - 1 });
+        for (c, k) in blocks[at].1.iter_mut().zip(row) { c.push(k) }
+    }
+    let mut o = format!("T {}\n", terms.len());
+    for t in &terms {
+        match t {
+            T::A(a) => { o.push_str("a "); o.push_str(a); }
+            T::S(s) => { o.push_str("s "); o.push_str(&s.replace('\\', "\\\\").replace('\n', "\\n").replace('\r', "\\r")); }
+            T::I(n) => { o.push_str("i "); o.push_str(&n.to_string()); }
+        }
+        o.push('\n');
+    }
+    for ((rel, book), cols) in &blocks {
+        o.push_str(&format!("R {rel} {book} {} {}\n", cols.len(), cols.first().map_or(0, Vec::len)));
+        for c in cols {
+            let line: Vec<String> = c.iter().map(|&k| radix36(k)).collect();
+            o.push_str(&line.join(" "));
+            o.push('\n');
+        }
+    }
+    Ok(o)
+}
+
+fn radix36(mut n: usize) -> String {
+    const D: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyz";
+    if n == 0 { return "0".into(); }
+    let mut s = Vec::new();
+    while n > 0 { s.push(D[n % 36]); n /= 36; }
+    s.reverse();
+    String::from_utf8(s).unwrap()
+}
