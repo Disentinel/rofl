@@ -1,0 +1,152 @@
+-- models/product/rofl.rofl — ROFL ITSELF IN THE WORDS OF models/product/vocab.rofl. Three parts.
+--
+--   THE OWNER'S   what only the owner can say: the features, whom each form is for, the contracts, the metrics and
+--                 their targets. Transcribed from CLAUDE.md, The goal; `goal` cites the words.
+--   THE READINGS  what the tree already says in words of its own, read into the vocabulary by a rule each: the
+--                 entries (models/engine/features.rofl over the engine's code, facts/commands.rofl,
+--                 facts/feature-map.rofl, scanners/product.py), the measurements (facts/bench.rofl), the views
+--                 (scanners/product.py: which document names which entry).
+--   THE HOLES     where the two disagree. Each is a rule with an empty answer when it holds.
+--
+-- One link is made here and nowhere else: an entry offers the feature whose word it says (`said`), in whatever form
+-- it is said, so `rofl why`, `--why`, the op `why` and the library's `why` are one feature, and a new form's `why`
+-- joins it by itself. An entry that says no feature's word is `unplaced` until it is given a reason.
+
+edb(user).      -- (user, who that is)
+edb(serves).    -- (form, user)
+edb(feature).   -- (feature, what the product can do, as its user would say it)
+edb(said).      -- (feature, the word an entry says it by)
+edb(contract).  -- (contract, feature, what must hold every time)
+edb(metric).    -- (metric, feature, what is measured)
+edb(scale).     -- (scale, files, platform)
+edb(aims).      -- (metric, scale, at most, unit)
+edb(goal).      -- (what, the owner's words in CLAUDE.md)
+edb(reads).     -- (user, view)
+edb(plumbing).  -- (kind, word, why it offers no feature)
+edb(measured).  -- (metric, scale, value, unit, the evidence)
+
+-- ===================================================================== THE OWNER'S
+user(agent, "a program that asks about a codebase").
+user(person, "someone reading and writing rules").
+user(contributor, "who works on ROFL in its tree").
+
+form(tree, "the source tree: its npm scripts").
+delivers(github, tree).
+
+serves(cli, agent).      serves(library, agent).
+serves(extension, person).  serves(web, person).
+serves(tree, contributor).
+goal(serves, "The engine is for agents (rofl ask and its verbs, --json, kept worlds); the notebook is for people").
+
+feature(model, "keep a model of a codebase").
+feature(ask, "answer a question about it").
+feature(why, "prove an answer").
+feature(whynot, "say why an answer is not there").
+feature(excise, "say what an answer rests on, by taking a fact out").
+feature(keep, "answer again from the kept world").
+feature(edit, "take an edit of the code without starting over").
+feature(sentences, "write a rule almost as a sentence and read the answer with its explanation").
+feature(work, "work on ROFL itself: check it, measure it, release it").
+goal(feature, "ROFL keeps a model of a large codebase and answers questions about it with proof: why, whynot, excise").
+
+said(model, "scan").
+said(ask, "ask").       said(ask, "?").       said(ask, "query").     said(ask, "holds").
+said(why, "why").       said(why, "why-all").
+said(whynot, "whynot"). said(whynot, "whynot-all").
+said(excise, "excise").
+said(keep, "kept").     said(keep, "keep").     said(keep, "open").    said(keep, "save").  said(keep, "fromSnapshot").
+said(edit, "assert").   said(edit, "retract").  said(edit, "load").
+said(sentences, "nb").  said(sentences, "render").  said(sentences, "repl").  said(sentences, "view").
+
+contract(unknown_is_said, ask, "where the data stops the answer says unknown, and why").
+contract(walls_are_said, model, "where memory or time runs out, the engine says so; it does not die").
+contract(same_model, sentences, "the notebook and the engine answer over the same model").
+goal(unknown_is_said, "an honest \"unknown, and why\" where the data stops").
+goal(walls_are_said, "where memory or time runs out, the engine says so; it does not die").
+
+scale(reference, 11100, "Mac M4 Pro").
+scale(vscode_250, 250, "4 cores, 16 GB").
+scale(vscode_20, 20, "4 cores, 16 GB").
+
+metric(first_evaluation, model, "the first whole evaluation").
+metric(peak_memory, model, "memory at the peak of it").
+metric(repeated_question, keep, "a repeated question from the kept world").
+metric(edit_cost, edit, "an edit of one file").
+aims(first_evaluation, reference, 300, s).
+aims(repeated_question, reference, 1, s).
+goal(first_evaluation, "the first whole evaluation within 5 minutes on that machine, so that it runs in CI").
+goal(repeated_question, "a repeated question answered from the kept world in about a second").
+goal(edit_cost, "an edit of one file costs in proportion to the edit, not to the world").
+
+-- the owner's own run of 2026-10-21 (CLAUDE.md): 20 minutes on 6 workers, about 23 GB at peak
+measured(first_evaluation, reference, 1200, s, "the owner's run, 2026-10-21").
+measured(peak_memory, reference, 23, gb, "the owner's run, 2026-10-21").
+
+reads(agent, "CLAUDE.md").        reads(agent, "docs/cli.md").
+reads(contributor, "CLAUDE.md").  reads(contributor, "docs/cli.md").
+reads(person, "README.md").       reads(person, "guide").
+goal(reads, "A feature is done when an agent reading only this file and docs/cli.md finds it").
+
+-- ===================================================================== THE READINGS
+-- entry(Form, Kind, Word): a name by which a user reaches the product, at a form. The words of the language
+-- (an aggregate, a builtin, a declaration, a marker) are entries of every form: `rules`.
+entry(cli, K, W)       :- engine_entry(K, W), cli_kind(K).
+entry(rules, K, W)     :- engine_entry(K, W), rules_kind(K).
+entry(library, K, W)   :- library_entry(K, W).
+entry(extension, K, W) :- extension_entry(K, W).
+entry(Form, cell, W)   :- engine_entry(cell, W), notebooks(Form).
+entry(tree, command, W) :- command_shown(W, _).
+entry(tree, env, W)    :- knob_shown(W, _), knob_note(W, env, _).
+notebooks(extension). notebooks(web). notebooks(cli).
+cli_kind(verb). cli_kind(flag). cli_kind(op).
+rules_kind(aggregate). rules_kind(builtin). rules_kind(declaration). rules_kind(marker).
+
+-- the word a flag says is the flag without its dashes
+word_of(flag, W, X) :- entry(_, flag, W), N is str_len(W), L is N - 2, L > 0, X is str_sub(W, 2, L).
+word_of(K, W, W)    :- entry(_, K, W), K != flag.
+
+offers(Form, K, W, F) :- entry(Form, K, W), word_of(K, W, X), said(F, X).
+offers(rules, K, W, model) :- entry(rules, K, W).
+offers(tree, command, W, work) :- entry(tree, command, W).
+
+-- an entry is accounted for when it offers a feature, or the inventory of knobs (the table of CLAUDE.md, or
+-- docs/knobs.md with its verdict) names it, or it is given a reason here
+placed(Form, K, W) :- offers(Form, K, W, _).
+placed(Form, K, W) :- entry(Form, K, W), knob_shown(W, _).
+placed(Form, K, W) :- named("docs/knobs.md", Form, K, W).
+placed(Form, K, W) :- entry(Form, K, W), plumbing(K, W, _).
+
+-- a feature reaches a user through an entry at a form that serves them
+reaches(F, U, Form) :- offers(Form, _, _, F), serves(Form, U).
+reached(F, U)       :- reaches(F, U, _).
+entered(F)          :- offers(_, _, _, F).
+
+-- a view presents an entry when it names it (scanners/product.py: named(View, Form, Kind, Word))
+found(Form, K, W, U) :- entry(Form, K, W), reads(U, V), named(V, Form, K, W).
+
+measured(M, S, V, U, B) :- bench(B, Name, V), bench_of(Name, M, S, U).
+bench_of(cone_250_eval_ms, first_evaluation, vscode_250, ms).
+bench_of(cone_250_peak_mb, peak_memory, vscode_250, mb).
+bench_of(kept_20_question_ms, repeated_question, vscode_20, ms).
+bench_of(add_20_file_median_ms, edit_cost, vscode_20, ms).
+
+-- ===================================================================== THE HOLES
+-- a feature of the goal no entry offers
+no_entry(F)       :- feature(F, _), not entered(F).
+-- a feature that does not reach one of the two users the goal names: "over the same model"
+not_for(F, U)     :- entered(F), F != work, goal_user(U), not reached(F, U).
+goal_user(agent). goal_user(person).
+-- an entry that offers no feature and has no reason: nobody's goal asked for it
+unplaced(Form, K, W) :- entry(Form, K, W), not placed(Form, K, W).
+-- an entry its user cannot find in what they read: "a feature is done when an agent ... finds it"
+unfound(Form, K, W, U) :- entry(Form, K, W), spelt(Form, K), serves(Form, U), goal_reader(U), not found(Form, K, W, U).
+goal_reader(agent). goal_reader(contributor).
+-- a metric with no target; a target measured only at a smaller scale; a target missed where it was measured
+no_target(M)       :- metric(M, _, _), not aims(M, _, _, _).
+at_scale(M, S)     :- measured(M, S, _, _, _).
+small_only(M, S)   :- aims(M, S, _, _), not at_scale(M, S).
+missed(M, S, V, T) :- aims(M, S, T, U), measured(M, S, V, U, _), V > T.
+-- a contract no evidence backs (backs(Evidence, Contract) is written by nothing yet)
+unbacked(C) :- contract(C, _, _), not backed(C).
+backed(C)   :- backs(_, C).
+edb(backs).

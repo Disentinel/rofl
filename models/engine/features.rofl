@@ -15,7 +15,7 @@
 
 -- ===================================================================== THE WAYS IN
 -- modality(Dispatcher, Kind): verb, flag, op (of rofl serve), builtin, aggregate, declaration, marker, auth
--- (how an adapter signs in), says (the reasons the engine names in an answer: the out side of a contract).
+-- (how an adapter signs in), cell (the question a notebook line asks), says (the reasons the engine names in an answer: the out side of a contract).
 modality("bin::rofl::run", verb).
 modality("bin::rofl::load::parse", flag).
 modality("bin::rofl::seed::parse_args", flag).
@@ -30,6 +30,8 @@ modality("rofl::cell::AggOp::from_name", aggregate).
 modality("rofl::cell::IvFn::from_name", aggregate).
 modality("rofl::structure::check_decl", declaration).
 modality("rofl::reflect::Temporal::from_marker", marker).
+modality("rofl::md::nb::answer", cell).
+modality("rofl::md::prose_split", cell).
 modality("rofl::net::declared", auth).
 modality("rofl::net::credential", auth).
 modality("rofl::engine::agg_refusal_text", says).
