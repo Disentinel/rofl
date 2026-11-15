@@ -570,6 +570,10 @@ impl Levels {
         let (trees, forest) = reader_trees(&self.cx, &self.tops, e);
         e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops)), Vec::new(), None, Some(trees), Some(forest));
         e.store.reads_ghosts(self.ghosts.clone());
+        // (the aggregates are the reader's unit's, the last: the cells its firings cite are read there)
+        if let Some(u) = self.tops.last() {
+            e.store.read_cells(u.stretch.store());
+        }
     }
 
     /// `e` names the keys the units' proofs quote as they do.

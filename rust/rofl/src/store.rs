@@ -1816,8 +1816,8 @@ impl VirtualRel {
 
     /// The firings down the chain of the row `(a, d)`: `firing_prems` of `(a, d)`, then of the row above, up to the
     /// one an edge out of `a` makes.
-    pub fn chain_prems(&self, book: Sym, a: Term, d: Term) -> Option<Vec<Vec<VPrem>>> {
-        let f = &self.forests.iter().find(|(b, f)| *b == book && f.is_ancestor(a, d))?.1;
+    pub fn chain_prems(&self, forests: &[(Sym, Rc<crate::forest::Forest>)], book: Sym, a: Term, d: Term) -> Option<Vec<Vec<VPrem>>> {
+        let f = &forests.iter().find(|(b, f)| *b == book && f.is_ancestor(a, d))?.1;
         let (ebook, near) = match self.near {
             Some(n) => (n.ebook, Some(n)),
             None => (book, None),
@@ -2862,9 +2862,27 @@ impl Store {
                 _ => continue,
             };
         }
+        if self.cells.prems.iter().any(|p| matches!(p.kind(), Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_))) {
+            for p in Rc::make_mut(&mut self.cells).prems.iter_mut() {
+                *p = match p.kind() {
+                    Prem::Neg(k) => PremRef::Neg(f(k)),
+                    Prem::Bi(k) if k != 0 => PremRef::Bi(f(k)),
+                    Prem::VRow(k) if k != 0 => PremRef::VRow(f(k)),
+                    _ => continue,
+                };
+            }
+        }
         let rows: Vec<(Sym, VRow)> = self.vrow_of.own.drain().map(|(k, v)| (f(k), v)).collect();
         self.vrow_of.own.extend(rows.iter().copied());
         rows
+    }
+
+    /// The cells of `s`, a store forked from the same core that settled the world's aggregates (by levels, the
+    /// reader's unit): a firing read from it names its cells by their place there.
+    pub fn read_cells(&mut self, s: &Store) {
+        if s.cells.recs.len() >= self.cells.recs.len() {
+            self.cells = s.cells.clone();
+        }
     }
 
     /// This store, which wrote nothing, set as it was before it read stretches (a volume holds it so, the stretches
@@ -4551,7 +4569,7 @@ impl Store {
                 let mut rank = |v: &WitView<'_>| {
                     let mut sig = String::new();
                     self.write_sig(h, v, &mut sig);
-                    (v.prems.iter().fold(0u32, |a, p| a.max(self.prem_height(p, memo))), sig)
+                    (v.prems.iter().fold(0u32, |a, p| a.max(self.prem_height(self, p, memo))), sig)
                 };
                 let mut ranked: Vec<((u32, String), WitView<'_>)> = vs.into_iter().map(|v| (rank(&v), v)).collect();
                 ranked.sort_by(|a, b| a.0 .0.cmp(&b.0 .0).then_with(|| cmp_js(&a.0 .1, &b.0 .1)));
@@ -4609,7 +4627,7 @@ impl Store {
             .map(|n| {
                 let mut hgt = 0u32;
                 for p in self.view(n).prems {
-                    hgt = hgt.max(self.prem_height(p, memo));
+                    hgt = hgt.max(self.prem_height(self, p, memo));
                 }
                 let mut sig = String::new();
                 self.write_sig(h, &self.view(n), &mut sig);
@@ -4624,7 +4642,9 @@ impl Store {
     /// returns first.
     pub fn firings_ranked(&self, h: &Heap, id: FactId, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
         if !self.here(id) {
-            return self.rank_firings(h, self.firings(id), memo);
+            // (read where they were written: a firing's rows are named by its store's keys)
+            let fs = self.views(id).into_iter().map(|v| ((v.rule, v.tick, v.prems.to_vec()), v.src)).collect();
+            return self.rank(h, fs, memo);
         }
         if self.wit_head.get(id as usize).is_none_or(|c| *c == EMPTY) {
             return Vec::new();
@@ -4641,14 +4661,19 @@ impl Store {
     /// Firings found by the caller (not held here) in the order `witness_of`
     /// ranks the held ones: least height, then signature.
     pub fn rank_firings(&self, h: &Heap, fs: Vec<(Sym, u32, Vec<PremRef>)>, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
-        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
+        self.rank(h, fs.into_iter().map(|f| (f, self)).collect(), memo)
+    }
+
+    /// `rank_firings` of firings each with the store that wrote it.
+    fn rank(&self, h: &Heap, fs: Vec<((Sym, u32, Vec<PremRef>), &Store)>, memo: &mut Heights) -> Vec<(Sym, u32, Vec<PremRef>)> {
+        let roots: Vec<FactId> = fs.iter().flat_map(|f| f.0 .2.iter()).filter_map(|p| if let Prem::Fact(g) = p.kind() { Some(g) } else { None }).collect();
         let _ = self.heights(&roots, memo);
         let mut ranked: Vec<(u32, String, (Sym, u32, Vec<PremRef>))> = fs
             .into_iter()
-            .map(|f| {
-                let hgt = f.2.iter().fold(0u32, |a, p| a.max(self.prem_height(p, memo)));
+            .map(|(f, src)| {
+                let hgt = f.2.iter().fold(0u32, |a, p| a.max(self.prem_height(src, p, memo)));
                 let mut sig = String::new();
-                self.write_sig(h, &WitView { rule: f.0, tick: f.1, prems: &f.2, src: self }, &mut sig);
+                self.write_sig(h, &WitView { rule: f.0, tick: f.1, prems: &f.2, src }, &mut sig);
                 (hgt + 1, sig, f)
             })
             .collect();
@@ -4768,9 +4793,19 @@ impl Store {
     /// The facts of the firings down a tree row's chain, from the descendant up to the ancestor; None for a row that
     /// does not hold.
     fn vrow_chain(&self, k: Sym) -> Option<Vec<Vec<FactId>>> {
-        let (ci, book, a, d) = self.vrow_of.get(&k).filter(|_| self.vwit && !brk!("vclosure_height_zero" => true; false))?;
+        let (ci, book, a, d) = self.vrow_of.get(&k).filter(|_| !brk!("vclosure_height_zero" => true; false))?;
         let v = self.virtuals.get(ci)?;
-        v.chain_prems(book, a, d)?.into_iter().map(|ps| {
+        // (the row's tree lies here, or by levels in the unit of the node's file, which says whether it kept the
+        // rows' firings)
+        let held = |fs: &[(Sym, Rc<crate::forest::Forest>)]| fs.iter().any(|(b, f)| *b == book && f.is_ancestor(a, d));
+        let (forests, wit) = match self.facts.near.as_ref().and_then(|n| n.trees.as_ref()).filter(|_| !held(&v.forests)).and_then(|t| t(d)) {
+            Some(s) => (s.forests(ci), s.store().vwit),
+            None => (v.forests.clone(), self.vwit),
+        };
+        if !wit {
+            return None;
+        }
+        v.chain_prems(&forests, book, a, d)?.into_iter().map(|ps| {
             ps.into_iter().filter_map(|p| match p {
                 VPrem::Fact(r, b, args) => Some(self.get(r, b, &args).ok_or(())),
                 _ => None,
@@ -4787,11 +4822,11 @@ impl Store {
     }
 
     /// The height of a premise: a fact's from `memo` (computed), a cell's own, a row of a tree's, a negation and a builtin 0.
-    fn prem_height(&self, p: &PremRef, memo: &mut Heights) -> u32 {
+    fn prem_height(&self, src: &Store, p: &PremRef, memo: &mut Heights) -> u32 {
         match p.kind() {
             Prem::Fact(g) => memo.get(&g).copied().unwrap_or(u32::MAX - 1),
-            Prem::Cell(x) => self.cells.recs[x as usize].height,
-            Prem::VRow(k) => self.vrow_height(k, memo),
+            Prem::Cell(x) => src.cells.recs[x as usize].height,
+            Prem::VRow(k) => self.vrow_height_in(src, k, memo),
             Prem::Neg(_) | Prem::Bi(_) => 0,
         }
     }

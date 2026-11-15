@@ -1192,6 +1192,43 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     }
 }
 
+/// WHY OF A COUNT BY LEVELS is the world whole's: the count is the reader's unit's, its cells are read there and its
+/// members' firings, written in the files' units, cite rows of a tree by those units' keys.
+#[test]
+fn why_of_a_count_by_levels_answers_as_the_world_whole() {
+    let d = Dir::new("levels_count");
+    let mut w = String::from("tree edge(P, C).\nnearest nfn[d](F, X) of edge[d](F, X) where func[d](F).\n\
+        m[d](X) :- stmt[d](X), nfn[d](F, X).\nm[d](X) :- stmt[d](X), deep[d](X).\ndeep[d](X) :- far[d](X, Y), deep[d](Y).\n\
+        deep[d](X) :- seed[d](X).\nn[d](F, N) :- func[d](F), N is count(X : m[d](X), nfn[d](F, X)).\n");
+    for f in 1..=24u64 {
+        let node = |k: u64| format!("n{f:016x}_{k}");
+        for g in 0..3 {
+            let fun = node(g * 11);
+            w += &format!("func[d]({fun}).\n");
+            for i in 1..=10 {
+                // (a statement is under the function or one deeper, and reached two ways: its nearest and a chain)
+                let (s, p) = (node(g * 11 + i), if i % 3 == 0 { node(g * 11 + i - 1) } else { fun.clone() });
+                w += &format!("edge[d]({p}, {s}).\nstmt[d]({s}).\n");
+                w += &if i == 1 { format!("seed[d]({s}).\n") } else { format!("far[d]({s}, {}).\n", node(g * 11 + i - 1)) };
+            }
+        }
+    }
+    d.write("w.rofl", &w);
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
+    let whole = [("ROFL_VOLUMES", "0".to_string())];
+    let ask = rofl_env(BIN, &d, &d.0.join("whole"), &whole, None, &["ask", "n[d](F, N)", "boot.rofl", "w.rofl"]);
+    let line = ask.out.lines().find(|l| l.contains("_11,")).expect("a count").to_string();
+    let fact = format!("n[d]({})", line.replace("F = ", "").replace(", N = ", ", "));
+    let args = ["why", "--all", fact.as_str(), "boot.rofl", "w.rofl"];
+    let want = rofl_env(BIN, &d, &d.0.join("whole"), &whole, None, &args);
+    assert!(want.code == 0 && want.out.contains("[aggregate"), "why {fact} whole: {:?} {:?}", want.out, want.err);
+    for run in ["fresh", "from the kept units"] {
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, None, &args);
+        assert!(got.code == 0 && got.out == want.out, "why {fact} by levels, {run}: {:?}\nthe world whole {:?}\n{:?}", got.out, want.out, got.err);
+        assert!(got.err.contains(if run == "fresh" { "settled by levels" } else { "kept units" }), "{run}: {:?}", got.err);
+    }
+}
+
 #[test]
 fn a_kept_world_answers_and_refuses_as_docs_cli_says() {
     // a fault planted by scripts/agg_breaks.ts reaches every binary a case runs
