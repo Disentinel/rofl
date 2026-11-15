@@ -1136,6 +1136,7 @@ impl Eval {
         // the relations the rules of the first layer read
         let read_rels: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).flat_map(|r| r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.rel) } else { None })).collect()).collect();
         let mut trees: Option<Rc<TreeOf>> = None;
+        let sizes: Mutex<Option<std::sync::Arc<FxMap<usize, [u64; 4]>>>> = Mutex::default();
         struct Stage1<'a>(&'a Stage);
         // SAFETY: the stage is read
         unsafe impl Sync for Stage1<'_> {}
@@ -1436,6 +1437,7 @@ impl Eval {
             here.sort_unstable();
             e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), walls: walls.clone() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
+            e.0.store.tree_sizes = sizes.lock().unwrap().clone();
             if let Some(o) = &old {
                 let Eval { store, h, .. } = &mut e.0;
                 let came = came.lock().unwrap();
@@ -1593,6 +1595,18 @@ impl Eval {
                     }
                 }
                 let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
+                {
+                    let mut by: FxMap<usize, [u64; 4]> = FxMap::default();
+                    for ci in 0..self.vc.vclosures.len() {
+                        let z = by.entry(ci).or_default();
+                        for f in of.iter().flat_map(|s| s.forests(ci).to_vec()) {
+                            for (i, n) in [f.1.pairs, f.1.deep as u64, f.1.internal as u64, f.1.fanout_sq()].into_iter().enumerate() {
+                                z[i] += n;
+                            }
+                        }
+                    }
+                    *sizes.lock().unwrap() = Some(std::sync::Arc::new(by));
+                }
                 trees = Some(Rc::new(move |t: Term| {
                     let s = &of[cx.file(t)? as usize / leaf];
                     asks(|a| { a.reads.insert(s.lo); });
@@ -1644,6 +1658,7 @@ impl Eval {
                     let mut e = fork();
                     let (trees, forest) = reader_trees(&cx, &tops, &e.0);
                     e.0.store.read_near(bump.load(Relaxed), Some(lower_of(&cx, &tops)), Vec::new(), None, Some(trees), Some(forest));
+                    e.0.store.tree_sizes = sizes.lock().unwrap().clone();
                     e.0.stage_given = Some(Rc::new(given));
                     // (it starts from nothing: no whole evaluation before it left what it may keep)
                     e.0.whole = None;

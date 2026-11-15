@@ -103,6 +103,8 @@ pub struct Forest {
     graph: Option<Box<crate::graph::Graph>>,
     /// a declared `nearest`: for each node the nearest strict ancestor the condition holds of, `NONE` for none
     near: Option<Arena<u32>>,
+    /// the sum over the ancestors of the square of their descendants (`fanout_sq`), made when first asked
+    sq: std::sync::OnceLock<u64>,
 }
 
 /// The children by parent, in the order the edges were given: the offsets into the child list, and the list.
@@ -187,7 +189,7 @@ impl Forest {
             internal += (start[v + 1] > start[v]) as u32;
         }
         let idx = Idx::of(&nodes, |_| true);
-        Forest { nodes: nodes.into(), idx, parent: parent.into(), pre: pre.into(), order: order.into(), end: end.into(), depth: depth.into(), pairs, deep, internal, broken, graph: None, near: None }
+        Forest { nodes: nodes.into(), idx, parent: parent.into(), pre: pre.into(), order: order.into(), end: end.into(), depth: depth.into(), pairs, deep, internal, broken, graph: None, near: None, sq: Default::default() }
     }
 
     /// The graph of `(from, to)` edges, cycles allowed.
@@ -220,6 +222,32 @@ impl Forest {
         (f.deep, f.internal) = (f.pairs as u32, ups.len() as u32);
         f.near = Some(near.into());
         f
+    }
+
+    /// THE SECOND MOMENT OF THE FAN-OUT: the sum over the ancestors of the square of the descendants each answers
+    /// for. A descendant reached through a join is drawn by the size of its ancestor, so the ancestor a join binds
+    /// answers for `fanout_sq / pairs` descendants, not the mean `pairs / internal`: the planner prices a premise
+    /// read by its ancestor so (`vstat`). A graph keeps no such count: its mean squared.
+    pub fn fanout_sq(&self) -> u64 {
+        *self.sq.get_or_init(|| {
+            if self.graph.is_some() {
+                return self.pairs * self.pairs / (self.internal.max(1) as u64);
+            }
+            if let Some(near) = &self.near {
+                let mut n = vec![0u64; self.nodes.len()];
+                for &u in near.iter() {
+                    if u != NONE {
+                        n[u as usize] += 1;
+                    }
+                }
+                return n.iter().map(|d| d * d).sum();
+            }
+            (0..self.nodes.len())
+                .filter(|&v| self.pre[v] != NONE)
+                .map(|v| (self.end[v] - self.pre[v] - 1) as u64)
+                .map(|d| d * d)
+                .sum()
+        })
     }
 
     pub fn is_graph(&self) -> bool {
@@ -274,7 +302,7 @@ impl Forest {
         }
         let (nodes, table): (Arena<Term>, Arena<u32>) = (r.arena()?, r.arena()?);
         let [parent, pre, order, end, depth] = [(); 5].map(|_| r.arena::<u32>());
-        let f = Forest { idx: Idx { table, over: FxMap::default() }, parent: parent?, pre: pre?, order: order?, end: end?, depth: depth?, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()?, broken: r.u32()? == 1, nodes, graph: None, near };
+        let f = Forest { idx: Idx { table, over: FxMap::default() }, parent: parent?, pre: pre?, order: order?, end: end?, depth: depth?, pairs: r.u64()?, deep: r.u32()?, internal: r.u32()?, broken: r.u32()? == 1, nodes, graph: None, near, sq: Default::default() };
         let n = f.nodes.len();
         if !f.idx.table.len().is_power_of_two() || [&f.parent, &f.pre, &f.end, &f.depth].into_iter().chain(&f.near).any(|a| a.len() != n) {
             return Err("a volume's forest is not a forest".into());
@@ -286,6 +314,7 @@ impl Forest {
     /// slot again, and a tree takes the first of the `free` ranges of the pre-order (those of the trees dropped) it
     /// fits, so a tree built again and again grows the forest by what is new in it.
     fn append(&mut self, add: Forest, mut free: Vec<(u32, u32)>) {
+        self.sq = Default::default();
         let slot: Vec<u32> = {
             let mut n = self.nodes.len() as u32;
             let dead = |t: &Term| self.idx.get(&self.nodes, t.bits()).filter(|v| self.pre[*v as usize] == NONE);
@@ -347,6 +376,7 @@ impl Forest {
     /// trees the edges are in, not the forest. The nodes of the trees dropped, each once, for the rows that ended at one
     /// are what a retraction looks at.
     pub fn rebuild_trees(&mut self, removed: &[(Term, Term)], added: &[(Term, Term)]) -> Vec<Term> {
+        self.sq = Default::default();
         if let Some(g) = &self.graph {
             let out: crate::store::FxSet<(u64, u64)> = removed.iter().map(|(p, c)| (p.bits(), c.bits())).collect();
             let mut es: Vec<(Term, Term)> = g.edges().into_iter().filter(|(p, c)| !out.contains(&(p.bits(), c.bits()))).collect();
@@ -402,6 +432,7 @@ impl Forest {
     /// that stand and those added, its marks asked of `marked`; the rest of the forest stands as it is numbered. The
     /// cost is the trees reached. False for a forest that is no nearest.
     pub fn renear(&mut self, removed: &[(Term, Term)], added: &[(Term, Term)], touched: &[Term], marked: &dyn Fn(Term) -> bool) -> bool {
+        self.sq = Default::default();
         if self.near.is_none() {
             return false;
         }

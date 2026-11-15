@@ -151,7 +151,12 @@ impl Eval {
     /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
     fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
         match self.vc.vclosure_for(rel) {
-            Some(ci) => self.vc.vlen(ci),
+            // (a tree held from the units is read as it stands: a plan made while it was empty is stale once it is not)
+            Some(ci) => match (self.store.held_trees(ci), self.store.tree_sizes.as_ref().and_then(|z| z.get(&ci))) {
+                (Some(f), _) => f.iter().map(|f| f.1.pairs as usize).sum(),
+                (None, Some(z)) if self.vc.vlen(ci) == 0 => z[0] as usize,
+                _ => self.vc.vlen(ci),
+            },
             None => self.store.rel_len_est(rel, persp),
         }
     }

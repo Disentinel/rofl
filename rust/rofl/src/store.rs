@@ -1905,6 +1905,9 @@ pub struct Store {
     /// Facts in a group ordered by tuple id instead of by rendered key: the same
     /// facts, a cheaper comparator, candidate order observable. Set by the harness.
     pub unordered: bool,
+    /// In a unit above the files', which reads a tree by the node from its file's unit: the size of each closure
+    /// over every file (pairs, deep, internal, the second moment), for the planner, which would see it empty.
+    pub tree_sizes: Option<std::sync::Arc<FxMap<usize, [u64; 4]>>>,
     pub tick: u32,
     pub dirty: bool,
     /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
@@ -2449,6 +2452,7 @@ impl VRows {
 impl Store {
     pub fn new() -> Store {
         Store {
+            tree_sizes: None,
             dirty: true,
             ..Default::default()
         }

@@ -4234,5 +4234,5 @@ work_state(w_readers_unit_explodes, open).
 work_spawned(w_readers_unit_explodes, f_the_js_model_grows_in_proportion_and_the_seconds_do_not).
 work(w_size_biased_fanout,
   "From f_a_tree_held_from_the_units_was_sized_zero_to_the_planner: the planner prices a premise read by a key a join bound at the average fan-out of a key (a closure: rows / internal), but a key bound by a join through its members is drawn by its size, and the expected fan-out is the sum of the squares over the sum. acts_in[flow] by levels reads 19 M rows at 120 files of vscode for 11 facts by it. To do: the second moment kept beside pairs, deep and internal in a forest, and in the census for a relation's distinct values, and `vstat` and the join estimate use it where the key is bound by a variable. ACCEPTANCE: acts_in out of `hot:` at 120 files by levels, the rows read of the run at 20, 60, 120 files no more than before.").
-work_state(w_size_biased_fanout, open).
+work_state(w_size_biased_fanout, done).
 work_spawned(w_size_biased_fanout, f_a_tree_held_from_the_units_was_sized_zero_to_the_planner).
