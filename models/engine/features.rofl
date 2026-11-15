@@ -180,12 +180,12 @@ by_value[audit](D, Name) :- entry(D, Name), not explained(D, Name).
 
 -- ===================================================================== A WORD THE ENGINE READS
 -- a name interned from a literal (`h.intern("cut")`): a relation or a book a world may write, read by the engine in
--- that function. Its behaviour is the function and what it reaches; no test guards it, so nothing is barred.
+-- that function. Its behaviour here is that function alone: where the facts found under the name are read from
+-- there on is carried by a symbol, which the model does not follow yet.
 word_at(F, Name) :- callee[value](C, M), member[value](M, _, "intern"), nth[tree](C, 0, L), literal[value](L, Name),
                     string is type_of(Name), in_fn[rust](F, C), not test_fn[rust](F).
 entry_kind(D, Name, word) :- word_at(F, Name), fn_q[rust](F, D).
 does_fn(D, Name, F) :- word_at(F, Name), fn_q[rust](F, D).
-does_fn(D, Name, H) :- word_at(F, Name), fn_q[rust](F, D), plain_reach(F, H).
 
 -- ===================================================================== FEATURE
 differs(D, A, B) :- does(D, A, H), entry(D, B), not does(D, B, H).

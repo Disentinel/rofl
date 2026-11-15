@@ -76,6 +76,10 @@ stray(P, K, Name) :- by(P, W, answer, engine), named(P, K, Name), pr(P, _, A, _)
 points_at(P, K, Name, Still) :- seen(P, K, Name), not stray(P, K, Name), evidence_n(P, K, Name, N),
                                 saw_n(P, K, Name, answer, S), Still is N - S.
 
+-- and the one fewest of the worlds that stayed say
+least_still(P, M)       :- points_at(P, _, _, _), M is min(S : points_at(P, _, _, S)).
+points_most(P, K, Name) :- points_at(P, K, Name, S), least_still(P, S).
+
 engine_moved_n(P, M, N) :- pr(P, _, _, _), metric(M), N is count(W : by(P, W, M, engine)).
 unsplit_n(P, M, N)      :- pr(P, _, _, _), metric(M), N is count(W : by(P, W, M, unsplit)).
 
