@@ -48,6 +48,9 @@ use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Subst, Sym, Term, TermK};
 
+/// The steps every evaluation of this process took, its rounds included: what `rofl load` says as `cost:`.
+pub static STEPS: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {
     pub eval: Eval,
@@ -900,6 +903,7 @@ impl Session {
             self.eval.store.partial_eval = true;
             e.partial = true;
         }
+        STEPS.fetch_add(spent, std::sync::atomic::Ordering::Relaxed);
         Ok(e)
     }
 
@@ -1435,7 +1439,9 @@ impl Session {
     /// The boundary. Staged `@next` facts are installed here, and here is the
     /// only place a volume may be lifted (measurement 3).
     pub fn tick(&mut self) -> Result<TickOutcome, Halt> {
-        self.eval.tick_advance()
+        let r = self.eval.tick_advance();
+        STEPS.fetch_add(self.eval.steps, std::sync::atomic::Ordering::Relaxed);
+        r
     }
 
     /// Ask one literal, written as ROFL: `edge(a, X)`, `kind[js](F, _)`.
@@ -2144,17 +2150,8 @@ impl Session {
                 continue;
             };
             if !lows.contains_key(file) {
-                let mut eval = self.eval.fork();
-                eval.lower_texts = None;
-                // (a reader of units: the file's lower stage is evaluated over the core alone)
-                if eval.levels.take().is_some() {
-                    eval.store.reads_none();
-                }
-                let r = crate::program::load_program(&mut eval, &texts[file], None);
-                if !r.ok {
-                    return Err(r.diagnostics.join("\n"));
-                }
-                eval.lower_stage(&st).map_err(|e| crate::describe(&e))?;
+                let mut eval = self.eval.thaw(&texts[file], &st).map_err(|e| crate::describe(&e))?;
+                eval.demand.asking = false;
                 lows.insert(file.to_string(), Session { eval, dangling: 0, asks: 0, profiled: true, kept: Default::default(), post: None, sent: Default::default() });
             }
             let low = lows.get_mut(file).expect("put above");
@@ -2377,6 +2374,17 @@ impl Session {
         match self.eval.whynot_files(&lit, b, vols) {
             Ok(r) => Ok(r),
             Err(Halt::Budget(..)) => Ok(Vec::new()),
+            Err(h) => Err(describe(&h)),
+        }
+    }
+
+    /// `whynot` in one file of a corpus (`Eval::whynot_in`): the file by its node prefix.
+    pub fn whynot_in(&mut self, query: &str, b: &WhynotBounds, file: &str) -> Result<WhynotFile, String> {
+        self.explaining()?;
+        let lit = self.one_lit(query)?;
+        self.cone_holds(&lit)?;
+        match self.eval.whynot_in(&lit, b, file) {
+            Ok(r) => Ok(r),
             Err(h) => Err(describe(&h)),
         }
     }

@@ -1,0 +1,107 @@
+-- models/engine/feature-behaviour.rofl — WHETHER A CHANGE MOVED WHAT A FEATURE DOES, SEEN FROM OUTSIDE. Beside
+-- feature-diff.rofl, which says whose code a change wrote, this says what the worlds of the tree saw. The words are
+-- the product model's (models/product/vocab.rofl): a world of `npm test` is EVIDENCE, it EXERCISES a feature whose
+-- name it says, and it MEASURES a metric at each snapshot: what it answered and what the answer cost.
+--
+--   file_word[snap](Tree, File, Name)  an entry's name written in a file of the tree, outside comments and strings
+--   ran_with[snap](Tree, W, Flag)      a flag `npm test` runs the world with
+--   measures[snap](Tree, W, M, V)      what W came to at the tree: answer (the hash), rows, steps, space (peak rows)
+--   world_file[snap](Tree, W, File)   a file W reads
+--   changed_file[snap](P, File)       a file P wrote
+--
+-- An answer is a function of the engine and of the world's files, so a move has a cause: `engine` where no file of
+-- the world was written, `files` where the engine was not, `unsplit` where both were (the measure cannot tell).
+
+edb(file_word).
+edb(ran_with).
+edb(measures).
+edb(world_file).
+edb(changed_file).
+
+engine_file("boot.rofl").
+engine_written(P) :- wrote[snap](P, _, _).
+engine_written(P) :- wrote_outside[snap](P, _, _).
+engine_written(P) :- changed_file[snap](P, F), engine_file(F).
+engine_written(P) :- files[snap](P, "src", _, _).
+
+-- ===================================================================== WHAT A WORLD SAYS
+-- the kinds of entry a world's text names; a verb or an op is said by whoever runs the world
+text_kind(aggregate). text_kind(builtin). text_kind(declaration). text_kind(marker). text_kind(word).
+exercises(T, W, K, Name)    :- world_file[snap](T, W, F), file_word[snap](T, F, Name), entry_at[snap](T, _, Name, K), text_kind(K).
+exercises(T, W, flag, Name) :- ran_with[snap](T, W, Name), entry_at[snap](T, _, Name, flag).
+
+-- ===================================================================== A WORLD, BEFORE AND AFTER
+moved_w(P, W, M) :- pr(P, B, A, _), measures[snap](B, W, M, X), measures[snap](A, W, M, Y), X != Y.
+fed(P, W)        :- pr(P, _, A, _), world_file[snap](A, W, F), changed_file[snap](P, F).
+by(P, W, M, unsplit) :- moved_w(P, W, M), fed(P, W), engine_written(P).
+by(P, W, M, files)   :- moved_w(P, W, M), fed(P, W), not engine_written(P).
+by(P, W, M, engine)  :- moved_w(P, W, M), not fed(P, W), engine_written(P).
+-- moved, and nothing it is a function of was written: the measure reads something this model does not
+uncaused[audit](P, W, M) :- moved_w(P, W, M), not fed(P, W), not engine_written(P).
+
+-- ===================================================================== A FEATURE AND ITS EVIDENCE
+-- evidence that can tell on the engine: measured at both trees, none of its files written
+evidence(P, K, Name, W) :- pr(P, B, A, _), exercises(A, W, K, Name), measures[snap](B, W, answer, _), not fed(P, W).
+saw(P, K, Name, M, W)  :- evidence(P, K, Name, W), by(P, W, M, engine).
+evidence_n(P, K, Name, N) :- named(P, K, Name), N is count(W : evidence(P, K, Name, W)).
+saw_n(P, K, Name, M, N)    :- named(P, K, Name), metric(M), N is count(W : saw(P, K, Name, M, W)).
+metric(answer). metric(steps). metric(space).
+named(P, K, Name) :- pr(P, _, A, _), entry_at[snap](A, _, Name, K).
+
+-- what its evidence cost together, before and after
+cost_at(P, T, K, Name, M, X) :- named(P, K, Name), pr(P, B, A, _), tree_of(P, T), cost_metric(M), evidence(P, K, Name, _),
+                                X is sum(V ; W : evidence(P, K, Name, W), measures[snap](T, W, M, V)).
+tree_of(P, B) :- pr(P, B, _, _).
+tree_of(P, A) :- pr(P, _, A, _).
+cost(P, K, Name, M, X, Y) :- pr(P, B, A, _), cost_at(P, B, K, Name, M, X), cost_at(P, A, K, Name, M, Y).
+cost_metric(steps). cost_metric(space).
+
+-- ===================================================================== WRITTEN AGAINST SEEN
+written(P, K, Name) :- sharp(P, K, _, Name, _).
+written(P, K, Name) :- rewrote_own(P, D, Name, _), pr(P, _, A, _), entry_at[snap](A, D, Name, K).
+watched(P, K, Name) :- evidence(P, K, Name, _).
+seen(P, K, Name)    :- saw(P, K, Name, answer, _).
+-- its code was written and its evidence answer otherwise
+verdict(P, K, Name, changed)   :- written(P, K, Name), seen(P, K, Name).
+-- written, and all its evidence answers as before: a change of form or of cost, as far as the tree's worlds can tell
+verdict(P, K, Name, held)      :- written(P, K, Name), watched(P, K, Name), not seen(P, K, Name).
+-- written, and no world says it: nothing would have seen it break
+verdict(P, K, Name, unwatched) :- written(P, K, Name), not watched(P, K, Name).
+-- not written, and its evidence answer otherwise: the code under every feature moved it
+verdict(P, K, Name, carried)   :- named(P, K, Name), not written(P, K, Name), seen(P, K, Name).
+
+-- ===================================================================== WHICH FEATURE THE MOVE POINTS AT
+-- every world the engine moved says it, and few of the worlds that stayed do
+stray(P, K, Name) :- by(P, W, answer, engine), named(P, K, Name), pr(P, _, A, _), not exercises(A, W, K, Name).
+points_at(P, K, Name, Still) :- seen(P, K, Name), not stray(P, K, Name), evidence_n(P, K, Name, N),
+                                saw_n(P, K, Name, answer, S), Still is N - S.
+
+-- and the one fewest of the worlds that stayed say
+least_still(P, M)       :- points_at(P, _, _, _), M is min(S : points_at(P, _, _, S)).
+points_most(P, K, Name) :- points_at(P, K, Name, S), least_still(P, S).
+
+engine_moved_n(P, M, N) :- pr(P, _, _, _), metric(M), N is count(W : by(P, W, M, engine)).
+unsplit_n(P, M, N)      :- pr(P, _, _, _), metric(M), N is count(W : by(P, W, M, unsplit)).
+
+-- ===================================================================== MEANT AGAINST SEEN
+-- meant_answers(P, Kind, Name, When): the worlds that say this entry are to answer otherwise; When as in intent.rofl.
+-- A change that says none means every answer to hold.
+edb(meant_answers).
+expected(P, W)    :- by(P, W, answer, engine), pr(P, _, A, _), meant_answers(P, K, Name, _), exercises(A, W, K, Name).
+-- a world the engine moved that says nothing the change meant to move
+side_answer(P, W) :- by(P, W, answer, engine), not expected(P, W).
+-- meant to move, and none of its evidence answers otherwise
+unmet_answers(P, K, Name) :- meant_answers(P, K, Name, _), not seen(P, K, Name).
+side_answer_n(P, N) :- pr(P, _, _, _), N is count(W : side_answer(P, W)).
+
+-- ===================================================================== WHAT IT COST
+-- a world the engine alone made dearer or cheaper, in steps or in rows at the peak
+dearer(P, W, M, X, Y)  :- by(P, W, M, engine), cost_metric(M), pr(P, B, A, _), measures[snap](B, W, M, X), measures[snap](A, W, M, Y), Y > X.
+cheaper(P, W, M, X, Y) :- by(P, W, M, engine), cost_metric(M), pr(P, B, A, _), measures[snap](B, W, M, X), measures[snap](A, W, M, Y), Y < X.
+-- meant_cheaper(P, Metric, Kind, Name, When): what the evidence of this entry costs is to go down
+edb(meant_cheaper).
+unmet_cheaper(P, M, K, Name) :- meant_cheaper(P, M, K, Name, _), cost(P, K, Name, M, X, Y), Y >= X.
+unmet_cheaper(P, M, K, Name) :- meant_cheaper(P, M, K, Name, _), not watched(P, K, Name).
+-- dearer, and says nothing the change meant to move or to make cheaper
+excused(P, W)       :- pr(P, _, A, _), meant_answers(P, K, Name, _), exercises(A, W, K, Name).
+side_dearer(P, W, M) :- dearer(P, W, M, _, _), not excused(P, W).

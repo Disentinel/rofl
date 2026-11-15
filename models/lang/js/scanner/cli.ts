@@ -5,7 +5,7 @@
 //
 // The facts are oxc's tree, raw, in [ast_oxc] (models/lang/js/scanner/oxc_scan, which models/lang/js/oxc-roles.rofl reads into the
 // roles), and the host's: the paths and the strings of the files (host_facts.ts). Without --out they go
-// to stdout. A file oxc refuses is named on stderr and the exit code is 2. Then: `rofl why L @rules/js.files FILE`.
+// to stdout. A file oxc refuses is named on stderr and the exit code is 2. Then: `rofl why L @js FILE`.
 // A node's id is a hash of its path in the tree, so a file scanned again keeps the ids of what the edit did not touch;
 // for a kept world the engine names the previous output in ROFL_SCAN_PREVIOUS, and a node matched there keeps its id
 // (models/lang/js/scanner/oxc_inherit.ts).

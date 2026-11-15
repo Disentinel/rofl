@@ -1632,9 +1632,11 @@ impl Eval {
                     e.0.stage_given = Some(Rc::new(given));
                     // (it starts from nothing: no whole evaluation before it left what it may keep)
                     e.0.whole = None;
+                    let t = std::time::Instant::now();
                     if e.0.run()?.partial {
                         return Err(Halt::Budget("budget_exhausted", None));
                     }
+                    said.push(format!("levels: the reader's unit, the rules left to it fired whole over the layers, took {} ms", t.elapsed().as_millis()));
                     said.append(&mut e.0.diags);
                     done(e, k, all, Vec::new(), FxMap::default(), Rc::default(), Asked::default())
                 }

@@ -5,10 +5,12 @@
 # (models/engine/features.rofl) and kept as [snap] facts under .cache/engine/features/;
 # models/engine/feature-diff.rofl reads two trees and a change's lines. A tree takes about a minute and 3 GB.
 # A tree already kept is not asked again. Needs `cargo build --release` in rust/.
+# The worlds of each tree (scripts/worlds_scan.ts: their files, the entries' names they say, their goldens) and the
+# files a change wrote go beside them, for models/engine/feature-behaviour.rofl.
 set -e
 n=${1:-20}
 ref=${2:-HEAD}
-rofl=rust/target/release/rofl
+rofl=rust/target/${ROFL_PROFILE:-release}/rofl
 cargo build --release -q --manifest-path rust/tools/rs_tree/Cargo.toml
 scan=rust/tools/rs_tree/target/release/rs_tree
 model="boot.rofl models/lang/js/roles.rofl models/lang/rust/rs-roles.rofl models/lang/rust/names.rofl models/lang/rust/calls.rofl models/lang/rust/flow.rofl models/lang/rust/qname.rofl models/engine/features.rofl"
@@ -49,6 +51,17 @@ snap() { # the features of the tree at commit $1, and with $2 (the lines a chang
   rm -f $out/$1.wrote.tmp
 }
 
+wk=$(cksum < scripts/worlds_scan.ts | cut -d' ' -f1)
+worlds() { # the worlds of the tree at commit $1, read by that tree's own scripts/goldens.ts
+  [ -e $out/$1.worlds.$wk.rofl ] && return
+  git -C "$tree" checkout -q --detach "$1"
+  sed -n 's/^entry_at\[snap\]("[^"]*", "[^"]*","\(.*\)",[a-z]*)\.$/\1/p' $out/$1.rofl | sort -u > $out/$1.names
+  cp scripts/worlds_scan.ts "$tree/scripts/_worlds_scan.ts"
+  node --experimental-strip-types "$tree/scripts/_worlds_scan.ts" "$1" $out/$1.names > $out/$1.worlds.tmp 2>/dev/null \
+    && mv $out/$1.worlds.tmp $out/$1.worlds.$wk.rofl || { echo "the worlds of $1 were not read" >&2; : > $out/$1.worlds.$wk.rofl; }
+  rm -f "$tree/scripts/_worlds_scan.ts" $out/$1.names $out/$1.worlds.tmp
+}
+
 : > $out/prs.rofl
 for c in $(git log --first-parent -$n --format=%h $ref); do
   b=$(git rev-parse --short "$c^")
@@ -68,10 +81,13 @@ for c in $(git log --first-parent -$n --format=%h $ref); do
     git diff -U0 "$b" "$c" -- facts/goldens.rofl | awk -v p=$pr -F'"' '/^[-+]golden_state\(/ { s[$2] = s[$2] substr($0, 1, 1) }
       END { for (w in s) print "golden[snap](" p ", \"" w "\", " (s[w] == "+" ? "new" : s[w] == "-" ? "gone" : "moved") ")." }' >> $out/$c.wrote.rofl
   fi
+  git diff --name-only "$b" "$c" | sed "s/.*/changed_file[snap]($pr, \"&\")./" > $out/$c.files.rofl
+  worlds "$c"
   echo "#$pr $c: $(wc -l < $out/$c.diff.rofl) lines, $(grep -c '^wrote\[' $out/$c.wrote.rofl || true) functions" >&2
   last=$b
 done
 snap "$last"
-cat $out/prs.rofl $(for c in $(git log --first-parent -$n --format=%h $ref); do echo $out/$c.rofl $out/$c.wrote.rofl $out/$(git rev-parse --short "$c^").rofl; done | tr ' ' '\n' | sort -u) > $out/world.rofl
+worlds "$last"
+cat $out/prs.rofl $(for c in $(git log --first-parent -$n --format=%h $ref); do b=$(git rev-parse --short "$c^"); echo $out/$c.rofl $out/$c.wrote.rofl $out/$c.files.rofl $out/$c.worlds.$wk.rofl $out/$b.rofl $out/$b.worlds.$wk.rofl; done | tr ' ' '\n' | sort -u) > $out/world.rofl
 cp $out/world.rofl .cache/engine/features/world.rofl
 echo .cache/engine/features/world.rofl

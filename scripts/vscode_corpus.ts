@@ -30,6 +30,7 @@ const OXC = path.join(ROOT, 'models/lang/js/scanner/oxc_scan/target/release/oxc_
 
 /** oxc's facts of the files (paths from root) and the host's of their paths and strings; the errors are the files oxc refused. */
 function factsOf(root: string, files: string[], seen: Set<string>): { text: string; errors: [string, string][] } {
+  if (!fs.existsSync(OXC)) throw new Error(`${OXC} is not built: cargo build --release --manifest-path models/lang/js/scanner/oxc_scan/Cargo.toml`);
   let raw: string;
   try { raw = execFileSync(OXC, ['--no-start', root, ...files], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch (e) { raw = (e as { stdout?: string }).stdout ?? ''; }
