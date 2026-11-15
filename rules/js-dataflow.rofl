@@ -1636,7 +1636,7 @@ via_sum[flow](C, O, Key, VK, X)      :- wants[flow](C, O, Key), resolves[code](C
 via_holds[flow](C, O, Key, lit, X)   :- via_sum[flow](C, O, Key, lit, X).
 via_holds[flow](C, O, Key, node, X)  :- via_sum[flow](C, O, Key, node, X).
 via_holds[flow](C, O, Key, inst, X)  :- via_sum[flow](C, O, Key, inst, X).
-via_holds[flow](C, O, Key, VK, X)    :- via_sum[flow](C, O, Key, input, S), resolves[code](C, F), input_param[flow](S, F, I),
+via_holds[flow](C, O, Key, VK, X)    :- via_sum[flow](C, O, Key, input, param(F, I)), resolves[code](C, F),
                                         arg_at[flow](C, I, A), may_be[flow](A, VK, X).
 via_holds[flow](C, O, Key, input, S) :- via_sum[flow](C, O, Key, input, S), resolves[code](C, F), input_this[flow](S, F).
 via_holds[flow](C, O, Key, input, S) :- via_sum[flow](C, O, Key, input, S), resolves[code](C, F), input_of[flow](S, H), H != F.

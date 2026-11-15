@@ -20,7 +20,7 @@
 se_host_global("process").
 se_host_global("fetch").
 external_value[flow](G, G) :- se_host_global(G).
-may_be_node[flow](E, G)    :- se_host_global(G), free_global[code](E, G, _).
+may_be[flow](E, node, G)   :- se_host_global(G), free_global[code](E, G, _).
 
 -- 2. WHAT AN EXTERNAL VALUE IS CALLED. The module object and the namespaces inside it (`fs.promises`, `x.default`);
 -- a function is a member of one, a name imported or destructured from the module, or the module itself (`*`).
