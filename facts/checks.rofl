@@ -4087,3 +4087,11 @@ check_world("ci_gate").
 check_file("ci_gate", "models/process/ci/cost.rofl").
 check_file("ci_gate", "models/process/ci/gate.rofl").
 check_file("ci_gate", "models/process/ci/gate-proof.rofl").
+
+-- WHAT THE WORLDS SAW OF A CHANGE, BY FEATURE (models/engine/feature-behaviour.rofl, beside feature-diff.rofl): one
+-- change over four features and five worlds, each verdict once: `cut` changed, `sum` carried, `whynot` unwatched,
+-- `--retract` meant to move and unmet; the ledger's world, whose file the change wrote too, is unsplit.
+check_world("feature_behaviour").
+check_file("feature_behaviour", "models/engine/feature-diff.rofl").
+check_file("feature_behaviour", "models/engine/feature-behaviour.rofl").
+check_file("feature_behaviour", "examples/checks/feature-behaviour-toy.rofl").
