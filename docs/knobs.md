@@ -44,6 +44,7 @@ Every flag has a consumer.
 | `--ask L`, `--why L`, `--why-all L`, `--whynot L`, `--excise F` | several questions in one run; `rofl ask`/`why`/`whynot`/`excise` is one of them (docs/cli.md) | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs`, example READMEs | KEEP | |
 | `--json` | each answer as `rofl serve` answers it | docs/cli.md, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--depth N`, `--nodes N` | bounds of every `--whynot` | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
+| `--in NODE` | a `--whynot` asked in the file of that node: the row of the table of files opened (docs/cli.md) | `rust/rofl/tests/kept.rs` | KEEP | an argument of the question, as the bounds are |
 | `--state` | print the dump before the answers | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `--propose-structures`, `--structures-min-rows N` | the detection report in place of the state | `scripts/structures.ts`, `scripts/agg_breaks.ts` | KEEP | |
 | `--kept F`, `--anew` | the world kept on disk at F, evaluated once and answered from F by every verb in later runs, refused when stale; `--anew` evaluates it again over F (docs/cli.md, "A world kept on disk") | the owner's request of 2026-10-21, `rust/rofl/tests/kept.rs`, docs/cli.md | KEEP: one name for a kept world for every verb and one reset, nothing else. Without them a question verb keeps its world by itself in the cache directory (docs/cli.md), with no knob to turn that on or off; `rofl load` and `rofl serve` never do | |

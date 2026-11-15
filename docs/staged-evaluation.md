@@ -132,8 +132,9 @@ from the store.
 6. **The explanation by file**: the why of an absence as a table of files, each row expanded by lifting one volume.
    Built over the evaluated world: a whynot walk parted by file, a row a file with its answers and the premises it
    stopped at, shown as the table in a notebook and answered by `rofl serve`
-   (`f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file`). Left: the zero of a row read from the
-   file's kept stage under its hash and the program's, which needs item 1.
+   (`f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file`). Over a corpus kept as units: the
+   table's counts are read off the units, a row opens with `--in`, and a walk that goes below a cut thaws the one
+   file it names (`f_a_whynot_below_the_cut_thaws_the_file_it_names`, docs/cli.md).
 
 Each item opens with its hypothesis measured; a refuted hypothesis is recorded and changes the order before
 anything is built on it.

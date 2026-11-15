@@ -48,6 +48,42 @@ out. `rofl whynot --all`, `rofl load --whynot-all L` and the protocol's
 `"all": true` print the whole walk; `explain_request(whynot, L)` stores the
 whole walk, and a notebook prints it under `--all`.
 
+**Below a cut, a whynot walks the file, thawed.** A world that cut a book
+(`cut[fixpointplan](Book)`, *Lemma stages*) holds the lemmas of its lower stage
+and not what they were proved from, so a walk of that stage's rules over it
+would name as failed a premise that held. Where the walk reaches a literal the
+lower stage concludes, the literal names its file by a node: the file's text is
+read again, its lower stage evaluated in a fork over the core alone, and the
+walk goes on there, the same text as in a world with nothing cut
+(`Eval::explain_thawed`, `cargo test -p rofl --test kept an_absence`). The
+sources are read when the first walk goes below the cut, and not before. A
+literal there that names no one file is said, not walked: `... is proved in a
+file from [Book], which this world cut; it names no one file: ask it of a node
+of a file`; so is one whose world was not given the files' text and whose
+rules read a cut book; one whose rules read only what the world kept is
+walked where it stands. `rofl serve` thaws from what its `load` ops gave; a
+notebook's kernel is given no text. TypeScript evaluates the world whole and cuts nothing.
+
+**An open whynot over a corpus is a table of files.** Asked of a world read
+from units (*A corpus larger than one heap*) with a variable in the question,
+a literal that holds answers `L holds: N answers in F of G files`, then the
+files that hold most with their counts and the first that hold none
+(twelve of each), read off the units, nothing walked. A file is named by its
+node prefix (`n` and 16 hex digits), an answer is of the file its first node
+names. **A row opens with `--in NODE`** (a node of the file, or its prefix):
+`rofl whynot 'dead(F, E)' --in n0123456789abcdef ...` walks the question in
+that file alone, the candidates of the other files not followed, thawing it
+where the walk goes below the cut, and closes with `K answers in this file`;
+`--json` gives `{"ok", "file", "found", "stops", "text"}`. `--in` works over a
+world evaluated whole as well.
+
+What it costs (vscode, release, 4 cores, 2026-11-15): the table takes what the
+ask it counts takes, a bound whynot or an opened row 1 to 2 s more: 0.9 s and
+1.6 s at 250 files, 3.1 s and 5.2 s at 1000 with 3.6 to 4.9 GB resident. The
+seconds past the first are the kept world opened whole, the same for `ask`
+(`w_a_kept_world_opens_whole`). A bare name is read in `[main]` by `whynot`
+and in any book by `ask`: write the book, `calls[code](A, B)`.
+
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
@@ -551,7 +587,7 @@ units settled again, S of them concluding what they had`; the unit of the edited
 and is settled again where one of those stretches was replaced or a fact came or went under such a key; a group is
 mended, its firings carried where their premises stand, where it read no aggregate (`engine/levels.rs`). The answers
 are those of the files evaluated anew (`cargo test -p rofl --test kept`). A file come or gone is computed anew.
-A `why --all` of such a world unfolds a lemma over the core and its file alone; a `whynot` nested inside an unfolded
+A `why --all` of such a world unfolds a lemma over the core and its file alone (the file thawed, as a `whynot` below the cut walks it); a `whynot` nested inside an unfolded
 lemma may name another failed premise than the world whole does (`f_levels_are_the_one_path_by_volumes`).
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
 on Rust (`check_opt(W, one_engine, rust)`). The engine does not yet derive a stage from what is read and asked; a
@@ -559,7 +595,7 @@ stage is the plan's mark.
 
 ## A corpus larger than one heap
 
-**`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
+**`rofl ask`, `rofl why` and `rofl whynot` answer a corpus by volumes, by themselves.** When
 the world's facts name two or more files (a node id's prefix, `n<16 hex>_`) and
 hold 32 MB or more between them (below that the whole world is as fast), the
 facts are cut by file and the world is settled BY LEVELS (`engine/volumes.rs`,
@@ -602,7 +638,10 @@ files 60 to 68 s from one hour to the next on a shared machine, a third of it
 the files' own rules; one fact edited in one file of 250 and asked again, 4.2
 to 5.2 s. Four files to a unit is the owner's trade between
 the two (sixteen: 20.7 s, 64 s and 9.2 s; one: 24.6 s, 93 s and 3.9 s;
-`f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). `whynot`, `excise`,
+`f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). A `whynot` is walked over the reader, the units read
+where they lie, and a file is thawed where the walk goes below a cut
+(*Below a cut*, above; not yet measured at the reference scale, and the first
+thaw of a run reads every source to cut its file out of them). `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.
