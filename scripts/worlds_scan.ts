@@ -3,7 +3,7 @@
 // TREE is the name the facts carry for this tree; NAMES a file of one name a line, the entries of the engine.
 // It prints, in the book `snap`: world_file(TREE, W, File), a file the world reads; ran_with(TREE, W, Flag), a flag
 // `npm test` runs it with; file_word(TREE, File, Name), a name of NAMES written in the file outside comments and
-// strings (a variable, capitalised, is no name); measures(TREE, W, answer|rows, V), the world's committed golden. scripts/features.sh copies it into each
+// strings (a variable, capitalised, is no name); measures(TREE, W, answer|rows|steps|space, V), the world's committed golden and what it cost. scripts/features.sh copies it into each
 // tree it asks, so the worlds are that tree's own.
 import { worlds, parse } from './goldens.ts';
 import { inputs } from './agg_select.ts';
@@ -31,6 +31,9 @@ for (const w of worlds()) {
   for (const f of files.slice(1)) wordsOf(path.join(ROOT, f));
 }
 for (const [f, ws] of words) for (const t of ws) out.push(`file_word[snap](${q(tree)}, ${q(path.relative(ROOT, f))}, ${q(t)}).`);
-for (const [w, g] of parse()) out.push(`measures[snap](${q(tree)}, ${q(w)}, answer, ${q(g.hash)}).`, `measures[snap](${q(tree)}, ${q(w)}, rows, ${g.facts}).`);
+for (const [w, g] of parse() as Map<string, { hash: string; facts: number; cost?: { steps: number; space: number } }>) {
+  if (g.cost) out.push(`measures[snap](${q(tree)}, ${q(w)}, steps, ${g.cost.steps}).`, `measures[snap](${q(tree)}, ${q(w)}, space, ${g.cost.space}).`);
+  out.push(`measures[snap](${q(tree)}, ${q(w)}, answer, ${q(g.hash)}).`, `measures[snap](${q(tree)}, ${q(w)}, rows, ${g.facts}).`);
+}
 console.log(out.join('\n'));
 process.exit(0);

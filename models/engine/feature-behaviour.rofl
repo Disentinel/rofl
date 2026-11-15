@@ -93,3 +93,15 @@ side_answer(P, W) :- by(P, W, answer, engine), not expected(P, W).
 -- meant to move, and none of its evidence answers otherwise
 unmet_answers(P, K, Name) :- meant_answers(P, K, Name, _), not seen(P, K, Name).
 side_answer_n(P, N) :- pr(P, _, _, _), N is count(W : side_answer(P, W)).
+
+-- ===================================================================== WHAT IT COST
+-- a world the engine alone made dearer or cheaper, in steps or in rows at the peak
+dearer(P, W, M, X, Y)  :- by(P, W, M, engine), cost_metric(M), pr(P, B, A, _), measures[snap](B, W, M, X), measures[snap](A, W, M, Y), Y > X.
+cheaper(P, W, M, X, Y) :- by(P, W, M, engine), cost_metric(M), pr(P, B, A, _), measures[snap](B, W, M, X), measures[snap](A, W, M, Y), Y < X.
+-- meant_cheaper(P, Metric, Kind, Name, When): what the evidence of this entry costs is to go down
+edb(meant_cheaper).
+unmet_cheaper(P, M, K, Name) :- meant_cheaper(P, M, K, Name, _), cost(P, K, Name, M, X, Y), Y >= X.
+unmet_cheaper(P, M, K, Name) :- meant_cheaper(P, M, K, Name, _), not watched(P, K, Name).
+-- dearer, and says nothing the change meant to move or to make cheaper
+excused(P, W)       :- pr(P, _, A, _), meant_answers(P, K, Name, _), exercises(A, W, K, Name).
+side_dearer(P, W, M) :- dearer(P, W, M, _, _), not excused(P, W).

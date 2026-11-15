@@ -37,3 +37,7 @@ measures[snap]("t0", "ledger", steps, 3000).       measures[snap]("t1", "ledger"
 -- said before the work: the worlds that say `cut` answer otherwise, and so does whoever says `--retract`
 meant_answers(242, declaration, "cut", planned).
 meant_answers(242, flag, "--retract", planned).
+-- and what says `cut` is to cost fewer steps (met), as is what says `--retract` (unmet: 400 and 400)
+meant_cheaper(242, steps, declaration, "cut", planned).
+meant_cheaper(242, steps, flag, "--retract", planned).
+measures[snap]("t0", "totals", space, 300).   measures[snap]("t1", "totals", space, 340).

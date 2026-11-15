@@ -316,6 +316,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     }
     if o.propose { propose_report(&mut s, o.min_rows); return; }
     if let Some(t) = s.eval.heap_said() { eprintln!("{t}"); }
+    if !from_disk { eprintln!("cost: {} steps, {} rows at peak", rofl::session::STEPS.load(std::sync::atomic::Ordering::Relaxed), s.eval.peak_rows); }
     let cut = s.eval.store.partial_eval;
     if o.qs.is_empty() || o.state { print_state(&o, &mut s, cut); }
     let (refused, partial) = answers(&mut s, &o, cut);

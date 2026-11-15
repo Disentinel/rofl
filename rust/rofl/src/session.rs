@@ -48,6 +48,9 @@ use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Subst, Sym, Term, TermK};
 
+/// The steps every evaluation of this process took, its rounds included: what `rofl load` says as `cost:`.
+pub static STEPS: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {
     pub eval: Eval,
@@ -874,6 +877,7 @@ impl Session {
             self.eval.store.partial_eval = true;
             e.partial = true;
         }
+        STEPS.fetch_add(spent, std::sync::atomic::Ordering::Relaxed);
         Ok(e)
     }
 
@@ -1409,7 +1413,9 @@ impl Session {
     /// The boundary. Staged `@next` facts are installed here, and here is the
     /// only place a volume may be lifted (measurement 3).
     pub fn tick(&mut self) -> Result<TickOutcome, Halt> {
-        self.eval.tick_advance()
+        let r = self.eval.tick_advance();
+        STEPS.fetch_add(self.eval.steps, std::sync::atomic::Ordering::Relaxed);
+        r
     }
 
     /// Ask one literal, written as ROFL: `edge(a, X)`, `kind[js](F, _)`.
