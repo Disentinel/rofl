@@ -1,0 +1,28 @@
+-- facts/gates.rofl — the task and the source of the number of each gate of the engine (models/engine/gates.rofl).
+-- Written by hand, 2026-11-15; a gate with a task and no source is a number from the ceiling.
+
+-- the number tells a person
+decides("HOT_READ", tell).          decides("HOT_SHARE", tell).
+decides("SHOWN", show).             decides("WHY_MEMBERS", show).        decides("WIDTH", show).
+-- which of two ways is cheaper
+decides("VOLUMES_FROM", cheaper).   decides("MIN_INDEXED", cheaper).     decides("FEW", cheaper).
+decides("MARGIN", cheaper).         decides("MARGIN_FULL", cheaper).     decides("REF_MIN", cheaper).
+decides("STITCH_MIN", cheaper).     decides("LABEL_REGIONS", cheaper).   decides("OVER_MOST", cheaper).
+decides("FAR", cheaper).
+-- whether a resource holds
+decides("MEMO_BYTES", room).        decides("FLOOR", room).              decides("SLACK", room).
+decides("MAX_PATTERNS", room).
+-- that a run will not end
+decides("MAX_DEPTH", stop).         decides("MAX_ALTERNATIONS", stop).   decides("DEFAULT_SPACE", stop).
+decides("SPACE", stop).             decides("BUDGET", stop).             decides("DEFAULT_BUDGET", stop).
+decides("POLICY_BUDGET", stop).     decides("WN_FAR", stop).             decides("MAX_ALIAS", stop).
+-- the layout of a value: its number is the width of a type or a field
+decides("SHARED0", room).  from("SHARED0", layout).
+decides("TUP_MASK", room). from("TUP_MASK", layout).
+decides("PREM_LOW", room). from("PREM_LOW", layout).
+decides("PREM_OTHER", room). from("PREM_OTHER", layout).
+decides("INT_MAX", room).  from("INT_MAX", layout).
+decides("INT_MIN", room).  from("INT_MIN", layout).
+decides("FIRST", room).    from("FIRST", layout).
+decides("RUNS", room).     from("RUNS", layout).
+decides("GB", room).       from("GB", layout).

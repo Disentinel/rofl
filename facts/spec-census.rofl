@@ -919,6 +919,8 @@ check[checks]("facts/goldens.rofl", "ds_tree_tick_staged_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_unknown_edge", world).
 check[checks]("facts/goldens.rofl", "ds_tree_unknown_edge_sealed", world).
 check[checks]("facts/goldens.rofl", "ds_tree_wall", world).
+check[checks]("facts/goldens.rofl", "feature_behaviour", world).
+check[checks]("facts/goldens.rofl", "gates_rust", world).
 check[checks]("facts/goldens.rofl", "holes_negation", world).
 check[checks]("facts/goldens.rofl", "holes_negation_scale", world).
 check[checks]("facts/goldens.rofl", "holes_negation_ticks", world).

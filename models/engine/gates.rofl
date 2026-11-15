@@ -1,0 +1,58 @@
+-- models/engine/gates.rofl — NO GATE ON A HARDCODED NUMBER (owner, 2026-11-15). A gate is an ordering (< > <= >=)
+-- in the engine's code whose operand, through arithmetic, is a number: a named constant, directly or carried by the
+-- value flow of models/lang/rust/flow.rofl (into a field, a local, an argument), or a bare number other than 0 and 1.
+-- Every named gate says the task it decides and where its number comes from; a gate that says no source is a hole.
+--
+--   decides(Name, Task)   tell (a person that something costs), show (how much of an answer is printed), cheaper (which
+--                         of two ways costs less), room (whether a resource holds), stop (that a run will not end)
+--   from(Name, Source)    layout (the width of a type or a field), target(M) (a metric of the goal, models/product),
+--                         forecast (a price the engine computes of both ways), machine (what the host has), run (a
+--                         measure of the run itself)
+--
+-- The engine's own book of them is facts/gates.rofl. It reads the Rust model over the roles (models/lang/rust) and the facts of rust/tools/rs_tree; npm run product loads it
+-- beside models/engine/features.rofl. Not seen yet: a number carried through a tuple (`(0, first)`, then `e.1`), which
+-- is how HOT_READ reaches the test that says a rule is hot.
+
+edb(decides).
+edb(from).
+edb(orders).
+edb(arith).
+orders("<"). orders(">"). orders("<="). orders(">=").
+arith("*"). arith("+"). arith("-"). arith("/"). arith("<<"). arith(">>").
+
+-- ===================================================================== WHAT A GATE IS
+ordered(E, X) :- binary[value](E, Op, X, _), orders(Op).
+ordered(E, X) :- binary[value](E, Op, _, X), orders(Op).
+gate_at(E, F) :- ordered(E, _), in_fn[rust](F, E), not test_fn[rust](F).
+-- the operands of an ordering, through arithmetic: `read * SHARE >= total`
+operand(E, X) :- gate_at(E, _), ordered(E, X).
+operand(E, X) :- operand(E, Y), binary[value](Y, Op, X, _), arith(Op).
+operand(E, X) :- operand(E, Y), binary[value](Y, Op, _, X), arith(Op).
+
+num(X, T) :- rs_k[ast_rs](X, integer_literal), rs_text[ast_rs](X, T).
+num(X, T) :- rs_k[ast_rs](X, float_literal), rs_text[ast_rs](X, T).
+const_item(I, Name) :- rs_k[ast_rs](I, const_item), child[ast_rs](I, name, 0, N), rs_text[ast_rs](N, Name).
+num_const(Name) :- const_item(I, Name), inside[tree](I, X), num(X, _).
+
+-- a named number where it is written, and wherever the value flow carries it
+named_at(X, Name) :- ref[value](X, Name), num_const(Name).
+carries(Name, Y) :- named_at(X, Name), copy[rust](X, Y).
+carries(Name, Z) :- carries(Name, Y), copy[rust](Y, Z).
+holds_num(X, Name) :- named_at(X, Name).
+holds_num(X, Name) :- carries(Name, X).
+
+gate(Name, FQ)    :- operand(E, X), holds_num(X, Name), gate_at(E, F), fn_q[rust](F, FQ).
+bare_gate(T, FQ)  :- operand(E, X), num(X, T), T != "0", T != "1", gate_at(E, F), fn_q[rust](F, FQ).
+
+-- ===================================================================== THE HOLES
+gate_named(Name) :- gate(Name, _).
+sourced(Name)    :- from(Name, _).
+stated(Name)     :- decides(Name, _).
+unsourced(Name, Task) :- gate_named(Name), decides(Name, Task), not sourced(Name).
+unstated(Name)        :- gate_named(Name), not stated(Name).
+-- a fact here about a constant that no longer gates: the code moved and the book did not
+stale(Name) :- decides(Name, _), not gate_named(Name).
+
+gates_n(N)     :- N is count(C : gate_named(C)).
+unsourced_n(N) :- N is count(C : unsourced(C, _)).
+bare_n(N)      :- N is count(T, F : bare_gate(T, F)).

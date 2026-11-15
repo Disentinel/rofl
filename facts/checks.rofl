@@ -3865,6 +3865,18 @@ check_file("product_rofl", "models/product/rofl.rofl").
 check_file("product_rofl", "facts/commands.rofl").
 check_file("product_rofl", "facts/bench.rofl").
 check_file("product_rofl", "examples/checks/product-facts.rofl").
+-- no gate on a hardcoded number (models/engine/gates.rofl) over a small crate: the gates by a named constant, directly
+-- and through a field and a product, a bare number, a gate with a task and no source, a fact of a gate that is gone
+check_world("gates_rust").
+check_file("gates_rust", "models/lang/js/roles.rofl").
+check_file("gates_rust", "models/lang/rust/rs-roles.rofl").
+check_file("gates_rust", "models/lang/rust/names.rofl").
+check_file("gates_rust", "models/lang/rust/calls.rofl").
+check_file("gates_rust", "models/lang/rust/flow.rofl").
+check_file("gates_rust", "models/lang/rust/qname.rofl").
+check_file("gates_rust", "models/engine/gates.rofl").
+check_file("gates_rust", "examples/checks/gates-rs-facts.rofl").
+check_opt("gates_rust", one_engine, rust).
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").
@@ -4064,3 +4076,11 @@ check_world("ci_gate").
 check_file("ci_gate", "models/process/ci/cost.rofl").
 check_file("ci_gate", "models/process/ci/gate.rofl").
 check_file("ci_gate", "models/process/ci/gate-proof.rofl").
+
+-- WHAT THE WORLDS SAW OF A CHANGE, BY FEATURE (models/engine/feature-behaviour.rofl, beside feature-diff.rofl): one
+-- change over four features and five worlds, each verdict once: `cut` changed, `sum` carried, `whynot` unwatched,
+-- `--retract` meant to move and unmet; the ledger's world, whose file the change wrote too, is unsplit.
+check_world("feature_behaviour").
+check_file("feature_behaviour", "models/engine/feature-diff.rofl").
+check_file("feature_behaviour", "models/engine/feature-behaviour.rofl").
+check_file("feature_behaviour", "examples/checks/feature-behaviour-toy.rofl").
