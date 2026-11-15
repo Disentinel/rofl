@@ -288,7 +288,7 @@ fn the_units_spend_into_the_worlds_count() {
     let cut = rofl::engine::volumes::cut(&refs);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[cut.core.as_str()], None).unwrap();
-    core.eval.cost.hot_read = 20;
+    (core.eval.cost.hot_read, core.eval.cost.hot_given) = (20, true);
     let v = core.by_volumes(&cut.files).unwrap().0;
     let heads: BTreeSet<String> = v.eval.hot_rules(100).into_iter().map(|h| h.head).collect();
     for of_file in ["has_child", "leaf"] {
