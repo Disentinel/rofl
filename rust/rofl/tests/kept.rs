@@ -893,9 +893,35 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
     ensure(after.code == 0 && after.out == whole.out && after.err.is_empty(), || format!("the run after: {} {:?}", after.code, after.err))
 }
 
+/// A world that cuts a book, kept for one question, answers a wider one as fresh: the lemmas the grown cone needs below
+/// the cut, which the world dropped, are proved again from its files and come in by delta, said on stderr.
+fn a_cone_grown_below_the_cut_takes_its_lemmas_again(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("below-cut");
+    let raw: String = (0..4).map(|i| format!("node[raw](p{i}, fn). node[raw](c{i}, call). child[raw](p{i}, c{i}). name[raw](c{i}, {}).\n", ["go", "go", "stop", "end"][i])).collect();
+    d.write("cut.rofl", &format!("cut[fixpointplan](raw).\nedb(node). edb(child). edb(name).\n\
+        kind(N, K) :- node[raw](N, K).\nedge(P, C) :- child[raw](P, C).\nnamed(N, S) :- name[raw](N, S).\n\
+        has_child(P) :- edge(P, _).\nleaf(N) :- kind(N, _), not has_child(N).\n\
+        twin(A) :- named(A, S), named(B, S), A != B, leaf(B).\nlonely(N) :- leaf(N), not twin(N).\n{raw}"));
+    let q = |rel: &str| ["ask", rel, "boot.rofl", "cut.rofl"].map(String::from);
+    let run = |f: &dyn Fn(&Dir, Option<&str>, &[&str]) -> Ran, rel: &str| f(&d, brk, &q(rel).iter().map(String::as_str).collect::<Vec<_>>());
+    run(&rofl, "leaf(N)");
+    let (want, got) = (run(&fresh, "lonely(N)"), run(&rofl, "lonely(N)"));
+    ensure(want.code == 0 && want.out.contains("N = c2") && !want.out.contains("N = c0"), || format!("fresh lonely: {} {:?} {:?}", want.code, want.out, want.err))?;
+    ensure(got.code == want.code && got.out == want.out && got.err.contains("lemmas proved again"),
+        || format!("lonely after leaf: fresh {:?}, from the world kept for leaf {} {:?} {:?}", want.out, got.code, got.out, got.err))?;
+    let again = run(&rofl, "leaf(N)");
+    ensure(again.code == 0 && again.out.contains("N = c0"), || format!("leaf again: {} {:?} {:?}", again.code, again.out, again.err))?;
+    // a lemma that nothing above read was dropped with the book: a rule above that comes to read it takes it again too
+    d.append("cut.rofl", "top(P) :- node[raw](P, fn), edge(P, _).\nparent(P) :- edge(P, _).\n");
+    run(&rofl, "top(N)");
+    let (want, got) = (run(&fresh, "parent(N)"), run(&rofl, "parent(N)"));
+    ensure(want.code == 0 && want.out.contains("N = p0") && got.code == 0 && got.out == want.out && got.err.contains("lemmas proved again"),
+        || format!("parent after top: fresh {:?}, from the world kept for top {} {:?} {:?}", want.out, got.code, got.out, got.err))
+}
+
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 33] = [
+const CASES: [(&str, Case); 34] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -929,6 +955,7 @@ const CASES: [(&str, Case); 33] = [
     ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
     ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
     ("deltas_of_volumes_one_after_another", deltas_of_volumes_one_after_another),
+    ("a_cone_grown_below_the_cut_takes_its_lemmas_again", a_cone_grown_below_the_cut_takes_its_lemmas_again),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
@@ -1267,6 +1294,43 @@ fn an_absence_below_the_cut_is_walked_in_its_file_thawed() {
             assert!(truth.code == 0 && truth.out.contains(&format!(" in {file}:")), "{q} in {file}: {} {}", truth.out, truth.err);
             assert!(row.out == truth.out, "{q} in {file} by levels:\n{}\nthe world with nothing cut:\n{}\n{}", row.out, truth.out, row.err);
         }
+    }
+}
+
+/// WHY OF A COUNT BY LEVELS is the world whole's: the count is the reader's unit's, its cells are read there and its
+/// members' firings, written in the files' units, cite rows of a tree by those units' keys.
+#[test]
+fn why_of_a_count_by_levels_answers_as_the_world_whole() {
+    let d = Dir::new("levels_count");
+    let mut w = String::from("tree edge(P, C).\nnearest nfn[d](F, X) of edge[d](F, X) where func[d](F).\n\
+        m[d](X) :- stmt[d](X), nfn[d](F, X).\nm[d](X) :- stmt[d](X), deep[d](X).\ndeep[d](X) :- far[d](X, Y), deep[d](Y).\n\
+        deep[d](X) :- seed[d](X).\nn[d](F, N) :- func[d](F), N is count(X : m[d](X), nfn[d](F, X)).\n");
+    for f in 1..=24u64 {
+        let node = |k: u64| format!("n{f:016x}_{k}");
+        for g in 0..3 {
+            let fun = node(g * 11);
+            w += &format!("func[d]({fun}).\n");
+            for i in 1..=10 {
+                // (a statement is under the function or one deeper, and reached two ways: its nearest and a chain)
+                let (s, p) = (node(g * 11 + i), if i % 3 == 0 { node(g * 11 + i - 1) } else { fun.clone() });
+                w += &format!("edge[d]({p}, {s}).\nstmt[d]({s}).\n");
+                w += &if i == 1 { format!("seed[d]({s}).\n") } else { format!("far[d]({s}, {}).\n", node(g * 11 + i - 1)) };
+            }
+        }
+    }
+    d.write("w.rofl", &w);
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
+    let whole = [("ROFL_VOLUMES", "0".to_string())];
+    let ask = rofl_env(BIN, &d, &d.0.join("whole"), &whole, None, &["ask", "n[d](F, N)", "boot.rofl", "w.rofl"]);
+    let line = ask.out.lines().find(|l| l.contains("_11,")).expect("a count").to_string();
+    let fact = format!("n[d]({})", line.replace("F = ", "").replace(", N = ", ", "));
+    let args = ["why", "--all", fact.as_str(), "boot.rofl", "w.rofl"];
+    let want = rofl_env(BIN, &d, &d.0.join("whole"), &whole, None, &args);
+    assert!(want.code == 0 && want.out.contains("[aggregate"), "why {fact} whole: {:?} {:?}", want.out, want.err);
+    for run in ["fresh", "from the kept units"] {
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, None, &args);
+        assert!(got.code == 0 && got.out == want.out, "why {fact} by levels, {run}: {:?}\nthe world whole {:?}\n{:?}", got.out, want.out, got.err);
+        assert!(got.err.contains(if run == "fresh" { "settled by levels" } else { "kept units" }), "{run}: {:?}", got.err);
     }
 }
 
