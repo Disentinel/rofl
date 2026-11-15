@@ -85,6 +85,7 @@ copy[rust](R, C) :- callee[value](C, M), member[value](M, R, Name), rs_same_valu
 --   in    an argument goes inside the receiver
 --   each  a closure given takes the receiver's inside as its parameters
 --   from  the call gives what the closure given gives
+--   gives the call gives an argument: `x.unwrap_or(d)`, `map.entry(k).or_insert(v)`
 edb(std_method).
 std_method("unwrap", out). std_method("expect", out). std_method("unwrap_or", out). std_method("unwrap_or_else", out).
 std_method("unwrap_or_default", out). std_method("ok", out). std_method("ok_or", out). std_method("ok_or_else", out).
@@ -102,6 +103,8 @@ std_method("for_each", each). std_method("any", each). std_method("all", each). 
 std_method("is_some_and", each). std_method("is_ok_and", each). std_method("flat_map", each). std_method("position", each).
 std_method("map", from). std_method("and_then", from). std_method("filter_map", from). std_method("flat_map", from).
 std_method("unwrap_or_else", from). std_method("or_else", from). std_method("then", from).
+std_method("unwrap_or", gives). std_method("or_insert", gives). std_method("or", gives). std_method("get_or_insert", gives).
+std_method("entry", out).
 
 std_call[rust](C, R, Name) :- callee[value](C, M), member[value](M, R, Name), not resolved[rust](C), not denoted[rust](M).
 place_of[rust](R, B) :- ref[value](R, _), denotes[rust](R, B), local[rust](B).
@@ -111,6 +114,7 @@ wrap[rust](R, C)  :- std_call[rust](C, R, Name), std_method(Name, out).
 wrap[rust](A, Pl) :- std_call[rust](C, R, Name), std_method(Name, in), nth[tree](C, _, A), place_of[rust](R, Pl).
 wrap[rust](R, P)  :- std_call[rust](C, R, Name), std_method(Name, each), nth[tree](C, _, Cl), param[value](Cl, _, P).
 wrap[rust](res(Cl), C) :- std_call[rust](C, _, Name), std_method(Name, from), nth[tree](C, _, Cl), body[value](Cl, _).
+wrap[rust](A, C)  :- std_call[rust](C, _, Name), std_method(Name, gives), nth[tree](C, _, A).
 wrap[rust](A, C)  :- callee[value](C, F), std_ctor[rust](F, _), nth[tree](C, _, A).
 wrap[rust](X, A)  :- mark[value](A, array), nth[tree](A, _, X).
 wrap[rust](O, N)  :- member_expr[value](N, O, _).

@@ -14,3 +14,12 @@ pub fn too_hot(c: &Cost) -> bool { c.read >= c.loud && c.read * SHARE >= c.total
 pub fn shown(n: usize) -> usize { if n > 12 { 12 } else { n } }
 
 pub fn equal(n: usize) -> bool { n == 7 }
+
+const NAMES: [&str; 2] = ["a", "b"];
+
+pub fn many(n: usize) -> bool { n > NAMES.len() }
+
+pub fn first_loud(c: &mut std::collections::HashMap<u32, (u64, u64)>) -> bool {
+    let e = c.entry(0).or_insert((0, LOUD));
+    e.0 >= e.1
+}

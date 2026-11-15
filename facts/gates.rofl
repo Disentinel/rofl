@@ -15,7 +15,7 @@ decides("MAX_PATTERNS", room).
 -- that a run will not end
 decides("MAX_DEPTH", stop).         decides("MAX_ALTERNATIONS", stop).   decides("DEFAULT_SPACE", stop).
 decides("SPACE", stop).             decides("BUDGET", stop).             decides("DEFAULT_BUDGET", stop).
-decides("POLICY_BUDGET", stop).     decides("WN_FAR", stop).             decides("MAX_ALIAS", stop).
+decides("POLICY_BUDGET", stop).     decides("MAX_WANTS", stop).     decides("WN_FAR", stop).             decides("MAX_ALIAS", stop).
 -- the layout of a value: its number is the width of a type or a field
 decides("SHARED0", room).  from("SHARED0", layout).
 decides("TUP_MASK", room). from("TUP_MASK", layout).
