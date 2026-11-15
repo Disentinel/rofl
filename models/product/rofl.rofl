@@ -94,6 +94,23 @@ reads(contributor, "CLAUDE.md").  reads(contributor, "docs/cli.md").
 reads(person, "README.md").       reads(person, "guide").
 goal(reads, "A feature is done when an agent reading only this file and docs/cli.md finds it").
 
+-- WORK SCALE and EXPLODE FACTOR (owner, 2026-11-15). The same facts give very different numbers of conclusions, so
+-- the size of a world is not the size of its evaluation. Work scale: the order of the rows the rules read (the
+-- book `profile`: deterministic, the same on every machine). Explode factor: how many orders a measure rises when
+-- the world rises one: 1 in proportion, 2 a square, 3 a cube; of the rules where the measure is the work, of the
+-- engine where it is the seconds.
+-- took(Corpus, read | concluded | seconds, N): the JS model with examples/vscode/side-effects.rofl over the first N
+-- files of the benchmark's vscode, `rofl load`, the fast build, 4 cores, one run each, 2026-11-15.
+edb(took).
+edb(aims_explode).  -- (metric, the explode factor at most)
+corpus(vscode_f20, 20, "4 cores, 15 GB").    facts(vscode_f20, 132557, counted).
+corpus(vscode_f60, 60, "4 cores, 15 GB").    facts(vscode_f60, 396000, counted).
+corpus(vscode_f120, 120, "4 cores, 15 GB").  facts(vscode_f120, 1028273, counted).
+took(vscode_f20, read, 5340667).     took(vscode_f20, concluded, 1182816).   took(vscode_f20, seconds, 4).
+took(vscode_f60, read, 14718306).    took(vscode_f60, concluded, 3026858).   took(vscode_f60, seconds, 12).
+took(vscode_f120, read, 41443492).   took(vscode_f120, concluded, 8463239).  took(vscode_f120, seconds, 83).
+aims_explode(edit_cost, 0).
+
 -- ===================================================================== THE READINGS
 -- entry(Form, Kind, Word): a name by which a user reaches the product, at a form. The words of the language
 -- (an aggregate, a builtin, a declaration, a marker) are entries of every form: `rules`.
@@ -155,6 +172,19 @@ at_scale(M, O)     :- measured(M, C, _, _, _), world_scale(C, O).
 at_least(M, O)     :- at_scale(M, P), order(P, A), order(O, B), A >= B.
 small_only(M, O)   :- aims(M, C, _, _), world_scale(C, O), not at_least(M, O).
 missed(M, O, V, T) :- aims(M, C, T, U), world_scale(C, O), measured(M, D, V, U, _), world_scale(D, O), V > T.
+-- work scale, and the explode factor between two corpora one of which is at least twice the other: with R the
+-- world's ratio and Q the measure's, in tenths, the factor is under a half where Q*Q < R, about 1 up to Q*Q < R^3,
+-- about 2 up to Q*Q < R^5, 3 and more past it
+work_scale(C, O) :- took(C, read, N), order(O, Lo), N >= Lo, Hi is Lo * 10, N < Hi.
+grew(A, B, What, R, Q) :- facts(A, FA, _), facts(B, FB, _), FB >= FA * 2, took(A, What, WA), took(B, What, WB),
+                          R is FB * 10 / FA, Q is WB * 10 / WA.
+explode(A, B, What, 0) :- grew(A, B, What, R, Q), Q * Q < R * 10.
+explode(A, B, What, 1) :- grew(A, B, What, R, Q), Q * Q >= R * 10, Q * Q * 10 < R * R * R.
+explode(A, B, What, 2) :- grew(A, B, What, R, Q), Q * Q * 10 >= R * R * R, Q * Q * 1000 < R * R * R * R * R.
+explode(A, B, What, 3) :- grew(A, B, What, R, Q), Q * Q * 1000 >= R * R * R * R * R.
+-- the engine explodes where the rules do not: the seconds rise by more orders than the work
+engine_explodes(A, B, Fw, Ft) :- explode(A, B, read, Fw), explode(A, B, seconds, Ft), Ft > Fw.
+
 -- a contract no evidence backs (backs(Evidence, Contract) is written by nothing yet)
 unbacked(C) :- contract(C, _, _), not backed(C).
 backed(C)   :- backs(_, C).
