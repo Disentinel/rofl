@@ -1642,7 +1642,13 @@ has_recv[code](C)                       :- recv_call[code](C, _).
 has_recv[code](N)                       :- member[value](N, _, _).
 may_be[flow](C, VK, X)                  :- resolves[code](C, F), sx_ret_field[surface](F, Key), not has_recv[code](C), this_val[flow](F, Key, VK, X).
 key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), bare_node[flow](R, I), sx_mset[surface](I, Key, VK, X), holds_members[flow](I).
-key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), bare_node[flow](R, Obj), member_plain[flow](Obj, Key, V), may_be[flow](V, VK, X).
+key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), bare_node[flow](R, Obj), member_plain[flow](Obj, Key, V), may_be[flow](V, VK, X),
+                                           not getter[value](V, V), not setter[value](V, V).
+-- the Key is a getter there: what the getter hands out, read off the same receiver
+key_get[flow](R, Key, G)                :- key_wanted[flow](R, Key), bare_node[flow](R, Obj), member_value[flow](Obj, Key, G), getter[value](G, G).
+key_on[flow](R, Key, VK, X)             :- key_get[flow](R, Key, G), sx_ret_own[surface](G, VK, X).
+key_wanted[flow](R, K2)                 :- key_get[flow](R, _, G), sx_ret_field[surface](G, K2).
+key_on[flow](R, Key, VK, X)             :- key_get[flow](R, Key, G), sx_ret_field[surface](G, K2), key_on[flow](R, K2, VK, X).
 key_on[flow](R, Key, input, field(M, Key)) :- key_wanted[flow](R, Key), may_be[flow](R, input, S), input_this[flow](S, M).
 key_on[flow](R, Key, VK, X)             :- key_wanted[flow](R, Key), may_be[flow](R, inst, via(C, O)), via_holds[flow](C, O, Key, VK, X).
 via_obj[flow](N, O, C, Obj)          :- may_be[flow](O, inst, via(C, Obj)), object_of[code](N, O), member_node_v[flow](N).
