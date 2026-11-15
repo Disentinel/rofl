@@ -9,7 +9,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { hostFacts } from '../playground/host.ts';
+import { hostFacts } from '../models/lang/js/scanner/host_facts.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;

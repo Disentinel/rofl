@@ -10,6 +10,7 @@ import { proofView, type Proven } from '../notebook/draw-proof.ts';
 import { collect, diff, scoped, status, KINDS, VIEW_RELS, unquote as termText, type DrawKind, type View, type World } from '../notebook/draw.ts';
 import { Vocabulary } from '../src/say.ts';
 import { BOOK_ROWS } from '../src/want.ts';
+import { hostFacts } from '../models/lang/js/scanner/host_facts.ts';
 import { scanText } from '../models/lang/js/scanner/oxc_wasm.ts';
 import { readBook, homeOf, booksOf, OWN, type Ask, type Cell, type Kind } from '../notebook/book.ts';
 import { plural, theVariable, type Question } from '../scripts/read_md.ts';
