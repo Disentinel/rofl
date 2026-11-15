@@ -18,12 +18,14 @@ edb(feature).   -- (feature, what the product can do, as its user would say it)
 edb(said).      -- (feature, the word an entry says it by)
 edb(contract).  -- (contract, feature, what must hold every time)
 edb(metric).    -- (metric, feature, what is measured)
-edb(scale).     -- (scale, files, platform)
-edb(aims).      -- (metric, scale, at most, unit)
+edb(corpus).    -- (corpus, files, platform): what a metric is measured on
+edb(facts).     -- (corpus, facts, counted | estimated)
+edb(order).     -- (world scale, its least number of facts)
+edb(aims).      -- (metric, corpus, at most, unit)
 edb(goal).      -- (what, the owner's words in CLAUDE.md)
 edb(reads).     -- (user, view)
 edb(plumbing).  -- (kind, word, why it offers no feature)
-edb(measured).  -- (metric, scale, value, unit, the evidence)
+edb(measured).  -- (metric, corpus, value, unit, the evidence)
 
 -- ===================================================================== THE OWNER'S
 user(agent, "a program that asks about a codebase").
@@ -64,9 +66,14 @@ contract(same_model, sentences, "the notebook and the engine answer over the sam
 goal(unknown_is_said, "an honest \"unknown, and why\" where the data stops").
 goal(walls_are_said, "where memory or time runs out, the engine says so; it does not die").
 
-scale(reference, 11100, "Mac M4 Pro").
-scale(vscode_250, 250, "4 cores, 16 GB").
-scale(vscode_20, 20, "4 cores, 16 GB").
+-- WORLD SCALE (owner, 2026-11-15): the size of a world by the order of its facts. The whole vscode is counted:
+-- 14 485 files, 91.9 M facts (w_vscode_whole_census); the others are estimated from it, 6 300 facts a file.
+order("10k", 10000).      order("100k", 100000).      order("1m", 1000000).
+order("10m", 10000000).   order("100m", 100000000).   order("1b", 1000000000).
+corpus(reference, 11100, "Mac M4 Pro").         facts(reference, 70000000, estimated).
+corpus(vscode_whole, 14485, "4 cores, 15 GB").  facts(vscode_whole, 91900000, counted).
+corpus(vscode_250, 250, "4 cores, 16 GB").      facts(vscode_250, 1600000, estimated).
+corpus(vscode_20, 20, "4 cores, 16 GB").        facts(vscode_20, 126000, estimated).
 
 metric(first_evaluation, model, "the first whole evaluation").
 metric(peak_memory, model, "memory at the peak of it").
@@ -141,11 +148,13 @@ unplaced(Form, K, W) :- entry(Form, K, W), not placed(Form, K, W).
 -- an entry its user cannot find in what they read: "a feature is done when an agent ... finds it"
 unfound(Form, K, W, U) :- entry(Form, K, W), spelt(Form, K), serves(Form, U), goal_reader(U), not found(Form, K, W, U).
 goal_reader(agent). goal_reader(contributor).
--- a metric with no target; a target measured only at a smaller scale; a target missed where it was measured
+-- a metric with no target; a target measured only at a smaller world scale; a target missed where it was measured
 no_target(M)       :- metric(M, _, _), not aims(M, _, _, _).
-at_scale(M, S)     :- measured(M, S, _, _, _).
-small_only(M, S)   :- aims(M, S, _, _), not at_scale(M, S).
-missed(M, S, V, T) :- aims(M, S, T, U), measured(M, S, V, U, _), V > T.
+world_scale(C, O)  :- facts(C, N, _), order(O, Lo), N >= Lo, Hi is Lo * 10, N < Hi.
+at_scale(M, O)     :- measured(M, C, _, _, _), world_scale(C, O).
+at_least(M, O)     :- at_scale(M, P), order(P, A), order(O, B), A >= B.
+small_only(M, O)   :- aims(M, C, _, _), world_scale(C, O), not at_least(M, O).
+missed(M, O, V, T) :- aims(M, C, T, U), world_scale(C, O), measured(M, D, V, U, _), world_scale(D, O), V > T.
 -- a contract no evidence backs (backs(Evidence, Contract) is written by nothing yet)
 unbacked(C) :- contract(C, _, _), not backed(C).
 backed(C)   :- backs(_, C).
