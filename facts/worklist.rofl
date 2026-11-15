@@ -3374,11 +3374,18 @@ work_needs(w_rust_default_backend, w_rust_cli).
 work(w_rust_rofl_md,
   "PART DONE 2026-10-16 (f_the_rofl_md_reader_is_native_and_reads_every_world_alike): the reader of worlds, rust/rofl/src/md/, read wherever the binary names a file and by rofl render --out DIR X.rofl.md; npm run mdcheck holds it to scripts/read.ts over every .rofl.md (132 of 132). PART DONE 2026-10-16 (f_the_rust_binary_runs_a_notebook_and_prints_it_as_the_kernel_does): rofl nb FILE.rofl.md answers every directive but draw and prints the text of the TypeScript kernel, 78 of 78 notebooks in the slice alike (npm run nbcheck; the slowest 17.9 s in TS, 1.0 s in Rust). LEFT: draw (about 18 kinds), a notebook over code or model: js, --json, the notes of vacuous, slip, together, holed and emptied, and goldens and test:nb reading notebooks through Rust. `.rofl.md` NOTEBOOKS AND THE SENTENCE FORM IN RUST: the cell reader, the directives (? never unsure why whynot excise extends), the phrase layer that facts/phrases.rofl and facts/js-phrases.rofl feed, and the rendering of answers in sentences. ACCEPTANCE: every notebook world gives the same verdicts and the same text in both engines.").
 work_state(w_rust_rofl_md, open).
+-- STILL OPEN 2026-11-15: the reader and `rofl nb` are native (src/md/), but `draw` is refused (md/nb.rs: "not native yet"),
+-- and so is a notebook over code (`model: js`, `code:`); --json, the notes of vacuous, slip, together, holed and emptied,
+-- and goldens and test:nb reading notebooks through Rust are not done. The first two are what the playground and the
+-- thin client wait on.
 work_needs(w_rust_rofl_md, w_rust_cli).
 
 work(w_l2_roles,
   "A LANGUAGE-NEUTRAL ROLE LAYER UNDER THE JS MODEL (f_two_parsers_are_the_occasion_for_a_language_neutral_model). The JS model reads roles, not AST kinds; a rule that genuinely needs AST detail is named and becomes a JS-only role or the normalizer's duty. One normalizer per parser, written as rules: Babel facts to roles first. Vocabulary governance from day one: every role relation declared, an unclaimed one an alarm. Reflective sites (Proxy, eval, computed access the model cannot follow) are shrugs with reason opaque_boundary, never guessed edges. Polyglot survey before the shared roles are frozen. ACCEPTANCE LADDER: (1) the JS model over roles through the Babel normalizer gives today's answers -- goldens and the V8 oracle; (2) see w_rust_scanner_oxc; (3) a second language.").
-work_state(w_l2_roles, open).
+work_state(w_l2_roles, done).
+-- DONE 2026-11-15 (f_the_roles_ladder_is_closed): rung 1 and 2 by #220 (the JS model over the roles, oxc the only scanner,
+-- Babel removed), rung 3 by models/lang/rust (rust/tools/rs_tree writes [ast_rs], rs-roles.rofl reads it into the roles of
+-- models/lang/js/roles.rofl, two words beyond them; the engine's own code is asked through it, npm run engine:features).
 -- PROGRESS 2026-10-31 (f_the_babel_roles_are_per_file_and_their_cost_is_the_rows_they_write): step one built BESIDE the
 -- model, which does not read it yet: models/lang/js/roles.rofl (the vocabulary of the doc «Словарь ролей модели JS»,
 -- worlds as books [value] / [type] / [tree]) and babel-roles.rofl over the raw tree in [ast_babel]; npm run test:roles
@@ -3387,7 +3394,10 @@ work_state(w_l2_roles, open).
 
 work(w_js_model_on_roles,
   "THE JS MODEL MOVED ONTO THE ROLES, oxc the scanner by default, Babel removed (owner, 2026-11-01: translate the rules keeping their names, one stream, one group of roles at a time). Steps: the roles and the Babel converter in every world of the model; names and scopes; functions; calls and members; values; control; modules; TS types; the coverage matrix as role x layer and the raw tree out of the world; oxc by default; Babel removed. ACCEPTANCE per step before oxc: not one fact of the model's own relations moves in any world, both engines. ACCEPTANCE of the oxc step: the model's answers over a Babel scan and an oxc scan of the same files compared by place, every difference fixed or recorded with its reason; then one bless.").
-work_state(w_js_model_on_roles, open).
+work_state(w_js_model_on_roles, done).
+-- DONE 2026-11-05, closed 2026-11-15 (f_the_roles_ladder_is_closed): #220 moved the rules onto the roles, oxc by default,
+-- Babel removed (the roles, audit and from-code books, test:parity, scanners/js_ast.ts, @babel/parser). Today's rules still
+-- reading the raw tree are the contested ones named in f_the_last_raw_rules_wait_on_meanings.
 work_needs(w_js_model_on_roles, w_l2_roles).
 work_needs(w_js_model_on_roles, w_rust_scanner_oxc).
 
@@ -3403,7 +3413,9 @@ work_needs(w_lifecycle_world, w_js_model_on_roles).
 
 work(w_rust_scanner_oxc,
   "THE JS SCANNER IN RUST on oxc, with its own normalizer into the L2 roles -- not a mapping onto Babel's AST. It also emits the host facts (fs_*, str_*) hostFacts writes today. ACCEPTANCE: over a real corpus the JS model gives identical answers and why text on the oxc facts and on the Babel facts; this is the first falsification of the role layer on two genuinely different fact shapes.").
-work_state(w_rust_scanner_oxc, open).
+work_state(w_rust_scanner_oxc, done).
+-- DONE 2026-11-05, closed 2026-11-15 (f_the_roles_ladder_is_closed): rust/tools/oxc_scan, `rofl scan` / `npm run scan`, writes
+-- oxc's tree and the host facts; models/lang/js/oxc-roles.rofl is its normalizer; it is the only scanner of the JS model.
 work_needs(w_rust_scanner_oxc, w_l2_roles).
 work_needs(w_rust_scanner_oxc, w_rust_cli).
 
@@ -4058,6 +4070,9 @@ work_state(w_rofl_by_the_product_model, open).
 work(w_scroll,
   "The owner, 2026-11-11 (thread on the delta of volumes): the store becomes ONE LONG SCROLL over raw mapped memory, in place of volumes that copy facts to one another. His words: a cooled volume is a fold (a spoiler: its content is not seen, is known to be there, can be unfolded); it is the addressing of memory by pages and of a disk by logical volumes; the indexes are digests, a service volume of their own, the book [index]; nothing is to be invented above what the machine's memory does already. Why: a delta of volumes of 7 files of 123 takes 17 s against 55 anew, and 8 of them are the exchange (the plan of what to lay, the copies, their files, the rounds), which exists because a fact's number and a name's number mean something only inside their volume (f_half_the_time_of_a_delta_of_volumes_is_where_no_rule_reads_a_row). One pull request, its parts in this order, the engine working and its answers equal after each; each part's forecast is written in models/engine/delta-model.rofl before it is built and a measure judges it.").
 work_state(w_scroll, open).
+-- STILL OPEN 2026-11-15: parts 1 to 3 are done and the store is one path (levels, units read where they lie, #244, 1.7.0:
+-- 250 files 18 to 21 s, 750 files 60 to 68 s on 4 cores, an edit of one file about 5 s). NOT YET: the goal's number at
+-- the reference scale (11 100 files in 5 minutes) is not measured; it waits on the owner's run, and part 4 is open.
 
 work(w_scroll_names,
   "Part 1 of w_scroll. ONE DICTIONARY OF NAMES for every volume: a name or a compound term a rule makes has one number wherever it is made, so a term reads the same in every volume and nothing is translated (copy_term, find_term, the spelling of a term to ask a neighbour). Today the names the files spell are named in the core before the volumes fork; what rules make each volume numbers alone.").
@@ -4083,6 +4098,11 @@ work_needs(w_scroll_foreign_premise, w_scroll_address).
 work(w_scroll_edit_is_a_version,
   "Part 4 of w_scroll. AN EDIT OF A FILE APPENDS A VERSION OF ITS FOLD: the old fold goes out of the registry (kept as history or removed as a file), the new facts go to new addresses, none is used again, nothing is rewritten clean; what stood on the old fold is derived again and no more. The memory the process may use is kept by the watcher giving back to the system the folds longest unread.").
 work_state(w_scroll_edit_is_a_version, open).
+-- STILL OPEN 2026-11-15: an edit settles again only the units it moved, a mended unit keeps its firings
+-- (f_a_mended_unit_dropped_the_firings_it_wrote_for_other_stretches), the forests reuse the slots a dropped tree left
+-- (f_a_tree_built_again_took_a_new_place_each_time), and the units done are cooled past a quarter of the memory. NOT AS WRITTEN:
+-- a mended unit is rewritten, not appended as a new version at new addresses; the memory the process may use is kept by
+-- cooling the units done, not by giving back the folds longest unread. Say which of the two the owner wants before it is built.
 work_spawned(w_scroll_edit_is_a_version, f_a_tree_built_again_took_a_new_place_each_time).
 work_needs(w_scroll, w_scroll_edit_is_a_version).
 work_needs(w_scroll_edit_is_a_version, w_scroll_foreign_premise).
