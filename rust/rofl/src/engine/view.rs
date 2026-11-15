@@ -94,6 +94,7 @@ impl Eval {
         self.view_rels = views.keys().copied().collect();
         let mut out = Vec::with_capacity(rules.len());
         for r in rules {
+            self.rule_fresh = Some(0);
             if views.contains_key(&r.clause.head.rel) {
                 let copies = self.view_copies(&r, &views);
                 self.view_drules.extend(copies);
@@ -106,6 +107,7 @@ impl Eval {
                 out.push(c);
             }
         }
+        self.rule_fresh = None;
         out
     }
 
@@ -117,10 +119,7 @@ impl Eval {
     pub fn view_answer(&mut self, rel: Sym, book: Option<Sym>, args: &[Term]) -> Result<Vec<Subst>, Halt> {
         let persp = match book {
             Some(b) => Term::atom(b),
-            None => {
-                self.alias_fresh += 1;
-                Term::var(self.h.intern(&format!("_$v{}", self.alias_fresh)))
-            }
+            None => self.fresh_var("v"),
         };
         let rules: Vec<Clause> = self.view_drules.iter().filter(|r| r.clause.head.rel == rel).map(|r| r.clause.clone()).collect();
         let mut out = Vec::new();
@@ -193,10 +192,7 @@ impl Eval {
         }
         vs.sort();
         vs.dedup();
-        let s: Subst = vs.into_iter().map(|x| {
-            self.alias_fresh += 1;
-            (x, Term::var(self.h.intern(&format!("_$v{}", self.alias_fresh))))
-        }).collect();
+        let s: Subst = vs.into_iter().map(|x| (x, self.fresh_var("v"))).collect();
         let mut out = c.clone();
         self.view_resolve(&mut out, &s);
         out

@@ -3374,6 +3374,9 @@ work_state(w_rust_default_backend, open).
 -- cold 13.0 -> 7.1 s, answers byte for byte (fast build). LEFT: the model loaded in TS beside Rust for its diagnostics (f_the_rust_path_loads_the_model_twice,
 -- about 4 s of a cold run), the book read in TS (about 110 ms warm), a cell's rule costing a whole prepare in the engine (about 230 ms, the safety
 -- program over the whole model, f_a_preparation_over_the_same_program_judges_it_once), and holding read by a scan (about 4 ms a picture's mark).
+-- PROGRESS 2026-11-15, the four left (f_a_cells_rule_no_longer_costs_the_model): the safety judgement of a cell's rule is incremental at last, the
+-- model is no longer loaded in TS when Rust accepts it, readBook prefilters templates, holding is indexed. RELEASE: cold 7.1-9.5 -> 1.6-1.8 s, a warm
+-- run 0.80 -> 0.30-0.41 s, byte for byte. LEFT: a cell's rule still seeds the judged rows of the whole program (about 120-150 ms a load, fast).
 work_needs(w_rust_default_backend, w_rust_cli).
 
 work(w_rust_rofl_md,

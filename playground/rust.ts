@@ -91,14 +91,19 @@ export class RustEngine implements Engine {
     return world;
   }
 
+  loaded(model: string, walls: Walls): boolean {
+    if (this.core?.model === model) return true;
+    if (this.core) this.call({ op: 'close', session: this.core.session });
+    this.core = undefined;
+    const s = this.call({ op: 'fresh', budget: walls.budget, space: walls.space }).session;
+    try { this.call({ op: 'load', session: s, rofl: model }); } catch { this.call({ op: 'close', session: s }); return false; }
+    this.core = { model, session: s };
+    return true;
+  }
+
   private run(slot: 'base' | 'cells', model: string, code: readonly string[], texts: string[], walls: Walls): { world: Rofl; errors: string[][] } {
-    if (this.core?.model !== model) {
-      if (this.core) this.call({ op: 'close', session: this.core.session });
-      const s = this.call({ op: 'fresh', budget: walls.budget, space: walls.space }).session;
-      this.call({ op: 'load', session: s, rofl: model });
-      this.core = { model, session: s };
-    }
-    const session = this.slot(slot, this.core.session);
+    if (!this.loaded(model, walls)) throw new Error('the Rust engine refused the model');
+    const session = this.slot(slot, this.core!.session);
     try { for (const rofl of chunksOf(code)) this.limited({ op: 'assert', session, rofl }, walls.stop); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
     return this.cells(session, texts, walls);
   }

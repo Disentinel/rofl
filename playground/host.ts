@@ -266,8 +266,10 @@ export class Host {
   init(model: string, phraseText: string, concernMap?: Concerns, kernel?: string, boot = kernel): { ok: boolean; diagnostics: string[]; ms: number } {
     const t = performance.now();
     // reuse is off: every run adds the cells' rules, which re-derives the stratum table and throws away all a reuse plan would keep, after paying seconds to plan it
-    this.core = new Rofl({ space: SPACE, reuse: false });
-    const l = this.core.load(model, { budget: BUDGET });
+    // the model is the engine's: loaded here only where the engine has no world of its own, or refuses it and the reference says why at its lines
+    const kept = this.engine.loaded?.(model, { budget: BUDGET, space: SPACE });
+    this.core = kept ? null : new Rofl({ space: SPACE, reuse: false });
+    const l = this.core ? this.core.load(model, { budget: BUDGET }) : { ok: true, diagnostics: [] };
     this.phrases = phraseText;
     if (concernMap) this.concerns = concernMap;
     this.home = homeOf(model);
@@ -291,7 +293,7 @@ export class Host {
    *  `stop`: asked as the run's evaluations go; true stops them as when the budget runs out. */
   run(code: string | Record<string, string>, cells: Cell[], data: string[] = [], stop?: Stop): RunOut {
     const files = typeof code === 'string' ? { [FILE]: code } : code;
-    if (!this.core) throw new Error('the model is not loaded');
+    if (!this.model) throw new Error('the model is not loaded');
     for (const w of [this.core, this.shell]) if (w) w.stop = stop;
     // a relation a datalog cell holds facts of in a book is read in that book by the sentence cells too
     const home = this.home, readHome = { ...homeOf(cells.filter((c) => c.form === 'rofl').map((c) => c.text).join('\n')), ...home };
@@ -410,7 +412,7 @@ export class Host {
     let f: Rofl, forked: ReturnType<NonNullable<Engine['over']>> | undefined;
     if (!base) {
       try {
-        const r = this.engine.withCells(this.core, this.model, [...Object.keys(files).length ? sc.lines : [], ...cone ? [asksOf(cone)] : []], texts, { budget: BUDGET, space: SPACE, stop });
+        const r = this.engine.withCells(this.core!, this.model, [...Object.keys(files).length ? sc.lines : [], ...cone ? [asksOf(cone)] : []], texts, { budget: BUDGET, space: SPACE, stop });
         r.errors.forEach((e, i) => outs[i].errors.push(...e));
         f = r.world; partial ||= f.store.partialEval;
       } catch (e) { return done((e as Error).message); }

@@ -783,6 +783,9 @@ pub struct Eval {
     /// The relations the last full pass evaluated again although the world held them whole before it.
     pub again: Vec<Sym>,
     alias_fresh: u32,
+    /// While a rule is rewritten by the preparation, the count of the variables it was given, from 0 for each rule: a rule's
+    /// rewriting is then the same in every preparation, and safety.rofl's judgment of the program is kept from one to the next.
+    rule_fresh: Option<u32>,
     pub lat: LatticeState,
     pub demand: DemandState,
     unk: UnknownState,
@@ -2335,6 +2338,7 @@ impl Eval {
             added_steps: 0,
             again: Vec::new(),
             alias_fresh: 0,
+            rule_fresh: None,
             lat: LatticeState::default(),
             demand: DemandState::default(),
             unk: UnknownState::new(unknown_value),
@@ -2433,6 +2437,16 @@ impl Eval {
     /// appends to. Its diagnostics are re-derived from the store on every
     /// call, so a second preparation would double every rule's complaint;
     /// they are merged rather than appended here.
+    /// A variable no clause holds: within a rule the preparation rewrites, numbered for that rule alone (`rule_fresh`); else from
+    /// the world's count, which only grows.
+    fn fresh_var(&mut self, prefix: &str) -> Term {
+        let name = match &mut self.rule_fresh {
+            Some(n) => { *n += 1; format!("_$r{prefix}{n}") }
+            None => { self.alias_fresh += 1; format!("_${prefix}{}", self.alias_fresh) }
+        };
+        Term::var(self.h.intern(&name))
+    }
+
     pub fn reprepare(&mut self) {
         let keep = std::mem::take(&mut self.diags);
         self.prepare();

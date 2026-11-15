@@ -172,9 +172,18 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       return m;
     });
   }
-  const cache = new Map<Tpl, RegExp>();
-  function regexOf(t: Tpl): RegExp {
-    let r = cache.get(t); if (r) return r;
+  // a sentence a template reads has the template's longest run of words in it: that substring is tried before the regex
+  type Matcher = { test: (s: string) => boolean; exec: (s: string) => RegExpExecArray | null };
+  const cache = new Map<Tpl, Matcher>();
+  let lastS = '', lastFlat = '';
+  const flat = (s: string) => s === lastS ? lastFlat : (lastS = s, lastFlat = s.replace(/\s+/g, ' '));
+  function regexOf(t: Tpl): Matcher {
+    let m = cache.get(t); if (m) return m;
+    const re = regExpOf(t), key = t.parts.reduce((k, p) => p.t === 'text' && p.s.replace(/\s+/g, ' ').length > k.length ? p.s.replace(/\s+/g, ' ') : k, '');
+    m = key ? { test: (s) => flat(s).includes(key) && re.test(s), exec: (s) => flat(s).includes(key) ? re.exec(s) : null } : re;
+    cache.set(t, m); return m;
+  }
+  function regExpOf(t: Tpl): RegExp {
     let src = '^';
     let first = true;
     for (const p of t.parts) {
@@ -184,7 +193,7 @@ export function readMd(rawMd: string, opts: ReadOptions): ReadResult {
       src += piece; first = false;
     }
     src += '$';
-    r = new RegExp(src); cache.set(t, r); return r;
+    return new RegExp(src);
   }
   /** A body aggregate or a threshold; its body is the conditions of one or more rules read in its parentheses, one after another. */
   /** `copy`: the sugar's second aggregate over the first one's body; its own variables are renamed apart when it is

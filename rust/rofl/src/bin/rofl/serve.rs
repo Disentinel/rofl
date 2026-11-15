@@ -146,6 +146,8 @@ fn strings(r: &Value, k: &str) -> Result<Option<Vec<String>>, String> {
 struct Keys {
     rels: HashMap<String, (HashMap<String, u32>, HashMap<String, (u32, u32, Vec<rofl::term::Term>)>)>,
     cells: Option<HashMap<String, u32>>,
+    /// the live facts by each atom (true) and string (false) anywhere in their terms, in the store's order
+    holding: Option<HashMap<(bool, u32), Vec<rofl::store::FactId>>>,
 }
 
 struct Server {
@@ -454,25 +456,33 @@ impl Server {
             (None, Some(t)) => (false, t.to_string()),
             _ => return Err("holding needs `atom` or `string`".into()),
         };
-        let s = self.get(r)?;
+        let id = session_id(r)?;
+        let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
         let e = &mut s.eval;
         let sym = e.h.intern(&text);
-        fn holds(h: &rofl::term::Heap, t: rofl::term::Term, atom: bool, sym: u32) -> bool {
+        fn held(h: &rofl::term::Heap, t: rofl::term::Term, out: &mut Vec<(bool, u32)>) {
             match t.kind() {
-                rofl::term::TermK::Atom(x) => atom && x == sym,
-                rofl::term::TermK::Str(x) => !atom && x == sym,
-                rofl::term::TermK::Func(i) => h.fargs(i).iter().any(|a| holds(h, *a, atom, sym)),
-                _ => false,
+                rofl::term::TermK::Atom(x) => out.push((true, x)),
+                rofl::term::TermK::Str(x) => out.push((false, x)),
+                rofl::term::TermK::Func(i) => h.fargs(i).iter().for_each(|a| held(h, *a, out)),
+                _ => {}
             }
         }
-        let facts: Vec<Value> = e
-            .store
-            .live_ids()
-            .into_iter()
-            .filter(|id| e.store.args(*id).iter().any(|a| holds(&e.h, *a, atom, sym)))
-            .take(limit)
-            .map(|id| rofl::seed::fact_json(&e.h, &e.store, id))
-            .collect();
+        let by = self.keys.entry(id).or_default().holding.get_or_insert_with(|| {
+            let mut by: HashMap<(bool, u32), Vec<rofl::store::FactId>> = HashMap::new();
+            let mut syms = Vec::new();
+            for f in e.store.live_ids() {
+                syms.clear();
+                e.store.args(f).iter().for_each(|a| held(&e.h, *a, &mut syms));
+                syms.sort_unstable();
+                syms.dedup();
+                for k in &syms {
+                    by.entry(*k).or_default().push(f);
+                }
+            }
+            by
+        });
+        let facts: Vec<Value> = by.get(&(atom, sym)).map_or(&[][..], |v| &v[..]).iter().take(limit).map(|f| rofl::seed::fact_json(&e.h, &e.store, *f)).collect();
         Ok(json!({ "facts": facts }))
     }
 
