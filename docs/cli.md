@@ -690,7 +690,8 @@ peak by nothing). They vary with the allocator: no golden reads them.
 
 **What an evaluation cost**, in the units of the walls: `rofl load` says on stderr `cost: 892 steps, 961 rows at
 peak`, the steps of every evaluation of the run (its rounds and ticks included; what `--budget` bounds) and the most
-rows the world held (what `--space` bounds). A world opened from a kept file evaluated nothing and says none. The
+rows the world held (what `--space` bounds). It is said with the state: a run that answers a question (`rofl ask`, `--ask`, `--why`) says none, and a world
+opened from a kept file evaluated nothing and says none. The
 two repeat from run to run, so they are blessed: `golden_cost(World, Steps, PeakRows)` in facts/goldens.rofl, and
 `npm test` is red on a world that took other steps or rows (`cost: steps 892->901, peak rows 961->961`).
 Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
