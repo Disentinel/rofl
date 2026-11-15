@@ -1593,7 +1593,7 @@ member_obj[flow](N, O, Obj)      :- bare_node[flow](O, Obj), object_of[code](N, 
 member_at[flow](N, O, Obj, Key)  :- member_obj[flow](N, O, Obj), selects[flow](N, Key).
 may_be[flow](N, VK, Val) :- member_any[flow](N, _, Obj, Key), class_member_static[flow](Obj, Key, V), may_be[flow](V, VK, Val).
 may_be[flow](N, VK, Val) :- member_at[flow](N, _, Obj, Key), member_plain[flow](Obj, Key, V), may_be[flow](V, VK, Val),
-                            not this_reads[code](N).
+                            not this_reads[code](N), not getter[value](V, V), not setter[value](V, V).
 
 -- A READ OFF AN INSTANCE. `member_at` is the object where the receiver holds it bare (`bare_node`: itself, or
 -- through its input), and what a member holds is read off it as above. Where the receiver holds an instance,

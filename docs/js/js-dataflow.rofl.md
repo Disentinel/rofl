@@ -3977,7 +3977,9 @@ The static member Key of a class CD is a node V if CD [is a class](#class_like) 
    - [`member_at`](#member_at)(N, something, Obj, Key);
    - [the plain member](#member_plain) Key of a node Obj is a node V;
    - [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val);
-   - unless [`this_reads`](#this_reads)(N).
+   - unless [`this_reads`](#this_reads)(N);
+   - unless [`getter`](#getter)(V, V);
+   - unless [`setter`](#setter)(V, V).
 
 > A READ OFF AN INSTANCE. `member_at` is the object where the receiver holds it bare (`bare_node`: itself, or
 > through its input), and what a member holds is read off it as above. Where the receiver holds an instance,
