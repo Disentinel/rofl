@@ -3913,12 +3913,35 @@ work_needs(w_workers_by_key, w_stage_planner).
 
 work(w_why_by_file,
   "The explanation of an absence as a table of files (each: zero, its hash, the program's), a row expanded by lifting one volume.").
-work_state(w_why_by_file, open).
+work_state(w_why_by_file, done).
+-- DONE 2026-11-15 (f_a_whynot_below_the_cut_thaws_the_file_it_names): a whynot is answered from the kept units; an
+-- open one that holds is the table of files, its counts read off the units; a row opens with --in; below a cut the
+-- walk thaws the file it names. Left, as items of their own: w_thaw_reads_one_file, w_whynot_by_units_at_scale.
 -- PROGRESS 2026-10-16 (release 1.3 audit): the parted walk and the table are built (#33,
 -- f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file); left: a row's zero read from the
 -- file's kept stage, and a row opened by lifting one volume.
 work_needs(w_why_by_file, w_stage_planner).
 work_spawned(w_why_by_file, f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file).
+
+work(w_thaw_reads_one_file,
+  "The first thaw of a run reads and cuts every source to find one file's text (Eval::lower_text): at the reference scale that is the whole scan, several GB, for one file of 11 100. Keep beside the units where each file's facts lie in the sources (or its scan under ~/.cache/rofl/scans), so that a thaw reads its file alone.").
+work_state(w_thaw_reads_one_file, open).
+work_spawned(w_thaw_reads_one_file, f_a_whynot_below_the_cut_thaws_the_file_it_names).
+
+work(w_whynot_by_units_at_scale,
+  "DONE 2026-11-15 (f_a_whynot_from_kept_units_costs_the_opening_of_the_world): measured at 250 and 1000 vscode files, release, 4 cores. What a whynot adds to opening the kept world is under 2 s; the opening itself is 0.8 s at 250 files and 3.2 s and 3.6 GB at 1000, and that is the item left: w_a_kept_world_opens_whole. WAS: MEASURE a whynot answered from kept units at 250 and 1000 vscode files on the release build: a bound question, an open one (the table), a row opened with --in, and a walk that thaws; and the table's count over 11 100 files, which reads every answer of the question (Eval::held_by_file). Nothing of it was measured past 12 files.").
+work_state(w_whynot_by_units_at_scale, done).
+work_spawned(w_whynot_by_units_at_scale, f_a_whynot_below_the_cut_thaws_the_file_it_names).
+
+work(w_a_kept_world_opens_whole,
+  "A question answered from kept units opens every unit of the world before it reads one: asked again, calls[code](A, B) takes 0.8 s and 0.9 GB resident at 250 vscode files and 3.2 s and 3.6 GB at 1000 (release, 4 cores), so by proportion about 35 s and 40 GB at 11 100, against the goal of a second. A bound question reads a few units; open the units a read reaches, as the walk reaches them, and keep the rest on disk. ACCEPTANCE: a bound ask and a bound whynot over the kept 1000-file world in about a second and well under 1 GB, the answers byte for byte.").
+work_state(w_a_kept_world_opens_whole, open).
+work_spawned(w_a_kept_world_opens_whole, f_a_whynot_from_kept_units_costs_the_opening_of_the_world).
+
+work(w_whynot_of_a_bare_name_reads_main,
+  "`rofl ask 'calls(A, B)'` answers from whatever book holds calls (calls[code], 515 answers at 20 vscode files) and `rofl whynot 'calls(A, B)'` over the same world reads the name in [main] and says `head does not unify`, as the reference does: the agent who asks why after asking what is told a thing about another relation. Say, where a bare name has no rule or fact in [main] and has them in one other book, which book was meant, or refuse naming the books.").
+work_state(w_whynot_of_a_bare_name_reads_main, open).
+work_spawned(w_whynot_of_a_bare_name_reads_main, f_a_whynot_from_kept_units_costs_the_opening_of_the_world).
 
 work(w_bench_legacy_pilot,
   "A PILOT BENCHMARK, CHEAP AND SIGNIFICANT (the owner, 2026-10-09): does a ROFL model of a project help a weak model (Haiku) answer the questions a team meets in real legacy JS more correctly and more honestly than the same model with grep and file reads? The corpus is what real JS does, NOT what the JS model covers today: where ROFL cannot answer, that is the work list for the engine. CORPUS: 84 small whole projects (code, package.json, Dockerfile or compose, k8s or terraform, nginx, .env) written by a strong model told only to confuse an experienced reviewer as in a real incident, never told of ROFL; 60 single traps spread over 14 families (types and coercion, undefined, scope and this, control flow and errors incl. Express arity and middleware order, async and races: check-then-act across await, a forgotten await, module state shared between requests, event before subscription, TOCTOU; import side effects and load order incl. circular imports, dotenv order, two copies of a package; runtime modification and non-obvious renaming: patched builtins and globals, Proxy, computed names, string events and DI tokens, mixins, re-exports, ORM hooks; aliasing and prototype pollution; dangerous sinks; resources; config and env; infrastructure around the code: 0.0.0.0, open debug port, missing NetworkPolicy, port mismatches, nginx prefix and slash rules, X-Forwarded-For trust, secrets in image layers; dependencies and build; old legacy: Grunt or Gulp concatenation order, global namespaces, AMD and CommonJS mixed) and 24 incident scenarios where 3-5 of them act together across code and infrastructure. About a third of the questions have 'no' or 'cannot tell' as the honest answer. TRUTH NEVER COMES FROM ROFL: a run with a logger on fs, net, child_process and env; a scheduler that enumerates the orders of promises and timers for races; a script over the configs; 'by construction' only where nothing runs, reported apart as weaker. Answers are checked by a script, no LLM judge. ARMS: A Haiku + grep and file reads, B the same + ROFL (?, why, whynot), the model built by the scanner and rules only, no LLM. 5 repeats per question and arm (840 runs), paired: McNemar per question and a bootstrap on the difference; enough to see about 20 points over the whole corpus, a direction only per family. OUTPUT: accuracy per family and per difficulty step A against B; confidently wrong against honest 'cannot tell' per arm; tokens per correct answer; the table of family x what ROFL could not answer. FIRST: the harness and a dry run on one project per family. NEEDS an Anthropic API key where it runs.").
