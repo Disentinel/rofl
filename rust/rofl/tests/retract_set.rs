@@ -147,7 +147,7 @@ fn a_set_taken_out_in_one_pass_is_the_fresh_world() {
 fn js_model() -> Vec<String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let list = std::fs::read_to_string(root.join("models/lang/js/js.files")).unwrap();
-    list.lines().filter(|l| !l.trim().is_empty()).map(|l| std::fs::read_to_string(root.join("rules").join(l.trim())).unwrap()).collect()
+    list.lines().filter(|l| !l.trim().is_empty()).map(|l| std::fs::read_to_string(root.join("models/lang/js").join(l.trim())).unwrap()).collect()
 }
 
 fn js_version(m: &str, v: usize) -> String {
@@ -324,7 +324,7 @@ fn a_tree_edited_in_sequence_is_the_fresh_world() {
 fn a_js_files_facts_taken_out_are_the_fresh_world() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let list = std::fs::read_to_string(root.join("models/lang/js/js.files")).unwrap();
-    let model: Vec<String> = list.lines().filter(|l| !l.trim().is_empty()).map(|l| std::fs::read_to_string(root.join("rules").join(l.trim())).unwrap()).collect();
+    let model: Vec<String> = list.lines().filter(|l| !l.trim().is_empty()).map(|l| std::fs::read_to_string(root.join("models/lang/js").join(l.trim())).unwrap()).collect();
     let mods = ["db", "users", "orders", "log", "server", "util"];
     let text = |m: &str| std::fs::read_to_string(root.join(format!("rust/rofl/tests/fixtures/delta/{m}.0.rofl"))).unwrap();
     let build = |ms: &[&str]| {
