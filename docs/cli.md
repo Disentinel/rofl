@@ -881,6 +881,13 @@ engine's on 555 of its 622, 95% of their bytes (f_the_memory_of_a_world_is_forec
 .claude/skills/forecast-engine-change/SKILL.md.
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
-reading and the binding. It is a diagnostic for the rule's author, not an
-error; docs/optimising-a-world.md is what to do about it. `evaluate` returns
-the same as `hot`.
+reading and the binding. A rule is hot when it has read more rows than the world
+holds facts as it stands and the most of any rule, and again at each doubling;
+no number is set. By levels each unit says its own, and once the units are
+settled the world says the rule that, summed over them, read more than the
+world (`..., summed over the units it fired in`). It is a diagnostic for the
+rule's author, not an error; docs/optimising-a-world.md is what to do about it.
+`evaluate` returns the same as `hot`. The profile (*The profile of an
+evaluation*) is the units' sum too: a world by levels that reads it stays by
+levels, and the rules that read it are fired by the reader once the units are
+settled.

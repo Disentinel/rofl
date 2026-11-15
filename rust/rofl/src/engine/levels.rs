@@ -1255,16 +1255,7 @@ impl Eval {
                 let named = store.rename_keys(|k| if e.0.h.is_own(k) { *memo.entry(k).or_insert_with(|| m.key(e.0.h.name(k))) } else { k });
                 rows.lock().unwrap().extend(named);
             }
-            {
-                let mut c = cost.lock().unwrap();
-                let hot = c.absorb(&e.0.cost);
-                if !hot.is_empty() {
-                    let _g = one.lock().unwrap();
-                    std::mem::swap(&mut e.0.cost, &mut c);
-                    e.0.say_hot_world(&hot);
-                    std::mem::swap(&mut e.0.cost, &mut c);
-                }
-            }
+            cost.lock().unwrap().absorb(&e.0.cost);
             let n = store.len_ids() - store.layer_mark();
             let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
             drop((one.lock().unwrap(), e));

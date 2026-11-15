@@ -956,9 +956,6 @@ impl<T: Pod> Col<T> {
             self.own.get(i - self.mark)
         }
     }
-    fn iter(&self) -> impl Iterator<Item = &T> {
-        (0..self.mark).map(|i| self.below(i)).chain(self.own.iter())
-    }
     fn capacity(&self) -> usize {
         self.base.capacity() + self.own.capacity() + self.low.capacity() * (std::mem::size_of::<T>() + 16)
     }
