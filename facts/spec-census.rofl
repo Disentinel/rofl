@@ -939,6 +939,7 @@ check[checks]("facts/goldens.rofl", "oxc_roles", world).
 check[checks]("facts/goldens.rofl", "plan_dp", world).
 check[checks]("facts/goldens.rofl", "plan_given", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).
+check[checks]("facts/goldens.rofl", "product_rofl", world).
 check[checks]("facts/goldens.rofl", "profile_model", world).
 check[checks]("facts/goldens.rofl", "prov_lazy", world).
 check[checks]("facts/goldens.rofl", "prov_lazy_lattice", world).
