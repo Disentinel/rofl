@@ -893,10 +893,9 @@ fn the_disk_cap_stops_and_a_larger_one_goes_on(brk: Option<&str>) -> Result<(), 
     ensure(after.code == 0 && after.out == whole.out && after.err.is_empty(), || format!("the run after: {} {:?}", after.code, after.err))
 }
 
-/// A world that cuts a book, kept for one question, answers a wider one as fresh: a cone grown below the cut would
-/// read the facts the cut dropped, so the world is computed anew, said on stderr; the third question reads the world
-/// kept then.
-fn a_cone_grown_below_the_cut_is_computed_anew(brk: Option<&str>) -> Result<(), String> {
+/// A world that cuts a book, kept for one question, answers a wider one as fresh: the lemmas the grown cone needs below
+/// the cut, which the world dropped, are proved again from its files and come in by delta, said on stderr.
+fn a_cone_grown_below_the_cut_takes_its_lemmas_again(brk: Option<&str>) -> Result<(), String> {
     let d = Dir::new("below-cut");
     let raw: String = (0..4).map(|i| format!("node[raw](p{i}, fn). node[raw](c{i}, call). child[raw](p{i}, c{i}). name[raw](c{i}, {}).\n", ["go", "go", "stop", "end"][i])).collect();
     d.write("cut.rofl", &format!("cut[fixpointplan](raw).\nedb(node). edb(child). edb(name).\n\
@@ -908,15 +907,15 @@ fn a_cone_grown_below_the_cut_is_computed_anew(brk: Option<&str>) -> Result<(), 
     run(&rofl, "leaf(N)");
     let (want, got) = (run(&fresh, "lonely(N)"), run(&rofl, "lonely(N)"));
     ensure(want.code == 0 && want.out.contains("N = c2") && !want.out.contains("N = c0"), || format!("fresh lonely: {} {:?} {:?}", want.code, want.out, want.err))?;
-    ensure(got.code == want.code && got.out == want.out && got.err.contains("computed anew"),
+    ensure(got.code == want.code && got.out == want.out && got.err.contains("lemmas proved again"),
         || format!("lonely after leaf: fresh {:?}, from the world kept for leaf {} {:?} {:?}", want.out, got.code, got.out, got.err))?;
     let again = run(&rofl, "leaf(N)");
-    ensure(again.code == 0 && again.out.contains("N = c0") && again.err.is_empty(), || format!("leaf again: {} {:?} {:?}", again.code, again.out, again.err))?;
-    // a lemma that nothing above read was dropped with the book: a rule above that comes to read it is computed anew too
+    ensure(again.code == 0 && again.out.contains("N = c0"), || format!("leaf again: {} {:?} {:?}", again.code, again.out, again.err))?;
+    // a lemma that nothing above read was dropped with the book: a rule above that comes to read it takes it again too
     d.append("cut.rofl", "top(P) :- node[raw](P, fn), edge(P, _).\nparent(P) :- edge(P, _).\n");
     run(&rofl, "top(N)");
     let (want, got) = (run(&fresh, "parent(N)"), run(&rofl, "parent(N)"));
-    ensure(want.code == 0 && want.out.contains("N = p0") && got.code == 0 && got.out == want.out && got.err.contains("computed anew"),
+    ensure(want.code == 0 && want.out.contains("N = p0") && got.code == 0 && got.out == want.out && got.err.contains("lemmas proved again"),
         || format!("parent after top: fresh {:?}, from the world kept for top {} {:?} {:?}", want.out, got.code, got.out, got.err))
 }
 
@@ -956,7 +955,7 @@ const CASES: [(&str, Case); 34] = [
     ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
     ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
     ("deltas_of_volumes_one_after_another", deltas_of_volumes_one_after_another),
-    ("a_cone_grown_below_the_cut_is_computed_anew", a_cone_grown_below_the_cut_is_computed_anew),
+    ("a_cone_grown_below_the_cut_takes_its_lemmas_again", a_cone_grown_below_the_cut_takes_its_lemmas_again),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

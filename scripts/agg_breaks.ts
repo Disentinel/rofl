@@ -9024,10 +9024,10 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "kept_cone_grown_over_the_cut",
-  "what": "a kept world grows its cone by delta with rules that read what the plan's cut dropped, so they read nothing and a wider question answers what a fresh world does not",
+  "id": "kept_cone_lemmas_unread",
+  "what": "a kept world that dropped what is below the plan's cut grows its cone without the lemmas its files' lower stage proves, so the rules it adds read nothing and a wider question answers what a fresh world does not",
   "expect": {
-   "kept_rule": "a_cone_grown_below_the_cut_is_computed_anew:"
+   "kept_rule": "a_cone_grown_below_the_cut_takes_its_lemmas_again:"
   }
  },
  {

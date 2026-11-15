@@ -310,13 +310,7 @@ fn run(json: bool, args: Vec<String>, mut pre: Option<(bool, crate::kept::Record
     set_walls(&o, &mut s);
     if let (Some(cut), Some(p)) = (found.cut, &slot) { resume_disk_wall(&o, &world, &mut s, p, cut); }
     if let (Some(d), Some(p)) = (&by_delta, &slot) { keep_taken(&o, &world, &mut s, p, d); }
-    if !from_disk {
-        build_world(&o, &world, &mut s, &slot, &[]);
-    } else if let Some(asks) = grow_cone(&o, &mut s) {
-        s = Session::fresh(o.budget);
-        set_walls(&o, &mut s);
-        build_world(&o, &world, &mut s, &slot, &asks);
-    }
+    if !from_disk { build_world(&o, &world, &mut s, &slot); } else { grow_cone(&o, &mut s); }
     if let Some(f) = &o.save {
         std::fs::write(f, s.save()).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: {e}")));
     }
@@ -446,7 +440,7 @@ fn set_walls(o: &Opts, s: &mut Session) {
 }
 
 /// The world of a run that did not open one from disk: its files, its world below, and what it evaluates, then kept.
-fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String>, also: &[String]) {
+fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String>) {
     let sources = load_sources(o);
     // what each file brought is read now, and the texts dropped before the evaluation, not held through it
     let units = {
@@ -455,8 +449,7 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
     };
     load_below(o, s, &sources);
     let disk = disk_wall(o, s, slot);
-    if let Some(mut rels) = question_rels(o) {
-        rels.extend(also.iter().filter(|r| !rels.contains(r)).cloned().collect::<Vec<_>>());
+    if let Some(rels) = question_rels(o) {
         if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
     }
     evaluate_world(o, s);
@@ -737,24 +730,22 @@ fn asked(s: &mut Session) -> Vec<String> {
 }
 
 /// A kept world asked for less than the question needs grows its cone over what it holds, by delta; one that asks
-/// nothing holds every rule already. A cone grown below the plan's cut reads what the world dropped with the cut
-/// books: the world is computed anew from its files, asked what it asked and more, said on stderr.
-fn grow_cone(o: &Opts, s: &mut Session) -> Option<Vec<String>> {
-    let rels = question_rels(o)?;
+/// nothing holds every rule already. Where the world dropped what is below the plan's cut, the lemmas the new cone
+/// needs are proved again from its files, by their lower stage alone, and come in with the asks.
+fn grow_cone(o: &Opts, s: &mut Session) {
+    let Some(rels) = question_rels(o) else { return };
     let had = asked(s);
     let more: Vec<String> = rels.into_iter().filter(|r| !had.contains(r)).collect();
-    if had.is_empty() || more.is_empty() { return None; }
-    let ran: Vec<_> = s.eval.rules.iter().map(|r| r.id).collect();
-    if let Err(e) = s.assert_delta(&asks_text(&more)) { fail(o.json, USAGE, &e); }
-    let added: Vec<_> = s.eval.rules.iter().map(|r| r.id).filter(|r| !ran.contains(r)).collect();
-    if s.eval.reads_staged_away(&added) && rofl::brk!("kept_cone_grown_over_the_cut" => false; true) {
-        eprintln!("the kept world was not asked {}, and a rule its cone grows by reads what the plan's cut (`cut[fixpointplan]`) dropped; computed anew", more.join(", "));
-        return Some(had);
-    }
+    if had.is_empty() || more.is_empty() { return; }
+    let asks = asks_text(&more);
+    let sources = load_sources(o);
+    let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
+    let lemmas = s.lower_lemmas(&texts.iter().map(String::as_str).collect::<Vec<_>>(), &asks).unwrap_or_else(|e| refuse(s, o.json, e));
+    if !lemmas.is_empty() { eprintln!("the kept world grew its cone below the plan's cut: {} lemmas proved again from its files", lemmas.lines().count()); }
+    if let Err(e) = s.assert_delta(&format!("{asks}{lemmas}")) { fail(o.json, USAGE, &e); }
     if s.eval.store.dirty {
         if let Err(e) = s.evaluate() { refuse(s, o.json, rofl::describe(&e)); }
     }
-    None
 }
 
 /// The sources of the files named: a `.rofl.md` world is read into its rules, after the worlds it reads.
