@@ -1,5 +1,6 @@
 #!/bin/sh
-# ROFL in the words of the product model, and the holes: `sh scripts/product.sh` (models/product/rofl.rofl).
+# ROFL in the words of the product model, and the holes: `npm run product [-- --fixture]` (models/product/rofl.rofl).
+# --fixture rewrites examples/checks/product-facts.rofl, the scanners' facts the world product_rofl is checked over.
 # The engine's entries are asked of its code once per tree of rust/rofl (about a minute) and kept under .cache/product.
 set -e
 rofl=rust/target/${ROFL_PROFILE:-release}/rofl
@@ -19,4 +20,9 @@ fi
 python3 scanners/product.py entries $out/engine-$key.json > $out/entries.rofl
 $rofl load --json --ask 'reads(U,V)' --ask 'entry(F,K,W)' $world $out/entries.rofl > $out/asked.json
 python3 scanners/product.py names $out/asked.json > $out/named.rofl
-echo "$world $out/entries.rofl $out/named.rofl"
+if [ "$1" = --fixture ]; then
+  { echo '-- examples/checks/product-facts.rofl: the entries of this tree and which view names which, as scripts/product.sh'
+    echo '-- read them (`npm run product -- --fixture` rewrites it), for the world product_rofl.'
+    cat $out/entries.rofl; echo; cat $out/named.rofl; } > examples/checks/product-facts.rofl
+fi
+$rofl load --json $(python3 scanners/product.py asks) $world $out/entries.rofl $out/named.rofl | python3 scanners/product.py report /dev/stdin

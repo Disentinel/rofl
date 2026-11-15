@@ -3,7 +3,8 @@
     product.py entries ENGINE.json    the entries: of the engine (the answer of models/engine/features.rofl to
                                       entry_kind(D,N,K), --json), of the library (facts/feature-map.rofl), of the
                                       editor extension (vscode/package.json)
-    product.py names ASKED.json       which view names which entry: the answers to reads(U,V) and entry(F,K,W)"""
+    product.py names ASKED.json       which view names which entry: the answers to reads(U,V) and entry(F,K,W)
+    product.py asks | report ANSWERS  the questions of the holes as flags of `rofl load`, and their answers in lines"""
 import json, pathlib, re, sys
 
 def answers(path):
@@ -58,4 +59,29 @@ def names(asked):
         out += [f'named({q(v)}, {f}, {k}, {q(w)}).' for f, k, w in entry if (f, k) in SPELT and re.search(SPELT[f, k](w), t)]
     return out
 
-print('\n'.join({'entries': entries, 'names': names}[sys.argv[1]](sys.argv[2])))
+# the holes: the question, and what an answer to it says
+HOLES = [
+    ('no_entry(F)', 'a feature no entry offers'),
+    ('not_for(F,U)', 'a feature that does not reach a user of the goal'),
+    ('unplaced(Form,K,W)', 'an entry the goal is silent about: it offers no feature and no inventory of knobs names it'),
+    ('unfound(Form,K,W,U)', 'an entry its user cannot find in what they read'),
+    ('no_target(M)', 'a metric with no target'),
+    ('small_only(M,O)', 'a target measured only below its world scale'),
+    ('missed(M,O,V,T)', 'a target missed at its world scale: measured, aimed'),
+    ('unbacked(C)', 'a contract no evidence backs'),
+    ('engine_explodes(A,B,Fw,Ft)', 'the engine explodes where the rules do not: the explode factor of the work, of the seconds'),
+]
+
+def asks(_):
+    return [' '.join(f"--ask {a}" for a, _ in HOLES)]
+
+def report(path):
+    out = []
+    for (ask, says), rows in zip(HOLES, answers(path)):
+        out.append(f'{len(rows):4}  {says}')
+        groups = {}
+        for r in rows: groups.setdefault(' '.join(r[:2]) if len(r) > 2 else '', []).append(' '.join(r[2:]) if len(r) > 2 else ' '.join(r))
+        out += [f'        {k + ": " if k else ""}{", ".join(sorted(v))}' for k, v in sorted(groups.items())]
+    return out
+
+print('\n'.join({'entries': entries, 'names': names, 'asks': asks, 'report': report}[sys.argv[1]](sys.argv[2] if len(sys.argv) > 2 else None)))

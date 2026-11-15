@@ -3857,6 +3857,14 @@ check_file("oxc_roles", "models/lang/js/roles.rofl").
 check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
 check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
 check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
+-- ROFL in the words of the product model (models/product/rofl.rofl): the goal as facts, the entries of the tree
+-- read into it, the holes; over the committed facts of the scanners (npm run product -- --fixture)
+check_world("product_rofl").
+check_file("product_rofl", "models/product/forms.rofl").
+check_file("product_rofl", "models/product/rofl.rofl").
+check_file("product_rofl", "facts/commands.rofl").
+check_file("product_rofl", "facts/bench.rofl").
+check_file("product_rofl", "examples/checks/product-facts.rofl").
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").
