@@ -9402,6 +9402,7 @@ finding_note(f_the_process_bands_plant_is_not_red_after_the_published_layout, "O
 finding(f_whole_picture_frames_do_not_follow_the_frame_decision, defect).
 recorded(f_whole_picture_frames_do_not_follow_the_frame_decision, "2026-09-30").
 demands(f_whole_picture_frames_do_not_follow_the_frame_decision, code).
+addressed_by(f_whole_picture_frames_do_not_follow_the_frame_decision, "notebook/draw.ts").
 finding_note(f_whole_picture_frames_do_not_follow_the_frame_decision, "OPEN. The owner's frame decision of 2026-09-30 (f_a_frame_draws_the_other_frames_people_under_bare_ids: a mark in every frame it is placed in, a pair whose far end is outside the frame not drawn in it) holds for `draw K in F` (scoped) and not for a picture drawn as all its frames (framesOf, notebook/draw.ts; used by notebook/cli.ts and vscode/visual/pictures.ts): there a mark has ONE frame, the last named, and a fact belongs by its first argument, so family-tree with frame(ivan, 1). frame(olga, 1). frame(boris, 2). frame(lena, 2). still writes `1 NAME boris` and `1 NAME lena` in frame 1. And the decision's pairs are link, link_tagged and inside: a notation's partner and child, whose first argument is a family in no frame, are not among them, so under `draw notation in 1` the family goes and the couple stays. Owed: framesOf on the same membership, the pairs of each kind named (a notation's partner and child, a timeline's message), and the moved worlds blessed and explained.").
 
 finding(f_a_snapshot_carries_the_world_not_its_walls, pitfall).
