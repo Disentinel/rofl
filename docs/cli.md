@@ -76,7 +76,9 @@ notebook over code (`code:`, `model: js`) and `--json` are not native yet: it sa
 `rofl ask`, `rofl why` and `rofl whynot` do the same: the world asks the relations
 their question names (`asks(R)`), so only the rules those reach run; asked later
 about a relation outside what its kept world asked, that world grows its cone by
-delta. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
+delta; where the grown cone reaches below a plan's cut (`cut[fixpointplan]`), whose
+books the world dropped, it is computed anew from its files, asked both, said on
+stderr. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
 rule, and so does `rofl load`, whose answers whycheck holds to the reference. At
 700 vscode files with the JS model: 49 s and 2.1 GB against 104 s and 3.4 GB.
 A world is kept only when the memory the process may still use holds about three

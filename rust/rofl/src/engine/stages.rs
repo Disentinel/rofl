@@ -535,6 +535,14 @@ impl Eval {
         self.staged_away = Some((st.cut.clone(), st.heads.iter().copied().filter(|r| !st.given.contains(r)).collect()));
     }
 
+    /// Whether one of `rules` reads what the stage took away: a cut book, or a relation concluded below that nothing
+    /// above read. Fired over this world, it reads nothing there.
+    pub fn reads_staged_away(&self, rules: &[Sym]) -> bool {
+        let Some((cut, gone)) = &self.staged_away else { return false };
+        let away = |l: &Lit| l.persp.as_atom().is_some_and(|b| cut.contains(&b)) || gone.contains(&l.rel);
+        self.rules.iter().filter(|r| rules.contains(&r.id)).any(|r| r.clause.body.iter().flat_map(BodyElem::lits_deep).any(away))
+    }
+
     /// Why a question is refused where the stage took its rows away: a relation of a cut book, or one concluded below
     /// that nothing above reads, is not kept. None when the world kept it.
     pub fn staged_away(&self, rel: Sym, book: Option<Sym>) -> Option<String> {
