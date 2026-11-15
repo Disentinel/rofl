@@ -1,6 +1,8 @@
-// A `.rofl.md` opens as a notebook; Run goes through notebook/kernel.ts in a worker; a failing never marks the lines it names.
+// A `.rofl.md` opens as a notebook; Run goes through notebook/kernel.ts in a kernel process of its own (vscode/worker.ts); a failing never marks the lines it names.
+// The extension is the editor's glue and loads no engine: models/process/loads.rofl holds it to that (vscode/test/thin.ts).
 import * as vscode from 'vscode';
-import { Worker } from 'node:worker_threads';
+import { fork, type ChildProcess } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { CODE, KINDS, bareLines, deserialize, serialize, type Cell, type Doc } from './serial.ts';
 import type { Run, Shown } from './render.ts';
 import type { Cell as Ask } from './worker.ts';
@@ -16,24 +18,32 @@ const TYPE = 'rofl-notebook', SAID_MIME = 'application/vnd.rofl.said+markdown';
 type Drawn = { kind: string; frames: string[]; labels: string[]; laid: string[]; features: string[]; spill: string[]; size: [number, number]; tags: string[]; panel?: boolean };
 type Note = { file: string; line: number; never: string; warn: boolean; where: vscode.Location };
 
-let worker: Worker | undefined, seq = 0;
+let worker: ChildProcess | undefined, seq = 0;
+const KERNEL = fileURLToPath(new URL('./worker.ts', import.meta.url));
 type Via = { model?: string; lm?: vscode.LanguageModelChat; stamp?: string };
 const waiting = new Map<number, { ok: (r: any) => void; fail: (e: Error) => void; step?: (s: string) => void; lm?: vscode.LanguageModelChat; stop?: vscode.CancellationToken }>();
+/** The kernel in a process of its own, Node as VS Code carries it: a run that grows its heap or dies takes nothing of the editor with it. */
+const startKernel = () => fork(KERNEL, [], { serialization: 'advanced', execArgv: KERNEL.endsWith('.ts') ? ['--experimental-strip-types', '--no-warnings'] : [],
+  env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', ROFL_KERNEL_ENGINE: vscode.workspace.getConfiguration('rofl').get<string>('engine') ?? '' }, stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
 /** `step` hears a translation's steps as they start; `stop` cancelled kills the model's process, or cancels VS Code's model's request. */
 function ask<T>(op: 'run' | 'translate' | 'why', file: string, text: string, unsaved: Record<string, string> = {}, cell?: Ask, step?: (s: string) => void, stop?: vscode.CancellationToken, via: Via = {}): Promise<T> {
   if (!worker) {
-    const w = worker = new Worker(new URL('./worker.ts', import.meta.url), { workerData: { engine: vscode.workspace.getConfiguration('rofl').get<string>('engine') } });
-    w.on('message', ({ id, r, error, step, lm, k }) => {
+    const w = worker = startKernel();
+    let said = '';
+    w.stderr!.on('data', (d: Buffer) => { said = (said + d).slice(-4000); });
+    w.on('message', ({ id, r, error, step, lm, k }: any) => {
       const p = waiting.get(id)!;
       if (step !== undefined) return p.step?.(step);
-      if (lm !== undefined) return void viaLm(p.lm!, lm, p.stop).then((answer) => worker?.postMessage({ id, op: 'answer', k, answer }));
+      if (lm !== undefined) return void viaLm(p.lm!, lm, p.stop).then((answer) => worker?.send({ id, op: 'answer', k, answer }));
       waiting.delete(id); error ? p.fail(new Error(error)) : p.ok(r);
     });
-    w.on('error', (e) => { worker = undefined; for (const p of waiting.values()) p.fail(e); waiting.clear(); });
+    const gone = (e: Error) => { if (worker === w) worker = undefined; for (const p of waiting.values()) p.fail(e); waiting.clear(); };
+    w.on('error', gone);
+    w.on('exit', (code, signal) => { if (worker === w) gone(new Error(`the kernel ended (${signal ?? `exit ${code}`})${said ? `: ${said.trim()}` : ''}`)); });
   }
   const id = ++seq;
-  stop?.onCancellationRequested(() => worker?.postMessage({ id, op: 'stop' }));
-  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.postMessage({ id, op, file, text, unsaved, cell, model: via.model, stamp: via.stamp }); });
+  stop?.onCancellationRequested(() => worker?.send({ id, op: 'stop' }));
+  return new Promise((ok, fail) => { waiting.set(id, { ok, fail, step, stop, lm: via.lm }); worker!.send({ id, op, file, text, unsaved, cell, model: via.model, stamp: via.stamp }); });
 }
 /** A person's click on a picture writes a file beside the notebook, never the notebook: Pin layout its placed(M, X, Y) facts in
  *  <notebook>.layout.rofl, a notation its standard file (<notebook>.ged), which VS Code then opens for the domain's own tool. */
@@ -77,7 +87,7 @@ async function chooseModel() {
 }
 /** The worker ended, mid-run or not: what waits on it fails, and the next run starts another, which loads the model again. */
 function restart() {
-  void worker?.terminate();
+  worker?.kill('SIGKILL');
   worker = undefined;
   for (const p of waiting.values()) p.fail(new Error('stopped: the kernel was restarted'));
   waiting.clear();
@@ -376,7 +386,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     void vscode.commands.executeCommand('setContext', 'rofl-notebook.translations', uris(runs.filter((c) => c.document.languageId !== 'natural' && naturalOf(c))));
   };
 
-  ctx.subscriptions.push(...lsp(channel), controller, channel, bad, warn, { dispose: () => { worker?.terminate(); for (const d of diagnostics.values()) d.dispose(); } },
+  ctx.subscriptions.push(...lsp(channel), controller, channel, bad, warn, { dispose: () => { worker?.kill('SIGKILL'); for (const d of diagnostics.values()) d.dispose(); } },
     vscode.workspace.registerNotebookSerializer(TYPE, {
       deserializeNotebook: (bytes) => { const d = deserialize(new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes)); return Object.assign(new vscode.NotebookData(cellsOf(d)), { metadata: d.metadata }); },
       serializeNotebook: (data) => new TextEncoder().encode(serialize({ cells: data.cells as Cell[], metadata: data.metadata ?? {} })),

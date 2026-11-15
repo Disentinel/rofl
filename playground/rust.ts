@@ -1,46 +1,17 @@
-// The model over the code, and the cells over it, evaluated by the Rust engine (playground/engine.ts), the default wherever its binary is. The world stays in the engine and the host
-// reads what it renders, a relation's rows, a fact, its firings, a cell, each when first asked: every answer, why and picture is then read by the TypeScript
-// engine's own code from the Rust engine's world, so the two engines say the same thing, and a world of millions of facts never crosses the pipe whole.
-import { accessSync, chmodSync, constants, existsSync } from 'node:fs';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { MessageChannel, receiveMessageOnPort, Worker } from 'node:worker_threads';
-import { Rofl } from '../src/api.ts';
-import { engine as installedEngine } from '../npm/platform.ts';
+// The model over the code, and the cells over it, evaluated by the Rust engine (playground/engine.ts), the default wherever its binary is. The world stays in the engine:
+// a query, why and whynot of it are the engine's own answers (`answered`), and the host reads what else it renders, a relation's rows, a fact, its firings, a cell,
+// each when first asked, so a world of millions of facts never crosses the pipe whole.
+import { Rofl, type Ask, type QueryResult, type QueryRow, type WhynotOpts } from '../src/api.ts';
+import type { WhynotFile } from '../src/aggeval.ts';
+import { rustBin, serve } from './rofl-serve.ts';
 import { asksOf, chunksOf, typescript, type Engine, type EngineName, type Holding, type Stop, type Walls } from './engine.ts';
 import type { CellRec, FactRec, PremRef, Store, Witness } from '../src/store.ts';
-import { termFromJson } from '../src/unify.ts';
-
-const ROOT = fileURLToPath(new URL('..', import.meta.url)), EXE = process.platform === 'win32' ? '.exe' : '';
-/** The Rust engine: the one a VSIX carries in bin/, made executable if unpacking lost the bit, else the npm package's platform package, else this tree's build. */
-export function rustBin(): string | undefined {
-  const installed = installedEngine();
-  const bin = [path.join(ROOT, 'bin', `rofl${EXE}`), 'bin' in installed ? installed.bin : '', path.join(ROOT, 'rust/target', process.env.ROFL_PROFILE || 'release', `rofl${EXE}`)].find((f) => f && existsSync(f));
-  if (bin && !EXE) try { accessSync(bin, constants.X_OK); } catch { try { chmodSync(bin, 0o755); } catch { return undefined; } }
-  return bin;
-}
+import { canonTerm, termFromJson } from '../src/unify.ts';
 
 /** The engine a name asks for; the Rust one only where its binary is, so `rust`, the default, is the TypeScript engine on a machine without it. */
 export function engineOf(name: EngineName = 'rust'): Engine {
   const bin = name === 'rust' ? rustBin() : undefined;
   return bin ? new RustEngine(bin) : typescript;
-}
-
-/** `rofl serve` in a child process, spoken to synchronously: a request waits on a thread that holds the child. One child for every engine of a process. */
-let engine: ((req: Record<string, unknown>) => Record<string, any>) | undefined;
-export function serve(bin: string) {
-  if (engine) return engine;
-  const { port1, port2 } = new MessageChannel(), flag = new Int32Array(new SharedArrayBuffer(4));
-  new Worker(new URL('./rust-worker.ts', import.meta.url), { workerData: { port: port2, flag, bin }, transferList: [port2] }).unref();
-  port1.unref();
-  return engine = (req) => {
-    Atomics.store(flag, 0, 0);
-    port1.postMessage(req);
-    Atomics.wait(flag, 0, 0);
-    const r = receiveMessageOnPort(port1)!.message;
-    if (!r.ok) throw new Error(`the Rust engine refused ${req.op}: ${r.error}`);
-    return r;
-  };
 }
 
 /** The model is loaded once and kept; each text of the code evaluates in a fork of it, kept until the next. */
@@ -113,8 +84,9 @@ export class RustEngine implements Engine {
   }
 
   private world(session: number, walls: Walls, partial: boolean): Rofl {
-    const world = new Rofl({ space: walls.space, reuse: false });
-    world.store = rustStore((req) => this.call({ ...req, session }), partial);
+    const ask = (req: Record<string, unknown>) => this.call({ ...req, session });
+    const world = answered(new Rofl({ space: walls.space, reuse: false }), ask);
+    world.store = rustStore(ask, partial);
     this.sessions.set(world, session);
     return world;
   }
@@ -130,6 +102,37 @@ export class RustEngine implements Engine {
     try { for (const rofl of chunksOf(code)) this.limited({ op: 'assert', session, rofl }, walls.stop); } catch (e) { throw new Error(`the code's facts were refused, so nothing was asked: ${(e as Error).message}`); }
     return this.cells(session, texts, walls);
   }
+}
+
+/** A literal as the engine reads a question: what `unpopulatable` judges is the relation, its book and its arity. */
+const textOf = (q: Ask): string => typeof q === 'string' ? q
+  : `${q.rel}${q.perspExplicit ? `[${q.persp.k === 'v' ? q.persp.name : canonTerm(q.persp)}]` : ''}(${q.args.map(() => '_').join(', ')})`;
+const refused = (e: unknown) => (e as Error).message.replace(/^the Rust engine refused \w+: /, '');
+
+/** A world the engine holds, asked as the engine answers: a query, why and whynot are its own (rofl serve ask, why, whynot, held to src/api.ts by
+ *  scripts/whycheck.ts), so no TypeScript evaluator is built over the world and the model's reflection never crosses the pipe. */
+function answered(world: Rofl, ask: (req: Record<string, unknown>) => Record<string, any>): Rofl {
+  const query = (text: Ask): QueryResult => {
+    let a: Record<string, any>;
+    try { a = ask({ op: 'ask', query: textOf(text) }); } catch (e) { return { rows: [], partial: false, error: refused(e) }; }
+    const vars: string[] = a.vars, named = vars.map((_, i) => i).sort((x, y) => (vars[x] < vars[y] ? -1 : vars[x] > vars[y] ? 1 : 0)), rows = new Map<string, QueryRow>();
+    for (const r of a.rows as string[][]) {
+      const bindings = Object.fromEntries(named.map((i) => [vars[i], r[i]])), text = vars.length ? named.map((i) => `${vars[i]} = ${r[i]}`).join(', ') : 'true';
+      if (!rows.has(text)) rows.set(text, { text, bindings });
+    }
+    return { rows: [...rows.keys()].sort().map((k) => rows.get(k)!), partial: !!a.partial, unpopulatable: !!a.unpopulatable };
+  };
+  return Object.assign(world, {
+    query,
+    holds: (text: Ask) => query(text).rows.length > 0,
+    unpopulatable: (text: Ask) => !!query(text).unpopulatable,
+    why: (text: Ask, opts: { all?: boolean } = {}) => { try { return { ok: true, text: ask({ op: 'why', query: textOf(text), all: !!opts.all }).text as string }; } catch (e) { return { ok: false, text: refused(e) }; } },
+    whynot: (text: Ask, opts: WhynotOpts = {}) => {
+      try { const r = ask({ op: 'whynot', query: textOf(text), depth: opts.depth, nodes: opts.nodes, all: !!opts.all }); return { holds: !!r.holds, text: r.text as string }; } catch (e) { return { holds: false, text: refused(e) }; }
+    },
+    whynotFiles: (text: Ask, files: [string, string][], opts: WhynotOpts = {}): WhynotFile[] =>
+      ask({ op: 'whynot', query: textOf(text), files, depth: opts.depth, nodes: opts.nodes, all: !!opts.all }).files,
+  });
 }
 
 type Fact = FactRec & { key: string };

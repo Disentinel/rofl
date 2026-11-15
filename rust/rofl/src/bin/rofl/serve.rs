@@ -45,7 +45,8 @@
 //!                                                        (what nothing touched is kept, engine/layer.rs)
 //!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
 //!                                                        stopped the last evaluation, or evaluated again
-//!   {"op":"ask","session":2,"query":"p(X)"}
+//!   {"op":"ask","session":2,"query":"p(X)"}            -> {"vars","rows","shrugs","partial","unpopulatable",...}:
+//!                                                        unpopulatable as src/api.ts `query` says it
 //!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
 //!   {"op":"why","session":2,"query":"c(a)","all":true} -> every member of every cell
 //!   {"op":"whynot","session":2,"query":"p(b)","depth":6,"nodes":64}
@@ -633,14 +634,16 @@ impl Server {
 
     fn op_ask(&mut self, r: &Value) -> Result<Value, String> {
         let q = str_of(r, "query", "ask needs `query`")?.to_string();
-        let a = self.get(r)?.ask(&q)?;
+        let s = self.get(r)?;
+        let a = s.ask(&q)?;
         let keys = if r.get("keys").and_then(|v| v.as_bool()).unwrap_or(false) {
             json!(a.keys)
         } else {
             Value::Null
         };
+        let unpopulatable = s.unpopulatable(&q).unwrap_or(false);
         Ok(json!({
-            "vars": a.vars, "rows": a.rows, "keys": keys,
+            "vars": a.vars, "rows": a.rows, "keys": keys, "unpopulatable": unpopulatable,
             "scanned": a.scanned, "probed": a.probed, "micros": a.micros, "partial": a.partial,
             "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
         }))
