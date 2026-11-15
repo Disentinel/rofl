@@ -385,6 +385,32 @@ impl Session {
         Ok(out)
     }
 
+    /// WHAT A CONE GROWN BELOW THE PLAN'S CUT NEEDS, for a world that dropped its cut books: `texts`, the world's files
+    /// read again, in a world of their own asked `asks`, evaluated through its lower stage alone; what that proves
+    /// outside the cut books and its upper stage reads, as facts written one a line for this world to assert. Empty
+    /// where this world dropped nothing.
+    pub fn lower_lemmas(&self, texts: &[&str], asks: &str) -> Result<String, String> {
+        if self.eval.staged_away.is_none() {
+            return Ok(String::new());
+        }
+        let mut low = Session::fresh(self.eval.budget);
+        low.eval.space = self.eval.space;
+        low.load_all(texts, None).map_err(|(_, d)| d.join("; "))?;
+        low.assert(asks)?;
+        low.eval.reprepare();
+        let Some(st) = low.eval.cut_stage() else { return Ok(String::new()) };
+        low.eval.lower_stage(&st).map_err(|h| describe(&h))?;
+        let mut out = String::new();
+        for id in low.eval.store.all_facts() {
+            let r = low.eval.store.rec(id);
+            if !r.base() && !st.cut.contains(&r.persp) && st.given.contains(&r.rel) && crate::brk!("kept_cone_lemmas_unread" => false; true) {
+                low.eval.store.write_key(&low.eval.h, id, &mut out);
+                out.push_str(".\n");
+            }
+        }
+        Ok(out)
+    }
+
     /// The facts in, as base: how many were new, whether one is an ask, and the facts the world now holds otherwise
     /// than before: the new ones and those that were derived and are base now (their height is a base fact's).
     fn put_facts(&mut self, facts: &[(Sym, Sym, Vec<Term>)]) -> (usize, bool, Vec<FactId>) {
