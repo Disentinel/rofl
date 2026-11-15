@@ -118,7 +118,7 @@ eff_here[flow](N, alloc, none) :- regexp[value](N).
 -- unknown is what the function DOES). `eff_member_both` is the never-both half
 -- of that partition; the never-neither half is a sum in the test.
 view eff_obj_traced(A).
-eff_obj_traced[flow](M) :- member_obj[flow](M, _, _).
+eff_obj_traced[flow](M) :- member_obj_any[flow](M, _, _).
 eff_heap_of[flow](M, local)  :- eff_obj_traced[flow](M), member_node_v[flow](M).
 eff_heap_of[flow](M, global) :- member_node_v[flow](M), not eff_obj_traced[flow](M).
 
