@@ -3888,6 +3888,26 @@ check_file("oxc_roles", "models/lang/js/roles.rofl").
 check_file("oxc_roles", "models/lang/js/oxc-roles.rofl").
 check_file("oxc_roles", "models/lang/js/roles-audit.rofl").
 check_file("oxc_roles", "models/lang/js/fixtures/all.oxc.rofl").
+-- ROFL in the words of the product model (models/product/rofl.rofl): the goal as facts, the entries of the tree
+-- read into it, the holes; over the committed facts of the scanners (npm run product -- --fixture)
+check_world("product_rofl").
+check_file("product_rofl", "models/product/forms.rofl").
+check_file("product_rofl", "models/product/rofl.rofl").
+check_file("product_rofl", "facts/commands.rofl").
+check_file("product_rofl", "facts/bench.rofl").
+check_file("product_rofl", "examples/checks/product-facts.rofl").
+-- no gate on a hardcoded number (models/engine/gates.rofl) over a small crate: the gates by a named constant, directly
+-- and through a field and a product, a bare number, a gate with a task and no source, a fact of a gate that is gone
+check_world("gates_rust").
+check_file("gates_rust", "models/lang/js/roles.rofl").
+check_file("gates_rust", "models/lang/rust/rs-roles.rofl").
+check_file("gates_rust", "models/lang/rust/names.rofl").
+check_file("gates_rust", "models/lang/rust/calls.rofl").
+check_file("gates_rust", "models/lang/rust/flow.rofl").
+check_file("gates_rust", "models/lang/rust/qname.rofl").
+check_file("gates_rust", "models/engine/gates.rofl").
+check_file("gates_rust", "examples/checks/gates-rs-facts.rofl").
+check_opt("gates_rust", one_engine, rust).
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").

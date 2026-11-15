@@ -227,7 +227,7 @@ impl Scan<'_> {
                     continue;
                 }
                 let word = t.chars().all(|c| c.is_ascii_alphabetic());
-                if (word && WORDS.contains(&t)) || (!word && !DELIMS.contains(&t)) || f.is_some() && !DELIMS.contains(&t) {
+                if (word && WORDS.contains(&t)) || (!word && !DELIMS.contains(&t)) || f == Some("operator") || f.is_some() && !DELIMS.contains(&t) {
                     self.fact("attr", &[&q(id), f.unwrap_or("token"), &q(t)]);
                 }
                 continue;
