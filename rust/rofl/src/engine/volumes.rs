@@ -5,21 +5,36 @@
 use super::*;
 use crate::dict::SHARED0;
 
-/// The file a fact's line names: its node prefix, `n` and 16 hex digits before `_`. None for a line that names no
-/// file or more than one: the core, which every unit reads.
+/// The file a node's name is of: its prefix, `n` and 16 hex digits before `_`.
+pub fn node_file(name: &str) -> Option<&str> {
+    let b = name.as_bytes();
+    (b.len() >= 18 && b[0] == b'n' && b[17] == b'_' && b[1..17].iter().all(u8::is_ascii_hexdigit)).then(|| &name[1..17])
+}
+
+/// The file a fact's line names: the one file of the nodes it holds, each an atom or a whole string. None for a line
+/// that names no file or more than one: the core, which every unit reads.
 pub fn file_of(line: &str) -> Option<&str> {
     let b = line.as_bytes();
     let mut found: Option<&str> = None;
     let mut i = 0;
-    while i + 18 <= b.len() {
-        if b[i] == b'n' && (i == 0 || !b[i - 1].is_ascii_alphanumeric() && b[i - 1] != b'_') && b[i + 17] == b'_' && b[i + 1..i + 17].iter().all(|c| c.is_ascii_hexdigit()) {
-            let f = &line[i + 1..i + 17];
+    while i < b.len() {
+        let at = if b[i] == b'"' {
+            let s = i + 1;
+            i = s;
+            while i < b.len() && b[i] != b'"' {
+                i += if b[i] == b'\\' { 2 } else { 1 };
+            }
+            node_file(&line[s..i.min(b.len())])
+        } else if b[i] == b'n' && (i == 0 || !b[i - 1].is_ascii_alphanumeric() && b[i - 1] != b'_') {
+            node_file(&line[i..])
+        } else {
+            None
+        };
+        if let Some(f) = at {
             match found {
                 Some(g) if g != f => return None,
                 _ => found = Some(f),
             }
-            i += 18;
-            continue;
         }
         i += 1;
     }
