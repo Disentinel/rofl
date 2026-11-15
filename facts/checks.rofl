@@ -3684,6 +3684,38 @@ check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
 
+-- w_js_call_site_context: a call is an instance of the object its function hands out, and a method call of the
+-- instance it is called on (examples/instances/src); every answer named in the check
+check_world("js_instances").
+check_file("js_instances", "facts/js-callgraph.rofl").
+check_file("js_instances", "facts/js-modules.rofl").
+check_file("js_instances", "facts/js-effects.rofl").
+check_file("js_instances", "facts/js-globals.rofl").
+check_file("js_instances", "facts/js-host.rofl").
+check_file("js_instances", "facts/js-host-surface.rofl").
+check_file("js_instances", "facts/js-lib-surface.rofl").
+check_file("js_instances", "facts/js-attrs.rofl").
+check_file("js_instances", "rules/js-structure.rofl").
+check_file("js_instances", "models/lang/js/roles.rofl").
+check_file("js_instances", "models/lang/js/oxc-roles.rofl").
+check_file("js_instances", "rules/js-dataflow.rofl").
+check_file("js_instances", "rules/js-model.rofl").
+check_file("js_instances", "rules/js-callgraph.rofl").
+check_file("js_instances", "rules/js-controlflow.rofl").
+check_file("js_instances", "rules/js-effects.rofl").
+check_file("js_instances", "rules/js-globals.rofl").
+check_file("js_instances", "rules/js-host.rofl").
+check_file("js_instances", "rules/js-ambient.rofl").
+check_file("js_instances", "rules/js-attrs.rofl").
+check_file("js_instances", "rules/js-modules.rofl").
+check_file("js_instances", "rules/js-concat.rofl").
+check_file("js_instances", "rules/js-surface.rofl").
+check_file("js_instances", "examples/checks/instances-facts.rofl").
+check_file("js_instances", "examples/vscode/side-effects.rofl").
+check_file("js_instances", "examples/checks/instances-check.rofl").
+check_opt("js_instances", one_engine, rust).
+proves_work("js_instances", w_js_call_site_context).
+
 -- w_concat_value: a string built from parts (rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
 -- the cap and the widening; every text, form and cut literal named in the check
 check_world("concat_value").

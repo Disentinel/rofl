@@ -1,0 +1,38 @@
+-- examples/checks/instances-check.rofl — A CALL IS AN INSTANCE (w_js_call_site_context) over examples/instances/src.
+-- deep.js: an object born in a function and handed out is a template, and a call gets it under its own label
+-- (`via(C, O)`): through wrappers (boot -> start -> init), a recursion (retry), a `new` in a factory (mk).
+-- storage.js: the values of an instance: a method says what it does in terms of its own `this` (`getPath`, `save`),
+-- the call reads it off its own receiver; through `this.save()`, a factory, and a method run on the object a field
+-- holds (Backup, Chain, Flusher, Outer), walked object by object.
+-- Every literal a named constant may hold and every value a side-effect site may get is named. Red if one is
+-- missing or one more appears: `a.getPath()` answering "b.json" again is one more.
+-- KNOWN GENERAL CASES kept as answers: a write made after the call lands on the template (`n2Slow` holds true,
+-- `n1Stale` false); what a kept variable holds is every instance (`curValue`); a condition is not evaluated
+-- (`r1Port`); an object literal filled after its birth may be read unset (`undefined`). Lines 5, 6, 40 are sites
+-- inside a method body: every instance there, the general case.
+iv_lit(Name, V) :- binder[code](D, Name, Init, _), at[tree](D, _, _), may_be_lit[flow](Init, V).
+iv_se(L, V)     :- side_effect_value(S, fs_mutation, V), at[tree](S, "src/storage.js", L).
+iv_want("adminPort", "4000"). iv_want("adminPort", undefined). iv_want("apiEnv", "prod").
+iv_want("apiEnv", undefined). iv_want("apiPort", "3000"). iv_want("apiPort", undefined).
+iv_want("cur", undefined). iv_want("curValue", "held"). iv_want("curValue", "one").
+iv_want("curValue", "two"). iv_want("direct_a", "a.json"). iv_want("direct_b", "b.json").
+iv_want("got_a", "a.json"). iv_want("got_b", "b.json"). iv_want("got_c", "c.json").
+iv_want("k1Value", "one"). iv_want("k2Value", "two"). iv_want("n1Slow", false).
+iv_want("n1Slow", true). iv_want("n1Stale", false). iv_want("n1Stale", true).
+iv_want("n2Slow", false). iv_want("n2Slow", true). iv_want("r1Port", "5000").
+iv_want("r1Port", "7001"). iv_want("r1Port", undefined). iv_want("r2Port", "5000").
+iv_want("r2Port", "7002"). iv_want("r2Port", undefined). iv_want("where_c2", "a.json").
+iv_want("where_c3", "b.json"). iv_want("where_j", "b.json"). iv_want("where_k", "a.json").
+iv_want_se(5, "a.json"). iv_want_se(5, "b.json"). iv_want_se(5, "c.json"). iv_want_se(6, "a.json").
+iv_want_se(6, "b.json"). iv_want_se(6, "c.json"). iv_want_se(14, "a.json"). iv_want_se(15, "b.json").
+iv_want_se(16, "a.json"). iv_want_se(20, "c.json"). iv_want_se(40, "a.json"). iv_want_se(40, "b.json").
+iv_want_se(44, "b.json"). iv_want_se(48, "a.json"). iv_want_se(49, "b.json"). iv_want_se(51, "b.json").
+iv_named(Name)        :- iv_want(Name, _).
+iv_missing(Name, V)   :- iv_want(Name, V), not iv_lit(Name, V).
+iv_extra(Name, V)     :- iv_lit(Name, V), iv_named(Name), not iv_want(Name, V).
+iv_missing_se(L, V)   :- iv_want_se(L, V), not iv_se(L, V).
+iv_extra_se(L, V)     :- iv_se(L, V), not iv_want_se(L, V).
+alarm(iv_missing).
+alarm(iv_extra).
+alarm(iv_missing_se).
+alarm(iv_extra_se).
