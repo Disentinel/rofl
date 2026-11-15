@@ -3714,7 +3714,6 @@ check_file("js_instances", "examples/checks/instances-facts.rofl").
 check_file("js_instances", "examples/vscode/side-effects.rofl").
 check_file("js_instances", "examples/checks/instances-check.rofl").
 check_opt("js_instances", one_engine, rust).
-proves_work("js_instances", w_js_call_site_context).
 
 -- w_concat_value: a string built from parts (rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
 -- the cap and the widening; every text, form and cut literal named in the check
