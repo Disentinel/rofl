@@ -28,6 +28,7 @@ edb(eff_label).
 edb(eff_name).
 edb(eff_row).
 edb(eff_alias).
+edb(eff_bit).
 
 -- ---------------------------------------------------------------------------
 -- THE HEAP PARAMETER, AND WHERE IT IS REFUSED.
@@ -64,6 +65,16 @@ eff_label(read,  local).
 eff_label(read,  global).
 eff_label(write, local).
 eff_label(write, global).
+
+-- One bit a label, so that a row of labels is the number `eff_mask` sums.
+eff_bit(exn,   none,   1).
+eff_bit(div,   none,   2).
+eff_bit(ndet,  none,   4).
+eff_bit(alloc, none,   8).
+eff_bit(read,  local,  16).
+eff_bit(read,  global, 32).
+eff_bit(write, local,  64).
+eff_bit(write, global, 128).
 
 -- ---------------------------------------------------------------------------
 -- THE NAMED LANDMARKS. Fourteen, and eight of them are the singleton row of a

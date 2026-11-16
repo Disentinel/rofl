@@ -3,14 +3,14 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1055 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1052 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 88 | 42 | 38 | 0 | 1 | 91 | 5 | 2 | 12 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 106 | 4 | 0 | 5 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 528 | 187 | 88 | 91 | 29 | 716 | 75 | 7 | 64 | 0 |
 | [js-concat](js-concat.rofl.md) | 193 | 63 | 0 | 52 | 2 | 317 | 23 | 7 | 11 | 0 |
 | [js-controlflow](js-controlflow.rofl.md) | 230 | 86 | 71 | 6 | 11 | 234 | 23 | 5 | 33 | 0 |
 | [js-dataflow](js-dataflow.rofl.md) | 1011 | 434 | 130 | 292 | 31 | 1877 | 182 | 8 | 72 | 0 |
-| [js-effects](js-effects.rofl.md) | 220 | 123 | 113 | 6 | 6 | 301 | 22 | 4 | 31 | 0 |
+| [js-effects](js-effects.rofl.md) | 224 | 126 | 110 | 12 | 6 | 305 | 23 | 4 | 32 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 44 | 33 | 32 | 0 | 0 | 42 | 5 | 1 | 18 | 0 |
 | [js-express](js-express.rofl.md) | 41 | 25 | 0 | 21 | 2 | 64 | 4 | 2 | 3 | 0 |
@@ -25,7 +25,7 @@
 | [js-surface](js-surface.rofl.md) | 103 | 61 | 1 | 59 | 3 | 175 | 12 | 1 | 12 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 6 | 4 | 4 | 0 | 0 | 4 | 2 | 0 | 1 | 0 |
 
-586 heads without a phrase across these files.
+592 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -249,8 +249,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_assign` | `is_a_write` |
 | `eff_assign_target` | `writes_to` |
 | `eff_bot` | `is_the_bottom` |
-| `eff_bounded` | `is_bounded_by` |
-| `eff_bounded_low` | `is_bounded_below` |
 | `eff_call_unattributed` | `has_no_surface` |
 | `eff_callee_less` | `has_a_callee_without_a_row` |
 | `eff_callee_more` | `has_a_callee_with_an_extra_row` |
@@ -303,13 +301,13 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_lb_higher` | `is_a_lower_bound_below_another` |
 | `eff_leq` | `is_at_or_below` |
 | `eff_lt` | `is_strictly_below` |
+| `eff_mask` | `has_the_effect_row` |
+| `eff_mask_name` | `is_named` |
 | `eff_meet` | `the_meet` |
 | `eff_member_both` | `is_read_and_written` |
 | `eff_member_target` | `is_a_written_member` |
-| `eff_mod_bounded` | `is_bounded_as_a_module_by` |
-| `eff_mod_bounded_low` | `is_bounded_as_a_module_below` |
 | `eff_mod_join_short` | `is_short_of_the_module_join` |
-| `eff_mod_over` | `exceeds_as_a_module` |
+| `eff_mod_mask` | `has_the_module_effect_row` |
 | `eff_mod_subject` | `is_a_module_subject` |
 | `eff_mod_two_names` | `has_two_module_effects` |
 | `eff_mod_unnamed` | `has_no_named_module_effect` |
@@ -331,7 +329,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_op_off_kind` | `inspects_off_its_kind` |
 | `eff_operation` | `performs_the_operation` |
 | `eff_origin` | `is_an_origin` |
-| `eff_over` | `exceeds` |
 | `eff_plain_key` | `has_a_plain_key` |
 | `eff_purer_callee` | `calls_a_purer_callee` |
 | `eff_reaches` | `reaches_by_calling` |

@@ -717,9 +717,8 @@ Declared as facts:
 | `may_throw_only` | "may_throw_without_a_latent_exception(function F)" |
 | `eff_swallowed` | "swallows(node F, effect label L:2, at host H:3, in call C:1)" |
 | `eff_subject` | "is_an_effect_subject(function F)" |
-| `eff_over` | "exceeds(function F, effect N)" |
-| `eff_bounded` | "is_bounded_by(function F, effect N)" |
-| `eff_bounded_low` | "is_bounded_below(function F, effect N)" |
+| `eff_mask` | "has_the_effect_row(function F, number M)" |
+| `eff_mask_name` | "is_named(effect row number M, by effect N)" |
 | `effect_of` | "the_effect(of function F, is effect N)" |
 | `eff_unnamed` | "has_no_named_effect(function F)" |
 | `concrete_denotes` | "denotes(surface S, effect E:2, at operation Op:1)" |
@@ -753,9 +752,7 @@ Declared as facts:
 | `eff_module` | "has_the_module_effect(file F, effect label L, at host H)" |
 | `eff_import_invented` | "invents_the_effect(node I, effect label L, at host H)" |
 | `eff_mod_subject` | "is_a_module_subject(file F)" |
-| `eff_mod_over` | "exceeds_as_a_module(file F, effect N)" |
-| `eff_mod_bounded` | "is_bounded_as_a_module_by(file F, effect N)" |
-| `eff_mod_bounded_low` | "is_bounded_as_a_module_below(file F, effect N)" |
+| `eff_mod_mask` | "has_the_module_effect_row(file F, number M)" |
 | `effect_of_module` | "the_module_effect(of file F, is effect N)" |
 | `eff_mod_unnamed` | "has_no_named_module_effect(file F)" |
 | `eff_mod_join_short` | "is_short_of_the_module_join(file F, effect J:2, with file T:1)" |
