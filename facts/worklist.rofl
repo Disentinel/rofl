@@ -3720,6 +3720,9 @@ work_needs(w_cmp_asks_from_cells, w_cmp_demand_cones).
 work(w_cmp_model_aggregates,
   "HYPOTHESIS 8: relations of the JS model that are aggregates in disguise read and cost better as aggregates: nearest_fn (`not closer` over every enclosing pair) as a min of depth, the effects (eff_here) as a lattice, the audit verdicts as a max over their strength, coverage audits as counts; and a census of the model's ~200 `not` for those that are a min/max/count. Value sets as a union lattice are NOT among them (refuted: sets are size 1). ACCEPTANCE per rewrite: identical answers, work before/after; with the owner, since the rules are his.").
 work_state(w_cmp_model_aggregates, open).
+-- 2026-11-16: census done, effect_of and effect_of_module rewritten by row bits (f_the_name_of_an_effect_row_is_solved_once_per_row);
+-- the other order-bearing negations are under 1 700 rows at vscode 1000. Open: the audit verdicts and coverage counts of the hypothesis.
+work_spawned(w_cmp_model_aggregates, f_the_name_of_an_effect_row_is_solved_once_per_row).
 
 work(w_cmp_delta_first,
   "ENGINE (from f_costly_rules_are_shapes, the largest shape: 265 rules, 49% of sealed rule time): new facts arriving at premise i only filter that premise while every premise before i is re-joined in full each round. Prototype ROFL_DELTA_FIRST (put the new-facts premise first when the delta is no larger than the first premise's relation) measured eval -27/-27/-36/-16% sealed on self/mcp/cli_exits/util, with three rules regressing ~90 ms (the guard counts all rows, not the constant-bound ones). Make it sound and general in the Rust engine (delta-first or a proper semi-naive plan per delta position, guard by bound-row estimates), byte-identical facts, then measure. Engine-fast area: the owner decides who builds it. Diff: scratchpad shapes/diffs/engine_profile_counters_and_delta_first.diff (also adds a full per-rule profile with probes, solutions, conclusions, firings).").

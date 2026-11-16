@@ -8,7 +8,7 @@
 --   side_effect_site(Site, Family)          every site, with a value or without
 --   side_effect_env(Value, Key)             the value is `process.env.Key`
 --   side_effect_form(Site, Family, Form)    a string built from parts may reach the argument, of that form, some part
---                                           unknown (rules/js-concat.rofl: `ref(P)`, `node(X)`); its concrete texts,
+--                                           unknown (models/lang/js/rules/js-concat.rofl: `ref(P)`, `node(X)`); its concrete texts,
 --                                           every part literal, are values; `part_value(V, I, PV)` lists the parts
 --   side_effect_count(Family, Sites, Valued)
 --
@@ -102,7 +102,7 @@ se_site(C, F, 0) :- call_like[code](C), callee[value](C, M),
 
 se_param(Fn, I, F) :- se_site(S, F, J), arg_at[flow](S, J, A), param_use[flow](Fn, Name, A), param_of[flow](Fn, I, Name).
 se_site(W, F, I)   :- resolves[code](W, Fn), sx_param_sink[surface](Fn, I, F).
--- the wrapper is the callee's: it publishes which parameter it hands on (rules/js-surface.rofl)
+-- the wrapper is the callee's: it publishes which parameter it hands on (models/lang/js/rules/js-surface.rofl)
 sx_param_sink[surface](Fn, I, F) :- se_param(Fn, I, F).
 -- A METHOD THAT HANDS A FIELD OF ITS OWN `this` TO A SITE is a wrapper too (`save() { fs.writeFileSync(this.path) }`):
 -- its call is a site whose value is that field of the call's receiver, the instance's own value (`key_on`).
@@ -150,7 +150,7 @@ side_effect_value(S, F, T) :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_no
 side_effect_form(S, F, T)  :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), not summarized[flow](C),
                               may_be_form[flow](C, T).
 
--- vscode's own path module is node's path, ported (rules/js-concat.rofl `ambient_module`): a call of it answers as
+-- vscode's own path module is node's path, ported (models/lang/js/rules/js-concat.rofl `ambient_module`): a call of it answers as
 -- the join it is, and the strings its body builds are not answers of their own.
 ambient_module("src/vs/base/common/path.ts", "node:path").
 

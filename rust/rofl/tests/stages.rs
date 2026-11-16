@@ -14,7 +14,7 @@ fn root() -> PathBuf {
 }
 
 fn texts(cut: bool) -> Vec<String> {
-    let rules = root().join("rules");
+    let rules = root().join("models/lang/js");
     let list = std::fs::read_to_string(rules.join("js.files")).unwrap();
     let mut files: Vec<PathBuf> = list.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')).map(|l| rules.join(l)).collect();
     files.push(root().join("examples/checks/vscode-split-facts.rofl"));

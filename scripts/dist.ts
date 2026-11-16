@@ -30,7 +30,7 @@ rmSync(OUT, { recursive: true, force: true });
 execFileSync(process.execPath, ['--experimental-strip-types', path.join(ROOT, 'scripts/guide.ts'), '--check'], { stdio: 'inherit' });
 
 // every module the command line, the kept kernel, the extension and the library's exports reach by relative imports
-const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'npm/rofl.ts', 'scanners/cli.ts', 'src/api.ts', 'runtime/port.ts'];
+const ENTRIES = ['notebook/cli.ts', 'notebook/serve.ts', 'lsp/server.ts', 'vscode/extension.ts', 'vscode/worker.ts', 'npm/rofl.ts', 'models/lang/js/scanner/cli.ts', 'src/api.ts', 'runtime/port.ts'];
 const seen = new Set<string>();
 for (const q = [...ENTRIES]; q.length;) {
   const f = q.pop()!;
@@ -66,7 +66,7 @@ process.argv[1] = fileURLToPath(new URL('${main}', import.meta.url));
 await import('${main}');
 `);
 cpSync(wasmScanner(ROOT + '/'), path.join(PKG, 'oxc_scan.wasm'));
-const OXC_NOTICE = `oxc_scan.wasm is rust/tools/oxc_scan built with the oxc crates (oxc_parser, oxc_ast, oxc_span, oxc_allocator, https://github.com/oxc-project/oxc), under the MIT license:
+const OXC_NOTICE = `oxc_scan.wasm is models/lang/js/scanner/oxc_scan built with the oxc crates (oxc_parser, oxc_ast, oxc_span, oxc_allocator, https://github.com/oxc-project/oxc), under the MIT license:
 
 MIT License
 
@@ -115,10 +115,10 @@ cpSync(PKG, path.join(VSIX, 'rofl-nb'), { recursive: true });
 // the editor's modules ship in the VSIX alone: no command of the npm package reaches them
 rmSync(path.join(PKG, 'vscode'), { recursive: true });
 
-// the library's types (its JavaScript is the commands' own, above) and what the engine reads from its tree: rules/js.files names the model from rules/
+// the library's types (its JavaScript is the commands' own, above) and what the engine reads from its tree: models/lang/js/js.files names the model from models/lang/js/
 execFileSync(process.execPath, [path.join(ROOT, 'node_modules/typescript/bin/tsc'), '-p', path.join(ROOT, 'tsconfig.build.json'), '--outDir', path.join(PKG, 'dist')], { stdio: 'inherit' });
-for (const f of [...root.files.filter((f: string) => f !== 'dist/' && f !== 'README.md'), 'rules/js.files']) cpSync(path.join(ROOT, f), path.join(PKG, f), { recursive: true });
-for (const f of readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean)) if (!existsSync(path.join(PKG, 'rules', f))) throw new Error(`rules/js.files names ${f}, which the package does not carry`);
+for (const f of [...root.files.filter((f: string) => f !== 'dist/' && f !== 'README.md'), 'models/lang/js/js.files', 'models/lang/js/library.rofl']) cpSync(path.join(ROOT, f), path.join(PKG, f), { recursive: true });
+for (const f of readFileSync(path.join(ROOT, 'models/lang/js/js.files'), 'utf8').split('\n').filter(Boolean)) if (!existsSync(path.join(PKG, 'models/lang/js', f))) throw new Error(`models/lang/js/js.files names ${f}, which the package does not carry`);
 execFileSync('npm', ['pack', '--silent', '--pack-destination', OUT], { cwd: PKG, stdio: ['ignore', 'ignore', 'inherit'] });
 const packed = [`grafema-rofl-${version}.tgz`];
 for (const p of PLATFORMS) {
@@ -129,10 +129,10 @@ for (const p of PLATFORMS) {
   mkdirSync(path.join(dir, 'bin'), { recursive: true });
   cpSync(built, path.join(dir, 'bin', exe));
   chmodSync(path.join(dir, 'bin', exe), 0o755);
-  // the scanner `rofl scan` runs (scanners/cli.ts looks for it beside the engine), built for the same platform
+  // the scanner `rofl scan` runs (models/lang/js/scanner/cli.ts looks for it beside the engine), built for the same platform
   const scan = `oxc_scan${p.startsWith('win32') ? '.exe' : ''}`;
-  const scanner = [path.join(ROOT, 'rust/target', `rofl-${p}`, scan), ...(own ? [path.join(ROOT, 'rust/tools/oxc_scan/target/release', scan)] : [])].find(existsSync);
-  if (!scanner) throw new Error(`${p}: the engine is built and rust/tools/oxc_scan is not (cargo build --release --manifest-path rust/tools/oxc_scan/Cargo.toml; CI lays it out beside the engine, rust/target/rofl-${p}/)`);
+  const scanner = [path.join(ROOT, 'rust/target', `rofl-${p}`, scan), ...(own ? [path.join(ROOT, 'models/lang/js/scanner/oxc_scan/target/release', scan)] : [])].find(existsSync);
+  if (!scanner) throw new Error(`${p}: the engine is built and models/lang/js/scanner/oxc_scan is not (cargo build --release --manifest-path models/lang/js/scanner/oxc_scan/Cargo.toml; CI lays it out beside the engine, rust/target/rofl-${p}/)`);
   cpSync(scanner, path.join(dir, 'bin', scan));
   chmodSync(path.join(dir, 'bin', scan), 0o755);
   cpSync(path.join(ROOT, 'LICENSE'), path.join(dir, 'LICENSE'));
@@ -160,8 +160,8 @@ if (TARGET) {
   const built = [`rofl-${TARGET}`, 'release'].map((d) => path.join(ROOT, 'rust/target', d, exe)).find(existsSync)!;
   cpSync(built, path.join(VSIX, 'rofl-nb/bin', exe));
   const scan = `oxc_scan${TARGET.startsWith('win32') ? '.exe' : ''}`;
-  const scanner = [path.join(ROOT, 'rust/target', `rofl-${TARGET}`, scan), path.join(ROOT, 'rust/tools/oxc_scan/target/release', scan)].find(existsSync);
-  if (!scanner) throw new Error(`${TARGET}: no oxc_scan built for it (rust/tools/oxc_scan)`);
+  const scanner = [path.join(ROOT, 'rust/target', `rofl-${TARGET}`, scan), path.join(ROOT, 'models/lang/js/scanner/oxc_scan/target/release', scan)].find(existsSync);
+  if (!scanner) throw new Error(`${TARGET}: no oxc_scan built for it (models/lang/js/scanner/oxc_scan)`);
   cpSync(scanner, path.join(VSIX, 'rofl-nb/bin', scan));
 }
 writeFileSync(path.join(VSIX, 'main.js'), "exports.activate = async (ctx) => (await import('./rofl-nb/vscode/extension.js')).activate(ctx);\n");

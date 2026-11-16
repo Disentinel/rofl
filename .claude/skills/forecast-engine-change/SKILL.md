@@ -19,7 +19,7 @@ the change; it judges the forecast. A forecast that the measurement contradicts 
        refine_profile(Rel, A) :- asserted_by($fact(Rel, profile, A), _, _).
        refine_w(R) :- width[profile](R, _, _).
 
-   `rofl load --json --ask 'refine_profile(Rel, A)' @rules/js.files <facts> meter.rofl`, then write each row back as
+   `rofl load --json --ask 'refine_profile(Rel, A)' @js <facts> meter.rofl`, then write each row back as
    `Rel[profile](args).` The second rule matters: without a rule that reads a profile relation the engine writes none.
    scripts/refine.ts does the same for the plan loop.
 

@@ -21,12 +21,12 @@ export function emit(root: string, lib: string, src: string): string {
   return js;
 }
 
-/** oxc_scan compiled to wasm (the scanner of a page, scanners/oxc_wasm.ts): this tree's build, made when it is missing. */
+/** oxc_scan compiled to wasm (the scanner of a page, models/lang/js/scanner/oxc_wasm.ts): this tree's build, made when it is missing. */
 export function wasmScanner(root: string): string {
-  const wasm = `${root}rust/tools/oxc_scan/target/wasm32-unknown-unknown/release/oxc_scan.wasm`;
+  const wasm = `${root}models/lang/js/scanner/oxc_scan/target/wasm32-unknown-unknown/release/oxc_scan.wasm`;
   if (!existsSync(wasm)) {
-    const r = spawnSync('cargo', ['build', '--release', '-q', '--lib', '--target', 'wasm32-unknown-unknown', '--manifest-path', `${root}rust/tools/oxc_scan/Cargo.toml`], { stdio: ['ignore', 2, 2] });
-    if (r.status !== 0) throw new Error('oxc_scan.wasm: rustup target add wasm32-unknown-unknown, then cargo build --release --lib --target wasm32-unknown-unknown in rust/tools/oxc_scan');
+    const r = spawnSync('cargo', ['build', '--release', '-q', '--lib', '--target', 'wasm32-unknown-unknown', '--manifest-path', `${root}models/lang/js/scanner/oxc_scan/Cargo.toml`], { stdio: ['ignore', 2, 2] });
+    if (r.status !== 0) throw new Error('oxc_scan.wasm: rustup target add wasm32-unknown-unknown, then cargo build --release --lib --target wasm32-unknown-unknown in models/lang/js/scanner/oxc_scan');
   }
   return wasm;
 }

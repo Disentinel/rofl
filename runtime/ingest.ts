@@ -9,7 +9,7 @@
 // The loop, per tick:
 //
 //   1. ask `needs_index` — the frontier, frozen for the round
-//   2. parse a batch with rust/tools/oxc_scan and `load` the facts
+//   2. parse a batch with models/lang/js/scanner/oxc_scan and `load` the facts
 //   3. evaluate, and read `peak_rows` against `space` — the only honest
 //      pressure signal, and it is counted in ROWS, which are not facts
 //   4. if over the mark, assert `under_pressure`, ask `candidate_intent(cool,
@@ -37,7 +37,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { idPrefix, oxcScan } from '../scanners/oxc_bin.ts';
+import { idPrefix, oxcScan } from '../models/lang/js/scanner/oxc_bin.ts';
 import { RoflPort, type RoflSession } from './port.ts';
 
 export interface IngestOpts {

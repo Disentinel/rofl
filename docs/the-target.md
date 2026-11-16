@@ -111,7 +111,7 @@ every size measured** — `derived_by` rows the reference loses to a stale firin
 
 - The **Rust engine** passes 34/34 on both conformance oracles, and the largest
   world it has ever evaluated is **11 591 facts** (the `spat` corpus case). It
-  has **never been given the JS model**; whether it even loads `rules/js-*.rofl`
+  has **never been given the JS model**; whether it even loads `models/lang/js/rules/js-*.rofl`
   is unknown, and that is rung L0.
 - The **TypeScript kernel** with the JS model reaches **64 files / 2 960 417
   facts / 67 s / 2.6 GB**, and only with `DEFAULT_SPACE` raised — which is not

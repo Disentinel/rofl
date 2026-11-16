@@ -663,7 +663,7 @@ evaluation, of which the report is one to two seconds; one run each, on a busy 4
 
 ## What serves the readers of the tree
 
-`facts/ast-within-readers.rofl` classifies every premise of `rules/js-*.rofl`
+`facts/ast-within-readers.rofl` classifies every premise of `models/lang/js/rules/js-*.rofl`
 that reads `ast_within` or `ast_in`, by the question it asks and the
 arguments bound when the premise is reached in written order, and the world
 `ast_within_readers` counts them. 56 premises in 48 rules (49 of `ast_within`,
@@ -712,7 +712,7 @@ Which readers need materialised rows anyway:
   they are two ancestor enumerations and a test (`completion_fn_between`
   asks exists-a-function-between the same way).
   They could become a walk up that stops at the first hit, but only in a model
-  change, which is the owner's (`rules/js-*.rofl`).
+  change, which is the owner's (`models/lang/js/rules/js-*.rofl`).
 
 The frozen copy `examples/linter/corpus-dataflow.rofl` repeats 23 of these
 premises under the same questions and is not counted.

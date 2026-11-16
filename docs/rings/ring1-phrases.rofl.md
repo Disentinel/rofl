@@ -10,7 +10,7 @@ default: main
 > end written in ROFL (examples/ring1/ring1.rofl, charclass.rofl). A position
 > is an index into the source, and a token is a pair of positions, never text.
 > Read by `rofl render`, which renders the grammar as docs/rings; loaded by
-> nothing else. The format is facts/js-phrases.rofl's.
+> nothing else. The format is models/lang/js/facts/js-phrases.rofl's.
 
 Declared as facts:
 

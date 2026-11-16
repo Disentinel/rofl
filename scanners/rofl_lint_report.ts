@@ -13,7 +13,7 @@ import { Rofl } from '../src/api.ts';
 const ROOT = join(import.meta.dirname, '..');
 const focus = process.argv.slice(2).length > 0
   ? process.argv.slice(2)
-  : ['rules/js-effects.rofl', 'rules/js-callgraph.rofl'];
+  : ['models/lang/js/rules/js-effects.rofl', 'models/lang/js/rules/js-callgraph.rofl'];
 
 const r = new Rofl();
 for (const f of ['boot.rofl', 'facts/rofl-lint.rofl', 'rules/rofl-lint.rofl']) {

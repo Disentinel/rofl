@@ -8667,7 +8667,7 @@ export const BREAKS: Break[] = [
   "what": "the loop unfolds twelve levels, not three: its texts grow with the bound, and only the bound stops them",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "concat_depth(3).",
     "concat_depth(12)."
    ]
@@ -8681,7 +8681,7 @@ export const BREAKS: Break[] = [
   "what": "the cap at 32 choices: a node with 32 texts keeps them",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "concat_cap(16).",
     "concat_cap(32)."
    ]
@@ -8695,7 +8695,7 @@ export const BREAKS: Break[] = [
   "what": "a `+` of two numbers inside a string-capable `+` is read as a concatenation",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "shape_needs(plus, yes).",
     "shape_needs(plus, yes).  shape_needs(plus, no)."
    ]
@@ -8709,7 +8709,7 @@ export const BREAKS: Break[] = [
   "what": "every `+` composes, a sum of two numbers too",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, V), str_value[flow](V).",
     "composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, _)."
    ]
@@ -8723,7 +8723,7 @@ export const BREAKS: Break[] = [
   "what": "an interpolated template composes nothing",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "composed[flow](T) :- interpolated[code](T), template[value](T), not tagged_quasi[code](T).",
     ""
    ]
@@ -8737,7 +8737,7 @@ export const BREAKS: Break[] = [
   "what": "`x += v` is not read as a concatenation",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "plus_assign[code](A, L, Name, File) :- binary[value](A, \"+\", L, _)",
     "plus_assign[code](A, L, Name, File) :- binary[value](A, \"-\", L, _)"
    ]
@@ -8751,7 +8751,7 @@ export const BREAKS: Break[] = [
   "what": "the table loses path.join",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "ambient_value(\"node:path\", \"join\",      concat,      path_sep).\n",
     ""
    ]
@@ -8765,7 +8765,7 @@ export const BREAKS: Break[] = [
   "what": "a library call composes the arguments it sees past a spread, a partial text",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "whole_args[flow](C) :- vlib_op[flow](C, _, _), not spread_arg[code](C, _).",
     "whole_args[flow](C) :- vlib_op[flow](C, _, _)."
    ]
@@ -8779,7 +8779,7 @@ export const BREAKS: Break[] = [
   "what": "dirname cuts before a doubled separator, where node keeps both",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "B is str_char(V, Q), B != \"/\",",
     "B is str_char(V, Q),"
    ]
@@ -8793,7 +8793,7 @@ export const BREAKS: Break[] = [
   "what": "a part with no value has no piece, so its node has no form",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "basic_piece[flow](C, I, ref(P), open, no)  :- parts[flow](C, I, P), not plain_valued[flow](P).\n",
     ""
    ]
@@ -8807,7 +8807,7 @@ export const BREAKS: Break[] = [
   "what": "new URL(rel, base) composed relative first",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "parts[flow](C, 0, B) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, _), arg_at[flow](C, 1, B).\nparts[flow](C, 1, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[flow](C, 0, A).",
     "parts[flow](C, 1, B) :- vlib_op[flow](C, url, _), arg_at[flow](C, 0, _), arg_at[flow](C, 1, B).\nparts[flow](C, 0, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[flow](C, 0, A)."
    ]
@@ -8821,7 +8821,7 @@ export const BREAKS: Break[] = [
   "what": "the loop unfolds one level less",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "concat_depth(3).",
     "concat_depth(2)."
    ]
@@ -8835,7 +8835,7 @@ export const BREAKS: Break[] = [
   "what": "a part reads the strings a summarized module's body builds beside the summary of the call",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).",
     "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D)."
    ]
@@ -8849,7 +8849,7 @@ export const BREAKS: Break[] = [
   "what": "a composed part that can have no text is unfolded, and its parent has none either",
   "edits": [
    [
-    "rules/js-concat.rofl",
+    "models/lang/js/rules/js-concat.rofl",
     "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).",
     "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), composed[flow](D), not summarized[flow](D)."
    ]
