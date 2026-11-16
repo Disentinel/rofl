@@ -72,6 +72,8 @@ jobs:
       - if: steps.stack.outputs.stacked != '0'
         run: npm run test:agg:breaks
       - if: steps.stack.outputs.stacked != '0'
+        id: land
         run: node --experimental-strip-types scripts/merge_train.ts land
-      - if: failure() && steps.stack.outcome == 'success'
+      # a gate red on the stack is the requests'; a landing that fails half way is not, and what did not land waits
+      - if: failure() && steps.stack.outcome == 'success' && steps.land.outcome != 'failure'
         run: node --experimental-strip-types scripts/merge_train.ts fail
