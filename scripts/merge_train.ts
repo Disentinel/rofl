@@ -41,6 +41,8 @@ type Pr = { number: number; title: string; ref: string; head: string; base: stri
 type Stacked = Pr & { commit: string };
 type State = { main: string; solo: boolean; stacked: Stacked[]; returned: { pr: Pr; files: string[] }[] };
 
+// every commit the train makes is the train's, whatever the machine's git knows
+Object.assign(process.env, { GIT_AUTHOR_NAME: 'merge-train', GIT_AUTHOR_EMAIL: 'merge-train@users.noreply.github.com', GIT_COMMITTER_NAME: 'merge-train', GIT_COMMITTER_EMAIL: 'merge-train@users.noreply.github.com' });
 const git = (...args: string[]): string => execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 }).trim();
 const gitOk = (...args: string[]): boolean => { try { git(...args); return true; } catch { return false; } };
 
@@ -91,11 +93,14 @@ function stack(): void {
     p.base = git('merge-base', s.main, p.head);
     if (!gitOk('merge', '--squash', '--no-commit', p.head)) {
       const files = git('diff', '--name-only', '--diff-filter=U').split('\n').filter(Boolean);
+      if (!files.length) throw new Error(`#${p.number}: git merge failed with no conflict: the train is broken, not the request`);
       for (const f of files.filter((f) => made.has(f))) { git('checkout', '--ours', '--', f); git('add', '--', f); }
       const left = files.filter((f) => !made.has(f));
       if (left.length) { git('reset', '-q', '--hard', 'HEAD'); s.returned.push({ pr: p, files: left }); console.log(`#${p.number} returned: ${left.join(', ')}`); continue; }
     }
-    git('-c', 'user.name=merge-train', '-c', 'user.email=merge-train@users.noreply.github.com', 'commit', '-q', '--allow-empty', '-m', `${p.title} (#${p.number})`);
+    if (gitOk('diff', '--cached', '--quiet') && !gitOk('diff', '--quiet', p.base, p.head))
+      throw new Error(`#${p.number} changes the tree and its squash on the stack changes nothing: the train is broken, not the request`);
+    git('commit', '-q', '--allow-empty', '-m', `${p.title} (#${p.number})`);
     s.stacked.push({ ...p, commit: git('rev-parse', 'HEAD') });
     console.log(`#${p.number} stacked`);
   }
@@ -113,7 +118,7 @@ function regenerate(): void {
     console.log('::endgroup::');
   }
   git('add', '--', ...MADE.map(([f]) => f));
-  git('-c', 'user.name=merge-train', '-c', 'user.email=merge-train@users.noreply.github.com', 'commit', '-q', '--amend', '--no-edit', '--allow-empty');
+  git('commit', '-q', '--amend', '--no-edit', '--allow-empty');
   s.stacked[s.stacked.length - 1].commit = git('rev-parse', 'HEAD');
   write(s);
 }
@@ -153,8 +158,7 @@ async function land(): Promise<void> {
   for (const p of s.stacked) {
     const tree = git('rev-parse', `${p.commit}^{tree}`);
     git('fetch', '-q', 'origin', main);
-    const m = git('-c', 'user.name=merge-train', '-c', 'user.email=merge-train@users.noreply.github.com',
-      'commit-tree', tree, '-p', p.head, '-p', main, '-m', `The merge train: main and the train before #${p.number} merged in`);
+    const m = git('commit-tree', tree, '-p', p.head, '-p', main, '-m', `The merge train: main and the train before #${p.number} merged in`);
     if (!gitOk('push', '-q', 'origin', `${m}:refs/heads/${p.ref}`)) { await say(p.number, `The train did not land this: its branch moved since the train took it. It waits for the next train.`); continue; }
     const r = await gh<{ sha: string }>('PUT', `/pulls/${p.number}/merge`, { merge_method: 'squash', sha: m, commit_title: `${p.title} (#${p.number})` });
     main = r.sha;
