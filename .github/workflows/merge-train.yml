@@ -69,6 +69,14 @@ jobs:
       - if: steps.stack.outputs.stacked != '0'
         # the toolchain ci.yml pins for its lints, so that a new stable's lints are not a request's fault
         run: rustup toolchain install 1.95.0 --profile minimal -c clippy && cd rust && cargo +1.95.0 clippy -p rofl --all-targets -- -D warnings
+      # THE PLANTED FAULTS NEED THE DISK. The release build, clippy's and the runner's own toolchains left a kept world
+      # under the 5 GB floor of its writer (kept.rs), and a world whole answered short with no word on stderr: a fault
+      # red for the disk, not for the request (#260). breaks reads only its own build, rust/target/breaks.
+      - if: steps.stack.outputs.stacked != '0'
+        run: |
+          rm -rf rust/target/release rust/target/debug
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h .
       - if: steps.stack.outputs.stacked != '0'
         run: npm run test:agg:breaks
       - if: steps.stack.outputs.stacked != '0'
