@@ -54,12 +54,12 @@ jobs:
           key: train
           workspaces: |
             rust
-            rust/tools/oxc_scan
+            models/lang/js/scanner/oxc_scan
       - if: steps.pick.outputs.count != '0'
         id: stack
         run: node --experimental-strip-types scripts/merge_train.ts stack
       - if: steps.stack.outputs.stacked != '0'
-        run: (cd rust && cargo build --release) && (cd rust/tools/oxc_scan && cargo build --release)
+        run: (cd rust && cargo build --release) && (cd models/lang/js/scanner/oxc_scan && cargo build --release)
       # the generated files made again over the stack, the goldens last, and train.rofl over the goldens of every side
       - if: steps.stack.outputs.stacked != '0'
         run: node --experimental-strip-types scripts/merge_train.ts regenerate
