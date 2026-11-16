@@ -5,7 +5,7 @@
 // Any other line ending in '.' is asserted as program text.
 //
 // `?`, `why` and `whynot` answer in the sentences of the document where a
-// phrase exists (facts/phrases.rofl, facts/js-phrases.rofl, the `sig` and
+// phrase exists (facts/phrases.rofl, models/lang/js/facts/js-phrases.rofl, the `sig` and
 // `phrase` facts of every loaded file and its `X.phrases.rofl` beside it),
 // positionally where none does. A `.rofl.md` file, executable Markdown, loads
 // through the reader; a plain `.md` is a document and is refused.

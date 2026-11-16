@@ -1,0 +1,493 @@
+-- js-modules.rofl — THE FILE IMPORT, at the module-graph layer.
+--
+-- Three relations and never one `imports` edge: DEPENDS is potential (if B
+-- changes, A might break), FLOWS is actual (a value travels), EVALUATES means
+-- the module body runs. A type-only import is a DEPENDS with nothing flowing,
+-- and erasure has TWO markers, neither implying the other:
+--   import type { e } from './d'   declaration "type", specifier "value"
+--   import { type c } from './d'   declaration "value", specifier "type"
+-- so a rule reading one marker is wrong about one form.
+--
+-- Resolution is a path walk over the disk, which no AST can see: the host
+-- emits the specifier cut into segments and the file tree as facts, blind.
+-- Which directory to start in, when to walk up and what counts as arriving is
+-- a join, and it is here.
+
+-- from outside the AST (models/lang/js/facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
+-- str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
+-- ":"; the disk in its own ledger, has_file[fs](Dir, Name) and
+-- has_dir[fs](Parent, Name), a directory named by its path; node_prefix_only(Canonical);
+-- shape_verdict(Shape, Reason); unknown_because.
+edb(str_seg).           -- str_seg[code](S, K, Segment)   S cut on "/", 0-based
+edb(str_segs).
+edb(str_char0).
+edb(str_scheme).        -- str_scheme[code](S, Scheme)    text before the first ":"
+edb(has_file).
+edb(has_dir).
+imports(code, fs).
+
+-- a file's and a directory's path: its directory's path and its name joined, the root's children by name alone
+file_at[code](".", N, N) :- has_file[fs](".", N).
+file_at[code](D, N, P)   :- has_file[fs](D, N), D != ".", S is concat(D, "/"), P is concat(S, N).
+dir_at[code](".", N, N)  :- has_dir[fs](".", N).
+dir_at[code](D, N, P)    :- has_dir[fs](D, N), D != ".", S is concat(D, "/"), P is concat(S, N).
+edb(node_prefix_only).  -- node_prefix_only(Canonical)  a builtin node loads under `node:` only
+edb(host_module).
+edb(shape_verdict).
+edb(unknown_because).
+
+-- =========================================================================
+-- 1. THE PLACES A MODULE SPECIFIER OCCURS — five kinds. A re-export is a site
+-- because it has a `source`, not because of its kind: `export { a as b }` and
+-- `export { a as b } from './d'` are one kind. `import_site` keeps its meaning
+-- (section 4 binds LOCAL names and a re-export introduces none); `module_site`
+-- is the union every later rule reads.
+-- The roles merge the forms that are one in JS: `import x from "m"` is `import {default as x} from "m"`, and
+-- `import "m"` is `export {} from "m"`. A declaration with a source and no export specifier is a static_import; the
+-- re-export with specifiers and the export-all are told apart by what they put into the exports.
+--
+-- The roles name the module by `module_ref`: on the string of a declaration, and on a dynamic import itself (a call).
+static_source[code](D, Src, Spec) :- module_ref[value](Src, Spec), not call[value](Src), parent[tree](D, Src).
+static_source[code](D, Src, Spec) :- module_ref[type](Src, Spec), parent[tree](D, Src).
+
+import_site[code](I, static_import)  :- static_source[code](I, Src, _), not spread_props[value](_, _, Src),
+                                        not reexport_site[code](I, reexport_named).
+import_site[code](I, dynamic_import) :- module_ref[value](I, _), call[value](I).
+import_site[code](I, dynamic_import) :- module_expr[value](I, _).
+
+reexport_site[code](E, reexport_named) :- export_spec[code](E, _), static_source[code](E, _, _).
+reexport_site[code](E, reexport_all)   :- static_source[code](E, Src, _), spread_props[value](_, _, Src).
+
+-- `require('./p')` is CommonJS's import: a call whose callee is the free
+-- global `require` and whose first argument is the specifier; a `require` the
+-- file declares itself is not node's. `require.resolve(s)` names a file and
+-- loads nothing, and is not a site.
+require_site[code](C) :- free_global[code](N, "require", _),
+                         callee[value](C, N), call[value](C),
+                         argument_at[code](C, 0, _).
+
+
+module_site[code](N, K) :- import_site[code](N, K).
+module_site[code](N, K) :- reexport_site[code](N, K).
+module_site[code](C, require_call) :- require_site[code](C).
+
+site_kind[code](I, import_declaration) :- import_site[code](I, static_import).
+site_kind[code](I, import_expression)  :- import_site[code](I, dynamic_import).
+site_kind[code](E, export_named_declaration) :- reexport_site[code](E, reexport_named).
+site_kind[code](E, export_all_declaration)   :- reexport_site[code](E, reexport_all).
+site_kind[code](C, call_expression)          :- require_site[code](C).
+
+site_file[code](I, F) :- module_site[code](I, _), at[tree](I, F, _).
+
+site_line[code](I, L) :- module_site[code](I, _), at[tree](I, _, L).
+
+site_source_node[code](I, Src) :- static_source[code](I, Src, _).
+site_source_node[code](I, Src) :- module_ref[value](I, _), call[value](I), nth[tree](I, 0, Src).
+site_source_node[code](I, E)   :- module_expr[value](I, E).
+site_source_node[code](C, Src) :- require_site[code](C), argument_at[code](C, 0, Src).
+
+site_source[code](I, S) :- static_source[code](I, _, S).
+site_source[code](I, S) :- module_ref[value](I, S), call[value](I).
+site_source[code](C, S) :- require_site[code](C), site_source_node[code](C, Src),
+                           literal[value](Src, S), string is type_of(S).
+
+site_source_literal[code](I) :- site_source[code](I, _).
+
+-- the one irreducible cell: `import(pathVar)` names a module that does not
+-- exist until the expression is evaluated
+site_source_computed[code](I) :- site_source_node[code](I, _),
+                                 not site_source_literal[code](I).
+
+-- =========================================================================
+-- 2. SOURCE SHAPE — total over literal sources, disjoint, keyed on the STRING.
+-- `./x` and `../x`: the first character discriminates. `#foo` is a package
+-- subpath (needs package.json `imports`, not read here). `node:` is a builtin
+-- by scheme, whatever follows; the bare form is a builtin of the host surface
+-- spelled without its scheme, `fs/promises` included. `bare` is the complement: the classification has no hole.
+explicit_shape[code](S, relative) :- str_char0[code](S, ".").
+
+explicit_shape[code](S, subpath)  :- str_char0[code](S, "#").
+
+explicit_shape[code](S, node_builtin) :- str_scheme[code](S, "node").
+explicit_shape[code](S, node_builtin) :- node_builtin_bare(S, _).
+
+-- a builtin of the host surface is reachable bare unless node says otherwise
+node_builtin_bare(B, C) :- host_module(node, C), not node_prefix_only(C),
+                           L is str_len(C), N is L - 5, B is str_sub(C, 5, N).
+
+has_explicit_shape[code](S) :- explicit_shape[code](S, _).
+
+src_shape[code](S, Sh)   :- explicit_shape[code](S, Sh).
+src_shape[code](S, bare) :- str_char0[code](S, _), not has_explicit_shape[code](S).
+
+site_shape[code](I, Sh)  :- site_source[code](I, S), src_shape[code](S, Sh).
+has_shape[code](I)       :- site_shape[code](I, _).
+
+-- =========================================================================
+-- 3. RESOLUTION — a walk over the directory tree one segment at a time,
+-- STARTING in the importing file's own directory, which is the whole content of
+-- `relative`. `..` stops at the scanned root. Arrival: the LAST segment names a
+-- file where the walk reached — without `str_segs(S, N)` `./sub/c.ts` would
+-- also claim a file called `sub`. A builtin resolves to its canonical `node:`
+-- name by table, because a rule cannot prefix a string. `dangling_import` is a
+-- broken import, not a missing rule.
+walk[code](I, 0, D) :- site_shape[code](I, relative),
+                       site_file[code](I, F), file_at[code](D, _, F).
+
+walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, "."), K1 is K + 1.
+
+walk[code](I, K1, P) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, ".."), dir_at[code](P, _, D), K1 is K + 1.
+
+-- the empty segment of `../` stays where it is, so a directory's index answers
+walk[code](I, K1, D) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, ""), K1 is K + 1.
+
+walk[code](I, K1, C) :- walk[code](I, K, D), site_source[code](I, S),
+                        str_seg[code](S, K, Seg), Seg != ".", Seg != "..", Seg != "",
+                        dir_at[code](D, Seg, C), K1 is K + 1.
+
+resolved_import[code](I, T) :- walk[code](I, K, D), site_source[code](I, S),
+                               str_seg[code](S, K, Seg), file_at[code](D, Seg, T),
+                               N is K + 1, str_segs[code](S, N).
+
+builtin_canonical[code](S, S) :- str_scheme[code](S, "node").
+builtin_canonical[code](S, C) :- node_builtin_bare(S, C).
+
+resolved_builtin[code](I, C) :- site_shape[code](I, node_builtin),
+                                site_source[code](I, S), builtin_canonical[code](S, C).
+
+resolved_site[code](I) :- resolved_import[code](I, _).
+resolved_site[code](I) :- resolved_builtin[code](I, _).
+
+dangling_import[code](I, S) :- site_shape[code](I, relative), site_source[code](I, S),
+                               not resolved_site[code](I).
+
+-- =========================================================================
+-- 3b. WHICH FILE THE CODE MEANS, for section 5 and the call graph: node's answer, else
+-- TypeScript's. `./config.js` written in TypeScript names `config.ts`,
+-- `./config` names `config.ts` or `config.js`, `./handlers` names
+-- `handlers/index.ts`. `resolved_import` stays node's alone, because
+-- models/lang/js/rules/js-resolve.rofl holds it to node's own resolver.
+-- TypeScript tries the candidates in this order and takes the first file that
+-- exists: `./utils` beside `utils.ts` and `utils/index.ts` is `utils.ts` alone.
+ts_ext("js", "ts", 0).  ts_ext("js", "tsx", 1).  ts_ext("jsx", "tsx", 0).  ts_ext("mjs", "mts", 0).  ts_ext("cjs", "cts", 0).
+
+probe_ext("ts", 10).  probe_ext("tsx", 11).  probe_ext("js", 12).  probe_ext("jsx", 13).  probe_ext("mjs", 14).  probe_ext("cjs", 15).  probe_ext("json", 16).
+
+index_file("index.ts", 20).  index_file("index.tsx", 21).  index_file("index.js", 22).  index_file("index.jsx", 23).
+
+last_ext[code](Name, E, L) :- file_at[code](_, Name, _),
+                              N is str_segs(Name, "."), N > 1, K is N - 1,
+                              E is str_seg(Name, ".", K), L is str_len(E).
+
+site_last_seg[code](I, D, Seg) :- walk[code](I, K, D), site_source[code](I, S),
+                                  str_seg[code](S, K, Seg), N is K + 1, str_segs[code](S, N).
+
+-- A file is found by its name, not by holding each site against every file of
+-- its folder: a file's stem is its name less the last extension.
+file_stem[code](D, Stem, E, T) :- file_at[code](D, Name, T), last_ext[code](Name, E, L),
+                                  Ln is str_len(Name), K is Ln - L - 1, Stem is str_sub(Name, 0, K).
+
+ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg),
+                           N is str_segs(Seg, "."), N > 1, K is N - 1, Es is str_seg(Seg, ".", K),
+                           Ls is str_len(Seg), Les is str_len(Es), Stem is Ls - Les - 1,
+                           P is str_sub(Seg, 0, Stem), file_stem[code](D, P, En, T), ts_ext(Es, En, R).
+
+ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), file_stem[code](D, Seg, E, T), probe_ext(E, R).
+
+ts_candidate[code](I, T, R) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
+                           index_file(Name, R), file_at[code](D, Name, T).
+
+ts_passed_over[code](I, R) :- ts_candidate[code](I, _, R), ts_candidate[code](I, _, R2), R2 < R.
+ts_resolved[code](I, T)    :- ts_candidate[code](I, T, R), not ts_passed_over[code](I, R).
+
+module_target[code](I, T) :- resolved_import[code](I, T).
+module_target[code](I, T) :- ts_resolved[code](I, T), not resolved_import[code](I, _).
+
+-- =========================================================================
+-- 4. IMPORT BINDINGS — the four specifier kinds. `imported` may be a
+-- StringLiteral (`import { "a-b" as c }`): two lines are cheaper than a
+-- verdict. A default binds `"default"`, a namespace `"*"`.
+view import_specifier_node(A).
+import_specifier_node[code](Sp) :- decl[value](Sp, import).
+
+view import_spec(A, B).
+import_spec[code](I, Sp) :- import_specifier_node[code](Sp), parent[tree](I, Sp).
+
+spec_local[code](Sp, L) :- import_specifier_node[code](Sp), target[value](Sp, N), binds[type](N, L).
+
+spec_imported[code](Sp, M)         :- decl[value](Sp, import), parent[tree](Sp, L), pattern_prop[value](_, M, L).
+spec_imported[code](Sp, "*")       :- import_specifier_node[code](Sp), assign[value](Sp, _, _).
+-- the name of an import_specifier written as an identifier (a string `imported` has none); a default specifier's "default" is not
+spec_key_string[code](Sp)        :- import_specifier_node[code](Sp), parent[tree](Sp, I), literal[value](I, _).
+import_ident_key[code](Sp, Key)  :- spec_imported[code](Sp, Key), not spec_key_string[code](Sp).
+
+binding[code](I, Sp, Local, Imported) :- import_spec[code](I, Sp),
+                                         spec_local[code](Sp, Local),
+                                         spec_imported[code](Sp, Imported).
+
+has_specifier[code](I) :- import_spec[code](I, _).
+
+-- =========================================================================
+-- 4b. EXPORT BINDINGS mirror section 4 and read OPPOSITE children: an export
+-- binds an EXTERNAL name to a name in THIS module, and the two can differ. An
+-- ExportNamespaceSpecifier carries `exported` and NO `local`, and
+-- `export * as ns from` is an ExportNamedDeclaration. Nothing here reads
+-- `source`: the naming question and the edge question are separate. Erasure
+-- has the same two markers as an import; a namespace specifier carries none
+-- and is a value binding, correctly.
+-- A specifier is the member of the program's exports that stands for it: the specifier itself, or for `* as ns` the
+-- name `ns` under it. A type-only specifier is a member of the types ([type]), a value one of the values; the roles
+-- merge `export type {X}` and `export {type X}`. A member of a class or a declared name is not under the declaration.
+export_spec[code](E, Sp) :- program[tree](Ns, _), has[value](Ns, Sp), parent[tree](E, Sp), parent[tree](Ns, E).
+export_spec[code](E, Sp) :- program[tree](Ns, _), has[type](Ns, Sp), parent[tree](E, Sp), parent[tree](Ns, E).
+export_spec[code](E, Sp) :- has[value](_, M), value[value](M, Src), module_ref[value](Src, _),
+                            parent[tree](Sp, M), parent[tree](E, Sp).
+export_spec[code](E, Sp) :- has[type](_, M), value[value](M, Src), module_ref[value](Src, _),
+                            parent[tree](Sp, M), parent[tree](E, Sp).
+
+export_value_spec[code](E, Sp) :- export_spec[code](E, Sp), has[value](_, Sp).
+export_value_spec[code](E, Sp) :- export_spec[code](E, Sp), parent[tree](Sp, M), has[value](_, M).
+
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), key[value](Sp, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), key[type](Sp, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), parent[tree](Sp, M), key[value](M, X).
+spec_external[code](Sp, X) :- export_spec[code](_, Sp), parent[tree](Sp, M), key[type](M, X).
+
+-- the name of a local export is the name it reads; of a re-export the name it destructures from the other module
+spec_internal[code](Sp, L)   :- export_spec[code](_, Sp), value[value](Sp, N), ref[value](N, L).
+spec_internal[code](Sp, L)   :- export_spec[code](_, Sp), value[type](Sp, N), ref[value](N, L).
+spec_internal[code](Sp, L)   :- export_spec[code](E, Sp), pattern_prop[value](E, L, Sp).
+spec_internal[code](Sp, "*") :- export_spec[code](_, Sp), parent[tree](Sp, M), value[value](M, Src),
+                                module_ref[value](Src, _).
+
+export_binding[code](E, Sp, External, Internal) :- export_spec[code](E, Sp),
+                                                   spec_external[code](Sp, External),
+                                                   spec_internal[code](Sp, Internal).
+
+export_renamed[code](Sp, External, Internal) :- export_binding[code](_, Sp, External, Internal),
+                                                External != Internal.
+
+-- a declaration with no member names its module in the world of types (`import type {} from`, `export type * from`)
+type_sited[code](E)  :- module_ref[type](Src, _), parent[tree](E, Src).
+
+export_value_binding[code](E, Sp) :- export_binding[code](E, Sp, _, _), export_value_spec[code](E, Sp).
+
+-- the gates: every specifier yields exactly one external and one internal name
+-- — none is an unread child, two is a name that is not a function of the node
+export_bound[audit](Sp) :- export_binding[code](_, Sp, _, _).
+export_binding_missing[audit](Sp)  :- export_spec[code](_, Sp), not export_bound[audit](Sp).
+export_binding_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, A, _),
+                                            export_binding[code](_, Sp, B, _), A != B.
+
+export_internal_conflict[audit](Sp, A, B) :- export_binding[code](_, Sp, _, A),
+                                             export_binding[code](_, Sp, _, B), A != B.
+
+-- =========================================================================
+-- 4c. THE DEFAULT EXPORT — no specifier node to hang a name on. Eight spellings
+-- split four and four on whether an internal name exists at all: `export
+-- default 42` offers `default` and nothing is named. The external name is the
+-- string `"default"`, the same section 4 writes for an ImportDefaultSpecifier,
+-- so both ends meet on one spelling. `export default q`: the declaration IS
+-- the name (an identifier has `name` and no `id`), hence the second arm.
+-- `export default interface I {}` is erased and carries `export_kind`
+-- "value"; its kind has no site here.
+export_default_site[code](E) :- program[tree](Ns, _), has[value](Ns, E), key[value](E, "default"), parent[tree](Ns, E).
+
+default_external[code](E, "default") :- export_default_site[code](E).
+
+default_declaration[code](E, D) :- export_default_site[code](E), value[value](E, D).
+
+default_internal[code](E, N) :- default_declaration[code](E, D), target[value](D, I), binds[value](I, N).
+default_internal[code](E, N) :- default_declaration[code](E, D), parent[tree](D, I), binds[type](I, N).
+default_internal[code](E, N) :- default_declaration[code](E, D), ref[value](D, N).
+
+has_default_internal[code](E) :- default_internal[code](E, _).
+default_anonymous[code](E)    :- default_declaration[code](E, _),
+                                 not has_default_internal[code](E).
+
+default_export_file[code](F, E) :- export_default_site[code](E), at[tree](E, F, _).
+
+-- totality, one internal name, one default per module (two in one File is
+-- what a collision between scanned modules would look like from here)
+default_accounted[audit](E)   :- default_internal[code](E, _).
+default_accounted[audit](E)   :- default_anonymous[code](E).
+default_unaccounted[audit](E) :- export_default_site[code](E), not default_accounted[audit](E).
+
+default_internal_conflict[audit](E, A, B) :- default_internal[code](E, A),
+                                             default_internal[code](E, B), A != B.
+
+default_conflict[audit](F, A, B) :- default_export_file[code](F, A),
+                                    default_export_file[code](F, B), A != B.
+
+-- =========================================================================
+-- 5. DEPENDS, FLOWS, EVALUATES. DEPENDS: the file is named. FLOWS: a binding
+-- that survives erasure (both negations load-bearing, one per marker) or a
+-- dynamic import carrying the module object. EVALUATES: the body RUNS —
+-- `import './side'` executes a file and `import type {}` executes nothing,
+-- and both read as "depends, nothing flows".
+value_binding[code](I, Sp) :- binding[code](I, Sp, _, _), target[value](Sp, N), binds[value](N, _).
+
+has_value_binding[code](I) :- value_binding[code](I, _).
+
+
+depends[code](F, T) :- module_target[code](I, T), site_file[code](I, F).
+
+flows[code](F, T) :- has_value_binding[code](I),
+                     module_target[code](I, T), site_file[code](I, F).
+flows[code](F, T) :- import_site[code](I, dynamic_import),
+                     module_target[code](I, T), site_file[code](I, F).
+flows[code](F, T) :- require_site[code](I),
+                     module_target[code](I, T), site_file[code](I, F).
+
+-- A SITE RUNS ITS TARGET unless TypeScript erases it or it imports data.
+-- The roles merge `import type {X}` with `import {type X}`: a name bound in the
+-- types only is one erased either way. A site ALL of whose specifiers are
+-- erased evaluates nothing and one with NO specifier evaluates everything
+-- (`import type {} from` and `export type * from` name their module in the types). A module imported as data (section 9) is read, not run.
+type_only_site[code](I)  :- has_specifier[code](I), not has_value_binding[code](I).
+type_only_site[code](E)  :- reexport_site[code](E, reexport_named), not reexport_value[code](E).
+type_only_site[code](E)  :- module_site[code](E, _), type_sited[code](E).
+runs_site[code](I)       :- module_site[code](I, _), not type_only_site[code](I), not module_is_data[code](I, _).
+
+evaluates_at[code](I, T)       :- runs_site[code](I), module_target[code](I, T).
+evaluates_unresolved[code](I)  :- runs_site[code](I), not module_target[code](I, _).
+evaluates[code](F, T)          :- evaluates_at[code](I, T), site_file[code](I, F).
+
+-- =========================================================================
+-- 5b. THE RE-EXPORT EDGE, through a different set of markers: the export-all
+-- forms carry theirs on the DECLARATION with no specifier; the named forms
+-- carry it in both places, neither implying the other. `export {} from
+-- './side'` is the side-effect import's twin — measured on node: the file runs
+-- and nothing flows.
+reexport_spec[code](E, Sp) :- reexport_site[code](E, reexport_named), export_spec[code](E, Sp).
+
+reexport_value_spec[code](E, Sp) :- reexport_site[code](E, reexport_named), export_value_spec[code](E, Sp).
+
+reexport_value[code](E) :- reexport_value_spec[code](E, _).
+reexport_value[code](E) :- reexport_site[code](E, reexport_all),
+                           not type_sited[code](E).
+
+flows[code](F, T) :- reexport_value[code](E),
+                     module_target[code](E, T), site_file[code](E, F).
+
+-- the join: the resolver says which FILE, the specifier which name in it.
+-- What `export * from` offers is the other file's export list —
+-- `exports_name` in models/lang/js/rules/js-dataflow.rofl, not a module-graph question.
+-- `"*"` rides the internal column unchanged: the module `export * as ns
+-- from './m'` offers IS m.
+reexport_offers[code](F, External, T, Internal) :-
+    reexport_value_spec[code](E, Sp),
+    spec_external[code](Sp, External), spec_internal[code](Sp, Internal),
+    module_target[code](E, T), site_file[code](E, F).
+
+-- =========================================================================
+-- 5c. WHICH MODULE AN INTERNAL NAME LIVES IN. `export { helper as reHelper }
+-- from './c'`: `helper` is c's name, not this file's. Under a declaration with
+-- no `source` the name lives here, under a re-export in the file resolved to,
+-- and an unresolved re-export is placed by SHAPE, a positive relation.
+export_internal_in[code](Sp, F) :- export_spec[code](E, Sp), not reexport_site[code](E, reexport_named),
+                                   at[tree](E, F, _).
+export_internal_in[code](Sp, T) :- reexport_spec[code](E, Sp), resolved_import[code](E, T).
+
+export_internal_unplaced[code](Sp, Sh) :- reexport_spec[code](E, Sp),
+                                          unresolved_import[code](E, Sh).
+
+export_internal_elsewhere[code](F, X, T) :- export_binding[code](E, Sp, X, _),
+                                            at[tree](E, F, _),
+                                            export_internal_in[code](Sp, T), T != F.
+
+has_internal_home[audit](Sp)        :- export_internal_in[code](Sp, _).
+has_internal_home[audit](Sp)        :- export_internal_unplaced[code](Sp, _).
+export_internal_homeless[audit](Sp) :- export_binding[code](_, Sp, _, _),
+                                       not has_internal_home[audit](Sp).
+
+-- =========================================================================
+-- 6. THE FRONTIER, AS A POSITIVE RELATION: every site is resolved or
+-- unresolved-with-a-shape, and `unaccounted_site` says so.
+unresolved_import[code](I, Sh)       :- site_shape[code](I, Sh), not resolved_site[code](I).
+unresolved_import[code](I, computed) :- site_source_computed[code](I).
+
+-- what a run over this corpus cannot see: a relative specifier — static,
+-- dynamic, re-exported or required — that names no file the corpus holds. A
+-- `never` over the rest holds only as far as these; a package name is not one.
+has_module_target[code](I) :- module_target[code](I, _).
+unresolved_relative[code](F, L, S) :- site_shape[code](I, relative), not has_module_target[code](I),
+                                      site_source[code](I, S), site_file[code](I, F), site_line[code](I, L).
+
+accounted[audit](I) :- resolved_site[code](I).
+accounted[audit](I) :- unresolved_import[code](I, _).
+
+unaccounted_site[audit](I) :- module_site[code](I, _), not accounted[audit](I).
+
+-- =========================================================================
+-- 7. THE AUDIT — the model checked against itself; the test plants a defect
+-- for every row. `resolve_gap`: a shape whose verdict is `resolves` that did
+-- not, and is not a broken path — a builtin missing from the table.
+-- `site_without_kind`: the bookkeeping below is keyed on `site_kind`, so a
+-- site outside it leaves without moving a row, which the re-export forms did.
+-- Reasons are keyed on (kind, shape): per kind, one excuse satisfied every
+-- shape and `stale_reason` reported false rows.
+resolve_gap[audit](I, Sh) :- unresolved_import[code](I, Sh), shape_verdict(Sh, resolves),
+                             not dangling_import[code](I, _).
+
+has_site_kind[audit](I)     :- site_kind[code](I, _).
+site_without_kind[audit](I) :- module_site[code](I, _), not has_site_kind[audit](I).
+
+shape_conflict[audit](I, A, B) :- site_shape[code](I, A), site_shape[code](I, B), A != B.
+
+shape_missing[audit](I) :- site_source_literal[code](I), not has_shape[code](I).
+
+has_verdict[audit](Sh) :- shape_verdict(Sh, _).
+shape_without_verdict[audit](Sh) :- site_shape[code](_, Sh), not has_verdict[audit](Sh).
+shape_without_verdict[audit](computed) :- site_source_computed[code](_),
+                                          not has_verdict[audit](computed).
+
+reason_missing[audit](K, Sh, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
+                                   shape_verdict(Sh, R), R != resolves,
+                                   not unknown_because(js, K, Sh, modules, R).
+
+reason_unexercised[audit](K, R) :- unknown_because(js, K, Sh, modules, R),
+                                   not reason_earned[audit](K, R).
+reason_earned[audit](K, R) :- unresolved_import[code](I, Sh), site_kind[code](I, K),
+                              shape_verdict(Sh, R).
+
+-- =========================================================================
+-- 8. THE MODULE'S OWN METADATA. `import.meta` points a module at itself;
+-- `meta_form` in models/lang/js/rules/js-structure.rofl tells it from `new.target`, which
+-- shares the kind. `import.meta.resolve(spec)` is a specifier in a fifth place
+-- and NOT modelled: wiring it into `module_site` changes the relation the test
+-- compares site for site against node's own resolver.
+module_meta[code](F, M) :- meta_form[code](M, import_meta), at[tree](M, F, _).
+
+self_referential_module[code](F) :- module_meta[code](F, _).
+
+not_module_meta[audit](M) :- meta_form[code](M, new_target).
+
+-- =========================================================================
+-- 9. IMPORT ATTRIBUTES — `with { type: "json" }` says what the module IS,
+-- not where. Hung off the `attributes` field, which import and export
+-- declarations both have. `type` is the only key ECMAScript defines; an
+-- unknown key is a `module_attr` row nothing reads. A module imported as data
+-- is NOT evaluated as code — `effect_of_module` assumes an imported module
+-- runs, and for these it does not. Two frontiers: an attribute whose parent is
+-- not a site, and one whose key or value the join could not read.
+-- oxc's tree: the clause is a node of its own, `with`, and its entries are the attributes; a key is a name or a string
+import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, name, Key),
+                                    child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
+import_attr[code](A, Key, Value) :- node[ast_oxc](A, import_attribute, _), child[ast_oxc](A, key, 0, K), attr[ast_oxc](K, value, Key),
+                                    child[ast_oxc](A, value, 0, V), attr[ast_oxc](V, value, Value).
+import_attr_of[code](D, A) :- child[ast_oxc](D, with_clause, 0, W), child[ast_oxc](W, with_entries, _, A).
+module_attr[code](D, Key, Value) :- import_attr_of[code](D, A), import_attr[code](A, Key, Value).
+
+module_type[code](D, T) :- module_attr[code](D, "type", T).
+
+module_is_data[code](D, T) :- module_type[code](D, T), T != "javascript".
+
+import_attr_unsited[audit](A) :- node[ast_oxc](A, import_attribute, _),
+                                 not import_attr_of[code](_, A).
+
+import_attr_unread[audit](A) :- node[ast_oxc](A, import_attribute, _),
+                                not import_attr[code](A, _, _).

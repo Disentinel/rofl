@@ -276,7 +276,7 @@ export function vocabulary(file: string | undefined, word = ''): { lines: string
     while (rel && j > 0 && ls[j - 1].startsWith('--')) j--;
     if (rel && j < i && /^(?:sig|phrase)\(/.test(ls[j - 1] ?? '')) meant.set(rel, ls.slice(j, i).map((x) => x.replace(/^--\s*/, '')).join(' '));
   });
-  const rules = libFiles(path.relative(ROOT, path.resolve(file ?? 'vocab.rofl.md')), parseFront(text)).model.filter((f) => f.startsWith('rules/'));
+  const rules = libFiles(path.relative(ROOT, path.resolve(file ?? 'vocab.rofl.md')), parseFront(text)).model.filter((f) => /(^|\/)rules\//.test(f));
   const area = concernsOf(rules.map((f) => [f, cx.input.lib[f] ?? ''])).rels;
   const w = word.toLowerCase().replace(/(?:ing|ed|s)$/, ''), has = (t: string) => t.toLowerCase().includes(w);
   const groups = new Map<string, string[]>(), put = (g: string, ...xs: string[]) => (groups.get(g) ?? groups.set(g, []).get(g)!).push(...xs);

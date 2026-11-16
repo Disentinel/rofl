@@ -577,7 +577,37 @@ class P {
 
 
 export function parseProgram(src: string): Clause[] {
-  return new P(tokenize(src)).program();
+  return new P(tokenize(isColumns(src) ? fromColumns(src) : src)).program();
+}
+
+/** The column form a scanner may write (docs/cli.md, *Model libraries*; rust/rofl/src/rofl_parse.rs `columns`), as
+ *  text: this engine is the reference, not the fast one. */
+export const COLUMNS = '-- rofl columns 1';
+
+export function isColumns(src: string): boolean {
+  for (const l of src.split('\n', 64)) { if (!l.startsWith('--')) return false; if (l.trimEnd() === COLUMNS) return true; }
+  return false;
+}
+
+export function fromColumns(src: string): string {
+  const lines = src.split('\n'), out: string[] = [];
+  let table: string[] = [];
+  const term = (e: string) => {
+    const v = e.slice(2);
+    if (e[0] !== 's') return v;
+    return '"' + v.replace(/\\(.)/g, (_, c) => (c === 'n' ? '\n' : c === 'r' ? '\r' : c)).replace(/[\\"]/g, '\\$&') + '"';
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.startsWith('T ')) { const n = Number(l.slice(2)); table = lines.slice(i + 1, i + 1 + n).map(term); i += n; continue; }
+    if (!l.startsWith('R ')) { out.push(l); continue; }
+    const [, rel, book, a, rows] = l.split(' '), arity = Number(a);
+    const cols = lines.slice(i + 1, i + 1 + arity).map((c) => c.split(' ').map((x) => table[parseInt(x, 36)]));
+    i += arity;
+    const head = book === '-' ? rel : `${rel}[${book}]`;
+    for (let r = 0; r < Number(rows); r++) out.push(`${head}(${cols.map((c) => c[r]).join(', ')}).`);
+  }
+  return out.join('\n');
 }
 
 /** Parse a single literal (for queries: ?, why, whynot, excise). */

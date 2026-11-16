@@ -5,7 +5,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { scan } from '../../scanners/oxc_code.ts';
+import { scan } from '../../models/lang/js/scanner/oxc_code.ts';
 import { MODEL_FILES } from '../../notebook/front.ts';
 import { AggEval } from '../../src/aggeval.ts';
 
@@ -375,7 +375,7 @@ function spanFacts(facts: string[]): string[] {
 
 // ---------------------------------------------------------------- one evaluation
 const SKIP = new Set(['derived_by', 'asserted_by', 'in_perspective']);
-const PHRASED = new Set([...fs.readFileSync(path.join(ROOT, 'facts/js-phrases.rofl'), 'utf8').matchAll(/^sig\((\w+),/gm)].map((m) => m[1]));
+const PHRASED = new Set([...fs.readFileSync(path.join(ROOT, 'models/lang/js/facts/js-phrases.rofl'), 'utf8').matchAll(/^sig\((\w+),/gm)].map((m) => m[1]));
 const AUDIT = new Set<string>(); const RULE_KEYED = new Set<string>();
 function run(model: string, all: string[]) {
   const r = new Rofl({ space: 400_000_000, reuse: false });

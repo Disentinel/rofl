@@ -2150,17 +2150,8 @@ impl Session {
                 continue;
             };
             if !lows.contains_key(file) {
-                let mut eval = self.eval.fork();
-                eval.lower_texts = None;
-                // (a reader of units: the file's lower stage is evaluated over the core alone)
-                if eval.levels.take().is_some() {
-                    eval.store.reads_none();
-                }
-                let r = crate::program::load_program(&mut eval, &texts[file], None);
-                if !r.ok {
-                    return Err(r.diagnostics.join("\n"));
-                }
-                eval.lower_stage(&st).map_err(|e| crate::describe(&e))?;
+                let mut eval = self.eval.thaw(&texts[file], &st).map_err(|e| crate::describe(&e))?;
+                eval.demand.asking = false;
                 lows.insert(file.to_string(), Session { eval, dangling: 0, asks: 0, profiled: true, kept: Default::default(), post: None, sent: Default::default() });
             }
             let low = lows.get_mut(file).expect("put above");
@@ -2305,13 +2296,16 @@ impl Session {
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
-        let mut src = String::new();
+        let (mut src, mut cols) = (String::new(), false);
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
             let rec = scan_rec(kind, path, text, scanners.get(kind).cloned(), ran);
+            cols |= crate::rofl_parse::is_columns(&rec.unit);
             src.push_str(&rec.unit);
             self.eval.scans.push(rec);
         }
+        // a scanner that writes columns makes the whole of them columns, the others' text read as text there
+        if cols { src.insert_str(0, &format!("{}\n", crate::rofl_parse::COLUMNS)); }
         self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
         Ok(todo.len())
     }
@@ -2380,6 +2374,17 @@ impl Session {
         match self.eval.whynot_files(&lit, b, vols) {
             Ok(r) => Ok(r),
             Err(Halt::Budget(..)) => Ok(Vec::new()),
+            Err(h) => Err(describe(&h)),
+        }
+    }
+
+    /// `whynot` in one file of a corpus (`Eval::whynot_in`): the file by its node prefix.
+    pub fn whynot_in(&mut self, query: &str, b: &WhynotBounds, file: &str) -> Result<WhynotFile, String> {
+        self.explaining()?;
+        let lit = self.one_lit(query)?;
+        self.cone_holds(&lit)?;
+        match self.eval.whynot_in(&lit, b, file) {
+            Ok(r) => Ok(r),
             Err(h) => Err(describe(&h)),
         }
     }
@@ -2514,7 +2519,7 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
     let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(scan_path).collect());
     let unit = match ran {
         Ok(out) => {
-            let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
+            let n = crate::rofl_parse::scanned_facts(&out);
             format!("{out}\nscan_done({kind}, {path}, {n}).\n")
         }
         Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),

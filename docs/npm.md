@@ -19,7 +19,7 @@ release job of `.github/workflows/ci.yml` stages them from a
   the Node process, so killing either is killing the one process; elsewhere the
   engine is a child, the signals are passed on and an engine killed by a signal
   kills the command by it. It calls the engine by a path inside the package, so
-  the engine reads `@rules/js.files` and a notebook's vocabulary from the
+  the engine reads `@js` and a notebook's vocabulary from the
   package (`md::installed_tree`, docs/cli.md). `rofl scan` is the JS scanner,
   `npm run scan` of a checkout; `rofl --version` the version and the engine
   binary it runs. No platform package, or one of another version: exit 127 and
@@ -29,8 +29,8 @@ release job of `.github/workflows/ci.yml` stages them from a
   release carried up to 1.4.0; the notebook evaluates on the same platform
   package's engine.
 - the library (`import { Rofl } from '@grafema/rofl'`, `./port`, `boot.rofl`,
-  the inquiry, policy and decision packs), the JS model (`rules/js.files` and
-  what it lists), the scanner (`oxc_scan.wasm`, oxc built from `rust/tools/oxc_scan`), the guide and the
+  the inquiry, policy and decision packs), the JS model (`models/lang/js/js.files` and
+  what it lists), the scanner (`oxc_scan.wasm`, oxc built from `models/lang/js/scanner/oxc_scan`), the guide and the
   examples.
 
 **`@grafema/rofl-<os>-<cpu>`** for `linux-x64`, `linux-arm64`, `darwin-x64`,

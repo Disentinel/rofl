@@ -2,7 +2,7 @@
 // "can this be shorter" is a query and not an opinion.
 //
 // The question that paid for this: two rule files written by a model,
-// rules/js-effects.rofl and rules/js-callgraph.rofl, are two thirds comment by
+// models/lang/js/rules/js-effects.rofl and models/lang/js/rules/js-callgraph.rofl, are two thirds comment by
 // line and carry several hundred clauses each. Reading them one can SEE things
 // to cut — a comment block whose rules moved to another file and left the
 // prose behind, two rules with the same body under two names, a relation that

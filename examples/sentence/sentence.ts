@@ -12,7 +12,7 @@
 //   node --experimental-strip-types examples/sentence/sentence.ts t.json /tmp/u.phrases.rofl
 //
 // The vocabulary files are `phrase`/`sig` facts (the tree's own are
-// facts/phrases.rofl and facts/js-phrases.rofl); vocabulary.rofl compiles them
+// facts/phrases.rofl and models/lang/js/facts/js-phrases.rofl); vocabulary.rofl compiles them
 // to token facts once, and every sentence is read in a fork of a world that
 // holds those facts. Blocks, conditions, negation folds and guards are not
 // measured here because ring 1 does not read them yet.

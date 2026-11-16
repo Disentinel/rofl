@@ -1,4 +1,4 @@
--- examples/checks/concat-check.rofl — concat_value (w_concat_value): every entry point of rules/js-concat.rofl over
+-- examples/checks/concat-check.rofl — concat_value (w_concat_value): every entry point of models/lang/js/rules/js-concat.rofl over
 -- examples/concat/src/entry.ts (facts in concat-facts.rofl), each value named by the exported name it is bound to.
 -- Red if a text, a form or a cut literal is missing or one more appears.
 ct_bound(Name, C) :- binder[code](_, Name, Init, "src/entry.ts"), may_be_node[flow](Init, C), composed[flow](C),

@@ -1,0 +1,251 @@
+-- ===========================================================================
+-- THE TAXONOMY IS KOKA'S AND IT IS NOT OURS TO INVENT
+--
+-- Settled by `f_the_effect_taxonomy_already_exists_and_it_is_a_lattice` on
+-- 2026-09-05 and not re-litigated here. The set is closed, named and ORDERED:
+-- `total`, `exn`, `div`, `ndet`, `alloc<h>`, `read<h>`, `write<h>`, `io`, with
+-- the aliases `pure = <div, exn>`, `st<h> = <rd, wr, heap<h>>` and
+-- `io = <st<global>, div, exn, ndet>`.
+--
+-- A LATTICE WITH A BOTTOM AND A TOP IS THE POINT. Every question this layer is
+-- asked — what is a body's effect given its statements', is this call at least
+-- as effectful as that one — is a JOIN or a COMPARISON, and a flat list of
+-- labels gives neither. So what is modelled below is the ORDER, and the labels
+-- are what the order is over.
+--
+-- THE CARRIER IS A ROW, NOT A LABEL. An effect is a SET of labels; the order is
+-- set inclusion; the join is union; the bottom is the empty row and the top is
+-- the full one. The named points below are LANDMARKS in that lattice, and the
+-- family they form is closed under intersection and contains the full row —
+-- which is exactly the condition (a Moore family) that makes the least NAME
+-- above a union always exist and be unique. That is not asserted here as a
+-- claim about the design: `join_missing[audit]`, `join_ambiguous[audit]`,
+-- `meet_missing[audit]` and `meet_ambiguous[audit]` in models/lang/js/rules/js-effects.rofl
+-- are the four ways it could fail, and they are the acceptance.
+
+edb(eff_heap).
+edb(eff_label).
+edb(eff_name).
+edb(eff_row).
+edb(eff_alias).
+edb(eff_bit).
+
+-- ---------------------------------------------------------------------------
+-- THE HEAP PARAMETER, AND WHERE IT IS REFUSED.
+--
+-- Koka parameterises three of the eight by a heap: `alloc<h>`, `read<h>`,
+-- `write<h>`, and `io` is defined over the GLOBAL one. The parameter is what
+-- makes `io`'s definition say anything at all, so it is kept — with two
+-- constants and a rule for deciding between them that this model can actually
+-- run:
+--
+--   local   the object is one this program allocates. `may_be_node[flow]`
+--           reaches an allocation site for the receiver.
+--   global  it does not. An ambient name, an import, a receiver the value layer
+--           cannot trace. This is precisely the residue the runtime and globals
+--           surfaces are being built to name, which is why the parameter earns
+--           its place rather than decorating the labels.
+--
+-- `alloc` IS NOT PARAMETERISED AND THAT IS A DELIBERATE DEVIATION FROM KOKA.
+-- Deciding which heap an allocation lands in is escape analysis, which this
+-- model does not have and will not fake; a column whose two values the rules
+-- cannot tell apart is the 48-cells-no-questions arithmetic that
+-- `axis_applies` exists to prevent, arriving in a label instead of an axis. So
+-- `st<h>` here is `<read<h>, write<h>, alloc>` — the deviation is one line and
+-- it is this one.
+eff_heap(none).
+eff_heap(local).
+eff_heap(global).
+
+eff_label(exn,   none).
+eff_label(div,   none).
+eff_label(ndet,  none).
+eff_label(alloc, none).
+eff_label(read,  local).
+eff_label(read,  global).
+eff_label(write, local).
+eff_label(write, global).
+
+-- One bit a label, so that a row of labels is the number `eff_mask` sums.
+eff_bit(exn,   none,   1).
+eff_bit(div,   none,   2).
+eff_bit(ndet,  none,   4).
+eff_bit(alloc, none,   8).
+eff_bit(read,  local,  16).
+eff_bit(read,  global, 32).
+eff_bit(write, local,  64).
+eff_bit(write, global, 128).
+
+-- ---------------------------------------------------------------------------
+-- THE NAMED LANDMARKS. Fourteen, and eight of them are the singleton row of a
+-- label; the other six are DEFINED by `eff_alias` below rather than typed out,
+-- so that `pure = <div, exn>` is a definition the model closes rather than a
+-- pair of rows a reader has to trust.
+eff_name(total).
+eff_name(exn).
+eff_name(div).
+eff_name(ndet).
+eff_name(alloc).
+eff_name(rd_local).
+eff_name(wr_local).
+eff_name(rd_global).
+eff_name(wr_global).
+eff_name(pure).
+eff_name(st_local).
+eff_name(st_global).
+eff_name(io).
+eff_name(top).
+
+-- `total` gets no row: it IS the empty one, and that is what makes it the
+-- bottom rather than a name for nothing. `eff_name_empty[audit]` guards the
+-- difference — any OTHER name that ends up with no row is a misspelt alias
+-- silently becoming the bottom, which would be a lie in the safe direction.
+eff_row(exn,       exn,   none).
+eff_row(div,       div,   none).
+eff_row(ndet,      ndet,  none).
+eff_row(alloc,     alloc, none).
+eff_row(rd_local,  read,  local).
+eff_row(wr_local,  write, local).
+eff_row(rd_global, read,  global).
+eff_row(wr_global, write, global).
+
+-- KOKA'S ALIASES, AS DEFINITIONS. models/lang/js/rules/js-effects.rofl closes `eff_row` over
+-- this table, so `join(div, exn) = pure` is DERIVED from the definition and not
+-- from a third place where the same thing is written down again.
+eff_alias(pure, div).
+eff_alias(pure, exn).
+eff_alias(st_local,  rd_local).
+eff_alias(st_local,  wr_local).
+eff_alias(st_local,  alloc).
+eff_alias(st_global, rd_global).
+eff_alias(st_global, wr_global).
+eff_alias(st_global, alloc).
+eff_alias(io, st_global).
+eff_alias(io, div).
+eff_alias(io, exn).
+eff_alias(io, ndet).
+-- ...AND THE TOP, WHICH KOKA DOES NOT NAME AND THIS MODEL NEEDS. `io` is the
+-- top of the GLOBAL tower — `total <= pure <= io` — and local state is not
+-- under it, which is not an accident of the encoding: Koka's `local<s>` is
+-- ENCAPSULATED, discharged by `run`, and that is why `io` does not contain it.
+-- A lattice needs a top, so the full row is named; `meet(io, st_local) = alloc`
+-- is the derived statement that the two branches share exactly the allocation.
+eff_alias(top, io).
+eff_alias(top, st_local).
+
+-- ===========================================================================
+-- THE CONCRETE COLUMN — `http:get` RATHER THAN `io`, AND WHY IT IS A SECOND
+-- THING AND NOT A REPLACEMENT.
+--
+-- The owner's amendment, 2026-09-09: "the Koka lattice is worth refining in a
+-- more human-readable language, because `http:get` is somewhat clearer than
+-- `io`". Both are kept, because they answer different questions and the model
+-- needs both:
+--
+--   `io`       answers the ALGEBRAIC question — the join of a body's
+--              statements, the comparison between two calls. It needs an
+--              order. It has one.
+--   `http:get` answers the HUMAN question — what does this function actually
+--              DO — which `io` answers uselessly. `http:get`, `fs:read` and
+--              `console:write` form NO order at all: there is no answer to
+--              which of `http:get` and `fs:write` is greater.
+--
+-- A CONCRETE EFFECT IS A PAIR, NOT AN ATOM. It is (Surface, Operation), and
+-- `http:get` is how the pair is WRITTEN for a reader. Manufacturing a joined
+-- atom would be making a term out of nothing, which this repository has refused
+-- before; the colon is a rendering, so `runtime/report.ts` can print it and no
+-- rule has to parse it back.
+--
+-- AND IT MAPS INTO THE LATTICE. `⊑` is `ambient_effect(Surface, Operation,
+-- EffectName)` — one row per member, naming a landmark above. Join and compare
+-- in the lattice; show the human the pair.
+--
+-- THE REAL RISK IS THE OPEN VOCABULARY AND THE CURE IS THE FINDING'S OWN.
+-- Koka's set is closed at eight; `http:get` opens an infinite one, which is
+-- what `f_the_effect_taxonomy_already_exists_and_it_is_a_lattice` refused when
+-- it said the taxonomy is not ours to invent. The same finding names the cure
+-- by example — it rejected `UNKNOWN` as a MEMBER because `unknown_type(R,
+-- irreducible|ours)` CLASSIFIES an unknown instead of making unknown a kind.
+-- So: A CONCRETE EFFECT IS DERIVED, NEVER AUTHORED, and this file authors not
+-- one of them.
+--
+-- WHERE EACH HALF OF THE NAME COMES FROM, per half, because the two halves have
+-- different provenance and only one of them is free:
+--
+--   THE SURFACE HALF IS A FACT and needs no judgement:
+--     * a builtin prototype        `prototype_of[flow]` from the receiver's
+--                                  KIND, plus `builtin_prototype` — derived in
+--                                  the tree TODAY: `array`, `string`, `regexp`,
+--                                  `bigint` over ten call sites
+--     * an ES intrinsic            the global's own name as `lib.es*.d.ts`
+--                                  declares it — `Promise`, `Map`, `JSON`,
+--                                  `Math`, `Symbol`, `globalThis`
+--     * a host runtime module      the import specifier, or the ambient
+--                                  global's name, as `lib.dom.d.ts` and
+--                                  `@types/node` declare it — `console`,
+--                                  `fetch`, `setTimeout`, `fs`, `path`,
+--                                  `process`
+--   THE OPERATION HALF is the member name, also a fact.
+--   THE MAP INTO THE LATTICE IS NEITHER. Nothing in a `.d.ts` signature says
+--   `readFileSync` reads and `writeFileSync` writes; the declaration FILE says
+--   which surface a member belongs to and says nothing about its effect. So
+--   `ambient_effect` is what the surface packs must supply, member by member,
+--   and until they do EVERY ambient call is an open cell with an owner rather
+--   than a label. That is the honest answer to the majority case and it is the
+--   answer this file gives.
+--
+-- WHAT THIS OWES grafema's effects-db, the owner's own prior art, which the
+-- founding finding already weighed: PURE / MUTATION / IO / THROW / ASYNC /
+-- NONDETERMINISTIC / SPAWN / MESSAGE_PASSING / UNKNOWN, split by runtime.
+--   * AGREED, and taken: PURE is `total`, MUTATION is `write<h>`, IO is `io`,
+--     THROW is `exn`, NONDETERMINISTIC is `ndet`.
+--   * AGREED AND PROMOTED: the RUNTIME SPLIT is half of what the amendment
+--     asks for, and it is exactly the SURFACE half of a concrete effect. A
+--     runtime is not an effect; it is where an effect's name comes from.
+--   * AGREED AND MOVED DOWN A LEVEL: SPAWN and MESSAGE_PASSING are not
+--     lattice elements, they are CONCRETE effects — `child_process:spawn`,
+--     `worker:postMessage` — each mapping into `io`. That is the whole
+--     argument for having two columns: they are the names a human wants and
+--     the join has nothing to do with them.
+--   * REFUSED: ASYNC. The founding finding measured the point — `await` is
+--     transparent to value flow and `yield` is not — so async-as-an-effect
+--     asserts a uniformity this repository's own measurement contradicts, and
+--     a concrete column must not smuggle it back as `async:*`.
+--     `concrete_async_smuggled[audit]` in models/lang/js/rules/js-effects.rofl is that
+--     sentence as a row.
+--   * REFUSED: UNKNOWN, on the grounds the finding already gave.
+--
+-- WHAT THE SURFACE PACKS MUST SUPPLY, stated as the shape this layer reads. The
+-- relations are declared `edb` here so that a world holding this pack and no
+-- surface reads them as EMPTY rather than as a misspelling — the same reason
+-- `unknown_type` and `ast_node` carry one in models/lang/js/rules/js-model.rofl.
+--
+--   surface_origin(Surface, Origin)
+--       one row per surface, saying which declaration file it came from.
+--       Origin is one of the three `eff_origin` values below.
+--   ambient_effect(Surface, Member, EffectName)
+--       the `⊑` map: one row per MEMBER, naming the lattice landmark the
+--       member's effect is at or below. EffectName must be an `eff_name` —
+--       `concrete_unnamed[audit]` says so.
+--
+--       THE MEMBER IS A STRING AND THE OTHER TWO ARE ATOMS, and this is not a
+--       style note: `ambient_effect(fs, readFileSync, io)` LOADS, holds, joins
+--       nothing and reports nothing, because the operation half comes from
+--       `selects[flow]`, which carries a key as a STRING. The right row is
+--       `ambient_effect(fs, "readFileSync", io).` Measured the hard way — the
+--       first planted control in test/js-effects.test.ts was written unquoted
+--       and derived zero — and it is the defect
+--       `f_unpopulatable_sees_the_relation_and_is_blind_to_the_constant`
+--       already records: a misspelt CONSTANT in the right lexical form is a
+--       well-formed question about a real relation, and nothing objects.
+edb(surface_origin).
+edb(ambient_effect).
+edb(eff_origin).
+-- `lib.es*.d.ts` — an ECMAScript intrinsic. Present in every host.
+eff_origin(es_intrinsic).
+-- `lib.dom.d.ts` or `@types/node` — a host surface. Present only in its host,
+-- which is the runtime split grafema's effects-db already makes.
+eff_origin(host_runtime).
+-- derived in this tree today, with no `.d.ts` at all: the receiver's KIND fixes
+-- the prototype, which is what `w_prototype_of_a_value` closed.
+eff_origin(builtin_prototype).

@@ -150,6 +150,8 @@ struct Opts {
     min_rows: usize,
     depth: Option<i64>,
     nodes: Option<i64>,
+    /// `--in NODE`: a whynot is asked in the file of this node, by its prefix
+    within: Option<String>,
     kept: Option<String>,
     anew: bool,
     world_given: bool,
@@ -189,6 +191,7 @@ fn parse(json: bool, args: &[String], implicit: bool) -> Opts {
     let mut propose = false;
     let mut min_rows = 2usize;
     let (mut depth, mut nodes): (Option<i64>, Option<i64>) = (None, None);
+    let mut within: Option<String> = None;
     let (mut kept, mut anew, mut world_given) = (None::<String>, false, false);
     let mut i = 0;
     while i < args.len() {
@@ -222,6 +225,13 @@ fn parse(json: bool, args: &[String], implicit: bool) -> Opts {
             "--excise" => qs.push(Q::Excise(value(&mut i))),
             "--depth" => depth = Some(number("--depth", value(&mut i), "an integer")),
             "--nodes" => nodes = Some(number("--nodes", value(&mut i), "an integer")),
+            "--in" => {
+                let v = value(&mut i);
+                match rofl::engine::volumes::first_file(&format!("{v}_")) {
+                    Some(f) => within = Some(format!("n{f}")),
+                    None => { eprintln!("--in takes a node of the file, as an answer names it (n and 16 hex digits, then _), not {v:?}"); std::process::exit(1) }
+                }
+            }
             "--state" => state = true,
             "--propose-structures" => propose = true,
             "--structures-min-rows" => min_rows = number("--structures-min-rows", value(&mut i), "a count of rows"),
@@ -229,7 +239,7 @@ fn parse(json: bool, args: &[String], implicit: bool) -> Opts {
         }
         i += 1;
     }
-    Opts { json, implicit, ticks, budget, files, strata, explain, save, space, below, retain, retracts, qs, state, propose, min_rows, depth, nodes, kept, anew, world_given }
+    Opts { json, implicit, ticks, budget, files, strata, explain, save, space, below, retain, retracts, qs, state, propose, min_rows, depth, nodes, within, kept, anew, world_given }
 }
 
 /// The walls and files of a world, canonical: what a kept world is kept from.
@@ -464,7 +474,7 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
 /// nothing else asked of it. `ROFL_VOLUMES=0` is the check harness's oracle of the whole world, `=1` of volumes
 /// under VOLUMES_FROM.
 fn by_volumes(o: &Opts) -> bool {
-    !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_) | Q::Why(_) | Q::WhyAll(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
+    !o.qs.is_empty() && o.qs.iter().all(|q| matches!(q, Q::Ask(_) | Q::Why(_) | Q::WhyAll(_) | Q::Whynot(_) | Q::WhynotAll(_))) && !o.state && o.ticks == 0 && o.retracts.is_empty() && !o.explain
         && o.below.is_empty() && o.kept.is_none() && o.save.is_none() && !o.propose && std::env::var("ROFL_VOLUMES").as_deref() != Ok("0")
 }
 
@@ -489,7 +499,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
     drop(texts);
     // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
-    let bytes: usize = cut.files.iter().map(|(_, t)| t.len()).sum();
+    let bytes: usize = cut.files.iter().map(|(_, t)| text_bytes(t)).sum();
     if cut.files.len() < 2 || bytes < VOLUMES_FROM && std::env::var("ROFL_VOLUMES").as_deref() != Ok("1") { return None; }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
     if let Some((mut s, sums)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
@@ -540,6 +550,13 @@ fn leave(s: Session, rest: impl Sized) {
 /// The bytes of the files' facts from which a world is evaluated by volumes: below them the whole world is as fast
 /// (vscode: 20 files, 10 MB).
 const VOLUMES_FROM: usize = 32 << 20;
+
+/// The bytes a file's facts take as text: a fact of the column form stands for the 75 its line took (vscode's
+/// vs/base/common, oxc's tree: 65.5 MB of text for 873 thousand facts).
+fn text_bytes(t: &str) -> usize {
+    if !rofl::rofl_parse::is_columns(t) { return t.len(); }
+    rofl::rofl_parse::column_rows(t) * 75
+}
 
 /// A file of a world kept by volumes (`<slot>.q<sum>.vol`): no world of its own to take by delta.
 pub fn is_volume_of_set(p: &std::path::Path) -> bool {
@@ -903,7 +920,14 @@ fn print_state(o: &Opts, s: &mut Session, cut: bool) {
 /// Where a `why --all` is asked of a world that cut a book, the texts of its files by the node prefix they name: what
 /// unfolds a lemma (`Session::why_all`).
 fn lower_texts(o: &Opts, s: &mut Session) {
-    if s.eval.lower_texts.is_some() || !o.qs.iter().any(|q| matches!(q, Q::WhyAll(_))) || s.eval.lemma_stage().is_none() {
+    if s.eval.lower_texts.is_some() || s.eval.lemma_stage().is_none() {
+        return;
+    }
+    // (a whynot reads them when its walk first goes below the cut, and not before)
+    if !o.qs.iter().any(|q| matches!(q, Q::WhyAll(_))) {
+        if o.qs.iter().any(|q| matches!(q, Q::Whynot(_) | Q::WhynotAll(_))) {
+            s.eval.lower_sources = Some(std::sync::Arc::new(load_sources(o)));
+        }
         return;
     }
     let sources = load_sources(o);
@@ -923,7 +947,7 @@ fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
     let mut refused = false;
     lower_texts(o, s);
     for q in &o.qs {
-        let (text, js, bad, part) = answer(s, q, &bounds, &failed);
+        let (text, js, bad, part) = answer(s, q, &bounds, &o.within, &failed);
         refused |= bad;
         partial |= part;
         if o.json { println!("{js}") } else { println!("{text}\n") }
@@ -932,7 +956,7 @@ fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
 }
 
 /// One question answered: its text, its `rofl serve` answer, whether it was refused, and whether it is partial.
-fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, failed: &[String]) -> (String, serde_json::Value, bool, bool) {
+fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>, failed: &[String]) -> (String, serde_json::Value, bool, bool) {
     let (mut refused, mut partial) = (false, false);
     // each answer as plain text, or as `rofl serve` answers it
     let (text, js) = match q {
@@ -949,6 +973,13 @@ fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, failed: &[String]) -> (
             Ok(t) => (t.clone(), serde_json::json!({ "ok": true, "text": t })),
             Err(e) => { refused = true; (e.clone(), serde_json::json!({ "ok": false, "error": e })) }
         },
+        Q::Whynot(l) | Q::WhynotAll(l) if within.is_some() => {
+            let f = within.clone().unwrap_or_default();
+            match s.whynot_in(l, &WhynotBounds { all: matches!(q, Q::WhynotAll(_)), ..*bounds }, &f) {
+                Ok(r) => (format!("{}\n  {} answers in this file", r.text, r.found), serde_json::json!({ "ok": true, "file": r.file, "found": r.found, "stops": r.stops, "text": r.text })),
+                Err(e) => { refused = true; (e.clone(), serde_json::json!({ "ok": false, "error": e })) }
+            }
+        }
         Q::Whynot(l) | Q::WhynotAll(l) => match s.whynot(l, &WhynotBounds { all: matches!(q, Q::WhynotAll(_)), ..*bounds }) {
             Ok((h, t)) => (t.clone(), serde_json::json!({ "ok": true, "holds": h, "text": t })),
             Err(e) => { refused = true; (e.clone(), serde_json::json!({ "ok": false, "error": e })) }

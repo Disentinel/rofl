@@ -63,10 +63,10 @@ jobs:
         with:
           workspaces: |
             rust
-            rust/tools/oxc_scan
+            models/lang/js/scanner/oxc_scan
       - run: cd rust && cargo build --release
-      # the scanner `rofl scan` and the JS worlds run (scanners/cli.ts)
-      - run: cd rust/tools/oxc_scan && cargo build --release
+      # the scanner `rofl scan` and the JS worlds run (models/lang/js/scanner/cli.ts)
+      - run: cd models/lang/js/scanner/oxc_scan && cargo build --release
       # THE KEEP, AND WHERE IT IS NOT TRUSTED. `npm test` reads back a world's answer kept under the hash of everything
       # it is a function of (scripts/keep.ts), so a pull request runs warm on the keep of earlier runs. A wrongly kept
       # answer that equals the golden would turn a real regression green, so a push to main and a release tag run COLD,
@@ -181,9 +181,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with: { targets: '${{ matrix.triple }}' }
       - uses: Swatinem/rust-cache@v2
-        with: { workspaces: 'rust\nrust/tools/oxc_scan', key: '${{ matrix.target }}' }
+        with: { workspaces: 'rust\nmodels/lang/js/scanner/oxc_scan', key: '${{ matrix.target }}' }
       - run: cd rust && cargo build --release --bin rofl ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
-      - run: cd rust/tools/oxc_scan && cargo build --release ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
+      - run: cd models/lang/js/scanner/oxc_scan && cargo build --release ${{ matrix.triple && format('--target {0}', matrix.triple) || '' }}
       # the engine and its scanner, side by side: rust/target/rofl-<target>/ for dist
       - shell: bash
         run: |
@@ -191,7 +191,7 @@ jobs:
           x=${{ startsWith(matrix.target, 'win32') && '.exe' || '' }}
           t=${{ matrix.triple && format('{0}/', matrix.triple) || '' }}
           cp rust/target/${t}release/rofl$x stage/
-          cp rust/tools/oxc_scan/target/${t}release/oxc_scan$x stage/
+          cp models/lang/js/scanner/oxc_scan/target/${t}release/oxc_scan$x stage/
       - uses: actions/upload-artifact@v4
         with:
           name: rofl-${{ matrix.target }}

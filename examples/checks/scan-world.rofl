@@ -3,6 +3,6 @@
 edb(scanner).
 edb(scan_done).
 edb(scan_failed).
-scanner(js, "node --experimental-strip-types scanners/cli.ts examples/scan/src").
+scanner(js, "node --experimental-strip-types models/lang/js/scanner/cli.ts examples/scan/src").
 scan_request(js, "main.js").
 scan_request(js, F) :- depends[code](_, F).

@@ -75,7 +75,7 @@ export function unfoldViews(decl: Set<string>, rules: DRule[], isCell: (rel: str
     done.reverse();
     done.forEach((clause, k) => {
       clause = annotateAggs(clause);
-      const id = k === 0 ? r.id : `${r.id}~${k}`;
+      const id = k === 0 ? r.id : `${r.id}_v${k}`;
       if (into === null) { out.views.get(r.clause.head.rel)!.push(clause); return; }
       out.changed.add(id);
       into.push({ id, clause, canon: `${r.canon}~view${k}` });

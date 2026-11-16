@@ -4,7 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { scan } from '../../scanners/oxc_code.ts';
+import { scan } from '../../models/lang/js/scanner/oxc_code.ts';
 import { AggEval } from '../../src/aggeval.ts';
 
 const HERE = path.dirname(new URL(import.meta.url).pathname);
@@ -68,7 +68,7 @@ function run(name: string, model: string, patched: boolean) {
   const t = performance.now(); let rep: any;
   try { rep = r.evaluate(4_000_000_000); } finally { proto.matchPremise = origMatch; proto.activate = origActivate; }
   const ms = performance.now() - t;
-  const ph = new Set([...fs.readFileSync('../../facts/js-phrases.rofl', 'utf8').matchAll(/^sig\((\w+),/gm)].map((m) => m[1]));
+  const ph = new Set([...fs.readFileSync('../../models/lang/js/facts/js-phrases.rofl', 'utf8').matchAll(/^sig\((\w+),/gm)].map((m) => m[1]));
   const pub = new Set<string>();
   for (const f of r.store.allFacts()) { const first = f.args[0] as any; if (first && first.k === 'a' && /^r[0-9a-f]{8}$/.test(first.name)) continue; if (ph.has(f.rel) || f.persp === 'audit') pub.add(f.key); }
   console.log(`${name.padEnd(28)} files ${files.length} | eval ${ms.toFixed(0).padStart(6)} ms | premise calls ${String(calls).padStart(8)} | peakRows ${rep.peakRows} | facts ${r.store.factCount()} | public rows ${pub.size}${patched ? ' | activations ' + acts.join(',') + sccLog : ''}`);
