@@ -3911,6 +3911,7 @@ check_file("gates_rust", "examples/checks/gates-rs-facts.rofl").
 check_opt("gates_rust", one_engine, rust).
 
 -- the Rust model on the scene of js_instances: a call is an instance, a method walked object by object, the value at an effect
+-- the scenes of examples/parity/ in Rust, each judged against what the program prints (examples/parity/check.rofl)
 check_world("parity_rs_instances").
 check_file("parity_rs_instances", "models/lang/js/roles.rofl").
 check_file("parity_rs_instances", "models/lang/rust/rs-roles.rofl").
@@ -3921,6 +3922,7 @@ check_file("parity_rs_instances", "models/lang/rust/qname.rofl").
 check_file("parity_rs_instances", "models/lang/rust/values.rofl").
 check_file("parity_rs_instances", "models/lang/rust/effects.rofl").
 check_file("parity_rs_instances", "models/lang/rust/strings.rofl").
+check_file("parity_rs_instances", "models/lang/rust/guards.rofl").
 check_file("parity_rs_instances", "examples/parity/instances/rs-facts.rofl").
 check_file("parity_rs_instances", "examples/parity/check.rofl").
 check_file("parity_rs_instances", "examples/parity/rs.rofl").
@@ -3936,6 +3938,7 @@ check_file("parity_rs_keyed", "models/lang/rust/qname.rofl").
 check_file("parity_rs_keyed", "models/lang/rust/values.rofl").
 check_file("parity_rs_keyed", "models/lang/rust/effects.rofl").
 check_file("parity_rs_keyed", "models/lang/rust/strings.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/guards.rofl").
 check_file("parity_rs_keyed", "examples/parity/keyed/rs-facts.rofl").
 check_file("parity_rs_keyed", "examples/parity/check.rofl").
 check_file("parity_rs_keyed", "examples/parity/rs.rofl").
@@ -3951,11 +3954,28 @@ check_file("parity_rs_strings", "models/lang/rust/qname.rofl").
 check_file("parity_rs_strings", "models/lang/rust/values.rofl").
 check_file("parity_rs_strings", "models/lang/rust/effects.rofl").
 check_file("parity_rs_strings", "models/lang/rust/strings.rofl").
+check_file("parity_rs_strings", "models/lang/rust/guards.rofl").
 check_file("parity_rs_strings", "examples/parity/strings/rs-facts.rofl").
 check_file("parity_rs_strings", "examples/parity/check.rofl").
 check_file("parity_rs_strings", "examples/parity/rs.rofl").
 check_file("parity_rs_strings", "examples/parity/strings/rs-check.rofl").
 check_opt("parity_rs_strings", one_engine, rust).
+check_world("parity_rs_guards").
+check_file("parity_rs_guards", "models/lang/js/roles.rofl").
+check_file("parity_rs_guards", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_guards", "models/lang/rust/names.rofl").
+check_file("parity_rs_guards", "models/lang/rust/calls.rofl").
+check_file("parity_rs_guards", "models/lang/rust/flow.rofl").
+check_file("parity_rs_guards", "models/lang/rust/qname.rofl").
+check_file("parity_rs_guards", "models/lang/rust/values.rofl").
+check_file("parity_rs_guards", "models/lang/rust/effects.rofl").
+check_file("parity_rs_guards", "models/lang/rust/strings.rofl").
+check_file("parity_rs_guards", "models/lang/rust/guards.rofl").
+check_file("parity_rs_guards", "examples/parity/guards/rs-facts.rofl").
+check_file("parity_rs_guards", "examples/parity/check.rofl").
+check_file("parity_rs_guards", "examples/parity/rs.rofl").
+check_file("parity_rs_guards", "examples/parity/guards/rs-check.rofl").
+check_opt("parity_rs_guards", one_engine, rust).
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").

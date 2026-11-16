@@ -1,0 +1,1420 @@
+-- examples/parity/guards/rs-facts.rofl: examples/parity/guards/rs/src scanned by rust/tools/rs_tree, for the world parity_rs_guards.
+crate_name("examples/parity/guards/rs/src/main.rs", "scene").
+file[ast_rs]("n30655d92d4853522_root", "examples/parity/guards/rs/src/main.rs").
+node[ast_rs]("n30655d92d4853522_root", source_file, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_root", 1).
+last[ast_rs]("n30655d92d4853522_root", 95).
+child[ast_rs]("n30655d92d4853522_root", c, 0, "n30655d92d4853522_6f4ec0b7c776").
+node[ast_rs]("n30655d92d4853522_6f4ec0b7c776", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6f4ec0b7c776", 1).
+last[ast_rs]("n30655d92d4853522_6f4ec0b7c776", 3).
+child[ast_rs]("n30655d92d4853522_6f4ec0b7c776", name, 0, "n30655d92d4853522_faeafd448861").
+node[ast_rs]("n30655d92d4853522_faeafd448861", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_faeafd448861", 1).
+attr[ast_rs]("n30655d92d4853522_faeafd448861", text, "probe").
+child[ast_rs]("n30655d92d4853522_6f4ec0b7c776", parameters, 0, "n30655d92d4853522_4bebbc2f56bd").
+node[ast_rs]("n30655d92d4853522_4bebbc2f56bd", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4bebbc2f56bd", 1).
+child[ast_rs]("n30655d92d4853522_4bebbc2f56bd", c, 0, "n30655d92d4853522_64bf7d64d78f").
+node[ast_rs]("n30655d92d4853522_64bf7d64d78f", parameter, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_64bf7d64d78f", 1).
+child[ast_rs]("n30655d92d4853522_64bf7d64d78f", pattern, 0, "n30655d92d4853522_69721dc80e10").
+node[ast_rs]("n30655d92d4853522_69721dc80e10", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_69721dc80e10", 1).
+attr[ast_rs]("n30655d92d4853522_69721dc80e10", text, "name").
+child[ast_rs]("n30655d92d4853522_64bf7d64d78f", type, 0, "n30655d92d4853522_7bdd129d0e8c").
+node[ast_rs]("n30655d92d4853522_7bdd129d0e8c", reference_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7bdd129d0e8c", 1).
+attr[ast_rs]("n30655d92d4853522_7bdd129d0e8c", token, "&").
+child[ast_rs]("n30655d92d4853522_7bdd129d0e8c", type, 0, "n30655d92d4853522_e0bb0d9fa862").
+node[ast_rs]("n30655d92d4853522_e0bb0d9fa862", primitive_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e0bb0d9fa862", 1).
+attr[ast_rs]("n30655d92d4853522_e0bb0d9fa862", text, "str").
+child[ast_rs]("n30655d92d4853522_6f4ec0b7c776", body, 0, "n30655d92d4853522_075da7559a85").
+node[ast_rs]("n30655d92d4853522_075da7559a85", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_075da7559a85", 1).
+last[ast_rs]("n30655d92d4853522_075da7559a85", 3).
+child[ast_rs]("n30655d92d4853522_075da7559a85", c, 0, "n30655d92d4853522_f9b4dc3d587b").
+node[ast_rs]("n30655d92d4853522_f9b4dc3d587b", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f9b4dc3d587b", 2).
+child[ast_rs]("n30655d92d4853522_f9b4dc3d587b", c, 0, "n30655d92d4853522_84e120105de3").
+node[ast_rs]("n30655d92d4853522_84e120105de3", macro_invocation, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_84e120105de3", 2).
+child[ast_rs]("n30655d92d4853522_84e120105de3", arg, 0, "n30655d92d4853522_9d3316618908").
+node[ast_rs]("n30655d92d4853522_9d3316618908", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9d3316618908", 2).
+attr[ast_rs]("n30655d92d4853522_9d3316618908", value, "{name}").
+attr[ast_rs]("n30655d92d4853522_9d3316618908", hole, "name").
+child[ast_rs]("n30655d92d4853522_84e120105de3", macro, 0, "n30655d92d4853522_f1871db2e62a").
+node[ast_rs]("n30655d92d4853522_f1871db2e62a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f1871db2e62a", 2).
+attr[ast_rs]("n30655d92d4853522_f1871db2e62a", text, "println").
+attr[ast_rs]("n30655d92d4853522_f9b4dc3d587b", token, ";").
+child[ast_rs]("n30655d92d4853522_root", c, 1, "n30655d92d4853522_6099335be15c").
+node[ast_rs]("n30655d92d4853522_6099335be15c", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6099335be15c", 5).
+last[ast_rs]("n30655d92d4853522_6099335be15c", 10).
+child[ast_rs]("n30655d92d4853522_6099335be15c", name, 0, "n30655d92d4853522_33a01809d34a").
+node[ast_rs]("n30655d92d4853522_33a01809d34a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_33a01809d34a", 5).
+attr[ast_rs]("n30655d92d4853522_33a01809d34a", text, "may_fail").
+child[ast_rs]("n30655d92d4853522_6099335be15c", parameters, 0, "n30655d92d4853522_788704fcae9b").
+node[ast_rs]("n30655d92d4853522_788704fcae9b", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_788704fcae9b", 5).
+child[ast_rs]("n30655d92d4853522_788704fcae9b", c, 0, "n30655d92d4853522_1d212c6b0ae7").
+node[ast_rs]("n30655d92d4853522_1d212c6b0ae7", parameter, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1d212c6b0ae7", 5).
+child[ast_rs]("n30655d92d4853522_1d212c6b0ae7", pattern, 0, "n30655d92d4853522_74def0471efc").
+node[ast_rs]("n30655d92d4853522_74def0471efc", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_74def0471efc", 5).
+attr[ast_rs]("n30655d92d4853522_74def0471efc", text, "x").
+child[ast_rs]("n30655d92d4853522_1d212c6b0ae7", type, 0, "n30655d92d4853522_66506ffb8eab").
+node[ast_rs]("n30655d92d4853522_66506ffb8eab", primitive_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_66506ffb8eab", 5).
+attr[ast_rs]("n30655d92d4853522_66506ffb8eab", text, "usize").
+child[ast_rs]("n30655d92d4853522_6099335be15c", return_type, 0, "n30655d92d4853522_f88e1c276b8b").
+node[ast_rs]("n30655d92d4853522_f88e1c276b8b", generic_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f88e1c276b8b", 5).
+child[ast_rs]("n30655d92d4853522_f88e1c276b8b", type, 0, "n30655d92d4853522_5d216e4a1b20").
+node[ast_rs]("n30655d92d4853522_5d216e4a1b20", type_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5d216e4a1b20", 5).
+attr[ast_rs]("n30655d92d4853522_5d216e4a1b20", text, "Result").
+child[ast_rs]("n30655d92d4853522_f88e1c276b8b", type_arguments, 0, "n30655d92d4853522_8604f9bb0ba0").
+node[ast_rs]("n30655d92d4853522_8604f9bb0ba0", type_arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8604f9bb0ba0", 5).
+child[ast_rs]("n30655d92d4853522_8604f9bb0ba0", c, 0, "n30655d92d4853522_ed26a553d04c").
+node[ast_rs]("n30655d92d4853522_ed26a553d04c", primitive_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ed26a553d04c", 5).
+attr[ast_rs]("n30655d92d4853522_ed26a553d04c", text, "usize").
+child[ast_rs]("n30655d92d4853522_8604f9bb0ba0", c, 1, "n30655d92d4853522_5098c875e301").
+node[ast_rs]("n30655d92d4853522_5098c875e301", type_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5098c875e301", 5).
+attr[ast_rs]("n30655d92d4853522_5098c875e301", text, "String").
+child[ast_rs]("n30655d92d4853522_6099335be15c", body, 0, "n30655d92d4853522_36533dc176ba").
+node[ast_rs]("n30655d92d4853522_36533dc176ba", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_36533dc176ba", 5).
+last[ast_rs]("n30655d92d4853522_36533dc176ba", 10).
+child[ast_rs]("n30655d92d4853522_36533dc176ba", c, 0, "n30655d92d4853522_562c0a2250f1").
+node[ast_rs]("n30655d92d4853522_562c0a2250f1", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_562c0a2250f1", 6).
+last[ast_rs]("n30655d92d4853522_562c0a2250f1", 8).
+child[ast_rs]("n30655d92d4853522_562c0a2250f1", c, 0, "n30655d92d4853522_f68ed6f0f52a").
+node[ast_rs]("n30655d92d4853522_f68ed6f0f52a", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f68ed6f0f52a", 6).
+last[ast_rs]("n30655d92d4853522_f68ed6f0f52a", 8).
+child[ast_rs]("n30655d92d4853522_f68ed6f0f52a", condition, 0, "n30655d92d4853522_a36356c4426d").
+node[ast_rs]("n30655d92d4853522_a36356c4426d", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a36356c4426d", 6).
+child[ast_rs]("n30655d92d4853522_a36356c4426d", left, 0, "n30655d92d4853522_43ff387df742").
+node[ast_rs]("n30655d92d4853522_43ff387df742", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_43ff387df742", 6).
+attr[ast_rs]("n30655d92d4853522_43ff387df742", text, "x").
+attr[ast_rs]("n30655d92d4853522_a36356c4426d", operator, ">").
+child[ast_rs]("n30655d92d4853522_a36356c4426d", right, 0, "n30655d92d4853522_1aef2d53b842").
+node[ast_rs]("n30655d92d4853522_1aef2d53b842", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1aef2d53b842", 6).
+attr[ast_rs]("n30655d92d4853522_1aef2d53b842", value, 3).
+attr[ast_rs]("n30655d92d4853522_1aef2d53b842", text, "3").
+child[ast_rs]("n30655d92d4853522_f68ed6f0f52a", consequence, 0, "n30655d92d4853522_8be76df7304b").
+node[ast_rs]("n30655d92d4853522_8be76df7304b", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8be76df7304b", 6).
+last[ast_rs]("n30655d92d4853522_8be76df7304b", 8).
+child[ast_rs]("n30655d92d4853522_8be76df7304b", c, 0, "n30655d92d4853522_4ae63632d824").
+node[ast_rs]("n30655d92d4853522_4ae63632d824", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4ae63632d824", 7).
+child[ast_rs]("n30655d92d4853522_4ae63632d824", c, 0, "n30655d92d4853522_07b982da5046").
+node[ast_rs]("n30655d92d4853522_07b982da5046", return_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_07b982da5046", 7).
+child[ast_rs]("n30655d92d4853522_07b982da5046", c, 0, "n30655d92d4853522_83300595d80d").
+node[ast_rs]("n30655d92d4853522_83300595d80d", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_83300595d80d", 7).
+child[ast_rs]("n30655d92d4853522_83300595d80d", function, 0, "n30655d92d4853522_a31bb08b22ae").
+node[ast_rs]("n30655d92d4853522_a31bb08b22ae", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a31bb08b22ae", 7).
+attr[ast_rs]("n30655d92d4853522_a31bb08b22ae", upper, true).
+attr[ast_rs]("n30655d92d4853522_a31bb08b22ae", text, "Err").
+child[ast_rs]("n30655d92d4853522_83300595d80d", arguments, 0, "n30655d92d4853522_b0be17203574").
+node[ast_rs]("n30655d92d4853522_b0be17203574", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b0be17203574", 7).
+child[ast_rs]("n30655d92d4853522_b0be17203574", c, 0, "n30655d92d4853522_d786ca917dbd").
+node[ast_rs]("n30655d92d4853522_d786ca917dbd", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d786ca917dbd", 7).
+child[ast_rs]("n30655d92d4853522_d786ca917dbd", function, 0, "n30655d92d4853522_335409b4434b").
+node[ast_rs]("n30655d92d4853522_335409b4434b", field_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_335409b4434b", 7).
+child[ast_rs]("n30655d92d4853522_335409b4434b", value, 0, "n30655d92d4853522_5c4528b67fcf").
+node[ast_rs]("n30655d92d4853522_5c4528b67fcf", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5c4528b67fcf", 7).
+attr[ast_rs]("n30655d92d4853522_5c4528b67fcf", value, "big").
+child[ast_rs]("n30655d92d4853522_335409b4434b", field, 0, "n30655d92d4853522_2439be91f6ba").
+node[ast_rs]("n30655d92d4853522_2439be91f6ba", field_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2439be91f6ba", 7).
+attr[ast_rs]("n30655d92d4853522_2439be91f6ba", text, "to_string").
+child[ast_rs]("n30655d92d4853522_d786ca917dbd", arguments, 0, "n30655d92d4853522_5035e603dc53").
+node[ast_rs]("n30655d92d4853522_5035e603dc53", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5035e603dc53", 7).
+attr[ast_rs]("n30655d92d4853522_5035e603dc53", text, "()").
+attr[ast_rs]("n30655d92d4853522_4ae63632d824", token, ";").
+child[ast_rs]("n30655d92d4853522_36533dc176ba", c, 1, "n30655d92d4853522_bf1f124bb20d").
+node[ast_rs]("n30655d92d4853522_bf1f124bb20d", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_bf1f124bb20d", 9).
+child[ast_rs]("n30655d92d4853522_bf1f124bb20d", function, 0, "n30655d92d4853522_ac5b950ae976").
+node[ast_rs]("n30655d92d4853522_ac5b950ae976", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ac5b950ae976", 9).
+attr[ast_rs]("n30655d92d4853522_ac5b950ae976", upper, true).
+attr[ast_rs]("n30655d92d4853522_ac5b950ae976", text, "Ok").
+child[ast_rs]("n30655d92d4853522_bf1f124bb20d", arguments, 0, "n30655d92d4853522_81b8e7685140").
+node[ast_rs]("n30655d92d4853522_81b8e7685140", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_81b8e7685140", 9).
+child[ast_rs]("n30655d92d4853522_81b8e7685140", c, 0, "n30655d92d4853522_a198ae087e56").
+node[ast_rs]("n30655d92d4853522_a198ae087e56", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a198ae087e56", 9).
+attr[ast_rs]("n30655d92d4853522_a198ae087e56", text, "x").
+child[ast_rs]("n30655d92d4853522_root", c, 2, "n30655d92d4853522_784df8bec884").
+node[ast_rs]("n30655d92d4853522_784df8bec884", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_784df8bec884", 12).
+last[ast_rs]("n30655d92d4853522_784df8bec884", 17).
+child[ast_rs]("n30655d92d4853522_784df8bec884", name, 0, "n30655d92d4853522_8e32b84bdd87").
+node[ast_rs]("n30655d92d4853522_8e32b84bdd87", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8e32b84bdd87", 12).
+attr[ast_rs]("n30655d92d4853522_8e32b84bdd87", text, "tried").
+child[ast_rs]("n30655d92d4853522_784df8bec884", parameters, 0, "n30655d92d4853522_30dceaea13f7").
+node[ast_rs]("n30655d92d4853522_30dceaea13f7", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_30dceaea13f7", 12).
+child[ast_rs]("n30655d92d4853522_30dceaea13f7", c, 0, "n30655d92d4853522_4e382218fe86").
+node[ast_rs]("n30655d92d4853522_4e382218fe86", parameter, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4e382218fe86", 12).
+child[ast_rs]("n30655d92d4853522_4e382218fe86", pattern, 0, "n30655d92d4853522_8cb914df3f22").
+node[ast_rs]("n30655d92d4853522_8cb914df3f22", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8cb914df3f22", 12).
+attr[ast_rs]("n30655d92d4853522_8cb914df3f22", text, "x").
+child[ast_rs]("n30655d92d4853522_4e382218fe86", type, 0, "n30655d92d4853522_cc2cd09b1ba5").
+node[ast_rs]("n30655d92d4853522_cc2cd09b1ba5", primitive_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_cc2cd09b1ba5", 12).
+attr[ast_rs]("n30655d92d4853522_cc2cd09b1ba5", text, "usize").
+child[ast_rs]("n30655d92d4853522_784df8bec884", return_type, 0, "n30655d92d4853522_4e6063232adf").
+node[ast_rs]("n30655d92d4853522_4e6063232adf", generic_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4e6063232adf", 12).
+child[ast_rs]("n30655d92d4853522_4e6063232adf", type, 0, "n30655d92d4853522_b567b3afe816").
+node[ast_rs]("n30655d92d4853522_b567b3afe816", type_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b567b3afe816", 12).
+attr[ast_rs]("n30655d92d4853522_b567b3afe816", text, "Result").
+child[ast_rs]("n30655d92d4853522_4e6063232adf", type_arguments, 0, "n30655d92d4853522_0eacc120dd36").
+node[ast_rs]("n30655d92d4853522_0eacc120dd36", type_arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0eacc120dd36", 12).
+child[ast_rs]("n30655d92d4853522_0eacc120dd36", c, 0, "n30655d92d4853522_8baa20ffcfb8").
+node[ast_rs]("n30655d92d4853522_8baa20ffcfb8", primitive_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8baa20ffcfb8", 12).
+attr[ast_rs]("n30655d92d4853522_8baa20ffcfb8", text, "usize").
+child[ast_rs]("n30655d92d4853522_0eacc120dd36", c, 1, "n30655d92d4853522_f6a3c7fc9175").
+node[ast_rs]("n30655d92d4853522_f6a3c7fc9175", type_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f6a3c7fc9175", 12).
+attr[ast_rs]("n30655d92d4853522_f6a3c7fc9175", text, "String").
+child[ast_rs]("n30655d92d4853522_784df8bec884", body, 0, "n30655d92d4853522_a6c04701c256").
+node[ast_rs]("n30655d92d4853522_a6c04701c256", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a6c04701c256", 12).
+last[ast_rs]("n30655d92d4853522_a6c04701c256", 17).
+child[ast_rs]("n30655d92d4853522_a6c04701c256", c, 0, "n30655d92d4853522_271ffc22f511").
+node[ast_rs]("n30655d92d4853522_271ffc22f511", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_271ffc22f511", 13).
+child[ast_rs]("n30655d92d4853522_271ffc22f511", c, 0, "n30655d92d4853522_e36790198515").
+node[ast_rs]("n30655d92d4853522_e36790198515", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e36790198515", 13).
+child[ast_rs]("n30655d92d4853522_e36790198515", function, 0, "n30655d92d4853522_f94254ea69a1").
+node[ast_rs]("n30655d92d4853522_f94254ea69a1", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f94254ea69a1", 13).
+attr[ast_rs]("n30655d92d4853522_f94254ea69a1", text, "probe").
+child[ast_rs]("n30655d92d4853522_e36790198515", arguments, 0, "n30655d92d4853522_fe648a7610ba").
+node[ast_rs]("n30655d92d4853522_fe648a7610ba", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_fe648a7610ba", 13).
+child[ast_rs]("n30655d92d4853522_fe648a7610ba", c, 0, "n30655d92d4853522_fc71e987f054").
+node[ast_rs]("n30655d92d4853522_fc71e987f054", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_fc71e987f054", 13).
+attr[ast_rs]("n30655d92d4853522_fc71e987f054", value, "before_try").
+attr[ast_rs]("n30655d92d4853522_271ffc22f511", token, ";").
+child[ast_rs]("n30655d92d4853522_a6c04701c256", c, 1, "n30655d92d4853522_0269adb364da").
+node[ast_rs]("n30655d92d4853522_0269adb364da", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0269adb364da", 14).
+child[ast_rs]("n30655d92d4853522_0269adb364da", pattern, 0, "n30655d92d4853522_2359b7e4adfa").
+node[ast_rs]("n30655d92d4853522_2359b7e4adfa", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2359b7e4adfa", 14).
+attr[ast_rs]("n30655d92d4853522_2359b7e4adfa", text, "y").
+child[ast_rs]("n30655d92d4853522_0269adb364da", value, 0, "n30655d92d4853522_0cd2eb858f36").
+node[ast_rs]("n30655d92d4853522_0cd2eb858f36", try_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0cd2eb858f36", 14).
+child[ast_rs]("n30655d92d4853522_0cd2eb858f36", c, 0, "n30655d92d4853522_3f5821396581").
+node[ast_rs]("n30655d92d4853522_3f5821396581", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3f5821396581", 14).
+child[ast_rs]("n30655d92d4853522_3f5821396581", function, 0, "n30655d92d4853522_71ea404fdf1b").
+node[ast_rs]("n30655d92d4853522_71ea404fdf1b", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_71ea404fdf1b", 14).
+attr[ast_rs]("n30655d92d4853522_71ea404fdf1b", text, "may_fail").
+child[ast_rs]("n30655d92d4853522_3f5821396581", arguments, 0, "n30655d92d4853522_96858d854ff9").
+node[ast_rs]("n30655d92d4853522_96858d854ff9", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_96858d854ff9", 14).
+child[ast_rs]("n30655d92d4853522_96858d854ff9", c, 0, "n30655d92d4853522_06031d2df67b").
+node[ast_rs]("n30655d92d4853522_06031d2df67b", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_06031d2df67b", 14).
+attr[ast_rs]("n30655d92d4853522_06031d2df67b", text, "x").
+attr[ast_rs]("n30655d92d4853522_0cd2eb858f36", token, "?").
+child[ast_rs]("n30655d92d4853522_a6c04701c256", c, 2, "n30655d92d4853522_61d9be4212e0").
+node[ast_rs]("n30655d92d4853522_61d9be4212e0", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_61d9be4212e0", 15).
+child[ast_rs]("n30655d92d4853522_61d9be4212e0", c, 0, "n30655d92d4853522_edce26ea0a0a").
+node[ast_rs]("n30655d92d4853522_edce26ea0a0a", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_edce26ea0a0a", 15).
+child[ast_rs]("n30655d92d4853522_edce26ea0a0a", function, 0, "n30655d92d4853522_385e4da4472f").
+node[ast_rs]("n30655d92d4853522_385e4da4472f", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_385e4da4472f", 15).
+attr[ast_rs]("n30655d92d4853522_385e4da4472f", text, "probe").
+child[ast_rs]("n30655d92d4853522_edce26ea0a0a", arguments, 0, "n30655d92d4853522_46d44cc0a321").
+node[ast_rs]("n30655d92d4853522_46d44cc0a321", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_46d44cc0a321", 15).
+child[ast_rs]("n30655d92d4853522_46d44cc0a321", c, 0, "n30655d92d4853522_40db78fd862a").
+node[ast_rs]("n30655d92d4853522_40db78fd862a", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_40db78fd862a", 15).
+attr[ast_rs]("n30655d92d4853522_40db78fd862a", value, "after_try").
+attr[ast_rs]("n30655d92d4853522_61d9be4212e0", token, ";").
+child[ast_rs]("n30655d92d4853522_a6c04701c256", c, 3, "n30655d92d4853522_b5a9baa4b7f1").
+node[ast_rs]("n30655d92d4853522_b5a9baa4b7f1", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b5a9baa4b7f1", 16).
+child[ast_rs]("n30655d92d4853522_b5a9baa4b7f1", function, 0, "n30655d92d4853522_14b7067ef095").
+node[ast_rs]("n30655d92d4853522_14b7067ef095", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_14b7067ef095", 16).
+attr[ast_rs]("n30655d92d4853522_14b7067ef095", upper, true).
+attr[ast_rs]("n30655d92d4853522_14b7067ef095", text, "Ok").
+child[ast_rs]("n30655d92d4853522_b5a9baa4b7f1", arguments, 0, "n30655d92d4853522_33715b7c489d").
+node[ast_rs]("n30655d92d4853522_33715b7c489d", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_33715b7c489d", 16).
+child[ast_rs]("n30655d92d4853522_33715b7c489d", c, 0, "n30655d92d4853522_3b61f9ecb1f3").
+node[ast_rs]("n30655d92d4853522_3b61f9ecb1f3", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3b61f9ecb1f3", 16).
+attr[ast_rs]("n30655d92d4853522_3b61f9ecb1f3", text, "y").
+child[ast_rs]("n30655d92d4853522_root", c, 3, "n30655d92d4853522_2396650ab92e").
+node[ast_rs]("n30655d92d4853522_2396650ab92e", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2396650ab92e", 19).
+last[ast_rs]("n30655d92d4853522_2396650ab92e", 21).
+child[ast_rs]("n30655d92d4853522_2396650ab92e", name, 0, "n30655d92d4853522_24614f1a4f55").
+node[ast_rs]("n30655d92d4853522_24614f1a4f55", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_24614f1a4f55", 19).
+attr[ast_rs]("n30655d92d4853522_24614f1a4f55", text, "never").
+child[ast_rs]("n30655d92d4853522_2396650ab92e", parameters, 0, "n30655d92d4853522_7df64baae36b").
+node[ast_rs]("n30655d92d4853522_7df64baae36b", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7df64baae36b", 19).
+attr[ast_rs]("n30655d92d4853522_7df64baae36b", text, "()").
+child[ast_rs]("n30655d92d4853522_2396650ab92e", return_type, 0, "n30655d92d4853522_52bf9bd1737f").
+node[ast_rs]("n30655d92d4853522_52bf9bd1737f", never_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_52bf9bd1737f", 19).
+attr[ast_rs]("n30655d92d4853522_52bf9bd1737f", text, "!").
+child[ast_rs]("n30655d92d4853522_2396650ab92e", body, 0, "n30655d92d4853522_152e138f06eb").
+node[ast_rs]("n30655d92d4853522_152e138f06eb", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_152e138f06eb", 19).
+last[ast_rs]("n30655d92d4853522_152e138f06eb", 21).
+child[ast_rs]("n30655d92d4853522_152e138f06eb", c, 0, "n30655d92d4853522_dc34ecdc10d1").
+node[ast_rs]("n30655d92d4853522_dc34ecdc10d1", macro_invocation, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dc34ecdc10d1", 20).
+child[ast_rs]("n30655d92d4853522_dc34ecdc10d1", arg, 0, "n30655d92d4853522_43daa03f1e1f").
+node[ast_rs]("n30655d92d4853522_43daa03f1e1f", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_43daa03f1e1f", 20).
+attr[ast_rs]("n30655d92d4853522_43daa03f1e1f", value, "never").
+child[ast_rs]("n30655d92d4853522_dc34ecdc10d1", macro, 0, "n30655d92d4853522_17d8cdee778e").
+node[ast_rs]("n30655d92d4853522_17d8cdee778e", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_17d8cdee778e", 20).
+attr[ast_rs]("n30655d92d4853522_17d8cdee778e", text, "panic").
+child[ast_rs]("n30655d92d4853522_root", c, 4, "n30655d92d4853522_1addc3d7e9aa").
+node[ast_rs]("n30655d92d4853522_1addc3d7e9aa", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1addc3d7e9aa", 23).
+last[ast_rs]("n30655d92d4853522_1addc3d7e9aa", 29).
+child[ast_rs]("n30655d92d4853522_1addc3d7e9aa", name, 0, "n30655d92d4853522_d5e24e245c6a").
+node[ast_rs]("n30655d92d4853522_d5e24e245c6a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d5e24e245c6a", 23).
+attr[ast_rs]("n30655d92d4853522_d5e24e245c6a", text, "else_branch").
+child[ast_rs]("n30655d92d4853522_1addc3d7e9aa", parameters, 0, "n30655d92d4853522_afdf368bcfe1").
+node[ast_rs]("n30655d92d4853522_afdf368bcfe1", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_afdf368bcfe1", 23).
+child[ast_rs]("n30655d92d4853522_afdf368bcfe1", c, 0, "n30655d92d4853522_78e33aa1a89a").
+node[ast_rs]("n30655d92d4853522_78e33aa1a89a", parameter, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_78e33aa1a89a", 23).
+child[ast_rs]("n30655d92d4853522_78e33aa1a89a", pattern, 0, "n30655d92d4853522_d5362a91de95").
+node[ast_rs]("n30655d92d4853522_d5362a91de95", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d5362a91de95", 23).
+attr[ast_rs]("n30655d92d4853522_d5362a91de95", text, "n").
+child[ast_rs]("n30655d92d4853522_78e33aa1a89a", type, 0, "n30655d92d4853522_6d62c1fd3de1").
+node[ast_rs]("n30655d92d4853522_6d62c1fd3de1", primitive_type, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6d62c1fd3de1", 23).
+attr[ast_rs]("n30655d92d4853522_6d62c1fd3de1", text, "usize").
+child[ast_rs]("n30655d92d4853522_1addc3d7e9aa", body, 0, "n30655d92d4853522_d03b9056798c").
+node[ast_rs]("n30655d92d4853522_d03b9056798c", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d03b9056798c", 23).
+last[ast_rs]("n30655d92d4853522_d03b9056798c", 29).
+child[ast_rs]("n30655d92d4853522_d03b9056798c", c, 0, "n30655d92d4853522_f0f24afa28a1").
+node[ast_rs]("n30655d92d4853522_f0f24afa28a1", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f0f24afa28a1", 24).
+last[ast_rs]("n30655d92d4853522_f0f24afa28a1", 27).
+child[ast_rs]("n30655d92d4853522_f0f24afa28a1", pattern, 0, "n30655d92d4853522_883fe32d3b28").
+node[ast_rs]("n30655d92d4853522_883fe32d3b28", tuple_struct_pattern, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_883fe32d3b28", 24).
+child[ast_rs]("n30655d92d4853522_883fe32d3b28", type, 0, "n30655d92d4853522_7d4f3f38cb4a").
+node[ast_rs]("n30655d92d4853522_7d4f3f38cb4a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7d4f3f38cb4a", 24).
+attr[ast_rs]("n30655d92d4853522_7d4f3f38cb4a", upper, true).
+attr[ast_rs]("n30655d92d4853522_7d4f3f38cb4a", text, "Some").
+child[ast_rs]("n30655d92d4853522_883fe32d3b28", c, 0, "n30655d92d4853522_89f1b442a14e").
+node[ast_rs]("n30655d92d4853522_89f1b442a14e", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_89f1b442a14e", 24).
+attr[ast_rs]("n30655d92d4853522_89f1b442a14e", text, "_v").
+child[ast_rs]("n30655d92d4853522_f0f24afa28a1", value, 0, "n30655d92d4853522_e3ea8b781021").
+node[ast_rs]("n30655d92d4853522_e3ea8b781021", parenthesized_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e3ea8b781021", 24).
+child[ast_rs]("n30655d92d4853522_e3ea8b781021", c, 0, "n30655d92d4853522_46a30dac3cca").
+node[ast_rs]("n30655d92d4853522_46a30dac3cca", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_46a30dac3cca", 24).
+child[ast_rs]("n30655d92d4853522_46a30dac3cca", condition, 0, "n30655d92d4853522_2b1c242a838e").
+node[ast_rs]("n30655d92d4853522_2b1c242a838e", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2b1c242a838e", 24).
+child[ast_rs]("n30655d92d4853522_2b1c242a838e", left, 0, "n30655d92d4853522_0c99c3527d27").
+node[ast_rs]("n30655d92d4853522_0c99c3527d27", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0c99c3527d27", 24).
+attr[ast_rs]("n30655d92d4853522_0c99c3527d27", text, "n").
+attr[ast_rs]("n30655d92d4853522_2b1c242a838e", operator, ">").
+child[ast_rs]("n30655d92d4853522_2b1c242a838e", right, 0, "n30655d92d4853522_f5fe74a3451e").
+node[ast_rs]("n30655d92d4853522_f5fe74a3451e", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f5fe74a3451e", 24).
+attr[ast_rs]("n30655d92d4853522_f5fe74a3451e", value, 2).
+attr[ast_rs]("n30655d92d4853522_f5fe74a3451e", text, "2").
+child[ast_rs]("n30655d92d4853522_46a30dac3cca", consequence, 0, "n30655d92d4853522_951dd9967096").
+node[ast_rs]("n30655d92d4853522_951dd9967096", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_951dd9967096", 24).
+child[ast_rs]("n30655d92d4853522_951dd9967096", c, 0, "n30655d92d4853522_0a8c4eb7b3cb").
+node[ast_rs]("n30655d92d4853522_0a8c4eb7b3cb", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0a8c4eb7b3cb", 24).
+child[ast_rs]("n30655d92d4853522_0a8c4eb7b3cb", function, 0, "n30655d92d4853522_9d7159dbf1c2").
+node[ast_rs]("n30655d92d4853522_9d7159dbf1c2", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9d7159dbf1c2", 24).
+attr[ast_rs]("n30655d92d4853522_9d7159dbf1c2", upper, true).
+attr[ast_rs]("n30655d92d4853522_9d7159dbf1c2", text, "Some").
+child[ast_rs]("n30655d92d4853522_0a8c4eb7b3cb", arguments, 0, "n30655d92d4853522_6facfff56e18").
+node[ast_rs]("n30655d92d4853522_6facfff56e18", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6facfff56e18", 24).
+child[ast_rs]("n30655d92d4853522_6facfff56e18", c, 0, "n30655d92d4853522_e4190cf54bf2").
+node[ast_rs]("n30655d92d4853522_e4190cf54bf2", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e4190cf54bf2", 24).
+attr[ast_rs]("n30655d92d4853522_e4190cf54bf2", value, 1).
+attr[ast_rs]("n30655d92d4853522_e4190cf54bf2", text, "1").
+child[ast_rs]("n30655d92d4853522_46a30dac3cca", alternative, 0, "n30655d92d4853522_1214f766be5d").
+node[ast_rs]("n30655d92d4853522_1214f766be5d", else_clause, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1214f766be5d", 24).
+child[ast_rs]("n30655d92d4853522_1214f766be5d", c, 0, "n30655d92d4853522_355ecb0df059").
+node[ast_rs]("n30655d92d4853522_355ecb0df059", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_355ecb0df059", 24).
+child[ast_rs]("n30655d92d4853522_355ecb0df059", c, 0, "n30655d92d4853522_ea7e071912cc").
+node[ast_rs]("n30655d92d4853522_ea7e071912cc", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ea7e071912cc", 24).
+attr[ast_rs]("n30655d92d4853522_ea7e071912cc", upper, true).
+attr[ast_rs]("n30655d92d4853522_ea7e071912cc", text, "None").
+child[ast_rs]("n30655d92d4853522_f0f24afa28a1", alternative, 0, "n30655d92d4853522_06a8902b37b4").
+node[ast_rs]("n30655d92d4853522_06a8902b37b4", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_06a8902b37b4", 24).
+last[ast_rs]("n30655d92d4853522_06a8902b37b4", 27).
+child[ast_rs]("n30655d92d4853522_06a8902b37b4", c, 0, "n30655d92d4853522_9274bf0dc77f").
+node[ast_rs]("n30655d92d4853522_9274bf0dc77f", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9274bf0dc77f", 25).
+child[ast_rs]("n30655d92d4853522_9274bf0dc77f", c, 0, "n30655d92d4853522_fa6167d89c59").
+node[ast_rs]("n30655d92d4853522_fa6167d89c59", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_fa6167d89c59", 25).
+child[ast_rs]("n30655d92d4853522_fa6167d89c59", function, 0, "n30655d92d4853522_fd0c0cb4f295").
+node[ast_rs]("n30655d92d4853522_fd0c0cb4f295", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_fd0c0cb4f295", 25).
+attr[ast_rs]("n30655d92d4853522_fd0c0cb4f295", text, "probe").
+child[ast_rs]("n30655d92d4853522_fa6167d89c59", arguments, 0, "n30655d92d4853522_b6c7429b27ec").
+node[ast_rs]("n30655d92d4853522_b6c7429b27ec", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b6c7429b27ec", 25).
+child[ast_rs]("n30655d92d4853522_b6c7429b27ec", c, 0, "n30655d92d4853522_9bd9024a37da").
+node[ast_rs]("n30655d92d4853522_9bd9024a37da", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9bd9024a37da", 25).
+attr[ast_rs]("n30655d92d4853522_9bd9024a37da", value, "let_else").
+attr[ast_rs]("n30655d92d4853522_9274bf0dc77f", token, ";").
+child[ast_rs]("n30655d92d4853522_06a8902b37b4", c, 1, "n30655d92d4853522_7982c6d0628c").
+node[ast_rs]("n30655d92d4853522_7982c6d0628c", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7982c6d0628c", 26).
+child[ast_rs]("n30655d92d4853522_7982c6d0628c", c, 0, "n30655d92d4853522_d8cefa525c73").
+node[ast_rs]("n30655d92d4853522_d8cefa525c73", return_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d8cefa525c73", 26).
+attr[ast_rs]("n30655d92d4853522_d8cefa525c73", text, "return").
+attr[ast_rs]("n30655d92d4853522_7982c6d0628c", token, ";").
+child[ast_rs]("n30655d92d4853522_d03b9056798c", c, 1, "n30655d92d4853522_7b76ce9d7b87").
+node[ast_rs]("n30655d92d4853522_7b76ce9d7b87", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7b76ce9d7b87", 28).
+child[ast_rs]("n30655d92d4853522_7b76ce9d7b87", c, 0, "n30655d92d4853522_ebc92bcebef7").
+node[ast_rs]("n30655d92d4853522_ebc92bcebef7", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ebc92bcebef7", 28).
+child[ast_rs]("n30655d92d4853522_ebc92bcebef7", function, 0, "n30655d92d4853522_6f1a555c5621").
+node[ast_rs]("n30655d92d4853522_6f1a555c5621", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6f1a555c5621", 28).
+attr[ast_rs]("n30655d92d4853522_6f1a555c5621", text, "probe").
+child[ast_rs]("n30655d92d4853522_ebc92bcebef7", arguments, 0, "n30655d92d4853522_a93b9ea935ee").
+node[ast_rs]("n30655d92d4853522_a93b9ea935ee", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a93b9ea935ee", 28).
+child[ast_rs]("n30655d92d4853522_a93b9ea935ee", c, 0, "n30655d92d4853522_d3ff7b91d8a7").
+node[ast_rs]("n30655d92d4853522_d3ff7b91d8a7", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d3ff7b91d8a7", 28).
+attr[ast_rs]("n30655d92d4853522_d3ff7b91d8a7", value, "after_let_else").
+attr[ast_rs]("n30655d92d4853522_7b76ce9d7b87", token, ";").
+child[ast_rs]("n30655d92d4853522_root", c, 5, "n30655d92d4853522_2fb931b3943d").
+node[ast_rs]("n30655d92d4853522_2fb931b3943d", attribute_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2fb931b3943d", 31).
+child[ast_rs]("n30655d92d4853522_2fb931b3943d", c, 0, "n30655d92d4853522_cd2d02453a51").
+node[ast_rs]("n30655d92d4853522_cd2d02453a51", attribute, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_cd2d02453a51", 31).
+child[ast_rs]("n30655d92d4853522_cd2d02453a51", arg, 0, "n30655d92d4853522_8e343ecc6b16").
+node[ast_rs]("n30655d92d4853522_8e343ecc6b16", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8e343ecc6b16", 31).
+attr[ast_rs]("n30655d92d4853522_8e343ecc6b16", text, "unreachable_code").
+child[ast_rs]("n30655d92d4853522_cd2d02453a51", c, 0, "n30655d92d4853522_c8957dd5e359").
+node[ast_rs]("n30655d92d4853522_c8957dd5e359", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c8957dd5e359", 31).
+attr[ast_rs]("n30655d92d4853522_c8957dd5e359", text, "allow").
+child[ast_rs]("n30655d92d4853522_root", c, 6, "n30655d92d4853522_2ec2702e6244").
+node[ast_rs]("n30655d92d4853522_2ec2702e6244", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2ec2702e6244", 32).
+last[ast_rs]("n30655d92d4853522_2ec2702e6244", 36).
+child[ast_rs]("n30655d92d4853522_2ec2702e6244", name, 0, "n30655d92d4853522_dd998c7b7374").
+node[ast_rs]("n30655d92d4853522_dd998c7b7374", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dd998c7b7374", 32).
+attr[ast_rs]("n30655d92d4853522_dd998c7b7374", text, "dead").
+child[ast_rs]("n30655d92d4853522_2ec2702e6244", parameters, 0, "n30655d92d4853522_4f914563098f").
+node[ast_rs]("n30655d92d4853522_4f914563098f", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4f914563098f", 32).
+attr[ast_rs]("n30655d92d4853522_4f914563098f", text, "()").
+child[ast_rs]("n30655d92d4853522_2ec2702e6244", body, 0, "n30655d92d4853522_6d87b5b58d87").
+node[ast_rs]("n30655d92d4853522_6d87b5b58d87", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6d87b5b58d87", 32).
+last[ast_rs]("n30655d92d4853522_6d87b5b58d87", 36).
+child[ast_rs]("n30655d92d4853522_6d87b5b58d87", c, 0, "n30655d92d4853522_efdab3ae7808").
+node[ast_rs]("n30655d92d4853522_efdab3ae7808", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_efdab3ae7808", 33).
+child[ast_rs]("n30655d92d4853522_efdab3ae7808", c, 0, "n30655d92d4853522_7e7cc9aaac74").
+node[ast_rs]("n30655d92d4853522_7e7cc9aaac74", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7e7cc9aaac74", 33).
+child[ast_rs]("n30655d92d4853522_7e7cc9aaac74", function, 0, "n30655d92d4853522_c675b5df6e7f").
+node[ast_rs]("n30655d92d4853522_c675b5df6e7f", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c675b5df6e7f", 33).
+attr[ast_rs]("n30655d92d4853522_c675b5df6e7f", text, "probe").
+child[ast_rs]("n30655d92d4853522_7e7cc9aaac74", arguments, 0, "n30655d92d4853522_ddcabafc13f8").
+node[ast_rs]("n30655d92d4853522_ddcabafc13f8", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ddcabafc13f8", 33).
+child[ast_rs]("n30655d92d4853522_ddcabafc13f8", c, 0, "n30655d92d4853522_83e4e7f48f28").
+node[ast_rs]("n30655d92d4853522_83e4e7f48f28", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_83e4e7f48f28", 33).
+attr[ast_rs]("n30655d92d4853522_83e4e7f48f28", value, "live").
+attr[ast_rs]("n30655d92d4853522_efdab3ae7808", token, ";").
+child[ast_rs]("n30655d92d4853522_6d87b5b58d87", c, 1, "n30655d92d4853522_259b1ce26c9c").
+node[ast_rs]("n30655d92d4853522_259b1ce26c9c", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_259b1ce26c9c", 34).
+child[ast_rs]("n30655d92d4853522_259b1ce26c9c", c, 0, "n30655d92d4853522_e138228d8b3f").
+node[ast_rs]("n30655d92d4853522_e138228d8b3f", return_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e138228d8b3f", 34).
+attr[ast_rs]("n30655d92d4853522_e138228d8b3f", text, "return").
+attr[ast_rs]("n30655d92d4853522_259b1ce26c9c", token, ";").
+child[ast_rs]("n30655d92d4853522_6d87b5b58d87", c, 2, "n30655d92d4853522_be78e65a8ee8").
+node[ast_rs]("n30655d92d4853522_be78e65a8ee8", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_be78e65a8ee8", 35).
+child[ast_rs]("n30655d92d4853522_be78e65a8ee8", c, 0, "n30655d92d4853522_37e53f6f9c72").
+node[ast_rs]("n30655d92d4853522_37e53f6f9c72", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_37e53f6f9c72", 35).
+child[ast_rs]("n30655d92d4853522_37e53f6f9c72", function, 0, "n30655d92d4853522_203d6c93eb54").
+node[ast_rs]("n30655d92d4853522_203d6c93eb54", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_203d6c93eb54", 35).
+attr[ast_rs]("n30655d92d4853522_203d6c93eb54", text, "probe").
+child[ast_rs]("n30655d92d4853522_37e53f6f9c72", arguments, 0, "n30655d92d4853522_86de751bf10e").
+node[ast_rs]("n30655d92d4853522_86de751bf10e", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_86de751bf10e", 35).
+child[ast_rs]("n30655d92d4853522_86de751bf10e", c, 0, "n30655d92d4853522_51814baeaa71").
+node[ast_rs]("n30655d92d4853522_51814baeaa71", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_51814baeaa71", 35).
+attr[ast_rs]("n30655d92d4853522_51814baeaa71", value, "dead").
+attr[ast_rs]("n30655d92d4853522_be78e65a8ee8", token, ";").
+child[ast_rs]("n30655d92d4853522_root", c, 7, "n30655d92d4853522_bb1cb323d9cb").
+node[ast_rs]("n30655d92d4853522_bb1cb323d9cb", attribute_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_bb1cb323d9cb", 38).
+child[ast_rs]("n30655d92d4853522_bb1cb323d9cb", c, 0, "n30655d92d4853522_b5402570970f").
+node[ast_rs]("n30655d92d4853522_b5402570970f", attribute, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b5402570970f", 38).
+child[ast_rs]("n30655d92d4853522_b5402570970f", arg, 0, "n30655d92d4853522_f80225a649b3").
+node[ast_rs]("n30655d92d4853522_f80225a649b3", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f80225a649b3", 38).
+attr[ast_rs]("n30655d92d4853522_f80225a649b3", text, "dead_code").
+child[ast_rs]("n30655d92d4853522_b5402570970f", c, 0, "n30655d92d4853522_34bb3874126c").
+node[ast_rs]("n30655d92d4853522_34bb3874126c", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_34bb3874126c", 38).
+attr[ast_rs]("n30655d92d4853522_34bb3874126c", text, "allow").
+child[ast_rs]("n30655d92d4853522_root", c, 8, "n30655d92d4853522_acae170de5c8").
+node[ast_rs]("n30655d92d4853522_acae170de5c8", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_acae170de5c8", 39).
+last[ast_rs]("n30655d92d4853522_acae170de5c8", 41).
+child[ast_rs]("n30655d92d4853522_acae170de5c8", name, 0, "n30655d92d4853522_4a1b2d4cad34").
+node[ast_rs]("n30655d92d4853522_4a1b2d4cad34", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4a1b2d4cad34", 39).
+attr[ast_rs]("n30655d92d4853522_4a1b2d4cad34", text, "unused").
+child[ast_rs]("n30655d92d4853522_acae170de5c8", parameters, 0, "n30655d92d4853522_6697b24efb5c").
+node[ast_rs]("n30655d92d4853522_6697b24efb5c", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6697b24efb5c", 39).
+attr[ast_rs]("n30655d92d4853522_6697b24efb5c", text, "()").
+child[ast_rs]("n30655d92d4853522_acae170de5c8", body, 0, "n30655d92d4853522_6fd05535301a").
+node[ast_rs]("n30655d92d4853522_6fd05535301a", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6fd05535301a", 39).
+last[ast_rs]("n30655d92d4853522_6fd05535301a", 41).
+child[ast_rs]("n30655d92d4853522_6fd05535301a", c, 0, "n30655d92d4853522_657e9a3eafb8").
+node[ast_rs]("n30655d92d4853522_657e9a3eafb8", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_657e9a3eafb8", 40).
+child[ast_rs]("n30655d92d4853522_657e9a3eafb8", c, 0, "n30655d92d4853522_54dab51b4524").
+node[ast_rs]("n30655d92d4853522_54dab51b4524", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_54dab51b4524", 40).
+child[ast_rs]("n30655d92d4853522_54dab51b4524", function, 0, "n30655d92d4853522_5d0a1428e23d").
+node[ast_rs]("n30655d92d4853522_5d0a1428e23d", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5d0a1428e23d", 40).
+attr[ast_rs]("n30655d92d4853522_5d0a1428e23d", text, "probe").
+child[ast_rs]("n30655d92d4853522_54dab51b4524", arguments, 0, "n30655d92d4853522_2e586b556ac9").
+node[ast_rs]("n30655d92d4853522_2e586b556ac9", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2e586b556ac9", 40).
+child[ast_rs]("n30655d92d4853522_2e586b556ac9", c, 0, "n30655d92d4853522_142de39f9521").
+node[ast_rs]("n30655d92d4853522_142de39f9521", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_142de39f9521", 40).
+attr[ast_rs]("n30655d92d4853522_142de39f9521", value, "unused").
+attr[ast_rs]("n30655d92d4853522_657e9a3eafb8", token, ";").
+child[ast_rs]("n30655d92d4853522_root", c, 9, "n30655d92d4853522_dc609b7523a9").
+node[ast_rs]("n30655d92d4853522_dc609b7523a9", function_item, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dc609b7523a9", 43).
+last[ast_rs]("n30655d92d4853522_dc609b7523a9", 95).
+child[ast_rs]("n30655d92d4853522_dc609b7523a9", name, 0, "n30655d92d4853522_d8f63d06f5f7").
+node[ast_rs]("n30655d92d4853522_d8f63d06f5f7", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d8f63d06f5f7", 43).
+attr[ast_rs]("n30655d92d4853522_d8f63d06f5f7", text, "main").
+child[ast_rs]("n30655d92d4853522_dc609b7523a9", parameters, 0, "n30655d92d4853522_5eef427f08c2").
+node[ast_rs]("n30655d92d4853522_5eef427f08c2", parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5eef427f08c2", 43).
+attr[ast_rs]("n30655d92d4853522_5eef427f08c2", text, "()").
+child[ast_rs]("n30655d92d4853522_dc609b7523a9", body, 0, "n30655d92d4853522_04971694ba28").
+node[ast_rs]("n30655d92d4853522_04971694ba28", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_04971694ba28", 43).
+last[ast_rs]("n30655d92d4853522_04971694ba28", 95).
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 0, "n30655d92d4853522_9ccda1c4e683").
+node[ast_rs]("n30655d92d4853522_9ccda1c4e683", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9ccda1c4e683", 44).
+child[ast_rs]("n30655d92d4853522_9ccda1c4e683", pattern, 0, "n30655d92d4853522_3c5ac10c485f").
+node[ast_rs]("n30655d92d4853522_3c5ac10c485f", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3c5ac10c485f", 44).
+attr[ast_rs]("n30655d92d4853522_3c5ac10c485f", text, "n").
+child[ast_rs]("n30655d92d4853522_9ccda1c4e683", value, 0, "n30655d92d4853522_c21a4b873b9a").
+node[ast_rs]("n30655d92d4853522_c21a4b873b9a", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c21a4b873b9a", 44).
+child[ast_rs]("n30655d92d4853522_c21a4b873b9a", function, 0, "n30655d92d4853522_7dad683d4ba0").
+node[ast_rs]("n30655d92d4853522_7dad683d4ba0", field_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7dad683d4ba0", 44).
+child[ast_rs]("n30655d92d4853522_7dad683d4ba0", value, 0, "n30655d92d4853522_ff165aa49020").
+node[ast_rs]("n30655d92d4853522_ff165aa49020", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ff165aa49020", 44).
+child[ast_rs]("n30655d92d4853522_ff165aa49020", function, 0, "n30655d92d4853522_f4e02c9ab225").
+node[ast_rs]("n30655d92d4853522_f4e02c9ab225", scoped_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f4e02c9ab225", 44).
+child[ast_rs]("n30655d92d4853522_f4e02c9ab225", path, 0, "n30655d92d4853522_9f075f77c994").
+node[ast_rs]("n30655d92d4853522_9f075f77c994", scoped_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9f075f77c994", 44).
+child[ast_rs]("n30655d92d4853522_9f075f77c994", path, 0, "n30655d92d4853522_511645c5e260").
+node[ast_rs]("n30655d92d4853522_511645c5e260", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_511645c5e260", 44).
+attr[ast_rs]("n30655d92d4853522_511645c5e260", text, "std").
+child[ast_rs]("n30655d92d4853522_9f075f77c994", name, 0, "n30655d92d4853522_c2bd538ef42a").
+node[ast_rs]("n30655d92d4853522_c2bd538ef42a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c2bd538ef42a", 44).
+attr[ast_rs]("n30655d92d4853522_c2bd538ef42a", text, "env").
+child[ast_rs]("n30655d92d4853522_f4e02c9ab225", name, 0, "n30655d92d4853522_7cfc897bc16b").
+node[ast_rs]("n30655d92d4853522_7cfc897bc16b", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7cfc897bc16b", 44).
+attr[ast_rs]("n30655d92d4853522_7cfc897bc16b", text, "args").
+child[ast_rs]("n30655d92d4853522_ff165aa49020", arguments, 0, "n30655d92d4853522_eec1eb92afce").
+node[ast_rs]("n30655d92d4853522_eec1eb92afce", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_eec1eb92afce", 44).
+attr[ast_rs]("n30655d92d4853522_eec1eb92afce", text, "()").
+child[ast_rs]("n30655d92d4853522_7dad683d4ba0", field, 0, "n30655d92d4853522_c32d02c7b8ed").
+node[ast_rs]("n30655d92d4853522_c32d02c7b8ed", field_identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c32d02c7b8ed", 44).
+attr[ast_rs]("n30655d92d4853522_c32d02c7b8ed", text, "count").
+child[ast_rs]("n30655d92d4853522_c21a4b873b9a", arguments, 0, "n30655d92d4853522_6a8335b2036a").
+node[ast_rs]("n30655d92d4853522_6a8335b2036a", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6a8335b2036a", 44).
+attr[ast_rs]("n30655d92d4853522_6a8335b2036a", text, "()").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 1, "n30655d92d4853522_3ea835408e52").
+node[ast_rs]("n30655d92d4853522_3ea835408e52", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3ea835408e52", 45).
+child[ast_rs]("n30655d92d4853522_3ea835408e52", c, 0, "n30655d92d4853522_4220d19423db").
+node[ast_rs]("n30655d92d4853522_4220d19423db", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4220d19423db", 45).
+child[ast_rs]("n30655d92d4853522_4220d19423db", function, 0, "n30655d92d4853522_a54b6929597b").
+node[ast_rs]("n30655d92d4853522_a54b6929597b", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a54b6929597b", 45).
+attr[ast_rs]("n30655d92d4853522_a54b6929597b", text, "probe").
+child[ast_rs]("n30655d92d4853522_4220d19423db", arguments, 0, "n30655d92d4853522_b2557b60b24a").
+node[ast_rs]("n30655d92d4853522_b2557b60b24a", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b2557b60b24a", 45).
+child[ast_rs]("n30655d92d4853522_b2557b60b24a", c, 0, "n30655d92d4853522_8be88d19168c").
+node[ast_rs]("n30655d92d4853522_8be88d19168c", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8be88d19168c", 45).
+attr[ast_rs]("n30655d92d4853522_8be88d19168c", value, "start").
+attr[ast_rs]("n30655d92d4853522_3ea835408e52", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 2, "n30655d92d4853522_7e7ee35fdd75").
+node[ast_rs]("n30655d92d4853522_7e7ee35fdd75", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7e7ee35fdd75", 46).
+last[ast_rs]("n30655d92d4853522_7e7ee35fdd75", 50).
+child[ast_rs]("n30655d92d4853522_7e7ee35fdd75", c, 0, "n30655d92d4853522_58a14dd8c2f3").
+node[ast_rs]("n30655d92d4853522_58a14dd8c2f3", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_58a14dd8c2f3", 46).
+last[ast_rs]("n30655d92d4853522_58a14dd8c2f3", 50).
+child[ast_rs]("n30655d92d4853522_58a14dd8c2f3", condition, 0, "n30655d92d4853522_54540408e0f0").
+node[ast_rs]("n30655d92d4853522_54540408e0f0", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_54540408e0f0", 46).
+child[ast_rs]("n30655d92d4853522_54540408e0f0", left, 0, "n30655d92d4853522_0ea5abf82ac1").
+node[ast_rs]("n30655d92d4853522_0ea5abf82ac1", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0ea5abf82ac1", 46).
+attr[ast_rs]("n30655d92d4853522_0ea5abf82ac1", text, "n").
+attr[ast_rs]("n30655d92d4853522_54540408e0f0", operator, ">").
+child[ast_rs]("n30655d92d4853522_54540408e0f0", right, 0, "n30655d92d4853522_9a96056364a5").
+node[ast_rs]("n30655d92d4853522_9a96056364a5", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9a96056364a5", 46).
+attr[ast_rs]("n30655d92d4853522_9a96056364a5", value, 1).
+attr[ast_rs]("n30655d92d4853522_9a96056364a5", text, "1").
+child[ast_rs]("n30655d92d4853522_58a14dd8c2f3", consequence, 0, "n30655d92d4853522_a72271f09f39").
+node[ast_rs]("n30655d92d4853522_a72271f09f39", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a72271f09f39", 46).
+last[ast_rs]("n30655d92d4853522_a72271f09f39", 48).
+child[ast_rs]("n30655d92d4853522_a72271f09f39", c, 0, "n30655d92d4853522_65564bae1385").
+node[ast_rs]("n30655d92d4853522_65564bae1385", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_65564bae1385", 47).
+child[ast_rs]("n30655d92d4853522_65564bae1385", c, 0, "n30655d92d4853522_c99fb21929fe").
+node[ast_rs]("n30655d92d4853522_c99fb21929fe", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c99fb21929fe", 47).
+child[ast_rs]("n30655d92d4853522_c99fb21929fe", function, 0, "n30655d92d4853522_4081f6efacd9").
+node[ast_rs]("n30655d92d4853522_4081f6efacd9", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4081f6efacd9", 47).
+attr[ast_rs]("n30655d92d4853522_4081f6efacd9", text, "probe").
+child[ast_rs]("n30655d92d4853522_c99fb21929fe", arguments, 0, "n30655d92d4853522_f35062964914").
+node[ast_rs]("n30655d92d4853522_f35062964914", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f35062964914", 47).
+child[ast_rs]("n30655d92d4853522_f35062964914", c, 0, "n30655d92d4853522_b20afd695051").
+node[ast_rs]("n30655d92d4853522_b20afd695051", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b20afd695051", 47).
+attr[ast_rs]("n30655d92d4853522_b20afd695051", value, "then").
+attr[ast_rs]("n30655d92d4853522_65564bae1385", token, ";").
+child[ast_rs]("n30655d92d4853522_58a14dd8c2f3", alternative, 0, "n30655d92d4853522_0deef25c9b50").
+node[ast_rs]("n30655d92d4853522_0deef25c9b50", else_clause, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0deef25c9b50", 48).
+last[ast_rs]("n30655d92d4853522_0deef25c9b50", 50).
+child[ast_rs]("n30655d92d4853522_0deef25c9b50", c, 0, "n30655d92d4853522_553ed692d726").
+node[ast_rs]("n30655d92d4853522_553ed692d726", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_553ed692d726", 48).
+last[ast_rs]("n30655d92d4853522_553ed692d726", 50).
+child[ast_rs]("n30655d92d4853522_553ed692d726", c, 0, "n30655d92d4853522_34a05a5bbde4").
+node[ast_rs]("n30655d92d4853522_34a05a5bbde4", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_34a05a5bbde4", 49).
+child[ast_rs]("n30655d92d4853522_34a05a5bbde4", c, 0, "n30655d92d4853522_c789b06e287c").
+node[ast_rs]("n30655d92d4853522_c789b06e287c", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c789b06e287c", 49).
+child[ast_rs]("n30655d92d4853522_c789b06e287c", function, 0, "n30655d92d4853522_5f19bdb4f18a").
+node[ast_rs]("n30655d92d4853522_5f19bdb4f18a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5f19bdb4f18a", 49).
+attr[ast_rs]("n30655d92d4853522_5f19bdb4f18a", text, "probe").
+child[ast_rs]("n30655d92d4853522_c789b06e287c", arguments, 0, "n30655d92d4853522_be6859ea38f2").
+node[ast_rs]("n30655d92d4853522_be6859ea38f2", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_be6859ea38f2", 49).
+child[ast_rs]("n30655d92d4853522_be6859ea38f2", c, 0, "n30655d92d4853522_4acdc016dc15").
+node[ast_rs]("n30655d92d4853522_4acdc016dc15", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4acdc016dc15", 49).
+attr[ast_rs]("n30655d92d4853522_4acdc016dc15", value, "else").
+attr[ast_rs]("n30655d92d4853522_34a05a5bbde4", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 3, "n30655d92d4853522_70585d681080").
+node[ast_rs]("n30655d92d4853522_70585d681080", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_70585d681080", 51).
+last[ast_rs]("n30655d92d4853522_70585d681080", 54).
+child[ast_rs]("n30655d92d4853522_70585d681080", c, 0, "n30655d92d4853522_e92008ebe853").
+node[ast_rs]("n30655d92d4853522_e92008ebe853", match_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e92008ebe853", 51).
+last[ast_rs]("n30655d92d4853522_e92008ebe853", 54).
+child[ast_rs]("n30655d92d4853522_e92008ebe853", value, 0, "n30655d92d4853522_64e078acdca6").
+node[ast_rs]("n30655d92d4853522_64e078acdca6", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_64e078acdca6", 51).
+attr[ast_rs]("n30655d92d4853522_64e078acdca6", text, "n").
+child[ast_rs]("n30655d92d4853522_e92008ebe853", body, 0, "n30655d92d4853522_0dfbb8ff3a05").
+node[ast_rs]("n30655d92d4853522_0dfbb8ff3a05", match_block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0dfbb8ff3a05", 51).
+last[ast_rs]("n30655d92d4853522_0dfbb8ff3a05", 54).
+child[ast_rs]("n30655d92d4853522_0dfbb8ff3a05", c, 0, "n30655d92d4853522_decc77495c7e").
+node[ast_rs]("n30655d92d4853522_decc77495c7e", match_arm, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_decc77495c7e", 52).
+child[ast_rs]("n30655d92d4853522_decc77495c7e", pattern, 0, "n30655d92d4853522_bce9b843629e").
+node[ast_rs]("n30655d92d4853522_bce9b843629e", match_pattern, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_bce9b843629e", 52).
+child[ast_rs]("n30655d92d4853522_bce9b843629e", c, 0, "n30655d92d4853522_464b63e2568d").
+node[ast_rs]("n30655d92d4853522_464b63e2568d", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_464b63e2568d", 52).
+attr[ast_rs]("n30655d92d4853522_464b63e2568d", value, 1).
+attr[ast_rs]("n30655d92d4853522_464b63e2568d", text, "1").
+child[ast_rs]("n30655d92d4853522_decc77495c7e", value, 0, "n30655d92d4853522_533cd1d8af7c").
+node[ast_rs]("n30655d92d4853522_533cd1d8af7c", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_533cd1d8af7c", 52).
+child[ast_rs]("n30655d92d4853522_533cd1d8af7c", function, 0, "n30655d92d4853522_98b46127fbb4").
+node[ast_rs]("n30655d92d4853522_98b46127fbb4", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_98b46127fbb4", 52).
+attr[ast_rs]("n30655d92d4853522_98b46127fbb4", text, "probe").
+child[ast_rs]("n30655d92d4853522_533cd1d8af7c", arguments, 0, "n30655d92d4853522_6a98ab13b34f").
+node[ast_rs]("n30655d92d4853522_6a98ab13b34f", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6a98ab13b34f", 52).
+child[ast_rs]("n30655d92d4853522_6a98ab13b34f", c, 0, "n30655d92d4853522_9590f1806218").
+node[ast_rs]("n30655d92d4853522_9590f1806218", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9590f1806218", 52).
+attr[ast_rs]("n30655d92d4853522_9590f1806218", value, "one").
+child[ast_rs]("n30655d92d4853522_0dfbb8ff3a05", c, 1, "n30655d92d4853522_8ad3a5f03f13").
+node[ast_rs]("n30655d92d4853522_8ad3a5f03f13", match_arm, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8ad3a5f03f13", 53).
+child[ast_rs]("n30655d92d4853522_8ad3a5f03f13", pattern, 0, "n30655d92d4853522_dc9388b3efe4").
+node[ast_rs]("n30655d92d4853522_dc9388b3efe4", match_pattern, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dc9388b3efe4", 53).
+attr[ast_rs]("n30655d92d4853522_dc9388b3efe4", text, "_").
+child[ast_rs]("n30655d92d4853522_dc9388b3efe4", c, 0, "n30655d92d4853522_90fef75b8925").
+node[ast_rs]("n30655d92d4853522_90fef75b8925", wildcard, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_90fef75b8925", 53).
+child[ast_rs]("n30655d92d4853522_8ad3a5f03f13", value, 0, "n30655d92d4853522_d7b160bb25f0").
+node[ast_rs]("n30655d92d4853522_d7b160bb25f0", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d7b160bb25f0", 53).
+child[ast_rs]("n30655d92d4853522_d7b160bb25f0", function, 0, "n30655d92d4853522_3e0a5a97ec9d").
+node[ast_rs]("n30655d92d4853522_3e0a5a97ec9d", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3e0a5a97ec9d", 53).
+attr[ast_rs]("n30655d92d4853522_3e0a5a97ec9d", text, "probe").
+child[ast_rs]("n30655d92d4853522_d7b160bb25f0", arguments, 0, "n30655d92d4853522_4b2b34fa3e1d").
+node[ast_rs]("n30655d92d4853522_4b2b34fa3e1d", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4b2b34fa3e1d", 53).
+child[ast_rs]("n30655d92d4853522_4b2b34fa3e1d", c, 0, "n30655d92d4853522_918da868d838").
+node[ast_rs]("n30655d92d4853522_918da868d838", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_918da868d838", 53).
+attr[ast_rs]("n30655d92d4853522_918da868d838", value, "many").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 4, "n30655d92d4853522_e70ec250d086").
+node[ast_rs]("n30655d92d4853522_e70ec250d086", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e70ec250d086", 55).
+last[ast_rs]("n30655d92d4853522_e70ec250d086", 58).
+child[ast_rs]("n30655d92d4853522_e70ec250d086", pattern, 0, "n30655d92d4853522_a11b76a226bc").
+node[ast_rs]("n30655d92d4853522_a11b76a226bc", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a11b76a226bc", 55).
+attr[ast_rs]("n30655d92d4853522_a11b76a226bc", text, "_a").
+child[ast_rs]("n30655d92d4853522_e70ec250d086", value, 0, "n30655d92d4853522_4c2bbdf117db").
+node[ast_rs]("n30655d92d4853522_4c2bbdf117db", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4c2bbdf117db", 55).
+last[ast_rs]("n30655d92d4853522_4c2bbdf117db", 58).
+child[ast_rs]("n30655d92d4853522_4c2bbdf117db", left, 0, "n30655d92d4853522_471227181c25").
+node[ast_rs]("n30655d92d4853522_471227181c25", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_471227181c25", 55).
+child[ast_rs]("n30655d92d4853522_471227181c25", left, 0, "n30655d92d4853522_1e1f3e8f929f").
+node[ast_rs]("n30655d92d4853522_1e1f3e8f929f", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1e1f3e8f929f", 55).
+attr[ast_rs]("n30655d92d4853522_1e1f3e8f929f", text, "n").
+attr[ast_rs]("n30655d92d4853522_471227181c25", operator, ">").
+child[ast_rs]("n30655d92d4853522_471227181c25", right, 0, "n30655d92d4853522_f2d8a86fc4ef").
+node[ast_rs]("n30655d92d4853522_f2d8a86fc4ef", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f2d8a86fc4ef", 55).
+attr[ast_rs]("n30655d92d4853522_f2d8a86fc4ef", value, 1).
+attr[ast_rs]("n30655d92d4853522_f2d8a86fc4ef", text, "1").
+attr[ast_rs]("n30655d92d4853522_4c2bbdf117db", operator, "&&").
+child[ast_rs]("n30655d92d4853522_4c2bbdf117db", right, 0, "n30655d92d4853522_efb244ea8517").
+node[ast_rs]("n30655d92d4853522_efb244ea8517", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_efb244ea8517", 55).
+last[ast_rs]("n30655d92d4853522_efb244ea8517", 58).
+child[ast_rs]("n30655d92d4853522_efb244ea8517", c, 0, "n30655d92d4853522_239f1e8c7970").
+node[ast_rs]("n30655d92d4853522_239f1e8c7970", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_239f1e8c7970", 56).
+child[ast_rs]("n30655d92d4853522_239f1e8c7970", c, 0, "n30655d92d4853522_2f84b78cf7c2").
+node[ast_rs]("n30655d92d4853522_2f84b78cf7c2", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2f84b78cf7c2", 56).
+child[ast_rs]("n30655d92d4853522_2f84b78cf7c2", function, 0, "n30655d92d4853522_204347a63ac4").
+node[ast_rs]("n30655d92d4853522_204347a63ac4", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_204347a63ac4", 56).
+attr[ast_rs]("n30655d92d4853522_204347a63ac4", text, "probe").
+child[ast_rs]("n30655d92d4853522_2f84b78cf7c2", arguments, 0, "n30655d92d4853522_c6cdcbbfc354").
+node[ast_rs]("n30655d92d4853522_c6cdcbbfc354", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c6cdcbbfc354", 56).
+child[ast_rs]("n30655d92d4853522_c6cdcbbfc354", c, 0, "n30655d92d4853522_30ab779afec7").
+node[ast_rs]("n30655d92d4853522_30ab779afec7", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_30ab779afec7", 56).
+attr[ast_rs]("n30655d92d4853522_30ab779afec7", value, "and_rhs").
+attr[ast_rs]("n30655d92d4853522_239f1e8c7970", token, ";").
+child[ast_rs]("n30655d92d4853522_efb244ea8517", c, 1, "n30655d92d4853522_787850f7d9a1").
+node[ast_rs]("n30655d92d4853522_787850f7d9a1", boolean_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_787850f7d9a1", 57).
+attr[ast_rs]("n30655d92d4853522_787850f7d9a1", text, "true").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 5, "n30655d92d4853522_dab78a948313").
+node[ast_rs]("n30655d92d4853522_dab78a948313", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dab78a948313", 59).
+last[ast_rs]("n30655d92d4853522_dab78a948313", 62).
+child[ast_rs]("n30655d92d4853522_dab78a948313", pattern, 0, "n30655d92d4853522_4c7e214afe9a").
+node[ast_rs]("n30655d92d4853522_4c7e214afe9a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4c7e214afe9a", 59).
+attr[ast_rs]("n30655d92d4853522_4c7e214afe9a", text, "_o").
+child[ast_rs]("n30655d92d4853522_dab78a948313", value, 0, "n30655d92d4853522_de67f28e1abd").
+node[ast_rs]("n30655d92d4853522_de67f28e1abd", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_de67f28e1abd", 59).
+last[ast_rs]("n30655d92d4853522_de67f28e1abd", 62).
+child[ast_rs]("n30655d92d4853522_de67f28e1abd", left, 0, "n30655d92d4853522_4ce4575039f4").
+node[ast_rs]("n30655d92d4853522_4ce4575039f4", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4ce4575039f4", 59).
+child[ast_rs]("n30655d92d4853522_4ce4575039f4", left, 0, "n30655d92d4853522_a314a57a8959").
+node[ast_rs]("n30655d92d4853522_a314a57a8959", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a314a57a8959", 59).
+attr[ast_rs]("n30655d92d4853522_a314a57a8959", text, "n").
+attr[ast_rs]("n30655d92d4853522_4ce4575039f4", operator, ">").
+child[ast_rs]("n30655d92d4853522_4ce4575039f4", right, 0, "n30655d92d4853522_5e93c593e33d").
+node[ast_rs]("n30655d92d4853522_5e93c593e33d", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5e93c593e33d", 59).
+attr[ast_rs]("n30655d92d4853522_5e93c593e33d", value, 1).
+attr[ast_rs]("n30655d92d4853522_5e93c593e33d", text, "1").
+attr[ast_rs]("n30655d92d4853522_de67f28e1abd", operator, "||").
+child[ast_rs]("n30655d92d4853522_de67f28e1abd", right, 0, "n30655d92d4853522_d0ea8f95d84a").
+node[ast_rs]("n30655d92d4853522_d0ea8f95d84a", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d0ea8f95d84a", 59).
+last[ast_rs]("n30655d92d4853522_d0ea8f95d84a", 62).
+child[ast_rs]("n30655d92d4853522_d0ea8f95d84a", c, 0, "n30655d92d4853522_7ff7fdeef4c4").
+node[ast_rs]("n30655d92d4853522_7ff7fdeef4c4", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7ff7fdeef4c4", 60).
+child[ast_rs]("n30655d92d4853522_7ff7fdeef4c4", c, 0, "n30655d92d4853522_ea97ea886fea").
+node[ast_rs]("n30655d92d4853522_ea97ea886fea", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ea97ea886fea", 60).
+child[ast_rs]("n30655d92d4853522_ea97ea886fea", function, 0, "n30655d92d4853522_96a30f9f2b02").
+node[ast_rs]("n30655d92d4853522_96a30f9f2b02", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_96a30f9f2b02", 60).
+attr[ast_rs]("n30655d92d4853522_96a30f9f2b02", text, "probe").
+child[ast_rs]("n30655d92d4853522_ea97ea886fea", arguments, 0, "n30655d92d4853522_1006b077e98d").
+node[ast_rs]("n30655d92d4853522_1006b077e98d", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1006b077e98d", 60).
+child[ast_rs]("n30655d92d4853522_1006b077e98d", c, 0, "n30655d92d4853522_a78b247c7f7a").
+node[ast_rs]("n30655d92d4853522_a78b247c7f7a", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a78b247c7f7a", 60).
+attr[ast_rs]("n30655d92d4853522_a78b247c7f7a", value, "or_rhs").
+attr[ast_rs]("n30655d92d4853522_7ff7fdeef4c4", token, ";").
+child[ast_rs]("n30655d92d4853522_d0ea8f95d84a", c, 1, "n30655d92d4853522_011a24394b03").
+node[ast_rs]("n30655d92d4853522_011a24394b03", boolean_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_011a24394b03", 61).
+attr[ast_rs]("n30655d92d4853522_011a24394b03", text, "false").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 6, "n30655d92d4853522_771e5aa65676").
+node[ast_rs]("n30655d92d4853522_771e5aa65676", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_771e5aa65676", 63).
+last[ast_rs]("n30655d92d4853522_771e5aa65676", 65).
+child[ast_rs]("n30655d92d4853522_771e5aa65676", c, 0, "n30655d92d4853522_972e5ede7862").
+node[ast_rs]("n30655d92d4853522_972e5ede7862", for_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_972e5ede7862", 63).
+last[ast_rs]("n30655d92d4853522_972e5ede7862", 65).
+child[ast_rs]("n30655d92d4853522_972e5ede7862", pattern, 0, "n30655d92d4853522_5c8adba4d2a5").
+node[ast_rs]("n30655d92d4853522_5c8adba4d2a5", wildcard, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5c8adba4d2a5", 63).
+child[ast_rs]("n30655d92d4853522_972e5ede7862", value, 0, "n30655d92d4853522_55a35981d959").
+node[ast_rs]("n30655d92d4853522_55a35981d959", range_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_55a35981d959", 63).
+child[ast_rs]("n30655d92d4853522_55a35981d959", c, 0, "n30655d92d4853522_17c15146032b").
+node[ast_rs]("n30655d92d4853522_17c15146032b", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_17c15146032b", 63).
+attr[ast_rs]("n30655d92d4853522_17c15146032b", value, 1).
+attr[ast_rs]("n30655d92d4853522_17c15146032b", text, "1").
+attr[ast_rs]("n30655d92d4853522_55a35981d959", token, "..").
+child[ast_rs]("n30655d92d4853522_55a35981d959", c, 1, "n30655d92d4853522_5847f9df6b6a").
+node[ast_rs]("n30655d92d4853522_5847f9df6b6a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5847f9df6b6a", 63).
+attr[ast_rs]("n30655d92d4853522_5847f9df6b6a", text, "n").
+child[ast_rs]("n30655d92d4853522_972e5ede7862", body, 0, "n30655d92d4853522_ac7ee8752802").
+node[ast_rs]("n30655d92d4853522_ac7ee8752802", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ac7ee8752802", 63).
+last[ast_rs]("n30655d92d4853522_ac7ee8752802", 65).
+child[ast_rs]("n30655d92d4853522_ac7ee8752802", c, 0, "n30655d92d4853522_23fa973892c0").
+node[ast_rs]("n30655d92d4853522_23fa973892c0", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_23fa973892c0", 64).
+child[ast_rs]("n30655d92d4853522_23fa973892c0", c, 0, "n30655d92d4853522_555acac758d4").
+node[ast_rs]("n30655d92d4853522_555acac758d4", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_555acac758d4", 64).
+child[ast_rs]("n30655d92d4853522_555acac758d4", function, 0, "n30655d92d4853522_7a86e4053b23").
+node[ast_rs]("n30655d92d4853522_7a86e4053b23", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7a86e4053b23", 64).
+attr[ast_rs]("n30655d92d4853522_7a86e4053b23", text, "probe").
+child[ast_rs]("n30655d92d4853522_555acac758d4", arguments, 0, "n30655d92d4853522_73ad512967b2").
+node[ast_rs]("n30655d92d4853522_73ad512967b2", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_73ad512967b2", 64).
+child[ast_rs]("n30655d92d4853522_73ad512967b2", c, 0, "n30655d92d4853522_c775ba74827a").
+node[ast_rs]("n30655d92d4853522_c775ba74827a", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c775ba74827a", 64).
+attr[ast_rs]("n30655d92d4853522_c775ba74827a", value, "loop_body").
+attr[ast_rs]("n30655d92d4853522_23fa973892c0", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 7, "n30655d92d4853522_2a57f2121128").
+node[ast_rs]("n30655d92d4853522_2a57f2121128", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2a57f2121128", 66).
+last[ast_rs]("n30655d92d4853522_2a57f2121128", 69).
+child[ast_rs]("n30655d92d4853522_2a57f2121128", c, 0, "n30655d92d4853522_c4ae0a007ea5").
+node[ast_rs]("n30655d92d4853522_c4ae0a007ea5", while_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c4ae0a007ea5", 66).
+last[ast_rs]("n30655d92d4853522_c4ae0a007ea5", 69).
+child[ast_rs]("n30655d92d4853522_c4ae0a007ea5", condition, 0, "n30655d92d4853522_e42ddbdb412f").
+node[ast_rs]("n30655d92d4853522_e42ddbdb412f", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e42ddbdb412f", 66).
+child[ast_rs]("n30655d92d4853522_e42ddbdb412f", left, 0, "n30655d92d4853522_c210dc7a5820").
+node[ast_rs]("n30655d92d4853522_c210dc7a5820", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c210dc7a5820", 66).
+attr[ast_rs]("n30655d92d4853522_c210dc7a5820", text, "n").
+attr[ast_rs]("n30655d92d4853522_e42ddbdb412f", operator, ">").
+child[ast_rs]("n30655d92d4853522_e42ddbdb412f", right, 0, "n30655d92d4853522_b573b0916f94").
+node[ast_rs]("n30655d92d4853522_b573b0916f94", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b573b0916f94", 66).
+attr[ast_rs]("n30655d92d4853522_b573b0916f94", value, 5).
+attr[ast_rs]("n30655d92d4853522_b573b0916f94", text, "5").
+child[ast_rs]("n30655d92d4853522_c4ae0a007ea5", body, 0, "n30655d92d4853522_c8075bde9109").
+node[ast_rs]("n30655d92d4853522_c8075bde9109", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c8075bde9109", 66).
+last[ast_rs]("n30655d92d4853522_c8075bde9109", 69).
+child[ast_rs]("n30655d92d4853522_c8075bde9109", c, 0, "n30655d92d4853522_31a9a7d860c7").
+node[ast_rs]("n30655d92d4853522_31a9a7d860c7", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_31a9a7d860c7", 67).
+child[ast_rs]("n30655d92d4853522_31a9a7d860c7", c, 0, "n30655d92d4853522_257165123c95").
+node[ast_rs]("n30655d92d4853522_257165123c95", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_257165123c95", 67).
+child[ast_rs]("n30655d92d4853522_257165123c95", function, 0, "n30655d92d4853522_ddc14838d38f").
+node[ast_rs]("n30655d92d4853522_ddc14838d38f", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ddc14838d38f", 67).
+attr[ast_rs]("n30655d92d4853522_ddc14838d38f", text, "probe").
+child[ast_rs]("n30655d92d4853522_257165123c95", arguments, 0, "n30655d92d4853522_649cefc12ff7").
+node[ast_rs]("n30655d92d4853522_649cefc12ff7", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_649cefc12ff7", 67).
+child[ast_rs]("n30655d92d4853522_649cefc12ff7", c, 0, "n30655d92d4853522_83ca39735998").
+node[ast_rs]("n30655d92d4853522_83ca39735998", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_83ca39735998", 67).
+attr[ast_rs]("n30655d92d4853522_83ca39735998", value, "while_body").
+attr[ast_rs]("n30655d92d4853522_31a9a7d860c7", token, ";").
+child[ast_rs]("n30655d92d4853522_c8075bde9109", c, 1, "n30655d92d4853522_95c1fbd2caa0").
+node[ast_rs]("n30655d92d4853522_95c1fbd2caa0", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_95c1fbd2caa0", 68).
+child[ast_rs]("n30655d92d4853522_95c1fbd2caa0", c, 0, "n30655d92d4853522_92e2895699d2").
+node[ast_rs]("n30655d92d4853522_92e2895699d2", break_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_92e2895699d2", 68).
+attr[ast_rs]("n30655d92d4853522_92e2895699d2", text, "break").
+attr[ast_rs]("n30655d92d4853522_95c1fbd2caa0", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 8, "n30655d92d4853522_9c00e2fe6181").
+node[ast_rs]("n30655d92d4853522_9c00e2fe6181", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9c00e2fe6181", 70).
+child[ast_rs]("n30655d92d4853522_9c00e2fe6181", pattern, 0, "n30655d92d4853522_3162101a228f").
+node[ast_rs]("n30655d92d4853522_3162101a228f", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3162101a228f", 70).
+attr[ast_rs]("n30655d92d4853522_3162101a228f", text, "f").
+child[ast_rs]("n30655d92d4853522_9c00e2fe6181", value, 0, "n30655d92d4853522_e06ec44d60f1").
+node[ast_rs]("n30655d92d4853522_e06ec44d60f1", closure_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e06ec44d60f1", 70).
+child[ast_rs]("n30655d92d4853522_e06ec44d60f1", parameters, 0, "n30655d92d4853522_7b53b7e44baf").
+node[ast_rs]("n30655d92d4853522_7b53b7e44baf", closure_parameters, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7b53b7e44baf", 70).
+attr[ast_rs]("n30655d92d4853522_7b53b7e44baf", text, "||").
+child[ast_rs]("n30655d92d4853522_e06ec44d60f1", body, 0, "n30655d92d4853522_52638a33b887").
+node[ast_rs]("n30655d92d4853522_52638a33b887", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_52638a33b887", 70).
+child[ast_rs]("n30655d92d4853522_52638a33b887", function, 0, "n30655d92d4853522_993a0d64ade2").
+node[ast_rs]("n30655d92d4853522_993a0d64ade2", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_993a0d64ade2", 70).
+attr[ast_rs]("n30655d92d4853522_993a0d64ade2", text, "probe").
+child[ast_rs]("n30655d92d4853522_52638a33b887", arguments, 0, "n30655d92d4853522_2ddb80c4ff1e").
+node[ast_rs]("n30655d92d4853522_2ddb80c4ff1e", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2ddb80c4ff1e", 70).
+child[ast_rs]("n30655d92d4853522_2ddb80c4ff1e", c, 0, "n30655d92d4853522_badd54fc1e15").
+node[ast_rs]("n30655d92d4853522_badd54fc1e15", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_badd54fc1e15", 70).
+attr[ast_rs]("n30655d92d4853522_badd54fc1e15", value, "closure_body").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 9, "n30655d92d4853522_8683d4f42012").
+node[ast_rs]("n30655d92d4853522_8683d4f42012", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8683d4f42012", 71).
+last[ast_rs]("n30655d92d4853522_8683d4f42012", 73).
+child[ast_rs]("n30655d92d4853522_8683d4f42012", c, 0, "n30655d92d4853522_a256fa7da6df").
+node[ast_rs]("n30655d92d4853522_a256fa7da6df", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_a256fa7da6df", 71).
+last[ast_rs]("n30655d92d4853522_a256fa7da6df", 73).
+child[ast_rs]("n30655d92d4853522_a256fa7da6df", condition, 0, "n30655d92d4853522_8fc2a73fdc0e").
+node[ast_rs]("n30655d92d4853522_8fc2a73fdc0e", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8fc2a73fdc0e", 71).
+child[ast_rs]("n30655d92d4853522_8fc2a73fdc0e", left, 0, "n30655d92d4853522_604cc211882c").
+node[ast_rs]("n30655d92d4853522_604cc211882c", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_604cc211882c", 71).
+attr[ast_rs]("n30655d92d4853522_604cc211882c", text, "n").
+attr[ast_rs]("n30655d92d4853522_8fc2a73fdc0e", operator, ">").
+child[ast_rs]("n30655d92d4853522_8fc2a73fdc0e", right, 0, "n30655d92d4853522_42f07fe16847").
+node[ast_rs]("n30655d92d4853522_42f07fe16847", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_42f07fe16847", 71).
+attr[ast_rs]("n30655d92d4853522_42f07fe16847", value, 3).
+attr[ast_rs]("n30655d92d4853522_42f07fe16847", text, "3").
+child[ast_rs]("n30655d92d4853522_a256fa7da6df", consequence, 0, "n30655d92d4853522_b25524c10703").
+node[ast_rs]("n30655d92d4853522_b25524c10703", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b25524c10703", 71).
+last[ast_rs]("n30655d92d4853522_b25524c10703", 73).
+child[ast_rs]("n30655d92d4853522_b25524c10703", c, 0, "n30655d92d4853522_cbc3a5d6aa17").
+node[ast_rs]("n30655d92d4853522_cbc3a5d6aa17", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_cbc3a5d6aa17", 72).
+child[ast_rs]("n30655d92d4853522_cbc3a5d6aa17", c, 0, "n30655d92d4853522_ed10983bd2f5").
+node[ast_rs]("n30655d92d4853522_ed10983bd2f5", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ed10983bd2f5", 72).
+child[ast_rs]("n30655d92d4853522_ed10983bd2f5", function, 0, "n30655d92d4853522_0886e3efa50c").
+node[ast_rs]("n30655d92d4853522_0886e3efa50c", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0886e3efa50c", 72).
+attr[ast_rs]("n30655d92d4853522_0886e3efa50c", text, "f").
+child[ast_rs]("n30655d92d4853522_ed10983bd2f5", arguments, 0, "n30655d92d4853522_3884a06b3d5e").
+node[ast_rs]("n30655d92d4853522_3884a06b3d5e", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3884a06b3d5e", 72).
+attr[ast_rs]("n30655d92d4853522_3884a06b3d5e", text, "()").
+attr[ast_rs]("n30655d92d4853522_cbc3a5d6aa17", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 10, "n30655d92d4853522_1af54a6ae915").
+node[ast_rs]("n30655d92d4853522_1af54a6ae915", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1af54a6ae915", 74).
+last[ast_rs]("n30655d92d4853522_1af54a6ae915", 76).
+child[ast_rs]("n30655d92d4853522_1af54a6ae915", c, 0, "n30655d92d4853522_5f9dad250615").
+node[ast_rs]("n30655d92d4853522_5f9dad250615", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5f9dad250615", 74).
+last[ast_rs]("n30655d92d4853522_5f9dad250615", 76).
+child[ast_rs]("n30655d92d4853522_5f9dad250615", condition, 0, "n30655d92d4853522_af94c2badcfc").
+node[ast_rs]("n30655d92d4853522_af94c2badcfc", let_condition, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_af94c2badcfc", 74).
+child[ast_rs]("n30655d92d4853522_af94c2badcfc", pattern, 0, "n30655d92d4853522_dcc44c56b42f").
+node[ast_rs]("n30655d92d4853522_dcc44c56b42f", tuple_struct_pattern, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dcc44c56b42f", 74).
+child[ast_rs]("n30655d92d4853522_dcc44c56b42f", type, 0, "n30655d92d4853522_1a3cb9d50a0c").
+node[ast_rs]("n30655d92d4853522_1a3cb9d50a0c", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1a3cb9d50a0c", 74).
+attr[ast_rs]("n30655d92d4853522_1a3cb9d50a0c", upper, true).
+attr[ast_rs]("n30655d92d4853522_1a3cb9d50a0c", text, "Some").
+child[ast_rs]("n30655d92d4853522_dcc44c56b42f", c, 0, "n30655d92d4853522_0f5d9b0e090f").
+node[ast_rs]("n30655d92d4853522_0f5d9b0e090f", wildcard, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0f5d9b0e090f", 74).
+child[ast_rs]("n30655d92d4853522_af94c2badcfc", value, 0, "n30655d92d4853522_f48689bd092f").
+node[ast_rs]("n30655d92d4853522_f48689bd092f", parenthesized_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f48689bd092f", 74).
+child[ast_rs]("n30655d92d4853522_f48689bd092f", c, 0, "n30655d92d4853522_aa449b1a1a8e").
+node[ast_rs]("n30655d92d4853522_aa449b1a1a8e", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_aa449b1a1a8e", 74).
+child[ast_rs]("n30655d92d4853522_aa449b1a1a8e", condition, 0, "n30655d92d4853522_c64f909193a7").
+node[ast_rs]("n30655d92d4853522_c64f909193a7", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c64f909193a7", 74).
+child[ast_rs]("n30655d92d4853522_c64f909193a7", left, 0, "n30655d92d4853522_1c89402496ac").
+node[ast_rs]("n30655d92d4853522_1c89402496ac", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1c89402496ac", 74).
+attr[ast_rs]("n30655d92d4853522_1c89402496ac", text, "n").
+attr[ast_rs]("n30655d92d4853522_c64f909193a7", operator, ">").
+child[ast_rs]("n30655d92d4853522_c64f909193a7", right, 0, "n30655d92d4853522_413d2d0f08f4").
+node[ast_rs]("n30655d92d4853522_413d2d0f08f4", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_413d2d0f08f4", 74).
+attr[ast_rs]("n30655d92d4853522_413d2d0f08f4", value, 1).
+attr[ast_rs]("n30655d92d4853522_413d2d0f08f4", text, "1").
+child[ast_rs]("n30655d92d4853522_aa449b1a1a8e", consequence, 0, "n30655d92d4853522_00d1936b4ea4").
+node[ast_rs]("n30655d92d4853522_00d1936b4ea4", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_00d1936b4ea4", 74).
+child[ast_rs]("n30655d92d4853522_00d1936b4ea4", c, 0, "n30655d92d4853522_e5eb41e788c7").
+node[ast_rs]("n30655d92d4853522_e5eb41e788c7", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e5eb41e788c7", 74).
+child[ast_rs]("n30655d92d4853522_e5eb41e788c7", function, 0, "n30655d92d4853522_befcb7c1f83a").
+node[ast_rs]("n30655d92d4853522_befcb7c1f83a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_befcb7c1f83a", 74).
+attr[ast_rs]("n30655d92d4853522_befcb7c1f83a", upper, true).
+attr[ast_rs]("n30655d92d4853522_befcb7c1f83a", text, "Some").
+child[ast_rs]("n30655d92d4853522_e5eb41e788c7", arguments, 0, "n30655d92d4853522_94f22906b5cd").
+node[ast_rs]("n30655d92d4853522_94f22906b5cd", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_94f22906b5cd", 74).
+child[ast_rs]("n30655d92d4853522_94f22906b5cd", c, 0, "n30655d92d4853522_3f4532c7575c").
+node[ast_rs]("n30655d92d4853522_3f4532c7575c", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3f4532c7575c", 74).
+attr[ast_rs]("n30655d92d4853522_3f4532c7575c", text, "n").
+child[ast_rs]("n30655d92d4853522_aa449b1a1a8e", alternative, 0, "n30655d92d4853522_b8a644cd4117").
+node[ast_rs]("n30655d92d4853522_b8a644cd4117", else_clause, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b8a644cd4117", 74).
+child[ast_rs]("n30655d92d4853522_b8a644cd4117", c, 0, "n30655d92d4853522_91ddd793f699").
+node[ast_rs]("n30655d92d4853522_91ddd793f699", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_91ddd793f699", 74).
+child[ast_rs]("n30655d92d4853522_91ddd793f699", c, 0, "n30655d92d4853522_f61d5a721286").
+node[ast_rs]("n30655d92d4853522_f61d5a721286", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f61d5a721286", 74).
+attr[ast_rs]("n30655d92d4853522_f61d5a721286", upper, true).
+attr[ast_rs]("n30655d92d4853522_f61d5a721286", text, "None").
+child[ast_rs]("n30655d92d4853522_5f9dad250615", consequence, 0, "n30655d92d4853522_774129233ad8").
+node[ast_rs]("n30655d92d4853522_774129233ad8", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_774129233ad8", 74).
+last[ast_rs]("n30655d92d4853522_774129233ad8", 76).
+child[ast_rs]("n30655d92d4853522_774129233ad8", c, 0, "n30655d92d4853522_29724d87e1f2").
+node[ast_rs]("n30655d92d4853522_29724d87e1f2", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_29724d87e1f2", 75).
+child[ast_rs]("n30655d92d4853522_29724d87e1f2", c, 0, "n30655d92d4853522_d081999450fa").
+node[ast_rs]("n30655d92d4853522_d081999450fa", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d081999450fa", 75).
+child[ast_rs]("n30655d92d4853522_d081999450fa", function, 0, "n30655d92d4853522_9f45c1f15128").
+node[ast_rs]("n30655d92d4853522_9f45c1f15128", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_9f45c1f15128", 75).
+attr[ast_rs]("n30655d92d4853522_9f45c1f15128", text, "probe").
+child[ast_rs]("n30655d92d4853522_d081999450fa", arguments, 0, "n30655d92d4853522_332651914888").
+node[ast_rs]("n30655d92d4853522_332651914888", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_332651914888", 75).
+child[ast_rs]("n30655d92d4853522_332651914888", c, 0, "n30655d92d4853522_035d88df36c8").
+node[ast_rs]("n30655d92d4853522_035d88df36c8", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_035d88df36c8", 75).
+attr[ast_rs]("n30655d92d4853522_035d88df36c8", value, "if_let").
+attr[ast_rs]("n30655d92d4853522_29724d87e1f2", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 11, "n30655d92d4853522_f53651ee9a7f").
+node[ast_rs]("n30655d92d4853522_f53651ee9a7f", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f53651ee9a7f", 77).
+child[ast_rs]("n30655d92d4853522_f53651ee9a7f", c, 0, "n30655d92d4853522_065727fb0b52").
+node[ast_rs]("n30655d92d4853522_065727fb0b52", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_065727fb0b52", 77).
+child[ast_rs]("n30655d92d4853522_065727fb0b52", function, 0, "n30655d92d4853522_7ce3dee7f4d2").
+node[ast_rs]("n30655d92d4853522_7ce3dee7f4d2", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7ce3dee7f4d2", 77).
+attr[ast_rs]("n30655d92d4853522_7ce3dee7f4d2", text, "else_branch").
+child[ast_rs]("n30655d92d4853522_065727fb0b52", arguments, 0, "n30655d92d4853522_8ca80e356225").
+node[ast_rs]("n30655d92d4853522_8ca80e356225", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8ca80e356225", 77).
+child[ast_rs]("n30655d92d4853522_8ca80e356225", c, 0, "n30655d92d4853522_3011ad4ecad2").
+node[ast_rs]("n30655d92d4853522_3011ad4ecad2", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3011ad4ecad2", 77).
+attr[ast_rs]("n30655d92d4853522_3011ad4ecad2", text, "n").
+attr[ast_rs]("n30655d92d4853522_f53651ee9a7f", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 12, "n30655d92d4853522_4c6c1e36a244").
+node[ast_rs]("n30655d92d4853522_4c6c1e36a244", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4c6c1e36a244", 78).
+child[ast_rs]("n30655d92d4853522_4c6c1e36a244", c, 0, "n30655d92d4853522_ef19076916a2").
+node[ast_rs]("n30655d92d4853522_ef19076916a2", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ef19076916a2", 78).
+child[ast_rs]("n30655d92d4853522_ef19076916a2", function, 0, "n30655d92d4853522_b6e311eb0be2").
+node[ast_rs]("n30655d92d4853522_b6e311eb0be2", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b6e311eb0be2", 78).
+attr[ast_rs]("n30655d92d4853522_b6e311eb0be2", text, "dead").
+child[ast_rs]("n30655d92d4853522_ef19076916a2", arguments, 0, "n30655d92d4853522_6119a07a48ec").
+node[ast_rs]("n30655d92d4853522_6119a07a48ec", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6119a07a48ec", 78).
+attr[ast_rs]("n30655d92d4853522_6119a07a48ec", text, "()").
+attr[ast_rs]("n30655d92d4853522_4c6c1e36a244", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 13, "n30655d92d4853522_335a35116583").
+node[ast_rs]("n30655d92d4853522_335a35116583", let_declaration, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_335a35116583", 79).
+child[ast_rs]("n30655d92d4853522_335a35116583", pattern, 0, "n30655d92d4853522_0750a0bb2782").
+node[ast_rs]("n30655d92d4853522_0750a0bb2782", wildcard, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0750a0bb2782", 79).
+child[ast_rs]("n30655d92d4853522_335a35116583", value, 0, "n30655d92d4853522_4f4b142c8b05").
+node[ast_rs]("n30655d92d4853522_4f4b142c8b05", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4f4b142c8b05", 79).
+child[ast_rs]("n30655d92d4853522_4f4b142c8b05", function, 0, "n30655d92d4853522_d7fca65ce34e").
+node[ast_rs]("n30655d92d4853522_d7fca65ce34e", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d7fca65ce34e", 79).
+attr[ast_rs]("n30655d92d4853522_d7fca65ce34e", text, "tried").
+child[ast_rs]("n30655d92d4853522_4f4b142c8b05", arguments, 0, "n30655d92d4853522_fb7c3c150e5a").
+node[ast_rs]("n30655d92d4853522_fb7c3c150e5a", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_fb7c3c150e5a", 79).
+child[ast_rs]("n30655d92d4853522_fb7c3c150e5a", c, 0, "n30655d92d4853522_11c6302dfd3b").
+node[ast_rs]("n30655d92d4853522_11c6302dfd3b", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_11c6302dfd3b", 79).
+attr[ast_rs]("n30655d92d4853522_11c6302dfd3b", text, "n").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 14, "n30655d92d4853522_222c06d7580d").
+node[ast_rs]("n30655d92d4853522_222c06d7580d", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_222c06d7580d", 80).
+last[ast_rs]("n30655d92d4853522_222c06d7580d", 85).
+child[ast_rs]("n30655d92d4853522_222c06d7580d", c, 0, "n30655d92d4853522_8cbee195c3b7").
+node[ast_rs]("n30655d92d4853522_8cbee195c3b7", for_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8cbee195c3b7", 80).
+last[ast_rs]("n30655d92d4853522_8cbee195c3b7", 85).
+child[ast_rs]("n30655d92d4853522_8cbee195c3b7", pattern, 0, "n30655d92d4853522_8b285fa67df5").
+node[ast_rs]("n30655d92d4853522_8b285fa67df5", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8b285fa67df5", 80).
+attr[ast_rs]("n30655d92d4853522_8b285fa67df5", text, "i").
+child[ast_rs]("n30655d92d4853522_8cbee195c3b7", value, 0, "n30655d92d4853522_afcd93673009").
+node[ast_rs]("n30655d92d4853522_afcd93673009", range_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_afcd93673009", 80).
+child[ast_rs]("n30655d92d4853522_afcd93673009", c, 0, "n30655d92d4853522_2c4e7818d6a2").
+node[ast_rs]("n30655d92d4853522_2c4e7818d6a2", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2c4e7818d6a2", 80).
+attr[ast_rs]("n30655d92d4853522_2c4e7818d6a2", value, 0).
+attr[ast_rs]("n30655d92d4853522_2c4e7818d6a2", text, "0").
+attr[ast_rs]("n30655d92d4853522_afcd93673009", token, "..").
+child[ast_rs]("n30655d92d4853522_afcd93673009", c, 1, "n30655d92d4853522_1418cbaa14db").
+node[ast_rs]("n30655d92d4853522_1418cbaa14db", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_1418cbaa14db", 80).
+attr[ast_rs]("n30655d92d4853522_1418cbaa14db", value, 3).
+attr[ast_rs]("n30655d92d4853522_1418cbaa14db", text, "3").
+child[ast_rs]("n30655d92d4853522_8cbee195c3b7", body, 0, "n30655d92d4853522_8c467a020204").
+node[ast_rs]("n30655d92d4853522_8c467a020204", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8c467a020204", 80).
+last[ast_rs]("n30655d92d4853522_8c467a020204", 85).
+child[ast_rs]("n30655d92d4853522_8c467a020204", c, 0, "n30655d92d4853522_e39b52dd743d").
+node[ast_rs]("n30655d92d4853522_e39b52dd743d", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e39b52dd743d", 81).
+last[ast_rs]("n30655d92d4853522_e39b52dd743d", 83).
+child[ast_rs]("n30655d92d4853522_e39b52dd743d", c, 0, "n30655d92d4853522_b537dab92584").
+node[ast_rs]("n30655d92d4853522_b537dab92584", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b537dab92584", 81).
+last[ast_rs]("n30655d92d4853522_b537dab92584", 83).
+child[ast_rs]("n30655d92d4853522_b537dab92584", condition, 0, "n30655d92d4853522_d5b19779b7c0").
+node[ast_rs]("n30655d92d4853522_d5b19779b7c0", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d5b19779b7c0", 81).
+child[ast_rs]("n30655d92d4853522_d5b19779b7c0", left, 0, "n30655d92d4853522_0bb78ae43c31").
+node[ast_rs]("n30655d92d4853522_0bb78ae43c31", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0bb78ae43c31", 81).
+attr[ast_rs]("n30655d92d4853522_0bb78ae43c31", text, "i").
+attr[ast_rs]("n30655d92d4853522_d5b19779b7c0", operator, "==").
+child[ast_rs]("n30655d92d4853522_d5b19779b7c0", right, 0, "n30655d92d4853522_d99b32b18e86").
+node[ast_rs]("n30655d92d4853522_d99b32b18e86", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d99b32b18e86", 81).
+attr[ast_rs]("n30655d92d4853522_d99b32b18e86", value, 1).
+attr[ast_rs]("n30655d92d4853522_d99b32b18e86", text, "1").
+child[ast_rs]("n30655d92d4853522_b537dab92584", consequence, 0, "n30655d92d4853522_eab4fb38c582").
+node[ast_rs]("n30655d92d4853522_eab4fb38c582", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_eab4fb38c582", 81).
+last[ast_rs]("n30655d92d4853522_eab4fb38c582", 83).
+child[ast_rs]("n30655d92d4853522_eab4fb38c582", c, 0, "n30655d92d4853522_8bfcdef8a02d").
+node[ast_rs]("n30655d92d4853522_8bfcdef8a02d", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8bfcdef8a02d", 82).
+child[ast_rs]("n30655d92d4853522_8bfcdef8a02d", c, 0, "n30655d92d4853522_b27daa150635").
+node[ast_rs]("n30655d92d4853522_b27daa150635", continue_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b27daa150635", 82).
+attr[ast_rs]("n30655d92d4853522_b27daa150635", text, "continue").
+attr[ast_rs]("n30655d92d4853522_8bfcdef8a02d", token, ";").
+child[ast_rs]("n30655d92d4853522_8c467a020204", c, 1, "n30655d92d4853522_ef01bc891279").
+node[ast_rs]("n30655d92d4853522_ef01bc891279", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_ef01bc891279", 84).
+child[ast_rs]("n30655d92d4853522_ef01bc891279", c, 0, "n30655d92d4853522_310d81e89b2f").
+node[ast_rs]("n30655d92d4853522_310d81e89b2f", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_310d81e89b2f", 84).
+child[ast_rs]("n30655d92d4853522_310d81e89b2f", function, 0, "n30655d92d4853522_3b5ecad25811").
+node[ast_rs]("n30655d92d4853522_3b5ecad25811", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3b5ecad25811", 84).
+attr[ast_rs]("n30655d92d4853522_3b5ecad25811", text, "probe").
+child[ast_rs]("n30655d92d4853522_310d81e89b2f", arguments, 0, "n30655d92d4853522_d0586e430914").
+node[ast_rs]("n30655d92d4853522_d0586e430914", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d0586e430914", 84).
+child[ast_rs]("n30655d92d4853522_d0586e430914", c, 0, "n30655d92d4853522_aa8a4d4b3e11").
+node[ast_rs]("n30655d92d4853522_aa8a4d4b3e11", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_aa8a4d4b3e11", 84).
+attr[ast_rs]("n30655d92d4853522_aa8a4d4b3e11", value, "after_continue").
+attr[ast_rs]("n30655d92d4853522_ef01bc891279", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 15, "n30655d92d4853522_3b0d8723b7d2").
+node[ast_rs]("n30655d92d4853522_3b0d8723b7d2", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3b0d8723b7d2", 86).
+child[ast_rs]("n30655d92d4853522_3b0d8723b7d2", c, 0, "n30655d92d4853522_f61a0f18a5ba").
+node[ast_rs]("n30655d92d4853522_f61a0f18a5ba", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f61a0f18a5ba", 86).
+child[ast_rs]("n30655d92d4853522_f61a0f18a5ba", function, 0, "n30655d92d4853522_54343104ad5a").
+node[ast_rs]("n30655d92d4853522_54343104ad5a", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_54343104ad5a", 86).
+attr[ast_rs]("n30655d92d4853522_54343104ad5a", text, "probe").
+child[ast_rs]("n30655d92d4853522_f61a0f18a5ba", arguments, 0, "n30655d92d4853522_42c578bf08f0").
+node[ast_rs]("n30655d92d4853522_42c578bf08f0", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_42c578bf08f0", 86).
+child[ast_rs]("n30655d92d4853522_42c578bf08f0", c, 0, "n30655d92d4853522_f8caa8aecf97").
+node[ast_rs]("n30655d92d4853522_f8caa8aecf97", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f8caa8aecf97", 86).
+attr[ast_rs]("n30655d92d4853522_f8caa8aecf97", value, "middle").
+attr[ast_rs]("n30655d92d4853522_3b0d8723b7d2", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 16, "n30655d92d4853522_d3290ea1d9a4").
+node[ast_rs]("n30655d92d4853522_d3290ea1d9a4", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_d3290ea1d9a4", 87).
+last[ast_rs]("n30655d92d4853522_d3290ea1d9a4", 89).
+child[ast_rs]("n30655d92d4853522_d3290ea1d9a4", c, 0, "n30655d92d4853522_5a202dc18d76").
+node[ast_rs]("n30655d92d4853522_5a202dc18d76", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5a202dc18d76", 87).
+last[ast_rs]("n30655d92d4853522_5a202dc18d76", 89).
+child[ast_rs]("n30655d92d4853522_5a202dc18d76", condition, 0, "n30655d92d4853522_5bcd74445a44").
+node[ast_rs]("n30655d92d4853522_5bcd74445a44", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_5bcd74445a44", 87).
+child[ast_rs]("n30655d92d4853522_5bcd74445a44", left, 0, "n30655d92d4853522_809821142be3").
+node[ast_rs]("n30655d92d4853522_809821142be3", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_809821142be3", 87).
+attr[ast_rs]("n30655d92d4853522_809821142be3", text, "n").
+attr[ast_rs]("n30655d92d4853522_5bcd74445a44", operator, ">").
+child[ast_rs]("n30655d92d4853522_5bcd74445a44", right, 0, "n30655d92d4853522_2614e7249ff1").
+node[ast_rs]("n30655d92d4853522_2614e7249ff1", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2614e7249ff1", 87).
+attr[ast_rs]("n30655d92d4853522_2614e7249ff1", value, 6).
+attr[ast_rs]("n30655d92d4853522_2614e7249ff1", text, "6").
+child[ast_rs]("n30655d92d4853522_5a202dc18d76", consequence, 0, "n30655d92d4853522_89e54f84e7fb").
+node[ast_rs]("n30655d92d4853522_89e54f84e7fb", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_89e54f84e7fb", 87).
+last[ast_rs]("n30655d92d4853522_89e54f84e7fb", 89).
+child[ast_rs]("n30655d92d4853522_89e54f84e7fb", c, 0, "n30655d92d4853522_63926ce94881").
+node[ast_rs]("n30655d92d4853522_63926ce94881", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_63926ce94881", 88).
+child[ast_rs]("n30655d92d4853522_63926ce94881", c, 0, "n30655d92d4853522_0af569c6c589").
+node[ast_rs]("n30655d92d4853522_0af569c6c589", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_0af569c6c589", 88).
+child[ast_rs]("n30655d92d4853522_0af569c6c589", function, 0, "n30655d92d4853522_c2e8d487a5c3").
+node[ast_rs]("n30655d92d4853522_c2e8d487a5c3", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c2e8d487a5c3", 88).
+attr[ast_rs]("n30655d92d4853522_c2e8d487a5c3", text, "never").
+child[ast_rs]("n30655d92d4853522_0af569c6c589", arguments, 0, "n30655d92d4853522_e5d99241bb4c").
+node[ast_rs]("n30655d92d4853522_e5d99241bb4c", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_e5d99241bb4c", 88).
+attr[ast_rs]("n30655d92d4853522_e5d99241bb4c", text, "()").
+attr[ast_rs]("n30655d92d4853522_63926ce94881", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 17, "n30655d92d4853522_b28fba874628").
+node[ast_rs]("n30655d92d4853522_b28fba874628", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_b28fba874628", 90).
+child[ast_rs]("n30655d92d4853522_b28fba874628", c, 0, "n30655d92d4853522_c9a726c0553a").
+node[ast_rs]("n30655d92d4853522_c9a726c0553a", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c9a726c0553a", 90).
+child[ast_rs]("n30655d92d4853522_c9a726c0553a", function, 0, "n30655d92d4853522_6366bb456761").
+node[ast_rs]("n30655d92d4853522_6366bb456761", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6366bb456761", 90).
+attr[ast_rs]("n30655d92d4853522_6366bb456761", text, "probe").
+child[ast_rs]("n30655d92d4853522_c9a726c0553a", arguments, 0, "n30655d92d4853522_3987a74fa6f7").
+node[ast_rs]("n30655d92d4853522_3987a74fa6f7", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_3987a74fa6f7", 90).
+child[ast_rs]("n30655d92d4853522_3987a74fa6f7", c, 0, "n30655d92d4853522_2289227890b9").
+node[ast_rs]("n30655d92d4853522_2289227890b9", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_2289227890b9", 90).
+attr[ast_rs]("n30655d92d4853522_2289227890b9", value, "after_never").
+attr[ast_rs]("n30655d92d4853522_b28fba874628", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 18, "n30655d92d4853522_c4a2ea7e4ccd").
+node[ast_rs]("n30655d92d4853522_c4a2ea7e4ccd", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c4a2ea7e4ccd", 91).
+last[ast_rs]("n30655d92d4853522_c4a2ea7e4ccd", 93).
+child[ast_rs]("n30655d92d4853522_c4a2ea7e4ccd", c, 0, "n30655d92d4853522_89a50482ba94").
+node[ast_rs]("n30655d92d4853522_89a50482ba94", if_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_89a50482ba94", 91).
+last[ast_rs]("n30655d92d4853522_89a50482ba94", 93).
+child[ast_rs]("n30655d92d4853522_89a50482ba94", condition, 0, "n30655d92d4853522_87b6d9d8693c").
+node[ast_rs]("n30655d92d4853522_87b6d9d8693c", binary_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_87b6d9d8693c", 91).
+child[ast_rs]("n30655d92d4853522_87b6d9d8693c", left, 0, "n30655d92d4853522_f5355401ef8b").
+node[ast_rs]("n30655d92d4853522_f5355401ef8b", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f5355401ef8b", 91).
+attr[ast_rs]("n30655d92d4853522_f5355401ef8b", text, "n").
+attr[ast_rs]("n30655d92d4853522_87b6d9d8693c", operator, ">").
+child[ast_rs]("n30655d92d4853522_87b6d9d8693c", right, 0, "n30655d92d4853522_f83cbb53c3a7").
+node[ast_rs]("n30655d92d4853522_f83cbb53c3a7", integer_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f83cbb53c3a7", 91).
+attr[ast_rs]("n30655d92d4853522_f83cbb53c3a7", value, 4).
+attr[ast_rs]("n30655d92d4853522_f83cbb53c3a7", text, "4").
+child[ast_rs]("n30655d92d4853522_89a50482ba94", consequence, 0, "n30655d92d4853522_183fc19d547b").
+node[ast_rs]("n30655d92d4853522_183fc19d547b", block, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_183fc19d547b", 91).
+last[ast_rs]("n30655d92d4853522_183fc19d547b", 93).
+child[ast_rs]("n30655d92d4853522_183fc19d547b", c, 0, "n30655d92d4853522_c8809a0b2dd5").
+node[ast_rs]("n30655d92d4853522_c8809a0b2dd5", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_c8809a0b2dd5", 92).
+child[ast_rs]("n30655d92d4853522_c8809a0b2dd5", c, 0, "n30655d92d4853522_dd3af68dfb0b").
+node[ast_rs]("n30655d92d4853522_dd3af68dfb0b", return_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_dd3af68dfb0b", 92).
+attr[ast_rs]("n30655d92d4853522_dd3af68dfb0b", text, "return").
+attr[ast_rs]("n30655d92d4853522_c8809a0b2dd5", token, ";").
+child[ast_rs]("n30655d92d4853522_04971694ba28", c, 19, "n30655d92d4853522_6279378009ec").
+node[ast_rs]("n30655d92d4853522_6279378009ec", expression_statement, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_6279378009ec", 94).
+child[ast_rs]("n30655d92d4853522_6279378009ec", c, 0, "n30655d92d4853522_8317622945d3").
+node[ast_rs]("n30655d92d4853522_8317622945d3", call_expression, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_8317622945d3", 94).
+child[ast_rs]("n30655d92d4853522_8317622945d3", function, 0, "n30655d92d4853522_4704079a6eca").
+node[ast_rs]("n30655d92d4853522_4704079a6eca", identifier, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_4704079a6eca", 94).
+attr[ast_rs]("n30655d92d4853522_4704079a6eca", text, "probe").
+child[ast_rs]("n30655d92d4853522_8317622945d3", arguments, 0, "n30655d92d4853522_f4a67961b791").
+node[ast_rs]("n30655d92d4853522_f4a67961b791", arguments, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_f4a67961b791", 94).
+child[ast_rs]("n30655d92d4853522_f4a67961b791", c, 0, "n30655d92d4853522_7566150737e5").
+node[ast_rs]("n30655d92d4853522_7566150737e5", string_literal, "examples/parity/guards/rs/src/main.rs").
+line[ast_rs]("n30655d92d4853522_7566150737e5", 94).
+attr[ast_rs]("n30655d92d4853522_7566150737e5", value, "end").
+attr[ast_rs]("n30655d92d4853522_6279378009ec", token, ";").

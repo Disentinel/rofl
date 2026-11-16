@@ -1,0 +1,12 @@
+-- examples/parity/guards/rs-check.rofl — WHETHER CODE RUNS AT ALL, IN RUST (examples/parity/check.rofl judges it).
+-- Truth: the scene run twice, with no argument and with six (cargo build, 2026-11-16): a probe printed by both runs
+-- has no truth (it runs), any other is `may_skip`.
+named("start"). named("before_try"). named("live"). named("middle"). named("after_continue").
+truth("then", may_skip). truth("else", may_skip). truth("one", may_skip). truth("many", may_skip).
+truth("and_rhs", may_skip). truth("or_rhs", may_skip). truth("loop_body", may_skip). truth("while_body", may_skip).
+truth("closure_body", may_skip). truth("if_let", may_skip). truth("let_else", may_skip).
+truth("after_let_else", may_skip). truth("dead", may_skip). truth("unused", may_skip). truth("after_try", may_skip).
+truth("after_never", may_skip). truth("end", may_skip).
+-- a loop's body may run no time; this one runs, its range is not evaluated
+general("after_continue", may_skip, loop_count).
+scene_file("examples/parity/guards/rs/src/main.rs").
