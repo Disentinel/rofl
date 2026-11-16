@@ -144,6 +144,15 @@ came nearest, the one with the fewest conditions left unmet. The last line,
 `(every failure: --all)`, says there were others; `rofl whynot --all` prints
 every one. `--depth N` and `--nodes N` bound how far the walk goes.
 
+Over a large project, the kind `rofl` splits by file, a `whynot` whose
+question has a variable and holds is not walked. `rofl whynot 'risky(N)'`
+then answers with a table: how many answers the project holds and in how
+many files, the files that hold the most, each with its count, and the
+first files that hold none. A file is named by the start of its nodes'
+names, such as `n017f49dbfbe9e0a8`. `--in n017f49dbfbe9e0a8` walks the
+question in that file alone, the same walk as above, and ends with how many
+answers that file holds.
+
 ## What it could not see
 
 The notebook prints a note about `./log.js` before anything else. On the
