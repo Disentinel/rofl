@@ -1,0 +1,25 @@
+-- models/process/ci/train-proof.rofl — each verdict of train.rofl once, so the world ci_train shows it: two requests,
+-- #a branched off main as it is, #b before main moved. Columns: main, #a's base and blessing, #b's, the stack's.
+edb(golden).
+
+-- still: nobody moved it, the stack answers as main: held
+golden("main", "", "still", "s0"). golden("base", "#a", "still", "s0"). golden("pr", "#a", "still", "s0").
+golden("base", "#b", "still", "s0"). golden("pr", "#b", "still", "s0"). golden("new", "", "still", "s0").
+-- drift: nobody moved it, the stack answers otherwise: met
+golden("main", "", "drift", "d0"). golden("base", "#a", "drift", "d0"). golden("pr", "#a", "drift", "d0").
+golden("base", "#b", "drift", "d0"). golden("pr", "#b", "drift", "d0"). golden("new", "", "drift", "d1").
+-- own: #a alone moved it, the stack answers as #a blessed: held
+golden("main", "", "own", "o0"). golden("base", "#a", "own", "o0"). golden("pr", "#a", "own", "o1").
+golden("base", "#b", "own", "o0"). golden("pr", "#b", "own", "o0"). golden("new", "", "own", "o1").
+-- crossed: #a alone moved it, the stack answers otherwise: met
+golden("main", "", "crossed", "c0"). golden("base", "#a", "crossed", "c0"). golden("pr", "#a", "crossed", "c1").
+golden("base", "#b", "crossed", "c0"). golden("pr", "#b", "crossed", "c0"). golden("new", "", "crossed", "c2").
+-- ledger: #a, #b and main since #b branched all moved it: blessed by the train
+golden("main", "", "ledger", "l1"). golden("base", "#a", "ledger", "l1"). golden("pr", "#a", "ledger", "l2").
+golden("base", "#b", "ledger", "l0"). golden("pr", "#b", "ledger", "l3"). golden("new", "", "ledger", "l4").
+-- behind: main moved it since #b branched, #b did not: as main, held
+golden("main", "", "behind", "m1"). golden("base", "#a", "behind", "m1"). golden("pr", "#a", "behind", "m1").
+golden("base", "#b", "behind", "m0"). golden("pr", "#b", "behind", "m0"). golden("new", "", "behind", "m1").
+-- born: #b adds it: as #b blessed, held
+golden("main", "", "born", "-"). golden("base", "#a", "born", "-"). golden("pr", "#a", "born", "-").
+golden("base", "#b", "born", "-"). golden("pr", "#b", "born", "n1"). golden("new", "", "born", "n1").

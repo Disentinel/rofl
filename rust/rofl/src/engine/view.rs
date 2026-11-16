@@ -176,7 +176,7 @@ impl Eval {
         done.reverse();
         done.into_iter().enumerate().map(|(k, mut clause)| {
             annotate_aggs(&self.h, &mut clause);
-            let id = if k == 0 { r.id } else { self.h.intern(&format!("{}~{k}", self.h.name(r.id))) };
+            let id = if k == 0 { r.id } else { self.h.intern(&format!("{}_v{k}", self.h.name(r.id))) };
             DRule { id, clause, canon: format!("{}~view{k}", r.canon) }
         }).collect()
     }

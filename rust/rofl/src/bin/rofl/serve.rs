@@ -562,7 +562,8 @@ impl Server {
     // was. It is an `ok:false` answer rather than a transport error,
     // because a rejected program is a normal outcome of loading one.
     fn op_load(&mut self, r: &Value) -> Result<Value, String> {
-        let text = match (r.get("path").and_then(|v| v.as_str()), r.get("rofl").and_then(|v| v.as_str())) {
+        let path = r.get("path").and_then(|v| v.as_str());
+        let text = match (path, r.get("rofl").and_then(|v| v.as_str())) {
             (Some(p), _) => std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
             (None, Some(t)) => t.to_string(),
             (None, None) => return Err("load needs `path` or `rofl`".into()),
@@ -570,7 +571,12 @@ impl Server {
         let who = r.get("who").and_then(|v| v.as_str()).map(|s| s.to_string());
         self.get(r)?.guard_permit(&text)?;
         match self.get(r)?.load_delta(&text, who.as_deref()) {
-            Ok((n, a)) => Ok(json!({ "admitted": n, "full": full(a) })),
+            Ok((n, a)) => {
+                // (what a whynot below a cut thaws its file from)
+                let source = path.map_or_else(|| (String::new(), Some(text)), |p| (p.to_string(), None));
+                self.get(r)?.eval.lower_source(source.0, source.1);
+                Ok(json!({ "admitted": n, "full": full(a) }))
+            }
             Err(d) => Err(d.join("\n")),
         }
     }

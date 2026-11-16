@@ -1,4 +1,4 @@
--- oxc-roles.rofl — oxc's raw tree (rust/tools/oxc_scan, [ast_oxc]) into the roles of the JS model.
+-- oxc-roles.rofl — oxc's raw tree (models/lang/js/scanner/oxc_scan, [ast_oxc]) into the roles of the JS model.
 --
 -- The vocabulary is models/lang/js/roles.rofl, loaded beside this file: [value] and [type] hold the
 -- roles of each world, [tree] the structure every world shares. Every rule reads one node and its

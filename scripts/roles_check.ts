@@ -20,7 +20,7 @@ import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const WORLD = path.join(ROOT, 'models/lang/js/roles-oxc.files');
-const OXC = path.join(ROOT, 'rust/tools/oxc_scan/target/release/oxc_scan');
+const OXC = path.join(ROOT, 'models/lang/js/scanner/oxc_scan/target/release/oxc_scan');
 const rofl = path.join(ROOT, `rust/target/${process.env.ROFL_PROFILE ?? 'release'}/rofl`);
 const argv = process.argv.slice(2);
 const flag = (k: string) => { const i = argv.indexOf(k); if (i < 0) return undefined; return argv.splice(i, k === '--break' ? 2 : 1).pop(); };

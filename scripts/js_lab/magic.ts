@@ -4,7 +4,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Rofl } from '../../src/api.ts';
-import { scan } from '../../scanners/oxc_code.ts';
+import { scan } from '../../models/lang/js/scanner/oxc_code.ts';
 import { MODEL_FILES } from '../../notebook/front.ts';
 import { parseProgram } from '../../src/parser.ts';
 

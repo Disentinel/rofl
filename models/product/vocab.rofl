@@ -95,8 +95,8 @@ rel(promises, feature, contract). source(promises, missing).
 rel(has, feature, metric).        source(has, missing).
 rel(aims, metric, target).        source(aims, owner).         lives(aims, "CLAUDE.md, The goal").
 rel(backs, evidence, contract).   source(backs, owner).        lives(backs, "facts/checks.rofl, facts/spec.rofl").
-rel(exercises, evidence, feature). source(exercises, scanner). lives(exercises, "facts/feature-map.rofl, the TypeScript api only").
-rel(measures, evidence, metric).  source(measures, scanner).   lives(measures, "facts/bench.rofl, one benchmark").
+rel(exercises, evidence, feature). source(exercises, scanner). lives(exercises, "facts/feature-map.rofl, the TypeScript api; models/engine/feature-behaviour.rofl, the worlds of npm test over the engine's entries").
+rel(measures, evidence, metric).  source(measures, scanner).   lives(measures, "facts/bench.rofl, one benchmark; models/engine/feature-behaviour.rofl, each world's golden at each tree").
 rel(presents, view, feature).     source(presents, missing).
 rel(presents, view, entry).
 rel(reads, user, view).           source(reads, missing).

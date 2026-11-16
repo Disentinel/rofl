@@ -3,7 +3,7 @@
 ROFL 1.05: a world is a Markdown file of sentences, named `X.rofl.md`, and it
 loads wherever a `.rofl` file loads. The extension is the distinction: a
 `.rofl.md` is executable Markdown, a plain `.md` is a document and no world.
-The JS model rendered under `docs/js/` is `.rofl.md` for the same reason. This page is the writer's side; `sentence-form.md` is
+The JS model rendered under `models/lang/js/docs/` is `.rofl.md` for the same reason. This page is the writer's side; `sentence-form.md` is
 where the form was measured and `roadmap.md` is what 1.05 ships and defers.
 
 ## The whole of the form
@@ -230,7 +230,7 @@ writes the rules, so the desugared world can be read beside the sentences.
 
 - Vocabulary is per file: a file declares every sentence it uses, or lists
   what it reads from another under `Reads:`. The JS model's vocabulary comes
-  in only with a file rendered from it (`docs/js/`); `--vocab FILE` adds one.
+  in only with a file rendered from it (`models/lang/js/docs/`); `--vocab FILE` adds one.
 - A string with a space in it, and a term built by a destructor, work in
   rules but not in a question at the REPL.
 - Tables are Markdown tables; the map form the design asks for is an open

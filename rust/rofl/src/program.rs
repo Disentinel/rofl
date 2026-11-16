@@ -1054,8 +1054,10 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     // A LARGE TEXT IS READ A PIECE AT A TIME: the parser holds four bytes a character and forty a token, ten times
     // the text, so a pack is cut between clauses and each piece parsed and checked before the next. A piece the
     // parser refuses is refused as the whole text is, with the whole text's line.
-    let mut pieces = Pieces { all: rofl_parse::pieces(text, 1 << 20), at: 0, threads: e.par.threads.max(1), lexed: Default::default() };
-    let mut clauses = match rofl_parse::parse_lexed(&mut e.h, pieces.next_piece().unwrap_or_else(|| rofl_parse::lex(""))) {
+    let cols = rofl_parse::is_columns(text);
+    let mut pieces = Pieces { all: if cols { Vec::new() } else { rofl_parse::pieces(text, 1 << 20) }, at: 0, threads: e.par.threads.max(1), lexed: Default::default() };
+    let first = if cols { rofl_parse::columns(&mut e.h, text) } else { rofl_parse::parse_lexed(&mut e.h, pieces.next_piece().unwrap_or_else(|| rofl_parse::lex(""))) };
+    let mut clauses = match first {
         Ok(cs) => cs,
         Err(d) => return refused(e, text, d),
     };

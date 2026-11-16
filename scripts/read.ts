@@ -1,7 +1,7 @@
 // read.ts — the reader as a command: a rendered Markdown file back into rules, measured
 // against the source it was rendered from.
 //
-//   npm run read -- docs/js/js-dataflow.rofl.md rules/js-dataflow.rofl [--out FILE.rofl]
+//   npm run read -- models/lang/js/docs/js-dataflow.rofl.md models/lang/js/rules/js-dataflow.rofl [--out FILE.rofl]
 //   npm run read -- rules/untyped.rofl.md --out FILE.rofl      a file authored as Markdown, no source
 //
 // Executable Markdown ends in `.rofl.md`; a plain `.md` is a document and no world.

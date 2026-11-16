@@ -19,7 +19,7 @@ default: main
 > (`npm run read`) turns it into rules for the goldens and the lint, and the
 > sentence of every relation is declared where the relation is first
 > defined. `signed` is computed by scripts/untyped.ts from the signatures
-> and phrases; `noun_guard` comes from facts/js-phrases.rofl.
+> and phrases; `noun_guard` comes from models/lang/js/facts/js-phrases.rofl.
 
 ## What the reflection and the vocabulary supply
 

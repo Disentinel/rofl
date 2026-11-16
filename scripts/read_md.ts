@@ -1,7 +1,7 @@
 // read_md.ts — the reader as a function: a `.rofl.md` text and a vocabulary in, rules and a report out.
 // No file is read here, so it runs where the engine runs, the browser included; scripts/read.ts is the command.
 //
-// The vocabulary is the renderer's (facts/phrases.rofl, facts/js-phrases.rofl, and whatever else the caller
+// The vocabulary is the renderer's (facts/phrases.rofl, models/lang/js/facts/js-phrases.rofl, and whatever else the caller
 // gives), and the file's own: an anchored head sentence declares the sentence of the relation its anchor
 // names, its typed holes the arguments in order. Every signature and phrase becomes a pattern, a sentence
 // is matched against all of them, and a fragment that matches more than one is an ambiguity and is counted.

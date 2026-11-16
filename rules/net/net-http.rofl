@@ -19,7 +19,7 @@
 --   http_reach(F, H, R)          F, walked through every hop, reaches H
 --   http_unserved(F, X)          F reaches X and no route of X answers it
 --
--- U and P are TEXTS (rules/js-concat.rofl's terms): a string, or cat(A, B),
+-- U and P are TEXTS (models/lang/js/rules/js-concat.rofl's terms): a string, or cat(A, B),
 -- join(A, B), url(Base, Rel), url(A), join(A) over texts; any other leaf is a
 -- value nothing knows, one DYNAMIC piece. The kernel builds no strings, so a
 -- text is cut into segments piece by piece, and the segments are compared.

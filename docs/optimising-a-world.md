@@ -307,7 +307,7 @@ after delta-first, 8 worlds): heads + helpers 1 237 -> 1 144 ms sealed (-7.5%),
 (rounds 1 354 -> 1 386 mcp sealed, +2%) and 1 000-3 000 helper facts a world.
 The same helper under the engine that fired in written order *raised* the probes
 2.5%, because the extra round re-fired `callback_param`; written order measured
--37% sealed for the pair alone. Lint: `twin_bodies`. Applied: `rules/js-dataflow.rofl`.
+-37% sealed for the pair alone. Lint: `twin_bodies`. Applied: `models/lang/js/rules/js-dataflow.rofl`.
 
 ### 3.8 Scoped descent (s11)
 

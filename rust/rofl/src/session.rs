@@ -48,6 +48,9 @@ use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Subst, Sym, Term, TermK};
 
+/// The steps every evaluation of this process took, its rounds included: what `rofl load` says as `cost:`.
+pub static STEPS: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
 /// A world. Built once with [`Session::open`], then forked per unit of work.
 pub struct Session {
     pub eval: Eval,
@@ -381,6 +384,32 @@ impl Session {
                 }
             }
             out.push((rel, persp, args));
+        }
+        Ok(out)
+    }
+
+    /// WHAT A CONE GROWN BELOW THE PLAN'S CUT NEEDS, for a world that dropped its cut books: `texts`, the world's files
+    /// read again, in a world of their own asked `asks`, evaluated through its lower stage alone; what that proves
+    /// outside the cut books and its upper stage reads, as facts written one a line for this world to assert. Empty
+    /// where this world dropped nothing.
+    pub fn lower_lemmas(&self, texts: &[&str], asks: &str) -> Result<String, String> {
+        if self.eval.staged_away.is_none() {
+            return Ok(String::new());
+        }
+        let mut low = Session::fresh(self.eval.budget);
+        low.eval.space = self.eval.space;
+        low.load_all(texts, None).map_err(|(_, d)| d.join("; "))?;
+        low.assert(asks)?;
+        low.eval.reprepare();
+        let Some(st) = low.eval.cut_stage() else { return Ok(String::new()) };
+        low.eval.lower_stage(&st).map_err(|h| describe(&h))?;
+        let mut out = String::new();
+        for id in low.eval.store.all_facts() {
+            let r = low.eval.store.rec(id);
+            if !r.base() && !st.cut.contains(&r.persp) && st.given.contains(&r.rel) && crate::brk!("kept_cone_lemmas_unread" => false; true) {
+                low.eval.store.write_key(&low.eval.h, id, &mut out);
+                out.push_str(".\n");
+            }
         }
         Ok(out)
     }
@@ -874,6 +903,7 @@ impl Session {
             self.eval.store.partial_eval = true;
             e.partial = true;
         }
+        STEPS.fetch_add(spent, std::sync::atomic::Ordering::Relaxed);
         Ok(e)
     }
 
@@ -1409,7 +1439,9 @@ impl Session {
     /// The boundary. Staged `@next` facts are installed here, and here is the
     /// only place a volume may be lifted (measurement 3).
     pub fn tick(&mut self) -> Result<TickOutcome, Halt> {
-        self.eval.tick_advance()
+        let r = self.eval.tick_advance();
+        STEPS.fetch_add(self.eval.steps, std::sync::atomic::Ordering::Relaxed);
+        r
     }
 
     /// Ask one literal, written as ROFL: `edge(a, X)`, `kind[js](F, _)`.
@@ -2118,17 +2150,8 @@ impl Session {
                 continue;
             };
             if !lows.contains_key(file) {
-                let mut eval = self.eval.fork();
-                eval.lower_texts = None;
-                // (a reader of units: the file's lower stage is evaluated over the core alone)
-                if eval.levels.take().is_some() {
-                    eval.store.reads_none();
-                }
-                let r = crate::program::load_program(&mut eval, &texts[file], None);
-                if !r.ok {
-                    return Err(r.diagnostics.join("\n"));
-                }
-                eval.lower_stage(&st).map_err(|e| crate::describe(&e))?;
+                let mut eval = self.eval.thaw(&texts[file], &st).map_err(|e| crate::describe(&e))?;
+                eval.demand.asking = false;
                 lows.insert(file.to_string(), Session { eval, dangling: 0, asks: 0, profiled: true, kept: Default::default(), post: None, sent: Default::default() });
             }
             let low = lows.get_mut(file).expect("put above");
@@ -2273,13 +2296,16 @@ impl Session {
         }).collect();
         // while the scanners run, the world goes cold
         self.cool_round()?;
-        let mut src = String::new();
+        let (mut src, mut cols) = (String::new(), false);
         for (((kind, path), text), run) in todo.iter().zip(runs) {
             let ran = run.join().unwrap_or_else(|_| Err("the scanner's thread failed".into()));
             let rec = scan_rec(kind, path, text, scanners.get(kind).cloned(), ran);
+            cols |= crate::rofl_parse::is_columns(&rec.unit);
             src.push_str(&rec.unit);
             self.eval.scans.push(rec);
         }
+        // a scanner that writes columns makes the whole of them columns, the others' text read as text there
+        if cols { src.insert_str(0, &format!("{}\n", crate::rofl_parse::COLUMNS)); }
         self.load_delta(&src, None).map_err(|d| format!("a scanner's facts were refused: {}", d.join("; ")))?;
         Ok(todo.len())
     }
@@ -2348,6 +2374,17 @@ impl Session {
         match self.eval.whynot_files(&lit, b, vols) {
             Ok(r) => Ok(r),
             Err(Halt::Budget(..)) => Ok(Vec::new()),
+            Err(h) => Err(describe(&h)),
+        }
+    }
+
+    /// `whynot` in one file of a corpus (`Eval::whynot_in`): the file by its node prefix.
+    pub fn whynot_in(&mut self, query: &str, b: &WhynotBounds, file: &str) -> Result<WhynotFile, String> {
+        self.explaining()?;
+        let lit = self.one_lit(query)?;
+        self.cone_holds(&lit)?;
+        match self.eval.whynot_in(&lit, b, file) {
+            Ok(r) => Ok(r),
             Err(h) => Err(describe(&h)),
         }
     }
@@ -2482,7 +2519,7 @@ fn scan_rec(kind: &str, path: &str, text: &str, cmd: Option<String>, ran: Result
     let read = ran.as_ref().map_or(Vec::new(), |out| out.lines().filter_map(|l| l.strip_prefix("-- reads: ")).map(scan_path).collect());
     let unit = match ran {
         Ok(out) => {
-            let n = out.lines().filter(|l| !l.starts_with("--") && l.trim_end().ends_with('.')).count();
+            let n = crate::rofl_parse::scanned_facts(&out);
             format!("{out}\nscan_done({kind}, {path}, {n}).\n")
         }
         Err(e) => format!("scan_failed({kind}, {path}, {}).\n", q(&e)),

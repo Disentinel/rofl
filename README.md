@@ -27,7 +27,7 @@ The kernel is a *generic* inference machine: all semantics — including the
 schema of what a "rule" is and the rules that validate rules — live in the
 graph as data (`boot.rofl`). The engine is Rust (the `rofl` binary under
 `rust/`, one native file); the TypeScript engine under `src/` is the parity
-reference, has zero runtime dependencies (the code scanner is `rust/tools/oxc_scan`, native for the command line and
+reference, has zero runtime dependencies (the code scanner is `models/lang/js/scanner/oxc_scan`, native for the command line and
 wasm for a page) and runs under
 Node ≥ 22.
 
@@ -113,8 +113,8 @@ recommendation[main](ship_it,no_go)  <= r989a9b8b @tick 0
     blocks_on[main](ship_it,tests_pass)  <= r6e89f9d7 @tick 0
 ```
 
-The JS model (`rules/js-*.rofl`, listed by `rules/js.files`) ships for
-`rofl ... @rules/js.files`. The other rule packs in this repository are models
+The JS model (`models/lang/js/rules/js-*.rofl`, listed by `models/lang/js/js.files`) ships for
+`rofl ... @js`. The other rule packs in this repository are models
 OF this repository — its ledger, its own layering — and do not ship.
 
 **Large worlds are the other engine's.** `src/` is built for small ones; the
@@ -134,10 +134,10 @@ points; the whole list is in `package.json`.
 | `src/` | the kernel: parser, store, evaluator, reflection, API, REPL. Zero runtime dependencies, closed vocabulary (below), mechanically checked | `repl` |
 | `boot.rofl` | the semantics as DATA — what a rule is, the rules that validate rules, the audits | loaded by every store |
 | `policy.rofl` `safety.rofl` | **the kernel's own two programs**, carried as data rather than as code — see *The kernel's own programs* | gated by test/kernel-policy-program.test.ts (gate removed 2026-09-11) |
-| `scanners/` | code and cost turned into facts: the JS/TS source scanner, the JS *model*, the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
-| `models/lang/js/` | the roles layer of the JS model (w_l2_roles): the vocabulary `roles.rofl`, worlds `[value]` `[type]` `[tree]`, and `oxc-roles.rofl`, its converter from oxc's tree in `[ast_oxc]`, with the audits a check loads (`roles-oxc.files`); `rules/js-*.rofl` read it, and what they do not read yet comes through `oxc-to-code.rofl`; the `[lifecycle]` world over the model, `lifecycle.rofl` with the host's resources in `lifecycle-host.rofl` (use after death, leaks, no stop) | `test:roles` `ask` |
+| `scanners/` | code and cost turned into facts (the JS/TS scanner lives with its model, in `models/lang/js/scanner/`): the Babel scanner of the self-models (`js.ts`), the Python AST scanner (`py_ast.py`, its model in `rules/py-model.rofl`, grown for the question in `examples/jodit/`), and the self-measuring scanners this repository argues with | `scan` `evalcost` `parsecost` `ruleshape` `perminv` |
+| `models/lang/js/` | **the JS model, a library of the engine** with a version of its own (`library.rofl`: its version, the engine it needs, its files `js.files`, its scanner; docs/cli.md, *Model libraries*): its rules `rules/js-*.rofl`, their tables `facts/js-*.rofl`, the roles layer (`roles.rofl`, worlds `[value]` `[type]` `[tree]`, and `oxc-roles.rofl`, its converter from oxc's tree in `[ast_oxc]`, with the audits a check loads, `roles-oxc.files`), the scanner (`scanner/`: `oxc_scan` and the host facts of `rofl scan`), the rules rendered in sentences (`docs/`), and the `[lifecycle]` world over the model (`lifecycle.rofl`, `lifecycle-host.rofl`) | `@js` `scan` `test:roles` |
 | `models/engine/` | the model of the engine itself: its Rust code scanned by `rust/tools/rs_scan` into `rs_*[rs]` facts, calls resolved where the code names them surely (`code.rofl`), its 17 parts and the glossary's words tied to the code (`parts.rofl`), and what a change touches (`blast.rofl`); the hypotheses over an evaluation's profile, judged by it (`profile.rofl`, world `profile_model`), and the join order planned from it as a fixpoint with min, concluded as the `plan[fixpointplan]` facts the engine obeys (`plan.rofl`, world `plan_dp`); the rest not swept by `npm test` | `engine` `nb` |
-| `rules/` | the inquiry kernel, the decision packs, the JS model's rule packs (`js-*.rofl`: since 1.1 `js-surface.rofl`, the `[surface]` book a file shows the others, docs/surface-split.md, and `js-concat.rofl`, a string built from parts as a node with parts and its text as a term), the service graph (`js-fetch.rofl`, `js-express.rofl`, `js-service.rofl`) and the net library it walks (`net/`: names, addresses, listeners, hops, guards, tls), the stage plan's checks (`stage-plan.rofl`), the aggregates programme (`agg.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` `test:split` |
+| `rules/` | the inquiry kernel, the decision packs (the JS model's rule packs moved to `models/lang/js/rules/`, among them the service graph `js-fetch.rofl`, `js-express.rofl`, `js-service.rofl`) and the net library it walks (`net/`: names, addresses, listeners, hops, guards, tls), the stage plan's checks (`stage-plan.rofl`), the aggregates programme (`agg.rofl`), and the rule packs that used to live in `boot.rofl` | `report` `findings` `test:split` |
 | `shrug.rofl` | the closed vocabulary of a shrug, the third answer: every cause and reason an engine may write in `shrug(Target, Reason, Meta)` (docs/aggregates.md) | compiled into `src/kernel-dense.ts` by `build:dense` |
 | `runtime/` | the report renderer, the admission gate, the scheduler, the tick loop, the port client | `report` `pair` |
 | `adapters/` | the storage port: a `FactStore` behind an interface, with a SQLite adapter, gated by a byte-identical `canonicalState()` against the in-memory reference | `boundary` |
@@ -190,7 +190,7 @@ reaches: the `asks` cone, when it is the whole world, what it saves, what growin
 (every aggregate class as one cell engine with two syntaxes, and the matrix
 that holds the work to it), `surface-split.md` (a file as a volume
 with a resident `[surface]` book of what escapes it: the crossing measured on
-vscode, the book `rules/js-surface.rofl`, the parity world and the lint that hold
+vscode, the book `models/lang/js/rules/js-surface.rofl`, the parity world and the lint that hold
 it, and the driver), `knobs.md` (every flag and `ROFL_*` variable of the tree with
 its verdict: the few an agent uses are CLAUDE.md's table, the rest are oracles of
 a check harness or leftovers).
@@ -214,7 +214,7 @@ The plan itself is the ledger.
 - **The notebook kept alive for the command line** — `notebook/serve.ts`: `npm run nb` keeps its kernel between runs. The first run starts a background process that holds the evaluated code model; later runs send it the notebook over a unix socket and print exactly what an in-process run prints, with the same exit codes. Every run re-reads the notebook, the code files and the read worlds, so an edit is always seen. The daemon exits after 60 idle minutes (`ROFL_NB_IDLE` seconds), a new one starts when the engine's source changes, and a dead or refusing daemon leaves the run to the process itself. Nothing to set up; `ROFL_NB_DAEMON=0` turns it off. Over the Grafema MCP package (40 files) a cell edit is about 9 s through it against about 64 s in a fresh process; `npm run test:nb` pins its answers against a fresh process.
 - **The notebook in VS Code** — `vscode/`: `npm run vscode -- <dir>` opens a window with the extension loaded (VS Code 1.132 or later: it runs the TypeScript unbuilt; the packaged VSIX built by `npm run dist` ships plain JS and needs only 1.101, per `dist/INSTALL.md`); any `.rofl.md` opens as a notebook, prose as Markdown cells, the front matter and the fenced blocks as code cells, and the file is written back byte for byte. Run All goes through the same `runFile` as the command line, in a kernel process of its own that keeps the model loaded (the extension is a thin client: the process VS Code runs it in loads no file of the TypeScript engine, which `models/process/loads.rofl` checks over the tree's imports); each code node in an answer links to its line, a failing never is an error in the Problems panel on its line and on the code lines it names, and *Translate natural cells* inserts the translation as an unsaved edit. *ROFL: Open notebook from GitHub…* opens a notebook of any repository the editor's GitHub account can read, private ones too, without a clone (docs/workbench.md). `npm run test:vscode` (the thin client, the round trip, the smoke run in the installed VS Code and one planted defect; `ROFL_VSCODE=<path of code>` runs another VS Code, a Linux one under `xvfb-run -a`) and `npm run test:vscode:mutants` (three more; `-- --break NAME` runs one by name) are its tests; `cd vscode && npm ci` once for them.
 - **The NPC yard, live** — `playground/npc.html`, built with the playground: `examples/npc` run one tick at a time in the browser, each agent's knowledge, intents, options and chosen act on the page, `why` and `whynot` on any of them at any kept tick, the rule the agents propose from their holes, taken and applied to the past, and the loop the declared tie order walks the yard into, noticed, explained from `tie[audit]` and broken by three rules taken at run time; the night ends at the model's own horizon. The yard's core is `examples/npc/sim.ts`, which `demo.ts` also runs; its sentences are `examples/npc/phrases.rofl`.
-- **The JS model, rendered** — `docs/js/`, the JS model's rule files (twenty-one since 1.3: `js-surface` and `js-concat` joined in 1.1, `js-fetch`, `js-express` and `js-service` in 1.3) as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `facts/js-phrases.rofl`. `npm run view -- docs/js` makes one HTML page of them to open in a browser, with the reader's own Markdown parser (`scripts/md_blocks.ts`). `npm run read` reads a rendered file back into rules (the reading itself is `readMd` in `scripts/read_md.ts`, a function with no file access, which the playground runs in a browser); `npm run untyped` (rules/untyped.rofl.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
+- **The JS model, rendered** — `models/lang/js/docs/`, the JS model's rule files (twenty-one since 1.3: `js-surface` and `js-concat` joined in 1.1, `js-fetch`, `js-express` and `js-service` in 1.3) as Markdown with a link on every use, by `npm run render:js` (needs `cargo build --release` in `rust/`); phrases in `models/lang/js/facts/js-phrases.rofl`. `npm run view -- docs/js` makes one HTML page of them to open in a browser, with the reader's own Markdown parser (`scripts/md_blocks.ts`). `npm run read` reads a rendered file back into rules (the reading itself is `readMd` in `scripts/read_md.ts`, a function with no file access, which the playground runs in a browser); `npm run untyped` (rules/untyped.rofl.md, a world authored as Markdown with no `.rofl` twin, read into rules by `npm run read`) lists the one-letter variables nothing in their rule types.
 - **The rings, in their own words** — `docs/rings/`: the kernel's four programs of rules (`boot.rofl`, `safety.rofl`, `policy.rofl`, `rules/strata.rofl`) and the front end written in ROFL (`examples/ring1/ring1.rofl`, `charclass.rofl`) and its host's contract (`examples/ring1/host.rofl`, checked by `npm run conform`) rendered as sentences by `npm run render:rings`, phrases in `facts/kernel-phrases.rofl` and `facts/ring1-phrases.rofl`; each reads back into its source clause for clause. `docs/rings/README.md` says what is there and what is not.
 
 ## How to run
@@ -283,14 +283,14 @@ asserted as program text.
 ## Code scanner
 
 `npm run scan -- DIR --out code.rofl` turns a JS/TS source tree into the
-facts the JS model reads: `rust/tools/oxc_scan` over each file and the host's
+facts the JS model reads: `models/lang/js/scanner/oxc_scan` over each file and the host's
 path and string facts, as the notebook host gives them. Not part of the
 kernel — it lives outside `src/` and the kernel grep test on purpose. The
 model then runs in the Rust engine:
 
 ```sh
 npm run scan -- path/to/src --out code.rofl
-rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @js code.rofl
 ```
 
 The stages, the relations each writes and the exit codes are in docs/cli.md.
@@ -582,7 +582,7 @@ negated anywhere cannot be answered from a part of the corpus.
   in `runtime/port.ts`), and `rofl load` answers them on the command line:
 
   ```sh
-  rust/target/release/rofl load boot.rofl facts/js-dataflow.rofl rules/js-dataflow.rofl \
+  rust/target/release/rofl load boot.rofl models/lang/js/facts/js-dataflow.rofl models/lang/js/rules/js-dataflow.rofl \
     --why 'flows_to(code, audit)' --whynot 'flows_to(audit, code)'
   ```
 
@@ -614,9 +614,9 @@ variable in it.
 
 ## The JS model
 
-`rules/js-*.rofl` is a model OF JAVASCRIPT — structure, modules, resolution,
+`models/lang/js/rules/js-*.rofl` is a model OF JAVASCRIPT — structure, modules, resolution,
 call graph, data flow, control flow, effects, environments, globals, hosts —
-fed by `rust/tools/oxc_scan` and indexed as a matrix of (node kind × layer)
+fed by `models/lang/js/scanner/oxc_scan` and indexed as a matrix of (node kind × layer)
 cells, each `modelled`, `waived` with a reason, or `not_modelled`. The
 methodology, and the one measurement that decides whether it is science or
 bookkeeping, is `docs/modelling-a-language.md`; `docs/scaling-a-corpus.md` is

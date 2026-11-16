@@ -48,6 +48,42 @@ out. `rofl whynot --all`, `rofl load --whynot-all L` and the protocol's
 `"all": true` print the whole walk; `explain_request(whynot, L)` stores the
 whole walk, and a notebook prints it under `--all`.
 
+**Below a cut, a whynot walks the file, thawed.** A world that cut a book
+(`cut[fixpointplan](Book)`, *Lemma stages*) holds the lemmas of its lower stage
+and not what they were proved from, so a walk of that stage's rules over it
+would name as failed a premise that held. Where the walk reaches a literal the
+lower stage concludes, the literal names its file by a node: the file's text is
+read again, its lower stage evaluated in a fork over the core alone, and the
+walk goes on there, the same text as in a world with nothing cut
+(`Eval::explain_thawed`, `cargo test -p rofl --test kept an_absence`). The
+sources are read when the first walk goes below the cut, and not before. A
+literal there that names no one file is said, not walked: `... is proved in a
+file from [Book], which this world cut; it names no one file: ask it of a node
+of a file`; so is one whose world was not given the files' text and whose
+rules read a cut book; one whose rules read only what the world kept is
+walked where it stands. `rofl serve` thaws from what its `load` ops gave; a
+notebook's kernel is given no text. TypeScript evaluates the world whole and cuts nothing.
+
+**An open whynot over a corpus is a table of files.** Asked of a world read
+from units (*A corpus larger than one heap*) with a variable in the question,
+a literal that holds answers `L holds: N answers in F of G files`, then the
+files that hold most with their counts and the first that hold none
+(twelve of each), read off the units, nothing walked. A file is named by its
+node prefix (`n` and 16 hex digits), an answer is of the file its first node
+names. **A row opens with `--in NODE`** (a node of the file, or its prefix):
+`rofl whynot 'dead(F, E)' --in n0123456789abcdef ...` walks the question in
+that file alone, the candidates of the other files not followed, thawing it
+where the walk goes below the cut, and closes with `K answers in this file`;
+`--json` gives `{"ok", "file", "found", "stops", "text"}`. `--in` works over a
+world evaluated whole as well.
+
+What it costs (vscode, release, 4 cores, 2026-11-15): the table takes what the
+ask it counts takes, a bound whynot or an opened row 1 to 2 s more: 0.9 s and
+1.6 s at 250 files, 3.1 s and 5.2 s at 1000 with 3.6 to 4.9 GB resident. The
+seconds past the first are the kept world opened whole, the same for `ask`
+(`w_a_kept_world_opens_whole`). A bare name is read in `[main]` by `whynot`
+and in any book by `ask`: write the book, `calls[code](A, B)`.
+
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
@@ -76,21 +112,22 @@ notebook over code (`code:`, `model: js`) and `--json` are not native yet: it sa
 `rofl ask`, `rofl why` and `rofl whynot` do the same: the world asks the relations
 their question names (`asks(R)`), so only the rules those reach run; asked later
 about a relation outside what its kept world asked, that world grows its cone by
-delta. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
+delta; a world that dropped what is below a plan's cut (`cut[fixpointplan]`) proves
+the lemmas the grown cone needs again from its files, by their lower stage alone,
+and takes them in with the asks, said on stderr. `rofl excise`, `--state`, `--ticks`, `--retract` and `--explain` keep every
 rule, and so does `rofl load`, whose answers whycheck holds to the reference. At
 700 vscode files with the JS model: 49 s and 2.1 GB against 104 s and 3.4 GB.
 A world is kept only when the memory the process may still use holds about three
 times its volume (indexing it for a delta and writing it); otherwise it is
 answered and not kept, said on stderr.
 
-**`@LIST`** stands for the files LIST names, one a line, each read from LIST's
-directory. `@rules/js.files` is the JS model, the files the notebook host
-loads (`notebook/front.ts` `MODEL_FILES`; `npm test` fails when the two differ).
-A LIST that is no file from the current directory is read from the tree the
-command came with: the tree above the path the binary was called by (the npm
-package calls it by a path inside itself), else the one above the binary. So
-`@rules/js.files` works from any directory, and a `.rofl.md`'s vocabulary is
-found the same way.
+**`@NAME`** is the model library NAME (*Model libraries*, below): `@js` is
+the JS model. **`@LIST`**, a path, stands for the files LIST names, one a
+line, each read from LIST's directory. A library or a LIST that is not found
+from the current directory is read from the tree the command came with: the
+tree above the path the binary was called by (the npm package calls it by a
+path inside itself), else the one above the binary. So `@js` works from any
+directory, and a `.rofl.md`'s vocabulary is found the same way.
 
 **`roflenox://HOST/IDENTITY/BOOK`** stands for the book BOOK as IDENTITY signed
 it on that Roflenox node, every batch of the chain checked (guide/ADAPTERS.md,
@@ -326,13 +363,66 @@ by delta.
 A refusal wins over a partial answer: a run with a refused question exits 4.
 A state dump of a cut world exits 0; its holes are in the dump.
 
+## Model libraries
+
+A model of a language is a library of the engine, kept in a folder of its own,
+`models/lang/NAME/`, with a version of its own. The JS model is the first:
+`models/lang/js/` holds its rules (`rules/`), their tables (`facts/`), its
+roles and converter (`roles.rofl`, `oxc-roles.rofl`), its scanner
+(`scanner/`: oxc_scan and the host facts), its rendered docs (`docs/`) and
+its manifest, `library.rofl`. The manifest is facts:
+
+| fact | says |
+|---|---|
+| `library(js, "1.0.0")` | the library and its version |
+| `needs_engine(js, "1.7.0")` | the oldest engine it runs on; an older one refuses `@js`, naming both versions (exit 1) |
+| `files(js, "js.files")` | the list of its files in load order, from its folder; `npm test` holds it to `notebook/front.ts` `MODEL_FILES` |
+| `scanner(js, "rofl scan", columns)` | the command that turns a directory of source into the facts the model reads, and the form it writes them in (`text` or `columns`, below) |
+
+The engine knows no library by name: `@js` reads `models/lang/js/library.rofl`
+of the tree above the current directory, else of the tree the command came
+with. The scanner is a program of its own, never built into the engine:
+`oxc_scan` ships beside `rofl` in each platform package, and a world names it
+as its scanner (*A world that asks for its own input*). Its rule worlds are
+checked by `npm test` under the names they always had (`rules_js-dataflow`).
+
+**The scanner's contract: text or columns.** A scanner writes base facts on
+its standard output, in either of two forms, and both engines read both; the
+form is told by the text itself. *Text* is ROFL source, a fact a line. The
+*column form* opens with the line `-- rofl columns 1` among its first comments
+and holds, per source file, a table of the terms it names and a block a
+relation of the numbers of those terms, a column an argument:
+
+```
+-- rofl columns 1
+-- reads: src/a.js
+T 3
+a n3f2c9e0a1b2c3d4_1
+a Identifier
+s src/a.js
+R node ast_oxc 3 1
+0
+1
+2
+```
+
+`T N` opens a table of N terms, one a line: `a NAME` an atom, `s TEXT` a
+string (`\\`, `\n`, `\r` escaped), `i N` an integer. `R REL BOOK ARITY ROWS`
+is ROWS facts of `REL[BOOK]` (`-` the bare book), then ARITY lines, each the
+column of one argument as table numbers in base 36. A table holds until the
+next, so the scanner keeps no state across files; node ids stay the hashes
+they are in text. Any other line is text, read as text is (a `-- ` line a
+comment). `rofl scan` writes columns (vscode's `vs/base/common`, 155 files:
+16.7 MB against 65.9 MB of text, the same facts) unless it is asked to keep the
+ids of a previous scan (`ROFL_SCAN_PREVIOUS`), when it writes text.
+
 ## JS code, through the Rust engine
 
 Two commands, a directory of JS or TS in, an answer out:
 
 ```sh
 npm run scan -- path/to/src --out code.rofl          # installed from npm: rofl scan path/to/src --out code.rofl
-rofl why 'flows[code]("api/server.js", "api/users.js")' @rules/js.files code.rofl
+rofl why 'flows[code]("api/server.js", "api/users.js")' @js code.rofl
 ```
 
 From the npm package `rofl scan` is `npm run scan --`, and a world that asks for
@@ -340,17 +430,17 @@ its own input names it as its scanner: `scanner(js, "rofl scan path/to/src")`.
 
 | stage | runs on | reads | writes |
 |---|---|---|---|
-| `npm run scan` | node: `scanners/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
-| the scanner | `rust/tools/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `rust/tools/oxc_scan/src/main.rs` |
-| the host facts | `playground/host.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
-| the model | `rofl`, Rust | `@rules/js.files` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`docs/js/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
+| `npm run scan` | node: `models/lang/js/scanner/cli.ts` | every `.js .ts .tsx .mjs .cjs .jsx .mts .cts` under the directory, `node_modules`, dot directories, `.d.ts` and `.min.js` left out | `code.rofl` |
+| the scanner | `models/lang/js/scanner/oxc_scan` (oxc, parallel; built by cargo on first use, else the one beside the installed engine) | one file's text, named by its path from the directory | `node[ast_oxc](Id, Kind, File)`, `line[ast_oxc](Id, Line)`, `start[ast_oxc](Id, Offset)`, `child[ast_oxc](Parent, Field, Index, Child)`, `attr[ast_oxc](Id, Key, Value)`, `file[ast_oxc](Root, File)`, `parse_error[ast_oxc](File, Message)`; the contract is the header of `models/lang/js/scanner/oxc_scan/src/main.rs` |
+| the host facts | `models/lang/js/scanner/host_facts.ts` `hostFacts` | the paths, and every string a file holds | `has_file[fs](Dir, Name)` and `has_dir[fs](Parent, Name)` (the files and directories in their own ledger, a directory named by its path, `"."` the root; the model joins a path with `concat`) and `str_segs`, `str_seg`, `str_char0`, `str_scheme` (each string cut the way a module specifier is read); the strings `[code]` |
+| the model | `rofl`, Rust | `@js` and `code.rofl` | the model's relations: `calls`, `flows`, `effect_of`, ... (`models/lang/js/docs/` renders each file of it in sentences). `models/lang/js/oxc-roles.rofl` reads the raw tree into the roles of `roles.rofl`; the rules read the roles |
 
 `npm run scan` prints the facts to stdout without `--out`, names every file no
 parser read on stderr and then exits 2. The facts are the ones the notebook
 host gives a `.rofl.md` with `model: js` (`npm run nb`, the VS Code worker): both scan with oxc, the notebook host and the
-browser page (playground, workbench) through `rust/tools/oxc_scan` compiled to wasm (`scanners/oxc_wasm.ts`, the facts of
+browser page (playground, workbench) through `models/lang/js/scanner/oxc_scan` compiled to wasm (`models/lang/js/scanner/oxc_wasm.ts`, the facts of
 `--no-start` byte for byte; `oxc_scan.wasm` is built by `cargo build --release --lib --target wasm32-unknown-unknown` in
-`rust/tools/oxc_scan`, and `rustup target add wasm32-unknown-unknown` is its one prerequisite), `scanners/cli.ts` for a
+`models/lang/js/scanner/oxc_scan`, and `rustup target add wasm32-unknown-unknown` is its one prerequisite), `models/lang/js/scanner/cli.ts` for a
 directory through the native binary. A notebook also reads `ast_node`, `ast_child`, `ast_attr` over oxc's tree
 (`models/lang/js/oxc-to-code.rofl`).
 
@@ -376,8 +466,8 @@ and as much for each `rofl why` run alone, since each builds the world.
 vocabulary of roles (`ref`, `binds`, `callee`, `nth`, `executes_if`, ...) in
 two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `oxc-roles.rofl`
 writes them from oxc's tree in `[ast_oxc]` (the raw relations are `node`, `child`, `attr`,
-`line` and `file`: a ledger is named by its book, not by a prefix). `rules/js-*.rofl` read
-the roles of the oxc converter (`rules/js.files`); `npm run test:roles` drives the layer, and
+`line` and `file`: a ledger is named by its book, not by a prefix). `models/lang/js/rules/js-*.rofl` read
+the roles of the oxc converter (`models/lang/js/js.files`); `npm run test:roles` drives the layer, and
 `rofl load @models/lang/js/oxc.files code.rofl` writes the roles of a corpus scanned by `npm run scan`. Pass `--budget` and `--space` at hundreds of files: the
 default budget cuts the state without saying so.
 
@@ -387,7 +477,7 @@ default budget cuts the state without saying so.
 npm run scan:oxc -- path/to/src --out oxc.rofl
 ```
 
-`rust/tools/oxc_scan` (its own cargo workspace, so the engine's build never
+`models/lang/js/scanner/oxc_scan` (its own cargo workspace, so the engine's build never
 compiles oxc) reads the same files as `npm run scan` through oxc and writes
 oxc's own tree, the Rust structs of `oxc_ast` and not its ESTree output, raw
 and without judgement into the `[ast_oxc]` perspective: `node(Id, Kind,
@@ -419,7 +509,7 @@ files) 1.1 s against 18.7 s for `npm run scan`, 304 MB against 241 MB.
 
 ```sh
 npm run scan -- path/to/src --out code.rofl
-rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @rules/js.files models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
+rofl ask 'leaks_at[lifecycle](Kind, How, File, Line)' @js models/lang/js/lifecycle-host.rofl models/lang/js/lifecycle.rofl code.rofl
 ```
 
 `models/lang/js/lifecycle.rofl` is the world `[lifecycle]` over the JS model
@@ -445,7 +535,7 @@ The words of behaviour the model derives live in their worlds (the doc «Сло�
 ролей модели JS», «Миры поведения»): `suspends[execution](Seq, I)`,
 `hidden_call[execution](N, How)`, `transfers[execution](X, Kind)`,
 `fallback[execution](F, Name, Init)`, `coerces[execution](N, X)`,
-`narrows[type](O)`; ask them with `@rules/js.files` alone.
+`narrows[type](O)`; ask them with `@js` alone.
 
 ## A world that asks for its own input
 
@@ -454,12 +544,12 @@ of input and asks for paths; each evaluation runs every new request at once,
 loads what the scanner prints, and evaluates again, until nothing new is asked.
 
 ```
-scanner(js, "node --experimental-strip-types scanners/cli.ts examples/scan/src").
+scanner(js, "node --experimental-strip-types models/lang/js/scanner/cli.ts examples/scan/src").
 scan_request(js, "main.js").
 scan_request(js, F) :- depends[code](_, F).
 ```
 
-`rofl load @rules/js.files examples/checks/scan-world.rofl` scans `main.js`,
+`rofl load @js examples/checks/scan-world.rofl` scans `main.js`,
 then `lib/greet.js` that it imports, then `lib/shout.js`, and never
 `lib/unused.js`. A scanner is any command: the path is its last argument and
 what it prints is loaded as ROFL, rules as well as facts. Each request runs
@@ -473,7 +563,7 @@ on stderr, `[partial: a scan failed ...]` under the rows (`"partial":true` in
 `--json`), exit 5. The world itself holds `scan_failed` to ask about.
 
 **A scan is kept.** A scanner that names what it read, a `-- reads: PATH` line
-for each file and directory (`scanners/cli.ts` names the file it parsed and
+for each file and directory (`models/lang/js/scanner/cli.ts` names the file it parsed and
 every directory it listed), has its output kept under
 `$XDG_CACHE_HOME/rofl/scans` (else `~/.cache/rofl/scans`), each read stamped:
 a file by its bytes, a directory by the names in it. The next run takes the
@@ -484,7 +574,7 @@ being the model's evaluation.
 
 A file scanned again for a kept world (`rofl ask` after an edit) is handed
 its previous output, the stale kept one, in `ROFL_SCAN_PREVIOUS`, and
-`scanners/cli.ts` gives a node it matches there its old id: a local renamed
+`models/lang/js/scanner/cli.ts` gives a node it matches there its old id: a local renamed
 moves the facts that hold its name, not those of every statement naming it.
 What it prints then is kept marked `-- inherited` and answers only such a
 rescan; a world evaluated from its files (`rofl load`, `npm test`) scans from
@@ -549,7 +639,7 @@ units settled again, S of them concluding what they had`; the unit of the edited
 and is settled again where one of those stretches was replaced or a fact came or went under such a key; a group is
 mended, its firings carried where their premises stand, where it read no aggregate (`engine/levels.rs`). The answers
 are those of the files evaluated anew (`cargo test -p rofl --test kept`). A file come or gone is computed anew.
-A `why --all` of such a world unfolds a lemma over the core and its file alone; a `whynot` nested inside an unfolded
+A `why --all` of such a world unfolds a lemma over the core and its file alone (the file thawed, as a `whynot` below the cut walks it); a `whynot` nested inside an unfolded
 lemma may name another failed premise than the world whole does (`f_levels_are_the_one_path_by_volumes`).
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
 on Rust (`check_opt(W, one_engine, rust)`). The engine does not yet derive a stage from what is read and asked; a
@@ -557,7 +647,7 @@ stage is the plan's mark.
 
 ## A corpus larger than one heap
 
-**`rofl ask` and `rofl why` answer a corpus by volumes, by themselves.** When
+**`rofl ask`, `rofl why` and `rofl whynot` answer a corpus by volumes, by themselves.** When
 the world's facts name two or more files (a node id's prefix, `n<16 hex>_`) and
 hold 32 MB or more between them (below that the whole world is as fast), the
 facts are cut by file and the world is settled BY LEVELS (`engine/volumes.rs`,
@@ -581,7 +671,8 @@ questions, and a `why` is its proof (a lemma of a cut book is where it stops;
 facts in their units`, `diag: levels: of R rules B below, ...` with the
 rules left to the last unit by their shape, and `diag: levels: ms a layer, ...`:
 for each layer the milliseconds before its units, then at each depth of them
-from the files up. What is kept beside the question's
+from the files up, and `diag: levels: the reader's unit ... took N ms`: the rules
+left to the last unit, fired whole over the layers, which no layer's time holds. What is kept beside the question's
 slot under `~/.cache/rofl/worlds`: the reader (`<slot>.q<sum>.vol`, the core it
 stands on), the names (`.names`), the units as segments (`.u<n>`, the newest
 named in `.units`) and the registry (`.scroll`). The next question over the
@@ -600,7 +691,10 @@ files 60 to 68 s from one hour to the next on a shared machine, a third of it
 the files' own rules; one fact edited in one file of 250 and asked again, 4.2
 to 5.2 s. Four files to a unit is the owner's trade between
 the two (sixteen: 20.7 s, 64 s and 9.2 s; one: 24.6 s, 93 s and 3.9 s;
-`f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). `whynot`, `excise`,
+`f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). A `whynot` is walked over the reader, the units read
+where they lie, and a file is thawed where the walk goes below a cut
+(*Below a cut*, above; not yet measured at the reference scale, and the first
+thaw of a run reads every source to cut its file out of them). `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.
@@ -608,7 +702,7 @@ the two (sixteen: 20.7 s, 64 s and 9.2 s; one: 24.6 s, 93 s and 3.9 s;
 **The design the owner agreed** (2026-10-25): a file is scanned into a volume of
 its own, the volume is cooled to disk and stays there until a question needs
 it, and beside it lives the file's `[surface]`, a thin volume of what escapes
-the file (`rules/js-surface.rofl`). The design is in
+the file (`models/lang/js/rules/js-surface.rofl`). The design is in
 docs/volumes-and-residency.md (why a corpus can stay cold),
 docs/surface-split.md (what crosses files, the book, the driver) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
@@ -687,6 +781,13 @@ there because a unit read back from disk is resident and not of the heap).
 A part is what was asked of the allocator, a vector's whole capacity with it; a capacity never written is not resident,
 which is why the heap is above the resident peak (reserving the witnesses' vectors whole beforehand moved the resident
 peak by nothing). They vary with the allocator: no golden reads them.
+
+**What an evaluation cost**, in the units of the walls: `rofl load` says on stderr `cost: 892 steps, 961 rows at
+peak`, the steps of every evaluation of the run (its rounds and ticks included; what `--budget` bounds) and the most
+rows the world held (what `--space` bounds). It is said with the state: a run that answers a question (`rofl ask`, `--ask`, `--why`) says none, and a world
+opened from a kept file evaluated nothing and says none. The
+two repeat from run to run, so they are blessed: `golden_cost(World, Steps, PeakRows)` in facts/goldens.rofl, and
+`npm test` is red on a world that took other steps or rows (`cost: steps 892->901, peak rows 961->961`).
 Rows read are deterministic, so the same world profiles the same on every machine; no time is written. The numbers are
 the evaluation's before the profile's readers ran, and are written once per session. examples/profile/chain.rofl asks
 the questions a rule's author asks of it (a rule kept in written order, a premise that scans where it should look up, a

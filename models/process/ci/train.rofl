@@ -1,0 +1,28 @@
+-- models/process/ci/train.rofl — which golden the merge train may bless by itself. The train (scripts/merge_train.ts,
+-- .github/workflows/merge-train.yml) stacks the pull requests labelled `queue` on main and blesses the goldens of
+-- the stack once. A golden is a world's answer; a world's answer is moved by whoever changed what it reads. Facts:
+-- golden(Side, P, World, Hash) for every world named on any side, "-" where a side has no such world:
+--   golden("main", "", W, H)   main, where the train starts
+--   golden("base", P, W, H)    main where pull request P branched off
+--   golden("pr", P, W, H)      what P blessed
+--   golden("new", "", W, H)    what the stack answers, blessed by the train
+-- A world moved by one party alone must answer as that party blessed it; a world nobody moved, as on main. A world
+-- two parties moved has an answer neither of them saw, and the train's blessing is the decision (the ledger's worlds,
+-- which every pull request moves). Any other answer is two changes meeting where neither looked: the train stops.
+
+edb(golden).
+
+world(W) :- golden(_, _, W, _).
+moved(P, W) :- golden("pr", P, W, H), golden("base", P, W, B), H != B.
+party(W, P) :- moved(P, W).
+party(W, "main") :- golden("main", _, W, H), golden("base", _, W, B), H != B.
+touched(W) :- party(W, _).
+shared(W) :- party(W, A), party(W, B), A != B.
+
+expect(W, H) :- world(W), not touched(W), golden("main", _, W, H).
+expect(W, H) :- party(W, "main"), not shared(W), golden("main", _, W, H).
+expect(W, H) :- moved(P, W), not shared(W), golden("pr", P, W, H).
+
+-- THE VERDICT: a world the stack answers otherwise than the one party that moved it, or than main when none did
+met(W, Got, Want) :- expect(W, Want), golden("new", _, W, Got), Got != Want.
+reblessed(W) :- shared(W), golden("new", _, W, H), golden("main", _, W, M), H != M.

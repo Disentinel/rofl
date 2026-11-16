@@ -34,8 +34,10 @@ pub struct Graph {
 
 /// What a walk forward from a component reached, as a bit per node, kept while the graph stands: a test of both ends
 /// asked again from one start reads a bit. Emptied whole past MEMO_BYTES.
+/// Beside it, from a start node, the node each other is first reached from by a walk breadth first (`NONE` where
+/// none): a shortest path to any end read backward.
 #[derive(Default)]
-struct Memo(std::sync::Mutex<(FxMap<u32, std::sync::Arc<Vec<u64>>>, usize)>);
+struct Memo(std::sync::Mutex<(FxMap<u32, std::sync::Arc<Vec<u64>>>, usize)>, std::sync::Mutex<(FxMap<u32, std::sync::Arc<Vec<u32>>>, usize)>);
 
 impl Clone for Memo {
     fn clone(&self) -> Memo {
@@ -181,23 +183,33 @@ impl Graph {
 
     /// The node before `d` on a shortest path from `a`, None where no path leads there.
     fn pred(&self, a: u32, d: u32) -> Option<u32> {
-        let floor = self.comp[d as usize];
-        let mut from: FxMap<u32, u32> = FxMap::default();
+        Some(self.from(a)[d as usize]).filter(|p| *p != NONE)
+    }
+
+    fn from(&self, a: u32) -> std::sync::Arc<Vec<u32>> {
+        if let Some(r) = self.memo.1.lock().unwrap().0.get(&a) {
+            return r.clone();
+        }
+        let mut from = vec![NONE; self.nodes.len()];
         let mut q = std::collections::VecDeque::from([a]);
         while let Some(x) = q.pop_front() {
             for k in self.ostart[x as usize]..self.ostart[x as usize + 1] {
                 let y = self.oadj[k as usize];
-                if self.comp[y as usize] < floor || from.contains_key(&y) {
-                    continue;
+                if from[y as usize] == NONE {
+                    from[y as usize] = x;
+                    q.push_back(y);
                 }
-                from.insert(y, x);
-                if y == d {
-                    return Some(x);
-                }
-                q.push_back(y);
             }
         }
-        None
+        let r = std::sync::Arc::new(from);
+        let mut m = self.memo.1.lock().unwrap();
+        m.1 += r.len() * 4;
+        if m.1 > MEMO_BYTES {
+            m.0.clear();
+            m.1 = r.len() * 4;
+        }
+        m.0.insert(a, r.clone());
+        r
     }
 
     fn reached(&self, a: u32) -> std::sync::Arc<Vec<u64>> {
@@ -233,6 +245,25 @@ impl Graph {
     pub fn step_of(&self, a: Term, d: Term) -> Option<Term> {
         let (a, d) = (self.at(a)?, self.at(d)?);
         self.pred(a, d).map(|p| self.nodes[p as usize])
+    }
+
+    /// The nodes from `d` up a shortest path to `a`, `d` first and `a` last: `step_of` down the whole chain, from one
+    /// search.
+    pub fn steps(&self, a: Term, d: Term) -> Option<Vec<Term>> {
+        let (av, dv) = (self.at(a)?, self.at(d)?);
+        let from = self.from(av);
+        let mut out = vec![d];
+        let mut c = dv;
+        loop {
+            c = Some(from[c as usize]).filter(|p| *p != NONE)?;
+            out.push(self.nodes[c as usize]);
+            if c == av {
+                return Some(out);
+            }
+            if out.len() > self.nodes.len() + 1 {
+                return None;
+            }
+        }
     }
 
     /// The rules that make the row `(a, d)`: the base where the edge is, the step where an edge into `d` leaves a node

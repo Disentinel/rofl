@@ -27,8 +27,8 @@ const REFUSED: Record<string, string> = {
   'examples/checks/agg-int-range-literal.rofl': 'a world written to be refused: a literal of 2^60 (check_refuses in facts/checks.rofl)',
   'guide/examples/typo.rofl.md': 'the guide\'s world written with a typo, to show what a sentence not read looks like',
   // renderings of the model the reader cannot read back as a world; no golden loads docs/
-  'docs/js/js-attrs.rofl.md': 'the reader writes $var(?X)', 'docs/js/js-pack-home.rofl.md': 'the reader writes ?X', 'docs/js/js-vocabulary.rofl.md': 'the reader writes ?X',
-  'docs/js/js-phrases.rofl.md': 'the reader writes a backtick', 'docs/rings/boot.rofl.md': 'the reader writes ?X', 'docs/rings/host.rofl.md': 'the reader writes ?X',
+  'models/lang/js/docs/js-attrs.rofl.md': 'the reader writes $var(?X)', 'models/lang/js/docs/js-pack-home.rofl.md': 'the reader writes ?X', 'models/lang/js/docs/js-vocabulary.rofl.md': 'the reader writes ?X',
+  'models/lang/js/docs/js-phrases.rofl.md': 'the reader writes a backtick', 'docs/rings/boot.rofl.md': 'the reader writes ?X', 'docs/rings/host.rofl.md': 'the reader writes ?X',
   'docs/rings/ring1.rofl.md': 'the reader writes ?X', 'docs/rings/safety.rofl.md': 'the reader writes ?X',
 };
 const WARNED: string[] = [];

@@ -74,7 +74,7 @@ export class Vocabulary {
   /** The phrase files a tree keeps, if present, then whatever else is given. */
   static fromFiles(root: string, paths: string[]): Vocabulary {
     const v = new Vocabulary();
-    for (const p of [`${root}facts/phrases.rofl`, `${root}facts/js-phrases.rofl`, ...paths]) if (existsSync(p)) v.addText(readFileSync(p, 'utf8'));
+    for (const p of [`${root}facts/phrases.rofl`, `${root}models/lang/js/facts/js-phrases.rofl`, ...paths]) if (existsSync(p)) v.addText(readFileSync(p, 'utf8'));
     return v;
   }
 

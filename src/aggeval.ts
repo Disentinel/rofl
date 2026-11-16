@@ -8430,7 +8430,7 @@ export class AggEval {
   private whynotFilesAt(lit: Lit, b: { maxDepth: number; maxNodes: number; all?: boolean }, vols: [string, string][]): WhynotFile[] {
     const names = new Map(vols), lens = [...new Set(vols.map(([p]) => p.length))];
     const volOf = (t: Term): string | undefined => {
-      if (t.k === 'a' || t.k === 'f') for (const n of lens) { const v = names.get(t.name.slice(0, n)); if (v !== undefined) return v; }
+      if (t.k === 'a' || t.k === 'f' || t.k === 's') for (const n of lens) { const v = names.get((t.k === 's' ? t.v : t.name).slice(0, n)); if (v !== undefined) return v; }
       if (t.k === 'f') for (const a of t.args) { const v = volOf(a); if (v !== undefined) return v; }
       return undefined;
     };

@@ -8,6 +8,7 @@
 --                variant (`"sum" => AggOp::Sum`, matched again in the fold), `true` in a field a flag sets, `Some`.
 --   FEATURE      entry points that share a behaviour: one capability, said in several ways.
 --   CONTRACT     the names said inside the behaviour of another.
+-- And a WORD: a name the engine interns from a literal, which a world says by writing a relation or a book so named.
 --
 -- It reads the Rust model over the roles (models/lang/rust: names, calls, flow) and nothing of the parser.
 -- A dispatcher is tied to its modality by hand, as a part is tied to its modules; one the table does not hold is
@@ -15,7 +16,7 @@
 
 -- ===================================================================== THE WAYS IN
 -- modality(Dispatcher, Kind): verb, flag, op (of rofl serve), builtin, aggregate, declaration, marker, auth
--- (how an adapter signs in), says (the reasons the engine names in an answer: the out side of a contract).
+-- (how an adapter signs in), cell (the question a notebook line asks), says (the reasons the engine names in an answer: the out side of a contract).
 modality("bin::rofl::run", verb).
 modality("bin::rofl::load::parse", flag).
 modality("bin::rofl::seed::parse_args", flag).
@@ -30,6 +31,8 @@ modality("rofl::cell::AggOp::from_name", aggregate).
 modality("rofl::cell::IvFn::from_name", aggregate).
 modality("rofl::structure::check_decl", declaration).
 modality("rofl::reflect::Temporal::from_marker", marker).
+modality("rofl::md::nb::answer", cell).
+modality("rofl::md::prose_split", cell).
 modality("rofl::net::declared", auth).
 modality("rofl::net::credential", auth).
 modality("rofl::engine::agg_refusal_text", says).
@@ -176,6 +179,15 @@ explained(D, Name) :- does(D, Name, _).
 explained(D, Name) :- far_site(D, Name, _).
 explained(D, Name) :- reads(D, Name, _).
 by_value[audit](D, Name) :- entry(D, Name), not explained(D, Name).
+
+-- ===================================================================== A WORD THE ENGINE READS
+-- a name interned from a literal (`h.intern("cut")`): a relation or a book a world may write, read by the engine in
+-- that function. Its behaviour here is that function alone: where the facts found under the name are read from
+-- there on is carried by a symbol, which the model does not follow yet.
+word_at(F, Name) :- callee[value](C, M), member[value](M, _, "intern"), nth[tree](C, 0, L), literal[value](L, Name),
+                    string is type_of(Name), in_fn[rust](F, C), not test_fn[rust](F).
+entry_kind(D, Name, word) :- word_at(F, Name), fn_q[rust](F, D).
+does_fn(D, Name, F) :- word_at(F, Name), fn_q[rust](F, D).
 
 -- ===================================================================== FEATURE
 differs(D, A, B) :- does(D, A, H), entry(D, B), not does(D, B, H).

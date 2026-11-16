@@ -87,7 +87,7 @@ internals — so the hot set becomes core + touched volumes + all exports.
 resolves imports, calls, re-exports and `require` across files (at 500 files of
 vscode, 0.56% of derived facts have a witness that names two files), so the
 statements above about 193 same-file `resolves` describe the model of
-2026-09-09. The crossing edge is the `[surface]` book, `rules/js-surface.rofl`:
+2026-09-09. The crossing edge is the `[surface]` book, `models/lang/js/rules/js-surface.rofl`:
 a rule that joins two files reads the other one only through `[surface]`, and
 each file evaluated alone with the others' surface equals the whole world, fact
 for fact, in both ingest orders (world `vscode_surface_split`, `npm run
@@ -136,7 +136,7 @@ the domain and start being about storage, and could not be carried to another
 layout.
 
 **The volume must be readable from the key.** Today it already is, but by
-accident: `rust/tools/oxc_scan` mints node ids as `n<hash of path>_<counter>`, so
+accident: `models/lang/js/scanner/oxc_scan` mints node ids as `n<hash of path>_<counter>`, so
 the file is a prefix of every id. The measurement above rests on that artefact.
 Make it deliberate.
 

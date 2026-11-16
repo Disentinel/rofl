@@ -54,9 +54,9 @@ one of them, and the round trip is the proof that they agree.
   with its reason), a `Reads` list (its imports, one line per source and
   book; a relation defined outside these files reads as its sentence,
   carries the anchor every use links to, and is grouped by where its rows
-  come from: `from the scanner:`, `from facts/js-env.rofl:`), a `Words`
+  come from: `from the scanner:`, `from models/lang/js/facts/js-env.rofl:`), a `Words`
   glossary, then the essay. A declared table says the same beside itself:
-  `rows in Words`, `rows in this file`, `rows from facts/js-callgraph.rofl`,
+  `rows in Words`, `rows in this file`, `rows from models/lang/js/facts/js-callgraph.rofl`,
   `rows from the scanner`, or `no rows: declared so a rule may read it`.
   The renderer finds what a .rofl file holds (the fact packs are given with
   `--tables`); what no file holds is declared beside the phrases,
@@ -126,7 +126,7 @@ What it took:
   declared tables declare the same way under `Declared as facts:`. The
   reader learns these before it parses anything, so a sentence may be used
   above its definition. The JS vocabulary now comes only with a file
-  rendered from the JS model (`docs/js/`); any other file brings its own,
+  rendered from the JS model (`models/lang/js/docs/`); any other file brings its own,
   plus `--vocab` for a shared one.
 - **A world authored as Markdown is a world.** `scripts/md_world.ts` reads
   it into rules under the temp directory; the goldens and the lint load it
@@ -190,8 +190,8 @@ Measured against the host reader's own matches, sentence for sentence:
 | file | sentences | identical |
 |---|---|---|
 | `rules/untyped.rofl.md` | 43 | 43 |
-| `docs/js/js-structure.rofl.md` | 21 | 21 |
-| `docs/js/js-dataflow.rofl.md` | 461 | 461 |
+| `models/lang/js/docs/js-structure.rofl.md` | 21 | 21 |
+| `models/lang/js/docs/js-dataflow.rofl.md` | 461 | 461 |
 
 None ambiguous, none divergent, none refused, at 186 ms a sentence over
 870 templates. Three shapes were refused on the way and are in the grammar
@@ -207,7 +207,7 @@ roadmap names; ring 1 is measured against it and does not replace it yet
 
 ## Open decisions
 
-1. **Renames.** `docs/js/index.md` lists 842 "proposed renames" because 842
+1. **Renames.** `models/lang/js/docs/index.md` lists 842 "proposed renames" because 842
    of 855 signatures name the relation differently. The signature is the
    sentence and the relation name is the handle; a differing name is not a
    proposal. Recommendation: retire that reading.

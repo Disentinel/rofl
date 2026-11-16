@@ -49,15 +49,15 @@ JavaScript.
 
 ## Спросить
 
-<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' @js shop.rofl -->
 ```
-$ rofl ask 'risky(N)' @rules/js.files shop.rofl
+$ rofl ask 'risky(N)' @js shop.rofl
 N = "charge"
 N = "checkout"
 ```
 <!-- END run -->
 
-По строке на ответ: переменная и её значение. `@rules/js.files` — модель
+По строке на ответ: переменная и её значение. `@js` — модель
 JavaScript, два десятка файлов правил, которые говорят, что значит
 `may_throw`; команда `rofl` находит их в собственном пакете, так что строка
 работает из любой папки. Мир — это модель плюс `shop.rofl`, а `shop.rofl`
@@ -65,9 +65,9 @@ JavaScript, два десятка файлов правил, которые го
 
 Для программы `--json` печатает тот же ответ одним объектом на строку:
 
-<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' --json @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' --json @js shop.rofl -->
 ```
-$ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
+$ rofl ask 'risky(N)' --json @js shop.rofl
 {"keys":["risky[main](\"checkout\")","risky[main](\"charge\")"],"ok":true,"partial":false,"rows":[["\"checkout\""],["\"charge\""]],"shrugs":[],"vars":["N"]}
 ```
 <!-- END run -->
@@ -80,9 +80,9 @@ $ rofl ask 'risky(N)' --json @rules/js.files shop.rofl
 
 ## Почему
 
-<!-- BEGIN run guide/examples/first: rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23 -->
+<!-- BEGIN run guide/examples/first: rofl why 'risky("checkout")' @js shop.rofl | head -23 -->
 ```
-$ rofl why 'risky("checkout")' @rules/js.files shop.rofl | head -23
+$ rofl why 'risky("checkout")' @js shop.rofl | head -23
 risky[main]("checkout")  <= re667b5bf @tick 0
   fn_name[code](n017f49dbfbe9e0a8_en4a19n90pa5f,"checkout")  <= rb448fa01 @tick 0
     fn_node[code](n017f49dbfbe9e0a8_en4a19n90pa5f)  <= r631ec945 @tick 0
@@ -122,9 +122,9 @@ risky[main]("checkout")  <= re667b5bf @tick 0
 
 ## Почему нет
 
-<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl whynot 'risky("safeCheckout")' @js shop.rofl -->
 ```
-$ rofl whynot 'risky("safeCheckout")' @rules/js.files shop.rofl
+$ rofl whynot 'risky("safeCheckout")' @js shop.rofl
 whynot risky[main]("safeCheckout"):
   rule re667b5bf: risky[main](?N)@now :- fn_name[code](?F,?N)@now, exported_fn[code](?F)@now, may_throw[code](?F)@now
     failed premise: may_throw[code](n017f49dbfbe9e0a8_0o34j1j12he7d)
@@ -148,14 +148,23 @@ whynot risky[main]("safeCheckout"):
 `rofl whynot --all` печатает их все. `--depth N` и `--nodes N` ограничивают,
 как далеко заходит обход.
 
+В большом проекте, из тех, что `rofl` режет по файлам, `whynot` не обходит
+вопрос, в котором есть переменная и который выполняется. Тогда
+`rofl whynot 'risky(N)'` отвечает таблицей: сколько ответов в проекте и в скольких
+файлах, файлы, где их больше всего, у каждого его число, и первые файлы,
+где их нет вовсе. Файл назван началом имён его узлов, например
+`n017f49dbfbe9e0a8`. `--in n017f49dbfbe9e0a8` обходит вопрос в одном этом
+файле тем же обходом, что выше, и в конце говорит, сколько ответов в этом
+файле.
+
 ## Чего он не видел
 
 Блокнот печатает заметку о `./log.js` раньше всего остального. В командной
 строке пробел — такое же отношение, как любое другое, и о нём спрашивают:
 
-<!-- BEGIN run guide/examples/first: rofl ask 'unresolved_relative[code](F,L,S)' @rules/js.files shop.rofl -->
+<!-- BEGIN run guide/examples/first: rofl ask 'unresolved_relative[code](F,L,S)' @js shop.rofl -->
 ```
-$ rofl ask 'unresolved_relative[code](F,L,S)' @rules/js.files shop.rofl
+$ rofl ask 'unresolved_relative[code](F,L,S)' @js shop.rofl
 F = "checkout.js", L = 2, S = "./log.js"
 ```
 <!-- END run -->

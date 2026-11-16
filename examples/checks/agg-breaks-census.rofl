@@ -2242,6 +2242,8 @@ brk_expects("volume_unknowns_dropped", "kept_holes").
 brk_expects("volume_unknowns_dropped", "kept_image_holes").
 brk("kept_key_ignores_walls"). brk_kind("kept_key_ignores_walls", switch).
 brk_expects("kept_key_ignores_walls", "kept_implicit_walls").
+brk("kept_cone_lemmas_unread"). brk_kind("kept_cone_lemmas_unread", switch).
+brk_expects("kept_cone_lemmas_unread", "kept_rule").
 brk("kept_verbs_compute"). brk_kind("kept_verbs_compute", switch).
 brk_expects("kept_verbs_compute", "kept_implicit").
 brk("kept_load_reads_cache"). brk_kind("kept_load_reads_cache", switch).
@@ -2563,6 +2565,7 @@ switch_site("journal_closed_late", "rust/rofl/src/journal.rs").
 switch_site("keep_first_derivation", "rust/rofl/src/engine.rs").
 switch_site("kept_blind_scans", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_cap_ignored", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_cone_lemmas_unread", "rust/rofl/src/session.rs").
 switch_site("kept_delta_all_files", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_delta_gone_rules_kept", "rust/rofl/src/bin/rofl/delta.rs").
 switch_site("kept_delta_keeps_old", "rust/rofl/src/bin/rofl/delta.rs").

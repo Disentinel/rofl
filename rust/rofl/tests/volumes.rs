@@ -14,7 +14,7 @@ fn root() -> PathBuf {
 }
 
 fn texts() -> Vec<String> {
-    let rules = root().join("rules");
+    let rules = root().join("models/lang/js");
     let list = std::fs::read_to_string(rules.join("js.files")).unwrap();
     let mut files: Vec<PathBuf> = list.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')).map(|l| rules.join(l)).collect();
     files.push(root().join("examples/checks/vscode-split-facts.rofl"));
@@ -213,4 +213,67 @@ fn a_file_that_breaks_the_plan_is_refused() {
         let e = core.by_volumes(&cut.files).err().map(|e| rofl::describe(&e)).unwrap_or_default();
         assert!(e.contains(said), "refused with {said:?}: {e}");
     }
+}
+
+/// A NODE IS AN ATOM OR A WHOLE STRING: a key written inside a string's text (a test of the scanner quoting one, a
+/// line of a source) names no file, and the fact is its own nodes' file's, not the core's.
+#[test]
+fn a_node_key_inside_a_string_names_no_file() {
+    use rofl::engine::volumes::file_of;
+    assert_eq!(file_of("attr[ast_rs](\"n4010502757c192de_a2\", value, \"refers(n0000000000000006_\").\n"), Some("4010502757c192de"));
+    assert_eq!(file_of("name[raw](\"n00000000000000aa_1\", \"n00000000000000bb_1 \\\" n00000000000000cc_1\").\n"), None);
+    assert_eq!(file_of("edge(n00000000000000aa_1, n00000000000000aa_2, \"x n00000000000000bb_1\").\n"), Some("00000000000000aa"));
+    assert_eq!(file_of("see(\"main\", \"go n00000000000000bb_1\").\n"), None);
+    // (so a plan that says a name's node is of its file holds: the world goes by levels, as the world whole answers)
+    let facts = by_file_facts() + "name[raw](\"n00000000000000aa_2\", \"go n00000000000000bb_4\").\n";
+    let refs = [BY_FILE, facts.as_str()];
+    let mut whole = Session::fresh(BUDGET);
+    whole.load_all(&refs, None).unwrap();
+    whole.evaluate().unwrap();
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    let mut v = core.by_volumes(&cut.files).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
+    assert_eq!(answers(&mut v, "named(N, S)"), answers(&mut whole, "named(N, S)"));
+}
+
+/// A FIRING IS READ IN THE STORE THAT WROTE IT: a unit's firing cites a row of a tree by its key, and the unit above
+/// (here the reader's, where a count is left) names its own rows with numbers of its own. The count's members rest
+/// on rows the file units cite, and their heights are the world whole's.
+#[test]
+fn the_rows_a_lower_unit_cites_are_its_own() {
+    let model = "tree edge(P, C).\nnearest nfn[d](F, X) of edge[d](F, X) where func[d](F).\n\
+        m[d](X) :- stmt[d](X), nfn[d](F, X).\nn[d](F, N) :- func[d](F), N is count(X : m[d](X), nfn[d](F, X)).\n";
+    let mut facts = String::new();
+    for f in 1..=12u64 {
+        let node = |k: u64| format!("n{f:016x}_{k}");
+        facts += &format!("func[d]({}).\n", node(0));
+        // (a chain as deep as the file's number: the rows' heights differ from file to file)
+        for k in 1..=f + 2 {
+            facts += &format!("edge[d]({}, {}).\nstmt[d]({}).\n", node(k - 1), node(k), node(k));
+        }
+    }
+    let refs = [model, facts.as_str()];
+    let mut whole = Session::fresh(BUDGET);
+    whole.load_all(&refs, None).unwrap();
+    whole.evaluate().unwrap();
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    let mut v = core.by_volumes(&cut.files).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
+    assert_eq!(answers(&mut v, "n[d](F, N)"), answers(&mut whole, "n[d](F, N)"));
+    let heights = |s: &rofl::store::Store| {
+        let mut all: Vec<Vec<u32>> = (0..s.cell_count()).map(|c| {
+            let mut h: Vec<u32> = s.cell_members(c as _).iter().map(|m| m.height).collect();
+            h.sort_unstable();
+            h
+        }).collect();
+        all.sort();
+        all
+    };
+    let lv = v.eval.levels.clone().expect("a world by levels");
+    let reader = lv.tops.last().expect("the reader's unit").stretch.store();
+    let want = heights(&whole.eval.store);
+    assert!(want.len() == 12 && want.iter().all(|h| !h.is_empty()), "{want:?}");
+    assert_eq!(heights(reader), want);
 }

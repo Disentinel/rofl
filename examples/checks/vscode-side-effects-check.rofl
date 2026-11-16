@@ -7,7 +7,7 @@
 --   a literal              spawn's `editor`, execFile's 'git', fetch's url
 --   an env read            process.env.VSCODE_PORT (_3ji3d81e6n) reaches server.listen (_r7jcjg1pls5) through listenOn (_j8599nf69r7)
 --   no value               remove(this.storage.dir) (_vdu008tnjk6): the storage is injected, nothing in the code builds it
---   a string built from parts (rules/js-concat.rofl), mini/node/paths.ts ndbdc6130c943fdee:
+--   a string built from parts (models/lang/js/rules/js-concat.rofl), mini/node/paths.ts ndbdc6130c943fdee:
 --     path.join(appRoot, 'out', name) (_dlqog2mm806)   the join's text, every part literal, beside its node
 --     `${appRoot}/logs/${kind}.log` (_717kubascm2)      one text per caller's kind
 --     join(dirname(__dirname), 'cache') (_lckrchp74h7)  a form: __dirname has no value and stays a reference

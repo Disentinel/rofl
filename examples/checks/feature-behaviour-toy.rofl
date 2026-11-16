@@ -1,0 +1,43 @@
+-- examples/checks/feature-behaviour-toy.rofl — the toy of models/engine/feature-behaviour.rofl: one change, four
+-- features, five worlds. The change wrote the code of `cut` and of `whynot` and one line of the ledger.
+pr(242, "t0", "t1", "a lemma nothing reads is not kept").
+entry_at[snap]("t0", "decl", "cut", declaration).      entry_at[snap]("t1", "decl", "cut", declaration).
+entry_at[snap]("t0", "agg", "sum", aggregate).         entry_at[snap]("t1", "agg", "sum", aggregate).
+entry_at[snap]("t0", "run", "whynot", verb).           entry_at[snap]("t1", "run", "whynot", verb).
+entry_at[snap]("t0", "load", "--retract", flag).       entry_at[snap]("t1", "load", "--retract", flag).
+hit[snap](242, "decl", "cut", 12).
+hit[snap](242, "run", "whynot", 3).
+wrote[snap](242, "engine::stages::keep", 12).
+changed_file[snap](242, "facts/findings.rofl").
+
+world_file[snap]("t1", "totals", "examples/totals.rofl").
+world_file[snap]("t1", "lifecycle", "models/js/roles.rofl").
+world_file[snap]("t1", "lifecycle", "models/js/lifecycle.rofl").
+world_file[snap]("t1", "vscode", "models/js/roles.rofl").
+world_file[snap]("t1", "sensors", "examples/sensors.rofl").
+world_file[snap]("t1", "ledger", "facts/findings.rofl").
+
+file_word[snap]("t1", "examples/totals.rofl", "sum").
+file_word[snap]("t1", "models/js/roles.rofl", "cut").
+file_word[snap]("t1", "models/js/lifecycle.rofl", "sum").
+file_word[snap]("t1", "facts/findings.rofl", "sum").
+ran_with[snap]("t1", "sensors", "--retract").
+
+measures[snap]("t0", "totals", answer, "a1").      measures[snap]("t1", "totals", answer, "a1").
+measures[snap]("t0", "totals", steps, 900).        measures[snap]("t1", "totals", steps, 900).
+measures[snap]("t0", "lifecycle", answer, "b1").   measures[snap]("t1", "lifecycle", answer, "b2").
+measures[snap]("t0", "lifecycle", steps, 52000).   measures[snap]("t1", "lifecycle", steps, 47000).
+measures[snap]("t0", "vscode", answer, "c1").      measures[snap]("t1", "vscode", answer, "c2").
+measures[snap]("t0", "vscode", steps, 81000).      measures[snap]("t1", "vscode", steps, 70000).
+measures[snap]("t0", "sensors", answer, "d1").     measures[snap]("t1", "sensors", answer, "d1").
+measures[snap]("t0", "sensors", steps, 400).       measures[snap]("t1", "sensors", steps, 400).
+measures[snap]("t0", "ledger", answer, "e1").      measures[snap]("t1", "ledger", answer, "e2").
+measures[snap]("t0", "ledger", steps, 3000).       measures[snap]("t1", "ledger", steps, 3010).
+
+-- said before the work: the worlds that say `cut` answer otherwise, and so does whoever says `--retract`
+meant_answers(242, declaration, "cut", planned).
+meant_answers(242, flag, "--retract", planned).
+-- and what says `cut` is to cost fewer steps (met), as is what says `--retract` (unmet: 400 and 400)
+meant_cheaper(242, steps, declaration, "cut", planned).
+meant_cheaper(242, steps, flag, "--retract", planned).
+measures[snap]("t0", "totals", space, 300).   measures[snap]("t1", "totals", space, 340).

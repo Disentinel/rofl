@@ -1,6 +1,6 @@
 // lint.ts — "probably needs a name", as rules over the reflection.
 //
-//   npm run lint -- rules/js-dataflow.rofl [more .rofl files]
+//   npm run lint -- models/lang/js/rules/js-dataflow.rofl [more .rofl files]
 //   npm run lint -- --boot-heads      the facts examples/linter/corpus-boot-heads.rofl freezes
 //
 // The decisions are examples/linter/linter.rofl; this loads boot.rofl, the

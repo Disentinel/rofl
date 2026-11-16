@@ -103,7 +103,7 @@ function run(reader: Reader, book: Book): string[] {
   const shipping = reader.readMd(readFileSync(path.join(ROOT, 'examples/visual/shipping-decision.rofl.md'), 'utf8'), { vocab: VOCAB });
   if (shipping.problems.dropped.length) bad.push(`case 27: the declared "Nothing covers M with B" was dropped: ${shipping.problems.dropped.join(' · ')}`);
   // a noun that is also a verb stays a verb when the line reads as written
-  const js = reader.readMd('', { vocab: VOCAB + readFileSync(path.join(ROOT, 'facts/js-phrases.rofl'), 'utf8') }).question('Which functions call `foo`?');
+  const js = reader.readMd('', { vocab: VOCAB + readFileSync(path.join(ROOT, 'models/lang/js/facts/js-phrases.rofl'), 'utf8') }).question('Which functions call `foo`?');
   if ('error' in js || js.line !== '? X calls `foo`') bad.push(`case 31: Which functions call \`foo\`? -> ${JSON.stringify(js)}`);
   // 35: a prefixed line of the prose asks as in a cell; the same words where prose runs on, is indented as code, quoted or listed do not
   const asked = (md: string) => book.readBook([{ id: 'p', text: md, form: 'md', prose: true }], VOCAB, {}).parts[0];

@@ -23,7 +23,7 @@
 // WHY A COMMITTED GOLDEN AND NOT A REGENERATED ONE. The old harness regenerated
 // its expectation before every run, so a change to any `.rofl` moved the
 // expectation with it and could not go red. Measured: deleting
-// `abrupt_kind(break_statement).` from rules/js-controlflow.rofl left it 150/150
+// `abrupt_kind(break_statement).` from models/lang/js/rules/js-controlflow.rofl left it 150/150
 // green. A golden is taken at a working state and committed, or it is not a
 // golden.
 //
@@ -163,20 +163,25 @@ export function worlds(): World[] {
     else if (e.endsWith('.rofl.md')) out.push({ name: e.replace(/\.rofl\.md$/, ''), files: worldFiles(p) });  // executable Markdown; a plain .md is a document
   }
   const rl = path.join(ROOT, 'rules');
-  const pack = (dir: string, prefix: string): void => {
+  const pack = (dir: string, prefix: string, factsDir = path.join(ROOT, 'facts')): void => {
     for (const e of fs.readdirSync(dir).sort()) {
       const p = path.join(dir, e);
-      if (fs.statSync(p).isDirectory()) { pack(p, `${prefix}${e}_`); continue; }
+      if (fs.statSync(p).isDirectory()) { pack(p, `${prefix}${e}_`, factsDir); continue; }
       // a world authored as Markdown (`.rofl.md`) is read into rules first (scripts/read.ts) and loaded from there
       if (!e.endsWith('.rofl') && !e.endsWith('.rofl.md')) continue;
       const stem = e.replace(/\.rofl(\.md)?$/, '');
-      const facts = path.join(ROOT, 'facts', `${stem}.rofl`);
+      const facts = path.join(factsDir, `${stem}.rofl`);
       const file = e.endsWith('.rofl.md') ? worldFiles(p) : [p];
       out.push({ name: `rules_${prefix}${stem}`,
         files: fs.existsSync(facts) ? [facts, ...file] : file });
     }
   };
   pack(rl, '');
+  // a model library (models/lang/L) keeps its rules and their facts in rules/ and facts/ of its own: each rule file a world
+  for (const lang of fs.readdirSync(path.join(ROOT, 'models/lang')).sort()) {
+    const lib = path.join(ROOT, 'models/lang', lang);
+    if (fs.existsSync(path.join(lib, 'rules'))) pack(path.join(lib, 'rules'), '', path.join(lib, 'facts'));
+  }
   out.push({ name: 'boot_only', files: [] });
   // A WALKED WORLD DECLARED ONE-ENGINE (check_opt(W, one_engine, rust)): a world found by walking has no check_world
   // block, so the option alone is read for it, and a name that is no world is refused rather than ignored
@@ -197,9 +202,20 @@ export function worlds(): World[] {
 export interface Answer {
   hash: string; facts: number; census: Map<string, number>; dropped: string[]; alarms: string[];
   problems: string[];
+  /** what the evaluation cost on the Rust engine, as `rofl load` says it on stderr: the walls' own units */
+  cost?: Cost;
   /** the state hashed, as computed (never kept): a world that comes out red has it written beside the keep */
   state?: string;
 }
+
+export interface Cost { steps: number; space: number }
+const costOf = (stderr: string): Cost | undefined => {
+  const m = /^cost: (\d+) steps, (\d+) rows at peak$/m.exec(stderr);
+  return m ? { steps: Number(m[1]), space: Number(m[2]) } : undefined;
+};
+const costMoved = (g: Cost | undefined, a: Cost | undefined): string | null =>
+  !a || planted() ? null : !g ? `cost: not blessed (${a.steps} steps, ${a.space} rows at peak)`
+    : g.steps !== a.steps || g.space !== a.space ? `cost: steps ${g.steps}->${a.steps}, peak rows ${g.space}->${a.space}` : null;
 
 /** WORLDS THE TREE CANNOT DISCOVER, declared in facts/checks.rofl. Everything
  *  under examples/ and rules/ is found by walking; a world that needs a TICK
@@ -638,8 +654,13 @@ function answerRustBoth(w: World): Answer {
   // The MESSAGE is not hashed. Two implementations word a syntax error
   // differently and always will; that a file is refused, and which one, is the
   // part both must agree on.
-  const run = (args: string[]): string => execFileSync(RUST, ['load', ...args],
-    { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+  let cost: Cost | undefined;
+  const run = (args: string[]): string => {
+    const p = spawnSync(RUST, ['load', ...args], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    if (p.status !== 0) throw new Error(`rofl load ${args.join(' ')} exited ${p.status}: ${p.stderr}`);
+    cost = costOf(p.stderr);
+    return p.stdout;
+  };
   const boot = bootPath();
   const diags: string[] = [], keep: string[] = [], problems: string[] = [];
   for (const f of w.files) {
@@ -661,7 +682,7 @@ function answerRustBoth(w: World): Answer {
   try {
     const state = run([...args, ...saveTo(snap)]);
     const full = diags.sort().join('\n') + (diags.length ? '\n' : '') + state;
-    return { state: full, hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: raised(alarmRels(state), state),
+    return { state: full, hash: digest(full), facts: 0, census: census(full), dropped: [], alarms: raised(alarmRels(state), state), cost,
              problems: [...problems, ...rowProblems(keep, state), ...storedClosureProblems(w, keep, args, state, snap)] };
   } finally { dropSnapshot(snap); }
 }
@@ -718,7 +739,7 @@ function answerRustOnly(w: World): Answer {
   const closure = p.status === 0 ? storedClosureProblems(w, keep, runArgs, state, snap) : [];
   dropSnapshot(snap);
   return { state: full, hash: digest(full), facts, census: census(full), dropped, alarms: raised(alarmRels(state), state),
-           problems: [...problems, ...closure] };
+           cost: costOf(p.stderr), problems: [...problems, ...closure] };
 }
 
 /** THE TYPESCRIPT ENGINE'S SHRUG SURFACES (docs/aggregates.md, "Shrugs, as
@@ -947,11 +968,15 @@ function render(rows: [World, Answer][]): string {
     'edb(golden_state).',
     'edb(golden_rel).',
     'edb(golden_host).',
+    'edb(golden_cost).',
     '',
   ];
   for (const [w, a] of rows) L.push(`golden_state("${w.name}", "${a.hash}", ${a.facts}).`);
   L.push('');
   for (const [name, h] of hostRows) L.push(`golden_host("${name}", "${h.hash}", ${h.exit}, ${h.lines}).`);
+  L.push('');
+  // what each world's evaluation cost on the Rust engine: steps, and rows at the peak
+  for (const [w, a] of rows) if (a.cost) L.push(`golden_cost("${w.name}", ${a.cost.steps}, ${a.cost.space}).`);
   L.push('');
   for (const [w, a] of rows)
     for (const [rel, n] of [...a.census].sort()) L.push(`golden_rel("${w.name}", "${rel}", ${n}).`);
@@ -963,14 +988,16 @@ const golden = (): Rofl | null => (goldenPack ??= pack('facts/goldens.rofl'));
 
 /** The goldens of facts/goldens.rofl, or of `text` in its place (another
  *  revision of the file, which scripts/agg_breaks.ts --changed compares). */
-export function parse(text?: string): Map<string, { hash: string; facts: number; census: Map<string, number> }> {
+export function parse(text?: string): Map<string, { hash: string; facts: number; census: Map<string, number>; cost?: Cost }> {
   const r = text === undefined ? golden() : pack('facts/goldens.rofl', text);
-  const out = new Map<string, { hash: string; facts: number; census: Map<string, number> }>();
+  const out = new Map<string, { hash: string; facts: number; census: Map<string, number>; cost?: Cost }>();
   if (!r) return out;
   for (const [n, h, f] of col(r, 'golden_state(N, H, F)', 'N', 'H', 'F'))
     out.set(n, { hash: h, facts: Number(f), census: new Map() });
   for (const [n, rel, c] of col(r, 'golden_rel(N, Rel, C)', 'N', 'Rel', 'C'))
     out.get(n)?.census.set(rel, Number(c));
+  if (/^golden_cost\(/m.test(text ?? fs.readFileSync(GOLDEN, 'utf8')))
+    for (const [n, st, sp] of col(r, 'golden_cost(N, St, Sp)', 'N', 'St', 'Sp')) { const g = out.get(n); if (g) g.cost = { steps: Number(st), space: Number(sp) }; }
   return out;
 }
 
@@ -1027,7 +1054,7 @@ export function absent(w: World): string | null {
 
 let refusalsOk: Set<string> | undefined;
 /** One world against its golden: null when it passes, else its FAIL line. */
-export function checkWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean, engine: EngineChoice = 'both'): string | null {
+export function checkWorld(w: World, g: { hash: string; census: Map<string, number>; cost?: Cost } | undefined, rustMissing: boolean, engine: EngineChoice = 'both'): string | null {
   const gone = absent(w);
   if (gone) return gone;
   let v = judgeWorld(w, g, rustMissing, engine);
@@ -1048,7 +1075,7 @@ export function checkWorld(w: World, g: { hash: string; census: Map<string, numb
 }
 
 let lastStates: Record<string, string> = {};
-function judgeWorld(w: World, g: { hash: string; census: Map<string, number> } | undefined, rustMissing: boolean, engine: EngineChoice): string | null {
+function judgeWorld(w: World, g: { hash: string; census: Map<string, number>; cost?: Cost } | undefined, rustMissing: boolean, engine: EngineChoice): string | null {
   lastStates = {};
   if (!g) return `${w.name}: no golden — bless it or delete the world`;
   // a world only the other engine answers is not asked of this one
@@ -1062,6 +1089,8 @@ function judgeWorld(w: World, g: { hash: string; census: Map<string, number> } |
   if (rs?.state !== undefined) lastStates.rust = rs.state;
   if (process.env.ROFL_TIMES) fs.appendFileSync(process.env.ROFL_TIMES, `${w.name}\t${t1 - t0}\t${Date.now() - t1}\t${(ts ?? rs)?.facts ?? 0}\t${w.oneEngine ?? 'both'}\n`);
   const bad: string[] = [];
+  const cost = costMoved(g.cost, rs?.cost);
+  if (cost) bad.push(cost);
   // a file the world refuses and is not declared to refuse (check_refuses in facts/checks.rofl)
   const blessed = w.oneEngine === 'rust' ? rs : ts;
   if (blessed) for (const d of undeclared(w, blessed, refusalsOk ??= expectedRefusals())) bad.push(`REFUSED ${d}`);
@@ -1119,7 +1148,7 @@ function judgeWorld(w: World, g: { hash: string; census: Map<string, number> } |
 export function blessAnswer(w: World): { a: Answer; said: string[] } {
   // a Rust-only world is never given to the TypeScript engine, here either: bless asked it of all 25 and threw the
   // answer away, and on cost_shapes_model a worker was killed before it came back
-  if (w.oneEngine !== 'rust') { const { state: _, ...ts } = answerTS(w); return { a: ts, said: [...ts.problems, ...ts.alarms.map((a) => `ALARM ${a}`)].map((p) => `  !! ${w.name}: ${p}`) }; }
+  if (w.oneEngine !== 'rust') { const { state: _, ...ts } = answerTS(w); ts.cost = answerRust(w)?.cost; return { a: ts, said: [...ts.problems, ...ts.alarms.map((a) => `ALARM ${a}`)].map((p) => `  !! ${w.name}: ${p}`) }; }
   const got = answerRust(w);
   if (!got) throw new Error(`${w.name}: rust-only world and no Rust binary`);
   const { state: __, ...rs } = got;
@@ -1149,9 +1178,9 @@ function refuse(e: unknown): never {
 const isMain = process.argv[1] && path.basename(process.argv[1]) === 'goldens.ts';
 if (isMain) {
   own();
-  // `rofl why L @rules/js.files code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
-  const listed = fs.readFileSync(path.join(ROOT, 'rules/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'rules', f)));
-  if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`rules/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
+  // `rofl why L @js code.rofl` reads the model of `rofl scan`, oxc's converter among it (notebook/front.ts MODEL_FILES)
+  const listed = fs.readFileSync(path.join(ROOT, 'models/lang/js/js.files'), 'utf8').split('\n').filter(Boolean).map((f) => path.relative(ROOT, path.join(ROOT, 'models/lang/js', f)));
+  if (listed.join('\n') !== MODEL_FILES.join('\n')) { console.error(`models/lang/js/js.files is not notebook/front.ts MODEL_FILES: ${listed.join(' ')}`); process.exit(1); }
   const { sel, rest } = parseSelector(process.argv.slice(2));
   const blessing = rest.includes('--bless'), hosts = rest.includes('--hosts');
   let engine: EngineChoice = 'both', engineWhy = '';
@@ -1213,7 +1242,7 @@ if (isMain) {
     // BLESSING SAYS WHAT IT CHANGES. The one real hazard of a committed golden
     // is blessing over a defect, and it was paid for within an hour of this
     // file existing: a bless ran while a planted mutant was still in
-    // rules/js-controlflow.rofl, and `abrupt_kind[main] 4 -> 3` went into the
+    // models/lang/js/rules/js-controlflow.rofl, and `abrupt_kind[main] 4 -> 3` went into the
     // expectation as the truth. Refusing to bless on a dirty tree is the wrong
     // guard — changing a rule IS the reason to bless — so the guard is that the
     // delta is printed and lands in the commit for a person to read.
@@ -1233,6 +1262,8 @@ if (isMain) {
     if (gone.length) refuse(new Error(`not blessed: ${gone.join('; ')}`));
     const answers = await runPool<{ a: Answer; said: string[] }>(ws.map((w) => ({ mod: SELF, fn: 'blessAnswer', args: [w] })), { env: { ROFL_KEEP_TALLY: TALLY } });
     const rows: [World, Answer][] = ws.map((w, i) => [w, answers[i].a]);
+    // a bless without the Rust binary keeps the cost it finds
+    for (const [w, x] of rows) x.cost ??= before.get(w.name)?.cost;
     for (const { said } of answers) for (const l of said) console.log(l);
     const ok = expectedRefusals();
     const bad = rows.flatMap(([w, a]) => undeclared(w, a, ok).map((d) => `${w.name}: ${d}`));
@@ -1248,7 +1279,11 @@ if (isMain) {
     for (const [w, a] of rows) {
       const g = before.get(w.name);
       if (!g) { console.log(`  NEW  ${w.name}`); moved++; continue; }
-      if (g.hash === a.hash) continue;
+      if (g.hash === a.hash) {
+        const c = a.cost && (g.cost?.steps !== a.cost.steps || g.cost?.space !== a.cost.space);
+        if (c) { console.log(`  COST  ${w.name.padEnd(26)} steps ${g.cost?.steps ?? '-'}->${a.cost!.steps}, peak rows ${g.cost?.space ?? '-'}->${a.cost!.space}`); moved++; }
+        continue;
+      }
       const d = [...new Set([...g.census.keys(), ...a.census.keys()])]
         .filter((k) => (g.census.get(k) ?? 0) !== (a.census.get(k) ?? 0))
         .map((k) => `${k} ${g.census.get(k) ?? 0}->${a.census.get(k) ?? 0}`);

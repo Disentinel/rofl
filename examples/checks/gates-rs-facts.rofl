@@ -1,0 +1,705 @@
+-- examples/checks/gates-rs-facts.rofl: examples/checks/gates-rs scanned by rust/tools/rs_tree, for the world gates_rust.
+crate_name("examples/checks/gates-rs/src/lib.rs", "gates").
+decides("LOUD", tell). decides("SHARE", tell). decides("TAG", room). from("TAG", layout). decides("GONE", stop).
+file[ast_rs]("n51f528aed36fe430_root", "examples/checks/gates-rs/src/lib.rs").
+node[ast_rs]("n51f528aed36fe430_root", source_file, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_root", 1).
+last[ast_rs]("n51f528aed36fe430_root", 25).
+child[ast_rs]("n51f528aed36fe430_root", c, 0, "n51f528aed36fe430_19d3e5bc76de").
+node[ast_rs]("n51f528aed36fe430_19d3e5bc76de", const_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_19d3e5bc76de", 2).
+attr[ast_rs]("n51f528aed36fe430_19d3e5bc76de", token, "const").
+child[ast_rs]("n51f528aed36fe430_19d3e5bc76de", name, 0, "n51f528aed36fe430_5f704a236f03").
+node[ast_rs]("n51f528aed36fe430_5f704a236f03", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_5f704a236f03", 2).
+attr[ast_rs]("n51f528aed36fe430_5f704a236f03", upper, true).
+attr[ast_rs]("n51f528aed36fe430_5f704a236f03", text, "TAG").
+child[ast_rs]("n51f528aed36fe430_19d3e5bc76de", type, 0, "n51f528aed36fe430_11b84264efea").
+node[ast_rs]("n51f528aed36fe430_11b84264efea", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_11b84264efea", 2).
+attr[ast_rs]("n51f528aed36fe430_11b84264efea", text, "u32").
+child[ast_rs]("n51f528aed36fe430_19d3e5bc76de", value, 0, "n51f528aed36fe430_dacf9e002017").
+node[ast_rs]("n51f528aed36fe430_dacf9e002017", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_dacf9e002017", 2).
+child[ast_rs]("n51f528aed36fe430_dacf9e002017", left, 0, "n51f528aed36fe430_64b78ff10dc2").
+node[ast_rs]("n51f528aed36fe430_64b78ff10dc2", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_64b78ff10dc2", 2).
+attr[ast_rs]("n51f528aed36fe430_64b78ff10dc2", value, 1).
+attr[ast_rs]("n51f528aed36fe430_64b78ff10dc2", text, "1").
+attr[ast_rs]("n51f528aed36fe430_dacf9e002017", operator, "<<").
+child[ast_rs]("n51f528aed36fe430_dacf9e002017", right, 0, "n51f528aed36fe430_f7b2205facb4").
+node[ast_rs]("n51f528aed36fe430_f7b2205facb4", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f7b2205facb4", 2).
+attr[ast_rs]("n51f528aed36fe430_f7b2205facb4", value, 31).
+attr[ast_rs]("n51f528aed36fe430_f7b2205facb4", text, "31").
+child[ast_rs]("n51f528aed36fe430_root", c, 1, "n51f528aed36fe430_037aea2420a4").
+node[ast_rs]("n51f528aed36fe430_037aea2420a4", const_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_037aea2420a4", 3).
+attr[ast_rs]("n51f528aed36fe430_037aea2420a4", token, "const").
+child[ast_rs]("n51f528aed36fe430_037aea2420a4", name, 0, "n51f528aed36fe430_6318dfa530f3").
+node[ast_rs]("n51f528aed36fe430_6318dfa530f3", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6318dfa530f3", 3).
+attr[ast_rs]("n51f528aed36fe430_6318dfa530f3", upper, true).
+attr[ast_rs]("n51f528aed36fe430_6318dfa530f3", text, "LOUD").
+child[ast_rs]("n51f528aed36fe430_037aea2420a4", type, 0, "n51f528aed36fe430_5327585f8225").
+node[ast_rs]("n51f528aed36fe430_5327585f8225", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_5327585f8225", 3).
+attr[ast_rs]("n51f528aed36fe430_5327585f8225", text, "u64").
+child[ast_rs]("n51f528aed36fe430_037aea2420a4", value, 0, "n51f528aed36fe430_29f12aeea7df").
+node[ast_rs]("n51f528aed36fe430_29f12aeea7df", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_29f12aeea7df", 3).
+attr[ast_rs]("n51f528aed36fe430_29f12aeea7df", value, 50000000).
+attr[ast_rs]("n51f528aed36fe430_29f12aeea7df", text, "50_000_000").
+child[ast_rs]("n51f528aed36fe430_root", c, 2, "n51f528aed36fe430_8cdc0fd4b58b").
+node[ast_rs]("n51f528aed36fe430_8cdc0fd4b58b", const_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_8cdc0fd4b58b", 4).
+attr[ast_rs]("n51f528aed36fe430_8cdc0fd4b58b", token, "const").
+child[ast_rs]("n51f528aed36fe430_8cdc0fd4b58b", name, 0, "n51f528aed36fe430_68e15ffc09bc").
+node[ast_rs]("n51f528aed36fe430_68e15ffc09bc", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_68e15ffc09bc", 4).
+attr[ast_rs]("n51f528aed36fe430_68e15ffc09bc", upper, true).
+attr[ast_rs]("n51f528aed36fe430_68e15ffc09bc", text, "SHARE").
+child[ast_rs]("n51f528aed36fe430_8cdc0fd4b58b", type, 0, "n51f528aed36fe430_936bc209f29a").
+node[ast_rs]("n51f528aed36fe430_936bc209f29a", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_936bc209f29a", 4).
+attr[ast_rs]("n51f528aed36fe430_936bc209f29a", text, "u64").
+child[ast_rs]("n51f528aed36fe430_8cdc0fd4b58b", value, 0, "n51f528aed36fe430_2739fb9e3661").
+node[ast_rs]("n51f528aed36fe430_2739fb9e3661", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2739fb9e3661", 4).
+attr[ast_rs]("n51f528aed36fe430_2739fb9e3661", value, 4).
+attr[ast_rs]("n51f528aed36fe430_2739fb9e3661", text, "4").
+child[ast_rs]("n51f528aed36fe430_root", c, 3, "n51f528aed36fe430_9a2ed0337ccf").
+node[ast_rs]("n51f528aed36fe430_9a2ed0337ccf", struct_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_9a2ed0337ccf", 6).
+child[ast_rs]("n51f528aed36fe430_9a2ed0337ccf", c, 0, "n51f528aed36fe430_56f3d7fd1a61").
+node[ast_rs]("n51f528aed36fe430_56f3d7fd1a61", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_56f3d7fd1a61", 6).
+attr[ast_rs]("n51f528aed36fe430_56f3d7fd1a61", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_56f3d7fd1a61", token, "pub").
+child[ast_rs]("n51f528aed36fe430_9a2ed0337ccf", name, 0, "n51f528aed36fe430_3b4e9ad53474").
+node[ast_rs]("n51f528aed36fe430_3b4e9ad53474", type_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_3b4e9ad53474", 6).
+attr[ast_rs]("n51f528aed36fe430_3b4e9ad53474", text, "Cost").
+child[ast_rs]("n51f528aed36fe430_9a2ed0337ccf", body, 0, "n51f528aed36fe430_ceb6dcead471").
+node[ast_rs]("n51f528aed36fe430_ceb6dcead471", field_declaration_list, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ceb6dcead471", 6).
+child[ast_rs]("n51f528aed36fe430_ceb6dcead471", c, 0, "n51f528aed36fe430_875a3d0166c1").
+node[ast_rs]("n51f528aed36fe430_875a3d0166c1", field_declaration, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_875a3d0166c1", 6).
+child[ast_rs]("n51f528aed36fe430_875a3d0166c1", name, 0, "n51f528aed36fe430_3a4746a992bc").
+node[ast_rs]("n51f528aed36fe430_3a4746a992bc", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_3a4746a992bc", 6).
+attr[ast_rs]("n51f528aed36fe430_3a4746a992bc", text, "loud").
+child[ast_rs]("n51f528aed36fe430_875a3d0166c1", type, 0, "n51f528aed36fe430_94bd3c2f93f4").
+node[ast_rs]("n51f528aed36fe430_94bd3c2f93f4", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_94bd3c2f93f4", 6).
+attr[ast_rs]("n51f528aed36fe430_94bd3c2f93f4", text, "u64").
+child[ast_rs]("n51f528aed36fe430_ceb6dcead471", c, 1, "n51f528aed36fe430_7a9d5528783d").
+node[ast_rs]("n51f528aed36fe430_7a9d5528783d", field_declaration, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_7a9d5528783d", 6).
+child[ast_rs]("n51f528aed36fe430_7a9d5528783d", name, 0, "n51f528aed36fe430_02ac0c626aa9").
+node[ast_rs]("n51f528aed36fe430_02ac0c626aa9", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_02ac0c626aa9", 6).
+attr[ast_rs]("n51f528aed36fe430_02ac0c626aa9", text, "read").
+child[ast_rs]("n51f528aed36fe430_7a9d5528783d", type, 0, "n51f528aed36fe430_b6e5d48e4056").
+node[ast_rs]("n51f528aed36fe430_b6e5d48e4056", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b6e5d48e4056", 6).
+attr[ast_rs]("n51f528aed36fe430_b6e5d48e4056", text, "u64").
+child[ast_rs]("n51f528aed36fe430_ceb6dcead471", c, 2, "n51f528aed36fe430_0edd1055f5c3").
+node[ast_rs]("n51f528aed36fe430_0edd1055f5c3", field_declaration, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_0edd1055f5c3", 6).
+child[ast_rs]("n51f528aed36fe430_0edd1055f5c3", name, 0, "n51f528aed36fe430_ceb9086331a6").
+node[ast_rs]("n51f528aed36fe430_ceb9086331a6", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ceb9086331a6", 6).
+attr[ast_rs]("n51f528aed36fe430_ceb9086331a6", text, "total").
+child[ast_rs]("n51f528aed36fe430_0edd1055f5c3", type, 0, "n51f528aed36fe430_f1d0c4823604").
+node[ast_rs]("n51f528aed36fe430_f1d0c4823604", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f1d0c4823604", 6).
+attr[ast_rs]("n51f528aed36fe430_f1d0c4823604", text, "u64").
+child[ast_rs]("n51f528aed36fe430_root", c, 4, "n51f528aed36fe430_cc856902e7a9").
+node[ast_rs]("n51f528aed36fe430_cc856902e7a9", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_cc856902e7a9", 8).
+child[ast_rs]("n51f528aed36fe430_cc856902e7a9", c, 0, "n51f528aed36fe430_6e34de751cc3").
+node[ast_rs]("n51f528aed36fe430_6e34de751cc3", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6e34de751cc3", 8).
+attr[ast_rs]("n51f528aed36fe430_6e34de751cc3", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_6e34de751cc3", token, "pub").
+child[ast_rs]("n51f528aed36fe430_cc856902e7a9", name, 0, "n51f528aed36fe430_8cf055ba1968").
+node[ast_rs]("n51f528aed36fe430_8cf055ba1968", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_8cf055ba1968", 8).
+attr[ast_rs]("n51f528aed36fe430_8cf055ba1968", text, "new").
+child[ast_rs]("n51f528aed36fe430_cc856902e7a9", parameters, 0, "n51f528aed36fe430_6f88bebd1596").
+node[ast_rs]("n51f528aed36fe430_6f88bebd1596", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6f88bebd1596", 8).
+attr[ast_rs]("n51f528aed36fe430_6f88bebd1596", text, "()").
+child[ast_rs]("n51f528aed36fe430_cc856902e7a9", return_type, 0, "n51f528aed36fe430_bd8a4c27be84").
+node[ast_rs]("n51f528aed36fe430_bd8a4c27be84", type_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_bd8a4c27be84", 8).
+attr[ast_rs]("n51f528aed36fe430_bd8a4c27be84", text, "Cost").
+child[ast_rs]("n51f528aed36fe430_cc856902e7a9", body, 0, "n51f528aed36fe430_e6cec6fc5b34").
+node[ast_rs]("n51f528aed36fe430_e6cec6fc5b34", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e6cec6fc5b34", 8).
+child[ast_rs]("n51f528aed36fe430_e6cec6fc5b34", c, 0, "n51f528aed36fe430_2ad3963a5843").
+node[ast_rs]("n51f528aed36fe430_2ad3963a5843", struct_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2ad3963a5843", 8).
+child[ast_rs]("n51f528aed36fe430_2ad3963a5843", name, 0, "n51f528aed36fe430_f8371f7a0df7").
+node[ast_rs]("n51f528aed36fe430_f8371f7a0df7", type_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f8371f7a0df7", 8).
+attr[ast_rs]("n51f528aed36fe430_f8371f7a0df7", text, "Cost").
+child[ast_rs]("n51f528aed36fe430_2ad3963a5843", body, 0, "n51f528aed36fe430_f0f13ac046da").
+node[ast_rs]("n51f528aed36fe430_f0f13ac046da", field_initializer_list, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f0f13ac046da", 8).
+child[ast_rs]("n51f528aed36fe430_f0f13ac046da", c, 0, "n51f528aed36fe430_dabfd27cf928").
+node[ast_rs]("n51f528aed36fe430_dabfd27cf928", field_initializer, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_dabfd27cf928", 8).
+child[ast_rs]("n51f528aed36fe430_dabfd27cf928", field, 0, "n51f528aed36fe430_d5fd7acfdfb8").
+node[ast_rs]("n51f528aed36fe430_d5fd7acfdfb8", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d5fd7acfdfb8", 8).
+attr[ast_rs]("n51f528aed36fe430_d5fd7acfdfb8", text, "loud").
+child[ast_rs]("n51f528aed36fe430_dabfd27cf928", value, 0, "n51f528aed36fe430_1fa398365559").
+node[ast_rs]("n51f528aed36fe430_1fa398365559", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_1fa398365559", 8).
+attr[ast_rs]("n51f528aed36fe430_1fa398365559", upper, true).
+attr[ast_rs]("n51f528aed36fe430_1fa398365559", text, "LOUD").
+child[ast_rs]("n51f528aed36fe430_f0f13ac046da", c, 1, "n51f528aed36fe430_1ae6ffdced91").
+node[ast_rs]("n51f528aed36fe430_1ae6ffdced91", field_initializer, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_1ae6ffdced91", 8).
+child[ast_rs]("n51f528aed36fe430_1ae6ffdced91", field, 0, "n51f528aed36fe430_50f42229bc1a").
+node[ast_rs]("n51f528aed36fe430_50f42229bc1a", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_50f42229bc1a", 8).
+attr[ast_rs]("n51f528aed36fe430_50f42229bc1a", text, "read").
+child[ast_rs]("n51f528aed36fe430_1ae6ffdced91", value, 0, "n51f528aed36fe430_d37cf733ce51").
+node[ast_rs]("n51f528aed36fe430_d37cf733ce51", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d37cf733ce51", 8).
+attr[ast_rs]("n51f528aed36fe430_d37cf733ce51", value, 0).
+attr[ast_rs]("n51f528aed36fe430_d37cf733ce51", text, "0").
+child[ast_rs]("n51f528aed36fe430_f0f13ac046da", c, 2, "n51f528aed36fe430_53dfa706ad94").
+node[ast_rs]("n51f528aed36fe430_53dfa706ad94", field_initializer, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_53dfa706ad94", 8).
+child[ast_rs]("n51f528aed36fe430_53dfa706ad94", field, 0, "n51f528aed36fe430_ee0726e1c342").
+node[ast_rs]("n51f528aed36fe430_ee0726e1c342", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ee0726e1c342", 8).
+attr[ast_rs]("n51f528aed36fe430_ee0726e1c342", text, "total").
+child[ast_rs]("n51f528aed36fe430_53dfa706ad94", value, 0, "n51f528aed36fe430_17597561a6c8").
+node[ast_rs]("n51f528aed36fe430_17597561a6c8", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_17597561a6c8", 8).
+attr[ast_rs]("n51f528aed36fe430_17597561a6c8", value, 0).
+attr[ast_rs]("n51f528aed36fe430_17597561a6c8", text, "0").
+child[ast_rs]("n51f528aed36fe430_root", c, 5, "n51f528aed36fe430_815485034f88").
+node[ast_rs]("n51f528aed36fe430_815485034f88", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_815485034f88", 10).
+child[ast_rs]("n51f528aed36fe430_815485034f88", c, 0, "n51f528aed36fe430_e8f38af80e9d").
+node[ast_rs]("n51f528aed36fe430_e8f38af80e9d", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e8f38af80e9d", 10).
+attr[ast_rs]("n51f528aed36fe430_e8f38af80e9d", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_e8f38af80e9d", token, "pub").
+child[ast_rs]("n51f528aed36fe430_815485034f88", name, 0, "n51f528aed36fe430_e4dfea3de7d7").
+node[ast_rs]("n51f528aed36fe430_e4dfea3de7d7", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e4dfea3de7d7", 10).
+attr[ast_rs]("n51f528aed36fe430_e4dfea3de7d7", text, "shared").
+child[ast_rs]("n51f528aed36fe430_815485034f88", parameters, 0, "n51f528aed36fe430_e83a8cb05386").
+node[ast_rs]("n51f528aed36fe430_e83a8cb05386", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e83a8cb05386", 10).
+child[ast_rs]("n51f528aed36fe430_e83a8cb05386", c, 0, "n51f528aed36fe430_7ffa31dcc88a").
+node[ast_rs]("n51f528aed36fe430_7ffa31dcc88a", parameter, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_7ffa31dcc88a", 10).
+child[ast_rs]("n51f528aed36fe430_7ffa31dcc88a", pattern, 0, "n51f528aed36fe430_24d677324520").
+node[ast_rs]("n51f528aed36fe430_24d677324520", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_24d677324520", 10).
+attr[ast_rs]("n51f528aed36fe430_24d677324520", text, "id").
+child[ast_rs]("n51f528aed36fe430_7ffa31dcc88a", type, 0, "n51f528aed36fe430_96c077ab6017").
+node[ast_rs]("n51f528aed36fe430_96c077ab6017", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_96c077ab6017", 10).
+attr[ast_rs]("n51f528aed36fe430_96c077ab6017", text, "u32").
+child[ast_rs]("n51f528aed36fe430_815485034f88", return_type, 0, "n51f528aed36fe430_66efe83cf532").
+node[ast_rs]("n51f528aed36fe430_66efe83cf532", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_66efe83cf532", 10).
+attr[ast_rs]("n51f528aed36fe430_66efe83cf532", text, "bool").
+child[ast_rs]("n51f528aed36fe430_815485034f88", body, 0, "n51f528aed36fe430_61202b5bf536").
+node[ast_rs]("n51f528aed36fe430_61202b5bf536", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_61202b5bf536", 10).
+child[ast_rs]("n51f528aed36fe430_61202b5bf536", c, 0, "n51f528aed36fe430_ed6ce42a87c2").
+node[ast_rs]("n51f528aed36fe430_ed6ce42a87c2", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ed6ce42a87c2", 10).
+child[ast_rs]("n51f528aed36fe430_ed6ce42a87c2", left, 0, "n51f528aed36fe430_efba7247bbbe").
+node[ast_rs]("n51f528aed36fe430_efba7247bbbe", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_efba7247bbbe", 10).
+attr[ast_rs]("n51f528aed36fe430_efba7247bbbe", text, "id").
+attr[ast_rs]("n51f528aed36fe430_ed6ce42a87c2", operator, ">=").
+child[ast_rs]("n51f528aed36fe430_ed6ce42a87c2", right, 0, "n51f528aed36fe430_435a69110c2c").
+node[ast_rs]("n51f528aed36fe430_435a69110c2c", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_435a69110c2c", 10).
+attr[ast_rs]("n51f528aed36fe430_435a69110c2c", upper, true).
+attr[ast_rs]("n51f528aed36fe430_435a69110c2c", text, "TAG").
+child[ast_rs]("n51f528aed36fe430_root", c, 6, "n51f528aed36fe430_33097fbf0721").
+node[ast_rs]("n51f528aed36fe430_33097fbf0721", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_33097fbf0721", 12).
+child[ast_rs]("n51f528aed36fe430_33097fbf0721", c, 0, "n51f528aed36fe430_43a3f9af2467").
+node[ast_rs]("n51f528aed36fe430_43a3f9af2467", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_43a3f9af2467", 12).
+attr[ast_rs]("n51f528aed36fe430_43a3f9af2467", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_43a3f9af2467", token, "pub").
+child[ast_rs]("n51f528aed36fe430_33097fbf0721", name, 0, "n51f528aed36fe430_6de2488bb857").
+node[ast_rs]("n51f528aed36fe430_6de2488bb857", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6de2488bb857", 12).
+attr[ast_rs]("n51f528aed36fe430_6de2488bb857", text, "too_hot").
+child[ast_rs]("n51f528aed36fe430_33097fbf0721", parameters, 0, "n51f528aed36fe430_2725eeadd956").
+node[ast_rs]("n51f528aed36fe430_2725eeadd956", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2725eeadd956", 12).
+child[ast_rs]("n51f528aed36fe430_2725eeadd956", c, 0, "n51f528aed36fe430_ba967e838f34").
+node[ast_rs]("n51f528aed36fe430_ba967e838f34", parameter, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ba967e838f34", 12).
+child[ast_rs]("n51f528aed36fe430_ba967e838f34", pattern, 0, "n51f528aed36fe430_933d551adaf9").
+node[ast_rs]("n51f528aed36fe430_933d551adaf9", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_933d551adaf9", 12).
+attr[ast_rs]("n51f528aed36fe430_933d551adaf9", text, "c").
+child[ast_rs]("n51f528aed36fe430_ba967e838f34", type, 0, "n51f528aed36fe430_d3632a2a55b8").
+node[ast_rs]("n51f528aed36fe430_d3632a2a55b8", reference_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d3632a2a55b8", 12).
+attr[ast_rs]("n51f528aed36fe430_d3632a2a55b8", token, "&").
+child[ast_rs]("n51f528aed36fe430_d3632a2a55b8", type, 0, "n51f528aed36fe430_95287a9e39e7").
+node[ast_rs]("n51f528aed36fe430_95287a9e39e7", type_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_95287a9e39e7", 12).
+attr[ast_rs]("n51f528aed36fe430_95287a9e39e7", text, "Cost").
+child[ast_rs]("n51f528aed36fe430_33097fbf0721", return_type, 0, "n51f528aed36fe430_8c98f885c648").
+node[ast_rs]("n51f528aed36fe430_8c98f885c648", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_8c98f885c648", 12).
+attr[ast_rs]("n51f528aed36fe430_8c98f885c648", text, "bool").
+child[ast_rs]("n51f528aed36fe430_33097fbf0721", body, 0, "n51f528aed36fe430_9503f0de7d80").
+node[ast_rs]("n51f528aed36fe430_9503f0de7d80", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_9503f0de7d80", 12).
+child[ast_rs]("n51f528aed36fe430_9503f0de7d80", c, 0, "n51f528aed36fe430_ee8c34dcb7af").
+node[ast_rs]("n51f528aed36fe430_ee8c34dcb7af", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ee8c34dcb7af", 12).
+child[ast_rs]("n51f528aed36fe430_ee8c34dcb7af", left, 0, "n51f528aed36fe430_a05b779ed9c9").
+node[ast_rs]("n51f528aed36fe430_a05b779ed9c9", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_a05b779ed9c9", 12).
+child[ast_rs]("n51f528aed36fe430_a05b779ed9c9", left, 0, "n51f528aed36fe430_37cc747cfda8").
+node[ast_rs]("n51f528aed36fe430_37cc747cfda8", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_37cc747cfda8", 12).
+child[ast_rs]("n51f528aed36fe430_37cc747cfda8", value, 0, "n51f528aed36fe430_442dc75f994a").
+node[ast_rs]("n51f528aed36fe430_442dc75f994a", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_442dc75f994a", 12).
+attr[ast_rs]("n51f528aed36fe430_442dc75f994a", text, "c").
+child[ast_rs]("n51f528aed36fe430_37cc747cfda8", field, 0, "n51f528aed36fe430_68b68fc0b0b9").
+node[ast_rs]("n51f528aed36fe430_68b68fc0b0b9", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_68b68fc0b0b9", 12).
+attr[ast_rs]("n51f528aed36fe430_68b68fc0b0b9", text, "read").
+attr[ast_rs]("n51f528aed36fe430_a05b779ed9c9", operator, ">=").
+child[ast_rs]("n51f528aed36fe430_a05b779ed9c9", right, 0, "n51f528aed36fe430_e2e0aef5c7e4").
+node[ast_rs]("n51f528aed36fe430_e2e0aef5c7e4", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e2e0aef5c7e4", 12).
+child[ast_rs]("n51f528aed36fe430_e2e0aef5c7e4", value, 0, "n51f528aed36fe430_052be82bdc7e").
+node[ast_rs]("n51f528aed36fe430_052be82bdc7e", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_052be82bdc7e", 12).
+attr[ast_rs]("n51f528aed36fe430_052be82bdc7e", text, "c").
+child[ast_rs]("n51f528aed36fe430_e2e0aef5c7e4", field, 0, "n51f528aed36fe430_129ab4ba6526").
+node[ast_rs]("n51f528aed36fe430_129ab4ba6526", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_129ab4ba6526", 12).
+attr[ast_rs]("n51f528aed36fe430_129ab4ba6526", text, "loud").
+attr[ast_rs]("n51f528aed36fe430_ee8c34dcb7af", operator, "&&").
+child[ast_rs]("n51f528aed36fe430_ee8c34dcb7af", right, 0, "n51f528aed36fe430_b02669b7ed52").
+node[ast_rs]("n51f528aed36fe430_b02669b7ed52", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b02669b7ed52", 12).
+child[ast_rs]("n51f528aed36fe430_b02669b7ed52", left, 0, "n51f528aed36fe430_81fb1d3ce206").
+node[ast_rs]("n51f528aed36fe430_81fb1d3ce206", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_81fb1d3ce206", 12).
+child[ast_rs]("n51f528aed36fe430_81fb1d3ce206", left, 0, "n51f528aed36fe430_e0da8efb7204").
+node[ast_rs]("n51f528aed36fe430_e0da8efb7204", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e0da8efb7204", 12).
+child[ast_rs]("n51f528aed36fe430_e0da8efb7204", value, 0, "n51f528aed36fe430_b60d16bae688").
+node[ast_rs]("n51f528aed36fe430_b60d16bae688", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b60d16bae688", 12).
+attr[ast_rs]("n51f528aed36fe430_b60d16bae688", text, "c").
+child[ast_rs]("n51f528aed36fe430_e0da8efb7204", field, 0, "n51f528aed36fe430_e4bce63775ff").
+node[ast_rs]("n51f528aed36fe430_e4bce63775ff", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e4bce63775ff", 12).
+attr[ast_rs]("n51f528aed36fe430_e4bce63775ff", text, "read").
+attr[ast_rs]("n51f528aed36fe430_81fb1d3ce206", operator, "*").
+child[ast_rs]("n51f528aed36fe430_81fb1d3ce206", right, 0, "n51f528aed36fe430_f7f9db51fd67").
+node[ast_rs]("n51f528aed36fe430_f7f9db51fd67", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f7f9db51fd67", 12).
+attr[ast_rs]("n51f528aed36fe430_f7f9db51fd67", upper, true).
+attr[ast_rs]("n51f528aed36fe430_f7f9db51fd67", text, "SHARE").
+attr[ast_rs]("n51f528aed36fe430_b02669b7ed52", operator, ">=").
+child[ast_rs]("n51f528aed36fe430_b02669b7ed52", right, 0, "n51f528aed36fe430_aef900a46187").
+node[ast_rs]("n51f528aed36fe430_aef900a46187", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_aef900a46187", 12).
+child[ast_rs]("n51f528aed36fe430_aef900a46187", value, 0, "n51f528aed36fe430_d51e4f8f76ae").
+node[ast_rs]("n51f528aed36fe430_d51e4f8f76ae", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d51e4f8f76ae", 12).
+attr[ast_rs]("n51f528aed36fe430_d51e4f8f76ae", text, "c").
+child[ast_rs]("n51f528aed36fe430_aef900a46187", field, 0, "n51f528aed36fe430_b055fd5f3ba0").
+node[ast_rs]("n51f528aed36fe430_b055fd5f3ba0", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b055fd5f3ba0", 12).
+attr[ast_rs]("n51f528aed36fe430_b055fd5f3ba0", text, "total").
+child[ast_rs]("n51f528aed36fe430_root", c, 7, "n51f528aed36fe430_b73d833163ec").
+node[ast_rs]("n51f528aed36fe430_b73d833163ec", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b73d833163ec", 14).
+child[ast_rs]("n51f528aed36fe430_b73d833163ec", c, 0, "n51f528aed36fe430_22f53974ab31").
+node[ast_rs]("n51f528aed36fe430_22f53974ab31", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_22f53974ab31", 14).
+attr[ast_rs]("n51f528aed36fe430_22f53974ab31", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_22f53974ab31", token, "pub").
+child[ast_rs]("n51f528aed36fe430_b73d833163ec", name, 0, "n51f528aed36fe430_bca0f92e148b").
+node[ast_rs]("n51f528aed36fe430_bca0f92e148b", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_bca0f92e148b", 14).
+attr[ast_rs]("n51f528aed36fe430_bca0f92e148b", text, "shown").
+child[ast_rs]("n51f528aed36fe430_b73d833163ec", parameters, 0, "n51f528aed36fe430_6a5d32539f17").
+node[ast_rs]("n51f528aed36fe430_6a5d32539f17", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6a5d32539f17", 14).
+child[ast_rs]("n51f528aed36fe430_6a5d32539f17", c, 0, "n51f528aed36fe430_ed3014afa3f4").
+node[ast_rs]("n51f528aed36fe430_ed3014afa3f4", parameter, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ed3014afa3f4", 14).
+child[ast_rs]("n51f528aed36fe430_ed3014afa3f4", pattern, 0, "n51f528aed36fe430_079fb81f7fa0").
+node[ast_rs]("n51f528aed36fe430_079fb81f7fa0", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_079fb81f7fa0", 14).
+attr[ast_rs]("n51f528aed36fe430_079fb81f7fa0", text, "n").
+child[ast_rs]("n51f528aed36fe430_ed3014afa3f4", type, 0, "n51f528aed36fe430_061cf0976948").
+node[ast_rs]("n51f528aed36fe430_061cf0976948", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_061cf0976948", 14).
+attr[ast_rs]("n51f528aed36fe430_061cf0976948", text, "usize").
+child[ast_rs]("n51f528aed36fe430_b73d833163ec", return_type, 0, "n51f528aed36fe430_0ac0057df10b").
+node[ast_rs]("n51f528aed36fe430_0ac0057df10b", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_0ac0057df10b", 14).
+attr[ast_rs]("n51f528aed36fe430_0ac0057df10b", text, "usize").
+child[ast_rs]("n51f528aed36fe430_b73d833163ec", body, 0, "n51f528aed36fe430_3344fb9a5672").
+node[ast_rs]("n51f528aed36fe430_3344fb9a5672", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_3344fb9a5672", 14).
+child[ast_rs]("n51f528aed36fe430_3344fb9a5672", c, 0, "n51f528aed36fe430_59bca5e2b33c").
+node[ast_rs]("n51f528aed36fe430_59bca5e2b33c", expression_statement, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_59bca5e2b33c", 14).
+child[ast_rs]("n51f528aed36fe430_59bca5e2b33c", c, 0, "n51f528aed36fe430_5bd958599963").
+node[ast_rs]("n51f528aed36fe430_5bd958599963", if_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_5bd958599963", 14).
+child[ast_rs]("n51f528aed36fe430_5bd958599963", condition, 0, "n51f528aed36fe430_f14c27833e97").
+node[ast_rs]("n51f528aed36fe430_f14c27833e97", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f14c27833e97", 14).
+child[ast_rs]("n51f528aed36fe430_f14c27833e97", left, 0, "n51f528aed36fe430_adc69dcebcbd").
+node[ast_rs]("n51f528aed36fe430_adc69dcebcbd", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_adc69dcebcbd", 14).
+attr[ast_rs]("n51f528aed36fe430_adc69dcebcbd", text, "n").
+attr[ast_rs]("n51f528aed36fe430_f14c27833e97", operator, ">").
+child[ast_rs]("n51f528aed36fe430_f14c27833e97", right, 0, "n51f528aed36fe430_89416d87a963").
+node[ast_rs]("n51f528aed36fe430_89416d87a963", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_89416d87a963", 14).
+attr[ast_rs]("n51f528aed36fe430_89416d87a963", value, 12).
+attr[ast_rs]("n51f528aed36fe430_89416d87a963", text, "12").
+child[ast_rs]("n51f528aed36fe430_5bd958599963", consequence, 0, "n51f528aed36fe430_e1fcbcf83ef7").
+node[ast_rs]("n51f528aed36fe430_e1fcbcf83ef7", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e1fcbcf83ef7", 14).
+child[ast_rs]("n51f528aed36fe430_e1fcbcf83ef7", c, 0, "n51f528aed36fe430_4cff103938a9").
+node[ast_rs]("n51f528aed36fe430_4cff103938a9", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_4cff103938a9", 14).
+attr[ast_rs]("n51f528aed36fe430_4cff103938a9", value, 12).
+attr[ast_rs]("n51f528aed36fe430_4cff103938a9", text, "12").
+child[ast_rs]("n51f528aed36fe430_5bd958599963", alternative, 0, "n51f528aed36fe430_3e0309ed4502").
+node[ast_rs]("n51f528aed36fe430_3e0309ed4502", else_clause, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_3e0309ed4502", 14).
+child[ast_rs]("n51f528aed36fe430_3e0309ed4502", c, 0, "n51f528aed36fe430_6293b38778df").
+node[ast_rs]("n51f528aed36fe430_6293b38778df", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6293b38778df", 14).
+child[ast_rs]("n51f528aed36fe430_6293b38778df", c, 0, "n51f528aed36fe430_3dbc3cc437e2").
+node[ast_rs]("n51f528aed36fe430_3dbc3cc437e2", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_3dbc3cc437e2", 14).
+attr[ast_rs]("n51f528aed36fe430_3dbc3cc437e2", text, "n").
+child[ast_rs]("n51f528aed36fe430_root", c, 8, "n51f528aed36fe430_c08de1c86d0b").
+node[ast_rs]("n51f528aed36fe430_c08de1c86d0b", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_c08de1c86d0b", 16).
+child[ast_rs]("n51f528aed36fe430_c08de1c86d0b", c, 0, "n51f528aed36fe430_09b0be97bbe1").
+node[ast_rs]("n51f528aed36fe430_09b0be97bbe1", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_09b0be97bbe1", 16).
+attr[ast_rs]("n51f528aed36fe430_09b0be97bbe1", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_09b0be97bbe1", token, "pub").
+child[ast_rs]("n51f528aed36fe430_c08de1c86d0b", name, 0, "n51f528aed36fe430_97c79b86a1b3").
+node[ast_rs]("n51f528aed36fe430_97c79b86a1b3", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_97c79b86a1b3", 16).
+attr[ast_rs]("n51f528aed36fe430_97c79b86a1b3", text, "equal").
+child[ast_rs]("n51f528aed36fe430_c08de1c86d0b", parameters, 0, "n51f528aed36fe430_c11c284ecea7").
+node[ast_rs]("n51f528aed36fe430_c11c284ecea7", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_c11c284ecea7", 16).
+child[ast_rs]("n51f528aed36fe430_c11c284ecea7", c, 0, "n51f528aed36fe430_0faf8da1750f").
+node[ast_rs]("n51f528aed36fe430_0faf8da1750f", parameter, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_0faf8da1750f", 16).
+child[ast_rs]("n51f528aed36fe430_0faf8da1750f", pattern, 0, "n51f528aed36fe430_60f6b38e5613").
+node[ast_rs]("n51f528aed36fe430_60f6b38e5613", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_60f6b38e5613", 16).
+attr[ast_rs]("n51f528aed36fe430_60f6b38e5613", text, "n").
+child[ast_rs]("n51f528aed36fe430_0faf8da1750f", type, 0, "n51f528aed36fe430_360052354267").
+node[ast_rs]("n51f528aed36fe430_360052354267", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_360052354267", 16).
+attr[ast_rs]("n51f528aed36fe430_360052354267", text, "usize").
+child[ast_rs]("n51f528aed36fe430_c08de1c86d0b", return_type, 0, "n51f528aed36fe430_2fe1245e1ce6").
+node[ast_rs]("n51f528aed36fe430_2fe1245e1ce6", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2fe1245e1ce6", 16).
+attr[ast_rs]("n51f528aed36fe430_2fe1245e1ce6", text, "bool").
+child[ast_rs]("n51f528aed36fe430_c08de1c86d0b", body, 0, "n51f528aed36fe430_2a736be175a2").
+node[ast_rs]("n51f528aed36fe430_2a736be175a2", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2a736be175a2", 16).
+child[ast_rs]("n51f528aed36fe430_2a736be175a2", c, 0, "n51f528aed36fe430_bf33d8d2fcd9").
+node[ast_rs]("n51f528aed36fe430_bf33d8d2fcd9", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_bf33d8d2fcd9", 16).
+child[ast_rs]("n51f528aed36fe430_bf33d8d2fcd9", left, 0, "n51f528aed36fe430_f357f2dfb05f").
+node[ast_rs]("n51f528aed36fe430_f357f2dfb05f", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f357f2dfb05f", 16).
+attr[ast_rs]("n51f528aed36fe430_f357f2dfb05f", text, "n").
+attr[ast_rs]("n51f528aed36fe430_bf33d8d2fcd9", operator, "==").
+child[ast_rs]("n51f528aed36fe430_bf33d8d2fcd9", right, 0, "n51f528aed36fe430_7aee41c2e955").
+node[ast_rs]("n51f528aed36fe430_7aee41c2e955", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_7aee41c2e955", 16).
+attr[ast_rs]("n51f528aed36fe430_7aee41c2e955", value, 7).
+attr[ast_rs]("n51f528aed36fe430_7aee41c2e955", text, "7").
+child[ast_rs]("n51f528aed36fe430_root", c, 9, "n51f528aed36fe430_0e7b9818b8e6").
+node[ast_rs]("n51f528aed36fe430_0e7b9818b8e6", const_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_0e7b9818b8e6", 18).
+attr[ast_rs]("n51f528aed36fe430_0e7b9818b8e6", token, "const").
+child[ast_rs]("n51f528aed36fe430_0e7b9818b8e6", name, 0, "n51f528aed36fe430_986d40f2c18a").
+node[ast_rs]("n51f528aed36fe430_986d40f2c18a", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_986d40f2c18a", 18).
+attr[ast_rs]("n51f528aed36fe430_986d40f2c18a", upper, true).
+attr[ast_rs]("n51f528aed36fe430_986d40f2c18a", text, "NAMES").
+child[ast_rs]("n51f528aed36fe430_0e7b9818b8e6", type, 0, "n51f528aed36fe430_0646f614a391").
+node[ast_rs]("n51f528aed36fe430_0646f614a391", array_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_0646f614a391", 18).
+child[ast_rs]("n51f528aed36fe430_0646f614a391", element, 0, "n51f528aed36fe430_7888d05a37ce").
+node[ast_rs]("n51f528aed36fe430_7888d05a37ce", reference_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_7888d05a37ce", 18).
+attr[ast_rs]("n51f528aed36fe430_7888d05a37ce", token, "&").
+child[ast_rs]("n51f528aed36fe430_7888d05a37ce", type, 0, "n51f528aed36fe430_91f89fff9af9").
+node[ast_rs]("n51f528aed36fe430_91f89fff9af9", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_91f89fff9af9", 18).
+attr[ast_rs]("n51f528aed36fe430_91f89fff9af9", text, "str").
+child[ast_rs]("n51f528aed36fe430_0646f614a391", length, 0, "n51f528aed36fe430_7aad3092f31d").
+node[ast_rs]("n51f528aed36fe430_7aad3092f31d", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_7aad3092f31d", 18).
+attr[ast_rs]("n51f528aed36fe430_7aad3092f31d", value, 2).
+attr[ast_rs]("n51f528aed36fe430_7aad3092f31d", text, "2").
+child[ast_rs]("n51f528aed36fe430_0e7b9818b8e6", value, 0, "n51f528aed36fe430_9c76fb73ec7a").
+node[ast_rs]("n51f528aed36fe430_9c76fb73ec7a", array_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_9c76fb73ec7a", 18).
+child[ast_rs]("n51f528aed36fe430_9c76fb73ec7a", c, 0, "n51f528aed36fe430_dc2f9f0b3624").
+node[ast_rs]("n51f528aed36fe430_dc2f9f0b3624", string_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_dc2f9f0b3624", 18).
+attr[ast_rs]("n51f528aed36fe430_dc2f9f0b3624", value, "a").
+child[ast_rs]("n51f528aed36fe430_9c76fb73ec7a", c, 1, "n51f528aed36fe430_48aa671e7b9d").
+node[ast_rs]("n51f528aed36fe430_48aa671e7b9d", string_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_48aa671e7b9d", 18).
+attr[ast_rs]("n51f528aed36fe430_48aa671e7b9d", value, "b").
+child[ast_rs]("n51f528aed36fe430_root", c, 10, "n51f528aed36fe430_6943383924be").
+node[ast_rs]("n51f528aed36fe430_6943383924be", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_6943383924be", 20).
+child[ast_rs]("n51f528aed36fe430_6943383924be", c, 0, "n51f528aed36fe430_5b3dd8aecf23").
+node[ast_rs]("n51f528aed36fe430_5b3dd8aecf23", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_5b3dd8aecf23", 20).
+attr[ast_rs]("n51f528aed36fe430_5b3dd8aecf23", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_5b3dd8aecf23", token, "pub").
+child[ast_rs]("n51f528aed36fe430_6943383924be", name, 0, "n51f528aed36fe430_2730cb05f7a7").
+node[ast_rs]("n51f528aed36fe430_2730cb05f7a7", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2730cb05f7a7", 20).
+attr[ast_rs]("n51f528aed36fe430_2730cb05f7a7", text, "many").
+child[ast_rs]("n51f528aed36fe430_6943383924be", parameters, 0, "n51f528aed36fe430_a547dc60d959").
+node[ast_rs]("n51f528aed36fe430_a547dc60d959", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_a547dc60d959", 20).
+child[ast_rs]("n51f528aed36fe430_a547dc60d959", c, 0, "n51f528aed36fe430_c2a657275343").
+node[ast_rs]("n51f528aed36fe430_c2a657275343", parameter, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_c2a657275343", 20).
+child[ast_rs]("n51f528aed36fe430_c2a657275343", pattern, 0, "n51f528aed36fe430_7950423532f2").
+node[ast_rs]("n51f528aed36fe430_7950423532f2", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_7950423532f2", 20).
+attr[ast_rs]("n51f528aed36fe430_7950423532f2", text, "n").
+child[ast_rs]("n51f528aed36fe430_c2a657275343", type, 0, "n51f528aed36fe430_e36617d3e752").
+node[ast_rs]("n51f528aed36fe430_e36617d3e752", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_e36617d3e752", 20).
+attr[ast_rs]("n51f528aed36fe430_e36617d3e752", text, "usize").
+child[ast_rs]("n51f528aed36fe430_6943383924be", return_type, 0, "n51f528aed36fe430_a4e4b397fa04").
+node[ast_rs]("n51f528aed36fe430_a4e4b397fa04", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_a4e4b397fa04", 20).
+attr[ast_rs]("n51f528aed36fe430_a4e4b397fa04", text, "bool").
+child[ast_rs]("n51f528aed36fe430_6943383924be", body, 0, "n51f528aed36fe430_bd5caf62c4d4").
+node[ast_rs]("n51f528aed36fe430_bd5caf62c4d4", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_bd5caf62c4d4", 20).
+child[ast_rs]("n51f528aed36fe430_bd5caf62c4d4", c, 0, "n51f528aed36fe430_25a1239d2778").
+node[ast_rs]("n51f528aed36fe430_25a1239d2778", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_25a1239d2778", 20).
+child[ast_rs]("n51f528aed36fe430_25a1239d2778", left, 0, "n51f528aed36fe430_ae2330a92bbc").
+node[ast_rs]("n51f528aed36fe430_ae2330a92bbc", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ae2330a92bbc", 20).
+attr[ast_rs]("n51f528aed36fe430_ae2330a92bbc", text, "n").
+attr[ast_rs]("n51f528aed36fe430_25a1239d2778", operator, ">").
+child[ast_rs]("n51f528aed36fe430_25a1239d2778", right, 0, "n51f528aed36fe430_887271e02785").
+node[ast_rs]("n51f528aed36fe430_887271e02785", call_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_887271e02785", 20).
+child[ast_rs]("n51f528aed36fe430_887271e02785", function, 0, "n51f528aed36fe430_b4a9c759a6e8").
+node[ast_rs]("n51f528aed36fe430_b4a9c759a6e8", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b4a9c759a6e8", 20).
+child[ast_rs]("n51f528aed36fe430_b4a9c759a6e8", value, 0, "n51f528aed36fe430_bb50b5bf7377").
+node[ast_rs]("n51f528aed36fe430_bb50b5bf7377", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_bb50b5bf7377", 20).
+attr[ast_rs]("n51f528aed36fe430_bb50b5bf7377", upper, true).
+attr[ast_rs]("n51f528aed36fe430_bb50b5bf7377", text, "NAMES").
+child[ast_rs]("n51f528aed36fe430_b4a9c759a6e8", field, 0, "n51f528aed36fe430_0d64fe002154").
+node[ast_rs]("n51f528aed36fe430_0d64fe002154", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_0d64fe002154", 20).
+attr[ast_rs]("n51f528aed36fe430_0d64fe002154", text, "len").
+child[ast_rs]("n51f528aed36fe430_887271e02785", arguments, 0, "n51f528aed36fe430_b097cac32edc").
+node[ast_rs]("n51f528aed36fe430_b097cac32edc", arguments, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b097cac32edc", 20).
+attr[ast_rs]("n51f528aed36fe430_b097cac32edc", text, "()").
+child[ast_rs]("n51f528aed36fe430_root", c, 11, "n51f528aed36fe430_a80f393ca546").
+node[ast_rs]("n51f528aed36fe430_a80f393ca546", function_item, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_a80f393ca546", 22).
+last[ast_rs]("n51f528aed36fe430_a80f393ca546", 25).
+child[ast_rs]("n51f528aed36fe430_a80f393ca546", c, 0, "n51f528aed36fe430_83faa3c63a1e").
+node[ast_rs]("n51f528aed36fe430_83faa3c63a1e", visibility_modifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_83faa3c63a1e", 22).
+attr[ast_rs]("n51f528aed36fe430_83faa3c63a1e", text, "pub").
+attr[ast_rs]("n51f528aed36fe430_83faa3c63a1e", token, "pub").
+child[ast_rs]("n51f528aed36fe430_a80f393ca546", name, 0, "n51f528aed36fe430_ede36f971a6e").
+node[ast_rs]("n51f528aed36fe430_ede36f971a6e", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ede36f971a6e", 22).
+attr[ast_rs]("n51f528aed36fe430_ede36f971a6e", text, "first_loud").
+child[ast_rs]("n51f528aed36fe430_a80f393ca546", parameters, 0, "n51f528aed36fe430_75526b2f50b5").
+node[ast_rs]("n51f528aed36fe430_75526b2f50b5", parameters, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_75526b2f50b5", 22).
+child[ast_rs]("n51f528aed36fe430_75526b2f50b5", c, 0, "n51f528aed36fe430_fc711f32fe0e").
+node[ast_rs]("n51f528aed36fe430_fc711f32fe0e", parameter, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_fc711f32fe0e", 22).
+child[ast_rs]("n51f528aed36fe430_fc711f32fe0e", pattern, 0, "n51f528aed36fe430_cb719cd2b830").
+node[ast_rs]("n51f528aed36fe430_cb719cd2b830", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_cb719cd2b830", 22).
+attr[ast_rs]("n51f528aed36fe430_cb719cd2b830", text, "c").
+child[ast_rs]("n51f528aed36fe430_fc711f32fe0e", type, 0, "n51f528aed36fe430_834842c0c021").
+node[ast_rs]("n51f528aed36fe430_834842c0c021", reference_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_834842c0c021", 22).
+attr[ast_rs]("n51f528aed36fe430_834842c0c021", token, "&").
+attr[ast_rs]("n51f528aed36fe430_834842c0c021", token, "mut").
+child[ast_rs]("n51f528aed36fe430_834842c0c021", type, 0, "n51f528aed36fe430_f535a44afd3d").
+node[ast_rs]("n51f528aed36fe430_f535a44afd3d", generic_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_f535a44afd3d", 22).
+child[ast_rs]("n51f528aed36fe430_f535a44afd3d", type, 0, "n51f528aed36fe430_175a9eb8e3c3").
+node[ast_rs]("n51f528aed36fe430_175a9eb8e3c3", scoped_type_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_175a9eb8e3c3", 22).
+child[ast_rs]("n51f528aed36fe430_175a9eb8e3c3", path, 0, "n51f528aed36fe430_3e4582817a7c").
+node[ast_rs]("n51f528aed36fe430_3e4582817a7c", scoped_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_3e4582817a7c", 22).
+child[ast_rs]("n51f528aed36fe430_3e4582817a7c", path, 0, "n51f528aed36fe430_78fcab4fcfaf").
+node[ast_rs]("n51f528aed36fe430_78fcab4fcfaf", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_78fcab4fcfaf", 22).
+attr[ast_rs]("n51f528aed36fe430_78fcab4fcfaf", text, "std").
+child[ast_rs]("n51f528aed36fe430_3e4582817a7c", name, 0, "n51f528aed36fe430_051fc3805a23").
+node[ast_rs]("n51f528aed36fe430_051fc3805a23", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_051fc3805a23", 22).
+attr[ast_rs]("n51f528aed36fe430_051fc3805a23", text, "collections").
+child[ast_rs]("n51f528aed36fe430_175a9eb8e3c3", name, 0, "n51f528aed36fe430_468f1a3feb28").
+node[ast_rs]("n51f528aed36fe430_468f1a3feb28", type_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_468f1a3feb28", 22).
+attr[ast_rs]("n51f528aed36fe430_468f1a3feb28", text, "HashMap").
+child[ast_rs]("n51f528aed36fe430_f535a44afd3d", type_arguments, 0, "n51f528aed36fe430_4900199b6eee").
+node[ast_rs]("n51f528aed36fe430_4900199b6eee", type_arguments, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_4900199b6eee", 22).
+child[ast_rs]("n51f528aed36fe430_4900199b6eee", c, 0, "n51f528aed36fe430_9aca4b47cf9c").
+node[ast_rs]("n51f528aed36fe430_9aca4b47cf9c", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_9aca4b47cf9c", 22).
+attr[ast_rs]("n51f528aed36fe430_9aca4b47cf9c", text, "u32").
+child[ast_rs]("n51f528aed36fe430_4900199b6eee", c, 1, "n51f528aed36fe430_2a2e2dfab0f1").
+node[ast_rs]("n51f528aed36fe430_2a2e2dfab0f1", tuple_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2a2e2dfab0f1", 22).
+child[ast_rs]("n51f528aed36fe430_2a2e2dfab0f1", c, 0, "n51f528aed36fe430_d56c05dd6a02").
+node[ast_rs]("n51f528aed36fe430_d56c05dd6a02", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d56c05dd6a02", 22).
+attr[ast_rs]("n51f528aed36fe430_d56c05dd6a02", text, "u64").
+child[ast_rs]("n51f528aed36fe430_2a2e2dfab0f1", c, 1, "n51f528aed36fe430_563730cb8186").
+node[ast_rs]("n51f528aed36fe430_563730cb8186", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_563730cb8186", 22).
+attr[ast_rs]("n51f528aed36fe430_563730cb8186", text, "u64").
+child[ast_rs]("n51f528aed36fe430_a80f393ca546", return_type, 0, "n51f528aed36fe430_73c61cc38f1f").
+node[ast_rs]("n51f528aed36fe430_73c61cc38f1f", primitive_type, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_73c61cc38f1f", 22).
+attr[ast_rs]("n51f528aed36fe430_73c61cc38f1f", text, "bool").
+child[ast_rs]("n51f528aed36fe430_a80f393ca546", body, 0, "n51f528aed36fe430_ce7c46dffb0d").
+node[ast_rs]("n51f528aed36fe430_ce7c46dffb0d", block, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ce7c46dffb0d", 22).
+last[ast_rs]("n51f528aed36fe430_ce7c46dffb0d", 25).
+child[ast_rs]("n51f528aed36fe430_ce7c46dffb0d", c, 0, "n51f528aed36fe430_2bc6ffa30d9a").
+node[ast_rs]("n51f528aed36fe430_2bc6ffa30d9a", let_declaration, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_2bc6ffa30d9a", 23).
+child[ast_rs]("n51f528aed36fe430_2bc6ffa30d9a", pattern, 0, "n51f528aed36fe430_754bc0ee52b9").
+node[ast_rs]("n51f528aed36fe430_754bc0ee52b9", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_754bc0ee52b9", 23).
+attr[ast_rs]("n51f528aed36fe430_754bc0ee52b9", text, "e").
+child[ast_rs]("n51f528aed36fe430_2bc6ffa30d9a", value, 0, "n51f528aed36fe430_9aaa77d919f8").
+node[ast_rs]("n51f528aed36fe430_9aaa77d919f8", call_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_9aaa77d919f8", 23).
+child[ast_rs]("n51f528aed36fe430_9aaa77d919f8", function, 0, "n51f528aed36fe430_4ddc14be4f05").
+node[ast_rs]("n51f528aed36fe430_4ddc14be4f05", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_4ddc14be4f05", 23).
+child[ast_rs]("n51f528aed36fe430_4ddc14be4f05", value, 0, "n51f528aed36fe430_d90b711f6d5c").
+node[ast_rs]("n51f528aed36fe430_d90b711f6d5c", call_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d90b711f6d5c", 23).
+child[ast_rs]("n51f528aed36fe430_d90b711f6d5c", function, 0, "n51f528aed36fe430_805735e09584").
+node[ast_rs]("n51f528aed36fe430_805735e09584", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_805735e09584", 23).
+child[ast_rs]("n51f528aed36fe430_805735e09584", value, 0, "n51f528aed36fe430_9b445f11c4f7").
+node[ast_rs]("n51f528aed36fe430_9b445f11c4f7", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_9b445f11c4f7", 23).
+attr[ast_rs]("n51f528aed36fe430_9b445f11c4f7", text, "c").
+child[ast_rs]("n51f528aed36fe430_805735e09584", field, 0, "n51f528aed36fe430_b7f2c1ac80dd").
+node[ast_rs]("n51f528aed36fe430_b7f2c1ac80dd", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_b7f2c1ac80dd", 23).
+attr[ast_rs]("n51f528aed36fe430_b7f2c1ac80dd", text, "entry").
+child[ast_rs]("n51f528aed36fe430_d90b711f6d5c", arguments, 0, "n51f528aed36fe430_61083524fd3e").
+node[ast_rs]("n51f528aed36fe430_61083524fd3e", arguments, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_61083524fd3e", 23).
+child[ast_rs]("n51f528aed36fe430_61083524fd3e", c, 0, "n51f528aed36fe430_907a12385463").
+node[ast_rs]("n51f528aed36fe430_907a12385463", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_907a12385463", 23).
+attr[ast_rs]("n51f528aed36fe430_907a12385463", value, 0).
+attr[ast_rs]("n51f528aed36fe430_907a12385463", text, "0").
+child[ast_rs]("n51f528aed36fe430_4ddc14be4f05", field, 0, "n51f528aed36fe430_8fb81ec7ac9f").
+node[ast_rs]("n51f528aed36fe430_8fb81ec7ac9f", field_identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_8fb81ec7ac9f", 23).
+attr[ast_rs]("n51f528aed36fe430_8fb81ec7ac9f", text, "or_insert").
+child[ast_rs]("n51f528aed36fe430_9aaa77d919f8", arguments, 0, "n51f528aed36fe430_1821d723be29").
+node[ast_rs]("n51f528aed36fe430_1821d723be29", arguments, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_1821d723be29", 23).
+child[ast_rs]("n51f528aed36fe430_1821d723be29", c, 0, "n51f528aed36fe430_d19defd03773").
+node[ast_rs]("n51f528aed36fe430_d19defd03773", tuple_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_d19defd03773", 23).
+child[ast_rs]("n51f528aed36fe430_d19defd03773", c, 0, "n51f528aed36fe430_c65a657e7de7").
+node[ast_rs]("n51f528aed36fe430_c65a657e7de7", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_c65a657e7de7", 23).
+attr[ast_rs]("n51f528aed36fe430_c65a657e7de7", value, 0).
+attr[ast_rs]("n51f528aed36fe430_c65a657e7de7", text, "0").
+child[ast_rs]("n51f528aed36fe430_d19defd03773", c, 1, "n51f528aed36fe430_bc7f1c09cf5e").
+node[ast_rs]("n51f528aed36fe430_bc7f1c09cf5e", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_bc7f1c09cf5e", 23).
+attr[ast_rs]("n51f528aed36fe430_bc7f1c09cf5e", upper, true).
+attr[ast_rs]("n51f528aed36fe430_bc7f1c09cf5e", text, "LOUD").
+child[ast_rs]("n51f528aed36fe430_ce7c46dffb0d", c, 1, "n51f528aed36fe430_aeeae6c5d00a").
+node[ast_rs]("n51f528aed36fe430_aeeae6c5d00a", binary_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_aeeae6c5d00a", 24).
+child[ast_rs]("n51f528aed36fe430_aeeae6c5d00a", left, 0, "n51f528aed36fe430_a07b68503484").
+node[ast_rs]("n51f528aed36fe430_a07b68503484", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_a07b68503484", 24).
+child[ast_rs]("n51f528aed36fe430_a07b68503484", value, 0, "n51f528aed36fe430_ab162b702a31").
+node[ast_rs]("n51f528aed36fe430_ab162b702a31", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_ab162b702a31", 24).
+attr[ast_rs]("n51f528aed36fe430_ab162b702a31", text, "e").
+child[ast_rs]("n51f528aed36fe430_a07b68503484", field, 0, "n51f528aed36fe430_13a67ff46467").
+node[ast_rs]("n51f528aed36fe430_13a67ff46467", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_13a67ff46467", 24).
+attr[ast_rs]("n51f528aed36fe430_13a67ff46467", value, 0).
+attr[ast_rs]("n51f528aed36fe430_13a67ff46467", text, "0").
+attr[ast_rs]("n51f528aed36fe430_aeeae6c5d00a", operator, ">=").
+child[ast_rs]("n51f528aed36fe430_aeeae6c5d00a", right, 0, "n51f528aed36fe430_27aa5bfd477a").
+node[ast_rs]("n51f528aed36fe430_27aa5bfd477a", field_expression, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_27aa5bfd477a", 24).
+child[ast_rs]("n51f528aed36fe430_27aa5bfd477a", value, 0, "n51f528aed36fe430_974163cabdd4").
+node[ast_rs]("n51f528aed36fe430_974163cabdd4", identifier, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_974163cabdd4", 24).
+attr[ast_rs]("n51f528aed36fe430_974163cabdd4", text, "e").
+child[ast_rs]("n51f528aed36fe430_27aa5bfd477a", field, 0, "n51f528aed36fe430_cc238efd84ca").
+node[ast_rs]("n51f528aed36fe430_cc238efd84ca", integer_literal, "examples/checks/gates-rs/src/lib.rs").
+line[ast_rs]("n51f528aed36fe430_cc238efd84ca", 24).
+attr[ast_rs]("n51f528aed36fe430_cc238efd84ca", value, 1).
+attr[ast_rs]("n51f528aed36fe430_cc238efd84ca", text, "1").

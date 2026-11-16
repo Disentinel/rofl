@@ -96,7 +96,7 @@ xl_fcbt(H, HB, J, TC, T) :- xl_fvart(R, _, V, W, T), conclusion_lit(R, 1, $lit(H
 xl_fcbt(H, HB, J, TC, T) :- xl_fvart(R, _, V, _, _), conclusion_lit(R, 1, $lit(H, HB, _, _)), HB != surface,
                             xl_hvar(R, J, V), xl_hconst(R, TC, T).
 
--- A MIRRORED relation has an arm that is one [surface] premise (rules/js-surface.rofl puts an escaping node's facts
+-- A MIRRORED relation has an arm that is one [surface] premise (models/lang/js/rules/js-surface.rofl puts an escaping node's facts
 -- back into their relation): its rows of another file's key are in the volume, so reading it there is the channel.
 xl_mirrored(Rel) :- conclusion_lit(R, 1, $lit(Rel, B, _, _)), B != surface,
                     has_premise(R, 1), not has_premise(R, 2), xl_lit(R, 1, pos, _, surface, _).
