@@ -1,0 +1,26 @@
+-- examples/parity/service/rs-check.rofl — A SERVICE AND ITS CLIENT, IN RUST: axum serves, reqwest asks (the scene of
+-- examples/service/ in JS; examples/parity/check.rofl judges it). Truth: cargo run, 2026-11-16: every request below got
+-- 200 from the handler named but DELETE /api/users (405) and GET /missing (404); a path is the text js-express writes.
+truth("serves", route(get, cat("/", "/health"), "health")).
+truth("serves", route(get, cat(cat("/", "/api"), "/users"), "list_users")).
+truth("serves", route(post, cat(cat("/", "/api"), "/users"), "add_user")).
+truth("serves", route(get, cat(cat("/", "/api"), "/version"), "version")).
+truth("serves", route(post, cat(cat("/", "/files"), "/upload"), "upload")).
+truth("listens", 3917).
+truth("requests", req(get, cat(cat("http://127.0.0.1:", 3917), "/health"))).
+truth("requests", req(get, cat(cat("http://127.0.0.1:", 3917), "/api/users"))).
+truth("requests", req(post, cat(cat("http://127.0.0.1:", 3917), "/api/users"))).
+truth("requests", req(get, cat(cat("http://127.0.0.1:", 3917), "/api/version"))).
+truth("requests", req(post, cat(cat("http://127.0.0.1:", 3917), "/files/upload"))).
+truth("requests", req(delete, cat(cat("http://127.0.0.1:", 3917), "/api/users"))).
+truth("requests", req(get, cat(cat("http://127.0.0.1:", 3917), "/missing"))).
+-- the value at each effect: the address bound, the address of each request
+se_truth(40, cat("127.0.0.1:", 3917)).
+se_truth(45, cat(cat("http://127.0.0.1:", 3917), "/health")).
+se_truth(47, cat(cat("http://127.0.0.1:", 3917), "/api/users")).
+se_truth(49, cat(cat("http://127.0.0.1:", 3917), "/api/users")).
+se_truth(51, cat(cat("http://127.0.0.1:", 3917), "/api/version")).
+se_truth(53, cat(cat("http://127.0.0.1:", 3917), "/files/upload")).
+se_truth(55, cat(cat("http://127.0.0.1:", 3917), "/api/users")).
+se_truth(57, cat(cat("http://127.0.0.1:", 3917), "/missing")).
+scene_file("examples/parity/service/rs/src/main.rs").

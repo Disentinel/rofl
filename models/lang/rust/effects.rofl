@@ -50,6 +50,18 @@ effect_call("std::thread", "scope", thread).
 effect_call("std::io", "stdin", stdin).
 effect_call("std::time::Instant", "now", clock).
 effect_call("std::time::SystemTime", "now", clock).
+effect_call("tokio::net::TcpListener", "bind", listen).
+effect_call("tokio::net::TcpStream", "connect", request).
+effect_call("tokio", "spawn", thread).
+effect_call("tokio::task", "spawn", thread).
+effect_call("tokio::task", "spawn_blocking", thread).
+effect_call("tokio::fs", "read_to_string", fs_read).
+effect_call("tokio::fs", "read", fs_read).
+effect_call("tokio::fs", "write", fs_write).
+effect_call("tokio::fs", "create_dir_all", fs_write).
+effect_call("tokio::fs", "remove_file", fs_delete).
+effect_call("tokio::process::Command", "new", exec).
+effect_call("reqwest", "get", request).
 
 effect_family(fs_write, fs_mutation).
 effect_family(fs_delete, fs_mutation).

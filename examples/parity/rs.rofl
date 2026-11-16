@@ -10,4 +10,8 @@ probe_at(S, Name) :- callee[value](S, N), ref[value](N, "probe"), nth[tree](S, 0
 skips(S) :- probe_at(S, _), guarded[code](S).
 skips(S) :- probe_at(S, _), in_fn[rust](F, S), may_not_be_reached[code](F).
 answer(Name, may_skip) :- probe_at(S, Name), skips(S).
+-- a service scene: the routes served, the port, the requests sent (models/lang/rust/web.rofl)
+answer("serves", route(M, P, Name)) :- named("serves"), serves[surface](_, M, P, H, route), target[value](H, N), binds[value](N, Name).
+answer("listens", Port) :- named("listens"), app_listens[surface](_, Port).
+answer("requests", req(M, U)) :- named("requests"), requests[flow](_, M, U).
 se_answer(L, V) :- side_effect_value[flow](S, _, V), scene_file(F), at[tree](S, F, L).

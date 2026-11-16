@@ -1,0 +1,102 @@
+-- web.rofl — THE CONTRACTS OF RUST'S WEB FRAMEWORKS, in the words of the JS model's js-express.rofl and js-fetch.rofl,
+-- so that rules/net and js-service.rofl read a Rust service as they read a JS one:
+--
+--   serves[surface](App, M, P, H, route)  the router App answers method M on the path P (a text, cat(Prefix, Path)
+--                                         from "/" as js-express writes it) with the function H
+--   app_listens[surface](App, Port)       App is served on a listener bound at Port
+--   requests[flow](C, M, U)               the call C may send a request with method M to the address U (a literal or
+--                                         a text of strings.rofl)
+--   request_unknown[flow](C)              a client call whose address nothing traces
+--
+-- The frameworks are tables, as the libraries of js-fetch are: axum's `Router` (`route`, `nest`, `merge` and the
+-- method routers `get(h).post(h2)`), `axum::serve` on a `TcpListener`, reqwest's `Client` and `reqwest::get`. A router
+-- or a client is a value (`rtr(C)`, `mrt(C)`, `client(C)`, `lsn(C)`) that flows as any other: through a `let`, a
+-- function's return, `.await` and `.unwrap()`. A router built by a chain is a new value made from the one before it.
+
+imports(flow, rust). imports(flow, value). imports(flow, tree). imports(surface, flow). imports(surface, rust).
+imports(surface, value).
+
+-- ===================================================================== THE CALLS OF A LIBRARY, BY THEIR PATH
+-- `Router::new()` under `use axum::Router` is ("axum::Router", "new"); `get(h)` under `use axum::routing::get` is
+-- ("axum::routing", "get")
+ext_call[rust](C, Q, N) :- callee[value](C, Fn), member[value](Fn, P, N), path_text[rust](P, Q).
+ext_call[rust](C, Q, N) :- callee[value](C, R), ref[value](R, N), not member[value](R, _, _), in_scope[rust](S, R),
+                           found[rust](S, N, B), import_leaf[rust](B), member[value](B, P, N), path_text[rust](P, Q).
+-- a method of the library called on a value of it
+on_val[rust](C, R, N, V) :- callee[value](C, M), member[value](M, R, N), val[rust](R, V).
+
+edb(web_ctor).
+web_ctor("axum::Router", "new", router).
+web_ctor("reqwest::Client", "new", client).
+web_ctor("tokio::net::TcpListener", "bind", listener).
+web_ctor("std::net::TcpListener", "bind", listener).
+edb(http_verb).
+http_verb("get", get). http_verb("post", post). http_verb("put", put). http_verb("delete", delete).
+http_verb("patch", patch). http_verb("head", head). http_verb("options", options).
+
+val[rust](C, rtr(C))   :- ext_call[rust](C, Q, N), web_ctor(Q, N, router).
+val[rust](C, client(C)) :- ext_call[rust](C, Q, N), web_ctor(Q, N, client).
+val[rust](C, lsn(C))   :- ext_call[rust](C, Q, N), web_ctor(Q, N, listener).
+-- a function that hands one back hands the same value to every call
+web_val[rust](rtr(Y))    :- val[rust](_, rtr(Y)).
+web_val[rust](mrt(Y))    :- val[rust](_, mrt(Y)).
+web_val[rust](client(Y)) :- val[rust](_, client(Y)).
+web_val[rust](lsn(Y))    :- val[rust](_, lsn(Y)).
+sub[rust](C, V, V) :- ran[rust](C, G), rv[rust](G, V), web_val[rust](V).
+
+-- ===================================================================== THE SERVER: axum
+-- a method router: `get(h)`, then `.post(h2)` on it
+val[rust](C, mrt(C)) :- ext_call[rust](C, "axum::routing", N), http_verb(N, _).
+mr_has[flow](C, M, H) :- ext_call[rust](C, "axum::routing", N), http_verb(N, M), nth[tree](C, 0, A), handler[rust](A, H).
+val[rust](C, mrt(C)) :- on_val[rust](C, _, N, mrt(_)), http_verb(N, _).
+mr_has[flow](C, M, H) :- on_val[rust](C, _, N, mrt(_)), http_verb(N, M), nth[tree](C, 0, A), handler[rust](A, H).
+mr_has[flow](C, M, H) :- on_val[rust](C, _, N, mrt(Y)), http_verb(N, _), mr_has[flow](Y, M, H).
+handler[rust](A, H) :- denotes[rust](A, H), fn_item[rust](H).
+
+-- a router made from another by `route`, `nest`, `merge` and the rest of its chain keeps what the other had
+edb(router_method).
+router_method("route"). router_method("nest"). router_method("merge"). router_method("layer").
+router_method("with_state"). router_method("fallback"). router_method("route_service"). router_method("nest_service").
+val[rust](C, rtr(C)) :- on_val[rust](C, _, N, rtr(_)), router_method(N).
+rt_from[flow](C, Y)  :- on_val[rust](C, _, N, rtr(Y)), router_method(N).
+rt_path[flow](C, P)  :- on_val[rust](C, _, N, rtr(_)), router_method(N), nth[tree](C, 0, A), may_be_lit[flow](A, P),
+                        string is type_of(P).
+rt_route[flow](C, M, P, H) :- on_val[rust](C, _, "route", rtr(_)), rt_path[flow](C, P), nth[tree](C, 1, A),
+                              val[rust](A, mrt(Y)), mr_has[flow](Y, M, H).
+rt_mount[flow](C, P, Y2) :- on_val[rust](C, _, "nest", rtr(_)), rt_path[flow](C, P), nth[tree](C, 1, A), val[rust](A, rtr(Y2)).
+rt_mount[flow](C, "/", Y2) :- on_val[rust](C, _, "merge", rtr(_)), nth[tree](C, 0, A), val[rust](A, rtr(Y2)).
+rt_routes[flow](Y, M, P, H) :- rt_route[flow](Y, M, P, H).
+rt_routes[flow](Y, M, P, H) :- rt_from[flow](Y, Y0), rt_routes[flow](Y0, M, P, H).
+rt_mounts[flow](Y, P, Y2) :- rt_mount[flow](Y, P, Y2).
+rt_mounts[flow](Y, P, Y2) :- rt_from[flow](Y, Y0), rt_mounts[flow](Y0, P, Y2).
+
+-- `axum::serve(listener, app)`: the app answers where the listener was bound
+ax_serve[flow](S, App, L) :- ext_call[rust](S, "axum", "serve"), nth[tree](S, 0, A), val[rust](A, lsn(L)),
+                             nth[tree](S, 1, B), val[rust](B, rtr(App)).
+edb(web_depth).
+web_depth(3).
+ax_reach[surface](App, App, "/", 0) :- ax_serve[flow](_, App, _).
+ax_reach[surface](App, Y2, cat(P, V), D) :- ax_reach[surface](App, Y, P, D0), rt_mounts[flow](Y, V, Y2), web_depth(Max),
+                                            D0 < Max, D is D0 + 1.
+serves[surface](App, M, cat(P, V), H, route) :- ax_reach[surface](App, Y, P, _), rt_routes[flow](Y, M, V, H).
+
+-- the port of an address "host:port", or of a text whose last piece is the port
+bound_at[flow](L, A) :- val[rust](L, lsn(L)), nth[tree](L, 0, A).
+app_listens[surface](App, Port) :- ax_serve[flow](_, App, L), bound_at[flow](L, A), may_be_node[flow](A, X),
+                                   may_be_text[flow](X, cat(_, Port)), int is type_of(Port).
+app_listens[surface](App, Port) :- ax_serve[flow](_, App, L), bound_at[flow](L, A), may_be_lit[flow](A, V),
+                                   string is type_of(V), N is str_segs(V, ":"), N >= 2, K is N - 1, Port is str_seg(V, ":", K).
+
+-- ===================================================================== THE CLIENT: reqwest
+cl_call[flow](C, M) :- on_val[rust](C, _, N, client(_)), http_verb(N, M).
+cl_call[flow](C, get) :- ext_call[rust](C, "reqwest", "get").
+cl_url[flow](C, V) :- cl_call[flow](C, _), nth[tree](C, 0, A), may_be_lit[flow](A, V), string is type_of(V).
+cl_url[flow](C, T) :- cl_call[flow](C, _), nth[tree](C, 0, A), may_be_node[flow](A, X), may_be_text[flow](X, T).
+cl_url[flow](C, T) :- cl_call[flow](C, _), nth[tree](C, 0, A), may_be_node[flow](A, X), may_be_form[flow](X, T).
+requests[flow](C, M, U) :- cl_call[flow](C, M), cl_url[flow](C, U).
+cl_sent[flow](C) :- cl_url[flow](C, _).
+request_unknown[flow](C) :- cl_call[flow](C, _), not cl_sent[flow](C).
+
+-- a request is an effect, its address the value at it
+effect_site[rust](C, request) :- cl_call[flow](C, _).
+se_val[rust](C, request, U) :- requests[flow](C, _, U).
