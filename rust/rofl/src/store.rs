@@ -946,7 +946,7 @@ impl<T: Pod> Col<T> {
         if self.low.is_empty() {
             &self.base[i]
         } else {
-            self.low.get(&i).unwrap_or(&self.base[i])
+            self.low.get(&i).unwrap_or_else(|| &self.base[i])
         }
     }
     fn get(&self, i: usize) -> Option<&T> {
@@ -955,9 +955,6 @@ impl<T: Pod> Col<T> {
         } else {
             self.own.get(i - self.mark)
         }
-    }
-    fn iter(&self) -> impl Iterator<Item = &T> {
-        (0..self.mark).map(|i| self.below(i)).chain(self.own.iter())
     }
     fn capacity(&self) -> usize {
         self.base.capacity() + self.own.capacity() + self.low.capacity() * (std::mem::size_of::<T>() + 16)
@@ -1908,6 +1905,9 @@ pub struct Store {
     /// Facts in a group ordered by tuple id instead of by rendered key: the same
     /// facts, a cheaper comparator, candidate order observable. Set by the harness.
     pub unordered: bool,
+    /// In a unit above the files', which reads a tree by the node from its file's unit: the size of each closure
+    /// over every file (pairs, deep, internal, the second moment), for the planner, which would see it empty.
+    pub tree_sizes: Option<std::sync::Arc<FxMap<usize, [u64; 4]>>>,
     pub tick: u32,
     pub dirty: bool,
     /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
@@ -2452,6 +2452,7 @@ impl VRows {
 impl Store {
     pub fn new() -> Store {
         Store {
+            tree_sizes: None,
             dirty: true,
             ..Default::default()
         }
@@ -5397,13 +5398,20 @@ impl Store {
     /// firing that does. Run where firings are dropped (`clear_derived`, and
     /// the end of a tick once its staged conclusions are written), never
     /// between a staged conclusion and the boundary that writes it.
+    /// The facts whose firings this store holds: all of them, but in a store that reads stretches, whose ids
+    /// between the core and its own are the stretches' and their firings theirs.
+    fn held_heads(&self) -> impl Iterator<Item = usize> {
+        let core = self.facts.near.as_ref().map_or(self.wit_head.mark, |n| n.core);
+        (0..core).chain(self.wit_head.mark..self.wit_head.len())
+    }
+
     pub fn gc_cells(&mut self) {
         if self.cells.recs.is_empty() {
             return;
         }
         let mut live = vec![false; self.cells.recs.len()];
-        for h in self.wit_head.iter() {
-            for n in self.nodes_from(*h) {
+        for id in self.held_heads() {
+            for n in self.nodes_from(self.wit_head[id]) {
                 for p in self.prems_of(&n) {
                     if let Prem::Cell(x) = p.kind() {
                         live[x as usize] = true;
@@ -5467,7 +5475,7 @@ impl Store {
         }
         // Only the live firings are renumbered: a node a removal orphaned is
         // read by nothing, and `compact_wits` drops its premises.
-        for h in 0..self.wit_head.len() {
+        for h in self.held_heads() {
             let mut c = self.wit_head[h];
             while c != EMPTY {
                 let n = self.wits[c as usize];

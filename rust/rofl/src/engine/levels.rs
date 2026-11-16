@@ -55,6 +55,8 @@ pub struct Joins {
     mates: FxMap<Place, Vec<Place>>,
     /// the lower stage of the books the plan cuts: a file's unit keeps its lemmas and drops the books
     low: Option<Stage>,
+    /// the rules that read the world's profile (`Eval::profile_rules`): fired by the reader once the units are settled
+    pub prof: FxSet<Sym>,
 }
 
 pub struct Unit {
@@ -525,6 +527,8 @@ pub struct Levels {
     /// what the evaluation of the rules left to the reader said
     pub said: Vec<String>,
     pub cooled: Cooled,
+    /// what the units spent, summed (`CostState::absorb`): the world's profile, as an evaluation whole keeps its own
+    pub cost: super::cost::CostState,
 }
 
 /// The units cooled under the memory's pressure: how many, in how many bytes, how many times, and the files they
@@ -724,7 +728,7 @@ impl Levels {
         for x in r.arena::<u64>()?.chunks_exact(2) {
             masks.entry(x[0] as Sym).or_default().insert(x[1]);
         }
-        Ok(Levels { tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, leaf, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default() })
+        Ok(Levels { tops, cx: Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: e.h.clone(), files, leaf, joins, masks: Mutex::new(masks) }), mark, keys: e.h.clone(), rows: Vec::new(), again: None, ghosts, said: Vec::new(), cooled: Cooled::default(), cost: Default::default() })
     }
 
     /// The unit of layer `k` over exactly `files`.
@@ -768,7 +772,11 @@ impl Eval {
     pub fn level_stage(&mut self) -> (Stage, Joins) {
         let low = self.cut_stage();
         let mut st = self.lemma_stage().unwrap_or_else(|| Stage { rules: Rc::default(), heads: FxSet::default(), given: FxSet::default(), cut: Vec::new(), wide: Vec::new(), own: FxMap::default(), free: FxSet::default() });
-        let rules = self.rules.clone();
+        // (what reads the world's profile waits for the units' count: no unit fires it, the reader does after them)
+        let prof = self.profile_rules();
+        st.rules = Rc::new(st.rules.iter().filter(|id| !prof.contains(*id)).copied().collect());
+        st.free.retain(|id| !prof.contains(id));
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| !prof.contains(&r.id)).cloned().collect();
         let mut odd: FxSet<Sym> = self.lat.cell_rels().collect();
         odd.extend(self.store.virtuals.iter().map(|v| v.rel));
         odd.extend(self.store.aliases.iter().map(|a| a.rel));
@@ -937,7 +945,7 @@ impl Eval {
                 up.clear();
             }
         }
-        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), tree_rules, low, ..Default::default() };
+        let mut joins = Joins { home: Rc::new((home, trees.clone())), held, core: Rc::new(core), tree_rules, low, prof, ..Default::default() };
         let mut by_layer: std::collections::BTreeMap<u32, FxSet<Sym>> = Default::default();
         for r in &up {
             by_layer.entry(layer[&booked(&r.clause.head)]).or_default().insert(r.id);
@@ -1049,7 +1057,10 @@ impl Eval {
         // (the nodes of the files edited whose rows in a tree moved, filled when the files are settled)
         let shifted: Mutex<FxSet<u64>> = Mutex::default();
         let was = |k: usize, files: (u32, u32)| edit.as_ref().and_then(|e| e.0.find(k, files));
-        let base = Fork(self.fork());
+        // (each unit counts what it spends from nothing; the world's count is their sum, `Levels.cost`)
+        let mut base = Fork(self.fork());
+        base.0.cost = self.cost.anew();
+        let cost = Mutex::new(self.cost.anew());
         let core_names = (self.h.syms.len() as Sym, self.h.funcs_len());
         let one = Mutex::new(());
         let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
@@ -1125,6 +1136,7 @@ impl Eval {
         // the relations the rules of the first layer read
         let read_rels: Vec<FxSet<Sym>> = rules_of.iter().map(|rs| self.rules.iter().filter(|r| rs.contains(&r.id)).flat_map(|r| r.plan.iter().filter_map(|b| if let BodyElem::Pos(l) = b { Some(l.rel) } else { None })).collect()).collect();
         let mut trees: Option<Rc<TreeOf>> = None;
+        let sizes: Mutex<Option<std::sync::Arc<FxMap<usize, [u64; 4]>>>> = Mutex::default();
         struct Stage1<'a>(&'a Stage);
         // SAFETY: the stage is read
         unsafe impl Sync for Stage1<'_> {}
@@ -1244,6 +1256,7 @@ impl Eval {
                 let named = store.rename_keys(|k| if e.0.h.is_own(k) { *memo.entry(k).or_insert_with(|| m.key(e.0.h.name(k))) } else { k });
                 rows.lock().unwrap().extend(named);
             }
+            cost.lock().unwrap().absorb(&e.0.cost);
             let n = store.len_ids() - store.layer_mark();
             let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
             drop((one.lock().unwrap(), e));
@@ -1414,7 +1427,9 @@ impl Eval {
             let mut e = {
                 let p = ready.lock().unwrap();
                 let _g = one.lock().unwrap();
-                Fork(p.as_ref().expect("the layer made ready").0.fork())
+                let mut e = Fork(p.as_ref().expect("the layer made ready").0.fork());
+                e.0.cost = e.0.cost.anew();
+                e
             };
             let mark = bump.load(Relaxed);
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
@@ -1422,6 +1437,7 @@ impl Eval {
             here.sort_unstable();
             e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), walls: walls.clone() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
+            e.0.store.tree_sizes = sizes.lock().unwrap().clone();
             if let Some(o) = &old {
                 let Eval { store, h, .. } = &mut e.0;
                 let came = came.lock().unwrap();
@@ -1548,6 +1564,7 @@ impl Eval {
                                 raw.0.lower_stage(low)?;
                                 raw.0.own_kept(stage.0, from)?;
                                 e.0.take_lemmas(&raw.0, low, from, core_names.0, core_names.1);
+                                e.0.cost.absorb(&raw.0.cost);
                                 drop((forks.lock().unwrap(), raw));
                             }
                             None => volumes::load_text(&mut e.0, text)?,
@@ -1578,6 +1595,18 @@ impl Eval {
                     }
                 }
                 let (cx, of): (Rc<Ctx>, Vec<Rc<Stretch>>) = (cx.clone(), units.iter().map(|u| u.stretch.clone()).collect());
+                {
+                    let mut by: FxMap<usize, [u64; 4]> = FxMap::default();
+                    for ci in 0..self.vc.vclosures.len() {
+                        let z = by.entry(ci).or_default();
+                        for f in of.iter().flat_map(|s| s.forests(ci).to_vec()) {
+                            for (i, n) in [f.1.pairs, f.1.deep as u64, f.1.internal as u64, f.1.fanout_sq()].into_iter().enumerate() {
+                                z[i] += n;
+                            }
+                        }
+                    }
+                    *sizes.lock().unwrap() = Some(std::sync::Arc::new(by));
+                }
                 trees = Some(Rc::new(move |t: Term| {
                     let s = &of[cx.file(t)? as usize / leaf];
                     asks(|a| { a.reads.insert(s.lo); });
@@ -1618,7 +1647,7 @@ impl Eval {
         // THE READER'S UNIT: the rules left to the world's reader by their shape are fired whole over the layers, and
         // what they conclude is one more stretch it reads; after an edit, again, unless no stretch was replaced
         let k = rules_of.len();
-        let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).copied().collect();
+        let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).chain(&cx.joins.prof).copied().collect();
         let mut said = vec![format!("levels: ms a layer, before its units and at each depth of them: {}", took.join(", "))];
         if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());
@@ -1629,6 +1658,7 @@ impl Eval {
                     let mut e = fork();
                     let (trees, forest) = reader_trees(&cx, &tops, &e.0);
                     e.0.store.read_near(bump.load(Relaxed), Some(lower_of(&cx, &tops)), Vec::new(), None, Some(trees), Some(forest));
+                    e.0.store.tree_sizes = sizes.lock().unwrap().clone();
                     e.0.stage_given = Some(Rc::new(given));
                     // (it starts from nothing: no whole evaluation before it left what it may keep)
                     e.0.whole = None;
@@ -1644,6 +1674,6 @@ impl Eval {
             tops.push(Rc::new(top));
         }
         let again = edit.is_some().then(|| (again.load(Relaxed), same.load(Relaxed)));
-        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap() })
+        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), said, cooled: cooled.into_inner().unwrap(), cost: cost.into_inner().unwrap() })
     }
 }

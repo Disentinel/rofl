@@ -9,10 +9,9 @@ use super::*;
 use crate::store::Fx;
 use std::hash::{Hash, Hasher};
 
-/// A rule that has read at least this many rows (`Eval::hot_read`), a quarter
-/// or more of all the rows read, is named without being asked.
-pub const HOT_READ: u64 = 50_000_000;
-const HOT_SHARE: u64 = 4;
+// A RULE IS HOT when it has read more rows than the world holds facts: one rule has read the world whole over at
+// least once, which no join that reads each fact by its key does. It is named without being asked while it is the
+// rule that has read the most, and again at each doubling. The measure is the world's own size, not a number.
 
 #[derive(Clone, Default, Debug)]
 pub struct PremCost {
@@ -41,7 +40,12 @@ pub struct CostState {
     pub(super) wide_floor: usize,
     /// Rows read under each rule, and the count at which it is next said to be hot.
     pub read_by_rule: FxMap<Sym, (u64, u64)>,
-    pub(super) hot_read: u64,
+    /// The rows a rule reads before it is hot, where given (`hot_given`, a test's world too small to cross its own
+    /// size); else the facts the store holds when the rule first reads (`hot_first`).
+    pub hot_read: u64,
+    pub hot_given: bool,
+    /// The most rows any one rule has read: a rule is said hot only while it is that one.
+    pub top_read: u64,
     /// Told each hot rule as it is found, as the sentence `hot_said` keeps.
     pub on_hot: Option<fn(&str)>,
     pub hot_said: Vec<String>,
@@ -81,11 +85,67 @@ impl Default for CostState {
     fn default() -> Self {
         CostState {
             prem_cost: FxMap::default(), prem_cost_at: FxMap::default(), read_rows: 0, widest: Widest::default(), wide_floor: 0,
-            read_by_rule: FxMap::default(), hot_read: HOT_READ, on_hot: None, hot_said: Vec::new(),
+            read_by_rule: FxMap::default(), hot_read: 1, hot_given: false, top_read: 0, on_hot: None, hot_said: Vec::new(),
             argm_by_rule: FxMap::default(), ns_by_rule: FxMap::default(), fires_by_rule: FxMap::default(),
             sols_by_rule: FxMap::default(), new_by_rule: FxMap::default(), fresh_whole_by_rule: FxMap::default(), again_by_rule: FxMap::default(), delta_by_rule: FxMap::default(), activation_by_rule: FxMap::default(),
             mem: MemPeak::default(),
         }
+    }
+}
+
+impl CostState {
+    /// A fresh count that says hot rules as this one does: what a unit settled apart spends, from nothing.
+    pub fn anew(&self) -> CostState {
+        CostState { hot_read: self.hot_read, hot_given: self.hot_given, on_hot: self.on_hot, ..CostState::default() }
+    }
+
+    /// WHAT A WORLD SETTLED BY LEVELS SPENT IS THE SUM OF ITS UNITS: `o`, one unit's count, added to this one.
+    pub fn absorb(&mut self, o: &CostState) {
+        fn add(to: &mut FxMap<Sym, u64>, from: &FxMap<Sym, u64>) {
+            for (k, v) in from {
+                *to.entry(*k).or_default() += v;
+            }
+        }
+        fn prem(to: &mut PremCost, c: &PremCost) {
+            (to.rows_in, to.read, to.rows_out) = (to.rows_in + c.rows_in, to.read + c.read, to.rows_out + c.rows_out);
+            if c.widest.n > to.widest.n {
+                to.widest = c.widest.clone();
+            }
+        }
+        for (k, c) in &o.prem_cost {
+            prem(self.prem_cost.entry(*k).or_default(), c);
+        }
+        for (k, c) in &o.prem_cost_at {
+            prem(self.prem_cost_at.entry(*k).or_default(), c);
+        }
+        self.read_rows += o.read_rows;
+        if o.widest.n > self.widest.n {
+            self.widest = o.widest.clone();
+        }
+        for (r, (n, _)) in &o.read_by_rule {
+            let e = self.read_by_rule.entry(*r).or_insert((0, 0));
+            e.0 += n;
+            self.top_read = self.top_read.max(e.0);
+        }
+        for (m, from) in [
+            (&mut self.argm_by_rule, &o.argm_by_rule),
+            (&mut self.ns_by_rule, &o.ns_by_rule),
+            (&mut self.fires_by_rule, &o.fires_by_rule),
+            (&mut self.sols_by_rule, &o.sols_by_rule),
+            (&mut self.new_by_rule, &o.new_by_rule),
+            (&mut self.fresh_whole_by_rule, &o.fresh_whole_by_rule),
+            (&mut self.again_by_rule, &o.again_by_rule),
+            (&mut self.delta_by_rule, &o.delta_by_rule),
+        ] {
+            add(m, from);
+        }
+        for (r, i) in &o.activation_by_rule {
+            self.activation_by_rule.entry(*r).or_insert(*i);
+        }
+        if o.mem.live > self.mem.live {
+            self.mem = o.mem.clone();
+        }
+        self.hot_said.extend(o.hot_said.iter().cloned());
     }
 }
 
@@ -148,19 +208,27 @@ pub(super) fn prem_key(b: &BodyElem) -> Option<u64> {
 impl Eval {
     /// A read of the store by premise `l` under `s`, of `n` rows; its bindings kept only when it
     /// is wider than any read of the premise being solved before.
-    /// A rule crossing `HOT_READ`, and each tenfold after, while it is a quarter of the reading, is said at once
-    /// (`on_hot`): a rule that blows up may never end for its report to be read.
+    /// A rule crossing `hot_read`, and each doubling after, while it has read the most, is said at once (`on_hot`):
+    /// a rule that blows up may never end for its report to be read.
     pub(super) fn note_read(&mut self, l: &Lit, s: &Subst, n: usize) {
         self.cost.read_rows += n as u64;
         if let Some(rid) = self.cur_rule {
-            let first = self.cost.hot_read;
+            let first = self.hot_first();
             let e = self.cost.read_by_rule.entry(rid).or_insert((0, first));
             e.0 += n as u64;
-            if e.0 >= e.1 {
-                e.1 = e.1.saturating_mul(10);
-                let read = e.0;
-                if read * HOT_SHARE >= self.cost.read_rows {
-                    self.say_hot(rid, l, s);
+            let (read, next) = *e;
+            self.cost.top_read = self.cost.top_read.max(read);
+            if read >= next {
+                // (the world grows while the rule reads: it is measured against the world as it stands)
+                let now = self.hot_first();
+                let e = self.cost.read_by_rule.get_mut(&rid).expect("counted above");
+                if read < now {
+                    e.1 = now;
+                } else {
+                    e.1 = read.saturating_mul(2);
+                    if read >= self.cost.top_read {
+                        self.say_hot(rid, l, s);
+                    }
                 }
             }
         }
@@ -168,6 +236,11 @@ impl Eval {
             let at = l.args.iter().map(|a| resolve(&mut self.h, *a, s)).collect();
             self.cost.widest = Widest { n, at };
         }
+    }
+
+    /// The rows a rule reads before it is first said hot: the world's facts as they stand, unless given.
+    pub(super) fn hot_first(&self) -> u64 {
+        if self.cost.hot_given { self.cost.hot_read } else { (self.store.len_ids() as u64).max(1) }
     }
 
     #[cold]
@@ -180,15 +253,27 @@ impl Eval {
         let head = r.map_or(String::new(), |r| format!(" ({})", self.h.name(r.clause.head.rel)));
         let k = r.and_then(|r| r.clause.body.iter().position(|b| matches!(b, BodyElem::Pos(p) | BodyElem::Neg(p) if p.rel == l.rel && p.args == l.args)));
         let mut said = format!(
-            "rule {}{head} has read {} rows for {} new facts, a quarter or more of all read; it is reading premise {}{lit}",
+            "rule {}{head} has read {} rows for {} new facts, more than the world's {} facts and the most of any rule; it is reading premise {}{lit}",
             self.h.name(rid),
             self.cost.read_by_rule[&rid].0,
             self.cost.new_by_rule.get(&rid).copied().unwrap_or(0),
+            self.hot_first(),
             k.map_or(String::new(), |k| format!("{}, ", k + 1)),
         );
         if !bound.is_empty() {
             said += &format!(" at {bound}");
         }
+        if let Some(f) = self.cost.on_hot {
+            f(&said);
+        }
+        self.cost.hot_said.push(said);
+    }
+
+    /// The rule of a world settled by levels that, summed over its units (`CostState::absorb`), read more rows than
+    /// the world holds facts and the most of any: said as `say_hot` says one, once the units are settled.
+    pub(super) fn say_hot_world(&mut self) {
+        let Some(h) = self.too_hot().pop() else { return };
+        let said = format!("{}, summed over the units it fired in", h.sentence());
         if let Some(f) = self.cost.on_hot {
             f(&said);
         }
@@ -250,7 +335,8 @@ impl Eval {
 
     /// The rules that read so much of all that is read that the author should hear of them.
     pub fn too_hot(&self) -> Vec<Hot> {
-        self.hot_rules(4).into_iter().filter(|h| h.read >= self.cost.hot_read && h.read * HOT_SHARE >= self.cost.read_rows).collect()
+        let at = self.hot_first();
+        self.hot_rules(1).into_iter().filter(|h| h.read >= at).collect()
     }
 }
 
@@ -311,6 +397,32 @@ impl Eval {
             if read > 0 {
                 let head = self.rule_at.get(r).map_or("", |i| self.h.name(self.rules[*i].clause.head.rel));
                 super::meter::read(step, self.h.name(*r), head, read);
+            }
+        }
+    }
+
+    /// The rules that read this evaluation's profile, those that read what they conclude, and every arm of what they conclude: a world settled by
+    /// levels fires them in its reader once the units are settled and their count is known (`Session::by_volumes`).
+    /// None when the world was given its profile, or reads none.
+    pub fn profile_rules(&mut self) -> FxSet<Sym> {
+        let mut out = FxSet::default();
+        if !self.profile_wanted() {
+            return out;
+        }
+        let p = self.h.intern("profile");
+        let names: FxSet<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
+        let mut heads: FxSet<Sym> = FxSet::default();
+        loop {
+            let n = out.len();
+            for r in &self.rules {
+                let reads = r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| (l.persp.as_atom() == Some(p) && names.contains(&l.rel)) || heads.contains(&l.rel))
+                    || heads.contains(&r.clause.head.rel);
+                if reads && out.insert(r.id) {
+                    heads.insert(r.clause.head.rel);
+                }
+            }
+            if out.len() == n {
+                return out;
             }
         }
     }
@@ -702,7 +814,7 @@ mod tests {
         }
         src += "inside(b1, u1).\nsees(U, B) :- use(U, N), bind(B, N), inside(B, U).\nother(U) :- use(U, _).\n";
         let mut s = Session::fresh(100_000_000);
-        s.eval.cost.hot_read = 10_000;
+        (s.eval.cost.hot_read, s.eval.cost.hot_given) = (10_000, true);
         s.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
         s.load(&src, None).unwrap();
         s.evaluate().unwrap();

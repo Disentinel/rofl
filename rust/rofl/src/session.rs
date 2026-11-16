@@ -912,9 +912,19 @@ impl Session {
     pub fn by_volumes(&mut self, files: &[(String, String)]) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
         let (eval, stats) = self.eval.by_volumes(files)?;
         let mut s = Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
-        let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()? + s.profile_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
+        let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
         if n > 0 {
             return Err(Halt::Strat("a world by volumes asks for input, which its units cannot bring".into(), String::new()));
+        }
+        // THE PROFILE IS THE UNITS' SUM (`CostState::absorb`): written once they are settled, and the rules that read
+        // it, which no unit fired, fired by the reader over everything else
+        if !s.profiled && s.eval.profile_wanted() {
+            s.profiled = true;
+            let src = s.eval.profile_text();
+            s.load(&src, None).map_err(|d| Halt::Strat(format!("the profile's facts were refused: {}", d.join("; ")), String::new()))?;
+            if s.eval.run()?.partial {
+                return Err(Halt::Budget("budget_exhausted", None));
+            }
         }
         Ok((s, stats))
     }
