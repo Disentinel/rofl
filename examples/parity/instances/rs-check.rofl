@@ -3,7 +3,6 @@
 -- reaches the effect at that line of rs/src/main.rs. A value of the truth the model misses is red (`missing`: the
 -- model is wrong); a value it gives beyond the truth is red unless `general(Name, V, Why)` says which general case of
 -- the abstraction it is, as the JS check names its own.
-edb(truth). edb(se_truth). edb(general). edb(se_general).
 truth("direct_a", "a.json"). truth("direct_b", "b.json"). truth("got_a", "a.json"). truth("got_b", "b.json").
 truth("got_c", "c.json"). truth("where_k", "a.json"). truth("where_j", "b.json"). truth("where_c2", "a.json").
 truth("where_c3", "b.json"). truth("api_port", "3000"). truth("admin_port", "4000"). truth("api_env", "prod").
@@ -21,10 +20,4 @@ se_truth(7, "a.json"). se_truth(7, "b.json"). se_truth(7, "c.json"). se_truth(8,
 se_truth(18, "b.json"). se_truth(22, "b.json"). se_truth(31, "a.json"). se_truth(32, "b.json"). se_truth(33, "a.json").
 se_truth(36, "c.json"). se_truth(48, "a.json"). se_truth(49, "b.json"). se_truth(51, "b.json").
 
-answer(Name, V) :- assign[value](_, P, Init), binds[value](P, Name), may_be_lit[flow](Init, V), truth(Name, _).
-se_answer(L, V) :- side_effect_value[flow](S, _, V), at[tree](S, "examples/parity/instances/rs/src/main.rs", L).
-missing(Name, V)    :- truth(Name, V), not answer(Name, V).
-extra(Name, V)      :- answer(Name, V), not truth(Name, V), not general(Name, V, _).
-se_missing(L, V)    :- se_truth(L, V), not se_answer(L, V).
-se_extra(L, V)      :- se_answer(L, V), not se_truth(L, V), not se_general(L, V, _).
-alarm(missing). alarm(extra). alarm(se_missing). alarm(se_extra).
+scene_file("examples/parity/instances/rs/src/main.rs").

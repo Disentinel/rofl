@@ -1,0 +1,6 @@
+-- examples/parity/keyed/rs-check.rofl — WHAT A MAP HOLDS UNDER A KEY, AND WHEN, IN RUST (the scene of
+-- examples/notebook/keyed/app.js and order.js; examples/parity/check.rofl judges it). Truth: cargo run, 2026-11-16.
+named("order_before"). named("order_gone"). named("order_cleared"). named("order_later").
+truth("reg_owner", "ops"). truth("reg_api", 8080). truth("reg_admin", 9000). truth("ports_which", 5432).
+truth("order_one", 1). truth("order_two", 2). truth("order_maybe", 3). truth("hits", 11).
+scene_file("examples/parity/keyed/rs/src/main.rs").

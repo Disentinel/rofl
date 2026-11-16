@@ -1,0 +1,17 @@
+-- examples/parity/check.rofl — ONE SCENE, TWO LANGUAGES: the judgement every scene world of examples/parity/ shares.
+-- A scene is a program written in JS and in Rust; its check file says what the program prints (cargo run, node)
+-- for each name it asks about, and the language's adapter (rs.rofl) says what the model answers for it:
+--   named(Name)            a `let` the scene asks about; a name with no truth holds nothing (`None`, `undefined`)
+--   truth(Name, V)         the program gives V there
+--   general(Name, V, Why)  the model gives V beyond the truth, and the abstraction says so (a case it keeps general)
+--   se_truth(Line, V), se_general(Line, V, Why)   the same for the value at the effect on a line
+-- Red (`alarm`): a value of the truth the model misses (the model is wrong), a value beyond it that no `general`
+-- names (the model is less exact than it says).
+edb(named). edb(truth). edb(general). edb(se_truth). edb(se_general).
+named(Name) :- truth(Name, _).
+missing(Name, V)    :- truth(Name, V), not answer(Name, V).
+extra(Name, V)      :- answer(Name, V), not truth(Name, V), not general(Name, V, _).
+se_missing(L, V)    :- se_truth(L, V), not se_answer(L, V).
+se_extra(L, V)      :- se_answer(L, V), not se_truth(L, V), not se_general(L, V, _).
+alarm(missing). alarm(extra). alarm(se_missing). alarm(se_extra).
+answered_n(N) :- N is count(Name, V : answer(Name, V)).
