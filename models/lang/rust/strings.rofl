@@ -21,14 +21,10 @@ imports(flow, rust). imports(flow, value). imports(flow, tree).
 -- ===================================================================== VALUES THE LIBRARY HANDS ON
 -- `String::from(x)`, `Path::new(x)`: the argument's value; `String::new()` the empty string
 edb(str_from).
-str_from("String", "from"). str_from("Path", "new"). str_from("PathBuf", "from"). str_from("OsStr", "new").
-str_from("OsString", "from").
--- by the type's own name: the path to it is text built by a rule, and a value may not wait on it
-lib_fn[rust](C, Q, N) :- callee[value](C, Fn), member[value](Fn, P, N), ref[value](P, Q), not denoted[rust](P).
-lib_fn[rust](C, Q, N) :- callee[value](C, Fn), member[value](Fn, P, N), ref[value](P, Q), import_leaf_ref[rust](P).
-import_leaf_ref[rust](P) :- denotes[rust](P, D), import_leaf[rust](D).
-val[rust](C, V) :- lib_fn[rust](C, Q, N), str_from(Q, N), nth[tree](C, 0, A), val[rust](A, V).
-val[rust](C, lit(""))  :- lib_fn[rust](C, "String", "new").
+str_from("String", "from"). str_from("std::path::Path", "new"). str_from("std::path::PathBuf", "from").
+str_from("std::ffi::OsStr", "new"). str_from("std::ffi::OsString", "from").
+val[rust](C, V) :- ext_call[rust](C, Q, N), str_from(Q, N), nth[tree](C, 0, A), val[rust](A, V).
+val[rust](C, lit(""))  :- ext_call[rust](C, "String", "new").
 
 -- ===================================================================== THE FORMS
 str_like[rust](X) :- may_be_lit[flow](X, V), string is type_of(V).

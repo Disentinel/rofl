@@ -3997,6 +3997,23 @@ check_file("parity_rs_service", "examples/parity/check.rofl").
 check_file("parity_rs_service", "examples/parity/rs.rofl").
 check_file("parity_rs_service", "examples/parity/service/rs-check.rofl").
 check_opt("parity_rs_service", one_engine, rust).
+check_world("parity_rs_calls").
+check_file("parity_rs_calls", "models/lang/js/roles.rofl").
+check_file("parity_rs_calls", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_calls", "models/lang/rust/names.rofl").
+check_file("parity_rs_calls", "models/lang/rust/calls.rofl").
+check_file("parity_rs_calls", "models/lang/rust/flow.rofl").
+check_file("parity_rs_calls", "models/lang/rust/qname.rofl").
+check_file("parity_rs_calls", "models/lang/rust/values.rofl").
+check_file("parity_rs_calls", "models/lang/rust/effects.rofl").
+check_file("parity_rs_calls", "models/lang/rust/strings.rofl").
+check_file("parity_rs_calls", "models/lang/rust/guards.rofl").
+check_file("parity_rs_calls", "models/lang/rust/web.rofl").
+check_file("parity_rs_calls", "examples/parity/calls/rs-facts.rofl").
+check_file("parity_rs_calls", "examples/parity/check.rofl").
+check_file("parity_rs_calls", "examples/parity/rs.rofl").
+check_file("parity_rs_calls", "examples/parity/calls/rs-check.rofl").
+check_opt("parity_rs_calls", one_engine, rust).
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").

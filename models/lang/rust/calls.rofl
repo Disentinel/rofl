@@ -72,6 +72,7 @@ holds[rust](N, D) :- mark[value](N, object), declared[value](N, T), denotes[rust
 holds[rust](N, E) :- mark[value](N, object), declared[value](N, T), denotes[rust](T, V), variant_of[rust](V, E).
 holds[rust](C, E) :- callee[value](C, F), denotes[rust](F, V), variant_of[rust](V, E).
 holds[rust](C, S) :- callee[value](C, F), denotes[rust](F, S), decl[type](S, struct).
+holds[rust](N, S) :- ref[value](N, _), denotes[rust](N, S), decl[type](S, struct), not callee_node[rust](N), not ty_named[rust](N).
 holds[rust](C, D) :- sure_call[rust](C, G), fn_item[rust](G), declared[value](G, T), carried[rust](T, D).
 holds[rust](C, D) :- sure_call[rust](C, Cl), not fn_item[rust](Cl), holds[rust](Cl, D).
 callee_node[rust](N) :- callee[value](_, N).
@@ -99,8 +100,10 @@ calls[rust](C, Cl, local) :- callee[value](C, F), ref[value](F, _), denotes[rust
 method_name[rust](Name, G) :- has[value](_, G), key[value](G, Name), fn_item[rust](G).
 named_twice[rust](Name)    :- method_name[rust](Name, A), method_name[rust](Name, B), A != B.
 typed_call[rust](C)        :- calls[rust](C, _, typed).
+-- a method call `x.name()` can reach only a function that takes `self`, and a name the standard library's containers
+-- answer (`collect`, `get`: flow.rofl's std_method) is theirs where the receiver's type is not known
 by_name[rust](C, G) :- callee[value](C, M), member[value](M, _, Name), method_name[rust](Name, G), not named_twice[rust](Name),
-                       not typed_call[rust](C), not denoted[rust](M).
+                       binds[value](G, "self"), not typed_call[rust](C), not denoted[rust](M), not std_method(Name, _).
 
 runs[rust](C, G)   :- calls[rust](C, G, _), fn_item[rust](G).
 runs[rust](C, G)   :- by_name[rust](C, G).

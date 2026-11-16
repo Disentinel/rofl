@@ -16,12 +16,6 @@
 imports(flow, rust). imports(flow, value). imports(flow, tree). imports(surface, flow). imports(surface, rust).
 imports(surface, value).
 
--- ===================================================================== THE CALLS OF A LIBRARY, BY THEIR PATH
--- `Router::new()` under `use axum::Router` is ("axum::Router", "new"); `get(h)` under `use axum::routing::get` is
--- ("axum::routing", "get")
-ext_call[rust](C, Q, N) :- callee[value](C, Fn), member[value](Fn, P, N), path_text[rust](P, Q).
-ext_call[rust](C, Q, N) :- callee[value](C, R), ref[value](R, N), not member[value](R, _, _), in_scope[rust](S, R),
-                           found[rust](S, N, B), import_leaf[rust](B), member[value](B, P, N), path_text[rust](P, Q).
 -- a method of the library called on a value of it
 on_val[rust](C, R, N, V) :- callee[value](C, M), member[value](M, R, N), val[rust](R, V).
 

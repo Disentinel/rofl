@@ -3,6 +3,8 @@
 -- the literals that may reach the effect on a line of the scene's main.rs (examples/parity/check.rofl).
 edb(scene_file).
 answer(Name, V) :- assign[value](_, P, Init), binds[value](P, Name), named(Name), may_be_lit[flow](Init, V).
+answer(Name, V) :- assign[value](_, P, _), pattern_elem[value](P, _, X), binds[value](X, Name), named(Name),
+                   may_be_lit[flow](X, V).
 answer(Name, T) :- assign[value](_, P, _), binds[value](P, Name), named(Name), may_be_node[flow](P, C),
                    may_be_text[flow](C, T).
 -- a probe `probe("name")` of a scene that may be skipped (models/lang/rust/guards.rofl); one that runs has no answer

@@ -24,8 +24,18 @@ is_node[rust](X)    :- at[tree](X, _, _).
 param_pat[rust](P)  :- param[value](_, _, P).
 v_edge[rust](X, Y) :- copy[rust](X, Y), is_node[rust](X), is_node[rust](Y), not param_pat[rust](Y), not fn_item[rust](Y).
 v_edge[rust](X, Y) :- wrap[rust](X, Y), is_node[rust](X), is_node[rust](Y), not param_pat[rust](Y), not fn_item[rust](Y),
-                      not keyed_read[rust](Y).
+                      not keyed_read[rust](Y), not split_part[rust](Y).
+-- a tuple written in place and taken apart by a tuple pattern: each part takes its own element, not the whole
+split[rust](X, E) :- assign[value](_, P, V), mark[value](V, array), pattern_elem[value](P, I, X), nth[tree](V, I, E).
+split_part[rust](X) :- split[rust](X, _).
+v_edge[rust](E, X) :- split[rust](X, E).
 
+-- ===================================================================== THE CALLS OF A LIBRARY, BY THEIR PATH
+-- `Router::new()` under `use axum::Router` is ("axum::Router", "new"); `get(h)` under `use axum::routing::get` is
+-- ("axum::routing", "get")
+ext_call[rust](C, Q, N) :- callee[value](C, Fn), member[value](Fn, P, N), path_text[rust](P, Q).
+ext_call[rust](C, Q, N) :- callee[value](C, R), ref[value](R, N), not member[value](R, _, _), in_scope[rust](S, R),
+                           found[rust](S, N, B), import_leaf[rust](B), member[value](B, P, N), path_text[rust](P, Q).
 -- ===================================================================== WHERE A VALUE STARTS
 val[rust](X, lit(L))   :- literal[value](X, L), string is type_of(L).
 val[rust](X, lit(L))   :- literal[value](X, L), int is type_of(L).
@@ -168,12 +178,14 @@ kput[rust](H2, K2, V2, W) :- kput[rust](prm(F, J), Kw, Vw, _), ran[rust](W, F), 
 karg[rust](A, loc(B)) :- krecv[rust](A, loc(B)).
 karg[rust](A, fl(Ob, K)) :- krecv[rust](A, field(O, K)), val[rust](O, Ob), is_obj[rust](Ob).
 -- the order, in the list of steps that makes the map: read off the tree alone
-kstep[rust](B, I, X) :- nth[tree](B, I, X).
-kstep[rust](B, I, X) :- nth[tree](B, I, S), inside[tree](S, X).
+kstep[rust](B, I, X) :- kblock[rust](B), nth[tree](B, I, X).
+kstep[rust](B, I, X) :- kblock[rust](B), nth[tree](B, I, S), inside[tree](S, X).
+kblock[rust](DB) :- kmade_in[rust](_, DB).
 kmade_in[rust](Bp, DB) :- keyed_local[rust](Bp), assign[value](L, Bp, _), nth[tree](DB, _, L).
 kget_loc[rust](G, Bp) :- keyed_read[rust](G), kop[rust](G, R, _), krecv[rust](R, loc(Bp)).
 kget_loc[rust](O, Bp) :- std_call[rust](O, E, "or_insert"), kop[rust](E, R, "entry"), krecv[rust](R, loc(Bp)).
-kunseen[rust](G, S) :- kget_loc[rust](G, Bp), kmade_in[rust](Bp, DB), kstep[rust](DB, Ig, G), kstep[rust](DB, Ip, S), Ip > Ig.
+kunseen[rust](G, S) :- kget_loc[rust](G, Bp), kmade_in[rust](Bp, DB), kstep[rust](DB, Ig, G), kput_step[rust](Bp, DB, Ip, S),
+                       Ip > Ig.
 -- what takes a key out, by a literal written at it
 skey[rust](C, L) :- nth[tree](C, 0, A), literal[value](A, L).
 skey[rust](C, L) :- nth[tree](C, 0, A), unary[value](A, _, X), literal[value](X, L).
