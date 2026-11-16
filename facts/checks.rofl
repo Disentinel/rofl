@@ -4077,6 +4077,12 @@ check_file("ci_gate", "models/process/ci/cost.rofl").
 check_file("ci_gate", "models/process/ci/gate.rofl").
 check_file("ci_gate", "models/process/ci/gate-proof.rofl").
 
+-- WHICH GOLDEN THE MERGE TRAIN MAY BLESS (models/process/ci/train.rofl, scripts/merge_train.ts): each verdict once,
+-- held, met (nobody moved it, or its one party blessed otherwise) and blessed by the train (more than one party moved it).
+check_world("ci_train").
+check_file("ci_train", "models/process/ci/train.rofl").
+check_file("ci_train", "models/process/ci/train-proof.rofl").
+
 -- WHAT THE WORLDS SAW OF A CHANGE, BY FEATURE (models/engine/feature-behaviour.rofl, beside feature-diff.rofl): one
 -- change over four features and five worlds, each verdict once: `cut` changed, `sum` carried, `whynot` unwatched,
 -- `--retract` meant to move and unmet; the ledger's world, whose file the change wrote too, is unsplit.

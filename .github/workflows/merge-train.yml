@@ -1,0 +1,76 @@
+name: merge train
+
+# THE MERGE TRAIN (scripts/merge_train.ts). A repository on a personal account has no merge queue, and with nine
+# branches in flight each merge made the others conflict on the ledgers and the goldens, so every merge cost every
+# other branch a rebase, a bless and a whole CI: a day for nine. A branch whose fast checks are green and that carries
+# the label `queue` waits here; one train takes all that wait, stacks them on main, blesses once, runs the slow gates
+# once, and lands each by its own squash. Branches labelled while a train runs take the next one.
+on:
+  pull_request_target:
+    types: [labeled]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+permissions: { contents: write, pull-requests: write, issues: write, actions: write, checks: read }
+
+jobs:
+  # A RUN LOST TO ITS MACHINE IS RUN AGAIN. A job cancelled while its commit is still the head of its branch was not
+  # superseded: the runner went away (#252 waited 1 h 47 min for a hand on Re-run). Once, by the workflow's token.
+  rerun:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node --experimental-strip-types scripts/merge_train.ts rerun ${{ github.event.workflow_run.id }}
+        env: { GITHUB_TOKEN: '${{ github.token }}' }
+
+  train:
+    if: (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') && (github.event_name != 'pull_request_target' || github.event.label.name == 'queue')
+    # one train at a time, and never one cut short: a train waiting behind it takes whatever waits when it starts
+    concurrency: { group: merge-train, cancel-in-progress: false }
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env: { GITHUB_TOKEN: '${{ github.token }}', ROFL_JOBS: 4 }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm ci
+      - id: pick
+        run: node --experimental-strip-types scripts/merge_train.ts pick
+      - if: steps.pick.outputs.count != '0'
+        uses: dtolnay/rust-toolchain@stable
+        with: { targets: wasm32-unknown-unknown, components: clippy }
+      - if: steps.pick.outputs.count != '0'
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: train
+          workspaces: |
+            rust
+            rust/tools/oxc_scan
+      - if: steps.pick.outputs.count != '0'
+        id: stack
+        run: node --experimental-strip-types scripts/merge_train.ts stack
+      - if: steps.stack.outputs.stacked != '0'
+        run: (cd rust && cargo build --release) && (cd rust/tools/oxc_scan && cargo build --release)
+      # the generated files made again over the stack, the goldens last, and train.rofl over the goldens of every side
+      - if: steps.stack.outputs.stacked != '0'
+        run: node --experimental-strip-types scripts/merge_train.ts regenerate
+      - if: steps.stack.outputs.stacked != '0'
+        run: node --experimental-strip-types scripts/merge_train.ts judge
+      # the slow gates, once for the whole train: the planted faults and the engine's lints
+      - if: steps.stack.outputs.stacked != '0'
+        run: cd rust && cargo clippy -p rofl --all-targets -- -D warnings
+      - if: steps.stack.outputs.stacked != '0'
+        run: npm run test:agg:breaks
+      - if: steps.stack.outputs.stacked != '0'
+        run: node --experimental-strip-types scripts/merge_train.ts land
+      - if: failure() && steps.stack.outcome == 'success'
+        run: node --experimental-strip-types scripts/merge_train.ts fail
