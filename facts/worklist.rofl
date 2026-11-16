@@ -3497,8 +3497,8 @@ work(w_js_dead_call_sites,
 work_state(w_js_dead_call_sites, done).
 
 work(w_js_call_site_context,
-  "NO CALL-SITE CONTEXT: express() inside a shared init is one allocation site, so app.set/app.get merge the values of every caller (two init() calls in one service got each other's port). Add bounded context (k-limited call strings or allocation-site cloning at named factories), sound, and measured against w_dataflow_pruning.").
-work_state(w_js_call_site_context, open).
+  "NO CALL-SITE CONTEXT: express() inside a shared init is one allocation site, so app.set/app.get merge the values of every caller (two init() calls in one service got each other's port). Add bounded context (k-limited call strings or allocation-site cloning at named factories), sound, and measured against w_dataflow_pruning. DONE 2026-11-16 (#261), by another route than the one named here: no call strings and no cloning, so no bound. A call is an instance of what its function hands out (`via(C, O)` and the callee's summary), a method call reads the fields of the instance it is called on (`field(M, Key)`, `key_of`), and a method run on an object a field holds is walked object by object (`hop`, `run`, `ret_of`); world `js_instances`. Over 100 vscode files against main: 4 615 node values and 122 literals gone, 96 true ones came, 32 false resolves gone; the side-effect question over 1000 files 781 -> 776 values in the same four minutes. KEPT GENERAL, named in the check: a write made after the call, a kept variable, `this` under another name or a computed key, a closure returning a foreign hop, keyed collections. Not measured above 1000 files.").
+work_state(w_js_call_site_context, done).
 work_needs(w_js_call_site_context, w_dataflow_pruning).
 
 work(w_js_framework_contracts,
