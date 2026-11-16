@@ -155,19 +155,41 @@ async function land(): Promise<void> {
   const s = read();
   let main = (await gh<{ object: { sha: string } }>('GET', '/git/ref/heads/main')).object.sha;
   if (main !== s.main) return void console.log(`main moved while the train ran (${s.main.slice(0, 7)} -> ${main.slice(0, 7)}), not by the train: the next train takes these`);
+  let landed = 0;
   for (const p of s.stacked) {
     const tree = git('rev-parse', `${p.commit}^{tree}`);
     git('fetch', '-q', 'origin', main);
     const m = git('commit-tree', tree, '-p', p.head, '-p', main, '-m', `The merge train: main and the train before #${p.number} merged in`);
-    if (!gitOk('push', '-q', 'origin', `${m}:refs/heads/${p.ref}`)) { await say(p.number, `The train did not land this: its branch moved since the train took it. It waits for the next train.`); continue; }
-    const r = await gh<{ sha: string }>('PUT', `/pulls/${p.number}/merge`, { merge_method: 'squash', sha: m, commit_title: `${p.title} (#${p.number})` });
-    main = r.sha;
+    // each later request's tree holds this one's change: a request that does not land stops the landing there
+    const stop = async (why: string): Promise<void> => {
+      await returnPr(p, why);
+      for (const q of s.stacked.slice(landed + 1)) await unlabel(q.number, RED);
+      console.log(`#${p.number} not landed: ${why} The rest wait for the next train.`);
+    };
+    if (!gitOk('push', '-q', 'origin', `${m}:refs/heads/${p.ref}`)) { await stop('its branch moved since the train took it; label it `queue` again.'); break; }
+    const sha = await squash(p, m);
+    if (!sha) { await stop('GitHub would not squash it after the train merged main into its branch; label it `queue` again.'); break; }
+    main = sha; landed++;
     await unlabel(p.number, QUEUE); await unlabel(p.number, RED);
     console.log(`#${p.number} landed as ${main.slice(0, 7)}`);
   }
   for (const { pr, files } of s.returned) await returnPr(pr, `The train could not stack this on main: ${files.map((f) => `\`${f}\``).join(', ')} conflict. Rebase on main and label it \`queue\` again.`);
   // a push by the workflow's own token starts no workflow: main's run (engine, vsix, release rehearsal) is asked for
-  if (s.stacked.length) await gh('POST', '/actions/workflows/ci.yml/dispatches', { ref: 'main' });
+  if (landed) await gh('POST', '/actions/workflows/ci.yml/dispatches', { ref: 'main' });
+}
+
+/** GitHub's squash of a request whose branch was just pushed: it says whether the request merges only once it has
+ *  computed it, so the merge waits for that and is tried again while GitHub still says no. */
+async function squash(p: Pr, m: string): Promise<string | null> {
+  for (let i = 0; i < 12; i++) {
+    const pr = await gh<{ head: { sha: string }; mergeable: boolean | null }>('GET', `/pulls/${p.number}`);
+    if (pr.head.sha === m && pr.mergeable) {
+      try { return (await gh<{ sha: string }>('PUT', `/pulls/${p.number}/merge`, { merge_method: 'squash', sha: m, commit_title: `${p.title} (#${p.number})` })).sha; }
+      catch (e) { console.log(`#${p.number}: ${(e as Error).message.slice(0, 200)}`); }
+    }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  return null;
 }
 
 async function returnPr(p: Pr, why: string): Promise<void> {
