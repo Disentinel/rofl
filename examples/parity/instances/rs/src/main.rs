@@ -17,6 +17,10 @@ struct Flusher<'a> { inner: &'a Storage }
 impl<'a> Flusher<'a> {
     fn flush(&self) { self.inner.save("f"); }
 }
+struct Outer<'a> { inner: &'a Flusher<'a> }
+impl<'a> Outer<'a> {
+    fn flush(&self) { self.inner.flush(); }
+}
 fn main() {
     let a = Storage::new("a.json");
     let b = Storage::new("b.json");
@@ -43,5 +47,7 @@ fn main() {
     let fb = Flusher { inner: &b };
     fa.flush();
     fb.flush();
+    let o = Outer { inner: &fb };
+    o.flush();
     println!("{where_c2}{where_c3}{direct_a}{direct_b}{got_a}{got_b}{got_c}{where_k}{where_j}");
 }

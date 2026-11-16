@@ -1,0 +1,115 @@
+-- effects.rofl — WHERE RUST CODE TOUCHES THE WORLD, AND WITH WHAT VALUE, read from the roles, names.rofl, calls.rofl
+-- and values.rofl. The words are those of the JS model's question (examples/vscode/side-effects.rofl):
+--
+--   effect_call(Path, Name, Kind)        a function of the standard library that touches the world, and how (data)
+--   effect_family(Kind, Family)          the family a kind belongs to, in the JS question's names (data)
+--   effect_site[rust](C, Kind)           the call C touches the world: directly, or through a function of the crate
+--   effect_in[rust](F, Kind)             the function F may touch the world so, itself or through what it calls
+--   side_effect_value[flow](C, Family, V) the literal V may reach the first argument of the effect at C
+--
+-- THE ABSTRACTION. A function whose effect takes a value it was handed is a SINK, and every call of it is a site of
+-- its own (`sink(F, Spec, Kind)`): of its I-th parameter p(I), of a field of its `self` f(Key), of what another
+-- method does on a field of its `self` h(Key, M) or on `self` itself s(M). A site's value is read off the receivers
+-- the call has: the objects it is called on where they are known (`a.save()` is a.json), and every object the
+-- method is ever called on where they are not (inside the body of `save`).
+
+imports(flow, rust).
+
+edb(effect_call).
+edb(effect_family).
+effect_call("std::fs", "read_to_string", fs_read).
+effect_call("std::fs", "read", fs_read).
+effect_call("std::fs", "read_dir", fs_read).
+effect_call("std::fs", "metadata", fs_read).
+effect_call("std::fs::File", "open", fs_read).
+effect_call("std::fs", "write", fs_write).
+effect_call("std::fs", "create_dir_all", fs_write).
+effect_call("std::fs", "create_dir", fs_write).
+effect_call("std::fs", "copy", fs_write).
+effect_call("std::fs", "rename", fs_write).
+effect_call("std::fs::OpenOptions", "new", fs_write).
+effect_call("std::fs::File", "create", fs_write).
+effect_call("std::fs", "remove_file", fs_delete).
+effect_call("std::fs", "remove_dir", fs_delete).
+effect_call("std::fs", "remove_dir_all", fs_delete).
+effect_call("std::env", "var", env_read).
+effect_call("std::env", "var_os", env_read).
+effect_call("std::env", "current_dir", env_read).
+effect_call("std::env", "current_exe", env_read).
+effect_call("std::env", "temp_dir", env_read).
+effect_call("std::env", "set_var", env_write).
+effect_call("std::env", "remove_var", env_write).
+effect_call("std::process", "exit", exit).
+effect_call("std::process::Command", "new", exec).
+effect_call("std::net::TcpListener", "bind", listen).
+effect_call("std::net::UdpSocket", "bind", listen).
+effect_call("std::net::TcpStream", "connect", request).
+effect_call("std::thread", "spawn", thread).
+effect_call("std::thread", "scope", thread).
+effect_call("std::io", "stdin", stdin).
+effect_call("std::time::Instant", "now", clock).
+effect_call("std::time::SystemTime", "now", clock).
+
+effect_family(fs_write, fs_mutation).
+effect_family(fs_delete, fs_mutation).
+effect_family(exec, process).
+effect_family(listen, listen).
+effect_family(request, request).
+effect_family(fs_read, fs_read).
+effect_family(env_read, env).
+effect_family(env_write, env).
+
+-- ===================================================================== DIRECT SITES
+std_site[rust](C, K) :- callee[value](C, Fn), member[value](Fn, P, N), effect_call(Q, N, K), path_text[rust](P, Q).
+effect_site[rust](C, K) :- std_site[rust](C, K).
+effect_in[rust](F, K) :- effect_site[rust](C, K), in_fn[rust](F, C).
+effect_in[rust](F, K) :- ran[rust](C, G), effect_in[rust](G, K), in_fn[rust](F, C).
+
+-- ===================================================================== SINKS
+-- a direct site's first argument, said in the terms of the function it is in
+sink[rust](F, p(I), K)   :- std_site[rust](C, K), nth[tree](C, 0, A), val[rust](A, in(F, I)), I != self.
+sink[rust](F, f(Key), K) :- std_site[rust](C, K), nth[tree](C, 0, A), val[rust](A, inf(F, self, Key)).
+-- a call of a sink is a site, and makes the function it is in a sink in its turn
+effect_site[rust](W, K) :- ran[rust](W, G), sink[rust](G, _, K).
+sink[rust](F, p(J), K)   :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), val[rust](A, in(F, J)), J != self.
+sink[rust](F, f(Key), K) :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), val[rust](A, inf(F, self, Key)).
+on_self[rust](W, G, F, K) :- ran[rust](W, G), obj_sink[rust](G, K), arg[rust](W, self, R), val[rust](R, in(F, self)).
+on_field[rust](W, G, F, Key, K) :- ran[rust](W, G), obj_sink[rust](G, K), arg[rust](W, self, R),
+                                   val[rust](R, inf(F, self, Key)).
+obj_sink[rust](G, K) :- sink[rust](G, f(_), K).
+obj_sink[rust](G, K) :- sink[rust](G, s(_), K).
+obj_sink[rust](G, K) :- sink[rust](G, h(_, _), K).
+sink[rust](F, s(G), K)        :- on_self[rust](_, G, F, K).
+sink[rust](F, h(Key, G), K)   :- on_field[rust](_, G, F, Key, K).
+
+-- ===================================================================== WHAT A METHOD TOUCHES ON AN OBJECT
+-- eff_on(G, Ob, K, V): run on the object Ob, G hands V to an effect K. Asked for the receivers that occur.
+eff_ask[rust](G, Ob) :- obj_sink[rust](G, _), recv[rust](_, G, Ob).
+eff_ask[rust](M, Ob2) :- eff_ask[rust](G, Ob), sink[rust](G, h(Key, M), _), fv[rust](Ob, Key, Ob2), is_obj[rust](Ob2).
+eff_ask[rust](M, Ob)  :- eff_ask[rust](G, Ob), sink[rust](G, s(M), _).
+eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, f(Key), K), fv[rust](Ob, Key, lit(L)).
+eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, h(Key, M), K), fv[rust](Ob, Key, Ob2), is_obj[rust](Ob2),
+                             eff_on[rust](M, Ob2, K, L).
+eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, s(M), K), eff_on[rust](M, Ob, K, L).
+
+-- recv(W, G, Ob): the call W runs G on the object Ob: the receiver's own objects where it has them, and inside a
+-- method every object that method is ever run on
+recv[rust](W, G, Ob)  :- ran[rust](W, G), argval[rust](W, self, Ob), is_obj[rust](Ob).
+recv[rust](W, G, Ob)  :- ran[rust](W, G), argval[rust](W, self, in(F, self)), runs_on[rust](F, Ob).
+recv[rust](W, G, Ob)  :- ran[rust](W, G), argval[rust](W, self, inf(F, self, Key)), runs_on[rust](F, Ob1),
+                         fv[rust](Ob1, Key, Ob), is_obj[rust](Ob).
+runs_on[rust](G, Ob)  :- recv[rust](_, G, Ob).
+
+-- ===================================================================== THE ANSWER
+-- a direct site: its argument's literals, or, where the argument is what its function was handed, every value it is
+se_val[rust](C, K, L) :- std_site[rust](C, K), nth[tree](C, 0, A), may_be_lit[flow](A, L).
+se_val[rust](C, K, L) :- std_site[rust](C, K), nth[tree](C, 0, A), val[rust](A, inf(F, self, Key)), runs_on[rust](F, Ob),
+                         fv[rust](Ob, Key, lit(L)).
+-- a call of a sink: by the argument it hands on, or by the objects it is called on
+se_val[rust](W, K, L) :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), may_be_lit[flow](A, L).
+se_val[rust](W, K, L) :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), val[rust](A, inf(F, self, Key)),
+                         runs_on[rust](F, Ob), fv[rust](Ob, Key, lit(L)).
+se_val[rust](W, K, L) :- recv[rust](W, G, Ob), eff_on[rust](G, Ob, K, L).
+
+side_effect_site[flow](C, F)     :- effect_site[rust](C, K), effect_family(K, F).
+side_effect_value[flow](C, F, V) :- se_val[rust](C, K, V), effect_family(K, F).
