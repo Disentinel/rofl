@@ -1,4 +1,4 @@
--- examples/parity/check.rofl — ONE SCENE, TWO LANGUAGES: the judgement every scene world of examples/parity/ shares.
+-- examples/parity/judge/check.rofl — ONE SCENE, TWO LANGUAGES: the judgement every scene world of examples/parity/ shares.
 -- A scene is a program written in JS and in Rust; its check file says what the program prints (cargo run, node)
 -- for each name it asks about, and the language's adapter (rs.rofl) says what the model answers for it:
 --   named(Name)            a `let` the scene asks about; a name with no truth holds nothing (`None`, `undefined`)

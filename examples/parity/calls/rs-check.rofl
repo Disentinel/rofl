@@ -1,5 +1,5 @@
 -- examples/parity/calls/rs-check.rofl — WHICH FUNCTION A METHOD CALL RUNS, where the receiver's type is not known
--- (examples/parity/check.rofl judges it). Three false values the Rust model gave over the engine's own code, each
+-- (examples/parity/judge/check.rofl judges it). Three false values the Rust model gave over the engine's own code, each
 -- a line here: a tuple taken apart gave each part every element; `Path::new(..).join(..)` ran the crate's `join`, which
 -- takes no `self`; `.collect()` of an iterator ran the crate's own `collect`. Truth: cargo run, 2026-11-16.
 truth("first", "one").

@@ -1,4 +1,4 @@
--- examples/parity/guards/rs-check.rofl — WHETHER CODE RUNS AT ALL, IN RUST (examples/parity/check.rofl judges it).
+-- examples/parity/guards/rs-check.rofl — WHETHER CODE RUNS AT ALL, IN RUST (examples/parity/judge/check.rofl judges it).
 -- Truth: the scene run twice, with no argument and with six (cargo build, 2026-11-16): a probe printed by both runs
 -- has no truth (it runs), any other is `may_skip`.
 named("start"). named("before_try"). named("live"). named("middle"). named("after_continue").

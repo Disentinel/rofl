@@ -1,4 +1,4 @@
--- examples/parity/matrix.rofl — HOW COMPLETE THE MODELS OF JS AND RUST ARE, capability by capability, each state read
+-- examples/parity/judge/matrix.rofl — HOW COMPLETE THE MODELS OF JS AND RUST ARE, capability by capability, each state read
 -- from the evidence that checks it: a world of `npm test`, a notebook, or a measurement. A capability with evidence and
 -- no gap is done, with a gap partial, with none none; red if Rust is behind JS anywhere. (The registry of worlds is not
 -- loaded here: its every new world would move this world's golden.)

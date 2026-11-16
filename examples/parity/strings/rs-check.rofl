@@ -1,5 +1,5 @@
 -- examples/parity/strings/rs-check.rofl — A STRING BUILT FROM PARTS, IN RUST (the scene of examples/concat/src/entry.ts;
--- examples/parity/check.rofl judges it). Truth: cargo run, 2026-11-16; a text is the term the program's string renders.
+-- examples/parity/judge/check.rofl judges it). Truth: cargo run, 2026-11-16; a text is the term the program's string renders.
 truth("template", cat("/srv", "/a")).
 truth("plus", cat("/srv", "/b")).
 truth("grown", cat("/srv", "/c")).
