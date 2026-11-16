@@ -1,0 +1,219 @@
+-- values.rofl — WHAT AN EXPRESSION OF RUST MAY HOLD, call by call and object by object, read from the roles,
+-- names.rofl, calls.rofl and flow.rofl. The words it gives are the JS model's (models/lang/js/rules/js-dataflow.rofl):
+--
+--   may_be_lit[flow](E, V)   the expression E may hold the literal V (a string, true, false)
+--   may_be_node[flow](E, O)  E may hold the object written at O (a struct literal)
+--
+-- THE ABSTRACTION. A value is a literal lit(L), an object obj(O) (the struct literal at O), an instance inst(C, O)
+-- (the object O the call C handed out, its fields filled by that call's arguments), or, inside a function, what the
+-- function was handed: in(F, I) (its I-th parameter, or `self`) and inf(F, I, K) (the field K of it). A function says
+-- once what it does in terms of its inputs, and a call puts its own arguments where the function says in(F, I): a
+-- call is an instance of the function. The objects a function hands out are tagged by the call (`hands`), through
+-- every function that hands them on, with no bound. A method that reaches into a field of its own `self` and calls
+-- on it (`self.inner.get()`) is walked object by object: `run(G, Ob, V)`, what G gives when `self` is Ob, asked only
+-- for the receivers that occur (`want_run`). What the abstraction keeps general, and says so: a field of a field of
+-- an input that is not `self`, a write onto an input's field, the order of writes; there a field is read of every
+-- object of its type, as flow.rofl reads it.
+
+imports(flow, rust). imports(flow, value). imports(flow, tree).
+
+-- ===================================================================== EDGES INSIDE A FUNCTION
+-- flow.rofl's copies and wraps between two nodes, less those that cross a call (an argument into a parameter,
+-- a receiver into `self`); results and fields are terms there and are read here by their own rules
+is_node[rust](X)    :- at[tree](X, _, _).
+param_pat[rust](P)  :- param[value](_, _, P).
+v_edge[rust](X, Y) :- copy[rust](X, Y), is_node[rust](X), is_node[rust](Y), not param_pat[rust](Y), not fn_item[rust](Y).
+v_edge[rust](X, Y) :- wrap[rust](X, Y), is_node[rust](X), is_node[rust](Y), not param_pat[rust](Y), not fn_item[rust](Y),
+                      not keyed_read[rust](Y), not split_part[rust](Y).
+-- a tuple written in place and taken apart by a tuple pattern: each part takes its own element, not the whole
+split[rust](X, E) :- assign[value](_, P, V), mark[value](V, array), pattern_elem[value](P, I, X), nth[tree](V, I, E).
+split_part[rust](X) :- split[rust](X, _).
+v_edge[rust](E, X) :- split[rust](X, E).
+
+-- ===================================================================== THE CALLS OF A LIBRARY, BY THEIR PATH
+-- `Router::new()` under `use axum::Router` is ("axum::Router", "new"); `get(h)` under `use axum::routing::get` is
+-- ("axum::routing", "get")
+ext_call[rust](C, Q, N) :- callee[value](C, Fn), member[value](Fn, P, N), path_text[rust](P, Q).
+ext_call[rust](C, Q, N) :- callee[value](C, R), ref[value](R, N), not member[value](R, _, _), in_scope[rust](S, R),
+                           found[rust](S, N, B), import_leaf[rust](B), member[value](B, P, N), path_text[rust](P, Q).
+-- ===================================================================== WHERE A VALUE STARTS
+val[rust](X, lit(L))   :- literal[value](X, L), string is type_of(L).
+val[rust](X, lit(L))   :- literal[value](X, L), int is type_of(L).
+val[rust](X, lit(B))   :- const[rust](X, b(B)).
+val[rust](O, obj(O))   :- obj_of[rust](O, _).
+val[rust](P, in(F, I)) :- param[value](F, I, P).
+val[rust](N, in(F, self)) :- ref[value](N, "self"), denotes[rust](N, F), fn_item[rust](F).
+val[rust](Y, V) :- val[rust](X, V), v_edge[rust](X, Y).
+
+concrete[rust](lit(L))     :- val[rust](_, lit(L)).
+concrete[rust](obj(O))     :- val[rust](_, obj(O)).
+concrete[rust](inst(C, O)) :- val[rust](_, inst(C, O)).
+is_obj[rust](obj(O))     :- val[rust](_, obj(O)).
+is_obj[rust](inst(C, O)) :- val[rust](_, inst(C, O)).
+obj_type[rust](obj(O), S)     :- obj_of[rust](O, S).
+obj_type[rust](inst(C, O), S) :- val[rust](_, inst(C, O)), obj_of[rust](O, S).
+
+-- ===================================================================== FIELDS, OBJECT BY OBJECT
+fread[rust](N, O, K) :- member[value](N, O, K), holds[rust](O, S), has_field[rust](S, K).
+-- a struct literal fills its fields; a write fills the field of every object its holder may be
+fv[rust](obj(O), K, V) :- obj_of[rust](O, _), has[value](O, M), key[value](M, K), value[value](M, X), val[rust](X, V).
+fwrite[rust](O, K, X)  :- assign[value](_, T, X), member[value](T, O, K), holds[rust](O, S), has_field[rust](S, K).
+fv[rust](Ob, K, V)     :- fwrite[rust](O, K, X), val[rust](O, Ob), is_obj[rust](Ob), val[rust](X, V).
+-- a write onto a field of what the function was handed lands, at each call, on the objects the argument may be
+wput[rust](F, I, K, W) :- fwrite[rust](O, K, X), val[rust](O, in(F, I)), val[rust](X, W).
+fv[rust](Ob, K, W) :- wput[rust](F, I, K, W), concrete[rust](W), ran[rust](C, F), argval[rust](C, I, Ob), is_obj[rust](Ob).
+fv[rust](Ob, K, V) :- wput[rust](F, I, K, in(F, J)), ran[rust](C, F), argval[rust](C, I, Ob), is_obj[rust](Ob),
+                      argval[rust](C, J, V).
+-- a read: of an object, the field's values; of an input, a field of the input; deeper, every object of the type
+val[rust](N, V)            :- fread[rust](N, O, K), val[rust](O, Ob), fv[rust](Ob, K, V).
+val[rust](N, inf(F, I, K)) :- fread[rust](N, O, K), val[rust](O, in(F, I)).
+deep_read[rust](N, S, K)   :- fread[rust](N, O, K), val[rust](O, inf(_, _, _)), holds[rust](O, S).
+val[rust](N, V)            :- deep_read[rust](N, S, K), obj_type[rust](Ob, S), fv[rust](Ob, K, V).
+
+-- ===================================================================== A CALL
+-- arg(C, I, A): the argument A takes the I-th parameter, or `self`, of what C runs
+arg[rust](C, I, A)    :- ran[rust](C, G), nth[tree](C, I, A), not by_path_self[rust](C, G).
+arg[rust](C, self, R) :- ran[rust](C, G), callee[value](C, M), member[value](M, R, _), binds[value](G, "self"),
+                         not by_path_self[rust](C, G).
+arg[rust](C, self, A) :- by_path_self[rust](C, _), nth[tree](C, 0, A).
+arg[rust](C, J, A)    :- by_path_self[rust](C, _), nth[tree](C, I, A), I > 0, J is I - 1.
+argval[rust](C, I, V) :- arg[rust](C, I, A), val[rust](A, V).
+
+-- what a function gives back, in its own terms
+rv[rust](G, V) :- copy[rust](E, res(G)), is_node[rust](E), val[rust](E, V).
+
+-- sub(C, W, V): the value W, said in the terms of the function C runs, as the call C has it
+sub[rust](C, lit(L), lit(L)) :- ran[rust](C, G), rv[rust](G, lit(L)).
+sub[rust](C, obj(O), obj(O)) :- ran[rust](C, G), rv[rust](G, obj(O)), not born_in[rust](G, O).
+sub[rust](C, inst(C2, O), inst(C2, O)) :- ran[rust](C, G), rv[rust](G, inst(C2, O)), not in_fn[rust](G, C2).
+sub[rust](C, in(G, I), V) :- ran[rust](C, G), rv[rust](G, in(G, I)), argval[rust](C, I, V).
+sub[rust](C, inf(G, I, K), V) :- ran[rust](C, G), rv[rust](G, inf(G, I, K)), argval[rust](C, I, Ob), is_obj[rust](Ob),
+                                 fv[rust](Ob, K, V).
+sub[rust](C, inf(G, I, K), inf(F, J, K)) :- ran[rust](C, G), rv[rust](G, inf(G, I, K)), argval[rust](C, I, in(F, J)).
+-- deeper than one field of an input: the call is asked again where the receiver is known (run, below)
+sub[rust](C, W, oncall(C)) :- ran[rust](C, G), rv[rust](G, W), deferred[rust](W).
+sub[rust](C, inf(G, I, K), oncall(C)) :- ran[rust](C, G), rv[rust](G, inf(G, I, K)), argval[rust](C, I, inf(_, _, _)).
+deferred[rust](oncall(C2)) :- rv[rust](_, oncall(C2)).
+
+-- the objects a function hands out are its call's own: inst(C, O), with the fields the function's summary says
+born_in[rust](G, O) :- obj_of[rust](O, _), in_fn[rust](G, O).
+hands[rust](G, O, K, W) :- rv[rust](G, obj(O)), born_in[rust](G, O), fv[rust](obj(O), K, W).
+hands[rust](G, O, K, W) :- rv[rust](G, inst(C2, O)), in_fn[rust](G, C2), fv[rust](inst(C2, O), K, W).
+handed[rust](G, O) :- rv[rust](G, obj(O)), born_in[rust](G, O).
+handed[rust](G, O) :- rv[rust](G, inst(C2, O)), in_fn[rust](G, C2).
+val[rust](C, inst(C, O)) :- ran[rust](C, G), handed[rust](G, O).
+fv[rust](inst(C, O), K, V) :- ran[rust](C, G), hands[rust](G, O, K, W), field_sub[rust](C, W, V).
+field_sub[rust](C, W, W) :- ran[rust](C, G), hands[rust](G, _, _, W), concrete[rust](W).
+field_sub[rust](C, in(G, I), V) :- ran[rust](C, G), hands[rust](G, _, _, in(G, I)), argval[rust](C, I, V).
+
+-- the rest of what it gives back
+val[rust](C, V) :- sub[rust](C, _, V).
+
+-- ===================================================================== A METHOD WALKED OBJECT BY OBJECT
+-- run(G, Ob, V): G gives V when its `self` is the object Ob. Asked where a call has a known receiver and what G
+-- gives is not said in its own terms alone.
+want_run[rust](G, Ob) :- ran[rust](C, G), argval[rust](C, self, Ob), is_obj[rust](Ob), rv[rust](G, oncall(_)).
+run[rust](G, Ob, V) :- want_run[rust](G, Ob), rv[rust](G, V), concrete[rust](V).
+run[rust](G, Ob, V) :- want_run[rust](G, Ob), rv[rust](G, inf(G, self, K)), fv[rust](Ob, K, V).
+-- the inner call reaches into a field of `self`: on each object that field holds
+inner_on[rust](G, C3, K) :- rv[rust](G, oncall(C3)), arg[rust](C3, self, A), val[rust](A, inf(G, self, K)).
+want_run[rust](G3, Ob2) :- want_run[rust](G, Ob), inner_on[rust](G, C3, K), fv[rust](Ob, K, Ob2), is_obj[rust](Ob2),
+                           ran[rust](C3, G3).
+run[rust](G, Ob, V) :- want_run[rust](G, Ob), inner_on[rust](G, C3, K), fv[rust](Ob, K, Ob2), is_obj[rust](Ob2),
+                       ran[rust](C3, G3), run[rust](G3, Ob2, V).
+-- the inner call is on `self` itself
+inner_self[rust](G, C3) :- rv[rust](G, oncall(C3)), arg[rust](C3, self, A), val[rust](A, in(G, self)).
+want_run[rust](G3, Ob) :- want_run[rust](G, Ob), inner_self[rust](G, C3), ran[rust](C3, G3).
+run[rust](G, Ob, V) :- want_run[rust](G, Ob), inner_self[rust](G, C3), ran[rust](C3, G3), run[rust](G3, Ob, V).
+val[rust](C, V) :- ran[rust](C, G), argval[rust](C, self, Ob), is_obj[rust](Ob), want_run[rust](G, Ob), run[rust](G, Ob, V).
+
+-- ===================================================================== WHAT A MAP HOLDS UNDER A KEY
+-- A map of the standard library (`HashMap`, `BTreeMap`) is known by its HOLDER: the `let` that makes it, loc(B); a
+-- parameter of that type, prm(F, J); a field of an object, fl(Ob, Key), or of a method's own `self`, sf(F, Key). A
+-- put is an `insert`, or `entry(k).or_insert(v)`; a get is a `get`, or that `or_insert`. A get reads the puts of its
+-- key on its holder. In the list of steps that makes a `let` map, the order is read too (as js-dataflow.rofl, 7c):
+-- a put in a later step is not seen, and a step between them that removes that literal key, puts it again or
+-- clears the map takes the earlier put out. Elsewhere every put of the key may be the value. A key of no known value
+-- matches no put (`keyed_key_unknown[audit]`).
+edb(keyed_word).
+keyed_word("HashMap"). keyed_word("BTreeMap").
+keyed_type[rust](T) :- type_word[rust](T, W), keyed_word(W).
+keyed_ctor[rust](C) :- callee[value](C, Fn), member[value](Fn, P, _), ref[value](P, W), keyed_word(W).
+keyed_local[rust](B) :- assign[value](_, B, Init), keyed_ctor[rust](Init), local[rust](B).
+keyed_local[rust](B) :- declared[value](B, T), keyed_type[rust](T), local[rust](B), not param_pat[rust](B).
+keyed_param[rust](F, J, P) :- param[value](F, J, P), declared[value](P, T), keyed_type[rust](T).
+keyed_field[rust](S, Key) :- field_type[rust](S, Key, T), keyed_type[rust](T).
+-- the receiver of a keyed operation, by its form
+krecv[rust](R, loc(B))     :- ref[value](R, _), denotes[rust](R, B), keyed_local[rust](B).
+krecv[rust](R, prm(F, J))  :- ref[value](R, _), denotes[rust](R, P), keyed_param[rust](F, J, P).
+krecv[rust](R, field(O, K)) :- member[value](R, O, K), holds[rust](O, S), keyed_field[rust](S, K).
+krecv[rust](R, H)          :- unary[value](R, _, X), krecv[rust](X, H).
+kop[rust](C, R, Name) :- std_call[rust](C, R, Name), krecv[rust](R, _).
+keyed_read[rust](C) :- kop[rust](C, _, "get").
+keyed_read[rust](C) :- kop[rust](C, _, "get_mut").
+keyed_read[rust](C) :- kop[rust](C, _, "entry").
+keyed_read[rust](O) :- std_call[rust](O, E, "or_insert"), kop[rust](E, _, "entry").
+-- the holder: the form, and for a field the objects its owner may be
+hold[rust](C, loc(B))      :- kop[rust](C, R, _), krecv[rust](R, loc(B)).
+hold[rust](C, prm(F, J))   :- kop[rust](C, R, _), krecv[rust](R, prm(F, J)).
+hold[rust](C, fl(Ob, K))   :- kop[rust](C, R, _), krecv[rust](R, field(O, K)), val[rust](O, Ob), is_obj[rust](Ob).
+hold[rust](C, sf(F, K))    :- kop[rust](C, R, _), krecv[rust](R, field(O, K)), val[rust](O, in(F, self)).
+-- puts and gets
+kput[rust](H, Kw, Vw, C) :- kop[rust](C, _, "insert"), hold[rust](C, H), nth[tree](C, 0, Ka), val[rust](Ka, Kw),
+                            nth[tree](C, 1, Va), val[rust](Va, Vw).
+kput[rust](H, Kw, Vw, O) :- std_call[rust](O, E, "or_insert"), kop[rust](E, _, "entry"), hold[rust](E, H),
+                            nth[tree](E, 0, Ka), val[rust](Ka, Kw), nth[tree](O, 0, Va), val[rust](Va, Vw).
+kget[rust](C, H, Kw) :- kop[rust](C, _, "get"), hold[rust](C, H), nth[tree](C, 0, Ka), val[rust](Ka, Kw).
+kget[rust](C, H, Kw) :- kop[rust](C, _, "get_mut"), hold[rust](C, H), nth[tree](C, 0, Ka), val[rust](Ka, Kw).
+kget[rust](O, H, Kw) :- std_call[rust](O, E, "or_insert"), kop[rust](E, _, "entry"), hold[rust](E, H),
+                        nth[tree](E, 0, Ka), val[rust](Ka, Kw).
+-- a put a function makes on what it was handed lands, at each call, on the caller's holder; the call is its step
+ksub[rust](W, lit(L), lit(L)) :- ran[rust](W, _), kput[rust](_, lit(L), _, _).
+ksub[rust](W, lit(L), lit(L)) :- ran[rust](W, _), kput[rust](_, _, lit(L), _).
+ksub[rust](W, in(F, J), V)    :- ran[rust](W, F), argval[rust](W, J, V).
+kput[rust](fl(Ob, K), K2, V2, W) :- kput[rust](sf(F, K), Kw, Vw, _), ran[rust](W, F), argval[rust](W, self, Ob), is_obj[rust](Ob),
+                                    ksub[rust](W, Kw, K2), ksub[rust](W, Vw, V2).
+kput[rust](H2, K2, V2, W) :- kput[rust](prm(F, J), Kw, Vw, _), ran[rust](W, F), arg[rust](W, J, A), karg[rust](A, H2),
+                             ksub[rust](W, Kw, K2), ksub[rust](W, Vw, V2).
+karg[rust](A, loc(B)) :- krecv[rust](A, loc(B)).
+karg[rust](A, fl(Ob, K)) :- krecv[rust](A, field(O, K)), val[rust](O, Ob), is_obj[rust](Ob).
+-- the order, in the list of steps that makes the map: read off the tree alone
+kstep[rust](B, I, X) :- kblock[rust](B), nth[tree](B, I, X).
+kstep[rust](B, I, X) :- kblock[rust](B), nth[tree](B, I, S), inside[tree](S, X).
+kblock[rust](DB) :- kmade_in[rust](_, DB).
+kmade_in[rust](Bp, DB) :- keyed_local[rust](Bp), assign[value](L, Bp, _), nth[tree](DB, _, L).
+kget_loc[rust](G, Bp) :- keyed_read[rust](G), kop[rust](G, R, _), krecv[rust](R, loc(Bp)).
+kget_loc[rust](O, Bp) :- std_call[rust](O, E, "or_insert"), kop[rust](E, R, "entry"), krecv[rust](R, loc(Bp)).
+kunseen[rust](G, S) :- kget_loc[rust](G, Bp), kmade_in[rust](Bp, DB), kstep[rust](DB, Ig, G), kput_step[rust](Bp, DB, Ip, S),
+                       Ip > Ig.
+-- what takes a key out, by a literal written at it
+skey[rust](C, L) :- nth[tree](C, 0, A), literal[value](A, L).
+skey[rust](C, L) :- nth[tree](C, 0, A), unary[value](A, _, X), literal[value](X, L).
+skey[rust](C, L) :- nth[tree](C, 0, A), ref[value](A, _), denotes[rust](A, B), assign[value](_, B, I), literal[value](I, L).
+kkill[rust](X, Bp, L)   :- kop[rust](X, R, "remove"), krecv[rust](R, loc(Bp)), skey[rust](X, L).
+kkill[rust](X, Bp, L)   :- kop[rust](X, R, "insert"), krecv[rust](R, loc(Bp)), skey[rust](X, L).
+kkill[rust](X, Bp, all) :- kop[rust](X, R, "clear"), krecv[rust](R, loc(Bp)).
+kgone[rust](G, S, L) :- kget_loc[rust](G, Bp), kmade_in[rust](Bp, DB), kkill[rust](X, Bp, L), nth[tree](DB, Ik, X),
+                        kstep[rust](DB, Ig, G), Ik < Ig, kput_step[rust](Bp, DB, Ip, S), Ip < Ik.
+kput_step[rust](Bp, DB, Ip, S) :- kmade_in[rust](Bp, DB), kput_site[rust](S), kstep[rust](DB, Ip, S).
+kput_site[rust](S) :- kop[rust](S, _, "insert").
+kput_site[rust](O) :- std_call[rust](O, E, "or_insert"), kop[rust](E, _, "entry").
+kput_site[rust](W) :- ran[rust](W, _).
+val[rust](G, V) :- kget[rust](G, H, lit(K)), kput[rust](H, lit(K), V, S), not kunseen[rust](G, S), not kgone[rust](G, S, K),
+                   not kgone[rust](G, S, all).
+keyed_key_unknown[audit](G) :- keyed_read[rust](G), not kget_known[rust](G).
+kget_known[rust](G) :- kget[rust](G, _, lit(_)).
+
+-- ===================================================================== AN INPUT, WHERE THE CALL IS NOT KNOWN
+-- inside a function its input may be every argument any call gives it
+in_lit[rust](F, I, L) :- ran[rust](C, F), argval[rust](C, I, lit(L)).
+in_lit[rust](F, I, L) :- ran[rust](C, F), argval[rust](C, I, in(F2, I2)), in_lit[rust](F2, I2, L).
+in_obj[rust](F, I, Ob) :- ran[rust](C, F), argval[rust](C, I, Ob), is_obj[rust](Ob).
+in_obj[rust](F, I, Ob) :- ran[rust](C, F), argval[rust](C, I, in(F2, I2)), in_obj[rust](F2, I2, Ob).
+
+-- ===================================================================== THE WORDS OF THE MODEL
+may_be_lit[flow](E, L)  :- val[rust](E, lit(L)).
+may_be_lit[flow](E, L)  :- val[rust](E, in(F, I)), in_lit[rust](F, I, L).
+may_be_lit[flow](E, L)  :- val[rust](E, inf(F, I, K)), in_obj[rust](F, I, Ob), fv[rust](Ob, K, lit(L)).
+may_be_node[flow](E, O) :- val[rust](E, obj(O)).
+may_be_node[flow](E, O) :- val[rust](E, inst(_, O)).

@@ -947,6 +947,13 @@ check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
 check[checks]("facts/goldens.rofl", "oxc_roles", world).
+check[checks]("facts/goldens.rofl", "parity_matrix", world).
+check[checks]("facts/goldens.rofl", "parity_rs_calls", world).
+check[checks]("facts/goldens.rofl", "parity_rs_guards", world).
+check[checks]("facts/goldens.rofl", "parity_rs_instances", world).
+check[checks]("facts/goldens.rofl", "parity_rs_keyed", world).
+check[checks]("facts/goldens.rofl", "parity_rs_service", world).
+check[checks]("facts/goldens.rofl", "parity_rs_strings", world).
 check[checks]("facts/goldens.rofl", "plan_dp", world).
 check[checks]("facts/goldens.rofl", "plan_given", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).

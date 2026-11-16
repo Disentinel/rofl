@@ -4236,3 +4236,18 @@ work(w_size_biased_fanout,
   "From f_a_tree_held_from_the_units_was_sized_zero_to_the_planner: the planner prices a premise read by a key a join bound at the average fan-out of a key (a closure: rows / internal), but a key bound by a join through its members is drawn by its size, and the expected fan-out is the sum of the squares over the sum. acts_in[flow] by levels reads 19 M rows at 120 files of vscode for 11 facts by it. To do: the second moment kept beside pairs, deep and internal in a forest, and in the census for a relation's distinct values, and `vstat` and the join estimate use it where the key is bound by a variable. ACCEPTANCE: acts_in out of `hot:` at 120 files by levels, the rows read of the run at 20, 60, 120 files no more than before.").
 work_state(w_size_biased_fanout, done).
 work_spawned(w_size_biased_fanout, f_a_tree_held_from_the_units_was_sized_zero_to_the_planner).
+
+work(w_one_text_kernel,
+  "From f_the_rust_model_reaches_parity_with_the_js_model: models/lang/rust/strings.rofl repeats section 5 of js-concat.rofl (slots, pieces, choices under concat_cap, levels to concat_depth, seq into cat/join texts) over its own instances. Put the kernel once in a book both models load (the core of the Language model: parts, part_lit, shape in, may_be_text and may_be_form out), keep only the forms per language, and let the JS worlds' answers not move.").
+work_state(w_one_text_kernel, open).
+work_spawned(w_one_text_kernel, f_the_rust_model_reaches_parity_with_the_js_model).
+
+work(w_polyglot_service_graph,
+  "From f_the_rust_model_reaches_parity_with_the_js_model: web.rofl writes serves, app_listens and requests as js-express and js-fetch do, so a JS client of a Rust server should meet in js-service.rofl and rules/net. Not yet tried: js-service reads corpus_file[code], str_value[flow], nearest_fn[code] and top_call[code] of the JS model, which the Rust model does not write, and a port inside a text is an int piece where the net rules expect a string. A scene: examples/parity/service with a JS client beside the Rust server, its edges the requests the program answers.").
+work_state(w_polyglot_service_graph, open).
+work_spawned(w_polyglot_service_graph, f_the_rust_model_reaches_parity_with_the_js_model).
+
+work(w_engine_safety_names_meet_a_models,
+  "From f_a_model_relation_named_as_a_safety_relation_is_refused_for_its_rule: a relation `slot[rust]` of a model made safety.rofl refuse an unrelated rule. Find where the reflected program meets safety's own `slot`, keep the two apart, and add the case to the engine's tests.").
+work_state(w_engine_safety_names_meet_a_models, open).
+work_spawned(w_engine_safety_names_meet_a_models, f_a_model_relation_named_as_a_safety_relation_is_refused_for_its_rule).

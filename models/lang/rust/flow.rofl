@@ -97,7 +97,7 @@ std_method("enumerate", out). std_method("zip", out). std_method("drain", out). 
 std_method("as_str", out). std_method("as_slice", out). std_method("lock", out). std_method("filter", out).
 std_method("collect", out). std_method("to_vec", out). std_method("to_string", out). std_method("as_deref_mut", out).
 std_method("push", in). std_method("insert", in). std_method("push_back", in). std_method("push_front", in).
-std_method("extend", in). std_method("push_str", in). std_method("replace", in).
+std_method("extend", in). std_method("replace", in).
 std_method("map", each). std_method("and_then", each). std_method("filter", each). std_method("filter_map", each).
 std_method("for_each", each). std_method("any", each). std_method("all", each). std_method("find", each).
 std_method("is_some_and", each). std_method("is_ok_and", each). std_method("flat_map", each). std_method("position", each).
