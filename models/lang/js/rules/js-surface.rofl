@@ -29,8 +29,8 @@ sx_esc[surface](V) :- sx_esc[surface](G), thrown_by[flow](G, V).
 sx_esc[surface](E) :- sx_esc[surface](G), yields[flow](G, E).
 
 -- ---------------------------------------------------------------- an escaping node's facts, and their mirrors
-sx_node[surface](N, M)       :- sx_esc[surface](N), may_be_node[flow](N, M).
-sx_lit[surface](N, V)        :- sx_esc[surface](N), may_be_lit[flow](N, V).
+sx_node[surface](N, M)       :- sx_esc[surface](N), may_be[flow](N, node, M).
+sx_lit[surface](N, V)        :- sx_esc[surface](N), may_be[flow](N, lit, V).
 sx_elem[surface](A, I, E)    :- sx_esc[surface](A), array_elem[flow](A, I, E).
 sx_name[surface](E, Name)    :- sx_elem[surface](_, _, E), ref[value](E, Name).
 sx_fn[surface](F)            :- sx_esc[surface](F), fn_node[code](F).
@@ -113,13 +113,17 @@ sx_ret_plit[surface](F, V)  :- ret_param[flow](F, _, E), may_be_lit[flow](E, V).
 sx_ret_param[surface](F, I) :- ret_param[flow](F, I, _).
 -- the summary a call applies: what the function returns of its own, and which of its inputs it returns; an input of
 -- an enclosing function is returned as the values it holds
-sx_ret_own[surface](F, node, N) :- call_returns[flow](F, E), may_be[flow](E, node, N).
+sx_ret_own[surface](F, node, N) :- call_returns[flow](F, E), own_node[flow](E, N).
 sx_ret_own[surface](F, lit, V)  :- call_returns[flow](F, E), may_be[flow](E, lit, V).
 sx_ret_own[surface](F, node, N) :- call_returns[flow](F, E), may_be[flow](E, input, S), input_of[flow](S, G), G != F,
                                    input_node[flow](S, N).
 sx_ret_own[surface](F, lit, V)  :- call_returns[flow](F, E), may_be[flow](E, input, S), input_of[flow](S, G), G != F,
                                    input_lit[flow](S, V).
 sx_ret_input[surface](F, I)     :- call_returns[flow](F, E), may_be[flow](E, input, S), input_param[flow](S, F, I).
+sx_ret_field[surface](F, Key)   :- call_returns[flow](F, E), may_be[flow](E, input, field(F, Key)).
+sx_ret_hop[surface](F, K, M2)   :- call_returns[flow](F, E), may_be[flow](E, input, hop(F, K, M2)).
+sx_ret_inst[surface](F)         :- sx_ret_field[surface](F, _).
+sx_ret_inst[surface](F)         :- sx_ret_hop[surface](F, _, _).
 sx_ret_self[surface](F)         :- call_returns[flow](F, E), may_be[flow](E, input, S), input_this[flow](S, F).
 sx_ret_this[surface](F, I)      :- call_returns[flow](F, E), may_be[flow](E, input, S), input_this[flow](S, F),
                                    input_node[flow](S, I).
