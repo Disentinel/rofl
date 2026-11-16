@@ -47,7 +47,7 @@ jobs:
         run: node --experimental-strip-types scripts/merge_train.ts pick
       - if: steps.pick.outputs.count != '0'
         uses: dtolnay/rust-toolchain@stable
-        with: { targets: wasm32-unknown-unknown, components: clippy }
+        with: { targets: wasm32-unknown-unknown }
       - if: steps.pick.outputs.count != '0'
         uses: Swatinem/rust-cache@v2
         with:
@@ -67,7 +67,8 @@ jobs:
         run: node --experimental-strip-types scripts/merge_train.ts judge
       # the slow gates, once for the whole train: the planted faults and the engine's lints
       - if: steps.stack.outputs.stacked != '0'
-        run: cd rust && cargo clippy -p rofl --all-targets -- -D warnings
+        # the toolchain ci.yml pins for its lints, so that a new stable's lints are not a request's fault
+        run: rustup toolchain install 1.95.0 --profile minimal -c clippy && cd rust && cargo +1.95.0 clippy -p rofl --all-targets -- -D warnings
       - if: steps.stack.outputs.stacked != '0'
         run: npm run test:agg:breaks
       - if: steps.stack.outputs.stacked != '0'
