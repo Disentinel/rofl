@@ -697,9 +697,8 @@ sig(eff_exn_only, "has_only_a_latent_exception(function F)").
 sig(may_throw_only, "may_throw_without_a_latent_exception(function F)").
 sig(eff_swallowed, "swallows(node F, effect label L:2, at host H:3, in call C:1)").
 sig(eff_subject, "is_an_effect_subject(function F)").
-sig(eff_over, "exceeds(function F, effect N)").
-sig(eff_bounded, "is_bounded_by(function F, effect N)").
-sig(eff_bounded_low, "is_bounded_below(function F, effect N)").
+sig(eff_mask, "has_the_effect_row(function F, number M)").
+sig(eff_mask_name, "is_named(effect row number M, by effect N)").
 sig(effect_of, "the_effect(of function F, is effect N)").
 sig(eff_unnamed, "has_no_named_effect(function F)").
 sig(concrete_denotes, "denotes(surface S, effect E:2, at operation Op:1)").
@@ -733,9 +732,7 @@ sig(eff_import_outside, "imports_outside_the_corpus(node I, text Src)").
 sig(eff_module, "has_the_module_effect(file F, effect label L, at host H)").
 sig(eff_import_invented, "invents_the_effect(node I, effect label L, at host H)").
 sig(eff_mod_subject, "is_a_module_subject(file F)").
-sig(eff_mod_over, "exceeds_as_a_module(file F, effect N)").
-sig(eff_mod_bounded, "is_bounded_as_a_module_by(file F, effect N)").
-sig(eff_mod_bounded_low, "is_bounded_as_a_module_below(file F, effect N)").
+sig(eff_mod_mask, "has_the_module_effect_row(file F, number M)").
 sig(effect_of_module, "the_module_effect(of file F, is effect N)").
 sig(eff_mod_unnamed, "has_no_named_module_effect(file F)").
 sig(eff_mod_join_short, "is_short_of_the_module_join(file F, effect J:2, with file T:1)").

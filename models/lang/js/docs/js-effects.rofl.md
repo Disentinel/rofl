@@ -42,6 +42,8 @@ Reads:
   - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
 - from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
+- from outside these files, in the main:
+  - <a id="eff_bit"></a>`eff_bit`
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
@@ -447,33 +449,54 @@ Declared as facts:
 > `eff_join_short` is the one place the join is READ: a caller's name joined
 > with its callee's must give the caller's own back. `eff_purer_callee`
 > compares rows: the callee lacks one of the caller's and has none it lacks.
+> 
+> A row is a set of labels, so it is a number: the sum of its labels' bits
+> (`eff_bit`). The least landmark above a row is then solved once per row
+> that occurs, a few dozen, and not once per function and landmark.
 
 `eff_subject` of A is read through its rules and never stored.
 
 In the flow:
 
-<a id="eff_lh"></a>`eff_lh`(L, H) either:
+<a id="eff_mask"></a>F has the effect row M if F [is an effect subject](#eff_subject), and M is the sum of B over (L, H) such that (F [has the latent effect](#eff_latent) L at H and [`eff_bit`](#eff_bit)(L, H, B)).
 
-1. if some function [has the latent effect](#eff_latent) L at a host H;
-2. if some file [has the module effect](#eff_module) L at a host H.
+<a id="eff_unbit"></a>`eff_unbit`(F) if F [has the latent effect](#eff_latent) L at a host H, unless [`eff_bit`](#eff_bit)(L, H, something).
 
-<a id="eff_gap"></a>`eff_gap`(L, H, N) if all of:
-  - [`eff_lh`](#eff_lh)(L, H);
+<a id="eff_mask_seen"></a>`eff_mask_seen`(M) either:
+
+1. if F [has the effect row](#eff_mask) M, unless [`eff_unbit`](#eff_unbit)(F);
+2. if a file F [has the module effect row](#eff_mod_mask) M, unless [`eff_mod_unbit`](#eff_mod_unbit)(F).
+
+<a id="eff_mask_gap"></a>`eff_mask_gap`(M, N) if all of:
+  - [`eff_mask_seen`](#eff_mask_seen)(M);
+  - [`eff_bit`](#eff_bit)(L, H, B);
+  - X is mod(M / B, 2);
+  - X is 1;
   - an effect N [is in the lattice](#eff_name);
   - unless N [covers](#eff_row) an effect label L at a host H.
 
-<a id="eff_over"></a>F exceeds an effect N if F [has the latent effect](#eff_latent) L at a host H and [`eff_gap`](#eff_gap)(L, H, N).
+<a id="eff_mask_bound"></a>`eff_mask_bound`(M, N) if all of:
+  - [`eff_mask_seen`](#eff_mask_seen)(M);
+  - an effect N [is in the lattice](#eff_name);
+  - unless [`eff_mask_gap`](#eff_mask_gap)(M, N).
 
-<a id="eff_bounded"></a>F is bounded by an effect N if all of:
-  - F [is an effect subject](#eff_subject);
-  - N [is in the lattice](#eff_name);
-  - unless F [exceeds](#eff_over) N.
+<a id="eff_mask_low"></a>`eff_mask_low`(M, N) if [`eff_mask_bound`](#eff_mask_bound)(M, K) and an effect K [is strictly below](#eff_lt) an effect N.
 
-<a id="eff_bounded_low"></a>F is bounded below an effect N if F [is bounded by](#eff_bounded) an effect M and M [is strictly below](#eff_lt) N.
+<a id="eff_mask_name"></a>A number M is named by an effect N if [`eff_mask_bound`](#eff_mask_bound)(M, N), unless [`eff_mask_low`](#eff_mask_low)(M, N).
 
-<a id="effect_of"></a>The effect of F is an effect N if F [is bounded by](#eff_bounded) N, unless F [is bounded below](#eff_bounded_low) N.
+<a id="effect_of"></a>The effect of F is an effect N if all of:
+  - F [has the effect row](#eff_mask) M;
+  - M [is named](#eff_mask_name) by N;
+  - unless [`eff_unbit`](#eff_unbit)(F).
 
 In the audit:
+
+<a id="eff_bit_missing"></a>`eff_bit_missing`(L, H) if an effect label L [is a label](#eff_label) at a host H, unless [`eff_bit`](#eff_bit)(L, H, something).
+
+<a id="eff_bit_shared"></a>`eff_bit_shared`(L, H, B) either:
+
+1. if [`eff_bit`](#eff_bit)(L, H, B), [`eff_bit`](#eff_bit)(L2, something, B), and L differs from L2;
+2. if [`eff_bit`](#eff_bit)(L, H, B), [`eff_bit`](#eff_bit)(L, H2, B), and H differs from H2.
 
 <a id="eff_unnamed"></a>F has no named effect if F [is an effect subject](#eff_subject), unless [the effect](#effect_of) of F is some effect.
 
@@ -728,16 +751,14 @@ In the audit:
 
 In the flow:
 
-A file F
+<a id="eff_mod_mask"></a>A file F has the module effect row M if F [is a module subject](#eff_mod_subject), and M is the sum of B over (L, H) such that (F [has the module effect](#eff_module) L at H and [`eff_bit`](#eff_bit)(L, H, B)).
 
-- <a id="eff_mod_over"></a>exceeds as a module N if F [has the module effect](#eff_module) L at a host H and [`eff_gap`](#eff_gap)(L, H, N).
-- <a id="eff_mod_bounded"></a>is bounded as a module by an effect N if all of:
-  - F [is a module subject](#eff_mod_subject);
-  - N [is in the lattice](#eff_name);
-  - unless F [exceeds as a module](#eff_mod_over) N.
-- <a id="eff_mod_bounded_low"></a>is bounded as a module below N if F [is bounded as a module by](#eff_mod_bounded) an effect M and M [is strictly below](#eff_lt) N.
+<a id="eff_mod_unbit"></a>`eff_mod_unbit`(F) if a file F [has the module effect](#eff_module) L at a host H, unless [`eff_bit`](#eff_bit)(L, H, something).
 
-<a id="effect_of_module"></a>The module effect of a file F is an effect N if F [is bounded as a module by](#eff_mod_bounded) N, unless F [is bounded as a module below](#eff_mod_bounded_low) N.
+<a id="effect_of_module"></a>The module effect of a file F is an effect N if all of:
+  - F [has the module effect row](#eff_mod_mask) M;
+  - M [is named](#eff_mask_name) by N;
+  - unless [`eff_mod_unbit`](#eff_mod_unbit)(F).
 
 In the audit:
 

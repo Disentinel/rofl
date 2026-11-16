@@ -213,15 +213,26 @@ eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G
 -- `eff_join_short` is the one place the join is READ: a caller's name joined
 -- with its callee's must give the caller's own back. `eff_purer_callee`
 -- compares rows: the callee lacks one of the caller's and has none it lacks.
+--
+-- A row is a set of labels, so it is a number: the sum of its labels' bits
+-- (`eff_bit`). The least landmark above a row is then solved once per row
+-- that occurs, a few dozen, and not once per function and landmark.
 view eff_subject(A).
 eff_subject[flow](F)        :- fn_node[code](F).
-eff_lh[flow](L, H)          :- eff_latent[flow](_, L, H).
-eff_lh[flow](L, H)          :- eff_module[flow](_, L, H).
-eff_gap[flow](L, H, N)      :- eff_lh[flow](L, H), eff_name(N), not eff_row(N, L, H).
-eff_over[flow](F, N)        :- eff_latent[flow](F, L, H), eff_gap[flow](L, H, N).
-eff_bounded[flow](F, N)     :- eff_subject[flow](F), eff_name(N), not eff_over[flow](F, N).
-eff_bounded_low[flow](F, N) :- eff_bounded[flow](F, M), eff_lt(M, N).
-effect_of[flow](F, N)       :- eff_bounded[flow](F, N), not eff_bounded_low[flow](F, N).
+eff_mask[flow](F, M)        :- eff_subject[flow](F), M is sum(B ; L, H : eff_latent[flow](F, L, H), eff_bit(L, H, B)).
+eff_unbit[flow](F)          :- eff_latent[flow](F, L, H), not eff_bit(L, H, _).
+eff_mask_seen[flow](M)      :- eff_mask[flow](F, M), not eff_unbit[flow](F).
+eff_mask_seen[flow](M)      :- eff_mod_mask[flow](F, M), not eff_mod_unbit[flow](F).
+eff_mask_gap[flow](M, N)    :- eff_mask_seen[flow](M), eff_bit(L, H, B), X is (M / B) mod 2, X = 1,
+                               eff_name(N), not eff_row(N, L, H).
+eff_mask_bound[flow](M, N)  :- eff_mask_seen[flow](M), eff_name(N), not eff_mask_gap[flow](M, N).
+eff_mask_low[flow](M, N)    :- eff_mask_bound[flow](M, K), eff_lt(K, N).
+eff_mask_name[flow](M, N)   :- eff_mask_bound[flow](M, N), not eff_mask_low[flow](M, N).
+effect_of[flow](F, N)       :- eff_mask[flow](F, M), not eff_unbit[flow](F), eff_mask_name[flow](M, N).
+
+eff_bit_missing[audit](L, H)   :- eff_label(L, H), not eff_bit(L, H, _).
+eff_bit_shared[audit](L, H, B) :- eff_bit(L, H, B), eff_bit(L2, _, B), L != L2.
+eff_bit_shared[audit](L, H, B) :- eff_bit(L, H, B), eff_bit(L, H2, B), H != H2.
 
 eff_unnamed[audit](F)       :- eff_subject[flow](F), not effect_of[flow](F, _).
 eff_two_names[audit](F, A, B) :- effect_of[flow](F, A), effect_of[flow](F, B), A != B.
@@ -381,10 +392,9 @@ eff_import_invented[audit](I, L, H) :- evaluates_at[code](I, T), eff_here[flow](
 
 -- The same Moore closure as section 4, over a file.
 eff_mod_subject[flow](F)        :- corpus_file[code](F).
-eff_mod_over[flow](F, N)        :- eff_module[flow](F, L, H), eff_gap[flow](L, H, N).
-eff_mod_bounded[flow](F, N)     :- eff_mod_subject[flow](F), eff_name(N), not eff_mod_over[flow](F, N).
-eff_mod_bounded_low[flow](F, N) :- eff_mod_bounded[flow](F, M), eff_lt(M, N).
-effect_of_module[flow](F, N)    :- eff_mod_bounded[flow](F, N), not eff_mod_bounded_low[flow](F, N).
+eff_mod_mask[flow](F, M)        :- eff_mod_subject[flow](F), M is sum(B ; L, H : eff_module[flow](F, L, H), eff_bit(L, H, B)).
+eff_mod_unbit[flow](F)          :- eff_module[flow](F, L, H), not eff_bit(L, H, _).
+effect_of_module[flow](F, N)    :- eff_mod_mask[flow](F, M), not eff_mod_unbit[flow](F), eff_mask_name[flow](M, N).
 
 eff_mod_unnamed[audit](F)         :- eff_mod_subject[flow](F), not effect_of_module[flow](F, _).
 eff_mod_two_names[audit](F, A, B) :- effect_of_module[flow](F, A), effect_of_module[flow](F, B), A != B.
