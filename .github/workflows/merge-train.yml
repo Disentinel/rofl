@@ -47,19 +47,19 @@ jobs:
         run: node --experimental-strip-types scripts/merge_train.ts pick
       - if: steps.pick.outputs.count != '0'
         uses: dtolnay/rust-toolchain@stable
-        with: { targets: wasm32-unknown-unknown, components: clippy }
+        with: { targets: wasm32-unknown-unknown }
       - if: steps.pick.outputs.count != '0'
         uses: Swatinem/rust-cache@v2
         with:
           key: train
           workspaces: |
             rust
-            rust/tools/oxc_scan
+            models/lang/js/scanner/oxc_scan
       - if: steps.pick.outputs.count != '0'
         id: stack
         run: node --experimental-strip-types scripts/merge_train.ts stack
       - if: steps.stack.outputs.stacked != '0'
-        run: (cd rust && cargo build --release) && (cd rust/tools/oxc_scan && cargo build --release)
+        run: (cd rust && cargo build --release) && (cd models/lang/js/scanner/oxc_scan && cargo build --release)
       # the generated files made again over the stack, the goldens last, and train.rofl over the goldens of every side
       - if: steps.stack.outputs.stacked != '0'
         run: node --experimental-strip-types scripts/merge_train.ts regenerate
@@ -67,10 +67,21 @@ jobs:
         run: node --experimental-strip-types scripts/merge_train.ts judge
       # the slow gates, once for the whole train: the planted faults and the engine's lints
       - if: steps.stack.outputs.stacked != '0'
-        run: cd rust && cargo clippy -p rofl --all-targets -- -D warnings
+        # the toolchain ci.yml pins for its lints, so that a new stable's lints are not a request's fault
+        run: rustup toolchain install 1.95.0 --profile minimal -c clippy && cd rust && cargo +1.95.0 clippy -p rofl --all-targets -- -D warnings
+      # THE PLANTED FAULTS NEED THE DISK. The release build, clippy's and the runner's own toolchains left a kept world
+      # under the 5 GB floor of its writer (kept.rs), and a world whole answered short with no word on stderr: a fault
+      # red for the disk, not for the request (#260). breaks reads only its own build, rust/target/breaks.
+      - if: steps.stack.outputs.stacked != '0'
+        run: |
+          rm -rf rust/target/release rust/target/debug
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h .
       - if: steps.stack.outputs.stacked != '0'
         run: npm run test:agg:breaks
       - if: steps.stack.outputs.stacked != '0'
+        id: land
         run: node --experimental-strip-types scripts/merge_train.ts land
-      - if: failure() && steps.stack.outcome == 'success'
+      # a gate red on the stack is the requests'; a landing that fails half way is not, and what did not land waits
+      - if: failure() && steps.stack.outcome == 'success' && steps.land.outcome != 'failure'
         run: node --experimental-strip-types scripts/merge_train.ts fail

@@ -329,6 +329,9 @@ check[checks]("rust/rofl/tests/volumes.rs", "the_rules_of_one_file_are_evaluated
 check[checks]("rust/rofl/tests/volumes.rs", "a_file_that_breaks_the_plan_is_refused", test).
 check[checks]("rust/rofl/tests/volumes.rs", "a_node_key_inside_a_string_names_no_file", test).
 check[checks]("rust/rofl/tests/volumes.rs", "the_rows_a_lower_unit_cites_are_its_own", test).
+check[checks]("rust/rofl/tests/volumes.rs", "the_units_spend_into_the_worlds_count", test).
+check[checks]("rust/rofl/tests/volumes.rs", "a_world_by_levels_reads_its_own_profile", test).
+check[checks]("rust/rofl/tests/volumes.rs", "a_count_of_the_core_and_one_of_the_reader", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_is_its_rows", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_no_capability_is_refused", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_the_wrong_arity_is_refused", test).

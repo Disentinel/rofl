@@ -52,15 +52,17 @@ when the node-id format changes (the tree measurement regenerated them for the
 engine counts, per premise of each rule, the partial rows it was solved from,
 the rows it read from the store (a tree closure's answers included), the rows it
 left, and its widest single read with the values bound there. A rule that has
-read 50 M rows, a quarter or more of everything read so far, is said at once on
-stderr by `rofl load` and `rofl serve`, again at each tenfold, while the
-evaluation is still running: a rule that blows up may never end for a report to
-be read. One line names the rule, the premise it is reading and the values bound
-there (the unit test `a_join_by_a_common_name_is_named_with_the_name`, its
-threshold lowered to 10 000 rows):
+read more rows than the world holds facts as it stands, and the most of any
+rule, has read the world whole over once, which no join by keys does: it is said
+at once on stderr by `rofl load` and `rofl serve`, again at each doubling, while
+the evaluation is still running: a rule that blows up may never end for a report
+to be read. The measure is the world's own size, not a number set by hand. One
+line names the rule, the premise it is reading and the values bound there (the
+unit test `a_join_by_a_common_name_is_named_with_the_name`, its threshold given
+as 10 000 rows):
 
 ```
-hot: rule r75512e2d (sees) has read 10231 rows for 0 new facts, a quarter or more of all read; it is reading premise 2, bind[main](?B,?N)@now at ?N = e
+hot: rule r75512e2d (sees) has read 10231 rows for 0 new facts, more than the world's 10000 facts and the most of any rule; it is reading premise 2, bind[main](?B,?N)@now at ?N = e
 ```
 
 That is the case the shape lint cannot see (3.14, a premise whose cost is a
