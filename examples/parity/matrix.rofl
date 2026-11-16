@@ -1,0 +1,80 @@
+-- examples/parity/matrix.rofl — HOW COMPLETE THE MODELS OF JS AND RUST ARE, capability by capability, each state read
+-- from the evidence that checks it: a world of `npm test`, a notebook, or a measurement. A capability with evidence and
+-- no gap is done, with a gap partial, with none none; red if Rust is behind JS anywhere. (The registry of worlds is not
+-- loaded here: its every new world would move this world's golden.)
+--
+--   shows(Lang, Cap, Kind, Where)   Kind world | notebook | measured
+--   gap(Lang, Cap, Why)             what the model of Lang keeps general there, said by its check
+edb(lang). edb(cap). edb(shows). edb(gap). edb(rank).
+lang(js). lang(rust).
+rank(done, 2). rank(partial, 1). rank(none, 0).
+
+cap(names,      1, "имена и области видимости").
+cap(modules,    2, "импорты / модули между файлами").
+cap(calls,      3, "граф вызовов").
+cap(dispatch,   4, "методы по типу / трейты / прототипы").
+cap(values,     5, "что значение может держать").
+cap(consts,     6, "константы и литералы").
+cap(fields,     7, "поля объектов").
+cap(instances,  8, "вызов = свой экземпляр").
+cap(keyed,      9, "коллекции по ключу").
+cap(strings,   10, "строки из частей").
+cap(guards,    11, "выполнится ли код").
+cap(effects,   12, "побочные эффекты и их значения").
+cap(stdlib,    13, "стандартная библиотека").
+cap(frameworks,14, "контракты фреймворков").
+cap(surface,   15, "по томам на поле").
+cap(audit,     16, "аудит покрытия дерева").
+
+shows(js, names, notebook, "examples/notebook/scoped.rofl.md").
+shows(js, modules, notebook, "examples/notebook/imports.rofl.md").
+shows(js, calls, world, "services").
+shows(js, dispatch, notebook, "examples/notebook/self.rofl.md").
+shows(js, values, world, "vscode_side_effects").
+shows(js, consts, world, "concat_value").
+shows(js, fields, world, "js_instances").
+shows(js, instances, world, "js_instances").
+shows(js, keyed, notebook, "examples/notebook/keyed.rofl.md").
+shows(js, strings, world, "concat_value").
+shows(js, guards, notebook, "examples/notebook/guard.rofl.md").
+shows(js, effects, world, "vscode_side_effects").
+shows(js, stdlib, world, "vscode_side_effects").
+shows(js, frameworks, world, "services").
+shows(js, surface, world, "vscode_surface_split").
+shows(js, audit, world, "roles_oxc").
+
+shows(rust, names, world, "gates_rust").
+shows(rust, modules, world, "gates_rust").
+shows(rust, calls, world, "parity_rs_calls").
+shows(rust, dispatch, world, "parity_rs_calls").
+shows(rust, values, world, "parity_rs_instances").
+shows(rust, consts, world, "parity_rs_instances").
+shows(rust, fields, world, "parity_rs_instances").
+shows(rust, instances, world, "parity_rs_instances").
+shows(rust, keyed, world, "parity_rs_keyed").
+shows(rust, strings, world, "parity_rs_strings").
+shows(rust, guards, world, "parity_rs_guards").
+shows(rust, effects, world, "parity_rs_service").
+shows(rust, stdlib, world, "parity_rs_calls").
+shows(rust, frameworks, world, "parity_rs_service").
+shows(rust, surface, measured, "the engine's own 76 files by levels, 45 s, 3 GB (f_the_rust_model_answers_the_engine_by_levels)").
+shows(rust, audit, world, "gates_rust").
+
+gap(js, instances, "write after a call, a kept variable, this under another name, a computed key, a Map: kept general (#261)").
+gap(js, guards, "a condition inside an instance is not evaluated").
+gap(js, frameworks, "parameters a framework injects (w_js_injected_params)").
+gap(rust, instances, "a field written after its object is made reaches every reader of the object (examples/parity/instances)").
+gap(rust, guards, "a condition is not evaluated: both arms may run (examples/parity/instances, n1_slow)").
+gap(rust, frameworks, "the parameters axum injects (State, Path, Json) are not read").
+
+has_ev(L, C) :- shows(L, C, _, _).
+state(L, C, done)    :- has_ev(L, C), not has_gap(L, C).
+state(L, C, partial) :- has_ev(L, C), has_gap(L, C).
+state(L, C, none)    :- lang(L), cap(C, _, _), not has_ev(L, C).
+has_gap(L, C) :- gap(L, C, _).
+
+behind(C) :- state(js, C, SJ), state(rust, C, SR), rank(SJ, A), rank(SR, B), A > B.
+ahead(C)  :- state(js, C, SJ), state(rust, C, SR), rank(SJ, A), rank(SR, B), A < B.
+even(C)   :- state(js, C, S), state(rust, C, S).
+alarm(behind).
+even_n(N) :- N is count(C : even(C)).

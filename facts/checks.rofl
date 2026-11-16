@@ -4014,6 +4014,8 @@ check_file("parity_rs_calls", "examples/parity/check.rofl").
 check_file("parity_rs_calls", "examples/parity/rs.rofl").
 check_file("parity_rs_calls", "examples/parity/calls/rs-check.rofl").
 check_opt("parity_rs_calls", one_engine, rust).
+check_world("parity_matrix").
+check_file("parity_matrix", "examples/parity/matrix.rofl").
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").
