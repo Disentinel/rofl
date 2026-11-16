@@ -1,0 +1,61 @@
+-- examples/parity/strings/rs-check.rofl — A STRING BUILT FROM PARTS, IN RUST (the scene of examples/concat/src/entry.ts;
+-- examples/parity/check.rofl judges it). Truth: cargo run, 2026-11-16; a text is the term the program's string renders.
+truth("template", cat("/srv", "/a")).
+truth("plus", cat("/srv", "/b")).
+truth("grown", cat("/srv", "/c")).
+truth("named", cat(cat("/srv", "/n"), "!")).
+truth("numbered", cat(cat("b", "-"), "a")).
+truth("keyed", cat(cat("me", "@"), "/srv")).
+truth("joined", join(join("/srv", "d"), "e")).
+truth("elems", cat(cat("/srv", "/"), "i")).
+truth("glued", cat("j", "k")).
+truth("fixed", cat("p", "q")).
+truth("at_cap", cat(cat(cat("y", "y"), "y"), "y")).
+truth("over_cap", "yyyyy").
+truth("looped", cat("x", "x")).
+truth("pushed", cat("a", "b")).
+truth("wrapped", cat(cat("<", cat("u", "/x")), ">")).
+truth("width", "  z").
+truth("braces", "{}w").
+truth("shown", "\"q\"").
+
+-- what the model keeps general: the value a binding had before it was written again (writes are not ordered), a
+-- loop's count, a condition not evaluated
+general("grown", "/srv", written_after).
+general("grown", cat(cat("/srv", "/c"), "/c"), written_after).
+general("grown", cat(cat(cat("/srv", "/c"), "/c"), "/c"), written_after).
+general("grown", cat(cat(cat(cat("/srv", "/c"), "/c"), "/c"), "/c"), written_after).
+general("pushed", "a", written_after).
+general("pushed", cat(cat("a", "b"), "b"), written_after).
+general("pushed", cat(cat(cat("a", "b"), "b"), "b"), written_after).
+general("pushed", cat(cat(cat(cat("a", "b"), "b"), "b"), "b"), written_after).
+general("looped", "", loop_count).
+general("looped", "x", loop_count).
+general("looped", cat(cat("x", "x"), "x"), loop_count).
+general("looped", cat(cat(cat("x", "x"), "x"), "x"), loop_count).
+general("at_cap", cat(cat(cat("x", "x"), "x"), "x"), condition).
+general("at_cap", cat(cat(cat("x", "x"), "x"), "y"), condition).
+general("at_cap", cat(cat(cat("x", "x"), "y"), "x"), condition).
+general("at_cap", cat(cat(cat("x", "x"), "y"), "y"), condition).
+general("at_cap", cat(cat(cat("x", "y"), "x"), "x"), condition).
+general("at_cap", cat(cat(cat("x", "y"), "x"), "y"), condition).
+general("at_cap", cat(cat(cat("x", "y"), "y"), "x"), condition).
+general("at_cap", cat(cat(cat("x", "y"), "y"), "y"), condition).
+general("at_cap", cat(cat(cat("y", "x"), "x"), "x"), condition).
+general("at_cap", cat(cat(cat("y", "x"), "x"), "y"), condition).
+general("at_cap", cat(cat(cat("y", "x"), "y"), "x"), condition).
+general("at_cap", cat(cat(cat("y", "x"), "y"), "y"), condition).
+general("at_cap", cat(cat(cat("y", "y"), "x"), "x"), condition).
+general("at_cap", cat(cat(cat("y", "y"), "x"), "y"), condition).
+general("at_cap", cat(cat(cat("y", "y"), "y"), "x"), condition).
+
+-- what the model does not say, on purpose: over the cap of choices, a spec it does not render, an escaped brace
+bound("over_cap", "yyyyy", cap).
+bound("width", "  z", spec).
+bound("shown", "\"q\"", spec).
+bound("braces", "{}w", escaped).
+scene_file("examples/parity/strings/rs/src/main.rs").
+truth("home", cat("SCENE", "_HOME")).
+truth("cache", join("/nonexistent", cat("scene", "/x"))).
+se_truth(41, cat("SCENE", "_HOME")).
+se_truth(43, join("/nonexistent", cat("scene", "/x"))).

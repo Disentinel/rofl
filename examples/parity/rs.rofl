@@ -1,5 +1,8 @@
--- examples/parity/rs.rofl — what the Rust model answers for a name of a scene: the literals its `let` may hold, and
+-- examples/parity/rs.rofl — what the Rust model answers for a name of a scene: the literals its `let` may hold, the
+-- texts of the strings its binding may hold, and
 -- the literals that may reach the effect on a line of the scene's main.rs (examples/parity/check.rofl).
 edb(scene_file).
 answer(Name, V) :- assign[value](_, P, Init), binds[value](P, Name), named(Name), may_be_lit[flow](Init, V).
+answer(Name, T) :- assign[value](_, P, _), binds[value](P, Name), named(Name), may_be_node[flow](P, C),
+                   may_be_text[flow](C, T).
 se_answer(L, V) :- side_effect_value[flow](S, _, V), scene_file(F), at[tree](S, F, L).

@@ -5,7 +5,8 @@
 --   effect_family(Kind, Family)          the family a kind belongs to, in the JS question's names (data)
 --   effect_site[rust](C, Kind)           the call C touches the world: directly, or through a function of the crate
 --   effect_in[rust](F, Kind)             the function F may touch the world so, itself or through what it calls
---   side_effect_value[flow](C, Family, V) the literal V may reach the first argument of the effect at C
+--   side_effect_value[flow](C, Family, V) the literal V, or the text V of a string built from parts, may reach the
+--                                         first argument of the effect at C
 --
 -- THE ABSTRACTION. A function whose effect takes a value it was handed is a SINK, and every call of it is a site of
 -- its own (`sink(F, Spec, Kind)`): of its I-th parameter p(I), of a field of its `self` f(Key), of what another
@@ -87,7 +88,7 @@ sink[rust](F, h(Key, G), K)   :- on_field[rust](_, G, F, Key, K).
 eff_ask[rust](G, Ob) :- obj_sink[rust](G, _), recv[rust](_, G, Ob).
 eff_ask[rust](M, Ob2) :- eff_ask[rust](G, Ob), sink[rust](G, h(Key, M), _), fv[rust](Ob, Key, Ob2), is_obj[rust](Ob2).
 eff_ask[rust](M, Ob)  :- eff_ask[rust](G, Ob), sink[rust](G, s(M), _).
-eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, f(Key), K), fv[rust](Ob, Key, lit(L)).
+eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, f(Key), K), fv[rust](Ob, Key, W), shown[rust](W, L).
 eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, h(Key, M), K), fv[rust](Ob, Key, Ob2), is_obj[rust](Ob2),
                              eff_on[rust](M, Ob2, K, L).
 eff_on[rust](G, Ob, K, L) :- eff_ask[rust](G, Ob), sink[rust](G, s(M), K), eff_on[rust](M, Ob, K, L).
@@ -101,14 +102,19 @@ recv[rust](W, G, Ob)  :- ran[rust](W, G), argval[rust](W, self, inf(F, self, Key
 runs_on[rust](G, Ob)  :- recv[rust](_, G, Ob).
 
 -- ===================================================================== THE ANSWER
+-- what a value says at an effect: a literal, or the text of a string built from parts (strings.rofl)
+shown[rust](lit(L), L) :- concrete[rust](lit(L)).
+shown[rust](str(C), T) :- may_be_text[flow](C, T).
+may_show[rust](A, L) :- may_be_lit[flow](A, L).
+may_show[rust](A, T) :- may_be_node[flow](A, C), may_be_text[flow](C, T).
 -- a direct site: its argument's literals, or, where the argument is what its function was handed, every value it is
-se_val[rust](C, K, L) :- std_site[rust](C, K), nth[tree](C, 0, A), may_be_lit[flow](A, L).
+se_val[rust](C, K, L) :- std_site[rust](C, K), nth[tree](C, 0, A), may_show[rust](A, L).
 se_val[rust](C, K, L) :- std_site[rust](C, K), nth[tree](C, 0, A), val[rust](A, inf(F, self, Key)), runs_on[rust](F, Ob),
-                         fv[rust](Ob, Key, lit(L)).
+                         fv[rust](Ob, Key, W), shown[rust](W, L).
 -- a call of a sink: by the argument it hands on, or by the objects it is called on
-se_val[rust](W, K, L) :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), may_be_lit[flow](A, L).
+se_val[rust](W, K, L) :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), may_show[rust](A, L).
 se_val[rust](W, K, L) :- ran[rust](W, G), sink[rust](G, p(I), K), arg[rust](W, I, A), val[rust](A, inf(F, self, Key)),
-                         runs_on[rust](F, Ob), fv[rust](Ob, Key, lit(L)).
+                         runs_on[rust](F, Ob), fv[rust](Ob, Key, W2), shown[rust](W2, L).
 se_val[rust](W, K, L) :- recv[rust](W, G, Ob), eff_on[rust](G, Ob, K, L).
 
 side_effect_site[flow](C, F)     :- effect_site[rust](C, K), effect_family(K, F).
