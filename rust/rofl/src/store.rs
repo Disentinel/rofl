@@ -1912,6 +1912,8 @@ pub struct Store {
     pub dirty: bool,
     /// Where set, every fact `put` makes new (or brings back) is noted (`Session::load_delta`).
     pub arrivals: Option<Vec<FactId>>,
+    /// What a watcher of `rofl serve` is told (`Tap`); never carried into a fork.
+    pub tap: TapSlot,
     pub partial_eval: bool,
     pub tick_log: Vec<String>,
     /// what the world was told and when (`crate::journal`)
@@ -2573,6 +2575,7 @@ impl Store {
         if let Some(a) = self.arrivals.as_mut() {
             a.push(id);
         }
+        self.tap.touch(id, rel, persp, false);
         let run = self.run_mut(rel, persp);
         run.arrived.to_mut().push(id);
         if !ground {
@@ -3144,6 +3147,7 @@ impl Store {
         if let Some(a) = self.arrivals.as_mut() {
             a.push(id);
         }
+        self.tap.touch(id, rel, persp, false);
         // a provenance row is written when a world settles it, sooner or later; no answer reads it
         if !h.name(persp).starts_with('$') || h.name(rel) != "derived_by" {
             self.bump();
@@ -3919,6 +3923,7 @@ impl Store {
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
+        self.tap.touch(id, r.rel, r.persp, true);
         *self.deaths.entry(r.rel).or_default() += 1;
         if let Some(d) = self.died.get_mut(&r.rel) {
             d.push(id);
@@ -3945,6 +3950,7 @@ impl Store {
         }
         self.facts.add_flags(id, F_DEAD);
         self.n_live -= 1;
+        self.tap.touch(id, r.rel, r.persp, true);
         *self.deaths.entry(r.rel).or_default() += 1;
         if let Some(d) = self.died.get_mut(&r.rel) {
             d.push(id);
@@ -4042,6 +4048,9 @@ impl Store {
     /// provenance row they were recorded with stays too. `row_of` reads a
     /// record as that row; without it no row stands.
     pub fn clear_derived(&mut self, row_of: Option<RowOf<'_>>) {
+        if let Some(t) = self.tap.0.as_mut() {
+            t.whole = true;
+        }
         self.chains_cut();
         self.vlisted = false;
         let settled = self.settled;
@@ -6184,6 +6193,44 @@ impl Hasher for Fx {
     }
     fn write_usize(&mut self, n: usize) {
         self.write_u64(n as u64);
+    }
+}
+
+/// THE FACTS A WATCHER IS TOLD OF (`rofl serve`'s `watch`): each fact of a watched relation that came or went since
+/// the watcher was last told, by its id, and whether it held before it was first touched. A key and an id are in
+/// bijection (`find_rec`), so a fact taken out and derived again is touched twice under one id and holds as it held:
+/// no change. What it costs is the facts of the watched relations an operation touched, not the relations.
+#[derive(Default)]
+pub struct Tap {
+    /// the watched relations, each in one book or (`None`) in all
+    pub sel: Vec<(Sym, Option<Sym>)>,
+    /// each fact touched: whether it held before
+    pub seen: FxMap<FactId, bool>,
+    /// a whole evaluation ran since the watcher was last told (`clear_derived`)
+    pub whole: bool,
+    /// what was seen in a store the world left for another (`Session::cool_round`): by key, the relation, the book,
+    /// the row as `rows` writes it, whether it held before and whether it held when the world left it
+    pub left: HashMap<String, (String, String, serde_json::Value, bool, bool)>,
+}
+
+/// The slot of a store's `Tap`: a fork, a scratch world or a thawed file starts with none.
+#[derive(Default)]
+pub struct TapSlot(pub Option<Box<Tap>>);
+
+impl Clone for TapSlot {
+    fn clone(&self) -> Self {
+        TapSlot(None)
+    }
+}
+
+impl TapSlot {
+    #[inline]
+    fn touch(&mut self, id: FactId, rel: Sym, persp: Sym, held: bool) {
+        if let Some(t) = self.0.as_mut() {
+            if t.sel.iter().any(|(r, b)| *r == rel && b.is_none_or(|b| b == persp)) {
+                t.seen.entry(id).or_insert(held);
+            }
+        }
     }
 }
 

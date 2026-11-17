@@ -2262,6 +2262,7 @@ impl Session {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let path = std::env::temp_dir().join(format!("rofl-round-{}-{n}.vol", std::process::id())).to_string_lossy().to_string();
+        let watched = crate::watch::leave(self);
         self.keep_volume(&path).map_err(|e| format!("{path}: {e}"))?;
         let opened = Session::open_volume(&path, self.eval.budget);
         let _ = std::fs::remove_file(&path);
@@ -2271,6 +2272,7 @@ impl Session {
         s.eval.scans = std::mem::take(&mut self.eval.scans);
         (s.dangling, s.asks) = (self.dangling, self.asks);
         *self = s;
+        crate::watch::arrive(self, watched);
         trim_heap();
         Ok(())
     }

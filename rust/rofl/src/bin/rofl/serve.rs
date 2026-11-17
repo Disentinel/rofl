@@ -72,6 +72,13 @@
 //!   {"op":"close","session":2}
 //!   {"op":"fresh","budget":n}                  -> {"session":n}: an empty world, no seed; `load` fills it
 //!   {"op":"facts","session":2}                 -> {"facts":n,"tick":t}
+//!   {"op":"watch","session":2,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]} -> {"watching":n}: from then on every
+//!                                                        answer on the session carries "changes":[{"rel","book",
+//!                                                        "added":[args...],"removed":[args...]}] for the watched rows
+//!                                                        that came or went (args as `rows` writes them; no book: every
+//!                                                        book), and "changes_by": "delta", "whole", "diff" or "lost"
+//!                                                        (src/watch.rs); absent where nothing moved
+//!   {"op":"unwatch","session":2,"rels":[...]}  -> {"watching":n}: those no longer watched; without "rels", none
 //!   {"op":"spans","text":"..."}                -> {"spans":[[a,b],...]}: no session; the lines [a,b), from 0, of a
 //!                                                        `.rofl.md` the reader reads as sentences, and each line of
 //!                                                        its prose that asks (md `sentence_spans`)
@@ -152,6 +159,8 @@ struct Server {
     next: u64,
     /// a session's facts and cells by key, built on the first read by key and dropped by anything that may change a world
     keys: HashMap<u64, Keys>,
+    /// what each session's watcher watches (rofl::watch)
+    watches: HashMap<u64, rofl::watch::Watch>,
 }
 
 impl Server {
@@ -258,6 +267,7 @@ impl Server {
             }
         }
         match op {
+            "watch" | "unwatch" => self.op_watch(op, r),
             "rows" | "holding" | "books" | "fact" | "firings" | "cell" | "open" => self.op_read(op, r),
             "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "view" | "fork" | "keep" => self.op_world(op, r),
             _ => self.op_change(op, r),
@@ -405,6 +415,7 @@ impl Server {
             }
             "close" => {
                 let id = session_id(r)?;
+                self.watches.remove(&id);
                 match self.sessions.remove(&id) {
                     Some(_) => Ok(json!({ "closed": id })),
                     None => Err(format!("no such session: {id}")),
@@ -414,6 +425,48 @@ impl Server {
         }
     }
 
+
+    /// `watch` adds relations to what the session's watcher is told of, `unwatch` takes them out (all, without `rels`).
+    fn op_watch(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        let id = session_id(r)?;
+        let given = match r.get("rels") {
+            None | Some(Value::Null) if op == "unwatch" => None,
+            Some(Value::Array(a)) => Some(
+                a.iter()
+                    .map(|x| {
+                        let rel = str_of(x, "rel", "a watched relation needs `rel`")?.to_string();
+                        let book = x.get("book").or_else(|| x.get("persp")).filter(|b| !b.is_null());
+                        let book = book.map(|b| b.as_str().map(str::to_string).ok_or("`book` is a string")).transpose()?;
+                        Ok((rel, book))
+                    })
+                    .collect::<Result<Vec<_>, &str>>()?,
+            ),
+            _ => return Err(format!("{op} needs `rels`, an array of {{\"rel\", \"book\"}}")),
+        };
+        let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
+        let w = self.watches.entry(id).or_default();
+        let mut sel = w.sel.clone();
+        match (op, given) {
+            ("watch", Some(g)) => sel.extend(g.into_iter().filter(|x| !w.sel.contains(x))),
+            (_, Some(g)) => sel.retain(|x| !g.contains(x)),
+            (_, None) => sel.clear(),
+        }
+        sel.dedup();
+        w.set(s, sel);
+        Ok(json!({ "watching": w.sel.len() }))
+    }
+
+    /// What the session's watcher is told with this answer: the rows of its relations that came or went.
+    fn told(&mut self, r: &Value, v: &mut Value) {
+        let Ok(id) = session_id(r) else { return };
+        let (Some(w), Some(s)) = (self.watches.get_mut(&id), self.sessions.get_mut(&id)) else { return };
+        if let Some((by, changes)) = w.told(s) {
+            if !changes.is_empty() || by == "lost" {
+                v["changes"] = json!(changes);
+                v["changes_by"] = json!(by);
+            }
+        }
+    }
 
     fn op_rows(&mut self, r: &Value) -> Result<Value, String> {
         let rel = str_of(r, "rel", "rows needs `rel`")?;
@@ -720,7 +773,7 @@ impl Server {
 /// `rofl serve FILE...` serves a world: the files loaded and evaluated as session 1 before the first request, which
 /// another world's `rofl` adapter asks (src/adapter.rs `Served`).
 pub fn main(files: Vec<String>) {
-    let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new() };
+    let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new(), watches: HashMap::new() };
     if !files.is_empty() {
         let mut text = String::new();
         for f in &files {
@@ -755,12 +808,13 @@ pub fn main(files: Vec<String>) {
         // a client may pipeline without matching answers by arrival order. A
         // protocol whose errors lose their correlation deadlocks the client
         // that was waiting for them.
-        let (id, res) = match serde_json::from_str::<Value>(&line) {
+        let (id, res, req) = match serde_json::from_str::<Value>(&line) {
             Ok(r) => {
                 let id = r.get("id").cloned().unwrap_or(Value::Null);
-                (id, srv.handle(&r))
+                let res = srv.handle(&r);
+                (id, res, Some(r))
             }
-            Err(e) => (Value::Null, Err(format!("bad json: {e}"))),
+            Err(e) => (Value::Null, Err(format!("bad json: {e}")), None),
         };
         let mut v = match res {
             Ok(mut v) => {
@@ -773,6 +827,9 @@ pub fn main(files: Vec<String>) {
             Err(e) => json!({ "ok": false, "error": e }),
         };
         v.as_object_mut().unwrap().insert("id".into(), id);
+        if let Some(r) = req {
+            srv.told(&r, &mut v);
+        }
         let _ = writeln!(out, "{v}");
         let _ = out.flush();
     }
