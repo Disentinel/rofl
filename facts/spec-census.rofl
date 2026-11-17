@@ -1068,6 +1068,7 @@ test_file[checks]("rust/rofl/tests/volumes.rs").
 test_file[checks]("rust/rofl/tests/want.rs").
 test_file[checks]("rust/rofl/tests/watch.rs").
 test_file[checks]("rust/rofl/tests/why_bins.rs").
+citation_ok[checks](s_watch_told_what_moved).
 citation_ok[checks](d_veto_belongs_inside).
 citation_ok[checks](l_budget_counts_firings).
 citation_ok[checks](d_aggregates_in_the_kernel).
