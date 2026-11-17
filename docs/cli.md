@@ -744,7 +744,7 @@ without a question, so ~12 GB over the 4 308 files of subset S
 operations and their fields is the header of
 `rust/rofl/src/bin/rofl/serve.rs`; `runtime/port.ts` is the TypeScript client
 every harness above uses. Besides the question verbs: `open` (a seed, a kept
-image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`,
+image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`, `edit` (below),
 `evaluate` and `resume`, `keep` (an image or, with `volume`, a volume),
 `cool`, `cool_many` and `reheat` (a volume by its key prefix, to disk and
 back), `view` (what a volume's world wrote above its base), `evaluate` with
@@ -756,9 +756,19 @@ back), `view` (what a volume's world wrote above its base), `evaluate` with
 the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
 line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
 
+**An edit in one request.** `{"op":"edit","session":S,"out":["q(a)","q(b)"],"rofl":"q(c).\n"}` takes the base
+facts `out` names out in one pass by delta (what rests on them is overdeleted and what another firing still makes
+is derived again, as a kept world takes a changed file) and then the facts of `rofl` in by delta: a file's old
+facts swapped for its new ones costs the facts that moved, not a request each. It answers
+`{"out":n,"added":n,"touched":k,"full":null|WHY}` (`touched`: overdeleted or derived again). It is refused whole,
+the world untouched, when `out` names no fact or a derived one; where the engine refuses the delta (`full` says
+why) the world is evaluated whole once, at the end of the request, and a watch is told the same net change
+(`changes_by` `whole`). Rust only (rust/rofl/tests/edit.rs holds every edit to the world evaluated whole from
+what remains, and its watch to the diff of `rows`).
+
 **A watch: how a question's rows move.** `{"op":"watch","session":S,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]}`
 answers `{"watching":n}`; a relation without `book` is watched in every book (`book` is what `rows` calls `persp`).
-From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `inbox`, `reheat`,
+From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `edit`, `inbox`, `reheat`,
 `evaluate`, a read that evaluates a world left dirty, an answer that came back from an adapter) carries
 `"changes":[{"rel","book","added":[ARGS...],"removed":[ARGS...]}]`, each `ARGS` a row's `args` as `rows` writes
 them, for the watched rows whose holding changed since the last answer, and `"changes_by"`: `delta` (the change

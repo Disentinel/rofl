@@ -589,6 +589,16 @@ impl Session {
         r
     }
 
+    /// `retract_set_delta` of the base facts `queries` name, each a ground literal. Refused whole, the world untouched,
+    /// when one names no fact or a derived one.
+    pub fn retract_queries_delta(&mut self, queries: &[&str]) -> Result<Result<crate::engine::AddDelta, String>, String> {
+        let mut ids = queries.iter().map(|q| self.base_fact(q)).collect::<Result<Vec<_>, _>>()?;
+        if brk!("edit_last_kept" => true; false) {
+            ids.pop();
+        }
+        self.retract_set_delta(&ids)
+    }
+
     fn retract_set_delta_unjournaled(&mut self, ids: &[FactId]) -> Result<Result<crate::engine::AddDelta, String>, String> {
         self.settle()?;
         let facts: Vec<FactId> = {

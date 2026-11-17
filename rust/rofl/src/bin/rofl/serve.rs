@@ -56,6 +56,13 @@
 //!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
 //!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why"}: the base fact out, the
 //!                                                        cells updated by delta, evaluated again if not
+//!   {"op":"edit","session":2,"out":["q(a)","q(b)"],"rofl":"q(c)."} -> {"out":n,"added":n,"touched":k,"full":null|"why"}:
+//!                                                        an edit in one request: the base facts `out` names taken out
+//!                                                        in one pass by delta (Session::retract_queries_delta), then
+//!                                                        the facts of `rofl` in by delta; either may be left out. Refused
+//!                                                        whole, nothing touched, if `out` names no fact or a derived
+//!                                                        one; where a delta is refused, `full` says why and the world
+//!                                                        is evaluated once, at the end. A watch is told its net change
 //!   {"op":"dispatch","session":2,"journal":"dir"}  -> {"loaded":n}: the permitted `does` wants sent, each in the
 //!                                                        append-only journal dir/does.journal, never twice
 //!                                                        (docs/intents.md D6); `assert` and `load` refuse what
@@ -394,6 +401,7 @@ impl Server {
                 if s.eval.store.dirty { s.evaluate().map_err(|e| rofl::describe(&e))?; }
                 Ok(json!({ "full": full }))
             }
+            "edit" => self.op_edit(r),
             "tick" => {
                 let s = self.get(r)?;
                 let t = s.tick().map_err(|e| rofl::describe(&e))?;
@@ -425,6 +433,37 @@ impl Server {
         }
     }
 
+
+    /// `edit`: the base facts `out` names taken out in one pass by delta, then the facts of `rofl` in by delta; where a
+    /// delta is refused the world is evaluated once, at the end.
+    fn op_edit(&mut self, r: &Value) -> Result<Value, String> {
+        let out = strings(r, "out")?.unwrap_or_default();
+        let text = r.get("rofl").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        if !text.is_empty() {
+            self.get(r)?.guard_permit(&text)?;
+        }
+        let s = self.get(r)?;
+        let queries: Vec<&str> = out.iter().map(String::as_str).collect();
+        let (mut full, mut touched) = (None, 0);
+        if !queries.is_empty() {
+            match s.retract_queries_delta(&queries)? {
+                Ok(d) => touched = d.overdeleted + d.rederived,
+                Err(why) => full = Some(why),
+            }
+        }
+        let mut added = 0;
+        if !text.is_empty() {
+            let (n, a) = s.assert_delta(&text)?;
+            added = n;
+            if let (None, rofl::session::Addition::Full(why)) = (&full, a) {
+                full = Some(why);
+            }
+        }
+        if s.eval.store.dirty {
+            s.evaluate().map_err(|e| rofl::describe(&e))?;
+        }
+        Ok(json!({ "out": queries.len(), "added": added, "touched": touched, "full": full }))
+    }
 
     /// `watch` adds relations to what the session's watcher is told of, `unwatch` takes them out (all, without `rels`).
     fn op_watch(&mut self, op: &str, r: &Value) -> Result<Value, String> {

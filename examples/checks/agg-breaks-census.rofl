@@ -18,6 +18,8 @@ brk("watch_removals_dropped"). brk_kind("watch_removals_dropped", switch).
 brk_expects("watch_removals_dropped", "watch_told").
 brk("watch_rederived_removed"). brk_kind("watch_rederived_removed", switch).
 brk_expects("watch_rederived_removed", "watch_rederived").
+brk("edit_last_kept"). brk_kind("edit_last_kept", switch).
+brk_expects("edit_last_kept", "edit_whole").
 brk("served_other_session"). brk_kind("served_other_session", switch).
 brk_expects("served_other_session", "served_world").
 brk("login_verifier_dropped"). brk_kind("login_verifier_dropped", switch).
@@ -2510,6 +2512,7 @@ switch_site("ds_seal_early", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_spread_uncarried", "rust/rofl/src/engine/datastrat.rs").
 switch_site("ds_wide_unlisted", "rust/rofl/src/engine.rs").
 switch_site("ds_wild_keys", "rust/rofl/src/engine/datastrat.rs").
+switch_site("edit_last_kept", "rust/rofl/src/session.rs").
 switch_site("empty_none", "rust/rofl/src/engine.rs").
 switch_site("empty_text", "rust/rofl/src/engine.rs").
 switch_site("event_time_raw", "rust/rofl/src/adapter.rs").

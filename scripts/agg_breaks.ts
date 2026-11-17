@@ -85,6 +85,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "edit_last_kept",
+  "what": "rofl serve's edit leaves the last fact it names out in the world, so a file's old facts outlive the edit",
+  "expect": {
+   "edit_whole": "the rows differ from the world evaluated whole"
+  }
+ },
+ {
   "id": "served_other_session",
   "what": "a rofl adapter whose address is a command asks another session than the world it serves, so a served world answers nothing",
   "expect": {
@@ -9375,6 +9382,7 @@ export const TESTS: Record<string, string> = {
   served_world: 'served a_world_another_process_serves_answers_its_wants',
   watch_told: 'watch a_watch_is_told_what_came_and_went',
   watch_rederived: 'watch a_row_derived_again_is_no_change',
+  edit_whole: 'edit an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff',
   login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
   event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
