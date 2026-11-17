@@ -1133,6 +1133,7 @@ citation_ok[checks](s_budgets_are_semantics).
 citation_ok[checks](l_comparisons_need_ground_ints).
 citation_ok[checks](b_collected_declared_only).
 citation_ok[checks](s_sees_computed_by_boot).
+citation_ok[checks](s_edit_is_the_world_whole).
 citation_ok[checks](s_a_counter).
 citation_ok[checks](s_done_ci_green).
 citation_ok[checks](s_appendix_dep_edges).
