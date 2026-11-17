@@ -3688,7 +3688,10 @@ work_needs(w_cmp_store_load_forwarding, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_runtime_assumptions,
   "HYPOTHESIS 6: runtime assumptions prune dead branches (conditional constant propagation): `runtime_env(NODE_ENV, production)` and the like as base facts in their own book; a branch dead under them contributes no edges; excising the assumption brings them back by retraction; whynot names the assumption a missing flow was bought with; an unknown assumption keeps both branches (w_labeled_unknowns). EXPERIMENT: one real corpus with environment checks, size and answers with and without the assumption, and the excise round trip identical to a fresh evaluation.").
-work_state(w_cmp_runtime_assumptions, open).
+work_state(w_cmp_runtime_assumptions, done).
+work_spawned(w_cmp_runtime_assumptions, f_runtime_assumptions_decide_tests_and_save_no_rows_on_vscode).
+work_spawned(w_cmp_runtime_assumptions, f_a_compound_term_premise_leaves_its_file).
+-- DONE 2026-11-17: built, excised by delta, measured on vscode 250/1000: answers move only through dead arms (32 of 1713 at 1000), no rows saved: dead code is 0.11% of vscode. Left: a whynot that names the assumption behind a blocked negation.
 work_needs(w_cmp_runtime_assumptions, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_demand_cones,

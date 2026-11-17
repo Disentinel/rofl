@@ -1,6 +1,6 @@
 ---
 world: js-dataflow
-books: audit, code, execution, flow, main, surface, tree, type, value
+books: assume, audit, code, execution, flow, main, surface, tree, type, value
 default: code
 ---
 
@@ -1053,9 +1053,122 @@ In the code:
    - unless [`read_as_script`](#read_as_script)();
    - unless File [runs as the script](#runs_as_script).
 
+Declared as facts:
+
+- <a id="reads_the_file_as"></a>A view V is read as the — no rows: declared so a rule may read it
+- <a id="runs_as_script"></a>A file File runs as the script — no rows: declared so a rule may read it
+
+> A TEST A RUNTIME ASSUMPTION DECIDES. A world may say what a value is when the program runs, as base facts of
+> their own book: `assumed_env[assume]("NODE_ENV", "production")` is what `process.env.NODE_ENV` reads,
+> `assumed_export[assume]("src/vs/base/common/platform.ts", "isWindows", false)` what a file exports under a
+> name, read through an import of it or of the file's namespace. The facts are flat: a premise matching a compound
+> term is read as leaving its file, and would lift `arg_at` and the flow out of the per-file levels. A test that
+> reads one, alone, negated, joined by `&&` / `||` or compared with a literal by `===` / `!==`, is decided, and the
+> arm it does not take is dead as an entry guard's arm is. A value no assumption states decides nothing: both arms
+> stay. Excising the fact brings the arm back.
+
+`imports` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `code` | `assume` |
+
+<a id="falsy_value"></a>`falsy_value` includes `false`, "", 0, `null`, `undefined`.
+
+<a id="truth_not"></a>`truth_not` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| `true` | `false` |
+| `false` | `true` |
+
+<a id="strict_eq"></a>`strict_eq` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| "===" | `true` |
+| "!==" | `false` |
+
+<a id="assumed_read"></a>`assumed_read`(E, V) either:
+
+1. if all of:
+   - [`assumed_env`](#assumed_env)(Name, V);
+   - [`prop_name`](js-structure.rofl.md#prop_name)(E, O, Name);
+   - [`prop_name`](js-structure.rofl.md#prop_name)(O, P, "env");
+   - a node P [refers to the free](#free_global) "process" in some file;
+2. if all of:
+   - [`assumed_export`](#assumed_export)(T, Name, V);
+   - a site D [means the file](js-modules.rofl.md#module_target) T;
+   - Local [imports](#imports_name) Name at D in File;
+   - E [is read at the top of](#top_read) Local and File;
+3. if all of:
+   - [`assumed_export`](#assumed_export)(T, Name, V);
+   - a site D [means the file](js-modules.rofl.md#module_target) T;
+   - Local [imports the namespace](#imports_ns) at D in File;
+   - a node O [is read at the top of](#top_read) Local and File;
+   - [`prop_name`](js-structure.rofl.md#prop_name)(E, O, Name).
+
+<a id="decided"></a>`decided`(E, N) either:
+
+1. if [`assumed_read`](#assumed_read)(E, V), [`falsy_value`](#falsy_value)(V), and N is `false`;
+2. if [`assumed_read`](#assumed_read)(E, V) and N is `true`, unless [`falsy_value`](#falsy_value)(V);
+3. if [`un_op`](#un_op)(E, "!", X), [`decided`](#decided)(X, C), and [`truth_not`](#truth_not)(C, N);
+4. if all of:
+   - [`bin_op`](#bin_op)(E, Op, L, R);
+   - [`strict_eq`](#strict_eq)(Op, N);
+   - [`assumed_read`](#assumed_read)(L, V);
+   - [`literal`](#literal)(R, V);
+5. if all of:
+   - [`bin_op`](#bin_op)(E, Op, L, R);
+   - [`strict_eq`](#strict_eq)(Op, N);
+   - [`assumed_read`](#assumed_read)(R, V);
+   - [`literal`](#literal)(L, V);
+6. if all of:
+   - [`bin_op`](#bin_op)(E, Op, L, R);
+   - [`strict_eq`](#strict_eq)(Op, C);
+   - [`assumed_read`](#assumed_read)(L, V);
+   - [`literal`](#literal)(R, W);
+   - V differs from W;
+   - [`truth_not`](#truth_not)(C, N);
+7. if all of:
+   - [`bin_op`](#bin_op)(E, Op, L, R);
+   - [`strict_eq`](#strict_eq)(Op, C);
+   - [`assumed_read`](#assumed_read)(R, V);
+   - [`literal`](#literal)(L, W);
+   - V differs from W;
+   - [`truth_not`](#truth_not)(C, N);
+8. if all of:
+   - [`logic_op`](#logic_op)(E, "&&", L, something);
+   - [`decided`](#decided)(L, `false`);
+   - N is `false`;
+9. if all of:
+   - [`logic_op`](#logic_op)(E, "&&", something, R);
+   - [`decided`](#decided)(R, `false`);
+   - N is `false`;
+10. if all of:
+   - [`logic_op`](#logic_op)(E, "&&", L, R);
+   - [`decided`](#decided)(L, `true`);
+   - [`decided`](#decided)(R, N);
+11. if [`logic_op`](#logic_op)(E, "||", L, something), [`decided`](#decided)(L, `true`), and N is `true`;
+12. if [`logic_op`](#logic_op)(E, "||", something, R), [`decided`](#decided)(R, `true`), and N is `true`;
+13. if all of:
+   - [`logic_op`](#logic_op)(E, "||", L, R);
+   - [`decided`](#decided)(L, `false`);
+   - [`decided`](#decided)(R, N).
+
+`dead_arm`(X) either:
+
+1. if [`decided`](#decided)(T, `false`) and [`arm_under`](#arm_under)(X, T, `truthy`);
+2. if [`decided`](#decided)(T, `true`) and [`arm_under`](#arm_under)(X, T, `falsy`);
+3. if [`decided`](#decided)(T, `false`) and [`logical`](#logical)(something, "&&", T, X);
+4. if [`decided`](#decided)(T, `true`) and [`logical`](#logical)(something, "||", T, X).
+
 <a id="dead_in"></a>`dead_in`(X, C) if [`dead_arm`](#dead_arm)(X) and [`inside`](#inside)(X, C).
 
-<a id="dead_site"></a>`dead_site`(C) if [`dead_in`](#dead_in)(something, C) and [`call_like`](#call_like)(C).
+<a id="dead_site"></a>`dead_site`(C) either:
+
+1. if [`dead_in`](#dead_in)(something, C) and [`call_like`](#call_like)(C);
+2. if [`dead_arm`](#dead_arm)(C) and [`call_like`](#call_like)(C).
 
 <a id="mention"></a>`mention`(F, E) either:
 
@@ -1087,8 +1200,8 @@ In the code:
 
 Declared as facts:
 
-- <a id="reads_the_file_as"></a>A view V is read as the — no rows: declared so a rule may read it
-- <a id="runs_as_script"></a>A file File runs as the script — no rows: declared so a rule may read it
+- <a id="assumed_env"></a>`assumed_env` — no rows: declared so a rule may read it
+- <a id="assumed_export"></a>`assumed_export` — no rows: declared so a rule may read it
 
 > Argument into parameter by INDEX. A spread destroys the correspondence for
 > everything after it, and a may-set may be silent but not wrong, so `arg_at`
