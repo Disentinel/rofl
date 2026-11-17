@@ -12,6 +12,7 @@
 //   node --experimental-strip-types scripts/merge_train.ts stack           stack them on HEAD (main); conflicts returned
 //   node --experimental-strip-types scripts/merge_train.ts regenerate      the generated files, the goldens last
 //   node --experimental-strip-types scripts/merge_train.ts judge           train.rofl over the goldens of every side
+//   node --experimental-strip-types scripts/merge_train.ts features        what each request did, by feature, for land to say
 //   node --experimental-strip-types scripts/merge_train.ts land            each request merged in turn
 //   node --experimental-strip-types scripts/merge_train.ts fail            the train is red: say so on its requests
 //   node --experimental-strip-types scripts/merge_train.ts rerun RUN       a run lost to its machine, run again once
@@ -149,6 +150,53 @@ function judge(): number {
   return met.length ? 1 : 0;
 }
 
+/** What each request of the stack did, said by feature: scripts/features.sh over the stack's commits, asked through
+ *  models/engine/feature-behaviour.rofl; one comment per request in .cache/train/features/, said on it when it lands. */
+function features(): void {
+  const s = read();
+  if (!s.stacked.length) return;
+  execFileSync('sh', ['scripts/features.sh', String(s.stacked.length), 'HEAD'], { cwd: ROOT, stdio: 'inherit' });
+  const asks = ['verdict(P, K, N, V)', 'points_most(P, K, N)', 'by(P, W, M, C)', 'dearer(P, W, M, X, Y)', 'cheaper(P, W, M, X, Y)'];
+  const out = execFileSync('rust/target/release/rofl', ['load', '--json', ...asks.flatMap((a) => ['--ask', a]), 'boot.rofl',
+    'models/engine/feature-diff.rofl', 'models/engine/feature-behaviour.rofl', '.cache/engine/features/world.rofl'],
+  { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 28 });
+  const rows = new Map<string, string[][]>();
+  for (const line of out.split('\n').filter(Boolean)) {
+    const a = JSON.parse(line) as { ok: boolean; keys: string[]; error?: string };
+    if (!a.ok) throw new Error(`feature-behaviour.rofl: ${a.error}`);
+    for (const k of a.keys) {
+      const m = /^(\w+)\[\w+\]\((.*)\)$/.exec(k)!;
+      const args = (m[2].match(/"(?:[^"\\]|\\.)*"|[^,\s]+/g) ?? []).map((x) => x.startsWith('"') ? JSON.parse(x) as string : x);
+      rows.set(m[1], [...rows.get(m[1]) ?? [], args]);
+    }
+  }
+  const of = (rel: string, n: number): string[][] => (rows.get(rel) ?? []).filter((r) => r[0] === String(n)).map((r) => r.slice(1)).sort();
+  const means = { changed: 'its code written and its worlds answer otherwise', held: 'its code written, its worlds answer as before',
+    unwatched: 'its code written, and no world says it', carried: 'its code not written, and its worlds answer otherwise' };
+  const dir = path.join(path.dirname(STATE), 'features');
+  fs.mkdirSync(dir, { recursive: true });
+  for (const p of s.stacked) {
+    const lines = ['**What this change did, by feature** (models/engine/feature-behaviour.rofl over the train\'s stack)', ''];
+    for (const [v, why] of Object.entries(means)) {
+      const names = of('verdict', p.number).filter((r) => r[2] === v).map(([k, n]) => `${k} \`${n}\``);
+      if (names.length) lines.push(`- **${v}** (${why}): ${names.join(', ')}`);
+    }
+    const most = of('points_most', p.number).map(([k, n]) => `${k} \`${n}\``);
+    if (most.length) lines.push(`- the moved worlds point at: ${most.join(', ')}`);
+    const engine = of('by', p.number).filter((r) => r[1] === 'answer' && r[2] === 'engine').map((r) => r[0]);
+    if (engine.length) lines.push(`- worlds whose answer the engine alone moved: ${engine.length} (${engine.slice(0, 12).map((w) => `\`${w}\``).join(', ')}${engine.length > 12 ? ', ...' : ''})`);
+    const own = of('by', p.number).filter((r) => r[1] === 'answer' && r[2] !== 'engine').map((r) => r[0]);
+    if (own.length) lines.push(`- worlds whose answer moved with their own files: ${own.length} (${own.slice(0, 12).map((w) => `\`${w}\``).join(', ')}${own.length > 12 ? ', ...' : ''})`);
+    for (const [rel, word] of [['dearer', 'dearer'], ['cheaper', 'cheaper']] as const) {
+      const ws = of(rel, p.number).map(([w, m, x, y]) => `\`${w}\` ${m === 'space' ? 'peak rows' : m} ${x} → ${y}`);
+      if (ws.length) lines.push(`- ${word} by the engine alone: ${ws.slice(0, 12).join('; ')}${ws.length > 12 ? `; and ${ws.length - 12} more` : ''}`);
+    }
+    if (!of('verdict', p.number).length && !engine.length) lines.push('- no entry of the engine written, and no world the engine moved');
+    fs.writeFileSync(path.join(dir, `${p.number}.md`), lines.join('\n'));
+    console.log(`#${p.number}\n${lines.slice(2).join('\n')}`);
+  }
+}
+
 /** Each request in turn: a commit whose parents are its head and main as it now is and whose tree is the stack's after
  *  it, pushed to its branch (a fast-forward), then GitHub's squash of it: main becomes that tree. */
 async function land(): Promise<void> {
@@ -171,6 +219,8 @@ async function land(): Promise<void> {
     if (!sha) { await stop('GitHub would not squash it after the train merged main into its branch; label it `queue` again.'); break; }
     main = sha; landed++;
     await unlabel(p.number, QUEUE); await unlabel(p.number, RED);
+    const report = path.join(path.dirname(STATE), 'features', `${p.number}.md`);
+    if (fs.existsSync(report)) await say(p.number, fs.readFileSync(report, 'utf8')).catch((e) => console.log(`#${p.number}: ${(e as Error).message.slice(0, 200)}`));
     console.log(`#${p.number} landed as ${main.slice(0, 7)}`);
   }
   for (const { pr, files } of s.returned) await returnPr(pr, `The train could not stack this on main: ${files.map((f) => `\`${f}\``).join(', ')} conflict. Rebase on main and label it \`queue\` again.`);
@@ -225,7 +275,7 @@ async function rerun(id: string): Promise<void> {
 
 const [cmd, arg] = process.argv.slice(2);
 const steps: Record<string, () => unknown> = {
-  pick, stack, regenerate, land, judge: () => { process.exitCode = judge(); },
+  pick, stack, regenerate, features, land, judge: () => { process.exitCode = judge(); },
   fail, rerun: () => rerun(arg),
 };
 if (!steps[cmd]) { console.error(`merge_train: ${Object.keys(steps).join(' | ')}`); process.exit(2); }
