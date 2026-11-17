@@ -94,8 +94,13 @@ impl Watch {
         let mut by = if t.whole { "whole" } else { "delta" };
         {
             let (h, st) = (&s.eval.h, &s.eval.store);
+            let left = !held.is_empty();
             for (&id, &before) in &t.seen {
                 let after = st.alive(id);
+                // a fact that holds as it held is no change, unless a store the world left saw it otherwise
+                if before == after && !left && !crate::brk!("watch_rederived_removed" => before; false) {
+                    continue;
+                }
                 match held.entry(st.key(h, id)) {
                     std::collections::btree_map::Entry::Occupied(mut e) => e.get_mut().4 = after,
                     std::collections::btree_map::Entry::Vacant(e) => {
