@@ -596,7 +596,7 @@ impl Session {
             ids.iter().copied().filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base() && seen.insert(f)).collect()
         };
         if !ids.is_empty() {
-            if let Some(why) = self.eval.refuses_retraction() {
+            if let Some(why) = self.eval.refuses_retracting(Some(&facts)) {
                 self.eval.store.dirty = true;
                 return Ok(Err(why));
             }
@@ -1787,7 +1787,7 @@ impl Session {
 
     fn retract_unjournaled(&mut self, query: &str) -> Result<(), String> {
         let id = self.base_fact(query)?;
-        if let Some(why) = self.eval.refuses_retraction() {
+        if let Some(why) = self.eval.refuses_retracting(Some(&[id])) {
             return Err(why);
         }
         let doomed = self.doomed(id);
@@ -1816,7 +1816,7 @@ impl Session {
 
     fn retract_delta_unjournaled(&mut self, query: &str) -> Result<Retraction, String> {
         let id = self.base_fact(query)?;
-        if let Some(why) = self.eval.refuses_retraction() {
+        if let Some(why) = self.eval.refuses_retracting(Some(&[id])) {
             return Err(why);
         }
         let rel = self.eval.store.rec(id).rel;

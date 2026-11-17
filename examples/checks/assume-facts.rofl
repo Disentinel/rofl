@@ -1,0 +1,487 @@
+-- rofl columns 1
+-- rofl columns 1
+T 87
+a n119d983d8a43c58c_root
+a program
+s platform.ts
+i 1
+a n119d983d8a43c58c_q7bunpvt09vc3
+a variable_declaration
+a kind
+s Let
+a declare
+a false
+a n119d983d8a43c58c_r9hmu5i5kbk7a
+a variable_declarator
+a n119d983d8a43c58c_n1pvbu7tukgr9
+a binding_identifier
+a name
+s _isWindows
+a id
+i 0
+a n119d983d8a43c58c_gvv0imjovrfs2
+a boolean_literal
+a value
+a init
+a declarations
+a body
+a n119d983d8a43c58c_u5r177kmth1k
+a if_statement
+i 2
+a n119d983d8a43c58c_6e66832ao8p55
+a binary_expression
+a operator
+s StrictInequality
+a n119d983d8a43c58c_en1qs7uuf6859
+a unary_expression
+s Typeof
+a n119d983d8a43c58c_vhth560s0p5pa
+a identifier_reference
+s process
+a argument
+a left
+a n119d983d8a43c58c_8okm4e1j2mg2f
+a string_literal
+s undefined
+a right
+a test
+a n119d983d8a43c58c_k5q9nh6h2im47
+a block_statement
+a n119d983d8a43c58c_maor5hscjdol4
+a expression_statement
+a n119d983d8a43c58c_0ssr27nhgmbi7
+a assignment_expression
+s Assign
+a n119d983d8a43c58c_rb7hp43di09hd
+a n119d983d8a43c58c_8ufh4sn37jkqc
+s StrictEquality
+a n119d983d8a43c58c_f6snbj6vparj8
+a static_member_expression
+a optional
+a n119d983d8a43c58c_ar2bivht4ieh2
+a object
+a n119d983d8a43c58c_6k1mblaavhst
+a identifier_name
+s platform
+a property
+a n119d983d8a43c58c_6t3e3mqile7v3
+s win32
+a expression
+a consequent
+a n119d983d8a43c58c_6rnmr5ue0fm7e
+a export_declaration
+i 3
+a n119d983d8a43c58c_uq4e0hko2pv89
+s Const
+a n119d983d8a43c58c_tqp5gcqgrvdj4
+a n119d983d8a43c58c_k490u1hage3r2
+s isWindows
+a n119d983d8a43c58c_cdqad0micv0aa
+a declaration
+a n119d983d8a43c58c_b9rp2684fedd1
+i 4
+a n119d983d8a43c58c_d5lah8l0ut0fb
+a n119d983d8a43c58c_aceuit8g0hhu2
+a n119d983d8a43c58c_297m6n6lo32v1
+s isWeb
+a n119d983d8a43c58c_lboju04tfckva
+a n119d983d8a43c58c_332rufpec4vfb
+a n119d983d8a43c58c_fggp04apegol
+a n119d983d8a43c58c_b3imhba0nrnv
+R node ast_oxc 3 32
+0 4 a c i o r v y 13 18 1a 1c 1f 1g 1i 1l 1n 1r 1v 1y 20 21 23 25 27 28 29 2b 2c 2d 2e
+1 5 b d j p s w z 14 19 1b 1d z s 1j z 1o 14 1w 5 b d z 1w 5 b d s w z 14
+2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+R line ast_oxc 2 32
+0 4 a c i o r v y 13 18 1a 1c 1f 1g 1i 1l 1n 1r 1v 1y 20 21 23 25 27 28 29 2b 2c 2d 2e
+3 3 3 3 3 q q q q q q q q q q q q q q 1x 1x 1x 1x 1x 26 26 26 26 26 26 26 26
+R attr ast_oxc 3 26
+4 4 c i r v y 13 1c 1f 1g 1i 1l 1n 1r 1y 1y 21 23 27 27 29 2b 2c 2d 2e
+6 8 e k t t e k t e t 1k e e k 6 8 e e 6 8 e t t e k
+7 9 f 9 u x 10 15 1e f 1h 9 10 1p 1s 1z 9 22 f 1z 9 2a 1h x 10 15
+R child ast_oxc 4 31
+a a 4 0 v r r o 1c 1i 1i 1g 1g 1c 1a 18 o 0 20 20 1y 1v 0 28 2c 2b 2b 28 27 25 0
+g l m n 11 12 16 17 12 1m 1q 12 16 16 1t n 1u n g l m 24 n g 11 12 16 l m 24 n
+h h h h h h h h h h h h h h h h h 3 h h h h q h h h h h h h 1x
+c i a 4 y v 13 r 1f 1l 1n 1i 1r 1g 1c 1a 18 o 21 23 20 1y 1v 29 2d 2c 2e 2b 28 27 25
+R file ast_oxc 2 1
+0
+2
+T 302
+a n39fdc5c1034c35b1_root
+a program
+s shell.ts
+i 1
+a n39fdc5c1034c35b1_7a35rs3f7r2m3
+a import_declaration
+a import_kind
+s Value
+a n39fdc5c1034c35b1_ecnmidm53usk5
+a import_specifier
+a n39fdc5c1034c35b1_v8j7ld1g72js3
+a identifier_name
+a name
+s isWindows
+a imported
+i 0
+a n39fdc5c1034c35b1_ktpamglrek4j9
+a binding_identifier
+a local
+a specifiers
+a n39fdc5c1034c35b1_8isr1pq25v3n3
+a n39fdc5c1034c35b1_7cd3aib7jkk68
+s isWeb
+a n39fdc5c1034c35b1_noadj6khonmr5
+a n39fdc5c1034c35b1_8t7ro1aj2qk69
+a string_literal
+a value
+s ./platform
+a source
+a body
+a n39fdc5c1034c35b1_i7avchbk229n3
+i 2
+a n39fdc5c1034c35b1_ih6r3vq564ahd
+a import_namespace_specifier
+a n39fdc5c1034c35b1_qr2976j2gpll2
+s platform
+a n39fdc5c1034c35b1_e87l6i05cvlkd
+a n39fdc5c1034c35b1_pfl5d464s7ecf
+a function
+i 4
+a n39fdc5c1034c35b1_fvdam3mav4qi
+s use
+a id
+a n39fdc5c1034c35b1_mtvmf4qcegkv7
+a formal_parameters
+a kind
+s FormalParameter
+a n39fdc5c1034c35b1_r2k6v3bv8fk58
+a formal_parameter
+a optional
+a false
+a readonly
+a n39fdc5c1034c35b1_kcnfv406h0in4
+s tag
+a pattern
+a n39fdc5c1034c35b1_9aalge3kmk7k
+a tstype_annotation
+a n39fdc5c1034c35b1_q8ubmf4q09p16
+a tsstring_keyword
+a type_annotation
+a items
+a n39fdc5c1034c35b1_4tlse0jvqgof9
+a n39fdc5c1034c35b1_cfiih8vubmadb
+s v
+a n39fdc5c1034c35b1_0da5qhmmsqs3
+a n39fdc5c1034c35b1_5f3pk39j22j96
+a tsunknown_keyword
+a params
+a n39fdc5c1034c35b1_igerqv80uljhe
+a function_body
+a n39fdc5c1034c35b1_70o3f1voh4rf4
+a expression_statement
+a n39fdc5c1034c35b1_o4sqm5uums8gb
+a chain_expression
+a n39fdc5c1034c35b1_i1k1mjgv98bi8
+a call_expression
+a true
+a n39fdc5c1034c35b1_78ujv47nt0902
+a static_member_expression
+a n39fdc5c1034c35b1_5khpghd4ha2h9
+a parenthesized_expression
+a n39fdc5c1034c35b1_4aq21e9qhlh1c
+a tsas_expression
+a n39fdc5c1034c35b1_bev5g928aidm8
+a identifier_reference
+s globalThis
+a expression
+a n39fdc5c1034c35b1_ghnqrdauaao39
+a tsany_keyword
+a object
+a n39fdc5c1034c35b1_3ic1vh21f96lf
+s __seen
+a property
+a callee
+a n39fdc5c1034c35b1_ra4rg0pg14sp7
+a arguments
+a n39fdc5c1034c35b1_fefhp75kaapfa
+a statements
+a type
+s FunctionDeclaration
+a generator
+a async
+a declare
+a n39fdc5c1034c35b1_ldhj6cdps67a3
+i 6
+a n39fdc5c1034c35b1_e1vb8e0mivss5
+s run
+a n39fdc5c1034c35b1_ldretgmsrot5e
+a n39fdc5c1034c35b1_00a6rsiipq2j2
+a n39fdc5c1034c35b1_s2t7tq415tuec
+s cmd
+a n39fdc5c1034c35b1_vg4i971lt87be
+a n39fdc5c1034c35b1_j5k8rl1q3dl81
+a n39fdc5c1034c35b1_cacigf3a1qi9a
+a n39fdc5c1034c35b1_g6206c39hks8f
+a n39fdc5c1034c35b1_tkkre6h3psg19
+a n39fdc5c1034c35b1_no83u8ttbtju
+a n39fdc5c1034c35b1_es45mcce3bavc
+s run.cmd
+a n39fdc5c1034c35b1_m0d86n2en0qo5
+i 3
+a n39fdc5c1034c35b1_mkrlrevk7arq2
+i 8
+a n39fdc5c1034c35b1_aojr1u4n9u2n5
+s winOnly
+a n39fdc5c1034c35b1_klt9hkp0s4891
+a n39fdc5c1034c35b1_275u27f0p5ina
+a n39fdc5c1034c35b1_g8fkhgnklu18
+a n39fdc5c1034c35b1_1buj7ho5nq8n9
+a n39fdc5c1034c35b1_9m4qir2c3kgo2
+a n39fdc5c1034c35b1_0vfjlsp73tpd7
+s reg.exe
+a n39fdc5c1034c35b1_ot4kuhe73ppt1
+a if_statement
+i 10
+a n39fdc5c1034c35b1_3a60m7gglt0h7
+a test
+a n39fdc5c1034c35b1_ru1v6pvsklbv6
+a block_statement
+a n39fdc5c1034c35b1_cieqdvm7cf2i7
+a n39fdc5c1034c35b1_k8a2m1mdab1q6
+a n39fdc5c1034c35b1_unbkbk7ped8rb
+a n39fdc5c1034c35b1_vh87j3lsmkqtc
+s cmd.exe
+a n39fdc5c1034c35b1_1hamkrk899s15
+a n39fdc5c1034c35b1_j8kulq9bu4mt3
+a n39fdc5c1034c35b1_pv3hja98cd3d6
+a consequent
+a n39fdc5c1034c35b1_n8adeur1hnb77
+a n39fdc5c1034c35b1_rebpludddct24
+a n39fdc5c1034c35b1_9d6h84mgo7oh
+a n39fdc5c1034c35b1_gtpg2l1gnrobd
+a n39fdc5c1034c35b1_lus3if9jpujj5
+s /bin/sh
+a alternate
+i 5
+a n39fdc5c1034c35b1_or8q2r11fcov
+i 11
+a n39fdc5c1034c35b1_9bk16v4jr3221
+a unary_expression
+a operator
+s LogicalNot
+a n39fdc5c1034c35b1_gh85c6qq87a1a
+a argument
+a n39fdc5c1034c35b1_n941m1bs6fmd5
+a n39fdc5c1034c35b1_unuvak6pl1pre
+a n39fdc5c1034c35b1_e9asehsca8qdc
+a n39fdc5c1034c35b1_9mvuh59qfksvc
+a n39fdc5c1034c35b1_lltnu27e40978
+s ls
+a n39fdc5c1034c35b1_mp988vs8mt004
+i 12
+a n39fdc5c1034c35b1_tpif9b1b77mba
+a n39fdc5c1034c35b1_crv3k3tmv2a68
+a n39fdc5c1034c35b1_6h89g9ah2agvb
+a n39fdc5c1034c35b1_qtsv52gtjec2
+a n39fdc5c1034c35b1_b3eproqdv0m05
+a n39fdc5c1034c35b1_4cu4b3h755st4
+a n39fdc5c1034c35b1_16q9ae7kqb1i7
+a n39fdc5c1034c35b1_osf8n2memoki8
+s dir
+i 7
+a n39fdc5c1034c35b1_p3k3lj7u73ih6
+i 13
+a n39fdc5c1034c35b1_sj95stft80pi9
+a logical_expression
+s And
+a n39fdc5c1034c35b1_h10lkn9j03ga2
+a left
+a n39fdc5c1034c35b1_ob0njv8iqfqq5
+a n39fdc5c1034c35b1_1dqgbgjeir1j1
+a n39fdc5c1034c35b1_3t7p0i51fs3ue
+s ver
+a right
+a n39fdc5c1034c35b1_1daigivj6ijj3
+i 14
+a n39fdc5c1034c35b1_lagqs5ep9p7pd
+s Or
+a n39fdc5c1034c35b1_gh7aqvcg0glk3
+a n39fdc5c1034c35b1_v53v2kqg12kv8
+a n39fdc5c1034c35b1_f2bhctk5erhd3
+a n39fdc5c1034c35b1_768kqtp9ppsff
+s node
+i 9
+a n39fdc5c1034c35b1_3557g1rkm03q3
+a variable_declaration
+i 15
+s Const
+a n39fdc5c1034c35b1_9i5emt9doemg2
+a variable_declarator
+a n39fdc5c1034c35b1_tf1d2kgql3ga4
+s sep
+a n39fdc5c1034c35b1_2pelr982sv9r1
+a conditional_expression
+a n39fdc5c1034c35b1_j47t57626sbqb
+a n39fdc5c1034c35b1_044ldftfqd185
+a n39fdc5c1034c35b1_bag5n3shs0tgc
+a n39fdc5c1034c35b1_a3motn6h2nme1
+s \\
+a n39fdc5c1034c35b1_q97035p0m8g74
+a n39fdc5c1034c35b1_9j28utfhbqa08
+a n39fdc5c1034c35b1_85gmhe8jkt922
+s /
+a init
+a declarations
+a n39fdc5c1034c35b1_hvhhig4sjd5v4
+i 16
+a n39fdc5c1034c35b1_a1gq9voi1olta
+a binary_expression
+s StrictEquality
+a n39fdc5c1034c35b1_vnfij2h3qav3
+a n39fdc5c1034c35b1_rnmetr5c6f417
+a n39fdc5c1034c35b1_12inaolfic4p8
+s process
+a n39fdc5c1034c35b1_00r9pe9upejt2
+s env
+a n39fdc5c1034c35b1_vbdu22ie15p98
+s NODE_ENV
+a n39fdc5c1034c35b1_qe7eod47aiqa5
+s production
+a n39fdc5c1034c35b1_4uok3grs4a976
+a n39fdc5c1034c35b1_tl2j37dhecjie
+a n39fdc5c1034c35b1_16metuh6fm3hb
+a n39fdc5c1034c35b1_r021p1tmtbbof
+a n39fdc5c1034c35b1_gm7og3pg36ot5
+s serve
+a n39fdc5c1034c35b1_5br0d5v2o5sc4
+a n39fdc5c1034c35b1_tetu1uupujobb
+a n39fdc5c1034c35b1_u4ck6sdslo914
+a n39fdc5c1034c35b1_kgrfeb5m4u1sb
+a n39fdc5c1034c35b1_necjvjiiv6o0d
+s watch
+a n39fdc5c1034c35b1_6n7jjei8g46tb
+i 17
+a n39fdc5c1034c35b1_t4jqj94djfo
+s StrictInequality
+a n39fdc5c1034c35b1_oibg5rl736c65
+a n39fdc5c1034c35b1_mm52b1162040d
+a n39fdc5c1034c35b1_2fjl2bffuq1eb
+a n39fdc5c1034c35b1_2qsh1c5g7j709
+a n39fdc5c1034c35b1_v6n6r6gcej21
+a n39fdc5c1034c35b1_s795vdlj1gao6
+a n39fdc5c1034c35b1_pqsohq7olhrv8
+a n39fdc5c1034c35b1_2h6hig7lu0rc4
+a n39fdc5c1034c35b1_qv4qp5mb4hu07
+a n39fdc5c1034c35b1_9s3lntnjqm4f1
+a n39fdc5c1034c35b1_31valsjntebrf
+s debug
+a n39fdc5c1034c35b1_6s78iu1bf1re1
+i 18
+a n39fdc5c1034c35b1_nhmbqcq5lqdj
+a n39fdc5c1034c35b1_5of5q81gltjc7
+a n39fdc5c1034c35b1_79rmav5e6205f
+a n39fdc5c1034c35b1_h28t2hbutncv6
+a n39fdc5c1034c35b1_n9qh9sssrul16
+a n39fdc5c1034c35b1_s6d8e9o4k88h9
+s LOG_LEVEL
+a n39fdc5c1034c35b1_053msrnoc6o6f
+s trace
+a n39fdc5c1034c35b1_qdhp75cfqr0ef
+a n39fdc5c1034c35b1_q497ua9dfhql
+a n39fdc5c1034c35b1_nkt56hd8desuc
+a n39fdc5c1034c35b1_uk8bbrsdbckqe
+a n39fdc5c1034c35b1_6bqg7nconi1p9
+a n39fdc5c1034c35b1_u319jke5jhisa
+a n39fdc5c1034c35b1_8b95ji3ltntrf
+a n39fdc5c1034c35b1_3qmkt4b9j557d
+a n39fdc5c1034c35b1_o0q9o435fttrd
+a n39fdc5c1034c35b1_34p6mvp95c77f
+s quiet
+a n39fdc5c1034c35b1_nnsk14q5smjka
+a export_named_declaration
+i 19
+a export_kind
+a n39fdc5c1034c35b1_dufbod2m18g91
+a export_specifier
+a n39fdc5c1034c35b1_72tfe3qbr9vte
+a n39fdc5c1034c35b1_uqtmlbvi81o24
+a exported
+a n39fdc5c1034c35b1_nv0224qfklo1a
+a n39fdc5c1034c35b1_dcvp00af3be16
+a n39fdc5c1034c35b1_ko0mbjo4remub
+R node ast_oxc 3 168
+0 4 8 a g k l n o u w y 10 11 14 17 1b 1g 1j 1l 1p 1q 1s 1t 1w 1y 20 22 25 27 29 2b 2f 2i 2m 2o 2v 2x 2z 30 31 33 34 35 36 37 38 39 3b 3d 3f 3h 3i 3j 3k 3l 3m 3o 3r 3t 3v 3w 3x 3y 40 41 42 44 45 46 47 48 4c 4e 4i 4k 4l 4m 4n 4o 4q 4s 4t 4u 4v 4w 4x 4y 4z 52 54 57 59 5a 5b 5e 5g 5i 5j 5k 5l 5o 5s 5u 5w 5y 5z 60 61 63 64 65 69 6b 6e 6f 6g 6i 6k 6m 6o 6p 6q 6r 6s 6u 6v 6w 6x 6y 70 72 74 75 76 77 78 79 7a 7b 7c 7d 7e 7g 7i 7j 7k 7l 7m 7n 7p 7r 7s 7t 7u 7v 7w 7x 7y 7z 80 82 86 88 89 8b 8c 8d
+1 5 9 b h 9 b h p 5 x h p 12 h 18 1c h 1k 1m 1c h 1k 1u 1x 1z 21 23 26 28 2a 2c 2g b 2c 2c 12 h 18 1c h 1k 1m 1x 1z 23 2c p 2c 12 h 18 1x 1z 23 2c p 3p 2c 3u 1z 23 2c p 1z 23 2c 3u 1z 23 2c p 3p 4f 2c 3u 1z 23 2c p 3p 26 2c b 3u 1z 23 2c p 1z 55 2c 23 2c p 1z 55 2c 23 2c p 5p 5t h 5x 2c 23 2c p 23 2c p 3p 6c 26 26 2c b b p 3u 1z 23 2c p 3u 1z 23 2c p 3p 6c 26 26 2c b b p 3u 1z 23 2c p 3p 6c 26 26 2c b b p 3u 1z 23 2c p 3u 1z 23 2c p 83 87 2c b 87 2c b
+2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2
+R line ast_oxc 2 168
+0 4 8 a g k l n o u w y 10 11 14 17 1b 1g 1j 1l 1p 1q 1s 1t 1w 1y 20 22 25 27 29 2b 2f 2i 2m 2o 2v 2x 2z 30 31 33 34 35 36 37 38 39 3b 3d 3f 3h 3i 3j 3k 3l 3m 3o 3r 3t 3v 3w 3x 3y 40 41 42 44 45 46 47 48 4c 4e 4i 4k 4l 4m 4n 4o 4q 4s 4t 4u 4v 4w 4x 4y 4z 52 54 57 59 5a 5b 5e 5g 5i 5j 5k 5l 5o 5s 5u 5w 5y 5z 60 61 63 64 65 69 6b 6e 6f 6g 6i 6k 6m 6o 6p 6q 6r 6s 6u 6v 6w 6x 6y 70 72 74 75 76 77 78 79 7a 7b 7c 7d 7e 7g 7i 7j 7k 7l 7m 7n 7p 7r 7s 7t 7u 7v 7w 7x 7y 7z 80 82 86 88 89 8b 8c 8d
+3 3 3 3 3 3 3 3 3 v v v v 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 2w 2w 2w 2w 2w 2w 2w 2w 2w 2w 2w 2w 2w 3e 3e 3e 3e 3e 3e 3e 3e 3q 3q 3q 3q 3q 3q 3q 3q 3q 3q 3q 3q 3q 3q 3q 4d 4d 4d 4d 4d 4d 4d 4d 4r 4r 4r 4r 4r 4r 4r 4r 4r 53 53 53 53 53 53 5f 5f 5f 5f 5f 5f 5q 5q 5q 5q 5q 5q 5q 5q 5q 5q 5q 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 6a 71 71 71 71 71 71 71 71 71 71 71 71 71 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 7h 84 84 84 84 84 84 84
+R attr ast_oxc 3 134
+4 8 a g k l n o u y 10 14 17 1b 1b 1g 1p 1p 1q 22 25 2b 2i 2m 2o 11 11 11 11 2x 2z 30 30 31 37 38 39 3b 2v 2v 2v 2v 3f 3h 3k 3l 3m 3d 3d 3d 3d 3r 3w 3x 3y 41 42 46 47 48 4e 4i 4m 4n 4o 4s 4t 4u 4x 4y 4z 54 57 59 5a 5b 5g 5i 5j 5k 5l 5o 5o 5u 5y 5z 60 61 63 64 65 6b 6e 6f 6g 6i 6k 6m 6q 6r 6s 6w 6x 6y 72 74 75 76 77 78 79 7c 7d 7e 7i 7j 7k 7l 7m 7n 7p 7t 7u 7v 7y 7z 80 82 86 88 89 8b 8c 8d
+6 6 c c 6 c c q 6 c q c 19 1d 1f c 1d 1f c 1d 1d c c c c 2q 2s 2t 2u c 19 1d 1f c 1d c q c 2q 2s 2t 2u c 19 1d c q 2q 2s 2t 2u c 1d c q 1d c 1d c q 4g c 1d c q 1d c c 1d c q 4g c 1d c q 4g c 1d c q 19 2u c c 1d c q 1d c q 4g 1d 1d c c c q 1d c q 1d c q 4g 1d 1d c c c q 1d c q 4g 1d 1d c c c q 1d c q 1d c q 85 85 c c 85 c c
+7 7 d d 7 m m r 7 z r 15 1a 1e 1e 1h 1e 1e 1r 24 1e 2d 2j 1h 1r 2r 1e 1e 1e 2y 1a 1e 1e 32 1e 15 3a 32 2r 1e 1e 1e 3g 1a 1e 2y 3n 2r 1e 1e 1e d 1e 2y 3z 1e 3g 1e 2y 49 4h d 1e 2y 4p 1e z d 1e 2y 50 56 d 1e 2y 5c 5h m 1e 2y 5m 5r 1e 5v d 1e 2y 62 1e 2y 66 6d 1e 1e 6h 6j 6l 6n 1e 2y 6t 1e 2y 6z 73 1e 1e 6h 6j 6l 6n 1e 2y 7f 6d 1e 1e 6h 6j 7o 7q 1e 2y 7q 1e 2y 81 7 7 2y 2y 7 5v 5v
+R child ast_oxc 4 167
+8 8 4 k k 4 4 0 w u u 0 11 1b 1j 1b 17 1p 1s 1p 17 11 29 29 27 25 25 22 22 22 20 1y 1w 11 0 2v 30 33 30 2z 2v 37 37 37 36 35 2v 0 3d 3d 3k 3k 3j 3i 3d 0 3o 3w 3w 3v 3t 41 40 3t 3o 46 46 45 44 3o 0 4e 4c 4m 4m 4l 4k 4c 0 4s 4s 4q 4x 4x 4w 4v 4q 0 54 59 59 54 52 0 5g 5j 5j 5g 5e 0 5s 5w 5z 5z 5w 63 63 5w 5s 5o 0 6f 6f 6e 6e 6b 6b 69 6q 6q 6p 6o 69 6w 6w 6v 6u 69 0 75 75 74 74 72 72 70 7c 7c 7b 7a 70 0 7k 7k 7j 7j 7i 7i 7g 7t 7t 7s 7r 7g 7y 7y 7x 7w 7g 0 86 86 82 8b 8b 82 0
+e i j e i j s t i j s t 16 1i 1n 1n 1o 1i 1n 1n 1o 1v 2e 1n 2e 2h 2k 2l 2n 2n 2e 2e 2p t t 16 1i 1n 1n 1o 1v 2l 2n 2n 2e 2p t t 16 1v 2l 2n 2e 2p t t 3s 2l 2n 2e t 2l 2e t 43 2l 2n 2e t 4a t 4j 3s 2l 2n 2e t 43 t 2h 2k 3s 2l 2n 2e t 43 t 58 2l 2n 5d 2e t 58 2l 2n 5d 2e t 16 3s 2l 2n 43 2l 2n 4a 67 68 t 2h 2k 2h 2k 58 5d 3s 2l 2n 2e t 43 2l 2n 2e t 4a t 2h 2k 2h 2k 58 5d 3s 2l 2n 2e t 43 t 2h 2k 2h 2k 58 5d 3s 2l 2n 2e t 43 2l 2n 2e t 4a t i 8a j i 8a j t
+f f f f f 3 f f f f f 3 f f f f f f f f 3 f f f f f f f f 3 f f f f v f f f f f f f f 3 f f f 3c f f f f f f f 13 f f f f f f f 3 f f f f f f 4b f f f f f f f 2w f f f f f f f f 51 f f f f f 3e f f f f f 5n f f f f f f f f f f 3q f f f f f f f f f f f f f f f f f 4d f f f f f f f f f f f f 4r f f f f f f f f f f f f f f f f f 53 f f f f f 3 5f
+a g 8 l n k o 4 y w 10 u 14 1g 1l 1j 1b 1q 1t 1s 1p 17 2b 2f 29 27 2i 25 2m 2o 22 20 1y 1w 11 2x 31 34 33 30 2z 38 39 3b 37 36 35 2v 3f 3h 3l 3m 3k 3j 3i 3d 3r 3x 3y 3w 3v 42 41 40 3t 47 48 46 45 44 3o 4i 4e 4n 4o 4m 4l 4k 4c 4t 4u 4s 4y 4z 4x 4w 4v 4q 57 5a 5b 59 54 52 5i 5k 5l 5j 5g 5e 5u 5y 60 61 5z 64 65 63 5w 5s 5o 6g 6i 6f 6k 6e 6m 6b 6r 6s 6q 6p 6o 6x 6y 6w 6v 6u 69 76 77 75 78 74 79 72 7d 7e 7c 7b 7a 70 7l 7m 7k 7n 7j 7p 7i 7u 7v 7t 7s 7r 7z 80 7y 7x 7w 7g 88 89 86 8c 8d 8b 82
+R file ast_oxc 2 1
+0
+2
+T 42
+s .
+s platform.ts
+s shell.ts
+s undefined
+i 1
+s u
+i 0
+s win32
+s w
+s ./platform
+i 2
+s platform
+s run.cmd
+s r
+s reg.exe
+s cmd.exe
+s c
+s /bin/sh
+i 3
+s /
+s 
+s bin
+s sh
+s ls
+s l
+s dir
+s d
+s ver
+s v
+s node
+s n
+s \\
+s production
+s p
+s serve
+s s
+s watch
+s debug
+s trace
+s t
+s quiet
+s q
+R has_file fs 2 2
+0 0
+1 2
+R str_segs code 2 19
+3 7 9 c e f h n p r t v j w y 10 11 12 14
+4 4 a 4 4 4 i 4 4 4 4 4 a 4 4 4 4 4 4
+R str_char0 code 2 19
+3 7 9 c e f h n p r t v j w y 10 11 12 14
+5 8 0 d d g j o q s u v j x z 8 q 13 15
+R str_seg code 3 23
+3 7 9 9 c e f h h h n p r t v j j w y 10 11 12 14
+6 6 6 4 6 6 6 6 4 a 6 6 6 6 6 6 4 6 6 6 6 6 6
+3 7 0 b c e f k l m n p r t v k k w y 10 11 12 14

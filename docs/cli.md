@@ -451,7 +451,13 @@ may reach (the functions its receiver holds, never folded into `calls`);
 `merged_param[audit](F, I, N)` names a parameter handed N functions, whose
 answers are their union, not per call. Code under `require.main === module` is
 read as the library's: `runs_as_script("path.js")` reads one file as the script
-node runs, `reads_the_file_as(script)` every file. A notebook cell whose rule
+node runs, `reads_the_file_as(script)` every file. **A runtime assumption** is a
+base fact of the book `[assume]`: `assumed_env[assume]("NODE_ENV", "production")`
+or `assumed_export[assume]("src/platform.ts", "isWindows", false)`; a test that
+reads it (alone, `!`, `&&`, `||`, `===` / `!==` a literal) is decided, and the
+calls of the arm it does not take hand their callees nothing, as under an entry
+guard; `rofl excise` of the fact brings them back by delta
+(examples/notebook/assume.rofl.md, examples/vscode/assume-linux.rofl). A notebook cell whose rule
 reads a relation at an arity or in a book nothing writes says so on the cell.
 
 Measured on `examples/services/src` (3 files, 1051 facts), five questions, two

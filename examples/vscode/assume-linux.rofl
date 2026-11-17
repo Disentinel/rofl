@@ -1,0 +1,17 @@
+-- examples/vscode/assume-linux.rofl — RUNTIME ASSUMPTIONS (w_cmp_runtime_assumptions): vscode as a desktop build runs
+-- it on Linux, outside development. The platform constants of src/vs/base/common/platform.ts and the environment a
+-- release is started with, as the book [assume] models/lang/js/rules/js-dataflow.rofl reads: a test of one of them
+-- is decided and the arm it does not take is dead. Excise one fact and its arms come back.
+assumed_export[assume]("src/vs/base/common/platform.ts", "isWindows", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isMacintosh", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isLinux", true).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isLinuxSnap", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isChromeOS", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isNative", true).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isElectron", true).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isWeb", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isWebWorker", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isIOS", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isMobile", false).
+assumed_export[assume]("src/vs/base/common/platform.ts", "isCI", false).
+assumed_env[assume]("VSCODE_DEV", undefined).
