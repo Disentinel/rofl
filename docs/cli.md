@@ -750,10 +750,26 @@ image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`,
 back), `view` (what a volume's world wrote above its base), `evaluate` with
 `wall`, `evaluate_on` and `admit` (a level at a time), `rows`, `fact`,
 `firings`, `cell`, `books`, `holding` (the store read piece by piece),
-`inbox` and `dispatch` (adapters, docs/intents.md), `tick`, `state`, `facts`,
+`inbox` and `dispatch` (adapters, docs/intents.md), `watch` and `unwatch`
+(below), `tick`, `state`, `facts`,
 `close`, and `spans` (no session: `{"op":"spans","text":MD}` answers `{"spans":[[a,b],...]}`,
 the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
 line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
+
+**A watch: how a question's rows move.** `{"op":"watch","session":S,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]}`
+answers `{"watching":n}`; a relation without `book` is watched in every book (`book` is what `rows` calls `persp`).
+From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `inbox`, `reheat`,
+`evaluate`, a read that evaluates a world left dirty, an answer that came back from an adapter) carries
+`"changes":[{"rel","book","added":[ARGS...],"removed":[ARGS...]}]`, each `ARGS` a row's `args` as `rows` writes
+them, for the watched rows whose holding changed since the last answer, and `"changes_by"`: `delta` (the change
+was taken by delta, and what the watch paid is the facts of its relations the delta touched), `whole` (the world
+was evaluated whole: every derived fact of the watched relations was touched, the cost of a diff), `diff` (a
+watched relation is answered from a structure, a tree's closure or an alias, whose rows are read and compared
+with the last read) or `lost` (the world's store was replaced by a path that did not carry the watch: read the
+relations again). Both are absent where nothing moved. A row taken out and derived again is no change.
+`{"op":"unwatch","session":S,"rels":[...]}` stops those (without `rels`, all). A watch keeps its selectors and,
+for a relation answered from a structure, its rows; nothing else (src/watch.rs; Rust only, rust/rofl/tests/watch.rs
+holds every answer's changes to the diff of `rows` before and after).
 
 **The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).

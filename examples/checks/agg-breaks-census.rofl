@@ -14,6 +14,10 @@ brk("journal_closed_late"). brk_kind("journal_closed_late", switch).
 brk_expects("journal_closed_late", "journal_replay").
 brk("roflenox_unsigned"). brk_kind("roflenox_unsigned", switch).
 brk_expects("roflenox_unsigned", "roflenox_stranger").
+brk("watch_removals_dropped"). brk_kind("watch_removals_dropped", switch).
+brk_expects("watch_removals_dropped", "watch_told").
+brk("watch_rederived_removed"). brk_kind("watch_rederived_removed", switch).
+brk_expects("watch_rederived_removed", "watch_rederived").
 brk("served_other_session"). brk_kind("served_other_session", switch).
 brk_expects("served_other_session", "served_world").
 brk("login_verifier_dropped"). brk_kind("login_verifier_dropped", switch).
@@ -2947,6 +2951,8 @@ switch_site("want_arity_off_by_one", "rust/rofl/src/engine/want.rs").
 switch_site("want_capability_unchecked", "rust/rofl/src/engine/want.rs").
 switch_site("want_shows_read", "rust/rofl/src/engine/want.rs").
 switch_site("want_types_unchecked", "rust/rofl/src/engine/want.rs").
+switch_site("watch_rederived_removed", "rust/rofl/src/watch.rs").
+switch_site("watch_removals_dropped", "rust/rofl/src/watch.rs").
 switch_site("wfs_admits_body_aggregate", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_lattice", "rust/rofl/src/engine.rs").
 switch_site("wfs_admits_subsumption", "rust/rofl/src/engine.rs").

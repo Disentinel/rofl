@@ -71,6 +71,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "watch_removals_dropped",
+  "what": "a watch of rofl serve is never told a row that went, so a subscriber keeps rows that no longer hold",
+  "expect": {
+   "watch_told": "rofl\":\"edge(c, d)."
+  }
+ },
+ {
+  "id": "watch_rederived_removed",
+  "what": "a watch of rofl serve is told a row went when it was taken out and derived again by another path",
+  "expect": {
+   "watch_rederived": "query\":\"edge(a, c)"
+  }
+ },
+ {
   "id": "served_other_session",
   "what": "a rofl adapter whose address is a command asks another session than the world it serves, so a served world answers nothing",
   "expect": {
@@ -9359,6 +9373,8 @@ export const TESTS: Record<string, string> = {
   adapter_capped: 'adapter a_capability_sends_no_more_wants_than_its_book_allows',
   roflenox_stranger: 'roflenox a_batch_signed_by_a_stranger_is_refused',
   served_world: 'served a_world_another_process_serves_answers_its_wants',
+  watch_told: 'watch a_watch_is_told_what_came_and_went',
+  watch_rederived: 'watch a_row_derived_again_is_no_change',
   login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
   event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',
