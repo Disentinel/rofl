@@ -1621,6 +1621,7 @@ impl Eval {
             };
             ms.push(t0.elapsed().as_millis());
             let mut depths = vec![units.clone()];
+            eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis());
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
                 let d = depths.len();
@@ -1639,6 +1640,7 @@ impl Eval {
                 })?;
                 depths.push(units.clone());
                 ms.push(t0.elapsed().as_millis());
+                eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis());
             }
             took.push(ms.iter().scan(0, |at, &m| Some(m - std::mem::replace(at, m))).map(|m| m.to_string()).collect::<Vec<_>>().join("+"));
             tops.push(units.pop().expect("a file at least"));
@@ -1666,6 +1668,7 @@ impl Eval {
                     if e.0.run()?.partial {
                         return Err(Halt::Budget("budget_exhausted", None));
                     }
+                    eprintln!("DBGL reader live {} MB peak {} MB", crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20);
                     said.push(format!("levels: the reader's unit, the rules left to it fired whole over the layers, took {} ms", t.elapsed().as_millis()));
                     said.append(&mut e.0.diags);
                     done(e, k, all, Vec::new(), FxMap::default(), Rc::default(), Asked::default())

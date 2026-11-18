@@ -32,6 +32,7 @@ mod view;
 mod prov;
 mod resume;
 mod cost;
+pub use cost::HEAP_PEAK;
 pub use cost::heap_said_over;
 mod par;
 mod latkept;

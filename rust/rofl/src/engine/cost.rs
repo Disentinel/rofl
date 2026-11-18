@@ -738,7 +738,7 @@ impl CostState {
 }
 
 /// The highest any world of this process saw the heap (`note_heap`).
-static HEAP_PEAK: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+pub static HEAP_PEAK: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
 
 /// The most of this process that was resident, in bytes: what the machine gave it. The heap's count is what was
 /// asked of the allocator, a vector's whole capacity with it; a capacity never written is asked and not resident.
