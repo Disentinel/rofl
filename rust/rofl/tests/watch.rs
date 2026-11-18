@@ -142,6 +142,25 @@ fn a_row_derived_again_is_no_change() {
     let v = step(&mut s, id, json!({ "op": "retract", "session": id, "query": "edge(a, c)" }));
     assert_eq!(rows_of(&v, "reach"), (vec![], vec![]), "a row derived again told: {v}");
     assert_eq!(rows_of(&v, "edge").1, vec!["a,c".to_string()], "{v}");
+    // (the set's pass keeps reach(a, c) standing on its other firing; what it does take out and derive again is an
+    // order lattice the change reaches, whole: of its seven rows four come back, and only the three that went are told)
+    let mut s = Serve::new();
+    let id = s.ask(json!({ "op": "fresh" }))["session"].as_u64().unwrap();
+    let lattice = "lattice d(A, B, min W).\nd(A, B, W) :- e(A, B, W).\nd(A, C, W) :- d(A, B, W1), e(B, C, W2), W is W1 + W2.\ne(a, b, 1). e(b, c, 1). e(a, c, 5). e(c, d, 1). e(x, y, 2).\n";
+    s.ask(json!({ "op": "load", "session": id, "rofl": lattice }));
+    s.ask(json!({ "op": "evaluate", "session": id }));
+    s.ask(json!({ "op": "watch", "session": id, "rels": [{ "rel": "d" }] }));
+    let before = read(&mut s, id, &[("d", None)]);
+    let v = s.ask(json!({ "op": "retract", "session": id, "query": "e(c, d, 1)" }));
+    let after = read(&mut s, id, &[("d", None)]);
+    assert_eq!(v["pass"], json!("set"), "{v}");
+    let key = ("d".to_string(), "main".to_string());
+    let gone: BTreeSet<String> = before[&key].difference(&after[&key]).cloned().collect();
+    assert_eq!((before[&key].len(), gone.len()), (7, 3), "{v}");
+    let c = v["changes"].as_array().and_then(|a| a.iter().find(|c| c["rel"] == "d")).unwrap_or_else(|| panic!("nothing told: {v}"));
+    let told: BTreeSet<String> = c["removed"].as_array().unwrap().iter().map(|x| x.to_string()).collect();
+    assert_eq!(told, gone, "a lattice row derived again told: {v}");
+    assert!(c["added"].as_array().unwrap().is_empty(), "{v}");
 }
 
 #[test]
