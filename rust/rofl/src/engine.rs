@@ -7789,6 +7789,7 @@ impl Eval {
     fn member_height(&mut self, prems: &[PremRef]) -> Result<u32, Halt> {
         let roots: Vec<FactId> = prems.iter().filter_map(|p| if let Prem::Fact(f) = p.kind() { Some(f) } else { None }).collect();
         if let Err(f) = self.store.heights(&roots, &mut self.memo.height_memo) {
+            self.memory_met()?;
             return Err(Halt::Bug(format!("{} has no well-founded height", self.store.key(&self.h, f))));
         }
         let mut hgt = 0u32;

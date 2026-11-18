@@ -1065,6 +1065,8 @@ pub struct Stretch {
     raw: std::sync::OnceLock<Raw>,
     /// of a file's own unit kept: its trees, as they were kept
     forests: std::sync::OnceLock<Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
+    /// kept: its firings read where they lie, until it is unfolded
+    wits: std::sync::OnceLock<Wits>,
     /// kept: something read it where it lies (`Stretch::bodies_read`)
     opened: std::sync::atomic::AtomicBool,
     /// the relations it wrote a fact of, and the facts lying elsewhere it holds a firing of: both in order
@@ -1130,6 +1132,35 @@ struct Raw {
     by_rel: FxMap<Sym, Vec<FactId>>,
     /// its facts by the hash of their key, made when first asked
     keys: std::sync::OnceLock<FxMap<u64, Vec<FactId>>>,
+}
+
+/// A kept stretch's firings where they lie: four words a firing (fact, rule, tick, premises), the premises, where
+/// each firing's premises begin, and its firings by fact.
+struct Wits {
+    fired: crate::arena::Arena<u32>,
+    prems: crate::arena::Arena<PremRef>,
+    at: Vec<u32>,
+    by: Vec<(FactId, u32)>,
+}
+
+impl Wits {
+    /// The firings of `id`, as its chain would hold them unfolded: the last put first, one put again not twice.
+    fn of(&self, id: FactId) -> Vec<(Sym, u32, &[PremRef])> {
+        let a = self.by.partition_point(|x| x.0 < id);
+        let b = a + self.by[a..].partition_point(|x| x.0 == id);
+        let mut seen: FxSet<u64> = FxSet::default();
+        let mut out: Vec<(Sym, u32, &[PremRef])> = Vec::with_capacity(b - a);
+        for &(_, i) in &self.by[a..b] {
+            let (x, i) = (&self.fired[4 * i as usize..4 * i as usize + 4], i as usize);
+            let ps = &self.prems[self.at[i] as usize..self.at[i + 1] as usize];
+            if !seen.insert(firing_hash(id, x[1], ps)) && out.iter().any(|(r, _, p)| *r == x[1] && *p == ps) {
+                continue;
+            }
+            out.push((x[1], x[2], ps));
+        }
+        out.reverse();
+        out
+    }
 }
 
 /// A stretch's own facts and firings as they are kept.
@@ -1282,7 +1313,7 @@ impl Stretch {
         }
         let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
         let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
-        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), books: self.books.clone(), forests: Default::default(), raw: Default::default(), opened: Default::default() })
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), books: self.books.clone(), forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
     }
 
     /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
@@ -1329,7 +1360,7 @@ impl Stretch {
             return Err("a kept stretch is not one".into());
         }
         let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees, seg, start });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), opened: Default::default() })
+        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
     }
 
     /// The segment of the scroll it is kept in, and where its record begins there. None for one cooled out of
@@ -1388,6 +1419,30 @@ impl Stretch {
             }
             at.push(o);
             Raw { recs, args, at, by_rel, keys: Default::default() }
+        }))
+    }
+
+    fn wits(&self) -> Option<&Wits> {
+        if self.store.get().is_some() {
+            return None;
+        }
+        let k = self.kept.as_ref()?;
+        Some(self.wits.get_or_init(|| {
+            self.opens();
+            let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
+            let _ = (r.arena::<u32>().expect("a kept stretch"), r.arena::<u64>().expect("a kept stretch"));
+            let (fired, prems) = (r.arena::<u32>().expect("a kept stretch"), r.arena::<PremRef>().expect("a kept stretch"));
+            let mut at = Vec::with_capacity(fired.len() / 4 + 1);
+            let mut by = Vec::with_capacity(fired.len() / 4);
+            let mut o = 0u32;
+            for (i, x) in fired.chunks_exact(4).enumerate() {
+                at.push(o);
+                o += x[3];
+                by.push((x[0], i as u32));
+            }
+            at.push(o);
+            by.sort_unstable();
+            Wits { fired, prems, at, by }
         }))
     }
 
@@ -3128,7 +3183,7 @@ impl Store {
         rels.sort_unstable();
         far.sort_unstable();
         books.sort_unstable();
-        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), opened: Default::default() }
+        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() }
     }
 
     /// The candidates the stretches read here hold, added to this store's own, read whole where it declined: a
@@ -4582,6 +4637,12 @@ impl Store {
                 if !own && s.far.binary_search(&id).is_err() {
                     continue;
                 }
+                let cut = |r: &Sym| self.lemma_cut.as_ref().is_none_or(|cut| !cut.contains(r));
+                if let (Some(w), Some(k)) = (s.wits(), s.kept.as_ref()) {
+                    // (unfolded, its firings would read over the store it is kept over)
+                    out.extend(w.of(id).into_iter().filter(|x| cut(&x.0)).map(|(rule, tick, prems)| WitView { rule, tick, prems, src: &k.over.0 }));
+                    continue;
+                }
                 let s = s.store();
                 let c = if own { s.wit_head[id as usize] } else { s.far_heads.get(&id).copied().unwrap_or(EMPTY) };
                 out.extend(s.nodes_from(c).filter(|n| self.lemma_cut.as_ref().is_none_or(|cut| !cut.contains(&n.rule))).map(|n| view(s, n)));
@@ -5667,6 +5728,9 @@ impl Store {
         while let Some(f) = stack.pop() {
             if memo.contains_key(&f) || !seen.insert(f) {
                 continue;
+            }
+            if order.len() & 0xfff == 0 && crate::engine::MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
+                return Err(f);
             }
             order.push(f);
             for n in self.views(f) {
