@@ -3930,8 +3930,8 @@ work_needs(w_why_by_file, w_stage_planner).
 work_spawned(w_why_by_file, f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file).
 
 work(w_thaw_reads_one_file,
-  "The first thaw of a run reads and cuts every source to find one file's text (Eval::lower_text): at the reference scale that is the whole scan, several GB, for one file of 11 100. Keep beside the units where each file's facts lie in the sources (or its scan under ~/.cache/rofl/scans), so that a thaw reads its file alone.").
-work_state(w_thaw_reads_one_file, open).
+  "DONE 2026-11-18 for a world read from its kept units (f_a_question_opens_of_a_kept_world_what_its_walk_reads): each file's text is kept beside the units (`.texts`, sorted by file) and a thaw reads its file's alone; a world evaluated in the run still cuts every source on its first thaw. WAS: The first thaw of a run reads and cuts every source to find one file's text (Eval::lower_text): at the reference scale that is the whole scan, several GB, for one file of 11 100. Keep beside the units where each file's facts lie in the sources (or its scan under ~/.cache/rofl/scans), so that a thaw reads its file alone.").
+work_state(w_thaw_reads_one_file, done).
 work_spawned(w_thaw_reads_one_file, f_a_whynot_below_the_cut_thaws_the_file_it_names).
 
 work(w_whynot_by_units_at_scale,
@@ -3940,9 +3940,19 @@ work_state(w_whynot_by_units_at_scale, done).
 work_spawned(w_whynot_by_units_at_scale, f_a_whynot_below_the_cut_thaws_the_file_it_names).
 
 work(w_a_kept_world_opens_whole,
-  "A question answered from kept units opens every unit of the world before it reads one: asked again, calls[code](A, B) takes 0.8 s and 0.9 GB resident at 250 vscode files and 3.2 s and 3.6 GB at 1000 (release, 4 cores), so by proportion about 35 s and 40 GB at 11 100, against the goal of a second. A bound question reads a few units; open the units a read reaches, as the walk reaches them, and keep the rest on disk. ACCEPTANCE: a bound ask and a bound whynot over the kept 1000-file world in about a second and well under 1 GB, the answers byte for byte.").
-work_state(w_a_kept_world_opens_whole, open).
+  "DONE 2026-11-18 (f_a_question_opens_of_a_kept_world_what_its_walk_reads): a question opens the core, the dictionary and a table of the units, and reads a unit's directory, stretch and trees when its walk reaches them; at 1000 files a bound ask 0.10 s and 0.13 GB, a bound whynot 0.23 s and 0.28 GB, the answers byte for byte. WAS: A question answered from kept units opens every unit of the world before it reads one: asked again, calls[code](A, B) takes 0.8 s and 0.9 GB resident at 250 vscode files and 3.2 s and 3.6 GB at 1000 (release, 4 cores), so by proportion about 35 s and 40 GB at 11 100, against the goal of a second. A bound question reads a few units; open the units a read reaches, as the walk reaches them, and keep the rest on disk. ACCEPTANCE: a bound ask and a bound whynot over the kept 1000-file world in about a second and well under 1 GB, the answers byte for byte.").
+work_state(w_a_kept_world_opens_whole, done).
 work_spawned(w_a_kept_world_opens_whole, f_a_whynot_from_kept_units_costs_the_opening_of_the_world).
+
+work(w_a_kept_world_is_summed_by_its_first_question,
+  "The first question after a world is kept sums every kept file once before it trusts them (volume.rs whole, noted under $XDG_CACHE_HOME/rofl/seen only once the file's mtime is a second old): at 1000 vscode files 1.7 s and 2.9 GB of mapped pages for an answer that then takes 0.17 s, so at 11 100 files some 20 s for the first question after each keep or edit. The writer knows the sums it wrote: note them when the world is kept (and say what the mtime rule guards against if it must stay), so that the first question reads only what its walk reads.").
+work_state(w_a_kept_world_is_summed_by_its_first_question, open).
+work_spawned(w_a_kept_world_is_summed_by_its_first_question, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
+
+work(w_kept_texts_written_whole_on_an_edit,
+  "An edit of one file keeps the world again with every file's text (`.texts`, 0.49 GB of 3.0 GB at 1000 vscode files), as it writes every unit's directories in the new segment: the write of an edit grows with the world, not with the edit. Write the texts once and an edit's moved files beside them, as the units' segments do with the stretches.").
+work_state(w_kept_texts_written_whole_on_an_edit, open).
+work_spawned(w_kept_texts_written_whole_on_an_edit, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
 
 work(w_whynot_of_a_bare_name_reads_main,
   "`rofl ask 'calls(A, B)'` answers from whatever book holds calls (calls[code], 515 answers at 20 vscode files) and `rofl whynot 'calls(A, B)'` over the same world reads the name in [main] and says `head does not unify`, as the reference does: the agent who asks why after asking what is told a thing about another relation. Say, where a bare name has no rule or fact in [main] and has them in one other book, which book was meant, or refuse naming the books.").

@@ -77,11 +77,9 @@ where the walk goes below the cut, and closes with `K answers in this file`;
 `--json` gives `{"ok", "file", "found", "stops", "text"}`. `--in` works over a
 world evaluated whole as well.
 
-What it costs (vscode, release, 4 cores, 2026-11-15): the table takes what the
-ask it counts takes, a bound whynot or an opened row 1 to 2 s more: 0.9 s and
-1.6 s at 250 files, 3.1 s and 5.2 s at 1000 with 3.6 to 4.9 GB resident. The
-seconds past the first are the kept world opened whole, the same for `ask`
-(`w_a_kept_world_opens_whole`). A bare name is read in `[main]` by `whynot`
+What it costs: a question asked again opens of the kept world only what its
+walk reads (*What a question reads of a kept world*, below); the table takes
+what the ask it counts takes. A bare name is read in `[main]` by `whynot`
 and in any book by `ask`: write the book, `calls[code](A, B)`.
 
 **The text is the reference's.** `why`, `whynot` and `excise` print what
@@ -682,9 +680,26 @@ left to the last unit, fired whole over the layers, which no layer's time holds.
 slot under `~/.cache/rofl/worlds`: the reader (`<slot>.q<sum>.vol`, the core it
 stands on), the names (`.names`), the units as segments (`.u<n>`, the newest
 named in `.units`) and the registry (`.scroll`). The next question over the
-same files is answered from them (`volumes: N answered from the kept units`),
-the units read where they lie in the file; an edited file settles again only
+same files is answered from them (`volumes: N answered from the kept units,
+reading K of their U stretches`), the units read where they lie in the file;
+an edited file settles again only
 the units it moved (*Lemma stages*, above), which are written as a new segment.
+**What a question reads of a kept world**: the reader's core, the dictionary
+and a table of the units, each mapped where it lies; a unit's directory, its
+stretch of facts and a file's trees are read when the walk first reaches them,
+the rest stays on disk. `reading K of their U stretches` on stderr is what the
+question opened. A question bound to a value reads the units that may hold it
+(its relation's arguments are keys of the units' directories); an unbound one
+reads every unit that wrote its relation, so it costs in proportion to its
+answers. A thaw reads its file's text from `.texts`, kept beside the units, not
+from the sources. The first question after a world is kept sums its files once
+(`$XDG_CACHE_HOME/rofl/seen` notes them after that). Measured (vscode, release,
+4 cores, 2026-11-18), asked again: at 1000 files a bound `ask` 0.10 s and
+0.13 GB (7 of 2010 stretches), a bound `whynot` 0.23 s and 0.28 GB (14), the
+unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask
+0.08 s and 0.10 GB (4 of 505). Before, every unit was opened first: 3.6 s and
+3.9 GB, 4.0 s and 5.2 GB, 3.5 s and 3.9 GB
+(`f_a_question_opens_of_a_kept_world_what_its_walk_reads`).
 **Past a quarter of the memory the process may use** (the memory wall's
 measure, below), the units done are cooled: written to a segment under the
 system's temporary directory (`rofl-units-<pid>-<n>.seg`, removed at the end)
@@ -699,8 +714,9 @@ to 5.2 s. Four files to a unit is the owner's trade between
 the two (sixteen: 20.7 s, 64 s and 9.2 s; one: 24.6 s, 93 s and 3.9 s;
 `f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). A `whynot` is walked over the reader, the units read
 where they lie, and a file is thawed where the walk goes below a cut
-(*Below a cut*, above; not yet measured at the reference scale, and the first
-thaw of a run reads every source to cut its file out of them). `excise`,
+(*Below a cut*, above; not yet measured at the reference scale; a world
+evaluated in this run, not read from its kept units, still cuts the file out of
+every source on its first thaw). `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.
