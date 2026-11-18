@@ -1530,6 +1530,41 @@ pub struct Lower {
     by_lo: Vec<u32>,
     /// the relations a stretch of `list` wrote a fact of
     rels: FxSet<Sym>,
+    /// what the planner counted of its rows, once for every unit of the layer that reads them
+    counted: std::sync::Mutex<FxMap<GroupsKey, Rc<Counts>>>,
+}
+
+/// A premise's shape as the planner counts it: the relation, the book, the constant positions, the bound positions.
+type GroupsKey = (Sym, Option<Sym>, Vec<usize>, Vec<usize>);
+
+/// The rows of a relation by the values of its constant positions (one or two, the bits of each), and how many
+/// distinct values the bound positions take among them (`Store::probe_groups`).
+pub type Counts = FxMap<(u64, u64), (usize, usize)>;
+
+/// `Counts` of the rows `each` gives, each with its book and arguments.
+fn count_groups(h: &Heap, each: impl FnOnce(&mut dyn FnMut(Sym, &[Term])), persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> Counts {
+    let mut rows: Counts = FxMap::default();
+    let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
+    each(&mut |p, a| {
+        if persp.is_some_and(|q| q != p) {
+            return;
+        }
+        let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
+        let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { return };
+        let c = (c0, c1);
+        rows.entry(c).or_default().0 += 1;
+        if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+            let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+            for &p in vpos {
+                x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+            }
+            seen.insert((c, x));
+        }
+    });
+    for (c, _) in seen {
+        rows.get_mut(&c).expect("a value seen is counted").1 += 1;
+    }
+    rows
 }
 
 impl Lower {
@@ -1537,7 +1572,25 @@ impl Lower {
         let mut by_lo: Vec<u32> = (0..list.len() as u32).collect();
         by_lo.sort_unstable_by_key(|&i| list[i as usize].lo);
         let rels = list.iter().flat_map(|s| s.rels()).collect();
-        Lower { list, route, by_lo, rels }
+        Lower { list, route, by_lo, rels, counted: Default::default() }
+    }
+
+    /// What the planner counts of the rows of `rel` its stretches hold, by premise shape: counted once, since every
+    /// unit of the layer reads the same stretches by key.
+    fn groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> Rc<Counts> {
+        let key = (rel, persp, cpos.to_vec(), vpos.to_vec());
+        if let Some(g) = self.counted.lock().unwrap().get(&key) {
+            return g.clone();
+        }
+        let g = Rc::new(count_groups(h, |f| {
+            for s in self.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+                for k in s.of_rel(rel) {
+                    f(s.rec(k).persp, s.args(k));
+                }
+            }
+        }, persp, cpos, vpos));
+        self.counted.lock().unwrap().insert(key, g.clone());
+        g
     }
     fn of(&self, id: FactId) -> Option<&Stretch> {
         let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);
@@ -3374,57 +3427,69 @@ impl Store {
     /// trusted for a column of many values, and an estimate off by a factor
     /// of ten here costs a join order ten times worse.
     pub fn probe_stats(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], cvals: &[Term], vpos: &[usize]) -> (usize, usize) {
-        let mut rows = 0usize;
-        let mut seen: FxSet<u64> = FxSet::default();
-        self.each_row(rel, |p, k| {
-            if persp.is_some_and(|q| q != p) {
-                return;
-            }
-            let a = self.facts.args(k);
-            if !cpos.iter().zip(cvals).all(|(&p, &v)| a.get(p) == Some(&v)) {
-                return;
-            }
-            rows += 1;
-            if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
-                let mut x: u64 = 0xcbf2_9ce4_8422_2325;
-                for &p in vpos {
-                    x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+        if cpos.len() > 2 {
+            let mut rows = 0usize;
+            let mut seen: FxSet<u64> = FxSet::default();
+            self.each_counted(rel, &mut |p, a| {
+                if persp.is_some_and(|q| q != p) || !cpos.iter().zip(cvals).all(|(&p, &v)| a.get(p) == Some(&v)) {
+                    return;
                 }
-                seen.insert(x);
-            }
-        });
-        (rows, seen.len().clamp(1, rows.max(1)))
+                rows += 1;
+                if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+                    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+                    for &p in vpos {
+                        x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+                    }
+                    seen.insert(x);
+                }
+            });
+            return (rows, seen.len().clamp(1, rows.max(1)));
+        }
+        let at = (cvals.first().map_or(0, |t| t.bits()), cvals.get(1).map_or(0, |t| t.bits()));
+        self.probe_groups(h, rel, persp, cpos, vpos).get(&at).copied().unwrap_or((0, 1))
     }
 
-    /// `probe_stats` for every value of the constant positions `cpos` (one or two) at once, by the values' bits: one
-    /// pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`).
+    /// `probe_stats` for every value of the constant positions `cpos` (none, one or two) at once, by the values'
+    /// bits: one pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`). A
+    /// unit counts the stretches of the layers below it too, which it reads by key though a whole read of it does
+    /// not: a planner blind to them reads them by a key that holds every file's rows (f_a_unit_planned_blind_to_its_children).
     pub fn probe_groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> FxMap<(u64, u64), (usize, usize)> {
-        let mut rows: FxMap<(u64, u64), (usize, usize)> = FxMap::default();
-        let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
-        self.each_row(rel, |p, k| {
-            if persp.is_some_and(|q| q != p) {
-                return;
+        let mut rows = count_groups(h, |f| self.each_counted_here(rel, f), persp, cpos, vpos);
+        if let Some(l) = self.facts.near.as_ref().filter(|n| !n.whole).and_then(|n| n.lower.as_ref()) {
+            for (c, &(r, d)) in l.groups(h, rel, persp, cpos, vpos).iter() {
+                let e = rows.entry(*c).or_default();
+                e.0 += r;
+                e.1 += d;
             }
-            let a = self.facts.args(k);
-            let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
-            let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { return };
-            let c = (c0, c1);
-            rows.entry(c).or_default().0 += 1;
-            if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
-                let mut x: u64 = 0xcbf2_9ce4_8422_2325;
-                for &p in vpos {
-                    x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
-                }
-                seen.insert((c, x));
-            }
-        });
-        for (c, _) in seen {
-            rows.get_mut(&c).expect("a value seen is counted").1 += 1;
         }
         for v in rows.values_mut() {
             v.1 = v.1.clamp(1, v.0.max(1));
         }
         rows
+    }
+
+    /// Every row of `rel` the planner counts, with its book and arguments: `each_counted_here` and the layers below.
+    fn each_counted(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
+        self.each_counted_here(rel, f);
+        if let Some(l) = self.facts.near.as_ref().filter(|n| !n.whole).and_then(|n| n.lower.as_ref()) {
+            for s in l.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+                for k in s.of_rel(rel) {
+                    f(s.rec(k).persp, s.args(k));
+                }
+            }
+        }
+    }
+
+    /// The rows of `rel` the store reads whole, and in a unit those of the stretches of its own layer it reads by key.
+    fn each_counted_here(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
+        self.each_row(rel, |p, k| f(p, self.facts.args(k)));
+        if let Some(n) = self.facts.near.as_ref().filter(|n| !n.whole) {
+            for s in n.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+                for k in s.of_rel(rel) {
+                    f(s.rec(k).persp, s.args(k));
+                }
+            }
+        }
     }
 
     /// What `probe_groups` counted is still so: the rows of `rel` neither grew, nor died, nor came back.

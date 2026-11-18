@@ -333,3 +333,4 @@ fn a_count_of_the_core_and_one_of_the_reader() {
         assert_eq!(answers(&mut v, q), answers(&mut whole, q), "{q}");
     }
 }
+
