@@ -719,8 +719,9 @@ unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask
 (`f_a_question_opens_of_a_kept_world_what_its_walk_reads`).
 **Past a quarter of the memory the process may use** (the memory wall's
 measure, below), the units done are cooled: written to a segment under the
-system's temporary directory (`rofl-units-<pid>-<n>.seg`, removed at the end)
-and read back mapped from it, so what no unit reads again lies in pages the
+system's temporary directory (`rofl-units-<pid>-<n>.seg`, unlinked once mapped
+on Unix, so a process killed leaves none; elsewhere removed at the end) and
+read back mapped from it, so what no unit reads again lies in pages the
 system takes back. Stderr says how many times, how many units and how many MB
 of disk. A world its units refuse (a wall met, a fact that breaks the plan's
 `own`) is said on stderr and evaluated whole. Measured on the release build, 4

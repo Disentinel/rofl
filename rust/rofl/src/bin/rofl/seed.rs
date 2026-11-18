@@ -36,7 +36,8 @@ fn count(n: isize) {
     match told {
         Ok(0) => {}
         Ok(v) => {
-            LIVE.fetch_add(v, Ordering::Relaxed);
+            let now = LIVE.fetch_add(v, Ordering::Relaxed) + v;
+            rofl::engine::HEAP_PEAK.fetch_max(now as i64, Ordering::Relaxed);
         }
         Err(_) => {
             LIVE.fetch_add(n, Ordering::Relaxed);

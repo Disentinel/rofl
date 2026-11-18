@@ -4180,6 +4180,11 @@ work(w_au_memory_wall_before_the_kernel,
 work_state(w_au_memory_wall_before_the_kernel, done).
 work_spawned(w_au_memory_wall_before_the_kernel, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
+work(w_heights_thaw_every_unit,
+  "An aggregate's members are ordered by the height of their proofs (Eval::member_height, Store::heights_where_head), a walk of every witness below them; by levels a witness of a cooled stretch is read by unfolding the whole stretch into a store on the heap (Stretch::store via Store::views), so the reader's count over 2 617 vscode files thaws every unit back: from 7.5 GB by about 160 MB a second to the edge (f_a_unit_planned_blind_to_the_layers_below). The walk takes no step, so the memory wall is not met in it. Read a cooled stretch's firings where they lie (its `fired` and `prems` are in the segment), or keep a fact's height beside it when its unit is settled, so that the reader asks no unit to unfold; and meet the wall in the walk. Acceptance: the side-effect question over 2 617 vscode files answers whole in a 14 GB cgroup, answers as at 493 files where they overlap.").
+work_state(w_heights_thaw_every_unit, done).
+work_spawned(w_heights_thaw_every_unit, f_a_unit_planned_blind_to_the_layers_below).
+
 work(w_au_no_whole_fallback_past_units,
   "`volumes: wall: budget_exhausted; the world is evaluated whole`: when the units path meets a wall it falls back to the whole world on one heap, which at that size cannot fit (platform 3 097 files: silent for 4m45; 2 617 files: killed). The fallback also made an edit slower than the cold run (82 s against 54 s). Answer partial from the units with the wall named, or say which unit and which wall with how much spent.").
 work_state(w_au_no_whole_fallback_past_units, open).

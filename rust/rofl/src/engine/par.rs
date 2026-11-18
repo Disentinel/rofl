@@ -506,6 +506,10 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
         let mut next: Vec<Sol> = Vec::new();
         let mut scratch = Subst::new();
         for a in input {
+            // (one premise can multiply its partial solutions past the memory: the wall is met between them)
+            if super::MEMORY_FULL.load(Ordering::Relaxed) {
+                return None;
+            }
             let from = next.len();
             match fr.find(a, &mut lv.probes)? {
                 Found::Neg(holds) => {
@@ -534,6 +538,9 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
                                 continue;
                             }
                             read += 1;
+                            if read & 0xfff == 0 && super::MEMORY_FULL.load(Ordering::Relaxed) {
+                                return None;
+                            }
                             if fr.unifies(&c, a, f, &mut scratch) {
                                 let mut prems = Vec::with_capacity(a.prems.len() + 1);
                                 prems.extend_from_slice(&a.prems);
