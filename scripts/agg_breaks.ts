@@ -81,7 +81,7 @@ export const BREAKS: Break[] = [
   "id": "watch_rederived_removed",
   "what": "a watch of rofl serve is told a row went when it was taken out and derived again by another path",
   "expect": {
-   "watch_rederived": "query\":\"edge(a, c)"
+   "watch_rederived": "a lattice row derived again told"
   }
  },
  {
