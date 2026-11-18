@@ -748,6 +748,8 @@ pub struct VolR {
     chain: Vec<Rc<Base>>,
     /// how many leading bytes of the arena read last are its volume's own, unchanged
     vouched: usize,
+    /// the volume's sum was found to hold: every byte of it is one its writer wrote
+    summed: bool,
 }
 
 /// A volume an overlay is kept over, mapped, and its file, which a stitched span maps again.
@@ -773,7 +775,7 @@ pub fn file_id(b: &[u8]) -> Option<u64> {
 impl VolR {
     pub fn new(map: Rc<Region>, from: usize) -> VolR {
         let end = map.len().saturating_sub(8);
-        VolR { map, i: from, end, chain: Vec::new(), vouched: 0 }
+        VolR { map, i: from, end, chain: Vec::new(), vouched: 0, summed: false }
     }
     /// Where the next read is, and the volume read: a reader made over them reads on from here.
     pub fn at(&self) -> usize {
@@ -785,6 +787,11 @@ impl VolR {
     /// An overlay's reader: what it names read from `chain`.
     pub fn with_chain(mut self, chain: Vec<Rc<Base>>) -> VolR {
         self.chain = chain;
+        self
+    }
+    /// A reader of a volume whose sum was found to hold: what it wrote is vouched for, not checked again.
+    pub fn summed(mut self) -> VolR {
+        self.summed = true;
         self
     }
     /// The volume read, mapped.
@@ -827,7 +834,8 @@ impl VolR {
     /// An arena and how many of its leading bytes are its volume's, unchanged: what that volume's sum vouches for.
     pub fn arena_vouched<T: Pod>(&mut self) -> Result<(Arena<T>, usize), String> {
         let a = self.arena()?;
-        Ok((a, self.vouched))
+        let v = if self.summed { std::mem::size_of_val::<[T]>(&a) } else { self.vouched };
+        Ok((a, v))
     }
     /// An arena of T, after `ok` approved its words: for a T not every bit pattern of which is a value.
     pub fn arena_checked<T: Pod>(&mut self, ok: impl Fn(&[u32]) -> bool) -> Result<Arena<T>, String> {

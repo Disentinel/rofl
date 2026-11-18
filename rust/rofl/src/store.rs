@@ -1065,14 +1065,33 @@ pub struct Stretch {
     raw: std::sync::OnceLock<Raw>,
     /// of a file's own unit kept: its trees, as they were kept
     forests: std::sync::OnceLock<Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>>,
+    /// kept: its firings read where they lie, until it is unfolded
+    wits: std::sync::OnceLock<Wits>,
+    /// kept: something read it where it lies (`Stretch::bodies_read`)
+    opened: std::sync::atomic::AtomicBool,
     /// the relations it wrote a fact of, and the facts lying elsewhere it holds a firing of: both in order
     rels: Vec<Sym>,
     far: Vec<FactId>,
+    /// the relations it wrote a fact of with the book of each, in order
+    books: Vec<(Sym, Sym)>,
     /// its own facts of a relation by the value at one argument, made when first read so
     keyed: Keyed,
 }
 
-type Keys = FxMap<u64, Vec<FactId>>;
+/// A stretch's facts of a relation by the value at one argument: the values sorted, each beside its fact, so a fact
+/// costs twelve bytes where a map of lists cost five times that.
+#[derive(Default)]
+struct Keys {
+    vals: Vec<u64>,
+    ids: Vec<FactId>,
+}
+
+impl Keys {
+    fn get(&self, v: u64) -> &[FactId] {
+        let a = self.vals.partition_point(|&x| x < v);
+        &self.ids[a..a + self.vals[a..].partition_point(|&x| x == v)]
+    }
+}
 
 /// By the place of the relation in `rels` and the argument: the first four each in a cell written once, read with no
 /// lock by every thread; the others behind one.
@@ -1087,6 +1106,8 @@ impl Keyed {
     }
 }
 
+static BODIES_READ: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 /// The segment of a stretch cooled to a file of its own, out of the kept scroll.
 pub const COOLED: u32 = u32::MAX;
 
@@ -1095,7 +1116,9 @@ struct Kept {
     over: Rc<(Store, Heap)>,
     map: Rc<crate::arena::Region>,
     at: usize,
-    /// the segment of the scroll it lies in, and where its record begins there
+    /// where its trees lie, 0 for none
+    trees: usize,
+    /// the segment of the scroll it lies in, and where its head begins there
     seg: u32,
     start: usize,
 }
@@ -1109,6 +1132,35 @@ struct Raw {
     by_rel: FxMap<Sym, Vec<FactId>>,
     /// its facts by the hash of their key, made when first asked
     keys: std::sync::OnceLock<FxMap<u64, Vec<FactId>>>,
+}
+
+/// A kept stretch's firings where they lie: four words a firing (fact, rule, tick, premises), the premises, where
+/// each firing's premises begin, and its firings by fact.
+struct Wits {
+    fired: crate::arena::Arena<u32>,
+    prems: crate::arena::Arena<PremRef>,
+    at: Vec<u32>,
+    by: Vec<(FactId, u32)>,
+}
+
+impl Wits {
+    /// The firings of `id`, as its chain would hold them unfolded: the last put first, one put again not twice.
+    fn of(&self, id: FactId) -> Vec<(Sym, u32, &[PremRef])> {
+        let a = self.by.partition_point(|x| x.0 < id);
+        let b = a + self.by[a..].partition_point(|x| x.0 == id);
+        let mut seen: FxSet<u64> = FxSet::default();
+        let mut out: Vec<(Sym, u32, &[PremRef])> = Vec::with_capacity(b - a);
+        for &(_, i) in &self.by[a..b] {
+            let (x, i) = (&self.fired[4 * i as usize..4 * i as usize + 4], i as usize);
+            let ps = &self.prems[self.at[i] as usize..self.at[i + 1] as usize];
+            if !seen.insert(firing_hash(id, x[1], ps)) && out.iter().any(|(r, _, p)| *r == x[1] && *p == ps) {
+                continue;
+            }
+            out.push((x[1], x[2], ps));
+        }
+        out.reverse();
+        out
+    }
 }
 
 /// A stretch's own facts and firings as they are kept.
@@ -1125,14 +1177,32 @@ static UNFOLD: std::sync::Mutex<()> = std::sync::Mutex::new(());
 const OPEN: u64 = u64::MAX;
 
 impl Stretch {
-    /// A STRETCH AS IT IS KEPT: its own facts in the order of their ids and every firing it holds, of them and of
-    /// facts that lie elsewhere. Nothing of what it read is written, and its indexes are made again when it is read.
-    /// `trees`: it is a file's own, whose trees the units above read, and they are kept with it.
-    pub fn write(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<(), String> {
+    /// A STRETCH AS IT IS KEPT: its body (`write_body`), then its head (`write_head`); where the head lies.
+    pub fn write(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<usize, String> {
+        let body = self.write_body(w, trees)?;
+        let at = w.at();
+        self.write_head(w, body);
+        Ok(at)
+    }
+
+    /// Its head, what an opening reads: its ids, the relations it wrote, the facts lying elsewhere it holds a firing
+    /// of, and where its body lies.
+    pub fn write_head(&self, w: &mut crate::arena::VolW, body: (usize, usize)) {
         w.u32(self.lo);
         w.u32(self.hi);
         w.arena(&self.rels);
         w.arena(&self.far);
+        w.arena(&self.books.iter().flat_map(|(r, b)| [*r, *b]).collect::<Vec<u32>>());
+        w.u64(body.0 as u64);
+        w.u64(body.1 as u64);
+    }
+
+    /// Its body, read when something reads it: its own facts in the order of their ids and every firing it holds,
+    /// of them and of facts that lie elsewhere; nothing of what it read, its indexes made again when it is read.
+    /// `trees`: it is a file's own, whose trees the units above read, and they are kept with it. Where its facts
+    /// and its trees lie (0: none kept).
+    pub fn write_body(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<(usize, usize), String> {
+        let at = w.at();
         match &self.kept {
             // (kept already: what lies there is what it would write)
             Some(k) => {
@@ -1151,11 +1221,15 @@ impl Stretch {
                 w.arena(&p.prems);
             }
         }
-        let fs: Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>> = match (trees, self.forests.get()) {
+        let fs: Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>> = match (trees, self.kept_forests()) {
             (false, _) => Vec::new(),
             (true, Some(fs)) => fs.clone(),
             (true, None) => self.store().virtuals.iter().map(|v| v.forests.clone()).collect(),
         };
+        if fs.is_empty() {
+            return Ok((at, 0));
+        }
+        let trees_at = w.at();
         w.u32(fs.len() as u32);
         for f in &fs {
             w.u32(f.len() as u32);
@@ -1164,7 +1238,31 @@ impl Stretch {
                 t.write(w);
             }
         }
-        Ok(())
+        Ok((at, trees_at))
+    }
+
+    /// Its trees as a file's own unit kept them, read from there when first asked for.
+    fn kept_forests(&self) -> Option<&Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>> {
+        if let Some(fs) = self.forests.get() {
+            return Some(fs);
+        }
+        let k = self.kept.as_ref().filter(|k| k.trees != 0)?;
+        Some(self.forests.get_or_init(|| {
+            self.opens();
+            let mut r = crate::arena::VolR::new(k.map.clone(), k.trees);
+            let mut read = || -> Result<Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>>, String> {
+                let mut fs = Vec::new();
+                for _ in 0..r.u32()? {
+                    let mut f = Vec::new();
+                    for _ in 0..r.u32()? {
+                        f.push((r.u32()?, Rc::new(crate::forest::Forest::read(&mut r)?)));
+                    }
+                    fs.push(Rc::from(f));
+                }
+                Ok(fs)
+            };
+            read().expect("a kept stretch's trees read once read again")
+        }))
     }
 
     /// Its own facts in `order` and every firing it holds, each of its own ids named by `to`.
@@ -1215,7 +1313,7 @@ impl Stretch {
         }
         let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
         let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
-        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), forests: Default::default(), raw: Default::default() })
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), books: self.books.clone(), forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
     }
 
     /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
@@ -1250,31 +1348,19 @@ impl Stretch {
         }
     }
 
-    /// The stretch `write` kept, to be unfolded when first read: over `over`, a fork of the core that wrote nothing
-    /// and the core's heap.
+    /// The stretch whose head `r` reads (`write_head`), its body to be read where it lies when first read: over
+    /// `over`, a fork of the core that wrote nothing and the core's heap.
     pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR, seg: u32) -> Result<Stretch, String> {
         let start = r.at();
         let (lo, hi) = (r.u32()?, r.u32()?);
         let (rels, far) = (r.arena::<u32>()?.to_vec(), r.arena::<u32>()?.to_vec());
-        let at = r.at();
-        r.arena::<u32>()?;
-        r.arena::<u64>()?;
-        r.arena::<u32>()?;
-        r.arena::<PremRef>()?;
-        let mut fs: Vec<Rc<[(Sym, Rc<crate::forest::Forest>)]>> = Vec::new();
-        for _ in 0..r.u32()? {
-            let mut f = Vec::new();
-            for _ in 0..r.u32()? {
-                f.push((r.u32()?, Rc::new(crate::forest::Forest::read(r)?)));
-            }
-            fs.push(Rc::from(f));
+        let books = r.arena::<u32>()?.chunks_exact(2).map(|x| (x[0], x[1])).collect();
+        let (at, trees) = (r.u64()? as usize, r.u64()? as usize);
+        if at.max(trees) >= r.map().len() {
+            return Err("a kept stretch is not one".into());
         }
-        let forests = std::sync::OnceLock::new();
-        if !fs.is_empty() {
-            let _ = forests.set(fs);
-        }
-        let kept = Some(Kept { over: over.clone(), map: r.map(), at, seg, start });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, forests, raw: Default::default() })
+        let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees, seg, start });
+        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
     }
 
     /// The segment of the scroll it is kept in, and where its record begins there. None for one cooled out of
@@ -1288,9 +1374,21 @@ impl Stretch {
         self.kept.is_some()
     }
 
+    /// How many kept stretches this process read a body of: what a question over a kept world opened of it.
+    pub fn bodies_read() -> usize {
+        BODIES_READ.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn opens(&self) {
+        if self.kept.is_some() && !self.opened.swap(true, std::sync::atomic::Ordering::Relaxed) {
+            BODIES_READ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
     /// The stretch itself: as it was settled, or read now from where it is kept.
     pub fn store(&self) -> &Store {
         self.store.get_or_init(|| {
+            self.opens();
             let k = self.kept.as_ref().expect("a stretch not kept is unfolded");
             let _one = UNFOLD.lock().unwrap();
             let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
@@ -1308,6 +1406,7 @@ impl Stretch {
         }
         let k = self.kept.as_ref()?;
         Some(self.raw.get_or_init(|| {
+            self.opens();
             let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
             let (recs, args) = (r.arena::<u32>().expect("a kept stretch"), r.arena::<u64>().expect("a kept stretch"));
             let mut at = Vec::with_capacity(recs.len() / 4 + 1);
@@ -1320,6 +1419,30 @@ impl Stretch {
             }
             at.push(o);
             Raw { recs, args, at, by_rel, keys: Default::default() }
+        }))
+    }
+
+    fn wits(&self) -> Option<&Wits> {
+        if self.store.get().is_some() {
+            return None;
+        }
+        let k = self.kept.as_ref()?;
+        Some(self.wits.get_or_init(|| {
+            self.opens();
+            let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
+            let _ = (r.arena::<u32>().expect("a kept stretch"), r.arena::<u64>().expect("a kept stretch"));
+            let (fired, prems) = (r.arena::<u32>().expect("a kept stretch"), r.arena::<PremRef>().expect("a kept stretch"));
+            let mut at = Vec::with_capacity(fired.len() / 4 + 1);
+            let mut by = Vec::with_capacity(fired.len() / 4);
+            let mut o = 0u32;
+            for (i, x) in fired.chunks_exact(4).enumerate() {
+                at.push(o);
+                o += x[3];
+                by.push((x[0], i as u32));
+            }
+            at.push(o);
+            by.sort_unstable();
+            Wits { fired, prems, at, by }
         }))
     }
 
@@ -1382,7 +1505,7 @@ impl Stretch {
 
     /// The forests of the closure `ci` this stretch answers with: as it was settled, or as a file's unit kept them.
     pub fn forests(&self, ci: usize) -> Rc<[(Sym, Rc<crate::forest::Forest>)]> {
-        match self.forests.get() {
+        match self.kept_forests() {
             Some(fs) => fs.get(ci).cloned().unwrap_or_else(|| Rc::from(Vec::new())),
             None => self.store().virtuals[ci].forests.clone(),
         }
@@ -1419,13 +1542,9 @@ impl Stretch {
     fn keyed(&self, h: &Heap, rel: Sym, p: u8) -> Option<&Keys> {
         let i = self.rels.binary_search(&rel).ok()?;
         let make = || {
-            let mut ix = Keys::default();
-            for k in self.of_rel(rel) {
-                if let Some(&t) = self.args(k).get(p as usize) {
-                    ix.entry(if h.is_ground(t) { t.bits() } else { OPEN }).or_default().push(k);
-                }
-            }
-            ix
+            let mut at: Vec<(u64, FactId)> = self.of_rel(rel).into_iter().filter_map(|k| self.args(k).get(p as usize).map(|&t| (if h.is_ground(t) { t.bits() } else { OPEN }, k))).collect();
+            at.sort_unstable();
+            Keys { vals: at.iter().map(|x| x.0).collect(), ids: at.iter().map(|x| x.1).collect() }
         };
         if let Some(cell) = self.keyed.low[i].get(p as usize) {
             return Some(cell.get_or_init(make));
@@ -1454,7 +1573,7 @@ impl Stretch {
             return;
         }
         let mut best: Option<(&Keys, u64, usize)> = None;
-        let len = |ix: &Keys, v: u64| ix.get(&v).map_or(0, Vec::len) + ix.get(&OPEN).map_or(0, Vec::len);
+        let len = |ix: &Keys, v: u64| ix.get(v).len() + ix.get(OPEN).len();
         for (&p, v) in pos.iter().zip(vals).filter(|(p, v)| **p < 256 && h.is_ground(**v)) {
             let Some(ix) = self.keyed(h, rel, p as u8) else { return };
             let n = len(ix, v.bits());
@@ -1473,7 +1592,7 @@ impl Stretch {
             out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
             return;
         };
-        for k in ix.get(&v).into_iter().chain(ix.get(&OPEN)).flatten().copied() {
+        for k in ix.get(v).iter().chain(ix.get(OPEN)).copied() {
             let a = self.args(k);
             if a.len() == arity && persp.is_none_or(|q| self.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v)) {
                 out.push(k);
@@ -1510,7 +1629,7 @@ pub struct Near {
     trees: Option<Rc<TreeOf>>,
     /// in the world's reader: the closures the trees of the files' own units answer, each with the forests of
     /// every file
-    forest: Option<FxMap<usize, Forests>>,
+    forest: Option<Rc<AllTrees>>,
     /// the stretches an edit replaced: a proof kept from before may still name a fact by its id there
     ghosts: Option<Rc<Lower>>,
     /// this store's own ids end here: a stretch laid again where it stood may name a fact that lies above it
@@ -1518,6 +1637,24 @@ pub struct Near {
 }
 
 pub type Forests = Rc<[(Sym, Rc<crate::forest::Forest>)]>;
+
+/// The closures the trees of the files' own units answer, and each one's forests of every file, gathered from the
+/// units when a question first reads one whole.
+pub struct AllTrees {
+    leaves: Vec<Rc<Stretch>>,
+    cis: FxSet<usize>,
+    by: std::sync::OnceLock<FxMap<usize, Forests>>,
+}
+
+impl AllTrees {
+    fn get(&self, ci: usize) -> Option<Forests> {
+        if !self.cis.contains(&ci) {
+            return None;
+        }
+        let by = self.by.get_or_init(|| self.cis.iter().map(|&ci| (ci, self.leaves.iter().flat_map(|s| s.forests(ci).to_vec()).collect())).collect());
+        by.get(&ci).cloned()
+    }
+}
 
 /// The stretch a file's own unit left, by a node of the file.
 pub type TreeOf = dyn Fn(Term) -> Option<Rc<Stretch>> + Send + Sync;
@@ -1530,6 +1667,41 @@ pub struct Lower {
     by_lo: Vec<u32>,
     /// the relations a stretch of `list` wrote a fact of
     rels: FxSet<Sym>,
+    /// what the planner counted of its rows, once for every unit of the layer that reads them
+    counted: std::sync::Mutex<FxMap<GroupsKey, Rc<Counts>>>,
+}
+
+/// A premise's shape as the planner counts it: the relation, the book, the constant positions, the bound positions.
+type GroupsKey = (Sym, Option<Sym>, Vec<usize>, Vec<usize>);
+
+/// The rows of a relation by the values of its constant positions (one or two, the bits of each), and how many
+/// distinct values the bound positions take among them (`Store::probe_groups`).
+pub type Counts = FxMap<(u64, u64), (usize, usize)>;
+
+/// `Counts` of the rows `each` gives, each with its book and arguments.
+fn count_groups(h: &Heap, each: impl FnOnce(&mut dyn FnMut(Sym, &[Term])), persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> Counts {
+    let mut rows: Counts = FxMap::default();
+    let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
+    each(&mut |p, a| {
+        if persp.is_some_and(|q| q != p) {
+            return;
+        }
+        let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
+        let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { return };
+        let c = (c0, c1);
+        rows.entry(c).or_default().0 += 1;
+        if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+            let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+            for &p in vpos {
+                x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+            }
+            seen.insert((c, x));
+        }
+    });
+    for (c, _) in seen {
+        rows.get_mut(&c).expect("a value seen is counted").1 += 1;
+    }
+    rows
 }
 
 impl Lower {
@@ -1537,7 +1709,25 @@ impl Lower {
         let mut by_lo: Vec<u32> = (0..list.len() as u32).collect();
         by_lo.sort_unstable_by_key(|&i| list[i as usize].lo);
         let rels = list.iter().flat_map(|s| s.rels()).collect();
-        Lower { list, route, by_lo, rels }
+        Lower { list, route, by_lo, rels, counted: Default::default() }
+    }
+
+    /// What the planner counts of the rows of `rel` its stretches hold, by premise shape: counted once, since every
+    /// unit of the layer reads the same stretches by key.
+    fn groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> Rc<Counts> {
+        let key = (rel, persp, cpos.to_vec(), vpos.to_vec());
+        if let Some(g) = self.counted.lock().unwrap().get(&key) {
+            return g.clone();
+        }
+        let g = Rc::new(count_groups(h, |f| {
+            for s in self.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+                for k in s.of_rel(rel) {
+                    f(s.rec(k).persp, s.args(k));
+                }
+            }
+        }, persp, cpos, vpos));
+        self.counted.lock().unwrap().insert(key, g.clone());
+        g
     }
     fn of(&self, id: FactId) -> Option<&Stretch> {
         let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);
@@ -1577,6 +1767,11 @@ impl Near {
 
     fn len(&self, rel: Sym, persp: Option<Sym>) -> usize {
         self.lens(rel).iter().filter(|(p, _)| persp.is_none_or(|q| q == *p)).map(|(_, n)| n).sum()
+    }
+
+    /// Whether `each` gives a row of the relation in the book: read in the stretches that wrote one alone.
+    fn holds(&self, rel: Sym, persp: Sym) -> bool {
+        self.whole && self.all().any(|s| s.books.binary_search(&(rel, persp)).is_ok() && s.of_rel(rel).into_iter().any(|k| s.rec(k).persp == persp))
     }
 
     fn rows(&self, facts: &Facts, h: &Heap, rel: Sym) -> NearRows {
@@ -2688,7 +2883,7 @@ impl Store {
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
     pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, trees: Option<Rc<TreeOf>>, forest: Option<(Vec<Rc<Stretch>>, FxSet<usize>)>) {
         let whole = trees.is_none() || forest.is_some();
-        let forest: Option<FxMap<usize, Forests>> = forest.map(|(leaves, cis)| cis.into_iter().map(|ci| (ci, leaves.iter().flat_map(|s| s.forests(ci).to_vec()).collect())).collect());
+        let forest = forest.map(|(leaves, cis)| Rc::new(AllTrees { leaves, cis, by: Default::default() }));
         let core = self.facts.recs.mark;
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
@@ -2914,20 +3109,19 @@ impl Store {
     pub fn tree_of(&self, ci: usize, node: Option<Term>) -> Option<Rc<[(Sym, Rc<crate::forest::Forest>)]>> {
         let near = self.facts.near.as_ref()?;
         let trees = near.trees.as_ref()?;
-        let all = match &near.forest {
-            Some(by) => Some(by.get(&ci)?),
-            None => None,
-        };
-        match (node, all) {
+        if near.forest.as_ref().is_some_and(|f| !f.cis.contains(&ci)) {
+            return None;
+        }
+        match (node, &near.forest) {
             (Some(node), _) => Some(trees(node).map_or_else(|| Rc::from(Vec::new()), |s| s.forests(ci))),
-            (None, Some(all)) => Some(all.clone()),
+            (None, Some(all)) => all.get(ci),
             (None, None) => panic!("a unit reads a tree from a node, never whole"),
         }
     }
 
     /// In the world's reader, the trees of the closure `ci` the files' units left, all of them.
     pub fn held_trees(&self, ci: usize) -> Option<Forests> {
-        self.facts.near.as_ref()?.forest.as_ref()?.get(&ci).cloned()
+        self.facts.near.as_ref()?.forest.as_ref()?.get(ci)
     }
 
     /// Whether this store reads its trees from the units of the files.
@@ -2988,9 +3182,11 @@ impl Store {
         }
         self.dup_window = None;
         let (mut rels, mut far): (Vec<Sym>, Vec<FactId>) = (self.idx.own.keys().copied().collect(), self.far_heads.keys().copied().collect());
+        let mut books: Vec<(Sym, Sym)> = self.idx.own.iter().flat_map(|(r, v)| v.iter().map(move |(b, _)| (*r, *b))).collect();
         rels.sort_unstable();
         far.sort_unstable();
-        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, forests: Default::default(), raw: Default::default() }
+        books.sort_unstable();
+        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() }
     }
 
     /// The candidates the stretches read here hold, added to this store's own, read whole where it declined: a
@@ -3270,7 +3466,7 @@ impl Store {
     /// Whether a live fact of `rel` stands in the book `persp`, here or in a stretch read here: `rel_persp` not empty,
     /// without the rows of the stretches gathered and sorted.
     pub fn any_in(&mut self, h: &Heap, rel: Sym, persp: Sym) -> bool {
-        if self.facts.near.as_ref().is_some_and(|n| n.len(rel, Some(persp)) > 0) {
+        if self.facts.near.as_ref().is_some_and(|n| n.holds(rel, persp)) {
             return true;
         }
         self.absorb(h, rel, persp);
@@ -3378,57 +3574,69 @@ impl Store {
     /// trusted for a column of many values, and an estimate off by a factor
     /// of ten here costs a join order ten times worse.
     pub fn probe_stats(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], cvals: &[Term], vpos: &[usize]) -> (usize, usize) {
-        let mut rows = 0usize;
-        let mut seen: FxSet<u64> = FxSet::default();
-        self.each_row(rel, |p, k| {
-            if persp.is_some_and(|q| q != p) {
-                return;
-            }
-            let a = self.facts.args(k);
-            if !cpos.iter().zip(cvals).all(|(&p, &v)| a.get(p) == Some(&v)) {
-                return;
-            }
-            rows += 1;
-            if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
-                let mut x: u64 = 0xcbf2_9ce4_8422_2325;
-                for &p in vpos {
-                    x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+        if cpos.len() > 2 {
+            let mut rows = 0usize;
+            let mut seen: FxSet<u64> = FxSet::default();
+            self.each_counted(rel, &mut |p, a| {
+                if persp.is_some_and(|q| q != p) || !cpos.iter().zip(cvals).all(|(&p, &v)| a.get(p) == Some(&v)) {
+                    return;
                 }
-                seen.insert(x);
-            }
-        });
-        (rows, seen.len().clamp(1, rows.max(1)))
+                rows += 1;
+                if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
+                    let mut x: u64 = 0xcbf2_9ce4_8422_2325;
+                    for &p in vpos {
+                        x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
+                    }
+                    seen.insert(x);
+                }
+            });
+            return (rows, seen.len().clamp(1, rows.max(1)));
+        }
+        let at = (cvals.first().map_or(0, |t| t.bits()), cvals.get(1).map_or(0, |t| t.bits()));
+        self.probe_groups(h, rel, persp, cpos, vpos).get(&at).copied().unwrap_or((0, 1))
     }
 
-    /// `probe_stats` for every value of the constant positions `cpos` (one or two) at once, by the values' bits: one
-    /// pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`).
+    /// `probe_stats` for every value of the constant positions `cpos` (none, one or two) at once, by the values'
+    /// bits: one pass where a plan asks the same premise under many constants (`node(N, "CallExpression")`). A
+    /// unit counts the stretches of the layers below it too, which it reads by key though a whole read of it does
+    /// not: a planner blind to them reads them by a key that holds every file's rows (f_a_unit_planned_blind_to_its_children).
     pub fn probe_groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> FxMap<(u64, u64), (usize, usize)> {
-        let mut rows: FxMap<(u64, u64), (usize, usize)> = FxMap::default();
-        let mut seen: FxSet<((u64, u64), u64)> = FxSet::default();
-        self.each_row(rel, |p, k| {
-            if persp.is_some_and(|q| q != p) {
-                return;
+        let mut rows = count_groups(h, |f| self.each_counted_here(rel, f), persp, cpos, vpos);
+        if let Some(l) = self.facts.near.as_ref().filter(|n| !n.whole).and_then(|n| n.lower.as_ref()) {
+            for (c, &(r, d)) in l.groups(h, rel, persp, cpos, vpos).iter() {
+                let e = rows.entry(*c).or_default();
+                e.0 += r;
+                e.1 += d;
             }
-            let a = self.facts.args(k);
-            let bits = |i: usize| cpos.get(i).map_or(Some(0), |&p| a.get(p).map(|t| t.bits()));
-            let (Some(c0), Some(c1)) = (bits(0), bits(1)) else { return };
-            let c = (c0, c1);
-            rows.entry(c).or_default().0 += 1;
-            if !vpos.is_empty() && vpos.iter().all(|&p| a.get(p).is_some_and(|&t| h.is_ground(t))) {
-                let mut x: u64 = 0xcbf2_9ce4_8422_2325;
-                for &p in vpos {
-                    x = (x ^ a[p].bits()).wrapping_mul(0x1000_0000_01b3);
-                }
-                seen.insert((c, x));
-            }
-        });
-        for (c, _) in seen {
-            rows.get_mut(&c).expect("a value seen is counted").1 += 1;
         }
         for v in rows.values_mut() {
             v.1 = v.1.clamp(1, v.0.max(1));
         }
         rows
+    }
+
+    /// Every row of `rel` the planner counts, with its book and arguments: `each_counted_here` and the layers below.
+    fn each_counted(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
+        self.each_counted_here(rel, f);
+        if let Some(l) = self.facts.near.as_ref().filter(|n| !n.whole).and_then(|n| n.lower.as_ref()) {
+            for s in l.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+                for k in s.of_rel(rel) {
+                    f(s.rec(k).persp, s.args(k));
+                }
+            }
+        }
+    }
+
+    /// The rows of `rel` the store reads whole, and in a unit those of the stretches of its own layer it reads by key.
+    fn each_counted_here(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
+        self.each_row(rel, |p, k| f(p, self.facts.args(k)));
+        if let Some(n) = self.facts.near.as_ref().filter(|n| !n.whole) {
+            for s in n.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+                for k in s.of_rel(rel) {
+                    f(s.rec(k).persp, s.args(k));
+                }
+            }
+        }
     }
 
     /// What `probe_groups` counted is still so: the rows of `rel` neither grew, nor died, nor came back.
@@ -4436,6 +4644,12 @@ impl Store {
             for s in n.all() {
                 let own = s.lo <= id && id < s.hi;
                 if !own && s.far.binary_search(&id).is_err() {
+                    continue;
+                }
+                let cut = |r: &Sym| self.lemma_cut.as_ref().is_none_or(|cut| !cut.contains(r));
+                if let (Some(w), Some(k)) = (s.wits(), s.kept.as_ref()) {
+                    // (unfolded, its firings would read over the store it is kept over)
+                    out.extend(w.of(id).into_iter().filter(|x| cut(&x.0)).map(|(rule, tick, prems)| WitView { rule, tick, prems, src: &k.over.0 }));
                     continue;
                 }
                 let s = s.store();
@@ -5523,6 +5737,9 @@ impl Store {
         while let Some(f) = stack.pop() {
             if memo.contains_key(&f) || !seen.insert(f) {
                 continue;
+            }
+            if order.len() & 0xfff == 0 && crate::engine::MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
+                return Err(f);
             }
             order.push(f);
             for n in self.views(f) {
