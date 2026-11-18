@@ -1592,6 +1592,9 @@ impl Lower {
         self.counted.lock().unwrap().insert(key, g.clone());
         g
     }
+    pub fn counted_rows(&self) -> usize {
+        self.counted.lock().unwrap().values().map(|g| g.len()).sum()
+    }
     fn of(&self, id: FactId) -> Option<&Stretch> {
         let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);
         let s = &self.list[*self.by_lo.get(i.checked_sub(1)?)? as usize];

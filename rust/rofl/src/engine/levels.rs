@@ -59,6 +59,7 @@ pub struct Joins {
     pub prof: FxSet<Sym>,
 }
 
+static COOLD: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
 pub struct Unit {
     pub stretch: Rc<Stretch>,
     /// the files below, by their places in the world's order
@@ -1063,6 +1064,7 @@ impl Eval {
         let cost = Mutex::new(self.cost.anew());
         let core_names = (self.h.syms.len() as Sym, self.h.funcs_len());
         let one = Mutex::new(());
+        eprintln!("DBGS live {} MB", crate::engine::HEAP_LIVE.load(Relaxed) >> 20);
         let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let all = (0, files.len() as u32);
@@ -1224,7 +1226,9 @@ impl Eval {
                 if volumes::pressed() {
                     let mut done: Vec<&mut Unit> = out.iter_mut().filter_map(|u| u.get_mut().unwrap().as_mut()?.as_mut().ok()).collect();
                     let (cool, per) = (&cool, done.len().div_ceil(threads).max(1));
+                    let l0 = crate::engine::HEAP_LIVE.load(Relaxed);
                     std::thread::scope(|sc| done.chunks_mut(per).for_each(|us| { sc.spawn(move || cool(us, trees)); }));
+                    COOLD.fetch_add(l0 - crate::engine::HEAP_LIVE.load(Relaxed), Relaxed);
                 }
                 from = to;
             }
@@ -1621,7 +1625,7 @@ impl Eval {
             };
             ms.push(t0.elapsed().as_millis());
             let mut depths = vec![units.clone()];
-            eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis());
+            eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms cooled {} units {} MB", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis(), { let c = cooled.lock().unwrap(); c.units }, { let c = cooled.lock().unwrap(); c.bytes >> 20 }); { let (a, r, d, i): (usize, usize, usize, usize) = units.iter().fold((0,0,0,0), |(a,r,d,i), u| (a + u.asked.len(), r + u.reads.len(), d + u.dir.values().map(|v| v.len() + 4).sum::<usize>(), i + u.inner.values().map(|v| v.len() + 4).sum::<usize>())); let (kl, kb) = { let k = keys.lock().unwrap(); (k.syms.len(), k.syms.bytes()) }; let rl = rows.lock().unwrap().len(); eprintln!("DBGU asked {a} reads {r} dir {d} inner {i} keys {kl} {} MB rows {rl} cooldelta {} MB counted {} masks {}", kb >> 20, COOLD.load(Relaxed) >> 20, lower.as_ref().map_or(0, |l| l.counted_rows()), cx.masks.lock().unwrap().values().map(|m| m.len()).sum::<usize>()); }
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
                 let d = depths.len();
@@ -1640,7 +1644,7 @@ impl Eval {
                 })?;
                 depths.push(units.clone());
                 ms.push(t0.elapsed().as_millis());
-                eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis());
+                eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms cooled {} units {} MB", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis(), { let c = cooled.lock().unwrap(); c.units }, { let c = cooled.lock().unwrap(); c.bytes >> 20 }); { let (a, r, d, i): (usize, usize, usize, usize) = units.iter().fold((0,0,0,0), |(a,r,d,i), u| (a + u.asked.len(), r + u.reads.len(), d + u.dir.values().map(|v| v.len() + 4).sum::<usize>(), i + u.inner.values().map(|v| v.len() + 4).sum::<usize>())); let (kl, kb) = { let k = keys.lock().unwrap(); (k.syms.len(), k.syms.bytes()) }; let rl = rows.lock().unwrap().len(); eprintln!("DBGU asked {a} reads {r} dir {d} inner {i} keys {kl} {} MB rows {rl} cooldelta {} MB counted {} masks {}", kb >> 20, COOLD.load(Relaxed) >> 20, lower.as_ref().map_or(0, |l| l.counted_rows()), cx.masks.lock().unwrap().values().map(|m| m.len()).sum::<usize>()); }
             }
             took.push(ms.iter().scan(0, |at, &m| Some(m - std::mem::replace(at, m))).map(|m| m.to_string()).collect::<Vec<_>>().join("+"));
             tops.push(units.pop().expect("a file at least"));
