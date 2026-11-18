@@ -645,6 +645,7 @@ check[checks]("facts/goldens.rofl", "agg_incr_partial", world).
 check[checks]("facts/goldens.rofl", "agg_incr_readers", world).
 check[checks]("facts/goldens.rofl", "agg_incr_stacked", world).
 check[checks]("facts/goldens.rofl", "agg_incr_staged", world).
+check[checks]("facts/goldens.rofl", "agg_incr_staged_cell", world).
 check[checks]("facts/goldens.rofl", "agg_incr_stale", world).
 check[checks]("facts/goldens.rofl", "agg_incr_stockholes", world).
 check[checks]("facts/goldens.rofl", "agg_incr_sub", world).
@@ -652,6 +653,7 @@ check[checks]("facts/goldens.rofl", "agg_incr_sum", world).
 check[checks]("facts/goldens.rofl", "agg_incr_tag", world).
 check[checks]("facts/goldens.rofl", "agg_incr_tagc", world).
 check[checks]("facts/goldens.rofl", "agg_incr_thr", world).
+check[checks]("facts/goldens.rofl", "agg_incr_thr_after", world).
 check[checks]("facts/goldens.rofl", "agg_incr_twice", world).
 check[checks]("facts/goldens.rofl", "agg_incr_widen", world).
 check[checks]("facts/goldens.rofl", "agg_int_range", world).
@@ -889,6 +891,7 @@ check[checks]("facts/goldens.rofl", "demand_neg_decided", world).
 check[checks]("facts/goldens.rofl", "demand_neg_flush", world).
 check[checks]("facts/goldens.rofl", "demand_neg_hole", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract", world).
+check[checks]("facts/goldens.rofl", "demand_neg_retract_after", world).
 check[checks]("facts/goldens.rofl", "demand_neg_retract_closed", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round", world).
 check[checks]("facts/goldens.rofl", "demand_neg_round_closed", world).
