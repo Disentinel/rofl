@@ -83,6 +83,8 @@ function exec(line: string, budget?: number): void {
   if (line.startsWith('?')) {
     const q = rofl.query(asked(line.slice(1).trim()), { budget });
     if (q.error) { console.log('error: ' + q.error); return; }
+    // a partial answer opens and closes with a line of its own, so that no row read alone passes for the whole answer
+    if (q.partial) console.log('[partial answer: the rows below may be short of the whole answer]');
     if (q.rows.length === 0 && !q.shrugs) console.log('(empty)');
     for (const r of q.rows) {
       const s = sentences ? vocab.say(instance(asked(line.slice(1).trim()), r.bindings)) : null;
