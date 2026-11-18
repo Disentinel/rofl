@@ -348,6 +348,8 @@ cited_check[map](c_watch_rederived, "rust/rofl/tests/watch.rs", "a_row_derived_a
 cited_check[map](c_edit_whole, "rust/rofl/tests/edit.rs", "an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff").
 cited_check[map](c_rule_out_whole, "rust/rofl/tests/rule_edit.rs", "a_rule_out_is_the_world_evaluated_whole_without_it").
 cited_check[map](c_rule_out_each, "rust/rofl/tests/rule_edit.rs", "each_rule_out_and_back_is_the_world_evaluated_whole").
+cited_check[map](c_rule_out_refused, "rust/rofl/tests/rule_edit.rs", "a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it").
+cited_check[map](c_rule_out_spelled, "rust/rofl/tests/rule_edit.rs", "a_rule_named_with_other_variables_and_spacing_is_the_same_rule").
 
 -- `No @async` IS A LIMIT AND NOT A RESERVATION since 2026-09-16, so this
 -- world guards the LIMITS.md bullet and not the START.md sentence it retired.
@@ -371,6 +373,8 @@ guards[map](c_watch_rederived, s_watch_told_what_moved).
 guards[map](c_edit_whole, s_edit_is_the_world_whole).
 guards[map](c_rule_out_whole, s_rule_out_is_the_world_whole).
 guards[map](c_rule_out_each, s_rule_out_is_the_world_whole).
+guards[map](c_rule_out_refused, s_rule_out_is_the_world_whole).
+guards[map](c_rule_out_spelled, s_rule_out_is_the_world_whole).
 
 -- TWO THAT A GOLDEN CANNOT HOLD, and the reason is the same in both: a golden
 -- compares ONE run of one world against its own pin, and these duties are

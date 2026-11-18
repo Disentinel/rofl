@@ -22,6 +22,10 @@ brk("edit_last_kept"). brk_kind("edit_last_kept", switch).
 brk_expects("edit_last_kept", "edit_whole").
 brk("rule_row_out_alone"). brk_kind("rule_row_out_alone", switch).
 brk_expects("rule_row_out_alone", "rule_row_out").
+brk("rule_named_as_written_only"). brk_kind("rule_named_as_written_only", switch).
+brk_expects("rule_named_as_written_only", "rule_spelled").
+brk("rule_out_agg_unrefused"). brk_kind("rule_out_agg_unrefused", switch).
+brk_expects("rule_out_agg_unrefused", "rule_refused").
 brk("rule_out_firings_kept"). brk_kind("rule_out_firings_kept", switch).
 brk_expects("rule_out_firings_kept", "rule_out_whole").
 brk("rule_out_unprepared"). brk_kind("rule_out_unprepared", switch).
@@ -2814,6 +2818,8 @@ switch_site("retract_unrederived", "rust/rofl/src/engine/addition.rs").
 switch_site("roflenox_unsigned", "rust/rofl/src/roflenox.rs").
 switch_site("roots_of_cycle_off", "rust/rofl/src/engine.rs").
 switch_site("rounds_budget_each", "rust/rofl/src/session.rs").
+switch_site("rule_named_as_written_only", "rust/rofl/src/program.rs").
+switch_site("rule_out_agg_unrefused", "rust/rofl/src/engine/addition.rs").
 switch_site("rule_out_firings_kept", "rust/rofl/src/engine/addition.rs").
 switch_site("rule_out_unprepared", "rust/rofl/src/engine/addition.rs").
 switch_site("rule_row_out_alone", "rust/rofl/src/session.rs").

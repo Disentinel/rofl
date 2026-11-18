@@ -275,6 +275,8 @@ check[checks]("rust/rofl/tests/roflenox.rs", "a_book_changed_after_it_was_signed
 check[checks]("rust/rofl/tests/roflenox.rs", "a_batch_signed_by_a_stranger_is_refused", test).
 check[checks]("rust/rofl/tests/roflenox.rs", "another_identity_under_the_same_name_is_refused", test).
 check[checks]("rust/rofl/tests/rule_edit.rs", "a_rule_row_out_is_refused_and_the_rule_out_is_the_world_without_it", test).
+check[checks]("rust/rofl/tests/rule_edit.rs", "a_rule_named_with_other_variables_and_spacing_is_the_same_rule", test).
+check[checks]("rust/rofl/tests/rule_edit.rs", "a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it", test).
 check[checks]("rust/rofl/tests/rule_edit.rs", "a_rule_out_is_the_world_evaluated_whole_without_it", test).
 check[checks]("rust/rofl/tests/rule_edit.rs", "each_rule_out_and_back_is_the_world_evaluated_whole", test).
 check[checks]("rust/rofl/tests/rule_edit.rs", "a_rule_not_held_or_a_row_of_one_is_refused_and_touches_nothing", test).
@@ -1017,6 +1019,7 @@ check[checks]("scripts/goldens.ts", "npm run test:bun", gate).
 check[checks]("scripts/text_check.ts", "npm run textcheck", gate).
 check[checks](".github/workflows/ci.yml", "invariants of CI", ci).
 check[checks](".github/workflows/ci.yml", "typecheck", ci).
+check[checks](".github/workflows/ci.yml", "serve tests (rust)", ci).
 check[checks](".github/workflows/ci.yml", "goldens (node)", ci).
 check[checks](".github/workflows/ci.yml", "npm packages", ci).
 check[checks](".github/workflows/ci.yml", "planted faults", ci).
