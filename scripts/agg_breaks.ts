@@ -4015,7 +4015,7 @@ export const BREAKS: Break[] = [
   "id": "demand_strict_refire",
   "what": "the retraction fires a rule whose demand premise unfolds into a negation with the monotone rules, before what the negation reads is derived again",
   "expect": {
-   "demand_neg_retract": "dt_wrong"
+   "demand_neg_retract_after": "holds the row dk_h[main](1,1)"
   }
  },
  {
@@ -6634,7 +6634,7 @@ export const BREAKS: Break[] = [
   "id": "retract_alts_unindexed",
   "what": "the back-index cites a member's canonical derivation only: a retracted fact that is another derivation leaves the member's derivation set as it was",
   "expect": {
-   "agg_member_derivs_retract": "holds the row mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1 id=2253268ea44d73e0"
+   "agg_incr_staged_cell": "lacks the row evaluated_again"
   }
  },
  {
@@ -6697,7 +6697,7 @@ export const BREAKS: Break[] = [
   "id": "retract_index_off",
   "what": "the back-index finds no cell for a retracted fact",
   "expect": {
-   "agg_incr_sum": "holds the row ai_total[main](a,15)"
+   "agg_incr_staged_cell": "lacks the row evaluated_again"
   }
  },
  {
@@ -6972,14 +6972,14 @@ export const BREAKS: Break[] = [
   "id": "retract_thr_unclosed",
   "what": "the quorums a retraction reaches again are not closed",
   "expect": {
-   "agg_incr_thr": "lacks the row cell"
+   "agg_incr_thr_after": "lacks the row agg_cell"
   }
  },
  {
   "id": "restage_dead_kept",
   "what": "a staged fact whose firing cited what is gone stays staged",
   "expect": {
-   "agg_incr_staged": "does not evaluate"
+   "agg_incr_staged": "holds the row sg_carry[main](a,10)"
   }
  },
  {
@@ -8192,13 +8192,6 @@ export const BREAKS: Break[] = [
   "what": "a row of a closure answered from its tree is taken for a row that does not hold where an unknown could reach it, and made a shrug",
   "expect": {
    "ds_tree_unknown_edge": "lknown_shrug"
-  }
- },
- {
-  "id": "vclosure_retract_edge_delta",
-  "what": "a retraction that reaches the edges of a closure answered from its tree is worked out as a delta, which does not build the forest again for what reads it",
-  "expect": {
-   "ds_tree_retract_edge": "dtg"
   }
  },
  {

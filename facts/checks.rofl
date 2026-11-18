@@ -326,6 +326,10 @@ check_world("demand_neg_retract").
 check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
 check_opt("demand_neg_retract", together, 1).
 check_opt("demand_neg_retract", retract, "dt_z(1)").
+check_world("demand_neg_retract_after").
+check_file("demand_neg_retract_after", "examples/checks/demand-neg-retract-after.rofl").
+check_opt("demand_neg_retract_after", together, 1).
+check_opt("demand_neg_retract_after", retract, "dk_z(1)").
 
 -- the two above in their closed form: the relation's answers ground, read from the store
 -- (f_the_closed_forms_of_the_negation_worlds_are_kept)
@@ -2664,6 +2668,11 @@ check_opt("agg_incr_thr", together, 1).
 check_opt("agg_incr_thr", retract, "th_sale(1, a, 5)").
 check_opt("agg_incr_thr", retract, "th_sale(4, b, 7)").
 proves_work("agg_incr_thr", w_agg_retract_fallback_tail).
+check_world("agg_incr_thr_after").
+check_file("agg_incr_thr_after", "examples/checks/agg-incr-thr-after.rofl").
+check_opt("agg_incr_thr_after", together, 1).
+check_opt("agg_incr_thr_after", retract, "ta_k(a)").
+proves_work("agg_incr_thr_after", w_agg_retract_fallback_tail).
 
 check_world("agg_incr_owner").
 check_file("agg_incr_owner", "examples/checks/agg-incr-owner.rofl").
@@ -2686,6 +2695,13 @@ check_opt("agg_incr_staged", retract, "sg_base0(a)").
 check_opt("agg_incr_staged", retract, "sg_sale(3, b, 9)").
 check_opt("agg_incr_staged", retract, "sg_sale(1, a, 4)").
 proves_work("agg_incr_staged", w_agg_retract_fallback_tail).
+check_world("agg_incr_staged_cell").
+check_file("agg_incr_staged_cell", "examples/checks/agg-incr-staged-cell.rofl").
+check_opt("agg_incr_staged_cell", together, 1).
+check_opt("agg_incr_staged_cell", ticks, 1).
+check_opt("agg_incr_staged_cell", retract, "sc_k(a)").
+check_opt("agg_incr_staged_cell", one_engine, rust).
+proves_work("agg_incr_staged_cell", w_agg_retract_fallback_tail).
 
 check_world("agg_incr_demand").
 check_file("agg_incr_demand", "examples/checks/agg-incr-demand.rofl").

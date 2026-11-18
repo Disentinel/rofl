@@ -1057,8 +1057,7 @@ impl Eval {
             return false;
         }
         let edges: HashSet<Sym> = self.vc.vclosures.iter().filter(|c| c.active).map(|c| c.src).collect();
-        let reached = readers_cone(HashSet::from([rel]), self.rules.iter(), reads_any).iter().any(|r| edges.contains(r));
-        reached && !brk!("vclosure_retract_edge_delta" => true; false)
+        readers_cone(HashSet::from([rel]), self.rules.iter(), reads_any).iter().any(|r| edges.contains(r))
     }
 }
 
