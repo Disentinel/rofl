@@ -87,7 +87,8 @@ and in any book by `ask`: write the book, `calls[code](A, B)`.
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
-a shrug, and `[partial: ...]` when the rows may be short of an answer.
+a shrug, and when the rows may be short of an answer a first line
+`[partial answer: ...]` and a last `[partial: why]` (*A partial answer reads as one*, below).
 `npm run whycheck` holds every one of them to the TypeScript engine byte for
 byte over every world `npm test` loads, refusals included.
 
@@ -183,18 +184,34 @@ write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
 
 **A world larger than memory stops there.** Every `rofl` process watches the
 memory it may use: the least memory limit of its cgroup less a quarter, against
-the cgroup's anonymous memory (so the Node of a notebook in the same container
-counts); without a limit, what the machine has available down to a quarter of
-it; on macOS, four fifths of the machine against the engine's own heap
-(src/bin/rofl/memory.rs). Past it, an evaluation stops as at a step wall, with
+the cgroup's anonymous and shared memory (so the Node of a notebook in the same
+container counts, and a segment cooled to a `/tmp` of tmpfs); without a limit,
+what the machine has available down to a quarter of it; on macOS, four fifths of
+the machine against the process's physical footprint, what the system counts
+against it, about twice the engine's live heap (src/bin/rofl/memory.rs). Past
+it, an evaluation stops at its next step or premise, as at a step wall, with
 `hole($adhoc, memory_exhausted)`: a question verb answers partial (exit 5), says
 on stderr `the world reached the memory this process may use and stopped there:
 its answers are partial, and it is not kept`, and keeps nothing; `rofl serve`
 answers the request with `"stopped":"heap"`, as under a caller's `limit.bytes`,
 and refuses every later request but `close` while the memory stays spent, so a
-host is told instead of finding the engine killed. The wall is checked between
-steps: a phase that takes no steps (reading the files, one firing that solves
-more than the reserve) can still pass it. Nothing to turn on or off.
+host is told instead of finding the engine killed. A corpus settled by levels
+whose units reach it is not evaluated whole after them (the whole world takes
+more): stderr says `volumes: the units reached the memory this process may use`,
+the answer is partial and empty, exit 5. **The edge**: a phase that takes no
+step (reading the files, one firing that takes more than the quarter left) can
+still pass the wall; the watcher keeps the largest rise it saw between two looks,
+and when the next would reach the limit itself it says so on stderr and ends the
+process, exit 5, before the kernel kills it without a word. Measured on the JS
+model over 493 vscode files in a cgroup of 6 GB (2026-11-18): before, killed by
+the kernel at 6.1 GB with no line; now stopped at 5.2 to 5.4 GB with the line,
+whole and by levels. Nothing to turn on or off.
+
+**A partial answer reads as one.** Its first line is `[partial answer: the rows
+below may be short of the whole answer]` and its last says why: `[partial: the
+memory this process may use ran out, and the world stopped there]`, `[partial:
+budget exhausted, hole emitted]` (a step or row wall), the disk cap, or a scan
+that failed; `--json` says `"partial":true`; the exit is 5.
 
 `--kept F` with any verb names the kept world yourself, under the owner's
 stricter rule: computed once, asked many times, each question a new process that

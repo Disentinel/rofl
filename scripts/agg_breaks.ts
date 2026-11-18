@@ -9024,6 +9024,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "memory_wall_sparse",
+  "what": "the memory wall is met only at every thousandth step, so a world that fills the memory within fewer steps goes on past the watcher's word, and at the reference scale a firing of gigabytes between two such steps is killed by the kernel without a line",
+  "expect": {
+   "memory_wall": "the memory wall waited for a later step"
+  }
+ },
+ {
   "id": "kept_cone_lemmas_unread",
   "what": "a kept world that dropped what is below the plan's cut grows its cone without the lemmas its files' lower stage proves, so the rules it adds read nothing and a wider question answers what a fresh world does not",
   "expect": {
@@ -9287,6 +9294,7 @@ export const TESTS: Record<string, string> = {
   demand_scale: 'demand_scale',
   demand_query_ask: 'demand_query',
   demand_fixpoint: 'demand_fixpoint',
+  memory_wall: 'memory_wall',
   // a name of a test after the file runs that test alone
   incremental_cell_cycle: 'incremental a_fact_a_changed_cell_concluded_goes_whole',
   incremental_thr_outer: 'incremental a_threshold_whose_outer_premise_goes',

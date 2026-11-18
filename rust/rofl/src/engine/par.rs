@@ -564,6 +564,10 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
         if cur.is_empty() {
             break;
         }
+        // the memory wall is the written path's to meet, before the next premise multiplies these
+        if super::MEMORY_FULL.load(Ordering::Relaxed) {
+            return None;
+        }
     }
     Some((cur, levels))
 }
