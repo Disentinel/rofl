@@ -162,7 +162,6 @@ check[checks]("rust/rofl/tests/incremental.rs", "a_component_stratified_by_its_d
 check[checks]("rust/rofl/tests/incremental.rs", "two_components_and_what_reads_them_are_run_again_where_they_changed", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_answered_on_demand_and_its_callers_are_made_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_goes_with_any_retraction", test).
-check[checks]("rust/rofl/tests/incremental.rs", "a_refused_delta_says_every_reason", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_question_made_beside_a_lattice_is_evaluated_again", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_cell_read_again_beside_its_own_retraction_is_read_again_whole", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_rule_read_again_whole_that_concludes_what_a_changed_cell_concludes_is_the_same", test).
@@ -257,7 +256,7 @@ check[checks]("rust/rofl/tests/prov_lazy.rs", "why_of_a_derived_by_row_and_a_for
 check[checks]("rust/rofl/tests/resume.rs", "a_resumed_evaluation_is_a_whole_one", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_another_book_does_not_stop_the_delta", test).
 check[checks]("rust/rofl/tests/retract_refuse.rs", "a_base_fact_in_the_same_book_is_taken_by_the_sets_pass", test).
-check[checks]("rust/rofl/tests/retract_refuse.rs", "the_engine_delta_refuses_two_facts_at_once", test).
+check[checks]("rust/rofl/tests/retract_refuse.rs", "a_refused_retraction_touches_nothing", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_base_fact_a_rule_still_makes_stands", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_fact_kept_by_a_longer_proof_stands_higher_in_its_cell", test).
 check[checks]("rust/rofl/tests/retract_set.rs", "a_set_taken_out_in_one_pass_is_the_fresh_world", test).

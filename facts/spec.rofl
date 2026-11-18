@@ -347,6 +347,7 @@ cited_check[map](c_watch_told, "rust/rofl/tests/watch.rs", "random_edits_are_tol
 cited_check[map](c_watch_rederived, "rust/rofl/tests/watch.rs", "a_row_derived_again_is_no_change").
 cited_check[map](c_edit_whole, "rust/rofl/tests/edit.rs", "an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff").
 cited_check[map](c_retract_is_edit, "rust/rofl/tests/edit.rs", "a_retract_is_an_edit_of_one_fact").
+cited_check[map](c_refusal_untouched, "rust/rofl/tests/retract_refuse.rs", "a_refused_retraction_touches_nothing").
 cited_check[map](c_rule_out_whole, "rust/rofl/tests/rule_edit.rs", "a_rule_out_is_the_world_evaluated_whole_without_it").
 cited_check[map](c_rule_out_each, "rust/rofl/tests/rule_edit.rs", "each_rule_out_and_back_is_the_world_evaluated_whole").
 cited_check[map](c_rule_out_refused, "rust/rofl/tests/rule_edit.rs", "a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it").
@@ -373,6 +374,7 @@ guards[map](c_watch_told, s_watch_told_what_moved).
 guards[map](c_watch_rederived, s_watch_told_what_moved).
 guards[map](c_edit_whole, s_edit_is_the_world_whole).
 guards[map](c_retract_is_edit, s_edit_is_the_world_whole).
+guards[map](c_refusal_untouched, s_edit_is_the_world_whole).
 guards[map](c_rule_out_whole, s_rule_out_is_the_world_whole).
 guards[map](c_rule_out_each, s_rule_out_is_the_world_whole).
 guards[map](c_rule_out_refused, s_rule_out_is_the_world_whole).
