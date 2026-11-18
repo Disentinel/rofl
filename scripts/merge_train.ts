@@ -72,7 +72,14 @@ async function pick(): Promise<void> {
     if (p.draft || !labels.includes(QUEUE)) continue;
     const runs = (await gh<{ check_runs: { name: string; conclusion: string | null }[] }>('GET', `/commits/${p.head.sha}/check-runs?per_page=100`)).check_runs;
     const red = FAST.filter((j) => !runs.some((r) => r.name === j && r.conclusion === 'success'));
-    if (red.length) { console.error(`#${p.number} waits: ${red.join(', ')} not green on ${p.head.sha.slice(0, 7)}`); continue; }
+    if (red.length) {
+      // a request that conflicts with main gets no run of ci.yml at all, and would wait for ever (#274)
+      if ((await gh<{ mergeable: boolean | null }>('GET', `/pulls/${p.number}`)).mergeable === false) {
+        await returnPr({ number: p.number } as Pr, 'This conflicts with main, so GitHub runs no CI on it and the train cannot take it. Merge main and label it `queue` again.');
+        console.error(`#${p.number} returned: it conflicts with main`);
+      } else console.error(`#${p.number} waits: ${red.join(', ')} not green on ${p.head.sha.slice(0, 7)}`);
+      continue;
+    }
     ready.push({ number: p.number, title: p.title, ref: p.head.ref, head: p.head.sha, base: '', labels });
   }
   const solo = ready.some((p) => p.labels.includes(RED));
