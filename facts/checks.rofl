@@ -3897,6 +3897,7 @@ check_file("product_rofl", "models/product/rofl.rofl").
 check_file("product_rofl", "facts/commands.rofl").
 check_file("product_rofl", "facts/bench.rofl").
 check_file("product_rofl", "examples/checks/product-facts.rofl").
+check_file("product_rofl", "facts/worklist.rofl").
 -- no gate on a hardcoded number (models/engine/gates.rofl) over a small crate: the gates by a named constant, directly
 -- and through a field and a product, a bare number, a gate with a task and no source, a fact of a gate that is gone
 check_world("gates_rust").

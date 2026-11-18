@@ -4098,6 +4098,16 @@ work_state(w_rofl_by_the_product_model, open).
 work_spawned(w_rofl_by_the_product_model, f_the_goal_written_as_facts_names_its_holes).
 work_spawned(w_rofl_by_the_product_model, f_the_js_model_grows_in_proportion_and_the_seconds_do_not).
 
+work(w_test_every_codepath,
+  "Closes the owner's invariant `tested` (models/product/rofl.rofl): All effects covered with world/scenario tests. RED 2026-11-16 by `npm run product`: the codepath by levels (bin/rofl/load.rs answer_by_volumes, engine/levels.rs) can write, delete and read files, read the environment, run a process, exit, spawn threads, read the clock, say `hot:` and give the profile, and no scenario of the tree goes it: npm test prints the state of a world (no question), whycheck, test:hosts and bench go through rofl serve, test:npm asks a world below VOLUMES_FROM. Only Rust tests reach it, through the oracle ROFL_VOLUMES=1. Closed when a scenario goes it by what the engine decides, not by an oracle (a world of npm test asked over files, or the gate VOLUMES_FROM restated so that a corpus of a few files goes by levels).").
+work_state(w_test_every_codepath, open).
+closes_invariant(w_test_every_codepath, tested).
+
+work(w_restate_the_numbered_gates,
+  "Closes the owner's invariant `no_magic_gate` (models/product/rofl.rofl, models/engine/gates.rofl): No gates based on hardcoded numeric constant. RED 2026-11-16 with 29 gates whose number has no source in facts/gates.rofl, by task: tell (HOT_READ, HOT_SHARE), show (SHOWN, WHY_MEMBERS, WIDTH), cheaper (VOLUMES_FROM, MIN_INDEXED, FEW, MARGIN, MARGIN_FULL, REF_MIN, STITCH_MIN, LABEL_REGIONS, OVER_MOST, FAR), room (MEMO_BYTES, FLOOR, SLACK, MAX_PATTERNS), stop (MAX_DEPTH, MAX_ALTERNATIONS, DEFAULT_SPACE, SPACE, BUDGET, DEFAULT_BUDGET, POLICY_BUDGET, WN_FAR, MAX_ALIAS, MAX_WANTS). Each is restated by its task and given its source (a target of the goal, a forecast, the machine, the run): for `tell`, the target of a question answered in about a second. One gate at a time, each a change of its own; the bare numbers of models/engine/gates.rofl (bare_gate) after.").
+work_state(w_restate_the_numbered_gates, open).
+closes_invariant(w_restate_the_numbered_gates, no_magic_gate).
+
 work(w_scroll,
   "The owner, 2026-11-11 (thread on the delta of volumes): the store becomes ONE LONG SCROLL over raw mapped memory, in place of volumes that copy facts to one another. His words: a cooled volume is a fold (a spoiler: its content is not seen, is known to be there, can be unfolded); it is the addressing of memory by pages and of a disk by logical volumes; the indexes are digests, a service volume of their own, the book [index]; nothing is to be invented above what the machine's memory does already. Why: a delta of volumes of 7 files of 123 takes 17 s against 55 anew, and 8 of them are the exchange (the plan of what to lay, the copies, their files, the rounds), which exists because a fact's number and a name's number mean something only inside their volume (f_half_the_time_of_a_delta_of_volumes_is_where_no_rule_reads_a_row). One pull request, its parts in this order, the engine working and its answers equal after each; each part's forecast is written in models/engine/delta-model.rofl before it is built and a measure judges it.").
 work_state(w_scroll, open).

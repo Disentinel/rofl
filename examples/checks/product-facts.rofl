@@ -3,221 +3,354 @@
 edb(engine_entry).
 edb(library_entry).
 edb(extension_entry).
-engine_entry(verb, "login").
-engine_entry(verb, "openapi").
-engine_entry(verb, "mcp").
-engine_entry(says, "regions_capped").
-engine_entry(says, "space_exhausted").
-engine_entry(says, "disk_exhausted").
-engine_entry(builtin, "type_of").
-engine_entry(builtin, "hash").
-engine_entry(builtin, "str_pre").
-engine_entry(builtin, "str_segs").
-engine_entry(cell, "?").
-engine_entry(cell, "excise").
-engine_entry(cell, "why").
-engine_entry(cell, "whynot").
-engine_entry(says, "excise").
-engine_entry(says, "cut").
-engine_entry(says, "answers").
-engine_entry(says, "unknown").
-engine_entry(says, "excise").
-engine_entry(declaration, "function").
-engine_entry(declaration, "graph").
-engine_entry(declaration, "tree").
-engine_entry(declaration, "alias").
-engine_entry(declaration, "nearest").
-engine_entry(op, "holding").
-engine_entry(op, "books").
-engine_entry(op, "cell").
-engine_entry(op, "firings").
-engine_entry(op, "rows").
-engine_entry(op, "fact").
-engine_entry(verb, "why").
-engine_entry(verb, "whynot").
-engine_entry(flag, "--kept").
+edb(codepath_effect).
+edb(unsourced_gate).
 engine_entry(flag, "--anew").
-engine_entry(flag, "--ticks").
-engine_entry(flag, "--budget").
-engine_entry(flag, "--space").
-engine_entry(flag, "--strata").
-engine_entry(flag, "--explain").
-engine_entry(flag, "--save").
+engine_entry(flag, "--ask").
 engine_entry(flag, "--below").
+engine_entry(flag, "--budget").
+engine_entry(flag, "--depth").
+engine_entry(flag, "--excise").
+engine_entry(flag, "--explain").
+engine_entry(flag, "--in").
+engine_entry(flag, "--kept").
+engine_entry(flag, "--nodes").
+engine_entry(flag, "--propose-structures").
 engine_entry(flag, "--retain").
 engine_entry(flag, "--retract").
-engine_entry(flag, "--ask").
+engine_entry(flag, "--save").
+engine_entry(flag, "--space").
+engine_entry(flag, "--state").
+engine_entry(flag, "--strata").
+engine_entry(flag, "--structures-min-rows").
+engine_entry(flag, "--ticks").
 engine_entry(flag, "--why").
 engine_entry(flag, "--why-all").
 engine_entry(flag, "--whynot").
 engine_entry(flag, "--whynot-all").
-engine_entry(flag, "--excise").
-engine_entry(flag, "--depth").
-engine_entry(flag, "--nodes").
-engine_entry(flag, "--state").
-engine_entry(flag, "--propose-structures").
-engine_entry(flag, "--structures-min-rows").
-engine_entry(verb, "load").
-engine_entry(verb, "excise").
-engine_entry(verb, "ask").
-engine_entry(verb, "serve").
-engine_entry(verb, "render").
-engine_entry(verb, "nb").
+engine_entry(word, "A").
+engine_entry(word, "ast_node").
+engine_entry(word, "edb").
+engine_entry(word, "fun_phrase").
+engine_entry(word, "kind_noun").
+engine_entry(word, "noun_guard").
+engine_entry(word, "phrase").
+engine_entry(word, "rows_from").
+engine_entry(word, "sig").
 engine_entry(verb, "adapter").
+engine_entry(verb, "ask").
+engine_entry(verb, "excise").
+engine_entry(verb, "load").
+engine_entry(verb, "login").
+engine_entry(verb, "mcp").
+engine_entry(verb, "nb").
+engine_entry(verb, "openapi").
+engine_entry(verb, "render").
+engine_entry(verb, "serve").
+engine_entry(verb, "why").
+engine_entry(verb, "whynot").
 engine_entry(flag, "--budget").
-engine_entry(flag, "--space").
-engine_entry(flag, "--ticks").
 engine_entry(flag, "--bytes").
 engine_entry(flag, "--derivations").
 engine_entry(flag, "--help").
+engine_entry(flag, "--space").
+engine_entry(flag, "--ticks").
 engine_entry(flag, "-h").
-engine_entry(op, "open").
-engine_entry(op, "keep").
-engine_entry(op, "fork").
-engine_entry(op, "view").
-engine_entry(op, "reheat").
-engine_entry(op, "cool_many").
-engine_entry(op, "cool").
-engine_entry(op, "load").
-engine_entry(op, "fresh").
-engine_entry(op, "spans").
-engine_entry(op, "rows").
-engine_entry(op, "holding").
 engine_entry(op, "books").
 engine_entry(op, "cell").
-engine_entry(op, "firings").
-engine_entry(op, "fact").
-engine_entry(op, "open").
-engine_entry(op, "fresh").
-engine_entry(op, "spans").
-engine_entry(op, "load").
 engine_entry(op, "cool").
 engine_entry(op, "cool_many").
-engine_entry(op, "reheat").
-engine_entry(op, "view").
+engine_entry(op, "fact").
+engine_entry(op, "firings").
 engine_entry(op, "fork").
+engine_entry(op, "fresh").
+engine_entry(op, "holding").
 engine_entry(op, "keep").
+engine_entry(op, "load").
+engine_entry(op, "open").
+engine_entry(op, "reheat").
+engine_entry(op, "rows").
+engine_entry(op, "spans").
+engine_entry(op, "view").
+engine_entry(op, "admit").
+engine_entry(op, "ask").
 engine_entry(op, "assert").
-engine_entry(op, "inbox").
+engine_entry(op, "close").
 engine_entry(op, "dispatch").
 engine_entry(op, "evaluate").
 engine_entry(op, "evaluate_on").
-engine_entry(op, "admit").
+engine_entry(op, "excise").
+engine_entry(op, "facts").
+engine_entry(op, "inbox").
 engine_entry(op, "resume").
 engine_entry(op, "retract").
+engine_entry(op, "state").
 engine_entry(op, "tick").
-engine_entry(op, "ask").
 engine_entry(op, "why").
 engine_entry(op, "whynot").
-engine_entry(op, "excise").
-engine_entry(op, "state").
-engine_entry(op, "facts").
-engine_entry(op, "close").
-engine_entry(aggregate, "count").
-engine_entry(aggregate, "sum").
-engine_entry(aggregate, "min").
-engine_entry(aggregate, "max").
-engine_entry(aggregate, "or").
+engine_entry(op, "books").
+engine_entry(op, "cell").
+engine_entry(op, "fact").
+engine_entry(op, "firings").
+engine_entry(op, "holding").
+engine_entry(op, "open").
+engine_entry(op, "rows").
+engine_entry(op, "cool").
+engine_entry(op, "cool_many").
+engine_entry(op, "fork").
+engine_entry(op, "fresh").
+engine_entry(op, "keep").
+engine_entry(op, "load").
+engine_entry(op, "reheat").
+engine_entry(op, "spans").
+engine_entry(op, "view").
+engine_entry(word, "permit").
 engine_entry(aggregate, "and").
 engine_entry(aggregate, "at_least").
+engine_entry(aggregate, "bitor").
+engine_entry(aggregate, "count").
+engine_entry(aggregate, "hull").
+engine_entry(aggregate, "max").
 engine_entry(aggregate, "median").
+engine_entry(aggregate, "min").
+engine_entry(aggregate, "or").
 engine_entry(aggregate, "quantile").
 engine_entry(aggregate, "rank").
+engine_entry(aggregate, "sum").
 engine_entry(aggregate, "union").
-engine_entry(aggregate, "hull").
-engine_entry(aggregate, "bitor").
 engine_entry(aggregate, "ivadd").
-engine_entry(aggregate, "ivsub").
-engine_entry(aggregate, "ivmul").
 engine_entry(aggregate, "ivmeet").
-engine_entry(says, "sum_needs_key").
-engine_entry(says, "key_on_count").
-engine_entry(says, "key_on_idempotent").
-engine_entry(says, "one_value").
-engine_entry(says, "count_needs_a_term").
-engine_entry(says, "member_unbound").
-engine_entry(says, "unsafe").
-engine_entry(says, "reads_live_kernel").
-engine_entry(says, "demand_head").
-engine_entry(says, "key_on_threshold").
-engine_entry(says, "threshold_needs_a_term").
-engine_entry(says, "holistic_needs_key").
-engine_entry(says, "param_and_value").
-engine_entry(says, "rank_key_arity").
-engine_entry(says, "threshold_lattice").
-engine_entry(says, "lattice_arity").
-engine_entry(says, "lattice_two_algebras").
-engine_entry(says, "lattice_negated").
-engine_entry(says, "set_pattern").
-engine_entry(says, "join_value_off_carrier").
-engine_entry(says, "lattice_unwidened").
-engine_entry(says, "unbounded_in_recursion").
-engine_entry(says, "order_nonmonotone").
-engine_entry(says, "lattice_nonmonotone").
-engine_entry(says, "tag_weight_reads_tag").
-engine_entry(says, "tag_arity").
-engine_entry(says, "inherited").
-engine_entry(says, "cut").
+engine_entry(aggregate, "ivmul").
+engine_entry(aggregate, "ivsub").
+engine_entry(word, "cut").
+engine_entry(word, "fixpointplan").
+engine_entry(word, "site").
+engine_entry(word, "$below").
+engine_entry(word, "$next").
+engine_entry(word, "?V").
+engine_entry(word, "$below").
+engine_entry(word, "$next").
+engine_entry(word, "at").
 engine_entry(says, "budget").
-engine_entry(says, "divergence").
-engine_entry(says, "widened").
 engine_entry(says, "conflict").
+engine_entry(says, "cut").
+engine_entry(word, "cycle").
+engine_entry(says, "disk_exhausted").
+engine_entry(says, "divergence").
+engine_entry(word, "earlier").
 engine_entry(says, "federation").
+engine_entry(says, "inherited").
+engine_entry(word, "parties").
+engine_entry(says, "regions_capped").
+engine_entry(says, "space_exhausted").
+engine_entry(word, "spent").
+engine_entry(says, "widened").
+engine_entry(word, "within").
+engine_entry(word, "?R").
+engine_entry(word, "$b").
+engine_entry(word, "improving_cycle").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "$next").
+engine_entry(word, "in").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "support_withdrawn").
+engine_entry(says, "not_idempotent").
+engine_entry(says, "order_and_rules").
 engine_entry(says, "two_algebras").
 engine_entry(says, "two_arities").
 engine_entry(says, "two_keys").
 engine_entry(says, "two_orders").
-engine_entry(says, "order_and_rules").
-engine_entry(says, "not_idempotent").
-engine_entry(says, "widen_not_hull").
 engine_entry(says, "two_widenings").
+engine_entry(says, "widen_not_hull").
+engine_entry(word, "from").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "regions_capped").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "every").
+engine_entry(word, "in").
+engine_entry(word, "from").
+engine_entry(word, "every").
+engine_entry(word, "in").
+engine_entry(word, "support_withdrawn").
+engine_entry(word, "cycle").
+engine_entry(word, "in").
+engine_entry(word, "unit_concludes").
+engine_entry(word, "B").
+engine_entry(says, "count_needs_a_term").
+engine_entry(says, "demand_head").
+engine_entry(says, "holistic_needs_key").
+engine_entry(says, "join_value_off_carrier").
+engine_entry(says, "key_on_count").
+engine_entry(says, "key_on_idempotent").
+engine_entry(says, "key_on_threshold").
+engine_entry(says, "lattice_arity").
+engine_entry(says, "lattice_negated").
+engine_entry(says, "lattice_nonmonotone").
+engine_entry(says, "lattice_two_algebras").
+engine_entry(says, "lattice_unwidened").
+engine_entry(says, "member_unbound").
+engine_entry(says, "one_value").
+engine_entry(says, "order_nonmonotone").
+engine_entry(says, "param_and_value").
+engine_entry(says, "rank_key_arity").
+engine_entry(says, "reads_live_kernel").
+engine_entry(says, "set_pattern").
+engine_entry(says, "sum_needs_key").
+engine_entry(says, "tag_arity").
+engine_entry(says, "tag_weight_reads_tag").
+engine_entry(says, "threshold_lattice").
+engine_entry(says, "threshold_needs_a_term").
+engine_entry(says, "unbounded_in_recursion").
+engine_entry(says, "unsafe").
+engine_entry(word, "profile").
+engine_entry(word, "profile").
+engine_entry(builtin, "*").
 engine_entry(builtin, "+").
 engine_entry(builtin, "-").
-engine_entry(builtin, "*").
 engine_entry(builtin, "/").
-engine_entry(builtin, "mod").
-engine_entry(builtin, "min").
 engine_entry(builtin, "max").
-engine_entry(builtin, "str_len").
-engine_entry(builtin, "concat").
-engine_entry(builtin, "str_char").
-engine_entry(builtin, "str_sub").
+engine_entry(builtin, "min").
+engine_entry(builtin, "mod").
 engine_entry(builtin, "atom_of").
-engine_entry(says, "unasked").
-engine_entry(says, "fails").
-engine_entry(says, "holds").
-engine_entry(says, "blind").
-engine_entry(says, "answers").
-engine_entry(says, "ok").
-engine_entry(says, "fails").
-engine_entry(says, "unread").
+engine_entry(builtin, "concat").
+engine_entry(builtin, "hash").
+engine_entry(builtin, "str_char").
+engine_entry(builtin, "str_len").
+engine_entry(builtin, "str_pre").
+engine_entry(builtin, "str_segs").
+engine_entry(builtin, "str_sub").
+engine_entry(builtin, "type_of").
+engine_entry(word, "fixpointplan").
+engine_entry(word, "plan").
+engine_entry(word, "c").
+engine_entry(word, "join_value_off_carrier").
+engine_entry(word, "set_pattern").
+engine_entry(word, "cut").
+engine_entry(word, "fixpointplan").
+engine_entry(word, "fixpointplan").
+engine_entry(word, "site").
+engine_entry(word, "fixpointplan").
+engine_entry(word, "own").
+engine_entry(word, "surface").
+engine_entry(word, "query").
+engine_entry(cell, "excise").
+engine_entry(cell, "why").
+engine_entry(cell, "whynot").
 engine_entry(says, "cut").
 engine_entry(says, "fails").
+engine_entry(says, "ok").
 engine_entry(says, "unread").
+engine_entry(says, "answers").
 engine_entry(says, "blind").
-engine_entry(auth, "bearer").
+engine_entry(says, "cut").
+engine_entry(says, "excise").
+engine_entry(says, "fails").
+engine_entry(says, "unknown").
+engine_entry(says, "unread").
+engine_entry(says, "answers").
+engine_entry(says, "blind").
+engine_entry(says, "excise").
+engine_entry(says, "fails").
+engine_entry(says, "holds").
+engine_entry(says, "unasked").
+engine_entry(cell, "?").
 engine_entry(auth, "basic").
+engine_entry(auth, "bearer").
 engine_entry(auth, "client_credentials").
 engine_entry(auth, "login").
 engine_entry(auth, "query").
-engine_entry(auth, "bearer").
 engine_entry(auth, "basic").
+engine_entry(auth, "bearer").
 engine_entry(auth, "client_credentials").
 engine_entry(auth, "header").
 engine_entry(auth, "query").
 engine_entry(marker, "$init").
-engine_entry(marker, "$now").
 engine_entry(marker, "$next").
-engine_entry(builtin, "opens_str").
-engine_entry(builtin, "opens_cmt").
+engine_entry(marker, "$now").
 engine_entry(builtin, "code_at").
-engine_entry(builtin, "str_open").
-engine_entry(builtin, "str_close").
-engine_entry(builtin, "wordch").
-engine_entry(builtin, "prevword").
 engine_entry(builtin, "dollar_before").
-engine_entry(builtin, "word_start").
+engine_entry(builtin, "opens_cmt").
+engine_entry(builtin, "opens_str").
+engine_entry(builtin, "prevword").
+engine_entry(builtin, "str_close").
+engine_entry(builtin, "str_open").
 engine_entry(builtin, "white").
+engine_entry(builtin, "word_start").
+engine_entry(builtin, "wordch").
+engine_entry(word, "$q").
+engine_entry(word, "why").
+engine_entry(word, "why_all").
+engine_entry(word, "whynot").
+engine_entry(word, "surface").
+engine_entry(word, "$below").
+engine_entry(word, "every").
+engine_entry(word, "in").
+engine_entry(word, "scan_request").
+engine_entry(word, "$q").
+engine_entry(word, "reflection_sealed").
+engine_entry(declaration, "alias").
+engine_entry(declaration, "function").
+engine_entry(declaration, "graph").
+engine_entry(declaration, "nearest").
+engine_entry(declaration, "tree").
+engine_entry(word, "B").
+engine_entry(word, "F").
+engine_entry(word, "N").
+engine_entry(word, "V").
+engine_entry(word, "tag_arity").
+engine_entry(word, "tag_weight_reads_tag").
+engine_entry(word, "$cons").
+codepath_effect(by_levels, clock).
+codepath_effect(by_levels, env_read).
+codepath_effect(by_levels, exec).
+codepath_effect(by_levels, exit).
+codepath_effect(by_levels, fs_delete).
+codepath_effect(by_levels, fs_read).
+codepath_effect(by_levels, fs_write).
+codepath_effect(by_levels, hot).
+codepath_effect(by_levels, profile).
+codepath_effect(by_levels, thread).
+codepath_effect(whole, clock).
+codepath_effect(whole, env_read).
+codepath_effect(whole, exec).
+codepath_effect(whole, exit).
+codepath_effect(whole, fs_delete).
+codepath_effect(whole, fs_read).
+codepath_effect(whole, fs_write).
+codepath_effect(whole, hot).
+codepath_effect(whole, profile).
+codepath_effect(whole, thread).
+unsourced_gate("BUDGET", stop).
+unsourced_gate("DEFAULT_BUDGET", stop).
+unsourced_gate("DEFAULT_SPACE", stop).
+unsourced_gate("FAR", cheaper).
+unsourced_gate("FEW", cheaper).
+unsourced_gate("FLOOR", room).
+unsourced_gate("HOT_READ", tell).
+unsourced_gate("HOT_SHARE", tell).
+unsourced_gate("LABEL_REGIONS", cheaper).
+unsourced_gate("MARGIN", cheaper).
+unsourced_gate("MARGIN_FULL", cheaper).
+unsourced_gate("MAX_ALIAS", stop).
+unsourced_gate("MAX_ALTERNATIONS", stop).
+unsourced_gate("MAX_DEPTH", stop).
+unsourced_gate("MAX_PATTERNS", room).
+unsourced_gate("MAX_WANTS", stop).
+unsourced_gate("MEMO_BYTES", room).
+unsourced_gate("MIN_INDEXED", cheaper).
+unsourced_gate("OVER_MOST", cheaper).
+unsourced_gate("POLICY_BUDGET", stop).
+unsourced_gate("REF_MIN", cheaper).
+unsourced_gate("SHOWN", show).
+unsourced_gate("SLACK", room).
+unsourced_gate("SPACE", stop).
+unsourced_gate("STITCH_MIN", cheaper).
+unsourced_gate("VOLUMES_FROM", cheaper).
+unsourced_gate("WHY_MEMBERS", show).
+unsourced_gate("WIDTH", show).
+unsourced_gate("WN_FAR", stop).
 library_entry(api, "assert").
 library_entry(api, "assertClauses").
 library_entry(api, "evaluate").
@@ -274,9 +407,6 @@ spelt(library, api).
 spelt(library, knob).
 spelt(extension, command).
 spelt(extension, knob).
-named("CLAUDE.md", extension, cell, "?").
-named("CLAUDE.md", web, cell, "?").
-named("CLAUDE.md", cli, cell, "?").
 named("CLAUDE.md", extension, cell, "excise").
 named("CLAUDE.md", web, cell, "excise").
 named("CLAUDE.md", cli, cell, "excise").
@@ -286,35 +416,39 @@ named("CLAUDE.md", cli, cell, "why").
 named("CLAUDE.md", extension, cell, "whynot").
 named("CLAUDE.md", web, cell, "whynot").
 named("CLAUDE.md", cli, cell, "whynot").
+named("CLAUDE.md", extension, cell, "?").
+named("CLAUDE.md", web, cell, "?").
+named("CLAUDE.md", cli, cell, "?").
+named("CLAUDE.md", cli, verb, "ask").
+named("CLAUDE.md", cli, verb, "excise").
+named("CLAUDE.md", cli, verb, "load").
+named("CLAUDE.md", cli, verb, "render").
+named("CLAUDE.md", cli, verb, "serve").
 named("CLAUDE.md", cli, verb, "why").
 named("CLAUDE.md", cli, verb, "whynot").
-named("CLAUDE.md", cli, verb, "load").
-named("CLAUDE.md", cli, verb, "excise").
-named("CLAUDE.md", cli, verb, "ask").
-named("CLAUDE.md", cli, verb, "serve").
-named("CLAUDE.md", cli, verb, "render").
-named("CLAUDE.md", cli, flag, "--kept").
 named("CLAUDE.md", cli, flag, "--anew").
-named("CLAUDE.md", cli, flag, "--ticks").
-named("CLAUDE.md", cli, flag, "--budget").
-named("CLAUDE.md", cli, flag, "--space").
-named("CLAUDE.md", cli, flag, "--strata").
-named("CLAUDE.md", cli, flag, "--retain").
-named("CLAUDE.md", cli, flag, "--retract").
 named("CLAUDE.md", cli, flag, "--ask").
-named("CLAUDE.md", cli, flag, "--why").
-named("CLAUDE.md", cli, flag, "--whynot").
-named("CLAUDE.md", cli, flag, "--excise").
+named("CLAUDE.md", cli, flag, "--budget").
 named("CLAUDE.md", cli, flag, "--depth").
+named("CLAUDE.md", cli, flag, "--excise").
+named("CLAUDE.md", cli, flag, "--in").
+named("CLAUDE.md", cli, flag, "--kept").
 named("CLAUDE.md", cli, flag, "--nodes").
 named("CLAUDE.md", cli, flag, "--propose-structures").
+named("CLAUDE.md", cli, flag, "--retain").
+named("CLAUDE.md", cli, flag, "--retract").
+named("CLAUDE.md", cli, flag, "--space").
+named("CLAUDE.md", cli, flag, "--strata").
 named("CLAUDE.md", cli, flag, "--structures-min-rows").
+named("CLAUDE.md", cli, flag, "--ticks").
+named("CLAUDE.md", cli, flag, "--why").
+named("CLAUDE.md", cli, flag, "--whynot").
 named("CLAUDE.md", cli, flag, "--bytes").
 named("CLAUDE.md", cli, flag, "--derivations").
 named("CLAUDE.md", cli, op, "ask").
+named("CLAUDE.md", cli, op, "excise").
 named("CLAUDE.md", cli, op, "why").
 named("CLAUDE.md", cli, op, "whynot").
-named("CLAUDE.md", cli, op, "excise").
 named("CLAUDE.md", library, knob, "budget").
 named("CLAUDE.md", library, knob, "depth").
 named("CLAUDE.md", library, knob, "nodes").
@@ -350,9 +484,6 @@ named("CLAUDE.md", tree, command, "test:roles").
 named("CLAUDE.md", tree, command, "scan:oxc").
 named("CLAUDE.md", tree, command, "refine").
 named("CLAUDE.md", tree, command, "ci:cost").
-named("README.md", extension, cell, "?").
-named("README.md", web, cell, "?").
-named("README.md", cli, cell, "?").
 named("README.md", extension, cell, "excise").
 named("README.md", web, cell, "excise").
 named("README.md", cli, cell, "excise").
@@ -362,28 +493,30 @@ named("README.md", cli, cell, "why").
 named("README.md", extension, cell, "whynot").
 named("README.md", web, cell, "whynot").
 named("README.md", cli, cell, "whynot").
-named("README.md", cli, verb, "why").
-named("README.md", cli, verb, "load").
+named("README.md", extension, cell, "?").
+named("README.md", web, cell, "?").
+named("README.md", cli, cell, "?").
 named("README.md", cli, verb, "ask").
-named("README.md", cli, verb, "serve").
-named("README.md", cli, verb, "render").
+named("README.md", cli, verb, "load").
 named("README.md", cli, verb, "nb").
-named("README.md", cli, flag, "--ticks").
+named("README.md", cli, verb, "render").
+named("README.md", cli, verb, "serve").
+named("README.md", cli, verb, "why").
 named("README.md", cli, flag, "--budget").
+named("README.md", cli, flag, "--depth").
+named("README.md", cli, flag, "--nodes").
 named("README.md", cli, flag, "--space").
+named("README.md", cli, flag, "--state").
 named("README.md", cli, flag, "--strata").
+named("README.md", cli, flag, "--ticks").
 named("README.md", cli, flag, "--why").
 named("README.md", cli, flag, "--why-all").
 named("README.md", cli, flag, "--whynot").
-named("README.md", cli, flag, "--depth").
-named("README.md", cli, flag, "--nodes").
-named("README.md", cli, flag, "--state").
 named("README.md", cli, op, "load").
+named("README.md", cli, op, "excise").
 named("README.md", cli, op, "tick").
-named("README.md", cli, op, "ask").
 named("README.md", cli, op, "why").
 named("README.md", cli, op, "whynot").
-named("README.md", cli, op, "excise").
 named("README.md", extension, command, "Translate natural cells").
 named("README.md", extension, command, "Translate").
 named("README.md", extension, command, "Open notebook from GitHub…").
@@ -414,72 +547,73 @@ named("README.md", tree, command, "conform").
 named("README.md", tree, command, "nb").
 named("README.md", tree, command, "whycheck").
 named("README.md", tree, command, "structures").
-named("docs/cli.md", extension, cell, "?").
-named("docs/cli.md", web, cell, "?").
-named("docs/cli.md", cli, cell, "?").
 named("docs/cli.md", extension, cell, "why").
 named("docs/cli.md", web, cell, "why").
 named("docs/cli.md", cli, cell, "why").
+named("docs/cli.md", extension, cell, "?").
+named("docs/cli.md", web, cell, "?").
+named("docs/cli.md", cli, cell, "?").
+named("docs/cli.md", cli, verb, "adapter").
+named("docs/cli.md", cli, verb, "ask").
+named("docs/cli.md", cli, verb, "excise").
+named("docs/cli.md", cli, verb, "load").
+named("docs/cli.md", cli, verb, "nb").
+named("docs/cli.md", cli, verb, "render").
+named("docs/cli.md", cli, verb, "serve").
 named("docs/cli.md", cli, verb, "why").
 named("docs/cli.md", cli, verb, "whynot").
-named("docs/cli.md", cli, verb, "load").
-named("docs/cli.md", cli, verb, "excise").
-named("docs/cli.md", cli, verb, "ask").
-named("docs/cli.md", cli, verb, "serve").
-named("docs/cli.md", cli, verb, "render").
-named("docs/cli.md", cli, verb, "nb").
-named("docs/cli.md", cli, verb, "adapter").
-named("docs/cli.md", cli, flag, "--kept").
 named("docs/cli.md", cli, flag, "--anew").
-named("docs/cli.md", cli, flag, "--ticks").
-named("docs/cli.md", cli, flag, "--budget").
-named("docs/cli.md", cli, flag, "--space").
-named("docs/cli.md", cli, flag, "--strata").
-named("docs/cli.md", cli, flag, "--explain").
+named("docs/cli.md", cli, flag, "--ask").
 named("docs/cli.md", cli, flag, "--below").
+named("docs/cli.md", cli, flag, "--budget").
+named("docs/cli.md", cli, flag, "--depth").
+named("docs/cli.md", cli, flag, "--excise").
+named("docs/cli.md", cli, flag, "--explain").
+named("docs/cli.md", cli, flag, "--in").
+named("docs/cli.md", cli, flag, "--kept").
+named("docs/cli.md", cli, flag, "--nodes").
 named("docs/cli.md", cli, flag, "--retain").
 named("docs/cli.md", cli, flag, "--retract").
-named("docs/cli.md", cli, flag, "--ask").
+named("docs/cli.md", cli, flag, "--space").
+named("docs/cli.md", cli, flag, "--state").
+named("docs/cli.md", cli, flag, "--strata").
+named("docs/cli.md", cli, flag, "--ticks").
 named("docs/cli.md", cli, flag, "--why").
 named("docs/cli.md", cli, flag, "--why-all").
 named("docs/cli.md", cli, flag, "--whynot").
 named("docs/cli.md", cli, flag, "--whynot-all").
-named("docs/cli.md", cli, flag, "--excise").
-named("docs/cli.md", cli, flag, "--depth").
-named("docs/cli.md", cli, flag, "--nodes").
-named("docs/cli.md", cli, flag, "--state").
-named("docs/cli.md", cli, op, "holding").
 named("docs/cli.md", cli, op, "books").
 named("docs/cli.md", cli, op, "cell").
-named("docs/cli.md", cli, op, "firings").
-named("docs/cli.md", cli, op, "rows").
-named("docs/cli.md", cli, op, "fact").
-named("docs/cli.md", cli, op, "open").
-named("docs/cli.md", cli, op, "keep").
-named("docs/cli.md", cli, op, "fork").
-named("docs/cli.md", cli, op, "view").
-named("docs/cli.md", cli, op, "reheat").
-named("docs/cli.md", cli, op, "cool_many").
 named("docs/cli.md", cli, op, "cool").
-named("docs/cli.md", cli, op, "load").
+named("docs/cli.md", cli, op, "cool_many").
+named("docs/cli.md", cli, op, "fact").
+named("docs/cli.md", cli, op, "firings").
+named("docs/cli.md", cli, op, "fork").
 named("docs/cli.md", cli, op, "fresh").
+named("docs/cli.md", cli, op, "holding").
+named("docs/cli.md", cli, op, "keep").
+named("docs/cli.md", cli, op, "load").
+named("docs/cli.md", cli, op, "open").
+named("docs/cli.md", cli, op, "reheat").
+named("docs/cli.md", cli, op, "rows").
 named("docs/cli.md", cli, op, "spans").
+named("docs/cli.md", cli, op, "view").
+named("docs/cli.md", cli, op, "admit").
+named("docs/cli.md", cli, op, "ask").
 named("docs/cli.md", cli, op, "assert").
-named("docs/cli.md", cli, op, "inbox").
+named("docs/cli.md", cli, op, "close").
 named("docs/cli.md", cli, op, "dispatch").
 named("docs/cli.md", cli, op, "evaluate").
 named("docs/cli.md", cli, op, "evaluate_on").
-named("docs/cli.md", cli, op, "admit").
+named("docs/cli.md", cli, op, "excise").
+named("docs/cli.md", cli, op, "facts").
+named("docs/cli.md", cli, op, "inbox").
 named("docs/cli.md", cli, op, "resume").
 named("docs/cli.md", cli, op, "retract").
+named("docs/cli.md", cli, op, "state").
 named("docs/cli.md", cli, op, "tick").
-named("docs/cli.md", cli, op, "ask").
 named("docs/cli.md", cli, op, "why").
 named("docs/cli.md", cli, op, "whynot").
-named("docs/cli.md", cli, op, "excise").
-named("docs/cli.md", cli, op, "state").
-named("docs/cli.md", cli, op, "facts").
-named("docs/cli.md", cli, op, "close").
 named("docs/cli.md", library, knob, "budget").
 named("docs/cli.md", library, knob, "depth").
 named("docs/cli.md", library, knob, "naive").
@@ -492,55 +626,56 @@ named("docs/cli.md", tree, command, "whycheck").
 named("docs/cli.md", tree, command, "test:roles").
 named("docs/cli.md", tree, command, "scan:oxc").
 named("docs/cli.md", tree, command, "refine").
-named("docs/knobs.md", cli, verb, "load").
 named("docs/knobs.md", cli, verb, "ask").
-named("docs/knobs.md", cli, verb, "serve").
+named("docs/knobs.md", cli, verb, "load").
 named("docs/knobs.md", cli, verb, "render").
-named("docs/knobs.md", cli, flag, "--kept").
+named("docs/knobs.md", cli, verb, "serve").
 named("docs/knobs.md", cli, flag, "--anew").
-named("docs/knobs.md", cli, flag, "--ticks").
-named("docs/knobs.md", cli, flag, "--budget").
-named("docs/knobs.md", cli, flag, "--space").
-named("docs/knobs.md", cli, flag, "--strata").
-named("docs/knobs.md", cli, flag, "--explain").
-named("docs/knobs.md", cli, flag, "--save").
+named("docs/knobs.md", cli, flag, "--ask").
 named("docs/knobs.md", cli, flag, "--below").
+named("docs/knobs.md", cli, flag, "--budget").
+named("docs/knobs.md", cli, flag, "--depth").
+named("docs/knobs.md", cli, flag, "--excise").
+named("docs/knobs.md", cli, flag, "--explain").
+named("docs/knobs.md", cli, flag, "--in").
+named("docs/knobs.md", cli, flag, "--kept").
+named("docs/knobs.md", cli, flag, "--nodes").
+named("docs/knobs.md", cli, flag, "--propose-structures").
 named("docs/knobs.md", cli, flag, "--retain").
 named("docs/knobs.md", cli, flag, "--retract").
-named("docs/knobs.md", cli, flag, "--ask").
+named("docs/knobs.md", cli, flag, "--save").
+named("docs/knobs.md", cli, flag, "--space").
+named("docs/knobs.md", cli, flag, "--state").
+named("docs/knobs.md", cli, flag, "--strata").
+named("docs/knobs.md", cli, flag, "--structures-min-rows").
+named("docs/knobs.md", cli, flag, "--ticks").
 named("docs/knobs.md", cli, flag, "--why").
 named("docs/knobs.md", cli, flag, "--why-all").
 named("docs/knobs.md", cli, flag, "--whynot").
-named("docs/knobs.md", cli, flag, "--excise").
-named("docs/knobs.md", cli, flag, "--depth").
-named("docs/knobs.md", cli, flag, "--nodes").
-named("docs/knobs.md", cli, flag, "--state").
-named("docs/knobs.md", cli, flag, "--propose-structures").
-named("docs/knobs.md", cli, flag, "--structures-min-rows").
 named("docs/knobs.md", cli, flag, "--bytes").
 named("docs/knobs.md", cli, flag, "--derivations").
 named("docs/knobs.md", cli, flag, "--help").
-named("docs/knobs.md", cli, op, "holding").
 named("docs/knobs.md", cli, op, "books").
 named("docs/knobs.md", cli, op, "cell").
-named("docs/knobs.md", cli, op, "firings").
-named("docs/knobs.md", cli, op, "fact").
-named("docs/knobs.md", cli, op, "open").
-named("docs/knobs.md", cli, op, "keep").
-named("docs/knobs.md", cli, op, "view").
 named("docs/knobs.md", cli, op, "cool_many").
-named("docs/knobs.md", cli, op, "load").
+named("docs/knobs.md", cli, op, "fact").
+named("docs/knobs.md", cli, op, "firings").
 named("docs/knobs.md", cli, op, "fresh").
-named("docs/knobs.md", cli, op, "assert").
-named("docs/knobs.md", cli, op, "evaluate").
-named("docs/knobs.md", cli, op, "retract").
-named("docs/knobs.md", cli, op, "tick").
+named("docs/knobs.md", cli, op, "holding").
+named("docs/knobs.md", cli, op, "keep").
+named("docs/knobs.md", cli, op, "load").
+named("docs/knobs.md", cli, op, "open").
+named("docs/knobs.md", cli, op, "view").
 named("docs/knobs.md", cli, op, "ask").
+named("docs/knobs.md", cli, op, "assert").
+named("docs/knobs.md", cli, op, "close").
+named("docs/knobs.md", cli, op, "evaluate").
+named("docs/knobs.md", cli, op, "excise").
+named("docs/knobs.md", cli, op, "retract").
+named("docs/knobs.md", cli, op, "state").
+named("docs/knobs.md", cli, op, "tick").
 named("docs/knobs.md", cli, op, "why").
 named("docs/knobs.md", cli, op, "whynot").
-named("docs/knobs.md", cli, op, "excise").
-named("docs/knobs.md", cli, op, "state").
-named("docs/knobs.md", cli, op, "close").
 named("docs/knobs.md", library, knob, "budget").
 named("docs/knobs.md", library, knob, "depth").
 named("docs/knobs.md", library, knob, "evaluator").
@@ -550,9 +685,6 @@ named("docs/knobs.md", library, knob, "space").
 named("docs/knobs.md", library, knob, "who").
 named("docs/knobs.md", tree, command, "test").
 named("docs/knobs.md", tree, command, "nb").
-named("guide", extension, cell, "?").
-named("guide", web, cell, "?").
-named("guide", cli, cell, "?").
 named("guide", extension, cell, "excise").
 named("guide", web, cell, "excise").
 named("guide", cli, cell, "excise").
@@ -562,28 +694,32 @@ named("guide", cli, cell, "why").
 named("guide", extension, cell, "whynot").
 named("guide", web, cell, "whynot").
 named("guide", cli, cell, "whynot").
+named("guide", extension, cell, "?").
+named("guide", web, cell, "?").
+named("guide", cli, cell, "?").
+named("guide", cli, verb, "adapter").
+named("guide", cli, verb, "ask").
+named("guide", cli, verb, "excise").
+named("guide", cli, verb, "load").
+named("guide", cli, verb, "render").
+named("guide", cli, verb, "serve").
 named("guide", cli, verb, "why").
 named("guide", cli, verb, "whynot").
-named("guide", cli, verb, "load").
-named("guide", cli, verb, "excise").
-named("guide", cli, verb, "ask").
-named("guide", cli, verb, "serve").
-named("guide", cli, verb, "render").
-named("guide", cli, verb, "adapter").
-named("guide", cli, flag, "--kept").
 named("guide", cli, flag, "--ask").
+named("guide", cli, flag, "--depth").
+named("guide", cli, flag, "--excise").
+named("guide", cli, flag, "--in").
+named("guide", cli, flag, "--kept").
+named("guide", cli, flag, "--nodes").
 named("guide", cli, flag, "--why").
 named("guide", cli, flag, "--whynot").
-named("guide", cli, flag, "--excise").
-named("guide", cli, flag, "--depth").
-named("guide", cli, flag, "--nodes").
 named("guide", cli, flag, "--help").
-named("guide", cli, op, "open").
 named("guide", cli, op, "load").
+named("guide", cli, op, "open").
 named("guide", cli, op, "ask").
+named("guide", cli, op, "excise").
 named("guide", cli, op, "why").
 named("guide", cli, op, "whynot").
-named("guide", cli, op, "excise").
 named("guide", extension, command, "Translate").
 named("guide", extension, command, "Choose model").
 named("guide", extension, command, "Open notebook from GitHub…").
