@@ -697,8 +697,8 @@ impl Session {
         }
     }
 
-    /// The base facts `ids` taken out one after another by the engine's one-fact delta (`retract_delta`): the
-    /// reference `retract_facts_delta` is held to. `Full` as there.
+    /// The base facts `ids` taken out one after another, each by the pass `retract` takes one by: the reference a set
+    /// taken out in one pass (`retract_facts_delta`) is held to. `Full` as there.
     pub fn retract_facts_one_by_one(&mut self, ids: &[FactId]) -> Result<Retraction, String> {
         let before = self.base_alive(ids);
         let r = self.told(crate::journal::Verb::OneByOne, |s| s.retract_facts_one_by_one_unjournaled(ids));
@@ -720,15 +720,12 @@ impl Session {
                 return Ok(Retraction::Full("asks names the rules the world runs".into()));
             }
             let doomed = self.doomed(id);
-            let read = self.read_marks(&doomed);
             // the rest go without a delta, and the world is evaluated again
-            match self.retract_doomed(id, &doomed, read) {
+            match self.retract_one(id, &doomed)? {
                 Ok(d) => {
-                    if let Err(e) = self.eval.ds.check_promises(&self.eval.h, &self.eval.store) {
-                        self.eval.store.dirty = true;
-                        return Err(crate::describe(&e));
+                    if !matches!(last, Retraction::Full(_)) {
+                        last = Retraction::Delta(d);
                     }
-                    last = Retraction::Delta(d);
                 }
                 Err(why) => {
                     if !matches!(last, Retraction::Full(_)) {
@@ -740,22 +737,11 @@ impl Session {
         Ok(last)
     }
 
-    /// Whether a rule reads an edb or authority row among `doomed`: such a row cannot go by a delta.
-    fn read_marks(&self, doomed: &[FactId]) -> bool {
-        let marks: Vec<Sym> = doomed.iter().map(|&f| self.eval.store.rec(f).rel).filter(|r| [self.eval.v.edb, self.eval.v.authority].contains(r)).collect();
-        self.eval.rules.iter().any(|r| r.clause.body.iter().any(|b| b.lits_deep().iter().any(|l| marks.contains(&l.rel))))
-    }
-
     /// ONE FACT OUT, the way `retract` and an `edit` of one fact take it: the set's pass over the one fact
-    /// (`retract_set`), and only where that refuses with the store untouched, the one-fact delta (`Eval::retract_delta`),
-    /// which takes what the set's pass does not (a lattice that keeps the history of a superseded value). Where both
-    /// refuse, `doomed` goes and the world is left dirty.
+    /// (`retract_set`), which decides before it takes the fact out whether it holds the delta. Where it does not,
+    /// `doomed` goes and the world is left dirty, to be evaluated whole.
     fn retract_one(&mut self, id: FactId, doomed: &[FactId]) -> Result<Result<crate::engine::Delta, String>, String> {
-        let r = match self.retract_set_inner(&[id])? {
-            Ok(d) => Ok(crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() }),
-            Err(why) if self.eval.store.alive(id) && !self.eval.store.dirty && !self.read_marks(doomed) => self.eval.retract_delta(doomed).map_err(|_| why),
-            Err(why) => Err(why),
-        };
+        let r = self.retract_set_inner(&[id])?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
         if r.is_err() {
             if self.eval.store.alive(id) {
                 self.eval.store.remove_many(doomed);
@@ -763,32 +749,6 @@ impl Session {
             self.eval.store.dirty = true;
         }
         Ok(r)
-    }
-
-    /// `retract_delta` by the engine's one-fact delta alone, as `retract` took a fact before the set's pass came
-    /// first: the reference the tests of that delta's own mechanism (cells subtracted, consumers reset) read. Not a verb.
-    pub fn retract_one_fact_delta(&mut self, query: &str) -> Result<Retraction, String> {
-        let ids: Vec<FactId> = self.ground_fact(query, "retract").ok().and_then(|(id, _)| id).into_iter().collect();
-        let before = self.base_alive(&ids);
-        let r = self.told(crate::journal::Verb::RetractDelta, |s| s.retract_delta_unjournaled(query, true));
-        self.journal_gone(&before);
-        r
-    }
-
-    /// The delta that takes `doomed` out, or why there is none: then `doomed` goes and the world is left dirty.
-    fn retract_doomed(&mut self, id: FactId, doomed: &[FactId], read: bool) -> Result<crate::engine::Delta, String> {
-        let mut delta = if read { Err("the retraction takes an edb or authority row a rule reads".to_string()) } else { self.eval.retract_delta(doomed) };
-        // what the one-fact delta refuses with the store untouched, the set's pass may take
-        if delta.is_err() && self.eval.store.alive(id) && !self.eval.store.dirty {
-            delta = self.retract_set_delta_unjournaled(&[id])?.map(|d| crate::engine::Delta { set: Some(Box::new(d)), ..Default::default() });
-        }
-        if delta.is_err() {
-            if self.eval.store.alive(id) {
-                self.eval.store.remove_many(doomed);
-            }
-            self.eval.store.dirty = true;
-        }
-        delta
     }
 
     fn evaluated_again(&mut self, requests: &[Term], why: &str) {
@@ -1906,12 +1866,12 @@ impl Session {
     pub fn retract_delta(&mut self, query: &str) -> Result<Retraction, String> {
         let ids: Vec<FactId> = self.ground_fact(query, "retract").ok().and_then(|(id, _)| id).into_iter().collect();
         let before = self.base_alive(&ids);
-        let r = self.told(crate::journal::Verb::RetractDelta, |s| s.retract_delta_unjournaled(query, false));
+        let r = self.told(crate::journal::Verb::RetractDelta, |s| s.retract_delta_unjournaled(query));
         self.journal_gone(&before);
         r
     }
 
-    fn retract_delta_unjournaled(&mut self, query: &str, one_fact: bool) -> Result<Retraction, String> {
+    fn retract_delta_unjournaled(&mut self, query: &str) -> Result<Retraction, String> {
         let id = self.base_fact(query)?;
         if let Some(why) = self.eval.refuses_retracting(Some(&[id])) {
             return Err(why);
@@ -1928,23 +1888,8 @@ impl Session {
         self.settle()?;
         let doomed = self.doomed(id);
         // ONE PATH: a fact out is the set's pass over one fact, as `edit` takes it (`retract_one`)
-        let r = if brk!("retract_one_fact_first" => true; one_fact) {
-            let read = self.read_marks(&doomed);
-            self.retract_doomed(id, &doomed, read)
-        } else {
-            self.retract_one(id, &doomed)?
-        };
-        match r {
-            Ok(d) => {
-                // (the set's pass judged its promises; the one-fact delta is judged here)
-                if d.set.is_none() {
-                    if let Err(e) = self.eval.ds.check_promises(&self.eval.h, &self.eval.store) {
-                        self.eval.store.dirty = true;
-                        return Err(crate::describe(&e));
-                    }
-                }
-                Ok(Retraction::Delta(d))
-            }
+        match self.retract_one(id, &doomed)? {
+            Ok(d) => Ok(Retraction::Delta(d)),
             Err(why) => {
                 self.evaluated_again(&request, &why);
                 Ok(Retraction::Full(why))

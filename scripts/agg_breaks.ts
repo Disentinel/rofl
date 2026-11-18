@@ -99,10 +99,31 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_one_fact_first",
-  "what": "rofl serve's retract takes a fact out by the old one-fact delta, which reads a negating rule's head whole, instead of the pass edit takes it by",
+  "id": "retract_lattice_cut_off",
+  "what": "a retraction counts every order lattice its relations reach as reached, though no fact of it rests on what goes, so a lattice keeping a history refuses the delta",
   "expect": {
-   "retract_one": "differs"
+   "lattice_history": "a world with a history is a delta when nothing rests on the superseded value"
+  }
+ },
+ {
+  "id": "citers_begun_beside_kept",
+  "what": "a full pass that keeps a relation of a lattice world begins the citer index empty, so the firings of what it kept are not listed and a retraction misses what rests on a fact",
+  "expect": {
+   "mixed_fresh": "the delta state is not a fresh evaluation's"
+  }
+ },
+ {
+  "id": "ds_comp_kept_in_delta",
+  "what": "a component stratified by its data that a retraction reaches is worked out in the delta instead of set apart and evaluated again, and its cells are sealed out of the order of its data",
+  "expect": {
+   "agg_datastrat_retract": "value"
+  }
+ },
+ {
+  "id": "retract_decided_late",
+  "what": "the set's pass decides it cannot hold a retraction only after it took the facts out, so a refusal leaves the world touched",
+  "expect": {
+   "refusal_untouched": "the refused retraction took the fact out"
   }
  },
  {
@@ -6601,21 +6622,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_no_subtract",
-  "what": "a dropped member's value is not subtracted from the total of a count or sum",
-  "expect": {
-   "agg_incr_sum": "lacks the row ai_total[main](a,5)",
-   "agg_incr_tagc": "lacks the row ic_"
-  }
- },
- {
-  "id": "retract_stale_rep",
-  "what": "a member that rests on a retracted fact keeps that derivation instead of the one that is left",
-  "expect": {
-   "agg_incr_sum": "lacks the row mem $cell(r9f34c003,2,0,$cons(b,$nil)) #1"
-  }
- },
- {
   "id": "keep_first_derivation",
   "what": "a member keeps only its canonical derivation: the others are dropped when the cell is sealed",
   "expect": {
@@ -6629,13 +6635,6 @@ export const BREAKS: Break[] = [
   "what": "the back-index cites a member's canonical derivation only: a retracted fact that is another derivation leaves the member's derivation set as it was",
   "expect": {
    "agg_member_derivs_retract": "holds the row mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1 id=2253268ea44d73e0"
-  }
- },
- {
-  "id": "retract_alt_member_dropped",
-  "what": "a retraction drops a member that another derivation still supports (an excise of one of its facts removes the member's row with it)",
-  "expect": {
-   "agg_member_derivs_retract": "lacks the row mem $cell(rea3e7ccf,2,0,$cons(a,$nil)) #1"
   }
  },
  {
@@ -6674,13 +6673,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_deep_neg_unread",
-  "what": "a fact read negated inside an aggregate body is retracted as if only the back-index read it: the cell keeps the members it had",
-  "expect": {
-   "agg_incr_neginner": "lacks the row ni_n[main](g,2)"
-  }
- },
- {
   "id": "cited_past_canonical_only",
   "what": "the past-tick premises a live cell cites are walked in each member's canonical derivation only: the derived_by row a member's other derivation alone cites is pruned",
   "expect": {
@@ -6702,60 +6694,10 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_no_readers",
-  "what": "the facts a cell's reader concluded from its old record stay when the cell is replaced",
-  "expect": {
-   "agg_incr_sum": "holds the row ai_total[main](a,15)"
-  }
- },
- {
-  "id": "retract_no_refire",
-  "what": "what read a replaced cell does not read the new one",
-  "expect": {
-   "agg_incr_sum": "lacks the row ai_total[main](a,5)"
-  }
- },
- {
-  "id": "retract_no_rederive",
-  "what": "an idempotent cell is not derived again after one of its supports is retracted",
-  "expect": {
-   "agg_incr_minmax": "lacks the row am_lo[main](a,3)",
-   "agg_incr_holistic": "lacks the row ah_med[main](a,4)"
-  }
- },
- {
   "id": "retract_index_off",
   "what": "the back-index finds no cell for a retracted fact",
   "expect": {
    "agg_incr_sum": "holds the row ai_total[main](a,15)"
-  }
- },
- {
-  "id": "retract_gate_plain",
-  "what": "a fact a plain rule reads is retracted as if only aggregates read it",
-  "expect": {
-   "agg_incr_gate": "holds the row ag_big[main](1)"
-  }
- },
- {
-  "id": "retract_gate_neg",
-  "what": "a fact a negation reads is retracted as if only aggregates read it",
-  "expect": {
-   "agg_incr_neg": "lacks the row ag_quiet[main](b)"
-  }
- },
- {
-  "id": "retract_empty_gone",
-  "what": "a count of a bound key with no member left is gone instead of 0",
-  "expect": {
-   "agg_incr_sum": "lacks the row ai_n[main](c,0)"
-  }
- },
- {
-  "id": "retract_memo_stale",
-  "what": "the correlation's cells are not updated, so what reads them reads the old record",
-  "expect": {
-   "agg_incr_sum": "lacks the row ai_total[main](a,5)"
   }
  },
  {
@@ -6815,55 +6757,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_lattice_precise",
-  "what": "a lattice fact is in the cone only if every firing of it rests on the cone, so a cycle that rested on the fact alone stands",
-  "expect": {
-   "agg_incr_lattice": "holds the row il_hop[main](d,2)"
-  }
- },
- {
-  "id": "retract_tag_derivations_kept",
-  "what": "the derivations of a counting tag that cited a retracted fact stay",
-  "expect": {
-   "agg_incr_tagc": "holds the row ic_"
-  }
- },
- {
-  "id": "retract_thr_no_close",
-  "what": "a threshold cell derived again keeps the provisional quorum of its first members",
-  "expect": {
-   "agg_incr_holistic": "the state lacks the row"
-  }
- },
- {
-  "id": "retract_chain_gate_off",
-  "what": "an aggregate that reads what another of its rule binds is retracted from as if its cells were all indexed",
-  "expect": {
-   "agg_incr_chain": "holds the row cell"
-  }
- },
- {
-  "id": "retract_partial_gate_off",
-  "what": "an aggregate after one that may leave no solution is retracted from as if it were sealed for every group",
-  "expect": {
-   "agg_incr_partial": "holds the row cell"
-  }
- },
- {
-  "id": "retract_hole_kept",
-  "what": "a retraction that makes a hole is taken by the delta, which writes none of its shrugs",
-  "expect": {
-   "agg_incr_overflow": "lacks the row shrug"
-  }
- },
- {
-  "id": "retract_lattice_hole_kept",
-  "what": "a retraction under a lattice that makes a hole is taken by the delta, which writes none of its shrugs",
-  "expect": {
-   "agg_incr_latticehole": "lacks the row shrug"
-  }
- },
- {
   "id": "ts_stock_stale_holes_kept",
   "what": "the TypeScript evaluator keeps the hole rows of the evaluation before when a world is evaluated again",
   "edits": [
@@ -6878,20 +6771,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_stacked_plain",
-  "what": "a rule that negates or aggregates what changed is treated as a plain reader: only the facts that cite what went are taken out",
-  "expect": {
-   "agg_incr_stacked": "lacks the row st_"
-  }
- },
- {
-  "id": "retract_stacked_facts_kept",
-  "what": "the facts of a rule read again whole stay beside the ones it concludes again",
-  "expect": {
-   "agg_incr_stacked": "holds the row st_"
-  }
- },
- {
   "id": "retract_stacked_cells_kept",
   "what": "the cells of a rule read again whole stay, and the rule reads the old record",
   "expect": {
@@ -6903,15 +6782,6 @@ export const BREAKS: Break[] = [
   "what": "the rules read again fire in one wave, whatever the level of what they read",
   "expect": {
    "agg_incr_stacked": "st_"
-  }
- },
- {
-  "id": "retract_consumers_kept",
-  "what": "the facts of plain rules that rested on a replaced cell or a retracted lattice value stay beside the ones derived again",
-  "expect": {
-   "agg_incr_readers": "holds the row ir_",
-   "demand_neg_retract": "holds the row dt_h[main](1,1)",
-   "demand_neg_retract_closed": "holds the row dtc_h[main](1)"
   }
  },
  {
@@ -7013,13 +6883,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "ds_comp_not_reread",
-  "what": "a retraction that reaches a component stratified by its data fires its rules again at once, with no walk of its data",
-  "expect": {
-   "agg_datastrat_retract": "the state lacks the row value"
-  }
- },
- {
   "id": "ds_group_whole",
   "what": "a group the rule binds is read as the whole correlation: a group that reads another group of its own relation is a cycle",
   "expect": {
@@ -7110,20 +6973,6 @@ export const BREAKS: Break[] = [
   "what": "the quorums a retraction reaches again are not closed",
   "expect": {
    "agg_incr_thr": "lacks the row cell"
-  }
- },
- {
-  "id": "retract_swept_cell_subtracted",
-  "what": "a cell of a rule read again whole is subtracted from as well",
-  "expect": {
-   "agg_incr_twice": "holds the row agg_cell"
-  }
- },
- {
-  "id": "retract_demand_kept",
-  "what": "the facts made at the calls of a relation answered on demand stay when the rules that call it fire again",
-  "expect": {
-   "agg_incr_demand": "the state holds the row dm_big"
   }
  },
  {
@@ -8502,20 +8351,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_cell_reader_kept",
-  "what": "a fact a changed cell's reader concluded loses only the firing that cited the old record, and a cycle through its own relation holds it up",
-  "expect": {
-   "incremental_cell_cycle": "retract e(b, c)"
-  }
- },
- {
-  "id": "retract_thr_outer_plain",
-  "what": "a threshold whose outer premise is retracted is read again as a plain reader, its cell kept",
-  "expect": {
-   "incremental_thr_outer": "retract n(a)"
-  }
- },
- {
   "id": "add_demand_kept",
   "what": "an addition keeps the facts calls made to a relation answered on demand, and fires again none of the rules that call it",
   "expect": {
@@ -8649,13 +8484,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_fault_hole_refused",
-  "what": "a world that holds a rule's fault refuses every retraction, reached or not",
-  "expect": {
-   "addition_fault": "most retractions reach no fault"
-  }
- },
- {
   "id": "add_dominance_refused",
   "what": "a dominance the change reaches is refused, not derived again",
   "expect": {
@@ -8702,20 +8530,6 @@ export const BREAKS: Break[] = [
   "what": "a threshold sealed again at its level closes at once, before the level makes the rest of its members",
   "expect": {
    "addition_threshold": "the addition to"
-  }
- },
- {
-  "id": "retract_staged_thr_plain",
-  "what": "a threshold staged `@next` whose outer premise is retracted is read again as a plain reader, its cell kept",
-  "expect": {
-   "incremental_staged_thr": "retract n(a)"
-  }
- },
- {
-  "id": "retract_seed_rules_unfired",
-  "what": "a fact a changed cell's reader concluded goes whole and only the changed cell's rule makes it again, not another of its relation",
-  "expect": {
-   "incremental_two_aggs": "retract w(e, 3)"
   }
  },
  {
@@ -9151,20 +8965,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "retract_reset_any_book",
-  "what": "a negating rule read again whole is refused by a base fact of its relation in any book, not only the book it concludes into",
-  "expect": {
-   "retract_other_book": "refused:"
-  }
- },
- {
-  "id": "retract_many_silent",
-  "what": "the engine's retraction delta takes a set of the program's facts as if it were one, removing the rest with nothing that rests on them",
-  "expect": {
-   "retract_two_facts": "two facts taken as one"
-  }
- },
- {
   "id": "retract_unrederived",
   "what": "a retraction derives nothing again by its rules: a base fact taken out that a rule still makes stays out",
   "expect": {
@@ -9436,7 +9236,9 @@ export const TESTS: Record<string, string> = {
   rule_out_whole: 'rule_edit a_rule_out_is_the_world_evaluated_whole_without_it',
   rule_row_out: 'rule_edit a_rule_row_out_is_refused_and_the_rule_out_is_the_world_without_it',
   rule_spelled: 'rule_edit a_rule_named_with_other_variables_and_spacing_is_the_same_rule',
-  retract_one: 'edit a_retract_is_an_edit_of_one_fact',
+  lattice_history: 'incremental a_lattice_that_keeps_a_history_is_evaluated_again_by_name',
+  mixed_fresh: 'incremental cells_lattices_and_tags_in_one_world_each_take_their_own_path',
+  refusal_untouched: 'retract_refuse a_refused_retraction_touches_nothing',
   rule_refused: 'rule_edit a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it',
   login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
   event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',

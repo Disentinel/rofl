@@ -1048,16 +1048,10 @@ impl Eval {
         !brk!("vclosure_unknown_row_absent" => true; false) && self.store.virtuals[ci].forests.iter().any(|(b, f)| *b == book && f.is_ancestor(*a, *d))
     }
 
-    /// Does a change of these relations reach what a nearest answered from its tree reads: its edges, or (`cond_only`)
-    /// what its ancestor is, the growth of which may take a row out.
-    pub(super) fn near_reached(&self, grown: &HashSet<Sym>, cond_only: bool) -> bool {
-        self.vc.any && self.vc.vclosures.iter().zip(self.store.virtuals.iter()).any(|(c, v)| {
-            c.active && v.near.is_some_and(|n| grown.contains(&n.cond) || (!cond_only && grown.contains(&c.src)))
-        })
-    }
-
     /// Can a change of `rel` reach the edges of a closure answered from its tree, through the rules (a negation and an
     /// aggregate included)? A retraction that cannot leaves every forest as it is, and is worked out as a delta.
+    // (read only by the planted fault `retract_tree_refused`)
+    #[cfg_attr(not(feature = "breaks"), allow(dead_code))]
     pub(super) fn vedges_reached(&self, rel: Sym) -> bool {
         if !self.vc.any {
             return false;

@@ -157,8 +157,7 @@ fn an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff() {
 
 /// ONE PATH FOR A FACT OUT: `retract` of a fact is `edit` with that one fact in `out`, the same pass, so it answers the
 /// same (`full`, `touched`) and its watch is told the same `changes`; both are the world evaluated whole without the
-/// fact, and in these programs the pass is the set's. Planted: `retract_one_fact_first` (the old one-fact delta back in
-/// `retract`) turns it red.
+/// fact, and in these programs the pass is the set's.
 #[test]
 fn a_retract_is_an_edit_of_one_fact() {
     let mut s = Serve::new();

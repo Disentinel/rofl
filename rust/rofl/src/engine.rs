@@ -3666,7 +3666,12 @@ impl Eval {
             }
             self.cur_front = Front::default();
         }
+        // (a pass that keeps a relation keeps its firings, which an index begun empty here would not list: it is built
+        // over what stands, and kept by every firing of the pass)
         self.store.track_citers(self.lat.has_cells());
+        if self.lat.has_cells() && brk!("citers_begun_beside_kept" => false; !self.store.kept_layer.is_empty()) {
+            self.store.index_citers();
+        }
         let steps = brk!("widen_steps_carried" => std::mem::take(&mut self.lat.pass.steps); HashMap::new());
         self.lat.pass = LatticePass { steps, plain_pending: self.carried_unknowns(self.store.tick), ..Default::default() };
         self.lat.carry = UnknownCarry::default();
