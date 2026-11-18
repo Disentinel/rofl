@@ -99,6 +99,9 @@ planted faults run once for the whole train and each request lands by its own sq
 stack, or that is red alone, comes back unlabelled with a comment saying why. A pull request runs the fast gates
 only; `breaks` runs in the train and on main. A run cancelled while its commit is still its branch's head is run
 again by the same workflow, once. A merge by hand moves main under a running train, which then lands nothing.
+A request that lands gets a comment of what it did by feature (owner, 2026-11-17): scripts/features.sh over the
+stack's commits, asked through models/engine/feature-behaviour.rofl (changed, held, unwatched, carried; the worlds
+the engine alone moved, made dearer or cheaper); it informs and never stops a train.
 
 Knobs: **fewer is the rule** (owner, 2026-10-05). The interface has as few tools
 as possible, and what is configuration goes in as a config, a preset or a view,
