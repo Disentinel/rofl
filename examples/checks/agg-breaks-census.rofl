@@ -22,6 +22,8 @@ brk("edit_last_kept"). brk_kind("edit_last_kept", switch).
 brk_expects("edit_last_kept", "edit_whole").
 brk("rule_row_out_alone"). brk_kind("rule_row_out_alone", switch).
 brk_expects("rule_row_out_alone", "rule_row_out").
+brk("retract_one_fact_first"). brk_kind("retract_one_fact_first", switch).
+brk_expects("retract_one_fact_first", "retract_one").
 brk("rule_named_as_written_only"). brk_kind("rule_named_as_written_only", switch).
 brk_expects("rule_named_as_written_only", "rule_spelled").
 brk("rule_out_agg_unrefused"). brk_kind("rule_out_agg_unrefused", switch).
@@ -2796,6 +2798,7 @@ switch_site("retract_no_readers", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_rederive", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_refire", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_no_subtract", "rust/rofl/src/engine/delta.rs").
+switch_site("retract_one_fact_first", "rust/rofl/src/session.rs").
 switch_site("retract_partial_gate_off", "rust/rofl/src/engine/delta.rs").
 switch_site("retract_rederive_all", "rust/rofl/src/engine/addition.rs").
 switch_site("retract_reset_any_book", "rust/rofl/src/engine/delta.rs").
