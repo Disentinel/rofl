@@ -16,10 +16,11 @@ const most = ci >= 0 ? Number(process.argv[ci + 1]) : null;
 
 const tally = new Map<string, number>();
 for (const w0 of worlds()) {
-  if (!w0.retract?.length) continue;
   const w = placed(w0);
+  const out = w.retract ?? [];
+  if (out.length === 0) continue;
   const args = ['load', path.join(ROOT, 'boot.rofl'), ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []),
-    ...w.retract.flatMap((f) => ['--retract', f]), ...w.files];
+    ...out.flatMap((f) => ['--retract', f]), ...w.files];
   const r = spawnSync(BIN, args, { encoding: 'utf8', maxBuffer: 1 << 28 });
   for (const l of String(r.stderr).split('\n').filter((l) => l.startsWith('retract '))) {
     const pass = l.includes('evaluated again, ') ? 'full' : l.includes('set: Some') ? 'set' : 'other';
