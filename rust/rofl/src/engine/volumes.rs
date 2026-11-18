@@ -265,7 +265,7 @@ pub(super) fn pressed() -> bool {
 impl Eval {
     /// The world of this core and the `files`, each its name and text, settled by levels: the reader, a fork of the
     /// core that reads every unit and fires nothing.
-    pub fn by_volumes(&mut self, files: &[(String, String)]) -> Result<(Eval, VolStats), Halt> {
+    pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
         let (stage, mut joins) = self.level_stage();
@@ -279,7 +279,7 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for (_, text) in files {
+        for (_, text) in &files {
             let mut rest = text.as_str();
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
@@ -306,6 +306,7 @@ impl Eval {
         let held = std::mem::take(&mut joins.held);
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
+        let n = files.len();
         let lv = e.fork().by_levels(files, &stage, joins, None)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
@@ -321,7 +322,7 @@ impl Eval {
             lv.tops.iter().map(|t| t.count()).sum::<usize>()
         ));
         e.diags.extend(lv.said.iter().cloned());
-        let st = VolStats { files: files.len(), ms: t0.elapsed().as_millis(), facts: (lv.mark - from) as usize, cooled: lv.cooled.times, cool_files: lv.cooled.units, cool_bytes: lv.cooled.bytes };
+        let st = VolStats { files: n, ms: t0.elapsed().as_millis(), facts: (lv.mark - from) as usize, cooled: lv.cooled.times, cool_files: lv.cooled.units, cool_bytes: lv.cooled.bytes };
         e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
         e.levels = Some(Rc::new(lv));
         Ok((e, st))

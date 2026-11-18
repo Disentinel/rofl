@@ -59,7 +59,6 @@ pub struct Joins {
     pub prof: FxSet<Sym>,
 }
 
-static COOLD: std::sync::atomic::AtomicIsize = std::sync::atomic::AtomicIsize::new(0);
 pub struct Unit {
     pub stretch: Rc<Stretch>,
     /// the files below, by their places in the world's order
@@ -1036,11 +1035,14 @@ impl Eval {
     }
 
     /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world.
-    pub fn by_levels(&self, files: &[(String, String)], st: &Stage, joins: Joins, edit: Option<Edit>) -> Result<Levels, Halt> {
+    pub fn by_levels(&self, files: Vec<(String, String)>, st: &Stage, joins: Joins, edit: Option<Edit>) -> Result<Levels, Halt> {
         // (the check harness's oracles: how many files a unit of files alone holds, how many units meet in one)
         let env = |name: &str, by: usize| std::env::var(name).ok().and_then(|x| x.parse().ok()).unwrap_or(by);
         let (leaf, fan) = (edit.as_ref().map_or(env("ROFL_LEAF", 4).max(1), |e| e.0.cx.leaf), env("ROFL_FAN", 8));
         let cx = Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: self.h.clone(), leaf, files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
+        // a file's text is read once, by its leaf unit, and let go there
+        let (n, bytes): (usize, Vec<usize>) = (files.len(), files.iter().map(|f| f.1.len()).collect());
+        let texts: Vec<Mutex<String>> = files.into_iter().map(|(_, t)| Mutex::new(t)).collect();
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
         // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
@@ -1064,10 +1066,9 @@ impl Eval {
         let cost = Mutex::new(self.cost.anew());
         let core_names = (self.h.syms.len() as Sym, self.h.funcs_len());
         let one = Mutex::new(());
-        eprintln!("DBGS live {} MB", crate::engine::HEAP_LIVE.load(Relaxed) >> 20);
         let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
-        let all = (0, files.len() as u32);
+        let all = (0, n as u32);
         // the rules of each layer, and the relations each takes the facts at home by
         let rules_of: Vec<Rc<FxSet<Sym>>> = std::iter::once(Rc::new(cx.joins.cross.clone())).chain(cx.joins.up.iter().cloned()).collect();
         let home = cx.joins.home.clone();
@@ -1166,6 +1167,10 @@ impl Eval {
             })();
             let read = written.and_then(|(starts, bytes)| {
                 let map = crate::arena::map_file(&path).map_err(|x| x.to_string())?;
+                // (mapped, the file needs no name: where the system lets it go, a process killed leaves nothing behind)
+                if cfg!(unix) {
+                    let _ = std::fs::remove_file(&path);
+                }
                 let over = over.get_or_init(|| {
                     let _g = one.lock().unwrap();
                     let store = base.0.fork().store;
@@ -1226,9 +1231,7 @@ impl Eval {
                 if volumes::pressed() {
                     let mut done: Vec<&mut Unit> = out.iter_mut().filter_map(|u| u.get_mut().unwrap().as_mut()?.as_mut().ok()).collect();
                     let (cool, per) = (&cool, done.len().div_ceil(threads).max(1));
-                    let l0 = crate::engine::HEAP_LIVE.load(Relaxed);
                     std::thread::scope(|sc| done.chunks_mut(per).for_each(|us| { sc.spawn(move || cool(us, trees)); }));
-                    COOLD.fetch_add(l0 - crate::engine::HEAP_LIVE.load(Relaxed), Relaxed);
                 }
                 from = to;
             }
@@ -1525,9 +1528,9 @@ impl Eval {
         // the units of each layer: by depth, by place; a unit of files alone holds `leaf` of them
         let mut layers: Vec<Vec<Vec<Rc<Unit>>>> = Vec::new();
         let mut tops: Vec<Rc<Unit>> = Vec::new();
-        let ranges: Vec<(u32, u32)> = (0..files.len()).step_by(leaf).map(|a| (a as u32, (a + leaf).min(files.len()) as u32)).collect();
+        let ranges: Vec<(u32, u32)> = (0..n).step_by(leaf).map(|a| (a as u32, (a + leaf).min(n) as u32)).collect();
         let mut largest: Vec<usize> = (0..ranges.len()).collect();
-        largest.sort_by_key(|&x| std::cmp::Reverse(files[ranges[x].0 as usize..ranges[x].1 as usize].iter().map(|f| f.1.len()).sum::<usize>()));
+        largest.sort_by_key(|&x| std::cmp::Reverse(bytes[ranges[x].0 as usize..ranges[x].1 as usize].iter().sum::<usize>()));
         // (what each layer took: before its units, then each depth of them from the files up)
         let mut took: Vec<String> = Vec::new();
         for (k, rules_k) in rules_of.iter().enumerate() {
@@ -1558,7 +1561,8 @@ impl Eval {
                     }
                     let mut e = fork();
                     let from = e.0.store.len_ids();
-                    for (_, text) in &files[one.0 as usize..one.1 as usize] {
+                    for text in &texts[one.0 as usize..one.1 as usize] {
+                        let text = &std::mem::take(&mut *text.lock().unwrap());
                         match &cx.joins.low {
                             // the books the plan cuts are read in a world let go: its lemmas and the file's facts
                             // outside the books are given to the unit, as the world whole keeps them
@@ -1625,7 +1629,6 @@ impl Eval {
             };
             ms.push(t0.elapsed().as_millis());
             let mut depths = vec![units.clone()];
-            eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms cooled {} units {} MB", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis(), { let c = cooled.lock().unwrap(); c.units }, { let c = cooled.lock().unwrap(); c.bytes >> 20 }); { let (a, r, d, i): (usize, usize, usize, usize) = units.iter().fold((0,0,0,0), |(a,r,d,i), u| (a + u.asked.len(), r + u.reads.len(), d + u.dir.values().map(|v| v.len() + 4).sum::<usize>(), i + u.inner.values().map(|v| v.len() + 4).sum::<usize>())); let (kl, kb) = { let k = keys.lock().unwrap(); (k.syms.len(), k.syms.bytes()) }; let rl = rows.lock().unwrap().len(); eprintln!("DBGU asked {a} reads {r} dir {d} inner {i} keys {kl} {} MB rows {rl} cooldelta {} MB counted {} masks {}", kb >> 20, COOLD.load(Relaxed) >> 20, lower.as_ref().map_or(0, |l| l.counted_rows()), cx.masks.lock().unwrap().values().map(|m| m.len()).sum::<usize>()); }
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
                 let d = depths.len();
@@ -1644,7 +1647,6 @@ impl Eval {
                 })?;
                 depths.push(units.clone());
                 ms.push(t0.elapsed().as_millis());
-                eprintln!("DBGL layer {} depth {} units {} live {} MB peak {} MB t {} ms cooled {} units {} MB", k, depths.len(), units.len(), crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20, t0.elapsed().as_millis(), { let c = cooled.lock().unwrap(); c.units }, { let c = cooled.lock().unwrap(); c.bytes >> 20 }); { let (a, r, d, i): (usize, usize, usize, usize) = units.iter().fold((0,0,0,0), |(a,r,d,i), u| (a + u.asked.len(), r + u.reads.len(), d + u.dir.values().map(|v| v.len() + 4).sum::<usize>(), i + u.inner.values().map(|v| v.len() + 4).sum::<usize>())); let (kl, kb) = { let k = keys.lock().unwrap(); (k.syms.len(), k.syms.bytes()) }; let rl = rows.lock().unwrap().len(); eprintln!("DBGU asked {a} reads {r} dir {d} inner {i} keys {kl} {} MB rows {rl} cooldelta {} MB counted {} masks {}", kb >> 20, COOLD.load(Relaxed) >> 20, lower.as_ref().map_or(0, |l| l.counted_rows()), cx.masks.lock().unwrap().values().map(|m| m.len()).sum::<usize>()); }
             }
             took.push(ms.iter().scan(0, |at, &m| Some(m - std::mem::replace(at, m))).map(|m| m.to_string()).collect::<Vec<_>>().join("+"));
             tops.push(units.pop().expect("a file at least"));
@@ -1672,7 +1674,6 @@ impl Eval {
                     if e.0.run()?.partial {
                         return Err(Halt::Budget("budget_exhausted", None));
                     }
-                    eprintln!("DBGL reader live {} MB peak {} MB", crate::engine::HEAP_LIVE.load(Relaxed) >> 20, crate::engine::HEAP_PEAK.load(Relaxed) >> 20);
                     said.push(format!("levels: the reader's unit, the rules left to it fired whole over the layers, took {} ms", t.elapsed().as_millis()));
                     said.append(&mut e.0.diags);
                     done(e, k, all, Vec::new(), FxMap::default(), Rc::default(), Asked::default())

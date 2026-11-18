@@ -1072,7 +1072,20 @@ pub struct Stretch {
     keyed: Keyed,
 }
 
-type Keys = FxMap<u64, Vec<FactId>>;
+/// A stretch's facts of a relation by the value at one argument: the values sorted, each beside its fact, so a fact
+/// costs twelve bytes where a map of lists cost five times that.
+#[derive(Default)]
+struct Keys {
+    vals: Vec<u64>,
+    ids: Vec<FactId>,
+}
+
+impl Keys {
+    fn get(&self, v: u64) -> &[FactId] {
+        let a = self.vals.partition_point(|&x| x < v);
+        &self.ids[a..a + self.vals[a..].partition_point(|&x| x == v)]
+    }
+}
 
 /// By the place of the relation in `rels` and the argument: the first four each in a cell written once, read with no
 /// lock by every thread; the others behind one.
@@ -1419,13 +1432,9 @@ impl Stretch {
     fn keyed(&self, h: &Heap, rel: Sym, p: u8) -> Option<&Keys> {
         let i = self.rels.binary_search(&rel).ok()?;
         let make = || {
-            let mut ix = Keys::default();
-            for k in self.of_rel(rel) {
-                if let Some(&t) = self.args(k).get(p as usize) {
-                    ix.entry(if h.is_ground(t) { t.bits() } else { OPEN }).or_default().push(k);
-                }
-            }
-            ix
+            let mut at: Vec<(u64, FactId)> = self.of_rel(rel).into_iter().filter_map(|k| self.args(k).get(p as usize).map(|&t| (if h.is_ground(t) { t.bits() } else { OPEN }, k))).collect();
+            at.sort_unstable();
+            Keys { vals: at.iter().map(|x| x.0).collect(), ids: at.iter().map(|x| x.1).collect() }
         };
         if let Some(cell) = self.keyed.low[i].get(p as usize) {
             return Some(cell.get_or_init(make));
@@ -1454,7 +1463,7 @@ impl Stretch {
             return;
         }
         let mut best: Option<(&Keys, u64, usize)> = None;
-        let len = |ix: &Keys, v: u64| ix.get(&v).map_or(0, Vec::len) + ix.get(&OPEN).map_or(0, Vec::len);
+        let len = |ix: &Keys, v: u64| ix.get(v).len() + ix.get(OPEN).len();
         for (&p, v) in pos.iter().zip(vals).filter(|(p, v)| **p < 256 && h.is_ground(**v)) {
             let Some(ix) = self.keyed(h, rel, p as u8) else { return };
             let n = len(ix, v.bits());
@@ -1473,7 +1482,7 @@ impl Stretch {
             out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
             return;
         };
-        for k in ix.get(&v).into_iter().chain(ix.get(&OPEN)).flatten().copied() {
+        for k in ix.get(v).iter().chain(ix.get(OPEN)).copied() {
             let a = self.args(k);
             if a.len() == arity && persp.is_none_or(|q| self.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v)) {
                 out.push(k);
@@ -1591,9 +1600,6 @@ impl Lower {
         }, persp, cpos, vpos));
         self.counted.lock().unwrap().insert(key, g.clone());
         g
-    }
-    pub fn counted_rows(&self) -> usize {
-        self.counted.lock().unwrap().values().map(|g| g.len()).sum()
     }
     fn of(&self, id: FactId) -> Option<&Stretch> {
         let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);

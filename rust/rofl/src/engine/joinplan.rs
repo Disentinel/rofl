@@ -122,9 +122,6 @@ impl Eval {
                 Some(p) => Slot::Plan(Rc::new(p)),
                 None => Slot::No,
             };
-            if self.h.name(r.clause.head.rel) == "at_call" && r.plan.len() == 4 {
-                match &slot { Slot::Plan(p) => eprintln!("DBGP {} at {:?} perm {:?} unit {:.1} by_seed {} store {}", self.h.name(r.id), at, p.perm, p.unit, self.by_seed, self.store.len_ids()), Slot::No => eprintln!("DBGP {} at {:?} no plan", self.h.name(r.id), at) }
-            }
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
