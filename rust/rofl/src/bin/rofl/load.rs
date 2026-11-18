@@ -68,16 +68,34 @@ fn refuse(s: &mut Session, json: bool, msg: String) -> ! {
 }
 
 /// An ask in the REPL's words with the sentences off (src/repl.ts `?`): each row's bindings, sorted, `(empty)` for
-/// none, each shrug with its line, and a last line when the rows may be short of an answer.
-fn ask_text(a: &rofl::session::Answer) -> String {
+/// none, each shrug with its line. A partial answer opens with a line of its own and closes with why it may be short,
+/// so that neither its first rows nor its last read as the whole answer.
+fn ask_text(a: &rofl::session::Answer, why: &[&str]) -> String {
     let said = |row: &[String]| if a.vars.is_empty() { "true".to_string() } else { a.vars.iter().zip(row).map(|(v, x)| format!("{v} = {x}")).collect::<Vec<_>>().join(", ") };
     let mut rows: Vec<String> = a.rows.iter().map(|r| said(r)).collect();
     rows.sort_by(|x, y| rofl::term::cmp_js(x, y));
     rows.dedup();
     if rows.is_empty() && a.shrugs.is_empty() { rows.push("(empty)".into()); }
     rows.extend(a.shrugs.iter().map(|(r, line)| format!("? {}  {line}", said(r))));
-    if a.partial { rows.push("[partial: budget exhausted, hole emitted]".into()); }
+    if !why.is_empty() {
+        rows.insert(0, PARTIAL_HEAD.into());
+        rows.extend(why.iter().map(|w| format!("[partial: {w}]")));
+    }
     rows.join("\n")
+}
+
+/// The first line of a partial answer (src/repl.ts says the same).
+pub const PARTIAL_HEAD: &str = "[partial answer: the rows below may be short of the whole answer]";
+
+/// Why the world's answers may be short: the wall it stopped at.
+fn cut_why(s: &Session) -> &'static str {
+    if s.eval.memory_cut() {
+        "the memory this process may use ran out, and the world stopped there"
+    } else if s.eval.disk_cut() {
+        "the disk cap of the cache was reached, and the world stopped there"
+    } else {
+        "budget exhausted, hole emitted"
+    }
 }
 
 pub fn main(args: Vec<String>) {
@@ -528,6 +546,15 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
             }
             s
         }
+        // the whole world on one heap takes more memory than its units: past the memory wall it is not tried
+        Err(_) if rofl::engine::MEMORY_STOPPED.load(std::sync::atomic::Ordering::Relaxed) => {
+            let may = rofl::engine::MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed);
+            eprintln!("volumes: the units reached the memory this process may use, {:.1} GB, before the question's relations were settled: no answer, and nothing is kept; ask over fewer files", may as f64 / (1u64 << 30) as f64);
+            for _ in &o.qs {
+                if o.json { println!("{}", serde_json::json!({ "ok": true, "vars": [], "rows": [], "partial": true })) } else { println!("{PARTIAL_HEAD}\n(empty)\n[partial: the memory this process may use ran out before the units were settled]\n") }
+            }
+            return Some(PARTIAL);
+        }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
@@ -964,7 +991,8 @@ fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>
             Ok(a) => {
                 partial = a.partial;
                 let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
-                let text = if failed.is_empty() { ask_text(&a) } else { format!("{}\n[partial: a scan failed, its facts are not in the world]", ask_text(&a)) };
+                let why: Vec<&str> = [a.partial.then(|| cut_why(s)), (!failed.is_empty()).then_some("a scan failed, its facts are not in the world")].into_iter().flatten().collect();
+                let text = ask_text(&a, &why);
                 (text, serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial || !failed.is_empty() }))
             }
             Err(e) => { refused = true; (format!("error: {e}"), serde_json::json!({ "ok": false, "error": e })) }
