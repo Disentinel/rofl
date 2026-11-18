@@ -451,7 +451,13 @@ may reach (the functions its receiver holds, never folded into `calls`);
 `merged_param[audit](F, I, N)` names a parameter handed N functions, whose
 answers are their union, not per call. Code under `require.main === module` is
 read as the library's: `runs_as_script("path.js")` reads one file as the script
-node runs, `reads_the_file_as(script)` every file. A notebook cell whose rule
+node runs, `reads_the_file_as(script)` every file. **A runtime assumption** is a
+base fact of the book `[assume]`: `assumed_env[assume]("NODE_ENV", "production")`
+or `assumed_export[assume]("src/platform.ts", "isWindows", false)`; a test that
+reads it (alone, `!`, `&&`, `||`, `===` / `!==` a literal) is decided, and the
+calls of the arm it does not take hand their callees nothing, as under an entry
+guard; `rofl excise` of the fact brings them back by delta
+(examples/notebook/assume.rofl.md, examples/vscode/assume-linux.rofl). A notebook cell whose rule
 reads a relation at an arity or in a book nothing writes says so on the cell.
 
 Measured on `examples/services/src` (3 files, 1051 facts), five questions, two
@@ -881,6 +887,13 @@ engine's on 555 of its 622, 95% of their bytes (f_the_memory_of_a_world_is_forec
 .claude/skills/forecast-engine-change/SKILL.md.
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
-reading and the binding. It is a diagnostic for the rule's author, not an
-error; docs/optimising-a-world.md is what to do about it. `evaluate` returns
-the same as `hot`.
+reading and the binding. A rule is hot when it has read more rows than the world
+holds facts as it stands and the most of any rule, and again at each doubling;
+no number is set. By levels each unit says its own, and once the units are
+settled the world says the rule that, summed over them, read more than the
+world (`..., summed over the units it fired in`). It is a diagnostic for the
+rule's author, not an error; docs/optimising-a-world.md is what to do about it.
+`evaluate` returns the same as `hot`. The profile (*The profile of an
+evaluation*) is the units' sum too: a world by levels that reads it stays by
+levels, and the rules that read it are fired by the reader once the units are
+settled.

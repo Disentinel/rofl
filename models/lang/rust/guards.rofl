@@ -1,0 +1,70 @@
+-- guards.rofl — WHETHER RUST CODE RUNS AT ALL, in the words of the JS model's js-controlflow.rofl:
+--
+--   guarded[code](N)              N may not run when the code around it runs (a MAY: never "never runs")
+--   completes_abruptly[code](X)   X never completes normally: it returns, breaks, continues or diverges
+--   always_throws[code](F)        the function F never returns: its body diverges (`panic!`, a call of such a function)
+--   after_abrupt[code](S)         S follows, in its block, a step that completes abruptly: it never runs
+--   may_not_be_reached[code](F)   no path from `main` runs F for sure: every call of it is guarded or in such a function
+--
+-- What guards: an arm of `if`, `match`, `&&`, `||`, a loop's body, the `else` of `let .. else` (executes_if, the
+-- roles), the body of a closure (it runs when called), and, unlike js-controlflow, every step after one that MAY
+-- leave its block: a `return`, a `?`, a diverging call, a `break` or `continue` of a loop around the block, anywhere in
+-- the step but inside a closure of its own. js-controlflow guards only after a step that surely leaves; a step that
+-- may (`if c { return }`) is then a guard too small, and the MAY reads it.
+
+imports(code, rust). imports(code, value). imports(code, tree). imports(code, ast_rs).
+
+-- ===================================================================== WHAT LEAVES
+edb(diverging_macro).
+diverging_macro("panic!"). diverging_macro("unreachable!"). diverging_macro("todo!"). diverging_macro("unimplemented!").
+diverges[code](M) :- callee[value](M, N), ref[value](N, Name), diverging_macro(Name).
+diverges[code](W) :- ran[rust](W, F), always_throws[code](F).
+abrupt[code](X) :- exits[value](X, _).
+abrupt[code](X) :- diverges[code](X).
+
+-- a node completes abruptly when a part of it that always runs does; an `if` when both its arms do
+completes_abruptly[code](X) :- abrupt[code](X).
+completes_abruptly[code](P) :- completes_abruptly[code](X), parent[tree](P, X), always_runs_in[code](P, X).
+completes_abruptly[code](If) :- executes_if[value](C, G, truthy), parent[tree](If, C), executes_if[value](A, G, falsy),
+                                parent[tree](If, A), completes_abruptly[code](C), completes_abruptly[code](A).
+diverges[code](P) :- diverges[code](X), parent[tree](P, X), always_runs_in[code](P, X).
+always_runs_in[code](P, X) :- parent[tree](P, X), not executes_if[value](X, _, _), not repeats[value](P, X),
+                              not own_body[code](P, X).
+own_body[code](F, B) :- body[value](F, B).
+always_throws[code](F) :- fn_item[rust](F), body[value](F, B), diverges[code](B).
+
+-- ===================================================================== WHAT MAY LEAVE A BLOCK
+rs_block[code](Bk) :- rs_k[ast_rs](Bk, block).
+loop_node[code](L) :- repeats[value](L, _).
+body_owner[code](F) :- body[value](F, _).
+nearest in_loop[code](L, N) of parent[tree](L, N) where loop_node[code](L).
+nearest in_owner[code](F, N) of parent[tree](F, N) where body_owner[code](F).
+leaves_fn[code](X) :- exits[value](X, return).
+leaves_fn[code](X) :- diverges[code](X).
+leaves_fn[code](T) :- passes[value](T, E), returns[value](T, E).
+leaves_loop[code](X) :- exits[value](X, break).
+leaves_loop[code](X) :- exits[value](X, continue).
+-- the step S of the block Bk may leave it: something in S leaves the function S is in, or a loop around Bk
+step_of[code](Bk, I, S) :- rs_block[code](Bk), nth[tree](Bk, I, S).
+may_leave[code](Bk, I) :- step_of[code](Bk, I, S), leaves_fn[code](S).
+may_leave[code](Bk, I) :- step_of[code](Bk, I, S), inside[tree](S, X), leaves_fn[code](X), in_owner[code](F, X),
+                          in_owner[code](F, S).
+may_leave[code](Bk, I) :- step_of[code](Bk, I, S), leaves_loop[code](S).
+may_leave[code](Bk, I) :- step_of[code](Bk, I, S), inside[tree](S, X), leaves_loop[code](X), in_loop[code](L, X),
+                          not inside[tree](S, L), L != S.
+after_leave[code](T) :- may_leave[code](Bk, I), step_of[code](Bk, J, T), I < J.
+after_abrupt[code](T) :- step_of[code](Bk, I, S), completes_abruptly[code](S), step_of[code](Bk, J, T), I < J.
+
+-- ===================================================================== GUARDED
+guard_root[code](A) :- executes_if[value](A, _, _).
+guard_root[code](B) :- body[value](Cl, B), rs_k[ast_rs](Cl, closure_expression).
+guard_root[code](T) :- after_leave[code](T).
+guard_root[code](T) :- after_abrupt[code](T).
+guarded[code](A) :- guard_root[code](A).
+guarded[code](N) :- guard_root[code](A), inside[tree](A, N).
+
+-- ===================================================================== REACHED FROM MAIN
+main_fn[code](F) :- fn_item[rust](F), target[value](F, N), binds[value](N, "main"), in_module[rust](M, F), crate_root[rust](M, M).
+reached[code](F) :- main_fn[code](F).
+reached[code](F) :- ran[rust](W, F), not guarded[code](W), in_fn[rust](G, W), reached[code](G).
+may_not_be_reached[code](F) :- fn_item[rust](F), not reached[code](F).

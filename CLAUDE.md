@@ -91,6 +91,18 @@ The Rust code's form has a gate of its own, no npm script: from rust/, `cargo cl
 exits 0, and CI runs it on every push and pull request (job `clippy`, the toolchain pinned to 1.95.0, beside a
 `cargo check --features breaks`). The lints the style overrules are in rust/rofl/Cargo.toml, `[lints.clippy]`.
 
+**A pull request lands by the merge train, not by hand** (owner, 2026-11-15). When its checks are green, label it
+`queue` and stop: .github/workflows/merge-train.yml (scripts/merge_train.ts) takes every request so labelled,
+stacks them on main, merges the ledgers by line, makes the generated files and the goldens again once, and lets
+models/process/ci/train.rofl say whether a world answers otherwise than the one change that moved it; then the
+planted faults run once for the whole train and each request lands by its own squash. A request the train cannot
+stack, or that is red alone, comes back unlabelled with a comment saying why. A pull request runs the fast gates
+only; `breaks` runs in the train and on main. A run cancelled while its commit is still its branch's head is run
+again by the same workflow, once. A merge by hand moves main under a running train, which then lands nothing.
+A request that lands gets a comment of what it did by feature (owner, 2026-11-17): scripts/features.sh over the
+stack's commits, asked through models/engine/feature-behaviour.rofl (changed, held, unwatched, carried; the worlds
+the engine alone moved, made dearer or cheaper); it informs and never stops a train.
+
 Knobs: **fewer is the rule** (owner, 2026-10-05). The interface has as few tools
 as possible, and what is configuration goes in as a config, a preset or a view,
 not as another flag or variable. These are the only ones to use; every other

@@ -1,0 +1,23 @@
+-- examples/parity/instances/rs-check.rofl — A CALL IS AN INSTANCE, IN RUST (the scene of examples/checks/instances-check.rofl).
+-- truth(Name, V): what the program prints for the `let` named Name (cargo run, 2026-11-16); se_truth(Line, V): what
+-- reaches the effect at that line of rs/src/main.rs. A value of the truth the model misses is red (`missing`: the
+-- model is wrong); a value it gives beyond the truth is red unless `general(Name, V, Why)` says which general case of
+-- the abstraction it is, as the JS check names its own.
+truth("direct_a", "a.json"). truth("direct_b", "b.json"). truth("got_a", "a.json"). truth("got_b", "b.json").
+truth("got_c", "c.json"). truth("where_k", "a.json"). truth("where_j", "b.json"). truth("where_c2", "a.json").
+truth("where_c3", "b.json"). truth("api_port", "3000"). truth("admin_port", "4000"). truth("api_env", "prod").
+truth("r1_port", "5000"). truth("r2_port", "7002"). truth("k1_value", "one"). truth("k2_value", "two").
+truth("n1_slow", true). truth("n2_slow", false). truth("n1_stale", true).
+general("api_port", "", "a field written after the object is made: the order of writes is not followed").
+general("admin_port", "", "a field written after the object is made").
+general("r1_port", "", "a field written after the object is made").
+general("r2_port", "", "a field written after the object is made").
+general("api_env", "dev", "a field written after the object is made").
+general("r1_port", "7001", "a condition is not evaluated: retry may take either arm").
+general("r2_port", "5000", "a condition is not evaluated").
+general("n1_slow", false, "a field written after the object is made").
+se_truth(7, "a.json"). se_truth(7, "b.json"). se_truth(7, "c.json"). se_truth(8, "a.json"). se_truth(18, "a.json").
+se_truth(18, "b.json"). se_truth(22, "b.json"). se_truth(31, "a.json"). se_truth(32, "b.json"). se_truth(33, "a.json").
+se_truth(36, "c.json"). se_truth(48, "a.json"). se_truth(49, "b.json"). se_truth(51, "b.json").
+
+scene_file("examples/parity/instances/rs/src/main.rs").

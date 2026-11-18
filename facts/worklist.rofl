@@ -3497,8 +3497,8 @@ work(w_js_dead_call_sites,
 work_state(w_js_dead_call_sites, done).
 
 work(w_js_call_site_context,
-  "NO CALL-SITE CONTEXT: express() inside a shared init is one allocation site, so app.set/app.get merge the values of every caller (two init() calls in one service got each other's port). Add bounded context (k-limited call strings or allocation-site cloning at named factories), sound, and measured against w_dataflow_pruning.").
-work_state(w_js_call_site_context, open).
+  "NO CALL-SITE CONTEXT: express() inside a shared init is one allocation site, so app.set/app.get merge the values of every caller (two init() calls in one service got each other's port). Add bounded context (k-limited call strings or allocation-site cloning at named factories), sound, and measured against w_dataflow_pruning. DONE 2026-11-16 (#261), by another route than the one named here: no call strings and no cloning, so no bound. A call is an instance of what its function hands out (`via(C, O)` and the callee's summary), a method call reads the fields of the instance it is called on (`field(M, Key)`, `key_of`), and a method run on an object a field holds is walked object by object (`hop`, `run`, `ret_of`); world `js_instances`. Over 100 vscode files against main: 4 615 node values and 122 literals gone, 96 true ones came, 32 false resolves gone; the side-effect question over 1000 files 781 -> 776 values in the same four minutes. KEPT GENERAL, named in the check: a write made after the call, a kept variable, `this` under another name or a computed key, a closure returning a foreign hop, keyed collections. Not measured above 1000 files.").
+work_state(w_js_call_site_context, done).
 work_needs(w_js_call_site_context, w_dataflow_pruning).
 
 work(w_js_framework_contracts,
@@ -3688,7 +3688,10 @@ work_needs(w_cmp_store_load_forwarding, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_runtime_assumptions,
   "HYPOTHESIS 6: runtime assumptions prune dead branches (conditional constant propagation): `runtime_env(NODE_ENV, production)` and the like as base facts in their own book; a branch dead under them contributes no edges; excising the assumption brings them back by retraction; whynot names the assumption a missing flow was bought with; an unknown assumption keeps both branches (w_labeled_unknowns). EXPERIMENT: one real corpus with environment checks, size and answers with and without the assumption, and the excise round trip identical to a fresh evaluation.").
-work_state(w_cmp_runtime_assumptions, open).
+work_state(w_cmp_runtime_assumptions, done).
+work_spawned(w_cmp_runtime_assumptions, f_runtime_assumptions_decide_tests_and_save_no_rows_on_vscode).
+work_spawned(w_cmp_runtime_assumptions, f_a_compound_term_premise_leaves_its_file).
+-- DONE 2026-11-17: built, excised by delta, measured on vscode 250/1000: answers move only through dead arms (32 of 1713 at 1000), no rows saved: dead code is 0.11% of vscode. Left: a whynot that names the assumption behind a blocked negation.
 work_needs(w_cmp_runtime_assumptions, w_cmp_remeasure_after_engine_fast).
 
 work(w_cmp_demand_cones,
@@ -4242,3 +4245,22 @@ work(w_readers_unit_explodes,
   "From f_the_js_model_grows_in_proportion_and_the_seconds_do_not: over the JS model with examples/vscode/side-effects.rofl the layers of a world settled by levels rise as the world does (2.5 s, 5.9 s, 17.3 s at 20, 60, 120 files of vscode, release, 4 cores) and the reader's unit, the rules left to the world's reader by their shape, fired whole over the layers, rises by a square (0.8 s, 3.6 s, about 32 s): two thirds of the time at 1 M facts. The goal: the first whole evaluation within 5 minutes at the reference world, 70 M facts by estimate. FOUND 2026-11-15: the second arm of amb_exn_carrier[flow] alone, 28.7 s of the unit's 36.9 s at 120 files, 41 M rows read where the world's `resolves` edges are far fewer. To do: why it reads them (the order of its premises, the index it is given in the reader's unit, the lookup across the units), by the refine loop over that unit; the rule is of the frozen JS model, a change of its text goes to the owner. ACCEPTANCE: the explode factor of the seconds from 400 k to 1 M facts is 1 in models/product/rofl.rofl, `engine_explodes` empty.").
 work_state(w_readers_unit_explodes, open).
 work_spawned(w_readers_unit_explodes, f_the_js_model_grows_in_proportion_and_the_seconds_do_not).
+work(w_size_biased_fanout,
+  "From f_a_tree_held_from_the_units_was_sized_zero_to_the_planner: the planner prices a premise read by a key a join bound at the average fan-out of a key (a closure: rows / internal), but a key bound by a join through its members is drawn by its size, and the expected fan-out is the sum of the squares over the sum. acts_in[flow] by levels reads 19 M rows at 120 files of vscode for 11 facts by it. To do: the second moment kept beside pairs, deep and internal in a forest, and in the census for a relation's distinct values, and `vstat` and the join estimate use it where the key is bound by a variable. ACCEPTANCE: acts_in out of `hot:` at 120 files by levels, the rows read of the run at 20, 60, 120 files no more than before.").
+work_state(w_size_biased_fanout, done).
+work_spawned(w_size_biased_fanout, f_a_tree_held_from_the_units_was_sized_zero_to_the_planner).
+
+work(w_one_text_kernel,
+  "From f_the_rust_model_reaches_parity_with_the_js_model: models/lang/rust/strings.rofl repeats section 5 of js-concat.rofl (slots, pieces, choices under concat_cap, levels to concat_depth, seq into cat/join texts) over its own instances. Put the kernel once in a book both models load (the core of the Language model: parts, part_lit, shape in, may_be_text and may_be_form out), keep only the forms per language, and let the JS worlds' answers not move.").
+work_state(w_one_text_kernel, open).
+work_spawned(w_one_text_kernel, f_the_rust_model_reaches_parity_with_the_js_model).
+
+work(w_polyglot_service_graph,
+  "From f_the_rust_model_reaches_parity_with_the_js_model: web.rofl writes serves, app_listens and requests as js-express and js-fetch do, so a JS client of a Rust server should meet in js-service.rofl and rules/net. Not yet tried: js-service reads corpus_file[code], str_value[flow], nearest_fn[code] and top_call[code] of the JS model, which the Rust model does not write, and a port inside a text is an int piece where the net rules expect a string. A scene: examples/parity/service with a JS client beside the Rust server, its edges the requests the program answers.").
+work_state(w_polyglot_service_graph, open).
+work_spawned(w_polyglot_service_graph, f_the_rust_model_reaches_parity_with_the_js_model).
+
+work(w_engine_safety_names_meet_a_models,
+  "From f_a_model_relation_named_as_a_safety_relation_is_refused_for_its_rule: a relation `slot[rust]` of a model made safety.rofl refuse an unrelated rule. Find where the reflected program meets safety's own `slot`, keep the two apart, and add the case to the engine's tests.").
+work_state(w_engine_safety_names_meet_a_models, open).
+work_spawned(w_engine_safety_names_meet_a_models, f_a_model_relation_named_as_a_safety_relation_is_refused_for_its_rule).

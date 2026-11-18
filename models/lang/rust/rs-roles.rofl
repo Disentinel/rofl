@@ -52,7 +52,7 @@ edb(rs_wrapper).
 rs_wrapper(parenthesized_expression, c). rs_wrapper(unsafe_block, c).      rs_wrapper(const_block, body).
 rs_wrapper(generic_function, function).  rs_wrapper(reference_pattern, c). rs_wrapper(mut_pattern, c).
 rs_wrapper(ref_pattern, c).              rs_wrapper(match_pattern, c).     rs_wrapper(else_clause, c).
-rs_wrapper(expression_statement, c).
+rs_wrapper(expression_statement, c). rs_wrapper(await_expression, c).
 unwrapped[ast_rs](X, X) :- node[ast_rs](X, K, _), not rs_wrapper(K, _).
 unwrapped[ast_rs](X, Y) :- node[ast_rs](X, K, _), rs_wrapper(K, F), child[ast_rs](X, F, 0, Z), unwrapped[ast_rs](Z, Y).
 rs_c[ast_rs](P, F, I, C) :- child[ast_rs](P, F, I, X), unwrapped[ast_rs](X, C).

@@ -289,6 +289,7 @@ check[checks]("rust/rofl/tests/sql.rs", "an_argument_is_bound_never_written_into
 check[checks]("rust/rofl/tests/sql.rs", "a_template_a_rule_builds_is_refused", test).
 check[checks]("rust/rofl/tests/sql.rs", "a_database_that_is_not_there_fails_its_wants", test).
 check[checks]("rust/rofl/tests/stages.rs", "a_cut_world_holds_what_the_whole_world_holds_outside_the_cut", test).
+check[checks]("rust/rofl/tests/stages.rs", "a_fact_read_only_above_the_cut_is_retracted_as_fresh", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_declaration_changes_no_fact_and_the_planner_reads_its_promise", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_broken_promise_is_refused_naming_the_key_and_both_values", test).
 check[checks]("rust/rofl/tests/structure.rs", "the_promise_is_judged_at_every_tick", test).
@@ -329,6 +330,9 @@ check[checks]("rust/rofl/tests/volumes.rs", "the_rules_of_one_file_are_evaluated
 check[checks]("rust/rofl/tests/volumes.rs", "a_file_that_breaks_the_plan_is_refused", test).
 check[checks]("rust/rofl/tests/volumes.rs", "a_node_key_inside_a_string_names_no_file", test).
 check[checks]("rust/rofl/tests/volumes.rs", "the_rows_a_lower_unit_cites_are_its_own", test).
+check[checks]("rust/rofl/tests/volumes.rs", "the_units_spend_into_the_worlds_count", test).
+check[checks]("rust/rofl/tests/volumes.rs", "a_world_by_levels_reads_its_own_profile", test).
+check[checks]("rust/rofl/tests/volumes.rs", "a_count_of_the_core_and_one_of_the_reader", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_is_its_rows", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_no_capability_is_refused", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_the_wrong_arity_is_refused", test).
@@ -373,6 +377,7 @@ check[checks]("facts/goldens.rofl", "moot", world).
 check[checks]("facts/goldens.rofl", "nope", world).
 check[checks]("facts/goldens.rofl", "notebook", world).
 check[checks]("facts/goldens.rofl", "notebook_assign", world).
+check[checks]("facts/goldens.rofl", "notebook_assume", world).
 check[checks]("facts/goldens.rofl", "notebook_cjs", world).
 check[checks]("facts/goldens.rofl", "notebook_cli_exits", world).
 check[checks]("facts/goldens.rofl", "notebook_declared", world).
@@ -850,6 +855,7 @@ check[checks]("facts/goldens.rofl", "async_refused", world).
 check[checks]("facts/goldens.rofl", "budget_wall", world).
 check[checks]("facts/goldens.rofl", "ci_cost", world).
 check[checks]("facts/goldens.rofl", "ci_gate", world).
+check[checks]("facts/goldens.rofl", "ci_train", world).
 check[checks]("facts/goldens.rofl", "closure_base_fact", world).
 check[checks]("facts/goldens.rofl", "concat_builtin", world).
 check[checks]("facts/goldens.rofl", "concat_recursion", world).
@@ -933,6 +939,7 @@ check[checks]("facts/goldens.rofl", "intents_screen", world).
 check[checks]("facts/goldens.rofl", "intents_sql", world).
 check[checks]("facts/goldens.rofl", "jodit_fixture", world).
 check[checks]("facts/goldens.rofl", "join_through_constants", world).
+check[checks]("facts/goldens.rofl", "js_instances", world).
 check[checks]("facts/goldens.rofl", "keyword_atom", world).
 check[checks]("facts/goldens.rofl", "lifecycle_clean", world).
 check[checks]("facts/goldens.rofl", "lifecycle_forgetful", world).
@@ -942,6 +949,13 @@ check[checks]("facts/goldens.rofl", "net", world).
 check[checks]("facts/goldens.rofl", "not_as_a_name", world).
 check[checks]("facts/goldens.rofl", "operators", world).
 check[checks]("facts/goldens.rofl", "oxc_roles", world).
+check[checks]("facts/goldens.rofl", "parity_matrix", world).
+check[checks]("facts/goldens.rofl", "parity_rs_calls", world).
+check[checks]("facts/goldens.rofl", "parity_rs_guards", world).
+check[checks]("facts/goldens.rofl", "parity_rs_instances", world).
+check[checks]("facts/goldens.rofl", "parity_rs_keyed", world).
+check[checks]("facts/goldens.rofl", "parity_rs_service", world).
+check[checks]("facts/goldens.rofl", "parity_rs_strings", world).
 check[checks]("facts/goldens.rofl", "plan_dp", world).
 check[checks]("facts/goldens.rofl", "plan_given", world).
 check[checks]("facts/goldens.rofl", "premise_arity", world).

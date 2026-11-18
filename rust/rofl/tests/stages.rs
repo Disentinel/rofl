@@ -64,3 +64,29 @@ fn a_cut_world_holds_what_the_whole_world_holds_outside_the_cut() {
     let refused = cut.retract_set_delta(&[some]).unwrap();
     assert!(refused.is_err_and(|why| why.contains("lemmas")), "a staged world takes no retraction");
 }
+
+/// A fact no rule below the cut reads proved no lemma: a runtime assumption is taken out of a staged world by delta,
+/// and the world is the one evaluated without it.
+#[test]
+fn a_fact_read_only_above_the_cut_is_retracted_as_fresh() {
+    let fact = r#"assumed_export[assume]("platform.ts", "isWindows", false)"#;
+    let world_with = |more: &str| {
+        let mut ts = texts(true);
+        ts.pop();
+        ts.push(std::fs::read_to_string(root().join("examples/checks/assume-facts.rofl")).unwrap());
+        ts.push(more.to_string());
+        let refs: Vec<&str> = ts.iter().map(String::as_str).collect();
+        let mut s = Session::fresh(BUDGET);
+        s.load_all(&refs, None).unwrap();
+        s.evaluate().unwrap();
+        s
+    };
+    let (mut with, mut without) = (world_with(&format!("{fact}.")), world_with(""));
+    assert!(with.eval.diags.iter().any(|d| d.starts_with("stage: ")), "the world was staged");
+    assert!(with.ask("dead_site[code](C)").unwrap().rows.len() > without.ask("dead_site[code](C)").unwrap().rows.len(), "the assumption kills a site");
+    with.retract_delta(fact).unwrap();
+    let (a, b) = (keys(&with), keys(&without));
+    let lost: Vec<_> = b.difference(&a).take(5).collect();
+    let more: Vec<_> = a.difference(&b).take(5).collect();
+    assert!(lost.is_empty() && more.is_empty(), "lost {lost:?}, more {more:?}");
+}

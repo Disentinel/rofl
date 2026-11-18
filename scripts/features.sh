@@ -40,6 +40,14 @@ git worktree add -q --detach "$tree" HEAD
 asks="--ask entry_kind(D,N,K) --ask does(D,N,H) --ask entry_effect(D,N,K,C) --ask wide(H)"
 snap() { # the features of the tree at commit $1, and with $2 (the lines a change wrote in it) where it wrote
   [ -s $out/$1.rofl ] && { [ -z "$2" ] || [ -e $out/$1.wrote.rofl ]; } && return
+  # an engine already asked, under another commit, is the same answer: most changes do not write the engine
+  e=$(git rev-parse "$1:rust/rofl")
+  if [ -s $out/engine.$e ] && [ ! -s "${2:-/dev/null}" ]; then
+    was=$(cat $out/engine.$e)
+    sed "s/^\([a-z_]*\[snap\](\)\"$was\"/\1\"$1\"/" $out/$was.rofl > $out/$1.rofl
+    [ -z "$2" ] || : > $out/$1.wrote.rofl
+    return
+  fi
   git -C "$tree" checkout -q --detach "$1"
   $scan "$tree/rust/rofl" rust/rofl/ > $out/$1.rs.rofl
   $rofl load --json --space 80000000 --budget 4000000000 $asks ${2:+--ask 'touched_lines(F,K)' --ask 'outside_lines(File,K)' --ask 'hit(D,N,K)'} \
@@ -49,6 +57,7 @@ snap() { # the features of the tree at commit $1, and with $2 (the lines a chang
   rm $out/$1.all $out/$1.rs.rofl
   [ -z "$2" ] || mv $out/$1.wrote.tmp $out/$1.wrote.rofl
   rm -f $out/$1.wrote.tmp
+  echo $1 > $out/engine.$e
 }
 
 wk=$(cksum < scripts/worlds_scan.ts | cut -d' ' -f1)
