@@ -1301,6 +1301,8 @@ pub struct AddState {
     /// What the overdeletion took out though a firing of it over a cell or a row was not judged (`overdelete`): only
     /// these, and a base fact that lost its firings, are derived again by their rules; the rest comes back by the news.
     retry: crate::store::FxSet<FactId>,
+    /// The facts a rule taken out fired (`retract_rules`): each lost a firing, and is judged with what rests on it.
+    lost: Vec<FactId>,
     pub delta_ns: u64,
     delta_plans: HashMap<(Sym, usize), joinplan::Slot>,
     delta_stats: HashMap<Vec<u64>, (usize, usize, usize)>,

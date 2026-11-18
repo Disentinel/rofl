@@ -562,6 +562,95 @@ impl Eval {
         Ok(d)
     }
 
+    /// TAKE OUT OF AN EVALUATED WORLD the rules `gone`, `rows` the rows of them a load wrote (base facts of the kernel's
+    /// book), and bring it to the state a fresh evaluation of the program without them holds: the rows go as base
+    /// facts go (`retract_set`), each fact a rule fired loses that firing and is a seed of the same DRed pass (what
+    /// another firing still proves stands, the rest goes with what rests on it, a negation over what went holds), and
+    /// the program is prepared again before the levels run, so nothing fires the rules again. The rows always go;
+    /// `Err(reason)` leaves the store dirty, and the caller evaluates again.
+    pub fn retract_rules(&mut self, gone: &[Sym], rows: &[FactId]) -> Result<AddDelta, String> {
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| gone.contains(&r.id)).cloned().collect();
+        let mut why = self.addition_refusals();
+        if self.prov.no_witness {
+            why.push("the world keeps no witness, so nothing says which facts lose their last support");
+        }
+        if rules.len() != gone.len() {
+            why.push("a rule taken out is not run as written (lowered by a declaration, or outside the cone of asks)");
+        }
+        for r in &rules {
+            let head = r.clause.head.rel;
+            if r.clause.head.temporal == Temporal::Next {
+                why.push("a rule taken out stages @next");
+            }
+            if r.has_agg || r.has_thr {
+                why.push("a rule taken out aggregates");
+            }
+            if self.lat.is_cell(head) || self.demand.on(head) || self.clo.closures.iter().any(|c| c.rel == head) || self.vc.vclosures.iter().any(|c| c.rel == head) {
+                why.push("a rule taken out concludes a lattice, a relation answered on demand or a closure");
+            }
+        }
+        let mut mark = self.prep_mark();
+        mark.rules.retain(|id, _| !gone.contains(id));
+        if !why.is_empty() {
+            self.store.remove_many(rows);
+            self.store.dirty = true;
+            self.reprepare();
+            why.dedup();
+            return Err(why.join("; "));
+        }
+        self.index_for_retraction();
+        self.vsnapshot();
+        let mut lost: Vec<FactId> = Vec::new();
+        for r in &rules {
+            let fired = self.store.rel_all(&self.h, r.clause.head.rel).into_iter().filter(|f| self.store.alive(*f) && self.store.fired_by(*f, r.id));
+            lost.extend(fired);
+        }
+        lost.sort_unstable();
+        lost.dedup();
+        if brk!("rule_out_firings_kept" => false; true) {
+            self.withdraw_unswept(&lost, |r, _| gone.contains(&r));
+        } else {
+            lost.clear();
+        }
+        self.store.remove_many(rows);
+        if brk!("rule_out_unprepared" => false; true) && !self.reprepare_keeping_trees() {
+            self.store.dirty = true;
+            return Err("a closure answered from its tree is declared, dropped or answered another way".into());
+        }
+        let (added, called, moves) = self.prep_moves(&mark);
+        let mut why: Vec<String> = moves.into_iter().map(String::from).collect();
+        if !added.is_empty() || !called.is_empty() {
+            why.push("taking the rule out moved how another rule is run".into());
+        }
+        // (a cell sealed over a relation whose round moved is sealed again, as an addition seals it)
+        let moved = self.rerank().unwrap_or_else(|w| {
+            why.push(w.into());
+            HashSet::new()
+        });
+        if !why.is_empty() {
+            self.store.dirty = true;
+            return Err(why.join("; "));
+        }
+        let mut from: HashSet<Sym> = rows.iter().map(|f| self.store.rec(*f).rel).collect();
+        from.extend(rules.iter().map(|r| r.clause.head.rel));
+        let grown = self.grow(&from, &HashSet::new());
+        self.add.lost = lost;
+        self.vc.near_moved = false;
+        self.vc.near_out.clear();
+        self.vc.near_in.clear();
+        self.vc.near_owed.clear();
+        self.vc.near_was.clear();
+        let r = self.worked_out_beside_holes(&[], rows, &HashSet::new(), &grown, &moved, &[]);
+        self.add.lost.clear();
+        let d = r?;
+        if self.vnear_put_in() || self.vc.near_moved || self.vc.unbased {
+            self.store.dirty = true;
+            return Err("taking the rule out moved a nearest or a tree's rows".into());
+        }
+        self.vsettle_forests();
+        Ok(d)
+    }
+
     /// The addition worked out over the program without the rules of what a hole or a shrug may move that it reaches
     /// (`hole_world`): none of them is read by the rest, so the rest is the delta of a program of its own; they are
     /// evaluated again after it (`pass_aside`).
@@ -950,7 +1039,9 @@ impl Eval {
         if removed.is_empty() {
             return;
         }
-        let mut seeds: Vec<FactId> = Vec::new();
+        // a fact a rule taken out fired lost that firing: it is a seed, and where it stands it may stand higher
+        let mut seeds: Vec<FactId> = std::mem::take(&mut self.add.lost);
+        self.add.refired.extend(seeds.iter().copied().filter(|f| self.store.alive(*f)));
         for &f in removed {
             st.over.insert(f);
             if brk!("retract_set_unpropagated" => false; true) {

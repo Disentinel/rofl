@@ -1330,6 +1330,32 @@ impl Pending {
     }
 }
 
+/// THE RULES A TEXT NAMES, each as a load of it writes it: its id and the rows of it the store keeps (a sealed body
+/// withheld as `admit_clause` withholds it). Nothing is written. Refused where the text holds anything but rules.
+pub fn rules_named(e: &mut Eval, text: &str) -> Result<Vec<(Sym, Vec<(Sym, Vec<Term>)>)>, String> {
+    let clauses = rofl_parse::parse(&mut e.h, text)?;
+    let mut p = Pending::new(e);
+    for pc in &clauses {
+        let plain = !pc.want && pc.structure.is_none() && pc.ord.is_none() && pc.dom.is_none() && pc.lattice.is_none() && !pc.tag && !pc.body.is_empty();
+        if !plain {
+            return Err(format!("a rule is named by its text as written in the program: {} is not a rule", rofl_parse::show(&e.h, pc)));
+        }
+        p.clause(e, pc, None, false);
+    }
+    p.diags.append(&mut p.unready);
+    if !p.diags.is_empty() {
+        return Err(p.diags.join("; "));
+    }
+    let drop = sealed_rels(e);
+    let mut out = Vec::new();
+    for c in &p.ready {
+        let (id, facts) = encode_rule(&mut e.h, &e.v, c);
+        let rows = facts.into_iter().filter(|f| !drop.contains(&f.rel)).map(|f| (f.rel, f.args)).collect();
+        out.push((e.h.intern(&id), rows));
+    }
+    Ok(out)
+}
+
 fn lower_declared(e: &mut Eval, lowered: &[String], diags: &mut Vec<String>) -> Vec<Clause> {
     let mut low: Vec<Clause> = Vec::with_capacity(lowered.len());
     for t in lowered {

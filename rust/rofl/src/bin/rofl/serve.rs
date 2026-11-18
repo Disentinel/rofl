@@ -62,7 +62,10 @@
 //!                                                        the facts of `rofl` in by delta; either may be left out. Refused
 //!                                                        whole, nothing touched, if `out` names no fact or a derived
 //!                                                        one; where a delta is refused, `full` says why and the world
-//!                                                        is evaluated once, at the end. A watch is told its net change
+//!                                                        is evaluated once, at the end. A watch is told its net change.
+//!                                                        An entry of `out` written as a rule (`p(X) :- q(X).`) takes
+//!                                                        that rule out (Session::retract_rules_delta); `rofl` with a
+//!                                                        rule in it is loaded, as `load` with `who`
 //!   {"op":"dispatch","session":2,"journal":"dir"}  -> {"loaded":n}: the permitted `does` wants sent, each in the
 //!                                                        append-only journal dir/does.journal, never twice
 //!                                                        (docs/intents.md D6); `assert` and `load` refuse what
@@ -438,12 +441,18 @@ impl Server {
     /// delta is refused the world is evaluated once, at the end.
     fn op_edit(&mut self, r: &Value) -> Result<Value, String> {
         let out = strings(r, "out")?.unwrap_or_default();
+        let who = r.get("who").and_then(|v| v.as_str()).map(str::to_string);
         let text = r.get("rofl").and_then(|v| v.as_str()).unwrap_or("").to_string();
         if !text.is_empty() {
             self.get(r)?.guard_permit(&text)?;
         }
         let s = self.get(r)?;
-        let queries: Vec<&str> = out.iter().map(String::as_str).collect();
+        // a rule is named by its text as written in the program; anything else in `out` is a base fact
+        let (rules, queries): (Vec<&str>, Vec<&str>) = out.iter().map(String::as_str).partition(|q| s.is_rule_text(q));
+        let rules = rules.join("\n");
+        if !rules.is_empty() {
+            s.rules_held(&rules)?;
+        }
         let (mut full, mut touched) = (None, 0);
         if !queries.is_empty() {
             match s.retract_queries_delta(&queries)? {
@@ -451,9 +460,16 @@ impl Server {
                 Err(why) => full = Some(why),
             }
         }
+        if !rules.is_empty() {
+            match s.retract_rules_delta(&rules)? {
+                Ok(d) => touched += d.overdeleted + d.rederived,
+                Err(why) => full = full.or(Some(why)),
+            }
+        }
         let mut added = 0;
         if !text.is_empty() {
-            let (n, a) = s.assert_delta(&text)?;
+            // a rule in is a load: a rule edited is the old text out and the new in, in one request
+            let (n, a) = if text.contains(":-") { s.load_delta(&text, who.as_deref()).map_err(|d| d.join("; "))? } else { s.assert_delta(&text)? };
             added = n;
             if let (None, rofl::session::Addition::Full(why)) = (&full, a) {
                 full = Some(why);
@@ -462,7 +478,7 @@ impl Server {
         if s.eval.store.dirty {
             s.evaluate().map_err(|e| rofl::describe(&e))?;
         }
-        Ok(json!({ "out": queries.len(), "added": added, "touched": touched, "full": full }))
+        Ok(json!({ "out": out.len(), "added": added, "touched": touched, "full": full }))
     }
 
     /// `watch` adds relations to what the session's watcher is told of, `unwatch` takes them out (all, without `rels`).

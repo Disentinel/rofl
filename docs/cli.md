@@ -766,6 +766,22 @@ why) the world is evaluated whole once, at the end of the request, and a watch i
 (`changes_by` `whole`). Rust only (rust/rofl/tests/edit.rs holds every edit to the world evaluated whole from
 what remains, and its watch to the diff of `rows`).
 
+**A rule out, as a fact goes.** A rule is facts of the kernel's book, and `edit` takes one out the way it takes a
+fact out: an entry of `out` holding `:-` is a rule, written as in the program
+(`{"op":"edit","session":S,"out":["p(X) :- q(X), not r(X)."]}`; it is found by its content, so spacing and variable
+names as the program wrote them do not matter, the clause does). The rows a load wrote for it go, every firing of it
+is withdrawn, what another rule still makes stays, what rested only on it goes with what rests on that, a negation
+over what went now holds, and the program is prepared again without it: one DRed pass, in proportion to what the
+rule made, not to the world. A rule back is `load` (or `edit`'s `rofl`: a rule there is loaded, so a rule edited is
+the old text in `out` and the new in `rofl`, one request), by delta. Refused whole, nothing touched, when the text
+holds anything but rules or names a rule the world does not hold; a row of a rule (`rule[$kernel](r…)` and the
+rest) is refused by `retract` and `edit` alike, since one row out would leave the rule running. Where the engine does
+not work the delta out, `full` says why and the world is evaluated whole: a rule that aggregates, stages `@next`, or
+concludes a lattice, a relation answered on demand or a closure; a world that keeps no witness
+(`sealed(provenance)`), asks a cone, or is refused an addition for any reason a load is; a rule lowered by a
+declaration. Rust only (rust/rofl/tests/rule_edit.rs holds each rule out, and back, to the world evaluated whole from
+the program without it, rows and `why`, and the watch to the diff of `rows`).
+
 **A watch: how a question's rows move.** `{"op":"watch","session":S,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]}`
 answers `{"watching":n}`; a relation without `book` is watched in every book (`book` is what `rows` calls `persp`).
 From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `edit`, `inbox`, `reheat`,

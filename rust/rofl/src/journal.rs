@@ -65,9 +65,10 @@ pub enum Verb {
     RetractDelta,
     RetractSet,
     OneByOne,
+    RetractRules,
 }
 
-const VERBS: [Verb; 8] = [Verb::Load, Verb::LoadDelta, Verb::Assert, Verb::AssertDelta, Verb::Retract, Verb::RetractDelta, Verb::RetractSet, Verb::OneByOne];
+const VERBS: [Verb; 9] = [Verb::Load, Verb::LoadDelta, Verb::Assert, Verb::AssertDelta, Verb::Retract, Verb::RetractDelta, Verb::RetractSet, Verb::OneByOne, Verb::RetractRules];
 
 #[derive(Clone, Copy)]
 pub struct Mark {
