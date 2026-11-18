@@ -35,7 +35,7 @@ jobs:
     # one train at a time, and never one cut short: a train waiting behind it takes whatever waits when it starts
     concurrency: { group: merge-train, cancel-in-progress: false }
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env: { GITHUB_TOKEN: '${{ github.token }}', ROFL_JOBS: 4 }
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +55,7 @@ jobs:
           workspaces: |
             rust
             models/lang/js/scanner/oxc_scan
+            rust/tools/rs_tree
       - if: steps.pick.outputs.count != '0'
         id: stack
         run: node --experimental-strip-types scripts/merge_train.ts stack
@@ -65,6 +66,12 @@ jobs:
         run: node --experimental-strip-types scripts/merge_train.ts regenerate
       - if: steps.stack.outputs.stacked != '0'
         run: node --experimental-strip-types scripts/merge_train.ts judge
+      # WHAT EACH REQUEST DID, BY FEATURE (models/engine/feature-behaviour.rofl), said on it when it lands. About a minute
+      # and 3 GB a tree, one tree more than the train holds; it informs and never stops the train.
+      - if: steps.stack.outputs.stacked != '0'
+        continue-on-error: true
+        timeout-minutes: 40
+        run: node --experimental-strip-types scripts/merge_train.ts features
       # the slow gates, once for the whole train: the planted faults and the engine's lints
       - if: steps.stack.outputs.stacked != '0'
         # the toolchain ci.yml pins for its lints, so that a new stable's lints are not a request's fault
