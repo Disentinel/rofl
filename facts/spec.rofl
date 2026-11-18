@@ -69,6 +69,7 @@ duty[spec](s_witness_is_first_canonical, guaranteed, "START.md", "first derivati
 duty[spec](s_excise_not_from_witness, guaranteed, "START.md", "must NOT be computed from witnesses").
 duty[spec](s_watch_told_what_moved, guaranteed, "docs/cli.md", "A row taken out and derived again is no change").
 duty[spec](s_edit_is_the_world_whole, guaranteed, "docs/cli.md", "costs the facts that moved, not a request each").
+duty[spec](s_rule_out_is_the_world_whole, guaranteed, "docs/cli.md", "the program is prepared again without it").
 
 duty[spec](s_budget_emits_hole, guaranteed, "START.md", "returns the partial result marked partial").
 duty[spec](s_never_hang, prohibited, "START.md", "a kernel that hangs instead of emitting").
@@ -345,6 +346,8 @@ cited_check[map](c_port_excise, "rust/rofl/tests/explain.rs", "excise_recomputes
 cited_check[map](c_watch_told, "rust/rofl/tests/watch.rs", "random_edits_are_told_as_the_diff").
 cited_check[map](c_watch_rederived, "rust/rofl/tests/watch.rs", "a_row_derived_again_is_no_change").
 cited_check[map](c_edit_whole, "rust/rofl/tests/edit.rs", "an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff").
+cited_check[map](c_rule_out_whole, "rust/rofl/tests/rule_edit.rs", "a_rule_out_is_the_world_evaluated_whole_without_it").
+cited_check[map](c_rule_out_each, "rust/rofl/tests/rule_edit.rs", "each_rule_out_and_back_is_the_world_evaluated_whole").
 
 -- `No @async` IS A LIMIT AND NOT A RESERVATION since 2026-09-16, so this
 -- world guards the LIMITS.md bullet and not the START.md sentence it retired.
@@ -366,6 +369,8 @@ guards[map](c_port_excise, s_excise_not_from_witness).
 guards[map](c_watch_told, s_watch_told_what_moved).
 guards[map](c_watch_rederived, s_watch_told_what_moved).
 guards[map](c_edit_whole, s_edit_is_the_world_whole).
+guards[map](c_rule_out_whole, s_rule_out_is_the_world_whole).
+guards[map](c_rule_out_each, s_rule_out_is_the_world_whole).
 
 -- TWO THAT A GOLDEN CANNOT HOLD, and the reason is the same in both: a golden
 -- compares ONE run of one world against its own pin, and these duties are
