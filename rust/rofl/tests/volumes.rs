@@ -87,7 +87,7 @@ fn check(cool: bool) {
         let mut e = v.eval.fork();
         e.store.reads_none();
         e.levels = None;
-        let back = std::sync::Arc::new(rofl::volume::open_units(&k, &e).unwrap());
+        let back = std::sync::Arc::new(rofl::volume::open_units(&k, &e, None).unwrap());
         back.read_by(&mut e);
         e.levels = Some(back);
         v.eval = e;

@@ -247,3 +247,25 @@ by_value_n(K, N) :- modality(_, K), N is count(D, X : by_value[audit](D, X), ent
 wide_n(N) :- N is count(H : wide(H)).
 own_n(D, Name, N) :- entry(D, Name), N is count(H : own(D, Name, H)).
 regions_n(D, Name, N) :- entry(D, Name), N is count(R : sel(D, Name, R)).
+
+-- ===================================================================== CODEPATHS
+-- codepath(Root, Name): a way the engine carries a feature out that the world chooses, not a word said; tied to its
+-- root functions by hand, as a dispatcher to its modality. said_by(Effect, Fn): an effect the engine says to whoever
+-- runs it, by the function that says it.
+edb(codepath).
+codepath("bin::rofl::load::answer_by_volumes", by_levels).
+codepath("rofl::engine::levels::Eval::by_levels", by_levels).
+codepath("bin::rofl::load::evaluate_world", whole).
+codepath("rofl::engine::Eval::run", whole).
+edb(said_by).
+said_by(hot, "rofl::engine::cost::Eval::say_hot").
+said_by(profile, "rofl::engine::cost::Eval::profile_text").
+graph any_call(F, G) closure any_reach.
+any_call(F, G) :- in_fn[rust](F, C), mark[value](C, call), ran[rust](C, G), fn_item[rust](G), not test_fn[rust](G).
+cp_root(P, G) :- codepath(Q, P), fn_q[rust](G, Q).
+on_codepath(P, H) :- cp_root(P, H).
+on_codepath(P, H) :- cp_root(P, G), any_reach(G, H).
+-- cp_effect(P, K): an effect the codepath can have, of the standard library or said by the engine
+cp_effect(P, K) :- on_codepath(P, H), effect(H, K).
+cp_effect(P, K) :- said_by(K, Q), fn_q[rust](H, Q), on_codepath(P, H).
+dangling_codepath[audit](Q) :- codepath(Q, _), not fn_q[rust](_, Q).
