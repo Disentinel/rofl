@@ -6134,13 +6134,7 @@ impl Eval {
         if self.steps & 0x3ff == 0 {
             self.note_heap();
         }
-        if self.steps & 0x3ff == 0 && MEMORY_FULL.load(std::sync::atomic::Ordering::Relaxed) {
-            use std::sync::atomic::Ordering::Relaxed;
-            self.memory_hit = true;
-            MEMORY_STOPPED.store(true, Relaxed);
-            self.wall.spent.set(Some(("bytes", MEMORY_USED.load(Relaxed), MEMORY_LIMIT.load(Relaxed))));
-            return Err(Halt::Budget("budget_exhausted", None));
-        }
+        self.memory_met()?;
         if self.disk != i64::MAX && self.budget != i64::MAX && brk!("disk_wall_ignored" => false; true) {
             let b = self.disk_bytes();
             if b > self.disk {
@@ -6173,8 +6167,22 @@ impl Eval {
         self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(reason))
     }
 
+    /// The memory wall, met at every step and at every premise matched: a firing can take gigabytes between two
+    /// steps, which the kernel would take back by killing the process before the next one.
+    fn memory_met(&mut self) -> Result<(), Halt> {
+        use std::sync::atomic::Ordering::Relaxed;
+        if !MEMORY_FULL.load(Relaxed) || brk!("memory_wall_sparse" => self.steps & 0x3ff != 0; false) {
+            return Ok(());
+        }
+        self.memory_hit = true;
+        MEMORY_STOPPED.store(true, Relaxed);
+        self.wall.spent.set(Some(("bytes", MEMORY_USED.load(Relaxed), MEMORY_LIMIT.load(Relaxed))));
+        Err(Halt::Budget("budget_exhausted", None))
+    }
+
     /// The rows held while a premise is matched, `now`, against the space: the wall a body solved meets.
     fn room(&mut self, now: i64, rule_id: Option<Sym>) -> Result<(), Halt> {
+        self.memory_met()?;
         if now > self.peak_rows {
             self.peak_rows = now;
         }
@@ -6195,6 +6203,9 @@ impl Eval {
         self.rows += 1;
         if self.rows > self.peak_rows {
             self.peak_rows = self.rows;
+        }
+        if enforce {
+            self.memory_met()?;
         }
         if enforce && self.rows > self.space {
             self.wall.spent.set(Some(("rows", self.rows, self.space)));
