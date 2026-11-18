@@ -79,17 +79,17 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let all = rofl::brk!("kept_delta_all_files" => true; false);
     let mut p = plan_files(s, files, &old, &stamps, all)?;
     plan_gone(r, files, &mut p)?;
-    if p.moved {
-        if let Some(why) = s.eval.refuses_retraction() {
-            return Err(why);
-        }
-    }
     let (ids, live) = (s.eval.store.len_ids() as usize, s.eval.store.fact_count());
     if (ids - live) * 4 > ids {
         return Err(format!("{} of its {ids} fact records are of facts gone: it is evaluated whole to drop them", ids - live));
     }
     let (mut scans, again) = plan_scans(s, r, &stamps, all, &mut p)?;
     let out = going(std::mem::take(&mut p.goes), &p.stays);
+    if p.moved {
+        if let Some(why) = s.eval.refuses_retracting(Some(&out)) {
+            return Err(why);
+        }
+    }
     let mut n_out = out.len();
     use rofl::engine::meter;
     meter::in_step("takes_out");
