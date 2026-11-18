@@ -1130,8 +1130,8 @@ struct Raw {
     args: crate::arena::Arena<u64>,
     at: Vec<u32>,
     by_rel: FxMap<Sym, Vec<FactId>>,
-    /// its facts by the hash of their key, made when first asked
-    keys: std::sync::OnceLock<FxMap<u64, Vec<FactId>>>,
+    /// its facts by the hash of their key, sorted, made when first asked: twelve bytes a fact
+    keys: std::sync::OnceLock<(Vec<u64>, Vec<FactId>)>,
 }
 
 /// A kept stretch's firings where they lie: four words a firing (fact, rule, tick, premises), the premises, where
@@ -1485,19 +1485,20 @@ impl Stretch {
 
     /// The fact of its own of this key.
     fn find(&self, h: u64, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        if !self.wrote(rel) {
+            return None;
+        }
         let Some(r) = self.raw() else {
             let s = self.store();
             return s.probe(&s.keys, h, rel, persp, args).filter(|&i| s.alive(i));
         };
-        let keys = r.keys.get_or_init(|| {
-            let mut m: FxMap<u64, Vec<FactId>> = FxMap::default();
-            for id in self.lo..self.hi {
-                let x = self.rec(id);
-                m.entry(hash_key(x.rel, x.persp, self.args(id))).or_default().push(id);
-            }
-            m
+        let (hs, ids) = r.keys.get_or_init(|| {
+            let mut m: Vec<(u64, FactId)> = (self.lo..self.hi).map(|id| (hash_key(self.rec(id).rel, self.rec(id).persp, self.args(id)), id)).collect();
+            m.sort_unstable();
+            m.into_iter().unzip()
         });
-        keys.get(&h)?.iter().copied().find(|&k| {
+        let a = hs.partition_point(|&x| x < h);
+        ids[a..a + hs[a..].partition_point(|&x| x == h)].iter().copied().find(|&k| {
             let x = self.rec(k);
             x.rel == rel && x.persp == persp && self.args(k) == args
         })
@@ -1634,6 +1635,64 @@ pub struct Near {
     ghosts: Option<Rc<Lower>>,
     /// this store's own ids end here: a stretch laid again where it stood may name a fact that lies above it
     top: FactId,
+    /// which of `list` hold a firing of a fact, made when first asked
+    held: std::sync::OnceLock<Rc<Held>>,
+    /// `KeyIx` of a relation of `list`, made when a fact of it is first looked for where no route answers
+    key_ix: Rc<std::sync::Mutex<FxMap<Sym, Rc<KeyIx>>>>,
+}
+
+/// The stretches of a list that hold a firing of a fact: by their own ids, and by the facts lying elsewhere they
+/// hold one of; so a walk of the firings below a fact asks a search, not every stretch.
+#[derive(Default)]
+struct Held {
+    own: Vec<(FactId, FactId, u32)>,
+    far: Vec<(FactId, u32)>,
+    disjoint: bool,
+}
+
+/// The facts of one relation a list of stretches holds, by the hash of their key: the hashes sorted, each beside the
+/// place of its stretch, so a fact is looked for in the stretches that may hold it and not in every one.
+type KeyIx = (Vec<u64>, Vec<u32>);
+
+fn key_ix(list: &[Rc<Stretch>], rel: Sym) -> Rc<KeyIx> {
+    let mut at: Vec<(u64, u32)> = Vec::new();
+    for (i, s) in list.iter().enumerate().filter(|(_, s)| s.wrote(rel)) {
+        at.extend(s.of_rel(rel).into_iter().map(|k| (hash_key(rel, s.rec(k).persp, s.args(k)), i as u32)));
+    }
+    at.sort_unstable();
+    at.dedup();
+    Rc::new(at.into_iter().unzip())
+}
+
+fn key_ix_of(ixs: &std::sync::Mutex<FxMap<Sym, Rc<KeyIx>>>, list: &[Rc<Stretch>], rel: Sym) -> Rc<KeyIx> {
+    if let Some(ix) = ixs.lock().unwrap().get(&rel) {
+        return ix.clone();
+    }
+    let ix = key_ix(list, rel);
+    ixs.lock().unwrap().entry(rel).or_insert(ix).clone()
+}
+
+impl Held {
+    fn of(list: &[Rc<Stretch>]) -> Rc<Held> {
+        let mut own: Vec<(FactId, FactId, u32)> = list.iter().enumerate().map(|(i, s)| (s.lo, s.hi, i as u32)).collect();
+        own.sort_unstable();
+        let disjoint = own.windows(2).all(|w| w[0].1 <= w[1].0);
+        let mut far: Vec<(FactId, u32)> = list.iter().enumerate().flat_map(|(i, s)| s.far.iter().map(move |&f| (f, i as u32))).collect();
+        far.sort_unstable();
+        Rc::new(Held { own, far, disjoint })
+    }
+
+    /// The places in the list of the stretches holding a firing of `id`, each after `base`.
+    fn holding(&self, id: FactId, base: u32, out: &mut Vec<u32>) {
+        if self.disjoint {
+            let i = self.own.partition_point(|x| x.0 <= id);
+            out.extend(i.checked_sub(1).map(|i| self.own[i]).filter(|x| id < x.1).map(|x| base + x.2));
+        } else {
+            out.extend(self.own.iter().filter(|x| x.0 <= id && id < x.1).map(|x| base + x.2));
+        }
+        let a = self.far.partition_point(|x| x.0 < id);
+        out.extend(self.far[a..].iter().take_while(|x| x.0 == id).map(|x| base + x.1));
+    }
 }
 
 pub type Forests = Rc<[(Sym, Rc<crate::forest::Forest>)]>;
@@ -1669,6 +1728,8 @@ pub struct Lower {
     rels: FxSet<Sym>,
     /// what the planner counted of its rows, once for every unit of the layer that reads them
     counted: std::sync::Mutex<FxMap<GroupsKey, Rc<Counts>>>,
+    held: std::sync::OnceLock<Rc<Held>>,
+    key_ix: std::sync::Mutex<FxMap<Sym, Rc<KeyIx>>>,
 }
 
 /// A premise's shape as the planner counts it: the relation, the book, the constant positions, the bound positions.
@@ -1709,7 +1770,7 @@ impl Lower {
         let mut by_lo: Vec<u32> = (0..list.len() as u32).collect();
         by_lo.sort_unstable_by_key(|&i| list[i as usize].lo);
         let rels = list.iter().flat_map(|s| s.rels()).collect();
-        Lower { list, route, by_lo, rels, counted: Default::default() }
+        Lower { list, route, by_lo, rels, counted: Default::default(), held: Default::default(), key_ix: Default::default() }
     }
 
     /// What the planner counts of the rows of `rel` its stretches hold, by premise shape: counted once, since every
@@ -2835,7 +2896,21 @@ impl Store {
         let n = self.facts.near.as_ref()?;
         let pos: Vec<usize> = (0..args.len()).collect();
         let h = hash_key(rel, persp, args);
-        n.holders(rel, Some(persp), &pos, args).into_iter().find_map(|s| s.find(h, rel, persp, args))
+        let mut at = Vec::new();
+        let lists = n.lower.iter().map(|l| (&l.list, Some(&l.route), &l.key_ix)).chain([(&n.list, n.route.as_ref(), &*n.key_ix)]);
+        for (list, route, ixs) in lists {
+            at.clear();
+            if !route.is_some_and(|r| r(rel, Some(persp), &pos, args, &mut at)) {
+                let (hs, places) = &*key_ix_of(ixs, list, rel);
+                let a = hs.partition_point(|&x| x < h);
+                at.extend_from_slice(&places[a..a + hs[a..].partition_point(|&x| x == h)]);
+                at.sort_unstable();
+            }
+            if let Some(id) = at.iter().find_map(|&i| list[i as usize].find(h, rel, persp, args)) {
+                return Some(id);
+            }
+        }
+        None
     }
 
     /// The ids of this store's base and of its own layer: every id but those of the stretches it reads.
@@ -2885,7 +2960,7 @@ impl Store {
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
         assert!(lower.iter().flat_map(|l| l.list.iter()).all(|s| s.hi <= mark));
-        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, forest, rows: Rc::default(), lens: Rc::default(), whole, ghosts: None, top: FactId::MAX }));
+        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, forest, rows: Rc::default(), lens: Rc::default(), whole, ghosts: None, top: FactId::MAX, held: Default::default(), key_ix: Rc::default() }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
     }
@@ -4632,11 +4707,17 @@ impl Store {
         let id = self.current(id);
         let mut out: Vec<WitView<'_>> = self.chain(id).map(|n| view(self, n)).collect();
         if let Some(n) = self.facts.near.as_ref().filter(|_| !self.here(id)) {
-            for s in n.all() {
+            let below: &[Rc<Stretch>] = n.lower.as_ref().map_or(&[], |l| &l.list);
+            let mut at = Vec::new();
+            if let Some(l) = &n.lower {
+                l.held.get_or_init(|| Held::of(&l.list)).holding(id, 0, &mut at);
+            }
+            n.held.get_or_init(|| Held::of(&n.list)).holding(id, below.len() as u32, &mut at);
+            at.sort_unstable();
+            at.dedup();
+            for i in at {
+                let s = below.get(i as usize).unwrap_or_else(|| &n.list[i as usize - below.len()]);
                 let own = s.lo <= id && id < s.hi;
-                if !own && s.far.binary_search(&id).is_err() {
-                    continue;
-                }
                 let cut = |r: &Sym| self.lemma_cut.as_ref().is_none_or(|cut| !cut.contains(r));
                 if let (Some(w), Some(k)) = (s.wits(), s.kept.as_ref()) {
                     // (unfolded, its firings would read over the store it is kept over)
