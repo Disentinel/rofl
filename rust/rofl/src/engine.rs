@@ -853,6 +853,8 @@ pub struct Eval {
     pub lower_texts: Option<Rc<HashMap<String, String>>>,
     /// The files those texts are cut from when one is first needed: each a path, or the text it was read into.
     pub lower_sources: Option<Rc<Vec<(String, Option<String>)>>>,
+    /// The texts kept beside the units a world is read from, where a file's text is read alone.
+    pub lower_kept: Option<Rc<volumes::KeptTexts>>,
     /// A file thawed (`Eval::thaw`): it holds the books of its file, which the world it was forked from cut.
     thawed: bool,
     /// The heads of the whole program's lower stage, where asks prunes it (`Eval::lemma_stage`).
@@ -2378,6 +2380,7 @@ impl Eval {
             lemma_heads: None,
             lower_texts: None,
             lower_sources: None,
+            lower_kept: None,
             thawed: false,
             lower_full: None,
             aside: HashSet::new(),
@@ -17064,6 +17067,9 @@ impl Eval {
     /// are cut from (`lower_sources`, read once).
     fn lower_text(&mut self, file: &str) -> Option<String> {
         if self.lower_texts.is_none() {
+            if let Some(k) = &self.lower_kept {
+                return k.get(file).map(str::to_string);
+            }
             let sources = self.lower_sources.clone()?;
             let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
             let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
@@ -17079,6 +17085,7 @@ impl Eval {
         let mut low = self.fork();
         low.lower_texts = None;
         low.lower_sources = None;
+        low.lower_kept = None;
         low.thawed = true;
         // (a reader of units: the file's lower stage is evaluated over the core alone)
         if low.levels.take().is_some() {

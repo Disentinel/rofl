@@ -507,8 +507,10 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         format!("{}.q{:016x}", p.trim_end_matches(".vol"), h.finish())
     });
     if let Some(mut s) = kept.as_ref().and_then(|k| open_volumes(o, k)) {
-        eprintln!("volumes: {} answered from the kept units", o.qs.len());
-        return Some(answer_volumes(o, &mut s));
+        let c = answer_volumes(o, &mut s);
+        let units = s.eval.levels.as_ref().map_or(0, |lv| lv.stretches());
+        eprintln!("volumes: {} answered from the kept units, reading {} of their {units} stretches", o.qs.len(), rofl::store::Stretch::bodies_read());
+        return Some(c);
     }
     let sources = load_sources(o);
     // a source gone is said by the kept world's slot, which knows it was there
@@ -524,7 +526,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         let t = std::time::Instant::now();
         let code = answer_volumes(o, &mut s);
         let t = rofl::engine::meter::spent("answers", t);
-        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums), true) { eprintln!("the volumes are not kept: {e}"); }
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, kept.as_deref().unwrap_or_default(), (sum(&cut.core), &sums), &cut.files, true) { eprintln!("the volumes are not kept: {e}"); }
         rofl::engine::meter::spent("keeps", t);
         rofl::engine::meter::write();
         leave(s, cut);
@@ -562,7 +564,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let code = answer_volumes(o, &mut s);
     if let Some(k) = &kept {
         let sums: Vec<(String, u64)> = cut.files.iter().map(|(f, t)| (f.clone(), sum(t))).collect();
-        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, k, (sum(&cut.core), &sums), false) { eprintln!("the volumes are not kept: {e}"); }
+        if let Err(e) = keep_volumes(world, files_of(o, world), &read, &mut s, k, (sum(&cut.core), &sums), &cut.files, false) { eprintln!("the volumes are not kept: {e}"); }
     }
     leave(s, (core, cut));
     Some(code)
@@ -593,7 +595,7 @@ pub fn is_volume_of_set(p: &std::path::Path) -> bool {
 /// The reader kept at `k` over its dictionary and units, not yet reading them; none where one is missing.
 fn open_reader(o: &Opts, k: &str, held: impl Fn(&crate::kept::Record, bool) -> bool) -> Option<Session> {
     let p = format!("{k}.vol");
-    let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names")).ok()?);
+    let dict = std::sync::Arc::new(rofl::dict::Dict::read(&format!("{k}.names"), crate::kept::seen().as_deref()).ok()?);
     let t = std::time::Instant::now();
     let c = rofl::volume::check_seen(&p, crate::kept::seen().as_deref()).ok()?;
     rofl::engine::meter::spent("sums", t);
@@ -610,16 +612,17 @@ fn open_volumes(o: &Opts, k: &str) -> Option<Session> {
         Some(m) => { eprintln!("the kept volumes {k} are stale: {m}"); false }
         None => true,
     })?;
-    let lv = std::sync::Arc::new(rofl::volume::open_units(k, &s.eval).map_err(|e| eprintln!("the kept units {k}: {e}")).ok()?);
+    let lv = std::sync::Arc::new(rofl::volume::open_units(k, &s.eval, crate::kept::seen().as_deref()).map_err(|e| eprintln!("the kept units {k}: {e}")).ok()?);
     lv.read_by(&mut s.eval);
     s.eval.levels = Some(lv);
+    s.eval.lower_kept = rofl::engine::volumes::KeptTexts::open(&format!("{k}.texts"), crate::kept::seen().as_deref()).ok().map(std::sync::Arc::new);
     crate::kept::touch(&format!("{k}.vol"));
     Some(s)
 }
 
 /// The reader kept at `k` (`<k>.vol`: the core it stands on), with what it was read from; beside it the names its
 /// facts share (`<k>.names`), its units (`<k>.u<n>`) and the registry (`<k>.scroll`): what a later run takes by delta.
-fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Session, k: &str, sums: (u64, &[(String, u64)]), over: bool) -> Result<(), String> {
+fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Session, k: &str, sums: (u64, &[(String, u64)]), texts: &[(String, String)], over: bool) -> Result<(), String> {
     let units = s.eval.levels.clone();
     let note = crate::kept::record(world, files, &[], read, &[], None)?;
     let _ = std::fs::remove_file(format!("{k}.scroll"));
@@ -635,6 +638,7 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Ses
         s.eval.h.dict().ok_or("the volumes share no dictionary")?.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
     }
     rofl::volume::keep_units(k, units.as_deref())?;
+    rofl::engine::volumes::keep_texts(&format!("{k}.texts"), texts).map_err(|e| e.to_string())?;
     Registry { core: sums.0, files: sums.1.iter().cloned().collect() }.write(k)
 }
 
@@ -698,7 +702,7 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     }
     let t = std::time::Instant::now();
     let mut s = open_reader(o, k, |r, this_build| r.engine_env_hold(this_build).is_none() && r.scans.is_empty())?;
-    let before = rofl::volume::open_units(k, &s.eval).map_err(|e| say(&e)).ok()?;
+    let before = rofl::volume::open_units(k, &s.eval, crate::kept::seen().as_deref()).map_err(|e| say(&e)).ok()?;
     let named: std::collections::HashMap<u64, (&str, &str)> = now.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (*f, *t)))).collect();
     let files: Vec<(String, String)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), t.to_string()))).collect::<Option<_>>().or_else(|| { say("a file came or went"); None })?;
     let changed = files.iter().enumerate().filter(|(_, (f, _))| moved.contains(&f.as_str())).map(|(i, _)| i as u32).collect();
@@ -947,7 +951,7 @@ fn print_state(o: &Opts, s: &mut Session, cut: bool) {
 /// Where a `why --all` is asked of a world that cut a book, the texts of its files by the node prefix they name: what
 /// unfolds a lemma (`Session::why_all`).
 fn lower_texts(o: &Opts, s: &mut Session) {
-    if s.eval.lower_texts.is_some() || s.eval.lemma_stage().is_none() {
+    if s.eval.lower_texts.is_some() || s.eval.lower_kept.is_some() || s.eval.lemma_stage().is_none() {
         return;
     }
     // (a whynot reads them when its walk first goes below the cut, and not before)
