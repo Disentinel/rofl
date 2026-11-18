@@ -598,8 +598,20 @@ impl Eval {
     /// Why a retraction is refused here: the world cut a book and holds lemmas, given facts no file names, whose proof
     /// is gone, so nothing could take out the lemmas a fact taken out had proved. None in a world that holds none.
     pub fn refuses_retraction(&mut self) -> Option<String> {
+        self.refuses_retracting(None)
+    }
+
+    /// As `refuses_retraction`, of these facts: a fact of a relation no rule of the lower stage reads or concludes
+    /// proved no lemma, so taking it out leaves none behind (a runtime assumption read above the cut).
+    pub fn refuses_retracting(&mut self, facts: Option<&[FactId]>) -> Option<String> {
         let st = self.stage_here()?;
         let held = st.heads.iter().any(|&rel| self.store.rel_all(&self.h, rel).into_iter().any(|f| self.store.rec(f).base()));
+        if let (true, Some(facts)) = (held, facts) {
+            let read: FxSet<Sym> = self.rules.iter().filter(|r| st.rules.contains(&r.id)).flat_map(|r| r.clause.body.iter().flat_map(BodyElem::lits_deep).map(|l| l.rel).collect::<Vec<_>>()).collect();
+            if facts.iter().all(|&f| { let rel = self.store.rec(f).rel; !read.contains(&rel) && !st.heads.contains(&rel) }) {
+                return None;
+            }
+        }
         held.then(|| {
             let books: Vec<String> = st.cut.iter().map(|b| format!("[{}]", self.h.name(*b))).collect();
             format!("the world cut {} and holds the lemmas proved from it: a fact taken out would leave the lemmas it proved; evaluate the files anew", books.join(" "))

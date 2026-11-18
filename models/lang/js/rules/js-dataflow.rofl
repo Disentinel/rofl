@@ -504,8 +504,52 @@ dead_arm[code](A) :- entry_test[code](T), logical[value](S, "&&", T, A),
 dead_arm[code](A) :- imported_test[code](T), logical[value](S, "||", T, A),
                      at[tree](S, File, _), not read_as_script(), not runs_as_script(File).
 
+-- A TEST A RUNTIME ASSUMPTION DECIDES. A world may say what a value is when the program runs, as base facts of
+-- their own book: `assumed_env[assume]("NODE_ENV", "production")` is what `process.env.NODE_ENV` reads,
+-- `assumed_export[assume]("src/vs/base/common/platform.ts", "isWindows", false)` what a file exports under a
+-- name, read through an import of it or of the file's namespace. The facts are flat: a premise matching a compound
+-- term is read as leaving its file, and would lift `arg_at` and the flow out of the per-file levels. A test that
+-- reads one, alone, negated, joined by `&&` / `||` or compared with a literal by `===` / `!==`, is decided, and the
+-- arm it does not take is dead as an entry guard's arm is. A value no assumption states decides nothing: both arms
+-- stay. Excising the fact brings the arm back.
+edb(assumed_env).
+imports(code, assume).
+edb(assumed_export).
+falsy_value(false). falsy_value(""). falsy_value(0). falsy_value(null). falsy_value(undefined).
+truth_not(true, false). truth_not(false, true).
+strict_eq("===", true). strict_eq("!==", false).
+
+assumed_read[code](E, V) :- assumed_env[assume](Name, V), prop_name[code](E, O, Name), prop_name[code](O, P, "env"),
+                            free_global[code](P, "process", _).
+assumed_read[code](E, V) :- assumed_export[assume](T, Name, V), module_target[code](D, T),
+                            imports_name[code](Local, Name, D, File), top_read[code](E, Local, File).
+assumed_read[code](E, V) :- assumed_export[assume](T, Name, V), module_target[code](D, T),
+                            imports_ns[code](Local, D, File), top_read[code](O, Local, File), prop_name[code](E, O, Name).
+
+decided[code](E, false) :- assumed_read[code](E, V), falsy_value(V).
+decided[code](E, true)  :- assumed_read[code](E, V), not falsy_value(V).
+decided[code](E, B)     :- un_op[code](E, "!", X), decided[code](X, C), truth_not(C, B).
+decided[code](E, B)     :- bin_op[code](E, Op, L, R), strict_eq(Op, B), assumed_read[code](L, V), literal[value](R, V).
+decided[code](E, B)     :- bin_op[code](E, Op, L, R), strict_eq(Op, B), assumed_read[code](R, V), literal[value](L, V).
+decided[code](E, B)     :- bin_op[code](E, Op, L, R), strict_eq(Op, C), assumed_read[code](L, V), literal[value](R, W),
+                           V != W, truth_not(C, B).
+decided[code](E, B)     :- bin_op[code](E, Op, L, R), strict_eq(Op, C), assumed_read[code](R, V), literal[value](L, W),
+                           V != W, truth_not(C, B).
+decided[code](E, false) :- logic_op[code](E, "&&", L, _), decided[code](L, false).
+decided[code](E, false) :- logic_op[code](E, "&&", _, R), decided[code](R, false).
+decided[code](E, B)     :- logic_op[code](E, "&&", L, R), decided[code](L, true), decided[code](R, B).
+decided[code](E, true)  :- logic_op[code](E, "||", L, _), decided[code](L, true).
+decided[code](E, true)  :- logic_op[code](E, "||", _, R), decided[code](R, true).
+decided[code](E, B)     :- logic_op[code](E, "||", L, R), decided[code](L, false), decided[code](R, B).
+
+dead_arm[code](A) :- decided[code](T, false), arm_under[code](A, T, truthy).
+dead_arm[code](A) :- decided[code](T, true), arm_under[code](A, T, falsy).
+dead_arm[code](A) :- decided[code](T, false), logical[value](_, "&&", T, A).
+dead_arm[code](A) :- decided[code](T, true), logical[value](_, "||", T, A).
+
 dead_in[code](A, C) :- dead_arm[code](A), inside[tree](A, C).
 dead_site[code](C)  :- dead_in[code](_, C), call_like[code](C).
+dead_site[code](C)  :- dead_arm[code](C), call_like[code](C).
 
 mention[code](F, E)     :- sees_decl[code](E, F), hoisted[value](F, _), fn_node[code](F),
                            target[value](F, I), E != I.
