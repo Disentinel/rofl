@@ -767,9 +767,15 @@ why) the world is evaluated whole once, at the end of the request, and a watch i
 what remains, and its watch to the diff of `rows`).
 
 **A rule out, as a fact goes.** A rule is facts of the kernel's book, and `edit` takes one out the way it takes a
-fact out: an entry of `out` holding `:-` is a rule, written as in the program
-(`{"op":"edit","session":S,"out":["p(X) :- q(X), not r(X)."]}`; it is found by its content, so spacing and variable
-names as the program wrote them do not matter, the clause does). The rows a load wrote for it go, every firing of it
+fact out: an entry of `out` written as a rule (a clause with a body) is a rule. It is found by its clause, so its
+spacing and the names of its variables need not be the program's; where the program holds two rules that differ only
+by their variables, a third spelling is refused and each is named as the program writes it.
+
+    remove:   {"op":"edit","session":S,"out":["p(X) :- q(X), not r(X)."]}
+    replace:  {"op":"edit","session":S,"out":["p(X) :- q(X), not r(X)."],"rofl":"p(X) :- q(X), not r(X), not s(X).\n"}
+    back:     {"op":"load","session":S,"rofl":"p(X) :- q(X), not r(X).\n"}
+
+Each answers `{"out":n,"added":n,"touched":k,"full":null|WHY}` and a watch is told the net change of the request. The rows a load wrote for it go, every firing of it
 is withdrawn, what another rule still makes stays, what rested only on it goes with what rests on that, a negation
 over what went now holds, and the program is prepared again without it: one DRed pass, in proportion to what the
 rule made, not to the world. A rule back is `load` (or `edit`'s `rofl`: a rule there is loaded, so a rule edited is
@@ -778,9 +784,10 @@ holds anything but rules or names a rule the world does not hold; a row of a rul
 rest) is refused by `retract` and `edit` alike, since one row out would leave the rule running. Where the engine does
 not work the delta out, `full` says why and the world is evaluated whole: a rule that aggregates, stages `@next`, or
 concludes a lattice, a relation answered on demand or a closure; a world that keeps no witness
-(`sealed(provenance)`), asks a cone, or is refused an addition for any reason a load is; a rule lowered by a
-declaration. Rust only (rust/rofl/tests/rule_edit.rs holds each rule out, and back, to the world evaluated whole from
-the program without it, rows and `why`, and the watch to the diff of `rows`).
+(`sealed(provenance)`) or is refused an addition for any reason a load is; a rule outside the cone of `asks`, or
+lowered by a declaration. Rust only (rust/rofl/tests/rule_edit.rs, run by CI on every pull request, holds each rule out, and back, and
+each refusal, to the world evaluated whole from the program without it, rows and `why`, and the watch to the diff of
+`rows`).
 
 **A watch: how a question's rows move.** `{"op":"watch","session":S,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]}`
 answers `{"watching":n}`; a relation without `book` is watched in every book (`book` is what `rows` calls `persp`).

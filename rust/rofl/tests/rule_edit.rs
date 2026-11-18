@@ -127,6 +127,63 @@ fn a_rule_row_out_is_refused_and_the_rule_out_is_the_world_without_it() {
     assert_eq!(whys(&mut s, id, &rels), whys(&mut s, whole, &rels), "the rule out: {v}: a why differs from the world evaluated whole");
 }
 
+/// A RULE IS NAMED BY ITS CLAUSE, NOT ITS SPELLING: other variable names and other spacing name the same rule. Where
+/// the program holds two rules that differ only by their variables, a third spelling names neither and is refused;
+/// each named as written goes, and the rows the other makes stay.
+#[test]
+fn a_rule_named_with_other_variables_and_spacing_is_the_same_rule() {
+    let mut s = Serve::new();
+    let rels = ["e", "s", "t"];
+    let id = s.world("e(a, b). e(b, c). e(c, c).\ns(X) :- e(X,Y).\nt(X) :- e(X, _), not s(X).\n");
+    let v = s.ask(json!({ "op": "edit", "session": id, "out": ["s(A)   :-   e(A, B)."] }));
+    assert!(v["full"].is_null(), "{v}");
+    let whole = s.world("e(a, b). e(b, c). e(c, c).\nt(X) :- e(X, _), not s(X).\n");
+    assert_eq!(read(&mut s, id, &rels), read(&mut s, whole, &rels), "the rule out by another spelling: {v}: the rows differ from the world evaluated whole");
+    assert_eq!(whys(&mut s, id, &rels), whys(&mut s, whole, &rels), "the rule out by another spelling: {v}: a why differs from the world evaluated whole");
+    let two = s.world("e(a, b).\ns(X) :- e(X, Y).\ns(A) :- e(A, B).\n");
+    let held = read(&mut s, two, &rels);
+    let v = s.send(&json!({ "op": "edit", "session": two, "out": ["s(P) :- e(P, Q)."] }));
+    assert_ne!(v["ok"], json!(true), "a spelling of two rules: {v}");
+    assert_eq!(read(&mut s, two, &rels), held, "a refused edit touched the world: {v}");
+    let v = s.ask(json!({ "op": "edit", "session": two, "out": ["s(A) :- e(A, B)."] }));
+    assert!(v["full"].is_null(), "{v}");
+    assert_eq!(read(&mut s, two, &rels), held, "the other rule still makes s: {v}");
+    let v = s.ask(json!({ "op": "edit", "session": two, "out": ["s(Z) :- e(Z, W)."] }));
+    assert!(v["full"].is_null(), "the one left, by a third spelling: {v}");
+    let whole = s.world("e(a, b).\n");
+    assert_eq!(read(&mut s, two, &rels), read(&mut s, whole, &rels), "both rules out: {v}");
+}
+
+/// WHERE THE ENGINE WORKS NO DELTA OUT FOR A RULE, IT SAYS WHY AND EVALUATES THE WORLD WHOLE: a rule outside the cone
+/// of `asks`, one staged `@next`, any rule of a world that keeps no witness, an aggregate, a rule of a closure. Each
+/// answers `full` with its reason, and the world is then the world evaluated whole without the rule.
+#[test]
+fn a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it() {
+    let mut s = Serve::new();
+    // (name, program, the rule out, the reason, the relations compared, whether `why` is asked)
+    let cases: [(&str, &str, &str, &str, &[&str], bool); 5] = [
+        ("cone", "asks(t).\ne(a, b). e(b, c).\ns(X) :- e(X, _).\nt(X) :- s(X).\nu(Y) :- e(_, Y).\n", "u(Y) :- e(_, Y).", "outside the cone of asks", &["e", "s", "t", "u"], true),
+        ("next", "e(a). e(b).\ng(X) :- e(X).\nf(X) @next :- e(X).\n", "f(X) @next :- e(X).", "stages @next", &["e", "f", "g"], true),
+        ("sealed", "sealed(provenance).\ne(a, b). e(b, c).\ns(X) :- e(X, _).\nt(X) :- s(X), not e(_, X).\n", "s(X) :- e(X, _).", "keeps no witness", &["e", "s", "t"], false),
+        ("aggregate", "g(a). g(b).\nsale(k1, a, 2). sale(k2, a, 5). sale(k3, b, 1).\ntotal(G, S) :- g(G), S is sum(V ; K : sale(K, G, V)).\nbig(G) :- total(G, S), S > 3.\n", "total(G, S) :- g(G), S is sum(V ; K : sale(K, G, V)).", "aggregates", &["sale", "total", "big"], true),
+        ("closure", "edge(a, b). edge(b, c). edge(c, d).\nreach(X, Y) :- edge(X, Y).\nreach(X, Z) :- reach(X, Y), edge(Y, Z).\nfar(X) :- reach(a, X), not edge(a, X).\n", "reach(X, Z) :- reach(X, Y), edge(Y, Z).", "a closure", &["edge", "reach", "far"], true),
+    ];
+    for (name, prog, rule, why, rels, explain) in cases {
+        let id = s.world(prog);
+        let v = s.ask(json!({ "op": "edit", "session": id, "out": [rule] }));
+        let full = v["full"].as_str().unwrap_or_else(|| panic!("{name}: {rule} out went by delta, not refused: {v}"));
+        assert!(full.contains(why), "{name}: {rule} out: full says {full:?}, not {why:?}");
+        let without: String = prog.lines().filter(|l| l.trim() != rule).map(|l| format!("{l}\n")).collect();
+        assert_ne!(without, prog, "{name}: the rule is in the program");
+        let whole = s.world(&without);
+        assert_eq!(read(&mut s, id, rels), read(&mut s, whole, rels), "{name}: {rule} out ({full}): the rows differ from the world evaluated whole");
+        if explain {
+            assert_eq!(whys(&mut s, id, rels), whys(&mut s, whole, rels), "{name}: {rule} out ({full}): a why differs from the world evaluated whole");
+        }
+        s.ask(json!({ "op": "close", "session": whole }));
+    }
+}
+
 struct Rng(u64);
 impl Rng {
     fn below(&mut self, n: usize) -> usize {

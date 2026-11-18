@@ -99,6 +99,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "rule_named_as_written_only",
+  "what": "a rule named in edit's out is found only as the program spells it, so the same rule with other variable names is no such rule",
+  "expect": {
+   "rule_spelled": "no such rule"
+  }
+ },
+ {
+  "id": "rule_out_agg_unrefused",
+  "what": "a rule that aggregates is taken out by the delta, which does not take its cells out, instead of the world evaluated whole",
+  "expect": {
+   "rule_refused": "aggregate"
+  }
+ },
+ {
   "id": "rule_out_firings_kept",
   "what": "a rule taken out of an evaluated world keeps what it fired: its facts outlive it",
   "expect": {
@@ -9406,6 +9420,8 @@ export const TESTS: Record<string, string> = {
   edit_whole: 'edit an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff',
   rule_out_whole: 'rule_edit a_rule_out_is_the_world_evaluated_whole_without_it',
   rule_row_out: 'rule_edit a_rule_row_out_is_refused_and_the_rule_out_is_the_world_without_it',
+  rule_spelled: 'rule_edit a_rule_named_with_other_variables_and_spacing_is_the_same_rule',
+  rule_refused: 'rule_edit a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it',
   login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
   event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',
   does_once: 'dispatch a_does_want_runs_once_across_a_dispatch_the_world_anew_and_a_replay',

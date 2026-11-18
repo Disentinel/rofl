@@ -582,7 +582,7 @@ impl Eval {
             if r.clause.head.temporal == Temporal::Next {
                 why.push("a rule taken out stages @next");
             }
-            if r.has_agg || r.has_thr {
+            if brk!("rule_out_agg_unrefused" => false; r.has_agg || r.has_thr) {
                 why.push("a rule taken out aggregates");
             }
             if self.lat.is_cell(head) || self.demand.on(head) || self.clo.closures.iter().any(|c| c.rel == head) || self.vc.vclosures.iter().any(|c| c.rel == head) {

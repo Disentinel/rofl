@@ -1347,11 +1347,33 @@ pub fn rules_named(e: &mut Eval, text: &str) -> Result<Vec<(Sym, Vec<(Sym, Vec<T
         return Err(p.diags.join("; "));
     }
     let drop = sealed_rels(e);
+    let (stored, _) = crate::reflect::decode_rules(&mut e.h, &e.v, &mut e.store);
     let mut out = Vec::new();
     for c in &p.ready {
         let (id, facts) = encode_rule(&mut e.h, &e.v, c);
+        let id = e.h.intern(&id);
+        // as written, or else the one rule the program holds that differs from it only by its variables' names
+        let (id, facts) = if brk!("rule_named_as_written_only" => true; stored.iter().any(|d| d.id == id)) {
+            (id, facts)
+        } else {
+            let mut r = c.clone();
+            resolve_clause_books(&e.v, &mut r);
+            let key = crate::reflect::alpha_key(&canon_clause(&e.h, &r));
+            let like: Vec<&crate::reflect::DRule> = stored.iter().filter(|d| crate::reflect::alpha_key(&d.canon) == key).collect();
+            match like[..] {
+                [] => (id, facts),
+                [d] => {
+                    let (did, dfacts) = encode_rule(&mut e.h, &e.v, &d.clause);
+                    if e.h.intern(&did) != d.id {
+                        return Err(format!("the rule {} does not read back as written", e.h.name(d.id)));
+                    }
+                    (d.id, dfacts)
+                }
+                _ => return Err(format!("{} names {} rules that differ only by their variables; name one as the program writes it", canon_clause(&e.h, c), like.len())),
+            }
+        };
         let rows = facts.into_iter().filter(|f| !drop.contains(&f.rel)).map(|f| (f.rel, f.args)).collect();
-        out.push((e.h.intern(&id), rows));
+        out.push((id, rows));
     }
     Ok(out)
 }

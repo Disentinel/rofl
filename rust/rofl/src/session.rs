@@ -638,7 +638,7 @@ impl Session {
         let mut rows = Vec::new();
         for (id, rs) in named {
             if !self.eval.store.get(rule, kp, &[Term::atom(id)]).is_some_and(|f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
-                return Err(format!("no such rule: {} (a rule is named by its text as written in the program)", text.trim()));
+                return Err(format!("no such rule: {} (a rule is named by its clause, as the program writes it up to the names of its variables and its spacing)", text.trim()));
             }
             if gone.contains(&id) {
                 continue;
