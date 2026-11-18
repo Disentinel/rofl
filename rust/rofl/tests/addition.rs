@@ -298,11 +298,11 @@ fn differential(seed: u64, head: &str, rules: Vec<String>, gen: fn(&mut Rng) -> 
             let f = r.pick(&present_now).clone();
             asserted.remove(&f);
             present.remove(&f);
-            let how = s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}"));
+            let how = s.retract_one_fact_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}"));
             st.retracted.0 += 1;
             st.retracted.1 += matches!(&how, Retraction::Delta(d) if d.set.is_none()) as usize;
             if let Some(mut g) = replay(&ops) {
-                let gh = g.retract_delta(&f).unwrap();
+                let gh = g.retract_one_fact_delta(&f).unwrap();
                 let mut ops2 = ops.clone();
                 ops2.push(Op::Retract(f.clone()));
                 if let Some(mut w) = replay(&ops2) {

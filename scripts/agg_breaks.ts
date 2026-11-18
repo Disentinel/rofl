@@ -99,6 +99,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "retract_one_fact_first",
+  "what": "rofl serve's retract takes a fact out by the old one-fact delta, which reads a negating rule's head whole, instead of the pass edit takes it by",
+  "expect": {
+   "retract_one": "differs"
+  }
+ },
+ {
   "id": "rule_named_as_written_only",
   "what": "a rule named in edit's out is found only as the program spells it, so the same rule with other variable names is no such rule",
   "expect": {
@@ -9421,6 +9428,7 @@ export const TESTS: Record<string, string> = {
   rule_out_whole: 'rule_edit a_rule_out_is_the_world_evaluated_whole_without_it',
   rule_row_out: 'rule_edit a_rule_row_out_is_refused_and_the_rule_out_is_the_world_without_it',
   rule_spelled: 'rule_edit a_rule_named_with_other_variables_and_spacing_is_the_same_rule',
+  retract_one: 'edit a_retract_is_an_edit_of_one_fact',
   rule_refused: 'rule_edit a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it',
   login_flow: 'login a_person_signs_in_once_and_the_token_is_renewed_when_refused',
   event_time: 'event_time an_event_time_is_one_instant_whatever_zone_it_came_in',

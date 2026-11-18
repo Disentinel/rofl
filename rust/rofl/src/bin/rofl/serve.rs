@@ -54,8 +54,9 @@
 //!                                                     -> {"files":[{"file","found","stops","text"}]}: a row a file,
 //!                                                        a file being the key prefix its nodes share
 //!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
-//!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why"}: the base fact out, the
-//!                                                        cells updated by delta, evaluated again if not
+//!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why","touched":k,"pass":"set"|"one_fact"|null}:
+//!                                                        the base fact out by the pass `edit` takes it by (the set's;
+//!                                                        the one-fact delta where that refuses), evaluated again if not
 //!   {"op":"edit","session":2,"out":["q(a)","q(b)"],"rofl":"q(c)."} -> {"out":n,"added":n,"touched":k,"full":null|"why"}:
 //!                                                        an edit in one request: the base facts `out` names taken out
 //!                                                        in one pass by delta (Session::retract_queries_delta), then
@@ -397,12 +398,12 @@ impl Server {
             "retract" => {
                 let q = str_of(r, "query", "retract needs `query`")?.to_string();
                 let s = self.get(r)?;
-                let full = match s.retract_delta(&q)? {
-                    rofl::session::Retraction::Delta(_) => None,
-                    rofl::session::Retraction::Full(why) => Some(why),
+                let (full, touched, pass) = match s.retract_delta(&q)? {
+                    rofl::session::Retraction::Delta(d) => (None, Self::touched_by(&d), Self::pass_of(&d)),
+                    rofl::session::Retraction::Full(why) => (Some(why), 0, None),
                 };
                 if s.eval.store.dirty { s.evaluate().map_err(|e| rofl::describe(&e))?; }
-                Ok(json!({ "full": full }))
+                Ok(json!({ "full": full, "touched": touched, "pass": pass }))
             }
             "edit" => self.op_edit(r),
             "tick" => {
@@ -437,6 +438,17 @@ impl Server {
     }
 
 
+    /// What a fact out touched: overdeleted or derived again, by the set's pass or, where it refused, the one-fact delta.
+    fn touched_by(d: &rofl::engine::Delta) -> usize {
+        d.set.as_ref().map_or(d.retired + d.rederived, |a| a.overdeleted + a.rederived)
+    }
+
+    /// Which pass took the facts out: `set` (the set's pass, the path every fact out takes first) or `one_fact` (the
+    /// engine's one-fact delta, where the set's pass refuses).
+    fn pass_of(d: &rofl::engine::Delta) -> Option<&'static str> {
+        Some(if d.set.is_some() { "set" } else { "one_fact" })
+    }
+
     /// `edit`: the base facts `out` names taken out in one pass by delta, then the facts of `rofl` in by delta; where a
     /// delta is refused the world is evaluated once, at the end.
     fn op_edit(&mut self, r: &Value) -> Result<Value, String> {
@@ -454,9 +466,16 @@ impl Server {
             s.rules_held(&rules)?;
         }
         let (mut full, mut touched) = (None, 0);
-        if !queries.is_empty() {
+        let mut pass = None;
+        if let [q] = queries[..] {
+            // one fact out is `retract`'s pass, the same call
+            match s.retract_delta(q)? {
+                rofl::session::Retraction::Delta(d) => (touched, pass) = (Self::touched_by(&d), Self::pass_of(&d)),
+                rofl::session::Retraction::Full(why) => full = Some(why),
+            }
+        } else if !queries.is_empty() {
             match s.retract_queries_delta(&queries)? {
-                Ok(d) => touched = d.overdeleted + d.rederived,
+                Ok(d) => (touched, pass) = (d.overdeleted + d.rederived, Some("set")),
                 Err(why) => full = Some(why),
             }
         }
@@ -478,7 +497,7 @@ impl Server {
         if s.eval.store.dirty {
             s.evaluate().map_err(|e| rofl::describe(&e))?;
         }
-        Ok(json!({ "out": out.len(), "added": added, "touched": touched, "full": full }))
+        Ok(json!({ "out": out.len(), "added": added, "touched": touched, "full": full, "pass": pass }))
     }
 
     /// `watch` adds relations to what the session's watcher is told of, `unwatch` takes them out (all, without `rels`).

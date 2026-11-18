@@ -592,7 +592,7 @@ fn differential(program: &str, gen: Gen, seed: u64, start: usize, steps: usize, 
             let before = member_ids(&state(&mut s));
             let mut by_delta = false;
             let mut stacked = false;
-            match s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}")) {
+            match s.retract_one_fact_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}")) {
                 Retraction::Delta(d) => {
                     by_delta = true;
                     stacked = d.stacked_rules > 0 || d.set.as_ref().is_some_and(|a| a.stacked_rules > 0);
@@ -916,7 +916,7 @@ fn a_fact_a_question_made_goes_with_any_retraction() {
     let mut s = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)", "z(1)"]), &BTreeSet::new());
     let _ = s.whynot("big(8)", &rofl::engine::WhynotBounds::default());
     assert!(s.holds("big(8)").unwrap(), "the question makes the fact");
-    match s.retract_delta("z(1)").unwrap() {
+    match s.retract_one_fact_delta("z(1)").unwrap() {
         Retraction::Delta(d) => assert!(d.demanded > 0, "{d:?}"),
         other => panic!("{other:?}"),
     }
@@ -943,7 +943,7 @@ fn a_fact_a_question_made_beside_a_lattice_is_evaluated_again() {
     let mut s = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)", "z(1)", "ed(p,q,1)"]), &BTreeSet::new());
     let _ = s.whynot("big(8)", &rofl::engine::WhynotBounds::default());
     assert!(s.holds("big(8)").unwrap(), "the question makes the fact");
-    match s.retract_delta("z(1)").unwrap() {
+    match s.retract_one_fact_delta("z(1)").unwrap() {
         Retraction::Full(_) => {}
         other => panic!("{other:?}"),
     }
@@ -1101,12 +1101,12 @@ fn cells_lattices_and_tags_in_one_world_each_take_their_own_path() {
 #[test]
 fn a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule() {
     let mut s = fresh(PROGRAM, &["grp(a)", "sale(1, a, 3)"].iter().map(|x| x.to_string()).collect(), &BTreeSet::new());
-    match s.retract_delta("grp(a)").unwrap() {
+    match s.retract_one_fact_delta("grp(a)").unwrap() {
         Retraction::Delta(d) => assert!(d.stacked_rules > 0 && d.stacked_cells > 0 && d.cells == 0, "{d:?}"),
         other => panic!("{other:?}"),
     }
     let mut s = fresh(PROGRAM, &["sale(1, a, 3)"].iter().map(|x| x.to_string()).collect(), &BTreeSet::new());
-    match s.retract_delta("sale(1, a, 3)").unwrap() {
+    match s.retract_one_fact_delta("sale(1, a, 3)").unwrap() {
         Retraction::Delta(d) => assert!(d.cells > 0 && d.subtracted > 0, "{d:?}"),
         other => panic!("{other:?}"),
     }
@@ -1181,7 +1181,7 @@ fn a_negation_inside_an_aggregate_is_read_again_whole() {
 fn one_retraction(program: &str, facts: &[&str], gone: &str) -> Retraction {
     let loaded: BTreeSet<String> = facts.iter().map(|f| f.to_string()).collect();
     let mut s = fresh(program, &loaded, &BTreeSet::new());
-    let how = s.retract_delta(gone).unwrap();
+    let how = s.retract_one_fact_delta(gone).unwrap();
     let rest: BTreeSet<String> = loaded.iter().filter(|f| f.as_str() != gone).cloned().collect();
     assert_eq!(state(&mut s), state(&mut fresh(program, &rest, &BTreeSet::new())), "retract {gone} ({how:?})");
     how

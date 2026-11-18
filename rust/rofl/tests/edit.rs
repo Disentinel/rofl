@@ -155,6 +155,46 @@ fn an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff() {
     assert!(by_delta * 2 > steps, "{by_delta} of {steps} edits by delta");
 }
 
+/// ONE PATH FOR A FACT OUT: `retract` of a fact is `edit` with that one fact in `out`, the same pass, so it answers the
+/// same (`full`, `touched`) and its watch is told the same `changes`; both are the world evaluated whole without the
+/// fact, and in these programs the pass is the set's. Planted: `retract_one_fact_first` (the old one-fact delta back in
+/// `retract`) turns it red.
+#[test]
+fn a_retract_is_an_edit_of_one_fact() {
+    let mut s = Serve::new();
+    let mut steps = 0;
+    for (p, prog) in PROGRAMS.iter().enumerate() {
+        let mut r = Rng(0x5851f42d4c957f2d ^ ((p as u64 + 1) * 0x2545f4914f6cdd1d));
+        let mut held: BTreeSet<String> = (0..12).map(|_| (prog.fact)(&mut r)).collect();
+        let text = |held: &BTreeSet<String>| format!("{}{}", prog.rules, held.iter().map(|f| format!("{f}.\n")).collect::<String>());
+        let (a, b) = (s.world(&text(&held)), s.world(&text(&held)));
+        let rels: Vec<Value> = prog.rels.iter().map(|r| json!({ "rel": r })).collect();
+        for id in [a, b] {
+            s.ask(json!({ "op": "watch", "session": id, "rels": rels }));
+        }
+        while held.len() > 2 {
+            let list: Vec<String> = held.iter().cloned().collect();
+            let f = list[r.below(list.len())].clone();
+            let before = read(&mut s, a, prog.rels);
+            let va = s.ask(json!({ "op": "retract", "session": a, "query": f }));
+            let vb = s.ask(json!({ "op": "edit", "session": b, "out": [f] }));
+            for k in ["full", "touched", "pass", "changes"] {
+                assert_eq!(va[k], vb[k], "{f}: retract answered {va}, edit {vb}: {k} differs");
+            }
+            // (none of these programs is one the set's pass refuses: each fact goes by it)
+            assert_eq!(va["pass"], json!("set"), "{f}: retract answered {va}: the pass differs");
+            held.remove(&f);
+            let after = read(&mut s, a, prog.rels);
+            assert_eq!(told(&va), diff(&before, &after), "retract {f}: told {va}");
+            let whole = s.world(&text(&held));
+            assert_eq!(after, read(&mut s, whole, prog.rels), "retract {f} answered {va}: the rows differ from the world evaluated whole");
+            s.ask(json!({ "op": "close", "session": whole }));
+            steps += 1;
+        }
+    }
+    assert!(steps > 20, "{steps} retractions");
+}
+
 #[test]
 fn an_edit_naming_no_fact_is_refused_and_touches_nothing() {
     let mut s = Serve::new();

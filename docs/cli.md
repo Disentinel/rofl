@@ -299,9 +299,11 @@ read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
 another directory, a file changed that is neither named nor read by a scanner,
 or the engine refuses the delta (a fact read on demand, a world kept with no
 witnesses, a well-founded world, an edit that makes a rule fault anew).
-`rofl load --retract F` and `rofl serve`'s `retract` take one fact by the same
-pass where the engine's one-fact delta refuses it; stderr's `Delta { .. set:
-Some(..) }` says so. A world holding a hole is taken by delta: what
+`rofl load --retract F`, `rofl serve`'s `retract` and an `edit` of one fact take
+it by this same pass, one path, and by the engine's one-fact delta only where the
+pass refuses it (a lattice that keeps the history of a superseded value);
+stderr's `Delta { .. set: Some(..) }` and serve's `"pass":"set"|"one_fact"` say
+which. A world holding a hole is taken by delta: what
 the holes and the shrugs may move that the edit reaches is evaluated again
 after it, the rest kept with what the holes left unknown in it. The
 answer is the fresh evaluation's either way (rust/rofl/tests/retract_set.rs:

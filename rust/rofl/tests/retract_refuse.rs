@@ -23,7 +23,7 @@ const BASE: &str = "edb(k).\nedb(dom).\nk(a).\nk(b).\ndom(a).\ndom(c).\n";
 fn a_base_fact_in_another_book_does_not_stop_the_delta() {
     let rules = "v[audit](S) :- dom(S), not k(S).\nv(x).\n";
     let mut s = world(&format!("{BASE}{rules}"));
-    let r = s.retract_delta("k(a)").unwrap();
+    let r = s.retract_one_fact_delta("k(a)").unwrap();
     match &r {
         Retraction::Delta(d) if d.set.is_none() => assert!(d.stacked_rules > 0, "the negating rule was not read again whole: {d:?}"),
         _ => panic!("refused: the one-fact delta did not take it: {r:?}"),
@@ -44,7 +44,7 @@ fn a_base_fact_in_the_same_book_is_taken_by_the_sets_pass() {
         Ok(d) => panic!("the one-fact delta took a base fact of the rule's own book: {d:?}"),
     }
     let mut s = world(&format!("{BASE}{rules}"));
-    match s.retract_delta("k(a)").unwrap() {
+    match s.retract_one_fact_delta("k(a)").unwrap() {
         Retraction::Delta(d) => assert!(d.set.is_some(), "{d:?}"),
         r => panic!("evaluated again: {r:?}"),
     }
