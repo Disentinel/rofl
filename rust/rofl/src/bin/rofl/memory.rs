@@ -1,23 +1,32 @@
 //! The memory wall's watcher: `rofl::engine::MEMORY_FULL` set while the process is near the memory it may use, so an
 //! evaluation stops and answers partial (`memory_exhausted`) instead of being killed. What it may use is, in order:
 //! the memory limit of its cgroup (v2 `memory.max`, v1 `memory.limit_in_bytes`, the least on the way to the root) less
-//! a tenth, against the cgroup's anonymous memory, which is what neither a cache nor a file gives back; else what the
-//! machine has available (Linux `MemAvailable`) down to a tenth of it; else four fifths of the machine's memory against
-//! this process's live heap (`seed::LIVE`). Siblings in the same cgroup (the Node of a notebook) count against it.
+//! a quarter, against the cgroup's anonymous and shared memory, which is what neither a cache nor a file gives back
+//! (a segment cooled to a `/tmp` of tmpfs is shared memory); else what the machine has available (Linux
+//! `MemAvailable`) down to a quarter of it; else, on macOS, four fifths of the machine against this process's physical
+//! footprint, what the system counts against it (twice its live heap at 493 vscode files). Siblings in the same cgroup
+//! (the Node of a notebook) count against it.
+//!
+//! THE EDGE. The kernel kills at the limit itself, and an evaluation stops only at its next step or premise: a step
+//! that takes more than the quarter left passes the wall. So the watcher keeps the largest rise it has seen between
+//! two looks, and when the next such rise would reach the edge while the evaluation has not stopped, it says so and
+//! ends the process itself, exit 5, before the kernel does it without a word.
 use rofl::engine::{MEMORY_FULL, MEMORY_LIMIT, MEMORY_USED};
 use std::sync::atomic::Ordering::Relaxed;
 
 const RESERVE_MIN: i64 = 256 << 20;
 
-/// Used and may-use, in bytes, as measured now.
-type Measure = Box<dyn Fn() -> Option<(i64, i64)> + Send>;
+/// Used, may-use and the edge where the system takes the memory back by killing, in bytes, as measured now.
+type Measure = Box<dyn Fn() -> Option<(i64, i64, i64)> + Send>;
 
 fn read(p: &str) -> Option<String> {
     std::fs::read_to_string(p).ok()
 }
 
-fn stat(dir: &str, key: &str) -> Option<i64> {
-    read(&format!("{dir}/memory.stat"))?.lines().find_map(|l| l.strip_prefix(key)?.strip_prefix(' ')?.trim().parse().ok())
+/// The sum of the keys of the cgroup's `memory.stat`, each of which it must hold.
+fn stat(dir: &str, keys: &[&str]) -> Option<i64> {
+    let text = read(&format!("{dir}/memory.stat"))?;
+    keys.iter().map(|k| text.lines().find_map(|l| l.strip_prefix(k)?.strip_prefix(' ')?.trim().parse::<i64>().ok())).sum()
 }
 
 /// The cgroup directory holding the least memory limit above this process, with the limit.
@@ -62,35 +71,65 @@ fn machine() -> Option<i64> {
     (ok == 0).then_some(n)
 }
 
+/// What the system counts against this process: its physical footprint.
+#[cfg(target_os = "macos")]
+fn footprint() -> Option<i64> {
+    let mut info: libc::rusage_info_v2 = unsafe { std::mem::zeroed() };
+    let ok = unsafe { libc::proc_pid_rusage(std::process::id() as i32, libc::RUSAGE_INFO_V2, &mut info as *mut _ as *mut libc::rusage_info_t) };
+    (ok == 0).then_some(info.ri_phys_footprint as i64)
+}
+
 #[cfg(not(target_os = "macos"))]
 fn machine() -> Option<i64> {
-    meminfo("MemTotal:")
+    None
+}
+
+#[cfg(not(target_os = "macos"))]
+fn footprint() -> Option<i64> {
+    None
 }
 
 fn measure() -> Option<Measure> {
     if let Some((dir, limit, v2)) = cgroup() {
-        let key = if v2 { "anon" } else { "total_rss" };
-        stat(&dir, key)?;
+        let keys: &[&str] = if v2 { &["anon", "shmem"] } else { &["total_rss", "total_shmem"] };
+        stat(&dir, keys)?;
         let may = limit - (limit / 4).max(RESERVE_MIN.min(limit / 2));
-        return Some(Box::new(move || stat(&dir, key).map(|u| (u, may))));
+        return Some(Box::new(move || stat(&dir, keys).map(|u| (u, may, limit))));
     }
     if let (Some(_), Some(total)) = (meminfo("MemAvailable:"), meminfo("MemTotal:")) {
         let reserve = (total / 4).max(RESERVE_MIN);
-        return Some(Box::new(move || meminfo("MemAvailable:").map(|a| (total - a, total - reserve))));
+        return Some(Box::new(move || meminfo("MemAvailable:").map(|a| (total - a, total - reserve, total))));
     }
-    let may = machine()? / 5 * 4;
-    Some(Box::new(move || Some((crate::seed::LIVE.load(Relaxed) as i64, may))))
+    let total = machine()?;
+    footprint()?;
+    Some(Box::new(move || footprint().map(|u| (u, total / 5 * 4, total))))
 }
 
-/// Starts the watcher; without a measure there is no wall, as before.
-pub fn watch() {
+/// Starts the watcher; without a measure there is no wall, as before. `answers`: whether stdout carries a question
+/// verb's answers, and in JSON, so that a process ended at the edge leaves a partial answer there.
+pub fn watch(answers: Option<bool>) {
     let Some(m) = measure() else { return };
-    std::thread::spawn(move || loop {
-        if let Some((used, may)) = m() {
-            MEMORY_USED.store(used, Relaxed);
-            MEMORY_LIMIT.store(may, Relaxed);
-            MEMORY_FULL.store(used >= may, Relaxed);
+    std::thread::spawn(move || {
+        let (mut last, mut leap) = (i64::MAX, 0i64);
+        loop {
+            if let Some((used, may, edge)) = m() {
+                leap = leap.max(used - last);
+                last = used;
+                MEMORY_USED.store(used, Relaxed);
+                MEMORY_LIMIT.store(may, Relaxed);
+                MEMORY_FULL.store(used >= may, Relaxed);
+                if used >= may && used + leap >= edge {
+                    let gb = |b: i64| format!("{:.1} GB", b as f64 / (1u64 << 30) as f64);
+                    eprintln!("the world reached the memory this process may use ({} of {}) and did not stop before the edge where the system kills it ({}, rising up to {} between two looks): the process ends here, without an answer; ask over fewer files", gb(used), gb(may), gb(edge), gb(leap));
+                    match answers {
+                        Some(true) => println!("{}", serde_json::json!({ "ok": true, "vars": [], "rows": [], "partial": true })),
+                        Some(false) => println!("{}\n(empty)\n[partial: the memory ran out before the world could stop; no answer]", crate::load::PARTIAL_HEAD),
+                        None => {}
+                    }
+                    std::process::exit(crate::load::PARTIAL);
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(20));
         }
-        std::thread::sleep(std::time::Duration::from_millis(20));
     });
 }

@@ -2262,6 +2262,8 @@ brk_expects("volume_unknowns_dropped", "kept_holes").
 brk_expects("volume_unknowns_dropped", "kept_image_holes").
 brk("kept_key_ignores_walls"). brk_kind("kept_key_ignores_walls", switch).
 brk_expects("kept_key_ignores_walls", "kept_implicit_walls").
+brk("memory_wall_sparse"). brk_kind("memory_wall_sparse", switch).
+brk_expects("memory_wall_sparse", "memory_wall").
 brk("kept_cone_lemmas_unread"). brk_kind("kept_cone_lemmas_unread", switch).
 brk_expects("kept_cone_lemmas_unread", "kept_rule").
 brk("kept_verbs_compute"). brk_kind("kept_verbs_compute", switch).
@@ -2677,6 +2679,7 @@ switch_site("mcp_does_sent", "rust/rofl/src/adapter.rs").
 switch_site("median_upper", "rust/rofl/src/cell.rs").
 switch_site("member_id_position", "rust/rofl/src/store.rs").
 switch_site("memo", "rust/rofl/src/engine.rs").
+switch_site("memory_wall_sparse", "rust/rofl/src/engine.rs").
 switch_site("min_by_value", "rust/rofl/src/engine.rs").
 switch_site("mod_floor", "rust/rofl/src/engine.rs").
 switch_site("mono", "rust/rofl/src/engine.rs").

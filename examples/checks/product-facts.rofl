@@ -206,6 +206,7 @@ engine_entry(says, "unbounded_in_recursion").
 engine_entry(says, "unsafe").
 engine_entry(word, "profile").
 engine_entry(word, "profile").
+engine_entry(word, "profile").
 engine_entry(builtin, "*").
 engine_entry(builtin, "+").
 engine_entry(builtin, "-").
@@ -328,8 +329,6 @@ unsourced_gate("DEFAULT_SPACE", stop).
 unsourced_gate("FAR", cheaper).
 unsourced_gate("FEW", cheaper).
 unsourced_gate("FLOOR", room).
-unsourced_gate("HOT_READ", tell).
-unsourced_gate("HOT_SHARE", tell).
 unsourced_gate("LABEL_REGIONS", cheaper).
 unsourced_gate("MARGIN", cheaper).
 unsourced_gate("MARGIN_FULL", cheaper).
