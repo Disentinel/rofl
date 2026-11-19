@@ -406,6 +406,38 @@ fn volumes_delta(name: &str, model: &str, each: &dyn Fn(usize, &dyn Fn(usize) ->
     ensure(got.out == anew.out && got.err.contains("units settled again"), || format!("{name}: a delta of volumes answers otherwise than the files anew: {} lines against {}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))
 }
 
+/// A book of facts alone, naming no file, laid over a world kept by volumes: put in, edited and taken out by delta,
+/// the units it may meet settled again, each answer that of the files evaluated anew. Read by a file's own rule, and
+/// by a rule that crosses files through a closure.
+fn a_book_laid_over_volumes_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("laid_over");
+    let n = |i: usize| format!("n{i:016x}");
+    let mut text = String::new();
+    for i in 0..24 {
+        text += &format!("here(\"{}_z\").\ncolor(\"{}_1\", blue).\ncolor(\"{}_2\", {}).\nlink(\"{}_1\", \"{}_1\").\n", n(i), n(i), n(i), ["red", "green", "blue"][i % 3], n(i), n((i + 1) % 24));
+    }
+    d.write("f.rofl", &text);
+    d.write("m.rofl", "edb(here). edb(color). edb(link). edb(off).\nimports(main, assume).\n\
+        shown(N) :- color(N, C), not off[assume](C).\n\
+        reach(A, B) :- link(A, B).\nreach(A, C) :- reach(A, B), link(B, C).\n\
+        seen(A) :- reach(A, B), color(B, C), not off[assume](C).\n");
+    let env = [("ROFL_VOLUMES", "1".to_string())];
+    for q in ["shown(N)", "seen(A)"] {
+        let args = ["ask", q, "boot.rofl", "m.rofl", "f.rofl", "ov.rofl"];
+        d.write("ov.rofl", "");
+        let kept = rofl_env(BIN, &d, &d.0.join(format!("cache-{q}")), &env, brk, &args);
+        ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("{q}: not kept by volumes: {} {:?}", kept.code, kept.err))?;
+        for ov in ["off[assume](red).\n", "off[assume](red).\noff[assume](blue).\n", "off[assume](green).\n", ""] {
+            d.write("ov.rofl", ov);
+            let got = rofl_env(BIN, &d, &d.0.join(format!("cache-{q}")), &env, brk, &args);
+            let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{q}-{}", ov.len())), &env, brk, &args);
+            let by_delta = got.err.contains("the facts laid over them moved");
+            ensure(anew.code == 0 && got.out == anew.out && (by_delta || q != "shown(N)"), || format!("{q}, {ov:?}: wanted {:?} by delta, got {:?} {:?}", anew.out, got.out, got.err))?;
+        }
+    }
+    Ok(())
+}
+
 /// A copy with no original goes: a fact a volume made for the length of a round (its `not` read a copy not yet laid)
 /// was copied to the others, and goes from them when the copy that takes it out is laid.
 fn a_copy_with_no_original_goes(brk: Option<&str>) -> Result<(), String> {
@@ -938,7 +970,7 @@ fn a_cone_grown_below_the_cut_takes_its_lemmas_again(brk: Option<&str>) -> Resul
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 35] = [
+const CASES: [(&str, Case); 36] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -969,6 +1001,7 @@ const CASES: [(&str, Case); 35] = [
     ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
     ("a_nearest_moved_goes_by_delta", a_nearest_moved_goes_by_delta),
     ("a_cut_world_takes_a_file_read_above_the_cut", a_cut_world_takes_a_file_read_above_the_cut),
+    ("a_book_laid_over_volumes_goes_by_delta", a_book_laid_over_volumes_goes_by_delta),
     ("a_nearest_row_gone_and_back_goes_by_delta", a_nearest_row_gone_and_back_goes_by_delta),
     ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
     ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
