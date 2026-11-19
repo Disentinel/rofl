@@ -16,7 +16,7 @@ default: surface
 
 Reads:
 
-- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [callback_site](js-callgraph.rofl.md#callback_site), [callee_of](js-callgraph.rofl.md#callee_of), [calls_back](js-callgraph.rofl.md#calls_back), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
+- from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
 - from js-callgraph, in the flow: [may_be](js-callgraph.rofl.md#may_be)
 - from js-controlflow, in the code: [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable)
 - from js-controlflow, in the flow: [thrown_by](js-controlflow.rofl.md#thrown_by)
@@ -26,8 +26,6 @@ Reads:
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the flow:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
-- from outside these files, in the main:
-  - <a id="host_passes"></a>`host_passes`
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
   - <a id="parent"></a>`parent`
@@ -166,52 +164,6 @@ In the surface:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
   - X [points to](js-dataflow.rofl.md#may_be_node) a node N.
-
-> what a host hands the function it calls back (models/lang/js/facts/js-host.rofl `host_passes`): an element
-> of the receiver, its index, the receiver itself, what the receiving promise settles to, or an argument of
-> the call (`setTimeout(f, ms, x)`); a promise is read as the value it settles to, as `await` reads it
-
-In the flow:
-
-<a id="callback_recv"></a>An invocation calls back on a receiver R if all of:
-  - it [calls back](js-callgraph.rofl.md#calls_back) some function some when;
-  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node M;
-  - [`object_of`](js-structure.rofl.md#object_of)(M, R).
-
-<a id="host_hands"></a>The host hands F and E at an index I either:
-
-1. if all of:
-   - a call C [calls back](js-callgraph.rofl.md#calls_back) F some when;
-   - C [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
-   - [`host_passes`](#host_passes)(O, Key, I, `element`);
-   - C [calls back on](#callback_recv) a receiver R;
-   - R [points to](js-dataflow.rofl.md#may_be_node) a node X;
-   - [`array_elem`](js-dataflow.rofl.md#array_elem)(X, something, E);
-2. if all of:
-   - a call C [calls back](js-callgraph.rofl.md#calls_back) F some when;
-   - C [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
-   - [`host_passes`](#host_passes)(O, Key, I, `receiver` or `settled`);
-   - C [calls back on](#callback_recv) E;
-3. if all of:
-   - a call C [calls back](js-callgraph.rofl.md#calls_back) F some when;
-   - C [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
-   - [`host_passes`](#host_passes)(O, Key, I, arg(K));
-   - C [passes](js-dataflow.rofl.md#arg_at) E at an index K.
-
-In the surface:
-
-`sx_arg_lit`(F, I, K) either:
-
-1. if all of:
-   - a call C [calls back](js-callgraph.rofl.md#calls_back) F some when;
-   - C [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
-   - [`host_passes`](#host_passes)(O, Key, I, `index`);
-   - C [calls back on](#callback_recv) a receiver R;
-   - R [points to](js-dataflow.rofl.md#may_be_node) a node X;
-   - [`array_elem`](js-dataflow.rofl.md#array_elem)(X, K, something);
-2. if [the host hands](#host_hands) F and E at I, and E [may be the literal](js-dataflow.rofl.md#may_be_lit) K.
-
-`sx_arg_node`(F, I, N) if [the host hands](#host_hands) F and E at an index I, and E [points to](js-dataflow.rofl.md#may_be_node) a node N.
 
 `sx_called` of A is read through its rules and never stored.
 

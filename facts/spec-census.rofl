@@ -408,7 +408,9 @@ check[checks]("facts/goldens.rofl", "notebook_missing", world).
 check[checks]("facts/goldens.rofl", "notebook_order", world).
 check[checks]("facts/goldens.rofl", "notebook_packages", world).
 check[checks]("facts/goldens.rofl", "notebook_passes", world).
+check[checks]("facts/goldens.rofl", "notebook_puts", world).
 check[checks]("facts/goldens.rofl", "notebook_rest", world).
+check[checks]("facts/goldens.rofl", "notebook_returns", world).
 check[checks]("facts/goldens.rofl", "notebook_review", world).
 check[checks]("facts/goldens.rofl", "notebook_runs", world).
 check[checks]("facts/goldens.rofl", "notebook_scoped", world).

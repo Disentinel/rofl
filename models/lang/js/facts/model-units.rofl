@@ -39,6 +39,11 @@ unit_concludes("models/lang/js/facts/js-host.rofl", host_member_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_global_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_no_effects).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_passes).
+unit_concludes("models/lang/js/facts/js-host.rofl", host_makes_array).
+unit_concludes("models/lang/js/facts/js-host.rofl", host_returns).
+unit_concludes("models/lang/js/facts/js-host.rofl", host_makes_object).
+unit_concludes("models/lang/js/facts/js-host.rofl", host_gives_result).
+unit_concludes("models/lang/js/facts/js-host.rofl", host_puts).
 unit_concludes("models/lang/js/facts/js-host.rofl", fn_invoker).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_calls_back).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_member_module).
@@ -160,6 +165,15 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", decl_value).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", destructures_at).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", array_elem).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_at).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_call_on).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_src).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_any).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_somewhere).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", lit_somewhere).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", entry_of).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_plain).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_result).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_value).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", param_wrap).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", param_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", fallback).
@@ -171,8 +185,6 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", rest_at).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", rest_src).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", obj_rest).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", arr_rest).
-unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_value).
-unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_plain).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", spread_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", valued).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", call_like).
@@ -205,6 +217,9 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", input_param).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", input_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", input_node).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", input_lit).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", callback_recv).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_hands).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_index).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", returns).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", born_tmpl).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", recv_call).
@@ -391,6 +406,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", obj_method).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", obj_like).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", class_like).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", inst_of).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", args_read).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", mwrite_at).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", sx_wsum).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", sx_wsum_in).
@@ -1355,8 +1371,6 @@ unit_concludes("models/lang/js/rules/js-surface.rofl", sx_eff_module).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_effect_module).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_arg_lit).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_arg_node).
-unit_concludes("models/lang/js/rules/js-surface.rofl", callback_recv).
-unit_concludes("models/lang/js/rules/js-surface.rofl", host_hands).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_called).
 unit_concludes("models/lang/js/rules/js-surface.rofl", arg_given).
 unit_concludes("models/lang/js/rules/js-surface.rofl", arg_count).

@@ -380,6 +380,8 @@ may_be[flow](T, input, S) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T)
                              array_elem[flow](A, I, V), may_be[flow](V, input, S).
 may_be[flow](T, lit, L)   :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
                              array_elem[flow](A, I, V), may_be[flow](V, lit, L).
+may_be[flow](T, VK, X)    :- pattern_elem[value](P, _, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
+                             elem_somewhere[flow](A, V), may_be[flow](V, VK, X).
 -- the default of a target is a conditional source of it
 may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be[flow](Init, VK, V).
 
@@ -405,6 +407,55 @@ array_elem[flow](A, I, X) :- spread_elems[value](A, I, X).
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 -- `list[0]`: a read by an index the layer knows is the element at that index
 may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), array_elem[flow](A, I, E), may_be[flow](E, VK, V).
+
+-- WHAT A HOST MEMBER RETURNS OF ITS RECEIVER (models/lang/js/facts/js-host.rofl `host_returns`): one of its
+-- elements (`find`, `at`, `pop`), or a new array of them whose places the layer does not keep (`filter`, `slice`,
+-- `concat`, `Array.from`, `[...xs]`), or of an object's values or keys (`Object.values`, `Object.keys`). An
+-- element of such an array is read at any index, walked by for-of, handed to a callback.
+host_call_on[flow](C, O, Key, R) :- callback_site[code](C, O, Key), callee_of[code](C, M), object_of[code](M, R).
+host_call_on[flow](C, Name, Key, R) :- callee_of[code](C, M), object_of[code](M, G), free_global[code](G, Name, _),
+                                       lib_global(Name, _, _), selects[flow](M, Key), arg_at[flow](C, 0, R).
+host_src[flow](C, What, R) :- host_call_on[flow](C, O, Key, R), host_returns(O, Key, What).
+elem_any[flow](A, E) :- array_elem[flow](A, _, E).
+elem_any[flow](A, E) :- elem_somewhere[flow](A, E).
+may_be[flow](C, VK, V) :- host_src[flow](C, element, R), may_be_node[flow](R, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](C, lit, undefined) :- host_src[flow](C, element, _).
+may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_array(What).
+elem_somewhere[flow](C, E) :- host_src[flow](C, elements, R), may_be_node[flow](R, A), elem_any[flow](A, E).
+elem_somewhere[flow](C, E) :- host_src[flow](C, elements, _), host_call_on[flow](C, array, "concat", _),
+                              arg_at[flow](C, _, X), may_be_node[flow](X, A), elem_any[flow](A, E).
+elem_somewhere[flow](C, V) :- host_src[flow](C, values, R), may_be_node[flow](R, O), member_value[flow](O, _, V).
+lit_somewhere[flow](C, Key) :- host_src[flow](C, keys, R), may_be_node[flow](R, O), member_value[flow](O, Key, _).
+-- `Object.entries(o)`: each entry a pair `[Key, value]` of its own, `entry(C, Key)`
+entry_of[flow](C, Key, V) :- host_src[flow](C, entries, R), may_be_node[flow](R, O), member_value[flow](O, Key, V).
+elem_somewhere[flow](C, entry(C, Key)) :- entry_of[flow](C, Key, _).
+may_be[flow](entry(C, Key), node, entry(C, Key)) :- entry_of[flow](C, Key, _).
+array_elem[flow](entry(C, Key), 0, entry_key(C, Key)) :- entry_of[flow](C, Key, _).
+array_elem[flow](entry(C, Key), 1, V) :- entry_of[flow](C, Key, V).
+may_be[flow](entry_key(C, Key), lit, Key) :- entry_of[flow](C, Key, _).
+elem_somewhere[flow](A, E) :- spread_elems[value](A, _, X), may_be_node[flow](X, B), elem_any[flow](B, E).
+may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), int is type_of(I), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](N, lit, K) :- member_at[flow](N, _, A, I), int is type_of(I), lit_somewhere[flow](A, K).
+-- `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
+may_be[flow](C, VK, V) :- host_src[flow](C, same, R), may_be[flow](R, VK, V).
+may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_object(What).
+member_plain[flow](C, Key, V) :- host_src[flow](C, What, _), host_makes_object(What), member_value[flow](C, Key, V).
+-- what the function it calls back returns: an array of them (`map`), or one (`reduce`, a promise's `then`)
+host_result[flow](C, E) :- host_src[flow](C, What, _), host_gives_result(What), calls_back[code](C, F, _), returns[flow](F, E).
+elem_somewhere[flow](C, E) :- host_src[flow](C, results, _), host_result[flow](C, E).
+may_be[flow](C, VK, V) :- host_src[flow](C, result, _), host_result[flow](C, E), may_be[flow](E, VK, V).
+member_value[flow](C, Key, V) :- host_src[flow](C, inherits, R), may_be_node[flow](R, P), member_value[flow](P, Key, V).
+member_value[flow](C, Key, V) :- host_src[flow](C, from_entries, R), may_be_node[flow](R, A), elem_any[flow](A, E),
+                                 may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), may_be_lit[flow](KE, Key),
+                                 array_elem[flow](Pair, 1, V).
+-- what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
+elem_somewhere[flow](A, X) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_be_node[flow](R, A),
+                              arg_at[flow](C, _, X).
+elem_somewhere[flow](X, E) :- es_instance[flow](X, "Set", _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr),
+                              elem_any[flow](Arr, E).
+-- `{ [k]: v }`: a computed key whose value is known
+member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_expr[value](P, E), may_be_lit[flow](E, Key),
+                                 string is type_of(Key).
 
 may_be[flow](E, node, N) :- destructures_at[code](D, Local, Index, File),
                             decl_value[flow](D, Init), may_be_node[flow](Init, A), array_elem[flow](A, Index, V),
@@ -628,6 +679,24 @@ input_of[flow](S, F) :- input_this[flow](S, F).
 input_node[flow](S, N) :- input_param[flow](S, F, I), sx_arg_node[surface](F, I, N).
 input_lit[flow](S, V)  :- input_param[flow](S, F, I), sx_arg_lit[surface](F, I, V).
 
+-- what a host hands the function it calls back (models/lang/js/facts/js-host.rofl `host_passes`): an element
+-- of the receiver, its index, the receiver itself, what the receiving promise settles to, or an argument of
+-- the call (`setTimeout(f, ms, x)`); a promise is read as the value it settles to, as `await` reads it
+callback_recv[flow](C, R) :- calls_back[code](C, _, _), callee_of[code](C, M), object_of[code](M, R).
+host_hands[flow](F, I, E)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, element),
+                             callback_recv[flow](C, R), may_be_node[flow](R, A), elem_any[flow](A, E).
+host_hands[flow](F, I, R)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, receiver),
+                             callback_recv[flow](C, R).
+host_hands[flow](F, I, R)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, settled),
+                             callback_recv[flow](C, R).
+host_hands[flow](F, I, A)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, arg(K)),
+                             arg_at[flow](C, K, A).
+host_index[flow](F, I, K) :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, index),
+                             callback_recv[flow](C, R), may_be_node[flow](R, A), array_elem[flow](A, K, _).
+input_node[flow](S, N) :- input_param[flow](S, F, I), host_hands[flow](F, I, E), may_be_node[flow](E, N).
+input_lit[flow](S, V)  :- input_param[flow](S, F, I), host_hands[flow](F, I, E), may_be_lit[flow](E, V).
+input_lit[flow](S, K)  :- input_param[flow](S, F, I), host_index[flow](F, I, K).
+
 -- A call is its function's summary applied to THIS call: what the function returns of its own, and what it
 -- returns of an input, here this call's argument or receiver (`sx_ret_own`, `sx_ret_input`, `sx_ret_this`,
 -- models/lang/js/rules/js-surface.rofl). An input of an enclosing function is not this call's to give: the summary holds its values.
@@ -731,6 +800,10 @@ keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), 
 sx_kput[surface](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
                              may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
 keyed_put[flow](X, K, V) :- sx_kput[surface](X, K, V).
+-- `new Map([[k, v], ...])` puts each pair it is made with
+keyed_put[flow](X, K, V) :- keyed_obj[flow](X, _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr), elem_any[flow](Arr, E),
+                            may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), may_be_lit[flow](KE, K),
+                            array_elem[flow](Pair, 1, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
                             may_be_lit[flow](A, K), not argument_at[code](C, 1, _).
 may_be[flow](C, lit, undefined) :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get).
@@ -1372,6 +1445,14 @@ class_like[flow](O) :- class[value](O).
 -- prototype half and whatever is written onto it.
 inst_of[flow](inst(CD), CD)   :- class_like[flow](CD).
 member_value[flow](I, Key, V) :- isa[flow](I, CD), class_member_proto[flow](CD, Key, V).
+-- `arguments[I]` in a function is what its calls hand it at I
+args_read[flow](N, F, I) :- object_of[code](N, O), ref[value](O, "arguments"), selects[flow](N, I),
+                            int is type_of(I), nearest_v[flow](F, N).
+may_be[flow](N, VK, V) :- args_read[flow](N, F, I), applies[flow](C, F), arg_at[flow](C, I, A), may_be[flow](A, VK, V).
+-- `super.m` in an instance method is m of the base class's prototype
+may_be[flow](N, node, V) :- super[value](S), object_of[code](N, S), selects[flow](N, Key), inside[tree](M, S),
+                            class_method_of[flow](CD, M), not static[value](M), super_of[flow](CD, B),
+                            class_member_proto[flow](B, Key, V).
 member_plain[flow](I, Key, V) :- isa[flow](I, _), member_value[flow](I, Key, V).
 
 member_value[flow](O, Key, V) :- obj_method[code](O, M), key_name[code](M, Key), V = M.
@@ -2285,6 +2366,7 @@ may_be[flow](Y, node, X) :- delegates[value](Y, A), resolves[code](A, Inner),
 -- element walked. An array is a VALUE (through `may_be_node`); a generator is
 -- a CALL, read at the site, because its returns are not what for-of walks.
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
+iter_elem[flow](X, E) :- may_be_node[flow](X, A), elem_somewhere[flow](A, E).
 iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
 
 decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),

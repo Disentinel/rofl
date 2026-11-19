@@ -338,6 +338,35 @@ host_passes(promise, "then", 0, settled).
 host_passes("setTimeout", itself, 0, arg(2)). host_passes("setTimeout", itself, 1, arg(3)).
 host_passes("setImmediate", itself, 0, arg(1)). host_passes("setImmediate", itself, 1, arg(2)).
 
+-- `host_returns(Origin, Key, What)`: what the member Key of Origin returns of its receiver (or, for a static of
+-- a global, of its first argument): one `element`, an array of its `elements`, of an object's `values`, `keys`
+-- or `entries`
+edb(host_returns).
+edb(host_makes_array).
+host_makes_array(elements). host_makes_array(results). host_makes_array(values). host_makes_array(keys). host_makes_array(entries).
+host_returns(array, "find", element). host_returns(array, "findLast", element). host_returns(array, "at", element).
+host_returns(array, "pop", element). host_returns(array, "shift", element).
+host_returns(array, "filter", elements). host_returns(array, "slice", elements). host_returns(array, "concat", elements).
+host_returns(array, "toSorted", elements). host_returns(array, "toReversed", elements). host_returns(array, "reverse", elements).
+host_returns(array, "sort", elements).
+host_returns("Array", "from", elements). host_returns("Array", "of", elements).
+host_returns("Object", "values", values). host_returns("Object", "keys", keys). host_returns("Object", "entries", entries).
+host_returns("Object", "freeze", same). host_returns("Object", "seal", same). host_returns("Object", "preventExtensions", same).
+host_returns("Object", "create", inherits). host_returns("Object", "fromEntries", from_entries).
+host_returns("Promise", "all", elements). host_returns("Promise", "allSettled", elements).
+host_returns("Promise", "race", element). host_returns("Promise", "any", element).
+edb(host_makes_object).
+host_makes_object(inherits). host_makes_object(from_entries).
+host_returns(array, "map", results). host_returns(array, "flatMap", results).
+host_returns(array, "reduce", result). host_returns(array, "reduceRight", result).
+host_returns(promise, "then", result). host_returns(promise, "catch", result). host_returns(promise, "catch", same).
+host_returns(promise, "finally", same).
+edb(host_gives_result).
+host_gives_result(results). host_gives_result(result).
+-- `host_puts(Origin, Key)`: the member Key of Origin puts its arguments into its receiver
+edb(host_puts).
+host_puts(array, "push"). host_puts(array, "unshift"). host_puts(set, "add").
+
 -- the members of Function.prototype that call their receiver at once
 edb(fn_invoker).
 fn_invoker("call").
