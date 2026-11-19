@@ -106,6 +106,9 @@ Declared as facts:
 | `destructures` | "destructures(declarator D, name Local, from key Key, in file File)" |
 | `destructures_at` | "destructures(declarator D, name Local, at index Index, in file File)" |
 | `pattern_takes` | "takes_the_key(object pattern P, key Key)" |
+| `assign_pat` | "takes_apart_on_the_left(assignment A, pattern R, the value Src)" |
+| `pat_place` | "places(pattern P, target T)" |
+| `catch_local` | "catches_into(catch clause H, name Name, target T)" |
 | `obj_rest` | "holds_the_object_rest(pattern P, node R, taken from node Src)" |
 | `arr_rest` | "holds_the_array_rest(from index I, node R, taken from node Src)" |
 | `rest_src` | "takes_apart(pattern P, node Src)" |

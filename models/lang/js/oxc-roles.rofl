@@ -427,9 +427,13 @@ ox_pat_sourced(P) :- oxc_c[ast_oxc](A, left, 0, P), oxc_k[ast_oxc](A, assignment
 pattern_elem[value](P, I, T) :- ox_array_pat(P), oxc_c[ast_oxc](P, elements, I, V), oxc_k[ast_oxc](V, K), K != assignment_pattern, T = V.
 pattern_elem[value](P, I, T) :- ox_array_pat(P), oxc_c[ast_oxc](P, elements, I, V), oxc_k[ast_oxc](V, assignment_pattern), oxc_c[ast_oxc](V, left, 0, T).
 rest_elems[value](P, I, T)   :- oxc_k[ast_oxc](P, array_pattern), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, argument, 0, T),
-                                I is count(J : oxc_c[ast_oxc](P, elements, J, _)).
+                                ox_elems_len(P, I).
 rest_elems[value](P, I, T)   :- oxc_k[ast_oxc](P, array_assignment_target), oxc_c[ast_oxc](P, rest, 0, R), oxc_c[ast_oxc](R, target, 0, T),
-                                I is count(J : oxc_c[ast_oxc](P, elements, J, _)).
+                                ox_elems_len(P, I).
+-- how many elements stand before the rest: a list with a hole says its length, one without has a child at each
+ox_rest_pat(P) :- oxc_c[ast_oxc](P, rest, 0, _).
+ox_elems_len(P, I) :- ox_rest_pat(P), oxc_a[ast_oxc](P, elements_len, I).
+ox_elems_len(P, I) :- ox_rest_pat(P), not oxc_a[ast_oxc](P, elements_len, _), I is count(J : oxc_c[ast_oxc](P, elements, J, _)).
 
 -- VALUES -----------------------------------------------------------------------------------------------
 

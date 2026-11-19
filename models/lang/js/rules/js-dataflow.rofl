@@ -174,8 +174,9 @@ own_name[code](X, Name, File, itself) :- decl[value](X, class), not named_here[c
 named_decl[code](D, Name, File)  :- own_name[code](D, Name, File, around).
 decl_region[code](D, R)  :- named_decl[code](D, _, _), scope_of[code](R, D).
 decl_at_top[code](D)     :- named_decl[code](D, _, _), not decl_region[code](D, _).
-catch_names[code](H, Name, File) :- decl[value](P, catch), binds[value](P, Name), parent[tree](H, P),
-                                    at[tree](H, File, _).
+catch_local[code](H, Name, P) :- decl[value](P, catch), binds[value](P, Name), parent[tree](H, P).
+catch_local[code](H, Name, T) :- decl[value](P, catch), parent[tree](H, P), pat_in[code](P, _, T), binds[value](T, Name).
+catch_names[code](H, Name, File) :- catch_local[code](H, Name, _), at[tree](H, File, _).
 
 -- which declaration a read of its name sees, found by the same lookup
 sees_decl[code](E, D) :- named_decl[code](D, Name, File), decl_region[code](D, S),
@@ -343,14 +344,21 @@ prototype_of[flow](E, promise) :- binder[code](D, _, Init, _), prototype_of[flow
 -- (key for the member, value for the local). An array pattern binds by
 -- POSITION over the raw array, so `[, second]` keeps index 1.
 -- Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
--- declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
+-- declarator's pattern, a parameter, a catch parameter or the left of `=`. `{ a: { b }, [k]: c, d = 1 } = o` and
+-- `[x, , y = 2] = arr` alike. A member on the left of `=` (`({ a: o.x } = src)`) is a write of that member, not a
+-- target of the pattern: it is no step.
 pat_in[code](R, R, T) :- declarator_id[code](_, R), pat_step[code](R, T).
 pat_in[code](R, R, T) :- param[value](_, _, R), pat_step[code](R, T).
+pat_in[code](R, R, T) :- decl[value](R, catch), pat_step[code](R, T).
+pat_in[code](R, R, T) :- assign_pat[code](_, R, _), pat_step[code](R, T).
 pat_in[code](R, P, T) :- pat_in[code](R, _, P), pat_step[code](P, T).
-pat_step[code](P, T) :- pattern_prop[value](P, _, T).
-pat_step[code](P, T) :- pattern_elem[value](P, _, T).
+pat_place[code](P, T) :- pattern_prop[value](P, _, T).
+pat_place[code](P, T) :- pattern_elem[value](P, _, T).
+pat_place[code](P, T) :- rest_at[code](P, T).
+pat_step[code](P, T) :- pat_place[code](P, T), not member_kind_expr[code](T).
 pat_step[code](P, T) :- pat_computed[code](P, T, _).
-pat_step[code](P, T) :- rest_at[code](P, T).
+-- `({ p } = o)`, `[q] = arr`: the pattern on the left of an assignment, and the value it takes apart
+assign_pat[code](A, R, Src) :- value_write[code](A, R, Src), pat_place[code](R, _).
 pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, T), T != E.
 pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, W), assign[value](W, T, _),
                                parent[tree](W, T).
@@ -363,6 +371,8 @@ may_be[flow](R, node, N) :- declarator_id[code](D, R), pat_in[code](R, _, _), de
 may_be[flow](R, input, S) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
                              may_be[flow](Init, input, S).
 may_be[flow](R, input, S) :- input_param[flow](S, F, I), param[value](F, I, R), pat_in[code](R, _, _).
+may_be[flow](R, node, N) :- assign_pat[code](_, R, Src), own_node[flow](Src, N).
+may_be[flow](R, input, S) :- assign_pat[code](_, R, Src), may_be[flow](Src, input, S).
 may_be[flow](T, node, N) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
                             array_elem[flow](A, I, V), own_node[flow](V, N).
 may_be[flow](T, input, S) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
@@ -376,6 +386,9 @@ may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_
 pat_local[code](D, Local, T, File) :- declarator_id[code](D, R), pat_in[code](R, _, T), binds[value](T, Local),
                                       at[tree](D, File, _).
 scoped_binder[code](D, File) :- pat_local[code](D, _, _, File).
+-- a name the left of `=` writes through its pattern is assigned the target, as `p = o.p` assigns `o.p`
+assigned[code](T, T, Name, T, File) :- assign_pat[code](_, R, _), pat_in[code](R, _, T), ref[value](T, Name),
+                                       at[tree](T, File, _).
 may_be[flow](E, VK, V) :- pat_local[code](D, Local, T, File), may_be[flow](T, VK, V),
                       ident_in[code](E, Local, File), sees_binder[code](E, D).
 
@@ -389,6 +402,8 @@ destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, R), patte
 array_elem[flow](A, I, E) :- array[value](A), nth[tree](A, I, E), parent[tree](A, E).
 array_elem[flow](A, I, X) :- spread_elems[value](A, I, X).
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
+-- `list[0]`: a read by an index the layer knows is the element at that index
+may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), array_elem[flow](A, I, E), may_be[flow](E, VK, V).
 
 may_be[flow](E, node, N) :- destructures_at[code](D, Local, Index, File),
                             decl_value[flow](D, Init), may_be_node[flow](Init, A), array_elem[flow](A, Index, V),
@@ -430,6 +445,8 @@ rest_at[code](P, R)     :- rest_elems[value](P, _, R).
 rest_src[code](P, Init) :- rest_at[code](P, _), pattern_source[code](P, Init).
 rest_src[code](P, P)    :- rest_at[code](P, R), pat_in[code](Root, P, R), Root != P.
 rest_src[code](P, P)    :- rest_at[code](P, _), param[value](_, _, P).
+rest_src[code](P, P)    :- rest_at[code](P, _), decl[value](P, catch).
+rest_src[code](P, Src)  :- rest_at[code](P, _), assign_pat[code](_, P, Src).
 obj_rest[code](P, R, Src) :- rest_props[value](P, R), pat_in[code](_, P, R), rest_src[code](P, Src).
 arr_rest[code](I, R, Src) :- rest_elems[value](P, I, R), pat_in[code](_, P, R), rest_src[code](P, Src).
 may_be[flow](R, node, R) :- obj_rest[code](_, R, _).
@@ -2319,6 +2336,9 @@ throw_in_fn[flow](Th)    :- exits[value](Th, throw), nearest_v[flow](_, Th).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).
 may_be[flow](P, node, V) :- caught_value[flow](P, V).
+-- a read of a catch name is what its target holds: the thrown value, or a part of it
+may_be[flow](U, VK, V) :- catch_names[code](H, Name, File), catch_local[code](H, Name, T), may_be[flow](T, VK, V),
+                          name_scope[code](U, Name, File, H).
 
 call_in_try[flow](T)     :- try_block[flow](T, B), inside[tree](B, C),
                             call_site[code](C, _).

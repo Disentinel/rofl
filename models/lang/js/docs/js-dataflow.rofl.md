@@ -28,7 +28,7 @@ default: code
 
 Reads:
 
-- from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [member_kind_expr](js-callgraph.rofl.md#member_kind_expr), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-concat, in the flow: [may_be](js-concat.rofl.md#may_be)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
@@ -412,11 +412,15 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 
 <a id="decl_at_top"></a>D is declared at the top if D [declares the name](#named_decl) some name in some file, unless D [is scoped to](#decl_region) some scope.
 
-<a id="catch_names"></a>H declares its caught name Name in File if all of:
+A clause
+
+- <a id="catch_local"></a>catches into Name and P if [`decl`](#decl)(P, `catch`), [`binds`](#binds)(P, Name), and [`parent`](#parent)(it, P).
+- catches into Name and T if all of:
   - [`decl`](#decl)(P, `catch`);
-  - [`binds`](#binds)(P, Name);
-  - [`parent`](#parent)(H, P);
-  - [`at`](#at)(H, File, something).
+  - [`parent`](#parent)(it, P);
+  - [`pat_in`](#pat_in)(P, something, T);
+  - [`binds`](#binds)(T, Name).
+- <a id="catch_names"></a>declares its caught name Name in File if it [catches into](#catch_local) Name and some target, and [`at`](#at)(it, File, something).
 
 > which declaration a read of its name sees, found by the same lookup
 
@@ -695,7 +699,9 @@ Declared as facts:
 > (key for the member, value for the local). An array pattern binds by
 > POSITION over the raw array, so `[, second]` keeps index 1.
 > Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
-> declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
+> declarator's pattern, a parameter, a catch parameter or the left of `=`. `{ a: { b }, [k]: c, d = 1 } = o` and
+> `[x, , y = 2] = arr` alike. A member on the left of `=` (`({ a: o.x } = src)`) is a write of that member, not a
+> target of the pattern: it is no step.
 
 In the code:
 
@@ -703,14 +709,27 @@ In the code:
 
 1. if [`declarator_id`](#declarator_id)(something, R), [`pat_step`](#pat_step)(R, T), and N is R;
 2. if [`param`](#param)(something, something, R), [`pat_step`](#pat_step)(R, T), and N is R;
-3. if [`pat_in`](#pat_in)(R, something, N) and [`pat_step`](#pat_step)(N, T).
+3. if [`decl`](#decl)(R, `catch`), [`pat_step`](#pat_step)(R, T), and N is R;
+4. if all of:
+   - some assignment [takes apart on the left](#assign_pat) R the some value;
+   - [`pat_step`](#pat_step)(R, T);
+   - N is R;
+5. if [`pat_in`](#pat_in)(R, something, N) and [`pat_step`](#pat_step)(N, T).
 
-<a id="pat_step"></a>`pat_step`(P, T) either:
+<a id="pat_place"></a>A pattern P places a target T either:
 
 1. if [`pattern_prop`](#pattern_prop)(P, something, T);
 2. if [`pattern_elem`](#pattern_elem)(P, something, T);
-3. if [`pat_computed`](#pat_computed)(P, T, something);
-4. if [`rest_at`](#rest_at)(P, T).
+3. if [`rest_at`](#rest_at)(P, T).
+
+<a id="pat_step"></a>`pat_step`(P, T) either:
+
+1. if a pattern P [places](#pat_place) a target T, unless T [is a member read](js-callgraph.rofl.md#member_kind_expr);
+2. if [`pat_computed`](#pat_computed)(P, T, something).
+
+> `({ p } = o)`, `[q] = arr`: the pattern on the left of an assignment, and the value it takes apart
+
+<a id="assign_pat"></a>X takes apart on the left R the Src if [`value_write`](js-structure.rofl.md#value_write)(X, R, Src) and R [places](#pat_place) some target.
 
 <a id="pat_computed"></a>`pat_computed`(P, T, E) either:
 
@@ -752,20 +771,28 @@ In the flow:
    - [`pat_in`](#pat_in)(R, something, something);
    - E is `input`;
 4. if all of:
+   - some assignment [takes apart on the left](#assign_pat) R the Src;
+   - [`own_node`](#own_node)(Src, N);
+   - E is `node`;
+5. if all of:
+   - some assignment [takes apart on the left](#assign_pat) R the Src;
+   - [`may_be`](js-concat.rofl.md#may_be)(Src, `input`, N);
+   - E is `input`;
+6. if all of:
    - [`pattern_elem`](#pattern_elem)(P, I, R);
    - [`pat_in`](#pat_in)(something, P, R);
    - a node P [points to](#may_be_node) a node X;
    - [`array_elem`](#array_elem)(X, I, V);
    - [`own_node`](#own_node)(V, N);
    - E is `node`;
-5. if all of:
+7. if all of:
    - [`pattern_elem`](#pattern_elem)(P, I, R);
    - [`pat_in`](#pat_in)(something, P, R);
    - a node P [points to](#may_be_node) a node X;
    - [`array_elem`](#array_elem)(X, I, V);
    - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, N);
    - E is `input`;
-6. if all of:
+8. if all of:
    - [`pattern_elem`](#pattern_elem)(P, I, R);
    - [`pat_in`](#pat_in)(something, P, R);
    - a node P [points to](#may_be_node) a node X;
@@ -791,6 +818,14 @@ In the code:
   - [`at`](#at)(D, File, something).
 
 D is scoped in File if [`pat_local`](#pat_local)(D, something, something, File).
+
+> a name the left of `=` writes through its pattern is assigned the target, as `p = o.p` assigns `o.p`
+
+`assigned`(T, T, Name, T, File) if all of:
+  - some assignment [takes apart on the left](#assign_pat) R the some value;
+  - [`pat_in`](#pat_in)(R, something, T);
+  - [`ref`](#ref)(T, Name);
+  - [`at`](#at)(T, File, something).
 
 In the flow:
 
@@ -821,6 +856,13 @@ In the flow:
 2. if [`spread_elems`](#spread_elems)(Y, I, E).
 
 <a id="elem_at"></a>The element I of a node X is a node E if X [points to](#may_be_node) a node Y and [`array_elem`](#array_elem)(Y, I, E).
+
+> `list[0]`: a read by an index the layer knows is the element at that index
+
+`may_be`(N, VK, V) if all of:
+  - [`member_at`](#member_at)(N, something, X, I);
+  - [`array_elem`](#array_elem)(X, I, E);
+  - [`may_be`](js-concat.rofl.md#may_be)(E, VK, V).
 
 `may_be`(E, `node`, N) if all of:
   - D [destructures](#destructures_at) Local at Index in File;
@@ -910,7 +952,9 @@ In the code:
 
 1. if [`rest_at`](#rest_at)(P, something) and [the pattern source](#pattern_source) of P is Init;
 2. if [`rest_at`](#rest_at)(P, R), [`pat_in`](#pat_in)(Root, P, R), Root differs from P, and Init is P;
-3. if [`rest_at`](#rest_at)(P, something), [`param`](#param)(something, something, P), and Init is P.
+3. if [`rest_at`](#rest_at)(P, something), [`param`](#param)(something, something, P), and Init is P;
+4. if [`rest_at`](#rest_at)(P, something), [`decl`](#decl)(P, `catch`), and Init is P;
+5. if [`rest_at`](#rest_at)(P, something) and some assignment [takes apart on the left](#assign_pat) P the Init.
 
 <a id="obj_rest"></a>A pattern holds the object rest R taken from a node Src if all of:
   - [`rest_props`](#rest_props)(it, R);
@@ -5522,6 +5566,14 @@ A node catches a node V if all of:
   - T [throws](#thrown_in) V.
 
 `may_be`(P, `node`, V) if a node P [catches](js-controlflow.rofl.md#caught_value) a node V.
+
+> a read of a catch name is what its target holds: the thrown value, or a part of it
+
+`may_be`(U, VK, V) if all of:
+  - a clause H [declares its caught name](#catch_names) Name in File;
+  - H [catches into](#catch_local) Name and T;
+  - [`may_be`](js-concat.rofl.md#may_be)(T, VK, V);
+  - a node U [finds its name in](#name_scope) Name in File H.
 
 <a id="call_in_try"></a>T calls if all of:
   - [the block](#try_block) of T is a node B;
