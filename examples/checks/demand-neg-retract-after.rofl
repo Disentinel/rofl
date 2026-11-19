@@ -1,0 +1,25 @@
+-- examples/checks/demand-neg-retract-after.rofl — demand_neg_retract_after: the retraction
+-- of demand_neg_retract where what the negation reads is itself derived again after
+-- the rest. dk_g reads dk_k, a relation answered on demand that the retraction of
+-- dk_z(1) reaches, so dk_g and every rule over it fire again whole. The rules over a
+-- demand premise that unfolds `not dk_g(X)` fire at their level, after dk_g; fired
+-- first they keep dk_h, dk_r and dk_r2 of 1 and 2.
+edb(dk_z). edb(dk_b). edb(dk_q). edb(dk_c).
+dk_b(1). dk_b(2). dk_b(3). dk_q(3).
+dk_z(1).
+dk_c(1). dk_c(2). dk_c(3).
+dk_k(X, Y) :- dk_c(X), not dk_z(X).
+dk_g(X)    :- dk_c(X), dk_k(X, X).
+dk_u(X, Y) :- dk_q(X).
+dk_h(X, Y) :- dk_b(X), not dk_g(X).
+dk_h(X, Y) :- dk_u(X, X).
+dk_d(X)    :- dk_h(X, X).
+dk_r(X)    :- dk_b(X), dk_h(X, X).
+dk_r2(X)   :- dk_b(X), dk_d(X).
+dk_nr(X)   :- dk_b(X), not dk_r2(X).
+
+-- expect-row: dk_g[main](1) tick drv support=1
+-- expect-row: dk_nr[main](1) tick drv support=1
+-- expect-no-row: dk_h[main](1,1)
+-- expect-no-row: dk_r[main](2)
+-- expect-no-row: dk_r2[main](2)

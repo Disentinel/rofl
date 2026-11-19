@@ -54,6 +54,88 @@ pub struct Cut {
     pub files: Vec<(String, String)>,
 }
 
+const TEXTS: &[u8; 16] = b"ROFL-TEXTS-1\n\0\0\0";
+
+/// THE FILES' TEXTS KEPT BESIDE A WORLD'S UNITS: what a thaw reads again, found by the file's name and read alone,
+/// where it lies, not cut again from every source. Four words a file, by name (where its name and its text lie), the
+/// names, the texts, and the sum of every byte before it.
+pub fn keep_texts(path: &str, files: &[(String, String)]) -> std::io::Result<()> {
+    let mut by: Vec<&(String, String)> = files.iter().collect();
+    by.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+    let head = TEXTS.len() + 8 + 32 * by.len();
+    let names: usize = by.iter().map(|(f, _)| f.len()).sum();
+    let mut out: Vec<u8> = Vec::with_capacity(head + names + by.iter().map(|(_, t)| t.len()).sum::<usize>() + 8);
+    out.extend_from_slice(TEXTS);
+    out.extend_from_slice(&(by.len() as u64).to_le_bytes());
+    let (mut name_at, mut text_at) = (head, head + names);
+    for (f, t) in &by {
+        for x in [name_at, f.len(), text_at, t.len()] {
+            out.extend_from_slice(&(x as u64).to_le_bytes());
+        }
+        name_at += f.len();
+        text_at += t.len();
+    }
+    by.iter().for_each(|(f, _)| out.extend_from_slice(f.as_bytes()));
+    by.iter().for_each(|(_, t)| out.extend_from_slice(t.as_bytes()));
+    let mut sum = crate::arena::Sum::default();
+    sum.add(&out);
+    out.extend_from_slice(&sum.value().to_le_bytes());
+    let tmp = format!("{path}.{}.new", std::process::id());
+    std::fs::write(&tmp, out)?;
+    std::fs::rename(&tmp, path)
+}
+
+/// The texts `keep_texts` kept, mapped; whole once its sum held, or `seen` notes it as it was (`volume::check_seen`).
+pub struct KeptTexts {
+    map: memmap2::Mmap,
+    n: usize,
+}
+
+impl KeptTexts {
+    pub fn open(path: &str, seen: Option<&std::path::Path>) -> Result<KeptTexts, String> {
+        let f = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
+        // SAFETY: written whole under another name and moved into place, never written again.
+        let map = unsafe { memmap2::Mmap::map(&f) }.map_err(|e| format!("{path}: {e}"))?;
+        let bad = || format!("{path}: not the texts of a world's files");
+        if map.get(..TEXTS.len()) != Some(TEXTS) {
+            return Err(bad());
+        }
+        let n = map.get(TEXTS.len()..TEXTS.len() + 8).map(|b| u64::from_le_bytes(b.try_into().unwrap()) as usize).ok_or_else(bad)?;
+        if n.checked_mul(32).and_then(|x| x.checked_add(TEXTS.len() + 16)).is_none_or(|h| h > map.len()) {
+            return Err(bad());
+        }
+        if !crate::volume::ends_in_its_sum(path, &map, seen) {
+            return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
+        }
+        Ok(KeptTexts { map, n })
+    }
+
+    fn entry(&self, i: usize) -> [usize; 4] {
+        let at = TEXTS.len() + 8 + 32 * i;
+        std::array::from_fn(|k| u64::from_le_bytes(self.map[at + 8 * k..at + 8 * k + 8].try_into().unwrap()) as usize)
+    }
+
+    fn str(&self, at: usize, len: usize) -> &str {
+        // SAFETY: the sum held, so these are the bytes of a `&str` `keep_texts` wrote
+        unsafe { std::str::from_utf8_unchecked(&self.map[at..at + len]) }
+    }
+
+    /// The text of the file of this name.
+    pub fn get(&self, file: &str) -> Option<&str> {
+        let (mut lo, mut hi) = (0, self.n);
+        while lo < hi {
+            let mid = (lo + hi) / 2;
+            let [na, nl, ta, tl] = self.entry(mid);
+            match self.str(na, nl).cmp(file) {
+                std::cmp::Ordering::Equal => return Some(self.str(ta, tl)),
+                std::cmp::Ordering::Less => lo = mid + 1,
+                std::cmp::Ordering::Greater => hi = mid,
+            }
+        }
+        None
+    }
+}
+
 /// The texts cut into core and files. A clause spans lines while a string in it is open.
 pub fn cut(texts: &[&str]) -> Cut {
     let mut core = String::new();
@@ -265,7 +347,7 @@ pub(super) fn pressed() -> bool {
 impl Eval {
     /// The world of this core and the `files`, each its name and text, settled by levels: the reader, a fork of the
     /// core that reads every unit and fires nothing.
-    pub fn by_volumes(&mut self, files: &[(String, String)]) -> Result<(Eval, VolStats), Halt> {
+    pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
         let (stage, mut joins) = self.level_stage();
@@ -279,7 +361,7 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for (_, text) in files {
+        for (_, text) in &files {
             let mut rest = text.as_str();
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
@@ -306,6 +388,7 @@ impl Eval {
         let held = std::mem::take(&mut joins.held);
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
+        let n = files.len();
         let lv = e.fork().by_levels(files, &stage, joins, None)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
@@ -321,7 +404,7 @@ impl Eval {
             lv.tops.iter().map(|t| t.count()).sum::<usize>()
         ));
         e.diags.extend(lv.said.iter().cloned());
-        let st = VolStats { files: files.len(), ms: t0.elapsed().as_millis(), facts: (lv.mark - from) as usize, cooled: lv.cooled.times, cool_files: lv.cooled.units, cool_bytes: lv.cooled.bytes };
+        let st = VolStats { files: n, ms: t0.elapsed().as_millis(), facts: (lv.mark - from) as usize, cooled: lv.cooled.times, cool_files: lv.cooled.units, cool_bytes: lv.cooled.bytes };
         e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
         e.levels = Some(Rc::new(lv));
         Ok((e, st))

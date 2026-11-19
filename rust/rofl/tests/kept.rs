@@ -1276,7 +1276,7 @@ fn an_absence_below_the_cut_is_walked_in_its_file_thawed() {
         let args: Vec<&str> = ["whynot", "--all", q].iter().chain(more).chain(&["boot.rofl", world, "f.rofl"]).copied().collect();
         rofl_env(BIN, &d, &d.0.join(format!("{cache}-{}", rel(q))), env, None, &args)
     };
-    let (mut below, mut absent) = (0, 0);
+    let (mut below, mut absent, mut fewer) = (0, 0, 0);
     for i in [0, 1, 3, 6] {
         for k in 1..5 {
             let x = format!("\"{}_{k}\"", n(i));
@@ -1291,11 +1291,18 @@ fn an_absence_below_the_cut_is_walked_in_its_file_thawed() {
                 let (anew, kept, cut) = (run(&q, &[], "cut.rofl", "levels", &levels), run(&q, &[], "cut.rofl", "levels", &levels), run(&q, &[], "cut.rofl", "cut", &whole));
                 assert!(anew.out == truth.out, "{q} by levels:\n{}\nthe world with nothing cut:\n{}\n{}", anew.out, truth.out, anew.err);
                 assert!(kept.out == truth.out && kept.err.contains("answered from the kept units"), "{q} from the kept units:\n{}\n{}", kept.out, kept.err);
+                // a question bound to a node reads the units that may hold it, not every unit
+                let read: Vec<usize> = kept.err.split("reading ").nth(1).and_then(|r| r.split(" stretches").next()).map(|r| r.split(" of their ").filter_map(|x| x.parse().ok()).collect()).unwrap_or_default();
+                assert!(read.len() == 2 && read[0] <= read[1], "{q} from the kept units says what it read: {}", kept.err);
+                fewer += (read[0] < read[1]) as usize;
                 assert!(cut.out == truth.out, "{q} in the cut world whole:\n{}\nthe world with nothing cut:\n{}", cut.out, truth.out);
             }
         }
     }
     assert!(absent > 40 && below > 20, "the corpus asks too little below the cut: {below} of {absent} absences");
+    // a question bound to a node reads the units that may hold it, not every unit, unless what it reads joins by a
+    // value of every file (`twin` reads `same`, a name of any file)
+    assert!(fewer * 2 > absent, "a bound question read every unit: {fewer} of {absent} read fewer");
     // a failure of the lower stage that names no file is said, not walked over the lemmas
     let q = format!("calls(A, \"{}_1\")", n(0));
     let open = run(&q, &[], "cut.rofl", "levels", &levels);

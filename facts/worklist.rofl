@@ -3930,8 +3930,8 @@ work_needs(w_why_by_file, w_stage_planner).
 work_spawned(w_why_by_file, f_whynot_by_file_parts_the_walk_where_a_candidate_first_names_a_file).
 
 work(w_thaw_reads_one_file,
-  "The first thaw of a run reads and cuts every source to find one file's text (Eval::lower_text): at the reference scale that is the whole scan, several GB, for one file of 11 100. Keep beside the units where each file's facts lie in the sources (or its scan under ~/.cache/rofl/scans), so that a thaw reads its file alone.").
-work_state(w_thaw_reads_one_file, open).
+  "DONE 2026-11-18 for a world read from its kept units (f_a_question_opens_of_a_kept_world_what_its_walk_reads): each file's text is kept beside the units (`.texts`, sorted by file) and a thaw reads its file's alone; a world evaluated in the run still cuts every source on its first thaw. WAS: The first thaw of a run reads and cuts every source to find one file's text (Eval::lower_text): at the reference scale that is the whole scan, several GB, for one file of 11 100. Keep beside the units where each file's facts lie in the sources (or its scan under ~/.cache/rofl/scans), so that a thaw reads its file alone.").
+work_state(w_thaw_reads_one_file, done).
 work_spawned(w_thaw_reads_one_file, f_a_whynot_below_the_cut_thaws_the_file_it_names).
 
 work(w_whynot_by_units_at_scale,
@@ -3940,9 +3940,19 @@ work_state(w_whynot_by_units_at_scale, done).
 work_spawned(w_whynot_by_units_at_scale, f_a_whynot_below_the_cut_thaws_the_file_it_names).
 
 work(w_a_kept_world_opens_whole,
-  "A question answered from kept units opens every unit of the world before it reads one: asked again, calls[code](A, B) takes 0.8 s and 0.9 GB resident at 250 vscode files and 3.2 s and 3.6 GB at 1000 (release, 4 cores), so by proportion about 35 s and 40 GB at 11 100, against the goal of a second. A bound question reads a few units; open the units a read reaches, as the walk reaches them, and keep the rest on disk. ACCEPTANCE: a bound ask and a bound whynot over the kept 1000-file world in about a second and well under 1 GB, the answers byte for byte.").
-work_state(w_a_kept_world_opens_whole, open).
+  "DONE 2026-11-18 (f_a_question_opens_of_a_kept_world_what_its_walk_reads): a question opens the core, the dictionary and a table of the units, and reads a unit's directory, stretch and trees when its walk reaches them; at 1000 files a bound ask 0.10 s and 0.13 GB, a bound whynot 0.23 s and 0.28 GB, the answers byte for byte. WAS: A question answered from kept units opens every unit of the world before it reads one: asked again, calls[code](A, B) takes 0.8 s and 0.9 GB resident at 250 vscode files and 3.2 s and 3.6 GB at 1000 (release, 4 cores), so by proportion about 35 s and 40 GB at 11 100, against the goal of a second. A bound question reads a few units; open the units a read reaches, as the walk reaches them, and keep the rest on disk. ACCEPTANCE: a bound ask and a bound whynot over the kept 1000-file world in about a second and well under 1 GB, the answers byte for byte.").
+work_state(w_a_kept_world_opens_whole, done).
 work_spawned(w_a_kept_world_opens_whole, f_a_whynot_from_kept_units_costs_the_opening_of_the_world).
+
+work(w_a_kept_world_is_summed_by_its_first_question,
+  "The first question after a world is kept sums every kept file once before it trusts them (volume.rs whole, noted under $XDG_CACHE_HOME/rofl/seen only once the file's mtime is a second old): at 1000 vscode files 1.7 s and 2.9 GB of mapped pages for an answer that then takes 0.17 s, so at 11 100 files some 20 s for the first question after each keep or edit. The writer knows the sums it wrote: note them when the world is kept (and say what the mtime rule guards against if it must stay), so that the first question reads only what its walk reads.").
+work_state(w_a_kept_world_is_summed_by_its_first_question, open).
+work_spawned(w_a_kept_world_is_summed_by_its_first_question, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
+
+work(w_kept_texts_written_whole_on_an_edit,
+  "An edit of one file keeps the world again with every file's text (`.texts`, 0.49 GB of 3.0 GB at 1000 vscode files), as it writes every unit's directories in the new segment: the write of an edit grows with the world, not with the edit. Write the texts once and an edit's moved files beside them, as the units' segments do with the stretches.").
+work_state(w_kept_texts_written_whole_on_an_edit, open).
+work_spawned(w_kept_texts_written_whole_on_an_edit, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
 
 work(w_whynot_of_a_bare_name_reads_main,
   "`rofl ask 'calls(A, B)'` answers from whatever book holds calls (calls[code], 515 answers at 20 vscode files) and `rofl whynot 'calls(A, B)'` over the same world reads the name in [main] and says `head does not unify`, as the reference does: the agent who asks why after asking what is told a thing about another relation. Say, where a bare name has no rule or fact in [main] and has them in one other book, which book was meant, or refuse naming the books.").
@@ -4098,6 +4108,16 @@ work_state(w_rofl_by_the_product_model, open).
 work_spawned(w_rofl_by_the_product_model, f_the_goal_written_as_facts_names_its_holes).
 work_spawned(w_rofl_by_the_product_model, f_the_js_model_grows_in_proportion_and_the_seconds_do_not).
 
+work(w_test_every_codepath,
+  "Closes the owner's invariant `tested` (models/product/rofl.rofl): All effects covered with world/scenario tests. RED 2026-11-16 by `npm run product`: the codepath by levels (bin/rofl/load.rs answer_by_volumes, engine/levels.rs) can write, delete and read files, read the environment, run a process, exit, spawn threads, read the clock, say `hot:` and give the profile, and no scenario of the tree goes it: npm test prints the state of a world (no question), whycheck, test:hosts and bench go through rofl serve, test:npm asks a world below VOLUMES_FROM. Only Rust tests reach it, through the oracle ROFL_VOLUMES=1. Closed when a scenario goes it by what the engine decides, not by an oracle (a world of npm test asked over files, or the gate VOLUMES_FROM restated so that a corpus of a few files goes by levels).").
+work_state(w_test_every_codepath, open).
+closes_invariant(w_test_every_codepath, tested).
+
+work(w_restate_the_numbered_gates,
+  "Closes the owner's invariant `no_magic_gate` (models/product/rofl.rofl, models/engine/gates.rofl): No gates based on hardcoded numeric constant. RED 2026-11-16 with 29 gates whose number has no source in facts/gates.rofl, by task: tell (HOT_READ, HOT_SHARE), show (SHOWN, WHY_MEMBERS, WIDTH), cheaper (VOLUMES_FROM, MIN_INDEXED, FEW, MARGIN, MARGIN_FULL, REF_MIN, STITCH_MIN, LABEL_REGIONS, OVER_MOST, FAR), room (MEMO_BYTES, FLOOR, SLACK, MAX_PATTERNS), stop (MAX_DEPTH, MAX_ALTERNATIONS, DEFAULT_SPACE, SPACE, BUDGET, DEFAULT_BUDGET, POLICY_BUDGET, WN_FAR, MAX_ALIAS, MAX_WANTS). Each is restated by its task and given its source (a target of the goal, a forecast, the machine, the run): for `tell`, the target of a question answered in about a second. One gate at a time, each a change of its own; the bare numbers of models/engine/gates.rofl (bare_gate) after.").
+work_state(w_restate_the_numbered_gates, open).
+closes_invariant(w_restate_the_numbered_gates, no_magic_gate).
+
 work(w_scroll,
   "The owner, 2026-11-11 (thread on the delta of volumes): the store becomes ONE LONG SCROLL over raw mapped memory, in place of volumes that copy facts to one another. His words: a cooled volume is a fold (a spoiler: its content is not seen, is known to be there, can be unfolded); it is the addressing of memory by pages and of a disk by logical volumes; the indexes are digests, a service volume of their own, the book [index]; nothing is to be invented above what the machine's memory does already. Why: a delta of volumes of 7 files of 123 takes 17 s against 55 anew, and 8 of them are the exchange (the plan of what to lay, the copies, their files, the rounds), which exists because a fact's number and a name's number mean something only inside their volume (f_half_the_time_of_a_delta_of_volumes_is_where_no_rule_reads_a_row). One pull request, its parts in this order, the engine working and its answers equal after each; each part's forecast is written in models/engine/delta-model.rofl before it is built and a measure judges it.").
 work_state(w_scroll, open).
@@ -4151,14 +4171,19 @@ work_spawned(w_scroll_regions, f_in_one_store_the_search_is_spread_and_the_writi
 -- THE FRESH AGENT'S STUMBLES (w_cutoff_agent_usability, first run 2026-11-15; transcripts and stumbles books in the project
 -- files, agent-usability/). One item per theme of themes.rofl there.
 work(w_au_kept_cone_grows_wrong,
-  "DEFECT, the first to fix. A kept world asked a question outside its cone grows by delta and answers WRONG, silently, exit 0. Repro in the tree: `npm run scan -- examples/services/src --out svc.rofl`; with an empty ~/.cache/rofl: `rofl ask 'call_like[code](C)' @rules/js.files svc.rofl`, then `rofl ask 'may_be_node[flow](A, X)' @rules/js.files svc.rofl` answers 2 rows; with the cache emptied the second alone answers 161. On vscode base the grown world answered (empty) where fresh says X = \"fs\", and a whynot built on it named a premise that holds. docs/cli.md (rofl ask) promises the growth. Acceptance: a check world asks a narrow cone, then a wider one, and equals the fresh answer; at least the two relations above.").
-work_state(w_au_kept_cone_grows_wrong, open).
+  "DONE 2026-11-15 by #252 (3a4c7477): a cone grown below the cut takes its lemmas again by delta (Session::lower_lemmas), test a_cone_grown_below_the_cut_takes_its_lemmas_again in rust/rofl/tests/kept.rs, faults kept_cone_grown_over_the_cut and kept_cone_lemmas_unread; the services repro answers 161 after the narrow question. WAS: DEFECT, the first to fix. A kept world asked a question outside its cone grows by delta and answers WRONG, silently, exit 0. Repro in the tree: `npm run scan -- examples/services/src --out svc.rofl`; with an empty ~/.cache/rofl: `rofl ask 'call_like[code](C)' @rules/js.files svc.rofl`, then `rofl ask 'may_be_node[flow](A, X)' @rules/js.files svc.rofl` answers 2 rows; with the cache emptied the second alone answers 161. On vscode base the grown world answered (empty) where fresh says X = \"fs\", and a whynot built on it named a premise that holds. docs/cli.md (rofl ask) promises the growth. Acceptance: a check world asks a narrow cone, then a wider one, and equals the fresh answer; at least the two relations above.").
+work_state(w_au_kept_cone_grows_wrong, done).
 work_spawned(w_au_kept_cone_grows_wrong, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 work(w_au_memory_wall_before_the_kernel,
-  "The memory wall did not fire before the kernel: three runs on a 15 GB machine (base 493 files with --space 2e8; base+platform 2 617 files) ended exit 137 with no engine line, resident about twice the heap at the stop. cli.md promises the world stops and says so. Acceptance: on a machine with no cgroup limit a run that outgrows memory ends with the wall said and a partial answer, measured at 2 617 vscode files.").
-work_state(w_au_memory_wall_before_the_kernel, open).
+  "DONE 2026-11-18 (f_the_memory_wall_waited_a_thousand_steps_and_the_units_fell_back_whole): the wall is met at every step, premise and row, a parallel match gives back at it, the units met by it are not evaluated whole after them, the watcher ends the process itself with a line before the edge, macOS measures the physical footprint, and a partial answer opens with a line of its own. 2 617 vscode files on 15 GB: stopped with the line at 185 s, exit 5. WAS: The memory wall did not fire before the kernel: three runs on a 15 GB machine (base 493 files with --space 2e8; base+platform 2 617 files) ended exit 137 with no engine line, resident about twice the heap at the stop. cli.md promises the world stops and says so. Acceptance: on a machine with no cgroup limit a run that outgrows memory ends with the wall said and a partial answer, measured at 2 617 vscode files.").
+work_state(w_au_memory_wall_before_the_kernel, done).
 work_spawned(w_au_memory_wall_before_the_kernel, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
+
+work(w_heights_thaw_every_unit,
+  "An aggregate's members are ordered by the height of their proofs (Eval::member_height, Store::heights_where_head), a walk of every witness below them; by levels a witness of a cooled stretch is read by unfolding the whole stretch into a store on the heap (Stretch::store via Store::views), so the reader's count over 2 617 vscode files thaws every unit back: from 7.5 GB by about 160 MB a second to the edge (f_a_unit_planned_blind_to_the_layers_below). The walk takes no step, so the memory wall is not met in it. Read a cooled stretch's firings where they lie (its `fired` and `prems` are in the segment), or keep a fact's height beside it when its unit is settled, so that the reader asks no unit to unfold; and meet the wall in the walk. Acceptance: the side-effect question over 2 617 vscode files answers whole in a 14 GB cgroup, answers as at 493 files where they overlap.").
+work_state(w_heights_thaw_every_unit, done).
+work_spawned(w_heights_thaw_every_unit, f_a_unit_planned_blind_to_the_layers_below).
 
 work(w_au_no_whole_fallback_past_units,
   "`volumes: wall: budget_exhausted; the world is evaluated whole`: when the units path meets a wall it falls back to the whole world on one heap, which at that size cannot fit (platform 3 097 files: silent for 4m45; 2 617 files: killed). The fallback also made an edit slower than the cold run (82 s against 54 s). Answer partial from the units with the wall named, or say which unit and which wall with how much spent.").

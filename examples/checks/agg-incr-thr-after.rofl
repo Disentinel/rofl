@@ -1,0 +1,19 @@
+-- examples/checks/agg-incr-thr-after.rofl — agg_incr_thr_after: A QUORUM OVER WHAT IS
+-- DERIVED AGAIN AFTER THE REST, under retraction. ta_fired reads derived_by, so it and
+-- what reads it (ta_mid) are derived again whole after a retraction, and the rule of
+-- the quorum over ta_mid fires again with them. The quorum it reaches again is closed
+-- as an evaluation closes it: the cell stands with its row, at the height of its
+-- members. After `--retract ta_k(a)` two members are left and ta_busy(1) holds.
+edb(ta_n). edb(ta_k).
+ta_n(a). ta_n(b). ta_n(c).
+ta_k(a). ta_k(b). ta_k(c).
+ta_q(X) :- ta_n(X), ta_k(X).
+ta_fired(R) :- derived_by(_, R, _).
+ta_mid(X) :- ta_q(X), ta_fired(_).
+ta_busy(1) :- at_least(2, X : ta_mid(X)).
+ta_calm(1) :- not ta_busy(1).
+
+-- expect-row: ta_busy[main](1) tick drv support=1
+-- expect-row: agg_cell[$kernel]($cell(
+-- expect-no-row: ta_calm[main](1)
+-- expect-no-row: ta_mid[main](a)

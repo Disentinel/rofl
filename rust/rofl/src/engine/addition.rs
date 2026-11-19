@@ -423,9 +423,6 @@ impl Eval {
         if self.rules.iter().any(|r| reads(r, &ledger).0) {
             out.push("a rule reads the ledger of cells, provenance or assertions");
         }
-        if !self.ds.comps.is_empty() {
-            out.push("a component is stratified by its data");
-        }
         out
     }
 
@@ -526,6 +523,11 @@ impl Eval {
             return Err(why.join("; "));
         }
         let grown = self.grow(&from, &HashSet::new());
+        let grown = self.lattices_untouched(facts, &from, grown);
+        // A REFUSAL TOUCHES NOTHING: the delta is decided before a fact is taken out
+        if let Some(why) = brk!("retract_decided_late" => None; self.delta_refused(&HashSet::new(), &grown, &HashSet::new(), &[])) {
+            return Err(why);
+        }
         let mut all: Vec<FactId> = facts.to_vec();
         all.extend(doomed.iter().copied().filter(|g| !facts.contains(g)));
         if !self.store.has_citers() {
@@ -557,6 +559,95 @@ impl Eval {
         if self.vc.unbased {
             self.store.dirty = true;
             return Err(UNBASED.into());
+        }
+        self.vsettle_forests();
+        Ok(d)
+    }
+
+    /// TAKE OUT OF AN EVALUATED WORLD the rules `gone`, `rows` the rows of them a load wrote (base facts of the kernel's
+    /// book), and bring it to the state a fresh evaluation of the program without them holds: the rows go as base
+    /// facts go (`retract_set`), each fact a rule fired loses that firing and is a seed of the same DRed pass (what
+    /// another firing still proves stands, the rest goes with what rests on it, a negation over what went holds), and
+    /// the program is prepared again before the levels run, so nothing fires the rules again. The rows always go;
+    /// `Err(reason)` leaves the store dirty, and the caller evaluates again.
+    pub fn retract_rules(&mut self, gone: &[Sym], rows: &[FactId]) -> Result<AddDelta, String> {
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| gone.contains(&r.id)).cloned().collect();
+        let mut why = self.addition_refusals();
+        if self.prov.no_witness {
+            why.push("the world keeps no witness, so nothing says which facts lose their last support");
+        }
+        if rules.len() != gone.len() {
+            why.push("a rule taken out is not run as written (lowered by a declaration, or outside the cone of asks)");
+        }
+        for r in &rules {
+            let head = r.clause.head.rel;
+            if r.clause.head.temporal == Temporal::Next {
+                why.push("a rule taken out stages @next");
+            }
+            if brk!("rule_out_agg_unrefused" => false; r.has_agg || r.has_thr) {
+                why.push("a rule taken out aggregates");
+            }
+            if self.lat.is_cell(head) || self.demand.on(head) || self.clo.closures.iter().any(|c| c.rel == head) || self.vc.vclosures.iter().any(|c| c.rel == head) {
+                why.push("a rule taken out concludes a lattice, a relation answered on demand or a closure");
+            }
+        }
+        let mut mark = self.prep_mark();
+        mark.rules.retain(|id, _| !gone.contains(id));
+        if !why.is_empty() {
+            self.store.remove_many(rows);
+            self.store.dirty = true;
+            self.reprepare();
+            why.dedup();
+            return Err(why.join("; "));
+        }
+        self.index_for_retraction();
+        self.vsnapshot();
+        let mut lost: Vec<FactId> = Vec::new();
+        for r in &rules {
+            let fired = self.store.rel_all(&self.h, r.clause.head.rel).into_iter().filter(|f| self.store.alive(*f) && self.store.fired_by(*f, r.id));
+            lost.extend(fired);
+        }
+        lost.sort_unstable();
+        lost.dedup();
+        if brk!("rule_out_firings_kept" => false; true) {
+            self.withdraw_unswept(&lost, |r, _| gone.contains(&r));
+        } else {
+            lost.clear();
+        }
+        self.store.remove_many(rows);
+        if brk!("rule_out_unprepared" => false; true) && !self.reprepare_keeping_trees() {
+            self.store.dirty = true;
+            return Err("a closure answered from its tree is declared, dropped or answered another way".into());
+        }
+        let (added, called, moves) = self.prep_moves(&mark);
+        let mut why: Vec<String> = moves.into_iter().map(String::from).collect();
+        if !added.is_empty() || !called.is_empty() {
+            why.push("taking the rule out moved how another rule is run".into());
+        }
+        // (a cell sealed over a relation whose round moved is sealed again, as an addition seals it)
+        let moved = self.rerank().unwrap_or_else(|w| {
+            why.push(w.into());
+            HashSet::new()
+        });
+        if !why.is_empty() {
+            self.store.dirty = true;
+            return Err(why.join("; "));
+        }
+        let mut from: HashSet<Sym> = rows.iter().map(|f| self.store.rec(*f).rel).collect();
+        from.extend(rules.iter().map(|r| r.clause.head.rel));
+        let grown = self.grow(&from, &HashSet::new());
+        self.add.lost = lost;
+        self.vc.near_moved = false;
+        self.vc.near_out.clear();
+        self.vc.near_in.clear();
+        self.vc.near_owed.clear();
+        self.vc.near_was.clear();
+        let r = self.worked_out_beside_holes(&[], rows, &HashSet::new(), &grown, &moved, &[]);
+        self.add.lost.clear();
+        let d = r?;
+        if self.vnear_put_in() || self.vc.near_moved || self.vc.unbased {
+            self.store.dirty = true;
+            return Err("taking the rule out moved a nearest or a tree's rows".into());
         }
         self.vsettle_forests();
         Ok(d)
@@ -950,7 +1041,9 @@ impl Eval {
         if removed.is_empty() {
             return;
         }
-        let mut seeds: Vec<FactId> = Vec::new();
+        // a fact a rule taken out fired lost that firing: it is a seed, and where it stands it may stand higher
+        let mut seeds: Vec<FactId> = std::mem::take(&mut self.add.lost);
+        self.add.refired.extend(seeds.iter().copied().filter(|f| self.store.alive(*f)));
         for &f in removed {
             st.over.insert(f);
             if brk!("retract_set_unpropagated" => false; true) {
@@ -1556,17 +1649,7 @@ impl Eval {
     /// An addition's own work: the lattices and calls it reaches, every rule sorted by how it fires again, what it
     /// refuses, what goes, and the window the fine path runs in.
     fn add_worked_out(&mut self, added: &[FactId], removed: &[FactId], fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<AddDelta, String> {
-        let call_rels = self.call_relations(called, fresh, grown);
-        let (lats, joins) = self.lattices_reached(grown)?;
-        let mut plan = Plan { lats, joins, call_rels, ..Plan::default() };
-        self.sort_rules(&mut plan, grown, moved, fresh)?;
-        let ledger_heads = self.ledger_readers(&mut plan.reset);
-        plan.dirty = self.dirty_set(&plan, &ledger_heads);
-        self.reset_negated_dirty(&mut plan);
-        self.split_again(&mut plan);
-        let changed: HashSet<Sym> = grown.union(&plan.dirty).copied().chain(plan.recompute.iter().map(|r| r.clause.head.rel)).collect();
-        self.stage_changed(&mut plan, fresh, &changed);
-        self.refuse_changed(&plan, &changed)?;
+        let plan = self.plan_of(fresh, grown, moved, called)?;
         // (what is forced goes is read before the joins and the based facts are retired)
         let forced = self.forced_facts(&plan);
         self.retire_joins(&plan);
@@ -1613,6 +1696,78 @@ impl Eval {
         }
     }
 
+    /// THE PLAN OF A DELTA, and every refusal of it the store can tell before anything is taken out: the lattices and
+    /// calls it reaches, every rule sorted by how it fires again, what goes. Reads the store; writes nothing to it.
+    fn plan_of(&mut self, fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Result<Plan, &'static str> {
+        let call_rels = self.call_relations(called, fresh, grown);
+        let (lats, joins) = self.lattices_reached(grown)?;
+        let mut plan = Plan { lats, joins, call_rels, ..Plan::default() };
+        self.sort_rules(&mut plan, grown, moved, fresh)?;
+        let ledger_heads = self.ledger_readers(&mut plan.reset);
+        plan.dirty = self.dirty_set(&plan, &ledger_heads);
+        self.reset_negated_dirty(&mut plan);
+        self.split_again(&mut plan);
+        let changed: HashSet<Sym> = grown.union(&plan.dirty).copied().chain(plan.recompute.iter().map(|r| r.clause.head.rel)).collect();
+        self.stage_changed(&mut plan, fresh, &changed);
+        self.refuse_changed(&plan, &changed)?;
+        Ok(plan)
+    }
+
+    /// Whether the delta `worked_out_beside_holes` would work out is refused, decided before the store is touched: what
+    /// a hole, a shrug or a component stratified by its data may move set apart, and the plan of the rest.
+    fn delta_refused(&mut self, fresh: &HashSet<Sym>, grown: &HashSet<Sym>, moved: &HashSet<Sym>, called: &[Sym]) -> Option<String> {
+        let reached: HashSet<Sym> = grown.iter().copied().chain(self.call_relations(called, fresh, grown)).collect();
+        let aside = match self.hole_world(&reached, fresh) {
+            Ok(a) => a,
+            Err(why) => return Some(why.to_string()),
+        };
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| !aside.contains(&r.clause.head.rel)).cloned().collect();
+        let at: HashMap<Sym, usize> = rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
+        let (rules, at) = (std::mem::replace(&mut self.rules, rules), std::mem::replace(&mut self.rule_at, at));
+        let fresh: HashSet<Sym> = fresh.iter().copied().filter(|r| self.rule_at.contains_key(r)).collect();
+        let grown: HashSet<Sym> = grown.difference(&aside).copied().collect();
+        let r = self.plan_of(&fresh, &grown, moved, called).err().map(str::to_string);
+        (self.rules, self.rule_at) = (rules, at);
+        r
+    }
+
+    /// AN ORDER LATTICE A RETRACTION DOES NOT REACH BY ITS FACTS: no fact of it, standing or kept as the history of a
+    /// superseded value, rests on what the facts taken out hold up (through every firing that cites one, at any depth),
+    /// and no rule reaches it from them under a negation or an aggregate, which could put a value into it that rests
+    /// on nothing taken out. Its values stand as they are, so it is no relation the retraction grows: `grown` less it,
+    /// and less what is reached only through it.
+    fn lattices_untouched(&mut self, facts: &[FactId], from: &HashSet<Sym>, grown: HashSet<Sym>) -> HashSet<Sym> {
+        // (an order lattice alone: a subsumptive relation remembers what it was given beside its facts, a join, a
+        // widening and a counting tag read their history, none of which a firing of a fact cites)
+        let order = |a: &super::algebra::RelAlgebra| a.tag.is_none() && a.sub.is_none() && a.join.is_none() && a.join_of.is_none() && a.widen.is_none() && a.count_of.is_none() && a.count.is_none() && a.cell.is_some_and(|(_, op)| matches!(op.class(), Class::IdempotentOrder | Class::PartialOrder));
+        let lats: HashSet<Sym> = grown.iter().copied().filter(|r| self.lat.is_cell(*r) && order(self.lat.algebra(*r))).collect();
+        if lats.is_empty() || brk!("retract_lattice_cut_off" => true; false) {
+            return grown;
+        }
+        // what a negation or an aggregate over what changed concludes, and what reads that
+        let inner: HashSet<Sym> = self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && reads(r, &grown).1).map(|r| r.clause.head.rel).collect();
+        let inner = self.grow(&inner, &HashSet::new());
+        if !self.store.has_citers() {
+            self.store.index_citers();
+        }
+        let mut seen: crate::store::FxSet<FactId> = facts.iter().copied().collect();
+        let mut stack: Vec<FactId> = facts.to_vec();
+        let mut touched: HashSet<Sym> = HashSet::new();
+        while let Some(x) = stack.pop() {
+            for y in self.store.citers_one(x) {
+                if self.store.cites(y, PremRef::Fact(x)) && seen.insert(y) {
+                    touched.insert(self.store.rec(y).rel);
+                    stack.push(y);
+                }
+            }
+        }
+        let cut: HashSet<Sym> = lats.into_iter().filter(|l| !touched.contains(l) && !inner.contains(l)).collect();
+        if cut.is_empty() {
+            return grown;
+        }
+        readers_cone(from.clone(), self.rules.iter().filter(|r| r.clause.head.temporal != Temporal::Next && !cut.contains(&r.clause.head.rel)), |r, seen| reads(r, seen).0)
+    }
+
     /// The order lattices the change reaches, and the joins among them. A lattice the change reaches is derived again
     /// whole, as the retraction path derives its cone again: an improved value withdraws what read the old one, and the
     /// history of a schedule is no delta's. What cannot be derived so refuses.
@@ -1657,7 +1812,8 @@ impl Eval {
     fn sort_rules(&self, plan: &mut Plan, grown: &HashSet<Sym>, moved: &HashSet<Sym>, fresh: &HashSet<Sym>) -> Result<(), &'static str> {
         for r in &self.rules {
             let (any, inner) = reads(r, grown);
-            if r.clause.head.temporal == Temporal::Next || !r.safe {
+            // (a lattice a retraction does not reach by its facts is out of `grown`: its rules fire on nothing new)
+            if r.clause.head.temporal == Temporal::Next || !r.safe || self.lat.is_cell(r.clause.head.rel) && !grown.contains(&r.clause.head.rel) {
                 continue;
             }
             // a cell seals the rounds of what it reads: one over a relation whose round moved is sealed again

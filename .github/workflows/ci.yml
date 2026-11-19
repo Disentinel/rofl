@@ -65,6 +65,11 @@ jobs:
             rust
             models/lang/js/scanner/oxc_scan
       - run: cd rust && cargo build --release
+      # THE SERVE PROTOCOL'S OWN TESTS, on every pull request: `edit` (facts and rules out), a watch's changes, each
+      # held to the world evaluated whole. Before 2026-11-18 a test of rust/rofl/tests ran only where a planted fault
+      # names it, in the breaks job, which a pull request does not run. Seconds; the release library above is reused.
+      - name: serve tests (rust)
+        run: cd rust && cargo test --release -p rofl --test rule_edit --test edit --test watch
       # the scanner `rofl scan` and the JS worlds run (models/lang/js/scanner/cli.ts)
       - run: cd models/lang/js/scanner/oxc_scan && cargo build --release
       # THE KEEP, AND WHERE IT IS NOT TRUSTED. `npm test` reads back a world's answer kept under the hash of everything

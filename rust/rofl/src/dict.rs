@@ -78,22 +78,28 @@ pub(crate) struct Slots {
     n: usize,
 }
 
+/// The number in the table `slots` that `same` accepts, among those hashed as `h`.
+#[inline]
+fn probe(slots: &[u32], h: u64, same: impl Fn(u32) -> bool) -> Option<u32> {
+    if slots.is_empty() {
+        return None;
+    }
+    let mask = slots.len() - 1;
+    let mut i = h as usize & mask;
+    loop {
+        match slots[i] {
+            0 => return None,
+            v if same(v - 1) => return Some(v - 1),
+            _ => i = (i + 1) & mask,
+        }
+    }
+}
+
 impl Slots {
     /// The number in the table that `same` accepts, among those hashed as `h`.
     #[inline]
     fn find(&self, h: u64, same: impl Fn(u32) -> bool) -> Option<u32> {
-        if self.slots.is_empty() {
-            return None;
-        }
-        let mask = self.slots.len() - 1;
-        let mut i = h as usize & mask;
-        loop {
-            match self.slots[i] {
-                0 => return None,
-                v if same(v - 1) => return Some(v - 1),
-                _ => i = (i + 1) & mask,
-            }
-        }
+        probe(&self.slots, h, same)
     }
     /// `k` put in, not there before; `hash` says the hash of a number already in.
     fn put(&mut self, h: u64, k: u32, hash: impl Fn(u32) -> u64) {
@@ -127,7 +133,39 @@ struct Ends {
     by_func: Slots,
 }
 
+/// Names and terms numbered below `Base::names` and `Base::funcs`: the dictionary a file holds, read where it lies,
+/// with the tables that find them by what they name.
+struct Base {
+    map: memmap2::Mmap,
+    names: u32,
+    funcs: u32,
+    /// where each table begins in `map`, in bytes: the names' (start, length), their text, the terms' (name, start,
+    /// length), their arguments, and the open-addressed tables of each
+    at: [usize; 6],
+    lens: [usize; 6],
+}
+
+impl Base {
+    #[inline(always)]
+    fn of<T>(&self, i: usize) -> &[T] {
+        // SAFETY: `Dict::read` checked each table lies inside the map, at a multiple of its item's size.
+        unsafe { std::slice::from_raw_parts(self.map.as_ptr().add(self.at[i]) as *const T, self.lens[i]) }
+    }
+    #[inline]
+    fn name(&self, k: u32) -> &str {
+        let (start, len) = self.of::<(u32, u32)>(0)[k as usize];
+        // SAFETY: `Dict::read` checked the text is UTF-8 and each name a span of it on a character's bounds.
+        unsafe { std::str::from_utf8_unchecked(&self.of::<u8>(1)[start as usize..(start + len) as usize]) }
+    }
+    #[inline]
+    fn node(&self, k: u32) -> FuncNode {
+        let x = &self.of::<[u32; 3]>(2)[k as usize];
+        FuncNode { name: x[0], start: x[1], len: x[2] }
+    }
+}
+
 pub struct Dict {
+    base: Option<Base>,
     text: Runs<u8>,
     /// Where each name lies in `text`, and how long it is.
     names: Runs<(u32, u32)>,
@@ -138,25 +176,39 @@ pub struct Dict {
 
 impl Default for Dict {
     fn default() -> Self {
-        Dict { text: Runs::new(), names: Runs::new(), args: Runs::new(), funcs: Runs::new(), ends: Mutex::default() }
+        Dict { base: None, text: Runs::new(), names: Runs::new(), args: Runs::new(), funcs: Runs::new(), ends: Mutex::default() }
     }
 }
 
 impl Dict {
+    /// How many names and terms its file holds: those it appends are numbered after them.
+    #[inline(always)]
+    fn base_len(&self) -> (u32, u32) {
+        self.base.as_ref().map_or((0, 0), |b| (b.names, b.funcs))
+    }
     #[inline]
     pub fn name(&self, k: u32) -> &str {
-        let (start, len) = self.names.get(k as usize, 1)[0];
+        if let Some(b) = self.base.as_ref().filter(|b| k < b.names) {
+            return b.name(k);
+        }
+        let (start, len) = self.names.get((k - self.base_len().0) as usize, 1)[0];
         // SAFETY: only a `&str` is appended, whole.
         unsafe { std::str::from_utf8_unchecked(self.text.get(start as usize, len as usize)) }
     }
     #[inline(always)]
     pub(crate) fn node(&self, k: u32) -> FuncNode {
-        self.funcs.get(k as usize, 1)[0]
+        if let Some(b) = self.base.as_ref().filter(|b| k < b.funcs) {
+            return b.node(k);
+        }
+        self.funcs.get((k - self.base_len().1) as usize, 1)[0]
     }
     #[inline(always)]
     pub fn fargs(&self, k: u32) -> &[Term] {
         let f = self.node(k);
-        self.args.get(f.start as usize, f.len as usize)
+        match self.base.as_ref().filter(|b| k < b.funcs) {
+            Some(b) => &b.of::<Term>(3)[f.start as usize..(f.start + f.len) as usize],
+            None => self.args.get(f.start as usize, f.len as usize),
+        }
     }
     fn name_hash_of(&self, k: u32) -> u64 {
         name_hash(self.name(k).as_bytes())
@@ -167,30 +219,42 @@ impl Dict {
     fn same_func(&self, k: u32, name: Sym, args: &[Term]) -> bool {
         self.node(k).name == name && self.fargs(k) == args
     }
+    fn base_find(&self, s: &str, h: u64) -> Option<u32> {
+        self.base.as_ref().and_then(|b| probe(b.of(4), h, |k| b.name(k) == s))
+    }
+    fn base_find_f(&self, name: Sym, args: &[Term], h: u64) -> Option<u32> {
+        self.base.as_ref().and_then(|b| probe(b.of(5), h, |k| self.same_func(k, name, args)))
+    }
     pub fn find(&self, s: &str, h: u64) -> Option<u32> {
-        self.ends.lock().unwrap().by_name.find(h, |k| self.name(k) == s)
+        self.base_find(s, h).or_else(|| self.ends.lock().unwrap().by_name.find(h, |k| self.name(k) == s))
     }
     pub fn intern(&self, s: &str, h: u64) -> u32 {
+        if let Some(k) = self.base_find(s, h) {
+            return k;
+        }
         let mut e = self.ends.lock().unwrap();
         if let Some(k) = e.by_name.find(h, |k| self.name(k) == s) {
             return k;
         }
         let start = self.text.put(&mut e.text, s.as_bytes());
-        let k = self.names.put(&mut e.names, &[(start as u32, s.len() as u32)]) as u32;
+        let k = self.base_len().0 + self.names.put(&mut e.names, &[(start as u32, s.len() as u32)]) as u32;
         assert!(k < SHARED0 && start < u32::MAX as usize, "the dictionary of a world's volumes is full");
         e.by_name.put(h, k, |k| self.name_hash_of(k));
         k
     }
     pub fn find_f(&self, name: Sym, args: &[Term], h: u64) -> Option<u32> {
-        self.ends.lock().unwrap().by_func.find(h, |k| self.same_func(k, name, args))
+        self.base_find_f(name, args, h).or_else(|| self.ends.lock().unwrap().by_func.find(h, |k| self.same_func(k, name, args)))
     }
     pub fn mkf(&self, name: Sym, args: &[Term], h: u64) -> u32 {
+        if let Some(k) = self.base_find_f(name, args, h) {
+            return k;
+        }
         let mut e = self.ends.lock().unwrap();
         if let Some(k) = e.by_func.find(h, |k| self.same_func(k, name, args)) {
             return k;
         }
         let start = self.args.put(&mut e.args, args);
-        let k = self.funcs.put(&mut e.funcs, &[FuncNode { name, start: start as u32, len: args.len() as u32 }]) as u32;
+        let k = self.base_len().1 + self.funcs.put(&mut e.funcs, &[FuncNode { name, start: start as u32, len: args.len() as u32 }]) as u32;
         assert!(k < SHARED0 && start < u32::MAX as usize, "the dictionary of a world's volumes is full");
         e.by_func.put(h, k, |k| self.func_hash_of(k));
         k
@@ -198,71 +262,97 @@ impl Dict {
     /// How many names and compound terms it holds.
     pub fn len(&self) -> (u32, u32) {
         let e = self.ends.lock().unwrap();
-        (e.names as u32, e.funcs as u32)
+        let (n, f) = self.base_len();
+        (n + e.names as u32, f + e.funcs as u32)
     }
     pub fn is_empty(&self) -> bool {
         self.len() == (0, 0)
     }
 
-    /// The dictionary as a file beside the volumes that read it: every name, then every compound term, in the order
-    /// of their numbers.
+    /// The dictionary as a file beside the volumes that read it: every name and every compound term in the order of
+    /// their numbers, and the tables that find each by what it names, so that a reader maps it and builds nothing.
     pub fn write(&self, path: &str) -> std::io::Result<()> {
         let (names, funcs) = self.len();
-        let mut out = Vec::new();
-        out.extend_from_slice(MAGIC);
-        out.extend_from_slice(&names.to_le_bytes());
+        let (mut at, mut text, mut nodes, mut args) = (Vec::with_capacity(names as usize), Vec::new(), Vec::with_capacity(funcs as usize), Vec::new());
+        let (mut by_name, mut by_func) = (Slots::default(), Slots::default());
         for k in 0..names {
             let s = self.name(k);
-            out.extend_from_slice(&(s.len() as u32).to_le_bytes());
-            out.extend_from_slice(s.as_bytes());
+            at.push([text.len() as u32, s.len() as u32]);
+            text.extend_from_slice(s.as_bytes());
+            by_name.put(name_hash(s.as_bytes()), k, |k| self.name_hash_of(k));
         }
-        out.extend_from_slice(&funcs.to_le_bytes());
         for k in 0..funcs {
             let f = self.node(k);
-            out.extend_from_slice(&f.name.to_le_bytes());
-            out.extend_from_slice(&f.len.to_le_bytes());
-            for a in self.fargs(k) {
-                out.extend_from_slice(&a.bits().to_le_bytes());
-            }
+            nodes.push([f.name, args.len() as u32, f.len]);
+            args.extend(self.fargs(k).iter().map(|a| a.bits()));
+            by_func.put(cons_hash(f.name, self.fargs(k)), k, |k| self.func_hash_of(k));
         }
+        if text.len() >= u32::MAX as usize || args.len() >= u32::MAX as usize {
+            return Err(std::io::Error::other("the dictionary of a world's volumes is full"));
+        }
+        let mut out = Vec::new();
+        out.extend_from_slice(MAGIC);
+        let tables: [&[u8]; 6] = [bytes(&at), &text, bytes(&nodes), bytes(&args), bytes(&by_name.slots), bytes(&by_func.slots)];
+        let lens = [at.len(), text.len(), nodes.len(), args.len(), by_name.slots.len(), by_func.slots.len()];
+        for n in [names as u64, funcs as u64].into_iter().chain(lens.iter().map(|l| *l as u64)) {
+            out.extend_from_slice(&n.to_le_bytes());
+        }
+        for t in tables {
+            out.resize(out.len().next_multiple_of(8), 0);
+            out.extend_from_slice(t);
+        }
+        let mut sum = crate::arena::Sum::default();
+        sum.add(&out);
+        out.extend_from_slice(&sum.value().to_le_bytes());
         let tmp = format!("{path}.{}.new", std::process::id());
         std::fs::write(&tmp, out)?;
         std::fs::rename(&tmp, path)
     }
-    /// The dictionary a file holds, each name and term under the number it was written under.
-    pub fn read(path: &str) -> Result<Dict, String> {
-        let b = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+    /// The dictionary a file holds, each name and term under the number it was written under: mapped, read where
+    /// it lies; what is interned after is appended in memory. Its bytes are summed whole once, and not again while
+    /// `seen` notes it as it was (`volume::check_seen`).
+    pub fn read(path: &str, seen: Option<&std::path::Path>) -> Result<Dict, String> {
         let bad = || format!("{path}: not a dictionary of volumes");
-        let mut at = MAGIC.len();
-        if b.get(..at) != Some(MAGIC) {
+        let f = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
+        // SAFETY: the dictionary is written whole under another name and moved into place, never written again.
+        let map = unsafe { memmap2::Mmap::map(&f) }.map_err(|e| format!("{path}: {e}"))?;
+        if map.get(..MAGIC.len()) != Some(MAGIC) {
             return Err(bad());
         }
-        let mut take = |n: usize| -> Result<&[u8], String> {
-            let s = b.get(at..at + n).ok_or_else(bad)?;
-            at += n;
-            Ok(s)
+        let word = |i: usize| -> Result<usize, String> {
+            let at = MAGIC.len() + 8 * i;
+            Ok(u64::from_le_bytes(map.get(at..at + 8).ok_or_else(bad)?.try_into().unwrap()) as usize)
         };
-        let u32_of = |s: &[u8]| u32::from_le_bytes(s.try_into().unwrap());
-        let d = Dict::default();
-        for k in 0..u32_of(take(4)?) {
-            let n = u32_of(take(4)?) as usize;
-            let s = std::str::from_utf8(take(n)?).map_err(|_| bad())?;
-            if d.intern(s, name_hash(s.as_bytes())) != k {
-                return Err(bad());
-            }
+        let (names, funcs) = (word(0)?, word(1)?);
+        let mut lens = [0; 6];
+        for (i, l) in lens.iter_mut().enumerate() {
+            *l = word(2 + i)?;
         }
-        for k in 0..u32_of(take(4)?) {
-            let (name, n) = (u32_of(take(4)?), u32_of(take(4)?) as usize);
-            let args: Vec<Term> = take(n * 8)?.chunks_exact(8).map(|c| Term::from_bits(u64::from_le_bytes(c.try_into().unwrap()))).collect();
-            if d.mkf(name, &args, cons_hash(name, &args)) != k {
-                return Err(bad());
-            }
+        let size = [8, 1, 12, 8, 4, 4];
+        let (mut at, mut o) = ([0; 6], MAGIC.len() + 8 * 8);
+        for i in 0..6 {
+            o = o.next_multiple_of(8);
+            at[i] = o;
+            o = lens[i].checked_mul(size[i]).and_then(|n| n.checked_add(o)).filter(|e| *e <= map.len()).ok_or_else(bad)?;
         }
-        Ok(d)
+        let pow2 = |n: usize| n == 0 || n.is_power_of_two();
+        if names != lens[0] || funcs != lens[2] || names >= SHARED0 as usize || funcs >= SHARED0 as usize || !pow2(lens[4]) || !pow2(lens[5]) || o + 8 != map.len() {
+            return Err(bad());
+        }
+        // (its bytes the ones `write` wrote: each name a whole `&str` of the text, each term's arguments in theirs)
+        if !crate::volume::ends_in_its_sum(path, &map, seen) {
+            return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
+        }
+        Ok(Dict { base: Some(Base { map, names: names as u32, funcs: funcs as u32, at, lens }), ..Dict::default() })
     }
 }
 
-const MAGIC: &[u8] = b"ROFLDICT1\n";
+fn bytes<T>(v: &[T]) -> &[u8] {
+    // SAFETY: plain integers, read back by `Base::of` as they lie
+    unsafe { std::slice::from_raw_parts(v.as_ptr() as *const u8, std::mem::size_of_val(v)) }
+}
+
+const MAGIC: &[u8] = b"ROFLDICT2\n\0\0\0\0\0\0";
 
 /// What one heap has seen of the dictionary, found without its lock.
 #[derive(Default, Clone)]
@@ -334,7 +424,7 @@ mod tests {
         }
         let p = std::env::temp_dir().join(format!("rofl-dict-{}", std::process::id())).to_string_lossy().to_string();
         d.write(&p).unwrap();
-        let r = Dict::read(&p).unwrap();
+        let r = Dict::read(&p, None).unwrap();
         std::fs::remove_file(&p).unwrap();
         assert_eq!(r.len(), d.len());
         for k in 0..d.len().0 {

@@ -194,3 +194,35 @@ engine_explodes(A, B, Fw, Ft) :- explode(A, B, read, Fw), explode(A, B, seconds,
 unbacked(C) :- contract(C, _, _), not backed(C).
 backed(C)   :- backs(_, C).
 edb(backs).
+
+-- ===================================================================== THE INVARIANTS AND THE WORK THEY MAKE
+-- The owner's invariants (2026-11-15). A broken one is red unless accepted; a red one makes work: it owes an item of
+-- facts/worklist.rofl that says it closes it (`closes_invariant`), and an item it does not have yet is `owed`.
+--
+--   scenario(S, Codepath, How)  a run the tree makes of the engine, and the codepath it goes: what decides it (How)
+--   codepath_effect(P, K)       an effect a codepath of the engine can have (scanners/product.py, from
+--                               models/engine/features.rofl: of the standard library, or said by the engine: hot)
+--   unsourced_gate(N, Task)     a gate by a number whose source is not said (models/engine/gates.rofl)
+edb(scenario).
+edb(accepted_red).      -- (invariant, subject, why the owner lets it stand)
+edb(closes_invariant).  -- (work item, invariant)
+invariant(tested, "All effects covered with world/scenario tests").
+invariant(no_magic_gate, "No gates based on hardcoded numeric constant").
+goal(tested, "All effects covered with world/scenario tests (owner, 2026-11-15)").
+goal(no_magic_gate, "No gates based on hardcoded numeric constant; each restated by the task the gate solves (owner, 2026-11-15)").
+
+-- npm test, whycheck, test:hosts load a world and print it or ask it through rofl serve: never by levels, which
+-- only `rofl ask|why` over two files or more and VOLUMES_FROM bytes takes (bin/rofl/load.rs, by_volumes)
+scenario(npm_test, whole, "rofl load prints the state; no question").
+scenario(whycheck, whole, "rofl serve, rofl load --ask over worlds below VOLUMES_FROM").
+scenario(test_hosts, whole, "rofl serve").
+scenario(bench, whole, "rofl serve loads the corpus").
+scenario(test_npm, whole, "rofl ask over a world below VOLUMES_FROM").
+
+goes(P) :- scenario(_, P, _).
+broken(tested, P, K)         :- codepath_effect(P, K), not goes(P).
+broken(no_magic_gate, N, T)  :- unsourced_gate(N, T).
+red(I, A, B) :- broken(I, A, B), not accepted_red(I, A, B).
+red_invariant(I) :- red(I, _, _).
+worked(I) :- closes_invariant(_, I).
+owed(I, N) :- red_invariant(I), not worked(I), N is count(A, B : red(I, A, B)).
