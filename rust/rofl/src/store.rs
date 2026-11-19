@@ -1589,8 +1589,10 @@ impl Stretch {
             let a = self.args(k);
             a.len() == arity && persp.is_none_or(|q| self.rec(k).persp == q) && pos.iter().zip(vals).all(|(&p, v)| a[p] == *v || !h.is_ground(a[p]) || !h.is_ground(*v))
         };
+        let from = out.len();
         let Some((ix, v, _)) = best else {
             out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
+            seam((out.len() - from) as u64, out[from..].iter().map(|&k| 16 + 4 * self.args(k).len() as u64).sum());
             return;
         };
         for k in ix.get(v).iter().chain(ix.get(OPEN)).copied() {
@@ -1599,12 +1601,24 @@ impl Stretch {
                 out.push(k);
             }
         }
+        seam((out.len() - from) as u64, out[from..].iter().map(|&k| 16 + 4 * self.args(k).len() as u64).sum());
     }
 }
 
 // SAFETY: a stretch is only read, and no read of it counts again what it shares.
 unsafe impl Send for Stretch {}
 unsafe impl Sync for Stretch {}
+
+/// What units read of the stretches of others, for the diagnosis of a seam between nodes: the questions asked by
+/// key, the facts they answered, and their bytes (a record and its arguments).
+pub static SEAM: [std::sync::atomic::AtomicU64; 3] = [const { std::sync::atomic::AtomicU64::new(0) }; 3];
+
+fn seam(facts: u64, bytes: u64) {
+    use std::sync::atomic::Ordering::Relaxed;
+    SEAM[0].fetch_add(1, Relaxed);
+    SEAM[1].fetch_add(facts, Relaxed);
+    SEAM[2].fetch_add(bytes, Relaxed);
+}
 
 /// The stretches of `Near::list`, by their places there, that may hold a fact of the relation in the book (None:
 /// any book) with the values at the positions; false, any of them may.

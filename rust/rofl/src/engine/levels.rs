@@ -1674,6 +1674,7 @@ impl Eval {
         largest.sort_by_key(|&x| std::cmp::Reverse(bytes[ranges[x].0 as usize..ranges[x].1 as usize].iter().sum::<usize>()));
         // (what each layer took: before its units, then each depth of them from the files up)
         let mut took: Vec<String> = Vec::new();
+        let mut seam_said: Vec<String> = Vec::new();
         for (k, rules_k) in rules_of.iter().enumerate() {
             let t0 = std::time::Instant::now();
             let lower = (k > 0).then(|| lower_of(&cx, &tops));
@@ -1769,6 +1770,8 @@ impl Eval {
                 })?
             };
             ms.push(t0.elapsed().as_millis());
+            let snap = || crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
+            let mut seen = vec![snap()];
             let mut depths = vec![units.clone()];
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
@@ -1788,7 +1791,9 @@ impl Eval {
                 })?;
                 depths.push(units.clone());
                 ms.push(t0.elapsed().as_millis());
+                seen.push(snap());
             }
+            seam_said.push(seen.windows(2).map(|w| format!("{}q/{}f/{}KB", w[1][0] - w[0][0], w[1][1] - w[0][1], (w[1][2] - w[0][2]) / 1024)).collect::<Vec<_>>().join(" "));
             took.push(ms.iter().scan(0, |at, &m| Some(m - std::mem::replace(at, m))).map(|m| m.to_string()).collect::<Vec<_>>().join("+"));
             tops.push(units.pop().expect("a file at least"));
             layers.push(depths);
@@ -1798,6 +1803,8 @@ impl Eval {
         let k = rules_of.len();
         let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).chain(&cx.joins.prof).copied().collect();
         let mut said = vec![format!("levels: ms a layer, before its units and at each depth of them: {}", took.join(", "))];
+        said.push(format!("levels: seam, what a depth's units read of their children (questions/facts/bytes), a layer each: {}", seam_said.join(", ")));
+        let reader0 = crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
         if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
@@ -1816,6 +1823,8 @@ impl Eval {
                         return Err(Halt::Budget("budget_exhausted", None));
                     }
                     said.push(format!("levels: the reader's unit, the rules left to it fired whole over the layers, took {} ms", t.elapsed().as_millis()));
+                    let r: Vec<u64> = crate::store::SEAM.iter().zip(&reader0).map(|(c, b)| c.load(Relaxed) - b).collect();
+                    said.push(format!("levels: seam, the reader's unit read {}q/{}f/{}KB", r[0], r[1], r[2] / 1024));
                     said.append(&mut e.0.diags);
                     done(e, k, all, Vec::new(), FxMap::default(), Rc::default(), Asked::default())
                 }
