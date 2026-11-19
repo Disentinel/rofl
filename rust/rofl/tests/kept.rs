@@ -347,6 +347,23 @@ fn a_nearest_moved_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
+/// A world cut below a book (`cut[fixpointplan]`) takes by delta a file of facts only the rules above the cut read,
+/// put in and taken out again, though the records the cut dropped are most of its records.
+fn a_cut_world_takes_a_file_read_above_the_cut(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("cut_overlay");
+    let raw: String = (0..40).map(|i| format!("node[raw](n{i}, {}).\n", if i % 2 == 0 { "call" } else { "fn" })).collect();
+    d.write("cut.rofl", &format!("cut[fixpointplan](raw).\nedb(node). edb(off).\nimports(main, assume).\ncall(N) :- node[raw](N, call).\nlive(N) :- call(N), not off[assume](N).\n{raw}"));
+    let args = ["ask", "live(N)", "boot.rofl", "cut.rofl", "ov.rofl"];
+    d.write("ov.rofl", "");
+    answered(&rofl(&d, brk, &args), "N = n2", "kept")?;
+    for ov in ["off[assume](n2). off[assume](n4).\n", ""] {
+        d.write("ov.rofl", ov);
+        let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+        ensure(fresh.code == 0 && got.out == fresh.out && got.err.contains("took 1 file by delta"), || format!("{ov:?}: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))?;
+    }
+    Ok(())
+}
+
 /// A nearest row gone and back within a retraction (its tree's edges are concluded, and derived again where a fact
 /// below them lost one of two firings) leaves the nearest as it stood: the edit goes by delta.
 fn a_nearest_row_gone_and_back_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
@@ -921,7 +938,7 @@ fn a_cone_grown_below_the_cut_takes_its_lemmas_again(brk: Option<&str>) -> Resul
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 34] = [
+const CASES: [(&str, Case); 35] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -951,6 +968,7 @@ const CASES: [(&str, Case); 34] = [
     ("a_far_world_is_no_base", a_far_world_is_no_base),
     ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
     ("a_nearest_moved_goes_by_delta", a_nearest_moved_goes_by_delta),
+    ("a_cut_world_takes_a_file_read_above_the_cut", a_cut_world_takes_a_file_read_above_the_cut),
     ("a_nearest_row_gone_and_back_goes_by_delta", a_nearest_row_gone_and_back_goes_by_delta),
     ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
     ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),

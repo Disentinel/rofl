@@ -80,8 +80,9 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let mut p = plan_files(s, files, &old, &stamps, all)?;
     plan_gone(r, files, &mut p)?;
     let (ids, live) = (s.eval.store.len_ids() as usize, s.eval.store.fact_count());
-    if (ids - live) * 4 > ids {
-        return Err(format!("{} of its {ids} fact records are of facts gone: it is evaluated whole to drop them", ids - live));
+    let gone = ids - live - s.eval.gone_by_the_cut();
+    if gone * 4 > ids {
+        return Err(format!("{gone} of its {ids} fact records are of facts gone: it is evaluated whole to drop them"));
     }
     let (mut scans, again) = plan_scans(s, r, &stamps, all, &mut p)?;
     let out = going(std::mem::take(&mut p.goes), &p.stays);

@@ -346,7 +346,18 @@ again whole. 5-8 MB for the same edits.
 Records of facts gone stay in the world (a reader skips them) until it is
 evaluated whole: once they are more than a quarter of its records, the next
 edit says `of facts gone: it is evaluated whole to drop them` and is not taken
-by delta.
+by delta. The records a plan's cut dropped (`cut[fixpointplan]`) are not
+counted: an evaluation anew leaves them too.
+
+A world cut so takes by delta a file whose facts no rule of the lower stage
+reads or concludes, put in, edited or taken out: a book of assumptions laid
+over a kept world (`assumed_env[assume]`, `assumed_export[assume]` of the JS
+model, examples/vscode/assume-linux.rofl) costs what it moves. vscode at the
+bench commit, 250 files, kept whole (fast build, 2026-11-19): evaluated 82 s;
+the 13 assumptions put in 3.4 s, taken out 2.6 s, each the answer of the files
+evaluated anew. A file whose facts the lower stage reads is evaluated anew,
+said on stderr. By volumes (from 32 MB of corpus on) a file of facts naming no
+node of a file is of the core, and a core that moved is evaluated anew.
 
 ## Exit codes
 
