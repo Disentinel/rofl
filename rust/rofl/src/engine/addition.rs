@@ -679,10 +679,12 @@ impl Eval {
     /// `plan` solved as rule `r` solves its body, from each of `seeds`, the solutions in the order of the seeds.
     pub(super) fn solve_seeds_as(&mut self, r: &ERule, plan: &[BodyElem], seeds: Vec<Subst>) -> Result<Vec<Sol>, Halt> {
         let outer = self.cur_rule.replace(r.id);
+        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was = std::mem::replace(&mut self.firing, true);
         let sols = self.solve_body_seeds(plan, seeds, 0, None, Some(r.id));
         self.firing = was;
         self.cur_rule = outer;
+        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         sols
     }
 

@@ -178,6 +178,8 @@ struct Asked {
     masks: FxSet<(Sym, u64)>,
 }
 
+static WIRED: AtomicUsize = AtomicUsize::new(0);
+
 thread_local! {
     static ASKED: std::cell::RefCell<Option<Asked>> = const { std::cell::RefCell::new(None) };
 }
@@ -1406,6 +1408,12 @@ impl Eval {
             cost.lock().unwrap().absorb(&e.0.cost);
             let n = store.len_ids() - store.layer_mark();
             let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
+            // (an oracle of the seam between nodes: a file's own unit crosses as another process would read it)
+            if k == 0 && kids.is_empty() && std::env::var_os("ROFL_WIRE_UNITS").is_some() {
+                let b = stretch.to_wire(&e.0.h, &|k| keys.lock().unwrap().name(k).to_string(), true).expect("a file's own unit goes on the wire");
+                WIRED.fetch_add(b.len(), Relaxed);
+                stretch = Stretch::from_wire(&b, &mut e.0.h, &mut |_, s| keys.lock().unwrap().key(s), fork().0.store, stretch.lo).expect("a file's own unit comes off the wire");
+            }
             drop((one.lock().unwrap(), e));
             if let Some(o) = was(k, files) {
                 again.fetch_add(1, Relaxed);
@@ -1812,6 +1820,16 @@ impl Eval {
         let given: FxSet<Sym> = st.below().iter().chain(cx.joins.up.iter().flat_map(|l| l.iter())).chain(cx.joins.core.iter()).chain(&cx.joins.prof).copied().collect();
         let mut said = vec![format!("levels: ms a layer, before its units and at each depth of them: {}", took.join(", "))];
         said.push(format!("levels: seam, what a depth's units read of their children (questions/facts/bytes), a layer each: {}", seam_said.join(", ")));
+        if let Some(m) = crate::store::SEAM_RULES.lock().unwrap().take() {
+            let mut by: Vec<((Sym, Sym), (u64, u64))> = m.into_iter().collect();
+            by.sort_by_key(|x| std::cmp::Reverse(x.1 .0));
+            let head = |r: Sym| self.rules.iter().find(|x| x.id == r).map_or("?".to_string(), |x| self.h.name(x.clause.head.rel).to_string());
+            let sum: u64 = by.iter().map(|x| x.1 .0).sum();
+            said.push(format!("levels: seam by rule, of {sum} questions: {}", by.iter().take(25).map(|((r, rel), (q, n))| format!("{} ({}) asks {} {q}q/{n}f", if *r == u32::MAX { "-".to_string() } else { self.h.name(*r).to_string() }, if *r == u32::MAX { "-".to_string() } else { head(*r) }, self.h.name(*rel))).collect::<Vec<_>>().join("; ")));
+        }
+        if std::env::var_os("ROFL_WIRE_UNITS").is_some() {
+            said.push(format!("levels: the files' own units crossed the wire, {} KB", WIRED.load(Relaxed) / 1024));
+        }
         let reader0 = crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
         if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());

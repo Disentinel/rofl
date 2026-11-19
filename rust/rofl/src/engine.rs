@@ -5777,11 +5777,13 @@ impl Eval {
     ) -> Result<Front, Halt> {
         *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let outer = self.cur_rule.replace(r.id);
+        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was_firing = std::mem::replace(&mut self.firing, true);
         let before = self.steps;
         let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
+        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         let sols = self.solved(r, sols, before)?;
         *self.cost.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
         self.conclude_all(r, sols, Front::default(), true)

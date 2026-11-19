@@ -64,6 +64,7 @@ use crate::arena::{Arena, Pod};
 use std::sync::Arc as Rc;
 
 mod volume;
+mod wire;
 
 pub type FactId = u32;
 pub type CellId = u32;
@@ -1521,7 +1522,13 @@ impl Stretch {
 
     /// The facts of a stretch put under the ids `lo..hi` into `fork`, in the order given, with their firings.
     #[allow(clippy::too_many_arguments)]
-    fn unfold(mut fork: Store, h: &Heap, lo: FactId, hi: FactId, recs: &[u32], args: &[u64], fired: &[u32], prems: &[PremRef]) -> Result<Store, String> {
+    fn unfold(fork: Store, h: &Heap, lo: FactId, hi: FactId, recs: &[u32], args: &[u64], fired: &[u32], prems: &[PremRef]) -> Result<Store, String> {
+        Ok(Self::unfolded(fork, h, lo, hi, recs, args, fired, prems)?.store.into_inner().unwrap())
+    }
+
+    /// `unfold`, the stretch whole.
+    #[allow(clippy::too_many_arguments)]
+    fn unfolded(mut fork: Store, h: &Heap, lo: FactId, hi: FactId, recs: &[u32], args: &[u64], fired: &[u32], prems: &[PremRef]) -> Result<Stretch, String> {
         fork.read_near(lo, None, Vec::new(), None, None, None);
         Rc::make_mut(fork.facts.near.as_mut().expect("set above")).top = hi;
         let bad = || "a kept stretch is not one".to_string();
@@ -1543,7 +1550,7 @@ impl Stretch {
         if lo + (recs.len() / 4) as FactId != hi {
             return Err(bad());
         }
-        Ok(fork.into_stretch(h, lo).store.into_inner().unwrap())
+        Ok(fork.into_stretch(h, lo))
     }
 
     /// None: it wrote no fact of the relation.
@@ -1600,7 +1607,7 @@ impl Stretch {
         let from = out.len();
         let Some((ix, v, _)) = best else {
             out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
-            seam(self, &out[from..]);
+            seam(self, rel, &out[from..]);
             return;
         };
         for k in ix.get(v).iter().chain(ix.get(OPEN)).copied() {
@@ -1609,7 +1616,7 @@ impl Stretch {
                 out.push(k);
             }
         }
-        seam(self, &out[from..]);
+        seam(self, rel, &out[from..]);
     }
 }
 
@@ -1631,8 +1638,24 @@ pub static SEAM_SEEN: std::sync::Mutex<Option<(FxSet<FactId>, u64)>> = std::sync
 /// the (stretch, relation) pairs read since last taken, each with the facts and bytes of the whole relation there
 pub static SEAM_RELS: std::sync::Mutex<Option<FxMap<(usize, Sym), (u64, u64)>>> = std::sync::Mutex::new(None);
 
-fn seam(s: &Stretch, ids: &[FactId]) {
+thread_local! {
+    /// the rule whose firing reads now, for `SEAM_RULES`
+    pub static SEAM_RULE: std::cell::Cell<Sym> = const { std::cell::Cell::new(EMPTY) };
+}
+/// by the rule that asked and the relation asked: questions, facts answered
+pub static SEAM_RULES: std::sync::Mutex<Option<FxMap<(Sym, Sym), (u64, u64)>>> = std::sync::Mutex::new(None);
+
+fn seam(s: &Stretch, rel: Sym, ids: &[FactId]) {
     use std::sync::atomic::Ordering::Relaxed;
+    {
+        let mut g = SEAM_RULES.lock().unwrap();
+        let e = g.get_or_insert_with(Default::default).entry((SEAM_RULE.with(|r| r.get()), rel)).or_default();
+        e.0 += 1;
+        e.1 += ids.len() as u64;
+        if std::env::var_os("ROFL_SEAM_BT").is_some() && e.0 % 20000 == 7 && SEAM_RULE.with(|r| r.get()) == EMPTY {
+            eprintln!("seam-bt:\n{}", std::backtrace::Backtrace::force_capture());
+        }
+    }
     let bytes: u64 = ids.iter().map(|&k| 16 + 4 * s.args(k).len() as u64).sum();
     SEAM[0].fetch_add(1, Relaxed);
     SEAM[1].fetch_add(ids.len() as u64, Relaxed);
@@ -7201,6 +7224,58 @@ sks {:>10} B ({:>4.1}% of {})",
         assert_eq!(top.firings(d), vec![(rule, 0, vec![PremRef::Fact(b.hi - 1)]), (rule, 0, vec![PremRef::Fact(b.lo)])]);
         assert_eq!(top.put(&h, q, m, &[v[58]], 0), (b.hi, true));
         assert_eq!(b.store().firings(d).len(), 1);
+    }
+
+    /// A stretch settled in one process is read in another, whose dictionary numbers every name otherwise and whose
+    /// scroll lays it elsewhere: the same facts by their text, the same firings, a premise below it the core's own,
+    /// and a key found there as a store holding it would find it.
+    #[test]
+    fn a_stretch_crosses_to_another_process_by_its_names() {
+        let (mut h, mut s, p, m, _) = world();
+        let (q, rule, absent) = (h.intern("q"), h.intern("r1"), h.key("not_r"));
+        let v: Vec<Term> = (0..30).map(|i| h.atom(&format!("v{i:02}"))).collect();
+        let (core_fact, _) = s.put(&h, p, m, &[v[29], v[28]], F_BASE);
+        h.freeze();
+        s.freeze(&h);
+        let core = s.len_ids();
+        let mut u = s.clone();
+        let deep = h.mkf_named("at", &[v[1], Term::int(-7)]);
+        let lit = h.string("a \"quoted\" name");
+        for i in 0..20 {
+            let (e, _) = u.put(&h, p, m, &[v[i], v[i + 1]], F_BASE);
+            let (d, _) = u.put(&h, q, m, &[v[i], deep, lit], 0);
+            u.support(d, Witness { rule, tick: 3, prems: vec![PremRef::Fact(e), PremRef::Fact(core_fact), PremRef::Neg(absent)] });
+        }
+        let sent = u.into_stretch(&h, core).to_wire(&h, &|k| h.name(k).to_string(), true).unwrap();
+
+        // the other process: names met in another order, and a stretch of its own already laid where this one stood
+        let mut h2 = Heap::default();
+        for n in ["zz", "main", "v28", "v29", "q", "p"] {
+            h2.intern(n);
+        }
+        let (p2, m2) = (h2.intern("p"), h2.intern("main"));
+        let w: Vec<Term> = (0..30).map(|i| h2.atom(&format!("v{i:02}"))).collect();
+        let mut s2 = Store::new();
+        s2.put(&h2, p2, m2, &[w[29], w[28]], F_BASE);
+        h2.freeze();
+        s2.freeze(&h2);
+        let lo = core + 100;
+        let got = Stretch::from_wire(&sent, &mut h2, &mut |h, s| h.key(s), s2.clone(), lo).unwrap();
+        assert_eq!((got.lo, got.hi), (lo, lo + 40));
+        let text = |h: &Heap, st: &Store, f: FactId| format!("{}[{}]{}", h.name(st.rec(f).rel), h.name(st.rec(f).persp), st.args(f).iter().map(|&t| h.canon(t)).collect::<Vec<_>>().join(","));
+        let back = Stretch::from_wire(&sent, &mut h.clone(), &mut |h, s| h.key(s), s.clone(), core).unwrap();
+        for k in 0..40 {
+            assert_eq!(text(&h2, got.store(), lo + k), text(&h, back.store(), core + k));
+        }
+        let (q2, r2, n2) = (h2.intern("q"), h2.intern("r1"), h2.key("not_r"));
+        let d = lo + 1;
+        assert_eq!(got.store().rec(d).rel, q2);
+        assert_eq!(got.store().firings(d), vec![(r2, 3, vec![PremRef::Fact(lo), PremRef::Fact(0), PremRef::Neg(n2)])]);
+        let mut top = s2.clone();
+        top.read_near(got.hi, None, vec![Rc::new(got)], None, None, None);
+        assert_eq!(top.get(p2, m2, &[w[5], w[6]]), Some(lo + 10));
+        assert!(Stretch::from_wire(&sent[..sent.len() - 1], &mut h2, &mut |h, s| h.key(s), s2.clone(), lo).is_err());
+        assert!(Stretch::from_wire(&sent, &mut h2, &mut |h, s| h.key(s), s2, 0).is_err());
     }
 
     #[test]
