@@ -409,6 +409,7 @@ check[checks]("facts/goldens.rofl", "notebook_packages", world).
 check[checks]("facts/goldens.rofl", "notebook_passes", world).
 check[checks]("facts/goldens.rofl", "notebook_rest", world).
 check[checks]("facts/goldens.rofl", "notebook_review", world).
+check[checks]("facts/goldens.rofl", "notebook_runs", world).
 check[checks]("facts/goldens.rofl", "notebook_scoped", world).
 check[checks]("facts/goldens.rofl", "notebook_self", world).
 check[checks]("facts/goldens.rofl", "notebook_small", world).

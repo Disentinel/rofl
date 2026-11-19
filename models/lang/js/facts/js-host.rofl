@@ -307,14 +307,19 @@ host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).
 -- 4. WHAT CALLS A FUNCTION IT IS HANDED. A type says an argument is a
 -- function and never whether or when it is called, so this is authored too.
 -- `host_calls_back(Origin, Key, Arg, When)`: the member Key of Origin calls
--- its argument Arg (an index, or `last`) `at_once`, inside the call, or
--- `later`, after the synchronous run that handed it over has finished.
+-- its argument Arg (an index, or `last`) `at_once`, inside the call,
+-- `at_once_caught`, inside the call and its throw caught (a promise's
+-- executor), or `later`, after the synchronous run that handed it over has finished.
 -- Origin is a builtin prototype (`array`, `string`, `promise`) or a host
 -- site's origin (a module's specifier, a global's name, with `itself` for a
 -- plain call of the global). `later` says nothing about the order of two later callbacks,
 -- which is when timers fire and promises settle; a microtask and a macrotask
 -- are both after the run, and that is all this table claims.
 edb(host_calls_back).
+-- the members of Function.prototype that call their receiver at once
+edb(fn_invoker).
+fn_invoker("call").
+fn_invoker("apply").
 
 host_calls_back(array,  "forEach",       0, at_once).
 host_calls_back(map,    "forEach",       0, at_once).
@@ -334,6 +339,7 @@ host_calls_back(array,  "sort",          0, at_once).
 host_calls_back(array,  "toSorted",      0, at_once).
 host_calls_back(string, "replace",       1, at_once).
 host_calls_back(string, "replaceAll",    1, at_once).
+host_calls_back("Promise", itself,       0, at_once_caught).
 
 host_calls_back(promise,  "then",    0, later).
 host_calls_back(promise,  "then",    1, later).

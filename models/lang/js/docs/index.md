@@ -3,14 +3,14 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1056 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1058 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 88 | 42 | 38 | 0 | 1 | 91 | 5 | 2 | 12 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 106 | 4 | 0 | 5 | 0 |
-| [js-callgraph](js-callgraph.rofl.md) | 528 | 187 | 88 | 91 | 29 | 716 | 75 | 7 | 64 | 0 |
+| [js-callgraph](js-callgraph.rofl.md) | 536 | 189 | 90 | 91 | 29 | 725 | 77 | 7 | 66 | 0 |
 | [js-concat](js-concat.rofl.md) | 193 | 63 | 0 | 52 | 2 | 317 | 23 | 7 | 11 | 0 |
-| [js-controlflow](js-controlflow.rofl.md) | 229 | 85 | 70 | 6 | 11 | 231 | 22 | 5 | 33 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 1168 | 482 | 135 | 332 | 33 | 2187 | 212 | 11 | 75 | 0 |
-| [js-effects](js-effects.rofl.md) | 225 | 126 | 110 | 12 | 6 | 306 | 24 | 4 | 32 | 0 |
+| [js-controlflow](js-controlflow.rofl.md) | 226 | 84 | 69 | 6 | 11 | 225 | 22 | 5 | 33 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 1169 | 482 | 135 | 332 | 33 | 2187 | 212 | 11 | 75 | 0 |
+| [js-effects](js-effects.rofl.md) | 228 | 127 | 111 | 12 | 6 | 318 | 25 | 4 | 32 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 44 | 33 | 32 | 0 | 0 | 42 | 5 | 1 | 18 | 0 |
 | [js-express](js-express.rofl.md) | 41 | 25 | 0 | 21 | 2 | 64 | 4 | 2 | 3 | 0 |
@@ -261,6 +261,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_class_form` | `is_a_class_form` |
 | `eff_compound` | `is_a_compound_write` |
 | `eff_construct_part` | `constructs_by_running` |
+| `eff_constructs` | `runs_when_constructed` |
 | `eff_conv_accounted` | `accounts_for_coercing` |
 | `eff_conv_any` | `may_be_done_by_a_conversion` |
 | `eff_conv_call` | `coerces_through` |
@@ -288,7 +289,6 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `eff_heap_of` | `touches_the_heap` |
 | `eff_heap_unknown` | `is_an_unknown_heap` |
 | `eff_here` | `has_the_effect` |
-| `eff_hidden_call` | `hides_the_call` |
 | `eff_import_invented` | `invents_the_effect` |
 | `eff_import_outside` | `imports_outside_the_corpus` |
 | `eff_join` | `the_join` |
@@ -774,7 +774,9 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `rules_answer` | `the_rules_answer` |
 | `rules_has_answer` | `has_a_rules_answer` |
 | `rules_verdict` | `the_rules_verdict` |
+| `runs` | `runs_the_function` |
 | `runs_as_script` | `runs_as_the_script` |
+| `runs_now` | `runs_before_it_returns` |
 | `runs_site` | `runs_its_target` |
 | `runtime` | `is_a_runtime` |
 | `runtime_cross_family` | `includes_across_families` |

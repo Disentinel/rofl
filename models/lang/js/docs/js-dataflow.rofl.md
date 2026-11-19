@@ -628,22 +628,19 @@ In the flow:
 
 1. if [`array`](#array)(E) and N is `array`;
 2. if [`obj_lit`](#obj_lit)(E) and N is `object`;
-3. if all of:
-   - E is a [function](js-callgraph.rofl.md#fn_node);
-   - N is `function`;
-   - unless [`hoisted`](#hoisted)(E, something);
-   - unless [`has`](#has)(something, E);
-4. if [`regexp`](#regexp)(E) and N is `regexp`;
-5. if all of:
+3. if E is a [function](js-callgraph.rofl.md#fn_node) and N is `function`;
+4. if [`class`](#class)(E) and N is `function`, unless E is a [function](js-callgraph.rofl.md#fn_node);
+5. if [`regexp`](#regexp)(E) and N is `regexp`;
+6. if all of:
    - [`literal`](#literal)(E, V);
    - `string` is type_of(V);
    - N is `string`;
    - unless [`template_part`](#template_part)(something, something, E);
-6. if [`template`](#template)(E) and N is `string`;
-7. if [`literal`](#literal)(E, V), `int` is type_of(V), and N is `number`;
-8. if [`literal`](#literal)(E, float(something)) and N is `number`;
-9. if [`literal`](#literal)(E, bigint(something)) and N is `bigint`;
-10. if [`literal`](#literal)(E, `true` or `false`) and N is `boolean`.
+7. if [`template`](#template)(E) and N is `string`;
+8. if [`literal`](#literal)(E, V), `int` is type_of(V), and N is `number`;
+9. if [`literal`](#literal)(E, float(something)) and N is `number`;
+10. if [`literal`](#literal)(E, bigint(something)) and N is `bigint`;
+11. if [`literal`](#literal)(E, `true` or `false`) and N is `boolean`.
 
 <a id="prototype_of"></a>The prototype of a node E is P either:
 

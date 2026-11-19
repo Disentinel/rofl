@@ -298,7 +298,8 @@ may_be[flow](E, VK, V) :- passes[value](E, X), may_be[flow](X, VK, V).
 function kind_proto(E, to P).
 kind_proto[flow](E, array)  :- array[value](E).
 kind_proto[flow](E, object) :- obj_lit[code](E).
-kind_proto[flow](E, function) :- fn_node[code](E), not hoisted[value](E, _), not has[value](_, E).
+kind_proto[flow](E, function) :- fn_node[code](E).
+kind_proto[flow](E, function) :- class[value](E), not fn_node[code](E).
 kind_proto[flow](E, regexp) :- regexp[value](E).
 kind_proto[flow](E, string) :- literal[value](E, V), string is type_of(V), not template_part[value](_, _, E).
 kind_proto[flow](E, string) :- template[value](E).

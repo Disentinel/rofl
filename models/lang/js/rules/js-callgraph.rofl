@@ -308,10 +308,9 @@ ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F 
 -- =========================================================================
 -- 5. THE EDGE — by node, by name (a stack frame carries a name), and by file
 -- (an oracle can only be compared against the files it ran).
+-- `calls` is `runs_now` below, by the function the call stands in.
 -- `passes_function` is recorded and NOT folded into `calls`: passing a
 -- function is not calling it.
-calls[code](Caller, Callee) :- resolves[code](C, Callee), nearest_fn[code](Caller, C).
-calls[code](R, Callee)      :- resolves[code](C, Callee), top_call[code](C, R).
 
 calls_named[code](A, B)   :- calls[code](X, Y), fn_name[code](X, A), fn_label[flow](Y, B).
 calls_named[code](top, B) :- calls[code](R, Y), program[tree](R, _), fn_label[flow](Y, B).
@@ -341,11 +340,33 @@ written_arg[code](C, I, A) :- arg_at[flow](C, I, A), argument_at[code](C, I, A).
 callback_site[code](C, P, Key)        :- builtin_prototype(P), prototype_of[flow](O, P), object_of[code](N, O),
                                          callee_of[code](C, N), selects[flow](N, Key).
 callback_site[code](C, Origin, Key)   :- host_site[code](C, _, Origin, Key).
+callback_site[code](C, Name, itself)  :- callee[value](C, N), free_global[code](N, Name, _), lib_global(Name, _, _).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
                                 arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
                                 arg_at[flow](C, I, A), J is I + 1, not arg_at[flow](C, J, _),
                                 may_be_node[flow](A, F), fn_value[flow](F).
+
+-- A call RUNS a function when it applies it (resolves to it, or constructs
+-- its class), when a host calls it back
+-- before returning (`at_once`: `forEach`, `map`, `sort`), or when a pattern
+-- calls a getter or an iterator's `next`: whatever that function does, the
+-- call does. The effects and `may_throw` close over this edge, and dataflow
+-- over `resolves` alone. A callback called `later` (`then`, `setTimeout`) is
+-- not a frame of the call; js-effects.rofl carries what it does without its
+-- throw, and what an `at_once_caught` callback does without its throw.
+runs[code](C, G) :- applies[flow](C, G).
+runs[code](C, F) :- calls_back[code](C, F, at_once).
+runs[code](N, M) :- pattern_accessor[code](N, M).
+runs[code](N, M) :- pattern_next[code](N, M).
+-- `f.call(t, a)` and `f.apply(t, [a])` run f
+runs[code](C, F) :- call_on[flow](C, F, Key), fn_invoker(Key), fn_value[flow](F).
+-- `new Promise(executor)` calls the executor at once and catches its throw,
+-- which rejects the promise: the call runs it and does not throw what it throws
+runs_now[code](C, F) :- runs[code](C, F).
+runs_now[code](C, F) :- calls_back[code](C, F, at_once_caught).
+calls[code](Caller, F) :- runs_now[code](C, F), nearest_fn[code](Caller, C).
+calls[code](R, F)      :- runs_now[code](C, F), top_call[code](C, R).
 
 -- a row for a prototype member the library does not have is a misspelling
 callback_key_unknown[audit](P, Key) :- host_calls_back(P, Key, _, _), builtin_prototype(P),

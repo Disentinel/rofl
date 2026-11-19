@@ -38,6 +38,7 @@ unit_concludes("models/lang/js/facts/js-host.rofl", host_module_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_member_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_global_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_no_effects).
+unit_concludes("models/lang/js/facts/js-host.rofl", fn_invoker).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_calls_back).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_member_module).
 unit_concludes("models/lang/js/facts/js-host-surface.rofl", edb).
@@ -640,6 +641,8 @@ unit_concludes("models/lang/js/rules/js-callgraph.rofl", passes_function).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", written_arg).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", callback_site).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", calls_back).
+unit_concludes("models/lang/js/rules/js-callgraph.rofl", runs).
+unit_concludes("models/lang/js/rules/js-callgraph.rofl", runs_now).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", callback_key_unknown).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", resolved_site).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", resolved_call).
@@ -815,7 +818,6 @@ unit_concludes("models/lang/js/rules/js-controlflow.rofl", site).
 unit_concludes("models/lang/js/rules/js-controlflow.rofl", pattern_accessor).
 unit_concludes("models/lang/js/rules/js-controlflow.rofl", spread_iterated).
 unit_concludes("models/lang/js/rules/js-controlflow.rofl", pattern_iterates).
-unit_concludes("models/lang/js/rules/js-controlflow.rofl", calls).
 unit_concludes("models/lang/js/rules/js-controlflow.rofl", pattern_next).
 unit_concludes("models/lang/js/rules/js-controlflow.rofl", hidden_call).
 unit_concludes("models/lang/js/rules/js-controlflow.rofl", hidden_call_src).
@@ -967,7 +969,6 @@ unit_concludes("models/lang/js/rules/js-effects.rofl", effect_of_module).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_mod_unnamed).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_mod_two_names).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_mod_join_short).
-unit_concludes("models/lang/js/rules/js-effects.rofl", eff_hidden_call).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_edge_closed).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_edge_unclosed).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_class_body).
@@ -979,6 +980,8 @@ unit_concludes("models/lang/js/rules/js-effects.rofl", eff_plain_key).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_runs_in).
 unit_concludes("models/lang/js/rules/js-effects.rofl", class_define_eff).
 unit_concludes("models/lang/js/rules/js-effects.rofl", class_construct_eff).
+unit_concludes("models/lang/js/rules/js-effects.rofl", eff_constructs).
+unit_concludes("models/lang/js/rules/js-effects.rofl", runs).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_moment_both).
 unit_concludes("models/lang/js/rules/js-effects.rofl", eff_moment_unplaced).
 unit_concludes("models/lang/js/rules/js-effects.rofl", imports).
