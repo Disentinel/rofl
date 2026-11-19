@@ -1,7 +1,7 @@
 ---
 world: js-dataflow
 books: assume, audit, code, execution, flow, main, surface, tree, type, value
-default: code
+default: flow
 ---
 
 # js-dataflow
@@ -28,28 +28,28 @@ default: code
 
 Reads:
 
-- from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callback_site](js-callgraph.rofl.md#callback_site), [callee_of](js-callgraph.rofl.md#callee_of), [calls_back](js-callgraph.rofl.md#calls_back), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [member_kind_expr](js-callgraph.rofl.md#member_kind_expr), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-callgraph, in the flow: [may_be](js-callgraph.rofl.md#may_be)
+- from js-callgraph, in the code: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callback_site](js-callgraph.rofl.md#callback_site), [callee_of](js-callgraph.rofl.md#callee_of), [calls_back](js-callgraph.rofl.md#calls_back), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [member_kind_expr](js-callgraph.rofl.md#member_kind_expr), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-callgraph: [may_be](js-callgraph.rofl.md#may_be)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
+- from js-controlflow, in the code: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
 - from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
-- from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
-- from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop)
-- from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
-- from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
-- from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
-- from js-surface, in the flow: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
+- from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
+- from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop)
+- from js-globals, in the code: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
+- from js-globals: [es_instance](js-globals.rofl.md#es_instance)
+- from js-modules, in the code: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
+- from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
+- from js-surface: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
 - from models/lang/js/facts/js-globals.rofl, in the main:
   - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
-- from outside these files:
+- from outside these files, in the code:
   - <a id="dreach"></a>`dreach`
   - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
   - <a id="keyed_upstream"></a>`keyed_upstream`
   - <a id="scope_of"></a>`scope_of`
-- from outside these files, in the flow:
+- from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the main:
   - <a id="host_gives_result"></a>`host_gives_result`
@@ -165,6 +165,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 > identifier in the corpus — 39 % of a fixpoint.
 
 `ident_in` has one Name and File for each N.
+
+In the code:
 
 <a id="ident_in"></a>N reads Name in File either:
 
@@ -635,20 +637,25 @@ In the flow:
 <a id="kind_proto"></a>`kind_proto`(E, N) either:
 
 1. if [`array`](#array)(E) and N is `array`;
-2. if [`obj_lit`](#obj_lit)(E) and N is `object`;
-3. if E is a [function](js-callgraph.rofl.md#fn_node) and N is `function`;
-4. if [`class`](#class)(E) and N is `function`, unless E is a [function](js-callgraph.rofl.md#fn_node);
-5. if [`regexp`](#regexp)(E) and N is `regexp`;
-6. if all of:
+2. if [`rest_params`](#rest_params)(something, something, E) and N is `array`;
+3. if all of:
+   - [`host_src`](#host_src)(E, What, something);
+   - [`host_makes_array`](#host_makes_array)(What);
+   - N is `array`;
+4. if [`obj_lit`](#obj_lit)(E) and N is `object`;
+5. if E is a [function](js-callgraph.rofl.md#fn_node) and N is `function`;
+6. if [`class`](#class)(E) and N is `function`, unless E is a [function](js-callgraph.rofl.md#fn_node);
+7. if [`regexp`](#regexp)(E) and N is `regexp`;
+8. if all of:
    - [`literal`](#literal)(E, V);
    - `string` is type_of(V);
    - N is `string`;
    - unless [`template_part`](#template_part)(something, something, E);
-7. if [`template`](#template)(E) and N is `string`;
-8. if [`literal`](#literal)(E, V), `int` is type_of(V), and N is `number`;
-9. if [`literal`](#literal)(E, float(something)) and N is `number`;
-10. if [`literal`](#literal)(E, bigint(something)) and N is `bigint`;
-11. if [`literal`](#literal)(E, `true` or `false`) and N is `boolean`.
+9. if [`template`](#template)(E) and N is `string`;
+10. if [`literal`](#literal)(E, V), `int` is type_of(V), and N is `number`;
+11. if [`literal`](#literal)(E, float(something)) and N is `number`;
+12. if [`literal`](#literal)(E, bigint(something)) and N is `bigint`;
+13. if [`literal`](#literal)(E, `true` or `false`) and N is `boolean`.
 
 <a id="prototype_of"></a>The prototype of a node E is P either:
 
@@ -917,10 +924,7 @@ In the flow:
 
 <a id="elem_somewhere"></a>`elem_somewhere`(C, E) either:
 
-1. if all of:
-   - [`host_src`](#host_src)(C, `elements`, R);
-   - a node R [points to](#may_be_node) a node Y;
-   - [`elem_any`](#elem_any)(Y, E);
+1. if [`host_src`](#host_src)(C, `elements`, R) and a node R [has an element](#iter_elem) E;
 2. if all of:
    - [`host_src`](#host_src)(C, `elements`, something);
    - [`host_call_on`](#host_call_on)(C, `array`, "concat", something);
@@ -930,7 +934,7 @@ In the flow:
 3. if all of:
    - [`host_src`](#host_src)(C, `values`, R);
    - a node R [points to](#may_be_node) a node O;
-   - [the member](#member_value) some key of O holds E.
+   - [the member](#member_value) some key of O holds a node E.
 
 <a id="lit_somewhere"></a>`lit_somewhere`(C, Key) if all of:
   - [`host_src`](#host_src)(C, `keys`, R);
@@ -959,10 +963,7 @@ In the flow:
 
 `may_be`(entry_key(C, Key), `lit`, Key) if [`entry_of`](#entry_of)(C, Key, something).
 
-`elem_somewhere`(Y, E) if all of:
-  - [`spread_elems`](#spread_elems)(Y, something, X);
-  - a node X [points to](#may_be_node) a node B;
-  - [`elem_any`](#elem_any)(B, E).
+`elem_somewhere`(Y, E) if [`spread_elems`](#spread_elems)(Y, something, X) and a node X [has an element](#iter_elem) E.
 
 `may_be`(N, VK, V) either:
 
@@ -3417,6 +3418,23 @@ In the flow:
 
 <a id="keyed_read"></a>`keyed_read`(C, V) if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V).
 
+> a key that is an object (`wm.set(el, v)`, `wm.get(el)`) is the object itself
+
+<a id="keyed_put_obj"></a>`keyed_put_obj`(X, N, V) if all of:
+  - [`keyed_on`](#keyed_on)(C, X, P, Put);
+  - [`keyed_store`](#keyed_store)(P, Put, something);
+  - an invocation C [passes](#arg_at) a node Y at 0;
+  - Y [points to](#may_be_node) a node N;
+  - C [passes](#arg_at) a node V at 1.
+
+`keyed_read`(C, V) if all of:
+  - [`keyed_on`](#keyed_on)(C, X, P, Get);
+  - [`keyed_store`](#keyed_store)(P, something, Get);
+  - an invocation C [passes](#arg_at) a node Y at 0;
+  - Y [points to](#may_be_node) a node N;
+  - [`keyed_put_obj`](#keyed_put_obj)(X, N, V);
+  - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something).
+
 `may_be`(C, VK, Val) if [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val) and [`keyed_read`](#keyed_read)(C, V).
 
 > the walks: position 0 of the head's pattern is a key, position 1 a value;
@@ -3447,7 +3465,17 @@ In the flow:
    - [`keyed_walk`](#keyed_walk)(something, D, X);
    - [`keyed_put`](#keyed_put)(X, Val, something);
    - [`keyed_walk_at`](#keyed_walk_at)(E, D, 0);
-   - VK is `lit`.
+   - VK is `lit`;
+3. if all of:
+   - [`keyed_walk`](#keyed_walk)(something, D, X);
+   - [`keyed_put_obj`](#keyed_put_obj)(X, something, V);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val);
+   - [`keyed_walk_at`](#keyed_walk_at)(E, D, 1);
+4. if all of:
+   - [`keyed_walk`](#keyed_walk)(something, D, X);
+   - [`keyed_put_obj`](#keyed_put_obj)(X, Val, something);
+   - [`keyed_walk_at`](#keyed_walk_at)(E, D, 0);
+   - VK is `node`.
 
 In the surface:
 
@@ -3473,7 +3501,15 @@ In the flow:
 2. if all of:
    - [`keyed_each_at`](#keyed_each_at)(U, something, X, 1);
    - [`keyed_put`](#keyed_put)(X, Val, something);
-   - VK is `lit`.
+   - VK is `lit`;
+3. if all of:
+   - [`keyed_each_at`](#keyed_each_at)(U, something, X, 0);
+   - [`keyed_put_obj`](#keyed_put_obj)(X, something, V);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val);
+4. if all of:
+   - [`keyed_each_at`](#keyed_each_at)(U, something, X, 1);
+   - [`keyed_put_obj`](#keyed_put_obj)(X, Val, something);
+   - VK is `node`.
 
 > WHAT A READ HOLDS AT ITS MOMENT: the flow's value, but at a read of a
 > collection only the puts the order leaves it.
@@ -5740,6 +5776,24 @@ In the flow:
    - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(Inner, X);
    - N is `node`.
 
+> what `g.next()` gives: a step whose `value` is what the generator yields or returns
+
+<a id="gen_step"></a>`gen_step`(C, G) if all of:
+  - a node N [selects](#selects) "next";
+  - [the callee](js-callgraph.rofl.md#callee_of) of a call C is N;
+  - [`object_of`](js-structure.rofl.md#object_of)(N, O);
+  - a node O [points to](#may_be_node) a node GC;
+  - GC [makes a generator of](#gen_of) G.
+
+`may_be`(C, `node`, step(C)) if [`gen_step`](#gen_step)(C, something).
+
+`may_be`(step(C), `node`, step(C)) if [`gen_step`](#gen_step)(C, something).
+
+The plain member X of a node N is a node E either:
+
+1. if [`gen_step`](#gen_step)(C, G), G [yields](#yields) E, N is step(C), and X is "value";
+2. if [`gen_step`](#gen_step)(C, G), G [returns](#returns) E, N is step(C), and X is "value".
+
 > FOR-OF: the head is a declarator like any other, whose value is each
 > element walked. An array is a VALUE (through `may_be_node`); a generator is
 > a CALL, read at the site, because its returns are not what for-of walks.
@@ -5752,6 +5806,14 @@ In the flow:
    - X [points to](#may_be_node) a node GC;
    - GC [makes a generator of](#gen_of) F;
    - F [yields](#yields) E.
+
+> an object of the program that is iterable by a generator at `[Symbol.iterator]`
+
+A node has an element E if all of:
+  - it [points to](#may_be_node) a node O;
+  - [the member](#member_value) `symbol_iterator` of O holds a node M;
+  - M [is a generator function](#gen_fn);
+  - M [yields](#yields) E.
 
 D takes its value from a node E if all of:
   - [`iterates`](#iterates)(S, V, X);

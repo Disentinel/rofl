@@ -38,3 +38,24 @@ all.then(([v]) => use('promiseAll', v));
 all.then((vs) => use('promiseAllIndex', vs[0]));
 Promise.resolve(1).then(() => 'th').then((v) => use('thenChain', v));
 Promise.reject(new Error('x')).catch(() => 'cr').then((v) => use('catchResult', v));
+
+const wm = new WeakMap();
+const el = {};
+wm.set(el, 'wm');
+use('weakmap', wm.get(el));
+use('weakmapOther', wm.get({}));
+const byObj = new Map();
+byObj.set({ id: 1 }, 'mo');
+for (const [k, v] of byObj) { use('walkValue', v); use('walkKey', k.id); }
+byObj.forEach((v, k) => { use('eachValue', v); use('eachKey', k.id); });
+
+function* gen() { yield 'g1'; return 'gr'; }
+use('genNext', gen().next().value);
+const steps = gen();
+use('genStep', steps.next().value);
+const iterable = { *[Symbol.iterator]() { yield 'si'; } };
+for (const s of iterable) use('symbolIterator', s);
+class Bag { *[Symbol.iterator]() { yield 'bi'; } }
+for (const b of new Bag()) use('classIterator', b);
+use('spreadGenerator', [...gen()][0]);
+use('fromGenerator', Array.from(gen())[0]);

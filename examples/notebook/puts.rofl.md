@@ -14,7 +14,11 @@ code:
 > `Object.freeze(o)` is o, `Object.create(p)` reads p's members and
 > `Object.fromEntries(pairs)` has them; `xs.map(f)` is an array of what f
 > returns, `reduce` and a promise's `then` and `catch` are what it returns,
-> and `Promise.all(xs)` settles to an array of xs's values.
+> and `Promise.all(xs)` settles to an array of xs's values. A Map or WeakMap
+> keyed by an object finds the value put under that object, and only it.
+> `g.next().value` is what the generator yields or returns, and for-of walks
+> an object whose `[Symbol.iterator]` is a generator, as `[...g]` and
+> `Array.from(g)` do.
 > `use(tag, v)` marks each read; the model's may-set for it is checked against
 > what V8 observes by `npm run test:nb`. Run it with
 > `npm run nb -- examples/notebook/puts.rofl.md`.
@@ -31,4 +35,5 @@ silent(Tag) :- call_site[code](C, _), callee_of[code](C, U), ast_name[code](U, "
 never silent(Tag)
 never seen("set", "pu")
 never seen("computed", "ck")
+never seen("weakmapOther", "wm")
 ```

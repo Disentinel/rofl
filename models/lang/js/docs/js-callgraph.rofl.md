@@ -726,7 +726,13 @@ A call
    - [`callee`](#callee)(C, N);
    - a node N [refers to the free](js-dataflow.rofl.md#free_global) P in some file;
    - P [is a global](#lib_global) since some release with some form;
-   - Key is `itself`.
+   - Key is `itself`;
+4. if all of:
+   - [the callee](#callee_of) of C is a node M;
+   - [`object_of`](js-structure.rofl.md#object_of)(M, G);
+   - a node G [refers to the free](js-dataflow.rofl.md#free_global) P in some file;
+   - P [is a global](#lib_global) since some release with some form;
+   - M [selects](js-dataflow.rofl.md#selects) Key.
 
 <a id="calls_back"></a>A call C calls back a node F a when When either:
 
@@ -778,10 +784,25 @@ In the flow:
   - [`arg_count`](js-surface.rofl.md#arg_count)(B, N);
   - N < 2.
 
-> `new Promise(executor)` calls the executor at once and catches its throw,
-> which rejects the promise: the call runs it and does not throw what it throws
+> a function bound with arguments is no longer f to the dataflow (its parameters shift), but a call of it runs f
+
+<a id="bound_with_args"></a>`bound_with_args`(B, F) if all of:
+  - [`call_on`](#call_on)(B, F, "bind");
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F);
+  - [`arg_count`](js-surface.rofl.md#arg_count)(B, N);
+  - N >= 2.
+
+`may_be`(B, `node`, B) if [`bound_with_args`](#bound_with_args)(B, something).
 
 In the code:
+
+An invocation runs the function F if all of:
+  - [`callee`](#callee)(it, G);
+  - a node G [points to](js-dataflow.rofl.md#may_be_node) a node B;
+  - [`bound_with_args`](#bound_with_args)(B, F).
+
+> `new Promise(executor)` calls the executor at once and catches its throw,
+> which rejects the promise: the call runs it and does not throw what it throws
 
 <a id="runs_now"></a>An invocation C runs before it returns F either:
 

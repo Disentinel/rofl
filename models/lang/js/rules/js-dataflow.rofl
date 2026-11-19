@@ -297,6 +297,8 @@ may_be[flow](E, VK, V) :- passes[value](E, X), may_be[flow](X, VK, V).
 -- (`member_value` and the language answer those).
 function kind_proto(E, to P).
 kind_proto[flow](E, array)  :- array[value](E).
+kind_proto[flow](R, array)  :- rest_params[value](_, _, R).
+kind_proto[flow](C, array)  :- host_src[flow](C, What, _), host_makes_array(What).
 kind_proto[flow](E, object) :- obj_lit[code](E).
 kind_proto[flow](E, function) :- fn_node[code](E).
 kind_proto[flow](E, function) :- class[value](E), not fn_node[code](E).
@@ -421,7 +423,7 @@ elem_any[flow](A, E) :- elem_somewhere[flow](A, E).
 may_be[flow](C, VK, V) :- host_src[flow](C, element, R), may_be_node[flow](R, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
 may_be[flow](C, lit, undefined) :- host_src[flow](C, element, _).
 may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_array(What).
-elem_somewhere[flow](C, E) :- host_src[flow](C, elements, R), may_be_node[flow](R, A), elem_any[flow](A, E).
+elem_somewhere[flow](C, E) :- host_src[flow](C, elements, R), iter_elem[flow](R, E).
 elem_somewhere[flow](C, E) :- host_src[flow](C, elements, _), host_call_on[flow](C, array, "concat", _),
                               arg_at[flow](C, _, X), may_be_node[flow](X, A), elem_any[flow](A, E).
 elem_somewhere[flow](C, V) :- host_src[flow](C, values, R), may_be_node[flow](R, O), member_value[flow](O, _, V).
@@ -433,7 +435,7 @@ may_be[flow](entry(C, Key), node, entry(C, Key)) :- entry_of[flow](C, Key, _).
 array_elem[flow](entry(C, Key), 0, entry_key(C, Key)) :- entry_of[flow](C, Key, _).
 array_elem[flow](entry(C, Key), 1, V) :- entry_of[flow](C, Key, V).
 may_be[flow](entry_key(C, Key), lit, Key) :- entry_of[flow](C, Key, _).
-elem_somewhere[flow](A, E) :- spread_elems[value](A, _, X), may_be_node[flow](X, B), elem_any[flow](B, E).
+elem_somewhere[flow](A, E) :- spread_elems[value](A, _, X), iter_elem[flow](X, E).
 may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), int is type_of(I), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
 may_be[flow](N, lit, K) :- member_at[flow](N, _, A, I), int is type_of(I), lit_somewhere[flow](A, K).
 -- `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
@@ -1374,6 +1376,11 @@ keyed_present[code](C) :- keyed_fill[code](C, J), not keyed_lost[code](C, J).
 -- reach what, which keys are one), so what it rules out cannot feed the flow
 -- back; it is a view over it, `read_holds_lit` / `read_holds_node` below.
 keyed_read[flow](C, V)  :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
+-- a key that is an object (`wm.set(el, v)`, `wm.get(el)`) is the object itself
+keyed_put_obj[flow](X, N, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
+                                may_be_node[flow](A, N), arg_at[flow](C, 1, V).
+keyed_read[flow](C, V)  :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), not argument_at[code](C, 1, _),
+                           arg_at[flow](C, 0, A), may_be_node[flow](A, N), keyed_put_obj[flow](X, N, V).
 may_be[flow](C, VK, Val) :- may_be[flow](V, VK, Val), keyed_read[flow](C, V).
 
 -- the walks: position 0 of the head's pattern is a key, position 1 a value;
@@ -1386,12 +1393,17 @@ keyed_walk_at[flow](E, D, Pos) :- keyed_walk[flow](_, D, _), destructures_at[cod
 may_be[flow](E, VK, Val) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, _, V), may_be[flow](V, VK, Val),
                         keyed_walk_at[flow](E, D, 1).
 may_be[flow](E, lit, K) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, K, _), keyed_walk_at[flow](E, D, 0).
+may_be[flow](E, VK, Val) :- keyed_walk[flow](_, D, X), keyed_put_obj[flow](X, _, V), may_be[flow](V, VK, Val),
+                            keyed_walk_at[flow](E, D, 1).
+may_be[flow](E, node, N) :- keyed_walk[flow](_, D, X), keyed_put_obj[flow](X, N, _), keyed_walk_at[flow](E, D, 0).
 
 sx_keach[surface](C, F, X) :- keyed_on[flow](C, X, _, "forEach"), arg_at[flow](C, 0, A), may_be_node[flow](A, F),
                               fn_value[flow](F).
 keyed_each_at[flow](U, C, X, Pos) :- sx_keach[surface](C, F, X), param_of[flow](F, Pos, Name), param_use[flow](F, Name, U).
 may_be[flow](U, VK, Val) :- keyed_each_at[flow](U, _, X, 0), keyed_put[flow](X, _, V), may_be[flow](V, VK, Val).
 may_be[flow](U, lit, K) :- keyed_each_at[flow](U, _, X, 1), keyed_put[flow](X, K, _).
+may_be[flow](U, VK, Val) :- keyed_each_at[flow](U, _, X, 0), keyed_put_obj[flow](X, _, V), may_be[flow](V, VK, Val).
+may_be[flow](U, node, N) :- keyed_each_at[flow](U, _, X, 1), keyed_put_obj[flow](X, N, _).
 
 -- WHAT A READ HOLDS AT ITS MOMENT: the flow's value, but at a read of a
 -- collection only the puts the order leaves it.
@@ -2361,6 +2373,13 @@ may_be[flow](Y, input, S) :- next_send[flow](G, V), nearest_v[flow](G, Y), yield
 
 may_be[flow](Y, node, X) :- delegates[value](Y, A), resolves[code](A, Inner),
                             ret_node_any[flow](Inner, X).
+-- what `g.next()` gives: a step whose `value` is what the generator yields or returns
+gen_step[flow](C, G) :- selects[flow](N, "next"), callee_of[code](C, N), object_of[code](N, O),
+                        may_be_node[flow](O, GC), gen_of[flow](GC, G).
+may_be[flow](C, node, step(C)) :- gen_step[flow](C, _).
+may_be[flow](step(C), node, step(C)) :- gen_step[flow](C, _).
+member_plain[flow](step(C), "value", E) :- gen_step[flow](C, G), yields[flow](G, E).
+member_plain[flow](step(C), "value", E) :- gen_step[flow](C, G), returns[flow](G, E).
 
 -- FOR-OF: the head is a declarator like any other, whose value is each
 -- element walked. An array is a VALUE (through `may_be_node`); a generator is
@@ -2368,6 +2387,9 @@ may_be[flow](Y, node, X) :- delegates[value](Y, A), resolves[code](A, Inner),
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
 iter_elem[flow](X, E) :- may_be_node[flow](X, A), elem_somewhere[flow](A, E).
 iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
+-- an object of the program that is iterable by a generator at `[Symbol.iterator]`
+iter_elem[flow](X, E) :- may_be_node[flow](X, O), member_value[flow](O, symbol_iterator, M), gen_fn[flow](M),
+                         yields[flow](M, E).
 
 decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
                           nth[tree](V, 0, D),
