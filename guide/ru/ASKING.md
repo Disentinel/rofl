@@ -128,7 +128,7 @@ $ rofl whynot 'risky("safeCheckout")' @js shop.rofl
 whynot risky[main]("safeCheckout"):
   rule re667b5bf: risky[main](?N)@now :- fn_name[code](?F,?N)@now, exported_fn[code](?F)@now, may_throw[code](?F)@now
     failed premise: may_throw[code](n017f49dbfbe9e0a8_0o34j1j12he7d)
-      rule rbef6bec0: may_throw[code](?F)@now :- may_throw[code](?G)@now, sync_body[code](?G)@now, resolves[code](?C,?G)@now, nearest_fn[code](?F,?C)@now, not caught_here[code](?C)@now
+      rule r254a7401: may_throw[code](?F)@now :- may_throw[code](?G)@now, sync_body[code](?G)@now, runs[code](?C,?G)@now, nearest_fn[code](?F,?C)@now, not caught_here[code](?C)@now
         failed premise: not caught_here[code](n017f49dbfbe9e0a8_fr031il3tivb6) -- blocked: caught_here[code](n017f49dbfbe9e0a8_fr031il3tivb6) holds
   (every failure: --all)
 ```

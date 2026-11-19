@@ -171,7 +171,7 @@ checkout.rofl.md:22: cell 2 · rofl
         why not "safeCheckout" is a risky export in checkout.js:
           by the rule: N is a risky export if F is a function, in the code, F answers to N, in the code, F is exported, in the code, F may throw, in the code
             it stops at: [function safeCheckout() at checkout.js:9] may throw, in the code
-              by the rule: F may throw, in the code if G may throw, in the code, G runs its body at once, in the code, C resolves to G, in the code, F is the nearest function of C, in the code, not C is caught here, in the code
+              by the rule: F may throw, in the code if G may throw, in the code, G runs its body at once, in the code, C runs the function G, in the code, F is the nearest function of C, in the code, not C is caught here, in the code
                 it stops at: not [checkout() at checkout.js:11] is caught here, in the code, and [checkout() at checkout.js:11] is caught here, in the code does
           (every failure: --all)
       pay.js: none; it stops at: Some function answers to "safeCheckout", in the code -- none in this file
