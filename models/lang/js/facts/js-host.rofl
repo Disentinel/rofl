@@ -316,6 +316,28 @@ host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).
 -- which is when timers fire and promises settle; a microtask and a macrotask
 -- are both after the run, and that is all this table claims.
 edb(host_calls_back).
+edb(host_passes).
+-- `host_passes(Origin, Key, Arg, What)`: what the member Key of Origin hands its callback at Arg: an `element`
+-- of the receiving array, its `index`, the `receiver`, the value it `settled` to (a promise), or the call's
+-- own argument K (`arg(K)`)
+host_passes(array, "forEach", 0, element). host_passes(array, "forEach", 1, index). host_passes(array, "forEach", 2, receiver).
+host_passes(array, "map", 0, element). host_passes(array, "map", 1, index). host_passes(array, "map", 2, receiver).
+host_passes(array, "filter", 0, element). host_passes(array, "filter", 1, index). host_passes(array, "filter", 2, receiver).
+host_passes(array, "some", 0, element). host_passes(array, "some", 1, index). host_passes(array, "some", 2, receiver).
+host_passes(array, "every", 0, element). host_passes(array, "every", 1, index). host_passes(array, "every", 2, receiver).
+host_passes(array, "find", 0, element). host_passes(array, "find", 1, index). host_passes(array, "find", 2, receiver).
+host_passes(array, "findIndex", 0, element). host_passes(array, "findIndex", 1, index). host_passes(array, "findIndex", 2, receiver).
+host_passes(array, "findLast", 0, element). host_passes(array, "findLast", 1, index). host_passes(array, "findLast", 2, receiver).
+host_passes(array, "findLastIndex", 0, element). host_passes(array, "findLastIndex", 1, index). host_passes(array, "findLastIndex", 2, receiver).
+host_passes(array, "flatMap", 0, element). host_passes(array, "flatMap", 1, index). host_passes(array, "flatMap", 2, receiver).
+host_passes(array, "reduce", 1, element). host_passes(array, "reduce", 2, index). host_passes(array, "reduce", 3, receiver).
+host_passes(array, "reduceRight", 1, element). host_passes(array, "reduceRight", 2, index). host_passes(array, "reduceRight", 3, receiver).
+host_passes(array, "sort", 0, element). host_passes(array, "sort", 1, element).
+host_passes(array, "toSorted", 0, element). host_passes(array, "toSorted", 1, element).
+host_passes(promise, "then", 0, settled).
+host_passes("setTimeout", itself, 0, arg(2)). host_passes("setTimeout", itself, 1, arg(3)).
+host_passes("setImmediate", itself, 0, arg(1)). host_passes("setImmediate", itself, 1, arg(2)).
+
 -- the members of Function.prototype that call their receiver at once
 edb(fn_invoker).
 fn_invoker("call").

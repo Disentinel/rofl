@@ -29,7 +29,7 @@ default: code
 Reads:
 
 - from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [member_kind_expr](js-callgraph.rofl.md#member_kind_expr), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-concat, in the flow: [may_be](js-concat.rofl.md#may_be)
+- from js-callgraph, in the flow: [may_be](js-callgraph.rofl.md#may_be)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
 - from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
@@ -182,15 +182,15 @@ In the flow:
 
 <a id="own_node"></a>`own_node`(E, N) either:
 
-1. if [`may_be`](js-concat.rofl.md#may_be)(E, `node`, N);
-2. if [`may_be`](js-concat.rofl.md#may_be)(E, `inst`, via(something, N)).
+1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, N);
+2. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(something, N)).
 
 A node
 
-- <a id="may_be_node"></a>points to a node N if [`may_be`](js-concat.rofl.md#may_be)(it, `inst`, via(something, N)).
-- <a id="may_be_lit"></a>may be the literal V if [`may_be`](js-concat.rofl.md#may_be)(it, `lit`, V).
+- <a id="may_be_node"></a>points to a node N if [`may_be`](js-callgraph.rofl.md#may_be)(it, `inst`, via(something, N)).
+- <a id="may_be_lit"></a>may be the literal V if [`may_be`](js-callgraph.rofl.md#may_be)(it, `lit`, V).
 - points to a node N if [`bare_node`](#bare_node)(it, N).
-- may be the literal V if [`may_be`](js-concat.rofl.md#may_be)(it, `input`, S) and [`input_lit`](#input_lit)(S, V).
+- may be the literal V if [`may_be`](js-callgraph.rofl.md#may_be)(it, `input`, S) and [`input_lit`](#input_lit)(S, V).
 
 `may_be`(E, `lit`, V) if [`literal`](#literal)(E, V).
 
@@ -524,7 +524,7 @@ A node
 In the flow:
 
 `may_be`(E, VK, V) if all of:
-  - [`may_be`](js-concat.rofl.md#may_be)(Init, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(Init, VK, V);
   - D [binds](#binder) Name to a node Init in File;
   - a node E [reads](#ident_in) Name in File;
   - E [sees](#sees_binder) D.
@@ -577,13 +577,13 @@ In the flow:
 1. if all of:
    - X [is written into](#assign_binder) D;
    - [`assigned`](#assigned)(X, something, Name, Src, File);
-   - [`may_be`](js-concat.rofl.md#may_be)(Src, VK, V);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Src, VK, V);
    - a node E [reads](#ident_in) Name in File;
    - E [sees](#sees_binder) D;
 2. if all of:
    - X [is written into a parameter of](#assign_param) F;
    - [`assigned`](#assigned)(X, something, Name, Src, something);
-   - [`may_be`](js-concat.rofl.md#may_be)(Src, VK, V);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Src, VK, V);
    - F [uses](#param_use) Name at a node E.
 
 > A TARGET NO DECLARATOR OR PARAMETER OWNS — a function or class name, a
@@ -606,13 +606,13 @@ In the flow:
    - a node L [is read at the top of](#top_read) Name and File;
    - E [is read at the top of](#top_read) Name and File.
 
-`may_be`(E, VK, V) if a node E [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and [`may_be`](js-concat.rofl.md#may_be)(Src, VK, V).
+`may_be`(E, VK, V) if a node E [may hold by name alone](#assign_reaches_unscoped) what node a Src Src and [`may_be`](js-callgraph.rofl.md#may_be)(Src, VK, V).
 
 > A parenthesis, a TS cast, a non-null assertion, `satisfies` and an instantiation
 > change nothing about the value (`passes`); the call graph lists them as shapes and
 > this layer does not.
 
-`may_be`(E, VK, V) if [`passes`](#passes)(E, X) and [`may_be`](js-concat.rofl.md#may_be)(X, VK, V).
+`may_be`(E, VK, V) if [`passes`](#passes)(E, X) and [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V).
 
 ## 5. WHICH PROTOTYPE A VALUE HAS — from the KIND of a receiver written in
 
@@ -760,7 +760,7 @@ In the flow:
    - [`declarator_id`](#declarator_id)(D, R);
    - [`pat_in`](#pat_in)(R, something, something);
    - D [takes its value from](#decl_value) a node Init;
-   - [`may_be`](js-concat.rofl.md#may_be)(Init, `input`, N);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Init, `input`, N);
    - E is `input`;
 3. if all of:
    - [`input_param`](#input_param)(N, F, I);
@@ -773,7 +773,7 @@ In the flow:
    - E is `node`;
 5. if all of:
    - some assignment [takes apart on the left](#assign_pat) R the Src;
-   - [`may_be`](js-concat.rofl.md#may_be)(Src, `input`, N);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Src, `input`, N);
    - E is `input`;
 6. if all of:
    - [`pattern_elem`](#pattern_elem)(P, I, R);
@@ -787,14 +787,14 @@ In the flow:
    - [`pat_in`](#pat_in)(something, P, R);
    - a node P [points to](#may_be_node) a node X;
    - [`array_elem`](#array_elem)(X, I, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, N);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, `input`, N);
    - E is `input`;
 8. if all of:
    - [`pattern_elem`](#pattern_elem)(P, I, R);
    - [`pat_in`](#pat_in)(something, P, R);
    - a node P [points to](#may_be_node) a node X;
    - [`array_elem`](#array_elem)(X, I, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, `lit`, N);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, `lit`, N);
    - E is `lit`.
 
 > the default of a target is a conditional source of it
@@ -802,7 +802,7 @@ In the flow:
 `may_be`(T, VK, V) if all of:
   - [`pat_in`](#pat_in)(something, something, T);
   - [`assign`](#assign)(something, T, Init);
-  - [`may_be`](js-concat.rofl.md#may_be)(Init, VK, V).
+  - [`may_be`](js-callgraph.rofl.md#may_be)(Init, VK, V).
 
 > a name a declarator's pattern binds, and the target that binds it
 
@@ -828,7 +828,7 @@ In the flow:
 
 `may_be`(E, VK, V) if all of:
   - [`pat_local`](#pat_local)(D, Local, T, File);
-  - [`may_be`](js-concat.rofl.md#may_be)(T, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(T, VK, V);
   - a node E [reads](#ident_in) Local in File;
   - E [sees](#sees_binder) D.
 
@@ -859,7 +859,7 @@ In the flow:
 `may_be`(N, VK, V) if all of:
   - [`member_at`](#member_at)(N, something, X, I);
   - [`array_elem`](#array_elem)(X, I, E);
-  - [`may_be`](js-concat.rofl.md#may_be)(E, VK, V).
+  - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V).
 
 `may_be`(E, `node`, N) if all of:
   - D [destructures](#destructures_at) Local at Index in File;
@@ -896,7 +896,7 @@ In the flow:
 
 `may_be`(U, VK, V) if all of:
   - F [defaults](#fallback) Name to a node Init;
-  - [`may_be`](js-concat.rofl.md#may_be)(Init, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(Init, VK, V);
   - F [uses](#param_use) Name at a node U.
 
 > A parameter that is a pattern, `({ port, host }) =>`, alone or with a default for the whole object, binds each name
@@ -919,7 +919,7 @@ In the flow:
 
 `may_be`(U, VK, V) if all of:
   - [`param_local`](#param_local)(F, Local, T);
-  - [`may_be`](js-concat.rofl.md#may_be)(T, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(T, VK, V);
   - F [uses](#param_use) Local at a node U.
 
 > A rest binds a FRESH value with no node of its own, so its target stands for it, wherever its pattern stands: a
@@ -1415,7 +1415,17 @@ In the flow:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
    - [`sx_ret_input`](js-surface.rofl.md#sx_ret_input)(F, I);
    - C [passes](#arg_at) a node X at an index I;
-   - [`may_be`](js-concat.rofl.md#may_be)(X, N, E).
+   - [`may_be`](js-callgraph.rofl.md#may_be)(X, N, E).
+
+> `Promise.resolve(x)` is read as x, as an async call is read as what it returns and `await` as what it awaits
+
+`may_be`(C, VK, V) if all of:
+  - [the callee](js-callgraph.rofl.md#callee_of) of a call C is a node M;
+  - [`object_of`](js-structure.rofl.md#object_of)(M, P);
+  - a node P [refers to the free](#free_global) "Promise" in some file;
+  - M [selects](#selects) "resolve";
+  - C [passes](#arg_at) a node X at 0;
+  - [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V).
 
 > `this` is the receiver where the call names one, and only the instances `this` may be in the function at all
 
@@ -1447,7 +1457,7 @@ In the flow:
 
 1. if all of:
    - [`self_recv`](#self_recv)(C, R);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T);
    - N is `input`;
 2. if all of:
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
@@ -1534,7 +1544,7 @@ Declared as facts:
 2. if all of:
    - [`merge_call`](#merge_call)(C);
    - an invocation C [passes](#arg_at) a node T at 0;
-   - [`may_be`](js-concat.rofl.md#may_be)(T, `input`, O);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(T, `input`, O);
    - N is `input`.
 
 In the surface:
@@ -3161,7 +3171,7 @@ In the flow:
 
 <a id="keyed_read"></a>`keyed_read`(C, V) if [`keyed_get`](#keyed_get)(C, X, K) and [`keyed_put`](#keyed_put)(X, K, V).
 
-`may_be`(C, VK, Val) if [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val) and [`keyed_read`](#keyed_read)(C, V).
+`may_be`(C, VK, Val) if [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val) and [`keyed_read`](#keyed_read)(C, V).
 
 > the walks: position 0 of the head's pattern is a key, position 1 a value;
 > forEach's callback takes (value, key)
@@ -3185,7 +3195,7 @@ In the flow:
 1. if all of:
    - [`keyed_walk`](#keyed_walk)(something, D, X);
    - [`keyed_put`](#keyed_put)(X, something, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val);
    - [`keyed_walk_at`](#keyed_walk_at)(E, D, 1);
 2. if all of:
    - [`keyed_walk`](#keyed_walk)(something, D, X);
@@ -3213,7 +3223,7 @@ In the flow:
 1. if all of:
    - [`keyed_each_at`](#keyed_each_at)(U, something, X, 0);
    - [`keyed_put`](#keyed_put)(X, something, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val);
 2. if all of:
    - [`keyed_each_at`](#keyed_each_at)(U, something, X, 1);
    - [`keyed_put`](#keyed_put)(X, Val, something);
@@ -3373,29 +3383,29 @@ In the surface:
 
 1. if all of:
    - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Obj, `input`, S);
    - [`input_of`](#input_of)(S, G);
    - [`own_node`](#own_node)(V, X);
    - N is `node`;
 2. if all of:
    - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Obj, `input`, S);
    - [`input_of`](#input_of)(S, G);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, `lit`, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, `lit`, X);
    - N is `lit`;
 3. if all of:
    - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
-   - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Obj, `input`, S);
    - [`input_of`](#input_of)(S, G);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, `input`, X);
    - N is `input`;
    - unless [`input_of`](#input_of)(X, G).
 
 <a id="sx_wsum_in"></a>`sx_wsum_in`(G, S, Key, X) if all of:
   - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
-  - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, S);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(Obj, `input`, S);
   - [`input_of`](#input_of)(S, G);
-  - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, X);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(V, `input`, X);
   - [`input_of`](#input_of)(X, G).
 
 In the flow:
@@ -3472,7 +3482,7 @@ In the flow:
    - [`applies`](#applies)(C, G);
    - [`sx_wparam`](#sx_wparam)(G, S, I);
    - an invocation C [passes](#arg_at) a node Y at an index I;
-   - [`may_be`](js-concat.rofl.md#may_be)(Y, VK, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Y, VK, X);
 2. if all of:
    - [`applies`](#applies)(C, G);
    - [`sx_wthis`](#sx_wthis)(G, S);
@@ -3555,7 +3565,7 @@ In the flow:
 
 <a id="runs_recv"></a>`runs_recv`(C, T, G, S) if all of:
   - [`recv_key`](#recv_key)(C, R, MKey);
-  - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T);
   - [`applies`](#applies)(C, G);
   - [`sx_wthis`](#sx_wthis)(G, S).
 
@@ -3652,14 +3662,14 @@ In the flow:
 
 1. if all of:
    - [`recv_key`](#recv_key)(C, R, MKey);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T);
    - [`applies`](#applies)(C, G);
    - [`sx_wthis`](#sx_wthis)(G, S);
    - [`wput`](#wput)(C, S, Key, VK, X);
    - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
 2. if all of:
    - [`recv_key`](#recv_key)(C, R, MKey);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T);
    - [`applies`](#applies)(C, G);
    - [`sx_wthis`](#sx_wthis)(G, S);
    - [`wputc`](#wputc)(C, S, CD, Key, VK, X);
@@ -3779,7 +3789,7 @@ In the flow:
 2. if all of:
    - [`applies`](#applies)(C, M);
    - [`recv_key`](#recv_key)(C, R, something);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, something).
+   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, something).
 
 In the surface:
 
@@ -4148,11 +4158,11 @@ The static member Key of a class CD is a node V if CD [is a class](#class_like) 
 1. if all of:
    - [`member_any`](#member_any)(N, something, Obj, Key);
    - [the static member](#class_member_static) Key of a class Obj is a node V;
-   - [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val);
 2. if all of:
    - [`member_at`](#member_at)(N, something, Obj, Key);
    - [the plain member](#member_plain) Key of a node Obj is a node V;
-   - [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val);
    - unless [`this_reads`](#this_reads)(N);
    - unless [`getter`](#getter)(V, V);
    - unless [`setter`](#setter)(V, V).
@@ -4167,8 +4177,8 @@ The static member Key of a class CD is a node V if CD [is a class](#class_like) 
 
 <a id="bare_node"></a>`bare_node`(E, N) either:
 
-1. if [`may_be`](js-concat.rofl.md#may_be)(E, `node`, N);
-2. if [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S) and [`input_node`](#input_node)(S, N).
+1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, N);
+2. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S) and [`input_node`](#input_node)(S, N).
 
 > A READ OFF `this` IS THE METHOD'S INPUT TOO: `field(M, Key)`, the Key of the object the method was called on. In
 > the body it is what any instance holds (`this_val`, the general case, behind `input_lit` and `input_node` as a
@@ -4197,7 +4207,7 @@ In the flow:
 
 <a id="key_this"></a>`key_this`(R, Key, M) if all of:
   - [`key_wanted`](#key_wanted)(R, Key);
-  - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, S);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, S);
   - [`input_this`](#input_this)(S, M).
 
 `this_key`(M, Key) if [`key_this`](#key_this)(something, Key, M).
@@ -4228,7 +4238,7 @@ In the surface:
 
 `sx_mwrite`(O, Key, V) if all of:
   - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
-  - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, T);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(Obj, `input`, T);
   - [`field_node`](#field_node)(T, O).
 
 In the flow:
@@ -4237,7 +4247,7 @@ In the flow:
   - [`applies`](#applies)(C, G);
   - [`sx_wthis`](#sx_wthis)(G, S);
   - [`recv_key`](#recv_key)(C, R, Key);
-  - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T);
   - [`field_node`](#field_node)(T, I);
   - [`isa`](#isa)(I, CD);
   - [`sx_lookup`](#sx_lookup)(CD, Key, G).
@@ -4299,12 +4309,12 @@ In the flow:
 
 <a id="recv_obj"></a>`recv_obj`(R, I) either:
 
-1. if [`may_be`](js-concat.rofl.md#may_be)(R, `node`, I);
+1. if [`may_be`](js-callgraph.rofl.md#may_be)(R, `node`, I);
 2. if all of:
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, S);
    - [`input_param`](#input_param)(S, something, something);
    - [`input_node`](#input_node)(S, I);
-3. if [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T) and [`hop_node`](#hop_node)(T, I).
+3. if [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T) and [`hop_node`](#hop_node)(T, I).
 
 <a id="key_ask"></a>`key_ask`(I, Key) either:
 
@@ -4323,7 +4333,7 @@ In the flow:
 2. if all of:
    - [`key_ask`](#key_ask)(I, Key);
    - [the plain member](#member_plain) Key of I is a node V;
-   - [`may_be`](js-concat.rofl.md#may_be)(V, VK, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, X);
    - unless [`getter`](#getter)(V, V);
    - unless [`setter`](#setter)(V, V).
 
@@ -4351,7 +4361,7 @@ In the flow:
 > on an object (`run(I, M)`), asked by a call on an object and by a run that hands on to the object in a field.
 > Only the runs somebody asks; a chain of objects is walked object by object, a fixpoint with no depth to bound.
 
-<a id="recv_field"></a>`recv_field`(R, M, K) if [`may_be`](js-concat.rofl.md#may_be)(R, `input`, field(M, K)).
+<a id="recv_field"></a>`recv_field`(R, M, K) if [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, field(M, K)).
 
 <a id="hop_at"></a>`hop_at`(C, M, K, M2) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) M2;
@@ -4363,7 +4373,7 @@ In the flow:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) M2;
   - [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M2, K, M3);
   - [`recv_of`](#recv_of)(C, R);
-  - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, S);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, S);
   - [`input_this`](#input_this)(S, M).
 
 `may_be`(C, `input`, hop(M, K, M2)) if [`hop_at`](#hop_at)(C, M, K, M2).
@@ -4446,10 +4456,10 @@ In the flow:
 1. if [`key_this`](#key_this)(R, Key, M), N is `input`, and E is field(M, Key);
 2. if all of:
    - [`key_wanted`](#key_wanted)(R, Key);
-   - [`may_be`](js-concat.rofl.md#may_be)(R, `inst`, via(C, O));
+   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `inst`, via(C, O));
    - [`via_holds`](#via_holds)(C, O, Key, N, E).
 
-<a id="via_obj"></a>`via_obj`(a [member access](#member_node_v) N, O, C, Obj) if [`may_be`](js-concat.rofl.md#may_be)(O, `inst`, via(C, Obj)) and [`object_of`](js-structure.rofl.md#object_of)(N, O).
+<a id="via_obj"></a>`via_obj`(a [member access](#member_node_v) N, O, C, Obj) if [`may_be`](js-callgraph.rofl.md#may_be)(O, `inst`, via(C, Obj)) and [`object_of`](js-structure.rofl.md#object_of)(N, O).
 
 <a id="member_via"></a>`member_via`(N, O, C, Obj, Key) if [`via_obj`](#via_obj)(N, O, C, Obj) and N [selects](#selects) Key.
 
@@ -4473,7 +4483,7 @@ In the flow:
 
 <a id="wants"></a>`wants`(C, O, Key) if [`member_via`](#member_via)(something, something, C, O, Key).
 
-`wants`(C, O, Key) if [`key_wanted`](#key_wanted)(R, Key) and [`may_be`](js-concat.rofl.md#may_be)(R, `inst`, via(C, O)).
+`wants`(C, O, Key) if [`key_wanted`](#key_wanted)(R, Key) and [`may_be`](js-callgraph.rofl.md#may_be)(R, `inst`, via(C, O)).
 
 `wants`(B, O, Key) if all of:
   - [`wants`](#wants)(C, O, Key);
@@ -4489,10 +4499,10 @@ In the flow:
 
 <a id="ret_node"></a>`ret_node`(F, O) either:
 
-1. if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `node`, O);
+1. if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, O);
 2. if all of:
    - F [returns to its call](js-surface.rofl.md#call_returns) E;
-   - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S);
    - [`input_of`](#input_of)(S, G);
    - G differs from F;
    - [`input_node`](#input_node)(S, O).
@@ -4502,7 +4512,7 @@ In the flow:
 1. if [`ret_node`](#ret_node)(F, O) and [`born_tmpl`](#born_tmpl)(O);
 2. if [`ret_node`](#ret_node)(F, O) and [`made_of`](#made_of)(O, something).
 
-<a id="ret_via"></a>`ret_via`(F, C, O) if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `inst`, via(C, O)).
+<a id="ret_via"></a>`ret_via`(F, C, O) if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(C, O)).
 
 In the surface:
 
@@ -4512,7 +4522,7 @@ In the surface:
    - [`asked`](#asked)(F, O, Key);
    - [`ret_bare`](#ret_bare)(F, O);
    - [the plain member](#member_plain) Key of a node O is a node V;
-   - [`may_be`](js-concat.rofl.md#may_be)(V, VK, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, X);
 2. if all of:
    - [`asked`](#asked)(F, O, Key);
    - [`ret_bare`](#ret_bare)(F, O);
@@ -4542,7 +4552,7 @@ In the flow:
    - [`via_sum`](#via_sum)(C, O, Key, `input`, param(F, I));
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
    - C [passes](#arg_at) a node Y at an index I;
-   - [`may_be`](js-concat.rofl.md#may_be)(Y, N, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Y, N, X);
 5. if all of:
    - [`via_sum`](#via_sum)(C, O, Key, `input`, X);
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
@@ -4576,7 +4586,7 @@ In the flow:
    - [`has`](#has)(O, M);
    - [`obj_lit`](#obj_lit)(O);
    - [`value`](#value)(M, X);
-   - [`may_be`](js-concat.rofl.md#may_be)(X, N, Y).
+   - [`may_be`](js-callgraph.rofl.md#may_be)(X, N, Y).
 
 In the code:
 
@@ -4597,7 +4607,7 @@ In the code:
 
 In the flow:
 
-`may_be`(P, VK, V) if [`pattern_entry`](#pattern_entry)(P, T) and [`may_be`](js-concat.rofl.md#may_be)(T, VK, V).
+`may_be`(P, VK, V) if [`pattern_entry`](#pattern_entry)(P, T) and [`may_be`](js-callgraph.rofl.md#may_be)(T, VK, V).
 
 ## 9. `this` — bound by the nearest enclosing function that is NOT an arrow (an
 
@@ -4746,7 +4756,7 @@ In the flow:
 `may_be`(N, VK, Val) if all of:
   - N [binds privately to](#private_binds) a node M;
   - [`value`](#value)(M, V);
-  - [`may_be`](js-concat.rofl.md#may_be)(V, VK, Val).
+  - [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val).
 
 A class has the method M if [`class_slot`](#class_slot)(it, M) and [`private_method`](#private_method)(M).
 
@@ -5252,7 +5262,7 @@ In the flow:
 
 `may_be`(Y, VK, V) either:
 
-1. if [`coroutine_yield`](#coroutine_yield)(Y, X) and [`may_be`](js-concat.rofl.md#may_be)(X, VK, V);
+1. if [`coroutine_yield`](#coroutine_yield)(Y, X) and [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V);
 2. if all of:
    - [`coroutine_of`](#coroutine_of)(Y, F);
    - [`sx_gen_ret`](js-surface.rofl.md#sx_gen_ret)(F, V);
@@ -5265,7 +5275,7 @@ In the flow:
    - [`contract_call`](#contract_call)(Y, Pkg, Key);
    - [`returns_argument`](#returns_argument)(Pkg, Key, I);
    - Y [passes](#arg_at) a node X at an index I;
-   - [`may_be`](js-concat.rofl.md#may_be)(X, VK, V).
+   - [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V).
 
 Declared as facts:
 
@@ -5388,9 +5398,9 @@ The member Name of a node NS holds a node In if all of:
 
 1. if all of:
    - [`gives`](#gives)(E, X);
-   - [`may_be`](js-concat.rofl.md#may_be)(X, VK, V);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V);
    - unless [`assign`](#assign)(E, something, something);
-2. if [`may_be`](js-concat.rofl.md#may_be)(X, VK, V) and [`awaits`](#awaits)(E, X).
+2. if [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V) and [`awaits`](#awaits)(E, X).
 
 ## 14. GENERATORS. Calling a generator function makes a generator OBJECT, the
 
@@ -5449,7 +5459,7 @@ In the flow:
    - G [is sent](#next_send) a node V;
    - G [is nearest to](#nearest_v) a node Y;
    - [`yield_back`](#yield_back)(Y);
-   - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, X);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(V, `input`, X);
    - N is `input`;
 3. if all of:
    - [`delegates`](#delegates)(Y, Z) in the value;
@@ -5478,7 +5488,7 @@ D takes its value from a node E if all of:
 `may_be`(U, VK, V) if all of:
   - D [declares without a value](#bare_binder) Name in File;
   - D [takes its value from](#decl_value) a node E;
-  - [`may_be`](js-concat.rofl.md#may_be)(E, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V);
   - a node U [reads](#ident_in) Name in File;
   - U [sees](#sees_binder) D.
 
@@ -5497,7 +5507,7 @@ In the code:
 In the flow:
 
 `may_be`(E, VK, V) if all of:
-  - [`may_be`](js-concat.rofl.md#may_be)(X, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V);
   - [`assign`](#assign)(E, something, X);
   - E [is plain](#plain_assign).
 
@@ -5569,7 +5579,7 @@ A node catches a node V if all of:
 `may_be`(U, VK, V) if all of:
   - a clause H [declares its caught name](#catch_names) Name in File;
   - H [catches into](#catch_local) Name and T;
-  - [`may_be`](js-concat.rofl.md#may_be)(T, VK, V);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(T, VK, V);
   - a node U [finds its name in](#name_scope) Name in File H.
 
 <a id="call_in_try"></a>T calls if all of:

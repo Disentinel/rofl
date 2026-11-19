@@ -344,7 +344,7 @@ callback_site[code](C, Name, itself)  :- callee[value](C, N), free_global[code](
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
                                 arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
-                                arg_at[flow](C, I, A), J is I + 1, not arg_at[flow](C, J, _),
+                                arg_count[code](C, N), I is N - 1, arg_at[flow](C, I, A),
                                 may_be_node[flow](A, F), fn_value[flow](F).
 
 -- A call RUNS a function when it applies it (resolves to it, or constructs
@@ -361,6 +361,8 @@ runs[code](N, M) :- pattern_accessor[code](N, M).
 runs[code](N, M) :- pattern_next[code](N, M).
 -- `f.call(t, a)` and `f.apply(t, [a])` run f
 runs[code](C, F) :- call_on[flow](C, F, Key), fn_invoker(Key), fn_value[flow](F).
+-- `f.bind(t)` is f, called with the arguments its calls hand it; a bind that fixes arguments too shifts them, and is not read
+may_be[flow](B, node, F) :- call_on[flow](B, F, "bind"), fn_value[flow](F), arg_count[code](B, N), N < 2.
 -- `new Promise(executor)` calls the executor at once and catches its throw,
 -- which rejects the promise: the call runs it and does not throw what it throws
 runs_now[code](C, F) :- runs[code](C, F).

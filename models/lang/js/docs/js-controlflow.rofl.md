@@ -693,7 +693,7 @@ In the flow:
 2. if all of:
    - G [throws out](#thrown_by) V;
    - G [runs its body at once](#sync_body);
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - an invocation C [runs the function](js-callgraph.rofl.md#runs) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
    - unless C [is caught here](#caught_here);
 3. if all of:
@@ -710,7 +710,7 @@ In the flow:
    - [the catch](js-dataflow.rofl.md#catch_of) of T is H;
    - [the param](js-dataflow.rofl.md#catch_param) of H is P;
    - [`try_walk`](#try_walk)(T, C);
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - an invocation C [runs the function](js-callgraph.rofl.md#runs) G;
    - G [runs its body at once](#sync_body);
    - G [throws out](#thrown_by) V;
 2. if all of:

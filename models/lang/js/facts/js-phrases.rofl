@@ -185,6 +185,8 @@ sig(arr_rest, "holds_the_array_rest(from index I, node R, taken from node Src)")
 sig(rest_src, "takes_apart(pattern P, node Src)").
 sig(runs, "runs_the_function(invocation C, function G)").
 sig(runs_now, "runs_before_it_returns(invocation C, function F)").
+sig(host_hands, "the_host_hands(function F, at index I, node E)").
+sig(callback_recv, "calls_back_on(invocation C, receiver R)").
 sig(eff_constructs, "runs_when_constructed(class CD, function G)").
 sig(param_of, "takes(function F, name Name:2, at index I:1)").
 sig(param_rest, "has_the_rest_parameter(function F, at index J, node R, name Name)").

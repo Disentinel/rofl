@@ -67,6 +67,22 @@ sx_effect_module[surface](File, N)     :- effect_of_module[flow](File, N).
 -- ---------------------------------------------------------------- what a call hands its callee
 sx_arg_lit[surface](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V).
 sx_arg_node[surface](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
+-- what a host hands the function it calls back (models/lang/js/facts/js-host.rofl `host_passes`): an element
+-- of the receiver, its index, the receiver itself, what the receiving promise settles to, or an argument of
+-- the call (`setTimeout(f, ms, x)`); a promise is read as the value it settles to, as `await` reads it
+callback_recv[flow](C, R) :- calls_back[code](C, _, _), callee_of[code](C, M), object_of[code](M, R).
+host_hands[flow](F, I, E)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, element),
+                             callback_recv[flow](C, R), may_be_node[flow](R, A), array_elem[flow](A, _, E).
+host_hands[flow](F, I, R)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, receiver),
+                             callback_recv[flow](C, R).
+host_hands[flow](F, I, R)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, settled),
+                             callback_recv[flow](C, R).
+host_hands[flow](F, I, A)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, arg(K)),
+                             arg_at[flow](C, K, A).
+sx_arg_lit[surface](F, I, K)  :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, index),
+                                 callback_recv[flow](C, R), may_be_node[flow](R, A), array_elem[flow](A, K, _).
+sx_arg_lit[surface](F, I, V)  :- host_hands[flow](F, I, E), may_be_lit[flow](E, V).
+sx_arg_node[surface](F, I, N) :- host_hands[flow](F, I, E), may_be_node[flow](E, N).
 view sx_called(A).
 sx_called[surface](F)         :- resolves[code](_, F).
 -- how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`

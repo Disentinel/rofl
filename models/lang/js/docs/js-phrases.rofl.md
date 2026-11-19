@@ -114,6 +114,8 @@ Declared as facts:
 | `rest_src` | "takes_apart(pattern P, node Src)" |
 | `runs` | "runs_the_function(invocation C, function G)" |
 | `runs_now` | "runs_before_it_returns(invocation C, function F)" |
+| `host_hands` | "the_host_hands(function F, at index I, node E)" |
+| `callback_recv` | "calls_back_on(invocation C, receiver R)" |
 | `eff_constructs` | "runs_when_constructed(class CD, function G)" |
 | `param_of` | "takes(function F, name Name:2, at index I:1)" |
 | `param_rest` | "has_the_rest_parameter(function F, at index J, node R, name Name)" |

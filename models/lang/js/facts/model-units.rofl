@@ -38,6 +38,7 @@ unit_concludes("models/lang/js/facts/js-host.rofl", host_module_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_member_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_global_effect).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_no_effects).
+unit_concludes("models/lang/js/facts/js-host.rofl", host_passes).
 unit_concludes("models/lang/js/facts/js-host.rofl", fn_invoker).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_calls_back).
 unit_concludes("models/lang/js/facts/js-host.rofl", host_member_module).
@@ -642,6 +643,7 @@ unit_concludes("models/lang/js/rules/js-callgraph.rofl", written_arg).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", callback_site).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", calls_back).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", runs).
+unit_concludes("models/lang/js/rules/js-callgraph.rofl", may_be).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", runs_now).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", callback_key_unknown).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", resolved_site).
@@ -1353,6 +1355,8 @@ unit_concludes("models/lang/js/rules/js-surface.rofl", sx_eff_module).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_effect_module).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_arg_lit).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_arg_node).
+unit_concludes("models/lang/js/rules/js-surface.rofl", callback_recv).
+unit_concludes("models/lang/js/rules/js-surface.rofl", host_hands).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_called).
 unit_concludes("models/lang/js/rules/js-surface.rofl", arg_given).
 unit_concludes("models/lang/js/rules/js-surface.rofl", arg_count).

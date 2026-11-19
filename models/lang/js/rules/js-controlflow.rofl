@@ -345,12 +345,12 @@ may_throw[code](F) :- may_throw[code](G), async_body[code](G), resolves[code](C,
                       await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 
 thrown_by[flow](F, V) :- throws[value](T, V), nearest_v[flow](F, T), not caught_here[code](T).
-thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), resolves[code](C, G),
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), runs[code](C, G),
                          nearest_fn[code](F, C), not caught_here[code](C).
 thrown_by[flow](F, V) :- thrown_by[flow](G, V), async_body[code](G), resolves[code](C, G),
                          await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
-                            try_walk[code](T, C), resolves[code](C, G),
+                            try_walk[code](T, C), runs[code](C, G),
                             sync_body[code](G), thrown_by[flow](G, V).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             try_walk[code](T, A), await_arg[code](A, C), resolves[code](C, G),

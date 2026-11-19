@@ -29,3 +29,4 @@ class Built { constructor() { hit('constructor'); total += 1; } }
 class Refuses { constructor() { throw new Error('ctor'); } }
 function viaConstructor() { return new Built(); }
 function throwsInConstructor() { return new Refuses(); }
+function viaBind() { const g = declared.bind(null); g(); }

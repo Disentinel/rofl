@@ -648,6 +648,9 @@ may_be[flow](C, node, inst(CD))             :- resolves[code](C, F), sx_ret_own[
 may_be[flow](C, node, V)                    :- resolves[code](C, F), sx_ret_own[surface](F, node, V), at[tree](V, _, _),
                                                not born_tmpl[code](V).
 may_be[flow](C, VK, V) :- resolves[code](C, F), sx_ret_input[surface](F, I), arg_at[flow](C, I, A), may_be[flow](A, VK, V).
+-- `Promise.resolve(x)` is read as x, as an async call is read as what it returns and `await` as what it awaits
+may_be[flow](C, VK, V) :- callee_of[code](C, M), object_of[code](M, P), free_global[code](P, "Promise", _),
+                          selects[flow](M, "resolve"), arg_at[flow](C, 0, A), may_be[flow](A, VK, V).
 -- `this` is the receiver where the call names one, and only the instances `this` may be in the function at all
 recv_call[code](C, R) :- call[value](C), callee[value](C, N), member[value](N, _, _), object_of[code](N, R),
                          not super[value](R).

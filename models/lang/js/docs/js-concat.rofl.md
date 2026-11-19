@@ -126,7 +126,7 @@ In the flow:
    - a node X [points to](js-dataflow.rofl.md#may_be_node) a node D;
    - [`composed`](#composed)(D).
 
-<a id="may_be"></a>`may_be`(C, `node`, C) if [`composed`](#composed)(C).
+`may_be`(C, `node`, C) if [`composed`](#composed)(C).
 
 > `x += v` writes the binding, as `x = x + v` would: every read of the binding
 > may be the composed value at the assignment. Scoped as section 4 of

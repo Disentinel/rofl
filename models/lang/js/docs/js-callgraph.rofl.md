@@ -30,6 +30,7 @@ Reads:
 - from js-model, in the main: [unknown_type](js-model.rofl.md#unknown_type)
 - from js-modules: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
 - from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
+- from js-surface: [arg_count](js-surface.rofl.md#arg_count)
 - from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
 - from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from models/lang/js/facts/js-globals.rofl, in the main:
@@ -738,11 +739,11 @@ A call
 2. if all of:
    - C [is a callback site](#callback_site) of an origin O at Key;
    - O [calls back its argument](#host_calls_back) Key and `last` and When;
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
-   - an index J is I + 1;
+   - [`arg_count`](js-surface.rofl.md#arg_count)(C, N);
+   - an index I is N - 1;
+   - C [passes](js-dataflow.rofl.md#arg_at) a node X at I;
    - X [points to](js-dataflow.rofl.md#may_be_node) F;
-   - [`fn_value`](js-surface.rofl.md#fn_value)(F);
-   - unless C [passes](js-dataflow.rofl.md#arg_at) some node at J.
+   - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
 > A call RUNS a function when it applies it (resolves to it, or constructs
 > its class), when a host calls it back
@@ -767,8 +768,20 @@ An invocation runs the function F if all of:
   - [`fn_invoker`](#fn_invoker)(Key);
   - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
+> `f.bind(t)` is f, called with the arguments its calls hand it; a bind that fixes arguments too shifts them, and is not read
+
+In the flow:
+
+<a id="may_be"></a>`may_be`(B, `node`, F) if all of:
+  - [`call_on`](#call_on)(B, F, "bind");
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F);
+  - [`arg_count`](js-surface.rofl.md#arg_count)(B, N);
+  - N < 2.
+
 > `new Promise(executor)` calls the executor at once and catches its throw,
 > which rejects the promise: the call runs it and does not throw what it throws
+
+In the code:
 
 <a id="runs_now"></a>An invocation C runs before it returns F either:
 
