@@ -52,6 +52,30 @@ pub fn first_file(text: &str) -> Option<&str> {
 pub struct Cut {
     pub core: String,
     pub files: Vec<(String, String)>,
+    /// the texts of facts alone, none naming a file: laid over the files' units where the rules let them be
+    /// (`Eval::overlay_rels`), into the core otherwise
+    pub over: Vec<String>,
+}
+
+/// Whether `text` holds facts alone and none names a file: a book laid over the world, such as its assumptions.
+fn facts_alone(text: &str) -> bool {
+    let mut any = false;
+    for l in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("--")) {
+        if l.contains(":-") || !l.ends_with('.') || file_of(l).is_some() || !l.starts_with(|c: char| c.is_ascii_lowercase()) {
+            return false;
+        }
+        any = true;
+    }
+    any
+}
+
+/// The relations a text of facts alone states, by name.
+pub fn fact_rels(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("--"))
+        .map(|l| l[..l.find(['[', '(', '.']).unwrap_or(l.len())].trim().to_string()).collect();
+    out.sort();
+    out.dedup();
+    out
 }
 
 const TEXTS: &[u8; 16] = b"ROFL-TEXTS-1\n\0\0\0";
@@ -138,10 +162,24 @@ impl KeptTexts {
 
 /// The texts cut into core and files. A clause spans lines while a string in it is open.
 pub fn cut(texts: &[&str]) -> Cut {
+    cut_by(texts, false)
+}
+
+/// `cut`, the texts of facts alone that name no file set apart (`Cut::over`).
+pub fn cut_over(texts: &[&str]) -> Cut {
+    cut_by(texts, true)
+}
+
+fn cut_by(texts: &[&str], apart: bool) -> Cut {
     let mut core = String::new();
     let mut at: FxMap<String, usize> = FxMap::default();
     let mut files: Vec<(String, String)> = Vec::new();
+    let mut over = Vec::new();
     for text in texts {
+        if apart && facts_alone(text) {
+            over.push(text.to_string());
+            continue;
+        }
         if crate::rofl_parse::is_columns(text) {
             cut_columns(text, &mut core, &mut at, &mut files);
             continue;
@@ -175,7 +213,7 @@ pub fn cut(texts: &[&str]) -> Cut {
             core.push('\n');
         }
     }
-    Cut { core, files }
+    Cut { core, files, over }
 }
 
 
@@ -348,6 +386,12 @@ impl Eval {
     /// The world of this core and the `files`, each its name and text, settled by levels: the reader, a fork of the
     /// core that reads every unit and fires nothing.
     pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Eval, VolStats), Halt> {
+        self.by_volumes_over(files, "")
+    }
+
+    /// `by_volumes`, with `over` laid over the files' units: facts of the relations `overlay_rels` names, read by
+    /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
+    pub fn by_volumes_over(&mut self, files: Vec<(String, String)>, over: &str) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
         let (stage, mut joins) = self.level_stage();
@@ -361,8 +405,8 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for (_, text) in &files {
-            let mut rest = text.as_str();
+        for text in files.iter().map(|f| f.1.as_str()).chain([over]) {
+            let mut rest = text;
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
                 let end = a + 1 + n;
@@ -389,7 +433,7 @@ impl Eval {
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let n = files.len();
-        let lv = e.fork().by_levels(files, &stage, joins, None)?;
+        let lv = e.fork().by_levels(files, &stage, joins, None, over)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
         lv.read_by(&mut e);
