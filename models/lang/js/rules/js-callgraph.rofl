@@ -362,7 +362,7 @@ runs[code](C, F) :- calls_back[code](C, F, at_once).
 runs[code](N, M) :- pattern_accessor[code](N, M).
 runs[code](N, M) :- pattern_next[code](N, M).
 -- `f.call(t, a)` and `f.apply(t, [a])` run f
-runs[code](C, F) :- call_on[flow](C, F, Key), fn_invoker(Key), fn_value[flow](F).
+runs[code](C, F) :- invoked[flow](C, F).
 -- `f.bind(t)` is f, called with the arguments its calls hand it; a bind that fixes arguments too shifts them, and is not read
 may_be[flow](B, node, F) :- call_on[flow](B, F, "bind"), fn_value[flow](F), arg_count[code](B, N), N < 2.
 -- a function bound with arguments is no longer f to the dataflow (its parameters shift), but a call of it runs f

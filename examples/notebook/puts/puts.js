@@ -59,3 +59,12 @@ class Bag { *[Symbol.iterator]() { yield 'bi'; } }
 for (const b of new Bag()) use('classIterator', b);
 use('spreadGenerator', [...gen()][0]);
 use('fromGenerator', Array.from(gen())[0]);
+
+function readsThis() { return this.bv; }
+const ctx = { bv: 'bb' };
+use('callThis', readsThis.call(ctx));
+use('applyThis', readsThis.apply(ctx, []));
+use('bindThis', readsThis.bind(ctx)());
+const described = {};
+Object.defineProperty(described, 'k', { value: 'dv' });
+use('defineProperty', described.k);

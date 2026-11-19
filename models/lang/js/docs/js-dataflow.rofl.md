@@ -29,7 +29,7 @@ default: flow
 Reads:
 
 - from js-callgraph, in the code: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callback_site](js-callgraph.rofl.md#callback_site), [callee_of](js-callgraph.rofl.md#callee_of), [calls_back](js-callgraph.rofl.md#calls_back), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [member_kind_expr](js-callgraph.rofl.md#member_kind_expr), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-callgraph: [may_be](js-callgraph.rofl.md#may_be)
+- from js-callgraph: [call_on](js-callgraph.rofl.md#call_on), [may_be](js-callgraph.rofl.md#may_be)
 - from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow, in the code: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
 - from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
@@ -52,12 +52,14 @@ Reads:
 - from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the main:
+  - <a id="fn_invoker"></a>`fn_invoker`
   - <a id="host_gives_result"></a>`host_gives_result`
   - <a id="host_makes_array"></a>`host_makes_array`
   - <a id="host_makes_object"></a>`host_makes_object`
   - <a id="host_passes"></a>`host_passes`
   - <a id="host_puts"></a>`host_puts`
   - <a id="host_returns"></a>`host_returns`
+  - <a id="this_giver"></a>`this_giver`
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="inside"></a>`inside`
@@ -1023,6 +1025,17 @@ In the flow:
    - [`array_elem`](#array_elem)(Pair, 0, KE);
    - a node KE [may be the literal](#may_be_lit) Key;
    - [`array_elem`](#array_elem)(Pair, 1, V).
+
+> `Object.defineProperty(o, k, { value: v })` puts v at k
+
+The member Key of a node O holds a node V if all of:
+  - [`host_call_on`](#host_call_on)(C, "Object", "defineProperty", R);
+  - a node R [points to](#may_be_node) O;
+  - an invocation C [passes](#arg_at) a node K at 1;
+  - K [may be the literal](#may_be_lit) Key;
+  - C [passes](#arg_at) a node D at 2;
+  - D [points to](#may_be_node) a node DO;
+  - [the plain member](#member_plain) "value" of DO is V.
 
 > what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
 
@@ -4961,6 +4974,36 @@ In the flow:
 <a id="input_this"></a>`input_this`(this(M), M) if [`method_fn`](#method_fn)(M), unless [`static`](#static)(M).
 
 `may_be`(T, `input`, S) if [`input_this`](#input_this)(S, M) and a node M [hosts](#this_host) T.
+
+> `f.call(t)`, `f.apply(t)`, `f.bind(t)`: t is `this` in f
+
+<a id="this_given"></a>`this_given`(F, X) if all of:
+  - [`call_on`](js-callgraph.rofl.md#call_on)(C, F, Key);
+  - [`this_giver`](#this_giver)(Key);
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F);
+  - an invocation C [passes](#arg_at) a node X at 0.
+
+`input_this`(this(a [function](js-callgraph.rofl.md#fn_node) F), F) if F [hosts](#this_host) some this, unless [`method_fn`](#method_fn)(F).
+
+`input_node`(this(F), N) if [`this_given`](#this_given)(F, X) and a node X [points to](#may_be_node) a node N.
+
+> `f.call(t)` and `f.apply(t)` run f (`runs`) and give what f returns of its own, and the members of t it returns
+
+<a id="invoked"></a>`invoked`(C, F) if all of:
+  - [`call_on`](js-callgraph.rofl.md#call_on)(C, F, Key);
+  - [`fn_invoker`](#fn_invoker)(Key);
+  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+`may_be`(C, N, V) either:
+
+1. if all of:
+   - [`invoked`](#invoked)(C, F);
+   - [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(F, `lit`, V);
+   - N is `lit`;
+2. if all of:
+   - [`invoked`](#invoked)(C, F);
+   - [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(F, Key);
+   - [`this_val`](#this_val)(F, Key, N, V).
 
 > `this` in the body is any instance of the class, `inst(CD)`, which holds what any of them holds; a call on
 > a receiver names the instance itself (section 7)

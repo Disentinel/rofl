@@ -371,6 +371,9 @@ host_puts(array, "push"). host_puts(array, "unshift"). host_puts(set, "add").
 edb(fn_invoker).
 fn_invoker("call").
 fn_invoker("apply").
+-- `this_giver(Key)`: the member Key of a function hands its first argument as `this`
+edb(this_giver).
+this_giver("call"). this_giver("apply"). this_giver("bind").
 
 host_calls_back(array,  "forEach",       0, at_once).
 host_calls_back(map,    "forEach",       0, at_once).
