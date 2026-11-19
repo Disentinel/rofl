@@ -8854,7 +8854,7 @@ export const BREAKS: Break[] = [
   "id": "plans_outlive_rules",
   "what": "an order planned for a rule is kept when the rules are built again: a rule that reads a view has other variables then, the order binds the old ones and the conclusion, open, is skipped",
   "expect": {
-   "kept_js_sources": "an import of unused.js added"
+   "kept_js_sources": "the import taken away"
   }
  },
  {
