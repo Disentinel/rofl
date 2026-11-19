@@ -19,7 +19,7 @@ code:
 > `g.next().value` is what the generator yields or returns, and for-of walks
 > an object whose `[Symbol.iterator]` is a generator, as `[...g]` and
 > `Array.from(g)` do. `f.call(t)`, `f.apply(t)` and `f.bind(t)` hand t as
-> `this`, and `Object.defineProperty(o, k, { value: v })` puts v at k.
+> `this`, and `Object.defineProperty(o, k, { value: v })` puts v at k. A for-in takes the keys.
 > `use(tag, v)` marks each read; the model's may-set for it is checked against
 > what V8 observes by `npm run test:nb`. Run it with
 > `npm run nb -- examples/notebook/puts.rofl.md`.

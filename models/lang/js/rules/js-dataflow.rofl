@@ -2409,6 +2409,11 @@ decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
 
 may_be[flow](U, VK, V) :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be[flow](E, VK, V),
                       ident_in[code](U, Name, File), sees_binder[code](U, D).
+-- FOR-IN: the head takes the keys of the object
+key_walk[flow](D, K) :- enumerates[value](S, V, X), nth[tree](V, 0, D), may_be_node[flow](X, O), member_value[flow](O, K, _),
+                        string is type_of(K).
+may_be[flow](U, lit, K) :- bare_binder[code](D, Name, File), key_walk[flow](D, K),
+                           ident_in[code](U, Name, File), sees_binder[code](U, D).
 
 
 plain_assign[flow](E) :- assign[value](E, _, R), gives[value](E, R).

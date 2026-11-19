@@ -5871,6 +5871,21 @@ D takes its value from a node E if all of:
   - a node U [reads](#ident_in) Name in File;
   - U [sees](#sees_binder) D.
 
+> FOR-IN: the head takes the keys of the object
+
+<a id="key_walk"></a>`key_walk`(D, K) if all of:
+  - [`enumerates`](#enumerates)(S, V, X);
+  - [`nth`](#nth)(V, 0, D);
+  - a node X [points to](#may_be_node) a node O;
+  - [the member](#member_value) K of O holds some node;
+  - `string` is type_of(K).
+
+`may_be`(U, `lit`, K) if all of:
+  - D [declares without a value](#bare_binder) Name in File;
+  - [`key_walk`](#key_walk)(D, K);
+  - a node U [reads](#ident_in) Name in File;
+  - U [sees](#sees_binder) D.
+
 <a id="plain_assign"></a>E is plain if [`assign`](#assign)(E, something, R) and [`gives`](#gives)(E, R).
 
 > an operator written between operands, not an assignment with an operator
