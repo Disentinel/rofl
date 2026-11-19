@@ -294,11 +294,17 @@ impl Eval {
     /// worked out without their rules and they are evaluated again after it (`pass_aside`). A lattice, a tag or a
     /// dominance among them keeps a history the delta's own paths for them would read: refused.
     pub(super) fn hole_world(&mut self, from: &HashSet<Sym>, fresh: &HashSet<Sym>) -> Result<HashSet<Sym>, &'static str> {
-        let cone = self.hole_cone();
+        let mut cone = self.hole_cone();
+        // A COMPONENT STRATIFIED BY ITS DATA seals its cells in the order of its data, which no delta knows: one the
+        // change reaches is set apart with what reads it, and evaluated again after the delta, as what a hole may move
+        let reached = self.grow(from, fresh);
+        let hit: HashSet<Sym> = self.ds.comps.iter().filter(|c| c.rels.iter().any(|r| reached.contains(r))).flat_map(|c| c.rels.iter().copied()).collect();
+        if !hit.is_empty() && brk!("ds_comp_kept_in_delta" => false; true) {
+            cone.extend(self.grow(&hit, &HashSet::new()));
+        }
         if cone.is_empty() {
             return Ok(cone);
         }
-        let reached = self.grow(from, fresh);
         let aside: HashSet<Sym> = cone.into_iter().filter(|r| reached.contains(r)).collect();
         if aside.iter().any(|r| self.lat.algebras.get(r).is_some_and(|a| a.cell.is_some() || a.tag.is_some() || a.sub.is_some() || a.join.is_some())) {
             return Err("a lattice, a tag or a dominance a hole or a shrug may move is reached by what changed");

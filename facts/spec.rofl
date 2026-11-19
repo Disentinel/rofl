@@ -67,6 +67,9 @@ duty[spec](s_canonical_order, guaranteed, "START.md", "lexicographic order of th
 duty[spec](s_provenance_per_firing, guaranteed, "START.md", "On every successful rule firing the kernel emits").
 duty[spec](s_witness_is_first_canonical, guaranteed, "START.md", "first derivation in canonical order").
 duty[spec](s_excise_not_from_witness, guaranteed, "START.md", "must NOT be computed from witnesses").
+duty[spec](s_watch_told_what_moved, guaranteed, "docs/cli.md", "A row taken out and derived again is no change").
+duty[spec](s_edit_is_the_world_whole, guaranteed, "docs/cli.md", "costs the facts that moved, not a request each").
+duty[spec](s_rule_out_is_the_world_whole, guaranteed, "docs/cli.md", "the program is prepared again without it").
 
 duty[spec](s_budget_emits_hole, guaranteed, "START.md", "returns the partial result marked partial").
 duty[spec](s_never_hang, prohibited, "START.md", "a kernel that hangs instead of emitting").
@@ -340,6 +343,15 @@ cited_check[map](c_w_budget_wall, "facts/goldens.rofl", "budget_wall").
 cited_check[map](c_port_partial, "rust/rofl/tests/explain.rs", "run_reports_partial_rather_than_pretending_to_have_finished").
 cited_check[map](c_port_canonical, "rust/rofl/tests/explain.rs", "fact_keys_narrows_by_relation_and_comes_back_in_canonical_order").
 cited_check[map](c_port_excise, "rust/rofl/tests/explain.rs", "excise_recomputes_rather_than_reading_the_witness").
+cited_check[map](c_watch_told, "rust/rofl/tests/watch.rs", "random_edits_are_told_as_the_diff").
+cited_check[map](c_watch_rederived, "rust/rofl/tests/watch.rs", "a_row_derived_again_is_no_change").
+cited_check[map](c_edit_whole, "rust/rofl/tests/edit.rs", "an_edit_is_the_world_evaluated_whole_and_its_watch_the_diff").
+cited_check[map](c_retract_is_edit, "rust/rofl/tests/edit.rs", "a_retract_is_an_edit_of_one_fact").
+cited_check[map](c_refusal_untouched, "rust/rofl/tests/retract_refuse.rs", "a_refused_retraction_touches_nothing").
+cited_check[map](c_rule_out_whole, "rust/rofl/tests/rule_edit.rs", "a_rule_out_is_the_world_evaluated_whole_without_it").
+cited_check[map](c_rule_out_each, "rust/rofl/tests/rule_edit.rs", "each_rule_out_and_back_is_the_world_evaluated_whole").
+cited_check[map](c_rule_out_refused, "rust/rofl/tests/rule_edit.rs", "a_rule_out_the_delta_refuses_says_why_and_is_the_world_without_it").
+cited_check[map](c_rule_out_spelled, "rust/rofl/tests/rule_edit.rs", "a_rule_named_with_other_variables_and_spacing_is_the_same_rule").
 
 -- `No @async` IS A LIMIT AND NOT A RESERVATION since 2026-09-16, so this
 -- world guards the LIMITS.md bullet and not the START.md sentence it retired.
@@ -358,6 +370,15 @@ guards[map](c_w_budget_wall, s_budget_emits_hole).
 guards[map](c_port_partial, s_budget_emits_hole).
 guards[map](c_port_canonical, s_canonical_order).
 guards[map](c_port_excise, s_excise_not_from_witness).
+guards[map](c_watch_told, s_watch_told_what_moved).
+guards[map](c_watch_rederived, s_watch_told_what_moved).
+guards[map](c_edit_whole, s_edit_is_the_world_whole).
+guards[map](c_retract_is_edit, s_edit_is_the_world_whole).
+guards[map](c_refusal_untouched, s_edit_is_the_world_whole).
+guards[map](c_rule_out_whole, s_rule_out_is_the_world_whole).
+guards[map](c_rule_out_each, s_rule_out_is_the_world_whole).
+guards[map](c_rule_out_refused, s_rule_out_is_the_world_whole).
+guards[map](c_rule_out_spelled, s_rule_out_is_the_world_whole).
 
 -- TWO THAT A GOLDEN CANNOT HOLD, and the reason is the same in both: a golden
 -- compares ONE run of one world against its own pin, and these duties are

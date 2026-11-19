@@ -54,8 +54,19 @@
 //!                                                     -> {"files":[{"file","found","stops","text"}]}: a row a file,
 //!                                                        a file being the key prefix its nodes share
 //!   {"op":"excise","session":2,"query":"q(a)"}         -> {"removed":[...],"added":[...]}
-//!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why"}: the base fact out, the
-//!                                                        cells updated by delta, evaluated again if not
+//!   {"op":"retract","session":2,"query":"q(a)"}       -> {"full":null|"why","touched":k,"pass":"set"|null}:
+//!                                                        the base fact out by the pass `edit` takes it by (the set's),
+//!                                                        evaluated again where it refuses
+//!   {"op":"edit","session":2,"out":["q(a)","q(b)"],"rofl":"q(c)."} -> {"out":n,"added":n,"touched":k,"full":null|"why"}:
+//!                                                        an edit in one request: the base facts `out` names taken out
+//!                                                        in one pass by delta (Session::retract_queries_delta), then
+//!                                                        the facts of `rofl` in by delta; either may be left out. Refused
+//!                                                        whole, nothing touched, if `out` names no fact or a derived
+//!                                                        one; where a delta is refused, `full` says why and the world
+//!                                                        is evaluated once, at the end. A watch is told its net change.
+//!                                                        An entry of `out` written as a rule (`p(X) :- q(X).`) takes
+//!                                                        that rule out (Session::retract_rules_delta); `rofl` with a
+//!                                                        rule in it is loaded, as `load` with `who`
 //!   {"op":"dispatch","session":2,"journal":"dir"}  -> {"loaded":n}: the permitted `does` wants sent, each in the
 //!                                                        append-only journal dir/does.journal, never twice
 //!                                                        (docs/intents.md D6); `assert` and `load` refuse what
@@ -72,6 +83,13 @@
 //!   {"op":"close","session":2}
 //!   {"op":"fresh","budget":n}                  -> {"session":n}: an empty world, no seed; `load` fills it
 //!   {"op":"facts","session":2}                 -> {"facts":n,"tick":t}
+//!   {"op":"watch","session":2,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]} -> {"watching":n}: from then on every
+//!                                                        answer on the session carries "changes":[{"rel","book",
+//!                                                        "added":[args...],"removed":[args...]}] for the watched rows
+//!                                                        that came or went (args as `rows` writes them; no book: every
+//!                                                        book), and "changes_by": "delta", "whole", "diff" or "lost"
+//!                                                        (src/watch.rs); absent where nothing moved
+//!   {"op":"unwatch","session":2,"rels":[...]}  -> {"watching":n}: those no longer watched; without "rels", none
 //!   {"op":"spans","text":"..."}                -> {"spans":[[a,b],...]}: no session; the lines [a,b), from 0, of a
 //!                                                        `.rofl.md` the reader reads as sentences, and each line of
 //!                                                        its prose that asks (md `sentence_spans`)
@@ -152,6 +170,8 @@ struct Server {
     next: u64,
     /// a session's facts and cells by key, built on the first read by key and dropped by anything that may change a world
     keys: HashMap<u64, Keys>,
+    /// what each session's watcher watches (rofl::watch)
+    watches: HashMap<u64, rofl::watch::Watch>,
 }
 
 impl Server {
@@ -258,6 +278,7 @@ impl Server {
             }
         }
         match op {
+            "watch" | "unwatch" => self.op_watch(op, r),
             "rows" | "holding" | "books" | "fact" | "firings" | "cell" | "open" => self.op_read(op, r),
             "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "view" | "fork" | "keep" => self.op_world(op, r),
             _ => self.op_change(op, r),
@@ -377,13 +398,14 @@ impl Server {
             "retract" => {
                 let q = str_of(r, "query", "retract needs `query`")?.to_string();
                 let s = self.get(r)?;
-                let full = match s.retract_delta(&q)? {
-                    rofl::session::Retraction::Delta(_) => None,
-                    rofl::session::Retraction::Full(why) => Some(why),
+                let (full, touched, pass) = match s.retract_delta(&q)? {
+                    rofl::session::Retraction::Delta(d) => (None, Self::touched_by(&d), Self::pass_of(&d)),
+                    rofl::session::Retraction::Full(why) => (Some(why), 0, None),
                 };
                 if s.eval.store.dirty { s.evaluate().map_err(|e| rofl::describe(&e))?; }
-                Ok(json!({ "full": full }))
+                Ok(json!({ "full": full, "touched": touched, "pass": pass }))
             }
+            "edit" => self.op_edit(r),
             "tick" => {
                 let s = self.get(r)?;
                 let t = s.tick().map_err(|e| rofl::describe(&e))?;
@@ -405,6 +427,7 @@ impl Server {
             }
             "close" => {
                 let id = session_id(r)?;
+                self.watches.remove(&id);
                 match self.sessions.remove(&id) {
                     Some(_) => Ok(json!({ "closed": id })),
                     None => Err(format!("no such session: {id}")),
@@ -414,6 +437,109 @@ impl Server {
         }
     }
 
+
+    /// What a fact out touched: overdeleted or derived again by the set's pass.
+    fn touched_by(d: &rofl::engine::Delta) -> usize {
+        d.set.as_ref().map_or(0, |a| a.overdeleted + a.rederived)
+    }
+
+    /// Which pass took the facts out: `set`, the one every fact out takes; null where the world was evaluated whole.
+    fn pass_of(d: &rofl::engine::Delta) -> Option<&'static str> {
+        d.set.as_ref().map(|_| "set")
+    }
+
+    /// `edit`: the base facts `out` names taken out in one pass by delta, then the facts of `rofl` in by delta; where a
+    /// delta is refused the world is evaluated once, at the end.
+    fn op_edit(&mut self, r: &Value) -> Result<Value, String> {
+        let out = strings(r, "out")?.unwrap_or_default();
+        let who = r.get("who").and_then(|v| v.as_str()).map(str::to_string);
+        let text = r.get("rofl").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        if !text.is_empty() {
+            self.get(r)?.guard_permit(&text)?;
+        }
+        let s = self.get(r)?;
+        // a rule is named by its text as written in the program; anything else in `out` is a base fact
+        let (rules, queries): (Vec<&str>, Vec<&str>) = out.iter().map(String::as_str).partition(|q| s.is_rule_text(q));
+        let rules = rules.join("\n");
+        if !rules.is_empty() {
+            s.rules_held(&rules)?;
+        }
+        let (mut full, mut touched) = (None, 0);
+        let mut pass = None;
+        if let [q] = queries[..] {
+            // one fact out is `retract`'s pass, the same call
+            match s.retract_delta(q)? {
+                rofl::session::Retraction::Delta(d) => (touched, pass) = (Self::touched_by(&d), Self::pass_of(&d)),
+                rofl::session::Retraction::Full(why) => full = Some(why),
+            }
+        } else if !queries.is_empty() {
+            match s.retract_queries_delta(&queries)? {
+                Ok(d) => (touched, pass) = (d.overdeleted + d.rederived, Some("set")),
+                Err(why) => full = Some(why),
+            }
+        }
+        if !rules.is_empty() {
+            match s.retract_rules_delta(&rules)? {
+                Ok(d) => touched += d.overdeleted + d.rederived,
+                Err(why) => full = full.or(Some(why)),
+            }
+        }
+        let mut added = 0;
+        if !text.is_empty() {
+            // a rule in is a load: a rule edited is the old text out and the new in, in one request
+            let (n, a) = if text.contains(":-") { s.load_delta(&text, who.as_deref()).map_err(|d| d.join("; "))? } else { s.assert_delta(&text)? };
+            added = n;
+            if let (None, rofl::session::Addition::Full(why)) = (&full, a) {
+                full = Some(why);
+            }
+        }
+        if s.eval.store.dirty {
+            s.evaluate().map_err(|e| rofl::describe(&e))?;
+        }
+        Ok(json!({ "out": out.len(), "added": added, "touched": touched, "full": full, "pass": pass }))
+    }
+
+    /// `watch` adds relations to what the session's watcher is told of, `unwatch` takes them out (all, without `rels`).
+    fn op_watch(&mut self, op: &str, r: &Value) -> Result<Value, String> {
+        let id = session_id(r)?;
+        let given = match r.get("rels") {
+            None | Some(Value::Null) if op == "unwatch" => None,
+            Some(Value::Array(a)) => Some(
+                a.iter()
+                    .map(|x| {
+                        let rel = str_of(x, "rel", "a watched relation needs `rel`")?.to_string();
+                        let book = x.get("book").or_else(|| x.get("persp")).filter(|b| !b.is_null());
+                        let book = book.map(|b| b.as_str().map(str::to_string).ok_or("`book` is a string")).transpose()?;
+                        Ok((rel, book))
+                    })
+                    .collect::<Result<Vec<_>, &str>>()?,
+            ),
+            _ => return Err(format!("{op} needs `rels`, an array of {{\"rel\", \"book\"}}")),
+        };
+        let s = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
+        let w = self.watches.entry(id).or_default();
+        let mut sel = w.sel.clone();
+        match (op, given) {
+            ("watch", Some(g)) => sel.extend(g.into_iter().filter(|x| !w.sel.contains(x))),
+            (_, Some(g)) => sel.retain(|x| !g.contains(x)),
+            (_, None) => sel.clear(),
+        }
+        sel.dedup();
+        w.set(s, sel);
+        Ok(json!({ "watching": w.sel.len() }))
+    }
+
+    /// What the session's watcher is told with this answer: the rows of its relations that came or went.
+    fn told(&mut self, r: &Value, v: &mut Value) {
+        let Ok(id) = session_id(r) else { return };
+        let (Some(w), Some(s)) = (self.watches.get_mut(&id), self.sessions.get_mut(&id)) else { return };
+        if let Some((by, changes)) = w.told(s) {
+            if !changes.is_empty() || by == "lost" {
+                v["changes"] = json!(changes);
+                v["changes_by"] = json!(by);
+            }
+        }
+    }
 
     fn op_rows(&mut self, r: &Value) -> Result<Value, String> {
         let rel = str_of(r, "rel", "rows needs `rel`")?;
@@ -720,7 +846,7 @@ impl Server {
 /// `rofl serve FILE...` serves a world: the files loaded and evaluated as session 1 before the first request, which
 /// another world's `rofl` adapter asks (src/adapter.rs `Served`).
 pub fn main(files: Vec<String>) {
-    let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new() };
+    let mut srv = Server { sessions: HashMap::new(), next: 1, keys: HashMap::new(), watches: HashMap::new() };
     if !files.is_empty() {
         let mut text = String::new();
         for f in &files {
@@ -755,12 +881,13 @@ pub fn main(files: Vec<String>) {
         // a client may pipeline without matching answers by arrival order. A
         // protocol whose errors lose their correlation deadlocks the client
         // that was waiting for them.
-        let (id, res) = match serde_json::from_str::<Value>(&line) {
+        let (id, res, req) = match serde_json::from_str::<Value>(&line) {
             Ok(r) => {
                 let id = r.get("id").cloned().unwrap_or(Value::Null);
-                (id, srv.handle(&r))
+                let res = srv.handle(&r);
+                (id, res, Some(r))
             }
-            Err(e) => (Value::Null, Err(format!("bad json: {e}"))),
+            Err(e) => (Value::Null, Err(format!("bad json: {e}")), None),
         };
         let mut v = match res {
             Ok(mut v) => {
@@ -773,6 +900,9 @@ pub fn main(files: Vec<String>) {
             Err(e) => json!({ "ok": false, "error": e }),
         };
         v.as_object_mut().unwrap().insert("id".into(), id);
+        if let Some(r) = req {
+            srv.told(&r, &mut v);
+        }
         let _ = writeln!(out, "{v}");
         let _ = out.flush();
     }
