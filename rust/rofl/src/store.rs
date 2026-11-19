@@ -65,6 +65,7 @@ use std::sync::Arc as Rc;
 
 mod volume;
 mod wire;
+pub use wire::WIRE_PARTS;
 
 pub type FactId = u32;
 pub type CellId = u32;

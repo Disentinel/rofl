@@ -179,6 +179,7 @@ struct Asked {
 }
 
 static WIRED: AtomicUsize = AtomicUsize::new(0);
+static TAKEN: AtomicUsize = AtomicUsize::new(0);
 
 thread_local! {
     static ASKED: std::cell::RefCell<Option<Asked>> = const { std::cell::RefCell::new(None) };
@@ -1409,8 +1410,20 @@ impl Eval {
             let n = store.len_ids() - store.layer_mark();
             let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
             // (an oracle of the seam between nodes: a file's own unit crosses as another process would read it)
+            // (and with a directory, through a file: one run writes there what another reads in place of its own)
             if k == 0 && kids.is_empty() && std::env::var_os("ROFL_WIRE_UNITS").is_some() {
-                let b = stretch.to_wire(&e.0.h, &|k| keys.lock().unwrap().name(k).to_string(), true).expect("a file's own unit goes on the wire");
+                let dir = std::env::var_os("ROFL_WIRE_DIR").map(std::path::PathBuf::from);
+                let path = dir.map(|d| d.join(format!("{}-{}.unit", files.0, files.1)));
+                let b = match path.as_ref().filter(|p| std::env::var_os("ROFL_WIRE_TAKE").is_some() && p.exists()) {
+                    Some(p) => {
+                        TAKEN.fetch_add(1, Relaxed);
+                        std::fs::read(p).expect("a unit another run wrote")
+                    }
+                    None => stretch.to_wire(&e.0.h, &|k| keys.lock().unwrap().name(k).to_string(), true).expect("a file's own unit goes on the wire"),
+                };
+                if let Some(p) = path.filter(|_| std::env::var_os("ROFL_WIRE_TAKE").is_none()) {
+                    std::fs::write(p, &b).expect("a unit written for another run");
+                }
                 WIRED.fetch_add(b.len(), Relaxed);
                 stretch = Stretch::from_wire(&b, &mut e.0.h, &mut |_, s| keys.lock().unwrap().key(s), fork().0.store, stretch.lo).expect("a file's own unit comes off the wire");
             }
@@ -1828,7 +1841,9 @@ impl Eval {
             said.push(format!("levels: seam by rule, of {sum} questions: {}", by.iter().take(25).map(|((r, rel), (q, n))| format!("{} ({}) asks {} {q}q/{n}f", if *r == u32::MAX { "-".to_string() } else { self.h.name(*r).to_string() }, if *r == u32::MAX { "-".to_string() } else { head(*r) }, self.h.name(*rel))).collect::<Vec<_>>().join("; ")));
         }
         if std::env::var_os("ROFL_WIRE_UNITS").is_some() {
-            said.push(format!("levels: the files' own units crossed the wire, {} KB", WIRED.load(Relaxed) / 1024));
+            let p: Vec<u64> = crate::store::WIRE_PARTS.iter().map(|c| c.load(Relaxed) / 1024).collect();
+            said.push(format!("levels: {} units taken from another run", TAKEN.load(Relaxed)));
+            said.push(format!("levels: the files' own units crossed the wire, {} KB: names {} KB, facts {} KB, firings {} KB, trees {} KB (the last three counted twice)", WIRED.load(Relaxed) / 1024, p[0], p[1], p[2], p[3]));
         }
         let reader0 = crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
         if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {

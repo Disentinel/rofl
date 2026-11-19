@@ -9,15 +9,27 @@ use super::*;
 
 const MAGIC: &[u8; 8] = b"ROFLWIR1";
 
+/// The bytes the wire took, of the names, the facts, the firings and the trees (each encoding counted).
+pub static WIRE_PARTS: [std::sync::atomic::AtomicU64; 4] = [const { std::sync::atomic::AtomicU64::new(0) }; 4];
+
 struct Out {
     b: Vec<u8>,
+    /// the last of its own facts named: the next is named by how far it lies from it
+    last: FactId,
     names: Vec<(Sym, bool)>,
     at: FxMap<(Sym, bool), u32>,
 }
 
 impl Out {
     fn u32(&mut self, x: u32) {
-        self.b.extend_from_slice(&x.to_le_bytes());
+        self.u64(x as u64)
+    }
+    fn u64(&mut self, mut x: u64) {
+        while x >= 0x80 {
+            self.b.push(x as u8 | 0x80);
+            x >>= 7;
+        }
+        self.b.push(x as u8);
     }
     fn name(&mut self, s: Sym) {
         self.named(s, false)
@@ -64,6 +76,7 @@ impl Out {
 
 struct In<'a> {
     b: &'a [u8],
+    last: FactId,
     at: usize,
     names: Vec<Sym>,
 }
@@ -75,7 +88,18 @@ impl In<'_> {
         Ok(s)
     }
     fn u32(&mut self) -> Result<u32, String> {
-        Ok(u32::from_le_bytes(self.take(4)?.try_into().unwrap()))
+        u32::try_from(self.u64()?).map_err(|_| "a number on the wire is too long".into())
+    }
+    fn u64(&mut self) -> Result<u64, String> {
+        let mut x = 0u64;
+        for s in (0..64).step_by(7) {
+            let c = self.take(1)?[0];
+            x |= ((c & 0x7f) as u64) << s;
+            if c < 0x80 {
+                return Ok(x);
+            }
+        }
+        Err("a number on the wire is too long".into())
     }
     fn name(&mut self) -> Result<Sym, String> {
         let i = self.u32()? as usize;
@@ -102,13 +126,42 @@ impl Stretch {
     /// The stretch as another process reads it (`Stretch::from_wire`), with its trees where `trees`.
     /// A key is spelled by `key`, the heap that named it.
     pub fn to_wire(&self, h: &Heap, key: &dyn Fn(Sym) -> String, trees: bool) -> Result<Vec<u8>, String> {
+        // the names met, then numbered in the order of their spelling, which each writes as what it adds to the last
+        let mut o = Out { b: Vec::new(), last: self.lo, names: Vec::new(), at: FxMap::default() };
+        self.encode(h, trees, &mut o)?;
+        let spell = |&(n, is_key): &(Sym, bool)| (is_key, if is_key { key(n) } else { h.name(n).to_string() });
+        let mut names: Vec<((bool, String), (Sym, bool))> = o.names.iter().map(|x| (spell(x), *x)).collect();
+        names.sort_unstable();
+        let at = names.iter().enumerate().map(|(i, (_, x))| (*x, i as u32)).collect();
+        let mut o = Out { b: Vec::new(), last: self.lo, names: names.iter().map(|x| x.1).collect(), at };
+        self.encode(h, trees, &mut o)?;
+        let mut t = Out { b: MAGIC.to_vec(), last: 0, names: Vec::new(), at: FxMap::default() };
+        t.u32(names.len() as u32);
+        let mut last: &[u8] = &[];
+        for ((is_key, spelt), _) in &names {
+            let s = spelt.as_bytes();
+            let same = s.iter().zip(last).take_while(|(a, b)| a == b).count();
+            t.b.push(*is_key as u8);
+            t.u32(same as u32);
+            t.u32((s.len() - same) as u32);
+            t.b.extend_from_slice(&s[same..]);
+            last = s;
+        }
+        WIRE_PARTS[0].fetch_add(t.b.len() as u64, std::sync::atomic::Ordering::Relaxed);
+        t.b.extend_from_slice(&o.b);
+        Ok(t.b)
+    }
+
+    fn encode(&self, h: &Heap, trees: bool, o: &mut Out) -> Result<(), String> {
         let s = self.store();
         let (lo, hi) = (self.lo, self.hi);
-        let mut o = Out { b: Vec::new(), names: Vec::new(), at: FxMap::default() };
         let id = |o: &mut Out, f: FactId| -> Result<(), String> {
             match f {
-                f if f < lo => o.u32(f),
-                f if f < hi => o.u32(PREM_OTHER | (f - lo)),
+                f if f < lo => o.u64(2 * f as u64),
+                f if f < hi => {
+                    let d = f as i64 - std::mem::replace(&mut o.last, f) as i64;
+                    o.u64(2 * ((d << 1) ^ (d >> 63)) as u64 + 1)
+                }
                 _ => return Err("a stretch on the wire names a fact above it".into()),
             }
             Ok(())
@@ -132,9 +185,10 @@ impl Stretch {
                 fired.push((f, n.rule, n.tick, s.prems_of(&n).to_vec()));
             }
         }
+        let facts_end = o.b.len();
         o.u32(fired.len() as u32);
         for (f, rule, tick, ps) in fired {
-            id(&mut o, f)?;
+            id(o, f)?;
             o.name(rule);
             o.u32(tick);
             o.u32(ps.len() as u32);
@@ -142,7 +196,7 @@ impl Stretch {
                 match p.kind() {
                     Prem::Fact(f) => {
                         o.b.push(0);
-                        id(&mut o, f)?;
+                        id(o, f)?;
                     }
                     Prem::Neg(x) => {
                         o.b.push(1);
@@ -170,6 +224,7 @@ impl Stretch {
             (true, Some(fs)) => fs.clone(),
             (true, None) => s.virtuals.iter().map(|v| v.forests.clone()).collect(),
         };
+        let fired_end = o.b.len();
         o.b.push(trees as u8);
         o.u32(fs.len() as u32);
         for f in &fs {
@@ -190,17 +245,10 @@ impl Stretch {
                 o.b.push(broken as u8);
             }
         }
-        let mut b = MAGIC.to_vec();
-        b.extend_from_slice(&(o.names.len() as u32).to_le_bytes());
-        for &(n, is_key) in &o.names {
-            b.push(is_key as u8);
-            let spelt = if is_key { key(n) } else { h.name(n).to_string() };
-            let t = spelt.as_bytes();
-            b.extend_from_slice(&(t.len() as u32).to_le_bytes());
-            b.extend_from_slice(t);
+        for (k, n) in [facts_end, fired_end - facts_end, o.b.len() - fired_end].into_iter().enumerate() {
+            WIRE_PARTS[k + 1].fetch_add(n as u64, std::sync::atomic::Ordering::Relaxed);
         }
-        b.extend_from_slice(&o.b);
-        Ok(b)
+        Ok(())
     }
 
     /// A stretch another process wrote (`to_wire`), laid at `lo` over `fork`, a fork of the core it was settled
@@ -209,22 +257,36 @@ impl Stretch {
         if b.get(..8) != Some(MAGIC) {
             return Err("not a stretch on the wire".into());
         }
-        let mut r = In { b, at: 8, names: Vec::new() };
+        let mut r = In { b, at: 8, names: Vec::new(), last: lo };
+        let mut last: Vec<u8> = Vec::new();
         for _ in 0..r.u32()? {
             let is_key = r.take(1)?[0] == 1;
-            let n = r.u32()? as usize;
-            let t = std::str::from_utf8(r.take(n)?).map_err(|_| "a name on the wire is not text")?.to_string();
-            r.names.push(if is_key { key(h, &t) } else { h.intern(&t) });
+            let (same, n) = (r.u32()? as usize, r.u32()? as usize);
+            if same > last.len() {
+                return Err("a name on the wire shares more than the last had".into());
+            }
+            last.truncate(same);
+            last.extend_from_slice(r.take(n)?);
+            let t = std::str::from_utf8(&last).map_err(|_| "a name on the wire is not text")?;
+            r.names.push(if is_key { key(h, t) } else { h.intern(t) });
         }
         let n = r.u32()?;
         if lo < fork.len_ids() {
             return Err("a stretch is laid above the store it is read over".into());
         }
         let id = |r: &mut In, below: FactId| -> Result<FactId, String> {
-            let x = r.u32()?;
-            Ok(match x {
-                x if x & PREM_OTHER == 0 && x < below => x,
-                x if x & PREM_OTHER != 0 && x & !PREM_OTHER < n => lo + (x & !PREM_OTHER),
+            let x = r.u64()?;
+            Ok(match (x / 2, x % 2) {
+                (x, 0) if x < below as u64 => x as FactId,
+                (x, 1) => {
+                    let d = (x >> 1) as i64 ^ -((x & 1) as i64);
+                    let f = r.last as i64 + d;
+                    if !(lo as i64..(lo + n) as i64).contains(&f) {
+                        return Err("a stretch on the wire names a fact it cannot".into());
+                    }
+                    r.last = f as FactId;
+                    r.last
+                }
                 _ => return Err("a stretch on the wire names a fact it cannot".into()),
             })
         };
