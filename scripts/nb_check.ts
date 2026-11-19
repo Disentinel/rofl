@@ -323,6 +323,22 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const wrong = [...hit].filter((n) => !model.has(n)).concat([...model].filter((n) => !hit.has(n)), [...later].filter((n) => !hitLater.has(n)));
     return { code: 0, out: `V8 ran ${hit.size}, ${hitLater.size} of them after the script; the model differs at: ${JSON.stringify(wrong)}`, stdout: '' };
   },
+  exported: () => cli([path.join(NB, 'exported.rofl.md')]),
+  exportedNode: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'exported.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("(\w+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const seen = 'data:text/javascript,globalThis.__seen=(t,v)=>console.log(t+":"+String(v))';
+    const observed = new Set<string>();
+    for (const entry of ['main.js', 'e.cjs'])
+      for (const line of execFileSync(process.execPath, ['--import', seen, path.join(NB, 'exported', entry)], { encoding: 'utf8' }).split('\n'))
+        if (line) observed.add(line);
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `node observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
   missing: () => cli([path.join(NB, 'missing.rofl.md')]),
   missingV8: async (): Promise<Out> => {
     const ran = await cli([path.join(NB, 'missing.rofl.md'), '--json', '--all']);
@@ -410,7 +426,7 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, assigned!: Out, assignedV8!: Out, runs!: Out, runsV8!: Out, handed!: Out, handedV8!: Out, returns!: Out, returnsV8!: Out, puts!: Out, putsV8!: Out, reached!: Out, reachedV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, assigned!: Out, assignedV8!: Out, runs!: Out, runsV8!: Out, handed!: Out, handedV8!: Out, returns!: Out, returnsV8!: Out, puts!: Out, putsV8!: Out, reached!: Out, reachedV8!: Out, exported!: Out, exportedNode!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -470,6 +486,8 @@ test('puts: push, unshift and add put into the receiver, new Set(xs) holds xs, {
 test('puts: every value V8 observes at a read is in the model\'s may-set', ['putsV8'], () => has(putsV8, 'observed 39 values; missing from the model: []'), () => putsV8);
 test('reached: a function is seen called through a map of handlers, an array, an emitter, a field, a returned object, Reflect.apply, a class in a variable, a getter, a Map, bind with arguments, a rest parameter, a default, super and await; then and setTimeout call later', ['reached'], () => is(reached, 0) && has(reached, 'never unreached(Name)  ->  holds') && has(reached, '? called_later(Name)  ->  2 answers'), () => reached);
 test('reached: what V8 runs is what the model says is called, and what it calls later V8 runs after the script', ['reachedV8'], () => has(reachedV8, 'V8 ran 26, 3 of them after the script; the model differs at: []'), () => reachedV8);
+test('exported: named, default and namespace imports, re-exports, a live binding, import() and require carry a value across modules', ['exported'], () => is(exported, 0) && has(exported, 'never silent(Tag)  ->  holds') && has(exported, '? seen(Tag, V)  ->  18 answers'), () => exported);
+test('exported: every value node observes at a read is in the model\'s may-set', ['exportedNode'], () => has(exportedNode, 'node observed 17 values; missing from the model: []'), () => exportedNode);
 test('runs: what V8 runs, throws and writes is what the model says', ['runsV8'], () => has(runsV8, 'observed 30; missing from the model: []; said and not run: []'), () => runsV8);
 test('missing: a call of a member a receiver seen whole has not got is said missing, and never over a package or a parameter', ['missing'], () => is(missing, 0) && has(missing, '? missing(T)  ->  9 answers') && has(missing, 'never missing("path.nosuch")  ->  holds'), () => missing);
 test('imports: an imported class, a namespace and a module object are seen whole, and what re-exports a package is not', ['imports'], () => is(imports, 0) && has(imports, '? missing(T)  ->  8 answers') && has(imports, 'never missing("O.join")  ->  holds'), () => imports);
@@ -591,7 +609,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, assigned, assignedV8, runs, runsV8, handed, handedV8, returns, returnsV8, puts, putsV8, reached, reachedV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, assigned, assignedV8, runs, runsV8, handed, handedV8, returns, returnsV8, puts, putsV8, reached, reachedV8, exported, exportedNode, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

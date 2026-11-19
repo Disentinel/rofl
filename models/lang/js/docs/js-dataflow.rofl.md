@@ -680,24 +680,25 @@ The prototype of a node C is Y either:
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
    - F [is async](js-controlflow.rofl.md#async_body);
    - Y is `promise`;
-2. if all of:
+2. if C [is an import site](js-modules.rofl.md#import_site) of `dynamic_import` and Y is `promise`;
+3. if all of:
    - [`construct`](#construct)(C);
    - [`callee`](#callee)(C, G);
    - a node G [refers to the free](#free_global) "Promise" in some file;
    - Y is `promise`;
-3. if all of:
+4. if all of:
    - [`callee`](#callee)(C, N);
    - [`object_of`](js-structure.rofl.md#object_of)(N, G);
    - a node G [refers to the free](#free_global) "Promise" in some file;
    - Y is `promise`;
-4. if all of:
+5. if all of:
    - [`callee`](#callee)(C, N);
    - [`object_of`](js-structure.rofl.md#object_of)(N, O);
    - [the prototype](#prototype_of) of a node O is `promise`;
    - N [selects](#selects) Key;
    - `promise` [has the member](#lib_member) Key since some release;
    - Y is `promise`;
-5. if all of:
+6. if all of:
    - D [binds](#binder) some name to a node Init in some file;
    - [the prototype](#prototype_of) of Init is `promise`;
    - C [sees](#sees_binder) D;
@@ -5257,13 +5258,25 @@ A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, 
 <a id="exports_value"></a>`exports_value`(Init, Name, File) either:
 
 1. if [`export_var`](#export_var)(Init, Name, File);
-2. if Init [is exported locally as](#export_local) Name from File;
-3. if all of:
+2. if Init [is exported locally as](#export_local) Name from File.
+
+> an exported `let` is a live binding: what the module later writes to it is exported too
+
+`exports_value`(R, Name, File) either:
+
+1. if all of:
+   - [`export_var`](#export_var)(Init, Name, File);
+   - D [binds](#binder) Name to a node Init in File;
+   - a node L [reads](#ident_in) Name in File;
+   - L [sees](#sees_binder) D;
+   - [`assign`](#assign)(Y, L, R);
+   - Y [is plain](#plain_assign);
+2. if all of:
    - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
    - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) Target;
-   - [`sx_export_val`](js-surface.rofl.md#sx_export_val)(Target, Name, Init);
-4. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`sx_export_val`](js-surface.rofl.md#sx_export_val)(T, Int, Init).
+   - [`sx_export_val`](js-surface.rofl.md#sx_export_val)(Target, Name, R);
+3. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`sx_export_val`](js-surface.rofl.md#sx_export_val)(T, Int, R).
 
 In the flow:
 
@@ -5294,6 +5307,13 @@ In the flow:
   - D [means the file](js-modules.rofl.md#module_target) Target;
   - [`sx_module`](js-surface.rofl.md#sx_module)(Target, P);
   - a node E [is read at the top of](#top_read) Local and File.
+
+> `import('./m')` settles to the module object, as a namespace import binds it (a promise is read as its value)
+
+`may_be`(I, `node`, P) if all of:
+  - a node I [is an import site](js-modules.rofl.md#import_site) of `dynamic_import`;
+  - I [means the file](js-modules.rofl.md#module_target) Target;
+  - [`sx_module`](js-surface.rofl.md#sx_module)(Target, P).
 
 The member Name of a node P holds a node F if P [is the module object of](#module_object) Target and F [is exported as](#exports_name) Name from Target.
 

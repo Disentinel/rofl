@@ -331,6 +331,7 @@ builtin_prototype(weakset).
 -- on a promise, and a name bound to one is one.
 edb(lib_member).
 prototype_of[flow](C, promise) :- resolves[code](C, F), async_body[code](F).
+prototype_of[flow](I, promise) :- import_site[code](I, dynamic_import).
 prototype_of[flow](X, promise) :- construct[value](X), callee[value](X, G),
                                   free_global[code](G, "Promise", _).
 prototype_of[flow](C, promise) :- callee[value](C, N), object_of[code](N, G),
@@ -2083,6 +2084,10 @@ exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_
 
 exports_value[code](Init, Name, File) :- export_var[code](Init, Name, File).
 exports_value[code](L, Ext, File) :- export_local[code](L, Ext, File).
+-- an exported `let` is a live binding: what the module later writes to it is exported too
+exports_value[code](R, Name, File) :- export_var[code](Init, Name, File), binder[code](D, Name, Init, File),
+                                      ident_in[code](L, Name, File), sees_binder[code](L, D),
+                                      assign[value](A, L, R), plain_assign[flow](A).
 exports_value[code](X, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
                                       module_target[code](E, Target), sx_export_val[surface](Target, Name, X).
 exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), sx_export_val[surface](T, Int, X).
@@ -2102,6 +2107,8 @@ module_object[flow](P, File) :- program[tree](P, File).
 
 may_be[flow](E, node, P) :- imports_ns[code](Local, D, File), module_target[code](D, Target),
                             sx_module[surface](Target, P), top_read[code](E, Local, File).
+-- `import('./m')` settles to the module object, as a namespace import binds it (a promise is read as its value)
+may_be[flow](I, node, P) :- import_site[code](I, dynamic_import), module_target[code](I, Target), sx_module[surface](Target, P).
 member_value[flow](P, Name, F) :- module_object[flow](P, Target),
                                   exports_name[code](F, Name, Target).
 
