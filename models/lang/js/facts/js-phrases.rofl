@@ -177,8 +177,9 @@ sig(arg_at, "passes(invocation C, node A:2, at index I:1)").
 sig(destructures, "destructures(declarator D, name Local, from key Key, in file File)").
 sig(destructures_at, "destructures(declarator D, name Local, at index Index, in file File)").
 sig(pattern_takes, "takes_the_key(object pattern P, key Key)").
-sig(rest_in_pattern, "holds_a_rest(declarator D, node R, in file File)").
-sig(rest_binds, "binds(declarator D, name Local:2, through the rest node R:1, in file File:3)").
+sig(obj_rest, "holds_the_object_rest(pattern P, node R, taken from node Src)").
+sig(arr_rest, "holds_the_array_rest(from index I, node R, taken from node Src)").
+sig(rest_src, "takes_apart(pattern P, node Src)").
 sig(param_of, "takes(function F, name Name:2, at index I:1)").
 sig(param_rest, "has_the_rest_parameter(function F, at index J, node R, name Name)").
 sig(fallback, "defaults(function F, name Name, to node Init)").
