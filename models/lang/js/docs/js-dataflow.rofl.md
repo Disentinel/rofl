@@ -104,6 +104,7 @@ Reads:
   - <a id="ref"></a>`ref`
   - <a id="regexp"></a>`regexp`
   - <a id="repeats"></a>`repeats`
+  - <a id="rest_elems"></a>`rest_elems`
   - <a id="rest_params"></a>`rest_params`
   - <a id="rest_props"></a>`rest_props`
   - <a id="setter"></a>`setter`
@@ -353,8 +354,7 @@ D is scoped in File if D [declares without a value](#bare_binder) some name in F
 
 1. if D [binds](#binder) Name to some node in File;
 2. if D [declares without a value](#bare_binder) Name in File;
-3. if [`pat_local`](#pat_local)(D, Name, something, File);
-4. if D [binds](#rest_binds) Name through the rest some node in File.
+3. if [`pat_local`](#pat_local)(D, Name, something, File).
 
 > 3a. THE LOOKUP. A scope declares a name by a binder whose region it is, or
 > by a parameter of the function it is. An identifier's name is found in the
@@ -693,9 +693,7 @@ Declared as facts:
 
 > `taken` to member `pulled` of the init; shorthand and rename are one case
 > (key for the member, value for the local). An array pattern binds by
-> POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
-> arm for array patterns: nothing exercises it and an arm nothing exercises
-> cannot go red.
+> POSITION over the raw array, so `[, second]` keeps index 1.
 > Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
 > declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
 
@@ -711,7 +709,8 @@ In the code:
 
 1. if [`pattern_prop`](#pattern_prop)(P, something, T);
 2. if [`pattern_elem`](#pattern_elem)(P, something, T);
-3. if [`pat_computed`](#pat_computed)(P, T, something).
+3. if [`pat_computed`](#pat_computed)(P, T, something);
+4. if [`rest_at`](#rest_at)(P, T).
 
 <a id="pat_computed"></a>`pat_computed`(P, T, E) either:
 
@@ -765,7 +764,14 @@ In the flow:
    - a node P [points to](#may_be_node) a node X;
    - [`array_elem`](#array_elem)(X, I, V);
    - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, N);
-   - E is `input`.
+   - E is `input`;
+6. if all of:
+   - [`pattern_elem`](#pattern_elem)(P, I, R);
+   - [`pat_in`](#pat_in)(something, P, R);
+   - a node P [points to](#may_be_node) a node X;
+   - [`array_elem`](#array_elem)(X, I, V);
+   - [`may_be`](js-concat.rofl.md#may_be)(V, `lit`, N);
+   - E is `lit`.
 
 > the default of a target is a conditional source of it
 
@@ -877,10 +883,11 @@ In the flow:
   - [`may_be`](js-concat.rofl.md#may_be)(T, VK, V);
   - F [uses](#param_use) Local at a node U.
 
-> An object rest binds a FRESH object with no node of its own, so the
-> `rest_element` node stands for it. It holds every key EXCEPT the ones the
-> pattern took — the exclusion is the whole content. It is `member_plain` (no
-> `static` anywhere), as a module namespace is.
+> A rest binds a FRESH value with no node of its own, so its target stands for it, wherever its pattern stands: a
+> declarator or a parameter, at the top or nested. Its source is what the pattern takes apart: a declarator's value,
+> or the pattern itself below it. An object rest holds every key EXCEPT the ones the pattern took — the exclusion is
+> the whole content; it is `member_plain` (no `static` anywhere), as a module namespace is. An array rest at I holds
+> the elements from I on.
 
 In the code:
 
@@ -892,35 +899,50 @@ In the code:
    - [`parent`](#parent)(P, Q);
    - a node E [is the well known symbol](#symbol_ref) Key.
 
-<a id="rest_in_pattern"></a>D holds a rest T in File if all of:
-  - [`declarator_id`](#declarator_id)(D, P);
-  - [`at`](#at)(D, File, something);
-  - [`rest_props`](#rest_props)(P, T).
+<a id="pattern_source"></a>The pattern source of a node P is a node Init if [`declarator_id`](#declarator_id)(D, P) and D [takes its value from](#decl_value) Init.
 
-<a id="rest_binds"></a>D binds Local through the rest R in File if all of:
-  - D [holds a rest](#rest_in_pattern) R in File;
-  - [`declarator_id`](#declarator_id)(D, P);
-  - [`rest_props`](#rest_props)(P, R);
-  - [`binds`](#binds)(R, Local).
+<a id="rest_at"></a>`rest_at`(P, R) either:
 
-D is scoped in File if D [binds](#rest_binds) some name through the rest some node in File.
+1. if [`rest_props`](#rest_props)(P, R);
+2. if [`rest_elems`](#rest_elems)(P, something, R).
+
+<a id="rest_src"></a>A pattern P takes apart a node Init either:
+
+1. if [`rest_at`](#rest_at)(P, something) and [the pattern source](#pattern_source) of P is Init;
+2. if [`rest_at`](#rest_at)(P, R), [`pat_in`](#pat_in)(Root, P, R), Root differs from P, and Init is P;
+3. if [`rest_at`](#rest_at)(P, something), [`param`](#param)(something, something, P), and Init is P.
+
+<a id="obj_rest"></a>A pattern holds the object rest R taken from a node Src if all of:
+  - [`rest_props`](#rest_props)(it, R);
+  - [`pat_in`](#pat_in)(something, it, R);
+  - it [takes apart](#rest_src) Src.
+
+<a id="arr_rest"></a>An index I holds the array rest R taken from a node Src if all of:
+  - [`rest_elems`](#rest_elems)(P, I, R);
+  - [`pat_in`](#pat_in)(something, P, R);
+  - a pattern P [takes apart](#rest_src) Src.
 
 In the flow:
 
+`may_be`(R, N, E) either:
+
+1. if some pattern [holds the object rest](#obj_rest) R taken from some node, N is `node`, and E is R;
+2. if some index [holds the array rest](#arr_rest) R taken from some node, N is `node`, and E is R.
+
 <a id="member_value"></a>The member Key of a node R holds a node V if all of:
-  - D [holds a rest](#rest_in_pattern) R in some file;
-  - [`declarator_id`](#declarator_id)(D, P);
-  - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](#may_be_node) a node Obj;
+  - a pattern P [holds the object rest](#obj_rest) R taken from a node Src;
+  - Src [points to](#may_be_node) a node Obj;
   - [the member](#member_value) Key of Obj holds V;
   - unless P [takes the key](#pattern_takes) Key.
 
-<a id="member_plain"></a>The plain member Key of a node R is a node V if some declarator [holds a rest](#rest_in_pattern) R in some file and [the member](#member_value) Key of R holds V.
+<a id="member_plain"></a>The plain member Key of a node R is a node V if some pattern [holds the object rest](#obj_rest) R taken from some node and [the member](#member_value) Key of R holds V.
 
-`may_be`(E, `node`, R) if all of:
-  - D [binds](#rest_binds) Local through the rest R in File;
-  - a node E [reads](#ident_in) Local in File;
-  - E [sees](#sees_binder) D.
+`array_elem`(R, K, E) if all of:
+  - an index I [holds the array rest](#arr_rest) R taken from a node Src;
+  - Src [points to](#may_be_node) a node X;
+  - [`array_elem`](#array_elem)(X, J, E);
+  - J >= I;
+  - K is J - I.
 
 > Spread copies the source's keys. `{ ...o, k: v }` keeps both `k`s — the safe
 > direction; narrowing needs an order this layer has not got.
@@ -5077,9 +5099,8 @@ The plain member Key of a node X is a node V if X [comes out of](#external_value
 > another object of the same origin.
 
 A node comes out of a module Spec if all of:
-  - D [holds a rest](#rest_in_pattern) it in some file;
-  - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](#may_be_node) a node X;
+  - some pattern [holds the object rest](#obj_rest) it taken from a node Src;
+  - Src [points to](#may_be_node) a node X;
   - X [comes out of](#external_value) Spec.
 
 > WHICH PACKAGE an external value came from: a bare specifier's first segment,
