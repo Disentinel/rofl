@@ -1770,7 +1770,15 @@ impl Eval {
                 })?
             };
             ms.push(t0.elapsed().as_millis());
-            let snap = || crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
+            let snap = || {
+                let mut v = crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
+                let (n, b) = crate::store::SEAM_SEEN.lock().unwrap().take().map_or((0, 0), |(s, b)| (s.len() as u64, b));
+                v.extend([n, b]);
+                v.extend(crate::store::SEAM_BY.iter().map(|c| c.load(Relaxed)));
+                let rels = crate::store::SEAM_RELS.lock().unwrap().take().unwrap_or_default();
+                v.extend([rels.len() as u64, rels.values().map(|x| x.0).sum(), rels.values().map(|x| x.1).sum()]);
+                v
+            };
             let mut seen = vec![snap()];
             let mut depths = vec![units.clone()];
             while units.len() > 1 {
@@ -1793,7 +1801,7 @@ impl Eval {
                 ms.push(t0.elapsed().as_millis());
                 seen.push(snap());
             }
-            seam_said.push(seen.windows(2).map(|w| format!("{}q/{}f/{}KB", w[1][0] - w[0][0], w[1][1] - w[0][1], (w[1][2] - w[0][2]) / 1024)).collect::<Vec<_>>().join(" "));
+            seam_said.push(seen.windows(2).map(|w| format!("{}q/{}f/{}KB distinct {}f/{}KB whole rels {} trips {}f/{}KB; calls store/rec/args/of_rel/find/forests/wits/matches {}", w[1][0] - w[0][0], w[1][1] - w[0][1], (w[1][2] - w[0][2]) / 1024, w[1][3], w[1][4] / 1024, w[1][13], w[1][14], w[1][15] / 1024, (5..13).map(|i| (w[1][i] - w[0][i]).to_string()).collect::<Vec<_>>().join("/"))).collect::<Vec<_>>().join(" "));
             took.push(ms.iter().scan(0, |at, &m| Some(m - std::mem::replace(at, m))).map(|m| m.to_string()).collect::<Vec<_>>().join("+"));
             tops.push(units.pop().expect("a file at least"));
             layers.push(depths);

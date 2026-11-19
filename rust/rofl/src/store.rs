@@ -1387,6 +1387,7 @@ impl Stretch {
 
     /// The stretch itself: as it was settled, or read now from where it is kept.
     pub fn store(&self) -> &Store {
+        by(0);
         self.store.get_or_init(|| {
             self.opens();
             let k = self.kept.as_ref().expect("a stretch not kept is unfolded");
@@ -1423,6 +1424,7 @@ impl Stretch {
     }
 
     fn wits(&self) -> Option<&Wits> {
+        by(6);
         if self.store.get().is_some() {
             return None;
         }
@@ -1448,6 +1450,7 @@ impl Stretch {
 
     /// A fact of its own, without unfolding it.
     pub fn rec(&self, id: FactId) -> FactRec {
+        by(1);
         match self.raw() {
             Some(r) => {
                 let i = 4 * (id - self.lo) as usize;
@@ -1459,6 +1462,7 @@ impl Stretch {
 
     /// The arguments of a fact of its own, without unfolding it.
     pub fn args(&self, id: FactId) -> &[Term] {
+        by(2);
         match self.raw() {
             Some(r) => {
                 let i = (id - self.lo) as usize;
@@ -1472,6 +1476,7 @@ impl Stretch {
 
     /// Its own live facts of a relation.
     fn of_rel(&self, rel: Sym) -> Vec<FactId> {
+        by(3);
         if let Some(r) = self.raw() {
             return r.by_rel.get(&rel).cloned().unwrap_or_default();
         }
@@ -1485,6 +1490,7 @@ impl Stretch {
 
     /// The fact of its own of this key.
     fn find(&self, h: u64, rel: Sym, persp: Sym, args: &[Term]) -> Option<FactId> {
+        by(4);
         if !self.wrote(rel) {
             return None;
         }
@@ -1506,6 +1512,7 @@ impl Stretch {
 
     /// The forests of the closure `ci` this stretch answers with: as it was settled, or as a file's unit kept them.
     pub fn forests(&self, ci: usize) -> Rc<[(Sym, Rc<crate::forest::Forest>)]> {
+        by(5);
         match self.kept_forests() {
             Some(fs) => fs.get(ci).cloned().unwrap_or_else(|| Rc::from(Vec::new())),
             None => self.store().virtuals[ci].forests.clone(),
@@ -1570,6 +1577,7 @@ impl Stretch {
     /// What this stretch itself holds of the candidates of a premise, read by the argument fewest of its facts share.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn matches(&self, h: &Heap, rel: Sym, persp: Option<Sym>, arity: usize, pos: &[usize], vals: &[Term], out: &mut Vec<FactId>) {
+        by(7);
         if !self.wrote(rel) {
             return;
         }
@@ -1592,7 +1600,7 @@ impl Stretch {
         let from = out.len();
         let Some((ix, v, _)) = best else {
             out.extend(self.of_rel(rel).into_iter().filter(|&k| fits(k)));
-            seam((out.len() - from) as u64, out[from..].iter().map(|&k| 16 + 4 * self.args(k).len() as u64).sum());
+            seam(self, &out[from..]);
             return;
         };
         for k in ix.get(v).iter().chain(ix.get(OPEN)).copied() {
@@ -1601,7 +1609,7 @@ impl Stretch {
                 out.push(k);
             }
         }
-        seam((out.len() - from) as u64, out[from..].iter().map(|&k| 16 + 4 * self.args(k).len() as u64).sum());
+        seam(self, &out[from..]);
     }
 }
 
@@ -1612,12 +1620,40 @@ unsafe impl Sync for Stretch {}
 /// What units read of the stretches of others, for the diagnosis of a seam between nodes: the questions asked by
 /// key, the facts they answered, and their bytes (a record and its arguments).
 pub static SEAM: [std::sync::atomic::AtomicU64; 3] = [const { std::sync::atomic::AtomicU64::new(0) }; 3];
+/// calls of each way a stretch is read: store, rec, args, of_rel, find, forests, wits, matches
+pub static SEAM_BY: [std::sync::atomic::AtomicU64; 8] = [const { std::sync::atomic::AtomicU64::new(0) }; 8];
+#[inline(always)]
+fn by(i: usize) {
+    SEAM_BY[i].fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+/// the distinct facts read since last taken, and their bytes
+pub static SEAM_SEEN: std::sync::Mutex<Option<(FxSet<FactId>, u64)>> = std::sync::Mutex::new(None);
+/// the (stretch, relation) pairs read since last taken, each with the facts and bytes of the whole relation there
+pub static SEAM_RELS: std::sync::Mutex<Option<FxMap<(usize, Sym), (u64, u64)>>> = std::sync::Mutex::new(None);
 
-fn seam(facts: u64, bytes: u64) {
+fn seam(s: &Stretch, ids: &[FactId]) {
     use std::sync::atomic::Ordering::Relaxed;
+    let bytes: u64 = ids.iter().map(|&k| 16 + 4 * s.args(k).len() as u64).sum();
     SEAM[0].fetch_add(1, Relaxed);
-    SEAM[1].fetch_add(facts, Relaxed);
+    SEAM[1].fetch_add(ids.len() as u64, Relaxed);
     SEAM[2].fetch_add(bytes, Relaxed);
+    if let Some(&k0) = ids.first() {
+        let rel = s.rec(k0).rel;
+        let key = (s as *const Stretch as usize, rel);
+        let fresh = !SEAM_RELS.lock().unwrap().get_or_insert_with(Default::default).contains_key(&key);
+        if fresh {
+            let all = s.of_rel(rel);
+            let b: u64 = all.iter().map(|&k| 16 + 4 * s.args(k).len() as u64).sum();
+            SEAM_RELS.lock().unwrap().get_or_insert_with(Default::default).insert(key, (all.len() as u64, b));
+        }
+    }
+    let mut g = SEAM_SEEN.lock().unwrap();
+    let (seen, b) = g.get_or_insert_with(Default::default);
+    for &k in ids {
+        if seen.insert(k) {
+            *b += 16 + 4 * s.args(k).len() as u64;
+        }
+    }
 }
 
 /// The stretches of `Near::list`, by their places there, that may hold a fact of the relation in the book (None:
