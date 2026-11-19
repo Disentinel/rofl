@@ -1722,6 +1722,21 @@ impl Eval {
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| brk!("levels_leaf_first_file" => one.0..one.0 + 1; one.0..one.1).any(|f| e.1.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
                     }
+                    // (a unit another run settled, read in place of settling it here: an oracle of the seam)
+                    if let Some(p) = std::env::var_os("ROFL_WIRE_TAKE").and(std::env::var_os("ROFL_WIRE_DIR")).map(|d| std::path::PathBuf::from(d).join(format!("{}-{}.unit", one.0, one.1))).filter(|p| p.exists()) {
+                        let b = std::fs::read(p).expect("a unit another run wrote");
+                        let n = Stretch::wire_facts(&b).expect("a unit another run wrote");
+                        let lo = bump.fetch_add(n, Relaxed);
+                        let mut e = fork();
+                        let stretch = Stretch::from_wire(&b, &mut e.0.h, &mut |_, s| keys.lock().unwrap().key(s), fork().0.store, lo).expect("a file's own unit comes off the wire");
+                        drop((forks.lock().unwrap(), e));
+                        TAKEN.fetch_add(1, Relaxed);
+                        WIRED.fetch_add(b.len(), Relaxed);
+                        let mut dir = FxMap::default();
+                        surface(&stretch, &cx, one, &mut dir);
+                        let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::default(), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()) };
+                        return Ok(Unit { stretch: Rc::new(stretch), files: one, kids: Vec::new(), parts: Rc::new(Lazy::made(parts)) });
+                    }
                     let mut e = fork();
                     let from = e.0.store.len_ids();
                     for text in &texts[one.0 as usize..one.1 as usize] {

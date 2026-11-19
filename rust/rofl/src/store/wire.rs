@@ -251,6 +251,21 @@ impl Stretch {
         Ok(())
     }
 
+    /// How many facts a stretch on the wire holds: the ids a reader lays it at.
+    pub fn wire_facts(b: &[u8]) -> Result<u32, String> {
+        if b.get(..8) != Some(MAGIC) {
+            return Err("not a stretch on the wire".into());
+        }
+        let mut r = In { b, at: 8, names: Vec::new(), last: 0 };
+        for _ in 0..r.u32()? {
+            r.take(1)?;
+            r.u32()?;
+            let n = r.u32()? as usize;
+            r.take(n)?;
+        }
+        r.u32()
+    }
+
     /// A stretch another process wrote (`to_wire`), laid at `lo` over `fork`, a fork of the core it was settled
     /// over: its names interned here, its own ids counted from `lo`, what lies below it named as it was.
     pub fn from_wire(b: &[u8], h: &mut Heap, key: &mut dyn FnMut(&mut Heap, &str) -> Sym, fork: Store, lo: FactId) -> Result<Stretch, String> {
