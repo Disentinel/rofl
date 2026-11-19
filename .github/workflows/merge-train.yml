@@ -35,7 +35,7 @@ jobs:
     # one train at a time, and never one cut short: a train waiting behind it takes whatever waits when it starts
     concurrency: { group: merge-train, cancel-in-progress: false }
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env: { GITHUB_TOKEN: '${{ github.token }}', ROFL_JOBS: 4 }
     steps:
       - uses: actions/checkout@v4
@@ -55,6 +55,7 @@ jobs:
           workspaces: |
             rust
             models/lang/js/scanner/oxc_scan
+            rust/tools/rs_tree
       - if: steps.pick.outputs.count != '0'
         id: stack
         run: node --experimental-strip-types scripts/merge_train.ts stack
@@ -65,13 +66,29 @@ jobs:
         run: node --experimental-strip-types scripts/merge_train.ts regenerate
       - if: steps.stack.outputs.stacked != '0'
         run: node --experimental-strip-types scripts/merge_train.ts judge
+      # WHAT EACH REQUEST DID, BY FEATURE (models/engine/feature-behaviour.rofl), said on it when it lands. About a minute
+      # and 3 GB a tree, one tree more than the train holds; it informs and never stops the train.
+      - if: steps.stack.outputs.stacked != '0'
+        continue-on-error: true
+        timeout-minutes: 40
+        run: node --experimental-strip-types scripts/merge_train.ts features
       # the slow gates, once for the whole train: the planted faults and the engine's lints
       - if: steps.stack.outputs.stacked != '0'
         # the toolchain ci.yml pins for its lints, so that a new stable's lints are not a request's fault
         run: rustup toolchain install 1.95.0 --profile minimal -c clippy && cd rust && cargo +1.95.0 clippy -p rofl --all-targets -- -D warnings
+      # THE PLANTED FAULTS NEED THE DISK. The release build, clippy's and the runner's own toolchains left a kept world
+      # under the 5 GB floor of its writer (kept.rs), and a world whole answered short with no word on stderr: a fault
+      # red for the disk, not for the request (#260). breaks reads only its own build, rust/target/breaks.
+      - if: steps.stack.outputs.stacked != '0'
+        run: |
+          rm -rf rust/target/release rust/target/debug
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h .
       - if: steps.stack.outputs.stacked != '0'
         run: npm run test:agg:breaks
       - if: steps.stack.outputs.stacked != '0'
+        id: land
         run: node --experimental-strip-types scripts/merge_train.ts land
-      - if: failure() && steps.stack.outcome == 'success'
+      # a gate red on the stack is the requests'; a landing that fails half way is not, and what did not land waits
+      - if: failure() && steps.stack.outcome == 'success' && steps.land.outcome != 'failure'
         run: node --experimental-strip-types scripts/merge_train.ts fail

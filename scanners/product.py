@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """What models/product/rofl.rofl reads of the tree that no book of facts holds yet, as facts on stdout.
-    product.py entries ENGINE.json    the entries: of the engine (the answer of models/engine/features.rofl to
-                                      entry_kind(D,N,K), --json), of the library (facts/feature-map.rofl), of the
+    product.py entries ENGINE.json    the entries: of the engine (the answers of models/engine/features.rofl to
+                                      entry_kind(D,N,K) and cp_effect(P,K), of models/engine/gates.rofl to
+                                      unsourced(N,T), --json), of the library (facts/feature-map.rofl), of the
                                       editor extension (vscode/package.json)
     product.py names ASKED.json       which view names which entry: the answers to reads(U,V) and entry(F,K,W)
     product.py asks | report ANSWERS  the questions of the holes as flags of `rofl load`, and their answers in lines"""
@@ -17,9 +18,11 @@ def answers(path):
 q = lambda s: '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 def entries(engine):
-    out = ['edb(engine_entry).', 'edb(library_entry).', 'edb(extension_entry).']
-    for rows in answers(engine):
-        out += [f'engine_entry({k}, {q(n)}).' for _, n, k in rows if n]
+    out = ['edb(engine_entry).', 'edb(library_entry).', 'edb(extension_entry).', 'edb(codepath_effect).', 'edb(unsourced_gate).']
+    kinds, effects, gates = answers(engine)
+    out += [f'engine_entry({k}, {q(n)}).' for _, n, k in kinds if n]
+    out += [f'codepath_effect({p}, {k}).' for p, k in effects]
+    out += [f'unsourced_gate({q(n)}, {t}).' for n, t in gates]
     for kind, name in re.findall(r'^feature\("(api|flag):([^"]+)"', open('facts/feature-map.rofl').read(), re.M):
         out.append(f'library_entry({"api" if kind == "api" else "knob"}, {q(name)}).')
     ext = json.load(open('vscode/package.json'))['contributes']
@@ -70,6 +73,8 @@ HOLES = [
     ('missed(M,O,V,T)', 'a target missed at its world scale: measured, aimed'),
     ('unbacked(C)', 'a contract no evidence backs'),
     ('engine_explodes(A,B,Fw,Ft)', 'the engine explodes where the rules do not: the explode factor of the work, of the seconds'),
+    ('red(I,A,B)', 'an invariant of the owner broken and not accepted'),
+    ('owed(I,N)', 'a red invariant no item of the worklist closes: the work it makes, and its red rows'),
 ]
 
 def asks(_):

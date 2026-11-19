@@ -1,0 +1,19 @@
+-- examples/checks/agg-incr-staged-cell.rofl — agg_incr_staged_cell: A CELL OF A STAGED
+-- RULE OVER WHAT IS DERIVED AGAIN AFTER THE REST. sc_fired reads derived_by, so it and
+-- sc_h, which reads it, are derived again whole after a retraction. The count staged
+-- `@next` holds a cell whose members rest on sc_h; a member here has two derivations,
+-- sc_h(X, 0) and sc_h(X, 1), and only the second rests on sc_fired. The retraction finds
+-- the cell through the back-index, by every derivation its members keep, and the world
+-- is evaluated again, and says so.
+edb(sc_n). edb(sc_k).
+sc_n(a). sc_n(b).
+sc_k(a). sc_k(b).
+sc_q(X) :- sc_n(X), sc_k(X).
+sc_fired(R) :- derived_by(_, R, _).
+sc_h(X, 0) :- sc_q(X).
+sc_h(X, 1) :- sc_q(X), sc_fired(_).
+sc_tot(N)@next :- N is count(X : sc_h(X, _)).
+
+-- expect-row: sc_tot[main](1) tick base support=1
+-- expect-row: evaluated_again[$kernel](retract($fact(sc_k,main,$cons(a,$nil))),"a cell rests on what rests on the fact")
+-- expect-no-row: sc_tot[main](2)

@@ -77,17 +77,16 @@ where the walk goes below the cut, and closes with `K answers in this file`;
 `--json` gives `{"ok", "file", "found", "stops", "text"}`. `--in` works over a
 world evaluated whole as well.
 
-What it costs (vscode, release, 4 cores, 2026-11-15): the table takes what the
-ask it counts takes, a bound whynot or an opened row 1 to 2 s more: 0.9 s and
-1.6 s at 250 files, 3.1 s and 5.2 s at 1000 with 3.6 to 4.9 GB resident. The
-seconds past the first are the kept world opened whole, the same for `ask`
-(`w_a_kept_world_opens_whole`). A bare name is read in `[main]` by `whynot`
+What it costs: a question asked again opens of the kept world only what its
+walk reads (*What a question reads of a kept world*, below); the table takes
+what the ask it counts takes. A bare name is read in `[main]` by `whynot`
 and in any book by `ask`: write the book, `calls[code](A, B)`.
 
 **The text is the reference's.** `why`, `whynot` and `excise` print what
 `src/api.ts` prints; `ask` prints what the REPL's `?` prints with the
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
-a shrug, and `[partial: ...]` when the rows may be short of an answer.
+a shrug, and when the rows may be short of an answer a first line
+`[partial answer: ...]` and a last `[partial: why]` (*A partial answer reads as one*, below).
 `npm run whycheck` holds every one of them to the TypeScript engine byte for
 byte over every world `npm test` loads, refusals included.
 
@@ -183,18 +182,34 @@ write them: a gate computes. Nothing to turn on or off; the cap is the one knob.
 
 **A world larger than memory stops there.** Every `rofl` process watches the
 memory it may use: the least memory limit of its cgroup less a quarter, against
-the cgroup's anonymous memory (so the Node of a notebook in the same container
-counts); without a limit, what the machine has available down to a quarter of
-it; on macOS, four fifths of the machine against the engine's own heap
-(src/bin/rofl/memory.rs). Past it, an evaluation stops as at a step wall, with
+the cgroup's anonymous and shared memory (so the Node of a notebook in the same
+container counts, and a segment cooled to a `/tmp` of tmpfs); without a limit,
+what the machine has available down to a quarter of it; on macOS, four fifths of
+the machine against the process's physical footprint, what the system counts
+against it, about twice the engine's live heap (src/bin/rofl/memory.rs). Past
+it, an evaluation stops at its next step or premise, as at a step wall, with
 `hole($adhoc, memory_exhausted)`: a question verb answers partial (exit 5), says
 on stderr `the world reached the memory this process may use and stopped there:
 its answers are partial, and it is not kept`, and keeps nothing; `rofl serve`
 answers the request with `"stopped":"heap"`, as under a caller's `limit.bytes`,
 and refuses every later request but `close` while the memory stays spent, so a
-host is told instead of finding the engine killed. The wall is checked between
-steps: a phase that takes no steps (reading the files, one firing that solves
-more than the reserve) can still pass it. Nothing to turn on or off.
+host is told instead of finding the engine killed. A corpus settled by levels
+whose units reach it is not evaluated whole after them (the whole world takes
+more): stderr says `volumes: the units reached the memory this process may use`,
+the answer is partial and empty, exit 5. **The edge**: a phase that takes no
+step (reading the files, one firing that takes more than the quarter left) can
+still pass the wall; the watcher keeps the largest rise it saw between two looks,
+and when the next would reach the limit itself it says so on stderr and ends the
+process, exit 5, before the kernel kills it without a word. Measured on the JS
+model over 493 vscode files in a cgroup of 6 GB (2026-11-18): before, killed by
+the kernel at 6.1 GB with no line; now stopped at 5.2 to 5.4 GB with the line,
+whole and by levels. Nothing to turn on or off.
+
+**A partial answer reads as one.** Its first line is `[partial answer: the rows
+below may be short of the whole answer]` and its last says why: `[partial: the
+memory this process may use ran out, and the world stopped there]`, `[partial:
+budget exhausted, hole emitted]` (a step or row wall), the disk cap, or a scan
+that failed; `--json` says `"partial":true`; the exit is 5.
 
 `--kept F` with any verb names the kept world yourself, under the owner's
 stricter rule: computed once, asked many times, each question a new process that
@@ -299,9 +314,12 @@ read from its files alone (a `.rofl.md`, a world `--below`), a scanner ran in
 another directory, a file changed that is neither named nor read by a scanner,
 or the engine refuses the delta (a fact read on demand, a world kept with no
 witnesses, a well-founded world, an edit that makes a rule fault anew).
-`rofl load --retract F` and `rofl serve`'s `retract` take one fact by the same
-pass where the engine's one-fact delta refuses it; stderr's `Delta { .. set:
-Some(..) }` says so. A world holding a hole is taken by delta: what
+`rofl load --retract F`, `rofl serve`'s `retract` and an `edit` of one fact take
+it by this same pass, one path, which decides before it takes the fact out whether
+it holds the delta: a refusal touches nothing, and the world is then evaluated
+whole. stderr's `Delta { .. set: Some(..) }` and serve's `"pass":"set"` say it went
+by delta; `node --experimental-strip-types scripts/retract_passes.ts` prints the pass
+of every retraction of the golden worlds. A world holding a hole is taken by delta: what
 the holes and the shrugs may move that the edit reaches is evaluated again
 after it, the rest kept with what the holes left unknown in it. The
 answer is the fresh evaluation's either way (rust/rofl/tests/retract_set.rs:
@@ -451,7 +469,13 @@ may reach (the functions its receiver holds, never folded into `calls`);
 `merged_param[audit](F, I, N)` names a parameter handed N functions, whose
 answers are their union, not per call. Code under `require.main === module` is
 read as the library's: `runs_as_script("path.js")` reads one file as the script
-node runs, `reads_the_file_as(script)` every file. A notebook cell whose rule
+node runs, `reads_the_file_as(script)` every file. **A runtime assumption** is a
+base fact of the book `[assume]`: `assumed_env[assume]("NODE_ENV", "production")`
+or `assumed_export[assume]("src/platform.ts", "isWindows", false)`; a test that
+reads it (alone, `!`, `&&`, `||`, `===` / `!==` a literal) is decided, and the
+calls of the arm it does not take hand their callees nothing, as under an entry
+guard; `rofl excise` of the fact brings them back by delta
+(examples/notebook/assume.rofl.md, examples/vscode/assume-linux.rofl). A notebook cell whose rule
 reads a relation at an arity or in a book nothing writes says so on the cell.
 
 Measured on `examples/services/src` (3 files, 1051 facts), five questions, two
@@ -676,13 +700,31 @@ left to the last unit, fired whole over the layers, which no layer's time holds.
 slot under `~/.cache/rofl/worlds`: the reader (`<slot>.q<sum>.vol`, the core it
 stands on), the names (`.names`), the units as segments (`.u<n>`, the newest
 named in `.units`) and the registry (`.scroll`). The next question over the
-same files is answered from them (`volumes: N answered from the kept units`),
-the units read where they lie in the file; an edited file settles again only
+same files is answered from them (`volumes: N answered from the kept units,
+reading K of their U stretches`), the units read where they lie in the file;
+an edited file settles again only
 the units it moved (*Lemma stages*, above), which are written as a new segment.
+**What a question reads of a kept world**: the reader's core, the dictionary
+and a table of the units, each mapped where it lies; a unit's directory, its
+stretch of facts and a file's trees are read when the walk first reaches them,
+the rest stays on disk. `reading K of their U stretches` on stderr is what the
+question opened. A question bound to a value reads the units that may hold it
+(its relation's arguments are keys of the units' directories); an unbound one
+reads every unit that wrote its relation, so it costs in proportion to its
+answers. A thaw reads its file's text from `.texts`, kept beside the units, not
+from the sources. The first question after a world is kept sums its files once
+(`$XDG_CACHE_HOME/rofl/seen` notes them after that). Measured (vscode, release,
+4 cores, 2026-11-18), asked again: at 1000 files a bound `ask` 0.10 s and
+0.13 GB (7 of 2010 stretches), a bound `whynot` 0.23 s and 0.28 GB (14), the
+unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask
+0.08 s and 0.10 GB (4 of 505). Before, every unit was opened first: 3.6 s and
+3.9 GB, 4.0 s and 5.2 GB, 3.5 s and 3.9 GB
+(`f_a_question_opens_of_a_kept_world_what_its_walk_reads`).
 **Past a quarter of the memory the process may use** (the memory wall's
 measure, below), the units done are cooled: written to a segment under the
-system's temporary directory (`rofl-units-<pid>-<n>.seg`, removed at the end)
-and read back mapped from it, so what no unit reads again lies in pages the
+system's temporary directory (`rofl-units-<pid>-<n>.seg`, unlinked once mapped
+on Unix, so a process killed leaves none; elsewhere removed at the end) and
+read back mapped from it, so what no unit reads again lies in pages the
 system takes back. Stderr says how many times, how many units and how many MB
 of disk. A world its units refuse (a wall met, a fact that breaks the plan's
 `own`) is said on stderr and evaluated whole. Measured on the release build, 4
@@ -693,8 +735,9 @@ to 5.2 s. Four files to a unit is the owner's trade between
 the two (sixteen: 20.7 s, 64 s and 9.2 s; one: 24.6 s, 93 s and 3.9 s;
 `f_a_layer_is_made_ready_once_and_the_sieve_is_gone`). A `whynot` is walked over the reader, the units read
 where they lie, and a file is thawed where the walk goes below a cut
-(*Below a cut*, above; not yet measured at the reference scale, and the first
-thaw of a run reads every source to cut its file out of them). `excise`,
+(*Below a cut*, above; not yet measured at the reference scale; a world
+evaluated in this run, not read from its kept units, still cuts the file out of
+every source on its first thaw). `excise`,
 `--state`, `--ticks`, `--retract`, `--explain`, `--below`, `--kept` and
 `rofl load` evaluate the world whole, on one heap; at the reference scale (CLAUDE.md,
 *The goal*) that is the 23 GB the owner measured.
@@ -738,16 +781,65 @@ without a question, so ~12 GB over the 4 308 files of subset S
 operations and their fields is the header of
 `rust/rofl/src/bin/rofl/serve.rs`; `runtime/port.ts` is the TypeScript client
 every harness above uses. Besides the question verbs: `open` (a seed, a kept
-image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`,
+image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`, `edit` (below),
 `evaluate` and `resume`, `keep` (an image or, with `volume`, a volume),
 `cool`, `cool_many` and `reheat` (a volume by its key prefix, to disk and
 back), `view` (what a volume's world wrote above its base), `evaluate` with
 `wall`, `evaluate_on` and `admit` (a level at a time), `rows`, `fact`,
 `firings`, `cell`, `books`, `holding` (the store read piece by piece),
-`inbox` and `dispatch` (adapters, docs/intents.md), `tick`, `state`, `facts`,
+`inbox` and `dispatch` (adapters, docs/intents.md), `watch` and `unwatch`
+(below), `tick`, `state`, `facts`,
 `close`, and `spans` (no session: `{"op":"spans","text":MD}` answers `{"spans":[[a,b],...]}`,
 the lines [a,b) of a `.rofl.md` the reader reads as sentences, and each prose
 line that asks; the VS Code extension cuts its bare cells by it). Any request may carry `"limit":{"ms":n,"bytes":n}`.
+
+**An edit in one request.** `{"op":"edit","session":S,"out":["q(a)","q(b)"],"rofl":"q(c).\n"}` takes the base
+facts `out` names out in one pass by delta (what rests on them is overdeleted and what another firing still makes
+is derived again, as a kept world takes a changed file) and then the facts of `rofl` in by delta: a file's old
+facts swapped for its new ones costs the facts that moved, not a request each. It answers
+`{"out":n,"added":n,"touched":k,"full":null|WHY}` (`touched`: overdeleted or derived again). It is refused whole,
+the world untouched, when `out` names no fact or a derived one; where the engine refuses the delta (`full` says
+why) the world is evaluated whole once, at the end of the request, and a watch is told the same net change
+(`changes_by` `whole`). Rust only (rust/rofl/tests/edit.rs holds every edit to the world evaluated whole from
+what remains, and its watch to the diff of `rows`).
+
+**A rule out, as a fact goes.** A rule is facts of the kernel's book, and `edit` takes one out the way it takes a
+fact out: an entry of `out` written as a rule (a clause with a body) is a rule. It is found by its clause, so its
+spacing and the names of its variables need not be the program's; where the program holds two rules that differ only
+by their variables, a third spelling is refused and each is named as the program writes it.
+
+    remove:   {"op":"edit","session":S,"out":["p(X) :- q(X), not r(X)."]}
+    replace:  {"op":"edit","session":S,"out":["p(X) :- q(X), not r(X)."],"rofl":"p(X) :- q(X), not r(X), not s(X).\n"}
+    back:     {"op":"load","session":S,"rofl":"p(X) :- q(X), not r(X).\n"}
+
+Each answers `{"out":n,"added":n,"touched":k,"full":null|WHY}` and a watch is told the net change of the request. The rows a load wrote for it go, every firing of it
+is withdrawn, what another rule still makes stays, what rested only on it goes with what rests on that, a negation
+over what went now holds, and the program is prepared again without it: one DRed pass, in proportion to what the
+rule made, not to the world. A rule back is `load` (or `edit`'s `rofl`: a rule there is loaded, so a rule edited is
+the old text in `out` and the new in `rofl`, one request), by delta. Refused whole, nothing touched, when the text
+holds anything but rules or names a rule the world does not hold; a row of a rule (`rule[$kernel](r…)` and the
+rest) is refused by `retract` and `edit` alike, since one row out would leave the rule running. Where the engine does
+not work the delta out, `full` says why and the world is evaluated whole: a rule that aggregates, stages `@next`, or
+concludes a lattice, a relation answered on demand or a closure; a world that keeps no witness
+(`sealed(provenance)`) or is refused an addition for any reason a load is; a rule outside the cone of `asks`, or
+lowered by a declaration. Rust only (rust/rofl/tests/rule_edit.rs, run by CI on every pull request, holds each rule out, and back, and
+each refusal, to the world evaluated whole from the program without it, rows and `why`, and the watch to the diff of
+`rows`).
+
+**A watch: how a question's rows move.** `{"op":"watch","session":S,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]}`
+answers `{"watching":n}`; a relation without `book` is watched in every book (`book` is what `rows` calls `persp`).
+From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `edit`, `inbox`, `reheat`,
+`evaluate`, a read that evaluates a world left dirty, an answer that came back from an adapter) carries
+`"changes":[{"rel","book","added":[ARGS...],"removed":[ARGS...]}]`, each `ARGS` a row's `args` as `rows` writes
+them, for the watched rows whose holding changed since the last answer, and `"changes_by"`: `delta` (the change
+was taken by delta, and what the watch paid is the facts of its relations the delta touched), `whole` (the world
+was evaluated whole: every derived fact of the watched relations was touched, the cost of a diff), `diff` (a
+watched relation is answered from a structure, a tree's closure or an alias, whose rows are read and compared
+with the last read) or `lost` (the world's store was replaced by a path that did not carry the watch: read the
+relations again). Both are absent where nothing moved. A row taken out and derived again is no change.
+`{"op":"unwatch","session":S,"rels":[...]}` stops those (without `rels`, all). A watch keeps its selectors and,
+for a relation answered from a structure, its rows; nothing else (src/watch.rs; Rust only, rust/rofl/tests/watch.rs
+holds every answer's changes to the diff of `rows` before and after).
 
 **The profile of an evaluation** is the book `profile`, written by the Rust engine after an evaluation in which a rule reads
 one of the relations below there (the book is shared with rules/profile.rofl, whose relations do not ask for it), and read in the round after (as a scanner's facts are: `Session::profile_wants`, `Eval::profile_text`).
@@ -881,6 +973,13 @@ engine's on 555 of its 622, 95% of their bytes (f_the_memory_of_a_world_is_forec
 .claude/skills/forecast-engine-change/SKILL.md.
 **`hot:` on stderr** is the engine naming a rule that reads far more rows than
 it concludes, while it runs (`engine/cost.rs`): the rule, the premise it is
-reading and the binding. It is a diagnostic for the rule's author, not an
-error; docs/optimising-a-world.md is what to do about it. `evaluate` returns
-the same as `hot`.
+reading and the binding. A rule is hot when it has read more rows than the world
+holds facts as it stands and the most of any rule, and again at each doubling;
+no number is set. By levels each unit says its own, and once the units are
+settled the world says the rule that, summed over them, read more than the
+world (`..., summed over the units it fired in`). It is a diagnostic for the
+rule's author, not an error; docs/optimising-a-world.md is what to do about it.
+`evaluate` returns the same as `hot`. The profile (*The profile of an
+evaluation*) is the units' sum too: a world by levels that reads it stays by
+levels, and the rules that read it are fired by the reader once the units are
+settled.

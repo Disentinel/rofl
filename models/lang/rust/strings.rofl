@@ -1,0 +1,200 @@
+-- strings.rofl — A STRING RUST BUILDS FROM PARTS, in the words of the JS model's js-concat.rofl:
+--
+--   composed[flow](C)       C builds a string from parts; its value is `str(C)` and flows as any other value
+--   may_be_text[flow](C, T) every part is a literal: C may be exactly the string the text T renders to
+--   may_be_form[flow](C, T) some part is unknown, `ref(X)` (the part at X) or `node(D)` (a string with no text)
+--
+-- A call of a function whose string reads what it was handed is an instance of that string, with texts of its own:
+-- `may_be_node[flow](E, W)` and `may_be_text[flow](W, T)` for the call W.
+--
+-- Texts are terms, as in js-concat: cat(A, B) a concatenation, join(A, B) a path joined (`Path::join`); the kernel
+-- builds no string. The forms: `format!` (its holes positional, numbered, named or captured), `concat!`, a `+` whose
+-- left side may be a string, `+=` and `push_str` (the binding takes the composed value), `[..].join(sep)` and
+-- `[..].concat()` of an array written in place, `Path::join`. A hole with a format spec (`{:>3}`, `{:?}`) is a
+-- part the text cannot say, and a format string with an escaped brace has no text.
+--
+-- The same two bounds as js-concat, for the same reason: a text only while the product of its parts' choices is at
+-- most `concat_cap`, and a composed part unfolded at most `concat_depth` levels (a loop `s = s + x` unfolds to it).
+
+imports(flow, rust). imports(flow, value). imports(flow, tree).
+
+-- ===================================================================== VALUES THE LIBRARY HANDS ON
+-- `String::from(x)`, `Path::new(x)`: the argument's value; `String::new()` the empty string
+edb(str_from).
+str_from("String", "from"). str_from("std::path::Path", "new"). str_from("std::path::PathBuf", "from").
+str_from("std::ffi::OsStr", "new"). str_from("std::ffi::OsString", "from").
+val[rust](C, V) :- ext_call[rust](C, Q, N), str_from(Q, N), nth[tree](C, 0, A), val[rust](A, V).
+val[rust](C, lit(""))  :- ext_call[rust](C, "String", "new").
+
+-- ===================================================================== THE FORMS
+str_like[rust](X) :- may_be_lit[flow](X, V), string is type_of(V).
+str_like[rust](X) :- val[rust](X, str(_)).
+macro_of[rust](M, Name) :- callee[value](M, N), ref[value](N, Name), mark[value](M, call).
+
+-- `a + b`, `a += b` where a may be a string
+composed[flow](C) :- binary[value](C, "+", L, _), str_like[rust](L).
+cshape[rust](C, raw) :- binary[value](C, "+", _, _), composed[flow](C).
+parts[rust](C, 0, L) :- binary[value](C, "+", L, _), composed[flow](C).
+parts[rust](C, 1, R) :- binary[value](C, "+", _, R), composed[flow](C).
+
+-- `s.push_str(x)`: s's binding takes s then x
+pushes[rust](C, R, A) :- callee[value](C, M), member[value](M, R, "push_str"), nth[tree](C, 0, A).
+composed[flow](C) :- pushes[rust](C, _, _).
+cshape[rust](C, raw) :- pushes[rust](C, _, _).
+parts[rust](C, 0, R) :- pushes[rust](C, R, _).
+parts[rust](C, 1, A) :- pushes[rust](C, _, A).
+val[rust](B, str(C)) :- pushes[rust](C, R, _), place_of[rust](R, B).
+
+-- `concat!(a, b)`
+composed[flow](M) :- macro_of[rust](M, "concat!").
+cshape[rust](M, raw) :- macro_of[rust](M, "concat!").
+parts[rust](M, I, X) :- macro_of[rust](M, "concat!"), nth[tree](M, I, X).
+
+-- `[a, b].join(sep)`, `[a, b].concat()`: the elements, the separator between
+edb(arr_glue).
+arr_glue("join"). arr_glue("concat").
+arr_call[rust](C, A, Name) :- callee[value](C, M), member[value](M, A, Name), mark[value](A, array).
+composed[flow](C) :- arr_call[rust](C, _, "join").
+composed[flow](C) :- arr_call[rust](C, _, "concat").
+cshape[rust](C, raw) :- arr_call[rust](C, _, "join").
+cshape[rust](C, raw) :- arr_call[rust](C, _, "concat").
+parts[rust](C, I, E) :- arr_call[rust](C, A, Name), arr_glue(Name), nth[tree](A, K, E), I is 2 * K.
+parts[rust](C, I, S) :- arr_call[rust](C, A, "join"), nth[tree](A, K, _), K > 0, I is 2 * K - 1, nth[tree](C, 0, S).
+part_lit[rust](C, I, "") :- arr_call[rust](C, A, "concat"), nth[tree](A, K, _), K > 0, I is 2 * K - 1.
+
+-- `p.join(q)` on a path or a string that is not an array written in place
+composed[flow](C) :- callee[value](C, M), member[value](M, R, "join"), not mark[value](R, array), str_like[rust](R).
+cshape[rust](C, join) :- callee[value](C, M), member[value](M, _, "join"), composed[flow](C), not arr_call[rust](C, _, _).
+parts[rust](C, 0, R) :- cshape[rust](C, join), callee[value](C, M), member[value](M, R, "join").
+parts[rust](C, 1, A) :- cshape[rust](C, join), nth[tree](C, 0, A).
+
+-- `format!(s, ..)`: s cut at its holes. Slot 0 the text before the first hole, slot 2K-1 hole K, slot 2K the text
+-- after it.
+edb(fmt_macro).
+fmt_macro("format!").
+fmt[rust](M, S) :- macro_of[rust](M, Name), fmt_macro(Name), nth[tree](M, 0, S), literal[value](S, V), string is type_of(V),
+                   N is str_segs(V, "{{"), N = 1, K is str_segs(V, "}}"), K = 1.
+composed[flow](M) :- fmt[rust](M, _).
+cshape[rust](M, raw) :- fmt[rust](M, _).
+fseg[rust](M, K, T) :- fmt[rust](M, S), literal[value](S, V), N is str_segs(V, "{"), nat_below[rust](N, K), T is str_seg(V, "{", K).
+part_lit[rust](M, 0, T) :- fseg[rust](M, 0, T), N is str_segs(T, "}"), N = 1.
+fhole[rust](M, K, Spec) :- fseg[rust](M, K, T), K > 0, N is str_segs(T, "}"), N = 2, Spec is str_seg(T, "}", 0).
+part_lit[rust](M, I, Rest) :- fseg[rust](M, K, T), fhole[rust](M, K, _), Rest is str_seg(T, "}", 1), I is 2 * K.
+nat_below[rust](N, K) :- fmt_len[rust](N), fnat(K), K < N.
+fmt_len[rust](N) :- fmt[rust](_, S), literal[value](S, V), N is str_segs(V, "{").
+fnat(0).
+fnat(N) :- fnat(M), fmt_len[rust](Max), M < Max, N is M + 1.
+
+-- which argument a hole reads
+positional[rust](M, K) :- fhole[rust](M, K, "").
+positional[rust](M, K) :- fhole[rust](M, K, Spec), Spec != "", ":" is str_char(Spec, 0).
+pos_before[rust](M, K, J) :- fhole[rust](M, K, _), positional[rust](M, J), J < K.
+fpos[rust](M, K, N) :- positional[rust](M, K), N is count(J : pos_before[rust](M, K, J)).
+fnamed[rust](M, Name, R) :- fmt[rust](M, _), nth[tree](M, _, X), assign[value](X, L, R), ref[value](L, Name).
+is_fnamed[rust](M, Name) :- fnamed[rust](M, Name, _).
+edb(digit).
+digit("0", 0). digit("1", 1). digit("2", 2). digit("3", 3). digit("4", 4).
+digit("5", 5). digit("6", 6). digit("7", 7). digit("8", 8). digit("9", 9).
+hole_arg[rust](M, K, A) :- positional[rust](M, K), fpos[rust](M, K, N), J is N + 1, nth[tree](M, J, A).
+hole_arg[rust](M, K, A) :- fhole[rust](M, K, Spec), digit(Spec, N), J is N + 1, nth[tree](M, J, A).
+hole_arg[rust](M, K, R) :- fhole[rust](M, K, Name), fnamed[rust](M, Name, R).
+-- a name the string captures: the binding it denotes, as the hole's ref finds it
+hole_arg[rust](M, K, D) :- fhole[rust](M, K, Name), not is_fnamed[rust](M, Name), fmt[rust](M, S), in_scope[rust](Sc, S),
+                           found[rust](Sc, Name, B), bind_decl[rust](B, D).
+parts[rust](M, I, A) :- hole_arg[rust](M, K, A), I is 2 * K - 1.
+-- a spec the text cannot render: the part is open
+spec_open[rust](M, I, Spec) :- fhole[rust](M, K, Spec), N is str_segs(Spec, ":"), N > 1, I is 2 * K - 1.
+
+-- ===================================================================== THE VALUE AND ITS INSTANCES
+-- A string is an INSTANCE S of a composition C: C itself, or, where C reads what its function was handed, each call W
+-- of that function, its parts read with the call's arguments (the call is an instance of the function, as in the JS
+-- model). Whether C reads an input is said by the names alone: a part that is a parameter, or a hole that captures one.
+val[rust](C, str(C)) :- composed[flow](C).
+may_be_node[flow](E, S) :- val[rust](E, str(S)).
+reads_in[rust](C, G) :- in_fn[rust](G, C), inside[tree](C, X), denotes[rust](X, P), param[value](G, _, P).
+reads_in[rust](C, G) :- hole_arg[rust](C, _, P), param[value](G, _, P), in_fn[rust](G, C).
+sub[rust](W, str(C), str(C)) :- ran[rust](W, G), rv[rust](G, str(C)), not reads_in[rust](C, G).
+sub[rust](W, str(C), str(W)) :- ran[rust](W, G), rv[rust](G, str(C)), reads_in[rust](C, G).
+inst_of[rust](C, C, top) :- composed[flow](C).
+inst_of[rust](W, C, G)   :- ran[rust](W, G), rv[rust](G, str(C)), reads_in[rust](C, G).
+
+-- what part I of the instance S may be: at the composition itself every value its node may hold, at a call the
+-- values the node holds with the function's inputs read off the call's arguments
+pval[rust](S, I, lit(L)) :- inst_of[rust](S, C, top), parts[rust](C, I, X), may_be_lit[flow](X, L).
+pval[rust](S, I, str(S2)) :- inst_of[rust](S, C, top), parts[rust](C, I, X), val[rust](X, str(S2)).
+pval[rust](W, I, V) :- inst_of[rust](W, C, G), parts[rust](C, I, X), val[rust](X, V), plain_val[rust](V).
+pval[rust](W, I, V) :- inst_of[rust](W, C, G), parts[rust](C, I, X), val[rust](X, in(G, J)), argval[rust](W, J, V),
+                       plain_val[rust](V).
+pval[rust](W, I, lit(L)) :- inst_of[rust](W, C, G), parts[rust](C, I, X), val[rust](X, in(G, J)), argval[rust](W, J, in(F, K)),
+                            in_lit[rust](F, K, L).
+pval[rust](W, I, lit(L)) :- inst_of[rust](W, C, G), parts[rust](C, I, X), val[rust](X, inf(G, J, K)), argval[rust](W, J, Ob),
+                            fv[rust](Ob, K, lit(L)).
+plain_val[rust](lit(L)) :- val[rust](_, lit(L)).
+plain_val[rust](str(S)) :- val[rust](_, str(S)).
+
+cslot[rust](C, I) :- parts[rust](C, I, _).
+cslot[rust](C, I) :- part_lit[rust](C, I, _).
+cslot[rust](C, I) :- spec_open[rust](C, I, _).
+last_slot[rust](C, L) :- cslot[rust](C, 0), L is max(I : cslot[rust](C, I)).
+textable[rust](C) :- last_slot[rust](C, L), N is count(I : cslot[rust](C, I)), M is L + 1, N = M.
+is_spec[rust](C, I) :- spec_open[rust](C, I, _).
+s_textable[rust](S) :- inst_of[rust](S, C, _), textable[rust](C).
+s_last[rust](S, L) :- inst_of[rust](S, C, _), last_slot[rust](C, L).
+s_shape[rust](S, Sh) :- inst_of[rust](S, C, _), cshape[rust](C, Sh).
+
+-- a slot's pieces: a literal, a string with no text node(S), the part itself ref(X) when nothing says what it is
+valued[rust](S, I) :- pval[rust](S, I, _).
+basic_piece[rust](S, I, V, lit) :- inst_of[rust](S, C, _), part_lit[rust](C, I, V), not is_spec[rust](C, I).
+basic_piece[rust](S, I, V, lit) :- pval[rust](S, I, lit(V)), inst_of[rust](S, C, _), not is_spec[rust](C, I).
+basic_piece[rust](S, I, node(S2), open) :- pval[rust](S, I, str(S2)), not s_textable[rust](S2), inst_of[rust](S, C, _),
+                                          not is_spec[rust](C, I).
+basic_piece[rust](S, I, ref(X), open) :- inst_of[rust](S, C, _), parts[rust](C, I, X), not valued[rust](S, I),
+                                        not is_spec[rust](C, I).
+basic_piece[rust](S, I, fmt(Spec), open) :- inst_of[rust](S, C, _), spec_open[rust](C, I, Spec).
+comp_of[rust](S, I, S2) :- pval[rust](S, I, str(S2)), s_textable[rust](S2), inst_of[rust](S, C, _), not is_spec[rust](C, I).
+slot_n[rust](S, I, N) :- inst_of[rust](S, C, _), cslot[rust](C, I), N is count(T : basic_piece[rust](S, I, T, _)).
+ncomp[rust](S, I, M)  :- inst_of[rust](S, C, _), cslot[rust](C, I), M is count(D : comp_of[rust](S, I, D)).
+comp1[rust](S, I, D)  :- ncomp[rust](S, I, 1), comp_of[rust](S, I, D).
+
+edb(concat_depth). edb(concat_cap).
+concat_depth(3).
+concat_cap(16).
+clevel[rust](0).
+clevel[rust](N) :- clevel[rust](M), concat_depth(Max), M < Max, N is M + 1.
+
+piece[rust](C, I, D, T, Ex) :- choices[rust](C, D, _), basic_piece[rust](C, I, T, Ex).
+piece[rust](C, I, 0, node(X), open) :- comp_of[rust](C, I, X).
+piece[rust](C, I, D, node(X), open) :- clevel[rust](D), D > 0, ncomp[rust](C, I, M), M >= 2, comp_of[rust](C, I, X).
+piece[rust](C, I, D, T, Ex) :- clevel[rust](D), D > 0, comp1[rust](C, I, X), E is D - 1, text_at[rust](X, E, T, Ex0),
+                               sub_ex(Ex0, Ex).
+
+slot_k[rust](C, I, 0, K) :- slot_n[rust](C, I, N), ncomp[rust](C, I, M), K is N + M.
+slot_k[rust](C, I, D, K) :- clevel[rust](D), D > 0, slot_n[rust](C, I, N), ncomp[rust](C, I, M), M != 1, K is N + M.
+slot_k[rust](C, I, D, K) :- clevel[rust](D), D > 0, slot_n[rust](C, I, N), comp1[rust](C, I, X), E is D - 1,
+                            choices[rust](X, E, KX), K is N + KX.
+choices_to[rust](C, D, 0, K) :- s_textable[rust](C), slot_k[rust](C, 0, D, K), K >= 1, concat_cap(Cap), K <= Cap.
+choices_to[rust](C, D, I, K) :- choices_to[rust](C, D, J, K0), I is J + 1, slot_k[rust](C, I, D, K1), K1 >= 1,
+                                K is K0 * K1, concat_cap(Cap), K <= Cap.
+choices[rust](C, D, K) :- s_last[rust](C, L), choices_to[rust](C, D, L, K).
+
+-- slot by slot; an empty literal adds nothing to a concatenation
+seq[rust](C, D, 0, T, Ex) :- choices[rust](C, D, _), piece[rust](C, 0, D, T, Ex).
+seq[rust](C, D, I, cat(T0, T), Ex) :- seq[rust](C, D, J, T0, Ex0), s_shape[rust](C, raw), I is J + 1,
+                                      piece[rust](C, I, D, T, Ex1), T0 != "", T != "", ex_and(Ex0, Ex1, Ex).
+seq[rust](C, D, I, T, Ex) :- seq[rust](C, D, J, "", Ex0), s_shape[rust](C, raw), I is J + 1,
+                             piece[rust](C, I, D, T, Ex1), ex_and(Ex0, Ex1, Ex).
+seq[rust](C, D, I, T0, Ex) :- seq[rust](C, D, J, T0, Ex0), s_shape[rust](C, raw), I is J + 1,
+                              piece[rust](C, I, D, "", Ex1), T0 != "", ex_and(Ex0, Ex1, Ex).
+seq[rust](C, D, I, join(T0, T), Ex) :- seq[rust](C, D, J, T0, Ex0), s_shape[rust](C, join), I is J + 1,
+                                       piece[rust](C, I, D, T, Ex1), ex_and(Ex0, Ex1, Ex).
+text_at[rust](C, D, T, Ex) :- s_last[rust](C, L), seq[rust](C, D, L, T, Ex).
+
+edb(ex_and). edb(sub_ex).
+ex_and(lit, lit, lit).      ex_and(lit, exact, exact).  ex_and(exact, lit, exact).  ex_and(exact, exact, exact).
+ex_and(open, lit, open).    ex_and(open, exact, open).  ex_and(open, open, open).
+ex_and(lit, open, open).    ex_and(exact, open, open).
+sub_ex(lit, exact).  sub_ex(exact, exact).  sub_ex(open, open).
+
+may_be_text[flow](C, T) :- concat_depth(D), text_at[rust](C, D, T, exact).
+may_be_text[flow](C, T) :- concat_depth(D), text_at[rust](C, D, T, lit).
+may_be_form[flow](C, T) :- concat_depth(D), text_at[rust](C, D, T, open).

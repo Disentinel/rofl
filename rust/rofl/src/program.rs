@@ -1330,6 +1330,54 @@ impl Pending {
     }
 }
 
+/// THE RULES A TEXT NAMES, each as a load of it writes it: its id and the rows of it the store keeps (a sealed body
+/// withheld as `admit_clause` withholds it). Nothing is written. Refused where the text holds anything but rules.
+pub fn rules_named(e: &mut Eval, text: &str) -> Result<Vec<(Sym, Vec<(Sym, Vec<Term>)>)>, String> {
+    let clauses = rofl_parse::parse(&mut e.h, text)?;
+    let mut p = Pending::new(e);
+    for pc in &clauses {
+        let plain = !pc.want && pc.structure.is_none() && pc.ord.is_none() && pc.dom.is_none() && pc.lattice.is_none() && !pc.tag && !pc.body.is_empty();
+        if !plain {
+            return Err(format!("a rule is named by its text as written in the program: {} is not a rule", rofl_parse::show(&e.h, pc)));
+        }
+        p.clause(e, pc, None, false);
+    }
+    p.diags.append(&mut p.unready);
+    if !p.diags.is_empty() {
+        return Err(p.diags.join("; "));
+    }
+    let drop = sealed_rels(e);
+    let (stored, _) = crate::reflect::decode_rules(&mut e.h, &e.v, &mut e.store);
+    let mut out = Vec::new();
+    for c in &p.ready {
+        let (id, facts) = encode_rule(&mut e.h, &e.v, c);
+        let id = e.h.intern(&id);
+        // as written, or else the one rule the program holds that differs from it only by its variables' names
+        let (id, facts) = if brk!("rule_named_as_written_only" => true; stored.iter().any(|d| d.id == id)) {
+            (id, facts)
+        } else {
+            let mut r = c.clone();
+            resolve_clause_books(&e.v, &mut r);
+            let key = crate::reflect::alpha_key(&canon_clause(&e.h, &r));
+            let like: Vec<&crate::reflect::DRule> = stored.iter().filter(|d| crate::reflect::alpha_key(&d.canon) == key).collect();
+            match like[..] {
+                [] => (id, facts),
+                [d] => {
+                    let (did, dfacts) = encode_rule(&mut e.h, &e.v, &d.clause);
+                    if e.h.intern(&did) != d.id {
+                        return Err(format!("the rule {} does not read back as written", e.h.name(d.id)));
+                    }
+                    (d.id, dfacts)
+                }
+                _ => return Err(format!("{} names {} rules that differ only by their variables; name one as the program writes it", canon_clause(&e.h, c), like.len())),
+            }
+        };
+        let rows = facts.into_iter().filter(|f| !drop.contains(&f.rel)).map(|f| (f.rel, f.args)).collect();
+        out.push((id, rows));
+    }
+    Ok(out)
+}
+
 fn lower_declared(e: &mut Eval, lowered: &[String], diags: &mut Vec<String>) -> Vec<Clause> {
     let mut low: Vec<Clause> = Vec::with_capacity(lowered.len());
     for t in lowered {

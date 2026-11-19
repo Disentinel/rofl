@@ -68,7 +68,7 @@ pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, cha
 }
 
 /// The units of a world settled by levels (`engine/levels.rs`), beside the volume of the core they stand over.
-const UNITS: &[u8; 16] = b"ROFL-UNITS-1\n\0\0\0";
+const UNITS: &[u8; 16] = b"ROFL-UNITS-2\n\0\0\0";
 
 /// THE UNITS AS A SCROLL at `k`: segments `<k>.u<n>`, each written once and whole, the newest naming every stretch
 /// it holds or an earlier one holds; `<k>.units` names the newest. An edit appends a segment of what it settled
@@ -110,14 +110,15 @@ pub fn has_units(k: &str) -> bool {
     newest_segment(k).is_some()
 }
 
-/// The units kept at `k`, over `e`, their core opened.
-pub fn open_units(k: &str, e: &Eval) -> Result<crate::engine::levels::Levels, String> {
+/// The units kept at `k`, over `e`, their core opened; a segment noted under `seen` as it was written is not summed
+/// again (`check_seen`).
+pub fn open_units(k: &str, e: &Eval, seen: Option<&Path>) -> Result<crate::engine::levels::Levels, String> {
     let n = newest_segment(k).ok_or_else(|| format!("{k}: no units are kept"))?;
     let open = |m: u32| -> Result<(std::sync::Arc<crate::arena::Region>, VolR), String> {
         let path = format!("{k}.u{m}");
         let map = crate::arena::map_file(&path).map_err(|x| x.to_string())?;
         let mut r = VolR::new(map.clone(), UNITS.len());
-        if !map.starts_with(UNITS) || r.text()? != build_id() || !r.sum_holds() {
+        if !map.starts_with(UNITS) || r.text()? != build_id() || !whole(&path, &r, seen) {
             return Err(format!("{path}: not the units of this build"));
         }
         Ok((map, r))
@@ -313,17 +314,41 @@ pub fn check_seen(path: &str, seen: Option<&Path>) -> Result<Checked, String> {
 /// The header of the volume at `path`, once its sum holds or it is noted under `seen` as it is.
 fn check_one(path: &str, seen: Option<&Path>) -> Result<Header, String> {
     let h = header(path)?;
-    let line = seen.and_then(|d| seen_line(path, h.r.id(), d));
-    if !line.as_ref().is_some_and(|(m, l, _)| std::fs::read_to_string(m).is_ok_and(|x| x == *l)) {
-        if !crate::brk!("kept_unsummed" => true; h.r.sum_holds()) {
-            return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
-        }
-        if let Some((m, l, _)) = line.filter(|(_, _, at)| at.elapsed().is_ok_and(|e| e.as_secs() >= 1)) {
-            note_seen(&m, &l);
-        }
+    if !whole(path, &h.r, seen) {
+        return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
     }
     WHOLE.with(|w| w.borrow_mut().insert(path.to_string()));
     Ok(h)
+}
+
+/// Whether the file at `path`, read by `r`, holds its sum: noted under `seen` as it is, or summed whole now and
+/// noted so.
+fn whole(path: &str, r: &VolR, seen: Option<&Path>) -> bool {
+    holds_sum(path, r.id(), || r.sum_holds(), seen)
+}
+
+/// Whether the file at `path` whose bytes end in `bytes` sums to its last eight bytes, as `whole`.
+pub fn ends_in_its_sum(path: &str, bytes: &[u8], seen: Option<&Path>) -> bool {
+    let Some(end) = bytes.len().checked_sub(8) else { return false };
+    holds_sum(path, crate::arena::file_id(bytes).unwrap_or(0), || {
+        let mut s = crate::arena::Sum::default();
+        s.add(&bytes[..end]);
+        s.value().to_le_bytes() == bytes[end..]
+    }, seen)
+}
+
+fn holds_sum(path: &str, id: u64, sum_holds: impl FnOnce() -> bool, seen: Option<&Path>) -> bool {
+    let line = seen.and_then(|d| seen_line(path, id, d));
+    if line.as_ref().is_some_and(|(m, l, _)| std::fs::read_to_string(m).is_ok_and(|x| x == *l)) {
+        return true;
+    }
+    if !crate::brk!("kept_unsummed" => true; sum_holds()) {
+        return false;
+    }
+    if let Some((m, l, _)) = line.filter(|(_, _, at)| at.elapsed().is_ok_and(|e| e.as_secs() >= 1)) {
+        note_seen(&m, &l);
+    }
+    true
 }
 
 /// Where `seen` notes the volume at `path` whose sum is `id`, the line it notes (the sum, the length, the change
@@ -391,6 +416,9 @@ pub fn open(path: &str) -> Result<Opened, String> {
     let Header { mut r, over, build, .. } = header(path)?;
     if build != build_id() {
         return Err(format!("{path}: a volume of another build"));
+    }
+    if WHOLE.with(|w| w.borrow().contains(path)) {
+        r = r.summed();
     }
     let mut chain = Chain::default();
     if over {

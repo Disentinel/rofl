@@ -63,7 +63,7 @@ fn check(cool: bool) {
     if cool {
         mem(2, 2);
     }
-    let v = core.by_volumes(&cut.files);
+    let v = core.by_volumes(cut.files.clone());
     if cool {
         mem(0, 0);
     }
@@ -87,7 +87,7 @@ fn check(cool: bool) {
         let mut e = v.eval.fork();
         e.store.reads_none();
         e.levels = None;
-        let back = std::sync::Arc::new(rofl::volume::open_units(&k, &e).unwrap());
+        let back = std::sync::Arc::new(rofl::volume::open_units(&k, &e, None).unwrap());
         back.read_by(&mut e);
         e.levels = Some(back);
         v.eval = e;
@@ -121,7 +121,7 @@ fn walked(model: &str) {
     assert_eq!(cut.files.len(), 3);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[cut.core.as_str()], None).unwrap();
-    let mut v = core.by_volumes(&cut.files).unwrap().0;
+    let mut v = core.by_volumes(cut.files.clone()).unwrap().0;
     let q = "from(S, Y)";
     let by = answers(&mut v, q);
     let all = answers(&mut whole, q);
@@ -179,7 +179,7 @@ fn the_rules_of_one_file_are_evaluated_in_its_world() {
     for across in ["same", "twin", "lonely", "under"] {
         assert!(!heads.contains(across), "{across} is not given by a file: {heads:?}");
     }
-    let mut v = core.by_volumes(&cut.files).unwrap().0;
+    let mut v = core.by_volumes(cut.files.clone()).unwrap().0;
     for (q, n) in [("leaf(N)", 6), ("kids(P, N)", 6), ("deep(A, D)", 12), ("same(A, B)", 6), ("twin(A)", 3), ("lonely(N)", 3)] {
         let all = answers(&mut whole, q);
         assert_eq!(all.len(), n, "{q}: {all:?}");
@@ -210,7 +210,7 @@ fn a_file_that_breaks_the_plan_is_refused() {
         let cut = rofl::engine::volumes::cut(&refs);
         let mut core = Session::fresh(BUDGET);
         core.load_all(&[cut.core.as_str()], None).unwrap();
-        let e = core.by_volumes(&cut.files).err().map(|e| rofl::describe(&e)).unwrap_or_default();
+        let e = core.by_volumes(cut.files.clone()).err().map(|e| rofl::describe(&e)).unwrap_or_default();
         assert!(e.contains(said), "refused with {said:?}: {e}");
     }
 }
@@ -233,7 +233,7 @@ fn a_node_key_inside_a_string_names_no_file() {
     let cut = rofl::engine::volumes::cut(&refs);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[cut.core.as_str()], None).unwrap();
-    let mut v = core.by_volumes(&cut.files).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
+    let mut v = core.by_volumes(cut.files.clone()).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
     assert_eq!(answers(&mut v, "named(N, S)"), answers(&mut whole, "named(N, S)"));
 }
 
@@ -260,7 +260,7 @@ fn the_rows_a_lower_unit_cites_are_its_own() {
     let cut = rofl::engine::volumes::cut(&refs);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[cut.core.as_str()], None).unwrap();
-    let mut v = core.by_volumes(&cut.files).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
+    let mut v = core.by_volumes(cut.files.clone()).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
     assert_eq!(answers(&mut v, "n[d](F, N)"), answers(&mut whole, "n[d](F, N)"));
     let heights = |s: &rofl::store::Store| {
         let mut all: Vec<Vec<u32>> = (0..s.cell_count()).map(|c| {
@@ -276,4 +276,60 @@ fn the_rows_a_lower_unit_cites_are_its_own() {
     let want = heights(&whole.eval.store);
     assert!(want.len() == 12 && want.iter().all(|h| !h.is_empty()), "{want:?}");
     assert_eq!(heights(reader), want);
+}
+
+/// WHAT A WORLD BY LEVELS SPENT IS THE SUM OF ITS UNITS: the rules fired in the files' units are in the reader's
+/// count, as a world whole keeps its own (`hot_rules`, the profile), and one whose rows read, summed, cross the
+/// threshold is said hot though no unit alone crossed it.
+#[test]
+fn the_units_spend_into_the_worlds_count() {
+    let facts = by_file_facts();
+    let refs = [BY_FILE, facts.as_str()];
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    (core.eval.cost.hot_read, core.eval.cost.hot_given) = (20, true);
+    let v = core.by_volumes(cut.files.clone()).unwrap().0;
+    let heads: BTreeSet<String> = v.eval.hot_rules(100).into_iter().map(|h| h.head).collect();
+    for of_file in ["has_child", "leaf"] {
+        assert!(heads.contains(of_file), "{of_file} fired in the files' units: {heads:?}");
+    }
+    assert!(v.eval.cost.hot_said.iter().any(|s| s.contains("summed over the units")), "{:#?}", v.eval.cost.hot_said);
+}
+
+/// THE PROFILE OF A WORLD BY LEVELS (docs/cli.md, *The profile of an evaluation*): a rule that reads it is not a
+/// reason to evaluate the world whole. The units' count is written once they are settled, and the reader fires what
+/// reads it: the rules the files' units fired are there.
+#[test]
+fn a_world_by_levels_reads_its_own_profile() {
+    let facts = by_file_facts();
+    let model = format!("{BY_FILE}fired(R) :- fires[profile](R, N), N > 0.\n");
+    let refs = [model.as_str(), facts.as_str()];
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    let mut v = core.by_volumes(cut.files.clone()).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
+    let fired: BTreeSet<String> = answers(&mut v, "fired(R)").into_iter().map(|r| r[0].clone()).collect();
+    let leaf: BTreeSet<String> = v.eval.rules.iter().filter(|r| ["leaf", "has_child"].contains(&v.eval.h.name(r.clause.head.rel))).map(|r| v.eval.h.name(r.id).to_string()).collect();
+    assert!(!leaf.is_empty() && leaf.is_subset(&fired), "the rules of the files' units are in the profile: {leaf:?} of {fired:?}");
+    assert_eq!(answers(&mut v, "leaf(N)").len(), 6);
+}
+
+/// A count the core settles (it reads no file) and a count left to the reader's unit, in one world: the reader's
+/// unit, a fork of the frozen core, clears what it derives without walking the core's cells as its own.
+#[test]
+fn a_count_of_the_core_and_one_of_the_reader() {
+    let facts = by_file_facts();
+    let model = format!("{BY_FILE}tag(a). tag(b).\ntags(N) :- N is count(X : tag(X)).\ntwins(N) :- N is count(A : twin(A)).\n");
+    let refs = [model.as_str(), facts.as_str()];
+    let mut whole = Session::fresh(BUDGET);
+    whole.load_all(&refs, None).unwrap();
+    whole.evaluate().unwrap();
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut core = Session::fresh(BUDGET);
+    core.load_all(&[cut.core.as_str()], None).unwrap();
+    let mut v = core.by_volumes(cut.files.clone()).unwrap_or_else(|e| panic!("{}", rofl::describe(&e))).0;
+    for q in ["tags(N)", "twins(N)"] {
+        assert_eq!(answers(&mut v, q), answers(&mut whole, q), "{q}");
+    }
 }

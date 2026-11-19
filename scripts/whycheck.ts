@@ -242,7 +242,7 @@ const askText = (rows: string[], shrugs: string[], partial: boolean): string =>
   [...[...rows].sort().map((r) => `row ${r}`), ...[...shrugs].sort().map((x) => `shrug ${x}`), `partial ${partial}`].join('\n');
 /** An ask as the REPL prints it with the sentences off (src/repl.ts `?`), which `rofl ask` prints byte for byte. */
 const replAsk = (a: { rows: { text: string }[]; shrugs?: { text: string; line: string }[]; partial: boolean }): string =>
-  [...(a.rows.length === 0 && !a.shrugs ? ['(empty)'] : []), ...a.rows.map((r) => r.text), ...(a.shrugs ?? []).map((x) => `? ${x.text}  ${x.line}`),
+  [...(a.partial ? ['[partial answer: the rows below may be short of the whole answer]'] : []), ...(a.rows.length === 0 && !a.shrugs ? ['(empty)'] : []), ...a.rows.map((r) => r.text), ...(a.shrugs ?? []).map((x) => `? ${x.text}  ${x.line}`),
     ...(a.partial ? ['[partial: budget exhausted, hole emitted]'] : [])].join('\n');
 const bound = (vars: string[], row: string[]): string => {
   const at = vars.map((_, i) => i).sort((a, b) => (vars[a] < vars[b] ? -1 : vars[a] > vars[b] ? 1 : 0));

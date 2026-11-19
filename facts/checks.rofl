@@ -326,6 +326,10 @@ check_world("demand_neg_retract").
 check_file("demand_neg_retract", "examples/checks/demand-neg-retract.rofl").
 check_opt("demand_neg_retract", together, 1).
 check_opt("demand_neg_retract", retract, "dt_z(1)").
+check_world("demand_neg_retract_after").
+check_file("demand_neg_retract_after", "examples/checks/demand-neg-retract-after.rofl").
+check_opt("demand_neg_retract_after", together, 1).
+check_opt("demand_neg_retract_after", retract, "dk_z(1)").
 
 -- the two above in their closed form: the relation's answers ground, read from the store
 -- (f_the_closed_forms_of_the_negation_worlds_are_kept)
@@ -2664,6 +2668,11 @@ check_opt("agg_incr_thr", together, 1).
 check_opt("agg_incr_thr", retract, "th_sale(1, a, 5)").
 check_opt("agg_incr_thr", retract, "th_sale(4, b, 7)").
 proves_work("agg_incr_thr", w_agg_retract_fallback_tail).
+check_world("agg_incr_thr_after").
+check_file("agg_incr_thr_after", "examples/checks/agg-incr-thr-after.rofl").
+check_opt("agg_incr_thr_after", together, 1).
+check_opt("agg_incr_thr_after", retract, "ta_k(a)").
+proves_work("agg_incr_thr_after", w_agg_retract_fallback_tail).
 
 check_world("agg_incr_owner").
 check_file("agg_incr_owner", "examples/checks/agg-incr-owner.rofl").
@@ -2686,6 +2695,13 @@ check_opt("agg_incr_staged", retract, "sg_base0(a)").
 check_opt("agg_incr_staged", retract, "sg_sale(3, b, 9)").
 check_opt("agg_incr_staged", retract, "sg_sale(1, a, 4)").
 proves_work("agg_incr_staged", w_agg_retract_fallback_tail).
+check_world("agg_incr_staged_cell").
+check_file("agg_incr_staged_cell", "examples/checks/agg-incr-staged-cell.rofl").
+check_opt("agg_incr_staged_cell", together, 1).
+check_opt("agg_incr_staged_cell", ticks, 1).
+check_opt("agg_incr_staged_cell", retract, "sc_k(a)").
+check_opt("agg_incr_staged_cell", one_engine, rust).
+proves_work("agg_incr_staged_cell", w_agg_retract_fallback_tail).
 
 check_world("agg_incr_demand").
 check_file("agg_incr_demand", "examples/checks/agg-incr-demand.rofl").
@@ -3684,6 +3700,38 @@ check_file("vscode_side_effects", "examples/checks/vscode-mini-facts.rofl").
 check_file("vscode_side_effects", "examples/vscode/side-effects.rofl").
 check_file("vscode_side_effects", "examples/checks/vscode-side-effects-check.rofl").
 
+-- w_js_call_site_context: a call is an instance of the object its function hands out, and a method call of the
+-- instance it is called on (examples/instances/src); every answer named in the check
+check_world("js_instances").
+check_file("js_instances", "models/lang/js/facts/js-callgraph.rofl").
+check_file("js_instances", "models/lang/js/facts/js-modules.rofl").
+check_file("js_instances", "models/lang/js/facts/js-effects.rofl").
+check_file("js_instances", "models/lang/js/facts/js-globals.rofl").
+check_file("js_instances", "models/lang/js/facts/js-host.rofl").
+check_file("js_instances", "models/lang/js/facts/js-host-surface.rofl").
+check_file("js_instances", "models/lang/js/facts/js-lib-surface.rofl").
+check_file("js_instances", "models/lang/js/facts/js-attrs.rofl").
+check_file("js_instances", "models/lang/js/rules/js-structure.rofl").
+check_file("js_instances", "models/lang/js/roles.rofl").
+check_file("js_instances", "models/lang/js/oxc-roles.rofl").
+check_file("js_instances", "models/lang/js/rules/js-dataflow.rofl").
+check_file("js_instances", "models/lang/js/rules/js-model.rofl").
+check_file("js_instances", "models/lang/js/rules/js-callgraph.rofl").
+check_file("js_instances", "models/lang/js/rules/js-controlflow.rofl").
+check_file("js_instances", "models/lang/js/rules/js-effects.rofl").
+check_file("js_instances", "models/lang/js/rules/js-globals.rofl").
+check_file("js_instances", "models/lang/js/rules/js-host.rofl").
+check_file("js_instances", "models/lang/js/rules/js-ambient.rofl").
+check_file("js_instances", "models/lang/js/rules/js-attrs.rofl").
+check_file("js_instances", "models/lang/js/rules/js-modules.rofl").
+check_file("js_instances", "models/lang/js/rules/js-concat.rofl").
+check_file("js_instances", "models/lang/js/rules/js-surface.rofl").
+check_file("js_instances", "examples/checks/instances-facts.rofl").
+check_file("js_instances", "examples/vscode/side-effects.rofl").
+check_file("js_instances", "examples/checks/instances-check.rofl").
+check_opt("js_instances", one_engine, rust).
+
+-- w_concat_value: a string built from parts (rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
 -- w_concat_value: a string built from parts (models/lang/js/rules/js-concat.rofl), every entry point over examples/concat/src/entry.ts,
 -- the cap and the widening; every text, form and cut literal named in the check
 check_world("concat_value").
@@ -3865,6 +3913,7 @@ check_file("product_rofl", "models/product/rofl.rofl").
 check_file("product_rofl", "facts/commands.rofl").
 check_file("product_rofl", "facts/bench.rofl").
 check_file("product_rofl", "examples/checks/product-facts.rofl").
+check_file("product_rofl", "facts/worklist.rofl").
 -- no gate on a hardcoded number (models/engine/gates.rofl) over a small crate: the gates by a named constant, directly
 -- and through a field and a product, a bare number, a gate with a task and no source, a fact of a gate that is gone
 check_world("gates_rust").
@@ -3877,6 +3926,113 @@ check_file("gates_rust", "models/lang/rust/qname.rofl").
 check_file("gates_rust", "models/engine/gates.rofl").
 check_file("gates_rust", "examples/checks/gates-rs-facts.rofl").
 check_opt("gates_rust", one_engine, rust).
+
+-- the Rust model on the scene of js_instances: a call is an instance, a method walked object by object, the value at an effect
+-- the scenes of examples/parity/ in Rust, each judged against what the program prints (examples/parity/judge/check.rofl)
+check_world("parity_rs_instances").
+check_file("parity_rs_instances", "models/lang/js/roles.rofl").
+check_file("parity_rs_instances", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_instances", "models/lang/rust/names.rofl").
+check_file("parity_rs_instances", "models/lang/rust/calls.rofl").
+check_file("parity_rs_instances", "models/lang/rust/flow.rofl").
+check_file("parity_rs_instances", "models/lang/rust/qname.rofl").
+check_file("parity_rs_instances", "models/lang/rust/values.rofl").
+check_file("parity_rs_instances", "models/lang/rust/effects.rofl").
+check_file("parity_rs_instances", "models/lang/rust/strings.rofl").
+check_file("parity_rs_instances", "models/lang/rust/guards.rofl").
+check_file("parity_rs_instances", "models/lang/rust/web.rofl").
+check_file("parity_rs_instances", "examples/parity/instances/rs-facts.rofl").
+check_file("parity_rs_instances", "examples/parity/judge/check.rofl").
+check_file("parity_rs_instances", "examples/parity/judge/rs.rofl").
+check_file("parity_rs_instances", "examples/parity/instances/rs-check.rofl").
+check_opt("parity_rs_instances", one_engine, rust).
+check_world("parity_rs_keyed").
+check_file("parity_rs_keyed", "models/lang/js/roles.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/names.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/calls.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/flow.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/qname.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/values.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/effects.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/strings.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/guards.rofl").
+check_file("parity_rs_keyed", "models/lang/rust/web.rofl").
+check_file("parity_rs_keyed", "examples/parity/keyed/rs-facts.rofl").
+check_file("parity_rs_keyed", "examples/parity/judge/check.rofl").
+check_file("parity_rs_keyed", "examples/parity/judge/rs.rofl").
+check_file("parity_rs_keyed", "examples/parity/keyed/rs-check.rofl").
+check_opt("parity_rs_keyed", one_engine, rust).
+check_world("parity_rs_strings").
+check_file("parity_rs_strings", "models/lang/js/roles.rofl").
+check_file("parity_rs_strings", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_strings", "models/lang/rust/names.rofl").
+check_file("parity_rs_strings", "models/lang/rust/calls.rofl").
+check_file("parity_rs_strings", "models/lang/rust/flow.rofl").
+check_file("parity_rs_strings", "models/lang/rust/qname.rofl").
+check_file("parity_rs_strings", "models/lang/rust/values.rofl").
+check_file("parity_rs_strings", "models/lang/rust/effects.rofl").
+check_file("parity_rs_strings", "models/lang/rust/strings.rofl").
+check_file("parity_rs_strings", "models/lang/rust/guards.rofl").
+check_file("parity_rs_strings", "models/lang/rust/web.rofl").
+check_file("parity_rs_strings", "examples/parity/strings/rs-facts.rofl").
+check_file("parity_rs_strings", "examples/parity/judge/check.rofl").
+check_file("parity_rs_strings", "examples/parity/judge/rs.rofl").
+check_file("parity_rs_strings", "examples/parity/strings/rs-check.rofl").
+check_opt("parity_rs_strings", one_engine, rust).
+check_world("parity_rs_guards").
+check_file("parity_rs_guards", "models/lang/js/roles.rofl").
+check_file("parity_rs_guards", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_guards", "models/lang/rust/names.rofl").
+check_file("parity_rs_guards", "models/lang/rust/calls.rofl").
+check_file("parity_rs_guards", "models/lang/rust/flow.rofl").
+check_file("parity_rs_guards", "models/lang/rust/qname.rofl").
+check_file("parity_rs_guards", "models/lang/rust/values.rofl").
+check_file("parity_rs_guards", "models/lang/rust/effects.rofl").
+check_file("parity_rs_guards", "models/lang/rust/strings.rofl").
+check_file("parity_rs_guards", "models/lang/rust/guards.rofl").
+check_file("parity_rs_guards", "models/lang/rust/web.rofl").
+check_file("parity_rs_guards", "examples/parity/guards/rs-facts.rofl").
+check_file("parity_rs_guards", "examples/parity/judge/check.rofl").
+check_file("parity_rs_guards", "examples/parity/judge/rs.rofl").
+check_file("parity_rs_guards", "examples/parity/guards/rs-check.rofl").
+check_opt("parity_rs_guards", one_engine, rust).
+check_world("parity_rs_service").
+check_file("parity_rs_service", "models/lang/js/roles.rofl").
+check_file("parity_rs_service", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_service", "models/lang/rust/names.rofl").
+check_file("parity_rs_service", "models/lang/rust/calls.rofl").
+check_file("parity_rs_service", "models/lang/rust/flow.rofl").
+check_file("parity_rs_service", "models/lang/rust/qname.rofl").
+check_file("parity_rs_service", "models/lang/rust/values.rofl").
+check_file("parity_rs_service", "models/lang/rust/effects.rofl").
+check_file("parity_rs_service", "models/lang/rust/strings.rofl").
+check_file("parity_rs_service", "models/lang/rust/guards.rofl").
+check_file("parity_rs_service", "models/lang/rust/web.rofl").
+check_file("parity_rs_service", "examples/parity/service/rs-facts.rofl").
+check_file("parity_rs_service", "examples/parity/judge/check.rofl").
+check_file("parity_rs_service", "examples/parity/judge/rs.rofl").
+check_file("parity_rs_service", "examples/parity/service/rs-check.rofl").
+check_opt("parity_rs_service", one_engine, rust).
+check_world("parity_rs_calls").
+check_file("parity_rs_calls", "models/lang/js/roles.rofl").
+check_file("parity_rs_calls", "models/lang/rust/rs-roles.rofl").
+check_file("parity_rs_calls", "models/lang/rust/names.rofl").
+check_file("parity_rs_calls", "models/lang/rust/calls.rofl").
+check_file("parity_rs_calls", "models/lang/rust/flow.rofl").
+check_file("parity_rs_calls", "models/lang/rust/qname.rofl").
+check_file("parity_rs_calls", "models/lang/rust/values.rofl").
+check_file("parity_rs_calls", "models/lang/rust/effects.rofl").
+check_file("parity_rs_calls", "models/lang/rust/strings.rofl").
+check_file("parity_rs_calls", "models/lang/rust/guards.rofl").
+check_file("parity_rs_calls", "models/lang/rust/web.rofl").
+check_file("parity_rs_calls", "examples/parity/calls/rs-facts.rofl").
+check_file("parity_rs_calls", "examples/parity/judge/check.rofl").
+check_file("parity_rs_calls", "examples/parity/judge/rs.rofl").
+check_file("parity_rs_calls", "examples/parity/calls/rs-check.rofl").
+check_opt("parity_rs_calls", one_engine, rust).
+check_world("parity_matrix").
+check_file("parity_matrix", "examples/parity/judge/matrix.rofl").
 -- its twin over oxc: the same sources through oxc_scan, oxc-roles.rofl and oxc-audit.rofl (npm run test:roles -- --fixture)
 check_world("roles_oxc").
 check_file("roles_oxc", "models/lang/js/roles.rofl").

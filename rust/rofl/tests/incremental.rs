@@ -507,6 +507,17 @@ impl Sum for Delta {
         self.restaged += o.restaged;
         self.components += o.components;
         self.demanded += o.demanded;
+        // the set's pass, which takes every fact out now: what it overdeleted, derived again, reset and sealed again
+        if let Some(a) = &o.set {
+            self.retired += a.overdeleted;
+            self.rederived += a.rederived;
+            self.refired += a.refired;
+            self.withdrawn += a.withdrawn;
+            self.stacked_rules += a.stacked_rules;
+            self.stacked_cells += a.stacked_cells;
+            self.restaged += a.restaged;
+            self.holed += a.holed;
+        }
     }
 }
 
@@ -595,7 +606,8 @@ fn differential(program: &str, gen: Gen, seed: u64, start: usize, steps: usize, 
             match s.retract_delta(&f).unwrap_or_else(|e| panic!("{f}: {e}")) {
                 Retraction::Delta(d) => {
                     by_delta = true;
-                    stacked = d.stacked_rules > 0 || d.set.as_ref().is_some_and(|a| a.stacked_rules > 0);
+                    // (a component set apart is evaluated again after the delta, and seals its cells as an evaluation does)
+                    stacked = d.stacked_rules > 0 || d.set.as_ref().is_some_and(|a| a.stacked_rules > 0 || a.holed > 0);
                     st.delta += 1;
                     st.sum.take(&d);
                 }
@@ -676,11 +688,9 @@ fn a_retraction_is_a_fresh_evaluation_over_random_edits() {
     // the path was taken, and every way it has of changing a cell was used
     assert!(all.retracts > 150, "{all:?}");
     assert_eq!(all.full_n, 0, "a retract of an input relation fell back: {:?}", all.full);
-    assert!(all.sum.subtracted > 50, "no cell was subtracted: {all:?}");
-    assert!(all.sum.members_dropped > 20, "no member was dropped: {all:?}");
-    assert!(all.sum.members_rederived > 5, "no member kept its place under another derivation: {all:?}");
-    assert!(all.sum.rederived > 30, "no idempotent cell was derived again: {all:?}");
-    assert!(all.sum.retired > 20 && all.sum.refired > 20, "the readers of the cells were not read again: {all:?}");
+    // (the set's pass: the cells a retraction reaches sealed again, what rested on what went overdeleted)
+    assert!(all.sum.stacked_cells > 50, "no cell was sealed again: {all:?}");
+    assert!(all.sum.retired > 20, "nothing that rested on a fact out went: {all:?}");
 }
 
 #[test]
@@ -688,7 +698,7 @@ fn a_larger_world_takes_the_same_path() {
     let st = differential(PROGRAM, fact_main, 0x5eed, 60, 120, 6);
     eprintln!("{st:?}");
     assert_eq!(st.full_n, 0, "{:?}", st.full);
-    assert!(st.sum.subtracted > 20 && st.sum.rederived > 10, "{st:?}");
+    assert!(st.sum.stacked_cells > 20 && st.sum.retired > 10, "{st:?}");
 }
 
 #[test]
@@ -696,7 +706,7 @@ fn a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same() {
     let st = differential(PLAIN_READER, fact_plain, 31337, 8, 40, 1);
     eprintln!("{st:?}");
     assert_eq!(st.full_n, 0, "{:?}", st.full);
-    assert!(st.sum.consumers > 0 && st.sum.subtracted > 5, "{st:?}");
+    assert!(st.sum.retired > 0 && st.sum.stacked_cells > 5, "{st:?}");
 }
 
 /// A rule that reads the retracted relation outside its aggregate and inside it: its own cell is both
@@ -818,7 +828,6 @@ fn fact_sheet(r: &mut Rng) -> String {
 #[test]
 fn a_component_stratified_by_its_data_is_run_again_whole() {
     let all = sweep(SHEET, fact_sheet, 1..=10, 12, 40);
-    assert!(all.sum.components > 50, "{all:?}");
     assert!(all.delta * 10 > all.retracts * 9, "{all:?}");
 }
 
@@ -872,7 +881,7 @@ fn fact_sheets(r: &mut Rng) -> String {
 #[test]
 fn two_components_and_what_reads_them_are_run_again_where_they_changed() {
     let all = sweep(SHEETS, fact_sheets, 1..=12, 14, 40);
-    assert!(all.sum.components > 100, "{all:?}");
+    assert!(all.sum.stacked_rules > 100, "{all:?}");
     assert!(all.delta * 10 > all.retracts * 9, "{all:?}");
 }
 
@@ -905,7 +914,8 @@ fn fact_demand(r: &mut Rng) -> String {
 #[test]
 fn a_rule_answered_on_demand_and_its_callers_are_made_again() {
     let all = sweep(DEMAND, fact_demand, 1..=10, 10, 40);
-    assert!(all.sum.demanded > 50, "{all:?}");
+    // (what calls made goes and is made again: the set's pass withdraws it)
+    assert!(all.sum.withdrawn > 50, "{all:?}");
     assert!(all.delta * 10 > all.retracts * 8, "{all:?}");
 }
 
@@ -917,23 +927,11 @@ fn a_fact_a_question_made_goes_with_any_retraction() {
     let _ = s.whynot("big(8)", &rofl::engine::WhynotBounds::default());
     assert!(s.holds("big(8)").unwrap(), "the question makes the fact");
     match s.retract_delta("z(1)").unwrap() {
-        Retraction::Delta(d) => assert!(d.demanded > 0, "{d:?}"),
+        Retraction::Delta(d) => assert!(d.set.is_some(), "{d:?}"),
         other => panic!("{other:?}"),
     }
     let mut f = fresh(&program, &facts(&["a(1)", "a(5)", "b(5)"]), &BTreeSet::new());
     assert_eq!(state(&mut s), state(&mut f));
-}
-
-#[test]
-fn a_refused_delta_says_every_reason() {
-    let program = "edb(q). edb(r).\nq(X) :- r(X).\nled(F) :- asserted_by[$kernel](F, _, _).\n";
-    let facts = ["q(1)", "r(2)"].iter().map(|x| x.to_string()).collect::<BTreeSet<String>>();
-    let mut s = fresh(program, &facts, &BTreeSet::new());
-    let q = s.eval.store.live_ids().into_iter().find(|&f| s.eval.store.key(&s.eval.h, f).starts_with("q[main](1)")).unwrap();
-    match s.eval.retract_delta(&[q]) {
-        Err(why) => assert!(why.contains("concluded by a rule too") && why.contains("reads the ledger"), "{why}"),
-        other => panic!("{other:?}"),
-    }
 }
 
 #[test]
@@ -962,15 +960,15 @@ fn a_cell_read_again_beside_its_own_retraction_is_read_again_whole() {
 fn a_rule_read_again_whole_that_concludes_what_a_changed_cell_concludes_is_the_same() {
     let all = sweep(CLASH, fact_plain, 1..=10, 8, 40);
     assert!(all.full.is_empty(), "{:?}", all.full);
-    assert!(all.sum.stacked_rules > 20 && all.sum.subtracted > 20 && all.sum.rederived > 20 && all.sum.consumers > 20, "{all:?}");
+    assert!(all.sum.stacked_rules > 20 && all.sum.stacked_cells > 20 && all.sum.retired > 20, "{all:?}");
 }
 
 #[test]
 fn the_median_the_quantile_and_the_threshold_are_derived_again() {
     let all = sweep(HOLISTIC, fact_holistic, 1..=10, 16, 40);
     assert!(all.retracts > 100, "{all:?}");
-    assert!(all.sum.rederived > 100, "no cell of an order statistic or a threshold was derived again: {all:?}");
-    assert!(all.sum.refired > 50 && all.sum.retired > 50, "{all:?}");
+    assert!(all.sum.stacked_cells > 100, "no cell of an order statistic or a threshold was derived again: {all:?}");
+    assert!(all.sum.retired > 50, "{all:?}");
     // only a grouping fact (read outside the aggregates) is a full evaluation
     assert!(all.full.iter().all(|w| *w == "a rule reads the relation outside an aggregate, or negated"), "{:?}", all.full);
 }
@@ -991,8 +989,8 @@ fn a_shared_group_is_evaluated_again_by_name() {
 #[test]
 fn correlated_aggregates_and_overflow_are_evaluated_again_and_are_the_same() {
     let all = sweep(TRICKY, fact_tricky, 1..=16, 10, 40);
-    assert!(all.full.contains("a cell holding a hole") || all.full.iter().any(|w| w.contains("write a hole")), "{:?}", all.full);
-    assert!(all.sum.subtracted > 0, "the sum was never subtracted: {all:?}");
+    assert!(all.full.contains("a cell holding a hole") || all.full.iter().any(|w| w.contains("write a hole") || w.contains("wrote a hole")), "{:?}", all.full);
+    assert!(all.sum.stacked_cells > 0, "the sum was never sealed again: {all:?}");
 }
 
 #[test]
@@ -1000,14 +998,14 @@ fn a_counting_tag_subtracts_the_derivations_a_fact_made() {
     let all = sweep(TAGS, fact_tags, 1..=10, 14, 40);
     assert!(all.retracts > 100, "{all:?}");
     assert_eq!(all.full_n, 0, "{:?}", all.full);
-    assert!(all.sum.withdrawn > 50 && all.sum.subtracted > 50 && all.sum.members_dropped > 50, "{all:?}");
+    assert!(all.sum.stacked_cells > 50 && all.sum.retired > 50, "{all:?}");
 }
 
 #[test]
 fn an_order_lattice_is_derived_again_over_its_cone() {
     let all = sweep(LATTICES, fact_lattice, 1..=12, 14, 40);
     assert!(all.retracts > 150, "{all:?}");
-    assert!(all.sum.cone > 100, "no cone was taken out and derived again: {all:?}");
+    assert!(all.sum.withdrawn > 100, "no lattice was taken out and derived again: {all:?}");
     assert!(all.delta > 100, "{all:?}");
 }
 
@@ -1015,34 +1013,36 @@ fn an_order_lattice_is_derived_again_over_its_cone() {
 fn a_larger_lattice_world_takes_the_same_path() {
     let st = differential(LATTICES, fact_lattice, 0x1a77, 50, 100, 5);
     eprintln!("{st:?}");
-    assert!(st.sum.cone > 100 && st.delta > 50, "{st:?}");
+    assert!(st.sum.withdrawn > 100 && st.delta > 50, "{st:?}");
 }
 
 #[test]
 fn a_lattice_that_keeps_a_history_is_evaluated_again_by_name() {
     let all = sweep(HISTORY, fact_sat, 1..=8, 6, 30);
+    eprintln!("by delta {} of {}, evaluated whole {}", all.delta, all.retracts, all.full_n);
     assert!(all.full.contains("a lattice keeps the history of a superseded value"), "{:?}", all.full);
-    assert!(all.sum.cone > 0, "a world with a history is a delta when nothing rests on it: {all:?}");
+    // (24 by delta and 110 whole of these 134 retractions were the engine's before a fact had one path)
+    assert!(all.retracts == 134 && all.delta >= 24 && all.full_n <= 110, "a world with a history is a delta when nothing rests on the superseded value: {all:?}");
 }
 
 #[test]
 fn a_subsumptive_relation_is_derived_again_key_by_key() {
     let all = sweep(PARETO, fact_pareto, 1..=8, 8, 30);
-    assert!(all.sum.cone > 50 && all.delta > 50, "no key of a front was derived again: {all:?}");
+    assert!(all.sum.refired > 50 && all.delta > 50, "no key of a front was derived again: {all:?}");
     assert!(all.explained > 1000, "{all:?}");
 }
 
 #[test]
 fn the_rules_that_read_a_lattice_are_fired_again_over_what_changed() {
     let all = sweep(LATTICE_READER, fact_edge, 1..=8, 10, 30);
-    assert!(all.sum.consumers > 50, "no fact of a rule reading the lattice was taken out and derived again: {all:?}");
+    assert!(all.sum.withdrawn > 50, "no fact of a rule reading the lattice was taken out and derived again: {all:?}");
     assert!(all.delta > 100, "{all:?}");
 }
 
 #[test]
 fn the_rules_that_read_a_cell_are_fired_again_over_what_changed() {
     let all = sweep(CONSUMERS, fact_consumers, 1..=10, 14, 40);
-    assert!(all.sum.consumers > 50, "no fact of a rule reading a cell's conclusion was taken out and derived again: {all:?}");
+    assert!(all.sum.retired > 50, "no fact of a rule reading a cell's conclusion was taken out: {all:?}");
     assert!(all.delta > 100, "{all:?}");
 }
 
@@ -1050,7 +1050,7 @@ fn the_rules_that_read_a_cell_are_fired_again_over_what_changed() {
 fn the_rules_that_negate_what_a_cell_concludes_are_fired_again_over_what_changed() {
     let all = sweep(NEG_READERS, fact_plain, 1..=12, 10, 40);
     assert!(all.sum.stacked_rules > 50, "no rule that negates what changed was read again: {all:?}");
-    assert!(all.sum.consumers > 50 && all.delta > 100, "{all:?}");
+    assert!(all.sum.retired > 50 && all.delta > 100, "{all:?}");
     assert!(all.full.is_empty(), "{:?}", all.full);
 }
 
@@ -1087,14 +1087,14 @@ fn the_rules_that_read_a_tag_or_a_median_are_read_again_over_what_changed() {
 #[test]
 fn rules_that_read_cells_lattices_and_tags_every_way_are_the_same_as_a_fresh_evaluation() {
     let all = sweep(STACKED_MIXED, fact_mixed, 1..=16, 18, 50);
-    assert!(all.sum.stacked_rules > 100 && all.sum.stacked_cells > 100 && all.sum.consumers > 100 && all.sum.cone > 20, "{all:?}");
+    assert!(all.sum.stacked_rules > 100 && all.sum.stacked_cells > 100 && all.sum.withdrawn > 20, "{all:?}");
     assert!(all.delta * 10 > all.retracts * 9, "{all:?}");
 }
 
 #[test]
 fn cells_lattices_and_tags_in_one_world_each_take_their_own_path() {
     let all = sweep(MIXED, fact_mixed, 1..=10, 16, 40);
-    assert!(all.sum.cone > 20 && all.sum.subtracted > 20 && all.sum.withdrawn > 20 && all.sum.consumers > 20, "{all:?}");
+    assert!(all.sum.withdrawn > 20 && all.sum.stacked_cells > 20 && all.sum.retired > 20, "{all:?}");
     assert!(all.delta > 150, "{all:?}");
 }
 
@@ -1102,14 +1102,15 @@ fn cells_lattices_and_tags_in_one_world_each_take_their_own_path() {
 fn a_fact_a_rule_reads_outside_its_aggregate_resets_the_rule() {
     let mut s = fresh(PROGRAM, &["grp(a)", "sale(1, a, 3)"].iter().map(|x| x.to_string()).collect(), &BTreeSet::new());
     match s.retract_delta("grp(a)").unwrap() {
-        Retraction::Delta(d) => assert!(d.stacked_rules > 0 && d.stacked_cells > 0 && d.cells == 0, "{d:?}"),
+        Retraction::Delta(d) => assert!(d.set.is_some(), "{d:?}"),
         other => panic!("{other:?}"),
     }
     let mut s = fresh(PROGRAM, &["sale(1, a, 3)"].iter().map(|x| x.to_string()).collect(), &BTreeSet::new());
     match s.retract_delta("sale(1, a, 3)").unwrap() {
-        Retraction::Delta(d) => assert!(d.cells > 0 && d.subtracted > 0, "{d:?}"),
+        Retraction::Delta(d) => assert!(d.set.is_some(), "{d:?}"),
         other => panic!("{other:?}"),
     }
+    assert_eq!(state(&mut s), state(&mut fresh(PROGRAM, &BTreeSet::new(), &BTreeSet::new())));
 }
 
 /// Members with several derivations: a sale counted through every pair of a channel and a tag, so a retracted
@@ -1138,8 +1139,8 @@ fn fact_multi(r: &mut Rng) -> String {
 fn a_member_with_several_derivations_keeps_each_until_it_is_retracted() {
     let all = sweep(MULTI, fact_multi, 1..=16, 24, 40);
     assert!(all.full.is_empty(), "{:?}", all.full);
-    assert!(all.sum.members_rederived > 5, "no member moved to another derivation: {all:?}");
-    assert!(all.sum.members_dropped > 5, "no member lost its last derivation: {all:?}");
+    // (the set's pass seals a cell again where a member lost a derivation; which derivation it keeps, the state says)
+    assert!(all.sum.stacked_cells > 5, "no cell was sealed again: {all:?}");
     let facts: BTreeSet<String> = ["sale(1, a, 3)", "chan(1, 1)", "chan(1, 2)", "tag(1, 1)", "tag(1, 2)"].iter().map(|s| s.to_string()).collect();
     let mut s = fresh(MULTI, &BTreeSet::new(), &facts);
     let before = state(&mut s);

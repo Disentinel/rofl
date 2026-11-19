@@ -1048,23 +1048,16 @@ impl Eval {
         !brk!("vclosure_unknown_row_absent" => true; false) && self.store.virtuals[ci].forests.iter().any(|(b, f)| *b == book && f.is_ancestor(*a, *d))
     }
 
-    /// Does a change of these relations reach what a nearest answered from its tree reads: its edges, or (`cond_only`)
-    /// what its ancestor is, the growth of which may take a row out.
-    pub(super) fn near_reached(&self, grown: &HashSet<Sym>, cond_only: bool) -> bool {
-        self.vc.any && self.vc.vclosures.iter().zip(self.store.virtuals.iter()).any(|(c, v)| {
-            c.active && v.near.is_some_and(|n| grown.contains(&n.cond) || (!cond_only && grown.contains(&c.src)))
-        })
-    }
-
     /// Can a change of `rel` reach the edges of a closure answered from its tree, through the rules (a negation and an
     /// aggregate included)? A retraction that cannot leaves every forest as it is, and is worked out as a delta.
+    // (read only by the planted fault `retract_tree_refused`)
+    #[cfg_attr(not(feature = "breaks"), allow(dead_code))]
     pub(super) fn vedges_reached(&self, rel: Sym) -> bool {
         if !self.vc.any {
             return false;
         }
         let edges: HashSet<Sym> = self.vc.vclosures.iter().filter(|c| c.active).map(|c| c.src).collect();
-        let reached = readers_cone(HashSet::from([rel]), self.rules.iter(), reads_any).iter().any(|r| edges.contains(r));
-        reached && !brk!("vclosure_retract_edge_delta" => true; false)
+        readers_cone(HashSet::from([rel]), self.rules.iter(), reads_any).iter().any(|r| edges.contains(r))
     }
 }
 
@@ -1171,6 +1164,8 @@ impl VClosureState {
             return Rc::from(Vec::new());
         }
         if let Some(f) = store.held_trees(ci) {
+            let c = &mut self.vclosures[ci];
+            (c.pairs, c.deep, c.internal) = f.iter().fold((0, 0, 0), |(p, d, i), (_, f)| (p + f.pairs, d + f.deep as u64, i + f.internal as u64));
             store.virtuals[ci].forests = f.clone();
             return f;
         }
@@ -1446,10 +1441,15 @@ impl VClosureState {
     /// bound (`cpos` by a constant, `vpos` by a variable). A both-bound premise is a test; an unbound one costs every row,
     /// so no plan puts it first.
     pub(super) fn vstat(&mut self, store: &mut Store, ci: usize, cpos: &[usize], vpos: &[usize]) -> (f64, f64) {
-        self.vforests(store, ci);
+        let forests = self.vforests(store, ci);
         let c = &self.vclosures[ci];
-        let (rows, deep, internal) = (c.pairs as f64, c.deep.max(1) as f64, c.internal.max(1) as f64);
-        if c.pairs == 0 {
+        // (a unit above the files' reads the trees by node: its own are empty, the files' are its size)
+        let [pairs, deep, internal, sq] = match store.tree_sizes.as_ref().and_then(|z| z.get(&ci)).filter(|_| c.pairs == 0) {
+            Some(z) => *z,
+            None => [c.pairs, c.deep, c.internal, forests.iter().map(|f| f.1.fanout_sq()).sum()],
+        };
+        let (rows, deep, internal) = (pairs as f64, deep.max(1) as f64, internal.max(1) as f64);
+        if pairs == 0 {
             return (0.0, 0.0);
         }
         let bound = |k: usize| cpos.contains(&k) || vpos.contains(&k);
@@ -1457,7 +1457,9 @@ impl VClosureState {
         match (bound(0), bound(1)) {
             (true, true) => (if konst(0) && konst(1) { 1.0 } else { rows }, 1.0),
             (false, true) => (if konst(1) { rows / deep } else { rows }, (rows / deep).max(1.0)),
-            (true, false) => (if konst(0) { rows / internal } else { rows }, (rows / internal).max(1.0)),
+            // (an ancestor bound by a join is drawn by its descendants: their second moment, not their mean)
+            (true, false) if !konst(0) => (rows, (sq as f64 / rows).max(1.0)),
+            (true, false) => (rows / internal, (rows / internal).max(1.0)),
             (false, false) => brk!("vclosure_unbound_cheap" => (1.0, 1.0); (rows, rows)),
         }
     }

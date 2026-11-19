@@ -737,6 +737,46 @@ pub fn canon_clause(h: &Heap, c: &Clause) -> String {
     s
 }
 
+/// A canonical clause with its variables named by the order they first occur (`?0`, `?1`, ...): two rules that differ
+/// only by the names of their variables have one key. The rule id keeps the names (`canon_clause`); this is how a rule
+/// is found by a text that spells it otherwise.
+pub fn alpha_key(canon: &str) -> String {
+    let (mut out, mut names): (String, Vec<String>) = (String::with_capacity(canon.len()), Vec::new());
+    let mut it = canon.chars().peekable();
+    while let Some(c) = it.next() {
+        match c {
+            '"' => {
+                out.push(c);
+                while let Some(d) = it.next() {
+                    out.push(d);
+                    if d == '\\' {
+                        if let Some(e) = it.next() {
+                            out.push(e);
+                        }
+                    } else if d == '"' {
+                        break;
+                    }
+                }
+            }
+            '?' => {
+                let mut name = String::new();
+                while let Some(&d) = it.peek().filter(|d| !matches!(d, ',' | '(' | ')' | '[' | ']' | ' ' | ';' | ':')) {
+                    name.push(d);
+                    it.next();
+                }
+                let i = names.iter().position(|n| *n == name).unwrap_or_else(|| {
+                    names.push(name);
+                    names.len() - 1
+                });
+                out.push('?');
+                out.push_str(&i.to_string());
+            }
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 /// `resolveBook`: a bare kernel-book literal points at `[$kernel]`, and that
 /// is a resolution rather than a default (src/reflect.ts:~700).
 pub fn resolve_book(v: &Vocab, l: &mut Lit) -> bool {

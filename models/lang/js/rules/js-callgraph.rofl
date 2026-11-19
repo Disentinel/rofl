@@ -377,7 +377,7 @@ edb(shape_because).
 -- `unresolved_call`. When the receiver is known, the functions it holds are what
 -- the call may reach: a may-set beside `calls`, never folded into it.
 may_resolve[code](C, F) :- unresolved_call[code](C, s_computed_dynamic_key), callee_of[code](C, N),
-                           member_obj[flow](N, _, Obj), member_value[flow](Obj, _, V),
+                           member_obj_any[flow](N, _, Obj), member_value[flow](Obj, _, V),
                            may_be_node[flow](V, F), fn_value[flow](F).
 may_call[code](Caller, F) :- may_resolve[code](C, F), nearest_fn[code](Caller, C).
 may_call[code](R, F)      :- may_resolve[code](C, F), top_call[code](C, R).
@@ -587,10 +587,10 @@ member_written[flow](N) :- member_node_v[flow](N), rest_props[value](_, N), not 
 member_written[flow](N) :- member_node_v[flow](N), rest_elems[value](_, _, N), not pat_in[code](_, _, N).
 member_written[flow](N) :- member_node_v[flow](N), iterates[value](S, N, _), for_of[code](S).
 member_written[flow](N) :- member_node_v[flow](N), enumerates[value](_, N, _).
-sx_mkey[surface](O, Key) :- member_written[flow](N), member_at[flow](N, _, O, Key).
+sx_mkey[surface](O, Key) :- member_written[flow](N), member_any[flow](N, _, O, Key).
 
 sx_open[surface](O)  :- placed[flow](A), may_be_node[flow](A, O), surveyed[flow](O), not held[flow](A).
-sx_open[surface](O)  :- member_written[flow](N), member_obj[flow](N, _, O), not selects[flow](N, _).
+sx_open[surface](O)  :- member_written[flow](N), member_obj_any[flow](N, _, O), not selects[flow](N, _).
 sx_open[surface](O)  :- may_be_node[flow](P, O), literal_part[flow](L, P), sx_open[surface](L).
 sx_open[surface](O)  :- stored_in[flow](V, H), sx_open[surface](H), may_be_node[flow](V, O).
 -- an object literal with a spread, a computed key or a `__proto__`
@@ -603,7 +603,7 @@ sx_open[surface](O)  :- receivable[flow](O), member_value[flow](O, _, V), may_be
                         this_unfollowed[flow](F).
 -- a class whose prototype may change: read as `C.prototype`, decorated, a base not
 -- seen or open, a constructor returning a value
-sx_open[surface](CD) :- member_at[flow](_, _, CD, "prototype").
+sx_open[surface](CD) :- member_any[flow](_, _, CD, "prototype").
 sx_open[surface](CD) :- class_like[flow](CD), decorated[value](CD, _).
 sx_open[surface](CD) :- class_like[flow](CD), class_slot[code](CD, M), decorated[value](M, _).
 sx_open[surface](CD) :- class_like[flow](CD), type_open[flow](CD).

@@ -506,6 +506,10 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
         let mut next: Vec<Sol> = Vec::new();
         let mut scratch = Subst::new();
         for a in input {
+            // (one premise can multiply its partial solutions past the memory: the wall is met between them)
+            if super::MEMORY_FULL.load(Ordering::Relaxed) {
+                return None;
+            }
             let from = next.len();
             match fr.find(a, &mut lv.probes)? {
                 Found::Neg(holds) => {
@@ -534,6 +538,9 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
                                 continue;
                             }
                             read += 1;
+                            if read & 0xfff == 0 && super::MEMORY_FULL.load(Ordering::Relaxed) {
+                                return None;
+                            }
                             if fr.unifies(&c, a, f, &mut scratch) {
                                 let mut prems = Vec::with_capacity(a.prems.len() + 1);
                                 prems.extend_from_slice(&a.prems);
@@ -563,6 +570,10 @@ fn solve_run(frs: &[Frozen], acc: &[Sol], sort: bool) -> Option<(Vec<Sol>, Vec<L
         cur = next;
         if cur.is_empty() {
             break;
+        }
+        // the memory wall is the written path's to meet, before the next premise multiplies these
+        if super::MEMORY_FULL.load(Ordering::Relaxed) {
+            return None;
         }
     }
     Some((cur, levels))
@@ -889,7 +900,7 @@ impl Eval {
         let mut rows = self.rows;
         let (mut read, hot) = match self.cur_rule.and_then(|r| self.cost.read_by_rule.get(&r)) {
             Some(&(n, next)) => (n, next),
-            None => (0, self.cost.hot_read),
+            None => (0, self.hot_first()),
         };
         for (k, t) in levels.iter().enumerate() {
             read += t.read as u64;
@@ -911,7 +922,7 @@ impl Eval {
             if !neg && !frs_off(l, tick) {
                 self.cost.read_rows += t.read as u64;
                 if let Some(rid) = self.cur_rule {
-                    let first = self.cost.hot_read;
+                    let first = self.hot_first();
                     self.cost.read_by_rule.entry(rid).or_insert((0, first)).0 += t.read as u64;
                 }
                 if t.wide > self.cost.wide_floor && t.wide > self.cost.widest.n {
