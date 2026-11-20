@@ -174,8 +174,9 @@ own_name[code](X, Name, File, itself) :- decl[value](X, class), not named_here[c
 named_decl[code](D, Name, File)  :- own_name[code](D, Name, File, around).
 decl_region[code](D, R)  :- named_decl[code](D, _, _), scope_of[code](R, D).
 decl_at_top[code](D)     :- named_decl[code](D, _, _), not decl_region[code](D, _).
-catch_names[code](H, Name, File) :- decl[value](P, catch), binds[value](P, Name), parent[tree](H, P),
-                                    at[tree](H, File, _).
+catch_local[code](H, Name, P) :- decl[value](P, catch), binds[value](P, Name), parent[tree](H, P).
+catch_local[code](H, Name, T) :- decl[value](P, catch), parent[tree](H, P), pat_in[code](P, _, T), binds[value](T, Name).
+catch_names[code](H, Name, File) :- catch_local[code](H, Name, _), at[tree](H, File, _).
 
 -- which declaration a read of its name sees, found by the same lookup
 sees_decl[code](E, D) :- named_decl[code](D, Name, File), decl_region[code](D, S),
@@ -296,8 +297,11 @@ may_be[flow](E, VK, V) :- passes[value](E, X), may_be[flow](X, VK, V).
 -- (`member_value` and the language answer those).
 function kind_proto(E, to P).
 kind_proto[flow](E, array)  :- array[value](E).
+kind_proto[flow](R, array)  :- rest_params[value](_, _, R).
+kind_proto[flow](C, array)  :- host_src[flow](C, What, _), host_makes_array(What).
 kind_proto[flow](E, object) :- obj_lit[code](E).
-kind_proto[flow](E, function) :- fn_node[code](E), not hoisted[value](E, _), not has[value](_, E).
+kind_proto[flow](E, function) :- fn_node[code](E).
+kind_proto[flow](E, function) :- class[value](E), not fn_node[code](E).
 kind_proto[flow](E, regexp) :- regexp[value](E).
 kind_proto[flow](E, string) :- literal[value](E, V), string is type_of(V), not template_part[value](_, _, E).
 kind_proto[flow](E, string) :- template[value](E).
@@ -327,6 +331,7 @@ builtin_prototype(weakset).
 -- on a promise, and a name bound to one is one.
 edb(lib_member).
 prototype_of[flow](C, promise) :- resolves[code](C, F), async_body[code](F).
+prototype_of[flow](I, promise) :- import_site[code](I, dynamic_import).
 prototype_of[flow](X, promise) :- construct[value](X), callee[value](X, G),
                                   free_global[code](G, "Promise", _).
 prototype_of[flow](C, promise) :- callee[value](C, N), object_of[code](N, G),
@@ -343,14 +348,21 @@ prototype_of[flow](E, promise) :- binder[code](D, _, Init, _), prototype_of[flow
 -- (key for the member, value for the local). An array pattern binds by
 -- POSITION over the raw array, so `[, second]` keeps index 1.
 -- Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
--- declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
+-- declarator's pattern, a parameter, a catch parameter or the left of `=`. `{ a: { b }, [k]: c, d = 1 } = o` and
+-- `[x, , y = 2] = arr` alike. A member on the left of `=` (`({ a: o.x } = src)`) is a write of that member, not a
+-- target of the pattern: it is no step.
 pat_in[code](R, R, T) :- declarator_id[code](_, R), pat_step[code](R, T).
 pat_in[code](R, R, T) :- param[value](_, _, R), pat_step[code](R, T).
+pat_in[code](R, R, T) :- decl[value](R, catch), pat_step[code](R, T).
+pat_in[code](R, R, T) :- assign_pat[code](_, R, _), pat_step[code](R, T).
 pat_in[code](R, P, T) :- pat_in[code](R, _, P), pat_step[code](P, T).
-pat_step[code](P, T) :- pattern_prop[value](P, _, T).
-pat_step[code](P, T) :- pattern_elem[value](P, _, T).
+pat_place[code](P, T) :- pattern_prop[value](P, _, T).
+pat_place[code](P, T) :- pattern_elem[value](P, _, T).
+pat_place[code](P, T) :- rest_at[code](P, T).
+pat_step[code](P, T) :- pat_place[code](P, T), not member_kind_expr[code](T).
 pat_step[code](P, T) :- pat_computed[code](P, T, _).
-pat_step[code](P, T) :- rest_at[code](P, T).
+-- `({ p } = o)`, `[q] = arr`: the pattern on the left of an assignment, and the value it takes apart
+assign_pat[code](A, R, Src) :- value_write[code](A, R, Src), pat_place[code](R, _).
 pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, T), T != E.
 pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, W), assign[value](W, T, _),
                                parent[tree](W, T).
@@ -363,12 +375,13 @@ may_be[flow](R, node, N) :- declarator_id[code](D, R), pat_in[code](R, _, _), de
 may_be[flow](R, input, S) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
                              may_be[flow](Init, input, S).
 may_be[flow](R, input, S) :- input_param[flow](S, F, I), param[value](F, I, R), pat_in[code](R, _, _).
-may_be[flow](T, node, N) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
-                            array_elem[flow](A, I, V), own_node[flow](V, N).
-may_be[flow](T, input, S) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
-                             array_elem[flow](A, I, V), may_be[flow](V, input, S).
-may_be[flow](T, lit, L)   :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
-                             array_elem[flow](A, I, V), may_be[flow](V, lit, L).
+may_be[flow](R, node, N) :- assign_pat[code](_, R, Src), own_node[flow](Src, N).
+may_be[flow](R, input, S) :- assign_pat[code](_, R, Src), may_be[flow](Src, input, S).
+pat_arr[flow](T, I, A) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A).
+may_be[flow](T, node, N) :- pat_arr[flow](T, I, A), array_elem[flow](A, I, V), own_node[flow](V, N).
+may_be[flow](T, input, S) :- pat_arr[flow](T, I, A), array_elem[flow](A, I, V), may_be[flow](V, input, S).
+may_be[flow](T, lit, L)   :- pat_arr[flow](T, I, A), array_elem[flow](A, I, V), may_be[flow](V, lit, L).
+may_be[flow](T, VK, X)    :- pat_arr[flow](T, _, A), elem_somewhere[flow](A, V), may_be[flow](V, VK, X).
 -- the default of a target is a conditional source of it
 may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be[flow](Init, VK, V).
 
@@ -376,6 +389,9 @@ may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_
 pat_local[code](D, Local, T, File) :- declarator_id[code](D, R), pat_in[code](R, _, T), binds[value](T, Local),
                                       at[tree](D, File, _).
 scoped_binder[code](D, File) :- pat_local[code](D, _, _, File).
+-- a name the left of `=` writes through its pattern is assigned the target, as `p = o.p` assigns `o.p`
+assigned[code](T, T, Name, T, File) :- assign_pat[code](_, R, _), pat_in[code](R, _, T), ref[value](T, Name),
+                                       at[tree](T, File, _).
 may_be[flow](E, VK, V) :- pat_local[code](D, Local, T, File), may_be[flow](T, VK, V),
                       ident_in[code](E, Local, File), sees_binder[code](E, D).
 
@@ -389,6 +405,71 @@ destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, R), patte
 array_elem[flow](A, I, E) :- array[value](A), nth[tree](A, I, E), parent[tree](A, E).
 array_elem[flow](A, I, X) :- spread_elems[value](A, I, X).
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
+-- `list[0]`: a read by an index the layer knows is the element at that index
+may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), array_elem[flow](A, I, E), may_be[flow](E, VK, V).
+
+-- WHAT A HOST MEMBER RETURNS OF ITS RECEIVER (models/lang/js/facts/js-host.rofl `host_returns`): one of its
+-- elements (`find`, `at`, `pop`), or a new array of them whose places the layer does not keep (`filter`, `slice`,
+-- `concat`, `Array.from`, `[...xs]`), or of an object's values or keys (`Object.values`, `Object.keys`). An
+-- element of such an array is read at any index, walked by for-of, handed to a callback.
+host_call_on[flow](C, O, Key, R) :- callback_site[code](C, O, Key), callee_of[code](C, M), object_of[code](M, R).
+host_call_on[flow](C, Name, Key, R) :- callee_of[code](C, M), object_of[code](M, G), free_global[code](G, Name, _),
+                                       lib_global(Name, _, _), selects[flow](M, Key), arg_at[flow](C, 0, R).
+host_src[flow](C, What, R) :- host_call_on[flow](C, O, Key, R), host_returns(O, Key, What).
+elem_any[flow](A, E) :- array_elem[flow](A, _, E).
+elem_any[flow](A, E) :- elem_somewhere[flow](A, E).
+host_on[flow](C, What, A) :- host_src[flow](C, What, R), may_be_node[flow](R, A).
+may_be[flow](C, VK, V) :- host_on[flow](C, element, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](C, lit, undefined) :- host_src[flow](C, element, _).
+may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_array(What).
+elem_somewhere[flow](C, E) :- host_src[flow](C, elements, R), iter_elem[flow](R, E).
+elem_somewhere[flow](C, E) :- host_src[flow](C, elements, _), host_call_on[flow](C, array, "concat", _),
+                              arg_at[flow](C, _, X), may_be_node[flow](X, A), elem_any[flow](A, E).
+elem_somewhere[flow](C, V) :- host_on[flow](C, values, O), member_value[flow](O, _, V).
+lit_somewhere[flow](C, Key) :- host_on[flow](C, keys, O), member_value[flow](O, Key, _).
+-- `Object.entries(o)`: each entry a pair `[Key, value]` of its own, `entry(C, Key)`
+entry_of[flow](C, Key, V) :- host_on[flow](C, entries, O), member_value[flow](O, Key, V).
+elem_somewhere[flow](C, entry(C, Key)) :- entry_of[flow](C, Key, _).
+may_be[flow](entry(C, Key), node, entry(C, Key)) :- entry_of[flow](C, Key, _).
+array_elem[flow](entry(C, Key), 0, entry_key(C, Key)) :- entry_of[flow](C, Key, _).
+array_elem[flow](entry(C, Key), 1, V) :- entry_of[flow](C, Key, V).
+may_be[flow](entry_key(C, Key), lit, Key) :- entry_of[flow](C, Key, _).
+elem_somewhere[flow](A, E) :- spread_elems[value](A, _, X), iter_elem[flow](X, E).
+may_be[flow](N, VK, V) :- at_index[flow](N, A), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](N, lit, K) :- at_index[flow](N, A), lit_somewhere[flow](A, K).
+at_index[flow](N, A) :- member_at[flow](N, _, A, I), int is type_of(I).
+-- `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
+may_be[flow](C, VK, V) :- host_src[flow](C, same, R), may_be[flow](R, VK, V).
+may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_object(What).
+member_plain[flow](C, Key, V) :- host_src[flow](C, What, _), host_makes_object(What), member_value[flow](C, Key, V).
+-- what the function it calls back returns: an array of them (`map`), or one (`reduce`, a promise's `then`)
+host_result[flow](C, E) :- host_src[flow](C, What, _), host_gives_result(What), calls_back[code](C, F, _), returns[flow](F, E).
+elem_somewhere[flow](C, E) :- host_src[flow](C, results, _), host_result[flow](C, E).
+-- `Promise.allSettled(xs)`: an outcome per value, whose `value` is the value
+elem_somewhere[flow](C, outcome(C)) :- host_src[flow](C, outcomes, _).
+may_be[flow](outcome(C), node, outcome(C)) :- host_src[flow](C, outcomes, _).
+member_plain[flow](outcome(C), "value", E) :- host_src[flow](C, outcomes, R), iter_elem[flow](R, E).
+-- `new Promise(executor)` settles to what the executor hands its first parameter
+settles_with[flow](X, A) :- calls_back[code](X, F, at_once_caught), param_of[flow](F, 0, Name), param_use[flow](F, Name, U),
+                            callee[value](C, U), arg_at[flow](C, 0, A).
+may_be[flow](X, VK, V) :- settles_with[flow](X, A), may_be[flow](A, VK, V).
+may_be[flow](C, VK, V) :- host_src[flow](C, result, _), host_result[flow](C, E), may_be[flow](E, VK, V).
+member_value[flow](C, Key, V) :- host_on[flow](C, inherits, P), member_value[flow](P, Key, V).
+member_value[flow](C, Key, V) :- host_on[flow](C, from_entries, A), elem_any[flow](A, E),
+                                 may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), may_be_lit[flow](KE, Key),
+                                 array_elem[flow](Pair, 1, V).
+-- `Object.defineProperty(o, k, { value: v })` puts v at k
+member_value[flow](O, Key, V) :- host_call_on[flow](C, "Object", "defineProperty", R), may_be_node[flow](R, O),
+                                 arg_at[flow](C, 1, K), may_be_lit[flow](K, Key), arg_at[flow](C, 2, D),
+                                 may_be_node[flow](D, DO), member_plain[flow](DO, "value", V).
+-- what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
+elem_somewhere[flow](A, X) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_be_node[flow](R, A),
+                              arg_at[flow](C, _, X).
+elem_somewhere[flow](X, E) :- es_instance[flow](X, "Set", _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr),
+                              elem_any[flow](Arr, E).
+-- `{ [k]: v }`: a computed key whose value is known
+member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_expr[value](P, E), may_be_lit[flow](E, Key),
+                                 string is type_of(Key).
 
 may_be[flow](E, node, N) :- destructures_at[code](D, Local, Index, File),
                             decl_value[flow](D, Init), may_be_node[flow](Init, A), array_elem[flow](A, Index, V),
@@ -430,6 +511,8 @@ rest_at[code](P, R)     :- rest_elems[value](P, _, R).
 rest_src[code](P, Init) :- rest_at[code](P, _), pattern_source[code](P, Init).
 rest_src[code](P, P)    :- rest_at[code](P, R), pat_in[code](Root, P, R), Root != P.
 rest_src[code](P, P)    :- rest_at[code](P, _), param[value](_, _, P).
+rest_src[code](P, P)    :- rest_at[code](P, _), decl[value](P, catch).
+rest_src[code](P, Src)  :- rest_at[code](P, _), assign_pat[code](_, P, Src).
 obj_rest[code](P, R, Src) :- rest_props[value](P, R), pat_in[code](_, P, R), rest_src[code](P, Src).
 arr_rest[code](I, R, Src) :- rest_elems[value](P, I, R), pat_in[code](_, P, R), rest_src[code](P, Src).
 may_be[flow](R, node, R) :- obj_rest[code](_, R, _).
@@ -610,6 +693,24 @@ input_of[flow](S, F) :- input_this[flow](S, F).
 input_node[flow](S, N) :- input_param[flow](S, F, I), sx_arg_node[flow](F, I, N).
 input_lit[flow](S, V)  :- input_param[flow](S, F, I), sx_arg_lit[flow](F, I, V).
 
+-- what a host hands the function it calls back (models/lang/js/facts/js-host.rofl `host_passes`): an element
+-- of the receiver, its index, the receiver itself, what the receiving promise settles to, or an argument of
+-- the call (`setTimeout(f, ms, x)`); a promise is read as the value it settles to, as `await` reads it
+callback_recv[flow](C, R) :- calls_back[code](C, _, _), callee_of[code](C, M), object_of[code](M, R).
+host_hands[flow](F, I, E)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, element),
+                             callback_recv[flow](C, R), may_be_node[flow](R, A), elem_any[flow](A, E).
+host_hands[flow](F, I, R)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, receiver),
+                             callback_recv[flow](C, R).
+host_hands[flow](F, I, R)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, settled),
+                             callback_recv[flow](C, R).
+host_hands[flow](F, I, A)     :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, arg(K)),
+                             arg_at[flow](C, K, A).
+host_index[flow](F, I, K) :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, index),
+                             callback_recv[flow](C, R), may_be_node[flow](R, A), array_elem[flow](A, K, _).
+input_node[flow](S, N) :- input_param[flow](S, F, I), host_hands[flow](F, I, E), may_be_node[flow](E, N).
+input_lit[flow](S, V)  :- input_param[flow](S, F, I), host_hands[flow](F, I, E), may_be_lit[flow](E, V).
+input_lit[flow](S, K)  :- input_param[flow](S, F, I), host_index[flow](F, I, K).
+
 -- A call is its function's summary applied to THIS call: what the function returns of its own, and what it
 -- returns of an input, here this call's argument or receiver (`sx_ret_own`, `sx_ret_input`, `sx_ret_this`,
 -- models/lang/js/rules/js-surface.rofl). An input of an enclosing function is not this call's to give: the summary holds its values.
@@ -630,6 +731,9 @@ may_be[flow](C, node, inst(CD))             :- resolves[code](C, F), sx_ret_own[
 may_be[flow](C, node, V)                    :- resolves[code](C, F), sx_ret_own[flow](F, node, V), at[tree](V, _, _),
                                                not born_tmpl[code](V).
 may_be[flow](C, VK, V) :- resolves[code](C, F), sx_ret_input[flow](F, I), arg_at[flow](C, I, A), may_be[flow](A, VK, V).
+-- `Promise.resolve(x)` is read as x, as an async call is read as what it returns and `await` as what it awaits
+may_be[flow](C, VK, V) :- callee_of[code](C, M), object_of[code](M, P), free_global[code](P, "Promise", _),
+                          selects[flow](M, "resolve"), arg_at[flow](C, 0, A), may_be[flow](A, VK, V).
 -- `this` is the receiver where the call names one, and only the instances `this` may be in the function at all
 recv_call[code](C, R) :- call[value](C), callee[value](C, N), member[value](N, _, _), object_of[code](N, R),
                          not super[value](R).
@@ -710,6 +814,10 @@ keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), 
 sx_kput[flow](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
                              may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
 keyed_put[flow](X, K, V) :- sx_kput[flow](X, K, V).
+-- `new Map([[k, v], ...])` puts each pair it is made with
+keyed_put[flow](X, K, V) :- keyed_obj[flow](X, _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr), elem_any[flow](Arr, E),
+                            may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), may_be_lit[flow](KE, K),
+                            array_elem[flow](Pair, 1, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
                             may_be_lit[flow](A, K), not argument_at[code](C, 1, _).
 may_be[flow](C, lit, undefined) :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get).
@@ -1280,6 +1388,11 @@ keyed_present[code](C) :- keyed_fill[code](C, J), not keyed_lost[code](C, J).
 -- reach what, which keys are one), so what it rules out cannot feed the flow
 -- back; it is a view over it, `read_holds_lit` / `read_holds_node` below.
 keyed_read[flow](C, V)  :- keyed_get[flow](C, X, K), keyed_put[flow](X, K, V).
+-- a key that is an object (`wm.set(el, v)`, `wm.get(el)`) is the object itself
+keyed_put_obj[flow](X, N, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
+                                may_be_node[flow](A, N), arg_at[flow](C, 1, V).
+keyed_read[flow](C, V)  :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), not argument_at[code](C, 1, _),
+                           arg_at[flow](C, 0, A), may_be_node[flow](A, N), keyed_put_obj[flow](X, N, V).
 may_be[flow](C, VK, Val) :- may_be[flow](V, VK, Val), keyed_read[flow](C, V).
 
 -- the walks: position 0 of the head's pattern is a key, position 1 a value;
@@ -1292,12 +1405,17 @@ keyed_walk_at[flow](E, D, Pos) :- keyed_walk[flow](_, D, _), destructures_at[cod
 may_be[flow](E, VK, Val) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, _, V), may_be[flow](V, VK, Val),
                         keyed_walk_at[flow](E, D, 1).
 may_be[flow](E, lit, K) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, K, _), keyed_walk_at[flow](E, D, 0).
+may_be[flow](E, VK, Val) :- keyed_walk[flow](_, D, X), keyed_put_obj[flow](X, _, V), may_be[flow](V, VK, Val),
+                            keyed_walk_at[flow](E, D, 1).
+may_be[flow](E, node, N) :- keyed_walk[flow](_, D, X), keyed_put_obj[flow](X, N, _), keyed_walk_at[flow](E, D, 0).
 
 sx_keach[flow](C, F, X) :- keyed_on[flow](C, X, _, "forEach"), arg_at[flow](C, 0, A), may_be_node[flow](A, F),
                               fn_value[flow](F).
 keyed_each_at[flow](U, C, X, Pos) :- sx_keach[flow](C, F, X), param_of[flow](F, Pos, Name), param_use[flow](F, Name, U).
 may_be[flow](U, VK, Val) :- keyed_each_at[flow](U, _, X, 0), keyed_put[flow](X, _, V), may_be[flow](V, VK, Val).
 may_be[flow](U, lit, K) :- keyed_each_at[flow](U, _, X, 1), keyed_put[flow](X, K, _).
+may_be[flow](U, VK, Val) :- keyed_each_at[flow](U, _, X, 0), keyed_put_obj[flow](X, _, V), may_be[flow](V, VK, Val).
+may_be[flow](U, node, N) :- keyed_each_at[flow](U, _, X, 1), keyed_put_obj[flow](X, N, _).
 
 -- WHAT A READ HOLDS AT ITS MOMENT: the flow's value, but at a read of a
 -- collection only the puts the order leaves it.
@@ -1351,6 +1469,14 @@ class_like[flow](O) :- class[value](O).
 -- prototype half and whatever is written onto it.
 inst_of[flow](inst(CD), CD)   :- class_like[flow](CD).
 member_value[flow](I, Key, V) :- isa[flow](I, CD), class_member_proto[flow](CD, Key, V).
+-- `arguments[I]` in a function is what its calls hand it at I
+args_read[flow](N, F, I) :- object_of[code](N, O), ref[value](O, "arguments"), selects[flow](N, I),
+                            int is type_of(I), nearest_v[flow](F, N).
+may_be[flow](N, VK, V) :- args_read[flow](N, F, I), applies[flow](C, F), arg_at[flow](C, I, A), may_be[flow](A, VK, V).
+-- `super.m` in an instance method is m of the base class's prototype
+may_be[flow](N, node, V) :- super[value](S), object_of[code](N, S), selects[flow](N, Key), inside[tree](M, S),
+                            class_method_of[flow](CD, M), not static[value](M), super_of[flow](CD, B),
+                            class_member_proto[flow](B, Key, V).
 member_plain[flow](I, Key, V) :- isa[flow](I, _), member_value[flow](I, Key, V).
 
 member_value[flow](O, Key, V) :- obj_method[code](O, M), key_name[code](M, Key), V = M.
@@ -1808,6 +1934,14 @@ view method_fn(A).
 method_fn[flow](M) :- class_method_of[flow](_, M).
 input_this[flow](this(M), M) :- method_fn[flow](M), not static[value](M).
 may_be[flow](T, input, S) :- input_this[flow](S, M), this_host[flow](M, T).
+-- `f.call(t)`, `f.apply(t)`, `f.bind(t)`: t is `this` in f
+this_given[flow](F, A) :- call_on[flow](C, F, Key), this_giver(Key), fn_value[flow](F), arg_at[flow](C, 0, A).
+input_this[flow](this(F), F) :- this_host[flow](F, _), fn_node[code](F), not method_fn[flow](F).
+input_node[flow](this(F), N) :- this_given[flow](F, A), may_be_node[flow](A, N).
+-- `f.call(t)` and `f.apply(t)` run f (`runs`) and give what f returns of its own, and the members of t it returns
+invoked[flow](C, F) :- call_on[flow](C, F, Key), fn_invoker(Key), fn_value[flow](F).
+may_be[flow](C, lit, V)  :- invoked[flow](C, F), sx_ret_own[flow](F, lit, V).
+may_be[flow](C, VK, X)   :- invoked[flow](C, F), sx_ret_field[flow](F, Key), this_val[flow](F, Key, VK, X).
 -- `this` in the body is any instance of the class, `inst(CD)`, which holds what any of them holds; a call on
 -- a receiver names the instance itself (section 7)
 input_node[flow](S, inst(CD)) :- input_this[flow](S, M), class_method_of[flow](CD, M).
@@ -1817,8 +1951,11 @@ input_node[flow](S, inst(CD)) :- input_this[flow](S, M), class_method_of[flow](C
 sub_inst[flow](SD, I) :- super_of[flow](CD, SD), inst_of[flow](I, CD).
 sub_inst[flow](SD, I) :- super_of[flow](MD, SD), sub_inst[flow](MD, I).
 input_node[flow](S, I) :- input_this[flow](S, M), class_method_of[flow](SD, M), sub_inst[flow](SD, I).
-may_be[flow](T, node, CD) :- class_method_of[flow](CD, M), static[value](M),
-                             this_host[flow](M, T).
+-- a static method's `this` is its class, or a subclass it is called on (`Sub.make()`)
+class_under[flow](CD, CD) :- class_like[flow](CD).
+class_under[flow](SD, CD) :- super_of[flow](SD, MD), class_under[flow](MD, CD).
+may_be[flow](T, node, SD) :- class_method_of[flow](CD, M), static[value](M),
+                             this_host[flow](M, T), class_under[flow](SD, CD).
 
 -- =========================================================================
 -- 10. ES2022 CLASS SYNTAX
@@ -1870,6 +2007,7 @@ may_be[flow](N, VK, Val) :- private_binds[code](N, M), value[value](M, V), may_b
 
 class_method_of[flow](CD, M) :- class_slot[code](CD, M), private_method[code](M).
 
+
 class_field_this[flow](CD, P) :- field_of[flow](CD, _, P, _).
 class_field_this[flow](CD, P) :- private_member[code](CD, _, P), not fn_node[code](P).
 may_be[flow](T, node, inst(CD)) :- class_field_this[flow](CD, P), not static[value](P), this_host[flow](P, T).
@@ -1897,6 +2035,8 @@ imports_name[code](Local, Name, D, File) :-
 -- one row per file, from `program`; `ast_node(_, _, File)` would enumerate
 -- the corpus to learn three strings
 corpus_file[code](File) :- program[tree](_, File).
+
+
 
 -- an export of the module itself, not one inside a TypeScript namespace
 exports_name[code](F, Name, File) :- fn_node[code](F), target[value](F, I), binds[value](I, Name),
@@ -1954,6 +2094,10 @@ exports_name[code](F, Name, File) :- export_var[code](Init, Name, File), may_be_
 
 exports_value[code](Init, Name, File) :- export_var[code](Init, Name, File).
 exports_value[code](L, Ext, File) :- export_local[code](L, Ext, File).
+-- an exported `let` is a live binding: what the module later writes to it is exported too
+exports_value[code](R, Name, File) :- export_var[code](Init, Name, File), binder[code](D, Name, Init, File),
+                                      ident_in[code](L, Name, File), sees_binder[code](L, D),
+                                      assign[value](A, L, R), plain_assign[flow](A).
 exports_value[code](X, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
                                       module_target[code](E, Target), sx_export_val[flow](Target, Name, X).
 exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), sx_export_val[flow](T, Int, X).
@@ -1973,6 +2117,8 @@ module_object[flow](P, File) :- program[tree](P, File).
 
 may_be[flow](E, node, P) :- imports_ns[code](Local, D, File), module_target[code](D, Target),
                             sx_module[flow](Target, P), top_read[code](E, Local, File).
+-- `import('./m')` settles to the module object, as a namespace import binds it (a promise is read as its value)
+may_be[flow](I, node, P) :- import_site[code](I, dynamic_import), module_target[code](I, Target), sx_module[flow](Target, P).
 member_value[flow](P, Name, F) :- module_object[flow](P, Target),
                                   exports_name[code](F, Name, Target).
 
@@ -1993,6 +2139,8 @@ may_be[flow](E, node, F) :- imports_default[code](Local, D, File),
 -- `module.exports = f; module.exports.g = h` answers `.g`, and `exports.a = f`
 -- is an ordinary member write (section 8) on the first.
 cjs_module_exports[code](M, File) :- free_global[code](O, "module", File), prop_name[code](M, O, "exports").
+
+
 
 cjs_exports[flow](File, P) :- module_object[flow](P, File).
 cjs_exports[flow](File, V) :- cjs_module_exports[code](L, File), assign[value](A, L, R), plain_assign[flow](A),
@@ -2168,6 +2316,14 @@ may_be[flow](U, node, P) :- callback_param[flow](P, F, _), binds[value](P, Name)
 -- reached by its name, holding what its body exports.
 ts_namespace[code](NS) :- decl[value](NS, namespace), not ambient[value](NS).
 may_be[flow](E, node, NS) :- sees_decl[code](E, NS), ts_namespace[code](NS).
+member_plain[flow](NS, Key, V) :- ts_namespace[code](NS), member_value[flow](NS, Key, V).
+-- A TypeScript enum is an object of its members, reached by its name; a member with an initialiser holds it
+may_be[flow](E, node, D) :- sees_decl[code](E, D), decl[value](D, enum).
+member_plain[flow](D, Key, V) :- decl[value](D, enum), has[value](D, M), key[value](M, Key), value[value](M, V).
+-- an enum with no initialiser at all numbers its members from 0
+enum_valued[code](D) :- decl[value](D, enum), has[value](D, M), value[value](M, _).
+member_plain[flow](D, Key, M) :- decl[value](D, enum), not enum_valued[code](D), has[value](D, M), key[value](M, Key).
+may_be[flow](M, lit, K) :- decl[value](D, enum), not enum_valued[code](D), nth[tree](D, K, M).
 member_value[flow](NS, Name, D)    :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, I),
                                       target[value](D, I), own_name[code](D, Name, _, around),
                                       not bodiless[code](D).
@@ -2191,6 +2347,13 @@ made_of[flow](made(E, CD), CD) :- new_of[flow](E, CD).
 isa[flow](I, CD) :- inst_of[flow](I, CD).
 isa[flow](I, CD) :- made_of[flow](I, CD).
 may_be[flow](E, node, made(E, CD)) :- new_of[flow](E, CD).
+-- a parameter property (`constructor(private name: string)`) is a member each `new` sets to its argument
+param_member[flow](CD, Key, I) :- has[value](CD, FP), key[value](FP, Key), assign[value](FP, FP, X),
+                                  own_ctor[flow](CD, M), param[value](M, I, X).
+member_value[flow](made(E, CD), Key, A) :- new_of[flow](E, CD), param_member[flow](CD, Key, I), arg_at[flow](E, I, A).
+member_value[flow](inst(CD), Key, A)    :- new_of[flow](E, CD), param_member[flow](CD, Key, I), arg_at[flow](E, I, A).
+member_value[flow](made(E, CD), Key, D) :- new_of[flow](E, CD), param_member[flow](CD, Key, I), own_ctor[flow](CD, M),
+                                           param_wrap[code](M, I, W, L), assign[value](W, L, D).
 
 -- `super` denotes the class its `extends` expression may be.
 super_of[flow](CD, SD) :- class_like[flow](CD), extends[value](CD, SC),
@@ -2219,6 +2382,8 @@ may_be[flow](S, node, SD) :- super[value](S),
 -- promise constructed and awaited later reaches the Promise class, which no
 -- corpus here declares. A plain assignment is its right-hand side; `+=` is a sum.
 may_be[flow](E, VK, V) :- gives[value](E, X), not assign[value](E, _, _), may_be[flow](X, VK, V).
+
+
 
 may_be[flow](E, VK, V) :- may_be[flow](X, VK, V), awaits[value](E, X).
 
@@ -2252,12 +2417,23 @@ may_be[flow](Y, input, S) :- next_send[flow](G, V), nearest_v[flow](G, Y), yield
 
 may_be[flow](Y, node, X) :- delegates[value](Y, A), resolves[code](A, Inner),
                             ret_node_any[flow](Inner, X).
+-- what `g.next()` gives: a step whose `value` is what the generator yields or returns
+gen_step[flow](C, G) :- selects[flow](N, "next"), callee_of[code](C, N), object_of[code](N, O),
+                        may_be_node[flow](O, GC), gen_of[flow](GC, G).
+may_be[flow](C, node, step(C)) :- gen_step[flow](C, _).
+may_be[flow](step(C), node, step(C)) :- gen_step[flow](C, _).
+member_plain[flow](step(C), "value", E) :- gen_step[flow](C, G), yields[flow](G, E).
+member_plain[flow](step(C), "value", E) :- gen_step[flow](C, G), returns[flow](G, E).
 
 -- FOR-OF: the head is a declarator like any other, whose value is each
 -- element walked. An array is a VALUE (through `may_be_node`); a generator is
 -- a CALL, read at the site, because its returns are not what for-of walks.
 iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
+iter_elem[flow](X, E) :- may_be_node[flow](X, A), elem_somewhere[flow](A, E).
 iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
+-- an object of the program that is iterable by a generator at `[Symbol.iterator]`
+iter_elem[flow](X, E) :- may_be_node[flow](X, O), member_value[flow](O, symbol_iterator, M), gen_fn[flow](M),
+                         yields[flow](M, E).
 
 decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
                           nth[tree](V, 0, D),
@@ -2265,6 +2441,16 @@ decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
 
 may_be[flow](U, VK, V) :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be[flow](E, VK, V),
                       ident_in[code](U, Name, File), sees_binder[code](U, D).
+-- FOR-IN: the head takes the keys of the object
+key_walk[flow](D, K) :- enumerates[value](S, V, X), nth[tree](V, 0, D), may_be_node[flow](X, O), member_value[flow](O, K, _),
+                        string is type_of(K).
+-- a key used as a key again (`dst[k] = src[k]`) is each key with its own member, which a may-set does not keep
+-- together: read so, every key would take every member; there it is an open key
+may_be[flow](U, lit, K) :- bare_binder[code](D, Name, File), key_walk[flow](D, K),
+                           ident_in[code](U, Name, File), sees_binder[code](U, D), not computed_key[code](_, U).
+may_be[flow](U, open, D) :- bare_binder[code](D, Name, File), nth[tree](V, 0, D), enumerates[value](_, V, _),
+                            ident_in[code](U, Name, File), sees_binder[code](U, D), computed_key[code](_, U).
+
 
 plain_assign[flow](E) :- assign[value](E, _, R), gives[value](E, R).
 
@@ -2273,6 +2459,7 @@ bin_op[code](E, Op, L, R)   :- binary[value](E, Op, L, R), not assign[value](E, 
 logic_op[code](E, Op, L, R) :- logical[value](E, Op, L, R), not assign[value](E, _, _).
 un_op[code](E, Op, X)       :- unary[value](E, Op, X), not assign[value](E, _, _).
 
+
 may_be[flow](E, VK, V) :- may_be[flow](X, VK, V), assign[value](E, _, X), plain_assign[flow](E).
 
 -- The crossings this layer performs: the scanner's tree, the unperspectived
@@ -2280,9 +2467,7 @@ may_be[flow](E, VK, V) :- may_be[flow](X, VK, V), assign[value](E, _, X), plain_
 imports(flow, code).
 imports(flow, main).
 imports(flow, $kernel).
-
 imports(code, flow).
-
 imports(flow, code).
 
 -- =========================================================================
@@ -2310,6 +2495,9 @@ throw_in_fn[flow](Th)    :- exits[value](Th, throw), nearest_v[flow](_, Th).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             thrown_in[flow](T, V).
 may_be[flow](P, node, V) :- caught_value[flow](P, V).
+-- a read of a catch name is what its target holds: the thrown value, or a part of it
+may_be[flow](U, VK, V) :- catch_names[code](H, Name, File), catch_local[code](H, Name, T), may_be[flow](T, VK, V),
+                          name_scope[code](U, Name, File, H).
 
 call_in_try[flow](T)     :- try_block[flow](T, B), inside[tree](B, C),
                             call_site[code](C, _).
@@ -2341,6 +2529,41 @@ decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
                                          class_method[code](CD, M), key_name[code](M, Key).
 class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N), static[value](M).
 class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N), not static[value](M).
+
+-- 17. A VALUE THE MODEL CANNOT NAME IS OPEN. An operator's result (`a * b`, `-x`, `` `t${x}` ``, `x += v`, `x++`)
+-- and what a host member returns where no table says what (`Math.random()`, `s.toUpperCase()`, `JSON.parse(s)`)
+-- are `may_be(E, open, E)`: E may be a value the model does not compute. It goes where a value goes, as any kind
+-- does, so a read whose may-set holds an open value says it may be more than the values it names, instead of
+-- silently fewer. A member of an open value, and what calling one returns, is open by the same place.
+may_be[flow](E, open, E) :- bin_op[code](E, _, _, _).
+may_be[flow](E, open, E) :- un_op[code](E, Op, _), Op != "void".
+may_be[flow](E, open, E) :- template_part[value](E, 1, _).
+may_be[flow](A, open, A) :- open_write[code](A, _).
+may_be[flow](C, open, C) :- callback_site[code](C, O, Key), call[value](C), not host_valued[code](O, Key).
+may_be[flow](N, open, W) :- object_of[code](N, O), may_be[flow](O, open, W).
+may_be[flow](C, open, W) :- callee[value](C, N), may_be[flow](N, open, W).
+-- a function handed in as a parameter returns what the model does not see, whoever hands it
+may_be[flow](C, open, C) :- callee[value](C, N), may_be[flow](N, input, _), call[value](C).
+host_valued[code](O, Key) :- host_returns(O, Key, _).
+host_valued[code](O, Key) :- keyed_store(O, _, Key).
+host_valued[code](O, Key) :- keeps_argument_static(O, Key).
+host_valued[code](Name, itself) :- keeps_argument(Name).
+host_valued[code](O, Key) :- merges_into_first(O, Key).
+host_valued[code]("Promise", "resolve").
+-- a member read at a key the model cannot name reads every element of an array, and may be any member: open
+open_key[flow](N, Obj) :- computed_key[code](N, P), may_be[flow](P, open, _), member_obj[flow](N, _, Obj).
+may_be[flow](N, VK, V) :- open_key[flow](N, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](N, open, N) :- open_key[flow](N, O), not array[value](O).
+mwrite_at[flow](Obj, Key, A) :- object_of[code](L, Obj), selects[flow](L, Key), open_write[code](A, L).
+may_be[flow](E, open, A) :- open_write[code](A, L), ref[value](L, Name), sees_binder[code](L, D),
+                            binds_name[code](D, Name, File), ident_in[code](E, Name, File), sees_binder[code](E, D).
+may_be[flow](U, open, A) :- open_write[code](A, L), ref[value](L, Name), param_use[flow](F, Name, L),
+                            param_use[flow](F, Name, U).
+-- what a call returns that is open, and a pattern over an open value
+may_be[flow](C, open, W) :- resolves[code](C, F), call_returns[flow](F, E), may_be[flow](E, open, W).
+may_be[flow](R, open, W) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
+                            may_be[flow](Init, open, W).
+may_be[flow](R, open, W) :- assign_pat[code](_, R, Src), may_be[flow](Src, open, W).
 
 -- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).

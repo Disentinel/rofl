@@ -1,0 +1,20 @@
+import def, { named, fn, renamed, K, obj, mutable, setMutable } from './a.js';
+import * as all from './a.js';
+import { again, ns, named as viaStar } from './b.js';
+function use(tag, v) { (globalThis.__seen ?? (() => {}))(tag, v); }
+use('named', named);
+use('default', def());
+use('fn', fn());
+use('renamed', renamed);
+use('classMethod', new K().m());
+use('objMember', obj.k);
+use('nsMember', all.named);
+use('nsCall', all.fn());
+use('reexport', again);
+use('starReexport', viaStar);
+use('nsReexport', ns.named);
+setMutable();
+use('liveBinding', mutable);
+const lazy = await import('./a.js');
+use('dynamicImport', lazy.named);
+import('./a.js').then((m) => use('dynamicThen', m.fn()));

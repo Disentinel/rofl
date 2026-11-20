@@ -17,7 +17,7 @@ default: flow
 Reads:
 
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
-- from js-concat: [may_be](js-concat.rofl.md#may_be)
+- from js-callgraph: [may_be](js-callgraph.rofl.md#may_be)
 - from js-controlflow, in the code: [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable)
 - from js-controlflow: [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
@@ -79,9 +79,9 @@ What this file calls a node, and what each word stands for:
 
 > ---------------------------------------------------------------- an escaping node's facts, and their mirrors
 
-<a id="sx_node"></a>`sx_node`(N, M) if [`sx_esc`](#sx_esc)(N) and [`may_be`](js-concat.rofl.md#may_be)(N, `node`, M).
+<a id="sx_node"></a>`sx_node`(N, M) if [`sx_esc`](#sx_esc)(N) and [`may_be`](js-callgraph.rofl.md#may_be)(N, `node`, M).
 
-<a id="sx_lit"></a>`sx_lit`(N, V) if [`sx_esc`](#sx_esc)(N) and [`may_be`](js-concat.rofl.md#may_be)(N, `lit`, V).
+<a id="sx_lit"></a>`sx_lit`(N, V) if [`sx_esc`](#sx_esc)(N) and [`may_be`](js-callgraph.rofl.md#may_be)(N, `lit`, V).
 
 <a id="sx_elem"></a>`sx_elem`(X, I, E) if [`sx_esc`](#sx_esc)(X) and [`array_elem`](js-dataflow.rofl.md#array_elem)(X, I, E).
 
@@ -275,18 +275,18 @@ In the flow:
    - X is `node`;
 2. if all of:
    - F [returns to its call](#call_returns) E;
-   - [`may_be`](js-concat.rofl.md#may_be)(E, `lit`, N);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `lit`, N);
    - X is `lit`;
 3. if all of:
    - F [returns to its call](#call_returns) E;
-   - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S);
    - [`input_of`](js-dataflow.rofl.md#input_of)(S, G);
    - G differs from F;
    - [`input_node`](js-dataflow.rofl.md#input_node)(S, N);
    - X is `node`;
 4. if all of:
    - F [returns to its call](#call_returns) E;
-   - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S);
    - [`input_of`](js-dataflow.rofl.md#input_of)(S, G);
    - G differs from F;
    - [`input_lit`](js-dataflow.rofl.md#input_lit)(S, N);
@@ -294,12 +294,12 @@ In the flow:
 
 <a id="sx_ret_input"></a>`sx_ret_input`(F, I) if all of:
   - F [returns to its call](#call_returns) E;
-  - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S);
   - [`input_param`](js-dataflow.rofl.md#input_param)(S, F, I).
 
-<a id="sx_ret_field"></a>`sx_ret_field`(F, Key) if F [returns to its call](#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `input`, field(F, Key)).
+<a id="sx_ret_field"></a>`sx_ret_field`(F, Key) if F [returns to its call](#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, field(F, Key)).
 
-<a id="sx_ret_hop"></a>`sx_ret_hop`(F, K, M2) if F [returns to its call](#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `input`, hop(F, K, M2)).
+<a id="sx_ret_hop"></a>`sx_ret_hop`(F, K, M2) if F [returns to its call](#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, hop(F, K, M2)).
 
 <a id="sx_ret_inst"></a>`sx_ret_inst`(F) either:
 
@@ -308,12 +308,12 @@ In the flow:
 
 <a id="sx_ret_self"></a>`sx_ret_self`(F) if all of:
   - F [returns to its call](#call_returns) E;
-  - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S);
   - [`input_this`](js-dataflow.rofl.md#input_this)(S, F).
 
 <a id="sx_ret_this"></a>`sx_ret_this`(F, I) if all of:
   - F [returns to its call](#call_returns) E;
-  - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S);
   - [`input_this`](js-dataflow.rofl.md#input_this)(S, F);
   - [`input_node`](js-dataflow.rofl.md#input_node)(S, I).
 

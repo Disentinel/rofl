@@ -106,9 +106,17 @@ Declared as facts:
 | `destructures` | "destructures(declarator D, name Local, from key Key, in file File)" |
 | `destructures_at` | "destructures(declarator D, name Local, at index Index, in file File)" |
 | `pattern_takes` | "takes_the_key(object pattern P, key Key)" |
+| `assign_pat` | "takes_apart_on_the_left(assignment A, pattern R, the value Src)" |
+| `pat_place` | "places(pattern P, target T)" |
+| `catch_local` | "catches_into(catch clause H, name Name, target T)" |
 | `obj_rest` | "holds_the_object_rest(pattern P, node R, taken from node Src)" |
 | `arr_rest` | "holds_the_array_rest(from index I, node R, taken from node Src)" |
 | `rest_src` | "takes_apart(pattern P, node Src)" |
+| `runs` | "runs_the_function(invocation C, function G)" |
+| `runs_now` | "runs_before_it_returns(invocation C, function F)" |
+| `host_hands` | "the_host_hands(function F, at index I, node E)" |
+| `callback_recv` | "calls_back_on(invocation C, receiver R)" |
+| `eff_constructs` | "runs_when_constructed(class CD, function G)" |
 | `param_of` | "takes(function F, name Name:2, at index I:1)" |
 | `param_rest` | "has_the_rest_parameter(function F, at index J, node R, name Name)" |
 | `fallback` | "defaults(function F, name Name, to node Init)" |
@@ -757,7 +765,6 @@ Declared as facts:
 | `effect_of_module` | "the_module_effect(of file F, is effect N)" |
 | `eff_mod_unnamed` | "has_no_named_module_effect(file F)" |
 | `eff_mod_join_short` | "is_short_of_the_module_join(file F, effect J:2, with file T:1)" |
-| `eff_hidden_call` | "hides_the_call(node N, node M)" |
 | `eff_edge_closed` | "closes_the_edge_to(node F, function G)" |
 | `eff_edge_unclosed` | "leaves_open_the_edge(function F, to function G, for effect label L, at host H)" |
 | `eff_class_body` | "has_the_body_member(node CD, node P)" |

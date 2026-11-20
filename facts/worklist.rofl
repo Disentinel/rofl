@@ -3273,7 +3273,8 @@ work_spawned(w_the_generator_is_not_a_builtin, f_a_rule_that_derives_nothing_is_
 -- reached through a BINDING. That is the same relation three branches met on
 -- 2026-09-09 and all three left alone.
 work(w_effect_reads_only_what_resolves, "the effect layer closes over `resolves` and three of its own hidden-call doors reach `calls` only, so three destructuring kinds contribute nothing while their cells claim a transfer - and `eff_join_short[audit]`, the gate for exactly that, reads `resolves` too").
-work_state(w_effect_reads_only_what_resolves, open).
+work_state(w_effect_reads_only_what_resolves, done).
+work_spawned(w_effect_reads_only_what_resolves, f_a_call_runs_what_a_host_or_a_constructor_calls_for_it).
 work_spawned(w_effect_reads_only_what_resolves, f_a_gate_that_reads_what_the_propagation_reads_cannot_see_a_dropped_edge).
 
 -- ===========================================================================
@@ -4250,7 +4251,8 @@ work_spawned(w_au_side_effect_names, f_a_fresh_agent_answers_the_side_effect_que
 
 work(w_au_promise_executor_calls,
   "calls[code] has no edge from a function to the executor it hands to `new Promise(...)`: listProcesses (ps.ts:14) and resolveTerminalEncoding do not reach the exec inside their executors, silently, no unresolved_call. Both agents hit it on the transitive reach question. Touches rules/js-*.rofl (frozen): a decision of the owner; at least the call should be said as unresolved. Also ship a documented reaches_effect(F, Family).").
-work_state(w_au_promise_executor_calls, open).
+work_state(w_au_promise_executor_calls, done).
+work_spawned(w_au_promise_executor_calls, f_a_call_runs_what_a_host_or_a_constructor_calls_for_it).
 work_spawned(w_au_promise_executor_calls, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 work(w_au_scan_without_cargo,
@@ -4309,6 +4311,6 @@ work_state(w_engine_safety_names_meet_a_models, open).
 work_spawned(w_engine_safety_names_meet_a_models, f_a_model_relation_named_as_a_safety_relation_is_refused_for_its_rule).
 
 work(w_js_assignment_patterns,
-  "From f_a_rest_binds_wherever_its_pattern_stands: a destructuring ASSIGNMENT (`({ p, ...r } = o)`, `[q] = [5]`) and a catch parameter's pattern (`catch ({ message, ...e })`) are no roots of pat_in, so nothing flows through them: `p` and `q` answer only `undefined` from their `let`, `r` and `e` nothing. Not a rest question: the whole pattern is missing. The entanglement to settle first: an assignment pattern's target may be a member (`({ a: o.x } = src)`), which member_written and object_of read today as a write, and a target in pat_in is read as a member of its pattern. Also seen: an index read `arr[0]` of an array reaches no element (elem_at feeds only spread arguments), so `tail[0]` of a rest has no value though `const [x] = tail` has.").
-work_state(w_js_assignment_patterns, open).
+  "DONE 2026-11-19, f_a_pattern_on_the_left_of_an_assignment_takes_its_value_apart. From f_a_rest_binds_wherever_its_pattern_stands: a destructuring ASSIGNMENT (`({ p, ...r } = o)`, `[q] = [5]`) and a catch parameter's pattern (`catch ({ message, ...e })`) are no roots of pat_in, so nothing flows through them: `p` and `q` answer only `undefined` from their `let`, `r` and `e` nothing. Not a rest question: the whole pattern is missing. The entanglement to settle first: an assignment pattern's target may be a member (`({ a: o.x } = src)`), which member_written and object_of read today as a write, and a target in pat_in is read as a member of its pattern. Also seen: an index read `arr[0]` of an array reaches no element (elem_at feeds only spread arguments), so `tail[0]` of a rest has no value though `const [x] = tail` has.").
+work_state(w_js_assignment_patterns, done).
 work_spawned(w_js_assignment_patterns, f_a_rest_binds_wherever_its_pattern_stands).

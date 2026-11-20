@@ -1160,7 +1160,7 @@ impl Eval {
             } else if !joined(r) {
                 "premises not joined".into()
             } else if walled(r) {
-                "a builtin before a premise that reads the rule's own conclusion".into()
+                format!("a builtin before a premise that reads the rule's own conclusion, in {}", self.h.name(r.clause.head.rel))
             } else {
                 "other".into()
             };

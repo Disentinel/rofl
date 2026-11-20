@@ -307,14 +307,73 @@ host_no_effects(browser, a_surface_scanned_and_not_yet_attributed).
 -- 4. WHAT CALLS A FUNCTION IT IS HANDED. A type says an argument is a
 -- function and never whether or when it is called, so this is authored too.
 -- `host_calls_back(Origin, Key, Arg, When)`: the member Key of Origin calls
--- its argument Arg (an index, or `last`) `at_once`, inside the call, or
--- `later`, after the synchronous run that handed it over has finished.
+-- its argument Arg (an index, or `last`) `at_once`, inside the call,
+-- `at_once_caught`, inside the call and its throw caught (a promise's
+-- executor), or `later`, after the synchronous run that handed it over has finished.
 -- Origin is a builtin prototype (`array`, `string`, `promise`) or a host
 -- site's origin (a module's specifier, a global's name, with `itself` for a
 -- plain call of the global). `later` says nothing about the order of two later callbacks,
 -- which is when timers fire and promises settle; a microtask and a macrotask
 -- are both after the run, and that is all this table claims.
 edb(host_calls_back).
+edb(host_passes).
+-- `host_passes(Origin, Key, Arg, What)`: what the member Key of Origin hands its callback at Arg: an `element`
+-- of the receiving array, its `index`, the `receiver`, the value it `settled` to (a promise), or the call's
+-- own argument K (`arg(K)`)
+host_passes(array, "forEach", 0, element). host_passes(array, "forEach", 1, index). host_passes(array, "forEach", 2, receiver).
+host_passes(array, "map", 0, element). host_passes(array, "map", 1, index). host_passes(array, "map", 2, receiver).
+host_passes(array, "filter", 0, element). host_passes(array, "filter", 1, index). host_passes(array, "filter", 2, receiver).
+host_passes(array, "some", 0, element). host_passes(array, "some", 1, index). host_passes(array, "some", 2, receiver).
+host_passes(array, "every", 0, element). host_passes(array, "every", 1, index). host_passes(array, "every", 2, receiver).
+host_passes(array, "find", 0, element). host_passes(array, "find", 1, index). host_passes(array, "find", 2, receiver).
+host_passes(array, "findIndex", 0, element). host_passes(array, "findIndex", 1, index). host_passes(array, "findIndex", 2, receiver).
+host_passes(array, "findLast", 0, element). host_passes(array, "findLast", 1, index). host_passes(array, "findLast", 2, receiver).
+host_passes(array, "findLastIndex", 0, element). host_passes(array, "findLastIndex", 1, index). host_passes(array, "findLastIndex", 2, receiver).
+host_passes(array, "flatMap", 0, element). host_passes(array, "flatMap", 1, index). host_passes(array, "flatMap", 2, receiver).
+host_passes(array, "reduce", 1, element). host_passes(array, "reduce", 2, index). host_passes(array, "reduce", 3, receiver).
+host_passes(array, "reduceRight", 1, element). host_passes(array, "reduceRight", 2, index). host_passes(array, "reduceRight", 3, receiver).
+host_passes(array, "sort", 0, element). host_passes(array, "sort", 1, element).
+host_passes(array, "toSorted", 0, element). host_passes(array, "toSorted", 1, element).
+host_passes(promise, "then", 0, settled).
+host_passes("setTimeout", itself, 0, arg(2)). host_passes("setTimeout", itself, 1, arg(3)).
+host_passes("setImmediate", itself, 0, arg(1)). host_passes("setImmediate", itself, 1, arg(2)).
+
+-- `host_returns(Origin, Key, What)`: what the member Key of Origin returns of its receiver (or, for a static of
+-- a global, of its first argument): one `element`, an array of its `elements`, of an object's `values`, `keys`
+-- or `entries`
+edb(host_returns).
+edb(host_makes_array).
+host_makes_array(elements). host_makes_array(outcomes). host_makes_array(results). host_makes_array(values). host_makes_array(keys). host_makes_array(entries).
+host_returns(array, "find", element). host_returns(array, "findLast", element). host_returns(array, "at", element).
+host_returns(array, "pop", element). host_returns(array, "shift", element).
+host_returns(array, "filter", elements). host_returns(array, "slice", elements). host_returns(array, "concat", elements).
+host_returns(array, "toSorted", elements). host_returns(array, "toReversed", elements). host_returns(array, "reverse", elements).
+host_returns(array, "sort", elements).
+host_returns("Array", "from", elements). host_returns("Array", "of", elements).
+host_returns("Object", "values", values). host_returns("Object", "keys", keys). host_returns("Object", "entries", entries).
+host_returns("Object", "freeze", same). host_returns("Object", "seal", same). host_returns("Object", "preventExtensions", same).
+host_returns("Object", "create", inherits). host_returns("Object", "fromEntries", from_entries).
+host_returns("Promise", "all", elements). host_returns("Promise", "allSettled", outcomes).
+host_returns("Promise", "race", element). host_returns("Promise", "any", element).
+edb(host_makes_object).
+host_makes_object(inherits). host_makes_object(from_entries).
+host_returns(array, "map", results). host_returns(array, "flatMap", results).
+host_returns(array, "reduce", result). host_returns(array, "reduceRight", result).
+host_returns(promise, "then", result). host_returns(promise, "catch", result). host_returns(promise, "catch", same).
+host_returns(promise, "finally", same).
+edb(host_gives_result).
+host_gives_result(results). host_gives_result(result).
+-- `host_puts(Origin, Key)`: the member Key of Origin puts its arguments into its receiver
+edb(host_puts).
+host_puts(array, "push"). host_puts(array, "unshift"). host_puts(set, "add").
+
+-- the members of Function.prototype that call their receiver at once
+edb(fn_invoker).
+fn_invoker("call").
+fn_invoker("apply").
+-- `this_giver(Key)`: the member Key of a function hands its first argument as `this`
+edb(this_giver).
+this_giver("call"). this_giver("apply"). this_giver("bind").
 
 host_calls_back(array,  "forEach",       0, at_once).
 host_calls_back(map,    "forEach",       0, at_once).
@@ -334,6 +393,9 @@ host_calls_back(array,  "sort",          0, at_once).
 host_calls_back(array,  "toSorted",      0, at_once).
 host_calls_back(string, "replace",       1, at_once).
 host_calls_back(string, "replaceAll",    1, at_once).
+host_calls_back("Promise", itself,       0, at_once_caught).
+host_calls_back("Reflect", "apply",       0, at_once).
+host_calls_back("Array",   "from",        1, at_once).
 
 host_calls_back(promise,  "then",    0, later).
 host_calls_back(promise,  "then",    1, later).

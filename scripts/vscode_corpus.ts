@@ -2,7 +2,7 @@
 //   fixture [BASE SUB OUT]          examples/vscode/mini -> examples/checks/vscode-mini-facts.rofl, mini + split ->
 //                                   examples/checks/vscode-split-facts.rofl (world vscode_surface_split);
 //                                   or BASE/SUB -> OUT
-//   corpus ROOT OUT [N...]          vscode's subset S (src/vs/{base,platform,code,server} and extensions/, no tests), in
+//   corpus ROOT OUT [N...]          vscode's subset S (another tree: all of it, no tests) (src/vs/{base,platform,code,server} and extensions/, no tests), in
 //                                   that order and by path within it; OUT/files.lst, and OUT/facts-<N>.rofl holding the
 //                                   files after the previous size up to N (the last is every file), so a size is its
 //                                   prefix of chunks; the files no parser read are printed and in OUT/parse-errors.lst
@@ -20,7 +20,7 @@ const SUBSET = ['src/vs/base', 'src/vs/platform', 'src/vs/code', 'src/vs/server'
 
 function walk(root: string, dir: string, out: string[]): void {
   for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : 1)) {
-    const rel = `${dir}/${e.name}`;
+    const rel = dir === '.' ? e.name : `${dir}/${e.name}`;
     if (e.isDirectory()) { if (!SKIP_DIR.has(e.name) && !TEST_DIR.has(e.name)) walk(root, rel, out); }
     else if (CODE.test(e.name) && !NOT_SOURCE.test(e.name)) out.push(rel);
   }
@@ -68,7 +68,8 @@ if (mode === 'fixture') {
 } else if (mode === 'corpus') {
   const [root, out, ...sizes] = rest;
   const files: string[] = [];
-  for (const d of SUBSET) walk(root, d, files);
+  const subset = SUBSET.filter((d) => fs.existsSync(path.join(root, d)));
+  for (const d of subset.length ? subset : ['.']) walk(root, d, files);
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'files.lst'), files.join('\n') + '\n');
   const cuts = [...sizes.map(Number).filter((n) => n < files.length), files.length];
