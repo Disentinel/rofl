@@ -3,13 +3,13 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1052 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1053 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 88 | 42 | 38 | 0 | 1 | 91 | 5 | 2 | 12 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 106 | 4 | 0 | 5 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 528 | 187 | 88 | 91 | 29 | 716 | 75 | 7 | 64 | 0 |
 | [js-concat](js-concat.rofl.md) | 193 | 63 | 0 | 52 | 2 | 317 | 23 | 7 | 11 | 0 |
-| [js-controlflow](js-controlflow.rofl.md) | 230 | 86 | 71 | 6 | 11 | 234 | 23 | 5 | 33 | 0 |
-| [js-dataflow](js-dataflow.rofl.md) | 1147 | 476 | 130 | 331 | 33 | 2152 | 208 | 11 | 74 | 0 |
+| [js-controlflow](js-controlflow.rofl.md) | 229 | 85 | 70 | 6 | 11 | 231 | 22 | 5 | 33 | 0 |
+| [js-dataflow](js-dataflow.rofl.md) | 1155 | 479 | 132 | 332 | 33 | 2162 | 211 | 11 | 75 | 0 |
 | [js-effects](js-effects.rofl.md) | 225 | 126 | 110 | 12 | 6 | 306 | 24 | 4 | 32 | 0 |
 | [js-env-api](js-env-api.rofl.md) | 5 | 5 | 5 | 0 | 0 | 8 | 0 | 0 | 3 | 0 |
 | [js-env](js-env.rofl.md) | 44 | 33 | 32 | 0 | 0 | 42 | 5 | 1 | 18 | 0 |
@@ -25,7 +25,7 @@
 | [js-surface](js-surface.rofl.md) | 107 | 64 | 1 | 62 | 3 | 181 | 13 | 1 | 12 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 6 | 4 | 4 | 0 | 0 | 4 | 2 | 0 | 1 | 0 |
 
-634 heads without a phrase across these files.
+635 heads without a phrase across these files.
 
 ## Proposed renames
 
@@ -74,6 +74,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `answer_without_trace` | `resolves_without_a_trace` |
 | `any_env_has` | `is_supported_somewhere` |
 | `arg_at` | `passes` |
+| `arr_rest` | `holds_the_array_rest` |
 | `arrival` | `arrives` |
 | `arrived_by` | `has_received` |
 | `assign_binder` | `is_written_into` |
@@ -680,6 +681,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `obj_like` | `is_object_like` |
 | `obj_member_fn` | `has_the_member_function` |
 | `obj_method_of` | `has_the_object_method` |
+| `obj_rest` | `holds_the_object_rest` |
 | `only_written` | `is_only_written` |
 | `optional_member` | `calls_through_an_optional_member` |
 | `orphan` | `is_orphaned` |
@@ -763,8 +765,7 @@ A signature whose name differs from the relation is a rename waiting to be appli
 | `resolved_site` | `is_resolved` |
 | `resolves` | `resolves_to` |
 | `resolves_to` | `resolves_by_the_host_to` |
-| `rest_binds` | `binds` |
-| `rest_in_pattern` | `holds_a_rest` |
+| `rest_src` | `takes_apart` |
 | `rule_opinion_unlisted` | `is_named_by_a_rule_yet_unlisted` |
 | `rule_prem` | `has_the_premise` |
 | `rules_answer` | `the_rules_answer` |

@@ -168,6 +168,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
   decorated: () => cli([path.join(NB, 'decorated.rofl.md')]),
   scoped: () => cli([path.join(NB, 'scoped.rofl.md')]),
   destructure: () => cli([path.join(NB, 'destructure.rofl.md')]),
+  rest: () => cli([path.join(NB, 'rest.rofl.md')]),
   assign: () => cli([path.join(NB, 'assign.rofl.md')]),
   guard: () => cli([path.join(NB, 'guard.rofl.md')]),
   passes: () => cli([path.join(NB, 'passes.rofl.md')]),
@@ -195,6 +196,18 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const dir = path.join(NB, 'destructure');
     const required = () => { const module = { exports: {} }; vm.runInNewContext(readFileSync(path.join(dir, 'config.js'), 'utf8'), { module }); return module.exports; };
     vm.runInNewContext(readFileSync(path.join(dir, 'shapes.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`), require: required });
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  restV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'rest.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'rest/rest.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
     const missing = [...observed].filter((o) => !model.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
   },
@@ -285,7 +298,7 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -332,6 +345,8 @@ test('scoped: an assignment reaches the readers of its own binding and what no b
 test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('destructure: a name bound from an object pattern, in a declarator or a parameter, with a default or off a required module, and a conversion, carry their values', ['destructure'], () => is(destructure, 0) && has(destructure, 'never seen("object.port", 3030)  ->  holds') && has(destructure, 'never seen("default.port", 8082)  ->  holds') && has(destructure, 'never seen("require.port", 5)  ->  holds') && has(destructure, '? seen(Tag, V)  ->  18 answers'), () => destructure);
 test('destructure: every value V8 observes at a read is in the model\'s may-set', ['destructureV8'], () => has(destructureV8, 'missing from the model: []'), () => destructureV8);
+test('rest: an object or array rest binds its name in a declarator, a parameter or a for-of head, at any depth, without the keys its pattern took, and a spread copies it', ['rest'], () => is(rest, 0) && has(rest, 'never silent(Tag)  ->  holds') && has(rest, 'never rest_key(R, "a")  ->  holds') && has(rest, '? seen(Tag, V)  ->  20 answers'), () => rest);
+test('rest: every value V8 observes at a read is in the model\'s may-set', ['restV8'], () => has(restV8, 'missing from the model: []'), () => restV8);
 test('missing: a call of a member a receiver seen whole has not got is said missing, and never over a package or a parameter', ['missing'], () => is(missing, 0) && has(missing, '? missing(T)  ->  9 answers') && has(missing, 'never missing("path.nosuch")  ->  holds'), () => missing);
 test('imports: an imported class, a namespace and a module object are seen whole, and what re-exports a package is not', ['imports'], () => is(imports, 0) && has(imports, '? missing(T)  ->  8 answers') && has(imports, 'never missing("O.join")  ->  holds'), () => imports);
 test('imports: Node throws a TypeError at every call said missing and at no call said found', ['importsNode'], () => has(importsNode, 'wrong: []') && has(importsNode, 'said 8 missing'), () => importsNode);
@@ -452,7 +467,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

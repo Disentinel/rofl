@@ -18,7 +18,7 @@ Reads:
 
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
-- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [rest_in_pattern](js-dataflow.rofl.md#rest_in_pattern), [spread_of](js-dataflow.rofl.md#spread_of)
+- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_rest](js-dataflow.rofl.md#obj_rest), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_source](js-dataflow.rofl.md#pattern_source), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [spread_of](js-dataflow.rofl.md#spread_of)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
@@ -474,20 +474,17 @@ A node is a site if it [reads through the accessor](#accessor_read) some node.
 > the declarator form: a pattern in a parameter reads the argument, a
 > call-site question, so it is silent here rather than wrong.
 
-<a id="pattern_source"></a>The pattern source of a node P is a node Init if [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P) and D [takes its value from](js-dataflow.rofl.md#decl_value) Init.
-
 A node
 
 - <a id="pattern_accessor"></a>destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of a node Obj at Key is M;
   - a node Init [points to](js-dataflow.rofl.md#may_be_node) Obj;
-  - [the pattern source](#pattern_source) of it is Init;
+  - [the pattern source](js-dataflow.rofl.md#pattern_source) of it is Init;
   - it [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 - destructures through the accessor M if all of:
-  - D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) it in some file;
-  - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P);
-  - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
-  - Init [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
+  - a pattern P [holds the object rest](js-dataflow.rofl.md#obj_rest) it taken from a node Src;
+  - [the pattern source](js-dataflow.rofl.md#pattern_source) of P is Src;
+  - Src [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
   - [the accessor](#accessor_of) of Obj at Key is M;
   - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 - destructures through the accessor M if all of:
@@ -571,18 +568,22 @@ In the execution:
 
 In the code:
 
-<a id="hidden_call_src"></a>The hidden call source of a node P is a node Init either:
+<a id="hidden_call_src"></a>The hidden call source of a node P is a node Init if [the pattern source](js-dataflow.rofl.md#pattern_source) of P is Init and [`object_pat`](js-structure.rofl.md#object_pat)(P).
 
-1. if [the pattern source](#pattern_source) of P is Init and [`object_pat`](js-structure.rofl.md#object_pat)(P);
-2. if D [holds a rest](js-dataflow.rofl.md#rest_in_pattern) P in some file and D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-3. if P [is iterated](#spread_iterated) and Init is P;
-4. if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, P) and Init is P;
-5. if [`iterates`](#iterates)(P, something, Init) and P differs from Init;
-6. if all of:
-   - [`iterates`](#iterates)(P, P, P);
-   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P);
-   - D [takes its value from](js-dataflow.rofl.md#decl_value) Init;
-7. if [`iterates`](#iterates)(P, P, P) and P [points to](js-dataflow.rofl.md#may_be_node) Init.
+The hidden call source of a node R is a node Src if a pattern P [holds the object rest](js-dataflow.rofl.md#obj_rest) R taken from Src and [the pattern source](js-dataflow.rofl.md#pattern_source) of P is Src.
+
+The hidden call source of a node Y is Y if Y [is iterated](#spread_iterated).
+
+The hidden call source of a node Y is Y if [`spread_of`](js-dataflow.rofl.md#spread_of)(something, Y).
+
+The hidden call source of a node X is a node R if [`iterates`](#iterates)(X, something, R) and X differs from R.
+
+The hidden call source of a node P is a node N if all of:
+  - [`iterates`](#iterates)(P, P, P);
+  - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P);
+  - D [takes its value from](js-dataflow.rofl.md#decl_value) N.
+
+The hidden call source of a node P is a node N if [`iterates`](#iterates)(P, P, P) and P [points to](js-dataflow.rofl.md#may_be_node) N.
 
 In the flow:
 
