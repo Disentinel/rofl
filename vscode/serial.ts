@@ -2,13 +2,13 @@
 // Prose between fences is a markdown cell, the front matter and every ```rofl, ```datalog and ```natural block a code cell;
 // the blank lines around a cell and the fence lines themselves ride in its metadata. Cut the way notebook/front.ts cellsOf cuts.
 // A block of the prose the reader reads as sentences (sentenceSpans) is a rofl cell with no fence, `bare`: it runs as the prose it is.
-import { serve, rustBin } from '../playground/rust.ts';
-import * as ts from '../scripts/read_md.ts';
+import { serve, rustBin } from '../playground/rofl-serve.ts';
 
-/** The lines the reader reads as sentences: the Rust engine's, where its binary is, else the TypeScript reader's (scripts/read_md.ts). */
+/** The lines the reader reads as sentences, as the Rust engine reads them. Without its binary none: the prose stays prose cells, and a run still reads it
+ *  as sentences, as the kernel's own reader does; the extension loads no reader of its own (models/process/loads.rofl). */
 export const sentenceSpans = (md: string): [number, number][] => {
   const bin = rustBin();
-  return bin ? serve(bin)({ op: 'spans', text: md }).spans : ts.sentenceSpans(md);
+  return bin ? serve(bin)({ op: 'spans', text: md }).spans : [];
 };
 
 export const KINDS = ['rofl', 'datalog', 'natural'];

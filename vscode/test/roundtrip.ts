@@ -8,7 +8,7 @@ import { cellsOf } from '../../notebook/front.ts';
 import { editCell, runFile, wall } from '../../notebook/cli.ts';
 import { Kernel } from '../../notebook/kernel.ts';
 import { sentenceSpans } from '../../scripts/read_md.ts';
-import { rustBin } from '../../playground/rust.ts';
+import { rustBin } from '../../playground/rofl-serve.ts';
 import { render, type Run } from '../render.ts';
 
 type Serial = typeof import('../serial.ts');

@@ -143,8 +143,9 @@ I5 The LLM proposes, the book decides: a translation enters the file only after 
 > Step 1. A model is called by starting a process; only the function that
 > starts the harness (`notebook/model.ts`) may start one, the one that runs git to list and search the files the model may read (`notebook/reader.ts`), the one that searches them
 > where git is not installed, in a node process killed at its time limit (`notebook/reader.ts`), the one that runs the person's own
-> untracked command, set outside the workspace (`notebook/reader.ts`), and the one that starts the kept kernel
-> (`notebook/serve.ts`), whose command is node itself.
+> untracked command, set outside the workspace (`notebook/reader.ts`), the one that starts the kept kernel
+> (`notebook/serve.ts`), whose command is node itself, and the one that starts the editor's kernel process
+> (`vscode/extension.ts`), node again.
 
 ```rofl
 A call C starts a process if C is a host site of `node` from "node:child_process" at some key.
@@ -154,14 +155,15 @@ A function F may start a process either:
 2. if F answers to "viaDaemon";
 3. if F answers to "runGit";
 4. if F answers to "search";
-5. if F answers to "userCommand".
+5. if F answers to "userCommand";
+6. if F answers to "startKernel".
 
 A call C starts a process outside the model call if C starts a process, a function F is the nearest function of C, and unless F may start a process.
 
 never C starts a process outside the model call
 ```
 
-> Step 2. The editor's host runs the kernel in a worker, which hands the
+> Step 2. The editor's host runs the kernel in a process of its own, which hands the
 > model call to the translator only on the translate command's path: in the
 > extension's files `llm` is passed to a call only inside a function that
 > answers to "translate". The question beside it is the control: the name is
