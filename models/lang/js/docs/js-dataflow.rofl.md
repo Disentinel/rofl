@@ -5711,6 +5711,34 @@ In the flow:
 
 `may_be`(E, `node`, NS) if E [sees the declaration](#sees_decl) NS and [`ts_namespace`](#ts_namespace)(NS).
 
+The plain member Key of a node NS is a node V if [`ts_namespace`](#ts_namespace)(NS) and [the member](#member_value) Key of NS holds V.
+
+> A TypeScript enum is an object of its members, reached by its name; a member with an initialiser holds it
+
+`may_be`(E, `node`, D) if E [sees the declaration](#sees_decl) D and [`decl`](#decl)(D, `enum`).
+
+The plain member Key of a node D is a node V if all of:
+  - [`decl`](#decl)(D, `enum`);
+  - [`has`](#has)(D, M);
+  - [`key`](#key)(M, Key);
+  - [`value`](#value)(M, V).
+
+> an enum with no initialiser at all numbers its members from 0
+
+In the code:
+
+<a id="enum_valued"></a>`enum_valued`(D) if [`decl`](#decl)(D, `enum`), [`has`](#has)(D, M), and [`value`](#value)(M, something).
+
+In the flow:
+
+The plain member Key of a node D is a node M if all of:
+  - [`decl`](#decl)(D, `enum`);
+  - [`has`](#has)(D, M);
+  - [`key`](#key)(M, Key);
+  - unless [`enum_valued`](#enum_valued)(D).
+
+`may_be`(M, `lit`, K) if [`decl`](#decl)(D, `enum`) and [`nth`](#nth)(D, K, M), unless [`enum_valued`](#enum_valued)(D).
+
 The member Name of a node NS holds a node D if all of:
   - [`ts_namespace`](#ts_namespace)(NS);
   - [`namespace`](#namespace)(NS, B);
@@ -5756,6 +5784,35 @@ The member Name of a node NS holds a node In if all of:
 2. if [`made_of`](#made_of)(I, CD).
 
 `may_be`(E, `node`, made(E, CD)) if [`new_of`](js-callgraph.rofl.md#new_of)(E, CD) in the flow.
+
+> a parameter property (`constructor(private name: string)`) is a member each `new` sets to its argument
+
+<a id="param_member"></a>`param_member`(CD, Key, I) if all of:
+  - [`has`](#has)(CD, FP);
+  - [`key`](#key)(FP, Key);
+  - [`assign`](#assign)(FP, FP, X);
+  - a class CD [has its own constructor](#own_ctor) M;
+  - [`param`](#param)(M, I, X).
+
+The member Key of a node N holds a node X either:
+
+1. if all of:
+   - [`new_of`](js-callgraph.rofl.md#new_of)(E, CD) in the flow;
+   - [`param_member`](#param_member)(CD, Key, I);
+   - an invocation E [passes](#arg_at) X at an index I;
+   - N is made(E, CD);
+2. if all of:
+   - [`new_of`](js-callgraph.rofl.md#new_of)(E, CD) in the flow;
+   - [`param_member`](#param_member)(CD, Key, I);
+   - an invocation E [passes](#arg_at) X at an index I;
+   - N is inst(CD);
+3. if all of:
+   - [`new_of`](js-callgraph.rofl.md#new_of)(E, CD) in the flow;
+   - [`param_member`](#param_member)(CD, Key, I);
+   - a class CD [has its own constructor](#own_ctor) M;
+   - [`param_wrap`](#param_wrap)(M, I, W, L);
+   - [`assign`](#assign)(W, L, X);
+   - N is made(E, CD).
 
 > `super` denotes the class its `extends` expression may be.
 

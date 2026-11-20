@@ -273,12 +273,13 @@ mark[value](F, async)     :- ox_fn_node(F, Fn), oxc_a[ast_oxc](Fn, async, true).
 mark[value](F, generator) :- ox_fn_node(F, Fn), oxc_a[ast_oxc](Fn, generator, true).
 constructs[value](CD, M) :- oxc_k[ast_oxc](CD, class), oxc_c[ast_oxc](CD, body, 0, B), oxc_c[ast_oxc](B, body, _, M),
                             oxc_a[ast_oxc](M, kind, "Constructor"), not ox_type_only(M).
-ox_param_member(C, FP, X) :- constructs[value](C, M), ox_method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
-                          oxc_c[ast_oxc](Ps, items, _, FP), oxc_a[ast_oxc](FP, accessibility, _),
-                          oxc_c[ast_oxc](FP, pattern, 0, X), oxc_k[ast_oxc](X, binding_identifier).
-ox_param_member(C, FP, X) :- constructs[value](C, M), ox_method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
-                          oxc_c[ast_oxc](Ps, items, _, FP), oxc_a[ast_oxc](FP, readonly, true),
-                          oxc_c[ast_oxc](FP, pattern, 0, X), oxc_k[ast_oxc](X, binding_identifier).
+ox_param_ident(FP, X) :- oxc_c[ast_oxc](FP, pattern, 0, X), oxc_k[ast_oxc](X, binding_identifier).
+ox_param_ident(FP, X) :- oxc_c[ast_oxc](FP, pattern, 0, P), oxc_k[ast_oxc](P, assignment_pattern),
+                         oxc_c[ast_oxc](P, left, 0, X), oxc_k[ast_oxc](X, binding_identifier).
+ox_ctor_param(C, FP) :- constructs[value](C, M), ox_method_member(M, Fn), oxc_c[ast_oxc](Fn, params, 0, Ps),
+                        oxc_c[ast_oxc](Ps, items, _, FP).
+ox_param_member(C, FP, X) :- ox_ctor_param(C, FP), access[type](FP, _), ox_param_ident(FP, X).
+ox_param_member(C, FP, X) :- ox_ctor_param(C, FP), frozen[type](FP), ox_param_ident(FP, X).
 has[value](C, FP)        :- ox_param_member(C, FP, _).
 key[value](FP, Name)     :- ox_param_member(_, FP, X), oxc_name[ast_oxc](X, Name).
 assign[value](FP, FP, X) :- ox_param_member(_, FP, X).
@@ -456,7 +457,8 @@ static_block[value](C, B) :- oxc_k[ast_oxc](C, class), oxc_c[ast_oxc](C, body, 0
 decorated[value](X, E) :- oxc_c[ast_oxc](X, decorators, _, D), oxc_c[ast_oxc](D, expression, 0, E).
 -- an enum is an object: each member a key and its initializer
 mark[value](E, object)  :- oxc_k[ast_oxc](E, tsenum_declaration).
-has[value](E, M)  :- oxc_k[ast_oxc](E, tsenum_declaration), oxc_c[ast_oxc](E, body, 0, B), oxc_c[ast_oxc](B, members, _, M).
+nth[tree](E, I, M) :- oxc_k[ast_oxc](E, tsenum_declaration), oxc_c[ast_oxc](E, body, 0, B), oxc_c[ast_oxc](B, members, I, M).
+has[value](E, M)  :- oxc_k[ast_oxc](E, tsenum_declaration), nth[tree](E, _, M).
 key[value](M, Key) :- oxc_k[ast_oxc](M, tsenum_member), oxc_c[ast_oxc](M, id, 0, K), ox_key_name(K, Key).
 value[value](M, V) :- oxc_k[ast_oxc](M, tsenum_member), oxc_c[ast_oxc](M, initializer, 0, V).
 spread_props[value](O, I, X) :- oxc_k[ast_oxc](O, object_expression), oxc_c[ast_oxc](O, properties, I, S),

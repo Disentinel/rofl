@@ -2317,6 +2317,14 @@ may_be[flow](U, node, P) :- callback_param[flow](P, F, _), binds[value](P, Name)
 -- reached by its name, holding what its body exports.
 ts_namespace[code](NS) :- decl[value](NS, namespace), not ambient[value](NS).
 may_be[flow](E, node, NS) :- sees_decl[code](E, NS), ts_namespace[code](NS).
+member_plain[flow](NS, Key, V) :- ts_namespace[code](NS), member_value[flow](NS, Key, V).
+-- A TypeScript enum is an object of its members, reached by its name; a member with an initialiser holds it
+may_be[flow](E, node, D) :- sees_decl[code](E, D), decl[value](D, enum).
+member_plain[flow](D, Key, V) :- decl[value](D, enum), has[value](D, M), key[value](M, Key), value[value](M, V).
+-- an enum with no initialiser at all numbers its members from 0
+enum_valued[code](D) :- decl[value](D, enum), has[value](D, M), value[value](M, _).
+member_plain[flow](D, Key, M) :- decl[value](D, enum), not enum_valued[code](D), has[value](D, M), key[value](M, Key).
+may_be[flow](M, lit, K) :- decl[value](D, enum), not enum_valued[code](D), nth[tree](D, K, M).
 member_value[flow](NS, Name, D)    :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, I),
                                       target[value](D, I), own_name[code](D, Name, _, around),
                                       not bodiless[code](D).
@@ -2340,6 +2348,13 @@ made_of[flow](made(E, CD), CD) :- new_of[flow](E, CD).
 isa[flow](I, CD) :- inst_of[flow](I, CD).
 isa[flow](I, CD) :- made_of[flow](I, CD).
 may_be[flow](E, node, made(E, CD)) :- new_of[flow](E, CD).
+-- a parameter property (`constructor(private name: string)`) is a member each `new` sets to its argument
+param_member[flow](CD, Key, I) :- has[value](CD, FP), key[value](FP, Key), assign[value](FP, FP, X),
+                                  own_ctor[flow](CD, M), param[value](M, I, X).
+member_value[flow](made(E, CD), Key, A) :- new_of[flow](E, CD), param_member[flow](CD, Key, I), arg_at[flow](E, I, A).
+member_value[flow](inst(CD), Key, A)    :- new_of[flow](E, CD), param_member[flow](CD, Key, I), arg_at[flow](E, I, A).
+member_value[flow](made(E, CD), Key, D) :- new_of[flow](E, CD), param_member[flow](CD, Key, I), own_ctor[flow](CD, M),
+                                           param_wrap[code](M, I, W, L), assign[value](W, L, D).
 
 -- `super` denotes the class its `extends` expression may be.
 super_of[flow](CD, SD) :- class_like[flow](CD), extends[value](CD, SC),
