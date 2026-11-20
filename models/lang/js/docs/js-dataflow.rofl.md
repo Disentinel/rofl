@@ -1045,11 +1045,12 @@ The member Key of a node O holds a node V if all of:
 
 > what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
 
-`elem_somewhere`(Y, X) if all of:
+`elem_somewhere`(Y, X) if [`puts_on`](#puts_on)(C, Y) and an invocation C [passes](#arg_at) a node X at some index.
+
+<a id="puts_on"></a>`puts_on`(C, X) if all of:
   - [`host_call_on`](#host_call_on)(C, O, Key, R);
   - [`host_puts`](#host_puts)(O, Key);
-  - a node R [points to](#may_be_node) a node Y;
-  - an invocation C [passes](#arg_at) a node X at some index.
+  - a node R [points to](#may_be_node) a node X.
 
 `elem_somewhere`(X, E) if all of:
   - an invocation X [is an instance](js-globals.rofl.md#es_instance) of "Set" from some release;
@@ -4040,10 +4041,13 @@ In the flow:
 5. if O [comes out of](#external_value) some module.
 
 `may_be`(N, VK, X) if all of:
-  - [`member_at`](#member_at)(N, something, I, Key);
+  - [`member_at_out`](#member_at_out)(N, I, Key);
   - [`sx_mset`](#sx_mset)(I, Key, VK, X);
-  - [`holds_members`](#holds_members)(I);
-  - unless [`this_reads`](#this_reads)(N).
+  - [`holds_members`](#holds_members)(I).
+
+> a read of a member not through `this`, joined once: from a new member value, the reads by `this` were each read to be dropped
+
+<a id="member_at_out"></a>`member_at_out`(N, I, Key) if [`member_at`](#member_at)(N, something, I, Key), unless [`this_reads`](#this_reads)(N).
 
 > `inst(CD)` is an instance of CD in general, `this` in its methods' bodies: what any run of its methods, its
 > ancestors' and its constructor may write on it (an argument as the input, whatever any caller hands), and what is
@@ -5943,12 +5947,23 @@ The plain member X of a node N is a node E either:
 > FOR-OF: the head is a declarator like any other, whose value is each
 > element walked. An array is a VALUE (through `may_be_node`); a generator is
 > a CALL, read at the site, because its returns are not what for-of walks.
+> only what is walked: every alias of a large array taking each of its elements was a product of the two (tailwindcss)
+
+<a id="walked"></a>`walked`(X) either:
+
+1. if [`iterates`](#iterates)(S, something, X) and [`for_of`](js-structure.rofl.md#for_of)(S);
+2. if [`spread_elems`](#spread_elems)(something, something, X);
+3. if [`host_src`](#host_src)(something, `elements` or `outcomes`, X).
 
 <a id="iter_elem"></a>A node X has an element E either:
 
-1. if [the element](#elem_at) some index of X is E;
-2. if X [points to](#may_be_node) a node Y and [`elem_somewhere`](#elem_somewhere)(Y, E);
+1. if [`walked`](#walked)(X) and [the element](#elem_at) some index of X is E;
+2. if all of:
+   - [`walked`](#walked)(X);
+   - X [points to](#may_be_node) a node Y;
+   - [`elem_somewhere`](#elem_somewhere)(Y, E);
 3. if all of:
+   - [`walked`](#walked)(X);
    - X [points to](#may_be_node) a node GC;
    - GC [makes a generator of](#gen_of) F;
    - F [yields](#yields) E.
@@ -5956,6 +5971,7 @@ The plain member X of a node N is a node E either:
 > an object of the program that is iterable by a generator at `[Symbol.iterator]`
 
 A node has an element E if all of:
+  - [`walked`](#walked)(it);
   - it [points to](#may_be_node) a node O;
   - [the member](#member_value) `symbol_iterator` of O holds a node M;
   - M [is a generator function](#gen_fn);
@@ -6391,6 +6407,30 @@ In the flow:
    - a node P [finds its name in](#name_scope) "arguments" in File X;
    - N is `open`.
 
+> an import of a module the corpus neither holds nor names as a package (`#internal/x`, a path alias, a file left
+> out) binds what the model does not see
+
+In the code:
+
+<a id="unseen_module"></a>`unseen_module`(D) if all of:
+  - a node D [is an import site](js-modules.rofl.md#import_site) of `static_import`;
+  - [the site shape](js-modules.rofl.md#site_shape) of D is a shape Sh;
+  - unless D [means the file](js-modules.rofl.md#module_target) some file;
+  - unless [`external_shape`](#external_shape)(Sh).
+
+<a id="import_local"></a>`import_local`(Local, D, File) either:
+
+1. if Local [imports](#imports_name) some name at a site D in File;
+2. if Local [imports the default](#imports_default) at a site D in File;
+3. if Local [imports the namespace](#imports_ns) at a site D in File.
+
+In the flow:
+
+`may_be`(E, `open`, D) if all of:
+  - [`import_local`](#import_local)(Local, D, File);
+  - [`unseen_module`](#unseen_module)(D);
+  - a node E [is read at the top of](#top_read) Local and File.
+
 > a default import is what the other module exports as default, a name what it exports under the name, open or not
 
 In the code:
@@ -6399,21 +6439,28 @@ In the code:
 
 In the flow:
 
-`may_be`(E, VK, V) either:
+`may_be`(E, VK, V) if all of:
+  - [`default_import`](#default_import)(E, X);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V);
+  - VK differs from `node`.
 
-1. if all of:
-   - Local [imports the default](#imports_default) at a site D in File;
-   - D [means the file](js-modules.rofl.md#module_target) Target;
-   - [`default_value`](#default_value)(X, Target);
-   - [`may_be`](js-callgraph.rofl.md#may_be)(X, VK, V);
-   - a node E [is read at the top of](#top_read) Local and File;
-2. if all of:
-   - Local [imports](#imports_name) Name at a site D in File;
-   - D [means the file](js-modules.rofl.md#module_target) Target;
-   - [`exports_value`](#exports_value)(X, Name, Target);
-   - [`may_be`](js-callgraph.rofl.md#may_be)(X, `open`, V);
-   - a node E [is read at the top of](#top_read) Local and File;
-   - VK is `open`.
+> an object or a class exported as default is open where it is imported: carried as a node, Chart.js's classes took
+> their instances' members to every importer and the run went from 17 s to 108 s (sx_mset 0.35 -> 2.9 million rows)
+
+`may_be`(E, `open`, X) if [`default_import`](#default_import)(E, X) and a node X [points to](#may_be_node) some node.
+
+<a id="default_import"></a>`default_import`(E, X) if all of:
+  - Local [imports the default](#imports_default) at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target;
+  - [`default_value`](#default_value)(X, Target);
+  - a node E [is read at the top of](#top_read) Local and File.
+
+`may_be`(E, `open`, W) if all of:
+  - Local [imports](#imports_name) Name at a site D in File;
+  - D [means the file](js-modules.rofl.md#module_target) Target;
+  - [`exports_value`](#exports_value)(X, Name, Target);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(X, `open`, W);
+  - a node E [is read at the top of](#top_read) Local and File.
 
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 

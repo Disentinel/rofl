@@ -463,8 +463,8 @@ member_value[flow](O, Key, V) :- host_call_on[flow](C, "Object", "defineProperty
                                  arg_at[flow](C, 1, K), may_be_lit[flow](K, Key), arg_at[flow](C, 2, D),
                                  may_be_node[flow](D, DO), member_plain[flow](DO, "value", V).
 -- what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
-elem_somewhere[flow](A, X) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_be_node[flow](R, A),
-                              arg_at[flow](C, _, X).
+elem_somewhere[flow](A, X) :- puts_on[flow](C, A), arg_at[flow](C, _, X).
+puts_on[flow](C, A) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_be_node[flow](R, A).
 elem_somewhere[flow](X, E) :- es_instance[flow](X, "Set", _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr),
                               elem_any[flow](Arr, E).
 -- `{ [k]: v }`: a computed key whose value is known
@@ -1597,7 +1597,9 @@ holds_members[flow](O) :- module_object[flow](O, _).
 holds_members[flow](O) :- isa[flow](O, _).
 holds_members[flow](O) :- class_like[flow](O).
 holds_members[flow](O) :- external_value[flow](O, _).
-may_be[flow](N, VK, X) :- member_at[flow](N, _, I, Key), sx_mset[surface](I, Key, VK, X), holds_members[flow](I), not this_reads[code](N).
+may_be[flow](N, VK, X) :- member_at_out[flow](N, I, Key), sx_mset[surface](I, Key, VK, X), holds_members[flow](I).
+-- a read of a member not through `this`, joined once: from a new member value, the reads by `this` were each read to be dropped
+member_at_out[flow](N, I, Key) :- member_at[flow](N, _, I, Key), not this_reads[code](N).
 
 -- `inst(CD)` is an instance of CD in general, `this` in its methods' bodies: what any run of its methods, its
 -- ancestors' and its constructor may write on it (an argument as the input, whatever any caller hands), and what is
@@ -2436,11 +2438,16 @@ member_plain[flow](step(C), "value", E) :- gen_step[flow](C, G), returns[flow](G
 -- FOR-OF: the head is a declarator like any other, whose value is each
 -- element walked. An array is a VALUE (through `may_be_node`); a generator is
 -- a CALL, read at the site, because its returns are not what for-of walks.
-iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
-iter_elem[flow](X, E) :- may_be_node[flow](X, A), elem_somewhere[flow](A, E).
-iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
+-- only what is walked: every alias of a large array taking each of its elements was a product of the two (tailwindcss)
+walked[flow](X) :- iterates[value](S, _, X), for_of[code](S).
+walked[flow](X) :- spread_elems[value](_, _, X).
+walked[flow](X) :- host_src[flow](_, elements, X).
+walked[flow](X) :- host_src[flow](_, outcomes, X).
+iter_elem[flow](X, E) :- walked[flow](X), elem_at[flow](X, _, E).
+iter_elem[flow](X, E) :- walked[flow](X), may_be_node[flow](X, A), elem_somewhere[flow](A, E).
+iter_elem[flow](X, E) :- walked[flow](X), may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
 -- an object of the program that is iterable by a generator at `[Symbol.iterator]`
-iter_elem[flow](X, E) :- may_be_node[flow](X, O), member_value[flow](O, symbol_iterator, M), gen_fn[flow](M),
+iter_elem[flow](X, E) :- walked[flow](X), may_be_node[flow](X, O), member_value[flow](O, symbol_iterator, M), gen_fn[flow](M),
                          yields[flow](M, E).
 
 decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
@@ -2613,10 +2620,22 @@ may_be[flow](C, global, G) :- resolves[code](C, F), call_returns[flow](F, E), ma
 -- caller handed, read whole
 may_be[flow](P, open, P) :- catch_of[flow](T, H), catch_param[flow](H, P), call_in_try[flow](T).
 may_be[flow](E, open, F) :- scope_declares[code](F, "arguments", File), name_scope[code](E, "arguments", File, F).
+-- an import of a module the corpus neither holds nor names as a package (`#internal/x`, a path alias, a file left
+-- out) binds what the model does not see
+unseen_module[code](D) :- import_site[code](D, static_import), not module_target[code](D, _), site_shape[code](D, Sh),
+                          not external_shape(Sh).
+import_local[code](Local, D, File) :- imports_name[code](Local, _, D, File).
+import_local[code](Local, D, File) :- imports_default[code](Local, D, File).
+import_local[code](Local, D, File) :- imports_ns[code](Local, D, File).
+may_be[flow](E, open, D) :- import_local[code](Local, D, File), unseen_module[code](D), top_read[code](E, Local, File).
 -- a default import is what the other module exports as default, a name what it exports under the name, open or not
 default_value[code](X, File) :- default_declaration[code](E, X), at[tree](E, File, _).
-may_be[flow](E, VK, V) :- imports_default[code](Local, D, File), module_target[code](D, Target),
-                          default_value[code](X, Target), may_be[flow](X, VK, V), top_read[code](E, Local, File).
+may_be[flow](E, VK, V) :- default_import[flow](E, X), may_be[flow](X, VK, V), VK != node.
+-- an object or a class exported as default is open where it is imported: carried as a node, Chart.js's classes took
+-- their instances' members to every importer and the run went from 17 s to 108 s (sx_mset 0.35 -> 2.9 million rows)
+may_be[flow](E, open, X) :- default_import[flow](E, X), may_be_node[flow](X, _).
+default_import[flow](E, X) :- imports_default[code](Local, D, File), module_target[code](D, Target),
+                              default_value[code](X, Target), top_read[code](E, Local, File).
 may_be[flow](E, open, W) :- imports_name[code](Local, Name, D, File), module_target[code](D, Target),
                             exports_value[code](X, Name, Target), may_be[flow](X, open, W), top_read[code](E, Local, File).
 
