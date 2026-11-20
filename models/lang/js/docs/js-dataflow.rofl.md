@@ -971,15 +971,12 @@ In the flow:
 `may_be`(N, VK, V) either:
 
 1. if all of:
-   - [`member_at`](#member_at)(N, something, X, I);
-   - `int` is type_of(I);
+   - [`at_index`](#at_index)(N, X);
    - [`elem_somewhere`](#elem_somewhere)(X, E);
    - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V);
-2. if all of:
-   - [`member_at`](#member_at)(N, something, X, I);
-   - `int` is type_of(I);
-   - [`lit_somewhere`](#lit_somewhere)(X, V);
-   - VK is `lit`.
+2. if [`at_index`](#at_index)(N, X), [`lit_somewhere`](#lit_somewhere)(X, V), and VK is `lit`.
+
+<a id="at_index"></a>`at_index`(N, X) if [`member_at`](#member_at)(N, something, X, I) and `int` is type_of(I).
 
 > `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
 

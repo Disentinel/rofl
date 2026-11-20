@@ -744,11 +744,16 @@ A call
 2. if all of:
    - C [is a callback site](#callback_site) of an origin O at Key;
    - O [calls back its argument](#host_calls_back) Key and `last` and When;
-   - [`arg_count`](js-surface.rofl.md#arg_count)(C, N);
-   - an index I is N - 1;
-   - C [passes](js-dataflow.rofl.md#arg_at) a node X at I;
-   - X [points to](js-dataflow.rofl.md#may_be_node) F;
+   - [`last_arg`](#last_arg)(C, X);
+   - a node X [points to](js-dataflow.rofl.md#may_be_node) F;
    - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+
+In the flow:
+
+<a id="last_arg"></a>`last_arg`(C, X) if all of:
+  - [`arg_count`](js-surface.rofl.md#arg_count)(C, N);
+  - an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
+  - N is I + 1.
 
 > A call RUNS a function when it applies it (resolves to it, or constructs
 > its class), when a host calls it back
@@ -758,6 +763,8 @@ A call
 > over `resolves` alone. A callback called `later` (`then`, `setTimeout`) is
 > not a frame of the call; js-effects.rofl carries what it does without its
 > throw, and what an `at_once_caught` callback does without its throw.
+
+In the code:
 
 <a id="runs"></a>An invocation C runs the function G either:
 

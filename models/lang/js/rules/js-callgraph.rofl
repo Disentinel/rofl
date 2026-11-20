@@ -346,8 +346,8 @@ callback_site[code](C, Name, Key)     :- callee_of[code](C, M), object_of[code](
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
                                 arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
-                                arg_count[code](C, N), I is N - 1, arg_at[flow](C, I, A),
-                                may_be_node[flow](A, F), fn_value[flow](F).
+                                last_arg[flow](C, A), may_be_node[flow](A, F), fn_value[flow](F).
+last_arg[flow](C, A) :- arg_count[code](C, N), arg_at[flow](C, I, A), N is I + 1.
 
 -- A call RUNS a function when it applies it (resolves to it, or constructs
 -- its class), when a host calls it back

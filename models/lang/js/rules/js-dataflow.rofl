@@ -437,8 +437,9 @@ array_elem[flow](entry(C, Key), 0, entry_key(C, Key)) :- entry_of[flow](C, Key, 
 array_elem[flow](entry(C, Key), 1, V) :- entry_of[flow](C, Key, V).
 may_be[flow](entry_key(C, Key), lit, Key) :- entry_of[flow](C, Key, _).
 elem_somewhere[flow](A, E) :- spread_elems[value](A, _, X), iter_elem[flow](X, E).
-may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), int is type_of(I), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
-may_be[flow](N, lit, K) :- member_at[flow](N, _, A, I), int is type_of(I), lit_somewhere[flow](A, K).
+may_be[flow](N, VK, V) :- at_index[flow](N, A), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](N, lit, K) :- at_index[flow](N, A), lit_somewhere[flow](A, K).
+at_index[flow](N, A) :- member_at[flow](N, _, A, I), int is type_of(I).
 -- `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
 may_be[flow](C, VK, V) :- host_src[flow](C, same, R), may_be[flow](R, VK, V).
 may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_object(What).

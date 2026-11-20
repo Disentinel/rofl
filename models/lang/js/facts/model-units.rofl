@@ -172,6 +172,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_any).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_somewhere).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", lit_somewhere).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", entry_of).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", at_index).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_plain).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_result).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", settles_with).
@@ -668,6 +669,7 @@ unit_concludes("models/lang/js/rules/js-callgraph.rofl", passes_function).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", written_arg).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", callback_site).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", calls_back).
+unit_concludes("models/lang/js/rules/js-callgraph.rofl", last_arg).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", runs).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", may_be).
 unit_concludes("models/lang/js/rules/js-callgraph.rofl", bound_with_args).
