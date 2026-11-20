@@ -1395,9 +1395,7 @@ In the code:
 
 In the flow:
 
-<a id="sx_ns_key"></a>`sx_ns_key`(NS, Name) if [`ns_key`](#ns_key)(NS, Name).
-
-`call_finds`(C) if [`call_on`](#call_on)(C, O, Key) and [`sx_ns_key`](#sx_ns_key)(O, Key).
+`call_finds`(C) if [`call_on`](#call_on)(C, O, Key) and [`ns_key`](#ns_key)(O, Key).
 
 > An ES module's namespace object (`import * as m`) is frozen and has no prototype:
 > exactly the names the module exports. It is open where a name comes from where
@@ -1418,14 +1416,8 @@ In the code:
    - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
    - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) T;
-   - [`sx_export_key`](#sx_export_key)(T, Name);
+   - [`export_key`](#export_key)(T, Name);
    - Name differs from "default".
-
-In the flow:
-
-<a id="sx_export_key"></a>`sx_export_key`(File, Name) if [`export_key`](#export_key)(File, Name).
-
-In the code:
 
 <a id="ns_open_file"></a>`ns_open_file`(File) either:
 
@@ -1437,7 +1429,7 @@ In the code:
    - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
    - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) T;
-   - [`sx_ns_open`](#sx_ns_open)(T);
+   - [`ns_open_file`](#ns_open_file)(T);
 3. if all of:
    - [`namespace`](#namespace)(something, Ns);
    - [`assign`](#assign)(E, Ns, something);
@@ -1445,8 +1437,6 @@ In the code:
 4. if some node [refers to the free](js-dataflow.rofl.md#free_global) "exports" or "module" in File.
 
 In the flow:
-
-<a id="sx_ns_open"></a>`sx_ns_open`(File) if [`ns_open_file`](#ns_open_file)(File).
 
 <a id="sx_mod_key"></a>`sx_mod_key`(P, Key) if a node P [is the module object of](js-dataflow.rofl.md#module_object) File and [`export_key`](#export_key)(File, Key).
 

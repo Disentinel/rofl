@@ -669,8 +669,7 @@ call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
 -- (`export let x;`, `export declare function f()`).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[value](B, X), key[value](X, Name).
 ns_key[code](NS, Name) :- ts_namespace[code](NS), namespace[value](NS, B), has[type](B, X), key[type](X, Name).
-sx_ns_key[flow](NS, Name) :- ns_key[code](NS, Name).
-call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[flow](O, Key).
+call_finds[flow](C) :- call_on[flow](C, O, Key), ns_key[code](O, Key).
 
 -- An ES module's namespace object (`import * as m`) is frozen and has no prototype:
 -- exactly the names the module exports. It is open where a name comes from where
@@ -679,15 +678,13 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), sx_ns_key[flow](O, Key).
 whole_expr[flow](E) :- imports_ns[code](Local, D, File), module_target[code](D, _), top_read[code](E, Local, File).
 export_key[code](File, Name) :- program[tree](P, File), has[value](P, M), key[value](M, Name).
 export_key[code](File, Name) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), module_target[code](E, T),
-                                sx_export_key[flow](T, Name), Name != "default".
-sx_export_key[flow](File, Name) :- export_key[code](File, Name).
+                                export_key[code](T, Name), Name != "default".
 ns_open_file[code](File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), not module_target[code](E, _).
 ns_open_file[code](File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _), module_target[code](E, T),
-                            sx_ns_open[flow](T).
+                            ns_open_file[code](T).
 ns_open_file[code](File) :- namespace[value](_, Ns), assign[value](E, Ns, _), at[tree](E, File, _).
 ns_open_file[code](File) :- free_global[code](_, "exports", File).
 ns_open_file[code](File) :- free_global[code](_, "module", File).
-sx_ns_open[flow](File) :- ns_open_file[code](File).
 sx_mod_key[flow](P, Key) :- module_object[flow](P, File), export_key[code](File, Key).
 sx_mod_open[flow](P)     :- module_object[flow](P, File), ns_open_file[code](File).
 call_finds[flow](C) :- call_on[flow](C, P, Key), sx_mod_key[flow](P, Key).

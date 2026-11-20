@@ -5,15 +5,15 @@
 -- argument (`sx_ret_param`), not every caller's.
 
 -- ---------------------------------------------------------------- what escapes
-sx_esc[flow](N) :- sx_export_node[flow](_, _, N).
-sx_esc[flow](N) :- sx_default[flow](_, N).
-sx_esc[flow](N) :- sx_cjs[flow](_, N).
+sx_esc[flow](N) :- exports_name[code](N, _, _).
+sx_esc[flow](N) :- exports_default[code](N, _).
+sx_esc[flow](N) :- cjs_exports[flow](_, N).
 sx_esc[flow](N) :- sx_module[flow](_, N).
 sx_esc[flow](N) :- sx_arg_node[flow](_, _, N).
 sx_esc[flow](N) :- sx_ret_node[flow](_, N).
 sx_esc[flow](N) :- sx_ret_pnode[flow](_, N).
 sx_esc[flow](N) :- sx_gen_ret[flow](_, N).
-sx_esc[flow](N) :- sx_next[flow](_, N).
+sx_esc[flow](N) :- next_send[flow](_, N).
 sx_esc[flow](F) :- sx_cb[flow](F, _).
 sx_esc[flow](A) :- sx_rest_elem[flow](_, _, A).
 sx_esc[flow](I) :- sx_sub_inst[flow](_, I).
@@ -55,15 +55,8 @@ fn_nested[flow](F)            :- fn_node[code](F), in_fn[code](F).
 dcall[code](F, H)             :- sx_dcall[flow](F, H).
 
 -- ---------------------------------------------------------------- exports, by the module's path
-sx_export_node[flow](File, Name, F) :- exports_name[code](F, Name, File).
-sx_export_val[flow](File, Name, X)  :- exports_value[code](X, Name, File).
 sx_export_lit[flow](File, Name, V)  :- exports_value[code](X, Name, File), may_be_lit[flow](X, V).
-sx_default[flow](File, F)           :- exports_default[code](F, File).
-sx_cjs[flow](File, V)               :- cjs_exports[flow](File, V).
 sx_module[flow](File, P)            :- corpus_file[code](File), module_object[flow](P, File).
-sx_eff_module[flow](File, L, H)     :- eff_module[flow](File, L, H).
-sx_effect_module[flow](File, N)     :- effect_of_module[flow](File, N).
-
 -- ---------------------------------------------------------------- what a call hands its callee
 sx_arg_lit[flow](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_lit[flow](A, V).
 sx_arg_node[flow](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
@@ -82,9 +75,7 @@ may_be[flow](U, lit, undefined) :- sx_arg_short[flow](F, N), param_of[flow](F, I
 sx_reached[flow](F)        :- resolves[code](C, F), not guarded[code](C).
 sx_reach[flow](F)          :- resolves[code](C, F), not guarded[code](C), not in_fn[code](C).
 sx_reach[flow](F)          :- reachable[code](G), nearest_v[flow](G, C), resolves[code](C, F), not guarded[code](C).
-sx_next[flow](G, V)        :- next_send[flow](G, V).
-sx_rest[flow](F, J, R)     :- param_rest[code](F, J, R, _).
-sx_rest_elem[flow](R, K, A) :- sx_rest[flow](F, J, R), resolves[code](C, F), arg_at[flow](C, I, A),
+sx_rest_elem[flow](R, K, A) :- param_rest[code](F, J, R, _), resolves[code](C, F), arg_at[flow](C, I, A),
                                   I >= J, K is I - J.
 -- a function handed to an external call is called back by code the corpus cannot see
 sx_cb[flow](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),

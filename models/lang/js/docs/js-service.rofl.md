@@ -31,7 +31,7 @@ Reads:
 - from js-callgraph, in the code: [nearest_fn](js-callgraph.rofl.md#nearest_fn), [top_call](js-callgraph.rofl.md#top_call)
 - from js-concat, in the flow: [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [corpus_file](js-dataflow.rofl.md#corpus_file)
-- from js-express, in the flow: [app_listens](js-express.rofl.md#app_listens), [serves](js-express.rofl.md#serves), [sx_ex_str](js-express.rofl.md#sx_ex_str)
+- from js-express, in the flow: [app_listens](js-express.rofl.md#app_listens), [ex_path](js-express.rofl.md#ex_path), [serves](js-express.rofl.md#serves)
 - from js-fetch, in the flow: [requests](js-fetch.rofl.md#requests)
 - from outside these files:
   - <a id="code_of"></a>`code_of`
@@ -77,7 +77,7 @@ Reads:
 <a id="url_str"></a>`url_str`(V) either:
 
 1. if [`url_term`](#url_term)(V) and [`str_value`](js-concat.rofl.md#str_value)(V);
-2. if [`url_term`](#url_term)(V) and [`sx_ex_str`](js-express.rofl.md#sx_ex_str)(V).
+2. if [`url_term`](#url_term)(V) and [`ex_path`](js-express.rofl.md#ex_path)(something, V).
 
 In the code:
 
