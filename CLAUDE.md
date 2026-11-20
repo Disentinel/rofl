@@ -92,8 +92,12 @@ The Rust code's form has a gate of its own, no npm script: from rust/, `cargo cl
 exits 0, and CI runs it on every push and pull request (job `clippy`, the toolchain pinned to 1.95.0, beside a
 `cargo check --features breaks`). The lints the style overrules are in rust/rofl/Cargo.toml, `[lints.clippy]`.
 
-**A pull request lands by the merge train, not by hand** (owner, 2026-11-15). When its checks are green, label it
-`queue` and stop: .github/workflows/merge-train.yml (scripts/merge_train.ts) takes every request so labelled,
+**A pull request lands by the merge train, not by hand** (owner, 2026-11-15). Label it `queue` right after the push
+that makes it whole, with its checks still running, and stop: do not wait for them. The train waits for the fast
+checks of the head itself (it starts when CI finishes and every 20 minutes), says once on the request when one is red
+on that head and keeps it labelled, so a fix pushed to the branch is taken without labelling again. To hold a request
+back take the label off: a train that already took it then does not land it, nor a head other than the one it stacked.
+.github/workflows/merge-train.yml (scripts/merge_train.ts) takes every request so labelled,
 stacks them on main, merges the ledgers by line, makes the generated files and the goldens again once, and lets
 models/process/ci/train.rofl say whether a world answers otherwise than the one change that moved it; then the
 planted faults run once for the whole train and each request lands by its own squash. A request the train cannot

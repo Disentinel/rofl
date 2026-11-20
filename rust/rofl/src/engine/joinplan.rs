@@ -681,6 +681,7 @@ impl Eval {
         };
         let (peak, undecided) = (self.peak_rows, self.lat.carry.undecided.len());
         let outer = self.cur_rule.replace(r.id);
+        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
         self.sn_perm = self.sn.is_some().then(|| Rc::new(p.perm.clone()));
@@ -690,6 +691,7 @@ impl Eval {
         self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;
+        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         // a negation records the position it was undecided at; none is while no unknown spreads
         debug_assert_eq!(self.lat.carry.undecided.len(), undecided);
         let sols = match sols {

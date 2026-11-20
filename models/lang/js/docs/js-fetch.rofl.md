@@ -1,6 +1,6 @@
 ---
 world: js-fetch
-books: code, flow, main, surface, value
+books: code, flow, main, value
 default: flow
 ---
 
@@ -189,14 +189,10 @@ In the flow:
 
 <a id="cl_url_arg"></a>`cl_url_arg`(C, X) if [`cl_how`](#cl_how)(C, something, something) and an invocation C [passes](js-dataflow.rofl.md#arg_at) a node X at 0.
 
-In the surface:
-
 `concat_wanted`(X) if all of:
   - [`cl_url_arg`](#cl_url_arg)(something, Y);
   - a node Y [points to](js-dataflow.rofl.md#may_be_node) a node X;
   - [`composed`](js-concat.rofl.md#composed)(X).
-
-In the flow:
 
 <a id="cl_url"></a>`cl_url`(C, V) either:
 

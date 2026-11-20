@@ -198,7 +198,7 @@ In the audit:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
+| `flow` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

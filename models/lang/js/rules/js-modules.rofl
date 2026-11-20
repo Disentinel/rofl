@@ -66,7 +66,6 @@ require_site[code](C) :- free_global[code](N, "require", _),
                          callee[value](C, N), call[value](C),
                          argument_at[code](C, 0, _).
 
-
 module_site[code](N, K) :- import_site[code](N, K).
 module_site[code](N, K) :- reexport_site[code](N, K).
 module_site[code](C, require_call) :- require_site[code](C).
@@ -331,7 +330,6 @@ default_conflict[audit](F, A, B) :- default_export_file[code](F, A),
 value_binding[code](I, Sp) :- binding[code](I, Sp, _, _), target[value](Sp, N), binds[value](N, _).
 
 has_value_binding[code](I) :- value_binding[code](I, _).
-
 
 depends[code](F, T) :- module_target[code](I, T), site_file[code](I, F).
 

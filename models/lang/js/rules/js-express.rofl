@@ -1,10 +1,10 @@
 -- js-express.rofl — THE SERVER SIDE OF A SERVICE CALL (w_express_semantics).
 --
---   serves[surface](App, M, P, H, R)   the app App answers method M (or `any`)
+--   serves[flow](App, M, P, H, R)   the app App answers method M (or `any`)
 --                                      on the pattern P, a text over the route's
 --                                      strings, with the function H, a `route`
 --                                      or a `middleware` that runs before one
---   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port,
+--   app_listens[flow](App, Port)     `app.listen(Port)`: App answers at Port,
 --                                      also `app.listen(app.get('port'))`
 --
 -- Knows nothing about clients. An app is a call of the module (`express()`), a
@@ -34,7 +34,7 @@ ex_import[flow](Sp, K) :- external_import[code](Sp, _, S, _), express_module(S),
 ex_app[flow](C) :- call[value](C), callee[value](C, G),
                    may_be_node[flow](G, S), external_value[flow](S, S), express_module(S).
 ex_router[flow](C) :- call[value](C), callee[value](C, G), ex_router_fn[flow](G).
-ex_target[flow](Y) :- sx_ex_app[surface](Y).
+ex_target[flow](Y) :- sx_ex_app[flow](Y).
 ex_target[flow](Y) :- ex_router[flow](Y).
 
 -- =========================================================================
@@ -58,18 +58,18 @@ ex_listen[flow](Y, P) :- ex_on[flow](R, Y, "listen"), arg_at[flow](R, 0, A), may
 -- a keyed collection of models/lang/js/rules/js-dataflow.rofl section 7c. A `get` with a
 -- handler is a route, and section 7c reads only a `get` with one argument.
 keyed_store(express_app, "set", "get").
-keyed_obj[flow](Y, express_app) :- sx_ex_app[surface](Y).
+keyed_obj[flow](Y, express_app) :- sx_ex_app[flow](Y).
 
 -- =========================================================================
 -- 3. ACROSS FILES. A router is made in one file and mounted in another; what
--- a file registers on one is published, and the mounts compose in [surface].
-sx_ex_app[surface](Y) :- ex_app[flow](Y).
-sx_ex_route[surface](Y, M, V, H, R) :- ex_route[flow](Y, M, V, H, R).
-sx_ex_mount[surface](Y, V, Y2) :- ex_mount[flow](Y, V, Y2).
-sx_ex_str[surface](V) :- ex_path[flow](_, V).
-app_listens[surface](App, P) :- sx_ex_app[surface](App), ex_listen[flow](App, P).
+-- a file registers on one is published, and the mounts compose in [flow].
+sx_ex_app[flow](Y) :- ex_app[flow](Y).
+sx_ex_route[flow](Y, M, V, H, R) :- ex_route[flow](Y, M, V, H, R).
+sx_ex_mount[flow](Y, V, Y2) :- ex_mount[flow](Y, V, Y2).
+sx_ex_str[flow](V) :- ex_path[flow](_, V).
+app_listens[flow](App, P) :- sx_ex_app[flow](App), ex_listen[flow](App, P).
 
-ex_reach[surface](App, App, "/", 0) :- sx_ex_app[surface](App).
-ex_reach[surface](App, Y2, cat(P, V), D) :- ex_reach[surface](App, Y, P, D0), sx_ex_mount[surface](Y, V, Y2),
+ex_reach[flow](App, App, "/", 0) :- sx_ex_app[flow](App).
+ex_reach[flow](App, Y2, cat(P, V), D) :- ex_reach[flow](App, Y, P, D0), sx_ex_mount[flow](Y, V, Y2),
                                             ex_depth(Max), D0 < Max, D is D0 + 1.
-serves[surface](App, M, cat(P, V), H, R) :- ex_reach[surface](App, Y, P, _), sx_ex_route[surface](Y, M, V, H, R).
+serves[flow](App, M, cat(P, V), H, R) :- ex_reach[flow](App, Y, P, _), sx_ex_route[flow](Y, M, V, H, R).

@@ -382,8 +382,8 @@ guarded[code](N) :- after_suspend[code](S), inside[tree](S, N).
 guarded_call[code](C)      :- call_site[code](C, _), guarded[code](C).
 -- Both are the CALLEE's and their support is the callers': each caller publishes the call
 -- (models/lang/js/rules/js-surface.rofl `sx_called`, `sx_reached`), and the callee's volume reads them.
-reached_unguarded[code](F) :- sx_reached[surface](F).
-may_not_run[code](F)       :- sx_called[surface](F), not reached_unguarded[code](F).
+reached_unguarded[code](F) :- sx_reached[flow](F).
+may_not_run[code](F)       :- sx_called[flow](F), not reached_unguarded[code](F).
 
 -- =========================================================================
 -- 7. TRANSITIVE REACHABILITY needs an ENTRY POINT: without one the question is
@@ -409,18 +409,18 @@ exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](D, F)
 exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_default_site[code](E).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
-sx_entry[surface](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
+sx_entry[flow](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
                         fn_value[flow](F), not fn_nested[flow](F).
-exported_fn[code](F) :- sx_entry[surface](F).
+exported_fn[code](F) :- sx_entry[flow](F).
 
 entry_point[code](F) :- exported_fn[code](F).
 
 -- ...and a top-level call runs on import, with no enclosing function. A top-level call and a call from reachable
 -- code are published for the callee (`sx_reach`, models/lang/js/rules/js-surface.rofl).
 reachable[code](F) :- entry_point[code](F).
-reachable[code](F) :- sx_reach[surface](F).
+reachable[code](F) :- sx_reach[flow](F).
 
-may_not_be_reached[code](F) :- sx_called[surface](F), not reachable[code](F).
+may_not_be_reached[code](F) :- sx_called[flow](F), not reachable[code](F).
 
 -- A file with functions and no entry point reports every function dead — an
 -- artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
@@ -500,11 +500,10 @@ mechanism_unanswered[audit](M) :- transfer_mechanism(_, M), not mechanism_known(
 guarded_at[code](File, Line) :- guarded_call[code](C), at[tree](C, File, _), at[tree](C, _, Line).
 
 -- the callee-keyed verdicts read the callers through models/lang/js/rules/js-surface.rofl
-imports(code, surface).
-imports(surface, code).
-imports(surface, flow).
+imports(code, flow).
+imports(flow, code).
 
 -- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
-imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(code, execution). imports(flow, execution). imports(audit, execution). imports(flow, execution).
 imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).
