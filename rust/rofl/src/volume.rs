@@ -68,12 +68,12 @@ pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, cha
 }
 
 /// The units of a world settled by levels (`engine/levels.rs`), beside the volume of the core they stand over.
-const UNITS: &[u8; 16] = b"ROFL-UNITS-2\n\0\0\0";
+const UNITS: &[u8; 16] = b"ROFL-UNITS-3\n\0\0\0";
 
 /// THE UNITS AS A SCROLL at `k`: segments `<k>.u<n>`, each written once and whole, the newest naming every stretch
 /// it holds or an earlier one holds; `<k>.units` names the newest. An edit appends a segment of what it settled
 /// again, and a segment no longer named is let go. None: no units are kept at `k`.
-pub fn keep_units(k: &str, lv: Option<&crate::engine::levels::Levels>) -> Result<(), String> {
+pub fn keep_units(k: &str, lv: Option<&crate::engine::levels::Levels>, seen: Option<&Path>) -> Result<(), String> {
     let was = newest_segment(k);
     let n = was.map_or(0, |n| n + 1);
     let named = match lv {
@@ -84,6 +84,7 @@ pub fn keep_units(k: &str, lv: Option<&crate::engine::levels::Levels>) -> Result
             w.text(&build_id());
             let segs = lv.write(&mut w)?;
             w.finish().map_err(|x| x.to_string())?;
+            note_written(&path, seen);
             let tmp = format!("{k}.units.{}.new", std::process::id());
             std::fs::write(&tmp, format!("{n}\n")).and_then(|_| std::fs::rename(&tmp, format!("{k}.units"))).map_err(|x| x.to_string())?;
             segs
@@ -357,7 +358,11 @@ fn seen_line(path: &str, id: u64, seen: &Path) -> Option<(PathBuf, String, Syste
     let m = std::fs::metadata(path).ok()?;
     let at = m.modified().ok()?;
     let ns = at.duration_since(UNIX_EPOCH).ok()?.as_nanos();
-    Some((seen.join(crate::arena::Sum::of(path.as_bytes())), format!("{id:016x} {} {ns}", m.len()), at))
+    #[cfg(unix)]
+    let ino = std::os::unix::fs::MetadataExt::ino(&m);
+    #[cfg(not(unix))]
+    let ino = 0;
+    Some((seen.join(crate::arena::Sum::of(path.as_bytes())), format!("{id:016x} {} {ns} {ino}", m.len()), at))
 }
 
 fn note_seen(mark: &Path, line: &str) {
@@ -365,6 +370,26 @@ fn note_seen(mark: &Path, line: &str) {
     if mark.parent().is_some_and(|d| std::fs::create_dir_all(d).is_ok()) && std::fs::write(&tmp, line).is_ok() && std::fs::rename(&tmp, mark).is_err() {
         let _ = std::fs::remove_file(&tmp);
     }
+}
+
+/// A file this process has just written whole and moved into place, noted under `seen` as it is: the bytes are the
+/// ones its sum was made of, so the first reader does not sum them again. Whoever changes it after changes its
+/// length or its time and it is summed again; what is not seen is a write in place within the clock's tick of this
+/// one, by another process, of the same length.
+pub fn note_written(path: &str, seen: Option<&Path>) {
+    if !crate::brk!("kept_written_unnoted" => false; true) {
+        return;
+    }
+    use std::io::{Read, Seek, SeekFrom};
+    let mut id = [0u8; 8];
+    let Ok(mut f) = std::fs::File::open(path) else { return };
+    if f.seek(SeekFrom::End(-8)).is_err() || f.read_exact(&mut id).is_err() {
+        return;
+    }
+    if let Some((m, l, _)) = seen.and_then(|d| seen_line(path, u64::from_le_bytes(id), d)) {
+        note_seen(&m, &l);
+    }
+    WHOLE.with(|w| w.borrow_mut().insert(path.to_string()));
 }
 
 /// The volume at `path` marked as used now (its change time orders its keeper's volumes by use); one this process

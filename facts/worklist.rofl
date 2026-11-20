@@ -3945,14 +3945,29 @@ work_state(w_a_kept_world_opens_whole, done).
 work_spawned(w_a_kept_world_opens_whole, f_a_whynot_from_kept_units_costs_the_opening_of_the_world).
 
 work(w_a_kept_world_is_summed_by_its_first_question,
-  "The first question after a world is kept sums every kept file once before it trusts them (volume.rs whole, noted under $XDG_CACHE_HOME/rofl/seen only once the file's mtime is a second old): at 1000 vscode files 1.7 s and 2.9 GB of mapped pages for an answer that then takes 0.17 s, so at 11 100 files some 20 s for the first question after each keep or edit. The writer knows the sums it wrote: note them when the world is kept (and say what the mtime rule guards against if it must stay), so that the first question reads only what its walk reads.").
-work_state(w_a_kept_world_is_summed_by_its_first_question, open).
+  "DONE 2026-11-20 (f_an_edit_writes_what_it_moved): the writer notes what it wrote; 0.56 s to 0.19 s after an edit at 1000 files. WAS: The first question after a world is kept sums every kept file once before it trusts them (volume.rs whole, noted under $XDG_CACHE_HOME/rofl/seen only once the file's mtime is a second old): at 1000 vscode files 1.7 s and 2.9 GB of mapped pages for an answer that then takes 0.17 s, so at 11 100 files some 20 s for the first question after each keep or edit. The writer knows the sums it wrote: note them when the world is kept (and say what the mtime rule guards against if it must stay), so that the first question reads only what its walk reads.").
+work_state(w_a_kept_world_is_summed_by_its_first_question, done).
 work_spawned(w_a_kept_world_is_summed_by_its_first_question, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
 
 work(w_kept_texts_written_whole_on_an_edit,
-  "An edit of one file keeps the world again with every file's text (`.texts`, 0.49 GB of 3.0 GB at 1000 vscode files), as it writes every unit's directories in the new segment: the write of an edit grows with the world, not with the edit. Write the texts once and an edit's moved files beside them, as the units' segments do with the stretches.").
-work_state(w_kept_texts_written_whole_on_an_edit, open).
+  "DONE 2026-11-20 (f_an_edit_writes_what_it_moved): 0.51 GB to 0.24 MB of texts an edit at 1000 files. WAS: An edit of one file keeps the world again with every file's text (`.texts`, 0.49 GB of 3.0 GB at 1000 vscode files), as it writes every unit's directories in the new segment: the write of an edit grows with the world, not with the edit. Write the texts once and an edit's moved files beside them, as the units' segments do with the stretches.").
+work_state(w_kept_texts_written_whole_on_an_edit, done).
 work_spawned(w_kept_texts_written_whole_on_an_edit, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
+
+work(w_units_segments_grow_by_every_edit,
+  "An edit of one file of a world kept by volumes writes a segment of units of 0.17 GB at 1000 vscode files (the stretches and parts of the 29 units it settled again, the world-wide units of the top layers among them), and no segment is ever let go: a stretch replaced stays as a ghost (Levels::ghosts) that the next segment names, so the kept world grows by 0.17 GB an edit until ROFL_CACHE_GB refuses it. Say which ghost a kept proof can still name and let the rest go; write what a top unit settled again moved, not its whole directory (f_an_edit_writes_what_it_moved).").
+work_state(w_units_segments_grow_by_every_edit, open).
+work_spawned(w_units_segments_grow_by_every_edit, f_an_edit_writes_what_it_moved).
+
+work(w_dict_written_whole_when_a_name_comes,
+  "The dictionary of a world kept by volumes (`.names`, 74 MB at 1000 vscode files) is written whole by an edit that names one new thing. Write what an edit named beside it, as the texts' segments do (f_an_edit_writes_what_it_moved).").
+work_state(w_dict_written_whole_when_a_name_comes, open).
+work_spawned(w_dict_written_whole_when_a_name_comes, f_an_edit_writes_what_it_moved).
+
+work(w_edit_by_levels_loses_answers,
+  "An edit of one line of one file of 1000 vscode files, taken by delta by levels, answers calls[code](A, B) with 29 669 rows where the files anew answer 31 198 (f_an_edit_by_levels_loses_answers_at_1000_files). Find the unit that loses them and a world of a few files that does the same.").
+work_state(w_edit_by_levels_loses_answers, open).
+work_spawned(w_edit_by_levels_loses_answers, f_an_edit_by_levels_loses_answers_at_1000_files).
 
 work(w_whynot_of_a_bare_name_reads_main,
   "`rofl ask 'calls(A, B)'` answers from whatever book holds calls (calls[code], 515 answers at 20 vscode files) and `rofl whynot 'calls(A, B)'` over the same world reads the name in [main] and says `head does not unify`, as the reference does: the agent who asks why after asking what is told a thing about another relation. Say, where a bare name has no rule or fact in [main] and has them in one other book, which book was meant, or refuse naming the books.").
