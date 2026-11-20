@@ -8858,6 +8858,34 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "texts_edit_stale",
+  "what": "an edit's segment of texts names the file that moved with its old text: a whynot thawed in it after the edit reads the file as it was",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
+  "id": "texts_never_carried",
+  "what": "an edit's segment of texts carries no older segment, not even one whose texts all moved: every edit leaves one more segment on disk",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
+  "id": "units_parts_misplaced",
+  "what": "a unit's parts kept in an earlier segment are named as if the new segment held them: an edit's units read their directories from bytes that are something else",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
+  "id": "kept_written_unnoted",
+  "what": "a kept file is not noted whole by its writer, so the first question after a keep or an edit sums every kept file again",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
   "id": "kept_unsummed",
   "what": "a volume's sum is not compared, so a kept file changed after it was written is answered",
   "expect": {

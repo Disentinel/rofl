@@ -265,6 +265,11 @@ impl Dict {
         let (n, f) = self.base_len();
         (n + e.names as u32, f + e.funcs as u32)
     }
+    /// Whether it holds anything the file it was read from does not: a dictionary made in memory always does.
+    pub fn grew(&self) -> bool {
+        let e = self.ends.lock().unwrap();
+        e.names != 0 || e.funcs != 0 || self.base.is_none()
+    }
     pub fn is_empty(&self) -> bool {
         self.len() == (0, 0)
     }

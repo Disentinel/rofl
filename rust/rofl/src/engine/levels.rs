@@ -83,10 +83,13 @@ pub(super) struct Parts {
     asked: Arena<u64>,
 }
 
+/// A unit's parts kept in the segment that names the unit.
+const HERE: u32 = u32::MAX;
+
 /// A value as it was made, or where it is kept, read from there once when first asked for.
 pub(super) struct Lazy<T> {
     got: std::sync::OnceLock<T>,
-    kept: Option<(Rc<crate::arena::Region>, usize, fn(&mut VolR) -> Result<T, String>)>,
+    kept: Option<(Rc<crate::arena::Region>, usize, fn(&mut VolR) -> Result<T, String>, u32)>,
 }
 
 impl<T> Lazy<T> {
@@ -95,9 +98,13 @@ impl<T> Lazy<T> {
         let _ = got.set(x);
         Lazy { got, kept: None }
     }
+    /// The segment it is kept in and where, while it was not made anew.
+    fn kept_at(&self) -> Option<(u32, usize)> {
+        self.kept.as_ref().map(|k| (k.3, k.1))
+    }
     fn get(&self) -> &T {
         self.got.get_or_init(|| {
-            let (map, at, read) = self.kept.as_ref().expect("a value not made is kept");
+            let (map, at, read, _) = self.kept.as_ref().expect("a value not made is kept");
             read(&mut VolR::new(map.clone(), *at)).expect("what a sum vouches for reads")
         })
     }
@@ -819,9 +826,21 @@ impl Levels {
         // (the bodies first, then the table that names where each lies, its place the last word: an opening reads
         // the table, and a body only when something reads it)
         let bodies: Vec<Option<(usize, usize)>> = ss.iter().map(|s| if s.kept_at().is_some() { Ok(None) } else { s.write_body(w, leaves.contains(&s.lo)).map(Some) }).collect::<Result<_, _>>()?;
-        let parts: Vec<usize> = us.iter().map(|u| { let at = w.at(); u.parts.get().write(w); at }).collect();
-        let table = w.at();
+        // (a unit's parts kept in an earlier segment are named there, as a stretch's body is: an edit writes the
+        // parts of the units it settled again)
         let mut segs: FxSet<u32> = FxSet::default();
+        let parts: Vec<(u32, usize)> = us.iter().map(|u| match u.parts.kept_at() {
+            Some((seg, at)) => {
+                segs.insert(seg);
+                (crate::brk!("units_parts_misplaced" => HERE; seg), at)
+            }
+            None => {
+                let at = w.at();
+                u.parts.get().write(w);
+                (HERE, at)
+            }
+        }).collect();
+        let table = w.at();
         w.u32(ss.len() as u32);
         for (s, body) in ss.iter().zip(&bodies) {
             match (s.kept_at(), body) {
@@ -844,7 +863,8 @@ impl Levels {
             w.u32(u.files.0);
             w.u32(u.files.1);
             w.arena(&u.kids.iter().map(at).collect::<Vec<u32>>());
-            w.u64(*p as u64);
+            w.u32(p.0);
+            w.u64(p.1 as u64);
         }
         w.arena(&self.tops.iter().map(at).collect::<Vec<u32>>());
         w.u32(live as u32);
@@ -889,7 +909,9 @@ impl Levels {
             let stretch = ss.get(r.u32()? as usize).ok_or_else(bad)?.clone();
             let files = (r.u32()?, r.u32()?);
             let kids = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
-            let parts = Rc::new(Lazy { got: Default::default(), kept: Some((map.clone(), r.u64()? as usize, Parts::read)) });
+            let (s, at) = (r.u32()?, r.u64()? as usize);
+            let kept = if s == HERE { (map.clone(), at, Parts::read as fn(&mut VolR) -> Result<Parts, String>, seg) } else { (open(s)?, at, Parts::read as fn(&mut VolR) -> Result<Parts, String>, s) };
+            let parts = Rc::new(Lazy { got: Default::default(), kept: Some(kept) });
             us.push(Rc::new(Unit { stretch, files, kids, parts }));
         }
         let tops = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
