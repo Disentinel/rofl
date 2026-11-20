@@ -5668,7 +5668,7 @@ impl Eval {
                                 e.pre_now = None;
                                 f
                             }
-                            None if e.by_seed && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
+                            None if e.by_seed && !e.store.reads_wide() && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
                         let f = self.fire_at(r, i + 1, fl.take(), fire);

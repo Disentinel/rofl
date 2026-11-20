@@ -1585,6 +1585,9 @@ impl Eval {
             here.sort_unstable();
             e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), walls: walls.clone() }));
             e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
+            if files == all && k + 1 == rules_of.len() {
+                e.0.store.read_wide();
+            }
             e.0.store.tree_sizes = sizes.lock().unwrap().clone();
             if let Some(o) = &old {
                 let Eval { store, h, .. } = &mut e.0;
