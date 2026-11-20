@@ -14,9 +14,9 @@ is left of `models/lang/js/rules/js-surface.rofl` are the relations with a meani
 
 Status: sections 1-4 are the scouting as it was written (its relation names, such as `sx_export_fn`, are the
 prototype's). Of the work in section 5, items 1-4 are built (sections 6 and 7: the driver is `runtime/split.ts`,
-correct at 500 vscode files and 140 times slower than the whole world there); items 5 and 6 are open. The owner's
-design (2026-10-25) stands: a volume per file, cooled, with a thin surface; what the driver needs to be an economy
-is the end of section 7. How to run it: docs/cli.md, *A corpus larger than one heap*.
+correct at 500 vscode files and 140 times slower than the whole world there); items 5 and 6 will not be built. The
+owner's design stands without the book: a volume per file, cooled, and what crosses found from the rules' keys, a
+fact of another file a lemma where a rule reads it (owner, 2026-11-07; f_surface_is_replaced_by_lemmas_by_keys).
 
 ## What was run
 

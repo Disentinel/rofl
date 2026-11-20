@@ -364,7 +364,18 @@ again whole. 5-8 MB for the same edits.
 Records of facts gone stay in the world (a reader skips them) until it is
 evaluated whole: once they are more than a quarter of its records, the next
 edit says `of facts gone: it is evaluated whole to drop them` and is not taken
-by delta.
+by delta. The records a plan's cut dropped (`cut[fixpointplan]`) are not
+counted: an evaluation anew leaves them too.
+
+A world cut so takes by delta a file whose facts no rule of the lower stage
+reads or concludes, put in, edited or taken out: a book of assumptions laid
+over a kept world (`assumed_env[assume]`, `assumed_export[assume]` of the JS
+model, examples/vscode/assume-linux.rofl) costs what it moves. vscode at the
+bench commit, 250 files, kept whole (fast build, 2026-11-19): evaluated 82 s;
+the 13 assumptions put in 3.4 s, taken out 2.6 s, each the answer of the files
+evaluated anew. A file whose facts the lower stage reads is evaluated anew,
+said on stderr. By volumes (from 32 MB of corpus on) such a file is laid over the
+units (*A book laid over the units*, below).
 
 ## Exit codes
 
@@ -654,7 +665,8 @@ one file each refuse the world by volumes, naming the fact (then it is evaluated
 one of the lemma's; a world that asks has the site in its cone whatever it asks). What is a lemma is the whole program's
 lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
 fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
-takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
+takes no retraction of a fact its lower stage reads or concludes (refused with the reason); a kept world whose file of such
+facts changed is computed anew, not by delta.
 The units of a world name what their rules make in one dictionary (`rust/rofl/src/dict.rs`), kept beside them as `<slot>.q<sum>.names`: a term reads the same in every unit and none is spelled to cross.
 The world `rofl ask`/`why` keep by volumes (from 32 MB) is the exception to "computed anew": it is kept as its units
 (*A corpus larger than one heap*, below) with a registry (`<slot>.q<sum>.scroll`: the sum of the core's text and of each file's; written last, so a set half written is no kept world), and when at most one file in eight moved, none came or went and the rules
@@ -663,6 +675,17 @@ units settled again, S of them concluding what they had`; the unit of the edited
 and is settled again where one of those stretches was replaced or a fact came or went under such a key; a group is
 mended, its firings carried where their premises stand, where it read no aggregate (`engine/levels.rs`). The answers
 are those of the files evaluated anew (`cargo test -p rofl --test kept`). A file come or gone is computed anew.
+**A book laid over the units.** A file of facts alone, none naming a file (a book of assumptions, such as
+examples/vscode/assume-linux.rofl), is not the core's when only the rules of the files' units and of the layers above
+read its relations (`Eval::overlay_rels`: no rule concludes them, and no rule of the core, of the plan's lower stage, of
+a tree, of an aggregate or where units meet reads them): it is laid over the units as a stretch of their own, and the
+registry keeps its sum and those relations. Put in, edited or taken out, it goes by delta (`volumes: 0 of Y files
+edited, the facts laid over them moved; ...`): a unit of a layer above is settled again where it asked a key a fact
+came or went under, a file's unit where one of its rules takes such a fact and each other premise the core holds
+none of is answered in the unit under the values that binds. vscode at the bench commit, 250 files, the side-effect
+question (fast build, 2026-11-19): evaluated 21 s; the 13 assumptions put in 6.2 s and taken out 5.8 s, 113-118 of
+432 units settled again, each answer that of the files anew. A file of facts some other rule reads is the core's,
+and a core that moved is computed anew.
 A `why --all` of such a world unfolds a lemma over the core and its file alone (the file thawed, as a `whynot` below the cut walks it); a `whynot` nested inside an unfolded
 lemma may name another failed premise than the world whole does (`f_levels_are_the_one_path_by_volumes`).
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
@@ -744,20 +767,22 @@ every source on its first thaw). `excise`,
 
 **The design the owner agreed** (2026-10-25): a file is scanned into a volume of
 its own, the volume is cooled to disk and stays there until a question needs
-it, and beside it lives the file's `[surface]`, a thin volume of what escapes
-the file (`models/lang/js/rules/js-surface.rofl`). The design is in
-docs/volumes-and-residency.md (why a corpus can stay cold),
-docs/surface-split.md (what crosses files, the book, the driver) and
+it. What crosses files is no book (owner, 2026-11-07): the engine finds it from
+the rules' keys (the relation, the argument a rule joins at, its value), and a
+fact of another file comes as a lemma only where a rule reads it (*Lemma
+stages*, above). The `[surface]` book of the earlier design
+(docs/surface-split.md, the driver of `runtime/split.ts`) is replaced: do not
+route a corpus, a federation or a split by it, and do not add rules to it; what
+the JS model still writes there (`models/lang/js/rules/js-surface.rofl`) is a
+debt (f_surface_is_replaced_by_lemmas_by_keys). The rest of the design is in
+docs/volumes-and-residency.md (why a corpus can stay cold) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
-The units of the question verbs need no such book: what crosses files
-comes from the rules' keys (above), and `[surface]` is a book like any other to
-them; the driver of `runtime/split.ts` still exchanges it alone.
 **The question verbs evaluate by levels and cool the units under pressure (above).** The other parts and the harnesses that drive
 them, each over `rofl serve`:
 
 | what | how to run it | measured | status |
 |---|---|---|---|
-| a volume per file, cooled, the surface resident (the driver) | `runtime/split.ts`; `node --experimental-strip-types scripts/vscode_curve.ts DIR N split [--hot K]` over a corpus of `scripts/vscode_corpus.ts`; its gate over the JS model was retired with the [surface] mirrors (2026-11-09): unchecked since | 500 vscode files: the whole world's answers exactly, 2.0 GB against 2.5 GB, but 6 335 s against 40 s: each volume reads ~10% of the surface and is evaluated again whole 7.6 times (surface-split.md §7) | correct, not an economy; what it needs next is in §7 |
+| a volume per file, cooled, the surface resident (the driver) | `runtime/split.ts`; `node --experimental-strip-types scripts/vscode_curve.ts DIR N split [--hot K]` over a corpus of `scripts/vscode_corpus.ts`; its gate over the JS model was retired with the [surface] mirrors (2026-11-09): unchecked since | 500 vscode files: the whole world's answers exactly, 2.0 GB against 2.5 GB, but 6 335 s against 40 s: each volume reads ~10% of the surface and is evaluated again whole 7.6 times (surface-split.md §7) | replaced by the units by keys; history |
 | the ingest loop: parse a batch, evaluate, cool volumes under pressure | `node --experimental-strip-types runtime/ingest.ts ROOT SUB N [--batch K] [--pressure F]` (boot and `rules/ingest.rofl`, no JS model) | eslint, 1 426 files: 29.9 s, 1 290 volumes cooled to 200 MB, the world never above 1.94 M facts (docs/scaling-a-corpus.md) | the AST only; the JS model is not evaluated |
 | stages that fit a memory limit, each a process over the last volume (a TypeScript driver, to give way to the plan's stages, *Lemma stages*) | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
 | an evaluation in pieces of a fixed time, each a process resuming the last volume | `node --experimental-strip-types scripts/vscode_pieces.ts FACTS N MS [--state FILE]` | the same state as one run | built (item 3) |

@@ -597,6 +597,15 @@ impl Eval {
 
     /// Why a retraction is refused here: the world cut a book and holds lemmas, given facts no file names, whose proof
     /// is gone, so nothing could take out the lemmas a fact taken out had proved. None in a world that holds none.
+    /// Of the records of facts gone, those the cut dropped (`cut_away`): an evaluation of the files anew leaves them too.
+    pub fn gone_by_the_cut(&mut self) -> usize {
+        let Some(st) = self.stage_here() else { return 0 };
+        (0..self.store.len_ids()).filter(|&id| {
+            let r = self.store.rec(id);
+            r.dead() && (st.cut.contains(&r.persp) || (!r.base() && st.heads.contains(&r.rel) && !st.given.contains(&r.rel)))
+        }).count()
+    }
+
     pub fn refuses_retraction(&mut self) -> Option<String> {
         self.refuses_retracting(None)
     }

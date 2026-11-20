@@ -220,14 +220,11 @@ site[code](N) :- accessor_read[code](N, _).
 -- `accessor_of` and `member_value(Obj, symbol_iterator, M)` already decide. Only
 -- the declarator form: a pattern in a parameter reads the argument, a
 -- call-site question, so it is silent here rather than wrong.
-pattern_source[code](P, Init) :- declarator_id[code](D, P), decl_value[flow](D, Init).
 
 pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
                                 pattern_source[code](P, Init),
                                 pattern_takes[code](P, Key).
-pattern_accessor[code](R, M) :- rest_in_pattern[code](D, R, _), declarator_id[code](D, P),
-
-                                decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
+pattern_accessor[code](R, M) :- obj_rest[code](P, R, Src), pattern_source[code](P, Src), may_be_node[flow](Src, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
 pattern_accessor[code](A, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
                                 spread_props[value](O, _, A), obj_lit[code](O).
@@ -281,8 +278,7 @@ hidden_call[execution](S, iterator_call) :- spread_iterated[code](S).
 hidden_call[execution](X, iterator_call) :- iterates[value](X, _, _).
 
 hidden_call_src[code](P, Init) :- pattern_source[code](P, Init), object_pat[code](P).
-hidden_call_src[code](R, Init) :- rest_in_pattern[code](D, R, _),
-                                  decl_value[flow](D, Init).
+hidden_call_src[code](R, Src)  :- obj_rest[code](P, R, Src), pattern_source[code](P, Src).
 hidden_call_src[code](A, A)    :- spread_iterated[code](A).
 hidden_call_src[code](A, A)    :- spread_of[code](_, A).
 hidden_call_src[code](X, R)    :- iterates[value](X, _, R), X != R.

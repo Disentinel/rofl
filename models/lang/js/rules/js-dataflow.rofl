@@ -139,7 +139,6 @@ closer_s[code](R, D)   :- encloses_s[code](R, D), nearest_s[code](S, D), R != S.
 binds_name[code](D, Name, File) :- binder[code](D, Name, _, File).
 binds_name[code](D, Name, File) :- bare_binder[code](D, Name, File).
 binds_name[code](D, Name, File) :- pat_local[code](D, Name, _, File).
-binds_name[code](D, Name, File) :- rest_binds[code](D, _, Name, File).
 
 -- 3a. THE LOOKUP. A scope declares a name by a binder whose region it is, or
 -- by a parameter of the function it is. An identifier's name is found in the
@@ -342,9 +341,7 @@ prototype_of[flow](E, promise) :- binder[code](D, _, Init, _), prototype_of[flow
 -- 6. DESTRUCTURING — a name bound from a PATTERN. `{ pulled: taken }` binds
 -- `taken` to member `pulled` of the init; shorthand and rename are one case
 -- (key for the member, value for the local). An array pattern binds by
--- POSITION over the raw array, so `[, second]` keeps index 1. No `may_be_lit`
--- arm for array patterns: nothing exercises it and an arm nothing exercises
--- cannot go red.
+-- POSITION over the raw array, so `[, second]` keeps index 1.
 -- Every member of a pattern is the target T under the pattern P it sits in, at any depth, found from its root R: a
 -- declarator's pattern or a parameter. `{ a: { b }, [k]: c, d = 1 } = o` and `[x, , y = 2] = arr` alike.
 pat_in[code](R, R, T) :- declarator_id[code](_, R), pat_step[code](R, T).
@@ -353,6 +350,7 @@ pat_in[code](R, P, T) :- pat_in[code](R, _, P), pat_step[code](P, T).
 pat_step[code](P, T) :- pattern_prop[value](P, _, T).
 pat_step[code](P, T) :- pattern_elem[value](P, _, T).
 pat_step[code](P, T) :- pat_computed[code](P, T, _).
+pat_step[code](P, T) :- rest_at[code](P, T).
 pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, T), T != E.
 pat_computed[code](P, T, E) :- key_expr[value](Q, E), parent[tree](P, Q), parent[tree](Q, W), assign[value](W, T, _),
                                parent[tree](W, T).
@@ -369,6 +367,8 @@ may_be[flow](T, node, N) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T),
                             array_elem[flow](A, I, V), own_node[flow](V, N).
 may_be[flow](T, input, S) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
                              array_elem[flow](A, I, V), may_be[flow](V, input, S).
+may_be[flow](T, lit, L)   :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), may_be_node[flow](P, A),
+                             array_elem[flow](A, I, V), may_be[flow](V, lit, L).
 -- the default of a target is a conditional source of it
 may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be[flow](Init, VK, V).
 
@@ -416,26 +416,31 @@ param_bound[flow](F, Name) :- param_local[code](F, Name, _).
 
 may_be[flow](U, VK, V) :- param_local[code](F, Local, T), may_be[flow](T, VK, V), param_use[flow](F, Local, U).
 
--- An object rest binds a FRESH object with no node of its own, so the
--- `rest_element` node stands for it. It holds every key EXCEPT the ones the
--- pattern took — the exclusion is the whole content. It is `member_plain` (no
--- `static` anywhere), as a module namespace is.
+-- A rest binds a FRESH value with no node of its own, so its target stands for it, wherever its pattern stands: a
+-- declarator or a parameter, at the top or nested. Its source is what the pattern takes apart: a declarator's value,
+-- or the pattern itself below it. An object rest holds every key EXCEPT the ones the pattern took — the exclusion is
+-- the whole content; it is `member_plain` (no `static` anywhere), as a module namespace is. An array rest at I holds
+-- the elements from I on.
 pattern_takes[code](P, Key) :- pattern_prop[value](P, Key, _).
 pattern_takes[code](P, Key) :- key_expr[value](Q, E), parent[tree](P, Q), symbol_ref[code](E, Key).
 
-rest_in_pattern[code](D, T, File) :- declarator_id[code](D, P), at[tree](D, File, _), rest_props[value](P, T).
-rest_binds[code](D, R, Local, File) :- rest_in_pattern[code](D, R, File), declarator_id[code](D, P),
-                                       rest_props[value](P, R), binds[value](R, Local).
-scoped_binder[code](D, File) :- rest_binds[code](D, _, _, File).
+pattern_source[code](P, Init) :- declarator_id[code](D, P), decl_value[flow](D, Init).
+rest_at[code](P, R)     :- rest_props[value](P, R).
+rest_at[code](P, R)     :- rest_elems[value](P, _, R).
+rest_src[code](P, Init) :- rest_at[code](P, _), pattern_source[code](P, Init).
+rest_src[code](P, P)    :- rest_at[code](P, R), pat_in[code](Root, P, R), Root != P.
+rest_src[code](P, P)    :- rest_at[code](P, _), param[value](_, _, P).
+obj_rest[code](P, R, Src) :- rest_props[value](P, R), pat_in[code](_, P, R), rest_src[code](P, Src).
+arr_rest[code](I, R, Src) :- rest_elems[value](P, I, R), pat_in[code](_, P, R), rest_src[code](P, Src).
+may_be[flow](R, node, R) :- obj_rest[code](_, R, _).
+may_be[flow](R, node, R) :- arr_rest[code](_, R, _).
 
-member_value[flow](R, Key, V) :- rest_in_pattern[code](D, R, _), declarator_id[code](D, P),
-                                 decl_value[flow](D, Init), may_be_node[flow](Init, Obj),
+member_value[flow](R, Key, V) :- obj_rest[code](P, R, Src), may_be_node[flow](Src, Obj),
                                  member_value[flow](Obj, Key, V),
                                  not pattern_takes[code](P, Key).
-member_plain[flow](R, Key, V) :- rest_in_pattern[code](_, R, _), member_value[flow](R, Key, V).
-
-may_be[flow](E, node, R) :- rest_binds[code](D, R, Local, File),
-                            ident_in[code](E, Local, File), sees_binder[code](E, D).
+member_plain[flow](R, Key, V) :- obj_rest[code](_, R, _), member_value[flow](R, Key, V).
+array_elem[flow](R, K, E) :- arr_rest[code](I, R, Src), may_be_node[flow](Src, A), array_elem[flow](A, J, E),
+                             J >= I, K is J - I.
 
 -- Spread copies the source's keys. `{ ...o, k: v }` keeps both `k`s — the safe
 -- direction; narrowing needs an order this layer has not got.
@@ -2099,8 +2104,7 @@ member_plain[flow](X, Key, V) :- external_value[flow](X, _), member_value[flow](
 
 -- A pattern off an external value: each name is a member of it (ext_member), the rest is
 -- another object of the same origin.
-external_value[flow](R, Spec)    :- rest_in_pattern[code](D, R, _),
-                                    decl_value[flow](D, Init), may_be_node[flow](Init, X),
+external_value[flow](R, Spec)    :- obj_rest[code](_, R, Src), may_be_node[flow](Src, X),
                                     external_value[flow](X, Spec).
 
 -- WHICH PACKAGE an external value came from: a bare specifier's first segment,

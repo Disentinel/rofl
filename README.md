@@ -188,10 +188,9 @@ a span), `demand-cones.md` (answering a question in the part of the world it
 reaches: the `asks` cone, when it is the whole world, what it saves, what growing it needs),
 `staged-evaluation.md` (a world evaluated in stages that fit memory: kept volumes, resume after a budget, the stage planner), `modelling-a-language.md` (the JS model as a research programme), `aggregates.md`
 (every aggregate class as one cell engine with two syntaxes, and the matrix
-that holds the work to it), `surface-split.md` (a file as a volume
-with a resident `[surface]` book of what escapes it: the crossing measured on
-vscode, the book `models/lang/js/rules/js-surface.rofl`, the parity world and the lint that hold
-it, and the driver), `knobs.md` (every flag and `ROFL_*` variable of the tree with
+that holds the work to it), `surface-split.md` (history: the
+`[surface]` book of what escapes a file, replaced by lemmas by the rules' keys,
+f_surface_is_replaced_by_lemmas_by_keys), `knobs.md` (every flag and `ROFL_*` variable of the tree with
 its verdict: the few an agent uses are CLAUDE.md's table, the rest are oracles of
 a check harness or leftovers).
 

@@ -185,8 +185,12 @@ Decided by the owner; each is a finding, read it before arguing with it.
   rules R needs, and a question outside the cone is refused, not answered
   wrong (docs/demand-cones.md).
 - **A corpus lives as volumes** (owner, 2026-10-25). A file is scanned into a
-  volume of its own, cooled to disk, and a thin `[surface]` of what escapes it
-  stays beside it. It is to be the engine's default behaviour, not a command
+  volume of its own and cooled to disk. What crosses files is no book of the
+  model: the engine finds it from the rules' keys (the relation, the argument
+  a rule joins at, its value), and a fact of another file comes as a lemma
+  only where a rule reads it (owner, 2026-11-07: the `[surface]` book is
+  replaced, never route or add to it; f_surface_is_replaced_by_lemmas_by_keys).
+  It is to be the engine's default behaviour, not a command
   of its own (owner, 2026-10-25): `rofl ask` and `rofl why` evaluate a
   corpus by volumes by themselves: each file settled alone into a frozen unit,
   the units met level by level, one reader over them all, an edit settling
