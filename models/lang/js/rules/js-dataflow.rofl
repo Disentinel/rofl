@@ -2069,13 +2069,13 @@ class_or_namespace[code](D) :- decl[value](D, enum), own_name[code](D, _, _, aro
 -- kind guard is not redundant with `module_site`, which holds of imports too.
 exports_name[code](F, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
                                      module_target[code](E, Target),
-                                     sx_export_node[flow](Target, Name, F).
+                                     exports_name[code](F, Name, Target).
 
 -- `export { a as b } from './m'` offers m's `a`, or m's default when `a` is `default`.
 exports_name[code](F, Ext, File) :- reexport_offers[code](File, Ext, T, Int),
-                                    sx_export_node[flow](T, Int, F).
+                                    exports_name[code](F, Int, T).
 exports_name[code](F, Ext, File) :- reexport_offers[code](File, Ext, T, "default"),
-                                    sx_default[flow](T, F).
+                                    exports_default[code](F, T).
 
 -- `export { a as b }`: the `local` child is an identifier of this file and
 -- resolves through `may_be_node`; under a declaration WITH a `source` it names
@@ -2100,7 +2100,7 @@ exports_name[code](P, Name, File) :- export_ns_name[code](Name, E, File),
 
 may_be[flow](E, node, F) :- imports_name[code](Local, Name, D, File),
                             module_target[code](D, Target),
-                            sx_export_node[flow](Target, Name, F),
+                            exports_name[code](F, Name, Target),
                             top_read[code](E, Local, File).
 
 -- `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
@@ -2117,8 +2117,8 @@ exports_value[code](R, Name, File) :- export_var[code](Init, Name, File), binder
                                       binder_read[code](D, Name, File, L),
                                       assign[value](A, L, R), plain_assign[flow](A).
 exports_value[code](X, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
-                                      module_target[code](E, Target), sx_export_val[flow](Target, Name, X).
-exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), sx_export_val[flow](T, Int, X).
+                                      module_target[code](E, Target), exports_value[code](X, Name, Target).
+exports_value[code](X, Ext, File) :- reexport_offers[code](File, Ext, T, Int), exports_value[code](X, Int, T).
 
 may_be[flow](E, lit, V) :- imports_name[code](Local, Name, D, File), module_target[code](D, Target),
                            sx_export_lit[flow](Target, Name, V),
@@ -2148,7 +2148,7 @@ exports_default[code](F, File) :- default_declaration[code](E, F), at[tree](E, F
 
 may_be[flow](E, node, F) :- imports_default[code](Local, D, File),
                             module_target[code](D, Target),
-                            sx_default[flow](Target, F),
+                            exports_default[code](F, Target),
                             top_read[code](E, Local, File).
 
 -- CommonJS. `require(S)` is what the target's `module.exports` may be: first
@@ -2166,7 +2166,7 @@ cjs_exports[flow](File, V) :- cjs_module_exports[code](L, File), assign[value](A
 
 may_be[flow](M, node, V) :- cjs_module_exports[code](M, File), cjs_exports[flow](File, V).
 may_be[flow](E, node, P) :- free_global[code](E, "exports", File), module_object[flow](P, File).
-may_be[flow](C, node, V) :- require_site[code](C), module_target[code](C, T), sx_cjs[flow](T, V).
+may_be[flow](C, node, V) :- require_site[code](C), module_target[code](C, T), cjs_exports[flow](T, V).
 
 -- The frontier: a module this corpus does not contain, one row per module.
 import_outside_corpus[audit](Src, File) :- site_source[code](N, Src), site_file[code](N, File),
@@ -2311,8 +2311,7 @@ contract_call[flow](C, Pkg, Key)   :- contract_fn[flow](X, Pkg, Key), may_be_nod
 
 coroutine_of[flow](C, F) :- contract_call[flow](C, Pkg, Key), runs_coroutine(Pkg, Key, I),
                             arg_at[flow](C, I, A), may_be_node[flow](A, F), gen_fn[flow](F).
-sx_coroutine[flow](F) :- coroutine_of[flow](_, F).
-coroutine_yield[flow](Y, A) :- sx_coroutine[flow](F), nearest_v[flow](F, Y),
+coroutine_yield[flow](Y, A) :- coroutine_of[flow](_, F), nearest_v[flow](F, Y),
                                yields[value](Y, A).
 may_be[flow](Y, VK, V) :- coroutine_yield[flow](Y, A), may_be[flow](A, VK, V).
 may_be[flow](C, node, N) :- coroutine_of[flow](C, F), sx_gen_ret[flow](F, N).

@@ -96,7 +96,7 @@ Declared as facts:
 
 <a id="ex_target"></a>`ex_target`(Y) either:
 
-1. if [`sx_ex_app`](#sx_ex_app)(Y);
+1. if [`ex_app`](#ex_app)(Y);
 2. if [`ex_router`](#ex_router)(Y).
 
 ## 2. What a call on one registers.
@@ -172,32 +172,24 @@ Declared as facts:
 |---|---|---|
 | `express_app` | "set" | "get" |
 
-`keyed_obj`(Y, `express_app`) if [`sx_ex_app`](#sx_ex_app)(Y).
+`keyed_obj`(Y, `express_app`) if [`ex_app`](#ex_app)(Y).
 
 ## 3. ACROSS FILES. A router is made in one file and mounted in another; what
 
 > a file registers on one is published, and the mounts compose in [flow].
 
-<a id="sx_ex_app"></a>`sx_ex_app`(Y) if [`ex_app`](#ex_app)(Y).
-
-<a id="sx_ex_route"></a>`sx_ex_route`(Y, M, V, H, R) if [`ex_route`](#ex_route)(Y, M, V, H, R).
-
-<a id="sx_ex_mount"></a>`sx_ex_mount`(Y, V, Y2) if [`ex_mount`](#ex_mount)(Y, V, Y2).
-
-<a id="sx_ex_str"></a>`sx_ex_str`(V) if [`ex_path`](#ex_path)(something, V).
-
-<a id="app_listens"></a>`app_listens`(App, P) if [`sx_ex_app`](#sx_ex_app)(App) and [`ex_listen`](#ex_listen)(App, P).
+<a id="app_listens"></a>`app_listens`(App, P) if [`ex_app`](#ex_app)(App) and [`ex_listen`](#ex_listen)(App, P).
 
 <a id="ex_reach"></a>`ex_reach`(App, N, E, X) either:
 
-1. if [`sx_ex_app`](#sx_ex_app)(App), N is App, E is "/", and X is 0;
+1. if [`ex_app`](#ex_app)(App), N is App, E is "/", and X is 0;
 2. if all of:
    - [`ex_reach`](#ex_reach)(App, Y, P, D0);
-   - [`sx_ex_mount`](#sx_ex_mount)(Y, V, N);
+   - [`ex_mount`](#ex_mount)(Y, V, N);
    - [`ex_depth`](#ex_depth)(Max);
    - D0 < Max;
    - X is D0 + 1;
    - E is cat(P, V).
 
-<a id="serves"></a>`serves`(App, M, cat(P, V), H, R) if [`ex_reach`](#ex_reach)(App, Y, P, something) and [`sx_ex_route`](#sx_ex_route)(Y, M, V, H, R).
+<a id="serves"></a>`serves`(App, M, cat(P, V), H, R) if [`ex_reach`](#ex_reach)(App, Y, P, something) and [`ex_route`](#ex_route)(Y, M, V, H, R).
 

@@ -39,7 +39,7 @@ Reads:
 - from js-globals: [es_instance](js-globals.rofl.md#es_instance)
 - from js-modules, in the code: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
 - from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [open_write](js-structure.rofl.md#open_write), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
-- from js-surface: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym), [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
+- from js-surface: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym), [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
 - from models/lang/js/facts/js-globals.rofl, in the main:
   - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
@@ -5148,14 +5148,14 @@ A node is exported as Name from File if all of:
   - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
   - [`at`](#at)(E, File, something);
   - E [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_export_node`](js-surface.rofl.md#sx_export_node)(Target, Name, it).
+  - it [is exported as](#exports_name) Name from Target.
 
 > `export { a as b } from './m'` offers m's `a`, or m's default when `a` is `default`.
 
 A node F is exported as Ext from File either:
 
-1. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Ext and [`sx_export_node`](js-surface.rofl.md#sx_export_node)(T, Int, F);
-2. if File [reexports](js-modules.rofl.md#reexport_offers) "default" of a file T as Ext and [`sx_default`](js-surface.rofl.md#sx_default)(T, F).
+1. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Ext and F [is exported as](#exports_name) Int from T;
+2. if File [reexports](js-modules.rofl.md#reexport_offers) "default" of a file T as Ext and F [is the default export of](#exports_default) T.
 
 > `export { a as b }`: the `local` child is an identifier of this file and
 > resolves through `may_be_node`; under a declaration WITH a `source` it names
@@ -5192,7 +5192,7 @@ In the flow:
 `may_be`(E, `node`, F) if all of:
   - Local [imports](#imports_name) Name at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_export_node`](js-surface.rofl.md#sx_export_node)(Target, Name, F);
+  - a node F [is exported as](#exports_name) Name from Target;
   - a node E [is read at the top of](#top_read) Local and File.
 
 > `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
@@ -5228,8 +5228,8 @@ A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, 
    - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
    - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) Target;
-   - [`sx_export_val`](js-surface.rofl.md#sx_export_val)(Target, Name, R);
-3. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`sx_export_val`](js-surface.rofl.md#sx_export_val)(T, Int, R).
+   - [`exports_value`](#exports_value)(R, Name, Target);
+3. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`exports_value`](#exports_value)(R, Int, T).
 
 In the flow:
 
@@ -5281,7 +5281,7 @@ In the flow:
 `may_be`(E, `node`, F) if all of:
   - Local [imports the default](#imports_default) at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_default`](js-surface.rofl.md#sx_default)(Target, F);
+  - a node F [is the default export of](#exports_default) Target;
   - a node E [is read at the top of](#top_read) Local and File.
 
 > CommonJS. `require(S)` is what the target's `module.exports` may be: first
@@ -5318,7 +5318,7 @@ In the flow:
 3. if all of:
    - a node M [is a require site](js-modules.rofl.md#require_site);
    - M [means the file](js-modules.rofl.md#module_target) T;
-   - [`sx_cjs`](js-surface.rofl.md#sx_cjs)(T, V);
+   - T [exports by commonjs](#cjs_exports) a node V;
    - N is `node`.
 
 > The frontier: a module this corpus does not contain, one row per module.
@@ -5572,10 +5572,8 @@ In the flow:
   - X [points to](#may_be_node) a node F;
   - F [is a generator function](#gen_fn).
 
-<a id="sx_coroutine"></a>`sx_coroutine`(F) if [`coroutine_of`](#coroutine_of)(something, F).
-
 <a id="coroutine_yield"></a>`coroutine_yield`(Y, X) if all of:
-  - [`sx_coroutine`](#sx_coroutine)(F);
+  - [`coroutine_of`](#coroutine_of)(something, F);
   - F [is nearest to](#nearest_v) a node Y;
   - [`yields`](#yields)(Y, X) in the value.
 
