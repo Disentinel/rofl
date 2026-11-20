@@ -51,7 +51,7 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 /** Tracked files only. A build output or a cache is not a dependency of
  *  anything and would drown the model; `git ls-files` is the tree's own
  *  answer to which files are the repository. */
-function tracked(): string[] {
+export function tracked(): string[] {
   return execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })
     .split('\n').filter((l) => l.length > 0);
 }
@@ -66,7 +66,7 @@ const kindOf = (p: string): string => KIND[path.extname(p)] ?? 'other';
 /** Line and block comments out of TS source. Strings are preserved, so a path
  *  inside a string literal survives and a path inside a comment does not —
  *  which is the whole distinction this scanner turns on. */
-function stripTsComments(src: string): string {
+export function stripTsComments(src: string): string {
   let out = '';
   let i = 0;
   while (i < src.length) {
@@ -86,7 +86,7 @@ function stripTsComments(src: string): string {
 type Edge = { from: string; to: string; how: string };
 
 /** A path as the repository spells it, or null when it is not one of ours. */
-function resolveRepoPath(from: string, spec: string): string | null {
+export function resolveRepoPath(from: string, spec: string): string | null {
   if (spec.startsWith('node:') || spec.startsWith('@') || /^[a-z][a-z0-9-]*$/i.test(spec)) return null;
   const base = spec.startsWith('.') ? path.join(path.dirname(from), spec) : spec;
   const norm = path.normalize(base).replace(/^\.\//, '');
