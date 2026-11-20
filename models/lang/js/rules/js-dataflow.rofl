@@ -446,6 +446,14 @@ member_plain[flow](C, Key, V) :- host_src[flow](C, What, _), host_makes_object(W
 -- what the function it calls back returns: an array of them (`map`), or one (`reduce`, a promise's `then`)
 host_result[flow](C, E) :- host_src[flow](C, What, _), host_gives_result(What), calls_back[code](C, F, _), returns[flow](F, E).
 elem_somewhere[flow](C, E) :- host_src[flow](C, results, _), host_result[flow](C, E).
+-- `Promise.allSettled(xs)`: an outcome per value, whose `value` is the value
+elem_somewhere[flow](C, outcome(C)) :- host_src[flow](C, outcomes, _).
+may_be[flow](outcome(C), node, outcome(C)) :- host_src[flow](C, outcomes, _).
+member_plain[flow](outcome(C), "value", E) :- host_src[flow](C, outcomes, R), iter_elem[flow](R, E).
+-- `new Promise(executor)` settles to what the executor hands its first parameter
+settles_with[flow](X, A) :- calls_back[code](X, F, at_once_caught), param_of[flow](F, 0, Name), param_use[flow](F, Name, U),
+                            callee[value](C, U), arg_at[flow](C, 0, A).
+may_be[flow](X, VK, V) :- settles_with[flow](X, A), may_be[flow](A, VK, V).
 may_be[flow](C, VK, V) :- host_src[flow](C, result, _), host_result[flow](C, E), may_be[flow](E, VK, V).
 member_value[flow](C, Key, V) :- host_src[flow](C, inherits, R), may_be_node[flow](R, P), member_value[flow](P, Key, V).
 member_value[flow](C, Key, V) :- host_src[flow](C, from_entries, R), may_be_node[flow](R, A), elem_any[flow](A, E),
@@ -1944,8 +1952,11 @@ input_node[flow](S, inst(CD)) :- input_this[flow](S, M), class_method_of[flow](C
 sub_inst[flow](SD, I) :- super_of[flow](CD, SD), inst_of[flow](I, CD).
 sub_inst[flow](SD, I) :- super_of[flow](MD, SD), sub_inst[flow](MD, I).
 input_node[flow](S, I) :- input_this[flow](S, M), class_method_of[flow](SD, M), sub_inst[flow](SD, I).
-may_be[flow](T, node, CD) :- class_method_of[flow](CD, M), static[value](M),
-                             this_host[flow](M, T).
+-- a static method's `this` is its class, or a subclass it is called on (`Sub.make()`)
+class_under[flow](CD, CD) :- class_like[flow](CD).
+class_under[flow](SD, CD) :- super_of[flow](SD, MD), class_under[flow](MD, CD).
+may_be[flow](T, node, SD) :- class_method_of[flow](CD, M), static[value](M),
+                             this_host[flow](M, T), class_under[flow](SD, CD).
 
 -- =========================================================================
 -- 10. ES2022 CLASS SYNTAX

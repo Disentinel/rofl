@@ -1007,10 +1007,30 @@ In the flow:
 
 `elem_somewhere`(C, E) if [`host_src`](#host_src)(C, `results`, something) and [`host_result`](#host_result)(C, E).
 
-`may_be`(C, VK, V) if all of:
-  - [`host_src`](#host_src)(C, `result`, something);
-  - [`host_result`](#host_result)(C, E);
-  - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V).
+> `Promise.allSettled(xs)`: an outcome per value, whose `value` is the value
+
+`elem_somewhere`(C, outcome(C)) if [`host_src`](#host_src)(C, `outcomes`, something).
+
+`may_be`(outcome(C), `node`, outcome(C)) if [`host_src`](#host_src)(C, `outcomes`, something).
+
+The plain member "value" of outcome(C) is a node E if [`host_src`](#host_src)(C, `outcomes`, R) and a node R [has an element](#iter_elem) E.
+
+> `new Promise(executor)` settles to what the executor hands its first parameter
+
+<a id="settles_with"></a>`settles_with`(X, Y) if all of:
+  - a call X [calls back](js-callgraph.rofl.md#calls_back) F `at_once_caught`;
+  - F [takes](#param_of) Name at 0;
+  - F [uses](#param_use) Name at a node U;
+  - [`callee`](#callee)(C, U);
+  - an invocation C [passes](#arg_at) a node Y at 0.
+
+`may_be`(X, VK, V) either:
+
+1. if [`settles_with`](#settles_with)(X, Y) and [`may_be`](js-callgraph.rofl.md#may_be)(Y, VK, V);
+2. if all of:
+   - [`host_src`](#host_src)(X, `result`, something);
+   - [`host_result`](#host_result)(X, E);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V).
 
 <a id="member_value"></a>The member Key of a node C holds a node V either:
 
@@ -5025,10 +5045,18 @@ In the flow:
   - a class SD [has the method](#class_method_of) M;
   - [`sub_inst`](#sub_inst)(SD, I).
 
-`may_be`(T, `node`, CD) if all of:
+> a static method's `this` is its class, or a subclass it is called on (`Sub.make()`)
+
+<a id="class_under"></a>`class_under`(CD, N) either:
+
+1. if a node CD [is a class](#class_like) and N is CD;
+2. if [the super](#super_of) of a class CD is a class MD and [`class_under`](#class_under)(MD, N).
+
+`may_be`(T, `node`, SD) if all of:
   - a class CD [has the method](#class_method_of) M;
   - [`static`](#static)(M);
-  - M [hosts](#this_host) T.
+  - M [hosts](#this_host) T;
+  - [`class_under`](#class_under)(SD, CD).
 
 ## 10. Es2022 class syntax
 

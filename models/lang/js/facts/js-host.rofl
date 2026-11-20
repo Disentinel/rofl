@@ -343,7 +343,7 @@ host_passes("setImmediate", itself, 0, arg(1)). host_passes("setImmediate", itse
 -- or `entries`
 edb(host_returns).
 edb(host_makes_array).
-host_makes_array(elements). host_makes_array(results). host_makes_array(values). host_makes_array(keys). host_makes_array(entries).
+host_makes_array(elements). host_makes_array(outcomes). host_makes_array(results). host_makes_array(values). host_makes_array(keys). host_makes_array(entries).
 host_returns(array, "find", element). host_returns(array, "findLast", element). host_returns(array, "at", element).
 host_returns(array, "pop", element). host_returns(array, "shift", element).
 host_returns(array, "filter", elements). host_returns(array, "slice", elements). host_returns(array, "concat", elements).
@@ -353,7 +353,7 @@ host_returns("Array", "from", elements). host_returns("Array", "of", elements).
 host_returns("Object", "values", values). host_returns("Object", "keys", keys). host_returns("Object", "entries", entries).
 host_returns("Object", "freeze", same). host_returns("Object", "seal", same). host_returns("Object", "preventExtensions", same).
 host_returns("Object", "create", inherits). host_returns("Object", "fromEntries", from_entries).
-host_returns("Promise", "all", elements). host_returns("Promise", "allSettled", elements).
+host_returns("Promise", "all", elements). host_returns("Promise", "allSettled", outcomes).
 host_returns("Promise", "race", element). host_returns("Promise", "any", element).
 edb(host_makes_object).
 host_makes_object(inherits). host_makes_object(from_entries).

@@ -14260,3 +14260,10 @@ addressed_by(f_a_live_binding_and_import_carry_across_modules, "examples/noteboo
 finding_note(f_a_live_binding_and_import_carry_across_modules,
   "A PROBE OF 18 READS ACROSS MODULES (2026-11-19) found two holes. An exported `let` that the module writes later (`export let m = 'm0'; export function set() { m = 'm1' }`) exported its initialiser only, so the importer's may-set was {m0} where node reads m1: the plain writes to the binding are exported too (`exports_value`). `import('./m')` had no value: it is the module object, and a promise (`prototype_of`), so `await import(...)` and `.then(m => ...)` read its exports. MEASURED on examples/notebook/exported.rofl.md, run in node by `npm run test:nb` (`exportedNode`): 17 values node observes, all in the model; named, default, namespace, re-exports, `export * as ns` and require held before.").
 
+finding(f_a_promise_settles_to_what_its_executor_resolves, defect).
+recorded(f_a_promise_settles_to_what_its_executor_resolves, "2026-11-19").
+addressed_by(f_a_promise_settles_to_what_its_executor_resolves, "models/lang/js/rules/js-dataflow.rofl").
+addressed_by(f_a_promise_settles_to_what_its_executor_resolves, "examples/notebook/settles.rofl.md").
+finding_note(f_a_promise_settles_to_what_its_executor_resolves,
+  "A PROBE OF 23 ASYNC AND CLASS READS (2026-11-19) found three holes. `new Promise(res => res(v))` had no value, so its `then` and an `await` of it were silent: it settles to what the executor hands its first parameter (`settles_with`). `Promise.allSettled(xs)` was read as `all` (its elements the values), wrong: it gives an outcome per value, `outcome(C)`, whose `value` is the value. A static method called on a subclass (`class B { static make() { return new this() } }`, `Sub.make()`) had B as `this` only, a may-set SHORT of the subclass: `this` there is any subclass too (`class_under`). MEASURED on examples/notebook/settles.rofl.md: 18 values V8 observes, all in the model (`settlesV8`); for await, private methods, a getter through super, fluent setters held before.").
+

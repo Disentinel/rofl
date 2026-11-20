@@ -73,6 +73,8 @@ shape_ok(fn_value, twin_bodies, "alias_of_a_derived: the flow book's name for fn
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
 shape_ok(scope_node, twin_bodies, "alias_of_a_derived: eff_subject is its fn_node arm in the flow book, 10 ms sealed / 57 default (all arms)").
 shape_ok(runs, twin_bodies, "alias_of_a_derived: a getter or an iterator`s next a pattern calls is one of the four doors of what a call runs, beside hidden_call_user`s names, 0 ms").
+shape_ok(class_under, twin_bodies, "alias_of_a_derived: sx_ancestor walks up from the classes something instantiates, for what an instance runs; class_under from every class, for what a static method's this may be, and a subclass a static makes (`new this()`) has no instance before it, 0 ms").
+shape_ok(sx_ancestor, twin_bodies, "alias_of_a_derived: its reflexive arm is class_under's; the step differs (an instance's class against a superclass), 0 ms").
 shape_ok(hidden_call_user, twin_bodies, "alias_of_a_derived: one hidden call fans to the flow book's names, 0 ms").
 shape_ok(resolves, twin_bodies, "alias_of_a_derived: a hidden call is a call edge too, 96 ms sealed / 221 default (all arms; this body is the one-premise arms)").
 shape_ok(has_default_internal, twin_bodies, "alias_of_a_derived: default_accounted is the audit's name, 0 ms").

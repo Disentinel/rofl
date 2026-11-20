@@ -174,6 +174,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", lit_somewhere).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", entry_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_plain).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_result).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", settles_with).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_value).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", param_wrap).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", param_of).
@@ -525,6 +526,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", input_this).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", this_given).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", invoked).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", sub_inst).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", class_under).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", field_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", field_at).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", inherited_field).
