@@ -26,3 +26,5 @@ function apply(f) { return f(); }
 use('paramCall', apply(() => 'pf'));
 const ob = { x: 'ox' };
 use('obj[k]', ob[String(n)]);
+const walked = { wa: 'wv' };
+for (const k in walked) use('forInValue', walked[k]);

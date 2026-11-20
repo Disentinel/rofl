@@ -792,32 +792,32 @@ In the flow:
 5. if all of:
    - some assignment [takes apart on the left](#assign_pat) R the Src;
    - [`may_be`](js-callgraph.rofl.md#may_be)(Src, `input`, N);
-   - E is `input`;
-6. if all of:
-   - [`pattern_elem`](#pattern_elem)(P, I, R);
-   - [`pat_in`](#pat_in)(something, P, R);
-   - a node P [points to](#may_be_node) a node Y;
+   - E is `input`.
+
+<a id="pat_arr"></a>`pat_arr`(T, I, X) if all of:
+  - [`pattern_elem`](#pattern_elem)(P, I, T);
+  - [`pat_in`](#pat_in)(something, P, T);
+  - a node P [points to](#may_be_node) a node X.
+
+`may_be`(T, E, N) either:
+
+1. if all of:
+   - [`pat_arr`](#pat_arr)(T, I, Y);
    - [`array_elem`](#array_elem)(Y, I, V);
    - [`own_node`](#own_node)(V, N);
    - E is `node`;
-7. if all of:
-   - [`pattern_elem`](#pattern_elem)(P, I, R);
-   - [`pat_in`](#pat_in)(something, P, R);
-   - a node P [points to](#may_be_node) a node Y;
+2. if all of:
+   - [`pat_arr`](#pat_arr)(T, I, Y);
    - [`array_elem`](#array_elem)(Y, I, V);
    - [`may_be`](js-callgraph.rofl.md#may_be)(V, `input`, N);
    - E is `input`;
-8. if all of:
-   - [`pattern_elem`](#pattern_elem)(P, I, R);
-   - [`pat_in`](#pat_in)(something, P, R);
-   - a node P [points to](#may_be_node) a node Y;
+3. if all of:
+   - [`pat_arr`](#pat_arr)(T, I, Y);
    - [`array_elem`](#array_elem)(Y, I, V);
    - [`may_be`](js-callgraph.rofl.md#may_be)(V, `lit`, N);
    - E is `lit`;
-9. if all of:
-   - [`pattern_elem`](#pattern_elem)(P, something, R);
-   - [`pat_in`](#pat_in)(something, P, R);
-   - a node P [points to](#may_be_node) a node Y;
+4. if all of:
+   - [`pat_arr`](#pat_arr)(T, something, Y);
    - [`elem_somewhere`](#elem_somewhere)(Y, V);
    - [`may_be`](js-callgraph.rofl.md#may_be)(V, E, N).
 
@@ -911,11 +911,12 @@ In the flow:
 1. if [`array_elem`](#array_elem)(X, something, E);
 2. if [`elem_somewhere`](#elem_somewhere)(X, E).
 
+<a id="host_on"></a>`host_on`(C, What, X) if [`host_src`](#host_src)(C, What, R) and a node R [points to](#may_be_node) a node X.
+
 `may_be`(C, VK, V) either:
 
 1. if all of:
-   - [`host_src`](#host_src)(C, `element`, R);
-   - a node R [points to](#may_be_node) a node X;
+   - [`host_on`](#host_on)(C, `element`, X);
    - [`elem_any`](#elem_any)(X, E);
    - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V);
 2. if [`host_src`](#host_src)(C, `element`, something), VK is `lit`, and V is `undefined`;
@@ -934,22 +935,13 @@ In the flow:
    - C [passes](#arg_at) a node X at some index;
    - X [points to](#may_be_node) a node Y;
    - [`elem_any`](#elem_any)(Y, E);
-3. if all of:
-   - [`host_src`](#host_src)(C, `values`, R);
-   - a node R [points to](#may_be_node) a node O;
-   - [the member](#member_value) some key of O holds a node E.
+3. if [`host_on`](#host_on)(C, `values`, O) and [the member](#member_value) some key of a node O holds a node E.
 
-<a id="lit_somewhere"></a>`lit_somewhere`(C, Key) if all of:
-  - [`host_src`](#host_src)(C, `keys`, R);
-  - a node R [points to](#may_be_node) a node O;
-  - [the member](#member_value) Key of O holds some node.
+<a id="lit_somewhere"></a>`lit_somewhere`(C, Key) if [`host_on`](#host_on)(C, `keys`, O) and [the member](#member_value) Key of a node O holds some node.
 
 > `Object.entries(o)`: each entry a pair `[Key, value]` of its own, `entry(C, Key)`
 
-<a id="entry_of"></a>`entry_of`(C, Key, V) if all of:
-  - [`host_src`](#host_src)(C, `entries`, R);
-  - a node R [points to](#may_be_node) a node O;
-  - [the member](#member_value) Key of O holds a node V.
+<a id="entry_of"></a>`entry_of`(C, Key, V) if [`host_on`](#host_on)(C, `entries`, O) and [the member](#member_value) Key of a node O holds a node V.
 
 `elem_somewhere`(C, entry(C, Key)) if [`entry_of`](#entry_of)(C, Key, something).
 
@@ -1031,13 +1023,9 @@ The plain member "value" of outcome(C) is a node E if [`host_src`](#host_src)(C,
 
 <a id="member_value"></a>The member Key of a node C holds a node V either:
 
-1. if all of:
-   - [`host_src`](#host_src)(C, `inherits`, R);
-   - a node R [points to](#may_be_node) a node P;
-   - [the member](#member_value) Key of P holds V;
+1. if [`host_on`](#host_on)(C, `inherits`, P) and [the member](#member_value) Key of a node P holds V;
 2. if all of:
-   - [`host_src`](#host_src)(C, `from_entries`, R);
-   - a node R [points to](#may_be_node) a node X;
+   - [`host_on`](#host_on)(C, `from_entries`, X);
    - [`elem_any`](#elem_any)(X, E);
    - a node E [points to](#may_be_node) a node Pair;
    - [`array_elem`](#array_elem)(Pair, 0, KE);
@@ -5982,11 +5970,26 @@ D takes its value from a node E if all of:
   - [the member](#member_value) K of O holds some node;
   - `string` is type_of(K).
 
-`may_be`(U, `lit`, K) if all of:
-  - D [declares without a value](#bare_binder) Name in File;
-  - [`key_walk`](#key_walk)(D, K);
-  - a node U [reads](#ident_in) Name in File;
-  - U [sees](#sees_binder) D.
+> a key used as a key again (`dst[k] = src[k]`) is each key with its own member, which a may-set does not keep
+> together: read so, every key would take every member; there it is an open key
+
+`may_be`(U, N, K) either:
+
+1. if all of:
+   - D [declares without a value](#bare_binder) Name in File;
+   - [`key_walk`](#key_walk)(D, K);
+   - a node U [reads](#ident_in) Name in File;
+   - U [sees](#sees_binder) D;
+   - N is `lit`;
+   - unless [`computed_key`](#computed_key)(something, U);
+2. if all of:
+   - K [declares without a value](#bare_binder) Name in File;
+   - [`nth`](#nth)(V, 0, K);
+   - [`enumerates`](#enumerates)(something, V, something);
+   - a node U [reads](#ident_in) Name in File;
+   - U [sees](#sees_binder) K;
+   - [`computed_key`](#computed_key)(something, U);
+   - N is `open`.
 
 <a id="plain_assign"></a>E is plain if [`assign`](#assign)(E, something, R) and [`gives`](#gives)(E, R).
 
