@@ -529,13 +529,8 @@ impl Eval {
     /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
     pub fn by_volumes_over(&mut self, files: Vec<(String, String)>, over: &str) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
-        let surface = self.h.intern("surface");
         let (stage, mut joins) = self.level_stage();
         self.settle_core(joins.core.clone())?;
-        // (the rules above the cut that the stage took are of one file by their shape: nothing of theirs crosses)
-        if let Some(low) = self.cut_stage() {
-            self.refuse_stage_across(&low, surface)?;
-        }
         self.refuse_own_outside(&stage)?;
         self.settle_provenance();
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,

@@ -1,7 +1,7 @@
 ---
 world: js-callgraph
-books: ast_oxc, audit, code, execution, flow, main, surface, tree, type, value
-default: code
+books: ast_oxc, audit, code, execution, flow, main, tree, type, value
+default: flow
 ---
 
 # js-callgraph
@@ -20,17 +20,16 @@ default: code
 
 Reads:
 
-- from js-dataflow: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_method](js-dataflow.rofl.md#class_method), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [logic_op](js-dataflow.rofl.md#logic_op), [named_decl](js-dataflow.rofl.md#named_decl), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_method](js-dataflow.rofl.md#obj_method), [obj_prop](js-dataflow.rofl.md#obj_prop), [own_name](js-dataflow.rofl.md#own_name), [param_wrap](js-dataflow.rofl.md#param_wrap), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [isa](js-dataflow.rofl.md#isa), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_any](js-dataflow.rofl.md#member_any), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj_any](js-dataflow.rofl.md#member_obj_any), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow, in the code: [assign_binder](js-dataflow.rofl.md#assign_binder), [assigned](js-dataflow.rofl.md#assigned), [binder](js-dataflow.rofl.md#binder), [class_method](js-dataflow.rofl.md#class_method), [class_or_namespace](js-dataflow.rofl.md#class_or_namespace), [class_slot](js-dataflow.rofl.md#class_slot), [decl_at_top](js-dataflow.rofl.md#decl_at_top), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [imports_name](js-dataflow.rofl.md#imports_name), [imports_ns](js-dataflow.rofl.md#imports_ns), [keyed_quiet](js-dataflow.rofl.md#keyed_quiet), [logic_op](js-dataflow.rofl.md#logic_op), [named_decl](js-dataflow.rofl.md#named_decl), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_method](js-dataflow.rofl.md#obj_method), [obj_prop](js-dataflow.rofl.md#obj_prop), [own_name](js-dataflow.rofl.md#own_name), [param_wrap](js-dataflow.rofl.md#param_wrap), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder), [sees_decl](js-dataflow.rofl.md#sees_decl), [top_read](js-dataflow.rofl.md#top_read), [ts_namespace](js-dataflow.rofl.md#ts_namespace), [var_decl](js-dataflow.rofl.md#var_decl)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [assign_reaches_unscoped](js-dataflow.rofl.md#assign_reaches_unscoped), [class_like](js-dataflow.rofl.md#class_like), [class_member_static](js-dataflow.rofl.md#class_member_static), [class_method_of](js-dataflow.rofl.md#class_method_of), [ctor_of](js-dataflow.rofl.md#ctor_of), [isa](js-dataflow.rofl.md#isa), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_any](js-dataflow.rofl.md#member_any), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_obj_any](js-dataflow.rofl.md#member_obj_any), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [returns](js-dataflow.rofl.md#returns), [selects](js-dataflow.rofl.md#selects), [super_of](js-dataflow.rofl.md#super_of), [this_host](js-dataflow.rofl.md#this_host), [yields](js-dataflow.rofl.md#yields)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype), [lib_member](js-dataflow.rofl.md#lib_member)
-- from js-globals: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
-- from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
-- from js-host: [host_site](js-host.rofl.md#host_site)
+- from js-globals, in the code: [es_global](js-globals.rofl.md#es_global), [es_static](js-globals.rofl.md#es_static)
+- from js-globals: [es_instance](js-globals.rofl.md#es_instance)
+- from js-host, in the code: [host_site](js-host.rofl.md#host_site)
 - from js-model, in the main: [unknown_type](js-model.rofl.md#unknown_type)
-- from js-modules: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
-- from js-surface, in the flow: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
+- from js-modules, in the code: [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site)
+- from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [pattern_target](js-structure.rofl.md#pattern_target), [value_expr](js-structure.rofl.md#value_expr)
+- from js-surface: [fn_label](js-surface.rofl.md#fn_label), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_module](js-surface.rofl.md#sx_module), [sx_name](js-surface.rofl.md#sx_name)
 - from models/lang/js/facts/js-globals.rofl, in the main:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
 - from models/lang/js/facts/js-host.rofl, in the main:
@@ -38,7 +37,7 @@ Reads:
 - from outside these files, in the ast_oxc:
   - <a id="child"></a>`child`
   - <a id="node"></a>`node`
-- from outside these files, in the flow:
+- from outside these files:
   - <a id="nearest_v"></a>A [function](#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the main:
   - <a id="host_global_type"></a>`host_global_type`
@@ -135,6 +134,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 `call_site` has one File for each C.
 
 `callee_of` has one N for each C.
+
+In the code:
 
 <a id="call_site"></a>A call is a call site in File if [`call`](#call)(it) and [`at`](#at)(it, File, something).
 
@@ -1156,8 +1157,6 @@ Declared as facts:
    - [`for_of`](js-structure.rofl.md#for_of)(S);
 6. if N is a [member access](js-dataflow.rofl.md#member_node_v) and [`enumerates`](#enumerates)(something, N, something).
 
-In the surface:
-
 <a id="sx_mkey"></a>`sx_mkey`(O, Key) if [`member_written`](#member_written)(N) and [`member_any`](js-dataflow.rofl.md#member_any)(N, something, O, Key).
 
 <a id="sx_open"></a>`sx_open`(O) either:
@@ -1193,11 +1192,7 @@ In the surface:
 
 > a member function whose `this` the model does not follow may write onto it
 
-In the flow:
-
 <a id="this_unfollowed"></a>`this_unfollowed`(F) if a node F [hosts](js-dataflow.rofl.md#this_host) some this, unless [`class_method`](js-dataflow.rofl.md#class_method)(something, F).
-
-In the surface:
 
 `sx_open`(O) if all of:
   - [`receivable`](#receivable)(O);
@@ -1229,8 +1224,6 @@ In the surface:
 `sx_open`(I) if [`isa`](js-dataflow.rofl.md#isa)(I, CD) and [`sx_open`](#sx_open)(CD).
 
 > a value has the key: written in the corpus, or on Object.prototype, or on its library prototype
-
-In the flow:
 
 <a id="member_call"></a>`member_call`(C, R, Key) if all of:
   - [`call`](#call)(C);
@@ -1323,11 +1316,9 @@ In the code:
    - [`has`](#has)(B, X) in the type;
    - [`key`](#key)(X, Name) in the type.
 
-In the surface:
+In the flow:
 
 <a id="sx_ns_key"></a>`sx_ns_key`(NS, Name) if [`ns_key`](#ns_key)(NS, Name).
-
-In the flow:
 
 `call_finds`(C) if [`call_on`](#call_on)(C, O, Key) and [`sx_ns_key`](#sx_ns_key)(O, Key).
 
@@ -1353,7 +1344,7 @@ In the code:
    - [`sx_export_key`](#sx_export_key)(T, Name);
    - Name differs from "default".
 
-In the surface:
+In the flow:
 
 <a id="sx_export_key"></a>`sx_export_key`(File, Name) if [`export_key`](#export_key)(File, Name).
 
@@ -1376,15 +1367,13 @@ In the code:
    - [`at`](#at)(E, File, something);
 4. if some node [refers to the free](js-dataflow.rofl.md#free_global) "exports" or "module" in File.
 
-In the surface:
+In the flow:
 
 <a id="sx_ns_open"></a>`sx_ns_open`(File) if [`ns_open_file`](#ns_open_file)(File).
 
 <a id="sx_mod_key"></a>`sx_mod_key`(P, Key) if a node P [is the module object of](js-dataflow.rofl.md#module_object) File and [`export_key`](#export_key)(File, Key).
 
 <a id="sx_mod_open"></a>`sx_mod_open`(P) if a node P [is the module object of](js-dataflow.rofl.md#module_object) File and [`ns_open_file`](#ns_open_file)(File).
-
-In the flow:
 
 `call_finds`(C) if [`call_on`](#call_on)(C, P, Key) and [`sx_mod_key`](#sx_mod_key)(P, Key).
 
@@ -1414,7 +1403,7 @@ In the code:
 
 <a id="bodiless"></a>`bodiless`(F) if [`decl`](#decl)(F, `function`) and [`ambient`](#ambient)(F).
 
-In the surface:
+In the flow:
 
 <a id="sx_whole_export"></a>`sx_whole_export`(File, Name) either:
 
@@ -1436,16 +1425,12 @@ In the surface:
 
 `host_extends_global` includes "Error".
 
-In the flow:
-
 <a id="whole_global"></a>`whole_global`(R) if all of:
   - a node R [is the global](js-globals.rofl.md#es_global) Name of some release with a form Form;
   - Form differs from `plain_value`;
   - unless [`host_extends_global`](#host_extends_global)(Name);
   - unless R [may hold by name alone](js-dataflow.rofl.md#assign_reaches_unscoped) what node some Src;
   - unless [`sx_global_open`](#sx_global_open)(Name).
-
-In the surface:
 
 <a id="sx_global_key"></a>`sx_global_key`(Name, Key) if all of:
   - [`member_written`](#member_written)(N);
@@ -1464,8 +1449,6 @@ In the surface:
    - a node G [is the global](js-globals.rofl.md#es_global) Name of some release with some form;
    - unless [`in_place`](#in_place)(G);
    - unless [`discards`](#discards)(something, G).
-
-In the flow:
 
 `call_finds`(C) either:
 
@@ -1572,7 +1555,7 @@ Declared as facts:
    - [`ref`](#ref)(N, Name) in the type;
    - [`at`](#at)(X, File, something).
 
-In the surface:
+In the flow:
 
 <a id="sx_export_type"></a>`sx_export_type`(File, Name, T) either:
 
@@ -1585,8 +1568,6 @@ In the surface:
    - a node L [is exported locally as](js-dataflow.rofl.md#export_local) Name from File;
    - [`ref`](#ref)(L, Local);
    - [`type_decl`](#type_decl)(T, Local, File).
-
-In the flow:
 
 <a id="names_type"></a>`names_type`(X, T) either:
 
@@ -1789,51 +1770,27 @@ In the flow:
 
 > the six, mirrored for a type another file names
 
-In the surface:
-
 <a id="sx_type_member"></a>`sx_type_member`(T, Key) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`type_member`](#type_member)(T, Key).
-
-In the flow:
 
 `type_member`(T, Key) if [`sx_type_member`](#sx_type_member)(T, Key).
 
-In the surface:
-
 <a id="sx_type_open"></a>`sx_type_open`(T) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`type_open`](#type_open)(T).
-
-In the flow:
 
 `type_open`(T) if [`sx_type_open`](#sx_type_open)(T).
 
-In the surface:
-
 <a id="sx_member_type"></a>`sx_member_type`(T, Key, T2) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`member_type`](#member_type)(T, Key, T2).
-
-In the flow:
 
 `member_type`(T, Key, T2) if [`sx_member_type`](#sx_member_type)(T, Key, T2).
 
-In the surface:
-
 <a id="sx_member_lib"></a>`sx_member_lib`(T, Key, P) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`member_lib`](#member_lib)(T, Key, P).
-
-In the flow:
 
 `member_lib`(T, Key, P) if [`sx_member_lib`](#sx_member_lib)(T, Key, P).
 
-In the surface:
-
 <a id="sx_method_type"></a>`sx_method_type`(T, Key, T2) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`method_type`](#method_type)(T, Key, T2).
-
-In the flow:
 
 `method_type`(T, Key, T2) if [`sx_method_type`](#sx_method_type)(T, Key, T2).
 
-In the surface:
-
 <a id="sx_method_lib"></a>`sx_method_lib`(T, Key, P) if [`sx_export_type`](#sx_export_type)(something, something, T) and [`method_lib`](#method_lib)(T, Key, P).
-
-In the flow:
 
 `method_lib`(T, Key, P) if [`sx_method_lib`](#sx_method_lib)(T, Key, P).
 
@@ -1948,8 +1905,6 @@ In the flow:
 `declared`(C, T) if [`fn_ret_at`](#fn_ret_at)(C, F) and [`names_type`](#names_type)(F, T).
 
 > a function another module exports, by what its declaration returns
-
-In the surface:
 
 <a id="sx_fn_ret"></a>`sx_fn_ret`(File, Name, T) if [`export_fn_ret`](#export_fn_ret)(File, Name, F) and [`names_type`](#names_type)(F, T).
 
@@ -2138,7 +2093,7 @@ In the audit:
 |---|---|
 | `code` | `flow` |
 | `audit` | `flow` |
-| `code` | `surface` |
+| `code` | `flow` |
 
 ## A CALL SHORT OF ITS CALLEE: `requestLog(logger)` against
 
@@ -2170,8 +2125,6 @@ In the flow:
 
 > the callee's side, published: parameter I of F is read through, untested, at DefFile:DefLine
 
-In the surface:
-
 <a id="sx_param_deref"></a>`sx_param_deref`(F, I, Name, DefFile, DefLine) if all of:
   - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
   - F [uses](js-dataflow.rofl.md#param_use) Name at a node U;
@@ -2181,8 +2134,6 @@ In the surface:
   - unless [`param_defaulted`](#param_defaulted)(F, I);
   - unless [`param_tested`](#param_tested)(F, Name);
   - unless [`executes_if`](#executes_if)(M, something, `defined`).
-
-In the flow:
 
 <a id="unpassed_deref_at"></a>`unpassed_deref_at`(File, Line, Name, DefFile, DefLine) if all of:
   - a call C [resolves to](#resolves) F;
@@ -2206,7 +2157,7 @@ In the flow:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
+| `flow` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

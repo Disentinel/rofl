@@ -1,6 +1,6 @@
 ---
 world: js-host
-books: audit, code, flow, main, surface, tree
+books: audit, code, flow, main, tree
 default: audit
 ---
 
@@ -435,11 +435,7 @@ In the flow:
   - [`object_of`](js-structure.rofl.md#object_of)(M, P);
   - M [selects](js-dataflow.rofl.md#selects) "env".
 
-In the surface:
-
 <a id="sx_env"></a>`sx_env`(M) if [`env_member`](#env_member)(M).
-
-In the flow:
 
 <a id="env_object"></a>`env_object`(M) if [`sx_env`](#sx_env)(M).
 

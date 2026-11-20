@@ -1,6 +1,6 @@
 ---
 world: js-controlflow
-books: audit, code, execution, flow, main, surface, tree, value
+books: audit, code, execution, flow, main, tree, value
 default: code
 ---
 
@@ -23,8 +23,7 @@ Reads:
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
 - from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in)
-- from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
+- from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
 - from outside these files, in the flow:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
@@ -825,7 +824,7 @@ A node
 
 > `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
 
-In the surface:
+In the flow:
 
 <a id="sx_entry"></a>`sx_entry`(F) if all of:
   - a node L [is exported locally as](js-dataflow.rofl.md#export_local) some name from some file;
@@ -953,9 +952,8 @@ In the code:
 
 | arg 1 | arg 2 |
 |---|---|
-| `code` | `surface` |
-| `surface` | `code` |
-| `surface` | `flow` |
+| `code` | `flow` |
+| `flow` | `code` |
 
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 
@@ -971,7 +969,7 @@ In the code:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
+| `flow` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

@@ -73,8 +73,8 @@ What this file calls a node, and what each word stands for:
 | `code` | `tree` |
 | `flow` | `value` |
 | `flow` | `tree` |
-| `surface` | `value` |
-| `surface` | `tree` |
+| `flow` | `value` |
+| `flow` | `tree` |
 | `audit` | `value` |
 | `audit` | `tree` |
 
@@ -92,7 +92,7 @@ What this file calls a node, and what each word stands for:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
+| `flow` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |
