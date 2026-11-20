@@ -11,6 +11,9 @@ export type Stop = (() => boolean) & { cause?: string; left?: () => Limit; said?
 export type Walls = { budget: number; space: number; stop?: Stop };
 export interface Engine {
   readonly name: EngineName;
+  /** The model loaded in the engine and kept for the runs over it, and whether the engine took it; where it is not, the host loads it itself to say why at
+   *  its lines. Undefined where the host's own world of the model is the engine's. */
+  loaded?(model: string, walls: Walls): boolean;
   /** `core`, the model `model` loaded and not evaluated, over the code's facts `code`, one clause a line, evaluated: a world whose store says `partialEval` when it was cut short. */
   evaluated(core: Rofl, model: string, code: readonly string[], walls: Walls): Rofl;
   /** The same with the cells' texts loaded beside the code, in a world of its own; a text the engine refuses is said in `errors` at its place and left out. */

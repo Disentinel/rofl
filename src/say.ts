@@ -23,14 +23,14 @@ export function parsePhrase(rel: string, t: string): Tpl {
 }
 
 /** `has_the_field(class CD, key Key, at node P, holding node V)`: the name is the phrase, each argument `[marker] noun Var[:i]`. */
-export function parseSig(rel: string, text: string, nouns: Iterable<string>): Tpl {
+export function parseSig(rel: string, text: string, nouns: Set<string>): Tpl {
   const open = text.indexOf('(');
   const name = text.slice(0, open).trim(), inner = text.slice(open + 1).replace(/\)\s*$/, '');
   const args = inner.split(',').map((a) => a.trim()).filter(Boolean).map((raw, k) => {
     const toks = raw.split(/\s+/); const last = toks.pop()!;
     const [, posS] = last.split(':'); const pos = posS !== undefined ? Number(posS) : k;
     let nounLen = 1;
-    for (const n of nouns) if (n.includes(' ')) { const w = n.split(' '); if (toks.length >= w.length && toks.slice(-w.length).join(' ') === n) nounLen = Math.max(nounLen, w.length); }
+    for (let w = toks.length; w > 1; w--) if (nouns.has(toks.slice(-w).join(' '))) { nounLen = w; break; }
     return { marker: toks.slice(0, -nounLen).join(' '), noun: toks.slice(-nounLen).join(' '), pos };
   });
   const words = name.split('_').filter(Boolean).join(' ');

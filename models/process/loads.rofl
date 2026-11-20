@@ -1,0 +1,24 @@
+-- models/process/loads.rofl — what each process of the tree loads, and the processes that must not load the engine.
+-- The facts are scanners/loads.ts over the tree: loads(F, G, How) and source(F). A process is named by the file it starts
+-- at; what it loads is every file its code runs in that process, by an import TypeScript keeps or by a thread it starts.
+-- `why loaded(P, G)` is the chain of files by which G gets in; a thin client that loads the TypeScript engine is a breach.
+-- Asked by vscode/test/thin.ts: `rofl ask 'breach(P, G)' models/process/loads.rofl FACTS` is empty, or the gate is red.
+
+edb(loads).
+edb(source).
+
+process_entry(extension_host, "vscode/extension.ts").
+thin(extension_host).
+
+in_process(F, G) :- loads(F, G, value).
+in_process(F, G) :- loads(F, G, thread).
+
+loaded(P, F) :- process_entry(P, F).
+loaded(P, G) :- loaded(P, F), in_process(F, G).
+
+-- the TypeScript engine: the evaluator and everything it is made of
+engine_file(F) :- source(F), D is str_pre(F, "/"), D = "src".
+
+breach(P, G) :- thin(P), loaded(P, G), engine_file(G).
+loaded_count(P, N) :- process_entry(P, _), N is count(G : loaded(P, G)).
+breach_count(P, N) :- thin(P), N is count(G : breach(P, G)).

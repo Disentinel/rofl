@@ -258,7 +258,14 @@ its bytes, read whole before it is opened. Once a volume settled (a second after
 it was last changed) has been found whole, its sum, length and change time are
 noted under `$XDG_CACHE_HOME/rofl/seen`, and while all three are as noted it is
 opened without being read whole again; the files a world was kept from are
-stamped by the sum of their bytes, noted there the same way. A run whose files
+stamped by the sum of their bytes, noted there the same way. The writer of a
+kept file notes it so as it moves it into place (its sum, length, change time
+and inode), so the first question after a keep or an edit sums none of it
+again; a kept file or a source changed by anyone after that changes its length,
+time or inode and is summed again. The second a reader waits before it notes a
+file it summed itself is the clock's tick: a file changed in place within the
+tick of its last change keeps its time, so a note taken then could vouch for
+bytes written after the sum. A run whose files
 are more than eight away from every kept world's, and more than one in eight of
 the world, is evaluated whole rather than taken by delta from the nearest.
 
@@ -734,9 +741,23 @@ the rest stays on disk. `reading K of their U stretches` on stderr is what the
 question opened. A question bound to a value reads the units that may hold it
 (its relation's arguments are keys of the units' directories); an unbound one
 reads every unit that wrote its relation, so it costs in proportion to its
-answers. A thaw reads its file's text from `.texts`, kept beside the units, not
-from the sources. The first question after a world is kept sums its files once
-(`$XDG_CACHE_HOME/rofl/seen` notes them after that). Measured (vscode, release,
+answers. A thaw reads its file's text from the texts kept beside the units,
+not from the sources: segments `.t<n>`, `.texts` naming the newest, whose
+entries name every file and the segment its text lies in. An edit writes the
+texts of the files it moved in a segment of their own (about that file's text
+and 56 bytes a file of index) and carries an older segment into it only where
+most of its texts went or it is no larger than what the new one holds, so the
+segments hold at most twice the texts. A unit's directories kept in an earlier
+segment of units are named there, not written again, and an edit that names
+nothing new leaves the dictionary (`.names`) as it lies. The first question
+after a world is kept or edited reads only what its walk reads: the writer
+noted what it wrote (above). Measured (vscode at the bench's commit, 1000
+files, the `fast` build, 4 cores, 2026-11-20), one file of 181 KB edited:
+written by the edit 1.19 GB before (texts 0.51 GB, units 0.60 GB, dictionary
+74 MB), 0.24 GB after (texts 0.24 MB, units 0.17 GB, the dictionary not
+written where no name came); the first question after the edit 0.56 s and
+1.25 GB before, 0.19 s and 0.20 GB after, as a repeated one
+(`f_an_edit_writes_what_it_moved`). Measured (vscode, release,
 4 cores, 2026-11-18), asked again: at 1000 files a bound `ask` 0.10 s and
 0.13 GB (7 of 2010 stretches), a bound `whynot` 0.23 s and 0.28 GB (14), the
 unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask
