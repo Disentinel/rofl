@@ -162,6 +162,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", pat_place).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", pat_step).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", assign_pat).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", pat_computed).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", pat_arr).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", pat_local).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", decl_value).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", destructures_at).
@@ -170,6 +171,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_at).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_call_on).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_src).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_any).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_on).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_somewhere).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", lit_somewhere).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", entry_of).

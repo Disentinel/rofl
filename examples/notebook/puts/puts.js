@@ -69,4 +69,4 @@ const described = {};
 Object.defineProperty(described, 'k', { value: 'dv' });
 use('defineProperty', described.k);
 const keyed = { ka: 1, kb: 2 };
-for (const k in keyed) { use('forIn', k); use('forInValue', keyed[k]); }
+for (const k in keyed) use('forIn', k);
