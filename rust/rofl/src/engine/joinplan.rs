@@ -125,8 +125,9 @@ impl Eval {
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
-        // a unit reads by key alone what lies outside it: from the news, never in written order
-        if self.by_seed && at.is_some() {
+        // a unit reads by key alone what lies outside it: from the news, never in written order; the unit that holds
+        // every file of the last layer reads a relation whole as the reader does, and chooses
+        if self.by_seed && at.is_some() && !self.store.reads_wide() {
             return Some(p.clone());
         }
         let n = n as f64;

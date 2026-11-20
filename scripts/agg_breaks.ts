@@ -8851,17 +8851,38 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "plans_outlive_rules",
-  "what": "an order planned for a rule is kept when the rules are built again: a rule that reads a view has other variables then, the order binds the old ones and the conclusion, open, is skipped",
-  "expect": {
-   "kept_js_sources": "an import of unused.js added"
-  }
- },
- {
   "id": "volumes_dict_unkept",
   "what": "the dictionary the volumes of a world name in is not kept beside them: the volumes kept hold numbers nothing names, and the next run cannot open them",
   "expect": {
    "kept_damaged": "deltas_of_volumes_one_after_another:"
+  }
+ },
+ {
+  "id": "texts_edit_stale",
+  "what": "an edit's segment of texts names the file that moved with its old text: a whynot thawed in it after the edit reads the file as it was",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
+  "id": "texts_never_carried",
+  "what": "an edit's segment of texts carries no older segment, not even one whose texts all moved: every edit leaves one more segment on disk",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
+  "id": "units_parts_misplaced",
+  "what": "a unit's parts kept in an earlier segment are named as if the new segment held them: an edit's units read their directories from bytes that are something else",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
+  }
+ },
+ {
+  "id": "kept_written_unnoted",
+  "what": "a kept file is not noted whole by its writer, so the first question after a keep or an edit sums every kept file again",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
   }
  },
  {

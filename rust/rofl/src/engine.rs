@@ -784,6 +784,9 @@ pub struct Eval {
     /// The relations the last full pass evaluated again although the world held them whole before it.
     pub again: Vec<Sym>,
     alias_fresh: u32,
+    /// While a rule is rewritten by the preparation, the count of the variables it was given, from 0 for each rule: a rule's
+    /// rewriting is then the same in every preparation, and safety.rofl's judgment of the program is kept from one to the next.
+    rule_fresh: Option<u32>,
     pub lat: LatticeState,
     pub demand: DemandState,
     unk: UnknownState,
@@ -2346,6 +2349,7 @@ impl Eval {
             added_steps: 0,
             again: Vec::new(),
             alias_fresh: 0,
+            rule_fresh: None,
             lat: LatticeState::default(),
             demand: DemandState::default(),
             unk: UnknownState::new(unknown_value),
@@ -2448,6 +2452,16 @@ impl Eval {
     /// appends to. Its diagnostics are re-derived from the store on every
     /// call, so a second preparation would double every rule's complaint;
     /// they are merged rather than appended here.
+    /// A variable no clause holds: within a rule the preparation rewrites, numbered for that rule alone (`rule_fresh`); else from
+    /// the world's count, which only grows.
+    fn fresh_var(&mut self, prefix: &str) -> Term {
+        let name = match &mut self.rule_fresh {
+            Some(n) => { *n += 1; format!("_$r{prefix}{n}") }
+            None => { self.alias_fresh += 1; format!("_${prefix}{}", self.alias_fresh) }
+        };
+        Term::var(self.h.intern(&name))
+    }
+
     pub fn reprepare(&mut self) {
         let keep = std::mem::take(&mut self.diags);
         self.prepare();
@@ -2722,10 +2736,8 @@ impl Eval {
         self.lat.lattice_rows = decls;
         self.lat.lattice_rows.extend(self.tags.as_lattices(&self.v));
         self.lat.read_algebras(&self.v, &self.tags);
-        // (an order planned for a rule holds the variables of the rule as it was built then)
-        if brk!("plans_outlive_rules" => false; true) {
-            self.add.delta_plans.clear();
-        }
+        // an order planned for a rule holds the rule's body as it was built then: a view's copy is named by its place
+        self.add.delta_plans.clear();
         self.peeled = None;
         let rules = self.view_unfold(rules);
         let rules = self.alias_lower(rules);
@@ -5668,7 +5680,7 @@ impl Eval {
                                 e.pre_now = None;
                                 f
                             }
-                            None if e.by_seed && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
+                            None if e.by_seed && !e.store.reads_wide() && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
                         let f = self.fire_at(r, i + 1, fl.take(), fire);

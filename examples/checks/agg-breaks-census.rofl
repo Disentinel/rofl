@@ -2191,10 +2191,16 @@ brk("kept_stale_args"). brk_kind("kept_stale_args", switch).
 brk_expects("kept_stale_args", "kept_walls").
 brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
 brk_expects("kept_stale_engine", "kept_engine").
-brk("plans_outlive_rules"). brk_kind("plans_outlive_rules", switch).
-brk_expects("plans_outlive_rules", "kept_js_sources").
 brk("volumes_dict_unkept"). brk_kind("volumes_dict_unkept", switch).
 brk_expects("volumes_dict_unkept", "kept_damaged").
+brk("texts_edit_stale"). brk_kind("texts_edit_stale", switch).
+brk_expects("texts_edit_stale", "kept_damaged").
+brk("texts_never_carried"). brk_kind("texts_never_carried", switch).
+brk_expects("texts_never_carried", "kept_damaged").
+brk("units_parts_misplaced"). brk_kind("units_parts_misplaced", switch).
+brk_expects("units_parts_misplaced", "kept_damaged").
+brk("kept_written_unnoted"). brk_kind("kept_written_unnoted", switch).
+brk_expects("kept_written_unnoted", "kept_damaged").
 brk("kept_unsummed"). brk_kind("kept_unsummed", switch).
 brk_expects("kept_unsummed", "kept_damaged").
 brk("kept_stamp_mtime"). brk_kind("kept_stamp_mtime", switch).
@@ -2548,6 +2554,7 @@ switch_site("kept_stamp_mtime", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_unsummed", "rust/rofl/src/volume.rs").
 switch_site("kept_verbs_compute", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_write_unbounded", "rust/rofl/src/bin/rofl/kept.rs").
+switch_site("kept_written_unnoted", "rust/rofl/src/volume.rs").
 switch_site("label_by_values_ignored", "rust/rofl/src/engine.rs").
 switch_site("label_cap_ignored", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_correlation_lost", "rust/rofl/src/engine/labeled.rs").
@@ -2686,7 +2693,6 @@ switch_site("plain_reader_unclosed", "rust/rofl/src/engine.rs").
 switch_site("plain_rule_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
-switch_site("plans_outlive_rules", "rust/rofl/src/engine.rs").
 switch_site("post_resends_flying", "rust/rofl/src/adapter.rs").
 switch_site("promoted_tick_scope_kept", "rust/rofl/src/store.rs").
 switch_site("prov_reader_deferred", "rust/rofl/src/engine/prov.rs").
@@ -2815,6 +2821,8 @@ switch_site("tag_label_lattice", "rust/rofl/src/engine.rs").
 switch_site("tag_lattice_admitted", "rust/rofl/src/tag.rs").
 switch_site("tag_times_skipped", "rust/rofl/src/tag.rs").
 switch_site("tag_unread", "rust/rofl/src/rofl_parse.rs").
+switch_site("texts_edit_stale", "rust/rofl/src/engine/volumes.rs").
+switch_site("texts_never_carried", "rust/rofl/src/engine/volumes.rs").
 switch_site("thr_acc_frozen", "rust/rofl/src/engine.rs").
 switch_site("thr_door_n", "rust/rofl/src/program.rs").
 switch_site("thr_first_height", "rust/rofl/src/store.rs").
@@ -2848,6 +2856,7 @@ switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
 switch_site("unfired_neg_decides", "rust/rofl/src/engine.rs").
 switch_site("unify_no_occurs_check", "rust/rofl/src/term.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
+switch_site("units_parts_misplaced", "rust/rofl/src/engine/levels.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
 switch_site("vciters_unkept", "rust/rofl/src/store.rs").

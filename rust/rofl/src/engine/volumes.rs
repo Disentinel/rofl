@@ -52,72 +52,229 @@ pub fn first_file(text: &str) -> Option<&str> {
 pub struct Cut {
     pub core: String,
     pub files: Vec<(String, String)>,
+    /// the texts of facts alone, none naming a file: laid over the files' units where the rules let them be
+    /// (`Eval::overlay_rels`), into the core otherwise
+    pub over: Vec<String>,
 }
 
-const TEXTS: &[u8; 16] = b"ROFL-TEXTS-1\n\0\0\0";
+/// Whether `text` holds facts alone and none names a file: a book laid over the world, such as its assumptions.
+fn facts_alone(text: &str) -> bool {
+    let mut any = false;
+    for l in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("--")) {
+        if l.contains(":-") || !l.ends_with('.') || file_of(l).is_some() || !l.starts_with(|c: char| c.is_ascii_lowercase()) {
+            return false;
+        }
+        any = true;
+    }
+    any
+}
 
-/// THE FILES' TEXTS KEPT BESIDE A WORLD'S UNITS: what a thaw reads again, found by the file's name and read alone,
-/// where it lies, not cut again from every source. Four words a file, by name (where its name and its text lie), the
-/// names, the texts, and the sum of every byte before it.
-pub fn keep_texts(path: &str, files: &[(String, String)]) -> std::io::Result<()> {
-    let mut by: Vec<&(String, String)> = files.iter().collect();
-    by.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-    let head = TEXTS.len() + 8 + 32 * by.len();
-    let names: usize = by.iter().map(|(f, _)| f.len()).sum();
-    let mut out: Vec<u8> = Vec::with_capacity(head + names + by.iter().map(|(_, t)| t.len()).sum::<usize>() + 8);
+/// The relations a text of facts alone states, by name.
+pub fn fact_rels(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("--"))
+        .map(|l| l[..l.find(['[', '(', '.']).unwrap_or(l.len())].trim().to_string()).collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+const TEXTS: &[u8; 16] = b"ROFL-TEXTS-2\n\0\0\0";
+
+/// An entry's text lies in the segment that holds the entry.
+const HERE: u64 = u64::MAX;
+
+/// Where a segment's entry finds its text: given now, or where a kept segment holds it.
+enum Text<'a> {
+    New(&'a str),
+    In(u64, usize, usize),
+}
+
+/// THE FILES' TEXTS KEPT BESIDE A WORLD'S UNITS, AS A SCROLL at `k`: what a thaw reads again, found by the file's
+/// name and read alone, where it lies. Segments `<k>.t<n>`, each written once and whole; `<k>.texts` names the
+/// newest, whose entries name every file and the segment its text lies in. A segment: the segments its entries read
+/// besides itself, five words a file by name (where its name lies, the segment, where its text lies), the names, the
+/// texts it holds, and the sum of every byte before it.
+fn write_segment(path: &str, entries: &[(&str, Text)]) -> std::io::Result<usize> {
+    let mut segs: Vec<u64> = entries.iter().filter_map(|(_, t)| match t { Text::In(m, ..) => Some(*m), Text::New(_) => None }).collect();
+    segs.sort_unstable();
+    segs.dedup();
+    let head = TEXTS.len() + 16 + 8 * segs.len() + 40 * entries.len();
+    let names: usize = entries.iter().map(|(f, _)| f.len()).sum();
+    let new: usize = entries.iter().map(|(_, t)| if let Text::New(t) = t { t.len() } else { 0 }).sum();
+    let mut out: Vec<u8> = Vec::with_capacity(head + names + new + 8);
     out.extend_from_slice(TEXTS);
-    out.extend_from_slice(&(by.len() as u64).to_le_bytes());
+    for x in [entries.len() as u64, segs.len() as u64].into_iter().chain(segs.iter().copied()) {
+        out.extend_from_slice(&x.to_le_bytes());
+    }
     let (mut name_at, mut text_at) = (head, head + names);
-    for (f, t) in &by {
-        for x in [name_at, f.len(), text_at, t.len()] {
-            out.extend_from_slice(&(x as u64).to_le_bytes());
+    for (f, t) in entries {
+        let (seg, at, len) = match t {
+            Text::New(t) => { text_at += t.len(); (HERE, text_at - t.len(), t.len()) }
+            Text::In(m, at, len) => (*m, *at, *len),
+        };
+        for x in [name_at as u64, f.len() as u64, seg, at as u64, len as u64] {
+            out.extend_from_slice(&x.to_le_bytes());
         }
         name_at += f.len();
-        text_at += t.len();
     }
-    by.iter().for_each(|(f, _)| out.extend_from_slice(f.as_bytes()));
-    by.iter().for_each(|(_, t)| out.extend_from_slice(t.as_bytes()));
+    entries.iter().for_each(|(f, _)| out.extend_from_slice(f.as_bytes()));
+    entries.iter().for_each(|(_, t)| if let Text::New(t) = t { out.extend_from_slice(t.as_bytes()) });
     let mut sum = crate::arena::Sum::default();
     sum.add(&out);
     out.extend_from_slice(&sum.value().to_le_bytes());
-    let tmp = format!("{path}.{}.new", std::process::id());
-    std::fs::write(&tmp, out)?;
-    std::fs::rename(&tmp, path)
+    std::fs::write(path, &out)?;
+    Ok(out.len())
 }
 
-/// The texts `keep_texts` kept, mapped; whole once its sum held, or `seen` notes it as it was (`volume::check_seen`).
+/// The texts of every file as one segment at `path`, kept at `k` by `keep_texts`.
+pub fn texts_whole(path: &str, files: &[(String, String)]) -> std::io::Result<()> {
+    let mut by: Vec<(&str, Text)> = files.iter().map(|(f, t)| (f.as_str(), Text::New(t))).collect();
+    by.sort_unstable_by(|a, b| a.0.cmp(b.0));
+    write_segment(path, &by).map(drop)
+}
+
+fn segment(k: &str, n: u64) -> String {
+    format!("{k}.t{n}")
+}
+
+fn newest_texts(k: &str) -> Option<u64> {
+    std::fs::read_to_string(format!("{k}.texts")).ok()?.trim().parse().ok()
+}
+
+/// The segment written at `path` made the newest at `k`, under the number `n`; every segment it does not read let go.
+fn publish(k: &str, path: &str, n: u64, reads: &[u64], seen: Option<&std::path::Path>) -> std::io::Result<()> {
+    let was: Vec<u64> = KeptTexts::segments(k);
+    std::fs::rename(path, segment(k, n))?;
+    crate::volume::note_written(&segment(k, n), seen);
+    let tmp = format!("{k}.texts.{}.new", std::process::id());
+    std::fs::write(&tmp, format!("{n}\n"))?;
+    std::fs::rename(&tmp, format!("{k}.texts"))?;
+    for m in was.into_iter().filter(|m| *m != n && !reads.contains(m)) {
+        let _ = std::fs::remove_file(segment(k, m));
+    }
+    Ok(())
+}
+
+/// The texts `texts_whole` wrote at `path` kept at `k` in place of every segment before them.
+pub fn keep_texts(k: &str, path: &str, seen: Option<&std::path::Path>) -> std::io::Result<()> {
+    publish(k, path, newest_texts(k).map_or(0, |n| n + 1), &[], seen)
+}
+
+/// AN EDIT'S TEXTS: the files that moved written in a segment of their own, the rest read where they lie. A segment
+/// whose texts mostly went is carried into the new one, so the segments hold at most twice the texts of the files;
+/// one whose texts are no more than what the new one holds so far is carried too, so a segment is copied a number of
+/// times that grows as the log of the texts, and the segments read are as few. The bytes written; an error where no
+/// texts are kept at `k` or a file moved that they do not name.
+pub fn keep_texts_edit(k: &str, moved: &[(String, String)], seen: Option<&std::path::Path>) -> Result<usize, String> {
+    let old = KeptTexts::open(k, seen)?;
+    let now: HashMap<&str, &str> = moved.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
+    let mut entries: Vec<(&str, Option<(u64, usize, usize)>)> = Vec::with_capacity(old.n);
+    for i in 0..old.n {
+        let [na, nl, seg, ta, tl] = old.entry(i);
+        let f = old.top_str(na, nl);
+        let seg = if seg as u64 == HERE { old.top } else { seg as u64 };
+        entries.push((f, (!now.contains_key(f)).then_some((seg, ta, tl))));
+    }
+    if entries.iter().filter(|(f, _)| now.contains_key(f)).count() != now.len() {
+        return Err(format!("{k}: a file moved that the kept texts do not name"));
+    }
+    let mut live: std::collections::BTreeMap<u64, usize> = old.maps.keys().map(|m| (*m, 0)).collect();
+    for (_, at) in &entries {
+        if let Some((m, _, len)) = at { *live.entry(*m).or_default() += len; }
+    }
+    let mut carried: Vec<u64> = Vec::new();
+    let mut acc: usize = moved.iter().map(|(_, t)| t.len()).sum();
+    let carry_all = crate::brk!("texts_never_carried" => false; true);
+    for (m, l) in live.iter().rev() {
+        if carry_all && (*l * 2 < old.maps[m].len() || *l <= acc) {
+            carried.push(*m);
+            acc += l;
+        }
+    }
+    let written: Vec<(&str, Text)> = entries.iter().map(|(f, at)| match at {
+        None => (*f, Text::New(if crate::brk!("texts_edit_stale" => false; true) { now[f] } else { old.get(f).unwrap_or_default() })),
+        Some((m, ta, tl)) if carried.contains(m) => (*f, Text::New(old.str(&old.maps[m], *ta, *tl))),
+        Some((m, ta, tl)) => (*f, Text::In(*m, *ta, *tl)),
+    }).collect();
+    let reads: Vec<u64> = live.keys().filter(|m| !carried.contains(m)).copied().collect();
+    let n = old.top + 1;
+    let tmp = format!("{}.{}.new", segment(k, n), std::process::id());
+    let bytes = write_segment(&tmp, &written).map_err(|e| format!("{tmp}: {e}"))?;
+    publish(k, &tmp, n, &reads, seen).map_err(|e| format!("{k}: {e}"))?;
+    Ok(bytes)
+}
+
+/// The texts kept at `k`, mapped: the newest segment and those it reads, each whole once its sum held, or `seen`
+/// notes it as it was (`volume::check_seen`).
 pub struct KeptTexts {
-    map: memmap2::Mmap,
+    maps: HashMap<u64, memmap2::Mmap>,
+    top: u64,
     n: usize,
+    /// where the entries begin in the newest segment
+    at: usize,
 }
 
 impl KeptTexts {
-    pub fn open(path: &str, seen: Option<&std::path::Path>) -> Result<KeptTexts, String> {
+    fn map(path: &str, seen: Option<&std::path::Path>) -> Result<memmap2::Mmap, String> {
         let f = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
         // SAFETY: written whole under another name and moved into place, never written again.
         let map = unsafe { memmap2::Mmap::map(&f) }.map_err(|e| format!("{path}: {e}"))?;
-        let bad = || format!("{path}: not the texts of a world's files");
-        if map.get(..TEXTS.len()) != Some(TEXTS) {
-            return Err(bad());
-        }
-        let n = map.get(TEXTS.len()..TEXTS.len() + 8).map(|b| u64::from_le_bytes(b.try_into().unwrap()) as usize).ok_or_else(bad)?;
-        if n.checked_mul(32).and_then(|x| x.checked_add(TEXTS.len() + 16)).is_none_or(|h| h > map.len()) {
-            return Err(bad());
+        if map.get(..TEXTS.len()) != Some(TEXTS) || map.len() < TEXTS.len() + 24 {
+            return Err(format!("{path}: not the texts of a world's files"));
         }
         if !crate::volume::ends_in_its_sum(path, &map, seen) {
             return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
         }
-        Ok(KeptTexts { map, n })
+        Ok(map)
     }
 
-    fn entry(&self, i: usize) -> [usize; 4] {
-        let at = TEXTS.len() + 8 + 32 * i;
-        std::array::from_fn(|k| u64::from_le_bytes(self.map[at + 8 * k..at + 8 * k + 8].try_into().unwrap()) as usize)
+    fn word(map: &[u8], at: usize) -> usize {
+        u64::from_le_bytes(map[at..at + 8].try_into().unwrap()) as usize
     }
 
-    fn str(&self, at: usize, len: usize) -> &str {
-        // SAFETY: the sum held, so these are the bytes of a `&str` `keep_texts` wrote
-        unsafe { std::str::from_utf8_unchecked(&self.map[at..at + len]) }
+    pub fn open(k: &str, seen: Option<&std::path::Path>) -> Result<KeptTexts, String> {
+        let top = newest_texts(k).ok_or_else(|| format!("{k}: no texts are kept"))?;
+        let path = segment(k, top);
+        let map = Self::map(&path, seen)?;
+        let (n, s) = (Self::word(&map, TEXTS.len()), Self::word(&map, TEXTS.len() + 8));
+        let at = s.checked_mul(8).and_then(|x| x.checked_add(TEXTS.len() + 16)).filter(|a| *a <= map.len()).ok_or_else(|| format!("{path}: not the texts of a world's files"))?;
+        if n.checked_mul(40).and_then(|x| x.checked_add(at + 8)).is_none_or(|h| h > map.len()) {
+            return Err(format!("{path}: not the texts of a world's files"));
+        }
+        let mut maps = HashMap::new();
+        for i in 0..s {
+            let m = Self::word(&map, TEXTS.len() + 16 + 8 * i) as u64;
+            maps.insert(m, Self::map(&segment(k, m), seen)?);
+        }
+        maps.insert(top, map);
+        Ok(KeptTexts { maps, top, n, at })
+    }
+
+    /// The segments kept at `k`: the newest and those it reads, as its head names them.
+    fn segments(k: &str) -> Vec<u64> {
+        let Some(top) = newest_texts(k) else { return Vec::new() };
+        let mut out = vec![top];
+        if let Ok(b) = std::fs::read(segment(k, top)) {
+            if b.starts_with(TEXTS) && b.len() >= TEXTS.len() + 16 {
+                let s = Self::word(&b, TEXTS.len() + 8);
+                out.extend((0..s).filter(|i| TEXTS.len() + 24 + 8 * i <= b.len()).map(|i| Self::word(&b, TEXTS.len() + 16 + 8 * i) as u64));
+            }
+        }
+        out
+    }
+
+    fn entry(&self, i: usize) -> [usize; 5] {
+        let map = &self.maps[&self.top];
+        std::array::from_fn(|k| Self::word(map, self.at + 40 * i + 8 * k))
+    }
+
+    fn str<'a>(&self, map: &'a [u8], at: usize, len: usize) -> &'a str {
+        // SAFETY: the sum held, so these are the bytes of a `&str` a segment was written with
+        unsafe { std::str::from_utf8_unchecked(&map[at..at + len]) }
+    }
+
+    fn top_str(&self, at: usize, len: usize) -> &str {
+        self.str(&self.maps[&self.top], at, len)
     }
 
     /// The text of the file of this name.
@@ -125,9 +282,12 @@ impl KeptTexts {
         let (mut lo, mut hi) = (0, self.n);
         while lo < hi {
             let mid = (lo + hi) / 2;
-            let [na, nl, ta, tl] = self.entry(mid);
-            match self.str(na, nl).cmp(file) {
-                std::cmp::Ordering::Equal => return Some(self.str(ta, tl)),
+            let [na, nl, seg, ta, tl] = self.entry(mid);
+            match self.top_str(na, nl).cmp(file) {
+                std::cmp::Ordering::Equal => {
+                    let m = if seg as u64 == HERE { self.top } else { seg as u64 };
+                    return self.maps.get(&m).map(|map| self.str(map, ta, tl));
+                }
                 std::cmp::Ordering::Less => lo = mid + 1,
                 std::cmp::Ordering::Greater => hi = mid,
             }
@@ -138,10 +298,24 @@ impl KeptTexts {
 
 /// The texts cut into core and files. A clause spans lines while a string in it is open.
 pub fn cut(texts: &[&str]) -> Cut {
+    cut_by(texts, false)
+}
+
+/// `cut`, the texts of facts alone that name no file set apart (`Cut::over`).
+pub fn cut_over(texts: &[&str]) -> Cut {
+    cut_by(texts, true)
+}
+
+fn cut_by(texts: &[&str], apart: bool) -> Cut {
     let mut core = String::new();
     let mut at: FxMap<String, usize> = FxMap::default();
     let mut files: Vec<(String, String)> = Vec::new();
+    let mut over = Vec::new();
     for text in texts {
+        if apart && facts_alone(text) {
+            over.push(text.to_string());
+            continue;
+        }
         if crate::rofl_parse::is_columns(text) {
             cut_columns(text, &mut core, &mut at, &mut files);
             continue;
@@ -175,7 +349,7 @@ pub fn cut(texts: &[&str]) -> Cut {
             core.push('\n');
         }
     }
-    Cut { core, files }
+    Cut { core, files, over }
 }
 
 
@@ -348,6 +522,12 @@ impl Eval {
     /// The world of this core and the `files`, each its name and text, settled by levels: the reader, a fork of the
     /// core that reads every unit and fires nothing.
     pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Eval, VolStats), Halt> {
+        self.by_volumes_over(files, "")
+    }
+
+    /// `by_volumes`, with `over` laid over the files' units: facts of the relations `overlay_rels` names, read by
+    /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
+    pub fn by_volumes_over(&mut self, files: Vec<(String, String)>, over: &str) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let surface = self.h.intern("surface");
         let (stage, mut joins) = self.level_stage();
@@ -361,8 +541,8 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for (_, text) in &files {
-            let mut rest = text.as_str();
+        for text in files.iter().map(|f| f.1.as_str()).chain([over]) {
+            let mut rest = text;
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
                 let end = a + 1 + n;
@@ -389,7 +569,7 @@ impl Eval {
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let n = files.len();
-        let lv = e.fork().by_levels(files, &stage, joins, None)?;
+        let lv = e.fork().by_levels(files, &stage, joins, None, over)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
         lv.read_by(&mut e);

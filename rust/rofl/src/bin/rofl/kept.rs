@@ -373,6 +373,7 @@ fn keep_bounded(s: &mut rofl::session::Session, kept: &str, note: &str, chain: &
         return Err(format!("with what other processes are writing the cache would hold {}, over the cap of {} (ROFL_CACHE_GB)", size(total), size(cap)));
     }
     std::fs::rename(&new, kept).map_err(|e| format!("{kept}: {e}"))?;
+    rofl::volume::note_written(kept, seen().as_deref());
     Ok(bytes)
 }
 

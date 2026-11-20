@@ -347,6 +347,23 @@ fn a_nearest_moved_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
+/// A world cut below a book (`cut[fixpointplan]`) takes by delta a file of facts only the rules above the cut read,
+/// put in and taken out again, though the records the cut dropped are most of its records.
+fn a_cut_world_takes_a_file_read_above_the_cut(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("cut_overlay");
+    let raw: String = (0..40).map(|i| format!("node[raw](n{i}, {}).\n", if i % 2 == 0 { "call" } else { "fn" })).collect();
+    d.write("cut.rofl", &format!("cut[fixpointplan](raw).\nedb(node). edb(off).\nimports(main, assume).\ncall(N) :- node[raw](N, call).\nlive(N) :- call(N), not off[assume](N).\n{raw}"));
+    let args = ["ask", "live(N)", "boot.rofl", "cut.rofl", "ov.rofl"];
+    d.write("ov.rofl", "");
+    answered(&rofl(&d, brk, &args), "N = n2", "kept")?;
+    for ov in ["off[assume](n2). off[assume](n4).\n", ""] {
+        d.write("ov.rofl", ov);
+        let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
+        ensure(fresh.code == 0 && got.out == fresh.out && got.err.contains("took 1 file by delta"), || format!("{ov:?}: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))?;
+    }
+    Ok(())
+}
+
 /// A nearest row gone and back within a retraction (its tree's edges are concluded, and derived again where a fact
 /// below them lost one of two firings) leaves the nearest as it stood: the edit goes by delta.
 fn a_nearest_row_gone_and_back_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
@@ -359,6 +376,88 @@ fn a_nearest_row_gone_and_back_goes_by_delta(brk: Option<&str>) -> Result<(), St
     d.write("t.rofl", tree);
     let (got, fresh) = (rofl(&d, brk, &args), fresh(&d, brk, &args));
     ensure(got.out == fresh.out && got.err.contains("by delta"), || format!("a nearest row gone and back: wanted {:?} by delta, got {:?} {:?}", fresh.out, got.out, got.err))
+}
+
+/// AN EDIT WRITES THE TEXTS OF ITS FILES ALONE: a world by levels kept with its files' texts, a whynot thawing a file
+/// below the cut, then one file edited again and again: each edit writes a segment of about that file's text, the
+/// segments stay at most twice the texts, and the whynot from the kept units after each edit is the world's with
+/// nothing cut over the edited files. A segment or a source changed outside rofl, the length kept, is found.
+fn an_edit_writes_its_files_texts_alone(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("texts");
+    let model = "own[fixpointplan](node, 0). own[fixpointplan](child, 0). own[fixpointplan](child, 1). own[fixpointplan](name, 0). own[fixpointplan](pad, 0).\n\
+        edb(node). edb(child). edb(name). edb(pad).\n\
+        kind(N, K) :- node[raw](N, K).\nedge(P, C) :- child[raw](P, C).\nnamed(N, S) :- name[raw](N, S).\n\
+        has_child(P) :- edge(P, _).\nleaf(N) :- kind(N, _), not has_child(N).\n\
+        same(A, B) :- named(A, S), named(B, S).\ntwin(A) :- same(A, B), leaf(B).\nlonely(N) :- leaf(N), not twin(N).\n";
+    let n = |i: usize| format!("n{i:016x}");
+    let file = |i: usize, name: &str| {
+        let f = n(i);
+        let mut t = format!("node[raw](\"{f}_1\", fn).\nnode[raw](\"{f}_2\", call).\nchild[raw](\"{f}_1\", \"{f}_2\").\nname[raw](\"{f}_2\", \"{name}\").\n");
+        t += &(0..200).map(|j| format!("pad[raw](\"{f}_p{j}\", {j}).\n")).collect::<String>();
+        t
+    };
+    let names = ["go", "stop", "go", "run"];
+    let corpus = |three: &str| (0..12).map(|i| file(i, if i == 3 { three } else { names[i % 4] })).collect::<String>();
+    d.write("cut.rofl", &format!("cut[fixpointplan](raw).\n{model}"));
+    d.write("whole.rofl", model);
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
+    let whole = [("ROFL_VOLUMES", "0".to_string())];
+    // (the name the file held when kept: where it holds no more, the walk goes below the cut into the edited file,
+    // thawed from its text, and a text kept as it was would hold it)
+    let q = format!("named(\"{}_2\", \"stop\")", n(3));
+    let mut below = 0;
+    let ask = |world: &str, cache: &str, env: &[(&str, String)]| rofl_env(BIN, &d, &d.0.join(cache), env, brk, &["whynot", "--all", &q, "boot.rofl", world, "f.rofl"]);
+    let segments = || -> Vec<(String, u64)> {
+        let dir = d.0.join("levels/rofl/worlds");
+        let mut v: Vec<(String, u64)> = std::fs::read_dir(&dir).map(|r| r.flatten().filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            let (_, n) = name.rsplit_once(".t")?;
+            n.parse::<u64>().ok().map(|_| (name.clone(), e.metadata().unwrap().len()))
+        }).collect()).unwrap_or_default();
+        v.sort();
+        v
+    };
+    d.write("f.rofl", &corpus("stop"));
+    let first = ask("cut.rofl", "levels", &levels);
+    ensure(first.code == 0 && first.err.contains("settled by levels"), || format!("not kept by levels: {} {:?}", first.code, first.err))?;
+    let all: u64 = segments().iter().map(|s| s.1).sum();
+    let one = file(3, "stop").len() as u64;
+    // the writer notes what it wrote whole, so the first question sums none of it again
+    let notes = std::fs::read_dir(d.0.join("levels/rofl/seen")).map(|r| r.flatten().filter(|e| e.path().is_file()).count()).unwrap_or(0);
+    ensure(notes >= 4, || format!("the kept files written are not noted whole: {notes} notes"))?;
+    ensure(all > 10 * one, || format!("the texts kept: {:?}, a file's {one}; {:?} {:?}", segments(), first.err, std::fs::read_dir(d.0.join("levels/rofl/worlds")).map(|r| r.flatten().map(|e| e.file_name()).collect::<Vec<_>>())))?;
+    for (step, three) in ["walk", "stop", "zebra", "go", "walk"].iter().enumerate() {
+        d.write("f.rofl", &corpus(three));
+        let before: Vec<String> = segments().into_iter().map(|s| s.0).collect();
+        let edit = ask("cut.rofl", "levels", &levels);
+        ensure(edit.err.contains("units settled again"), || format!("edit {step} not taken by delta: {:?}", edit.err))?;
+        let new: Vec<(String, u64)> = segments().into_iter().filter(|s| !before.contains(&s.0)).collect();
+        let total: u64 = segments().iter().map(|s| s.1).sum();
+        ensure(new.len() == 1 && new[0].1 < all / 2 && total <= 2 * all + 2 * one && segments().len() <= 2, || format!("edit {step} wrote {new:?}; kept {:?}, the texts whole {all}", segments()))?;
+        let truth = ask("whole.rofl", "truth", &whole);
+        let kept = ask("cut.rofl", "levels", &levels);
+        ensure(truth.code == 0, || format!("edit {step}: {}", truth.err))?;
+        below += truth.out.contains("[raw]") as usize;
+        ensure(kept.out == truth.out && kept.err.contains("answered from the kept units"), || format!("edit {step}, from the kept units:\n{}\nthe world with nothing cut:\n{}\n{}", kept.out, truth.out, kept.err))?;
+    }
+    ensure(below >= 3, || format!("the question went below the cut after {below} of 5 edits"))?;
+    // a segment changed in place outside rofl, its length kept, is summed again and refused: the files are read
+    let dir = d.0.join("levels/rofl/worlds");
+    for (name, _) in segments() {
+        let p = dir.join(&name);
+        let mut b = std::fs::read(&p).unwrap();
+        let at = b.len() / 2;
+        b[at] ^= 1;
+        std::fs::write(&p, &b).unwrap();
+    }
+    let truth = ask("whole.rofl", "truth", &whole);
+    let kept = ask("cut.rofl", "levels", &levels);
+    ensure(kept.out == truth.out, || format!("a damaged segment:\n{}\nthe world with nothing cut:\n{}\n{}", kept.out, truth.out, kept.err))?;
+    // a source changed outside rofl, its length kept, is found by the first question
+    d.write("f.rofl", &corpus("goes"));
+    let truth = ask("whole.rofl", "truth", &whole);
+    let kept = ask("cut.rofl", "levels", &levels);
+    ensure(kept.out == truth.out && !kept.err.contains("answered from the kept units"), || format!("a source edited outside:\n{}\nthe world with nothing cut:\n{}\n{}", kept.out, truth.out, kept.err))
 }
 
 /// A DELTA OF VOLUMES, a corpus of 24 files small enough to read: `model` over the files' facts `was`, kept by the
@@ -387,6 +486,38 @@ fn volumes_delta(name: &str, model: &str, each: &dyn Fn(usize, &dyn Fn(usize) ->
     let got = rofl_env(BIN, &d, &d.0.join("cache"), &env, brk, &args);
     let anew = rofl_env(BIN, &d, &d.0.join("anew"), &env, brk, &args);
     ensure(got.out == anew.out && got.err.contains("units settled again"), || format!("{name}: a delta of volumes answers otherwise than the files anew: {} lines against {}; {:?}", got.out.lines().count(), anew.out.lines().count(), got.err))
+}
+
+/// A book of facts alone, naming no file, laid over a world kept by volumes: put in, edited and taken out by delta,
+/// the units it may meet settled again, each answer that of the files evaluated anew. Read by a file's own rule, and
+/// by a rule that crosses files through a closure.
+fn a_book_laid_over_volumes_goes_by_delta(brk: Option<&str>) -> Result<(), String> {
+    let d = Dir::new("laid_over");
+    let n = |i: usize| format!("n{i:016x}");
+    let mut text = String::new();
+    for i in 0..24 {
+        text += &format!("here(\"{}_z\").\ncolor(\"{}_1\", blue).\ncolor(\"{}_2\", {}).\nlink(\"{}_1\", \"{}_1\").\n", n(i), n(i), n(i), ["red", "green", "blue"][i % 3], n(i), n((i + 1) % 24));
+    }
+    d.write("f.rofl", &text);
+    d.write("m.rofl", "edb(here). edb(color). edb(link). edb(off).\nimports(main, assume).\n\
+        shown(N) :- color(N, C), not off[assume](C).\n\
+        reach(A, B) :- link(A, B).\nreach(A, C) :- reach(A, B), link(B, C).\n\
+        seen(A) :- reach(A, B), color(B, C), not off[assume](C).\n");
+    let env = [("ROFL_VOLUMES", "1".to_string())];
+    for q in ["shown(N)", "seen(A)"] {
+        let args = ["ask", q, "boot.rofl", "m.rofl", "f.rofl", "ov.rofl"];
+        d.write("ov.rofl", "");
+        let kept = rofl_env(BIN, &d, &d.0.join(format!("cache-{q}")), &env, brk, &args);
+        ensure(kept.code == 0 && kept.err.contains("volumes: 24 files"), || format!("{q}: not kept by volumes: {} {:?}", kept.code, kept.err))?;
+        for ov in ["off[assume](red).\n", "off[assume](red).\noff[assume](blue).\n", "off[assume](green).\n", ""] {
+            d.write("ov.rofl", ov);
+            let got = rofl_env(BIN, &d, &d.0.join(format!("cache-{q}")), &env, brk, &args);
+            let anew = rofl_env(BIN, &d, &d.0.join(format!("anew-{q}-{}", ov.len())), &env, brk, &args);
+            let by_delta = got.err.contains("the facts laid over them moved");
+            ensure(anew.code == 0 && got.out == anew.out && (by_delta || q != "shown(N)"), || format!("{q}, {ov:?}: wanted {:?} by delta, got {:?} {:?}", anew.out, got.out, got.err))?;
+        }
+    }
+    Ok(())
 }
 
 /// A copy with no original goes: a fact a volume made for the length of a round (its `not` read a copy not yet laid)
@@ -921,7 +1052,7 @@ fn a_cone_grown_below_the_cut_takes_its_lemmas_again(brk: Option<&str>) -> Resul
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 34] = [
+const CASES: [(&str, Case); 37] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -951,11 +1082,14 @@ const CASES: [(&str, Case); 34] = [
     ("a_far_world_is_no_base", a_far_world_is_no_base),
     ("a_traded_facts_file_is_no_base", a_traded_facts_file_is_no_base),
     ("a_nearest_moved_goes_by_delta", a_nearest_moved_goes_by_delta),
+    ("a_cut_world_takes_a_file_read_above_the_cut", a_cut_world_takes_a_file_read_above_the_cut),
+    ("a_book_laid_over_volumes_goes_by_delta", a_book_laid_over_volumes_goes_by_delta),
     ("a_nearest_row_gone_and_back_goes_by_delta", a_nearest_row_gone_and_back_goes_by_delta),
     ("a_copy_with_no_original_goes", a_copy_with_no_original_goes),
     ("a_volume_waits_for_its_copy", a_volume_waits_for_its_copy),
     ("deltas_of_volumes_one_after_another", deltas_of_volumes_one_after_another),
     ("a_cone_grown_below_the_cut_takes_its_lemmas_again", a_cone_grown_below_the_cut_takes_its_lemmas_again),
+    ("an_edit_writes_its_files_texts_alone", an_edit_writes_its_files_texts_alone),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.

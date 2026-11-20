@@ -83,7 +83,7 @@ fn check(cool: bool) {
         // the units cooled are kept as a segment of the scroll and read back from it: the same answers
         let units = v.eval.levels.clone().expect("a world by levels");
         let k = std::env::temp_dir().join(format!("rofl-volumes-kept-{}", std::process::id())).to_string_lossy().to_string();
-        rofl::volume::keep_units(&k, Some(&units)).unwrap();
+        rofl::volume::keep_units(&k, Some(&units), None).unwrap();
         let mut e = v.eval.fork();
         e.store.reads_none();
         e.levels = None;
@@ -94,7 +94,7 @@ fn check(cool: bool) {
         for q in ASKED {
             assert_eq!(answers(&mut v, q), answers(&mut whole, q), "the units kept and read back answer otherwise than the whole world: {q}");
         }
-        rofl::volume::keep_units(&k, None).unwrap();
+        rofl::volume::keep_units(&k, None, None).unwrap();
     }
 }
 

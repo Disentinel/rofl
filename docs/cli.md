@@ -258,7 +258,14 @@ its bytes, read whole before it is opened. Once a volume settled (a second after
 it was last changed) has been found whole, its sum, length and change time are
 noted under `$XDG_CACHE_HOME/rofl/seen`, and while all three are as noted it is
 opened without being read whole again; the files a world was kept from are
-stamped by the sum of their bytes, noted there the same way. A run whose files
+stamped by the sum of their bytes, noted there the same way. The writer of a
+kept file notes it so as it moves it into place (its sum, length, change time
+and inode), so the first question after a keep or an edit sums none of it
+again; a kept file or a source changed by anyone after that changes its length,
+time or inode and is summed again. The second a reader waits before it notes a
+file it summed itself is the clock's tick: a file changed in place within the
+tick of its last change keeps its time, so a note taken then could vouch for
+bytes written after the sum. A run whose files
 are more than eight away from every kept world's, and more than one in eight of
 the world, is evaluated whole rather than taken by delta from the nearest.
 
@@ -364,7 +371,18 @@ again whole. 5-8 MB for the same edits.
 Records of facts gone stay in the world (a reader skips them) until it is
 evaluated whole: once they are more than a quarter of its records, the next
 edit says `of facts gone: it is evaluated whole to drop them` and is not taken
-by delta.
+by delta. The records a plan's cut dropped (`cut[fixpointplan]`) are not
+counted: an evaluation anew leaves them too.
+
+A world cut so takes by delta a file whose facts no rule of the lower stage
+reads or concludes, put in, edited or taken out: a book of assumptions laid
+over a kept world (`assumed_env[assume]`, `assumed_export[assume]` of the JS
+model, examples/vscode/assume-linux.rofl) costs what it moves. vscode at the
+bench commit, 250 files, kept whole (fast build, 2026-11-19): evaluated 82 s;
+the 13 assumptions put in 3.4 s, taken out 2.6 s, each the answer of the files
+evaluated anew. A file whose facts the lower stage reads is evaluated anew,
+said on stderr. By volumes (from 32 MB of corpus on) such a file is laid over the
+units (*A book laid over the units*, below).
 
 ## Exit codes
 
@@ -654,7 +672,8 @@ one file each refuse the world by volumes, naming the fact (then it is evaluated
 one of the lemma's; a world that asks has the site in its cone whatever it asks). What is a lemma is the whole program's
 lower stage, not the asked cone's. `why --all` (`--why-all`) unfolds each lemma: its file's lower stage is evaluated again in a
 fork of the world and its proof set in the lemma's place. A world that cut a book holds lemmas no file names, so it
-takes no retraction (refused with the reason); a kept world whose file changed is computed anew, not by delta.
+takes no retraction of a fact its lower stage reads or concludes (refused with the reason); a kept world whose file of such
+facts changed is computed anew, not by delta.
 The units of a world name what their rules make in one dictionary (`rust/rofl/src/dict.rs`), kept beside them as `<slot>.q<sum>.names`: a term reads the same in every unit and none is spelled to cross.
 The world `rofl ask`/`why` keep by volumes (from 32 MB) is the exception to "computed anew": it is kept as its units
 (*A corpus larger than one heap*, below) with a registry (`<slot>.q<sum>.scroll`: the sum of the core's text and of each file's; written last, so a set half written is no kept world), and when at most one file in eight moved, none came or went and the rules
@@ -663,6 +682,17 @@ units settled again, S of them concluding what they had`; the unit of the edited
 and is settled again where one of those stretches was replaced or a fact came or went under such a key; a group is
 mended, its firings carried where their premises stand, where it read no aggregate (`engine/levels.rs`). The answers
 are those of the files evaluated anew (`cargo test -p rofl --test kept`). A file come or gone is computed anew.
+**A book laid over the units.** A file of facts alone, none naming a file (a book of assumptions, such as
+examples/vscode/assume-linux.rofl), is not the core's when only the rules of the files' units and of the layers above
+read its relations (`Eval::overlay_rels`: no rule concludes them, and no rule of the core, of the plan's lower stage, of
+a tree, of an aggregate or where units meet reads them): it is laid over the units as a stretch of their own, and the
+registry keeps its sum and those relations. Put in, edited or taken out, it goes by delta (`volumes: 0 of Y files
+edited, the facts laid over them moved; ...`): a unit of a layer above is settled again where it asked a key a fact
+came or went under, a file's unit where one of its rules takes such a fact and each other premise the core holds
+none of is answered in the unit under the values that binds. vscode at the bench commit, 250 files, the side-effect
+question (fast build, 2026-11-19): evaluated 21 s; the 13 assumptions put in 6.2 s and taken out 5.8 s, 113-118 of
+432 units settled again, each answer that of the files anew. A file of facts some other rule reads is the core's,
+and a core that moved is computed anew.
 A `why --all` of such a world unfolds a lemma over the core and its file alone (the file thawed, as a `whynot` below the cut walks it); a `whynot` nested inside an unfolded
 lemma may name another failed premise than the world whole does (`f_levels_are_the_one_path_by_volumes`).
 Stages are Rust only: the TypeScript engine evaluates the world whole, and the worlds of the JS model are checked
@@ -711,9 +741,23 @@ the rest stays on disk. `reading K of their U stretches` on stderr is what the
 question opened. A question bound to a value reads the units that may hold it
 (its relation's arguments are keys of the units' directories); an unbound one
 reads every unit that wrote its relation, so it costs in proportion to its
-answers. A thaw reads its file's text from `.texts`, kept beside the units, not
-from the sources. The first question after a world is kept sums its files once
-(`$XDG_CACHE_HOME/rofl/seen` notes them after that). Measured (vscode, release,
+answers. A thaw reads its file's text from the texts kept beside the units,
+not from the sources: segments `.t<n>`, `.texts` naming the newest, whose
+entries name every file and the segment its text lies in. An edit writes the
+texts of the files it moved in a segment of their own (about that file's text
+and 56 bytes a file of index) and carries an older segment into it only where
+most of its texts went or it is no larger than what the new one holds, so the
+segments hold at most twice the texts. A unit's directories kept in an earlier
+segment of units are named there, not written again, and an edit that names
+nothing new leaves the dictionary (`.names`) as it lies. The first question
+after a world is kept or edited reads only what its walk reads: the writer
+noted what it wrote (above). Measured (vscode at the bench's commit, 1000
+files, the `fast` build, 4 cores, 2026-11-20), one file of 181 KB edited:
+written by the edit 1.19 GB before (texts 0.51 GB, units 0.60 GB, dictionary
+74 MB), 0.24 GB after (texts 0.24 MB, units 0.17 GB, the dictionary not
+written where no name came); the first question after the edit 0.56 s and
+1.25 GB before, 0.19 s and 0.20 GB after, as a repeated one
+(`f_an_edit_writes_what_it_moved`). Measured (vscode, release,
 4 cores, 2026-11-18), asked again: at 1000 files a bound `ask` 0.10 s and
 0.13 GB (7 of 2010 stretches), a bound `whynot` 0.23 s and 0.28 GB (14), the
 unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask

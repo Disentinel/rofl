@@ -70,6 +70,7 @@ impl Eval {
         self.store.aliases = views.into_iter().map(|(v, _)| v).collect();
         let mut out = Vec::with_capacity(rules.len());
         for mut r in rules {
+            self.rule_fresh = Some(0);
             if lowered.contains(&r.id) {
                 self.alias_drules.push(r);
                 continue;
@@ -80,6 +81,7 @@ impl Eval {
             }
             out.push(r);
         }
+        self.rule_fresh = None;
         out
     }
 
@@ -147,10 +149,7 @@ impl Eval {
         let args = v.pat.iter().map(|p| match p {
             SrcArg::Head(i) => l.args[*i],
             SrcArg::Const(c) => *c,
-            SrcArg::Anon => {
-                self.alias_fresh += 1;
-                Term::var(self.h.intern(&format!("_$a{}", self.alias_fresh)))
-            }
+            SrcArg::Anon => self.fresh_var("a"),
         }).collect();
         Some(Lit { rel: v.src, persp: l.persp, persp_explicit: l.persp_explicit, args, temporal: l.temporal })
     }
