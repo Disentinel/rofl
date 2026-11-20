@@ -49,7 +49,7 @@ default: flow
 Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
-- from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [call_like](js-dataflow.rofl.md#call_like), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
+- from js-dataflow, in the code: [binder_read](js-dataflow.rofl.md#binder_read), [binds_name](js-dataflow.rofl.md#binds_name), [call_like](js-dataflow.rofl.md#call_like), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
@@ -149,14 +149,13 @@ In the flow:
    - [`plus_assign`](#plus_assign)(X, L, Name, File);
    - D [introduces](js-dataflow.rofl.md#binds_name) Name in File;
    - a node L [sees](js-dataflow.rofl.md#sees_binder) D;
-   - a node E [reads](js-dataflow.rofl.md#ident_in) Name in File;
-   - E [sees](js-dataflow.rofl.md#sees_binder) D;
+   - [`binder_read`](js-dataflow.rofl.md#binder_read)(D, Name, File, E);
    - N is `node`;
 2. if all of:
    - [`composed`](#composed)(X);
    - [`plus_assign`](#plus_assign)(X, L, Name, something);
    - F [uses](js-dataflow.rofl.md#param_use) Name at a node L;
-   - F [uses](js-dataflow.rofl.md#param_use) Name at a node E;
+   - F [uses](js-dataflow.rofl.md#param_use) Name at E;
    - N is `node`.
 
 <a id="sx_mwrite"></a>`sx_mwrite`(O, Key, X) if all of:

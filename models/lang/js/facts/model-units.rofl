@@ -119,6 +119,8 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", bare_binder).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", binder_region).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", binder_at_top).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", sees_binder).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", region_binds).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", binder_read).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", scope_node).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", lexical_binder).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", scope_of).
@@ -137,6 +139,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", catch_names).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", sees_decl).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", scoped_name).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", name_cand).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", read_under).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", name_outer).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", name_scope).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", top_read).
@@ -173,14 +176,20 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_src).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_any).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_on).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_somewhere).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", concat_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", lit_somewhere).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", entry_of).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", elem_value).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", indexed).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", any_value).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", any_read).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", at_index).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_plain).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", host_result).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", settles_with).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_value).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", puts_on).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", set_from).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", param_wrap).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", param_of).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", fallback).
@@ -598,6 +607,7 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", yield_back).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", gen_step).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", walked).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", iter_elem).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", walks).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", key_walk).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", plain_assign).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", bin_op).

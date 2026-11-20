@@ -59,7 +59,6 @@ shape_ok(call_in_try, closure_wide_end, "tried_no_net_gain: entering from call_s
 
 shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; the first version led with site(C) and cost 21 firings").
 shape_ok(name_outer, not_closer, "small_set: name_cand holds 1.01 rows an identifier over 20 vscode files (5229 for 5182), the pairs are the one or two scopes of one identifier, 47 rows").
-shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
 
 shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
 shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
