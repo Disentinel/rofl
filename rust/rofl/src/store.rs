@@ -1626,6 +1626,8 @@ pub struct Near {
     /// whether a read of a whole relation here takes the stretches' rows: the world's reader does; a unit reads its
     /// children by key alone, and a whole read of it is of what it wrote itself
     whole: bool,
+    /// in the unit that holds every file: a premise read whole takes the stretches' rows too, as the reader's does
+    wide: bool,
     /// in a unit: the stretch of the file a node is of, whose trees answer for the node
     trees: Option<Rc<TreeOf>>,
     /// in the world's reader: the closures the trees of the files' own units answer, each with the forests of
@@ -1639,6 +1641,8 @@ pub struct Near {
     held: std::sync::OnceLock<Rc<Held>>,
     /// `KeyIx` of a relation of `list`, made when a fact of it is first looked for where no route answers
     key_ix: Rc<std::sync::Mutex<FxMap<Sym, Rc<KeyIx>>>>,
+    /// what the planner counted of the rows of `list`, which stand while the unit writes
+    counted: Rc<std::sync::Mutex<FxMap<GroupsKey, Rc<Counts>>>>,
 }
 
 /// The stretches of a list that hold a firing of a fact: by their own ids, and by the facts lying elsewhere they
@@ -1765,6 +1769,23 @@ fn count_groups(h: &Heap, each: impl FnOnce(&mut dyn FnMut(Sym, &[Term])), persp
     rows
 }
 
+/// `Counts` of the rows of `rel` the stretches of `list` hold, by premise shape: counted once in `counted`.
+fn list_groups(list: &[Rc<Stretch>], counted: &std::sync::Mutex<FxMap<GroupsKey, Rc<Counts>>>, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> Rc<Counts> {
+    let key = (rel, persp, cpos.to_vec(), vpos.to_vec());
+    if let Some(g) = counted.lock().unwrap().get(&key) {
+        return g.clone();
+    }
+    let g = Rc::new(count_groups(h, |f| {
+        for s in list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
+            for k in s.of_rel(rel) {
+                f(s.rec(k).persp, s.args(k));
+            }
+        }
+    }, persp, cpos, vpos));
+    counted.lock().unwrap().insert(key, g.clone());
+    g
+}
+
 impl Lower {
     pub fn new(list: Vec<Rc<Stretch>>, route: Rc<Route>) -> Lower {
         let mut by_lo: Vec<u32> = (0..list.len() as u32).collect();
@@ -1776,19 +1797,7 @@ impl Lower {
     /// What the planner counts of the rows of `rel` its stretches hold, by premise shape: counted once, since every
     /// unit of the layer reads the same stretches by key.
     fn groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> Rc<Counts> {
-        let key = (rel, persp, cpos.to_vec(), vpos.to_vec());
-        if let Some(g) = self.counted.lock().unwrap().get(&key) {
-            return g.clone();
-        }
-        let g = Rc::new(count_groups(h, |f| {
-            for s in self.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
-                for k in s.of_rel(rel) {
-                    f(s.rec(k).persp, s.args(k));
-                }
-            }
-        }, persp, cpos, vpos));
-        self.counted.lock().unwrap().insert(key, g.clone());
-        g
+        list_groups(&self.list, &self.counted, h, rel, persp, cpos, vpos)
     }
     fn of(&self, id: FactId) -> Option<&Stretch> {
         let i = self.by_lo.partition_point(|&i| self.list[i as usize].lo <= id);
@@ -1797,8 +1806,9 @@ impl Lower {
     }
 }
 
-/// The rows of one relation in the stretches a store reads, by book: each fact once, the lowest id of those that
-/// say it, in key order.
+/// The rows of one relation in the stretches a store reads, by book: each fact once; in the world's reader the lowest
+/// id of those that say it, in key order, in the unit that reads wide the first met, in the order the stretches lie
+/// (a sort of every row by its text cost that unit more than its firings saved).
 type NearRows = Rc<Vec<(Sym, Vec<FactId>)>>;
 
 impl Near {
@@ -1840,11 +1850,20 @@ impl Near {
             return r.clone();
         }
         let mut by: Vec<(Sym, Vec<FactId>)> = Vec::new();
-        self.each(rel, |p, k| match by.iter_mut().find(|(q, _)| *q == p) {
-            Some((_, v)) => v.push(k),
-            None => by.push((p, vec![k])),
-        });
+        for s in self.all().filter(|s| (self.whole || self.wide) && s.rels.binary_search(&rel).is_ok()) {
+            for k in s.of_rel(rel) {
+                match by.iter_mut().find(|(q, _)| *q == s.rec(k).persp) {
+                    Some((_, v)) => v.push(k),
+                    None => by.push((s.rec(k).persp, vec![k])),
+                }
+            }
+        }
         for (_, v) in &mut by {
+            if !self.whole {
+                let mut seen: FxSet<&[Term]> = FxSet::default();
+                v.retain(|&k| seen.insert(facts.args(k)));
+                continue;
+            }
             let mut rows: Vec<(&[Term], FactId)> = v.iter().map(|&k| (facts.args(k), k)).collect();
             rows.sort_unstable_by(|a, b| cmp_args_rendered(h, a.0, b.0).then(a.1.cmp(&b.1)));
             rows.dedup_by(|b, a| a.0 == b.0);
@@ -2954,6 +2973,19 @@ impl Store {
         }
     }
 
+    /// Whether this store is the unit that holds every file and reads a relation whole (`read_wide`).
+    pub fn reads_wide(&self) -> bool {
+        self.facts.near.as_ref().is_some_and(|n| n.wide)
+    }
+
+    /// The unit that holds every file reads a relation whole, as the world's reader does, so that it may fire a
+    /// rule in written order where that reads fewer rows than from its news (f_a_unit_fired_only_from_its_news).
+    pub fn read_wide(&mut self) {
+        if let Some(n) = self.facts.near.as_mut().and_then(Rc::get_mut) {
+            n.wide = true;
+        }
+    }
+
     /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
     pub fn read_near(&mut self, mark: FactId, lower: Option<Rc<Lower>>, list: Vec<Rc<Stretch>>, route: Option<Rc<Route>>, trees: Option<Rc<TreeOf>>, forest: Option<(Vec<Rc<Stretch>>, FxSet<usize>)>) {
@@ -2963,7 +2995,7 @@ impl Store {
         assert!(self.facts.recs.own.is_empty() && self.facts.near.is_none() && mark as usize >= core, "a store that reads stretches is a fork that wrote nothing");
         assert!(list.windows(2).all(|w| w[0].hi <= w[1].lo) && list.last().is_none_or(|s| s.hi <= mark));
         assert!(lower.iter().flat_map(|l| l.list.iter()).all(|s| s.hi <= mark));
-        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, forest, rows: Rc::default(), lens: Rc::default(), whole, ghosts: None, top: FactId::MAX, held: Default::default(), key_ix: Rc::default() }));
+        self.facts.near = Some(Rc::new(Near { core, lower, list, route, trees, forest, rows: Rc::default(), lens: Rc::default(), whole, wide: false, ghosts: None, top: FactId::MAX, held: Default::default(), key_ix: Rc::default(), counted: Rc::default() }));
         self.facts.recs.mark = mark as usize;
         self.wit_head.mark = mark as usize;
     }
@@ -3676,12 +3708,15 @@ impl Store {
     /// unit counts the stretches of the layers below it too, which it reads by key though a whole read of it does
     /// not: a planner blind to them reads them by a key that holds every file's rows (f_a_unit_planned_blind_to_its_children).
     pub fn probe_groups(&self, h: &Heap, rel: Sym, persp: Option<Sym>, cpos: &[usize], vpos: &[usize]) -> FxMap<(u64, u64), (usize, usize)> {
-        let mut rows = count_groups(h, |f| self.each_counted_here(rel, f), persp, cpos, vpos);
-        if let Some(l) = self.facts.near.as_ref().filter(|n| !n.whole).and_then(|n| n.lower.as_ref()) {
-            for (c, &(r, d)) in l.groups(h, rel, persp, cpos, vpos).iter() {
-                let e = rows.entry(*c).or_default();
-                e.0 += r;
-                e.1 += d;
+        let mut rows = count_groups(h, |f| self.each_own(rel, f), persp, cpos, vpos);
+        if let Some(n) = &self.facts.near {
+            let here = list_groups(&n.list, &n.counted, h, rel, persp, cpos, vpos);
+            for g in std::iter::once(here).chain(n.lower.as_ref().map(|l| l.groups(h, rel, persp, cpos, vpos))) {
+                for (c, &(r, d)) in g.iter() {
+                    let e = rows.entry(*c).or_default();
+                    e.0 += r;
+                    e.1 += d;
+                }
             }
         }
         for v in rows.values_mut() {
@@ -3693,7 +3728,7 @@ impl Store {
     /// Every row of `rel` the planner counts, with its book and arguments: `each_counted_here` and the layers below.
     fn each_counted(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
         self.each_counted_here(rel, f);
-        if let Some(l) = self.facts.near.as_ref().filter(|n| !n.whole).and_then(|n| n.lower.as_ref()) {
+        if let Some(l) = self.facts.near.as_ref().and_then(|n| n.lower.as_ref()) {
             for s in l.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
                 for k in s.of_rel(rel) {
                     f(s.rec(k).persp, s.args(k));
@@ -3702,10 +3737,21 @@ impl Store {
         }
     }
 
-    /// The rows of `rel` the store reads whole, and in a unit those of the stretches of its own layer it reads by key.
+    /// The live rows of `rel` this store wrote itself.
+    fn each_own(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
+        if let Some(groups) = self.idx.get(&rel) {
+            for (p, r) in groups {
+                for &k in r.canon.iter().chain(r.arrived.iter()).filter(|&&k| self.facts.alive(k)) {
+                    f(*p, self.facts.args(k));
+                }
+            }
+        }
+    }
+
+    /// The rows of `rel` this store wrote, and those of the stretches it reads of its own layer.
     fn each_counted_here(&self, rel: Sym, f: &mut dyn FnMut(Sym, &[Term])) {
-        self.each_row(rel, |p, k| f(p, self.facts.args(k)));
-        if let Some(n) = self.facts.near.as_ref().filter(|n| !n.whole) {
+        self.each_own(rel, f);
+        if let Some(n) = self.facts.near.as_ref() {
             for s in n.list.iter().filter(|s| s.rels.binary_search(&rel).is_ok()) {
                 for k in s.of_rel(rel) {
                     f(s.rec(k).persp, s.args(k));
@@ -3865,7 +3911,7 @@ impl Store {
     /// The run of one group as `rel_persp` reads it, dead rows included, without copying it: None when it must be
     /// merged first.
     pub fn run_ro(&self, rel: Sym, persp: Sym) -> Option<&[FactId]> {
-        if self.unabsorbed(rel, persp) || self.facts.near.as_ref().is_some_and(|n| n.len(rel, Some(persp)) > 0) {
+        if self.unabsorbed(rel, persp) || self.facts.near.as_ref().is_some_and(|n| n.wide || n.len(rel, Some(persp)) > 0) {
             return None;
         }
         Some(self.run(rel, persp).map_or(&[][..], |r| &r.canon[..]))
