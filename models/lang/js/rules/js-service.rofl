@@ -16,21 +16,19 @@
 -- An app answers on `::`, as Node binds when no host is given.
 --
 -- Needs rules/net/*, models/lang/js/rules/js-fetch.rofl, models/lang/js/rules/js-express.rofl and the JS
--- model with models/lang/js/rules/js-concat.rofl and models/lang/js/rules/js-surface.rofl.
+-- model with models/lang/js/rules/js-concat.rofl and models/lang/js/rules/js-dataflow.rofl.
 imports(main, flow).
-imports(main, surface).
 imports(code, main).
-imports(surface, main).
 
 svc_dir(F, X) :- corpus_file[code](F), code_of(X, D), L is str_len(D), M is str_len(F), M > L, P is str_sub(F, 0, L), P = D,
                  C is str_char(F, L), C = "/".
 svc_proc(N, X) :- at[tree](N, F, _), svc_dir(F, X).
 
 http_send(C, X, M, U) :- requests[flow](C, M, U), svc_proc(C, X).
-http_serves(X, P, M, R, H, K) :- serves[surface](App, M, R, H, K), app_listens[surface](App, P), svc_proc(App, X).
-listens(X, "::", P, tcp) :- app_listens[surface](App, P), svc_proc(App, X).
+http_serves(X, P, M, R, H, K) :- serves[flow](App, M, R, H, K), app_listens[flow](App, P), svc_proc(App, X).
+listens(X, "::", P, tcp) :- app_listens[flow](App, P), svc_proc(App, X).
 url_str(V) :- url_term(V), str_value[flow](V).
-url_str(V) :- url_term(V), sx_ex_str[surface](V).
+url_str(V) :- url_term(V), ex_path[flow](_, V).
 
 calls[code](Caller, H) :- http_reach(C, H, _), nearest_fn[code](Caller, C).
 calls[code](R, H)      :- http_reach(C, H, _), top_call[code](C, R).
@@ -38,6 +36,5 @@ calls[code](R, H)      :- http_reach(C, H, _), top_call[code](C, R).
 request_lost(C, Why) :- net_lost(C, Why).
 request_no_origin(C) :- http_no_origin(C).
 request_unserved(C, X) :- http_unserved(C, X).
-sx_svc_hit[surface](H) :- http_reach(_, H, _).
-svc_route(H) :- serves[surface](_, _, _, H, route).
-route_unreached(H) :- svc_route(H), not sx_svc_hit[surface](H).
+svc_route(H) :- serves[flow](_, _, _, H, route).
+route_unreached(H) :- svc_route(H), not http_reach(_, H, _).

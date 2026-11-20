@@ -20,6 +20,5 @@ rules/js-ambient.rofl
 rules/js-attrs.rofl
 rules/js-modules.rofl
 rules/js-concat.rofl
-rules/js-surface.rofl
 roles.rofl
 oxc-roles.rofl

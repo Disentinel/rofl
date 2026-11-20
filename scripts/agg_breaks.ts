@@ -9118,6 +9118,20 @@ export const BREAKS: Break[] = [
    "kept_rename": "a fresh load read the inherited scan"
   }
  },
+ {
+  "id": "summary_own_file",
+  "what": "what a call hands its callee is read only where caller and callee share a file: the crossing a book once carried, lost",
+  "edits": [
+   [
+    "models/lang/js/rules/js-dataflow.rofl",
+    "handed_node[flow](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).",
+    "handed_node[flow](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N), at[tree](C, Fl, _), at[tree](F, Fl, _)."
+   ]
+  ],
+  "expect": {
+   "vscode_surface_split": "vsp_missing"
+  }
+ },
 ];
 
 /** A proof that is no world: the report `rofl load --propose-structures` prints over a fixture (rust/rofl/src/structures.rs),

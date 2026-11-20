@@ -76,7 +76,7 @@ cl_method[flow](C, any) :- cl_method_at[flow](C, P), not cl_named[flow](P).
 -- this pack asks js-concat to unfold. An instance's request goes under a base
 -- nothing traced, a piece no one knows.
 cl_url_arg[flow](C, A) :- cl_how[flow](C, _, _), arg_at[flow](C, 0, A).
-concat_wanted[surface](X) :- cl_url_arg[flow](_, A), may_be_node[flow](A, X), composed[flow](X).
+concat_wanted[flow](X) :- cl_url_arg[flow](_, A), may_be_node[flow](A, X), composed[flow](X).
 cl_url[flow](C, V) :- cl_url_arg[flow](C, A), may_be_lit[flow](A, V), str_value[flow](V).
 cl_url[flow](C, T) :- cl_url_arg[flow](C, A), may_be_node[flow](A, X), concat_depth(D), text_at[flow](X, D, T, _).
 

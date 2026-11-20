@@ -2269,6 +2269,8 @@ brk("scan_previous_ignored"). brk_kind("scan_previous_ignored", switch).
 brk_expects("scan_previous_ignored", "kept_rename").
 brk("scan_inherited_answers_fresh"). brk_kind("scan_inherited_answers_fresh", switch).
 brk_expects("scan_inherited_answers_fresh", "kept_rename").
+brk("summary_own_file"). brk_kind("summary_own_file", file).
+brk_expects("summary_own_file", "vscode_surface_split").
 
 switch_site("adapter_lost_answered", "rust/rofl/src/adapter.rs").
 switch_site("adapter_one_call_per_want", "rust/rofl/src/adapter.rs").

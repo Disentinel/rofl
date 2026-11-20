@@ -253,5 +253,5 @@ eff_exn_unexplained[audit](F) :- eff_exn_only[audit](F), not amb_exn_carrier[flo
 
 -- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
-imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).
+imports(code, execution). imports(flow, execution). imports(audit, execution).
 imports(type, code). imports(type, flow). imports(code, type). imports(flow, type).

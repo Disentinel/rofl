@@ -10,7 +10,7 @@
 -- What each extra file is for:
 --   a helper merged across callers   util.ts `id(p) { return p }` called from store.ts ('/var/a', '/var/b') and consumer.ts
 --                                    (as `ident` through a re-export, '/etc/x'; as `u.id` through a namespace, '/var/c'):
---                                    each call has ITS argument, not the four (`sx_ret_param`); `ensure(dir)`, a sink inside
+--                                    each call has ITS argument, not the four (`ret_param_at`); `ensure(dir)`, a sink inside
 --                                    a helper, still has every caller's value (one caller here)
 --   re-export and `export *`         reexports.ts `export { id as ident } from`, `export * from`
 --   namespace, require, default      consumer.ts `import * as u`, `require('./util.js')`; store.ts `import home`

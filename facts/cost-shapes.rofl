@@ -71,7 +71,7 @@ shape_ok(receivable, twin_bodies, "alias_of_a_role: one arm is obj_lit, as obj_l
 shape_ok(static_block_of, twin_bodies, "alias_of_a_role: the flow book's name for static_block[value], 0 ms").
 shape_ok(eff_class_body, twin_bodies, "alias_of_a_role: one arm is static_block[value], as static_block_of, 0 ms").
 shape_ok(eff_define_part, twin_bodies, "alias_of_a_role: one arm is static_block[value], as static_block_of, 0 ms").
-shape_ok(fn_value, twin_bodies, "alias_of_a_derived: the flow book's name for fn_node, the one a function of another file reaches through models/lang/js/rules/js-surface.rofl; one row per function, not timed").
+shape_ok(fn_value, twin_bodies, "alias_of_a_derived: the flow book's name for fn_node, the one a function read as a value is asked by; one row per function, not timed").
 shape_ok(eff_subject, twin_bodies, "alias_of_a_derived: scope_node has more arms than the fn_node one, 2 ms sealed / 13 default").
 shape_ok(scope_node, twin_bodies, "alias_of_a_derived: eff_subject is its fn_node arm in the flow book, 10 ms sealed / 57 default (all arms)").
 shape_ok(hidden_call_user, twin_bodies, "alias_of_a_derived: one hidden call fans to the flow book's names, 0 ms").
@@ -81,8 +81,8 @@ shape_ok(has_default_internal, twin_bodies, "alias_of_a_derived: default_account
 shape_ok(default_accounted, twin_bodies, "alias_of_a_derived: has_default_internal is the code book's name, 0 ms").
 shape_ok(object_pat, project_then_negate, "one_row_per_key: a root pattern without a declarator or parameter value, 132 rows on the corpus, 0 ms").
 shape_ok(eff_field_moment, project_then_negate, "one_row_per_key: the class fields of the corpus without static, 0 ms").
-shape_ok(obj_open_own, twin_bodies, "alias_of_a_derived: the spread arm is sx_open's, in the code book where member_unset reads it and the surface book that publishes it, 0 ms").
-shape_ok(sx_open, twin_bodies, "alias_of_a_derived: the spread arm is obj_open_own's, in the surface book that publishes it, 0 ms").
+shape_ok(obj_open_own, twin_bodies, "alias_of_a_derived: the spread arm is open_obj's, in the code book where member_unset reads it, 0 ms").
+shape_ok(open_obj, twin_bodies, "alias_of_a_derived: the spread arm is obj_open_own's, in the flow book where the readers of another file's object read it, 0 ms").
 shape_ok(value_expr, twin_bodies, "alias_of_a_derived: a union of the object, the array and the function that makes a value, read by may_be_node, whole_expr and the effect layer; each arm is one premise, 0 ms").
 shape_ok(type_owner, twin_bodies, "alias_of_a_derived: the owner of a member declared as a type is an interface, a type literal or a class; two one-premise arms of different relations, 0 ms").
 shape_ok(surveyed, twin_bodies, "alias_of_a_derived: what the surface surveyed is a receivable, a class or a published survey; one-premise arms of different relations, 0 ms").

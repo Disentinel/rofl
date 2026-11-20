@@ -72,7 +72,7 @@ may_be[flow](E, node, A) :- composed[flow](A), plus_assign[code](A, L, Name, Fil
                             ident_in[code](E, Name, File), sees_binder[code](E, D).
 may_be[flow](U, node, A) :- composed[flow](A), plus_assign[code](A, L, Name, _),
                             param_use[flow](F, Name, L), param_use[flow](F, Name, U).
-sx_mwrite[surface](O, Key, A) :- composed[flow](A), binary[value](A, "+", L, _), assign[value](A, L, A),
+mwrite[flow](O, Key, A) :- composed[flow](A), binary[value](A, "+", L, _), assign[value](A, L, A),
                                  object_of[code](L, Obj),
 
                                  may_be_node[flow](Obj, O), selects[flow](L, Key).
@@ -280,16 +280,16 @@ piece[flow](C, I, D, T, Ex, yes) :- concat_level(D), D > 0, comp1[flow](C, I, X)
 
 -- WHICH NODES GET TEXTS. Unfolding costs (a fifth of the side-effect question on
 -- vscode's first 500 files when every composed node is unfolded), so a question
--- names the composed values it reads in `concat_wanted[surface]`, and only
+-- names the composed values it reads in `concat_wanted[flow]`, and only
 -- those, with the composed values their parts may be, are unfolded. The want is
 -- asked through the surface: the value, or a part of it, may be another
 -- file's, and that file unfolds it. `concat_want` is the table form, empty
 -- here; a world that wants every one says
--- `concat_wanted[surface](C) :- composed[flow](C).`
+-- `concat_wanted[flow](C) :- composed[flow](C).`
 edb(concat_want).
-concat_wanted[surface](C) :- concat_want(C).
-concat_wanted[surface](X) :- text_scope[flow](C), comp_of[flow](C, _, X).
-text_scope[flow](C)       :- concat_wanted[surface](C).
+concat_wanted[flow](C) :- concat_want(C).
+concat_wanted[flow](X) :- text_scope[flow](C), comp_of[flow](C, _, X).
+text_scope[flow](C)       :- concat_wanted[flow](C).
 
 -- THE CAP, as an upper bound on the choices computed level by level: a
 -- product over the slots that stops at the cap, so a node over it has no row.
@@ -367,16 +367,16 @@ may_be_text[flow](C, T) :- concat_depth(D), text_at[flow](C, D, T, lit).
 may_be_form[flow](C, T) :- concat_depth(D), text_at[flow](C, D, T, open).
 
 -- =========================================================================
--- 6. ACROSS FILES (models/lang/js/rules/js-surface.rofl). A composed value that leaves its file
+-- 6. ACROSS FILES (models/lang/js/rules/js-dataflow.rofl, section 17). A composed value that leaves its file
 -- takes what a reader of it needs: that it is composed, whether it can have a
 -- text, whether a library module's body built it, its choices and texts at
 -- every level. A volume that unfolds another file's value asks that file for its
 -- texts (`concat_wanted`, keyed by the node, section 5). A string value that leaves a file says
 -- it is a string, for a `+` that reads it elsewhere.
-sx_str[surface](V) :- sx_lit[surface](_, V), str_value[flow](V).
-sx_str[surface](V) :- sx_export_lit[surface](_, _, V), str_value[flow](V).
-sx_str[surface](V) :- sx_arg_lit[surface](_, _, V), str_value[flow](V).
-sx_str[surface](V) :- sx_ret_lit[surface](_, V), str_value[flow](V).
-sx_str[surface](V) :- sx_ret_plit[surface](_, V), str_value[flow](V).
+str_out[flow](V) :- escaping[flow](N), may_be[flow](N, lit, V), str_value[flow](V).
+str_out[flow](V) :- export_lit[flow](_, _, V), str_value[flow](V).
+str_out[flow](V) :- handed_lit[flow](_, _, V), str_value[flow](V).
+str_out[flow](V) :- ret_plain_lit[flow](_, V), str_value[flow](V).
+str_out[flow](V) :- ret_param_lit[flow](_, V), str_value[flow](V).
 
-str_value[flow](V)        :- sx_str[surface](V).
+str_value[flow](V)        :- str_out[flow](V).

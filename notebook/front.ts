@@ -7,7 +7,7 @@ export const MODEL_FILES = ['boot.rofl', 'models/lang/js/facts/model-units.rofl'
   'models/lang/js/facts/js-effects.rofl', 'models/lang/js/facts/js-globals.rofl', 'models/lang/js/facts/js-host.rofl', 'models/lang/js/facts/js-host-surface.rofl', 'models/lang/js/facts/js-lib-surface.rofl', 'models/lang/js/facts/js-attrs.rofl',
   'models/lang/js/rules/js-structure.rofl', 'models/lang/js/rules/js-dataflow.rofl', 'models/lang/js/rules/js-model.rofl', 'models/lang/js/rules/js-callgraph.rofl', 'models/lang/js/rules/js-controlflow.rofl',
   'models/lang/js/rules/js-effects.rofl', 'models/lang/js/rules/js-globals.rofl', 'models/lang/js/rules/js-host.rofl', 'models/lang/js/rules/js-ambient.rofl', 'models/lang/js/rules/js-attrs.rofl', 'models/lang/js/rules/js-modules.rofl',
-  'models/lang/js/rules/js-concat.rofl', 'models/lang/js/rules/js-surface.rofl',
+  'models/lang/js/rules/js-concat.rofl',
   'models/lang/js/roles.rofl', 'models/lang/js/oxc-roles.rofl'];
 /** What a notebook host loads: the model, and oxc-to-code.rofl so a cell's own rules may still name ast_node, ast_child, ast_attr, ast_line and ast_file. */
 export const NB_MODEL_FILES = [...MODEL_FILES, 'models/lang/js/oxc-to-code.rofl'];

@@ -1,9 +1,9 @@
 -- web.rofl — THE CONTRACTS OF RUST'S WEB FRAMEWORKS, in the words of the JS model's js-express.rofl and js-fetch.rofl,
 -- so that rules/net and js-service.rofl read a Rust service as they read a JS one:
 --
---   serves[surface](App, M, P, H, route)  the router App answers method M on the path P (a text, cat(Prefix, Path)
+--   serves[flow](App, M, P, H, route)  the router App answers method M on the path P (a text, cat(Prefix, Path)
 --                                         from "/" as js-express writes it) with the function H
---   app_listens[surface](App, Port)       App is served on a listener bound at Port
+--   app_listens[flow](App, Port)       App is served on a listener bound at Port
 --   requests[flow](C, M, U)               the call C may send a request with method M to the address U (a literal or
 --                                         a text of strings.rofl)
 --   request_unknown[flow](C)              a client call whose address nothing traces
@@ -13,8 +13,7 @@
 -- or a client is a value (`rtr(C)`, `mrt(C)`, `client(C)`, `lsn(C)`) that flows as any other: through a `let`, a
 -- function's return, `.await` and `.unwrap()`. A router built by a chain is a new value made from the one before it.
 
-imports(flow, rust). imports(flow, value). imports(flow, tree). imports(surface, flow). imports(surface, rust).
-imports(surface, value).
+imports(flow, rust). imports(flow, value). imports(flow, tree).
 
 -- a method of the library called on a value of it
 on_val[rust](C, R, N, V) :- callee[value](C, M), member[value](M, R, N), val[rust](R, V).
@@ -69,16 +68,16 @@ ax_serve[flow](S, App, L) :- ext_call[rust](S, "axum", "serve"), nth[tree](S, 0,
                              nth[tree](S, 1, B), val[rust](B, rtr(App)).
 edb(web_depth).
 web_depth(3).
-ax_reach[surface](App, App, "/", 0) :- ax_serve[flow](_, App, _).
-ax_reach[surface](App, Y2, cat(P, V), D) :- ax_reach[surface](App, Y, P, D0), rt_mounts[flow](Y, V, Y2), web_depth(Max),
+ax_reach[flow](App, App, "/", 0) :- ax_serve[flow](_, App, _).
+ax_reach[flow](App, Y2, cat(P, V), D) :- ax_reach[flow](App, Y, P, D0), rt_mounts[flow](Y, V, Y2), web_depth(Max),
                                             D0 < Max, D is D0 + 1.
-serves[surface](App, M, cat(P, V), H, route) :- ax_reach[surface](App, Y, P, _), rt_routes[flow](Y, M, V, H).
+serves[flow](App, M, cat(P, V), H, route) :- ax_reach[flow](App, Y, P, _), rt_routes[flow](Y, M, V, H).
 
 -- the port of an address "host:port", or of a text whose last piece is the port
 bound_at[flow](L, A) :- val[rust](L, lsn(L)), nth[tree](L, 0, A).
-app_listens[surface](App, Port) :- ax_serve[flow](_, App, L), bound_at[flow](L, A), may_be_node[flow](A, X),
+app_listens[flow](App, Port) :- ax_serve[flow](_, App, L), bound_at[flow](L, A), may_be_node[flow](A, X),
                                    may_be_text[flow](X, cat(_, Port)), int is type_of(Port).
-app_listens[surface](App, Port) :- ax_serve[flow](_, App, L), bound_at[flow](L, A), may_be_lit[flow](A, V),
+app_listens[flow](App, Port) :- ax_serve[flow](_, App, L), bound_at[flow](L, A), may_be_lit[flow](A, V),
                                    string is type_of(V), N is str_segs(V, ":"), N >= 2, K is N - 1, Port is str_seg(V, ":", K).
 
 -- ===================================================================== THE CLIENT: reqwest
