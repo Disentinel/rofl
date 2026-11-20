@@ -2530,6 +2530,41 @@ decorated_member[flow](CD, Key, M, N) :- decorated_by[flow](M, N),
 class_member_static[flow](CD, Key, N) :- decorated_member[flow](CD, Key, M, N), static[value](M).
 class_member_proto[flow](CD, Key, N)  :- decorated_member[flow](CD, Key, M, N), not static[value](M).
 
+-- 17. A VALUE THE MODEL CANNOT NAME IS OPEN. An operator's result (`a * b`, `-x`, `` `t${x}` ``, `x += v`, `x++`)
+-- and what a host member returns where no table says what (`Math.random()`, `s.toUpperCase()`, `JSON.parse(s)`)
+-- are `may_be(E, open, E)`: E may be a value the model does not compute. It goes where a value goes, as any kind
+-- does, so a read whose may-set holds an open value says it may be more than the values it names, instead of
+-- silently fewer. A member of an open value, and what calling one returns, is open by the same place.
+may_be[flow](E, open, E) :- bin_op[code](E, _, _, _).
+may_be[flow](E, open, E) :- un_op[code](E, Op, _), Op != "void".
+may_be[flow](E, open, E) :- template_part[value](E, 1, _).
+may_be[flow](A, open, A) :- open_write[code](A, _).
+may_be[flow](C, open, C) :- callback_site[code](C, O, Key), call[value](C), not host_valued[code](O, Key).
+may_be[flow](N, open, W) :- object_of[code](N, O), may_be[flow](O, open, W).
+may_be[flow](C, open, W) :- callee[value](C, N), may_be[flow](N, open, W).
+-- a function handed in as a parameter returns what the model does not see, whoever hands it
+may_be[flow](C, open, C) :- callee[value](C, N), may_be[flow](N, input, _), call[value](C).
+host_valued[code](O, Key) :- host_returns(O, Key, _).
+host_valued[code](O, Key) :- keyed_store(O, _, Key).
+host_valued[code](O, Key) :- keeps_argument_static(O, Key).
+host_valued[code](Name, itself) :- keeps_argument(Name).
+host_valued[code](O, Key) :- merges_into_first(O, Key).
+host_valued[code]("Promise", "resolve").
+-- a member read at a key the model cannot name reads every element of an array, and may be any member: open
+open_key[flow](N, Obj) :- computed_key[code](N, P), may_be[flow](P, open, _), member_obj[flow](N, _, Obj).
+may_be[flow](N, VK, V) :- open_key[flow](N, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](N, open, N) :- open_key[flow](N, O), not array[value](O).
+mwrite_at[flow](Obj, Key, A) :- object_of[code](L, Obj), selects[flow](L, Key), open_write[code](A, L).
+may_be[flow](E, open, A) :- open_write[code](A, L), ref[value](L, Name), sees_binder[code](L, D),
+                            binds_name[code](D, Name, File), ident_in[code](E, Name, File), sees_binder[code](E, D).
+may_be[flow](U, open, A) :- open_write[code](A, L), ref[value](L, Name), param_use[flow](F, Name, L),
+                            param_use[flow](F, Name, U).
+-- what a call returns that is open, and a pattern over an open value
+may_be[flow](C, open, W) :- resolves[code](C, F), call_returns[flow](F, E), may_be[flow](E, open, W).
+may_be[flow](R, open, W) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
+                            may_be[flow](Init, open, W).
+may_be[flow](R, open, W) :- assign_pat[code](_, R, Src), may_be[flow](Src, open, W).
+
 -- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
 imports(code, execution). imports(flow, execution). imports(audit, execution). imports(surface, execution).

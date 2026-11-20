@@ -71,6 +71,9 @@ assign_op[code](A, L, R) :- assign[value](A, L, _), logical[value](A, _, L, R).
 assign_op[code](A, L, R) :- assign[value](A, L, _), binary[value](A, _, L, R).
 value_write[code](A, L, R) :- assign_op[code](A, L, R), not binary[value](A, _, _, _).
 compound_write[code](A, L)  :- assign_op[code](A, L, _), binary[value](A, _, _, _).
+-- a write whose new value the model computes nothing of, `x += v` and `x++`
+open_write[code](A, L)      :- compound_write[code](A, L).
+open_write[code](U, X)      :- assign[value](U, X, U).
 
 -- A write whose value is only sometimes the source: the default of a pattern or a parameter, and `||=`, `&&=`, `??=`.
 -- `x = v` and a declarator's init are unconditional.

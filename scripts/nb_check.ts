@@ -286,6 +286,23 @@ const RUNS: Record<string, () => Promise<Out>> = {
     const missing = [...observed].filter((o) => !model.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
   },
+  opened: () => cli([path.join(NB, 'opened.rofl.md')]),
+  openedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'opened.rofl.md'), '--json', '--all']);
+    const model = new Set<string>(), open = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.\[\]+=-]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+      const o = /^opened\("([\w.\[\]+=-]+)"\)$/.exec(a.literal);
+      if (o) open.add(o[1]);
+    }
+    const observed: [string, string][] = [];
+    vm.runInNewContext(readFileSync(path.join(NB, 'opened/opened.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.push([tag, String(v)]) });
+    const named = observed.filter(([t, v]) => model.has(`${t}:${v}`)).length;
+    const byOpen = observed.filter(([t, v]) => !model.has(`${t}:${v}`) && open.has(t)).length;
+    const missing = observed.filter(([t, v]) => !model.has(`${t}:${v}`) && !open.has(t)).map(([t, v]) => `${t}:${v}`);
+    return { code: 0, out: `V8 observed ${observed.length} values: ${named} named by the model, ${byOpen} at a read it says is open; missing: ${JSON.stringify(missing)}`, stdout: '' };
+  },
   puts: () => cli([path.join(NB, 'puts.rofl.md')]),
   putsV8: async (): Promise<Out> => {
     const ran = await cli([path.join(NB, 'puts.rofl.md'), '--json', '--all']);
@@ -454,7 +471,7 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, assigned!: Out, assignedV8!: Out, runs!: Out, runsV8!: Out, handed!: Out, handedV8!: Out, returns!: Out, returnsV8!: Out, puts!: Out, putsV8!: Out, reached!: Out, reachedV8!: Out, exported!: Out, exportedNode!: Out, settles!: Out, settlesV8!: Out, typed!: Out, typedV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, assigned!: Out, assignedV8!: Out, runs!: Out, runsV8!: Out, handed!: Out, handedV8!: Out, returns!: Out, returnsV8!: Out, puts!: Out, putsV8!: Out, opened!: Out, openedV8!: Out, reached!: Out, reachedV8!: Out, exported!: Out, exportedNode!: Out, settles!: Out, settlesV8!: Out, typed!: Out, typedV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -510,6 +527,8 @@ test('handed: a host hands its callback the elements, the index, the array, what
 test('handed: every value V8 observes at a read is in the model\'s may-set', ['handedV8'], () => has(handedV8, 'observed 20 values; missing from the model: []'), () => handedV8);
 test('returns: a host member returns elements of what it holds (filter, find, at, slice, concat, Array.from, [...xs], Object.keys, values, entries), super.m is the base class\'s and arguments[i] what the calls hand', ['returns'], () => is(returns, 0) && has(returns, 'never silent(Tag)  ->  holds') && has(returns, '? seen(Tag, V)  ->  51 answers'), () => returns);
 test('returns: every value V8 observes at a read is in the model\'s may-set', ['returnsV8'], () => has(returnsV8, 'observed 33 values; missing from the model: []'), () => returnsV8);
+test('opened: an operator, x += v, x++, a host member no table values and what reads them are open; an index the model cannot name reads every element; known reads stay closed', ['opened'], () => is(opened, 0) && has(opened, 'never silent(Tag)  ->  holds') && has(opened, '? opened(Tag)  ->  17 answers') && has(opened, 'never opened("plain")  ->  holds'), () => opened);
+test('opened: every value V8 observes is named by the model or at a read it says is open', ['openedV8'], () => has(openedV8, 'V8 observed 23 values: 7 named by the model, 16 at a read it says is open; missing: []'), () => openedV8);
 test('puts: push, unshift and add put into the receiver, new Set(xs) holds xs, { [k]: v } has v at k, Object.freeze, create and fromEntries, map, reduce, then and catch give what the callback returns, Promise.all an array of the values, a Map keyed by an object finds what was put under it, g.next().value, [Symbol.iterator], spread and Array.from walk a generator, call, apply and bind hand this, defineProperty puts a value, for-in takes the keys', ['puts'], () => is(puts, 0) && has(puts, 'never silent(Tag)  ->  holds') && has(puts, '? seen(Tag, V)  ->  43 answers'), () => puts);
 test('puts: every value V8 observes at a read is in the model\'s may-set', ['putsV8'], () => has(putsV8, 'observed 39 values; missing from the model: []'), () => putsV8);
 test('reached: a function is seen called through a map of handlers, an array, an emitter, a field, a returned object, Reflect.apply, a class in a variable, a getter, a Map, bind with arguments, a rest parameter, a default, super and await; then and setTimeout call later', ['reached'], () => is(reached, 0) && has(reached, 'never unreached(Name)  ->  holds') && has(reached, '? called_later(Name)  ->  2 answers'), () => reached);
@@ -641,7 +660,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, assigned, assignedV8, runs, runsV8, handed, handedV8, returns, returnsV8, puts, putsV8, reached, reachedV8, exported, exportedNode, settles, settlesV8, typed, typedV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, assigned, assignedV8, runs, runsV8, handed, handedV8, returns, returnsV8, puts, putsV8, opened, openedV8, reached, reachedV8, exported, exportedNode, settles, settlesV8, typed, typedV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

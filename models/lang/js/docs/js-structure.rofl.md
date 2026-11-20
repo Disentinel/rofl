@@ -189,6 +189,13 @@ Each child of `ast_in` has one parent and no node is its own ancestor, and `ast_
 
 <a id="compound_write"></a>`compound_write`(X, L) if [`assign_op`](#assign_op)(X, L, something) and [`binary`](#binary)(X, something, something, something) in the value.
 
+> a write whose new value the model computes nothing of, `x += v` and `x++`
+
+<a id="open_write"></a>`open_write`(Y, L) either:
+
+1. if [`compound_write`](#compound_write)(Y, L);
+2. if [`assign`](#assign)(Y, L, Y).
+
 > A write whose value is only sometimes the source: the default of a pattern or a parameter, and `||=`, `&&=`, `??=`.
 > `x = v` and a declarator's init are unconditional.
 > an object pattern: it takes properties, or it is a pattern that takes nothing and does not iterate

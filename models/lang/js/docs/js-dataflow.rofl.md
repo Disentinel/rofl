@@ -38,7 +38,7 @@ Reads:
 - from js-globals, in the code: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
 - from js-globals: [es_instance](js-globals.rofl.md#es_instance)
 - from js-modules, in the code: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
+- from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [open_write](js-structure.rofl.md#open_write), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
 - from js-surface: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
 - from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
 - from models/lang/js/facts/js-globals.rofl, in the main:
@@ -6134,6 +6134,112 @@ In the flow:
   - M [spells](js-structure.rofl.md#key_name) Key.
 
 The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at M replaced with N and/unless [`static`](#static)(M).
+
+> 17. A VALUE THE MODEL CANNOT NAME IS OPEN. An operator's result (`a * b`, `-x`, `` `t${x}` ``, `x += v`, `x++`)
+> and what a host member returns where no table says what (`Math.random()`, `s.toUpperCase()`, `JSON.parse(s)`)
+> are `may_be(E, open, E)`: E may be a value the model does not compute. It goes where a value goes, as any kind
+> does, so a read whose may-set holds an open value says it may be more than the values it names, instead of
+> silently fewer. A member of an open value, and what calling one returns, is open by the same place.
+
+`may_be`(E, X, Y) either:
+
+1. if [`bin_op`](#bin_op)(E, something, something, something), X is `open`, and Y is E;
+2. if [`un_op`](#un_op)(E, Op, something), Op differs from "void", X is `open`, and Y is E;
+3. if [`template_part`](#template_part)(E, 1, something), X is `open`, and Y is E;
+4. if [`open_write`](js-structure.rofl.md#open_write)(E, something), X is `open`, and Y is E;
+5. if all of:
+   - E [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
+   - [`call`](#call)(E);
+   - X is `open`;
+   - Y is E;
+   - unless [`host_valued`](#host_valued)(O, Key);
+6. if all of:
+   - [`object_of`](js-structure.rofl.md#object_of)(E, O);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(O, `open`, Y);
+   - X is `open`;
+7. if [`callee`](#callee)(E, N), [`may_be`](js-callgraph.rofl.md#may_be)(N, `open`, Y), and X is `open`.
+
+> a function handed in as a parameter returns what the model does not see, whoever hands it
+
+`may_be`(C, `open`, C) if all of:
+  - [`callee`](#callee)(C, N);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(N, `input`, something);
+  - [`call`](#call)(C).
+
+In the code:
+
+<a id="host_valued"></a>`host_valued`(O, Key) either:
+
+1. if [`host_returns`](#host_returns)(O, Key, something);
+2. if [`keyed_store`](#keyed_store)(O, something, Key);
+3. if [`keeps_argument_static`](#keeps_argument_static)(O, Key);
+4. if [`keeps_argument`](#keeps_argument)(O) and Key is `itself`;
+5. if [`merges_into_first`](#merges_into_first)(O, Key).
+
+`host_valued` lists:
+
+| arg 1 | arg 2 |
+|---|---|
+| "Promise" | "resolve" |
+
+> a member read at a key the model cannot name reads every element of an array, and may be any member: open
+
+In the flow:
+
+<a id="open_key"></a>`open_key`(N, Obj) if all of:
+  - [`computed_key`](#computed_key)(N, P);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(P, `open`, something);
+  - [`member_obj`](#member_obj)(N, something, Obj).
+
+`may_be`(N, VK, V) either:
+
+1. if all of:
+   - [`open_key`](#open_key)(N, X);
+   - [`elem_any`](#elem_any)(X, E);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, VK, V);
+2. if [`open_key`](#open_key)(N, O), VK is `open`, and V is N, unless [`array`](#array)(O).
+
+`mwrite_at`(Obj, Key, X) if all of:
+  - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
+  - L [selects](#selects) Key;
+  - [`open_write`](js-structure.rofl.md#open_write)(X, L).
+
+`may_be`(E, N, X) either:
+
+1. if all of:
+   - [`open_write`](js-structure.rofl.md#open_write)(X, L);
+   - [`ref`](#ref)(L, Name);
+   - a node L [sees](#sees_binder) D;
+   - D [introduces](#binds_name) Name in File;
+   - a node E [reads](#ident_in) Name in File;
+   - E [sees](#sees_binder) D;
+   - N is `open`;
+2. if all of:
+   - [`open_write`](js-structure.rofl.md#open_write)(X, L);
+   - [`ref`](#ref)(L, Name);
+   - F [uses](#param_use) Name at a node L;
+   - F [uses](#param_use) Name at a node E;
+   - N is `open`.
+
+> what a call returns that is open, and a pattern over an open value
+
+`may_be`(C, N, W) either:
+
+1. if all of:
+   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+   - F [returns to its call](js-surface.rofl.md#call_returns) E;
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `open`, W);
+   - N is `open`;
+2. if all of:
+   - [`declarator_id`](#declarator_id)(D, C);
+   - [`pat_in`](#pat_in)(C, something, something);
+   - D [takes its value from](#decl_value) a node Init;
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Init, `open`, W);
+   - N is `open`;
+3. if all of:
+   - some assignment [takes apart on the left](#assign_pat) C the Src;
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Src, `open`, W);
+   - N is `open`.
 
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 
