@@ -28,3 +28,12 @@ const ob = { x: 'ox' };
 use('obj[k]', ob[String(n)]);
 const walked = { wa: 'wv' };
 for (const k in walked) use('forInValue', walked[k]);
+use('pi', Math.PI);
+use('strLen', 'abc'.length);
+function memberOf(p) { return p.x; }
+use('paramMember', memberOf({ x: 'px' }));
+try { JSON.parse('{'); } catch (e) { use('caught', e.name); }
+use('arguments', (function () { return arguments.length; })(1, 2));
+for (const v of JSON.parse('["jv"]')) use('forOfOpen', v);
+function Maker() { return { made: 'mv' }; }
+use('newFn', new Maker().made);

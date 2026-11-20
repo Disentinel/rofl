@@ -17,7 +17,12 @@ code:
 > the model could not compute, carried where the value goes as any other kind
 > is: a read answers what it knows AND that it may be what W made. An index the
 > model cannot name (`arr[i]`, `arr[arr.length - 1]`) reads every element.
-> The last three reads are the control: known values, nothing open.
+> So is a member of a value whose members the model does not keep (a
+> parameter's `p.x`, a literal's `.length`, `Math.PI`), what a `catch` takes
+> from a call, `arguments`, what a for-of walks over an open value, and what
+> `new f()` of a plain function makes. A name nothing declares is the global
+> of that name, `may_be(E, global, Name)`.
+> The reads `plain`, `cond`, `find` and `arr[i]` are the control: known values, nothing open.
 > `use(tag, v)` marks each read; `npm run test:nb` checks it against V8.
 > Run it with `npm run nb -- examples/notebook/opened.rofl.md`.
 

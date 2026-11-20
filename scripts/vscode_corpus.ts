@@ -14,8 +14,8 @@ import { hostFacts } from '../models/lang/js/scanner/host_facts.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
 const CODE = /\.(js|ts|tsx|mjs|cjs|jsx|mts|cts)$/;
 const SKIP_DIR = new Set(['node_modules', '.git', 'dist', 'build', 'out', '.yarn', 'vendor', 'third_party', 'coverage', 'generated', '__generated__', 'typings', 'docs', '.vscode-test']);
-const TEST_DIR = new Set(['test', 'tests', '__tests__', '__mocks__', 'fixtures', 'fixture', '__fixtures__', 'e2e', 'testdata', 'test-fixtures', 'mocks', 'smoke', 'integration', 'benchmark', 'benchmarks', 'examples', 'example', 'playground']);
-const NOT_SOURCE = /\.(test|spec|e2e|e2e-spec|stories)\.[a-z]+$|\.d\.[mc]?ts$|\.min\.js$|\.generated\./;
+const TEST_DIR = new Set(['test', 'tests', '__tests__', '__mocks__', 'fixtures', 'fixture', '__fixtures__', 'e2e', 'testdata', 'test-fixtures', 'mocks', 'smoke', 'integration', 'benchmark', 'benchmarks', '__benchmarks__', 'dts-test', 'examples', 'example', 'playground']);
+const NOT_SOURCE = /\.(test|spec|e2e|e2e-spec|stories|test-d|bench)\.[a-z]+$|\.d\.[mc]?ts$|\.min\.js$|\.generated\./;
 const SUBSET = ['src/vs/base', 'src/vs/platform', 'src/vs/code', 'src/vs/server', 'extensions'];
 
 function walk(root: string, dir: string, out: string[]): void {
