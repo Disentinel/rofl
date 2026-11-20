@@ -59,7 +59,6 @@ shape_ok(call_in_try, closure_wide_end, "tried_no_net_gain: entering from call_s
 
 shape_ok(dec_up, scoped_descent, "small_set: a site inside a decorator, 0 ms; the first version led with site(C) and cost 21 firings").
 shape_ok(name_outer, not_closer, "small_set: name_cand holds 1.01 rows an identifier over 20 vscode files (5229 for 5182), the pairs are the one or two scopes of one identifier, 47 rows").
-shape_ok(tdz_deferred, scoped_descent, "small_set: the descendant set is tdz_cand (a read above its declaration), nearest_v asked once per candidate, 1 ms").
 
 shape_ok(class_ctor, twin_bodies, "alias_of_a_derived: own_ctor is the flow book's name for it, 0 ms").
 shape_ok(own_ctor, twin_bodies, "alias_of_a_derived: class_ctor is the code book's name for it, 1 ms").
@@ -112,4 +111,5 @@ shape_ok(roled, twin_bodies, "alias_of_a_derived: the vocabulary's roled gathers
 shape_ok(may_be_node, twin_bodies, "alias_of_a_derived: the stored reader of may_be for an object, whatever holds it; its arms are the halves the views below name; vscode 100 by levels 9 s with the views against 11 s before them (fast build, f_a_call_is_an_instance_of_what_its_function_hands_out)").
 shape_ok(own_node, twin_bodies, "alias_of_a_derived: a view, no rows kept: the object an expression holds itself, bare or under a call's label, as against one its input holds").
 shape_ok(bare_node, twin_bodies, "alias_of_a_derived: a view, no rows kept: the object without a label, itself or through an input, where a member is read off it").
+shape_ok(walked, twin_bodies, "small_set: the expressions something walks (for-of, spread, a host walk), the demand of iter_elem; without it every alias of a large array took each of its elements and tailwindcss ran out of memory (f_silence_has_few_roots_and_they_close)").
 shape_ok(recv_obj, twin_bodies, "alias_of_a_derived: the objects a receiver is where the call says which (its own, a parameter's, a hop's); a this-field is left out on purpose, it is the method's input").

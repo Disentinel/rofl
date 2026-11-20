@@ -479,7 +479,8 @@ fn prefix(file: &str) -> String {
 
 fn source_type(file: &str) -> SourceType {
     let ts = [".ts", ".tsx", ".mts", ".cts"].iter().any(|e| file.ends_with(e));
-    let jsx = file.ends_with(".tsx") || file.ends_with(".jsx");
+    // a .js file may hold JSX (React writes it so); JavaScript reads the same with it on
+    let jsx = file.ends_with(".tsx") || !ts;
     let st = if ts { SourceType::ts() } else { SourceType::mjs() };
     st.with_jsx(jsx)
 }

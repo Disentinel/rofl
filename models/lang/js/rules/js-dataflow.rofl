@@ -111,8 +111,12 @@ binder_region[code](D, R)    :- lexical_binder[code](D), nearest_s[code](R, D).
 binder_region[code](D, R)    :- scoped_binder[code](D, _), not lexical_binder[code](D),
                                 nearest_v[flow](R, D).
 binder_at_top[code](D)       :- scoped_binder[code](D, _), not binder_region[code](D, _).
-sees_binder[code](E, D)      :- name_scope[code](E, Name, File, S), binder_region[code](D, S),
-                                binds_name[code](D, Name, File), not tdz_at[code](E, D).
+sees_binder[code](E, D)      :- name_scope[code](E, Name, File, S), region_binds[code](S, Name, File, D),
+                                not tdz_at[code](E, D).
+-- the binders of a name in a region, one row a binder: by the name alone a minified file's thousand `e`s each met every other
+region_binds[code](S, Name, File, D) :- binder_region[code](D, S), binds_name[code](D, Name, File).
+-- a read of a binder under the name it reads, one row a read: joined by the name, each read of `e` met every `e` of its file
+binder_read[code](D, Name, File, E) :- sees_binder[code](E, D), ident_in[code](E, Name, File).
 sees_binder[code](E, D)      :- binder_at_top[code](D), binds_name[code](D, Name, File),
                                 top_read[code](E, Name, File).
 
@@ -185,8 +189,9 @@ sees_decl[code](E, D) :- decl_at_top[code](D), named_decl[code](D, Name, File),
                          top_read[code](E, Name, File).
 scoped_name[code](Name, File) :- scope_declares[code](_, Name, File).
 
-name_cand[code](E, Name, File, S)  :- ident_in[code](E, Name, File), scoped_name[code](Name, File),
-                                      inside[tree](S, E), scope_declares[code](S, Name, File).
+name_cand[code](E, Name, File, S)  :- read_under[code](E, Name, File, S), scope_declares[code](S, Name, File).
+-- a read with each node around it, walked up from the read: joined by the name, a scope declaring `item` met every `item`
+read_under[code](E, Name, File, S) :- ident_in[code](E, Name, File), scoped_name[code](Name, File), inside[tree](S, E).
 name_outer[code](E, S)             :- name_cand[code](E, Name, File, S), name_cand[code](E, Name, File, S2),
                                       inside[tree](S, S2).
 function name_scope(E, to Name, to File, to S).
@@ -227,9 +232,8 @@ symbol_ref[code](E, Key) :- prop_name[code](E, O, N), free_global[code](O, "Symb
 -- above its declaration in the same region throws, so the model says nothing
 -- there. A closure between the use and the region is deferred and keeps its
 -- value: `const via = () => later; const later = f;` is legal.
-tdz_cand[code](E, D)     :- lexical_binder[code](D), binder_region[code](D, R),
-                            binds_name[code](D, Name, File), ident_in[code](E, Name, File),
-                            inside[tree](R, E),
+-- only a read that resolves to the binder's region asks: a read of the name in a nearer scope sees another binder
+tdz_cand[code](E, D)     :- name_scope[code](E, Name, File, R), region_binds[code](R, Name, File, D), lexical_binder[code](D),
                             at[tree](D, _, LD), at[tree](E, _, LE),
                             LE < LD.
 tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
@@ -237,7 +241,7 @@ tdz_deferred[code](E, D) :- tdz_cand[code](E, D), binder_region[code](D, R),
 tdz_at[code](E, D)       :- tdz_cand[code](E, D), not tdz_deferred[code](E, D).
 
 may_be[flow](E, VK, V) :- may_be[flow](Init, VK, V), binder[code](D, Name, Init, File),
-                       ident_in[code](E, Name, File), sees_binder[code](E, D).
+                       binder_read[code](D, Name, File, E).
 
 -- =========================================================================
 -- 4. ASSIGNMENT, FLOW-INSENSITIVELY: `x = "a"` makes the BINDING `x` names
@@ -267,7 +271,7 @@ assign_decided[flow](A)   :- assign_dead[code](A).
 
 may_be[flow](E, VK, V) :- assign_binder[code](A, D), assigned[code](A, _, Name, Src, File),
                        may_be[flow](Src, VK, V),
-                       ident_in[code](E, Name, File), sees_binder[code](E, D).
+                       binder_read[code](D, Name, File, E).
 may_be[flow](U, VK, V) :- assign_param[flow](A, F), assigned[code](A, _, Name, Src, _),
                        may_be[flow](Src, VK, V), param_use[flow](F, Name, U).
 
@@ -381,7 +385,7 @@ pat_arr[flow](T, I, A) :- pattern_elem[value](P, I, T), pat_in[code](_, P, T), m
 may_be[flow](T, node, N) :- pat_arr[flow](T, I, A), array_elem[flow](A, I, V), own_node[flow](V, N).
 may_be[flow](T, input, S) :- pat_arr[flow](T, I, A), array_elem[flow](A, I, V), may_be[flow](V, input, S).
 may_be[flow](T, lit, L)   :- pat_arr[flow](T, I, A), array_elem[flow](A, I, V), may_be[flow](V, lit, L).
-may_be[flow](T, VK, X)    :- pat_arr[flow](T, _, A), elem_somewhere[flow](A, V), may_be[flow](V, VK, X).
+may_be[flow](T, VK, X)    :- pat_arr[flow](T, _, A), elem_value[flow](A, VK, X).
 -- the default of a target is a conditional source of it
 may_be[flow](T, VK, V) :- pat_in[code](_, _, T), assign[value](_, T, Init), may_be[flow](Init, VK, V).
 
@@ -393,7 +397,7 @@ scoped_binder[code](D, File) :- pat_local[code](D, _, _, File).
 assigned[code](T, T, Name, T, File) :- assign_pat[code](_, R, _), pat_in[code](R, _, T), ref[value](T, Name),
                                        at[tree](T, File, _).
 may_be[flow](E, VK, V) :- pat_local[code](D, Local, T, File), may_be[flow](T, VK, V),
-                      ident_in[code](E, Local, File), sees_binder[code](E, D).
+                      binder_read[code](D, Local, File, E).
 
 -- What a declarator's pattern takes apart: its initialiser, or at the head of
 -- a for-of each element the loop walks (section 14).
@@ -419,12 +423,13 @@ host_src[flow](C, What, R) :- host_call_on[flow](C, O, Key, R), host_returns(O, 
 elem_any[flow](A, E) :- array_elem[flow](A, _, E).
 elem_any[flow](A, E) :- elem_somewhere[flow](A, E).
 host_on[flow](C, What, A) :- host_src[flow](C, What, R), may_be_node[flow](R, A).
-may_be[flow](C, VK, V) :- host_on[flow](C, element, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](C, VK, V) :- host_on[flow](C, element, A), any_value[flow](A, VK, V).
 may_be[flow](C, lit, undefined) :- host_src[flow](C, element, _).
 may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_array(What).
 elem_somewhere[flow](C, E) :- host_src[flow](C, elements, R), iter_elem[flow](R, E).
-elem_somewhere[flow](C, E) :- host_src[flow](C, elements, _), host_call_on[flow](C, array, "concat", _),
-                              arg_at[flow](C, _, X), may_be_node[flow](X, A), elem_any[flow](A, E).
+elem_somewhere[flow](C, E) :- concat_of[flow](C, A), elem_any[flow](A, E).
+concat_of[flow](C, A) :- host_src[flow](C, elements, _), host_call_on[flow](C, array, "concat", _),
+                         arg_at[flow](C, _, X), may_be_node[flow](X, A).
 elem_somewhere[flow](C, V) :- host_on[flow](C, values, O), member_value[flow](O, _, V).
 lit_somewhere[flow](C, Key) :- host_on[flow](C, keys, O), member_value[flow](O, Key, _).
 -- `Object.entries(o)`: each entry a pair `[Key, value]` of its own, `entry(C, Key)`
@@ -435,7 +440,14 @@ array_elem[flow](entry(C, Key), 0, entry_key(C, Key)) :- entry_of[flow](C, Key, 
 array_elem[flow](entry(C, Key), 1, V) :- entry_of[flow](C, Key, V).
 may_be[flow](entry_key(C, Key), lit, Key) :- entry_of[flow](C, Key, _).
 elem_somewhere[flow](A, E) :- spread_elems[value](A, _, X), iter_elem[flow](X, E).
-may_be[flow](N, VK, V) :- at_index[flow](N, A), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
+may_be[flow](N, VK, V) :- at_index[flow](N, A), elem_value[flow](A, VK, V).
+-- what any element of an array read by index may be, once for the array and not again for each read
+elem_value[flow](A, VK, V) :- indexed[flow](A), elem_somewhere[flow](A, E), may_be[flow](E, VK, V).
+indexed[flow](A) :- at_index[flow](_, A).
+indexed[flow](A) :- pat_arr[flow](_, _, A).
+any_value[flow](A, VK, V) :- any_read[flow](A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+any_read[flow](A) :- host_on[flow](_, element, A).
+any_read[flow](A) :- open_key[flow](_, A).
 may_be[flow](N, lit, K) :- at_index[flow](N, A), lit_somewhere[flow](A, K).
 at_index[flow](N, A) :- member_at[flow](N, _, A, I), int is type_of(I).
 -- `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
@@ -463,10 +475,10 @@ member_value[flow](O, Key, V) :- host_call_on[flow](C, "Object", "defineProperty
                                  arg_at[flow](C, 1, K), may_be_lit[flow](K, Key), arg_at[flow](C, 2, D),
                                  may_be_node[flow](D, DO), member_plain[flow](DO, "value", V).
 -- what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
-elem_somewhere[flow](A, X) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_be_node[flow](R, A),
-                              arg_at[flow](C, _, X).
-elem_somewhere[flow](X, E) :- es_instance[flow](X, "Set", _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr),
-                              elem_any[flow](Arr, E).
+elem_somewhere[flow](A, X) :- puts_on[flow](C, A), arg_at[flow](C, _, X).
+puts_on[flow](C, A) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_be_node[flow](R, A).
+elem_somewhere[flow](X, E) :- set_from[flow](X, Arr), elem_any[flow](Arr, E).
+set_from[flow](X, Arr) :- es_instance[flow](X, "Set", _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr).
 -- `{ [k]: v }`: a computed key whose value is known
 member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_expr[value](P, E), may_be_lit[flow](E, Key),
                                  string is type_of(Key).
@@ -474,7 +486,7 @@ member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_expr[value](P, E),
 may_be[flow](E, node, N) :- destructures_at[code](D, Local, Index, File),
                             decl_value[flow](D, Init), may_be_node[flow](Init, A), array_elem[flow](A, Index, V),
                             own_node[flow](V, N),
-                            ident_in[code](E, Local, File), sees_binder[code](E, D).
+                            binder_read[code](D, Local, File, E).
 
 -- A defaulted parameter has an index (the `left` of its `assignment_pattern`)
 -- and a default that reaches the body.
@@ -1401,7 +1413,7 @@ keyed_walk[flow](S, D, X) :- iterates[value](S, H, R), for_of[code](S),
                              parent[tree](H, D), decl[value](D, _),
                              may_be_node[flow](R, X), keyed_obj[flow](X, _).
 keyed_walk_at[flow](E, D, Pos) :- keyed_walk[flow](_, D, _), destructures_at[code](D, Local, Pos, File),
-                                  ident_in[code](E, Local, File), sees_binder[code](E, D).
+                                  binder_read[code](D, Local, File, E).
 may_be[flow](E, VK, Val) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, _, V), may_be[flow](V, VK, Val),
                         keyed_walk_at[flow](E, D, 1).
 may_be[flow](E, lit, K) :- keyed_walk[flow](_, D, X), keyed_put[flow](X, K, _), keyed_walk_at[flow](E, D, 0).
@@ -1544,7 +1556,9 @@ wput[flow](C, S, Key, VK, X) :- applies[flow](C, G), sx_wsum_in[flow](G, S, Key,
 wputc[flow](C, S, CD, Key, input, X) :- applies[flow](C, G), sx_wcls[flow](G, S, CD, Key, input, X).
 wputc[flow](C, S, CD, Key, VK, X) :- applies[flow](C, G), sx_wcls_in[flow](G, S, CD, Key, Y), at_call[flow](C, Y, VK, X).
 sx_mset[flow](I, Key, VK, X) :- wput[flow](C, S, Key, VK, X), at_call[flow](C, S, node, I).
-sx_mset[flow](I, Key, VK, X) :- wputc[flow](C, S, CD, Key, VK, X), at_call[flow](C, S, node, I), isa[flow](I, CD).
+sx_mset[flow](I, Key, VK, X) :- wputc[flow](C, S, CD, Key, VK, X), at_call_isa[flow](C, S, I, CD).
+at_call_isa[flow](C, S, I, CD) :- at_call[flow](C, S, node, I), isa[flow](I, CD).
+lands_isa[flow](I, M, SM, CD) :- lands[flow](I, M, SM), isa[flow](I, CD).
 -- What a callee writes that its inputs do not decide (a node or a literal of its own) is not copied into the caller:
 -- the caller's summary says which function's own writes land on which of its inputs (`sx_runs`, per class where a
 -- call on the input decides the method, `sx_runs_c`), and an instance reads them where they were written.
@@ -1563,13 +1577,13 @@ sx_runs_c[flow](H, T, CD, M, SM) :- runs_recv[flow](C, T, G, S), sx_runs[flow](G
 sx_runs_c[flow](H, T, CD, M, SM) :- runs_recv[flow](C, T, G, S), sx_runs_c[flow](G, S, CD, M, SM), recv_key[flow](C, _, MKey),
                                        sx_lookup[flow](CD, MKey, G), input_of[flow](T, H).
 lands[flow](I, M, SM) :- applies[flow](C, G), sx_runs[flow](G, S, M, SM), at_call[flow](C, S, node, I).
-lands[flow](I, M, SM) :- applies[flow](C, G), sx_runs_c[flow](G, S, CD, M, SM), at_call[flow](C, S, node, I), isa[flow](I, CD).
+lands[flow](I, M, SM) :- applies[flow](C, G), sx_runs_c[flow](G, S, CD, M, SM), at_call_isa[flow](C, S, I, CD).
 lands[flow](I, M2, SM2) :- meth_on[flow](I, _, M), sx_wthis[flow](M, S), sx_runs[flow](M, S, M2, SM2).
 lands[flow](I, M2, SM2) :- meth_on[flow](I, C, M), sx_wthis[flow](M, S), sx_runs_c[flow](M, S, C, M2, SM2).
 sx_mset[flow](I, Key, node, X) :- lands[flow](I, M, SM), sx_wsum[flow](M, SM, Key, node, X).
 sx_mset[flow](I, Key, lit, X)  :- lands[flow](I, M, SM), sx_wsum[flow](M, SM, Key, lit, X).
-sx_mset[flow](I, Key, node, X) :- lands[flow](I, M, SM), sx_wcls[flow](M, SM, CD, Key, node, X), isa[flow](I, CD).
-sx_mset[flow](I, Key, lit, X)  :- lands[flow](I, M, SM), sx_wcls[flow](M, SM, CD, Key, lit, X), isa[flow](I, CD).
+sx_mset[flow](I, Key, node, X) :- lands_isa[flow](I, M, SM, CD), sx_wcls[flow](M, SM, CD, Key, node, X).
+sx_mset[flow](I, Key, lit, X)  :- lands_isa[flow](I, M, SM, CD), sx_wcls[flow](M, SM, CD, Key, lit, X).
 -- onto the caller's input: the caller's summary
 sx_wsum[flow](H, T, Key, node, X)  :- wput[flow](C, S, Key, node, X), at_call[flow](C, S, input, T), input_of[flow](T, H).
 sx_wsum[flow](H, T, Key, lit, X)   :- wput[flow](C, S, Key, lit, X), at_call[flow](C, S, input, T), input_of[flow](T, H).
@@ -1595,7 +1609,9 @@ holds_members[flow](O) :- module_object[flow](O, _).
 holds_members[flow](O) :- isa[flow](O, _).
 holds_members[flow](O) :- class_like[flow](O).
 holds_members[flow](O) :- external_value[flow](O, _).
-may_be[flow](N, VK, X) :- member_at[flow](N, _, I, Key), sx_mset[flow](I, Key, VK, X), holds_members[flow](I), not this_reads[code](N).
+may_be[flow](N, VK, X) :- member_at_out[flow](N, I, Key), sx_mset[flow](I, Key, VK, X), holds_members[flow](I).
+-- a read of a member not through `this`, joined once: from a new member value, the reads by `this` were each read to be dropped
+member_at_out[flow](N, I, Key) :- member_at[flow](N, _, I, Key), not this_reads[code](N).
 
 -- `inst(CD)` is an instance of CD in general, `this` in its methods' bodies: what any run of its methods, its
 -- ancestors' and its constructor may write on it (an argument as the input, whatever any caller hands), and what is
@@ -1803,7 +1819,8 @@ sx_mwrite[flow](O, Key, V)           :- mwrite_at[flow](Obj, Key, V), may_be[flo
 at_call[flow](C, S, node, I)            :- applies[flow](C, G), sx_wthis[flow](G, S), recv_key[flow](C, R, Key), may_be[flow](R, input, T),
                                            field_node[flow](T, I), isa[flow](I, CD), sx_lookup[flow](CD, Key, G).
 sx_mset[flow](I, Key, VK, X)         :- wput[flow](C, S, Key, VK, X), at_call[flow](C, S, input, T), field_node[flow](T, I).
-sx_mset[flow](I, Key, VK, X)         :- wputc[flow](C, S, CD, Key, VK, X), at_call[flow](C, S, input, T), field_node[flow](T, I), isa[flow](I, CD).
+sx_mset[flow](I, Key, VK, X)         :- wputc[flow](C, S, CD, Key, VK, X), at_field_isa[flow](C, S, I, CD).
+at_field_isa[flow](C, S, I, CD)         :- at_call[flow](C, S, input, T), field_node[flow](T, I), isa[flow](I, CD).
 input_lit[flow](field(M, Key), V)       :- this_val[flow](M, Key, input, T), input_lit[flow](T, V).
 -- the call of a method that hands out a Key of its `this`: the Key read off this call's receiver
 recv_of[flow](C, R)                     :- recv_call[code](C, R).
@@ -2046,6 +2063,7 @@ exports_name[code](D, Name, File) :- class_or_namespace[code](D), own_name[code]
                                      target[value](D, I), has[value](P, I), program[tree](P, File).
 class_or_namespace[code](D) :- decl[value](D, class), own_name[code](D, _, _, around).
 class_or_namespace[code](D) :- ts_namespace[code](D).
+class_or_namespace[code](D) :- decl[value](D, enum), own_name[code](D, _, _, around).
 
 -- `export * from` re-exports every NAME (not the default), recursively. The
 -- kind guard is not redundant with `module_site`, which holds of imports too.
@@ -2096,7 +2114,7 @@ exports_value[code](Init, Name, File) :- export_var[code](Init, Name, File).
 exports_value[code](L, Ext, File) :- export_local[code](L, Ext, File).
 -- an exported `let` is a live binding: what the module later writes to it is exported too
 exports_value[code](R, Name, File) :- export_var[code](Init, Name, File), binder[code](D, Name, Init, File),
-                                      ident_in[code](L, Name, File), sees_binder[code](L, D),
+                                      binder_read[code](D, Name, File, L),
                                       assign[value](A, L, R), plain_assign[flow](A).
 exports_value[code](X, Name, File) :- reexport_site[code](E, reexport_all), at[tree](E, File, _),
                                       module_target[code](E, Target), exports_value[code](X, Name, Target).
@@ -2346,6 +2364,10 @@ made_of[flow](made(E, CD), CD) :- new_of[flow](E, CD).
 isa[flow](I, CD) :- inst_of[flow](I, CD).
 isa[flow](I, CD) :- made_of[flow](I, CD).
 may_be[flow](E, node, made(E, CD)) :- new_of[flow](E, CD).
+-- `new f()` of a plain function is the object it makes, or an object f returns: open. What f returns is not carried:
+-- three.js calls one such function from thousands of places, and their values met in it (past ten minutes)
+new_fn[flow](E, F) :- construct[value](E), callee[value](E, CE), may_be_node[flow](CE, F), fn_node[code](F).
+may_be[flow](E, open, E) :- new_fn[flow](E, _).
 -- a parameter property (`constructor(private name: string)`) is a member each `new` sets to its argument
 param_member[flow](CD, Key, I) :- has[value](CD, FP), key[value](FP, Key), assign[value](FP, FP, X),
                                   own_ctor[flow](CD, M), param[value](M, I, X).
@@ -2427,11 +2449,17 @@ member_plain[flow](step(C), "value", E) :- gen_step[flow](C, G), returns[flow](G
 -- FOR-OF: the head is a declarator like any other, whose value is each
 -- element walked. An array is a VALUE (through `may_be_node`); a generator is
 -- a CALL, read at the site, because its returns are not what for-of walks.
-iter_elem[flow](X, E) :- elem_at[flow](X, _, E).
-iter_elem[flow](X, E) :- may_be_node[flow](X, A), elem_somewhere[flow](A, E).
-iter_elem[flow](X, E) :- may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
+-- only what is walked: every alias of a large array taking each of its elements was a product of the two (tailwindcss)
+walked[flow](X) :- iterates[value](S, _, X), for_of[code](S).
+walked[flow](X) :- spread_elems[value](_, _, X).
+walked[flow](X) :- host_src[flow](_, elements, X).
+walked[flow](X) :- host_src[flow](_, outcomes, X).
+iter_elem[flow](X, E) :- walked[flow](X), elem_at[flow](X, _, E).
+iter_elem[flow](X, E) :- walks[flow](X, A), elem_somewhere[flow](A, E).
+walks[flow](X, A) :- walked[flow](X), may_be_node[flow](X, A).
+iter_elem[flow](X, E) :- walked[flow](X), may_be_node[flow](X, GC), gen_of[flow](GC, F), yields[flow](F, E).
 -- an object of the program that is iterable by a generator at `[Symbol.iterator]`
-iter_elem[flow](X, E) :- may_be_node[flow](X, O), member_value[flow](O, symbol_iterator, M), gen_fn[flow](M),
+iter_elem[flow](X, E) :- walked[flow](X), may_be_node[flow](X, O), member_value[flow](O, symbol_iterator, M), gen_fn[flow](M),
                          yields[flow](M, E).
 
 decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
@@ -2439,16 +2467,16 @@ decl_value[flow](D, E) :- iterates[value](S, V, X), for_of[code](S),
                           iter_elem[flow](X, E).
 
 may_be[flow](U, VK, V) :- bare_binder[code](D, Name, File), decl_value[flow](D, E), may_be[flow](E, VK, V),
-                      ident_in[code](U, Name, File), sees_binder[code](U, D).
+                      binder_read[code](D, Name, File, U).
 -- FOR-IN: the head takes the keys of the object
 key_walk[flow](D, K) :- enumerates[value](S, V, X), nth[tree](V, 0, D), may_be_node[flow](X, O), member_value[flow](O, K, _),
                         string is type_of(K).
 -- a key used as a key again (`dst[k] = src[k]`) is each key with its own member, which a may-set does not keep
 -- together: read so, every key would take every member; there it is an open key
 may_be[flow](U, lit, K) :- bare_binder[code](D, Name, File), key_walk[flow](D, K),
-                           ident_in[code](U, Name, File), sees_binder[code](U, D), not computed_key[code](_, U).
+                           binder_read[code](D, Name, File, U), not computed_key[code](_, U).
 may_be[flow](U, open, D) :- bare_binder[code](D, Name, File), nth[tree](V, 0, D), enumerates[value](_, V, _),
-                            ident_in[code](U, Name, File), sees_binder[code](U, D), computed_key[code](_, U).
+                            binder_read[code](D, Name, File, U), computed_key[code](_, U).
 
 
 plain_assign[flow](E) :- assign[value](E, _, R), gives[value](E, R).
@@ -2551,11 +2579,12 @@ host_valued[code](O, Key) :- merges_into_first(O, Key).
 host_valued[code]("Promise", "resolve").
 -- a member read at a key the model cannot name reads every element of an array, and may be any member: open
 open_key[flow](N, Obj) :- computed_key[code](N, P), may_be[flow](P, open, _), member_obj[flow](N, _, Obj).
-may_be[flow](N, VK, V) :- open_key[flow](N, A), elem_any[flow](A, E), may_be[flow](E, VK, V).
+open_key[flow](N, Obj) :- computed_key[code](N, P), may_be[flow](P, input, _), member_obj[flow](N, _, Obj).
+may_be[flow](N, VK, V) :- open_key[flow](N, A), any_value[flow](A, VK, V).
 may_be[flow](N, open, N) :- open_key[flow](N, O), not array[value](O).
 mwrite_at[flow](Obj, Key, A) :- object_of[code](L, Obj), selects[flow](L, Key), open_write[code](A, L).
 may_be[flow](E, open, A) :- open_write[code](A, L), ref[value](L, Name), sees_binder[code](L, D),
-                            binds_name[code](D, Name, File), ident_in[code](E, Name, File), sees_binder[code](E, D).
+                            binds_name[code](D, Name, File), binder_read[code](D, Name, File, E).
 may_be[flow](U, open, A) :- open_write[code](A, L), ref[value](L, Name), param_use[flow](F, Name, L),
                             param_use[flow](F, Name, U).
 -- what a call returns that is open, and a pattern over an open value
@@ -2563,6 +2592,62 @@ may_be[flow](C, open, W) :- resolves[code](C, F), call_returns[flow](F, E), may_
 may_be[flow](R, open, W) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init),
                             may_be[flow](Init, open, W).
 may_be[flow](R, open, W) :- assign_pat[code](_, R, Src), may_be[flow](Src, open, W).
+-- a name nothing declares is the environment's: the global by that name (`Object`, `process`, `require`); a member of it
+-- no table values, and a call of one the environment alone defines, are open
+may_be[flow](E, global, Name) :- free_global[code](E, Name, _), Name != "undefined", Name != "exports".
+may_be[flow](N, open, N) :- object_of[code](N, G), may_be[flow](G, global, Name), selects[flow](N, Key),
+                            not host_valued[code](Name, Key).
+may_be[flow](C, open, C) :- callee[value](C, N), free_global[code](N, Name, _), not lib_global(Name, _, _),
+                            not require_site[code](C).
+may_be[flow](C, open, C) :- require_site[code](C), not module_target[code](C, _), not external_site[code](C, _).
+host_valued[code]("module", "exports").
+-- a member of a value whose members the model does not keep, a parameter's or a literal's, is open
+opaque[flow](O) :- may_be[flow](O, input, _).
+opaque[flow](O) :- may_be[flow](O, lit, _).
+may_be[flow](N, open, N) :- object_of[code](N, O), opaque[flow](O).
+-- a pattern takes apart a global or a literal as it does any value: its targets are members of it
+pat_src[flow](R, X) :- declarator_id[code](D, R), pattern_root[code](R), decl_value[flow](D, X).
+pat_src[flow](R, X) :- assign_pat[code](_, R, X).
+pattern_root[code](R) :- pat_in[code](R, R, _).
+may_be[flow](R, global, G) :- pat_src[flow](R, X), may_be[flow](X, global, G).
+may_be[flow](R, lit, L) :- pat_src[flow](R, X), may_be[flow](X, lit, L).
+may_be[flow](T, open, W) :- pattern_elem[value](P, _, T), pat_in[code](_, P, T), may_be[flow](P, open, W).
+may_be[flow](T, open, T) :- pattern_elem[value](P, _, T), pat_in[code](_, P, T), opaque[flow](P).
+-- a for-of over what the model does not keep the elements of walks values it does not name
+has_open[flow](X) :- may_be[flow](X, open, _).
+walks_unknown[flow](D) :- iterates[value](S, V, X), for_of[code](S), nth[tree](V, 0, D), opaque[flow](X).
+walks_unknown[flow](D) :- iterates[value](S, V, X), for_of[code](S), nth[tree](V, 0, D), has_open[flow](X).
+walks_unknown[flow](D) :- enumerates[value](_, V, X), nth[tree](V, 0, D), opaque[flow](X).
+walks_unknown[flow](D) :- enumerates[value](_, V, X), nth[tree](V, 0, D), has_open[flow](X).
+-- a length is a number the model does not count
+may_be[flow](N, open, N) :- object_of[code](N, _), selects[flow](N, "length").
+may_be[flow](U, open, D) :- walks_unknown[flow](D), bare_binder[code](D, Name, File), ident_in[code](U, Name, File),
+                            sees_binder[code](U, D).
+may_be[flow](R, open, D) :- walks_unknown[flow](D), declarator_id[code](D, R), pattern_root[code](R).
+-- what a function returns that is a global is the global where it is called
+may_be[flow](C, global, G) :- resolves[code](C, F), call_returns[flow](F, E), may_be[flow](E, global, G).
+-- what a try catches from a call is what the call throws, which the model does not follow; `arguments` is what the
+-- caller handed, read whole
+may_be[flow](P, open, P) :- catch_of[flow](T, H), catch_param[flow](H, P), call_in_try[flow](T).
+may_be[flow](E, open, F) :- scope_declares[code](F, "arguments", File), name_scope[code](E, "arguments", File, F).
+-- an import of a module the corpus neither holds nor names as a package (`#internal/x`, a path alias, a file left
+-- out) binds what the model does not see
+unseen_module[code](D) :- import_site[code](D, static_import), not module_target[code](D, _), site_shape[code](D, Sh),
+                          not external_shape(Sh).
+import_local[code](Local, D, File) :- imports_name[code](Local, _, D, File).
+import_local[code](Local, D, File) :- imports_default[code](Local, D, File).
+import_local[code](Local, D, File) :- imports_ns[code](Local, D, File).
+may_be[flow](E, open, D) :- import_local[code](Local, D, File), unseen_module[code](D), top_read[code](E, Local, File).
+-- a default import is what the other module exports as default, a name what it exports under the name, open or not
+default_value[code](X, File) :- default_declaration[code](E, X), at[tree](E, File, _).
+may_be[flow](E, VK, V) :- default_import[flow](E, X), may_be[flow](X, VK, V), VK != node.
+-- an object or a class exported as default is open where it is imported: carried as a node, Chart.js's classes took
+-- their instances' members to every importer and the run went from 17 s to 108 s (sx_mset 0.35 -> 2.9 million rows)
+may_be[flow](E, open, X) :- default_import[flow](E, X), may_be_node[flow](X, _).
+default_import[flow](E, X) :- imports_default[code](Local, D, File), module_target[code](D, Target),
+                              default_value[code](X, Target), top_read[code](E, Local, File).
+may_be[flow](E, open, W) :- imports_name[code](Local, Name, D, File), module_target[code](D, Target),
+                            exports_value[code](X, Name, Target), may_be[flow](X, open, W), top_read[code](E, Local, File).
 
 -- the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 imports(execution, value). imports(execution, tree). imports(execution, code). imports(execution, flow). imports(execution, main).
