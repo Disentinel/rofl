@@ -1171,6 +1171,7 @@ fn js_sources_edited_go_by_delta() {
         d.append("src/lib/shout.js", "export function whisper(s) { return s.toLowerCase(); }\n");
         step("shout.js edited", Some("lib/shout.js (scanned again)"))
     }).and_then(|_| {
+        d.write("src/lib/unused.js", "export function quiet(s) { return `${s}`.trim(); }\n");
         d.write("src/lib/greet.js", "import { shout } from './shout.js';\nimport { quiet } from './unused.js';\nexport function greet(name) { return quiet(shout(`hello ${name}`)); }\n");
         step("an import of unused.js added", Some("lib/unused.js (scanned)"))
     }).and_then(|_| {

@@ -38,3 +38,7 @@ function outer({ a, ...opt }) {
 outer({ a: 0, port: 7070 });
 
 for (const { id, ...row } of [{ id: 1, name: 'r1' }]) { use('forOf.id', id); use('forOf.rest', row.name); }
+
+const [lead, , ...gap] = [1, 2, 3];
+const [afterGap] = gap;
+use('array.lead', lead); use('array.gap', afterGap);

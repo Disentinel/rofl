@@ -14,6 +14,7 @@
 //                                                every edit above a node moves it, and only the parity check reads it)
 //   child[ast_oxc](Parent, Field, Index, Child)  the tree; Index over the raw Vec, a None keeps its place
 //   attr[ast_oxc](Id, Key, Value)                every scalar (--no-start: only the READ ones); a struct without span flattened as key_member
+//                                                and Field_len, the length of a list with a hole, which its children do not say
 //   file[ast_oxc](RootId, File)                  one per parsed file
 //   parse_error[ast_oxc](File, Message)          instead of all of the above when oxc reports an error
 //
@@ -31,7 +32,7 @@ mod wasm;
 
 pub const P: &str = "ast_oxc";
 /// the attributes the model reads (models/lang/js/oxc-roles.rofl, oxc-to-code.rofl, the rules and the notebooks); `--no-start` writes no other
-const READ: [&str; 21] = ["accessibility", "async", "await", "computed", "declare", "delegate", "export_kind", "generator", "import_kind", "kind", "method", "name", "operator", "optional", "prefix", "readonly", "static", "tail", "type", "value", "value_cooked"];
+const READ: [&str; 22] = ["accessibility", "async", "await", "computed", "declare", "delegate", "elements_len", "export_kind", "generator", "import_kind", "kind", "method", "name", "operator", "optional", "prefix", "readonly", "static", "tail", "type", "value", "value_cooked"];
 static NO_START: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// The scan for the model: no `start`, and only the attributes in READ.
@@ -433,6 +434,10 @@ impl Scan<'_> {
                         self.child(me, hash, f, i, c, true, equal);
                     }
                 }
+                let len = format!("{f}_len");
+                if xs.iter().any(|x| matches!(x, V::None)) && (!NO_START.load(Ordering::Relaxed) || READ.contains(&len.as_str())) {
+                    writeln!(self.out, "attr[{P}]({me}, {len}, {}).", xs.len()).unwrap();
+                }
             }
             V::Rec(fs) => {
                 for (k, x) in fs {
@@ -555,6 +560,13 @@ mod tests {
         let f = scan(SRC, "a.js").unwrap();
         assert!(f.lines().any(|l| l.starts_with("child[ast_oxc](") && l.contains(", elements, 2, ")));
         assert!(!f.lines().any(|l| l.contains(", elements, 1, ")));
+    }
+
+    #[test]
+    fn a_list_with_a_hole_says_its_length() {
+        let f = scan("const [a, , ...r] = x; const [b, ...s] = y;", "a.js").unwrap();
+        assert_eq!(f.lines().filter(|l| l.contains(", elements_len, ")).count(), 1);
+        assert!(f.lines().any(|l| l.ends_with(", elements_len, 2).")));
     }
 
     #[test]

@@ -93,12 +93,12 @@ eff_loop[code](L) :- repeats[value](L, _), not enumerates[value](L, _, _).
 
 eff_here[flow](N, div, none) :- eff_loop[code](N).
 
-eff_calls[code](F, G)   :- resolves[code](C, G), nearest_fn[code](F, C), fn_value[flow](G).
+eff_calls[code](F, G)   :- runs[code](C, G), nearest_fn[code](F, C), fn_value[flow](G).
 -- `eff_reaches` is reach over the call graph, walked and never stored (a graph closure): a
 -- function reaches itself only on a cycle, which is all the recursion test reads.
 graph eff_calls(F, G) closure eff_reaches.
 
-eff_here[flow](C, div, none) :- resolves[code](C, G), nearest_fn[code](F, C),
+eff_here[flow](C, div, none) :- runs[code](C, G), nearest_fn[code](F, C),
                                 eff_reaches[code](G, F).
 
 -- ALLOC: a fresh mutable identity. `new_expression` is here although its cell
@@ -187,8 +187,14 @@ edb(eff_discharges).
 eff_discharges(catch_clause, exn).
 eff_discharged_at[code](C, L) :- eff_catch_here[code](C), eff_discharges(catch_clause, L).
 
-eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), resolves[code](C, G),
+eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), runs[code](C, G),
                              nearest_fn[code](F, C), not eff_discharged_at[code](C, L).
+-- a callback called later does what it does, but its throw is a rejection or
+-- an uncaught error of the event loop, and its endless loop is not the caller's
+eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), calls_back[code](C, G, later),
+                             nearest_fn[code](F, C), L != exn, L != div.
+eff_latent[flow](F, L, H) :- eff_latent[flow](G, L, H), calls_back[code](C, G, at_once_caught),
+                             nearest_fn[code](F, C), L != exn.
 
 eff_discharge_unknown[audit](M, L) :- eff_discharges(M, L), not eff_label(L, _).
 
@@ -200,7 +206,7 @@ eff_discharge_unknown[audit](M, L) :- eff_discharges(M, L), not eff_label(L, _).
 eff_exn_only[audit](F)   :- eff_latent[flow](F, exn, none), not may_throw[code](F).
 may_throw_only[audit](F) :- may_throw[code](F), not eff_latent[flow](F, exn, none).
 
-eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), resolves[code](C, G),
+eff_swallowed[audit](F, C, L, H) :- eff_catch_here[code](C), runs[code](C, G),
                                     eff_latent[flow](G, L, H), L != exn,
                                     nearest_fn[code](F, C),
                                     not eff_latent[flow](F, L, H).
@@ -238,14 +244,14 @@ eff_bit_shared[audit](L, H, B) :- eff_bit(L, H, B), eff_bit(L, H2, B), H != H2.
 eff_unnamed[audit](F)       :- eff_subject[flow](F), not effect_of[flow](F, _).
 eff_two_names[audit](F, A, B) :- effect_of[flow](F, A), effect_of[flow](F, B), A != B.
 
-eff_join_short[audit](F, G, J) :- resolves[code](C, G), nearest_fn[code](F, C),
+eff_join_short[audit](F, G, J) :- runs[code](C, G), nearest_fn[code](F, C),
                                   not eff_catch_here[code](C),
                                   effect_of[flow](F, NF), effect_of[flow](G, NG),
                                   eff_join(NF, NG, J), J != NF.
 
-eff_callee_less[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
+eff_callee_less[flow](C, F, G) :- runs[code](C, G), nearest_fn[code](F, C),
                                   eff_latent[flow](F, L, H), not eff_latent[flow](G, L, H).
-eff_callee_more[flow](C, F, G) :- resolves[code](C, G), nearest_fn[code](F, C),
+eff_callee_more[flow](C, F, G) :- runs[code](C, G), nearest_fn[code](F, C),
                                   eff_latent[flow](G, L, H), not eff_latent[flow](F, L, H).
 eff_purer_callee[flow](C, F, G) :- eff_callee_less[flow](C, F, G), not eff_callee_more[flow](C, F, G).
 
@@ -383,7 +389,7 @@ eff_import_outside[flow](I, Src) :- site_source[code](I, Src), evaluates_unresol
 -- as `await` is.
 eff_module[flow](F, L, H) :- eff_here[flow](N, L, H), not in_fn[code](N),
                              at[tree](N, F, _).
-eff_module[flow](F, L, H) :- resolves[code](C, G), not in_fn[code](C),
+eff_module[flow](F, L, H) :- runs[code](C, G), not in_fn[code](C),
                              at[tree](C, F, _), eff_latent[flow](G, L, H).
 
 eff_here[flow](I, L, H) :- evaluates_at[code](I, T), sx_eff_module[surface](T, L, H).
@@ -407,20 +413,13 @@ eff_mod_join_short[audit](F, T, J) :- evaluates_at[code](I, T), at[tree](I, F, _
 -- =========================================================================
 -- 5d. A HIDDEN CALL THAT REACHES `calls` AND NOT `resolves`
 --
--- `pattern_accessor` and `pattern_next` reach `calls` directly (two true calls
--- at one node must not read as `ambiguous_call`), and `eff_latent` closes over
--- `resolves` — so a destructured getter that writes is invisible here, and so
--- is an iterator's `next`. THIS SECTION MEASURES THE HOLE AND DOES NOT CLOSE
--- IT: the arm is one line (`eff_conv_call` is its shape) and was refused by
--- the owner on 2026-09-09 as belonging to the two packs together;
--- `w_effect_reads_only_what_resolves` owns it. `eff_edge_unclosed` is the
--- residue, positive, and empty on this corpus (every getter here is pure);
--- probes in the test make it appear while `eff_join_short` stays empty —
--- a gate that reads `resolves` cannot see an edge `resolves` missed.
-eff_hidden_call[flow](N, M) :- pattern_accessor[code](N, M).
-eff_hidden_call[flow](N, M) :- pattern_next[code](N, M).
-
-eff_edge_closed[flow](F, G) :- resolves[code](C, G), nearest_fn[code](F, C).
+-- `pattern_accessor` and `pattern_next` are not `resolves` rows (two true
+-- calls at one node must not read as `ambiguous_call`), and the effects close
+-- over `runs`, which carries them with a host's callback (js-callgraph.rofl).
+-- `eff_edge_unclosed` is the residue: a `calls` edge that `runs` lacks and
+-- whose effect the caller lost; it ranges over `calls`, wider than `runs`, so
+-- it sees an edge the propagation misses.
+eff_edge_closed[flow](F, G) :- runs[code](C, G), nearest_fn[code](F, C).
 
 eff_edge_unclosed[flow](F, G, L, H) :- calls[code](F, G), fn_node[code](F),
                                        not eff_edge_closed[flow](F, G),
@@ -495,16 +494,22 @@ eff_catch_here[code](N) :- eff_runs_in[flow](P, TS),
 class_define_eff[flow](CD, L, H)    :- eff_define_part[flow](CD, P),
                                        eff_runs_in[flow](P, X), eff_here[flow](X, L, H).
 class_define_eff[flow](CD, L, H)    :- eff_define_part[flow](CD, P), eff_runs_in[flow](P, C),
-                                       resolves[code](C, G), eff_latent[flow](G, L, H),
+                                       runs[code]  (C, G), eff_latent[flow](G, L, H),
                                        not eff_discharged_at[code](C, L).
 class_construct_eff[flow](CD, L, H) :- eff_construct_part[flow](CD, P),
                                        eff_runs_in[flow](P, X), eff_here[flow](X, L, H).
 class_construct_eff[flow](CD, L, H) :- eff_construct_part[flow](CD, P), eff_runs_in[flow](P, C),
-                                       resolves[code](C, G), eff_latent[flow](G, L, H),
+                                       runs[code]  (C, G), eff_latent[flow](G, L, H),
                                        not eff_discharged_at[code](C, L).
 
 class_construct_eff[flow](CD, L, H) :- super_of[flow](CD, SD),
                                        class_construct_eff[flow](SD, L, H).
+
+-- `new C()` runs what C's instance initialisers call, its ancestors' too, so
+-- the call graph and `may_throw` see them as `eff_latent` does.
+eff_constructs[flow](CD, G) :- eff_construct_part[flow](CD, P), eff_runs_in[flow](P, C), runs[code](C, G).
+eff_constructs[flow](CD, G) :- super_of[flow](CD, SD), eff_constructs[flow](SD, G).
+runs[code](X, G) :- construct[value](X), may_be_node[flow](X, I), isa[flow](I, CD), eff_constructs[flow](CD, G).
 
 -- The two seeds. Evaluating a class DECLARATION allocates (a fresh mutable
 -- `prototype`, where a function declaration is hoisted and performs nothing

@@ -169,6 +169,7 @@ const RUNS: Record<string, () => Promise<Out>> = {
   scoped: () => cli([path.join(NB, 'scoped.rofl.md')]),
   destructure: () => cli([path.join(NB, 'destructure.rofl.md')]),
   rest: () => cli([path.join(NB, 'rest.rofl.md')]),
+  assigned: () => cli([path.join(NB, 'assigned.rofl.md')]),
   assign: () => cli([path.join(NB, 'assign.rofl.md')]),
   guard: () => cli([path.join(NB, 'guard.rofl.md')]),
   passes: () => cli([path.join(NB, 'passes.rofl.md')]),
@@ -208,6 +209,178 @@ const RUNS: Record<string, () => Promise<Out>> = {
     }
     const observed = new Set<string>();
     vm.runInNewContext(readFileSync(path.join(NB, 'rest/rest.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  assignedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'assigned.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'assigned/patterns.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  runs: () => cli([path.join(NB, 'runs.rofl.md')]),
+  runsV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'runs.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(ran|may_fail|writes)\((.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}(${m[2]})`);
+    }
+    const observed = new Set<string>();
+    let current = '', sync = false;
+    const later: (() => void)[] = [];
+    const ctx = vm.createContext({ __hit: (tag: string) => { if (sync) observed.add(`ran("${current}", "${tag}")`); }, setTimeout: (f: () => void) => later.push(f) });
+    vm.runInContext(readFileSync(path.join(NB, 'runs/runs.js'), 'utf8'), ctx);
+    const total = () => vm.runInContext('total', ctx) as number;
+    const probes = (vm.runInContext('Object.keys(globalThis)', ctx) as string[]).filter((k) => typeof ctx[k] === 'function' && !k.startsWith('__') && k !== 'hit' && k !== 'setTimeout');
+    for (const p of probes) {
+      current = p; const before = total(); sync = true;
+      try { ctx[p](); } catch { observed.add(`may_fail("${p}")`); }
+      sync = false;
+      const quiet = () => {}; process.on('unhandledRejection', quiet);
+      await new Promise((r) => setImmediate(r));
+      process.off('unhandledRejection', quiet);
+      for (const f of later.splice(0)) f();
+      if (!Object.is(total(), before)) observed.add(`writes("${p}")`);
+    }
+    const missing = [...observed].filter((o) => !model.has(o));
+    const extra = [...model].filter((o) => !o.startsWith('writes') && !observed.has(o));
+    return { code: 0, out: `V8 ran ${probes.length} probes, observed ${observed.size}; missing from the model: ${JSON.stringify(missing)}; said and not run: ${JSON.stringify(extra)}`, stdout: '' };
+  },
+  handed: () => cli([path.join(NB, 'handed.rofl.md')]),
+  handedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'handed.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    const later: (() => void)[] = [];
+    vm.runInNewContext(readFileSync(path.join(NB, 'handed/handed.js'), 'utf8'), {
+      __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`),
+      setTimeout: (f: (...a: unknown[]) => void, _ms: number, ...a: unknown[]) => later.push(() => f(...a)),
+    });
+    await new Promise((r) => setImmediate(r));
+    for (const f of later.splice(0)) f();
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  returns: () => cli([path.join(NB, 'returns.rofl.md')]),
+  returnsV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'returns.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.\[\]]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'returns/returns.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
+    await new Promise((r) => setImmediate(r));
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  opened: () => cli([path.join(NB, 'opened.rofl.md')]),
+  openedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'opened.rofl.md'), '--json', '--all']);
+    const model = new Set<string>(), open = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.\[\]+=-]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+      const o = /^opened\("([\w.\[\]+=-]+)"\)$/.exec(a.literal);
+      if (o) open.add(o[1]);
+    }
+    const observed: [string, string][] = [];
+    vm.runInNewContext(readFileSync(path.join(NB, 'opened/opened.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.push([tag, String(v)]) });
+    const named = observed.filter(([t, v]) => model.has(`${t}:${v}`)).length;
+    const byOpen = observed.filter(([t, v]) => !model.has(`${t}:${v}`) && open.has(t)).length;
+    const missing = observed.filter(([t, v]) => !model.has(`${t}:${v}`) && !open.has(t)).map(([t, v]) => `${t}:${v}`);
+    return { code: 0, out: `V8 observed ${observed.length} values: ${named} named by the model, ${byOpen} at a read it says is open; missing: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  puts: () => cli([path.join(NB, 'puts.rofl.md')]),
+  putsV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'puts.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.\[\]]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'puts/puts.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
+    await new Promise((r) => setImmediate(r));
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  reached: () => cli([path.join(NB, 'reached.rofl.md')]),
+  reachedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'reached.rofl.md'), '--json', '--all']);
+    const now = new Set<string>(), later = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^(called|called_later)\("(t_\w+)"\)$/.exec(a.literal);
+      if (m) (m[1] === 'called' ? now : later).add(m[2]);
+    }
+    const hitNow = new Set<string>(), hitLater = new Set<string>();
+    let hits = hitNow;
+    const queued: (() => void)[] = [];
+    vm.runInNewContext(readFileSync(path.join(NB, 'reached/reached.js'), 'utf8'), {
+      __hit: (name: string) => hits.add(name),
+      setTimeout: (f: () => void) => queued.push(f),
+      Promise, Reflect, Map, Object,
+    });
+    hits = hitLater;
+    await new Promise((r) => setImmediate(r));
+    for (const f of queued.splice(0)) f();
+    const model = new Set([...now, ...later]), hit = new Set([...hitNow, ...hitLater]);
+    const wrong = [...hit].filter((n) => !model.has(n)).concat([...model].filter((n) => !hit.has(n)), [...later].filter((n) => !hitLater.has(n)));
+    return { code: 0, out: `V8 ran ${hit.size}, ${hitLater.size} of them after the script; the model differs at: ${JSON.stringify(wrong)}`, stdout: '' };
+  },
+  exported: () => cli([path.join(NB, 'exported.rofl.md')]),
+  exportedNode: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'exported.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("(\w+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const seen = 'data:text/javascript,globalThis.__seen=(t,v)=>console.log(t+":"+String(v))';
+    const observed = new Set<string>();
+    for (const entry of ['main.js', 'e.cjs'])
+      for (const line of execFileSync(process.execPath, ['--import', seen, path.join(NB, 'exported', entry)], { encoding: 'utf8' }).split('\n'))
+        if (line) observed.add(line);
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `node observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  settles: () => cli([path.join(NB, 'settles.rofl.md')]),
+  settlesV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'settles.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.\[\]]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(readFileSync(path.join(NB, 'settles/settles.js'), 'utf8'), { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
+    await new Promise((r) => setImmediate(r));
+    const missing = [...observed].filter((o) => !model.has(o));
+    return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
+  },
+  typed: () => cli([path.join(NB, 'typed.rofl.md')]),
+  typedV8: async (): Promise<Out> => {
+    const ran = await cli([path.join(NB, 'typed.rofl.md'), '--json', '--all']);
+    const model = new Set<string>();
+    for (const c of JSON.parse(ran.stdout ?? '{}').cells ?? []) for (const l of c.lines) for (const a of l.answers) {
+      const m = /^seen\("([\w.\[\]]+)", (.+)\)$/.exec(a.literal);
+      if (m) model.add(`${m[1]}:${m[2].replace(/^"(.*)"$/, '$1')}`);
+    }
+    const observed = new Set<string>();
+    vm.runInNewContext(ts.transpileModule(readFileSync(path.join(NB, 'typed/typed.ts'), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, { __seen: (tag: string, v: unknown) => observed.add(`${tag}:${String(v)}`) });
+    await new Promise((r) => setImmediate(r));
     const missing = [...observed].filter((o) => !model.has(o));
     return { code: 0, out: `V8 observed ${observed.size} values; missing from the model: ${JSON.stringify(missing)}`, stdout: '' };
   },
@@ -298,7 +471,7 @@ await import(${JSON.stringify('file://' + path.join(out, 'use.mjs'))}); console.
     return { code: differ.length, out: differ.length ? `not the same on the two engines: ${differ.join(', ')}` : 'the same on both engines', stdout: '' };
   },
 };
-let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
+let engines!: Out, review!: Out, small!: Out, orderNb!: Out, self!: Out, reviewJson!: Out, fails!: Out, notRead!: Out, rewrite!: Out, extended!: Out, collided!: Out, recurse!: Out, red!: Out, blind!: Out, unpop!: Out, early!: Out, nat!: Out, trOk!: Out, trBad!: Out, trGone!: Out, unparsedOut!: Out, fr!: Out, badRead!: Out, chained!: Out, lone!: Out, trSlow!: Out, spat!: Out, ex!: Out, wo!: Out, hol!: Out, xdir!: Out, xdirFails!: Out, cjs!: Out, cjsBlind!: Out, external!: Out, decorated!: Out, scoped!: Out, scopedV8!: Out, assign!: Out, guard!: Out, passes!: Out, destructure!: Out, destructureV8!: Out, rest!: Out, restV8!: Out, assigned!: Out, assignedV8!: Out, runs!: Out, runsV8!: Out, handed!: Out, handedV8!: Out, returns!: Out, returnsV8!: Out, puts!: Out, putsV8!: Out, opened!: Out, openedV8!: Out, reached!: Out, reachedV8!: Out, exported!: Out, exportedNode!: Out, settles!: Out, settlesV8!: Out, typed!: Out, typedV8!: Out, orderV8!: Out, missing!: Out, missingV8!: Out, imports!: Out, importsNode!: Out, declared!: Out, declaredTsc!: Out, climb!: Out, heavy!: Out, nmWorld!: Out, out!: Out, three!: Out, part!: Out, nothing!: Out, sides!: Out, sidesAll!: Out, sidesJson!: Out;
 type Test = { name: string; needs: string[]; ok: () => boolean; o?: () => Out };
 const TESTS: Test[] = [];
 /** A check, by the runs it reads; it is judged once they are done. */
@@ -345,8 +518,28 @@ test('scoped: an assignment reaches the readers of its own binding and what no b
 test('scoped: every value V8 observes at a read is in the model\'s may-set; the one miss is the concatenation `t += "b"`', ['scopedV8'], () => has(scopedV8, 'missing from the model: ["sum:\\"ab\\""]'), () => scopedV8);
 test('destructure: a name bound from an object pattern, in a declarator or a parameter, with a default or off a required module, and a conversion, carry their values', ['destructure'], () => is(destructure, 0) && has(destructure, 'never seen("object.port", 3030)  ->  holds') && has(destructure, 'never seen("default.port", 8082)  ->  holds') && has(destructure, 'never seen("require.port", 5)  ->  holds') && has(destructure, '? seen(Tag, V)  ->  18 answers'), () => destructure);
 test('destructure: every value V8 observes at a read is in the model\'s may-set', ['destructureV8'], () => has(destructureV8, 'missing from the model: []'), () => destructureV8);
-test('rest: an object or array rest binds its name in a declarator, a parameter or a for-of head, at any depth, without the keys its pattern took, and a spread copies it', ['rest'], () => is(rest, 0) && has(rest, 'never silent(Tag)  ->  holds') && has(rest, 'never rest_key(R, "a")  ->  holds') && has(rest, '? seen(Tag, V)  ->  20 answers'), () => rest);
+test('rest: an object or array rest binds its name in a declarator, a parameter or a for-of head, at any depth, without the keys its pattern took, and a spread copies it', ['rest'], () => is(rest, 0) && has(rest, 'never silent(Tag)  ->  holds') && has(rest, 'never rest_key(R, "a")  ->  holds') && has(rest, '? seen(Tag, V)  ->  22 answers'), () => rest);
 test('rest: every value V8 observes at a read is in the model\'s may-set', ['restV8'], () => has(restV8, 'missing from the model: []'), () => restV8);
+test('assigned: a pattern on the left of = or in a catch takes its value apart, nested, defaulted and with a rest, and a literal index reads its element', ['assigned'], () => is(assigned, 0) && has(assigned, 'never silent(Tag)  ->  holds') && has(assigned, 'never seen("assign.arrayRest", "a")  ->  holds') && has(assigned, '? seen(Tag, V)  ->  22 answers'), () => assigned);
+test('assigned: every value V8 observes at a read is in the model\'s may-set', ['assignedV8'], () => has(assignedV8, 'missing from the model: []'), () => assignedV8);
+test('runs: a call runs what a host calls back at once, a getter of a pattern, f.call, and the constructor and field initialisers of new C(), throws what they throw and writes what they write; an executor and a later callback write and do not throw; a declared function and a class have Function.prototype', ['runs'], () => is(runs, 0) && has(runs, 'never ran(P, "then")  ->  holds') && has(runs, 'never may_fail("viaThen")  ->  holds') && has(runs, '? ran(P, Tag)  ->  14 answers') && has(runs, '? builtin(Obj, Key)  ->  6 answers'), () => runs);
+test('handed: a host hands its callback the elements, the index, the array, what a promise settles to and the arguments of setTimeout; a bound function takes its calls\' arguments, and a catch takes what a callback threw', ['handed'], () => is(handed, 0) && has(handed, '? silent(Tag)  ->  0 answers') && has(handed, '? seen(Tag, V)  ->  22 answers'), () => handed);
+test('handed: every value V8 observes at a read is in the model\'s may-set', ['handedV8'], () => has(handedV8, 'observed 20 values; missing from the model: []'), () => handedV8);
+test('returns: a host member returns elements of what it holds (filter, find, at, slice, concat, Array.from, [...xs], Object.keys, values, entries), super.m is the base class\'s and arguments[i] what the calls hand', ['returns'], () => is(returns, 0) && has(returns, 'never silent(Tag)  ->  holds') && has(returns, '? seen(Tag, V)  ->  51 answers'), () => returns);
+test('returns: every value V8 observes at a read is in the model\'s may-set', ['returnsV8'], () => has(returnsV8, 'observed 33 values; missing from the model: []'), () => returnsV8);
+test('opened: an operator, x += v, x++, a host member no table values and what reads them are open; an index the model cannot name reads every element; known reads stay closed', ['opened'], () => is(opened, 0) && has(opened, 'never silent(Tag)  ->  holds') && has(opened, '? opened(Tag)  ->  17 answers') && has(opened, 'never opened("plain")  ->  holds'), () => opened);
+test('opened: every value V8 observes is named by the model or at a read it says is open', ['openedV8'], () => has(openedV8, 'V8 observed 23 values: 7 named by the model, 16 at a read it says is open; missing: []'), () => openedV8);
+test('puts: push, unshift and add put into the receiver, new Set(xs) holds xs, { [k]: v } has v at k, Object.freeze, create and fromEntries, map, reduce, then and catch give what the callback returns, Promise.all an array of the values, a Map keyed by an object finds what was put under it, g.next().value, [Symbol.iterator], spread and Array.from walk a generator, call, apply and bind hand this, defineProperty puts a value, for-in takes the keys', ['puts'], () => is(puts, 0) && has(puts, 'never silent(Tag)  ->  holds') && has(puts, '? seen(Tag, V)  ->  43 answers'), () => puts);
+test('puts: every value V8 observes at a read is in the model\'s may-set', ['putsV8'], () => has(putsV8, 'observed 39 values; missing from the model: []'), () => putsV8);
+test('reached: a function is seen called through a map of handlers, an array, an emitter, a field, a returned object, Reflect.apply, a class in a variable, a getter, a Map, bind with arguments, a rest parameter, a default, super and await; then and setTimeout call later', ['reached'], () => is(reached, 0) && has(reached, 'never unreached(Name)  ->  holds') && has(reached, '? called_later(Name)  ->  2 answers'), () => reached);
+test('reached: what V8 runs is what the model says is called, and what it calls later V8 runs after the script', ['reachedV8'], () => has(reachedV8, 'V8 ran 26, 3 of them after the script; the model differs at: []'), () => reachedV8);
+test('exported: named, default and namespace imports, re-exports, a live binding, import() and require carry a value across modules', ['exported'], () => is(exported, 0) && has(exported, 'never silent(Tag)  ->  holds') && has(exported, '? seen(Tag, V)  ->  18 answers'), () => exported);
+test('exported: every value node observes at a read is in the model\'s may-set', ['exportedNode'], () => has(exportedNode, 'node observed 17 values; missing from the model: []'), () => exportedNode);
+test('settles: new Promise(res => res(v)) settles to v, allSettled gives outcomes whose value is it, a static method called on a subclass has it as this', ['settles'], () => is(settles, 0) && has(settles, 'never silent(Tag)  ->  holds') && has(settles, '? seen(Tag, V)  ->  23 answers'), () => settles);
+test('settles: every value V8 observes at a read is in the model\'s may-set', ['settlesV8'], () => has(settlesV8, 'observed 18 values; missing from the model: []'), () => settlesV8);
+test('typed: a TypeScript enum is an object of its members, a parameter property a member each new sets, a namespace an object of its exports', ['typed'], () => is(typed, 0) && has(typed, 'never silent(Tag)  ->  holds') && has(typed, '? seen(Tag, V)  ->  14 answers'), () => typed);
+test('typed: every value V8 observes at a read is in the model\'s may-set', ['typedV8'], () => has(typedV8, 'observed 14 values; missing from the model: []'), () => typedV8);
+test('runs: what V8 runs, throws and writes is what the model says', ['runsV8'], () => has(runsV8, 'observed 30; missing from the model: []; said and not run: []'), () => runsV8);
 test('missing: a call of a member a receiver seen whole has not got is said missing, and never over a package or a parameter', ['missing'], () => is(missing, 0) && has(missing, '? missing(T)  ->  9 answers') && has(missing, 'never missing("path.nosuch")  ->  holds'), () => missing);
 test('imports: an imported class, a namespace and a module object are seen whole, and what re-exports a package is not', ['imports'], () => is(imports, 0) && has(imports, '? missing(T)  ->  8 answers') && has(imports, 'never missing("O.join")  ->  holds'), () => imports);
 test('imports: Node throws a TypeError at every call said missing and at no call said found', ['importsNode'], () => has(importsNode, 'wrong: []') && has(importsNode, 'said 8 missing'), () => importsNode);
@@ -467,7 +660,7 @@ if (shard) {
 }
 if (only) chosen = chosen.filter((t) => new RegExp(only).test(t.name));
 const got: Record<string, Out> = Object.fromEntries(await Promise.all([...new Set(chosen.flatMap((t) => t.needs))].map(async (r) => [r, await RUNS[r]()])));
-({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
+({ engines, review, small, self, reviewJson, fails, notRead, rewrite, extended, collided, recurse, red, blind, unpop, early, nat, trOk, trBad, trGone, unparsedOut, fr, badRead, chained, lone, trSlow, spat, ex, wo, hol, xdir, xdirFails, cjs, cjsBlind, external, decorated, scoped, scopedV8, assign, guard, passes, destructure, destructureV8, rest, restV8, assigned, assignedV8, runs, runsV8, handed, handedV8, returns, returnsV8, puts, putsV8, opened, openedV8, reached, reachedV8, exported, exportedNode, settles, settlesV8, typed, typedV8, orderV8, orderNb, missing, missingV8, imports, importsNode, declared, declaredTsc, climb, heavy, nmWorld, out, three, part, nothing, sides, sidesAll, sidesJson } = got);
 for (const t of chosen) {
   let ok = false, o: Out | undefined;
   try { ok = t.ok(); o = t.o?.(); } catch (e) { o = { code: -1, out: `the check threw, a run it reads not named among its needs? ${(e as Error).stack}` }; }

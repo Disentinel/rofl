@@ -245,11 +245,9 @@ pattern_iterates[code](A, M) :- spread_iterated[code](A), may_be_node[flow](A, O
 -- `ambiguous_call[audit]` would read a correct model as an over-approximation.
 -- `site` on both sides: `nearest_fn` ranges over sites, and a `resolves` row at
 -- a non-site draws no edge (six missing edges, measured). `pattern_next` is a
--- relation so the effect layer can name the callee it drops
--- (`w_effect_reads_only_what_resolves`).
+-- relation so the effect layer can name the callee; both reach `calls` and the
+-- effects by `runs` (js-callgraph.rofl).
 site[code](N)          :- pattern_accessor[code](N, _).
-calls[code](Caller, M) :- pattern_accessor[code](N, M), nearest_fn[code](Caller, N).
-calls[code](R, M)      :- pattern_accessor[code](N, M), top_call[code](N, R).
 
 site[code](N)          :- pattern_iterates[code](N, _).
 resolves[code](N, M)   :- pattern_iterates[code](N, M).
@@ -257,7 +255,6 @@ pattern_next[code](X, Next) :- pattern_iterates[code](X, M),
                                ret_node_any[flow](M, IterObj),
                                member_value[flow](IterObj, "next", V),
                                may_be_node[flow](V, Next), fn_value[flow](Next).
-calls[code](Caller, Next) :- pattern_next[code](X, Next), nearest_fn[code](Caller, X).
 
 -- =========================================================================
 -- 5. THE SOURCE DECIDES, SO COUNT THE SOURCES. Every position that runs a
@@ -340,7 +337,7 @@ throws_outright[code](F) :- exits[value](T, throw),
 -- `may_throw` is a handful of rows and binds G, so `resolves` is probed by
 -- callee. The value travels with the throw: `thrown_by`, `caught_value`.
 may_throw[code](F) :- throws_outright[code](F).
-may_throw[code](F) :- may_throw[code](G), sync_body[code](G), resolves[code](C, G),
+may_throw[code](F) :- may_throw[code](G), sync_body[code](G), runs[code](C, G),
                       nearest_fn[code](F, C), not caught_here[code](C).
 -- an async callee's throw is the rejection of its promise, and comes out where
 -- the promise is awaited
@@ -348,12 +345,12 @@ may_throw[code](F) :- may_throw[code](G), async_body[code](G), resolves[code](C,
                       await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 
 thrown_by[flow](F, V) :- throws[value](T, V), nearest_v[flow](F, T), not caught_here[code](T).
-thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), resolves[code](C, G),
+thrown_by[flow](F, V) :- thrown_by[flow](G, V), sync_body[code](G), runs[code](C, G),
                          nearest_fn[code](F, C), not caught_here[code](C).
 thrown_by[flow](F, V) :- thrown_by[flow](G, V), async_body[code](G), resolves[code](C, G),
                          await_arg[code](A, C), nearest_v[flow](F, A), not caught_here[code](A).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
-                            try_walk[code](T, C), resolves[code](C, G),
+                            try_walk[code](T, C), runs[code](C, G),
                             sync_body[code](G), thrown_by[flow](G, V).
 caught_value[flow](P, V) :- catch_of[flow](T, H), catch_param[flow](H, P),
                             try_walk[code](T, A), await_arg[code](A, C), resolves[code](C, G),

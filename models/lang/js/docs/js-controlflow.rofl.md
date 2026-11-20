@@ -16,7 +16,7 @@ default: code
 
 Reads:
 
-- from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
+- from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [runs](js-callgraph.rofl.md#runs)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_rest](js-dataflow.rofl.md#obj_rest), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_source](js-dataflow.rofl.md#pattern_source), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [spread_of](js-dataflow.rofl.md#spread_of)
 - from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
@@ -517,17 +517,13 @@ A node
 > `ambiguous_call[audit]` would read a correct model as an over-approximation.
 > `site` on both sides: `nearest_fn` ranges over sites, and a `resolves` row at
 > a non-site draws no edge (six missing edges, measured). `pattern_next` is a
-> relation so the effect layer can name the callee it drops
-> (`w_effect_reads_only_what_resolves`).
+> relation so the effect layer can name the callee; both reach `calls` and the
+> effects by `runs` (js-callgraph.rofl).
 
-A node is a site if it [destructures through the accessor](#pattern_accessor) some node.
+A node N is a site either:
 
-Caller calls a node M either:
-
-1. if a node N [destructures through the accessor](#pattern_accessor) M and Caller [is the nearest function of](js-callgraph.rofl.md#nearest_fn) N;
-2. if a node N [destructures through the accessor](#pattern_accessor) M and N [runs at the top of](js-callgraph.rofl.md#top_call) Caller.
-
-A node is a site if it [destructures through](#pattern_iterates) some node.
+1. if N [destructures through the accessor](#pattern_accessor) some node;
+2. if N [destructures through](#pattern_iterates) some node.
 
 A call resolves to a node M if it [destructures through](#pattern_iterates) M.
 
@@ -537,8 +533,6 @@ A call resolves to a node M if it [destructures through](#pattern_iterates) M.
   - [the member](js-dataflow.rofl.md#member_value) "next" of a node IterObj holds a node V;
   - V [points to](js-dataflow.rofl.md#may_be_node) Next;
   - [`fn_value`](js-surface.rofl.md#fn_value)(Next).
-
-Caller calls Next if a node X [iterates with the next](#pattern_next) Next and Caller [is the nearest function of](js-callgraph.rofl.md#nearest_fn) X.
 
 ## 5. THE SOURCE DECIDES, SO COUNT THE SOURCES. Every position that runs a
 
@@ -673,7 +667,7 @@ In the code:
 2. if all of:
    - G [may throw](#may_throw);
    - G [runs its body at once](#sync_body);
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - an invocation C [runs the function](js-callgraph.rofl.md#runs) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
    - unless C [is caught here](#caught_here).
 
@@ -699,7 +693,7 @@ In the flow:
 2. if all of:
    - G [throws out](#thrown_by) V;
    - G [runs its body at once](#sync_body);
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - an invocation C [runs the function](js-callgraph.rofl.md#runs) G;
    - F [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
    - unless C [is caught here](#caught_here);
 3. if all of:
@@ -716,7 +710,7 @@ In the flow:
    - [the catch](js-dataflow.rofl.md#catch_of) of T is H;
    - [the param](js-dataflow.rofl.md#catch_param) of H is P;
    - [`try_walk`](#try_walk)(T, C);
-   - a call C [resolves to](js-callgraph.rofl.md#resolves) G;
+   - an invocation C [runs the function](js-callgraph.rofl.md#runs) G;
    - G [runs its body at once](#sync_body);
    - G [throws out](#thrown_by) V;
 2. if all of:

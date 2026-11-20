@@ -34,4 +34,5 @@ never rest_key(R, "a")
 never rest_key(R, "mode")
 never seen("param.rest", 1)
 never seen("spread.rest", "m")
+never seen("array.gap", 2)
 ```
