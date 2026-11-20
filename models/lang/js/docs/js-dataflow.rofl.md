@@ -1,6 +1,6 @@
 ---
 world: js-dataflow
-books: assume, audit, code, execution, flow, main, surface, tree, type, value
+books: assume, audit, code, execution, flow, main, tree, type, value
 default: flow
 ---
 
@@ -30,7 +30,7 @@ Reads:
 
 - from js-callgraph, in the code: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callback_site](js-callgraph.rofl.md#callback_site), [callee_of](js-callgraph.rofl.md#callee_of), [calls_back](js-callgraph.rofl.md#calls_back), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [member_kind_expr](js-callgraph.rofl.md#member_kind_expr), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-callgraph: [call_on](js-callgraph.rofl.md#call_on), [may_be](js-callgraph.rofl.md#may_be)
-- from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
+- from js-concat: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
 - from js-controlflow, in the code: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
 - from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
 - from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value)
@@ -39,8 +39,7 @@ Reads:
 - from js-globals: [es_instance](js-globals.rofl.md#es_instance)
 - from js-modules, in the code: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
 - from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [open_write](js-structure.rofl.md#open_write), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
-- from js-surface: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
-- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
+- from js-surface: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym), [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
 - from models/lang/js/facts/js-globals.rofl, in the main:
   - <a id="lib_global"></a>A name Name is a global since a release Rel with a form Form (`lib_global`)
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
@@ -1801,8 +1800,6 @@ Declared as facts:
    - [`may_be`](js-callgraph.rofl.md#may_be)(T, `input`, O);
    - N is `input`.
 
-In the surface:
-
 `sx_mwrite`(O, Key, V) if all of:
   - [`merge_call`](#merge_call)(C);
   - an invocation C [passes](#arg_at) a node T at 0;
@@ -1838,8 +1835,6 @@ Declared as facts:
 | `map` | "set" | "get" |
 | `weakmap` | "set" | "get" |
 
-In the flow:
-
 <a id="keyed_obj"></a>`keyed_obj`(X, P) if all of:
   - X [is an instance](js-globals.rofl.md#es_instance) of Name from some release;
   - Name [has the prototype](#lib_global_prototype) P;
@@ -1853,16 +1848,12 @@ In the flow:
   - [`call`](#call)(C);
   - N [selects](#selects) Key.
 
-In the surface:
-
 <a id="sx_kput"></a>`sx_kput`(X, K, V) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Put);
   - [`keyed_store`](#keyed_store)(P, Put, something);
   - an invocation C [passes](#arg_at) a node Y at 0;
   - Y [may be the literal](#may_be_lit) K;
   - C [passes](#arg_at) a node V at 1.
-
-In the flow:
 
 <a id="keyed_put"></a>`keyed_put`(X, K, V) if [`sx_kput`](#sx_kput)(X, K, V).
 
@@ -3496,15 +3487,11 @@ In the flow:
    - [`keyed_walk_at`](#keyed_walk_at)(E, D, 0);
    - VK is `node`.
 
-In the surface:
-
 <a id="sx_keach"></a>`sx_keach`(C, F, X) if all of:
   - [`keyed_on`](#keyed_on)(C, X, something, "forEach");
   - an invocation C [passes](#arg_at) a node Y at 0;
   - Y [points to](#may_be_node) a node F;
   - [`fn_value`](js-surface.rofl.md#fn_value)(F).
-
-In the flow:
 
 <a id="keyed_each_at"></a>`keyed_each_at`(U, C, X, Pos) if all of:
   - [`sx_keach`](#sx_keach)(C, F, X);
@@ -3692,11 +3679,7 @@ The member Key of a node O holds a node V either:
   - X [is plain](#plain_assign);
   - unless [`store_sym`](js-surface.rofl.md#store_sym)(X).
 
-In the surface:
-
 `sx_mwrite`(O, Key, V) if [`mwrite_at`](#mwrite_at)(Obj, Key, V) and [`own_node`](#own_node)(Obj, O).
-
-In the flow:
 
 The member Key of a node O holds a node V if [`sx_mwrite`](js-concat.rofl.md#sx_mwrite)(O, Key, V).
 
@@ -3704,8 +3687,6 @@ The member Key of a node O holds a node V if [`sx_mwrite`](js-concat.rofl.md#sx_
 > the input is at each call, the receiver or the argument, and nowhere else. A value that is the function's own
 > input is named apart (`sx_wsum_in`) and becomes this call's argument; a write onto the caller's input is the
 > caller's summary in turn, so a summary composes through its callees and a recursion is a fixpoint.
-
-In the surface:
 
 <a id="sx_wsum"></a>`sx_wsum`(G, S, Key, N, X) either:
 
@@ -3736,8 +3717,6 @@ In the surface:
   - [`may_be`](js-callgraph.rofl.md#may_be)(V, `input`, X);
   - [`input_of`](#input_of)(X, G).
 
-In the flow:
-
 <a id="winput"></a>`winput`(G, S) either:
 
 1. if [`sx_wsum`](#sx_wsum)(G, S, something, something, something);
@@ -3748,8 +3727,6 @@ In the flow:
 6. if [`sx_wcls_in`](#sx_wcls_in)(G, something, something, something, S);
 7. if [`sx_runs`](#sx_runs)(G, S, something, something);
 8. if [`sx_runs_c`](#sx_runs_c)(G, S, something, something, something).
-
-In the surface:
 
 <a id="sx_wparam"></a>`sx_wparam`(G, S, I) if [`winput`](#winput)(G, S) and [`input_param`](#input_param)(S, G, I).
 
@@ -3790,14 +3767,10 @@ In the flow:
    - [`object_of`](js-structure.rofl.md#object_of)(C, R);
    - C [selects](#selects) Key.
 
-In the surface:
-
 <a id="sx_lookup"></a>`sx_lookup`(CD, Key, G) if all of:
   - [the instance member](#class_member_proto) Key of a class CD is a node V;
   - CD [is a class](#class_like);
   - [`own_node`](#own_node)(V, G).
-
-In the flow:
 
 <a id="applies"></a>`applies`(C, G) either:
 
@@ -3857,8 +3830,6 @@ In the flow:
    - [`sx_wcls_in`](#sx_wcls_in)(G, S, CD, Key, Y);
    - [`at_call`](#at_call)(C, Y, N, X).
 
-In the surface:
-
 <a id="sx_mset"></a>`sx_mset`(I, Key, VK, X) either:
 
 1. if [`wput`](#wput)(C, S, Key, VK, X) and [`at_call`](#at_call)(C, S, `node`, I);
@@ -3889,15 +3860,11 @@ In the surface:
   - [`at_call`](#at_call)(C, S, `input`, T);
   - [`input_of`](#input_of)(T, H).
 
-In the flow:
-
 <a id="runs_recv"></a>`runs_recv`(C, T, G, S) if all of:
   - [`recv_key`](#recv_key)(C, R, MKey);
   - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, T);
   - [`applies`](#applies)(C, G);
   - [`sx_wthis`](#sx_wthis)(G, S).
-
-In the surface:
 
 `sx_runs_c`(H, T, CD, M, SM) either:
 
@@ -3913,8 +3880,6 @@ In the surface:
    - [`recv_key`](#recv_key)(C, something, MKey);
    - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
    - [`input_of`](#input_of)(T, H).
-
-In the flow:
 
 <a id="lands"></a>`lands`(I, M, SM) if all of:
   - [`applies`](#applies)(C, G);
@@ -3936,8 +3901,6 @@ In the flow:
   - [`meth_on`](#meth_on)(I, C, M);
   - [`sx_wthis`](#sx_wthis)(M, S);
   - [`sx_runs_c`](#sx_runs_c)(M, S, C, M2, SM2).
-
-In the surface:
 
 `sx_mset`(I, Key, N, X) either:
 
@@ -3984,8 +3947,6 @@ In the surface:
 > a call on the caller's input `t.m()`: what runs depends on the class of t, so the summary is the caller's for each
 > class that finds the callee under the key
 
-In the flow:
-
 <a id="dput"></a>`dput`(C, T, CD, Key, VK, X) either:
 
 1. if all of:
@@ -4008,8 +3969,6 @@ In the flow:
 1. if [`dput`](#dput)(C, T, CD, Key, VK, X);
 2. if [`wputc`](#wputc)(C, S, CD, Key, VK, X) and [`at_call`](#at_call)(C, S, `input`, T).
 
-In the surface:
-
 <a id="sx_wcls"></a>`sx_wcls`(H, T, CD, Key, N, X) either:
 
 1. if [`cput`](#cput)(something, T, CD, Key, `node`, X), [`input_of`](#input_of)(T, H), and N is `node`;
@@ -4026,8 +3985,6 @@ In the surface:
   - [`input_of`](#input_of)(X, H).
 
 > read back where a member is read at all (`member_plain`, `class_member_static`): not an array's index
-
-In the flow:
 
 <a id="holds_members"></a>`holds_members`(O) either:
 
@@ -4047,11 +4004,7 @@ In the flow:
 > ancestors' and its constructor may write on it (an argument as the input, whatever any caller hands), and what is
 > written onto each instance. An instance a `new` made, `made(E, CD)`, holds only what the calls made on it write.
 
-In the surface:
-
 <a id="sx_meth"></a>`sx_meth`(C, M) if a class C [has the method](#class_method_of) M, unless [`static`](#static)(M).
-
-In the flow:
 
 <a id="meth_on"></a>`meth_on`(I, C, M) either:
 
@@ -4060,8 +4013,6 @@ In the flow:
    - [`sub_inst`](#sub_inst)(SD, I);
    - a node I [stands for an instance of](#inst_of) a class C;
    - [`sx_meth`](#sx_meth)(SD, M).
-
-In the surface:
 
 `sx_mset`(I, Key, `input`, X) if all of:
   - [`meth_on`](#meth_on)(I, something, M);
@@ -4088,8 +4039,6 @@ In the surface:
   - [`made_of`](#made_of)(I, CD);
   - a node J [stands for an instance of](#inst_of) a class CD.
 
-In the flow:
-
 The member Key of a node J holds a node V if all of:
   - [`sx_mwrite`](js-concat.rofl.md#sx_mwrite)(I, Key, V);
   - [`made_of`](#made_of)(I, CD);
@@ -4101,15 +4050,11 @@ The member Key of a node J holds a node V if all of:
 > does not know (the call). A class handed to a call nothing resolves may be constructed there: `inst(CD)` says so
 > for what its constructor writes of its arguments.
 
-In the surface:
-
 <a id="sx_cwrites"></a>`sx_cwrites`(CD, Key, M) if all of:
   - a class CD [has the method](#class_method_of) M;
   - [`input_this`](#input_this)(S, M);
   - [`sx_wkey`](#sx_wkey)(M, S, Key);
   - unless M [is a constructor](js-callgraph.rofl.md#ctor_method).
-
-In the flow:
 
 <a id="this_bound"></a>`this_bound`(C, M) either:
 
@@ -4119,15 +4064,9 @@ In the flow:
    - [`recv_key`](#recv_key)(C, R, something);
    - [`may_be`](js-callgraph.rofl.md#may_be)(R, `input`, something).
 
-In the surface:
-
 <a id="sx_ran_out"></a>`sx_ran_out`(M, Spec) if [`sx_cb`](js-surface.rofl.md#sx_cb)(M, Spec) and [`sx_wthis`](#sx_wthis)(M, something).
 
-In the flow:
-
 <a id="writes_this"></a>`writes_this`(M) if [`sx_cwrites`](#sx_cwrites)(something, something, M).
-
-In the surface:
 
 `sx_ran_out`(M, N) either:
 
@@ -4154,8 +4093,6 @@ In the surface:
   - [`sx_wthis`](#sx_wthis)(M, S);
   - [`sx_wsum_in`](#sx_wsum_in)(M, S, Key, something).
 
-In the flow:
-
 <a id="changed_outside"></a>`changed_outside`(N, Key, M, Where) if all of:
   - [`member_any`](#member_any)(N, something, I, Key);
   - [`made_of`](#made_of)(I, CD);
@@ -4163,14 +4100,10 @@ In the flow:
   - [`sx_cwrites`](#sx_cwrites)(AD, Key, M);
   - [`sx_ran_out`](#sx_ran_out)(M, Where).
 
-In the surface:
-
 <a id="sx_ancestor"></a>`sx_ancestor`(CD, N) either:
 
 1. if a node CD [is a class](#class_like) and N is CD;
 2. if [`sub_inst`](#sub_inst)(N, I) and a node I [stands for an instance of](#inst_of) a class CD.
-
-In the flow:
 
 `changed_outside`(N, Key, M, Where) if [`member_any`](#member_any)(N, something, I, Key) and [`sx_out_inst`](#sx_out_inst)(I, Key, M, Where).
 
@@ -4562,14 +4495,10 @@ In the flow:
 > what is done to the object `this.key` holds is done to every object the key may hold, the general case: a
 > write onto it, a method run on it, and a callee's write onto it where it is handed on
 
-In the surface:
-
 `sx_mwrite`(O, Key, V) if all of:
   - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
   - [`may_be`](js-callgraph.rofl.md#may_be)(Obj, `input`, T);
   - [`field_node`](#field_node)(T, O).
-
-In the flow:
 
 `at_call`(C, S, `node`, I) if all of:
   - [`applies`](#applies)(C, G);
@@ -4579,8 +4508,6 @@ In the flow:
   - [`field_node`](#field_node)(T, I);
   - [`isa`](#isa)(I, CD);
   - [`sx_lookup`](#sx_lookup)(CD, Key, G).
-
-In the surface:
 
 `sx_mset`(I, Key, VK, X) either:
 
@@ -4593,8 +4520,6 @@ In the surface:
    - [`at_call`](#at_call)(C, S, `input`, T);
    - [`field_node`](#field_node)(T, I);
    - [`isa`](#isa)(I, CD).
-
-In the flow:
 
 `input_lit`(field(M, Key), V) if [`this_val`](#this_val)(M, Key, `input`, T) and [`input_lit`](#input_lit)(T, V).
 
@@ -4842,8 +4767,6 @@ In the flow:
 
 <a id="ret_via"></a>`ret_via`(F, C, O) if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(C, O)).
 
-In the surface:
-
 <a id="sx_holds"></a>`sx_holds`(F, O, Key, VK, X) either:
 
 1. if all of:
@@ -4863,8 +4786,6 @@ In the surface:
 
 > via_holds(C, O, Key, VK, X): the summary seen through the call C. An input that is not this call's to give (the
 > callee's `this`, an enclosing function's parameter) stays an input, and reads as whatever any caller hands it.
-
-In the flow:
 
 <a id="via_sum"></a>`via_sum`(C, O, Key, VK, X) if all of:
   - [`wants`](#wants)(C, O, Key);
@@ -5596,11 +5517,9 @@ In the main:
 1. if [`runs_coroutine`](#runs_coroutine)(Pkg, Key, something);
 2. if [`returns_argument`](#returns_argument)(Pkg, Key, something).
 
-In the surface:
+In the flow:
 
 <a id="sx_contract_pkg"></a>`sx_contract_pkg`(Spec, Pkg) if [`external_package`](#external_package)(Spec, Pkg, something) and [`contract_key`](#contract_key)(Pkg, something).
-
-In the flow:
 
 <a id="contract_fn"></a>`contract_fn`(Spec, Pkg, `call`) if all of:
   - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
@@ -5634,11 +5553,7 @@ In the flow:
   - X [points to](#may_be_node) a node F;
   - F [is a generator function](#gen_fn).
 
-In the surface:
-
 <a id="sx_coroutine"></a>`sx_coroutine`(F) if [`coroutine_of`](#coroutine_of)(something, F).
-
-In the flow:
 
 <a id="coroutine_yield"></a>`coroutine_yield`(Y, X) if all of:
   - [`sx_coroutine`](#sx_coroutine)(F);
@@ -6020,10 +5935,8 @@ In the flow:
 | `flow` | `code` |
 | `flow` | `main` |
 | `flow` | `$kernel` |
-| `flow` | `surface` |
-| `code` | `surface` |
-| `surface` | `flow` |
-| `surface` | `code` |
+| `code` | `flow` |
+| `flow` | `code` |
 
 ## 15. THE EXCEPTION PATH. A catch parameter may be what the guarded BLOCK
 
@@ -6258,7 +6171,7 @@ In the flow:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
+| `flow` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

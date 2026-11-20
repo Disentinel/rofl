@@ -219,7 +219,9 @@ fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T 
     let Ok(mut pool) = POOL.try_lock() else { return (0..n).map(f).collect() };
     let out: Vec<Mutex<Option<T>>> = (0..n).map(|_| Mutex::new(None)).collect();
     let lent = super::levels::lend();
+    let seam_rule = crate::store::SEAM_RULE.with(|c| c.get());
     let task = |k: usize| {
+        crate::store::SEAM_RULE.with(|c| c.set(seam_rule));
         let v = match &lent {
             Some(l) => l.on(|| f(k)),
             None => f(k),
@@ -759,7 +761,10 @@ impl Eval {
             })
             .collect();
         let sort = !self.store.unordered;
-        let made: Vec<Option<(Vec<Sol>, Vec<Level>)>> = spread(self.par.threads, tasks.len(), true, |t| if frs[t].is_empty() { None } else { solve_run(&frs[t], &seed, sort) });
+        let made: Vec<Option<(Vec<Sol>, Vec<Level>)>> = spread(self.par.threads, tasks.len(), true, |t| {
+            crate::store::SEAM_RULE.with(|c| c.set(jobs[tasks[t].0].rule.id));
+            if frs[t].is_empty() { None } else { solve_run(&frs[t], &seed, sort) }
+        });
         let lits: Vec<usize> = jobs.iter().map(|j| self.job_lits(j).len()).collect();
         drop(frs);
         self.firing = was;

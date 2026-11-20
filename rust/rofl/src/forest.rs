@@ -290,6 +290,26 @@ impl Forest {
         self.nodes.len() < 1 << 14 || (w.in_base(&self.nodes) && [&self.parent, &self.pre, &self.order, &self.end, &self.depth].into_iter().chain(&self.near).all(|a| w.in_base(a)))
     }
 
+    /// Its columns as another process lays it again (`from_columns`): the nodes, parent, pre, order, end, depth, the
+    /// nearest, and the counts; none for a graph.
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn columns(&self) -> Option<(&[Term], [&[u32]; 5], Option<&[u32]>, (u64, u32, u32, bool))> {
+        if self.graph.is_some() {
+            return None;
+        }
+        Some((&self.nodes, [&self.parent, &self.pre, &self.order, &self.end, &self.depth], self.near.as_deref(), (self.pairs, self.deep, self.internal, self.broken)))
+    }
+
+    /// A forest from `columns`, its nodes named by the process that reads it.
+    pub(crate) fn from_columns(nodes: Vec<Term>, [parent, pre, order, end, depth]: [Vec<u32>; 5], near: Option<Vec<u32>>, (pairs, deep, internal, broken): (u64, u32, u32, bool)) -> Result<Forest, String> {
+        let n = nodes.len();
+        if [&parent, &pre, &end, &depth].into_iter().chain(&near).any(|a| a.len() != n) {
+            return Err("a forest on the wire is not a forest".into());
+        }
+        let idx = Idx::of(&nodes, |i| pre[i] != NONE);
+        Ok(Forest { idx, nodes: nodes.into(), parent: parent.into(), pre: pre.into(), order: order.into(), end: end.into(), depth: depth.into(), pairs, deep, internal, broken, graph: None, near: near.map(Into::into), sq: Default::default() })
+    }
+
     pub(crate) fn read(r: &mut VolR) -> Result<Forest, String> {
         let kind = r.u32()?;
         let near: Option<Arena<u32>> = if kind == 2 { Some(r.arena()?) } else { None };

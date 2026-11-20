@@ -1,6 +1,6 @@
 ---
 world: js-express
-books: code, flow, main, surface, value
+books: code, flow, main, value
 default: flow
 ---
 
@@ -8,11 +8,11 @@ default: flow
 
 > js-express.rofl — THE SERVER SIDE OF A SERVICE CALL (w_express_semantics).
 > 
->   serves[surface](App, M, P, H, R)   the app App answers method M (or `any`)
+>   serves[flow](App, M, P, H, R)   the app App answers method M (or `any`)
 >                                      on the pattern P, a text over the route's
 >                                      strings, with the function H, a `route`
 >                                      or a `middleware` that runs before one
->   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port,
+>   app_listens[flow](App, Port)     `app.listen(Port)`: App answers at Port,
 >                                      also `app.listen(app.get('port'))`
 > 
 > Knows nothing about clients. An app is a call of the module (`express()`), a
@@ -176,9 +176,7 @@ Declared as facts:
 
 ## 3. ACROSS FILES. A router is made in one file and mounted in another; what
 
-> a file registers on one is published, and the mounts compose in [surface].
-
-In the surface:
+> a file registers on one is published, and the mounts compose in [flow].
 
 <a id="sx_ex_app"></a>`sx_ex_app`(Y) if [`ex_app`](#ex_app)(Y).
 

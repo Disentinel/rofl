@@ -52,6 +52,10 @@ Every flag has a consumer.
 | `ROFL_VOLUMES` | `0` answers a question verb from the whole world instead of by volumes; `1` answers by volumes a corpus under the 32 MB where they begin, so a test reads an edit of a few lines taken by the units (`engine/volumes.rs`, `engine/levels.rs`, docs/cli.md) | `rust/rofl/src/bin/rofl/load.rs`, `rust/rofl/tests/kept.rs` | INTERNAL: the oracle a check compares the volumes with | |
 | `ROFL_FAN` | how many units a group of a world by levels holds (8) | `rust/rofl/tests/kept.rs` | INTERNAL: a small fan makes a small world's tree deep, for the check | |
 | `ROFL_LEAF` | how many files a unit of files alone holds in a world by levels (4) | `rust/rofl/tests/kept.rs` | INTERNAL: a small leaf gives a small world units to meet, for the check | |
+| `ROFL_WIRE_UNITS` | every file's own unit of a world by levels goes through `Stretch::to_wire` and back (`store/wire.rs`): names as text, ids from the unit's first, firings and trees; prints the bytes by part | none yet (FKTS seam, branch `claude/project-thread-cisevd`) | INTERNAL: the oracle that a unit crossing to another process answers the same | |
+| `ROFL_WIRE_DIR` | with `ROFL_WIRE_UNITS`, the files' units are written there as `<first>-<end>.unit` | none yet | INTERNAL: one run of the two-run check | |
+| `ROFL_WIRE_TAKE` | with `ROFL_WIRE_DIR`, a file's unit found there is laid in place of loading and settling its files | none yet | INTERNAL: the other run of the two-run check | |
+| `ROFL_SEAM_BT` | a backtrace of a seam read no rule asked, now and then (`store.rs` `seam`) | none | INTERNAL: finds who reads a child outside a firing | |
 | `ROFL_DELTA_FACTS` | the file a delta of volumes writes what it did to, as facts of the book `delta` (`engine/meter.rs`, docs/cli.md, *A delta as facts*) | `models/engine/delta-model.rofl` reads the file; no script yet | INTERNAL: the oracle of the delta model; to become the world's own book, as the profile is | |
 | `ROFL_VSTATS` | print the virtual closure's counters on stderr | none: the definition only | REMOVE | done |
 

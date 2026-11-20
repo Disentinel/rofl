@@ -1,6 +1,6 @@
 ---
 world: js-service
-books: code, flow, main, surface, tree
+books: code, flow, main, tree
 default: main
 ---
 
@@ -31,7 +31,7 @@ Reads:
 - from js-callgraph, in the code: [nearest_fn](js-callgraph.rofl.md#nearest_fn), [top_call](js-callgraph.rofl.md#top_call)
 - from js-concat, in the flow: [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [corpus_file](js-dataflow.rofl.md#corpus_file)
-- from js-express, in the surface: [app_listens](js-express.rofl.md#app_listens), [serves](js-express.rofl.md#serves), [sx_ex_str](js-express.rofl.md#sx_ex_str)
+- from js-express, in the flow: [app_listens](js-express.rofl.md#app_listens), [serves](js-express.rofl.md#serves), [sx_ex_str](js-express.rofl.md#sx_ex_str)
 - from js-fetch, in the flow: [requests](js-fetch.rofl.md#requests)
 - from outside these files:
   - <a id="code_of"></a>`code_of`
@@ -48,9 +48,9 @@ Reads:
 | arg 1 | arg 2 |
 |---|---|
 | `main` | `flow` |
-| `main` | `surface` |
+| `main` | `flow` |
 | `code` | `main` |
-| `surface` | `main` |
+| `flow` | `main` |
 
 <a id="svc_dir"></a>`svc_dir`(F, X) if all of:
   - a file F [is in the corpus](js-dataflow.rofl.md#corpus_file);
@@ -94,7 +94,7 @@ In the main:
 
 <a id="request_unserved"></a>`request_unserved`(C, X) if [`http_unserved`](#http_unserved)(C, X).
 
-In the surface:
+In the flow:
 
 <a id="sx_svc_hit"></a>`sx_svc_hit`(H) if [`http_reach`](#http_reach)(something, H, something).
 
