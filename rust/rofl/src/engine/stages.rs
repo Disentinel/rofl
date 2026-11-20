@@ -496,40 +496,6 @@ impl Eval {
         self.store.dirty = true;
     }
 
-    /// A lower stage that reads or concludes `[surface]` is refused where files are evaluated apart: it is evaluated
-    /// a file at a time, before anything crosses.
-    pub fn refuse_stage_across(&self, st: &Stage, surface: Sym) -> Result<(), Halt> {
-        // what [surface] holds, and what a rule of a variable book concludes from it
-        let mut crossing: HashSet<Sym> = self.rules.iter().filter(|r| r.clause.head.persp.as_atom() == Some(surface)).map(|r| r.clause.head.rel).collect();
-        loop {
-            let more: Vec<Sym> = self
-                .rules
-                .iter()
-                .filter(|r| r.clause.head.persp.as_atom().is_none() && !crossing.contains(&r.clause.head.rel))
-                .filter(|r| r.clause.body.iter().flat_map(BodyElem::lits_deep).any(|l| l.persp.as_atom() == Some(surface) || l.persp.as_atom().is_none() && crossing.contains(&l.rel)))
-                .map(|r| r.clause.head.rel)
-                .collect();
-            if more.is_empty() {
-                break;
-            }
-            crossing.extend(more);
-        }
-        for r in self.rules.iter().filter(|r| st.rules.contains(&r.id)) {
-            let lits = std::iter::once(&r.clause.head).chain(r.clause.body.iter().flat_map(BodyElem::lits_deep));
-            if let Some(l) = lits.into_iter().find(|l| match l.persp.as_atom() {
-                Some(b) => b == surface,
-                None => crossing.contains(&l.rel),
-            }) {
-                return Err(Halt::reject(format!(
-                    "the lower stage of the cut books reads {}, which crosses files: rule {} is evaluated a file at a time, before anything crosses",
-                    self.h.name(l.rel),
-                    self.h.name(r.id)
-                )));
-            }
-        }
-        Ok(())
-    }
-
     /// What a staged evaluation takes away: the cut books, and the relations concluded below that nothing above reads.
     pub fn note_staged_away(&mut self, st: &Stage) {
         self.staged_away = Some((st.cut.clone(), st.heads.iter().copied().filter(|r| !st.given.contains(r)).collect()));

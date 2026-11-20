@@ -1,6 +1,6 @@
 ---
 world: js-effects
-books: audit, code, execution, flow, main, surface, tree, value
+books: audit, code, execution, flow, main, tree, value
 default: flow
 ---
 
@@ -30,8 +30,7 @@ Reads:
 - from js-model, in the code: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules, in the code: [evaluates_at](js-modules.rofl.md#evaluates_at), [evaluates_unresolved](js-modules.rofl.md#evaluates_unresolved), [site_source](js-modules.rofl.md#site_source)
 - from js-structure, in the code: [assign_op](js-structure.rofl.md#assign_op), [object_of](js-structure.rofl.md#object_of), [value_expr](js-structure.rofl.md#value_expr)
-- from js-surface: [fn_value](js-surface.rofl.md#fn_value)
-- from js-surface, in the surface: [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
+- from js-surface: [fn_value](js-surface.rofl.md#fn_value), [sx_eff_module](js-surface.rofl.md#sx_eff_module), [sx_effect_module](js-surface.rofl.md#sx_effect_module)
 - from models/lang/js/facts/js-effects.rofl, in the main:
   - <a id="eff_alias"></a>An effect X is an alias of an effect P (`eff_alias`)
   - <a id="eff_heap"></a>A heap H is a heap (`eff_heap`)
@@ -1070,8 +1069,7 @@ In the audit:
 | `flow` | `main` |
 | `audit` | `code` |
 | `audit` | `flow` |
-| `flow` | `surface` |
-| `audit` | `surface` |
+| `audit` | `flow` |
 
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 
@@ -1087,7 +1085,7 @@ In the audit:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
+| `flow` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

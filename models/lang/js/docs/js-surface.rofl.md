@@ -1,30 +1,30 @@
 ---
 world: js-surface
-books: code, flow, main, surface, tree, value
-default: surface
+books: code, flow, main, tree, value
+default: flow
 ---
 
 # js-surface
 
-> models/lang/js/rules/js-surface.rofl — THE [surface] BOOK: what a file offers the others (exports, what a call hands a function,
-> the nodes that leave their file), kept where a rule reads it as a relation of its own. Volumes route every relation
-> by the rules' keys, so nothing here is needed to cross files: the mirrors that restated an escaping node's facts
-> back into their relations were removed 2026-11-09 (docs/surface-split.md). A call of a function whose return is its
-> own parameter takes that call's argument (`sx_ret_param`), not every caller's.
+> models/lang/js/rules/js-surface.rofl — WHAT A FILE OFFERS THE OTHERS (exports, what a call hands a function, the
+> nodes that leave their file), as relations of [flow] like any other. There is no book of what crosses files: the
+> engine finds that from the rules' keys and reads another file's fact as a lemma where a rule reads it
+> (f_surface_is_replaced_by_lemmas_by_keys). A call of a function whose return is its own parameter takes that call's
+> argument (`sx_ret_param`), not every caller's.
 
 > ---------------------------------------------------------------- what escapes
 
 Reads:
 
 - from js-callgraph, in the code: [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [ctor_method](js-callgraph.rofl.md#ctor_method), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [resolves](js-callgraph.rofl.md#resolves)
-- from js-callgraph, in the flow: [may_be](js-callgraph.rofl.md#may_be)
+- from js-callgraph: [may_be](js-callgraph.rofl.md#may_be)
 - from js-controlflow, in the code: [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable)
-- from js-controlflow, in the flow: [thrown_by](js-controlflow.rofl.md#thrown_by)
+- from js-controlflow: [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [next_send](js-dataflow.rofl.md#next_send), [own_node](js-dataflow.rofl.md#own_node), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
-- from js-effects, in the flow: [eff_module](js-effects.rofl.md#eff_module), [effect_of_module](js-effects.rofl.md#effect_of_module)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [next_send](js-dataflow.rofl.md#next_send), [own_node](js-dataflow.rofl.md#own_node), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
+- from js-effects: [eff_module](js-effects.rofl.md#eff_module), [effect_of_module](js-effects.rofl.md#effect_of_module)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
-- from outside these files, in the flow:
+- from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
   - <a id="nth"></a>`nth`
@@ -105,8 +105,6 @@ What this file calls a node, and what each word stands for:
 1. if [`sx_drops_any`](#sx_drops_any)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H);
 2. if [`sx_dwalked`](#sx_dwalked)(F) and [`dcall`](js-dataflow.rofl.md#dcall)(F, H).
 
-In the flow:
-
 `may_be`(N, E, M) either:
 
 1. if [`sx_node`](#sx_node)(N, M) and E is `node`;
@@ -135,7 +133,7 @@ In the code:
 
 > ---------------------------------------------------------------- exports, by the module's path
 
-In the surface:
+In the flow:
 
 <a id="sx_export_node"></a>`sx_export_node`(File, Name, F) if a node F [is exported as](js-dataflow.rofl.md#exports_name) Name from File.
 
@@ -186,19 +184,15 @@ In the code:
    - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, E, something);
    - unless [`call_spreads`](js-callgraph.rofl.md#call_spreads)(C).
 
-In the surface:
+In the flow:
 
 <a id="sx_arg_short"></a>`sx_arg_short`(F, N) if a call C [resolves to](js-callgraph.rofl.md#resolves) F and [`arg_count`](#arg_count)(C, N).
-
-In the flow:
 
 `may_be`(U, `lit`, `undefined`) if all of:
   - [`sx_arg_short`](#sx_arg_short)(F, N);
   - F [takes](js-dataflow.rofl.md#param_of) Name at an index I;
   - I >= N;
   - F [uses](js-dataflow.rofl.md#param_use) Name at a node U.
-
-In the surface:
 
 <a id="sx_reached"></a>`sx_reached`(F) if a call C [resolves to](js-callgraph.rofl.md#resolves) F, unless C [is guarded](js-controlflow.rofl.md#guarded).
 
@@ -234,8 +228,6 @@ In the surface:
   - [`fn_value`](#fn_value)(F);
   - unless [`spread_args`](#spread_args)(C, something, Y).
 
-In the flow:
-
 `array_elem`(R, K, X) if [`sx_rest_elem`](#sx_rest_elem)(R, K, X).
 
 > ---------------------------------------------------------------- what a call gets back
@@ -261,8 +253,6 @@ In the flow:
 <a id="ret_param"></a>`ret_param`(F, I, E) if F [returns to its call](#call_returns) E and [`param_read`](#param_read)(F, I, E).
 
 <a id="ret_plain"></a>`ret_plain`(F, E) if F [returns to its call](#call_returns) E, unless [`ret_param`](#ret_param)(F, something, E).
-
-In the surface:
 
 <a id="sx_ret_node"></a>`sx_ret_node`(F, N) if [`ret_plain`](#ret_plain)(F, E) and a node E [points to](js-dataflow.rofl.md#may_be_node) a node N.
 
@@ -343,21 +333,17 @@ In the code:
    - F [is nearest to](#nearest_v) a node R;
    - unless [`returns`](js-dataflow.rofl.md#returns)(R, something) in the value.
 
-In the surface:
+In the flow:
 
 <a id="sx_ret_undef"></a>`sx_ret_undef`(F) if all of:
   - [`falls_off`](#falls_off)(F);
   - unless [`generator`](#generator)(F);
   - unless F [is a constructor](js-callgraph.rofl.md#ctor_method).
 
-In the flow:
-
 `may_be`(C, `lit`, `undefined`) if all of:
   - a call C [is a call site](js-callgraph.rofl.md#call_site) in some file;
   - C [resolves to](js-callgraph.rofl.md#resolves) F;
   - [`sx_ret_undef`](#sx_ret_undef)(F).
-
-In the surface:
 
 <a id="sx_gen_ret"></a>`sx_gen_ret`(F, N) if all of:
   - F [returns](js-dataflow.rofl.md#returns) a node E;
@@ -373,8 +359,6 @@ In the surface:
 > `o[k] = v` with k and v the function's own parameters (`on(name, handler)`): at a call, THAT call's value under
 > THAT call's key, not every value under every key.
 
-In the flow:
-
 <a id="store_pkey"></a>`store_pkey`(F, J, I, X) if all of:
   - [`assign`](#assign)(X, L, V);
   - X [is plain](js-dataflow.rofl.md#plain_assign);
@@ -383,8 +367,6 @@ In the flow:
   - [`param_read`](#param_read)(F, I, V).
 
 <a id="store_sym"></a>`store_sym`(X) if [`store_pkey`](#store_pkey)(something, something, something, X).
-
-In the surface:
 
 <a id="sx_store_pkey"></a>`sx_store_pkey`(F, J, I, O) if all of:
   - [`store_pkey`](#store_pkey)(F, J, I, X);
@@ -401,8 +383,6 @@ In the surface:
 
 > every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
 
-In the flow:
-
 <a id="ret_node_any"></a>`ret_node_any`(F, N) either:
 
 1. if [`sx_ret_node`](#sx_ret_node)(F, N);
@@ -413,9 +393,7 @@ In the flow:
 
 | arg 1 | arg 2 |
 |---|---|
-| `surface` | `code` |
-| `surface` | `flow` |
-| `code` | `surface` |
-| `flow` | `surface` |
-| `audit` | `surface` |
+| `flow` | `code` |
+| `code` | `flow` |
+| `audit` | `flow` |
 

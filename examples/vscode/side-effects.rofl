@@ -101,35 +101,35 @@ se_site(C, F, 0) :- call_like[code](C), callee[value](C, M),
                     object_of[code](M, O), may_be_node[flow](O, Y), se_recv(Y, S, R).
 
 se_param(Fn, I, F) :- se_site(S, F, J), arg_at[flow](S, J, A), param_use[flow](Fn, Name, A), param_of[flow](Fn, I, Name).
-se_site(W, F, I)   :- resolves[code](W, Fn), sx_param_sink[surface](Fn, I, F).
+se_site(W, F, I)   :- resolves[code](W, Fn), sx_param_sink[flow](Fn, I, F).
 -- the wrapper is the callee's: it publishes which parameter it hands on (models/lang/js/rules/js-surface.rofl)
-sx_param_sink[surface](Fn, I, F) :- se_param(Fn, I, F).
+sx_param_sink[flow](Fn, I, F) :- se_param(Fn, I, F).
 -- A METHOD THAT HANDS A FIELD OF ITS OWN `this` TO A SITE is a wrapper too (`save() { fs.writeFileSync(this.path) }`):
 -- its call is a site whose value is that field of the call's receiver, the instance's own value (`key_on`).
 se_field(Fn, Key, F) :- se_site(S, F, J), arg_at[flow](S, J, A), may_be[flow](A, input, field(Fn, Key)).
 se_field(Fn, Key, F) :- se_fsite(_, F, R, Key), key_on[flow](R, Key, input, field(Fn, Key)).
-sx_field_sink[surface](Fn, Key, F) :- se_field(Fn, Key, F).
-se_fsite(W, F, R, Key) :- resolves[code](W, Fn), sx_field_sink[surface](Fn, Key, F), recv_call[code](W, R).
+sx_field_sink[flow](Fn, Key, F) :- se_field(Fn, Key, F).
+se_fsite(W, F, R, Key) :- resolves[code](W, Fn), sx_field_sink[flow](Fn, Key, F), recv_call[code](W, R).
 key_wanted[flow](R, Key) :- se_fsite(_, _, R, Key).
 -- and a method that runs such a method ON THE OBJECT ITS FIELD HOLDS (`flush() { this.inner.save() }`): which object
 -- that is, is the call's to say, so the run is walked object by object from the call (`se_run`), as `run` is.
-se_sink(M, F)        :- sx_field_sink[surface](M, _, F).
-se_sink(M, F)        :- sx_hop_sink[surface](M, _, _, F).
+se_sink(M, F)        :- sx_field_sink[flow](M, _, F).
+se_sink(M, F)        :- sx_hop_sink[flow](M, _, _, F).
 se_hop(M, K, M2, F)  :- resolves[code](W, M2), se_sink(M2, F), recv_call[code](W, R), recv_field[flow](R, M, K).
-se_hop(M, K, M3, F)  :- resolves[code](W, M2), sx_hop_sink[surface](M2, K, M3, F), recv_call[code](W, R), may_be[flow](R, input, S), input_this[flow](S, M).
-sx_hop_sink[surface](M, K, M2, F) :- se_hop(M, K, M2, F).
+se_hop(M, K, M3, F)  :- resolves[code](W, M2), sx_hop_sink[flow](M2, K, M3, F), recv_call[code](W, R), may_be[flow](R, input, S), input_this[flow](S, M).
+sx_hop_sink[flow](M, K, M2, F) :- se_hop(M, K, M2, F).
 this_key[flow](M, K) :- se_hop(M, K, _, _).
 se_run(I, M, F)      :- resolves[code](W, M), se_sink(M, F), recv_call[code](W, R), recv_obj[flow](R, I).
-se_run(I2, M2, F)    :- se_run(I, M, F), sx_hop_sink[surface](M, K, M2, F), key_node[flow](I, K, I2).
+se_run(I2, M2, F)    :- se_run(I, M, F), sx_hop_sink[flow](M, K, M2, F), key_node[flow](I, K, I2).
 se_run(I2, M2, F)    :- se_hop(M, K, M2, F), field_holds[flow](M, K, I2).
-key_ask[flow](I, K)   :- se_run(I, M, F), sx_hop_sink[surface](M, K, _, F).
-key_ask[flow](I, Key) :- se_run(I, M, F), sx_field_sink[surface](M, Key, F).
-se_eff(I, M, F, VK, X) :- se_run(I, M, F), sx_field_sink[surface](M, Key, F), key_of[flow](I, Key, VK, X).
-se_eff(I, M, F, VK, X) :- se_run(I, M, F), sx_hop_sink[surface](M, K, M2, F), key_node[flow](I, K, I2), se_eff(I2, M2, F, VK, X).
-se_osite(W, F, I, M) :- resolves[code](W, M), sx_hop_sink[surface](M, _, _, F), recv_call[code](W, R), recv_obj[flow](R, I).
+key_ask[flow](I, K)   :- se_run(I, M, F), sx_hop_sink[flow](M, K, _, F).
+key_ask[flow](I, Key) :- se_run(I, M, F), sx_field_sink[flow](M, Key, F).
+se_eff(I, M, F, VK, X) :- se_run(I, M, F), sx_field_sink[flow](M, Key, F), key_of[flow](I, Key, VK, X).
+se_eff(I, M, F, VK, X) :- se_run(I, M, F), sx_hop_sink[flow](M, K, M2, F), key_node[flow](I, K, I2), se_eff(I2, M2, F, VK, X).
+se_osite(W, F, I, M) :- resolves[code](W, M), sx_hop_sink[flow](M, _, _, F), recv_call[code](W, R), recv_obj[flow](R, I).
 se_gsite(W, F, I2, M2) :- resolves[code](W, M2), se_sink(M2, F), recv_call[code](W, R), recv_field[flow](R, M, K), field_holds[flow](M, K, I2).
-imports(main, surface).
-imports(surface, main).
+imports(main, flow).
+imports(flow, main).
 
 -- 5. THE ANSWER.
 side_effect_site(S, F) :- se_site(S, F, _).
@@ -155,7 +155,7 @@ side_effect_form(S, F, T)  :- se_site(S, F, I), arg_at[flow](S, I, A), may_be_no
 ambient_module("src/vs/base/common/path.ts", "node:path").
 
 -- Only a value that reaches a site is unfolded into texts.
-concat_wanted[surface](C) :- se_site(S, _, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), composed[flow](C).
+concat_wanted[flow](C) :- se_site(S, _, I), arg_at[flow](S, I, A), may_be_node[flow](A, C), composed[flow](C).
 side_effect_env(V, Key) :- se_member_of(V, E, Key), se_member_of(E, "process", "env").
 
 se_family(F) :- side_effect_site(_, F).
