@@ -22,7 +22,6 @@ Reads:
 - from js-controlflow: [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
 - from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [next_send](js-dataflow.rofl.md#next_send), [own_node](js-dataflow.rofl.md#own_node), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
-- from js-effects: [eff_module](js-effects.rofl.md#eff_module), [effect_of_module](js-effects.rofl.md#effect_of_module)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
@@ -50,20 +49,20 @@ What this file calls a node, and what each word stands for:
 
 <a id="sx_esc"></a>`sx_esc`(N) either:
 
-1. if [`sx_export_node`](#sx_export_node)(something, something, N);
-2. if [`sx_default`](#sx_default)(something, N);
-3. if [`sx_cjs`](#sx_cjs)(something, N);
+1. if a node N [is exported as](js-dataflow.rofl.md#exports_name) some name from some file;
+2. if a node N [is the default export of](js-dataflow.rofl.md#exports_default) some file;
+3. if some file [exports by commonjs](js-dataflow.rofl.md#cjs_exports) a node N;
 4. if [`sx_module`](#sx_module)(something, N);
 5. if [`sx_arg_node`](#sx_arg_node)(something, something, N);
 6. if [`sx_ret_node`](#sx_ret_node)(something, N);
 7. if [`sx_ret_pnode`](#sx_ret_pnode)(something, N);
 8. if [`sx_gen_ret`](#sx_gen_ret)(something, N);
-9. if [`sx_next`](#sx_next)(something, N);
+9. if some function [is sent](js-dataflow.rofl.md#next_send) a node N;
 10. if [`sx_cb`](#sx_cb)(N, something);
 11. if [`sx_rest_elem`](#sx_rest_elem)(something, something, N);
 12. if [`sx_sub_inst`](#sx_sub_inst)(something, N);
-13. if [`sx_esc`](#sx_esc)(C) and N [stands for an instance of](js-dataflow.rofl.md#inst_of) a class C;
-14. if [`sx_esc`](#sx_esc)(I) and a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) N;
+13. if [`sx_esc`](#sx_esc)(C) and a node N [stands for an instance of](js-dataflow.rofl.md#inst_of) a class C;
+14. if [`sx_esc`](#sx_esc)(I) and a node I [stands for an instance of](js-dataflow.rofl.md#inst_of) a class N;
 15. if [`sx_esc`](#sx_esc)(I) and [`isa`](js-dataflow.rofl.md#isa)(I, N).
 
 > ... and what an escaping node holds
@@ -135,21 +134,9 @@ In the code:
 
 In the flow:
 
-<a id="sx_export_node"></a>`sx_export_node`(File, Name, F) if a node F [is exported as](js-dataflow.rofl.md#exports_name) Name from File.
-
-<a id="sx_export_val"></a>`sx_export_val`(File, Name, X) if [`exports_value`](js-dataflow.rofl.md#exports_value)(X, Name, File).
-
 <a id="sx_export_lit"></a>`sx_export_lit`(File, Name, V) if [`exports_value`](js-dataflow.rofl.md#exports_value)(X, Name, File) and a node X [may be the literal](js-dataflow.rofl.md#may_be_lit) V.
 
-<a id="sx_default"></a>`sx_default`(File, F) if a node F [is the default export of](js-dataflow.rofl.md#exports_default) File.
-
-<a id="sx_cjs"></a>`sx_cjs`(File, V) if File [exports by commonjs](js-dataflow.rofl.md#cjs_exports) a node V.
-
 <a id="sx_module"></a>`sx_module`(File, P) if File [is in the corpus](js-dataflow.rofl.md#corpus_file) and a node P [is the module object of](js-dataflow.rofl.md#module_object) File.
-
-<a id="sx_eff_module"></a>`sx_eff_module`(File, L, H) if File [has the module effect](js-effects.rofl.md#eff_module) L at a host H.
-
-<a id="sx_effect_module"></a>`sx_effect_module`(File, N) if [the module effect](js-effects.rofl.md#effect_of_module) of File is an effect N.
 
 > ---------------------------------------------------------------- what a call hands its callee
 
@@ -205,12 +192,8 @@ In the flow:
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
    - unless C [is guarded](js-controlflow.rofl.md#guarded).
 
-<a id="sx_next"></a>`sx_next`(G, V) if G [is sent](js-dataflow.rofl.md#next_send) a node V.
-
-<a id="sx_rest"></a>`sx_rest`(F, J, R) if F [has the rest parameter](js-dataflow.rofl.md#param_rest) at an index J a node R and some name.
-
 <a id="sx_rest_elem"></a>`sx_rest_elem`(R, K, X) if all of:
-  - [`sx_rest`](#sx_rest)(F, J, R);
+  - F [has the rest parameter](js-dataflow.rofl.md#param_rest) at an index J a node R and some name;
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
   - I >= J;
