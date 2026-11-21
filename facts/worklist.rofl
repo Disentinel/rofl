@@ -4221,7 +4221,7 @@ work_spawned(w_au_no_whole_fallback_past_units, f_a_fresh_agent_answers_the_side
 
 work(w_au_default_walls_hold_js,
   "The default walls cut the JS model at 41 files (spent(rows, 500001, 500000)); the shrug says `budget` while the wall is --space, and --budget alone changes nothing. Both agents guessed --space values. Make the defaults hold the JS model over a few thousand files, or name the flag and a value that would suffice in the shrug; put tested values per corpus size beside rofl ask in docs/cli.md.").
-work_state(w_au_default_walls_hold_js, open).
+work_state(w_au_default_walls_hold_js, done).
 work_spawned(w_au_default_walls_hold_js, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 work(w_au_side_effect_question_findable,
@@ -4282,7 +4282,7 @@ work_spawned(w_au_parse_error_position, f_a_fresh_agent_answers_the_side_effect_
 
 work(w_au_narrowing_and_progress,
   "When a world fails for size nothing says which files or directories grew it (vscode base: test/ doubled it); an agent narrows by guessing. A long ask prints no heartbeat, so an agent with a 2-minute foreground limit cannot tell a stuck run from a slow one. Rank the largest units by facts when a wall is met; a progress line every N seconds on stderr.").
-work_state(w_au_narrowing_and_progress, open).
+work_state(w_au_narrowing_and_progress, done).
 work_spawned(w_au_narrowing_and_progress, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 
