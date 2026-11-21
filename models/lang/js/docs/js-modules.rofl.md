@@ -21,11 +21,9 @@ default: code
 > Which directory to start in, when to walk up and what counts as arriving is
 > a join, and it is here.
 
-> from outside the AST (models/lang/js/facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
-> str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
-> ":"; the disk in its own ledger, has_file[fs](Dir, Name) and
-> has_dir[fs](Parent, Name), a directory named by its path; node_prefix_only(Canonical);
-> shape_verdict(Shape, Reason); unknown_because.
+> from outside the AST (models/lang/js/facts/js-modules.rofl): the disk in its own ledger,
+> has_file[fs](Dir, Name) and has_dir[fs](Parent, Name), a directory named by its path;
+> node_prefix_only(Canonical); shape_verdict(Shape, Reason); unknown_because.
 
 Reads:
 
@@ -87,10 +85,6 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 Declared as facts:
 
-- <a id="str_seg"></a>`str_seg` — rows from the host, which cuts the specifier
-- <a id="str_segs"></a>`str_segs` — rows from the host, which cuts the specifier
-- <a id="str_char0"></a>A text S starts with a text C — rows from the host, which cuts the specifier
-- <a id="str_scheme"></a>A text S has the scheme Scheme — rows from the host, which cuts the specifier
 - <a id="has_file"></a>A directory D holds the file Name — rows from the host, which lists the files
 - <a id="has_dir"></a>A directory D holds the directory Name — rows from the host, which lists the files
 
@@ -211,6 +205,31 @@ A site
 
 <a id="site_source_computed"></a>A site has a computed source if [the source node](#site_source_node) of it is some node, unless it [has a literal source](#site_source_literal).
 
+> A specifier's text cut the way node reads it, by the kernel's string operations: its first character, its
+> scheme before the first ":", its segments on "/". Read off the texts a site names, so no string of a file
+> is a fact of the world before a rule asks for it.
+
+<a id="str_segs"></a>`str_segs`(S, N) if all of:
+  - [the source text](#site_source) of some site is S;
+  - L is the length of S;
+  - L > 0;
+  - N is the number of segments of S split by "/".
+
+A text S
+
+- <a id="str_char0"></a>starts with a text C if [`str_segs`](#str_segs)(S, something) and C is the character 0 of S.
+- <a id="str_scheme"></a>has the scheme P if [`str_segs`](#str_segs)(S, something), P is the prefix of S before ":", and P differs from "".
+
+<a id="str_seg"></a>`str_seg`(S, E, G) either:
+
+1. if [`str_segs`](#str_segs)(S, something), G is the segment 0 of S split by "/", and E is 0;
+2. if all of:
+   - [`str_seg`](#str_seg)(S, K, something);
+   - [`str_segs`](#str_segs)(S, N);
+   - E is K + 1;
+   - E < N;
+   - G is the segment E of S split by "/".
+
 ## 2. SOURCE SHAPE — total over literal sources, disjoint, keyed on the STRING.
 
 > `./x` and `../x`: the first character discriminates. `#foo` is a package
@@ -299,7 +318,7 @@ A site
   - [`str_seg`](#str_seg)(S, K, Seg);
   - D [holds the file](#file_at) Seg being T;
   - N is K + 1;
-  - [`str_segs`](#str_segs)(S, N).
+  - N is the number of segments of S split by "/".
 
 <a id="builtin_canonical"></a>The canonical builtin of a text S is a spec N either:
 
@@ -374,7 +393,7 @@ A node I is resolved either:
   - [the source text](#site_source) of it is S;
   - [`str_seg`](#str_seg)(S, K, Seg);
   - N is K + 1;
-  - [`str_segs`](#str_segs)(S, N).
+  - N is the number of segments of S split by "/".
 
 > A file is found by its name, not by holding each site against every file of
 > its folder: a file's stem is its name less the last extension.
@@ -407,7 +426,7 @@ A node I is resolved either:
 3. if all of:
    - I [walks](#walk) at a step N to a directory D;
    - [the source text](#site_source) of I is S;
-   - [`str_segs`](#str_segs)(S, N);
+   - N is the number of segments of S split by "/";
    - Name [is an index file](#index_file) at R;
    - D [holds the file](#file_at) Name being T.
 
@@ -869,5 +888,5 @@ In the audit:
 
 <a id="import_attr_unread"></a>X is unread if [`node`](#node)(X, `import_attribute`, something), unless X [carries](#import_attr) some key holding some text.
 
-> 3 trailing comments on rule lines are not carried over.
+> 1 trailing comments on rule lines are not carried over.
 

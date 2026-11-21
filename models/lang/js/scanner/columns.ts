@@ -4,7 +4,6 @@ export { COLUMNS } from '../../../../src/parser.ts';
 
 const radix36 = (n: number) => n.toString(36);
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-const unesc = (s: string) => s.replace(/\\(.)/g, (_, c) => (c === 'n' ? '\n' : c === 'r' ? '\r' : c));
 
 /** Facts of the text form whose arguments are strings and integers, as one table and a block a relation. */
 export function toColumns(facts: string[]): string {
@@ -25,34 +24,19 @@ export function toColumns(facts: string[]): string {
   return out.join('\n') + '\n';
 }
 
-/** A reader of the column form a whole line at a time: every string an `attr[ast_oxc](N, value, S)` holds, and the facts. */
-export function valueStrings(value: (s: string) => void, counted: (n: number) => void): (text: string) => void {
-  let table: string[] = [], want = 0, block: { rel: string; arity: number; cols: string[] } | null = null;
+/** A counter of the facts in the column form, read a whole line at a time. */
+export function countRows(counted: (n: number) => void): (text: string) => void {
+  let skip = 0;
   return (text: string) => {
     const lines = text.split('\n');
     if (lines[lines.length - 1] === '') lines.pop();
     for (const l of lines) {
-      if (want > 0) { table.push(l); want--; continue; }
-      if (block) {
-        block.cols.push(l);
-        if (block.cols.length === block.arity) {
-          if (block.rel === 'attr ast_oxc' && block.arity === 3) {
-            const keys = block.cols[1].split(' '), vals = block.cols[2].split(' ');
-            keys.forEach((k, i) => {
-              if (table[parseInt(k, 36)] !== 'a value') return;
-              const v = table[parseInt(vals[i], 36)];
-              if (v?.startsWith('s ')) value(unesc(v.slice(2)));
-            });
-          }
-          block = null;
-        }
-        continue;
-      }
-      if (l.startsWith('T ')) { table = []; want = Number(l.slice(2)); }
+      if (skip > 0) { skip--; continue; }
+      if (l.startsWith('T ')) skip = Number(l.slice(2));
       else if (l.startsWith('R ')) {
-        const [, rel, book, arity, rows] = l.split(' ');
+        const [, , , arity, rows] = l.split(' ');
         counted(Number(rows));
-        block = Number(arity) > 0 ? { rel: `${rel} ${book}`, arity: Number(arity), cols: [] } : null;
+        skip = Number(arity);
       }
     }
   };

@@ -103,13 +103,3 @@ has_file[fs](".", "log.js").
 has_file[fs](".", "orders.js").
 has_file[fs](".", "server.js").
 has_file[fs](".", "util.js").
-str_segs[code]("./db.js", 2).
-str_char0[code]("./db.js", ".").
-str_seg[code]("./db.js", 0, ".").
-str_seg[code]("./db.js", 1, "db.js").
-str_segs[code]("select name from users where id=", 1).
-str_char0[code]("select name from users where id=", "s").
-str_seg[code]("select name from users where id=", 0, "select name from users where id=").
-str_segs[code]("select * from users", 1).
-str_char0[code]("select * from users", "s").
-str_seg[code]("select * from users", 0, "select * from users").
