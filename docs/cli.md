@@ -205,11 +205,34 @@ model over 493 vscode files in a cgroup of 6 GB (2026-11-18): before, killed by
 the kernel at 6.1 GB with no line; now stopped at 5.2 to 5.4 GB with the line,
 whole and by levels. Nothing to turn on or off.
 
+**No row wall by default; the memory is the wall.** A world holds as many rows
+as the memory this process may use holds (above): `--space N` sets a wall of N
+rows only where a caller asks for one, a check harness whose world's meaning is
+the stop (`check_opt(W, space, N)`). The step budget is 200 000 000 by default
+(`--budget N`). Measured on the JS model and examples/vscode/side-effects.rofl,
+no flags, 4 cores and 15 GB (2026-11-21): 41 vscode files, which the old wall
+of 500 000 rows cut, answered whole in 10 s; 1000 files stop at the memory
+wall (10.0 GB) after 823 s, exit 5, naming where to narrow (below); the JS model
+now takes that much, not a flag (f_the_js_model_since_1117_takes_three_times_the_time).
+
 **A partial answer reads as one.** Its first line is `[partial answer: the rows
-below may be short of the whole answer]` and its last says why: `[partial: the
-memory this process may use ran out, and the world stopped there]`, `[partial:
-budget exhausted, hole emitted]` (a step or row wall), the disk cap, or a scan
-that failed; `--json` says `"partial":true`; the exit is 5.
+below may be short of the whole answer]` and its last says why and which flag
+moves it: `[partial: the memory this process may use, 10.0 GB, ran out, and the
+world stopped there; ask over fewer files]`, `[partial: the step budget of N
+steps was spent; --budget sets it, a larger one goes further]`, `[partial: the
+row wall of N rows that --space set was met; ...]`, the disk cap, or a scan that
+failed; `--json` says `"partial":true`; the exit is 5. Beside it, on stderr, a
+line says where to narrow: `narrow: the largest directories of the world by
+facts, of 272812: src/vs/base/browser/ui 32% (88592 facts), ...`, the files'
+facts summed by directory (a directory most of whose facts are one child's is
+said by that child), or the largest files where they share one directory; the
+edge of the memory watcher and units that ran out of memory say it too.
+
+**A long question says it is moving.** Every 15 s a question verb (`ask`, `why`,
+`whynot`, `excise`) prints on stderr `progress: 30 s, 22.9 M steps, 14.7 M in
+the last 15 s, memory 3.3 GB of the 10.0 GB it may use`: steps that still rise
+are a slow run, not a stuck one. `rofl load` and `rofl serve`, the harnesses'
+entries, print none.
 
 `--kept F` with any verb names the kept world yourself, under the owner's
 stricter rule: computed once, asked many times, each question a new process that
@@ -510,8 +533,8 @@ two worlds, `[value]` and `[type]`, over one tree, `[tree]`; `oxc-roles.rofl`
 writes them from oxc's tree in `[ast_oxc]` (the raw relations are `node`, `child`, `attr`,
 `line` and `file`: a ledger is named by its book, not by a prefix). `models/lang/js/rules/js-*.rofl` read
 the roles of the oxc converter (`models/lang/js/js.files`); `npm run test:roles` drives the layer, and
-`rofl load @models/lang/js/oxc.files code.rofl` writes the roles of a corpus scanned by `npm run scan`. Pass `--budget` and `--space` at hundreds of files: the
-default budget cuts the state without saying so.
+`rofl load @models/lang/js/oxc.files code.rofl` writes the roles of a corpus scanned by `npm run scan`. The whole state of hundreds of files can pass the
+default step budget: a cut state holds `hole($kernel)(..., budget_exhausted)`; pass a larger `--budget`.
 
 ### The second parser: oxc, in Rust
 

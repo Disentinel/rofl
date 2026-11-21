@@ -394,7 +394,7 @@ impl Server {
                 let (o, resumed) = s.resume(more).map_err(|e| rofl::describe(&e))?;
                 Ok(json!({
                     "partial": o.partial, "staged": o.staged, "steps": o.steps,
-                    "peakRows": o.peak_rows, "space": o.space, "resumed": resumed,
+                    "peakRows": o.peak_rows, "space": (o.space != i64::MAX).then_some(o.space), "resumed": resumed,
                     "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
                 }))
             }
@@ -768,7 +768,7 @@ impl Server {
         let flying = s.post.as_ref().map_or(0, |p| p.flying());
         Ok(json!({
             "partial": o.partial, "staged": o.staged, "steps": o.steps,
-            "peakRows": o.peak_rows, "space": o.space, "flying": flying, "next": s.eval.wall.next_level(),
+            "peakRows": o.peak_rows, "space": (o.space != i64::MAX).then_some(o.space), "flying": flying, "next": s.eval.wall.next_level(),
             "again": s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect::<Vec<_>>(),
             "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
         }))

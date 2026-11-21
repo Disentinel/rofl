@@ -54,7 +54,6 @@ pub use par::Split;
 
 const MAX_DEPTH: usize = 512;
 const MAX_ALTERNATIONS: usize = 256;
-const DEFAULT_SPACE: i64 = 500_000;
 /// What a world cut by the disk wall may keep beyond it (the evaluation in flight, its cut): an eighth of the wall,
 /// which a question verb leaves free (tests/disk.rs).
 pub const CUT_ROOM: i64 = 8;
@@ -685,6 +684,8 @@ pub static MEMORY_FULL: std::sync::atomic::AtomicBool = std::sync::atomic::Atomi
 pub static MEMORY_STOPPED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 pub static MEMORY_USED: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
 pub static MEMORY_LIMIT: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+/// The steps every evaluation of the process has taken, told a thousand at a time: what a run's progress line says moved.
+pub static STEPS_DONE: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
 
 #[derive(Clone)]
 pub struct Eval {
@@ -2303,7 +2304,7 @@ impl Eval {
             store,
             budget,
             halt: None,
-            space: DEFAULT_SPACE,
+            space: i64::MAX,
             disk: i64::MAX,
             disk_hit: false,
             memory_hit: false,
@@ -2365,7 +2366,7 @@ impl Eval {
             wall: WallState::default(),
             cells: CellState::default(),
             unknown_cone: HashSet::new(),
-            wfs: WfsState { carry_wall: (budget, DEFAULT_SPACE), ..Default::default() },
+            wfs: WfsState { carry_wall: (budget, i64::MAX), ..Default::default() },
             shrug_readers: HashSet::new(),
             whole: None,
             kept_carry: None,
@@ -4532,11 +4533,11 @@ impl Eval {
             }
             "budget" => {
                 let (kind, spent, limit) = self.wall.spent.get().unwrap_or(if cname == "space_exhausted" {
-                    ("rows", self.space + 1, self.space)
+                    ("rows", self.space.saturating_add(1), self.space)
                 } else if cname == "disk_exhausted" {
                     ("bytes", self.disk.saturating_add(1), self.disk)
                 } else {
-                    ("steps", self.budget + 1, self.budget)
+                    ("steps", self.budget.saturating_add(1), self.budget)
                 });
                 let (f, k) = (self.h.intern("spent"), self.h.atom(kind));
                 self.h.mkf(f, &[k, Term::int(spent), Term::int(limit.min(i64::MAX >> 4))])
@@ -6158,6 +6159,7 @@ impl Eval {
         }
         if self.steps & 0x3ff == 0 {
             self.note_heap();
+            STEPS_DONE.fetch_add(0x400, std::sync::atomic::Ordering::Relaxed);
         }
         self.memory_met()?;
         if self.disk != i64::MAX && self.budget != i64::MAX && brk!("disk_wall_ignored" => false; true) {
@@ -6181,6 +6183,11 @@ impl Eval {
     /// Whether the last evaluation stopped at the disk wall: its hole is in the store.
     pub fn disk_cut(&self) -> bool {
         self.cut_by(self.v.disk_reason)
+    }
+
+    /// The world stopped at the row wall a caller set (`space`).
+    pub fn space_cut(&self) -> bool {
+        self.cut_by(self.v.space_reason)
     }
 
     /// The world stopped at the memory wall (`MEMORY_FULL`).

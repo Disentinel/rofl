@@ -14,7 +14,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 const BUDGET: i64 = 4_000_000_000;
-const SPACE: i64 = 40_000_000;
 pub const SHOWN: usize = 12;
 
 /// What the renderer reads by name: the pictures' words (notebook/draw.ts `VIEW_RELS`) and `unknown`, which a notebook writes.
@@ -477,7 +476,6 @@ pub fn run(file: &Path, all_rows: bool) -> Result<NbResult, String> {
 
 fn load_model(a: &Assembled) -> Result<Session, NbResult> {
     let mut core = Session::fresh(BUDGET);
-    core.eval.space = SPACE;
     match core.load(&a.model, None) {
         Ok(_) => Ok(core),
         Err(d) => {
@@ -497,7 +495,6 @@ fn kernel_names(a: &Assembled) -> Kernel {
     let world_rels: HashSet<String> = match program(&a.model) { Ok(p) => { p.rels(&mut world); world.iter().cloned().collect() } Err(_) => HashSet::new() };
     let foreign: HashSet<String> = boot_rels.iter().cloned().chain(reserved_names().map(|s| s.to_string())).filter(|r| !said.contains(r) && !written.contains(r)).collect();
     let mut shell = Session::fresh(BUDGET);
-    shell.eval.space = SPACE;
     let _ = shell.load(&boot, None);
     let _ = shell.evaluate();
     let kernel_rels: HashSet<String> = boot_rels.iter().cloned().chain(shell.fact_keys(None).iter().map(|k| rel_of_key(k))).collect();
@@ -865,7 +862,7 @@ fn cut_reason(f: &mut Session) -> Option<String> {
     let holes = query(f, "hole[$kernel](H, R)");
     let k = holes.vars.iter().position(|v| v == "R");
     let has = |w: &str| k.is_some_and(|k| holes.rows.iter().any(|r| r[k] == w));
-    if has("space_exhausted") { Some("the space wall of 40,000,000 rows was reached, the usual mark of a rule that climbs without end; a notebook has no setting that raises it".to_string()) }
+    if has("memory_exhausted") { Some("the memory this process may use ran out, and the notebook stopped there; ROFL_NB_MEMORY bounds it".to_string()) }
     else if has("budget_exhausted") { Some("the step budget of 4,000,000,000 was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it".to_string()) }
     else { None }
 }
