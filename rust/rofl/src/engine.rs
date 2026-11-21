@@ -2753,6 +2753,7 @@ impl Eval {
         let staged_twice = staged_twice(&self.h, &rules);
         self.store.unordered = !self.lat.has_cells() && (self.prov.no_witness || !staged_twice);
         self.diags.extend(diags);
+        self.diags.extend(arity_unconcluded(&self.h, &self.v, &rules, &self.store));
         self.answer = self.safety_answer(&rules);
         self.settle_provenance_mode(&rules);
         let mut kept: Vec<ERule> = Vec::new();
@@ -14421,6 +14422,36 @@ fn arith_shape(h: &Heap, t: Term) -> Option<(String, Term, Term)> {
 /// `r(k, -1)` of a bitor, which would be a silent false). A slot may hold a
 /// variable, a value of the carrier (a ground set is canonical by the load),
 /// `set(T)`, and `iv(A, B)` of variables and integers.
+/// A RULE THAT READS A RELATION AT AN ARITY NOTHING GIVES IT, where rules conclude it at another: the literal can match
+/// no row, so a positive premise is never true and a negated one always is. Said, not refused: the other arity may be
+/// a form the data brings (`claim/6` beside `claim/5`) or another file's (`suspends[value]/3` beside a book's `/2`).
+fn arity_unconcluded(h: &Heap, v: &Vocab, rules: &[DRule], store: &Store) -> Vec<String> {
+    let mut heads: HashMap<Sym, BTreeSet<usize>> = HashMap::new();
+    for r in rules {
+        heads.entry(r.clause.head.rel).or_default().insert(r.clause.head.args.len());
+    }
+    let mut out = Vec::new();
+    for r in rules {
+        for l in r.clause.body.iter().flat_map(|b| b.lits_deep()) {
+            let n = l.args.len();
+            let Some(ns) = heads.get(&l.rel) else { continue };
+            if v.arity_of(l.rel).is_some() || ns.contains(&n) {
+                continue;
+            }
+            if store.rel_all_ro(h, l.rel).is_none_or(|fs| fs.iter().any(|f| store.args(*f).len() == n)) {
+                continue;
+            }
+            let at: Vec<String> = ns.iter().map(|k| k.to_string()).collect();
+            let line = format!("arity: {} reads {}/{n}, which no rule concludes and no fact has; its rules conclude it at {}: the literal matches no row",
+                crate::reflect::canon_clause(h, &r.clause), h.name(l.rel), at.join(", "));
+            if !out.contains(&line) {
+                out.push(line);
+            }
+        }
+    }
+    out
+}
+
 fn set_spelling_refusals(h: &mut Heap, v: &Vocab, rules: &[DRule], lattices: &[(Sym, usize, Sym)]) -> Vec<(Sym, Sym)> {
     let join_of = |h: &Heap, rel: Sym| {
         lattices.iter().find(|(p, _, _)| *p == rel).and_then(|(_, _, op)| AggOp::from_name(h.name(*op))).filter(|op| op.is_join())
@@ -14956,6 +14987,17 @@ mod tests {
         }
         bad.sort();
         assert!(bad.is_empty(), "{}", bad.join("\n"));
+    }
+
+    #[test]
+    fn a_read_at_an_arity_nothing_concludes_is_said() {
+        let mut s = crate::session::Session::fresh(1_000_000);
+        s.load("p(a). q(a, 1). c(a, 1, 2).\nhas(X) :- q(X, _).\nbad(X) :- p(X), not has(X, _).\nc(X, Y) :- q(X, Y).\nwide(X) :- c(X, _, _).", None).unwrap();
+        s.evaluate().unwrap();
+        let said: Vec<&String> = s.eval.diags.iter().filter(|d| d.starts_with("arity:")).collect();
+        assert_eq!(said.len(), 1, "{said:?}");
+        assert!(said[0].contains("has/2") && said[0].contains("at 1"), "{}", said[0]);
+        assert!(s.holds("bad(a)").unwrap(), "said, not refused: the literal matches no row");
     }
 
     #[test]

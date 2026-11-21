@@ -397,6 +397,11 @@ units (*A book laid over the units*, below).
 | 70 | a defect: the engine failed (a panic, or an evaluation that says `defect:`) |
 
 A refusal wins over a partial answer: a run with a refused question exits 4.
+
+A rule that reads a relation at an arity no rule concludes and no fact has, where rules conclude it at another, is
+said on stderr and run: `diag: arity: RULE reads has_lit/2, which no rule concludes and no fact has; its rules
+conclude it at 1`. The literal matches no row, so a negated one is always true; the other arity may be a form the
+data brings, so the world is not refused.
 A state dump of a cut world exits 0; its holes are in the dump.
 
 ## Model libraries
