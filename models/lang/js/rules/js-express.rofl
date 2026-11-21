@@ -42,7 +42,7 @@ ex_target[flow](Y) :- ex_router[flow](Y).
 ex_on[flow](R, Y, K) :- call[value](R), callee[value](R, M),
                         member_node_v[flow](M), selects[flow](M, K), object_of[code](M, O),
                         may_be_node[flow](O, Y), ex_target[flow](Y).
-ex_path[flow](R, V) :- ex_on[flow](R, _, _), arg_at[flow](R, 0, A), may_be_lit[flow](A, V), str_value[flow](V).
+ex_path[flow](R, V) :- ex_on[flow](R, _, _), arg_at[flow](R, 0, A), lit_of[flow](A, V), str_value[flow](V).
 ex_fn[flow](R, I, F) :- ex_on[flow](R, _, _), arg_at[flow](R, I, A), may_be_node[flow](A, F), fn_value[flow](F).
 ex_sub[flow](R, I, Y) :- ex_on[flow](R, _, "use"), arg_at[flow](R, I, A), may_be_node[flow](A, Y), ex_target[flow](Y).
 
@@ -52,7 +52,7 @@ ex_route[flow](Y, any, "*", H, middleware) :- ex_on[flow](R, Y, "use"), ex_fn[fl
 ex_mount[flow](Y, V, Y2) :- ex_path[flow](R, V), ex_sub[flow](R, I, Y2), I > 0, ex_on[flow](R, Y, "use").
 ex_mount[flow](Y, "/", Y2) :- ex_sub[flow](R, 0, Y2), ex_on[flow](R, Y, "use").
 ex_port_lit[flow](V) :- literal[value](_, V), int is type_of(V).
-ex_listen[flow](Y, P) :- ex_on[flow](R, Y, "listen"), arg_at[flow](R, 0, A), may_be_lit[flow](A, P), ex_port_lit[flow](P).
+ex_listen[flow](Y, P) :- ex_on[flow](R, Y, "listen"), arg_at[flow](R, 0, A), lit_of[flow](A, P), ex_port_lit[flow](P).
 
 -- An app keeps its settings by key, `app.set('port', p)` and `app.get('port')`:
 -- a keyed collection of models/lang/js/rules/js-dataflow.rofl section 7c. A `get` with a

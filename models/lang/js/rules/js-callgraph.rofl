@@ -650,7 +650,7 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), es_instance[flow](O, Name, _), 
                        lib_member(P, Key, _).
 call_open[flow](C)    :- member_call[flow](C, R, _), not whole_expr[flow](R), not whole_global[flow](R).
 call_open[flow](C)    :- member_call[flow](C, R, _), whole_expr[flow](R), not may_be_node[flow](R, _).
-call_open[flow](C)    :- member_call[flow](C, R, _), may_be_lit[flow](R, _).
+call_open[flow](C)    :- member_call[flow](C, R, _), lit_of[flow](R, _).
 call_open[flow](C)    :- call_on[flow](C, O, _), not surveyed[flow](O), not sx_module[flow](_, O).
 call_open[flow](C)    :- call_on[flow](C, O, _), sx_open[flow](O).
 

@@ -42,9 +42,14 @@ view own_node(A, B).
 own_node[flow](E, N)    :- may_be[flow](E, node, N).
 own_node[flow](E, N)    :- may_be[flow](E, inst, via(_, N)).
 may_be_node[flow](E, N) :- may_be[flow](E, inst, via(_, N)).
-may_be_lit[flow](E, V)  :- may_be[flow](E, lit, V).
+-- what an expression may be as a literal: its own, and an input's as the input holds them, read where a rule asks
+-- (`lit_of`) and not copied to every expression that holds the input; `may_be_lit` is the answer to a question
+view lit_of(A, B).
+lit_of[flow](E, V)      :- may_be[flow](E, lit, V).
+lit_of[flow](E, V)      :- may_be[flow](E, input, S), input_lit[flow](S, V).
+has_lit[flow](E)        :- lit_of[flow](E, _).
+may_be_lit[flow](E, V)  :- lit_of[flow](E, V).
 may_be_node[flow](E, N) :- bare_node[flow](E, N).
-may_be_lit[flow](E, V)  :- may_be[flow](E, input, S), input_lit[flow](S, V).
 
 may_be[flow](E, lit, V) :- literal[value](E, V).
 
@@ -468,11 +473,11 @@ may_be[flow](X, VK, V) :- settles_with[flow](X, A), may_be[flow](A, VK, V).
 may_be[flow](C, VK, V) :- host_src[flow](C, result, _), host_result[flow](C, E), may_be[flow](E, VK, V).
 member_value[flow](C, Key, V) :- host_on[flow](C, inherits, P), member_value[flow](P, Key, V).
 member_value[flow](C, Key, V) :- host_on[flow](C, from_entries, A), elem_any[flow](A, E),
-                                 may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), may_be_lit[flow](KE, Key),
+                                 may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), lit_of[flow](KE, Key),
                                  array_elem[flow](Pair, 1, V).
 -- `Object.defineProperty(o, k, { value: v })` puts v at k
 member_value[flow](O, Key, V) :- host_call_on[flow](C, "Object", "defineProperty", R), may_be_node[flow](R, O),
-                                 arg_at[flow](C, 1, K), may_be_lit[flow](K, Key), arg_at[flow](C, 2, D),
+                                 arg_at[flow](C, 1, K), lit_of[flow](K, Key), arg_at[flow](C, 2, D),
                                  may_be_node[flow](D, DO), member_plain[flow](DO, "value", V).
 -- what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
 elem_somewhere[flow](A, X) :- puts_on[flow](C, A), arg_at[flow](C, _, X).
@@ -480,7 +485,7 @@ puts_on[flow](C, A) :- host_call_on[flow](C, O, Key, R), host_puts(O, Key), may_
 elem_somewhere[flow](X, E) :- set_from[flow](X, Arr), elem_any[flow](Arr, E).
 set_from[flow](X, Arr) :- es_instance[flow](X, "Set", _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr).
 -- `{ [k]: v }`: a computed key whose value is known
-member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_expr[value](P, E), may_be_lit[flow](E, Key),
+member_value[flow](O, Key, V) :- obj_prop[code](O, P, V), key_expr[value](P, E), lit_of[flow](E, Key),
                                  string is type_of(Key).
 
 may_be[flow](E, node, N) :- destructures_at[code](D, Local, Index, File),
@@ -543,7 +548,7 @@ spread_of[code](O, A) :- obj_lit[code](O), spread_props[value](O, _, A).
 member_value[flow](O, Key, V) :- spread_of[code](O, A), may_be_node[flow](A, Src), member_value[flow](Src, Key, V).
 
 view valued(E).
-valued[flow](E) :- may_be_lit[flow](E, _).
+valued[flow](E) :- has_lit[flow](E).
 valued[flow](E) :- may_be_node[flow](E, _).
 
 -- =========================================================================
@@ -720,7 +725,7 @@ host_hands[flow](F, I, A)     :- calls_back[code](C, F, _), callback_site[code](
 host_index[flow](F, I, K) :- calls_back[code](C, F, _), callback_site[code](C, O, Key), host_passes(O, Key, I, index),
                              callback_recv[flow](C, R), may_be_node[flow](R, A), array_elem[flow](A, K, _).
 input_node[flow](S, N) :- input_param[flow](S, F, I), host_hands[flow](F, I, E), may_be_node[flow](E, N).
-input_lit[flow](S, V)  :- input_param[flow](S, F, I), host_hands[flow](F, I, E), may_be_lit[flow](E, V).
+input_lit[flow](S, V)  :- input_param[flow](S, F, I), host_hands[flow](F, I, E), lit_of[flow](E, V).
 input_lit[flow](S, K)  :- input_param[flow](S, F, I), host_index[flow](F, I, K).
 
 -- A call is its function's summary applied to THIS call: what the function returns of its own, and what it
@@ -777,7 +782,7 @@ converts[flow](C) :- keeps_argument(Name), free_global[code](G, Name, _),
                      callee[value](C, G), call[value](C).
 converts[flow](C) :- keeps_argument_static(Owner, Key), es_static_call[code](C, Owner, Key, _),
                      call[value](C).
-may_be[flow](C, lit, V) :- converts[flow](C), arg_at[flow](C, 0, A), may_be_lit[flow](A, V).
+may_be[flow](C, lit, V) :- converts[flow](C), arg_at[flow](C, 0, A), lit_of[flow](A, V).
 
 -- `Object.assign(target, ...sources)` copies the sources' members onto the target
 -- and evaluates to the target itself. Its function value is the member read
@@ -824,14 +829,14 @@ keyed_on[flow](C, X, P, Key) :- keyed_obj[flow](X, P), may_be_node[flow](O, X), 
                                 callee[value](C, N), call[value](C),
                                 selects[flow](N, Key).
 sx_kput[flow](X, K, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A),
-                             may_be_lit[flow](A, K), arg_at[flow](C, 1, V).
+                             lit_of[flow](A, K), arg_at[flow](C, 1, V).
 keyed_put[flow](X, K, V) :- sx_kput[flow](X, K, V).
 -- `new Map([[k, v], ...])` puts each pair it is made with
 keyed_put[flow](X, K, V) :- keyed_obj[flow](X, _), arg_at[flow](X, 0, A), may_be_node[flow](A, Arr), elem_any[flow](Arr, E),
-                            may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), may_be_lit[flow](KE, K),
+                            may_be_node[flow](E, Pair), array_elem[flow](Pair, 0, KE), lit_of[flow](KE, K),
                             array_elem[flow](Pair, 1, V).
 keyed_get[flow](C, X, K) :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A),
-                            may_be_lit[flow](A, K), not argument_at[code](C, 1, _).
+                            lit_of[flow](A, K), not argument_at[code](C, 1, _).
 may_be[flow](C, lit, undefined) :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get).
 -- code outside the model runs at a site nothing resolves, unless it is a
 -- method of a collection that calls nothing back (all but `forEach`)
@@ -840,7 +845,7 @@ runs_unknown[code](Q) :- site[code](Q), not resolved_site[code](Q), not keyed_qu
 
 keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Put), keyed_store(P, Put, _), arg_at[flow](C, 0, A).
 keyed_key_at[flow](C, A)    :- keyed_on[flow](C, _, P, Get), keyed_store(P, _, Get), arg_at[flow](C, 0, A).
-keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), may_be_lit[flow](A, _).
+keyed_key_known[flow](C)    :- keyed_key_at[flow](C, A), lit_of[flow](A, _).
 keyed_key_unknown[audit](C) :- keyed_key_at[flow](C, _), not keyed_key_known[flow](C).
 
 -- WHAT IS IN IT AT THE READ. A collection has a HOLDER whose reads and writes
@@ -1000,8 +1005,8 @@ keyed_open[code](E) :- keyed_src[code](E, S), keyed_open[code](S).
 -- a source that reaches itself builds its value in a loop
 graph keyed_src(E, S) closure keyed_upstream.
 keyed_open[code](E) :- keyed_upstream[code](E, E).
-keyed_lits[code](A) :- keyed_want[code](A), may_be_lit[flow](A, L), may_be_lit[flow](A, M), L != M.
-keyed_key[code](C, Key) :- keyed_key_arg[code](C, A), keyed_want[code](A), may_be_lit[flow](A, Key),
+keyed_lits[code](A) :- keyed_want[code](A), lit_of[flow](A, L), lit_of[flow](A, M), L != M.
+keyed_key[code](C, Key) :- keyed_key_arg[code](C, A), keyed_want[code](A), lit_of[flow](A, Key),
                            not keyed_lits[code](A), not keyed_open[code](A).
 keyed_const_name[code](C, Dk) :- keyed_key_arg[code](C, A), ref[value](A, _), sees_binder[code](A, Dk),
                                  decl[value](Dk, const).
@@ -1453,11 +1458,11 @@ view read_holds_node(E, N).
 view read_holds_lit(E, L).
 read_holds_node[flow](E, N) :- may_be_node[flow](E, N), not keyed_viewed[flow](E).
 read_holds_node[flow](E, N) :- keyed_holds[flow](E, V), may_be_node[flow](V, N).
-read_holds_lit[flow](E, L)  :- may_be_lit[flow](E, L), not keyed_viewed[flow](E), not member_viewed[flow](E).
-read_holds_lit[flow](N, L)  :- member_viewed[flow](N), may_be_lit[flow](N, L), L != undefined.
+read_holds_lit[flow](E, L)  :- lit_of[flow](E, L), not keyed_viewed[flow](E), not member_viewed[flow](E).
+read_holds_lit[flow](N, L)  :- member_viewed[flow](N), lit_of[flow](N, L), L != undefined.
 read_holds_lit[flow](N, undefined) :- member_may_lack[flow](N).
-read_holds_lit[flow](N, undefined) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, V), may_be_lit[flow](V, undefined).
-read_holds_lit[flow](E, L)  :- keyed_holds[flow](E, V), may_be_lit[flow](V, L).
+read_holds_lit[flow](N, undefined) :- member_unset[flow](N, O, Key), member_value[flow](O, Key, V), lit_of[flow](V, undefined).
+read_holds_lit[flow](E, L)  :- keyed_holds[flow](E, V), lit_of[flow](V, L).
 read_holds_lit[flow](E, K)  :- keyed_holds_key[flow](E, K).
 read_holds_lit[flow](C, undefined) :- keyed_read[flow](C, _), not keyed_present[code](C).
 
@@ -1670,11 +1675,11 @@ selects[flow](N, Key)       :- prop_name[code](N, _, Key).
 computed_key[code](N, P)    :- member_expr[value](N, _, P).
 computed_key[code](T, E)    :- pat_in[code](_, P, T), pat_computed[code](P, T, E).
 -- a number that is not an integer, and a bigint, select the property their text names
-selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P), string is type_of(Key).
-selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P), int is type_of(Key).
-selects[flow](N, Key)       :- may_be_lit[flow](P, Key), computed_key[code](N, P), atom is type_of(Key).
-selects[flow](N, Key)       :- may_be_lit[flow](P, float(Key)), computed_key[code](N, P).
-selects[flow](N, Key)       :- may_be_lit[flow](P, bigint(Key)), computed_key[code](N, P).
+selects[flow](N, Key)       :- lit_of[flow](P, Key), computed_key[code](N, P), string is type_of(Key).
+selects[flow](N, Key)       :- lit_of[flow](P, Key), computed_key[code](N, P), int is type_of(Key).
+selects[flow](N, Key)       :- lit_of[flow](P, Key), computed_key[code](N, P), atom is type_of(Key).
+selects[flow](N, Key)       :- lit_of[flow](P, float(Key)), computed_key[code](N, P).
+selects[flow](N, Key)       :- lit_of[flow](P, bigint(Key)), computed_key[code](N, P).
 selects[flow](N, Key)       :- symbol_ref[code](P, Key), computed_key[code](N, P).
 
 -- WHAT AN OBJECT LACKS: an object literal with no spread and no computed key
@@ -1833,6 +1838,7 @@ may_be[flow](C, VK, X)                  :- resolves[code](C, F), sx_ret_field[fl
 -- what an object holds under a Key, where somebody asks (`key_ask`): what was written onto it, what it holds
 -- plain, and where the Key is a getter there, what the getter hands out, read off the same object
 -- the objects a receiver is, where the call is to say which: its own, and what callers hand a parameter
+view recv_obj(A, B).
 recv_obj[flow](R, I)                    :- may_be[flow](R, node, I).
 recv_obj[flow](R, I)                    :- may_be[flow](R, input, S), input_param[flow](S, _, _), input_node[flow](S, I).
 recv_obj[flow](R, I)                    :- may_be[flow](R, input, T), hop_node[flow](T, I).

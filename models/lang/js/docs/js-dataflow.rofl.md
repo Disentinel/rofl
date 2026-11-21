@@ -146,6 +146,7 @@ What this file calls a node, and what each word stands for:
 Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
+- <a id="may_be_lit"></a>A node may be the literal V if [`lit_of`](#lit_of)(it, V).
 - <a id="named_decl"></a>A node declares the name Name in File if it [carries its own name](#own_name) Name and File and `around`.
 - <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="spread_arg"></a>An invocation has a spread at an index I if [`spread_args`](#spread_args)(it, I, something).
@@ -196,12 +197,21 @@ In the flow:
 1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, N);
 2. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(something, N)).
 
-A node
+<a id="may_be_node"></a>A node points to a node N if [`may_be`](js-callgraph.rofl.md#may_be)(it, `inst`, via(something, N)).
 
-- <a id="may_be_node"></a>points to a node N if [`may_be`](js-callgraph.rofl.md#may_be)(it, `inst`, via(something, N)).
-- <a id="may_be_lit"></a>may be the literal V if [`may_be`](js-callgraph.rofl.md#may_be)(it, `lit`, V).
-- points to a node N if [`bare_node`](#bare_node)(it, N).
-- may be the literal V if [`may_be`](js-callgraph.rofl.md#may_be)(it, `input`, S) and [`input_lit`](#input_lit)(S, V).
+> what an expression may be as a literal: its own, and an input's as the input holds them, read where a rule asks
+> (`lit_of`) and not copied to every expression that holds the input; `may_be_lit` is the answer to a question
+
+`lit_of` of A and B is read through its rules and never stored.
+
+<a id="lit_of"></a>`lit_of`(E, V) either:
+
+1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `lit`, V);
+2. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S) and [`input_lit`](#input_lit)(S, V).
+
+<a id="has_lit"></a>`has_lit`(E) if [`lit_of`](#lit_of)(E, something).
+
+A node points to a node N if [`bare_node`](#bare_node)(it, N).
 
 `may_be`(E, `lit`, V) if [`literal`](#literal)(E, V).
 
@@ -1046,7 +1056,7 @@ The plain member "value" of outcome(C) is a node E if [`host_src`](#host_src)(C,
    - [`elem_any`](#elem_any)(X, E);
    - a node E [points to](#may_be_node) a node Pair;
    - [`array_elem`](#array_elem)(Pair, 0, KE);
-   - a node KE [may be the literal](#may_be_lit) Key;
+   - [`lit_of`](#lit_of)(KE, Key);
    - [`array_elem`](#array_elem)(Pair, 1, V).
 
 > `Object.defineProperty(o, k, { value: v })` puts v at k
@@ -1055,7 +1065,7 @@ The member Key of a node O holds a node V if all of:
   - [`host_call_on`](#host_call_on)(C, "Object", "defineProperty", R);
   - a node R [points to](#may_be_node) O;
   - an invocation C [passes](#arg_at) a node K at 1;
-  - K [may be the literal](#may_be_lit) Key;
+  - [`lit_of`](#lit_of)(K, Key);
   - C [passes](#arg_at) a node D at 2;
   - D [points to](#may_be_node) a node DO;
   - [the plain member](#member_plain) "value" of DO is V.
@@ -1081,7 +1091,7 @@ The member Key of a node O holds a node V if all of:
 The member Key of a node O holds a node V if all of:
   - [`obj_prop`](#obj_prop)(O, P, V);
   - [`key_expr`](#key_expr)(P, E);
-  - a node E [may be the literal](#may_be_lit) Key;
+  - [`lit_of`](#lit_of)(E, Key);
   - `string` is type_of(Key).
 
 `may_be`(E, `node`, N) if all of:
@@ -1225,7 +1235,7 @@ The member Key of a node O holds a node V if all of:
 
 <a id="valued"></a>A node E is valued either:
 
-1. if E [may be the literal](#may_be_lit) some text;
+1. if [`has_lit`](#has_lit)(E);
 2. if E [points to](#may_be_node) some node.
 
 ## 7. Across a call
@@ -1628,7 +1638,7 @@ In the flow:
 1. if all of:
    - [`input_param`](#input_param)(S, F, I);
    - [the host hands](#host_hands) F and E at an index I;
-   - E [may be the literal](#may_be_lit) V;
+   - [`lit_of`](#lit_of)(E, V);
 2. if [`input_param`](#input_param)(S, F, I) and [`host_index`](#host_index)(F, I, V).
 
 > A call is its function's summary applied to THIS call: what the function returns of its own, and what it
@@ -1772,7 +1782,7 @@ In the flow:
 `may_be`(C, `lit`, V) if all of:
   - [`converts`](#converts)(C);
   - an invocation C [passes](#arg_at) a node X at 0;
-  - X [may be the literal](#may_be_lit) V.
+  - [`lit_of`](#lit_of)(X, V).
 
 Declared as facts:
 
@@ -1871,7 +1881,7 @@ Declared as facts:
   - [`keyed_on`](#keyed_on)(C, X, P, Put);
   - [`keyed_store`](#keyed_store)(P, Put, something);
   - an invocation C [passes](#arg_at) a node Y at 0;
-  - Y [may be the literal](#may_be_lit) K;
+  - [`lit_of`](#lit_of)(Y, K);
   - C [passes](#arg_at) a node V at 1.
 
 <a id="keyed_put"></a>`keyed_put`(X, K, V) if [`sx_kput`](#sx_kput)(X, K, V).
@@ -1889,14 +1899,14 @@ Declared as facts:
   - [`elem_any`](#elem_any)(Arr, E);
   - a node E [points to](#may_be_node) a node Pair;
   - [`array_elem`](#array_elem)(Pair, 0, KE);
-  - a node KE [may be the literal](#may_be_lit) K;
+  - [`lit_of`](#lit_of)(KE, K);
   - [`array_elem`](#array_elem)(Pair, 1, V).
 
 <a id="keyed_get"></a>`keyed_get`(C, X, K) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Get);
   - [`keyed_store`](#keyed_store)(P, something, Get);
   - an invocation C [passes](#arg_at) a node Y at 0;
-  - Y [may be the literal](#may_be_lit) K;
+  - [`lit_of`](#lit_of)(Y, K);
   - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something).
 
 `may_be`(C, `lit`, `undefined`) if [`keyed_on`](#keyed_on)(C, something, P, Get) and [`keyed_store`](#keyed_store)(P, something, Get).
@@ -1926,7 +1936,7 @@ In the flow:
    - [`keyed_store`](#keyed_store)(P, something, Get);
    - an invocation C [passes](#arg_at) a node X at 0.
 
-<a id="keyed_key_known"></a>`keyed_key_known`(C) if [`keyed_key_at`](#keyed_key_at)(C, X) and a node X [may be the literal](#may_be_lit) some text.
+<a id="keyed_key_known"></a>`keyed_key_known`(C) if [`keyed_key_at`](#keyed_key_at)(C, X) and [`lit_of`](#lit_of)(X, something).
 
 In the audit:
 
@@ -2272,14 +2282,14 @@ In the code:
 
 <a id="keyed_lits"></a>`keyed_lits`(X) if all of:
   - [`keyed_want`](#keyed_want)(X);
-  - a node X [may be the literal](#may_be_lit) L;
-  - X [may be the literal](#may_be_lit) M;
+  - [`lit_of`](#lit_of)(X, L);
+  - [`lit_of`](#lit_of)(X, M);
   - L differs from M.
 
 <a id="keyed_key"></a>`keyed_key`(C, Key) if all of:
   - [`keyed_key_arg`](#keyed_key_arg)(C, X);
   - [`keyed_want`](#keyed_want)(X);
-  - a node X [may be the literal](#may_be_lit) Key;
+  - [`lit_of`](#lit_of)(X, Key);
   - unless [`keyed_lits`](#keyed_lits)(X);
   - unless [`keyed_open`](#keyed_open)(X).
 
@@ -3598,20 +3608,17 @@ In the flow:
 <a id="read_holds_lit"></a>`read_holds_lit`(E, L) either:
 
 1. if all of:
-   - a node E [may be the literal](#may_be_lit) L;
+   - [`lit_of`](#lit_of)(E, L);
    - unless [`keyed_viewed`](#keyed_viewed)(E);
    - unless [`member_viewed`](#member_viewed)(E);
-2. if all of:
-   - [`member_viewed`](#member_viewed)(E);
-   - a node E [may be the literal](#may_be_lit) L;
-   - L differs from `undefined`;
+2. if [`member_viewed`](#member_viewed)(E), [`lit_of`](#lit_of)(E, L), and L differs from `undefined`;
 3. if [`member_may_lack`](#member_may_lack)(E) and L is `undefined`;
 4. if all of:
    - [`member_unset`](#member_unset)(E, O, Key);
    - [the member](#member_value) Key of a node O holds a node V;
-   - V [may be the literal](#may_be_lit) `undefined`;
+   - [`lit_of`](#lit_of)(V, `undefined`);
    - L is `undefined`;
-5. if [`keyed_holds`](#keyed_holds)(E, V) and a node V [may be the literal](#may_be_lit) L;
+5. if [`keyed_holds`](#keyed_holds)(E, V) and [`lit_of`](#lit_of)(V, L);
 6. if [`keyed_holds_key`](#keyed_holds_key)(E, L);
 7. if all of:
    - [`keyed_read`](#keyed_read)(E, something);
@@ -4160,19 +4167,10 @@ In the flow:
 
 N selects Key either:
 
-1. if all of:
-   - a node P [may be the literal](#may_be_lit) Key;
-   - [`computed_key`](#computed_key)(N, P);
-   - `string` is type_of(Key);
-2. if all of:
-   - a node P [may be the literal](#may_be_lit) Key;
-   - [`computed_key`](#computed_key)(N, P);
-   - `int` is type_of(Key);
-3. if all of:
-   - a node P [may be the literal](#may_be_lit) Key;
-   - [`computed_key`](#computed_key)(N, P);
-   - `atom` is type_of(Key);
-4. if a node P [may be the literal](#may_be_lit) float(Key) or bigint(Key) and [`computed_key`](#computed_key)(N, P);
+1. if [`lit_of`](#lit_of)(P, Key), [`computed_key`](#computed_key)(N, P), and `string` is type_of(Key);
+2. if [`lit_of`](#lit_of)(P, Key), [`computed_key`](#computed_key)(N, P), and `int` is type_of(Key);
+3. if [`lit_of`](#lit_of)(P, Key), [`computed_key`](#computed_key)(N, P), and `atom` is type_of(Key);
+4. if [`lit_of`](#lit_of)(P, float(Key) or bigint(Key)) and [`computed_key`](#computed_key)(N, P);
 5. if a node P [is the well known symbol](#symbol_ref) Key and [`computed_key`](#computed_key)(N, P).
 
 > WHAT AN OBJECT LACKS: an object literal with no spread and no computed key
@@ -4579,6 +4577,8 @@ In the flow:
 > what an object holds under a Key, where somebody asks (`key_ask`): what was written onto it, what it holds
 > plain, and where the Key is a getter there, what the getter hands out, read off the same object
 > the objects a receiver is, where the call is to say which: its own, and what callers hand a parameter
+
+`recv_obj` of A and B is read through its rules and never stored.
 
 <a id="recv_obj"></a>`recv_obj`(R, I) either:
 
