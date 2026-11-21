@@ -1354,6 +1354,27 @@ fn a_world_by_levels_answers_as_the_world_whole() {
     }
 }
 
+/// A FACT A CHILD HOLDS, WHICH ITS GROUP CONCLUDED AGAIN THROUGH ITS OWN, STANDS IN THE CHILD AFTER AN EDIT. The first
+/// file's unit concludes `p(nm)`; the group meets it with the second file's `link` and concludes `q(nm)`, and from
+/// that `p(nm)` again, a firing of a fact of the child's stretch. An edit the answer does not move settles the
+/// first file's unit again, and the group, mended, carried that firing waiting on `q(nm)`, which waits on `p(nm)`:
+/// neither was put back, and `q` answered nothing (f_a_mended_group_waited_on_a_fact_its_child_holds).
+#[test]
+fn a_fact_a_child_holds_stands_where_its_group_concluded_it_again() {
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let d = Dir::new("far-held");
+    let world = |v: usize| format!("p[d](N) :- base[d](X, N).\nq[d](N) :- p[d](N), link[d](Y, N).\np[d](N) :- q[d](N).\n\
+        base[d](n0000000000000001_1, nm).\nother[d](n0000000000000001_2, {v}).\nlink[d](n0000000000000002_1, nm).\n");
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_LEAF", "1".to_string())];
+    let args = ["ask", "q[d](A)", "boot.rofl", "w.rofl"];
+    for v in [1, 2] {
+        d.write("w.rofl", &world(v));
+        let got = rofl_env(BIN, &d, &d.0.join("levels"), &levels, planted.as_deref(), &args);
+        assert!(got.code == 0 && got.out.trim() == "A = nm", "other = {v}: q[d](A) by levels {:?} {:?}", got.out, got.err);
+        assert!(v == 1 || got.err.contains("units settled again"), "the edit was not taken by the units: {:?}", got.err);
+    }
+}
+
 /// AN ABSENCE BELOW THE CUT IS WALKED IN ITS FILE, THAWED (`Eval::explain_thawed`). A world that cut a book holds its
 /// lemmas and not what they were proved from: a `whynot` whose walk reaches a rule of the lower stage reads the
 /// file's text again and goes on in it alone. Judged against the same world with nothing cut, text for text: the
