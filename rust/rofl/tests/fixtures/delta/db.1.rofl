@@ -159,10 +159,3 @@ has_file[fs](".", "orders.js").
 has_file[fs](".", "server.js").
 has_file[fs](".", "users.js").
 has_file[fs](".", "util.js").
-str_segs[code]("http://db.internal/q?", 4).
-str_char0[code]("http://db.internal/q?", "h").
-str_seg[code]("http://db.internal/q?", 0, "http:").
-str_seg[code]("http://db.internal/q?", 1, "").
-str_seg[code]("http://db.internal/q?", 2, "db.internal").
-str_seg[code]("http://db.internal/q?", 3, "q?").
-str_scheme[code]("http://db.internal/q?", "http").

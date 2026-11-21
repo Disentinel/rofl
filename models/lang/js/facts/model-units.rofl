@@ -1224,6 +1224,10 @@ unit_concludes("models/lang/js/rules/js-modules.rofl", site_source_node).
 unit_concludes("models/lang/js/rules/js-modules.rofl", site_source).
 unit_concludes("models/lang/js/rules/js-modules.rofl", site_source_literal).
 unit_concludes("models/lang/js/rules/js-modules.rofl", site_source_computed).
+unit_concludes("models/lang/js/rules/js-modules.rofl", str_segs).
+unit_concludes("models/lang/js/rules/js-modules.rofl", str_char0).
+unit_concludes("models/lang/js/rules/js-modules.rofl", str_scheme).
+unit_concludes("models/lang/js/rules/js-modules.rofl", str_seg).
 unit_concludes("models/lang/js/rules/js-modules.rofl", explicit_shape).
 unit_concludes("models/lang/js/rules/js-modules.rofl", node_builtin_bare).
 unit_concludes("models/lang/js/rules/js-modules.rofl", has_explicit_shape).

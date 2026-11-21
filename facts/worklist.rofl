@@ -4226,7 +4226,7 @@ work_spawned(w_au_no_whole_fallback_past_units, f_a_fresh_agent_answers_the_side
 
 work(w_au_default_walls_hold_js,
   "The default walls cut the JS model at 41 files (spent(rows, 500001, 500000)); the shrug says `budget` while the wall is --space, and --budget alone changes nothing. Both agents guessed --space values. Make the defaults hold the JS model over a few thousand files, or name the flag and a value that would suffice in the shrug; put tested values per corpus size beside rofl ask in docs/cli.md.").
-work_state(w_au_default_walls_hold_js, open).
+work_state(w_au_default_walls_hold_js, done).
 work_spawned(w_au_default_walls_hold_js, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 work(w_au_side_effect_question_findable,
@@ -4272,7 +4272,7 @@ work_spawned(w_au_kept_world_said, f_a_fresh_agent_answers_the_side_effect_quest
 
 work(w_au_string_edit_by_delta,
   "An edit that changes a string literal is not taken by delta ('the rules or the facts naming no file changed; computed anew', 30 s whole at 312 files): the host's string facts (str_segs, str_seg ...) carry no file prefix. Most edits touch a string; key them by the file that holds them.").
-work_state(w_au_string_edit_by_delta, open).
+work_state(w_au_string_edit_by_delta, done).
 work_spawned(w_au_string_edit_by_delta, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 work(w_au_docs_arg_order,
@@ -4287,7 +4287,7 @@ work_spawned(w_au_parse_error_position, f_a_fresh_agent_answers_the_side_effect_
 
 work(w_au_narrowing_and_progress,
   "When a world fails for size nothing says which files or directories grew it (vscode base: test/ doubled it); an agent narrows by guessing. A long ask prints no heartbeat, so an agent with a 2-minute foreground limit cannot tell a stuck run from a slow one. Rank the largest units by facts when a wall is met; a progress line every N seconds on stderr.").
-work_state(w_au_narrowing_and_progress, open).
+work_state(w_au_narrowing_and_progress, done).
 work_spawned(w_au_narrowing_and_progress, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 
@@ -4324,3 +4324,7 @@ work(w_the_last_layer_top_unit_does_the_world,
   "From f_a_unit_cools_whole: by levels, the top unit of the last layer does most of the evaluation alone, on one thread: over 493 vscode files (src/vs/base with tests) 366 s of 552 (the depths below it 30, 9, 48 s), and the reader 67 s; over 2 286 files the run passed 20 minutes at layer 5 depth 3 with 3.3 GB of heap. Memory no longer stops the whole vscode; this does. To find: which rules of the last layer the top unit fires (seam by rule names sx_cb asking nth, se_member_of asking object_of, may_be), why their facts do not meet below the top (keys of no file, a recursion that closes only over the whole world), and whether the JS model's threefold slowdown since 11-17 (f_the_js_model_since_1117_takes_three_times_the_time) is the same cost. ACCEPTANCE: 2 286 files answer whole within the 5 minutes the goal names for the whole of 11 100, the top unit not more than its share.").
 work_state(w_the_last_layer_top_unit_does_the_world, open).
 work_spawned(w_the_last_layer_top_unit_does_the_world, f_a_unit_cools_whole).
+work(w_kept_cut_world_edit_beside_rule_file,
+  "A kept heap world that cut [ast_oxc] takes an edit of a cut file by delta when a rule file is edited in the same run, and answers wrong (f_a_kept_world_that_cut_takes_an_edit_below_the_cut_beside_a_rule_file_wrong). Refuse it, or take it with the lemmas proved again, as an edit of the cut file alone is.").
+work_state(w_kept_cut_world_edit_beside_rule_file, open).
+work_spawned(w_kept_cut_world_edit_beside_rule_file, f_a_kept_world_that_cut_takes_an_edit_below_the_cut_beside_a_rule_file_wrong).

@@ -85,7 +85,7 @@ const USAGE: &str =
 struct Args {
     path: Option<String>,
     budget: i64,
-    /// The materialization wall, in rows (`DEFAULT_SPACE`, 500 000).
+    /// The materialization wall, in rows; none unless given.
     ///
     /// SEPARATE FROM `--budget` BECAUSE THEY DEMAND OPPOSITE REPAIRS, which is
     /// the reason `budget_exhausted` and `space_exhausted` are two atoms
@@ -109,7 +109,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
     let mut a = Args {
         path: None,
         budget: 100_000,
-        space: 500_000,
+        space: i64::MAX,
         ticks: 0,
         want_bytes: false,
         derivations: false,

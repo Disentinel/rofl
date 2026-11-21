@@ -241,9 +241,9 @@ function rustQuestions(w: World, rich = false): Q[] {
 const askText = (rows: string[], shrugs: string[], partial: boolean): string =>
   [...[...rows].sort().map((r) => `row ${r}`), ...[...shrugs].sort().map((x) => `shrug ${x}`), `partial ${partial}`].join('\n');
 /** An ask as the REPL prints it with the sentences off (src/repl.ts `?`), which `rofl ask` prints byte for byte. */
-const replAsk = (a: { rows: { text: string }[]; shrugs?: { text: string; line: string }[]; partial: boolean }): string =>
+const replAsk = (a: { rows: { text: string }[]; shrugs?: { text: string; line: string }[]; partial: boolean }, why: string): string =>
   [...(a.partial ? ['[partial answer: the rows below may be short of the whole answer]'] : []), ...(a.rows.length === 0 && !a.shrugs ? ['(empty)'] : []), ...a.rows.map((r) => r.text), ...(a.shrugs ?? []).map((x) => `? ${x.text}  ${x.line}`),
-    ...(a.partial ? ['[partial: budget exhausted, hole emitted]'] : [])].join('\n');
+    ...(a.partial ? [`[partial: ${why}]`] : [])].join('\n');
 const bound = (vars: string[], row: string[]): string => {
   const at = vars.map((_, i) => i).sort((a, b) => (vars[a] < vars[b] ? -1 : vars[a] > vars[b] ? 1 : 0));
   return vars.length === 0 ? 'true' : at.map((i) => `${vars[i]} = ${row[i]}`).join(', ');
@@ -269,7 +269,7 @@ function expected(r: Rofl, q: Q, budget?: number): A {
     if (q.op === 'ask') {
       const a = r.query(q.query, { budget });
       if (a.error !== undefined) return { ok: false, text: a.error };
-      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial), repl: replAsk(a) };
+      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial), repl: replAsk(a, r.cutWhy(budget)) };
     }
     if (q.op === 'whynot' || q.op === 'whynotall') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text

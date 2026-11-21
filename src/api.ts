@@ -16,7 +16,7 @@ import {
   SEALED_BODY, SEALED_HOLE, SEALED_REASON, sealedBodies, sealedRels, list as listT,
 } from './reflect.ts';
 import { SHRUG, shrugsOf, shrugLine, shrugAtom, shown } from './shrug.ts';
-import { AggEval, DEFAULT_SPACE, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
+import { AggEval, Rejected, Wall, checkAggregatesDoor, checkSetPatternsDoor, checkOrderableAgg,
   checkNextInBody, checkLatticeDecl, checkDominance, lowerOrder, type Unknown, type WhynotFile } from './aggeval.ts';
 import { encodeDominance } from './reflect.ts';
 import { lowerWant, WANT_ROWS } from './want.ts';
@@ -77,7 +77,7 @@ export interface EvalOpts {
   retainTicks?: number;
   /** `'rounds'` (default) or the original `'strata'`. See `Rofl.evaluator`. */
   evaluator?: 'rounds' | 'strata';
-  /** The materialization wall, in rows (`DEFAULT_SPACE`, 500 000).
+  /** The materialization wall, in rows; none unless given (the memory the process may use is the wall).
    *
    *  ON THE CONSTRUCTOR AND NOT ON `evaluate`, and the split is the kernel's
    *  own: `budget_exhausted` and `space_exhausted` are separate atoms because
@@ -810,7 +810,7 @@ export class Rofl {
   private aggEval(budget: number, holeId: Term): AggEval {
     const ev = new AggEval(this.store, budget, this.evaluator);
     ev.holeId = holeId;
-    ev.space = this.space ?? DEFAULT_SPACE;
+    ev.space = this.space ?? Infinity;
     ev.retainTicks = this.retainTicks;
     ev.naive = this.naive;
     ev.reuse = this.reuse;
@@ -876,6 +876,14 @@ export class Rofl {
 
   /** Whether nothing could ever put a row at this literal: no rule concludes it, no fact holds it, nothing declares it, or it is
    *  asked at an arity or in a book none of those use. */
+  /** Why the last answer may be short, as `rofl ask` says it (rust/rofl/src/bin/rofl/load.rs `cut_why`): the wall, and the
+   *  flag that sets it. */
+  cutWhy(budget: number = DEFAULT_BUDGET): string {
+    const space = this.store.evalHoles.some((k) => this.store.facts.has(k) && /space_exhausted\)$/.test(k));
+    return space ? `the row wall of ${this.space} rows that --space set was met; a larger --space goes further while memory holds`
+      : `the step budget of ${budget} steps was spent; --budget sets it, a larger one goes further`;
+  }
+
   unpopulatable(text: Ask, ev: AggEval = this.standing(DEFAULT_BUDGET)): boolean {
     const lit = this.asked(text);
     // WHAT COULD EVER PUT A ROW HERE. Rule heads and stored facts both carry an
@@ -1146,7 +1154,7 @@ export class Rofl {
       ev = new AggEval(this.store, budget, this.evaluator);
       ev.forceAgg = true;
       ev.reprepare();
-      ev.space = this.space ?? DEFAULT_SPACE;
+      ev.space = this.space ?? Infinity;
       ev.reuse = false;
       try { ev.run(); } catch (e) { if (!(e instanceof Wall)) throw e; }
     }

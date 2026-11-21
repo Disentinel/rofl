@@ -1142,9 +1142,5 @@ rows_from(env_ran, "the resolve observer").
 rows_from(premise_lit, "the kernel's reflection").
 rows_from(asserted_by, "the kernel's reflection").
 rows_from(env_extension, "the resolve observer").
-rows_from(str_seg, "the host, which cuts the specifier").
-rows_from(str_segs, "the host, which cuts the specifier").
-rows_from(str_char0, "the host, which cuts the specifier").
-rows_from(str_scheme, "the host, which cuts the specifier").
 rows_from(has_file, "the host, which lists the files").
 rows_from(has_dir, "the host, which lists the files").
