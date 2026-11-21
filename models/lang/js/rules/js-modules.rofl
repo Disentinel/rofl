@@ -13,15 +13,9 @@
 -- Which directory to start in, when to walk up and what counts as arriving is
 -- a join, and it is here.
 
--- from outside the AST (models/lang/js/facts/js-modules.rofl): str_seg(S, K, Seg) cut on "/",
--- str_segs(S, N), str_char0(S, C), str_scheme(S, Scheme) before the first
--- ":"; the disk in its own ledger, has_file[fs](Dir, Name) and
--- has_dir[fs](Parent, Name), a directory named by its path; node_prefix_only(Canonical);
--- shape_verdict(Shape, Reason); unknown_because.
-edb(str_seg).           -- str_seg[code](S, K, Segment)   S cut on "/", 0-based
-edb(str_segs).
-edb(str_char0).
-edb(str_scheme).        -- str_scheme[code](S, Scheme)    text before the first ":"
+-- from outside the AST (models/lang/js/facts/js-modules.rofl): the disk in its own ledger,
+-- has_file[fs](Dir, Name) and has_dir[fs](Parent, Name), a directory named by its path;
+-- node_prefix_only(Canonical); shape_verdict(Shape, Reason); unknown_because.
 edb(has_file).
 edb(has_dir).
 imports(code, fs).
@@ -97,6 +91,15 @@ site_source_literal[code](I) :- site_source[code](I, _).
 site_source_computed[code](I) :- site_source_node[code](I, _),
                                  not site_source_literal[code](I).
 
+-- A specifier's text cut the way node reads it, by the kernel's string operations: its first character, its
+-- scheme before the first ":", its segments on "/". Read off the texts a site names, so no string of a file
+-- is a fact of the world before a rule asks for it.
+str_segs[code](S, N)    :- site_source[code](_, S), L is str_len(S), L > 0, N is str_segs(S, "/").
+str_char0[code](S, C)   :- str_segs[code](S, _), C is str_char(S, 0).
+str_scheme[code](S, P)  :- str_segs[code](S, _), P is str_pre(S, ":"), P != "".
+str_seg[code](S, 0, G)  :- str_segs[code](S, _), G is str_seg(S, "/", 0).
+str_seg[code](S, K1, G) :- str_seg[code](S, K, _), str_segs[code](S, N), K1 is K + 1, K1 < N, G is str_seg(S, "/", K1).
+
 -- =========================================================================
 -- 2. SOURCE SHAPE — total over literal sources, disjoint, keyed on the STRING.
 -- `./x` and `../x`: the first character discriminates. `#foo` is a package
@@ -149,7 +152,7 @@ walk[code](I, K1, C) :- walk[code](I, K, D), site_source[code](I, S),
 
 resolved_import[code](I, T) :- walk[code](I, K, D), site_source[code](I, S),
                                str_seg[code](S, K, Seg), file_at[code](D, Seg, T),
-                               N is K + 1, str_segs[code](S, N).
+                               N is K + 1, N is str_segs(S, "/").
 
 builtin_canonical[code](S, S) :- str_scheme[code](S, "node").
 builtin_canonical[code](S, C) :- node_builtin_bare(S, C).
@@ -182,7 +185,7 @@ last_ext[code](Name, E, L) :- file_at[code](_, Name, _),
                               E is str_seg(Name, ".", K), L is str_len(E).
 
 site_last_seg[code](I, D, Seg) :- walk[code](I, K, D), site_source[code](I, S),
-                                  str_seg[code](S, K, Seg), N is K + 1, str_segs[code](S, N).
+                                  str_seg[code](S, K, Seg), N is K + 1, N is str_segs(S, "/").
 
 -- A file is found by its name, not by holding each site against every file of
 -- its folder: a file's stem is its name less the last extension.
@@ -196,7 +199,7 @@ ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg),
 
 ts_candidate[code](I, T, R) :- site_last_seg[code](I, D, Seg), file_stem[code](D, Seg, E, T), probe_ext(E, R).
 
-ts_candidate[code](I, T, R) :- walk[code](I, N, D), site_source[code](I, S), str_segs[code](S, N),
+ts_candidate[code](I, T, R) :- walk[code](I, N, D), site_source[code](I, S), N is str_segs(S, "/"),
                            index_file(Name, R), file_at[code](D, Name, T).
 
 ts_passed_over[code](I, R) :- ts_candidate[code](I, _, R), ts_candidate[code](I, _, R2), R2 < R.

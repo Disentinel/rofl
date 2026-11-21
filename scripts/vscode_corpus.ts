@@ -28,17 +28,16 @@ function walk(root: string, dir: string, out: string[]): void {
 
 const OXC = path.join(ROOT, 'models/lang/js/scanner/oxc_scan/target/release/oxc_scan');
 
-/** oxc's facts of the files (paths from root) and the host's of their paths and strings; the errors are the files oxc refused. */
+/** oxc's facts of the files (paths from root) and the host's of their paths; the errors are the files oxc refused. */
 function factsOf(root: string, files: string[], seen: Set<string>): { text: string; errors: [string, string][] } {
   if (!fs.existsSync(OXC)) throw new Error(`${OXC} is not built: cargo build --release --manifest-path models/lang/js/scanner/oxc_scan/Cargo.toml`);
   let raw: string;
   try { raw = execFileSync(OXC, ['--no-start', root, ...files], { encoding: 'utf8', maxBuffer: 1 << 30, stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch (e) { raw = (e as { stdout?: string }).stdout ?? ''; }
   // the header of `-- reads:` lines is dropped, and the text is searched as it is: a chunk is millions of lines
-  const body = raw.slice(raw.search(/^(?!-- reads:)/m) < 0 ? 0 : raw.search(/^(?!-- reads:)/m)), strings = new Set<string>(), errors: [string, string][] = [];
-  for (const v of body.matchAll(/^attr\[ast_oxc\]\(\w+, value, "((?:[^"\\\n]|\\.)*)"\)\.$/gm)) strings.add(v[1].replace(/\\(["\\])/g, '$1'));
+  const body = raw.slice(raw.search(/^(?!-- reads:)/m) < 0 ? 0 : raw.search(/^(?!-- reads:)/m)), errors: [string, string][] = [];
   for (const e of body.matchAll(/^parse_error\[ast_oxc\]\("([^"]*)", "(.*)"\)\.$/gm)) errors.push([e[1], e[2]]);
-  const fresh = hostFacts(files, strings).filter((h) => !seen.has(h) && seen.add(h));
+  const fresh = hostFacts(files).filter((h) => !seen.has(h) && seen.add(h));
   return { text: body + fresh.join('\n') + '\n', errors };
 }
 

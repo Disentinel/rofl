@@ -140,10 +140,3 @@ has_file[fs](".", "log.js").
 has_file[fs](".", "server.js").
 has_file[fs](".", "users.js").
 has_file[fs](".", "util.js").
-str_segs[code]("./db.js", 2).
-str_char0[code]("./db.js", ".").
-str_seg[code]("./db.js", 0, ".").
-str_seg[code]("./db.js", 1, "db.js").
-str_segs[code]("orders ", 1).
-str_char0[code]("orders ", "o").
-str_seg[code]("orders ", 0, "orders ").

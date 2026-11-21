@@ -626,28 +626,3 @@ child[ast_oxc](na4c65ede64197e1a_7o3bvoadlf1g5, expression, 0, na4c65ede64197e1a
 child[ast_oxc](na4c65ede64197e1a_root, body, 8, na4c65ede64197e1a_7o3bvoadlf1g5).
 file[ast_oxc](na4c65ede64197e1a_root, "server.js").
 has_file[fs](".", "server.js").
-str_segs[code]("http", 1).
-str_char0[code]("http", "h").
-str_seg[code]("http", 0, "http").
-str_segs[code]("fs", 1).
-str_char0[code]("fs", "f").
-str_seg[code]("fs", 0, "fs").
-str_segs[code]("child_process", 1).
-str_char0[code]("child_process", "c").
-str_seg[code]("child_process", 0, "child_process").
-str_segs[code]("./convert.js", 2).
-str_char0[code]("./convert.js", ".").
-str_seg[code]("./convert.js", 0, ".").
-str_seg[code]("./convert.js", 1, "convert.js").
-str_segs[code]("message", 1).
-str_char0[code]("message", "m").
-str_seg[code]("message", 0, "message").
-str_segs[code]("tick", 1).
-str_char0[code]("tick", "t").
-str_seg[code]("tick", 0, "tick").
-str_segs[code]("a", 1).
-str_char0[code]("a", "a").
-str_seg[code]("a", 0, "a").
-str_segs[code]("r", 1).
-str_char0[code]("r", "r").
-str_seg[code]("r", 0, "r").

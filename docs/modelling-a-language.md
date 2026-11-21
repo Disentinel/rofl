@@ -416,7 +416,10 @@ cannot hold, count, or report as missing:
    countable, with the count reaching zero being what "the kernel grew a string
    primitive" would mean. This is a row about OUR ENGINE inside a model of
    someone else's language, and it binds every language model that resolves
-   anything.
+   anything. *Retired 2026-11-21*: the kernel has had `str_char`, `str_pre`,
+   `str_seg`, `str_segs` since 2026-09-04, and models/lang/js/rules/js-modules.rofl
+   now cuts a specifier with them; the host emits the disk alone, so a file's
+   strings are facts of that file and an edit of one is taken by delta.
 2. **Which resolver is being modelled.** The oracle is CJS, because
    `import.meta.resolve` cannot be aimed at a parent without a node flag. CJS and
    ESM diverge on extension guessing and directory index — invisible here because

@@ -88,7 +88,7 @@ function labelNodes(kind: Map<string, string>, kid: Map<string, string>, attr: M
 
 /** The facts of the code: oxc's tree of each file (models/lang/js/scanner/oxc_wasm.ts, the scan of `rofl scan --no-start`), and the host's of the paths and of every string a file holds. */
 export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
-  const facts: string[] = [], nodes: Record<string, Node> = {}, parseErrors: Record<string, string> = {}, strings = new Set<string>();
+  const facts: string[] = [], nodes: Record<string, Node> = {}, parseErrors: Record<string, string> = {};
   const kind = new Map<string, string>(), kid = new Map<string, string>(), attr = new Map<string, string>();
   for (const [path, src] of Object.entries(files)) {
     for (const l of scanText(src, path).split('\n')) {
@@ -101,13 +101,13 @@ export function codeFacts(files: Record<string, string>, data: string[] = []): {
       m = /^child\[ast_oxc\]\((\w+), (\w+), 0, (\w+)\)\.$/.exec(l);
       if (m) { kid.set(`${m[1]} ${m[2]}`, m[3]); continue; }
       m = /^attr\[ast_oxc\]\((\w+), (\w+), (.*)\)\.$/.exec(l);
-      if (m) { attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? unquote(m[3]) : m[3]); if (m[2] === 'value' && m[3].startsWith('"')) strings.add(unquote(m[3])); continue; }
+      if (m) { attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? unquote(m[3]) : m[3]); continue; }
       m = /^parse_error\[ast_oxc\]\("((?:[^"\\]|\\.)*)", "(.*)"\)\.$/.exec(l);
       if (m) parseErrors[path] = m[2];
     }
   }
   labelNodes(kind, kid, attr, nodes);
-  return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data], strings) };
+  return { facts, nodes, parseErrors, host: hostFacts([...Object.keys(files), ...data]) };
 }
 
 /** The head's variables that nothing in the body gives a value. */
