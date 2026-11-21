@@ -966,12 +966,12 @@ impl Session {
 
     /// This world, holding the core, and the `files` settled by levels (`engine/volumes.rs`): the world that reads
     /// their units. Refused when it asks for input (a scan or an adapter's want), which the units cannot bring.
-    pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
+    pub fn by_volumes(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
         self.by_volumes_over(files, "")
     }
 
     /// `by_volumes`, `over` laid over the files' units (`Eval::by_volumes_over`).
-    pub fn by_volumes_over(&mut self, files: Vec<(String, String)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
+    pub fn by_volumes_over(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
         let (eval, stats) = self.eval.by_volumes_over(files, over)?;
         let mut s = Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
         let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;

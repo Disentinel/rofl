@@ -1296,14 +1296,14 @@ impl Eval {
     }
 
     /// The files settled by levels over this core (frozen, its dictionary shared): the unit of the world.
-    pub fn by_levels(&self, files: Vec<(String, String)>, st: &Stage, joins: Joins, edit: Option<Edit>, laid: &str) -> Result<Levels, Halt> {
+    pub fn by_levels(&self, files: Vec<(String, volumes::FileText)>, st: &Stage, joins: Joins, edit: Option<Edit>, laid: &str) -> Result<Levels, Halt> {
         // (the check harness's oracles: how many files a unit of files alone holds, how many units meet in one)
         let env = |name: &str, by: usize| std::env::var(name).ok().and_then(|x| x.parse().ok()).unwrap_or(by);
         let (leaf, fan) = (edit.as_ref().map_or(env("ROFL_LEAF", 4).max(1), |e| e.0.cx.leaf), env("ROFL_FAN", 8));
         let cx = Rc::new(Ctx { id: WORLDS.fetch_add(1, Relaxed), h: self.h.clone(), leaf, files: files.iter().enumerate().filter_map(|(i, (f, _))| u64::from_str_radix(f, 16).ok().map(|x| (x, i as u32))).collect(), joins, masks: Mutex::new(edit.as_ref().map_or(FxMap::default(), |e| e.0.cx.masks.lock().unwrap().clone())) });
         // a file's text is read once, by its leaf unit, and let go there
         let (n, bytes): (usize, Vec<usize>) = (files.len(), files.iter().map(|f| f.1.len()).collect());
-        let texts: Vec<Mutex<String>> = files.into_iter().map(|(_, t)| Mutex::new(t)).collect();
+        let texts: Vec<Mutex<volumes::FileText>> = files.into_iter().map(|(_, t)| Mutex::new(t)).collect();
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
         // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
@@ -1921,7 +1921,7 @@ impl Eval {
                     }
                     let from = e.0.store.len_ids();
                     for text in &texts[one.0 as usize..one.1 as usize] {
-                        let text = &std::mem::take(&mut *text.lock().unwrap());
+                        let text = &std::mem::take(&mut *text.lock().unwrap()).into_text();
                         match &cx.joins.low {
                             // the books the plan cuts are read in a world let go: its lemmas and the file's facts
                             // outside the books are given to the unit, as the world whole keeps them

@@ -36,6 +36,21 @@ fn answers(s: &mut Session, q: &str) -> BTreeSet<Vec<String>> {
     s.ask(q).unwrap().rows.into_iter().collect()
 }
 
+/// A text cut to disk as it is read is the text cut on the heap: the same core, facts alone and files, each file's
+/// text the same, of the text form and of the column form.
+#[test]
+fn the_cut_to_disk_is_the_cut_on_the_heap() {
+    let mut ts = texts();
+    ts.push(std::fs::read_to_string(root().join("examples/checks/assume-facts.rofl")).unwrap());
+    let refs: Vec<&str> = ts.iter().map(String::as_str).collect();
+    let (heap, disk) = (rofl::engine::volumes::cut_over(&refs), rofl::engine::volumes::cut_over_into(&refs, &std::env::temp_dir()).unwrap());
+    assert!(matches!(disk.files[0].1, rofl::engine::volumes::FileText::Lies(..)));
+    assert_eq!((&heap.core, &heap.over), (&disk.core, &disk.over));
+    let text = |c: &rofl::engine::volumes::Cut| c.files.iter().map(|(f, t)| (f.clone(), t.text().into_owned())).collect::<Vec<_>>();
+    assert_eq!(text(&heap), text(&disk));
+    assert!(heap.files.len() >= 19);
+}
+
 /// Then again past a quarter of the memory the process may use, where the units done are cooled to disk and go
 /// on mapped from it: the same facts and answers. One test, as the memory measured is the process's.
 #[test]
@@ -51,11 +66,13 @@ fn check(cool: bool) {
     whole.load_all(&refs, None).unwrap();
     whole.evaluate().unwrap();
 
-    let cut = rofl::engine::volumes::cut(&refs);
+    // (cooled, the files' texts are cut to disk too, as `rofl ask` cuts them)
+    let cut = if cool { rofl::engine::volumes::cut_over_into(&refs, &std::env::temp_dir()).unwrap() } else { rofl::engine::volumes::cut(&refs) };
     let files = cut.files.len();
     assert_eq!(files, 19);
     let mut core = Session::fresh(BUDGET);
-    core.load_all(&[cut.core.as_str()], None).unwrap();
+    // (the facts alone the cut set apart are the core's here)
+    core.load_all(&std::iter::once(cut.core.as_str()).chain(cut.over.iter().map(String::as_str)).collect::<Vec<_>>(), None).unwrap();
     let mem = |used: i64, may: i64| {
         rofl::engine::MEMORY_USED.store(used, std::sync::atomic::Ordering::Relaxed);
         rofl::engine::MEMORY_LIMIT.store(may, std::sync::atomic::Ordering::Relaxed);
@@ -190,7 +207,7 @@ fn the_rules_of_one_file_are_evaluated_in_its_world() {
         let fact = "lonely(\"n00000000000000aa_4\")";
         let short = w.why(fact).unwrap();
         assert!(short.contains("leaf") && short.contains("[lemma"), "why stops at the file's lemma:\n{short}");
-        w.eval.lower_texts = Some(std::sync::Arc::new(cut.files.iter().cloned().collect()));
+        w.eval.lower_texts = Some(std::sync::Arc::new(cut.files.iter().map(|(f, t)| (f.clone(), t.text().into_owned())).collect()));
         let all = w.why_all(fact).unwrap();
         assert!(!all.contains("[lemma") && all.contains("has_child"), "why --all unfolds it:\n{all}");
     }

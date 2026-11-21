@@ -17096,7 +17096,7 @@ impl Eval {
             let sources = self.lower_sources.clone()?;
             let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
             let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
-            self.lower_texts = Some(Rc::new(cut.files.into_iter().collect()));
+            self.lower_texts = Some(Rc::new(cut.files.into_iter().map(|(f, t)| (f, t.into_text())).collect()));
         }
         self.lower_texts.as_ref()?.get(file).cloned()
     }

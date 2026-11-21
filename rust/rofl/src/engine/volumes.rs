@@ -51,7 +51,7 @@ pub fn first_file(text: &str) -> Option<&str> {
 /// order first met, each file's lines.
 pub struct Cut {
     pub core: String,
-    pub files: Vec<(String, String)>,
+    pub files: Vec<(String, FileText)>,
     /// the texts of facts alone, none naming a file: laid over the files' units where the rules let them be
     /// (`Eval::overlay_rels`), into the core otherwise
     pub over: Vec<String>,
@@ -86,49 +86,75 @@ const HERE: u64 = u64::MAX;
 /// Where a segment's entry finds its text: given now, or where a kept segment holds it.
 enum Text<'a> {
     New(&'a str),
+    File(&'a FileText),
     In(u64, usize, usize),
+}
+
+impl Text<'_> {
+    fn new_len(&self) -> usize {
+        match self {
+            Text::New(t) => t.len(),
+            Text::File(t) => t.len(),
+            Text::In(..) => 0,
+        }
+    }
 }
 
 /// THE FILES' TEXTS KEPT BESIDE A WORLD'S UNITS, AS A SCROLL at `k`: what a thaw reads again, found by the file's
 /// name and read alone, where it lies. Segments `<k>.t<n>`, each written once and whole; `<k>.texts` names the
 /// newest, whose entries name every file and the segment its text lies in. A segment: the segments its entries read
 /// besides itself, five words a file by name (where its name lies, the segment, where its text lies), the names, the
-/// texts it holds, and the sum of every byte before it.
+/// texts it holds, and the sum of every byte before it. Written a text at a time: the memory of the largest.
 fn write_segment(path: &str, entries: &[(&str, Text)]) -> std::io::Result<usize> {
-    let mut segs: Vec<u64> = entries.iter().filter_map(|(_, t)| match t { Text::In(m, ..) => Some(*m), Text::New(_) => None }).collect();
+    use std::io::Write;
+    let mut segs: Vec<u64> = entries.iter().filter_map(|(_, t)| match t { Text::In(m, ..) => Some(*m), _ => None }).collect();
     segs.sort_unstable();
     segs.dedup();
     let head = TEXTS.len() + 16 + 8 * segs.len() + 40 * entries.len();
     let names: usize = entries.iter().map(|(f, _)| f.len()).sum();
-    let new: usize = entries.iter().map(|(_, t)| if let Text::New(t) = t { t.len() } else { 0 }).sum();
-    let mut out: Vec<u8> = Vec::with_capacity(head + names + new + 8);
-    out.extend_from_slice(TEXTS);
+    struct Out<W: Write> { w: W, sum: crate::arena::Sum, len: usize }
+    impl<W: Write> Out<W> {
+        fn put(&mut self, b: &[u8]) -> std::io::Result<()> {
+            self.sum.add(b);
+            self.len += b.len();
+            self.w.write_all(b)
+        }
+    }
+    let mut out = Out { w: std::io::BufWriter::with_capacity(1 << 20, std::fs::File::create(path)?), sum: Default::default(), len: 0 };
+    out.put(TEXTS)?;
     for x in [entries.len() as u64, segs.len() as u64].into_iter().chain(segs.iter().copied()) {
-        out.extend_from_slice(&x.to_le_bytes());
+        out.put(&x.to_le_bytes())?;
     }
     let (mut name_at, mut text_at) = (head, head + names);
     for (f, t) in entries {
         let (seg, at, len) = match t {
-            Text::New(t) => { text_at += t.len(); (HERE, text_at - t.len(), t.len()) }
             Text::In(m, at, len) => (*m, *at, *len),
+            t => { text_at += t.new_len(); (HERE, text_at - t.new_len(), t.new_len()) }
         };
         for x in [name_at as u64, f.len() as u64, seg, at as u64, len as u64] {
-            out.extend_from_slice(&x.to_le_bytes());
+            out.put(&x.to_le_bytes())?;
         }
         name_at += f.len();
     }
-    entries.iter().for_each(|(f, _)| out.extend_from_slice(f.as_bytes()));
-    entries.iter().for_each(|(_, t)| if let Text::New(t) = t { out.extend_from_slice(t.as_bytes()) });
-    let mut sum = crate::arena::Sum::default();
-    sum.add(&out);
-    out.extend_from_slice(&sum.value().to_le_bytes());
-    std::fs::write(path, &out)?;
-    Ok(out.len())
+    for (f, _) in entries {
+        out.put(f.as_bytes())?;
+    }
+    for (_, t) in entries {
+        match t {
+            Text::New(t) => out.put(t.as_bytes())?,
+            Text::File(t) => out.put(t.text().as_bytes())?,
+            Text::In(..) => {}
+        }
+    }
+    let sum = out.sum.value();
+    out.put(&sum.to_le_bytes())?;
+    out.w.flush()?;
+    Ok(out.len)
 }
 
 /// The texts of every file as one segment at `path`, kept at `k` by `keep_texts`.
-pub fn texts_whole(path: &str, files: &[(String, String)]) -> std::io::Result<()> {
-    let mut by: Vec<(&str, Text)> = files.iter().map(|(f, t)| (f.as_str(), Text::New(t))).collect();
+pub fn texts_whole(path: &str, files: &[(String, FileText)]) -> std::io::Result<()> {
+    let mut by: Vec<(&str, Text)> = files.iter().map(|(f, t)| (f.as_str(), Text::File(t))).collect();
     by.sort_unstable_by(|a, b| a.0.cmp(b.0));
     write_segment(path, &by).map(drop)
 }
@@ -296,20 +322,165 @@ impl KeptTexts {
     }
 }
 
+/// A file's facts as text, as the cut left them: held, or written to the cut's spill on disk, its pieces in order,
+/// and read back by the leaf that settles it.
+#[derive(Clone)]
+pub enum FileText {
+    Held(String),
+    Lies(Rc<memmap2::Mmap>, Vec<(usize, usize)>),
+}
+
+impl Default for FileText {
+    fn default() -> Self {
+        FileText::Held(String::new())
+    }
+}
+
+impl From<String> for FileText {
+    fn from(t: String) -> Self {
+        FileText::Held(t)
+    }
+}
+
+impl FileText {
+    pub fn len(&self) -> usize {
+        match self {
+            FileText::Held(t) => t.len(),
+            FileText::Lies(_, ps) => ps.iter().map(|p| p.1).sum(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /// The text, read where it lies when it lies in one piece.
+    pub fn text(&self) -> std::borrow::Cow<'_, str> {
+        // (the spill holds only what the cut wrote there, each piece a whole `&str`)
+        fn at(m: &memmap2::Mmap, (a, n): (usize, usize)) -> &str {
+            std::str::from_utf8(&m[a..a + n]).unwrap_or_default()
+        }
+        match self {
+            FileText::Held(t) => std::borrow::Cow::Borrowed(t),
+            FileText::Lies(m, ps) if ps.len() == 1 => std::borrow::Cow::Borrowed(at(m, ps[0])),
+            FileText::Lies(m, ps) => {
+                let mut t = String::with_capacity(self.len());
+                ps.iter().for_each(|&p| t.push_str(at(m, p)));
+                std::borrow::Cow::Owned(t)
+            }
+        }
+    }
+
+    pub fn into_text(self) -> String {
+        match self {
+            FileText::Held(t) => t,
+            t => t.text().into_owned(),
+        }
+    }
+}
+
+/// Where the cut puts the files' texts: on the heap, or appended to a file on disk as they are cut, so that cutting
+/// costs the memory of the text being read, not of the corpus.
+struct Files {
+    at: FxMap<String, usize>,
+    names: Vec<String>,
+    held: Vec<String>,
+    spill: Option<Spill>,
+}
+
+struct Spill {
+    path: std::path::PathBuf,
+    w: std::io::BufWriter<std::fs::File>,
+    end: usize,
+    pieces: Vec<Vec<(usize, usize)>>,
+    last: usize,
+}
+
+impl Files {
+    fn new(spill: Option<&std::path::Path>) -> std::io::Result<Files> {
+        let spill = match spill {
+            Some(dir) => {
+                static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+                let path = dir.join(format!("rofl-cut-{}-{}.txt", std::process::id(), N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)));
+                let w = std::io::BufWriter::with_capacity(1 << 20, std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&path)?);
+                Some(Spill { path, w, end: 0, pieces: Vec::new(), last: usize::MAX })
+            }
+            None => None,
+        };
+        Ok(Files { at: FxMap::default(), names: Vec::new(), held: Vec::new(), spill })
+    }
+
+    fn place(&mut self, f: &str) -> usize {
+        if let Some(&n) = self.at.get(f) {
+            return n;
+        }
+        self.at.insert(f.to_string(), self.names.len());
+        self.names.push(f.to_string());
+        match &mut self.spill {
+            Some(s) => s.pieces.push(Vec::new()),
+            None => self.held.push(String::new()),
+        }
+        self.names.len() - 1
+    }
+
+    fn started(&self, n: usize) -> bool {
+        match &self.spill {
+            Some(s) => !s.pieces[n].is_empty(),
+            None => !self.held[n].is_empty(),
+        }
+    }
+
+    fn push(&mut self, n: usize, text: &str) -> std::io::Result<()> {
+        match &mut self.spill {
+            None => self.held[n].push_str(text),
+            Some(s) => {
+                std::io::Write::write_all(&mut s.w, text.as_bytes())?;
+                // (what one file writes in a row is one piece)
+                match s.pieces[n].last_mut() {
+                    Some(p) if s.last == n => p.1 += text.len(),
+                    _ => s.pieces[n].push((s.end, text.len())),
+                }
+                s.end += text.len();
+                s.last = n;
+            }
+        }
+        Ok(())
+    }
+
+    fn done(self) -> std::io::Result<Vec<(String, FileText)>> {
+        let Some(mut s) = self.spill else { return Ok(self.names.into_iter().zip(self.held.into_iter().map(FileText::Held)).collect()) };
+        std::io::Write::flush(&mut s.w)?;
+        let f = s.w.into_inner().map_err(|e| e.into_error())?;
+        let map = (s.end > 0).then(|| unsafe { memmap2::Mmap::map(&f) }).transpose();
+        // (mapped, the file needs no name: a process killed leaves nothing behind)
+        if cfg!(unix) || map.is_err() || s.end == 0 {
+            let _ = std::fs::remove_file(&s.path);
+        }
+        let Some(map) = map? else { return Ok(self.names.into_iter().map(|f| (f, FileText::default())).collect()) };
+        let map = Rc::new(map);
+        Ok(self.names.into_iter().zip(s.pieces).map(|(f, ps)| (f, FileText::Lies(map.clone(), ps))).collect())
+    }
+}
+
 /// The texts cut into core and files. A clause spans lines while a string in it is open.
 pub fn cut(texts: &[&str]) -> Cut {
-    cut_by(texts, false)
+    cut_by(texts, false, None).unwrap_or_else(|_| unreachable!("a cut on the heap writes no file"))
 }
 
 /// `cut`, the texts of facts alone that name no file set apart (`Cut::over`).
 pub fn cut_over(texts: &[&str]) -> Cut {
-    cut_by(texts, true)
+    cut_by(texts, true, None).unwrap_or_else(|_| unreachable!("a cut on the heap writes no file"))
 }
 
-fn cut_by(texts: &[&str], apart: bool) -> Cut {
+/// `cut_over`, each file's text written to a file in `dir` as it is cut and read from there where it lies
+/// (`FileText::Lies`): what the cut holds is the text it reads, the core and a list of pieces a file.
+pub fn cut_over_into(texts: &[&str], dir: &std::path::Path) -> std::io::Result<Cut> {
+    cut_by(texts, true, Some(dir))
+}
+
+fn cut_by(texts: &[&str], apart: bool, spill: Option<&std::path::Path>) -> std::io::Result<Cut> {
     let mut core = String::new();
-    let mut at: FxMap<String, usize> = FxMap::default();
-    let mut files: Vec<(String, String)> = Vec::new();
+    let mut files = Files::new(spill)?;
     let mut over = Vec::new();
     for text in texts {
         if apart && facts_alone(text) {
@@ -317,7 +488,7 @@ fn cut_by(texts: &[&str], apart: bool) -> Cut {
             continue;
         }
         if crate::rofl_parse::is_columns(text) {
-            cut_columns(text, &mut core, &mut at, &mut files);
+            cut_columns(text, &mut core, &mut files)?;
             continue;
         }
         let b = text.as_bytes();
@@ -330,11 +501,8 @@ fn cut_by(texts: &[&str], apart: bool) -> Cut {
                     let line = &text[start..=i];
                     match file_of(line) {
                         Some(f) => {
-                            let n = *at.entry(f.to_string()).or_insert_with(|| {
-                                files.push((f.to_string(), String::new()));
-                                files.len() - 1
-                            });
-                            files[n].1.push_str(line);
+                            let n = files.place(f);
+                            files.push(n, line)?;
                         }
                         None => core.push_str(line),
                     }
@@ -349,36 +517,33 @@ fn cut_by(texts: &[&str], apart: bool) -> Cut {
             core.push('\n');
         }
     }
-    Cut { core, files, over }
+    Ok(Cut { core, files: files.done()?, over })
 }
 
 
 /// The column form cut as `cut` cuts text: each row to the one file its nodes name, a file's rows a column text of its
 /// own under the table they were read with; a row that names no file, or two, goes to the core as a line of text, and
 /// so does a line of text.
-fn cut_columns(text: &str, core: &mut String, at: &mut FxMap<String, usize>, files: &mut Vec<(String, String)>) {
+fn cut_columns(text: &str, core: &mut String, files: &mut Files) -> std::io::Result<()> {
     let mut lines = text.lines().peekable();
     let mut table: Vec<&str> = Vec::new();
     let mut table_text = String::new();
     // per file of this table: its blocks so far
     let mut out: FxMap<String, String> = FxMap::default();
-    let flush = |out: &mut FxMap<String, String>, table_text: &str, at: &mut FxMap<String, usize>, files: &mut Vec<(String, String)>| {
+    let flush = |out: &mut FxMap<String, String>, table_text: &str, files: &mut Files| -> std::io::Result<()> {
         let mut keys: Vec<String> = out.keys().cloned().collect();
         keys.sort();
         for f in keys {
             let blocks = out.remove(&f).unwrap_or_default();
-            let n = *at.entry(f.clone()).or_insert_with(|| {
-                files.push((f.clone(), String::new()));
-                files.len() - 1
-            });
-            let t = &mut files[n].1;
-            if t.is_empty() {
-                t.push_str(crate::rofl_parse::COLUMNS);
-                t.push('\n');
+            let n = files.place(&f);
+            if !files.started(n) {
+                files.push(n, crate::rofl_parse::COLUMNS)?;
+                files.push(n, "\n")?;
             }
-            t.push_str(table_text);
-            t.push_str(&blocks);
+            files.push(n, table_text)?;
+            files.push(n, &blocks)?;
         }
+        Ok(())
     };
     let term_text = |e: &str| -> String {
         match e.split_at(2) {
@@ -406,7 +571,7 @@ fn cut_columns(text: &str, core: &mut String, at: &mut FxMap<String, usize>, fil
             continue;
         }
         if let Some(n) = l.strip_prefix("T ") {
-            flush(&mut out, &table_text, at, files);
+            flush(&mut out, &table_text, files)?;
             let n: usize = n.parse().unwrap_or(0);
             table.clear();
             table_text = format!("{l}\n");
@@ -458,7 +623,8 @@ fn cut_columns(text: &str, core: &mut String, at: &mut FxMap<String, usize>, fil
             }
         }
     }
-    flush(&mut out, &table_text, at, files);
+    flush(&mut out, &table_text, files)?;
+    Ok(())
 }
 
 fn radix36(mut n: usize) -> String {
@@ -521,13 +687,13 @@ pub(super) fn pressed() -> bool {
 impl Eval {
     /// The world of this core and the `files`, each its name and text, settled by levels: the reader, a fork of the
     /// core that reads every unit and fires nothing.
-    pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Eval, VolStats), Halt> {
+    pub fn by_volumes(&mut self, files: Vec<(String, FileText)>) -> Result<(Eval, VolStats), Halt> {
         self.by_volumes_over(files, "")
     }
 
     /// `by_volumes`, with `over` laid over the files' units: facts of the relations `overlay_rels` names, read by
     /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
-    pub fn by_volumes_over(&mut self, files: Vec<(String, String)>, over: &str) -> Result<(Eval, VolStats), Halt> {
+    pub fn by_volumes_over(&mut self, files: Vec<(String, FileText)>, over: &str) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let (stage, mut joins) = self.level_stage();
         self.settle_core(joins.core.clone())?;
@@ -536,8 +702,8 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for text in files.iter().map(|f| f.1.as_str()).chain([over]) {
-            let mut rest = text;
+        for text in files.iter().map(|f| f.1.text()).chain([std::borrow::Cow::Borrowed(over)]) {
+            let mut rest = &*text;
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
                 let end = a + 1 + n;
