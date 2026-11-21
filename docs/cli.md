@@ -807,7 +807,15 @@ system's temporary directory (`rofl-units-<pid>-<n>.seg`, unlinked once mapped
 on Unix, so a process killed leaves none; elsewhere removed at the end) and
 read back mapped from it, so what no unit reads again lies in pages the
 system takes back. Stderr says how many times, how many units and how many MB
-of disk. A world its units refuse (a wall met, a fact that breaks the plan's
+of disk. A unit is cooled whole: its facts and firings, its directories of
+keys, and a unit where children met and made no fact of its own too; the keys
+the units' proofs quote are cooled once those come since outweigh those cooled,
+and the indexes a reader builds over a cooled unit (the places of its facts, its
+facts by key and by relation) lie in one spill file of the same directory
+(`rofl-spill-<pid>.bin`, sparse, unlinked once mapped). Over 2 286 vscode files
+the heap after the six layers is 3.3 GB where it was 7 GB and the last layer met
+the wall (`f_a_unit_cools_whole`); `ROFL_CENSUS=1` prints what the units hold at
+each depth. A world its units refuse (a wall met, a fact that breaks the plan's
 `own`) is said on stderr and evaluated whole. Measured on the release build, 4
 cores, the side-effect question over vscode, kept too: 250 files 18 to 21 s, 750
 files 60 to 68 s from one hour to the next on a shared machine, a third of it

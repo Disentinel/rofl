@@ -100,7 +100,7 @@ impl<T> Lazy<T> {
     }
     /// The segment it is kept in and where, while it was not made anew.
     fn kept_at(&self) -> Option<(u32, usize)> {
-        self.kept.as_ref().map(|k| (k.3, k.1))
+        self.kept.as_ref().filter(|k| k.3 != crate::store::COOLED).map(|k| (k.3, k.1))
     }
     fn get(&self) -> &T {
         self.got.get_or_init(|| {
@@ -672,6 +672,59 @@ fn reader_trees(cx: &Rc<Ctx>, tops: &[Rc<Unit>], e: &Eval) -> (Rc<TreeOf>, (Vec<
     let cis: FxSet<usize> = cx.joins.home.1.iter().filter_map(|rel| e.vc.vclosure_for(*rel)).collect();
     let (cx, of) = (cx.clone(), leaves.clone());
     (Rc::new(move |t: Term| Some(of[cx.file(t)? as usize / cx.leaf].clone())), (leaves, cis))
+}
+
+/// (an oracle of the measure: what the units' stretches hold on the heap, said on stderr under ROFL_CENSUS)
+fn census(at: &str, layers: &[Vec<Vec<Rc<Unit>>>], now: &[Rc<Unit>]) {
+    if std::env::var_os("ROFL_CENSUS").is_none() {
+        return;
+    }
+    let mut seen: FxSet<usize> = FxSet::default();
+    let mut t = [0usize; 6];
+    let (mut n, mut facts) = (0usize, 0u64);
+    let all = layers.iter().flatten().flatten().chain(now);
+    for u in all {
+        if !seen.insert(Rc::as_ptr(&u.stretch) as usize) {
+            continue;
+        }
+        n += 1;
+        facts += (u.stretch.hi - u.stretch.lo) as u64;
+        for (a, b) in t.iter_mut().zip(u.stretch.heap_census()) {
+            *a += b;
+        }
+    }
+    let used = crate::engine::MEMORY_USED.load(Relaxed);
+    let (mut pseen, mut dirb, mut dirn): (FxSet<usize>, usize, usize) = Default::default();
+    for u in layers.iter().flatten().flatten().chain(now) {
+        if !pseen.insert(Rc::as_ptr(&u.parts) as usize) {
+            continue;
+        }
+        let Some(p) = u.parts.got.get() else { continue };
+        for d in [&p.dir, &p.inner] {
+            if let Dir::Built(m) = &**d {
+                dirn += m.len();
+                dirb += m.capacity() * 48 + m.values().map(|v| v.capacity() * 4).sum::<usize>();
+            }
+        }
+        if let Arena::Heap(v) = &p.reads { dirb += v.capacity() * 4; }
+        if let Arena::Heap(v) = &p.asked { dirb += v.capacity() * 8; }
+    }
+    eprintln!("census {at}: parts {dirn} keys, {} MB", dirb >> 20);
+    let mut by: Vec<(&str, usize)> = Vec::new();
+    let mut seen2: FxSet<usize> = FxSet::default();
+    for u in layers.iter().flatten().flatten().chain(now) {
+        if seen2.insert(Rc::as_ptr(&u.stretch) as usize) {
+            for (name, b) in u.stretch.unfolded_bytes() {
+                match by.iter_mut().find(|x| x.0 == name) {
+                    Some(x) => x.1 += b,
+                    None => by.push((name, b)),
+                }
+            }
+        }
+    }
+    let by = by.iter().map(|(k, b)| format!("{k} {}", b >> 20)).collect::<Vec<_>>().join(" ");
+    static T0: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    eprintln!("census {at} at {} s: {n} stretches ({} cooled), {facts} facts; heap MB unfolded {} ({by}) raw {} wits {} keyed {} trees {}; process {} MB, heap live {} MB", T0.get_or_init(std::time::Instant::now).elapsed().as_secs(), t[4], t[0] >> 20, t[1] >> 20, t[2] >> 20, t[3] >> 20, t[5] >> 20, used >> 20, crate::engine::HEAP_LIVE.load(Relaxed) >> 20);
 }
 
 /// A world settled by levels: the one unit of each layer and, where rules were left to the world's reader, the unit
@@ -1413,17 +1466,24 @@ impl Eval {
         let cooled = Mutex::new(Cooled::default());
         let over: std::sync::OnceLock<Over> = std::sync::OnceLock::new();
         let cool = |us: &mut [&mut Unit], trees: bool| {
-            let us: Vec<&mut &mut Unit> = us.iter_mut().filter(|u| !u.stretch.cooled() && u.stretch.lo < u.stretch.hi && Rc::strong_count(&u.stretch) == 1).collect();
+            let us: Vec<&mut &mut Unit> = us.iter_mut().filter(|u| !u.stretch.cooled() && Rc::strong_count(&u.stretch) == 1).collect();
             if us.is_empty() {
                 return;
             }
             static N: AtomicUsize = AtomicUsize::new(0);
             let path = std::env::temp_dir().join(format!("rofl-units-{}-{}.seg", std::process::id(), N.fetch_add(1, Relaxed))).to_string_lossy().to_string();
-            let written = (|| -> Result<(Vec<usize>, usize), String> {
+            // (and its directories: what finds a key in it, read where they lie as a kept world's are)
+            let written = (|| -> Result<(Vec<(usize, Option<usize>)>, usize), String> {
                 let mut w = VolW::bounded(&path, None).map_err(|x| x.to_string())?;
                 let mut starts = Vec::with_capacity(us.len());
                 for u in &us {
-                    starts.push(u.stretch.write(&mut w, trees && u.kids.is_empty())?);
+                    let at = u.stretch.write(&mut w, trees && u.kids.is_empty())?;
+                    let parts = (Rc::strong_count(&u.parts) == 1 && u.parts.kept.is_none()).then(|| {
+                        let p = w.at();
+                        u.parts.get().write(&mut w);
+                        p
+                    });
+                    starts.push((at, parts));
                 }
                 Ok((starts, w.finish().map_err(|x| x.to_string())?))
             })();
@@ -1438,7 +1498,10 @@ impl Eval {
                     let store = base.0.fork().store;
                     Over(Rc::new((store, cx.h.clone())))
                 });
-                let ss: Vec<Stretch> = starts.iter().map(|&at| Stretch::read(&over.0, &mut VolR::new(map.clone(), at), crate::store::COOLED)).collect::<Result<_, _>>()?;
+                let ss: Vec<(Stretch, Option<Lazy<Parts>>)> = starts
+                    .iter()
+                    .map(|&(at, parts)| Ok((Stretch::read(&over.0, &mut VolR::new(map.clone(), at), crate::store::COOLED)?, parts.map(|p| Lazy { got: Default::default(), kept: Some((map.clone(), p, Parts::read as fn(&mut VolR) -> Result<Parts, String>, crate::store::COOLED)) }))))
+                    .collect::<Result<_, String>>()?;
                 Ok((ss, bytes))
             });
             let mut c = cooled.lock().unwrap();
@@ -1448,8 +1511,11 @@ impl Eval {
                     c.bytes += bytes as u64;
                     c.times += 1;
                     c.paths.push(path);
-                    for (u, s) in us.into_iter().zip(ss) {
+                    for (u, (s, parts)) in us.into_iter().zip(ss) {
                         u.stretch = Rc::new(s);
+                        if let Some(p) = parts {
+                            u.parts = Rc::new(p);
+                        }
                     }
                 }
                 Err(e) => {
@@ -1494,6 +1560,17 @@ impl Eval {
                     let mut done: Vec<&mut Unit> = out.iter_mut().filter_map(|u| u.get_mut().unwrap().as_mut()?.as_mut().ok()).collect();
                     let (cool, per) = (&cool, done.len().div_ceil(threads).max(1));
                     std::thread::scope(|sc| done.chunks_mut(per).for_each(|us| { sc.spawn(move || cool(us, trees)); }));
+                    // (and the keys the units' proofs quote, once those that came since are more than those cooled)
+                    let mut k = keys.lock().unwrap();
+                    let (cold, warm) = k.layer_bytes();
+                    if warm > cold {
+                        static N: AtomicUsize = AtomicUsize::new(0);
+                        let path = std::env::temp_dir().join(format!("rofl-keys-{}-{}.seg", std::process::id(), N.fetch_add(1, Relaxed))).to_string_lossy().to_string();
+                        if let Err(e) = k.spill(&path) {
+                            eprintln!("volumes: the keys stay on the heap: {e}");
+                            let _ = std::fs::remove_file(&path);
+                        }
+                    }
                 }
                 from = to;
             }
@@ -1812,6 +1889,7 @@ impl Eval {
         };
         // the units of each layer: by depth, by place; a unit of files alone holds `leaf` of them
         let mut layers: Vec<Vec<Vec<Rc<Unit>>>> = Vec::new();
+        if std::env::var_os("ROFL_CENSUS").is_some() { eprintln!("census start: heap live {} MB, core heap {} MB, core store {} MB", crate::engine::HEAP_LIVE.load(Relaxed) >> 20, self.h.bytes() >> 20, self.store.bytes().iter().map(|x| x.1).sum::<usize>() >> 20); }
         let mut tops: Vec<Rc<Unit>> = Vec::new();
         let ranges: Vec<(u32, u32)> = (0..n).step_by(leaf).map(|a| (a as u32, (a + leaf).min(n) as u32)).collect();
         let mut largest: Vec<usize> = (0..ranges.len()).collect();
@@ -1987,6 +2065,8 @@ impl Eval {
                 })?
             };
             ms.push(t0.elapsed().as_millis());
+            census(&format!("layer {k} depth 0"), &layers, &units);
+            if std::env::var_os("ROFL_CENSUS").is_some() { let kh = keys.lock().unwrap(); eprintln!("census keys heap {} MB, {} names, {:?}, rows {}", kh.bytes() >> 20, kh.sym_count(), kh.parts(), rows.lock().unwrap().len()); }
             let snap = || {
                 let mut v = crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
                 let (n, b) = crate::store::SEAM_SEEN.lock().unwrap().take().map_or((0, 0), |(s, b)| (s.len() as u64, b));
@@ -2016,6 +2096,7 @@ impl Eval {
                 })?;
                 depths.push(units.clone());
                 ms.push(t0.elapsed().as_millis());
+                census(&format!("layer {k} depth {d}"), &layers, &depths.concat());
                 seen.push(snap());
             }
             seam_said.push(seen.windows(2).map(|w| format!("{}q/{}f/{}KB distinct {}f/{}KB whole rels {} trips {}f/{}KB; calls store/rec/args/of_rel/find/forests/wits/matches {}", w[1][0] - w[0][0], w[1][1] - w[0][1], (w[1][2] - w[0][2]) / 1024, w[1][3], w[1][4] / 1024, w[1][13], w[1][14], w[1][15] / 1024, (5..13).map(|i| (w[1][i] - w[0][i]).to_string()).collect::<Vec<_>>().join("/"))).collect::<Vec<_>>().join(" "));

@@ -4320,6 +4320,10 @@ work(w_js_assignment_patterns,
 work_state(w_js_assignment_patterns, done).
 work_spawned(w_js_assignment_patterns, f_a_rest_binds_wherever_its_pattern_stands).
 
+work(w_the_last_layer_top_unit_does_the_world,
+  "From f_a_unit_cools_whole: by levels, the top unit of the last layer does most of the evaluation alone, on one thread: over 493 vscode files (src/vs/base with tests) 366 s of 552 (the depths below it 30, 9, 48 s), and the reader 67 s; over 2 286 files the run passed 20 minutes at layer 5 depth 3 with 3.3 GB of heap. Memory no longer stops the whole vscode; this does. To find: which rules of the last layer the top unit fires (seam by rule names sx_cb asking nth, se_member_of asking object_of, may_be), why their facts do not meet below the top (keys of no file, a recursion that closes only over the whole world), and whether the JS model's threefold slowdown since 11-17 (f_the_js_model_since_1117_takes_three_times_the_time) is the same cost. ACCEPTANCE: 2 286 files answer whole within the 5 minutes the goal names for the whole of 11 100, the top unit not more than its share.").
+work_state(w_the_last_layer_top_unit_does_the_world, open).
+work_spawned(w_the_last_layer_top_unit_does_the_world, f_a_unit_cools_whole).
 work(w_kept_cut_world_edit_beside_rule_file,
   "A kept heap world that cut [ast_oxc] takes an edit of a cut file by delta when a rule file is edited in the same run, and answers wrong (f_a_kept_world_that_cut_takes_an_edit_below_the_cut_beside_a_rule_file_wrong). Refuse it, or take it with the lemmas proved again, as an edit of the cut file alone is.").
 work_state(w_kept_cut_world_edit_beside_rule_file, open).

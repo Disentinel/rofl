@@ -1084,8 +1084,8 @@ pub struct Stretch {
 /// costs twelve bytes where a map of lists cost five times that.
 #[derive(Default)]
 struct Keys {
-    vals: Vec<u64>,
-    ids: Vec<FactId>,
+    vals: crate::arena::Arena<u64>,
+    ids: crate::arena::Arena<FactId>,
 }
 
 impl Keys {
@@ -1130,10 +1130,10 @@ struct Kept {
 struct Raw {
     recs: crate::arena::Arena<u32>,
     args: crate::arena::Arena<u64>,
-    at: Vec<u32>,
-    by_rel: FxMap<Sym, Vec<FactId>>,
+    at: crate::arena::Arena<u32>,
+    by_rel: FxMap<Sym, crate::arena::Arena<FactId>>,
     /// its facts by the hash of their key, sorted, made when first asked: twelve bytes a fact
-    keys: std::sync::OnceLock<(Vec<u64>, Vec<FactId>)>,
+    keys: std::sync::OnceLock<(crate::arena::Arena<u64>, crate::arena::Arena<FactId>)>,
 }
 
 /// A kept stretch's firings where they lie: four words a firing (fact, rule, tick, premises), the premises, where
@@ -1387,6 +1387,21 @@ impl Stretch {
         }
     }
 
+    /// What it holds on the heap, in bytes: unfolded (whole), its facts' places and by relation, its firings' places,
+    /// its facts by key; and whether it is cooled.
+    pub fn heap_census(&self) -> [usize; 6] {
+        let unf = self.store.get().map_or(0, |s| s.bytes().iter().map(|x| x.1).sum());
+        let raw = self.raw.get().map_or(0, |r| r.at.capacity() * 4 + r.by_rel.values().map(|v| v.capacity() * 4 + 32).sum::<usize>() + r.keys.get().map_or(0, |k| k.0.capacity() * 8 + k.1.capacity() * 4));
+        let wits = self.wits.get().map_or(0, |w| w.at.capacity() * 4 + w.by.capacity() * 8);
+        let kb = |k: &Keys| k.vals.capacity() * 8 + k.ids.capacity() * 4;
+        let keyed = self.keyed.low.iter().flat_map(|c| c.iter()).filter_map(|c| c.get()).map(kb).sum::<usize>() + self.keyed.high.read().unwrap().values().map(|k| kb(k)).sum::<usize>();
+        let fs = self.forests.get().map_or(0, |v| v.iter().flat_map(|f| f.iter()).map(|(_, t)| t.heap_bytes()).sum());
+        [unf, raw, wits, keyed, self.cooled() as usize, fs]
+    }
+    pub fn unfolded_bytes(&self) -> Vec<(&'static str, usize)> {
+        self.store.get().map_or(Vec::new(), |s| s.bytes())
+    }
+
     /// The stretch itself: as it was settled, or read now from where it is kept.
     pub fn store(&self) -> &Store {
         by(0);
@@ -1421,7 +1436,10 @@ impl Stretch {
                 by_rel.entry(x[0]).or_default().push(self.lo + i as FactId);
             }
             at.push(o);
-            Raw { recs, args, at, by_rel, keys: Default::default() }
+            // (made where the memory is pressed, they lie in the spill)
+            let cold = crate::engine::volumes::pressed();
+            let by_rel = by_rel.into_iter().map(|(r, v)| (r, crate::arena::spilled(v, cold))).collect();
+            Raw { recs, args, at: crate::arena::spilled(at, cold), by_rel, keys: Default::default() }
         }))
     }
 
@@ -1480,7 +1498,7 @@ impl Stretch {
     fn of_rel(&self, rel: Sym) -> Vec<FactId> {
         by(3);
         if let Some(r) = self.raw() {
-            return r.by_rel.get(&rel).cloned().unwrap_or_default();
+            return r.by_rel.get(&rel).map_or_else(Vec::new, |v| v.to_vec());
         }
         let s = self.store();
         let mut out = Vec::new();
@@ -1503,7 +1521,9 @@ impl Stretch {
         let (hs, ids) = r.keys.get_or_init(|| {
             let mut m: Vec<(u64, FactId)> = (self.lo..self.hi).map(|id| (hash_key(self.rec(id).rel, self.rec(id).persp, self.args(id)), id)).collect();
             m.sort_unstable();
-            m.into_iter().unzip()
+            let (hs, ids): (Vec<u64>, Vec<FactId>) = m.into_iter().unzip();
+            let cold = crate::engine::volumes::pressed();
+            (crate::arena::spilled(hs, cold), crate::arena::spilled(ids, cold))
         });
         let a = hs.partition_point(|&x| x < h);
         ids[a..a + hs[a..].partition_point(|&x| x == h)].iter().copied().find(|&k| {
@@ -1560,7 +1580,8 @@ impl Stretch {
         let make = || {
             let mut at: Vec<(u64, FactId)> = self.of_rel(rel).into_iter().filter_map(|k| self.args(k).get(p as usize).map(|&t| (if h.is_ground(t) { t.bits() } else { OPEN }, k))).collect();
             at.sort_unstable();
-            Keys { vals: at.iter().map(|x| x.0).collect(), ids: at.iter().map(|x| x.1).collect() }
+            let cold = crate::engine::volumes::pressed();
+            Keys { vals: crate::arena::spilled(at.iter().map(|x| x.0).collect(), cold), ids: crate::arena::spilled(at.iter().map(|x| x.1).collect(), cold) }
         };
         if let Some(cell) = self.keyed.low[i].get(p as usize) {
             return Some(cell.get_or_init(make));

@@ -679,7 +679,7 @@ pub(super) fn load_text(e: &mut Eval, text: &str) -> Result<(), Halt> {
 
 /// Whether the process uses more than a quarter of the memory it may (`MEMORY_USED`, `MEMORY_LIMIT`, set by the
 /// binary's watcher): then the units done are cooled.
-pub(super) fn pressed() -> bool {
+pub fn pressed() -> bool {
     let (used, may) = (MEMORY_USED.load(std::sync::atomic::Ordering::Relaxed), MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed));
     may > 0 && used * 4 > may
 }
