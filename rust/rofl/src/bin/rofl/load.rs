@@ -108,8 +108,8 @@ pub fn gb(b: i64) -> String {
 /// The files of a world cut into volumes, each by its path and its facts, kept for a wall to say where to narrow.
 pub static SIZES: std::sync::Mutex<Vec<(String, usize)>> = std::sync::Mutex::new(Vec::new());
 
-fn note_sizes(files: &[(String, String)]) {
-    let sizes = files.iter().map(|(f, t)| (path_of(t).unwrap_or(f).to_string(), t.bytes().filter(|&b| b == b'\n').count())).collect();
+fn note_sizes(files: &[(String, rofl::engine::volumes::FileText)]) {
+    let sizes = files.iter().map(|(f, t)| { let t = t.text(); (path_of(&t).unwrap_or(f).to_string(), t.bytes().filter(|&b| b == b'\n').count()) }).collect();
     if let Ok(mut s) = SIZES.lock() { *s = sizes; }
 }
 
@@ -572,11 +572,22 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
     let sources = load_sources(o);
     // a source gone is said by the kept world's slot, which knows it was there
     if sources.iter().any(|(f, t)| t.is_none() && !std::path::Path::new(f).exists()) { return None; }
-    let texts: Vec<String> = sources.iter().map(|(f, t)| t.clone().unwrap_or_else(|| read(o.json, f))).collect();
-    let mut cut = rofl::engine::volumes::cut_over(&texts.iter().map(String::as_str).collect::<Vec<_>>());
+    // READ UNDER THE MEMORY WALL: the sources are mapped, not read onto the heap, and each file's facts are written
+    // to disk as they are cut, read back by the unit that settles the file; what the read holds is the core
+    let maps: Vec<Mapped> = sources.iter().map(|(f, t)| t.clone().map_or_else(|| mapped(o.json, f), Mapped::Text)).collect();
+    let texts: Vec<&str> = maps.iter().map(|m| m.text(o.json)).collect();
+    let mut cut = rofl::engine::volumes::cut_over_into(&texts, &std::env::temp_dir()).unwrap_or_else(|e| {
+        eprintln!("the files' facts are cut on the heap: {}: {e}", std::env::temp_dir().display());
+        rofl::engine::volumes::cut_over(&texts)
+    });
     drop(texts);
+    drop(maps);
     // under VOLUMES_FROM a world is kept whole, its answer read back fastest so
-    let bytes: usize = cut.files.iter().map(|(_, t)| text_bytes(t)).sum();
+    let mut bytes = 0;
+    for (_, t) in &cut.files {
+        if bytes >= VOLUMES_FROM { break; }
+        bytes += text_bytes(&t.text());
+    }
     if cut.files.len() < 2 || bytes < VOLUMES_FROM && std::env::var("ROFL_VOLUMES").as_deref() != Ok("1") { return None; }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).collect();
     if let Some((mut s, reg, moved)) = kept.as_ref().and_then(|k| delta_volumes(o, k, &cut)) {
@@ -585,7 +596,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         let t = rofl::engine::meter::spent("answers", t);
         // the texts of the files that moved are written beside those kept; where none are kept, every file's
         let texts = |k: &str| {
-            let moved: Vec<(String, String)> = cut.files.iter().filter(|(f, _)| moved.contains(f)).cloned().collect();
+            let moved: Vec<(String, String)> = cut.files.iter().filter(|(f, _)| moved.contains(f)).map(|(f, t)| (f.clone(), t.text().into_owned())).collect();
             rofl::engine::volumes::keep_texts_edit(k, &moved, crate::kept::seen().as_deref()).map(drop).or_else(|e| {
                 eprintln!("the kept texts are written whole: {e}");
                 let p = format!("{k}.texts.{}.new", std::process::id());
@@ -615,7 +626,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         }
     }
     note_sizes(&cut.files);
-    let reg = Registry { core: sum(&format!("{}{rest}", cut.core)), files: if kept.is_some() { cut.files.iter().map(|(f, t)| (f.clone(), sum(t))).collect() } else { Default::default() }, over: sum(&over), rels };
+    let reg = Registry { core: sum(&format!("{}{rest}", cut.core)), files: if kept.is_some() { cut.files.iter().map(|(f, t)| (f.clone(), sum(&t.text()))).collect() } else { Default::default() }, over: sum(&over), rels };
     // the texts a kept world reads again are written now: the units let each go once they read it
     let texts = kept.as_ref().and_then(|k| {
         let p = format!("{k}.texts.{}.new", std::process::id());
@@ -801,8 +812,8 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
         say("the rules or the facts naming no file changed");
         return None;
     }
-    let now: std::collections::HashMap<&str, &str> = cut.files.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
-    let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f).is_none_or(|h| *h != sum(t))).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
+    let now: std::collections::HashMap<&str, u64> = cut.files.iter().map(|(f, t)| (f.as_str(), sum(&t.text()))).collect();
+    let moved: Vec<&str> = now.iter().filter(|(f, t)| old.get(**f) != Some(*t)).map(|(f, _)| *f).chain(old.keys().map(String::as_str).filter(|f| !now.contains_key(f))).collect();
     let over_moved = sum(&over) != over_sum;
     if (moved.is_empty() && !over_moved) || moved.len() * 8 > now.len().max(8) {
         if !moved.is_empty() { say(&format!("{} of {} files moved", moved.len(), now.len())); }
@@ -815,14 +826,14 @@ fn delta_volumes(o: &Opts, k: &str, cut: &rofl::engine::volumes::Cut) -> Option<
     let t = std::time::Instant::now();
     let mut s = open_reader(o, k, |r, this_build| r.engine_env_hold(this_build).is_none() && r.scans.is_empty())?;
     let before = rofl::volume::open_units(k, &s.eval, crate::kept::seen().as_deref()).map_err(|e| say(&e)).ok()?;
-    let named: std::collections::HashMap<u64, (&str, &str)> = now.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (*f, *t)))).collect();
-    let files: Vec<(String, String)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), t.to_string()))).collect::<Option<_>>().or_else(|| { say("a file came or went"); None })?;
+    let named: std::collections::HashMap<u64, (&str, &rofl::engine::volumes::FileText)> = cut.files.iter().filter_map(|(f, t)| Some((u64::from_str_radix(f, 16).ok()?, (f.as_str(), t)))).collect();
+    let files: Vec<(String, rofl::engine::volumes::FileText)> = before.files().iter().map(|h| named.get(h).map(|(f, t)| (f.to_string(), (*t).clone()))).collect::<Option<_>>().or_else(|| { say("a file came or went"); None })?;
     let changed = files.iter().enumerate().filter(|(_, (f, _))| moved.contains(&f.as_str())).map(|(i, _)| i as u32).collect();
     before.named_by(&mut s.eval);
     let (st, joins) = s.eval.level_stage();
     s.eval.store.settled = s.eval.store.len_ids();
     // (the check harness's oracle: how many units meet in one)
-    let (n, sums): (usize, std::collections::HashMap<String, u64>) = (files.len(), files.iter().map(|(f, t)| (f.clone(), sum(t))).collect());
+    let (n, sums): (usize, std::collections::HashMap<String, u64>) = (files.len(), files.iter().map(|(f, _)| (f.clone(), now[f.as_str()])).collect());
     let lv = match s.eval.fork().by_levels(files, &st, joins, Some(rofl::engine::levels::Edit(&before, changed)), &over) {
         Ok(lv) => lv,
         Err(e) => { say(&rofl::describe(&e)); return None; }
@@ -1076,7 +1087,7 @@ fn lower_texts(o: &Opts, s: &mut Session) {
     let sources = load_sources(o);
     let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
     let cut = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
-    s.eval.lower_texts = Some(std::sync::Arc::new(cut.files.into_iter().collect()));
+    s.eval.lower_texts = Some(std::sync::Arc::new(cut.files.into_iter().map(|(f, t)| (f, t.into_text())).collect()));
 }
 
 /// Every question answered in order. Returns whether one was refused and whether the answers are partial.
@@ -1140,6 +1151,31 @@ fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>
         },
     };
     (text, js, refused, partial)
+}
+
+/// A source as the cut reads it: given as text, or the file mapped where it lies, so that the pages read go back
+/// to the system as the cut moves on.
+enum Mapped {
+    Text(String),
+    Map(String, memmap2::Mmap),
+}
+
+impl Mapped {
+    fn text(&self, json: bool) -> &str {
+        match self {
+            Mapped::Text(t) => t,
+            Mapped::Map(f, m) => std::str::from_utf8(m).unwrap_or_else(|e| fail(json, USAGE, &format!("{f}: stream did not contain valid UTF-8: {e}"))),
+        }
+    }
+}
+
+/// The file mapped, or read where it cannot be (an empty file, a pipe); the run ends where it cannot be read.
+fn mapped(json: bool, f: &str) -> Mapped {
+    let map = std::fs::File::open(f).and_then(|h| if h.metadata()?.len() == 0 { Err(std::io::ErrorKind::Other.into()) } else { unsafe { memmap2::Mmap::map(&h) } });
+    match map {
+        Ok(m) => Mapped::Map(f.to_string(), m),
+        Err(_) => Mapped::Text(read(json, f)),
+    }
 }
 
 /// The text of a file that was read, or the run ends.

@@ -55,7 +55,7 @@ fn a_cut_world_holds_what_the_whole_world_holds_outside_the_cut() {
     assert!(short.contains("[lemma "), "why stops at a lemma:\n{short}");
     let texts = texts(true);
     let parts = rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
-    cut.eval.lower_texts = Some(std::sync::Arc::new(parts.files.into_iter().collect()));
+    cut.eval.lower_texts = Some(std::sync::Arc::new(parts.files.into_iter().map(|(f, t)| (f, t.into_text())).collect()));
     let all = cut.why_all(&fact).unwrap();
     assert!(!all.contains("[lemma"), "why --all unfolds every lemma:\n{all}");
     assert!(all.contains("[ast_oxc]"), "down to the raw tree:\n{all}");
