@@ -73,7 +73,6 @@ const NARROW_PASSES = 4;
 
 const MAX_DEPTH = 512;
 const MAX_ALTERNATIONS = 256;
-export const DEFAULT_SPACE = 500_000;
 const POLICY_BUDGET = 20_000_000;
 
 // ------------------------------------------------------------------ codes
@@ -809,7 +808,7 @@ export type Mode = 'rounds' | 'strata';
 export class AggEval {
   store: Store;
   budget: number;
-  space = DEFAULT_SPACE;
+  space = Infinity;
   mode: Mode;
   naive = false;
   /** A PROGRAM WITH NO AGGREGATE CONSTRUCT is planned with the cross-product hold and explained as the plain explainer
@@ -1074,7 +1073,7 @@ export class AggEval {
     this.budget = budget;
     this.mode = mode;
     this.bootstrap = bootstrap;
-    this.carryWall = [budget, DEFAULT_SPACE];
+    this.carryWall = [budget, Infinity];
     this.prepare();
   }
 

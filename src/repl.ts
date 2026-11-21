@@ -91,7 +91,7 @@ function exec(line: string, budget?: number): void {
       console.log(s ? (r.text ? `${s}  [${r.text}]` : s) : r.text);
     }
     for (const sh of q.shrugs ?? []) console.log(`? ${sh.text}  ${sh.line}`);
-    if (q.partial) console.log('[partial: budget exhausted, hole emitted]');
+    if (q.partial) console.log(`[partial: ${rofl.cutWhy(budget)}]`);
     return;
   }
   const said = (t: string) => (sentences ? vocab.sayAll(t) : t);

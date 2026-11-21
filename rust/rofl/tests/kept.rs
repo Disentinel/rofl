@@ -1180,6 +1180,53 @@ fn js_sources_edited_go_by_delta() {
     }).unwrap_or_else(|e| panic!("{e}"));
 }
 
+/// A STRING EDITED GOES BY DELTA (w_au_string_edit_by_delta): a JS corpus scanned by models/lang/js/scanner/cli.ts
+/// and kept by levels; an import's specifier and a plain string edited are each a fact of that file alone, so the
+/// edit is taken by delta, and the answers are those of the world whole. The control: a fact naming no file, such as
+/// the host's string cuts were, moves the core and the edit is computed anew.
+#[test]
+fn a_string_edited_goes_by_delta() {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let planted = std::env::var("ROFL_BREAK").ok().filter(|b| !b.is_empty());
+    let brk = planted.as_deref();
+    let d = Dir::new("strings");
+    std::fs::create_dir_all(d.0.join("src/lib")).unwrap();
+    for (f, t) in [("b", "s"), ("c", "s + 1"), ("d", "s * 2"), ("e", "-s")] {
+        d.write(&format!("src/lib/{f}.js"), &format!("export function f(s) {{ return {t}; }}\n"));
+    }
+    let main = |from: &str, word: &str| d.write("src/main.js", &format!("import {{ f }} from './lib/{from}.js';\nexport function g() {{ return f('{word}'); }}\n"));
+    let cli = root().join("models/lang/js/scanner/cli.ts");
+    let model = format!("@{}", root().join("models/lang/js/js.files").display());
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
+    let whole = [("ROFL_VOLUMES", "0".to_string())];
+    let step = |what: &str, delta: bool| -> Result<(), String> {
+        let scan = Command::new("node").args(["--experimental-strip-types", &cli.to_string_lossy(), "src", "--out", "f.rofl"]).current_dir(&d.0).output().unwrap();
+        ensure(scan.status.success(), || format!("{what}: the scan failed: {}", String::from_utf8_lossy(&scan.stderr)))?;
+        let got = rofl_env(BIN, &d, &d.0.join("cache"), &levels, brk, &["ask", "calls[code](A, B)", &model, "f.rofl", "x.rofl"]);
+        // (the world whole from nothing: a kept one that cut [ast_oxc] takes a cut file and a rule file edited together
+        // wrong, f_a_kept_world_that_cut_takes_an_edit_below_the_cut_beside_a_rule_file_wrong)
+        let truth = rofl_env(BIN, &d, &d.0.join(format!("truth-{what}")), &whole, brk, &["ask", "calls[code](A, B)", &model, "f.rofl", "x.rofl"]);
+        ensure(got.code == 0 && got.out == truth.out, || format!("{what}: by levels\n{}\nwhole\n{}\n{}", got.out, truth.out, got.err))?;
+        ensure(got.err.contains("units settled again") == delta, || format!("{what}: wanted {} by delta: {:?}", if delta { "taken" } else { "not taken" }, got.err))
+    };
+    let core = |n: u32| d.write("x.rofl", &format!("edb(seen).\nseen({n}).\nseen_twice(X) :- seen(X), seen(X).\n"));
+    core(1);
+    main("b", "x");
+    step("kept", false).and_then(|_| {
+        main("b", "y");
+        step("a string edited", true)
+    }).and_then(|_| {
+        main("c", "y");
+        step("an import's specifier edited", true)
+    }).and_then(|_| {
+        core(2);
+        main("e", "y");
+        step("the control: a fact naming no file moved", false)
+    }).unwrap_or_else(|e| panic!("{e}"));
+}
+
 /// A LOCAL RENAMED KEEPS ITS IDS (f_a_rename_gives_new_ids_to_every_statement_naming_it): the file scanned again for
 /// a kept world is matched to its previous scan and its declaration keeps its id, where a scan from nothing gives it a
 /// new one; the answers are a fresh run's but for ids, and a world evaluated from its files after it is still the

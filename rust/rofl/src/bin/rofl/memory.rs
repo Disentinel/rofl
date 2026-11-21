@@ -119,8 +119,9 @@ pub fn watch(answers: Option<bool>) {
                 MEMORY_LIMIT.store(may, Relaxed);
                 MEMORY_FULL.store(used >= may, Relaxed);
                 if used >= may && used + leap >= edge {
-                    let gb = |b: i64| format!("{:.1} GB", b as f64 / (1u64 << 30) as f64);
+                    let gb = crate::load::gb;
                     eprintln!("the world reached the memory this process may use ({} of {}) and did not stop before the edge where the system kills it ({}, rising up to {} between two looks): the process ends here, without an answer; ask over fewer files", gb(used), gb(may), gb(edge), gb(leap));
+                    if let Some(n) = crate::load::narrowing() { eprintln!("{n}"); }
                     match answers {
                         Some(true) => println!("{}", serde_json::json!({ "ok": true, "vars": [], "rows": [], "partial": true })),
                         Some(false) => println!("{}\n(empty)\n[partial: the memory ran out before the world could stop; no answer]", crate::load::PARTIAL_HEAD),
