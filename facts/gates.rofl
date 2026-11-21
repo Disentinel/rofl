@@ -13,7 +13,7 @@ decides("FAR", cheaper).
 decides("MEMO_BYTES", room).        decides("FLOOR", room).              decides("SLACK", room).
 decides("MAX_PATTERNS", room).
 -- that a run will not end
-decides("MAX_DEPTH", stop).         decides("MAX_ALTERNATIONS", stop).
+decides("MAX_DEPTH", stop).         decides("MAX_ALTERNATIONS", stop).   decides("BREAK_ROWS", stop).
 decides("BUDGET", stop).             decides("DEFAULT_BUDGET", stop).
 decides("POLICY_BUDGET", stop).     decides("MAX_WANTS", stop).     decides("WN_FAR", stop).             decides("MAX_ALIAS", stop).
 -- the layout of a value: its number is the width of a type or a field

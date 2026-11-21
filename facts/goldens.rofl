@@ -53,7 +53,7 @@ golden_state("notebook_guard", "57d3360371a4177b", 751).
 golden_state("notebook_handed", "c0214ba4ed454898", 789).
 golden_state("notebook_imports", "fe0e0c0a4759b824", 818).
 golden_state("notebook_keyed", "b7b31ab2f62cde14", 789).
-golden_state("notebook_ledger", "6ee719bb8b7111a1", 33466).
+golden_state("notebook_ledger", "ecd4984b9609ebab", 33466).
 golden_state("notebook_mcp", "cc9fdab011528c58", 1106).
 golden_state("notebook_missing", "fe0e0c0a4759b824", 818).
 golden_state("notebook_opened", "42ea13f03c8cbb44", 820).
@@ -144,7 +144,7 @@ golden_state("rules_depends", "9e999d830f3ca6f3", 29498).
 golden_state("rules_engine-split", "cc8215b0a6cd3032", 868).
 golden_state("rules_eval-cost", "056df3f03682c1a6", 5864).
 golden_state("rules_features", "bc0ddaff6cb7d4d6", 1037).
-golden_state("rules_findings", "bd8477e2dcd4390e", 27828).
+golden_state("rules_findings", "f595fc753b3b5a58", 27828).
 golden_state("rules_floor-census", "42718cb0977d4c16", 2170).
 golden_state("rules_ingest", "afdb214afc65886b", 996).
 golden_state("rules_inquiry_epistemic", "cf6874f54a2957a7", 997).
@@ -390,7 +390,7 @@ golden_state("agg_narrow_why", "38bf85382f1a010f", 1581).
 golden_state("agg_precise_holes", "7b8fdc15bb2a25b3", 2704).
 golden_state("agg_precise_oracle", "ca8a43251b71d3fe", 319094).
 golden_state("agg_precise_scale", "e2e58c1129bf32c9", 3172).
-golden_state("agg_proofs", "d60503fd9cbbcec5", 38945).
+golden_state("agg_proofs", "880a7cbb4eb71fe9", 38945).
 golden_state("agg_prose", "fea88aed7dccf84b", 1148).
 golden_state("agg_quorum_demo", "1bbe4c1a2b86f4e0", 3434).
 golden_state("agg_rank_tuple_eval", "30552a674ce9ad6b", 1750).

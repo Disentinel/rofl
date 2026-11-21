@@ -108,6 +108,13 @@ export interface World {
 /** A declared world as it is loaded: each `.rofl.md` file read into rules, and under `sentences` each file headed
  *  so written as sentences and read back (scripts/sentences.ts). Done where the world is answered, so a fault
  *  planted in the reader or the renderer reaches it. */
+/** THE HARNESS'S ROW WALL. The engines hold no row wall of their own (f_the_memory_is_the_wall_and_a_wall_says_where_to_narrow);
+ *  a world here, and a planted fault that makes one run away (scripts/agg_breaks.ts), is cut at the rows the engines held by
+ *  default when the worlds and the faults were written, which no world that declares no space peaks past (golden_cost).
+ *  A cut by it is a problem as before: only a world's own `check_opt(W, space, N)` declares one. */
+const HARNESS_ROWS = 500_000;
+const rowsOf = (w: World): number => w.space ?? HARNESS_ROWS;
+
 export const placed = (w: World): World => ({ ...w, files: w.files.map((f) => materialize(f, !!w.sentences)) });
 
 /** AN ANSWER IS KEPT UNDER THE HASH OF EVERYTHING IT IS A FUNCTION OF (scripts/keep.ts): this harness and every file it
@@ -416,7 +423,7 @@ function answerTSAlone(w: World, Engine: typeof Rofl): Answer {
   // `evaluator, strata` reaches this engine as it reaches rofl load: a world
   // both engines answer runs the stock evaluator in both, or the option would
   // be read by one and silently dropped by the other
-  const r = new Engine(w.strata ? { evaluator: 'strata' } : {});
+  const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), space: rowsOf(w) });
   // THE BUDGET GOES ON EVERY LOAD, NOT ONLY ON `evaluate`. In this host a load
   // evaluates what it can with the budget it is given, so a world whose budget
   // reaches `evaluate` alone has already been derived and never walls; in Rust
@@ -480,7 +487,7 @@ export function expectedRefusal(f: string): string | null {
 function together(w: World, Engine: typeof Rofl) {
   const budget = w.budget ?? w.cap ?? 200_000_000;
   const fresh = (): Rofl => {
-    const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), ...(w.space ? { space: w.space } : {}),
+    const r = new Engine({ ...(w.strata ? { evaluator: 'strata' as const } : {}), space: rowsOf(w),
       ...(w.retain !== undefined ? { retainTicks: w.retain } : {}) });
     if (!r.load(bootText(), { defer: true }).ok) throw new Error('boot.rofl does not load');
     return r;
@@ -669,7 +676,7 @@ function answerRustBoth(w: World): Answer {
     const unread = unreadOf(f), want = expectedRefusal(f), base = path.basename(f);
     // only a fixture is offered alone, as answerRustOnly does: a file that needs its stratum table beside it is refused alone, rightly
     if (!want && !unread.length && w.strata) { keep.push(f); continue; }
-    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, ['load', boot, ...(w.strata ? ['--strata'] : []), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
+    const p = unread.length ? { status: 2, stderr: unread.join('\n') } : spawnSync(RUST, ['load', boot, '--space', String(rowsOf(w)), ...(w.strata ? ['--strata'] : []), f], { encoding: 'utf8', maxBuffer: 512 * 1024 * 1024 });
     if (p.status === 0) {
       keep.push(f);
       if (want) problems.push(`${base} was to be refused (${want}) and loaded`);
@@ -679,7 +686,7 @@ function answerRustBoth(w: World): Answer {
     if (want && !p.stderr.includes(want)) problems.push(`${base} refused, but not for '${want}': ${p.stderr.trim().split('\n')[0]}`);
   }
   const args = [boot, ...(w.ticks ? ['--ticks', String(w.ticks)] : []),
-    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), ...(w.strata ? ['--strata'] : []), ...keep];
+    ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []), '--space', String(rowsOf(w)), ...(w.strata ? ['--strata'] : []), ...keep];
   const snap = snapshotPath(keep);
   try {
     const state = run([...args, ...saveTo(snap)]);
@@ -702,7 +709,7 @@ function answerRustBoth(w: World): Answer {
 function answerRustOnly(w: World): Answer {
   const boot = bootPath();
   const opts = [...(w.ticks ? ['--ticks', String(w.ticks)] : []), ...(w.budget ?? w.cap ? ['--budget', String(w.budget ?? w.cap)] : []),
-    ...(w.space ? ['--space', String(w.space)] : []), ...(w.strata ? ['--strata'] : []),
+    '--space', String(rowsOf(w)), ...(w.strata ? ['--strata'] : []),
     ...(w.retain !== undefined ? ['--retain', String(w.retain)] : []), ...(w.retract ?? []).flatMap((f) => ['--retract', f])];
   const diags: string[] = [], keep: string[] = [], dropped: string[] = [], problems: string[] = [];
   for (const f of w.files) {

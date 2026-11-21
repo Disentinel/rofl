@@ -54,6 +54,10 @@ pub use par::Split;
 
 const MAX_DEPTH: usize = 512;
 const MAX_ALTERNATIONS: usize = 256;
+/// No row wall: the memory the process may use is the wall (f_the_memory_is_the_wall_and_a_wall_says_where_to_narrow).
+/// The build of planted faults keeps the rows they were written against (scripts/agg_breaks.ts): a fault that runs away
+/// is cut there in a second, not at the memory in an hour.
+const BREAK_ROWS: i64 = if cfg!(feature = "breaks") { 500_000 } else { i64::MAX };
 /// What a world cut by the disk wall may keep beyond it (the evaluation in flight, its cut): an eighth of the wall,
 /// which a question verb leaves free (tests/disk.rs).
 pub const CUT_ROOM: i64 = 8;
@@ -2304,7 +2308,7 @@ impl Eval {
             store,
             budget,
             halt: None,
-            space: i64::MAX,
+            space: BREAK_ROWS,
             disk: i64::MAX,
             disk_hit: false,
             memory_hit: false,
@@ -2366,7 +2370,7 @@ impl Eval {
             wall: WallState::default(),
             cells: CellState::default(),
             unknown_cone: HashSet::new(),
-            wfs: WfsState { carry_wall: (budget, i64::MAX), ..Default::default() },
+            wfs: WfsState { carry_wall: (budget, BREAK_ROWS), ..Default::default() },
             shrug_readers: HashSet::new(),
             whole: None,
             kept_carry: None,
