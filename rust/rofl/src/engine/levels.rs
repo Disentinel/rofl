@@ -723,7 +723,8 @@ fn census(at: &str, layers: &[Vec<Vec<Rc<Unit>>>], now: &[Rc<Unit>]) {
         }
     }
     let by = by.iter().map(|(k, b)| format!("{k} {}", b >> 20)).collect::<Vec<_>>().join(" ");
-    eprintln!("census {at}: {n} stretches ({} cooled), {facts} facts; heap MB unfolded {} ({by}) raw {} wits {} keyed {} trees {}; process {} MB, heap live {} MB", t[4], t[0] >> 20, t[1] >> 20, t[2] >> 20, t[3] >> 20, t[5] >> 20, used >> 20, crate::engine::HEAP_LIVE.load(Relaxed) >> 20);
+    static T0: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    eprintln!("census {at} at {} s: {n} stretches ({} cooled), {facts} facts; heap MB unfolded {} ({by}) raw {} wits {} keyed {} trees {}; process {} MB, heap live {} MB", T0.get_or_init(std::time::Instant::now).elapsed().as_secs(), t[4], t[0] >> 20, t[1] >> 20, t[2] >> 20, t[3] >> 20, t[5] >> 20, used >> 20, crate::engine::HEAP_LIVE.load(Relaxed) >> 20);
 }
 
 /// A world settled by levels: the one unit of each layer and, where rules were left to the world's reader, the unit
@@ -1562,7 +1563,7 @@ impl Eval {
                     // (and the keys the units' proofs quote, once those that came since are more than those cooled)
                     let mut k = keys.lock().unwrap();
                     let (cold, warm) = k.layer_bytes();
-                    if warm > cold.max(1 << 26) {
+                    if warm > cold {
                         static N: AtomicUsize = AtomicUsize::new(0);
                         let path = std::env::temp_dir().join(format!("rofl-keys-{}-{}.seg", std::process::id(), N.fetch_add(1, Relaxed))).to_string_lossy().to_string();
                         if let Err(e) = k.spill(&path) {
