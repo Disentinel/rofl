@@ -25,7 +25,7 @@
 | [js-surface](js-surface.rofl.md) | 97 | 56 | 1 | 54 | 3 | 173 | 13 | 1 | 12 | 0 |
 | [js-vocabulary](js-vocabulary.rofl.md) | 6 | 4 | 4 | 0 | 0 | 4 | 2 | 0 | 1 | 0 |
 
-672 heads without a phrase across these files.
+674 heads without a phrase across these files.
 
 ## Proposed renames
 
