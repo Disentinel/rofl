@@ -87,15 +87,72 @@ fn ask_text(a: &rofl::session::Answer, why: &[&str]) -> String {
 /// The first line of a partial answer (src/repl.ts says the same).
 pub const PARTIAL_HEAD: &str = "[partial answer: the rows below may be short of the whole answer]";
 
-/// Why the world's answers may be short: the wall it stopped at.
-fn cut_why(s: &Session) -> &'static str {
+/// Why the world's answers may be short: the wall it stopped at, and the flag that sets it where one does.
+fn cut_why(s: &Session) -> String {
     if s.eval.memory_cut() {
-        "the memory this process may use ran out, and the world stopped there"
+        let may = rofl::engine::MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed);
+        format!("the memory this process may use, {}, ran out, and the world stopped there; ask over fewer files", gb(may))
     } else if s.eval.disk_cut() {
-        "the disk cap of the cache was reached, and the world stopped there"
+        "the disk cap of the cache was reached, and the world stopped there".into()
+    } else if s.eval.space_cut() {
+        format!("the row wall of {} rows that --space set was met; a larger --space goes further while memory holds", s.eval.space)
     } else {
-        "budget exhausted, hole emitted"
+        format!("the step budget of {} steps was spent; --budget sets it, a larger one goes further", s.eval.budget)
     }
+}
+
+pub fn gb(b: i64) -> String {
+    format!("{:.1} GB", b as f64 / (1u64 << 30) as f64)
+}
+
+/// The files of a world cut into volumes, each by its path and its facts, kept for a wall to say where to narrow.
+pub static SIZES: std::sync::Mutex<Vec<(String, usize)>> = std::sync::Mutex::new(Vec::new());
+
+fn note_sizes(files: &[(String, rofl::engine::volumes::FileText)]) {
+    let sizes = files.iter().map(|(f, t)| { let t = t.text(); (path_of(&t).unwrap_or(f).to_string(), t.bytes().filter(|&b| b == b'\n').count()) }).collect();
+    if let Ok(mut s) = SIZES.lock() { *s = sizes; }
+}
+
+/// The path a file's facts name: the first string in them that reads as one (`node[ast_oxc](N, program, "a/b.ts")`).
+fn path_of(t: &str) -> Option<&str> {
+    t.split('"').skip(1).step_by(2).find(|s| {
+        let ext = s.rsplit_once('.').map(|(_, e)| e);
+        !s.contains(char::is_whitespace) && !s.contains('\\') && ext.is_some_and(|e| !e.is_empty() && e.bytes().all(|b| b.is_ascii_alphanumeric()))
+    })
+}
+
+/// Where to narrow a world that met a wall: its largest directories by facts, or its largest files where they share
+/// one. A directory most of whose facts are one child's is said by that child, and one holding every fact says nothing.
+pub fn narrowing() -> Option<String> {
+    let sizes = SIZES.lock().ok()?.clone();
+    if sizes.len() < 2 { return None; }
+    let total: usize = sizes.iter().map(|(_, n)| n).sum();
+    let mut dirs: std::collections::BTreeMap<&str, usize> = Default::default();
+    for (p, n) in &sizes {
+        for (i, _) in p.match_indices('/') { *dirs.entry(&p[..i]).or_default() += n; }
+    }
+    let child_of = |c: &str, d: &str| c.len() > d.len() && c.starts_with(d) && c.as_bytes()[d.len()] == b'/' && !c[d.len() + 1..].contains('/');
+    let mut said: Vec<(&str, usize)> = dirs.iter().filter(|(d, n)| **n < total && !dirs.iter().any(|(c, m)| child_of(c, d) && *m > **n - *m)).map(|(d, n)| (*d, *n)).collect();
+    let what = if said.is_empty() {
+        said = sizes.iter().map(|(p, n)| (p.as_str(), *n)).collect();
+        "files"
+    } else {
+        "directories"
+    };
+    said.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(b.0)));
+    let top: Vec<String> = said.iter().take(5).map(|(d, n)| format!("{d} {}% ({} facts)", n * 100 / total.max(1), n)).collect();
+    Some(format!("narrow: the largest {what} of the world by facts, of {total}: {}", top.join(", ")))
+}
+
+/// The narrowing said on stderr, the sizes read from the files first when no volumes noted them and the files are
+/// few enough to be read again beside the world (under VOLUMES_FROM, as a world evaluated whole is).
+fn say_narrowing(o: &Opts) {
+    let bytes: u64 = o.files.iter().filter_map(|f| std::fs::metadata(f).ok()).map(|m| m.len()).sum();
+    if SIZES.lock().map(|s| s.is_empty()).unwrap_or(true) && bytes < VOLUMES_FROM as u64 {
+        let texts: Vec<String> = load_sources(o).into_iter().filter_map(|(f, t)| t.or_else(|| std::fs::read_to_string(f).ok())).collect();
+        note_sizes(&rofl::engine::volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>()).files);
+    }
+    if let Some(n) = narrowing() { eprintln!("{n}"); }
 }
 
 pub fn main(args: Vec<String>) {
@@ -568,6 +625,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
             fail(o.json, FILE_REFUSED, &format!("refused:\n  {}", d.1.join("\n  ")));
         }
     }
+    note_sizes(&cut.files);
     let reg = Registry { core: sum(&format!("{}{rest}", cut.core)), files: if kept.is_some() { cut.files.iter().map(|(f, t)| (f.clone(), sum(&t.text()))).collect() } else { Default::default() }, over: sum(&over), rels };
     // the texts a kept world reads again are written now: the units let each go once they read it
     let texts = kept.as_ref().and_then(|k| {
@@ -594,7 +652,8 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         // the whole world on one heap takes more memory than its units: past the memory wall it is not tried
         Err(_) if rofl::engine::MEMORY_STOPPED.load(std::sync::atomic::Ordering::Relaxed) => {
             let may = rofl::engine::MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed);
-            eprintln!("volumes: the units reached the memory this process may use, {:.1} GB, before the question's relations were settled: no answer, and nothing is kept; ask over fewer files", may as f64 / (1u64 << 30) as f64);
+            eprintln!("volumes: the units reached the memory this process may use, {}, before the question's relations were settled: no answer, and nothing is kept; ask over fewer files", gb(may));
+            if let Some(n) = narrowing() { eprintln!("{n}"); }
             for _ in &o.qs {
                 if o.json { println!("{}", serde_json::json!({ "ok": true, "vars": [], "rows": [], "partial": true })) } else { println!("{PARTIAL_HEAD}\n(empty)\n[partial: the memory this process may use ran out before the units were settled]\n") }
             }
@@ -1047,6 +1106,7 @@ fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
         partial |= part;
         if o.json { println!("{js}") } else { println!("{text}\n") }
     }
+    if partial && failed.is_empty() { say_narrowing(o); }
     (refused, partial)
 }
 
@@ -1059,8 +1119,8 @@ fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>
             Ok(a) => {
                 partial = a.partial;
                 let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
-                let why: Vec<&str> = [a.partial.then(|| cut_why(s)), (!failed.is_empty()).then_some("a scan failed, its facts are not in the world")].into_iter().flatten().collect();
-                let text = ask_text(&a, &why);
+                let why: Vec<String> = [a.partial.then(|| cut_why(s)), (!failed.is_empty()).then(|| "a scan failed, its facts are not in the world".to_string())].into_iter().flatten().collect();
+                let text = ask_text(&a, &why.iter().map(String::as_str).collect::<Vec<_>>());
                 (text, serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial || !failed.is_empty() }))
             }
             Err(e) => { refused = true; (format!("error: {e}"), serde_json::json!({ "ok": false, "error": e })) }

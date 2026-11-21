@@ -716,21 +716,3 @@ child[ast_oxc](n58417e0f781b6656_ojg786vsk1ev4, expression, 0, n58417e0f781b6656
 child[ast_oxc](n58417e0f781b6656_root, body, 11, n58417e0f781b6656_ojg786vsk1ev4).
 file[ast_oxc](n58417e0f781b6656_root, "main.js").
 has_file[fs](".", "main.js").
-str_segs[code]("net", 1).
-str_char0[code]("net", "n").
-str_seg[code]("net", 0, "net").
-str_segs[code]("fs", 1).
-str_char0[code]("fs", "f").
-str_seg[code]("fs", 0, "fs").
-str_segs[code]("bye", 1).
-str_char0[code]("bye", "b").
-str_seg[code]("bye", 0, "bye").
-str_segs[code]("SIGINT", 1).
-str_char0[code]("SIGINT", "S").
-str_seg[code]("SIGINT", 0, "SIGINT").
-str_segs[code]("a", 1).
-str_char0[code]("a", "a").
-str_seg[code]("a", 0, "a").
-str_segs[code]("r", 1).
-str_char0[code]("r", "r").
-str_seg[code]("r", 0, "r").
