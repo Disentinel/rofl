@@ -66,7 +66,7 @@ cl_method[flow](C, any) :- cl_opts[flow](C, A), not cl_known[flow](A).
 cl_method_at[flow](C, P) :- cl_opts[flow](C, A), may_be_node[flow](A, O), member_value[flow](O, "method", P).
 cl_has_method[flow](C) :- cl_method_at[flow](C, _).
 cl_method[flow](C, get) :- cl_opts[flow](C, A), cl_known[flow](A), not cl_has_method[flow](C).
-cl_method_lit[flow](C, P, M) :- cl_method_at[flow](C, P), may_be_lit[flow](P, V), http_method(V, M).
+cl_method_lit[flow](C, P, M) :- cl_method_at[flow](C, P), lit_of[flow](P, V), http_method(V, M).
 cl_method[flow](C, M) :- cl_method_lit[flow](C, _, M).
 cl_named[flow](P) :- cl_method_lit[flow](_, P, _).
 cl_method[flow](C, any) :- cl_method_at[flow](C, P), not cl_named[flow](P).
@@ -77,7 +77,7 @@ cl_method[flow](C, any) :- cl_method_at[flow](C, P), not cl_named[flow](P).
 -- nothing traced, a piece no one knows.
 cl_url_arg[flow](C, A) :- cl_how[flow](C, _, _), arg_at[flow](C, 0, A).
 concat_wanted[flow](X) :- cl_url_arg[flow](_, A), may_be_node[flow](A, X), composed[flow](X).
-cl_url[flow](C, V) :- cl_url_arg[flow](C, A), may_be_lit[flow](A, V), str_value[flow](V).
+cl_url[flow](C, V) :- cl_url_arg[flow](C, A), lit_of[flow](A, V), str_value[flow](V).
 cl_url[flow](C, T) :- cl_url_arg[flow](C, A), may_be_node[flow](A, X), concat_depth(D), text_at[flow](X, D, T, _).
 
 requests[flow](C, M, U) :- cl_how[flow](C, _, root), cl_method[flow](C, M), cl_url[flow](C, U).

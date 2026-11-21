@@ -8580,8 +8580,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "models/lang/js/rules/js-concat.rofl",
-    "composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, V), str_value[flow](V).",
-    "composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, _)."
+    "composed[flow](C) :- plus_operand[code](C, X), lit_of[flow](X, V), str_value[flow](V).",
+    "composed[flow](C) :- plus_operand[code](C, X), lit_of[flow](X, _)."
    ]
   ],
   "expect": {

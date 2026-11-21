@@ -57,7 +57,7 @@ plus_site[code](C, L, R) :- binary[value](C, "+", L, R).
 plus_operand[code](C, X) :- plus_site[code](C, X, _).
 plus_operand[code](C, X) :- plus_site[code](C, _, X).
 
-composed[flow](C) :- plus_operand[code](C, X), may_be_lit[flow](X, V), str_value[flow](V).
+composed[flow](C) :- plus_operand[code](C, X), lit_of[flow](X, V), str_value[flow](V).
 composed[flow](C) :- plus_operand[code](C, X), may_be_node[flow](X, D), composed[flow](D).
 
 may_be[flow](C, node, C) :- composed[flow](C).
@@ -126,7 +126,7 @@ vlib_call[flow](C, S, construct) :- construct[value](C), callee[value](C, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
 -- A method of a prototype: the receiver decides the surface.
-str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_lit[flow](O, V), str_value[flow](V).
+str_recv[flow](O) :- proto_call[flow](_, O, _), lit_of[flow](O, V), str_value[flow](V).
 str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_node[flow](O, D), composed[flow](D).
 str_recv[flow](O) :- proto_call[flow](_, O, _), prototype_of[flow](O, string).
 proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), selects[flow](M, K),
@@ -142,25 +142,25 @@ composed[flow](C) :- vlib_op[flow](C, _, _).
 -- A path's dirname and basename of a literal are substrings of it, cut as node's
 -- path.posix cuts them; a shape the cut would get wrong (a trailing or doubled
 -- separator) has no row.
-path_cut[flow](C, ".") :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), may_be_lit[flow](A, V),
+path_cut[flow](C, ".") :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), lit_of[flow](A, V),
                           str_value[flow](V), N is str_segs(V, "/"), N = 1.
-path_cut[flow](C, "/") :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), may_be_lit[flow](A, V),
+path_cut[flow](C, "/") :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), lit_of[flow](A, V),
                           str_value[flow](V), N is str_segs(V, "/"), N = 2, H is str_seg(V, "/", 0), H = "".
-path_cut[flow](C, D) :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), may_be_lit[flow](A, V),
+path_cut[flow](C, D) :- vlib_op[flow](C, dirname, _), arg_at[flow](C, 0, A), lit_of[flow](A, V),
                         str_value[flow](V), N is str_segs(V, "/"), N >= 2, K is N - 1,
                         Last is str_seg(V, "/", K), Last != "", LL is str_len(Last), L is str_len(V),
                         P is L - LL - 1, P > 0, Q is P - 1, B is str_char(V, Q), B != "/",
                         D is str_sub(V, 0, P).
-base_of[flow](C, Last) :- vlib_op[flow](C, basename, _), arg_at[flow](C, 0, A), may_be_lit[flow](A, V),
+base_of[flow](C, Last) :- vlib_op[flow](C, basename, _), arg_at[flow](C, 0, A), lit_of[flow](A, V),
                           str_value[flow](V), N is str_segs(V, "/"), K is N - 1,
                           Last is str_seg(V, "/", K), Last != "".
 path_cut[flow](C, B) :- base_of[flow](C, B), not argument_at[code](C, 1, _).
-path_cut[flow](C, B) :- base_of[flow](C, B), arg_at[flow](C, 1, E), may_be_lit[flow](E, X),
+path_cut[flow](C, B) :- base_of[flow](C, B), arg_at[flow](C, 1, E), lit_of[flow](E, X),
                         str_value[flow](X), LB is str_len(B), LX is str_len(X), LX < LB,
                         S is LB - LX, T is str_sub(B, S, LX), T != X.
-path_cut[flow](C, B) :- base_of[flow](C, B), arg_at[flow](C, 1, E), may_be_lit[flow](E, X),
+path_cut[flow](C, B) :- base_of[flow](C, B), arg_at[flow](C, 1, E), lit_of[flow](E, X),
                         str_value[flow](X), LB is str_len(B), LX is str_len(X), LX >= LB.
-path_cut[flow](C, R) :- base_of[flow](C, B), arg_at[flow](C, 1, E), may_be_lit[flow](E, X),
+path_cut[flow](C, R) :- base_of[flow](C, B), arg_at[flow](C, 1, E), lit_of[flow](E, X),
                         str_value[flow](X), LB is str_len(B), LX is str_len(X), LX < LB,
                         S is LB - LX, T is str_sub(B, S, LX), T = X, R is str_sub(B, 0, S).
 may_be[flow](C, lit, V) :- path_cut[flow](C, V).
@@ -219,7 +219,7 @@ part_lit[flow](C, I, ",") :- join_sep[flow](C, I), not argument_at[code](C, 0, _
 
 -- What a part may be, for a reader of the answer.
 part_value[flow](C, I, V) :- part_lit[flow](C, I, V).
-part_value[flow](C, I, V) :- parts[flow](C, I, P), may_be_lit[flow](P, V).
+part_value[flow](C, I, V) :- parts[flow](C, I, P), lit_of[flow](P, V).
 part_value[flow](C, I, V) :- parts[flow](C, I, P), may_be_node[flow](P, V).
 
 -- =========================================================================
@@ -244,12 +244,12 @@ textable[flow](C) :- last_slot[flow](C, L), N is count(I : slot[flow](C, I)), M 
 -- summary of the call.
 edb(ambient_module).
 summarized[flow](X) :- composed[flow](X), at[tree](X, File, _), ambient_module(File, _).
-plain_valued[flow](P) :- parts[flow](_, _, P), may_be_lit[flow](P, _).
+plain_valued[flow](P) :- parts[flow](_, _, P), lit_of[flow](P, _).
 plain_valued[flow](P) :- parts[flow](_, _, P), may_be_node[flow](P, X), not summarized[flow](X).
 
 str_piece[flow](V, yes) :- str_value[flow](V).
 lit_piece[flow](C, I, V) :- part_lit[flow](C, I, V).
-lit_piece[flow](C, I, V) :- parts[flow](C, I, P), may_be_lit[flow](P, V).
+lit_piece[flow](C, I, V) :- parts[flow](C, I, P), lit_of[flow](P, V).
 
 basic_piece[flow](C, I, V, lit, S)  :- lit_piece[flow](C, I, V), str_piece[flow](V, S).
 basic_piece[flow](C, I, V, lit, no) :- lit_piece[flow](C, I, V), not str_value[flow](V).
