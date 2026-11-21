@@ -787,6 +787,15 @@ unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask
 0.08 s and 0.10 GB (4 of 505). Before, every unit was opened first: 3.6 s and
 3.9 GB, 4.0 s and 5.2 GB, 3.5 s and 3.9 GB
 (`f_a_question_opens_of_a_kept_world_what_its_walk_reads`).
+**The files are read where they lie, and cut to disk.** The sources are mapped, not read onto the
+heap, and each file's facts are written as they are cut to a file under the system's temporary directory
+(`rofl-cut-<pid>-<n>.txt`, unlinked once mapped on Unix, so a process killed leaves none), from which the unit
+that settles the file reads them; the kept texts are written from there a file at a time. What the read holds
+is the core and the text being cut, not the corpus; the disk holds the corpus once more while the world is
+settled. Measured (the whole of vscode at the bench's commit, 14 485 files, the side-effect question, the
+`fast` build, 4 cores, a 14 GB cgroup, 2026-11-21): the scan as columns (1.77 GB) read and cut in 19 s at
+0.22 GB of heap, 3.8 GB before; as text (8.1 GB) in 32 s at 69 MB, where before the memory wall stopped the
+read at 31 s with no answer (`f_the_read_holds_one_file`).
 **Past a quarter of the memory the process may use** (the memory wall's
 measure, below), the units done are cooled: written to a segment under the
 system's temporary directory (`rofl-units-<pid>-<n>.seg`, unlinked once mapped
