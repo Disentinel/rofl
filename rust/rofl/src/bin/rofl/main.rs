@@ -24,6 +24,7 @@ mod delta;
 mod kept;
 mod load;
 mod memory;
+mod progress;
 mod nb;
 mod render;
 mod seed;
@@ -123,6 +124,7 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let verb = matches!(args.first().map(String::as_str), Some("ask" | "why" | "whynot" | "excise" | "load"));
     memory::watch(verb.then(|| args.iter().any(|a| a == "--json")));
+    if matches!(args.first().map(String::as_str), Some("ask" | "why" | "whynot" | "excise")) { progress::tell(); }
     // a panic is the engine's own fault, never a refusal
     if std::panic::catch_unwind(|| run(args)).is_err() {
         std::process::exit(load::DEFECT);

@@ -3,7 +3,7 @@
 | file | clauses | heads | phrased | positional | absorbed guards | links | either | tables | not defined here | refused |
 |---|---|---|---|---|---|---|---|---|---|---|
 | [phrases](phrases.rofl.md) | 11 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
-| [js-phrases](js-phrases.rofl.md) | 1060 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
+| [js-phrases](js-phrases.rofl.md) | 1056 | 3 | 0 | 0 | 0 | 0 | 0 | 31 | 0 | 0 |
 | [js-ambient](js-ambient.rofl.md) | 88 | 42 | 38 | 0 | 1 | 91 | 5 | 2 | 12 | 0 |
 | [js-attrs](js-attrs.rofl.md) | 51 | 39 | 37 | 2 | 0 | 106 | 4 | 0 | 5 | 0 |
 | [js-callgraph](js-callgraph.rofl.md) | 539 | 189 | 90 | 91 | 29 | 735 | 77 | 7 | 65 | 0 |
@@ -18,7 +18,7 @@
 | [js-globals](js-globals.rofl.md) | 31 | 18 | 15 | 1 | 0 | 33 | 0 | 1 | 6 | 0 |
 | [js-host](js-host.rofl.md) | 76 | 59 | 44 | 14 | 3 | 101 | 8 | 1 | 18 | 0 |
 | [js-model](js-model.rofl.md) | 14 | 2 | 0 | 0 | 0 | 0 | 0 | 2 | 0 | 0 |
-| [js-modules](js-modules.rofl.md) | 192 | 111 | 102 | 5 | 0 | 251 | 30 | 4 | 22 | 0 |
+| [js-modules](js-modules.rofl.md) | 193 | 115 | 104 | 7 | 0 | 254 | 31 | 4 | 22 | 0 |
 | [js-resolve](js-resolve.rofl.md) | 58 | 36 | 35 | 0 | 0 | 79 | 8 | 0 | 0 | 0 |
 | [js-service](js-service.rofl.md) | 19 | 14 | 1 | 12 | 0 | 16 | 2 | 1 | 7 | 0 |
 | [js-structure](js-structure.rofl.md) | 71 | 21 | 4 | 16 | 2 | 23 | 14 | 2 | 30 | 0 |
