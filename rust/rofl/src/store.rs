@@ -3132,20 +3132,31 @@ impl Store {
                 }
             }
         }
+        // a fact of another stretch that lies near now stands there, whatever this store's firings of it read: they
+        // may read it back through facts of `old` alone
+        let mut new_id = vec![EMPTY; n + far.len()];
+        for (j, &f) in far.iter().enumerate() {
+            let there = if self.reads_id(f) {
+                let r = self.rec(f);
+                self.find_near(r.rel, r.persp, self.args(f))
+            } else {
+                was(f).and_then(|(rel, persp, args, _)| self.find_near(rel, persp, &args))
+            };
+            new_id[n + j] = brk!("levels_far_fact_unplaced" => EMPTY; there.unwrap_or(EMPTY));
+        }
         // the firings waiting on facts of `old`, and how many each waits on
         let mut open: Vec<usize> = vec![0; fired.len()];
         let mut users: FxMap<usize, Vec<usize>> = FxMap::default();
         for (i, f) in fired.iter().enumerate() {
             for p in &f.3 {
                 if let Prem::Fact(g) = p.kind() {
-                    if let Some(b) = own(g) {
+                    if let Some(b) = own(g).filter(|&b| new_id[b] == EMPTY) {
                         open[i] += 1;
                         users.entry(b).or_default().push(i);
                     }
                 }
             }
         }
-        let mut new_id = vec![EMPTY; n + far.len()];
         let mut order: Vec<usize> = Vec::new();
         let mut queue: Vec<usize> = (0..fired.len()).filter(|&i| open[i] == 0).collect();
         while let Some(i) = queue.pop() {
