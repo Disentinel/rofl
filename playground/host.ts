@@ -20,7 +20,7 @@ import { asksOf, holding, remote, typescript, type Engine, type Stop } from './e
 import { SCREEN_RELS } from '../notebook/screen.ts';
 export type { Stop };
 
-const BUDGET = 4_000_000_000, SPACE = 40_000_000;
+const BUDGET = 4_000_000_000;
 export const FILE = 'play.js';
 
 export { NB_MODEL_FILES, PHRASE_FILES } from '../notebook/front.ts';
@@ -196,7 +196,7 @@ function proofs(model: Store, cells: Store, heads: Set<string>, kernel: Set<stri
     indexed: (rel: string, persp: string | null) => kernel.has(rel) ? model.indexed(rel, persp) && cells.indexed(rel, persp) : one(rel).indexed(rel, persp),
     perspectivesOf: (rel: string) => kernel.has(rel) ? [...new Set([...model.perspectivesOf(rel), ...cells.perspectivesOf(rel)])] : one(rel).perspectivesOf(rel),
   };
-  const r = new Rofl({ reuse: false, space: SPACE });
+  const r = new Rofl({ reuse: false });
   r.store = store as unknown as Store;
   return r;
 }
@@ -247,8 +247,8 @@ export class Host {
     const t = performance.now();
     // reuse is off: every run adds the cells' rules, which re-derives the stratum table and throws away all a reuse plan would keep, after paying seconds to plan it
     // the model is the engine's: loaded here only where the engine has no world of its own, or refuses it and the reference says why at its lines
-    const kept = this.engine.loaded?.(model, { budget: BUDGET, space: SPACE });
-    this.core = kept ? null : new Rofl({ space: SPACE, reuse: false });
+    const kept = this.engine.loaded?.(model, { budget: BUDGET });
+    this.core = kept ? null : new Rofl({ reuse: false });
     const l = this.core ? this.core.load(model, { budget: BUDGET }) : { ok: true, diagnostics: [] };
     this.phrases = phraseText;
     if (concernMap) this.concerns = concernMap;
@@ -260,7 +260,7 @@ export class Host {
     this.scanned = this.base = null;
     this.shell = null;
     if (kernel !== undefined && l.ok) {
-      this.shell = new Rofl({ space: SPACE, reuse: false });
+      this.shell = new Rofl({ reuse: false });
       this.shell.load(kernel, { budget: BUDGET });
       this.shell.evaluate(BUDGET);
       this.kernelRels = new Set([...relsOf(parseProgram(kernel)), ...this.shell.store.allFacts().map((f) => f.rel)]);
@@ -372,14 +372,13 @@ export class Host {
       : new Set([...live.flatMap((a) => [a.lit, a.q?.blank ? owned(a.q.blank.lit) : '']).map(relOf), ...(layered ? over : heads), ...AFTER].filter((r) => /^[a-z_]\w*$/.test(r)));
     let unresolved: string[] = [], partial = false, model: RunOut['model'];
     let evaluatedWorld: Rofl | undefined;
-    // a wall of the clock or the heap says itself; the engine's own, the step budget or the space, is the hole its evaluation left
+    // a wall of the clock or the heap says itself; the engine's own, the step budget, is the hole its evaluation left
     const cutBy = (): string | undefined => {
       if (!partial) return undefined;
       if (stop?.cause) return stop.cause;
       let holes: string[] = [];
       try { holes = (evaluatedWorld ?? base) ? holesOf((evaluatedWorld ?? base)!).map((r) => r.R) : []; } catch { /* the world could not say */ }
-      return holes.includes('space_exhausted') ? `the space wall of ${SPACE.toLocaleString('en')} rows was reached, the usual mark of a rule that climbs without end; a notebook has no setting that raises it`
-        : holes.includes('budget_exhausted') ? `the step budget of ${BUDGET.toLocaleString('en')} was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it` : undefined;
+      return holes.includes('budget_exhausted') ? `the step budget of ${BUDGET.toLocaleString('en')} was spent, the usual mark of a rule that climbs without end; a notebook has no setting that raises it` : undefined;
     };
     const done = (error?: string): RunOut => ({ parseErrors, facts: facts.length, ms: Math.round(performance.now() - t), phases, learned, cells: outs, nodes, unresolved, error, partial, cut: cutBy(), model });
     let base: Rofl | null = null;
@@ -392,14 +391,14 @@ export class Host {
     let f: Rofl, forked: ReturnType<NonNullable<Engine['over']>> | undefined;
     if (!base) {
       try {
-        const r = this.engine.withCells(this.core!, this.model, [...Object.keys(files).length ? sc.lines : [], ...cone ? [asksOf(cone)] : []], texts, { budget: BUDGET, space: SPACE, stop });
+        const r = this.engine.withCells(this.core!, this.model, [...Object.keys(files).length ? sc.lines : [], ...cone ? [asksOf(cone)] : []], texts, { budget: BUDGET, stop });
         r.errors.forEach((e, i) => outs[i].errors.push(...e));
         f = r.world; partial ||= f.store.partialEval;
       } catch (e) { return done((e as Error).message); }
       lap('fork'); lap('load');
     } else if (this.engine.over && remote(base)) {
       // the cells in a fork of the engine's own world, which keeps the model's conclusions where they were derived
-      try { forked = this.engine.over(base, texts, [...heads], { budget: BUDGET, space: SPACE, stop }); } catch (e) { return done((e as Error).message); }
+      try { forked = this.engine.over(base, texts, [...heads], { budget: BUDGET, stop }); } catch (e) { return done((e as Error).message); }
       forked!.errors.forEach((e, i) => outs[i].errors.push(...e));
       f = forked!.world; partial ||= f.store.partialEval;
       lap('fork'); lap('load');
@@ -645,7 +644,7 @@ export class Host {
       if (!cut.length || refused.has(i)) return;
       let g: Rofl;
       try {
-        const r = this.engine.excised(f, cut.map((a) => a.lit), { budget: BUDGET, space: SPACE, stop });
+        const r = this.engine.excised(f, cut.map((a) => a.lit), { budget: BUDGET, stop });
         r.errors.forEach((e) => outs[i].errors.push(`${cut[0].text}: ${e}`));
         g = r.world; partial ||= g.store.partialEval;
       } catch (e) { outs[i].errors.push(`${cut[0].text}: ${(e as Error).message}`); return; }
@@ -719,7 +718,7 @@ export class Host {
   /** The model evaluated over the code, asked `cone` (undefined: every rule), once per text of the files: a kept world asked less answers as it is,
    *  one asked more grows its cone over what it holds. */
   private evaluated(sc: Scanned, cone: Set<string> | undefined, stop?: Stop): Rofl {
-    const walls = { budget: BUDGET, space: SPACE, stop }, kept = this.base, had = this.baseAsks;
+    const walls = { budget: BUDGET, stop }, kept = this.base, had = this.baseAsks;
     this.base = null;
     let b: Rofl;
     if (kept && (!had || cone && [...cone].every((r) => had.has(r)))) b = kept;

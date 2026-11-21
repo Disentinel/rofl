@@ -8,7 +8,7 @@ export type EngineName = 'rust' | 'typescript';
 export type Limit = { ms?: number; bytes?: number };
 /** A run's stop: true when the clock or the heap says so, and then `cause` says which. `left`: what remains of each; `said`: an engine stopped by one. */
 export type Stop = (() => boolean) & { cause?: string; left?: () => Limit; said?: (by: 'clock' | 'heap') => void };
-export type Walls = { budget: number; space: number; stop?: Stop };
+export type Walls = { budget: number; space?: number; stop?: Stop };
 export interface Engine {
   readonly name: EngineName;
   /** The model loaded in the engine and kept for the runs over it, and whether the engine took it; where it is not, the host loads it itself to say why at
