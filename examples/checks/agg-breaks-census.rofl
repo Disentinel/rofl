@@ -2174,6 +2174,8 @@ brk("levels_solved_run_lost"). brk_kind("levels_solved_run_lost", switch).
 brk_expects("levels_solved_run_lost", "levels_whole").
 brk("levels_far_firing_dropped"). brk_kind("levels_far_firing_dropped", switch).
 brk_expects("levels_far_firing_dropped", "levels_whole").
+brk("levels_far_fact_unplaced"). brk_kind("levels_far_fact_unplaced", switch).
+brk_expects("levels_far_fact_unplaced", "levels_far_held").
 brk("levels_leaf_first_file"). brk_kind("levels_leaf_first_file", switch).
 brk_expects("levels_leaf_first_file", "levels_whole").
 brk("kept_stale_files"). brk_kind("kept_stale_files", switch).
@@ -2608,6 +2610,7 @@ switch_site("lattice_whynot_no_path", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
+switch_site("levels_far_fact_unplaced", "rust/rofl/src/store.rs").
 switch_site("levels_far_firing_dropped", "rust/rofl/src/store.rs").
 switch_site("levels_guard_unasked", "rust/rofl/src/engine.rs").
 switch_site("levels_home_round_kept", "rust/rofl/src/engine/levels.rs").

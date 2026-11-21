@@ -24,7 +24,7 @@ Reads:
 - from js-concat: [composed](js-concat.rofl.md#composed), [str_value](js-concat.rofl.md#str_value), [text_at](js-concat.rofl.md#text_at)
 - from js-concat, in the main: [concat_depth](js-concat.rofl.md#concat_depth)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [lit_of](js-dataflow.rofl.md#lit_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [selects](js-dataflow.rofl.md#selects)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files, in the value:
@@ -173,7 +173,7 @@ In the flow:
 
 <a id="cl_method_lit"></a>`cl_method_lit`(C, P, M) if all of:
   - [`cl_method_at`](#cl_method_at)(C, P);
-  - a node P [may be the literal](js-dataflow.rofl.md#may_be_lit) V;
+  - [`lit_of`](js-dataflow.rofl.md#lit_of)(P, V);
   - [`http_method`](#http_method)(V, M).
 
 `cl_method`(C, M) if [`cl_method_lit`](#cl_method_lit)(C, something, M).
@@ -198,7 +198,7 @@ In the flow:
 
 1. if all of:
    - [`cl_url_arg`](#cl_url_arg)(C, Y);
-   - a node Y [may be the literal](js-dataflow.rofl.md#may_be_lit) V;
+   - [`lit_of`](js-dataflow.rofl.md#lit_of)(Y, V);
    - [`str_value`](js-concat.rofl.md#str_value)(V);
 2. if all of:
    - [`cl_url_arg`](#cl_url_arg)(C, Y);

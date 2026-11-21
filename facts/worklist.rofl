@@ -3980,7 +3980,7 @@ work_spawned(w_dict_written_whole_when_a_name_comes, f_an_edit_writes_what_it_mo
 
 work(w_edit_by_levels_loses_answers,
   "An edit of one line of one file of 1000 vscode files, taken by delta by levels, answers calls[code](A, B) with 29 669 rows where the files anew answer 31 198 (f_an_edit_by_levels_loses_answers_at_1000_files). Find the unit that loses them and a world of a few files that does the same.").
-work_state(w_edit_by_levels_loses_answers, open).
+work_state(w_edit_by_levels_loses_answers, done).
 work_spawned(w_edit_by_levels_loses_answers, f_an_edit_by_levels_loses_answers_at_1000_files).
 
 work(w_whynot_of_a_bare_name_reads_main,

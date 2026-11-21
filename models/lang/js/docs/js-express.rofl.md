@@ -27,7 +27,7 @@ Reads:
 
 - from js-concat: [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [lit_of](js-dataflow.rofl.md#lit_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
@@ -112,7 +112,7 @@ Declared as facts:
 <a id="ex_path"></a>`ex_path`(R, V) if all of:
   - [`ex_on`](#ex_on)(R, something, something);
   - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
-  - X [may be the literal](js-dataflow.rofl.md#may_be_lit) V;
+  - [`lit_of`](js-dataflow.rofl.md#lit_of)(X, V);
   - [`str_value`](js-concat.rofl.md#str_value)(V).
 
 <a id="ex_fn"></a>`ex_fn`(R, I, F) if all of:
@@ -159,7 +159,7 @@ Declared as facts:
 <a id="ex_listen"></a>`ex_listen`(Y, P) if all of:
   - [`ex_on`](#ex_on)(R, Y, "listen");
   - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at 0;
-  - X [may be the literal](js-dataflow.rofl.md#may_be_lit) P;
+  - [`lit_of`](js-dataflow.rofl.md#lit_of)(X, P);
   - [`ex_port_lit`](#ex_port_lit)(P).
 
 > An app keeps its settings by key, `app.set('port', p)` and `app.get('port')`:

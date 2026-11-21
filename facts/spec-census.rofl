@@ -201,6 +201,7 @@ check[checks]("rust/rofl/tests/kept.rs", "js_sources_edited_go_by_delta", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_string_edited_goes_by_delta", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_renamed_local_keeps_its_ids", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_world_by_levels_answers_as_the_world_whole", test).
+check[checks]("rust/rofl/tests/kept.rs", "a_fact_a_child_holds_stands_where_its_group_concluded_it_again", test).
 check[checks]("rust/rofl/tests/kept.rs", "an_absence_below_the_cut_is_walked_in_its_file_thawed", test).
 check[checks]("rust/rofl/tests/kept.rs", "why_of_a_count_by_levels_answers_as_the_world_whole", test).
 check[checks]("rust/rofl/tests/kept.rs", "a_kept_world_answers_and_refuses_as_docs_cli_says", test).

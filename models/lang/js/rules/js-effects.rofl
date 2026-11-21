@@ -347,9 +347,9 @@ eff_conv_call[flow](N, M)       :- eff_conv_key(Key), member_value[flow](O, Key,
 eff_conv_overridden[flow](N, X) :- eff_conv_key(Key), member_value[flow](O, Key, _), may_be_node[flow](X, O),
                                    coerces[execution](N, X).
 eff_conv_default[flow](N, X)    :- eff_conv_object[flow](N, X), not eff_conv_overridden[flow](N, X).
-eff_conv_primitive[flow](N, X)  :- coerces[execution](N, X), may_be_lit[flow](X, _),
+eff_conv_primitive[flow](N, X)  :- coerces[execution](N, X), lit_of[flow](X, _),
                                    not eff_conv_object[flow](N, X).
-eff_conv_untraced[flow](N, X)   :- coerces[execution](N, X), not may_be_lit[flow](X, _),
+eff_conv_untraced[flow](N, X)   :- coerces[execution](N, X), not has_lit[flow](X),
                                    not may_be_node[flow](X, _).
 
 -- A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
