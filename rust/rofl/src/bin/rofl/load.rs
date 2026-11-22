@@ -664,6 +664,7 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
+    rofl::engine::levels::far_wait();
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     if let Some(t) = rofl::engine::heap_said_over(&[&core.eval, &s.eval]) { eprintln!("{t}"); }
     let code = answer_volumes(o, &mut s);

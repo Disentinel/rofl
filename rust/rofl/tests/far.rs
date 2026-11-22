@@ -21,13 +21,45 @@ fn texts() -> Vec<String> {
     files.iter().map(|f| std::fs::read_to_string(f).unwrap_or_else(|e| panic!("{}: {e}", f.display()))).collect()
 }
 
-fn by_levels() -> Session {
+type Files = Vec<(String, rofl::engine::volumes::FileText)>;
+
+/// The core and the files cut into volumes, and the world of them by levels.
+fn by_levels() -> (Session, Files, Session) {
     let ts = texts();
     let refs: Vec<&str> = ts.iter().map(String::as_str).collect();
     let cut = rofl::engine::volumes::cut(&refs);
     let mut core = Session::fresh(BUDGET);
     core.load_all(&std::iter::once(cut.core.as_str()).chain(cut.over.iter().map(String::as_str)).collect::<Vec<_>>(), None).unwrap();
-    core.by_volumes(cut.files.clone()).unwrap().0
+    let v = core.by_volumes(cut.files.clone()).unwrap().0;
+    (core, cut.files, v)
+}
+
+/// The same edit everywhere: a file loses its first fact naming a node.
+fn edited(files: &Files, i: usize) -> String {
+    let t = files[i].1.text().to_string();
+    t[t.find(".\n").map_or(0, |x| x + 2)..].to_string()
+}
+
+fn whole_of(files: &Files) -> Session {
+    let ts = texts();
+    let refs: Vec<&str> = ts.iter().map(String::as_str).collect();
+    let cut = rofl::engine::volumes::cut(&refs);
+    let mut texts: Vec<String> = vec![cut.core.clone()];
+    texts.extend(cut.over.iter().cloned());
+    texts.extend(files.iter().map(|f| f.1.text().to_string()));
+    let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+    let mut whole = Session::fresh(BUDGET);
+    whole.load_all(&refs, None).unwrap();
+    whole.evaluate().unwrap();
+    whole
+}
+
+fn same_answers(a: &mut Session, b: &mut Session, at: &str) {
+    for q in ASKED {
+        let x: BTreeSet<Vec<String>> = a.ask(q).unwrap().rows.into_iter().collect();
+        let y: BTreeSet<Vec<String>> = b.ask(q).unwrap().rows.into_iter().collect();
+        assert_eq!(x, y, "{at}: {q}");
+    }
 }
 
 fn keys(s: &Session) -> BTreeSet<String> {
@@ -35,17 +67,33 @@ fn keys(s: &Session) -> BTreeSet<String> {
     (0..st.len_ids()).filter(|&id| st.alive(id)).map(|id| st.key(&s.eval.h, id)).filter(|k| !k.contains("[$kernel]")).collect()
 }
 
-/// A node: run by the test below as a process of its own; it settles its units and answers until the root goes.
+/// A node: run by the test below as a process of its own; it settles its units, then each edit the root sends,
+/// and answers until the root goes.
 #[test]
 #[ignore]
 fn a_node() {
     if std::env::var_os("ROFL_FAR").is_some() {
-        by_levels();
+        let (mut core, mut files, mut v) = by_levels();
+        loop {
+            let e = rofl::engine::levels::far_next();
+            for (i, t) in &e {
+                files[*i as usize].1 = rofl::engine::volumes::FileText::Held(t.clone());
+            }
+            v = core.by_volumes_edit(files.clone(), &v, e.iter().map(|x| x.0).collect()).unwrap();
+        }
     }
 }
 
 #[test]
-fn nodes_in_processes_answer_as_the_whole_world() {
+fn nodes_in_processes_answer_as_the_whole_world_and_after_edits() {
+    // (first in one process, the edit in memory: one test, since the nodes are this binary's processes and the
+    // environment says which one is which)
+    {
+        let (mut core, mut files, v) = by_levels();
+        files[3].1 = rofl::engine::volumes::FileText::Held(edited(&files, 3));
+        let mut w = core.by_volumes_edit(files.clone(), &v, [3u32].into_iter().collect()).unwrap();
+        same_answers(&mut w, &mut whole_of(&files), "in one process, after the edit");
+    }
     let dir = std::env::temp_dir().join(format!("rofl-far-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
@@ -68,12 +116,8 @@ fn nodes_in_processes_answer_as_the_whole_world() {
         std::env::set_var("ROFL_FAR_ME", "root");
         std::env::set_var("ROFL_HELD", "4");
     }
-    let mut v = by_levels();
-    let ts = texts();
-    let refs: Vec<&str> = ts.iter().map(String::as_str).collect();
-    let mut whole = Session::fresh(BUDGET);
-    whole.load_all(&refs, None).unwrap();
-    whole.evaluate().unwrap();
+    let (mut core, mut files, mut v) = by_levels();
+    let mut whole = whole_of(&files);
 
     let said = rofl::engine::levels::FAR_SAID[0].load(std::sync::atomic::Ordering::Relaxed);
     assert!(said > 0, "the root asked no node");
@@ -82,10 +126,17 @@ fn nodes_in_processes_answer_as_the_whole_world() {
     let missing: Vec<&String> = all.difference(&got).filter(names_file).take(5).collect();
     let invented: Vec<&String> = got.difference(&all).filter(names_file).take(5).collect();
     assert!(missing.is_empty() && invented.is_empty(), "missing {missing:?}, invented {invented:?}");
-    for q in ASKED {
-        let a: BTreeSet<Vec<String>> = v.ask(q).unwrap().rows.into_iter().collect();
-        let b: BTreeSet<Vec<String>> = whole.ask(q).unwrap().rows.into_iter().collect();
-        assert_eq!(a, b, "{q}");
+    same_answers(&mut v, &mut whole, "the world");
+
+    // (a file of node 0 edited, then one of node 2 and one of node 4 at once: every process takes each)
+    for at in [vec![3usize], vec![9, 17]] {
+        let e: Vec<(u32, String)> = at.iter().map(|&i| (i as u32, edited(&files, i))).collect();
+        rofl::engine::levels::far_edit(&e);
+        for (i, t) in &e {
+            files[*i as usize].1 = rofl::engine::volumes::FileText::Held(t.clone());
+        }
+        v = core.by_volumes_edit(files.clone(), &v, at.iter().map(|&i| i as u32).collect()).unwrap();
+        same_answers(&mut v, &mut whole_of(&files), &format!("after the edit of {at:?}"));
     }
     drop(v);
     for mut n in nodes {
@@ -94,4 +145,3 @@ fn nodes_in_processes_answer_as_the_whole_world() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
-

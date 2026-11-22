@@ -14,8 +14,8 @@ pub(super) const ROOT: u32 = u32::MAX;
 /// What crossed between the processes: requests and the bytes of their answers.
 pub static FAR_SAID: [std::sync::atomic::AtomicU64; 2] = [const { std::sync::atomic::AtomicU64::new(0) }; 2];
 /// The requests by kind, in the order of `OPS`.
-pub static FAR_OPS: [std::sync::atomic::AtomicU64; 8] = [const { std::sync::atomic::AtomicU64::new(0) }; 8];
-pub const OPS: &[u8; 8] = b"HRUPFCTI";
+pub static FAR_OPS: [std::sync::atomic::AtomicU64; 9] = [const { std::sync::atomic::AtomicU64::new(0) }; 9];
+pub const OPS: &[u8; 9] = b"HRUPFCTIE";
 
 /// The files this process settles, where the nodes are processes: its node's block, none for the root.
 pub fn block(files: usize) -> Option<std::ops::Range<usize>> {
@@ -35,7 +35,7 @@ pub(super) struct Far {
     nodes: u32,
     /// the connections to each node not in use: a question that waits holds one, the others go on
     conns: Mutex<FxMap<u32, Vec<UnixStream>>>,
-    units: Mutex<FxMap<(u32, u32, u32), Rc<Unit>>>,
+    units: Mutex<FxMap<(u32, u32, u32, u32), Rc<Unit>>>,
     came: Condvar,
     stretches: Mutex<FxMap<FactId, Rc<Stretch>>>,
     /// the root's: the next id to give, once the ids every process lays alike are laid
@@ -45,22 +45,81 @@ pub(super) struct Far {
     seen: AtomicU32,
     trips: Mutex<FxMap<u32, Rc<Trip>>>,
     /// the names of the keys a proof quotes, this process's
-    keys: std::sync::OnceLock<Rc<Mutex<Heap>>>,
+    keys: Mutex<Option<Rc<Mutex<Heap>>>>,
+    /// the world by levels this process is at: 1 the first, one more each edit
+    round: AtomicU32,
+    /// another's units as they came, by their ids: a unit that stands is read through the same view
+    views: Mutex<FxMap<(FactId, FactId), Rc<Stretch>>>,
+    /// of a unit settled again here: the ids it had, and its facts that came (with their ids) and went
+    moved: Mutex<FxMap<FactId, Moved>>,
+    /// the edits the root sent a node, to take in order
+    edits: Mutex<std::collections::VecDeque<Vec<(u32, String)>>>,
+    told: Condvar,
 }
+
+/// What a unit settled again moved: the ids it had, and its facts that came (with their ids) and went.
+pub(super) type Moved = (FactId, Vec<(Sym, Vec<Term>, Option<FactId>)>);
+
+/// The next edit the root sent this node: the files at their places and their new texts.
+pub fn far_next() -> Vec<(u32, String)> {
+    let far = FAR_OF.get().expect("a node by levels first");
+    let mut q = far.told.wait_while(far.edits.lock().unwrap(), |q| q.is_empty()).unwrap();
+    q.pop_front().unwrap()
+}
+
+/// Where this process is the root: the edit sent to every node before the root takes it itself.
+pub fn far_edit(files: &[(u32, String)]) {
+    let Some(far) = FAR_OF.get().filter(|f| f.me == ROOT) else { return };
+    let mut e = Enc::op(b'E', &far.h);
+    e.u64(files.len() as u64);
+    for (i, t) in files {
+        e.u64(*i as u64);
+        e.text(t);
+    }
+    let b = e.done();
+    for n in 0..far.nodes {
+        far.ask(n, &b);
+    }
+}
+
+/// Where this process is a node: it answers the others until the root goes, and the process with it.
+pub fn far_wait() {
+    if let Some(f) = FAR_OF.get().filter(|f| f.me != ROOT) {
+        eprintln!("levels: node {} settled its units, answers the others until the root goes", f.me);
+        loop {
+            std::thread::park();
+        }
+    }
+}
+
+static FAR_OF: std::sync::OnceLock<Rc<Far>> = std::sync::OnceLock::new();
 // SAFETY: what it holds is made under its locks and then only read
 unsafe impl Send for Far {}
 unsafe impl Sync for Far {}
 
 impl Far {
+    /// This process's place among the nodes, made at its first world by levels and kept for the edits after.
     pub(super) fn of_env(h: &Heap, files: usize) -> Option<Rc<Far>> {
+        static FAR: std::sync::OnceLock<Option<Rc<Far>>> = std::sync::OnceLock::new();
+        std::env::var_os("ROFL_FAR")?;
+        let far = FAR.get_or_init(|| Far::open(h, files)).clone()?;
+        let r = far.round.fetch_add(1, Relaxed) + 1;
+        // (the rounds go one after another: every unit of the one before was asked before this began)
+        far.units.lock().unwrap().retain(|k, _| k.0 >= r);
+        far.moved.lock().unwrap().clear();
+        far.trips.lock().unwrap().clear();
+        Some(far)
+    }
+    fn open(h: &Heap, files: usize) -> Option<Rc<Far>> {
         let dir = std::path::PathBuf::from(std::env::var_os("ROFL_FAR")?);
         let size: u32 = std::env::var("ROFL_HELD").ok().and_then(|n| n.parse().ok()).unwrap_or(32).max(1);
         let me = match std::env::var("ROFL_FAR_ME").ok()?.as_str() {
             "root" => ROOT,
             n => n.parse().ok()?,
         };
-        let far = Rc::new(Far { me, size, dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default() });
+        let far = Rc::new(Far { me, size, dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default(), round: AtomicU32::new(0), views: Default::default(), moved: Default::default(), edits: Default::default(), told: Condvar::new() });
         far.serve();
+        let _ = FAR_OF.set(far.clone());
         Some(far)
     }
     fn path(&self, node: u32) -> std::path::PathBuf {
@@ -74,13 +133,13 @@ impl Far {
         self.home(files) == self.me
     }
     pub(super) fn keys(&self, keys: Rc<Mutex<Heap>>) {
-        let _ = self.keys.set(keys);
+        *self.keys.lock().unwrap() = Some(keys);
     }
     fn key_name(&self, k: Sym) -> String {
-        self.keys.get().expect("far: the keys").lock().unwrap().name(k).to_string()
+        self.keys.lock().unwrap().as_ref().expect("far: the keys").lock().unwrap().name(k).to_string()
     }
     fn key(&self, s: &str) -> Sym {
-        self.keys.get().expect("far: the keys").lock().unwrap().key(s)
+        self.keys.lock().unwrap().as_ref().expect("far: the keys").lock().unwrap().key(s)
     }
     pub(super) fn saw(&self, hi: FactId) {
         self.seen.fetch_max(hi, Relaxed);
@@ -92,7 +151,9 @@ impl Far {
     pub(super) fn laid(&self, at: FactId) {
         self.saw(at);
         if self.me == ROOT {
-            *self.next.lock().unwrap() = Some(at);
+            let mut n = self.next.lock().unwrap();
+            *n = Some(n.map_or(at, |x| x.max(at)));
+            drop(n);
             self.ready.notify_all();
             // (the root holds every node open while it answers: a node goes when the root has gone)
             for n in 0..self.nodes {
@@ -125,6 +186,10 @@ impl Far {
             self.publish_at(k, d, x, u);
         }
     }
+    /// What a unit settled again here moved, for the others to take with it.
+    pub(super) fn moved(&self, lo: FactId, m: Moved) {
+        self.moved.lock().unwrap().insert(lo, m);
+    }
     /// A unit settled here, for the others to ask as soon as it is.
     pub(super) fn settled(&self, k: usize, d: usize, x: usize, u: Result<Unit, Halt>) -> Result<Unit, Halt> {
         if let Ok(u) = &u {
@@ -135,7 +200,8 @@ impl Far {
     }
     fn publish_at(&self, k: usize, d: usize, x: usize, u: &Rc<Unit>) {
         if !u.stretch.is_held_there() && self.mine(u.files) {
-            self.units.lock().unwrap().insert((k as u32, d as u32, x as u32), u.clone());
+            let r = self.round.load(Relaxed);
+            self.units.lock().unwrap().insert((r, k as u32, d as u32, x as u32), u.clone());
             // (an empty one shares its `lo` with the next and is never asked)
             if u.stretch.lo < u.stretch.hi {
                 self.stretches.lock().unwrap().insert(u.stretch.lo, u.stretch.clone());
@@ -147,9 +213,10 @@ impl Far {
         self.trips.lock().unwrap().entry(node).or_insert_with(|| Rc::new(Trip::new(Rc::new(Node { far: self.clone(), node })))).clone()
     }
     /// A unit another process settles, as it says it when it has.
-    pub(super) fn unit(self: &Rc<Self>, k: usize, d: usize, x: usize, files: (u32, u32), kids: Vec<Rc<Unit>>) -> Unit {
+    pub(super) fn unit(self: &Rc<Self>, k: usize, d: usize, x: usize, files: (u32, u32), kids: Vec<Rc<Unit>>) -> (Unit, Option<Moved>) {
         let node = self.home(files);
         let mut e = Enc::op(b'U', &self.h);
+        e.u64(self.round.load(Relaxed) as u64);
         e.u64(k as u64);
         e.u64(d as u64);
         e.u64(x as u64);
@@ -160,12 +227,25 @@ impl Far {
         let far = (0..r.u64()).map(|_| r.u64() as FactId).collect();
         let books = (0..r.u64()).map(|_| (r.name(), r.name())).collect();
         let (dir, inner) = (r.dir(), r.dir());
+        let moved = (r.u64() == 1).then(|| {
+            let was = r.u64() as FactId;
+            let fs = (0..r.u64()).map(|_| {
+                let rel = r.name();
+                let a: Vec<Term> = (0..r.u64()).map(|_| r.term()).collect();
+                let id = (r.u64() == 1).then(|| r.u64() as FactId);
+                (rel, a, id)
+            }).collect();
+            (was, fs)
+        });
         self.saw(hi);
-        let trip = self.trip(node);
-        let stretch = Rc::new(Stretch::held_by(lo, hi, rels, far, books, trip.clone()));
-        trip.join(&stretch);
+        let stretch = self.views.lock().unwrap().entry((lo, hi)).or_insert_with(|| {
+            let trip = self.trip(node);
+            let s = Rc::new(Stretch::held_by(lo, hi, rels, far, books, trip.clone()));
+            trip.join(&s);
+            s
+        }).clone();
         let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::new(Dir::Built(inner)), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()) };
-        Unit { stretch, files, kids, parts: Rc::new(Lazy::made(parts)) }
+        (Unit { stretch, files, kids, parts: Rc::new(Lazy::made(parts)) }, moved)
     }
 
     fn ask(&self, node: u32, req: &[u8]) -> Vec<u8> {
@@ -242,12 +322,17 @@ impl Far {
         let mut e = Enc::new(h);
         match r.op() {
             b'H' => {}
+            b'E' => {
+                let fs = (0..r.u64()).map(|_| (r.u64() as u32, r.text())).collect();
+                self.edits.lock().unwrap().push_back(fs);
+                self.told.notify_all();
+            }
             b'R' => {
                 let n = r.u64() as u32;
                 e.u64(self.take(n) as u64);
             }
             b'U' => {
-                let key = (r.u64() as u32, r.u64() as u32, r.u64() as u32);
+                let key = (r.u64() as u32, r.u64() as u32, r.u64() as u32, r.u64() as u32);
                 let us = self.came.wait_while(self.units.lock().unwrap(), |us| !us.contains_key(&key)).unwrap();
                 let u = us[&key].clone();
                 drop(us);
@@ -263,6 +348,23 @@ impl Far {
                 books.iter().for_each(|&(a, b)| { e.name(a); e.name(b); });
                 e.dir(u.dir());
                 e.dir(u.inner());
+                match self.moved.lock().unwrap().get(&s.lo) {
+                    Some((was, fs)) => {
+                        e.u64(1);
+                        e.u64(*was as u64);
+                        e.u64(fs.len() as u64);
+                        for (rel, a, id) in fs {
+                            e.name(*rel);
+                            e.u64(a.len() as u64);
+                            a.iter().for_each(|&t| e.term(t));
+                            e.u64(id.is_some() as u64);
+                            if let Some(id) = id {
+                                e.u64(*id as u64);
+                            }
+                        }
+                    }
+                    None => e.u64(0),
+                }
             }
             b'P' => {
                 let rel = r.name();

@@ -31,7 +31,7 @@ use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering::Relaxed};
 use std::sync::Mutex;
 
 mod far;
-pub use far::{block as far_block, FAR_SAID};
+pub use far::{block as far_block, far_edit, far_next, far_wait, FAR_SAID};
 
 /// An argument of a relation's facts of one arity.
 type Place = (Sym, u8, u8);
@@ -850,7 +850,8 @@ impl Levels {
         e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops, self.over.as_ref())), Vec::new(), None, Some(trees), Some(forest));
         e.store.reads_ghosts(self.ghosts.clone());
         // (the aggregates are the reader's unit's, the last: the cells its firings cite are read there)
-        if let Some(u) = self.tops.last() {
+        // (a node as a process has none: its last unit is the root's)
+        if let Some(u) = self.tops.last().filter(|u| !u.stretch.is_held_there()) {
             e.store.read_cells(u.stretch.store());
         }
     }
@@ -1416,7 +1417,7 @@ impl Eval {
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
         // (nodes as processes: ids from the root's counter, the units of other nodes asked where they are settled)
-        let far = far::Far::of_env(&cx.h, n).filter(|_| edit.is_none());
+        let far = far::Far::of_env(&cx.h, n);
         let ids = |n: u32| far.as_ref().map_or_else(|| bump.fetch_add(n, Relaxed), |f| f.ids(n));
         let mark = || far.as_ref().map_or_else(|| bump.load(Relaxed), |f| f.mark());
         // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
@@ -1651,6 +1652,37 @@ impl Eval {
         };
         // a layer's rules made ready once: every unit of the layer starts from it
         let ready: Mutex<Option<Fork>> = Mutex::default();
+        // what a unit settled again moved: the keys a fact came or went under, the relations a fact came to
+        let took_moved = |k: usize, fs: &[(Sym, Vec<Term>, Option<FactId>)]| {
+            let (mut keys, mut went): (FxSet<u64>, FxSet<u64>) = Default::default();
+            {
+                let ms = cx.masks.lock().unwrap();
+                let mut rels = came.lock().unwrap();
+                let mut ids = new_ids.lock().unwrap();
+                for (rel, args, new) in fs {
+                    answers(&cx.h, *rel, args, ms.get(rel), |key| { keys.insert(key); });
+                    if let Some(id) = new {
+                        rels.insert(*rel);
+                        ids[k].insert(*id);
+                    } else if negated.contains(rel) {
+                        answers(&cx.h, *rel, args, ms.get(rel), |key| { went.insert(key); });
+                    }
+                }
+            }
+            moved.lock().unwrap()[k].extend(keys);
+            gone.lock().unwrap().extend(went);
+        };
+        // a unit another process settled: where it was settled again, what it moved is taken as if settled here
+        let from_far = |k: usize, files: (u32, u32), (u, m): (Unit, Option<far::Moved>)| -> Unit {
+            if let (Some(o), Some((lo, fs))) = (was(k, files), m) {
+                assert_eq!(o.stretch.lo, lo, "far: the unit of files {files:?} was not where its node says it was");
+                again.fetch_add(1, Relaxed);
+                replaced.lock().unwrap().insert(o.stretch.lo);
+                ghosts.lock().unwrap().push(o.stretch.clone());
+                took_moved(k, &fs);
+            }
+            u
+        };
         let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<Dir>, asked: Asked| {
             let mut e = e;
             let mut store = std::mem::take(&mut e.0.store);
@@ -1709,23 +1741,12 @@ impl Eval {
                     None => {
                         replaced.lock().unwrap().insert(o.stretch.lo);
                         ghosts.lock().unwrap().push(o.stretch.clone());
-                        let (mut keys, mut went): (FxSet<u64>, FxSet<u64>) = Default::default();
-                        {
-                            let ms = cx.masks.lock().unwrap();
-                            let mut rels = came.lock().unwrap();
-                            let mut ids = new_ids.lock().unwrap();
-                                stretch.differs(&o.stretch, |rel, args, new| {
-                                answers(&cx.h, rel, args, ms.get(&rel), |key| { keys.insert(key); });
-                                if let Some(id) = new {
-                                    rels.insert(rel);
-                                    ids[k].insert(id);
-                                } else if negated.contains(&rel) {
-                                    answers(&cx.h, rel, args, ms.get(&rel), |key| { went.insert(key); });
-                                }
-                            });
+                        let mut fs = Vec::new();
+                        stretch.differs(&o.stretch, |rel, args, new| fs.push((rel, args.to_vec(), new)));
+                        took_moved(k, &fs);
+                        if let Some(f) = &far {
+                            f.moved(stretch.lo, (o.stretch.lo, fs));
                         }
-                        moved.lock().unwrap()[k].extend(keys);
-                        gone.lock().unwrap().extend(went);
                     }
                 }
             }
@@ -1984,6 +2005,7 @@ impl Eval {
             drop((one.lock().unwrap(), e));
             Some(match &old_over {
                 Some(o) if s.same_as(o) => o.clone(),
+                Some(_) if far.is_some() => panic!("far: the facts laid over the files changed at an edit, which the nodes as processes do not lay alike yet"),
                 _ => Rc::new(s),
             })
         };
@@ -2055,7 +2077,7 @@ impl Eval {
                 let units = level((k, 0), ranges.len(), true, &largest, &|x| {
                     let one = ranges[x];
                     if let Some(f) = far.as_ref().filter(|f| !f.mine(one)) {
-                        return Ok(f.unit(k, 0, x, one, Vec::new()));
+                        return Ok(from_far(k, one, f.unit(k, 0, x, one, Vec::new())));
                     }
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| brk!("levels_leaf_first_file" => one.0..one.0 + 1; one.0..one.1).any(|f| e.1.contains(&f) || touched.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
@@ -2142,8 +2164,8 @@ impl Eval {
                 units
             } else {
                 level((k, 0), ranges.len(), false, &largest, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
+                    _ if far.as_ref().is_some_and(|f| !f.mine(ranges[i])) => Ok(from_far(k, ranges[i], far.as_ref().unwrap().unit(k, 0, i, ranges[i], Vec::new()))),
                     Some(o) => Ok(kept(&o, Vec::new())),
-                    None if far.as_ref().is_some_and(|f| !f.mine(ranges[i])) => Ok(far.as_ref().unwrap().unit(k, 0, i, ranges[i], Vec::new())),
                     None => unit(k, &lower, &trees, at_home(0, i), Vec::new(), Vec::new(), ranges[i], None),
                 })?
             };
@@ -2178,7 +2200,7 @@ impl Eval {
                     }
                     let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
                     if let Some(f) = far.as_ref().filter(|f| !f.mine(files)) {
-                        return Ok(f.unit(k, d, x, files, kids));
+                        return Ok(from_far(k, files, f.unit(k, d, x, files, kids)));
                     }
                     if let Some(o) = was(k, files).filter(|o| stands(o, &moved_below)) {
                         return Ok(kept(&o, kids));
@@ -2203,12 +2225,8 @@ impl Eval {
             tops.push(units.pop().expect("a file at least"));
             layers.push(depths);
         }
-        if let Some(f) = far.as_ref().filter(|f| f.me != far::ROOT) {
-            eprintln!("levels: node {} settled its units, answers the others until the root goes", f.me);
-            loop {
-                std::thread::park();
-            }
-        }
+        // (a node's world ends at its layers: the reader's unit is the root's)
+        let node = far.as_ref().is_some_and(|f| f.me != far::ROOT);
         // THE READER'S UNIT: the rules left to the world's reader by their shape are fired whole over the layers, and
         // what they conclude is one more stretch it reads; after an edit, again, unless no stretch was replaced
         let k = rules_of.len();
@@ -2238,7 +2256,7 @@ impl Eval {
         if edit.is_some() && !over_keys.is_empty() {
             said.push(format!("levels: the facts laid over the files moved under {} keys; the units of {} files meet them; units settled again by the layer's end: {:?}", over_keys.len(), touched.len(), again_at));
         }
-        if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
+        if !node && self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
             let top = match was(k, all).filter(|_| replaced.lock().unwrap().is_empty()) {

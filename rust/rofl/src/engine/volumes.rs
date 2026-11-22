@@ -730,6 +730,12 @@ impl Eval {
     /// `by_volumes`, with `over` laid over the files' units: facts of the relations `overlay_rels` names, read by
     /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
     pub fn by_volumes_over(&mut self, files: Vec<(String, FileText)>, over: &str) -> Result<(Eval, VolStats), Halt> {
+        self.by_volumes_edit(files, over, None)
+    }
+
+    /// `by_volumes_over` again over this core after an edit of the files `edit` names (their places), the world
+    /// before held in memory: the units whose answer may have moved are settled again, the others stand.
+    pub fn by_volumes_edit(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let (stage, mut joins) = self.level_stage();
         self.settle_core(joins.core.clone())?;
@@ -768,7 +774,7 @@ impl Eval {
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let n = files.len();
-        let lv = e.fork().by_levels(files, &stage, joins, None, over)?;
+        let lv = e.fork().by_levels(files, &stage, joins, edit.map(|(b, c)| super::levels::Edit(b, c)), over)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
         lv.read_by(&mut e);
