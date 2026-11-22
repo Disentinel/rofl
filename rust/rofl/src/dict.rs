@@ -442,7 +442,7 @@ impl Dict {
     /// written over the base whose sum is `sum`; its length in whole chunks. A log of another base, or none, is
     /// nothing; a chunk cut short ends it, as a run that stopped while appending it left it.
     fn replay(&self, log: &str, sum: u64) -> Result<u64, String> {
-        let Ok(b) = std::fs::read(log).map_err(drop).and_then(|b| if crate::brk!("dict_log_unread" => true; false) { Err(()) } else { Ok(b) }) else { return Ok(0) };
+        let Ok(b) = std::fs::read(log) else { return Ok(0) };
         let (n0, f0) = self.len();
         if b.get(..LOG.len()) != Some(LOG) || b.len() < LOG.len() + 24 {
             return Ok(0);

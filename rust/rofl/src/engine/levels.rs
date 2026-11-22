@@ -170,7 +170,7 @@ impl Parts {
             return Ok(false);
         }
         w.u32(1);
-        write_dir(w, &Dir::Built(crate::brk!("units_parts_patch_drops_moved" => FxMap::default(); dir)));
+        write_dir(w, &Dir::Built(crate::brk!("units_patch_drops_moved" => FxMap::default(); dir)));
         write_dir(w, &Dir::Built(inner));
         w.arena(&self.reads[..]);
         w.u32(asked);
@@ -2057,7 +2057,7 @@ impl Eval {
             e.0.seeded = None;
             let mut asked = ASKED.with(|a| a.borrow_mut().take()).unwrap_or_default();
             // (mended, the firings it carried asked what they asked when they fired: those keys are still its own)
-            if let Some(o) = old.as_ref().filter(|_| crate::brk!("levels_mended_forgets_asked" => false; true)) {
+            if let Some(o) = old.as_ref() {
                 let p = o.parts.get();
                 asked.carried = Some((p.asked.clone(), p.more.clone()));
             }

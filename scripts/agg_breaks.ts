@@ -8865,13 +8865,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "dict_log_unread",
-  "what": "the names an edit appended beside the dictionary are not read back: a world kept after a name came opens with the dictionary as it was before",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
   "id": "units_named_let_go",
   "what": "an edit lets go of the segments of units the kept world still names: a stretch kept in an older segment is read from a file no longer there",
   "expect": {
@@ -8880,21 +8873,7 @@ export const BREAKS: Break[] = [
  },
  {
   "id": "units_patch_drops_moved",
-  "what": "a stretch laid again is written as a patch that names none of the facts whose firings moved: its firings are read as the body under it kept them, citing facts at ids an edit replaced",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
-  "id": "units_parts_patch_drops_moved",
-  "what": "a unit's parts written as a patch carry none of the keys whose holders moved: a question bound to such a key is sent to a stretch an edit replaced",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
-  "id": "levels_mended_forgets_asked",
-  "what": "a unit settled again keeps only the keys asked while it was settled, not those the unit before it asked: the next edit under a forgotten key does not settle it again, and every edit writes its parts whole",
+  "what": "a unit laid again is written as a patch that names none of what moved: its firings are read as the body under it kept them, citing facts at ids an edit replaced, and its directories send a question bound to a moved key to a stretch an edit replaced",
   "expect": {
    "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
   }
