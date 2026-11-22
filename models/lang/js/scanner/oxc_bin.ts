@@ -22,3 +22,5 @@ export function oxcScan(): string | { error: string } {
 
 /** The prefix of every node id of a file: oxc_scan's (models/lang/js/scanner/oxc_scan, `prefix`), which names the volume a file cools to. */
 export const idPrefix = (file: string): string => 'n' + createHash('sha256').update(file).digest('hex').slice(0, 16) + '_';
+/** a node id in a fact's text; group 1 is its file's hash */
+export const NODE = /\bn([0-9a-f]{16})_[0-9a-z]+/g;

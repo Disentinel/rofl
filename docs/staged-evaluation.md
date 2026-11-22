@@ -8,10 +8,9 @@ hypothesis below names the measurement that can refute it.
 
 ## What is set aside
 
-The `[surface]` driver (`docs/surface-split.md` §7) stays in the tree and is not the road: at 500 files it took 140
-times the whole world, because the values every escaping node holds were published across files and each file was
-evaluated again on every growth (7.6 evaluations a file). Volumes, books, `cool`/`reheat` and `fork` are kept as
-the working tools.
+The `[surface]` driver was not the road and is deleted (2026-11-22): at 500 files it took 140 times the whole world,
+because the values every escaping node holds were published across files and each file was evaluated again on
+every growth (7.6 evaluations a file). Volumes, `cool`/`reheat` and `fork` are kept as the working tools.
 
 ## The decisions
 
@@ -36,7 +35,7 @@ the working tools.
    ends (an import that leaves the file, a call to another file's function) and exports; a link pass over those
    alone makes the edges; a question follows the edges on demand and lifts only the volumes on its path.
 6. **A recursion that crosses a large import cycle is refused.** Statically, a recursive component of the rule
-   graph through a foreign-capable column (`examples/surface/surface.rofl`) is a recursion that can cross files;
+   graph through a column that can hold another file's node is a recursion that can cross files;
    in the data, its cost is the largest strongly connected component of the import graph. Over the limit the world
    is refused, naming the rule and the files, with the reformulations: a per-function summary, a bounded depth, or
    the cycle broken in the code.
@@ -50,7 +49,7 @@ the working tools.
 | | hypothesis | refuted if | measured on |
 |---|---|---|---|
 | H1 | import cycles are small: the largest SCC of the import graph is a few dozen files | it holds hundreds | vscode subset S, `module_target` |
-| H2 | what crosses files is rare: under 2 % of derived facts rest on two files | above 5 % | vscode S at 500, the census of `docs/surface-split.md` §1 again on the current model |
+| H2 | what crosses files is rare: under 2 % of derived facts rest on two files | above 5 % | vscode S at 500, the census of cross-file witnesses again on the current model |
 | H3 | the largest recursive data-flow component fits a stage | its facts exceed a stage's limit | vscode S, the file graph of cross-file `resolves`/`may_be_node` |
 | H4 | a mapped kept fact is at least 50 times cheaper than deriving it | under 10 times | one volume, storebench's colfile against `evaluate` |
 | H5 | a resumed evaluation equals a whole one, byte for byte | any difference | the differential of `rust/rofl/tests/incremental.rs`, cut at every budget |
