@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 2264 artifacts, 6034 edges, 284 unreadable path expressions.
+-- 2264 artifacts, 6095 edges, 284 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -3165,6 +3165,7 @@ edge[dep]("examples/notebook/keyed/order_use.mjs", "examples/notebook/keyed/orde
 edge[dep]("examples/notebook/keyed/order_use.mjs", "examples/notebook/keyed/order_lib.mjs", ts_import).
 edge[dep]("examples/notebook/ledger_facts.rofl", ".claude/skills/refine-plan/SKILL.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", ".github/workflows/ci.yml", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", ".github/workflows/merge-train.yml", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", ".github/workflows/pages.yml", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "adapters/sqlite-store.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "boot.rofl", doc_ref).
@@ -3222,8 +3223,10 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-holistic-s
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-demand.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-owner.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-stacked.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-staged-cell.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-staged.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-stockholes.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-thr-after.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-thr.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-twice.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-int-range-literal.rofl", doc_ref).
@@ -3343,6 +3346,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-fixpoin
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-decided.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-flush.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-hole.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-retract-after.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-retract-closed.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-round-closed.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-round.rofl", doc_ref).
@@ -3358,6 +3362,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/destructor-hol
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-function-holds.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-function-retract-2-broken.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-function-wall.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-nearest-holds.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-demand-book-check.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-demand-book.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-demand-edge.rofl", doc_ref).
@@ -3369,6 +3374,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-plan.r
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-retract-4-other.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-tick-3-staged.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-unknown-edge.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/feature-behaviour-toy.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-scale.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-ticks-unknown.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-ticks.rofl", doc_ref).
@@ -3379,6 +3385,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-wfs-unknown.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-wfs.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/instances-check.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/keyword-atom.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/not-as-a-name.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/operators.rofl", doc_ref).
@@ -3417,19 +3424,34 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/linter/linter.rofl", 
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/loot/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/moot/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/moot/moot.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/assigned.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/assume.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/cjs.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/decorated.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/destructure.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/exported.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/guard.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/handed.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/keyed.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/missing.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/opened.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/order.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/passes.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/puts.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/reached.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/rest.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/returns.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/runs.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/self.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/settles.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/small.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/typed.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/npc/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/npc/npc.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/npc/sim.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/parity/calls/rs-check.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/parity/judge/check.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/parity/judge/matrix.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/profile/chain.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/reach/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/ring1/conform.ts", doc_ref).
@@ -3446,6 +3468,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/slop/slop.rofl", doc_
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/spat/README.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/sus/sus.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/tutorial/README.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/vscode/assume-linux.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/vscode/side-effects.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/wtf/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/yak/fragments/08-golden-accident.ts", doc_ref).
@@ -3472,6 +3495,10 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "lsp/know.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "lsp/test.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/blast.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/code.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/delta-model.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/feature-behaviour.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/features.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/gates.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/memory.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/parts.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/plan.rofl", doc_ref).
@@ -3485,6 +3512,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/js-host.r
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/js-modules.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/js-phrases.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/model-units.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/library.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/lifecycle-host.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/lifecycle.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/oxc-roles.rofl", doc_ref).
@@ -3510,17 +3538,29 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/rules/js-struct
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/rules/js-surface.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/rules/js-vocabulary.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/cli.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/host_facts.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/host_lib.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/js_resolve.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_code.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_inherit.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_scan/src/lib.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_scan/src/main.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_scan/src/wasm.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_wasm.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/ts_lib.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/calls.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/effects.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/guards.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/rs-roles.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/strings.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/values.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/web.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/accepted.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/cost.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/gate.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/train.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/loads.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/product/rofl.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "notebook/book.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "notebook/cli.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "notebook/draw.ts", doc_ref).
@@ -3594,12 +3634,15 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/load.rs
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/main.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/memory.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/nb.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/place.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/progress.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/render.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/seed.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/serve.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/breaks.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/cell.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/corpus.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/dict.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/addition.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/algebra.rs", doc_ref).
@@ -3612,13 +3655,16 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/joinplan.
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/labeled.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/latkept.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/layer.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/levels.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/par.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/prov.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/resume.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/stages.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/vclosure.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/view.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/volumes.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/forest.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/graph.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/image.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/kernel.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/md/mod.rs", doc_ref).
@@ -3640,6 +3686,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/structures.rs", 
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/tag.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/term.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/volume.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/watch.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/addition.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/agg_worlds.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/asks_cone.rs", doc_ref).
@@ -3649,12 +3696,14 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/demand_fixpoin
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/demand_query.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/demand_scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/disk.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/edit.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/explain.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/incremental.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/join_scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/kept.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/lattice_scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/level_wall.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/memory_wall.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/par.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/profile_model.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/profile.rs", doc_ref).
@@ -3662,6 +3711,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/program.rs", d
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/prov_lazy.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/retract_refuse.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/retract_set.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/rule_edit.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/scan.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/session.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/structure.rs", doc_ref).
@@ -3672,6 +3722,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/tick_scale.rs"
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/tree.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/volume.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/volumes.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/watch.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/why_bins.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/run_corpus.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/share_curve.sh", doc_ref).
@@ -3679,12 +3730,14 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/storebench/src/colfile.rs
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/storebench/src/column.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/storebench/src/scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/tools/rs_scan/src/main.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/tools/rs_tree/src/main.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "safety.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/book_locality.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/ci_cost.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/eval_cost.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/features.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/floor_census.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/loads.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/necessity.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/parse_cost.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/ring1_lexgen.ts", doc_ref).
@@ -3721,6 +3774,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/md_blocks.ts", doc_ref
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/md_world.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/mdcheck.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/measurement_check.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/merge_train.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/nb_check.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/nb_layers.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/nb_lib.ts", doc_ref).
@@ -3733,16 +3787,19 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/parser_optional.ts", d
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/playground.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/pool.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/port_corpus.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/product.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/published_diff.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/read_md.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/read.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/refine.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/release_publish.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/render_docs.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/retract_passes.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/sentences.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/stage_plan.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/text_check.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/view.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/vscode_corpus.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/vscode_curve.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/vscode_pieces.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/why_dag.ts", doc_ref).
@@ -3752,6 +3809,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/witness_check.ts", doc
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/workbench_auth.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/workbench_browser.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/workbench_check.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/worlds_scan.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "shrug.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "skills/guided-formal-reasoning/escalate.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/aggeval.ts", doc_ref).
@@ -3761,6 +3819,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "src/dense.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/kernel-dense.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/labeled.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/parser.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "src/places.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/reflect.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/reuse.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/say.ts", doc_ref).
@@ -3772,6 +3831,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "src/structure.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/tag.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/tokens.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/unify.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "src/view.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "START.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "test/read-out-atomic.test.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "test/semiring-cells.test.ts", doc_ref).
@@ -3788,6 +3848,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/dist.ts", doc_ref)
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/roundtrip.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/run.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/suite.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/thin.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/visual/pan.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/visual/pic-graph.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/visual/pic-notation.ts", doc_ref).
