@@ -15513,7 +15513,8 @@ impl Eval {
     /// the evaluation renamed, and the engine's own counter is put back.
     pub fn why_text_with(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let r = self.questioned(|e| e.why_at(lit, o, shown));
+        let h: *mut crate::term::Heap = &mut self.h;
+        let r = levels::far_names(h, || self.questioned(|e| e.why_at(lit, o, shown)));
         self.rename_counter = saved;
         r
     }
@@ -16518,7 +16519,8 @@ impl Eval {
     pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
         let asking = std::mem::replace(&mut self.demand.asking, true);
-        let r = self.questioned(|e| e.whynot_at(lit, b, shown));
+        let h: *mut crate::term::Heap = &mut self.h;
+        let r = levels::far_names(h, || self.questioned(|e| e.whynot_at(lit, b, shown)));
         self.demand.asking = asking;
         self.demand.asked.clear();
         self.demand.trail.clear();

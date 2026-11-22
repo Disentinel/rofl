@@ -93,6 +93,22 @@ pub fn far_node() -> bool {
 }
 
 static FAR_OF: std::sync::OnceLock<Rc<Far>> = std::sync::OnceLock::new();
+
+thread_local! {
+    static SINK: std::cell::Cell<*mut Heap> = const { std::cell::Cell::new(std::ptr::null_mut()) };
+}
+
+/// `f`, a reading of proofs by the world whose heap is `h`: the keys the proofs of other processes quote that come
+/// while it reads are named in `h`.
+pub fn far_names<R>(h: *mut Heap, f: impl FnOnce() -> R) -> R {
+    if FAR_OF.get().is_none() {
+        return f();
+    }
+    let was = SINK.with(|c| c.replace(h));
+    let r = f();
+    SINK.with(|c| c.set(was));
+    r
+}
 // SAFETY: what it holds is made under its locks and then only read
 unsafe impl Send for Far {}
 unsafe impl Sync for Far {}
@@ -148,7 +164,14 @@ impl Far {
     fn key_name(&self, k: Sym) -> String {
         self.keys.lock().unwrap().as_ref().expect("far: the keys").lock().unwrap().name(k).to_string()
     }
+    /// A key a proof of another process quotes, named here: while the levels are settled in their keys, and while a
+    /// world reads a proof (`far_names`) in that world's own heap, which was cloned from them and named more since.
     fn key(&self, s: &str) -> Sym {
+        let sink = SINK.with(|c| c.get());
+        if !sink.is_null() {
+            // SAFETY: set by `far_names` for the call that reads the proof, on this thread, the heap alive through it
+            return unsafe { (*sink).key(s) };
+        }
         self.keys.lock().unwrap().as_ref().expect("far: the keys").lock().unwrap().key(s)
     }
     pub(super) fn saw(&self, hi: FactId) {

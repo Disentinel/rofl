@@ -140,6 +140,12 @@ fn nodes_in_processes_answer_as_the_whole_world_and_after_edits() {
         }
         v = core.by_volumes_edit(files.clone(), "", &v, at.iter().map(|&i| i as u32).collect()).unwrap();
         same_answers(&mut v, &mut whole_of(&files), &format!("after the edit of {at:?}"));
+        // (a proof read after the edit goes down into units the nodes settled, and names the keys their proofs quote)
+        for q in ASKED {
+            let row = v.ask(q).unwrap().rows.into_iter().next().expect("an answer");
+            let lit = format!("{}({})", &q[..q.find('(').unwrap()], row.join(", "));
+            assert!(v.why(&lit).is_ok_and(|t| !t.is_empty()), "why {lit}");
+        }
     }
     drop(v);
     for mut n in nodes {

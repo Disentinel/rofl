@@ -31,7 +31,7 @@ use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering::Relaxed};
 use std::sync::Mutex;
 
 mod far;
-pub use far::{block as far_block, far_edit, far_next, far_node, FAR_SAID};
+pub use far::{block as far_block, far_edit, far_names, far_next, far_node, FAR_SAID};
 
 /// An argument of a relation's facts of one arity.
 type Place = (Sym, u8, u8);
