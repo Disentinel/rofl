@@ -764,7 +764,7 @@ stage is the plan's mark.
 **The stage a world is evaluated by is read as facts of the book `stageplan`**, for a world that executes it
 elsewhere: a federation whose nodes hold the files and whose coordinator fires the rules that cross them. No flag
 and no op of its own: `rofl serve`, `{"op":"rows","session":S,"rel":"fires","persp":"stageplan"}` (and `gives`,
-`cuts`, `own`), asked of a session that loaded the program; the files need not be loaded, and the plan does not
+`cuts`, `own`, `layer`, `tree`), asked of a session that loaded the program; the files need not be loaded, and the plan does not
 move with them. It is the stage the engine itself evaluates by levels (`Eval::level_stage`, read by
 `Eval::stage_plan` in `engine/stages.rs`), not an analysis beside it.
 
@@ -776,19 +776,25 @@ move with them. It is the stage the engine itself evaluates by levels (`Eval::le
 | `fires(Rule, across)` | the rule may cross files: fired once, over what the files gave |
 | `gives(Rel)` | what a file's world concludes of `Rel` is given above; what it concludes of any other relation is not. The edges of a declared tree and the condition of a `nearest` are among them: a closure answered from a tree has no row to give, and the world above walks it |
 | `cuts(Book)` | the facts of `Book` stay in the file's world; every other fact a file states is given above |
+| `layer(Rule, N)` | the order the engine's units fire the rules across in: 0 where two units meet, from 1 the layers above, each after the absences it asks are settled; a rule across with no layer is fired last, once, by the world that reads the units |
+| `tree(Rel, Book)` | a closure answered from a tree a file settles alone (a `nearest`, a `tree ... closure`): a unit reads it from the tree of the file that holds the node, complete from the start, and does not walk it again |
 | `own(Rel, Book, I)` | a fact of `Rel[Book]` a file's world holds that is of the file holds a node of it at argument `I`, from 0, so the fact's file is read off it; one that holds no node there is of no file, the same in every file's world (`none`: no argument holds one; `any`: in every book) |
 
 `Rule` is the rule's id, `r` and the sum of its canonical text, the id `why` prints and the kernel's book keeps
 (`rows` of `rule`, `conclusion_lit`, `premise_lit`). A split executed from these facts alone is the whole world,
 fact for fact outside the cut books, however the files are dealt to the nodes (`cargo test -p rofl --test
-stage_plan`: the plan is loaded as facts, the stage read back from them by `Eval::stage_planned`, and held to the
+stage_plan`: the plan is taken as its text, the stage read back from it by `Eval::stage_planned`, and held to the
 world whole over random programs, every world of facts/checks.rofl that cuts a book, and the JS model). It is held
 to what the world whole keeps: a relation concluded below the cut that no rule above reads (the edges of a tree)
 is given by the split and dropped by the world whole. A world whose files state a relation no `own[fixpointplan]`
-names is refused by the split as by the engine (*Lemma stages*). Open: the four lifecycle worlds lose the rows of
-one rule that reads a `nearest`, which the engine's pass above given lemmas does not fire
-(`f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest`). The size is
-the program's: one `fires` a rule, and for the JS model 4 724 facts, 166 KB (3 401 rules: 79 `core`, 1 293 `file`,
+names is refused by the split as by the engine (*Lemma stages*). **Open, and it binds whoever executes the plan
+out of process:** a world that is given the lemmas and walks a `tree(Rel, Book)` again above them, instead of
+reading it from its file, loses rows where the closure is a `nearest`: the engine opens a nearest at the level of
+its condition, the condition was given, and a monotone rule that reads it fires from what was given before that
+level and is not fired again. The four lifecycle worlds lose 4 or 5 rows each so (`ow_fn[lifecycle]` and what
+rests on it), and are whole by the engine's own units, which read the file's tree (`cargo test -p rofl --test
+stage_plan the_checked_worlds_by_the_engines_units`; `f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest`). The size is
+the program's: one `fires` a rule, and for the JS model 6 426 facts, 219 KB (3 401 rules: 79 `core`, 1 293 `file`,
 10 `both`, 2 019 `across`; 460 `gives`). A program whose plan cuts no
 book has no rule of a file: every rule is `across` or `core`. What the units of one process join by where they
 meet (`Joins` in `engine/levels.rs`: the relation, the argument, the value) is not given out yet.

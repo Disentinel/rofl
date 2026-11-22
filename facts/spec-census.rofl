@@ -304,6 +304,7 @@ check[checks]("rust/rofl/tests/stage_plan.rs", "random_programs_split_by_their_p
 check[checks]("rust/rofl/tests/stage_plan.rs", "the_plan_does_not_move_with_the_files", test).
 check[checks]("rust/rofl/tests/stage_plan.rs", "the_js_model_split_by_its_plan", test).
 check[checks]("rust/rofl/tests/stage_plan.rs", "the_checked_worlds_split_by_their_plans", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "the_checked_worlds_by_the_engines_units", test).
 check[checks]("rust/rofl/tests/stage_plan.rs", "rofl_serve_gives_the_plan_by_rows", test).
 check[checks]("rust/rofl/tests/stages.rs", "a_cut_world_holds_what_the_whole_world_holds_outside_the_cut", test).
 check[checks]("rust/rofl/tests/stages.rs", "a_fact_read_only_above_the_cut_is_retracted_as_fresh", test).

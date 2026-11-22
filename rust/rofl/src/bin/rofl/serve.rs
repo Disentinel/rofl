@@ -574,9 +574,9 @@ impl Server {
                 facts.push(rofl::seed::virtual_json(&e.h, rel, b, &args));
             }
         }
-        // the stage as facts (`Eval::stage_plan`), computed where the world was given none
-        if persp.as_deref() == Some("stageplan") && e.stage_planned().is_none() {
-            let b = e.h.intern("stageplan");
+        // the stage as facts (`Eval::stage_plan`), computed where the world states none
+        let b = e.h.intern("stageplan");
+        if persp.as_deref() == Some("stageplan") && e.store.live_census().iter().all(|c| c.1 != b) {
             for (r, args) in e.stage_plan() {
                 if r == rel && at.iter().all(|(k, v)| args.get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
                     facts.push(rofl::seed::virtual_json(&e.h, r, b, &args));

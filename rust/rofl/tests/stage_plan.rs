@@ -1,6 +1,6 @@
 //! THE STAGE GIVEN OUT (`Eval::stage_plan`, docs/cli.md *The stage given out*), held to the whole world. A split is
 //! executed here as a federation would, from the plan's facts and nothing else: the plan is taken as text off the
-//! core, loaded as facts, and the stage read back from them (`Eval::stage_planned`); the rules it names `core` are
+//! core and the stage read back from that text (`Eval::stage_planned`); the rules it names `core` are
 //! fired once, each pod of files fires the rules it names `file` and `both` and gives what it names `gives` and what
 //! the files state outside `cuts`, and the rest fires once over what the pods gave. Every fact outside the cut books
 //! must be the whole world's, however the files are dealt into pods.
@@ -16,9 +16,9 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn rows(e: &mut Eval, rel: &str) -> Vec<Vec<String>> {
-    let (rel, book) = (e.h.intern(rel), e.h.intern("stageplan"));
-    e.store.rel_persp(&e.h, rel, book).into_iter().map(|f| e.store.args(f).iter().map(|t| e.h.canon(*t)).collect()).collect()
+/// The facts of one relation of a plan, each by its arguments.
+fn rows(plan: &str, rel: &str) -> Vec<Vec<String>> {
+    plan.lines().filter_map(|l| l.strip_prefix(&format!("{rel}[stageplan](")).and_then(|l| l.strip_suffix(")."))).map(|l| l.split(',').map(str::to_string).collect()).collect()
 }
 
 /// The facts a world holds outside the books `away` and the engine's own.
@@ -27,7 +27,7 @@ fn keys(e: &Eval, away: &[String]) -> BTreeSet<String> {
     (0..st.len_ids())
         .filter(|&id| st.alive(id))
         .map(|id| st.key(&e.h, id))
-        .filter(|k| !["[$kernel]", "[fixpointplan]", "stageplan"].iter().any(|b| k.contains(b)) && !away.iter().any(|b| k.contains(&format!("[{b}]"))))
+        .filter(|k| !["[$kernel]", "[fixpointplan]"].iter().any(|b| k.contains(b)) && !away.iter().any(|b| k.contains(&format!("[{b}]"))))
         .collect()
 }
 
@@ -44,14 +44,11 @@ fn split(texts: &[&str], pod: usize) -> Result<Split, String> {
     let mut core = Session::fresh(BUDGET);
     core.load_all(&[parts.core.as_str()], None).map_err(|e| format!("the core: {:?}", e.1))?;
     let plan = core.eval.stage_plan_text();
-    let before = keys(&core.eval, &[]);
-    core.load_all(&[plan.as_str()], None).map_err(|e| format!("the plan: {:?}", e.1))?;
-    // (what the load of the plan itself wrote, `edb[main](fires)` and the like, is no fact of the world)
-    let loaded: BTreeSet<String> = keys(&core.eval, &[]).difference(&before).cloned().collect();
-    let (st, first) = core.eval.stage_planned().ok_or("the plan names no rule")?;
+    // the plan goes as its text, and the stage is read from it alone
+    let (st, first) = core.eval.stage_planned(&plan).ok_or("the plan names no rule")?;
     core.eval.settle_core(first).map_err(|e| rofl::describe(&e))?;
-    let own = rows(&mut core.eval, "own");
-    let cuts: Vec<String> = rows(&mut core.eval, "cuts").into_iter().map(|a| a[0].clone()).collect();
+    let own = rows(&plan, "own");
+    let cuts: Vec<String> = rows(&plan, "cuts").into_iter().map(|a| a[0].clone()).collect();
     let mut up = core.fork();
     let (syms, funcs) = (core.eval.h.syms.len() as u32, core.eval.h.funcs_len());
     let from = core.eval.store.len_ids();
@@ -69,7 +66,7 @@ fn split(texts: &[&str], pod: usize) -> Result<Split, String> {
     }
     up.eval.stage_given = Some(st.below());
     up.evaluate().map_err(|e| rofl::describe(&e))?;
-    Ok(Split { keys: keys(&up.eval, &cuts).difference(&loaded).cloned().collect(), plan, cuts, files: parts.files.len() })
+    Ok(Split { keys: keys(&up.eval, &cuts), plan, cuts, files: parts.files.len() })
 }
 
 /// `own[stageplan](Rel, Book, I)` holds of what a file's world holds: argument I names a node of that file.
@@ -108,6 +105,14 @@ fn parity(name: &str, texts: &[&str], pods: &[usize]) -> (usize, usize) {
     held(name, texts, pods).unwrap_or_else(|e| panic!("{}", e.said))
 }
 
+/// Whether the world whole keeps the relation of a fact: it keeps none of a relation below its cut that no rule
+/// above reads, and refuses a question of it.
+fn kept(all: &mut Session, k: &str) -> bool {
+    let (rel, book) = k.split_once('[').and_then(|(r, rest)| Some((r, rest.split_once(']')?.0))).unwrap_or((k, ""));
+    let (rel, book) = (all.eval.h.intern(rel), all.eval.h.intern(book));
+    all.eval.staged_away(rel, Some(book)).is_none()
+}
+
 /// Why a split is not the world whole: the relations of the rows it lost, and how many rows it holds too many.
 struct Gap {
     said: String,
@@ -125,12 +130,7 @@ fn held(name: &str, texts: &[&str], pods: &[usize]) -> Result<(usize, usize), Ga
         let lost: Vec<_> = want.difference(&s.keys).take(4).collect();
         // (the world whole keeps no fact of a relation below its cut that no rule above reads, and refuses a question of
         // it: a split that gave one, the edges of a tree it walks above, is held to what the world whole answers)
-        let mut kept = |k: &str| {
-            let (rel, book) = k.split_once('[').and_then(|(r, rest)| Some((r, rest.split_once(']')?.0))).unwrap_or((k, ""));
-            let (rel, book) = (all.eval.h.intern(rel), all.eval.h.intern(book));
-            all.eval.staged_away(rel, Some(book)).is_none()
-        };
-        let more: Vec<_> = s.keys.difference(&want).filter(|k| kept(k)).take(4).collect();
+        let more: Vec<_> = s.keys.difference(&want).filter(|k| kept(&mut all, k)).take(4).collect();
         if !(lost.is_empty() && more.is_empty()) {
             let rels = want.difference(&s.keys).filter_map(|k| k.split_once(']').map(|x| format!("{}]", x.0))).collect();
             let said = format!("{name}, {pod} files to a pod of {}: the split is not the world whole: {} rows whole, {} split; lost {lost:?}, more {more:?}", s.files, want.len(), s.keys.len());
@@ -261,6 +261,9 @@ fn a_split_by_the_plan_is_the_world_whole() {
     }
     let fires = |w: &str| s.plan.lines().filter(|l| l.starts_with("fires[") && l.ends_with(&format!(",{w})."))).count();
     assert!(fires("file") >= 6 && fires("across") >= 3, "rules of a file and rules across:\n{}", s.plan);
+    // every rule the plan gives a layer is a rule across
+    let layered: Vec<&str> = s.plan.lines().filter_map(|l| l.strip_prefix("layer[stageplan](")).filter_map(|l| l.split(',').next()).collect();
+    assert!(!layered.is_empty() && layered.iter().all(|r| s.plan.contains(&format!("fires[stageplan]({r},across)."))), "the layers:\n{}", s.plan);
 }
 
 fn by_file_facts() -> String {
@@ -349,14 +352,12 @@ fn the_js_model_split_by_its_plan() {
         s.plan.lines().filter(|l| l.starts_with("gives[")).count()
     );
     assert!(count("file") > 300 && count("across") > 0);
+    assert!(s.plan.contains("tree[stageplan](nearest_v,flow)."), "the nearest a file settles is named a tree");
 }
 
-/// The worlds whose split loses the rows of one rule the engine's pass above does not fire (below).
-const OPEN: [&str; 4] = ["lifecycle_clean", "lifecycle_forgetful", "lifecycle_leaky", "lifecycle_overwrites"];
-
-/// EVERY WORLD OF facts/checks.rofl WHOSE PLAN CUTS A BOOK, as `npm test` loads it (boot.rofl, then its files).
-#[test]
-fn the_checked_worlds_split_by_their_plans() {
+/// The worlds of facts/checks.rofl whose plan cuts a book, each as `npm test` loads it: boot.rofl, then its files.
+/// `STAGE_PLAN_WORLD` names one.
+fn checked_worlds() -> Vec<(String, Vec<String>)> {
     let checks = std::fs::read_to_string(root().join("facts/checks.rofl")).unwrap();
     let mut worlds: Vec<(String, Vec<String>)> = Vec::new();
     for l in checks.lines().filter_map(|l| l.strip_prefix("check_file(\"")) {
@@ -368,16 +369,29 @@ fn the_checked_worlds_split_by_their_plans() {
     }
     let only = std::env::var("STAGE_PLAN_WORLD").ok();
     let boot = std::fs::read_to_string(root().join("boot.rofl")).unwrap();
-    let (mut ran, mut refused, mut open, mut bad) = (0, 0, 0, Vec::new());
-    for (w, fs) in worlds.iter().filter(|x| only.as_ref().is_none_or(|o| *o == x.0)) {
-        if fs.iter().any(|f| !f.ends_with(".rofl")) {
-            continue;
-        }
+    let mut out = Vec::new();
+    for (w, fs) in worlds.into_iter().filter(|x| only.as_ref().is_none_or(|o| *o == x.0) && x.1.iter().all(|f| f.ends_with(".rofl"))) {
         let mut texts = vec![boot.clone()];
         texts.extend(fs.iter().map(|f| std::fs::read_to_string(root().join(f)).unwrap_or_else(|e| panic!("{f}: {e}"))));
-        if !texts.iter().any(|t| t.lines().any(|l| l.starts_with("cut[fixpointplan]("))) {
-            continue;
+        if texts.iter().any(|t| t.lines().any(|l| l.starts_with("cut[fixpointplan]("))) {
+            out.push((w, texts));
         }
+    }
+    out
+}
+
+/// The worlds the engine's own units do not answer whole (`the_checked_worlds_by_the_engines_units`).
+const UNITS_OPEN: [&str; 6] = ["parity_rs_instances", "parity_rs_keyed", "parity_rs_strings", "parity_rs_guards", "parity_rs_service", "parity_rs_calls"];
+
+/// The worlds whose split loses the rows of one rule the engine's pass above does not fire (below).
+const OPEN: [&str; 4] = ["lifecycle_clean", "lifecycle_forgetful", "lifecycle_leaky", "lifecycle_overwrites"];
+
+/// EVERY WORLD OF facts/checks.rofl WHOSE PLAN CUTS A BOOK, as `npm test` loads it (boot.rofl, then its files).
+#[test]
+fn the_checked_worlds_split_by_their_plans() {
+    let (mut ran, mut refused, mut open, mut bad) = (0, 0, 0, Vec::new());
+    for (w, texts) in checked_worlds() {
+        let w = &w;
         let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
         let t0 = std::time::Instant::now();
         match held(w, &refs, &[1]) {
@@ -395,11 +409,14 @@ fn the_checked_worlds_split_by_their_plans() {
                 eprintln!("REFUSED {w}, as the engine by volumes refuses it: {} is stated by a file and no `own[fixpointplan]` names it (by volumes: {})", fact(&e), fact(&said));
                 refused += 1;
             }
-            // OPEN, f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest: the engine's pass above given lemmas
-            // (`Eval::stage_given`) does not fire `ow_fn[lifecycle](X, F) :- updated_by[lifecycle](_, X),
-            // nearest_v[flow](F, X)`, a rule the plan names `across`, where both premises hold in that world; the
-            // rows it concludes and those that rest on them are lost, and nothing else is. A world named here that
-            // comes whole is a red too: the gap closed, take its name out.
+            // OPEN, f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest: a pass above given lemmas walks
+            // `nearest_v[flow]` again, and the nearest is closed until its level while its condition is already
+            // given; `ow_fn[lifecycle](X, F) :- updated_by[lifecycle](_, X), nearest_v[flow](F, X)`, monotone and
+            // standing above that level, fires from the given binders at the start, meets it closed and is never
+            // fired again. The engine's units do not walk it: they read the tree its file settled (the plan's
+            // `tree[stageplan](nearest_v, flow)`), and are whole (`the_checked_worlds_by_the_engines_units`). The
+            // rows of that rule and those that rest on them are lost, and nothing else is. A world named here
+            // that comes whole is a red too: the gap closed, take its name out.
             Err(g) if OPEN.contains(&w.as_str()) && g.more == 0 && g.lost.iter().all(|r| ["ow_fn[lifecycle]", "ow_read_elsewhere[lifecycle]"].contains(&r.as_str())) => {
                 eprintln!("OPEN {w}: {}", &g.said[..g.said.len().min(600)]);
                 open += 1;
@@ -414,6 +431,72 @@ fn the_checked_worlds_split_by_their_plans() {
     assert!(ran > 0, "no world of facts/checks.rofl cuts a book");
     eprintln!("parity of the checked worlds: {ran} that cut a book, {refused} of them refused, {open} open");
     assert!(bad.is_empty(), "of {ran} worlds, not the world whole: {bad:?}");
+}
+
+/// THE ENGINE'S OWN UNITS, held to the same worlds (`Session::by_volumes`, the path `rofl ask` takes over a corpus):
+/// every checked world that cuts a book and names a file is the world whole by them, or refused as the split by the
+/// plan refuses it. The four worlds the split by the plan leaves open are whole here: a unit reads a nearest from
+/// the tree its file settled, where a pass above given lemmas walks it again and meets it closed.
+/// A world to a process, as `rofl ask` is: the units of a second program in one process read the names of the first
+/// (f_the_units_of_two_programs_in_one_process_share_their_names), so this test runs itself again for each world.
+#[test]
+fn the_checked_worlds_by_the_engines_units() {
+    if std::env::var("STAGE_PLAN_UNITS").is_ok() {
+        for (w, texts) in checked_worlds() {
+            let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+            let parts = cut(&refs);
+            let mut core = Session::fresh(BUDGET);
+            core.load_all(&[parts.core.as_str()], None).unwrap();
+            let cuts: Vec<String> = rows(&core.eval.stage_plan_text(), "cuts").into_iter().map(|a| a[0].clone()).collect();
+            let files = parts.files.len();
+            match core.by_volumes(parts.files) {
+                Err(e) if rofl::describe(&e).contains("the plan names what a file states") => println!("UNITS refused {w}"),
+                Err(e) => println!("UNITS red {w}: {}", rofl::describe(&e)),
+                Ok((vol, _)) => {
+                    let mut all = whole(&refs).unwrap_or_else(|e| panic!("{w}: {e}"));
+                    let (want, got) = (keys(&all.eval, &cuts), keys(&vol.eval, &cuts));
+                    // (held, as the split is, to what the world whole keeps)
+                    let more: Vec<&String> = got.difference(&want).filter(|k| kept(&mut all, k)).collect();
+                    let lost: Vec<&String> = want.difference(&got).collect();
+                    println!("UNITS {} {w}: {files} files, {} rows whole, {} by units, lost {}, more {}; {:?} {:?}", if lost.len() + more.len() == 0 { "whole" } else { "red" }, want.len(), got.len(), lost.len(), more.len(), lost.iter().take(3).collect::<Vec<_>>(), more.iter().take(3).collect::<Vec<_>>());
+                }
+            }
+        }
+        return;
+    }
+    // (the engine goes by units over files: a world of none is evaluated whole)
+    let worlds: Vec<String> = checked_worlds().into_iter().filter(|(_, texts)| !cut(&texts.iter().map(String::as_str).collect::<Vec<_>>()).files.is_empty()).map(|x| x.0).collect();
+    let said: Vec<String> = std::thread::scope(|s| {
+        let runs: Vec<_> = worlds
+            .chunks(worlds.len().div_ceil(3).max(1))
+            .map(|ws| {
+                s.spawn(move || {
+                    ws.iter()
+                        .map(|w| {
+                            let out = std::process::Command::new(std::env::current_exe().unwrap()).args(["the_checked_worlds_by_the_engines_units", "--exact", "--nocapture"]).env("STAGE_PLAN_UNITS", "1").env("STAGE_PLAN_WORLD", w).output().unwrap();
+                            let text = String::from_utf8_lossy(&out.stdout).to_string();
+                            text.lines().find(|l| l.starts_with("UNITS ")).map(str::to_string).unwrap_or_else(|| format!("UNITS red {w}: no verdict: {}", String::from_utf8_lossy(&out.stderr).lines().rev().take(4).collect::<Vec<_>>().join(" | ")))
+                        })
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        runs.into_iter().flat_map(|r| r.join().unwrap()).collect()
+    });
+    for l in &said {
+        eprintln!("{l}");
+    }
+    let count = |k: &str| said.iter().filter(|l| l.starts_with(&format!("UNITS {k} "))).count();
+    eprintln!("the engine's units over the checked worlds: {} that cut a book and name a file, {} whole, {} refused, {} open", said.len(), count("whole"), count("refused"), count("red"));
+    // OPEN, f_the_units_lose_the_qualified_names_of_the_rust_model: the reader of the units answers
+    // `fn_q[rust](F, Q)` with no row where the world whole holds some (a name a rule makes with `concat`), and what
+    // rests on it is lost or too many. The split by the plan is whole on these six. One that comes whole is a red.
+    let red: Vec<&String> = said.iter().filter(|l| l.starts_with("UNITS red")).filter(|l| !UNITS_OPEN.iter().any(|w| l.starts_with(&format!("UNITS red {w}:")))).collect();
+    let closed: Vec<&&str> = UNITS_OPEN.iter().filter(|w| !said.iter().any(|l| l.starts_with(&format!("UNITS red {w}:")))).collect();
+    assert!(count("whole") > 0 && red.is_empty() && closed.is_empty(), "by the engine's units, not the world whole: {red:?}; named open and whole now: {closed:?}");
+    for w in OPEN {
+        assert!(said.iter().any(|l| l.starts_with(&format!("UNITS whole {w}:"))), "{w} is open by the plan's split and whole by the engine's units");
+    }
 }
 
 /// `rofl serve` GIVES THE PLAN BY ITS `rows`, of a session that loaded the program and no file: the facts of
@@ -439,13 +522,13 @@ fn rofl_serve_gives_the_plan_by_rows() {
     let mut here = Session::fresh(BUDGET);
     here.load_all(&[BY_FILE], None).unwrap();
     let plan = here.eval.stage_plan_text();
-    for rel in ["fires", "gives", "cuts", "own"] {
+    for rel in ["fires", "gives", "cuts", "own", "layer", "tree"] {
         let got = ask(serde_json::json!({"op": "rows", "session": s, "rel": rel, "persp": "stageplan"}));
         let mut keys: Vec<String> = got["facts"].as_array().unwrap_or_else(|| panic!("{got}")).iter().map(|f| f["key"].as_str().unwrap_or_default().to_string() + ".").collect();
         keys.sort();
         let mut want: Vec<&str> = plan.lines().filter(|l| l.starts_with(&format!("{rel}["))).collect();
         want.sort();
-        assert!(!want.is_empty() && keys == want, "{rel}: served {keys:?}, the plan {want:?}");
+        assert!((!want.is_empty() || rel == "tree") && keys == want, "{rel}: served {keys:?}, the plan {want:?}");
     }
     let across = ask(serde_json::json!({"op": "rows", "session": s, "rel": "fires", "persp": "stageplan", "at": {"1": "across"}}));
     assert_eq!(across["facts"].as_array().map(Vec::len), Some(plan.lines().filter(|l| l.ends_with(",across).")).count()), "{across}");
