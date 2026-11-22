@@ -759,6 +759,43 @@ Stages are Rust only: the TypeScript engine evaluates the world whole, and the w
 on Rust (`check_opt(W, one_engine, rust)`). The engine does not yet derive a stage from what is read and asked; a
 stage is the plan's mark.
 
+## The stage given out
+
+**The stage a world is evaluated by is read as facts of the book `stageplan`**, for a world that executes it
+elsewhere: a federation whose nodes hold the files and whose coordinator fires the rules that cross them. No flag
+and no op of its own: `rofl serve`, `{"op":"rows","session":S,"rel":"fires","persp":"stageplan"}` (and `gives`,
+`cuts`, `own`, `layer`, `tree`), asked of a session that loaded the program; the files need not be loaded, and the plan does not
+move with them. It is the stage the engine itself evaluates by levels (`Eval::level_stage`, read by
+`Eval::stage_plan` in `engine/stages.rs`), not an analysis beside it.
+
+| fact | says |
+|---|---|
+| `fires(Rule, core)` | the rule reads no file: fired once, before the files, over what no file states |
+| `fires(Rule, file)` | the rule cannot leave a file (*Lemma stages*, above): fired in the world of the file, or of any set of files; a world of no file fires it too, over what the core states |
+| `fires(Rule, both)` | fired in the file's world and again above it (a closure walked on both sides) |
+| `fires(Rule, across)` | the rule may cross files: fired once, over what the files gave |
+| `gives(Rel)` | what a file's world concludes of `Rel` is given above; what it concludes of any other relation is not. The edges of a declared tree and the condition of a `nearest` are among them: a closure answered from a tree has no row to give, and the world above walks it |
+| `cuts(Book)` | the facts of `Book` stay in the file's world; every other fact a file states is given above |
+| `layer(Rule, N)` | the order the engine's units fire the rules across in: 0 where two units meet, from 1 the layers above, each after the absences it asks are settled; a rule across with no layer is fired last, once, by the world that reads the units |
+| `tree(Rel, Book)` | a closure answered from a tree a file settles alone (a `nearest`, a `tree ... closure`): a unit reads it from the tree of the file that holds the node, complete from the start, and does not walk it again |
+| `own(Rel, Book, I)` | a fact of `Rel[Book]` a file's world holds that is of the file holds a node of it at argument `I`, from 0, so the fact's file is read off it; one that holds no node there is of no file, the same in every file's world (`none`: no argument holds one; `any`: in every book) |
+
+`Rule` is the rule's id, `r` and the sum of its canonical text, the id `why` prints and the kernel's book keeps
+(`rows` of `rule`, `conclusion_lit`, `premise_lit`). A split executed from these facts alone is the whole world,
+fact for fact outside the cut books, however the files are dealt to the nodes (`cargo test -p rofl --test
+stage_plan`: the plan is taken as its text, the stage read back from it by `Eval::stage_planned`, and held to the
+world whole over random programs, every world of facts/checks.rofl that cuts a book, and the JS model). It is held
+to what the world whole keeps: a relation concluded below the cut that no rule above reads (the edges of a tree)
+is given by the split and dropped by the world whole. A world whose files state a relation no `own[fixpointplan]`
+names is refused by the split as by the engine (*Lemma stages*). A world that is given the lemmas and walks a `tree(Rel, Book)` again above
+them, instead of reading it from its file, holds the same rows: a `nearest` opens at the level of its condition, and
+a monotone rule above that level that fired before, from what was given, fires again at the opening (the four
+lifecycle worlds, which lost 4 or 5 rows each before; `f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest`). The size is
+the program's: one `fires` a rule, and for the JS model 6 426 facts, 219 KB (3 401 rules: 79 `core`, 1 293 `file`,
+10 `both`, 2 019 `across`; 460 `gives`). A program whose plan cuts no
+book has no rule of a file: every rule is `across` or `core`. What the units of one process join by where they
+meet (`Joins` in `engine/levels.rs`: the relation, the argument, the value) is not given out yet.
+
 ## A corpus larger than one heap
 
 **`rofl ask`, `rofl why` and `rofl whynot` answer a corpus by volumes, by themselves.** When

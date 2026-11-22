@@ -2195,6 +2195,15 @@ brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
 brk_expects("kept_stale_engine", "kept_engine").
 brk("volumes_dict_unkept"). brk_kind("volumes_dict_unkept", switch).
 brk_expects("volumes_dict_unkept", "kept_damaged").
+brk("plan_across_as_file"). brk_kind("plan_across_as_file", switch).
+brk_expects("plan_across_as_file", "stage_plan_by_file").
+brk("plan_given_dropped"). brk_kind("plan_given_dropped", switch).
+brk_expects("plan_given_dropped", "stage_plan_by_file").
+brk("plan_key_off_by_one"). brk_kind("plan_key_off_by_one", switch).
+brk_expects("plan_key_off_by_one", "stage_plan_by_file").
+brk("nearest_fired_closed_left"). brk_kind("nearest_fired_closed_left", switch).
+brk_expects("nearest_fired_closed_left", "nearest_reader_above").
+brk_expects("nearest_fired_closed_left", "stage_plan_checked").
 brk("units_named_let_go"). brk_kind("units_named_let_go", switch).
 brk_expects("units_named_let_go", "kept_damaged").
 brk("units_patch_drops_moved"). brk_kind("units_patch_drops_moved", switch).
@@ -2645,6 +2654,7 @@ switch_site("narrow_once", "rust/rofl/src/engine.rs").
 switch_site("narrow_overshoot", "rust/rofl/src/cell.rs").
 switch_site("narrow_why_bare", "rust/rofl/src/engine.rs").
 switch_site("narrower_by_columns", "rust/rofl/src/store.rs").
+switch_site("nearest_fired_closed_left", "rust/rofl/src/engine/vclosure.rs").
 switch_site("neg_unknown_unbound", "rust/rofl/src/engine.rs").
 switch_site("next_cells_reflected_early", "rust/rofl/src/engine.rs").
 switch_site("no_agg_edge", "rust/rofl/src/engine.rs").
@@ -2700,6 +2710,9 @@ switch_site("plain_reader_unclosed", "rust/rofl/src/engine.rs").
 switch_site("plain_rule_hole_unspread", "rust/rofl/src/engine.rs").
 switch_site("plain_staged_why_present", "rust/rofl/src/engine.rs").
 switch_site("plain_unknown_settles", "rust/rofl/src/engine.rs").
+switch_site("plan_across_as_file", "rust/rofl/src/engine/stages.rs").
+switch_site("plan_given_dropped", "rust/rofl/src/engine/stages.rs").
+switch_site("plan_key_off_by_one", "rust/rofl/src/engine/stages.rs").
 switch_site("post_resends_flying", "rust/rofl/src/adapter.rs").
 switch_site("promoted_tick_scope_kept", "rust/rofl/src/store.rs").
 switch_site("prov_reader_deferred", "rust/rofl/src/engine/prov.rs").

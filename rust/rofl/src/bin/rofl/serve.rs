@@ -117,6 +117,8 @@
 //! (playground/rust.ts RustStore), each answer in a snapshot's own form:
 //!   {"op":"rows","session":2,"rel":"r","persp":"main","at":{"0":"a"}} -> {"facts":[...]}: the facts of a relation, in one
 //!                                                        book or all, those whose argument at each position is spelled so
+//!                                                        `"persp":"stageplan"`: the stage the world is evaluated by, as
+//!                                                        facts (`fires`, `gives`, `cuts`, `own`; docs/cli.md, *The stage given out*)
 //!   {"op":"fact","session":2,"key":"r[main](a)"}      -> {"fact":{...}|null}
 //!   {"op":"firings","session":2,"key":"r[main](a)"}   -> {"firings":[...]}: ranked, the witness first
 //!   {"op":"cell","session":2,"key":"$cell(...)"}      -> {"cell":{...}|null}
@@ -570,6 +572,15 @@ impl Server {
         for (rel, b, args) in e.store.virtual_facts(&e.h, Some(rel)) {
             if book.is_none_or(|x| x == b) && at.iter().all(|(k, v)| args.get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
                 facts.push(rofl::seed::virtual_json(&e.h, rel, b, &args));
+            }
+        }
+        // the stage as facts (`Eval::stage_plan`), computed where the world states none
+        let b = e.h.intern("stageplan");
+        if persp.as_deref() == Some("stageplan") && e.store.live_census().iter().all(|c| c.1 != b) {
+            for (r, args) in e.stage_plan() {
+                if r == rel && at.iter().all(|(k, v)| args.get(*k).is_some_and(|t| e.h.canon(*t) == *v)) {
+                    facts.push(rofl::seed::virtual_json(&e.h, r, b, &args));
+                }
             }
         }
         Ok(json!({ "facts": facts }))

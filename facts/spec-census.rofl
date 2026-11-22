@@ -299,6 +299,14 @@ check[checks]("rust/rofl/tests/sql.rs", "a_question_loads_only_the_rows_it_reach
 check[checks]("rust/rofl/tests/sql.rs", "an_argument_is_bound_never_written_into_the_query", test).
 check[checks]("rust/rofl/tests/sql.rs", "a_template_a_rule_builds_is_refused", test).
 check[checks]("rust/rofl/tests/sql.rs", "a_database_that_is_not_there_fails_its_wants", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "a_split_by_the_plan_is_the_world_whole", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "random_programs_split_by_their_plans", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "the_plan_does_not_move_with_the_files", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "the_js_model_split_by_its_plan", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "a_reader_above_a_nearest_that_fired_before_it_opened", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "the_checked_worlds_split_by_their_plans", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "the_checked_worlds_by_the_engines_units", test).
+check[checks]("rust/rofl/tests/stage_plan.rs", "rofl_serve_gives_the_plan_by_rows", test).
 check[checks]("rust/rofl/tests/stages.rs", "a_cut_world_holds_what_the_whole_world_holds_outside_the_cut", test).
 check[checks]("rust/rofl/tests/stages.rs", "a_fact_read_only_above_the_cut_is_retracted_as_fresh", test).
 check[checks]("rust/rofl/tests/structure.rs", "a_declaration_changes_no_fact_and_the_planner_reads_its_promise", test).
@@ -1085,6 +1093,7 @@ test_file[checks]("rust/rofl/tests/scan.rs").
 test_file[checks]("rust/rofl/tests/served.rs").
 test_file[checks]("rust/rofl/tests/session.rs").
 test_file[checks]("rust/rofl/tests/sql.rs").
+test_file[checks]("rust/rofl/tests/stage_plan.rs").
 test_file[checks]("rust/rofl/tests/stages.rs").
 test_file[checks]("rust/rofl/tests/structure.rs").
 test_file[checks]("rust/rofl/tests/structures.rs").
