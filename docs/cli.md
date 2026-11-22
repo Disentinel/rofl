@@ -87,11 +87,43 @@ and in any book by `ask`: write the book, `calls[code](A, B)`.
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
 a shrug, and when the rows may be short of an answer a first line
 `[partial answer: ...]` and a last `[partial: why]` (*A partial answer reads as one*, below).
+
+**An answer names the place of each node.** A value of a row that the world's
+plan places (`site[fixpointplan](at, tree)`: `at[tree](N, File, Line)` in the JS
+and Rust models, the one a lemma is placed by) is said under its row, the id
+kept for the next question:
+
+```
+S = n2bf233effbb62ea7_do3ljrh2m5umf, F = fs_mutation
+  S: vs/base/node/pfs.ts:412  return promisify(fs.utimes)(path, atime, mtime);
+```
+
+The line's text is read from the file as named, else from the path a file of
+facts says its scan read (`-- reads: PATH`, which `rofl scan` writes at its head);
+where neither is found the place is `File:Line` alone. `--json` and `rofl serve`
+carry the same as `"places": {"n…": {"file", "line", "text"}}` beside the rows,
+which keep the ids. It costs one index probe for each distinct value and the read
+of each source named; where the world cut the book its site reads (the JS model cuts
+`[ast_oxc]`, and keeps no `at[tree]` that nothing above reads), the files of the
+answer's nodes are thawed together with only the rules the site stands on, each
+reading of its file's kept text only the lines that name a node asked
+(`Eval::sites_of`): at 1000 vscode files, an ask from the kept world of 24 rows in 24
+files takes 0.28 s with its places against 0.17 s without, one of 4 737 rows in 445
+files 1.3 s (release build, the median of three). **`ask` takes one literal**: a join (`a(X), b(X)`) is refused
+with what to do instead, a rule in a file of the world (`q(X) :- a(X), b(X).`)
+asked as `q(X)`.
+
+**`undefined`** in an answer of the JS model is the JS value, the atom
+`undefined` (the string `"undefined"` is another): the global of that name,
+`void`, a `let` or `var` with no initialiser where it is read, a parameter a call
+leaves out, a call of a function that may end without a value, a get that may
+find no entry (models/lang/js/rules/js-dataflow.rofl, section 1). A value of
+`side_effect_value` that is `undefined` is that: the argument may be undefined at the site.
 `npm run whycheck` holds every one of them to the TypeScript engine byte for
 byte over every world `npm test` loads, refusals included.
 
 **`--json`** prints each answer as one line in the shape `rofl serve` answers:
-`{"ok":true,"vars","rows","keys","shrugs","partial"}` for an ask,
+`{"ok":true,"vars","rows","keys","shrugs","places","partial"}` for an ask,
 `{"ok":true,"text"}` for a why, `{"ok":true,"holds","text"}` for a whynot,
 `{"ok":true,"removed","added"}` for an excise, `{"ok":false,"error"}` for a
 refused question. With no question it prints `{"ok":true,"state","partial"}`.
@@ -792,13 +824,30 @@ unbound `calls[code](A, B)` 0.17 s and 0.20 GB (265); at 250 files a bound ask
 0.08 s and 0.10 GB (4 of 505). Before, every unit was opened first: 3.6 s and
 3.9 GB, 4.0 s and 5.2 GB, 3.5 s and 3.9 GB
 (`f_a_question_opens_of_a_kept_world_what_its_walk_reads`).
+**The files are read where they lie, and cut to disk.** The sources are mapped, not read onto the
+heap, and each file's facts are written as they are cut to a file under the system's temporary directory
+(`rofl-cut-<pid>-<n>.txt`, unlinked once mapped on Unix, so a process killed leaves none), from which the unit
+that settles the file reads them; the kept texts are written from there a file at a time. What the read holds
+is the core and the text being cut, not the corpus; the disk holds the corpus once more while the world is
+settled. Measured (the whole of vscode at the bench's commit, 14 485 files, the side-effect question, the
+`fast` build, 4 cores, a 14 GB cgroup, 2026-11-21): the scan as columns (1.77 GB) read and cut in 19 s at
+0.22 GB of heap, 3.8 GB before; as text (8.1 GB) in 32 s at 69 MB, where before the memory wall stopped the
+read at 31 s with no answer (`f_the_read_holds_one_file`).
 **Past a quarter of the memory the process may use** (the memory wall's
 measure, below), the units done are cooled: written to a segment under the
 system's temporary directory (`rofl-units-<pid>-<n>.seg`, unlinked once mapped
 on Unix, so a process killed leaves none; elsewhere removed at the end) and
 read back mapped from it, so what no unit reads again lies in pages the
 system takes back. Stderr says how many times, how many units and how many MB
-of disk. A world its units refuse (a wall met, a fact that breaks the plan's
+of disk. A unit is cooled whole: its facts and firings, its directories of
+keys, and a unit where children met and made no fact of its own too; the keys
+the units' proofs quote are cooled once those come since outweigh those cooled,
+and the indexes a reader builds over a cooled unit (the places of its facts, its
+facts by key and by relation) lie in one spill file of the same directory
+(`rofl-spill-<pid>.bin`, sparse, unlinked once mapped). Over 2 286 vscode files
+the heap after the six layers is 3.3 GB where it was 7 GB and the last layer met
+the wall (`f_a_unit_cools_whole`); `ROFL_CENSUS=1` prints what the units hold at
+each depth. A world its units refuse (a wall met, a fact that breaks the plan's
 `own`) is said on stderr and evaluated whole. Measured on the release build, 4
 cores, the side-effect question over vscode, kept too: 250 files 18 to 21 s, 750
 files 60 to 68 s from one hour to the next on a shared machine, a third of it

@@ -966,12 +966,12 @@ impl Session {
 
     /// This world, holding the core, and the `files` settled by levels (`engine/volumes.rs`): the world that reads
     /// their units. Refused when it asks for input (a scan or an adapter's want), which the units cannot bring.
-    pub fn by_volumes(&mut self, files: Vec<(String, String)>) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
+    pub fn by_volumes(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
         self.by_volumes_over(files, "")
     }
 
     /// `by_volumes`, `over` laid over the files' units (`Eval::by_volumes_over`).
-    pub fn by_volumes_over(&mut self, files: Vec<(String, String)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
+    pub fn by_volumes_over(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
         let (eval, stats) = self.eval.by_volumes_over(files, over)?;
         let mut s = Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
         let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
@@ -1516,6 +1516,14 @@ impl Session {
         r
     }
 
+    /// Where the world's plan places each node an answer names (`site[fixpointplan]`, `at[tree](N, File, Line)` in
+    /// the JS and Rust models): each value of the rows that some site names, once, with the site's other arguments.
+    pub fn places(&mut self, a: &Answer) -> Vec<(String, Vec<String>)> {
+        let mut seen = HashSet::new();
+        let names: Vec<String> = a.rows.iter().chain(a.shrugs.iter().map(|(r, _)| r)).flatten().filter(|v| seen.insert(v.as_str())).cloned().collect();
+        self.eval.sites_of(&names)
+    }
+
     /// Ask one literal, written as ROFL: `edge(a, X)`, `kind[js](F, _)`.
     ///
     /// The query language is the SOURCE language, which is the whole reason the
@@ -1528,6 +1536,9 @@ impl Session {
         self.asks += 1;
         if let Some(m) = &self.eval.ds.promise_broken {
             return Err(m.clone());
+        }
+        if joins(query) {
+            return Err(format!("ask takes one literal, and `{}` joins several: write the join as a rule in a file of the world, `q(X) :- a(X), b(X).` with the variables you want in the head, and ask `q(X)` with that file", query.trim()));
         }
         let src = format!("{}.", query.trim().trim_end_matches('.'));
         let cs = rofl_parse::parse(&mut self.eval.h, &src)?;
@@ -2660,3 +2671,20 @@ fn trim_heap() {
 
 #[cfg(not(all(target_os = "linux", target_env = "gnu")))]
 fn trim_heap() {}
+
+/// Whether a question is several literals: a comma outside every bracket and string (`a(X), b(X)`).
+fn joins(q: &str) -> bool {
+    let (mut depth, mut quoted, mut escaped) = (0i32, false, false);
+    for c in q.chars() {
+        match c {
+            _ if escaped => escaped = false,
+            '\\' if quoted => escaped = true,
+            '"' => quoted = !quoted,
+            '(' | '[' | '{' if !quoted => depth += 1,
+            ')' | ']' | '}' if !quoted => depth -= 1,
+            ',' if !quoted && depth == 0 => return true,
+            _ => {}
+        }
+    }
+    false
+}

@@ -49,6 +49,7 @@ unsafe impl Sync for Region {}
 
 enum Hold {
     Map(#[allow(dead_code)] memmap2::Mmap),
+    Spill(#[allow(dead_code)] memmap2::MmapMut),
     #[cfg(unix)]
     Stitched,
 }
@@ -985,6 +986,56 @@ fn stitch<T: Pod>(base: &Base, at: usize, bytes: usize, deltas: &[Delta], len: u
 
 /// A file mapped read-only. The file must not change while it is mapped: a volume is written once, beside the
 /// world it keeps, under a name of its own.
+/// THE SPILL: one file of the temporary directory, mapped once and written at its end. An array put there lies on
+/// disk and is read in place, the heap holding none of it; the file is let go once mapped, its space when the process
+/// ends. What a process past the memory it may use puts there is what it made once and only reads.
+struct Spill {
+    region: Rc<Region>,
+    at: std::sync::atomic::AtomicUsize,
+}
+
+/// The span the spill's mapping reserves: the file is sparse, so the disk holds what was written.
+const SPILL_SPAN: usize = 1 << 40;
+
+fn spill_file() -> Option<&'static Spill> {
+    static SPILL: std::sync::OnceLock<Option<Spill>> = std::sync::OnceLock::new();
+    SPILL
+        .get_or_init(|| {
+            let path = std::env::temp_dir().join(format!("rofl-spill-{}.bin", std::process::id()));
+            let f = std::fs::OpenOptions::new().read(true).write(true).create(true).truncate(true).open(&path).ok()?;
+            let mapped = f.set_len(SPILL_SPAN as u64).ok().and_then(|_| {
+                // SAFETY: the file is this process's own, unlinked below; a span of it is written once, before any
+                // arena over it is made, and never again.
+                unsafe { memmap2::MmapOptions::new().len(SPILL_SPAN).map_mut(&f) }.ok()
+            });
+            let _ = std::fs::remove_file(&path);
+            let m = mapped?;
+            Some(Spill { region: Rc::new(Region { ptr: m.as_ptr(), len: SPILL_SPAN, hold: Hold::Spill(m) }), at: Default::default() })
+        })
+        .as_ref()
+}
+
+/// `v` put in the spill, and the arena that reads it there; None where there is no spill or no room in it.
+pub fn spill<T: Pod>(v: &[T]) -> Option<Arena<T>> {
+    let s = spill_file()?;
+    let bytes = std::mem::size_of_val(v);
+    let off = s.at.fetch_add(bytes.next_multiple_of(8), std::sync::atomic::Ordering::Relaxed);
+    if off + bytes > s.region.len {
+        return None;
+    }
+    // SAFETY: the span `off..off + bytes` is this call's alone (taken above) and lies in the mapping.
+    unsafe { std::ptr::copy_nonoverlapping(v.as_ptr() as *const u8, s.region.ptr.add(off) as *mut u8, bytes) };
+    Arena::mapped(&s.region, off, v.len())
+}
+
+/// `v` as an arena: in the spill when `cold`, where it can be, else on the heap.
+pub fn spilled<T: Pod>(v: Vec<T>, cold: bool) -> Arena<T> {
+    match cold.then(|| spill(&v)).flatten() {
+        Some(a) => a,
+        None => Arena::Heap(v),
+    }
+}
+
 pub fn map_file(path: &str) -> std::io::Result<Rc<Region>> {
     let f = std::fs::File::open(path)?;
     // SAFETY: the volume is written whole before it is opened and never written again (`volume::keep`).

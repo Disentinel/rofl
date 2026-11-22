@@ -2542,13 +2542,11 @@ impl Eval {
             self.diags.push("asks: the stock evaluator orders every rule by its stratum table, so every rule is kept".to_string());
             return None;
         }
-        // a world that cuts a book places its lemmas by the plan's site, which `why` reads whatever is asked
-        let (site, plan, cut) = (self.h.intern("site"), self.h.intern("fixpointplan"), self.h.intern("cut"));
-        if !self.store.rel_persp(&self.h, cut, plan).is_empty() {
-            for f in self.store.rel_persp(&self.h, site, plan) {
-                if let Some(rel) = self.store.args(f).first().and_then(|t| t.as_atom()) {
-                    cone.insert(rel);
-                }
+        // the plan's site places a lemma for `why` and a node for an answer, whatever is asked
+        let (site, plan) = (self.h.intern("site"), self.h.intern("fixpointplan"));
+        for f in self.store.rel_persp(&self.h, site, plan) {
+            if let Some(rel) = self.store.args(f).first().and_then(|t| t.as_atom()) {
+                cone.insert(rel);
             }
         }
         let (req, main) = (self.v.explain_request, self.v.main);
@@ -17149,7 +17147,7 @@ impl Eval {
             let sources = self.lower_sources.clone()?;
             let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
             let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
-            self.lower_texts = Some(Rc::new(cut.files.into_iter().collect()));
+            self.lower_texts = Some(Rc::new(cut.files.into_iter().map(|(f, t)| (f, t.into_text())).collect()));
         }
         self.lower_texts.as_ref()?.get(file).cloned()
     }

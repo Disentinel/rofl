@@ -8799,6 +8799,13 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "levels_far_fact_unplaced",
+  "what": "a unit an edit mends waits, for a fact of another unit's stretch it wrote a firing of, on its own firings of it, which may read it back through its own facts alone: the fact and what it concluded are lost though the child still holds it",
+  "expect": {
+   "levels_far_held": "other = 2: q[d](A) by levels"
+  }
+ },
+ {
   "id": "levels_leaf_first_file",
   "what": "an edit settles again a unit of files only where its first file was edited: a file further in it stays as it stood",
   "expect": {
@@ -9202,6 +9209,7 @@ export const TESTS: Record<string, string> = {
   // a world kept on disk (docs/cli.md): each case of tests/kept.rs names itself where it fails
   kept_rule: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   levels_whole: 'kept a_world_by_levels_answers_as_the_world_whole',
+  levels_far_held: 'kept a_fact_a_child_holds_stands_where_its_group_concluded_it_again',
   kept_boot: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_md: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',
   kept_scan: 'kept a_kept_world_answers_and_refuses_as_docs_cli_says',

@@ -26,6 +26,7 @@ mod load;
 mod memory;
 mod progress;
 mod nb;
+mod place;
 mod render;
 mod seed;
 mod serve;

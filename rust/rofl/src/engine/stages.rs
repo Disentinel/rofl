@@ -535,6 +535,14 @@ impl Eval {
     /// Where a lemma stands, by the plan's `site[fixpointplan](Rel, Book)`: the first fact of `Rel[Book]` whose first
     /// argument is one of the lemma's, its other arguments joined by `:` (`at[tree](N, File, Line)`: `File:Line`).
     pub(super) fn lemma_site(&mut self, id: FactId) -> Option<String> {
+        let args: Vec<Term> = self.store.args(id).to_vec();
+        args.into_iter().find_map(|a| self.site_of(a)).map(|rest| rest.join(":"))
+    }
+
+    /// Where the plan's `site[fixpointplan](Rel, Book)` places a term: the other arguments of the first fact of
+    /// `Rel[Book]` whose first argument it is (`at[tree](N, File, Line)`: `[File, Line]`); none for a term no site names.
+    pub fn site_of(&mut self, a: Term) -> Option<Vec<String>> {
+        a.as_atom()?;
         let (rel, book) = (self.h.intern("site"), self.h.intern("fixpointplan"));
         let site: Vec<(Sym, Sym)> = self
             .store
@@ -545,20 +553,72 @@ impl Eval {
                 _ => None,
             })
             .collect();
-        let args: Vec<Term> = self.store.args(id).to_vec();
         for (r, b) in site {
-            for a in args.iter().filter(|a| a.as_atom().is_some()) {
-                let Some(fs) = self.store.arg_matches(&self.h, r, Some(b), 3, &[0], &[*a]) else { continue };
-                if let Some(&f) = fs.iter().find(|&&f| self.store.alive(f)) {
-                    let rest: Vec<String> = self.store.args(f)[1..].iter().map(|t| match t.kind() {
-                        TermK::Str(s) => self.h.name(s).to_string(),
-                        _ => self.h.canon(*t),
-                    }).collect();
-                    return Some(rest.join(":"));
-                }
+            // (a relation the store keeps no index of is walked)
+            let fs = self.store.arg_matches(&self.h, r, Some(b), 3, &[0], &[a]).unwrap_or_else(|| self.store.rel_persp(&self.h, r, b));
+            if let Some(&f) = fs.iter().find(|&&f| self.store.alive(f) && self.store.args(f).len() == 3 && self.store.args(f)[0] == a) {
+                return Some(self.store.args(f)[1..].iter().map(|t| match t.kind() {
+                    TermK::Str(s) => self.h.name(s).to_string(),
+                    _ => self.h.canon(*t),
+                }).collect());
             }
         }
         None
+    }
+
+    /// Where the plan's site places each of these names (`site_of`), and where this store holds no site for one, as a
+    /// world that cut its book holds none that nothing above reads, the node's file thawed with only the rules of the
+    /// lower stage the site reads: a file at a time, each file read once.
+    pub fn sites_of(&mut self, names: &[String]) -> Vec<(String, Vec<String>)> {
+        let mut out = Vec::new();
+        let mut by_file: std::collections::BTreeMap<String, Vec<&String>> = Default::default();
+        for v in names {
+            match self.h.syms.find(v).and_then(|s| self.site_of(Term::atom(s))) {
+                Some(at) => out.push((v.clone(), at)),
+                None => if let Some(f) = super::volumes::node_file(v) { by_file.entry(f.to_string()).or_default().push(v) },
+            }
+        }
+        if by_file.is_empty() || self.thawed {
+            return out;
+        }
+        let Some(mut st) = self.lemma_stage() else { return out };
+        // the rules of the stage the site's relations stand on
+        let (rel, book) = (self.h.intern("site"), self.h.intern("fixpointplan"));
+        let mut need: FxSet<Sym> = self.store.rel_persp(&self.h, rel, book).into_iter().filter_map(|f| self.store.args(f).first()?.as_atom()).collect();
+        let rules: Vec<_> = self.rules.iter().filter(|r| st.rules.contains(&r.id)).cloned().collect();
+        let mut taken: FxSet<Sym> = FxSet::default();
+        loop {
+            let more: Vec<_> = rules.iter().filter(|r| !taken.contains(&r.id) && need.contains(&r.clause.head.rel)).collect();
+            if more.is_empty() { break; }
+            for r in more {
+                taken.insert(r.id);
+                need.extend(r.clause.body.iter().flat_map(BodyElem::lits_deep).map(|l| l.rel));
+            }
+        }
+        // where every premise of those rules holds the node the site places, as `at[tree](N, File, Line) :- node(N,
+        // ...), line(N, ...)` does, a line of a file that names none of the nodes asked proves no site of them
+        let keyed = rules.iter().filter(|r| taken.contains(&r.id)).all(|r| {
+            let Some(&n) = r.clause.head.args.first().filter(|t| t.is_var()) else { return false };
+            r.clause.body.iter().flat_map(BodyElem::lits_deep).all(|l| if taken_heads(&rules, &taken).contains(&l.rel) { l.args.first() == Some(&n) } else { l.args.contains(&n) })
+        });
+        let names: FxSet<String> = need.iter().map(|r| self.h.name(*r).to_string()).collect();
+        st.rules = Rc::new(taken);
+        st.free = FxSet::default();
+        // the files thawed together, in one fork of the core, each of the lines those rules read
+        let mut text = String::new();
+        for (file, vs) in &by_file {
+            let Some(t) = self.lower_text(file) else { continue };
+            let held: Vec<&str> = if keyed { vs.iter().map(|v| v.as_str()).collect() } else { Vec::new() };
+            for l in super::volumes::fact_lines(&t, |r| names.contains(r), &held) {
+                text.push_str(&l);
+                text.push('\n');
+            }
+        }
+        let Ok(mut low) = self.thaw(&text, &st) else { return out };
+        for v in by_file.into_values().flatten() {
+            if let Some(at) = low.h.syms.find(v).and_then(|s| low.site_of(Term::atom(s))) { out.push((v.clone(), at)); }
+        }
+        out
     }
 
     /// Why a retraction is refused here: the world cut a book and holds lemmas, given facts no file names, whose proof
@@ -592,4 +652,9 @@ impl Eval {
             format!("the world cut {} and holds the lemmas proved from it: a fact taken out would leave the lemmas it proved; evaluate the files anew", books.join(" "))
         })
     }
+}
+
+/// The relations the rules `taken` of `rules` conclude.
+fn taken_heads(rules: &[Rc<ERule>], taken: &FxSet<Sym>) -> FxSet<Sym> {
+    rules.iter().filter(|r| taken.contains(&r.id)).map(|r| r.clause.head.rel).collect()
 }

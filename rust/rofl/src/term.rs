@@ -595,6 +595,32 @@ impl Heap {
         }
         w.u64(cons_n as u64);
     }
+    /// What its layers hold, in bytes: the base and the top.
+    pub fn layer_bytes(&self) -> (usize, usize) {
+        (self.syms.base.bytes() + self.base.funcs.capacity() * std::mem::size_of::<FuncNode>() + self.base.args.capacity() * 8, self.syms.top.bytes() + self.top.funcs.capacity() * std::mem::size_of::<FuncNode>() + self.top.args.capacity() * 8)
+    }
+    /// THE HEAP COOLED TO DISK: written as a volume to `path`, mapped, and read from there, every name and term at
+    /// the number it had; what comes after goes on the heap above it. The file is let go once mapped.
+    pub fn spill(&mut self, path: &str) -> Result<(), String> {
+        let mut w = VolW::bounded(path, None).map_err(|e| e.to_string())?;
+        let at = w.at();
+        self.write_volume(&mut w);
+        w.finish().map_err(|e| e.to_string())?;
+        let map = crate::arena::map_file(path).map_err(|e| e.to_string())?;
+        if cfg!(unix) {
+            let _ = std::fs::remove_file(path);
+        }
+        let mut h = Heap::read_volume(&mut VolR::new(map, at))?;
+        if (h.syms.len(), h.funcs_len()) != (self.syms.len(), self.funcs_len()) {
+            return Err("a heap read back is not the one written".into());
+        }
+        h.syms.dict = self.syms.dict.take();
+        h.syms.seen = std::mem::take(&mut self.syms.seen);
+        h.seen = std::mem::take(&mut self.seen);
+        h.keys = std::mem::take(&mut self.keys);
+        *self = h;
+        Ok(())
+    }
     /// The heap a volume holds, mapped; its names are checked to be text, cut where one ends.
     pub fn read_volume(r: &mut VolR) -> Result<Heap, String> {
         let two = |r: &mut VolR| r.u32().map(|n| n == 2);
