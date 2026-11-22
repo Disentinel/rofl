@@ -415,7 +415,7 @@ array_elem[flow](A, I, E) :- array[value](A), nth[tree](A, I, E), parent[tree](A
 array_elem[flow](A, I, X) :- spread_elems[value](A, I, X).
 elem_at[flow](X, I, E)    :- may_be_node[flow](X, A), array_elem[flow](A, I, E).
 -- `list[0]`: a read by an index the layer knows is the element at that index
-may_be[flow](N, VK, V) :- member_at[flow](N, _, A, I), array_elem[flow](A, I, E), may_be[flow](E, VK, V).
+may_be[flow](N, VK, V) :- member_cp[flow](N, A, I), array_elem[flow](A, I, E), may_be[flow](E, VK, V).
 
 -- WHAT A HOST MEMBER RETURNS OF ITS RECEIVER (models/lang/js/facts/js-host.rofl `host_returns`): one of its
 -- elements (`find`, `at`, `pop`), or a new array of them whose places the layer does not keep (`filter`, `slice`,
@@ -454,7 +454,7 @@ any_value[flow](A, VK, V) :- any_read[flow](A), elem_any[flow](A, E), may_be[flo
 any_read[flow](A) :- host_on[flow](_, element, A).
 any_read[flow](A) :- open_key[flow](_, A).
 may_be[flow](N, lit, K) :- at_index[flow](N, A), lit_somewhere[flow](A, K).
-at_index[flow](N, A) :- member_at[flow](N, _, A, I), int is type_of(I).
+at_index[flow](N, A) :- member_cp[flow](N, A, I), int is type_of(I).
 -- `Object.freeze(o)` is o; `Object.create(p)` reads p's members; `Object.fromEntries(pairs)` has them
 may_be[flow](C, VK, V) :- host_src[flow](C, same, R), may_be[flow](R, VK, V).
 may_be[flow](C, node, C) :- host_src[flow](C, What, _), host_makes_object(What).
@@ -1616,7 +1616,7 @@ holds_members[flow](O) :- class_like[flow](O).
 holds_members[flow](O) :- external_value[flow](O, _).
 may_be[flow](N, VK, X) :- member_at_out[flow](N, I, Key), sx_mset[flow](I, Key, VK, X), holds_members[flow](I).
 -- a read of a member not through `this`, joined once: from a new member value, the reads by `this` were each read to be dropped
-member_at_out[flow](N, I, Key) :- member_at[flow](N, _, I, Key), not this_reads[code](N).
+member_at_out[flow](N, I, Key) :- member_cp[flow](N, I, Key), not this_reads[code](N).
 
 -- `inst(CD)` is an instance of CD in general, `this` in its methods' bodies: what any run of its methods, its
 -- ancestors' and its constructor may write on it (an argument as the input, whatever any caller hands), and what is
@@ -1787,8 +1787,9 @@ class_member_static[flow](CD, Key, V) :- class_like[flow](CD), sx_mwrite[flow](C
 
 member_obj[flow](N, O, Obj)      :- bare_node[flow](O, Obj), object_of[code](N, O), member_node_v[flow](N).
 member_at[flow](N, O, Obj, Key)  :- member_obj[flow](N, O, Obj), selects[flow](N, Key).
-may_be[flow](N, VK, Val) :- member_any[flow](N, _, Obj, Key), class_member_static[flow](Obj, Key, V), may_be[flow](V, VK, Val).
-may_be[flow](N, VK, Val) :- member_at[flow](N, _, Obj, Key), member_plain[flow](Obj, Key, V), may_be[flow](V, VK, Val),
+may_be[flow](N, VK, Val) :- member_cp[flow](N, Obj, Key), class_member_static[flow](Obj, Key, V), may_be[flow](V, VK, Val).
+may_be[flow](N, VK, Val) :- member_via[flow](N, _, _, Obj, Key), class_member_static[flow](Obj, Key, V), may_be[flow](V, VK, Val).
+may_be[flow](N, VK, Val) :- member_cp[flow](N, Obj, Key), member_plain[flow](Obj, Key, V), may_be[flow](V, VK, Val),
                             not this_reads[code](N), not getter[value](V, V), not setter[value](V, V).
 
 -- A READ OFF AN INSTANCE. `member_at` is the object where the receiver holds it bare (`bare_node`: itself, or
@@ -1799,6 +1800,37 @@ may_be[flow](N, VK, Val) :- member_at[flow](N, _, Obj, Key), member_plain[flow](
 view bare_node(A, B).
 bare_node[flow](E, N)   :- may_be[flow](E, node, N).
 bare_node[flow](E, N)   :- may_be[flow](E, input, S), input_node[flow](S, N).
+-- A READ OFF A PARAMETER IS THE FUNCTION'S INPUT TOO: `pfield(S, Key)`, the Key of what the parameter S is handed.
+-- In the body it is the general case, what any caller's object holds under Key, said once for the parameter and
+-- the Key (`pval`) and not copied into every read of it: the read holds the input, and a rule that asks what it
+-- holds reads `input_lit` and `input_node` as for any input. Where the read's object is the function's own, or an
+-- input of another kind, the member is copied as before (`member_cp`).
+member_cp[flow](N, Obj, Key) :- object_of[code](N, O), may_be[flow](O, node, Obj), member_node_v[flow](N), selects[flow](N, Key).
+member_cp[flow](N, Obj, Key) :- object_of[code](N, O), may_be[flow](O, input, S), not input_param[flow](S, _, _), input_node[flow](S, Obj),
+                                member_node_v[flow](N), selects[flow](N, Key).
+pread[flow](N, S, Key)        :- object_of[code](N, O), may_be[flow](O, input, S), input_param[flow](S, _, _), member_node_v[flow](N),
+                                 selects[flow](N, Key), not this_reads[code](N).
+may_be[flow](N, input, pfield(S, Key)) :- pread[flow](N, S, Key).
+pkey[flow](S, Key)            :- pread[flow](_, S, Key).
+pobj[flow](S, Key, I)         :- pkey[flow](S, Key), input_node[flow](S, I).
+pval[flow](S, Key, VK, X)     :- pobj[flow](S, Key, I), member_plain[flow](I, Key, V), may_be[flow](V, VK, X),
+                                 not getter[value](V, V), not setter[value](V, V).
+pval[flow](S, Key, VK, X)     :- pobj[flow](S, Key, I), class_member_static[flow](I, Key, V), may_be[flow](V, VK, X).
+pval[flow](S, Key, VK, X)     :- pobj[flow](S, Key, I), sx_mset[flow](I, Key, VK, X), holds_members[flow](I).
+pval[flow](S, Key, VK, X)     :- pobj[flow](S, Key, A), array_elem[flow](A, Key, E), may_be[flow](E, VK, X).
+pval[flow](S, Key, VK, X)     :- pobj[flow](S, Key, A), int is type_of(Key), elem_value[flow](A, VK, X).
+pval[flow](S, Key, lit, K)    :- pobj[flow](S, Key, A), int is type_of(Key), lit_somewhere[flow](A, K).
+indexed[flow](A)              :- pobj[flow](_, Key, A), int is type_of(Key).
+input_lit[flow](pfield(S, Key), V)  :- pval[flow](S, Key, lit, V).
+input_lit[flow](pfield(S, Key), V)  :- pval[flow](S, Key, input, T), input_lit[flow](T, V).
+pnode[flow](pfield(S, Key), X)      :- pval[flow](S, Key, node, X).
+pnode[flow](pfield(S, Key), X)      :- pval[flow](S, Key, inst, via(_, X)).
+pnode[flow](pfield(S, Key), X)      :- pval[flow](S, Key, input, T), input_node[flow](T, X).
+input_node[flow](T, X)              :- pnode[flow](T, X).
+-- what the read holds that is no value to name: an open one is said once, from the input; an instance, a global
+-- and another input are the read's own
+may_be[flow](N, open, pfield(S, Key)) :- pread[flow](N, S, Key), pval[flow](S, Key, open, _).
+may_be[flow](N, VK, X)              :- pread[flow](N, S, Key), pval[flow](S, Key, VK, X), VK != lit, VK != node, VK != open, VK != input.
 -- A READ OFF `this` IS THE METHOD'S INPUT TOO: `field(M, Key)`, the Key of the object the method was called on. In
 -- the body it is what any instance holds (`this_val`, the general case, behind `input_lit` and `input_node` as a
 -- parameter's is); a method that hands it out says so in its summary (`sx_ret_field`, rules/js-surface.rofl) and
@@ -1831,6 +1863,9 @@ input_lit[flow](field(M, Key), V)       :- this_val[flow](M, Key, input, T), inp
 recv_of[flow](C, R)                     :- recv_call[code](C, R).
 recv_of[flow](N, R)                     :- accessor_read[code](N, _), object_of[code](N, R).
 key_wanted[flow](R, Key)                :- resolves[code](C, F), sx_ret_field[flow](F, Key), recv_of[flow](C, R).
+-- the call of a function that hands out a Key of its parameter: the Key read off this call's argument
+key_wanted[flow](A, Key)                :- resolves[code](C, F), sx_ret_pfield[flow](F, I, Key), arg_at[flow](C, I, A).
+may_be[flow](C, VK, X)                  :- resolves[code](C, F), sx_ret_pfield[flow](F, I, Key), arg_at[flow](C, I, A), key_on[flow](A, Key, VK, X).
 may_be[flow](C, VK, X)                  :- resolves[code](C, F), sx_ret_field[flow](F, Key), recv_of[flow](C, R), key_on[flow](R, Key, VK, X).
 has_recv[code](C)                       :- recv_call[code](C, _).
 has_recv[code](N)                       :- member_node_v[flow](N).
@@ -1842,12 +1877,18 @@ view recv_obj(A, B).
 recv_obj[flow](R, I)                    :- may_be[flow](R, node, I).
 recv_obj[flow](R, I)                    :- may_be[flow](R, input, S), input_param[flow](S, _, _), input_node[flow](S, I).
 recv_obj[flow](R, I)                    :- may_be[flow](R, input, T), hop_node[flow](T, I).
+recv_obj[flow](R, I)                    :- may_be[flow](R, input, T), pnode[flow](T, I).
 key_ask[flow](I, Key)                   :- key_wanted[flow](R, Key), recv_obj[flow](R, I).
 key_ask[flow](I, Key)                   :- this_key[flow](M, Key), input_this[flow](S, M), input_node[flow](S, I).
 key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), sx_mset[flow](I, Key, VK, X), holds_members[flow](I).
 key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), member_plain[flow](I, Key, V), may_be[flow](V, VK, X),
                                            not getter[value](V, V), not setter[value](V, V).
 key_getter[flow](I, Key, G)             :- key_ask[flow](I, Key), member_value[flow](I, Key, G), getter[value](G, G).
+key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), class_member_static[flow](I, Key, V), may_be[flow](V, VK, X).
+key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), array_elem[flow](I, Key, E), may_be[flow](E, VK, X).
+key_of[flow](I, Key, VK, X)             :- key_ask[flow](I, Key), int is type_of(Key), elem_value[flow](I, VK, X).
+key_of[flow](I, Key, lit, K)            :- key_ask[flow](I, Key), int is type_of(Key), lit_somewhere[flow](I, K).
+indexed[flow](I)                        :- key_ask[flow](I, Key), int is type_of(Key).
 key_of[flow](I, Key, VK, X)             :- key_getter[flow](I, Key, G), sx_ret_own[flow](G, VK, X).
 key_ask[flow](I, K2)                    :- key_getter[flow](I, _, G), sx_ret_field[flow](G, K2).
 key_of[flow](I, Key, VK, X)             :- key_getter[flow](I, Key, G), sx_ret_field[flow](G, K2), key_of[flow](I, K2, VK, X).
@@ -1920,6 +1961,7 @@ via_holds[flow](C, O, Key, inst, X)  :- via_sum[flow](C, O, Key, inst, X).
 via_holds[flow](C, O, Key, VK, X)    :- via_sum[flow](C, O, Key, input, param(F, I)), resolves[code](C, F),
                                         arg_at[flow](C, I, A), may_be[flow](A, VK, X).
 via_holds[flow](C, O, Key, input, S) :- via_sum[flow](C, O, Key, input, S), resolves[code](C, F), input_this[flow](S, F).
+via_holds[flow](C, O, Key, input, pfield(P, K)) :- via_sum[flow](C, O, Key, input, pfield(P, K)).
 via_holds[flow](C, O, Key, input, S) :- via_sum[flow](C, O, Key, input, S), resolves[code](C, F), input_of[flow](S, H), H != F.
 
 -- A method is a value; a declared function is reached by its name, looked up

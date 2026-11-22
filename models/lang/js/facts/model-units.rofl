@@ -498,6 +498,12 @@ unit_concludes("models/lang/js/rules/js-dataflow.rofl", class_member_proto).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_obj).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_at).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", bare_node).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", member_cp).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", pread).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", pkey).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", pobj).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", pval).
+unit_concludes("models/lang/js/rules/js-dataflow.rofl", pnode).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", this_read).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", this_reads).
 unit_concludes("models/lang/js/rules/js-dataflow.rofl", this_key).
@@ -1432,6 +1438,8 @@ unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_param).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_own).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_input).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_field).
+unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_pfield).
+unit_concludes("models/lang/js/rules/js-surface.rofl", pfield_of).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_hop).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_inst).
 unit_concludes("models/lang/js/rules/js-surface.rofl", sx_ret_self).

@@ -112,6 +112,10 @@ sx_ret_own[flow](F, lit, V)  :- call_returns[flow](F, E), may_be[flow](E, input,
                                    input_lit[flow](S, V).
 sx_ret_input[flow](F, I)     :- call_returns[flow](F, E), may_be[flow](E, input, S), input_param[flow](S, F, I).
 sx_ret_field[flow](F, Key)   :- call_returns[flow](F, E), may_be[flow](E, input, field(F, Key)).
+sx_ret_pfield[flow](F, I, Key) :- call_returns[flow](F, E), may_be[flow](E, input, pfield(S, Key)), input_param[flow](S, F, I).
+pfield_of[flow](pfield(S, K), G) :- pkey[flow](S, K), input_param[flow](S, G, _).
+sx_ret_own[flow](F, node, N) :- call_returns[flow](F, E), may_be[flow](E, input, T), pfield_of[flow](T, G), G != F, input_node[flow](T, N).
+sx_ret_own[flow](F, lit, V)  :- call_returns[flow](F, E), may_be[flow](E, input, T), pfield_of[flow](T, G), G != F, input_lit[flow](T, V).
 sx_ret_hop[flow](F, K, M2)   :- call_returns[flow](F, E), may_be[flow](E, input, hop(F, K, M2)).
 sx_ret_inst[flow](F)         :- sx_ret_field[flow](F, _).
 sx_ret_inst[flow](F)         :- sx_ret_hop[flow](F, _, _).
