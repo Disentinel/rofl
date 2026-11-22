@@ -3969,13 +3969,23 @@ work_state(w_kept_texts_written_whole_on_an_edit, done).
 work_spawned(w_kept_texts_written_whole_on_an_edit, f_a_question_opens_of_a_kept_world_what_its_walk_reads).
 
 work(w_units_segments_grow_by_every_edit,
-  "An edit of one file of a world kept by volumes writes a segment of units of 0.17 GB at 1000 vscode files (the stretches and parts of the 29 units it settled again, the world-wide units of the top layers among them), and no segment is ever let go: a stretch replaced stays as a ghost (Levels::ghosts) that the next segment names, so the kept world grows by 0.17 GB an edit until ROFL_CACHE_GB refuses it. Say which ghost a kept proof can still name and let the rest go; write what a top unit settled again moved, not its whole directory (f_an_edit_writes_what_it_moved).").
-work_state(w_units_segments_grow_by_every_edit, open).
+  "DONE 2026-11-22 (f_an_edit_writes_its_units_as_what_moved): 137.9 MB to 4.2 MB an edit at 300 files, the world 1.27 GB after 20 edits. WAS: An edit of one file of a world kept by volumes writes a segment of units of 0.17 GB at 1000 vscode files (the stretches and parts of the 29 units it settled again, the world-wide units of the top layers among them), and no segment is ever let go: a stretch replaced stays as a ghost (Levels::ghosts) that the next segment names, so the kept world grows by 0.17 GB an edit until ROFL_CACHE_GB refuses it. Say which ghost a kept proof can still name and let the rest go; write what a top unit settled again moved, not its whole directory (f_an_edit_writes_what_it_moved).").
+work_state(w_units_segments_grow_by_every_edit, done).
 work_spawned(w_units_segments_grow_by_every_edit, f_an_edit_writes_what_it_moved).
 
 work(w_dict_written_whole_when_a_name_comes,
-  "The dictionary of a world kept by volumes (`.names`, 74 MB at 1000 vscode files) is written whole by an edit that names one new thing. Write what an edit named beside it, as the texts' segments do (f_an_edit_writes_what_it_moved).").
-work_state(w_dict_written_whole_when_a_name_comes, open).
+  "DONE 2026-11-22 (f_an_edit_writes_its_units_as_what_moved): a name appends a chunk to `.names+`, 25.5 MB to bytes at 300 files. WAS: The dictionary of a world kept by volumes (`.names`, 74 MB at 1000 vscode files) is written whole by an edit that names one new thing. Write what an edit named beside it, as the texts' segments do (f_an_edit_writes_what_it_moved).").
+work_state(w_dict_written_whole_when_a_name_comes, done).
+
+work(w_overlay_chain_grows_by_every_edit,
+  "An edit of a world kept by volumes writes the core as an overlay over the volume it was opened from and the overlays before (kept::keep_capped_over), and none is ever let go: one file of about 45 KB more on disk every edit at 300 vscode files (31 files after 20 edits), and the chain an opening maps grows with the edits (f_an_edit_writes_its_units_as_what_moved). Fold the chain as the texts' segments are folded.").
+work_state(w_overlay_chain_grows_by_every_edit, open).
+work_spawned(w_overlay_chain_grows_by_every_edit, f_an_edit_writes_its_units_as_what_moved).
+
+work(w_levels_drop_answers_beside_a_one_file_relation,
+  "Levels answer out(X) with z3 alone where the world whole answers go, k0, k1, k2, z3 (f_levels_drop_answers_beside_a_one_file_relation): find what in the plan of levels sees no rule where units meet, and make the world of 12 files a world of npm test.").
+work_state(w_levels_drop_answers_beside_a_one_file_relation, open).
+work_spawned(w_levels_drop_answers_beside_a_one_file_relation, f_levels_drop_answers_beside_a_one_file_relation).
 work_spawned(w_dict_written_whole_when_a_name_comes, f_an_edit_writes_what_it_moved).
 
 work(w_edit_by_levels_loses_answers,
