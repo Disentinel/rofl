@@ -148,6 +148,32 @@ impl Far {
         };
         let far = Rc::new(Far { me, size, peers: peers(&dir), dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default(), round: AtomicU32::new(0), views: Default::default(), moved: Default::default(), edits: Default::default(), told: Condvar::new(), failed: Default::default() });
         far.serve();
+        if me != ROOT {
+            // (a node goes when the root has gone: it holds a connection to the root, which the root answers and keeps
+            // open while it lives)
+            let (path, peer, hold) = (far.path(ROOT), far.peers.get(&ROOT).cloned(), Enc::op(b'H', h).done());
+            std::thread::spawn(move || {
+                let t0 = std::time::Instant::now();
+                let mut c = loop {
+                    let c = match &peer {
+                        Some(a) => TcpStream::connect(a).map(Conn::Tcp),
+                        None => UnixStream::connect(&path).map(Conn::Unix),
+                    };
+                    match c {
+                        Ok(c) => break c,
+                        Err(_) if t0.elapsed().as_secs() < 120 => std::thread::sleep(std::time::Duration::from_millis(20)),
+                        Err(e) => {
+                            eprintln!("levels: no root at {}: {e}", peer.clone().unwrap_or_else(|| path.display().to_string()));
+                            std::process::exit(3);
+                        }
+                    }
+                };
+                if put_frame(&mut c, &hold).is_ok() && get_frame(&mut c).is_ok_and(|a| a.is_some()) {
+                    let _ = get_frame(&mut c);
+                }
+                std::process::exit(0);
+            });
+        }
         let _ = FAR_OF.set(far.clone());
         Some(far)
     }
@@ -201,10 +227,6 @@ impl Far {
             *n = Some(n.map_or(at, |x| x.max(at)));
             drop(n);
             self.ready.notify_all();
-            // (the root holds every node open while it answers: a node goes when the root has gone)
-            for n in 0..self.nodes {
-                let _ = self.try_ask(n, &Enc::op(b'H', &self.h).done());
-            }
         }
     }
     /// Ids for `n` facts, from the root's counter.
@@ -337,8 +359,8 @@ impl Far {
                 loop {
                     match self.connect(node) {
                         Ok(s) => break s,
-                        // (a socket no one listens at any more: its process went)
-                        Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused && !self.peers.contains_key(&node) => return Err(format!("node {node} went: {e}")),
+                        // (a socket no one listens at any more, after it was answered at: its process went)
+                        Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused && !self.peers.contains_key(&node) && self.conns.lock().unwrap().contains_key(&node) => return Err(format!("node {node} went: {e}")),
                         Err(_) if t0.elapsed().as_secs() < 120 => std::thread::sleep(std::time::Duration::from_millis(20)),
                         Err(e) => return Err(format!("no node {node} at {}: {e}", self.peers.get(&node).cloned().unwrap_or_else(|| self.path(node).display().to_string()))),
                     }
@@ -386,17 +408,11 @@ impl Far {
                 let Ok(mut s) = l() else { continue };
                 let far = far.clone();
                 std::thread::spawn(move || {
-                    let mut root = false;
                     while let Ok(Some(req)) = get_frame(&mut s) {
-                        // (the root's hello: no names, then its mark)
-                        root |= req.starts_with(&[0, b'H']);
                         let a = far.answer(&req);
                         if put_frame(&mut s, &a).is_err() {
                             break;
                         }
-                    }
-                    if root && far.me != ROOT {
-                        std::process::exit(0);
                     }
                 });
             }

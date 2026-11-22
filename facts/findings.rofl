@@ -14466,3 +14466,9 @@ finding(f_the_nodes_meet_a_rule_with_no_order_from_its_news_on_the_1_7_package_m
 recorded(f_the_nodes_meet_a_rule_with_no_order_from_its_news_on_the_1_7_package_model, "2026-11-22").
 finding_note(f_the_nodes_meet_a_rule_with_no_order_from_its_news_on_the_1_7_package_model,
   "OPEN. The engine of this tree with ROFL_FAR (5 nodes) over vscode base/common (155 files) and the JS model of the published package @grafema/rofl 1.7.0 refuses at the start: node 0 'defect: rule r1dff947b has no order from its news, and a unit reads by key alone' (engine.rs, by_seed without reads_wide). The model of this tree over the same files does not meet it. Not yet cut down: which rule, and whether it holds in one process by levels.").
+
+finding(f_an_edit_by_levels_read_the_units_of_other_processes_a_fact_at_a_time, defect).
+recorded(f_an_edit_by_levels_read_the_units_of_other_processes_a_fact_at_a_time, "2026-11-22").
+addressed_by(f_an_edit_by_levels_read_the_units_of_other_processes_a_fact_at_a_time, "rust/rofl/src/engine/levels.rs").
+finding_note(f_an_edit_by_levels_read_the_units_of_other_processes_a_fact_at_a_time,
+  "When an edit moved the rows of a tree, the group being mended looked for the facts naming a moved node by walking every id of every unit near it and at home, each fact's record and arguments. A unit of another process answers that one fact per request: vscode base/common (155 files, FKTS's corpus, 5 nodes) took 1.17M F requests and 48.9 s for one edit. Now it reads only the relations the layer's rules read, by their pages (one P request per relation for all the units of a node): 14 F requests, 3.6 s, the answers equal the whole world. The common-oxc cut of the same files moved no tree rows and never walked there (0.9 s).").

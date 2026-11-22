@@ -1803,11 +1803,8 @@ impl Eval {
                 seeds.extend(ids[k].iter().filter(|&&id| near.partition_point(|(s, _)| s.lo <= id).checked_sub(1).is_some_and(|i| id < near[i].0.hi)));
                 let shifted = shifted.lock().unwrap();
                 for st in near.iter().map(|(s, _)| s).chain(&at_home).filter(|_| !shifted.is_empty()) {
-                    for id in st.lo..st.hi {
-                        let r = st.rec(id);
-                        if !r.dead() && read_rels[k].contains(&r.rel) && st.args(id).iter().any(|t| shifted.contains(&t.bits())) {
-                            seeds.push(id);
-                        }
+                    for rel in st.rels().filter(|r| read_rels[k].contains(r)) {
+                        seeds.extend(st.of_rel(rel).into_iter().filter(|&id| st.args(id).iter().any(|t| shifted.contains(&t.bits()))));
                     }
                 }
             }
