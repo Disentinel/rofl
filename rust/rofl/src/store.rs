@@ -1105,6 +1105,8 @@ struct HeldThere {
     at: std::sync::OnceLock<Box<[std::sync::atomic::AtomicU64]>>,
     /// what this reader asks the node that holds it, asked once for all that node's units the reader sees
     trip: Rc<Trip>,
+    /// whether it kept the firings of the rows of its trees, as its node said it (in this process, its own)
+    vwit: Option<bool>,
 }
 
 /// What a reader asks one node that holds units: a relation's facts, or the planner's counts of it (every shape the
@@ -1700,12 +1702,12 @@ impl Stretch {
 
     /// A stretch another node holds, as a reader here sees it.
     pub fn held_there(there: &Stretch, trip: Rc<Trip>) -> Stretch {
-        Stretch::held_by(there.lo, there.hi, there.rels.clone(), there.far.clone(), there.books.clone(), trip)
+        Stretch::held_by(there.lo, there.hi, there.rels.clone(), there.far.clone(), there.books.clone(), None, trip)
     }
     /// A stretch another node holds, from what it wrote: its ids, relations, far facts and books.
-    pub fn held_by(lo: FactId, hi: FactId, rels: Vec<Sym>, far: Vec<FactId>, books: Vec<(Sym, Sym)>, trip: Rc<Trip>) -> Stretch {
+    pub fn held_by(lo: FactId, hi: FactId, rels: Vec<Sym>, far: Vec<FactId>, books: Vec<(Sym, Sym)>, vwit: Option<bool>, trip: Rc<Trip>) -> Stretch {
         let pages = rels.iter().map(|_| Default::default()).collect();
-        let held = Some(Box::new(HeldThere { lo, hi, rels: rels.clone(), whole: Default::default(), trees: Default::default(), fired: Default::default(), pages, at: Default::default(), trip }));
+        let held = Some(Box::new(HeldThere { lo, hi, rels: rels.clone(), whole: Default::default(), trees: Default::default(), fired: Default::default(), pages, at: Default::default(), trip, vwit }));
         Stretch { store: Default::default(), kept: None, lo, hi, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default(), held, counted: Default::default() }
     }
     /// The planner's counts of a premise's shape over its own facts, counted once.
@@ -1739,6 +1741,13 @@ impl Stretch {
         };
         out.retain(|&k| self.args(k).get(p) == Some(&v));
         out
+    }
+    /// Whether it kept the firings of the rows of its trees.
+    pub fn vwit(&self) -> bool {
+        match &self.held {
+            Some(x) => x.vwit.unwrap_or_else(|| x.trip.ask.here(x.lo).expect("a stretch of this process").store().vwit),
+            None => self.store().vwit,
+        }
     }
     pub fn is_held_there(&self) -> bool {
         self.held.is_some()
@@ -5670,7 +5679,7 @@ impl Store {
         // rows' firings)
         let held = |fs: &[(Sym, Rc<crate::forest::Forest>)]| fs.iter().any(|(b, f)| *b == book && f.is_ancestor(a, d));
         let (forests, wit) = match self.facts.near.as_ref().and_then(|n| n.trees.as_ref()).filter(|_| !held(&v.forests)).and_then(|t| t(d)) {
-            Some(s) => (s.forests(ci), s.store().vwit),
+            Some(s) => (s.forests(ci), s.vwit()),
             None => (v.forests.clone(), self.vwit),
         };
         if !wit {

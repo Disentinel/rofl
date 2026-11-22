@@ -227,6 +227,7 @@ impl Far {
         let far = (0..r.u64()).map(|_| r.u64() as FactId).collect();
         let books = (0..r.u64()).map(|_| (r.name(), r.name())).collect();
         let (dir, inner) = (r.dir(), r.dir());
+        let vwit = r.u64() == 1;
         let moved = (r.u64() == 1).then(|| {
             let was = r.u64() as FactId;
             let fs = (0..r.u64()).map(|_| {
@@ -240,7 +241,7 @@ impl Far {
         self.saw(hi);
         let stretch = self.views.lock().unwrap().entry((lo, hi)).or_insert_with(|| {
             let trip = self.trip(node);
-            let s = Rc::new(Stretch::held_by(lo, hi, rels, far, books, trip.clone()));
+            let s = Rc::new(Stretch::held_by(lo, hi, rels, far, books, Some(vwit), trip.clone()));
             trip.join(&s);
             s
         }).clone();
@@ -348,6 +349,7 @@ impl Far {
                 books.iter().for_each(|&(a, b)| { e.name(a); e.name(b); });
                 e.dir(u.dir());
                 e.dir(u.inner());
+                e.u64(s.vwit() as u64);
                 match self.moved.lock().unwrap().get(&s.lo) {
                     Some((was, fs)) => {
                         e.u64(1);
