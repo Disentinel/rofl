@@ -45,7 +45,7 @@
 //!                                                        (what nothing touched is kept, engine/layer.rs)
 //!   {"op":"resume","session":2,"steps":n}            -> as evaluate, and "resumed": went on from where the budget
 //!                                                        stopped the last evaluation, or evaluated again
-//!   {"op":"ask","session":2,"query":"p(X)"}            -> {"vars","rows","shrugs","partial","unpopulatable",...}:
+//!   {"op":"ask","session":2,"query":"p(X)"}            -> {"vars","rows","shrugs","places","partial","unpopulatable",...}:
 //!                                                        unpopulatable as src/api.ts `query` says it
 //!   {"op":"why","session":2,"query":"p(a)"}            -> {"text":...}
 //!   {"op":"why","session":2,"query":"c(a)","all":true} -> every member of every cell
@@ -784,8 +784,9 @@ impl Server {
             Value::Null
         };
         let unpopulatable = s.unpopulatable(&q).unwrap_or(false);
+        let places = crate::place::Sources::of(&[]).places(s, &a);
         Ok(json!({
-            "vars": a.vars, "rows": a.rows, "keys": keys, "unpopulatable": unpopulatable,
+            "vars": a.vars, "rows": a.rows, "keys": keys, "unpopulatable": unpopulatable, "places": crate::place::json(&places),
             "scanned": a.scanned, "probed": a.probed, "micros": a.micros, "partial": a.partial,
             "shrugs": a.shrugs.iter().map(|(row, line)| json!({ "row": row, "line": line })).collect::<Vec<_>>(),
         }))

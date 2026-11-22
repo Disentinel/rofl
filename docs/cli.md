@@ -87,11 +87,43 @@ and in any book by `ask`: write the book, `calls[code](A, B)`.
 sentences off: `V = x, W = y` a row, sorted, `(empty)` for none, `? row  line`
 a shrug, and when the rows may be short of an answer a first line
 `[partial answer: ...]` and a last `[partial: why]` (*A partial answer reads as one*, below).
+
+**An answer names the place of each node.** A value of a row that the world's
+plan places (`site[fixpointplan](at, tree)`: `at[tree](N, File, Line)` in the JS
+and Rust models, the one a lemma is placed by) is said under its row, the id
+kept for the next question:
+
+```
+S = n2bf233effbb62ea7_do3ljrh2m5umf, F = fs_mutation
+  S: vs/base/node/pfs.ts:412  return promisify(fs.utimes)(path, atime, mtime);
+```
+
+The line's text is read from the file as named, else from the path a file of
+facts says its scan read (`-- reads: PATH`, which `rofl scan` writes at its head);
+where neither is found the place is `File:Line` alone. `--json` and `rofl serve`
+carry the same as `"places": {"n…": {"file", "line", "text"}}` beside the rows,
+which keep the ids. It costs one index probe for each distinct value and the read
+of each source named; where the world cut the book its site reads (the JS model cuts
+`[ast_oxc]`, and keeps no `at[tree]` that nothing above reads), the files of the
+answer's nodes are thawed together with only the rules the site stands on, each
+reading of its file's kept text only the lines that name a node asked
+(`Eval::sites_of`): at 1000 vscode files, an ask from the kept world of 24 rows in 24
+files takes 0.28 s with its places against 0.17 s without, one of 4 737 rows in 445
+files 1.3 s (release build, the median of three). **`ask` takes one literal**: a join (`a(X), b(X)`) is refused
+with what to do instead, a rule in a file of the world (`q(X) :- a(X), b(X).`)
+asked as `q(X)`.
+
+**`undefined`** in an answer of the JS model is the JS value, the atom
+`undefined` (the string `"undefined"` is another): the global of that name,
+`void`, a `let` or `var` with no initialiser where it is read, a parameter a call
+leaves out, a call of a function that may end without a value, a get that may
+find no entry (models/lang/js/rules/js-dataflow.rofl, section 1). A value of
+`side_effect_value` that is `undefined` is that: the argument may be undefined at the site.
 `npm run whycheck` holds every one of them to the TypeScript engine byte for
 byte over every world `npm test` loads, refusals included.
 
 **`--json`** prints each answer as one line in the shape `rofl serve` answers:
-`{"ok":true,"vars","rows","keys","shrugs","partial"}` for an ask,
+`{"ok":true,"vars","rows","keys","shrugs","places","partial"}` for an ask,
 `{"ok":true,"text"}` for a why, `{"ok":true,"holds","text"}` for a whynot,
 `{"ok":true,"removed","added"}` for an excise, `{"ok":false,"error"}` for a
 refused question. With no question it prints `{"ok":true,"state","partial"}`.
