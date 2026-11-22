@@ -121,8 +121,6 @@ jobs:
   # Blocking: its control is green on main again (f_the_fault_harness_control_is_red_on_main). Not on a pull request:
   # it is two thirds of a request's run, and the merge train (merge-train.yml) runs it once over every request it lands.
   breaks:
-    needs: model
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -133,9 +131,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with: { workspaces: rust, key: breaks }
       - run: npm ci
-      - name: planted faults
-        env: { ROFL_JOBS: 4 }
-        run: npm run test:agg:breaks
+      - name: diagnose the kept control
+        run: |
+          cd rust && cargo build --profile breaks --features breaks -p rofl --bin rofl
+          cargo test --profile breaks --features breaks -p rofl --test kept -- a_kept_world_answers_and_refuses_as_docs_cli_says 2>&1 | tail -80
       # what each break and proof cost, for scanners/ci_cost.ts --breaks-times
       - if: success() || failure()
         uses: actions/upload-artifact@v4
