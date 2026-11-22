@@ -1,6 +1,6 @@
 ---
 world: js-host
-books: audit, code, flow, main, surface, tree
+books: audit, code, flow, main, tree
 default: audit
 ---
 
@@ -435,21 +435,15 @@ In the flow:
   - [`object_of`](js-structure.rofl.md#object_of)(M, P);
   - M [selects](js-dataflow.rofl.md#selects) "env".
 
-In the surface:
+<a id="env_object"></a>`env_object`(M) if [`env_member`](#env_member)(M).
 
-<a id="sx_env"></a>`sx_env`(M) if [`env_member`](#env_member)(M).
-
-In the flow:
-
-<a id="env_object"></a>`env_object`(M) if [`sx_env`](#sx_env)(M).
-
-`env_object`(E) if a node E [points to](js-dataflow.rofl.md#may_be_node) a node M and [`sx_env`](#sx_env)(M).
+`env_object`(E) if a node E [points to](js-dataflow.rofl.md#may_be_node) a node M and [`env_member`](#env_member)(M).
 
 `env_object`(R) if all of:
   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, R);
   - [`pat_in`](js-dataflow.rofl.md#pat_in)(R, something, something);
   - D [takes its value from](js-dataflow.rofl.md#decl_value) a node Init;
-  - [`sx_env`](#sx_env)(Init).
+  - [`env_member`](#env_member)(Init).
 
 `env_object`(E) if all of:
   - a node E [sees](js-dataflow.rofl.md#sees_binder) D;

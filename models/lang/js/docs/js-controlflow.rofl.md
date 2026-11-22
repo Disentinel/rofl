@@ -1,6 +1,6 @@
 ---
 world: js-controlflow
-books: audit, code, execution, flow, main, surface, tree, value
+books: audit, code, execution, flow, main, tree, value
 default: code
 ---
 
@@ -18,13 +18,11 @@ Reads:
 
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [top_call](js-callgraph.rofl.md#top_call)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
-- from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_rest](js-dataflow.rofl.md#obj_rest), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_source](js-dataflow.rofl.md#pattern_source), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [spread_of](js-dataflow.rofl.md#spread_of)
-- from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [called](js-dataflow.rofl.md#called), [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_rest](js-dataflow.rofl.md#obj_rest), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_source](js-dataflow.rofl.md#pattern_source), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [spread_of](js-dataflow.rofl.md#spread_of)
+- from js-dataflow, in the flow: [called_unguarded](js-dataflow.rofl.md#called_unguarded), [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [fn_nested](js-dataflow.rofl.md#fn_nested), [fn_value](js-dataflow.rofl.md#fn_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [plain_assign](js-dataflow.rofl.md#plain_assign), [reached_by_call](js-dataflow.rofl.md#reached_by_call), [ret_node_any](js-dataflow.rofl.md#ret_node_any), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
 - from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in)
-- from js-surface, in the flow: [fn_nested](js-surface.rofl.md#fn_nested), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any)
-- from js-surface, in the surface: [sx_called](js-surface.rofl.md#sx_called), [sx_reach](js-surface.rofl.md#sx_reach), [sx_reached](js-surface.rofl.md#sx_reached)
 - from outside these files, in the flow:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
@@ -82,7 +80,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 - <a id="hidden_call_sourced"></a>A node has a sourced hidden call if [the hidden call source](#hidden_call_src) of it is some node.
 - <a id="try_catches"></a>A node has a handler if [`tries`](#tries)(it, something).
 - <a id="caught_here"></a>A node is caught here if [`try_walk`](#try_walk)(something, it).
-- <a id="reached_unguarded"></a>F is reached unguarded if [`sx_reached`](js-surface.rofl.md#sx_reached)(F).
+- <a id="reached_unguarded"></a>F is reached unguarded if [`called_unguarded`](js-dataflow.rofl.md#called_unguarded)(F).
 - <a id="in_fn"></a>A node is inside a function if some function [is nearest to](#nearest_v) it.
 - <a id="entry_point"></a>F is an entry point if F [is exported](#exported_fn).
 
@@ -508,7 +506,7 @@ A node
    - P [is iterated](#spread_iterated);
    - P [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
    - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
-   - [`fn_value`](js-surface.rofl.md#fn_value)(M).
+   - [`fn_value`](js-dataflow.rofl.md#fn_value)(M).
 
 > The two sides reach the call graph differently. An iterable position has one
 > `[Symbol.iterator]` per receiver, so two answers are two candidate receivers
@@ -533,10 +531,10 @@ A call resolves to a node M if it [destructures through](#pattern_iterates) M.
 
 <a id="pattern_next"></a>A node iterates with the next Next if all of:
   - it [destructures through](#pattern_iterates) a node M;
-  - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(M, IterObj);
+  - [`ret_node_any`](js-dataflow.rofl.md#ret_node_any)(M, IterObj);
   - [the member](js-dataflow.rofl.md#member_value) "next" of a node IterObj holds a node V;
   - V [points to](js-dataflow.rofl.md#may_be_node) Next;
-  - [`fn_value`](js-surface.rofl.md#fn_value)(Next).
+  - [`fn_value`](js-dataflow.rofl.md#fn_value)(Next).
 
 Caller calls Next if a node X [iterates with the next](#pattern_next) Next and Caller [is the nearest function of](js-callgraph.rofl.md#nearest_fn) X.
 
@@ -772,10 +770,10 @@ A node
 
 <a id="guarded_call"></a>A call is a guarded call if it [is a call site](js-callgraph.rofl.md#call_site) in some file and it [is guarded](#guarded).
 
-> Both are the CALLEE's and their support is the callers': each caller publishes the call
-> (models/lang/js/rules/js-surface.rofl `sx_called`, `sx_reached`), and the callee's volume reads them.
+> Both are the CALLEE's and their support is the callers': each call is read at its callee
+> (`called`, `called_unguarded`, models/lang/js/rules/js-dataflow.rofl section 17).
 
-<a id="may_not_run"></a>F may not run if [`sx_called`](js-surface.rofl.md#sx_called)(F), unless F [is reached unguarded](#reached_unguarded).
+<a id="may_not_run"></a>F may not run if [`called`](js-dataflow.rofl.md#called)(F), unless F [is reached unguarded](#reached_unguarded).
 
 ## 7. TRANSITIVE REACHABILITY needs an ENTRY POINT: without one the question is
 
@@ -823,29 +821,29 @@ A node
    - E [is a default export site](js-modules.rofl.md#export_default_site);
    - unless F [is inside a function](#in_fn).
 
-> `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
+> `export { f }` may hand on a function of another file: the exporting file says it, the function's file reads it
 
-In the surface:
+In the flow:
 
-<a id="sx_entry"></a>`sx_entry`(F) if all of:
+<a id="entry_fn"></a>`entry_fn`(F) if all of:
   - a node L [is exported locally as](js-dataflow.rofl.md#export_local) some name from some file;
   - L [points to](js-dataflow.rofl.md#may_be_node) a node F;
-  - [`fn_value`](js-surface.rofl.md#fn_value)(F);
-  - unless [`fn_nested`](js-surface.rofl.md#fn_nested)(F).
+  - [`fn_value`](js-dataflow.rofl.md#fn_value)(F);
+  - unless [`fn_nested`](js-dataflow.rofl.md#fn_nested)(F).
 
 In the code:
 
-F is exported if [`sx_entry`](#sx_entry)(F).
+F is exported if [`entry_fn`](#entry_fn)(F).
 
 > ...and a top-level call runs on import, with no enclosing function. A top-level call and a call from reachable
-> code are published for the callee (`sx_reach`, models/lang/js/rules/js-surface.rofl).
+> code are read at the callee (`reached_by_call`, models/lang/js/rules/js-dataflow.rofl section 17).
 
 <a id="reachable"></a>F is reachable either:
 
 1. if F [is an entry point](#entry_point);
-2. if [`sx_reach`](js-surface.rofl.md#sx_reach)(F).
+2. if [`reached_by_call`](js-dataflow.rofl.md#reached_by_call)(F).
 
-<a id="may_not_be_reached"></a>F may not be reached if [`sx_called`](js-surface.rofl.md#sx_called)(F), unless F [is reachable](#reachable).
+<a id="may_not_be_reached"></a>F may not be reached if [`called`](js-dataflow.rofl.md#called)(F), unless F [is reachable](#reachable).
 
 > A file with functions and no entry point reports every function dead — an
 > artefact of the seed, named. `has_entry` is [code]: a denominator, not a gate.
@@ -947,15 +945,7 @@ In the code:
   - [`at`](#at)(C, File, something);
   - [`at`](#at)(C, something, Line).
 
-> the callee-keyed verdicts read the callers through models/lang/js/rules/js-surface.rofl
-
-`imports` lists:
-
-| arg 1 | arg 2 |
-|---|---|
-| `code` | `surface` |
-| `surface` | `code` |
-| `surface` | `flow` |
+> the callee-keyed verdicts read the callers by the callee's key (models/lang/js/rules/js-dataflow.rofl section 17)
 
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 
@@ -971,7 +961,6 @@ In the code:
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

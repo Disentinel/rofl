@@ -1,6 +1,6 @@
 ---
 world: js-express
-books: code, flow, main, surface, value
+books: code, flow, main, value
 default: flow
 ---
 
@@ -8,11 +8,11 @@ default: flow
 
 > js-express.rofl — THE SERVER SIDE OF A SERVICE CALL (w_express_semantics).
 > 
->   serves[surface](App, M, P, H, R)   the app App answers method M (or `any`)
+>   serves[flow](App, M, P, H, R)   the app App answers method M (or `any`)
 >                                      on the pattern P, a text over the route's
 >                                      strings, with the function H, a `route`
 >                                      or a `middleware` that runs before one
->   app_listens[surface](App, Port)     `app.listen(Port)`: App answers at Port,
+>   app_listens[flow](App, Port)     `app.listen(Port)`: App answers at Port,
 >                                      also `app.listen(app.get('port'))`
 > 
 > Knows nothing about clients. An app is a call of the module (`express()`), a
@@ -27,10 +27,9 @@ Reads:
 
 - from js-concat: [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [fn_value](js-dataflow.rofl.md#fn_value), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
-- from js-surface: [fn_value](js-surface.rofl.md#fn_value)
 - from outside these files, in the value:
   - <a id="call"></a>`call`
   - <a id="callee"></a>`callee`
@@ -96,7 +95,7 @@ Declared as facts:
 
 <a id="ex_target"></a>`ex_target`(Y) either:
 
-1. if [`sx_ex_app`](#sx_ex_app)(Y);
+1. if [`ex_app`](#ex_app)(Y);
 2. if [`ex_router`](#ex_router)(Y).
 
 ## 2. What a call on one registers.
@@ -119,7 +118,7 @@ Declared as facts:
   - [`ex_on`](#ex_on)(R, something, something);
   - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
   - X [points to](js-dataflow.rofl.md#may_be_node) a node F;
-  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
+  - [`fn_value`](js-dataflow.rofl.md#fn_value)(F).
 
 <a id="ex_sub"></a>`ex_sub`(R, I, Y) if all of:
   - [`ex_on`](#ex_on)(R, something, "use");
@@ -172,34 +171,24 @@ Declared as facts:
 |---|---|---|
 | `express_app` | "set" | "get" |
 
-`keyed_obj`(Y, `express_app`) if [`sx_ex_app`](#sx_ex_app)(Y).
+`keyed_obj`(Y, `express_app`) if [`ex_app`](#ex_app)(Y).
 
 ## 3. ACROSS FILES. A router is made in one file and mounted in another; what
 
-> a file registers on one is published, and the mounts compose in [surface].
+> a file registers on one is read by the app's key, and the mounts compose in [flow].
 
-In the surface:
-
-<a id="sx_ex_app"></a>`sx_ex_app`(Y) if [`ex_app`](#ex_app)(Y).
-
-<a id="sx_ex_route"></a>`sx_ex_route`(Y, M, V, H, R) if [`ex_route`](#ex_route)(Y, M, V, H, R).
-
-<a id="sx_ex_mount"></a>`sx_ex_mount`(Y, V, Y2) if [`ex_mount`](#ex_mount)(Y, V, Y2).
-
-<a id="sx_ex_str"></a>`sx_ex_str`(V) if [`ex_path`](#ex_path)(something, V).
-
-<a id="app_listens"></a>`app_listens`(App, P) if [`sx_ex_app`](#sx_ex_app)(App) and [`ex_listen`](#ex_listen)(App, P).
+<a id="app_listens"></a>`app_listens`(App, P) if [`ex_app`](#ex_app)(App) and [`ex_listen`](#ex_listen)(App, P).
 
 <a id="ex_reach"></a>`ex_reach`(App, N, E, X) either:
 
-1. if [`sx_ex_app`](#sx_ex_app)(App), N is App, E is "/", and X is 0;
+1. if [`ex_app`](#ex_app)(App), N is App, E is "/", and X is 0;
 2. if all of:
    - [`ex_reach`](#ex_reach)(App, Y, P, D0);
-   - [`sx_ex_mount`](#sx_ex_mount)(Y, V, N);
+   - [`ex_mount`](#ex_mount)(Y, V, N);
    - [`ex_depth`](#ex_depth)(Max);
    - D0 < Max;
    - X is D0 + 1;
    - E is cat(P, V).
 
-<a id="serves"></a>`serves`(App, M, cat(P, V), H, R) if [`ex_reach`](#ex_reach)(App, Y, P, something) and [`sx_ex_route`](#sx_ex_route)(Y, M, V, H, R).
+<a id="serves"></a>`serves`(App, M, cat(P, V), H, R) if [`ex_reach`](#ex_reach)(App, Y, P, something) and [`ex_route`](#ex_route)(Y, M, V, H, R).
 

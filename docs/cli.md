@@ -749,9 +749,9 @@ the rules' keys (the relation, the argument a rule joins at, its value), and a
 fact of another file comes as a lemma only where a rule reads it (*Lemma
 stages*, above). The `[surface]` book of the earlier design
 (docs/surface-split.md, the driver of `runtime/split.ts`) is replaced: do not
-route a corpus, a federation or a split by it, and do not add rules to it; what
-the JS model still writes there (`models/lang/js/rules/js-surface.rofl`) is a
-debt (f_surface_is_replaced_by_lemmas_by_keys). The rest of the design is in
+route a corpus, a federation or a split by it, and do not add rules to it. The
+JS model writes no `[surface]` since 2026-11-20: its summaries are [flow]
+relations keyed by what they are about (f_surface_is_replaced_by_lemmas_by_keys). The rest of the design is in
 docs/volumes-and-residency.md (why a corpus can stay cold) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
 **The question verbs evaluate by levels and cool the units under pressure (above).** The other parts and the harnesses that drive

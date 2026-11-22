@@ -1,6 +1,6 @@
 ---
 world: js-concat
-books: audit, code, flow, main, surface, tree, value
+books: audit, code, flow, main, tree, value
 default: flow
 ---
 
@@ -50,11 +50,10 @@ Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-dataflow, in the code: [binds_name](js-dataflow.rofl.md#binds_name), [call_like](js-dataflow.rofl.md#call_like), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [ident_in](js-dataflow.rofl.md#ident_in), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [escaping](js-dataflow.rofl.md#escaping), [export_lit](js-dataflow.rofl.md#export_lit), [handed_lit](js-dataflow.rofl.md#handed_lit), [kind_proto](js-dataflow.rofl.md#kind_proto), [may_be_lit](js-dataflow.rofl.md#may_be_lit), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [ret_param_lit](js-dataflow.rofl.md#ret_param_lit), [ret_plain_lit](js-dataflow.rofl.md#ret_plain_lit), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
-- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_lit](js-surface.rofl.md#sx_lit), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_plit](js-surface.rofl.md#sx_ret_plit)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
   - <a id="nth"></a>`nth`
@@ -159,9 +158,7 @@ In the flow:
    - F [uses](js-dataflow.rofl.md#param_use) Name at a node E;
    - N is `node`.
 
-In the surface:
-
-<a id="sx_mwrite"></a>`sx_mwrite`(O, Key, X) if all of:
+<a id="mwrite"></a>`mwrite`(O, Key, X) if all of:
   - [`composed`](#composed)(X);
   - [`binary`](#binary)(X, "+", L, something) in the value;
   - [`assign`](#assign)(X, L, X);
@@ -651,20 +648,16 @@ Declared as facts:
 
 > WHICH NODES GET TEXTS. Unfolding costs (a fifth of the side-effect question on
 > vscode's first 500 files when every composed node is unfolded), so a question
-> names the composed values it reads in `concat_wanted[surface]`, and only
+> names the composed values it reads in `concat_wanted[flow]`, and only
 > those, with the composed values their parts may be, are unfolded. The want is
 > asked through the surface: the value, or a part of it, may be another
 > file's, and that file unfolds it. `concat_want` is the table form, empty
 > here; a world that wants every one says
-> `concat_wanted[surface](C) :- composed[flow](C).`
-
-In the surface:
+> `concat_wanted[flow](C) :- composed[flow](C).`
 
 <a id="concat_wanted"></a>`concat_wanted`(C) if [`concat_want`](#concat_want)(C).
 
 `concat_wanted`(X) if [`text_scope`](#text_scope)(C) and [`comp_of`](#comp_of)(C, something, X).
-
-In the flow:
 
 <a id="text_scope"></a>`text_scope`(C) if [`concat_wanted`](#concat_wanted)(C).
 
@@ -894,7 +887,7 @@ Declared as facts:
 
 <a id="may_be_form"></a>`may_be_form`(C, T) if [`concat_depth`](#concat_depth)(D) and [`text_at`](#text_at)(C, D, T, `open`).
 
-## 6. ACROSS FILES (models/lang/js/rules/js-surface.rofl). A composed value that leaves its file
+## 6. ACROSS FILES (models/lang/js/rules/js-dataflow.rofl, section 17). A composed value that leaves its file
 
 > takes what a reader of it needs: that it is composed, whether it can have a
 > text, whether a library module's body built it, its choices and texts at
@@ -902,17 +895,16 @@ Declared as facts:
 > texts (`concat_wanted`, keyed by the node, section 5). A string value that leaves a file says
 > it is a string, for a `+` that reads it elsewhere.
 
-In the surface:
+<a id="str_out"></a>`str_out`(V) either:
 
-<a id="sx_str"></a>`sx_str`(V) either:
+1. if all of:
+   - [`escaping`](js-dataflow.rofl.md#escaping)(N);
+   - [`may_be`](#may_be)(N, `lit`, V);
+   - [`str_value`](#str_value)(V);
+2. if [`export_lit`](js-dataflow.rofl.md#export_lit)(something, something, V) and [`str_value`](#str_value)(V);
+3. if [`handed_lit`](js-dataflow.rofl.md#handed_lit)(something, something, V) and [`str_value`](#str_value)(V);
+4. if [`ret_plain_lit`](js-dataflow.rofl.md#ret_plain_lit)(something, V) and [`str_value`](#str_value)(V);
+5. if [`ret_param_lit`](js-dataflow.rofl.md#ret_param_lit)(something, V) and [`str_value`](#str_value)(V).
 
-1. if [`sx_lit`](js-surface.rofl.md#sx_lit)(something, V) and [`str_value`](#str_value)(V);
-2. if [`sx_export_lit`](js-surface.rofl.md#sx_export_lit)(something, something, V) and [`str_value`](#str_value)(V);
-3. if [`sx_arg_lit`](js-surface.rofl.md#sx_arg_lit)(something, something, V) and [`str_value`](#str_value)(V);
-4. if [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(something, V) and [`str_value`](#str_value)(V);
-5. if [`sx_ret_plit`](js-surface.rofl.md#sx_ret_plit)(something, V) and [`str_value`](#str_value)(V).
-
-In the flow:
-
-`str_value`(V) if [`sx_str`](#sx_str)(V).
+`str_value`(V) if [`str_out`](#str_out)(V).
 

@@ -1,7 +1,7 @@
 ---
 world: js-dataflow
-books: assume, audit, code, execution, flow, main, surface, tree, type, value
-default: code
+books: assume, audit, code, execution, flow, main, tree, type, value
+default: flow
 ---
 
 # js-dataflow
@@ -28,27 +28,24 @@ default: code
 
 Reads:
 
-- from js-callgraph: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
-- from js-concat, in the flow: [may_be](js-concat.rofl.md#may_be)
-- from js-concat, in the surface: [sx_mwrite](js-concat.rofl.md#sx_mwrite)
-- from js-controlflow: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [in_fn](js-controlflow.rofl.md#in_fn), [written_member](js-controlflow.rofl.md#written_member)
+- from js-callgraph, in the code: [bodiless](js-callgraph.rofl.md#bodiless), [call_site](js-callgraph.rofl.md#call_site), [call_spreads](js-callgraph.rofl.md#call_spreads), [callee_of](js-callgraph.rofl.md#callee_of), [ctor_method](js-callgraph.rofl.md#ctor_method), [decorates](js-callgraph.rofl.md#decorates), [fn_name](js-callgraph.rofl.md#fn_name), [fn_node](js-callgraph.rofl.md#fn_node), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [new_of](js-callgraph.rofl.md#new_of), [resolved_site](js-callgraph.rofl.md#resolved_site), [resolves](js-callgraph.rofl.md#resolves), [runs_outside](js-callgraph.rofl.md#runs_outside), [site](js-callgraph.rofl.md#site), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
+- from js-concat: [may_be](js-concat.rofl.md#may_be), [mwrite](js-concat.rofl.md#mwrite)
+- from js-controlflow, in the code: [accessor_read](js-controlflow.rofl.md#accessor_read), [arm_first](js-controlflow.rofl.md#arm_first), [async_body](js-controlflow.rofl.md#async_body), [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [declares_export](js-controlflow.rofl.md#declares_export), [entry_point](js-controlflow.rofl.md#entry_point), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable), [written_member](js-controlflow.rofl.md#written_member)
 - from js-controlflow, in the execution: [suspends](js-controlflow.rofl.md#suspends)
-- from js-controlflow, in the flow: [caught_value](js-controlflow.rofl.md#caught_value)
-- from js-effects: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop)
-- from js-globals: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
-- from js-globals, in the flow: [es_instance](js-globals.rofl.md#es_instance)
-- from js-modules: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
-- from js-structure: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
-- from js-surface, in the flow: [call_returns](js-surface.rofl.md#call_returns), [fn_value](js-surface.rofl.md#fn_value), [ret_node_any](js-surface.rofl.md#ret_node_any), [ret_plain](js-surface.rofl.md#ret_plain), [store_sym](js-surface.rofl.md#store_sym)
-- from js-surface, in the surface: [sx_arg_lit](js-surface.rofl.md#sx_arg_lit), [sx_arg_node](js-surface.rofl.md#sx_arg_node), [sx_called](js-surface.rofl.md#sx_called), [sx_cb](js-surface.rofl.md#sx_cb), [sx_cjs](js-surface.rofl.md#sx_cjs), [sx_default](js-surface.rofl.md#sx_default), [sx_esc](js-surface.rofl.md#sx_esc), [sx_export_lit](js-surface.rofl.md#sx_export_lit), [sx_export_node](js-surface.rofl.md#sx_export_node), [sx_export_val](js-surface.rofl.md#sx_export_val), [sx_gen_ret](js-surface.rofl.md#sx_gen_ret), [sx_gen_rlit](js-surface.rofl.md#sx_gen_rlit), [sx_module](js-surface.rofl.md#sx_module), [sx_ret_field](js-surface.rofl.md#sx_ret_field), [sx_ret_hop](js-surface.rofl.md#sx_ret_hop), [sx_ret_input](js-surface.rofl.md#sx_ret_input), [sx_ret_inst](js-surface.rofl.md#sx_ret_inst), [sx_ret_lit](js-surface.rofl.md#sx_ret_lit), [sx_ret_own](js-surface.rofl.md#sx_ret_own), [sx_ret_param](js-surface.rofl.md#sx_ret_param), [sx_ret_self](js-surface.rofl.md#sx_ret_self), [sx_ret_this](js-surface.rofl.md#sx_ret_this)
+- from js-controlflow: [caught_value](js-controlflow.rofl.md#caught_value), [thrown_by](js-controlflow.rofl.md#thrown_by)
+- from js-effects, in the code: [eff_calls](js-effects.rofl.md#eff_calls), [eff_loop](js-effects.rofl.md#eff_loop)
+- from js-globals, in the code: [es_global_construct](js-globals.rofl.md#es_global_construct), [es_static](js-globals.rofl.md#es_static), [es_static_call](js-globals.rofl.md#es_static_call)
+- from js-globals: [es_instance](js-globals.rofl.md#es_instance)
+- from js-modules, in the code: [binding](js-modules.rofl.md#binding), [builtin_canonical](js-modules.rofl.md#builtin_canonical), [default_declaration](js-modules.rofl.md#default_declaration), [export_spec](js-modules.rofl.md#export_spec), [import_ident_key](js-modules.rofl.md#import_ident_key), [import_site](js-modules.rofl.md#import_site), [module_target](js-modules.rofl.md#module_target), [reexport_offers](js-modules.rofl.md#reexport_offers), [reexport_site](js-modules.rofl.md#reexport_site), [require_site](js-modules.rofl.md#require_site), [site_file](js-modules.rofl.md#site_file), [site_shape](js-modules.rofl.md#site_shape), [site_source](js-modules.rofl.md#site_source), [spec_imported](js-modules.rofl.md#spec_imported), [spec_local](js-modules.rofl.md#spec_local), [str_char0](js-modules.rofl.md#str_char0), [str_seg](js-modules.rofl.md#str_seg), [type_only_site](js-modules.rofl.md#type_only_site), [value_binding](js-modules.rofl.md#value_binding)
+- from js-structure, in the code: [arg_node](js-structure.rofl.md#arg_node), [argument_at](js-structure.rofl.md#argument_at), [assign_op](js-structure.rofl.md#assign_op), [compound_write](js-structure.rofl.md#compound_write), [for_of](js-structure.rofl.md#for_of), [key_name](js-structure.rofl.md#key_name), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [pattern_target](js-structure.rofl.md#pattern_target), [prop_name](js-structure.rofl.md#prop_name), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in), [value_expr](js-structure.rofl.md#value_expr), [value_write](js-structure.rofl.md#value_write)
 - from models/lang/js/facts/js-globals.rofl, in the main:
   - <a id="lib_global_prototype"></a>A name Name has the prototype P (`lib_global_prototype`)
-- from outside these files:
+- from outside these files, in the code:
   - <a id="dreach"></a>`dreach`
   - <a id="eff_reaches"></a>A node F reaches by calling a node G (`eff_reaches`)
   - <a id="keyed_upstream"></a>`keyed_upstream`
   - <a id="scope_of"></a>`scope_of`
-- from outside these files, in the flow:
+- from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
 - from outside these files, in the tree:
   - <a id="at"></a>`at`
@@ -158,6 +155,8 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 `ident_in` has one Name and File for each N.
 
+In the code:
+
 <a id="ident_in"></a>N reads Name in File either:
 
 1. if [`ref`](#ref)(N, Name) and [`at`](#at)(N, File, something);
@@ -197,7 +196,7 @@ A node
 > `undefined` is a value too, the atom `undefined` (the string "undefined" is
 > another): the global of that name, `void`, a `let` or `var` with no
 > initialiser wherever it is read, a parameter a call leaves out and a call of
-> a function that may end without a value (models/lang/js/rules/js-surface.rofl), a get that
+> a function that may end without a value (section 17), a get that
 > may find no entry (section 7c). Where an object lacks a property is not
 > here: the layer does not know what an object lacks.
 
@@ -1277,7 +1276,7 @@ F takes Name at an index I either:
 > A rest parameter is an array of the arguments from its index on: element K
 > of `...args` at J is the argument at J + K of every call of the function,
 > so `inner(...args)` hands them on through the spread rule above. The caller
-> knows its arguments and publishes them (sx_rest_elem, models/lang/js/rules/js-surface.rofl).
+> knows its arguments and hands them on (rest_elem, section 17).
 
 In the code:
 
@@ -1296,7 +1295,7 @@ In the flow:
 <a id="param_use"></a>F uses Name at a node U if U [finds its name in](#name_scope) Name in some file F and [`param_bound`](#param_bound)(F, Name).
 
 > A read of a parameter is the function's INPUT, not its callers' values: the body says what it does with
-> `param(F, I)` once, whoever calls it. What the input may be is what the callers hand it (models/lang/js/rules/js-surface.rofl),
+> `param(F, I)` once, whoever calls it. What the input may be is what the callers hand it (section 17),
 > and that is what `may_be_node` and `may_be_lit` read inside the body.
 
 <a id="input_param"></a>`input_param`(N, F, I) either:
@@ -1314,13 +1313,13 @@ In the flow:
 1. if [`input_param`](#input_param)(S, F, something);
 2. if [`input_this`](#input_this)(S, F).
 
-<a id="input_node"></a>`input_node`(S, N) if [`input_param`](#input_param)(S, F, I) and [`sx_arg_node`](js-surface.rofl.md#sx_arg_node)(F, I, N).
+<a id="input_node"></a>`input_node`(S, N) if [`input_param`](#input_param)(S, F, I) and [`handed_node`](#handed_node)(F, I, N).
 
-<a id="input_lit"></a>`input_lit`(S, V) if [`input_param`](#input_param)(S, F, I) and [`sx_arg_lit`](js-surface.rofl.md#sx_arg_lit)(F, I, V).
+<a id="input_lit"></a>`input_lit`(S, V) if [`input_param`](#input_param)(S, F, I) and [`handed_lit`](#handed_lit)(F, I, V).
 
 > A call is its function's summary applied to THIS call: what the function returns of its own, and what it
-> returns of an input, here this call's argument or receiver (`sx_ret_own`, `sx_ret_input`, `sx_ret_this`,
-> models/lang/js/rules/js-surface.rofl). An input of an enclosing function is not this call's to give: the summary holds its values.
+> returns of an input, here this call's argument or receiver (`ret_own`, `ret_input`, `ret_this`,
+> section 17). An input of an enclosing function is not this call's to give: the summary holds its values.
 
 <a id="returns"></a>F returns a node E either:
 
@@ -1330,12 +1329,12 @@ In the flow:
    - F [is nearest to](#nearest_v) a node R;
 2. if F is a [function](js-callgraph.rofl.md#fn_node) and [`returns`](#returns)(F, E) in the value.
 
-`may_be`(C, `lit`, V) if a call C [resolves to](js-callgraph.rofl.md#resolves) F and [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(F, `lit`, V).
+`may_be`(C, `lit`, V) if a call C [resolves to](js-callgraph.rofl.md#resolves) F and [`ret_own`](#ret_own)(F, `lit`, V).
 
 > AN OBJECT BORN IN A FUNCTION AND HANDED OUT IS A TEMPLATE, AND A CALL IS AN INSTANCE OF IT, as a `new` is of a
 > class (`made`, section 12). What the call gets is `via(C, O)`: the O that THIS call handed out. The label is one
 > call, the one the holder sees; what stands behind it (a wrapper over a wrapper, a recursion) is the called
-> function's summary of the object it hands out, in its own terms (`sx_holds`, section 8), so nothing bounds a depth.
+> function's summary of the object it hands out, in its own terms (`ret_holds`, section 8), so nothing bounds a depth.
 > The label is carried where a value of any kind is (the rules over `VK`); a reader that wants the object reads
 > `may_be_node`, and one that passes it on by kind hands the object on without its label, which is the general case.
 
@@ -1349,30 +1348,30 @@ In the flow:
 
 1. if all of:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(F, `node`, O);
+   - [`ret_own`](#ret_own)(F, `node`, O);
    - [`born_tmpl`](#born_tmpl)(O);
    - N is `inst`;
    - E is via(C, O);
 2. if all of:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(F, `node`, M);
+   - [`ret_own`](#ret_own)(F, `node`, M);
    - [`made_of`](#made_of)(M, something);
    - N is `inst`;
    - E is via(C, M);
 3. if all of:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(F, `node`, inst(CD));
+   - [`ret_own`](#ret_own)(F, `node`, inst(CD));
    - N is `node`;
    - E is inst(CD);
 4. if all of:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(F, `node`, E);
+   - [`ret_own`](#ret_own)(F, `node`, E);
    - [`at`](#at)(E, something, something);
    - N is `node`;
    - unless [`born_tmpl`](#born_tmpl)(E);
 5. if all of:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_input`](js-surface.rofl.md#sx_ret_input)(F, I);
+   - [`ret_input`](#ret_input)(F, I);
    - C [passes](#arg_at) a node X at an index I;
    - [`may_be`](js-concat.rofl.md#may_be)(X, N, E).
 
@@ -1391,15 +1390,15 @@ In the flow:
 
 `may_be`(C, `node`, I) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_ret_self`](js-surface.rofl.md#sx_ret_self)(F);
+  - [`ret_self`](#ret_self)(F);
   - [`recv_key`](#recv_key)(C, R, Key);
   - [`own_node`](#own_node)(R, I);
   - [`isa`](#isa)(I, CD);
-  - [`sx_lookup`](#sx_lookup)(CD, Key, F).
+  - [`proto_lookup`](#proto_lookup)(CD, Key, F).
 
 <a id="self_recv"></a>`self_recv`(C, R) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_ret_self`](js-surface.rofl.md#sx_ret_self)(F);
+  - [`ret_self`](#ret_self)(F);
   - [`recv_call`](#recv_call)(C, R).
 
 `may_be`(C, N, T) either:
@@ -1410,7 +1409,7 @@ In the flow:
    - N is `input`;
 2. if all of:
    - C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_this`](js-surface.rofl.md#sx_ret_this)(F, T);
+   - [`ret_this`](#ret_this)(F, T);
    - N is `node`;
    - unless [`recv_call`](#recv_call)(C, something).
 
@@ -1496,9 +1495,7 @@ Declared as facts:
    - [`may_be`](js-concat.rofl.md#may_be)(T, `input`, O);
    - N is `input`.
 
-In the surface:
-
-`sx_mwrite`(O, Key, V) if all of:
+`mwrite`(O, Key, V) if all of:
   - [`merge_call`](#merge_call)(C);
   - an invocation C [passes](#arg_at) a node T at 0;
   - T [points to](#may_be_node) a node O;
@@ -1533,8 +1530,6 @@ Declared as facts:
 | `map` | "set" | "get" |
 | `weakmap` | "set" | "get" |
 
-In the flow:
-
 <a id="keyed_obj"></a>`keyed_obj`(X, P) if all of:
   - X [is an instance](js-globals.rofl.md#es_instance) of Name from some release;
   - Name [has the prototype](#lib_global_prototype) P;
@@ -1548,18 +1543,14 @@ In the flow:
   - [`call`](#call)(C);
   - N [selects](#selects) Key.
 
-In the surface:
-
-<a id="sx_kput"></a>`sx_kput`(X, K, V) if all of:
+<a id="keyed_put_at"></a>`keyed_put_at`(X, K, V) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Put);
   - [`keyed_store`](#keyed_store)(P, Put, something);
   - an invocation C [passes](#arg_at) a node Y at 0;
   - Y [may be the literal](#may_be_lit) K;
   - C [passes](#arg_at) a node V at 1.
 
-In the flow:
-
-<a id="keyed_put"></a>`keyed_put`(X, K, V) if [`sx_kput`](#sx_kput)(X, K, V).
+<a id="keyed_put"></a>`keyed_put`(X, K, V) if [`keyed_put_at`](#keyed_put_at)(X, K, V).
 
 <a id="keyed_get"></a>`keyed_get`(C, X, K) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Get);
@@ -1862,13 +1853,13 @@ In the code:
 > volume publishes what it found.
 
 <a id="keyed_rets_many"></a>`keyed_rets_many`(a [function](js-callgraph.rofl.md#fn_node) F) if all of:
-  - [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(F, V);
-  - [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(F, W);
+  - [`ret_plain_lit`](#ret_plain_lit)(F, V);
+  - [`ret_plain_lit`](#ret_plain_lit)(F, W);
   - V differs from W.
 
-<a id="keyed_ret_need"></a>`keyed_ret_need`(a [function](js-callgraph.rofl.md#fn_node) F) if [`sx_ret_lit`](js-surface.rofl.md#sx_ret_lit)(F, something), unless [`keyed_rets_many`](#keyed_rets_many)(F).
+<a id="keyed_ret_need"></a>`keyed_ret_need`(a [function](js-callgraph.rofl.md#fn_node) F) if [`ret_plain_lit`](#ret_plain_lit)(F, something), unless [`keyed_rets_many`](#keyed_rets_many)(F).
 
-`keyed_want`(R) if [`keyed_ret_need`](#keyed_ret_need)(F) and [`ret_plain`](js-surface.rofl.md#ret_plain)(F, R).
+`keyed_want`(R) if [`keyed_ret_need`](#keyed_ret_need)(F) and [`ret_plain`](#ret_plain)(F, R).
 
 <a id="keyed_ret_known"></a>`keyed_ret_known`(F) if [`keyed_ret_need`](#keyed_ret_need)(F).
 
@@ -1876,7 +1867,7 @@ In the code:
 
 1. if all of:
    - [`keyed_ret_need`](#keyed_ret_need)(F);
-   - [`ret_plain`](js-surface.rofl.md#ret_plain)(F, R);
+   - [`ret_plain`](#ret_plain)(F, R);
    - [`keyed_open`](#keyed_open)(R);
 2. if [`keyed_ret_need`](#keyed_ret_need)(F) and [`async`](#async)(F);
 3. if [`keyed_ret_need`](#keyed_ret_need)(F) and [`generator`](#generator)(F).
@@ -1901,13 +1892,13 @@ In the code:
 5. if all of:
    - [`keyed_want`](#keyed_want)(C);
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-   - [`sx_ret_param`](js-surface.rofl.md#sx_ret_param)(F, I);
+   - [`ret_param_at`](#ret_param_at)(F, I);
    - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, I, something).
 
 `keyed_src`(C, X) if all of:
   - [`keyed_want`](#keyed_want)(C);
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_ret_param`](js-surface.rofl.md#sx_ret_param)(F, I);
+  - [`ret_param_at`](#ret_param_at)(F, I);
   - [`arg_node`](js-structure.rofl.md#arg_node)(C, I, X).
 
 <a id="keyed_fn_need"></a>`keyed_fn_need`(G) if [`keyed_param`](#keyed_param)(something, G, something).
@@ -2329,7 +2320,7 @@ Declared as facts:
 
 > what a call may run, asked backwards from the functions in question along
 > the call graph (`eff_reaches` is reach inside its cycles only); another
-> file's function brings its answer with it (`sx_keyed_runs`, `sx_runs_out`)
+> file's function brings its answer with it (`keyed_runs`, `runs_out`)
 
 `keyed_runs_m`(F, M) if a node F [reaches by calling](#eff_reaches) a node M and [`keyed_target`](#keyed_target)(M).
 
@@ -2366,7 +2357,7 @@ Declared as facts:
 
 <a id="keyed_handed"></a>`keyed_handed`(V) either:
 
-1. if [`keyed_hand_need`](#keyed_hand_need)(V) and [`sx_esc`](js-surface.rofl.md#sx_esc)(V);
+1. if [`keyed_hand_need`](#keyed_hand_need)(V) and [`escaping`](#escaping)(V);
 2. if all of:
    - [`keyed_hand_need`](#keyed_hand_need)(V);
    - a node X [points to](#may_be_node) V;
@@ -3094,7 +3085,7 @@ A node is taken out before a call C by a call Q if [`keyed_vsure_out`](#keyed_vs
    - [`keyed_leaves`](#keyed_leaves)(C, J);
    - [`keyed_read_site`](#keyed_read_site)(C, H, something, something);
    - [`keyed_made`](#keyed_made)(H, X);
-   - [`sx_esc`](js-surface.rofl.md#sx_esc)(X);
+   - [`escaping`](#escaping)(X);
 2. if all of:
    - [`keyed_outside_at`](#keyed_outside_at)(C, J);
    - [`keyed_drop_may`](#keyed_drop_may)(C, J, D);
@@ -3152,18 +3143,14 @@ In the flow:
    - [`keyed_walk_at`](#keyed_walk_at)(E, D, 0);
    - VK is `lit`.
 
-In the surface:
-
-<a id="sx_keach"></a>`sx_keach`(C, F, X) if all of:
+<a id="keach"></a>`keach`(C, F, X) if all of:
   - [`keyed_on`](#keyed_on)(C, X, something, "forEach");
   - an invocation C [passes](#arg_at) a node Y at 0;
   - Y [points to](#may_be_node) a node F;
-  - [`fn_value`](js-surface.rofl.md#fn_value)(F).
-
-In the flow:
+  - [`fn_value`](#fn_value)(F).
 
 <a id="keyed_each_at"></a>`keyed_each_at`(U, C, X, Pos) if all of:
-  - [`sx_keach`](#sx_keach)(C, F, X);
+  - [`keach`](#keach)(C, F, X);
   - F [takes](#param_of) Name at Pos;
   - F [uses](#param_use) Name at a node U.
 
@@ -3304,31 +3291,25 @@ The member Key of a node O holds a node V either:
 
 > A member written is a member read, flow-insensitively — `assigns` one step
 > over. `plain_assign` is load-bearing: `+=` evaluates to a sum. The object may be
-> another file's: the write is published for it (models/lang/js/rules/js-surface.rofl) and read back.
+> another file's: the write is kept by its object's key (section 17) and read back.
 
 <a id="mwrite_at"></a>`mwrite_at`(Obj, Key, V) if all of:
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
   - L [selects](#selects) Key;
   - [`assign`](#assign)(X, L, V);
   - X [is plain](#plain_assign);
-  - unless [`store_sym`](js-surface.rofl.md#store_sym)(X).
+  - unless [`store_sym`](#store_sym)(X).
 
-In the surface:
+`mwrite`(O, Key, V) if [`mwrite_at`](#mwrite_at)(Obj, Key, V) and [`own_node`](#own_node)(Obj, O).
 
-`sx_mwrite`(O, Key, V) if [`mwrite_at`](#mwrite_at)(Obj, Key, V) and [`own_node`](#own_node)(Obj, O).
-
-In the flow:
-
-The member Key of a node O holds a node V if [`sx_mwrite`](js-concat.rofl.md#sx_mwrite)(O, Key, V).
+The member Key of a node O holds a node V if [`mwrite`](js-concat.rofl.md#mwrite)(O, Key, V).
 
 > A write onto an INPUT (`this.x = v`, `o.x = v` with `o` a parameter) is the function's summary: it lands on what
 > the input is at each call, the receiver or the argument, and nowhere else. A value that is the function's own
-> input is named apart (`sx_wsum_in`) and becomes this call's argument; a write onto the caller's input is the
+> input is named apart (`wsum_in`) and becomes this call's argument; a write onto the caller's input is the
 > caller's summary in turn, so a summary composes through its callees and a recursion is a fixpoint.
 
-In the surface:
-
-<a id="sx_wsum"></a>`sx_wsum`(G, S, Key, N, X) either:
+<a id="wsum"></a>`wsum`(G, S, Key, N, X) either:
 
 1. if all of:
    - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
@@ -3350,40 +3331,36 @@ In the surface:
    - N is `input`;
    - unless [`input_of`](#input_of)(X, G).
 
-<a id="sx_wsum_in"></a>`sx_wsum_in`(G, S, Key, X) if all of:
+<a id="wsum_in"></a>`wsum_in`(G, S, Key, X) if all of:
   - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
   - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, S);
   - [`input_of`](#input_of)(S, G);
   - [`may_be`](js-concat.rofl.md#may_be)(V, `input`, X);
   - [`input_of`](#input_of)(X, G).
 
-In the flow:
-
 <a id="winput"></a>`winput`(G, S) either:
 
-1. if [`sx_wsum`](#sx_wsum)(G, S, something, something, something);
-2. if [`sx_wsum_in`](#sx_wsum_in)(G, S, something, something);
-3. if [`sx_wsum_in`](#sx_wsum_in)(G, something, something, S);
-4. if [`sx_wcls`](#sx_wcls)(G, S, something, something, something, something);
-5. if [`sx_wcls_in`](#sx_wcls_in)(G, S, something, something, something);
-6. if [`sx_wcls_in`](#sx_wcls_in)(G, something, something, something, S);
-7. if [`sx_runs`](#sx_runs)(G, S, something, something);
-8. if [`sx_runs_c`](#sx_runs_c)(G, S, something, something, something).
+1. if [`wsum`](#wsum)(G, S, something, something, something);
+2. if [`wsum_in`](#wsum_in)(G, S, something, something);
+3. if [`wsum_in`](#wsum_in)(G, something, something, S);
+4. if [`wcls`](#wcls)(G, S, something, something, something, something);
+5. if [`wcls_in`](#wcls_in)(G, S, something, something, something);
+6. if [`wcls_in`](#wcls_in)(G, something, something, something, S);
+7. if [`wruns`](#wruns)(G, S, something, something);
+8. if [`wruns_c`](#wruns_c)(G, S, something, something, something).
 
-In the surface:
+<a id="wparam"></a>`wparam`(G, S, I) if [`winput`](#winput)(G, S) and [`input_param`](#input_param)(S, G, I).
 
-<a id="sx_wparam"></a>`sx_wparam`(G, S, I) if [`winput`](#winput)(G, S) and [`input_param`](#input_param)(S, G, I).
+<a id="wthis"></a>`wthis`(G, S) if [`winput`](#winput)(G, S) and [`input_this`](#input_this)(S, G).
 
-<a id="sx_wthis"></a>`sx_wthis`(G, S) if [`winput`](#winput)(G, S) and [`input_this`](#input_this)(S, G).
+<a id="wkey"></a>`wkey`(G, S, Key) either:
 
-<a id="sx_wkey"></a>`sx_wkey`(G, S, Key) either:
-
-1. if [`sx_wsum`](#sx_wsum)(G, S, Key, something, something);
-2. if [`sx_wsum_in`](#sx_wsum_in)(G, S, Key, something);
-3. if [`sx_wcls`](#sx_wcls)(G, S, something, Key, something, something);
-4. if [`sx_wcls_in`](#sx_wcls_in)(G, S, something, Key, something);
-5. if [`sx_runs`](#sx_runs)(G, S, M, SM) and [`sx_wsum`](#sx_wsum)(M, SM, Key, something, something);
-6. if [`sx_runs_c`](#sx_runs_c)(G, S, something, M, SM) and [`sx_wsum`](#sx_wsum)(M, SM, Key, something, something).
+1. if [`wsum`](#wsum)(G, S, Key, something, something);
+2. if [`wsum_in`](#wsum_in)(G, S, Key, something);
+3. if [`wcls`](#wcls)(G, S, something, Key, something, something);
+4. if [`wcls_in`](#wcls_in)(G, S, something, Key, something);
+5. if [`wruns`](#wruns)(G, S, M, SM) and [`wsum`](#wsum)(M, SM, Key, something, something);
+6. if [`wruns_c`](#wruns_c)(G, S, something, M, SM) and [`wsum`](#wsum)(M, SM, Key, something, something).
 
 > What the callee's input is at THIS call: the argument; the instance a `new` makes; the caller's own `this` for
 > `super`; at a call on a receiver (`r.m()`, a getter), each instance `r` may be whose class finds the callee under
@@ -3411,14 +3388,10 @@ In the flow:
    - [`object_of`](js-structure.rofl.md#object_of)(C, R);
    - C [selects](#selects) Key.
 
-In the surface:
-
-<a id="sx_lookup"></a>`sx_lookup`(CD, Key, G) if all of:
+<a id="proto_lookup"></a>`proto_lookup`(CD, Key, G) if all of:
   - [the instance member](#class_member_proto) Key of a class CD is a node V;
   - CD [is a class](#class_like);
   - [`own_node`](#own_node)(V, G).
-
-In the flow:
 
 <a id="applies"></a>`applies`(C, G) either:
 
@@ -3429,20 +3402,20 @@ In the flow:
 
 1. if all of:
    - [`applies`](#applies)(C, G);
-   - [`sx_wparam`](#sx_wparam)(G, S, I);
+   - [`wparam`](#wparam)(G, S, I);
    - an invocation C [passes](#arg_at) a node Y at an index I;
    - [`may_be`](js-concat.rofl.md#may_be)(Y, VK, X);
 2. if all of:
    - [`applies`](#applies)(C, G);
-   - [`sx_wthis`](#sx_wthis)(G, S);
+   - [`wthis`](#wthis)(G, S);
    - [`recv_key`](#recv_key)(C, R, Key);
    - [`own_node`](#own_node)(R, X);
    - [`isa`](#isa)(X, CD);
-   - [`sx_lookup`](#sx_lookup)(CD, Key, G);
+   - [`proto_lookup`](#proto_lookup)(CD, Key, G);
    - VK is `node`;
 3. if all of:
    - [`applies`](#applies)(C, G);
-   - [`sx_wthis`](#sx_wthis)(G, S);
+   - [`wthis`](#wthis)(G, S);
    - [`new_of`](js-callgraph.rofl.md#new_of)(C, CD) in the flow;
    - VK is `node`;
    - X is made(C, CD).
@@ -3454,7 +3427,7 @@ In the flow:
 1. if [`at_call`](#at_call)(C, S, `inst`, via(something, O)) and N is `node`;
 2. if all of:
    - [`applies`](#applies)(C, G);
-   - [`sx_wthis`](#sx_wthis)(G, S);
+   - [`wthis`](#wthis)(G, S);
    - [`super_recv`](#super_recv)(C);
    - H [is the nearest function of](js-callgraph.rofl.md#nearest_fn) C;
    - [`input_this`](#input_this)(O, H);
@@ -3464,23 +3437,21 @@ In the flow:
 
 <a id="wput"></a>`wput`(C, S, Key, N, X) either:
 
-1. if [`applies`](#applies)(C, G), [`sx_wsum`](#sx_wsum)(G, S, Key, `input`, X), and N is `input`;
+1. if [`applies`](#applies)(C, G), [`wsum`](#wsum)(G, S, Key, `input`, X), and N is `input`;
 2. if all of:
    - [`applies`](#applies)(C, G);
-   - [`sx_wsum_in`](#sx_wsum_in)(G, S, Key, Y);
+   - [`wsum_in`](#wsum_in)(G, S, Key, Y);
    - [`at_call`](#at_call)(C, Y, N, X).
 
 <a id="wputc"></a>`wputc`(C, S, CD, Key, N, X) either:
 
-1. if [`applies`](#applies)(C, G), [`sx_wcls`](#sx_wcls)(G, S, CD, Key, `input`, X), and N is `input`;
+1. if [`applies`](#applies)(C, G), [`wcls`](#wcls)(G, S, CD, Key, `input`, X), and N is `input`;
 2. if all of:
    - [`applies`](#applies)(C, G);
-   - [`sx_wcls_in`](#sx_wcls_in)(G, S, CD, Key, Y);
+   - [`wcls_in`](#wcls_in)(G, S, CD, Key, Y);
    - [`at_call`](#at_call)(C, Y, N, X).
 
-In the surface:
-
-<a id="sx_mset"></a>`sx_mset`(I, Key, VK, X) either:
+<a id="mset"></a>`mset`(I, Key, VK, X) either:
 
 1. if [`wput`](#wput)(C, S, Key, VK, X) and [`at_call`](#at_call)(C, S, `node`, I);
 2. if all of:
@@ -3489,95 +3460,87 @@ In the surface:
    - [`isa`](#isa)(I, CD).
 
 > What a callee writes that its inputs do not decide (a node or a literal of its own) is not copied into the caller:
-> the caller's summary says which function's own writes land on which of its inputs (`sx_runs`, per class where a
-> call on the input decides the method, `sx_runs_c`), and an instance reads them where they were written.
+> the caller's summary says which function's own writes land on which of its inputs (`wruns`, per class where a
+> call on the input decides the method, `wruns_c`), and an instance reads them where they were written.
 
-<a id="sx_wconst"></a>`sx_wconst`(G, S) if [`sx_wsum`](#sx_wsum)(G, S, something, `node` or `lit`, something).
+<a id="wconst"></a>`wconst`(G, S) if [`wsum`](#wsum)(G, S, something, `node` or `lit`, something).
 
-<a id="sx_runs"></a>`sx_runs`(G, S, G, S) if [`sx_wconst`](#sx_wconst)(G, S).
+<a id="wruns"></a>`wruns`(G, S, G, S) if [`wconst`](#wconst)(G, S).
 
-`sx_wconst`(G, S) if [`sx_wcls`](#sx_wcls)(G, S, something, something, `node` or `lit`, something).
+`wconst`(G, S) if [`wcls`](#wcls)(G, S, something, something, `node` or `lit`, something).
 
-`sx_runs`(H, T, M, SM) if all of:
+`wruns`(H, T, M, SM) if all of:
   - [`applies`](#applies)(C, G);
-  - [`sx_runs`](#sx_runs)(G, S, M, SM);
+  - [`wruns`](#wruns)(G, S, M, SM);
   - [`at_call`](#at_call)(C, S, `input`, T);
   - [`input_of`](#input_of)(T, H).
 
-<a id="sx_runs_c"></a>`sx_runs_c`(H, T, CD, M, SM) if all of:
+<a id="wruns_c"></a>`wruns_c`(H, T, CD, M, SM) if all of:
   - [`applies`](#applies)(C, G);
-  - [`sx_runs_c`](#sx_runs_c)(G, S, CD, M, SM);
+  - [`wruns_c`](#wruns_c)(G, S, CD, M, SM);
   - [`at_call`](#at_call)(C, S, `input`, T);
   - [`input_of`](#input_of)(T, H).
-
-In the flow:
 
 <a id="runs_recv"></a>`runs_recv`(C, T, G, S) if all of:
   - [`recv_key`](#recv_key)(C, R, MKey);
   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
   - [`applies`](#applies)(C, G);
-  - [`sx_wthis`](#sx_wthis)(G, S).
+  - [`wthis`](#wthis)(G, S).
 
-In the surface:
-
-`sx_runs_c`(H, T, CD, M, SM) either:
+`wruns_c`(H, T, CD, M, SM) either:
 
 1. if all of:
    - [`runs_recv`](#runs_recv)(C, T, G, S);
-   - [`sx_runs`](#sx_runs)(G, S, M, SM);
+   - [`wruns`](#wruns)(G, S, M, SM);
    - [`recv_key`](#recv_key)(C, something, MKey);
-   - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
+   - [`proto_lookup`](#proto_lookup)(CD, MKey, G);
    - [`input_of`](#input_of)(T, H);
 2. if all of:
    - [`runs_recv`](#runs_recv)(C, T, G, S);
-   - [`sx_runs_c`](#sx_runs_c)(G, S, CD, M, SM);
+   - [`wruns_c`](#wruns_c)(G, S, CD, M, SM);
    - [`recv_key`](#recv_key)(C, something, MKey);
-   - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
+   - [`proto_lookup`](#proto_lookup)(CD, MKey, G);
    - [`input_of`](#input_of)(T, H).
-
-In the flow:
 
 <a id="lands"></a>`lands`(I, M, SM) if all of:
   - [`applies`](#applies)(C, G);
-  - [`sx_runs`](#sx_runs)(G, S, M, SM);
+  - [`wruns`](#wruns)(G, S, M, SM);
   - [`at_call`](#at_call)(C, S, `node`, I).
 
 `lands`(I, M, SM) if all of:
   - [`applies`](#applies)(C, G);
-  - [`sx_runs_c`](#sx_runs_c)(G, S, CD, M, SM);
+  - [`wruns_c`](#wruns_c)(G, S, CD, M, SM);
   - [`at_call`](#at_call)(C, S, `node`, I);
   - [`isa`](#isa)(I, CD).
 
 `lands`(I, M2, SM2) if all of:
   - [`meth_on`](#meth_on)(I, something, M);
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_runs`](#sx_runs)(M, S, M2, SM2).
+  - [`wthis`](#wthis)(M, S);
+  - [`wruns`](#wruns)(M, S, M2, SM2).
 
 `lands`(I, M2, SM2) if all of:
   - [`meth_on`](#meth_on)(I, C, M);
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_runs_c`](#sx_runs_c)(M, S, C, M2, SM2).
+  - [`wthis`](#wthis)(M, S);
+  - [`wruns_c`](#wruns_c)(M, S, C, M2, SM2).
 
-In the surface:
+`mset`(I, Key, N, X) either:
 
-`sx_mset`(I, Key, N, X) either:
-
-1. if [`lands`](#lands)(I, M, SM), [`sx_wsum`](#sx_wsum)(M, SM, Key, `node`, X), and N is `node`;
-2. if [`lands`](#lands)(I, M, SM), [`sx_wsum`](#sx_wsum)(M, SM, Key, `lit`, X), and N is `lit`;
+1. if [`lands`](#lands)(I, M, SM), [`wsum`](#wsum)(M, SM, Key, `node`, X), and N is `node`;
+2. if [`lands`](#lands)(I, M, SM), [`wsum`](#wsum)(M, SM, Key, `lit`, X), and N is `lit`;
 3. if all of:
    - [`lands`](#lands)(I, M, SM);
-   - [`sx_wcls`](#sx_wcls)(M, SM, CD, Key, `node`, X);
+   - [`wcls`](#wcls)(M, SM, CD, Key, `node`, X);
    - [`isa`](#isa)(I, CD);
    - N is `node`;
 4. if all of:
    - [`lands`](#lands)(I, M, SM);
-   - [`sx_wcls`](#sx_wcls)(M, SM, CD, Key, `lit`, X);
+   - [`wcls`](#wcls)(M, SM, CD, Key, `lit`, X);
    - [`isa`](#isa)(I, CD);
    - N is `lit`.
 
 > onto the caller's input: the caller's summary
 
-`sx_wsum`(H, T, Key, N, X) either:
+`wsum`(H, T, Key, N, X) either:
 
 1. if all of:
    - [`wput`](#wput)(C, S, Key, `node`, X);
@@ -3596,7 +3559,7 @@ In the surface:
    - N is `input`;
    - unless [`input_of`](#input_of)(X, H).
 
-`sx_wsum_in`(H, T, Key, X) if all of:
+`wsum_in`(H, T, Key, X) if all of:
   - [`wput`](#wput)(C, S, Key, `input`, X);
   - [`at_call`](#at_call)(C, S, `input`, T);
   - [`input_of`](#input_of)(T, H);
@@ -3605,33 +3568,29 @@ In the surface:
 > a call on the caller's input `t.m()`: what runs depends on the class of t, so the summary is the caller's for each
 > class that finds the callee under the key
 
-In the flow:
-
 <a id="dput"></a>`dput`(C, T, CD, Key, VK, X) either:
 
 1. if all of:
    - [`recv_key`](#recv_key)(C, R, MKey);
    - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
    - [`applies`](#applies)(C, G);
-   - [`sx_wthis`](#sx_wthis)(G, S);
+   - [`wthis`](#wthis)(G, S);
    - [`wput`](#wput)(C, S, Key, VK, X);
-   - [`sx_lookup`](#sx_lookup)(CD, MKey, G);
+   - [`proto_lookup`](#proto_lookup)(CD, MKey, G);
 2. if all of:
    - [`recv_key`](#recv_key)(C, R, MKey);
    - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
    - [`applies`](#applies)(C, G);
-   - [`sx_wthis`](#sx_wthis)(G, S);
+   - [`wthis`](#wthis)(G, S);
    - [`wputc`](#wputc)(C, S, CD, Key, VK, X);
-   - [`sx_lookup`](#sx_lookup)(CD, MKey, G).
+   - [`proto_lookup`](#proto_lookup)(CD, MKey, G).
 
 <a id="cput"></a>`cput`(C, T, CD, Key, VK, X) either:
 
 1. if [`dput`](#dput)(C, T, CD, Key, VK, X);
 2. if [`wputc`](#wputc)(C, S, CD, Key, VK, X) and [`at_call`](#at_call)(C, S, `input`, T).
 
-In the surface:
-
-<a id="sx_wcls"></a>`sx_wcls`(H, T, CD, Key, N, X) either:
+<a id="wcls"></a>`wcls`(H, T, CD, Key, N, X) either:
 
 1. if [`cput`](#cput)(something, T, CD, Key, `node`, X), [`input_of`](#input_of)(T, H), and N is `node`;
 2. if [`cput`](#cput)(something, T, CD, Key, `lit`, X), [`input_of`](#input_of)(T, H), and N is `lit`;
@@ -3641,14 +3600,12 @@ In the surface:
    - N is `input`;
    - unless [`input_of`](#input_of)(X, H).
 
-<a id="sx_wcls_in"></a>`sx_wcls_in`(H, T, CD, Key, X) if all of:
+<a id="wcls_in"></a>`wcls_in`(H, T, CD, Key, X) if all of:
   - [`cput`](#cput)(something, T, CD, Key, `input`, X);
   - [`input_of`](#input_of)(T, H);
   - [`input_of`](#input_of)(X, H).
 
 > read back where a member is read at all (`member_plain`, `class_member_static`): not an array's index
-
-In the flow:
 
 <a id="holds_members"></a>`holds_members`(O) either:
 
@@ -3660,7 +3617,7 @@ In the flow:
 
 `may_be`(N, VK, X) if all of:
   - [`member_at`](#member_at)(N, something, I, Key);
-  - [`sx_mset`](#sx_mset)(I, Key, VK, X);
+  - [`mset`](#mset)(I, Key, VK, X);
   - [`holds_members`](#holds_members)(I);
   - unless [`this_reads`](#this_reads)(N).
 
@@ -3668,132 +3625,105 @@ In the flow:
 > ancestors' and its constructor may write on it (an argument as the input, whatever any caller hands), and what is
 > written onto each instance. An instance a `new` made, `made(E, CD)`, holds only what the calls made on it write.
 
-In the surface:
-
-<a id="sx_meth"></a>`sx_meth`(C, M) if a class C [has the method](#class_method_of) M, unless [`static`](#static)(M).
-
-In the flow:
+<a id="meth"></a>`meth`(C, M) if a class C [has the method](#class_method_of) M, unless [`static`](#static)(M).
 
 <a id="meth_on"></a>`meth_on`(I, C, M) either:
 
-1. if a node I [stands for an instance of](#inst_of) a class C and [`sx_meth`](#sx_meth)(C, M);
+1. if a node I [stands for an instance of](#inst_of) a class C and [`meth`](#meth)(C, M);
 2. if all of:
    - [`sub_inst`](#sub_inst)(SD, I);
    - a node I [stands for an instance of](#inst_of) a class C;
-   - [`sx_meth`](#sx_meth)(SD, M).
+   - [`meth`](#meth)(SD, M).
 
-In the surface:
-
-`sx_mset`(I, Key, `input`, X) if all of:
+`mset`(I, Key, `input`, X) if all of:
   - [`meth_on`](#meth_on)(I, something, M);
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wsum`](#sx_wsum)(M, S, Key, `input`, X).
+  - [`wthis`](#wthis)(M, S);
+  - [`wsum`](#wsum)(M, S, Key, `input`, X).
 
-`sx_mset`(I, Key, `input`, P) if all of:
+`mset`(I, Key, `input`, P) if all of:
   - [`meth_on`](#meth_on)(I, something, M);
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wsum_in`](#sx_wsum_in)(M, S, Key, P).
+  - [`wthis`](#wthis)(M, S);
+  - [`wsum_in`](#wsum_in)(M, S, Key, P).
 
-`sx_mset`(I, Key, `input`, X) if all of:
+`mset`(I, Key, `input`, X) if all of:
   - [`meth_on`](#meth_on)(I, C, M);
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wcls`](#sx_wcls)(M, S, C, Key, `input`, X).
+  - [`wthis`](#wthis)(M, S);
+  - [`wcls`](#wcls)(M, S, C, Key, `input`, X).
 
-`sx_mset`(I, Key, `input`, P) if all of:
+`mset`(I, Key, `input`, P) if all of:
   - [`meth_on`](#meth_on)(I, C, M);
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wcls_in`](#sx_wcls_in)(M, S, C, Key, P).
+  - [`wthis`](#wthis)(M, S);
+  - [`wcls_in`](#wcls_in)(M, S, C, Key, P).
 
-`sx_mset`(J, Key, VK, X) if all of:
-  - [`sx_mset`](#sx_mset)(I, Key, VK, X);
+`mset`(J, Key, VK, X) if all of:
+  - [`mset`](#mset)(I, Key, VK, X);
   - [`made_of`](#made_of)(I, CD);
   - a node J [stands for an instance of](#inst_of) a class CD.
 
-In the flow:
-
 The member Key of a node J holds a node V if all of:
-  - [`sx_mwrite`](js-concat.rofl.md#sx_mwrite)(I, Key, V);
+  - [`mwrite`](js-concat.rofl.md#mwrite)(I, Key, V);
   - [`made_of`](#made_of)(I, CD);
   - J [stands for an instance of](#inst_of) a class CD.
 
 > A run of a method the model does not see writes nothing; every instance of its class says instead that the
 > member may be changed there (`changed_outside`, with where): the method is handed to code outside the model
-> (`sx_cb`, the module), no call in the model reaches it (`uncalled`), or a call reaches it on a receiver the model
+> (`called_back`, the module), no call in the model reaches it (`uncalled`), or a call reaches it on a receiver the model
 > does not know (the call). A class handed to a call nothing resolves may be constructed there: `inst(CD)` says so
 > for what its constructor writes of its arguments.
 
-In the surface:
-
-<a id="sx_cwrites"></a>`sx_cwrites`(CD, Key, M) if all of:
+<a id="cwrites"></a>`cwrites`(CD, Key, M) if all of:
   - a class CD [has the method](#class_method_of) M;
   - [`input_this`](#input_this)(S, M);
-  - [`sx_wkey`](#sx_wkey)(M, S, Key);
+  - [`wkey`](#wkey)(M, S, Key);
   - unless M [is a constructor](js-callgraph.rofl.md#ctor_method).
-
-In the flow:
 
 <a id="this_bound"></a>`this_bound`(C, M) either:
 
-1. if [`at_call`](#at_call)(C, S, something, something) and [`sx_wthis`](#sx_wthis)(M, S);
+1. if [`at_call`](#at_call)(C, S, something, something) and [`wthis`](#wthis)(M, S);
 2. if all of:
    - [`applies`](#applies)(C, M);
    - [`recv_key`](#recv_key)(C, R, something);
    - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, something).
 
-In the surface:
+<a id="ran_out"></a>`ran_out`(M, Spec) if [`called_back`](#called_back)(M, Spec) and [`wthis`](#wthis)(M, something).
 
-<a id="sx_ran_out"></a>`sx_ran_out`(M, Spec) if [`sx_cb`](js-surface.rofl.md#sx_cb)(M, Spec) and [`sx_wthis`](#sx_wthis)(M, something).
+<a id="writes_this"></a>`writes_this`(M) if [`cwrites`](#cwrites)(something, something, M).
 
-In the flow:
+`ran_out`(M, N) either:
 
-<a id="writes_this"></a>`writes_this`(M) if [`sx_cwrites`](#sx_cwrites)(something, something, M).
-
-In the surface:
-
-`sx_ran_out`(M, N) either:
-
-1. if all of:
-   - [`writes_this`](#writes_this)(M);
-   - N is `uncalled`;
-   - unless [`sx_called`](js-surface.rofl.md#sx_called)(M);
+1. if [`writes_this`](#writes_this)(M) and N is `uncalled`, unless [`called`](#called)(M);
 2. if all of:
    - [`applies`](#applies)(N, M);
-   - [`sx_wthis`](#sx_wthis)(M, something);
+   - [`wthis`](#wthis)(M, something);
    - unless [`this_bound`](#this_bound)(N, M);
    - unless [`super_recv`](#super_recv)(N);
    - unless [`new_of`](js-callgraph.rofl.md#new_of)(N, something) in the flow.
 
-<a id="sx_made_out"></a>`sx_made_out`(CD, C) if all of:
+<a id="made_out"></a>`made_out`(CD, C) if all of:
   - a call C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - C [passes](#arg_at) a node X at some index;
   - X [points to](#may_be_node) a node CD;
   - inst(CD) [stands for an instance of](#inst_of) CD.
 
-<a id="sx_out_inst"></a>`sx_out_inst`(inst(CD), Key, M, C) if all of:
-  - [`sx_made_out`](#sx_made_out)(CD, C);
+<a id="out_inst"></a>`out_inst`(inst(CD), Key, M, C) if all of:
+  - [`made_out`](#made_out)(CD, C);
   - [the constructor](#ctor_of) of a class CD is M;
-  - [`sx_wthis`](#sx_wthis)(M, S);
-  - [`sx_wsum_in`](#sx_wsum_in)(M, S, Key, something).
-
-In the flow:
+  - [`wthis`](#wthis)(M, S);
+  - [`wsum_in`](#wsum_in)(M, S, Key, something).
 
 <a id="changed_outside"></a>`changed_outside`(N, Key, M, Where) if all of:
   - [`member_any`](#member_any)(N, something, I, Key);
   - [`made_of`](#made_of)(I, CD);
-  - [`sx_ancestor`](#sx_ancestor)(CD, AD);
-  - [`sx_cwrites`](#sx_cwrites)(AD, Key, M);
-  - [`sx_ran_out`](#sx_ran_out)(M, Where).
+  - [`ancestor`](#ancestor)(CD, AD);
+  - [`cwrites`](#cwrites)(AD, Key, M);
+  - [`ran_out`](#ran_out)(M, Where).
 
-In the surface:
-
-<a id="sx_ancestor"></a>`sx_ancestor`(CD, N) either:
+<a id="ancestor"></a>`ancestor`(CD, N) either:
 
 1. if a node CD [is a class](#class_like) and N is CD;
 2. if [`sub_inst`](#sub_inst)(N, I) and a node I [stands for an instance of](#inst_of) a class CD.
 
-In the flow:
-
-`changed_outside`(N, Key, M, Where) if [`member_any`](#member_any)(N, something, I, Key) and [`sx_out_inst`](#sx_out_inst)(I, Key, M, Where).
+`changed_outside`(N, Key, M, Where) if [`member_any`](#member_any)(N, something, I, Key) and [`out_inst`](#out_inst)(I, Key, M, Where).
 
 > Inheritance walks `super_of`, and `not own_key` makes it a LOOKUP rather
 > than a union: a subclass declaring `hold` answers with its own. `own_key`
@@ -4096,7 +4026,7 @@ The plain member Key of a node O is a node V either:
 1. if [`obj_lit`](#obj_lit)(O) and [the member](#member_value) Key of O holds V;
 2. if O [is the module object of](#module_object) some file and [the member](#member_value) Key of O holds V.
 
-The static member Key of a class CD is a node V if CD [is a class](#class_like) and [`sx_mwrite`](js-concat.rofl.md#sx_mwrite)(CD, Key, V).
+The static member Key of a class CD is a node V if CD [is a class](#class_like) and [`mwrite`](js-concat.rofl.md#mwrite)(CD, Key, V).
 
 <a id="member_obj"></a>`member_obj`(a [member access](#member_node_v) N, O, Obj) if [`bare_node`](#bare_node)(O, Obj) and [`object_of`](js-structure.rofl.md#object_of)(N, O).
 
@@ -4131,7 +4061,7 @@ The static member Key of a class CD is a node V if CD [is a class](#class_like) 
 
 > A READ OFF `this` IS THE METHOD'S INPUT TOO: `field(M, Key)`, the Key of the object the method was called on. In
 > the body it is what any instance holds (`this_val`, the general case, behind `input_lit` and `input_node` as a
-> parameter's is); a method that hands it out says so in its summary (`sx_ret_field`, rules/js-surface.rofl) and
+> parameter's is); a method that hands it out says so in its summary (`ret_field`, section 17) and
 > the call reads the Key off its own receiver (`key_on`): the instance stores nothing. `this_read` is the read
 > by its form, `this.key`; a computed key or `this` under another name is read as before.
 
@@ -4183,27 +4113,21 @@ In the flow:
 > what is done to the object `this.key` holds is done to every object the key may hold, the general case: a
 > write onto it, a method run on it, and a callee's write onto it where it is handed on
 
-In the surface:
-
-`sx_mwrite`(O, Key, V) if all of:
+`mwrite`(O, Key, V) if all of:
   - [`mwrite_at`](#mwrite_at)(Obj, Key, V);
   - [`may_be`](js-concat.rofl.md#may_be)(Obj, `input`, T);
   - [`field_node`](#field_node)(T, O).
 
-In the flow:
-
 `at_call`(C, S, `node`, I) if all of:
   - [`applies`](#applies)(C, G);
-  - [`sx_wthis`](#sx_wthis)(G, S);
+  - [`wthis`](#wthis)(G, S);
   - [`recv_key`](#recv_key)(C, R, Key);
   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, T);
   - [`field_node`](#field_node)(T, I);
   - [`isa`](#isa)(I, CD);
-  - [`sx_lookup`](#sx_lookup)(CD, Key, G).
+  - [`proto_lookup`](#proto_lookup)(CD, Key, G).
 
-In the surface:
-
-`sx_mset`(I, Key, VK, X) either:
+`mset`(I, Key, VK, X) either:
 
 1. if all of:
    - [`wput`](#wput)(C, S, Key, VK, X);
@@ -4214,8 +4138,6 @@ In the surface:
    - [`at_call`](#at_call)(C, S, `input`, T);
    - [`field_node`](#field_node)(T, I);
    - [`isa`](#isa)(I, CD).
-
-In the flow:
 
 `input_lit`(field(M, Key), V) if [`this_val`](#this_val)(M, Key, `input`, T) and [`input_lit`](#input_lit)(T, V).
 
@@ -4228,12 +4150,12 @@ In the flow:
 
 <a id="key_wanted"></a>`key_wanted`(R, Key) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(F, Key);
+  - [`ret_field`](#ret_field)(F, Key);
   - [`recv_of`](#recv_of)(C, R).
 
 `may_be`(C, VK, X) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(F, Key);
+  - [`ret_field`](#ret_field)(F, Key);
   - [`recv_of`](#recv_of)(C, R);
   - [`key_on`](#key_on)(R, Key, VK, X).
 
@@ -4248,7 +4170,7 @@ In the flow:
 
 `may_be`(C, VK, X) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(F, Key);
+  - [`ret_field`](#ret_field)(F, Key);
   - [`this_val`](#this_val)(F, Key, VK, X);
   - unless [`has_recv`](#has_recv)(C).
 
@@ -4277,7 +4199,7 @@ In the flow:
 
 1. if all of:
    - [`key_ask`](#key_ask)(I, Key);
-   - [`sx_mset`](#sx_mset)(I, Key, VK, X);
+   - [`mset`](#mset)(I, Key, VK, X);
    - [`holds_members`](#holds_members)(I);
 2. if all of:
    - [`key_ask`](#key_ask)(I, Key);
@@ -4291,13 +4213,13 @@ In the flow:
   - [the member](#member_value) Key of a node I holds a node G;
   - [`getter`](#getter)(G, G).
 
-`key_of`(I, Key, VK, X) if [`key_getter`](#key_getter)(I, Key, G) and [`sx_ret_own`](js-surface.rofl.md#sx_ret_own)(G, VK, X).
+`key_of`(I, Key, VK, X) if [`key_getter`](#key_getter)(I, Key, G) and [`ret_own`](#ret_own)(G, VK, X).
 
-`key_ask`(I, K2) if [`key_getter`](#key_getter)(I, something, G) and [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(G, K2).
+`key_ask`(I, K2) if [`key_getter`](#key_getter)(I, something, G) and [`ret_field`](#ret_field)(G, K2).
 
 `key_of`(I, Key, VK, X) if all of:
   - [`key_getter`](#key_getter)(I, Key, G);
-  - [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(G, K2);
+  - [`ret_field`](#ret_field)(G, K2);
   - [`key_of`](#key_of)(I, K2, VK, X).
 
 <a id="key_on"></a>`key_on`(R, Key, VK, X) if all of:
@@ -4314,13 +4236,13 @@ In the flow:
 
 <a id="hop_at"></a>`hop_at`(C, M, K, M2) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) M2;
-  - [`sx_ret_inst`](js-surface.rofl.md#sx_ret_inst)(M2);
+  - [`ret_inst`](#ret_inst)(M2);
   - [`recv_of`](#recv_of)(C, R);
   - [`recv_field`](#recv_field)(R, M, K).
 
 `hop_at`(C, M, K, M3) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) M2;
-  - [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M2, K, M3);
+  - [`ret_hop`](#ret_hop)(M2, K, M3);
   - [`recv_of`](#recv_of)(C, R);
   - [`may_be`](js-concat.rofl.md#may_be)(R, `input`, S);
   - [`input_this`](#input_this)(S, M).
@@ -4331,21 +4253,18 @@ In the flow:
 
 <a id="run"></a>`run`(I, M) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) M;
-  - [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M, something, something);
+  - [`ret_hop`](#ret_hop)(M, something, something);
   - [`recv_of`](#recv_of)(C, R);
   - [`recv_obj`](#recv_obj)(R, I).
 
-`run`(I2, M2) if all of:
-  - [`run`](#run)(I, M);
-  - [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M, K, M2);
-  - [`key_node`](#key_node)(I, K, I2).
+`run`(I2, M2) if [`run`](#run)(I, M), [`ret_hop`](#ret_hop)(M, K, M2), and [`key_node`](#key_node)(I, K, I2).
 
 `run`(I2, M2) if [`hop_at`](#hop_at)(something, M, K, M2) and [`field_holds`](#field_holds)(M, K, I2).
 
 `key_ask`(I, K) either:
 
-1. if [`run`](#run)(I, M) and [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M, K, something);
-2. if [`run`](#run)(I, M) and [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(M, K).
+1. if [`run`](#run)(I, M) and [`ret_hop`](#ret_hop)(M, K, something);
+2. if [`run`](#run)(I, M) and [`ret_field`](#ret_field)(M, K).
 
 <a id="key_node"></a>`key_node`(I, K, I2) either:
 
@@ -4355,19 +4274,16 @@ In the flow:
 
 <a id="ret_of"></a>`ret_of`(I, M, VK, X) either:
 
-1. if all of:
-   - [`run`](#run)(I, M);
-   - [`sx_ret_field`](js-surface.rofl.md#sx_ret_field)(M, Key);
-   - [`key_of`](#key_of)(I, Key, VK, X);
+1. if [`run`](#run)(I, M), [`ret_field`](#ret_field)(M, Key), and [`key_of`](#key_of)(I, Key, VK, X);
 2. if all of:
    - [`run`](#run)(I, M);
-   - [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M, K, M2);
+   - [`ret_hop`](#ret_hop)(M, K, M2);
    - [`key_node`](#key_node)(I, K, I2);
    - [`ret_of`](#ret_of)(I2, M2, VK, X).
 
 `may_be`(C, VK, X) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) M;
-  - [`sx_ret_hop`](js-surface.rofl.md#sx_ret_hop)(M, something, something);
+  - [`ret_hop`](#ret_hop)(M, something, something);
   - [`recv_of`](#recv_of)(C, R);
   - [`recv_obj`](#recv_obj)(R, I);
   - [`ret_of`](#ret_of)(I, M, VK, X).
@@ -4441,16 +4357,16 @@ In the flow:
 
 <a id="asked"></a>`asked`(F, O, Key) if [`wants`](#wants)(C, O, Key) and a call C [resolves to](js-callgraph.rofl.md#resolves) F.
 
-> sx_holds(F, O, Key, VK, X): the O that F hands out holds (VK, X) under Key, in F's terms. Where F returns the
+> ret_holds(F, O, Key, VK, X): the O that F hands out holds (VK, X) under Key, in F's terms. Where F returns the
 > object itself, what its members hold; where F returns what a call handed it, that call's view of it.
-> Returned bare is every way `sx_ret_own` names an object but through a label (rules/js-surface.rofl): the
+> Returned bare is every way `ret_own` names an object but through a label (section 17): the
 > expression holds it, or holds an enclosing function's input that does. Asked of templates alone.
 
 <a id="ret_node"></a>`ret_node`(F, O) either:
 
-1. if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `node`, O);
+1. if F [returns to its call](#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `node`, O);
 2. if all of:
-   - F [returns to its call](js-surface.rofl.md#call_returns) E;
+   - F [returns to its call](#call_returns) E;
    - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
    - [`input_of`](#input_of)(S, G);
    - G differs from F;
@@ -4461,11 +4377,9 @@ In the flow:
 1. if [`ret_node`](#ret_node)(F, O) and [`born_tmpl`](#born_tmpl)(O);
 2. if [`ret_node`](#ret_node)(F, O) and [`made_of`](#made_of)(O, something).
 
-<a id="ret_via"></a>`ret_via`(F, C, O) if F [returns to its call](js-surface.rofl.md#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `inst`, via(C, O)).
+<a id="ret_via"></a>`ret_via`(F, C, O) if F [returns to its call](#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `inst`, via(C, O)).
 
-In the surface:
-
-<a id="sx_holds"></a>`sx_holds`(F, O, Key, VK, X) either:
+<a id="ret_holds"></a>`ret_holds`(F, O, Key, VK, X) either:
 
 1. if all of:
    - [`asked`](#asked)(F, O, Key);
@@ -4475,7 +4389,7 @@ In the surface:
 2. if all of:
    - [`asked`](#asked)(F, O, Key);
    - [`ret_bare`](#ret_bare)(F, O);
-   - [`sx_mset`](#sx_mset)(O, Key, VK, X);
+   - [`mset`](#mset)(O, Key, VK, X);
    - [`holds_members`](#holds_members)(O);
 3. if all of:
    - [`asked`](#asked)(F, O, Key);
@@ -4485,12 +4399,10 @@ In the surface:
 > via_holds(C, O, Key, VK, X): the summary seen through the call C. An input that is not this call's to give (the
 > callee's `this`, an enclosing function's parameter) stays an input, and reads as whatever any caller hands it.
 
-In the flow:
-
 <a id="via_sum"></a>`via_sum`(C, O, Key, VK, X) if all of:
   - [`wants`](#wants)(C, O, Key);
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
-  - [`sx_holds`](#sx_holds)(F, O, Key, VK, X).
+  - [`ret_holds`](#ret_holds)(F, O, Key, VK, X).
 
 <a id="via_holds"></a>`via_holds`(C, O, Key, N, X) either:
 
@@ -4609,7 +4521,7 @@ In the flow:
 
 > an instance of a subclass runs the parent's methods and constructor with
 > itself as `this`, so `this.m()` there reaches the subclass's override; a
-> subclass of another file's class tells that file (`sx_sub_inst`)
+> subclass of another file's class tells that file (`sub_inst`)
 
 <a id="sub_inst"></a>`sub_inst`(SD, I) either:
 
@@ -4790,14 +4702,14 @@ A node is exported as Name from File if all of:
   - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
   - [`at`](#at)(E, File, something);
   - E [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_export_node`](js-surface.rofl.md#sx_export_node)(Target, Name, it).
+  - it [is exported as](#exports_name) Name from Target.
 
 > `export { a as b } from './m'` offers m's `a`, or m's default when `a` is `default`.
 
 A node F is exported as Ext from File either:
 
-1. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Ext and [`sx_export_node`](js-surface.rofl.md#sx_export_node)(T, Int, F);
-2. if File [reexports](js-modules.rofl.md#reexport_offers) "default" of a file T as Ext and [`sx_default`](js-surface.rofl.md#sx_default)(T, F).
+1. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Ext and F [is exported as](#exports_name) Int from T;
+2. if File [reexports](js-modules.rofl.md#reexport_offers) "default" of a file T as Ext and F [is the default export of](#exports_default) T.
 
 > `export { a as b }`: the `local` child is an identifier of this file and
 > resolves through `may_be_node`; under a declaration WITH a `source` it names
@@ -4827,14 +4739,14 @@ A node
 A node is exported as Name from File if all of:
   - Name [is a namespace export](#export_ns_name) at a site E from File;
   - E [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_module`](js-surface.rofl.md#sx_module)(Target, it).
+  - [`file_module`](#file_module)(Target, it).
 
 In the flow:
 
 `may_be`(E, `node`, F) if all of:
   - Local [imports](#imports_name) Name at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_export_node`](js-surface.rofl.md#sx_export_node)(Target, Name, F);
+  - a node F [is exported as](#exports_name) Name from Target;
   - a node E [is read at the top of](#top_read) Local and File.
 
 > `export const X = init`: the name offers what the initialiser may be, a node through `exports_name` and a
@@ -4859,15 +4771,15 @@ A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, 
    - a node E [is a reexport site](js-modules.rofl.md#reexport_site) of `reexport_all`;
    - [`at`](#at)(E, File, something);
    - E [means the file](js-modules.rofl.md#module_target) Target;
-   - [`sx_export_val`](js-surface.rofl.md#sx_export_val)(Target, Name, Init);
-4. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`sx_export_val`](js-surface.rofl.md#sx_export_val)(T, Int, Init).
+   - [`exports_value`](#exports_value)(Init, Name, Target);
+4. if File [reexports](js-modules.rofl.md#reexport_offers) Int of a file T as Name and [`exports_value`](#exports_value)(Init, Int, T).
 
 In the flow:
 
 `may_be`(E, `lit`, V) if all of:
   - Local [imports](#imports_name) Name at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_export_lit`](js-surface.rofl.md#sx_export_lit)(Target, Name, V);
+  - [`export_lit`](#export_lit)(Target, Name, V);
   - a node E [is read at the top of](#top_read) Local and File.
 
 The member Name of a node P holds a node X if P [is the module object of](#module_object) Target and [`exports_value`](#exports_value)(X, Name, Target).
@@ -4889,7 +4801,7 @@ In the flow:
 `may_be`(E, `node`, P) if all of:
   - Local [imports the namespace](#imports_ns) at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_module`](js-surface.rofl.md#sx_module)(Target, P);
+  - [`file_module`](#file_module)(Target, P);
   - a node E [is read at the top of](#top_read) Local and File.
 
 The member Name of a node P holds a node F if P [is the module object of](#module_object) Target and F [is exported as](#exports_name) Name from Target.
@@ -4905,7 +4817,7 @@ In the flow:
 `may_be`(E, `node`, F) if all of:
   - Local [imports the default](#imports_default) at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
-  - [`sx_default`](js-surface.rofl.md#sx_default)(Target, F);
+  - a node F [is the default export of](#exports_default) Target;
   - a node E [is read at the top of](#top_read) Local and File.
 
 > CommonJS. `require(S)` is what the target's `module.exports` may be: first
@@ -4942,7 +4854,7 @@ In the flow:
 3. if all of:
    - a node M [is a require site](js-modules.rofl.md#require_site);
    - M [means the file](js-modules.rofl.md#module_target) T;
-   - [`sx_cjs`](js-surface.rofl.md#sx_cjs)(T, V);
+   - T [exports by commonjs](#cjs_exports) a node V;
    - N is `node`.
 
 > The frontier: a module this corpus does not contain, one row per module.
@@ -5160,19 +5072,17 @@ In the main:
 1. if [`runs_coroutine`](#runs_coroutine)(Pkg, Key, something);
 2. if [`returns_argument`](#returns_argument)(Pkg, Key, something).
 
-In the surface:
-
-<a id="sx_contract_pkg"></a>`sx_contract_pkg`(Spec, Pkg) if [`external_package`](#external_package)(Spec, Pkg, something) and [`contract_key`](#contract_key)(Pkg, something).
-
 In the flow:
 
+<a id="contract_pkg"></a>`contract_pkg`(Spec, Pkg) if [`external_package`](#external_package)(Spec, Pkg, something) and [`contract_key`](#contract_key)(Pkg, something).
+
 <a id="contract_fn"></a>`contract_fn`(Spec, Pkg, `call`) if all of:
-  - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
+  - [`contract_pkg`](#contract_pkg)(Spec, Pkg);
   - [`contract_key`](#contract_key)(Pkg, `call`);
   - a node Spec [comes out of](#external_value) Spec.
 
 `contract_fn`(a [member access](#member_node_v) M, Pkg, Key) if all of:
-  - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
+  - [`contract_pkg`](#contract_pkg)(Spec, Pkg);
   - a node Spec [comes out of](#external_value) Spec;
   - a node O [points to](#may_be_node) Spec;
   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
@@ -5181,7 +5091,7 @@ In the flow:
 
 `contract_fn`(Sp, Pkg, Key) if all of:
   - a node Sp [imports from outside](#external_import) some name from a module Spec in some file;
-  - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
+  - [`contract_pkg`](#contract_pkg)(Spec, Pkg);
   - [`import_ident_key`](js-modules.rofl.md#import_ident_key)(Sp, Key);
   - [`contract_key`](#contract_key)(Pkg, Key).
 
@@ -5198,28 +5108,16 @@ In the flow:
   - X [points to](#may_be_node) a node F;
   - F [is a generator function](#gen_fn).
 
-In the surface:
-
-<a id="sx_coroutine"></a>`sx_coroutine`(F) if [`coroutine_of`](#coroutine_of)(something, F).
-
-In the flow:
-
 <a id="coroutine_yield"></a>`coroutine_yield`(Y, X) if all of:
-  - [`sx_coroutine`](#sx_coroutine)(F);
+  - [`coroutine_of`](#coroutine_of)(something, F);
   - F [is nearest to](#nearest_v) a node Y;
   - [`yields`](#yields)(Y, X) in the value.
 
 `may_be`(Y, VK, V) either:
 
 1. if [`coroutine_yield`](#coroutine_yield)(Y, X) and [`may_be`](js-concat.rofl.md#may_be)(X, VK, V);
-2. if all of:
-   - [`coroutine_of`](#coroutine_of)(Y, F);
-   - [`sx_gen_ret`](js-surface.rofl.md#sx_gen_ret)(F, V);
-   - VK is `node`;
-3. if all of:
-   - [`coroutine_of`](#coroutine_of)(Y, F);
-   - [`sx_gen_rlit`](js-surface.rofl.md#sx_gen_rlit)(F, V);
-   - VK is `lit`;
+2. if [`coroutine_of`](#coroutine_of)(Y, F), [`gen_ret`](#gen_ret)(F, V), and VK is `node`;
+3. if [`coroutine_of`](#coroutine_of)(Y, F), [`gen_rlit`](#gen_rlit)(F, V), and VK is `lit`;
 4. if all of:
    - [`contract_call`](#contract_call)(Y, Pkg, Key);
    - [`returns_argument`](#returns_argument)(Pkg, Key, I);
@@ -5238,7 +5136,7 @@ Declared as facts:
 A node
 
 - <a id="callback_param"></a>is called back with in F from a module Spec if all of:
-  - [`sx_cb`](js-surface.rofl.md#sx_cb)(F, Spec);
+  - [`called_back`](#called_back)(F, Spec);
   - [`param`](#param)(F, something, it);
   - [`parent`](#parent)(F, it);
   - [`binds`](#binds)(it, something).
@@ -5413,7 +5311,7 @@ In the flow:
 3. if all of:
    - [`delegates`](#delegates)(Y, Z) in the value;
    - a call Z [resolves to](js-callgraph.rofl.md#resolves) Inner;
-   - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(Inner, X);
+   - [`ret_node_any`](#ret_node_any)(Inner, X);
    - N is `node`.
 
 > FOR-OF: the head is a declarator like any other, whose value is each
@@ -5470,10 +5368,6 @@ In the flow:
 | `flow` | `code` |
 | `flow` | `main` |
 | `flow` | `$kernel` |
-| `flow` | `surface` |
-| `code` | `surface` |
-| `surface` | `flow` |
-| `surface` | `code` |
 
 ## 15. THE EXCEPTION PATH. A catch parameter may be what the guarded BLOCK
 
@@ -5580,6 +5474,297 @@ In the flow:
 
 The static/instance member Key of a class CD is a node N if CD [has the decorated member](#decorated_member) Key at M replaced with N and/unless [`static`](#static)(M).
 
+## 17. SUMMARIES: what a call hands its callee, what it gets back and writes, and what
+
+> escapes the code the corpus sees. Each is keyed by the function or the object it
+> is about and applied at every call, in its file or another: the engine finds the
+> crossing by those keys (docs/cli.md, *A corpus larger than one heap*), no book
+> carries it. A call of a function whose return is its own parameter takes that
+> call's argument (`ret_param_at`), not every caller's.
+
+> ---------------------------------------------------------------- what escapes
+
+<a id="escaping"></a>`escaping`(N) either:
+
+1. if a node N [is exported as](#exports_name) some name from some file;
+2. if a node N [is the default export of](#exports_default) some file;
+3. if some file [exports by commonjs](#cjs_exports) a node N;
+4. if [`file_module`](#file_module)(something, N);
+5. if [`handed_node`](#handed_node)(something, something, N);
+6. if [`ret_plain_node`](#ret_plain_node)(something, N);
+7. if [`ret_param_node`](#ret_param_node)(something, N);
+8. if [`gen_ret`](#gen_ret)(something, N);
+9. if some function [is sent](#next_send) a node N;
+10. if [`called_back`](#called_back)(N, something);
+11. if [`rest_elem`](#rest_elem)(something, something, N);
+12. if [`escaping`](#escaping)(C) and [`sub_inst`](#sub_inst)(C, N);
+13. if [`escaping`](#escaping)(C) and a node N [stands for an instance of](#inst_of) a class C;
+14. if [`escaping`](#escaping)(I) and a node I [stands for an instance of](#inst_of) a class N;
+15. if [`escaping`](#escaping)(I) and [`isa`](#isa)(I, N).
+
+> ... and what an escaping node holds
+
+`escaping`(M) either:
+
+1. if [`escaping`](#escaping)(N) and a node N [points to](#may_be_node) a node M;
+2. if [`escaping`](#escaping)(O) and [the member](#member_value) some key of a node O holds a node M;
+3. if [`escaping`](#escaping)(Y) and [`array_elem`](#array_elem)(Y, something, M);
+4. if [`escaping`](#escaping)(X) and [`keyed_put`](#keyed_put)(X, something, M);
+5. if [`escaping`](#escaping)(G) and G [throws out](js-controlflow.rofl.md#thrown_by) a node M;
+6. if [`escaping`](#escaping)(G) and G [yields](#yields) a node M.
+
+> ---------------------------------------------------------------- an escaping node's facts, and their mirrors
+
+> `fn_node`, `fn_name` and `in_fn` are syntax and are negated below the flow, so a function read as a VALUE, which may be
+> another file's, is asked in [flow]: `fn_value`, `fn_label`, `fn_nested`.
+
+`fn_value` of A is read through its rules and never stored.
+
+<a id="fn_value"></a>`fn_value`(a [function](js-callgraph.rofl.md#fn_node) F).
+
+<a id="fn_label"></a>`fn_label`(F, X) if F [answers to](js-callgraph.rofl.md#fn_name) a name X.
+
+<a id="fn_nested"></a>`fn_nested`(a [function](js-callgraph.rofl.md#fn_node) F) if F [is inside a function](js-controlflow.rofl.md#in_fn).
+
+> ---------------------------------------------------------------- exports, by the module's path
+
+<a id="export_lit"></a>`export_lit`(File, Name, V) if [`exports_value`](#exports_value)(X, Name, File) and a node X [may be the literal](#may_be_lit) V.
+
+<a id="file_module"></a>`file_module`(File, P) if File [is in the corpus](#corpus_file) and a node P [is the module object of](#module_object) File.
+
+> ---------------------------------------------------------------- what a call hands its callee
+
+<a id="handed_lit"></a>`handed_lit`(F, I, V) if all of:
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - C [passes](#arg_at) a node X at an index I;
+  - X [may be the literal](#may_be_lit) V.
+
+<a id="handed_node"></a>`handed_node`(F, I, N) if all of:
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - C [passes](#arg_at) a node X at an index I;
+  - X [points to](#may_be_node) a node N.
+
+> a function some call resolves to
+
+`called` of A is read through its rules and never stored.
+
+In the code:
+
+<a id="called"></a>`called`(F) if some call [resolves to](js-callgraph.rofl.md#resolves) F.
+
+> how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
+
+`arg_given` of A is read through its rules and never stored.
+
+<a id="arg_given"></a>`arg_given`(C) if [`argument_at`](js-structure.rofl.md#argument_at)(C, something, something).
+
+<a id="arg_count"></a>`arg_count`(C, E) either:
+
+1. if [`callee`](#callee)(C, something) and E is 0, unless [`arg_given`](#arg_given)(C);
+2. if all of:
+   - [`argument_at`](js-structure.rofl.md#argument_at)(C, I, something);
+   - E is I + 1;
+   - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, E, something);
+   - unless [`call_spreads`](js-callgraph.rofl.md#call_spreads)(C).
+
+In the flow:
+
+<a id="handed_short"></a>`handed_short`(F, N) if a call C [resolves to](js-callgraph.rofl.md#resolves) F and [`arg_count`](#arg_count)(C, N).
+
+`may_be`(U, `lit`, `undefined`) if all of:
+  - [`handed_short`](#handed_short)(F, N);
+  - F [takes](#param_of) Name at an index I;
+  - I >= N;
+  - F [uses](#param_use) Name at a node U.
+
+<a id="called_unguarded"></a>`called_unguarded`(F) if a call C [resolves to](js-callgraph.rofl.md#resolves) F, unless C [is guarded](js-controlflow.rofl.md#guarded).
+
+<a id="reached_by_call"></a>`reached_by_call`(F) either:
+
+1. if a call C [resolves to](js-callgraph.rofl.md#resolves) F and C neither [is guarded](js-controlflow.rofl.md#guarded) nor [is inside a function](js-controlflow.rofl.md#in_fn);
+2. if all of:
+   - G [is reachable](js-controlflow.rofl.md#reachable);
+   - G [is nearest to](#nearest_v) a node C;
+   - C [resolves to](js-callgraph.rofl.md#resolves) F;
+   - unless C [is guarded](js-controlflow.rofl.md#guarded).
+
+<a id="rest_elem"></a>`rest_elem`(R, K, X) if all of:
+  - F [has the rest parameter](#param_rest) at an index J a node R and some name;
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - C [passes](#arg_at) a node X at an index I;
+  - I >= J;
+  - K is I - J.
+
+> a function handed to an external call is called back by code the corpus cannot see
+
+<a id="called_back"></a>`called_back`(F, Spec) if all of:
+  - a node X [comes out of](#external_value) a module Spec;
+  - a node G [points to](#may_be_node) X;
+  - [`callee`](#callee)(C, G);
+  - [`call_like`](#call_like)(C);
+  - [`nth`](#nth)(C, something, Y);
+  - a node Y [points to](#may_be_node) a node F;
+  - [`fn_value`](#fn_value)(F);
+  - unless [`spread_args`](#spread_args)(C, something, Y).
+
+`array_elem`(R, K, X) if [`rest_elem`](#rest_elem)(R, K, X).
+
+> ---------------------------------------------------------------- what a call gets back
+> A return that is the function's own parameter, read as nothing else: a plain identifier parameter, never assigned,
+> not redeclared where it is read. Its value at a call is that call's argument; the other returns are the summary.
+
+<a id="param_assigned"></a>`param_assigned`(F, Name) if X [is written into a parameter of](#assign_param) F and [`assigned`](#assigned)(X, something, Name, something, something).
+
+> A generator's call is a generator object (models/lang/js/rules/js-dataflow.rofl, `gen_of`): its `return` is what `yield*` gets, not
+> what the call is.
+
+<a id="call_returns"></a>F returns to its call E if F [returns](#returns) E, unless [`generator`](#generator)(F).
+
+<a id="param_read"></a>`param_read`(F, I, E) if all of:
+  - F [uses](#param_use) Name at a node E;
+  - F [takes](#param_of) Name at an index I;
+  - [`param`](#param)(F, I, P);
+  - [`parent`](#parent)(F, P);
+  - [`binds`](#binds)(P, something);
+  - unless [`param_assigned`](#param_assigned)(F, Name);
+  - unless E [sees](#sees_binder) some declarator.
+
+<a id="ret_param"></a>`ret_param`(F, I, E) if F [returns to its call](#call_returns) E and [`param_read`](#param_read)(F, I, E).
+
+<a id="ret_plain"></a>`ret_plain`(F, E) if F [returns to its call](#call_returns) E, unless [`ret_param`](#ret_param)(F, something, E).
+
+<a id="ret_plain_node"></a>`ret_plain_node`(F, N) if [`ret_plain`](#ret_plain)(F, E) and a node E [points to](#may_be_node) a node N.
+
+<a id="ret_plain_lit"></a>`ret_plain_lit`(F, V) if [`ret_plain`](#ret_plain)(F, E) and a node E [may be the literal](#may_be_lit) V.
+
+<a id="ret_param_node"></a>`ret_param_node`(F, N) if [`ret_param`](#ret_param)(F, something, E) and a node E [points to](#may_be_node) a node N.
+
+<a id="ret_param_lit"></a>`ret_param_lit`(F, V) if [`ret_param`](#ret_param)(F, something, E) and a node E [may be the literal](#may_be_lit) V.
+
+<a id="ret_param_at"></a>`ret_param_at`(F, I) if [`ret_param`](#ret_param)(F, I, something).
+
+> the summary a call applies: what the function returns of its own, and which of its inputs it returns; an input of
+> an enclosing function is returned as the values it holds
+
+<a id="ret_own"></a>`ret_own`(F, X, N) either:
+
+1. if F [returns to its call](#call_returns) E, [`own_node`](#own_node)(E, N), and X is `node`;
+2. if all of:
+   - F [returns to its call](#call_returns) E;
+   - [`may_be`](js-concat.rofl.md#may_be)(E, `lit`, N);
+   - X is `lit`;
+3. if all of:
+   - F [returns to its call](#call_returns) E;
+   - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+   - [`input_of`](#input_of)(S, G);
+   - G differs from F;
+   - [`input_node`](#input_node)(S, N);
+   - X is `node`;
+4. if all of:
+   - F [returns to its call](#call_returns) E;
+   - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+   - [`input_of`](#input_of)(S, G);
+   - G differs from F;
+   - [`input_lit`](#input_lit)(S, N);
+   - X is `lit`.
+
+<a id="ret_input"></a>`ret_input`(F, I) if all of:
+  - F [returns to its call](#call_returns) E;
+  - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+  - [`input_param`](#input_param)(S, F, I).
+
+<a id="ret_field"></a>`ret_field`(F, Key) if F [returns to its call](#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `input`, field(F, Key)).
+
+<a id="ret_hop"></a>`ret_hop`(F, K, M2) if F [returns to its call](#call_returns) E and [`may_be`](js-concat.rofl.md#may_be)(E, `input`, hop(F, K, M2)).
+
+<a id="ret_inst"></a>`ret_inst`(F) either:
+
+1. if [`ret_field`](#ret_field)(F, something);
+2. if [`ret_hop`](#ret_hop)(F, something, something).
+
+<a id="ret_self"></a>`ret_self`(F) if all of:
+  - F [returns to its call](#call_returns) E;
+  - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+  - [`input_this`](#input_this)(S, F).
+
+<a id="ret_this"></a>`ret_this`(F, I) if all of:
+  - F [returns to its call](#call_returns) E;
+  - [`may_be`](js-concat.rofl.md#may_be)(E, `input`, S);
+  - [`input_this`](#input_this)(S, F);
+  - [`input_node`](#input_node)(S, I).
+
+> a function that may end without a value: its body may complete normally (`completes_abruptly` names those that
+> cannot), or a `return` has no argument. Its call is `undefined` there; a constructor's `new` is the instance.
+
+In the code:
+
+<a id="falls_off"></a>`falls_off`(F) either:
+
+1. if all of:
+   - [`body`](#body)(F, B);
+   - unless [`returns`](#returns)(F, B) in the value;
+   - unless a node B [completes abruptly](js-controlflow.rofl.md#completes_abruptly);
+2. if all of:
+   - [`exits`](#exits)(R, `return`);
+   - F [is nearest to](#nearest_v) a node R;
+   - unless [`returns`](#returns)(R, something) in the value.
+
+In the flow:
+
+<a id="ret_undef"></a>`ret_undef`(F) if all of:
+  - [`falls_off`](#falls_off)(F);
+  - unless [`generator`](#generator)(F);
+  - unless F [is a constructor](js-callgraph.rofl.md#ctor_method).
+
+`may_be`(C, `lit`, `undefined`) if all of:
+  - a call C [is a call site](js-callgraph.rofl.md#call_site) in some file;
+  - C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - [`ret_undef`](#ret_undef)(F).
+
+<a id="gen_ret"></a>`gen_ret`(F, N) if all of:
+  - F [returns](#returns) a node E;
+  - [`generator`](#generator)(F);
+  - E [points to](#may_be_node) a node N.
+
+<a id="gen_rlit"></a>`gen_rlit`(F, V) if all of:
+  - F [returns](#returns) a node E;
+  - [`generator`](#generator)(F);
+  - E [may be the literal](#may_be_lit) V.
+
+> ---------------------------------------------------------------- what a call writes
+> `o[k] = v` with k and v the function's own parameters (`on(name, handler)`): at a call, THAT call's value under
+> THAT call's key, not every value under every key.
+
+<a id="store_pkey"></a>`store_pkey`(F, J, I, X) if all of:
+  - [`assign`](#assign)(X, L, V);
+  - X [is plain](#plain_assign);
+  - [`computed_key`](#computed_key)(L, Q);
+  - [`param_read`](#param_read)(F, J, Q);
+  - [`param_read`](#param_read)(F, I, V).
+
+<a id="store_sym"></a>`store_sym`(X) if [`store_pkey`](#store_pkey)(something, something, something, X).
+
+<a id="store_pkey_obj"></a>`store_pkey_obj`(F, J, I, O) if all of:
+  - [`store_pkey`](#store_pkey)(F, J, I, X);
+  - [`assign`](#assign)(X, L, something);
+  - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
+  - a node Obj [points to](#may_be_node) a node O.
+
+`mwrite`(O, K, X) if all of:
+  - [`store_pkey_obj`](#store_pkey_obj)(F, J, I, O);
+  - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
+  - C [passes](#arg_at) a node B at an index J;
+  - B [may be the literal](#may_be_lit) K;
+  - C [passes](#arg_at) a node X at an index I.
+
+> every value the function's returns may be, whoever called it: the iterator protocol and `yield*` read this
+
+<a id="ret_node_any"></a>`ret_node_any`(F, N) either:
+
+1. if [`ret_plain_node`](#ret_plain_node)(F, N);
+2. if [`ret_param_node`](#ret_param_node)(F, N);
+3. if [`gen_ret`](#gen_ret)(F, N).
+
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
 
 `imports` lists:
@@ -5594,7 +5779,6 @@ The static/instance member Key of a class CD is a node N if CD [has the decorate
 | `code` | `execution` |
 | `flow` | `execution` |
 | `audit` | `execution` |
-| `surface` | `execution` |
 | `type` | `code` |
 | `type` | `flow` |
 | `code` | `type` |

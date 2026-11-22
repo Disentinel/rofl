@@ -87,7 +87,7 @@ internals — so the hot set becomes core + touched volumes + all exports.
 resolves imports, calls, re-exports and `require` across files (at 500 files of
 vscode, 0.56% of derived facts have a witness that names two files), so the
 statements above about 193 same-file `resolves` describe the model of
-2026-09-09. The crossing edge is the `[surface]` book, `models/lang/js/rules/js-surface.rofl`:
+2026-09-09. The crossing edge was then the `[surface]` book (removed 2026-11-20, f_surface_is_replaced_by_lemmas_by_keys):
 a rule that joins two files reads the other one only through `[surface]`, and
 each file evaluated alone with the others' surface equals the whole world, fact
 for fact, in both ingest orders (world `vscode_surface_split`, `npm run
@@ -228,7 +228,7 @@ So the layering the measurements support is three deep, not two:
 table above is a plausible guess and that is its weakness. The correct content
 is exactly the relations read by rules whose premises span volumes — an
 empty set when this was written, because nothing crossed; it is now the
-`[surface]` book, and the surface lint (`examples/surface/surface.rofl`) derives
+`[surface]` book, and the surface lint (`surface.rofl (removed)`) derived
 which columns can hold another file's node from the rules themselves and
 reports a rule that reads a file-local premise at one. `scanners/rule_shape.ts` already computes
 `rule_leaves(R, B)`, rules that read outside their own book, which is the same

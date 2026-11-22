@@ -36,7 +36,7 @@ the working tools.
    ends (an import that leaves the file, a call to another file's function) and exports; a link pass over those
    alone makes the edges; a question follows the edges on demand and lifts only the volumes on its path.
 6. **A recursion that crosses a large import cycle is refused.** Statically, a recursive component of the rule
-   graph through a foreign-capable column (`examples/surface/surface.rofl`) is a recursion that can cross files;
+   graph through a foreign-capable column (the surface lint, `surface.rofl (removed)`) is a recursion that can cross files;
    in the data, its cost is the largest strongly connected component of the import graph. Over the limit the world
    is refused, naming the rule and the files, with the reformulations: a per-function summary, a bounded depth, or
    the cycle broken in the code.

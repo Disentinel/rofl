@@ -1,6 +1,6 @@
 ---
 world: js-service
-books: code, flow, main, surface, tree
+books: code, flow, main, tree
 default: main
 ---
 
@@ -24,14 +24,14 @@ default: main
 > An app answers on `::`, as Node binds when no host is given.
 > 
 > Needs rules/net/*, models/lang/js/rules/js-fetch.rofl, models/lang/js/rules/js-express.rofl and the JS
-> model with models/lang/js/rules/js-concat.rofl and models/lang/js/rules/js-surface.rofl.
+> model with models/lang/js/rules/js-concat.rofl and models/lang/js/rules/js-dataflow.rofl.
 
 Reads:
 
 - from js-callgraph, in the code: [nearest_fn](js-callgraph.rofl.md#nearest_fn), [top_call](js-callgraph.rofl.md#top_call)
 - from js-concat, in the flow: [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [corpus_file](js-dataflow.rofl.md#corpus_file)
-- from js-express, in the surface: [app_listens](js-express.rofl.md#app_listens), [serves](js-express.rofl.md#serves), [sx_ex_str](js-express.rofl.md#sx_ex_str)
+- from js-express, in the flow: [app_listens](js-express.rofl.md#app_listens), [ex_path](js-express.rofl.md#ex_path), [serves](js-express.rofl.md#serves)
 - from js-fetch, in the flow: [requests](js-fetch.rofl.md#requests)
 - from outside these files:
   - <a id="code_of"></a>`code_of`
@@ -48,9 +48,7 @@ Reads:
 | arg 1 | arg 2 |
 |---|---|
 | `main` | `flow` |
-| `main` | `surface` |
 | `code` | `main` |
-| `surface` | `main` |
 
 <a id="svc_dir"></a>`svc_dir`(F, X) if all of:
   - a file F [is in the corpus](js-dataflow.rofl.md#corpus_file);
@@ -77,7 +75,7 @@ Reads:
 <a id="url_str"></a>`url_str`(V) either:
 
 1. if [`url_term`](#url_term)(V) and [`str_value`](js-concat.rofl.md#str_value)(V);
-2. if [`url_term`](#url_term)(V) and [`sx_ex_str`](js-express.rofl.md#sx_ex_str)(V).
+2. if [`url_term`](#url_term)(V) and [`ex_path`](js-express.rofl.md#ex_path)(something, V).
 
 In the code:
 
@@ -94,13 +92,7 @@ In the main:
 
 <a id="request_unserved"></a>`request_unserved`(C, X) if [`http_unserved`](#http_unserved)(C, X).
 
-In the surface:
-
-<a id="sx_svc_hit"></a>`sx_svc_hit`(H) if [`http_reach`](#http_reach)(something, H, something).
-
-In the main:
-
 <a id="svc_route"></a>`svc_route`(H) if [`serves`](js-express.rofl.md#serves)(something, something, something, H, `route`).
 
-<a id="route_unreached"></a>`route_unreached`(H) if [`svc_route`](#svc_route)(H), unless [`sx_svc_hit`](#sx_svc_hit)(H).
+<a id="route_unreached"></a>`route_unreached`(H) if [`svc_route`](#svc_route)(H), unless [`http_reach`](#http_reach)(something, H, something).
 

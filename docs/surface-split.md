@@ -10,7 +10,10 @@ measures how wide it is, builds it by hand on a 14-file corpus, and says what it
 **Retired 2026-11-09.** Volumes route every relation by the rules' keys (`f_volumes_cross_by_the_rules_keys`), so
 the JS model no longer mirrors an escaping node's facts back through `[surface]`: the mirrors, the parity gate
 (`npm run test:split`, `surface_split.ts (removed)`) and the lint over the model (world `surface_model`) are gone. What
-is left of `models/lang/js/rules/js-surface.rofl` are the relations with a meaning of their own. The rest of this note is history.
+is left of `models/lang/js/rules/js-surface.rofl` are the relations with a meaning of their own. **Gone 2026-11-20**: the JS
+model writes no `[surface]`; those relations are [flow] relations under their own names, section 17 of
+`models/lang/js/rules/js-dataflow.rofl`, and the lint world `examples/surface/` is retired
+(f_surface_is_replaced_by_lemmas_by_keys). The rest of this note is history.
 
 Status: sections 1-4 are the scouting as it was written (its relation names, such as `sx_export_fn`, are the
 prototype's). Of the work in section 5, items 1-4 are built (sections 6 and 7: the driver is `runtime/split.ts`,
@@ -193,7 +196,7 @@ The wall moves from memory to ingest scheduling.
   a fixpoint, forward and reverse, and every fact of every file equals the whole world's: 420 surface facts, 93
   evaluations. The planted break (the model before the book, no surface) loses 84 of 184 answers and invents 16.
 - **The lint** (item 3; `f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise`) is rules over the
-  rule reflection, `examples/surface/surface.rofl`, seeded by `xl_seed(Rel, Col)` and excused by `xl_ok` in
+  rule reflection, `surface.rofl (removed)`, seeded by `xl_seed(Rel, Col)` and excused by `xl_ok` in
   `surface-lint.rofl (removed)`. Foreign-capability is a column, propagated through the rules' own heads from the seeds;
   `xl_finding` is a file-local premise read at a foreign key, `xl_alarm` one with no excuse, `xl_ok_stale` an excuse
   with no finding; `volatile_direct` and `volatile_head` are the heads a driver must not cool before the surface is
