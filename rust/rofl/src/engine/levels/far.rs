@@ -55,7 +55,7 @@ pub(super) struct Far {
     /// another's units as they came, by their ids: a unit that stands is read through the same view
     views: Mutex<FxMap<(FactId, FactId), Rc<Stretch>>>,
     /// of a unit settled again here: the ids it had, and its facts that came (with their ids) and went
-    moved: Mutex<FxMap<FactId, Moved>>,
+    moved: Mutex<FxMap<FactId, (u32, Moved)>>,
     /// the edits the root sent a node, to take in order
     edits: Mutex<std::collections::VecDeque<Vec<(u32, String)>>>,
     told: Condvar,
@@ -131,9 +131,10 @@ impl Far {
         std::env::var_os("ROFL_FAR")?;
         let far = FAR.get_or_init(|| Far::open(h, files)).clone()?;
         let r = far.round.fetch_add(1, Relaxed) + 1;
-        // (the rounds go one after another: every unit of the one before was asked before this began)
-        far.units.lock().unwrap().retain(|k, _| k.0 >= r);
-        far.moved.lock().unwrap().clear();
+        // (a process may still settle the round before, reading this one's units of it: the upper layers of its
+        // files stand on the tops other processes hold; it cannot be two behind, as this round waits for its units)
+        far.units.lock().unwrap().retain(|k, _| k.0 + 1 >= r);
+        far.moved.lock().unwrap().retain(|_, m| m.0 + 1 >= r);
         *far.failed.lock().unwrap() = None;
         far.trips.lock().unwrap().clear();
         Some(far)
@@ -202,7 +203,7 @@ impl Far {
             self.ready.notify_all();
             // (the root holds every node open while it answers: a node goes when the root has gone)
             for n in 0..self.nodes {
-                let _ = self.ask(n, &Enc::op(b'H', &self.h).done());
+                let _ = self.try_ask(n, &Enc::op(b'H', &self.h).done());
             }
         }
     }
@@ -233,7 +234,7 @@ impl Far {
     }
     /// What a unit settled again here moved, for the others to take with it.
     pub(super) fn moved(&self, lo: FactId, m: Moved) {
-        self.moved.lock().unwrap().insert(lo, m);
+        self.moved.lock().unwrap().insert(lo, (self.round.load(Relaxed), m));
     }
     /// A unit settled here, for the others to ask as soon as it is.
     pub(super) fn settled(&self, k: usize, d: usize, x: usize, u: Result<Unit, Halt>) -> Result<Unit, Halt> {
@@ -336,6 +337,8 @@ impl Far {
                 loop {
                     match self.connect(node) {
                         Ok(s) => break s,
+                        // (a socket no one listens at any more: its process went)
+                        Err(e) if e.kind() == std::io::ErrorKind::ConnectionRefused && !self.peers.contains_key(&node) => return Err(format!("node {node} went: {e}")),
                         Err(_) if t0.elapsed().as_secs() < 120 => std::thread::sleep(std::time::Duration::from_millis(20)),
                         Err(e) => return Err(format!("no node {node} at {}: {e}", self.peers.get(&node).cloned().unwrap_or_else(|| self.path(node).display().to_string()))),
                     }
@@ -447,7 +450,7 @@ impl Far {
                 e.dir(u.dir());
                 e.dir(u.inner());
                 e.u64(s.vwit() as u64);
-                match self.moved.lock().unwrap().get(&s.lo) {
+                match self.moved.lock().unwrap().get(&s.lo).filter(|m| m.0 == key.0).map(|m| &m.1) {
                     Some((was, fs)) => {
                         e.u64(1);
                         e.u64(*was as u64);
