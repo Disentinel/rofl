@@ -738,7 +738,9 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for text in files.iter().map(|f| f.1.text()).chain([std::borrow::Cow::Borrowed(over)]) {
+        // (where the nodes are processes, those of this one's files: another's come named as text)
+        let mine = super::levels::far_block(files.len()).unwrap_or(0..files.len());
+        for text in files[mine].iter().map(|f| f.1.text()).chain([std::borrow::Cow::Borrowed(over)]) {
             let mut rest = &*text;
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
