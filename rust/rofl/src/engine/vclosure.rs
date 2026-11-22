@@ -610,7 +610,8 @@ impl Eval {
 
     /// THE LEVEL OF A NEAREST REACHED: its step reads its condition under a negation, so the stratification puts it
     /// above what concludes the condition, and before that level it answers nothing. At it the closure opens and every
-    /// rule that reads it, at this level or below, fires whole over the condition complete; one above fires at its own.
+    /// rule that reads it, at this level or below, fires whole over the condition complete; one above fires at its own,
+    /// and one above that fired already (a monotone rule, from what stood at the start) met it closed and fires again.
     pub(super) fn vopen_below(&mut self, lv: i64) -> Result<(), Halt> {
         let opening: Vec<usize> = (0..self.vc.vclosures.len())
             .filter(|ci| {
@@ -629,8 +630,11 @@ impl Eval {
             // a negation reads the forests as they stand
             self.vc.vforests(&mut self.store, ci);
         }
-        let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r) && self.rule_level(r) <= lv).cloned().collect();
-        self.activate(&readers)
+        let (readers, above): (Vec<Rc<ERule>>, Vec<Rc<ERule>>) =
+            self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r)).cloned().partition(|r| self.rule_level(r) <= lv);
+        self.activate(&readers)?;
+        let fired: FxSet<Sym> = self.active.iter().map(|r| r.id).collect();
+        self.fire_all(brk!("nearest_fired_closed_left" => Vec::new(); above.into_iter().filter(|r| fired.contains(&r.id)).collect()))
     }
 
     /// The forests of each closure a negation reads, as a delta finds them: its change is counted against them

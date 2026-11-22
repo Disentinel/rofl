@@ -8886,6 +8886,14 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "nearest_fired_closed_left",
+  "what": "a monotone rule above a nearest's level that fired before the nearest opened is not fired again at the opening: what it joins from the start with the nearest is lost, in the world whole and in a pass above given lemmas",
+  "expect": {
+   "nearest_reader_above": "holds what its twin holds",
+   "stage_plan_checked": "lifecycle_clean"
+  }
+ },
+ {
   "id": "units_named_let_go",
   "what": "an edit lets go of the segments of units the kept world still names: a stretch kept in an older segment is read from a file no longer there",
   "expect": {
@@ -9233,6 +9241,8 @@ export const TESTS: Record<string, string> = {
   addition_holistic: 'addition a_holistic_aggregate_is_sealed_again',
   volumes: 'volumes',
   stage_plan_by_file: 'stage_plan a_split_by_the_plan_is_the_world_whole',
+  nearest_reader_above: 'stage_plan a_reader_above_a_nearest_that_fired_before_it_opened',
+  stage_plan_checked: 'stage_plan the_checked_worlds_split_by_their_plans',
   addition_lower_member: 'addition a_member_standing_lower_seals_again_only_its_group',
   addition_derived_by: 'addition a_rule_reading_derived_by',
   addition_fault: 'addition a_fault_the_addition_does_not_reach',

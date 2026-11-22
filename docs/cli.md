@@ -787,13 +787,10 @@ stage_plan`: the plan is taken as its text, the stage read back from it by `Eval
 world whole over random programs, every world of facts/checks.rofl that cuts a book, and the JS model). It is held
 to what the world whole keeps: a relation concluded below the cut that no rule above reads (the edges of a tree)
 is given by the split and dropped by the world whole. A world whose files state a relation no `own[fixpointplan]`
-names is refused by the split as by the engine (*Lemma stages*). **Open, and it binds whoever executes the plan
-out of process:** a world that is given the lemmas and walks a `tree(Rel, Book)` again above them, instead of
-reading it from its file, loses rows where the closure is a `nearest`: the engine opens a nearest at the level of
-its condition, the condition was given, and a monotone rule that reads it fires from what was given before that
-level and is not fired again. The four lifecycle worlds lose 4 or 5 rows each so (`ow_fn[lifecycle]` and what
-rests on it), and are whole by the engine's own units, which read the file's tree (`cargo test -p rofl --test
-stage_plan the_checked_worlds_by_the_engines_units`; `f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest`). The size is
+names is refused by the split as by the engine (*Lemma stages*). A world that is given the lemmas and walks a `tree(Rel, Book)` again above
+them, instead of reading it from its file, holds the same rows: a `nearest` opens at the level of its condition, and
+a monotone rule above that level that fired before, from what was given, fires again at the opening (the four
+lifecycle worlds, which lost 4 or 5 rows each before; `f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest`). The size is
 the program's: one `fires` a rule, and for the JS model 6 426 facts, 219 KB (3 401 rules: 79 `core`, 1 293 `file`,
 10 `both`, 2 019 `across`; 460 `gives`). A program whose plan cuts no
 book has no rule of a file: every rule is `across` or `core`. What the units of one process join by where they

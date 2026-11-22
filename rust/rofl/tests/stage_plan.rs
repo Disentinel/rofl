@@ -383,19 +383,45 @@ fn checked_worlds() -> Vec<(String, Vec<String>)> {
 /// The worlds the engine's own units do not answer whole (`the_checked_worlds_by_the_engines_units`).
 const UNITS_OPEN: [&str; 6] = ["parity_rs_instances", "parity_rs_keyed", "parity_rs_strings", "parity_rs_guards", "parity_rs_service", "parity_rs_calls"];
 
-/// The worlds whose split loses the rows of one rule the engine's pass above does not fire (below).
-const OPEN: [&str; 4] = ["lifecycle_clean", "lifecycle_forgetful", "lifecycle_leaky", "lifecycle_overwrites"];
+/// A NEAREST OPENS AT ITS LEVEL, and a monotone rule above that level has fired by then from what stood at the start
+/// (where rules are not fired by component: `h_any` is answered on demand) and met it closed: it fires again at the
+/// opening. `h_q(c1)` stands from the start and `h_q(b1)` comes above the nearest; the reader holds both, as its
+/// twin over the rules written by hand does.
+#[test]
+fn a_reader_above_a_nearest_that_fired_before_it_opened() {
+    let world = "edb(h_kind). edb(h_base). edb(h_s). edb(h_z).
+tree h_in(P, C).
+h_in[ast](r1, a1). h_in[ast](a1, b1). h_in[ast](b1, c1).
+h_kind(r1, fn). h_base(c1). h_s(b1).
+h_fn[code](N) :- h_kind(N, fn).
+nearest h_owner[flow](F, X) of h_in[ast](F, X) where h_fn[code](F).
+h_in_u[ast](P, C) :- h_in[ast](P, C).
+h_owner_u[flow](F, X) :- h_in_u[ast](F, X), h_fn[code](F).
+h_owner_u[flow](F, X) :- h_owner_u[flow](F, P), not h_fn[code](P), h_in_u[ast](P, X).
+h_r(X) :- h_s(X), not h_z(X), not h_owner[flow](X, X).
+h_q(X) :- h_base(X).
+h_q(X) :- h_r(X).
+h_p(X, F) :- h_q(X), h_owner[flow](F, X).
+h_p_u(X, F) :- h_q(X), h_owner_u[flow](F, X).
+h_any(X, Y) :- h_base(X).
+h_use(X) :- h_any(X, c1).
+";
+    let boot = std::fs::read_to_string(root().join("boot.rofl")).unwrap();
+    let all = whole(&[&boot, world]).unwrap();
+    let of = |rel: &str| keys(&all.eval, &[]).iter().filter_map(|k| k.strip_prefix(rel).map(str::to_string)).collect::<Vec<_>>();
+    assert_eq!(of("h_p_u[main]"), ["(b1,r1)", "(c1,r1)"], "the twin written by hand");
+    assert_eq!(of("h_p[main]"), of("h_p_u[main]"), "a reader above a nearest that fired before it opened holds what its twin holds");
+}
 
 /// EVERY WORLD OF facts/checks.rofl WHOSE PLAN CUTS A BOOK, as `npm test` loads it (boot.rofl, then its files).
 #[test]
 fn the_checked_worlds_split_by_their_plans() {
-    let (mut ran, mut refused, mut open, mut bad) = (0, 0, 0, Vec::new());
+    let (mut ran, mut refused, mut bad) = (0, 0, Vec::new());
     for (w, texts) in checked_worlds() {
         let w = &w;
         let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
         let t0 = std::time::Instant::now();
         match held(w, &refs, &[1]) {
-            Ok(_) if OPEN.contains(&w.as_str()) => bad.push(format!("{w} (whole now: no longer open)")),
             Ok((files, rows)) => eprintln!("parity {w}: {files} files, {rows} rows whole and split, {} ms", t0.elapsed().as_millis()),
             // a file that states what the plan's `own` does not name breaks the plan: the engine by volumes refuses
             // the world with the same words (and evaluates it whole)
@@ -409,18 +435,6 @@ fn the_checked_worlds_split_by_their_plans() {
                 eprintln!("REFUSED {w}, as the engine by volumes refuses it: {} is stated by a file and no `own[fixpointplan]` names it (by volumes: {})", fact(&e), fact(&said));
                 refused += 1;
             }
-            // OPEN, f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest: a pass above given lemmas walks
-            // `nearest_v[flow]` again, and the nearest is closed until its level while its condition is already
-            // given; `ow_fn[lifecycle](X, F) :- updated_by[lifecycle](_, X), nearest_v[flow](F, X)`, monotone and
-            // standing above that level, fires from the given binders at the start, meets it closed and is never
-            // fired again. The engine's units do not walk it: they read the tree its file settled (the plan's
-            // `tree[stageplan](nearest_v, flow)`), and are whole (`the_checked_worlds_by_the_engines_units`). The
-            // rows of that rule and those that rest on them are lost, and nothing else is. A world named here
-            // that comes whole is a red too: the gap closed, take its name out.
-            Err(g) if OPEN.contains(&w.as_str()) && g.more == 0 && g.lost.iter().all(|r| ["ow_fn[lifecycle]", "ow_read_elsewhere[lifecycle]"].contains(&r.as_str())) => {
-                eprintln!("OPEN {w}: {}", &g.said[..g.said.len().min(600)]);
-                open += 1;
-            }
             Err(g) => {
                 eprintln!("RED {}", &g.said[..g.said.len().min(900)]);
                 bad.push(w.clone());
@@ -429,14 +443,13 @@ fn the_checked_worlds_split_by_their_plans() {
         ran += 1;
     }
     assert!(ran > 0, "no world of facts/checks.rofl cuts a book");
-    eprintln!("parity of the checked worlds: {ran} that cut a book, {refused} of them refused, {open} open");
+    eprintln!("parity of the checked worlds: {ran} that cut a book, {refused} of them refused");
     assert!(bad.is_empty(), "of {ran} worlds, not the world whole: {bad:?}");
 }
 
 /// THE ENGINE'S OWN UNITS, held to the same worlds (`Session::by_volumes`, the path `rofl ask` takes over a corpus):
 /// every checked world that cuts a book and names a file is the world whole by them, or refused as the split by the
-/// plan refuses it. The four worlds the split by the plan leaves open are whole here: a unit reads a nearest from
-/// the tree its file settled, where a pass above given lemmas walks it again and meets it closed.
+/// plan refuses it.
 /// A world to a process, as `rofl ask` is: the units of a second program in one process read the names of the first
 /// (f_the_units_of_two_programs_in_one_process_share_their_names), so this test runs itself again for each world.
 #[test]
@@ -494,9 +507,6 @@ fn the_checked_worlds_by_the_engines_units() {
     let red: Vec<&String> = said.iter().filter(|l| l.starts_with("UNITS red")).filter(|l| !UNITS_OPEN.iter().any(|w| l.starts_with(&format!("UNITS red {w}:")))).collect();
     let closed: Vec<&&str> = UNITS_OPEN.iter().filter(|w| !said.iter().any(|l| l.starts_with(&format!("UNITS red {w}:")))).collect();
     assert!(count("whole") > 0 && red.is_empty() && closed.is_empty(), "by the engine's units, not the world whole: {red:?}; named open and whole now: {closed:?}");
-    for w in OPEN {
-        assert!(said.iter().any(|l| l.starts_with(&format!("UNITS whole {w}:"))), "{w} is open by the plan's split and whole by the engine's units");
-    }
 }
 
 /// `rofl serve` GIVES THE PLAN BY ITS `rows`, of a session that loaded the program and no file: the facts of
