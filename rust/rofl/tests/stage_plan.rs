@@ -102,7 +102,7 @@ fn whole(texts: &[&str]) -> Result<Session, String> {
 
 /// The split by the plan against the world whole, row for row; how many files and rows.
 fn parity(name: &str, texts: &[&str], pods: &[usize]) -> (usize, usize) {
-    held(name, texts, pods).unwrap_or_else(|e| panic!("{}", e.said))
+    held(name, texts, pods).unwrap_or_else(|e| panic!("{e}"))
 }
 
 /// Whether the world whole keeps the relation of a fact: it keeps none of a relation below its cut that no rule
@@ -113,28 +113,18 @@ fn kept(all: &mut Session, k: &str) -> bool {
     all.eval.staged_away(rel, Some(book)).is_none()
 }
 
-/// Why a split is not the world whole: the relations of the rows it lost, and how many rows it holds too many.
-struct Gap {
-    said: String,
-    lost: BTreeSet<String>,
-    more: usize,
-}
-
-fn held(name: &str, texts: &[&str], pods: &[usize]) -> Result<(usize, usize), Gap> {
-    let gap = |said: String| Gap { said, lost: BTreeSet::new(), more: 0 };
-    let mut all = whole(texts).map_err(|e| gap(format!("{name}: the world whole: {e}")))?;
+fn held(name: &str, texts: &[&str], pods: &[usize]) -> Result<(usize, usize), String> {
+    let mut all = whole(texts).map_err(|e| format!("{name}: the world whole: {e}"))?;
     let mut said = (0, 0);
     for &pod in pods {
-        let s = split(texts, pod).map_err(|e| gap(format!("{name}, {pod} files to a pod: {e}")))?;
+        let s = split(texts, pod).map_err(|e| format!("{name}, {pod} files to a pod: {e}"))?;
         let want = keys(&all.eval, &s.cuts);
         let lost: Vec<_> = want.difference(&s.keys).take(4).collect();
         // (the world whole keeps no fact of a relation below its cut that no rule above reads, and refuses a question of
         // it: a split that gave one, the edges of a tree it walks above, is held to what the world whole answers)
         let more: Vec<_> = s.keys.difference(&want).filter(|k| kept(&mut all, k)).take(4).collect();
         if !(lost.is_empty() && more.is_empty()) {
-            let rels = want.difference(&s.keys).filter_map(|k| k.split_once(']').map(|x| format!("{}]", x.0))).collect();
-            let said = format!("{name}, {pod} files to a pod of {}: the split is not the world whole: {} rows whole, {} split; lost {lost:?}, more {more:?}", s.files, want.len(), s.keys.len());
-            return Err(Gap { said, lost: rels, more: more.len() });
+            return Err(format!("{name}, {pod} files to a pod of {}: the split is not the world whole: {} rows whole, {} split; lost {lost:?}, more {more:?}", s.files, want.len(), s.keys.len()));
         }
         said = (s.files, want.len());
     }
@@ -425,7 +415,7 @@ fn the_checked_worlds_split_by_their_plans() {
             Ok((files, rows)) => eprintln!("parity {w}: {files} files, {rows} rows whole and split, {} ms", t0.elapsed().as_millis()),
             // a file that states what the plan's `own` does not name breaks the plan: the engine by volumes refuses
             // the world with the same words (and evaluates it whole)
-            Err(Gap { said: e, .. }) if e.contains("the plan names what a file states") => {
+            Err(e) if e.contains("the plan names what a file states") => {
                 let parts = cut(&refs);
                 let mut core = Session::fresh(BUDGET);
                 core.load_all(&[parts.core.as_str()], None).unwrap();
@@ -436,7 +426,7 @@ fn the_checked_worlds_split_by_their_plans() {
                 refused += 1;
             }
             Err(g) => {
-                eprintln!("RED {}", &g.said[..g.said.len().min(900)]);
+                eprintln!("RED {}", &g[..g.len().min(900)]);
                 bad.push(w.clone());
             }
         }

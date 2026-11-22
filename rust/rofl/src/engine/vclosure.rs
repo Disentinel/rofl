@@ -634,7 +634,11 @@ impl Eval {
             self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r)).cloned().partition(|r| self.rule_level(r) <= lv);
         self.activate(&readers)?;
         let fired: FxSet<Sym> = self.active.iter().map(|r| r.id).collect();
-        self.fire_all(brk!("nearest_fired_closed_left" => Vec::new(); above.into_iter().filter(|r| fired.contains(&r.id)).collect()))
+        let above: Vec<Rc<ERule>> = brk!("nearest_fired_closed_left" => Vec::new(); above.into_iter().filter(|r| fired.contains(&r.id)).collect());
+        if above.is_empty() {
+            return Ok(());
+        }
+        self.fire_all(above)
     }
 
     /// The forests of each closure a negation reads, as a delta finds them: its change is counted against them
