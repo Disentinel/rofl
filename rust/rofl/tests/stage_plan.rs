@@ -415,3 +415,44 @@ fn the_checked_worlds_split_by_their_plans() {
     eprintln!("parity of the checked worlds: {ran} that cut a book, {refused} of them refused, {open} open");
     assert!(bad.is_empty(), "of {ran} worlds, not the world whole: {bad:?}");
 }
+
+/// `rofl serve` GIVES THE PLAN BY ITS `rows`, of a session that loaded the program and no file: the facts of
+/// `Eval::stage_plan`, and those at an argument where one is named.
+#[test]
+fn rofl_serve_gives_the_plan_by_rows() {
+    use std::io::{BufRead, BufReader, Write};
+    let d = std::env::temp_dir().join(format!("rofl-stage-plan-{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    let file = d.join("by_file.rofl");
+    std::fs::write(&file, BY_FILE).unwrap();
+    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_rofl")).arg("serve").stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped()).spawn().unwrap();
+    let (mut to, mut from) = (child.stdin.take().unwrap(), BufReader::new(child.stdout.take().unwrap()));
+    let mut ask = |req: serde_json::Value| -> serde_json::Value {
+        writeln!(to, "{req}").unwrap();
+        let mut line = String::new();
+        from.read_line(&mut line).unwrap();
+        serde_json::from_str(&line).unwrap_or_else(|e| panic!("{e}: {line}"))
+    };
+    let s = ask(serde_json::json!({"op": "fresh"}))["session"].clone();
+    let loaded = ask(serde_json::json!({"op": "load", "session": s, "path": file}));
+    assert_eq!(loaded["ok"], true, "{loaded}");
+    let mut here = Session::fresh(BUDGET);
+    here.load_all(&[BY_FILE], None).unwrap();
+    let plan = here.eval.stage_plan_text();
+    for rel in ["fires", "gives", "cuts", "own"] {
+        let got = ask(serde_json::json!({"op": "rows", "session": s, "rel": rel, "persp": "stageplan"}));
+        let mut keys: Vec<String> = got["facts"].as_array().unwrap_or_else(|| panic!("{got}")).iter().map(|f| f["key"].as_str().unwrap_or_default().to_string() + ".").collect();
+        keys.sort();
+        let mut want: Vec<&str> = plan.lines().filter(|l| l.starts_with(&format!("{rel}["))).collect();
+        want.sort();
+        assert!(!want.is_empty() && keys == want, "{rel}: served {keys:?}, the plan {want:?}");
+    }
+    let across = ask(serde_json::json!({"op": "rows", "session": s, "rel": "fires", "persp": "stageplan", "at": {"1": "across"}}));
+    assert_eq!(across["facts"].as_array().map(Vec::len), Some(plan.lines().filter(|l| l.ends_with(",across).")).count()), "{across}");
+    // another book of the same relation's name is not the plan
+    let other = ask(serde_json::json!({"op": "rows", "session": s, "rel": "fires", "persp": "main"}));
+    assert_eq!(other["facts"].as_array().map(Vec::len), Some(0), "{other}");
+    drop(to);
+    let _ = child.wait();
+    let _ = std::fs::remove_dir_all(&d);
+}
