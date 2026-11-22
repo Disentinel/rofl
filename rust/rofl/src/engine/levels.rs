@@ -31,7 +31,7 @@ use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering::Relaxed};
 use std::sync::Mutex;
 
 mod far;
-pub use far::{block as far_block, far_edit, far_names, far_next, far_node, FAR_SAID};
+pub use far::{block as far_block, far_edit, far_failed, far_names, far_next, far_node, FAR_SAID};
 
 /// An argument of a relation's facts of one arity.
 type Place = (Sym, u8, u8);
@@ -1673,7 +1673,8 @@ impl Eval {
             gone.lock().unwrap().extend(went);
         };
         // a unit another process settled: where it was settled again, what it moved is taken as if settled here
-        let from_far = |k: usize, files: (u32, u32), (u, m): (Unit, Option<far::Moved>)| -> Unit {
+        let from_far = |k: usize, files: (u32, u32), got: Result<(Unit, Option<far::Moved>), Halt>| -> Result<Unit, Halt> {
+            let (u, m) = got?;
             if let (Some(o), Some((lo, fs))) = (was(k, files), m) {
                 assert_eq!(o.stretch.lo, lo, "far: the unit of files {files:?} was not where its node says it was");
                 again.fetch_add(1, Relaxed);
@@ -1681,7 +1682,7 @@ impl Eval {
                 ghosts.lock().unwrap().push(o.stretch.clone());
                 took_moved(k, &fs);
             }
-            u
+            Ok(u)
         };
         let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<Dir>, asked: Asked| {
             let mut e = e;
@@ -2077,7 +2078,7 @@ impl Eval {
                 let units = level((k, 0), ranges.len(), true, &largest, &|x| {
                     let one = ranges[x];
                     if let Some(f) = far.as_ref().filter(|f| !f.mine(one)) {
-                        return Ok(from_far(k, one, f.unit(k, 0, x, one, Vec::new())));
+                        return from_far(k, one, f.unit(k, 0, x, one, Vec::new()));
                     }
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| brk!("levels_leaf_first_file" => one.0..one.0 + 1; one.0..one.1).any(|f| e.1.contains(&f) || touched.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
@@ -2164,7 +2165,7 @@ impl Eval {
                 units
             } else {
                 level((k, 0), ranges.len(), false, &largest, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
-                    _ if far.as_ref().is_some_and(|f| !f.mine(ranges[i])) => Ok(from_far(k, ranges[i], far.as_ref().unwrap().unit(k, 0, i, ranges[i], Vec::new()))),
+                    _ if far.as_ref().is_some_and(|f| !f.mine(ranges[i])) => from_far(k, ranges[i], far.as_ref().unwrap().unit(k, 0, i, ranges[i], Vec::new())),
                     Some(o) => Ok(kept(&o, Vec::new())),
                     None => unit(k, &lower, &trees, at_home(0, i), Vec::new(), Vec::new(), ranges[i], None),
                 })?
@@ -2200,7 +2201,7 @@ impl Eval {
                     }
                     let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
                     if let Some(f) = far.as_ref().filter(|f| !f.mine(files)) {
-                        return Ok(from_far(k, files, f.unit(k, d, x, files, kids)));
+                        return from_far(k, files, f.unit(k, d, x, files, kids));
                     }
                     if let Some(o) = was(k, files).filter(|o| stands(o, &moved_below)) {
                         return Ok(kept(&o, kids));

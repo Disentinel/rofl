@@ -736,6 +736,12 @@ impl Eval {
     /// `by_volumes_over` again over this core after an edit of the files `edit` names (their places), the world
     /// before held in memory: the units whose answer may have moved are settled again, the others stand.
     pub fn by_volumes_edit(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
+        // (where the nodes are processes, one that cannot settle its units says why to those that wait for them)
+        let (h, n) = (self.h.clone(), files.len());
+        self.by_volumes_edit_here(files, over, edit).inspect_err(|e| super::levels::far_failed(&h, n, e))
+    }
+
+    fn by_volumes_edit_here(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let (stage, mut joins) = self.level_stage();
         self.settle_core(joins.core.clone())?;

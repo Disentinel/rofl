@@ -59,6 +59,8 @@ pub(super) struct Far {
     /// the edits the root sent a node, to take in order
     edits: Mutex<std::collections::VecDeque<Vec<(u32, String)>>>,
     told: Condvar,
+    /// why this process could not settle its units this round, for the others that wait for them
+    failed: Mutex<Option<(u32, u64, String)>>,
 }
 
 /// What a unit settled again moved: the ids it had, and its facts that came (with their ids) and went.
@@ -92,6 +94,15 @@ pub fn far_node() -> bool {
     FAR_OF.get().is_some_and(|f| f.me != ROOT)
 }
 
+/// Where this process is a node or the root: it could not settle its units (a wall, a refusal), and every process
+/// waiting for one of them, this round, is told why instead of waiting. A process that stopped before its levels
+/// began opens its place among the others to say so.
+pub fn far_failed(h: &Heap, files: usize, e: &Halt) {
+    if let Some(f) = FAR_OF.get().cloned().or_else(|| Far::of_env(h, files)) {
+        f.fail(e);
+    }
+}
+
 static FAR_OF: std::sync::OnceLock<Rc<Far>> = std::sync::OnceLock::new();
 
 thread_local! {
@@ -123,6 +134,7 @@ impl Far {
         // (the rounds go one after another: every unit of the one before was asked before this began)
         far.units.lock().unwrap().retain(|k, _| k.0 >= r);
         far.moved.lock().unwrap().clear();
+        *far.failed.lock().unwrap() = None;
         far.trips.lock().unwrap().clear();
         Some(far)
     }
@@ -133,7 +145,7 @@ impl Far {
             "root" => ROOT,
             n => n.parse().ok()?,
         };
-        let far = Rc::new(Far { me, size, peers: peers(&dir), dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default(), round: AtomicU32::new(0), views: Default::default(), moved: Default::default(), edits: Default::default(), told: Condvar::new() });
+        let far = Rc::new(Far { me, size, peers: peers(&dir), dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default(), round: AtomicU32::new(0), views: Default::default(), moved: Default::default(), edits: Default::default(), told: Condvar::new(), failed: Default::default() });
         far.serve();
         let _ = FAR_OF.set(far.clone());
         Some(far)
@@ -225,11 +237,24 @@ impl Far {
     }
     /// A unit settled here, for the others to ask as soon as it is.
     pub(super) fn settled(&self, k: usize, d: usize, x: usize, u: Result<Unit, Halt>) -> Result<Unit, Halt> {
-        if let Ok(u) = &u {
-            let c = Rc::new(Unit { stretch: u.stretch.clone(), files: u.files, kids: u.kids.clone(), parts: u.parts.clone() });
-            self.publish_at(k, d, x, &c);
+        match &u {
+            Ok(u) => {
+                let c = Rc::new(Unit { stretch: u.stretch.clone(), files: u.files, kids: u.kids.clone(), parts: u.parts.clone() });
+                self.publish_at(k, d, x, &c);
+            }
+            // (said at once: a unit of another process this one's other units wait for may wait for this one)
+            Err(e) => self.fail(e),
         }
         u
+    }
+    /// This process cannot settle its units this round: those who wait for one are told why.
+    fn fail(&self, e: &Halt) {
+        let (kind, said) = match e {
+            Halt::Budget(w, _) => (0, w.to_string()),
+            h => (1, crate::describe(h)),
+        };
+        self.failed.lock().unwrap().get_or_insert((u32::MAX, kind, said));
+        self.came.notify_all();
     }
     fn publish_at(&self, k: usize, d: usize, x: usize, u: &Rc<Unit>) {
         if !u.stretch.is_held_there() && self.mine(u.files) {
@@ -246,15 +271,30 @@ impl Far {
         self.trips.lock().unwrap().entry(node).or_insert_with(|| Rc::new(Trip::new(Rc::new(Node { far: self.clone(), node })))).clone()
     }
     /// A unit another process settles, as it says it when it has.
-    pub(super) fn unit(self: &Rc<Self>, k: usize, d: usize, x: usize, files: (u32, u32), kids: Vec<Rc<Unit>>) -> (Unit, Option<Moved>) {
+    pub(super) fn unit(self: &Rc<Self>, k: usize, d: usize, x: usize, files: (u32, u32), kids: Vec<Rc<Unit>>) -> Result<(Unit, Option<Moved>), Halt> {
         let node = self.home(files);
         let mut e = Enc::op(b'U', &self.h);
         e.u64(self.round.load(Relaxed) as u64);
         e.u64(k as u64);
         e.u64(d as u64);
         e.u64(x as u64);
-        let b = self.ask(node, &e.done());
+        let b = self.try_ask(node, &e.done()).map_err(|m| {
+            eprintln!("levels: {m}, so this process cannot settle its units");
+            let h = Halt::Strat(m, String::new());
+            self.fail(&h);
+            h
+        })?;
         let mut r = Dec::of(&b, &self.h);
+        if r.u64() == 1 {
+            let who = if node == ROOT { "the root".to_string() } else { format!("node {node}") };
+            let (kind, said) = (r.u64(), r.text());
+            eprintln!("levels: {who} could not settle its units ({}), nor can this process", if kind == 0 { format!("wall: {said}") } else { said.clone() });
+            return Err(match (kind, said) {
+                (0, w) if w == "space_exhausted" => Halt::Budget("space_exhausted", None),
+                (0, _) => Halt::Budget("budget_exhausted", None),
+                (_, m) => Halt::Strat(format!("{who} could not settle its units: {m}"), String::new()),
+            });
+        }
         let (lo, hi) = (r.u64() as FactId, r.u64() as FactId);
         let rels = r.names();
         let far = (0..r.u64()).map(|_| r.u64() as FactId).collect();
@@ -279,43 +319,49 @@ impl Far {
             s
         }).clone();
         let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::new(Dir::Built(inner)), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()) };
-        (Unit { stretch, files, kids, parts: Rc::new(Lazy::made(parts)) }, moved)
+        Ok((Unit { stretch, files, kids, parts: Rc::new(Lazy::made(parts)) }, moved))
     }
 
     fn ask(&self, node: u32, req: &[u8]) -> Vec<u8> {
+        self.try_ask(node, req).unwrap_or_else(|e| panic!("far: {e}"))
+    }
+
+    /// The answer of `node`, or that it went: the root gone takes this process with it.
+    fn try_ask(&self, node: u32, req: &[u8]) -> Result<Vec<u8>, String> {
         let c = self.conns.lock().unwrap().get_mut(&node).and_then(|v| v.pop());
-        let mut s = c.unwrap_or_else(|| {
-            let t0 = std::time::Instant::now();
-            loop {
-                match self.connect(node) {
-                    Ok(s) => break s,
-                    Err(_) if t0.elapsed().as_secs() < 120 => std::thread::sleep(std::time::Duration::from_millis(20)),
-                    Err(e) => panic!("far: no node {node} at {}: {e}", self.peers.get(&node).cloned().unwrap_or_else(|| self.path(node).display().to_string())),
+        let mut s = match c {
+            Some(s) => s,
+            None => {
+                let t0 = std::time::Instant::now();
+                loop {
+                    match self.connect(node) {
+                        Ok(s) => break s,
+                        Err(_) if t0.elapsed().as_secs() < 120 => std::thread::sleep(std::time::Duration::from_millis(20)),
+                        Err(e) => return Err(format!("no node {node} at {}: {e}", self.peers.get(&node).cloned().unwrap_or_else(|| self.path(node).display().to_string()))),
+                    }
                 }
             }
-        });
+        };
         FAR_SAID[0].fetch_add(1, Relaxed);
         if let Some(i) = OPS.iter().position(|&x| x == Dec::of(req, &self.h).op()) {
             FAR_OPS[i].fetch_add(1, Relaxed);
         }
-        let went = |e: String| -> ! {
+        let went = |e: String| {
             if node == ROOT {
                 eprintln!("levels: the root went ({e}): node {} goes too", self.me);
                 std::process::exit(3);
             }
-            panic!("far: node {node} went: {e}")
+            format!("node {node} went: {e}")
         };
-        if let Err(e) = put_frame(&mut s, req) {
-            went(e.to_string());
-        }
+        put_frame(&mut s, req).map_err(|e| went(e.to_string()))?;
         let b = match get_frame(&mut s) {
             Ok(Some(b)) => b,
-            Ok(None) => went("its socket closed".into()),
-            Err(e) => went(e.to_string()),
+            Ok(None) => return Err(went("its socket closed".into())),
+            Err(e) => return Err(went(e.to_string())),
         };
         FAR_SAID[1].fetch_add(b.len() as u64 + req.len() as u64, Relaxed);
         self.conns.lock().unwrap().entry(node).or_default().push(s);
-        b
+        Ok(b)
     }
 
     fn serve(self: &Rc<Self>) {
@@ -375,9 +421,19 @@ impl Far {
             }
             b'U' => {
                 let key = (r.u64() as u32, r.u64() as u32, r.u64() as u32, r.u64() as u32);
-                let us = self.came.wait_while(self.units.lock().unwrap(), |us| !us.contains_key(&key)).unwrap();
-                let u = us[&key].clone();
+                let failed = |round: u32| self.failed.lock().unwrap().as_ref().filter(|f| f.0 >= round).map(|f| (f.1, f.2.clone()));
+                let us = self.came.wait_while(self.units.lock().unwrap(), |us| !us.contains_key(&key) && failed(key.0).is_none()).unwrap();
+                let Some(u) = us.get(&key).cloned() else {
+                    drop(us);
+                    // (a node that could not settle its units says why: a wall by its name, the rest in words)
+                    let (kind, said) = failed(key.0).expect("woken by the failure");
+                    e.u64(1);
+                    e.u64(kind);
+                    e.text(&said);
+                    return e.done();
+                };
                 drop(us);
+                e.u64(0);
                 let s = &u.stretch;
                 e.u64(s.lo as u64);
                 e.u64(s.hi as u64);
