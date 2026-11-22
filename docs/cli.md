@@ -771,18 +771,23 @@ move with them. It is the stage the engine itself evaluates by levels (`Eval::le
 | fact | says |
 |---|---|
 | `fires(Rule, core)` | the rule reads no file: fired once, before the files, over what no file states |
-| `fires(Rule, file)` | the rule cannot leave a file (*Lemma stages*, above): fired in the world of the file, or of any set of files |
+| `fires(Rule, file)` | the rule cannot leave a file (*Lemma stages*, above): fired in the world of the file, or of any set of files; a world of no file fires it too, over what the core states |
 | `fires(Rule, both)` | fired in the file's world and again above it (a closure walked on both sides) |
 | `fires(Rule, across)` | the rule may cross files: fired once, over what the files gave |
-| `gives(Rel)` | what a file's world concludes of `Rel` is given above; what it concludes of any other relation is not |
+| `gives(Rel)` | what a file's world concludes of `Rel` is given above; what it concludes of any other relation is not. The edges of a declared tree and the condition of a `nearest` are among them: a closure answered from a tree has no row to give, and the world above walks it |
 | `cuts(Book)` | the facts of `Book` stay in the file's world; every other fact a file states is given above |
-| `own(Rel, Book, I)` | argument `I`, from 0, of every fact of `Rel[Book]` a file's world holds is a node of that file, so the fact's file is read off it (`none`: no argument is; `any`: in every book) |
+| `own(Rel, Book, I)` | a fact of `Rel[Book]` a file's world holds that is of the file holds a node of it at argument `I`, from 0, so the fact's file is read off it; one that holds no node there is of no file, the same in every file's world (`none`: no argument holds one; `any`: in every book) |
 
 `Rule` is the rule's id, `r` and the sum of its canonical text, the id `why` prints and the kernel's book keeps
 (`rows` of `rule`, `conclusion_lit`, `premise_lit`). A split executed from these facts alone is the whole world,
 fact for fact outside the cut books, however the files are dealt to the nodes (`cargo test -p rofl --test
 stage_plan`: the plan is loaded as facts, the stage read back from them by `Eval::stage_planned`, and held to the
-world whole over random programs, every world of facts/checks.rofl that cuts a book, and the JS model). The size is
+world whole over random programs, every world of facts/checks.rofl that cuts a book, and the JS model). It is held
+to what the world whole keeps: a relation concluded below the cut that no rule above reads (the edges of a tree)
+is given by the split and dropped by the world whole. A world whose files state a relation no `own[fixpointplan]`
+names is refused by the split as by the engine (*Lemma stages*). Open: the four lifecycle worlds lose the rows of
+one rule that reads a `nearest`, which the engine's pass above given lemmas does not fire
+(`f_a_pass_above_given_lemmas_misses_a_reader_of_a_nearest`). The size is
 the program's: one `fires` a rule, and for the JS model 4 724 facts, 166 KB (3 401 rules: 79 `core`, 1 293 `file`,
 10 `both`, 2 019 `across`; 460 `gives`). A program whose plan cuts no
 book has no rule of a file: every rule is `across` or `core`. What the units of one process join by where they
