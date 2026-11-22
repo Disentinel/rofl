@@ -842,8 +842,18 @@ texts of the files it moved in a segment of their own (about that file's text
 and 56 bytes a file of index) and carries an older segment into it only where
 most of its texts went or it is no larger than what the new one holds, so the
 segments hold at most twice the texts. A unit's directories kept in an earlier
-segment of units are named there, not written again, and an edit that names
-nothing new leaves the dictionary (`.names`) as it lies. The first question
+segment of units are named there, not written again. A unit an edit settled
+again that concludes what it had is written as a patch over the body and the
+directories it stood on (the facts whose firings moved, the keys whose holders
+moved), or whole where the patch passes a quarter of them; a stretch the edit
+replaced stays only while a kept stretch cites it, and a segment no kept
+stretch or unit names is deleted. The dictionary keeps its base (`.names`) and
+an edit appends the names it made to `.names+`, folded into a new base when the
+log passes a quarter of it. Measured (vscode, 300 files, the `fast` build, 4
+cores, 2026-11-22), one line edited 20 times: 137.9 MB written an edit before
+(163.4 MB where a name came: the dictionary whole) and the world grew 0.14 GB
+an edit; 4.2 MB now, a few bytes for a name, the world 1.27 GB after the first
+edit and the twentieth (`f_an_edit_writes_its_units_as_what_moved`). The first question
 after a world is kept or edited reads only what its walk reads: the writer
 noted what it wrote (above). Measured (vscode at the bench's commit, 1000
 files, the `fast` build, 4 cores, 2026-11-20), one file of 181 KB edited:
