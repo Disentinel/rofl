@@ -4246,7 +4246,7 @@ work_spawned(w_au_side_effect_question_findable, f_a_fresh_agent_answers_the_sid
 
 work(w_au_answers_name_places,
   "Answers are node ids (S = n2bf..._1vkc...): both agents wrote their own rule joining at[tree] for file:line, and `rofl ask 'a(X), b(X)'` is refused as 'no closing dot', not as 'one literal; put the join in a rule file'. side_effect_value prints node ids for non-literal values and `undefined` unexplained. Render a node id as file:line (and its text) in ask answers, or give the side-effect relations File and Line; say what undefined means.").
-work_state(w_au_answers_name_places, open).
+work_state(w_au_answers_name_places, done).
 work_spawned(w_au_answers_name_places, f_a_fresh_agent_answers_the_side_effect_question_and_stumbles_on_seventeen_things).
 
 work(w_au_why_for_a_reviewer,

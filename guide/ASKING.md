@@ -67,7 +67,7 @@ For a program, `--json` prints the same answer as one object a line:
 <!-- BEGIN run guide/examples/first: rofl ask 'risky(N)' --json @js shop.rofl -->
 ```
 $ rofl ask 'risky(N)' --json @js shop.rofl
-{"keys":["risky[main](\"checkout\")","risky[main](\"charge\")"],"ok":true,"partial":false,"rows":[["\"checkout\""],["\"charge\""]],"shrugs":[],"vars":["N"]}
+{"keys":["risky[main](\"checkout\")","risky[main](\"charge\")"],"ok":true,"partial":false,"places":{},"rows":[["\"checkout\""],["\"charge\""]],"shrugs":[],"vars":["N"]}
 ```
 <!-- END run -->
 

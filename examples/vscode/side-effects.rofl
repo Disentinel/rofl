@@ -4,7 +4,11 @@
 -- an external package directly or through a function of the corpus that hands its parameter on.
 --
 --   side_effect_value(Site, Family, Value)  Value may reach the argument at Site: a literal, or the node of a value
---                                           (a process.env read, an external call such as path.join, an object)
+--                                           (a process.env read, an external call such as path.join, an object);
+--                                           `undefined` is the JS value: the argument may be undefined there (a
+--                                           parameter a call leaves out, a `let` with no initialiser, a get that
+--                                           may find nothing: models/lang/js/rules/js-dataflow.rofl, section 1).
+--                                           `rofl ask` says each node's File:Line and its text under the row
 --   side_effect_site(Site, Family)          every site, with a value or without
 --   side_effect_env(Value, Key)             the value is `process.env.Key`
 --   side_effect_form(Site, Family, Form)    a string built from parts may reach the argument, of that form, some part

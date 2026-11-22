@@ -68,15 +68,18 @@ fn refuse(s: &mut Session, json: bool, msg: String) -> ! {
 }
 
 /// An ask in the REPL's words with the sentences off (src/repl.ts `?`): each row's bindings, sorted, `(empty)` for
-/// none, each shrug with its line. A partial answer opens with a line of its own and closes with why it may be short,
-/// so that neither its first rows nor its last read as the whole answer.
-fn ask_text(a: &rofl::session::Answer, why: &[&str]) -> String {
+/// none, each shrug with its line. A node the world places is said under its row, `  S: File:Line  text`. A partial
+/// answer opens with a line of its own and closes with why it may be short, so that neither its first rows nor its
+/// last read as the whole answer.
+fn ask_text(a: &rofl::session::Answer, why: &[&str], places: &std::collections::HashMap<String, crate::place::Place>) -> String {
     let said = |row: &[String]| if a.vars.is_empty() { "true".to_string() } else { a.vars.iter().zip(row).map(|(v, x)| format!("{v} = {x}")).collect::<Vec<_>>().join(", ") };
-    let mut rows: Vec<String> = a.rows.iter().map(|r| said(r)).collect();
-    rows.sort_by(|x, y| rofl::term::cmp_js(x, y));
+    let under = |row: &[String]| a.vars.iter().zip(row).filter_map(|(v, x)| places.get(x).map(|p| format!("\n  {v}: {}", crate::place::said(p)))).collect::<String>();
+    let mut rows: Vec<(String, String)> = a.rows.iter().map(|r| (said(r), under(r))).collect();
+    rows.sort_by(|x, y| rofl::term::cmp_js(&x.0, &y.0));
     rows.dedup();
+    let mut rows: Vec<String> = rows.into_iter().map(|(r, u)| r + &u).collect();
     if rows.is_empty() && a.shrugs.is_empty() { rows.push("(empty)".into()); }
-    rows.extend(a.shrugs.iter().map(|(r, line)| format!("? {}  {line}", said(r))));
+    rows.extend(a.shrugs.iter().map(|(r, line)| format!("? {}  {line}{}", said(r), under(r))));
     if !why.is_empty() {
         rows.insert(0, PARTIAL_HEAD.into());
         rows.extend(why.iter().map(|w| format!("[partial: {w}]")));
@@ -1076,9 +1079,9 @@ fn lower_texts(o: &Opts, s: &mut Session) {
     if s.eval.lower_texts.is_some() || s.eval.lower_kept.is_some() || s.eval.lemma_stage().is_none() {
         return;
     }
-    // (a whynot reads them when its walk first goes below the cut, and not before)
+    // (a whynot reads them when its walk first goes below the cut, and an ask when it places a node, and not before)
     if !o.qs.iter().any(|q| matches!(q, Q::WhyAll(_))) {
-        if o.qs.iter().any(|q| matches!(q, Q::Whynot(_) | Q::WhynotAll(_))) {
+        if o.qs.iter().any(|q| matches!(q, Q::Whynot(_) | Q::WhynotAll(_) | Q::Ask(_))) {
             s.eval.lower_sources = Some(std::sync::Arc::new(load_sources(o)));
         }
         return;
@@ -1099,8 +1102,9 @@ fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
     partial |= !failed.is_empty();
     let mut refused = false;
     lower_texts(o, s);
+    let mut sources = None;
     for q in &o.qs {
-        let (text, js, bad, part) = answer(s, q, &bounds, &o.within, &failed);
+        let (text, js, bad, part) = answer(s, q, &bounds, &o.within, &failed, || sources.get_or_insert_with(|| crate::place::Sources::of(&o.files)));
         refused |= bad;
         partial |= part;
         if o.json { println!("{js}") } else { println!("{text}\n") }
@@ -1110,7 +1114,7 @@ fn answers(s: &mut Session, o: &Opts, cut: bool) -> (bool, bool) {
 }
 
 /// One question answered: its text, its `rofl serve` answer, whether it was refused, and whether it is partial.
-fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>, failed: &[String]) -> (String, serde_json::Value, bool, bool) {
+fn answer<'a>(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>, failed: &[String], sources: impl FnOnce() -> &'a mut crate::place::Sources) -> (String, serde_json::Value, bool, bool) {
     let (mut refused, mut partial) = (false, false);
     // each answer as plain text, or as `rofl serve` answers it
     let (text, js) = match q {
@@ -1119,8 +1123,9 @@ fn answer(s: &mut Session, q: &Q, bounds: &WhynotBounds, within: &Option<String>
                 partial = a.partial;
                 let shrugs: Vec<_> = a.shrugs.iter().map(|(row, line)| serde_json::json!({ "row": row, "line": line })).collect();
                 let why: Vec<String> = [a.partial.then(|| cut_why(s)), (!failed.is_empty()).then(|| "a scan failed, its facts are not in the world".to_string())].into_iter().flatten().collect();
-                let text = ask_text(&a, &why.iter().map(String::as_str).collect::<Vec<_>>());
-                (text, serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "partial": a.partial || !failed.is_empty() }))
+                let places = sources().places(s, &a);
+                let text = ask_text(&a, &why.iter().map(String::as_str).collect::<Vec<_>>(), &places);
+                (text, serde_json::json!({ "ok": true, "vars": a.vars, "rows": a.rows, "keys": a.keys, "shrugs": shrugs, "places": crate::place::json(&places), "partial": a.partial || !failed.is_empty() }))
             }
             Err(e) => { refused = true; (format!("error: {e}"), serde_json::json!({ "ok": false, "error": e })) }
         },

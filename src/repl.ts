@@ -15,6 +15,7 @@ import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { Rofl } from './api.ts';
 import { Vocabulary } from './say.ts';
+import { Places } from './places.ts';
 import { roflFromMd } from '../scripts/md_world.ts';
 
 let rofl = new Rofl();
@@ -86,11 +87,12 @@ function exec(line: string, budget?: number): void {
     // a partial answer opens and closes with a line of its own, so that no row read alone passes for the whole answer
     if (q.partial) console.log('[partial answer: the rows below may be short of the whole answer]');
     if (q.rows.length === 0 && !q.shrugs) console.log('(empty)');
+    const places = new Places(rofl, files);
     for (const r of q.rows) {
       const s = sentences ? vocab.say(instance(asked(line.slice(1).trim()), r.bindings)) : null;
-      console.log(s ? (r.text ? `${s}  [${r.text}]` : s) : r.text);
+      console.log((s ? (r.text ? `${s}  [${r.text}]` : s) : r.text) + places.under(r.bindings));
     }
-    for (const sh of q.shrugs ?? []) console.log(`? ${sh.text}  ${sh.line}`);
+    for (const sh of q.shrugs ?? []) console.log(`? ${sh.text}  ${sh.line}${places.under(sh.bindings)}`);
     if (q.partial) console.log(`[partial: ${rofl.cutWhy(budget)}]`);
     return;
   }
