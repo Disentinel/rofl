@@ -1076,6 +1076,10 @@ pub struct Stretch {
     far: Vec<FactId>,
     /// the relations it wrote a fact of with the book of each, in order
     books: Vec<(Sym, Sym)>,
+    /// kept: the stretches its firings cite, by their `lo`, as the head names them (`Stretch::cites`)
+    cites: Option<Vec<FactId>>,
+    /// laid again at the ids of a stretch kept: the body that one stood on, which it is written as a patch over
+    base: Option<Body>,
     /// its own facts of a relation by the value at one argument, made when first read so
     keyed: Keyed,
 }
@@ -1112,6 +1116,22 @@ static BODIES_READ: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUs
 
 /// The segment of a stretch cooled to a file of its own, out of the kept scroll.
 pub const COOLED: u32 = u32::MAX;
+/// A head's body in the segment the head lies in.
+const OWN: u32 = u32::MAX;
+
+/// The firings of each fact, as a set: how many and the sum of their hashes, whatever their order.
+fn firing_sets(fired: &[u32], prems: &[PremRef]) -> FxMap<FactId, (u32, u64)> {
+    let mut m: FxMap<FactId, (u32, u64)> = FxMap::default();
+    let mut at = 0;
+    for x in fired.chunks_exact(4) {
+        let n = x[3] as usize;
+        let e = m.entry(x[0]).or_default();
+        e.0 += 1;
+        e.1 = e.1.wrapping_add(firing_hash(x[0], x[1], &prems[at..at + n]) ^ (x[2] as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15));
+        at += n;
+    }
+    m
+}
 
 /// A stretch where it is kept: the fork of the core it is put into, the core's heap, and its place in the file.
 struct Kept {
@@ -1123,6 +1143,18 @@ struct Kept {
     /// the segment of the scroll it lies in, and where its head begins there
     seg: u32,
     start: usize,
+    /// the segment its body lies in: its own, or the one of the body it was laid again over (`Stretch::write_patch`)
+    base_seg: u32,
+    /// laid again over that body: the firings of its facts whose firings moved since, where they lie
+    patch: Option<(Rc<crate::arena::Region>, usize)>,
+}
+
+/// A body kept: the file it lies in, where it begins, and the segment of the scroll that file is.
+#[derive(Clone)]
+struct Body {
+    map: Rc<crate::arena::Region>,
+    at: usize,
+    seg: u32,
 }
 
 /// A kept stretch's own facts where they lie: four words a fact (relation, book, flags, arity), the arguments, where
@@ -1143,6 +1175,8 @@ struct Wits {
     prems: crate::arena::Arena<PremRef>,
     at: Vec<u32>,
     by: Vec<(FactId, u32)>,
+    /// kept as a patch: its firings, numbered after those of the body, and where each one's premises begin
+    patch: Option<(crate::arena::Arena<u32>, crate::arena::Arena<PremRef>, Vec<u32>)>,
 }
 
 impl Wits {
@@ -1152,9 +1186,13 @@ impl Wits {
         let b = a + self.by[a..].partition_point(|x| x.0 == id);
         let mut seen: FxSet<u64> = FxSet::default();
         let mut out: Vec<(Sym, u32, &[PremRef])> = Vec::with_capacity(b - a);
+        let n = self.at.len() - 1;
         for &(_, i) in &self.by[a..b] {
-            let (x, i) = (&self.fired[4 * i as usize..4 * i as usize + 4], i as usize);
-            let ps = &self.prems[self.at[i] as usize..self.at[i + 1] as usize];
+            let i = i as usize;
+            let (x, ps) = match &self.patch {
+                Some((f, p, at)) if i >= n => (&f[4 * (i - n)..4 * (i - n) + 4], &p[at[i - n] as usize..at[i - n + 1] as usize]),
+                _ => (&self.fired[4 * i..4 * i + 4], &self.prems[self.at[i] as usize..self.at[i + 1] as usize]),
+            };
             if !seen.insert(firing_hash(id, x[1], ps)) && out.iter().any(|(r, _, p)| *r == x[1] && *p == ps) {
                 continue;
             }
@@ -1183,20 +1221,115 @@ impl Stretch {
     pub fn write(&self, w: &mut crate::arena::VolW, trees: bool) -> Result<usize, String> {
         let body = self.write_body(w, trees)?;
         let at = w.at();
-        self.write_head(w, body);
+        self.write_head(w, body, &[], None);
         Ok(at)
     }
 
     /// Its head, what an opening reads: its ids, the relations it wrote, the facts lying elsewhere it holds a firing
     /// of, and where its body lies.
-    pub fn write_head(&self, w: &mut crate::arena::VolW, body: (usize, usize)) {
+    /// `patch`: written as one over the body of another segment (`write_patch`), that segment and where the patch
+    /// lies; `body` then names where that body lies there.
+    pub fn write_head(&self, w: &mut crate::arena::VolW, body: (usize, usize), cites: &[FactId], patch: Option<(u32, usize)>) {
         w.u32(self.lo);
         w.u32(self.hi);
         w.arena(&self.rels);
         w.arena(&self.far);
         w.arena(&self.books.iter().flat_map(|(r, b)| [*r, *b]).collect::<Vec<u32>>());
+        w.arena(cites);
         w.u64(body.0 as u64);
         w.u64(body.1 as u64);
+        w.u32(patch.map_or(OWN, |p| p.0));
+        w.u64(patch.map_or(0, |p| p.1) as u64);
+    }
+
+    /// LAID AGAIN, WRITTEN AS WHAT MOVED: a stretch settled again at the ids of a kept one with the same facts
+    /// (`relaid`) holds mostly the firings that one held. It is written as a patch over the body that one stood
+    /// on: the facts whose firings are not the same set, and their firings. None, and nothing written, where it
+    /// stands on no kept body, its facts are not those of that body, or the patch would pass a quarter of the
+    /// body: a reading reads the body and the patch, so it costs at most a quarter more than a body whole, and a
+    /// firing an edit moved is written at most five times before the stretch is written whole again. The segment
+    /// of the body and where it and the patch lie.
+    pub fn write_patch(&self, w: &mut crate::arena::VolW) -> Result<Option<(u32, usize, usize)>, String> {
+        let Some(b) = self.base.as_ref().filter(|_| self.kept_at().is_none()) else { return Ok(None) };
+        let mut r = crate::arena::VolR::new(b.map.clone(), b.at);
+        let (recs, args, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+        let order: Vec<FactId> = (self.lo..self.hi).collect();
+        let p = self.parts(&order, &|f| f)?;
+        if recs[..] != p.recs[..] || args[..] != p.args[..] {
+            return Ok(None);
+        }
+        let (was, now) = (firing_sets(&fired, &prems), firing_sets(&p.fired, &p.prems));
+        let mut moved: Vec<FactId> = now.iter().filter(|(f, x)| was.get(f) != Some(x)).map(|(f, _)| *f).chain(was.keys().filter(|f| !now.contains_key(f)).copied()).collect();
+        moved.sort_unstable();
+        moved = crate::brk!("units_patch_drops_moved" => Vec::new(); moved);
+        let (mut pf, mut pp) = (Vec::new(), Vec::new());
+        let mut at = 0;
+        for x in p.fired.chunks_exact(4) {
+            let n = x[3] as usize;
+            if moved.binary_search(&x[0]).is_ok() {
+                pf.extend_from_slice(x);
+                pp.extend_from_slice(&p.prems[at..at + n]);
+            }
+            at += n;
+        }
+        let size = 4 * (moved.len() + pf.len() + pp.len());
+        let body = 4 * (recs.len() + fired.len() + prems.len()) + 8 * args.len();
+        if size * 4 > body {
+            return Ok(None);
+        }
+        let start = w.at();
+        w.arena(&moved);
+        w.arena(&pf);
+        w.arena(&pp);
+        Ok(Some((b.seg, b.at, start)))
+    }
+
+    /// Its firings as they are kept: those of its body, and over them, for a stretch kept as a patch, the firings of
+    /// the facts the patch names in their place.
+    fn kept_firings(k: &Kept) -> Result<(Vec<u32>, Vec<PremRef>), String> {
+        let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
+        let (_, _, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+        let Some((map, at)) = &k.patch else { return Ok((fired.to_vec(), prems.to_vec())) };
+        let mut r = crate::arena::VolR::new(map.clone(), *at);
+        let (moved, pf, pp) = (r.arena::<FactId>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+        let (mut f, mut p) = (Vec::with_capacity(fired.len()), Vec::with_capacity(prems.len()));
+        let mut o = 0;
+        for x in fired.chunks_exact(4) {
+            let n = x[3] as usize;
+            if moved.binary_search(&x[0]).is_err() {
+                f.extend_from_slice(x);
+                p.extend_from_slice(prems.get(o..o + n).ok_or("a kept stretch is not one")?);
+            }
+            o += n;
+        }
+        f.extend_from_slice(&pf);
+        p.extend_from_slice(&pp);
+        Ok((f, p))
+    }
+
+    /// THE STRETCHES ITS FIRINGS CITE, by their `lo`, sorted: of each fact a premise names, or it holds a firing of,
+    /// the stretch `of` says it lies in (none: the core's). What a stretch an edit replaced must stay for: a
+    /// stretch kept that cites it (`Levels::write`). Its head's where it is kept, else read off its firings.
+    pub fn cites(&self, of: impl Fn(FactId) -> Option<FactId>) -> Result<Vec<FactId>, String> {
+        if let Some(c) = self.kept.as_ref().filter(|k| k.seg != COOLED).and(self.cites.as_ref()) {
+            return Ok(c.clone());
+        }
+        let mut out: FxSet<FactId> = FxSet::default();
+        let mut cite = |f: FactId| {
+            if !(self.lo <= f && f < self.hi) {
+                if let Some(s) = of(f) {
+                    out.insert(s);
+                }
+            }
+        };
+        self.far.iter().for_each(|&f| cite(f));
+        match &self.kept {
+            Some(k) => Self::kept_firings(k)?.1.iter().for_each(|p| if let Prem::Fact(f) = p.kind() { cite(f) }),
+            None => self.store().prem_arena.own.iter().for_each(|p| if let Prem::Fact(f) = p.kind() { cite(f) }),
+        }
+        let mut v: Vec<FactId> = out.into_iter().collect();
+        v.sort_unstable();
+        Ok(v)
     }
 
     /// Its body, read when something reads it: its own facts in the order of their ids and every firing it holds,
@@ -1211,8 +1344,9 @@ impl Stretch {
                 let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
                 w.arena(&r.arena::<u32>()?[..]);
                 w.arena(&r.arena::<u64>()?[..]);
-                w.arena(&r.arena::<u32>()?[..]);
-                w.arena(&r.arena::<PremRef>()?[..]);
+                let (fired, prems) = Self::kept_firings(k)?;
+                w.arena(&fired);
+                w.arena(&prems);
             }
             None => {
                 let order: Vec<FactId> = (self.lo..self.hi).collect();
@@ -1315,7 +1449,7 @@ impl Stretch {
         }
         let p = self.parts(&order, &|f| if self.lo <= f && f < self.hi { to[(f - self.lo) as usize] } else { f }).ok()?;
         let store = Self::unfold(fork, h, old.lo, old.hi, &p.recs, &p.args, &p.fired, &p.prems).ok()?;
-        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), books: self.books.clone(), forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
+        Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), books: self.books.clone(), cites: None, base: old.kept.as_ref().filter(|k| k.seg != COOLED).map(|k| Body { map: k.map.clone(), at: k.at, seg: k.base_seg }), forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
     }
 
     /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
@@ -1352,23 +1486,37 @@ impl Stretch {
 
     /// The stretch whose head `r` reads (`write_head`), its body to be read where it lies when first read: over
     /// `over`, a fork of the core that wrote nothing and the core's heap.
-    pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR, seg: u32) -> Result<Stretch, String> {
+    pub fn read(over: &Rc<(Store, Heap)>, r: &mut crate::arena::VolR, seg: u32, open: &dyn Fn(u32) -> Result<Rc<crate::arena::Region>, String>) -> Result<Stretch, String> {
         let start = r.at();
         let (lo, hi) = (r.u32()?, r.u32()?);
         let (rels, far) = (r.arena::<u32>()?.to_vec(), r.arena::<u32>()?.to_vec());
         let books = r.arena::<u32>()?.chunks_exact(2).map(|x| (x[0], x[1])).collect();
+        let cites = Some(r.arena::<FactId>()?.to_vec());
         let (at, trees) = (r.u64()? as usize, r.u64()? as usize);
-        if at.max(trees) >= r.map().len() {
+        let (base_seg, patch_at) = (r.u32()?, r.u64()? as usize);
+        let (map, base_seg, patch) = if base_seg == OWN || base_seg == seg { (r.map(), seg, None) } else { (open(base_seg)?, base_seg, Some((r.map(), patch_at))) };
+        if at.max(trees) >= map.len() || patch_at >= r.map().len() {
             return Err("a kept stretch is not one".into());
         }
-        let kept = Some(Kept { over: over.clone(), map: r.map(), at, trees, seg, start });
-        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
+        let kept = Some(Kept { over: over.clone(), map, at, trees, seg, start, base_seg, patch });
+        Ok(Stretch { store: Default::default(), kept, lo, hi, keyed: Keyed::of(&rels), rels, far, books, cites, base: None, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() })
     }
 
     /// The segment of the scroll it is kept in, and where its record begins there. None for one cooled out of
     /// the scroll (`COOLED`), which a segment writes as its own.
     pub fn kept_at(&self) -> Option<(u32, usize)> {
         self.kept.as_ref().filter(|k| k.seg != COOLED).map(|k| (k.seg, k.start))
+    }
+
+    /// This stretch, cooled from `was`, to be written as a patch over the body `was` would have been (`write_patch`).
+    pub fn cooled_from(mut self, was: &Stretch) -> Stretch {
+        self.base = was.base.clone();
+        self
+    }
+
+    /// Kept as a patch, the segment of the body it is a patch over.
+    pub fn kept_over(&self) -> Option<u32> {
+        self.kept.as_ref().filter(|k| k.patch.is_some()).map(|k| k.base_seg)
     }
 
     /// Whether it lies in a file, read from there.
@@ -1411,7 +1559,8 @@ impl Stretch {
             let _one = UNFOLD.lock().unwrap();
             let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
             let read = |r: &mut crate::arena::VolR| -> Result<Store, String> {
-                let (recs, args, fired, prems) = (r.arena::<u32>()?, r.arena::<u64>()?, r.arena::<u32>()?, r.arena::<PremRef>()?);
+                let (recs, args) = (r.arena::<u32>()?, r.arena::<u64>()?);
+                let (fired, prems) = Self::kept_firings(k)?;
                 Self::unfold(k.over.0.clone(), &k.over.1, self.lo, self.hi, &recs, &args, &fired, &prems)
             };
             read(&mut r).expect("a kept stretch read once reads again")
@@ -1454,17 +1603,35 @@ impl Stretch {
             let mut r = crate::arena::VolR::new(k.map.clone(), k.at);
             let _ = (r.arena::<u32>().expect("a kept stretch"), r.arena::<u64>().expect("a kept stretch"));
             let (fired, prems) = (r.arena::<u32>().expect("a kept stretch"), r.arena::<PremRef>().expect("a kept stretch"));
+            let patch = k.patch.as_ref().map(|(map, at)| {
+                let mut r = crate::arena::VolR::new(map.clone(), *at);
+                (r.arena::<FactId>().expect("a kept patch"), r.arena::<u32>().expect("a kept patch"), r.arena::<PremRef>().expect("a kept patch"))
+            });
             let mut at = Vec::with_capacity(fired.len() / 4 + 1);
             let mut by = Vec::with_capacity(fired.len() / 4);
             let mut o = 0u32;
             for (i, x) in fired.chunks_exact(4).enumerate() {
                 at.push(o);
                 o += x[3];
-                by.push((x[0], i as u32));
+                if patch.as_ref().is_none_or(|p| p.0.binary_search(&x[0]).is_err()) {
+                    by.push((x[0], i as u32));
+                }
             }
             at.push(o);
+            let n = at.len() as u32 - 1;
+            let patch = patch.map(|(_, f, p)| {
+                let mut pat = Vec::with_capacity(f.len() / 4 + 1);
+                let mut o = 0u32;
+                for (i, x) in f.chunks_exact(4).enumerate() {
+                    pat.push(o);
+                    o += x[3];
+                    by.push((x[0], n + i as u32));
+                }
+                pat.push(o);
+                (f, p, pat)
+            });
             by.sort_unstable();
-            Wits { fired, prems, at, by }
+            Wits { fired, prems, at, by, patch }
         }))
     }
 
@@ -3399,7 +3566,7 @@ impl Store {
         rels.sort_unstable();
         far.sort_unstable();
         books.sort_unstable();
-        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, books, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() }
+        Stretch { store: self.into(), kept: None, lo, hi: lo + n, keyed: Keyed::of(&rels), rels, far, books, cites: None, base: None, forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default() }
     }
 
     /// The candidates the stretches read here hold, added to this store's own, read whole where it declined: a

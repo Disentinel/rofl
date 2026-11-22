@@ -394,6 +394,8 @@ fn an_edit_writes_its_files_texts_alone(brk: Option<&str>) -> Result<(), String>
         let f = n(i);
         let mut t = format!("node[raw](\"{f}_1\", fn).\nnode[raw](\"{f}_2\", call).\nchild[raw](\"{f}_1\", \"{f}_2\").\nname[raw](\"{f}_2\", \"{name}\").\n");
         t += &(0..200).map(|j| format!("pad[raw](\"{f}_p{j}\", {j}).\n")).collect::<String>();
+        // (names enough that the dictionary is larger than what an edit names)
+        t += &(0..200).map(|j| format!("node[raw](\"{f}_q{j}\", k{j}).\n")).collect::<String>();
         t
     };
     let names = ["go", "stop", "go", "run"];
@@ -407,12 +409,23 @@ fn an_edit_writes_its_files_texts_alone(brk: Option<&str>) -> Result<(), String>
     let q = format!("named(\"{}_2\", \"stop\")", n(3));
     let mut below = 0;
     let ask = |world: &str, cache: &str, env: &[(&str, String)]| rofl_env(BIN, &d, &d.0.join(cache), env, brk, &["whynot", "--all", &q, "boot.rofl", world, "f.rofl"]);
-    let segments = || -> Vec<(String, u64)> {
+    let kept_as = |mark: &str| -> Vec<(String, u64)> {
         let dir = d.0.join("levels/rofl/worlds");
         let mut v: Vec<(String, u64)> = std::fs::read_dir(&dir).map(|r| r.flatten().filter_map(|e| {
             let name = e.file_name().to_string_lossy().into_owned();
-            let (_, n) = name.rsplit_once(".t")?;
+            let (_, n) = name.rsplit_once(mark)?;
             n.parse::<u64>().ok().map(|_| (name.clone(), e.metadata().unwrap().len()))
+        }).collect()).unwrap_or_default();
+        v.sort();
+        v
+    };
+    let segments = || kept_as(".t");
+    let units = || kept_as(".u");
+    let dict = || -> Vec<(String, u64)> {
+        let dir = d.0.join("levels/rofl/worlds");
+        let mut v: Vec<(String, u64)> = std::fs::read_dir(&dir).map(|r| r.flatten().filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            (name.ends_with(".names") || name.ends_with(".names+")).then(|| (name.clone(), e.metadata().unwrap().len()))
         }).collect()).unwrap_or_default();
         v.sort();
         v
@@ -426,14 +439,29 @@ fn an_edit_writes_its_files_texts_alone(brk: Option<&str>) -> Result<(), String>
     let notes = std::fs::read_dir(d.0.join("levels/rofl/seen")).map(|r| r.flatten().filter(|e| e.path().is_file()).count()).unwrap_or(0);
     ensure(notes >= 4, || format!("the kept files written are not noted whole: {notes} notes"))?;
     ensure(all > 10 * one, || format!("the texts kept: {:?}, a file's {one}; {:?} {:?}", segments(), first.err, std::fs::read_dir(d.0.join("levels/rofl/worlds")).map(|r| r.flatten().map(|e| e.file_name()).collect::<Vec<_>>())))?;
-    for (step, three) in ["walk", "stop", "zebra", "go", "walk"].iter().enumerate() {
+    let units_whole: u64 = units().iter().map(|s| s.1).sum();
+    let (base, mut seen_names) = (dict(), vec!["go", "stop", "run"]);
+    ensure(base.len() == 1, || format!("the dictionary kept: {base:?}"))?;
+    let mut most = 0;
+    for (step, three) in ["walk", "stop", "zebra", "go", "walk", "stop", "yak", "go"].iter().enumerate() {
         d.write("f.rofl", &corpus(three));
         let before: Vec<String> = segments().into_iter().map(|s| s.0).collect();
+        let (dict_before, was_named) = (dict(), seen_names.contains(three));
         let edit = ask("cut.rofl", "levels", &levels);
         ensure(edit.err.contains("units settled again"), || format!("edit {step} not taken by delta: {:?}", edit.err))?;
         let new: Vec<(String, u64)> = segments().into_iter().filter(|s| !before.contains(&s.0)).collect();
         let total: u64 = segments().iter().map(|s| s.1).sum();
         ensure(new.len() == 1 && new[0].1 < all / 2 && total <= 2 * all + 2 * one && segments().len() <= 2, || format!("edit {step} wrote {new:?}; kept {:?}, the texts whole {all}", segments()))?;
+        // the units: what an edit replaced and nothing kept cites goes, and the segments only it held with it
+        let us = units();
+        most = most.max(us.last().map_or(0, |u| u.1));
+        let held: u64 = us.iter().map(|s| s.1).sum();
+        ensure(held <= units_whole + 2 * most && us.len() <= 3, || format!("edit {step}: the units kept {us:?}, whole {units_whole}"))?;
+        // the dictionary: the base as it lay, and a name the edit named appended beside it
+        let now = dict();
+        ensure(now[0] == base[0] && (was_named || now.len() == 2 && now[1].1 > dict_before.get(1).map_or(0, |x| x.1)) && (!was_named || now == dict_before),
+            || format!("edit {step} ({three}): the dictionary {dict_before:?} -> {now:?}"))?;
+        seen_names.push(three);
         let truth = ask("whole.rofl", "truth", &whole);
         let kept = ask("cut.rofl", "levels", &levels);
         ensure(truth.code == 0, || format!("edit {step}: {}", truth.err))?;
@@ -458,6 +486,84 @@ fn an_edit_writes_its_files_texts_alone(brk: Option<&str>) -> Result<(), String>
     let truth = ask("whole.rofl", "truth", &whole);
     let kept = ask("cut.rofl", "levels", &levels);
     ensure(kept.out == truth.out && !kept.err.contains("answered from the kept units"), || format!("a source edited outside:\n{}\nthe world with nothing cut:\n{}\n{}", kept.out, truth.out, kept.err))
+}
+
+/// AN EDIT WRITES ITS UNITS AS WHAT MOVED: a group that concluded what it had, one firing more or less, is a patch over
+/// the body it stood on; a stretch replaced goes with the segment only it held; a name the edit named is appended
+/// beside the dictionary. Edit after edit, every proof from the kept units is the world whole's.
+fn an_edit_writes_its_units_as_what_moved(brk: Option<&str>) -> Result<(), String> {
+    // file i and file 11-i share their kinds, so most of what files meet over meets in the top units; file 3, edited,
+    // holds a name and a few kinds: a name no other file has moves its leaf alone, every unit above concludes what
+    // it had, and the top ones hold firings of file 3's facts, now at other ids
+    let d = Dir::new("patch");
+    let model = "own[fixpointplan](node, 0). own[fixpointplan](name, 0).\nedb(node). edb(name).\n\
+        named(N, S) :- name[raw](N, S).\nkind(N, K) :- node[raw](N, K).\n\
+        paired(S) :- named(A, S), named(B, S), A != B.\nsorts(K) :- kind(A, K), kind(B, K), A != B.\n\
+        out(X) :- paired(X).\nout(X) :- sorts(X).\nout(z3) :- kind(N, z3).\n";
+    let file = |i: usize, name: &str| {
+        let f = format!("n{i:016x}");
+        let mut t = format!("name[raw](\"{f}_1\", \"{name}\").\n");
+        t += &(0..if i == 3 { 4 } else { 200 }).map(|j| format!("node[raw](\"{f}_q{j}\", m{}_k{j}).\n", i.min(11 - i))).collect::<String>();
+        if i == 3 {
+            t += &format!("node[raw](\"{f}_z\", z3).\n");
+        }
+        t
+    };
+    let corpus = |three: &str| (0..12).map(|i| file(i, if i == 3 { three } else if i % 2 == 0 { "go" } else { "stop" })).collect::<String>();
+    d.write("cut.rofl", &format!("cut[fixpointplan](raw).\n{model}"));
+    d.write("whole.rofl", model);
+    let levels = [("ROFL_VOLUMES", "1".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "1".to_string())];
+    let whole = [("ROFL_VOLUMES", "0".to_string())];
+    let run = |q: &[&str], world: &str, cache: &str, env: &[(&str, String)]| rofl_env(BIN, &d, &d.0.join(cache), env, brk, &[q, &["boot.rofl", world, "f.rofl"]].concat());
+    let ask = |world: &str, cache: &str, env: &[(&str, String)]| run(&["ask", "out(X)"], world, cache, env);
+    let kept_as = |end: &dyn Fn(&str) -> bool| -> Vec<(String, u64)> {
+        let mut v: Vec<(String, u64)> = std::fs::read_dir(d.0.join("levels/rofl/worlds")).map(|r| r.flatten().filter_map(|e| {
+            let name = e.file_name().to_string_lossy().into_owned();
+            end(&name).then(|| (name, e.metadata().unwrap().len()))
+        }).collect()).unwrap_or_default();
+        v.sort();
+        v
+    };
+    let units = || kept_as(&|n| n.rsplit_once(".u").is_some_and(|(_, k)| k.parse::<u32>().is_ok()));
+    let dict = || kept_as(&|n| n.ends_with(".names") || n.ends_with(".names+"));
+    d.write("f.rofl", &corpus("ant"));
+    let first = ask("cut.rofl", "levels", &levels);
+    ensure(first.code == 0 && first.err.contains("settled by levels"), || format!("not kept by levels: {} {:?}", first.code, first.err))?;
+    let (whole_units, base) = (units().iter().map(|u| u.1).sum::<u64>(), dict());
+    ensure(base.len() == 1, || format!("the dictionary kept: {base:?}"))?;
+    let (mut named, mut was) = (vec!["ant", "go", "stop"], "ant");
+    for (step, three) in ["zebra", "yak", "zebra", "go", "emu", "yak", "ant", "gnu"].into_iter().enumerate() {
+        d.write("f.rofl", &corpus(three));
+        let (dict_before, new_name) = (dict(), !named.contains(&three));
+        let edit = ask("cut.rofl", "levels", &levels);
+        ensure(edit.err.contains("units settled again"), || format!("edit {step} not taken by delta: {:?}", edit.err))?;
+        let truth = ask("whole.rofl", &format!("truth-{step}"), &whole);
+        let kept = ask("cut.rofl", "levels", &levels);
+        ensure(truth.code == 0 && !truth.out.is_empty() && edit.out == truth.out && kept.out == truth.out && kept.err.contains("answered from the kept units"),
+            || format!("edit {step} ({three}), out(X) by the edit and from the kept units:\n{}\n{}\nthe world with nothing cut:\n{}\n{}", edit.out, kept.out, truth.out, kept.err))?;
+        // a fact of the top units whose firings cite file 3, and one only file 3 holds, found by the directories
+        // above it: proved from the units the edits kept as from a twin kept anew from the files
+        let twin = format!("twin-{step}");
+        ask("cut.rofl", &twin, &levels);
+        for q in [["why", "out(m3_k1)"], ["why", "out(z3)"]] {
+            let (got, want) = (run(&q, "cut.rofl", "levels", &levels), run(&q, "cut.rofl", &twin, &levels));
+            ensure(got.code == 0 && !got.out.is_empty() && got.out == want.out && got.err.contains("answered from the kept units"),
+                || format!("edit {step} ({three}), {q:?} from the units the edits kept:\n{}\n{}\nfrom a twin kept anew:\n{}", got.out, got.err, want.out))?;
+        }
+        // the units: the first as it lay, beside it what the edits moved; where an edit moved the leaf alone, the
+        // segment it wrote is small beside the first
+        let us = units();
+        let (newest, rest) = (us.last().map_or(0, |u| u.1), us.iter().skip(1).map(|u| u.1).sum::<u64>());
+        let alone = ![was, three].iter().any(|n| ["go", "stop"].contains(n));
+        ensure(us[0].1 == whole_units && us.len() <= 4 && rest * 10 < whole_units && (!alone || newest * 20 < whole_units), || format!("edit {step} ({was} -> {three}): the units kept {us:?}, the first whole {whole_units}"))?;
+        // the dictionary: its base as it lay; a name the edit named, and only such, appended beside it
+        let now = dict();
+        let grew = now.get(1).map_or(0, |x| x.1) > dict_before.get(1).map_or(0, |x| x.1);
+        ensure(now[0] == base[0] && grew == new_name, || format!("edit {step} ({three}): the dictionary {dict_before:?} -> {now:?}"))?;
+        named.push(three);
+        was = three;
+    }
+    Ok(())
 }
 
 /// A DELTA OF VOLUMES, a corpus of 24 files small enough to read: `model` over the files' facts `was`, kept by the
@@ -1052,7 +1158,7 @@ fn a_cone_grown_below_the_cut_takes_its_lemmas_again(brk: Option<&str>) -> Resul
 
 type Case = fn(Option<&str>) -> Result<(), String>;
 
-const CASES: [(&str, Case); 37] = [
+const CASES: [(&str, Case); 38] = [
     ("answers_as_fresh", answers_as_fresh),
     ("a_rule_file_edited", a_rule_file_edited),
     ("boot_edited", boot_edited),
@@ -1090,6 +1196,7 @@ const CASES: [(&str, Case); 37] = [
     ("deltas_of_volumes_one_after_another", deltas_of_volumes_one_after_another),
     ("a_cone_grown_below_the_cut_takes_its_lemmas_again", a_cone_grown_below_the_cut_takes_its_lemmas_again),
     ("an_edit_writes_its_files_texts_alone", an_edit_writes_its_files_texts_alone),
+    ("an_edit_writes_its_units_as_what_moved", an_edit_writes_its_units_as_what_moved),
 ];
 
 /// What a hole left unknown is kept by an image as by a volume: a negation unfolded at a call reads it after opening.
