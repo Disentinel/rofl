@@ -644,6 +644,8 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         }
     }
     let _pending = Pending(texts.clone());
+    // (a node of a world by levels in processes keeps its files for the edits the root sends)
+    let far_files = std::env::var_os("ROFL_FAR").map(|_| cut.files.clone());
     let mut s = match core.by_volumes_over(std::mem::take(&mut cut.files), &over) {
         Ok((s, st)) => {
             eprintln!("volumes: {} files settled by levels, {} facts in their units ({} ms)", st.files, st.facts, st.ms);
@@ -664,7 +666,20 @@ fn answer_by_volumes(o: &Opts, world: &[String], slot: &Option<String>) -> Optio
         }
         Err(e) => { eprintln!("volumes: {}; the world is evaluated whole", rofl::describe(&e)); return None; }
     };
-    rofl::engine::levels::far_wait();
+    if rofl::engine::levels::far_node() {
+        eprintln!("levels: this node settled its units; it answers the others and takes the root's edits until the root goes");
+        let mut files = far_files.unwrap_or_default();
+        loop {
+            let e = rofl::engine::levels::far_next();
+            for (i, t) in &e {
+                files[*i as usize].1 = rofl::engine::volumes::FileText::Held(t.clone());
+            }
+            s = core.by_volumes_edit(files.clone(), &over, &s, e.iter().map(|x| x.0).collect()).unwrap_or_else(|e| {
+                eprintln!("levels: this node could not take the edit: {}", rofl::describe(&e));
+                std::process::exit(3)
+            });
+        }
+    }
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     if let Some(t) = rofl::engine::heap_said_over(&[&core.eval, &s.eval]) { eprintln!("{t}"); }
     let code = answer_volumes(o, &mut s);
@@ -752,7 +767,7 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Ses
 
 /// Of the texts of facts alone `cut` set apart, those of the relations `rels` alone, laid over the files, and the
 /// rest, which go to the core.
-fn lay_over(texts: &[String], rels: &[String]) -> (String, String) {
+pub(crate) fn lay_over(texts: &[String], rels: &[String]) -> (String, String) {
     let (mut over, mut core) = (String::new(), String::new());
     for t in texts {
         let to = if rofl::engine::volumes::fact_rels(t).iter().all(|r| rels.binary_search(r).is_ok()) { &mut over } else { &mut core };

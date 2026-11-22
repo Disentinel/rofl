@@ -971,11 +971,11 @@ impl Session {
     }
 
     /// The world by volumes again after an edit of the files at the places `changed`, the world before `before`
-    /// (a session `by_volumes` gave) held in memory (`Eval::by_volumes_edit`).
-    pub fn by_volumes_edit(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, before: &Session, changed: crate::store::FxSet<u32>) -> Result<Session, Halt> {
+    /// (a session `by_volumes` gave) held in memory (`Eval::by_volumes_edit`), `over` laid over the files' units.
+    pub fn by_volumes_edit(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str, before: &Session, changed: crate::store::FxSet<u32>) -> Result<Session, Halt> {
         let lv = before.eval.levels.clone().ok_or_else(|| Halt::Bug("a world before that is not by volumes".into()))?;
         lv.named_by(&mut self.eval);
-        let (eval, _) = self.eval.by_volumes_edit(files, "", Some((&lv, changed)))?;
+        let (eval, _) = self.eval.by_volumes_edit(files, over, Some((&lv, changed)))?;
         Ok(Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() })
     }
 

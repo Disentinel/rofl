@@ -898,6 +898,18 @@ the JS model over vscode is linear in the base facts, 0.92 GB at 250 files
 without a question, so ~12 GB over the 4 308 files of subset S
 (w_reference_scale_in_five_minutes in facts/findings.rofl).
 
+**The nodes as processes, on one machine or several.** The same levels can run in several processes, each
+settling the units of its block of files (a node, `ROFL_HELD` files) and the root those over more than one node,
+each asking the others for the units it reads: their facts by relation, the planner's counts, a tree, the firings
+of a fact; ids come from the root's one counter, so an id names one fact in every process and `why` is the same.
+It is harness-driven for now, by `ROFL_FAR=DIR` and `ROFL_FAR_ME=N|root` (docs/knobs.md): a unix socket each in DIR,
+or TCP where `DIR/peers` names where each listens. Through `rofl serve`: `{"op":"volumes","session":P,"path":F}`
+settles the corpus F by levels over the program of session P (forked) and answers the world's session;
+`{"op":"volumes_edit","session":W,"files":[{"at":I,"rofl":TEXT}]}` takes an edit of files by their place, the root
+sending it to every node first, and a node is asked without `files`: it waits for the root's next edit and takes it.
+Each process settles again only its units the edit moved; what they moved crosses as facts. rust/rofl/tests/far.rs
+holds the processes and their edits to the whole world.
+
 ## `rofl serve`, the protocol
 
 `rofl serve` reads one JSON request a line and answers one a line. The list of

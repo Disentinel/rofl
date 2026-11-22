@@ -79,7 +79,7 @@ fn a_node() {
             for (i, t) in &e {
                 files[*i as usize].1 = rofl::engine::volumes::FileText::Held(t.clone());
             }
-            v = core.by_volumes_edit(files.clone(), &v, e.iter().map(|x| x.0).collect()).unwrap();
+            v = core.by_volumes_edit(files.clone(), "", &v, e.iter().map(|x| x.0).collect()).unwrap();
         }
     }
 }
@@ -91,7 +91,7 @@ fn nodes_in_processes_answer_as_the_whole_world_and_after_edits() {
     {
         let (mut core, mut files, v) = by_levels();
         files[3].1 = rofl::engine::volumes::FileText::Held(edited(&files, 3));
-        let mut w = core.by_volumes_edit(files.clone(), &v, [3u32].into_iter().collect()).unwrap();
+        let mut w = core.by_volumes_edit(files.clone(), "", &v, [3u32].into_iter().collect()).unwrap();
         same_answers(&mut w, &mut whole_of(&files), "in one process, after the edit");
     }
     let dir = std::env::temp_dir().join(format!("rofl-far-{}", std::process::id()));
@@ -138,7 +138,7 @@ fn nodes_in_processes_answer_as_the_whole_world_and_after_edits() {
         for (i, t) in &e {
             files[*i as usize].1 = rofl::engine::volumes::FileText::Held(t.clone());
         }
-        v = core.by_volumes_edit(files.clone(), &v, at.iter().map(|&i| i as u32).collect()).unwrap();
+        v = core.by_volumes_edit(files.clone(), "", &v, at.iter().map(|&i| i as u32).collect()).unwrap();
         same_answers(&mut v, &mut whole_of(&files), &format!("after the edit of {at:?}"));
     }
     drop(v);

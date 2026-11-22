@@ -86,14 +86,10 @@ pub fn far_edit(files: &[(u32, String)]) {
     }
 }
 
-/// Where this process is a node: it answers the others until the root goes, and the process with it.
-pub fn far_wait() {
-    if let Some(f) = FAR_OF.get().filter(|f| f.me != ROOT) {
-        eprintln!("levels: node {} settled its units, answers the others until the root goes", f.me);
-        loop {
-            std::thread::park();
-        }
-    }
+/// Whether this process is a node of a world by levels (not its root): it answers the others, and takes the
+/// edits the root sends (`far_next`), until the root goes, and the process with it.
+pub fn far_node() -> bool {
+    FAR_OF.get().is_some_and(|f| f.me != ROOT)
 }
 
 static FAR_OF: std::sync::OnceLock<Rc<Far>> = std::sync::OnceLock::new();
