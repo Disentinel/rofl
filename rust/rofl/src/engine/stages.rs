@@ -265,13 +265,21 @@ impl Eval {
     /// is fired once, before the files; `file`, it cannot leave a file and is fired in the file's world; `both`, in
     /// the file's world and above it (a walked closure); `across`, once over what the files gave. `gives(Rel)`: what
     /// a file's world concludes of Rel is given above, with every fact the file states outside the books of
-    /// `cuts(Book)`; nothing else is. `own(Rel, Book, I)`: argument I, from 0, of every fact of Rel a file's world
-    /// holds is a node of that file (`none` where no argument is; `any` for every book).
+    /// `cuts(Book)`; nothing else is. `own(Rel, Book, I)`: a fact of Rel a file's world holds that is of the file
+    /// holds a node of it at argument I, from 0, and one that is of no file holds no node there (`none` where no
+    /// argument does; `any` for every book).
     pub fn stage_plan(&mut self) -> Vec<(Sym, Vec<Term>)> {
         let (st, joins) = self.level_stage();
         let at = self.lemma_stage_at().map(|x| x.1).unwrap_or_default();
         let [fires, gives, cuts, own, core, file, both, across, none, any] = ["fires", "gives", "cuts", "own", "core", "file", "both", "across", "none", "any"].map(|n| self.h.intern(n));
         let mut out: Vec<(Sym, Vec<Term>)> = Vec::new();
+        // a closure answered from a tree has no row to give: the world above walks it over its edges, and the
+        // condition of a nearest, which the file gives
+        let mut read: FxSet<Sym> = st.given.clone();
+        for ci in (0..self.vc.vclosures.len()).filter(|ci| !self.vc.vclosure_blocked.contains(ci)) {
+            read.insert(self.vc.vclosures[ci].src);
+            read.extend(self.store.virtuals[ci].near.map(|n| n.cond));
+        }
         let mut given: FxSet<Sym> = FxSet::default();
         for r in self.rules.iter() {
             let w = if joins.core.contains(&r.id) {
@@ -281,7 +289,7 @@ impl Eval {
             } else if st.free.contains(&r.id) {
                 both
             } else {
-                given.extend(st.given.get(&r.clause.head.rel));
+                given.extend(read.get(&r.clause.head.rel));
                 file
             };
             out.push((fires, vec![Term::atom(r.id), Term::atom(w)]));

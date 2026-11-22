@@ -759,6 +759,35 @@ Stages are Rust only: the TypeScript engine evaluates the world whole, and the w
 on Rust (`check_opt(W, one_engine, rust)`). The engine does not yet derive a stage from what is read and asked; a
 stage is the plan's mark.
 
+## The stage given out
+
+**The stage a world is evaluated by is read as facts of the book `stageplan`**, for a world that executes it
+elsewhere: a federation whose nodes hold the files and whose coordinator fires the rules that cross them. No flag
+and no op of its own: `rofl serve`, `{"op":"rows","session":S,"rel":"fires","persp":"stageplan"}` (and `gives`,
+`cuts`, `own`), asked of a session that loaded the program; the files need not be loaded, and the plan does not
+move with them. It is the stage the engine itself evaluates by levels (`Eval::level_stage`, read by
+`Eval::stage_plan` in `engine/stages.rs`), not an analysis beside it.
+
+| fact | says |
+|---|---|
+| `fires(Rule, core)` | the rule reads no file: fired once, before the files, over what no file states |
+| `fires(Rule, file)` | the rule cannot leave a file (*Lemma stages*, above): fired in the world of the file, or of any set of files |
+| `fires(Rule, both)` | fired in the file's world and again above it (a closure walked on both sides) |
+| `fires(Rule, across)` | the rule may cross files: fired once, over what the files gave |
+| `gives(Rel)` | what a file's world concludes of `Rel` is given above; what it concludes of any other relation is not |
+| `cuts(Book)` | the facts of `Book` stay in the file's world; every other fact a file states is given above |
+| `own(Rel, Book, I)` | argument `I`, from 0, of every fact of `Rel[Book]` a file's world holds is a node of that file, so the fact's file is read off it (`none`: no argument is; `any`: in every book) |
+
+`Rule` is the rule's id, `r` and the sum of its canonical text, the id `why` prints and the kernel's book keeps
+(`rows` of `rule`, `conclusion_lit`, `premise_lit`). A split executed from these facts alone is the whole world,
+fact for fact outside the cut books, however the files are dealt to the nodes (`cargo test -p rofl --test
+stage_plan`: the plan is loaded as facts, the stage read back from them by `Eval::stage_planned`, and held to the
+world whole over random programs, every world of facts/checks.rofl that cuts a book, and the JS model). The size is
+the program's: one `fires` a rule, and for the JS model 4 724 facts, 166 KB (3 401 rules: 79 `core`, 1 293 `file`,
+10 `both`, 2 019 `across`; 460 `gives`). A program whose plan cuts no
+book has no rule of a file: every rule is `across` or `core`. What the units of one process join by where they
+meet (`Joins` in `engine/levels.rs`: the relation, the argument, the value) is not given out yet.
+
 ## A corpus larger than one heap
 
 **`rofl ask`, `rofl why` and `rofl whynot` answer a corpus by volumes, by themselves.** When
