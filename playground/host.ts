@@ -86,12 +86,26 @@ function labelNodes(kind: Map<string, string>, kid: Map<string, string>, attr: M
   for (const id of Object.keys(nodes)) { const l = lab(id); nodes[id].label = l.length > 40 ? l.slice(0, 39) + '…' : l; }
 }
 
+/** The scanner's text a fact at a time: a string it holds may hold a line break, even an empty line. */
+function factLines(text: string): string[] {
+  const out: string[] = [];
+  let at = 0, quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) { if (c === '\\') i++; else if (c === '"') quoted = false; }
+    else if (c === '"' && !text.startsWith('--', at)) quoted = true;
+    else if (c === '\n') { out.push(text.slice(at, i)); at = i + 1; }
+  }
+  if (at < text.length) out.push(text.slice(at));
+  return out;
+}
+
 /** The facts of the code: oxc's tree of each file (models/lang/js/scanner/oxc_wasm.ts, the scan of `rofl scan --no-start`), and the host's of the paths and of every string a file holds. */
 export function codeFacts(files: Record<string, string>, data: string[] = []): { facts: string[]; nodes: Record<string, Node>; parseErrors: Record<string, string>; host: string[] } {
   const facts: string[] = [], nodes: Record<string, Node> = {}, parseErrors: Record<string, string> = {};
   const kind = new Map<string, string>(), kid = new Map<string, string>(), attr = new Map<string, string>();
   for (const [path, src] of Object.entries(files)) {
-    for (const l of scanText(src, path).split('\n')) {
+    for (const l of factLines(scanText(src, path))) {
       if (!l || l.startsWith('--')) continue;
       facts.push(l);
       let m = /^node\[ast_oxc\]\((\w+), (\w+), "((?:[^"\\]|\\.)*)"\)\.$/.exec(l);
@@ -100,7 +114,7 @@ export function codeFacts(files: Record<string, string>, data: string[] = []): {
       if (m) { if (nodes[m[1]]) nodes[m[1]].line = Number(m[2]); continue; }
       m = /^child\[ast_oxc\]\((\w+), (\w+), 0, (\w+)\)\.$/.exec(l);
       if (m) { kid.set(`${m[1]} ${m[2]}`, m[3]); continue; }
-      m = /^attr\[ast_oxc\]\((\w+), (\w+), (.*)\)\.$/.exec(l);
+      m = /^attr\[ast_oxc\]\((\w+), (\w+), ([\s\S]*)\)\.$/.exec(l);
       if (m) { attr.set(`${m[1]} ${m[2]}`, m[3].startsWith('"') ? unquote(m[3]) : m[3]); continue; }
       m = /^parse_error\[ast_oxc\]\("((?:[^"\\]|\\.)*)", "(.*)"\)\.$/.exec(l);
       if (m) parseErrors[path] = m[2];
