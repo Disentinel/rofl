@@ -9316,19 +9316,23 @@ export function timedTest(exe: string, t: string, id: string): { v: [boolean, st
 
 /** The verdict of a break on the cargo tests it names, from the runs of the pool: `control/test:T` with no break,
  *  `B/W` with it. */
+/** What a red cargo test said: the line of its panic and the one after, or its last lines. */
+function said(text: string): string {
+  const ls = text.split('\n'), at = ls.findIndex((l) => l.includes('panicked at'));
+  return (at < 0 ? ls.slice(-3).join(' | ') : `${ls[at]} ${ls[at + 1] ?? ''}`).slice(0, 600);
+}
+
 function proofTests(b: Break, res: Map<string, unknown>): Verdict {
   const lines: string[] = [], bad: string[] = [];
   for (const [name, sign] of Object.entries(b.expect)) {
     const t = TESTS[name];
     if (!t) continue;
-    const [cok] = res.get(`control/test:${t}`) as [boolean, string];
-    if (!cok) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
+    const [cok, ctext] = res.get(`control/test:${t}`) as [boolean, string];
+    if (!cok) { bad.push(`control, no break planted: cargo test ${t} fails: ${said(ctext)}`); continue; }
     const [ok, text] = res.get(`${b.id}/${name}`) as [boolean, string];
     const killed = !ok && text.includes(sign);
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
-    // (a test red otherwise than the fault's sign says what it said: the line after its panic)
-    const said = () => { const ls = text.split('\n'), at = ls.findIndex((l) => l.includes('panicked at')); return (at < 0 ? ls.slice(-3).join(' | ') : `${ls[at]} ${ls[at + 1] ?? ''}`).slice(0, 600); };
-    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}: ${said()}`}`);
+    if (!killed) bad.push(`${b.id}: cargo test ${t} ${ok ? 'passed' : `failed without ${sign}: ${said(text)}`}`);
   }
   return { lines, bad };
 }
