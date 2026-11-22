@@ -521,6 +521,59 @@ fn cut_by(texts: &[&str], apart: bool, spill: Option<&std::path::Path>) -> std::
 }
 
 
+/// A term of a column table (`a NAME`, `i N`, `s TEXT`) as text writes it.
+fn column_term(e: &str) -> String {
+    match e.split_at(2) {
+        ("a ", v) | ("i ", v) => v.to_string(),
+        (_, v) => {
+            let mut o = String::from('"');
+            let mut it = v.chars();
+            while let Some(c) = it.next() {
+                match c {
+                    '\\' => match it.next() { Some('n') => o.push('\n'), Some('r') => o.push('\r'), Some(x) => { if x == '\\' { o.push_str("\\\\") } else { o.push(x) } } None => {} },
+                    '"' => o.push_str("\\\""),
+                    c => o.push(c),
+                }
+            }
+            o.push('"');
+            o
+        }
+    }
+}
+
+/// The facts of a file's text, one a line, of the relations `rel` takes and, where `names` is not empty, that hold
+/// one of these names: text as it lies, the column form written out row by row.
+pub fn fact_lines(text: &str, rel: impl Fn(&str) -> bool, names: &[&str]) -> Vec<String> {
+    let starts = |l: &str| { let l = l.trim_start(); l.find(['[', '(']).is_some_and(|i| rel(&l[..i])) };
+    // a name is found as a whole word of the line, each word read once
+    let set: FxSet<&str> = names.iter().copied().collect();
+    let word = |c: char| c.is_ascii_alphanumeric() || c == '_';
+    let named = |l: &str| set.is_empty() || l.split(|c: char| !word(c)).any(|w| set.contains(w));
+    if !crate::rofl_parse::is_columns(text) {
+        return text.lines().filter(|l| starts(l) && named(l)).map(str::to_string).collect();
+    }
+    let (mut out, mut table, mut held, mut lines) = (Vec::new(), Vec::new(), FxSet::default(), text.lines());
+    while let Some(l) = lines.next() {
+        if let Some(n) = l.strip_prefix("T ") {
+            table = (0..n.parse().unwrap_or(0)).map_while(|_| lines.next()).map(column_term).collect();
+            held = table.iter().enumerate().filter(|(_, t)| names.contains(&t.as_str())).map(|(i, _)| i).collect();
+        } else if let Some(head) = l.strip_prefix("R ") {
+            let w: Vec<&str> = head.split(' ').collect();
+            let (arity, rows) = (w.get(2).and_then(|x| x.parse().ok()).unwrap_or(0), w.get(3).and_then(|x| x.parse().ok()).unwrap_or(0));
+            let cols: Vec<Vec<usize>> = (0..arity).map(|_| lines.next().unwrap_or("").split(' ').filter_map(|x| usize::from_str_radix(x, 36).ok()).collect()).collect();
+            if !rel(w[0]) { continue; }
+            let book = if w.get(1) == Some(&"-") { String::new() } else { format!("[{}]", w[1]) };
+            for r in (0..rows).filter(|&r| names.is_empty() || cols.iter().any(|c| c.get(r).is_some_and(|k| held.contains(k)))) {
+                let args: Vec<&str> = cols.iter().map(|c| c.get(r).and_then(|&k| table.get(k)).map_or("", String::as_str)).collect();
+                out.push(format!("{}{book}({}).", w[0], args.join(", ")));
+            }
+        } else if starts(l) && named(l) {
+            out.push(l.to_string());
+        }
+    }
+    out
+}
+
 /// The column form cut as `cut` cuts text: each row to the one file its nodes name, a file's rows a column text of its
 /// own under the table they were read with; a row that names no file, or two, goes to the core as a line of text, and
 /// so does a line of text.
@@ -545,24 +598,7 @@ fn cut_columns(text: &str, core: &mut String, files: &mut Files) -> std::io::Res
         }
         Ok(())
     };
-    let term_text = |e: &str| -> String {
-        match e.split_at(2) {
-            ("a ", v) | ("i ", v) => v.to_string(),
-            (_, v) => {
-                let mut o = String::from('"');
-                let mut it = v.chars();
-                while let Some(c) = it.next() {
-                    match c {
-                        '\\' => match it.next() { Some('n') => o.push('\n'), Some('r') => o.push('\r'), Some(x) => { if x == '\\' { o.push_str("\\\\") } else { o.push(x) } } None => {} },
-                        '"' => o.push_str("\\\""),
-                        c => o.push(c),
-                    }
-                }
-                o.push('"');
-                o
-            }
-        }
-    };
+    let term_text = column_term;
     while let Some(l) = lines.next() {
         if l.trim_end() == crate::rofl_parse::COLUMNS { continue; }
         if l.is_empty() || l.starts_with("--") {

@@ -40,6 +40,7 @@ import { RoflPort, type Walls } from '../runtime/port.ts';
 import { worlds, placed, togetherWorld, expectedRefusal, treeSealed, treeDeclared, filesText, closureVerdict, storedIsCut, type World } from './goldens.ts';
 import { belowFiles } from './agg_select.ts';
 import { dagProblem } from './why_dag.ts';
+import { Places } from '../src/places.ts';
 import { derivationHeights, type DerivationSource } from '../src/store.ts';
 import { unreadOf } from './sentences.ts';
 import * as fs from 'node:fs';
@@ -241,8 +242,8 @@ function rustQuestions(w: World, rich = false): Q[] {
 const askText = (rows: string[], shrugs: string[], partial: boolean): string =>
   [...[...rows].sort().map((r) => `row ${r}`), ...[...shrugs].sort().map((x) => `shrug ${x}`), `partial ${partial}`].join('\n');
 /** An ask as the REPL prints it with the sentences off (src/repl.ts `?`), which `rofl ask` prints byte for byte. */
-const replAsk = (a: { rows: { text: string }[]; shrugs?: { text: string; line: string }[]; partial: boolean }, why: string): string =>
-  [...(a.partial ? ['[partial answer: the rows below may be short of the whole answer]'] : []), ...(a.rows.length === 0 && !a.shrugs ? ['(empty)'] : []), ...a.rows.map((r) => r.text), ...(a.shrugs ?? []).map((x) => `? ${x.text}  ${x.line}`),
+const replAsk = (a: { rows: { text: string; bindings: Record<string, string> }[]; shrugs?: { text: string; line: string; bindings: Record<string, string> }[]; partial: boolean }, why: string, places: Places): string =>
+  [...(a.partial ? ['[partial answer: the rows below may be short of the whole answer]'] : []), ...(a.rows.length === 0 && !a.shrugs ? ['(empty)'] : []), ...a.rows.map((r) => r.text + places.under(r.bindings)), ...(a.shrugs ?? []).map((x) => `? ${x.text}  ${x.line}${places.under(x.bindings)}`),
     ...(a.partial ? [`[partial: ${why}]`] : [])].join('\n');
 const bound = (vars: string[], row: string[]): string => {
   const at = vars.map((_, i) => i).sort((a, b) => (vars[a] < vars[b] ? -1 : vars[a] > vars[b] ? 1 : 0));
@@ -254,7 +255,7 @@ const exciseText = (removed: string[], added: string[]): string => {
   return out.length ? out.join('\n') : '(no change)';
 };
 
-function expected(r: Rofl, q: Q, budget?: number): A {
+function expected(r: Rofl, q: Q, budget: number | undefined, files: string[]): A {
   if (process.env.WHYCHECK_TRACE) process.stderr.write(`whycheck:   ts ${q.op} ${q.query}\n`);
   try {
     // EVERY `[above]` MUST STAND FOR WHAT IT SAYS: the answer expanded by the rule of scripts/why_dag.ts is the tree the
@@ -269,7 +270,7 @@ function expected(r: Rofl, q: Q, budget?: number): A {
     if (q.op === 'ask') {
       const a = r.query(q.query, { budget });
       if (a.error !== undefined) return { ok: false, text: a.error };
-      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial), repl: replAsk(a, r.cutWhy(budget)) };
+      return { ok: true, text: askText(a.rows.map((x) => x.text), (a.shrugs ?? []).map((x) => `${x.text} :: ${x.line}`), a.partial), repl: replAsk(a, r.cutWhy(budget), new Places(r, files)) };
     }
     if (q.op === 'whynot' || q.op === 'whynotall') {
       // the aggregate evaluator's whynot hands back the parser's refusal as its text
@@ -490,12 +491,12 @@ async function check(ws: World[], firstName: string): Promise<Report> {
       const budget = w.budget ?? 200_000_000;
       const o = own.get(w.name);
       const qs = [...questions(r, budget, w.name === firstName, o?.excise ?? true), ...(o?.qs ?? []), ...(ASKED[w.name] ?? [])];
-      const want = qs.map((q) => expected(r, q, budget));
+      const want = qs.map((q) => expected(r, q, budget, [BOOT, ...w.files]));
       if (w.retract?.length) {
         const f = withoutRetracted(w);
         if (typeof f === 'string') rep.bad.push(`${w.name}: ${f}`);
         else qs.forEach((q, i) => {
-          const d = expected(f.r, q, budget);
+          const d = expected(f.r, q, budget, [BOOT, ...w.files]);
           if (parseRefusal(want[i])) return;
           if (d.ok !== want[i].ok || d.text !== want[i].text || d.holds !== want[i].holds)
             rep.bad.push(`${w.name} retracted session vs a world without the fact, ${q.op} ${JSON.stringify(q.query)}: ${firstDiff(d.text, want[i].text)}`);
