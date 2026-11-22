@@ -121,8 +121,6 @@ jobs:
   # Blocking: its control is green on main again (f_the_fault_harness_control_is_red_on_main). Not on a pull request:
   # it is two thirds of a request's run, and the merge train (merge-train.yml) runs it once over every request it lands.
   breaks:
-    needs: model
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
