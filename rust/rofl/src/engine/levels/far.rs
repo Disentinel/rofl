@@ -6,6 +6,7 @@
 use super::*;
 use crate::store::{Ask, Counts, Fact, FactRec, Firing, Forests, GroupsKey, Prem, PremRef, Trip};
 use std::io::{Read, Write};
+use std::net::{TcpListener, TcpStream};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Condvar;
 
@@ -34,7 +35,10 @@ pub(super) struct Far {
     h: Heap,
     nodes: u32,
     /// the connections to each node not in use: a question that waits holds one, the others go on
-    conns: Mutex<FxMap<u32, Vec<UnixStream>>>,
+    conns: Mutex<FxMap<u32, Vec<Conn>>>,
+    /// where each process listens over TCP, from DIR/peers (`root HOST:PORT`, `N HOST:PORT` a line): the processes
+    /// on other machines; without it, a unix socket in DIR each
+    peers: FxMap<u32, String>,
     units: Mutex<FxMap<(u32, u32, u32, u32), Rc<Unit>>>,
     came: Condvar,
     stretches: Mutex<FxMap<FactId, Rc<Stretch>>>,
@@ -117,13 +121,23 @@ impl Far {
             "root" => ROOT,
             n => n.parse().ok()?,
         };
-        let far = Rc::new(Far { me, size, dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default(), round: AtomicU32::new(0), views: Default::default(), moved: Default::default(), edits: Default::default(), told: Condvar::new() });
+        let far = Rc::new(Far { me, size, peers: peers(&dir), dir, h: h.clone(), nodes: (files as u32).div_ceil(size), conns: Default::default(), units: Default::default(), came: Condvar::new(), stretches: Default::default(), next: Mutex::new(None), ready: Condvar::new(), seen: AtomicU32::new(0), trips: Default::default(), keys: Default::default(), round: AtomicU32::new(0), views: Default::default(), moved: Default::default(), edits: Default::default(), told: Condvar::new() });
         far.serve();
         let _ = FAR_OF.set(far.clone());
         Some(far)
     }
     fn path(&self, node: u32) -> std::path::PathBuf {
         self.dir.join(if node == ROOT { "root.sock".to_string() } else { format!("node-{node}.sock") })
+    }
+    fn connect(&self, node: u32) -> std::io::Result<Conn> {
+        Ok(match self.peers.get(&node) {
+            Some(a) => {
+                let s = TcpStream::connect(a)?;
+                s.set_nodelay(true)?;
+                Conn::Tcp(s)
+            }
+            None => Conn::Unix(UnixStream::connect(self.path(node))?),
+        })
     }
     pub(super) fn home(&self, files: (u32, u32)) -> u32 {
         let n = self.size;
@@ -252,13 +266,12 @@ impl Far {
     fn ask(&self, node: u32, req: &[u8]) -> Vec<u8> {
         let c = self.conns.lock().unwrap().get_mut(&node).and_then(|v| v.pop());
         let mut s = c.unwrap_or_else(|| {
-            let p = self.path(node);
             let t0 = std::time::Instant::now();
             loop {
-                match UnixStream::connect(&p) {
+                match self.connect(node) {
                     Ok(s) => break s,
                     Err(_) if t0.elapsed().as_secs() < 120 => std::thread::sleep(std::time::Duration::from_millis(20)),
-                    Err(e) => panic!("far: no node at {}: {e}", p.display()),
+                    Err(e) => panic!("far: no node {node} at {}: {e}", self.peers.get(&node).cloned().unwrap_or_else(|| self.path(node).display().to_string())),
                 }
             }
         });
@@ -287,13 +300,22 @@ impl Far {
     }
 
     fn serve(self: &Rc<Self>) {
-        let p = self.path(self.me);
-        let _ = std::fs::remove_file(&p);
-        let l = UnixListener::bind(&p).unwrap_or_else(|e| panic!("far: cannot listen at {}: {e}", p.display()));
+        let l: Box<dyn Fn() -> std::io::Result<Conn> + Send> = match self.peers.get(&self.me) {
+            Some(a) => {
+                let l = TcpListener::bind(a).unwrap_or_else(|e| panic!("far: cannot listen at {a}: {e}"));
+                Box::new(move || l.accept().and_then(|(s, _)| s.set_nodelay(true).map(|_| Conn::Tcp(s))))
+            }
+            None => {
+                let p = self.path(self.me);
+                let _ = std::fs::remove_file(&p);
+                let l = UnixListener::bind(&p).unwrap_or_else(|e| panic!("far: cannot listen at {}: {e}", p.display()));
+                Box::new(move || l.accept().map(|(s, _)| Conn::Unix(s)))
+            }
+        };
         let far = self.clone();
         std::thread::spawn(move || {
-            for s in l.incoming() {
-                let Ok(mut s) = s else { continue };
+            loop {
+                let Ok(mut s) = l() else { continue };
                 let far = far.clone();
                 std::thread::spawn(move || {
                     let mut root = false;
@@ -578,12 +600,49 @@ impl Ask for Node {
     }
 }
 
-fn put_frame(s: &mut UnixStream, b: &[u8]) -> std::io::Result<()> {
+/// Where every process listens over TCP, as DIR/peers says it.
+fn peers(dir: &std::path::Path) -> FxMap<u32, String> {
+    let Ok(t) = std::fs::read_to_string(dir.join("peers")) else { return FxMap::default() };
+    t.lines().filter_map(|l| {
+        let (who, at) = l.trim().split_once(char::is_whitespace)?;
+        Some((if who == "root" { ROOT } else { who.parse().ok()? }, at.trim().to_string()))
+    }).collect()
+}
+
+/// A connection to another process: on this machine or another.
+enum Conn {
+    Unix(UnixStream),
+    Tcp(TcpStream),
+}
+impl Read for Conn {
+    fn read(&mut self, b: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            Conn::Unix(s) => s.read(b),
+            Conn::Tcp(s) => s.read(b),
+        }
+    }
+}
+impl Write for Conn {
+    fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+        match self {
+            Conn::Unix(s) => s.write(b),
+            Conn::Tcp(s) => s.write(b),
+        }
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            Conn::Unix(s) => s.flush(),
+            Conn::Tcp(s) => s.flush(),
+        }
+    }
+}
+
+fn put_frame(s: &mut Conn, b: &[u8]) -> std::io::Result<()> {
     s.write_all(&(b.len() as u32).to_le_bytes())?;
     s.write_all(b)
 }
 
-fn get_frame(s: &mut UnixStream) -> std::io::Result<Option<Vec<u8>>> {
+fn get_frame(s: &mut Conn) -> std::io::Result<Option<Vec<u8>>> {
     let mut n = [0u8; 4];
     if let Err(e) = s.read_exact(&mut n) {
         return if e.kind() == std::io::ErrorKind::UnexpectedEof { Ok(None) } else { Err(e) };

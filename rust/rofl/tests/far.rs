@@ -97,6 +97,9 @@ fn nodes_in_processes_answer_as_the_whole_world_and_after_edits() {
     let dir = std::env::temp_dir().join(format!("rofl-far-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
+    // (the root and two nodes listen over TCP, as processes on other machines would; the rest on unix sockets)
+    let port = || std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    std::fs::write(dir.join("peers"), format!("root 127.0.0.1:{}\n1 127.0.0.1:{}\n3 127.0.0.1:{}\n", port(), port(), port())).unwrap();
     let nodes: Vec<std::process::Child> = (0..5)
         .map(|i| {
             std::process::Command::new(std::env::current_exe().unwrap())
