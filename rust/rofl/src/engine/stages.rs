@@ -225,10 +225,15 @@ impl Eval {
     /// rules (`rule_reach`). What they conclude is a lemma of the file as the lower stage's is, and all of it is given.
     /// Where the plan names no `own`, the lower stage alone.
     pub fn lemma_stage(&mut self) -> Option<Stage> {
+        self.lemma_stage_at().map(|x| x.0)
+    }
+
+    /// `lemma_stage`, and the reach of every relation it was derived from.
+    fn lemma_stage_at(&mut self) -> Option<(Stage, Reaches)> {
         let mut st = self.cut_stage()?;
         let own = self.own_declared();
         if own.is_empty() {
-            return Some(st);
+            return Some((st, Reaches::default()));
         }
         let at = self.reaches(&own, &st.rules);
         let mut rules: FxSet<Sym> = (*st.rules).clone();
@@ -251,7 +256,88 @@ impl Eval {
         }
         st.rules = Rc::new(rules);
         st.own = own;
-        Some(st)
+        Some((st, at))
+    }
+
+    /// THE STAGE GIVEN OUT, as facts of the book `stageplan`: the stage a world by levels is evaluated by
+    /// (`level_stage`), for a world that is to execute it elsewhere, a node of a federation. It is a function of the
+    /// rules and of what the core states, not of the files. `fires(Rule, Where)`: `core`, the rule reads no file and
+    /// is fired once, before the files; `file`, it cannot leave a file and is fired in the file's world; `both`, in
+    /// the file's world and above it (a walked closure); `across`, once over what the files gave. `gives(Rel)`: what
+    /// a file's world concludes of Rel is given above, with every fact the file states outside the books of
+    /// `cuts(Book)`; nothing else is. `own(Rel, Book, I)`: argument I, from 0, of every fact of Rel a file's world
+    /// holds is a node of that file (`none` where no argument is; `any` for every book).
+    pub fn stage_plan(&mut self) -> Vec<(Sym, Vec<Term>)> {
+        let (st, joins) = self.level_stage();
+        let at = self.lemma_stage_at().map(|x| x.1).unwrap_or_default();
+        let [fires, gives, cuts, own, core, file, both, across, none, any] = ["fires", "gives", "cuts", "own", "core", "file", "both", "across", "none", "any"].map(|n| self.h.intern(n));
+        let mut out: Vec<(Sym, Vec<Term>)> = Vec::new();
+        let mut given: FxSet<Sym> = FxSet::default();
+        for r in self.rules.iter() {
+            let w = if joins.core.contains(&r.id) {
+                core
+            } else if joins.cross.contains(&r.id) || !st.rules.contains(&r.id) {
+                crate::brk!("plan_across_as_file" => file; across)
+            } else if st.free.contains(&r.id) {
+                both
+            } else {
+                given.extend(st.given.get(&r.clause.head.rel));
+                file
+            };
+            out.push((fires, vec![Term::atom(r.id), Term::atom(w)]));
+        }
+        let mut given: Vec<Sym> = given.into_iter().collect();
+        given.sort_unstable_by(|a, b| cmp_js(self.h.name(*a), self.h.name(*b)));
+        out.extend(given.iter().skip(crate::brk!("plan_given_dropped" => 1; 0)).map(|rel| (gives, vec![Term::atom(*rel)])));
+        out.extend(st.cut.iter().map(|b| (cuts, vec![Term::atom(*b)])));
+        for ((rel, book), reach) in &at.0 {
+            let Reach::File(mask) = *reach else { continue };
+            let book = Term::atom(if *book == ANY { any } else { *book });
+            if mask == 0 {
+                out.push((own, vec![Term::atom(*rel), book, Term::atom(none)]));
+            }
+            out.extend((0..64).filter(|i| mask >> i & 1 == 1).map(|i| (own, vec![Term::atom(*rel), book, Term::int(i + crate::brk!("plan_key_off_by_one" => 1; 0))])));
+        }
+        out.sort_by_cached_key(|(rel, args)| (self.h.name(*rel).to_string(), args.iter().map(|t| self.h.canon(*t)).collect::<Vec<_>>()));
+        out
+    }
+
+    /// `stage_plan`, a fact a line.
+    pub fn stage_plan_text(&mut self) -> String {
+        let book = self.h.intern("stageplan");
+        self.stage_plan().iter().map(|(rel, args)| crate::store::fact_key(&self.h, *rel, book, args) + ".\n").collect()
+    }
+
+    /// THE STAGE A WORLD WAS GIVEN, read from its facts of the book `stageplan` (`stage_plan`) and from nothing
+    /// else: the stage, and the rules the core fires before the files. None where the world holds no such fact.
+    pub fn stage_planned(&mut self) -> Option<(Stage, Rc<FxSet<Sym>>)> {
+        let book = self.h.intern("stageplan");
+        let rows = |e: &mut Eval, rel: &str| -> Vec<Vec<Term>> {
+            let rel = e.h.intern(rel);
+            e.store.rel_persp(&e.h, rel, book).into_iter().map(|f| e.store.args(f).to_vec()).collect()
+        };
+        let fires = rows(self, "fires");
+        if fires.is_empty() {
+            return None;
+        }
+        let [core, file, both, any] = ["core", "file", "both", "any"].map(|n| self.h.intern(n));
+        let at = |w: Sym| -> FxSet<Sym> { fires.iter().filter(|a| a.get(1).and_then(|t| t.as_atom()) == Some(w)).filter_map(|a| a[0].as_atom()).collect() };
+        let free = at(both);
+        let rules: FxSet<Sym> = at(file).into_iter().chain(free.iter().copied()).collect();
+        let atoms = |rs: Vec<Vec<Term>>| rs.into_iter().filter_map(|a| a[0].as_atom());
+        let given: FxSet<Sym> = atoms(rows(self, "gives")).collect();
+        let cut: Vec<Sym> = atoms(rows(self, "cuts")).collect();
+        let mut own: FxMap<Sym, u64> = FxMap::default();
+        for a in rows(self, "own") {
+            let [rel, book, i] = a[..] else { continue };
+            if let (Some(rel), Some(_)) = (rel.as_atom(), book.as_atom().filter(|b| *b == any)) {
+                let m = own.entry(rel).or_default();
+                if let TermK::Int(i @ 0..64) = i.kind() {
+                    *m |= 1 << i;
+                }
+            }
+        }
+        Some((Stage { rules: Rc::new(rules), heads: given.clone(), given, cut, wide: Vec::new(), own, free }, Rc::new(at(core))))
     }
 
     /// The stage this world was evaluated by: a file at a time where it was given its files' lemmas, else the cut alone.
