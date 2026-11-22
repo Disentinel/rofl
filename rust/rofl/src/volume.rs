@@ -68,7 +68,7 @@ pub fn keep_over(path: &str, e: &mut Eval, note: &str, bound: Option<usize>, cha
 }
 
 /// The units of a world settled by levels (`engine/levels.rs`), beside the volume of the core they stand over.
-const UNITS: &[u8; 16] = b"ROFL-UNITS-3\n\0\0\0";
+const UNITS: &[u8; 16] = b"ROFL-UNITS-4\n\0\0\0";
 
 /// THE UNITS AS A SCROLL at `k`: segments `<k>.u<n>`, each written once and whole, the newest naming every stretch
 /// it holds or an earlier one holds; `<k>.units` names the newest. An edit appends a segment of what it settled
@@ -95,7 +95,7 @@ pub fn keep_units(k: &str, lv: Option<&crate::engine::levels::Levels>, seen: Opt
         }
     };
     for m in 0..n.max(was.map_or(0, |w| w + 1)) {
-        if !named.contains(&m) && (lv.is_none() || m != n) {
+        if (!named.contains(&m) || crate::brk!("units_named_let_go" => true; false)) && (lv.is_none() || m != n) {
             let _ = std::fs::remove_file(format!("{k}.u{m}"));
         }
     }

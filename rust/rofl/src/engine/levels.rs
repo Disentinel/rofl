@@ -67,7 +67,7 @@ pub struct Unit {
     /// the files below, by their places in the world's order
     files: (u32, u32),
     kids: Vec<Rc<Unit>>,
-    parts: Rc<Lazy<Parts>>,
+    parts: Rc<Lazy>,
 }
 
 /// What a unit is found by and asked, read from where it is kept when first asked for.
@@ -81,44 +81,122 @@ pub(super) struct Parts {
     /// its children, in order
     reads: Arena<FactId>,
     asked: Arena<u64>,
+    /// kept as a patch, the keys asked besides those of the record it is a patch over, in order
+    more: Arena<u64>,
 }
 
 /// A unit's parts kept in the segment that names the unit.
 const HERE: u32 = u32::MAX;
 
-/// A value as it was made, or where it is kept, read from there once when first asked for.
-pub(super) struct Lazy<T> {
-    got: std::sync::OnceLock<T>,
-    kept: Option<(Rc<crate::arena::Region>, usize, fn(&mut VolR) -> Result<T, String>, u32)>,
+/// Where a record is kept: the file, where it begins, the segment of the scroll the file is.
+type At = (Rc<crate::arena::Region>, usize, u32);
+
+/// A unit's parts as they were made, or where they are kept, read from there once when first asked for: whole, or
+/// as a patch over a whole record of an earlier segment.
+pub(super) struct Lazy {
+    got: std::sync::OnceLock<Parts>,
+    kept: Option<At>,
+    /// kept as a patch, the whole record it is one over
+    over: Option<At>,
+    /// made anew where a unit kept stood: the whole record that one stood on, which it is written as a patch over
+    was: Option<At>,
 }
 
-impl<T> Lazy<T> {
-    fn made(x: T) -> Self {
+impl Lazy {
+    fn made(x: Parts, was: Option<&Lazy>) -> Self {
         let got = std::sync::OnceLock::new();
         let _ = got.set(x);
-        Lazy { got, kept: None }
+        let was = was.and_then(|w| w.over.clone().or_else(|| w.kept.clone().filter(|k| k.2 != crate::store::COOLED)));
+        Lazy { got, kept: None, over: None, was }
+    }
+    fn kept(at: At, over: Option<At>) -> Self {
+        Lazy { got: Default::default(), kept: Some(at), over, was: None }
     }
     /// The segment it is kept in and where, while it was not made anew.
     fn kept_at(&self) -> Option<(u32, usize)> {
-        self.kept.as_ref().filter(|k| k.3 != crate::store::COOLED).map(|k| (k.3, k.1))
+        self.kept.as_ref().filter(|k| k.2 != crate::store::COOLED).map(|k| (k.2, k.1))
     }
-    fn get(&self) -> &T {
+    fn get(&self) -> &Parts {
         self.got.get_or_init(|| {
-            let (map, at, read, _) = self.kept.as_ref().expect("a value not made is kept");
-            read(&mut VolR::new(map.clone(), *at)).expect("what a sum vouches for reads")
+            let (map, at, _) = self.kept.as_ref().expect("a value not made is kept");
+            Parts::read(&mut VolR::new(map.clone(), *at), self.over.as_ref()).expect("what a sum vouches for reads")
         })
     }
 }
 
 impl Parts {
     fn write(&self, w: &mut VolW) {
+        w.u32(0);
         write_dir(w, &self.dir);
         write_dir(w, &self.inner);
         w.arena(&self.reads[..]);
-        w.arena(&self.asked[..]);
+        if self.more.is_empty() {
+            w.arena(&self.asked[..]);
+        } else {
+            let mut all: Vec<u64> = self.asked.iter().chain(self.more.iter()).copied().collect();
+            all.sort_unstable();
+            all.dedup();
+            w.arena(&all);
+        }
     }
-    fn read(r: &mut VolR) -> Result<Parts, String> {
-        Ok(Parts { dir: Rc::new(read_dir(r)?), inner: Rc::new(read_dir(r)?), reads: r.arena()?, asked: r.arena()? })
+    /// SETTLED AGAIN, WRITTEN AS WHAT MOVED: a unit settled again where one stood keeps most of its directories
+    /// and of the keys it asked. Written as a patch over the whole record the unit before stood on (`was`): the
+    /// keys whose holders are not the same (none: gone), the stretches it read, and the keys it asked where they
+    /// are not those. None, and nothing written, where the patch would pass a quarter of that record, as a body's
+    /// patch (`Stretch::write_patch`).
+    fn write_patch(&self, w: &mut VolW, was: &At) -> Result<bool, String> {
+        let base = Parts::read(&mut VolR::new(was.0.clone(), was.1), None)?;
+        let moved = |now: &Dir, before: &Dir| -> FxMap<Key, Vec<FactId>> {
+            let mut m: FxMap<Key, Vec<FactId>> = now.iter().filter(|(k, h)| before.get(k) != Some(*h)).map(|(k, h)| (k, h.to_vec())).collect();
+            m.extend(before.iter().filter(|(k, _)| now.get(k).is_none()).map(|(k, _)| (k, Vec::new())));
+            m
+        };
+        let (dir, inner) = (moved(&self.dir, &base.dir), moved(&self.inner, &base.inner));
+        // (the keys asked: those of the record, those and more, or others)
+        let (now, more, asked): (Vec<u64>, Vec<u64>, u32) = if self.asked[..] == base.asked[..] {
+            let more: Vec<u64> = self.more.iter().copied().filter(|k| base.asked.binary_search(k).is_err()).collect();
+            let tag = if more.is_empty() { 0 } else { 2 };
+            (Vec::new(), more, tag)
+        } else {
+            let mut now: Vec<u64> = self.asked.iter().chain(self.more.iter()).copied().collect();
+            now.sort_unstable();
+            now.dedup();
+            let more: Vec<u64> = now.iter().copied().filter(|k| base.asked.binary_search(k).is_err()).collect();
+            let tag = if now.len() == base.asked.len() + more.len() { if more.is_empty() { 0 } else { 2 } } else { 1 };
+            (now, more, tag)
+        };
+        let size = 4 * (dir.len() + inner.len()) + match asked { 0 => 0, 2 => more.len(), _ => now.len() };
+        if size * 4 > base.dir.len() + base.inner.len() + base.asked.len() {
+            return Ok(false);
+        }
+        w.u32(1);
+        write_dir(w, &Dir::Built(crate::brk!("units_patch_drops_moved" => FxMap::default(); dir)));
+        write_dir(w, &Dir::Built(inner));
+        w.arena(&self.reads[..]);
+        w.u32(asked);
+        match asked {
+            0 => {}
+            2 => w.arena(&more),
+            _ => w.arena(&now),
+        }
+        Ok(true)
+    }
+    /// `over`: the whole record a patch is kept over.
+    fn read(r: &mut VolR, over: Option<&At>) -> Result<Parts, String> {
+        match (r.u32()?, over) {
+            (0, _) => Ok(Parts { dir: Rc::new(read_dir(r)?), inner: Rc::new(read_dir(r)?), reads: r.arena()?, asked: r.arena()?, more: Arena::Heap(Vec::new()) }),
+            (1, Some(o)) => {
+                let base = Parts::read(&mut VolR::new(o.0.clone(), o.1), None)?;
+                let (dir, inner, reads) = (read_dir(r)?, read_dir(r)?, r.arena()?);
+                let (asked, more) = match r.u32()? {
+                    0 => (base.asked, Arena::Heap(Vec::new())),
+                    2 => (base.asked, r.arena()?),
+                    _ => (r.arena()?, Arena::Heap(Vec::new())),
+                };
+                Ok(Parts { dir: Rc::new(Dir::Over(base.dir, Box::new(dir))), inner: Rc::new(Dir::Over(base.inner, Box::new(inner))), reads, asked, more })
+            }
+            _ => Err("the kept parts of a unit are not one".into()),
+        }
     }
 }
 
@@ -128,6 +206,8 @@ pub(super) enum Dir {
     Built(FxMap<Key, Vec<FactId>>),
     /// the keys in order, three words each (`key_words`), where each one's holders end, and the holders
     Kept { keys: Arena<u64>, ends: Arena<u32>, hs: Arena<FactId> },
+    /// a kept directory and over it the keys whose holders moved since, a key with none gone
+    Over(Rc<Dir>, Box<Dir>),
 }
 
 impl Default for Dir {
@@ -149,6 +229,10 @@ impl Dir {
                 let i = ks.binary_search(&key_words(k)).ok()?;
                 Some(&hs[if i == 0 { 0 } else { ends[i - 1] as usize }..ends[i] as usize])
             }
+            Dir::Over(base, over) => match over.get(k) {
+                Some(h) => (!h.is_empty()).then_some(h),
+                None => base.get(k),
+            },
         }
     }
     fn contains_key(&self, k: &Key) -> bool {
@@ -158,6 +242,14 @@ impl Dir {
         match self {
             Dir::Built(m) => m.is_empty(),
             Dir::Kept { ends, .. } => ends.is_empty(),
+            Dir::Over(..) => self.iter().next().is_none(),
+        }
+    }
+    fn len(&self) -> usize {
+        match self {
+            Dir::Built(m) => m.len(),
+            Dir::Kept { ends, .. } => ends.len(),
+            Dir::Over(..) => self.iter().count(),
         }
     }
     fn iter(&self) -> Box<dyn Iterator<Item = (Key, &[FactId])> + '_> {
@@ -166,6 +258,7 @@ impl Dir {
             Dir::Kept { keys, ends, hs } => Box::new(bytemuck_words(keys).iter().enumerate().map(move |(i, k)| {
                 ((k[0] as Sym, k[1] as u8, Term::from_bits(k[2])), &hs[if i == 0 { 0 } else { ends[i - 1] as usize }..ends[i] as usize])
             })),
+            Dir::Over(base, over) => Box::new(base.iter().filter(|(k, _)| !over.contains_key(k)).chain(over.iter().filter(|(_, h)| !h.is_empty()))),
         }
     }
 }
@@ -183,6 +276,9 @@ struct Asked {
     keys: FxSet<u64>,
     /// the arguments its reads of a relation gave, as bits
     masks: FxSet<(Sym, u64)>,
+    /// mended: the keys the unit before asked (`Parts::asked`, `Parts::more`), which the firings it carried asked
+    /// when they fired
+    carried: Option<(Arena<u64>, Arena<u64>)>,
 }
 
 static WIRED: AtomicUsize = AtomicUsize::new(0);
@@ -867,7 +963,31 @@ impl Levels {
             ss.len() as u32 - 1
         });
         let live = ss.len();
-        ss.extend(self.ghosts.iter());
+        // (a stretch an edit replaced stays while a stretch kept cites it, through the ghosts that stay: the firings
+        // of one not settled again name their premises by the ids they had, `Store::current`; the rest go, and the
+        // segments only they held with them)
+        let mut by_lo: Vec<(FactId, FactId)> = ss.iter().copied().chain(self.ghosts.iter()).map(|s| (s.lo, s.hi)).collect();
+        by_lo.sort_unstable();
+        by_lo.dedup();
+        let of = |f: FactId| by_lo.get(by_lo.partition_point(|x| x.0 <= f).checked_sub(1)?).filter(|x| f < x.1).map(|x| x.0);
+        let mut cites: Vec<Vec<FactId>> = ss.iter().map(|s| s.cites(of)).collect::<Result<_, _>>()?;
+        let mut wanted: FxSet<FactId> = cites.iter().flatten().copied().collect();
+        let mut stay: Vec<bool> = vec![false; self.ghosts.len()];
+        loop {
+            let before = ss.len();
+            for (g, st) in self.ghosts.iter().zip(stay.iter_mut()) {
+                if !*st && wanted.contains(&g.lo) && !ss[..live].iter().any(|x| Rc::ptr_eq(x, g)) {
+                    *st = true;
+                    let c = g.cites(of)?;
+                    wanted.extend(c.iter().copied());
+                    cites.push(c);
+                    ss.push(g);
+                }
+            }
+            if ss.len() == before {
+                break;
+            }
+        }
         // (the files' own units, whose trees the units above read)
         let mut leaves: FxSet<FactId> = FxSet::default();
         if let Some(t) = self.tops.first() {
@@ -881,24 +1001,54 @@ impl Levels {
         }
         // (the bodies first, then the table that names where each lies, its place the last word: an opening reads
         // the table, and a body only when something reads it)
-        let bodies: Vec<Option<(usize, usize)>> = ss.iter().map(|s| if s.kept_at().is_some() { Ok(None) } else { s.write_body(w, leaves.contains(&s.lo)).map(Some) }).collect::<Result<_, _>>()?;
+        // (a stretch laid again at the ids of one kept is written as what moved over the body that one stood on)
+        let mut segs: FxSet<u32> = FxSet::default();
+        let mut bodies: Vec<Option<((usize, usize), Option<(u32, usize)>)>> = Vec::with_capacity(ss.len());
+        for s in &ss {
+            if s.kept_at().is_some() {
+                segs.extend(s.kept_over());
+                bodies.push(None);
+                continue;
+            }
+            let b = match s.write_patch(w)? {
+                Some((seg, at, patch)) => {
+                    segs.insert(seg);
+                    ((at, 0), Some((seg, patch)))
+                }
+                None => (s.write_body(w, leaves.contains(&s.lo))?, None),
+            };
+            bodies.push(Some(b));
+        }
         // (a unit's parts kept in an earlier segment are named there, as a stretch's body is: an edit writes the
         // parts of the units it settled again)
-        let mut segs: FxSet<u32> = FxSet::default();
-        let parts: Vec<(u32, usize)> = us.iter().map(|u| match u.parts.kept_at() {
-            Some((seg, at)) => {
-                segs.insert(seg);
-                (crate::brk!("units_parts_misplaced" => HERE; seg), at)
-            }
-            None => {
-                let at = w.at();
-                u.parts.get().write(w);
-                (HERE, at)
-            }
-        }).collect();
+        let mut parts: Vec<(u32, usize, u32, usize)> = Vec::with_capacity(us.len());
+        for u in &us {
+            let over = |segs: &mut FxSet<u32>, o: Option<&At>| o.map_or((HERE, 0), |o| {
+                segs.insert(o.2);
+                (o.2, o.1)
+            });
+            parts.push(match u.parts.kept_at() {
+                Some((seg, at)) => {
+                    segs.insert(seg);
+                    let o = over(&mut segs, u.parts.over.as_ref());
+                    (crate::brk!("units_parts_misplaced" => HERE; seg), at, o.0, o.1)
+                }
+                None => {
+                    let at = w.at();
+                    let o = match &u.parts.was {
+                        Some(was) if u.parts.get().write_patch(w, was)? => over(&mut segs, Some(was)),
+                        _ => {
+                            u.parts.get().write(w);
+                            (HERE, 0)
+                        }
+                    };
+                    (HERE, at, o.0, o.1)
+                }
+            });
+        }
         let table = w.at();
         w.u32(ss.len() as u32);
-        for (s, body) in ss.iter().zip(&bodies) {
+        for ((s, body), cites) in ss.iter().zip(&bodies).zip(&cites) {
             match (s.kept_at(), body) {
                 (Some((seg, start)), _) => {
                     segs.insert(seg);
@@ -907,8 +1057,9 @@ impl Levels {
                     w.u64(start as u64);
                 }
                 (None, body) => {
+                    let (body, patch) = body.expect("written above");
                     w.u32(0);
-                    s.write_head(w, body.expect("written above"));
+                    s.write_head(w, body, cites, patch);
                 }
             }
         }
@@ -921,6 +1072,8 @@ impl Levels {
             w.arena(&u.kids.iter().map(at).collect::<Vec<u32>>());
             w.u32(p.0);
             w.u64(p.1 as u64);
+            w.u32(p.2);
+            w.u64(p.3 as u64);
         }
         w.arena(&self.tops.iter().map(at).collect::<Vec<u32>>());
         w.u32(live as u32);
@@ -954,10 +1107,10 @@ impl Levels {
         let r = &mut r;
         for _ in 0..r.u32()? {
             ss.push(Rc::new(if r.u32()? == 0 {
-                Stretch::read(&over, r, seg)?
+                Stretch::read(&over, r, seg, open)?
             } else {
                 let (s, start) = (r.u32()?, r.u64()? as usize);
-                Stretch::read(&over, &mut VolR::new(open(s)?, start), s)?
+                Stretch::read(&over, &mut VolR::new(open(s)?, start), s, open)?
             }));
         }
         let mut us: Vec<Rc<Unit>> = Vec::new();
@@ -966,8 +1119,10 @@ impl Levels {
             let files = (r.u32()?, r.u32()?);
             let kids = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
             let (s, at) = (r.u32()?, r.u64()? as usize);
-            let kept = if s == HERE { (map.clone(), at, Parts::read as fn(&mut VolR) -> Result<Parts, String>, seg) } else { (open(s)?, at, Parts::read as fn(&mut VolR) -> Result<Parts, String>, s) };
-            let parts = Rc::new(Lazy { got: Default::default(), kept: Some(kept) });
+            let (os, oat) = (r.u32()?, r.u64()? as usize);
+            let kept = if s == HERE { (map.clone(), at, seg) } else { (open(s)?, at, s) };
+            let over = if os == HERE { None } else { Some((open(os)?, oat, os)) };
+            let parts = Rc::new(Lazy::kept(kept, over));
             us.push(Rc::new(Unit { stretch, files, kids, parts }));
         }
         let tops = r.arena::<u32>()?.iter().map(|k| us.get(*k as usize).cloned().ok_or_else(bad)).collect::<Result<Vec<_>, _>>()?;
@@ -1025,8 +1180,14 @@ impl Unit {
     fn reads(&self) -> &[FactId] {
         &self.parts.get().reads
     }
-    fn asked(&self) -> &[u64] {
-        &self.parts.get().asked
+    /// The keys it asked.
+    fn asked(&self) -> impl Iterator<Item = u64> + '_ {
+        let p = self.parts.get();
+        p.asked.iter().chain(p.more.iter()).copied()
+    }
+    fn asked_has(&self, key: u64) -> bool {
+        let p = self.parts.get();
+        p.asked.binary_search(&key).is_ok() || p.more.binary_search(&key).is_ok()
     }
     pub fn count(&self) -> usize {
         1 + self.kids.iter().map(|k| k.count()).sum::<usize>()
@@ -1498,9 +1659,9 @@ impl Eval {
                     let store = base.0.fork().store;
                     Over(Rc::new((store, cx.h.clone())))
                 });
-                let ss: Vec<(Stretch, Option<Lazy<Parts>>)> = starts
+                let ss: Vec<(Stretch, Option<Lazy>)> = starts
                     .iter()
-                    .map(|&(at, parts)| Ok((Stretch::read(&over.0, &mut VolR::new(map.clone(), at), crate::store::COOLED)?, parts.map(|p| Lazy { got: Default::default(), kept: Some((map.clone(), p, Parts::read as fn(&mut VolR) -> Result<Parts, String>, crate::store::COOLED)) }))))
+                    .map(|&(at, parts)| Ok((Stretch::read(&over.0, &mut VolR::new(map.clone(), at), crate::store::COOLED, &|_| Err("a cooled unit stands alone".into()))?, parts.map(|p| Lazy::kept((map.clone(), p, crate::store::COOLED), None)))))
                     .collect::<Result<_, String>>()?;
                 Ok((ss, bytes))
             });
@@ -1512,7 +1673,7 @@ impl Eval {
                     c.times += 1;
                     c.paths.push(path);
                     for (u, (s, parts)) in us.into_iter().zip(ss) {
-                        u.stretch = Rc::new(s);
+                        u.stretch = Rc::new(s.cooled_from(&u.stretch));
                         if let Some(p) = parts {
                             u.parts = Rc::new(p);
                         }
@@ -1665,7 +1826,18 @@ impl Eval {
             let (mut reads, mut keys): (Vec<FactId>, Vec<u64>) = (asked.reads.into_iter().collect(), asked.keys.into_iter().collect());
             reads.sort_unstable();
             keys.sort_unstable();
-            Unit { stretch: Rc::new(stretch), files, kids, parts: Rc::new(Lazy::made(Parts { dir: Rc::new(Dir::Built(dir)), inner, reads: Arena::Heap(reads), asked: Arena::Heap(keys) })) }
+            // (mended: the keys before as they lie, and besides them those it asked now, a key of both in both)
+            let (keys, more) = match asked.carried {
+                Some((was, more)) => {
+                    keys.extend(more.iter().copied());
+                    keys.sort_unstable();
+                    keys.dedup();
+                    (was, Arena::Heap(keys))
+                }
+                None => (Arena::Heap(keys), Arena::Heap(Vec::new())),
+            };
+            let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner, reads: Arena::Heap(reads), asked: keys, more };
+            Unit { stretch: Rc::new(stretch), files, kids, parts: Rc::new(Lazy::made(parts, was(k, files).as_ref().map(|o| &*o.parts))) }
         };
         // a unit of the world before, over the children as they are now
         let kept = |o: &Unit, kids: Vec<Rc<Unit>>| Unit { stretch: o.stretch.clone(), files: o.files, kids, parts: o.parts.clone() };
@@ -1673,7 +1845,7 @@ impl Eval {
         // under a key it asked the layers below
         let stands = |o: &Unit, below: &FxSet<u64>| {
             let r = replaced.lock().unwrap();
-            !o.reads().iter().any(|s| r.contains(s)) && (below.is_empty() || !o.asked().iter().any(|a| below.contains(a)))
+            !o.reads().iter().any(|s| r.contains(s)) && (below.is_empty() || !o.asked().any(|a| below.contains(&a)))
         };
         // a unit of layer `k` over `kids`: it reads the layers below (`lower`) of the whole world by key, takes at
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
@@ -1700,7 +1872,7 @@ impl Eval {
             // stretch below made anew, a fact that names a node of a file edited, a firing that read an absence of a
             // relation a fact came to or a row of a tree. Not where a fact went from under an absence it asked: what
             // that absence gives now stands on facts that stood.
-            let old = old.filter(|o| !o.kids.is_empty() && o.stretch.carriable() && { let g = gone.lock().unwrap(); !o.asked().iter().any(|a| g.contains(a)) });
+            let old = old.filter(|o| !o.kids.is_empty() && o.stretch.carriable() && { let g = gone.lock().unwrap(); !o.asked().any(|a| g.contains(&a)) });
             near.sort_unstable_by_key(|(s, _)| s.lo);
             // (mended, it is seeded by the facts that came: in the layers below wherever they lie, at its own layer
             // under it; and by those under it and at home that name a node whose rows in a tree moved)
@@ -1868,7 +2040,7 @@ impl Eval {
                 let news = match &old {
                     Some(o) if !e.0.store.here(id) && !near.iter().chain(&low_near).map(|(s, _)| s).chain(&at_home).any(|s| s.lo <= id && id < s.hi) => {
                         let (mut hit, ms) = (false, cx.masks.lock().unwrap());
-                        answers(&cx.h, r.rel, e.0.store.args(id), ms.get(&r.rel), |key| hit |= o.asked().binary_search(&key).is_ok());
+                        answers(&cx.h, r.rel, e.0.store.args(id), ms.get(&r.rel), |key| hit |= o.asked_has(key));
                         hit
                     }
                     _ => true,
@@ -1883,7 +2055,12 @@ impl Eval {
             }
             e.0.propagate(front)?;
             e.0.seeded = None;
-            let asked = ASKED.with(|a| a.borrow_mut().take()).unwrap_or_default();
+            let mut asked = ASKED.with(|a| a.borrow_mut().take()).unwrap_or_default();
+            // (mended, the firings it carried asked what they asked when they fired: those keys are still its own)
+            if let Some(o) = old.as_ref() {
+                let p = o.parts.get();
+                asked.carried = Some((p.asked.clone(), p.more.clone()));
+            }
             let out = done(e, k, files, kids, dir, inner, asked);
             Ok(out)
         };
@@ -1990,8 +2167,8 @@ impl Eval {
                         WIRED.fetch_add(b.len(), Relaxed);
                         let mut dir = FxMap::default();
                         surface(&stretch, &cx, one, &mut dir);
-                        let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::default(), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()) };
-                        return Ok(Unit { stretch: Rc::new(stretch), files: one, kids: Vec::new(), parts: Rc::new(Lazy::made(parts)) });
+                        let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::default(), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()), more: Arena::Heap(Vec::new()) };
+                        return Ok(Unit { stretch: Rc::new(stretch), files: one, kids: Vec::new(), parts: Rc::new(Lazy::made(parts, None)) });
                     }
                     let mut e = fork();
                     if let Some(o) = over_st.as_ref().filter(|_| leaves_read) {
