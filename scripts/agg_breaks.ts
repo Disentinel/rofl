@@ -8865,6 +8865,20 @@ export const BREAKS: Break[] = [
   }
  },
  {
+  "id": "units_named_let_go",
+  "what": "an edit lets go of the segments of units the kept world still names: a stretch kept in an older segment is read from a file no longer there",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
+  }
+ },
+ {
+  "id": "units_patch_drops_moved",
+  "what": "a unit laid again is written as a patch that names none of what moved: its firings are read as the body under it kept them, citing facts at ids an edit replaced, and its directories send a question bound to a moved key to a stretch an edit replaced",
+  "expect": {
+   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
+  }
+ },
+ {
   "id": "texts_edit_stale",
   "what": "an edit's segment of texts names the file that moved with its old text: a whynot thawed in it after the edit reads the file as it was",
   "expect": {
@@ -9307,8 +9321,8 @@ function proofTests(b: Break, res: Map<string, unknown>): Verdict {
   for (const [name, sign] of Object.entries(b.expect)) {
     const t = TESTS[name];
     if (!t) continue;
-    const [cok] = res.get(`control/test:${t}`) as [boolean, string];
-    if (!cok) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
+    const [cok, ctext] = res.get(`control/test:${t}`) as [boolean, string];
+    if (!cok) { const m = `control, no break planted: cargo test ${t} fails: ${ctext.split('\n').slice(-12).join(' | ').slice(-1500)}`; if (!bad.includes(m)) bad.push(m); continue; }
     const [ok, text] = res.get(`${b.id}/${name}`) as [boolean, string];
     const killed = !ok && text.includes(sign);
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);

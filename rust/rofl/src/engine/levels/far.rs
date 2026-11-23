@@ -341,8 +341,8 @@ impl Far {
             trip.join(&s);
             s
         }).clone();
-        let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::new(Dir::Built(inner)), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()) };
-        Ok((Unit { stretch, files, kids, parts: Rc::new(Lazy::made(parts)) }, moved))
+        let parts = Parts { dir: Rc::new(Dir::Built(dir)), inner: Rc::new(Dir::Built(inner)), reads: Arena::Heap(Vec::new()), asked: Arena::Heap(Vec::new()), more: Arena::Heap(Vec::new()) };
+        Ok((Unit { stretch, files, kids, parts: Rc::new(Lazy::made(parts, None)) }, moved))
     }
 
     fn ask(&self, node: u32, req: &[u8]) -> Vec<u8> {

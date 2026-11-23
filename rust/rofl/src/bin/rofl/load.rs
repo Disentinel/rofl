@@ -754,11 +754,10 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Ses
         s.eval.store.reads_again(n);
     }
     done?;
-    // (an edit that named nothing new leaves the dictionary it was opened over as it lies)
+    // (an edit writes what it named beside the dictionary it was opened over, nothing where it named nothing new)
     let dict = s.eval.h.dict().ok_or("the volumes share no dictionary")?;
     if rofl::brk!("volumes_dict_unkept" => false; dict.grew() || !std::path::Path::new(&format!("{k}.names")).exists()) {
-        dict.write(&format!("{k}.names")).map_err(|e| e.to_string())?;
-        rofl::volume::note_written(&format!("{k}.names"), crate::kept::seen().as_deref());
+        dict.keep(&format!("{k}.names"), crate::kept::seen().as_deref()).map_err(|e| e.to_string())?;
     }
     rofl::volume::keep_units(k, units.as_deref(), crate::kept::seen().as_deref())?;
     texts(k)?;

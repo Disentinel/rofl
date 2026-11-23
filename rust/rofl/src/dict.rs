@@ -131,6 +131,20 @@ struct Ends {
     funcs: usize,
     by_name: Slots,
     by_func: Slots,
+    /// what the files at its path hold: the base's names, terms and sum, and how many of those appended in memory
+    /// its log holds besides (`Dict::keep`)
+    disk: Option<Disk>,
+}
+
+#[derive(Clone, Copy)]
+struct Disk {
+    names: u32,
+    funcs: u32,
+    sum: u64,
+    /// the names and terms the base and the log hold
+    logged: (u32, u32),
+    /// the log's length in bytes
+    log: u64,
 }
 
 /// Names and terms numbered below `Base::names` and `Base::funcs`: the dictionary a file holds, read where it lies,
@@ -268,7 +282,8 @@ impl Dict {
     /// Whether it holds anything the file it was read from does not: a dictionary made in memory always does.
     pub fn grew(&self) -> bool {
         let e = self.ends.lock().unwrap();
-        e.names != 0 || e.funcs != 0 || self.base.is_none()
+        let now = (self.base_len().0 + e.names as u32, self.base_len().1 + e.funcs as u32);
+        e.disk.is_none_or(|d| d.logged != now)
     }
     pub fn is_empty(&self) -> bool {
         self.len() == (0, 0)
@@ -348,8 +363,159 @@ impl Dict {
         if !crate::volume::ends_in_its_sum(path, &map, seen) {
             return Err(format!("{path}: the file is damaged: its bytes are not the ones written"));
         }
-        Ok(Dict { base: Some(Base { map, names: names as u32, funcs: funcs as u32, at, lens }), ..Dict::default() })
+        let sum = crate::arena::file_id(&map).unwrap_or(0);
+        let d = Dict { base: Some(Base { map, names: names as u32, funcs: funcs as u32, at, lens }), ..Dict::default() };
+        let log = d.replay(&log_path(path), sum)?;
+        let logged = d.len();
+        d.ends.lock().unwrap().disk = Some(Disk { names: names as u32, funcs: funcs as u32, sum, logged, log });
+        Ok(d)
     }
+
+    /// KEPT AT `path` BY WHAT IT NAMED: the names and terms numbered since its files were written go to the end of
+    /// its log (`<path>+`), one chunk of them ending in its own sum, and the base stays as it lies: an edit that
+    /// names one thing writes that thing. An opening interns the log into its heap where it maps the base, so once
+    /// the log would pass a quarter of the base the two are written again as one base: an opening holds at most a
+    /// quarter more than the base alone, and a byte an edit names is written at most five times. The bytes written.
+    pub fn keep(&self, path: &str, seen: Option<&std::path::Path>) -> std::io::Result<u64> {
+        let disk = self.ends.lock().unwrap().disk;
+        let base = std::fs::metadata(path).ok().filter(|_| disk.is_some_and(|d| last_word(path) == Some(d.sum))).map(|m| m.len());
+        if let (Some(d), Some(base)) = (disk, base) {
+            let c = self.chunk(d.logged);
+            if c.is_empty() {
+                return Ok(0);
+            }
+            if (d.log + c.len() as u64) * 4 <= base {
+                let mut out = if d.log == 0 { log_head(d.names, d.funcs, d.sum) } else { Vec::new() };
+                out.extend_from_slice(&c);
+                use std::io::{Seek, Write};
+                let mut f = std::fs::OpenOptions::new().create(true).write(true).truncate(false).open(log_path(path))?;
+                // (what a run that stopped half way left past the last whole chunk goes)
+                f.set_len(d.log)?;
+                f.seek(std::io::SeekFrom::Start(d.log))?;
+                f.write_all(&out)?;
+                self.ends.lock().unwrap().disk = Some(Disk { logged: self.len(), log: d.log + out.len() as u64, ..d });
+                return Ok(out.len() as u64);
+            }
+        }
+        self.write(path)?;
+        let _ = std::fs::remove_file(log_path(path));
+        crate::volume::note_written(path, seen);
+        let (names, funcs) = self.len();
+        self.ends.lock().unwrap().disk = Some(Disk { names, funcs, sum: last_word(path).unwrap_or(0), logged: (names, funcs), log: 0 });
+        Ok(std::fs::metadata(path)?.len())
+    }
+
+    /// The names numbered from `from.0` and the terms from `from.1` on, as a chunk of the log: their counts, the
+    /// names' lengths and text, the terms' names, lengths and arguments, and the sum of the chunk. Empty where
+    /// there are none.
+    fn chunk(&self, from: (u32, u32)) -> Vec<u8> {
+        let (names, funcs) = self.len();
+        if (names, funcs) == from {
+            return Vec::new();
+        }
+        let (mut lens, mut text, mut nodes, mut args) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for k in from.0..names {
+            let s = self.name(k);
+            lens.push(s.len() as u32);
+            text.extend_from_slice(s.as_bytes());
+        }
+        for k in from.1..funcs {
+            let a = self.fargs(k);
+            nodes.push([self.node(k).name, a.len() as u32]);
+            args.extend(a.iter().map(|t| t.bits()));
+        }
+        let mut out = Vec::new();
+        for n in [lens.len(), text.len(), nodes.len(), args.len()] {
+            out.extend_from_slice(&(n as u64).to_le_bytes());
+        }
+        for t in [bytes(&lens), &text, bytes(&nodes), bytes(&args)] {
+            out.extend_from_slice(t);
+            out.resize(out.len().next_multiple_of(8), 0);
+        }
+        let mut sum = crate::arena::Sum::default();
+        sum.add(&out);
+        out.extend_from_slice(&sum.value().to_le_bytes());
+        out
+    }
+
+    /// The log at `log` interned in order, each name and term under the number it was written under, where it was
+    /// written over the base whose sum is `sum`; its length in whole chunks. A log of another base, or none, is
+    /// nothing; a chunk cut short ends it, as a run that stopped while appending it left it.
+    fn replay(&self, log: &str, sum: u64) -> Result<u64, String> {
+        let Ok(b) = std::fs::read(log) else { return Ok(0) };
+        let (n0, f0) = self.len();
+        if b.get(..LOG.len()) != Some(LOG) || b.len() < LOG.len() + 24 {
+            return Ok(0);
+        }
+        let word = |at: usize| b.get(at..at + 8).map(|x| u64::from_le_bytes(x.try_into().unwrap()));
+        if word(LOG.len()) != Some(n0 as u64) || word(LOG.len() + 8) != Some(f0 as u64) || word(LOG.len() + 16) != Some(sum) {
+            return Ok(0);
+        }
+        let bad = || format!("{log}: not the log of its dictionary");
+        let mut at = LOG.len() + 24;
+        while let Some(n) = (0..4).map(|i| word(at + 8 * i).map(|x| x as usize)).collect::<Option<Vec<usize>>>() {
+            let size = [4 * n[0], n[1], 8 * n[2], 8 * n[3]].iter().fold(32, |a, x| a + x.next_multiple_of(8));
+            let Some(c) = b.get(at..at + size + 8) else { break };
+            let mut s = crate::arena::Sum::default();
+            s.add(&c[..size]);
+            if s.value().to_le_bytes() != c[size..] {
+                break;
+            }
+            let mut o = 32;
+            let mut take = |len: usize| {
+                let x = &c[o..o + len];
+                o += len.next_multiple_of(8);
+                x
+            };
+            let (lens, text, nodes, args) = (take(4 * n[0]), take(n[1]), take(8 * n[2]), take(8 * n[3]));
+            let mut t = 0;
+            for l in lens.chunks_exact(4) {
+                let l = u32::from_le_bytes(l.try_into().unwrap()) as usize;
+                let name = std::str::from_utf8(text.get(t..t + l).ok_or_else(bad)?).map_err(|_| bad())?;
+                let k = self.len().0;
+                if self.intern(name, name_hash(name.as_bytes())) != k {
+                    return Err(bad());
+                }
+                t += l;
+            }
+            let mut a = 0;
+            for x in nodes.chunks_exact(8) {
+                let (name, len) = (u32::from_le_bytes(x[..4].try_into().unwrap()), u32::from_le_bytes(x[4..].try_into().unwrap()) as usize);
+                let terms: Vec<Term> = args.get(8 * a..8 * (a + len)).ok_or_else(bad)?.chunks_exact(8).map(|w| Term::from_bits(u64::from_le_bytes(w.try_into().unwrap()))).collect();
+                let k = self.len().1;
+                if self.mkf(name, &terms, cons_hash(name, &terms)) != k {
+                    return Err(bad());
+                }
+                a += len;
+            }
+            at += size + 8;
+        }
+        Ok(at as u64)
+    }
+}
+
+const LOG: &[u8] = b"ROFLDICTLOG1\n\0\0\0";
+
+fn log_path(path: &str) -> String {
+    format!("{path}+")
+}
+
+fn log_head(names: u32, funcs: u32, sum: u64) -> Vec<u8> {
+    let mut out = LOG.to_vec();
+    for w in [names as u64, funcs as u64, sum] {
+        out.extend_from_slice(&w.to_le_bytes());
+    }
+    out
+}
+
+/// The last word of the file at `path`: the sum of a dictionary written whole.
+fn last_word(path: &str) -> Option<u64> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = std::fs::File::open(path).ok()?;
+    let mut w = [0u8; 8];
+    f.seek(SeekFrom::End(-8)).ok()?;
+    f.read_exact(&mut w).ok()?;
+    Some(u64::from_le_bytes(w))
 }
 
 fn bytes<T>(v: &[T]) -> &[u8] {
