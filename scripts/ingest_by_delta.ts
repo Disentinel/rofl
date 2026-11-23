@@ -5,7 +5,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { RoflPort } from '../runtime/port.ts';
 import { MODEL_FILES } from '../notebook/front.ts';
-import { NODE } from '../runtime/split.ts';
+import { NODE } from '../models/lang/js/scanner/oxc_bin.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
 const [factsPath, nArg, mode] = process.argv.slice(2);
 const N = Number(nArg);

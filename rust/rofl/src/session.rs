@@ -126,8 +126,6 @@ pub struct Cooled {
     pub facts: usize,
     pub bytes: usize,
     pub path: String,
-    /// by book, the base facts a by-book cool wrote (empty for the others)
-    pub books: Vec<(String, usize)>,
 }
 
 pub struct Answer {
@@ -970,6 +968,15 @@ impl Session {
         self.by_volumes_over(files, "")
     }
 
+    /// The world by volumes again after an edit of the files at the places `changed`, the world before `before`
+    /// (a session `by_volumes` gave) held in memory (`Eval::by_volumes_edit`), `over` laid over the files' units.
+    pub fn by_volumes_edit(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str, before: &Session, changed: crate::store::FxSet<u32>) -> Result<Session, Halt> {
+        let lv = before.eval.levels.clone().ok_or_else(|| Halt::Bug("a world before that is not by volumes".into()))?;
+        lv.named_by(&mut self.eval);
+        let (eval, _) = self.eval.by_volumes_edit(files, over, Some((&lv, changed)))?;
+        Ok(Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() })
+    }
+
     /// `by_volumes`, `over` laid over the files' units (`Eval::by_volumes_over`).
     pub fn by_volumes_over(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
         let (eval, stats) = self.eval.by_volumes_over(files, over)?;
@@ -1109,18 +1116,18 @@ impl Session {
         // hole that leaves open, which is deliberate and named rather than
         // pretended away.
         let head = self.header(prefix);
-        self.cool_facts(head, &write, &drop, out, Vec::new())
+        self.cool_facts(head, &write, &drop, out)
     }
 
     /// The text of `write` under `head`, written to `out`; then `drop` leaves the store and the world is dirty.
-    fn cool_facts(&mut self, head: String, write: &[FactId], drop: &[FactId], out: &str, books: Vec<(String, usize)>) -> Result<Cooled, String> {
+    fn cool_facts(&mut self, head: String, write: &[FactId], drop: &[FactId], out: &str) -> Result<Cooled, String> {
         let mut text = head;
         for &id in write {
             self.push_fact(id, &mut text);
         }
         write_cool_file(out, &text)?;
         self.drop_cooled(drop);
-        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string(), books })
+        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string() })
     }
 
     /// One base fact of a volume, as a line of its text.
@@ -1133,111 +1140,6 @@ impl Session {
     fn drop_cooled(&mut self, drop: &[FactId]) {
         self.eval.store.remove_many(drop);
         self.eval.store.dirty = true;
-    }
-
-    /// COOL A VOLUME BY BOOK (docs/surface-split.md, the driver): `cool`, of the facts of `books` only. The volume's
-    /// base facts of those books are written, every fact of those books naming the prefix is dropped, and so is the
-    /// kernel's account of each (the `$fact` a trail row reifies is of one of those books); the facts of the other
-    /// books stay, a `[surface]` the volume published or read among them. Like `cool`, the store is left dirty: a
-    /// kept fact concluded from what left is a conclusion without its support until `reheat` brings the volume back
-    /// and the next evaluation answers, so a caller that keeps a book makes its facts base where they must outlive it.
-    ///
-    /// A base fact of the volume in a book neither cooled nor in `keep` (`surface` is always kept) would be lost by a
-    /// volume that is closed after, or left behind by one that is not: the cool is REFUSED, before anything moves.
-    pub fn cool_books(&mut self, prefix: &str, books: &[String], keep: &[String], out: &str) -> Result<Cooled, String> {
-        if books.is_empty() {
-            return Err("cool by book needs at least one book".into());
-        }
-        let want: std::collections::HashSet<Sym> = books.iter().map(|b| self.eval.h.intern(b)).collect();
-        let mut kept: std::collections::HashSet<Sym> = keep.iter().map(|b| self.eval.h.intern(b)).collect();
-        kept.insert(self.eval.h.intern("surface"));
-        self.eval.settle_provenance();
-        let head = self.header(prefix);
-        let (mut write, mut drop, mut by_book) = (Vec::new(), Vec::new(), std::collections::BTreeMap::<String, usize>::new());
-        for id in self.eval.store.all_facts() {
-            let args = self.eval.store.args(id).to_vec();
-            if !args.iter().any(|a| self.mentions(*a, prefix)) {
-                continue;
-            }
-            let r = self.eval.store.rec(id);
-            let kernel = is_kernel_ledger(&self.eval.h, r.persp);
-            let book = if kernel { args.iter().find_map(|a| self.reified_book(*a)) } else { Some(r.persp) };
-            if r.base() && !kernel && !want.contains(&r.persp) && !kept.contains(&r.persp) {
-                return Err(format!("cool by book: the volume holds a base fact in [{}], a book neither cooled nor kept: {}",
-                    self.eval.h.name(r.persp), self.eval.store.key(&self.eval.h, id)));
-            }
-            if !book.is_some_and(|b| want.contains(&b)) {
-                continue;
-            }
-            if r.base() && !kernel {
-                write.push(id);
-                *by_book.entry(self.eval.h.name(r.persp).to_string()).or_default() += 1;
-            }
-            drop.push(id);
-        }
-        self.cool_facts(head, &write, &drop, out, by_book.into_iter().collect())
-    }
-
-    /// The book of the fact a kernel row reifies, `$fact(Rel, Book, Args)`.
-    fn reified_book(&self, t: Term) -> Option<Sym> {
-        let TermK::Func(i) = t.kind() else { return None };
-        if self.eval.h.fname(i) != self.eval.v.s_fact {
-            return None;
-        }
-        match self.eval.h.fargs(i).get(1)?.kind() {
-            TermK::Atom(b) => Some(b),
-            _ => None,
-        }
-    }
-
-    /// WHAT A VOLUME'S WORLD HOLDS OF ITS OWN, for a driver (docs/surface-split.md): over the facts this world wrote
-    /// above the base it was forked from, the keys of those in `books` or of a relation in `rels`, sorted, and every
-    /// atom and string their arguments name (nested too), outside the kernel's ledgers and not beginning with
-    /// `prefix`: the names a volume can subscribe by.
-    pub fn layer_view(&mut self, prefix: &str, books: &[String], rels: &[String]) -> Result<(Vec<String>, Vec<String>), String> {
-        // a world not evaluated, or cut by a wall, holds less than its program concludes: a view of it would be taken
-        // for the volume's
-        if prefix.is_empty() {
-            return Err("view needs a prefix: with none every name is excluded".into());
-        }
-        if self.eval.store.dirty {
-            return Err("view: the world is not evaluated".into());
-        }
-        if self.eval.store.partial_eval {
-            return Err("view: the world is partial, a wall cut its evaluation".into());
-        }
-        let bs: std::collections::HashSet<Sym> = books.iter().map(|b| self.eval.h.intern(b)).collect();
-        let rs: std::collections::HashSet<Sym> = rels.iter().map(|r| self.eval.h.intern(r)).collect();
-        let mut facts = Vec::new();
-        let mut seen: std::collections::HashSet<Term> = std::collections::HashSet::new();
-        let mut names = Vec::new();
-        for id in self.eval.store.layer_mark()..self.eval.store.len_ids() {
-            if !self.eval.store.alive(id) {
-                continue;
-            }
-            let r = self.eval.store.rec(id);
-            if is_kernel_ledger(&self.eval.h, r.persp) {
-                continue;
-            }
-            let args = self.eval.store.args(id).to_vec();
-            if bs.contains(&r.persp) || rs.contains(&r.rel) {
-                facts.push(self.eval.store.key(&self.eval.h, id));
-            }
-            let mut stack = args;
-            while let Some(t) = stack.pop() {
-                match t.kind() {
-                    TermK::Atom(a) | TermK::Str(a)
-                        if (matches!(t.kind(), TermK::Str(_)) || !self.eval.h.name(a).starts_with(prefix)) && seen.insert(t) => {
-                            names.push(self.eval.h.canon(t));
-                        }
-                    TermK::Func(i) => stack.extend(self.eval.h.fargs(i).iter().copied()),
-                    _ => {}
-                }
-            }
-        }
-        facts.sort_by(|a, b| crate::term::cmp_js(a, b));
-        names.sort();
-        Ok((facts, names))
     }
 
     /// COOL THE ASSERTION TRAIL: the `why was this here` layer, parked.
@@ -1267,7 +1169,7 @@ impl Session {
             }
         }
         let head = self.header("$trail");
-        self.cool_facts(head, &ids, &ids, out, Vec::new())
+        self.cool_facts(head, &ids, &ids, out)
     }
 
     /// REHEAT THE TRAIL, PAST THE DOOR, and the signature is what earns that.
@@ -1435,7 +1337,7 @@ impl Session {
         let mut out = Vec::with_capacity(vols.len());
         for (i, (_, path)) in vols.iter().enumerate() {
             write_cool_file(path, &texts[i])?;
-            out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone(), books: Vec::new() });
+            out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone() });
         }
         self.drop_cooled(&drop);
         Ok(out)

@@ -1,8 +1,9 @@
 //! A STRETCH BETWEEN TWO PROCESSES: its facts and firings with every name as text and every id of its own counted
 //! from its first, so that a process with another dictionary and another numbering lays it where its own scroll is.
 //!
-//! What lies below the stretch (the core both ends settled alike) is named by its id as it is; a fact above the
-//! stretch or an aggregate's cell is not carried, and the stretch is refused. A key a proof quotes (an absence, a
+//! What lies below the stretch (the core both ends settled alike, and the stretches of the one scroll under it: a
+//! group's children) is named by its id as it is; a fact above the stretch or an aggregate's cell is not carried,
+//! and the stretch is refused. A key a proof quotes (an absence, a
 //! closure's row) is named by the reader's own `key`.
 
 use super::*;
@@ -305,7 +306,7 @@ impl Stretch {
                 _ => return Err("a stretch on the wire names a fact it cannot".into()),
             })
         };
-        let below = fork.len_ids();
+        let below = lo;
         let (mut recs, mut args) = (Vec::with_capacity(4 * n as usize), Vec::new());
         for _ in 0..n {
             let (rel, persp, flags, k) = (r.name()?, r.name()?, r.u32()?, r.u32()?);
