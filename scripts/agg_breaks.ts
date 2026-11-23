@@ -9321,8 +9321,8 @@ function proofTests(b: Break, res: Map<string, unknown>): Verdict {
   for (const [name, sign] of Object.entries(b.expect)) {
     const t = TESTS[name];
     if (!t) continue;
-    const [cok] = res.get(`control/test:${t}`) as [boolean, string];
-    if (!cok) { bad.push(`control, no break planted: cargo test ${t} fails`); continue; }
+    const [cok, ctext] = res.get(`control/test:${t}`) as [boolean, string];
+    if (!cok) { const m = `control, no break planted: cargo test ${t} fails: ${ctext.split('\n').slice(-12).join(' | ').slice(-1500)}`; if (!bad.includes(m)) bad.push(m); continue; }
     const [ok, text] = res.get(`${b.id}/${name}`) as [boolean, string];
     const killed = !ok && text.includes(sign);
     lines.push(`${killed ? 'KILLED  ' : 'SURVIVED'} ${b.id.padEnd(20)} ${name.padEnd(22)} ${sign}`);
