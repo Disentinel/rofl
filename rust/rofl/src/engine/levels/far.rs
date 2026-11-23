@@ -7,7 +7,48 @@ use super::*;
 use crate::store::{Ask, Counts, Fact, FactRec, Firing, Forests, GroupsKey, Prem, PremRef, Trip};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+#[cfg(unix)]
 use std::os::unix::net::{UnixListener, UnixStream};
+#[cfg(not(unix))]
+use no_unix::{UnixListener, UnixStream};
+
+/// Where there are no unix sockets the nodes meet over TCP only, by DIR/peers.
+#[cfg(not(unix))]
+mod no_unix {
+    use std::io;
+    use std::path::Path;
+    fn none<T>() -> io::Result<T> {
+        Err(io::Error::new(io::ErrorKind::Unsupported, "no unix sockets here: say where each process listens in DIR/peers"))
+    }
+    pub struct UnixStream;
+    pub struct UnixListener;
+    impl UnixStream {
+        pub fn connect(_: impl AsRef<Path>) -> io::Result<Self> {
+            none()
+        }
+    }
+    impl UnixListener {
+        pub fn bind(_: impl AsRef<Path>) -> io::Result<Self> {
+            none()
+        }
+        pub fn accept(&self) -> io::Result<(UnixStream, ())> {
+            none()
+        }
+    }
+    impl io::Read for UnixStream {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            none()
+        }
+    }
+    impl io::Write for UnixStream {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            none()
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            none()
+        }
+    }
+}
 use std::sync::Condvar;
 
 pub(super) const ROOT: u32 = u32::MAX;
