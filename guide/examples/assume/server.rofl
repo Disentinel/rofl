@@ -1,0 +1,3 @@
+-- The server. The scanner reads server.js.
+scanner(js, "rofl scan .").
+scan_request(js, "server.js").

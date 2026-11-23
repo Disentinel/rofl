@@ -34,7 +34,7 @@ what runs. They are published at
 
 ## What is new
 
-### On main, not yet in a release
+### 1.8 (23 November 2026)
 
 - **The JS model is called `@js`.** It is now a library with a folder and a
   version of its own, `models/lang/js/`; write `@js` where 1.7 had
@@ -52,6 +52,36 @@ what runs. They are published at
 - **`rofl scan` writes smaller files.** The facts go in columns of numbers
   instead of text: 155 files of VS Code take 16.7 MB where they took
   65.9 MB, and read back the same.
+- **An answer says where each piece of code is.** A row whose value is a
+  node of the code is followed by its file, line and the text of that line,
+  `F: server.js:6  function dump(state) {`; `--json` carries the same as
+  `places` beside the rows ([ASKING.md](ASKING.md#ask)).
+- **You can say how the program runs.** A fact such as
+  `assumed_env[assume]("NODE_ENV", "production")` decides every test of
+  that value, and the code in the branch it does not take counts as never
+  run; `rofl excise` of the fact brings it back
+  ([ASKING.md](ASKING.md#how-the-program-runs)).
+- **The JS model follows more of a program.** The share of reads that the
+  model gives a value rose from between 72 and 95% in 1.7 to between 98.5
+  and 99.7% now, over express, axios, vue core and three.js; for calls, from
+  between 57 and 90% to between 93 and 99.5%. It costs time: the side-effect question over 250 files of VS Code
+  takes 57 s where it took 23.
+- **The memory is the limit, and a short answer says so.** 1.7 stopped a
+  world at 500 000 rows; now a world grows as far as the memory the process
+  may use, so 41 files of VS Code that were cut short answer whole in 10 s.
+  A partial answer opens with `[partial answer: ...]`, ends with why and
+  which flag moves it, and stderr names the largest directories to leave
+  out. A question that runs longer than 15 s says every 15 s how far it has
+  got ([ASKING.md](ASKING.md#a-partial-answer)).
+- **A large kept world answers and takes edits faster.** A question asked
+  again reads only the part of the kept world it walks: on 1 000 files of
+  VS Code a question about one value takes 0.10 s and 0.13 GB where it took
+  3.6 s and 3.9 GB. An edit writes only what it moved: 4.2 MB an edit on
+  300 files, where it wrote 137.9 MB.
+- **A notebook in VS Code answers sooner.** Its cells run in a process of
+  their own that asks the engine: the first run of a notebook takes about
+  1.7 s where it took 7 to 9, a run after an edit about 0.35 s where it took
+  0.8.
 
 ### 1.7 (15 November 2026)
 

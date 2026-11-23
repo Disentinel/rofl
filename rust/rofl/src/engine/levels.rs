@@ -112,6 +112,11 @@ impl Lazy {
     fn kept(at: At, over: Option<At>) -> Self {
         Lazy { got: Default::default(), kept: Some(at), over, was: None }
     }
+    /// This record, cooled from `was`, to be written as a patch over what `was` stood on.
+    fn cooled_from(mut self, was: &Lazy) -> Self {
+        self.was = was.was.clone();
+        self
+    }
     /// The segment it is kept in and where, while it was not made anew.
     fn kept_at(&self) -> Option<(u32, usize)> {
         self.kept.as_ref().filter(|k| k.2 != crate::store::COOLED).map(|k| (k.2, k.1))
@@ -1675,7 +1680,7 @@ impl Eval {
                     for (u, (s, parts)) in us.into_iter().zip(ss) {
                         u.stretch = Rc::new(s.cooled_from(&u.stretch));
                         if let Some(p) = parts {
-                            u.parts = Rc::new(p);
+                            u.parts = Rc::new(p.cooled_from(&u.parts));
                         }
                     }
                 }

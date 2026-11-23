@@ -71,11 +71,26 @@ $ rofl ask 'risky(N)' --json @js shop.rofl
 ```
 <!-- END run -->
 
-`partial` is `false`: every row that follows from the facts is there. It is
-`true`, and the exit code 5, when the evaluation was cut short by a budget or
-by the memory the process may use, or a scan failed; then the rows may be
-short of an answer, and the output says so rather than passing a short list
-off as the whole one.
+`partial` is `false`: every row that follows from the facts is there
+(*A partial answer*, below, is the other case). `places` is empty because
+the values are names, strings; when a value is a piece of the code, the
+answer says where it is.
+
+<!-- BEGIN run guide/examples/first: rofl ask 'may_throw[code](F)' @js shop.rofl -->
+```
+$ rofl ask 'may_throw[code](F)' @js shop.rofl
+F = n017f49dbfbe9e0a8_en4a19n90pa5f
+  F: checkout.js:4  export function checkout(cart) {
+F = na31b9c7ff583580b_dhkic1pficov8
+  F: pay.js:1  export function charge(card, amount) {
+```
+<!-- END run -->
+
+The values are the model's names for the code's nodes. Each row is followed
+by the place of its node: the file, the line and the text of that line. The
+name stays in the row, so the next question can use it as it is; `--json`
+gives the places as `places`, from each name to its `file`, `line` and
+`text`.
 
 ## Why
 
@@ -184,6 +199,72 @@ counts as never run. A world that means otherwise says so in a fact:
 `runs_as_script("bin/cli.js")` reads that one file as node runs it, and
 `reads_the_file_as(script)` reads every file so.
 
+## How the program runs
+
+Code often asks where it runs: `process.env.NODE_ENV`, a platform, a flag
+another module exports. The model does not know the answer, so it keeps both
+branches of every such test. A world that knows says so in a fact of the book
+`[assume]`. This server dumps its state outside production:
+
+<!-- BEGIN file guide/examples/assume/server.js -->
+```js
+export function start(state) {
+  if (process.env.NODE_ENV !== 'production') dump(state);
+  return serve(state);
+}
+
+function dump(state) {
+  console.log(JSON.stringify(state));
+}
+
+function serve(state) {
+  return { ok: true, state };
+}
+```
+<!-- END file -->
+
+`server.rofl` scans it, as `shop.rofl` scans the shop. `dead_fn` holds for a
+function nothing calls, and over the server alone there is none, since
+`dump` may be called:
+
+<!-- BEGIN run guide/examples/assume: rofl ask 'dead_fn[code](F)' @js server.rofl -->
+```
+$ rofl ask 'dead_fn[code](F)' @js server.rofl
+(empty)
+```
+<!-- END run -->
+
+A second file says the server runs in production:
+
+<!-- BEGIN file guide/examples/assume/prod.rofl -->
+```rofl
+-- It runs in production.
+assumed_env[assume]("NODE_ENV", "production").
+```
+<!-- END file -->
+
+Asked over both files, the test is decided, the call in the branch it does
+not take is never made, and `dump` is dead:
+
+<!-- BEGIN run guide/examples/assume: rofl ask 'dead_fn[code](F)' @js server.rofl prod.rofl -->
+```
+$ rofl ask 'dead_fn[code](F)' @js server.rofl prod.rofl
+F = na4c65ede64197e1a_2d456i6b4tf03
+  F: server.js:6  function dump(state) {
+```
+<!-- END run -->
+
+The kept world takes the second file by delta: the question pays for what
+the fact moves, not for a new evaluation. `rofl excise` of the fact, over the same two files, lists what
+changes without it.
+
+A test is decided when it reads the value alone, with `!`, `&&` or `||`, or
+compares it with `===` or `!==` to a literal. `assumed_env[assume](Name,
+Value)` gives a variable of `process.env`, and
+`assumed_export[assume](File, Name, Value)` the value a file exports under a
+name, such as `assumed_export[assume]("src/platform.ts", "isWindows", false)`.
+A value with no fact keeps both branches.
+
 ## The second question costs nothing
 
 The first `rofl ask` over the shop scanned two files, evaluated the model and
@@ -214,6 +295,43 @@ question about something else grows the kept world by what that one needs. On
 700 files of VS Code with the JavaScript model, the first question takes 49 s
 and 2.1 GB, where evaluating the whole model takes 104 s and 3.4 GB.
 
+A question asked again reads only the part of the kept world it walks. On
+1 000 files of VS Code, a question about one value takes 0.10 s and 0.13 GB
+the second time, and an edit writes to disk only what it moved.
+
+## A partial answer
+
+A world has two limits: the memory the process may use and a budget of
+steps, 200 million by default. There is no limit on the number of rows. A
+world that reaches either stops there and answers what it has, and the
+answer says it may be short, on its first line and its last. Here the shop
+is given a budget far too small for it:
+
+<!-- BEGIN run+exit guide/examples/first: rofl ask 'risky(N)' --budget 1000 @js shop.rofl -->
+```
+$ rofl ask 'risky(N)' --budget 1000 @js shop.rofl
+[partial answer: the rows below may be short of the whole answer]
+? N = _  $adhoc is a shrug: budget, the evaluation ran out of steps or rows before it could answer; spent(steps, 1, 0)
+[partial: the step budget of 1000 steps was spent; --budget sets it, a larger one goes further]
+$ echo $?
+5
+```
+<!-- END run+exit -->
+
+The world stopped before it found a row, so the line between, the one that
+starts with `?`, says the engine cannot tell what `N` is, and why. The last
+line names the limit that was met and what moves it. When the memory ran out, it says how much the process could use and asks over fewer
+files; beside it, stderr names the largest directories of the world by the
+facts they hold, the ones to leave out first. `--json` says
+`"partial":true`, and the exit code is 5. The engine watches the memory as it
+goes: when the next step would pass the limit, it stops and says so rather
+than being killed by the system without a word.
+
+A question that takes longer than 15 seconds prints a `progress:` line on
+stderr every 15 seconds: the time so far, the steps taken, how many of them in
+the last 15 seconds, and the memory in use against what the process may use.
+Steps that still rise mean a slow run, not a stuck one.
+
 ## Exit codes
 
 | code | meaning |
@@ -223,7 +341,7 @@ and 2.1 GB, where evaluating the whole model takes 104 s and 3.4 GB.
 | 2 | a file is refused: it does not parse or does not load; or a `--kept` world is stale |
 | 3 | the world is refused when evaluated: a declared structure does not hold, or a negation runs through a cycle |
 | 4 | the question is refused: `why` of a literal with a variable in it, `excise` of a fact that is not given, a question outside the world's declared cone |
-| 5 | answered, but from a world cut short by its budget, its space, the memory the process may use, or a failed scan; the rows may be short |
+| 5 | answered, but from a world cut short by its step budget, the memory the process may use, a row wall set with `--space`, or a failed scan; the rows may be short |
 | 70 | a defect in the engine itself |
 
 A refusal wins over a partial answer: a run with a refused question exits 4
