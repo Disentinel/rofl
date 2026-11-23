@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.1 (preview, ROFL 1.8.1)
+
+- The kernel is ROFL 1.8.1. See docs/releases/1.8.md.
+
 ## 1.8.0 (preview, ROFL 1.8.0)
 
 - Cells run in a process of their own that asks the engine; the extension
