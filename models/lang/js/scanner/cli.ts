@@ -51,7 +51,7 @@ const put = (text: string | Buffer) => new Promise<void>((done) => { if (sink.wr
 // what was read, for the engine's storeroom of scans (docs/cli.md): the files and directories oxc_scan names, and the
 // scanner's own code, so that a scanner changed is a scan stale
 if (process.env.ROFL_SCAN_PREVIOUS === undefined) await put(`${COLUMNS}\n`);
-await put([bin, fileURLToPath(import.meta.url), fileURLToPath(new URL('oxc_inherit.ts', import.meta.url)), fileURLToPath(new URL('../../../../playground/host.ts', import.meta.url))].map((f) => `-- reads: ${f}\n`).join(''));
+await put([bin, fileURLToPath(import.meta.url), fileURLToPath(new URL(`oxc_inherit${path.extname(fileURLToPath(import.meta.url))}`, import.meta.url)), fileURLToPath(new URL('../../../../playground/host.ts', import.meta.url))].map((f) => `-- reads: ${f}\n`).join(''));
 
 const prev = process.env.ROFL_SCAN_PREVIOUS;
 const kept = prev && fs.existsSync(prev) ? fs.readFileSync(prev, 'utf8') : undefined;
