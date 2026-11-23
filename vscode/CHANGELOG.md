@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.0 (preview, ROFL 1.8.0)
+
+- Cells run in a process of their own that asks the engine; the extension
+  loads no engine, and a notebook's first run takes about 1.7 s.
+- An answer names the file and line of each node it gives.
+- The kernel is ROFL 1.8.0: the JS model gives a value to almost every read.
+  See docs/releases/1.8.md.
+
 ## 1.7.0 (preview, ROFL 1.7.0)
 
 - A notebook's proof stops at a lemma of the JS model and names its line,
