@@ -152,6 +152,9 @@ check[checks]("rust/rofl/tests/explain.rs", "excise_keeps_a_member_another_deriv
 check[checks]("rust/rofl/tests/explain.rs", "why_shows_the_shortest_firing_and_why_all_the_circle", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_all_writes_every_firing_with_shared_subtrees_as_references", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_base_fact_whose_firing_rests_on_itself_is_its_assertion", test).
+check[checks]("rust/rofl/tests/far.rs", "a_node", test).
+check[checks]("rust/rofl/tests/far.rs", "nodes_in_processes_answer_as_the_whole_world_and_after_edits", test).
+check[checks]("rust/rofl/tests/held.rs", "a_unit_another_node_holds_answers_as_the_whole_world", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_retraction_is_a_fresh_evaluation_over_random_edits", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_larger_world_takes_the_same_path", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same", test).
@@ -1057,6 +1060,8 @@ test_file[checks]("rust/rofl/tests/dispatch.rs").
 test_file[checks]("rust/rofl/tests/edit.rs").
 test_file[checks]("rust/rofl/tests/event_time.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
+test_file[checks]("rust/rofl/tests/far.rs").
+test_file[checks]("rust/rofl/tests/held.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
 test_file[checks]("rust/rofl/tests/journal.rs").
