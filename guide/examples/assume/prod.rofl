@@ -1,0 +1,2 @@
+-- It runs in production.
+assumed_env[assume]("NODE_ENV", "production").
