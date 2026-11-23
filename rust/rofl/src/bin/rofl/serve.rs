@@ -105,15 +105,11 @@
 //!                                                        world, fired on by every rule active so far
 //!   {"op":"evaluate_on","session":2,"wall":L}  -> goes on from where the last wall stopped it
 //!
-//! VOLUMES, a key prefix to disk and back (runtime/ingest.ts, runtime/split.ts):
-//!   {"op":"cool","session":2,"prefix":"na","path":"v.vol"} -> {"facts","bytes","path","books"}: the facts whose
-//!                                                        key starts with the prefix written and dropped; with
-//!                                                        "books":[...] (and "keep":[...]) only those books go,
-//!                                                        a `[surface]` beside them stays
+//! VOLUMES, a key prefix to disk and back (runtime/ingest.ts):
+//!   {"op":"cool","session":2,"prefix":"na","path":"v.vol"} -> {"facts","bytes","path"}: the facts whose
+//!                                                        key starts with the prefix written and dropped
 //!   {"op":"cool_many","session":2,"volumes":[{"prefix","path"},...]} -> {"volumes":[...]}: many in one pass
 //!   {"op":"reheat","session":2,"path":"v.vol"} -> {"admitted":n,"evaluated":b}: a cooled volume back, by delta
-//!   {"op":"view","session":2,"prefix":"na","books":[...],"rels":[...]} -> {"facts","names"}: what a volume's world
-//!                                                        wrote above its base, and the names it subscribes by
 //!   any op on a session may carry "limit":{"ms":n,"bytes":n}: past n milliseconds, or n live bytes in this
 //!   process, its evaluation stops as at the step budget, and the answer says "stopped":"clock"|"heap"
 //!
@@ -289,7 +285,7 @@ impl Server {
         match op {
             "watch" | "unwatch" => self.op_watch(op, r),
             "rows" | "holding" | "books" | "fact" | "firings" | "cell" | "open" => self.op_read(op, r),
-            "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "view" | "fork" | "keep" => self.op_world(op, r),
+            "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "fork" | "keep" => self.op_world(op, r),
             "volumes" => self.op_volumes(r),
             "volumes_edit" => self.op_volumes_edit(r),
             _ => self.op_change(op, r),
@@ -336,15 +332,6 @@ impl Server {
                 let n = s.reheat(&p).map_err(|d| d.join("\n"))?;
                 // evaluated by delta, or left for the next evaluation (a cooled world, a program the path refuses)
                 Ok(json!({ "admitted": n, "evaluated": !s.eval.store.dirty }))
-            }
-            // What a volume's world wrote above its base: the facts of `books` and `rels`, and the names it can
-            // subscribe by (`Session::layer_view`).
-            "view" => {
-                let prefix = str_of(r, "prefix", "view needs `prefix`")?.to_string();
-                let books = strings(r, "books")?.unwrap_or_default();
-                let rels = strings(r, "rels")?.unwrap_or_default();
-                let (facts, names) = self.get(r)?.layer_view(&prefix, &books, &rels)?;
-                Ok(json!({ "facts": facts, "names": names }))
             }
             "fork" => {
                 let f = self.get(r)?.fork();
@@ -788,16 +775,8 @@ impl Server {
     fn op_cool(&mut self, r: &Value) -> Result<Value, String> {
         let prefix = str_of(r, "prefix", "cool needs `prefix`")?.to_string();
         let out = str_of(r, "path", "cool needs `path`")?.to_string();
-        // by book: only the facts of `books` go, a `[surface]` kept beside them stays
-        let c = match strings(r, "books")? {
-            Some(bs) => {
-                let keep = strings(r, "keep")?.unwrap_or_default();
-                self.get(r)?.cool_books(&prefix, &bs, &keep, &out)?
-            }
-            None => self.get(r)?.cool(&prefix, &out)?,
-        };
-        let books: serde_json::Map<String, Value> = c.books.iter().map(|(b, n)| (b.clone(), json!(n))).collect();
-        Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path, "books": books }))
+        let c = self.get(r)?.cool(&prefix, &out)?;
+        Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
     }
 
     // Many volumes in ONE pass over the world. Cooling them one at a

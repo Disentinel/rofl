@@ -878,11 +878,9 @@ its own, the volume is cooled to disk and stays there until a question needs
 it. What crosses files is no book (owner, 2026-11-07): the engine finds it from
 the rules' keys (the relation, the argument a rule joins at, its value), and a
 fact of another file comes as a lemma only where a rule reads it (*Lemma
-stages*, above). The `[surface]` book of the earlier design
-(docs/surface-split.md, the driver of `runtime/split.ts`) is replaced: do not
-route a corpus, a federation or a split by it, and do not add rules to it; what
-the JS model still writes there (`models/lang/js/rules/js-surface.rofl`) is a
-debt (f_surface_is_replaced_by_lemmas_by_keys). The rest of the design is in
+stages*, above). The `[surface]` book of the earlier design, and the driver
+that cooled a volume per file beside it, are gone (2026-11-22): do not route a
+corpus, a federation or a split by a book (f_surface_is_replaced_by_lemmas_by_keys). The rest of the design is in
 docs/volumes-and-residency.md (why a corpus can stay cold) and
 docs/staged-evaluation.md (stages, kept volumes, resume, the planner).
 **The question verbs evaluate by levels and cool the units under pressure (above).** The other parts and the harnesses that drive
@@ -890,7 +888,6 @@ them, each over `rofl serve`:
 
 | what | how to run it | measured | status |
 |---|---|---|---|
-| a volume per file, cooled, the surface resident (the driver) | `runtime/split.ts`; `node --experimental-strip-types scripts/vscode_curve.ts DIR N split [--hot K]` over a corpus of `scripts/vscode_corpus.ts`; its gate over the JS model was retired with the [surface] mirrors (2026-11-09): unchecked since | 500 vscode files: the whole world's answers exactly, 2.0 GB against 2.5 GB, but 6 335 s against 40 s: each volume reads ~10% of the surface and is evaluated again whole 7.6 times (surface-split.md §7) | replaced by the units by keys; history |
 | the ingest loop: parse a batch, evaluate, cool volumes under pressure | `node --experimental-strip-types runtime/ingest.ts ROOT SUB N [--batch K] [--pressure F]` (boot and `rules/ingest.rofl`, no JS model) | eslint, 1 426 files: 29.9 s, 1 290 volumes cooled to 200 MB, the world never above 1.94 M facts (docs/scaling-a-corpus.md) | the AST only; the JS model is not evaluated |
 | stages that fit a memory limit, each a process over the last volume (a TypeScript driver, to give way to the plan's stages, *Lemma stages*) | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
 | an evaluation in pieces of a fixed time, each a process resuming the last volume | `node --experimental-strip-types scripts/vscode_pieces.ts FACTS N MS [--state FILE]` | the same state as one run | built (item 3) |

@@ -87,12 +87,9 @@ finding, and listed so that this page does not read as the whole release
   one line each, above a proof whose side conditions are counted; `npm run nb
   -- --all` prints every answer and every proof whole
   (f_every_why_line_of_a_notebook_failed; `docs/md-world.md`).
-- **The `[surface]` book**: `models/lang/js/rules/js-surface.rofl`, the cross-file rules
-  rewritten to read another file only through it, the gate world
-  `vscode_surface_split` (`npm run test:split`) and the surface lint
-  (f_the_surface_book_mirrors_what_escapes_and_every_file_alone_equals_the_whole_world,
-  f_the_surface_lint_is_a_foreign_capable_column_read_by_a_local_premise;
-  `docs/surface-split.md`). The driver that cools volumes is not built yet.
+- **What crosses files**: no book; the engine finds it from the rules' keys and reads another file's fact as a
+  lemma (f_surface_is_replaced_by_lemmas_by_keys). The `[surface]` book, its lint and its driver are gone
+  (2026-11-20..22).
 - **Path values**: a string built from parts is a node with parts, its text a
   term (`models/lang/js/rules/js-concat.rofl`;
   f_a_string_built_from_parts_is_a_node_with_parts_and_its_text_is_a_term).
