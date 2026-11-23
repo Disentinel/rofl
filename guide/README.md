@@ -34,7 +34,7 @@ what runs. They are published at
 
 ## What is new
 
-### On main, not yet in a release
+### 1.8 (23 November 2026)
 
 - **The JS model is called `@js`.** It is now a library with a folder and a
   version of its own, `models/lang/js/`; write `@js` where 1.7 had
