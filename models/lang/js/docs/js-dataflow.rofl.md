@@ -195,9 +195,13 @@ In the flow:
 <a id="own_node"></a>`own_node`(E, N) either:
 
 1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, N);
-2. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(something, N)).
+2. if [`via_node`](#via_node)(E, N).
 
-<a id="may_be_node"></a>A node points to a node N if [`may_be`](js-callgraph.rofl.md#may_be)(it, `inst`, via(something, N)).
+<a id="may_be_node"></a>A node points to a node N if [`via_node`](#via_node)(it, N).
+
+> kept, so that a rule that knows the object and not the call finds the expressions that hold it by its key
+
+<a id="via_node"></a>`via_node`(E, N) if [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(something, N)).
 
 > what an expression may be as a literal: its own, and an input's as the input holds them, read where a rule asks
 > (`lit_of`) and not copied to every expression that holds the input; `may_be_lit` is the answer to a question
@@ -4547,7 +4551,7 @@ The static member Key of a class CD is a node V if CD [is a class](#class_like) 
    - [`pread`](#pread)(N, S, Key);
    - [`pval`](#pval)(S, Key, `open`, something);
    - E is `open`;
-   - Y is pfield(S, Key);
+   - Y is `open`;
 2. if all of:
    - [`pread`](#pread)(N, S, Key);
    - [`pval`](#pval)(S, Key, E, Y);
@@ -5843,7 +5847,7 @@ The member Name of a node NS holds a node In if all of:
   - [`callee`](#callee)(E, CE);
   - a node CE [points to](#may_be_node) F.
 
-`may_be`(E, `open`, E) if [`new_fn`](#new_fn)(E, something).
+`may_be`(E, `open`, `open`) if [`new_fn`](#new_fn)(E, something).
 
 > a parameter property (`constructor(private name: string)`) is a member each `new` sets to its argument
 
@@ -6068,12 +6072,13 @@ D takes its value from a node E if all of:
    - N is `lit`;
    - unless [`computed_key`](#computed_key)(something, U);
 2. if all of:
-   - K [declares without a value](#bare_binder) Name in File;
-   - [`nth`](#nth)(V, 0, K);
+   - D [declares without a value](#bare_binder) Name in File;
+   - [`nth`](#nth)(V, 0, D);
    - [`enumerates`](#enumerates)(something, V, something);
-   - [`binder_read`](#binder_read)(K, Name, File, U);
+   - [`binder_read`](#binder_read)(D, Name, File, U);
    - [`computed_key`](#computed_key)(something, U);
-   - N is `open`.
+   - N is `open`;
+   - K is `open`.
 
 <a id="plain_assign"></a>E is plain if [`assign`](#assign)(E, something, R) and [`gives`](#gives)(E, R).
 
@@ -6222,31 +6227,37 @@ The static/instance member Key of a class CD is a node N if CD [has the decorate
 
 > 17. A VALUE THE MODEL CANNOT NAME IS OPEN. An operator's result (`a * b`, `-x`, `` `t${x}` ``, `x += v`, `x++`)
 > and what a host member returns where no table says what (`Math.random()`, `s.toUpperCase()`, `JSON.parse(s)`)
-> are `may_be(E, open, E)`: E may be a value the model does not compute. It goes where a value goes, as any kind
+> are `may_be(E, open, open)`: E may be a value the model does not compute. It goes where a value goes, as any kind
 > does, so a read whose may-set holds an open value says it may be more than the values it names, instead of
-> silently fewer. A member of an open value, and what calling one returns, is open by the same place.
+> silently fewer. A member of an open value, and what calling one returns, is open too. The row is one per place,
+> not one per place it came from: where it came from is asked (`rofl why --all`), not kept for every read.
 
 `may_be`(E, X, Y) either:
 
-1. if [`bin_op`](#bin_op)(E, something, something, something), X is `open`, and Y is E;
-2. if [`un_op`](#un_op)(E, Op, something), Op differs from "void", X is `open`, and Y is E;
-3. if [`template_part`](#template_part)(E, 1, something), X is `open`, and Y is E;
-4. if [`open_write`](js-structure.rofl.md#open_write)(E, something), X is `open`, and Y is E;
+1. if [`bin_op`](#bin_op)(E, something, something, something), X is `open`, and Y is `open`;
+2. if [`un_op`](#un_op)(E, Op, something), Op differs from "void", X is `open`, and Y is `open`;
+3. if [`template_part`](#template_part)(E, 1, something), X is `open`, and Y is `open`;
+4. if [`open_write`](js-structure.rofl.md#open_write)(E, something), X is `open`, and Y is `open`;
 5. if all of:
    - E [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
    - [`call`](#call)(E);
    - X is `open`;
-   - Y is E;
+   - Y is `open`;
    - unless [`host_valued`](#host_valued)(O, Key);
 6. if all of:
    - [`object_of`](js-structure.rofl.md#object_of)(E, O);
-   - [`may_be`](js-callgraph.rofl.md#may_be)(O, `open`, Y);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(O, `open`, something);
    - X is `open`;
-7. if [`callee`](#callee)(E, N), [`may_be`](js-callgraph.rofl.md#may_be)(N, `open`, Y), and X is `open`.
+   - Y is `open`;
+7. if all of:
+   - [`callee`](#callee)(E, N);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(N, `open`, something);
+   - X is `open`;
+   - Y is `open`.
 
 > a function handed in as a parameter returns what the model does not see, whoever hands it
 
-`may_be`(C, `open`, C) if all of:
+`may_be`(C, `open`, `open`) if all of:
   - [`callee`](#callee)(C, N);
   - [`may_be`](js-callgraph.rofl.md#may_be)(N, `input`, something);
   - [`call`](#call)(C).
@@ -6279,7 +6290,7 @@ In the flow:
 `may_be`(N, VK, V) either:
 
 1. if [`open_key`](#open_key)(N, X) and [`any_value`](#any_value)(X, VK, V);
-2. if [`open_key`](#open_key)(N, O), VK is `open`, and V is N, unless [`array`](#array)(O).
+2. if [`open_key`](#open_key)(N, O), VK is `open`, and V is `open`, unless [`array`](#array)(O).
 
 `mwrite_at`(Obj, Key, X) if all of:
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
@@ -6289,38 +6300,43 @@ In the flow:
 `may_be`(E, N, X) either:
 
 1. if all of:
-   - [`open_write`](js-structure.rofl.md#open_write)(X, L);
+   - [`open_write`](js-structure.rofl.md#open_write)(Y, L);
    - [`ref`](#ref)(L, Name);
    - a node L [sees](#sees_binder) D;
    - D [introduces](#binds_name) Name in File;
    - [`binder_read`](#binder_read)(D, Name, File, E);
    - N is `open`;
+   - X is `open`;
 2. if all of:
-   - [`open_write`](js-structure.rofl.md#open_write)(X, L);
+   - [`open_write`](js-structure.rofl.md#open_write)(Y, L);
    - [`ref`](#ref)(L, Name);
    - F [uses](#param_use) Name at a node L;
    - F [uses](#param_use) Name at E;
-   - N is `open`.
+   - N is `open`;
+   - X is `open`.
 
 > what a call returns that is open, and a pattern over an open value
 
-`may_be`(C, N, W) either:
+`may_be`(C, N, X) either:
 
 1. if all of:
    - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
    - F [returns to its call](js-surface.rofl.md#call_returns) E;
-   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `open`, W);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `open`, something);
    - N is `open`;
+   - X is `open`;
 2. if all of:
    - [`declarator_id`](#declarator_id)(D, C);
    - [`pat_in`](#pat_in)(C, something, something);
    - D [takes its value from](#decl_value) a node Init;
-   - [`may_be`](js-callgraph.rofl.md#may_be)(Init, `open`, W);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Init, `open`, something);
    - N is `open`;
+   - X is `open`;
 3. if all of:
    - some assignment [takes apart on the left](#assign_pat) C the Src;
-   - [`may_be`](js-callgraph.rofl.md#may_be)(Src, `open`, W);
-   - N is `open`.
+   - [`may_be`](js-callgraph.rofl.md#may_be)(Src, `open`, something);
+   - N is `open`;
+   - X is `open`.
 
 > a name nothing declares is the environment's: the global by that name (`Object`, `process`, `require`); a member of it
 > no table values, and a call of one the environment alone defines, are open
@@ -6330,18 +6346,18 @@ In the flow:
   - Name differs from "undefined";
   - Name differs from "exports".
 
-`may_be`(N, `open`, N) if all of:
+`may_be`(N, `open`, `open`) if all of:
   - [`object_of`](js-structure.rofl.md#object_of)(N, G);
   - [`may_be`](js-callgraph.rofl.md#may_be)(G, `global`, Name);
   - N [selects](#selects) Key;
   - unless [`host_valued`](#host_valued)(Name, Key).
 
-`may_be`(C, `open`, C) if all of:
+`may_be`(C, `open`, `open`) if all of:
   - [`callee`](#callee)(C, N);
   - a node N [refers to the free](#free_global) Name in some file;
   - unless Name [is a global](#lib_global) since some release with some form or a node C [is a require site](js-modules.rofl.md#require_site).
 
-`may_be`(C, `open`, C) if a node C [is a require site](js-modules.rofl.md#require_site) and C neither [means the file](js-modules.rofl.md#module_target) some file nor [is an external site](#external_site) of some module.
+`may_be`(C, `open`, `open`) if a node C [is a require site](js-modules.rofl.md#require_site) and C neither [means the file](js-modules.rofl.md#module_target) some file nor [is an external site](#external_site) of some module.
 
 `host_valued` lists:
 
@@ -6353,7 +6369,7 @@ In the flow:
 
 <a id="opaque"></a>`opaque`(O) if [`may_be`](js-callgraph.rofl.md#may_be)(O, `input` or `lit`, something).
 
-`may_be`(N, `open`, N) if [`object_of`](js-structure.rofl.md#object_of)(N, O) and [`opaque`](#opaque)(O).
+`may_be`(N, `open`, `open`) if [`object_of`](js-structure.rofl.md#object_of)(N, O) and [`opaque`](#opaque)(O).
 
 > a pattern takes apart a global or a literal as it does any value: its targets are members of it
 
@@ -6381,14 +6397,15 @@ In the flow:
 3. if all of:
    - [`pattern_elem`](#pattern_elem)(P, something, R);
    - [`pat_in`](#pat_in)(something, P, R);
-   - [`may_be`](js-callgraph.rofl.md#may_be)(P, `open`, G);
+   - [`may_be`](js-callgraph.rofl.md#may_be)(P, `open`, something);
    - N is `open`;
+   - G is `open`;
 4. if all of:
    - [`pattern_elem`](#pattern_elem)(P, something, R);
    - [`pat_in`](#pat_in)(something, P, R);
    - [`opaque`](#opaque)(P);
    - N is `open`;
-   - G is R.
+   - G is `open`.
 
 > a for-of over what the model does not keep the elements of walks values it does not name
 
@@ -6420,18 +6437,20 @@ In the flow:
    - [`object_of`](js-structure.rofl.md#object_of)(N, something);
    - N [selects](#selects) "length";
    - E is `open`;
-   - X is N;
+   - X is `open`;
 2. if all of:
-   - [`walks_unknown`](#walks_unknown)(X);
-   - X [declares without a value](#bare_binder) Name in File;
+   - [`walks_unknown`](#walks_unknown)(D);
+   - D [declares without a value](#bare_binder) Name in File;
    - N [reads](#ident_in) Name in File;
-   - N [sees](#sees_binder) X;
+   - N [sees](#sees_binder) D;
    - E is `open`;
+   - X is `open`;
 3. if all of:
-   - [`walks_unknown`](#walks_unknown)(X);
-   - [`declarator_id`](#declarator_id)(X, N);
+   - [`walks_unknown`](#walks_unknown)(D);
+   - [`declarator_id`](#declarator_id)(D, N);
    - [`pattern_root`](#pattern_root)(N);
-   - E is `open`.
+   - E is `open`;
+   - X is `open`.
 
 > what a function returns that is a global is the global where it is called
 
@@ -6450,11 +6469,12 @@ In the flow:
    - [the param](#catch_param) of H is a node P;
    - T [calls](#call_in_try);
    - N is `open`;
-   - X is P;
+   - X is `open`;
 2. if all of:
-   - X [declares](#scope_declares) "arguments" in File;
-   - a node P [finds its name in](#name_scope) "arguments" in File X;
-   - N is `open`.
+   - F [declares](#scope_declares) "arguments" in File;
+   - a node P [finds its name in](#name_scope) "arguments" in File F;
+   - N is `open`;
+   - X is `open`.
 
 > an import of a module the corpus neither holds nor names as a package (`#internal/x`, a path alias, a file left
 > out) binds what the model does not see
@@ -6475,7 +6495,7 @@ In the code:
 
 In the flow:
 
-`may_be`(E, `open`, D) if all of:
+`may_be`(E, `open`, `open`) if all of:
   - [`import_local`](#import_local)(Local, D, File);
   - [`unseen_module`](#unseen_module)(D);
   - a node E [is read at the top of](#top_read) Local and File.
@@ -6496,7 +6516,7 @@ In the flow:
 > an object or a class exported as default is open where it is imported: carried as a node, Chart.js's classes took
 > their instances' members to every importer and the run went from 17 s to 108 s (sx_mset 0.35 -> 2.9 million rows)
 
-`may_be`(E, `open`, X) if [`default_import`](#default_import)(E, X) and a node X [points to](#may_be_node) some node.
+`may_be`(E, `open`, `open`) if [`default_import`](#default_import)(E, X) and a node X [points to](#may_be_node) some node.
 
 <a id="default_import"></a>`default_import`(E, X) if all of:
   - Local [imports the default](#imports_default) at a site D in File;
@@ -6504,11 +6524,11 @@ In the flow:
   - [`default_value`](#default_value)(X, Target);
   - a node E [is read at the top of](#top_read) Local and File.
 
-`may_be`(E, `open`, W) if all of:
+`may_be`(E, `open`, `open`) if all of:
   - Local [imports](#imports_name) Name at a site D in File;
   - D [means the file](js-modules.rofl.md#module_target) Target;
   - [`exports_value`](#exports_value)(X, Name, Target);
-  - [`may_be`](js-callgraph.rofl.md#may_be)(X, `open`, W);
+  - [`may_be`](js-callgraph.rofl.md#may_be)(X, `open`, something);
   - a node E [is read at the top of](#top_read) Local and File.
 
 > the world of execution (suspends, hidden_call, transfers, fallback, coerces) and narrows in [type]: the doc's «Миры поведения»
