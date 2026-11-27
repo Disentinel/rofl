@@ -351,15 +351,6 @@ impl Eval {
             let k = if r.clause.head.temporal == Temporal::Next { u32::MAX } else { self.round_of.get(&self.books.head(&r.clause.head)).copied().unwrap_or(0) };
             by_round.entry(k).or_default().push(r.clone());
         }
-        // A NEAREST ANSWERED FROM ITS TREE is not a page yet: the levels evaluate it
-        if self.vc.vclosures.iter().enumerate().any(|(ci, c)| c.active && self.store.virtuals[ci].near.is_some()) {
-            if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
-                use std::io::Write;
-                let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off nearest {}", rules.len()));
-            }
-            self.pages_declined = true;
-            return Ok(None);
-        }
         // A CLOSURE ANSWERED FROM ITS TREE is not fired: its rows are read from the tree, its readers fired whole again
         // when its edges have news
         if self.vc.any {
@@ -367,6 +358,7 @@ impl Eval {
                 rs.retain(|r| !self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active));
             }
         }
+        let rounds: Vec<u32> = by_round.keys().copied().collect();
         let comps: Vec<Vec<Rc<ERule>>> = by_round
             .into_values()
             .map(|mut c| {
@@ -374,7 +366,7 @@ impl Eval {
                 c
             })
             .collect();
-        let out = match self.pages_pass(&comps) {
+        let out = match self.pages_pass(&comps, &rounds) {
             Ok(()) => Ok(()),
             Err(Err(e @ Halt::Budget(..))) => Err(e),
             Err(Ok(Back)) => {
@@ -397,11 +389,16 @@ impl Eval {
         Ok(Some(out))
     }
 
-    fn pages_pass(&mut self, comps: &[Vec<Rc<ERule>>]) -> Result<(), Result<Back, Halt>> {
+    fn pages_pass(&mut self, comps: &[Vec<Rc<ERule>>], rounds: &[u32]) -> Result<(), Result<Back, Halt>> {
         let (mut pg, fired) = self.pages_build(comps);
         let mut sc = Scratch::default();
         // (news meets every rule fired so far, as the levels deliver it to every rule active)
         for (k, fs) in fired.iter().enumerate() {
+            // a nearest answers from the round of its step on, which negates its condition
+            if self.vc.any {
+                let k = rounds[k];
+                self.vopen_where(&|e, r| e.round_of.get(&e.books.head(&r.clause.head)).copied().unwrap_or(0) <= k);
+            }
             let mut news = Front::default();
             for f in fs {
                 self.pages_fire(&pg, f, None, &mut sc, &mut news)?;

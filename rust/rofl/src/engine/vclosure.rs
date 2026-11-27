@@ -612,15 +612,22 @@ impl Eval {
     /// above what concludes the condition, and before that level it answers nothing. At it the closure opens and every
     /// rule that reads it, at this level or below, fires whole over the condition complete; one above fires at its own.
     pub(super) fn vopen_below(&mut self, lv: i64) -> Result<(), Halt> {
-        let opening: Vec<usize> = (0..self.vc.vclosures.len())
-            .filter(|ci| {
-                let (c, step) = (&self.vc.vclosures[*ci], self.store.virtuals[*ci].step_rule);
-                c.active && !c.open && self.rules.iter().find(|r| r.id == step).is_none_or(|r| self.rule_level(r) <= lv)
-            })
-            .collect();
+        let opening = self.vopen_where(&|e, r| e.rule_level(r) <= lv);
         if opening.is_empty() {
             return Ok(());
         }
+        let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r) && self.rule_level(r) <= lv).cloned().collect();
+        self.activate(&readers)
+    }
+
+    /// The nearests whose step `due` says has come, opened: their forests built from the edges as they stand.
+    pub(super) fn vopen_where(&mut self, due: &dyn Fn(&Eval, &ERule) -> bool) -> Vec<usize> {
+        let opening: Vec<usize> = (0..self.vc.vclosures.len())
+            .filter(|ci| {
+                let (c, step) = (&self.vc.vclosures[*ci], self.store.virtuals[*ci].step_rule);
+                c.active && !c.open && self.rules.iter().find(|r| r.id == step).is_none_or(|r| due(self, r))
+            })
+            .collect();
         for &ci in &opening {
             let c = &mut self.vc.vclosures[ci];
             (c.open, c.built) = (true, None);
@@ -629,8 +636,7 @@ impl Eval {
             // a negation reads the forests as they stand
             self.vc.vforests(&mut self.store, ci);
         }
-        let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r) && self.rule_level(r) <= lv).cloned().collect();
-        self.activate(&readers)
+        opening
     }
 
     /// The forests of each closure a negation reads, as a delta finds them: its change is counted against them
