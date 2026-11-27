@@ -338,13 +338,13 @@ impl Eval {
                 "lattice"
             } else if r.demand_strict {
                 "demand"
-            } else if !head(&r.clause.head) {
-                "temporal"
-            } else if !r.plan.iter().all(|b| match b {
-                BodyElem::Pos(l) | BodyElem::Neg(l) => plain(l),
-                BodyElem::Bi { .. } => true,
-                BodyElem::Agg(a) => a.op != AggOp::AtLeast && a.body.iter().flat_map(|b| b.lits_deep()).all(plain),
-            }) {
+            } else if !head(&r.clause.head)
+                || !r.plan.iter().all(|b| match b {
+                    BodyElem::Pos(l) | BodyElem::Neg(l) => plain(l),
+                    BodyElem::Bi { .. } => true,
+                    BodyElem::Agg(a) => a.op != AggOp::AtLeast && a.body.iter().flat_map(|b| b.lits_deep()).all(plain),
+                })
+            {
                 "temporal"
             } else {
                 continue;
