@@ -549,9 +549,17 @@ impl Eval {
             let list = ks.iter().rev().fold("$nil".to_string(), |t, k| format!("$cons({k}, {t})"));
             let _ = writeln!(out, "order[profile]({id}, {at}, {list}, {}).", if given { "plan" } else { "greedy" });
         }
-        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = self
-            .store
-            .live_census()
+        // by levels the reader holds only what it concluded itself: the units' rows are summed in
+        let mut live = self.store.live_census();
+        if let Some(lv) = &self.levels {
+            for ((rel, book), n) in lv.rel_rows() {
+                match live.iter_mut().find(|c| c.0 == rel && c.1 == book) {
+                    Some(c) => c.2 += n,
+                    None => live.push((rel, book, n, 0, 0)),
+                }
+            }
+        }
+        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = live
             .into_iter()
             .filter(|&(rel, book, _, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
             .map(|(rel, book, n, base, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, base, arity))

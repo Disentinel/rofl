@@ -2145,6 +2145,11 @@ impl Stretch {
         Some(lent(self.keyed.high.write().unwrap().entry((rel, p)).or_insert(ix)))
     }
 
+    /// Its live rows of each relation it wrote, with the relation's book: what it adds to a world's census.
+    pub fn rel_rows(&self) -> Vec<(Sym, Sym, usize)> {
+        self.books.iter().map(|&(rel, book)| (rel, book, self.of_rel(rel).len())).collect()
+    }
+
     /// The relations this stretch wrote a fact of.
     /// What a reader of another process is told of it beside its ids: the facts of other stretches it holds a
     /// firing of, and the book of each relation it wrote.
@@ -3874,13 +3879,19 @@ impl Store {
     /// This store, which wrote nothing, set as it was before it read stretches (a volume holds it so, the stretches
     /// are kept beside it), and what `reads_again` takes to set it back.
     pub fn reads_none(&mut self) -> Option<(Rc<Near>, usize)> {
+        assert!(!self.reader_wrote(), "a reader concluded facts of its own: keeping it as it was before it read would lose them");
         let n = self.facts.near.take()?;
-        assert!(self.facts.recs.own.is_empty(), "a store that reads stretches and wrote is no reader");
         let mark = self.facts.recs.mark;
         for m in [&mut self.facts.recs.mark, &mut self.wit_head.mark] {
             *m = n.core;
         }
         Some((n, mark))
+    }
+
+    /// Whether this store reads stretches and has concluded facts of its own beside them (a question of the
+    /// profile writes its rows after the run).
+    pub fn reader_wrote(&self) -> bool {
+        self.facts.near.is_some() && !self.facts.recs.own.is_empty()
     }
 
     pub fn reads_again(&mut self, (n, mark): (Rc<Near>, usize)) {

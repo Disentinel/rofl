@@ -6202,6 +6202,24 @@ impl Eval {
         self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(reason))
     }
 
+    /// (an oracle of the measure, under ROFL_CENSUS: the relations this evaluation and the units below it hold most
+    /// rows of, said on stderr when the memory wall stops it)
+    fn census_at_wall(&self) {
+        let mut rows: FxMap<(Sym, Sym), (usize, usize)> = FxMap::default();
+        for (rel, book, n, _, _) in self.store.live_census() {
+            rows.entry((rel, book)).or_default().0 += n;
+        }
+        if let Some(lv) = &self.levels {
+            for (k, n) in lv.rel_rows() {
+                rows.entry(k).or_default().1 += n;
+            }
+        }
+        let mut v: Vec<_> = rows.into_iter().collect();
+        v.sort_by_key(|(_, (a, b))| std::cmp::Reverse(a + b));
+        let top: Vec<String> = v.iter().take(25).map(|((r, b), (a, u))| format!("{}[{}] {a}+{u}", self.h.name(*r), self.h.name(*b))).collect();
+        eprintln!("census at the memory wall, rows here+below: {}", top.join(", "));
+    }
+
     /// The memory wall, met at every step and at every premise matched: a firing can take gigabytes between two
     /// steps, which the kernel would take back by killing the process before the next one.
     fn memory_met(&mut self) -> Result<(), Halt> {
@@ -6210,7 +6228,9 @@ impl Eval {
             return Ok(());
         }
         self.memory_hit = true;
-        MEMORY_STOPPED.store(true, Relaxed);
+        if !MEMORY_STOPPED.swap(true, Relaxed) && std::env::var_os("ROFL_CENSUS").is_some() {
+            self.census_at_wall();
+        }
         self.wall.spent.set(Some(("bytes", MEMORY_USED.load(Relaxed), MEMORY_LIMIT.load(Relaxed))));
         Err(Halt::Budget("budget_exhausted", None))
     }
