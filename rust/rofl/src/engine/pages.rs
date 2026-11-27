@@ -19,6 +19,11 @@ struct Pages {
     ix: Vec<FxMap<u64, Vec<FactId>>>,
     ix_of: FxMap<(Sym, u64), usize>,
     masks: FxMap<Sym, Vec<(u64, usize)>>,
+    /// the round of news each fact came in, by its id, and the round being met
+    news_of: Vec<u32>,
+    round: u32,
+    /// the round's news by relation
+    news: FxMap<Sym, Vec<FactId>>,
 }
 
 const NO_ROW: u32 = u32::MAX;
@@ -65,6 +70,10 @@ impl Pages {
             self.at.resize(id as usize + 1, NO_ROW);
         }
         self.at[id as usize] = self.terms.len() as u32;
+        if self.news_of.len() <= id as usize {
+            self.news_of.resize(id as usize + 1, 0);
+        }
+        self.news_of[id as usize] = self.round;
         let args = store.args(id);
         // (the length first, as a bare word)
         self.terms.push(Term::from_bits(args.len() as u64));
@@ -102,6 +111,11 @@ struct Step {
     at: usize,
     mask: u64,
     ix: usize,
+    /// a premise written before the one a new fact met: it reads only the facts older than this round's news, so
+    /// that a conclusion of two new facts is found once
+    old: bool,
+    /// the premise the round's news meets: it reads only the news
+    news: bool,
 }
 
 /// A rule and the orders its body is read in: whole, and from a new fact at each premise.
@@ -115,6 +129,8 @@ struct Fired {
     pats: Vec<Vec<Pat>>,
     /// each premise whose book is a variable not bound where it is written: it does not range over the kernel's books
     open_book: Vec<bool>,
+    /// each premise and negation on a closure answered from its trees: the closure
+    closure: Vec<Option<usize>>,
 }
 
 /// An argument of a literal: a value, a variable's slot, or a term with variables inside, matched by unification.
@@ -126,7 +142,7 @@ enum Pat {
 }
 
 impl Fired {
-    fn new(h: &Heap, r: &Rc<ERule>, virt: &FxSet<Sym>) -> Fired {
+    fn new(h: &Heap, r: &Rc<ERule>) -> Fired {
         let mut vars: Vec<Sym> = Vec::new();
         for b in &r.plan {
             b.vars(h, &mut vars);
@@ -149,7 +165,7 @@ impl Fired {
             .collect();
         let from = (0..r.plan.len())
             .filter(|&i| matches!(&r.plan[i], BodyElem::Pos(_)))
-            .map(|i| (i, order(h, r, Some(i), virt)))
+            .map(|i| (i, order(h, r, Some(i))))
             .collect();
         let mut bound: FxSet<Sym> = FxSet::default();
         let mut open_book = Vec::with_capacity(r.plan.len());
@@ -163,7 +179,7 @@ impl Fired {
             b.vars(h, &mut vs);
             bound.extend(vs);
         }
-        Fired { r: r.clone(), whole: order(h, r, None, virt), from, vars, pats, open_book }
+        Fired { r: r.clone(), whole: order(h, r, None), from, vars, pats, open_book, closure: Vec::new() }
     }
 
     fn subst(&self, b: &[Option<Term>]) -> Subst {
@@ -222,57 +238,25 @@ fn term_vars(h: &Heap, t: Term, out: &mut Vec<Sym>) {
 
 /// The order of `r`'s body read from `first` (a premise met by a new fact) or from the start: a negation or a builtin
 /// once everything written before it is read, else the premise with the most arguments bound, the first of those.
-fn order(h: &Heap, r: &ERule, first: Option<usize>, virt: &FxSet<Sym>) -> Vec<Step> {
-    let plan = &r.plan;
+fn order(h: &Heap, r: &ERule, first: Option<usize>) -> Vec<Step> {
     let mut bound: FxSet<Sym> = FxSet::default();
-    let mut placed = vec![false; plan.len()];
-    let mut steps = Vec::with_capacity(plan.len());
-    let mask_of = |l: &Lit, bound: &FxSet<Sym>| {
-        let mut m = 0u64;
-        let mut vs = Vec::new();
-        term_vars(h, l.persp, &mut vs);
-        if vs.iter().all(|v| bound.contains(v)) {
-            m |= 1;
-        }
-        for (i, a) in l.args.iter().enumerate().take(62) {
-            vs.clear();
-            term_vars(h, *a, &mut vs);
-            if vs.iter().all(|v| bound.contains(v)) {
-                m |= 1 << (i + 1);
+    let mut steps = Vec::with_capacity(r.plan.len());
+    let mut vs = Vec::new();
+    for (k, b) in r.plan.iter().enumerate() {
+        let mut mask = 0u64;
+        if let Some(l) = b.lit() {
+            for (j, t) in std::iter::once(l.persp).chain(l.args.iter().copied()).enumerate().take(63) {
+                vs.clear();
+                term_vars(h, t, &mut vs);
+                if vs.iter().all(|v| bound.contains(v)) {
+                    mask |= 1 << j;
+                }
             }
         }
-        m
-    };
-    let place = |k: usize, mask: u64, bound: &mut FxSet<Sym>, placed: &mut Vec<bool>, steps: &mut Vec<Step>| {
-        placed[k] = true;
-        steps.push(Step { at: k, mask, ix: usize::MAX });
-        let mut vs = Vec::new();
-        plan[k].vars(h, &mut vs);
-        bound.extend(vs);
-    };
-    if let Some(i) = first {
-        place(i, 0, &mut bound, &mut placed, &mut steps);
-        steps.clear();
-    }
-    while placed.iter().any(|p| !p) {
-        let filter = (0..plan.len()).find(|&k| !placed[k] && !matches!(&plan[k], BodyElem::Pos(l) if !virt.contains(&l.rel)) && placed[..k].iter().all(|p| *p));
-        if let Some(k) = filter {
-            let mask = plan[k].lit().map_or(0, |l| mask_of(l, &bound));
-            place(k, mask, &mut bound, &mut placed, &mut steps);
-            continue;
-        }
-        let best = (0..plan.len())
-            .filter(|&k| !placed[k] && matches!(&plan[k], BodyElem::Pos(l) if !virt.contains(&l.rel)))
-            .max_by_key(|&k| (mask_of(plan[k].lit().unwrap(), &bound).count_ones(), std::cmp::Reverse(k)));
-        let Some(k) = best else {
-            // a negation or builtin before an element not yet read: in the order written
-            let k = (0..plan.len()).find(|&k| !placed[k]).unwrap();
-            let mask = plan[k].lit().map_or(0, |l| mask_of(l, &bound));
-            place(k, mask, &mut bound, &mut placed, &mut steps);
-            continue;
-        };
-        let mask = mask_of(plan[k].lit().unwrap(), &bound);
-        place(k, mask, &mut bound, &mut placed, &mut steps);
+        steps.push(Step { at: k, mask, ix: usize::MAX, old: first.is_some_and(|i| k < i), news: first == Some(k) });
+        vs.clear();
+        b.vars(h, &mut vs);
+        bound.extend(vs.iter().copied());
     }
     steps
 }
@@ -406,10 +390,15 @@ impl Eval {
         let mut pg = Pages::default();
         let mut read: FxSet<Sym> = FxSet::default();
         let mut fired: Vec<Vec<Fired>> = Vec::with_capacity(comps.len());
-        // (a closure answered from its tree is read where it is written)
-        let virt: FxSet<Sym> = self.vc.vclosures.iter().filter(|c| c.active).map(|c| c.rel).collect();
         for comp in comps {
-            let mut fs: Vec<Fired> = comp.iter().map(|r| Fired::new(&self.h, r, &virt)).collect();
+            let mut fs: Vec<Fired> = comp
+                .iter()
+                .map(|r| {
+                    let mut f = Fired::new(&self.h, r);
+                    f.closure = r.plan.iter().map(|b| b.lit().and_then(|l| self.vc.vclosure_for(l.rel))).collect();
+                    f
+                })
+                .collect();
             for f in &mut fs {
                 let r = f.r.clone();
                 for st in f.whole.iter_mut().chain(f.from.iter_mut().flat_map(|(_, o)| o.iter_mut())) {
@@ -437,6 +426,7 @@ impl Eval {
             loop {
                 let mut fresh: Vec<FactId> = news.keys.iter().copied().collect();
                 fresh.sort_unstable();
+                pg.round += 1;
                 for &id in &fresh {
                     let rel = self.store.rec(id).rel;
                     pg.file(&self.h, &self.store, rel, id);
@@ -446,7 +436,7 @@ impl Eval {
                 if cur.keys.is_empty() {
                     break;
                 }
-                let by_rel: FxMap<Sym, Vec<FactId>> = cur
+                pg.news = cur
                     .by_rel
                     .iter()
                     .map(|(rel, ids)| {
@@ -455,6 +445,7 @@ impl Eval {
                         (*rel, ids)
                     })
                     .collect();
+                let by_rel = &pg.news;
                 for f in fired[..=k].iter().flatten() {
                     if self.vc.any && self.vc.vreader_due(&self.store, &f.r, &cur) {
                         self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
@@ -462,9 +453,8 @@ impl Eval {
                     }
                     for (i, _) in &f.from {
                         let BodyElem::Pos(l) = &f.r.plan[*i] else { continue };
-                        let Some(ids) = by_rel.get(&l.rel) else { continue };
-                        for &id in ids {
-                            self.pages_fire(&pg, f, Some((*i, id)), &mut sc, &mut news)?;
+                        if by_rel.contains_key(&l.rel) {
+                            self.pages_fire(&pg, f, Some(*i), &mut sc, &mut news)?;
                         }
                     }
                 }
@@ -478,7 +468,7 @@ impl Eval {
     }
 
     /// `f` fired whole, or from one new fact at premise `at`, its conclusions concluded into `news`.
-    fn pages_fire(&mut self, pg: &Pages, f: &Fired, at: Option<(usize, FactId)>, sc: &mut Scratch, news: &mut Front) -> Result<(), Result<Back, Halt>> {
+    fn pages_fire(&mut self, pg: &Pages, f: &Fired, at: Option<usize>, sc: &mut Scratch, news: &mut Front) -> Result<(), Result<Back, Halt>> {
         let r = &f.r;
         let (b, trail, prems) = (&mut sc.b, &mut sc.trail, &mut sc.prems);
         b.clear();
@@ -488,13 +478,7 @@ impl Eval {
         prems.resize(r.plan.len(), PremRef::Bi(0));
         let steps = match at {
             None => &f.whole[..],
-            Some((i, id)) => {
-                if !self.pages_meet(pg, f, i, id, b, trail) {
-                    return Ok(());
-                }
-                prems[i] = PremRef::Fact(id);
-                &f.from.iter().find(|(k, _)| *k == i).unwrap().1[..]
-            }
+            Some(i) => &f.from.iter().find(|(k, _)| *k == i).unwrap().1[..],
         };
         *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let fresh0 = news.keys.len();
@@ -585,8 +569,8 @@ impl Eval {
         let i = st.at;
         let mark = trail.len();
         match &r.plan[i] {
-            BodyElem::Pos(l) if self.vc.vclosure_for(l.rel).is_some() => {
-                let ci = self.vc.vclosure_for(l.rel).unwrap();
+            BodyElem::Pos(l) if f.closure[i].is_some() => {
+                let ci = f.closure[i].unwrap();
                 let found = self.vmatch(ci, l, &f.subst(b));
                 for (s2, pr) in found {
                     for (k, var) in f.vars.iter().enumerate() {
@@ -607,12 +591,15 @@ impl Eval {
             }
             BodyElem::Pos(l) => {
                 let key = self.pages_key(f, i, st.mask, b);
-                let under = pg.under(l.rel, st.ix, key);
+                let under = if st.news && st.mask == 0 { pg.news.get(&l.rel).map_or(&[][..], |v| &v[..]) } else { pg.under(l.rel, st.ix, key) };
                 self.cost.read_rows += under.len() as u64;
                 if under.len() > self.pages_widest.0 {
                     self.pages_widest = (under.len(), i);
                 }
                 for &id in under {
+                    if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news {
+                        continue;
+                    }
                     if self.pages_meet(pg, f, i, id, b, trail) {
                         prems[i] = PremRef::Fact(id);
                         let done = self.pages_solve(pg, f, rest, b, trail, prems, news);
@@ -622,8 +609,8 @@ impl Eval {
                 }
                 Ok(())
             }
-            BodyElem::Neg(l) if self.vc.vclosure_for(l.rel).is_some() => {
-                let ci = self.vc.vclosure_for(l.rel).unwrap();
+            BodyElem::Neg(l) if f.closure[i].is_some() => {
+                let ci = f.closure[i].unwrap();
                 if !self.vmatch(ci, l, &f.subst(b)).is_empty() {
                     return Ok(());
                 }
