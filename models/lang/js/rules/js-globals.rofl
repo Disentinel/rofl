@@ -93,7 +93,7 @@ es_instance[flow](X, Name, Rel) :- es_global_construct[code](X, Name, Rel),
 
 may_be[flow](X, node, X) :- es_instance[flow](X, _, _).
 
-prototype_of[flow](E, P) :- may_be_node[flow](E, X), es_instance[flow](X, Name, _),
+prototype_of[flow](E, P) :- node_of[flow](E, X), es_instance[flow](X, Name, _),
                             lib_global_prototype(Name, P).
 
 -- Where the bridge cannot look, as rows: `es_prototype_gap` is the LIBRARY
@@ -106,7 +106,7 @@ es_prototype_gap[audit](Name, Rel) :- lib_global(Name, Rel, Form), constructible
 
 es_instance_unattributed[audit](C, Name, Key) :- unresolved_call[code](C, _), callee_of[code](C, N),
                                                  object_of[code](N, O),
-                                                 may_be_node[flow](O, X),
+                                                 node_of[flow](O, X),
                                                  es_instance[flow](X, Name, _),
                                                  not lib_global_prototype(Name, _),
                                                  selects[flow](N, Key).

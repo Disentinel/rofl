@@ -193,7 +193,7 @@ accessor_as[flow](Obj, Key, M, "set") :- member_value[flow](Obj, Key, M), setter
 view accessor_of(A, B, C).
 accessor_of[flow](Obj, Key, M) :- accessor_as[flow](Obj, Key, M, _).
 accessor_obj[flow](Obj) :- accessor_of[flow](Obj, _, _).
-accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), may_be_node[flow](O, Obj),
+accessor_recv[flow](N, Obj) :- accessor_obj[flow](Obj), node_of[flow](O, Obj),
                                object_of[code](N, O), member_node_v[flow](N).
 -- A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
 accessor_read[code](N, M) :- accessor_recv[flow](N, Obj), accessor_as[flow](Obj, Key, M, "get"),
@@ -221,12 +221,12 @@ site[code](N) :- accessor_read[code](N, _).
 -- the declarator form: a pattern in a parameter reads the argument, a
 -- call-site question, so it is silent here rather than wrong.
 
-pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](Init, Obj),
+pattern_accessor[code](P, M) :- accessor_of[flow](Obj, Key, M), node_of[flow](Init, Obj),
                                 pattern_source[code](P, Init),
                                 pattern_takes[code](P, Key).
-pattern_accessor[code](R, M) :- obj_rest[code](P, R, Src), pattern_source[code](P, Src), may_be_node[flow](Src, Obj),
+pattern_accessor[code](R, M) :- obj_rest[code](P, R, Src), pattern_source[code](P, Src), node_of[flow](Src, Obj),
                                 accessor_of[flow](Obj, Key, M), not pattern_takes[code](P, Key).
-pattern_accessor[code](A, M) :- accessor_of[flow](Obj, Key, M), may_be_node[flow](A, Obj),
+pattern_accessor[code](A, M) :- accessor_of[flow](Obj, Key, M), node_of[flow](A, Obj),
                                 spread_props[value](O, _, A), obj_lit[code](O).
 
 -- `spread_element` is one kind doing two things: in `properties` it copies
@@ -235,7 +235,7 @@ spread_iterated[code](A) :- spread_elems[value](_, _, A).
 spread_iterated[code](A) :- spread_args[value](_, _, A).
 
 pattern_iterates[code](P, M) :- iterates[value](P, P, _), for_of_iterates[code](P, M).
-pattern_iterates[code](A, M) :- spread_iterated[code](A), may_be_node[flow](A, Obj),
+pattern_iterates[code](A, M) :- spread_iterated[code](A), node_of[flow](A, Obj),
                                 member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 
 -- The two sides reach the call graph differently. An iterable position has one
@@ -254,7 +254,7 @@ resolves[code](N, M)   :- pattern_iterates[code](N, M).
 pattern_next[code](X, Next) :- pattern_iterates[code](X, M),
                                ret_node_any[flow](M, IterObj),
                                member_value[flow](IterObj, "next", V),
-                               may_be_node[flow](V, Next), fn_value[flow](Next).
+                               node_of[flow](V, Next), fn_value[flow](Next).
 
 -- =========================================================================
 -- 5. THE SOURCE DECIDES, SO COUNT THE SOURCES. Every position that runs a
@@ -280,7 +280,7 @@ hidden_call_src[code](A, A)    :- spread_iterated[code](A).
 hidden_call_src[code](A, A)    :- spread_of[code](_, A).
 hidden_call_src[code](X, R)    :- iterates[value](X, _, R), X != R.
 hidden_call_src[code](P, N)    :- iterates[value](P, P, P), declarator_id[code](D, P), decl_value[flow](D, N).
-hidden_call_src[code](P, N)    :- iterates[value](P, P, P), may_be_node[flow](P, N).
+hidden_call_src[code](P, N)    :- iterates[value](P, P, P), node_of[flow](P, N).
 
 hidden_call_user[flow](N, M) :- pattern_accessor[code](N, M).
 hidden_call_user[flow](N, M) :- pattern_iterates[code](N, M).
@@ -288,15 +288,15 @@ hidden_call_user[flow](X, M) :- for_of_iterates[code](X, M).
 hidden_call_fires[code](N)   :- hidden_call_user[flow](N, _).
 
 hidden_call_builtin[flow](N, O) :- hidden_call_src[code](N, Src),
-                                   may_be_node[flow](Src, O),
+                                   node_of[flow](Src, O),
                                    not hidden_call_fires[code](N).
 hidden_call_primitive[flow](N, V) :- hidden_call_src[code](N, Src),
                                      lit_of[flow](Src, V),
                                      not hidden_call_traced[code](N).
-hidden_call_traced[code](N)       :- hidden_call_src[code](N, Src), may_be_node[flow](Src, _).
+hidden_call_traced[code](N)       :- hidden_call_src[code](N, Src), node_of[flow](Src, _).
 hidden_call_untraced[flow](N, Src) :- hidden_call_src[code](N, Src),
                                       not has_lit[flow](Src),
-                                      not may_be_node[flow](Src, _).
+                                      not has_node[flow](Src).
 hidden_call_sourced[code](N)       :- hidden_call_src[code](N, _).
 hidden_call_unsourced[flow](N)     :- hidden_call[execution](N, _), not hidden_call_sourced[code](N).
 
@@ -409,7 +409,7 @@ exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](D, F)
 exported_fn[code](F) :- fn_node[code](F), not in_fn[code](F), inside[tree](E, F), export_default_site[code](E).
 
 -- `export { f }` may hand on a function of another file: the exporting file publishes it, the function's file reads it
-sx_entry[flow](F) :- export_local[code](L, _, _), may_be_node[flow](L, F),
+sx_entry[flow](F) :- export_local[code](L, _, _), node_of[flow](L, F),
                         fn_value[flow](F), not fn_nested[flow](F).
 exported_fn[code](F) :- sx_entry[flow](F).
 

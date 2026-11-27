@@ -747,6 +747,9 @@ fn keep_volumes(world: &[String], files: &[String], read: &[String], s: &mut Ses
     let note = crate::kept::record(world, files, &[], read, &[], None)?;
     let _ = std::fs::remove_file(format!("{k}.scroll"));
     let p = format!("{k}.vol");
+    if s.eval.store.reader_wrote() {
+        return Err("the reader concluded facts of its own (the profile's rows are written after the run), and a kept reader holds only what its units hold".into());
+    }
     let near = s.eval.store.reads_none();
     // (taken by delta, it is written as an overlay over the volume it was opened from)
     let done = if over { crate::kept::keep_capped_over(s, &p, &note, true).map(drop) } else { crate::kept::keep_capped(s, &p, &note).map(drop) };

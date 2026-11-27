@@ -27,12 +27,12 @@ ex_depth(3).
 -- =========================================================================
 -- 1. THE APPS AND THE ROUTERS.
 ex_router_fn[flow](G) :- member_node_v[flow](G), selects[flow](G, "Router"), object_of[code](G, O),
-                         may_be_node[flow](O, S), external_value[flow](S, S), express_module(S).
-ex_router_fn[flow](G) :- may_be_node[flow](G, Sp), ex_import[flow](Sp, "Router").
+                         node_of[flow](O, S), external_value[flow](S, S), express_module(S).
+ex_router_fn[flow](G) :- node_of[flow](G, Sp), ex_import[flow](Sp, "Router").
 ex_import[flow](Sp, K) :- external_import[code](Sp, _, S, _), express_module(S),
                           import_ident_key[code](Sp, K).
 ex_app[flow](C) :- call[value](C), callee[value](C, G),
-                   may_be_node[flow](G, S), external_value[flow](S, S), express_module(S).
+                   node_of[flow](G, S), external_value[flow](S, S), express_module(S).
 ex_router[flow](C) :- call[value](C), callee[value](C, G), ex_router_fn[flow](G).
 ex_target[flow](Y) :- ex_app[flow](Y).
 ex_target[flow](Y) :- ex_router[flow](Y).
@@ -41,10 +41,10 @@ ex_target[flow](Y) :- ex_router[flow](Y).
 -- 2. WHAT A CALL ON ONE REGISTERS.
 ex_on[flow](R, Y, K) :- call[value](R), callee[value](R, M),
                         member_node_v[flow](M), selects[flow](M, K), object_of[code](M, O),
-                        may_be_node[flow](O, Y), ex_target[flow](Y).
+                        node_of[flow](O, Y), ex_target[flow](Y).
 ex_path[flow](R, V) :- ex_on[flow](R, _, _), arg_at[flow](R, 0, A), lit_of[flow](A, V), str_value[flow](V).
-ex_fn[flow](R, I, F) :- ex_on[flow](R, _, _), arg_at[flow](R, I, A), may_be_node[flow](A, F), fn_value[flow](F).
-ex_sub[flow](R, I, Y) :- ex_on[flow](R, _, "use"), arg_at[flow](R, I, A), may_be_node[flow](A, Y), ex_target[flow](Y).
+ex_fn[flow](R, I, F) :- ex_on[flow](R, _, _), arg_at[flow](R, I, A), node_of[flow](A, F), fn_value[flow](F).
+ex_sub[flow](R, I, Y) :- ex_on[flow](R, _, "use"), arg_at[flow](R, I, A), node_of[flow](A, Y), ex_target[flow](Y).
 
 ex_route[flow](Y, M, V, H, route) :- ex_on[flow](R, Y, K), express_verb(K, M), ex_path[flow](R, V), ex_fn[flow](R, I, H), I > 0.
 ex_route[flow](Y, any, join(V, "*"), H, middleware) :- ex_on[flow](R, Y, "use"), ex_path[flow](R, V), ex_fn[flow](R, I, H), I > 0.

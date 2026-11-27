@@ -58,7 +58,7 @@ plus_operand[code](C, X) :- plus_site[code](C, X, _).
 plus_operand[code](C, X) :- plus_site[code](C, _, X).
 
 composed[flow](C) :- plus_operand[code](C, X), lit_of[flow](X, V), str_value[flow](V).
-composed[flow](C) :- plus_operand[code](C, X), may_be_node[flow](X, D), composed[flow](D).
+composed[flow](C) :- plus_operand[code](C, X), node_of[flow](X, D), composed[flow](D).
 
 may_be[flow](C, node, C) :- composed[flow](C).
 
@@ -75,7 +75,7 @@ may_be[flow](U, node, A) :- composed[flow](A), plus_assign[code](A, L, Name, _),
 sx_mwrite[flow](O, Key, A) :- composed[flow](A), binary[value](A, "+", L, _), assign[value](A, L, A),
                                  object_of[code](L, Obj),
 
-                                 may_be_node[flow](Obj, O), selects[flow](L, Key).
+                                 node_of[flow](Obj, O), selects[flow](L, Key).
 
 -- =========================================================================
 -- 3. THE LIBRARY, AS A TABLE. `ambient_value(Surface, Member, Op, Kind)`: a
@@ -107,7 +107,7 @@ ambient_value_ns("default").
 vlib_ns[flow](S, Surface) :- builtin_ns[flow](S, Surface), ambient_value(Surface, _, _, _).
 vlib_ns[flow](M, Surface) :- vlib_member[flow](M, Surface, K), ambient_value_ns(K).
 
-vlib_member[flow](M, Surface, K) :- vlib_ns[flow](Y, Surface), may_be_node[flow](O, Y),
+vlib_member[flow](M, Surface, K) :- vlib_ns[flow](Y, Surface), node_of[flow](O, Y),
                                    object_of[code](M, O), member_node_v[flow](M), selects[flow](M, K).
 
 -- The value of a function of the table: a member read off the module, a name
@@ -120,21 +120,21 @@ vlib_fn[flow](F, Surface, K) :- ambient_module(File, Surface), exports_name[code
 vlib_fn[flow](M, Surface, K) :- ambient_module(File, Surface), exports_name[code](O, N, File), ambient_value_ns(N),
                               member_value[flow](O, K, M), ambient_value(Surface, K, _, _).
 
-vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), may_be_node[flow](G, X), callee[value](C, G),
+vlib_call[flow](C, Surface, K) :- vlib_fn[flow](X, Surface, K), node_of[flow](G, X), callee[value](C, G),
                                   call_like[code](C).
 vlib_call[flow](C, S, construct) :- construct[value](C), callee[value](C, G),
                                     free_global[code](G, S, _), ambient_value(S, construct, _, _).
 
 -- A method of a prototype: the receiver decides the surface.
 str_recv[flow](O) :- proto_call[flow](_, O, _), lit_of[flow](O, V), str_value[flow](V).
-str_recv[flow](O) :- proto_call[flow](_, O, _), may_be_node[flow](O, D), composed[flow](D).
+str_recv[flow](O) :- proto_call[flow](_, O, _), node_of[flow](O, D), composed[flow](D).
 str_recv[flow](O) :- proto_call[flow](_, O, _), prototype_of[flow](O, string).
 proto_call[flow](C, O, K) :- ambient_value(P, K, _, _), builtin_prototype(P), selects[flow](M, K),
                              member_node_v[flow](M), callee[value](C, M), object_of[code](M, O),
                              call_like[code](C).
 vlib_call[flow](C, string, K) :- ambient_value(string, K, _, _), proto_call[flow](C, O, K), str_recv[flow](O).
 vlib_call[flow](C, array, K)  :- ambient_value(array, K, _, _), proto_call[flow](C, O, K),
-                                may_be_node[flow](O, A), kind_proto[flow](A, array).
+                                node_of[flow](O, A), kind_proto[flow](A, array).
 
 vlib_op[flow](C, Op, Kind) :- vlib_call[flow](C, S, K), ambient_value(S, K, Op, Kind).
 composed[flow](C) :- vlib_op[flow](C, _, _).
@@ -209,7 +209,7 @@ parts[flow](C, 1, A) :- vlib_op[flow](C, url, _), arg_at[flow](C, 1, _), arg_at[
 -- place; the separator between, "," by default. A hole leaves a gap, so no
 -- text; a spread is a part nothing gives a value, so a form.
 join_recv[flow](C, A) :- vlib_op[flow](C, elements, _), callee[value](C, M),
-                         object_of[code](M, O), may_be_node[flow](O, A), kind_proto[flow](A, array).
+                         object_of[code](M, O), node_of[flow](O, A), kind_proto[flow](A, array).
 join_arrays[flow](C, N) :- vlib_op[flow](C, elements, _), N is count(A : join_recv[flow](C, A)).
 join_array[flow](C, A) :- join_arrays[flow](C, 1), join_recv[flow](C, A).
 parts[flow](C, I, E) :- join_array[flow](C, A), array_elem[flow](A, K, E), I is 2 * K.
@@ -220,7 +220,7 @@ part_lit[flow](C, I, ",") :- join_sep[flow](C, I), not argument_at[code](C, 0, _
 -- What a part may be, for a reader of the answer.
 part_value[flow](C, I, V) :- part_lit[flow](C, I, V).
 part_value[flow](C, I, V) :- parts[flow](C, I, P), lit_of[flow](P, V).
-part_value[flow](C, I, V) :- parts[flow](C, I, P), may_be_node[flow](P, V).
+part_value[flow](C, I, V) :- parts[flow](C, I, P), node_of[flow](P, V).
 
 -- =========================================================================
 -- 5. THE TEXTS. A slot's PIECES: a literal (exact), a node with no text
@@ -245,7 +245,7 @@ textable[flow](C) :- last_slot[flow](C, L), N is count(I : slot[flow](C, I)), M 
 edb(ambient_module).
 summarized[flow](X) :- composed[flow](X), at[tree](X, File, _), ambient_module(File, _).
 plain_valued[flow](P) :- parts[flow](_, _, P), lit_of[flow](P, _).
-plain_valued[flow](P) :- parts[flow](_, _, P), may_be_node[flow](P, X), not summarized[flow](X).
+plain_valued[flow](P) :- parts[flow](_, _, P), node_of[flow](P, X), not summarized[flow](X).
 
 str_piece[flow](V, yes) :- str_value[flow](V).
 lit_piece[flow](C, I, V) :- part_lit[flow](C, I, V).
@@ -253,12 +253,12 @@ lit_piece[flow](C, I, V) :- parts[flow](C, I, P), lit_of[flow](P, V).
 
 basic_piece[flow](C, I, V, lit, S)  :- lit_piece[flow](C, I, V), str_piece[flow](V, S).
 basic_piece[flow](C, I, V, lit, no) :- lit_piece[flow](C, I, V), not str_value[flow](V).
-basic_piece[flow](C, I, node(X), open, no) :- parts[flow](C, I, P), may_be_node[flow](P, X), not composed[flow](X).
-basic_piece[flow](C, I, node(X), open, yes) :- parts[flow](C, I, P), may_be_node[flow](P, X), composed[flow](X),
+basic_piece[flow](C, I, node(X), open, no) :- parts[flow](C, I, P), node_of[flow](P, X), not composed[flow](X).
+basic_piece[flow](C, I, node(X), open, yes) :- parts[flow](C, I, P), node_of[flow](P, X), composed[flow](X),
                                               not textable[flow](X), not summarized[flow](X).
 basic_piece[flow](C, I, ref(P), open, no)  :- parts[flow](C, I, P), not plain_valued[flow](P).
 
-comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).
+comp_of[flow](C, I, D) :- parts[flow](C, I, P), node_of[flow](P, D), textable[flow](D), not summarized[flow](D).
 slot_n[flow](C, I, N) :- slot[flow](C, I), N is count(T : basic_piece[flow](C, I, T, _, _)).
 ncomp[flow](C, I, M)  :- slot[flow](C, I), M is count(D : comp_of[flow](C, I, D)).
 comp1[flow](C, I, D)  :- ncomp[flow](C, I, 1), comp_of[flow](C, I, D).

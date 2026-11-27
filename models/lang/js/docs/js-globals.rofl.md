@@ -26,7 +26,7 @@ Reads:
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of), [unresolved_call](js-callgraph.rofl.md#unresolved_call)
 - from js-callgraph, in the execution: [transfers](js-callgraph.rofl.md#transfers)
 - from js-dataflow, in the code: [free_global](js-dataflow.rofl.md#free_global)
-- from js-dataflow, in the flow: [may_be_node](js-dataflow.rofl.md#may_be_node), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [node_of](js-dataflow.rofl.md#node_of), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from models/lang/js/facts/js-env.rofl, in the main:
@@ -158,7 +158,7 @@ In the flow:
 `may_be`(X, `node`, X) if X [is an instance](#es_instance) of some name from some release.
 
 The prototype of a node E is P if all of:
-  - E [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(E, X);
   - X [is an instance](#es_instance) of Name from some release;
   - Name [has the prototype](#lib_global_prototype) P.
 
@@ -179,7 +179,7 @@ In the audit:
   - it [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - [the callee](js-callgraph.rofl.md#callee_of) of it is a node N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
-  - a node O [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(O, X);
   - X [is an instance](#es_instance) of Name from some release;
   - N [selects](js-dataflow.rofl.md#selects) Key;
   - unless Name [has the prototype](#lib_global_prototype) some prototype.

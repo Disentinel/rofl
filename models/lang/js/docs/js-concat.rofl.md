@@ -50,7 +50,7 @@ Reads:
 
 - from js-ambient, in the main: [surface_origin](js-ambient.rofl.md#surface_origin)
 - from js-dataflow, in the code: [binder_read](js-dataflow.rofl.md#binder_read), [binds_name](js-dataflow.rofl.md#binds_name), [call_like](js-dataflow.rofl.md#call_like), [exports_name](js-dataflow.rofl.md#exports_name), [free_global](js-dataflow.rofl.md#free_global), [interpolated](js-dataflow.rofl.md#interpolated), [sees_binder](js-dataflow.rofl.md#sees_binder), [spread_arg](js-dataflow.rofl.md#spread_arg)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [kind_proto](js-dataflow.rofl.md#kind_proto), [lit_of](js-dataflow.rofl.md#lit_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [kind_proto](js-dataflow.rofl.md#kind_proto), [lit_of](js-dataflow.rofl.md#lit_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [node_of](js-dataflow.rofl.md#node_of), [param_use](js-dataflow.rofl.md#param_use), [prototype_of](js-dataflow.rofl.md#prototype_of), [selects](js-dataflow.rofl.md#selects)
 - from js-dataflow, in the main: [builtin_prototype](js-dataflow.rofl.md#builtin_prototype)
 - from js-host: [builtin_member](js-host.rofl.md#builtin_member), [builtin_ns](js-host.rofl.md#builtin_ns)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
@@ -123,7 +123,7 @@ In the flow:
    - [`str_value`](#str_value)(V);
 2. if all of:
    - [`plus_operand`](#plus_operand)(C, X);
-   - a node X [points to](js-dataflow.rofl.md#may_be_node) a node D;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(X, D);
    - [`composed`](#composed)(D).
 
 `may_be`(C, `node`, C) if [`composed`](#composed)(C).
@@ -163,7 +163,7 @@ In the flow:
   - [`binary`](#binary)(X, "+", L, something) in the value;
   - [`assign`](#assign)(X, L, X);
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
-  - a node Obj [points to](js-dataflow.rofl.md#may_be_node) a node O;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(Obj, O);
   - L [selects](js-dataflow.rofl.md#selects) Key.
 
 ## 3. THE LIBRARY, AS A TABLE. `ambient_value(Surface, Member, Op, Kind)`: a
@@ -216,7 +216,7 @@ In the flow:
 
 <a id="vlib_member"></a>`vlib_member`(a [member access](js-dataflow.rofl.md#member_node_v) M, Surface, K) if all of:
   - [`vlib_ns`](#vlib_ns)(Y, Surface);
-  - a node O [points to](js-dataflow.rofl.md#may_be_node) a node Y;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(O, Y);
   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
   - M [selects](js-dataflow.rofl.md#selects) K.
 
@@ -242,7 +242,7 @@ In the flow:
 
 1. if all of:
    - [`vlib_fn`](#vlib_fn)(X, Surface, K);
-   - a node G [points to](js-dataflow.rofl.md#may_be_node) a node X;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(G, X);
    - [`callee`](#callee)(C, G);
    - [`call_like`](js-dataflow.rofl.md#call_like)(C);
 2. if all of:
@@ -262,7 +262,7 @@ In the flow:
    - [`str_value`](#str_value)(V);
 2. if all of:
    - [`proto_call`](#proto_call)(something, O, something);
-   - O [points to](js-dataflow.rofl.md#may_be_node) a node D;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(O, D);
    - [`composed`](#composed)(D);
 3. if [`proto_call`](#proto_call)(something, O, something) and [the prototype](js-dataflow.rofl.md#prototype_of) of O is `string`.
 
@@ -284,7 +284,7 @@ In the flow:
 2. if all of:
    - [`ambient_value`](#ambient_value)(`array`, K, something, something);
    - [`proto_call`](#proto_call)(C, O, K);
-   - a node O [points to](js-dataflow.rofl.md#may_be_node) a node X;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(O, X);
    - [`kind_proto`](js-dataflow.rofl.md#kind_proto)(X, `array`);
    - N is `array`.
 
@@ -483,7 +483,7 @@ Declared as facts:
   - [`vlib_op`](#vlib_op)(C, `elements`, something);
   - [`callee`](#callee)(C, M);
   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
-  - a node O [points to](js-dataflow.rofl.md#may_be_node) a node X;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(O, X);
   - [`kind_proto`](js-dataflow.rofl.md#kind_proto)(X, `array`).
 
 <a id="join_arrays"></a>`join_arrays`(C, N) if [`vlib_op`](#vlib_op)(C, `elements`, something) and N is the number of X such that ([`join_recv`](#join_recv)(C, X)).
@@ -511,7 +511,7 @@ Declared as facts:
 
 1. if [`part_lit`](#part_lit)(C, I, V);
 2. if [`parts`](#parts)(C, I, P) and [`lit_of`](js-dataflow.rofl.md#lit_of)(P, V);
-3. if [`parts`](#parts)(C, I, P) and a node P [points to](js-dataflow.rofl.md#may_be_node) V.
+3. if [`parts`](#parts)(C, I, P) and [`node_of`](js-dataflow.rofl.md#node_of)(P, V).
 
 ## 5. THE TEXTS. A slot's PIECES: a literal (exact), a node with no text
 
@@ -555,7 +555,7 @@ Declared as facts:
 1. if [`parts`](#parts)(something, something, P) and [`lit_of`](js-dataflow.rofl.md#lit_of)(P, something);
 2. if all of:
    - [`parts`](#parts)(something, something, P);
-   - P [points to](js-dataflow.rofl.md#may_be_node) a node X;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(P, X);
    - unless [`summarized`](#summarized)(X).
 
 <a id="str_piece"></a>`str_piece`(V, `yes`) if [`str_value`](#str_value)(V).
@@ -575,14 +575,14 @@ Declared as facts:
    - unless [`str_value`](#str_value)(V);
 3. if all of:
    - [`parts`](#parts)(C, I, P);
-   - a node P [points to](js-dataflow.rofl.md#may_be_node) a node X;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(P, X);
    - V is node(X);
    - N is `open`;
    - S is `no`;
    - unless [`composed`](#composed)(X);
 4. if all of:
    - [`parts`](#parts)(C, I, P);
-   - a node P [points to](js-dataflow.rofl.md#may_be_node) a node X;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(P, X);
    - [`composed`](#composed)(X);
    - V is node(X);
    - N is `open`;
@@ -598,7 +598,7 @@ Declared as facts:
 
 <a id="comp_of"></a>`comp_of`(C, I, D) if all of:
   - [`parts`](#parts)(C, I, P);
-  - a node P [points to](js-dataflow.rofl.md#may_be_node) a node D;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(P, D);
   - [`textable`](#textable)(D);
   - unless [`summarized`](#summarized)(D).
 

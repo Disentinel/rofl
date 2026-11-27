@@ -26,7 +26,7 @@ Reads:
 
 - from js-callgraph, in the code: [callee_of](js-callgraph.rofl.md#callee_of)
 - from js-dataflow, in the code: [binder](js-dataflow.rofl.md#binder), [declarator_id](js-dataflow.rofl.md#declarator_id), [external_import](js-dataflow.rofl.md#external_import), [free_global](js-dataflow.rofl.md#free_global), [pat_in](js-dataflow.rofl.md#pat_in), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [decl_value](js-dataflow.rofl.md#decl_value), [external_value](js-dataflow.rofl.md#external_value), [member_node_v](js-dataflow.rofl.md#member_node_v), [node_of](js-dataflow.rofl.md#node_of), [selects](js-dataflow.rofl.md#selects)
 - from js-env: [reaches](js-env.rofl.md#reaches)
 - from js-env-api, in the code: [lib_call](js-env-api.rofl.md#lib_call)
 - from js-modules, in the code: [builtin_canonical](js-modules.rofl.md#builtin_canonical), [import_ident_key](js-modules.rofl.md#import_ident_key)
@@ -105,12 +105,12 @@ In the flow:
 
 <a id="builtin_ns"></a>A node is the builtin module of a spec Spec if it [comes out of](js-dataflow.rofl.md#external_value) it and [the canonical builtin](js-modules.rofl.md#builtin_canonical) of it is Spec.
 
-<a id="builtin_ns_at"></a>`builtin_ns_at`(O, Spec) if a node Y [is the builtin module](#builtin_ns) of a spec Spec and a node O [points to](js-dataflow.rofl.md#may_be_node) Y.
+<a id="builtin_ns_at"></a>`builtin_ns_at`(O, Spec) if Y [is the builtin module](#builtin_ns) of a spec Spec and [`node_of`](js-dataflow.rofl.md#node_of)(O, Y).
 
 `builtin_ns_at`(O, Sub) if all of:
-  - a node X [is a member of the builtin](#builtin_member) of a spec Spec Key;
+  - X [is a member of the builtin](#builtin_member) of a spec Spec Key;
   - [`host_member_module`](#host_member_module)(`node`, Spec, Key, Sub);
-  - a node O [points to](js-dataflow.rofl.md#may_be_node) X.
+  - [`node_of`](js-dataflow.rofl.md#node_of)(O, X).
 
 <a id="builtin_member"></a>M is a member of the builtin of a spec Spec Key either:
 
@@ -164,9 +164,9 @@ In the flow:
 In the code:
 
 <a id="host_module_call"></a>A call calls the module member Key of a spec Spec if all of:
-  - a node X [is a member of the builtin](#builtin_member) of Spec Key;
-  - a node G [points to](js-dataflow.rofl.md#may_be_node) X;
-  - [the callee](js-callgraph.rofl.md#callee_of) of it is G.
+  - X [is a member of the builtin](#builtin_member) of Spec Key;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(G, X);
+  - [the callee](js-callgraph.rofl.md#callee_of) of it is a node G.
 
 > The union, with the receiver in the origin column: the canonical specifier
 > for a module, the global's own name for a member call, and the atom `itself`
@@ -437,7 +437,7 @@ In the flow:
 
 <a id="env_object"></a>`env_object`(M) if [`env_member`](#env_member)(M).
 
-`env_object`(E) if a node E [points to](js-dataflow.rofl.md#may_be_node) a node M and [`env_member`](#env_member)(M).
+`env_object`(E) if [`node_of`](js-dataflow.rofl.md#node_of)(E, M) and [`env_member`](#env_member)(M).
 
 `env_object`(R) if all of:
   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, R);

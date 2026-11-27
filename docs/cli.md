@@ -857,7 +857,8 @@ facts by key and by relation) lie in one spill file of the same directory
 (`rofl-spill-<pid>.bin`, sparse, unlinked once mapped). Over 2 286 vscode files
 the heap after the six layers is 3.3 GB where it was 7 GB and the last layer met
 the wall (`f_a_unit_cools_whole`); `ROFL_CENSUS=1` prints what the units hold at
-each depth. A world its units refuse (a wall met, a fact that breaks the plan's
+each depth, and, where the memory wall stops an evaluation, the relations it and
+the units below it hold most rows of (`census at the memory wall`). A world its units refuse (a wall met, a fact that breaks the plan's
 `own`) is said on stderr and evaluated whole. Measured on the release build, 4
 cores, the side-effect question over vscode, kept too: 250 files 18 to 21 s, 750
 files 60 to 68 s from one hour to the next on a shared machine, a third of it
@@ -995,7 +996,7 @@ means the rule reads or concludes a lattice relation, so a rule beside a lattice
 would be without it. Per premise
 `K` (its written position, from 1, as `premise_lit` counts it): `width[profile](R, K, N)` partial rows that reached it, `width_at[profile](R, At, K, N)` the same by the news position `At` the firing was solved from (0 the whole evaluation; a plan is given per `At`, so the refine loop judges it by these),
 `read[profile](R, K, N)` rows read from the store there, `yield[profile](R, K, N)` rows that left it,
-`widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows
+`widest[profile](R, K, N)` its widest single read. Per relation of a user's book: `rows[profile](Rel, Book, N)` live rows (by levels, those of every unit summed with the reader's)
 and `distinct[profile](Rel, Book, Pos, N)` the distinct values at argument `Pos` (from 1), the planner's own measure; a
 relation a rule reads and nothing holds is censused with 0 rows and 0 distinct, so a plan knows it is empty; a constant a rule writes in a column is censused as `selects[profile](Rel, Book, Pos, Const, N)`, the rows that hold it, since the column's average misses the skew a constant picks. A premise writing constants in two columns or more is censused as `picks[profile](R, K, N)`, the rows that hold them all, since the fewest of its columns misses their conjunction.
 **The heap** is the one part that is not: a world with a rule that reads `bytes`, `peak_bytes` or `peak_rule` there is

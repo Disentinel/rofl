@@ -1207,6 +1207,21 @@ impl Levels {
         Some(u.clone())
     }
 
+    /// The live rows of each (relation, book) its units hold, summed over every stretch they stand on once.
+    pub fn rel_rows(&self) -> FxMap<(Sym, Sym), usize> {
+        fn walk(u: &Rc<Unit>, seen: &mut FxSet<usize>, out: &mut FxMap<(Sym, Sym), usize>) {
+            if seen.insert(Rc::as_ptr(&u.stretch) as usize) {
+                for (rel, book, n) in u.stretch.rel_rows() {
+                    *out.entry((rel, book)).or_default() += n;
+                }
+                u.kids.iter().for_each(|k| walk(k, seen, out));
+            }
+        }
+        let (mut seen, mut out) = (FxSet::default(), FxMap::default());
+        self.tops.iter().for_each(|t| walk(t, &mut seen, &mut out));
+        out
+    }
+
     /// How many stretches its units stand on.
     pub fn stretches(&self) -> usize {
         fn walk(u: &Rc<Unit>, seen: &mut FxSet<usize>) {

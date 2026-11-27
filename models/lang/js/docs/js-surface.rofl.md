@@ -21,7 +21,7 @@ Reads:
 - from js-controlflow, in the code: [completes_abruptly](js-controlflow.rofl.md#completes_abruptly), [guarded](js-controlflow.rofl.md#guarded), [in_fn](js-controlflow.rofl.md#in_fn), [reachable](js-controlflow.rofl.md#reachable)
 - from js-controlflow: [thrown_by](js-controlflow.rofl.md#thrown_by)
 - from js-dataflow, in the code: [assigned](js-dataflow.rofl.md#assigned), [call_like](js-dataflow.rofl.md#call_like), [computed_key](js-dataflow.rofl.md#computed_key), [corpus_file](js-dataflow.rofl.md#corpus_file), [dcall](js-dataflow.rofl.md#dcall), [drops_any](js-dataflow.rofl.md#drops_any), [exports_default](js-dataflow.rofl.md#exports_default), [exports_name](js-dataflow.rofl.md#exports_name), [exports_value](js-dataflow.rofl.md#exports_value), [param_rest](js-dataflow.rofl.md#param_rest), [sees_binder](js-dataflow.rofl.md#sees_binder)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [lit_of](js-dataflow.rofl.md#lit_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [next_send](js-dataflow.rofl.md#next_send), [own_node](js-dataflow.rofl.md#own_node), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [array_elem](js-dataflow.rofl.md#array_elem), [assign_param](js-dataflow.rofl.md#assign_param), [cjs_exports](js-dataflow.rofl.md#cjs_exports), [external_value](js-dataflow.rofl.md#external_value), [input_lit](js-dataflow.rofl.md#input_lit), [input_node](js-dataflow.rofl.md#input_node), [input_of](js-dataflow.rofl.md#input_of), [input_param](js-dataflow.rofl.md#input_param), [input_this](js-dataflow.rofl.md#input_this), [inst_of](js-dataflow.rofl.md#inst_of), [isa](js-dataflow.rofl.md#isa), [keyed_put](js-dataflow.rofl.md#keyed_put), [lit_of](js-dataflow.rofl.md#lit_of), [member_value](js-dataflow.rofl.md#member_value), [module_object](js-dataflow.rofl.md#module_object), [next_send](js-dataflow.rofl.md#next_send), [node_of](js-dataflow.rofl.md#node_of), [own_node](js-dataflow.rofl.md#own_node), [param_of](js-dataflow.rofl.md#param_of), [param_use](js-dataflow.rofl.md#param_use), [pkey](js-dataflow.rofl.md#pkey), [plain_assign](js-dataflow.rofl.md#plain_assign), [returns](js-dataflow.rofl.md#returns), [sub_inst](js-dataflow.rofl.md#sub_inst), [yields](js-dataflow.rofl.md#yields)
 - from js-structure, in the code: [argument_at](js-structure.rofl.md#argument_at), [object_of](js-structure.rofl.md#object_of)
 - from outside these files:
   - <a id="nearest_v"></a>A [function](js-callgraph.rofl.md#fn_node) F is nearest to a node R (`nearest_v`)
@@ -69,12 +69,12 @@ What this file calls a node, and what each word stands for:
 
 `sx_esc`(M) either:
 
-1. if [`sx_esc`](#sx_esc)(N) and a node N [points to](js-dataflow.rofl.md#may_be_node) a node M;
-2. if [`sx_esc`](#sx_esc)(O) and [the member](js-dataflow.rofl.md#member_value) some key of a node O holds a node M;
+1. if [`sx_esc`](#sx_esc)(N) and [`node_of`](js-dataflow.rofl.md#node_of)(N, M);
+2. if [`sx_esc`](#sx_esc)(O) and [the member](js-dataflow.rofl.md#member_value) some key of a node O holds M;
 3. if [`sx_esc`](#sx_esc)(Y) and [`array_elem`](js-dataflow.rofl.md#array_elem)(Y, something, M);
 4. if [`sx_esc`](#sx_esc)(X) and [`keyed_put`](js-dataflow.rofl.md#keyed_put)(X, something, M);
-5. if [`sx_esc`](#sx_esc)(G) and G [throws out](js-controlflow.rofl.md#thrown_by) a node M;
-6. if [`sx_esc`](#sx_esc)(G) and G [yields](js-dataflow.rofl.md#yields) a node M.
+5. if [`sx_esc`](#sx_esc)(G) and G [throws out](js-controlflow.rofl.md#thrown_by) M;
+6. if [`sx_esc`](#sx_esc)(G) and G [yields](js-dataflow.rofl.md#yields) M.
 
 > ---------------------------------------------------------------- an escaping node's facts, and their mirrors
 
@@ -148,7 +148,7 @@ In the flow:
 <a id="sx_arg_node"></a>`sx_arg_node`(F, I, N) if all of:
   - a call C [resolves to](js-callgraph.rofl.md#resolves) F;
   - C [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
-  - X [points to](js-dataflow.rofl.md#may_be_node) a node N.
+  - [`node_of`](js-dataflow.rofl.md#node_of)(X, N).
 
 `sx_called` of A is read through its rules and never stored.
 
@@ -203,11 +203,11 @@ In the flow:
 
 <a id="sx_cb"></a>`sx_cb`(F, Spec) if all of:
   - a node X [comes out of](js-dataflow.rofl.md#external_value) a module Spec;
-  - a node G [points to](js-dataflow.rofl.md#may_be_node) X;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(G, X);
   - [`callee`](#callee)(C, G);
   - [`call_like`](js-dataflow.rofl.md#call_like)(C);
   - [`nth`](#nth)(C, something, Y);
-  - a node Y [points to](js-dataflow.rofl.md#may_be_node) a node F;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(Y, F);
   - [`fn_value`](#fn_value)(F);
   - unless [`spread_args`](#spread_args)(C, something, Y).
 
@@ -237,11 +237,11 @@ In the flow:
 
 <a id="ret_plain"></a>`ret_plain`(F, E) if F [returns to its call](#call_returns) E, unless [`ret_param`](#ret_param)(F, something, E).
 
-<a id="sx_ret_node"></a>`sx_ret_node`(F, N) if [`ret_plain`](#ret_plain)(F, E) and a node E [points to](js-dataflow.rofl.md#may_be_node) a node N.
+<a id="sx_ret_node"></a>`sx_ret_node`(F, N) if [`ret_plain`](#ret_plain)(F, E) and [`node_of`](js-dataflow.rofl.md#node_of)(E, N).
 
 <a id="sx_ret_lit"></a>`sx_ret_lit`(F, V) if [`ret_plain`](#ret_plain)(F, E) and [`lit_of`](js-dataflow.rofl.md#lit_of)(E, V).
 
-<a id="sx_ret_pnode"></a>`sx_ret_pnode`(F, N) if [`ret_param`](#ret_param)(F, something, E) and a node E [points to](js-dataflow.rofl.md#may_be_node) a node N.
+<a id="sx_ret_pnode"></a>`sx_ret_pnode`(F, N) if [`ret_param`](#ret_param)(F, something, E) and [`node_of`](js-dataflow.rofl.md#node_of)(E, N).
 
 <a id="sx_ret_plit"></a>`sx_ret_plit`(F, V) if [`ret_param`](#ret_param)(F, something, E) and [`lit_of`](js-dataflow.rofl.md#lit_of)(E, V).
 
@@ -281,6 +281,30 @@ In the flow:
   - [`input_param`](js-dataflow.rofl.md#input_param)(S, F, I).
 
 <a id="sx_ret_field"></a>`sx_ret_field`(F, Key) if F [returns to its call](#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, field(F, Key)).
+
+<a id="sx_ret_pfield"></a>`sx_ret_pfield`(F, I, Key) if all of:
+  - F [returns to its call](#call_returns) E;
+  - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, pfield(S, Key));
+  - [`input_param`](js-dataflow.rofl.md#input_param)(S, F, I).
+
+<a id="pfield_of"></a>`pfield_of`(pfield(S, K), G) if [`pkey`](js-dataflow.rofl.md#pkey)(S, K) and [`input_param`](js-dataflow.rofl.md#input_param)(S, G, something).
+
+`sx_ret_own`(F, X, N) either:
+
+1. if all of:
+   - F [returns to its call](#call_returns) E;
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, T);
+   - [`pfield_of`](#pfield_of)(T, G);
+   - G differs from F;
+   - [`input_node`](js-dataflow.rofl.md#input_node)(T, N);
+   - X is `node`;
+2. if all of:
+   - F [returns to its call](#call_returns) E;
+   - [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, T);
+   - [`pfield_of`](#pfield_of)(T, G);
+   - G differs from F;
+   - [`input_lit`](js-dataflow.rofl.md#input_lit)(T, N);
+   - X is `lit`.
 
 <a id="sx_ret_hop"></a>`sx_ret_hop`(F, K, M2) if F [returns to its call](#call_returns) E and [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, hop(F, K, M2)).
 
@@ -331,7 +355,7 @@ In the flow:
 <a id="sx_gen_ret"></a>`sx_gen_ret`(F, N) if all of:
   - F [returns](js-dataflow.rofl.md#returns) a node E;
   - [`generator`](#generator)(F);
-  - E [points to](js-dataflow.rofl.md#may_be_node) a node N.
+  - [`node_of`](js-dataflow.rofl.md#node_of)(E, N).
 
 <a id="sx_gen_rlit"></a>`sx_gen_rlit`(F, V) if all of:
   - F [returns](js-dataflow.rofl.md#returns) a node E;
@@ -355,7 +379,7 @@ In the flow:
   - [`store_pkey`](#store_pkey)(F, J, I, X);
   - [`assign`](#assign)(X, L, something);
   - [`object_of`](js-structure.rofl.md#object_of)(L, Obj);
-  - a node Obj [points to](js-dataflow.rofl.md#may_be_node) a node O.
+  - [`node_of`](js-dataflow.rofl.md#node_of)(Obj, O).
 
 `sx_mwrite`(O, K, X) if all of:
   - [`sx_store_pkey`](#sx_store_pkey)(F, J, I, O);

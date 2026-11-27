@@ -35,9 +35,9 @@ host_global_only_in[code](E, H, Name) :- host_global_ref[code](E, H, Name),
 -- stay shut for `const fs = require('fs')`.
 builtin_ns[flow](S, Spec) :- external_value[flow](S, S), builtin_canonical[code](S, Spec).
 
-builtin_ns_at[flow](O, Spec) :- builtin_ns[flow](Y, Spec), may_be_node[flow](O, Y).
+builtin_ns_at[flow](O, Spec) :- builtin_ns[flow](Y, Spec), node_of[flow](O, Y).
 builtin_ns_at[flow](O, Sub)  :- builtin_member[flow](X, Spec, Key), host_member_module(node, Spec, Key, Sub),
-                                may_be_node[flow](O, X).
+                                node_of[flow](O, X).
 
 builtin_member[flow](M, Spec, Key) :- builtin_ns_at[flow](O, Spec),
                                       object_of[code](M, O), member_node_v[flow](M),
@@ -70,7 +70,7 @@ host_global_call[code](C, H, Name) :- callee_of[code](C, N), host_global_ref[cod
 -- what a global of the host returns is a value of its own, born at the call (setInterval's timer)
 may_be[flow](C, node, C) :- host_global_call[code](C, _, _).
 
-host_module_call[code](C, Spec, Key) :- builtin_member[flow](X, Spec, Key), may_be_node[flow](G, X),
+host_module_call[code](C, Spec, Key) :- builtin_member[flow](X, Spec, Key), node_of[flow](G, X),
                                         callee_of[code](C, G).
 
 -- The union, with the receiver in the origin column: the canonical specifier
@@ -250,7 +250,7 @@ host_family_mismatch[audit](F) :- runtime(F), not host(F).
 env_member[flow](M) :- host_global_ref[code](P, node, "process"), object_of[code](M, P),
                        member_node_v[flow](M), selects[flow](M, "env").
 env_object[flow](M) :- env_member[flow](M).
-env_object[flow](E) :- may_be_node[flow](E, M), env_member[flow](M).
+env_object[flow](E) :- node_of[flow](E, M), env_member[flow](M).
 env_object[flow](R) :- declarator_id[code](D, R), pat_in[code](R, _, _), decl_value[flow](D, Init), env_member[flow](Init).
 env_object[flow](E) :- sees_binder[code](E, D), binder[code](D, _, Init, _), env_object[flow](Init).
 
