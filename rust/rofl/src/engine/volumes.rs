@@ -730,6 +730,18 @@ impl Eval {
     /// `by_volumes`, with `over` laid over the files' units: facts of the relations `overlay_rels` names, read by
     /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
     pub fn by_volumes_over(&mut self, files: Vec<(String, FileText)>, over: &str) -> Result<(Eval, VolStats), Halt> {
+        self.by_volumes_edit(files, over, None)
+    }
+
+    /// `by_volumes_over` again over this core after an edit of the files `edit` names (their places), the world
+    /// before held in memory: the units whose answer may have moved are settled again, the others stand.
+    pub fn by_volumes_edit(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
+        // (where the nodes are processes, one that cannot settle its units says why to those that wait for them)
+        let (h, n) = (self.h.clone(), files.len());
+        self.by_volumes_edit_here(files, over, edit).inspect_err(|e| super::levels::far_failed(&h, n, e))
+    }
+
+    fn by_volumes_edit_here(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
         let t0 = std::time::Instant::now();
         let (stage, mut joins) = self.level_stage();
         self.settle_core(joins.core.clone())?;
@@ -738,7 +750,9 @@ impl Eval {
         // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
         // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
         // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        for text in files.iter().map(|f| f.1.text()).chain([std::borrow::Cow::Borrowed(over)]) {
+        // (where the nodes are processes, those of this one's files: another's come named as text)
+        let mine = super::levels::far_block(files.len()).unwrap_or(0..files.len());
+        for text in files[mine].iter().map(|f| f.1.text()).chain([std::borrow::Cow::Borrowed(over)]) {
             let mut rest = &*text;
             while let Some(a) = rest.find('"') {
                 let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
@@ -766,7 +780,7 @@ impl Eval {
         let mut e = self.fork();
         e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let n = files.len();
-        let lv = e.fork().by_levels(files, &stage, joins, None, over)?;
+        let lv = e.fork().by_levels(files, &stage, joins, edit.map(|(b, c)| super::levels::Edit(b, c)), over)?;
         let ms = t0.elapsed().as_millis();
         let from = e.store.len_ids();
         lv.read_by(&mut e);

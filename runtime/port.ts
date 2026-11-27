@@ -197,13 +197,10 @@ export class RoflSession {
    *  The caller records the act — `cooled[code](File, Path)` so the file stays
    *  INDEXED rather than returning to the frontier, and `hole($cold(File),
    *  cooled_to_disk)` so a question about the cold volume refuses instead of
-   *  answering empty.
-   *
-   *  With `books` only the facts of those books go; `[surface]` and the books of `keep` stay, and a base fact of the
-   *  volume in any other book refuses the cool, before anything moves. `books` of the result: what was written, by book. */
-  async cool(prefix: string, path: string, books?: string[], keep?: string[]): Promise<{ facts: number; bytes: number; path: string; books: Record<string, number> }> {
-    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path, books, keep });
-    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string, books: (r.books ?? {}) as Record<string, number> };
+   *  answering empty. */
+  async cool(prefix: string, path: string): Promise<{ facts: number; bytes: number; path: string }> {
+    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path });
+    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string };
   }
 
   /** A cooled volume back, refused when this engine did not write it; into an evaluated world by delta. */
@@ -216,13 +213,6 @@ export class RoflSession {
   async add(rofl: string): Promise<{ added: number; full: string | null }> {
     const r = await this.port.send({ op: 'assert', session: this.id, rofl });
     return { added: r.added as number, full: r.full as string | null };
-  }
-
-  /** What this world wrote above the base it was forked from: the facts of `books` and of `rels`, and the atoms and
-   *  strings they name that do not begin with `prefix` (docs/surface-split.md, the driver). */
-  async view(prefix: string, books: string[], rels: string[] = []): Promise<{ facts: string[]; names: string[] }> {
-    const r = await this.port.send({ op: 'view', session: this.id, prefix, books, rels });
-    return { facts: r.facts as string[], names: r.names as string[] };
   }
 
   /** Cool MANY volumes in one pass over the world.

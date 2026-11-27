@@ -5,7 +5,7 @@
 --
 -- The reasoning over these rows is rules/depends.rofl; nothing here
 -- concludes anything.
--- 2164 artifacts, 5811 edges, 276 unreadable path expressions.
+-- 2264 artifacts, 6095 edges, 284 unreadable path expressions.
 
 artifact[dep](".claude-plugin/marketplace.json", json).
 artifact[dep](".claude-plugin/plugin.json", json).
@@ -13,7 +13,9 @@ artifact[dep](".claude/hooks/session-start.sh", sh).
 artifact[dep](".claude/settings.json", json).
 artifact[dep](".claude/skills/forecast-engine-change/SKILL.md", md).
 artifact[dep](".claude/skills/refine-plan/SKILL.md", md).
+artifact[dep](".gitattributes", other).
 artifact[dep](".github/workflows/ci.yml", yml).
+artifact[dep](".github/workflows/merge-train.yml", yml).
 artifact[dep](".github/workflows/pages.yml", yml).
 artifact[dep](".gitignore", other).
 artifact[dep]("CLAUDE.md", md).
@@ -52,6 +54,7 @@ artifact[dep]("docs/releases/1.4.md", md).
 artifact[dep]("docs/releases/1.5.md", md).
 artifact[dep]("docs/releases/1.6.md", md).
 artifact[dep]("docs/releases/1.7.md", md).
+artifact[dep]("docs/releases/1.8.md", md).
 artifact[dep]("docs/renderers-appendix.md", md).
 artifact[dep]("docs/renderers.md", md).
 artifact[dep]("docs/rings/README.md", md).
@@ -70,7 +73,6 @@ artifact[dep]("docs/scaling-a-corpus.md", md).
 artifact[dep]("docs/schemas.md", md).
 artifact[dep]("docs/sentence-form.md", md).
 artifact[dep]("docs/staged-evaluation.md", md).
-artifact[dep]("docs/surface-split.md", md).
 artifact[dep]("docs/test-maintenance-cost.md", md).
 artifact[dep]("docs/the-target.md", md).
 artifact[dep]("docs/three-valued-answers.md", md).
@@ -273,6 +275,7 @@ artifact[dep]("examples/checks/agg-incr-owner.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-partial.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-readers.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-stacked.rofl", rofl).
+artifact[dep]("examples/checks/agg-incr-staged-cell.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-staged.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-stale.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-stockholes.rofl", rofl).
@@ -280,6 +283,7 @@ artifact[dep]("examples/checks/agg-incr-sub.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-sum.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-tag.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-tagc.rofl", rofl).
+artifact[dep]("examples/checks/agg-incr-thr-after.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-thr.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-twice.rofl", rofl).
 artifact[dep]("examples/checks/agg-incr-widen.rofl", rofl).
@@ -808,6 +812,7 @@ artifact[dep]("examples/checks/asks-refused-wfs.rofl", rofl).
 artifact[dep]("examples/checks/asks-refused.rofl", rofl).
 artifact[dep]("examples/checks/asks-retracted.rofl", rofl).
 artifact[dep]("examples/checks/asks.rofl", rofl).
+artifact[dep]("examples/checks/assume-facts.rofl", rofl).
 artifact[dep]("examples/checks/ast-within-readers-check.rofl", rofl).
 artifact[dep]("examples/checks/async-refused.rofl", rofl).
 artifact[dep]("examples/checks/budget-wall.rofl", rofl).
@@ -831,6 +836,7 @@ artifact[dep]("examples/checks/demand-fixpoint-steps.rofl", rofl).
 artifact[dep]("examples/checks/demand-neg-decided.rofl", rofl).
 artifact[dep]("examples/checks/demand-neg-flush.rofl", rofl).
 artifact[dep]("examples/checks/demand-neg-hole.rofl", rofl).
+artifact[dep]("examples/checks/demand-neg-retract-after.rofl", rofl).
 artifact[dep]("examples/checks/demand-neg-retract-closed.rofl", rofl).
 artifact[dep]("examples/checks/demand-neg-retract.rofl", rofl).
 artifact[dep]("examples/checks/demand-neg-round-closed.rofl", rofl).
@@ -943,6 +949,9 @@ artifact[dep]("examples/checks/ds-tree-tick-3-staged-request.rofl", rofl).
 artifact[dep]("examples/checks/ds-tree-tick-3-staged.rofl", rofl).
 artifact[dep]("examples/checks/ds-tree-unknown-edge.rofl", rofl).
 artifact[dep]("examples/checks/ds-tree-wall.rofl", rofl).
+artifact[dep]("examples/checks/feature-behaviour-toy.rofl", rofl).
+artifact[dep]("examples/checks/gates-rs-facts.rofl", rofl).
+artifact[dep]("examples/checks/gates-rs/src/lib.rs", rs).
 artifact[dep]("examples/checks/holes-negation-scale.rofl", rofl).
 artifact[dep]("examples/checks/holes-negation-ticks-unknown.rofl", rofl).
 artifact[dep]("examples/checks/holes-negation-ticks.rofl", rofl).
@@ -953,6 +962,8 @@ artifact[dep]("examples/checks/holes-negation-wfs-unknown-draw.rofl", rofl).
 artifact[dep]("examples/checks/holes-negation-wfs-unknown.rofl", rofl).
 artifact[dep]("examples/checks/holes-negation-wfs.rofl", rofl).
 artifact[dep]("examples/checks/holes-negation.rofl", rofl).
+artifact[dep]("examples/checks/instances-check.rofl", rofl).
+artifact[dep]("examples/checks/instances-facts.rofl", rofl).
 artifact[dep]("examples/checks/jodit-fixture.rofl", rofl).
 artifact[dep]("examples/checks/join-through-constants.rofl", rofl).
 artifact[dep]("examples/checks/keyword-atom.rofl", rofl).
@@ -971,6 +982,7 @@ artifact[dep]("examples/checks/operators.rofl", rofl).
 artifact[dep]("examples/checks/plan-given.rofl", rofl).
 artifact[dep]("examples/checks/plan-world.rofl", rofl).
 artifact[dep]("examples/checks/premise-arity.rofl", rofl).
+artifact[dep]("examples/checks/product-facts.rofl", rofl).
 artifact[dep]("examples/checks/profile-hub.rofl", rofl).
 artifact[dep]("examples/checks/prov-lazy-lattice.rofl", rofl).
 artifact[dep]("examples/checks/prov-lazy-reader.rofl", rofl).
@@ -1100,6 +1112,8 @@ artifact[dep]("examples/iffy/iffy.rofl", rofl).
 artifact[dep]("examples/iffy/page.html", other).
 artifact[dep]("examples/iffy/policy.rofl", rofl).
 artifact[dep]("examples/iffy/statute.rofl", rofl).
+artifact[dep]("examples/instances/src/deep.js", ts).
+artifact[dep]("examples/instances/src/storage.js", ts).
 artifact[dep]("examples/intents/colleague.rofl", rofl).
 artifact[dep]("examples/intents/deps.cjs", other).
 artifact[dep]("examples/intents/exec.rofl", rofl).
@@ -1148,6 +1162,11 @@ artifact[dep]("examples/nope/page.html", other).
 artifact[dep]("examples/notebook/assign.rofl.md", md).
 artifact[dep]("examples/notebook/assign/consumer.js", ts).
 artifact[dep]("examples/notebook/assign/lib.js", ts).
+artifact[dep]("examples/notebook/assigned.rofl.md", md).
+artifact[dep]("examples/notebook/assigned/patterns.js", ts).
+artifact[dep]("examples/notebook/assume.rofl.md", md).
+artifact[dep]("examples/notebook/assume/src/platform.ts", ts).
+artifact[dep]("examples/notebook/assume/src/shell.ts", ts).
 artifact[dep]("examples/notebook/cjs.rofl.md", md).
 artifact[dep]("examples/notebook/cjs/cart.js", ts).
 artifact[dep]("examples/notebook/cjs/format.js", ts).
@@ -1163,6 +1182,13 @@ artifact[dep]("examples/notebook/decorated/deco.ts", ts).
 artifact[dep]("examples/notebook/destructure.rofl.md", md).
 artifact[dep]("examples/notebook/destructure/config.js", ts).
 artifact[dep]("examples/notebook/destructure/shapes.js", ts).
+artifact[dep]("examples/notebook/exported.rofl.md", md).
+artifact[dep]("examples/notebook/exported/a.js", ts).
+artifact[dep]("examples/notebook/exported/b.js", ts).
+artifact[dep]("examples/notebook/exported/c.cjs", other).
+artifact[dep]("examples/notebook/exported/d.cjs", other).
+artifact[dep]("examples/notebook/exported/e.cjs", other).
+artifact[dep]("examples/notebook/exported/main.js", ts).
 artifact[dep]("examples/notebook/external.rofl.md", md).
 artifact[dep]("examples/notebook/external/svc/bat/bat_wbm.js", ts).
 artifact[dep]("examples/notebook/external/util/http.js", ts).
@@ -1171,6 +1197,8 @@ artifact[dep]("examples/notebook/guard.rofl.md", md).
 artifact[dep]("examples/notebook/guard/lib.mjs", ts).
 artifact[dep]("examples/notebook/guard/script.js", ts).
 artifact[dep]("examples/notebook/guard/server.js", ts).
+artifact[dep]("examples/notebook/handed.rofl.md", md).
+artifact[dep]("examples/notebook/handed/handed.js", ts).
 artifact[dep]("examples/notebook/imports.rofl.md", md).
 artifact[dep]("examples/notebook/imports/lib.ts", ts).
 artifact[dep]("examples/notebook/imports/more.ts", ts).
@@ -1190,20 +1218,36 @@ artifact[dep]("examples/notebook/mcp.FRICTION.md", md).
 artifact[dep]("examples/notebook/mcp.rofl.md", md).
 artifact[dep]("examples/notebook/missing.rofl.md", md).
 artifact[dep]("examples/notebook/missing/calls.js", ts).
+artifact[dep]("examples/notebook/opened.rofl.md", md).
+artifact[dep]("examples/notebook/opened/opened.js", ts).
 artifact[dep]("examples/notebook/order.rofl.md", md).
 artifact[dep]("examples/notebook/packages.rofl.md", md).
 artifact[dep]("examples/notebook/packages/runner.js", ts).
 artifact[dep]("examples/notebook/passes.rofl.md", md).
 artifact[dep]("examples/notebook/passes/handlers.js", ts).
+artifact[dep]("examples/notebook/puts.rofl.md", md).
+artifact[dep]("examples/notebook/puts/puts.js", ts).
+artifact[dep]("examples/notebook/reached.rofl.md", md).
+artifact[dep]("examples/notebook/reached/reached.js", ts).
+artifact[dep]("examples/notebook/rest.rofl.md", md).
+artifact[dep]("examples/notebook/rest/rest.js", ts).
+artifact[dep]("examples/notebook/returns.rofl.md", md).
+artifact[dep]("examples/notebook/returns/returns.js", ts).
 artifact[dep]("examples/notebook/review.rofl.md", md).
+artifact[dep]("examples/notebook/runs.rofl.md", md).
+artifact[dep]("examples/notebook/runs/runs.js", ts).
 artifact[dep]("examples/notebook/scoped.rofl.md", md).
 artifact[dep]("examples/notebook/scoped/assign.js", ts).
 artifact[dep]("examples/notebook/self.rofl.md", md).
+artifact[dep]("examples/notebook/settles.rofl.md", md).
+artifact[dep]("examples/notebook/settles/settles.js", ts).
 artifact[dep]("examples/notebook/small.js", ts).
 artifact[dep]("examples/notebook/small.rofl.md", md).
 artifact[dep]("examples/notebook/spat.FRICTION.md", md).
 artifact[dep]("examples/notebook/spat.rofl.md", md).
 artifact[dep]("examples/notebook/spat_inferred_travel.rofl", rofl).
+artifact[dep]("examples/notebook/typed.rofl.md", md).
+artifact[dep]("examples/notebook/typed/typed.ts", ts).
 artifact[dep]("examples/notebook/xdir.rofl.md", md).
 artifact[dep]("examples/notebook/xdir/handlers/index.ts", ts).
 artifact[dep]("examples/notebook/xdir/handlers/list-handlers.ts", ts).
@@ -1220,6 +1264,32 @@ artifact[dep]("examples/oops/README.md", md).
 artifact[dep]("examples/oops/demo.ts", ts).
 artifact[dep]("examples/oops/oops.rofl", rofl).
 artifact[dep]("examples/oops/page.html", other).
+artifact[dep]("examples/parity/calls/rs-check.rofl", rofl).
+artifact[dep]("examples/parity/calls/rs-facts.rofl", rofl).
+artifact[dep]("examples/parity/calls/rs/Cargo.toml", toml).
+artifact[dep]("examples/parity/calls/rs/src/main.rs", rs).
+artifact[dep]("examples/parity/guards/rs-check.rofl", rofl).
+artifact[dep]("examples/parity/guards/rs-facts.rofl", rofl).
+artifact[dep]("examples/parity/guards/rs/Cargo.toml", toml).
+artifact[dep]("examples/parity/guards/rs/src/main.rs", rs).
+artifact[dep]("examples/parity/instances/rs-check.rofl", rofl).
+artifact[dep]("examples/parity/instances/rs-facts.rofl", rofl).
+artifact[dep]("examples/parity/instances/rs/src/deep.rs", rs).
+artifact[dep]("examples/parity/instances/rs/src/main.rs", rs).
+artifact[dep]("examples/parity/judge/check.rofl", rofl).
+artifact[dep]("examples/parity/judge/matrix.rofl", rofl).
+artifact[dep]("examples/parity/judge/rs.rofl", rofl).
+artifact[dep]("examples/parity/keyed/rs-check.rofl", rofl).
+artifact[dep]("examples/parity/keyed/rs-facts.rofl", rofl).
+artifact[dep]("examples/parity/keyed/rs/src/main.rs", rs).
+artifact[dep]("examples/parity/service/rs-check.rofl", rofl).
+artifact[dep]("examples/parity/service/rs-facts.rofl", rofl).
+artifact[dep]("examples/parity/service/rs/Cargo.toml", toml).
+artifact[dep]("examples/parity/service/rs/src/main.rs", rs).
+artifact[dep]("examples/parity/strings/rs-check.rofl", rofl).
+artifact[dep]("examples/parity/strings/rs-facts.rofl", rofl).
+artifact[dep]("examples/parity/strings/rs/Cargo.toml", toml).
+artifact[dep]("examples/parity/strings/rs/src/main.rs", rs).
 artifact[dep]("examples/profile/chain.rofl", rofl).
 artifact[dep]("examples/quorum/README.md", md).
 artifact[dep]("examples/quorum/quorum-data.rofl", rofl).
@@ -1285,9 +1355,6 @@ artifact[dep]("examples/start/pets.rofl.md", md).
 artifact[dep]("examples/start/shop.js", ts).
 artifact[dep]("examples/start/shop.rofl.md", md).
 artifact[dep]("examples/start/whatif.rofl.md", md).
-artifact[dep]("examples/surface/check.rofl", rofl).
-artifact[dep]("examples/surface/fixture.rofl", rofl).
-artifact[dep]("examples/surface/surface.rofl", rofl).
 artifact[dep]("examples/sus/README.md", md).
 artifact[dep]("examples/sus/demo.ts", ts).
 artifact[dep]("examples/sus/page.html", other).
@@ -1339,6 +1406,7 @@ artifact[dep]("examples/visual/who-knows-what.rofl.md", md).
 artifact[dep]("examples/voting/README.md", md).
 artifact[dep]("examples/voting/voting-ballots.rofl", rofl).
 artifact[dep]("examples/voting/voting.rofl", rofl).
+artifact[dep]("examples/vscode/assume-linux.rofl", rofl).
 artifact[dep]("examples/vscode/mini/common/channels.ts", ts).
 artifact[dep]("examples/vscode/mini/node/main.ts", ts).
 artifact[dep]("examples/vscode/mini/node/paths.ts", ts).
@@ -1391,6 +1459,7 @@ artifact[dep]("facts/eval-cost.rofl", rofl).
 artifact[dep]("facts/feature-map.rofl", rofl).
 artifact[dep]("facts/findings.rofl", rofl).
 artifact[dep]("facts/floor-census.rofl", rofl).
+artifact[dep]("facts/gates.rofl", rofl).
 artifact[dep]("facts/goldens.rofl", rofl).
 artifact[dep]("facts/kernel-phrases.rofl", rofl).
 artifact[dep]("facts/layering.rofl", rofl).
@@ -1481,10 +1550,12 @@ artifact[dep]("models/engine/code.rofl", rofl).
 artifact[dep]("models/engine/debt.rofl", rofl).
 artifact[dep]("models/engine/delta-model.rofl", rofl).
 artifact[dep]("models/engine/delta.rofl", rofl).
+artifact[dep]("models/engine/feature-behaviour.rofl", rofl).
 artifact[dep]("models/engine/feature-diff.rofl", rofl).
 artifact[dep]("models/engine/feature-hit.rofl", rofl).
 artifact[dep]("models/engine/features-syn.rofl", rofl).
 artifact[dep]("models/engine/features.rofl", rofl).
+artifact[dep]("models/engine/gates.rofl", rofl).
 artifact[dep]("models/engine/intent-read.rofl", rofl).
 artifact[dep]("models/engine/intent.rofl", rofl).
 artifact[dep]("models/engine/memory.rofl", rofl).
@@ -1536,6 +1607,7 @@ artifact[dep]("models/lang/js/fixtures/lifecycle/forgetful/main.js", ts).
 artifact[dep]("models/lang/js/fixtures/lifecycle/leaky/server.js", ts).
 artifact[dep]("models/lang/js/fixtures/lifecycle/overwrites/a.js", ts).
 artifact[dep]("models/lang/js/js.files", other).
+artifact[dep]("models/lang/js/library.rofl", rofl).
 artifact[dep]("models/lang/js/lifecycle-host.rofl", rofl).
 artifact[dep]("models/lang/js/lifecycle.rofl", rofl).
 artifact[dep]("models/lang/js/oxc-audit.rofl", rofl).
@@ -1566,6 +1638,8 @@ artifact[dep]("models/lang/js/rules/js-structure.rofl", rofl).
 artifact[dep]("models/lang/js/rules/js-surface.rofl", rofl).
 artifact[dep]("models/lang/js/rules/js-vocabulary.rofl", rofl).
 artifact[dep]("models/lang/js/scanner/cli.ts", ts).
+artifact[dep]("models/lang/js/scanner/columns.ts", ts).
+artifact[dep]("models/lang/js/scanner/host_facts.ts", ts).
 artifact[dep]("models/lang/js/scanner/host_lib.ts", ts).
 artifact[dep]("models/lang/js/scanner/js_resolve.ts", ts).
 artifact[dep]("models/lang/js/scanner/oxc_bin.ts", ts).
@@ -1579,11 +1653,16 @@ artifact[dep]("models/lang/js/scanner/oxc_scan/src/wasm.rs", rs).
 artifact[dep]("models/lang/js/scanner/oxc_wasm.ts", ts).
 artifact[dep]("models/lang/js/scanner/ts_lib.ts", ts).
 artifact[dep]("models/lang/rust/calls.rofl", rofl).
+artifact[dep]("models/lang/rust/effects.rofl", rofl).
 artifact[dep]("models/lang/rust/flow.rofl", rofl).
+artifact[dep]("models/lang/rust/guards.rofl", rofl).
 artifact[dep]("models/lang/rust/names.rofl", rofl).
 artifact[dep]("models/lang/rust/qname.rofl", rofl).
 artifact[dep]("models/lang/rust/rs-audit.rofl", rofl).
 artifact[dep]("models/lang/rust/rs-roles.rofl", rofl).
+artifact[dep]("models/lang/rust/strings.rofl", rofl).
+artifact[dep]("models/lang/rust/values.rofl", rofl).
+artifact[dep]("models/lang/rust/web.rofl", rofl).
 artifact[dep]("models/process/ci/accepted.rofl", rofl).
 artifact[dep]("models/process/ci/cost.rofl", rofl).
 artifact[dep]("models/process/ci/found-2026-11-07/cost.rofl", rofl).
@@ -1591,7 +1670,11 @@ artifact[dep]("models/process/ci/found-2026-11-07/runs.rofl", rofl).
 artifact[dep]("models/process/ci/found-2026-11-07/workflows.rofl", rofl).
 artifact[dep]("models/process/ci/gate-proof.rofl", rofl).
 artifact[dep]("models/process/ci/gate.rofl", rofl).
+artifact[dep]("models/process/ci/train-proof.rofl", rofl).
+artifact[dep]("models/process/ci/train.rofl", rofl).
+artifact[dep]("models/process/loads.rofl", rofl).
 artifact[dep]("models/product/forms.rofl", rofl).
+artifact[dep]("models/product/rofl.rofl", rofl).
 artifact[dep]("models/product/vocab.rofl", rofl).
 artifact[dep]("notebook/book.ts", ts).
 artifact[dep]("notebook/cli.ts", ts).
@@ -1657,6 +1740,7 @@ artifact[dep]("npm:perminv", script).
 artifact[dep]("npm:playground", script).
 artifact[dep]("npm:portcorpus", script).
 artifact[dep]("npm:prepack", script).
+artifact[dep]("npm:product", script).
 artifact[dep]("npm:published-diff", script).
 artifact[dep]("npm:read", script).
 artifact[dep]("npm:refine", script).
@@ -1715,6 +1799,7 @@ artifact[dep]("playground/npc.html", other).
 artifact[dep]("playground/npc_host.ts", ts).
 artifact[dep]("playground/npc_worker.ts", ts).
 artifact[dep]("playground/page.html", other).
+artifact[dep]("playground/rofl-serve.ts", ts).
 artifact[dep]("playground/rust-worker.ts", ts).
 artifact[dep]("playground/rust.ts", ts).
 artifact[dep]("playground/tokens.css", other).
@@ -1774,7 +1859,6 @@ artifact[dep]("runtime/port.ts", ts).
 artifact[dep]("runtime/report.ts", ts).
 artifact[dep]("runtime/scheduler.ts", ts).
 artifact[dep]("runtime/semirings.ts", ts).
-artifact[dep]("runtime/split.ts", ts).
 artifact[dep]("runtime/tick.ts", ts).
 artifact[dep]("rust/Cargo.lock", other).
 artifact[dep]("rust/Cargo.toml", toml).
@@ -1787,6 +1871,7 @@ artifact[dep]("rust/mutants.sh", sh).
 artifact[dep]("rust/rofl/Cargo.toml", toml).
 artifact[dep]("rust/rofl/build.rs", rs).
 artifact[dep]("rust/rofl/examples/fork_layers.rs", rs).
+artifact[dep]("rust/rofl/examples/load_cost.rs", rs).
 artifact[dep]("rust/rofl/src/adapter.rs", rs).
 artifact[dep]("rust/rofl/src/arena.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/delta.rs", rs).
@@ -1795,6 +1880,8 @@ artifact[dep]("rust/rofl/src/bin/rofl/load.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/main.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/memory.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/nb.rs", rs).
+artifact[dep]("rust/rofl/src/bin/rofl/place.rs", rs).
+artifact[dep]("rust/rofl/src/bin/rofl/progress.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/render.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/seed.rs", rs).
 artifact[dep]("rust/rofl/src/bin/rofl/serve.rs", rs).
@@ -1858,11 +1945,13 @@ artifact[dep]("rust/rofl/src/session.rs", rs).
 artifact[dep]("rust/rofl/src/shrug.rs", rs).
 artifact[dep]("rust/rofl/src/store.rs", rs).
 artifact[dep]("rust/rofl/src/store/volume.rs", rs).
+artifact[dep]("rust/rofl/src/store/wire.rs", rs).
 artifact[dep]("rust/rofl/src/structure.rs", rs).
 artifact[dep]("rust/rofl/src/structures.rs", rs).
 artifact[dep]("rust/rofl/src/tag.rs", rs).
 artifact[dep]("rust/rofl/src/term.rs", rs).
 artifact[dep]("rust/rofl/src/volume.rs", rs).
+artifact[dep]("rust/rofl/src/watch.rs", rs).
 artifact[dep]("rust/rofl/tests/adapter.rs", rs).
 artifact[dep]("rust/rofl/tests/addition.rs", rs).
 artifact[dep]("rust/rofl/tests/agg_worlds.rs", rs).
@@ -1875,6 +1964,7 @@ artifact[dep]("rust/rofl/tests/demand_query.rs", rs).
 artifact[dep]("rust/rofl/tests/demand_scale.rs", rs).
 artifact[dep]("rust/rofl/tests/disk.rs", rs).
 artifact[dep]("rust/rofl/tests/dispatch.rs", rs).
+artifact[dep]("rust/rofl/tests/edit.rs", rs).
 artifact[dep]("rust/rofl/tests/event_time.rs", rs).
 artifact[dep]("rust/rofl/tests/explain.rs", rs).
 artifact[dep]("rust/rofl/tests/fixtures/delta/db.0.rofl", rofl).
@@ -1905,6 +1995,7 @@ artifact[dep]("rust/rofl/tests/lattice_scale.rs", rs).
 artifact[dep]("rust/rofl/tests/level_wall.rs", rs).
 artifact[dep]("rust/rofl/tests/login.rs", rs).
 artifact[dep]("rust/rofl/tests/mcp.rs", rs).
+artifact[dep]("rust/rofl/tests/memory_wall.rs", rs).
 artifact[dep]("rust/rofl/tests/openapi.rs", rs).
 artifact[dep]("rust/rofl/tests/par.rs", rs).
 artifact[dep]("rust/rofl/tests/plan.rs", rs).
@@ -1919,6 +2010,7 @@ artifact[dep]("rust/rofl/tests/retract_refuse.rs", rs).
 artifact[dep]("rust/rofl/tests/retract_set.rs", rs).
 artifact[dep]("rust/rofl/tests/ring1_agg.rs", rs).
 artifact[dep]("rust/rofl/tests/roflenox.rs", rs).
+artifact[dep]("rust/rofl/tests/rule_edit.rs", rs).
 artifact[dep]("rust/rofl/tests/scan.rs", rs).
 artifact[dep]("rust/rofl/tests/served.rs", rs).
 artifact[dep]("rust/rofl/tests/session.rs", rs).
@@ -1934,6 +2026,7 @@ artifact[dep]("rust/rofl/tests/tree.rs", rs).
 artifact[dep]("rust/rofl/tests/volume.rs", rs).
 artifact[dep]("rust/rofl/tests/volumes.rs", rs).
 artifact[dep]("rust/rofl/tests/want.rs", rs).
+artifact[dep]("rust/rofl/tests/watch.rs", rs).
 artifact[dep]("rust/rofl/tests/why_bins.rs", rs).
 artifact[dep]("rust/run_corpus.sh", sh).
 artifact[dep]("rust/share_curve.sh", sh).
@@ -1973,11 +2066,13 @@ artifact[dep]("scanners/gh_runs.py", other).
 artifact[dep]("scanners/js.ts", ts).
 artifact[dep]("scanners/key_coupling.ts", ts).
 artifact[dep]("scanners/layering_report.ts", ts).
+artifact[dep]("scanners/loads.ts", ts).
 artifact[dep]("scanners/mutant_files.ts", ts).
 artifact[dep]("scanners/necessity.ts", ts).
 artifact[dep]("scanners/nullary_report.ts", ts).
 artifact[dep]("scanners/parse_cost.ts", ts).
 artifact[dep]("scanners/permission_inventory.ts", ts).
+artifact[dep]("scanners/product.py", other).
 artifact[dep]("scanners/profile_shape.ts", ts).
 artifact[dep]("scanners/py_ast.py", other).
 artifact[dep]("scanners/release_forms.py", other).
@@ -2037,6 +2132,7 @@ artifact[dep]("scripts/md_blocks.ts", ts).
 artifact[dep]("scripts/md_world.ts", ts).
 artifact[dep]("scripts/mdcheck.ts", ts).
 artifact[dep]("scripts/measurement_check.ts", ts).
+artifact[dep]("scripts/merge_train.ts", ts).
 artifact[dep]("scripts/nb_check.ts", ts).
 artifact[dep]("scripts/nb_layers.ts", ts).
 artifact[dep]("scripts/nb_lib.ts", ts).
@@ -2051,6 +2147,7 @@ artifact[dep]("scripts/parser_optional.ts", ts).
 artifact[dep]("scripts/playground.ts", ts).
 artifact[dep]("scripts/pool.ts", ts).
 artifact[dep]("scripts/port_corpus.ts", ts).
+artifact[dep]("scripts/product.sh", sh).
 artifact[dep]("scripts/product_view.py", other).
 artifact[dep]("scripts/published_diff.ts", ts).
 artifact[dep]("scripts/read.ts", ts).
@@ -2059,6 +2156,7 @@ artifact[dep]("scripts/refine.ts", ts).
 artifact[dep]("scripts/release_publish.sh", sh).
 artifact[dep]("scripts/render_docs.ts", ts).
 artifact[dep]("scripts/renderer.ts", ts).
+artifact[dep]("scripts/retract_passes.ts", ts).
 artifact[dep]("scripts/roles_check.ts", ts).
 artifact[dep]("scripts/sentences.ts", ts).
 artifact[dep]("scripts/stage_by_asks.ts", ts).
@@ -2080,6 +2178,7 @@ artifact[dep]("scripts/workbench.ts", ts).
 artifact[dep]("scripts/workbench_auth.ts", ts).
 artifact[dep]("scripts/workbench_browser.ts", ts).
 artifact[dep]("scripts/workbench_check.ts", ts).
+artifact[dep]("scripts/worlds_scan.ts", ts).
 artifact[dep]("shrug.rofl", rofl).
 artifact[dep]("skills/guided-formal-reasoning/SKILL.md", md).
 artifact[dep]("skills/guided-formal-reasoning/challenge.md", md).
@@ -2097,6 +2196,7 @@ artifact[dep]("src/dense.ts", ts).
 artifact[dep]("src/kernel-dense.ts", ts).
 artifact[dep]("src/labeled.ts", ts).
 artifact[dep]("src/parser.ts", ts).
+artifact[dep]("src/places.ts", ts).
 artifact[dep]("src/reflect.ts", ts).
 artifact[dep]("src/repl.ts", ts).
 artifact[dep]("src/reuse.ts", ts).
@@ -2114,7 +2214,6 @@ artifact[dep]("src/want.ts", ts).
 artifact[dep]("test/read-out-atomic.test.ts", ts).
 artifact[dep]("test/semiring-budget.test.ts", ts).
 artifact[dep]("test/semiring-cells.test.ts", ts).
-artifact[dep]("test/split-driver.test.ts", ts).
 artifact[dep]("test/string-escapes.test.ts", ts).
 artifact[dep]("test/twin-unread.test.ts", ts).
 artifact[dep]("tsconfig.build.json", json).
@@ -2148,6 +2247,7 @@ artifact[dep]("vscode/test/lock.ts", ts).
 artifact[dep]("vscode/test/roundtrip.ts", ts).
 artifact[dep]("vscode/test/run.ts", ts).
 artifact[dep]("vscode/test/suite.ts", ts).
+artifact[dep]("vscode/test/thin.ts", ts).
 artifact[dep]("vscode/test/window.swift", other).
 artifact[dep]("vscode/tsconfig.json", json).
 artifact[dep]("vscode/visual/pan.ts", ts).
@@ -2190,6 +2290,8 @@ edge[dep](".github/workflows/ci.yml", "scripts/dist.ts", ci_step).
 edge[dep](".github/workflows/ci.yml", "scripts/keep.ts", ci_step).
 edge[dep](".github/workflows/ci.yml", "scripts/npm_check.ts", ci_step).
 edge[dep](".github/workflows/ci.yml", "scripts/npm_oidc.ts", ci_step).
+edge[dep](".github/workflows/merge-train.yml", "npm:test:agg:breaks", ci_step).
+edge[dep](".github/workflows/merge-train.yml", "scripts/merge_train.ts", ci_step).
 edge[dep](".github/workflows/pages.yml", "scripts/guide_site.ts", ci_step).
 edge[dep](".github/workflows/pages.yml", "scripts/playground.ts", ci_step).
 edge[dep](".github/workflows/pages.yml", "scripts/workbench.ts", ci_step).
@@ -2336,25 +2438,23 @@ edge[dep]("docs/cli.md", "models/engine/memory.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/engine/plan.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/engine/sols.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/fixtures/all.ts", doc_ref).
+edge[dep]("docs/cli.md", "models/lang/js/library.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/lifecycle-host.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/lifecycle.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/oxc-roles.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/oxc-to-code.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/roles.rofl", doc_ref).
-edge[dep]("docs/cli.md", "models/lang/js/rules/js-surface.rofl", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/scanner/cli.ts", doc_ref).
+edge[dep]("docs/cli.md", "models/lang/js/scanner/host_facts.ts", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/scanner/oxc_scan/src/main.rs", doc_ref).
 edge[dep]("docs/cli.md", "models/lang/js/scanner/oxc_wasm.ts", doc_ref).
 edge[dep]("docs/cli.md", "notebook/front.ts", doc_ref).
 edge[dep]("docs/cli.md", "npm/rofl.ts", doc_ref).
-edge[dep]("docs/cli.md", "playground/host.ts", doc_ref).
 edge[dep]("docs/cli.md", "rules/ingest.rofl", doc_ref).
 edge[dep]("docs/cli.md", "runtime/port.ts", doc_ref).
-edge[dep]("docs/cli.md", "runtime/split.ts", doc_ref).
 edge[dep]("docs/cli.md", "rust/rofl/src/bin/rofl/serve.rs", doc_ref).
 edge[dep]("docs/cli.md", "rust/rofl/src/dict.rs", doc_ref).
 edge[dep]("docs/cli.md", "scripts/read.ts", doc_ref).
-edge[dep]("docs/cli.md", "scripts/vscode_corpus.ts", doc_ref).
 edge[dep]("docs/cli.md", "src/api.ts", doc_ref).
 edge[dep]("docs/cli.md", "src/repl.ts", doc_ref).
 edge[dep]("docs/data-structures.md", "docs/aggregates.md", doc_ref).
@@ -2386,7 +2486,6 @@ edge[dep]("docs/formal-reasoning-landscape.md", "rules/swarm.rofl", doc_ref).
 edge[dep]("docs/intents.md", "examples/intents/colleague.rofl", doc_ref).
 edge[dep]("docs/intents.md", "examples/intents/exec.rofl", doc_ref).
 edge[dep]("docs/intents.md", "examples/intents/mcp.rofl", doc_ref).
-edge[dep]("docs/intents.md", "examples/intents/rofl.rofl", doc_ref).
 edge[dep]("docs/intents.md", "examples/intents/screen.rofl", doc_ref).
 edge[dep]("docs/intents.md", "examples/intents/sql.rofl", doc_ref).
 edge[dep]("docs/intents.md", "facts/worklist.rofl", doc_ref).
@@ -2434,7 +2533,6 @@ edge[dep]("docs/knobs.md", "package.json", doc_ref).
 edge[dep]("docs/knobs.md", "playground/rust.ts", doc_ref).
 edge[dep]("docs/knobs.md", "runtime/ingest.ts", doc_ref).
 edge[dep]("docs/knobs.md", "runtime/port.ts", doc_ref).
-edge[dep]("docs/knobs.md", "runtime/split.ts", doc_ref).
 edge[dep]("docs/knobs.md", "rust/bytes_table.sh", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/build.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/src/bin/rofl/load.rs", doc_ref).
@@ -2445,6 +2543,7 @@ edge[dep]("docs/knobs.md", "rust/rofl/src/engine.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/src/engine/vclosure.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/src/kernel.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/src/session.rs", doc_ref).
+edge[dep]("docs/knobs.md", "rust/rofl/src/store.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/tests/agg_worlds.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/tests/cool.rs", doc_ref).
 edge[dep]("docs/knobs.md", "rust/rofl/tests/kept.rs", doc_ref).
@@ -2542,7 +2641,6 @@ edge[dep]("docs/releases/1.1.md", "examples/vscode/side-effects.rofl", doc_ref).
 edge[dep]("docs/releases/1.1.md", "facts/commands.rofl", doc_ref).
 edge[dep]("docs/releases/1.1.md", "facts/cost-shapes.rofl", doc_ref).
 edge[dep]("docs/releases/1.1.md", "facts/findings.rofl", doc_ref).
-edge[dep]("docs/releases/1.1.md", "runtime/split.ts", doc_ref).
 edge[dep]("docs/releases/1.1.md", "rust/rofl/src/engine.rs", doc_ref).
 edge[dep]("docs/releases/1.1.md", "scripts/vscode_corpus.ts", doc_ref).
 edge[dep]("docs/releases/1.1.md", "scripts/vscode_curve.ts", doc_ref).
@@ -2614,7 +2712,6 @@ edge[dep]("docs/rings/strata.rofl.md", "src/aggeval.ts", doc_ref).
 edge[dep]("docs/roadmap.md", "docs/aggregates.md", doc_ref).
 edge[dep]("docs/roadmap.md", "docs/md-world.md", doc_ref).
 edge[dep]("docs/roadmap.md", "docs/sentence-form.md", doc_ref).
-edge[dep]("docs/roadmap.md", "docs/surface-split.md", doc_ref).
 edge[dep]("docs/roadmap.md", "examples/linter/linter.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "examples/review.rofl.md", doc_ref).
 edge[dep]("docs/roadmap.md", "facts/agg.rofl", doc_ref).
@@ -2622,7 +2719,6 @@ edge[dep]("docs/roadmap.md", "facts/worklist.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "models/lang/js/facts/js-phrases.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "models/lang/js/rules/js-concat.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "models/lang/js/rules/js-dataflow.rofl", doc_ref).
-edge[dep]("docs/roadmap.md", "models/lang/js/rules/js-surface.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "rules/agg.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "rules/sentences.rofl", doc_ref).
 edge[dep]("docs/roadmap.md", "rules/untyped.rofl.md", doc_ref).
@@ -2648,8 +2744,6 @@ edge[dep]("docs/sentence-form.md", "models/lang/js/docs/js-structure.rofl.md", d
 edge[dep]("docs/sentence-form.md", "rules/untyped.rofl.md", doc_ref).
 edge[dep]("docs/sentence-form.md", "scripts/md_world.ts", doc_ref).
 edge[dep]("docs/sentence-form.md", "src/say.ts", doc_ref).
-edge[dep]("docs/staged-evaluation.md", "docs/surface-split.md", doc_ref).
-edge[dep]("docs/staged-evaluation.md", "examples/surface/surface.rofl", doc_ref).
 edge[dep]("docs/staged-evaluation.md", "rules/stage-plan.rofl", doc_ref).
 edge[dep]("docs/staged-evaluation.md", "rust/rofl/src/image.rs", doc_ref).
 edge[dep]("docs/staged-evaluation.md", "rust/rofl/src/volume.rs", doc_ref).
@@ -2659,19 +2753,11 @@ edge[dep]("docs/staged-evaluation.md", "scripts/addcheck.ts", doc_ref).
 edge[dep]("docs/staged-evaluation.md", "scripts/ingest_by_delta.ts", doc_ref).
 edge[dep]("docs/staged-evaluation.md", "scripts/stage_by_asks.ts", doc_ref).
 edge[dep]("docs/staged-evaluation.md", "scripts/vscode_pieces.ts", doc_ref).
-edge[dep]("docs/surface-split.md", "docs/volumes-and-residency.md", doc_ref).
-edge[dep]("docs/surface-split.md", "examples/surface/surface.rofl", doc_ref).
-edge[dep]("docs/surface-split.md", "models/lang/js/rules/js-surface.rofl", doc_ref).
-edge[dep]("docs/surface-split.md", "runtime/split.ts", doc_ref).
-edge[dep]("docs/surface-split.md", "scanners/rule_shape.ts", doc_ref).
 edge[dep]("docs/the-target.md", "docs/medium-and-large.md", doc_ref).
 edge[dep]("docs/three-valued-answers.md", "examples/sensors.rofl", doc_ref).
 edge[dep]("docs/three-valued-answers.md", "src/aggeval.ts", doc_ref).
 edge[dep]("docs/time-and-continuity.md", "boot.rofl", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "docs/aggregates.md", doc_ref).
-edge[dep]("docs/volumes-and-residency.md", "docs/surface-split.md", doc_ref).
-edge[dep]("docs/volumes-and-residency.md", "examples/surface/surface.rofl", doc_ref).
-edge[dep]("docs/volumes-and-residency.md", "models/lang/js/rules/js-surface.rofl", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "rules/rule-shape.rofl", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "scanners/rule_shape.ts", doc_ref).
 edge[dep]("docs/volumes-and-residency.md", "scanners/volume_locality.ts", doc_ref).
@@ -2730,11 +2816,13 @@ edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/datast
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/delta.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/joinplan.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/labeled.rs", doc_ref).
+edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/layer.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/levels.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/par.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/prov.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/resume.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/vclosure.rs", doc_ref).
+edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/volumes.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/engine/want.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/forest.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/journal.rs", doc_ref).
@@ -2753,6 +2841,7 @@ edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/structures.rs
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/tag.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/term.rs", doc_ref).
 edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/volume.rs", doc_ref).
+edge[dep]("examples/checks/agg-breaks-census.rofl", "rust/rofl/src/watch.rs", doc_ref).
 edge[dep]("examples/checks/agg-prose-census.rofl", "docs/roadmap.md", doc_ref).
 edge[dep]("examples/checks/agg-prose-census.rofl", "examples/aka/aka.rofl", doc_ref).
 edge[dep]("examples/checks/agg-prose-census.rofl", "examples/aka/README.md", doc_ref).
@@ -2784,8 +2873,15 @@ edge[dep]("examples/checks/agg-prose-census.rofl", "scripts/lint.ts", doc_ref).
 edge[dep]("examples/checks/agg-prose-census.rofl", "START.md", doc_ref).
 edge[dep]("examples/checks/concat-facts.rofl", "examples/concat/src/entry.ts", doc_ref).
 edge[dep]("examples/checks/concat-facts.rofl", "examples/concat/src/mypath.ts", doc_ref).
+edge[dep]("examples/checks/feature-behaviour-toy.rofl", "examples/sensors.rofl", doc_ref).
+edge[dep]("examples/checks/feature-behaviour-toy.rofl", "facts/findings.rofl", doc_ref).
+edge[dep]("examples/checks/gates-rs-facts.rofl", "examples/checks/gates-rs/src/lib.rs", doc_ref).
 edge[dep]("examples/checks/operators.rofl", "models/lang/js/rules/js-dataflow.rofl", doc_ref).
 edge[dep]("examples/checks/operators.rofl", "src/api.ts", doc_ref).
+edge[dep]("examples/checks/product-facts.rofl", "CLAUDE.md", doc_ref).
+edge[dep]("examples/checks/product-facts.rofl", "docs/cli.md", doc_ref).
+edge[dep]("examples/checks/product-facts.rofl", "docs/knobs.md", doc_ref).
+edge[dep]("examples/checks/product-facts.rofl", "README.md", doc_ref).
 edge[dep]("examples/checks/roles-oxc-facts.rofl", "examples/checks/roles/decorated.ts", doc_ref).
 edge[dep]("examples/checks/roles-oxc-facts.rofl", "examples/checks/roles/statements.ts", doc_ref).
 edge[dep]("examples/checks/roles-oxc-facts.rofl", "examples/checks/roles/types.ts", doc_ref).
@@ -3041,6 +3137,7 @@ edge[dep]("examples/nope/README.md", "boot.rofl", doc_ref).
 edge[dep]("examples/nope/README.md", "examples/nope/demo.ts", doc_ref).
 edge[dep]("examples/nope/README.md", "examples/nope/nope.rofl", doc_ref).
 edge[dep]("examples/nope/README.md", "runtime/semirings.ts", doc_ref).
+edge[dep]("examples/notebook/assume.rofl.md", "examples/notebook/assume/src/platform.ts", doc_ref).
 edge[dep]("examples/notebook/cjs/index.js", "examples/notebook/cjs/package.json", reads_path).
 edge[dep]("examples/notebook/cjs/index.js", "examples/notebook/cjs/package.json", ts_import).
 edge[dep]("examples/notebook/cli_exits.NOTES.md", "CLAUDE.md", doc_ref).
@@ -3053,6 +3150,12 @@ edge[dep]("examples/notebook/cli_exits.NOTES.md", "notebook/kernel.ts", doc_ref)
 edge[dep]("examples/notebook/cli_exits.NOTES.md", "notebook/serve.ts", doc_ref).
 edge[dep]("examples/notebook/cli_exits.NOTES.md", "README.md", doc_ref).
 edge[dep]("examples/notebook/cli_exits.rofl.md", "examples/notebook/self.rofl.md", doc_ref).
+edge[dep]("examples/notebook/exported/b.js", "examples/notebook/exported/a.js", reads_path).
+edge[dep]("examples/notebook/exported/b.js", "examples/notebook/exported/a.js", ts_import).
+edge[dep]("examples/notebook/exported/main.js", "examples/notebook/exported/a.js", reads_path).
+edge[dep]("examples/notebook/exported/main.js", "examples/notebook/exported/a.js", ts_import).
+edge[dep]("examples/notebook/exported/main.js", "examples/notebook/exported/b.js", reads_path).
+edge[dep]("examples/notebook/exported/main.js", "examples/notebook/exported/b.js", ts_import).
 edge[dep]("examples/notebook/gen_ledger_facts.ts", "examples/notebook/ledger_facts.rofl", generates).
 edge[dep]("examples/notebook/gen_ledger_facts.ts", "facts/findings.rofl", reads_path).
 edge[dep]("examples/notebook/guard.rofl.md", "examples/notebook/guard/lib.mjs", doc_ref).
@@ -3062,6 +3165,7 @@ edge[dep]("examples/notebook/keyed/order_use.mjs", "examples/notebook/keyed/orde
 edge[dep]("examples/notebook/keyed/order_use.mjs", "examples/notebook/keyed/order_lib.mjs", ts_import).
 edge[dep]("examples/notebook/ledger_facts.rofl", ".claude/skills/refine-plan/SKILL.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", ".github/workflows/ci.yml", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", ".github/workflows/merge-train.yml", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", ".github/workflows/pages.yml", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "adapters/sqlite-store.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "boot.rofl", doc_ref).
@@ -3086,7 +3190,6 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "docs/port-surface.md", doc_ref
 edge[dep]("examples/notebook/ledger_facts.rofl", "docs/rings/README.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "docs/schemas.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "docs/sentence-form.md", doc_ref).
-edge[dep]("examples/notebook/ledger_facts.rofl", "docs/surface-split.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "docs/three-valued-answers.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "docs/time-and-continuity.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "docs/volumes-and-residency.md", doc_ref).
@@ -3120,8 +3223,10 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-holistic-s
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-demand.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-owner.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-stacked.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-staged-cell.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-staged.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-stockholes.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-thr-after.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-thr.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-incr-twice.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/agg-int-range-literal.rofl", doc_ref).
@@ -3241,6 +3346,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-fixpoin
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-decided.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-flush.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-hole.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-retract-after.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-retract-closed.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-round-closed.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/demand-neg-round.rofl", doc_ref).
@@ -3256,6 +3362,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/destructor-hol
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-function-holds.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-function-retract-2-broken.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-function-wall.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-nearest-holds.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-demand-book-check.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-demand-book.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-demand-edge.rofl", doc_ref).
@@ -3267,6 +3374,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-plan.r
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-retract-4-other.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-tick-3-staged.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/ds-tree-unknown-edge.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/feature-behaviour-toy.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-scale.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-ticks-unknown.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-ticks.rofl", doc_ref).
@@ -3277,6 +3385,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-wfs-unknown.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation-wfs.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/holes-negation.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/instances-check.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/keyword-atom.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/not-as-a-name.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/checks/operators.rofl", doc_ref).
@@ -3315,19 +3424,34 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/linter/linter.rofl", 
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/loot/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/moot/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/moot/moot.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/assigned.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/assume.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/cjs.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/decorated.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/destructure.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/exported.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/guard.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/handed.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/keyed.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/missing.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/opened.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/order.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/passes.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/puts.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/reached.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/rest.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/returns.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/runs.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/self.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/settles.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/small.rofl.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/notebook/typed.rofl.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/npc/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/npc/npc.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/npc/sim.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/parity/calls/rs-check.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/parity/judge/check.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/parity/judge/matrix.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/profile/chain.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/reach/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/ring1/conform.ts", doc_ref).
@@ -3342,9 +3466,9 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "examples/rofl-release/frame.ro
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/slop/README.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/slop/slop.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/spat/README.md", doc_ref).
-edge[dep]("examples/notebook/ledger_facts.rofl", "examples/surface/surface.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/sus/sus.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/tutorial/README.md", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "examples/vscode/assume-linux.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/vscode/side-effects.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/wtf/demo.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "examples/yak/fragments/08-golden-accident.ts", doc_ref).
@@ -3371,6 +3495,10 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "lsp/know.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "lsp/test.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/blast.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/code.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/delta-model.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/feature-behaviour.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/features.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/gates.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/memory.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/parts.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/engine/plan.rofl", doc_ref).
@@ -3384,6 +3512,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/js-host.r
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/js-modules.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/js-phrases.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/facts/model-units.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/library.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/lifecycle-host.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/lifecycle.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/oxc-roles.rofl", doc_ref).
@@ -3409,17 +3538,29 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/rules/js-struct
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/rules/js-surface.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/rules/js-vocabulary.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/cli.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/host_facts.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/host_lib.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/js_resolve.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_code.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_inherit.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_scan/src/lib.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_scan/src/main.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_scan/src/wasm.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/oxc_wasm.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/js/scanner/ts_lib.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/calls.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/effects.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/guards.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/rs-roles.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/strings.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/values.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/lang/rust/web.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/accepted.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/cost.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/gate.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/ci/train.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/process/loads.rofl", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "models/product/rofl.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "notebook/book.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "notebook/cli.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "notebook/draw.ts", doc_ref).
@@ -3483,7 +3624,6 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "runtime/pair.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "runtime/port.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "runtime/report.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "runtime/semirings.ts", doc_ref).
-edge[dep]("examples/notebook/ledger_facts.rofl", "runtime/split.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/mutants.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/build.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/adapter.rs", doc_ref).
@@ -3494,12 +3634,15 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/load.rs
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/main.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/memory.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/nb.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/place.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/progress.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/render.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/seed.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/bin/rofl/serve.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/breaks.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/cell.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/corpus.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/dict.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/addition.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/algebra.rs", doc_ref).
@@ -3512,13 +3655,16 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/joinplan.
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/labeled.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/latkept.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/layer.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/levels.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/par.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/prov.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/resume.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/stages.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/vclosure.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/view.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/engine/volumes.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/forest.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/graph.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/image.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/kernel.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/md/mod.rs", doc_ref).
@@ -3540,6 +3686,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/structures.rs", 
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/tag.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/term.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/volume.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/src/watch.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/addition.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/agg_worlds.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/asks_cone.rs", doc_ref).
@@ -3549,12 +3696,14 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/demand_fixpoin
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/demand_query.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/demand_scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/disk.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/edit.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/explain.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/incremental.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/join_scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/kept.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/lattice_scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/level_wall.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/memory_wall.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/par.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/profile_model.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/profile.rs", doc_ref).
@@ -3562,6 +3711,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/program.rs", d
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/prov_lazy.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/retract_refuse.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/retract_set.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/rule_edit.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/scan.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/session.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/structure.rs", doc_ref).
@@ -3572,6 +3722,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/tick_scale.rs"
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/tree.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/volume.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/volumes.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/watch.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/rofl/tests/why_bins.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/run_corpus.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/share_curve.sh", doc_ref).
@@ -3579,12 +3730,14 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "rust/storebench/src/colfile.rs
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/storebench/src/column.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/storebench/src/scale.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "rust/tools/rs_scan/src/main.rs", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "rust/tools/rs_tree/src/main.rs", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "safety.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/book_locality.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/ci_cost.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/eval_cost.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/features.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/floor_census.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/loads.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/necessity.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/parse_cost.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scanners/ring1_lexgen.ts", doc_ref).
@@ -3621,6 +3774,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/md_blocks.ts", doc_ref
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/md_world.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/mdcheck.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/measurement_check.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/merge_train.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/nb_check.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/nb_layers.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/nb_lib.ts", doc_ref).
@@ -3633,16 +3787,19 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/parser_optional.ts", d
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/playground.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/pool.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/port_corpus.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/product.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/published_diff.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/read_md.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/read.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/refine.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/release_publish.sh", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/render_docs.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/retract_passes.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/sentences.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/stage_plan.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/text_check.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/view.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/vscode_corpus.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/vscode_curve.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/vscode_pieces.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/why_dag.ts", doc_ref).
@@ -3652,6 +3809,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/witness_check.ts", doc
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/workbench_auth.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/workbench_browser.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/workbench_check.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "scripts/worlds_scan.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "shrug.rofl", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "skills/guided-formal-reasoning/escalate.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/aggeval.ts", doc_ref).
@@ -3661,6 +3819,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "src/dense.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/kernel-dense.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/labeled.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/parser.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "src/places.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/reflect.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/reuse.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/say.ts", doc_ref).
@@ -3672,6 +3831,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "src/structure.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/tag.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/tokens.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "src/unify.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "src/view.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "START.md", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "test/read-out-atomic.test.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "test/semiring-cells.test.ts", doc_ref).
@@ -3688,6 +3848,7 @@ edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/dist.ts", doc_ref)
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/roundtrip.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/run.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/suite.ts", doc_ref).
+edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/test/thin.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/visual/pan.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/visual/pic-graph.ts", doc_ref).
 edge[dep]("examples/notebook/ledger_facts.rofl", "vscode/visual/pic-notation.ts", doc_ref).
@@ -3807,6 +3968,24 @@ edge[dep]("examples/oops/README.md", "docs/time-and-continuity.md", doc_ref).
 edge[dep]("examples/oops/README.md", "examples/oops/demo.ts", doc_ref).
 edge[dep]("examples/oops/README.md", "examples/oops/oops.rofl", doc_ref).
 edge[dep]("examples/oops/README.md", "LIMITS.md", doc_ref).
+edge[dep]("examples/parity/calls/rs-check.rofl", "examples/parity/calls/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/calls/rs-facts.rofl", "examples/parity/calls/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/guards/rs-check.rofl", "examples/parity/guards/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/guards/rs-facts.rofl", "examples/parity/guards/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/instances/rs-check.rofl", "examples/parity/instances/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/instances/rs-facts.rofl", "examples/parity/instances/rs/src/deep.rs", doc_ref).
+edge[dep]("examples/parity/instances/rs-facts.rofl", "examples/parity/instances/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/judge/matrix.rofl", "examples/notebook/guard.rofl.md", doc_ref).
+edge[dep]("examples/parity/judge/matrix.rofl", "examples/notebook/imports.rofl.md", doc_ref).
+edge[dep]("examples/parity/judge/matrix.rofl", "examples/notebook/keyed.rofl.md", doc_ref).
+edge[dep]("examples/parity/judge/matrix.rofl", "examples/notebook/scoped.rofl.md", doc_ref).
+edge[dep]("examples/parity/judge/matrix.rofl", "examples/notebook/self.rofl.md", doc_ref).
+edge[dep]("examples/parity/keyed/rs-check.rofl", "examples/parity/keyed/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/keyed/rs-facts.rofl", "examples/parity/keyed/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/service/rs-check.rofl", "examples/parity/service/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/service/rs-facts.rofl", "examples/parity/service/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/strings/rs-check.rofl", "examples/parity/strings/rs/src/main.rs", doc_ref).
+edge[dep]("examples/parity/strings/rs-facts.rofl", "examples/parity/strings/rs/src/main.rs", doc_ref).
 edge[dep]("examples/quorum/README.md", "examples/checks/agg-quorum-demo-check.rofl", doc_ref).
 edge[dep]("examples/quorum/README.md", "examples/quorum/quorum-data.rofl", doc_ref).
 edge[dep]("examples/quorum/README.md", "examples/quorum/quorum-says.rofl.md", doc_ref).
@@ -4353,6 +4532,7 @@ edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-owner.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-partial.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-readers.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-stacked.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-staged-cell.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-staged.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-stale.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-stockholes.rofl", doc_ref).
@@ -4360,6 +4540,7 @@ edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-sub.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-sum.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-tag.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-tagc.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-thr-after.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-thr.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-twice.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/agg-incr-widen.rofl", doc_ref).
@@ -4908,6 +5089,7 @@ edge[dep]("facts/checks.rofl", "examples/checks/demand-fixpoint-steps.rofl", doc
 edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-decided.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-flush.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-hole.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-retract-after.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-retract-closed.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-retract.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/demand-neg-round-closed.rofl", doc_ref).
@@ -5020,6 +5202,8 @@ edge[dep]("facts/checks.rofl", "examples/checks/ds-tree-tick-3-staged-request.ro
 edge[dep]("facts/checks.rofl", "examples/checks/ds-tree-tick-3-staged.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/ds-tree-unknown-edge.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/ds-tree-wall.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/feature-behaviour-toy.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/gates-rs-facts.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/holes-negation-scale.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/holes-negation-ticks-unknown.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/holes-negation-ticks.rofl", doc_ref).
@@ -5030,6 +5214,8 @@ edge[dep]("facts/checks.rofl", "examples/checks/holes-negation-wfs-unknown-draw.
 edge[dep]("facts/checks.rofl", "examples/checks/holes-negation-wfs-unknown.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/holes-negation-wfs.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/holes-negation.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/instances-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/instances-facts.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/jodit-fixture.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/join-through-constants.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/keyword-atom.rofl", doc_ref).
@@ -5048,6 +5234,7 @@ edge[dep]("facts/checks.rofl", "examples/checks/operators.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/plan-given.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/plan-world.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/premise-arity.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/checks/product-facts.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/profile-hub.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/prov-lazy-lattice.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/checks/prov-lazy-reader.rofl", doc_ref).
@@ -5126,6 +5313,21 @@ edge[dep]("facts/checks.rofl", "examples/linter/corpus-dataflow.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/linter/corpus-fixture.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/linter/linter.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/minimax/minimax.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/calls/rs-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/calls/rs-facts.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/guards/rs-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/guards/rs-facts.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/instances/rs-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/instances/rs-facts.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/judge/check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/judge/matrix.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/judge/rs.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/keyed/rs-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/keyed/rs-facts.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/service/rs-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/service/rs-facts.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/strings/rs-check.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "examples/parity/strings/rs-facts.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/quorum/quorum-data.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/quorum/quorum-says.rofl.md", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/quorum/quorum.rofl", doc_ref).
@@ -5144,6 +5346,8 @@ edge[dep]("facts/checks.rofl", "examples/voting/voting.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "examples/vscode/side-effects.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/agg.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/ast-within-readers.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "facts/bench.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "facts/commands.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/cost-shapes.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/findings.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/py-model.rofl", doc_ref).
@@ -5151,6 +5355,9 @@ edge[dep]("facts/checks.rofl", "facts/refactoring.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/spec-census.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/spec.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "facts/worklist.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/engine/feature-behaviour.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/engine/feature-diff.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/engine/gates.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/engine/plan.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/engine/profile.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/lang/js/facts/js-attrs.rofl", doc_ref).
@@ -5185,12 +5392,26 @@ edge[dep]("facts/checks.rofl", "models/lang/js/rules/js-modules.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/lang/js/rules/js-service.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/lang/js/rules/js-structure.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/lang/js/rules/js-surface.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/calls.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/effects.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/flow.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/guards.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/names.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/qname.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/rs-roles.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/strings.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/values.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/lang/rust/web.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/process/ci/cost.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/process/ci/found-2026-11-07/cost.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/process/ci/found-2026-11-07/runs.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/process/ci/found-2026-11-07/workflows.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/process/ci/gate-proof.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "models/process/ci/gate.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/process/ci/train-proof.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/process/ci/train.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/product/forms.rofl", doc_ref).
+edge[dep]("facts/checks.rofl", "models/product/rofl.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "rules/agg.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "rules/decisions/production-readiness.rofl", doc_ref).
 edge[dep]("facts/checks.rofl", "rules/decisions/public-release.rofl", doc_ref).
@@ -5242,6 +5463,7 @@ edge[dep]("facts/deviations.rofl", "src/tokens.ts", doc_ref).
 edge[dep]("facts/deviations.rofl", "src/unify.ts", doc_ref).
 edge[dep]("facts/findings.rofl", ".claude/skills/refine-plan/SKILL.md", ledger_ref).
 edge[dep]("facts/findings.rofl", ".github/workflows/ci.yml", ledger_ref).
+edge[dep]("facts/findings.rofl", ".github/workflows/merge-train.yml", ledger_ref).
 edge[dep]("facts/findings.rofl", ".github/workflows/pages.yml", ledger_ref).
 edge[dep]("facts/findings.rofl", "adapters/sqlite-store.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "boot.rofl", ledger_ref).
@@ -5266,7 +5488,6 @@ edge[dep]("facts/findings.rofl", "docs/port-surface.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/rings/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/schemas.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/sentence-form.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "docs/surface-split.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/three-valued-answers.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/time-and-continuity.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "docs/volumes-and-residency.md", ledger_ref).
@@ -5300,8 +5521,10 @@ edge[dep]("facts/findings.rofl", "examples/checks/agg-holistic-scale.rofl", ledg
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-demand.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-owner.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-stacked.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-staged-cell.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-staged.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-stockholes.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-thr-after.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-thr.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-incr-twice.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/agg-int-range-literal.rofl", ledger_ref).
@@ -5421,6 +5644,7 @@ edge[dep]("facts/findings.rofl", "examples/checks/demand-fixpoint-steps.rofl", l
 edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-decided.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-flush.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-hole.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-retract-after.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-retract-closed.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-round-closed.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/demand-neg-round.rofl", ledger_ref).
@@ -5448,6 +5672,7 @@ edge[dep]("facts/findings.rofl", "examples/checks/ds-tree-plan.rofl", ledger_ref
 edge[dep]("facts/findings.rofl", "examples/checks/ds-tree-retract-4-other.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/ds-tree-tick-3-staged.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/ds-tree-unknown-edge.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/feature-behaviour-toy.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/holes-negation-scale.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/holes-negation-ticks-unknown.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/holes-negation-ticks.rofl", ledger_ref).
@@ -5458,6 +5683,7 @@ edge[dep]("facts/findings.rofl", "examples/checks/holes-negation-wfs-unknown-dra
 edge[dep]("facts/findings.rofl", "examples/checks/holes-negation-wfs-unknown.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/holes-negation-wfs.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/holes-negation.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/checks/instances-check.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/keyword-atom.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/not-as-a-name.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/checks/operators.rofl", ledger_ref).
@@ -5497,19 +5723,34 @@ edge[dep]("facts/findings.rofl", "examples/linter/linter.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/loot/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/moot/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/moot/moot.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/assigned.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/assume.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/cjs.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/decorated.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/destructure.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/exported.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/guard.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/handed.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/keyed.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/missing.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/opened.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/order.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/passes.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/puts.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/reached.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/rest.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/returns.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/runs.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/self.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/settles.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/notebook/small.rofl.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/notebook/typed.rofl.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/npc/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/npc/npc.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/npc/sim.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/parity/calls/rs-check.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/parity/judge/check.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/parity/judge/matrix.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/profile/chain.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/reach/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/ring1/charclass.rofl", ledger_ref).
@@ -5530,9 +5771,9 @@ edge[dep]("facts/findings.rofl", "examples/sentence/vocabulary.rofl", ledger_ref
 edge[dep]("facts/findings.rofl", "examples/slop/README.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/slop/slop.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/spat/README.md", ledger_ref).
-edge[dep]("facts/findings.rofl", "examples/surface/surface.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/sus/sus.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/tutorial/README.md", ledger_ref).
+edge[dep]("facts/findings.rofl", "examples/vscode/assume-linux.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/vscode/side-effects.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/wtf/demo.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "examples/yak/fragments/08-golden-accident.ts", ledger_ref).
@@ -5561,21 +5802,71 @@ edge[dep]("facts/findings.rofl", "lsp/test.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/blast.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/code.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/delta-model.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/engine/feature-behaviour.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/features.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/engine/gates.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/memory.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/parts.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/plan.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/profile.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/engine/sols.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-callgraph.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-effects.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-env.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-globals.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-host.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-modules.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/js-phrases.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/facts/model-units.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/library.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/lang/js/lifecycle-host.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/lang/js/lifecycle.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/lang/js/oxc-roles.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/lang/js/oxc-to-code.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/lang/js/roles.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-ambient.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-attrs.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-callgraph.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-concat.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-controlflow.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-dataflow.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-effects.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-env.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-express.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-fetch.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-globals.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-host.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-model.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-modules.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-resolve.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-service.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-structure.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-surface.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/rules/js-vocabulary.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/cli.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/host_facts.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/host_lib.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/js_resolve.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/oxc_code.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/oxc_inherit.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/oxc_scan/src/lib.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/oxc_scan/src/main.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/oxc_scan/src/wasm.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/oxc_wasm.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/js/scanner/ts_lib.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/rust/calls.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/rust/effects.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/rust/guards.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/lang/rust/rs-roles.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/rust/strings.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/rust/values.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/lang/rust/web.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/process/ci/accepted.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/process/ci/cost.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "models/process/ci/gate.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/process/ci/train.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/process/loads.rofl", ledger_ref).
+edge[dep]("facts/findings.rofl", "models/product/rofl.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "notebook/book.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "notebook/cli.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "notebook/draw.ts", ledger_ref).
@@ -5639,7 +5930,6 @@ edge[dep]("facts/findings.rofl", "runtime/pair.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "runtime/port.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "runtime/report.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "runtime/semirings.ts", ledger_ref).
-edge[dep]("facts/findings.rofl", "runtime/split.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/mutants.sh", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/build.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/adapter.rs", ledger_ref).
@@ -5650,6 +5940,8 @@ edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/load.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/main.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/memory.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/nb.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/place.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/progress.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/render.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/seed.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/bin/rofl/serve.rs", ledger_ref).
@@ -5700,6 +5992,7 @@ edge[dep]("facts/findings.rofl", "rust/rofl/src/structures.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/tag.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/term.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/src/volume.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/src/watch.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/addition.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/agg_worlds.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/asks_cone.rs", ledger_ref).
@@ -5709,12 +6002,14 @@ edge[dep]("facts/findings.rofl", "rust/rofl/tests/demand_fixpoint.rs", ledger_re
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/demand_query.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/demand_scale.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/disk.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/tests/edit.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/explain.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/incremental.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/join_scale.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/kept.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/lattice_scale.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/level_wall.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/tests/memory_wall.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/par.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/profile_model.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/profile.rs", ledger_ref).
@@ -5722,6 +6017,7 @@ edge[dep]("facts/findings.rofl", "rust/rofl/tests/program.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/prov_lazy.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/retract_refuse.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/retract_set.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/tests/rule_edit.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/scan.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/session.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/structure.rs", ledger_ref).
@@ -5732,6 +6028,7 @@ edge[dep]("facts/findings.rofl", "rust/rofl/tests/tick_scale.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/tree.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/volume.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/volumes.rs", ledger_ref).
+edge[dep]("facts/findings.rofl", "rust/rofl/tests/watch.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/rofl/tests/why_bins.rs", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/run_corpus.sh", ledger_ref).
 edge[dep]("facts/findings.rofl", "rust/share_curve.sh", ledger_ref).
@@ -5747,6 +6044,7 @@ edge[dep]("facts/findings.rofl", "scanners/depends.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/eval_cost.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/features.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/floor_census.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scanners/loads.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/necessity.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/parse_cost.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scanners/ring1_lexgen.ts", ledger_ref).
@@ -5784,6 +6082,7 @@ edge[dep]("facts/findings.rofl", "scripts/md_blocks.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/md_world.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/mdcheck.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/measurement_check.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/merge_train.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/nb_check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/nb_layers.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/nb_lib.ts", ledger_ref).
@@ -5796,16 +6095,19 @@ edge[dep]("facts/findings.rofl", "scripts/parser_optional.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/playground.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/pool.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/port_corpus.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/product.sh", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/published_diff.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/read_md.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/read.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/refine.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/release_publish.sh", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/render_docs.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/retract_passes.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/sentences.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/stage_plan.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/text_check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/view.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/vscode_corpus.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/vscode_curve.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/vscode_pieces.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/why_dag.ts", ledger_ref).
@@ -5815,6 +6117,7 @@ edge[dep]("facts/findings.rofl", "scripts/witness_check.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/workbench_auth.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/workbench_browser.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "scripts/workbench_check.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "scripts/worlds_scan.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "shrug.rofl", ledger_ref).
 edge[dep]("facts/findings.rofl", "skills/guided-formal-reasoning/escalate.md", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/aggeval.ts", ledger_ref).
@@ -5824,6 +6127,7 @@ edge[dep]("facts/findings.rofl", "src/dense.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/kernel-dense.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/labeled.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/parser.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "src/places.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/reflect.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/reuse.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "src/say.ts", ledger_ref).
@@ -5852,6 +6156,7 @@ edge[dep]("facts/findings.rofl", "vscode/test/dist.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "vscode/test/roundtrip.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "vscode/test/run.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "vscode/test/suite.ts", ledger_ref).
+edge[dep]("facts/findings.rofl", "vscode/test/thin.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "vscode/visual/pan.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "vscode/visual/pic-graph.ts", ledger_ref).
 edge[dep]("facts/findings.rofl", "vscode/visual/pic-notation.ts", ledger_ref).
@@ -5971,6 +6276,7 @@ edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/demand_query.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/demand_scale.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/disk.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/dispatch.rs", doc_ref).
+edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/edit.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/event_time.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/explain.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/incremental.rs", doc_ref).
@@ -5981,6 +6287,7 @@ edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/lattice_scale.rs", doc_ref)
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/level_wall.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/login.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/mcp.rs", doc_ref).
+edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/memory_wall.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/openapi.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/par.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/plan_dp.rs", doc_ref).
@@ -5995,6 +6302,7 @@ edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/retract_refuse.rs", doc_ref
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/retract_set.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/ring1_agg.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/roflenox.rs", doc_ref).
+edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/rule_edit.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/scan.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/served.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/session.rs", doc_ref).
@@ -6010,6 +6318,7 @@ edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/tree.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/volume.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/volumes.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/want.rs", doc_ref).
+edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/watch.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "rust/rofl/tests/why_bins.rs", doc_ref).
 edge[dep]("facts/spec-census.rofl", "scripts/goldens.ts", doc_ref).
 edge[dep]("facts/spec-census.rofl", "scripts/measurement_check.ts", doc_ref).
@@ -6017,6 +6326,7 @@ edge[dep]("facts/spec-census.rofl", "scripts/text_check.ts", doc_ref).
 edge[dep]("facts/spec.rofl", ".github/workflows/ci.yml", ledger_ref).
 edge[dep]("facts/spec.rofl", "boot.rofl", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/aggregates.md", ledger_ref).
+edge[dep]("facts/spec.rofl", "docs/cli.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/performance-invariants.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/port-surface.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "docs/three-valued-answers.md", ledger_ref).
@@ -6027,7 +6337,11 @@ edge[dep]("facts/spec.rofl", "facts/goldens.rofl", ledger_ref).
 edge[dep]("facts/spec.rofl", "LIMITS.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "README.md", ledger_ref).
 edge[dep]("facts/spec.rofl", "rust/rofl/tests/agg_worlds.rs", ledger_ref).
+edge[dep]("facts/spec.rofl", "rust/rofl/tests/edit.rs", ledger_ref).
 edge[dep]("facts/spec.rofl", "rust/rofl/tests/explain.rs", ledger_ref).
+edge[dep]("facts/spec.rofl", "rust/rofl/tests/retract_refuse.rs", ledger_ref).
+edge[dep]("facts/spec.rofl", "rust/rofl/tests/rule_edit.rs", ledger_ref).
+edge[dep]("facts/spec.rofl", "rust/rofl/tests/watch.rs", ledger_ref).
 edge[dep]("facts/spec.rofl", "rust/rofl/tests/why_bins.rs", ledger_ref).
 edge[dep]("facts/spec.rofl", "scanners/spec.ts", ledger_ref).
 edge[dep]("facts/spec.rofl", "START.md", ledger_ref).
@@ -6199,19 +6513,48 @@ edge[dep]("lsp/test.ts", "models/lang/js/docs/js-phrases.rofl.md", reads_path).
 edge[dep]("lsp/test.ts", "models/lang/js/docs/js-vocabulary.rofl.md", reads_path).
 edge[dep]("lsp/test.ts", "notebook/front.ts", reads_path).
 edge[dep]("lsp/test.ts", "notebook/front.ts", ts_import).
+edge[dep]("models/engine/feature-behaviour.rofl", "boot.rofl", doc_ref).
 edge[dep]("models/engine/features.rofl", "rust/rofl/src/bin/rofl/main.rs", doc_ref).
 edge[dep]("models/engine/features.rofl", "rust/rofl/src/lib.rs", doc_ref).
 edge[dep]("models/lang/js/facts/js-effects.rofl", "runtime/report.ts", doc_ref).
 edge[dep]("models/lang/js/facts/js-modules.rofl", "package.json", doc_ref).
-edge[dep]("models/lang/js/facts/js-modules.rofl", "src/reflect.ts", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-attrs.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-callgraph.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-effects.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-globals.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-host-surface.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-host.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-lib-surface.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/facts/js-modules.rofl", doc_ref).
 edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/oxc-roles.rofl", doc_ref).
 edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/roles.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-ambient.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-attrs.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-callgraph.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-concat.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-controlflow.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-dataflow.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-effects.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-globals.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-host.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-model.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-modules.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-structure.rofl", doc_ref).
+edge[dep]("models/lang/js/facts/model-units.rofl", "models/lang/js/rules/js-surface.rofl", doc_ref).
 edge[dep]("models/lang/js/fixtures/all.oxc.rofl", "models/lang/js/fixtures/all.ts", doc_ref).
+edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/columns.ts", reads_path).
+edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/columns.ts", ts_import).
+edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/host_facts.ts", reads_path).
+edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/host_facts.ts", ts_import).
 edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/oxc_bin.ts", reads_path).
 edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/oxc_bin.ts", ts_import).
 edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/oxc_inherit.ts", reads_path).
 edge[dep]("models/lang/js/scanner/cli.ts", "models/lang/js/scanner/oxc_inherit.ts", ts_import).
 edge[dep]("models/lang/js/scanner/cli.ts", "playground/host.ts", reads_path).
+edge[dep]("models/lang/js/scanner/cli.ts", "src/parser.ts", reads_path).
+edge[dep]("models/lang/js/scanner/cli.ts", "src/parser.ts", ts_import).
+edge[dep]("models/lang/js/scanner/columns.ts", "src/parser.ts", reads_path).
+edge[dep]("models/lang/js/scanner/columns.ts", "src/parser.ts", ts_import).
 edge[dep]("models/lang/js/scanner/host_lib.ts", "package.json", reads_path).
 edge[dep]("models/lang/js/scanner/js_resolve.ts", "package.json", reads_path).
 edge[dep]("models/lang/js/scanner/oxc_bin.ts", "models/lang/js/scanner/oxc_scan/Cargo.toml", reads_path).
@@ -6220,6 +6563,11 @@ edge[dep]("models/lang/js/scanner/oxc_bin.ts", "npm/platform.ts", ts_import).
 edge[dep]("models/lang/js/scanner/oxc_code.ts", "models/lang/js/scanner/oxc_wasm.ts", reads_path).
 edge[dep]("models/lang/js/scanner/oxc_code.ts", "models/lang/js/scanner/oxc_wasm.ts", ts_import).
 edge[dep]("models/lang/js/scanner/oxc_wasm.ts", "models/lang/js/scanner/oxc_scan/Cargo.toml", reads_path).
+edge[dep]("models/process/loads.rofl", "vscode/extension.ts", doc_ref).
+edge[dep]("models/product/rofl.rofl", "CLAUDE.md", doc_ref).
+edge[dep]("models/product/rofl.rofl", "docs/cli.md", doc_ref).
+edge[dep]("models/product/rofl.rofl", "docs/knobs.md", doc_ref).
+edge[dep]("models/product/rofl.rofl", "README.md", doc_ref).
 edge[dep]("models/product/vocab.rofl", "models/engine/feature-diff.rofl", doc_ref).
 edge[dep]("models/product/vocab.rofl", "models/engine/features.rofl", doc_ref).
 edge[dep]("models/product/vocab.rofl", "models/engine/intent-read.rofl", doc_ref).
@@ -6451,6 +6799,7 @@ edge[dep]("npm:test:roles", "scripts/roles_check.ts", npm_script).
 edge[dep]("npm:test:vscode:mutants", "vscode/test/run.ts", npm_script).
 edge[dep]("npm:test:vscode", "vscode/test/roundtrip.ts", npm_script).
 edge[dep]("npm:test:vscode", "vscode/test/run.ts", npm_script).
+edge[dep]("npm:test:vscode", "vscode/test/thin.ts", npm_script).
 edge[dep]("npm:test:workbench", "scripts/own_check.ts", npm_script).
 edge[dep]("npm:test:workbench", "scripts/workbench_check.ts", npm_script).
 edge[dep]("npm:test", "scripts/goldens.ts", npm_script).
@@ -6489,6 +6838,8 @@ edge[dep]("playground/fold.ts", "src/reflect.ts", reads_path).
 edge[dep]("playground/fold.ts", "src/reflect.ts", ts_import).
 edge[dep]("playground/fold.ts", "src/store.ts", reads_path).
 edge[dep]("playground/fold.ts", "src/store.ts", ts_import).
+edge[dep]("playground/host.ts", "models/lang/js/scanner/host_facts.ts", reads_path).
+edge[dep]("playground/host.ts", "models/lang/js/scanner/host_facts.ts", ts_import).
 edge[dep]("playground/host.ts", "models/lang/js/scanner/oxc_wasm.ts", reads_path).
 edge[dep]("playground/host.ts", "models/lang/js/scanner/oxc_wasm.ts", ts_import).
 edge[dep]("playground/host.ts", "notebook/book.ts", reads_path).
@@ -6543,13 +6894,17 @@ edge[dep]("playground/npc_host.ts", "src/say.ts", reads_path).
 edge[dep]("playground/npc_host.ts", "src/say.ts", ts_import).
 edge[dep]("playground/npc_worker.ts", "playground/npc_host.ts", reads_path).
 edge[dep]("playground/npc_worker.ts", "playground/npc_host.ts", ts_import).
+edge[dep]("playground/rofl-serve.ts", "npm/platform.ts", reads_path).
+edge[dep]("playground/rofl-serve.ts", "npm/platform.ts", ts_import).
+edge[dep]("playground/rofl-serve.ts", "playground/rust-worker.ts", reads_path).
 edge[dep]("playground/rust-worker.ts", "runtime/port.ts", reads_path).
 edge[dep]("playground/rust-worker.ts", "runtime/port.ts", ts_import).
-edge[dep]("playground/rust.ts", "npm/platform.ts", reads_path).
-edge[dep]("playground/rust.ts", "npm/platform.ts", ts_import).
 edge[dep]("playground/rust.ts", "playground/engine.ts", reads_path).
 edge[dep]("playground/rust.ts", "playground/engine.ts", ts_import).
-edge[dep]("playground/rust.ts", "playground/rust-worker.ts", reads_path).
+edge[dep]("playground/rust.ts", "playground/rofl-serve.ts", reads_path).
+edge[dep]("playground/rust.ts", "playground/rofl-serve.ts", ts_import).
+edge[dep]("playground/rust.ts", "src/aggeval.ts", reads_path).
+edge[dep]("playground/rust.ts", "src/aggeval.ts", ts_import).
 edge[dep]("playground/rust.ts", "src/api.ts", reads_path).
 edge[dep]("playground/rust.ts", "src/api.ts", ts_import).
 edge[dep]("playground/rust.ts", "src/store.ts", reads_path).
@@ -6593,7 +6948,6 @@ edge[dep]("README.md", "docs/scaling-a-corpus.md", doc_ref).
 edge[dep]("README.md", "docs/schemas.md", doc_ref).
 edge[dep]("README.md", "docs/sentence-form.md", doc_ref).
 edge[dep]("README.md", "docs/staged-evaluation.md", doc_ref).
-edge[dep]("README.md", "docs/surface-split.md", doc_ref).
 edge[dep]("README.md", "docs/test-maintenance-cost.md", doc_ref).
 edge[dep]("README.md", "docs/the-target.md", doc_ref).
 edge[dep]("README.md", "docs/three-valued-answers.md", doc_ref).
@@ -6624,16 +6978,15 @@ edge[dep]("README.md", "models/engine/code.rofl", doc_ref).
 edge[dep]("README.md", "models/engine/parts.rofl", doc_ref).
 edge[dep]("README.md", "models/engine/plan.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/facts/js-phrases.rofl", doc_ref).
+edge[dep]("README.md", "models/lang/js/library.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/lifecycle-host.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/lifecycle.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/oxc-roles.rofl", doc_ref).
-edge[dep]("README.md", "models/lang/js/oxc-to-code.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/roles.rofl", doc_ref).
-edge[dep]("README.md", "models/lang/js/rules/js-concat.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/rules/js-express.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/rules/js-fetch.rofl", doc_ref).
 edge[dep]("README.md", "models/lang/js/rules/js-service.rofl", doc_ref).
-edge[dep]("README.md", "models/lang/js/rules/js-surface.rofl", doc_ref).
+edge[dep]("README.md", "models/process/loads.rofl", doc_ref).
 edge[dep]("README.md", "notebook/draw.ts", doc_ref).
 edge[dep]("README.md", "notebook/kernel.ts", doc_ref).
 edge[dep]("README.md", "notebook/model.ts", doc_ref).
@@ -6666,6 +7019,7 @@ edge[dep]("README.md", "rust/rofl/src/shrug.rs", doc_ref).
 edge[dep]("README.md", "rust/rofl/src/tag.rs", doc_ref).
 edge[dep]("README.md", "rust/rofl/tests/session.rs", doc_ref).
 edge[dep]("README.md", "safety.rofl", doc_ref).
+edge[dep]("README.md", "scanners/js.ts", doc_ref).
 edge[dep]("README.md", "schemas/intent-result.json", doc_ref).
 edge[dep]("README.md", "scripts/agg_breaks.ts", doc_ref).
 edge[dep]("README.md", "scripts/agg_mutants.ts", doc_ref).
@@ -6748,8 +7102,6 @@ edge[dep]("runtime/scheduler.ts", "src/api.ts", reads_path).
 edge[dep]("runtime/scheduler.ts", "src/api.ts", ts_import).
 edge[dep]("runtime/semirings.ts", "src/semiring.ts", reads_path).
 edge[dep]("runtime/semirings.ts", "src/semiring.ts", ts_import).
-edge[dep]("runtime/split.ts", "runtime/port.ts", reads_path).
-edge[dep]("runtime/split.ts", "runtime/port.ts", ts_import).
 edge[dep]("runtime/tick.ts", "runtime/admission.ts", reads_path).
 edge[dep]("runtime/tick.ts", "runtime/admission.ts", ts_import).
 edge[dep]("runtime/tick.ts", "runtime/report.ts", reads_path).
@@ -6827,6 +7179,8 @@ edge[dep]("scanners/layering_report.ts", "rules/depends.rofl", reads_path).
 edge[dep]("scanners/layering_report.ts", "rules/layering.rofl", reads_path).
 edge[dep]("scanners/layering_report.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/layering_report.ts", "src/api.ts", ts_import).
+edge[dep]("scanners/loads.ts", "scanners/depends.ts", reads_path).
+edge[dep]("scanners/loads.ts", "scanners/depends.ts", ts_import).
 edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", reads_path).
 edge[dep]("scanners/mutant_files.ts", "scanners/layering_report.ts", ts_import).
 edge[dep]("scanners/nullary_report.ts", "boot.rofl", reads_path).
@@ -6952,6 +7306,8 @@ edge[dep]("scanners/volume_locality.ts", "models/lang/js/rules/js-dataflow.rofl"
 edge[dep]("scanners/volume_locality.ts", "models/lang/js/rules/js-model.rofl", reads_path).
 edge[dep]("scanners/volume_locality.ts", "models/lang/js/rules/js-structure.rofl", reads_path).
 edge[dep]("scanners/volume_locality.ts", "models/lang/js/rules/js-surface.rofl", reads_path).
+edge[dep]("scanners/volume_locality.ts", "models/lang/js/scanner/oxc_code.ts", reads_path).
+edge[dep]("scanners/volume_locality.ts", "models/lang/js/scanner/oxc_code.ts", ts_import).
 edge[dep]("scanners/volume_locality.ts", "src/api.ts", reads_path).
 edge[dep]("scanners/volume_locality.ts", "src/api.ts", ts_import).
 edge[dep]("scripts/addcheck.ts", "boot.rofl", reads_path).
@@ -7078,6 +7434,7 @@ edge[dep]("scripts/dist.ts", "examples/spat/week.example.rofl", reads_path).
 edge[dep]("scripts/dist.ts", "facts/kernel-phrases.rofl", reads_path).
 edge[dep]("scripts/dist.ts", "facts/ring1-phrases.rofl", reads_path).
 edge[dep]("scripts/dist.ts", "lsp/server.ts", reads_path).
+edge[dep]("scripts/dist.ts", "models/lang/js/library.rofl", reads_path).
 edge[dep]("scripts/dist.ts", "models/lang/js/scanner/cli.ts", reads_path).
 edge[dep]("scripts/dist.ts", "notebook/cli.ts", reads_path).
 edge[dep]("scripts/dist.ts", "notebook/front.ts", reads_path).
@@ -7166,12 +7523,12 @@ edge[dep]("scripts/guide.ts", "vscode/visual/picture.ts", ts_import).
 edge[dep]("scripts/guide.ts", "vscode/visual/pictures.ts", reads_path).
 edge[dep]("scripts/guide.ts", "vscode/visual/pictures.ts", ts_import).
 edge[dep]("scripts/ingest_by_delta.ts", "examples/vscode/side-effects.rofl", reads_path).
+edge[dep]("scripts/ingest_by_delta.ts", "models/lang/js/scanner/oxc_bin.ts", reads_path).
+edge[dep]("scripts/ingest_by_delta.ts", "models/lang/js/scanner/oxc_bin.ts", ts_import).
 edge[dep]("scripts/ingest_by_delta.ts", "notebook/front.ts", reads_path).
 edge[dep]("scripts/ingest_by_delta.ts", "notebook/front.ts", ts_import).
 edge[dep]("scripts/ingest_by_delta.ts", "runtime/port.ts", reads_path).
 edge[dep]("scripts/ingest_by_delta.ts", "runtime/port.ts", ts_import).
-edge[dep]("scripts/ingest_by_delta.ts", "runtime/split.ts", reads_path).
-edge[dep]("scripts/ingest_by_delta.ts", "runtime/split.ts", ts_import).
 edge[dep]("scripts/js_lab/hints.ts", "notebook/front.ts", reads_path).
 edge[dep]("scripts/js_lab/hints.ts", "notebook/front.ts", ts_import).
 edge[dep]("scripts/js_lab/hints.ts", "src/api.ts", reads_path).
@@ -7245,6 +7602,19 @@ edge[dep]("scripts/md_world.ts", "scripts/read.ts", reads_path).
 edge[dep]("scripts/mdcheck.ts", "scripts/pool.ts", reads_path).
 edge[dep]("scripts/mdcheck.ts", "scripts/pool.ts", ts_import).
 edge[dep]("scripts/mdcheck.ts", "scripts/read.ts", reads_path).
+edge[dep]("scripts/merge_train.ts", "boot.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "examples/checks/agg-breaks-census.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "facts/goldens.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "facts/spec-census.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "models/engine/feature-behaviour.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "models/engine/feature-diff.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "models/process/ci/train.rofl", reads_path).
+edge[dep]("scripts/merge_train.ts", "scripts/agg_breaks.ts", reads_path).
+edge[dep]("scripts/merge_train.ts", "scripts/features.sh", reads_path).
+edge[dep]("scripts/merge_train.ts", "scripts/goldens.ts", reads_path).
+edge[dep]("scripts/merge_train.ts", "scripts/goldens.ts", ts_import).
+edge[dep]("scripts/merge_train.ts", "src/api.ts", reads_path).
+edge[dep]("scripts/merge_train.ts", "src/api.ts", ts_import).
 edge[dep]("scripts/nb_check.ts", "examples/notebook/cjs/cart.js", reads_path).
 edge[dep]("scripts/nb_check.ts", "examples/notebook/cjs/package.json", reads_path).
 edge[dep]("scripts/nb_check.ts", "examples/notebook/review.rofl.md", reads_path).
@@ -7322,6 +7692,7 @@ edge[dep]("scripts/parser_optional.ts", "tsconfig.json", reads_path).
 edge[dep]("scripts/playground.ts", "boot.rofl", generates).
 edge[dep]("scripts/playground.ts", "examples/npc/sim.ts", reads_path).
 edge[dep]("scripts/playground.ts", "facts/phrases.rofl", generates).
+edge[dep]("scripts/playground.ts", "models/lang/js/scanner/host_facts.ts", reads_path).
 edge[dep]("scripts/playground.ts", "models/lang/js/scanner/oxc_wasm.ts", reads_path).
 edge[dep]("scripts/playground.ts", "notebook/book.ts", reads_path).
 edge[dep]("scripts/playground.ts", "notebook/draw-argument.ts", reads_path).
@@ -7450,6 +7821,9 @@ edge[dep]("scripts/renderer.ts", "vscode/visual/pictures.ts", reads_path).
 edge[dep]("scripts/renderer.ts", "vscode/visual/renderer.ts", reads_path).
 edge[dep]("scripts/renderer.ts", "vscode/visual/schema-layouts.ts", reads_path).
 edge[dep]("scripts/renderer.ts", "vscode/visual/schema.ts", reads_path).
+edge[dep]("scripts/retract_passes.ts", "boot.rofl", reads_path).
+edge[dep]("scripts/retract_passes.ts", "scripts/goldens.ts", reads_path).
+edge[dep]("scripts/retract_passes.ts", "scripts/goldens.ts", ts_import).
 edge[dep]("scripts/roles_check.ts", "examples/checks/roles-oxc-facts.rofl", reads_path).
 edge[dep]("scripts/sentences.ts", "facts/phrases.rofl", reads_path).
 edge[dep]("scripts/sentences.ts", "notebook/front.ts", reads_path).
@@ -7464,21 +7838,21 @@ edge[dep]("scripts/sentences.ts", "src/reflect.ts", ts_import).
 edge[dep]("scripts/sentences.ts", "src/unify.ts", reads_path).
 edge[dep]("scripts/sentences.ts", "src/unify.ts", ts_import).
 edge[dep]("scripts/stage_by_asks.ts", "examples/vscode/side-effects.rofl", reads_path).
+edge[dep]("scripts/stage_by_asks.ts", "models/lang/js/scanner/oxc_bin.ts", reads_path).
+edge[dep]("scripts/stage_by_asks.ts", "models/lang/js/scanner/oxc_bin.ts", ts_import).
 edge[dep]("scripts/stage_by_asks.ts", "notebook/front.ts", reads_path).
 edge[dep]("scripts/stage_by_asks.ts", "notebook/front.ts", ts_import).
 edge[dep]("scripts/stage_by_asks.ts", "runtime/port.ts", reads_path).
 edge[dep]("scripts/stage_by_asks.ts", "runtime/port.ts", ts_import).
-edge[dep]("scripts/stage_by_asks.ts", "runtime/split.ts", reads_path).
-edge[dep]("scripts/stage_by_asks.ts", "runtime/split.ts", ts_import).
 edge[dep]("scripts/stage_plan.ts", "boot.rofl", reads_path).
 edge[dep]("scripts/stage_plan.ts", "examples/vscode/side-effects.rofl", reads_path).
+edge[dep]("scripts/stage_plan.ts", "models/lang/js/scanner/oxc_bin.ts", reads_path).
+edge[dep]("scripts/stage_plan.ts", "models/lang/js/scanner/oxc_bin.ts", ts_import).
 edge[dep]("scripts/stage_plan.ts", "notebook/front.ts", reads_path).
 edge[dep]("scripts/stage_plan.ts", "notebook/front.ts", ts_import).
 edge[dep]("scripts/stage_plan.ts", "rules/stage-plan.rofl", reads_path).
 edge[dep]("scripts/stage_plan.ts", "runtime/port.ts", reads_path).
 edge[dep]("scripts/stage_plan.ts", "runtime/port.ts", ts_import).
-edge[dep]("scripts/stage_plan.ts", "runtime/split.ts", reads_path).
-edge[dep]("scripts/stage_plan.ts", "runtime/split.ts", ts_import).
 edge[dep]("scripts/stage_plan.ts", "scripts/goldens.ts", reads_path).
 edge[dep]("scripts/stage_plan.ts", "scripts/goldens.ts", ts_import).
 edge[dep]("scripts/stage_plan.ts", "scripts/pool.ts", reads_path).
@@ -7491,22 +7865,20 @@ edge[dep]("scripts/untyped.ts", "scripts/md_world.ts", reads_path).
 edge[dep]("scripts/untyped.ts", "scripts/md_world.ts", ts_import).
 edge[dep]("scripts/untyped.ts", "src/api.ts", reads_path).
 edge[dep]("scripts/untyped.ts", "src/api.ts", ts_import).
-edge[dep]("scripts/vscode_corpus.ts", "playground/host.ts", reads_path).
-edge[dep]("scripts/vscode_corpus.ts", "playground/host.ts", ts_import).
+edge[dep]("scripts/vscode_corpus.ts", "models/lang/js/scanner/host_facts.ts", reads_path).
+edge[dep]("scripts/vscode_corpus.ts", "models/lang/js/scanner/host_facts.ts", ts_import).
 edge[dep]("scripts/vscode_curve.ts", "examples/vscode/side-effects.rofl", reads_path).
 edge[dep]("scripts/vscode_curve.ts", "notebook/front.ts", reads_path).
 edge[dep]("scripts/vscode_curve.ts", "notebook/front.ts", ts_import).
 edge[dep]("scripts/vscode_curve.ts", "runtime/port.ts", reads_path).
 edge[dep]("scripts/vscode_curve.ts", "runtime/port.ts", ts_import).
-edge[dep]("scripts/vscode_curve.ts", "runtime/split.ts", reads_path).
-edge[dep]("scripts/vscode_curve.ts", "runtime/split.ts", ts_import).
 edge[dep]("scripts/vscode_pieces.ts", "examples/vscode/side-effects.rofl", reads_path).
+edge[dep]("scripts/vscode_pieces.ts", "models/lang/js/scanner/oxc_bin.ts", reads_path).
+edge[dep]("scripts/vscode_pieces.ts", "models/lang/js/scanner/oxc_bin.ts", ts_import).
 edge[dep]("scripts/vscode_pieces.ts", "notebook/front.ts", reads_path).
 edge[dep]("scripts/vscode_pieces.ts", "notebook/front.ts", ts_import).
 edge[dep]("scripts/vscode_pieces.ts", "runtime/port.ts", reads_path).
 edge[dep]("scripts/vscode_pieces.ts", "runtime/port.ts", ts_import).
-edge[dep]("scripts/vscode_pieces.ts", "runtime/split.ts", reads_path).
-edge[dep]("scripts/vscode_pieces.ts", "runtime/split.ts", ts_import).
 edge[dep]("scripts/whycheck.ts", "boot.rofl", reads_path).
 edge[dep]("scripts/whycheck.ts", "runtime/port.ts", reads_path).
 edge[dep]("scripts/whycheck.ts", "runtime/port.ts", ts_import).
@@ -7522,6 +7894,8 @@ edge[dep]("scripts/whycheck.ts", "src/aggeval.ts", reads_path).
 edge[dep]("scripts/whycheck.ts", "src/aggeval.ts", ts_import).
 edge[dep]("scripts/whycheck.ts", "src/api.ts", reads_path).
 edge[dep]("scripts/whycheck.ts", "src/api.ts", ts_import).
+edge[dep]("scripts/whycheck.ts", "src/places.ts", reads_path).
+edge[dep]("scripts/whycheck.ts", "src/places.ts", ts_import).
 edge[dep]("scripts/whycheck.ts", "src/store.ts", reads_path).
 edge[dep]("scripts/whycheck.ts", "src/store.ts", ts_import).
 edge[dep]("scripts/whycheck.ts", "src/unify.ts", reads_path).
@@ -7564,6 +7938,11 @@ edge[dep]("scripts/workbench.ts", "workbench/bench.ts", ts_import).
 edge[dep]("scripts/workbench.ts", "workbench/github.ts", reads_path).
 edge[dep]("scripts/workbench.ts", "workbench/github.ts", ts_import).
 edge[dep]("scripts/workbench.ts", "workbench/page.ts", reads_path).
+edge[dep]("scripts/worlds_scan.ts", "boot.rofl", reads_path).
+edge[dep]("scripts/worlds_scan.ts", "scripts/agg_select.ts", reads_path).
+edge[dep]("scripts/worlds_scan.ts", "scripts/agg_select.ts", ts_import).
+edge[dep]("scripts/worlds_scan.ts", "scripts/goldens.ts", reads_path).
+edge[dep]("scripts/worlds_scan.ts", "scripts/goldens.ts", ts_import).
 edge[dep]("skills/guided-formal-reasoning/escalate.md", "rules/inquiry/obligations.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/escalate.md", "rules/policies/authority.rofl", doc_ref).
 edge[dep]("skills/guided-formal-reasoning/instruments.md", "docs/failure-modes.md", doc_ref).
@@ -7635,6 +8014,8 @@ edge[dep]("src/parser.ts", "src/tokens.ts", reads_path).
 edge[dep]("src/parser.ts", "src/tokens.ts", ts_import).
 edge[dep]("src/parser.ts", "src/unify.ts", reads_path).
 edge[dep]("src/parser.ts", "src/unify.ts", ts_import).
+edge[dep]("src/places.ts", "src/api.ts", reads_path).
+edge[dep]("src/places.ts", "src/api.ts", ts_import).
 edge[dep]("src/reflect.ts", "src/cell.ts", reads_path).
 edge[dep]("src/reflect.ts", "src/cell.ts", ts_import).
 edge[dep]("src/reflect.ts", "src/store.ts", reads_path).
@@ -7648,6 +8029,8 @@ edge[dep]("src/repl.ts", "scripts/md_world.ts", reads_path).
 edge[dep]("src/repl.ts", "scripts/md_world.ts", ts_import).
 edge[dep]("src/repl.ts", "src/api.ts", reads_path).
 edge[dep]("src/repl.ts", "src/api.ts", ts_import).
+edge[dep]("src/repl.ts", "src/places.ts", reads_path).
+edge[dep]("src/repl.ts", "src/places.ts", ts_import).
 edge[dep]("src/repl.ts", "src/say.ts", reads_path).
 edge[dep]("src/repl.ts", "src/say.ts", ts_import).
 edge[dep]("src/reuse.ts", "src/dense.ts", reads_path).
@@ -7731,8 +8114,6 @@ edge[dep]("test/semiring-cells.test.ts", "src/api.ts", reads_path).
 edge[dep]("test/semiring-cells.test.ts", "src/api.ts", ts_import).
 edge[dep]("test/semiring-cells.test.ts", "src/semiring.ts", reads_path).
 edge[dep]("test/semiring-cells.test.ts", "src/semiring.ts", ts_import).
-edge[dep]("test/split-driver.test.ts", "runtime/split.ts", reads_path).
-edge[dep]("test/split-driver.test.ts", "runtime/split.ts", ts_import).
 edge[dep]("test/string-escapes.test.ts", "src/dense.ts", reads_path).
 edge[dep]("test/string-escapes.test.ts", "src/dense.ts", ts_import).
 edge[dep]("test/string-escapes.test.ts", "src/tokens.ts", reads_path).
@@ -7794,10 +8175,8 @@ edge[dep]("vscode/render.ts", "notebook/front.ts", reads_path).
 edge[dep]("vscode/render.ts", "notebook/front.ts", ts_import).
 edge[dep]("vscode/render.ts", "notebook/kernel.ts", reads_path).
 edge[dep]("vscode/render.ts", "notebook/kernel.ts", ts_import).
-edge[dep]("vscode/serial.ts", "playground/rust.ts", reads_path).
-edge[dep]("vscode/serial.ts", "playground/rust.ts", ts_import).
-edge[dep]("vscode/serial.ts", "scripts/read_md.ts", reads_path).
-edge[dep]("vscode/serial.ts", "scripts/read_md.ts", ts_import).
+edge[dep]("vscode/serial.ts", "playground/rofl-serve.ts", reads_path).
+edge[dep]("vscode/serial.ts", "playground/rofl-serve.ts", ts_import).
 edge[dep]("vscode/test/dist.ts", "examples/notebook/review.rofl.md", reads_path).
 edge[dep]("vscode/test/dist.ts", "notebook/cli.ts", reads_path).
 edge[dep]("vscode/test/dist.ts", "package.json", generates).
@@ -7811,8 +8190,8 @@ edge[dep]("vscode/test/roundtrip.ts", "notebook/front.ts", reads_path).
 edge[dep]("vscode/test/roundtrip.ts", "notebook/front.ts", ts_import).
 edge[dep]("vscode/test/roundtrip.ts", "notebook/kernel.ts", reads_path).
 edge[dep]("vscode/test/roundtrip.ts", "notebook/kernel.ts", ts_import).
-edge[dep]("vscode/test/roundtrip.ts", "playground/rust.ts", reads_path).
-edge[dep]("vscode/test/roundtrip.ts", "playground/rust.ts", ts_import).
+edge[dep]("vscode/test/roundtrip.ts", "playground/rofl-serve.ts", reads_path).
+edge[dep]("vscode/test/roundtrip.ts", "playground/rofl-serve.ts", ts_import).
 edge[dep]("vscode/test/roundtrip.ts", "scripts/read_md.ts", reads_path).
 edge[dep]("vscode/test/roundtrip.ts", "scripts/read_md.ts", ts_import).
 edge[dep]("vscode/test/roundtrip.ts", "vscode/render.ts", reads_path).
@@ -7845,6 +8224,11 @@ edge[dep]("vscode/test/suite.ts", "vscode/serial.ts", reads_path).
 edge[dep]("vscode/test/suite.ts", "vscode/serial.ts", ts_import).
 edge[dep]("vscode/test/suite.ts", "vscode/visual/pictures.ts", reads_path).
 edge[dep]("vscode/test/suite.ts", "vscode/visual/pictures.ts", ts_import).
+edge[dep]("vscode/test/thin.ts", "models/process/loads.rofl", reads_path).
+edge[dep]("vscode/test/thin.ts", "playground/rofl-serve.ts", reads_path).
+edge[dep]("vscode/test/thin.ts", "playground/rofl-serve.ts", ts_import).
+edge[dep]("vscode/test/thin.ts", "scanners/loads.ts", reads_path).
+edge[dep]("vscode/test/thin.ts", "scanners/loads.ts", ts_import).
 edge[dep]("vscode/visual/pan.ts", "vscode/visual/picture.ts", reads_path).
 edge[dep]("vscode/visual/pan.ts", "vscode/visual/picture.ts", ts_import).
 edge[dep]("vscode/visual/panel.ts", "notebook/draw.ts", reads_path).
@@ -7984,4 +8368,4 @@ edge[dep]("workbench/page.ts", "workbench/bench.ts", ts_import).
 edge[dep]("workbench/page.ts", "workbench/github.ts", reads_path).
 edge[dep]("workbench/page.ts", "workbench/github.ts", ts_import).
 
-dark_paths[dep](276).
+dark_paths[dep](284).

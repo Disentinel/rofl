@@ -724,6 +724,26 @@ impl Heap {
             None => Term::func(self.f0 + self.top.mkf(name, args, h)),
         }
     }
+    /// A name another process spells, named here through the shared dictionary: no fork's own.
+    pub fn name_shared(&self, s: &str) -> Option<Sym> {
+        let h = name_hash(s.as_bytes());
+        if self.syms.n0 > 0 {
+            if let Some(id) = self.syms.base.find(s, h) {
+                return Some(id);
+            }
+        }
+        self.syms.dict.as_ref().map(|d| SHARED0 + d.intern(s, h))
+    }
+    /// A functor another process spells, built here in the shared dictionary.
+    pub fn func_shared(&self, name: Sym, args: &[Term]) -> Option<Term> {
+        let h = cons_hash(name, args);
+        if self.f0 > 0 {
+            if let Some(i) = self.base.find(name, args, h) {
+                return Some(Term::func(i));
+            }
+        }
+        self.syms.dict.as_ref().map(|d| Term::func(SHARED0 + d.mkf(name, args, h)))
+    }
     /// The functor already built of `name` over `args`, without building it.
     pub fn find_f(&self, name: Sym, args: &[Term]) -> Option<Term> {
         let h = cons_hash(name, args);

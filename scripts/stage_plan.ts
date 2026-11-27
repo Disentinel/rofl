@@ -15,7 +15,7 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { RoflPort } from '../runtime/port.ts';
 import { MODEL_FILES } from '../notebook/front.ts';
-import { NODE } from '../runtime/split.ts';
+import { NODE } from '../models/lang/js/scanner/oxc_bin.ts';
 import { tarjan } from '../src/scc.ts';
 import { PROFILE } from './goldens.ts';
 import { jobs } from './pool.ts';

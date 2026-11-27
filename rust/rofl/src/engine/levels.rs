@@ -30,6 +30,9 @@ use crate::arena::{Arena, VolR, VolW};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering::Relaxed};
 use std::sync::Mutex;
 
+mod far;
+pub use far::{block as far_block, far_edit, far_failed, far_names, far_next, far_node, FAR_SAID};
+
 /// An argument of a relation's facts of one arity.
 type Place = (Sym, u8, u8);
 /// A value at an argument of a relation.
@@ -584,10 +587,7 @@ fn spans(u: &Unit, child: u32, out: &mut Vec<(FactId, FactId, u32, (u32, u32))>)
 
 /// The facts a stretch holds itself with `v` at argument `p`.
 fn held(s: &Stretch, h: &Heap, (rel, arity, p): Place, v: Term) -> Vec<FactId> {
-    let mut out = Vec::new();
-    s.matches(h, rel, None, arity as usize, &[p as usize], &[v], &mut out);
-    out.retain(|&k| s.args(k).get(p as usize) == Some(&v));
-    out
+    s.of_key(h, rel, arity as usize, p as usize, v)
 }
 
 /// The keys of the facts a stretch holds itself that are not of the files `files`.
@@ -714,6 +714,62 @@ fn may_meet(h: &Heap, core: &crate::store::Store, rules: &[&Rc<ERule>], s: &Stre
             })
         })
     })
+}
+
+/// AN ORACLE OF THE SEAM BETWEEN NODES (`ROFL_HELD=N`): a node holds the units of N files in a row, and the root
+/// those over more; a reader sees a unit another holds as `Stretch::held_there` sees it, a relation or a key at a time.
+struct Nodes {
+    size: u32,
+    /// the files of each unit, by its first id
+    homes: Mutex<FxMap<FactId, (u32, u32)>>,
+    views: Mutex<FxMap<(u32, FactId), Rc<Stretch>>>,
+    lowers: Mutex<FxMap<(u32, usize), Rc<Lower>>>,
+    /// what a reader's node asks a node that holds units, by (reader's node, holder's node)
+    trips: Mutex<FxMap<(u32, u32), Rc<crate::store::Trip>>>,
+    /// each node's units, asked in place
+    heres: Mutex<FxMap<u32, Rc<crate::store::Here>>>,
+    h: Heap,
+}
+// SAFETY: a view is made and handed out under the lock, and only read
+unsafe impl Sync for Nodes {}
+
+impl Nodes {
+    fn of(size: u32, h: Heap) -> Nodes {
+        Nodes { size: size.max(1), homes: Default::default(), views: Default::default(), lowers: Default::default(), trips: Default::default(), heres: Default::default(), h }
+    }
+    fn home(&self, files: (u32, u32)) -> u32 {
+        let n = self.size;
+        if files.1 - files.0 > n || files.0 / n != (files.1.max(1) - 1) / n { u32::MAX } else { files.0 / n }
+    }
+    fn place(&self, units: &[Rc<Unit>]) {
+        self.homes.lock().unwrap().extend(units.iter().map(|u| (u.stretch.lo, u.files)));
+        let mut heres = self.heres.lock().unwrap();
+        for u in units {
+            heres.entry(self.home(u.files)).or_insert_with(|| Rc::new(crate::store::Here::new(self.h.clone()))).put(&u.stretch);
+        }
+    }
+    fn view(&self, reader: (u32, u32), s: &Rc<Stretch>) -> Rc<Stretch> {
+        let at = self.homes.lock().unwrap().get(&s.lo).copied();
+        let node = self.home(reader);
+        match at {
+            Some(f) if self.home(f) != node => self.views.lock().unwrap().entry((node, s.lo)).or_insert_with(|| {
+                let here: Rc<dyn crate::store::Ask> = self.heres.lock().unwrap()[&self.home(f)].clone();
+                let trip = self.trips.lock().unwrap().entry((node, self.home(f))).or_insert_with(|| Rc::new(crate::store::Trip::new(here))).clone();
+                let v = Rc::new(Stretch::held_there(s, trip.clone()));
+                trip.join(&v);
+                v
+            }).clone(),
+            _ => s.clone(),
+        }
+    }
+    fn lower(&self, reader: (u32, u32), l: &Rc<Lower>) -> Rc<Lower> {
+        let key = (self.home(reader), Rc::as_ptr(l) as usize);
+        if let Some(v) = self.lowers.lock().unwrap().get(&key) {
+            return v.clone();
+        }
+        let v = Rc::new(l.viewed(|s| self.view(reader, s)));
+        self.lowers.lock().unwrap().entry(key).or_insert(v).clone()
+    }
 }
 
 /// The layers under `tops` as one list every reader shares: their stretches, and where a key is found in them; and
@@ -895,7 +951,8 @@ impl Levels {
         e.store.read_near(self.mark, Some(lower_of(&self.cx, &self.tops, self.over.as_ref())), Vec::new(), None, Some(trees), Some(forest));
         e.store.reads_ghosts(self.ghosts.clone());
         // (the aggregates are the reader's unit's, the last: the cells its firings cite are read there)
-        if let Some(u) = self.tops.last() {
+        // (a node as a process has none: its last unit is the root's)
+        if let Some(u) = self.tops.last().filter(|u| !u.stretch.is_held_there()) {
             e.store.read_cells(u.stretch.store());
         }
     }
@@ -1525,6 +1582,10 @@ impl Eval {
         let texts: Vec<Mutex<volumes::FileText>> = files.into_iter().map(|(_, t)| Mutex::new(t)).collect();
         let core = self.store.len_ids();
         let bump = AtomicU32::new(edit.as_ref().map_or(core, |e| e.0.mark.max(core)));
+        // (nodes as processes: ids from the root's counter, the units of other nodes asked where they are settled)
+        let far = far::Far::of_env(&cx.h, n);
+        let ids = |n: u32| far.as_ref().map_or_else(|| bump.fetch_add(n, Relaxed), |f| f.ids(n));
+        let mark = || far.as_ref().map_or_else(|| bump.load(Relaxed), |f| f.mark());
         // an edit: the stretches replaced, the keys a fact came or went under by layer, and how many units were
         // settled again, how many of them with the facts they had
         let replaced: Mutex<FxSet<FactId>> = Mutex::default();
@@ -1548,7 +1609,10 @@ impl Eval {
         let cost = Mutex::new(self.cost.anew());
         let core_names = (self.h.syms.len() as Sym, self.h.funcs_len());
         let one = Mutex::new(());
-        let (keys, rows) = (Mutex::new(self.h.clone()), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
+        let (keys, rows) = (Rc::new(Mutex::new(self.h.clone())), Mutex::new(edit.as_ref().map_or(Vec::new(), |e| e.0.rows.clone())));
+        if let Some(f) = &far {
+            f.keys(keys.clone());
+        }
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let all = (0, n as u32);
         // the rules of each layer, and the relations each takes the facts at home by
@@ -1632,7 +1696,7 @@ impl Eval {
         let cooled = Mutex::new(Cooled::default());
         let over: std::sync::OnceLock<Over> = std::sync::OnceLock::new();
         let cool = |us: &mut [&mut Unit], trees: bool| {
-            let us: Vec<&mut &mut Unit> = us.iter_mut().filter(|u| !u.stretch.cooled() && Rc::strong_count(&u.stretch) == 1).collect();
+            let us: Vec<&mut &mut Unit> = us.iter_mut().filter(|u| !u.stretch.cooled() && !u.stretch.is_held_there() && Rc::strong_count(&u.stretch) == 1).collect();
             if us.is_empty() {
                 return;
             }
@@ -1700,7 +1764,7 @@ impl Eval {
             }
         }
         // (`first`: the order they are taken in, where not as they lie: the largest first, so none is left to end alone)
-        let level = |n: usize, trees: bool, first: &[usize], f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
+        let level = |(k, d): (usize, usize), n: usize, trees: bool, first: &[usize], f: &(dyn Fn(usize) -> Result<Unit, Halt> + Sync)| -> Result<Vec<Rc<Unit>>, Halt> {
             let next = AtomicUsize::new(0);
             let mut out: Vec<Mutex<Option<Result<Unit, Halt>>>> = (0..n).map(|_| Mutex::new(None)).collect();
             let (mut from, run) = (0, (threads * 32).max(64));
@@ -1717,7 +1781,11 @@ impl Eval {
                             super::par::UNITS.fetch_add(1, Relaxed);
                             let _busy = Busy;
                             let x = first.get(x).copied().unwrap_or(x);
-                            *out[x].lock().unwrap() = Some(f(x));
+                            let u = f(x);
+                            *out[x].lock().unwrap() = Some(match &far {
+                                Some(far) => far.settled(k, d, x, u),
+                                None => u,
+                            });
                         });
                     }
                 });
@@ -1750,6 +1818,38 @@ impl Eval {
         };
         // a layer's rules made ready once: every unit of the layer starts from it
         let ready: Mutex<Option<Fork>> = Mutex::default();
+        // what a unit settled again moved: the keys a fact came or went under, the relations a fact came to
+        let took_moved = |k: usize, fs: &[(Sym, Vec<Term>, Option<FactId>)]| {
+            let (mut keys, mut went): (FxSet<u64>, FxSet<u64>) = Default::default();
+            {
+                let ms = cx.masks.lock().unwrap();
+                let mut rels = came.lock().unwrap();
+                let mut ids = new_ids.lock().unwrap();
+                for (rel, args, new) in fs {
+                    answers(&cx.h, *rel, args, ms.get(rel), |key| { keys.insert(key); });
+                    if let Some(id) = new {
+                        rels.insert(*rel);
+                        ids[k].insert(*id);
+                    } else if negated.contains(rel) {
+                        answers(&cx.h, *rel, args, ms.get(rel), |key| { went.insert(key); });
+                    }
+                }
+            }
+            moved.lock().unwrap()[k].extend(keys);
+            gone.lock().unwrap().extend(went);
+        };
+        // a unit another process settled: where it was settled again, what it moved is taken as if settled here
+        let from_far = |k: usize, files: (u32, u32), got: Result<(Unit, Option<far::Moved>), Halt>| -> Result<Unit, Halt> {
+            let (u, m) = got?;
+            if let (Some(o), Some((lo, fs))) = (was(k, files), m) {
+                assert_eq!(o.stretch.lo, lo, "far: the unit of files {files:?} was not where its node says it was");
+                again.fetch_add(1, Relaxed);
+                replaced.lock().unwrap().insert(o.stretch.lo);
+                ghosts.lock().unwrap().push(o.stretch.clone());
+                took_moved(k, &fs);
+            }
+            Ok(u)
+        };
         let done = |e: Fork, k: usize, files: (u32, u32), kids: Vec<Rc<Unit>>, mut dir: FxMap<Key, Vec<FactId>>, inner: Rc<Dir>, asked: Asked| {
             let mut e = e;
             let mut store = std::mem::take(&mut e.0.store);
@@ -1770,24 +1870,25 @@ impl Eval {
             }
             cost.lock().unwrap().absorb(&e.0.cost);
             let n = store.len_ids() - store.layer_mark();
-            let mut stretch = store.into_stretch(&e.0.h, bump.fetch_add(n, Relaxed));
-            // (an oracle of the seam between nodes: a file's own unit crosses as another process would read it)
-            // (and with a directory, through a file: one run writes there what another reads in place of its own)
-            if k == 0 && kids.is_empty() && std::env::var_os("ROFL_WIRE_UNITS").is_some() {
-                let dir = std::env::var_os("ROFL_WIRE_DIR").map(std::path::PathBuf::from);
+            let mut stretch = store.into_stretch(&e.0.h, ids(n));
+            // (an oracle of the seam between nodes: every unit crosses as another process would read it)
+            // (and with a directory, through a file: one run writes there a file's own unit, which another reads in place
+            // of its own; a group names its children's facts by the ids of this run)
+            if std::env::var_os("ROFL_WIRE_UNITS").is_some() {
+                let dir = std::env::var_os("ROFL_WIRE_DIR").filter(|_| k == 0 && kids.is_empty()).map(std::path::PathBuf::from);
                 let path = dir.map(|d| d.join(format!("{}-{}.unit", files.0, files.1)));
                 let b = match path.as_ref().filter(|p| std::env::var_os("ROFL_WIRE_TAKE").is_some() && p.exists()) {
                     Some(p) => {
                         TAKEN.fetch_add(1, Relaxed);
                         std::fs::read(p).expect("a unit another run wrote")
                     }
-                    None => stretch.to_wire(&e.0.h, &|k| keys.lock().unwrap().name(k).to_string(), true).expect("a file's own unit goes on the wire"),
+                    None => stretch.to_wire(&e.0.h, &|k| keys.lock().unwrap().name(k).to_string(), true).expect("a unit goes on the wire"),
                 };
                 if let Some(p) = path.filter(|_| std::env::var_os("ROFL_WIRE_TAKE").is_none()) {
                     std::fs::write(p, &b).expect("a unit written for another run");
                 }
                 WIRED.fetch_add(b.len(), Relaxed);
-                stretch = Stretch::from_wire(&b, &mut e.0.h, &mut |_, s| keys.lock().unwrap().key(s), fork().0.store, stretch.lo).expect("a file's own unit comes off the wire");
+                stretch = Stretch::from_wire(&b, &mut e.0.h, &mut |_, s| keys.lock().unwrap().key(s), fork().0.store, stretch.lo).expect("a unit comes off the wire");
             }
             drop((one.lock().unwrap(), e));
             if let Some(o) = was(k, files) {
@@ -1807,23 +1908,12 @@ impl Eval {
                     None => {
                         replaced.lock().unwrap().insert(o.stretch.lo);
                         ghosts.lock().unwrap().push(o.stretch.clone());
-                        let (mut keys, mut went): (FxSet<u64>, FxSet<u64>) = Default::default();
-                        {
-                            let ms = cx.masks.lock().unwrap();
-                            let mut rels = came.lock().unwrap();
-                            let mut ids = new_ids.lock().unwrap();
-                                stretch.differs(&o.stretch, |rel, args, new| {
-                                answers(&cx.h, rel, args, ms.get(&rel), |key| { keys.insert(key); });
-                                if let Some(id) = new {
-                                    rels.insert(rel);
-                                    ids[k].insert(id);
-                                } else if negated.contains(&rel) {
-                                    answers(&cx.h, rel, args, ms.get(&rel), |key| { went.insert(key); });
-                                }
-                            });
+                        let mut fs = Vec::new();
+                        stretch.differs(&o.stretch, |rel, args, new| fs.push((rel, args.to_vec(), new)));
+                        took_moved(k, &fs);
+                        if let Some(f) = &far {
+                            f.moved(stretch.lo, (o.stretch.lo, fs));
                         }
-                        moved.lock().unwrap()[k].extend(keys);
-                        gone.lock().unwrap().extend(went);
                     }
                 }
             }
@@ -1856,6 +1946,7 @@ impl Eval {
         // their first premise the facts of those layers at home at its place (`at_home`), and what its children make
         // together where two of them meet
         // (`lows`: under each child, the units of the layers below at its place)
+        let nodes = std::env::var("ROFL_HELD").ok().filter(|_| far.is_none()).map(|n| Nodes::of(n.parse().unwrap_or(32), cx.h.clone()));
         let unit = |k: usize, lower: &Option<Rc<Lower>>, trees: &Option<Rc<TreeOf>>, at_home: Vec<Rc<Stretch>>, kids: Vec<Rc<Unit>>, lows: Vec<Vec<Rc<Unit>>>, files: (u32, u32), old: Option<Rc<Unit>>| -> Result<Unit, Halt> {
             let mut near: Vec<(Rc<Stretch>, u32)> = Vec::new();
             let mut low_near: Vec<(Rc<Stretch>, u32)> = Vec::new();
@@ -1889,11 +1980,8 @@ impl Eval {
                 seeds.extend(ids[k].iter().filter(|&&id| near.partition_point(|(s, _)| s.lo <= id).checked_sub(1).is_some_and(|i| id < near[i].0.hi)));
                 let shifted = shifted.lock().unwrap();
                 for st in near.iter().map(|(s, _)| s).chain(&at_home).filter(|_| !shifted.is_empty()) {
-                    for id in st.lo..st.hi {
-                        let r = st.rec(id);
-                        if !r.dead() && read_rels[k].contains(&r.rel) && st.args(id).iter().any(|t| shifted.contains(&t.bits())) {
-                            seeds.push(id);
-                        }
+                    for rel in st.rels().filter(|r| read_rels[k].contains(r)) {
+                        seeds.extend(st.of_rel(rel).into_iter().filter(|&id| st.args(id).iter().any(|t| shifted.contains(&t.bits()))));
                     }
                 }
             }
@@ -1939,7 +2027,10 @@ impl Eval {
                             let low = k > 0 && bplaces(k).contains(&(rel, n, p)) && ms().any(|&m| bmates(k).contains(&((rel, n, p), m)) && others().any(|d| of(d).skip(own as usize).any(|d| holds(d, m))));
                             if met || low {
                                 for &h in hs {
-                                    let ids = held(at(h), &cx.h, (rel, n, p), v);
+                                    let ids = match nodes.as_ref() {
+                                        Some(x) => held(&x.view(files, at(h)), &cx.h, (rel, n, p), v),
+                                        None => held(at(h), &cx.h, (rel, n, p), v),
+                                    };
                                     if low {
                                         bridges.extend(&ids);
                                     }
@@ -1974,12 +2065,16 @@ impl Eval {
                 e.0.cost = e.0.cost.anew();
                 e
             };
-            let mark = bump.load(Relaxed);
+            let mark = mark();
             ASKED.with(|a| *a.borrow_mut() = Some(Asked { reads: near.iter().chain(&low_near).map(|(s, _)| s.lo).chain(at_home.iter().map(|s| s.lo)).collect(), ..Default::default() }));
             let mut here: Vec<(FactId, FactId)> = at_home.iter().map(|s| (s.lo, s.hi)).collect();
             here.sort_unstable();
             e.0.meeting = Some(Rc::new(Meeting { mark, under, here, core, top: files == all, by: home.clone(), walls: walls.clone() }));
-            e.0.store.read_near(mark, lower.clone(), near.iter().map(|(s, _)| s.clone()).collect(), route, trees.clone(), None);
+            let (low, seen) = match nodes.as_ref() {
+                Some(v) => (lower.as_ref().map(|l| v.lower(files, l)), near.iter().map(|(s, _)| v.view(files, s)).collect()),
+                None => (lower.clone(), near.iter().map(|(s, _)| s.clone()).collect()),
+            };
+            e.0.store.read_near(mark, low, seen, route, trees.clone(), None);
             if files == all && k + 1 == rules_of.len() {
                 e.0.store.read_wide();
             }
@@ -2090,9 +2185,13 @@ impl Eval {
             drop((one.lock().unwrap(), e));
             Some(match &old_over {
                 Some(o) if s.same_as(o) => o.clone(),
+                Some(_) if far.is_some() => panic!("far: the facts laid over the files changed at an edit, which the nodes as processes do not lay alike yet"),
                 _ => Rc::new(s),
             })
         };
+        if let Some(f) = &far {
+            f.laid(bump.load(Relaxed));
+        }
         let (mut touched, mut over_keys): (FxSet<u32>, FxSet<u64>) = Default::default();
         if edit.is_some() && old_over.as_ref().map(|o| o.lo) != over_st.as_ref().map(|o| o.lo) {
             if let Some(o) = &old_over {
@@ -2155,8 +2254,11 @@ impl Eval {
             let mut units = if k == 0 {
                 // the files alone, every one at once
                 let forks = &one;
-                let units = level(ranges.len(), true, &largest, &|x| {
+                let units = level((k, 0), ranges.len(), true, &largest, &|x| {
                     let one = ranges[x];
+                    if let Some(f) = far.as_ref().filter(|f| !f.mine(one)) {
+                        return from_far(k, one, f.unit(k, 0, x, one, Vec::new()));
+                    }
                     if let Some(o) = was(k, one).filter(|_| !edit.as_ref().is_some_and(|e| brk!("levels_leaf_first_file" => one.0..one.0 + 1; one.0..one.1).any(|f| e.1.contains(&f) || touched.contains(&f)))) {
                         return Ok(kept(&o, Vec::new()));
                     }
@@ -2164,7 +2266,7 @@ impl Eval {
                     if let Some(p) = std::env::var_os("ROFL_WIRE_TAKE").and(std::env::var_os("ROFL_WIRE_DIR")).map(|d| std::path::PathBuf::from(d).join(format!("{}-{}.unit", one.0, one.1))).filter(|p| p.exists()) {
                         let b = std::fs::read(p).expect("a unit another run wrote");
                         let n = Stretch::wire_facts(&b).expect("a unit another run wrote");
-                        let lo = bump.fetch_add(n, Relaxed);
+                        let lo = ids(n);
                         let mut e = fork();
                         let stretch = Stretch::from_wire(&b, &mut e.0.h, &mut |_, s| keys.lock().unwrap().key(s), fork().0.store, lo).expect("a file's own unit comes off the wire");
                         drop((forks.lock().unwrap(), e));
@@ -2177,7 +2279,7 @@ impl Eval {
                     }
                     let mut e = fork();
                     if let Some(o) = over_st.as_ref().filter(|_| leaves_read) {
-                        e.0.store.read_near(bump.load(Relaxed), Some(lower_of(&cx, &[], Some(o))), Vec::new(), None, None, None);
+                        e.0.store.read_near(mark(), Some(lower_of(&cx, &[], Some(o))), Vec::new(), None, None, None);
                     }
                     let from = e.0.store.len_ids();
                     for text in &texts[one.0 as usize..one.1 as usize] {
@@ -2241,12 +2343,19 @@ impl Eval {
                 }));
                 units
             } else {
-                level(ranges.len(), false, &largest, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
+                level((k, 0), ranges.len(), false, &largest, &|i| match was(k, ranges[i]).filter(|o| stands(o, &moved_below)) {
+                    _ if far.as_ref().is_some_and(|f| !f.mine(ranges[i])) => from_far(k, ranges[i], far.as_ref().unwrap().unit(k, 0, i, ranges[i], Vec::new())),
                     Some(o) => Ok(kept(&o, Vec::new())),
                     None => unit(k, &lower, &trees, at_home(0, i), Vec::new(), Vec::new(), ranges[i], None),
                 })?
             };
             ms.push(t0.elapsed().as_millis());
+            if let Some(x) = &nodes {
+                x.place(&units);
+            }
+            if let Some(f) = &far {
+                f.publish(k, 0, &units);
+            }
             census(&format!("layer {k} depth 0"), &layers, &units);
             if std::env::var_os("ROFL_CENSUS").is_some() { let kh = keys.lock().unwrap(); eprintln!("census keys heap {} MB, {} names, {:?}, rows {}", kh.bytes() >> 20, kh.sym_count(), kh.parts(), rows.lock().unwrap().len()); }
             let snap = || {
@@ -2263,13 +2372,16 @@ impl Eval {
             while units.len() > 1 {
                 let groups: Vec<Vec<Rc<Unit>>> = units.chunks(fan.max(2)).map(|c| c.to_vec()).collect();
                 let d = depths.len();
-                units = level(groups.len(), false, &[], &|x| {
+                units = level((k, d), groups.len(), false, &[], &|x| {
                     let kids = groups[x].clone();
                     if kids.len() == 1 {
                         let k = &kids[0];
                         return Ok(kept(k, k.kids.clone()));
                     }
                     let files = (kids[0].files.0, kids[kids.len() - 1].files.1);
+                    if let Some(f) = far.as_ref().filter(|f| !f.mine(files)) {
+                        return from_far(k, files, f.unit(k, d, x, files, kids));
+                    }
                     if let Some(o) = was(k, files).filter(|o| stands(o, &moved_below)) {
                         return Ok(kept(&o, kids));
                     }
@@ -2277,6 +2389,12 @@ impl Eval {
                     unit(k, &lower, &trees, at_home(d, x), kids, lows, files, was(k, files))
                 })?;
                 depths.push(units.clone());
+                if let Some(x) = &nodes {
+                    x.place(&units);
+                }
+                if let Some(f) = &far {
+                    f.publish(k, d, &units);
+                }
                 ms.push(t0.elapsed().as_millis());
                 census(&format!("layer {k} depth {d}"), &layers, &depths.concat());
                 seen.push(snap());
@@ -2287,6 +2405,8 @@ impl Eval {
             tops.push(units.pop().expect("a file at least"));
             layers.push(depths);
         }
+        // (a node's world ends at its layers: the reader's unit is the root's)
+        let node = far.as_ref().is_some_and(|f| f.me != far::ROOT);
         // THE READER'S UNIT: the rules left to the world's reader by their shape are fired whole over the layers, and
         // what they conclude is one more stretch it reads; after an edit, again, unless no stretch was replaced
         let k = rules_of.len();
@@ -2300,16 +2420,23 @@ impl Eval {
             let sum: u64 = by.iter().map(|x| x.1 .0).sum();
             said.push(format!("levels: seam by rule, of {sum} questions: {}", by.iter().take(25).map(|((r, rel), (q, n))| format!("{} ({}) asks {} {q}q/{n}f", if *r == u32::MAX { "-".to_string() } else { self.h.name(*r).to_string() }, if *r == u32::MAX { "-".to_string() } else { head(*r) }, self.h.name(*rel))).collect::<Vec<_>>().join("; ")));
         }
+        if let Some(f) = &far {
+            said.push(format!("levels: far, {} requests ({}), {} KB between the processes; {} ids the last", FAR_SAID[0].load(Relaxed), far::OPS.iter().zip(&far::FAR_OPS).map(|(o, n)| format!("{} {}", *o as char, n.load(Relaxed))).collect::<Vec<_>>().join(" "), FAR_SAID[1].load(Relaxed) / 1024, f.mark()));
+        }
+        if nodes.is_some() || far.is_some() {
+            let r: Vec<u64> = crate::store::HELD_READ.iter().map(|c| c.load(Relaxed)).collect();
+            said.push(format!("levels: units other nodes hold, read: {} relations in {} KB, {} facts alone in {} KB, {} reads of a stretch there whole; the planner's counts {} in {} KB; firings asked {} in {} KB", r[0], r[1] / 1024, r[2], r[3] / 1024, r[4], r[5], r[6] / 1024, r[7], r[8] / 1024));
+        }
         if std::env::var_os("ROFL_WIRE_UNITS").is_some() {
             let p: Vec<u64> = crate::store::WIRE_PARTS.iter().map(|c| c.load(Relaxed) / 1024).collect();
             said.push(format!("levels: {} units taken from another run", TAKEN.load(Relaxed)));
-            said.push(format!("levels: the files' own units crossed the wire, {} KB: names {} KB, facts {} KB, firings {} KB, trees {} KB (the last three counted twice)", WIRED.load(Relaxed) / 1024, p[0], p[1], p[2], p[3]));
+            said.push(format!("levels: the units crossed the wire, {} KB: names {} KB, facts {} KB, firings {} KB, trees {} KB (the last three counted twice)", WIRED.load(Relaxed) / 1024, p[0], p[1], p[2], p[3]));
         }
         let reader0 = crate::store::SEAM.iter().map(|c| c.load(Relaxed)).collect::<Vec<u64>>();
         if edit.is_some() && !over_keys.is_empty() {
             said.push(format!("levels: the facts laid over the files moved under {} keys; the units of {} files meet them; units settled again by the layer's end: {:?}", over_keys.len(), touched.len(), again_at));
         }
-        if self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
+        if !node && self.rules.iter().any(|r| r.safe && !given.contains(&r.id) && !cx.joins.tree_rules.contains(&r.id)) {
             moved.lock().unwrap().push(FxSet::default());
             new_ids.lock().unwrap().push(FxSet::default());
             let top = match was(k, all).filter(|_| replaced.lock().unwrap().is_empty()) {
@@ -2317,7 +2444,9 @@ impl Eval {
                 None => {
                     let mut e = fork();
                     let (trees, forest) = reader_trees(&cx, &tops, &e.0);
-                    e.0.store.read_near(bump.load(Relaxed), Some(lower_of(&cx, &tops, over_st.as_ref())), Vec::new(), None, Some(trees), Some(forest));
+                    let low = lower_of(&cx, &tops, over_st.as_ref());
+                    let low = nodes.as_ref().map_or(low.clone(), |v| v.lower(all, &low));
+                    e.0.store.read_near(mark(), Some(low), Vec::new(), None, Some(trees), Some(forest));
                     e.0.store.tree_sizes = sizes.lock().unwrap().clone();
                     e.0.stage_given = Some(Rc::new(given));
                     // (it starts from nothing: no whole evaluation before it left what it may keep)
@@ -2336,6 +2465,6 @@ impl Eval {
             tops.push(Rc::new(top));
         }
         let again = edit.is_some().then(|| (again.load(Relaxed), same.load(Relaxed)));
-        Ok(Levels { tops, cx, mark: bump.load(Relaxed), keys: keys.into_inner().unwrap(), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), over: over_st, said, cooled: cooled.into_inner().unwrap(), cost: cost.into_inner().unwrap() })
+        Ok(Levels { tops, cx, mark: mark(), keys: Rc::try_unwrap(keys).map_or_else(|k| k.lock().unwrap().clone(), |k| k.into_inner().unwrap()), rows: rows.into_inner().unwrap(), again, ghosts: ghosts.into_inner().unwrap(), over: over_st, said, cooled: cooled.into_inner().unwrap(), cost: cost.into_inner().unwrap() })
     }
 }

@@ -10,7 +10,7 @@ import * as path from 'node:path';
 import * as readline from 'node:readline';
 import { RoflPort } from '../runtime/port.ts';
 import { MODEL_FILES } from '../notebook/front.ts';
-import { NODE } from '../runtime/split.ts';
+import { NODE } from '../models/lang/js/scanner/oxc_bin.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const [factsPath, nArg, msArg, ...rest] = process.argv.slice(2);

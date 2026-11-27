@@ -11,8 +11,7 @@
 //! `JSON.stringify` does, and come back through a parser that decodes the
 //! escapes the renderer writes and refuses every other BY NAME. A control
 //! character in a string attribute left as a `\u` escape and never returned
-//! until the parser read `\u0000`..`\u001f` too (found by the surface-split
-//! driver on vscode, docs/surface-split.md). That is exactly the
+//! until the parser read `\u0000`..`\u001f` too (found on vscode). That is exactly the
 //! kind of gap a round trip finds and an eyeball does not, which is why the
 //! fixture below carries a quote, a backslash and a tab on purpose.
 use rofl::session::Session;
@@ -187,87 +186,13 @@ fn a_volume_this_engine_did_not_write_is_refused() {
     std::fs::remove_file(&bad).ok();
 }
 
-/// A VOLUME COOLED BY BOOK (docs/surface-split.md, the driver): its `[code]` and `[flow]` facts go, base and derived,
-/// with the kernel's account of them; its `[surface]` stays, a base one through every evaluation after. Reheated, the
-/// world is the one that was cooled, byte for byte, and the other volume never moved.
+/// Two books over the volumes' facts, so a why crosses from one book's conclusion to another's.
 const BOOKS: &str = r#"
 imports(flow, code).
-imports(surface, flow).
+imports(reach, flow).
 callee_of[flow](C, N) :- ast_attr[code](C, name, N).
-sx_called[surface](N) :- callee_of[flow](_, N).
-sx_pinned[surface](na1b2c3d4_2, "published").
+called[reach](N) :- callee_of[flow](_, N).
 "#;
-
-#[test]
-fn a_volume_cooled_by_book_keeps_its_surface_and_reheats_to_the_same_world() {
-    let mut s = world();
-    s.load(BOOKS, None).expect("books refused");
-    s.evaluate().expect("evaluate");
-    let before = s.eval.canonical_state();
-    let n = |s: &mut Session, q: &str| s.ask(q).unwrap().rows.len();
-    assert_eq!(n(&mut s, "callee_of[flow](C, N)"), 2);
-
-    let out = tmp("cool_books_a.rofl");
-    let c = s.cool_books("na1b2c3d4_", &["ast_oxc".into(), "code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool by book");
-    assert_eq!(c.facts, 6, "the volume's base [code] facts are what is written");
-    let text = std::fs::read_to_string(&out).unwrap();
-    assert!(!text.contains("[surface]") && !text.contains("[flow]"), "only the base facts of the books leave: {text}");
-
-    // GONE: the volume's [code] and [flow], base and derived. KEPT: its [surface], and all of the other volume.
-    assert_eq!(n(&mut s, "ast_node[code](na1b2c3d4_1, K, F, L)"), 0);
-    assert_eq!(n(&mut s, "callee_of[flow](na1b2c3d4_2, N)"), 0);
-    assert_eq!(n(&mut s, "callee_of[flow](nf9e8d7c6_2, N)"), 1);
-    assert_eq!(n(&mut s, "sx_called[surface](\"greet\")"), 1, "the surface it published left with the volume");
-    assert_eq!(n(&mut s, "sx_pinned[surface](na1b2c3d4_2, V)"), 1);
-    // A BASE surface fact outlives the evaluation that drops what the cooled volume concluded, its trail with it.
-    s.evaluate().expect("re-evaluate after cooling");
-    assert_eq!(n(&mut s, "sx_pinned[surface](na1b2c3d4_2, V)"), 1);
-    assert_eq!(n(&mut s, "sx_called[surface](\"greet\")"), 0, "a conclusion without its volume outlived an evaluation");
-    assert_eq!(n(&mut s, "sx_called[surface](\"farewell\")"), 1);
-    assert_eq!(s.ask("asserted_by[$kernel](F, W, T)").unwrap().keys.iter().filter(|k| k.contains("sx_pinned")).count(), 1);
-
-    // BACK, by delta into the evaluated world, and identical.
-    s.reheat(out.to_str().unwrap()).unwrap_or_else(|d| panic!("reheat refused: {}", d.join("; ")));
-    s.evaluate().expect("re-evaluate after reheating");
-    assert_eq!(s.eval.canonical_state(), before, "a volume cooled by book did not come back the way it left");
-
-    // cooled and reheated with no evaluation between: the same
-    s.cool_books("na1b2c3d4_", &["ast_oxc".into(), "code".into(), "flow".into()], &[], out.to_str().unwrap()).expect("cool");
-    s.reheat(out.to_str().unwrap()).expect("reheat");
-    s.evaluate().expect("evaluate");
-    assert_eq!(s.eval.canonical_state(), before);
-    assert!(s.cool_books("na1b2c3d4_", &[], &[], out.to_str().unwrap()).is_err(), "cooling no book is a mistake, said");
-    std::fs::remove_file(&out).ok();
-}
-
-/// A base fact of the volume in a book that is neither cooled nor kept would be forgotten by the volume that is closed
-/// after (a hot volume and a cold one would differ): the cool is refused, before anything moves, naming the fact.
-#[test]
-fn a_volume_holding_a_base_fact_in_an_uncooled_book_is_refused_before_anything_moves() {
-    let mut s = world();
-    s.load(BOOKS, None).expect("books refused");
-    s.load("ast_attr[extra](na1b2c3d4_2, probe, \"x\").", None).expect("fact refused");
-    s.evaluate().expect("evaluate");
-    let before = s.eval.canonical_state();
-    let out = tmp("cool_books_extra.rofl");
-    std::fs::remove_file(&out).ok();
-    let both: Vec<String> = vec!["ast_oxc".into(), "code".into(), "flow".into()];
-    let e = s.cool_books("na1b2c3d4_", &both, &[], out.to_str().unwrap()).err().expect("a base fact in [extra] was forgotten");
-    assert!(e.contains("[extra]") && e.contains("probe"), "{e}");
-    assert!(!out.exists(), "a refused cool wrote a file");
-    assert_eq!(s.eval.canonical_state(), before, "a refused cool moved the world");
-    let all: Vec<String> = vec!["ast_oxc".into(), "code".into(), "flow".into(), "extra".into()];
-    let c = s.cool_books("na1b2c3d4_", &all, &[], out.to_str().unwrap()).expect("cool with the book");
-    assert_eq!(c.books, vec![("ast_oxc".to_string(), 1), ("code".to_string(), 5), ("extra".to_string(), 1)]);
-    assert!(std::fs::read_to_string(&out).unwrap().contains("[extra]"), "the fact did not leave with the volume");
-    s.reheat(out.to_str().unwrap()).expect("reheat");
-    s.evaluate().expect("evaluate");
-    assert_eq!(s.eval.canonical_state(), before);
-    // a book kept on purpose is no refusal, and stays
-    s.cool_books("na1b2c3d4_", &both, &["extra".to_string()], out.to_str().unwrap()).expect("kept");
-    assert_eq!(s.ask("ast_attr[extra](na1b2c3d4_2, probe, V)").unwrap().rows.len(), 1);
-    std::fs::remove_file(&out).ok();
-}
 
 /// A prefix that names nothing must cool nothing. A volume operation that
 /// quietly matched everything would empty a world the first time it came under
@@ -356,7 +281,7 @@ fn a_trail_this_engine_did_not_write_is_refused() {
 /// into the world it left, before an evaluation, or into the world kept as a volume and opened again.
 #[test]
 fn a_reheated_volume_answers_why_as_before_cooling() {
-    let qs = ["callee_of[flow](na1b2c3d4_2, \"greet\")", "sx_called[surface](\"greet\")", "callee_of[flow](nf9e8d7c6_2, \"farewell\")"];
+    let qs = ["callee_of[flow](na1b2c3d4_2, \"greet\")", "called[reach](\"greet\")", "callee_of[flow](nf9e8d7c6_2, \"farewell\")"];
     let fresh = || {
         let mut s = world();
         s.load(BOOKS, None).expect("books refused");
@@ -377,7 +302,7 @@ fn a_reheated_volume_answers_why_as_before_cooling() {
     s.evaluate().expect("evaluate");
     assert_eq!(whys(&mut s), before, "reheated by delta");
 
-    s.cool_books("na1b2c3d4_", &["ast_oxc".into(), "code".into(), "flow".into()], &[], path).expect("cool by book");
+    s.cool("na1b2c3d4_", path).expect("cool");
     s.reheat(path).expect("reheat");
     assert_eq!(whys(&mut s), before, "reheated with no evaluation between");
 

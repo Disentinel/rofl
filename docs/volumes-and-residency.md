@@ -87,15 +87,12 @@ internals — so the hot set becomes core + touched volumes + all exports.
 resolves imports, calls, re-exports and `require` across files (at 500 files of
 vscode, 0.56% of derived facts have a witness that names two files), so the
 statements above about 193 same-file `resolves` describe the model of
-2026-09-09. The crossing edge is the `[surface]` book, `models/lang/js/rules/js-surface.rofl`:
-a rule that joins two files reads the other one only through `[surface]`, and
-each file evaluated alone with the others' surface equals the whole world, fact
-for fact, in both ingest orders (world `vscode_surface_split`, `npm run
-test:split`). What crosses was measured, not guessed: it is more than exports
+2026-09-09. What crosses was measured, not guessed: it is more than exports
 (a node that leaves a file takes its elements, members and values with it), and
-a negation over `[surface]` makes ingest order matter. `docs/surface-split.md`
-is the account; the driver that cools volumes and runs the surface fixpoint is
-not built yet.
+a negation over what another file offers makes ingest order matter. The
+`[surface]` book that first carried it, and its driver, are gone: the engine
+finds what crosses from the rules' keys, settles the files by levels and reads
+another file's fact as a lemma (f_surface_is_replaced_by_lemmas_by_keys).
 
 ## The size of what must stay hot
 
@@ -227,10 +224,8 @@ So the layering the measurements support is three deep, not two:
 **1. The interface's CONTENT must be derived from the rules, not chosen.** The
 table above is a plausible guess and that is its weakness. The correct content
 is exactly the relations read by rules whose premises span volumes — an
-empty set when this was written, because nothing crossed; it is now the
-`[surface]` book, and the surface lint (`examples/surface/surface.rofl`) derives
-which columns can hold another file's node from the rules themselves and
-reports a rule that reads a file-local premise at one. `scanners/rule_shape.ts` already computes
+empty set when this was written, because nothing crossed; it is now
+found by the engine from the rules' keys (f_volumes_cross_by_the_rules_keys). `scanners/rule_shape.ts` already computes
 `rule_leaves(R, B)`, rules that read outside their own book, which is the same
 shape of question. Deriving it once beats maintaining a list, for the reason
 this repository has already paid for twice: a hand-written list reopens
