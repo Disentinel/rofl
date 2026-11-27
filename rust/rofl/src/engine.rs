@@ -869,6 +869,8 @@ pub struct Eval {
     pub lower_sources: Option<Rc<Vec<(String, Option<String>)>>>,
     /// The texts kept beside the units a world is read from, where a file's text is read alone.
     pub lower_kept: Option<Rc<volumes::KeptTexts>>,
+    /// a delta takes out lemmas of files whose lower stage it proved again (`Session::as_staged`)
+    pub retaking: bool,
     /// A file thawed (`Eval::thaw`): it holds the books of its file, which the world it was forked from cut.
     thawed: bool,
     /// The heads of the whole program's lower stage, where asks prunes it (`Eval::lemma_stage`).
@@ -2400,6 +2402,7 @@ impl Eval {
             lower_texts: None,
             lower_sources: None,
             lower_kept: None,
+            retaking: false,
             thawed: false,
             lower_full: None,
             aside: HashSet::new(),
@@ -17175,6 +17178,33 @@ impl Eval {
     /// lower stage whole, keeping the books the world cut. What `why --all` unfolds a lemma in and a `whynot` walks
     /// below the cut in.
     pub fn thaw(&self, text: &str, st: &stages::Stage) -> Result<Eval, Halt> {
+        Ok(self.thawed(text, st, None)?.0)
+    }
+
+    /// The lemmas the lower stage of a file's `text` proves (`thaw`), named in this world; `held`, the lemmas it gave
+    /// before, are taken out of the fork first.
+    pub fn lemmas_of(&mut self, text: &str, st: &stages::Stage, held: &[FactId]) -> Result<Vec<(Sym, Sym, Vec<Term>)>, Halt> {
+        let (low, stood) = self.thawed(text, st, Some(held))?;
+        Ok(self.lemmas_in(&low, &stood, st))
+    }
+
+    /// The lemmas `low`, a fork of this world, proved beyond the records that `stood`, named in this world.
+    pub fn lemmas_in(&mut self, low: &Eval, stood: &[bool], st: &stages::Stage) -> Vec<(Sym, Sym, Vec<Term>)> {
+        let ids: Vec<FactId> = (0..low.store.len_ids())
+            .filter(|&id| !stood.get(id as usize).copied().unwrap_or(false) && low.store.alive(id) && st.given.contains(&low.store.rec(id).rel) && !st.cut.contains(&low.store.rec(id).persp))
+            .collect();
+        ids.into_iter()
+            .map(|id| {
+                let r = low.store.rec(id);
+                let args = low.store.args(id).iter().map(|a| port_term(*a, &low.h, &mut self.h)).collect();
+                (self.h.intern(low.h.name(r.rel)), self.h.intern(low.h.name(r.persp)), args)
+            })
+            .collect()
+    }
+
+    /// `thaw`, with the lemmas the world held (or of them, `held`) taken out of the fork before it reads the file,
+    /// and which records stood then: what else the fork holds it proved anew.
+    fn thawed(&self, text: &str, st: &stages::Stage, held: Option<&[FactId]>) -> Result<(Eval, Vec<bool>), Halt> {
         let mut low = self.fork();
         low.lower_texts = None;
         low.lower_sources = None;
@@ -17184,10 +17214,16 @@ impl Eval {
         if low.levels.take().is_some() {
             low.store.reads_none();
         }
+        let held: Vec<FactId> = match held {
+            Some(h) => h.to_vec(),
+            None => low.store.all_facts().into_iter().filter(|&id| { let r = low.store.rec(id); r.base() && st.heads.contains(&r.rel) && !st.cut.contains(&r.persp) }).collect(),
+        };
+        low.store.remove_many(&held);
+        let stood: Vec<bool> = (0..low.store.len_ids()).map(|id| low.store.alive(id)).collect();
         volumes::load_text(&mut low, text)?;
         low.lower_stage(st)?;
         low.demand.asking = true;
-        Ok(low)
+        Ok((low, stood))
     }
 
     /// One rule that could conclude `lit`: its failing premise instances, each

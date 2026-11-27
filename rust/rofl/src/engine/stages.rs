@@ -640,6 +640,18 @@ impl Eval {
     /// proved no lemma, so taking it out leaves none behind (a runtime assumption read above the cut).
     pub fn refuses_retracting(&mut self, facts: Option<&[FactId]>) -> Option<String> {
         let st = self.stage_here()?;
+        // (the lemmas of a file whose lower stage was proved again, `Session::as_staged`: what it proves now comes in)
+        let rest: Vec<FactId>;
+        let facts = match facts {
+            Some(fs) if self.retaking => {
+                rest = fs.iter().copied().filter(|&f| { let r = self.store.rec(f); !(r.base() && st.given.contains(&r.rel) && !st.cut.contains(&r.persp)) }).collect();
+                if rest.is_empty() {
+                    return None;
+                }
+                Some(&rest[..])
+            }
+            f => f,
+        };
         let held = st.heads.iter().any(|&rel| self.store.rel_all(&self.h, rel).into_iter().any(|f| self.store.rec(f).base()));
         if let (true, Some(facts)) = (held, facts) {
             let read: FxSet<Sym> = self.rules.iter().filter(|r| st.rules.contains(&r.id)).flat_map(|r| r.clause.body.iter().flat_map(BodyElem::lits_deep).map(|l| l.rel).collect::<Vec<_>>()).collect();

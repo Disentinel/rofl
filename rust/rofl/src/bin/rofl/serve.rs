@@ -693,7 +693,7 @@ impl Server {
         let mut cut = rofl::engine::volumes::cut(&[text.as_str()]);
         let mut core = self.get(r)?.fork();
         core.load_all(&[cut.core.as_str()], None).map_err(|d| d.1.join("\n"))?;
-        let (over, rest) = crate::load::lay_over(&cut.over, &core.eval.overlay_rels());
+        let (over, rest) = lay_over(&cut.over, &core.eval.overlay_rels());
         if !rest.is_empty() {
             core.load_all(&[rest.as_str()], None).map_err(|d| d.1.join("\n"))?;
         }
@@ -973,4 +973,16 @@ pub fn main(files: Vec<String>) {
         let _ = writeln!(out, "{v}");
         let _ = out.flush();
     }
+}
+
+/// Of the texts of facts alone `cut` set apart, those of the relations `rels` alone, laid over the files, and the
+/// rest, which go to the core.
+pub(crate) fn lay_over(texts: &[String], rels: &[String]) -> (String, String) {
+    let (mut over, mut core) = (String::new(), String::new());
+    for t in texts {
+        let to = if rofl::engine::volumes::fact_rels(t).iter().all(|r| rels.binary_search(r).is_ok()) { &mut over } else { &mut core };
+        to.push_str(t);
+        if !t.ends_with('\n') { to.push('\n'); }
+    }
+    (over, core)
 }

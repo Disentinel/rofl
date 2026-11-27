@@ -1163,6 +1163,46 @@ pub fn scanned_facts(src: &str) -> usize {
     n
 }
 
+/// A text without its facts of `books`, in either form: the column form's blocks of them (and a table no block left
+/// reads), or the lines of text that state one `rel[book](...)` fact; and whether it held one.
+pub fn without_books(src: &str, books: &[&str]) -> (String, bool) {
+    let mut out = String::new();
+    let columns = is_columns(src);
+    let (mut lines, mut table, mut any) = (src.lines(), None::<String>, false);
+    while let Some(l) = lines.next() {
+        let w: Vec<&str> = l.splitn(5, ' ').collect();
+        let n: usize = w.get(if w.first() == Some(&"T") { 1 } else { 3 }).and_then(|x| x.parse().ok()).unwrap_or(0);
+        if columns && w.len() == 2 && w[0] == "T" {
+            let mut t = format!("{l}\n");
+            for l in lines.by_ref().take(n) {
+                t.push_str(l);
+                t.push('\n');
+            }
+            table = Some(t);
+            continue;
+        }
+        let block = columns && w.len() == 5 && w[0] == "R";
+        let t = l.trim();
+        let book = t.split_once('[').filter(|(rel, _)| !rel.is_empty() && rel.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')).and_then(|(_, rest)| rest.split_once("](")).map(|(b, _)| b);
+        let cut = if block { books.contains(&w[2]) } else { t.ends_with(").") && book.is_some_and(|b| books.contains(&b)) };
+        any |= cut;
+        if block && !cut {
+            out.push_str(&table.take().unwrap_or_default());
+        }
+        if !cut {
+            out.push_str(l);
+            out.push('\n');
+        }
+        for l in lines.by_ref().take(if block { n } else { 0 }) {
+            if !cut {
+                out.push_str(l);
+                out.push('\n');
+            }
+        }
+    }
+    (out, any)
+}
+
 pub fn columns(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
     let mut out = Vec::new();
     let mut table: Vec<Term> = Vec::new();

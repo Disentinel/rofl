@@ -48,6 +48,38 @@ use crate::rofl_parse::{self, Book, Tense};
 use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Subst, Sym, Term, TermK};
 
+/// A file's text as a world that cut a book holds it (`Session::as_staged`).
+pub struct Staged {
+    /// its lines outside the cut books
+    pub rest: String,
+    /// each file its nodes are of: as the world held it, or with the lemmas its lower stage proves now
+    pub parts: Vec<(Part, Vec<(Sym, Sym, Vec<Term>)>)>,
+}
+
+/// A file of the nodes a text names, in a world that cut a book: the sum of its lines and the lemmas they gave.
+#[derive(Clone, Debug, Default)]
+pub struct Part {
+    pub file: String,
+    pub sum: u64,
+    pub lemmas: Vec<FactId>,
+}
+
+impl Part {
+    pub fn sum_of(text: &str) -> u64 {
+        let mut s = crate::arena::Sum::default();
+        s.add(text.as_bytes());
+        s.value()
+    }
+
+    /// The files of the nodes `text` names, each with the sum of its lines; their lemmas are not yet known.
+    pub fn of_text(text: &str) -> Vec<Part> {
+        if crate::engine::volumes::first_file(text).is_none() {
+            return Vec::new();
+        }
+        crate::engine::volumes::cut(&[text]).files.into_iter().map(|(file, t)| Part { sum: Part::sum_of(&t.text()), file, lemmas: Vec::new() }).collect()
+    }
+}
+
 /// The steps every evaluation of this process took, its rounds included: what `rofl load` says as `cost:`.
 pub static STEPS: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
 
@@ -483,10 +515,15 @@ impl Session {
     /// facts it adds and the rules it adds fire over what the world holds (`Eval::add_delta`). A world not evaluated
     /// loads as `load` does; a program the path is not worked out for leaves the world dirty and `Full` says why.
     pub fn load_delta(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
-        self.told(crate::journal::Verb::LoadDelta, |s| s.load_delta_untold(src, who))
+        self.load_delta_given(src, who, &[])
     }
 
-    fn load_delta_untold(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
+    /// `load_delta`, with `given` put as given facts beside what `src` states: the lemmas of a file (`as_staged`).
+    pub fn load_delta_given(&mut self, src: &str, who: Option<&str>, given: &[(Sym, Sym, Vec<Term>)]) -> Result<(usize, Addition), Vec<String>> {
+        self.told(crate::journal::Verb::LoadDelta, |s| s.load_delta_untold(src, who, given))
+    }
+
+    fn load_delta_untold(&mut self, src: &str, who: Option<&str>, given: &[(Sym, Sym, Vec<Term>)]) -> Result<(usize, Addition), Vec<String>> {
         if self.eval.store.dirty {
             let n = self.load(src, who)?;
             return Ok((n, Addition::Full("the world is not evaluated".into())));
@@ -494,6 +531,9 @@ impl Session {
         let mark = self.eval.prep_mark();
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, who);
+        for (rel, persp, args) in given {
+            self.eval.store.put(&self.eval.h, *rel, *persp, args, F_BASE);
+        }
         let ids = self.eval.store.arrivals.take().unwrap_or_default();
         if !r.ok {
             return Err(r.diagnostics);
@@ -541,6 +581,69 @@ impl Session {
     /// in order (a fact said twice, once); its rules and declarations, each as written back, one a line; and its
     /// facts the store does not hold as base facts, likewise. A kept world records the first two of each of its
     /// files (docs/cli.md), to take a file's facts in and out by delta when the file changes and its rules did not.
+    /// A file's text as a world that cut a book holds it: its lines outside the cut books, and in place of the cut
+    /// ones the lemmas they prove, by the file of each node the text names (`volumes::cut`). A file `old` holds with
+    /// the same sum gives the lemmas it gave; the rest are proved by its lower stage evaluated alone
+    /// (`Eval::lemmas_of`). None where the world cut nothing or the text states nothing of a book it cut.
+    pub fn as_staged(&mut self, text: &str, old: &[Part]) -> Result<Option<Staged>, String> {
+        if self.eval.staged_away.is_none() {
+            return Ok(None);
+        }
+        let Some(st) = self.eval.stage_here() else { return Ok(None) };
+        let books: Vec<String> = st.cut.iter().map(|b| self.eval.h.name(*b).to_string()).collect();
+        let books: Vec<&str> = books.iter().map(String::as_str).collect();
+        let (rest, any) = rofl_parse::without_books(text, &books);
+        if !any {
+            return Ok(None);
+        }
+        let cut = crate::engine::volumes::cut(&[text]);
+        let mut pieces: Vec<(String, String)> = cut.files.into_iter().map(|(f, t)| (f, t.into_text())).collect();
+        if rofl_parse::without_books(&cut.core, &books).1 {
+            pieces.push((String::new(), cut.core));
+        }
+        let mut parts = Vec::with_capacity(pieces.len());
+        for (file, t) in pieces {
+            let sum = Part::sum_of(&t);
+            let was = old.iter().find(|p| p.file == file);
+            match was {
+                Some(p) if p.sum == sum => parts.push((p.clone(), Vec::new())),
+                _ => {
+                    let lemmas = self.eval.lemmas_of(&t, &st, was.map_or(&[][..], |p| &p.lemmas)).map_err(|e| describe(&e))?;
+                    parts.push((Part { file, sum, lemmas: Vec::new() }, lemmas));
+                }
+            }
+        }
+        Ok(Some(Staged { rest, parts }))
+    }
+
+    /// The facts of `lemmas` this world holds as given.
+    pub fn lemma_ids(&self, lemmas: &[(Sym, Sym, Vec<Term>)]) -> Vec<FactId> {
+        lemmas.iter().filter_map(|(rel, persp, args)| self.eval.store.get(*rel, *persp, args)).filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()).collect()
+    }
+
+    /// The lemmas a world that cut a book holds, by the one file each names (`volumes::file_of`): what `as_staged`
+    /// says of each file's text as the world was evaluated.
+    pub fn lemmas_by_file(&mut self) -> HashMap<String, Vec<FactId>> {
+        let mut by: HashMap<String, Vec<FactId>> = HashMap::new();
+        if self.eval.staged_away.is_none() {
+            return by;
+        }
+        let Some(st) = self.eval.stage_here() else { return by };
+        let mut key = String::new();
+        for id in self.eval.store.all_facts() {
+            let r = self.eval.store.rec(id);
+            if !(r.base() && st.given.contains(&r.rel) && !st.cut.contains(&r.persp)) {
+                continue;
+            }
+            key.clear();
+            self.eval.store.write_key(&self.eval.h, id, &mut key);
+            if let Some(f) = crate::engine::volumes::file_of(&key) {
+                by.entry(f.to_string()).or_default().push(id);
+            }
+        }
+        by
+    }
+
     pub fn facts_of(&mut self, src: &str) -> Result<(Vec<FactId>, String, String), String> {
         let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let (mut ids, mut rules, mut absent, mut seen) = (Vec::new(), String::new(), String::new(), HashSet::new());

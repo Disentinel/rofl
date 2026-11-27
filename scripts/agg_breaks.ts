@@ -8858,55 +8858,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "volumes_dict_unkept",
-  "what": "the dictionary the volumes of a world name in is not kept beside them: the volumes kept hold numbers nothing names, and the next run cannot open them",
-  "expect": {
-   "kept_damaged": "deltas_of_volumes_one_after_another:"
-  }
- },
- {
-  "id": "units_named_let_go",
-  "what": "an edit lets go of the segments of units the kept world still names: a stretch kept in an older segment is read from a file no longer there",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
-  "id": "units_patch_drops_moved",
-  "what": "a unit laid again is written as a patch that names none of what moved: its firings are read as the body under it kept them, citing facts at ids an edit replaced, and its directories send a question bound to a moved key to a stretch an edit replaced",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
-  "id": "texts_edit_stale",
-  "what": "an edit's segment of texts names the file that moved with its old text: a whynot thawed in it after the edit reads the file as it was",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
-  "id": "texts_never_carried",
-  "what": "an edit's segment of texts carries no older segment, not even one whose texts all moved: every edit leaves one more segment on disk",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
-  "id": "units_parts_misplaced",
-  "what": "a unit's parts kept in an earlier segment are named as if the new segment held them: an edit's units read their directories from bytes that are something else",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
-  "id": "kept_written_unnoted",
-  "what": "a kept file is not noted whole by its writer, so the first question after a keep or an edit sums every kept file again",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
   "id": "kept_unsummed",
   "what": "a volume's sum is not compared, so a kept file changed after it was written is answered",
   "expect": {
