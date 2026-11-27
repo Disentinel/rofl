@@ -104,7 +104,7 @@ struct Step {
     ix: usize,
 }
 
-/// A rule and the orders its body is read in: whole, and from a new fact at each premise of its own component.
+/// A rule and the orders its body is read in: whole, and from a new fact at each premise.
 struct Fired {
     r: Rc<ERule>,
     whole: Vec<Step>,
@@ -126,7 +126,7 @@ enum Pat {
 }
 
 impl Fired {
-    fn new(h: &Heap, r: &Rc<ERule>, heads: &FxSet<Sym>) -> Fired {
+    fn new(h: &Heap, r: &Rc<ERule>) -> Fired {
         let mut vars: Vec<Sym> = Vec::new();
         for b in &r.plan {
             b.vars(h, &mut vars);
@@ -148,7 +148,7 @@ impl Fired {
             .map(|b| b.lit().map_or_else(Vec::new, |l| std::iter::once(l.persp).chain(l.args.iter().copied()).map(pat).collect()))
             .collect();
         let from = (0..r.plan.len())
-            .filter(|&i| matches!(&r.plan[i], BodyElem::Pos(l) if heads.contains(&l.rel)))
+            .filter(|&i| matches!(&r.plan[i], BodyElem::Pos(_)))
             .map(|i| (i, order(h, r, Some(i))))
             .collect();
         let mut bound: FxSet<Sym> = FxSet::default();
@@ -305,18 +305,27 @@ impl Eval {
             }
             return Ok(None);
         }
-        let Some(comps) = components_by_rel(&self.h, rules) else {
+        // THE ROUNDS ARE THE LEVELS' OWN: peeled by book, a negation or an aggregate reading a round below its own
+        if self.peel_levels(mono, strat).is_err() || !self.ds.comps.is_empty() {
             if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
                 use std::io::Write;
-                let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off neg_cycle {}", rules.len()));
+                let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off rounds {}", rules.len()));
             }
-            return Ok(None);
-        };
-        // (a cell is sealed at the round of each relation it reads: the rounds peeled as the levels peel them)
-        if rules.iter().any(|r| r.has_agg) && self.peel_levels(mono, strat).is_err() {
             self.pages_declined = true;
             return Ok(None);
         }
+        let mut by_round: std::collections::BTreeMap<u32, Vec<Rc<ERule>>> = Default::default();
+        for r in rules {
+            let k = if r.clause.head.temporal == Temporal::Next { u32::MAX } else { self.round_of.get(&self.books.head(&r.clause.head)).copied().unwrap_or(0) };
+            by_round.entry(k).or_default().push(r.clone());
+        }
+        let comps: Vec<Vec<Rc<ERule>>> = by_round
+            .into_values()
+            .map(|mut c| {
+                c.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
+                c
+            })
+            .collect();
         let out = match self.pages_pass(&comps) {
             Ok(()) => Ok(()),
             Err(Err(e @ Halt::Budget(..))) => Err(e),
@@ -345,8 +354,7 @@ impl Eval {
         let mut read: FxSet<Sym> = FxSet::default();
         let mut fired: Vec<Vec<Fired>> = Vec::with_capacity(comps.len());
         for comp in comps {
-            let heads: FxSet<Sym> = comp.iter().map(|r| r.clause.head.rel).collect();
-            let mut fs: Vec<Fired> = comp.iter().map(|r| Fired::new(&self.h, r, &heads)).collect();
+            let mut fs: Vec<Fired> = comp.iter().map(|r| Fired::new(&self.h, r)).collect();
             for f in &mut fs {
                 let r = f.r.clone();
                 for st in f.whole.iter_mut().chain(f.from.iter_mut().flat_map(|(_, o)| o.iter_mut())) {
@@ -365,7 +373,8 @@ impl Eval {
             }
         }
         let mut sc = Scratch::default();
-        for fs in &fired {
+        // (news meets every rule fired so far, as the levels deliver it to every rule active)
+        for (k, fs) in fired.iter().enumerate() {
             let mut news = Front::default();
             for f in fs {
                 self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
@@ -391,7 +400,7 @@ impl Eval {
                         (*rel, ids)
                     })
                     .collect();
-                for f in fs {
+                for f in fired[..=k].iter().flatten() {
                     for (i, _) in &f.from {
                         let BodyElem::Pos(l) = &f.r.plan[*i] else { continue };
                         let Some(ids) = by_rel.get(&l.rel) else { continue };
@@ -620,96 +629,4 @@ fn undo(b: &mut [Option<Term>], trail: &mut Vec<usize>, mark: usize) {
     for k in trail.drain(mark..) {
         b[k] = None;
     }
-}
-
-/// The rules by the strongly connected components of the relations they conclude, each after those it reads; None
-/// when a negation reads inside its own component.
-fn components_by_rel(h: &Heap, rules: &[Rc<ERule>]) -> Option<Vec<Vec<Rc<ERule>>>> {
-    let mut heads: Vec<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
-    heads.sort_unstable();
-    heads.dedup();
-    let at: FxMap<Sym, usize> = heads.iter().enumerate().map(|(i, h)| (*h, i)).collect();
-    let n = heads.len();
-    let mut reads: Vec<Vec<usize>> = vec![Vec::new(); n];
-    let mut strict: Vec<(usize, usize)> = Vec::new();
-    // a cell an aggregate seals is reflected in the kernel's books: a rule that reads them comes after every rule
-    // that aggregates
-    let sealers: Vec<usize> = rules.iter().filter(|r| r.has_agg).map(|r| at[&r.clause.head.rel]).collect();
-    for r in rules {
-        if r.plan.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom().is_some_and(|p| is_kernel_ledger(h, p))) {
-            reads[at[&r.clause.head.rel]].extend(&sealers);
-        }
-    }
-    for r in rules {
-        let h = at[&r.clause.head.rel];
-        for b in &r.plan {
-            for l in b.lits_deep() {
-                if let Some(&k) = at.get(&l.rel) {
-                    reads[h].push(k);
-                    if !matches!(b, BodyElem::Pos(_)) {
-                        strict.push((h, k));
-                    }
-                }
-            }
-        }
-    }
-    let comp = tarjan(&reads);
-    if strict.iter().any(|(h, k)| comp[*h] == comp[*k]) {
-        return None;
-    }
-    let ncomp = comp.iter().copied().max().map_or(0, |m| m + 1);
-    let mut out: Vec<Vec<Rc<ERule>>> = vec![Vec::new(); ncomp];
-    for r in rules {
-        out[comp[at[&r.clause.head.rel]]].push(r.clone());
-    }
-    for c in &mut out {
-        c.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
-    }
-    Some(out)
-}
-
-/// Tarjan's components, numbered so that a component comes after every one it reads.
-fn tarjan(reads: &[Vec<usize>]) -> Vec<usize> {
-    let n = reads.len();
-    let (mut index, mut low, mut on) = (vec![usize::MAX; n], vec![0; n], vec![false; n]);
-    let (mut stack, mut comp, mut next, mut ncomp) = (Vec::new(), vec![usize::MAX; n], 0, 0);
-    for v0 in 0..n {
-        if index[v0] != usize::MAX {
-            continue;
-        }
-        let mut work: Vec<(usize, usize)> = vec![(v0, 0)];
-        while let Some((v, e)) = work.pop() {
-            if e == 0 {
-                index[v] = next;
-                low[v] = next;
-                next += 1;
-                stack.push(v);
-                on[v] = true;
-            }
-            if let Some(&w) = reads[v].get(e) {
-                work.push((v, e + 1));
-                if index[w] == usize::MAX {
-                    work.push((w, 0));
-                } else if on[w] {
-                    low[v] = low[v].min(index[w]);
-                }
-                continue;
-            }
-            if low[v] == index[v] {
-                loop {
-                    let w = stack.pop().unwrap();
-                    on[w] = false;
-                    comp[w] = ncomp;
-                    if w == v {
-                        break;
-                    }
-                }
-                ncomp += 1;
-            }
-            if let Some(&(u, _)) = work.last() {
-                low[u] = low[u].min(low[v]);
-            }
-        }
-    }
-    comp
 }
