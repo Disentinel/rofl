@@ -143,6 +143,15 @@ struct Fired {
     open_book: Vec<bool>,
     /// each premise and negation on a closure answered from its trees: the closure
     closure: Vec<Option<usize>>,
+    /// solved without writing (`pure`), so on the threads
+    pure: bool,
+}
+
+/// A firing of a round: a rule fired whole or from its news at one premise, or a reader of a closure, fired as
+/// its closure's news asks.
+enum Task<'a> {
+    Fire(&'a Fired, Option<usize>),
+    Rule(&'a Fired),
 }
 
 /// An argument of a literal: a value, a variable's slot, or a term with variables inside, matched by unification.
@@ -191,7 +200,14 @@ impl Fired {
             b.vars(h, &mut vs);
             bound.extend(vs);
         }
-        Fired { r: r.clone(), whole: order(h, r, None), from, vars, pats, open_book, closure: Vec::new() }
+        Fired { r: r.clone(), whole: order(h, r, None), from, vars, pats, open_book, closure: Vec::new(), pure: false }
+    }
+
+    fn steps(&self, at: Option<usize>) -> &[Step] {
+        match at {
+            None => &self.whole[..],
+            Some(i) => &self.from.iter().find(|(k, _)| *k == i).unwrap().1[..],
+        }
     }
 
     fn subst(&self, b: &[Option<Term>]) -> Subst {
@@ -366,6 +382,7 @@ impl Eval {
                 c
             })
             .collect();
+        let t0 = std::time::Instant::now();
         let out = match self.pages_pass(&comps, &rounds) {
             Ok(()) => Ok(()),
             Err(Err(e @ Halt::Budget(..))) => Err(e),
@@ -381,7 +398,7 @@ impl Eval {
         };
         if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
             use std::io::Write;
-            let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "on {}", rules.len()));
+            let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "on {} {:?}", rules.len(), t0.elapsed()));
         }
         let mut sorted = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
@@ -400,9 +417,8 @@ impl Eval {
                 self.vopen_where(&|e, r| e.round_of.get(&e.books.head(&r.clause.head)).copied().unwrap_or(0) <= k);
             }
             let mut news = Front::default();
-            for f in fs {
-                self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
-            }
+            let tasks: Vec<Task> = fs.iter().map(|f| Task::Fire(f, None)).collect();
+            self.pages_round(&pg, &tasks, None, &mut sc, &mut news)?;
             self.pages_news(&mut pg, &fired[..=k], &mut sc, news)?;
         }
         // what a fault or an unknown left to be carried to its readers is carried by the levels
@@ -423,6 +439,7 @@ impl Eval {
                 .map(|r| {
                     let mut f = Fired::new(&self.h, r);
                     f.closure = r.plan.iter().map(|b| b.lit().and_then(|l| self.vc.vclosure_for(l.rel))).collect();
+                    f.pure = pure(&self.h, &self.v, &f);
                     f
                 })
                 .collect();
@@ -480,23 +497,65 @@ impl Eval {
                 })
                 .collect();
             let pg = &*pg;
+            let mut tasks = Vec::new();
             for f in rules.iter().flatten() {
-                if self.vc.any && self.vc.vreader_due(&self.store, &f.r, &cur) {
-                    self.pages_fire(pg, f, None, sc, &mut news)?;
+                if self.vc.readers.contains_key(&f.r.id) {
+                    tasks.push(Task::Rule(f));
                     continue;
                 }
                 for (i, _) in &f.from {
-                    let BodyElem::Pos(l) = &f.r.plan[*i] else { continue };
-                    if pg.news.contains_key(&l.rel) {
-                        self.pages_fire(pg, f, Some(*i), sc, &mut news)?;
+                    if matches!(&f.r.plan[*i], BodyElem::Pos(l) if pg.news.contains_key(&l.rel)) {
+                        tasks.push(Task::Fire(f, Some(*i)));
                     }
                 }
             }
+            self.pages_round(pg, &tasks, Some(&cur), sc, &mut news)?;
         }
     }
 
+    fn pages_rule(&mut self, pg: &Pages, f: &Fired, due: bool, sc: &mut Scratch, news: &mut Front) -> Result<(), Result<Back, Halt>> {
+        if due {
+            return self.pages_fire(pg, f, None, None, sc, news);
+        }
+        for (i, _) in &f.from {
+            if matches!(&f.r.plan[*i], BodyElem::Pos(l) if pg.news.contains_key(&l.rel)) {
+                self.pages_fire(pg, f, Some(*i), None, sc, news)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// A round's firings, the pure ones solved first on the threads, then concluded in their order with the rest.
+    fn pages_round(&mut self, pg: &Pages, tasks: &[Task], cur: Option<&Front>, sc: &mut Scratch, news: &mut Front) -> Result<(), Result<Back, Halt>> {
+        let ro: Vec<usize> = (0..tasks.len()).filter(|&k| matches!(tasks[k], Task::Fire(f, _) if f.pure && !self.vc.readers.contains_key(&f.r.id))).collect();
+        let wide = !pg.edit && ro.len() > 1;
+        let read = par::Read((&self.h, &self.v, &self.store, pg, tasks, &ro));
+        let mut found: Vec<Option<Found>> = par::spread(self.par.threads, if wide { ro.len() } else { 0 }, wide, |k| {
+            let &(h, v, store, pg, tasks, ro) = read.get();
+            let Task::Fire(f, at) = tasks[ro[k]] else { unreachable!() };
+            let mut out = Found::default();
+            let (mut b, mut trail, mut prems) = (vec![None; f.vars.len()], Vec::new(), vec![PremRef::Bi(0); f.r.plan.len()]);
+            solve_ro(h, v, store, pg, f, f.steps(at), &mut b, &mut trail, &mut prems, &mut out);
+            Some(out)
+        });
+        found.reverse();
+        for (k, t) in tasks.iter().enumerate() {
+            match *t {
+                Task::Fire(f, at) => {
+                    let fd = if wide && ro.binary_search(&k).is_ok() { found.pop().unwrap() } else { None };
+                    self.pages_fire(pg, f, at, fd, sc, news)?;
+                }
+                Task::Rule(f) => {
+                    let due = self.vc.any && self.vc.vreader_due(&self.store, &f.r, cur.unwrap());
+                    self.pages_rule(pg, f, due, sc, news)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// `f` fired whole, or from one new fact at premise `at`, its conclusions concluded into `news`.
-    fn pages_fire(&mut self, pg: &Pages, f: &Fired, at: Option<usize>, sc: &mut Scratch, news: &mut Front) -> Result<(), Result<Back, Halt>> {
+    fn pages_fire(&mut self, pg: &Pages, f: &Fired, at: Option<usize>, found: Option<Found>, sc: &mut Scratch, news: &mut Front) -> Result<(), Result<Back, Halt>> {
         let r = &f.r;
         let (b, trail, prems) = (&mut sc.b, &mut sc.trail, &mut sc.prems);
         b.clear();
@@ -504,10 +563,7 @@ impl Eval {
         trail.clear();
         prems.clear();
         prems.resize(r.plan.len(), PremRef::Bi(0));
-        let steps = match at {
-            None => &f.whole[..],
-            Some(i) => &f.from.iter().find(|(k, _)| *k == i).unwrap().1[..],
-        };
+        let steps = f.steps(at);
         *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let fresh0 = news.keys.len();
         if at.is_none() {
@@ -519,7 +575,14 @@ impl Eval {
         }
         let outer = self.cur_rule.replace(r.id);
         let was = std::mem::replace(&mut self.firing, true);
-        let done = self.pages_solve(pg, f, steps, b, trail, prems, news);
+        let done = match found {
+            None => self.pages_solve(pg, f, steps, b, trail, prems, news),
+            Some(fd) => {
+                self.cost.read_rows += fd.read;
+                self.pages_widest = fd.widest;
+                fd.sols.iter().try_for_each(|(b, ps)| self.pages_leaf(pg, f, b, ps, news))
+            }
+        };
         // (what the firing wrote of itself, a sealed cell's reflection, is news too)
         for (rel, ids) in std::mem::take(&mut self.cur_front).by_rel {
             for id in ids {
@@ -540,99 +603,31 @@ impl Eval {
         done
     }
 
-    /// Whether fact `id` meets premise `i` of `f` under the slots `b`, binding the slots it fills (noted on `trail`).
-    #[allow(clippy::too_many_arguments)]
-    fn pages_meet(&self, pg: &Pages, f: &Fired, i: usize, id: FactId, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
-        let mark = trail.len();
-        let pats = &f.pats[i];
-        let row = pg.row(id);
-        if f.open_book[i] && !pg.kernel.is_empty() && pg.kernel.contains(&row[0].as_atom().unwrap()) {
-            return false;
+    /// An instance found: concluded, or in an edit's withdrawing withdrawn.
+    fn pages_leaf(&mut self, pg: &Pages, f: &Fired, b: &[Option<Term>], prems: &[PremRef], news: &mut Front) -> Result<(), Result<Back, Halt>> {
+        let r = &f.r;
+        let s = f.subst(b);
+        let mut ps = Vec::with_capacity(prems.len());
+        for (j, p) in prems.iter().enumerate() {
+            ps.push(self.record_prem(&r.plan[j], *p, &s));
         }
-        let ok = pats.len() == row.len()
-            && row.iter().copied().zip(pats).all(|(v, p)| match *p {
-                Pat::Val(c) => c == v,
-                Pat::Slot(k) => match b[k] {
-                    Some(x) => x == v,
-                    None => {
-                        b[k] = Some(v);
-                        trail.push(k);
-                        true
-                    }
-                },
-                Pat::Open(t) => match_open(&self.h, t, v, &f.vars, b, trail),
-            });
-        if !ok {
-            undo(b, trail, mark);
-        }
-        ok
-    }
-
-    /// The key premise `i` of `f` is asked by under `b`, by the arguments `mask` names bound.
-    fn pages_key(&mut self, f: &Fired, i: usize, mask: u64, b: &[Option<Term>]) -> u64 {
-        let mut key = KeyHash::default();
-        for (j, p) in f.pats[i].iter().enumerate() {
-            if mask >> j & 1 != 0 {
-                key.add(match *p {
-                    Pat::Val(c) => c,
-                    Pat::Slot(k) => b[k].unwrap(),
-                    Pat::Open(t) => build_open(&self.h, t, &f.vars, b).unwrap_or(Term::var(Sym::MAX)),
-                });
+        if pg.withdraw {
+            let head = &r.clause.head;
+            let persp = walk(&self.h, head.persp, &s).as_atom();
+            let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &s)).collect();
+            if let Some(y) = persp.and_then(|p| self.store.get(head.rel, p, &args)) {
+                pg.withdrawn.borrow_mut().push((y, r.id, ps));
             }
+            return Ok(());
         }
-        key.0
-    }
-
-    /// Whether a fact stands that negation `i` of `f` meets under `b`.
-    fn pages_held(&mut self, pg: &Pages, f: &Fired, i: usize, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
-        let mark = trail.len();
-        let mut mask = 0u64;
-        for (j, p) in f.pats[i].iter().enumerate() {
-            let bound = match *p {
-                Pat::Val(_) => true,
-                Pat::Slot(k) => b[k].is_some(),
-                Pat::Open(t) => {
-                    let mut vs = Vec::new();
-                    term_vars(&self.h, t, &mut vs);
-                    vs.iter().all(|v| b[f.vars.iter().position(|x| x == v).unwrap()].is_some())
-                }
-            };
-            mask |= (bound as u64) << j;
-        }
-        let BodyElem::Neg(l) = &f.r.plan[i] else { unreachable!() };
-        let ix = pg.ix_of.get(&(l.rel, mask)).copied().unwrap_or(usize::MAX);
-        let key = if ix == usize::MAX { 0 } else { self.pages_key(f, i, mask, b) };
-        for &id in pg.under(l.rel, ix, key) {
-            if pg.edit && !self.store.alive(id) {
-                continue;
-            }
-            if self.pages_meet(pg, f, i, id, b, trail) {
-                undo(b, trail, mark);
-                return true;
-            }
-        }
-        false
+        self.conclude(r, Sol { s, prems: ps }, news).map_err(Err)
     }
 
     #[allow(clippy::too_many_arguments)]
     fn pages_solve(&mut self, pg: &Pages, f: &Fired, steps: &[Step], b: &mut Vec<Option<Term>>, trail: &mut Vec<usize>, prems: &mut Vec<PremRef>, news: &mut Front) -> Result<(), Result<Back, Halt>> {
         let r = &f.r;
         let Some((st, rest)) = steps.split_first() else {
-            let s = f.subst(b);
-            let mut ps = Vec::with_capacity(prems.len());
-            for (j, p) in prems.iter().enumerate() {
-                ps.push(self.record_prem(&r.plan[j], *p, &s));
-            }
-            if pg.withdraw {
-                let head = &r.clause.head;
-                let persp = walk(&self.h, head.persp, &s).as_atom();
-                let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &s)).collect();
-                if let Some(y) = persp.and_then(|p| self.store.get(head.rel, p, &args)) {
-                    pg.withdrawn.borrow_mut().push((y, r.id, ps));
-                }
-                return Ok(());
-            }
-            return self.conclude(r, Sol { s, prems: ps }, news).map_err(Err);
+            return self.pages_leaf(pg, f, b, prems, news);
         };
         let i = st.at;
         let mark = trail.len();
@@ -658,7 +653,7 @@ impl Eval {
                 Ok(())
             }
             BodyElem::Pos(l) => {
-                let key = self.pages_key(f, i, st.mask, b);
+                let key = key(&self.h, f, i, st.mask, b);
                 let under = if st.news && st.mask == 0 { pg.news.get(&l.rel).map_or(&[][..], |v| &v[..]) } else { pg.under(l.rel, st.ix, key) };
                 self.cost.read_rows += under.len() as u64;
                 if under.len() > self.pages_widest.0 {
@@ -668,7 +663,7 @@ impl Eval {
                     if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !self.store.alive(id) {
                         continue;
                     }
-                    if self.pages_meet(pg, f, i, id, b, trail) {
+                    if meet(&self.h, pg, f, i, id, b, trail) {
                         prems[i] = PremRef::Fact(id);
                         let done = self.pages_solve(pg, f, rest, b, trail, prems, news);
                         undo(b, trail, mark);
@@ -689,8 +684,8 @@ impl Eval {
                 // (a fact an edit added or took out, met where the negation is written: a firing it blocks is
                 // withdrawn, one it lets through is found)
                 for &id in pg.neg_news.get(&l.rel).map_or(&[][..], |v| &v[..]) {
-                    if self.pages_meet(pg, f, i, id, b, trail) {
-                        let done = if pg.withdraw || !self.pages_held(pg, f, i, b, trail) {
+                    if meet(&self.h, pg, f, i, id, b, trail) {
+                        let done = if pg.withdraw || !held(&self.h, &self.store, pg, f, i, b, trail) {
                             prems[i] = PremRef::Neg(0);
                             self.pages_solve(pg, f, rest, b, trail, prems, news)
                         } else {
@@ -703,7 +698,7 @@ impl Eval {
                 Ok(())
             }
             BodyElem::Neg(_) => {
-                if self.pages_held(pg, f, i, b, trail) {
+                if held(&self.h, &self.store, pg, f, i, b, trail) {
                     return Ok(());
                 }
                 prems[i] = PremRef::Neg(0);
@@ -848,7 +843,7 @@ impl Eval {
             for f in &fired[j] {
                 for (i, _) in &f.from {
                     if matches!(&f.r.plan[*i], BodyElem::Neg(l) if pg.neg_news.contains_key(&l.rel)) {
-                        if let Err(e) = self.pages_fire(&pg, f, Some(*i), &mut sc, &mut Front::default()) {
+                        if let Err(e) = self.pages_fire(&pg, f, Some(*i), None, &mut sc, &mut Front::default()) {
                             return Err(self.pages_delta_failed(e));
                         }
                     }
@@ -958,7 +953,7 @@ impl Eval {
             for f in &fired[j] {
                 for (i, _) in &f.from {
                     if matches!(&f.r.plan[*i], BodyElem::Neg(l) if pg.neg_news.contains_key(&l.rel)) {
-                        if let Err(e) = self.pages_fire(&pg, f, Some(*i), &mut sc, &mut news) {
+                        if let Err(e) = self.pages_fire(&pg, f, Some(*i), None, &mut sc, &mut news) {
                             return Err(self.pages_delta_failed(e));
                         }
                     }
@@ -994,6 +989,178 @@ struct Scratch {
     b: Vec<Option<Term>>,
     trail: Vec<usize>,
     prems: Vec<PremRef>,
+}
+
+/// Whether fact `id` meets premise `i` of `f` under the slots `b`, binding the slots it fills (noted on `trail`).
+fn meet(h: &Heap, pg: &Pages, f: &Fired, i: usize, id: FactId, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
+    let mark = trail.len();
+    let pats = &f.pats[i];
+    let row = pg.row(id);
+    if f.open_book[i] && !pg.kernel.is_empty() && pg.kernel.contains(&row[0].as_atom().unwrap()) {
+        return false;
+    }
+    let ok = pats.len() == row.len()
+        && row.iter().copied().zip(pats).all(|(v, p)| match *p {
+            Pat::Val(c) => c == v,
+            Pat::Slot(k) => match b[k] {
+                Some(x) => x == v,
+                None => {
+                    b[k] = Some(v);
+                    trail.push(k);
+                    true
+                }
+            },
+            Pat::Open(t) => match_open(h, t, v, &f.vars, b, trail),
+        });
+    if !ok {
+        undo(b, trail, mark);
+    }
+    ok
+}
+
+/// The key premise `i` of `f` is asked by under `b`, by the arguments `mask` names bound.
+fn key(h: &Heap, f: &Fired, i: usize, mask: u64, b: &[Option<Term>]) -> u64 {
+    let mut key = KeyHash::default();
+    for (j, p) in f.pats[i].iter().enumerate() {
+        if mask >> j & 1 != 0 {
+            key.add(match *p {
+                Pat::Val(c) => c,
+                Pat::Slot(k) => b[k].unwrap(),
+                Pat::Open(t) => build_open(h, t, &f.vars, b).unwrap_or(Term::var(Sym::MAX)),
+            });
+        }
+    }
+    key.0
+}
+
+/// Whether a fact stands that negation `i` of `f` meets under `b`.
+fn held(h: &Heap, store: &Store, pg: &Pages, f: &Fired, i: usize, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
+    let mark = trail.len();
+    let mut mask = 0u64;
+    for (j, p) in f.pats[i].iter().enumerate() {
+        let bound = match *p {
+            Pat::Val(_) => true,
+            Pat::Slot(k) => b[k].is_some(),
+            Pat::Open(t) => {
+                let mut vs = Vec::new();
+                term_vars(h, t, &mut vs);
+                vs.iter().all(|v| b[f.vars.iter().position(|x| x == v).unwrap()].is_some())
+            }
+        };
+        mask |= (bound as u64) << j;
+    }
+    let BodyElem::Neg(l) = &f.r.plan[i] else { unreachable!() };
+    let ix = pg.ix_of.get(&(l.rel, mask)).copied().unwrap_or(usize::MAX);
+    let key = if ix == usize::MAX { 0 } else { key(h, f, i, mask, b) };
+    for &id in pg.under(l.rel, ix, key) {
+        if pg.edit && !store.alive(id) {
+            continue;
+        }
+        if meet(h, pg, f, i, id, b, trail) {
+            undo(b, trail, mark);
+            return true;
+        }
+    }
+    false
+}
+
+/// The firings of a task solved on a thread of its own: each instance's slots and premises, and what it read.
+#[derive(Default)]
+struct Found {
+    sols: Vec<(Vec<Option<Term>>, Vec<PremRef>)>,
+    read: u64,
+    widest: (usize, usize),
+}
+
+/// Whether `f` is solved without writing: no closure, no aggregate, a builtin only `=` or `!=` over variables and
+/// values.
+fn pure(h: &Heap, v: &Vocab, f: &Fired) -> bool {
+    f.closure.iter().all(Option::is_none)
+        && f.r.plan.iter().all(|b| match b {
+            BodyElem::Pos(_) | BodyElem::Neg(_) => true,
+            BodyElem::Bi { op, l, r } => (*op == v.op_eq || *op == v.op_ne) && [*l, *r].iter().all(|t| matches!(t.kind(), TermK::Var(_)) || h.is_ground(*t)),
+            BodyElem::Agg(_) => false,
+        })
+}
+
+/// A side of a pure builtin under the slots.
+fn side(f: &Fired, t: Term, b: &[Option<Term>]) -> Option<Term> {
+    match t.kind() {
+        TermK::Var(x) => b[f.vars.iter().position(|y| *y == x).unwrap()],
+        _ => Some(t),
+    }
+}
+
+/// `pages_solve` over a pure rule, read only: the instances found go to `out`, to be concluded in their order.
+#[allow(clippy::too_many_arguments)]
+fn solve_ro(h: &Heap, v: &Vocab, store: &Store, pg: &Pages, f: &Fired, steps: &[Step], b: &mut Vec<Option<Term>>, trail: &mut Vec<usize>, prems: &mut Vec<PremRef>, out: &mut Found) {
+    let r = &f.r;
+    let Some((st, rest)) = steps.split_first() else {
+        out.sols.push((b.clone(), prems.clone()));
+        return;
+    };
+    let i = st.at;
+    let mark = trail.len();
+    match &r.plan[i] {
+        BodyElem::Pos(l) => {
+            let k = key(h, f, i, st.mask, b);
+            let under = if st.news && st.mask == 0 { pg.news.get(&l.rel).map_or(&[][..], |v| &v[..]) } else { pg.under(l.rel, st.ix, k) };
+            out.read += under.len() as u64;
+            if under.len() > out.widest.0 {
+                out.widest = (under.len(), i);
+            }
+            for &id in under {
+                if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !store.alive(id) {
+                    continue;
+                }
+                if meet(h, pg, f, i, id, b, trail) {
+                    prems[i] = PremRef::Fact(id);
+                    solve_ro(h, v, store, pg, f, rest, b, trail, prems, out);
+                    undo(b, trail, mark);
+                }
+            }
+        }
+        BodyElem::Neg(l) if st.news => {
+            for &id in pg.neg_news.get(&l.rel).map_or(&[][..], |v| &v[..]) {
+                if meet(h, pg, f, i, id, b, trail) {
+                    if pg.withdraw || !held(h, store, pg, f, i, b, trail) {
+                        prems[i] = PremRef::Neg(0);
+                        solve_ro(h, v, store, pg, f, rest, b, trail, prems, out);
+                    }
+                    undo(b, trail, mark);
+                }
+            }
+        }
+        BodyElem::Neg(_) => {
+            if !held(h, store, pg, f, i, b, trail) {
+                prems[i] = PremRef::Neg(0);
+                solve_ro(h, v, store, pg, f, rest, b, trail, prems, out);
+            }
+        }
+        BodyElem::Bi { op, l, r } => {
+            let (x, y) = (side(f, *l, b), side(f, *r, b));
+            let go = if *op == v.op_ne {
+                x.is_some() && y.is_some() && x != y
+            } else {
+                match (x, y, l.kind(), r.kind()) {
+                    (Some(x), Some(y), _, _) => x == y,
+                    (None, Some(y), TermK::Var(a), _) | (Some(y), None, _, TermK::Var(a)) => {
+                        let k = f.vars.iter().position(|z| *z == a).unwrap();
+                        b[k] = Some(y);
+                        trail.push(k);
+                        true
+                    }
+                    _ => true,
+                }
+            };
+            if go {
+                prems[i] = PremRef::Bi(0);
+                solve_ro(h, v, store, pg, f, rest, b, trail, prems, out);
+            }
+            undo(b, trail, mark);
+        }
+        BodyElem::Agg(_) => unreachable!(),
+    }
 }
 
 fn undo(b: &mut [Option<Term>], trail: &mut Vec<usize>, mark: usize) {

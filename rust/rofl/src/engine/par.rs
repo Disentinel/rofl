@@ -210,7 +210,7 @@ pub(super) fn free(threads: usize) -> usize {
 }
 
 /// `f` over `0..n`, on the free of `threads` threads when `wide`, the results in the order of the indexes.
-fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
+pub(super) fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(usize) -> T + Sync) -> Vec<T> {
     let threads = free(threads);
     if !wide || threads < 2 || n < 2 {
         return (0..n).map(f).collect();
@@ -454,7 +454,13 @@ pub(super) enum News {
 }
 
 /// What the threads only read.
-struct Read<T>(T);
+pub(super) struct Read<T>(pub(super) T);
+
+impl<T> Read<T> {
+    pub(super) fn get(&self) -> &T {
+        &self.0
+    }
+}
 // SAFETY: nothing is written while a batch reads it (`Frozen`).
 unsafe impl<T> Sync for Read<T> {}
 
