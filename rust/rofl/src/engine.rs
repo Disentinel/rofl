@@ -21,6 +21,7 @@ use crate::store::{
 use crate::term::*;
 
 mod datastrat;
+mod pages;
 mod addition;
 pub mod meter;
 mod delta;
@@ -838,6 +839,10 @@ pub struct Eval {
     pub meeting: Option<Rc<levels::Meeting>>,
     /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
     by_seed: bool,
+    /// the pages core handed this pass back: it is evaluated again from the start by the levels
+    pages_declined: bool,
+    /// the widest read of the firing the pages core is in, and the body element that read it
+    pages_widest: (usize, usize),
     /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
     homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
     /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
@@ -2380,6 +2385,8 @@ impl Eval {
             staged_away: None,
             meeting: None,
             by_seed: false,
+            pages_declined: false,
+            pages_widest: (0, 0),
             homing: None,
             bridging: None,
             seeded: None,
@@ -3725,6 +3732,16 @@ impl Eval {
 
         let mut walled = false;
         self.wall.level_rest = None;
+        if from.is_none() && !self.pages_declined {
+            if self.run_pages(&safe_rules)? {
+                return self.end_pass(Ok(()), &strat_rules);
+            }
+            if self.pages_declined {
+                let out = self.run_pass();
+                self.pages_declined = false;
+                return out;
+            }
+        }
         let outcome = (|| -> Result<(), Halt> {
             // THE ROUNDS ARE PEELED BEFORE ANYTHING FIRES; THE STOCK
             // EVALUATOR'S TABLE IS READ AFTER PHASE A, which derives it. Read
