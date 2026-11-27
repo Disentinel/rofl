@@ -8706,8 +8706,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "models/lang/js/rules/js-concat.rofl",
-    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).",
-    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D)."
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), node_of[flow](P, D), textable[flow](D), not summarized[flow](D).",
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), node_of[flow](P, D), textable[flow](D)."
    ]
   ],
   "expect": {
@@ -8720,8 +8720,8 @@ export const BREAKS: Break[] = [
   "edits": [
    [
     "models/lang/js/rules/js-concat.rofl",
-    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), textable[flow](D), not summarized[flow](D).",
-    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), may_be_node[flow](P, D), composed[flow](D), not summarized[flow](D)."
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), node_of[flow](P, D), textable[flow](D), not summarized[flow](D).",
+    "comp_of[flow](C, I, D) :- parts[flow](C, I, P), node_of[flow](P, D), composed[flow](D), not summarized[flow](D)."
    ]
   ],
   "expect": {
