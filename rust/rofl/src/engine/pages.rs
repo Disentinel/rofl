@@ -171,6 +171,43 @@ impl Fired {
     }
 }
 
+/// Whether ground `v` has the shape of `t`, binding the slots of `t`'s variables it fills.
+fn match_open(h: &Heap, t: Term, v: Term, vars: &[Sym], b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
+    match t.kind() {
+        TermK::Var(x) => {
+            let k = vars.iter().position(|y| *y == x).unwrap();
+            match b[k] {
+                Some(w) => w == v,
+                None => {
+                    b[k] = Some(v);
+                    trail.push(k);
+                    true
+                }
+            }
+        }
+        TermK::Func(i) => match v.kind() {
+            TermK::Func(j) if h.fname(i) == h.fname(j) => {
+                let (ta, va) = (h.fargs(i), h.fargs(j));
+                ta.len() == va.len() && ta.iter().zip(va).all(|(a, c)| match_open(h, *a, *c, vars, b, trail))
+            }
+            _ => false,
+        },
+        _ => t == v,
+    }
+}
+
+/// The ground term `t` is under the slots, if one was ever built; none means no fact holds it.
+fn build_open(h: &Heap, t: Term, vars: &[Sym], b: &[Option<Term>]) -> Option<Term> {
+    match t.kind() {
+        TermK::Var(x) => b[vars.iter().position(|y| *y == x).unwrap()],
+        TermK::Func(i) if !h.is_ground(t) => {
+            let args = h.fargs(i).iter().map(|a| build_open(h, *a, vars, b)).collect::<Option<Vec<_>>>()?;
+            h.find_f(h.fname(i), &args)
+        }
+        _ => Some(t),
+    }
+}
+
 fn term_vars(h: &Heap, t: Term, out: &mut Vec<Sym>) {
     match t.kind() {
         TermK::Var(v) => out.push(v),
@@ -511,24 +548,7 @@ impl Eval {
                         true
                     }
                 },
-                Pat::Open(t) => {
-                    let s = f.subst(b);
-                    match unify(&self.h, t, v, &s) {
-                        Some(s2) => {
-                            for (k, var) in f.vars.iter().enumerate() {
-                                if b[k].is_none() {
-                                    let w = walk(&self.h, Term::var(*var), &s2);
-                                    if self.h.is_ground(w) {
-                                        b[k] = Some(w);
-                                        trail.push(k);
-                                    }
-                                }
-                            }
-                            true
-                        }
-                        None => false,
-                    }
-                }
+                Pat::Open(t) => match_open(&self.h, t, v, &f.vars, b, trail),
             });
         if !ok {
             undo(b, trail, mark);
@@ -544,7 +564,7 @@ impl Eval {
                 key.add(match *p {
                     Pat::Val(c) => c,
                     Pat::Slot(k) => b[k].unwrap(),
-                    Pat::Open(t) => resolve(&mut self.h, t, &f.subst(b)),
+                    Pat::Open(t) => build_open(&self.h, t, &f.vars, b).unwrap_or(Term::var(Sym::MAX)),
                 });
             }
         }
