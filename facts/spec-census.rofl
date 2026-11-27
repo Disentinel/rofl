@@ -150,9 +150,6 @@ check[checks]("rust/rofl/tests/explain.rs", "excise_keeps_a_member_another_deriv
 check[checks]("rust/rofl/tests/explain.rs", "why_shows_the_shortest_firing_and_why_all_the_circle", test).
 check[checks]("rust/rofl/tests/explain.rs", "why_all_writes_every_firing_with_shared_subtrees_as_references", test).
 check[checks]("rust/rofl/tests/explain.rs", "a_base_fact_whose_firing_rests_on_itself_is_its_assertion", test).
-check[checks]("rust/rofl/tests/far.rs", "a_node", test).
-check[checks]("rust/rofl/tests/far.rs", "nodes_in_processes_answer_as_the_whole_world_and_after_edits", test).
-check[checks]("rust/rofl/tests/held.rs", "a_unit_another_node_holds_answers_as_the_whole_world", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_retraction_is_a_fresh_evaluation_over_random_edits", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_larger_world_takes_the_same_path", test).
 check[checks]("rust/rofl/tests/incremental.rs", "a_fact_a_plain_rule_reads_is_a_delta_and_is_the_same", test).
@@ -332,16 +329,6 @@ check[checks]("rust/rofl/tests/tree.rs", "a_retraction_where_no_witness_is_kept_
 check[checks]("rust/rofl/tests/tree.rs", "a_snapshot_opened_and_not_evaluated_answers_the_closure_from_its_tree", test).
 check[checks]("rust/rofl/tests/volume.rs", "a_world_kept_as_a_volume_opens_as_itself", test).
 check[checks]("rust/rofl/tests/volume.rs", "edits_kept_as_overlays_open_as_the_fresh_world", test).
-check[checks]("rust/rofl/tests/volumes.rs", "the_cut_to_disk_is_the_cut_on_the_heap", test).
-check[checks]("rust/rofl/tests/volumes.rs", "the_volumes_answer_as_the_whole_world", test).
-check[checks]("rust/rofl/tests/volumes.rs", "a_walked_closure_crosses_the_volumes", test).
-check[checks]("rust/rofl/tests/volumes.rs", "the_rules_of_one_file_are_evaluated_in_its_world", test).
-check[checks]("rust/rofl/tests/volumes.rs", "a_file_that_breaks_the_plan_is_refused", test).
-check[checks]("rust/rofl/tests/volumes.rs", "a_node_key_inside_a_string_names_no_file", test).
-check[checks]("rust/rofl/tests/volumes.rs", "the_rows_a_lower_unit_cites_are_its_own", test).
-check[checks]("rust/rofl/tests/volumes.rs", "the_units_spend_into_the_worlds_count", test).
-check[checks]("rust/rofl/tests/volumes.rs", "a_world_by_levels_reads_its_own_profile", test).
-check[checks]("rust/rofl/tests/volumes.rs", "a_count_of_the_core_and_one_of_the_reader", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_is_its_rows", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_no_capability_is_refused", test).
 check[checks]("rust/rofl/tests/want.rs", "a_want_of_the_wrong_arity_is_refused", test).
@@ -1053,8 +1040,6 @@ test_file[checks]("rust/rofl/tests/dispatch.rs").
 test_file[checks]("rust/rofl/tests/edit.rs").
 test_file[checks]("rust/rofl/tests/event_time.rs").
 test_file[checks]("rust/rofl/tests/explain.rs").
-test_file[checks]("rust/rofl/tests/far.rs").
-test_file[checks]("rust/rofl/tests/held.rs").
 test_file[checks]("rust/rofl/tests/incremental.rs").
 test_file[checks]("rust/rofl/tests/join_scale.rs").
 test_file[checks]("rust/rofl/tests/journal.rs").
@@ -1092,7 +1077,6 @@ test_file[checks]("rust/rofl/tests/threshold.rs").
 test_file[checks]("rust/rofl/tests/tick_scale.rs").
 test_file[checks]("rust/rofl/tests/tree.rs").
 test_file[checks]("rust/rofl/tests/volume.rs").
-test_file[checks]("rust/rofl/tests/volumes.rs").
 test_file[checks]("rust/rofl/tests/want.rs").
 test_file[checks]("rust/rofl/tests/watch.rs").
 test_file[checks]("rust/rofl/tests/why_bins.rs").

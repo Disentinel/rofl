@@ -59,9 +59,9 @@
 //!                                                        the base fact out by the pass `edit` takes it by (the set's),
 //!                                                        evaluated again where it refuses
 //!   {"op":"volumes","session":1,"path":"corpus.rofl"} -> {"session":n,"files":n,"facts":n,"ms":n}: the corpus
-//!     settled by levels over the program of session 1 (forked); a node or the root where ROFL_FAR says so
+//!     evaluated whole over the program of session 1 (forked), its files by the key prefix their nodes share
 //!   {"op":"volumes_edit","session":n,"files":[{"at":3,"rofl":"..."}]} -> {"files":[3],"ms":n}: files edited by
-//!     their place, settled again where they moved the world; a node asked without `files` takes the root's next edit
+//!     their place, taken out and in by delta
 //!   {"op":"edit","session":2,"out":["q(a)","q(b)"],"rofl":"q(c)."} -> {"out":n,"added":n,"touched":k,"full":null|"why"}:
 //!                                                        an edit in one request: the base facts `out` names taken out
 //!                                                        in one pass by delta (Session::retract_queries_delta), then
@@ -175,8 +175,8 @@ struct Server {
     keys: HashMap<u64, Keys>,
     /// what each session's watcher watches (rofl::watch)
     watches: HashMap<u64, rofl::watch::Watch>,
-    /// a world by volumes: its core's session, its files and the facts laid over them, for its edits
-    volumes: HashMap<u64, (u64, Vec<(String, rofl::engine::volumes::FileText)>, String)>,
+    /// a world `volumes` made: its files by place, for its edits
+    volumes: HashMap<u64, Vec<String>>,
 }
 
 impl Server {
@@ -682,69 +682,75 @@ impl Server {
     // A refusal returns EVERY diagnostic and leaves the store as it
     // was. It is an `ok:false` answer rather than a transport error,
     // because a rejected program is a normal outcome of loading one.
-    /// A corpus settled by levels over the program of `session` (forked, so the program stays as it is): a new
-    /// session, the world that reads the units. Where the nodes are processes (`ROFL_FAR`), this is one of them.
+    /// A corpus evaluated whole over the program of `session` (forked, so the program stays as it is): a new session,
+    /// its files kept by place for `volumes_edit`.
     fn op_volumes(&mut self, r: &Value) -> Result<Value, String> {
         let text = match (r.get("path").and_then(|v| v.as_str()), r.get("rofl").and_then(|v| v.as_str())) {
             (Some(p), _) => std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?,
             (None, Some(t)) => t.to_string(),
             (None, None) => return Err("volumes needs `path` or `rofl`".into()),
         };
-        let mut cut = rofl::engine::volumes::cut(&[text.as_str()]);
-        let mut core = self.get(r)?.fork();
-        core.load_all(&[cut.core.as_str()], None).map_err(|d| d.1.join("\n"))?;
-        let (over, rest) = lay_over(&cut.over, &core.eval.overlay_rels());
-        if !rest.is_empty() {
-            core.load_all(&[rest.as_str()], None).map_err(|d| d.1.join("\n"))?;
-        }
-        let files = cut.files.clone();
-        let (w, st) = core.by_volumes_over(std::mem::take(&mut cut.files), &over).map_err(|e| rofl::describe(&e))?;
-        let c = self.keep(core);
+        let t = std::time::Instant::now();
+        let cut = rofl::engine::volumes::cut(&[text.as_str()]);
+        let files: Vec<String> = cut.files.into_iter().map(|(_, t)| t.into_text()).collect();
+        let mut w = self.get(r)?.fork();
+        let mut all: Vec<&str> = vec![cut.core.as_str()];
+        all.extend(cut.over.iter().map(String::as_str));
+        all.extend(files.iter().map(String::as_str));
+        w.load_all(&all, None).map_err(|d| d.1.join("\n"))?;
+        w.evaluate().map_err(|e| rofl::describe(&e))?;
+        let facts = w.eval.store.fact_count();
         let id = self.keep(w);
-        self.volumes.insert(id, (c, files, over));
-        Ok(json!({ "session": id, "files": st.files, "facts": st.facts, "ms": st.ms as u64 }))
+        let n = files.len();
+        self.volumes.insert(id, files);
+        Ok(json!({ "session": id, "files": n, "facts": facts, "ms": t.elapsed().as_millis() as u64 }))
     }
 
-    /// Files of a world by volumes edited (`files`: `{at, rofl}`, `at` the file's place in the corpus): the world
-    /// settled again where they moved it, in the same session. Where the nodes are processes, the root sends the
-    /// edit to every node first, and a node is asked without `files`: it waits for the root's next edit and takes it.
+    /// Files of a world `volumes` made edited (`files`: `{at, rofl}`, `at` the file's place in the corpus), by delta:
+    /// the facts each held and holds no more out, its new ones in.
     fn op_volumes_edit(&mut self, r: &Value) -> Result<Value, String> {
         let id = session_id(r)?;
-        // (a node takes the next edit the root sends, waiting for it)
-        let edits: Vec<(u32, String)> = match r.get("files").and_then(|v| v.as_array()) {
-            _ if rofl::engine::levels::far_node() => rofl::engine::levels::far_next(),
+        let edits: Vec<(usize, String)> = match r.get("files").and_then(|v| v.as_array()) {
             Some(fs) => fs.iter().map(|f| {
                 let at = f.get("at").and_then(|v| v.as_u64()).ok_or("a file edited needs `at`")?;
                 let t = f.get("rofl").and_then(|v| v.as_str()).ok_or("a file edited needs `rofl`, its facts now")?;
-                Ok((at as u32, t.to_string()))
+                Ok((at as usize, t.to_string()))
             }).collect::<Result<_, String>>()?,
             None => return Err("volumes_edit needs `files`".into()),
         };
-        let (c, mut files, over) = self.volumes.remove(&id).ok_or_else(|| format!("session {id} is not a world by volumes"))?;
-        if let Some((at, _)) = edits.iter().find(|(at, _)| *at as usize >= files.len()) {
-            self.volumes.insert(id, (c, files, over));
+        let mut files = self.volumes.remove(&id).ok_or_else(|| format!("session {id} is not a world by volumes"))?;
+        if let Some((at, _)) = edits.iter().find(|(at, _)| *at >= files.len()) {
+            let at = *at;
+            self.volumes.insert(id, files);
             return Err(format!("no file at {at}: a world by volumes takes edits of its files, not new files"));
         }
-        rofl::engine::levels::far_edit(&edits);
-        for (at, t) in &edits {
-            files[*at as usize].1 = rofl::engine::volumes::FileText::Held(t.clone());
-        }
-        let before = self.sessions.remove(&id).ok_or_else(|| format!("no such session: {id}"))?;
         let t = std::time::Instant::now();
-        let w = self.sessions.get_mut(&c).ok_or("the world's core is gone")?.by_volumes_edit(files.clone(), &over, &before, edits.iter().map(|e| e.0).collect());
-        let w = match w {
-            Ok(w) => w,
-            Err(e) => {
-                self.sessions.insert(id, before);
-                return Err(rofl::describe(&e));
-            }
+        let w = self.sessions.get_mut(&id).ok_or_else(|| format!("no such session: {id}"))?;
+        let mut out = Vec::new();
+        let mut stays = std::collections::HashSet::new();
+        let mut add = String::new();
+        for (at, text) in &edits {
+            out.extend(w.facts_of(&files[*at])?.0);
+            stays.extend(w.facts_of(text)?.0);
+            add.push_str(text);
+            add.push('\n');
+        }
+        out.retain(|f| !stays.contains(f));
+        let done = match w.retract_set_delta(&out)? {
+            Ok(_) => match w.load_delta(&add, None) {
+                Ok(_) => Ok(()),
+                Err(d) => Err(d.join("\n")),
+            },
+            Err(why) => Err(why),
         };
+        if done.is_err() {
+            w.evaluate().map_err(|e| rofl::describe(&e))?;
+        }
+        for (at, text) in edits.iter() {
+            files[*at] = text.clone();
+        }
         self.keys.remove(&id);
-        let mut w = w;
-        w.eval.cost.on_hot = Some(|t| eprintln!("hot: {t}"));
-        w.post = Some(Default::default());
-        self.sessions.insert(id, w);
-        self.volumes.insert(id, (c, files, over));
+        self.volumes.insert(id, files);
         Ok(json!({ "session": id, "files": edits.iter().map(|e| e.0).collect::<Vec<_>>(), "ms": t.elapsed().as_millis() as u64 }))
     }
 
@@ -973,16 +979,4 @@ pub fn main(files: Vec<String>) {
         let _ = writeln!(out, "{v}");
         let _ = out.flush();
     }
-}
-
-/// Of the texts of facts alone `cut` set apart, those of the relations `rels` alone, laid over the files, and the
-/// rest, which go to the core.
-pub(crate) fn lay_over(texts: &[String], rels: &[String]) -> (String, String) {
-    let (mut over, mut core) = (String::new(), String::new());
-    for t in texts {
-        let to = if rofl::engine::volumes::fact_rels(t).iter().all(|r| rels.binary_search(r).is_ok()) { &mut over } else { &mut core };
-        to.push_str(t);
-        if !t.ends_with('\n') { to.push('\n'); }
-    }
-    (over, core)
 }

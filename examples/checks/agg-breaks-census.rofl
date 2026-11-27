@@ -2602,12 +2602,6 @@ switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
 switch_site("levels_far_fact_unplaced", "rust/rofl/src/store.rs").
 switch_site("levels_far_firing_dropped", "rust/rofl/src/store.rs").
-switch_site("levels_guard_unasked", "rust/rofl/src/engine.rs").
-switch_site("levels_home_round_kept", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_leaf_first_file", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_lower_unmet", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_seed_every_place", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_solved_run_lost", "rust/rofl/src/engine/par.rs").
 switch_site("levels_tree_sliced", "rust/rofl/src/engine/par.rs").
 switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
@@ -2814,8 +2808,6 @@ switch_site("tag_label_lattice", "rust/rofl/src/engine.rs").
 switch_site("tag_lattice_admitted", "rust/rofl/src/tag.rs").
 switch_site("tag_times_skipped", "rust/rofl/src/tag.rs").
 switch_site("tag_unread", "rust/rofl/src/rofl_parse.rs").
-switch_site("texts_edit_stale", "rust/rofl/src/engine/volumes.rs").
-switch_site("texts_never_carried", "rust/rofl/src/engine/volumes.rs").
 switch_site("thr_acc_frozen", "rust/rofl/src/engine.rs").
 switch_site("thr_door_n", "rust/rofl/src/program.rs").
 switch_site("thr_first_height", "rust/rofl/src/store.rs").
@@ -2849,9 +2841,6 @@ switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
 switch_site("unfired_neg_decides", "rust/rofl/src/engine.rs").
 switch_site("unify_no_occurs_check", "rust/rofl/src/term.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
-switch_site("units_named_let_go", "rust/rofl/src/volume.rs").
-switch_site("units_parts_misplaced", "rust/rofl/src/engine/levels.rs").
-switch_site("units_patch_drops_moved", "rust/rofl/src/engine/levels.rs").
 switch_site("units_patch_drops_moved", "rust/rofl/src/store.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").

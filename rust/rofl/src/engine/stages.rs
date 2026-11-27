@@ -256,52 +256,10 @@ impl Eval {
 
     /// The stage this world was evaluated by: a file at a time where it was given its files' lemmas, else the cut alone.
     pub fn stage_here(&mut self) -> Option<Stage> {
-        if self.stage_given.is_some() && self.levels.is_none() { self.lemma_stage() } else { self.cut_stage() }
+        if self.stage_given.is_some() { self.lemma_stage() } else { self.cut_stage() }
     }
 
-    /// A relation `own[fixpointplan]` names is stated by files alone: a fact of it that is of no one file is refused.
-    pub fn refuse_own_outside(&mut self, st: &Stage) -> Result<(), Halt> {
-        let rels: Vec<Sym> = st.own.keys().copied().collect();
-        for rel in rels {
-            if let Some(&f) = self.store.rel_all(&self.h, rel).iter().find(|f| self.store.alive(**f)) {
-                let n = self.h.name(rel);
-                return Err(Halt::reject(format!("{} is of no one file, and `own[fixpointplan]({n}, _)` says a file states '{n}'", self.store.key(&self.h, f))));
-            }
-        }
-        Ok(())
-    }
 
-    /// What a file's world gives is checked against the plan: an argument `own[fixpointplan]` names holds a node of
-    /// the one file, and the file states no relation the plan does not name. The world's own facts are above `from`.
-    pub fn own_kept(&self, st: &Stage, from: FactId) -> Result<(), Halt> {
-        if st.own.is_empty() {
-            return Ok(());
-        }
-        let mut file: Option<String> = None;
-        for id in (from..self.store.len_ids()).filter(|&id| self.store.alive(id)) {
-            let r = self.store.rec(id);
-            if !r.base() {
-                continue;
-            }
-            let Some(m) = st.own.get(&r.rel) else {
-                let n = self.h.name(r.rel);
-                return Err(Halt::reject(format!("{} is stated by a file, and the plan names what a file states: say `own[fixpointplan]({n}, I)` of each argument I that holds a node of the file, or `own[fixpointplan]({n}, none)`", self.store.key(&self.h, id))));
-            };
-            for (i, t) in self.store.args(id).iter().enumerate().filter(|(i, _)| *i < 64 && m >> i & 1 == 1) {
-                let named = match t.kind() {
-                    TermK::Atom(x) | TermK::Str(x) => super::volumes::node_file(self.h.name(x)),
-                    _ => None,
-                };
-                if named.is_none() || file.as_deref().is_some_and(|f| Some(f) != named) {
-                    return Err(Halt::reject(format!("{} holds at argument {i} no node of its file, and `own[fixpointplan]({}, {i})` says every fact of it does", self.store.key(&self.h, id), self.h.name(r.rel))));
-                }
-                if file.is_none() {
-                    file = named.map(str::to_string);
-                }
-            }
-        }
-        Ok(())
-    }
 
     /// The books the plan cuts: `cut[fixpointplan](B)`.
     fn cut_books(&mut self) -> Vec<Sym> {

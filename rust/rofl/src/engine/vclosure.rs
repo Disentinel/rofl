@@ -1091,12 +1091,6 @@ fn in_cone(set: &HashSet<(Sym, Option<Sym>)>, rel: Sym, book: Option<Sym>) -> bo
     }
 }
 
-impl VClosure {
-    /// declared a `graph`: its closure is walked, over edges that may cross the files
-    pub(super) fn is_graph(&self) -> bool {
-        self.graph
-    }
-}
 
 impl VClosureState {
     /// The forests the closures answered from their trees were built to, as a volume keeps them: a world opened is

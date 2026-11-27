@@ -321,8 +321,6 @@ impl Eval {
             (!self.shrug_readers.is_empty(), "shrug"),
             (!self.store.aliases.is_empty(), "alias"),
             (self.stage_given.is_some(), "stage"),
-            (self.meeting.is_some(), "meeting"),
-            (self.by_seed, "seed"),
             (self.add.adding, "adding"),
             (self.wall.resume_at.is_some(), "resume"),
             (!self.store.kept_layer.is_empty(), "kept_layer"),

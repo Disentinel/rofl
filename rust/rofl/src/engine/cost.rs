@@ -269,16 +269,6 @@ impl Eval {
         self.cost.hot_said.push(said);
     }
 
-    /// The rule of a world settled by levels that, summed over its units (`CostState::absorb`), read more rows than
-    /// the world holds facts and the most of any: said as `say_hot` says one, once the units are settled.
-    pub(super) fn say_hot_world(&mut self) {
-        let Some(h) = self.too_hot().pop() else { return };
-        let said = format!("{}, summed over the units it fired in", h.sentence());
-        if let Some(f) = self.cost.on_hot {
-            f(&said);
-        }
-        self.cost.hot_said.push(said);
-    }
 
     fn bound_text(&self, l: &Lit, at: &[Term]) -> String {
         let mut bound: Vec<String> = Vec::new();
@@ -401,31 +391,6 @@ impl Eval {
         }
     }
 
-    /// The rules that read this evaluation's profile, those that read what they conclude, and every arm of what they conclude: a world settled by
-    /// levels fires them in its reader once the units are settled and their count is known (`Session::by_volumes`).
-    /// None when the world was given its profile, or reads none.
-    pub fn profile_rules(&mut self) -> FxSet<Sym> {
-        let mut out = FxSet::default();
-        if !self.profile_wanted() {
-            return out;
-        }
-        let p = self.h.intern("profile");
-        let names: FxSet<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
-        let mut heads: FxSet<Sym> = FxSet::default();
-        loop {
-            let n = out.len();
-            for r in &self.rules {
-                let reads = r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| (l.persp.as_atom() == Some(p) && names.contains(&l.rel)) || heads.contains(&l.rel))
-                    || heads.contains(&r.clause.head.rel);
-                if reads && out.insert(r.id) {
-                    heads.insert(r.clause.head.rel);
-                }
-            }
-            if out.len() == n {
-                return out;
-            }
-        }
-    }
 
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");

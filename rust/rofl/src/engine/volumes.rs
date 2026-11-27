@@ -69,14 +69,6 @@ fn facts_alone(text: &str) -> bool {
     any
 }
 
-/// The relations a text of facts alone states, by name.
-pub fn fact_rels(text: &str) -> Vec<String> {
-    let mut out: Vec<String> = text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("--"))
-        .map(|l| l[..l.find(['[', '(', '.']).unwrap_or(l.len())].trim().to_string()).collect();
-    out.sort();
-    out.dedup();
-    out
-}
 
 const TEXTS: &[u8; 16] = b"ROFL-TEXTS-2\n\0\0\0";
 
@@ -186,49 +178,6 @@ pub fn keep_texts(k: &str, path: &str, seen: Option<&std::path::Path>) -> std::i
     publish(k, path, newest_texts(k).map_or(0, |n| n + 1), &[], seen)
 }
 
-/// AN EDIT'S TEXTS: the files that moved written in a segment of their own, the rest read where they lie. A segment
-/// whose texts mostly went is carried into the new one, so the segments hold at most twice the texts of the files;
-/// one whose texts are no more than what the new one holds so far is carried too, so a segment is copied a number of
-/// times that grows as the log of the texts, and the segments read are as few. The bytes written; an error where no
-/// texts are kept at `k` or a file moved that they do not name.
-pub fn keep_texts_edit(k: &str, moved: &[(String, String)], seen: Option<&std::path::Path>) -> Result<usize, String> {
-    let old = KeptTexts::open(k, seen)?;
-    let now: HashMap<&str, &str> = moved.iter().map(|(f, t)| (f.as_str(), t.as_str())).collect();
-    let mut entries: Vec<(&str, Option<(u64, usize, usize)>)> = Vec::with_capacity(old.n);
-    for i in 0..old.n {
-        let [na, nl, seg, ta, tl] = old.entry(i);
-        let f = old.top_str(na, nl);
-        let seg = if seg as u64 == HERE { old.top } else { seg as u64 };
-        entries.push((f, (!now.contains_key(f)).then_some((seg, ta, tl))));
-    }
-    if entries.iter().filter(|(f, _)| now.contains_key(f)).count() != now.len() {
-        return Err(format!("{k}: a file moved that the kept texts do not name"));
-    }
-    let mut live: std::collections::BTreeMap<u64, usize> = old.maps.keys().map(|m| (*m, 0)).collect();
-    for (_, at) in &entries {
-        if let Some((m, _, len)) = at { *live.entry(*m).or_default() += len; }
-    }
-    let mut carried: Vec<u64> = Vec::new();
-    let mut acc: usize = moved.iter().map(|(_, t)| t.len()).sum();
-    let carry_all = crate::brk!("texts_never_carried" => false; true);
-    for (m, l) in live.iter().rev() {
-        if carry_all && (*l * 2 < old.maps[m].len() || *l <= acc) {
-            carried.push(*m);
-            acc += l;
-        }
-    }
-    let written: Vec<(&str, Text)> = entries.iter().map(|(f, at)| match at {
-        None => (*f, Text::New(if crate::brk!("texts_edit_stale" => false; true) { now[f] } else { old.get(f).unwrap_or_default() })),
-        Some((m, ta, tl)) if carried.contains(m) => (*f, Text::New(old.str(&old.maps[m], *ta, *tl))),
-        Some((m, ta, tl)) => (*f, Text::In(*m, *ta, *tl)),
-    }).collect();
-    let reads: Vec<u64> = live.keys().filter(|m| !carried.contains(m)).copied().collect();
-    let n = old.top + 1;
-    let tmp = format!("{}.{}.new", segment(k, n), std::process::id());
-    let bytes = write_segment(&tmp, &written).map_err(|e| format!("{tmp}: {e}"))?;
-    publish(k, &tmp, n, &reads, seen).map_err(|e| format!("{k}: {e}"))?;
-    Ok(bytes)
-}
 
 /// The texts kept at `k`, mapped: the newest segment and those it reads, each whole once its sum held, or `seen`
 /// notes it as it was (`volume::check_seen`).
@@ -467,16 +416,7 @@ pub fn cut(texts: &[&str]) -> Cut {
     cut_by(texts, false, None).unwrap_or_else(|_| unreachable!("a cut on the heap writes no file"))
 }
 
-/// `cut`, the texts of facts alone that name no file set apart (`Cut::over`).
-pub fn cut_over(texts: &[&str]) -> Cut {
-    cut_by(texts, true, None).unwrap_or_else(|_| unreachable!("a cut on the heap writes no file"))
-}
 
-/// `cut_over`, each file's text written to a file in `dir` as it is cut and read from there where it lies
-/// (`FileText::Lies`): what the cut holds is the text it reads, the core and a list of pieces a file.
-pub fn cut_over_into(texts: &[&str], dir: &std::path::Path) -> std::io::Result<Cut> {
-    cut_by(texts, true, Some(dir))
-}
 
 fn cut_by(texts: &[&str], apart: bool, spill: Option<&std::path::Path>) -> std::io::Result<Cut> {
     let mut core = String::new();
@@ -718,86 +658,4 @@ pub(super) fn load_text(e: &mut Eval, text: &str) -> Result<(), Halt> {
 pub fn pressed() -> bool {
     let (used, may) = (MEMORY_USED.load(std::sync::atomic::Ordering::Relaxed), MEMORY_LIMIT.load(std::sync::atomic::Ordering::Relaxed));
     may > 0 && used * 4 > may
-}
-
-impl Eval {
-    /// The world of this core and the `files`, each its name and text, settled by levels: the reader, a fork of the
-    /// core that reads every unit and fires nothing.
-    pub fn by_volumes(&mut self, files: Vec<(String, FileText)>) -> Result<(Eval, VolStats), Halt> {
-        self.by_volumes_over(files, "")
-    }
-
-    /// `by_volumes`, with `over` laid over the files' units: facts of the relations `overlay_rels` names, read by
-    /// every file's unit as a stretch of their own, so that an edit of them settles again only the units they meet.
-    pub fn by_volumes_over(&mut self, files: Vec<(String, FileText)>, over: &str) -> Result<(Eval, VolStats), Halt> {
-        self.by_volumes_edit(files, over, None)
-    }
-
-    /// `by_volumes_over` again over this core after an edit of the files `edit` names (their places), the world
-    /// before held in memory: the units whose answer may have moved are settled again, the others stand.
-    pub fn by_volumes_edit(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
-        // (where the nodes are processes, one that cannot settle its units says why to those that wait for them)
-        let (h, n) = (self.h.clone(), files.len());
-        self.by_volumes_edit_here(files, over, edit).inspect_err(|e| super::levels::far_failed(&h, n, e))
-    }
-
-    fn by_volumes_edit_here(&mut self, files: Vec<(String, FileText)>, over: &str, edit: Option<(&super::levels::Levels, FxSet<u32>)>) -> Result<(Eval, VolStats), Halt> {
-        let t0 = std::time::Instant::now();
-        let (stage, mut joins) = self.level_stage();
-        self.settle_core(joins.core.clone())?;
-        self.refuse_own_outside(&stage)?;
-        self.settle_provenance();
-        // ONE NUMBER FOR A NAME IN EVERY UNIT: the strings the files spell are named in the core before it is frozen,
-        // so a fact reads the same wherever it stands. (A string with an escape, and a name a rule makes, are still
-        // each unit's own. A quote in a comment names a string no fact holds: a name too many, nothing else.)
-        // (where the nodes are processes, those of this one's files: another's come named as text)
-        let mine = super::levels::far_block(files.len()).unwrap_or(0..files.len());
-        for text in files[mine].iter().map(|f| f.1.text()).chain([std::borrow::Cow::Borrowed(over)]) {
-            let mut rest = &*text;
-            while let Some(a) = rest.find('"') {
-                let Some(n) = rest[a + 1..].find(['"', '\\', '\n']) else { break };
-                let end = a + 1 + n;
-                if rest.as_bytes()[end] == b'"' {
-                    self.h.intern(&rest[a + 1..end]);
-                    rest = &rest[end + 1..];
-                } else {
-                    // an escape or a line's end: past the string's closing quote, or the line
-                    let line = rest[end..].find('\n').map_or(rest.len(), |x| end + x);
-                    rest = &rest[line..];
-                }
-            }
-        }
-        // (the rounds of the rules, once for every fork)
-        self.peel_ahead();
-        self.h.freeze();
-        self.h.share(None);
-        self.store.freeze(&self.h);
-        let cross = joins.cross.len();
-        let up: Vec<Sym> = joins.up.iter().flat_map(|l| l.iter().copied()).chain(joins.core.iter().copied()).collect();
-        let (layers, core) = (joins.up.len(), joins.core.len());
-        let trees = std::mem::take(&mut joins.tree_rules);
-        let held = std::mem::take(&mut joins.held);
-        let mut e = self.fork();
-        e.par.threads = std::thread::available_parallelism().map_or(1, |n| n.get());
-        let n = files.len();
-        let lv = e.fork().by_levels(files, &stage, joins, edit.map(|(b, c)| super::levels::Edit(b, c)), over)?;
-        let ms = t0.elapsed().as_millis();
-        let from = e.store.len_ids();
-        lv.read_by(&mut e);
-        e.cost.absorb(&lv.cost);
-        e.say_hot_world();
-        e.diags.push(format!(
-            "levels: of {} rules {} below, {cross} of them where units meet, {} in {layers} layers above; {} facts in {} units, in {ms} ms; left to the reader by their shape: {held}",
-            e.rules.iter().filter(|r| r.safe).count(),
-            e.rules.iter().filter(|r| r.safe && (stage.rules.contains(&r.id) || up.contains(&r.id) || trees.contains(&r.id))).count(),
-            up.len() - core,
-            lv.mark - from,
-            lv.tops.iter().map(|t| t.count()).sum::<usize>()
-        ));
-        e.diags.extend(lv.said.iter().cloned());
-        let st = VolStats { files: n, ms: t0.elapsed().as_millis(), facts: (lv.mark - from) as usize, cooled: lv.cooled.times, cool_files: lv.cooled.units, cool_bytes: lv.cooled.bytes };
-        e.stage_given = Some(Rc::new(stage.below().iter().copied().chain(up).collect()));
-        e.levels = Some(Rc::new(lv));
-        Ok((e, st))
-    }
 }

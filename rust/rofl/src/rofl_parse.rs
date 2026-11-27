@@ -1144,10 +1144,6 @@ pub fn is_columns(src: &str) -> bool {
     src.lines().take_while(|l| l.starts_with("--")).any(|l| l.trim_end() == COLUMNS)
 }
 
-/// The facts the blocks of a column text hold.
-pub fn column_rows(src: &str) -> usize {
-    src.lines().filter_map(|l| l.strip_prefix("R ")).filter_map(|l| l.rsplit(' ').next()?.parse::<usize>().ok()).sum()
-}
 
 /// The facts a scanner's output holds, a line of text each, in either form: the column form's tables and columns
 /// are not lines of text.

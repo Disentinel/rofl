@@ -689,17 +689,6 @@ impl Forest {
         self.len() == 0
     }
 
-    /// Heap bytes held.
-    /// What it holds on the heap and not in a map.
-    pub fn heap_bytes(&self) -> usize {
-        fn h<T: crate::arena::Pod>(a: &Arena<T>) -> usize {
-            match a {
-                Arena::Mapped { .. } => 0,
-                _ => a.len() * std::mem::size_of::<T>(),
-            }
-        }
-        h(&self.nodes) + h(&self.idx.table) + self.idx.over.capacity() * 16 + h(&self.parent) + h(&self.pre) + h(&self.order) + h(&self.end) + h(&self.depth) + self.near.as_ref().map_or(0, h) + self.graph.as_ref().map_or(0, |g| g.bytes())
-    }
     pub fn bytes(&self) -> usize {
         self.graph.as_ref().map_or(0, |g| g.bytes()) + self.near.as_ref().map_or(0, |n| n.len() * 4) + self.nodes.len() * (8 + 4 * 5 + 16) + self.order.len() * 4
     }

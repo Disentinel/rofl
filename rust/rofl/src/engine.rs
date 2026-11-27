@@ -42,7 +42,7 @@ mod layer;
 mod algebra;
 mod books;
 mod stages;
-pub mod levels;
+
 pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
@@ -835,31 +835,10 @@ pub struct Eval {
     stage_both: Rc<FxSet<Sym>>,
     /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
-    /// In a group of a world by levels: which child each fact below lies under.
-    pub meeting: Option<Rc<levels::Meeting>>,
-    /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
-    by_seed: bool,
     /// the pages core handed this pass back: it is evaluated again from the start by the levels
     pages_declined: bool,
     /// the widest read of the firing the pages core is in, and the body element that read it
     pages_widest: (usize, usize),
-    /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
-    homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
-    /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
-    bridging: Option<Rc<FxSet<Sym>>>,
-    /// The round of a group's seeds: the rules each is news to (`levels::Seeded`).
-    seeded: Option<Rc<levels::Seeded>>,
-    /// In a unit on several threads, a round's firings are gathered (`presolving`), solved together (`presolved`,
-    /// `Eval::presolve`) and then concluded each in its turn (`pre_now`: the one firing now).
-    presolving: Option<Vec<par::RoundJob>>,
-    presolved: FxMap<(Sym, usize), (par::RoundJob, par::Made)>,
-    pre_now: Option<par::Made>,
-    /// Before them, the premises the round has news at are listed (`news_listing`) and the news of each taken on the
-    /// threads (`news_taken`, `Eval::news_ahead`).
-    news_listing: Option<Vec<(Rc<ERule>, usize)>>,
-    news_taken: FxMap<(Sym, usize), Option<par::News>>,
-    /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
-    pub levels: Option<Rc<levels::Levels>>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
@@ -2385,19 +2364,8 @@ impl Eval {
             stage_given: None,
             stage_both: Rc::default(),
             staged_away: None,
-            meeting: None,
-            by_seed: false,
             pages_declined: false,
             pages_widest: (0, 0),
-            homing: None,
-            bridging: None,
-            seeded: None,
-            presolving: None,
-            news_listing: None,
-            news_taken: FxMap::default(),
-            presolved: FxMap::default(),
-            pre_now: None,
-            levels: None,
             lemma_heads: None,
             lower_texts: None,
             lower_sources: None,
@@ -5526,22 +5494,6 @@ impl Eval {
                 }
             };
             let active = self.active.clone();
-            self.presolved.clear();
-            self.news_taken.clear();
-            if self.meeting.is_some() && par::free(self.par.threads) > 1 && at.is_none() && j0 == 0 {
-                self.news_listing = Some(Vec::new());
-                let listed = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
-                let list = self.news_listing.take().unwrap_or_default();
-                listed?;
-                self.news_ahead(list, &cur);
-                self.presolving = Some(Vec::new());
-                let gathered = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
-                let jobs = self.presolving.take().unwrap_or_default();
-                gathered?;
-                if jobs.len() > 1 {
-                    self.presolved = self.presolve(jobs);
-                }
-            }
             let (mut sum, mut mx) = (0u64, 0u64);
             for (j, r) in active.iter().enumerate().skip(j0) {
                 let t = std::time::Instant::now();
@@ -5563,9 +5515,6 @@ impl Eval {
                 }
             }
             self.rounds.push((sum, mx));
-            self.homing = None;
-            self.bridging = None;
-            self.seeded = None;
             front = std::mem::take(&mut self.cur_front);
         }
         self.live_front = outer;
@@ -5581,14 +5530,7 @@ impl Eval {
     fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, at0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
         {
             {
-                if self.bridging.as_ref().is_some_and(|b| !b.contains(&r.id)) {
-                    return Ok(());
-                }
-                let gathering = self.presolving.is_some() || self.news_listing.is_some();
                 if self.naive {
-                    if gathering {
-                        return Ok(());
-                    }
                     let f = self.fire_rule(r, None)?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
@@ -5598,7 +5540,7 @@ impl Eval {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                    if !gathering && at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
+                    if at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
                         // (an addition fires it on the rows the new edges make)
                         let f = if fl.is_none() && self.add.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
                             let f = self.vfire_news(r, cur)?;
@@ -5618,93 +5560,32 @@ impl Eval {
                     return Ok(());
                 }
                 if r.has_demand_prem {
-                    if gathering {
-                        return Ok(());
-                    }
                     let f = self.fire_at(r, 1, fl.take(), |e| e.fire_rule(r, None))?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
                 // a firing whose premises are news at two places is found once from each
                 let twice = r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(l) if cur.by_rel.contains_key(&l.rel))).count() > 1;
-                let window = twice && !gathering && self.store.open_dup_window();
+                let window = twice && self.store.open_dup_window();
                 let fired = (|| -> Result<(), Halt> {
                     for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
                         let BodyElem::Pos(l) = b else { continue };
                         let Some(keys) = cur.by_rel.get(&l.rel) else {
                             continue;
                         };
-                        if self.homing.as_ref().is_some_and(|a| levels::first_at(r, a) != Some(i)) {
-                            continue;
-                        }
-                        // (a fact of a layer below through which others meet is no news to a premise after a builtin that walls the order)
-                        if self.bridging.is_some() && (0..i).any(|k| self.wall(&r.plan, k)) {
-                            continue;
-                        }
-                        // (in a unit: a premise of a relation it sees no fact of has no answer yet, and a fact of it
-                        // come later is news that reads these)
-                        if let Some(m) = self.meeting.as_ref() {
-                            let none = r.plan.iter().enumerate().find_map(|(j, b)| match b {
-                                BodyElem::Pos(lj) if j != i && lj.temporal == Temporal::Now && m.of_facts(lj.rel) && !self.store.holds_any(lj.rel) => Some(lj.rel),
-                                _ => None,
-                            });
-                            if let Some(rel) = none {
-                                if brk!("levels_guard_unasked" => false; true) {
-                                    levels::asked_any(rel);
-                                }
-                                continue;
-                            }
-                        }
-                        // (solved with the round's others: the news and the rows excluded are those it was solved with)
-                        if let Some(list) = self.news_listing.as_mut() {
-                            let before = (0..i).filter(|_| twice).filter(|&j| matches!(&r.plan[j], BodyElem::Pos(lj) if cur.by_rel.contains_key(&lj.rel)));
-                            list.extend(before.chain([i]).map(|j| (r.clone(), j)));
-                            continue;
-                        }
-                        let (pre, made) = self.presolved.remove(&(r.id, i)).map_or((None, None), |(j, m)| (Some(j), Some(m)));
-                        let news = match &pre {
-                            Some(_) => None,
-                            None => match self.news_of(r, i, l.rel, keys) {
-                                Some(k) => Some(k),
-                                None => continue,
-                            },
-                        };
-                        let keys = match (&pre, &news) {
-                            (Some(p), _) => &p.keys,
-                            (None, Some(par::News::Kept(k))) => &**k,
-                            (None, _) => keys,
-                        };
-                        if let Some(p) = &pre {
-                            self.sn = p.sn.clone();
-                        } else if twice {
+                        let Some(news) = self.news_since(r, l.rel, keys) else { continue };
+                        let keys = &*news;
+                        if twice {
                             let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
                             for (j, e) in excl.iter_mut().enumerate() {
                                 let BodyElem::Pos(lj) = &r.plan[j] else { continue };
                                 let Some(kj) = cur.by_rel.get(&lj.rel) else { continue };
-                                *e = self.news_of(r, j, lj.rel, kj).map(|k| match k {
-                                    par::News::All => Rc::new(kj.clone()),
-                                    par::News::Kept(k) => k,
-                                });
+                                *e = self.news_since(r, lj.rel, kj).map(|k| Rc::new(k.into_owned()));
                             }
                             self.sn = excl.iter().any(Option::is_some).then(|| Rc::new(excl));
                         }
-                        if gathering {
-                            let sn = self.sn.take();
-                            if let Some(plan) = self.delta_pick(r, Some(i), keys.len()) {
-                                let job = par::RoundJob { rule: r.clone(), at: i, keys: keys.clone(), sn, plan };
-                                self.presolving.as_mut().unwrap().push(job);
-                            }
-                            continue;
-                        }
-                        let plan = pre.as_ref().map(|p| p.plan.clone());
-                        let fire = |e: &mut Eval| match plan.or_else(|| e.delta_pick(r, Some(i), keys.len())) {
-                            Some(p) => {
-                                e.pre_now = made;
-                                let f = e.fire_planned(r, &p, Some(keys));
-                                e.pre_now = None;
-                                f
-                            }
-                            None if e.by_seed && !e.store.reads_wide() && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
+                        let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
+                            Some(p) => e.fire_planned(r, &p, Some(keys)),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
                         let f = self.fire_at(r, i + 1, fl.take(), fire);
@@ -5717,9 +5598,6 @@ impl Eval {
                     self.store.close_dup_window();
                 }
                 fired?;
-                if gathering {
-                    return Ok(());
-                }
                 // NEWS READ INSIDE A THRESHOLD: the rule fires again, and its
                 // thresholds solve only the groups the news reaches.
                 if brk!("thr_no_refire" => false; r.thr_rels.iter().any(|rel| cur.by_rel.contains_key(rel))) {
@@ -5741,25 +5619,6 @@ impl Eval {
         sn.get(at)?.clone()
     }
 
-    /// The news of a round that fire `r` from its premise `i`: in a unit, less the seeds that met no premise the rule
-    /// joins this one with.
-    fn news_of(&self, r: &ERule, i: usize, rel: Sym, keys: &FxSet<FactId>) -> Option<par::News> {
-        if let Some(n) = self.news_taken.get(&(r.id, i)) {
-            return n.clone();
-        }
-        self.news_at(r, i, rel, keys).map(|k| match k {
-            std::borrow::Cow::Borrowed(_) => par::News::All,
-            std::borrow::Cow::Owned(k) => par::News::Kept(Rc::new(k)),
-        })
-    }
-
-    fn news_at<'a>(&self, r: &ERule, i: usize, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
-        let keys = self.news_since(r, rel, keys)?;
-        let Some(sd) = self.seeded.as_ref() else { return Some(keys) };
-        let kept: FxSet<FactId> = keys.iter().copied().filter(|&f| sd.lets(r.id, i, f)).collect();
-        (!kept.is_empty()).then_some(std::borrow::Cow::Owned(kept))
-    }
-
     /// THE NEWS OF A ROUND THAT ARE NEWS FOR `r`: the facts the rule's whole firing in `fire_all` did not see, those
     /// with an id from the store's length at that firing. The first round carries every conclusion of the whole
     /// firings, and a rule activated after its producers joined them already: fired again on them in written order it
@@ -5779,9 +5638,6 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
-        if self.by_seed && front_at.is_none() {
-            return Ok(Front::default());
-        }
         // the rules a declared closure lowers to are not fired where the closure is answered from its tree
         if self.vc.any {
             if self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active) {
@@ -6003,9 +5859,6 @@ impl Eval {
                 self.h.name(head.rel)
             );
             self.diag_once(msg);
-            return Ok(());
-        }
-        if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems, self.bridging.is_some())) {
             return Ok(());
         }
         if head.temporal == Temporal::Next {
@@ -15533,8 +15386,7 @@ impl Eval {
     /// the evaluation renamed, and the engine's own counter is put back.
     pub fn why_text_with(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let h: *mut crate::term::Heap = &mut self.h;
-        let r = levels::far_names(h, || self.questioned(|e| e.why_at(lit, o, shown)));
+        let r = self.questioned(|e| e.why_at(lit, o, shown));
         self.rename_counter = saved;
         r
     }
@@ -16539,8 +16391,7 @@ impl Eval {
     pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
         let asking = std::mem::replace(&mut self.demand.asking, true);
-        let h: *mut crate::term::Heap = &mut self.h;
-        let r = levels::far_names(h, || self.questioned(|e| e.whynot_at(lit, b, shown)));
+        let r = self.questioned(|e| e.whynot_at(lit, b, shown));
         self.demand.asking = asking;
         self.demand.asked.clear();
         self.demand.trail.clear();
@@ -16605,13 +16456,25 @@ impl Eval {
     /// AN OPEN QUESTION THAT HOLDS, OVER A CORPUS, IS A TABLE OF FILES: how many answers each file holds, read off
     /// the units, and the files that hold none. Why a file holds none is not walked here: a row opens when the
     /// question is asked in that file (`whynot_files`), which thaws it alone. An answer is of the file its first
-    /// node names. None for a ground question and for a world that is not read from units.
+    /// node names. None for a ground question and for a world whose facts name no file.
     fn held_by_file(&mut self, lit: &Lit, k: &str, found: &[(Subst, PremRef)]) -> Option<String> {
-        let mut files: Vec<String> = self.levels.as_ref()?.files().into_iter().map(|f| format!("n{f:016x}")).collect();
-        files.sort_unstable();
         if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
             return None;
         }
+        let mut key = String::new();
+        let mut files: FxSet<String> = FxSet::default();
+        for id in self.store.all_facts() {
+            key.clear();
+            self.store.write_key(&self.h, id, &mut key);
+            if let Some(f) = volumes::first_file(&key) {
+                files.insert(format!("n{f}"));
+            }
+        }
+        if files.is_empty() {
+            return None;
+        }
+        let mut files: Vec<String> = files.into_iter().collect();
+        files.sort_unstable();
         let mut held: HashMap<String, usize> = HashMap::new();
         for (s, _) in found {
             let key = self.lit_key(lit, s);
@@ -17210,10 +17073,6 @@ impl Eval {
         low.lower_sources = None;
         low.lower_kept = None;
         low.thawed = true;
-        // (a reader of units: the file's lower stage is evaluated over the core alone)
-        if low.levels.take().is_some() {
-            low.store.reads_none();
-        }
         let held: Vec<FactId> = match held {
             Some(h) => h.to_vec(),
             None => low.store.all_facts().into_iter().filter(|&id| { let r = low.store.rec(id); r.base() && st.heads.contains(&r.rel) && !st.cut.contains(&r.persp) }).collect(),
@@ -17941,6 +17800,7 @@ fn reaches_in(deps: &HashMap<Sym, HashSet<Sym>>, from: Sym, to: Sym) -> bool {
     }
     false
 }
+
 
 #[allow(dead_code)]
 fn eval_is_send() {

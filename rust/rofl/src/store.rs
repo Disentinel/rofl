@@ -1750,20 +1750,7 @@ impl Stretch {
         Some(Stretch { store: store.into(), kept: None, lo: old.lo, hi: old.hi, keyed: Keyed::of(&self.rels), rels: self.rels.clone(), far: self.far.clone(), books: self.books.clone(), cites: None, base: old.kept.as_ref().filter(|k| k.seg != COOLED).map(|k| Body { map: k.map.clone(), at: k.at, seg: k.base_seg }), forests: Default::default(), raw: Default::default(), wits: Default::default(), opened: Default::default(), held: None, counted: Default::default() })
     }
 
-    /// Whether every firing it holds can be carried into another store (`Store::carry`): one that reads no
-    /// aggregate.
-    pub fn carriable(&self) -> bool {
-        !self.store().prem_arena.own.iter().any(|p| matches!(p.kind(), Prem::Cell(_)))
-    }
 
-    /// Whether the two hold the same facts.
-    pub fn same_as(&self, old: &Stretch) -> bool {
-        let mut same = self.hi - self.lo == old.hi - old.lo;
-        if same {
-            self.differs(old, |_, _, _| same = false);
-        }
-        same
-    }
 
     /// Every fact one of the two holds and the other does not.
     /// Every fact one of the two holds and the other does not: its id here if it came, none if it went.
@@ -1806,16 +1793,7 @@ impl Stretch {
         self.kept.as_ref().filter(|k| k.seg != COOLED).map(|k| (k.seg, k.start))
     }
 
-    /// This stretch, cooled from `was`, to be written as a patch over the body `was` would have been (`write_patch`).
-    pub fn cooled_from(mut self, was: &Stretch) -> Stretch {
-        self.base = was.base.clone();
-        self
-    }
 
-    /// Kept as a patch, the segment of the body it is a patch over.
-    pub fn kept_over(&self) -> Option<u32> {
-        self.kept.as_ref().filter(|k| k.patch.is_some()).map(|k| k.base_seg)
-    }
 
     /// Whether it lies in a file, read from there.
     pub fn cooled(&self) -> bool {
@@ -1833,25 +1811,7 @@ impl Stretch {
         }
     }
 
-    /// What it holds on the heap, in bytes: unfolded (whole), its facts' places and by relation, its firings' places,
-    /// its facts by key; and whether it is cooled.
-    pub fn heap_census(&self) -> [usize; 6] {
-        let unf = self.store.get().map_or(0, |s| s.bytes().iter().map(|x| x.1).sum());
-        let raw = self.raw.get().map_or(0, |r| r.at.capacity() * 4 + r.by_rel.values().map(|v| v.capacity() * 4 + 32).sum::<usize>() + r.keys.get().map_or(0, |k| k.0.capacity() * 8 + k.1.capacity() * 4));
-        let wits = self.wits.get().map_or(0, |w| w.at.capacity() * 4 + w.by.capacity() * 8);
-        let kb = |k: &Keys| k.vals.capacity() * 8 + k.ids.capacity() * 4;
-        let keyed = self.keyed.low.iter().flat_map(|c| c.iter()).filter_map(|c| c.get()).map(kb).sum::<usize>() + self.keyed.high.read().unwrap().values().map(|k| kb(k)).sum::<usize>();
-        let fs = self.forests.get().map_or(0, |v| v.iter().flat_map(|f| f.iter()).map(|(_, t)| t.heap_bytes()).sum());
-        [unf, raw, wits, keyed, self.cooled() as usize, fs]
-    }
-    pub fn unfolded_bytes(&self) -> Vec<(&'static str, usize)> {
-        self.store.get().map_or(Vec::new(), |s| s.bytes())
-    }
 
-    /// A stretch another node holds, as a reader here sees it.
-    pub fn held_there(there: &Stretch, trip: Rc<Trip>) -> Stretch {
-        Stretch::held_by(there.lo, there.hi, there.rels.clone(), there.far.clone(), there.books.clone(), None, trip)
-    }
     /// A stretch another node holds, from what it wrote: its ids, relations, far facts and books.
     pub fn held_by(lo: FactId, hi: FactId, rels: Vec<Sym>, far: Vec<FactId>, books: Vec<(Sym, Sym)>, vwit: Option<bool>, trip: Rc<Trip>) -> Stretch {
         let pages = rels.iter().map(|_| Default::default()).collect();
@@ -1877,28 +1837,12 @@ impl Stretch {
         let c = if self.lo <= id && id < self.hi { st.wit_head[id as usize] } else { st.far_heads.get(&id).copied().unwrap_or(EMPTY) };
         st.nodes_from(c).map(|n| (n.rule, n.tick, st.prems_of(&n).into())).collect()
     }
-    /// Its facts with `v` at argument `p`: asked there where another node holds it.
-    pub fn of_key(&self, h: &Heap, rel: Sym, arity: usize, p: usize, v: Term) -> Vec<FactId> {
-        let mut out = match &self.held {
-            Some(x) => x.key(rel, arity, p, v),
-            None => {
-                let mut out = Vec::new();
-                self.matches(h, rel, None, arity, &[p], &[v], &mut out);
-                out
-            }
-        };
-        out.retain(|&k| self.args(k).get(p) == Some(&v));
-        out
-    }
     /// Whether it kept the firings of the rows of its trees.
     pub fn vwit(&self) -> bool {
         match &self.held {
             Some(x) => x.vwit.unwrap_or_else(|| x.trip.ask.here(x.lo).expect("a stretch of this process").store().vwit),
             None => self.store().vwit,
         }
-    }
-    pub fn is_held_there(&self) -> bool {
-        self.held.is_some()
     }
 
     /// The stretch itself: as it was settled, or read now from where it is kept.
@@ -3488,10 +3432,6 @@ impl Store {
     pub fn tuple_count(&self) -> usize {
         self.facts.tups.len()
     }
-    /// The first id of this world's own layer: what a fork wrote above the base it shares (0 in a world never forked).
-    pub fn layer_mark(&self) -> FactId {
-        self.facts.mark() as FactId
-    }
     pub fn all_facts(&self) -> Vec<FactId> {
         self.ids_here()
             .filter(|&i| self.alive(i))
@@ -3642,18 +3582,7 @@ impl Store {
         }
     }
 
-    /// Whether this store is the unit that holds every file and reads a relation whole (`read_wide`).
-    pub fn reads_wide(&self) -> bool {
-        self.facts.near.as_ref().is_some_and(|n| n.wide)
-    }
 
-    /// The unit that holds every file reads a relation whole, as the world's reader does, so that it may fire a
-    /// rule in written order where that reads fewer rows than from its news (f_a_unit_fired_only_from_its_news).
-    pub fn read_wide(&mut self) {
-        if let Some(n) = self.facts.near.as_mut().and_then(Rc::get_mut) {
-            n.wide = true;
-        }
-    }
 
     /// From here on this store's own facts are numbered from `mark`, and it reads `list` (in the order of their
     /// `lo`, all below `mark`) where they lie. Asked of a fork that has written nothing.
@@ -3669,11 +3598,6 @@ impl Store {
         self.wit_head.mark = mark as usize;
     }
 
-    /// Whether a fact of the relation is here or in a stretch read here.
-    pub fn holds_any(&self, rel: Sym) -> bool {
-        self.idx.get(&rel).is_some_and(|v| v.iter().any(|(_, r)| !r.canon.is_empty() || !r.arrived.is_empty()))
-            || self.facts.near.as_ref().is_some_and(|n| n.lower.as_ref().is_some_and(|l| l.rels.contains(&rel)) || n.list.iter().any(|s| s.wrote(rel)))
-    }
 
     /// Whether a fact of this id stands for this store: the base's, or of a stretch it reads.
     pub fn reads_id(&self, id: FactId) -> bool {
@@ -3813,12 +3737,6 @@ impl Store {
         }).chain(came).collect()
     }
 
-    /// This reader reads by id, and no other way, the stretches an edit replaced.
-    pub fn reads_ghosts(&mut self, ghosts: Vec<Rc<Stretch>>) {
-        if let Some(n) = self.facts.near.as_mut().filter(|_| !ghosts.is_empty()) {
-            Rc::make_mut(n).ghosts = Some(Rc::new(Lower::new(ghosts, Rc::new(|_, _, _, _, _| false))));
-        }
-    }
 
     /// The id the fact `id` names has in the world as it stands: its own, or for a fact of a stretch an edit
     /// replaced, the id of the same fact where it lies now.
@@ -3831,37 +3749,7 @@ impl Store {
         self.find_near(r.rel, r.persp, &a).or_else(|| self.find_here(r.rel, r.persp, &a)).unwrap_or(id)
     }
 
-    /// The stretches read here that hold a fact this store wrote a firing of, by their `lo`.
-    pub fn far_homes(&self) -> Vec<FactId> {
-        let Some(n) = &self.facts.near else { return Vec::new() };
-        self.far_heads.keys().filter_map(|&id| n.live(id).map(|s| s.lo)).collect()
-    }
 
-    /// Every key a premise of this store's own firings quotes renamed by `f`, and the rows such keys name, which are
-    /// returned: a unit's keys are its heap's own until the world gives them one number (`engine/levels.rs`).
-    pub fn rename_keys(&mut self, mut f: impl FnMut(Sym) -> Sym) -> Vec<(Sym, VRow)> {
-        for p in self.prem_arena.own.iter_mut() {
-            *p = match p.kind() {
-                Prem::Neg(k) => PremRef::Neg(f(k)),
-                Prem::Bi(k) if k != 0 => PremRef::Bi(f(k)),
-                Prem::VRow(k) if k != 0 => PremRef::VRow(f(k)),
-                _ => continue,
-            };
-        }
-        if self.cells.prems.iter().any(|p| matches!(p.kind(), Prem::Neg(_) | Prem::Bi(_) | Prem::VRow(_))) {
-            for p in Rc::make_mut(&mut self.cells).prems.iter_mut() {
-                *p = match p.kind() {
-                    Prem::Neg(k) => PremRef::Neg(f(k)),
-                    Prem::Bi(k) if k != 0 => PremRef::Bi(f(k)),
-                    Prem::VRow(k) if k != 0 => PremRef::VRow(f(k)),
-                    _ => continue,
-                };
-            }
-        }
-        let rows: Vec<(Sym, VRow)> = self.vrow_of.own.drain().map(|(k, v)| (f(k), v)).collect();
-        self.vrow_of.own.extend(rows.iter().copied());
-        rows
-    }
 
     /// The cells of `s`, a store forked from the same core that settled the world's aggregates (by levels, the
     /// reader's unit): a firing read from it names its cells by their place there.
@@ -3871,24 +3759,7 @@ impl Store {
         }
     }
 
-    /// This store, which wrote nothing, set as it was before it read stretches (a volume holds it so, the stretches
-    /// are kept beside it), and what `reads_again` takes to set it back.
-    pub fn reads_none(&mut self) -> Option<(Rc<Near>, usize)> {
-        let n = self.facts.near.take()?;
-        assert!(self.facts.recs.own.is_empty(), "a store that reads stretches and wrote is no reader");
-        let mark = self.facts.recs.mark;
-        for m in [&mut self.facts.recs.mark, &mut self.wit_head.mark] {
-            *m = n.core;
-        }
-        Some((n, mark))
-    }
 
-    pub fn reads_again(&mut self, (n, mark): (Rc<Near>, usize)) {
-        for m in [&mut self.facts.recs.mark, &mut self.wit_head.mark] {
-            *m = mark;
-        }
-        self.facts.near = Some(n);
-    }
 
     /// In a world by levels, the forests of the closure `ci` that answer for `node`: those its file's unit left
     /// (none for a value of no file); for no node, in the world's reader, those of every file. None where this
@@ -5099,22 +4970,6 @@ impl Store {
         self.partial_eval = false;
     }
 
-    /// `advanceTick` (src/store.ts:643): end the current tick — freeze
-    /// provenance, drop the tick-scoped layer, install the staged next-tick
-    /// base facts, advance the clock.
-    ///
-    /// IT FREEZES BEFORE IT INCREMENTS, so the tick being ended is `self.tick`
-    /// as this is entered and `keep_frozen` is asked in that world
-    /// (src/api.ts:1017). `keep_frozen` is asked about every record on the
-    /// frozen layer — including records frozen by EARLIER ticks, so one can
-    /// age out — and everything it rejects is dropped instead of kept. The
-    /// store knows what none of those records mean: the policy is the
-    /// caller's, and it lives beside the evaluator predicate it depends on.
-    /// Take out the hole rows the last evaluation of this tick wrote.
-    pub fn drop_eval_holes(&mut self) {
-        let ids: Vec<FactId> = std::mem::take(&mut self.eval_holes).into_iter().filter(|i| self.alive(*i)).collect();
-        self.remove_many(&ids);
-    }
 
     pub fn advance_tick(
         &mut self,

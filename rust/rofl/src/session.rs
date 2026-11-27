@@ -1065,42 +1065,6 @@ impl Session {
         Ok(e)
     }
 
-    /// This world, holding the core, and the `files` settled by levels (`engine/volumes.rs`): the world that reads
-    /// their units. Refused when it asks for input (a scan or an adapter's want), which the units cannot bring.
-    pub fn by_volumes(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
-        self.by_volumes_over(files, "")
-    }
-
-    /// The world by volumes again after an edit of the files at the places `changed`, the world before `before`
-    /// (a session `by_volumes` gave) held in memory (`Eval::by_volumes_edit`), `over` laid over the files' units.
-    pub fn by_volumes_edit(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str, before: &Session, changed: crate::store::FxSet<u32>) -> Result<Session, Halt> {
-        let lv = before.eval.levels.clone().ok_or_else(|| Halt::Bug("a world before that is not by volumes".into()))?;
-        lv.named_by(&mut self.eval);
-        let (eval, _) = self.eval.by_volumes_edit(files, over, Some((&lv, changed)))?;
-        Ok(Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() })
-    }
-
-    /// `by_volumes`, `over` laid over the files' units (`Eval::by_volumes_over`).
-    pub fn by_volumes_over(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
-        let (eval, stats) = self.eval.by_volumes_over(files, over)?;
-        let mut s = Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
-        let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
-        if n > 0 {
-            return Err(Halt::Strat("a world by volumes asks for input, which its units cannot bring".into(), String::new()));
-        }
-        // THE PROFILE IS THE UNITS' SUM (`CostState::absorb`): written once they are settled, and the rules that read
-        // it, which no unit fired, fired by the reader over everything else
-        if !s.profiled && s.eval.profile_wanted() {
-            s.profiled = true;
-            let src = s.eval.profile_text();
-            s.load(&src, None).map_err(|d| Halt::Strat(format!("the profile's facts were refused: {}", d.join("; ")), String::new()))?;
-            if s.eval.run()?.partial {
-                return Err(Halt::Budget("budget_exhausted", None));
-            }
-        }
-        Ok((s, stats))
-    }
-
     /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and
     /// `admit` takes facts of the level it stopped after.
     pub fn evaluate_to(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
@@ -2210,9 +2174,6 @@ impl Session {
     /// language, as `ask` is: a caller who can write a rule can write a why.
     pub fn why(&mut self, query: &str) -> Result<String, String> {
         let lit = self.why_lit(query)?;
-        if self.eval.levels.is_some() {
-            self.eval.store.lemma_cut = self.eval.stage_here().map(|st| std::sync::Arc::new(st.rules.iter().copied().filter(|r| !st.free.contains(r)).collect()));
-        }
         self.eval.why_text(&lit, Some(query))
     }
 
