@@ -1562,7 +1562,10 @@ impl Eval {
             return Ok(());
         }
         self.stage_pass = StagePass::Lower(rules);
+        // (the units met by levels read the core as the levels left it, not the pages)
+        self.pages_declined = true;
         let out = self.run_whole();
+        self.pages_declined = false;
         self.stage_pass = StagePass::Whole;
         if out?.partial {
             return Err(Halt::Budget("budget_exhausted", None));

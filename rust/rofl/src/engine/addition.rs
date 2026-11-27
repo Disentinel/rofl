@@ -446,6 +446,9 @@ impl Eval {
         if added.iter().any(|f| self.clo.closures.iter().any(|c| c.rel == self.store.rec(*f).rel)) {
             self.clo.closures_engage(&self.store);
         }
+        if new_rules.is_empty() && called.is_empty() && self.pages_edits() {
+            return self.pages_delta(added, &[]);
+        }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
         self.vc.near_moved = false;
         self.vc.near_out.clear();
@@ -540,6 +543,10 @@ impl Eval {
         // where a rule still makes it)
         self.vsnapshot();
         let fired: Vec<FactId> = facts.iter().copied().filter(|f| !self.store.firings(*f).is_empty()).collect();
+        if fired.is_empty() && self.pages_edits() {
+            self.store.remove_many(&all);
+            return self.pages_delta(&[], &all);
+        }
         self.withdraw_unswept(&fired, |_, _| true);
         self.store.remove_many(&all);
         self.vc.near_moved = false;

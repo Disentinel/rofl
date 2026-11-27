@@ -24,6 +24,14 @@ struct Pages {
     round: u32,
     /// the round's news by relation
     news: FxMap<Sym, Vec<FactId>>,
+    /// AN EDIT: facts filed that died are skipped; the facts a negation meets as news, by relation; whether a firing
+    /// found is withdrawn instead of concluded (and a negation met as news is not asked again), and those withdrawn
+    edit: bool,
+    neg_news: FxMap<Sym, Vec<FactId>>,
+    withdraw: bool,
+    withdrawn: std::cell::RefCell<Vec<(FactId, Sym, Vec<PremRef>)>>,
+    /// the facts the news filed, in an edit
+    made: Vec<FactId>,
 }
 
 const NO_ROW: u32 = u32::MAX;
@@ -62,6 +70,10 @@ impl Pages {
     }
 
     fn file(&mut self, h: &Heap, store: &Store, rel: Sym, id: FactId) {
+        if self.at.get(id as usize).is_some_and(|a| *a != NO_ROW) {
+            self.news_of[id as usize] = self.round;
+            return;
+        }
         let persp = store.rec(id).persp;
         if is_kernel_ledger(h, persp) {
             self.kernel.insert(persp);
@@ -164,7 +176,7 @@ impl Fired {
             .map(|b| b.lit().map_or_else(Vec::new, |l| std::iter::once(l.persp).chain(l.args.iter().copied()).map(pat).collect()))
             .collect();
         let from = (0..r.plan.len())
-            .filter(|&i| matches!(&r.plan[i], BodyElem::Pos(_)))
+            .filter(|&i| matches!(&r.plan[i], BodyElem::Pos(_) | BodyElem::Neg(_)))
             .map(|i| (i, order(h, r, Some(i))))
             .collect();
         let mut bound: FxSet<Sym> = FxSet::default();
@@ -339,15 +351,14 @@ impl Eval {
             let k = if r.clause.head.temporal == Temporal::Next { u32::MAX } else { self.round_of.get(&self.books.head(&r.clause.head)).copied().unwrap_or(0) };
             by_round.entry(k).or_default().push(r.clone());
         }
-        // A NEAREST ANSWERED FROM ITS TREE is evaluated here by its rules, its rows stored (not yet a page that answers
-        // by walking its tree)
-        if self.vc.any {
-            for ci in 0..self.vc.vclosures.len() {
-                if self.store.virtuals[ci].near.is_some() {
-                    self.vc.vclosures[ci].active = false;
-                }
+        // A NEAREST ANSWERED FROM ITS TREE is not a page yet: the levels evaluate it
+        if self.vc.vclosures.iter().enumerate().any(|(ci, c)| c.active && self.store.virtuals[ci].near.is_some()) {
+            if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
+                use std::io::Write;
+                let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off nearest {}", rules.len()));
             }
-            self.vc.any = self.vc.vclosures.iter().any(|c| c.active);
+            self.pages_declined = true;
+            return Ok(None);
         }
         // A CLOSURE ANSWERED FROM ITS TREE is not fired: its rows are read from the tree, its readers fired whole again
         // when its edges have news
@@ -387,6 +398,25 @@ impl Eval {
     }
 
     fn pages_pass(&mut self, comps: &[Vec<Rc<ERule>>]) -> Result<(), Result<Back, Halt>> {
+        let (mut pg, fired) = self.pages_build(comps);
+        let mut sc = Scratch::default();
+        // (news meets every rule fired so far, as the levels deliver it to every rule active)
+        for (k, fs) in fired.iter().enumerate() {
+            let mut news = Front::default();
+            for f in fs {
+                self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
+            }
+            self.pages_news(&mut pg, &fired[..=k], &mut sc, news)?;
+        }
+        // what a fault or an unknown left to be carried to its readers is carried by the levels
+        if !self.lat.pass.plain_pending.is_empty() || !self.lat.pass.plain_undecided.is_empty() || !self.lat.carry.undecided.is_empty() {
+            return Err(Ok(Back));
+        }
+        Ok(())
+    }
+
+    /// The pages of the facts `comps` read, and each rule as it fires.
+    fn pages_build(&mut self, comps: &[Vec<Rc<ERule>>]) -> (Pages, Vec<Vec<Fired>>) {
         let mut pg = Pages::default();
         let mut read: FxSet<Sym> = FxSet::default();
         let mut fired: Vec<Vec<Fired>> = Vec::with_capacity(comps.len());
@@ -407,6 +437,12 @@ impl Eval {
                         st.ix = pg.want(l.rel, st.mask);
                     }
                 }
+                // (a negation met by an edit's news is asked whole)
+                for b in &r.plan {
+                    if let BodyElem::Neg(l) = b {
+                        pg.want(l.rel, (1u64 << (l.args.len() + 1).min(63)) - 1);
+                    }
+                }
             }
             fired.push(fs);
         }
@@ -416,55 +452,50 @@ impl Eval {
                 pg.file(&self.h, &self.store, rel, id);
             }
         }
-        let mut sc = Scratch::default();
-        // (news meets every rule fired so far, as the levels deliver it to every rule active)
-        for (k, fs) in fired.iter().enumerate() {
-            let mut news = Front::default();
-            for f in fs {
-                self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
+        (pg, fired)
+    }
+
+    /// `news` to its fixpoint, each round of it meeting `rules` at each premise that reads it.
+    fn pages_news(&mut self, pg: &mut Pages, rules: &[Vec<Fired>], sc: &mut Scratch, mut news: Front) -> Result<(), Result<Back, Halt>> {
+        loop {
+            let mut fresh: Vec<FactId> = news.keys.iter().copied().collect();
+            fresh.sort_unstable();
+            pg.round += 1;
+            for &id in &fresh {
+                let rel = self.store.rec(id).rel;
+                pg.file(&self.h, &self.store, rel, id);
             }
-            loop {
-                let mut fresh: Vec<FactId> = news.keys.iter().copied().collect();
-                fresh.sort_unstable();
-                pg.round += 1;
-                for &id in &fresh {
-                    let rel = self.store.rec(id).rel;
-                    pg.file(&self.h, &self.store, rel, id);
+            if pg.edit {
+                pg.made.extend_from_slice(&fresh);
+            }
+            self.peak_rows = self.peak_rows.max(fresh.len() as i64);
+            let cur = std::mem::take(&mut news);
+            if cur.keys.is_empty() {
+                return Ok(());
+            }
+            pg.news = cur
+                .by_rel
+                .iter()
+                .map(|(rel, ids)| {
+                    let mut ids: Vec<FactId> = ids.iter().copied().collect();
+                    ids.sort_unstable();
+                    (*rel, ids)
+                })
+                .collect();
+            let pg = &*pg;
+            for f in rules.iter().flatten() {
+                if self.vc.any && self.vc.vreader_due(&self.store, &f.r, &cur) {
+                    self.pages_fire(pg, f, None, sc, &mut news)?;
+                    continue;
                 }
-                self.peak_rows = self.peak_rows.max(fresh.len() as i64);
-                let cur = std::mem::take(&mut news);
-                if cur.keys.is_empty() {
-                    break;
-                }
-                pg.news = cur
-                    .by_rel
-                    .iter()
-                    .map(|(rel, ids)| {
-                        let mut ids: Vec<FactId> = ids.iter().copied().collect();
-                        ids.sort_unstable();
-                        (*rel, ids)
-                    })
-                    .collect();
-                let by_rel = &pg.news;
-                for f in fired[..=k].iter().flatten() {
-                    if self.vc.any && self.vc.vreader_due(&self.store, &f.r, &cur) {
-                        self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
-                        continue;
-                    }
-                    for (i, _) in &f.from {
-                        let BodyElem::Pos(l) = &f.r.plan[*i] else { continue };
-                        if by_rel.contains_key(&l.rel) {
-                            self.pages_fire(&pg, f, Some(*i), &mut sc, &mut news)?;
-                        }
+                for (i, _) in &f.from {
+                    let BodyElem::Pos(l) = &f.r.plan[*i] else { continue };
+                    if pg.news.contains_key(&l.rel) {
+                        self.pages_fire(pg, f, Some(*i), sc, &mut news)?;
                     }
                 }
             }
         }
-        // what a fault or an unknown left to be carried to its readers is carried by the levels
-        if !self.lat.pass.plain_pending.is_empty() || !self.lat.pass.plain_undecided.is_empty() || !self.lat.carry.undecided.is_empty() {
-            return Err(Ok(Back));
-        }
-        Ok(())
     }
 
     /// `f` fired whole, or from one new fact at premise `at`, its conclusions concluded into `news`.
@@ -555,6 +586,37 @@ impl Eval {
         key.0
     }
 
+    /// Whether a fact stands that negation `i` of `f` meets under `b`.
+    fn pages_held(&mut self, pg: &Pages, f: &Fired, i: usize, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
+        let mark = trail.len();
+        let mut mask = 0u64;
+        for (j, p) in f.pats[i].iter().enumerate() {
+            let bound = match *p {
+                Pat::Val(_) => true,
+                Pat::Slot(k) => b[k].is_some(),
+                Pat::Open(t) => {
+                    let mut vs = Vec::new();
+                    term_vars(&self.h, t, &mut vs);
+                    vs.iter().all(|v| b[f.vars.iter().position(|x| x == v).unwrap()].is_some())
+                }
+            };
+            mask |= (bound as u64) << j;
+        }
+        let BodyElem::Neg(l) = &f.r.plan[i] else { unreachable!() };
+        let ix = pg.ix_of.get(&(l.rel, mask)).copied().unwrap_or(usize::MAX);
+        let key = if ix == usize::MAX { 0 } else { self.pages_key(f, i, mask, b) };
+        for &id in pg.under(l.rel, ix, key) {
+            if pg.edit && !self.store.alive(id) {
+                continue;
+            }
+            if self.pages_meet(pg, f, i, id, b, trail) {
+                undo(b, trail, mark);
+                return true;
+            }
+        }
+        false
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn pages_solve(&mut self, pg: &Pages, f: &Fired, steps: &[Step], b: &mut Vec<Option<Term>>, trail: &mut Vec<usize>, prems: &mut Vec<PremRef>, news: &mut Front) -> Result<(), Result<Back, Halt>> {
         let r = &f.r;
@@ -563,6 +625,15 @@ impl Eval {
             let mut ps = Vec::with_capacity(prems.len());
             for (j, p) in prems.iter().enumerate() {
                 ps.push(self.record_prem(&r.plan[j], *p, &s));
+            }
+            if pg.withdraw {
+                let head = &r.clause.head;
+                let persp = walk(&self.h, head.persp, &s).as_atom();
+                let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &s)).collect();
+                if let Some(y) = persp.and_then(|p| self.store.get(head.rel, p, &args)) {
+                    pg.withdrawn.borrow_mut().push((y, r.id, ps));
+                }
+                return Ok(());
             }
             return self.conclude(r, Sol { s, prems: ps }, news).map_err(Err);
         };
@@ -597,7 +668,7 @@ impl Eval {
                     self.pages_widest = (under.len(), i);
                 }
                 for &id in under {
-                    if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news {
+                    if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !self.store.alive(id) {
                         continue;
                     }
                     if self.pages_meet(pg, f, i, id, b, trail) {
@@ -617,13 +688,26 @@ impl Eval {
                 prems[i] = PremRef::Neg(0);
                 self.pages_solve(pg, f, rest, b, trail, prems, news)
             }
-            BodyElem::Neg(l) => {
-                let key = self.pages_key(f, i, st.mask, b);
-                for &id in pg.under(l.rel, st.ix, key) {
+            BodyElem::Neg(l) if st.news => {
+                // (a fact an edit added or took out, met where the negation is written: a firing it blocks is
+                // withdrawn, one it lets through is found)
+                for &id in pg.neg_news.get(&l.rel).map_or(&[][..], |v| &v[..]) {
                     if self.pages_meet(pg, f, i, id, b, trail) {
+                        let done = if pg.withdraw || !self.pages_held(pg, f, i, b, trail) {
+                            prems[i] = PremRef::Neg(0);
+                            self.pages_solve(pg, f, rest, b, trail, prems, news)
+                        } else {
+                            Ok(())
+                        };
                         undo(b, trail, mark);
-                        return Ok(());
+                        done?;
                     }
+                }
+                Ok(())
+            }
+            BodyElem::Neg(_) => {
+                if self.pages_held(pg, f, i, b, trail) {
+                    return Ok(());
                 }
                 prems[i] = PremRef::Neg(0);
                 self.pages_solve(pg, f, rest, b, trail, prems, news)
@@ -674,6 +758,236 @@ impl Eval {
                 }
                 Ok(())
             }
+        }
+    }
+}
+
+impl Eval {
+    /// AN EDIT BY THE FIRINGS KEPT: the base facts `added` (put in) and `removed` (taken out) worked into an evaluated
+    /// world, round by round, lowest first. What rests on a fact taken out may go; of it, what still has a firing on
+    /// what stands stays, found over the firings the store keeps, so no rule fires again for it and a circle of facts
+    /// that hold each other up goes once the firing under it went; the rest is taken out. A fact an edit put in, or
+    /// that a rule now concludes, is news; it withdraws the firings its negation let through; one taken out for good
+    /// lets through the firings its negation blocked. Whether the core works an edit of this
+    /// world out, decided before the store is touched:
+    pub(super) fn pages_edits(&mut self) -> bool {
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
+        !(self.pages_unfit(&rules).is_some()
+            || self.prov.no_witness
+            || self.vc.any
+            || !self.store.virtuals.is_empty()
+            || !self.clo.closures.is_empty()
+            || rules.iter().any(|r| r.has_agg || r.clause.head.temporal == Temporal::Next)
+            || self.peel_levels(&[], &[]).is_err()
+            || !self.ds.comps.is_empty())
+    }
+
+    /// `added` and `removed` worked in, as `pages_edits` said the core can.
+    pub(super) fn pages_delta(&mut self, added: &[FactId], removed: &[FactId]) -> Result<AddDelta, String> {
+        let rules: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe).cloned().collect();
+        let mut by_round: std::collections::BTreeMap<u32, Vec<Rc<ERule>>> = Default::default();
+        for r in &rules {
+            by_round.entry(self.round_of.get(&self.books.head(&r.clause.head)).copied().unwrap_or(0)).or_default().push(r.clone());
+        }
+        let index: FxMap<u32, usize> = by_round.keys().enumerate().map(|(i, k)| (*k, i)).collect();
+        let comps: Vec<Vec<Rc<ERule>>> = by_round.into_values().collect();
+        let n = comps.len();
+        if !self.store.has_citers() {
+            self.store.index_citers();
+        }
+        let round = |e: &Eval, id: FactId| {
+            let r = e.store.rec(id);
+            e.round_of.get(&e.books.fact(r.rel, r.persp)).and_then(|k| index.get(k)).copied().unwrap_or(0)
+        };
+        if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
+            use std::io::Write;
+            let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "edit {} {}", added.len(), removed.len()));
+        }
+        let (mut pg, fired) = self.pages_build(&comps);
+        pg.edit = true;
+        // (what was taken out is met where a negation reads it, so it is filed though dead)
+        for &x in removed {
+            let rel = self.store.rec(x).rel;
+            if pg.masks.contains_key(&rel) || pg.all.contains_key(&rel) {
+                pg.file(&self.h, &self.store, rel, x);
+            }
+        }
+        let mut sc = Scratch::default();
+        let mut d = AddDelta { facts: added.len(), ..AddDelta::default() };
+        // what came and what went for good, below the round at hand; the facts of each round that lost a firing
+        let mut came: Vec<FactId> = added.to_vec();
+        let mut went: Vec<FactId> = removed.to_vec();
+        let mut lost: Vec<FxSet<FactId>> = vec![FxSet::default(); n];
+        for &x in removed {
+            for y in self.store.citers_one(x) {
+                if self.store.alive(y) {
+                    lost[round(self, y)].insert(y);
+                }
+            }
+        }
+        let mut gone: FxSet<FactId> = FxSet::default();
+        for j in 0..n {
+            let by_rel = |e: &Eval, ids: &[FactId]| {
+                let mut m: FxMap<Sym, Vec<FactId>> = FxMap::default();
+                for &id in ids {
+                    m.entry(e.store.rec(id).rel).or_default().push(id);
+                }
+                m
+            };
+            // THE FIRINGS THAT NO LONGER HOLD: one citing a fact dead, and one a fact come blocks under a negation
+            let mut cand: Vec<FactId> = std::mem::take(&mut lost[j]).into_iter().collect();
+            cand.sort_unstable();
+            for &y in &cand {
+                for (rule, _, prems) in self.store.firings(y) {
+                    if prems.iter().any(|p| matches!(p.kind(), Prem::Fact(g) if !self.store.alive(g))) {
+                        self.store.remove_firing(y, rule, &prems);
+                    }
+                }
+            }
+            // (what stands is read whole beside the negation's news: older than this round)
+            pg.round += 1;
+            pg.neg_news = by_rel(self, &came);
+            pg.withdraw = true;
+            for f in &fired[j] {
+                for (i, _) in &f.from {
+                    if matches!(&f.r.plan[*i], BodyElem::Neg(l) if pg.neg_news.contains_key(&l.rel)) {
+                        if let Err(e) = self.pages_fire(&pg, f, Some(*i), &mut sc, &mut Front::default()) {
+                            return Err(self.pages_delta_failed(e));
+                        }
+                    }
+                }
+            }
+            pg.withdraw = false;
+            for (y, rule, prems) in std::mem::take(&mut *pg.withdrawn.borrow_mut()) {
+                if self.store.remove_firing(y, rule, &prems) {
+                    cand.push(y);
+                }
+            }
+            // THE FACTS THAT MAY GO: each that lost a firing and what rests on it, in this round; a fact of a round
+            // above is looked at there
+            let mut queue: Vec<FactId> = Vec::new();
+            cand.sort_unstable();
+            cand.dedup();
+            for y in cand {
+                if self.store.alive(y) && !self.store.rec(y).base() && gone.insert(y) {
+                    queue.push(y);
+                }
+            }
+            let mut went_here: Vec<FactId> = Vec::new();
+            while let Some(x) = queue.pop() {
+                went_here.push(x);
+                for y in self.store.citers_one(x) {
+                    if !self.store.alive(y) {
+                        continue;
+                    }
+                    if round(self, y) != j {
+                        lost[round(self, y)].insert(y);
+                        continue;
+                    }
+                    if !self.store.rec(y).base() && gone.insert(y) {
+                        queue.push(y);
+                    }
+                }
+            }
+            // WHAT HAS A FIRING ON WHAT STANDS STAYS, by the firings the store keeps (no rule fired again): a firing waits
+            // for each premise that may go, and its fact stays when none is left to wait for; a circle of facts that
+            // hold each other up waits for ever
+            let mut waits: FxMap<FactId, Vec<(FactId, usize)>> = FxMap::default();
+            let mut open: Vec<usize> = Vec::new();
+            let mut back: Vec<FactId> = Vec::new();
+            for &y in &went_here {
+                let mut free = false;
+                for (_, _, ps) in self.store.firings(y) {
+                    let k = open.len();
+                    let mut n = 0;
+                    for p in &ps {
+                        if let Prem::Fact(g) = p.kind() {
+                            if gone.contains(&g) {
+                                n += 1;
+                                waits.entry(g).or_default().push((y, k));
+                            }
+                        }
+                    }
+                    open.push(n);
+                    free |= n == 0;
+                }
+                if free {
+                    back.push(y);
+                }
+            }
+            let mut i = 0;
+            while i < back.len() {
+                let g = back[i];
+                i += 1;
+                if !gone.remove(&g) {
+                    continue;
+                }
+                for (y, k) in waits.remove(&g).unwrap_or_default() {
+                    open[k] -= 1;
+                    if open[k] == 0 && gone.contains(&y) {
+                        back.push(y);
+                    }
+                }
+            }
+            // the rest is taken out, and the firings that cite it
+            let out: Vec<FactId> = went_here.iter().copied().filter(|x| gone.contains(x)).collect();
+            for &x in &out {
+                for y in self.store.citers_one(x) {
+                    if self.store.alive(y) && !gone.contains(&y) && round(self, y) == j {
+                        for (rule, _, prems) in self.store.firings(y) {
+                            if prems.contains(&PremRef::Fact(x)) {
+                                self.store.remove_firing(y, rule, &prems);
+                            }
+                        }
+                    }
+                }
+            }
+            for x in &out {
+                gone.remove(x);
+            }
+            d.rederived += went_here.len() - out.len();
+            let mut news = Front::default();
+            d.overdeleted += went_here.len();
+            self.store.remove_many(&out);
+            // THE NEWS OF THE ROUND: what came below and what came back here, met at each premise that reads it; and
+            // what went for good below, met where a negation is written
+            for &x in &came {
+                if self.store.alive(x) {
+                    news.note(self.store.rec(x).rel, x);
+                }
+            }
+            pg.round += 1;
+            pg.neg_news = by_rel(self, &went);
+            for f in &fired[j] {
+                for (i, _) in &f.from {
+                    if matches!(&f.r.plan[*i], BodyElem::Neg(l) if pg.neg_news.contains_key(&l.rel)) {
+                        if let Err(e) = self.pages_fire(&pg, f, Some(*i), &mut sc, &mut news) {
+                            return Err(self.pages_delta_failed(e));
+                        }
+                    }
+                }
+            }
+            let before: FxSet<FactId> = news.keys.clone();
+            pg.made.clear();
+            if let Err(e) = self.pages_news(&mut pg, &fired[j..=j], &mut sc, news) {
+                return Err(self.pages_delta_failed(e));
+            }
+            let out_set: FxSet<FactId> = out.iter().copied().collect();
+            came.extend(pg.made.iter().copied().filter(|id| !before.contains(id) && !out_set.contains(id)));
+            went.extend(out.into_iter().filter(|x| !self.store.alive(*x)));
+        }
+        if !self.lat.pass.plain_pending.is_empty() || !self.lat.pass.plain_undecided.is_empty() || !self.lat.carry.undecided.is_empty() {
+            self.store.dirty = true;
+            return Err("an edit met a fault or an unknown".into());
+        }
+        Ok(d)
+    }
+
+    fn pages_delta_failed(&mut self, e: Result<Back, Halt>) -> String {
+        self.store.dirty = true;
+        match e {
+            Ok(Back) => "an edit met a part of the language the pages do not evaluate yet".into(),
+            Err(h) => format!("the edit stopped at {}, and the world is evaluated again", crate::describe(&h)),
         }
     }
 }
