@@ -126,7 +126,7 @@ enum Pat {
 }
 
 impl Fired {
-    fn new(h: &Heap, r: &Rc<ERule>) -> Fired {
+    fn new(h: &Heap, r: &Rc<ERule>, virt: &FxSet<Sym>) -> Fired {
         let mut vars: Vec<Sym> = Vec::new();
         for b in &r.plan {
             b.vars(h, &mut vars);
@@ -149,7 +149,7 @@ impl Fired {
             .collect();
         let from = (0..r.plan.len())
             .filter(|&i| matches!(&r.plan[i], BodyElem::Pos(_)))
-            .map(|i| (i, order(h, r, Some(i))))
+            .map(|i| (i, order(h, r, Some(i), virt)))
             .collect();
         let mut bound: FxSet<Sym> = FxSet::default();
         let mut open_book = Vec::with_capacity(r.plan.len());
@@ -163,7 +163,7 @@ impl Fired {
             b.vars(h, &mut vs);
             bound.extend(vs);
         }
-        Fired { r: r.clone(), whole: order(h, r, None), from, vars, pats, open_book }
+        Fired { r: r.clone(), whole: order(h, r, None, virt), from, vars, pats, open_book }
     }
 
     fn subst(&self, b: &[Option<Term>]) -> Subst {
@@ -185,7 +185,7 @@ fn term_vars(h: &Heap, t: Term, out: &mut Vec<Sym>) {
 
 /// The order of `r`'s body read from `first` (a premise met by a new fact) or from the start: a negation or a builtin
 /// once everything written before it is read, else the premise with the most arguments bound, the first of those.
-fn order(h: &Heap, r: &ERule, first: Option<usize>) -> Vec<Step> {
+fn order(h: &Heap, r: &ERule, first: Option<usize>, virt: &FxSet<Sym>) -> Vec<Step> {
     let plan = &r.plan;
     let mut bound: FxSet<Sym> = FxSet::default();
     let mut placed = vec![false; plan.len()];
@@ -218,14 +218,14 @@ fn order(h: &Heap, r: &ERule, first: Option<usize>) -> Vec<Step> {
         steps.clear();
     }
     while placed.iter().any(|p| !p) {
-        let filter = (0..plan.len()).find(|&k| !placed[k] && !matches!(plan[k], BodyElem::Pos(_)) && placed[..k].iter().all(|p| *p));
+        let filter = (0..plan.len()).find(|&k| !placed[k] && !matches!(&plan[k], BodyElem::Pos(l) if !virt.contains(&l.rel)) && placed[..k].iter().all(|p| *p));
         if let Some(k) = filter {
             let mask = plan[k].lit().map_or(0, |l| mask_of(l, &bound));
             place(k, mask, &mut bound, &mut placed, &mut steps);
             continue;
         }
         let best = (0..plan.len())
-            .filter(|&k| !placed[k] && matches!(plan[k], BodyElem::Pos(_)))
+            .filter(|&k| !placed[k] && matches!(&plan[k], BodyElem::Pos(l) if !virt.contains(&l.rel)))
             .max_by_key(|&k| (mask_of(plan[k].lit().unwrap(), &bound).count_ones(), std::cmp::Reverse(k)));
         let Some(k) = best else {
             // a negation or builtin before an element not yet read: in the order written
@@ -258,7 +258,6 @@ impl Eval {
             (self.well_founded, "well_founded"),
             (self.lat.has_cells(), "cells"),
             (!self.demand.by_rel.is_empty(), "demand"),
-            (self.vc.any, "vclosure"),
             (!self.shrug_readers.is_empty(), "shrug"),
             (!self.store.aliases.is_empty(), "alias"),
             (self.stage_given.is_some(), "stage"),
@@ -319,6 +318,23 @@ impl Eval {
             let k = if r.clause.head.temporal == Temporal::Next { u32::MAX } else { self.round_of.get(&self.books.head(&r.clause.head)).copied().unwrap_or(0) };
             by_round.entry(k).or_default().push(r.clone());
         }
+        // A NEAREST ANSWERED FROM ITS TREE is evaluated here by its rules, its rows stored (not yet a page that answers
+        // by walking its tree)
+        if self.vc.any {
+            for ci in 0..self.vc.vclosures.len() {
+                if self.store.virtuals[ci].near.is_some() {
+                    self.vc.vclosures[ci].active = false;
+                }
+            }
+            self.vc.any = self.vc.vclosures.iter().any(|c| c.active);
+        }
+        // A CLOSURE ANSWERED FROM ITS TREE is not fired: its rows are read from the tree, its readers fired whole again
+        // when its edges have news
+        if self.vc.any {
+            for rs in by_round.values_mut() {
+                rs.retain(|r| !self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active));
+            }
+        }
         let comps: Vec<Vec<Rc<ERule>>> = by_round
             .into_values()
             .map(|mut c| {
@@ -353,8 +369,10 @@ impl Eval {
         let mut pg = Pages::default();
         let mut read: FxSet<Sym> = FxSet::default();
         let mut fired: Vec<Vec<Fired>> = Vec::with_capacity(comps.len());
+        // (a closure answered from its tree is read where it is written)
+        let virt: FxSet<Sym> = self.vc.vclosures.iter().filter(|c| c.active).map(|c| c.rel).collect();
         for comp in comps {
-            let mut fs: Vec<Fired> = comp.iter().map(|r| Fired::new(&self.h, r)).collect();
+            let mut fs: Vec<Fired> = comp.iter().map(|r| Fired::new(&self.h, r, &virt)).collect();
             for f in &mut fs {
                 let r = f.r.clone();
                 for st in f.whole.iter_mut().chain(f.from.iter_mut().flat_map(|(_, o)| o.iter_mut())) {
@@ -401,6 +419,10 @@ impl Eval {
                     })
                     .collect();
                 for f in fired[..=k].iter().flatten() {
+                    if self.vc.any && self.vc.vreader_due(&self.store, &f.r, &cur) {
+                        self.pages_fire(&pg, f, None, &mut sc, &mut news)?;
+                        continue;
+                    }
                     for (i, _) in &f.from {
                         let BodyElem::Pos(l) = &f.r.plan[*i] else { continue };
                         let Some(ids) = by_rel.get(&l.rel) else { continue };
@@ -440,6 +462,9 @@ impl Eval {
         *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let fresh0 = news.keys.len();
         if at.is_none() {
+            if self.vc.any {
+                self.vc.vreader_fired(&self.store, r);
+            }
             let n = self.cost.activation_by_rule.len() as u64 + 1;
             self.cost.activation_by_rule.entry(r.id).or_insert(n);
         }
@@ -540,6 +565,26 @@ impl Eval {
         let i = st.at;
         let mark = trail.len();
         match &r.plan[i] {
+            BodyElem::Pos(l) if self.vc.vclosure_for(l.rel).is_some() => {
+                let ci = self.vc.vclosure_for(l.rel).unwrap();
+                let found = self.vmatch(ci, l, &f.subst(b));
+                for (s2, pr) in found {
+                    for (k, var) in f.vars.iter().enumerate() {
+                        if b[k].is_none() {
+                            let w = resolve(&mut self.h, Term::var(*var), &s2);
+                            if self.h.is_ground(w) {
+                                b[k] = Some(w);
+                                trail.push(k);
+                            }
+                        }
+                    }
+                    prems[i] = pr;
+                    let done = self.pages_solve(pg, f, rest, b, trail, prems, news);
+                    undo(b, trail, mark);
+                    done?;
+                }
+                Ok(())
+            }
             BodyElem::Pos(l) => {
                 let key = self.pages_key(f, i, st.mask, b);
                 let under = pg.under(l.rel, st.ix, key);
@@ -556,6 +601,14 @@ impl Eval {
                     }
                 }
                 Ok(())
+            }
+            BodyElem::Neg(l) if self.vc.vclosure_for(l.rel).is_some() => {
+                let ci = self.vc.vclosure_for(l.rel).unwrap();
+                if !self.vmatch(ci, l, &f.subst(b)).is_empty() {
+                    return Ok(());
+                }
+                prems[i] = PremRef::Neg(0);
+                self.pages_solve(pg, f, rest, b, trail, prems, news)
             }
             BodyElem::Neg(l) => {
                 let key = self.pages_key(f, i, st.mask, b);
