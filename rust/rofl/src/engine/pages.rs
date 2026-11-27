@@ -264,13 +264,20 @@ fn term_vars(h: &Heap, t: Term, out: &mut Vec<Sym>) {
     }
 }
 
-/// The order of `r`'s body read from `first` (a premise met by a new fact) or from the start: a negation or a builtin
-/// once everything written before it is read, else the premise with the most arguments bound, the first of those.
+/// The order of `r`'s body read, and the arguments bound at each premise: as written, but that a premise sharing no
+/// variable with what is bound waits for one that binds it. Met from a new fact at `first`, the premises written
+/// before it read only what is older.
 fn order(h: &Heap, r: &ERule, first: Option<usize>) -> Vec<Step> {
     let mut bound: FxSet<Sym> = FxSet::default();
     let mut steps = Vec::with_capacity(r.plan.len());
     let mut vs = Vec::new();
-    for (k, b) in r.plan.iter().enumerate() {
+    // (a premise sharing no variable with what is bound is held until something binds one, as the plain planner holds it)
+    let mut seq = plan_order_with(h, &[], &r.plan, &[], &[], Hold::Cross).0;
+    if seq.len() != r.plan.len() {
+        seq = (0..r.plan.len()).collect();
+    }
+    for k in seq {
+        let b = &r.plan[k];
         let mut mask = 0u64;
         if let Some(l) = b.lit() {
             for (j, t) in std::iter::once(l.persp).chain(l.args.iter().copied()).enumerate().take(63) {
