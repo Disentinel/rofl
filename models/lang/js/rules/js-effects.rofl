@@ -341,16 +341,16 @@ eff_conv_key(symbol_to_primitive).
 eff_conv_key("valueOf").
 eff_conv_key("toString").
 
-eff_conv_object[flow](N, X)     :- coerces[execution](N, X), may_be_node[flow](X, _).
-eff_conv_call[flow](N, M)       :- eff_conv_key(Key), member_value[flow](O, Key, M), may_be_node[flow](X, O),
+eff_conv_object[flow](N, X)     :- coerces[execution](N, X), node_of[flow](X, _).
+eff_conv_call[flow](N, M)       :- eff_conv_key(Key), member_value[flow](O, Key, M), node_of[flow](X, O),
                                    coerces[execution](N, X).
-eff_conv_overridden[flow](N, X) :- eff_conv_key(Key), member_value[flow](O, Key, _), may_be_node[flow](X, O),
+eff_conv_overridden[flow](N, X) :- eff_conv_key(Key), member_value[flow](O, Key, _), node_of[flow](X, O),
                                    coerces[execution](N, X).
 eff_conv_default[flow](N, X)    :- eff_conv_object[flow](N, X), not eff_conv_overridden[flow](N, X).
 eff_conv_primitive[flow](N, X)  :- coerces[execution](N, X), lit_of[flow](X, _),
                                    not eff_conv_object[flow](N, X).
 eff_conv_untraced[flow](N, X)   :- coerces[execution](N, X), not has_lit[flow](X),
-                                   not may_be_node[flow](X, _).
+                                   not has_node[flow](X).
 
 -- A second arm of `eff_latent` rather than a row in `resolves`: the call-graph
 -- oracle is V8's stack frames, which know nothing about a conversion.
@@ -507,14 +507,14 @@ class_construct_eff[flow](CD, L, H) :- super_of[flow](CD, SD),
 -- the call graph and `may_throw` see them as `eff_latent` does.
 eff_constructs[flow](CD, G) :- eff_construct_part[flow](CD, P), eff_runs_in[flow](P, C), runs[code](C, G).
 eff_constructs[flow](CD, G) :- super_of[flow](CD, SD), eff_constructs[flow](SD, G).
-runs[code](X, G) :- construct[value](X), may_be_node[flow](X, I), isa[flow](I, CD), eff_constructs[flow](CD, G).
+runs[code](X, G) :- construct[value](X), node_of[flow](X, I), isa[flow](I, CD), eff_constructs[flow](CD, G).
 
 -- The two seeds. Evaluating a class DECLARATION allocates (a fresh mutable
 -- `prototype`, where a function declaration is hoisted and performs nothing
 -- where it is written).
 eff_here[flow](CD, L, H) :- class_define_eff[flow](CD, L, H).
 eff_here[flow](X, L, H)  :- construct[value](X),
-                            may_be_node[flow](X, I), isa[flow](I, CD), class_construct_eff[flow](CD, L, H).
+                            node_of[flow](X, I), isa[flow](I, CD), class_construct_eff[flow](CD, L, H).
 
 -- A field initialiser runs at definition or construction, never both, never
 -- neither — an identity, true of any corpus.

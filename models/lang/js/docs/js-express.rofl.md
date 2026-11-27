@@ -27,7 +27,7 @@ Reads:
 
 - from js-concat: [str_value](js-concat.rofl.md#str_value)
 - from js-dataflow, in the code: [external_import](js-dataflow.rofl.md#external_import)
-- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [lit_of](js-dataflow.rofl.md#lit_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow: [arg_at](js-dataflow.rofl.md#arg_at), [external_value](js-dataflow.rofl.md#external_value), [lit_of](js-dataflow.rofl.md#lit_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [node_of](js-dataflow.rofl.md#node_of), [selects](js-dataflow.rofl.md#selects)
 - from js-modules, in the code: [import_ident_key](js-modules.rofl.md#import_ident_key)
 - from js-structure, in the code: [object_of](js-structure.rofl.md#object_of)
 - from js-surface: [fn_value](js-surface.rofl.md#fn_value)
@@ -75,10 +75,10 @@ Declared as facts:
    - G is a [member access](js-dataflow.rofl.md#member_node_v);
    - G [selects](js-dataflow.rofl.md#selects) "Router";
    - [`object_of`](js-structure.rofl.md#object_of)(G, O);
-   - a node O [points to](js-dataflow.rofl.md#may_be_node) a node S;
-   - S [comes out of](js-dataflow.rofl.md#external_value) S;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(O, S);
+   - a node S [comes out of](js-dataflow.rofl.md#external_value) S;
    - [`express_module`](#express_module)(S);
-2. if G [points to](js-dataflow.rofl.md#may_be_node) a node Sp and [`ex_import`](#ex_import)(Sp, "Router").
+2. if [`node_of`](js-dataflow.rofl.md#node_of)(G, Sp) and [`ex_import`](#ex_import)(Sp, "Router").
 
 <a id="ex_import"></a>`ex_import`(Sp, K) if all of:
   - a node Sp [imports from outside](js-dataflow.rofl.md#external_import) some name from a module S in some file;
@@ -88,8 +88,8 @@ Declared as facts:
 <a id="ex_app"></a>`ex_app`(C) if all of:
   - [`call`](#call)(C);
   - [`callee`](#callee)(C, G);
-  - a node G [points to](js-dataflow.rofl.md#may_be_node) a node S;
-  - S [comes out of](js-dataflow.rofl.md#external_value) S;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(G, S);
+  - a node S [comes out of](js-dataflow.rofl.md#external_value) S;
   - [`express_module`](#express_module)(S).
 
 <a id="ex_router"></a>`ex_router`(C) if [`call`](#call)(C), [`callee`](#callee)(C, G), and [`ex_router_fn`](#ex_router_fn)(G).
@@ -106,7 +106,7 @@ Declared as facts:
   - [`callee`](#callee)(R, a [member access](js-dataflow.rofl.md#member_node_v) M);
   - M [selects](js-dataflow.rofl.md#selects) K;
   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
-  - a node O [points to](js-dataflow.rofl.md#may_be_node) a node Y;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(O, Y);
   - [`ex_target`](#ex_target)(Y).
 
 <a id="ex_path"></a>`ex_path`(R, V) if all of:
@@ -118,13 +118,13 @@ Declared as facts:
 <a id="ex_fn"></a>`ex_fn`(R, I, F) if all of:
   - [`ex_on`](#ex_on)(R, something, something);
   - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
-  - X [points to](js-dataflow.rofl.md#may_be_node) a node F;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(X, F);
   - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
 <a id="ex_sub"></a>`ex_sub`(R, I, Y) if all of:
   - [`ex_on`](#ex_on)(R, something, "use");
   - an invocation R [passes](js-dataflow.rofl.md#arg_at) a node X at an index I;
-  - X [points to](js-dataflow.rofl.md#may_be_node) a node Y;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(X, Y);
   - [`ex_target`](#ex_target)(Y).
 
 <a id="ex_route"></a>`ex_route`(Y, M, V, H, `route`) if all of:

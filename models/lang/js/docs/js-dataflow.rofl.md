@@ -147,6 +147,7 @@ Phrases this file defines in one step, each by the sentence it stands for:
 
 - <a id="ident"></a>N reads Name if N [reads](#ident_in) Name in some file.
 - <a id="may_be_lit"></a>A node may be the literal V if [`lit_of`](#lit_of)(it, V).
+- <a id="may_be_node"></a>A node points to a node N if [`node_of`](#node_of)(it, N).
 - <a id="named_decl"></a>A node declares the name Name in File if it [carries its own name](#own_name) Name and File and `around`.
 - <a id="scoped_name"></a>Name is declared in a scope in File if some scope [declares](#scope_declares) Name in File.
 - <a id="spread_arg"></a>An invocation has a spread at an index I if [`spread_args`](#spread_args)(it, I, something).
@@ -197,8 +198,6 @@ In the flow:
 1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, N);
 2. if [`via_node`](#via_node)(E, N).
 
-<a id="may_be_node"></a>A node points to a node N if [`via_node`](#via_node)(it, N).
-
 > kept, so that a rule that knows the object and not the call finds the expressions that hold it by its key
 
 <a id="via_node"></a>`via_node`(E, N) if [`may_be`](js-callgraph.rofl.md#may_be)(E, `inst`, via(something, N)).
@@ -215,7 +214,22 @@ In the flow:
 
 <a id="has_lit"></a>`has_lit`(E) if [`lit_of`](#lit_of)(E, something).
 
-A node points to a node N if [`bare_node`](#bare_node)(it, N).
+> the same for an object: `node_of` read where a rule asks, `has_node` whether there is one, `may_be_node` the answer
+
+`node_of` of A and B is read through its rules and never stored.
+
+<a id="node_of"></a>`node_of`(E, N) either:
+
+1. if [`via_node`](#via_node)(E, N);
+2. if [`bare_node`](#bare_node)(E, N).
+
+<a id="has_node"></a>`has_node`(E) either:
+
+1. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `node`, something);
+2. if [`via_node`](#via_node)(E, something);
+3. if [`may_be`](js-callgraph.rofl.md#may_be)(E, `input`, S) and [`input_has_node`](#input_has_node)(S).
+
+<a id="input_has_node"></a>`input_has_node`(S) if [`input_node`](#input_node)(S, something).
 
 `may_be`(E, `lit`, V) if [`literal`](#literal)(E, V).
 
@@ -680,7 +694,7 @@ In the flow:
 <a id="prototype_of"></a>The prototype of a node E is P either:
 
 1. if [`kind_proto`](#kind_proto)(E, P);
-2. if E [points to](#may_be_node) a node N and [`kind_proto`](#kind_proto)(N, P).
+2. if [`node_of`](#node_of)(E, N) and [`kind_proto`](#kind_proto)(N, P).
 
 `builtin_prototype` includes `array`, `string`, `number`, `boolean`, `regexp`, `bigint`, `promise`, `map`, `set`, `weakmap`, `weakset`.
 
@@ -815,7 +829,7 @@ In the flow:
 <a id="pat_arr"></a>`pat_arr`(T, I, X) if all of:
   - [`pattern_elem`](#pattern_elem)(P, I, T);
   - [`pat_in`](#pat_in)(something, P, T);
-  - a node P [points to](#may_be_node) a node X.
+  - [`node_of`](#node_of)(P, X).
 
 `may_be`(T, E, N) either:
 
@@ -890,7 +904,7 @@ In the flow:
 1. if [`array`](#array)(Y), [`nth`](#nth)(Y, I, E), and [`parent`](#parent)(Y, E);
 2. if [`spread_elems`](#spread_elems)(Y, I, E).
 
-<a id="elem_at"></a>The element I of a node X is a node E if X [points to](#may_be_node) a node Y and [`array_elem`](#array_elem)(Y, I, E).
+<a id="elem_at"></a>The element I of a node X is a node E if [`node_of`](#node_of)(X, Y) and [`array_elem`](#array_elem)(Y, I, E).
 
 > `list[0]`: a read by an index the layer knows is the element at that index
 
@@ -925,7 +939,7 @@ In the flow:
 1. if [`array_elem`](#array_elem)(X, something, E);
 2. if [`elem_somewhere`](#elem_somewhere)(X, E).
 
-<a id="host_on"></a>`host_on`(C, What, X) if [`host_src`](#host_src)(C, What, R) and a node R [points to](#may_be_node) a node X.
+<a id="host_on"></a>`host_on`(C, What, X) if [`host_src`](#host_src)(C, What, R) and [`node_of`](#node_of)(R, X).
 
 `may_be`(C, VK, V) either:
 
@@ -946,7 +960,7 @@ In the flow:
   - [`host_src`](#host_src)(C, `elements`, something);
   - [`host_call_on`](#host_call_on)(C, `array`, "concat", something);
   - an invocation C [passes](#arg_at) a node X at some index;
-  - X [points to](#may_be_node) a node Y.
+  - [`node_of`](#node_of)(X, Y).
 
 `elem_somewhere`(C, V) if [`host_on`](#host_on)(C, `values`, O) and [the member](#member_value) some key of a node O holds a node V.
 
@@ -1058,7 +1072,7 @@ The plain member "value" of outcome(C) is a node E if [`host_src`](#host_src)(C,
 2. if all of:
    - [`host_on`](#host_on)(C, `from_entries`, X);
    - [`elem_any`](#elem_any)(X, E);
-   - a node E [points to](#may_be_node) a node Pair;
+   - [`node_of`](#node_of)(E, Pair);
    - [`array_elem`](#array_elem)(Pair, 0, KE);
    - [`lit_of`](#lit_of)(KE, Key);
    - [`array_elem`](#array_elem)(Pair, 1, V).
@@ -1067,12 +1081,12 @@ The plain member "value" of outcome(C) is a node E if [`host_src`](#host_src)(C,
 
 The member Key of a node O holds a node V if all of:
   - [`host_call_on`](#host_call_on)(C, "Object", "defineProperty", R);
-  - a node R [points to](#may_be_node) O;
+  - [`node_of`](#node_of)(R, O);
   - an invocation C [passes](#arg_at) a node K at 1;
   - [`lit_of`](#lit_of)(K, Key);
   - C [passes](#arg_at) a node D at 2;
-  - D [points to](#may_be_node) a node DO;
-  - [the plain member](#member_plain) "value" of DO is V.
+  - [`node_of`](#node_of)(D, DO);
+  - [the plain member](#member_plain) "value" of a node DO is V.
 
 > what a host member puts into its receiver (`xs.push(x)`, `s.add(x)`), and what `new Set(xs)` is made with
 
@@ -1081,14 +1095,14 @@ The member Key of a node O holds a node V if all of:
 <a id="puts_on"></a>`puts_on`(C, X) if all of:
   - [`host_call_on`](#host_call_on)(C, O, Key, R);
   - [`host_puts`](#host_puts)(O, Key);
-  - a node R [points to](#may_be_node) a node X.
+  - [`node_of`](#node_of)(R, X).
 
 `elem_somewhere`(X, E) if [`set_from`](#set_from)(X, Arr) and [`elem_any`](#elem_any)(Arr, E).
 
 <a id="set_from"></a>`set_from`(X, Arr) if all of:
   - an invocation X [is an instance](js-globals.rofl.md#es_instance) of "Set" from some release;
   - X [passes](#arg_at) a node Y at 0;
-  - Y [points to](#may_be_node) a node Arr.
+  - [`node_of`](#node_of)(Y, Arr).
 
 > `{ [k]: v }`: a computed key whose value is known
 
@@ -1101,7 +1115,7 @@ The member Key of a node O holds a node V if all of:
 `may_be`(E, `node`, N) if all of:
   - D [destructures](#destructures_at) Local at Index in File;
   - D [takes its value from](#decl_value) a node Init;
-  - Init [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(Init, X);
   - [`array_elem`](#array_elem)(X, Index, V);
   - [`own_node`](#own_node)(V, N);
   - [`binder_read`](#binder_read)(D, Local, File, E).
@@ -1208,15 +1222,15 @@ In the flow:
 
 The member Key of a node R holds a node V if all of:
   - a pattern P [holds the object rest](#obj_rest) R taken from a node Src;
-  - Src [points to](#may_be_node) a node Obj;
-  - [the member](#member_value) Key of Obj holds V;
+  - [`node_of`](#node_of)(Src, Obj);
+  - [the member](#member_value) Key of a node Obj holds V;
   - unless P [takes the key](#pattern_takes) Key.
 
 The plain member Key of a node R is a node V if some pattern [holds the object rest](#obj_rest) R taken from some node and [the member](#member_value) Key of R holds V.
 
 `array_elem`(R, K, E) if all of:
   - an index I [holds the array rest](#arr_rest) R taken from a node Src;
-  - Src [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(Src, X);
   - [`array_elem`](#array_elem)(X, J, E);
   - J >= I;
   - K is J - I.
@@ -1232,15 +1246,15 @@ In the flow:
 
 The member Key of a node O holds a node V if all of:
   - [`spread_of`](#spread_of)(O, X);
-  - a node X [points to](#may_be_node) a node Src;
-  - [the member](#member_value) Key of Src holds V.
+  - [`node_of`](#node_of)(X, Src);
+  - [the member](#member_value) Key of a node Src holds V.
 
 `valued` of E is read through its rules and never stored.
 
 <a id="valued"></a>A node E is valued either:
 
 1. if [`has_lit`](#has_lit)(E);
-2. if E [points to](#may_be_node) some node.
+2. if [`node_of`](#node_of)(E, something).
 
 ## 7. Across a call
 
@@ -1611,7 +1625,7 @@ In the flow:
    - C [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
    - [`host_passes`](#host_passes)(O, Key, I, `element`);
    - C [calls back on](#callback_recv) a receiver R;
-   - R [points to](#may_be_node) a node X;
+   - [`node_of`](#node_of)(R, X);
    - [`elem_any`](#elem_any)(X, E);
 2. if all of:
    - a call C [calls back](js-callgraph.rofl.md#calls_back) F some when;
@@ -1629,13 +1643,13 @@ In the flow:
   - C [is a callback site](js-callgraph.rofl.md#callback_site) of an origin O at Key;
   - [`host_passes`](#host_passes)(O, Key, I, `index`);
   - C [calls back on](#callback_recv) a receiver R;
-  - R [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(R, X);
   - [`array_elem`](#array_elem)(X, K, something).
 
 `input_node`(S, N) if all of:
   - [`input_param`](#input_param)(S, F, I);
   - [the host hands](#host_hands) F and E at an index I;
-  - E [points to](#may_be_node) a node N.
+  - [`node_of`](#node_of)(E, N).
 
 `input_lit`(S, V) either:
 
@@ -1816,7 +1830,7 @@ Declared as facts:
 
 <a id="merge_call"></a>`merge_call`(C) if all of:
   - [`merge_fn`](#merge_fn)(X);
-  - a node G [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(G, X);
   - [`callee`](#callee)(C, G);
   - [`call`](#call)(C).
 
@@ -1836,11 +1850,11 @@ Declared as facts:
 `sx_mwrite`(O, Key, V) if all of:
   - [`merge_call`](#merge_call)(C);
   - an invocation C [passes](#arg_at) a node T at 0;
-  - T [points to](#may_be_node) a node O;
+  - [`node_of`](#node_of)(T, O);
   - C [passes](#arg_at) a node S at an index I;
   - I > 0;
-  - S [points to](#may_be_node) a node Src;
-  - [the member](#member_value) Key of Src holds a node V.
+  - [`node_of`](#node_of)(S, Src);
+  - [the member](#member_value) Key of a node Src holds a node V.
 
 Declared as facts:
 
@@ -1875,7 +1889,7 @@ Declared as facts:
 
 <a id="keyed_on"></a>`keyed_on`(C, X, P, Key) if all of:
   - [`keyed_obj`](#keyed_obj)(X, P);
-  - a node O [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(O, X);
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
   - [`callee`](#callee)(C, N);
   - [`call`](#call)(C);
@@ -1899,9 +1913,9 @@ Declared as facts:
 `keyed_put`(X, K, V) if all of:
   - [`keyed_obj`](#keyed_obj)(X, something);
   - an invocation X [passes](#arg_at) a node Y at 0;
-  - Y [points to](#may_be_node) a node Arr;
+  - [`node_of`](#node_of)(Y, Arr);
   - [`elem_any`](#elem_any)(Arr, E);
-  - a node E [points to](#may_be_node) a node Pair;
+  - [`node_of`](#node_of)(E, Pair);
   - [`array_elem`](#array_elem)(Pair, 0, KE);
   - [`lit_of`](#lit_of)(KE, K);
   - [`array_elem`](#array_elem)(Pair, 1, V).
@@ -2710,12 +2724,12 @@ Declared as facts:
 1. if [`keyed_hand_need`](#keyed_hand_need)(V) and [`sx_esc`](js-surface.rofl.md#sx_esc)(V);
 2. if all of:
    - [`keyed_hand_need`](#keyed_hand_need)(V);
-   - a node X [points to](#may_be_node) V;
-   - an invocation Q [passes](#arg_at) X at some index;
+   - [`node_of`](#node_of)(X, V);
+   - an invocation Q [passes](#arg_at) a node X at some index;
    - [`runs_unknown`](#runs_unknown)(Q);
 3. if all of:
    - [`keyed_hand_need`](#keyed_hand_need)(V);
-   - a node O [points to](#may_be_node) V;
+   - [`node_of`](#node_of)(O, V);
    - [`object_of`](js-structure.rofl.md#object_of)(N, O);
    - [the callee](js-callgraph.rofl.md#callee_of) of a call Q is a node N;
    - [`runs_unknown`](#runs_unknown)(Q).
@@ -3467,14 +3481,14 @@ In the flow:
   - [`keyed_on`](#keyed_on)(C, X, P, Put);
   - [`keyed_store`](#keyed_store)(P, Put, something);
   - an invocation C [passes](#arg_at) a node Y at 0;
-  - Y [points to](#may_be_node) a node N;
+  - [`node_of`](#node_of)(Y, N);
   - C [passes](#arg_at) a node V at 1.
 
 `keyed_read`(C, V) if all of:
   - [`keyed_on`](#keyed_on)(C, X, P, Get);
   - [`keyed_store`](#keyed_store)(P, something, Get);
   - an invocation C [passes](#arg_at) a node Y at 0;
-  - Y [points to](#may_be_node) a node N;
+  - [`node_of`](#node_of)(Y, N);
   - [`keyed_put_obj`](#keyed_put_obj)(X, N, V);
   - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something).
 
@@ -3488,7 +3502,7 @@ In the flow:
   - [`for_of`](js-structure.rofl.md#for_of)(S);
   - [`parent`](#parent)(H, D);
   - [`decl`](#decl)(D, something);
-  - a node R [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(R, X);
   - [`keyed_obj`](#keyed_obj)(X, something).
 
 <a id="keyed_walk_at"></a>`keyed_walk_at`(E, D, Pos) if all of:
@@ -3522,7 +3536,7 @@ In the flow:
 <a id="sx_keach"></a>`sx_keach`(C, F, X) if all of:
   - [`keyed_on`](#keyed_on)(C, X, something, "forEach");
   - an invocation C [passes](#arg_at) a node Y at 0;
-  - Y [points to](#may_be_node) a node F;
+  - [`node_of`](#node_of)(Y, F);
   - [`fn_value`](js-surface.rofl.md#fn_value)(F).
 
 <a id="keyed_each_at"></a>`keyed_each_at`(U, C, X, Pos) if all of:
@@ -3606,8 +3620,8 @@ In the flow:
 
 <a id="read_holds_node"></a>`read_holds_node`(E, N) either:
 
-1. if a node E [points to](#may_be_node) a node N, unless [`keyed_viewed`](#keyed_viewed)(E);
-2. if [`keyed_holds`](#keyed_holds)(E, V) and a node V [points to](#may_be_node) a node N.
+1. if [`node_of`](#node_of)(E, N), unless [`keyed_viewed`](#keyed_viewed)(E);
+2. if [`keyed_holds`](#keyed_holds)(E, V) and [`node_of`](#node_of)(V, N).
 
 <a id="read_holds_lit"></a>`read_holds_lit`(E, L) either:
 
@@ -4114,8 +4128,8 @@ The member Key of a node J holds a node V if all of:
 <a id="sx_made_out"></a>`sx_made_out`(CD, C) if all of:
   - a call C [is unresolved](js-callgraph.rofl.md#unresolved_call) with some shape;
   - C [passes](#arg_at) a node X at some index;
-  - X [points to](#may_be_node) a node CD;
-  - inst(CD) [stands for an instance of](#inst_of) CD.
+  - [`node_of`](#node_of)(X, CD);
+  - inst(a class CD) [stands for an instance of](#inst_of) CD.
 
 <a id="sx_out_inst"></a>`sx_out_inst`(inst(CD), Key, M, C) if all of:
   - [`sx_made_out`](#sx_made_out)(CD, C);
@@ -5069,7 +5083,7 @@ In the flow:
 
 `input_this`(this(a [function](js-callgraph.rofl.md#fn_node) F), F) if F [hosts](#this_host) some this, unless [`method_fn`](#method_fn)(F).
 
-`input_node`(this(F), N) if [`this_given`](#this_given)(F, X) and a node X [points to](#may_be_node) a node N.
+`input_node`(this(F), N) if [`this_given`](#this_given)(F, X) and [`node_of`](#node_of)(X, N).
 
 > `f.call(t)` and `f.apply(t)` run f (`runs`) and give what f returns of its own, and the members of t it returns
 
@@ -5306,7 +5320,7 @@ A node
   - [`value`](#value)(Sp, it);
   - [`key`](#key)(Sp, Ext);
   - [`at`](#at)(E, File, something).
-- is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and L [points to](#may_be_node) it.
+- is exported as Ext from File if a node L [is exported locally as](#export_local) Ext from File and [`node_of`](#node_of)(L, it).
 
 > `export * as ns from` exports the other module's OBJECT — its `program` node —
 > so `ns.f()` is an ordinary member lookup.
@@ -5344,7 +5358,7 @@ In the code:
   - [`has`](#has)(P, I);
   - [`program`](#program)(P, File).
 
-A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, File) and a node Init [points to](#may_be_node) it.
+A node is exported as Name from File if [`export_var`](#export_var)(Init, Name, File) and [`node_of`](#node_of)(Init, it).
 
 <a id="exports_value"></a>`exports_value`(Init, Name, File) either:
 
@@ -5440,7 +5454,7 @@ In the flow:
    - a node L [is module exports in](#cjs_module_exports) File;
    - [`assign`](#assign)(X, L, R);
    - X [is plain](#plain_assign);
-   - a node R [points to](#may_be_node) P.
+   - [`node_of`](#node_of)(R, P).
 
 `may_be`(M, N, V) either:
 
@@ -5586,7 +5600,7 @@ A node comes out of a module Spec if it [imports from outside](#external_import)
 
 <a id="ext_call"></a>An invocation is an external call of a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
-  - a node F [points to](#may_be_node) X;
+  - [`node_of`](#node_of)(F, X);
   - [`callee`](#callee)(it, F);
   - [`call_like`](#call_like)(it).
 
@@ -5596,7 +5610,7 @@ A node comes out of a module Spec if it [is an external call of](#ext_call) Spec
 
 <a id="ext_member"></a>A [member access](#member_node_v) is an external member of a module Spec if all of:
   - a node X [comes out of](#external_value) Spec;
-  - a node O [points to](#may_be_node) X;
+  - [`node_of`](#node_of)(O, X);
   - [`object_of`](js-structure.rofl.md#object_of)(it, O).
 
 A node comes out of a module Spec if it [is an external member of](#ext_member) Spec.
@@ -5613,8 +5627,8 @@ The plain member Key of a node X is a node V if X [comes out of](#external_value
 
 A node comes out of a module Spec if all of:
   - some pattern [holds the object rest](#obj_rest) it taken from a node Src;
-  - Src [points to](#may_be_node) a node X;
-  - X [comes out of](#external_value) Spec.
+  - [`node_of`](#node_of)(Src, X);
+  - a node X [comes out of](#external_value) Spec.
 
 > WHICH PACKAGE an external value came from: a bare specifier's first segment,
 > its first two for a scoped one (`@scope/pkg/sub` is `@scope/pkg`), and a
@@ -5685,7 +5699,7 @@ In the flow:
 `contract_fn`(a [member access](#member_node_v) M, Pkg, Key) if all of:
   - [`sx_contract_pkg`](#sx_contract_pkg)(Spec, Pkg);
   - a node Spec [comes out of](#external_value) Spec;
-  - a node O [points to](#may_be_node) Spec;
+  - [`node_of`](#node_of)(O, Spec);
   - [`object_of`](js-structure.rofl.md#object_of)(M, O);
   - M [selects](#selects) Key;
   - [`contract_key`](#contract_key)(Pkg, Key).
@@ -5698,7 +5712,7 @@ In the flow:
 
 <a id="contract_call"></a>`contract_call`(C, Pkg, Key) if all of:
   - [`contract_fn`](#contract_fn)(X, Pkg, Key);
-  - a node G [points to](#may_be_node) a node X;
+  - [`node_of`](#node_of)(G, X);
   - [`callee`](#callee)(C, G);
   - [`call`](#call)(C).
 
@@ -5706,7 +5720,7 @@ In the flow:
   - [`contract_call`](#contract_call)(C, Pkg, Key);
   - [`runs_coroutine`](#runs_coroutine)(Pkg, Key, I);
   - an invocation C [passes](#arg_at) a node X at an index I;
-  - X [points to](#may_be_node) a node F;
+  - [`node_of`](#node_of)(X, F);
   - F [is a generator function](#gen_fn).
 
 <a id="coroutine_yield"></a>`coroutine_yield`(Y, X) if all of:
@@ -5827,8 +5841,8 @@ The member Name of a node NS holds a node In if all of:
 `new_of`(E, CD), in the flow if all of:
   - [`construct`](#construct)(E);
   - [`callee`](#callee)(E, CE);
-  - a node CE [points to](#may_be_node) a node CD;
-  - some node [stands for an instance of](#inst_of) CD.
+  - [`node_of`](#node_of)(CE, CD);
+  - some node [stands for an instance of](#inst_of) a class CD.
 
 <a id="made_of"></a>`made_of`(made(E, CD), CD) if [`new_of`](js-callgraph.rofl.md#new_of)(E, CD) in the flow.
 
@@ -5842,10 +5856,7 @@ The member Name of a node NS holds a node In if all of:
 > `new f()` of a plain function is the object it makes, or an object f returns: open. What f returns is not carried:
 > three.js calls one such function from thousands of places, and their values met in it (past ten minutes)
 
-<a id="new_fn"></a>`new_fn`(E, a [function](js-callgraph.rofl.md#fn_node) F) if all of:
-  - [`construct`](#construct)(E);
-  - [`callee`](#callee)(E, CE);
-  - a node CE [points to](#may_be_node) F.
+<a id="new_fn"></a>`new_fn`(E, a [function](js-callgraph.rofl.md#fn_node) F) if [`construct`](#construct)(E), [`callee`](#callee)(E, CE), and [`node_of`](#node_of)(CE, F).
 
 `may_be`(E, `open`, `open`) if [`new_fn`](#new_fn)(E, something).
 
@@ -5883,7 +5894,7 @@ The member Key of a node N holds a node X either:
 <a id="super_of"></a>The super of a class CD is a class SD if all of:
   - CD [is a class](#class_like);
   - [`extends`](#extends)(CD, SC) in the value;
-  - a node SC [points to](#may_be_node) SD;
+  - [`node_of`](#node_of)(SC, SD);
   - some node [stands for an instance of](#inst_of) SD.
 
 > A class with no constructor answers with its nearest ancestor's. Measured on
@@ -5943,8 +5954,8 @@ The member Key of a node N holds a node X either:
   - a node N [selects](#selects) "next";
   - [the callee](js-callgraph.rofl.md#callee_of) of a call C is N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
-  - a node O [points to](#may_be_node) a node GC;
-  - GC [makes a generator of](#gen_of) G;
+  - [`node_of`](#node_of)(O, GC);
+  - a call GC [makes a generator of](#gen_of) G;
   - [`arg_node`](js-structure.rofl.md#arg_node)(C, 0, V).
 
 <a id="delegates"></a>Outer delegates to Inner if all of:
@@ -5994,8 +6005,8 @@ In the flow:
   - a node N [selects](#selects) "next";
   - [the callee](js-callgraph.rofl.md#callee_of) of a call C is N;
   - [`object_of`](js-structure.rofl.md#object_of)(N, O);
-  - a node O [points to](#may_be_node) a node GC;
-  - GC [makes a generator of](#gen_of) G.
+  - [`node_of`](#node_of)(O, GC);
+  - a call GC [makes a generator of](#gen_of) G.
 
 `may_be`(C, `node`, step(C)) if [`gen_step`](#gen_step)(C, something).
 
@@ -6022,20 +6033,20 @@ The plain member X of a node N is a node E either:
 1. if [`walked`](#walked)(X) and [the element](#elem_at) some index of X is E;
 2. if [`walks`](#walks)(X, Y) and [`elem_somewhere`](#elem_somewhere)(Y, E).
 
-<a id="walks"></a>`walks`(X, Y) if [`walked`](#walked)(X) and a node X [points to](#may_be_node) a node Y.
+<a id="walks"></a>`walks`(X, Y) if [`walked`](#walked)(X) and [`node_of`](#node_of)(X, Y).
 
 A node has an element E if all of:
   - [`walked`](#walked)(it);
-  - it [points to](#may_be_node) a node GC;
-  - GC [makes a generator of](#gen_of) F;
+  - [`node_of`](#node_of)(it, GC);
+  - a call GC [makes a generator of](#gen_of) F;
   - F [yields](#yields) E.
 
 > an object of the program that is iterable by a generator at `[Symbol.iterator]`
 
 A node has an element E if all of:
   - [`walked`](#walked)(it);
-  - it [points to](#may_be_node) a node O;
-  - [the member](#member_value) `symbol_iterator` of O holds a node M;
+  - [`node_of`](#node_of)(it, O);
+  - [the member](#member_value) `symbol_iterator` of a node O holds a node M;
   - M [is a generator function](#gen_fn);
   - M [yields](#yields) E.
 
@@ -6056,8 +6067,8 @@ D takes its value from a node E if all of:
 <a id="key_walk"></a>`key_walk`(D, K) if all of:
   - [`enumerates`](#enumerates)(S, V, X);
   - [`nth`](#nth)(V, 0, D);
-  - a node X [points to](#may_be_node) a node O;
-  - [the member](#member_value) K of O holds some node;
+  - [`node_of`](#node_of)(X, O);
+  - [the member](#member_value) K of a node O holds some node;
   - `string` is type_of(K).
 
 > a key used as a key again (`dst[k] = src[k]`) is each key with its own member, which a may-set does not keep
@@ -6204,7 +6215,7 @@ In the audit:
 
 In the flow:
 
-<a id="decorated_by"></a>A node is replaced by its decorator with a node N if it [is decorated by](js-callgraph.rofl.md#decorates) a node D and D [points to](#may_be_node) N.
+<a id="decorated_by"></a>A node is replaced by its decorator with a node N if it [is decorated by](js-callgraph.rofl.md#decorates) a node D and [`node_of`](#node_of)(D, N).
 
 `may_be`(E, X, N) either:
 
@@ -6516,7 +6527,7 @@ In the flow:
 > an object or a class exported as default is open where it is imported: carried as a node, Chart.js's classes took
 > their instances' members to every importer and the run went from 17 s to 108 s (sx_mset 0.35 -> 2.9 million rows)
 
-`may_be`(E, `open`, `open`) if [`default_import`](#default_import)(E, X) and a node X [points to](#may_be_node) some node.
+`may_be`(E, `open`, `open`) if [`default_import`](#default_import)(E, X) and [`node_of`](#node_of)(X, something).
 
 <a id="default_import"></a>`default_import`(E, X) if all of:
   - Local [imports the default](#imports_default) at a site D in File;

@@ -21,7 +21,7 @@ sx_esc[flow](I) :- sx_esc[flow](C), inst_of[flow](I, C).
 sx_esc[flow](C) :- sx_esc[flow](I), inst_of[flow](I, C).
 sx_esc[flow](C) :- sx_esc[flow](I), isa[flow](I, C).
 -- ... and what an escaping node holds
-sx_esc[flow](M) :- sx_esc[flow](N), may_be_node[flow](N, M).
+sx_esc[flow](M) :- sx_esc[flow](N), node_of[flow](N, M).
 sx_esc[flow](V) :- sx_esc[flow](O), member_value[flow](O, _, V).
 sx_esc[flow](E) :- sx_esc[flow](A), array_elem[flow](A, _, E).
 sx_esc[flow](V) :- sx_esc[flow](X), keyed_put[flow](X, _, V).
@@ -59,7 +59,7 @@ sx_export_lit[flow](File, Name, V)  :- exports_value[code](X, Name, File), lit_o
 sx_module[flow](File, P)            :- corpus_file[code](File), module_object[flow](P, File).
 -- ---------------------------------------------------------------- what a call hands its callee
 sx_arg_lit[flow](F, I, V)  :- resolves[code](C, F), arg_at[flow](C, I, A), lit_of[flow](A, V).
-sx_arg_node[flow](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), may_be_node[flow](A, N).
+sx_arg_node[flow](F, I, N) :- resolves[code](C, F), arg_at[flow](C, I, A), node_of[flow](A, N).
 view sx_called(A).
 sx_called[flow](F)         :- resolves[code](_, F).
 -- how many arguments a call hands over, where it is known (no spread): a parameter past them is `undefined`
@@ -78,9 +78,9 @@ sx_reach[flow](F)          :- reachable[code](G), nearest_v[flow](G, C), resolve
 sx_rest_elem[flow](R, K, A) :- param_rest[code](F, J, R, _), resolves[code](C, F), arg_at[flow](C, I, A),
                                   I >= J, K is I - J.
 -- a function handed to an external call is called back by code the corpus cannot see
-sx_cb[flow](F, Spec)       :- external_value[flow](X, Spec), may_be_node[flow](G, X),
+sx_cb[flow](F, Spec)       :- external_value[flow](X, Spec), node_of[flow](G, X),
                                  callee[value](C, G), call_like[code](C),
-                                 nth[tree](C, _, A), not spread_args[value](C, _, A), may_be_node[flow](A, F), fn_value[flow](F).
+                                 nth[tree](C, _, A), not spread_args[value](C, _, A), node_of[flow](A, F), fn_value[flow](F).
 
 array_elem[flow](R, K, A) :- sx_rest_elem[flow](R, K, A).
 
@@ -97,9 +97,9 @@ param_read[flow](F, I, E) :- param_use[flow](F, Name, E), param_of[flow](F, I, N
 ret_param[flow](F, I, E) :- call_returns[flow](F, E), param_read[flow](F, I, E).
 ret_plain[flow](F, E) :- call_returns[flow](F, E), not ret_param[flow](F, _, E).
 
-sx_ret_node[flow](F, N)  :- ret_plain[flow](F, E), may_be_node[flow](E, N).
+sx_ret_node[flow](F, N)  :- ret_plain[flow](F, E), node_of[flow](E, N).
 sx_ret_lit[flow](F, V)   :- ret_plain[flow](F, E), lit_of[flow](E, V).
-sx_ret_pnode[flow](F, N) :- ret_param[flow](F, _, E), may_be_node[flow](E, N).
+sx_ret_pnode[flow](F, N) :- ret_param[flow](F, _, E), node_of[flow](E, N).
 sx_ret_plit[flow](F, V)  :- ret_param[flow](F, _, E), lit_of[flow](E, V).
 sx_ret_param[flow](F, I) :- ret_param[flow](F, I, _).
 -- the summary a call applies: what the function returns of its own, and which of its inputs it returns; an input of
@@ -128,7 +128,7 @@ falls_off[code](F) :- body[value](F, B), not returns[value](F, B), not completes
 falls_off[code](F) :- exits[value](R, return), not returns[value](R, _), nearest_v[flow](F, R).
 sx_ret_undef[flow](F) :- falls_off[code](F), not generator[value](F), not ctor_method[code](F).
 may_be[flow](C, lit, undefined) :- call_site[code](C, _), resolves[code](C, F), sx_ret_undef[flow](F).
-sx_gen_ret[flow](F, N)   :- returns[flow](F, E), generator[value](F), may_be_node[flow](E, N).
+sx_gen_ret[flow](F, N)   :- returns[flow](F, E), generator[value](F), node_of[flow](E, N).
 sx_gen_rlit[flow](F, V)  :- returns[flow](F, E), generator[value](F), lit_of[flow](E, V).
 
 -- ---------------------------------------------------------------- what a call writes
@@ -138,7 +138,7 @@ store_pkey[flow](F, J, I, A) :- assign[value](A, L, V), plain_assign[flow](A), c
                                 param_read[flow](F, J, Q), param_read[flow](F, I, V).
 store_sym[flow](A) :- store_pkey[flow](_, _, _, A).
 sx_store_pkey[flow](F, J, I, O) :- store_pkey[flow](F, J, I, A), assign[value](A, L, _),
-                                      object_of[code](L, Obj), may_be_node[flow](Obj, O).
+                                      object_of[code](L, Obj), node_of[flow](Obj, O).
 sx_mwrite[flow](O, K, A) :- sx_store_pkey[flow](F, J, I, O), resolves[code](C, F),
                                arg_at[flow](C, J, B), lit_of[flow](B, K), arg_at[flow](C, I, A).
 
