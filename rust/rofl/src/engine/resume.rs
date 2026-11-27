@@ -55,6 +55,8 @@ pub(super) struct Cut {
     pub(super) hole: Option<FactId>,
     pub(super) facts: usize,
     pub(super) tick: u32,
+    /// The wall fell in a pass of the pages core: the facts it made stand, and the pass goes on by firing again over them.
+    pub(super) pages: bool,
 }
 
 impl Eval {
@@ -163,7 +165,7 @@ impl Eval {
     /// The cut gathered as the wall unwound, kept if it is whole.
     pub(super) fn keep_cut(&mut self) {
         let c = self.wall.cutting.take();
-        self.wall.cut = c.filter(|c| self.resumable() && c.phase.is_some() && c.fl.is_some() && c.at.is_some());
+        self.wall.cut = c.filter(|c| self.resumable() && (c.pages || c.phase.is_some() && c.fl.is_some() && c.at.is_some()));
     }
 
     /// Run on from where a step wall stopped the last evaluation, with `more`
@@ -194,7 +196,14 @@ impl Eval {
         self.store.vlisted = false;
         self.budget = self.steps + more;
         self.disk_held = 0;
-        self.wall.resume_at = Some(cut);
+        let pages = cut.pages;
+        if let (true, Some(InFlight::Rest { tail: Some(Tail::Fact { rule, rel, persp, args, id, .. }), .. })) = (pages, &cut.fl) {
+            // the fact the wall fell on stands; its firing is written whole before the pass fires again
+            let (rule, rel, persp, args, id) = (*rule, *rel, *persp, args.clone(), *id);
+            self.charge_row(Some(rule), true)?;
+            self.write_derived_by(rule, rel, persp, &args, id, &mut Front::default());
+        }
+        self.wall.resume_at = (!pages).then_some(cut);
         let out = self.run_pass_from();
         self.wall.resume_at = None;
         Ok((out?, true))
@@ -255,6 +264,7 @@ impl Eval {
         w.u64(c.facts as u64);
         w.u32(c.tick);
         match &c.at {
+            None if c.pages => w.u32(3),
             None => w.u32(0),
             Some(CutAt::Whole { i, front }) => {
                 w.u32(1);
@@ -316,6 +326,10 @@ impl Eval {
         (c.facts, c.tick) = (r.u64()? as usize, r.u32()?);
         c.at = match r.u32()? {
             0 => None,
+            3 => {
+                c.pages = true;
+                None
+            }
             1 => Some(CutAt::Whole { i: r.u64()? as usize, front: read_front(r)? }),
             _ => {
                 let cur = read_front(r)?;

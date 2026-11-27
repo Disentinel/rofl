@@ -3,7 +3,7 @@
 //! under its own key. Relations settle by strongly connected components, lowest first, each to its fixpoint by news:
 //! the facts a round made new meet every rule of the component that reads them, at that premise, the rest of the body
 //! read over all that stands. Conclusions go through `conclude`, so the store, its firings and the state are what any
-//! pass writes. A world this core cannot evaluate yet is evaluated by the levels below.
+//! pass writes. A pass this core cannot evaluate yet (`pages_unfit` says why) is evaluated by the rounds.
 use super::*;
 
 /// The facts a pass reads, each a row of its book and arguments, filed under every key a premise asks it by.
@@ -320,7 +320,6 @@ impl Eval {
             (!self.demand.by_rel.is_empty(), "demand"),
             (!self.shrug_readers.is_empty(), "shrug"),
             (!self.store.aliases.is_empty(), "alias"),
-            (self.stage_given.is_some(), "stage"),
             (self.add.adding, "adding"),
             (self.wall.resume_at.is_some(), "resume"),
             (!self.store.kept_layer.is_empty(), "kept_layer"),
@@ -355,19 +354,11 @@ impl Eval {
     /// The pass evaluated by the pages core; false when it handed the pass back, the store as the pass found it.
     /// None: handed back; else the pass's outcome, a wall's included.
     pub(super) fn run_pages(&mut self, rules: &[Rc<ERule>], mono: &[Rc<ERule>], strat: &[Rc<ERule>]) -> Result<Option<Result<(), Halt>>, Halt> {
-        if let Some(why) = self.pages_unfit(rules) {
-            if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
-                use std::io::Write;
-                let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off {why} {}", rules.len()));
-            }
+        if self.pages_unfit(rules).is_some() {
             return Ok(None);
         }
         // THE ROUNDS ARE THE LEVELS' OWN: peeled by book, a negation or an aggregate reading a round below its own
         if self.peel_levels(mono, strat).is_err() || !self.ds.comps.is_empty() {
-            if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
-                use std::io::Write;
-                let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off rounds {}", rules.len()));
-            }
             self.pages_declined = true;
             return Ok(None);
         }
@@ -391,24 +382,22 @@ impl Eval {
                 c
             })
             .collect();
-        let t0 = std::time::Instant::now();
         let out = match self.pages_pass(&comps, &rounds) {
             Ok(()) => Ok(()),
-            Err(Err(e @ Halt::Budget(..))) => Err(e),
-            Err(Ok(Back)) => {
-                if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
-                    use std::io::Write;
-                    let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off back {}", rules.len()));
+            Err(Err(e @ Halt::Budget(..))) => {
+                let tail = self.wall.cut_tail.take();
+                if let Some(c) = self.wall.cutting.as_mut() {
+                    c.pages = true;
+                    c.fl = Some(InFlight::Rest { sols: Vec::new(), out: Front::default(), tail });
                 }
+                Err(e)
+            }
+            Err(Ok(Back)) => {
                 self.pages_declined = true;
                 return Ok(None);
             }
             Err(Err(e)) => return Err(e),
         };
-        if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
-            use std::io::Write;
-            let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "on {} {:?}", rules.len(), t0.elapsed()));
-        }
         let mut sorted = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         self.active = sorted;
@@ -800,10 +789,6 @@ impl Eval {
             let r = e.store.rec(id);
             e.round_of.get(&e.books.fact(r.rel, r.persp)).and_then(|k| index.get(k)).copied().unwrap_or(0)
         };
-        if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
-            use std::io::Write;
-            let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "edit {} {}", added.len(), removed.len()));
-        }
         let (mut pg, fired) = self.pages_build(&comps);
         pg.edit = true;
         // (what was taken out is met where a negation reads it, so it is filed though dead)

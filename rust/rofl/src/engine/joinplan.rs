@@ -147,10 +147,8 @@ impl Eval {
     /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
     fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
         match self.vc.vclosure_for(rel) {
-            // (a tree held from the units is read as it stands: a plan made while it was empty is stale once it is not)
-            Some(ci) => match (self.store.held_trees(ci), self.store.tree_sizes.as_ref().and_then(|z| z.get(&ci))) {
-                (Some(f), _) => f.iter().map(|f| f.1.pairs as usize).sum(),
-                (None, Some(z)) if self.vc.vlen(ci) == 0 => z[0] as usize,
+            Some(ci) => match self.store.tree_sizes.as_ref().and_then(|z| z.get(&ci)) {
+                Some(z) if self.vc.vlen(ci) == 0 => z[0] as usize,
                 _ => self.vc.vlen(ci),
             },
             None => self.store.rel_len_est(rel, persp),
@@ -675,7 +673,6 @@ impl Eval {
         };
         let (peak, undecided) = (self.peak_rows, self.lat.carry.undecided.len());
         let outer = self.cur_rule.replace(r.id);
-        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
         self.sn_perm = self.sn.is_some().then(|| Rc::new(p.perm.clone()));
@@ -685,7 +682,6 @@ impl Eval {
         self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;
-        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         // a negation records the position it was undecided at; none is while no unknown spreads
         debug_assert_eq!(self.lat.carry.undecided.len(), undecided);
         let sols = match sols {
@@ -746,3 +742,4 @@ impl AddState {
         Ok(())
     }
 }
+

@@ -308,9 +308,6 @@ fn note_seen(mark: &Path, line: &str) {
 /// length or its time and it is summed again; what is not seen is a write in place within the clock's tick of this
 /// one, by another process, of the same length.
 pub fn note_written(path: &str, seen: Option<&Path>) {
-    if !crate::brk!("kept_written_unnoted" => false; true) {
-        return;
-    }
     use std::io::{Read, Seek, SeekFrom};
     let mut id = [0u8; 8];
     let Ok(mut f) = std::fs::File::open(path) else { return };

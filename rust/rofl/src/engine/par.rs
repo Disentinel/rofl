@@ -217,12 +217,7 @@ pub(super) fn spread<T: Send>(threads: usize, n: usize, wide: bool, f: impl Fn(u
     // (the kept threads serve one batch at a time: where another unit has them, this one goes alone)
     let Ok(mut pool) = POOL.try_lock() else { return (0..n).map(f).collect() };
     let out: Vec<Mutex<Option<T>>> = (0..n).map(|_| Mutex::new(None)).collect();
-    let seam_rule = crate::store::SEAM_RULE.with(|c| c.get());
-    let task = |k: usize| {
-        crate::store::SEAM_RULE.with(|c| c.set(seam_rule));
-        let v = f(k);
-        *out[k].lock().unwrap() = Some(v)
-    };
+    let task = |k: usize| *out[k].lock().unwrap() = Some(f(k));
     let task: &(dyn Fn(usize) + Sync) = &task;
     // SAFETY: the lifetime is erased for the kept threads; this call returns only once none of them holds the batch.
     let task: *const (dyn Fn(usize) + Sync) = unsafe { std::mem::transmute(task) };
@@ -297,7 +292,7 @@ impl<'a> Frozen<'a> {
             return Some(if self.neg { Found::Neg(rows.is_empty()) } else { Found::Walked(rows) });
         }
         let limit = self.news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1));
-        let (narrow, probed) = if self.news.is_some() && self.store.reads_near() { (None, false) } else { self.probe(&a.s, persp, limit)? };
+        let (narrow, probed) = self.probe(&a.s, persp, limit)?;
         *probes += probed as u64;
         let mut c = Cands { persp_t, persp, segs: Vec::new(), owned: Vec::new(), keep: Keep::All };
         match (&self.news, narrow) {
@@ -570,7 +565,7 @@ impl Eval {
         let (l, neg) = self.frozen_lit(b, depth, rule_id).filter(|(l, _)| self.vc.vclosure_for(l.rel).is_none())?;
         let off = l.temporal == Temporal::Init && self.store.tick != 0;
         let news = front_news(front_at, i, neg);
-        if !(off || news.is_some() && self.store.reads_near()) {
+        if !off {
             self.par_prepare(l, acc, news.as_ref().map_or(usize::MAX, |(keys, _)| keys.len().saturating_sub(1)));
         }
         let except = if depth == 0 && !neg { self.sn_except(i) } else { None };
@@ -676,8 +671,7 @@ impl Eval {
             || !self.lat.carry.spread.is_empty()
             || self.assume.is_some()
             || self.demand.on(l.rel)
-            // (a unit reads a tree from the unit of the node's file, a partial solution at a time)
-            || self.vc.vclosure_for(l.rel).is_some() && (!(self.store.unordered && l.args.len() == 2) || brk!("levels_tree_sliced" => false; self.store.reads_trees()))
+            || self.vc.vclosure_for(l.rel).is_some() && !(self.store.unordered && l.args.len() == 2)
             || neg && self.carry_check(0).is_err()
             || !plain(&l.persp)
             || !l.args.iter().all(plain)
@@ -720,7 +714,6 @@ impl Eval {
                     let ci = self.vc.vclosure_for(l.rel).unwrap();
                     self.vc.vforests(&mut self.store, ci);
                 }
-                Some((p, _)) if p == i && k == 0 && !neg && self.store.reads_near() => {}
                 Some((p, limit)) if p == i && k == 0 && !neg => self.par_prepare(l, acc, limit),
                 _ if k == 0 => self.par_prepare(l, acc, usize::MAX),
                 _ => self.store.absorb_for_read(&self.h, l.rel, l.persp.as_atom()),
@@ -852,3 +845,4 @@ impl Eval {
         }
     }
 }
+

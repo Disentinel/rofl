@@ -589,7 +589,7 @@ impl Session {
         if self.eval.staged_away.is_none() {
             return Ok(None);
         }
-        let Some(st) = self.eval.stage_here() else { return Ok(None) };
+        let Some(st) = self.eval.cut_stage() else { return Ok(None) };
         let books: Vec<String> = st.cut.iter().map(|b| self.eval.h.name(*b).to_string()).collect();
         let books: Vec<&str> = books.iter().map(String::as_str).collect();
         let (rest, any) = rofl_parse::without_books(text, &books);
@@ -628,7 +628,7 @@ impl Session {
         if self.eval.staged_away.is_none() {
             return by;
         }
-        let Some(st) = self.eval.stage_here() else { return by };
+        let Some(st) = self.eval.cut_stage() else { return by };
         let mut key = String::new();
         for id in self.eval.store.all_facts() {
             let r = self.eval.store.rec(id);
@@ -2190,7 +2190,7 @@ impl Session {
     /// world, the lemma's `why` read there. A lemma whose file this world was not given the text of stays.
     fn unfold_lemmas(&mut self, text: String) -> Result<String, String> {
         let Some(texts) = self.eval.lower_texts.clone() else { return Ok(text) };
-        let Some(st) = self.eval.lemma_stage() else { return Ok(text) };
+        let Some(st) = self.eval.cut_stage() else { return Ok(text) };
         let mut lows: HashMap<String, Session> = HashMap::new();
         let mut out = String::new();
         for line in text.lines() {

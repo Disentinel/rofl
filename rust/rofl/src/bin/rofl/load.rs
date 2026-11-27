@@ -792,7 +792,7 @@ fn print_state(o: &Opts, s: &mut Session, cut: bool) {
 /// Where a `why --all` is asked of a world that cut a book, the texts of its files by the node prefix they name: what
 /// unfolds a lemma (`Session::why_all`).
 fn lower_texts(o: &Opts, s: &mut Session) {
-    if s.eval.lower_texts.is_some() || s.eval.lower_kept.is_some() || s.eval.lemma_stage().is_none() {
+    if s.eval.lower_texts.is_some() || s.eval.cut_stage().is_none() {
         return;
     }
     // (a whynot reads them when its walk first goes below the cut, and an ask when it places a node, and not before)

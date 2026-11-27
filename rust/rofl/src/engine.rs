@@ -829,10 +829,6 @@ pub struct Eval {
     kept_carry: Option<Rc<layer::Carried>>,
     /// Which rules the pass under way fires, where the plan cuts a book (`engine/stages.rs`).
     stage_pass: StagePass,
-    /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
-    pub stage_given: Option<Rc<FxSet<Sym>>>,
-    /// the rules of the stage under way that the pass above it fires too (`Stage::free`)
-    stage_both: Rc<FxSet<Sym>>,
     /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
     /// the pages core handed this pass back: it is evaluated again from the start by the levels
@@ -846,8 +842,6 @@ pub struct Eval {
     pub lower_texts: Option<Rc<HashMap<String, String>>>,
     /// The files those texts are cut from when one is first needed: each a path, or the text it was read into.
     pub lower_sources: Option<Rc<Vec<(String, Option<String>)>>>,
-    /// The texts kept beside the units a world is read from, where a file's text is read alone.
-    pub lower_kept: Option<Rc<volumes::KeptTexts>>,
     /// a delta takes out lemmas of files whose lower stage it proved again (`Session::as_staged`)
     pub retaking: bool,
     /// A file thawed (`Eval::thaw`): it holds the books of its file, which the world it was forked from cut.
@@ -2361,15 +2355,12 @@ impl Eval {
             whole: None,
             kept_carry: None,
             stage_pass: StagePass::Whole,
-            stage_given: None,
-            stage_both: Rc::default(),
             staged_away: None,
             pages_declined: false,
             pages_widest: (0, 0),
             lemma_heads: None,
             lower_texts: None,
             lower_sources: None,
-            lower_kept: None,
             retaking: false,
             thawed: false,
             lower_full: None,
@@ -3544,13 +3535,9 @@ impl Eval {
         self.store.kept_layer = kept;
         self.stage_pass = StagePass::Whole;
         self.staged_away = None;
-        let out = match (self.stage_given.clone(), self.cut_stage()) {
-            (Some(given), _) => {
-                self.stage_pass = StagePass::Upper(given);
-                self.run_whole()
-            }
-            (None, Some(st)) => self.run_staged(st),
-            (None, None) => self.run_whole(),
+        let out = match self.cut_stage() {
+            Some(st) => self.run_staged(st),
+            None => self.run_whole(),
         };
         if !self.store.kept_rules.is_empty() {
             let rules = std::mem::take(&mut self.store.kept_rules);
@@ -5669,13 +5656,11 @@ impl Eval {
     ) -> Result<Front, Halt> {
         *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let outer = self.cur_rule.replace(r.id);
-        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was_firing = std::mem::replace(&mut self.firing, true);
         let before = self.steps;
         let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
-        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         let sols = self.solved(r, sols, before)?;
         *self.cost.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
         self.conclude_all(r, sols, Front::default(), true)
@@ -12107,9 +12092,8 @@ impl Eval {
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
             Some(keys) => {
-                // (the index read only as far as it is narrower than the news; a store that reads stretches would ask
-                // them all for what the news already holds)
-                let narrow = if self.store.reads_near() { None } else { self.index_probe(l, s, persp, keys.len().saturating_sub(1)) };
+                // (the index read only as far as it is narrower than the news)
+                let narrow = self.index_probe(l, s, persp, keys.len().saturating_sub(1));
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => {
@@ -12130,7 +12114,7 @@ impl Eval {
                     }
                 }
             }
-            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered && !self.store.reads_near() => self.question_cands(l, s, persp),
+            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
             None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
@@ -15601,7 +15585,6 @@ impl Eval {
     }
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
-        let id = self.store.current(id);
         let r = self.store.rec(id);
         let key = fact_key(&self.h, r.rel, r.persp, self.store.args(id));
         let pad = "  ".repeat(indent);
@@ -16972,7 +16955,7 @@ impl Eval {
             return Ok(None);
         }
         if ctx.stage.is_none() {
-            ctx.stage = Some(self.lemma_stage().map(Rc::new));
+            ctx.stage = Some(self.cut_stage().map(Rc::new));
         }
         let Some(st) = ctx.stage.clone().flatten() else { return Ok(None) };
         if !st.heads.contains(&lit.rel) {
@@ -16990,7 +16973,7 @@ impl Eval {
         }
         let Some((f, mut low)) = file.as_ref().and_then(|f| ctx.thawed.remove_entry(f)) else {
             // (a rule that reads no file is fired above the stage too: what it reads is here)
-            let below = self.rules.iter().any(|r| r.clause.head.rel == lit.rel && st.rules.contains(&r.id) && !st.free.contains(&r.id));
+            let below = self.rules.iter().any(|r| r.clause.head.rel == lit.rel && st.rules.contains(&r.id));
             if !below {
                 return Ok(None);
             }
@@ -17026,9 +17009,6 @@ impl Eval {
     /// are cut from (`lower_sources`, read once).
     fn lower_text(&mut self, file: &str) -> Option<String> {
         if self.lower_texts.is_none() {
-            if let Some(k) = &self.lower_kept {
-                return k.get(file).map(str::to_string);
-            }
             let sources = self.lower_sources.clone()?;
             let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
             let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
@@ -17071,7 +17051,6 @@ impl Eval {
         let mut low = self.fork();
         low.lower_texts = None;
         low.lower_sources = None;
-        low.lower_kept = None;
         low.thawed = true;
         let held: Vec<FactId> = match held {
             Some(h) => h.to_vec(),
@@ -17227,7 +17206,7 @@ impl Eval {
         if self.thawed {
             return Ok(None);
         }
-        let Some(st) = self.lemma_stage() else { return Ok(None) };
+        let Some(st) = self.cut_stage() else { return Ok(None) };
         if !st.heads.contains(&lit.rel) {
             return Ok(None);
         }
@@ -17807,3 +17786,4 @@ fn eval_is_send() {
     fn send<T: Send>() {}
     send::<Eval>();
 }
+

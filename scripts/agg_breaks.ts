@@ -8750,69 +8750,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "levels_home_round_kept",
-  "what": "a group of a world by levels with nothing at home never ends its home round, and what its children make together from another premise is not fired",
-  "expect": {
-   "levels_whole": "qq[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_tree_sliced",
-  "what": "a unit that solves a run of partial solutions at a time reads a tree from its own store, which holds none, and not from the unit of the node's file",
-  "expect": {
-   "levels_whole": "held_by[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_lower_unmet",
-  "what": "a group of a world by levels does not look at what the layers below hold under its children, and two facts of its layer that meet only through a fact of a layer below never meet",
-  "expect": {
-   "levels_whole": "via2[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_guard_unasked",
-  "what": "a rule with a premise of a relation the unit sees no fact of takes no news and the unit does not record that it asked: the first fact of the relation, come by an edit, fires nothing there",
-  "expect": {
-   "levels_whole": "a function come, marked[d](A): by levels"
-  }
- },
- {
-  "id": "levels_seed_every_place",
-  "what": "a seed of a group is news to a rule only where the rule joins it at every place it met a fact at, not at one: a fact two rules join at one value fires neither",
-  "expect": {
-   "levels_whole": "ac[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_solved_run_lost",
-  "what": "of a firing's news solved a run at a time with its round's others, the last run is lost",
-  "expect": {
-   "levels_whole": ": by levels"
-  }
- },
- {
-  "id": "levels_far_firing_dropped",
-  "what": "a unit an edit mends carries the firings of its own facts only: a fact of another unit's stretch it wrote a firing of is lost where that unit no longer concludes it",
-  "expect": {
-   "levels_whole": "a call gone, rlive[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_far_fact_unplaced",
-  "what": "a unit an edit mends waits, for a fact of another unit's stretch it wrote a firing of, on its own firings of it, which may read it back through its own facts alone: the fact and what it concluded are lost though the child still holds it",
-  "expect": {
-   "levels_far_held": "other = 2: q[d](A) by levels"
-  }
- },
- {
-  "id": "levels_leaf_first_file",
-  "what": "an edit settles again a unit of files only where its first file was edited: a file further in it stays as it stood",
-  "expect": {
-   "levels_whole": "a call gone: volumes: 1 of 64 files edited; 0 of"
-  }
- },
- {
   "id": "kept_stale_files",
   "what": "a kept world is answered whatever happened to the files it was computed from",
   "expect": {

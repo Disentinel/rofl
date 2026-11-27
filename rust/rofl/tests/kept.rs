@@ -994,16 +994,14 @@ fn a_string_edited_goes_by_delta() {
     let main = |from: &str, word: &str| d.write("src/main.js", &format!("import {{ f }} from './lib/{from}.js';\nexport function g() {{ return f('{word}'); }}\n"));
     let cli = root().join("models/lang/js/scanner/cli.ts");
     let model = format!("@{}", root().join("models/lang/js/js.files").display());
-    let levels = [("ROFL_VOLUMES", "0".to_string()), ("ROFL_FAN", "3".to_string()), ("ROFL_LEAF", "2".to_string())];
-    let whole = [("ROFL_VOLUMES", "0".to_string())];
     let step = |what: &str, delta: bool| -> Result<(), String> {
         let scan = Command::new("node").args(["--experimental-strip-types", &cli.to_string_lossy(), "src", "--out", "f.rofl"]).current_dir(&d.0).output().unwrap();
         ensure(scan.status.success(), || format!("{what}: the scan failed: {}", String::from_utf8_lossy(&scan.stderr)))?;
-        let got = rofl_env(BIN, &d, &d.0.join("cache"), &levels, brk, &["ask", "calls[code](A, B)", &model, "f.rofl", "x.rofl"]);
+        let got = rofl_env(BIN, &d, &d.0.join("cache"), &[], brk, &["ask", "calls[code](A, B)", &model, "f.rofl", "x.rofl"]);
         // (the world whole from nothing: a kept one that cut [ast_oxc] takes a cut file and a rule file edited together
         // wrong, f_a_kept_world_that_cut_takes_an_edit_below_the_cut_beside_a_rule_file_wrong)
-        let truth = rofl_env(BIN, &d, &d.0.join(format!("truth-{what}")), &whole, brk, &["ask", "calls[code](A, B)", &model, "f.rofl", "x.rofl"]);
-        ensure(got.code == 0 && got.out == truth.out, || format!("{what}: by levels\n{}\nwhole\n{}\n{}", got.out, truth.out, got.err))?;
+        let truth = rofl_env(BIN, &d, &d.0.join(format!("truth-{what}")), &[], brk, &["ask", "calls[code](A, B)", &model, "f.rofl", "x.rofl"]);
+        ensure(got.code == 0 && got.out == truth.out, || format!("{what}: kept\n{}\nanew\n{}\n{}", got.out, truth.out, got.err))?;
         ensure(got.err.contains("world took") == delta, || format!("{what}: wanted {} by delta: {:?}", if delta { "taken" } else { "not taken" }, got.err))
     };
     let core = |n: u32| d.write("x.rofl", &format!("edb(seen).\nseen({n}).\nseen_twice(X) :- seen(X), seen(X).\n"));
