@@ -9,17 +9,14 @@ use super::*;
 /// The facts a pass reads, each a row of its book and arguments, filed under every key a premise asks it by.
 #[derive(Default)]
 struct Pages {
-    /// where each fact's row starts in `terms`, by its id; `NO_ROW` for a fact not filed
-    at: Vec<u32>,
-    terms: Vec<Term>,
     /// the books that are the kernel's ledgers, which a book left open does not range over
     kernel: FxSet<Sym>,
     all: FxMap<Sym, Vec<FactId>>,
     /// the facts of a relation by the hash of the values a key binds: what a hash shares by chance a meeting drops
-    ix: Vec<FxMap<u64, Vec<FactId>>>,
+    ix: Vec<FxMap<u64, Ids>>,
     ix_of: FxMap<(Sym, u64), usize>,
     masks: FxMap<Sym, Vec<(u64, usize)>>,
-    /// the round of news each fact came in, by its id, and the round being met
+    /// the round of news each fact came in, by its id (`NO_ROW` for a fact not filed), and the round being met
     news_of: Vec<u32>,
     round: u32,
     /// the round's news by relation
@@ -37,18 +34,11 @@ struct Pages {
 const NO_ROW: u32 = u32::MAX;
 
 impl Pages {
-    /// The row of fact `id`: its book, then its arguments.
-    fn row(&self, id: FactId) -> &[Term] {
-        let a = self.at[id as usize] as usize;
-        let n = self.terms[a].bits() as usize;
-        &self.terms[a + 1..a + 2 + n]
-    }
-
-    fn key_of(row: &[Term], mask: u64) -> u64 {
+    fn key_of(persp: Sym, args: &[Term], mask: u64) -> u64 {
         let mut k = KeyHash::default();
-        for (j, t) in row.iter().enumerate() {
+        for (j, t) in std::iter::once(Term::atom(persp)).chain(args.iter().copied()).enumerate() {
             if mask >> j & 1 != 0 {
-                k.add(*t);
+                k.add(t);
             }
         }
         k.0
@@ -70,41 +60,55 @@ impl Pages {
     }
 
     fn file(&mut self, h: &Heap, store: &Store, rel: Sym, id: FactId) {
-        if self.at.get(id as usize).is_some_and(|a| *a != NO_ROW) {
-            self.news_of[id as usize] = self.round;
+        if self.news_of.len() <= id as usize {
+            self.news_of.resize(id as usize + 1, NO_ROW);
+        }
+        let filed = self.news_of[id as usize] != NO_ROW;
+        self.news_of[id as usize] = self.round;
+        if filed {
             return;
         }
         let persp = store.rec(id).persp;
         if is_kernel_ledger(h, persp) {
             self.kernel.insert(persp);
         }
-        if self.at.len() <= id as usize {
-            self.at.resize(id as usize + 1, NO_ROW);
-        }
-        self.at[id as usize] = self.terms.len() as u32;
-        if self.news_of.len() <= id as usize {
-            self.news_of.resize(id as usize + 1, 0);
-        }
-        self.news_of[id as usize] = self.round;
-        let args = store.args(id);
-        // (the length first, as a bare word)
-        self.terms.push(Term::from_bits(args.len() as u64));
-        self.terms.push(Term::atom(persp));
-        self.terms.extend_from_slice(args);
         self.all.entry(rel).or_default().push(id);
         if let Some(ms) = self.masks.get(&rel) {
-            let a = self.at[id as usize] as usize + 1;
+            let args = store.args(id);
             for &(m, x) in ms {
-                let k = Self::key_of(&self.terms[a..a + 1 + args.len()], m);
-                self.ix[x].entry(k).or_default().push(id);
+                match self.ix[x].entry(Self::key_of(persp, args, m)) {
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        e.insert(Ids::One(id));
+                    }
+                    std::collections::hash_map::Entry::Occupied(mut e) => {
+                        let v = e.get_mut();
+                        if let Ids::One(x) = *v {
+                            *v = Ids::Many(vec![x]);
+                        }
+                        let Ids::Many(xs) = v else { unreachable!() };
+                        xs.push(id);
+                    }
+                }
             }
         }
     }
 
     fn under(&self, rel: Sym, ix: usize, key: u64) -> &[FactId] {
-        let got = if ix == usize::MAX { self.all.get(&rel) } else { self.ix[ix].get(&key) };
-        got.map_or(&[][..], |v| &v[..])
+        if ix == usize::MAX {
+            return self.all.get(&rel).map_or(&[][..], |v| &v[..]);
+        }
+        match self.ix[ix].get(&key) {
+            None => &[],
+            Some(Ids::One(x)) => std::slice::from_ref(x),
+            Some(Ids::Many(xs)) => xs,
+        }
     }
+}
+
+/// The facts under one key: most keys hold one.
+enum Ids {
+    One(FactId),
+    Many(Vec<FactId>),
 }
 
 #[derive(Default)]
@@ -670,7 +674,7 @@ impl Eval {
                     if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !self.store.alive(id) {
                         continue;
                     }
-                    if meet(&self.h, pg, f, i, id, b, trail) {
+                    if meet(&self.h, &self.store, pg, f, i, id, b, trail) {
                         prems[i] = PremRef::Fact(id);
                         let done = self.pages_solve(pg, f, rest, b, trail, prems, news);
                         undo(b, trail, mark);
@@ -691,7 +695,7 @@ impl Eval {
                 // (a fact an edit added or took out, met where the negation is written: a firing it blocks is
                 // withdrawn, one it lets through is found)
                 for &id in pg.neg_news.get(&l.rel).map_or(&[][..], |v| &v[..]) {
-                    if meet(&self.h, pg, f, i, id, b, trail) {
+                    if meet(&self.h, &self.store, pg, f, i, id, b, trail) {
                         let done = if pg.withdraw || !held(&self.h, &self.store, pg, f, i, b, trail) {
                             prems[i] = PremRef::Neg(0);
                             self.pages_solve(pg, f, rest, b, trail, prems, news)
@@ -999,15 +1003,16 @@ struct Scratch {
 }
 
 /// Whether fact `id` meets premise `i` of `f` under the slots `b`, binding the slots it fills (noted on `trail`).
-fn meet(h: &Heap, pg: &Pages, f: &Fired, i: usize, id: FactId, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
+fn meet(h: &Heap, store: &Store, pg: &Pages, f: &Fired, i: usize, id: FactId, b: &mut [Option<Term>], trail: &mut Vec<usize>) -> bool {
     let mark = trail.len();
     let pats = &f.pats[i];
-    let row = pg.row(id);
-    if f.open_book[i] && !pg.kernel.is_empty() && pg.kernel.contains(&row[0].as_atom().unwrap()) {
+    let persp = store.rec(id).persp;
+    if f.open_book[i] && !pg.kernel.is_empty() && pg.kernel.contains(&persp) {
         return false;
     }
-    let ok = pats.len() == row.len()
-        && row.iter().copied().zip(pats).all(|(v, p)| match *p {
+    let args = store.args(id);
+    let ok = pats.len() == args.len() + 1
+        && std::iter::once(Term::atom(persp)).chain(args.iter().copied()).zip(pats).all(|(v, p)| match *p {
             Pat::Val(c) => c == v,
             Pat::Slot(k) => match b[k] {
                 Some(x) => x == v,
@@ -1063,7 +1068,7 @@ fn held(h: &Heap, store: &Store, pg: &Pages, f: &Fired, i: usize, b: &mut [Optio
         if pg.edit && !store.alive(id) {
             continue;
         }
-        if meet(h, pg, f, i, id, b, trail) {
+        if meet(h, store, pg, f, i, id, b, trail) {
             undo(b, trail, mark);
             return true;
         }
@@ -1120,7 +1125,7 @@ fn solve_ro(h: &Heap, v: &Vocab, store: &Store, pg: &Pages, f: &Fired, steps: &[
                 if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !store.alive(id) {
                     continue;
                 }
-                if meet(h, pg, f, i, id, b, trail) {
+                if meet(h, store, pg, f, i, id, b, trail) {
                     prems[i] = PremRef::Fact(id);
                     solve_ro(h, v, store, pg, f, rest, b, trail, prems, out);
                     undo(b, trail, mark);
@@ -1129,7 +1134,7 @@ fn solve_ro(h: &Heap, v: &Vocab, store: &Store, pg: &Pages, f: &Fired, steps: &[
         }
         BodyElem::Neg(l) if st.news => {
             for &id in pg.neg_news.get(&l.rel).map_or(&[][..], |v| &v[..]) {
-                if meet(h, pg, f, i, id, b, trail) {
+                if meet(h, store, pg, f, i, id, b, trail) {
                     if pg.withdraw || !held(h, store, pg, f, i, b, trail) {
                         prems[i] = PremRef::Neg(0);
                         solve_ro(h, v, store, pg, f, rest, b, trail, prems, out);
