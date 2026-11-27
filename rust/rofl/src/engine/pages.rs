@@ -273,9 +273,7 @@ impl Eval {
             return Some(why);
         }
         for r in rules {
-            let why = if r.has_agg {
-                "aggregate"
-            } else if r.has_thr {
+            let why = if r.has_thr {
                 "threshold"
             } else if !r.lattice_outer.is_empty() {
                 "lattice"
@@ -286,7 +284,7 @@ impl Eval {
             } else if !r.plan.iter().all(|b| match b {
                 BodyElem::Pos(l) | BodyElem::Neg(l) => plain(l),
                 BodyElem::Bi { .. } => true,
-                BodyElem::Agg(_) => false,
+                BodyElem::Agg(a) => a.op != AggOp::AtLeast && a.body.iter().flat_map(|b| b.lits_deep()).all(plain),
             }) {
                 "temporal"
             } else {
@@ -298,33 +296,40 @@ impl Eval {
     }
 
     /// The pass evaluated by the pages core; false when it handed the pass back, the store as the pass found it.
-    pub(super) fn run_pages(&mut self, rules: &[Rc<ERule>]) -> Result<bool, Halt> {
+    /// None: handed back; else the pass's outcome, a wall's included.
+    pub(super) fn run_pages(&mut self, rules: &[Rc<ERule>], mono: &[Rc<ERule>], strat: &[Rc<ERule>]) -> Result<Option<Result<(), Halt>>, Halt> {
         if let Some(why) = self.pages_unfit(rules) {
             if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
                 use std::io::Write;
                 let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off {why} {}", rules.len()));
             }
-            return Ok(false);
+            return Ok(None);
         }
-        let Some(comps) = components_by_rel(rules) else {
+        let Some(comps) = components_by_rel(&self.h, rules) else {
             if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
                 use std::io::Write;
                 let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off neg_cycle {}", rules.len()));
             }
-            return Ok(false);
+            return Ok(None);
         };
-        match self.pages_pass(&comps) {
-            Ok(()) => {}
-            Err(Ok(Back)) | Err(Err(Halt::Budget(..))) => {
+        // (a cell is sealed at the round of each relation it reads: the rounds peeled as the levels peel them)
+        if rules.iter().any(|r| r.has_agg) && self.peel_levels(mono, strat).is_err() {
+            self.pages_declined = true;
+            return Ok(None);
+        }
+        let out = match self.pages_pass(&comps) {
+            Ok(()) => Ok(()),
+            Err(Err(e @ Halt::Budget(..))) => Err(e),
+            Err(Ok(Back)) => {
                 if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
                     use std::io::Write;
                     let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "off back {}", rules.len()));
                 }
                 self.pages_declined = true;
-                return Ok(false);
+                return Ok(None);
             }
             Err(Err(e)) => return Err(e),
-        }
+        };
         if let Ok(f) = std::env::var("ROFL_PAGES_LOG") {
             use std::io::Write;
             let _ = std::fs::OpenOptions::new().create(true).append(true).open(f).and_then(|mut f| writeln!(f, "on {}", rules.len()));
@@ -332,7 +337,7 @@ impl Eval {
         let mut sorted = rules.to_vec();
         sorted.sort_by(|a, b| cmp_js(&a.canon, &b.canon));
         self.active = sorted;
-        Ok(true)
+        Ok(Some(out))
     }
 
     fn pages_pass(&mut self, comps: &[Vec<Rc<ERule>>]) -> Result<(), Result<Back, Halt>> {
@@ -397,6 +402,10 @@ impl Eval {
                 }
             }
         }
+        // what a fault or an unknown left to be carried to its readers is carried by the levels
+        if !self.lat.pass.plain_pending.is_empty() || !self.lat.pass.plain_undecided.is_empty() || !self.lat.carry.undecided.is_empty() {
+            return Err(Ok(Back));
+        }
         Ok(())
     }
 
@@ -428,6 +437,12 @@ impl Eval {
         let outer = self.cur_rule.replace(r.id);
         let was = std::mem::replace(&mut self.firing, true);
         let done = self.pages_solve(pg, f, steps, b, trail, prems, news);
+        // (what the firing wrote of itself, a sealed cell's reflection, is news too)
+        for (rel, ids) in std::mem::take(&mut self.cur_front).by_rel {
+            for id in ids {
+                news.note(rel, id);
+            }
+        }
         let (n, i) = std::mem::take(&mut self.pages_widest);
         if let Some(l) = r.plan.get(i).and_then(|b| b.lit()).filter(|_| n > 0) {
             // (the reads of a firing counted as one, its widest)
@@ -568,7 +583,28 @@ impl Eval {
                 }
                 Ok(())
             }
-            BodyElem::Agg(_) => Err(Ok(Back)),
+            BodyElem::Agg(ag) => {
+                // (an aggregate reads relations closed below: it is solved over the store, as any pass solves it)
+                let a = Sol { s: f.subst(b), prems: prems.clone() };
+                let mut next = Vec::new();
+                self.solve_agg(ag, &a, i, 0, Some(r.id), &mut next).map_err(Err)?;
+                for sol in next {
+                    for (k, var) in f.vars.iter().enumerate() {
+                        if b[k].is_none() {
+                            let w = resolve(&mut self.h, Term::var(*var), &sol.s);
+                            if self.h.is_ground(w) {
+                                b[k] = Some(w);
+                                trail.push(k);
+                            }
+                        }
+                    }
+                    prems[i] = *sol.prems.last().unwrap();
+                    let done = self.pages_solve(pg, f, rest, b, trail, prems, news);
+                    undo(b, trail, mark);
+                    done?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -588,7 +624,7 @@ fn undo(b: &mut [Option<Term>], trail: &mut Vec<usize>, mark: usize) {
 
 /// The rules by the strongly connected components of the relations they conclude, each after those it reads; None
 /// when a negation reads inside its own component.
-fn components_by_rel(rules: &[Rc<ERule>]) -> Option<Vec<Vec<Rc<ERule>>>> {
+fn components_by_rel(h: &Heap, rules: &[Rc<ERule>]) -> Option<Vec<Vec<Rc<ERule>>>> {
     let mut heads: Vec<Sym> = rules.iter().map(|r| r.clause.head.rel).collect();
     heads.sort_unstable();
     heads.dedup();
@@ -596,13 +632,21 @@ fn components_by_rel(rules: &[Rc<ERule>]) -> Option<Vec<Vec<Rc<ERule>>>> {
     let n = heads.len();
     let mut reads: Vec<Vec<usize>> = vec![Vec::new(); n];
     let mut strict: Vec<(usize, usize)> = Vec::new();
+    // a cell an aggregate seals is reflected in the kernel's books: a rule that reads them comes after every rule
+    // that aggregates
+    let sealers: Vec<usize> = rules.iter().filter(|r| r.has_agg).map(|r| at[&r.clause.head.rel]).collect();
+    for r in rules {
+        if r.plan.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom().is_some_and(|p| is_kernel_ledger(h, p))) {
+            reads[at[&r.clause.head.rel]].extend(&sealers);
+        }
+    }
     for r in rules {
         let h = at[&r.clause.head.rel];
         for b in &r.plan {
-            if let Some(l) = b.lit() {
+            for l in b.lits_deep() {
                 if let Some(&k) = at.get(&l.rel) {
                     reads[h].push(k);
-                    if matches!(b, BodyElem::Neg(_)) {
+                    if !matches!(b, BodyElem::Pos(_)) {
                         strict.push((h, k));
                     }
                 }

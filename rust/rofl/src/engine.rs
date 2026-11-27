@@ -3733,8 +3733,8 @@ impl Eval {
         let mut walled = false;
         self.wall.level_rest = None;
         if from.is_none() && !self.pages_declined {
-            if self.run_pages(&safe_rules)? {
-                return self.end_pass(Ok(()), &strat_rules);
+            if let Some(out) = self.run_pages(&safe_rules, &mono, &strat_rules)? {
+                return self.end_pass(out, &strat_rules);
             }
             if self.pages_declined {
                 let out = self.run_pass();
