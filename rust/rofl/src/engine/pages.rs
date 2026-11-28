@@ -15,6 +15,9 @@ struct Pages {
     /// the facts of a relation by the hash of the values a key binds: what a hash shares by chance a meeting drops
     /// a fact's id where the key holds one, else `MANY` and the place of its list in `many`
     ix: Vec<hashbrown::HashTable<(FactId, u32)>>,
+    /// each index's relation and mask, and whether it is open: filled and kept up while a component reads it
+    ix_rel: Vec<(Sym, u64)>,
+    open: Vec<bool>,
     many: Vec<Vec<FactId>>,
     /// the ids in `many`, counted as they come so that the pages' bytes are said without walking them
     many_ids: usize,
@@ -58,9 +61,67 @@ impl Pages {
         }
         let x = self.ix.len();
         self.ix.push(hashbrown::HashTable::new());
+        self.ix_rel.push((rel, mask));
+        self.open.push(false);
         self.ix_of.insert((rel, mask), x);
-        self.masks.entry(rel).or_default().push((mask, x));
         x
+    }
+
+    /// Index `x` filled with every fact of its relation filed so far, and kept up from here on.
+    fn open_ix(&mut self, store: &Store, x: usize) {
+        if self.open[x] {
+            return;
+        }
+        self.open[x] = true;
+        let (rel, m) = self.ix_rel[x];
+        self.masks.entry(rel).or_default().push((m, x));
+        let ids = self.all.get(&rel).cloned().unwrap_or_default();
+        let many = &self.many;
+        self.ix[x].reserve(ids.len(), |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
+        for id in ids {
+            self.put(store, x, m, id, store.rec(id).persp, store.args(id));
+        }
+    }
+
+    /// Index `x` emptied: nothing read later asks it.
+    fn close_ix(&mut self, x: usize) {
+        if !self.open[x] {
+            return;
+        }
+        self.open[x] = false;
+        let (rel, _) = self.ix_rel[x];
+        if let Some(ms) = self.masks.get_mut(&rel) {
+            ms.retain(|&(_, y)| y != x);
+        }
+        for (v, _) in std::mem::take(&mut self.ix[x]) {
+            if v & MANY != 0 {
+                let l = std::mem::take(&mut self.many[(v & !MANY) as usize]);
+                self.many_ids -= l.len();
+            }
+        }
+    }
+
+    fn put(&mut self, store: &Store, x: usize, m: u64, id: FactId, persp: Sym, args: &[Term]) {
+        Self::put_in(&mut self.ix[x], &mut self.many, &mut self.many_ids, store, m, id, persp, args);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn put_in(ix: &mut hashbrown::HashTable<(FactId, u32)>, many: &mut Vec<Vec<FactId>>, many_ids: &mut usize, store: &Store, m: u64, id: FactId, persp: Sym, args: &[Term]) {
+        let k = Self::key_of(persp, args, m);
+        match ix.find_mut(spread(k), |e| e.1 == high(k)) {
+            None => {
+                ix.insert_unique(spread(k), (id, high(k)), |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
+            }
+            Some((v, _)) => {
+                if *v & MANY == 0 {
+                    many.push(vec![*v]);
+                    *v = MANY | (many.len() - 1) as FactId;
+                    *many_ids += 1;
+                }
+                many[(*v & !MANY) as usize].push(id);
+                *many_ids += 1;
+            }
+        }
     }
 
     fn file(&mut self, h: &Heap, store: &Store, rel: Sym, id: FactId) {
@@ -80,31 +141,8 @@ impl Pages {
         if let Some(ms) = self.masks.get(&rel) {
             let args = store.args(id);
             for &(m, x) in ms {
-                let k = Self::key_of(persp, args, m);
-                let (ix, many, many_ids) = (&mut self.ix[x], &mut self.many, &mut self.many_ids);
-                match ix.find_mut(spread(k), |e| e.1 == high(k)) {
-                    None => {
-                        ix.insert_unique(spread(k), (id, high(k)), |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
-                    }
-                    Some((v, _)) => {
-                        if *v & MANY == 0 {
-                            many.push(vec![*v]);
-                            *v = MANY | (many.len() - 1) as FactId;
-                            *many_ids += 1;
-                        }
-                        many[(*v & !MANY) as usize].push(id);
-                        *many_ids += 1;
-                    }
-                }
+                Self::put_in(&mut self.ix[x], &mut self.many, &mut self.many_ids, store, m, id, persp, args);
             }
-        }
-    }
-
-    /// Room for `n` more facts of `rel` in each of its indexes, made at once instead of by rehashing as they come.
-    fn reserve(&mut self, store: &Store, rel: Sym, n: usize) {
-        for &(m, x) in self.masks.get(&rel).map_or(&[][..], |v| &v[..]) {
-            let many = &self.many;
-            self.ix[x].reserve(n, |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
         }
     }
 
@@ -149,6 +187,30 @@ fn high(k: u64) -> u32 {
 /// A key as the index places it: the low bits of a product are the weak ones, so the high half is folded into them.
 fn spread(k: u64) -> u64 {
     k ^ (k >> 32)
+}
+
+/// The components each index is open over: from the first whose rule reads it to the last in which a rule reading it
+/// can fire again, the last that concludes a relation the rule reads (news meets every rule fired so far).
+fn ix_spans(pg: &Pages, fired: &[Vec<Fired>]) -> (Vec<usize>, Vec<usize>) {
+    let mut last_head: FxMap<Sym, usize> = FxMap::default();
+    for (k, fs) in fired.iter().enumerate() {
+        for f in fs {
+            last_head.insert(f.r.clause.head.rel, k);
+        }
+    }
+    let (mut first, mut last) = (vec![usize::MAX; pg.ix.len()], vec![0; pg.ix.len()]);
+    for (k, fs) in fired.iter().enumerate() {
+        for f in fs {
+            let until = f.r.plan.iter().filter_map(|b| b.lit()).filter_map(|l| last_head.get(&l.rel)).fold(k, |a, &b| a.max(b));
+            let mut ixs: Vec<usize> = f.whole.iter().chain(f.from.iter().flat_map(|(_, o)| o.iter())).map(|st| st.ix).filter(|&x| x != usize::MAX).collect();
+            ixs.extend(f.r.plan.iter().filter_map(|b| if let BodyElem::Neg(l) = b { pg.ix_of.get(&(l.rel, (1u64 << (l.args.len() + 1).min(63)) - 1)).copied() } else { None }));
+            for x in ixs {
+                first[x] = first[x].min(k);
+                last[x] = last[x].max(until);
+            }
+        }
+    }
+    (first, last)
 }
 
 /// The mark of a key that holds more than one fact (an id never has its top bit).
@@ -462,8 +524,14 @@ impl Eval {
         // (news meets every rule fired so far, as the levels deliver it to every rule active)
         // (a pass a wall stopped goes on from the component it stopped in: those below it are whole)
         let from = std::mem::take(&mut self.pages_from);
+        let (first, last) = ix_spans(&pg, &fired);
         for (k, fs) in fired.iter().enumerate().skip(from) {
             self.pages_at = k;
+            for (x, (&a, &b)) in first.iter().zip(&last).enumerate() {
+                if a <= k && k <= b {
+                    pg.open_ix(&self.store, x);
+                }
+            }
             // a nearest answers from the round of its step on, which negates its condition
             if self.vc.any {
                 let k = rounds[k];
@@ -473,6 +541,9 @@ impl Eval {
             let tasks: Vec<Task> = fs.iter().map(|f| Task::Fire(f, None)).collect();
             self.pages_round(&pg, &tasks, None, &mut sc, &mut news)?;
             self.pages_news(&mut pg, &fired[..=k], &mut sc, news)?;
+            for (x, _) in last.iter().enumerate().filter(|(_, &b)| b == k) {
+                pg.close_ix(x);
+            }
         }
         // what a fault or an unknown left to be carried to its readers is carried by the levels
         if !self.lat.pass.plain_pending.is_empty() || !self.lat.pass.plain_undecided.is_empty() || !self.lat.carry.undecided.is_empty() {
@@ -515,7 +586,6 @@ impl Eval {
         }
         for rel in read {
             let ids = self.store.rel_all(&self.h, rel);
-            pg.reserve(&self.store, rel, ids.len());
             for id in ids {
                 pg.file(&self.h, &self.store, rel, id);
             }
@@ -875,6 +945,9 @@ impl Eval {
             e.round_of.get(&e.books.fact(r.rel, r.persp)).and_then(|k| index.get(k)).copied().unwrap_or(0)
         };
         let (mut pg, fired) = self.pages_build(&comps);
+        for x in 0..pg.ix.len() {
+            pg.open_ix(&self.store, x);
+        }
         pg.edit = true;
         // (what was taken out is met where a negation reads it, so it is filed though dead)
         for &x in removed {
@@ -1132,7 +1205,7 @@ fn held(h: &Heap, store: &Store, pg: &Pages, f: &Fired, i: usize, b: &mut [Optio
         mask |= (bound as u64) << j;
     }
     let BodyElem::Neg(l) = &f.r.plan[i] else { unreachable!() };
-    let ix = pg.ix_of.get(&(l.rel, mask)).copied().unwrap_or(usize::MAX);
+    let ix = pg.ix_of.get(&(l.rel, mask)).copied().filter(|&x| pg.open[x]).unwrap_or(usize::MAX);
     let key = if ix == usize::MAX { 0 } else { key(h, f, i, mask, b) };
     for &id in pg.under(l.rel, ix, key) {
         if pg.edit && !store.alive(id) {
