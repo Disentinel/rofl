@@ -422,6 +422,8 @@ destructures_at[code](D, Local, Index, File) :- declarator_id[code](D, R), patte
 
 array_elem[flow](A, I, E) :- array[value](A), nth[tree](A, I, E), parent[tree](A, E).
 array_elem[flow](A, I, X) :- spread_elems[value](A, I, X).
+-- the element of the array an expression holds, read where a rule asks: both readers know the expression
+view elem_at(X, I, E).
 elem_at[flow](X, I, E)    :- node_of[flow](X, A), array_elem[flow](A, I, E).
 -- `list[0]`: a read by an index the layer knows is the element at that index
 may_be[flow](N, VK, V) :- member_cp[flow](N, A, I), array_elem[flow](A, I, E), may_be[flow](E, VK, V).

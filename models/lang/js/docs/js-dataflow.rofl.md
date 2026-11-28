@@ -904,6 +904,10 @@ In the flow:
 1. if [`array`](#array)(Y), [`nth`](#nth)(Y, I, E), and [`parent`](#parent)(Y, E);
 2. if [`spread_elems`](#spread_elems)(Y, I, E).
 
+> the element of the array an expression holds, read where a rule asks: both readers know the expression
+
+`elem_at` of X, I and E is read through its rules and never stored.
+
 <a id="elem_at"></a>The element I of a node X is a node E if [`node_of`](#node_of)(X, Y) and [`array_elem`](#array_elem)(Y, I, E).
 
 > `list[0]`: a read by an index the layer knows is the element at that index
