@@ -542,10 +542,21 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
         if let Err(e) = s.assert(&asks_text(&rels)) { fail(o.json, USAGE, &e); }
     }
     evaluate_world(o, s);
+    cool_and_go_on(o, s);
     for d in &s.eval.diags { eprintln!("diag: {d}"); }
     let read: Vec<String> = sources.iter().map(|(f, _)| f.clone()).chain(o.below.iter().cloned()).collect();
     let units = units.map(|u| with_lemmas(s, u)).unwrap_or_default();
     keep_loaded(o, world, s, units, &read, slot, disk);
+}
+
+/// A world at the memory wall cooled to disk and gone on with (`Session::cool_and_go_on`), said on stderr.
+fn cool_and_go_on(o: &Opts, s: &mut Session) {
+    if o.ticks > 0 || !o.retracts.is_empty() || !s.eval.memory_cut() { return; }
+    let t = std::time::Instant::now();
+    match s.cool_and_go_on(&std::env::temp_dir()) {
+        Ok(n) => eprintln!("the world met the memory wall, was cooled to disk {n} time{} and went on, in {} ms in all{}", if n == 1 { "" } else { "s" }, t.elapsed().as_millis(), if s.eval.memory_cut() { "; it met the wall again where cooling gained nothing" } else { "" }),
+        Err(e) => eprintln!("{e}"),
+    }
 }
 
 /// A file of a world kept by volumes (`<slot>.q<sum>.vol`): no world of its own to take by delta.

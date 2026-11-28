@@ -310,6 +310,48 @@ impl Session {
         }
     }
 
+    /// THE MEMORY WALL COOLS THE WORLD TO DISK. A world that stopped there is written to `dir` as a volume (an
+    /// overlay over the one it was cooled to before), opened again from it, its facts the file's pages, which the
+    /// system takes back as it needs them, and goes on from where it stopped. It stops for good where it meets the
+    /// wall again having gone no step further. Returns how many times it was cooled.
+    pub fn cool_and_go_on(&mut self, dir: &std::path::Path) -> Result<usize, String> {
+        use std::sync::atomic::Ordering::Relaxed;
+        let (mut times, mut files) = (0, Vec::new());
+        let done = loop {
+            if !self.eval.memory_cut() {
+                break Ok(times);
+            }
+            let steps = self.eval.steps;
+            let p = dir.join(format!("rofl-cool-{}-{times}.vol", std::process::id())).display().to_string();
+            let chain = self.kept.files.clone();
+            if let Err(e) = self.keep_volume_as(&p, "", None, &chain) {
+                break Err(format!("the world met the memory wall and could not be cooled to {p}: {e}"));
+            }
+            files.push(p.clone());
+            let mut o = match Session::open_volume_in(&p, self.eval.budget, None) {
+                Ok(o) => o,
+                Err(e) => break Err(format!("the world met the memory wall and could not be opened again from {p}: {e}")),
+            };
+            let e = &self.eval;
+            (o.eval.space, o.eval.disk, o.eval.mode, o.eval.retain_ticks, o.eval.cost.on_hot) = (e.space, e.disk, e.mode, e.retain_ticks, e.cost.on_hot);
+            *self = o;
+            crate::engine::MEMORY_STOPPED.store(false, Relaxed);
+            times += 1;
+            if let Err(h) = self.resume(self.eval.budget - steps) {
+                break Err(crate::describe(&h));
+            }
+            if self.eval.steps <= steps {
+                break Ok(times);
+            }
+        };
+        // the files stay mapped where they were unlinked; nothing is kept over them
+        for f in files {
+            let _ = std::fs::remove_file(f);
+        }
+        self.kept = Default::default();
+        done
+    }
+
     /// The world a volume holds, its facts, names and witnesses read from the file where they lie.
     pub fn open_volume(path: &str, budget: i64) -> Result<Session, String> {
         Session::open_volume_in(path, budget, None)

@@ -1146,7 +1146,7 @@ impl<'a> Parts<'a> {
         match self {
             Parts::Columns(c) => c.next_block(h),
             // a refused piece is said with the whole text's line
-            Parts::Text { src, pieces } => pieces.next().map(|p| parse_lexed(h, lex(p)).or_else(|d| Err(parse(h, src).err().unwrap_or(d)))),
+            Parts::Text { src, pieces } => pieces.next().map(|p| parse_lexed(h, lex(p)).map_err(|d| parse(h, src).err().unwrap_or(d))),
         }
     }
 }

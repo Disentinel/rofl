@@ -233,6 +233,15 @@ model over 493 vscode files in a cgroup of 6 GB (2026-11-18): before, killed by
 the kernel at 6.1 GB with no line; now stopped at 5.2 to 5.4 GB with the line,
 whole. Nothing to turn on or off.
 
+**A question verb's world at the memory wall is cooled to disk and goes on** (`Session::cool_and_go_on`). Where an
+evaluation of `rofl ask`, `why`, `whynot`, `excise` or `rofl load` stops at the memory wall, the world is written as a
+volume under the system's temporary directory (`rofl-cool-<pid>-<n>.vol`, each later one an overlay over the one
+before), opened again from it with its facts on the file's pages, which the system takes back as it needs, and
+resumed from where it stopped; stderr says `the world met the memory wall, was cooled to disk N times and went on`.
+It stops for good, partial as above, where it meets the wall again without a step further. The files are unlinked
+once the world is whole. Measured: hono (the JS model, 557 k facts) in a cgroup of 2.5 GB stopped partial at 1.9 GB;
+now cooled once, the whole answer, 29 552 rows equal to a run with room, 70 s against 49 s.
+
 **No row wall by default; the memory is the wall.** A world holds as many rows
 as the memory this process may use holds (above): `--space N` sets a wall of N
 rows only where a caller asks for one, a check harness whose world's meaning is
@@ -737,8 +746,8 @@ by the rounds, with the same answers. A step or disk wall that falls in a pages 
 resumed: the facts it made stand, and the pass fires again over them. The sources are mapped, not read onto the
 heap, and the facts of a world that cuts a book are cut by file to a spill under the system's temporary directory
 (`rofl-cut-<pid>-<n>.txt`, unlinked once mapped), read back by a thaw. Past the memory this process may use, the
-evaluation stops as at a step wall (above). The design the owner agreed (2026-10-25: a file a volume, cooled to
-disk) is not built on this path: a corpus larger than one heap stops at the memory wall, partial, exit 5.
+world is cooled to disk and goes on (above); the owner's design (2026-10-25: a file a volume, cooled to disk) is
+built so far as the whole world cooled at once, not a volume a file.
 What crosses files is no book (owner, 2026-11-07, f_surface_is_replaced_by_lemmas_by_keys). The harnesses that
 drive the other parts, each over `rofl serve`:
 
