@@ -13,7 +13,9 @@ struct Pages {
     kernel: FxSet<Sym>,
     all: FxMap<Sym, Vec<FactId>>,
     /// the facts of a relation by the hash of the values a key binds: what a hash shares by chance a meeting drops
-    ix: Vec<FxMap<u64, Ids>>,
+    /// a fact's id where the key holds one, else `MANY` and the place of its list in `many`
+    ix: Vec<FxMap<u64, FactId>>,
+    many: Vec<Vec<FactId>>,
     ix_of: FxMap<(Sym, u64), usize>,
     masks: FxMap<Sym, Vec<(u64, usize)>>,
     /// the round of news each fact came in, by its id (`NO_ROW` for a fact not filed), and the round being met
@@ -78,15 +80,15 @@ impl Pages {
             for &(m, x) in ms {
                 match self.ix[x].entry(Self::key_of(persp, args, m)) {
                     std::collections::hash_map::Entry::Vacant(e) => {
-                        e.insert(Ids::One(id));
+                        e.insert(id);
                     }
                     std::collections::hash_map::Entry::Occupied(mut e) => {
                         let v = e.get_mut();
-                        if let Ids::One(x) = *v {
-                            *v = Ids::Many(vec![x]);
+                        if *v & MANY == 0 {
+                            self.many.push(vec![*v]);
+                            *v = MANY | (self.many.len() - 1) as FactId;
                         }
-                        let Ids::Many(xs) = v else { unreachable!() };
-                        xs.push(id);
+                        self.many[(*v & !MANY) as usize].push(id);
                     }
                 }
             }
@@ -99,17 +101,14 @@ impl Pages {
         }
         match self.ix[ix].get(&key) {
             None => &[],
-            Some(Ids::One(x)) => std::slice::from_ref(x),
-            Some(Ids::Many(xs)) => xs,
+            Some(x) if x & MANY == 0 => std::slice::from_ref(x),
+            Some(x) => &self.many[(x & !MANY) as usize],
         }
     }
 }
 
-/// The facts under one key: most keys hold one.
-enum Ids {
-    One(FactId),
-    Many(Vec<FactId>),
-}
+/// The mark of a key that holds more than one fact (an id never has its top bit).
+const MANY: FactId = 1 << 31;
 
 #[derive(Default)]
 struct KeyHash(u64);
