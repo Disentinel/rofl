@@ -238,7 +238,9 @@ evaluation of `rofl ask`, `why`, `whynot`, `excise` or `rofl load` stops at the 
 volume under the system's temporary directory (`rofl-cool-<pid>-<n>.vol`, each later one an overlay over the one
 before), opened again from it with its facts on the file's pages, which the system takes back as it needs, and
 resumed from where it stopped; stderr says `the world met the memory wall, was cooled to disk N times and went on`.
-It stops for good, partial as above, where it meets the wall again without a step further. The files are unlinked
+It stops for good, partial as above, where going on from a cooling took it fewer steps than it went before that
+cooling (what it holds beside the file then grows faster than a cooling frees: vscode/src/vs/platform, 18.6 M facts,
+in 10 GB went 33 M steps, then 34 M, then 0.1 M). The files are unlinked
 once the world is whole. Measured: hono (the JS model, 557 k facts) in a cgroup of 2.5 GB stopped partial at 1.9 GB;
 now cooled once, the whole answer, 29 552 rows equal to a run with room, 70 s against 49 s.
 

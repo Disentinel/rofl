@@ -312,16 +312,18 @@ impl Session {
 
     /// THE MEMORY WALL COOLS THE WORLD TO DISK. A world that stopped there is written to `dir` as a volume (an
     /// overlay over the one it was cooled to before), opened again from it, its facts the file's pages, which the
-    /// system takes back as it needs them, and goes on from where it stopped. It stops for good where it meets the
-    /// wall again having gone no step further. Returns how many times it was cooled.
+    /// system takes back as it needs them, and goes on from where it stopped. It stops for good where going on from
+    /// a cooling took it fewer steps than it went before that cooling: what it holds outside the file grows faster
+    /// than the cooling frees. Returns how many times it was cooled.
     pub fn cool_and_go_on(&mut self, dir: &std::path::Path) -> Result<usize, String> {
         use std::sync::atomic::Ordering::Relaxed;
-        let (mut times, mut files) = (0, Vec::new());
+        let (mut times, mut files, mut mark, mut went) = (0, Vec::new(), 0, 0);
         let done = loop {
-            if !self.eval.memory_cut() {
+            let steps = self.eval.steps;
+            if !self.eval.memory_cut() || (times > 0 && steps - mark < went) {
                 break Ok(times);
             }
-            let steps = self.eval.steps;
+            (went, mark) = (steps - mark, steps);
             let p = dir.join(format!("rofl-cool-{}-{times}.vol", std::process::id())).display().to_string();
             let chain = self.kept.files.clone();
             if let Err(e) = self.keep_volume_as(&p, "", None, &chain) {
@@ -339,9 +341,6 @@ impl Session {
             times += 1;
             if let Err(h) = self.resume(self.eval.budget - steps) {
                 break Err(crate::describe(&h));
-            }
-            if self.eval.steps <= steps {
-                break Ok(times);
             }
         };
         // the files stay mapped where they were unlinked; nothing is kept over them

@@ -554,7 +554,7 @@ fn cool_and_go_on(o: &Opts, s: &mut Session) {
     if o.ticks > 0 || !o.retracts.is_empty() || !s.eval.memory_cut() { return; }
     let t = std::time::Instant::now();
     match s.cool_and_go_on(&std::env::temp_dir()) {
-        Ok(n) => eprintln!("the world met the memory wall, was cooled to disk {n} time{} and went on, in {} ms in all{}", if n == 1 { "" } else { "s" }, t.elapsed().as_millis(), if s.eval.memory_cut() { "; it met the wall again where cooling gained nothing" } else { "" }),
+        Ok(n) => eprintln!("the world met the memory wall, was cooled to disk {n} time{} and went on, in {} ms in all{}", if n == 1 { "" } else { "s" }, t.elapsed().as_millis(), if s.eval.memory_cut() { "; it met the wall again sooner than before, and stopped there" } else { "" }),
         Err(e) => eprintln!("{e}"),
     }
 }
