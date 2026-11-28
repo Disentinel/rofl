@@ -829,12 +829,16 @@ pub struct Eval {
     kept_carry: Option<Rc<layer::Carried>>,
     /// Which rules the pass under way fires, where the plan cuts a book (`engine/stages.rs`).
     stage_pass: StagePass,
+    /// The component of relations a pages pass is in, and the one a resumed pass starts from.
+    pages_at: usize,
+    pages_from: usize,
     /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
     /// the pages core handed this pass back: it is evaluated again from the start by the levels
     pages_declined: bool,
     /// the widest read of the firing the pages core is in, and the body element that read it
-    pages_widest: (usize, usize),
+    /// what a pages firing read at each premise: the rows, the widest read and the binding there
+    pages_reads: Vec<(u64, usize, Option<Subst>)>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
@@ -2355,9 +2359,11 @@ impl Eval {
             whole: None,
             kept_carry: None,
             stage_pass: StagePass::Whole,
+            pages_at: 0,
+            pages_from: 0,
             staged_away: None,
             pages_declined: false,
-            pages_widest: (0, 0),
+            pages_reads: Vec::new(),
             lemma_heads: None,
             lower_texts: None,
             lower_sources: None,

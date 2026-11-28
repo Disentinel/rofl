@@ -14508,3 +14508,4 @@ removed_in("rust/rofl/src/engine/levels.rs", "047d6a2").
 removed_in("rust/rofl/tests/far.rs", "047d6a2").
 removed_in("rust/rofl/tests/held.rs", "047d6a2").
 removed_in("rust/rofl/tests/volumes.rs", "047d6a2").
+removed_in("rust/rofl/src/store/wire.rs", "eaebb78").

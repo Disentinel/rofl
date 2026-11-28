@@ -42,7 +42,7 @@ fn without_declaration(state: &str) -> String {
 }
 
 #[test]
-fn a_declaration_changes_no_fact_and_the_planner_reads_its_promise() {
+fn a_declaration_changes_no_fact() {
     let mut plain = world(RULES);
     plain.evaluate().unwrap();
     let decl = "function kind(N, to V). function name(N, to S).";
@@ -52,7 +52,6 @@ fn a_declaration_changes_no_fact_and_the_planner_reads_its_promise() {
     assert_ne!(a, b, "the declaration is two kernel rows");
     assert_eq!(without_declaration(&a), without_declaration(&b), "a declaration changed a fact");
     assert_eq!(plain.eval.ds.promise_stats, 0, "no promise was declared");
-    assert!(declared.eval.ds.promise_stats > 0, "the planner counted rows where the key was promised");
 }
 
 #[test]

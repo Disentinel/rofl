@@ -203,6 +203,9 @@ impl Eval {
             self.charge_row(Some(rule), true)?;
             self.write_derived_by(rule, rel, persp, &args, id, &mut Front::default());
         }
+        if pages {
+            self.pages_from = cut.comp;
+        }
         self.wall.resume_at = (!pages).then_some(cut);
         let out = self.run_pass_from();
         self.wall.resume_at = None;

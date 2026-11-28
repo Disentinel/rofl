@@ -351,10 +351,16 @@ impl Eval {
         None
     }
 
+    /// A world that reads its own profile or gives its rules' orders as facts is the planner's: its rounds evaluate it.
+    fn planned_by_profile(&mut self) -> bool {
+        let (p, plan, fp) = (self.h.intern("profile"), self.h.intern("plan"), self.h.intern("fixpointplan"));
+        self.rules.iter().any(|r| r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| l.persp.as_atom() == Some(p))) || !self.store.rel_persp(&self.h, plan, fp).is_empty()
+    }
+
     /// The pass evaluated by the pages core; false when it handed the pass back, the store as the pass found it.
     /// None: handed back; else the pass's outcome, a wall's included.
     pub(super) fn run_pages(&mut self, rules: &[Rc<ERule>], mono: &[Rc<ERule>], strat: &[Rc<ERule>]) -> Result<Option<Result<(), Halt>>, Halt> {
-        if self.pages_unfit(rules).is_some() {
+        if self.pages_unfit(rules).is_some() || self.planned_by_profile() {
             return Ok(None);
         }
         // THE ROUNDS ARE THE LEVELS' OWN: peeled by book, a negation or an aggregate reading a round below its own
@@ -388,6 +394,7 @@ impl Eval {
                 let tail = self.wall.cut_tail.take();
                 if let Some(c) = self.wall.cutting.as_mut() {
                     c.pages = true;
+                    c.comp = self.pages_at;
                     c.fl = Some(InFlight::Rest { sols: Vec::new(), out: Front::default(), tail });
                 }
                 Err(e)
@@ -408,7 +415,10 @@ impl Eval {
         let (mut pg, fired) = self.pages_build(comps);
         let mut sc = Scratch::default();
         // (news meets every rule fired so far, as the levels deliver it to every rule active)
-        for (k, fs) in fired.iter().enumerate() {
+        // (a pass a wall stopped goes on from the component it stopped in: those below it are whole)
+        let from = std::mem::take(&mut self.pages_from);
+        for (k, fs) in fired.iter().enumerate().skip(from) {
+            self.pages_at = k;
             // a nearest answers from the round of its step on, which negates its condition
             if self.vc.any {
                 let k = rounds[k];
@@ -571,13 +581,17 @@ impl Eval {
             let n = self.cost.activation_by_rule.len() as u64 + 1;
             self.cost.activation_by_rule.entry(r.id).or_insert(n);
         }
+        let read0 = self.cost.read_rows;
+        let outer_reads = std::mem::replace(&mut self.pages_reads, vec![(0, 0, None); r.plan.len()]);
         let outer = self.cur_rule.replace(r.id);
         let was = std::mem::replace(&mut self.firing, true);
         let done = match found {
             None => self.pages_solve(pg, f, steps, b, trail, prems, news),
             Some(fd) => {
                 self.cost.read_rows += fd.read;
-                self.pages_widest = fd.widest;
+                for (e, (n, w, at)) in self.pages_reads.iter_mut().zip(&fd.reads) {
+                    *e = (*n, *w, at.as_ref().map(|b| f.subst(b)));
+                }
                 fd.sols.iter().try_for_each(|(b, ps)| self.pages_leaf(pg, f, b, ps, news))
             }
         };
@@ -587,11 +601,28 @@ impl Eval {
                 news.note(rel, id);
             }
         }
-        let (n, i) = std::mem::take(&mut self.pages_widest);
-        if let Some(l) = r.plan.get(i).and_then(|b| b.lit()).filter(|_| n > 0) {
-            // (the reads of a firing counted as one, its widest)
-            self.cost.read_rows -= n as u64;
-            self.note_read(l, &Subst::new(), n);
+        // (the reads of a firing noted at once: by premise, and the rule's at the premise that read the most)
+        let reads = std::mem::replace(&mut self.pages_reads, outer_reads);
+        let read = self.cost.read_rows - read0;
+        if read > 0 {
+            for (i, (n, w, at)) in reads.iter().enumerate().filter(|(_, x)| x.0 > 0) {
+                let Some(key) = cost::prem_key(&r.plan[i]) else { continue };
+                let widest = match (at, r.plan[i].lit()) {
+                    (Some(sb), Some(l)) if *w > self.cost.prem_cost.get(&(r.id, key)).map_or(0, |c| c.widest.n) => Some(cost::Widest { n: *w, at: l.args.iter().map(|a| resolve(&mut self.h, *a, sb)).collect() }),
+                    _ => None,
+                };
+                let c = self.cost.prem_cost.entry((r.id, key)).or_default();
+                c.read += n;
+                if let Some(wd) = widest {
+                    c.widest = wd;
+                }
+            }
+            let best = (0..reads.len()).max_by_key(|&i| reads[i].0).unwrap_or(0);
+            if let Some(l) = r.plan.get(best).and_then(|b| b.lit()) {
+                self.cost.read_rows = read0;
+                let sb = reads[best].2.clone().unwrap_or_default();
+                self.note_read(l, &sb, read as usize);
+            }
         }
         if at.is_none() {
             self.cost.fresh_whole_by_rule.entry(r.id).or_insert((news.keys.len() - fresh0) as u64);
@@ -654,8 +685,11 @@ impl Eval {
                 let key = key(&self.h, f, i, st.mask, b);
                 let under = if st.news && st.mask == 0 { pg.news.get(&l.rel).map_or(&[][..], |v| &v[..]) } else { pg.under(l.rel, st.ix, key) };
                 self.cost.read_rows += under.len() as u64;
-                if under.len() > self.pages_widest.0 {
-                    self.pages_widest = (under.len(), i);
+                let e = &mut self.pages_reads[i];
+                e.0 += under.len() as u64;
+                if under.len() > e.1 {
+                    e.1 = under.len();
+                    e.2 = Some(f.subst(b));
                 }
                 for &id in under {
                     if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !self.store.alive(id) {
@@ -837,6 +871,7 @@ impl Eval {
             for f in &fired[j] {
                 for (i, _) in &f.from {
                     if matches!(&f.r.plan[*i], BodyElem::Neg(l) if pg.neg_news.contains_key(&l.rel)) {
+                        d.negated += 1;
                         if let Err(e) = self.pages_fire(&pg, f, Some(*i), None, &mut sc, &mut Front::default()) {
                             return Err(self.pages_delta_failed(e));
                         }
@@ -947,6 +982,7 @@ impl Eval {
             for f in &fired[j] {
                 for (i, _) in &f.from {
                     if matches!(&f.r.plan[*i], BodyElem::Neg(l) if pg.neg_news.contains_key(&l.rel)) {
+                        d.negated += 1;
                         if let Err(e) = self.pages_fire(&pg, f, Some(*i), None, &mut sc, &mut news) {
                             return Err(self.pages_delta_failed(e));
                         }
@@ -1064,7 +1100,8 @@ fn held(h: &Heap, store: &Store, pg: &Pages, f: &Fired, i: usize, b: &mut [Optio
 struct Found {
     sols: Vec<(Vec<Option<Term>>, Vec<PremRef>)>,
     read: u64,
-    widest: (usize, usize),
+    /// by premise: the rows read, the widest read and the slots bound there
+    reads: Vec<(u64, usize, Option<Vec<Option<Term>>>)>,
 }
 
 /// Whether `f` is solved without writing: no closure, no aggregate, a builtin only `=` or `!=` over variables and
@@ -1101,8 +1138,13 @@ fn solve_ro(h: &Heap, v: &Vocab, store: &Store, pg: &Pages, f: &Fired, steps: &[
             let k = key(h, f, i, st.mask, b);
             let under = if st.news && st.mask == 0 { pg.news.get(&l.rel).map_or(&[][..], |v| &v[..]) } else { pg.under(l.rel, st.ix, k) };
             out.read += under.len() as u64;
-            if under.len() > out.widest.0 {
-                out.widest = (under.len(), i);
+            if out.reads.len() < r.plan.len() {
+                out.reads.resize(r.plan.len(), (0, 0, None));
+            }
+            let e = &mut out.reads[i];
+            e.0 += under.len() as u64;
+            if under.len() > e.1 {
+                (e.1, e.2) = (under.len(), Some(b.to_vec()));
             }
             for &id in under {
                 if (st.old || st.news) && (pg.news_of[id as usize] == pg.round) != st.news || pg.edit && !store.alive(id) {

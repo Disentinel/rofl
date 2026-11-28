@@ -11,7 +11,8 @@ fn write_patterns(w: &mut VolW, facts: &Facts, by_pat: Option<&ArgIndex>) {
     let Some(by_pat) = by_pat else {
         return w.u32(u32::MAX);
     };
-    let mut masks: Vec<&u32> = by_pat.keys().collect();
+    // over a base, an index the base does not hold is not written: it is built again where a question needs it
+    let mut masks: Vec<&u32> = by_pat.keys().filter(|m| !w.is_over() || w.in_base(&by_pat[*m].bottom().ids)).collect();
     masks.sort_unstable();
     w.u32(masks.len() as u32);
     for m in masks {
