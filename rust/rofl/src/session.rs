@@ -906,17 +906,22 @@ impl Session {
     /// Texts loaded one after another as `load` loads each, the program prepared once after the last and not after
     /// each: a refusal names the text by its place, and what loaded before it stays, as when they load one by one.
     pub fn load_all(&mut self, srcs: &[&str], who: Option<&str>) -> Result<usize, (usize, Vec<String>)> {
-        let mut admitted = 0;
+        Ok(self.load_each(srcs, who)?.iter().map(|r| r.admitted).sum())
+    }
+
+    /// `load_all`, and of each text what it gave as `facts_of` reads it.
+    pub fn load_each(&mut self, srcs: &[&str], who: Option<&str>) -> Result<Vec<crate::program::Loaded>, (usize, Vec<String>)> {
+        let mut out = Vec::new();
         for (i, src) in srcs.iter().enumerate() {
             let r = self.told(crate::journal::Verb::Load, |s| crate::program::load_program(&mut s.eval, src, who));
             if !r.ok {
                 self.eval.reprepare();
                 return Err((i, r.diagnostics));
             }
-            admitted += r.admitted;
+            out.push(r);
         }
         self.eval.reprepare();
-        Ok(admitted)
+        Ok(out)
     }
 
     fn load_untold(&mut self, src: &str, who: Option<&str>) -> Result<usize, Vec<String>> {

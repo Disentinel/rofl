@@ -534,7 +534,7 @@ fn build_world(o: &Opts, world: &[String], s: &mut Session, slot: &Option<String
     // what each file brought is read now, and the texts dropped before the evaluation, not held through it
     let units = {
         let loaded = load_files(o, s, &sources);
-        (o.kept.is_some() || slot.is_some()).then(|| units_of(s, &loaded))
+        (o.kept.is_some() || slot.is_some()).then(|| units_of(loaded))
     };
     load_below(o, s, &sources);
     let disk = disk_wall(o, s, slot);
@@ -644,13 +644,11 @@ fn load_sources(o: &Opts) -> Vec<(String, Option<String>)> {
 }
 
 /// Each source loaded into the world, refused with its diagnostics; returned with its text, for what it asserts.
-fn load_files(o: &Opts, s: &mut Session, sources: &[(String, Option<String>)]) -> Vec<(String, String)> {
+fn load_files(o: &Opts, s: &mut Session, sources: &[(String, Option<String>)]) -> Vec<(String, String, rofl::program::Loaded)> {
     let loaded: Vec<(String, String)> = sources.iter().map(|(f, text)| (f.clone(), text.clone().unwrap_or_else(|| read(o.json, f)))).collect();
     let texts: Vec<&str> = loaded.iter().map(|(_, t)| t.as_str()).collect();
-    if let Err((i, d)) = s.load_all(&texts, None) {
-        fail(o.json, FILE_REFUSED, &format!("{} refused:\n  {}", loaded[i].0, d.join("\n  ")));
-    }
-    loaded
+    let read = s.load_each(&texts, None).unwrap_or_else(|(i, d)| fail(o.json, FILE_REFUSED, &format!("{} refused:\n  {}", loaded[i].0, d.join("\n  "))));
+    loaded.into_iter().zip(read).map(|((f, t), r)| (f, t, r)).collect()
 }
 
 /// The world below (`--below`), built and evaluated under the run's walls, and fed to this one before it evaluates.
@@ -714,13 +712,10 @@ fn evaluate_world(o: &Opts, s: &mut Session) {
 
 /// Each file loaded, with what it asserted and the files of the nodes it names: a delta takes a file's facts out by
 /// this (delta.rs), and the lemmas of those files once the world is evaluated (`with_lemmas`).
-fn units_of(s: &mut Session, loaded: &[(String, String)]) -> Vec<crate::kept::Unit> {
+fn units_of(loaded: Vec<(String, String, rofl::program::Loaded)>) -> Vec<crate::kept::Unit> {
     loaded
-        .iter()
-        .filter_map(|(f, t)| {
-            let (ids, rules, _) = s.facts_of(t).ok()?;
-            Some(crate::kept::Unit { path: crate::kept::absolute(f), rules: crate::kept::rules_sum(&rules), facts: ids, parts: rofl::session::Part::of_text(t) })
-        })
+        .into_iter()
+        .map(|(f, t, r)| crate::kept::Unit { path: crate::kept::absolute(&f), rules: crate::kept::rules_sum(&r.rules), facts: r.facts, parts: rofl::session::Part::of_text(&t) })
         .collect()
 }
 

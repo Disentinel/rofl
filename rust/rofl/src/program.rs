@@ -43,6 +43,8 @@
 
 use std::collections::HashMap;
 
+use crate::store::FactId;
+
 use crate::cell::AggOp;
 use crate::engine::{plan_body, plan_elems, plan_order, Eval};
 use crate::reflect::{
@@ -62,6 +64,10 @@ pub struct Loaded {
     pub diagnostics: Vec<String>,
     /// Clauses actually admitted. Zero on a refusal, by construction.
     pub admitted: usize,
+    /// What `Session::facts_of` reads of the text, read as it was loaded: the base facts it gave, each once, in its
+    /// order, and the text of every clause that is not a ground fact of now
+    pub facts: Vec<FactId>,
+    pub rules: String,
 }
 
 /// One parsed clause, in the engine's own vocabulary.
@@ -678,7 +684,7 @@ fn check_clause(h: &Heap, v: &Vocab, c0: &Clause, who: Option<&str>, trusted: bo
 fn admit_clause(e: &mut Eval, c: &Clause, who: Option<&str>) {
     if c.body.is_empty() {
         let h = &c.head;
-        add_fact(e, h.rel, h.persp, &h.args, h.temporal, who, &mut None);
+        add_fact(e, h.rel, h.persp, &h.args, h.temporal, who, &mut Admitted::default());
         return;
     }
     if let Some(p) = c.head.persp.as_atom() {
@@ -707,17 +713,27 @@ fn admit_clause(e: &mut Eval, c: &Clause, who: Option<&str>) {
     e.store.dirty = true;
 }
 
-/// `sealed`: the relations a sealed body withholds, read once and again after a `sealed` fact.
-fn add_fact(e: &mut Eval, rel: Sym, persp_t: Term, args: &[Term], temporal: Temporal, who: Option<&str>, sealed: &mut Option<Vec<Sym>>) {
+/// What a load has written once and need not write again for each of its facts: the relations a sealed body
+/// withholds (read again after a `sealed` fact), the books registered, the relations given as `edb`.
+#[derive(Default)]
+struct Admitted {
+    sealed: Option<Vec<Sym>>,
+    persps: crate::store::FxSet<Sym>,
+    edb: crate::store::FxSet<Sym>,
+}
+
+fn add_fact(e: &mut Eval, rel: Sym, persp_t: Term, args: &[Term], temporal: Temporal, who: Option<&str>, done: &mut Admitted) -> Option<FactId> {
     let persp = persp_t.as_atom().expect("checked");
     // NOT A REFUSAL: an `@init` fact arriving after tick 0 is IGNORED with a
     // diagnostic, which is why it is here and not in `check_clause`.
     if temporal == Temporal::Init && e.store.tick != 0 {
         let c = Clause { head: crate::reflect::Lit { rel, persp: persp_t, persp_explicit: true, args: args.to_vec(), temporal }, body: Vec::new() };
         e.diags.push(format!("fact {}: '@init' ignored after tick 0", canon_clause(&e.h, &c)));
-        return;
+        return None;
     }
-    register_persp(&mut e.h, &e.v, &mut e.store, persp);
+    if done.persps.insert(persp) {
+        register_persp(&mut e.h, &e.v, &mut e.store, persp);
+    }
 
     // The kernel's own relations are timeless, and so is the semantics
     // declaration: WHICH FIXPOINT the evaluator runs is a property of the
@@ -731,7 +747,7 @@ fn add_fact(e: &mut Eval, rel: Sym, persp_t: Term, args: &[Term], temporal: Temp
     let (id, _) = e.store.put(&e.h, rel, persp, args, flags);
     let author = who.map(|w| e.h.intern(w));
     e.store.journal.loaded(id, author);
-    if !e.v.is_reserved(rel) {
+    if !e.v.is_reserved(rel) && done.edb.insert(rel) {
         let (edb, main) = (e.v.edb, e.v.main);
         e.store.add(&e.h, edb, main, &[Term::atom(rel)], F_BASE);
     }
@@ -744,9 +760,9 @@ fn add_fact(e: &mut Eval, rel: Sym, persp_t: Term, args: &[Term], temporal: Temp
     // 41 722 rows on 16 eslint files, a third of the world, for the second
     // argument of the term it was keyed by. Noted, and written when something
     // reads it (prov.rs).
-    let sealed_now = match sealed {
+    let sealed_now = match &mut done.sealed {
         Some(s) => s,
-        None => sealed.insert(sealed_rels(e)),
+        None => done.sealed.insert(sealed_rels(e)),
     };
     if !sealed_now.contains(&e.v.asserted_by) {
         let who = e.h.intern(who.unwrap_or("user"));
@@ -761,7 +777,7 @@ fn add_fact(e: &mut Eval, rel: Sym, persp_t: Term, args: &[Term], temporal: Temp
     // rather than answer empty — an empty audit and a clean one are the same
     // two characters. Frozen, so re-evaluation cannot clear it.
     if rel == e.v.sealed {
-        *sealed = None;
+        done.sealed = None;
     }
     if rel == e.v.sealed && args.len() == 1 {
         if let Some(b) = args[0].as_atom() {
@@ -774,6 +790,7 @@ fn add_fact(e: &mut Eval, rel: Sym, persp_t: Term, args: &[Term], temporal: Temp
         }
     }
     e.store.dirty = true;
+    Some(id)
 }
 
 /// A WANT IS ITS ROWS (docs/intents.md 4.1): `want Cap(A1..An) :- Body.` is the rule
@@ -1087,6 +1104,16 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     loop {
         claimed_late |= !trusted && clauses.iter().any(|c| c.head.rel == claim);
         for pc in std::mem::take(&mut clauses) {
+            let fact = pc.body.is_empty() && pc.lattice.is_none() && pc.head.tense == rofl_parse::Tense::Now && pc.head.args.iter().all(|t| e.h.is_ground(*t));
+            if !fact {
+                p.rules.push_str(&rofl_parse::show(&e.h, &pc));
+                p.rules.push('\n');
+            }
+            let plain = !pc.want && pc.structure.is_none() && pc.ord.is_none() && pc.dom.is_none() && pc.lattice.is_none();
+            if fact && !plain {
+                p.looked.push(pc.head.clone());
+            }
+            p.now = fact;
             p.classify(e, &pc, who_owned.as_deref(), trusted);
         }
         let Some(piece) = next(e) else { break };
@@ -1106,20 +1133,35 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     }
     let mark = e.store.journal.mark();
     let who_owned = who_owned.as_deref();
-    let mut sealed = None;
+    let mut done = Admitted::default();
     let mut fact = 0;
-    let mut facts_to = |e: &mut Eval, end: usize, sealed: &mut Option<Vec<Sym>>| {
+    let mut gave: Vec<FactId> = Vec::new();
+    let mut seen = vec![0u64; 0];
+    let mut once = |id: FactId, gave: &mut Vec<FactId>| {
+        let (w, b) = (id as usize / 64, id % 64);
+        if seen.len() <= w {
+            seen.resize(w + 1, 0);
+        }
+        if seen[w] >> b & 1 == 0 {
+            seen[w] |= 1 << b;
+            gave.push(id);
+        }
+    };
+    let mut facts_to = |e: &mut Eval, end: usize, done: &mut Admitted, gave: &mut Vec<FactId>| {
         while fact < end {
             let f = &p.facts[fact];
-            add_fact(e, f.rel, f.persp, &p.fact_args[f.at as usize..(f.at + f.len) as usize], f.temporal, who_owned, sealed);
+            let id = add_fact(e, f.rel, f.persp, &p.fact_args[f.at as usize..(f.at + f.len) as usize], f.temporal, who_owned, done);
+            if let Some(id) = id.filter(|_| f.now) {
+                once(id, gave);
+            }
             fact += 1;
         }
     };
     for (c, &before) in p.ready.iter().zip(&p.rule_at) {
-        facts_to(e, before, &mut sealed);
+        facts_to(e, before, &mut done, &mut gave);
         admit_clause(e, c, who_owned);
     }
-    facts_to(e, p.facts.len(), &mut sealed);
+    facts_to(e, p.facts.len(), &mut done, &mut gave);
     for c in &low {
         admit_clause(e, c, who_owned);
     }
@@ -1133,11 +1175,24 @@ pub fn load_program(e: &mut Eval, text: &str, who: Option<&str>) -> Loaded {
     let dom_ids = write_dominance_rows(e, &p.doms);
     write_order_rows(e, &p.ords, &dom_ids);
     write_structure_rows(e, &p.structs);
-    Loaded { ok: true, diagnostics: Vec::new(), admitted: p.ready.len() + p.facts.len() + low.len() + p.decls.len() + p.tags.len() + p.doms.len() + p.structs.len() }
+    // a declaration written as a ground fact is the fact of that name where the store holds one
+    for l in &p.looked {
+        let persp = match l.book {
+            rofl_parse::Book::Bare => e.v.main,
+            rofl_parse::Book::Named(n) => n,
+            rofl_parse::Book::Var(_) => continue,
+        };
+        let args: Vec<Term> = l.args.iter().map(|t| canon_sets(&mut e.h, &e.v, *t)).collect();
+        if let Some(id) = e.store.get(l.rel, persp, &args).filter(|&f| e.store.alive(f) && e.store.rec(f).base()) {
+            once(id, &mut gave);
+        }
+    }
+    let admitted = p.ready.len() + p.facts.len() + low.len() + p.decls.len() + p.tags.len() + p.doms.len() + p.structs.len();
+    Loaded { ok: true, diagnostics: Vec::new(), admitted, facts: gave, rules: p.rules }
 }
 
 fn rejected(diagnostics: Vec<String>) -> Loaded {
-    Loaded { ok: false, diagnostics, admitted: 0 }
+    Loaded { ok: false, diagnostics, admitted: 0, facts: Vec::new(), rules: String::new() }
 }
 
 /// A refusal of a text the parser cannot read: the whole text's diagnostic, the line it is on in the whole text.
@@ -1212,6 +1267,11 @@ struct Pending {
     /// the facts, their arguments in one list: a load of millions holds no clause of each
     facts: Vec<PendingFact>,
     fact_args: Vec<Term>,
+    /// the clause being classified is a ground fact of now; the text of the others; the heads of declarations
+    /// written as ground facts
+    now: bool,
+    rules: String,
+    looked: Vec<rofl_parse::Lit>,
     unready: Vec<String>,
     diags: Vec<String>,
     decls: Vec<(Sym, usize, Sym, Option<i64>)>,
@@ -1232,6 +1292,7 @@ struct PendingFact {
     rel: Sym,
     persp: Term,
     temporal: Temporal,
+    now: bool,
     at: u32,
     len: u32,
 }
@@ -1250,7 +1311,7 @@ impl Pending {
     fn ready_push(&mut self, c: Clause) {
         if c.body.is_empty() {
             let h = c.head;
-            self.facts.push(PendingFact { rel: h.rel, persp: h.persp, temporal: h.temporal, at: self.fact_args.len() as u32, len: h.args.len() as u32 });
+            self.facts.push(PendingFact { rel: h.rel, persp: h.persp, temporal: h.temporal, now: self.now, at: self.fact_args.len() as u32, len: h.args.len() as u32 });
             self.fact_args.extend(h.args);
         } else {
             self.rule_at.push(self.facts.len());
