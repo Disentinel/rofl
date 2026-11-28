@@ -330,12 +330,16 @@ impl Session {
                 break Err(format!("the world met the memory wall and could not be cooled to {p}: {e}"));
             }
             files.push(p.clone());
-            let mut o = match Session::open_volume_in(&p, self.eval.budget, None) {
+            // (the world on the heap is dropped before the volume is opened: both at once are past the wall)
+            let e = &self.eval;
+            let keep = (e.space, e.disk, e.mode, e.retain_ticks, e.cost.on_hot, e.budget);
+            self.eval.store = Default::default();
+            self.eval.h = Default::default();
+            let mut o = match Session::open_volume_in(&p, keep.5, None) {
                 Ok(o) => o,
                 Err(e) => break Err(format!("the world met the memory wall and could not be opened again from {p}: {e}")),
             };
-            let e = &self.eval;
-            (o.eval.space, o.eval.disk, o.eval.mode, o.eval.retain_ticks, o.eval.cost.on_hot) = (e.space, e.disk, e.mode, e.retain_ticks, e.cost.on_hot);
+            (o.eval.space, o.eval.disk, o.eval.mode, o.eval.retain_ticks, o.eval.cost.on_hot) = (keep.0, keep.1, keep.2, keep.3, keep.4);
             *self = o;
             crate::engine::MEMORY_STOPPED.store(false, Relaxed);
             times += 1;
