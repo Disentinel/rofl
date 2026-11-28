@@ -77,7 +77,7 @@ facts/port-corpus, which is not in the tree.
 No flags: one JSON object per line in, one out. It is the npm package's `./port` export,
 so a request option with no caller in this tree may still have one outside it; that is
 why none is removed here. Clients in the tree: `runtime/port.ts` (used by
-`runtime/ingest.ts` and `scripts/whycheck.ts`), `scripts/goldens.ts` (raw `open`, `state`),
+`scripts/whycheck.ts`), `scripts/goldens.ts` (raw `open`, `state`),
 `rust/rofl/tests/why_bins.rs`, `rust/rofl/tests/agg_worlds.rs`.
 
 | request option | what it does | consumers | verdict | status |
@@ -87,23 +87,21 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 | `open` with `seed` (inline) | the same snapshot as a string | `rust/rofl/tests/agg_worlds.rs` only | MERGE into `seedPath` | done |
 | `budget` (`open`, `fresh`) | the step wall | `runtime/port.ts` | KEEP | |
 | `space`, `retainTicks`, `mode` (`open`, `fresh`) | the walls a snapshot does not carry | `scripts/whycheck.ts`, `rust/rofl/tests/agg_worlds.rs` | KEEP | |
-| `op: fresh`, `load` (`path`, `rofl`), `evaluate`, `retract`, `why`, `whynot`, `excise`, `close` | the core verbs; `load` into an evaluated session is an addition by delta (facts and rules) and answers `full`, as `retract` does | `scripts/whycheck.ts`, `runtime/ingest.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
+| `op: fresh`, `load` (`path`, `rofl`), `evaluate`, `retract`, `why`, `whynot`, `excise`, `close` | the core verbs; `load` into an evaluated session is an addition by delta (facts and rules) and answers `full`, as `retract` does | `scripts/whycheck.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `load` with `who` | the author of the loaded text | `runtime/port.ts` passes it; no caller sets it | KEEP (the permission model of `docs/books-and-permission.md`) | |
 | `why` with `all`, `whynot` with `depth`, `nodes`, `all` | the verbs' options | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
-| `op: ask` | rows of a query | `runtime/ingest.ts` | KEEP | |
+| `op: ask` | rows of a query | `runtime/port.ts`, `scripts/whycheck.ts` | KEEP | |
 | `ask` with `keys` | the matched facts in `canonicalState`'s key form | `scripts/vscode_curve.ts` (since the audit) | KEEP: the decision to remove it predates its callers | |
 | `op: assert`, `tick` | assert text; advance a tick. On an evaluated session `assert` is an addition by delta and answers `full` (null, or why it evaluated again) | `scripts/whycheck.ts` (`tick`) | KEEP (the core of the protocol; `docs/port-surface.md`) | |
 | `op: fork` | the cheap copy of a session | (none since the split gate was retired) | KEEP (the protocol's headline verb, `docs/port-surface.md`) | |
 | `op: state` | the state to a path, or as text | `scripts/goldens.ts` | KEEP | |
-| `op: cool_many` | cool several volumes in one pass | `runtime/ingest.ts` | KEEP | |
-| `op: cool` | cool one volume | `runtime/port.ts` `cool`; `cool_many` cools many in one pass | KEEP | the cool by book and `op: view` went with the split driver (2026-11-22) |
-| `op: cool_trail`, `reheat_trail` | park and fetch the assertion trail | `runtime/port.ts` methods only; no caller. `Session::cool_trail` stays, `rust/rofl/tests/cool.rs` calls it | REMOVE | done |
+| `op: cool`, `cool_many`, `reheat` | cool a volume by key prefix and back | none after the ingest loop | REMOVE | done 2026-11-28 with runtime/ingest.ts; the world cools whole at the memory wall |
 | `open` with `keptPath`, `volumePath`; `op: keep` (`path`, `volume`) | a world kept as an image or a mapped volume, opened evaluated where it was (docs/staged-evaluation.md) | `scripts/stage_by_asks.ts`, `scripts/stage_plan.ts`, `scripts/vscode_pieces.ts`, `scripts/addcheck.ts`, `runtime/port.ts` | KEEP; two kept formats, the image and the volume, both live; whether the image retires is the owner's call | |
 | `op: resume` with `steps` | go on from where a step budget stopped (`Session::resume`) | `scripts/vscode_pieces.ts` | KEEP | |
 | `limit` with `ms`, `bytes` (any op) | the clock and heap walls of a notebook run; the answer says `stopped` | `notebook/cli.ts` through `playground/rust.ts` | KEEP (`ROFL_NB_LIMIT`, `ROFL_NB_MEMORY`) | |
 | `whynot` with `files` | a whynot row a file (docs/md-world.md) | `runtime/port.ts`, `scripts/whycheck.ts` | KEEP | |
 | `op: rows`, `fact`, `firings`, `cell`, `books`, `holding` | the store read piece by piece by a host that keeps the world in the engine | `playground/rust.ts` | KEEP | |
-| `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `runtime/ingest.ts` and `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
+| `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
 
 ## rofl render (`rust/rofl/src/bin/rofl/render.rs`)
 

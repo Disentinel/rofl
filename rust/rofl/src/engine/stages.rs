@@ -143,9 +143,7 @@ impl Eval {
     /// The evaluation in two stages: the lower one whole, its conclusions outside the cut books made lemmas, the cut
     /// books' facts dropped, then the rest over them.
     pub(super) fn run_staged(&mut self, st: Stage) -> Result<Outcome, Halt> {
-        let walls = (self.wall.level_wall.take(), std::mem::take(&mut self.wall.hold_end));
         let low = self.lower_stage(&st);
-        (self.wall.level_wall, self.wall.hold_end) = walls;
         if let Err(Halt::Budget(..)) = low {
             return Ok(Outcome { partial: true, staged: 0 });
         }

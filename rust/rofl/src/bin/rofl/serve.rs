@@ -99,17 +99,6 @@
 //!                                                        `.rofl.md` the reader reads as sentences, and each line of
 //!                                                        its prose that asks (md `sentence_spans`)
 //!
-//! A LEVEL AT A TIME, for workers that meet between levels (tests/level_wall.rs):
-//!   {"op":"evaluate","session":2,"wall":L}     -> evaluated up to level L; "next" is the level it stopped before
-//!   {"op":"admit","session":2,"rofl":"..."}    -> {"admitted":n}: facts of the wall's level into the stopped
-//!                                                        world, fired on by every rule active so far
-//!   {"op":"evaluate_on","session":2,"wall":L}  -> goes on from where the last wall stopped it
-//!
-//! VOLUMES, a key prefix to disk and back (runtime/ingest.ts):
-//!   {"op":"cool","session":2,"prefix":"na","path":"v.vol"} -> {"facts","bytes","path"}: the facts whose
-//!                                                        key starts with the prefix written and dropped
-//!   {"op":"cool_many","session":2,"volumes":[{"prefix","path"},...]} -> {"volumes":[...]}: many in one pass
-//!   {"op":"reheat","session":2,"path":"v.vol"} -> {"admitted":n,"evaluated":b}: a cooled volume back, by delta
 //!   any op on a session may carry "limit":{"ms":n,"bytes":n}: past n milliseconds, or n live bytes in this
 //!   process, its evaluation stops as at the step budget, and the answer says "stopped":"clock"|"heap"
 //!
@@ -285,7 +274,7 @@ impl Server {
         match op {
             "watch" | "unwatch" => self.op_watch(op, r),
             "rows" | "holding" | "books" | "fact" | "firings" | "cell" | "open" => self.op_read(op, r),
-            "fresh" | "spans" | "load" | "cool" | "cool_many" | "reheat" | "fork" | "keep" => self.op_world(op, r),
+            "fresh" | "spans" | "load" | "fork" | "keep" => self.op_world(op, r),
             "volumes" => self.op_volumes(r),
             "volumes_edit" => self.op_volumes_edit(r),
             _ => self.op_change(op, r),
@@ -304,7 +293,7 @@ impl Server {
         }
     }
 
-    /// Worlds made, loaded, cooled, forked and kept: the operations that change which world a session is.
+    /// Worlds made, loaded, forked and kept: the operations that change which world a session is.
     fn op_world(&mut self, op: &str, r: &Value) -> Result<Value, String> {
         match op {
             // An empty world with the kernel's bootstrap tables and nothing
@@ -323,16 +312,6 @@ impl Server {
                 Ok(json!({ "spans": rofl::md::sentence_spans(text) }))
             }
             "load" => self.op_load(r),
-            "cool" => self.op_cool(r),
-            "cool_many" => self.op_cool_many(r),
-            // A cooled volume back, refused if this engine did not write it; into an evaluated world by delta.
-            "reheat" => {
-                let p = str_of(r, "path", "reheat needs `path`")?.to_string();
-                let s = self.get(r)?;
-                let n = s.reheat(&p).map_err(|d| d.join("\n"))?;
-                // evaluated by delta, or left for the next evaluation (a cooled world, a program the path refuses)
-                Ok(json!({ "admitted": n, "evaluated": !s.eval.store.dirty }))
-            }
             "fork" => {
                 let f = self.get(r)?.fork();
                 let facts = f.eval.store.fact_count();
@@ -377,12 +356,7 @@ impl Server {
                 let n = self.get(r)?.dispatch(std::path::Path::new(&dir))?;
                 Ok(json!({ "loaded": n }))
             }
-            "evaluate" | "evaluate_on" => self.op_evaluate(r),
-            "admit" => {
-                let text = str_of(r, "rofl", "admit needs `rofl`")?.to_string();
-                let n = self.get(r)?.admit(&text)?;
-                Ok(json!({ "admitted": n }))
-            }
+            "evaluate" => self.op_evaluate(r),
             "resume" => {
                 let more = r.get("steps").and_then(|v| v.as_i64()).ok_or("resume needs `steps`")?;
                 let s = self.get(r)?;
@@ -774,34 +748,6 @@ impl Server {
         }
     }
 
-    // Cool a volume to disk. The prefix is the volume; see
-    // `Session::cool`. The caller records `cooled` and the `hole`,
-    // because those are statements about a corpus and the engine knows
-    // only a prefix.
-    fn op_cool(&mut self, r: &Value) -> Result<Value, String> {
-        let prefix = str_of(r, "prefix", "cool needs `prefix`")?.to_string();
-        let out = str_of(r, "path", "cool needs `path`")?.to_string();
-        let c = self.get(r)?.cool(&prefix, &out)?;
-        Ok(json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
-    }
-
-    // Many volumes in ONE pass over the world. Cooling them one at a
-    // time is a walk per volume over a world that is still shrinking.
-    fn op_cool_many(&mut self, r: &Value) -> Result<Value, String> {
-        let vs = r.get("volumes").and_then(|v| v.as_array()).ok_or("cool_many needs `volumes`")?;
-        let mut pairs = Vec::with_capacity(vs.len());
-        for v in vs {
-            let p = str_of(v, "prefix", "a volume needs `prefix`")?;
-            let o = str_of(v, "path", "a volume needs `path`")?;
-            pairs.push((p.to_string(), o.to_string()));
-        }
-        let cs = self.get(r)?.cool_many(&pairs)?;
-        let rows: Vec<Value> = cs.iter()
-            .map(|c| json!({ "facts": c.facts, "bytes": c.bytes, "path": c.path }))
-            .collect();
-        Ok(json!({ "volumes": rows }))
-    }
-
     // A wall is a FACT, not an error (measurement 4): `partial` comes
     // back true with a `hole` in the store naming the unfinished part,
     // and `ok` stays true. Only a defect or a stratification refusal
@@ -810,16 +756,8 @@ impl Server {
     // waited for, as a one-shot verb waits, until none is in flight or the request's limit stops it
     fn op_evaluate(&mut self, r: &Value) -> Result<Value, String> {
         let wait = r.get("wait").and_then(|v| v.as_bool()).unwrap_or(true);
-        let wall = r.get("wall").and_then(|v| v.as_i64());
-        let on = r.get("op").and_then(|v| v.as_str()) == Some("evaluate_on");
-        let walled = r.get("wall").is_some();
         let s = self.get(r)?;
-        let o = match (on, walled) {
-            (true, _) => s.evaluate_on(wall),
-            (false, true) => s.evaluate_to(wall),
-            (false, false) => s.evaluate(),
-        }
-        .map_err(|e| rofl::describe(&e))?;
+        let o = s.evaluate().map_err(|e| rofl::describe(&e))?;
         let halted = |s: &Session| s.eval.halt.as_ref().is_some_and(|h| h.load(std::sync::atomic::Ordering::Relaxed));
         while wait && s.post.as_ref().is_some_and(|p| p.flying() > 0) && !halted(s) {
             s.collect(Some(std::time::Duration::from_millis(50)))?;
@@ -827,7 +765,7 @@ impl Server {
         let flying = s.post.as_ref().map_or(0, |p| p.flying());
         Ok(json!({
             "partial": o.partial, "staged": o.staged, "steps": o.steps,
-            "peakRows": o.peak_rows, "space": (o.space != i64::MAX).then_some(o.space), "flying": flying, "next": s.eval.wall.next_level(),
+            "peakRows": o.peak_rows, "space": (o.space != i64::MAX).then_some(o.space), "flying": flying,
             "again": s.eval.again.iter().map(|r| s.eval.h.name(*r)).collect::<Vec<_>>(),
             "hot": s.eval.too_hot().iter().map(|h| h.sentence()).collect::<Vec<_>>(),
         }))

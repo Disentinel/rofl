@@ -1088,11 +1088,6 @@ pub struct WallState {
     cutting: Option<Box<Cut>>,
     cut_tail: Option<Tail>,
     resume_at: Option<Box<Cut>>,
-    /// the last level an evaluation runs to (`run_on` goes on), and the levels left with the phase of the first
-    pub level_wall: Option<i64>,
-    /// the evaluation stops after its last level too, before the closes that end it, so facts may still be admitted
-    pub hold_end: bool,
-    level_rest: Option<(Levels, usize)>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     /// What the wall that fell measured: the count, what it counted, and the
     /// limit it passed (a `budget` shrug's `spent(Kind, Spent, Limit)`).
@@ -1115,13 +1110,6 @@ impl Spent {
     }
     fn set(&self, v: Option<(&'static str, i64, i64)>) {
         *self.0.lock().unwrap() = v;
-    }
-}
-
-impl WallState {
-    /// The level an evaluation stopped before, at its level wall.
-    pub fn next_level(&self) -> Option<i64> {
-        self.level_rest.as_ref().and_then(|(l, _)| l.first()).map(|(lv, _)| *lv)
     }
 }
 
@@ -3556,7 +3544,7 @@ impl Eval {
         self.store.kept_rows.clear();
         self.store.kept_rules.clear();
         self.kept_carry = None;
-        if out.as_ref().is_ok_and(|o| !o.partial) && self.wall.level_rest.is_none() {
+        if out.as_ref().is_ok_and(|o| !o.partial) {
             self.note_whole();
         }
         out
@@ -3697,8 +3685,6 @@ impl Eval {
         let mono: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| !stratified(r)).cloned().collect();
         let strat_rules: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| stratified(r)).cloned().collect();
 
-        let mut walled = false;
-        self.wall.level_rest = None;
         if from.is_none() && !self.pages_declined {
             if let Some(out) = self.run_pages(&safe_rules, &mono, &strat_rules)? {
                 return self.end_pass(out, &strat_rules);
@@ -3750,15 +3736,8 @@ impl Eval {
                 Some(l) => l,
                 None => self.strata_levels(&mono, &strat_rules)?,
             };
-            walled = self.run_levels(levels, 2, from)?;
-            Ok(())
+            self.run_levels(levels, 2, from)
         })();
-
-        if walled && outcome.is_ok() {
-            self.wall.cutting = None;
-            self.store.dirty = false;
-            return Ok(Outcome { partial: false, staged: 0 });
-        }
         self.end_pass(outcome, &strat_rules)
     }
 
@@ -3883,41 +3862,6 @@ impl Eval {
         }))
     }
 
-    /// What an evaluation that stopped at `level_wall` left, run on to the wall now set.
-    pub fn run_on(&mut self) -> Result<Outcome, Halt> {
-        let Some((rest, ph0)) = self.wall.level_rest.take() else { return self.run() };
-        self.wall.cutting = Some(Box::default());
-        let mut walled = false;
-        let outcome = self.run_levels(rest, ph0, None).map(|w| walled = w);
-        if walled && outcome.is_ok() {
-            self.wall.cutting = None;
-            self.store.dirty = false;
-            return Ok(Outcome { partial: false, staged: 0 });
-        }
-        let strat: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && r.has_agg).cloned().collect();
-        self.end_pass(outcome, &strat)
-    }
-
-    /// Facts `ids` admitted into a world stopped at a level wall: news to every rule active so far. Facts of the wall's
-    /// own level only, which no rule run yet negates or counts.
-    pub fn admit(&mut self, ids: &[FactId]) -> Result<(), Halt> {
-        if self.wall.level_rest.is_none() || self.lat.has_cells() {
-            return Err(Halt::Strat("admit takes a world stopped at a level wall, with no lattice".into(), String::new()));
-        }
-        let mut front = Front::default();
-        for &id in ids {
-            front.note(self.store.rec(id).rel, id);
-        }
-        // a closure already walked takes what follows as its two rules fire, written
-        let next = self.wall.next_level().unwrap_or(i64::MAX);
-        let walked: Vec<bool> = self.clo.closures.iter().map(|c| self.rel_level(c.rel) < next).collect();
-        self.clo.closure_of.retain(|_, (i, _)| !walked[*i]);
-        self.wall.cutting = Some(Box::default());
-        let r = self.propagate(front);
-        self.wall.cutting = None;
-        r
-    }
-
     #[cfg_attr(not(feature = "breaks"), allow(unused_variables))]
     fn end_pass(&mut self, outcome: Result<(), Halt>, strat_rules: &[Rc<ERule>]) -> Result<Outcome, Halt> {
         let mut partial = false;
@@ -3980,14 +3924,10 @@ impl Eval {
         })
     }
 
-    /// The levels from phase `ph0` on, each closing what is below it; true when the level wall stopped them.
-    fn run_levels(&mut self, levels: Levels, ph0: usize, from: Option<usize>) -> Result<bool, Halt> {
+    /// The levels from phase `ph0` on, each closing what is below it.
+    fn run_levels(&mut self, levels: Levels, ph0: usize, from: Option<usize>) -> Result<(), Halt> {
         for (n, (lv, rs)) in levels.iter().cloned().enumerate() {
             let ph = n + ph0;
-            if self.wall.level_wall.is_some_and(|w| lv > w) {
-                self.wall.level_rest = Some((levels[n..].to_vec(), ph));
-                return Ok(true);
-            }
             if from.is_some_and(|p| p > ph) {
                 continue;
             }
@@ -4017,10 +3957,6 @@ impl Eval {
             self.poison_readers(&rs)?;
             self.run_data_levels(lv, &ds)?;
         }
-        if self.wall.hold_end {
-            self.wall.level_rest = Some((Vec::new(), levels.len() + ph0));
-            return Ok(true);
-        }
         self.vopen_below(i64::MAX)?;
         self.close_plain_rules(i64::MAX)?;
         self.plain_flush(i64::MAX)?;
@@ -4033,7 +3969,7 @@ impl Eval {
                 break;
             }
         }
-        Ok(false)
+        Ok(())
     }
 
     /// The promises checked after an addition: on the facts it made new where it knows them (a key a new row shares

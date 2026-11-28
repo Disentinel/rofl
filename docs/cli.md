@@ -755,12 +755,10 @@ drive the other parts, each over `rofl serve`:
 
 | what | how to run it | measured | status |
 |---|---|---|---|
-| the ingest loop: parse a batch, evaluate, cool volumes under pressure | `node --experimental-strip-types runtime/ingest.ts ROOT SUB N [--batch K] [--pressure F]` (boot and `rules/ingest.rofl`, no JS model) | eslint, 1 426 files: 29.9 s, 1 290 volumes cooled to 200 MB, the world never above 1.94 M facts (docs/scaling-a-corpus.md) | the AST only; the JS model is not evaluated |
 | stages that fit a memory limit, each a process over the last volume (a TypeScript driver, to give way to the plan's stages, *Lemma stages*) | `node --experimental-strip-types scripts/stage_plan.ts FACTS LIMIT_MB [--files N] [--run] [--check]` | 100 vscode files in 4 stages equal the whole; a ring of files importing one another is one stage (vscode 223 files) | built (staged-evaluation.md, item 4) |
 | an evaluation in pieces of a fixed time, each a process resuming the last volume | `node --experimental-strip-types scripts/vscode_pieces.ts FACTS N MS [--state FILE]` | the same state as one run | built (item 3) |
 | a question added above an evaluated lower stage | `node --experimental-strip-types scripts/stage_by_asks.ts FACTS N LOWER,... [kept\|volume]` | 0.38 s against 5.2 s whole at 20 files | built |
 | files added to an evaluated world one by one | `node --experimental-strip-types scripts/ingest_by_delta.ts FACTS N` | byte for byte the whole world; ~3x a file's share at 20 files | built |
-| a level evaluated at a time, other workers' facts admitted between (for workers) | `rofl serve`: `evaluate` with `wall`, `admit`, `evaluate_on` (below), tests/level_wall.rs | 4 workers over vscode 250: the union is the whole world, the slowest worker 12.5 s against 22.8 s | built |
 | a corpus of files by place, an edit of them by delta | `rofl serve`: `{"op":"volumes","session":P,"path":F}` evaluates the corpus F whole over the program of session P (forked); `{"op":"volumes_edit","session":W,"files":[{"at":I,"rofl":TEXT}]}` takes the files at places I by delta | | built |
 
 A scan already lies per file: a world that asks for its own input
@@ -780,10 +778,7 @@ operations and their fields is the header of
 `rust/rofl/src/bin/rofl/serve.rs`; `runtime/port.ts` is the TypeScript client
 every harness above uses. Besides the question verbs: `open` (a seed, a kept
 image or a volume), `fresh`, `fork`, `load` and `assert` (by delta), `retract`, `edit` (below),
-`evaluate` and `resume`, `keep` (an image or, with `volume`, a volume),
-`cool`, `cool_many` and `reheat` (a volume by its key prefix, to disk and
-back), `view` (what a volume's world wrote above its base), `evaluate` with
-`wall`, `evaluate_on` and `admit` (a level at a time), `rows`, `fact`,
+`evaluate` and `resume`, `keep` (an image or, with `volume`, a volume), `rows`, `fact`,
 `firings`, `cell`, `books`, `holding` (the store read piece by piece),
 `inbox` and `dispatch` (adapters, docs/intents.md), `watch` and `unwatch`
 (below), `tick`, `state`, `facts`,
@@ -826,7 +821,7 @@ each refusal, to the world evaluated whole from the program without it, rows and
 
 **A watch: how a question's rows move.** `{"op":"watch","session":S,"rels":[{"rel":"red","book":"b1"},{"rel":"p"}]}`
 answers `{"watching":n}`; a relation without `book` is watched in every book (`book` is what `rows` calls `persp`).
-From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `edit`, `inbox`, `reheat`,
+From then on every answer on the session (whatever the op: `assert`, `load`, `retract`, `edit`, `inbox`,
 `evaluate`, a read that evaluates a world left dirty, an answer that came back from an adapter) carries
 `"changes":[{"rel","book","added":[ARGS...],"removed":[ARGS...]}]`, each `ARGS` a row's `args` as `rows` writes
 them, for the watched rows whose holding changed since the last answer, and `"changes_by"`: `delta` (the change
