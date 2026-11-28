@@ -1985,7 +1985,7 @@ impl Store {
         self.facts.reserve(n, n_args);
         self.wit_head.own.reserve(n);
         if self.facts.len() == 0 {
-            self.keys = vec![EMPTY; ((n + 1) * 4).next_power_of_two()];
+            self.keys = vec![EMPTY; ((n + 1) * 2).next_power_of_two()];
         }
     }
 
@@ -2144,7 +2144,7 @@ impl Store {
     }
 
     fn key_table(&self, from: usize) -> Vec<u32> {
-        let want = ((self.facts.len() - from + 1) * 4).next_power_of_two().max(64);
+        let want = ((self.facts.len() - from + 1) * 2).next_power_of_two().max(64);
         let mut keys = vec![EMPTY; want];
         let mask = want - 1;
         for id in from as FactId..self.facts.len() as FactId {
