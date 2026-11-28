@@ -16,6 +16,8 @@ struct Pages {
     /// a fact's id where the key holds one, else `MANY` and the place of its list in `many`
     ix: Vec<hashbrown::HashTable<(FactId, u32)>>,
     many: Vec<Vec<FactId>>,
+    /// the ids in `many`, counted as they come so that the pages' bytes are said without walking them
+    many_ids: usize,
     ix_of: FxMap<(Sym, u64), usize>,
     masks: FxMap<Sym, Vec<(u64, usize)>>,
     /// the round of news each fact came in, by its id (`NO_ROW` for a fact not filed), and the round being met
@@ -79,7 +81,7 @@ impl Pages {
             let args = store.args(id);
             for &(m, x) in ms {
                 let k = Self::key_of(persp, args, m);
-                let (ix, many) = (&mut self.ix[x], &mut self.many);
+                let (ix, many, many_ids) = (&mut self.ix[x], &mut self.many, &mut self.many_ids);
                 match ix.find_mut(spread(k), |e| e.1 == high(k)) {
                     None => {
                         ix.insert_unique(spread(k), (id, high(k)), |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
@@ -88,8 +90,10 @@ impl Pages {
                         if *v & MANY == 0 {
                             many.push(vec![*v]);
                             *v = MANY | (many.len() - 1) as FactId;
+                            *many_ids += 1;
                         }
                         many[(*v & !MANY) as usize].push(id);
+                        *many_ids += 1;
                     }
                 }
             }
@@ -118,7 +122,8 @@ impl Pages {
         let map = |cap: usize, entry: usize| cap * (entry + 1);
         self.all.values().map(|v| v.capacity() * 4 + 24).sum::<usize>()
             + self.ix.iter().map(|m| map(m.capacity(), 8)).sum::<usize>()
-            + self.many.iter().map(|v| v.capacity() * 4 + 40).sum::<usize>()
+            + self.many.len() * 40
+            + self.many_ids * 4
             + self.news_of.capacity() * 4
             + self.news.values().map(|v| v.capacity() * 4 + 24).sum::<usize>()
     }

@@ -125,9 +125,9 @@ fn run(args: Vec<String>) {
 const PURGE_DELAY: libmimalloc_sys::mi_option_t = 15;
 
 fn main() {
-    // what is freed goes back to the system at once: held for the second mimalloc waits by default, it was a quarter
-    // of axios's resident memory and an eighth of eslint's, for 1.5% of their time
-    unsafe { libmimalloc_sys::mi_option_set(PURGE_DELAY, 0) };
+    // what is freed goes back to the system after 10 ms, mimalloc v2's own delay, instead of v3's second: held a
+    // second, it was a quarter of axios's resident memory and an eighth of eslint's
+    unsafe { libmimalloc_sys::mi_option_set(PURGE_DELAY, 10) };
     let args: Vec<String> = std::env::args().skip(1).collect();
     let verb = matches!(args.first().map(String::as_str), Some("ask" | "why" | "whynot" | "excise" | "load"));
     memory::watch(verb.then(|| args.iter().any(|a| a == "--json")));
