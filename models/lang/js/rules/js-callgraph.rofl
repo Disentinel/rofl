@@ -268,18 +268,18 @@ obj_member_fn[code](O, Key, F) :- key_name[code](P, Key), obj_prop[code](O, P, F
 class_ctor[code](CD, M) :- class_method_of[flow](CD, M), ctor_method[code](M).
 
 resolves[code](X, M) :- transfers[execution](X, new_expression),
-                        may_be_node[flow](X, I), isa[flow](I, CD), class_ctor[code](CD, M).
+                        node_of[flow](X, I), isa[flow](I, CD), class_ctor[code](CD, M).
 
 resolves[code](C, M) :- super[value](N), callee_of[code](C, N),
-                        may_be_node[flow](N, SD), ctor_of[flow](SD, M).
+                        node_of[flow](N, SD), ctor_of[flow](SD, M).
 
 -- A tag is a callee in every sense but the grammar's (the field is `tag`, not
 -- `callee`); a decorator's `expression` is either the function or a factory
 -- call, and `may_be_node` carries what a call returns, so one arm covers both.
-resolves[code](X, F) :- tagged[value](X, T, _), may_be_node[flow](T, F), fn_value[flow](F).
+resolves[code](X, F) :- tagged[value](X, T, _), node_of[flow](T, F), fn_value[flow](F).
 
 resolves[code](Owner, F) :- decorated[value](Owner, E),
-                        may_be_node[flow](E, F), fn_value[flow](F).
+                        node_of[flow](E, F), fn_value[flow](F).
 
 -- `for (x of E)` calls `E[Symbol.iterator]()` and then `next()`. Only the first
 -- hop is a `resolves`: `ambiguous_call[audit]` reads two answers at one site
@@ -287,19 +287,19 @@ resolves[code](Owner, F) :- decorated[value](Owner, E),
 -- goes straight to `calls`. `member_value` names the node a member HOLDS — for
 -- `{ next: bump }` the identifier — hence the second `may_be_node` hop.
 for_of_iterates[code](X, M) :- iterates[value](X, _, R),
-                               may_be_node[flow](R, Obj),
+                               node_of[flow](R, Obj),
                                member_value[flow](Obj, symbol_iterator, M), fn_value[flow](M).
 resolves[code](X, M) :- for_of_iterates[code](X, M).
 
 calls[code](Caller, Next) :- for_of_iterates[code](X, M), nearest_fn[code](Caller, X),
                              ret_node_any[flow](M, IterObj),
                              member_value[flow](IterObj, "next", V),
-                             may_be_node[flow](V, Next), fn_value[flow](Next).
+                             node_of[flow](V, Next), fn_value[flow](Next).
 
 -- THE GENERAL RULE: whatever the callee expression may BE, if it is a function
 -- the site calls it. Covers `(f)()`, `f as T ()`, `f!()`, `(a, f)()`,
 -- `c ? f : g ()` and the next wrapper somebody adds, with no rule here.
-resolves[code](C, F) :- may_be_node[flow](N, F), fn_value[flow](F), callee_of[code](C, N).
+resolves[code](C, F) :- node_of[flow](N, F), fn_value[flow](F), callee_of[code](C, N).
 
 ambiguous_call[audit](C, F, G) :- resolves[code](C, F), resolves[code](C, G), F != G.
 
@@ -318,17 +318,17 @@ calls_in[code](File, A, B)   :- calls[code](X, Y), at[tree](X, File, _),
 calls_in[code](File, top, B) :- calls[code](R, Y), program[tree](R, File),
                                 fn_label[flow](Y, B).
 
-passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), node_of[flow](A, F), fn_value[flow](F),
                                         ref[value](A, Name).
 -- an element of another file's array spread into the call is named by its own file
-passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F),
+passes_function[code](C, I, F, Name) :- arg_at[flow](C, I, A), node_of[flow](A, F), fn_value[flow](F),
                                         sx_name[flow](A, Name).
 -- a function written in place is named by its own name, `anonymous` when it has none
 passes_function[code](C, I, A, Name)      :- written_arg[code](C, I, A), fn_node[code](A), fn_name[code](A, Name).
 passes_function[code](C, I, A, anonymous) :- written_arg[code](C, I, A), fn_node[code](A), not fn_name[code](A, _).
 -- a member handed over (`bus.on(x, this.onMsg)`) is named by its key
 passes_function[code](C, I, F, Key)       :- written_arg[code](C, I, A), member_node_v[flow](A), selects[flow](A, Key),
-                                             may_be_node[flow](A, F), fn_value[flow](F).
+                                             node_of[flow](A, F), fn_value[flow](F).
 written_arg[code](C, I, A) :- arg_at[flow](C, I, A), argument_at[code](C, I, A).
 
 -- A function handed over and CALLED, by models/lang/js/facts/js-host.rofl's `host_calls_back`.
@@ -342,9 +342,9 @@ callback_site[code](C, Name, itself)  :- callee[value](C, N), free_global[code](
 callback_site[code](C, Name, Key)     :- callee_of[code](C, M), object_of[code](M, G), free_global[code](G, Name, _),
                                          lib_global(Name, _, _), selects[flow](M, Key).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, I, When),
-                                arg_at[flow](C, I, A), may_be_node[flow](A, F), fn_value[flow](F).
+                                arg_at[flow](C, I, A), node_of[flow](A, F), fn_value[flow](F).
 calls_back[code](C, F, When) :- callback_site[code](C, O, Key), host_calls_back(O, Key, last, When),
-                                last_arg[flow](C, A), may_be_node[flow](A, F), fn_value[flow](F).
+                                last_arg[flow](C, A), node_of[flow](A, F), fn_value[flow](F).
 last_arg[flow](C, A) :- arg_count[code](C, N), arg_at[flow](C, I, A), N is I + 1.
 
 -- A call RUNS a function when it applies it (resolves to it, or constructs
@@ -366,7 +366,7 @@ may_be[flow](B, node, F) :- call_on[flow](B, F, "bind"), fn_value[flow](F), arg_
 -- a function bound with arguments is no longer f to the dataflow (its parameters shift), but a call of it runs f
 bound_with_args[flow](B, F) :- call_on[flow](B, F, "bind"), fn_value[flow](F), arg_count[code](B, N), N >= 2.
 may_be[flow](B, node, B) :- bound_with_args[flow](B, _).
-runs[code](C, F) :- callee[value](C, G), may_be_node[flow](G, B), bound_with_args[flow](B, F).
+runs[code](C, F) :- callee[value](C, G), node_of[flow](G, B), bound_with_args[flow](B, F).
 -- `new Promise(executor)` calls the executor at once and catches its throw,
 -- which rejects the promise: the call runs it and does not throw what it throws
 runs_now[code](C, F) :- runs[code](C, F).
@@ -405,7 +405,7 @@ edb(shape_because).
 -- the call may reach: a may-set beside `calls`, never folded into it.
 may_resolve[code](C, F) :- unresolved_call[code](C, s_computed_dynamic_key), callee_of[code](C, N),
                            member_obj_any[flow](N, _, Obj), member_value[flow](Obj, _, V),
-                           may_be_node[flow](V, F), fn_value[flow](F).
+                           node_of[flow](V, F), fn_value[flow](F).
 may_call[code](Caller, F) :- may_resolve[code](C, F), nearest_fn[code](Caller, C).
 may_call[code](R, F)      :- may_resolve[code](C, F), top_call[code](C, R).
 
@@ -484,9 +484,9 @@ fn_binder[code](O, M) :- obj_member_fn[code](O, _, M).
 -- last step the iterator protocol takes: `member_value` names the identifier.
 await_arg[code](A, X) :- awaits[value](A, X).
 
-awaited_then[code](A, F) :- await_arg[code](A, X), may_be_node[flow](X, O),
+awaited_then[code](A, F) :- await_arg[code](A, X), node_of[flow](X, O),
                             member_value[flow](O, "then", V),
-                            may_be_node[flow](V, F), fn_value[flow](F).
+                            node_of[flow](V, F), fn_value[flow](F).
 
 performed_call[code](A, F) :- awaited_then[code](A, F).
 callerless_call[audit](Name) :- performed_call[code](_, F), fn_label[flow](F, Name).
@@ -496,7 +496,7 @@ callerless_call[audit](Name) :- performed_call[code](_, F), fn_label[flow](F, Na
 -- WRONG rather than silent, since `may_be_node` is a may-set); value unknown
 -- (the frontier, deliberately not wired into `frontier_at`, which is keyed by
 -- a caller this call has not got).
-await_value_known[code](A)    :- await_arg[code](A, X), may_be_node[flow](X, _).
+await_value_known[code](A)    :- await_arg[code](A, X), node_of[flow](X, _).
 await_no_call[code](A)        :- await_value_known[code](A), not awaited_then[code](A, _).
 await_value_unknown[audit](A) :- await_arg[code](A, _), not await_value_known[code](A).
 
@@ -591,7 +591,7 @@ holds_in_place(tsmodule_block, body).
 holds_in_place(object_property, value).
 
 -- asked only of a place that may hold a surveyed object of its own file
-placed[flow](A) :- may_be_node[flow](A, O), surveyed[flow](O), parent[tree](_, A).
+placed[flow](A) :- node_of[flow](A, O), surveyed[flow](O), parent[tree](_, A).
 -- a node in a place that holds it, read off the raw tree once: a lemma of the tree's stage
 in_place[flow](A) :- child[ast_oxc](P, F, _, A), node[ast_oxc](P, PK, _), holds_in_place(PK, F).
 held[flow](A) :- placed[flow](A), in_place[flow](A).
@@ -604,7 +604,7 @@ held[flow](V) :- placed[flow](V), stored_in[flow](V, _).
 literal_part[flow](O, P) :- obj_lit[code](O), parent[tree](O, P).
 held[flow](P) :- placed[flow](P), literal_part[flow](_, P).
 stored_in[flow](V, H) :- assign_op[code](_, L, V), member_node_v[flow](L), object_of[code](L, HE),
-                         whole_expr[flow](HE), may_be_node[flow](HE, H).
+                         whole_expr[flow](HE), node_of[flow](HE, H).
 
 -- A member written: by a known key it is had, by an unknown one the object is open.
 member_written[flow](N) :- member_node_v[flow](N), assign[value](_, N, _), not pat_in[code](_, _, N).
@@ -615,17 +615,17 @@ member_written[flow](N) :- member_node_v[flow](N), iterates[value](S, N, _), for
 member_written[flow](N) :- member_node_v[flow](N), enumerates[value](_, N, _).
 sx_mkey[flow](O, Key) :- member_written[flow](N), member_any[flow](N, _, O, Key).
 
-sx_open[flow](O)  :- placed[flow](A), may_be_node[flow](A, O), surveyed[flow](O), not held[flow](A).
+sx_open[flow](O)  :- placed[flow](A), node_of[flow](A, O), surveyed[flow](O), not held[flow](A).
 sx_open[flow](O)  :- member_written[flow](N), member_obj_any[flow](N, _, O), not selects[flow](N, _).
-sx_open[flow](O)  :- may_be_node[flow](P, O), literal_part[flow](L, P), sx_open[flow](L).
-sx_open[flow](O)  :- stored_in[flow](V, H), sx_open[flow](H), may_be_node[flow](V, O).
+sx_open[flow](O)  :- node_of[flow](P, O), literal_part[flow](L, P), sx_open[flow](L).
+sx_open[flow](O)  :- stored_in[flow](V, H), sx_open[flow](H), node_of[flow](V, O).
 -- an object literal with a spread, a computed key or a `__proto__`
 sx_open[flow](O)  :- obj_lit[code](O), spread_props[value](O, _, _).
 sx_open[flow](O)  :- literal_part[flow](O, P), has[value](O, P), not key_name[code](P, _).
 sx_open[flow](O)  :- literal_part[flow](O, P), key_name[code](P, "__proto__").
 -- a member function whose `this` the model does not follow may write onto it
 this_unfollowed[flow](F) :- this_host[flow](F, _), not class_method[code](_, F).
-sx_open[flow](O)  :- receivable[flow](O), member_value[flow](O, _, V), may_be_node[flow](V, F),
+sx_open[flow](O)  :- receivable[flow](O), member_value[flow](O, _, V), node_of[flow](V, F),
                         this_unfollowed[flow](F).
 -- a class whose prototype may change: read as `C.prototype`, decorated, a base not
 -- seen or open, a constructor returning a value
@@ -641,7 +641,7 @@ sx_open[flow](I)  :- isa[flow](I, CD), sx_open[flow](CD).
 member_call[flow](C, R, Key) :- call[value](C), callee[value](C, N),
                                 member[value](N, _, _),
                                 selects[flow](N, Key), object_of[code](N, R).
-call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), may_be_node[flow](R, O).
+call_on[flow](C, O, Key) :- member_call[flow](C, R, Key), node_of[flow](R, O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), member_value[flow](O, Key, _), not class_like[flow](O).
 call_finds[flow](C) :- call_on[flow](C, O, Key), sx_mkey[flow](O, Key).
 call_finds[flow](C) :- call_on[flow](C, O, Key), receivable[flow](O), lib_member(object, Key, _).
@@ -649,7 +649,7 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), kind_proto[flow](O, P), lib_mem
 call_finds[flow](C) :- call_on[flow](C, O, Key), es_instance[flow](O, Name, _), lib_global_prototype(Name, P),
                        lib_member(P, Key, _).
 call_open[flow](C)    :- member_call[flow](C, R, _), not whole_expr[flow](R), not whole_global[flow](R).
-call_open[flow](C)    :- member_call[flow](C, R, _), whole_expr[flow](R), not may_be_node[flow](R, _).
+call_open[flow](C)    :- member_call[flow](C, R, _), whole_expr[flow](R), not has_node[flow](R).
 call_open[flow](C)    :- member_call[flow](C, R, _), lit_of[flow](R, _).
 call_open[flow](C)    :- call_on[flow](C, O, _), not surveyed[flow](O), not sx_module[flow](_, O).
 call_open[flow](C)    :- call_on[flow](C, O, _), sx_open[flow](O).
@@ -661,7 +661,7 @@ call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), class_memb
 call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), lib_member(function, Key, _).
 call_finds[flow](C) :- call_on[flow](C, O, Key), class_like[flow](O), lib_member(object, Key, _).
 static_open[flow](CD) :- class_like[flow](CD), ambient[value](CD).
-static_open[flow](CD) :- class_like[flow](CD), member_value[flow](CD, _, V), may_be_node[flow](V, F),
+static_open[flow](CD) :- class_like[flow](CD), member_value[flow](CD, _, V), node_of[flow](V, F),
                          this_unfollowed[flow](F).
 call_open[flow](C)    :- call_on[flow](C, O, _), static_open[flow](O).
 

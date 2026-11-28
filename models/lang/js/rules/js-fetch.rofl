@@ -40,12 +40,12 @@ http_method(V, M) :- http_verb_name(V, M).
 -- module made (`axios.create()`), whose base address is not traced: `inst`.
 -- A named import is read where it is written and published with the name.
 cl_api[flow](G, "fetch", call, root) :- free_global[code](G, "fetch", _).
-cl_api[flow](G, S, call, root) :- may_be_node[flow](G, S), external_value[flow](S, S), http_client(S, call, _).
+cl_api[flow](G, S, call, root) :- node_of[flow](G, S), external_value[flow](S, S), http_client(S, call, _).
 cl_api[flow](G, S, K, root) :- cl_member[flow](G, S, K), cl_rooted[flow](G).
 cl_api[flow](G, S, K, inst) :- cl_member[flow](G, S, K), not cl_rooted[flow](G).
-cl_api[flow](G, S, K, root) :- may_be_node[flow](G, Sp), cl_import[flow](Sp, S, K).
+cl_api[flow](G, S, K, root) :- node_of[flow](G, Sp), cl_import[flow](Sp, S, K).
 cl_member[flow](G, S, K) :- member_node_v[flow](G), selects[flow](G, K), external_value[flow](G, S), http_client(S, K, _).
-cl_rooted[flow](G) :- cl_member[flow](G, _, _), object_of[code](G, O), may_be_node[flow](O, S),
+cl_rooted[flow](G) :- cl_member[flow](G, _, _), object_of[code](G, O), node_of[flow](O, S),
                        external_value[flow](S, S).
 cl_import[flow](Sp, S, K) :- external_import[code](Sp, _, S, _), import_ident_key[code](Sp, K),
                              http_client(S, K, _).
@@ -61,9 +61,9 @@ cl_method[flow](C, M) :- cl_how[flow](C, verb(M), _).
 cl_opts[flow](C, A) :- cl_how[flow](C, opts(I), _), arg_at[flow](C, I, A).
 cl_method[flow](C, get) :- cl_how[flow](C, opts(I), _), not argument_at[code](C, I, _).
 
-cl_known[flow](A) :- cl_opts[flow](_, A), may_be_node[flow](A, _).
+cl_known[flow](A) :- cl_opts[flow](_, A), node_of[flow](A, _).
 cl_method[flow](C, any) :- cl_opts[flow](C, A), not cl_known[flow](A).
-cl_method_at[flow](C, P) :- cl_opts[flow](C, A), may_be_node[flow](A, O), member_value[flow](O, "method", P).
+cl_method_at[flow](C, P) :- cl_opts[flow](C, A), node_of[flow](A, O), member_value[flow](O, "method", P).
 cl_has_method[flow](C) :- cl_method_at[flow](C, _).
 cl_method[flow](C, get) :- cl_opts[flow](C, A), cl_known[flow](A), not cl_has_method[flow](C).
 cl_method_lit[flow](C, P, M) :- cl_method_at[flow](C, P), lit_of[flow](P, V), http_method(V, M).
@@ -76,9 +76,9 @@ cl_method[flow](C, any) :- cl_method_at[flow](C, P), not cl_named[flow](P).
 -- this pack asks js-concat to unfold. An instance's request goes under a base
 -- nothing traced, a piece no one knows.
 cl_url_arg[flow](C, A) :- cl_how[flow](C, _, _), arg_at[flow](C, 0, A).
-concat_wanted[flow](X) :- cl_url_arg[flow](_, A), may_be_node[flow](A, X), composed[flow](X).
+concat_wanted[flow](X) :- cl_url_arg[flow](_, A), node_of[flow](A, X), composed[flow](X).
 cl_url[flow](C, V) :- cl_url_arg[flow](C, A), lit_of[flow](A, V), str_value[flow](V).
-cl_url[flow](C, T) :- cl_url_arg[flow](C, A), may_be_node[flow](A, X), concat_depth(D), text_at[flow](X, D, T, _).
+cl_url[flow](C, T) :- cl_url_arg[flow](C, A), node_of[flow](A, X), concat_depth(D), text_at[flow](X, D, T, _).
 
 requests[flow](C, M, U) :- cl_how[flow](C, _, root), cl_method[flow](C, M), cl_url[flow](C, U).
 requests[flow](C, M, cat(base, U)) :- cl_how[flow](C, _, inst), cl_method[flow](C, M), cl_url[flow](C, U).

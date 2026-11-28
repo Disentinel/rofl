@@ -19,7 +19,7 @@ Reads:
 - from js-callgraph: [await_arg](js-callgraph.rofl.md#await_arg), [call_site](js-callgraph.rofl.md#call_site), [fn_node](js-callgraph.rofl.md#fn_node), [for_of_iterates](js-callgraph.rofl.md#for_of_iterates), [nearest_fn](js-callgraph.rofl.md#nearest_fn), [resolves](js-callgraph.rofl.md#resolves), [runs](js-callgraph.rofl.md#runs)
 - from js-callgraph, in the flow: [field_init](js-callgraph.rofl.md#field_init)
 - from js-dataflow: [declarator_id](js-dataflow.rofl.md#declarator_id), [export_local](js-dataflow.rofl.md#export_local), [obj_lit](js-dataflow.rofl.md#obj_lit), [obj_rest](js-dataflow.rofl.md#obj_rest), [pat_in](js-dataflow.rofl.md#pat_in), [pattern_source](js-dataflow.rofl.md#pattern_source), [pattern_takes](js-dataflow.rofl.md#pattern_takes), [private_binds](js-dataflow.rofl.md#private_binds), [spread_of](js-dataflow.rofl.md#spread_of)
-- from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [has_lit](js-dataflow.rofl.md#has_lit), [lit_of](js-dataflow.rofl.md#lit_of), [may_be_node](js-dataflow.rofl.md#may_be_node), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
+- from js-dataflow, in the flow: [catch_of](js-dataflow.rofl.md#catch_of), [catch_param](js-dataflow.rofl.md#catch_param), [decl_value](js-dataflow.rofl.md#decl_value), [has_lit](js-dataflow.rofl.md#has_lit), [has_node](js-dataflow.rofl.md#has_node), [lit_of](js-dataflow.rofl.md#lit_of), [member_node_v](js-dataflow.rofl.md#member_node_v), [member_value](js-dataflow.rofl.md#member_value), [node_of](js-dataflow.rofl.md#node_of), [plain_assign](js-dataflow.rofl.md#plain_assign), [selects](js-dataflow.rofl.md#selects)
 - from js-model: [ast_node](js-model.rofl.md#ast_node)
 - from js-modules: [export_default_site](js-modules.rofl.md#export_default_site)
 - from js-structure: [conditional_write](js-structure.rofl.md#conditional_write), [object_of](js-structure.rofl.md#object_of), [object_pat](js-structure.rofl.md#object_pat), [seq_at](js-structure.rofl.md#seq_at), [step_in](js-structure.rofl.md#step_in)
@@ -419,7 +419,7 @@ In the flow:
 
 <a id="accessor_recv"></a>`accessor_recv`(a [member access](js-dataflow.rofl.md#member_node_v) N, Obj) if all of:
   - [`accessor_obj`](#accessor_obj)(Obj);
-  - a node O [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(O, Obj);
   - [`object_of`](js-structure.rofl.md#object_of)(N, O).
 
 > A read runs the getter, `o.p = v` the setter, `o.p += v` and `o.p++` both.
@@ -477,19 +477,20 @@ A node
 
 - <a id="pattern_accessor"></a>destructures through the accessor M if all of:
   - [the accessor](#accessor_of) of a node Obj at Key is M;
-  - a node Init [points to](js-dataflow.rofl.md#may_be_node) Obj;
-  - [the pattern source](js-dataflow.rofl.md#pattern_source) of it is Init;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(Init, Obj);
+  - [the pattern source](js-dataflow.rofl.md#pattern_source) of it is a node Init;
   - it [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
 - destructures through the accessor M if all of:
   - a pattern P [holds the object rest](js-dataflow.rofl.md#obj_rest) it taken from a node Src;
   - [the pattern source](js-dataflow.rofl.md#pattern_source) of P is Src;
-  - Src [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
-  - [the accessor](#accessor_of) of Obj at Key is M;
-  - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
-- destructures through the accessor M if all of:
+  - [`node_of`](js-dataflow.rofl.md#node_of)(Src, Obj);
   - [the accessor](#accessor_of) of a node Obj at Key is M;
-  - it [points to](js-dataflow.rofl.md#may_be_node) Obj;
-  - [`spread_props`](#spread_props)(O, something, it);
+  - unless P [takes the key](js-dataflow.rofl.md#pattern_takes) Key.
+
+X destructures through the accessor M if all of:
+  - [the accessor](#accessor_of) of a node Obj at Key is M;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(X, Obj);
+  - [`spread_props`](#spread_props)(O, something, X);
   - [`obj_lit`](js-dataflow.rofl.md#obj_lit)(O).
 
 > `spread_element` is one kind doing two things: in `properties` it copies
@@ -505,8 +506,8 @@ A node
 1. if [`iterates`](#iterates)(P, P, something) and P [iterates through](js-callgraph.rofl.md#for_of_iterates) M;
 2. if all of:
    - P [is iterated](#spread_iterated);
-   - P [points to](js-dataflow.rofl.md#may_be_node) a node Obj;
-   - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of Obj holds M;
+   - [`node_of`](js-dataflow.rofl.md#node_of)(P, Obj);
+   - [the member](js-dataflow.rofl.md#member_value) `symbol_iterator` of a node Obj holds M;
    - [`fn_value`](js-surface.rofl.md#fn_value)(M).
 
 > The two sides reach the call graph differently. An iterable position has one
@@ -530,7 +531,7 @@ A call resolves to a node M if it [destructures through](#pattern_iterates) M.
   - it [destructures through](#pattern_iterates) a node M;
   - [`ret_node_any`](js-surface.rofl.md#ret_node_any)(M, IterObj);
   - [the member](js-dataflow.rofl.md#member_value) "next" of a node IterObj holds a node V;
-  - V [points to](js-dataflow.rofl.md#may_be_node) Next;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(V, Next);
   - [`fn_value`](js-surface.rofl.md#fn_value)(Next).
 
 ## 5. THE SOURCE DECIDES, SO COUNT THE SOURCES. Every position that runs a
@@ -576,7 +577,7 @@ The hidden call source of a node P is a node N if all of:
   - [`declarator_id`](js-dataflow.rofl.md#declarator_id)(D, P);
   - D [takes its value from](js-dataflow.rofl.md#decl_value) N.
 
-The hidden call source of a node P is a node N if [`iterates`](#iterates)(P, P, P) and P [points to](js-dataflow.rofl.md#may_be_node) N.
+The hidden call source of a node P is a node N if [`iterates`](#iterates)(P, P, P) and [`node_of`](js-dataflow.rofl.md#node_of)(P, N).
 
 In the flow:
 
@@ -592,7 +593,10 @@ In the flow:
 
 A node
 
-- <a id="hidden_call_builtin"></a>hides a builtin call on a node O if [the hidden call source](#hidden_call_src) of it [points to](js-dataflow.rofl.md#may_be_node) O, unless it [fires a hidden call](#hidden_call_fires).
+- <a id="hidden_call_builtin"></a>hides a builtin call on a node O if all of:
+  - [the hidden call source](#hidden_call_src) of it is a node Src;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(Src, O);
+  - unless it [fires a hidden call](#hidden_call_fires).
 - <a id="hidden_call_primitive"></a>hides a call on the primitive V if all of:
   - [the hidden call source](#hidden_call_src) of it is a node Src;
   - [`lit_of`](js-dataflow.rofl.md#lit_of)(Src, V);
@@ -600,14 +604,14 @@ A node
 
 In the code:
 
-<a id="hidden_call_traced"></a>A node has a traced hidden call if [the hidden call source](#hidden_call_src) of it [points to](js-dataflow.rofl.md#may_be_node) some node.
+<a id="hidden_call_traced"></a>A node has a traced hidden call if [the hidden call source](#hidden_call_src) of it is a node Src and [`node_of`](js-dataflow.rofl.md#node_of)(Src, something).
 
 In the flow:
 
 <a id="hidden_call_untraced"></a>A node has an untraced hidden call from a node Src if all of:
   - [the hidden call source](#hidden_call_src) of it is Src;
   - unless [`has_lit`](js-dataflow.rofl.md#has_lit)(Src);
-  - unless Src [points to](js-dataflow.rofl.md#may_be_node) some node.
+  - unless [`has_node`](js-dataflow.rofl.md#has_node)(Src).
 
 In the code:
 
@@ -828,7 +832,7 @@ In the flow:
 
 <a id="sx_entry"></a>`sx_entry`(F) if all of:
   - a node L [is exported locally as](js-dataflow.rofl.md#export_local) some name from some file;
-  - L [points to](js-dataflow.rofl.md#may_be_node) a node F;
+  - [`node_of`](js-dataflow.rofl.md#node_of)(L, F);
   - [`fn_value`](js-surface.rofl.md#fn_value)(F);
   - unless [`fn_nested`](js-surface.rofl.md#fn_nested)(F).
 
