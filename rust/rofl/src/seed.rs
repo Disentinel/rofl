@@ -831,9 +831,22 @@ fn terms(o: &mut Out, at: &str, h: &Heap, ts: &[Term]) {
 }
 
 fn prems(o: &mut Out, at: &str, h: &Heap, s: &Store, ps: &[PremRef]) {
+    rule_prems(o, at, h, s, crate::store::LAZY, ps)
+}
+
+fn rule_prems(o: &mut Out, at: &str, h: &Heap, s: &Store, rule: Sym, ps: &[PremRef]) {
+    let at_of = |p: &PremRef| ps.iter().position(|q| std::ptr::eq(q, p)).unwrap_or(0);
     o.list(at, ps, |o, p| {
         let mut key = String::new();
         let t = match p.kind() {
+            PremK::Neg(crate::store::LAZY) => {
+                o.s(r#"{"key":"#, &s.prem_name(h, rule, ps, at_of(p)));
+                "neg"
+            }
+            PremK::Bi(crate::store::LAZY) => {
+                o.s(r#"{"desc":"#, &s.prem_name(h, rule, ps, at_of(p)));
+                "bi"
+            }
             PremK::Bi(d) => {
                 o.s(r#"{"desc":"#, h.name(d));
                 "bi"
@@ -884,7 +897,7 @@ fn stored(o: &mut Out, h: &Heap, s: &Store, id: FactId, key: Option<&str>) {
 
 /// One firing, as a snapshot's `sup` and an answer of `firings` write it.
 fn firing(o: &mut Out, h: &Heap, s: &Store, sig: &str, rule: Sym, tick: u32, ps: &[PremRef]) {
-    prems(o, r#"{"prems":"#, h, s, ps);
+    rule_prems(o, r#"{"prems":"#, h, s, rule, ps);
     o.s(r#","ruleId":"#, h.name(rule));
     o.s(r#","sig":"#, sig);
     o.n(r#","tick":"#, tick);
@@ -1039,7 +1052,7 @@ pub fn snapshot(h: &Heap, s: &Store) -> String {
     o.list(r#","wits":"#, &fired, |o, (k, id)| {
         let w = s.witness_of(h, *id, &mut memo).unwrap();
         o.s(r#"{"key":"#, k);
-        prems(o, r#","prems":"#, h, s, w.prems);
+        rule_prems(o, r#","prems":"#, h, s, w.rule, w.prems);
         o.s(r#","ruleId":"#, h.name(w.rule));
         o.n(r#","tick":"#, w.tick);
         o.raw("}");

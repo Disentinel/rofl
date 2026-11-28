@@ -1141,6 +1141,7 @@ impl Eval {
                         let k = self.anon_lit_key(l, &sol.s);
                         prems.insert(*j, PremRef::Neg(self.h.key(&k)));
                     }
+                    self.settle_negs(r, &mut prems, &sol.s);
                     let head = &r.clause.head;
                     let persp = walk(&self.h, head.persp, &sol.s);
                     let args: Vec<Term> = head.args.iter().map(|a| resolve(&mut self.h, *a, &sol.s)).collect();

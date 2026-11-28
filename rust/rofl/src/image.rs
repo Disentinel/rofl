@@ -127,6 +127,8 @@ impl W {
                     self.out.push(0);
                     self.u32(fact_ix.get(&f).copied().unwrap_or(u32::MAX))
                 }
+                Prem::Neg(crate::store::LAZY) => self.out.push(5),
+                Prem::Bi(crate::store::LAZY) => self.out.push(6),
                 Prem::Neg(s) => {
                     self.out.push(1);
                     self.sym(s)
@@ -455,6 +457,8 @@ impl R<'_> {
                 1 => PremRef::Neg(self.sym()?),
                 2 => PremRef::Bi(self.sym()?),
                 3 => PremRef::VRow(self.sym()?),
+                5 => PremRef::Neg(crate::store::LAZY),
+                6 => PremRef::Bi(crate::store::LAZY),
                 _ => return Err("a kept image holds a premise of no kind".into()),
             });
         }

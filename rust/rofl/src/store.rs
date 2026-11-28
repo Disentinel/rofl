@@ -190,6 +190,9 @@ pub struct PremRef(u32);
 const PREM_OTHER: u32 = 1 << 31;
 const PREM_SHIFT: u32 = 29;
 const PREM_LOW: u32 = (1 << PREM_SHIFT) - 1;
+/// The name of a negated or builtin premise no key spells: the rule's element at its position, said again from the
+/// facts the rule's positive premises matched (`Lazy`).
+pub const LAZY: Sym = PREM_LOW;
 
 #[allow(non_snake_case)]
 impl PremRef {
@@ -1468,6 +1471,8 @@ pub struct Store {
     pub lemma_cut: Option<Rc<FxSet<Sym>>>,
     far_heads: FxMap<FactId, u32>,
     wits: Col<WitNode>,
+    /// How each rule's negations are said again from its premises, set by the engine with its rules.
+    pub lazy: Option<Rc<Lazy>>,
     prem_arena: Col<PremRef>,
     /// `firing_hash` of every node on a chain, and of some that left one: a
     /// firing whose hash is absent is new without walking its fact's chain.
@@ -1808,6 +1813,37 @@ pub struct StagedHead<'a> {
 
 /// A firing as the readers see it: no allocation, and the premises are the
 /// arena's own slice.
+/// A rule's negations and builtins said from its positive premises: for the element at a position, the positions of
+/// the positive premises that bind its variables, and each as the rule writes it.
+#[derive(Default)]
+pub struct Lazy {
+    pub rules: FxMap<Sym, LazyRule>,
+}
+
+#[derive(Default)]
+pub struct LazyRule {
+    /// (position, book, arguments) of each positive premise a negation reads its values from
+    pub pos: Vec<(usize, Term, Box<[Term]>)>,
+    /// (position, the element, the `pos` entries that bind it)
+    pub said: Vec<(usize, Said, Box<[usize]>)>,
+}
+
+pub enum Said {
+    /// `not rel[book](args)`
+    Neg(Sym, Term, Box<[Term]>),
+    /// `l op r`
+    Bi(Sym, Term, Term),
+}
+
+impl Lazy {
+    /// The element at `i` of a firing of `rule` with these premises can be said from them alone.
+    pub fn sayable(&self, rule: Sym, prems: &[PremRef], i: usize) -> bool {
+        let Some(r) = self.rules.get(&rule) else { return false };
+        let Some(n) = r.said.iter().find(|n| n.0 == i) else { return false };
+        n.2.iter().all(|&k| prems.get(r.pos[k].0).is_some_and(|p| matches!(p.kind(), Prem::Fact(_))))
+    }
+}
+
 pub struct WitView<'a> {
     pub rule: Sym,
     pub tick: u32,
@@ -3691,22 +3727,75 @@ impl Store {
         out
     }
 
+    /// The name of the premise at `i` of a firing of `rule`: a lazy one's said from the facts its rule matched, as
+    /// the firing would have spelled it (`rel[book](args)`, `l op r`).
+    pub fn write_prem_name(&self, h: &Heap, rule: Sym, prems: &[PremRef], i: usize, out: &mut String) {
+        let k = match prems[i].kind() {
+            Prem::Neg(k) | Prem::Bi(k) | Prem::VRow(k) => k,
+            _ => unreachable!("a premise with a name"),
+        };
+        if k != LAZY || matches!(prems[i].kind(), Prem::VRow(_)) {
+            out.push_str(h.name(k));
+            return;
+        }
+        let lazy = self.lazy.as_ref().expect("a lazy premise read without its rules");
+        let r = &lazy.rules[&rule];
+        let n = r.said.iter().find(|n| n.0 == i).expect("a lazy premise at a position its rule does not say");
+        let mut sb: Subst = Vec::new();
+        for &k in n.2.iter() {
+            let (at, persp, args) = &r.pos[k];
+            let Prem::Fact(f) = prems[*at].kind() else { unreachable!("a lazy negation over a premise not a fact") };
+            let rec = self.rec(f);
+            let ok = crate::term::unify_into(h, *persp, Term::atom(rec.persp), &mut sb)
+                && args.iter().zip(self.args(f)).all(|(a, b)| crate::term::unify_into(h, *a, *b, &mut sb));
+            assert!(ok, "a lazy premise's premise does not match its literal");
+        }
+        match &n.1 {
+            Said::Neg(rel, persp, args) => {
+                out.push_str(h.name(*rel));
+                out.push('[');
+                canon_under(h, *persp, &sb, out);
+                out.push_str("](");
+                for (j, a) in args.iter().enumerate() {
+                    if j > 0 {
+                        out.push(',');
+                    }
+                    canon_under(h, *a, &sb, out);
+                }
+                out.push(')');
+            }
+            Said::Bi(op, l, r) => {
+                canon_under(h, *l, &sb, out);
+                out.push(' ');
+                out.push_str(h.name(*op));
+                out.push(' ');
+                canon_under(h, *r, &sb, out);
+            }
+        }
+    }
+
+    pub fn prem_name(&self, h: &Heap, rule: Sym, prems: &[PremRef], i: usize) -> String {
+        let mut o = String::new();
+        self.write_prem_name(h, rule, prems, i, &mut o);
+        o
+    }
+
     pub fn write_sig(&self, h: &Heap, w: &WitView<'_>, out: &mut String) {
         out.push_str(h.name(w.rule));
-        for p in w.prems {
+        for (i, p) in w.prems.iter().enumerate() {
             out.push('|');
             match p.kind() {
                 Prem::Fact(f) => {
                     out.push_str("fact:");
                     self.write_key(h, f, out);
                 }
-                Prem::Neg(s) => {
+                Prem::Neg(_) => {
                     out.push_str("neg:");
-                    out.push_str(h.name(s));
+                    self.write_prem_name(h, w.rule, w.prems, i, out);
                 }
-                Prem::Bi(s) => {
+                Prem::Bi(_) => {
                     out.push_str("b:");
-                    out.push_str(h.name(s));
+                    self.write_prem_name(h, w.rule, w.prems, i, out);
                 }
                 Prem::Cell(c) => {
                     out.push_str("cell:");
@@ -3722,9 +3811,23 @@ impl Store {
 
     /// The premises spelled and sorted: order never depends on the planner's choice.
     fn sorted_prems(&self, h: &Heap, ps: &[PremRef]) -> Vec<String> {
-        let mut t: Vec<String> = ps.iter().map(|p| self.prem_text(h, *p)).collect();
+        self.sorted_firing_prems(h, LAZY, ps)
+    }
+
+    /// A firing's premises of `rule` spelled and sorted.
+    pub fn sorted_firing_prems(&self, h: &Heap, rule: Sym, ps: &[PremRef]) -> Vec<String> {
+        let mut t: Vec<String> = (0..ps.len()).map(|i| self.firing_prem_text(h, rule, ps, i)).collect();
         t.sort_by(|a, b| cmp_js(a, b));
         t
+    }
+
+    /// A premise of a firing of `rule` as `canonical_state` spells it in a witness line.
+    pub fn firing_prem_text(&self, h: &Heap, rule: Sym, ps: &[PremRef], i: usize) -> String {
+        match ps[i].kind() {
+            Prem::Neg(LAZY) => format!("neg:{}", self.prem_name(h, rule, ps, i)),
+            Prem::Bi(LAZY) => format!("bi:{}", self.prem_name(h, rule, ps, i)),
+            _ => self.prem_text(h, ps[i]),
+        }
     }
 
     /// A premise as `canonical_state` spells it in a witness line.
@@ -3977,7 +4080,7 @@ impl Store {
             // engines that agree on the premise SET look like two languages.
             // Measured: `drip` differed on exactly this, two witnesses of
             // 9439 lines, every fact line identical.
-            let prems = self.sorted_prems(h, w.prems);
+            let prems = self.sorted_firing_prems(h, w.rule, w.prems);
             out.push_str(&prems.join("; "));
             out.push(']');
         }
@@ -4255,7 +4358,7 @@ impl Store {
     /// sorted (FNV-1a over `rule@tick|prem; prem`; src/store.ts `firingId`).
     /// A firing a superseded value keeps has one too.
     pub fn firing_id(&self, h: &Heap, rule: Sym, tick: u32, prems: &[PremRef]) -> String {
-        let ps = self.sorted_prems(h, prems);
+        let ps = self.sorted_firing_prems(h, rule, prems);
         let text = brk!("firing_id_tickless" => format!("{}|{}", h.name(rule), ps.join("; ")); format!("{}@{}|{}", h.name(rule), tick, ps.join("; ")));
         fnv64(&text)
     }
@@ -4281,7 +4384,7 @@ impl Store {
             let state = if brk!("fir_superseded_live" => true; self.alive(id)) { "live" } else { "superseded" };
             for (rule, tick, prems) in self.firings(id) {
                 let fid = self.firing_id(h, rule, tick, &prems);
-                let ps = self.sorted_prems(h, &prems);
+                let ps = self.sorted_firing_prems(h, rule, &prems);
                 rows.push((key.clone(), fid.clone(), format!("\nfir {key} id={fid} {}@{tick} [{}] {state}", h.name(rule), ps.join("; "))));
             }
         }
@@ -5230,6 +5333,25 @@ pub fn fact_key(h: &Heap, rel: Sym, persp: Sym, args: &[Term]) -> String {
     let mut k = String::new();
     write_fact_key(h, rel, persp, args, &mut k);
     k
+}
+
+/// `h.canon_term(resolve(t, s))`, written without building the term.
+pub fn canon_under(h: &Heap, t: Term, s: &Subst, out: &mut String) {
+    let t = crate::term::walk(h, t, s);
+    match t.kind() {
+        TermK::Func(i) => {
+            out.push_str(h.name(h.fname(i)));
+            out.push('(');
+            for (k, a) in h.fargs(i).iter().enumerate() {
+                if k > 0 {
+                    out.push(',');
+                }
+                canon_under(h, *a, s, out);
+            }
+            out.push(')');
+        }
+        _ => h.canon_term(t, out),
+    }
 }
 
 pub fn write_arg_list(h: &Heap, args: &[Term], out: &mut String) {

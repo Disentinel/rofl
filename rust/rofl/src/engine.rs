@@ -16,7 +16,7 @@ use crate::reflect::*;
 use crate::store::{
     Member,
     fact_key, resolved_lit_key, tuple_text, write_arg_list, write_fact_key, CellId, CellOwner, CellValue, Dominators, FactId, FactRec, FxMap, FxSet, LatReg, NewCell,
-    NewMember, PremRef, Seal, StagedHead, Store, WitView, Witness, F_BASE, F_FROZEN, F_TICK,
+    NewMember, PremRef, Seal, StagedHead, Store, WitView, Witness, F_BASE, F_FROZEN, F_TICK, LAZY,
 };
 use crate::term::*;
 
@@ -2785,6 +2785,9 @@ impl Eval {
         self.clo.closures = find_closures(&self.rules, &refused);
         self.clo.closures_engage(&self.store);
         self.rule_at = self.rules.iter().enumerate().map(|(i, r)| (r.id, i)).collect();
+        let plain = |rel: Sym| !self.lat.is_cell(rel) && self.lat.algebra(rel).tag.is_none() && self.lat.algebra(rel).sub.is_none();
+        let plain: Vec<Rc<ERule>> = self.rules.iter().filter(|r| plain(r.clause.head.rel)).cloned().collect();
+        self.store.lazy = Some(Rc::new(lazy_negs(&self.h, &plain)));
         self.lat.widen_rec = self.widen_back_edges();
         self.lat.widen_th = self.widen_thresholds();
         let rels = demand.into_iter().map(|(rel, is)| (rel, is.into_iter().map(|i| self.rules[i].clone()).collect())).collect();
@@ -4824,8 +4827,7 @@ impl Eval {
     pub fn staged_text(&self) -> String {
         let mut out = String::new();
         for (k, f) in self.staged_sorted() {
-            let mut prems: Vec<String> = f.prems.iter().map(|p| self.store.prem_text(&self.h, *p)).collect();
-            prems.sort_by(|a, b| cmp_js(a, b));
+            let prems = self.store.sorted_firing_prems(&self.h, f.rule, &f.prems);
             out.push_str(&format!("{k} <- {} [{}]\n", self.h.name(f.rule), prems.join("; ")));
         }
         out
@@ -5758,7 +5760,8 @@ impl Eval {
         Ok(out)
     }
 
-    fn conclude(&mut self, r: &Rc<ERule>, sol: Sol, out: &mut Front) -> Result<(), Halt> {
+    fn conclude(&mut self, r: &Rc<ERule>, mut sol: Sol, out: &mut Front) -> Result<(), Halt> {
+        self.settle_negs(r, &mut sol.prems, &sol.s);
         let head = &r.clause.head;
         let persp_t = walk(&self.h, head.persp, &sol.s);
         let args: Vec<Term> = if persp_t.is_atom() {
@@ -6324,6 +6327,39 @@ impl Eval {
             next.push(Sol { s: s2, prems });
         }
         Ok(())
+    }
+
+    /// A firing's negations as its rule keeps them: lazy where its positive premises say them again
+    /// (`store::Lazy`), spelled where not.
+    pub(crate) fn settle_negs(&mut self, r: &ERule, prems: &mut [PremRef], s: &Subst) {
+        if prems.len() != r.plan.len() {
+            return;
+        }
+        for i in 0..prems.len() {
+            let lazy = match (&r.plan[i], prems[i].kind()) {
+                (BodyElem::Neg(_), Prem::Neg(_)) => PremRef::Neg(LAZY),
+                (BodyElem::Bi { .. }, Prem::Bi(_)) => PremRef::Bi(LAZY),
+                _ => continue,
+            };
+            if self.store.lazy.as_ref().is_some_and(|z| z.sayable(r.id, prems, i)) {
+                prems[i] = lazy;
+            } else if prems[i] == PremRef::Neg(0) || prems[i] == PremRef::Bi(0) {
+                prems[i] = self.record_prem(&r.plan[i], prems[i], s);
+            }
+        }
+    }
+
+    /// A firing's lazy negations spelled, for a reader that quotes them.
+    pub(crate) fn unlazy(&mut self, rule: Sym, prems: &mut [PremRef]) {
+        for i in 0..prems.len() {
+            let k = match prems[i].kind() {
+                Prem::Neg(LAZY) => PremRef::Neg,
+                Prem::Bi(LAZY) => PremRef::Bi,
+                _ => continue,
+            };
+            let t = self.store.prem_name(&self.h, rule, prems, i);
+            prems[i] = k(self.h.key(&t));
+        }
     }
 
     #[inline(never)]
@@ -10851,7 +10887,13 @@ impl Eval {
             .map(|(sig, rule, tick, prems)| (self.firing_height(&prems), self.h.name(rule).to_string(), sig, rule, tick, prems))
             .collect();
         ms.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| cmp_js(&a.1, &b.1)).then_with(|| cmp_js(&a.2, &b.2)));
-        Ok(ms.into_iter().map(|(h, _, _, r, t, p)| (h, r, t, p)).collect())
+        Ok(ms
+            .into_iter()
+            .map(|(h, _, _, r, t, mut p)| {
+                self.unlazy(r, &mut p);
+                (h, r, t, p)
+            })
+            .collect())
     }
 
     /// The dominators of the derivation graph of `p`'s recursion: the facts
@@ -13703,6 +13745,67 @@ pub fn plan_body(h: &Heap, c: &Clause) -> (Vec<BodyElem>, Option<usize>, bool, V
     plan_elems(h, &must, &c.body, &[], &outside)
 }
 
+/// Each rule's negations that its positive premises bind whole, so a firing need not spell them
+/// (`store::Lazy`): for each variable of the negation, the first positive premise of the plan that holds it.
+fn lazy_negs(h: &Heap, rules: &[Rc<ERule>]) -> crate::store::Lazy {
+    let mut out = crate::store::Lazy::default();
+    for r in rules {
+        let mut lr = crate::store::LazyRule::default();
+        let pos_vars: Vec<(usize, Vec<Sym>)> = r.plan.iter().enumerate().filter_map(|(j, b)| match b {
+            BodyElem::Pos(l) => {
+                let mut vs = Vec::new();
+                for t in std::iter::once(&l.persp).chain(&l.args) {
+                    h.vars_of(*t, &mut vs);
+                }
+                Some((j, vs))
+            }
+            _ => None,
+        }).collect();
+        for (i, b) in r.plan.iter().enumerate() {
+            let mut vs = Vec::new();
+            let said = match b {
+                BodyElem::Neg(l) => {
+                    for t in std::iter::once(&l.persp).chain(&l.args) {
+                        h.vars_of(*t, &mut vs);
+                    }
+                    crate::store::Said::Neg(l.rel, l.persp, l.args.clone().into())
+                }
+                BodyElem::Bi { op, l, r } => {
+                    h.vars_of(*l, &mut vs);
+                    h.vars_of(*r, &mut vs);
+                    crate::store::Said::Bi(*op, *l, *r)
+                }
+                _ => continue,
+            };
+            let mut by: Vec<usize> = Vec::new();
+            let whole = vs.iter().all(|v| match pos_vars.iter().find(|(_, pv)| pv.contains(v)) {
+                Some((j, _)) => {
+                    let BodyElem::Pos(p) = &r.plan[*j] else { unreachable!() };
+                    let k = match lr.pos.iter().position(|x| x.0 == *j) {
+                        Some(k) => k,
+                        None => {
+                            lr.pos.push((*j, p.persp, p.args.clone().into()));
+                            lr.pos.len() - 1
+                        }
+                    };
+                    if !by.contains(&k) {
+                        by.push(k);
+                    }
+                    true
+                }
+                None => false,
+            });
+            if whole {
+                lr.said.push((i, said, by.into()));
+            }
+        }
+        if !lr.said.is_empty() {
+            out.rules.insert(r.id, lr);
+        }
+    }
+    out
+}
+
 /// `plan_order`, with the elements rather than their positions.
 pub fn plan_elems(
     h: &Heap,
@@ -15616,7 +15719,8 @@ impl Eval {
     }
 
     /// The premises of one firing of `id`, each at `indent`.
-    fn push_firing(&mut self, id: FactId, rule: Sym, tick: u32, prems: Vec<PremRef>, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+    fn push_firing(&mut self, id: FactId, rule: Sym, tick: u32, mut prems: Vec<PremRef>, indent: usize, o: &WhyOpts, next: &mut Vec<WhyTask>) {
+        self.unlazy(rule, &mut prems);
         // a staged firing is stamped with the tick it arrived in and
         // read the tick before it: one that concludes a carried
         // lattice value, or cites a cell sealed before its tick
@@ -15706,6 +15810,7 @@ impl Eval {
                     for (k, i) in order.iter().enumerate() {
                         prems[*i] = sol.prems[k];
                     }
+                    self.settle_negs(&r, &mut prems, &sol.s);
                     out.push((r.id, tick, prems));
                 }
             }

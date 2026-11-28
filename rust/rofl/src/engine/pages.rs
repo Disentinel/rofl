@@ -759,7 +759,12 @@ impl Eval {
         let s = f.subst(b);
         let mut ps = Vec::with_capacity(prems.len());
         for (j, p) in prems.iter().enumerate() {
-            ps.push(self.record_prem(&r.plan[j], *p, &s));
+            let lazy = matches!(r.plan[j], BodyElem::Neg(_) | BodyElem::Bi { .. }) && self.store.lazy.as_ref().is_some_and(|z| z.sayable(r.id, prems, j));
+            ps.push(match (lazy, &r.plan[j]) {
+                (true, BodyElem::Neg(_)) => PremRef::Neg(crate::store::LAZY),
+                (true, _) => PremRef::Bi(crate::store::LAZY),
+                _ => self.record_prem(&r.plan[j], *p, &s),
+            });
         }
         if pg.withdraw {
             let head = &r.clause.head;
