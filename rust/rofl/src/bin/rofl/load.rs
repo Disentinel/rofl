@@ -749,8 +749,6 @@ fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, mut units: Vec<crate
         eprintln!("kept {k}: {n} bytes");
     } else if s.eval.memory_cut() {
         eprintln!("the world reached the memory this process may use and stopped there: its answers are partial, and it is not kept");
-    } else if let Some(need) = keep_needs_more(s) {
-        eprintln!("the world is not kept: keeping it takes about {} of memory more, which this process may not use", crate::kept::said_size(need));
     } else if let Some(p) = slot {
         // keeping is a convenience of the question: a world that cannot be kept is answered all the same
         let cut = disk.filter(|_| s.eval.disk_cut());
@@ -766,15 +764,6 @@ fn keep_loaded(o: &Opts, world: &[String], s: &mut Session, mut units: Vec<crate
             (Err(e), Some(m)) => to_the_end(s, o.budget, o.json, &format!("the world reached the disk cap of its cache, {}, and was not kept where it stopped: {e}", crate::kept::said_size(m))),
         }
     }
-}
-
-/// What keeping the world would take beyond the memory the process may still use, when it would: indexing it for a
-/// delta and writing its volume took 2.5 times the volume's bytes at 700 vscode files (5.9 GB against 2.1 GB evaluated).
-fn keep_needs_more(s: &Session) -> Option<u64> {
-    use std::sync::atomic::Ordering::Relaxed;
-    let may = rofl::engine::MEMORY_LIMIT.load(Relaxed);
-    let need = s.eval.disk_bytes().saturating_mul(3);
-    (may > 0 && need > may - rofl::engine::MEMORY_USED.load(Relaxed)).then_some(need as u64)
 }
 
 /// The read-only structure report, which replaces the dump as a question does.
