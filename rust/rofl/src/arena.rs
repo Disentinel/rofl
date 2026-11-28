@@ -513,6 +513,11 @@ impl VolW {
             self.err = self.out.write_all(b).err();
         }
         self.sum.add(b);
+        // (what is written waits in the page cache, which a cgroup counts: a volume of gigabytes written at the memory
+        // wall had the kernel kill the process. Every 256 MB goes to disk before more is written)
+        if (self.at >> 28) != ((self.at + b.len()) >> 28) && self.err.is_none() {
+            self.err = self.out.flush().and_then(|_| self.out.get_ref().sync_data()).err();
+        }
         self.at += b.len();
     }
     pub fn u32(&mut self, x: u32) {

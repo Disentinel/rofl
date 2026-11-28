@@ -1419,7 +1419,7 @@ keyed_put_obj[flow](X, N, V) :- keyed_on[flow](C, X, P, Put), keyed_store(P, Put
                                 node_of[flow](A, N), arg_at[flow](C, 1, V).
 keyed_read[flow](C, V)  :- keyed_on[flow](C, X, P, Get), keyed_store(P, _, Get), not argument_at[code](C, 1, _),
                            arg_at[flow](C, 0, A), node_of[flow](A, N), keyed_put_obj[flow](X, N, V).
-may_be[flow](C, VK, Val) :- may_be[flow](V, VK, Val), keyed_read[flow](C, V).
+may_be[flow](C, VK, Val) :- keyed_read[flow](C, V), may_be[flow](V, VK, Val).
 
 -- the walks: position 0 of the head's pattern is a key, position 1 a value;
 -- forEach's callback takes (value, key)

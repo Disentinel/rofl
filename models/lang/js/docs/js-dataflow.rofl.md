@@ -3492,7 +3492,7 @@ In the flow:
   - [`keyed_put_obj`](#keyed_put_obj)(X, N, V);
   - unless [`argument_at`](js-structure.rofl.md#argument_at)(C, 1, something).
 
-`may_be`(C, VK, Val) if [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val) and [`keyed_read`](#keyed_read)(C, V).
+`may_be`(C, VK, Val) if [`keyed_read`](#keyed_read)(C, V) and [`may_be`](js-callgraph.rofl.md#may_be)(V, VK, Val).
 
 > the walks: position 0 of the head's pattern is a key, position 1 a value;
 > forEach's callback takes (value, key)

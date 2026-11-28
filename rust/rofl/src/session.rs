@@ -301,8 +301,8 @@ impl Session {
         }
     }
 
-    /// THE MEMORY WALL COOLS THE WORLD TO DISK. A world that stopped there is written to `dir` as a volume (an
-    /// overlay over the one it was cooled to before), opened again from it, its facts the file's pages, which the
+    /// THE MEMORY WALL COOLS THE WORLD TO DISK. A world that stopped there is written to `dir` as a volume, whole,
+    /// opened again from it, its facts the file's pages, which the
     /// system takes back as it needs them, and goes on from where it stopped. It stops for good where going on from
     /// a cooling took it fewer steps than it went before that cooling: what it holds outside the file grows faster
     /// than the cooling frees. Returns how many times it was cooled.
@@ -316,8 +316,9 @@ impl Session {
             }
             (went, mark) = (steps - mark, steps);
             let p = dir.join(format!("rofl-cool-{}-{times}.vol", std::process::id())).display().to_string();
-            let chain = self.kept.files.clone();
-            if let Err(e) = self.keep_volume_as(&p, "", None, &chain) {
+            // (whole, not over the last cooling: a world opened over a volume writes into its mapped top, which is then
+            // copied to the heap whole, the tuples, the names and the key table, gigabytes with no step taken)
+            if let Err(e) = self.keep_volume_as(&p, "", None, &[]) {
                 break Err(format!("the world met the memory wall and could not be cooled to {p}: {e}"));
             }
             files.push(p.clone());
@@ -332,6 +333,10 @@ impl Session {
             };
             (o.eval.space, o.eval.disk, o.eval.mode, o.eval.retain_ticks, o.eval.cost.on_hot) = (keep.0, keep.1, keep.2, keep.3, keep.4);
             *self = o;
+            // (the last cooling is no longer read: the world was written whole and the old one dropped)
+            for f in files.drain(..files.len() - 1) {
+                let _ = std::fs::remove_file(f);
+            }
             crate::engine::MEMORY_STOPPED.store(false, Relaxed);
             times += 1;
             if let Err(h) = self.resume(self.eval.budget - steps) {

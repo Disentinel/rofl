@@ -6010,7 +6010,7 @@ impl Eval {
 
     /// The memory wall, met at every step and at every premise matched: a firing can take gigabytes between two
     /// steps, which the kernel would take back by killing the process before the next one.
-    fn memory_met(&mut self) -> Result<(), Halt> {
+    pub(crate) fn memory_met(&mut self) -> Result<(), Halt> {
         use std::sync::atomic::Ordering::Relaxed;
         if !MEMORY_FULL.load(Relaxed) || brk!("memory_wall_sparse" => self.steps & 0x3ff != 0; false) {
             return Ok(());

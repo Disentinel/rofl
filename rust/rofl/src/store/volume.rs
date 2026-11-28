@@ -218,9 +218,10 @@ impl Fired {
         if ((b.n + own.len()) * 2).next_power_of_two().max(64) <= b.slots.len() {
             w.arena_placed(&b.slots, &placed(&b.slots, 0, own.iter().filter(|h| **h != 0).map(|&h| (h, h))), &[]);
         } else {
-            let mut all = self.clone();
-            all.freeze();
-            w.arena(&all.base.slots);
+            // (a table of them all, made once: a copy of the base grown would hold it three times at the wall)
+            let cap = ((b.n + own.len()) * 2).next_power_of_two().max(64);
+            let all = b.slots.iter().copied().filter(|&h| h != 0).chain(own.iter().copied().filter(|&h| h != 0));
+            w.arena(&crate::arena::table(cap, 0u64, all.map(|h| (h, h))));
         }
         w.arena::<u64>(&[]);
     }

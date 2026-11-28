@@ -519,7 +519,7 @@ impl Eval {
     }
 
     fn pages_pass(&mut self, comps: &[Vec<Rc<ERule>>], rounds: &[u32]) -> Result<(), Result<Back, Halt>> {
-        let (mut pg, fired) = self.pages_build(comps);
+        let (mut pg, fired) = self.pages_build(comps).map_err(Err)?;
         let mut sc = Scratch::default();
         // (news meets every rule fired so far, as the levels deliver it to every rule active)
         // (a pass a wall stopped goes on from the component it stopped in: those below it are whole)
@@ -553,7 +553,7 @@ impl Eval {
     }
 
     /// The pages of the facts `comps` read, and each rule as it fires.
-    fn pages_build(&mut self, comps: &[Vec<Rc<ERule>>]) -> (Pages, Vec<Vec<Fired>>) {
+    fn pages_build(&mut self, comps: &[Vec<Rc<ERule>>]) -> Result<(Pages, Vec<Vec<Fired>>), Halt> {
         let mut pg = Pages::default();
         let mut read: FxSet<Sym> = FxSet::default();
         let mut fired: Vec<Vec<Fired>> = Vec::with_capacity(comps.len());
@@ -584,14 +584,18 @@ impl Eval {
             }
             fired.push(fs);
         }
+        // (filing a world's facts is no step, and a world at the wall takes gigabytes to file: the wall is met as it goes)
         for rel in read {
             let ids = self.store.rel_all(&self.h, rel);
-            for id in ids {
+            for (k, id) in ids.into_iter().enumerate() {
+                if k & 0xffff == 0 {
+                    self.memory_met()?;
+                }
                 pg.file(&self.h, &self.store, rel, id);
             }
         }
         self.pages_bytes = pg.bytes();
-        (pg, fired)
+        Ok((pg, fired))
     }
 
     /// `news` to its fixpoint, each round of it meeting `rules` at each premise that reads it.
@@ -600,7 +604,10 @@ impl Eval {
             let mut fresh: Vec<FactId> = news.keys.iter().copied().collect();
             fresh.sort_unstable();
             pg.round += 1;
-            for &id in &fresh {
+            for (k, &id) in fresh.iter().enumerate() {
+                if k & 0xffff == 0 {
+                    self.memory_met().map_err(Err)?;
+                }
                 let rel = self.store.rec(id).rel;
                 pg.file(&self.h, &self.store, rel, id);
             }
@@ -949,7 +956,7 @@ impl Eval {
             let r = e.store.rec(id);
             e.round_of.get(&e.books.fact(r.rel, r.persp)).and_then(|k| index.get(k)).copied().unwrap_or(0)
         };
-        let (mut pg, fired) = self.pages_build(&comps);
+        let (mut pg, fired) = self.pages_build(&comps).map_err(|h| crate::describe(&h))?;
         for x in 0..pg.ix.len() {
             pg.open_ix(&self.store, x);
         }
