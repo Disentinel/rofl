@@ -182,47 +182,10 @@ export class RoflSession {
     return { removed: r.removed as string[], added: r.added as string[] };
   }
 
-  /** COOL A VOLUME TO DISK: write its base facts out as ROFL and drop them.
-   *
-   *  A volume is a KEY PREFIX minted by the scanner — `models/lang/js/scanner/oxc_scan`
-   *  exports `idPrefix(file)` — so residency is decided before anything is
-   *  loaded, and no rule ever mentions a volume. The kernel's own books are
-   *  excluded: `asserted_by` and `in_perspective` are what the kernel says
-   *  ABOUT an assertion, and a reheat IS a fresh assertion that earns a fresh
-   *  trail dated to the tick it actually happened on.
-   *
-   *  Reversible, and gated as such: `rust/rofl/tests/cool.rs` compares
-   *  canonicalState before cooling and after reheating, byte for byte.
-   *
-   *  The caller records the act — `cooled[code](File, Path)` so the file stays
-   *  INDEXED rather than returning to the frontier, and `hole($cold(File),
-   *  cooled_to_disk)` so a question about the cold volume refuses instead of
-   *  answering empty. */
-  async cool(prefix: string, path: string): Promise<{ facts: number; bytes: number; path: string }> {
-    const r = await this.port.send({ op: 'cool', session: this.id, prefix, path });
-    return { facts: r.facts as number, bytes: r.bytes as number, path: r.path as string };
-  }
-
-  /** A cooled volume back, refused when this engine did not write it; into an evaluated world by delta. */
-  async reheat(path: string): Promise<{ admitted: number; evaluated: boolean }> {
-    const r = await this.port.send({ op: 'reheat', session: this.id, path });
-    return { admitted: r.admitted as number, evaluated: r.evaluated as boolean };
-  }
-
   /** `assert`, saying whether the world was brought up to date by delta (`full` null) or left for an evaluation. */
   async add(rofl: string): Promise<{ added: number; full: string | null }> {
     const r = await this.port.send({ op: 'assert', session: this.id, rofl });
     return { added: r.added as number, full: r.full as string | null };
-  }
-
-  /** Cool MANY volumes in one pass over the world.
-   *
-   *  Cooling them one at a time walks the world once per volume, and the world
-   *  is still shrinking as it goes — measured over 64 eslint files, that took
-   *  cooling from 73 ms to 4 699 ms a tick while the work per tick was flat. */
-  async coolMany(vols: { prefix: string; path: string }[]): Promise<{ facts: number; bytes: number; path: string }[]> {
-    const r = await this.port.send({ op: 'cool_many', session: this.id, volumes: vols });
-    return r.volumes as { facts: number; bytes: number; path: string }[];
   }
 
   /** Write canonicalState to a file. Deliberately not a string — see the

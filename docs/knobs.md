@@ -49,16 +49,6 @@ Every flag has a consumer.
 | `--propose-structures`, `--structures-min-rows N` | the detection report in place of the state | `scripts/structures.ts`, `scripts/agg_breaks.ts` | KEEP | |
 | `--kept F`, `--anew` | the world kept on disk at F, evaluated once and answered from F by every verb in later runs, refused when stale; `--anew` evaluates it again over F (docs/cli.md, "A world kept on disk") | the owner's request of 2026-10-21, `rust/rofl/tests/kept.rs`, docs/cli.md | KEEP: one name for a kept world for every verb and one reset, nothing else. Without them a question verb keeps its world by itself in the cache directory (docs/cli.md), with no knob to turn that on or off; `rofl load` and `rofl serve` never do | |
 | `ROFL_CACHE_GB` | the hard cap, in GB, on the worlds the question verbs keep by themselves (default 50, two worlds of the reference scale); a world over it is answered and not kept (docs/cli.md) | the owner's decision of 2026-10-21, `rust/rofl/tests/kept.rs` | KEEP: a user knob, the one way to size the cache | |
-| `ROFL_VOLUMES` | `0` answers a question verb from the whole world instead of by volumes; `1` answers by volumes a corpus under the 32 MB where they begin, so a test reads an edit of a few lines taken by the units (`engine/volumes.rs`, `engine/levels.rs`, docs/cli.md) | `rust/rofl/src/bin/rofl/load.rs`, `rust/rofl/tests/kept.rs` | INTERNAL: the oracle a check compares the volumes with | |
-| `ROFL_FAN` | how many units a group of a world by levels holds (8) | `rust/rofl/tests/kept.rs` | INTERNAL: a small fan makes a small world's tree deep, for the check | |
-| `ROFL_LEAF` | how many files a unit of files alone holds in a world by levels (4) | `rust/rofl/tests/kept.rs` | INTERNAL: a small leaf gives a small world units to meet, for the check | |
-| `ROFL_WIRE_UNITS` | every unit of a world by levels (a file's, a group's, a layer's above) goes through `Stretch::to_wire` and back (`store/wire.rs`): names as text, its own ids from its first, the facts below it by their ids; prints the bytes by part | `f_a_unit_another_node_holds_is_read_by_questions` | INTERNAL: the oracle that a unit crossing to another process answers the same | |
-| `ROFL_HELD` | `N`: a world by levels as nodes of N files each and a root over them (`engine/levels.rs` `Nodes`); a reader sees a unit another node holds only by questions asked there (`Stretch::held_there`, `store::Ask`): a relation's facts (a key is answered from them), the planner's counts, the firings of a fact, a tree; one question a node for all its units the reader sees (`store::Trip`); prints what each cost. With `ROFL_FAR`, the files a node holds | `rust/rofl/tests/held.rs`, `f_a_unit_another_node_holds_is_read_by_questions` | INTERNAL: the oracle of federation step 1, that a reader needs of another node only what it asks | |
-| `ROFL_FAR`, `ROFL_FAR_ME` | `DIR` and `N` or `root`: the nodes as processes (`engine/levels/far.rs`): every process runs the same levels over the same files, settles its node's units (the root those over more than one node) and asks the others' over a socket in DIR, or over TCP where DIR/peers says where a process listens (`root HOST:PORT`, `N HOST:PORT` a line), a name as text; ids from the root's one counter. The processes live on across edits (the root's `far_edit`, a node's `far_next`): each settles again its own units an edit moved, and what they moved crosses as facts. The root answers; a node goes when the root has | `rust/rofl/tests/far.rs`, `f_a_unit_another_node_holds_is_read_by_questions` | INTERNAL: the oracle of federation step 1 between processes; FKTS is to start the processes | |
-| `ROFL_CENSUS` | a world by levels prints on stderr, at each depth of each layer, what its units hold on the heap: stretches unfolded, indexes over cooled ones, directories, the keys' heap, rows, the process and the live heap; where the memory wall stops an evaluation, the relations it and its units below hold most rows of | none (a measurement of `f_a_unit_cools_whole`) | INTERNAL: the measure that found what cooling left on the heap | |
-| `ROFL_WIRE_DIR` | with `ROFL_WIRE_UNITS`, the files' units are written there as `<first>-<end>.unit` | none yet | INTERNAL: one run of the two-run check | |
-| `ROFL_WIRE_TAKE` | with `ROFL_WIRE_DIR`, a file's unit found there is laid in place of loading and settling its files | none yet | INTERNAL: the other run of the two-run check | |
-| `ROFL_SEAM_BT` | a backtrace of a seam read no rule asked, now and then (`store.rs` `seam`) | none | INTERNAL: finds who reads a child outside a firing | |
 | `ROFL_DELTA_FACTS` | the file a delta of volumes writes what it did to, as facts of the book `delta` (`engine/meter.rs`, docs/cli.md, *A delta as facts*) | `models/engine/delta-model.rofl` reads the file; no script yet | INTERNAL: the oracle of the delta model; to become the world's own book, as the profile is | |
 | `ROFL_VSTATS` | print the virtual closure's counters on stderr | none: the definition only | REMOVE | done |
 
@@ -87,7 +77,7 @@ facts/port-corpus, which is not in the tree.
 No flags: one JSON object per line in, one out. It is the npm package's `./port` export,
 so a request option with no caller in this tree may still have one outside it; that is
 why none is removed here. Clients in the tree: `runtime/port.ts` (used by
-`runtime/ingest.ts` and `scripts/whycheck.ts`), `scripts/goldens.ts` (raw `open`, `state`),
+`scripts/whycheck.ts`), `scripts/goldens.ts` (raw `open`, `state`),
 `rust/rofl/tests/why_bins.rs`, `rust/rofl/tests/agg_worlds.rs`.
 
 | request option | what it does | consumers | verdict | status |
@@ -97,23 +87,21 @@ why none is removed here. Clients in the tree: `runtime/port.ts` (used by
 | `open` with `seed` (inline) | the same snapshot as a string | `rust/rofl/tests/agg_worlds.rs` only | MERGE into `seedPath` | done |
 | `budget` (`open`, `fresh`) | the step wall | `runtime/port.ts` | KEEP | |
 | `space`, `retainTicks`, `mode` (`open`, `fresh`) | the walls a snapshot does not carry | `scripts/whycheck.ts`, `rust/rofl/tests/agg_worlds.rs` | KEEP | |
-| `op: fresh`, `load` (`path`, `rofl`), `evaluate`, `retract`, `why`, `whynot`, `excise`, `close` | the core verbs; `load` into an evaluated session is an addition by delta (facts and rules) and answers `full`, as `retract` does | `scripts/whycheck.ts`, `runtime/ingest.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
+| `op: fresh`, `load` (`path`, `rofl`), `evaluate`, `retract`, `why`, `whynot`, `excise`, `close` | the core verbs; `load` into an evaluated session is an addition by delta (facts and rules) and answers `full`, as `retract` does | `scripts/whycheck.ts`, `scripts/addcheck.ts`, `scripts/vscode_curve.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
 | `load` with `who` | the author of the loaded text | `runtime/port.ts` passes it; no caller sets it | KEEP (the permission model of `docs/books-and-permission.md`) | |
 | `why` with `all`, `whynot` with `depth`, `nodes`, `all` | the verbs' options | `scripts/whycheck.ts`, `rust/rofl/tests/why_bins.rs` | KEEP | |
-| `op: ask` | rows of a query | `runtime/ingest.ts` | KEEP | |
+| `op: ask` | rows of a query | `runtime/port.ts`, `scripts/whycheck.ts` | KEEP | |
 | `ask` with `keys` | the matched facts in `canonicalState`'s key form | `scripts/vscode_curve.ts` (since the audit) | KEEP: the decision to remove it predates its callers | |
 | `op: assert`, `tick` | assert text; advance a tick. On an evaluated session `assert` is an addition by delta and answers `full` (null, or why it evaluated again) | `scripts/whycheck.ts` (`tick`) | KEEP (the core of the protocol; `docs/port-surface.md`) | |
 | `op: fork` | the cheap copy of a session | (none since the split gate was retired) | KEEP (the protocol's headline verb, `docs/port-surface.md`) | |
 | `op: state` | the state to a path, or as text | `scripts/goldens.ts` | KEEP | |
-| `op: cool_many` | cool several volumes in one pass | `runtime/ingest.ts` | KEEP | |
-| `op: cool` | cool one volume | `runtime/port.ts` `cool`; `cool_many` cools many in one pass | KEEP | the cool by book and `op: view` went with the split driver (2026-11-22) |
-| `op: cool_trail`, `reheat_trail` | park and fetch the assertion trail | `runtime/port.ts` methods only; no caller. `Session::cool_trail` stays, `rust/rofl/tests/cool.rs` calls it | REMOVE | done |
+| `op: cool`, `cool_many`, `reheat` | cool a volume by key prefix and back | none after the ingest loop | REMOVE | done 2026-11-28 with runtime/ingest.ts; the world cools whole at the memory wall |
 | `open` with `keptPath`, `volumePath`; `op: keep` (`path`, `volume`) | a world kept as an image or a mapped volume, opened evaluated where it was (docs/staged-evaluation.md) | `scripts/stage_by_asks.ts`, `scripts/stage_plan.ts`, `scripts/vscode_pieces.ts`, `scripts/addcheck.ts`, `runtime/port.ts` | KEEP; two kept formats, the image and the volume, both live; whether the image retires is the owner's call | |
 | `op: resume` with `steps` | go on from where a step budget stopped (`Session::resume`) | `scripts/vscode_pieces.ts` | KEEP | |
 | `limit` with `ms`, `bytes` (any op) | the clock and heap walls of a notebook run; the answer says `stopped` | `notebook/cli.ts` through `playground/rust.ts` | KEEP (`ROFL_NB_LIMIT`, `ROFL_NB_MEMORY`) | |
 | `whynot` with `files` | a whynot row a file (docs/md-world.md) | `runtime/port.ts`, `scripts/whycheck.ts` | KEEP | |
 | `op: rows`, `fact`, `firings`, `cell`, `books`, `holding` | the store read piece by piece by a host that keeps the world in the engine | `playground/rust.ts` | KEEP | |
-| `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `runtime/ingest.ts` and `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
+| `op: facts` | fact count and tick | `runtime/port.ts` `factCount`, called by `scripts/vscode_curve.ts` (the audit missed them) | REMOVE once its callers have another way to count | open: no other verb counts without evaluating again |
 
 ## rofl render (`rust/rofl/src/bin/rofl/render.rs`)
 

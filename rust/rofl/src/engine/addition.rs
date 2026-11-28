@@ -446,6 +446,9 @@ impl Eval {
         if added.iter().any(|f| self.clo.closures.iter().any(|c| c.rel == self.store.rec(*f).rel)) {
             self.clo.closures_engage(&self.store);
         }
+        if new_rules.is_empty() && called.is_empty() && self.pages_edits() {
+            return self.pages_delta(added, &[]);
+        }
         let moved = if new_rules.is_empty() { HashSet::new() } else { self.rerank()? };
         self.vc.near_moved = false;
         self.vc.near_out.clear();
@@ -540,6 +543,10 @@ impl Eval {
         // where a rule still makes it)
         self.vsnapshot();
         let fired: Vec<FactId> = facts.iter().copied().filter(|f| !self.store.firings(*f).is_empty()).collect();
+        if fired.is_empty() && self.pages_edits() {
+            self.store.remove_many(&all);
+            return self.pages_delta(&[], &all);
+        }
         self.withdraw_unswept(&fired, |_, _| true);
         self.store.remove_many(&all);
         self.vc.near_moved = false;
@@ -679,12 +686,10 @@ impl Eval {
     /// `plan` solved as rule `r` solves its body, from each of `seeds`, the solutions in the order of the seeds.
     pub(super) fn solve_seeds_as(&mut self, r: &ERule, plan: &[BodyElem], seeds: Vec<Subst>) -> Result<Vec<Sol>, Halt> {
         let outer = self.cur_rule.replace(r.id);
-        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was = std::mem::replace(&mut self.firing, true);
         let sols = self.solve_body_seeds(plan, seeds, 0, None, Some(r.id));
         self.firing = was;
         self.cur_rule = outer;
-        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         sols
     }
 
@@ -2148,4 +2153,5 @@ impl LatticeState {
         true
     }
 }
+
 

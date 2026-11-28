@@ -125,11 +125,6 @@ impl Eval {
             self.add.delta_plans.insert(key, slot);
         }
         let Some(Slot::Plan(p)) = self.add.delta_plans.get(&key) else { return None };
-        // a unit reads by key alone what lies outside it: from the news, never in written order; the unit that holds
-        // every file of the last layer reads a relation whole as the reader does, and chooses
-        if self.by_seed && at.is_some() && !self.store.reads_wide() {
-            return Some(p.clone());
-        }
         let n = n as f64;
         let written = if at.is_none() {
             p.pre
@@ -152,10 +147,8 @@ impl Eval {
     /// Rows a premise's relation holds, for the planner: a closure answered from its tree holds its pairs.
     fn len_est(&self, rel: Sym, persp: Option<Sym>) -> usize {
         match self.vc.vclosure_for(rel) {
-            // (a tree held from the units is read as it stands: a plan made while it was empty is stale once it is not)
-            Some(ci) => match (self.store.held_trees(ci), self.store.tree_sizes.as_ref().and_then(|z| z.get(&ci))) {
-                (Some(f), _) => f.iter().map(|f| f.1.pairs as usize).sum(),
-                (None, Some(z)) if self.vc.vlen(ci) == 0 => z[0] as usize,
+            Some(ci) => match self.store.tree_sizes.as_ref().and_then(|z| z.get(&ci)) {
+                Some(z) if self.vc.vlen(ci) == 0 => z[0] as usize,
                 _ => self.vc.vlen(ci),
             },
             None => self.store.rel_len_est(rel, persp),
@@ -557,7 +550,7 @@ impl Eval {
         }
         // A BUILTIN IS A WALL: what is written before it is joined before it and nothing written after it is, so the
         // partial solutions that reach it, and the holes it makes, are the written order's
-        let walls: Vec<bool> = (0..plan.len()).map(|k| if self.by_seed { self.wall(plan, k) } else { matches!(plan[k], BodyElem::Bi { .. }) }).collect();
+        let walls: Vec<bool> = (0..plan.len()).map(|k| matches!(plan[k], BodyElem::Bi { .. })).collect();
         let walled = |j: usize, rest: &[usize]| rest.iter().any(|&k| k < j && walls[k]);
         let placeable = |j: usize, bound: &[Sym], rest: &[usize]| -> bool {
             if walled(j, rest) {
@@ -617,8 +610,7 @@ impl Eval {
                 }
                 let st = self.delta_stat(l, &bound);
                 let joined = all_vars[j].iter().any(|v| bound.contains(v));
-                // (a unit counts only its own rows: there the shared variable decides)
-                if best.is_none_or(|(_, f, b)| if self.by_seed && joined != b { joined } else { st.fan < f || (st.fan == f && joined && !b) }) {
+                if best.is_none_or(|(_, f, b)| st.fan < f || (st.fan == f && joined && !b)) {
                     best = Some((at, st.fan, joined));
                 }
             }
@@ -681,7 +673,6 @@ impl Eval {
         };
         let (peak, undecided) = (self.peak_rows, self.lat.carry.undecided.len());
         let outer = self.cur_rule.replace(r.id);
-        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was_firing = std::mem::replace(&mut self.firing, true);
         self.plan_trial = true;
         self.sn_perm = self.sn.is_some().then(|| Rc::new(p.perm.clone()));
@@ -691,7 +682,6 @@ impl Eval {
         self.plan_trial = false;
         self.firing = was_firing;
         self.cur_rule = outer;
-        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         // a negation records the position it was undecided at; none is while no unknown spreads
         debug_assert_eq!(self.lat.carry.undecided.len(), undecided);
         let sols = match sols {
@@ -752,3 +742,4 @@ impl AddState {
         Ok(())
     }
 }
+

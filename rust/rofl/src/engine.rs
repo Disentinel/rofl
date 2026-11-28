@@ -21,6 +21,7 @@ use crate::store::{
 use crate::term::*;
 
 mod datastrat;
+mod pages;
 mod addition;
 pub mod meter;
 mod delta;
@@ -41,7 +42,7 @@ mod layer;
 mod algebra;
 mod books;
 mod stages;
-pub mod levels;
+
 pub mod volumes;
 pub use books::Books;
 pub use algebra::RelAlgebra;
@@ -828,33 +829,18 @@ pub struct Eval {
     kept_carry: Option<Rc<layer::Carried>>,
     /// Which rules the pass under way fires, where the plan cuts a book (`engine/stages.rs`).
     stage_pass: StagePass,
-    /// The lower stage's rules, where the world was given its lemmas (`Eval::take_lemmas`): its first pass fires the rest.
-    pub stage_given: Option<Rc<FxSet<Sym>>>,
-    /// the rules of the stage under way that the pass above it fires too (`Stage::free`)
-    stage_both: Rc<FxSet<Sym>>,
+    /// The component of relations a pages pass is in, and the one a resumed pass starts from.
+    pages_at: usize,
+    pages_from: usize,
     /// What the last staged evaluation took away: the cut books, and the relations concluded below that nothing above reads.
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
-    /// In a group of a world by levels: which child each fact below lies under.
-    pub meeting: Option<Rc<levels::Meeting>>,
-    /// In a unit of a world by levels: no rule is fired whole, each on the facts it is given as news.
-    by_seed: bool,
-    /// The round of the facts at home in a unit: a rule takes them at its first premise of these relations alone.
-    homing: Option<Rc<(FxSet<Sym>, FxSet<Sym>)>>,
-    /// The round of the facts through which facts of a unit's layer may meet: the rules that take them as news.
-    bridging: Option<Rc<FxSet<Sym>>>,
-    /// The round of a group's seeds: the rules each is news to (`levels::Seeded`).
-    seeded: Option<Rc<levels::Seeded>>,
-    /// In a unit on several threads, a round's firings are gathered (`presolving`), solved together (`presolved`,
-    /// `Eval::presolve`) and then concluded each in its turn (`pre_now`: the one firing now).
-    presolving: Option<Vec<par::RoundJob>>,
-    presolved: FxMap<(Sym, usize), (par::RoundJob, par::Made)>,
-    pre_now: Option<par::Made>,
-    /// Before them, the premises the round has news at are listed (`news_listing`) and the news of each taken on the
-    /// threads (`news_taken`, `Eval::news_ahead`).
-    news_listing: Option<Vec<(Rc<ERule>, usize)>>,
-    news_taken: FxMap<(Sym, usize), Option<par::News>>,
-    /// the units a world settled by levels reads (`engine/levels.rs`): what is kept of it
-    pub levels: Option<Rc<levels::Levels>>,
+    /// the pages core handed this pass back: it is evaluated again from the start by the levels
+    pages_declined: bool,
+    /// what the pages of the pass being evaluated hold (`mem_parts`)
+    pages_bytes: usize,
+    /// the widest read of the firing the pages core is in, and the body element that read it
+    /// what a pages firing read at each premise: the rows, the widest read and the binding there
+    pages_reads: Vec<(u64, usize, Option<Subst>)>,
     /// The relations of the lower stage, for `why` to say a lemma by (`Eval::is_lemma`), with what they were read for.
     lemma_heads: Option<((usize, Vec<Sym>), Rc<FxSet<Sym>>)>,
     /// The texts of the files by the node prefix they name, where a `why` that unfolds its lemmas may be asked
@@ -862,8 +848,8 @@ pub struct Eval {
     pub lower_texts: Option<Rc<HashMap<String, String>>>,
     /// The files those texts are cut from when one is first needed: each a path, or the text it was read into.
     pub lower_sources: Option<Rc<Vec<(String, Option<String>)>>>,
-    /// The texts kept beside the units a world is read from, where a file's text is read alone.
-    pub lower_kept: Option<Rc<volumes::KeptTexts>>,
+    /// a delta takes out lemmas of files whose lower stage it proved again (`Session::as_staged`)
+    pub retaking: bool,
     /// A file thawed (`Eval::thaw`): it holds the books of its file, which the world it was forked from cut.
     thawed: bool,
     /// The heads of the whole program's lower stage, where asks prunes it (`Eval::lemma_stage`).
@@ -1102,11 +1088,6 @@ pub struct WallState {
     cutting: Option<Box<Cut>>,
     cut_tail: Option<Tail>,
     resume_at: Option<Box<Cut>>,
-    /// the last level an evaluation runs to (`run_on` goes on), and the levels left with the phase of the first
-    pub level_wall: Option<i64>,
-    /// the evaluation stops after its last level too, before the closes that end it, so facts may still be admitted
-    pub hold_end: bool,
-    level_rest: Option<(Levels, usize)>,
     round_resume: Option<(Front, usize, usize, Front, Option<InFlight>)>,
     /// What the wall that fell measured: the count, what it counted, and the
     /// limit it passed (a `budget` shrug's `spent(Kind, Spent, Limit)`).
@@ -1129,13 +1110,6 @@ impl Spent {
     }
     fn set(&self, v: Option<(&'static str, i64, i64)>) {
         *self.0.lock().unwrap() = v;
-    }
-}
-
-impl WallState {
-    /// The level an evaluation stopped before, at its level wall.
-    pub fn next_level(&self) -> Option<i64> {
-        self.level_rest.as_ref().and_then(|(l, _)| l.first()).map(|(lv, _)| *lv)
     }
 }
 
@@ -2375,24 +2349,16 @@ impl Eval {
             whole: None,
             kept_carry: None,
             stage_pass: StagePass::Whole,
-            stage_given: None,
-            stage_both: Rc::default(),
+            pages_at: 0,
+            pages_from: 0,
             staged_away: None,
-            meeting: None,
-            by_seed: false,
-            homing: None,
-            bridging: None,
-            seeded: None,
-            presolving: None,
-            news_listing: None,
-            news_taken: FxMap::default(),
-            presolved: FxMap::default(),
-            pre_now: None,
-            levels: None,
+            pages_declined: false,
+            pages_bytes: 0,
+            pages_reads: Vec::new(),
             lemma_heads: None,
             lower_texts: None,
             lower_sources: None,
-            lower_kept: None,
+            retaking: false,
             thawed: false,
             lower_full: None,
             aside: HashSet::new(),
@@ -3566,13 +3532,9 @@ impl Eval {
         self.store.kept_layer = kept;
         self.stage_pass = StagePass::Whole;
         self.staged_away = None;
-        let out = match (self.stage_given.clone(), self.cut_stage()) {
-            (Some(given), _) => {
-                self.stage_pass = StagePass::Upper(given);
-                self.run_whole()
-            }
-            (None, Some(st)) => self.run_staged(st),
-            (None, None) => self.run_whole(),
+        let out = match self.cut_stage() {
+            Some(st) => self.run_staged(st),
+            None => self.run_whole(),
         };
         if !self.store.kept_rules.is_empty() {
             let rules = std::mem::take(&mut self.store.kept_rules);
@@ -3582,7 +3544,7 @@ impl Eval {
         self.store.kept_rows.clear();
         self.store.kept_rules.clear();
         self.kept_carry = None;
-        if out.as_ref().is_ok_and(|o| !o.partial) && self.wall.level_rest.is_none() {
+        if out.as_ref().is_ok_and(|o| !o.partial) {
             self.note_whole();
         }
         out
@@ -3723,8 +3685,16 @@ impl Eval {
         let mono: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| !stratified(r)).cloned().collect();
         let strat_rules: Vec<Rc<ERule>> = safe_rules.iter().filter(|r| stratified(r)).cloned().collect();
 
-        let mut walled = false;
-        self.wall.level_rest = None;
+        if from.is_none() && !self.pages_declined {
+            if let Some(out) = self.run_pages(&safe_rules, &mono, &strat_rules)? {
+                return self.end_pass(out, &strat_rules);
+            }
+            if self.pages_declined {
+                let out = self.run_pass();
+                self.pages_declined = false;
+                return out;
+            }
+        }
         let outcome = (|| -> Result<(), Halt> {
             // THE ROUNDS ARE PEELED BEFORE ANYTHING FIRES; THE STOCK
             // EVALUATOR'S TABLE IS READ AFTER PHASE A, which derives it. Read
@@ -3766,15 +3736,8 @@ impl Eval {
                 Some(l) => l,
                 None => self.strata_levels(&mono, &strat_rules)?,
             };
-            walled = self.run_levels(levels, 2, from)?;
-            Ok(())
+            self.run_levels(levels, 2, from)
         })();
-
-        if walled && outcome.is_ok() {
-            self.wall.cutting = None;
-            self.store.dirty = false;
-            return Ok(Outcome { partial: false, staged: 0 });
-        }
         self.end_pass(outcome, &strat_rules)
     }
 
@@ -3899,41 +3862,6 @@ impl Eval {
         }))
     }
 
-    /// What an evaluation that stopped at `level_wall` left, run on to the wall now set.
-    pub fn run_on(&mut self) -> Result<Outcome, Halt> {
-        let Some((rest, ph0)) = self.wall.level_rest.take() else { return self.run() };
-        self.wall.cutting = Some(Box::default());
-        let mut walled = false;
-        let outcome = self.run_levels(rest, ph0, None).map(|w| walled = w);
-        if walled && outcome.is_ok() {
-            self.wall.cutting = None;
-            self.store.dirty = false;
-            return Ok(Outcome { partial: false, staged: 0 });
-        }
-        let strat: Vec<Rc<ERule>> = self.rules.iter().filter(|r| r.safe && r.has_agg).cloned().collect();
-        self.end_pass(outcome, &strat)
-    }
-
-    /// Facts `ids` admitted into a world stopped at a level wall: news to every rule active so far. Facts of the wall's
-    /// own level only, which no rule run yet negates or counts.
-    pub fn admit(&mut self, ids: &[FactId]) -> Result<(), Halt> {
-        if self.wall.level_rest.is_none() || self.lat.has_cells() {
-            return Err(Halt::Strat("admit takes a world stopped at a level wall, with no lattice".into(), String::new()));
-        }
-        let mut front = Front::default();
-        for &id in ids {
-            front.note(self.store.rec(id).rel, id);
-        }
-        // a closure already walked takes what follows as its two rules fire, written
-        let next = self.wall.next_level().unwrap_or(i64::MAX);
-        let walked: Vec<bool> = self.clo.closures.iter().map(|c| self.rel_level(c.rel) < next).collect();
-        self.clo.closure_of.retain(|_, (i, _)| !walked[*i]);
-        self.wall.cutting = Some(Box::default());
-        let r = self.propagate(front);
-        self.wall.cutting = None;
-        r
-    }
-
     #[cfg_attr(not(feature = "breaks"), allow(unused_variables))]
     fn end_pass(&mut self, outcome: Result<(), Halt>, strat_rules: &[Rc<ERule>]) -> Result<Outcome, Halt> {
         let mut partial = false;
@@ -3996,14 +3924,10 @@ impl Eval {
         })
     }
 
-    /// The levels from phase `ph0` on, each closing what is below it; true when the level wall stopped them.
-    fn run_levels(&mut self, levels: Levels, ph0: usize, from: Option<usize>) -> Result<bool, Halt> {
+    /// The levels from phase `ph0` on, each closing what is below it.
+    fn run_levels(&mut self, levels: Levels, ph0: usize, from: Option<usize>) -> Result<(), Halt> {
         for (n, (lv, rs)) in levels.iter().cloned().enumerate() {
             let ph = n + ph0;
-            if self.wall.level_wall.is_some_and(|w| lv > w) {
-                self.wall.level_rest = Some((levels[n..].to_vec(), ph));
-                return Ok(true);
-            }
             if from.is_some_and(|p| p > ph) {
                 continue;
             }
@@ -4033,10 +3957,6 @@ impl Eval {
             self.poison_readers(&rs)?;
             self.run_data_levels(lv, &ds)?;
         }
-        if self.wall.hold_end {
-            self.wall.level_rest = Some((Vec::new(), levels.len() + ph0));
-            return Ok(true);
-        }
         self.vopen_below(i64::MAX)?;
         self.close_plain_rules(i64::MAX)?;
         self.plain_flush(i64::MAX)?;
@@ -4049,7 +3969,7 @@ impl Eval {
                 break;
             }
         }
-        Ok(false)
+        Ok(())
     }
 
     /// The promises checked after an addition: on the facts it made new where it knows them (a key a new row shares
@@ -5506,22 +5426,6 @@ impl Eval {
                 }
             };
             let active = self.active.clone();
-            self.presolved.clear();
-            self.news_taken.clear();
-            if self.meeting.is_some() && par::free(self.par.threads) > 1 && at.is_none() && j0 == 0 {
-                self.news_listing = Some(Vec::new());
-                let listed = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
-                let list = self.news_listing.take().unwrap_or_default();
-                listed?;
-                self.news_ahead(list, &cur);
-                self.presolving = Some(Vec::new());
-                let gathered = active.iter().try_for_each(|r| self.fire_in_round(r, &cur));
-                let jobs = self.presolving.take().unwrap_or_default();
-                gathered?;
-                if jobs.len() > 1 {
-                    self.presolved = self.presolve(jobs);
-                }
-            }
             let (mut sum, mut mx) = (0u64, 0u64);
             for (j, r) in active.iter().enumerate().skip(j0) {
                 let t = std::time::Instant::now();
@@ -5543,9 +5447,6 @@ impl Eval {
                 }
             }
             self.rounds.push((sum, mx));
-            self.homing = None;
-            self.bridging = None;
-            self.seeded = None;
             front = std::mem::take(&mut self.cur_front);
         }
         self.live_front = outer;
@@ -5561,14 +5462,7 @@ impl Eval {
     fn fire_in_round_from(&mut self, r: &Rc<ERule>, cur: &Front, at0: usize, mut fl: Option<InFlight>) -> Result<(), Halt> {
         {
             {
-                if self.bridging.as_ref().is_some_and(|b| !b.contains(&r.id)) {
-                    return Ok(());
-                }
-                let gathering = self.presolving.is_some() || self.news_listing.is_some();
                 if self.naive {
-                    if gathering {
-                        return Ok(());
-                    }
                     let f = self.fire_rule(r, None)?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
@@ -5578,7 +5472,7 @@ impl Eval {
                         return Ok(());
                     }
                     // a closure answered from its tree has no news of its own: news of its edges fires a reader whole
-                    if !gathering && at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
+                    if at0 == 0 && (fl.is_some() || self.vc.vreader_due(&self.store, r, cur)) {
                         // (an addition fires it on the rows the new edges make)
                         let f = if fl.is_none() && self.add.adding && !r.has_agg && !r.has_thr && r.lattice_outer.is_empty() && !r.demand_strict {
                             let f = self.vfire_news(r, cur)?;
@@ -5598,93 +5492,32 @@ impl Eval {
                     return Ok(());
                 }
                 if r.has_demand_prem {
-                    if gathering {
-                        return Ok(());
-                    }
                     let f = self.fire_at(r, 1, fl.take(), |e| e.fire_rule(r, None))?;
                     merge_front(&mut self.cur_front, f);
                     return Ok(());
                 }
                 // a firing whose premises are news at two places is found once from each
                 let twice = r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(l) if cur.by_rel.contains_key(&l.rel))).count() > 1;
-                let window = twice && !gathering && self.store.open_dup_window();
+                let window = twice && self.store.open_dup_window();
                 let fired = (|| -> Result<(), Halt> {
                     for (i, b) in r.plan.iter().enumerate().skip(at0.saturating_sub(1)) {
                         let BodyElem::Pos(l) = b else { continue };
                         let Some(keys) = cur.by_rel.get(&l.rel) else {
                             continue;
                         };
-                        if self.homing.as_ref().is_some_and(|a| levels::first_at(r, a) != Some(i)) {
-                            continue;
-                        }
-                        // (a fact of a layer below through which others meet is no news to a premise after a builtin that walls the order)
-                        if self.bridging.is_some() && (0..i).any(|k| self.wall(&r.plan, k)) {
-                            continue;
-                        }
-                        // (in a unit: a premise of a relation it sees no fact of has no answer yet, and a fact of it
-                        // come later is news that reads these)
-                        if let Some(m) = self.meeting.as_ref() {
-                            let none = r.plan.iter().enumerate().find_map(|(j, b)| match b {
-                                BodyElem::Pos(lj) if j != i && lj.temporal == Temporal::Now && m.of_facts(lj.rel) && !self.store.holds_any(lj.rel) => Some(lj.rel),
-                                _ => None,
-                            });
-                            if let Some(rel) = none {
-                                if brk!("levels_guard_unasked" => false; true) {
-                                    levels::asked_any(rel);
-                                }
-                                continue;
-                            }
-                        }
-                        // (solved with the round's others: the news and the rows excluded are those it was solved with)
-                        if let Some(list) = self.news_listing.as_mut() {
-                            let before = (0..i).filter(|_| twice).filter(|&j| matches!(&r.plan[j], BodyElem::Pos(lj) if cur.by_rel.contains_key(&lj.rel)));
-                            list.extend(before.chain([i]).map(|j| (r.clone(), j)));
-                            continue;
-                        }
-                        let (pre, made) = self.presolved.remove(&(r.id, i)).map_or((None, None), |(j, m)| (Some(j), Some(m)));
-                        let news = match &pre {
-                            Some(_) => None,
-                            None => match self.news_of(r, i, l.rel, keys) {
-                                Some(k) => Some(k),
-                                None => continue,
-                            },
-                        };
-                        let keys = match (&pre, &news) {
-                            (Some(p), _) => &p.keys,
-                            (None, Some(par::News::Kept(k))) => &**k,
-                            (None, _) => keys,
-                        };
-                        if let Some(p) = &pre {
-                            self.sn = p.sn.clone();
-                        } else if twice {
+                        let Some(news) = self.news_since(r, l.rel, keys) else { continue };
+                        let keys = &*news;
+                        if twice {
                             let mut excl: Vec<Option<Rc<FxSet<FactId>>>> = vec![None; i];
                             for (j, e) in excl.iter_mut().enumerate() {
                                 let BodyElem::Pos(lj) = &r.plan[j] else { continue };
                                 let Some(kj) = cur.by_rel.get(&lj.rel) else { continue };
-                                *e = self.news_of(r, j, lj.rel, kj).map(|k| match k {
-                                    par::News::All => Rc::new(kj.clone()),
-                                    par::News::Kept(k) => k,
-                                });
+                                *e = self.news_since(r, lj.rel, kj).map(|k| Rc::new(k.into_owned()));
                             }
                             self.sn = excl.iter().any(Option::is_some).then(|| Rc::new(excl));
                         }
-                        if gathering {
-                            let sn = self.sn.take();
-                            if let Some(plan) = self.delta_pick(r, Some(i), keys.len()) {
-                                let job = par::RoundJob { rule: r.clone(), at: i, keys: keys.clone(), sn, plan };
-                                self.presolving.as_mut().unwrap().push(job);
-                            }
-                            continue;
-                        }
-                        let plan = pre.as_ref().map(|p| p.plan.clone());
-                        let fire = |e: &mut Eval| match plan.or_else(|| e.delta_pick(r, Some(i), keys.len())) {
-                            Some(p) => {
-                                e.pre_now = made;
-                                let f = e.fire_planned(r, &p, Some(keys));
-                                e.pre_now = None;
-                                f
-                            }
-                            None if e.by_seed && !e.store.reads_wide() && r.plan.iter().filter(|b| matches!(b, BodyElem::Pos(_))).count() > 1 => Err(Halt::Bug(format!("rule {} has no order from its news, and a unit reads by key alone", e.h.name(r.id)))),
+                        let fire = |e: &mut Eval| match e.delta_pick(r, Some(i), keys.len()) {
+                            Some(p) => e.fire_planned(r, &p, Some(keys)),
                             None => e.fire_rule(r, Some((i, keys))),
                         };
                         let f = self.fire_at(r, i + 1, fl.take(), fire);
@@ -5697,9 +5530,6 @@ impl Eval {
                     self.store.close_dup_window();
                 }
                 fired?;
-                if gathering {
-                    return Ok(());
-                }
                 // NEWS READ INSIDE A THRESHOLD: the rule fires again, and its
                 // thresholds solve only the groups the news reaches.
                 if brk!("thr_no_refire" => false; r.thr_rels.iter().any(|rel| cur.by_rel.contains_key(rel))) {
@@ -5721,25 +5551,6 @@ impl Eval {
         sn.get(at)?.clone()
     }
 
-    /// The news of a round that fire `r` from its premise `i`: in a unit, less the seeds that met no premise the rule
-    /// joins this one with.
-    fn news_of(&self, r: &ERule, i: usize, rel: Sym, keys: &FxSet<FactId>) -> Option<par::News> {
-        if let Some(n) = self.news_taken.get(&(r.id, i)) {
-            return n.clone();
-        }
-        self.news_at(r, i, rel, keys).map(|k| match k {
-            std::borrow::Cow::Borrowed(_) => par::News::All,
-            std::borrow::Cow::Owned(k) => par::News::Kept(Rc::new(k)),
-        })
-    }
-
-    fn news_at<'a>(&self, r: &ERule, i: usize, rel: Sym, keys: &'a FxSet<FactId>) -> Option<std::borrow::Cow<'a, FxSet<FactId>>> {
-        let keys = self.news_since(r, rel, keys)?;
-        let Some(sd) = self.seeded.as_ref() else { return Some(keys) };
-        let kept: FxSet<FactId> = keys.iter().copied().filter(|&f| sd.lets(r.id, i, f)).collect();
-        (!kept.is_empty()).then_some(std::borrow::Cow::Owned(kept))
-    }
-
     /// THE NEWS OF A ROUND THAT ARE NEWS FOR `r`: the facts the rule's whole firing in `fire_all` did not see, those
     /// with an id from the store's length at that firing. The first round carries every conclusion of the whole
     /// firings, and a rule activated after its producers joined them already: fired again on them in written order it
@@ -5759,9 +5570,6 @@ impl Eval {
         r: &Rc<ERule>,
         front_at: Option<(usize, &FxSet<FactId>)>,
     ) -> Result<Front, Halt> {
-        if self.by_seed && front_at.is_none() {
-            return Ok(Front::default());
-        }
         // the rules a declared closure lowers to are not fired where the closure is answered from its tree
         if self.vc.any {
             if self.vc.skip.get(&r.id).is_some_and(|&ci| self.vc.vclosures[ci].active) {
@@ -5793,13 +5601,11 @@ impl Eval {
     ) -> Result<Front, Halt> {
         *self.cost.fires_by_rule.entry(r.id).or_insert(0) += 1;
         let outer = self.cur_rule.replace(r.id);
-        let seam_was = crate::store::SEAM_RULE.with(|c| c.replace(r.id));
         let was_firing = std::mem::replace(&mut self.firing, true);
         let before = self.steps;
         let sols = self.solve_body(&r.plan, s0, 0, front_at, Some(r.id));
         self.firing = was_firing;
         self.cur_rule = outer;
-        crate::store::SEAM_RULE.with(|c| c.set(seam_was));
         let sols = self.solved(r, sols, before)?;
         *self.cost.sols_by_rule.entry(r.id).or_insert(0) += sols.len() as u64;
         self.conclude_all(r, sols, Front::default(), true)
@@ -5983,9 +5789,6 @@ impl Eval {
                 self.h.name(head.rel)
             );
             self.diag_once(msg);
-            return Ok(());
-        }
-        if self.meeting.as_ref().is_some_and(|m| !m.crosses(r, &sol.prems, self.bridging.is_some())) {
             return Ok(());
         }
         if head.temporal == Temporal::Next {
@@ -6202,24 +6005,6 @@ impl Eval {
         self.store.eval_holes.iter().any(|&id| self.store.alive(id) && self.store.args(id).get(1).and_then(|t| t.as_atom()) == Some(reason))
     }
 
-    /// (an oracle of the measure, under ROFL_CENSUS: the relations this evaluation and the units below it hold most
-    /// rows of, said on stderr when the memory wall stops it)
-    fn census_at_wall(&self) {
-        let mut rows: FxMap<(Sym, Sym), (usize, usize)> = FxMap::default();
-        for (rel, book, n, _, _) in self.store.live_census() {
-            rows.entry((rel, book)).or_default().0 += n;
-        }
-        if let Some(lv) = &self.levels {
-            for (k, n) in lv.rel_rows() {
-                rows.entry(k).or_default().1 += n;
-            }
-        }
-        let mut v: Vec<_> = rows.into_iter().collect();
-        v.sort_by_key(|(_, (a, b))| std::cmp::Reverse(a + b));
-        let top: Vec<String> = v.iter().take(25).map(|((r, b), (a, u))| format!("{}[{}] {a}+{u}", self.h.name(*r), self.h.name(*b))).collect();
-        eprintln!("census at the memory wall, rows here+below: {}", top.join(", "));
-    }
-
     /// The memory wall, met at every step and at every premise matched: a firing can take gigabytes between two
     /// steps, which the kernel would take back by killing the process before the next one.
     fn memory_met(&mut self) -> Result<(), Halt> {
@@ -6228,9 +6013,7 @@ impl Eval {
             return Ok(());
         }
         self.memory_hit = true;
-        if !MEMORY_STOPPED.swap(true, Relaxed) && std::env::var_os("ROFL_CENSUS").is_some() {
-            self.census_at_wall();
-        }
+        MEMORY_STOPPED.store(true, Relaxed);
         self.wall.spent.set(Some(("bytes", MEMORY_USED.load(Relaxed), MEMORY_LIMIT.load(Relaxed))));
         Err(Halt::Budget("budget_exhausted", None))
     }
@@ -12254,9 +12037,8 @@ impl Eval {
         let persp = persp_t.as_atom();
         let cands: Vec<FactId> = match only {
             Some(keys) => {
-                // (the index read only as far as it is narrower than the news; a store that reads stretches would ask
-                // them all for what the news already holds)
-                let narrow = if self.store.reads_near() { None } else { self.index_probe(l, s, persp, keys.len().saturating_sub(1)) };
+                // (the index read only as far as it is narrower than the news)
+                let narrow = self.index_probe(l, s, persp, keys.len().saturating_sub(1));
                 match narrow {
                     Some(n) => n.into_iter().filter(|f| keys.contains(f)).collect(),
                     _ => {
@@ -12277,7 +12059,7 @@ impl Eval {
                     }
                 }
             }
-            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered && !self.store.reads_near() => self.question_cands(l, s, persp),
+            None if (self.demand.asking || self.demand.refinding) && !self.firing && !self.store.unordered => self.question_cands(l, s, persp),
             None => match self.index_probe(l, s, persp, usize::MAX) {
                 Some(c) => c,
                 None => match persp {
@@ -15533,8 +15315,7 @@ impl Eval {
     /// the evaluation renamed, and the engine's own counter is put back.
     pub fn why_text_with(&mut self, lit: &Lit, o: &WhyOpts, shown: Option<&str>) -> Result<String, String> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
-        let h: *mut crate::term::Heap = &mut self.h;
-        let r = levels::far_names(h, || self.questioned(|e| e.why_at(lit, o, shown)));
+        let r = self.questioned(|e| e.why_at(lit, o, shown));
         self.rename_counter = saved;
         r
     }
@@ -15749,7 +15530,6 @@ impl Eval {
     }
 
     fn render_why(&mut self, id: FactId, indent: usize, seen: &mut HashSet<FactId>, o: &WhyOpts, next: &mut Vec<WhyTask>) {
-        let id = self.store.current(id);
         let r = self.store.rec(id);
         let key = fact_key(&self.h, r.rel, r.persp, self.store.args(id));
         let pad = "  ".repeat(indent);
@@ -16539,8 +16319,7 @@ impl Eval {
     pub fn whynot_text(&mut self, lit: &Lit, b: &WhynotBounds, shown: Option<&str>) -> Result<(bool, String), Halt> {
         let saved = std::mem::replace(&mut self.rename_counter, 0);
         let asking = std::mem::replace(&mut self.demand.asking, true);
-        let h: *mut crate::term::Heap = &mut self.h;
-        let r = levels::far_names(h, || self.questioned(|e| e.whynot_at(lit, b, shown)));
+        let r = self.questioned(|e| e.whynot_at(lit, b, shown));
         self.demand.asking = asking;
         self.demand.asked.clear();
         self.demand.trail.clear();
@@ -16605,13 +16384,25 @@ impl Eval {
     /// AN OPEN QUESTION THAT HOLDS, OVER A CORPUS, IS A TABLE OF FILES: how many answers each file holds, read off
     /// the units, and the files that hold none. Why a file holds none is not walked here: a row opens when the
     /// question is asked in that file (`whynot_files`), which thaws it alone. An answer is of the file its first
-    /// node names. None for a ground question and for a world that is not read from units.
+    /// node names. None for a ground question and for a world whose facts name no file.
     fn held_by_file(&mut self, lit: &Lit, k: &str, found: &[(Subst, PremRef)]) -> Option<String> {
-        let mut files: Vec<String> = self.levels.as_ref()?.files().into_iter().map(|f| format!("n{f:016x}")).collect();
-        files.sort_unstable();
         if self.h.is_ground(lit.persp) && lit.args.iter().all(|a| self.h.is_ground(*a)) {
             return None;
         }
+        let mut key = String::new();
+        let mut files: FxSet<String> = FxSet::default();
+        for id in self.store.all_facts() {
+            key.clear();
+            self.store.write_key(&self.h, id, &mut key);
+            if let Some(f) = volumes::first_file(&key) {
+                files.insert(format!("n{f}"));
+            }
+        }
+        if files.is_empty() {
+            return None;
+        }
+        let mut files: Vec<String> = files.into_iter().collect();
+        files.sort_unstable();
         let mut held: HashMap<String, usize> = HashMap::new();
         for (s, _) in found {
             let key = self.lit_key(lit, s);
@@ -17109,7 +16900,7 @@ impl Eval {
             return Ok(None);
         }
         if ctx.stage.is_none() {
-            ctx.stage = Some(self.lemma_stage().map(Rc::new));
+            ctx.stage = Some(self.cut_stage().map(Rc::new));
         }
         let Some(st) = ctx.stage.clone().flatten() else { return Ok(None) };
         if !st.heads.contains(&lit.rel) {
@@ -17127,7 +16918,7 @@ impl Eval {
         }
         let Some((f, mut low)) = file.as_ref().and_then(|f| ctx.thawed.remove_entry(f)) else {
             // (a rule that reads no file is fired above the stage too: what it reads is here)
-            let below = self.rules.iter().any(|r| r.clause.head.rel == lit.rel && st.rules.contains(&r.id) && !st.free.contains(&r.id));
+            let below = self.rules.iter().any(|r| r.clause.head.rel == lit.rel && st.rules.contains(&r.id));
             if !below {
                 return Ok(None);
             }
@@ -17163,9 +16954,6 @@ impl Eval {
     /// are cut from (`lower_sources`, read once).
     fn lower_text(&mut self, file: &str) -> Option<String> {
         if self.lower_texts.is_none() {
-            if let Some(k) = &self.lower_kept {
-                return k.get(file).map(str::to_string);
-            }
             let sources = self.lower_sources.clone()?;
             let texts: Vec<String> = sources.iter().filter_map(|(f, t)| t.clone().or_else(|| std::fs::read_to_string(f).ok())).collect();
             let cut = volumes::cut(&texts.iter().map(String::as_str).collect::<Vec<_>>());
@@ -17178,19 +16966,47 @@ impl Eval {
     /// lower stage whole, keeping the books the world cut. What `why --all` unfolds a lemma in and a `whynot` walks
     /// below the cut in.
     pub fn thaw(&self, text: &str, st: &stages::Stage) -> Result<Eval, Halt> {
+        Ok(self.thawed(text, st, None)?.0)
+    }
+
+    /// The lemmas the lower stage of a file's `text` proves (`thaw`), named in this world; `held`, the lemmas it gave
+    /// before, are taken out of the fork first.
+    pub fn lemmas_of(&mut self, text: &str, st: &stages::Stage, held: &[FactId]) -> Result<Vec<(Sym, Sym, Vec<Term>)>, Halt> {
+        let (low, stood) = self.thawed(text, st, Some(held))?;
+        Ok(self.lemmas_in(&low, &stood, st))
+    }
+
+    /// The lemmas `low`, a fork of this world, proved beyond the records that `stood`, named in this world.
+    pub fn lemmas_in(&mut self, low: &Eval, stood: &[bool], st: &stages::Stage) -> Vec<(Sym, Sym, Vec<Term>)> {
+        let ids: Vec<FactId> = (0..low.store.len_ids())
+            .filter(|&id| !stood.get(id as usize).copied().unwrap_or(false) && low.store.alive(id) && st.given.contains(&low.store.rec(id).rel) && !st.cut.contains(&low.store.rec(id).persp))
+            .collect();
+        ids.into_iter()
+            .map(|id| {
+                let r = low.store.rec(id);
+                let args = low.store.args(id).iter().map(|a| port_term(*a, &low.h, &mut self.h)).collect();
+                (self.h.intern(low.h.name(r.rel)), self.h.intern(low.h.name(r.persp)), args)
+            })
+            .collect()
+    }
+
+    /// `thaw`, with the lemmas the world held (or of them, `held`) taken out of the fork before it reads the file,
+    /// and which records stood then: what else the fork holds it proved anew.
+    fn thawed(&self, text: &str, st: &stages::Stage, held: Option<&[FactId]>) -> Result<(Eval, Vec<bool>), Halt> {
         let mut low = self.fork();
         low.lower_texts = None;
         low.lower_sources = None;
-        low.lower_kept = None;
         low.thawed = true;
-        // (a reader of units: the file's lower stage is evaluated over the core alone)
-        if low.levels.take().is_some() {
-            low.store.reads_none();
-        }
+        let held: Vec<FactId> = match held {
+            Some(h) => h.to_vec(),
+            None => low.store.all_facts().into_iter().filter(|&id| { let r = low.store.rec(id); r.base() && st.heads.contains(&r.rel) && !st.cut.contains(&r.persp) }).collect(),
+        };
+        low.store.remove_many(&held);
+        let stood: Vec<bool> = (0..low.store.len_ids()).map(|id| low.store.alive(id)).collect();
         volumes::load_text(&mut low, text)?;
         low.lower_stage(st)?;
         low.demand.asking = true;
-        Ok(low)
+        Ok((low, stood))
     }
 
     /// One rule that could conclude `lit`: its failing premise instances, each
@@ -17335,7 +17151,7 @@ impl Eval {
         if self.thawed {
             return Ok(None);
         }
-        let Some(st) = self.lemma_stage() else { return Ok(None) };
+        let Some(st) = self.cut_stage() else { return Ok(None) };
         if !st.heads.contains(&lit.rel) {
             return Ok(None);
         }
@@ -17909,8 +17725,10 @@ fn reaches_in(deps: &HashMap<Sym, HashSet<Sym>>, from: Sym, to: Sym) -> bool {
     false
 }
 
+
 #[allow(dead_code)]
 fn eval_is_send() {
     fn send<T: Send>() {}
     send::<Eval>();
 }
+

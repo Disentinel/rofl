@@ -269,16 +269,6 @@ impl Eval {
         self.cost.hot_said.push(said);
     }
 
-    /// The rule of a world settled by levels that, summed over its units (`CostState::absorb`), read more rows than
-    /// the world holds facts and the most of any: said as `say_hot` says one, once the units are settled.
-    pub(super) fn say_hot_world(&mut self) {
-        let Some(h) = self.too_hot().pop() else { return };
-        let said = format!("{}, summed over the units it fired in", h.sentence());
-        if let Some(f) = self.cost.on_hot {
-            f(&said);
-        }
-        self.cost.hot_said.push(said);
-    }
 
     fn bound_text(&self, l: &Lit, at: &[Term]) -> String {
         let mut bound: Vec<String> = Vec::new();
@@ -353,6 +343,7 @@ impl Eval {
     pub fn mem_parts(&self) -> Vec<(String, usize)> {
         let mut v: Vec<(String, usize)> = self.store.bytes().into_iter().chain(self.h.parts()).map(|(n, b)| (n.replace('.', "_"), b)).collect();
         v.push(("heights".into(), self.memo.height_memo.bytes() + self.heights_kept.bytes()));
+        v.push(("pages".into(), self.pages_bytes));
         v
     }
 
@@ -401,31 +392,6 @@ impl Eval {
         }
     }
 
-    /// The rules that read this evaluation's profile, those that read what they conclude, and every arm of what they conclude: a world settled by
-    /// levels fires them in its reader once the units are settled and their count is known (`Session::by_volumes`).
-    /// None when the world was given its profile, or reads none.
-    pub fn profile_rules(&mut self) -> FxSet<Sym> {
-        let mut out = FxSet::default();
-        if !self.profile_wanted() {
-            return out;
-        }
-        let p = self.h.intern("profile");
-        let names: FxSet<Sym> = PROFILE_RELS.iter().map(|n| self.h.intern(n)).collect();
-        let mut heads: FxSet<Sym> = FxSet::default();
-        loop {
-            let n = out.len();
-            for r in &self.rules {
-                let reads = r.clause.body.iter().flat_map(|b| b.lits_deep()).any(|l| (l.persp.as_atom() == Some(p) && names.contains(&l.rel)) || heads.contains(&l.rel))
-                    || heads.contains(&r.clause.head.rel);
-                if reads && out.insert(r.id) {
-                    heads.insert(r.clause.head.rel);
-                }
-            }
-            if out.len() == n {
-                return out;
-            }
-        }
-    }
 
     pub fn profile_wanted(&mut self) -> bool {
         let p = self.h.intern("profile");
@@ -549,17 +515,9 @@ impl Eval {
             let list = ks.iter().rev().fold("$nil".to_string(), |t, k| format!("$cons({k}, {t})"));
             let _ = writeln!(out, "order[profile]({id}, {at}, {list}, {}).", if given { "plan" } else { "greedy" });
         }
-        // by levels the reader holds only what it concluded itself: the units' rows are summed in
-        let mut live = self.store.live_census();
-        if let Some(lv) = &self.levels {
-            for ((rel, book), n) in lv.rel_rows() {
-                match live.iter_mut().find(|c| c.0 == rel && c.1 == book) {
-                    Some(c) => c.2 += n,
-                    None => live.push((rel, book, n, 0, 0)),
-                }
-            }
-        }
-        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = live
+        let mut census: Vec<(String, String, Sym, Sym, usize, usize, usize)> = self
+            .store
+            .live_census()
             .into_iter()
             .filter(|&(rel, book, _, _, _)| !self.v.is_reserved(rel) && !is_kernel_ledger(&self.h, book) && self.h.name(book) != "profile")
             .map(|(rel, book, n, base, arity)| (self.h.name(rel).to_string(), self.h.name(book).to_string(), rel, book, n, base, arity))
@@ -758,13 +716,8 @@ pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
     let top = evals.iter().max_by_key(|e| e.cost.mem.live)?;
     let m = &top.cost.mem;
     let mb = |b: i64| b >> 20;
-    // (a world by levels: the peak is a unit's, which is gone with its parts)
-    let peak = HEAP_PEAK.load(std::sync::atomic::Ordering::Relaxed);
-    if peak > m.live && peak >= 1 << 30 {
-        let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
-        return Some(format!("peak: the heap held {} MB{rss}, while the units were settled", mb(peak)));
-    }
-    if m.live < 1 << 30 {
+    let peak = HEAP_PEAK.load(std::sync::atomic::Ordering::Relaxed).max(m.live);
+    if peak < 1 << 30 {
         return None;
     }
     let mut by: Vec<(String, i64)> = Vec::new();
@@ -784,10 +737,10 @@ pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
         format!("the core and {} volumes at their own peaks", evals.len() - 1)
     };
     by.sort_by_key(|p| std::cmp::Reverse(p.1));
-    let list: Vec<String> = by.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
+    let list: Vec<String> = by.iter().take(12).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
     let rule = m.rule.map(|r| format!(", firing {}", top.h.name(r))).unwrap_or_default();
     let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
-    Some(format!("peak: the heap held {} MB{rss}{rule}; {at}: {} (MB)", mb(m.live), list.join(", ")))
+    Some(format!("peak: the heap held {} MB{rss}{rule}; {at}: {} (MB)", mb(peak), list.join(", ")))
 }
 
 pub fn resident_peak() -> Option<i64> {

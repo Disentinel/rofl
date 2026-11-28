@@ -13,6 +13,10 @@ regex = "1"
 libc = "0.2"
 # the allocator under the counting one (src/bin/rofl/seed.rs): an engine that allocates per partial solution
 mimalloc = { version = "0.1.43", default-features = false }
+# its options (src/bin/rofl/seed.rs): what is freed goes back to the system at once
+libmimalloc-sys = { version = "0.1.49", default-features = false, features = ["extended"] }
+# the pages' indexes (src/engine/pages.rs): a table of fact ids alone, its key computed from the fact
+hashbrown = { version = "0.17", default-features = false }
 # an OpenAPI document written in YAML (src/openapi.rs)
 serde_yaml = "0.9"
 # the sql adapter (src/adapter.rs `run_sql`); `cargo build --no-default-features` builds the engine without it

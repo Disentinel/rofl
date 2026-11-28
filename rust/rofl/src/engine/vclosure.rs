@@ -254,7 +254,7 @@ impl Eval {
             // a closure of a lemma stage's lower world: its rows are lemmas, given to the upper world as facts
             let (rel, base, step) = (self.store.virtuals[ci].rel, self.store.virtuals[ci].base_rule, self.store.virtuals[ci].step_rule);
             let lemma = match &self.stage_pass {
-                StagePass::Lower(s) => (s.contains(&base) || s.contains(&step)) && !self.stage_both.contains(&base),
+                StagePass::Lower(s) => s.contains(&base) || s.contains(&step),
                 StagePass::Upper(s) => s.contains(&base) || s.contains(&step),
                 StagePass::Whole => false,
             } || self.store.rel_all(&self.h, rel).iter().any(|f| self.store.alive(*f))
@@ -285,7 +285,7 @@ impl Eval {
     /// program is read and the closures that may be answered from their trees are engaged, the forests built from the edges
     /// the snapshot holds when first asked.
     pub fn vclosure_restore(&mut self) {
-        if let Some(st) = self.stage_here() {
+        if let Some(st) = self.cut_stage() {
             self.note_staged_away(&st);
         }
         if crate::structure::closures(&self.h, &self.v, &mut self.store).is_empty() && crate::structure::nearests(&self.h, &self.v, &mut self.store).is_empty() {
@@ -462,10 +462,7 @@ impl Eval {
         let persp = walk(&self.h, l.persp, s).as_atom();
         let (ta, td) = (resolve(&mut self.h, l.args[0], s), resolve(&mut self.h, l.args[1], s));
         if let (Some(p), true, true) = (persp, self.h.is_ground(ta), self.h.is_ground(td)) {
-            let forests = match self.store.tree_of(ci, Some(td)) {
-                Some(f) => f,
-                None => self.vc.vforests(&mut self.store, ci),
-            };
+            let forests = self.vc.vforests(&mut self.store, ci);
             return forests.iter().any(|(b, f)| *b == p && f.is_ancestor(ta, td));
         }
         !self.vmatch(ci, l, s).is_empty()
@@ -612,15 +609,22 @@ impl Eval {
     /// above what concludes the condition, and before that level it answers nothing. At it the closure opens and every
     /// rule that reads it, at this level or below, fires whole over the condition complete; one above fires at its own.
     pub(super) fn vopen_below(&mut self, lv: i64) -> Result<(), Halt> {
-        let opening: Vec<usize> = (0..self.vc.vclosures.len())
-            .filter(|ci| {
-                let (c, step) = (&self.vc.vclosures[*ci], self.store.virtuals[*ci].step_rule);
-                c.active && !c.open && self.rules.iter().find(|r| r.id == step).is_none_or(|r| self.rule_level(r) <= lv)
-            })
-            .collect();
+        let opening = self.vopen_where(&|e, r| e.rule_level(r) <= lv);
         if opening.is_empty() {
             return Ok(());
         }
+        let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r) && self.rule_level(r) <= lv).cloned().collect();
+        self.activate(&readers)
+    }
+
+    /// The nearests whose step `due` says has come, opened: their forests built from the edges as they stand.
+    pub(super) fn vopen_where(&mut self, due: &dyn Fn(&Eval, &ERule) -> bool) -> Vec<usize> {
+        let opening: Vec<usize> = (0..self.vc.vclosures.len())
+            .filter(|ci| {
+                let (c, step) = (&self.vc.vclosures[*ci], self.store.virtuals[*ci].step_rule);
+                c.active && !c.open && self.rules.iter().find(|r| r.id == step).is_none_or(|r| due(self, r))
+            })
+            .collect();
         for &ci in &opening {
             let c = &mut self.vc.vclosures[ci];
             (c.open, c.built) = (true, None);
@@ -629,8 +633,7 @@ impl Eval {
             // a negation reads the forests as they stand
             self.vc.vforests(&mut self.store, ci);
         }
-        let readers: Vec<Rc<ERule>> = self.rules.iter().filter(|r| self.vc.readers.get(&r.id).is_some_and(|cs| cs.iter().any(|c| opening.contains(c))) && self.stage_fires(r) && self.rule_level(r) <= lv).cloned().collect();
-        self.activate(&readers)
+        opening
     }
 
     /// The forests of each closure a negation reads, as a delta finds them: its change is counted against them
@@ -1085,12 +1088,6 @@ fn in_cone(set: &HashSet<(Sym, Option<Sym>)>, rel: Sym, book: Option<Sym>) -> bo
     }
 }
 
-impl VClosure {
-    /// declared a `graph`: its closure is walked, over edges that may cross the files
-    pub(super) fn is_graph(&self) -> bool {
-        self.graph
-    }
-}
 
 impl VClosureState {
     /// The forests the closures answered from their trees were built to, as a volume keeps them: a world opened is
@@ -1162,12 +1159,6 @@ impl VClosureState {
     pub(super) fn vforests(&mut self, store: &mut Store, ci: usize) -> Rc<[(Sym, Rc<Forest>)]> {
         if !self.vclosures[ci].open {
             return Rc::from(Vec::new());
-        }
-        if let Some(f) = store.held_trees(ci) {
-            let c = &mut self.vclosures[ci];
-            (c.pairs, c.deep, c.internal) = f.iter().fold((0, 0, 0), |(p, d, i), (_, f)| (p + f.pairs, d + f.deep as u64, i + f.internal as u64));
-            store.virtuals[ci].forests = f.clone();
-            return f;
         }
         let edge = self.vclosures[ci].src;
         let near = store.virtuals[ci].near;
@@ -1405,10 +1396,7 @@ impl VClosureState {
 
     /// The rows of the closure `ci` that hold the ends given (a bound end is a ground term), in the book given or in every one.
     pub fn vrows(&mut self, store: &mut Store, ci: usize, book: Option<Sym>, a: Option<Term>, d: Option<Term>) -> Vec<(Sym, Term, Term)> {
-        let forests = match store.tree_of(ci, d.or(a)) {
-            Some(f) => f,
-            None => self.vforests(store, ci),
-        };
+        let forests = self.vforests(store, ci);
         let mut out = Vec::new();
         for (b, f) in forests.iter() {
             if book.is_some_and(|p| p != *b) && !brk!("vclosure_book_merged" => true; false) {

@@ -2160,24 +2160,6 @@ brk("snapshot_drops_ghosts"). brk_kind("snapshot_drops_ghosts", switch).
 brk_expects("snapshot_drops_ghosts", "snapshot_round_trip").
 brk("snapshot_reads_no_tick"). brk_kind("snapshot_reads_no_tick", switch).
 brk_expects("snapshot_reads_no_tick", "snapshot_round_trip").
-brk("levels_home_round_kept"). brk_kind("levels_home_round_kept", switch).
-brk_expects("levels_home_round_kept", "levels_whole").
-brk("levels_tree_sliced"). brk_kind("levels_tree_sliced", switch).
-brk_expects("levels_tree_sliced", "levels_whole").
-brk("levels_lower_unmet"). brk_kind("levels_lower_unmet", switch).
-brk_expects("levels_lower_unmet", "levels_whole").
-brk("levels_guard_unasked"). brk_kind("levels_guard_unasked", switch).
-brk_expects("levels_guard_unasked", "levels_whole").
-brk("levels_seed_every_place"). brk_kind("levels_seed_every_place", switch).
-brk_expects("levels_seed_every_place", "levels_whole").
-brk("levels_solved_run_lost"). brk_kind("levels_solved_run_lost", switch).
-brk_expects("levels_solved_run_lost", "levels_whole").
-brk("levels_far_firing_dropped"). brk_kind("levels_far_firing_dropped", switch).
-brk_expects("levels_far_firing_dropped", "levels_whole").
-brk("levels_far_fact_unplaced"). brk_kind("levels_far_fact_unplaced", switch).
-brk_expects("levels_far_fact_unplaced", "levels_far_held").
-brk("levels_leaf_first_file"). brk_kind("levels_leaf_first_file", switch).
-brk_expects("levels_leaf_first_file", "levels_whole").
 brk("kept_stale_files"). brk_kind("kept_stale_files", switch).
 brk_expects("kept_stale_files", "kept_rule").
 brk_expects("kept_stale_files", "kept_boot").
@@ -2193,20 +2175,6 @@ brk("kept_stale_args"). brk_kind("kept_stale_args", switch).
 brk_expects("kept_stale_args", "kept_walls").
 brk("kept_stale_engine"). brk_kind("kept_stale_engine", switch).
 brk_expects("kept_stale_engine", "kept_engine").
-brk("volumes_dict_unkept"). brk_kind("volumes_dict_unkept", switch).
-brk_expects("volumes_dict_unkept", "kept_damaged").
-brk("units_named_let_go"). brk_kind("units_named_let_go", switch).
-brk_expects("units_named_let_go", "kept_damaged").
-brk("units_patch_drops_moved"). brk_kind("units_patch_drops_moved", switch).
-brk_expects("units_patch_drops_moved", "kept_damaged").
-brk("texts_edit_stale"). brk_kind("texts_edit_stale", switch).
-brk_expects("texts_edit_stale", "kept_damaged").
-brk("texts_never_carried"). brk_kind("texts_never_carried", switch).
-brk_expects("texts_never_carried", "kept_damaged").
-brk("units_parts_misplaced"). brk_kind("units_parts_misplaced", switch).
-brk_expects("units_parts_misplaced", "kept_damaged").
-brk("kept_written_unnoted"). brk_kind("kept_written_unnoted", switch).
-brk_expects("kept_written_unnoted", "kept_damaged").
 brk("kept_unsummed"). brk_kind("kept_unsummed", switch).
 brk_expects("kept_unsummed", "kept_damaged").
 brk("kept_stamp_mtime"). brk_kind("kept_stamp_mtime", switch).
@@ -2560,7 +2528,6 @@ switch_site("kept_stamp_mtime", "rust/rofl/src/bin/rofl/kept.rs").
 switch_site("kept_unsummed", "rust/rofl/src/volume.rs").
 switch_site("kept_verbs_compute", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("kept_write_unbounded", "rust/rofl/src/bin/rofl/kept.rs").
-switch_site("kept_written_unnoted", "rust/rofl/src/volume.rs").
 switch_site("label_by_values_ignored", "rust/rofl/src/engine.rs").
 switch_site("label_cap_ignored", "rust/rofl/src/engine/labeled.rs").
 switch_site("label_correlation_lost", "rust/rofl/src/engine/labeled.rs").
@@ -2614,15 +2581,6 @@ switch_site("lattice_whynot_no_path", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_whynot_tuple_plain", "rust/rofl/src/engine.rs").
 switch_site("lattice_withdrawn_unspread", "rust/rofl/src/engine.rs").
-switch_site("levels_far_fact_unplaced", "rust/rofl/src/store.rs").
-switch_site("levels_far_firing_dropped", "rust/rofl/src/store.rs").
-switch_site("levels_guard_unasked", "rust/rofl/src/engine.rs").
-switch_site("levels_home_round_kept", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_leaf_first_file", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_lower_unmet", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_seed_every_place", "rust/rofl/src/engine/levels.rs").
-switch_site("levels_solved_run_lost", "rust/rofl/src/engine/par.rs").
-switch_site("levels_tree_sliced", "rust/rofl/src/engine/par.rs").
 switch_site("login_verifier_dropped", "rust/rofl/src/login.rs").
 switch_site("max", "rust/rofl/src/cell.rs").
 switch_site("max_tie_last", "rust/rofl/src/cell.rs").
@@ -2828,8 +2786,6 @@ switch_site("tag_label_lattice", "rust/rofl/src/engine.rs").
 switch_site("tag_lattice_admitted", "rust/rofl/src/tag.rs").
 switch_site("tag_times_skipped", "rust/rofl/src/tag.rs").
 switch_site("tag_unread", "rust/rofl/src/rofl_parse.rs").
-switch_site("texts_edit_stale", "rust/rofl/src/engine/volumes.rs").
-switch_site("texts_never_carried", "rust/rofl/src/engine/volumes.rs").
 switch_site("thr_acc_frozen", "rust/rofl/src/engine.rs").
 switch_site("thr_door_n", "rust/rofl/src/program.rs").
 switch_site("thr_first_height", "rust/rofl/src/store.rs").
@@ -2863,10 +2819,6 @@ switch_site("unclosed", "rust/rofl/src/rofl_parse.rs").
 switch_site("unfired_neg_decides", "rust/rofl/src/engine.rs").
 switch_site("unify_no_occurs_check", "rust/rofl/src/term.rs").
 switch_site("union_left", "rust/rofl/src/cell.rs").
-switch_site("units_named_let_go", "rust/rofl/src/volume.rs").
-switch_site("units_parts_misplaced", "rust/rofl/src/engine/levels.rs").
-switch_site("units_patch_drops_moved", "rust/rofl/src/engine/levels.rs").
-switch_site("units_patch_drops_moved", "rust/rofl/src/store.rs").
 switch_site("unknown_scan", "rust/rofl/src/engine.rs").
 switch_site("unranked_negation_runs", "rust/rofl/src/engine.rs").
 switch_site("vciters_unkept", "rust/rofl/src/store.rs").
@@ -2897,7 +2849,6 @@ switch_site("vclosure_why_absent", "rust/rofl/src/engine/vclosure.rs").
 switch_site("vclosure_wit_unwritten", "rust/rofl/src/store.rs").
 switch_site("viterbi_rounds_up", "rust/rofl/src/cell.rs").
 switch_site("volume_unknowns_dropped", "rust/rofl/src/session.rs").
-switch_site("volumes_dict_unkept", "rust/rofl/src/bin/rofl/load.rs").
 switch_site("want_answer_concluded", "rust/rofl/src/engine/want.rs").
 switch_site("want_arity_off_by_one", "rust/rofl/src/engine/want.rs").
 switch_site("want_capability_unchecked", "rust/rofl/src/engine/want.rs").

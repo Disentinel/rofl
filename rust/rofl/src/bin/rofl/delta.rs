@@ -6,7 +6,7 @@
 //! for are taken out. The world is then the one a fresh evaluation of the files gives. Anything else that moved, or a
 //! delta the engine has not worked out, evaluates the files whole, the reason said on stderr.
 use crate::kept::{self, Record, ScanUnit, Unit};
-use rofl::session::{Addition, Session};
+use rofl::session::{Addition, Part, Session};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
@@ -73,6 +73,12 @@ fn going(ids: Vec<u32>, stays: &[u32]) -> Vec<rofl::store::FactId> {
 /// `s`, opened from the kept world `r`, brought by delta to the world of the files `files` (absolute, as the run
 /// names them); why not, otherwise, and then `s` is not to be used.
 pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, String> {
+    let done = apply_planned(s, r, files);
+    s.eval.retaking = false;
+    done
+}
+
+fn apply_planned(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, String> {
     check_record(r, files)?;
     let stamps: HashMap<&str, &str> = r.read.iter().map(|(p, s)| (p.as_str(), s.as_str())).collect();
     let old: HashMap<&str, &Unit> = r.units.iter().map(|u| (u.path.as_str(), u)).collect();
@@ -99,11 +105,12 @@ pub fn apply(s: &mut Session, r: &Record, files: &[String]) -> Result<Done, Stri
     let d = s.retract_set_delta(&out)??;
     s.eval.meter_read("takes_out", &mark);
     let mut touched = d.overdeleted + d.rederived;
-    if !p.add.is_empty() {
+    if !p.add.is_empty() || !p.parts.is_empty() {
         meter::in_step("takes_in");
         meter::step("takes_in", 1);
         let mark = s.eval.read_mark();
-        match s.load_delta(&p.add, None) {
+        let given: Lemmas = p.parts.values().flatten().flat_map(|(_, l)| l.iter().cloned()).collect();
+        match s.load_delta_given(&p.add, None, &given) {
             Err(d) => return Err(d.join("; ")),
             Ok((_, Addition::Full(why))) => return Err(why),
             Ok(_) => {}
@@ -150,11 +157,40 @@ struct Plan<'a> {
     add: String,
     took: Vec<String>,
     texts: HashMap<&'a str, String>,
+    /// of a file holding facts of a book the world cut, its parts and the lemmas they prove (`Session::as_staged`)
+    parts: HashMap<&'a str, Vec<(Part, Lemmas)>>,
     /// a file the world was kept from changed or went: what it gave may have to be taken out
     moved: bool,
 }
 
+type Lemmas = Vec<(rofl::term::Sym, rofl::term::Sym, Vec<rofl::term::Term>)>;
+
 impl<'a> Plan<'a> {
+    /// A file's text as the world holds it, with the lemmas of what it states of a book the world cut.
+    fn read(&mut self, s: &mut Session, f: &'a str, text: String, old: &[Part]) -> Result<String, String> {
+        Ok(match s.as_staged(&text, old)? {
+            Some(st) => {
+                s.eval.retaking = true;
+                self.parts.insert(f, st.parts);
+                st.rest
+            }
+            None => text,
+        })
+    }
+
+    /// The parts of a file `f` as the world holds them, each with its lemmas.
+    fn parts(&self, s: &Session, f: &str) -> Vec<Part> {
+        let Some(ps) = self.parts.get(f) else { return Vec::new() };
+        ps.iter().map(|(p, l)| Part { lemmas: if l.is_empty() { p.lemmas.clone() } else { s.lemma_ids(l) }, ..p.clone() }).collect()
+    }
+
+    /// The facts the world holds of a file `f` read as `text`.
+    fn ids(&self, s: &mut Session, f: &str, text: &str) -> Result<Vec<u32>, String> {
+        let mut ids = s.facts_of(text)?.0;
+        ids.extend(self.parts(s, f).into_iter().flat_map(|p| p.lemmas));
+        Ok(ids)
+    }
+
     fn take(&mut self, f: &'a str, text: String) {
         self.add.push_str(&text);
         self.add.push('\n');
@@ -165,16 +201,17 @@ impl<'a> Plan<'a> {
 
 /// Each file named: kept as it stood, read again (its rules must not have changed), or read for the first time.
 fn plan_files<'a>(s: &mut Session, files: &'a [String], old: &HashMap<&str, &Unit>, stamps: &HashMap<&str, &str>, all: bool) -> Result<Plan<'a>, String> {
-    let mut p = Plan { stays: Vec::new(), goes: Vec::new(), add: String::new(), took: Vec::new(), texts: HashMap::new(), moved: false };
+    let mut p = Plan { stays: Vec::new(), goes: Vec::new(), add: String::new(), took: Vec::new(), texts: HashMap::new(), parts: HashMap::new(), moved: false };
     for f in files {
         match old.get(f.as_str()) {
             Some(u) if !all && stamps.get(f.as_str()).is_some_and(|st| kept::holds(f, st)) => p.stays.extend(&u.facts),
             Some(u) => {
-                let text = read(f)?;
-                let (ids, rules, _) = s.facts_of(&text)?;
+                let text = p.read(s, f, read(f)?, &u.parts)?;
+                let (_, rules, _) = s.facts_of(&text)?;
                 if kept::rules_sum(&rules) != u.rules {
                     return Err(format!("the rules of {} changed", kept::shown(f)));
                 }
+                let ids = p.ids(s, f, &text)?;
                 p.stays.extend(ids.iter().copied());
                 p.moved = true;
                 if rofl::brk!("kept_delta_keeps_old" => false; true) {
@@ -183,8 +220,8 @@ fn plan_files<'a>(s: &mut Session, files: &'a [String], old: &HashMap<&str, &Uni
                 p.take(f, text);
             }
             None => {
-                let text = read(f)?;
-                let (ids, _, _) = s.facts_of(&text)?;
+                let text = p.read(s, f, read(f)?, &[])?;
+                let ids = p.ids(s, f, &text)?;
                 p.stays.extend(ids.iter().copied());
                 p.take(f, text);
             }
@@ -254,7 +291,7 @@ fn settle_scans(s: &mut Session, files: &[String], old: &HashMap<&str, &Unit>, p
             let mut stays: Vec<u32> = scans.iter().flat_map(|sc| sc.facts.iter().copied()).collect();
             for f in files {
                 match p.texts.get(f.as_str()) {
-                    Some(t) => stays.extend(s.facts_of(t)?.0),
+                    Some(t) => stays.extend(p.ids(s, f, t)?),
                     None => stays.extend(&old[f.as_str()].facts),
                 }
             }
@@ -278,8 +315,8 @@ fn units_of(s: &mut Session, files: &[String], p: &Plan, old: &HashMap<&str, &Un
         match (p.texts.get(f.as_str()), old.get(f.as_str())) {
             (Some(_), Some(u)) if stale_index => units.push((*u).clone()),
             (Some(t), _) => {
-                let (ids, rules, _) = s.facts_of(t)?;
-                units.push(Unit { path: f.clone(), rules: kept::rules_sum(&rules), facts: ids });
+                let (_, rules, _) = s.facts_of(t)?;
+                units.push(Unit { path: f.clone(), rules: kept::rules_sum(&rules), facts: p.ids(s, f, t)?, parts: p.parts(s, f) });
             }
             (None, Some(u)) => units.push((*u).clone()),
             (None, None) => unreachable!("a file neither kept nor read"),

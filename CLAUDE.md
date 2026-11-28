@@ -195,11 +195,11 @@ Decided by the owner; each is a finding, read it before arguing with it.
   only where a rule reads it (owner, 2026-11-07: the `[surface]` book is
   replaced, never route or add to it; f_surface_is_replaced_by_lemmas_by_keys).
   It is to be the engine's default behaviour, not a command
-  of its own (owner, 2026-10-25): `rofl ask` and `rofl why` evaluate a
-  corpus by volumes by themselves: each file settled alone into a frozen unit,
-  the units met level by level, one reader over them all, an edit settling
-  again only the units it moved, and the units done cooled to disk past a
-  quarter of the memory the process may use; before a
+  of its own (owner, 2026-10-25). The levels path that did it (a file a
+  frozen unit, units met level by level) was deleted for the pages core
+  (2026-11-27): a corpus is evaluated whole on one heap, a kept world takes an
+  edited file by delta, and volumes cooled to disk are still to be built on
+  pages; before a
   run over more files than one heap holds, read docs/cli.md, *A corpus larger
   than one heap*, for the parts that exist and how to run them, and say which
   one the run uses.

@@ -139,7 +139,6 @@ impl Eval {
         };
         if w.tick != self.store.tick
             || w.well_founded != self.well_founded
-            || self.wall.level_wall.is_some()
         {
             return (FxSet::default(), again(&FxSet::default()));
         }

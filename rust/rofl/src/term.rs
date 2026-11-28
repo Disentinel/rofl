@@ -595,10 +595,6 @@ impl Heap {
         }
         w.u64(cons_n as u64);
     }
-    /// What its layers hold, in bytes: the base and the top.
-    pub fn layer_bytes(&self) -> (usize, usize) {
-        (self.syms.base.bytes() + self.base.funcs.capacity() * std::mem::size_of::<FuncNode>() + self.base.args.capacity() * 8, self.syms.top.bytes() + self.top.funcs.capacity() * std::mem::size_of::<FuncNode>() + self.top.args.capacity() * 8)
-    }
     /// THE HEAP COOLED TO DISK: written as a volume to `path`, mapped, and read from there, every name and term at
     /// the number it had; what comes after goes on the heap above it. The file is let go once mapped.
     pub fn spill(&mut self, path: &str) -> Result<(), String> {
@@ -696,10 +692,6 @@ impl Heap {
     pub fn dict(&self) -> Option<&Rc<Dict>> {
         self.syms.dict.as_ref()
     }
-    /// Whether `k` is a name of this heap's own (`key`): no other heap reads it under that number.
-    pub fn is_own(&self, k: Sym) -> bool {
-        k >= self.syms.n0 && k < SHARED0
-    }
     pub fn atom(&mut self, s: &str) -> Term {
         Term::atom(self.syms.intern(s))
     }
@@ -723,26 +715,6 @@ impl Heap {
             Some(d) => Term::func(SHARED0 + self.seen.mkf(d, name, args, h)),
             None => Term::func(self.f0 + self.top.mkf(name, args, h)),
         }
-    }
-    /// A name another process spells, named here through the shared dictionary: no fork's own.
-    pub fn name_shared(&self, s: &str) -> Option<Sym> {
-        let h = name_hash(s.as_bytes());
-        if self.syms.n0 > 0 {
-            if let Some(id) = self.syms.base.find(s, h) {
-                return Some(id);
-            }
-        }
-        self.syms.dict.as_ref().map(|d| SHARED0 + d.intern(s, h))
-    }
-    /// A functor another process spells, built here in the shared dictionary.
-    pub fn func_shared(&self, name: Sym, args: &[Term]) -> Option<Term> {
-        let h = cons_hash(name, args);
-        if self.f0 > 0 {
-            if let Some(i) = self.base.find(name, args, h) {
-                return Some(Term::func(i));
-            }
-        }
-        self.syms.dict.as_ref().map(|d| Term::func(SHARED0 + d.mkf(name, args, h)))
     }
     /// The functor already built of `name` over `args`, without building it.
     pub fn find_f(&self, name: Sym, args: &[Term]) -> Option<Term> {

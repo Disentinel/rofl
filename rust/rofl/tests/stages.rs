@@ -44,7 +44,10 @@ fn a_cut_world_holds_what_the_whole_world_holds_outside_the_cut() {
     let st = &cut.eval.store;
     assert!(!(0..st.len_ids()).any(|id| st.alive(id) && st.key(&cut.eval.h, id).contains("[ast_oxc]")), "the cut book is dropped");
     let (a, b) = (keys(&whole), keys(&cut));
-    let lost: Vec<_> = a.difference(&b).take(5).collect();
+    // what the lower stage concluded and nothing above reads is dropped with the cut book
+    let st = cut.eval.cut_stage().expect("a stage");
+    let unread: BTreeSet<String> = st.heads.iter().filter(|r| !st.given.contains(r)).map(|r| format!("{}[", cut.eval.h.name(*r))).collect();
+    let lost: Vec<_> = a.difference(&b).filter(|k| !unread.iter().any(|u| k.starts_with(u.as_str()))).take(5).collect();
     let more: Vec<_> = b.difference(&a).take(5).collect();
     assert!(lost.is_empty() && more.is_empty(), "lost {lost:?}, more {more:?}");
 
@@ -60,9 +63,11 @@ fn a_cut_world_holds_what_the_whole_world_holds_outside_the_cut() {
     assert!(!all.contains("[lemma"), "why --all unfolds every lemma:\n{all}");
     assert!(all.contains("[ast_oxc]"), "down to the raw tree:\n{all}");
 
-    let some = (0..cut.eval.store.len_ids()).find(|&id| cut.eval.store.alive(id) && cut.eval.store.rec(id).base() && cut.eval.store.key(&cut.eval.h, id).contains("[fs]")).expect("a base fact");
+    // a lemma: proved from the cut book, which is gone
+    let heads = cut.eval.cut_stage().expect("a stage").heads;
+    let some = (0..cut.eval.store.len_ids()).find(|&id| cut.eval.store.alive(id) && cut.eval.store.rec(id).base() && heads.contains(&cut.eval.store.rec(id).rel)).expect("a lemma");
     let refused = cut.retract_set_delta(&[some]).unwrap();
-    assert!(refused.is_err_and(|why| why.contains("lemmas")), "a staged world takes no retraction");
+    assert!(refused.is_err_and(|why| why.contains("lemmas")), "a staged world takes no retraction of a lemma");
 }
 
 /// A fact no rule below the cut reads proved no lemma: a runtime assumption is taken out of a staged world by delta,

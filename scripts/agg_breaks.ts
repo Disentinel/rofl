@@ -8750,69 +8750,6 @@ export const BREAKS: Break[] = [
   }
  },
  {
-  "id": "levels_home_round_kept",
-  "what": "a group of a world by levels with nothing at home never ends its home round, and what its children make together from another premise is not fired",
-  "expect": {
-   "levels_whole": "qq[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_tree_sliced",
-  "what": "a unit that solves a run of partial solutions at a time reads a tree from its own store, which holds none, and not from the unit of the node's file",
-  "expect": {
-   "levels_whole": "held_by[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_lower_unmet",
-  "what": "a group of a world by levels does not look at what the layers below hold under its children, and two facts of its layer that meet only through a fact of a layer below never meet",
-  "expect": {
-   "levels_whole": "via2[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_guard_unasked",
-  "what": "a rule with a premise of a relation the unit sees no fact of takes no news and the unit does not record that it asked: the first fact of the relation, come by an edit, fires nothing there",
-  "expect": {
-   "levels_whole": "a function come, marked[d](A): by levels"
-  }
- },
- {
-  "id": "levels_seed_every_place",
-  "what": "a seed of a group is news to a rule only where the rule joins it at every place it met a fact at, not at one: a fact two rules join at one value fires neither",
-  "expect": {
-   "levels_whole": "ac[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_solved_run_lost",
-  "what": "of a firing's news solved a run at a time with its round's others, the last run is lost",
-  "expect": {
-   "levels_whole": ": by levels"
-  }
- },
- {
-  "id": "levels_far_firing_dropped",
-  "what": "a unit an edit mends carries the firings of its own facts only: a fact of another unit's stretch it wrote a firing of is lost where that unit no longer concludes it",
-  "expect": {
-   "levels_whole": "a call gone, rlive[d](A, B): by levels"
-  }
- },
- {
-  "id": "levels_far_fact_unplaced",
-  "what": "a unit an edit mends waits, for a fact of another unit's stretch it wrote a firing of, on its own firings of it, which may read it back through its own facts alone: the fact and what it concluded are lost though the child still holds it",
-  "expect": {
-   "levels_far_held": "other = 2: q[d](A) by levels"
-  }
- },
- {
-  "id": "levels_leaf_first_file",
-  "what": "an edit settles again a unit of files only where its first file was edited: a file further in it stays as it stood",
-  "expect": {
-   "levels_whole": "a call gone: volumes: 1 of 64 files edited; 0 of"
-  }
- },
- {
   "id": "kept_stale_files",
   "what": "a kept world is answered whatever happened to the files it was computed from",
   "expect": {
@@ -8855,55 +8792,6 @@ export const BREAKS: Break[] = [
   "what": "a kept world is answered by a binary that is not the one that kept it",
   "expect": {
    "kept_engine": "the_engine_changed:"
-  }
- },
- {
-  "id": "volumes_dict_unkept",
-  "what": "the dictionary the volumes of a world name in is not kept beside them: the volumes kept hold numbers nothing names, and the next run cannot open them",
-  "expect": {
-   "kept_damaged": "deltas_of_volumes_one_after_another:"
-  }
- },
- {
-  "id": "units_named_let_go",
-  "what": "an edit lets go of the segments of units the kept world still names: a stretch kept in an older segment is read from a file no longer there",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
-  "id": "units_patch_drops_moved",
-  "what": "a unit laid again is written as a patch that names none of what moved: its firings are read as the body under it kept them, citing facts at ids an edit replaced, and its directories send a question bound to a moved key to a stretch an edit replaced",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_units_as_what_moved:"
-  }
- },
- {
-  "id": "texts_edit_stale",
-  "what": "an edit's segment of texts names the file that moved with its old text: a whynot thawed in it after the edit reads the file as it was",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
-  "id": "texts_never_carried",
-  "what": "an edit's segment of texts carries no older segment, not even one whose texts all moved: every edit leaves one more segment on disk",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
-  "id": "units_parts_misplaced",
-  "what": "a unit's parts kept in an earlier segment are named as if the new segment held them: an edit's units read their directories from bytes that are something else",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
-  }
- },
- {
-  "id": "kept_written_unnoted",
-  "what": "a kept file is not noted whole by its writer, so the first question after a keep or an edit sums every kept file again",
-  "expect": {
-   "kept_damaged": "an_edit_writes_its_files_texts_alone:"
   }
  },
  {

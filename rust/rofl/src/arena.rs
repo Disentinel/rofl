@@ -1028,13 +1028,6 @@ pub fn spill<T: Pod>(v: &[T]) -> Option<Arena<T>> {
     Arena::mapped(&s.region, off, v.len())
 }
 
-/// `v` as an arena: in the spill when `cold`, where it can be, else on the heap.
-pub fn spilled<T: Pod>(v: Vec<T>, cold: bool) -> Arena<T> {
-    match cold.then(|| spill(&v)).flatten() {
-        Some(a) => a,
-        None => Arena::Heap(v),
-    }
-}
 
 pub fn map_file(path: &str) -> std::io::Result<Rc<Region>> {
     let f = std::fs::File::open(path)?;

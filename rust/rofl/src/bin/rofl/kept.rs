@@ -38,6 +38,8 @@ pub struct Unit {
     pub path: String,
     pub rules: String,
     pub facts: Vec<u32>,
+    /// in a world that cut a book, the files of the nodes it names, each with the lemmas it gave
+    pub parts: Vec<rofl::session::Part>,
 }
 
 /// The sum `Record` keeps of a file's rules.
@@ -455,7 +457,7 @@ pub fn record(args: &[String], world_files: &[String], units: &[Unit], files: &[
     paths.dedup();
     let read: Vec<Value> = paths.iter().map(|p| json!([p.to_string_lossy(), stamp(p)])).collect();
     let cwd = (!scans.is_empty()).then(|| std::env::current_dir().map(|d| d.to_string_lossy().into_owned()).unwrap_or_default());
-    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, runs(&u.facts)])).collect();
+    let units: Vec<Value> = units.iter().map(|u| json!([u.path, u.rules, runs(&u.facts), u.parts.iter().map(|p| json!([p.file, p.sum.to_string(), runs(&p.lemmas)])).collect::<Vec<_>>()])).collect();
     let scans: Vec<Value> = scans.iter().map(|s| json!([s.kind, s.path, s.text, s.cmd, s.read, runs(&s.facts)])).collect();
     Ok(json!({ "kept": 3, "args": args, "files": world_files, "engine": engine(), "env": env_now(), "cwd": cwd, "read": read, "units": units, "scans": scans, "cut": cut }).to_string())
 }
@@ -510,6 +512,10 @@ pub fn parse(note: &str) -> Option<Record> {
         path: u.get(0)?.as_str()?.to_string(),
         rules: u.get(1)?.as_str()?.to_string(),
         facts: unruns(u.get(2)?)?,
+        parts: match u.get(3) {
+            None => Vec::new(),
+            Some(ps) => ps.as_array()?.iter().map(|p| Some(rofl::session::Part { file: p.get(0)?.as_str()?.to_string(), sum: p.get(1)?.as_str()?.parse().ok()?, lemmas: unruns(p.get(2)?)? })).collect::<Option<Vec<_>>>()?,
+        },
     })).collect::<Option<Vec<_>>>()?;
     let (args, files) = (strs("args")?, strs("files")?);
     if files.len() > args.len() { return None; }

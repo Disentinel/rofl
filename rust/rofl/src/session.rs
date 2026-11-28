@@ -45,8 +45,40 @@ use crate::describe;
 use crate::engine::{Eval, Halt, Mode, Outcome, TickOutcome, WhyOpts, WhynotBounds, WhynotFile, EXPLAIN_WHYNOT_BOUNDS};
 use crate::reflect::{self, bootstrap_kernel, is_kernel_ledger, Vocab};
 use crate::rofl_parse::{self, Book, Tense};
-use crate::store::{fact_key, write_fact_key, FactId, Store, F_BASE, F_TICK};
+use crate::store::{fact_key, FactId, Store, F_BASE, F_TICK};
 use crate::term::{Heap, Subst, Sym, Term, TermK};
+
+/// A file's text as a world that cut a book holds it (`Session::as_staged`).
+pub struct Staged {
+    /// its lines outside the cut books
+    pub rest: String,
+    /// each file its nodes are of: as the world held it, or with the lemmas its lower stage proves now
+    pub parts: Vec<(Part, Vec<(Sym, Sym, Vec<Term>)>)>,
+}
+
+/// A file of the nodes a text names, in a world that cut a book: the sum of its lines and the lemmas they gave.
+#[derive(Clone, Debug, Default)]
+pub struct Part {
+    pub file: String,
+    pub sum: u64,
+    pub lemmas: Vec<FactId>,
+}
+
+impl Part {
+    pub fn sum_of(text: &str) -> u64 {
+        let mut s = crate::arena::Sum::default();
+        s.add(text.as_bytes());
+        s.value()
+    }
+
+    /// The files of the nodes `text` names, each with the sum of its lines; their lemmas are not yet known.
+    pub fn of_text(text: &str) -> Vec<Part> {
+        if crate::engine::volumes::first_file(text).is_none() {
+            return Vec::new();
+        }
+        crate::engine::volumes::cut(&[text]).files.into_iter().map(|(file, t)| Part { sum: Part::sum_of(&t.text()), file, lemmas: Vec::new() }).collect()
+    }
+}
 
 /// The steps every evaluation of this process took, its rounds included: what `rofl load` says as `cost:`.
 pub static STEPS: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
@@ -118,15 +150,6 @@ pub const VOLUME_FORMAT: u32 = 1;
 
 /// `excise` under a cone that left rules out: what the fact supports through those rules is not in the world.
 pub const EXCISE_UNDER_ASKS: &str = "excise is not answered under asks: the rules the cone leaves out would lose what the fact supports too; drop the asks";
-
-/// What `cool` did. `facts` is what left memory; `bytes` is what reached the
-/// disk, and the two are reported separately because a caller sizing a volume
-/// store needs the second and a caller watching pressure needs the first.
-pub struct Cooled {
-    pub facts: usize,
-    pub bytes: usize,
-    pub path: String,
-}
 
 pub struct Answer {
     /// Variable names in the order they first appear in the query. `_` is
@@ -276,6 +299,51 @@ impl Session {
                 Err(e)
             }
         }
+    }
+
+    /// THE MEMORY WALL COOLS THE WORLD TO DISK. A world that stopped there is written to `dir` as a volume (an
+    /// overlay over the one it was cooled to before), opened again from it, its facts the file's pages, which the
+    /// system takes back as it needs them, and goes on from where it stopped. It stops for good where going on from
+    /// a cooling took it fewer steps than it went before that cooling: what it holds outside the file grows faster
+    /// than the cooling frees. Returns how many times it was cooled.
+    pub fn cool_and_go_on(&mut self, dir: &std::path::Path) -> Result<usize, String> {
+        use std::sync::atomic::Ordering::Relaxed;
+        let (mut times, mut files, mut mark, mut went) = (0, Vec::new(), 0, 0);
+        let done = loop {
+            let steps = self.eval.steps;
+            if !self.eval.memory_cut() || (times > 0 && steps - mark < went) {
+                break Ok(times);
+            }
+            (went, mark) = (steps - mark, steps);
+            let p = dir.join(format!("rofl-cool-{}-{times}.vol", std::process::id())).display().to_string();
+            let chain = self.kept.files.clone();
+            if let Err(e) = self.keep_volume_as(&p, "", None, &chain) {
+                break Err(format!("the world met the memory wall and could not be cooled to {p}: {e}"));
+            }
+            files.push(p.clone());
+            // (the world on the heap is dropped before the volume is opened: both at once are past the wall)
+            let e = &self.eval;
+            let keep = (e.space, e.disk, e.mode, e.retain_ticks, e.cost.on_hot, e.budget);
+            self.eval.store = Default::default();
+            self.eval.h = Default::default();
+            let mut o = match Session::open_volume_in(&p, keep.5, None) {
+                Ok(o) => o,
+                Err(e) => break Err(format!("the world met the memory wall and could not be opened again from {p}: {e}")),
+            };
+            (o.eval.space, o.eval.disk, o.eval.mode, o.eval.retain_ticks, o.eval.cost.on_hot) = (keep.0, keep.1, keep.2, keep.3, keep.4);
+            *self = o;
+            crate::engine::MEMORY_STOPPED.store(false, Relaxed);
+            times += 1;
+            if let Err(h) = self.resume(self.eval.budget - steps) {
+                break Err(crate::describe(&h));
+            }
+        };
+        // the files stay mapped where they were unlinked; nothing is kept over them
+        for f in files {
+            let _ = std::fs::remove_file(f);
+        }
+        self.kept = Default::default();
+        done
     }
 
     /// The world a volume holds, its facts, names and witnesses read from the file where they lie.
@@ -483,10 +551,15 @@ impl Session {
     /// facts it adds and the rules it adds fire over what the world holds (`Eval::add_delta`). A world not evaluated
     /// loads as `load` does; a program the path is not worked out for leaves the world dirty and `Full` says why.
     pub fn load_delta(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
-        self.told(crate::journal::Verb::LoadDelta, |s| s.load_delta_untold(src, who))
+        self.load_delta_given(src, who, &[])
     }
 
-    fn load_delta_untold(&mut self, src: &str, who: Option<&str>) -> Result<(usize, Addition), Vec<String>> {
+    /// `load_delta`, with `given` put as given facts beside what `src` states: the lemmas of a file (`as_staged`).
+    pub fn load_delta_given(&mut self, src: &str, who: Option<&str>, given: &[(Sym, Sym, Vec<Term>)]) -> Result<(usize, Addition), Vec<String>> {
+        self.told(crate::journal::Verb::LoadDelta, |s| s.load_delta_untold(src, who, given))
+    }
+
+    fn load_delta_untold(&mut self, src: &str, who: Option<&str>, given: &[(Sym, Sym, Vec<Term>)]) -> Result<(usize, Addition), Vec<String>> {
         if self.eval.store.dirty {
             let n = self.load(src, who)?;
             return Ok((n, Addition::Full("the world is not evaluated".into())));
@@ -494,6 +567,9 @@ impl Session {
         let mark = self.eval.prep_mark();
         self.eval.store.arrivals = Some(Vec::new());
         let r = crate::program::load_program(&mut self.eval, src, who);
+        for (rel, persp, args) in given {
+            self.eval.store.put(&self.eval.h, *rel, *persp, args, F_BASE);
+        }
         let ids = self.eval.store.arrivals.take().unwrap_or_default();
         if !r.ok {
             return Err(r.diagnostics);
@@ -541,26 +617,91 @@ impl Session {
     /// in order (a fact said twice, once); its rules and declarations, each as written back, one a line; and its
     /// facts the store does not hold as base facts, likewise. A kept world records the first two of each of its
     /// files (docs/cli.md), to take a file's facts in and out by delta when the file changes and its rules did not.
-    pub fn facts_of(&mut self, src: &str) -> Result<(Vec<FactId>, String, String), String> {
-        let cs = rofl_parse::parse(&mut self.eval.h, src)?;
-        let (mut ids, mut rules, mut absent, mut seen) = (Vec::new(), String::new(), String::new(), HashSet::new());
-        for c in &cs {
-            let ground = || c.head.args.iter().all(|t| self.eval.h.is_ground(*t));
-            let fact = c.body.is_empty() && c.lattice.is_none() && c.head.tense == Tense::Now && ground();
-            let text = rofl_parse::show(&self.eval.h, c);
-            if !fact {
-                rules.push_str(&text);
-                rules.push('\n');
+    /// A file's text as a world that cut a book holds it: its lines outside the cut books, and in place of the cut
+    /// ones the lemmas they prove, by the file of each node the text names (`volumes::cut`). A file `old` holds with
+    /// the same sum gives the lemmas it gave; the rest are proved by its lower stage evaluated alone
+    /// (`Eval::lemmas_of`). None where the world cut nothing or the text states nothing of a book it cut.
+    pub fn as_staged(&mut self, text: &str, old: &[Part]) -> Result<Option<Staged>, String> {
+        if self.eval.staged_away.is_none() {
+            return Ok(None);
+        }
+        let Some(st) = self.eval.cut_stage() else { return Ok(None) };
+        let books: Vec<String> = st.cut.iter().map(|b| self.eval.h.name(*b).to_string()).collect();
+        let books: Vec<&str> = books.iter().map(String::as_str).collect();
+        let (rest, any) = rofl_parse::without_books(text, &books);
+        if !any {
+            return Ok(None);
+        }
+        let cut = crate::engine::volumes::cut(&[text]);
+        let mut pieces: Vec<(String, String)> = cut.files.into_iter().map(|(f, t)| (f, t.into_text())).collect();
+        if rofl_parse::without_books(&cut.core, &books).1 {
+            pieces.push((String::new(), cut.core));
+        }
+        let mut parts = Vec::with_capacity(pieces.len());
+        for (file, t) in pieces {
+            let sum = Part::sum_of(&t);
+            let was = old.iter().find(|p| p.file == file);
+            match was {
+                Some(p) if p.sum == sum => parts.push((p.clone(), Vec::new())),
+                _ => {
+                    let lemmas = self.eval.lemmas_of(&t, &st, was.map_or(&[][..], |p| &p.lemmas)).map_err(|e| describe(&e))?;
+                    parts.push((Part { file, sum, lemmas: Vec::new() }, lemmas));
+                }
+            }
+        }
+        Ok(Some(Staged { rest, parts }))
+    }
+
+    /// The facts of `lemmas` this world holds as given.
+    pub fn lemma_ids(&self, lemmas: &[(Sym, Sym, Vec<Term>)]) -> Vec<FactId> {
+        lemmas.iter().filter_map(|(rel, persp, args)| self.eval.store.get(*rel, *persp, args)).filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()).collect()
+    }
+
+    /// The lemmas a world that cut a book holds, by the one file each names (`volumes::file_of`): what `as_staged`
+    /// says of each file's text as the world was evaluated.
+    pub fn lemmas_by_file(&mut self) -> HashMap<String, Vec<FactId>> {
+        let mut by: HashMap<String, Vec<FactId>> = HashMap::new();
+        if self.eval.staged_away.is_none() {
+            return by;
+        }
+        let Some(st) = self.eval.cut_stage() else { return by };
+        let mut key = String::new();
+        for id in self.eval.store.all_facts() {
+            let r = self.eval.store.rec(id);
+            if !(r.base() && st.given.contains(&r.rel) && !st.cut.contains(&r.persp)) {
                 continue;
             }
-            let id = self.lit_terms(&c.head).ok().and_then(|(r, p, a)| self.eval.store.get(r, p, &a));
-            match id.filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
-                Some(f) => {
-                    if seen.insert(f) { ids.push(f); }
+            key.clear();
+            self.eval.store.write_key(&self.eval.h, id, &mut key);
+            if let Some(f) = crate::engine::volumes::file_of(&key) {
+                by.entry(f.to_string()).or_default().push(id);
+            }
+        }
+        by
+    }
+
+    pub fn facts_of(&mut self, src: &str) -> Result<(Vec<FactId>, String, String), String> {
+        let (mut ids, mut rules, mut absent, mut seen) = (Vec::new(), String::new(), String::new(), HashSet::new());
+        let mut parts = rofl_parse::Parts::new(src);
+        while let Some(cs) = parts.next_part(&mut self.eval.h) {
+            for c in &cs? {
+                let fact = c.body.is_empty() && c.lattice.is_none() && c.head.tense == Tense::Now && c.head.args.iter().all(|t| self.eval.h.is_ground(*t));
+                if !fact {
+                    rules.push_str(&rofl_parse::show(&self.eval.h, c));
+                    rules.push('\n');
+                    continue;
                 }
-                None => {
-                    absent.push_str(&text);
-                    absent.push('\n');
+                let id = self.lit_terms(&c.head).ok().and_then(|(r, p, a)| self.eval.store.get(r, p, &a));
+                match id.filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
+                    Some(f) => {
+                        if seen.insert(f) {
+                            ids.push(f);
+                        }
+                    }
+                    None => {
+                        absent.push_str(&rofl_parse::show(&self.eval.h, c));
+                        absent.push('\n');
+                    }
                 }
             }
         }
@@ -801,17 +942,22 @@ impl Session {
     /// Texts loaded one after another as `load` loads each, the program prepared once after the last and not after
     /// each: a refusal names the text by its place, and what loaded before it stays, as when they load one by one.
     pub fn load_all(&mut self, srcs: &[&str], who: Option<&str>) -> Result<usize, (usize, Vec<String>)> {
-        let mut admitted = 0;
+        Ok(self.load_each(srcs, who)?.iter().map(|r| r.admitted).sum())
+    }
+
+    /// `load_all`, and of each text what it gave as `facts_of` reads it.
+    pub fn load_each(&mut self, srcs: &[&str], who: Option<&str>) -> Result<Vec<crate::program::Loaded>, (usize, Vec<String>)> {
+        let mut out = Vec::new();
         for (i, src) in srcs.iter().enumerate() {
             let r = self.told(crate::journal::Verb::Load, |s| crate::program::load_program(&mut s.eval, src, who));
             if !r.ok {
                 self.eval.reprepare();
                 return Err((i, r.diagnostics));
             }
-            admitted += r.admitted;
+            out.push(r);
         }
         self.eval.reprepare();
-        Ok(admitted)
+        Ok(out)
     }
 
     fn load_untold(&mut self, src: &str, who: Option<&str>) -> Result<usize, Vec<String>> {
@@ -962,69 +1108,6 @@ impl Session {
         Ok(e)
     }
 
-    /// This world, holding the core, and the `files` settled by levels (`engine/volumes.rs`): the world that reads
-    /// their units. Refused when it asks for input (a scan or an adapter's want), which the units cannot bring.
-    pub fn by_volumes(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
-        self.by_volumes_over(files, "")
-    }
-
-    /// The world by volumes again after an edit of the files at the places `changed`, the world before `before`
-    /// (a session `by_volumes` gave) held in memory (`Eval::by_volumes_edit`), `over` laid over the files' units.
-    pub fn by_volumes_edit(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str, before: &Session, changed: crate::store::FxSet<u32>) -> Result<Session, Halt> {
-        let lv = before.eval.levels.clone().ok_or_else(|| Halt::Bug("a world before that is not by volumes".into()))?;
-        lv.named_by(&mut self.eval);
-        let (eval, _) = self.eval.by_volumes_edit(files, over, Some((&lv, changed)))?;
-        Ok(Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() })
-    }
-
-    /// `by_volumes`, `over` laid over the files' units (`Eval::by_volumes_over`).
-    pub fn by_volumes_over(&mut self, files: Vec<(String, crate::engine::volumes::FileText)>, over: &str) -> Result<(Session, crate::engine::volumes::VolStats), Halt> {
-        let (eval, stats) = self.eval.by_volumes_over(files, over)?;
-        let mut s = Session { eval, dangling: self.dangling, asks: self.asks, profiled: self.profiled, kept: Default::default(), post: None, sent: Default::default() };
-        let n = s.scan_requests().and_then(|n| Ok(n + s.adapter_wants()?)).map_err(|m| Halt::Strat(m, String::new()))?;
-        if n > 0 {
-            return Err(Halt::Strat("a world by volumes asks for input, which its units cannot bring".into(), String::new()));
-        }
-        // THE PROFILE IS THE UNITS' SUM (`CostState::absorb`): written once they are settled, and the rules that read
-        // it, which no unit fired, fired by the reader over everything else
-        if !s.profiled && s.eval.profile_wanted() {
-            s.profiled = true;
-            let src = s.eval.profile_text();
-            s.load(&src, None).map_err(|d| Halt::Strat(format!("the profile's facts were refused: {}", d.join("; ")), String::new()))?;
-            if s.eval.run()?.partial {
-                return Err(Halt::Budget("budget_exhausted", None));
-            }
-        }
-        Ok((s, stats))
-    }
-
-    /// The world evaluated to the level `wall` and stopped before the next (`None`: whole); `evaluate_on` goes on, and
-    /// `admit` takes facts of the level it stopped after.
-    pub fn evaluate_to(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
-        self.eval.wall.level_wall = wall;
-        let r = self.eval.run();
-        self.evaluated(r)
-    }
-
-    pub fn evaluate_on(&mut self, wall: Option<i64>) -> Result<Evaluated, Halt> {
-        self.eval.wall.level_wall = wall;
-        let r = self.eval.run_on();
-        self.evaluated(r)
-    }
-
-    /// The facts of `src` into a world stopped at a level wall, and fired on by every rule active so far.
-    pub fn admit(&mut self, src: &str) -> Result<usize, String> {
-        self.eval.store.arrivals = Some(Vec::new());
-        let r = crate::program::load_program(&mut self.eval, src, None);
-        let ids = self.eval.store.arrivals.take().unwrap_or_default();
-        if !r.ok {
-            return Err(r.diagnostics.join("\n"));
-        }
-        self.eval.admit(&ids).map_err(|e| crate::describe(&e))?;
-        self.eval.store.dirty = false;
-        Ok(ids.len())
-    }
-
     fn evaluated(&mut self, r: Result<Outcome, Halt>) -> Result<Evaluated, Halt> {
         let o = match r {
             Ok(o) => o,
@@ -1072,342 +1155,6 @@ impl Session {
         let out = self.evaluated(r).and_then(|e| if e.partial { Ok(e) } else { self.rounds(e) });
         self.eval.budget = budget;
         Ok((out?, went_on))
-    }
-
-    /// COOL A VOLUME TO DISK: write its facts out as ROFL and drop them.
-    ///
-    /// A VOLUME IS A KEY PREFIX (docs/volumes-and-residency.md). Which volume a
-    /// fact belongs to is decided by the SCANNER when it mints an id — nothing
-    /// is derived, because a derived answer would need the data in order to
-    /// find the data. `scanners/js_ast.ts` mints every node id as
-    /// `n<sha256(path)[0..8]>_<counter>`, so a file is a prefix of every id it
-    /// produced, and this reads that prefix off the key.
-    ///
-    /// THE RULES NEVER MENTION VOLUMES AND MUST NOT. All 64 volumes agreed byte
-    /// for byte while no rule knew volumes existed; locality here is a property
-    /// of the DATA, and a rule that named a volume would stop being about the
-    /// domain and start being about storage. So this is a host operation over
-    /// keys, and `rules/ingest.rofl` only ever says a book is `coolable`.
-    ///
-    /// ONLY BASE FACTS ARE WRITTEN AND DROPPED. A derived fact is not a
-    /// possession, it is a conclusion — re-derived from what remains — so
-    /// carrying it to disk would store an answer beside the question and let
-    /// the two disagree. Dropping the base layer marks the store dirty and the
-    /// next evaluation rebuilds what still follows.
-    ///
-    /// The caller is what records the act: `cooled[code](File, Path)` so the
-    /// file stays INDEXED rather than returning to the frontier, and
-    /// `hole($cold(File), cooled_to_disk)` so a question about the cold volume
-    /// REFUSES instead of answering empty. Neither is written here, because
-    /// both are statements about a corpus and this function knows only a
-    /// prefix.
-    pub fn cool(&mut self, prefix: &str, out: &str) -> Result<Cooled, String> {
-        let (write, drop) = self.volume(prefix);
-        // THE HEADER IS A REFUSAL WAITING TO HAPPEN, and that is its whole
-        // point. A volume is ROFL text, so no change to the store's layout can
-        // make it unreadable — but the kernel's own programs decide what a
-        // fact may say and how a rule is encoded, and a volume written under
-        // one policy and reheated under another still PARSES while meaning
-        // something else. That is the exact shape of the stale corpus this
-        // branch found today: an artefact that cannot go red on its own.
-        //
-        // A comment line, so the file stays ordinary ROFL and `load` will
-        // still take it. `reheat` is what checks — see the note there for the
-        // hole that leaves open, which is deliberate and named rather than
-        // pretended away.
-        let head = self.header(prefix);
-        self.cool_facts(head, &write, &drop, out)
-    }
-
-    /// The text of `write` under `head`, written to `out`; then `drop` leaves the store and the world is dirty.
-    fn cool_facts(&mut self, head: String, write: &[FactId], drop: &[FactId], out: &str) -> Result<Cooled, String> {
-        let mut text = head;
-        for &id in write {
-            self.push_fact(id, &mut text);
-        }
-        write_cool_file(out, &text)?;
-        self.drop_cooled(drop);
-        Ok(Cooled { facts: write.len(), bytes: text.len(), path: out.to_string() })
-    }
-
-    /// One base fact of a volume, as a line of its text.
-    fn push_fact(&self, id: FactId, text: &mut String) {
-        let r = self.eval.store.rec(id);
-        write_fact_key(&self.eval.h, r.rel, r.persp, self.eval.store.args(id), text);
-        text.push_str(".\n");
-    }
-
-    fn drop_cooled(&mut self, drop: &[FactId]) {
-        self.eval.store.remove_many(drop);
-        self.eval.store.dirty = true;
-    }
-
-    /// COOL THE ASSERTION TRAIL: the `why was this here` layer, parked.
-    ///
-    /// `asserted_by` is two-thirds of what a load writes and half of what a
-    /// world then holds — measured on 16 eslint files, 41 722 rows against
-    /// 43 078 base facts, and dropping it takes a load from 331 ms to 94. It is
-    /// also the layer nobody asks about until something is wrong.
-    ///
-    /// SEALING IT WOULD BE CHEAPER AND WORSE. `sealed(assertions)` already
-    /// exists and gets the same numbers, but the information is then never
-    /// written and `why` can never be answered, at any price. Cooling parks it:
-    /// the rows go to disk and come back when a question needs them.
-    ///
-    /// THE HOLE IS WHAT MAKES IT HONEST. A world whose trail is cold must
-    /// REFUSE a question about authorship rather than answer it empty, because
-    /// an empty audit and a clean one are the same two characters — so the
-    /// caller writes `hole($cold(assertions), cooled_to_disk)` as it cools,
-    /// exactly as it does for a volume.
-    pub fn cool_trail(&mut self, out: &str) -> Result<Cooled, String> {
-        self.eval.settle_assertions();
-        let ab = self.eval.v.asserted_by;
-        let mut ids = Vec::new();
-        for id in self.eval.store.all_facts() {
-            if self.eval.store.alive(id) && self.eval.store.rec(id).rel == ab {
-                ids.push(id);
-            }
-        }
-        let head = self.header("$trail");
-        self.cool_facts(head, &ids, &ids, out)
-    }
-
-    /// REHEAT THE TRAIL, PAST THE DOOR, and the signature is what earns that.
-    ///
-    /// `asserted_by` lives in `[$kernel]`, and a program may not write a kernel
-    /// ledger — rightly, since that is the whole `$` ring. So a cooled trail
-    /// cannot come back through `load`, and this adds to the store directly.
-    ///
-    /// THAT IS THE SAME CATEGORY AS `seed::restore`, NOT A NEW ONE: the door
-    /// exists to judge UNTRUSTED INPUT, and a file this engine wrote of its own
-    /// state is not input, it is the state. What makes the claim checkable is
-    /// the header — the volume names the kernel it was written under, and a
-    /// mismatch is refused rather than translated, because translating needs
-    /// the meaning that has been lost.
-    pub fn reheat_trail(&mut self, path: &str) -> Result<usize, String> {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-        let head = text.lines().next().unwrap_or("");
-        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", crate::kernel::hash());
-        if !head.starts_with(&want) {
-            return Err(format!(
-                "{path}: not a trail this engine wrote, so what it means is unknown.\n  \
-                 header: {head}\n  wanted: {want}..."
-            ));
-        }
-        let cs = rofl_parse::parse(&mut self.eval.h, &text)?;
-        let ab = self.eval.v.asserted_by;
-        let kp = self.eval.v.kernel_persp;
-        let mut n = 0;
-        for c in &cs {
-            if !c.body.is_empty() || c.lattice.is_some() || c.head.rel != ab {
-                return Err(format!("{path}: a trail holds `asserted_by` facts and nothing else"));
-            }
-            let args = c.head.args.clone();
-            if self.eval.store.add(&self.eval.h, ab, kp, &args, F_BASE) {
-                n += 1;
-            }
-        }
-        self.eval.store.dirty = true;
-        Ok(n)
-    }
-
-    /// REHEAT A COOLED VOLUME, refusing one this engine did not write.
-    ///
-    /// The check is a REFUSAL and never a repair: told the kernel has moved, a
-    /// caller re-parses the source, which is cheap — 28 MB/s measured on real
-    /// eslint AST facts — and is the only thing that can be right. Rewriting an
-    /// old volume to the new meaning would require knowing what it meant, which
-    /// is precisely what has been lost.
-    ///
-    /// THE HOLE, NAMED: a cooled volume is ordinary ROFL, so `load` will take
-    /// it without looking at the header. That is deliberate — a volume must
-    /// stay readable by anything that reads ROFL, including a person — and it
-    /// means the check lives on the path a driver uses rather than on the
-    /// format. A driver that reaches for `load` instead of `reheat` gets no
-    /// protection, and the gate says so rather than the doc claiming otherwise.
-    pub fn reheat(&mut self, path: &str) -> Result<usize, Vec<String>> {
-        let text = std::fs::read_to_string(path).map_err(|e| vec![format!("{path}: {e}")])?;
-        let head = text.lines().next().unwrap_or("");
-        let want = format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={}", crate::kernel::hash());
-        if !head.starts_with(&want) {
-            return Err(vec![format!(
-                "{path}: not a volume this engine wrote, so what it means is unknown.\n                   header: {head}\n  wanted: {want}...\n                   Re-parse the source instead; a volume cannot be translated, because \
-                 translating it needs the meaning that has been lost."
-            )]);
-        }
-        self.load_delta(&text, None).map(|(n, _)| n)
-    }
-
-    /// Every live BASE fact IN A PROGRAM'S OWN BOOK carrying an atom whose name
-    /// begins with `prefix`, looked for inside functors too — an id can be
-    /// nested, and a volume that dropped only the top-level mentions would
-    /// leave half a file behind.
-    ///
-    /// WHAT IS WRITTEN AND WHAT IS REMOVED ARE NOT THE SAME SET, and conflating
-    /// them is the defect that made cooling useless.
-    ///
-    /// The kernel writes `in_perspective` and `asserted_by` into `[$kernel]`
-    /// about every fact a program asserts, and those rows MENTION the volume —
-    /// the fact is reified inside a `$fact(...)` functor, so a prefix search
-    /// finds them. The first version excluded them from BOTH halves, which was
-    /// half right and wholly wrong:
-    ///
-    ///   * excluding them from what is WRITTEN is correct. The trail is what
-    ///     the kernel says ABOUT an assertion; a reheat IS a fresh assertion
-    ///     and earns a fresh trail dated to when it actually happened. A volume
-    ///     carrying the old trail would claim a fact was asserted at a time it
-    ///     was not — and the door refuses it anyway, since `$` marks a kernel
-    ///     ledger a program may not write.
-    ///   * excluding them from what is REMOVED left the trail behind forever.
-    ///     Measured over 64 eslint files: every file cooled on every tick and
-    ///     the world still grew 18 360 -> 295 185 facts, because the trail is
-    ///     roughly two rows per fact and none of it ever left. Cooling freed
-    ///     the smaller half and kept the larger.
-    ///
-    /// So: `write` is the program's own facts, `drop` is everything about the
-    /// volume including the kernel's account of it.
-    pub fn volume(&mut self, prefix: &str) -> (Vec<FactId>, Vec<FactId>) {
-        self.eval.settle_provenance();
-        let mut write = Vec::new();
-        let mut drop = Vec::new();
-        for id in self.eval.store.all_facts() {
-            if !self.eval.store.alive(id) {
-                continue;
-            }
-            let args = self.eval.store.args(id).to_vec();
-            if !args.iter().any(|a| self.mentions(*a, prefix)) {
-                continue;
-            }
-            let r = self.eval.store.rec(id);
-            let kernel = is_kernel_ledger(&self.eval.h, r.persp);
-            if r.base() && !kernel {
-                write.push(id);
-            }
-            drop.push(id);
-        }
-        (write, drop)
-    }
-
-    /// COOL MANY VOLUMES IN ONE PASS.
-    ///
-    /// `cool` walks every fact in the world to find one volume's, so cooling N
-    /// volumes one at a time is N walks over a world that is still shrinking —
-    /// quadratic, and measured as such: 8 volumes a tick over 64 files took
-    /// cooling from 73 ms to 4 699 ms while the work per tick was constant.
-    /// One pass, N prefixes.
-    pub fn cool_many(&mut self, vols: &[(String, String)]) -> Result<Vec<Cooled>, String> {
-        // FOUR PHASES, TIMED SEPARATELY, because "cooling is 61 per cent of the
-        // run" is not a place you can optimise. Walking the world, matching a
-        // prefix, rendering a fact to text and writing bytes are four different
-        // costs and only one of them is the FORMAT.
-        // A FACT FINDS ITS VOLUME BY LOOKUP, NOT BY SEARCH.
-        //
-        // This asked, for every fact, whether any of the batch's prefixes
-        // matched any of its arguments — a product, and measured as one: over
-        // the whole of eslint, matching was 13 168 ms for 456 volumes and
-        // 28 852 ms for 658, against 150 ms of rendering and 78 ms of disk.
-        // NINETY-EIGHT PER CENT OF COOLING WAS THE SEARCH. `cool_many`'s own
-        // comment boasts of replacing one walk per volume with one walk for all
-        // of them, and the product had simply moved INSIDE the walk.
-        //
-        // Volume prefixes are fixed-length strings, so they group by length and
-        // each length costs one hash lookup: `name[..len]` against a map. Two
-        // volumes of different prefix lengths cost two lookups, not two scans.
-        let mut by_len: HashMap<usize, HashMap<&str, usize>> = HashMap::new();
-        for (i, (p, _)) in vols.iter().enumerate() {
-            by_len.entry(p.len()).or_default().insert(p.as_str(), i);
-        }
-        self.eval.settle_provenance();
-        let mut texts: Vec<String> = vols.iter().map(|(p, _)| self.header(p)).collect();
-        let mut counts = vec![0usize; vols.len()];
-        let mut drop: Vec<FactId> = Vec::new();
-        for id in self.eval.store.all_facts() {
-            if !self.eval.store.alive(id) {
-                continue;
-            }
-            let args = self.eval.store.args(id).to_vec();
-            let Some(k) = self.volume_of(&args, &by_len) else { continue };
-            let r = self.eval.store.rec(id);
-            if r.base() && !is_kernel_ledger(&self.eval.h, r.persp) {
-                self.push_fact(id, &mut texts[k]);
-                counts[k] += 1;
-            }
-            drop.push(id);
-        }
-        let mut out = Vec::with_capacity(vols.len());
-        for (i, (_, path)) in vols.iter().enumerate() {
-            write_cool_file(path, &texts[i])?;
-            out.push(Cooled { facts: counts[i], bytes: texts[i].len(), path: path.clone() });
-        }
-        self.drop_cooled(&drop);
-        Ok(out)
-    }
-
-    /// Which of the batch's volumes this fact belongs to, by lookup.
-    ///
-    /// Walks the fact's terms once and, for each atom or functor name, tries
-    /// one map lookup per distinct prefix LENGTH in the batch — in practice
-    /// one, since a scanner mints ids of a single shape. The old form asked
-    /// every prefix about every argument, which is the product this replaces.
-    fn volume_of(
-        &self,
-        args: &[Term],
-        by_len: &HashMap<usize, HashMap<&str, usize>>,
-    ) -> Option<usize> {
-        for a in args {
-            if let Some(k) = self.volume_of_term(*a, by_len) {
-                return Some(k);
-            }
-        }
-        None
-    }
-
-    fn volume_of_term(
-        &self,
-        t: Term,
-        by_len: &HashMap<usize, HashMap<&str, usize>>,
-    ) -> Option<usize> {
-        match t.kind() {
-            TermK::Atom(a) => self.lookup_name(self.eval.h.name(a), by_len),
-            TermK::Func(i) => {
-                if let Some(k) = self.lookup_name(self.eval.h.name(self.eval.h.fname(i)), by_len) {
-                    return Some(k);
-                }
-                self.eval
-                    .h
-                    .fargs(i)
-                    .iter()
-                    .find_map(|x| self.volume_of_term(*x, by_len))
-            }
-            _ => None,
-        }
-    }
-
-    fn lookup_name(&self, n: &str, by_len: &HashMap<usize, HashMap<&str, usize>>) -> Option<usize> {
-        for (len, m) in by_len {
-            if n.len() >= *len {
-                if let Some(k) = m.get(&n[..*len]) {
-                    return Some(*k);
-                }
-            }
-        }
-        None
-    }
-
-    fn header(&self, prefix: &str) -> String {
-        format!("-- {VOLUME_MAGIC} {VOLUME_FORMAT} kernel={} prefix={prefix}\n",
-            crate::kernel::hash())
-    }
-
-    fn mentions(&self, t: Term, prefix: &str) -> bool {
-        match t.kind() {
-            TermK::Atom(a) => self.eval.h.name(a).starts_with(prefix),
-            TermK::Func(i) => {
-                self.eval.h.name(self.eval.h.fname(i)).starts_with(prefix)
-                    || self.eval.h.fargs(i).iter().any(|x| self.mentions(*x, prefix))
-            }
-            _ => false,
-        }
     }
 
     /// The boundary. Staged `@next` facts are installed here, and here is the
@@ -2107,9 +1854,6 @@ impl Session {
     /// language, as `ask` is: a caller who can write a rule can write a why.
     pub fn why(&mut self, query: &str) -> Result<String, String> {
         let lit = self.why_lit(query)?;
-        if self.eval.levels.is_some() {
-            self.eval.store.lemma_cut = self.eval.stage_here().map(|st| std::sync::Arc::new(st.rules.iter().copied().filter(|r| !st.free.contains(r)).collect()));
-        }
         self.eval.why_text(&lit, Some(query))
     }
 
@@ -2126,7 +1870,7 @@ impl Session {
     /// world, the lemma's `why` read there. A lemma whose file this world was not given the text of stays.
     fn unfold_lemmas(&mut self, text: String) -> Result<String, String> {
         let Some(texts) = self.eval.lower_texts.clone() else { return Ok(text) };
-        let Some(st) = self.eval.lemma_stage() else { return Ok(text) };
+        let Some(st) = self.eval.cut_stage() else { return Ok(text) };
         let mut lows: HashMap<String, Session> = HashMap::new();
         let mut out = String::new();
         for line in text.lines() {
@@ -2448,11 +2192,6 @@ impl Session {
 /// the engine and a scanner, and may keep what it can of it (scanners/js_ast.ts keeps the ids of the nodes it
 /// matches); what it prints then is kept marked `-- inherited` and answers only another `rescan`, so a world
 /// evaluated from its files is the same whatever ran before it.
-/// A cooled volume's text, written to `path`; the error names the path.
-fn write_cool_file(path: &str, text: &str) -> Result<(), String> {
-    std::fs::write(path, text).map_err(|e| format!("{path}: {e}"))
-}
-
 fn scan_kept(cmd: &str, path: &str) -> Option<std::path::PathBuf> {
     let home = std::env::var_os("XDG_CACHE_HOME").map(std::path::PathBuf::from)
         .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".cache")))?;
