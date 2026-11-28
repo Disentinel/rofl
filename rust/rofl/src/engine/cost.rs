@@ -343,6 +343,7 @@ impl Eval {
     pub fn mem_parts(&self) -> Vec<(String, usize)> {
         let mut v: Vec<(String, usize)> = self.store.bytes().into_iter().chain(self.h.parts()).map(|(n, b)| (n.replace('.', "_"), b)).collect();
         v.push(("heights".into(), self.memo.height_memo.bytes() + self.heights_kept.bytes()));
+        v.push(("pages".into(), self.pages_bytes));
         v
     }
 
@@ -715,13 +716,8 @@ pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
     let top = evals.iter().max_by_key(|e| e.cost.mem.live)?;
     let m = &top.cost.mem;
     let mb = |b: i64| b >> 20;
-    // (a world by levels: the peak is a unit's, which is gone with its parts)
-    let peak = HEAP_PEAK.load(std::sync::atomic::Ordering::Relaxed);
-    if peak > m.live && peak >= 1 << 30 {
-        let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
-        return Some(format!("peak: the heap held {} MB{rss}, while the units were settled", mb(peak)));
-    }
-    if m.live < 1 << 30 {
+    let peak = HEAP_PEAK.load(std::sync::atomic::Ordering::Relaxed).max(m.live);
+    if peak < 1 << 30 {
         return None;
     }
     let mut by: Vec<(String, i64)> = Vec::new();
@@ -741,10 +737,10 @@ pub fn heap_said_over(evals: &[&Eval]) -> Option<String> {
         format!("the core and {} volumes at their own peaks", evals.len() - 1)
     };
     by.sort_by_key(|p| std::cmp::Reverse(p.1));
-    let list: Vec<String> = by.iter().take(6).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
+    let list: Vec<String> = by.iter().take(12).map(|(n, b)| format!("{n} {}", mb(*b))).collect();
     let rule = m.rule.map(|r| format!(", firing {}", top.h.name(r))).unwrap_or_default();
     let rss = resident_peak().map(|b| format!(" ({} MB resident at most)", mb(b))).unwrap_or_default();
-    Some(format!("peak: the heap held {} MB{rss}{rule}; {at}: {} (MB)", mb(m.live), list.join(", ")))
+    Some(format!("peak: the heap held {} MB{rss}{rule}; {at}: {} (MB)", mb(peak), list.join(", ")))
 }
 
 pub fn resident_peak() -> Option<i64> {

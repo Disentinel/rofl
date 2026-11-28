@@ -5045,10 +5045,6 @@ impl Store {
             })
             .sum::<usize>()
             + self.idx.capacity() * 48;
-        let wit: usize = self.wit_head.capacity() * 4
-            + self.wits.capacity() * std::mem::size_of::<WitNode>()
-            + self.prem_arena.capacity() * std::mem::size_of::<PremRef>()
-            + self.fired.capacity() * 9;
         let (tends, tsks, tcons, targs) = self.facts.tups.bytes();
         vec![
             (
@@ -5061,7 +5057,10 @@ impl Store {
             ("args", targs),
             ("by_key", (self.keys_base.capacity() + self.keys.capacity()) * 4),
             ("idx", idx),
-            ("wit", wit),
+            ("wit_head", self.wit_head.capacity() * 4),
+            ("wit_nodes", self.wits.capacity() * std::mem::size_of::<WitNode>()),
+            ("wit_prems", self.prem_arena.capacity() * std::mem::size_of::<PremRef>()),
+            ("wit_fired", self.fired.capacity() * 9),
         ]
     }
 }

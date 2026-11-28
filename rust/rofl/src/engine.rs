@@ -836,6 +836,8 @@ pub struct Eval {
     pub staged_away: Option<(Vec<Sym>, FxSet<Sym>)>,
     /// the pages core handed this pass back: it is evaluated again from the start by the levels
     pages_declined: bool,
+    /// what the pages of the pass being evaluated hold (`mem_parts`)
+    pages_bytes: usize,
     /// the widest read of the firing the pages core is in, and the body element that read it
     /// what a pages firing read at each premise: the rows, the widest read and the binding there
     pages_reads: Vec<(u64, usize, Option<Subst>)>,
@@ -2363,6 +2365,7 @@ impl Eval {
             pages_from: 0,
             staged_away: None,
             pages_declined: false,
+            pages_bytes: 0,
             pages_reads: Vec::new(),
             lemma_heads: None,
             lower_texts: None,

@@ -95,6 +95,16 @@ impl Pages {
         }
     }
 
+    /// What the pages hold, as `mem_parts` counts it: a hash slot is its entry and a byte of control.
+    fn bytes(&self) -> usize {
+        let map = |cap: usize, entry: usize| cap * (entry + 1);
+        self.all.values().map(|v| v.capacity() * 4 + 24).sum::<usize>()
+            + self.ix.iter().map(|m| map(m.capacity(), 12)).sum::<usize>()
+            + self.many.iter().map(|v| v.capacity() * 4 + 40).sum::<usize>()
+            + self.news_of.capacity() * 4
+            + self.news.values().map(|v| v.capacity() * 4 + 24).sum::<usize>()
+    }
+
     fn under(&self, rel: Sym, ix: usize, key: u64) -> &[FactId] {
         if ix == usize::MAX {
             return self.all.get(&rel).map_or(&[][..], |v| &v[..]);
@@ -387,7 +397,9 @@ impl Eval {
                 c
             })
             .collect();
-        let out = match self.pages_pass(&comps, &rounds) {
+        let passed = self.pages_pass(&comps, &rounds);
+        self.pages_bytes = 0;
+        let out = match passed {
             Ok(()) => Ok(()),
             Err(Err(e @ Halt::Budget(..))) => {
                 let tail = self.wall.cut_tail.take();
@@ -473,6 +485,7 @@ impl Eval {
                 pg.file(&self.h, &self.store, rel, id);
             }
         }
+        self.pages_bytes = pg.bytes();
         (pg, fired)
     }
 
@@ -486,6 +499,7 @@ impl Eval {
                 let rel = self.store.rec(id).rel;
                 pg.file(&self.h, &self.store, rel, id);
             }
+            self.pages_bytes = pg.bytes();
             if pg.edit {
                 pg.made.extend_from_slice(&fresh);
             }
@@ -591,7 +605,10 @@ impl Eval {
                 for (e, (n, w, at)) in self.pages_reads.iter_mut().zip(&fd.reads) {
                     *e = (*n, *w, at.as_ref().map(|b| f.subst(b)));
                 }
-                fd.sols.iter().try_for_each(|(b, ps)| self.pages_leaf(pg, f, b, ps, news))
+                (0..fd.n).try_for_each(|k| {
+                    let (v, p) = (f.vars.len(), r.plan.len());
+                    self.pages_leaf(pg, f, &fd.slots[k * v..(k + 1) * v], &fd.prems[k * p..(k + 1) * p], news)
+                })
             }
         };
         // (what the firing wrote of itself, a sealed cell's reflection, is news too)
@@ -1094,10 +1111,13 @@ fn held(h: &Heap, store: &Store, pg: &Pages, f: &Fired, i: usize, b: &mut [Optio
     false
 }
 
-/// The firings of a task solved on a thread of its own: each instance's slots and premises, and what it read.
+/// The firings of a task solved on a thread of its own: each instance's slots and premises, one after the other, and
+/// what it read.
 #[derive(Default)]
 struct Found {
-    sols: Vec<(Vec<Option<Term>>, Vec<PremRef>)>,
+    n: usize,
+    slots: Vec<Option<Term>>,
+    prems: Vec<PremRef>,
     read: u64,
     /// by premise: the rows read, the widest read and the slots bound there
     reads: Vec<(u64, usize, Option<Vec<Option<Term>>>)>,
@@ -1127,7 +1147,9 @@ fn side(f: &Fired, t: Term, b: &[Option<Term>]) -> Option<Term> {
 fn solve_ro(h: &Heap, v: &Vocab, store: &Store, pg: &Pages, f: &Fired, steps: &[Step], b: &mut Vec<Option<Term>>, trail: &mut Vec<usize>, prems: &mut Vec<PremRef>, out: &mut Found) {
     let r = &f.r;
     let Some((st, rest)) = steps.split_first() else {
-        out.sols.push((b.clone(), prems.clone()));
+        out.n += 1;
+        out.slots.extend_from_slice(b);
+        out.prems.extend_from_slice(prems);
         return;
     };
     let i = st.at;
