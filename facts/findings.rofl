@@ -14511,6 +14511,9 @@ finding_note(f_a_red_control_of_breaks_said_nothing_of_why,
   "CI run 45008241035 on main at cfaeafa (#298) and the merge train's run 45113459401 on #303: `breaks` red with the control of `cargo test kept a_kept_world_answers_and_refuses_as_docs_cli_says` failing and nothing else (every plant KILLED; no NOT PLANTED, no SURVIVED). The harness printed no text for a failed control; it does now (last 12 lines), and the train's run said: `an_edit_writes_its_units_as_what_moved: edit 0 (ant -> zebra): the units kept [u0 496952, u1 168768], the first whole 496952`: the edit wrote a unit whole, not as a patch. CAUSE: under the memory's pressure (volumes::pressed: this process over a quarter of what MemAvailable lets it) the units done are cooled, and cooling carried the stretch's base over (Stretch::cooled_from) but not the unit's parts' (`Lazy.was`), so the parts of a cooled unit an edit settled again were written whole. It passed on a quiet box (17 s, six times) and failed, with the same byte counts, with 9 GB held by another process on a 15 GB box; the CI runner runs about 35 kept tests beside each other. FIX: Lazy::cooled_from keeps `was` through the cooling; the test passes under that pressure and without it. LEFT OPEN: under heavier pressure other cases of the same test answer partial (concurrent_cold_runs_keep_one_world: `safety.rofl did not settle: its budget of 20000000 steps ran out`; not looked into).").
 
 removed_in("rust/rofl/src/engine/levels.rs", "047d6a2").
+removed_in("runtime/ingest.ts", "8ad1230").
+removed_in("rust/rofl/tests/cool.rs", "8ad1230").
+removed_in("rust/rofl/tests/level_wall.rs", "8ad1230").
 removed_in("rust/rofl/tests/far.rs", "047d6a2").
 removed_in("rust/rofl/tests/held.rs", "047d6a2").
 removed_in("rust/rofl/tests/volumes.rs", "047d6a2").
