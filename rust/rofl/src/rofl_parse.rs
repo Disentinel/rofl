@@ -1131,6 +1131,26 @@ pub fn parse(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
     parse_lexed(h, lex(src))
 }
 
+/// `parse` a piece or a block at a time, so a large text is never held parsed whole.
+pub enum Parts<'a> {
+    Columns(Columns<'a>),
+    Text { src: &'a str, pieces: std::vec::IntoIter<&'a str> },
+}
+
+impl<'a> Parts<'a> {
+    pub fn new(src: &'a str) -> Self {
+        if is_columns(src) { Parts::Columns(Columns::new(src)) } else { Parts::Text { src, pieces: pieces(src, 1 << 20).into_iter() } }
+    }
+
+    pub fn next_part(&mut self, h: &mut Heap) -> Option<Result<Vec<Clause>, String>> {
+        match self {
+            Parts::Columns(c) => c.next_block(h),
+            // a refused piece is said with the whole text's line
+            Parts::Text { src, pieces } => pieces.next().map(|p| parse_lexed(h, lex(p)).or_else(|d| Err(parse(h, src).err().unwrap_or(d)))),
+        }
+    }
+}
+
 /// THE COLUMN FORM OF BASE FACTS (docs/cli.md, *Model libraries*, the scanner's contract): what a scanner may write in
 /// place of fact text, read without the lexer. The header is one of the comments the text opens with; `-- ` lines are comments as in text (a scanner's
 /// `-- reads:`); `T N` opens a table of N terms, one a line (`a NAME` an atom, `s TEXT` a string with `\\` and `\n`
@@ -1200,58 +1220,88 @@ pub fn without_books(src: &str, books: &[&str]) -> (String, bool) {
 }
 
 pub fn columns(h: &mut Heap, src: &str) -> Result<Vec<Clause>, String> {
+    let mut c = Columns::new(src);
     let mut out = Vec::new();
-    let mut table: Vec<Term> = Vec::new();
-    let mut text = String::new();
-    let mut lines = src.lines().enumerate();
-    let bad = |n: usize, why: &str| format!("line {}: {why}", n + 1);
-    while let Some((n, l)) = lines.next() {
-        if l.is_empty() || l.starts_with("--") { continue; }
-        let mut w = l.split(' ');
-        match w.next() {
-            Some("T") => {
-                let size: usize = w.next().and_then(|x| x.parse().ok()).ok_or_else(|| bad(n, "T takes the number of terms"))?;
-                table.clear();
-                table.reserve(size);
-                for _ in 0..size {
-                    let (n, t) = lines.next().ok_or_else(|| bad(n, "the table ends early"))?;
-                    let (k, v) = t.split_at(t.len().min(2));
-                    table.push(match k {
-                        "a " => Term::atom(h.intern(v)),
-                        "s " => Term::str(h.intern(&unescape_col(v))),
-                        "i " => v.parse::<i64>().ok().and_then(Term::try_int).ok_or_else(|| bad(n, "not an integer term"))?,
-                        _ => return Err(bad(n, "a term is `a NAME`, `s TEXT` or `i N`")),
-                    });
-                }
-            }
-            Some("R") => {
-                let (Some(rel), Some(book), Some(arity), Some(rows)) = (w.next(), w.next(), w.next(), w.next()) else { return Err(bad(n, "R takes REL BOOK ARITY ROWS")) };
-                let (arity, rows): (usize, usize) = (arity.parse().map_err(|_| bad(n, "arity"))?, rows.parse().map_err(|_| bad(n, "rows"))?);
-                let rel = h.intern(rel);
-                let book = if book == "-" { Book::Bare } else { Book::Named(h.intern(book)) };
-                let first = out.len();
-                out.extend((0..rows).map(|_| Clause { head: Lit { rel, book, args: Vec::with_capacity(arity), tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false }));
-                for _ in 0..arity {
-                    let (n, col) = lines.next().ok_or_else(|| bad(n, "the block ends early"))?;
-                    let mut got = 0;
-                    for (c, x) in out[first..].iter_mut().zip(col.split(' ')) {
-                        let k = usize::from_str_radix(x, 36).map_err(|_| bad(n, "a column holds numbers in base 36"))?;
-                        c.head.args.push(*table.get(k).ok_or_else(|| bad(n, "a number past the table"))?);
-                        got += 1;
+    while let Some(block) = c.next_block(h) {
+        out.extend(block?);
+    }
+    Ok(out)
+}
+
+/// A text of columns read a block at a time, so a load of millions of facts never holds a clause of each.
+pub struct Columns<'a> {
+    lines: std::iter::Enumerate<std::str::Lines<'a>>,
+    table: Vec<Term>,
+    text: String,
+}
+
+impl<'a> Columns<'a> {
+    pub fn new(src: &'a str) -> Self {
+        Columns { lines: src.lines().enumerate(), table: Vec::new(), text: String::new() }
+    }
+
+    /// The clauses up to the end of the next block of rows, or of the text.
+    pub fn next_block(&mut self, h: &mut Heap) -> Option<Result<Vec<Clause>, String>> {
+        let mut out = Vec::new();
+        let bad = |n: usize, why: &str| format!("line {}: {why}", n + 1);
+        while let Some((n, l)) = self.lines.next() {
+            if l.is_empty() || l.starts_with("--") { continue; }
+            let mut w = l.split(' ');
+            match w.next() {
+                Some("T") => {
+                    let Some(size) = w.next().and_then(|x| x.parse::<usize>().ok()) else { return Some(Err(bad(n, "T takes the number of terms"))) };
+                    self.table.clear();
+                    self.table.reserve(size);
+                    for _ in 0..size {
+                        let Some((n, t)) = self.lines.next() else { return Some(Err(bad(n, "the table ends early"))) };
+                        let (k, v) = t.split_at(t.len().min(2));
+                        self.table.push(match k {
+                            "a " => Term::atom(h.intern(v)),
+                            "s " => Term::str(h.intern(&unescape_col(v))),
+                            "i " => match v.parse::<i64>().ok().and_then(Term::try_int) { Some(t) => t, None => return Some(Err(bad(n, "not an integer term"))) },
+                            _ => return Some(Err(bad(n, "a term is `a NAME`, `s TEXT` or `i N`"))),
+                        });
                     }
-                    if got != rows { return Err(bad(n, "a column of another length than its block")); }
+                }
+                Some("R") => {
+                    let (Some(rel), Some(book), Some(arity), Some(rows)) = (w.next(), w.next(), w.next(), w.next()) else { return Some(Err(bad(n, "R takes REL BOOK ARITY ROWS"))) };
+                    let Ok(arity) = arity.parse::<usize>() else { return Some(Err(bad(n, "arity"))) };
+                    let Ok(rows) = rows.parse::<usize>() else { return Some(Err(bad(n, "rows"))) };
+                    let rel = h.intern(rel);
+                    let book = if book == "-" { Book::Bare } else { Book::Named(h.intern(book)) };
+                    let first = out.len();
+                    out.extend((0..rows).map(|_| Clause { head: Lit { rel, book, args: Vec::with_capacity(arity), tense: Tense::Now }, body: Vec::new(), lattice: None, widen: None, tag: false, dom: None, ord: None, structure: None, want: false }));
+                    for _ in 0..arity {
+                        let Some((n, col)) = self.lines.next() else { return Some(Err(bad(n, "the block ends early"))) };
+                        let mut got = 0;
+                        for (c, x) in out[first..].iter_mut().zip(col.split(' ')) {
+                            let Ok(k) = usize::from_str_radix(x, 36) else { return Some(Err(bad(n, "a column holds numbers in base 36"))) };
+                            let Some(t) = self.table.get(k) else { return Some(Err(bad(n, "a number past the table"))) };
+                            c.head.args.push(*t);
+                            got += 1;
+                        }
+                        if got != rows { return Some(Err(bad(n, "a column of another length than its block"))); }
+                    }
+                    if !self.text.is_empty() {
+                        match parse_lexed(h, lex(&std::mem::take(&mut self.text))) { Ok(cs) => out.extend(cs), Err(d) => return Some(Err(d)) }
+                    }
+                    return Some(Ok(out));
+                }
+                _ => {
+                    self.text.push_str(l);
+                    self.text.push('\n');
+                    continue;
                 }
             }
-            _ => {
-                text.push_str(l);
-                text.push('\n');
-                continue;
+            if !self.text.is_empty() {
+                match parse_lexed(h, lex(&std::mem::take(&mut self.text))) { Ok(cs) => out.extend(cs), Err(d) => return Some(Err(d)) }
             }
         }
-        if !text.is_empty() { out.extend(parse_lexed(h, lex(&std::mem::take(&mut text)))?); }
+        if !self.text.is_empty() {
+            match parse_lexed(h, lex(&std::mem::take(&mut self.text))) { Ok(cs) => out.extend(cs), Err(d) => return Some(Err(d)) }
+        }
+        (!out.is_empty()).then_some(Ok(out))
     }
-    if !text.is_empty() { out.extend(parse_lexed(h, lex(&text))?); }
-    Ok(out)
 }
 
 fn unescape_col(v: &str) -> String {

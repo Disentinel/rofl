@@ -14542,3 +14542,11 @@ recorded(f_keeping_a_world_on_pages_costs_no_memory_more, "2026-11-28").
 addressed_by(f_keeping_a_world_on_pages_costs_no_memory_more, "rust/rofl/src/bin/rofl/load.rs").
 finding_note(f_keeping_a_world_on_pages_costs_no_memory_more,
   "KEEPING A WORLD EVALUATED ON PAGES COSTS NO MEMORY MORE. `rofl ask` refused to keep a world whose volume times 3 was more than the memory left (the factor measured on the levels path, 700 vscode files: 5.9 GB against 2.1 GB). On pages, hono (calls, @js): the volume is 2.2 GB and the peak 2.9 GB without keeping, 3.06 GB with it, so the factor refused a world that fits; the next ask answered from the kept world in under a second at 398 MB. The estimate is deleted: a number whose source the path no longer is.").
+
+finding(f_a_large_load_was_parsed_whole_twice, measure).
+recorded(f_a_large_load_was_parsed_whole_twice, "2026-11-28").
+addressed_by(f_a_large_load_was_parsed_whole_twice, "rust/rofl/src/rofl_parse.rs").
+addressed_by(f_a_large_load_was_parsed_whole_twice, "rust/rofl/src/program.rs").
+addressed_by(f_a_large_load_was_parsed_whole_twice, "rust/rofl/src/session.rs").
+finding_note(f_a_large_load_was_parsed_whole_twice,
+  "A LARGE LOAD WAS PARSED WHOLE, TWICE. The JS model over vscode/src/vs/platform (3 097 files, 18.6 M facts in columns, 360 MB): the load rose to 10 GB at 12 s and the kernel killed the process at 13.9 GB without a word on one run in two; the world after the load is 2.5 GB. BY CODE: a text in columns was read into one list of parsed clauses (the parser's clause is some hundred bytes, and the list doubled as it grew), then every fact waited as a checked clause until the whole text was checked, and `units_of` parsed the text whole a second time to find the ids of its facts. NOW: columns are read a block at a time (`rofl_parse::Columns`, `Parts`), a fact waits as its relation, book, tense and arguments in one list (`Pending::facts`), and `facts_of` reads the text by parts. The load's peak is 3.7 GB, no kill in three runs; the answers of npm test do not move.").

@@ -645,25 +645,27 @@ impl Session {
     }
 
     pub fn facts_of(&mut self, src: &str) -> Result<(Vec<FactId>, String, String), String> {
-        let cs = rofl_parse::parse(&mut self.eval.h, src)?;
         let (mut ids, mut rules, mut absent, mut seen) = (Vec::new(), String::new(), String::new(), HashSet::new());
-        for c in &cs {
-            let ground = || c.head.args.iter().all(|t| self.eval.h.is_ground(*t));
-            let fact = c.body.is_empty() && c.lattice.is_none() && c.head.tense == Tense::Now && ground();
-            let text = rofl_parse::show(&self.eval.h, c);
-            if !fact {
-                rules.push_str(&text);
-                rules.push('\n');
-                continue;
-            }
-            let id = self.lit_terms(&c.head).ok().and_then(|(r, p, a)| self.eval.store.get(r, p, &a));
-            match id.filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
-                Some(f) => {
-                    if seen.insert(f) { ids.push(f); }
+        let mut parts = rofl_parse::Parts::new(src);
+        while let Some(cs) = parts.next_part(&mut self.eval.h) {
+            for c in &cs? {
+                let fact = c.body.is_empty() && c.lattice.is_none() && c.head.tense == Tense::Now && c.head.args.iter().all(|t| self.eval.h.is_ground(*t));
+                if !fact {
+                    rules.push_str(&rofl_parse::show(&self.eval.h, c));
+                    rules.push('\n');
+                    continue;
                 }
-                None => {
-                    absent.push_str(&text);
-                    absent.push('\n');
+                let id = self.lit_terms(&c.head).ok().and_then(|(r, p, a)| self.eval.store.get(r, p, &a));
+                match id.filter(|&f| self.eval.store.alive(f) && self.eval.store.rec(f).base()) {
+                    Some(f) => {
+                        if seen.insert(f) {
+                            ids.push(f);
+                        }
+                    }
+                    None => {
+                        absent.push_str(&rofl_parse::show(&self.eval.h, c));
+                        absent.push('\n');
+                    }
                 }
             }
         }
