@@ -14,7 +14,7 @@ struct Pages {
     all: FxMap<Sym, Vec<FactId>>,
     /// the facts of a relation by the hash of the values a key binds: what a hash shares by chance a meeting drops
     /// a fact's id where the key holds one, else `MANY` and the place of its list in `many`
-    ix: Vec<FxMap<u64, FactId>>,
+    ix: Vec<hashbrown::HashTable<(FactId, u32)>>,
     many: Vec<Vec<FactId>>,
     ix_of: FxMap<(Sym, u64), usize>,
     masks: FxMap<Sym, Vec<(u64, usize)>>,
@@ -55,7 +55,7 @@ impl Pages {
             return x;
         }
         let x = self.ix.len();
-        self.ix.push(FxMap::default());
+        self.ix.push(hashbrown::HashTable::new());
         self.ix_of.insert((rel, mask), x);
         self.masks.entry(rel).or_default().push((mask, x));
         x
@@ -78,20 +78,38 @@ impl Pages {
         if let Some(ms) = self.masks.get(&rel) {
             let args = store.args(id);
             for &(m, x) in ms {
-                match self.ix[x].entry(Self::key_of(persp, args, m)) {
-                    std::collections::hash_map::Entry::Vacant(e) => {
-                        e.insert(id);
+                let k = Self::key_of(persp, args, m);
+                let (ix, many) = (&mut self.ix[x], &mut self.many);
+                match ix.find_mut(spread(k), |e| e.1 == high(k)) {
+                    None => {
+                        ix.insert_unique(spread(k), (id, high(k)), |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
                     }
-                    std::collections::hash_map::Entry::Occupied(mut e) => {
-                        let v = e.get_mut();
+                    Some((v, _)) => {
                         if *v & MANY == 0 {
-                            self.many.push(vec![*v]);
-                            *v = MANY | (self.many.len() - 1) as FactId;
+                            many.push(vec![*v]);
+                            *v = MANY | (many.len() - 1) as FactId;
                         }
-                        self.many[(*v & !MANY) as usize].push(id);
+                        many[(*v & !MANY) as usize].push(id);
                     }
                 }
             }
+        }
+    }
+
+    /// Room for `n` more facts of `rel` in each of its indexes, made at once instead of by rehashing as they come.
+    fn reserve(&mut self, store: &Store, rel: Sym, n: usize) {
+        for &(m, x) in self.masks.get(&rel).map_or(&[][..], |v| &v[..]) {
+            let many = &self.many;
+            self.ix[x].reserve(n, |e| spread(Self::key_of(store.rec(Self::first(many, e.0)).persp, store.args(Self::first(many, e.0)), m)));
+        }
+    }
+
+    /// The fact a key's entry starts with: its one fact, or the first of its list.
+    fn first(many: &[Vec<FactId>], v: FactId) -> FactId {
+        if v & MANY == 0 {
+            v
+        } else {
+            many[(v & !MANY) as usize][0]
         }
     }
 
@@ -99,7 +117,7 @@ impl Pages {
     fn bytes(&self) -> usize {
         let map = |cap: usize, entry: usize| cap * (entry + 1);
         self.all.values().map(|v| v.capacity() * 4 + 24).sum::<usize>()
-            + self.ix.iter().map(|m| map(m.capacity(), 12)).sum::<usize>()
+            + self.ix.iter().map(|m| map(m.capacity(), 8)).sum::<usize>()
             + self.many.iter().map(|v| v.capacity() * 4 + 40).sum::<usize>()
             + self.news_of.capacity() * 4
             + self.news.values().map(|v| v.capacity() * 4 + 24).sum::<usize>()
@@ -109,12 +127,23 @@ impl Pages {
         if ix == usize::MAX {
             return self.all.get(&rel).map_or(&[][..], |v| &v[..]);
         }
-        match self.ix[ix].get(&key) {
+        match self.ix[ix].find(spread(key), |e| e.1 == high(key)) {
             None => &[],
-            Some(x) if x & MANY == 0 => std::slice::from_ref(x),
-            Some(x) => &self.many[(x & !MANY) as usize],
+            Some((x, _)) if x & MANY == 0 => std::slice::from_ref(x),
+            Some((x, _)) => &self.many[(x & !MANY) as usize],
         }
     }
+}
+
+/// The half of a key an index keeps beside the fact: the other half placed it, and the whole is the fact's to say
+/// again when the index grows. What two keys share by chance a meeting drops.
+fn high(k: u64) -> u32 {
+    (k >> 32) as u32
+}
+
+/// A key as the index places it: the low bits of a product are the weak ones, so the high half is folded into them.
+fn spread(k: u64) -> u64 {
+    k ^ (k >> 32)
 }
 
 /// The mark of a key that holds more than one fact (an id never has its top bit).
@@ -481,6 +510,7 @@ impl Eval {
         }
         for rel in read {
             let ids = self.store.rel_all(&self.h, rel);
+            pg.reserve(&self.store, rel, ids.len());
             for id in ids {
                 pg.file(&self.h, &self.store, rel, id);
             }

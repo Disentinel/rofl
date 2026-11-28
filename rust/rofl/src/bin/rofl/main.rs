@@ -121,7 +121,13 @@ fn run(args: Vec<String>) {
     }
 }
 
+/// mimalloc's `mi_option_purge_delay` (v3, include/mimalloc.h), which its Rust bindings do not name.
+const PURGE_DELAY: libmimalloc_sys::mi_option_t = 15;
+
 fn main() {
+    // what is freed goes back to the system at once: held for the second mimalloc waits by default, it was a quarter
+    // of axios's resident memory and an eighth of eslint's, for 1.5% of their time
+    unsafe { libmimalloc_sys::mi_option_set(PURGE_DELAY, 0) };
     let args: Vec<String> = std::env::args().skip(1).collect();
     let verb = matches!(args.first().map(String::as_str), Some("ask" | "why" | "whynot" | "excise" | "load"));
     memory::watch(verb.then(|| args.iter().any(|a| a == "--json")));
